@@ -3534,3 +3534,23 @@ and a room probe whose stored angle differs from its seed; no incorrect
 expectation or production defect was found. No World standing/pushing or
 Floating Block dispatch is admitted by these ports. Full-USA and regional
 completion remain open.
+
+### Authenticated Floating Block data — 24 October 2026
+
+The USA object asset owner adds two lazy views: Ani_FloatBlock at$A3DC/30 and
+MapSpr_FloatBlock at$A3FA/76. The existing strict decoder accepts six frames,
+three scripts and15tiles without another format seam. A separate lazy art bank
+binds ART_FLOAT_BLOCK to PLC_Std row2, VRAM$6680, tile$334..$342/baseword$4334.
+The source blob is230bytes; the Java bit reader consumes231realbytes, including
+the first$00byte of the adjacent SpringWheel blob at$366B6. No padding is
+invented. Selector5/subtype2zero is newly admitted; selector0 is unchanged and
+all other consumer combinations still reject. The original nine eager tables,
+two initial art decodes and existing three art banks remain unchanged.
+
+Root73022 passed34/0/0/0 with Java25 and supplied media: Visual13, constructed
+Assets18 and all three regional retail invocations. The USA first lazy decode
+after source closure executes; Japan/Europe remain explicitly unadmitted.
+Independent source review found noP1/P2 and re-derived the three real mapping
+alignment bytes, table/PLC operands and reader adjacency. This authenticates
+data only. The Floating Block body, live mapping/art presentation, solid-player
+state and world dispatch are separate work, not an act-completion claim.

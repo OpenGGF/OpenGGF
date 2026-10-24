@@ -48,7 +48,10 @@ public final class CdR11aObjectAssets {
         FLOWER_MAPPINGS("MapSpr_Flower", 0x35EF4, 90),
         // Game Over/Main.asm:36,43,118: one include holding BOTH two-word tables (TIME is +4, with its own base).
         // Read lazily through view(); never decoded here as uniform visual frames.
-        GAME_OVER_MAPPINGS("MapSpr_GameOver/MapSpr_TimeOver", 0xF03E, 56);
+        GAME_OVER_MAPPINGS("MapSpr_GameOver/MapSpr_TimeOver", 0xF03E, 56),
+        // Floating Block/Main.asm:42,110,129,140,171-176; direct USA operands join both adjacent includes.
+        FLOAT_BLOCK_ANIMATIONS("Ani_FloatBlock", 0xA3DC, 30),
+        FLOAT_BLOCK_MAPPINGS("MapSpr_FloatBlock", 0xA3FA, 76);
 
         private final String nativeLabel;
         private final int offset;
@@ -150,6 +153,29 @@ public final class CdR11aObjectAssets {
         }
     }
 
+    /**
+     * Separate optional source for PLC_Std row 2 (Art_FloatBlock). No PLC service, transfer or live residency
+     * is implied; every source in the initial, frontier and contact banks remains unbound here.
+     */
+    public static final class FloatBlockArtBank {
+        private final List<ArtBinding> bindings;
+        private FloatBlockArtBank(List<ArtBinding> bindings) { this.bindings = List.copyOf(bindings); }
+        public List<ArtBinding> bindings() { return bindings; }
+        public ArtBinding binding(CdR11aAsset source) {
+            return bindings.stream().filter(b -> b.source() == source).findFirst()
+                    .orElseThrow(() -> new UnsupportedOperationException("No FloatBlock art binding for " + source));
+        }
+        /** Native 11-bit tile ID after mapping/base-word addition; absent art is never zero-filled. */
+        public CdAssetBytes tile(int nativeTileId) {
+            if ((nativeTileId & ~0x7FF) != 0) { throw new IllegalArgumentException("Not an 11-bit tile ID"); }
+            for (var binding : bindings) {
+                int index = nativeTileId - binding.firstTileId();
+                if (index >= 0 && index < binding.tileCount()) { return binding.bytes().slice(index * 32, 32); }
+            }
+            throw new UnsupportedOperationException("Tile has no decoded FloatBlock source: " + nativeTileId);
+        }
+    }
+
     // Preserve the opening load's exact nine table reads and two art decodes. New data is opt-in below.
     private static final List<Table> OPENING_TABLES = List.of(Table.RING_DELTAS, Table.RING_ANIMATIONS,
             Table.RING_MAPPINGS, Table.MOSQUI_NORMAL_ANIMATIONS, Table.MOSQUI_DAMAGED_ANIMATIONS,
@@ -178,6 +204,8 @@ public final class CdR11aObjectAssets {
     private CdObjectVisualAssets points;
     private CdObjectVisualAssets flower;
     private ContactArtBank contactArtBank;
+    private CdObjectVisualAssets floatBlock;
+    private FloatBlockArtBank floatBlockArtBank;
 
     private CdR11aObjectAssets(CdR11aAssets.Identity identity, Map<Table, View> views, List<Delta> deltas,
                                 List<TouchSize> dimensions, CdObjectVisualAssets rings,
@@ -338,6 +366,42 @@ public final class CdR11aObjectAssets {
         }
         return contactArtBank;
     }
+    /** ObjFloatBlock_Init/Appear/Visible/Vanish (Floating Block/Main.asm:42,48,110,129,140); scripts are not executed. */
+    public synchronized CdObjectVisualAssets floatBlock() {
+        if (floatBlock == null) {
+            floatBlock = CdObjectVisualAssets.decode(read(Table.FLOAT_BLOCK_MAPPINGS), 6,
+                    read(Table.FLOAT_BLOCK_ANIMATIONS), 3, 15);
+        }
+        return floatBlock;
+    }
+    /** Explicit opt-in from the retained authenticated MMD; does not extend any existing bank. */
+    public synchronized FloatBlockArtBank floatBlockArtBank() throws IOException {
+        if (floatBlockArtBank == null) {
+            // PLC_Std row 2 (Data (Act 1 Present).asm:60-61); Init's MOVEQ #5 / JSR SetObjectTileID supplies the base
+            // word (Floating Block/Main.asm:43-44). Every actual R11A FloatBlock record has subtype2 0.
+            var source = CdR11aAsset.ART_FLOAT_BLOCK;
+            var entries = loadPlan.plcs().get(1).entries();
+            var entry = entries.get(2);
+            var blob = profile.range(source);
+            int baseWord = tileWord(5, 0);
+            if (entry.source() != source || entry.vramAddress() != 0x6680 || !entry.sourceRange().equals(blob)
+                    || entries.stream().filter(p -> p.source() == source).count() != 1
+                    || (baseWord & 0x7FF) * 32 != entry.vramAddress()
+                    || source.encodingForReviewedConsumer() != CdR11aAsset.Encoding.NEMESIS) {
+                throw new IllegalArgumentException("Unverified native FloatBlock PLC row/base-word/source association");
+            }
+            // The independent prefix walk needs all 230 source bytes; the 8-bit reader's final peek also needs the
+            // real next MMD byte, Art_SpringWheel's first byte at $366B6, never invented EOF padding.
+            var reader = new CdR11aProfile.FileRange(blob.file(), blob.domain(), blob.fileOffset(), 231);
+            var decoded = CdNemesisAsset.decode(reader.read(image).copy(), 15 * 32, 15 * 32);
+            if (decoded.consumedInputBytes() != reader.length()) {
+                throw new IOException("FloatBlock Nemesis reader consumption differs from its reviewed finite extent");
+            }
+            var read = new CdR11aAssets.NemesisRead(source, blob, reader, decoded.consumedInputBytes(), decoded.bytes());
+            floatBlockArtBank = new FloatBlockArtBank(List.of(new ArtBinding(source, 1, entry, baseWord, read)));
+        }
+        return floatBlockArtBank;
+    }
 
     /** Obj3DPlant_Init (3D Ramp/Main.asm:57-90): ADD.W consumes signed offsets in two distinct bodies. */
     public static PlantOffsets decodePlantOffsets(byte[] input) {
@@ -373,17 +437,18 @@ public final class CdR11aObjectAssets {
     /**
      * SetObjectTileID (Object Tile ID Set.asm:7-17) has a signed relative word index, then subtype2 words.
      * The source declares 18 index words (36 bytes), followed by 19 data words, not 37 index entries.
-     * Only Mosqui's selector 0 / opening subtype2 0 is admitted; Ring writes its own literal $A7AE.
+     * Only Mosqui's selector 0 and FloatBlock's selector 5 (Floating Block/Main.asm:43-44), each at subtype2 0,
+     * are admitted; Ring writes its own literal $A7AE.
      */
     public static int decodeTileWord(byte[] input, int selector, int subtype2) {
         if (selector < 0 || selector > 0x7FFF || (subtype2 & ~0xFF) != 0) {
             throw new IllegalArgumentException("Object tile selector/subtype width");
         }
         var bytes = exact(input, 74, "ObjectTileIDs");
-        if (selector != 0 || subtype2 != 0) {
-            throw new UnsupportedOperationException("Only opening Mosqui tile selector 0 / subtype2 0 is reviewed");
+        if ((selector != 0 && selector != 5) || subtype2 != 0) {
+            throw new UnsupportedOperationException("Only Mosqui selector 0 / FloatBlock selector 5 at subtype2 0 are reviewed");
         }
-        int target = (short) bytes.unsignedWord(0);
+        int target = (short) bytes.unsignedWord(selector * 2);
         int end = bytes.length();
         for (int i = 0; i < 18; i++) {
             int offset = (short) bytes.unsignedWord(i * 2);
@@ -392,7 +457,9 @@ public final class CdR11aObjectAssets {
             }
             if (offset > target && offset < end) { end = offset; }
         }
-        if (end - target < 2) { throw new IllegalArgumentException("Mosqui tile word crosses its selected body"); }
+        if (end - target < 2) {
+            throw new IllegalArgumentException((selector == 0 ? "Mosqui" : "FloatBlock") + " tile word crosses its selected body");
+        }
         return bytes.unsignedWord(target);
     }
 

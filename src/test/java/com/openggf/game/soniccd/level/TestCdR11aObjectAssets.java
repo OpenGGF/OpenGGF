@@ -46,7 +46,7 @@ class TestCdR11aObjectAssets {
 
     @Test
     void reusedNemesisDecoderHasRealFiniteReadAheadAndFixedObjectOutputContracts() throws Exception {
-        for (int tiles : new int[]{14, 70, 20, 28, 63, 5, 39}) {
+        for (int tiles : new int[]{14, 70, 20, 28, 63, 5, 39, 15}) {
             // Constructed one-bit repeat-eight A code: one payload byte per tile, plus real reader lookahead.
             byte[] input = new byte[6 + tiles + 1];
             input[1] = (byte) tiles;
@@ -164,7 +164,7 @@ class TestCdR11aObjectAssets {
 
     @Test
     void metadataNamesOriginalUsaFileRangesWithoutChangingTheExistingAssetEnumeration() {
-        assertEquals(25, CdR11aObjectAssets.Table.values().length);
+        assertEquals(27, CdR11aObjectAssets.Table.values().length);
         for (var table : CdR11aObjectAssets.Table.values()) {
             assertEquals(CdNativeFile.R11A, table.range().file());
             assertEquals(CdMmdImage.Domain.ORIGINAL_WORD_RAM, table.range().domain());
@@ -176,7 +176,7 @@ class TestCdR11aObjectAssets {
     }
 
     @Test
-    void frontierMetadataKeepsNineDistinctRangesAndNoFloatBlockAdmission() {
+    void frontierMetadataKeepsNineDistinctRangesSeparateFromFloatBlock() {
         var tables = List.of(CdR11aObjectAssets.Table.FLYING_ANIMAL_ANIMATIONS,
                 CdR11aObjectAssets.Table.GROUND_ANIMAL_ANIMATIONS,
                 CdR11aObjectAssets.Table.FLYING_ANIMAL_MAPPINGS,
@@ -201,9 +201,176 @@ class TestCdR11aObjectAssets {
                         || right.range().endExclusive() <= left.range().fileOffset());
             }
         }
-        assertTrue(Arrays.stream(CdR11aObjectAssets.Table.values())
-                .noneMatch(t -> t.nativeLabel().contains("FloatBlock")));
-        assertThrows(UnsupportedOperationException.class, () -> CdR11aObjectAssets.decodeTileWord(tileIds(), 5, 0));
+        // FloatBlock is its own opt-in pair below; none of the nine frontier views is one of its includes.
+        assertTrue(tables.stream().noneMatch(t -> t.nativeLabel().contains("FloatBlock")));
+    }
+
+    @Test
+    void floatBlockMetadataIsTwoAdjacentUsaIncludesBesideTheUnchangedNemesisSource() {
+        var animations = CdR11aObjectAssets.Table.FLOAT_BLOCK_ANIMATIONS;
+        var mappings = CdR11aObjectAssets.Table.FLOAT_BLOCK_MAPPINGS;
+        // Floating Block/Main.asm:171-176: Ani include + even, then MapSpr include + even, after TopSolid's JMP.
+        assertEquals("Ani_FloatBlock", animations.nativeLabel());
+        assertEquals("MapSpr_FloatBlock", mappings.nativeLabel());
+        assertEquals(0xA3DC, animations.range().fileOffset());
+        assertEquals(30, animations.range().length());
+        assertEquals(0x20A3DC, animations.range().nativeAddress());
+        assertEquals(0xA3FA, mappings.range().fileOffset());
+        assertEquals(76, mappings.range().length());
+        assertEquals(0x20A3FA, mappings.range().nativeAddress());
+        assertEquals(animations.range().endExclusive(), mappings.range().fileOffset());
+        assertEquals(0xA446, mappings.range().endExclusive());
+        assertEquals(2, Arrays.stream(CdR11aObjectAssets.Table.values())
+                .filter(t -> t.nativeLabel().contains("FloatBlock")).count());
+        assertEquals(List.of(CdR11aObjectAssets.Table.FLOAT_BLOCK_ANIMATIONS, CdR11aObjectAssets.Table.FLOAT_BLOCK_MAPPINGS),
+                Arrays.stream(CdR11aObjectAssets.Table.values()).skip(25).toList());
+        for (var left : List.of(animations, mappings)) {
+            for (var right : CdR11aObjectAssets.Table.values()) {
+                if (left == right) { continue; }
+                assertTrue(left.range().endExclusive() <= right.range().fileOffset()
+                        || right.range().endExclusive() <= left.range().fileOffset(), right.name());
+            }
+        }
+        // The compressed art keeps its existing enumeration owner; the tables do not alias it or its successor.
+        var art = CdR11aAsset.ART_FLOAT_BLOCK;
+        assertEquals("Art_FloatBlock", art.nativeLabel());
+        assertEquals(CdR11aAsset.Kind.SOURCE_BLOB, art.kind());
+        assertEquals(CdR11aAsset.Encoding.NEMESIS, art.encodingForReviewedConsumer());
+        assertEquals(230, art.length());
+        for (CdReleaseVariant region : CdReleaseVariant.values()) { assertEquals(0x365D0, art.fileOffset(region)); }
+        assertEquals(0x365D0 + 230, CdR11aAsset.ART_SPRING_WHEEL.fileOffset(CdReleaseVariant.USA));
+        var usaArt = CdR11aProfile.forStage(CdReleaseVariant.USA, CdStageKey.parse("R11A")).range(art);
+        for (var table : List.of(animations, mappings)) {
+            assertTrue(table.range().endExclusive() <= usaArt.fileOffset());
+        }
+    }
+
+    @Test
+    void constructedFloatBlockRangesReadExactBytesButNeverForgeAnAuthenticatedOwner() throws Exception {
+        var profile = CdR11aProfile.forStage(CdReleaseVariant.USA, CdStageKey.parse("R11A"));
+        byte[] fake = new byte[CdR11aProfile.FILE_BYTES];
+        ByteBuffer.wrap(fake).putInt(8, 0x200100).putInt(12, 0x20010C).putInt(16, 0x200112);
+        byte[] scripts = floatBlockAnimations();
+        byte[] maps = floatBlockMappings();
+        System.arraycopy(scripts, 0, fake, 0xA3DC, scripts.length);
+        System.arraycopy(maps, 0, fake, 0xA3FA, maps.length);
+        fake[0xA3DB] = 0x4E;
+        fake[0xA446] = 0x4E;
+        var image = CdMmdImage.parse(fake);
+        // A pure range read of a constructed image: exact extents, detached and read-only. Not an asset owner.
+        var animationBytes = CdR11aObjectAssets.Table.FLOAT_BLOCK_ANIMATIONS.range().read(image);
+        var mappingBytes = CdR11aObjectAssets.Table.FLOAT_BLOCK_MAPPINGS.range().read(image);
+        assertArrayEquals(scripts, animationBytes.copy());
+        assertArrayEquals(maps, mappingBytes.copy());
+        fake[0xA3DC] = 0x7F;
+        assertEquals(0, animationBytes.unsignedByte(0));
+        assertThrows(ReadOnlyBufferException.class, () -> mappingBytes.buffer().put((byte) 1));
+        // Invalid extents: one byte past the original file, or another domain, is not an R11A table range.
+        assertThrows(IllegalArgumentException.class, () -> new CdR11aProfile.FileRange(CdNativeFile.R11A,
+                CdMmdImage.Domain.ORIGINAL_WORD_RAM, CdR11aProfile.FILE_BYTES - 75, 76));
+        assertThrows(IllegalArgumentException.class, () -> new CdR11aProfile.FileRange(CdNativeFile.R11A,
+                CdMmdImage.Domain.RELOCATED_COPY, 0xA3FA, 76));
+        // Correct include bytes at the USA offsets never stand in for the authenticated whole-file USA identity.
+        var asserted = new CdR11aAssets.Identity(CdReleaseVariant.USA, profile.stage(), profile.file(),
+                profile.domain(), profile.expectedMmdSha256(), "constructed fixture is not a disc");
+        var error = assertThrows(IOException.class, () -> CdR11aObjectAssets.load(profile, asserted, image, null));
+        assertTrue(error.getMessage().contains("MMD content"));
+    }
+
+    @Test
+    void constructedFloatBlockFormatKeepsRealPadsRawFlipsAndTheFifteenTileBound() {
+        byte[] maps = floatBlockMappings();
+        byte[] scripts = floatBlockAnimations();
+        var visual = CdObjectVisualAssets.decode(maps, 6, scripts, 3, 15);
+        assertEquals(List.of(12, 14, 30, 46, 58, 70), visual.mappingFrames().stream()
+                .map(CdObjectVisualAssets.MappingFrame::relativeOffset).toList());
+        assertEquals(List.of(0, 3, 3, 2, 2, 1), visual.mappingFrames().stream().map(f -> f.pieces().size()).toList());
+        // Consumed bodies exclude the three real even-alignment zeros at 13, 57 and 69 (Mappings.asm:11,31,37).
+        assertEquals(List.of(1, 16, 16, 11, 11, 6), visual.mappingFrames().stream().map(f -> f.bytes().length()).toList());
+        for (int pad : new int[]{13, 57, 69}) { assertEquals(0, visual.mappings().unsignedByte(pad)); }
+        // Frames 1-4 reuse tile 0; the raw words keep the native H/V flip bits (Mappings.asm:15,22,29,35).
+        int[] raw = {0x0000, 0x0800, 0x1800, 0x1000};
+        for (int frame = 1; frame <= 4; frame++) {
+            int word = raw[frame - 1];
+            assertTrue(visual.mappingFrames().get(frame).pieces().stream().allMatch(p -> p.rawTileWord() == word));
+        }
+        assertEquals(List.of(new CdObjectVisualAssets.Piece(-12, 9, 0x0800, -12),
+                        new CdObjectVisualAssets.Piece(4, 0, 0x0800, -12), new CdObjectVisualAssets.Piece(4, 0, 0x0800, -4)),
+                visual.mappingFrames().get(2).pieces());
+        assertEquals(List.of(new CdObjectVisualAssets.Piece(-12, 0xA, 0x0006, -12)), visual.mappingFrames().get(5).pieces());
+        assertEquals(14, visual.mappingFrames().stream().flatMap(f -> f.pieces().stream())
+                .mapToInt(p -> p.tileOffset() + p.tileCount() - 1).max().orElseThrow());
+        assertEquals(List.of(6, 10, 20), visual.animations().stream()
+                .map(CdObjectVisualAssets.AnimationScript::relativeOffset).toList());
+        assertEquals(List.of(2, 2, 2), visual.animations().stream().map(CdObjectVisualAssets.AnimationScript::delay).toList());
+        assertEquals(List.of(List.of(5), List.of(1, 5, 2, 5, 3, 5, 4, 5), List.of(1, 0, 2, 0, 3, 0, 4, 0)),
+                visual.animations().stream().map(CdObjectVisualAssets.AnimationScript::frameBytes).toList());
+        assertEquals(List.of(CdObjectVisualAssets.Terminal.LOOP_FF, CdObjectVisualAssets.Terminal.ADVANCE_ROUTINE_FC,
+                        CdObjectVisualAssets.Terminal.ADVANCE_ROUTINE_FC),
+                visual.animations().stream().map(CdObjectVisualAssets.AnimationScript::terminal).toList());
+        // The invisible script keeps its real alignment zero (Animations.asm:7-8); the FC scripts end exactly.
+        assertEquals(List.of(4, 10, 10), visual.animations().stream().map(a -> a.bytes().length()).toList());
+        assertEquals(0, visual.animationTable().unsignedByte(9));
+        // Native counts are exact: 15 tiles, six frames and three scripts; neighbours and short includes reject.
+        assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decode(maps, 6, scripts, 3, 14));
+        for (int frames : new int[]{5, 7}) {
+            assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decode(maps, frames, scripts, 3, 15));
+        }
+        for (int count : new int[]{2, 4}) {
+            assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decode(maps, 6, scripts, count, 15));
+        }
+        assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decode(
+                Arrays.copyOf(maps, maps.length - 1), 6, scripts, 3, 15));
+        assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decode(
+                maps, 6, Arrays.copyOf(scripts, scripts.length - 1), 3, 15));
+        for (int pad : new int[]{13, 57, 69}) {
+            byte[] changed = floatBlockMappings();
+            changed[pad] = 1;
+            assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decode(changed, 6, scripts, 3, 15));
+        }
+        byte[] changedScripts = floatBlockAnimations();
+        changedScripts[9] = 1;
+        assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decode(maps, 6, changedScripts, 3, 15));
+        Arrays.fill(maps, (byte) 0);
+        Arrays.fill(scripts, (byte) 0);
+        assertEquals(12, visual.mappings().unsignedWord(0));
+        assertEquals(List.of(5), visual.animations().getFirst().frameBytes());
+        assertThrows(UnsupportedOperationException.class, visual.mappingFrames()::clear);
+        assertThrows(UnsupportedOperationException.class, visual.animations()::clear);
+        assertThrows(ReadOnlyBufferException.class, () -> visual.mappings().buffer().put((byte) 1));
+        assertThrows(ReadOnlyBufferException.class, () -> visual.animationTable().buffer().put((byte) 1));
+    }
+
+    @Test
+    void tileWordAdmitsFloatBlockSelectorFiveOnlyAtSubtypeTwoZero() {
+        byte[] raw = tileIds();
+        // Object Tile IDs (Act 1 Present).asm:13,18,33-34: index word 5 -> $30 (one-word body), word 10 -> $32.
+        raw[11] = 48;
+        raw[21] = 50;
+        raw[48] = 0x43;
+        raw[49] = 0x34;
+        assertEquals(0x23A0, CdR11aObjectAssets.decodeTileWord(raw, 0, 0));
+        assertEquals(0x4334, CdR11aObjectAssets.decodeTileWord(raw, 5, 0));
+        for (int selector = 1; selector < 18; selector++) {
+            if (selector == 5) { continue; }
+            int unreviewed = selector;
+            assertThrows(UnsupportedOperationException.class, () -> CdR11aObjectAssets.decodeTileWord(raw, unreviewed, 0));
+        }
+        assertThrows(UnsupportedOperationException.class, () -> CdR11aObjectAssets.decodeTileWord(raw, 0x7FFF, 0));
+        // Every actual FloatBlock record carries subtype2 0; the next word belongs to selector 10's body.
+        assertThrows(UnsupportedOperationException.class, () -> CdR11aObjectAssets.decodeTileWord(raw, 5, 1));
+        assertThrows(UnsupportedOperationException.class, () -> CdR11aObjectAssets.decodeTileWord(raw, 5, 0xFF));
+        assertThrows(IllegalArgumentException.class, () -> CdR11aObjectAssets.decodeTileWord(raw, 5, 256));
+        assertThrows(IllegalArgumentException.class, () -> CdR11aObjectAssets.decodeTileWord(raw, 5, -1));
+        assertThrows(IllegalArgumentException.class, () -> CdR11aObjectAssets.decodeTileWord(raw, 0x8000, 0));
+        for (int target : new int[]{0, 34, 47, 74, 0x8000, 0xFFFF}) {
+            byte[] malformed = raw.clone();
+            malformed[10] = (byte) (target >>> 8);
+            malformed[11] = (byte) target;
+            assertThrows(IllegalArgumentException.class, () -> CdR11aObjectAssets.decodeTileWord(malformed, 5, 0));
+        }
+        assertThrows(IllegalArgumentException.class, () -> CdR11aObjectAssets.decodeTileWord(Arrays.copyOf(raw, 73), 5, 0));
+        assertThrows(IllegalArgumentException.class, () -> CdR11aObjectAssets.decodeTileWord(Arrays.copyOf(raw, 75), 5, 0));
     }
 
     @Test
@@ -324,6 +491,36 @@ class TestCdR11aObjectAssets {
                 0x02, 0xF8, 0x0D, 0x00, 0x10, 0x08, 0xF8, 0x0D, 0x00, 0x18, 0x28, 0x00,
                 0x02, 0xF8, 0x0D, 0x00, 0x00, 0xBC, 0xF8, 0x09, 0x00, 0x08, 0xDC, 0x00,
                 0x02, 0xF8, 0x0D, 0x00, 0x0E, 0x04, 0xF8, 0x0D, 0x00, 0x16, 0x24, 0x00};
+        byte[] out = new byte[values.length];
+        for (int i = 0; i < values.length; i++) { out[i] = (byte) values[i]; }
+        return out;
+    }
+
+    /**
+     * Floating Block/Data/Mappings.asm:1-41 hand-assembled at the pinned source (1ecc5f3a): six relative words, then
+     * bodies at 12/14/30/46/58/70 with real even-alignment zeros at 13, 57 and 69. Format fixture only.
+     */
+    private static byte[] floatBlockMappings() {
+        int[] values = {
+                0x00, 0x0C, 0x00, 0x0E, 0x00, 0x1E, 0x00, 0x2E, 0x00, 0x3A, 0x00, 0x46,
+                0x00, 0x00,
+                0x03, 0xF4, 0x09, 0x00, 0x00, 0xF4, 0x04, 0x00, 0x00, 0x00, 0xFC, 0x04, 0x00, 0x00, 0x00, 0x04,
+                0x03, 0xF4, 0x09, 0x08, 0x00, 0xF4, 0x04, 0x00, 0x08, 0x00, 0xF4, 0x04, 0x00, 0x08, 0x00, 0xFC,
+                0x02, 0xF4, 0x09, 0x18, 0x00, 0xF4, 0x04, 0x00, 0x18, 0x00, 0xFC, 0x00,
+                0x02, 0xF4, 0x09, 0x10, 0x00, 0xF4, 0x04, 0x00, 0x10, 0x00, 0xFC, 0x00,
+                0x01, 0xF4, 0x0A, 0x00, 0x06, 0xF4};
+        byte[] out = new byte[values.length];
+        for (int i = 0; i < values.length; i++) { out[i] = (byte) values[i]; }
+        return out;
+    }
+
+    /** Floating Block/Data/Animations.asm:1-14 hand-assembled (one real zero after the FF script). Format fixture only. */
+    private static byte[] floatBlockAnimations() {
+        int[] values = {
+                0x00, 0x06, 0x00, 0x0A, 0x00, 0x14,
+                0x02, 0x05, 0xFF, 0x00,
+                0x02, 0x01, 0x05, 0x02, 0x05, 0x03, 0x05, 0x04, 0x05, 0xFC,
+                0x02, 0x01, 0x00, 0x02, 0x00, 0x03, 0x00, 0x04, 0x00, 0xFC};
         byte[] out = new byte[values.length];
         for (int i = 0; i < values.length; i++) { out[i] = (byte) values[i]; }
         return out;

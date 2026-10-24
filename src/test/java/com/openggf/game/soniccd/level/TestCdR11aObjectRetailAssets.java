@@ -33,6 +33,7 @@ import static com.openggf.game.soniccd.level.CdR11aAsset.ART_3D_RAMP_BOOST;
 import static com.openggf.game.soniccd.level.CdR11aAsset.ART_EXPLOSIONS;
 import static com.openggf.game.soniccd.level.CdR11aAsset.ART_POINTS;
 import static com.openggf.game.soniccd.level.CdR11aAsset.ART_FLOWER;
+import static com.openggf.game.soniccd.level.CdR11aAsset.ART_FLOAT_BLOCK;
 import static com.openggf.game.soniccd.level.CdR11aObjectAssets.Table.*;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -48,6 +49,11 @@ class TestCdR11aObjectRetailAssets {
             0x02, 0xF8, 0x0D, 0x00, 0x10, 0x08, 0xF8, 0x0D, 0x00, 0x18, 0x28, 0x00,
             0x02, 0xF8, 0x0D, 0x00, 0x00, 0xBC, 0xF8, 0x09, 0x00, 0x08, 0xDC, 0x00,
             0x02, 0xF8, 0x0D, 0x00, 0x0E, 0x04, 0xF8, 0x0D, 0x00, 0x16, 0x24, 0x00);
+    /** Actual USA include digests; each include was also matched against its pinned source (1ecc5f3a). */
+    private static final String FLOAT_BLOCK_ANIMATIONS_SHA256 =
+            "3c6451c3f6719a3765334aa1c13d2864ae4b92a523fb5a7e335c6dc362f8d6b9";
+    private static final String FLOAT_BLOCK_MAPPINGS_SHA256 =
+            "98fa7f8f57a4f5d8a00cd60ac795f7331e5a9f6009af31fcfaf33b85b8ff6e5e";
 
     @ParameterizedTest(name = "{0} terrain and optional USA opening-object assets")
     @EnumSource(CdReleaseVariant.class)
@@ -76,13 +82,15 @@ class TestCdR11aObjectRetailAssets {
                 verifyFrontierNativeReferences(original, terrainOwner, objects);
                 verifyContactNativeReferences(original, terrainOwner);
                 verifyGameOverNativeReferences(original, objects);
+                verifyFloatBlockNativeReferences(original, terrainOwner);
                 for (int offset : List.of(0x9C96, 0xA0F2, 0xA0FA, 0xB6CA, 0xB6D8, 0xB6E6, 0xB722,
                         0xCF48, 0x70C6, 0x35626, 0x3702A, 0x30000,
                         0xD1AE, 0xD1F0, 0xD22C, 0xD240, 0xD264, 0xE020, 0xDDC8, 0x1FDBC, 0xE046,
                         0x381C0, 0x3AC7A, 0x3AE02,
                         0x6EDC, 0x3F074, 0x3F088, 0xAC64, 0x35ED8, 0x35EF4,
                         0x3513E, 0x315C4, 0x31628, 0x35F4E,
-                        0xEF94, 0xF03E, 0xF075)) {
+                        0xEF94, 0xF03E, 0xF075,
+                        0xA3DC, 0xA3E5, 0xA3FA, 0xA445, 0xCF78, 0x365D0, 0x366B5, 0x366B6)) {
                     byte[] altered = original.readFile(0, original.fileBytes());
                     altered[offset] ^= 1;
                     // A plausible/correct caller record cannot authenticate even an unrelated changed byte.
@@ -97,6 +105,12 @@ class TestCdR11aObjectRetailAssets {
                         () -> CdGameOver.Assets.fromObjectAssets(terrainOwner.openingObjects()));
                 assertFalse(Arrays.equals(GAME_OVER_SOURCE_BYTES, source.mmd(CdNativeFile.R11A)
                         .readFile(GAME_OVER_MAPPINGS.range().fileOffset(), GAME_OVER_MAPPINGS.range().length())));
+                // Likewise FloatBlock: no regional owner, and both USA table ranges hold other bytes here.
+                var regional = source.mmd(CdNativeFile.R11A);
+                assertNotEquals(FLOAT_BLOCK_ANIMATIONS_SHA256, CdR11aProfile.sha256(regional.readFile(
+                        FLOAT_BLOCK_ANIMATIONS.range().fileOffset(), FLOAT_BLOCK_ANIMATIONS.range().length())));
+                assertNotEquals(FLOAT_BLOCK_MAPPINGS_SHA256, CdR11aProfile.sha256(regional.readFile(
+                        FLOAT_BLOCK_MAPPINGS.range().fileOffset(), FLOAT_BLOCK_MAPPINGS.range().length())));
                 var usa = CdR11aProfile.forStage(CdReleaseVariant.USA, CdStageKey.parse("R11A"));
                 var assertedUsa = new CdR11aAssets.Identity(CdReleaseVariant.USA, usa.stage(), usa.file(), usa.domain(),
                         usa.expectedMmdSha256(), terrainOwner.identity().observedWholeDiscSha256());
@@ -110,6 +124,7 @@ class TestCdR11aObjectRetailAssets {
         assertEquals(800, terrainOwner.terrain().patternCount());
         assertEquals(497, terrainOwner.placements().records().size());
         assertThrows(UnsupportedOperationException.class, () -> terrainOwner.decoded(ART_RINGS));
+        assertThrows(UnsupportedOperationException.class, () -> terrainOwner.decoded(ART_FLOAT_BLOCK));
         if (variant != CdReleaseVariant.USA) { return; }
         assertNotNull(objects);
         assertNotNull(untouchedFrontier);
@@ -122,6 +137,8 @@ class TestCdR11aObjectRetailAssets {
         verifyContact(terrainOwner, untouchedFrontier);
         // So does that owner's first, lazy Game Over view.
         verifyGameOver(untouchedFrontier);
+        // And its first FloatBlock views, visual decode, selector-5 tile word and art decode.
+        verifyFloatBlock(terrainOwner, untouchedFrontier);
         verifyUsa(terrainOwner, objects);
     }
 
@@ -155,6 +172,9 @@ class TestCdR11aObjectRetailAssets {
                 FLOWER_ANIMATIONS, "74105bb36227383768d51cd9084560633d8315a9c940e23e80c707532a5353e9",
                 FLOWER_MAPPINGS, "48b7482f83af1300d834e07ec7326e670740d8c5f89f5c8a2253de123e46bb41",
                 GAME_OVER_MAPPINGS, "ab185aa60f83919e611dd47457d7fb9b5b87e99f2b9210d0dc0508c71dcea44b"));
+        hashes.putAll(Map.of(
+                FLOAT_BLOCK_ANIMATIONS, FLOAT_BLOCK_ANIMATIONS_SHA256,
+                FLOAT_BLOCK_MAPPINGS, FLOAT_BLOCK_MAPPINGS_SHA256));
         for (var table : CdR11aObjectAssets.Table.values()) {
             var view = objects.view(table);
             assertEquals(table, view.table());
@@ -223,11 +243,12 @@ class TestCdR11aObjectRetailAssets {
         assertEquals(0, ringView.unsignedByte(0));
         verifyFrontier(terrainOwner, objects);
         verifyContact(terrainOwner, objects);
+        verifyFloatBlock(terrainOwner, objects);
         assertSame(bank, objects.initialArtBank());
         assertEquals(List.of(ART_RINGS, ART_MOSQUI), bank.bindings().stream()
                 .map(CdR11aObjectAssets.ArtBinding::source).toList());
         for (var added : List.of(ART_ANIMALS, ART_3D_PLANT, ART_3D_RAMP_BOOST,
-                ART_EXPLOSIONS, ART_POINTS, ART_FLOWER)) {
+                ART_EXPLOSIONS, ART_POINTS, ART_FLOWER, ART_FLOAT_BLOCK)) {
             assertThrows(UnsupportedOperationException.class, () -> bank.binding(added));
             assertThrows(UnsupportedOperationException.class, () -> terrainOwner.decoded(added));
         }
@@ -484,6 +505,205 @@ class TestCdR11aObjectRetailAssets {
         }
         assertEquals(0x80, Byte.toUnsignedInt(image.readFile(0x31628, 1)[0]),
                 "points lookahead is the first real FlowerCapsule byte, not invented EOF padding");
+    }
+
+    /** Lazy USA FloatBlock views, visual, selector-5 tile word and PLC_Std row-2 art, bound only through the owner. */
+    private static void verifyFloatBlock(CdR11aAssets owner, CdR11aObjectAssets objects) throws Exception {
+        var animations = objects.view(FLOAT_BLOCK_ANIMATIONS);
+        var mappings = objects.view(FLOAT_BLOCK_MAPPINGS);
+        assertSame(animations, objects.view(FLOAT_BLOCK_ANIMATIONS));
+        assertSame(mappings, objects.view(FLOAT_BLOCK_MAPPINGS));
+        assertEquals(FLOAT_BLOCK_ANIMATIONS.range(), animations.range());
+        assertEquals(FLOAT_BLOCK_MAPPINGS.range(), mappings.range());
+        assertEquals(FLOAT_BLOCK_ANIMATIONS_SHA256, CdR11aProfile.sha256(animations.bytes().copy()));
+        assertEquals(FLOAT_BLOCK_MAPPINGS_SHA256, CdR11aProfile.sha256(mappings.bytes().copy()));
+        var visual = objects.floatBlock();
+        assertSame(visual, objects.floatBlock());
+        assertArrayEquals(mappings.bytes().copy(), visual.mappings().copy());
+        assertArrayEquals(animations.bytes().copy(), visual.animationTable().copy());
+        assertEquals(List.of(12, 14, 30, 46, 58, 70), visual.mappingFrames().stream()
+                .map(CdObjectVisualAssets.MappingFrame::relativeOffset).toList());
+        assertEquals(List.of(0, 3, 3, 2, 2, 1), visual.mappingFrames().stream().map(f -> f.pieces().size()).toList());
+        // Three real even-alignment zeros stay in the include but outside every consumed body.
+        assertEquals(List.of(1, 16, 16, 11, 11, 6), visual.mappingFrames().stream().map(f -> f.bytes().length()).toList());
+        for (int pad : new int[]{13, 57, 69}) { assertEquals(0, mappings.bytes().unsignedByte(pad)); }
+        // Frames 1-4 reuse tile 0 with raw H/V flip words; frame 5 is the 3x3 block from tile 6.
+        assertEquals(List.of(0x0000, 0x0800, 0x1800, 0x1000), visual.mappingFrames().subList(1, 5).stream()
+                .map(f -> f.pieces().getFirst().rawTileWord()).toList());
+        assertTrue(visual.mappingFrames().subList(1, 5).stream().allMatch(f -> f.pieces().stream()
+                .allMatch(p -> p.rawTileWord() == f.pieces().getFirst().rawTileWord())));
+        assertEquals(List.of(new CdObjectVisualAssets.Piece(-12, 0xA, 0x0006, -12)), visual.mappingFrames().get(5).pieces());
+        assertEquals(14, lastUsedTile(visual));
+        assertEquals(List.of(6, 10, 20), visual.animations().stream()
+                .map(CdObjectVisualAssets.AnimationScript::relativeOffset).toList());
+        assertEquals(List.of(2, 2, 2), visual.animations().stream().map(CdObjectVisualAssets.AnimationScript::delay).toList());
+        assertEquals(List.of(List.of(5), List.of(1, 5, 2, 5, 3, 5, 4, 5), List.of(1, 0, 2, 0, 3, 0, 4, 0)),
+                visual.animations().stream().map(CdObjectVisualAssets.AnimationScript::frameBytes).toList());
+        assertEquals(List.of(CdObjectVisualAssets.Terminal.LOOP_FF, CdObjectVisualAssets.Terminal.ADVANCE_ROUTINE_FC,
+                        CdObjectVisualAssets.Terminal.ADVANCE_ROUTINE_FC),
+                visual.animations().stream().map(CdObjectVisualAssets.AnimationScript::terminal).toList());
+        assertEquals(List.of(4, 10, 10), visual.animations().stream().map(a -> a.bytes().length()).toList());
+        assertEquals(0, animations.bytes().unsignedByte(9));
+        assertThrows(ReadOnlyBufferException.class, () -> visual.mappings().buffer().put((byte) 0));
+        assertThrows(ReadOnlyBufferException.class, () -> animations.bytes().buffer().put((byte) 0));
+        assertThrows(UnsupportedOperationException.class, visual.mappingFrames()::clear);
+        assertThrows(UnsupportedOperationException.class, visual.animations()::clear);
+        // SetObjectTileID selector 5 at subtype2 0, the value in every actual R11A FloatBlock record.
+        assertEquals(0x4334, objects.tileWord(5, 0));
+        assertEquals(0x23A0, objects.tileWord(0, 0));
+        assertThrows(UnsupportedOperationException.class, () -> objects.tileWord(5, 1));
+        for (int selector : new int[]{1, 4, 6, 10, 17}) {
+            assertThrows(UnsupportedOperationException.class, () -> objects.tileWord(selector, 0));
+        }
+
+        var bank = objects.floatBlockArtBank();
+        assertSame(bank, objects.floatBlockArtBank());
+        assertEquals(List.of(ART_FLOAT_BLOCK), bank.bindings().stream().map(CdR11aObjectAssets.ArtBinding::source).toList());
+        var binding = bank.binding(ART_FLOAT_BLOCK);
+        assertEquals(1, binding.plcId());
+        assertEquals(owner.loadPlan().plcs().get(1).entries().get(2), binding.plc());
+        assertEquals(ART_FLOAT_BLOCK, binding.plc().source());
+        assertEquals(0x6680, binding.plc().vramAddress());
+        assertEquals(0x4334, binding.baseWord());
+        assertEquals(objects.tileWord(5, 0), binding.baseWord());
+        assertEquals(0x334, binding.firstTileId());
+        assertEquals(binding.plc().vramAddress() / 32, binding.baseWord() & 0x7FF);
+        var blob = new CdR11aProfile.FileRange(CdNativeFile.R11A, CdMmdImage.Domain.ORIGINAL_WORD_RAM, 0x365D0, 230);
+        assertEquals(blob, owner.profile().range(ART_FLOAT_BLOCK));
+        assertEquals(blob, binding.decode().sourceBlobRange());
+        assertEquals(binding.plc().sourceRange(), binding.decode().sourceBlobRange());
+        // The finite 8-bit reader also consumes the real first Art_SpringWheel byte; the blob range stays 230 bytes.
+        assertEquals(new CdR11aProfile.FileRange(CdNativeFile.R11A, CdMmdImage.Domain.ORIGINAL_WORD_RAM, 0x365D0, 231),
+                binding.decode().readerInputRange());
+        assertEquals(231, binding.decode().consumedInputBytes());
+        assertEquals(ART_FLOAT_BLOCK, binding.decode().asset());
+        assertEquals(15, binding.tileCount());
+        assertEquals(15 * 32, binding.bytes().length());
+        assertEquals("df65b0523d19f52de3f61737c9d130bd493c1591077767651012ac94047e8362",
+                CdR11aProfile.sha256(binding.bytes().copy()));
+        assertTrue(lastUsedTile(visual) < binding.tileCount(), "every mapped tile is inside the decoded source");
+        int first = binding.firstTileId(), last = first + binding.tileCount() - 1;
+        assertEquals(0x342, last);
+        for (int tile = first; tile <= last; tile++) {
+            assertArrayEquals(binding.bytes().slice((tile - first) * 32, 32).copy(), bank.tile(tile).copy());
+        }
+        assertThrows(UnsupportedOperationException.class, () -> bank.tile(first - 1));
+        assertThrows(UnsupportedOperationException.class, () -> bank.tile(last + 1));
+        var initial = objects.initialArtBank();
+        var frontier = objects.frontierArtBank();
+        var contact = objects.contactArtBank();
+        for (var old : List.of(initial.bindings(), frontier.bindings(), contact.bindings()).stream()
+                .flatMap(List::stream).toList()) {
+            assertTrue(last < old.firstTileId() || first >= old.firstTileId() + old.tileCount());
+            assertThrows(UnsupportedOperationException.class, () -> bank.binding(old.source()));
+            assertThrows(UnsupportedOperationException.class, () -> bank.tile(old.firstTileId()));
+        }
+        assertThrows(UnsupportedOperationException.class, () -> initial.binding(ART_FLOAT_BLOCK));
+        assertThrows(UnsupportedOperationException.class, () -> frontier.binding(ART_FLOAT_BLOCK));
+        assertThrows(UnsupportedOperationException.class, () -> contact.binding(ART_FLOAT_BLOCK));
+        assertThrows(UnsupportedOperationException.class, () -> initial.tile(first));
+        assertThrows(UnsupportedOperationException.class, () -> frontier.tile(first));
+        assertThrows(UnsupportedOperationException.class, () -> contact.tile(last));
+        assertThrows(UnsupportedOperationException.class, () -> owner.decoded(ART_FLOAT_BLOCK));
+        assertThrows(UnsupportedOperationException.class, () -> bank.bindings().clear());
+        assertThrows(IllegalArgumentException.class, () -> bank.tile(-1));
+        assertThrows(IllegalArgumentException.class, () -> bank.tile(0x800));
+        assertThrows(ReadOnlyBufferException.class, () -> bank.tile(first).buffer().put((byte) 0));
+        assertThrows(ReadOnlyBufferException.class, () -> binding.bytes().buffer().put((byte) 0));
+        byte[] altered = bank.tile(first).copy();
+        altered[0] ^= 1;
+        assertNotEquals(altered[0], bank.tile(first).copy()[0]);
+        // The opt-in bank extends none of the existing banks.
+        assertSame(initial, objects.initialArtBank());
+        assertSame(frontier, objects.frontierArtBank());
+        assertSame(contact, objects.contactArtBank());
+        assertEquals(List.of(ART_RINGS, ART_MOSQUI), initial.bindings().stream()
+                .map(CdR11aObjectAssets.ArtBinding::source).toList());
+        assertEquals(List.of(ART_ANIMALS, ART_3D_PLANT, ART_3D_RAMP_BOOST), frontier.bindings().stream()
+                .map(CdR11aObjectAssets.ArtBinding::source).toList());
+        assertEquals(List.of(ART_EXPLOSIONS, ART_POINTS, ART_FLOWER), contact.bindings().stream()
+                .map(CdR11aObjectAssets.ArtBinding::source).toList());
+    }
+
+    /**
+     * ObjFloatBlock (Floating Block/Main.asm:7-176) as assembled into the USA R11A program: dispatch, Init's mapping
+     * and SetObjectTileID operands, the three script operands, PLC_Std row 2 and the finite art reader extent.
+     */
+    private static void verifyFloatBlockNativeReferences(CdMmdImage image, CdR11aAssets owner) throws Exception {
+        // ObjectIndex is one-based (Object Index (Act 1 Present).asm: "12 - Floating block").
+        assertEquals(0x20A284, ByteBuffer.wrap(image.readFile(0x3E34 + (0x12 - 1) * 4, 4)).getInt());
+        // :8-11: MOVE.W .Index(pc,d0.w),d0 and JSR .Index(pc,d0.w) both resolve to the seven-word .Index at $A2B2.
+        assertArrayEquals(hexBytes("303B0026" + "4EBB0022"), image.readFile(0xA28A, 8));
+        assertEquals(0xA2B2, 0xA28C + 0x26);
+        assertEquals(0xA2B2, 0xA290 + 0x22);
+        var index = ByteBuffer.wrap(image.readFile(0xA2B2, 14));
+        int[] routines = new int[7];
+        for (int i = 0; i < routines.length; i++) { routines[i] = 0xA2B2 + index.getShort(); }
+        assertArrayEquals(new int[]{0xA2C0, 0xA2F2, 0xA336, 0xA358, 0xA37C, 0xA3AA, 0xA3BE}, routines);
+        // Init (:39-48): ADDQ.B #2,oRoutine / ORI.B #4,oSprFlags / MOVE.L #MapSpr_FloatBlock,oMap / MOVEQ #5,d0 /
+        // JSR SetObjectTileID / priority 1, width $C, Y radius $C and map frame 5, falling into Main at $A2F2.
+        assertArrayEquals(hexBytes("54280024" + "002800040001"), image.readFile(0xA2C0, 10));
+        var map = ByteBuffer.wrap(image.readFile(0xA2CA, 8));
+        assertEquals((short) 0x217C, map.getShort());
+        assertEquals(FLOAT_BLOCK_MAPPINGS.range().nativeAddress(), map.getInt());
+        assertEquals(4, map.getShort()); // oMap
+        assertArrayEquals(hexBytes("7005" + "4EB90020CF26"), image.readFile(0xA2D2, 8));
+        assertArrayEquals(hexBytes("117C00010018" + "117C000C0019" + "117C000C0016" + "117C0005001A"),
+                image.readFile(0xA2DA, 24));
+        // Object Tile ID Set.asm:7-17 at $20CF26; both PC-relative operands resolve to OBJECT_TILE_IDS.
+        assertArrayEquals(hexBytes("43F90020CF48" + "D040" + "383B0018" + "45FB4014" + "7200" + "12280029" + "D241"
+                + "3A321000" + "31450002" + "4E75"), image.readFile(0xCF26, 34));
+        assertEquals(OBJECT_TILE_IDS.range().fileOffset(), 0xCF30 + 0x18);
+        assertEquals(OBJECT_TILE_IDS.range().fileOffset(), 0xCF34 + 0x14);
+        var tileIds = ByteBuffer.wrap(image.readFile(OBJECT_TILE_IDS.range().fileOffset(), OBJECT_TILE_IDS.range().length()));
+        assertEquals(0x30, tileIds.getShort(5 * 2));
+        assertEquals(0x4334, Short.toUnsignedInt(tileIds.getShort(0x30)));
+        int next = OBJECT_TILE_IDS.range().length();
+        for (int i = 0; i < 18; i++) {
+            int offset = tileIds.getShort(i * 2);
+            if (offset > 0x30 && offset < next) { next = offset; }
+        }
+        assertEquals(0x32, next, "selector 5 selects a one-word body; subtype2 1 would read selector 10's word");
+        // Appear/Visible/Vanish (:110,129,140): LEA Ani_FloatBlock,a1 inside each routine, then BSR.W AnimateObject.
+        int[][] animate = {{0xA36C, 0xA358, 0xA37C}, {0xA39A, 0xA37C, 0xA3AA}, {0xA3AE, 0xA3AA, 0xA3BE}};
+        for (int[] reference : animate) {
+            assertTrue(reference[0] >= reference[1] && reference[0] + 6 <= reference[2]);
+            var instruction = ByteBuffer.wrap(image.readFile(reference[0], 8));
+            assertEquals((short) 0x43F9, instruction.getShort());
+            assertEquals(FLOAT_BLOCK_ANIMATIONS.range().nativeAddress(), instruction.getInt());
+            assertEquals((short) 0x6100, instruction.getShort());
+        }
+        // ObjFloatBlock_TopSolid (:156-165): LEA objPlayerSlot.w,a1 / BSR.W .Check, then .Check's MOVE.W oX,d3 /
+        // MOVE.W oY,d4 / JMP TopSolidObject ends immediately before the two includes.
+        assertArrayEquals(hexBytes("43F8D000" + "61000002" + "36280008" + "3828000C" + "4EF9"), image.readFile(0xA3C6, 18));
+        assertEquals(0xA3CE, 0xA3CC + 2);
+        assertEquals(FLOAT_BLOCK_ANIMATIONS.range().fileOffset(), 0xA3D6 + 6);
+        // PLC_Std row 2 (Data (Act 1 Present).asm:60-61).
+        int body = 0xFBC6 + ByteBuffer.wrap(image.readFile(0xFBC8, 2)).getShort();
+        assertEquals(0xFBFA, body);
+        assertEquals(13, ByteBuffer.wrap(image.readFile(body, 2)).getShort());
+        var range = owner.profile().range(ART_FLOAT_BLOCK);
+        var row = ByteBuffer.wrap(image.readFile(body + 2 + 2 * 6, 6));
+        assertEquals(range.nativeAddress(), row.getInt());
+        assertEquals(0x6680, Short.toUnsignedInt(row.getShort()));
+        assertEquals(0x800F, Short.toUnsignedInt(ByteBuffer.wrap(image.readFile(range.fileOffset(), 2)).getShort()),
+                "15 tiles, XOR mode");
+        assertEquals("8ccc2959a0cbebd2fc24ed2f4cc08fd1baaafbf971f13df254784cc65b7c5e76",
+                CdR11aProfile.sha256(range.read(image).copy()));
+        // The complete 230-byte source is one byte short for the Java reader's final 8-bit peek.
+        assertThrows(IOException.class, () -> CdNemesisAsset.decode(image.readFile(range.fileOffset(), 230), 480, 480));
+        var exact = CdNemesisAsset.decode(image.readFile(range.fileOffset(), 231), 480, 480);
+        var extended = CdNemesisAsset.decode(image.readFile(range.fileOffset(), 232), 480, 480);
+        assertEquals(231, exact.consumedInputBytes());
+        assertEquals(231, extended.consumedInputBytes());
+        assertArrayEquals(exact.bytes().copy(), extended.bytes().copy());
+        assertEquals("df65b0523d19f52de3f61737c9d130bd493c1591077767651012ac94047e8362",
+                CdR11aProfile.sha256(exact.bytes().copy()));
+        var successor = owner.profile().range(CdR11aAsset.ART_SPRING_WHEEL);
+        assertEquals(range.endExclusive(), successor.fileOffset());
+        assertEquals(0x0008, Short.toUnsignedInt(ByteBuffer.wrap(image.readFile(successor.fileOffset(), 2)).getShort()));
+        assertEquals(0x00, Byte.toUnsignedInt(image.readFile(0x366B6, 1)[0]),
+                "FloatBlock lookahead is the real first Art_SpringWheel byte, never invented EOF padding");
     }
 
     private static int lastUsedTile(CdObjectVisualAssets visual) {
