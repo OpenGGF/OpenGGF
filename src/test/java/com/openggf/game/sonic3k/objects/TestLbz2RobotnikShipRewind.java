@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.camera.Camera;
+import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.rewind.identity.ObjectRefId;
@@ -339,6 +340,7 @@ class TestLbz2RobotnikShipRewind {
 
     private static final class Harness {
         final Camera camera = new Camera();
+        final List<PlayableEntity> participants = new ArrayList<>();
         final RecordingManager manager;
         final RewindRegistry registry = new RewindRegistry();
         final ObjectServices services;
@@ -347,6 +349,7 @@ class TestLbz2RobotnikShipRewind {
             services = new StubObjectServices() {
                 @Override public ObjectManager objectManager() { return manager; }
                 @Override public Camera camera() { return camera; }
+                @Override public List<PlayableEntity> sidekicks() { return List.copyOf(participants); }
                 @Override public GraphicsManager graphicsManager() { return GraphicsManager.getInstance(); }
             };
             manager = new RecordingManager(camera, services);
@@ -370,6 +373,9 @@ class TestLbz2RobotnikShipRewind {
 
         void startRide(Lbz2RobotnikShipInstance ship) {
             var player = new TestablePlayableSprite("sonic", (short) 0x443F, (short) 0x640);
+            participants.add(player);
+            assertNotNull(manager.captureIdentityContext().requireIdentityTable().encodePlayer(player),
+                    "every acquired participant must have a stable player identity");
             ship.onTouchResponse(player,
                     new TouchResponseResult(0x0A, 0x10, 8, TouchCategory.SPECIAL), 0);
             ship.update(0, player);

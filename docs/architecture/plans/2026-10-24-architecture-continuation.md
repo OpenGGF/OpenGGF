@@ -386,6 +386,41 @@ only ICZ's key from the current 14, leaving 13. Its source/tests match the revie
 commit. GPU output, player contact and full-route certification remain outside
 the focused evidence. Composed checks are still pending.
 
+### Composed verification and participant correction
+
+The composed selection at `591c24f18` ran 187 cases across 17 reports, with two
+failures and four errors, zero skips. All six red cases came from the eight-case
+LBZ ship fixture: upstream's newly captured `visualControlOwners` correctly
+rejected synthetic players absent from its identity context. The other 179
+cases passed, including all 19 S2 ownership/codec cases, 34 ICZ cases, 42 upstream
+holder controls, 71 API/S3K cases and 13 ride-cameo cases. Admission took 159
+seconds and Maven 84 seconds.
+
+The coordinator traced `ObjectManager.registerPlayersInto`: it registers the
+camera's main player and the injected sidekick roster. This isolated fixture
+has no focused main player; each synthetic participant now enters that service
+roster, with an explicit encodable-identity assertion before the ship acquires
+it. This preserves its camera coordinates, allocator, lifecycle recording and
+distinct participants for overlapping ships. No production code or identity
+codec changed. The affected eight-case class then passed with zero failures,
+errors or skips, after 17 seconds of admission and 25.791 seconds of execution.
+The other 179 cases were unchanged and were not repeated. There was no single
+all-green 187-case invocation. Exact identities were inspected and all 34
+remaining XML/text reports removed.
+
+The combined selector was:
+
+```text
+TestS2RexonSolOwnershipRewind,TestS2BadnikChildGraphRewind,TestRewindFixS2Batch3Codecs,TestRewindFixS2Batch5Codecs,TestLbz2RobotnikShipRewind,TestLbz2RideCameoInstances,TestStageplayAcquiredControlRelease,TestIczMinibossGraphRewind,TestIczMinibossFieldDisposition,TestIczMinibossRenderBuckets,TestS3kIczMinibossObject,TestModApiSignatureSurface,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils
+```
+
+Both commands used the same display-free Java 25/Lua 5.4 environment, absolute
+main-checkout wrapper, `-Dmse=off`, surfaceless EGL flag and three absolute ROM
+properties documented for the prior loop above, ending `test -B`. The narrow
+repair selected only `TestLbz2RobotnikShipRewind`. Complete fresh guards remain
+pending. The later root-orchestration worker is independently committed and
+reviewed, and stays outside this tested candidate.
+
 ### Root orchestration queued behind this composition
 
 The remaining six concrete root references encode two responsibilities. A
