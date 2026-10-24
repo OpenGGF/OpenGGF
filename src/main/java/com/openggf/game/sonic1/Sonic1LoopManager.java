@@ -2,7 +2,7 @@ package com.openggf.game.sonic1;
 
 import com.openggf.audio.GameSound;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
-import com.openggf.level.Level;
+import com.openggf.level.LevelManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.logging.Logger;
@@ -92,12 +92,22 @@ public class Sonic1LoopManager {
      * <p>ROM equivalent: Sonic_Loops subroutine.
      */
     public void update(AbstractPlayableSprite player) {
-        if (!zoneHasLoops || zoneLoopTiles == null || player == null) {
+        if (player == null) {
             return;
         }
-
-        Level level = GameServices.level().getCurrentLevel();
-        if (!(level instanceof Sonic1Level s1Level)) {
+        // Sonic_Loops reads v_zone and v_lvllayout of the level the player is in on every
+        // call (_incObj/01 Sonic.asm:1536-1611). Resolve both from the player's own level, so
+        // a collision-only world (the Stageplay route probe) switches loop planes exactly as
+        // the live level does instead of reading another session's level or skipping the
+        // check because its level events were never initialized.
+        LevelManager levelManager = player.currentLevelManagerIfAvailable();
+        if (levelManager == null || !(levelManager.getCurrentLevel() instanceof Sonic1Level s1Level)) {
+            return;
+        }
+        if (levelManager.getCurrentZone() != currentZone) {
+            initLevel(levelManager.getCurrentZone(), levelManager.getCurrentAct());
+        }
+        if (!zoneHasLoops || zoneLoopTiles == null) {
             return;
         }
 

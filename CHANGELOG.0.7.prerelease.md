@@ -37,8 +37,8 @@ Unreleased. The earlier development themes remain in
   offline filmmaking; both editors import/export the same screenplay. A bounded
   route helper preserves per-route starting action, a slow stroll or live native Run speed,
   gentle/hard/overshoot endings and final facing (Spindash requires Run),
-  and emits native movement/jump intents over actual collision terrain
-  with observed native charge/release and cold LIVE verification, penalised back-up
+  and emits native movement/jump intents over actual collision terrain, including
+  Sonic 1 loop plane switching, with observed native charge/release and cold LIVE verification, penalised back-up
   run-ups only after direct steering fails, and location-specific speed advice
   supported by a matched Run probe, plus visual walking-object routes over slopes and
   steps up to eight pixels. Both editors show the simulated route before Apply,
