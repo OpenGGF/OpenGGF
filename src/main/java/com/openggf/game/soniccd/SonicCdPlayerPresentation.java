@@ -25,6 +25,7 @@ import com.openggf.game.soniccd.player.CdPlayerMotionState;
 import com.openggf.game.soniccd.player.CdPlayerFrameRuntime;
 import com.openggf.game.soniccd.scroll.CdR11aForegroundScroll;
 import com.openggf.game.soniccd.scroll.CdR11aBackgroundScroll;
+import com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane;
 import com.openggf.graphics.PatternAtlas;
 import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.level.LevelManager;
@@ -62,6 +63,10 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
     private CdR11aForegroundScroll.State scrollState;
     private CdR11aBackgroundScroll background;
     private CdR11aBackgroundScroll.State backgroundState; // The visit's ONE retained native BG image.
+    private CdR11aBackgroundPlane backgroundPlane; // One immutable source binding, not another BG arithmetic owner.
+    private CdR11aBackgroundPlane.State planeState; // Authoritative 4096 native bytes, advanced only by source draw service.
+    private DrawCopies drawCopies;
+    private CdR11aBackgroundPlane.State publishedPlane; // Selected immutable display value; no renderer upload in this unit.
     private boolean loadScrollPending;
     private Object scrollCaptureOwner = new Object();
     // CPU scroll prepared by the completed loop; V-int selects the previous one
@@ -70,17 +75,29 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
     private LevelSpritePresentation.ScrollFrame preparedScroll;
     private LevelSpritePresentation.ScrollFrame publishedScroll;
     record ScrollPublication(Object owner, LevelSpritePresentation.ScrollFrame prepared,
-                             LevelSpritePresentation.ScrollFrame published) { }
+                             LevelSpritePresentation.ScrollFrame published, CdR11aBackgroundPlane.State plane) {
+        ScrollPublication { Objects.requireNonNull(owner); Objects.requireNonNull(plane); }
+    }
+
+    // VInt_Level's MOVEM image: all 32 camera bytes and eight flag bytes, never an arithmetic accumulator.
+    record DrawCopies(int fgX16_16, int fgY16_16, CdR11aBackgroundPlane.CopiedCameras bg,
+                      int fgFlags, CdR11aBackgroundPlane.FlagWords bgFlags) {
+        DrawCopies {
+            Objects.requireNonNull(bg); Objects.requireNonNull(bgFlags);
+            if ((fgFlags & ~0xFFFF) != 0) throw new IllegalArgumentException("Expected an unsigned FG flag word");
+        }
+    }
     private PlcLifecyclePhase heldPhase;
 
     SonicCdPlayerPresentation(SonicCdGameModule module) { this.module = Objects.requireNonNull(module); }
 
     void bind(CdR11aAssets assets, SonicCdGameModule.BackgroundBuffers buffers) {
         if (frame != null && !frame.closed()) throw new IllegalStateException("Retire the previous CD frame owner first");
-        this.assets = Objects.requireNonNull(assets);
+        Objects.requireNonNull(assets);
         Objects.requireNonNull(buffers, "explicit background buffer ingress");
-        scrollState = CdR11aForegroundScroll.coldFromLoadPlan(assets.loadPlan(), 320, 224);
-        background = CdR11aBackgroundScroll.bind(assets);
+        var nextForeground = CdR11aForegroundScroll.coldFromLoadPlan(assets.loadPlan(), 320, 224);
+        var nextBackgroundOwner = CdR11aBackgroundScroll.bind(assets);
+        var nextPlaneOwner = CdR11aBackgroundPlane.bind(assets);
         // ClearCamera (Main:210-216) clears all six BG longs, crossings/padding and flags.
         // LevelSizeLoad:31 writes $1010 ONLY to the adjacent FG pair, not these BG bytes.
         // ClearFlowers (Main:178-184) covers FF1600..FF1FFF; scrlSectSpeeds is FF1E00/512
@@ -92,8 +109,25 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
                 buffers.deformationRam(), buffers.hscrollRam(), 0);
         // DefaultStart MOVEQ #0 + SetupCamera's WORD operations leave upper d0/d1 zero
         // (PP Scroll:76-109). Supply integer words, NEVER cameraY16_16's register bits.
-        backgroundState = CdR11aBackgroundScroll.init(cleared, new CdR11aBackgroundScroll.InitRegisters(
-                scrollState.cameraYWord(), scrollState.cameraX(), assets.loadPlan().initialCentre().centreX()));
+        var nextBackground = CdR11aBackgroundScroll.init(cleared, new CdR11aBackgroundScroll.InitRegisters(
+                nextForeground.cameraYWord(), nextForeground.cameraX(), assets.loadPlan().initialCentre().centreX()));
+        // Main:225 -> ClearScreen (Functions (General).asm:196-207) clears Plane B. Initial
+        // drawing at the actual $70B camera leaves 560 bytes untouched, so it cannot replace this seed.
+        var clearedPlane = new CdR11aBackgroundPlane.State(CdAssetBytes.copyOf(new byte[CdR11aBackgroundPlane.NAME_TABLE_BYTES]));
+        // Main.ClearFlowers:178-184 clears the distinct camera/flag copies. Never carry them across visits.
+        var zeroCamera = new CdR11aBackgroundPlane.Camera(0, 0);
+        var clearedCopies = new DrawCopies(0, 0,
+                new CdR11aBackgroundPlane.CopiedCameras(zeroCamera, zeroCamera, zeroCamera),
+                0, new CdR11aBackgroundPlane.FlagWords(0, 0, 0));
+        // All pure bindings/shapes/initial camera values are complete before replacing any visit field.
+        this.assets = assets;
+        scrollState = nextForeground;
+        background = nextBackgroundOwner;
+        backgroundState = nextBackground;
+        backgroundPlane = nextPlaneOwner;
+        planeState = clearedPlane;
+        drawCopies = clearedCopies;
+        publishedPlane = null; // No completed initial draw yet; loadScrollPending prevents admission.
         loadScrollPending = true;
         scroll.resetProjection();
         scrollCaptureOwner = new Object();
@@ -112,6 +146,9 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
     /**
      * Main:245-246 load-time call, once before ObjSonic_Init; not a gameplay loop or V-int.
      * Earlier renderer initialization may project Init RAM, but never consumes this call.
+     * Main:247's live FG forced flag and :249's initial BG draw follow the completed arithmetic.
+     * Native selector-C PLC waits and fade loops remain omitted by the existing DEV load; do not
+     * manufacture controller samples, clocks or a V-int here. This is post-InitLevelDraw only.
      * No actor, object, input, animation, art or level-frame service is executed here.
      */
     void completeLoadScroll(CdPlayerFrameRuntime sourceFrame) {
@@ -126,9 +163,19 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         }
         var next = CdR11aForegroundScroll.stepForBackground(scrollState, foregroundInput(sourceFrame, 0));
         var nextBackground = background.step(backgroundState, backgroundInput(next.state(), m));
+        // BSET #2,scrollFlags (Main:247) addresses the HIGH byte. This is live FG only;
+        // Plane B initialization consumes neither live flags nor the still-cleared draw copies.
+        var f = next.state();
+        var nextForeground = new CdR11aForegroundScroll.State(f.cameraX(), f.cameraY16_16(),
+                f.horizontalCrossed(), f.verticalCrossed(), f.scrollXDiff(), f.scrollYDiff(), f.scrollFlags() | 0x0400,
+                f.destBottomBound(), f.destLeftBound(), f.bottomBoundShift(), f.scrollLock());
+        var initialized = backgroundPlane.initialize(planeState, liveCameras(nextBackground.state()), liveFlags(nextBackground.state()));
+        // Stage the whole pure tuple before the first source/retained write. Failure closes load admission.
         sourceFrame.applyScrollFeedback(next.bounds(), next.cameraYCentre());
-        scrollState = next.state();
+        scrollState = nextForeground;
         backgroundState = nextBackground.state();
+        planeState = initialized.state();
+        publishedPlane = initialized.state();
         loadScrollPending = false;
     }
 
@@ -150,6 +197,60 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         return new CdR11aBackgroundScroll.Input(completed.cameraX(), completed.cameraYWord(),
                 (short) completed.scrollXDiff(), player.xVelocity(), player.centreX16_16() >>> 16,
                 player.playerControl(), completed.scrollLock() >>> 8);
+    }
+
+    private static CdR11aBackgroundPlane.LiveCameras liveCameras(CdR11aBackgroundScroll.State b) {
+        return new CdR11aBackgroundPlane.LiveCameras(new CdR11aBackgroundPlane.Camera(b.cameraBgX(), b.cameraBgY()),
+                new CdR11aBackgroundPlane.Camera(b.cameraBg2X(), b.cameraBg2Y()),
+                new CdR11aBackgroundPlane.Camera(b.cameraBg3X(), b.cameraBg3Y()));
+    }
+
+    private static CdR11aBackgroundPlane.FlagWords liveFlags(CdR11aBackgroundScroll.State b) {
+        return new CdR11aBackgroundPlane.FlagWords(b.scrollFlagsBg(), b.scrollFlagsBg2(), b.scrollFlagsBg3());
+    }
+
+    /** Pure admission before the Frame consumes input/art; lag admits no copy or draw service. */
+    void validatePlaneVBlank(PlcLifecyclePhase phase) {
+        Objects.requireNonNull(phase, "source V-int phase");
+        requireBound();
+        if (phase != PlcLifecyclePhase.ORDINARY_LEVEL && phase != PlcLifecyclePhase.NORMAL_PAUSE
+                && phase != PlcLifecyclePhase.LAG) {
+            throw new UnsupportedOperationException("Unsupported CD plane service phase: " + phase);
+        }
+        if (openingObjects != null) {
+            validateScrollPublication(new ScrollPublication(scrollCaptureOwner, preparedScroll, publishedScroll, publishedPlane));
+            if (phase != PlcLifecyclePhase.LAG && preparedScroll == null) {
+                throw new IllegalStateException("Selector8 requires the first-input scroll admission");
+            }
+        }
+    }
+
+    /**
+     * Exact selector8 source cut, after Sonic/powerup art and before VInt_Finish. Main:840-844
+     * replaces every camera/flag copy bit-for-bit on EVERY call, including pause/death/lock.
+     * Read retained fields directly: Frame.captureShared is forbidden inside its service operation.
+     */
+    void servicePlaneAtVInt() {
+        requireBound();
+        var live = liveCameras(backgroundState);
+        var copied = new DrawCopies(scrollState.cameraX() << 16, scrollState.cameraY16_16(),
+                new CdR11aBackgroundPlane.CopiedCameras(live.bg1(), live.bg2(), live.bg3()),
+                scrollState.scrollFlags(), liveFlags(backgroundState));
+        var result = backgroundPlane.incremental(planeState, live, copied.bg(), copied.bgFlags());
+        var consumed = new DrawCopies(copied.fgX16_16(), copied.fgY16_16(), copied.bg(), copied.fgFlags(), result.flags());
+        // Complete result and copies exist before either write. Live flags are never consumed here.
+        // Native FG streaming/FG copy consumption is outside this bounded Plane B composition.
+        planeState = result.state();
+        drawCopies = consumed;
+    }
+
+    /** Read-only selected immutable image for a future renderer; no descriptor/cache/GPU operation. */
+    CdR11aBackgroundPlane.State publishedPlane() { requireBound(); return publishedPlane; }
+
+    void publishTerrainPlane(PlcLifecyclePhase phase) {
+        requireBound();
+        if (openingObjects != null) throw new IllegalStateException("Opening publication owns its scroll/SAT tuple");
+        if (phase != PlcLifecyclePhase.LAG) publishedPlane = planeState;
     }
 
     CdOpeningObjectRuntime.LogicalBanks reserveOpeningPictureBank() {
@@ -200,6 +301,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         } finally {
             frame = null; actor = null; openingObjects = null; assets = null; scrollState = null; heldPhase = null;
             background = null; backgroundState = null; loadScrollPending = false;
+            backgroundPlane = null; planeState = null; drawCopies = null; publishedPlane = null;
             preparedScroll = null;
             publishedScroll = null;
             scroll.resetProjection();
@@ -234,7 +336,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         if (openingObjects == null || openingObjects.phase() != CdOpeningObjectRuntime.Phase.CLOSED_CUT) {
             throw new IllegalStateException("Opening scroll capture requires its completed native loop");
         }
-        return new ScrollPublication(scrollCaptureOwner, preparedScroll, publishedScroll);
+        return new ScrollPublication(scrollCaptureOwner, preparedScroll, publishedScroll, publishedPlane);
     }
 
     void validateScrollPublication(ScrollPublication snapshot) {
@@ -243,6 +345,9 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         if (snapshot.owner() != scrollCaptureOwner || (snapshot.prepared() == null) != (snapshot.published() == null)) {
             throw new IllegalArgumentException("Opening scroll capture belongs to another visit or an incomplete pair");
         }
+        // State/DrawCopies constructors enforce complete immutable shapes; publication adds the
+        // selected image, including the cold null/null ScrollFrame cut, without creating a service.
+        Objects.requireNonNull(snapshot.plane(), "selected immutable Plane B");
         if (snapshot.prepared() != null) {
             var level = GameServices.level();
             LevelSpritePresentation.validateScroll(level, snapshot.prepared());
@@ -254,6 +359,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         validateScrollPublication(snapshot);
         preparedScroll = snapshot.prepared();
         publishedScroll = snapshot.published();
+        publishedPlane = snapshot.plane();
     }
 
     // Called AFTER the one Runtime V-int service, never by rendering or diagnostics.
@@ -268,8 +374,11 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         if (preparedScroll == null || publishedScroll == null) {
             throw new IllegalStateException("Ordinary/pause publication requires its admitted cold or completed scroll");
         }
-        LevelSpritePresentation.validateScroll(GameServices.level(), preparedScroll);
-        publishedScroll = preparedScroll;
+        var nextScroll = preparedScroll;
+        var nextPlane = Objects.requireNonNull(planeState, "completed source Plane B");
+        LevelSpritePresentation.validateScroll(GameServices.level(), nextScroll);
+        publishedScroll = nextScroll;
+        publishedPlane = nextPlane; // Same completed V-int as Runtime.displayedFrame; CPU may now prepare N+1.
     }
 
     private void initializeOpeningScrollAfterLoad() {
@@ -280,8 +389,11 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
             // Profile installation precedes completedProductionLoadGeneration.
             // Capture only at first input, after load has returned. Restoring the
             // explicit cold null cut repeats this admission without advancing it.
-            preparedScroll = LevelSpritePresentation.captureScroll(GameServices.level());
-            publishedScroll = preparedScroll;
+            var initial = LevelSpritePresentation.captureScroll(GameServices.level());
+            var initialPlane = Objects.requireNonNull(publishedPlane, "completed initial Plane B");
+            preparedScroll = initial;
+            publishedScroll = initial;
+            publishedPlane = initialPlane;
         } else {
             LevelSpritePresentation.validateScroll(GameServices.level(), preparedScroll);
             LevelSpritePresentation.validateScroll(GameServices.level(), publishedScroll);
@@ -291,7 +403,8 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
     private void requireBound() {
         module.validateTerrainPlayerRequest();
         if (frame == null || actor == null || assets == null || scrollState == null || background == null
-                || backgroundState == null || loadScrollPending || frame.closed()
+                || backgroundState == null || backgroundPlane == null || planeState == null || drawCopies == null
+                || publishedPlane == null || loadScrollPending || frame.closed()
                 || (module.openingObjectsAdmission() && (openingObjects == null || openingObjects.closed()))) {
             throw new IllegalStateException("CD terrain-player admission is incomplete or closed");
         }
@@ -463,9 +576,13 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         camera.setShakeOffsets(0, 0);
     }
 
-    // One visit identity covers both native accumulators; render cuts retain only copied output.
-    record ScrollCapture(Object owner, CdR11aForegroundScroll.State state, CdR11aBackgroundScroll.State background) {
-        ScrollCapture { Objects.requireNonNull(owner); Objects.requireNonNull(state); Objects.requireNonNull(background); }
+    // One visit identity covers arithmetic, authoritative Plane B and exact native draw copies.
+    record ScrollCapture(Object owner, CdR11aForegroundScroll.State state, CdR11aBackgroundScroll.State background,
+                         CdR11aBackgroundPlane.State plane, DrawCopies copies) {
+        ScrollCapture {
+            Objects.requireNonNull(owner); Objects.requireNonNull(state); Objects.requireNonNull(background);
+            Objects.requireNonNull(plane); Objects.requireNonNull(copies);
+        }
     }
     private final class Scroll implements ZoneScrollHandler, CameraDrivenScrollHandler {
         private ScrollEffectComposer projection = new ScrollEffectComposer(0); // Derived output only.
@@ -540,16 +657,28 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
             return assets.terrain().layout().columns(CdR11aTerrain.Plane.BACKGROUND) * 256;
         }
         @Override public Object captureRewindState() {
-            return scrollState == null ? null : new ScrollCapture(scrollCaptureOwner, scrollState, backgroundState);
+            if (scrollState == null) return null;
+            requireBound();
+            return new ScrollCapture(scrollCaptureOwner, scrollState, backgroundState, planeState, drawCopies);
         }
         @Override public void restoreRewindState(Object snapshot) {
             if (snapshot == null) return;
+            requireBound();
             if (!(snapshot instanceof ScrollCapture value) || value.owner() != scrollCaptureOwner) {
                 throw new IllegalArgumentException("CD camera capture belongs to another source visit");
             }
-            // Identity/complete-value preflight precedes either assignment. No tick, publication or retry.
-            scrollState = value.state();
-            backgroundState = value.background();
+            // Every member was shape-checked by its immutable constructor. Identity/complete-value
+            // preflight precedes ALL assignments; exact bytes/copies return without stepping source.
+            var nextForeground = Objects.requireNonNull(value.state());
+            var nextBackground = Objects.requireNonNull(value.background());
+            var nextPlane = Objects.requireNonNull(value.plane());
+            var nextCopies = Objects.requireNonNull(value.copies());
+            scrollState = nextForeground;
+            backgroundState = nextBackground;
+            planeState = nextPlane;
+            drawCopies = nextCopies;
+            // Opening selected display bytes are restored by its preflighted shared publication payload.
+            if (openingObjects == null) publishedPlane = nextPlane;
         }
     }
 }

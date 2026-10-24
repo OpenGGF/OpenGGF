@@ -24,6 +24,7 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.game.soniccd.level.SonicCdLevel;
 import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.scroll.CdR11aBackgroundScroll;
+import com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane;
 import com.openggf.game.soniccd.scroll.CdR11aForegroundScroll;
 import com.openggf.level.LevelSpritePresentation;
 import com.openggf.game.soniccd.objects.CdLevelGlobals;
@@ -97,7 +98,10 @@ class TestSonicCdOpeningWorldLoad {
         assertEquals(LevelFrameResult.HELD, ControlledFrameRuntime.step(stock.mode(), new InputHandler(), LogicalInputSnapshot.neutral()));
         var terrain = load(SonicCdGameModule.terrainOnlyDevelopmentPlayer(), source, true);
         assertNull(terrain.module().getGameService(NativeDynamicObjectPass.class));
-        assertSame(terrain.module().requirePlayerFrame(), terrain.module().getGameService(PlcLifecycleService.class));
+        var terrainPlc = terrain.module().getGameService(PlcLifecycleService.class);
+        assertNotNull(terrainPlc);
+        assertNotSame(terrain.module().requirePlayerFrame(), terrainPlc);
+        assertSame(terrainPlc, terrain.module().getGameService(PlcLifecycleService.class));
         assertEquals(0, terrain.module().requirePlayerFrame().state().motion().routine());
         assertEquals(0x10000, scroll(terrain).background().cloudRam().unsignedLong(0), "one load-time call before player Init");
         step(terrain, LogicalInputSnapshot.neutral());
@@ -191,11 +195,17 @@ class TestSonicCdOpeningWorldLoad {
                 .moveWord(CdObjectState.WordField.Y, routine == 2 ? 0x759 : y));
         int cameraX = h.mode().getCamera().getX(), cameraY = h.mode().getCamera().getY();
         var rings = runtime.ringGlobals();
-        var background = scroll(h).background();
+        var raw = scroll(h).background();
+        replaceBackground(h, flags(raw, 0xAA5A, 0x00C3, 0x007E));
+        var background = scroll(h).background(); var beforeScroll = scroll(h);
+        var expectedPlane = nextPlane(h, beforeScroll);
         var before = h.mode().getRewindRegistry().capture();
 
         step(h, LogicalInputSnapshot.neutral());
         assertBackground(background, scroll(h).background());
+        assertPlane(expectedPlane.state(), scroll(h).plane());
+        assertCopies(consumedCopies(beforeScroll, expectedPlane.flags()), scroll(h).copies());
+        assertEquals(0xAA5A, scroll(h).background().scrollFlagsBg(), "death omits BG arithmetic, not V-int drawing");
         assertEquals(6, frame.state().motion().routine());
         assertEquals(0, frame.state().header().priority());
         assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT, runtime.phase());
@@ -225,19 +235,26 @@ class TestSonicCdOpeningWorldLoad {
         step(h, LogicalInputSnapshot.neutral());
         step(h, LogicalInputSnapshot.neutral());
         boolean movedHorizontally = false;
+        boolean planeCutDistinguished = false;
         for (int i = 0; i < 91; i++) {
             var prior = presentation.captureScrollPublication().prepared();
-            var priorBackground = scroll(h).background();
+            var sourceCut = scroll(h); var priorBackground = sourceCut.background();
+            var expectedPlane = nextPlane(h, sourceCut);
             step(h, input(8, i >= 60 && i < 84 ? 2 : 0, false));
             var next = presentation.captureScrollPublication();
             assertSame(prior, next.published(), "V-int latches the exact prior completed scroll with CPU SAT");
             assertScrollFrame(h, next.published(), priorBackground);
             assertScrollFrame(h, next.prepared(), scroll(h).background());
+            assertPlane(expectedPlane.state(), next.plane());
+            assertPlane(next.plane(), presentation.publishedPlane());
+            assertCopies(consumedCopies(sourceCut, expectedPlane.flags()), scroll(h).copies());
+            planeCutDistinguished |= !Arrays.equals(next.plane().nameTable().copy(), nextPlane(h, scroll(h)).state().nameTable().copy());
             assertEquals(h.mode().getCamera().getX(), next.prepared().cameraX());
             assertEquals(h.mode().getCamera().getY(), next.prepared().cameraY());
             movedHorizontally |= next.published().cameraX() != next.prepared().cameraX();
         }
         assertTrue(movedHorizontally, "The ordinary route must distinguish current and published camera");
+        assertTrue(planeCutDistinguished, "The route must distinguish selected plane N from the next CPU cut N+1");
     }
 
     @Test void coldFullRestoreRetainsUnseededScrollAndReplaysTheFirstCompletedLoop() throws Exception {
@@ -321,7 +338,7 @@ class TestSonicCdOpeningWorldLoad {
                 frame -> { LevelFrameStep.serviceVBlankOnly(LevelFrameContext.from(h.mode()), frame, PlcLifecyclePhase.LAG); return null; });
         assertSame(picture, objects.displayedFrame());
         assertBackground(priorBackground, scroll(h).background());
-        assertEquals(pausedScroll, presentation.captureScrollPublication(), "PP lag retains both scroll partitions");
+        assertPublication(pausedScroll, presentation.captureScrollPublication());
         assertEquals(prior.lastSoundRequests(), objects.lastSoundRequests(), "Lag does not clear or replay sounds");
         assertEquals(prior.ringGlobals(), objects.ringGlobals());
         assertEquals(prior.placement().pool().slots(), objects.placement().capture().pool().slots());
@@ -377,8 +394,12 @@ class TestSonicCdOpeningWorldLoad {
         var course = a.mode().getRewindRegistry().captureCourse();
         var retired = objects(a);
         var foreignScroll = scroll(a);
+        var foreignPublication = ((SonicCdPlayerPresentation) a.module().getScrollHandlerProvider()).captureScrollPublication();
         var b = opening();
         var before = state(b);
+        var targetPresentation = (SonicCdPlayerPresentation) b.module().getScrollHandlerProvider();
+        assertThrows(IllegalArgumentException.class, () -> targetPresentation.restoreScrollPublication(foreignPublication));
+        assertState(before, b);
         assertTrue(retired.closed());
         assertThrows(IllegalArgumentException.class, () -> b.module().getScrollHandlerProvider().getHandler(0)
                 .restoreRewindState(foreignScroll)); // Direct rejection covers both FG and BG before writes.
@@ -674,7 +695,7 @@ class TestSonicCdOpeningWorldLoad {
         assertThrows(IllegalArgumentException.class, () -> handler.update(oversized, 0, 0, 0, 0));
         assertTrue(Arrays.stream(oversized).allMatch(word -> word == 0xDEADBEEF));
         assertBackground(bg, scroll(h).background());
-        handler.restoreRewindState(new SonicCdPlayerPresentation.ScrollCapture(old.owner(), old.state(), bg));
+        handler.restoreRewindState(new SonicCdPlayerPresentation.ScrollCapture(old.owner(), old.state(), bg, old.plane(), old.copies()));
         assertBackground(bg, scroll(h).background());
     }
 
@@ -693,7 +714,7 @@ class TestSonicCdOpeningWorldLoad {
                 0x00205678, 0x01009ABC, 0x00309ABC, 0x0100DEF0, b.crossingRam(),
                 0, 0, 0, b.cloudRam(), b.deformationRam(), b.hscrollRam(), 0x01000100);
         h.module().getScrollHandlerProvider().getHandler(0).restoreRewindState(
-                new SonicCdPlayerPresentation.ScrollCapture(prior.owner(), fg, bg));
+                new SonicCdPlayerPresentation.ScrollCapture(prior.owner(), fg, bg, prior.plane(), prior.copies()));
         ((SonicCdPlayerPresentation) h.module().getScrollHandlerProvider()).afterRestore();
         step(h, LogicalInputSnapshot.neutral());
         assertEquals(0x600, frame.state().motion().xVelocity()); assertEquals(0x123, frame.state().motion().groundVelocity());
@@ -739,8 +760,11 @@ class TestSonicCdOpeningWorldLoad {
         h.module().getScrollHandlerProvider().getHandler(0).restoreRewindState(new SonicCdPlayerPresentation.ScrollCapture(
                 old.owner(), new CdR11aForegroundScroll.State(f.cameraX(), f.cameraY16_16(), f.horizontalCrossed(),
                 f.verticalCrossed(), f.scrollXDiff(), f.scrollYDiff(), f.scrollFlags(), f.destBottomBound(),
-                f.destLeftBound(), f.bottomBoundShift(), lock), old.background()));
+                f.destLeftBound(), f.bottomBoundShift(), lock), old.background(), old.plane(), old.copies()));
+        var sourceCut = scroll(h); var expectedPlane = nextPlane(h, sourceCut);
         step(h, LogicalInputSnapshot.neutral());
+        assertPlane(expectedPlane.state(), scroll(h).plane());
+        assertCopies(consumedCopies(sourceCut, expectedPlane.flags()), scroll(h).copies());
         assertEquals(expectedCloud, scroll(h).background().cloudRam().unsignedLong(0));
         if ((lock >>> 8) != 0) assertBackground(old.background(), scroll(h).background());
         assertFalse(objects(h).closed()); assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT, objects(h).phase());
@@ -748,6 +772,7 @@ class TestSonicCdOpeningWorldLoad {
 
     @Test void restartClearsHscrollAndCloudsThenRunsExactlyOneLoadScroll() throws Exception {
         var h = opening(); step(h, LogicalInputSnapshot.neutral());
+        var freshPlane = initialPlane(h).state();
         var oldCapture = scroll(h); var b = oldCapture.background();
         byte[] cloud = new byte[512], deform = new byte[512], horizontal = new byte[1024];
         Arrays.fill(cloud, (byte) 0x77); Arrays.fill(deform, (byte) 0x5A); Arrays.fill(horizontal, (byte) 0x6B);
@@ -755,10 +780,18 @@ class TestSonicCdOpeningWorldLoad {
                 0x3456789A, 0x070BBCDE, 0x56789ABC, 0x070BDEF0, CdAssetBytes.copyOf(new byte[] {1,2,3,4,5,6,7,8}),
                 0x1234, 0x5678, 0x9ABC, CdAssetBytes.copyOf(cloud), CdAssetBytes.copyOf(deform),
                 CdAssetBytes.copyOf(horizontal), b.vscroll()));
+        var dirtyCut = scroll(h); byte[] dirtyPlane = new byte[4096]; Arrays.fill(dirtyPlane, (byte) 0x6D);
+        h.module().getScrollHandlerProvider().getHandler(0).restoreRewindState(new SonicCdPlayerPresentation.ScrollCapture(
+                dirtyCut.owner(), dirtyCut.state(), dirtyCut.background(),
+                new CdR11aBackgroundPlane.State(CdAssetBytes.copyOf(dirtyPlane)),
+                new SonicCdPlayerPresentation.DrawCopies(0x12345678, 0x76543210, copied(dirtyCut.background()),
+                        0xBEEF, new CdR11aBackgroundPlane.FlagWords(0xFACE, 0xCAFE, 0xBABE))));
         constructedRestartCut(h); // The zero-call restart branch performs no scroll.
         assertArrayEquals(horizontal, scroll(h).background().hscrollRam().copy());
         h.module().restartOpeningWorld(); // Inspect the load cut before its first gameplay Init.
         var next = scroll(h); var bg = next.background();
+        assertPlane(freshPlane, next.plane()); assertCopies(clearedCopies(), next.copies());
+        assertPlane(next.plane(), ((SonicCdPlayerPresentation) h.module().getScrollHandlerProvider()).publishedPlane());
         assertEquals(0, h.module().requirePlayerFrame().state().motion().routine());
         assertEquals(0, bg.cameraBgX()); assertEquals(0, bg.cameraBg2X()); assertEquals(0, bg.cameraBg3X());
         assertEquals(0x070B0000, bg.cameraBgY()); assertEquals(0x070B0000, bg.cameraBg2Y());
@@ -774,8 +807,12 @@ class TestSonicCdOpeningWorldLoad {
                 "native ClearScreen clears the old tail before the load-time scroll");
         var handler = h.module().getScrollHandlerProvider().getHandler(0);
         assertThrows(IllegalArgumentException.class, () -> handler.restoreRewindState(oldCapture));
+        assertScroll(next, scroll(h)); // Old visit rejection precedes every current tuple write.
         assertBackground(bg, scroll(h).background());
-        step(h, LogicalInputSnapshot.neutral());
+        var registry = h.mode().getRewindRegistry(); var full = registry.capture(); var course = registry.captureCourse();
+        step(h, LogicalInputSnapshot.neutral()); var replay = state(h);
+        registry.restore(full); assertScroll(next, scroll(h)); step(h, LogicalInputSnapshot.neutral()); assertState(replay, h);
+        registry.restoreCourse(course); assertScroll(next, scroll(h)); step(h, LogicalInputSnapshot.neutral()); assertState(replay, h);
         assertEquals(0x20000, scroll(h).background().cloudRam().unsignedLong(0));
     }
 
@@ -789,7 +826,7 @@ class TestSonicCdOpeningWorldLoad {
         var old = scroll(h);
         h.module().getScrollHandlerProvider().getHandler(0).restoreRewindState(new SonicCdPlayerPresentation.ScrollCapture(
                 old.owner(), new CdR11aForegroundScroll.State(0, 0x07F80000, 0x10, 0x10,
-                0, 0, 0, 0x710, 0, 0, 0), old.background()));
+                0, 0, 0, 0x710, 0, 0, 0), old.background(), old.plane(), old.copies()));
         ((SonicCdPlayerPresentation) h.module().getScrollHandlerProvider()).afterRestore();
         var failure = assertThrows(CdR11aBackgroundScroll.InvalidScroll.class, () -> step(h, LogicalInputSnapshot.neutral()));
         assertEquals(CdR11aBackgroundScroll.Failure.DEFORMATION_READ, failure.failure());
@@ -803,6 +840,85 @@ class TestSonicCdOpeningWorldLoad {
             for (int call = 0; call < 400; call++) step(h, input(8, 0, false));
         });
         assertTrue(failure.getMessage().startsWith("Unowned CD object ID $a at live physical slot "), failure.getMessage());
+    }
+
+    // ClearScreen/InitLevelDrawBG: this is post-initial-draw, before any represented V-int.
+    @Test void coldPlaneUsesTheNativeClearSeedForAll560BytesNotCoveredBy442InitialBlocks() throws Exception {
+        var h = opening(); var cut = scroll(h); var initialized = initialPlane(h);
+        assertEquals(0x70B, cut.background().cameraBgYWord());
+        assertEquals(442, initialized.blocks().size()); assertEquals(16, initialized.sections().size());
+        assertEquals(112, initialized.sections().getFirst().tableIndex());
+        assertEquals(127, initialized.sections().getLast().tableIndex());
+        assertEquals(7, initialized.sections().stream().filter(section -> section.selector() == 4).count());
+        assertEquals(new CdR11aBackgroundPlane.FlagWords(0xAA00, 0, 0), initialized.flags());
+        assertEquals(0x0400, cut.state().scrollFlags(), "Main:247 forces only live FG high-byte bit2");
+        assertCopies(clearedCopies(), cut.copies()); assertPlane(initialized.state(), cut.plane());
+        var presentation = (SonicCdPlayerPresentation) h.module().getScrollHandlerProvider();
+        assertPlane(cut.plane(), presentation.publishedPlane());
+        assertNull(presentation.captureScrollPublication().prepared()); assertNull(presentation.captureScrollPublication().published());
+        assertEquals(0, h.module().requirePlayerFrame().captureShared().vIntClock().deltaSinceAdmittedCut());
+        byte[] marker = new byte[4096]; Arrays.fill(marker, (byte) 0x6D);
+        var marked = CdR11aBackgroundPlane.bind(h.module().requirePlayerFrame().assets()).initialize(
+                new CdR11aBackgroundPlane.State(CdAssetBytes.copyOf(marker)), live(cut.background()), flagWords(cut.background()));
+        int untouched = 0; byte[] zeroDraw = initialized.state().nameTable().copy(), markerDraw = marked.state().nameTable().copy();
+        for (int i = 0; i < 4096; i++) if (zeroDraw[i] != markerDraw[i]) {
+            untouched++; assertEquals(0, cut.plane().nameTable().unsignedByte(i)); assertEquals(0x6D, markerDraw[i] & 255);
+        }
+        assertEquals(560, untouched, "initial drawing cannot stand in for the native clear");
+        var before = state(h); h.module().gameplayFrameController().drawOverlay(); assertState(before, h);
+    }
+
+    @Test void firstSelectorEightServices39BlocksAndConsumesOnlyTheFreshCopiedBgHighByte() throws Exception {
+        var h = opening(); var before = scroll(h); var expected = nextPlane(h, before);
+        assertEquals(39, expected.blocks().size()); assertEquals(17, expected.sections().size());
+        assertEquals(127, expected.sections().getFirst().tableIndex());
+        assertEquals(7, expected.sections().stream().filter(section -> section.phase() == CdR11aBackgroundPlane.Phase.INCREMENTAL_COLUMN && section.drawn()).count());
+        step(h, input(0, 0, true)); // Genuine first selector8 NORMAL_PAUSE, no CPU LevelScroll afterward.
+        assertTrue(h.module().requirePlayerFrame().paused());
+        var after = scroll(h); assertBackground(before.background(), after.background());
+        assertPlane(expected.state(), after.plane()); assertCopies(consumedCopies(before, expected.flags()), after.copies());
+        assertEquals(0, after.copies().bgFlags().bg1()); assertEquals(0xAA00, after.background().scrollFlagsBg());
+        assertEquals(0x0400, after.copies().fgFlags(), "native FG streaming is outside this Plane B unit");
+        assertEquals(0x10000, after.background().cloudRam().unsignedLong(0));
+        assertEquals(1, h.module().requirePlayerFrame().captureShared().vIntClock().deltaSinceAdmittedCut());
+        assertTrue(objects(h).displayedFrame().tiles().isEmpty());
+    }
+
+    @Test void pauseRecopiesEveryFractionAndRawFlagWordWhileLagLeavesPlaneAndCopiesUntouched() throws Exception {
+        var h = opening(); var old = scroll(h); var b = old.background(); var f = old.state();
+        var bg = new CdR11aBackgroundScroll.State(0x00121234, 0x070B5678, 0x00239ABC, 0x070BDEF0,
+                0x00347654, 0x070B3210, b.crossingRam(), 0xAA5A, 0x00C3, 0x007E,
+                b.cloudRam(), b.deformationRam(), b.hscrollRam(), b.vscroll());
+        var fg = new CdR11aForegroundScroll.State(f.cameraX(), 0x070B7654, f.horizontalCrossed(), f.verticalCrossed(),
+                f.scrollXDiff(), f.scrollYDiff(), 0x915A, f.destBottomBound(), f.destLeftBound(), f.bottomBoundShift(), f.scrollLock());
+        var handler = h.module().getScrollHandlerProvider().getHandler(0);
+        handler.restoreRewindState(new SonicCdPlayerPresentation.ScrollCapture(old.owner(), fg, bg, old.plane(), old.copies()));
+        ((SonicCdPlayerPresentation) h.module().getScrollHandlerProvider()).afterRestore();
+        var sourceCut = scroll(h); var expected = nextPlane(h, sourceCut); assertEquals(39, expected.blocks().size());
+        step(h, input(0, 0, true)); var first = scroll(h);
+        assertBackground(bg, first.background()); assertEquals(fg, first.state());
+        assertPlane(expected.state(), first.plane()); assertCopies(consumedCopies(sourceCut, expected.flags()), first.copies());
+        assertEquals(new CdR11aBackgroundPlane.FlagWords(0x005A, 0x00C3, 0x007E), first.copies().bgFlags());
+        assertEquals(0x00121234, first.copies().bg().bg1().xLong()); assertEquals(0x070B5678, first.copies().bg().bg1().yLong());
+        assertEquals(0x00239ABC, first.copies().bg().bg2().xLong()); assertEquals(0x070BDEF0, first.copies().bg().bg2().yLong());
+        assertEquals(0x00347654, first.copies().bg().bg3().xLong()); assertEquals(0x070B3210, first.copies().bg().bg3().yLong());
+        assertEquals(0x070B7654, first.copies().fgY16_16()); assertEquals(0x915A, first.copies().fgFlags());
+        byte[] poison = new byte[4096]; Arrays.fill(poison, (byte) 0x6D);
+        handler.restoreRewindState(new SonicCdPlayerPresentation.ScrollCapture(first.owner(), first.state(), first.background(),
+                new CdR11aBackgroundPlane.State(CdAssetBytes.copyOf(poison)), first.copies()));
+        var secondSource = scroll(h); var repeated = nextPlane(h, secondSource);
+        assertEquals(39, repeated.blocks().size(), "expected from live AA5A, not previously consumed 005A");
+        step(h, LogicalInputSnapshot.neutral()); var second = scroll(h);
+        assertBackground(bg, second.background()); assertPlane(repeated.state(), second.plane());
+        assertCopies(consumedCopies(secondSource, repeated.flags()), second.copies());
+        assertFalse(Arrays.equals(poison, second.plane().nameTable().copy()), "pause must really repeat the plane writes");
+        var presentation = (SonicCdPlayerPresentation) h.module().getScrollHandlerProvider();
+        var publication = presentation.captureScrollPublication(); var picture = objects(h).displayedFrame();
+        var frame = h.module().requirePlayerFrame(); frame.prepareInput(0);
+        h.mode().plcFrameLifecycle().runLogicalIteration(token -> { }, h.mode().getFadeManager()::update,
+                token -> { LevelFrameStep.serviceVBlankOnly(LevelFrameContext.from(h.mode()), token, PlcLifecyclePhase.LAG); return null; });
+        assertScroll(second, scroll(h)); assertPublication(publication, presentation.captureScrollPublication());
+        assertSame(picture, objects(h).displayedFrame()); assertPlane(publication.plane(), presentation.publishedPlane());
     }
 
     /** Explicit component ingress for failure paths; the separate natural test supplies only controllers. */
@@ -883,7 +999,7 @@ class TestSonicCdOpeningWorldLoad {
         assertEquals(expected.picture(), actual.picture());
         assertEquals(expected.camera(), actual.camera()); assertScroll(expected.scroll(), actual.scroll());
         assertEquals(expected.levelFrame(), actual.levelFrame());
-        assertEquals(expected.publication(), actual.publication());
+        assertPublication(expected.publication(), actual.publication());
         var a = expected.resident().tiles(); var b = actual.resident().tiles();
         assertEquals(24, b.length);
         for (int i = 0; i < 24; i++) for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x++) assertEquals(a[i].getPixel(x, y), b[i].getPixel(x, y));
@@ -895,12 +1011,32 @@ class TestSonicCdOpeningWorldLoad {
     private static void replaceBackground(Harness h, CdR11aBackgroundScroll.State background) {
         var old = scroll(h);
         h.module().getScrollHandlerProvider().getHandler(0).restoreRewindState(
-                new SonicCdPlayerPresentation.ScrollCapture(old.owner(), old.state(), background));
+                new SonicCdPlayerPresentation.ScrollCapture(old.owner(), old.state(), background, old.plane(), old.copies()));
     }
     private static void assertScroll(Object expected, Object actual) {
         var a = assertInstanceOf(SonicCdPlayerPresentation.ScrollCapture.class, expected);
         var b = assertInstanceOf(SonicCdPlayerPresentation.ScrollCapture.class, actual);
         assertSame(a.owner(), b.owner()); assertEquals(a.state(), b.state()); assertBackground(a.background(), b.background());
+        assertPlane(a.plane(), b.plane()); assertCopies(a.copies(), b.copies());
+    }
+    private static void assertPlane(com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.State expected,
+                                    com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.State actual) {
+        assertEquals(4096, expected.nameTable().length()); assertEquals(4096, actual.nameTable().length());
+        assertArrayEquals(expected.nameTable().copy(), actual.nameTable().copy());
+    }
+    private static void assertCopies(SonicCdPlayerPresentation.DrawCopies expected,
+                                     SonicCdPlayerPresentation.DrawCopies actual) {
+        assertEquals(expected.fgX16_16(), actual.fgX16_16()); assertEquals(expected.fgY16_16(), actual.fgY16_16());
+        assertEquals(expected.bg().bg1(), actual.bg().bg1()); assertEquals(expected.bg().bg2(), actual.bg().bg2());
+        assertEquals(expected.bg().bg3(), actual.bg().bg3()); assertEquals(expected.fgFlags(), actual.fgFlags());
+        assertEquals(expected.bgFlags().bg1(), actual.bgFlags().bg1());
+        assertEquals(expected.bgFlags().bg2(), actual.bgFlags().bg2()); assertEquals(expected.bgFlags().bg3(), actual.bgFlags().bg3());
+    }
+    private static void assertPublication(SonicCdPlayerPresentation.ScrollPublication expected,
+                                          SonicCdPlayerPresentation.ScrollPublication actual) {
+        assertSame(expected.owner(), actual.owner());
+        assertEquals(expected.prepared(), actual.prepared()); assertEquals(expected.published(), actual.published());
+        assertPlane(expected.plane(), actual.plane());
     }
     private static void assertBackground(CdR11aBackgroundScroll.State a, CdR11aBackgroundScroll.State b) {
         assertEquals(a.cameraBgX(), b.cameraBgX()); assertEquals(a.cameraBgY(), b.cameraBgY());
@@ -923,6 +1059,39 @@ class TestSonicCdOpeningWorldLoad {
                 assertEquals((int) expected.hscrollRam().unsignedLong(i * 4), horizontal[i]);
             }
         });
+    }
+    private static CdR11aBackgroundPlane.LiveCameras live(CdR11aBackgroundScroll.State b) {
+        return new CdR11aBackgroundPlane.LiveCameras(new CdR11aBackgroundPlane.Camera(b.cameraBgX(), b.cameraBgY()),
+                new CdR11aBackgroundPlane.Camera(b.cameraBg2X(), b.cameraBg2Y()), new CdR11aBackgroundPlane.Camera(b.cameraBg3X(), b.cameraBg3Y()));
+    }
+    private static CdR11aBackgroundPlane.CopiedCameras copied(CdR11aBackgroundScroll.State b) {
+        var live = live(b); return new CdR11aBackgroundPlane.CopiedCameras(live.bg1(), live.bg2(), live.bg3());
+    }
+    private static CdR11aBackgroundPlane.FlagWords flagWords(CdR11aBackgroundScroll.State b) {
+        return new CdR11aBackgroundPlane.FlagWords(b.scrollFlagsBg(), b.scrollFlagsBg2(), b.scrollFlagsBg3());
+    }
+    private static CdR11aBackgroundScroll.State flags(CdR11aBackgroundScroll.State b, int one, int two, int three) {
+        return new CdR11aBackgroundScroll.State(b.cameraBgX(), b.cameraBgY(), b.cameraBg2X(), b.cameraBg2Y(),
+                b.cameraBg3X(), b.cameraBg3Y(), b.crossingRam(), one, two, three, b.cloudRam(), b.deformationRam(), b.hscrollRam(), b.vscroll());
+    }
+    private static SonicCdPlayerPresentation.DrawCopies clearedCopies() {
+        var zero = new CdR11aBackgroundPlane.Camera(0, 0);
+        return new SonicCdPlayerPresentation.DrawCopies(0, 0, new CdR11aBackgroundPlane.CopiedCameras(zero, zero, zero),
+                0, new CdR11aBackgroundPlane.FlagWords(0, 0, 0));
+    }
+    private static SonicCdPlayerPresentation.DrawCopies consumedCopies(SonicCdPlayerPresentation.ScrollCapture cut,
+                                                                      CdR11aBackgroundPlane.FlagWords remaining) {
+        return new SonicCdPlayerPresentation.DrawCopies(cut.state().cameraX() << 16, cut.state().cameraY16_16(),
+                copied(cut.background()), cut.state().scrollFlags(), remaining);
+    }
+    private static CdR11aBackgroundPlane.Result initialPlane(Harness h) {
+        var cut = scroll(h);
+        return CdR11aBackgroundPlane.bind(h.module().requirePlayerFrame().assets()).initialize(
+                new CdR11aBackgroundPlane.State(CdAssetBytes.copyOf(new byte[4096])), live(cut.background()), flagWords(cut.background()));
+    }
+    private static CdR11aBackgroundPlane.Result nextPlane(Harness h, SonicCdPlayerPresentation.ScrollCapture cut) {
+        return CdR11aBackgroundPlane.bind(h.module().requirePlayerFrame().assets()).incremental(cut.plane(),
+                live(cut.background()), copied(cut.background()), flagWords(cut.background()));
     }
     private static int pieceFor(CdObjectDrawQueue.CpuSat cpu, int slot) {
         for (int i = 0; i < cpu.provenance().size(); i++) {

@@ -69,6 +69,7 @@ public final class SonicCdGameModule implements GameModule {
     private CdPlayableSonic playerActor;
     private CdOpeningObjectRuntime openingObjects;
     private PlcLifecycleService openingPlc;
+    private PlcLifecycleService terrainPlc;
     private CdR11aAssets authenticatedOpeningAssets;
     private boolean constructingPlayer;
     private RestartCarry stagedRestart;
@@ -382,8 +383,9 @@ public final class SonicCdGameModule implements GameModule {
                     ? (carry == null ? CdPlayerFrameRuntime.externalTouchRequiredDevelopment(candidate.assets(), 0)
                             : CdPlayerFrameRuntime.externalTouchRequiredDevelopment(candidate.assets(), 0, carry.player()))
                     : CdPlayerFrameRuntime.terrainOnlyDevelopment(candidate.assets());
-            // LevelSizeLoad + the single load-time LevelScroll (Main:245-246) precede
-            // LoadPlayer/ObjSonic_Init. This runs pure scroll only, against the fresh native slot.
+            // LevelSizeLoad + one load-time LevelScroll (Main:245-246), live FG's forced flag
+            // (:247) and initial BG draw (:249) all precede LoadPlayer/ObjSonic_Init.
+            // No native selector-C load wait/fade V-int is fabricated by this DEV entry.
             playerPresentation.completeLoadScroll(playerFrame);
             if (openingObjectsAdmission) {
                 var banks = playerPresentation.reserveOpeningPictureBank();
@@ -415,6 +417,7 @@ public final class SonicCdGameModule implements GameModule {
                     throw new UncheckedIOException("Cannot stage authenticated CD opening objects", failure);
                 }
             }
+            if (!openingObjectsAdmission) terrainPlc = composeTerrainPlc(playerFrame);
             var definition = mode.getWorldSession().getPlayableCharacterRegistry().find(CharacterKey.SONIC).orElseThrow();
             var centre = candidate.assets().loadPlan().initialCentre();
             constructingPlayer = true;
@@ -456,7 +459,9 @@ public final class SonicCdGameModule implements GameModule {
                 requireCurrentOwner();
                 try {
                     requireTerrainPlayerReady();
-                    owner.serviceVBlank(phase); // Exactly one source service, including held frames.
+                    playerPresentation.validatePlaneVBlank(phase); // Pure complete-tuple preflight before Frame consumption.
+                    // Root-owned overload runs this exact callback after level art/before Finish, never on PP lag.
+                    owner.serviceVBlank(phase, playerPresentation::servicePlaneAtVInt);
                     playerPresentation.publishOpeningScroll(phase);
                 } catch (RuntimeException | Error failure) {
                     closePlayerCycleAfterFailure(failure);
@@ -478,6 +483,38 @@ public final class SonicCdGameModule implements GameModule {
             @Override public List<QueueDiagnosticSnapshot> captureQueueDiagnostics() {
                 requireCurrentOwner();
                 return owner.captureQueueDiagnostics();
+            }
+        };
+    }
+
+    private PlcLifecycleService composeTerrainPlc(CdPlayerFrameRuntime owner) {
+        return new PlcLifecycleService() {
+            private void requireCurrentOwner() {
+                if (playerFrame != owner) throw new IllegalStateException("Terrain PLC service belongs to a retired visit");
+            }
+            @Override public void serviceVBlank(PlcLifecyclePhase phase) {
+                requireCurrentOwner();
+                try {
+                    requireTerrainPlayerReady();
+                    playerPresentation.validatePlaneVBlank(phase);
+                    owner.serviceVBlank(phase, playerPresentation::servicePlaneAtVInt);
+                    playerPresentation.publishTerrainPlane(phase);
+                } catch (RuntimeException | Error failure) {
+                    closePlayerCycleAfterFailure(failure);
+                    throw failure;
+                }
+            }
+            @Override public boolean hasPreparationBoundary(PlcLifecyclePhase phase) {
+                requireCurrentOwner(); return owner.hasPreparationBoundary(phase);
+            }
+            @Override public boolean ownsTimedLoopTailArm() {
+                requireCurrentOwner(); return owner.ownsTimedLoopTailArm();
+            }
+            @Override public void prepareAfterLoop(PlcLifecyclePhase phase) {
+                requireCurrentOwner(); owner.prepareAfterLoop(phase);
+            }
+            @Override public List<QueueDiagnosticSnapshot> captureQueueDiagnostics() {
+                requireCurrentOwner(); return owner.captureQueueDiagnostics();
             }
         };
     }
@@ -543,6 +580,7 @@ public final class SonicCdGameModule implements GameModule {
                 } finally {
                     openingObjects = null;
                     openingPlc = null;
+                    terrainPlc = null;
                     playerFrame = null;
                     playerActor = null;
                     playerMode = null;
@@ -634,7 +672,7 @@ public final class SonicCdGameModule implements GameModule {
             if (type == NativeDynamicObjectPass.class) return openingObjects == null ? null : type.cast(openingObjects);
             return type == PlcLifecycleService.class && openingPlc != null ? type.cast(openingPlc) : null;
         }
-        return playerAdmission && type == PlcLifecycleService.class && playerFrame != null ? type.cast(playerFrame) : null;
+        return playerAdmission && type == PlcLifecycleService.class && terrainPlc != null ? type.cast(terrainPlc) : null;
     }
     @Override public boolean suppressesLevelSelect() { return true; }
     @Override public void onNewGameFromTitle(GameStateManager gameState) { throw SonicCd.unsupported("native new-game entry"); }

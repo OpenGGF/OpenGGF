@@ -96,7 +96,9 @@ class TestSonicCdTerrainPlayerLoad {
         assertNull(mode.getLevelManager().getObjectManager());
         assertNull(mode.getLevelManager().getRingManager());
         assertEquals(GameMode.LEVEL, h.loop().getCurrentGameMode());
-        assertSame(frame, module.getGameService(PlcLifecycleService.class));
+        var service = module.getGameService(PlcLifecycleService.class);
+        assertNotNull(service); assertNotSame(frame, service, "module composes Plane B at the existing Frame callback");
+        assertSame(service, module.getGameService(PlcLifecycleService.class));
         assertEquals(InitialProcessSpritesLifecycle.NONE, module.getLevelInitProfile().initialProcessSpritesLifecycle());
         assertEquals(0, module.getLevelInitProfile().freshMainPlayablePreludeFrames());
         assertEquals(0, module.getLevelInitProfile().skippedPresentationPlayableFrames());
@@ -419,6 +421,36 @@ class TestSonicCdTerrainPlayerLoad {
         assertEquals(0, mode.getLevelManager().getLevelGamestate().getTimerFrames());
     }
 
+    @ParameterizedTest @EnumSource(CdReleaseVariant.class)
+    void terrainSelectorEightOwnsPlaneCopiesAndRetiredServiceCannotWriteTheNextVisit(CdReleaseVariant variant) throws Exception {
+        var h = load(source(variant));
+        var presentation = (SonicCdPlayerPresentation) h.module().getScrollHandlerProvider();
+        var handler = h.module().getScrollHandlerProvider().getHandler(0);
+        var before = assertInstanceOf(SonicCdPlayerPresentation.ScrollCapture.class, handler.captureRewindState());
+        var b = before.background();
+        var cameras = new com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.CopiedCameras(
+                new com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.Camera(b.cameraBgX(), b.cameraBgY()),
+                new com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.Camera(b.cameraBg2X(), b.cameraBg2Y()),
+                new com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.Camera(b.cameraBg3X(), b.cameraBg3Y()));
+        var live = new com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.LiveCameras(cameras.bg1(), cameras.bg2(), cameras.bg3());
+        var expected = com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.bind(h.module().requirePlayerFrame().assets()).incremental(
+                before.plane(), live, cameras, new com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.FlagWords(
+                        b.scrollFlagsBg(), b.scrollFlagsBg2(), b.scrollFlagsBg3()));
+        assertEquals(39, expected.blocks().size());
+        assertEquals(LevelFrameResult.HELD, controlledStep(h, input(0, 0, true)));
+        var after = assertInstanceOf(SonicCdPlayerPresentation.ScrollCapture.class, handler.captureRewindState());
+        assertPlane(expected.state(), after.plane()); assertPlane(after.plane(), presentation.publishedPlane());
+        assertCopies(new SonicCdPlayerPresentation.DrawCopies(before.state().cameraX() << 16, before.state().cameraY16_16(),
+                cameras, before.state().scrollFlags(), expected.flags()), after.copies());
+        assertEquals(0xAA00, after.background().scrollFlagsBg()); assertEquals(0, after.copies().bgFlags().bg1());
+        var retired = h.module().getGameService(PlcLifecycleService.class);
+        h.mode().getLevelManager().loadLevel(0, LevelLoadMode.FULL, SonicCdPlayerInitProfile.terrainPlayerContext());
+        var fresh = state(h);
+        assertThrows(IllegalStateException.class, () -> retired.serviceVBlank(com.openggf.game.resources.PlcLifecyclePhase.LAG));
+        assertState(fresh, h);
+        assertThrows(IllegalArgumentException.class, () -> handler.restoreRewindState(after)); assertState(fresh, h);
+    }
+
     private record Harness(SonicCdGameModule module, GameplayModeContext mode, GameLoop loop) { }
 
     private static GameplayModeContext open(SonicCdGameModule module, CdGameDataSource source) {
@@ -509,11 +541,25 @@ class TestSonicCdTerrainPlayerLoad {
             return CdStockLaunch.prepare(cues.getFirst(), CdStockLaunch.Request.r11a());
         }
     }
+    private static void assertPlane(com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.State expected,
+                                    com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.State actual) {
+        assertEquals(4096, expected.nameTable().length()); assertEquals(4096, actual.nameTable().length());
+        assertArrayEquals(expected.nameTable().copy(), actual.nameTable().copy());
+    }
+    private static void assertCopies(SonicCdPlayerPresentation.DrawCopies expected,
+                                     SonicCdPlayerPresentation.DrawCopies actual) {
+        assertEquals(expected.fgX16_16(), actual.fgX16_16()); assertEquals(expected.fgY16_16(), actual.fgY16_16());
+        assertEquals(expected.bg().bg1(), actual.bg().bg1()); assertEquals(expected.bg().bg2(), actual.bg().bg2());
+        assertEquals(expected.bg().bg3(), actual.bg().bg3()); assertEquals(expected.fgFlags(), actual.fgFlags());
+        assertEquals(expected.bgFlags().bg1(), actual.bgFlags().bg1());
+        assertEquals(expected.bgFlags().bg2(), actual.bgFlags().bg2()); assertEquals(expected.bgFlags().bg3(), actual.bgFlags().bg3());
+    }
     private static void assertScroll(Object expected, Object actual) {
         var a = assertInstanceOf(SonicCdPlayerPresentation.ScrollCapture.class, expected);
         var b = assertInstanceOf(SonicCdPlayerPresentation.ScrollCapture.class, actual);
         assertSame(a.owner(), b.owner());
         assertEquals(a.state(), b.state());
+        assertPlane(a.plane(), b.plane()); assertCopies(a.copies(), b.copies());
         var x = a.background(); var y = b.background();
         assertEquals(x.cameraBgX(), y.cameraBgX()); assertEquals(x.cameraBgY(), y.cameraBgY());
         assertEquals(x.cameraBg2X(), y.cameraBg2X()); assertEquals(x.cameraBg2Y(), y.cameraBg2Y());

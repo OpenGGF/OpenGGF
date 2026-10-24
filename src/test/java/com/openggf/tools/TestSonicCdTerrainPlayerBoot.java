@@ -13,6 +13,8 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.game.soniccd.CdGameDataSource;
 import com.openggf.game.soniccd.CdReleaseVariant;
 import com.openggf.game.soniccd.CdStockLaunch;
+import com.openggf.game.soniccd.SonicCdGameModule;
+import com.openggf.game.soniccd.SonicCdTestAccess;
 import com.openggf.game.soniccd.player.CdPlayableSonic;
 import com.openggf.game.soniccd.player.CdPlayerFrameRuntime;
 import com.openggf.graphics.ScreenshotCapture;
@@ -67,8 +69,7 @@ class TestSonicCdTerrainPlayerBoot {
         try (var capture = new GameplayCaptureSession(settings)) {
             capture.bootSonicCdTerrainPlayer(source);
             var mode = SessionManager.getCurrentGameplayMode();
-            var module = mode.getWorldSession().getGameModule();
-            var frame = assertInstanceOf(CdPlayerFrameRuntime.class, module.getGameService(PlcLifecycleService.class));
+            var frame = currentFrame();
             var actor = assertInstanceOf(CdPlayableSonic.class, capture.player());
             assertSame(source, mode.getWorldSession().getDataSource());
             assertEquals(GameMode.LEVEL, capture.loop().getCurrentGameMode());
@@ -135,8 +136,7 @@ class TestSonicCdTerrainPlayerBoot {
             boot.bootSonicCdTerrainPlayer(source);
             assertTrue(boot.hasInstalledHeadlessAudioBackend());
             var first = assertInstanceOf(HeadlessSmpsAudioBackend.class, services.audio().getBackend());
-            var frame = assertInstanceOf(CdPlayerFrameRuntime.class, SessionManager.getCurrentWorldSession()
-                    .getGameModule().getGameService(PlcLifecycleService.class));
+            var frame = currentFrame();
             services.configuration().setSessionOverride(SonicConfiguration.AUDIO_ENABLED, false);
             boot.bootSonicCdTerrainPlayer(source);
             assertTrue(frame.closed(), "reboot retires the prior session's native owner");
@@ -162,7 +162,7 @@ class TestSonicCdTerrainPlayerBoot {
         try (var capture = new GameplayCaptureSession(settings)) {
             capture.bootSonicCdTerrainPlayer(source);
             var mode = SessionManager.getCurrentGameplayMode();
-            var frame = (CdPlayerFrameRuntime) mode.getWorldSession().getGameModule().getGameService(PlcLifecycleService.class);
+            var frame = currentFrame();
             var actor = (CdPlayableSonic) capture.player();
             for (int i = 0; i < 3; i++) capture.step(null);
             var checkpoint = mode.getRewindRegistry().capture();
@@ -227,6 +227,17 @@ class TestSonicCdTerrainPlayerBoot {
                 Files.writeString(Path.of("target", "soniccd-terrain-player-captures", "usa-route.csv"), rows);
             }
         }
+    }
+
+    /** The module owns Frame; the composed PLC service has a separate stable lifecycle identity. */
+    private static CdPlayerFrameRuntime currentFrame() {
+        var module = assertInstanceOf(SonicCdGameModule.class, SessionManager.getCurrentWorldSession().getGameModule());
+        var frame = SonicCdTestAccess.frame(module);
+        var plc = module.getGameService(PlcLifecycleService.class);
+        assertNotNull(plc);
+        assertNotSame(frame, plc);
+        assertSame(plc, module.getGameService(PlcLifecycleService.class));
+        return frame;
     }
 
     private static Bk2FrameInput routeInput(int frame) {

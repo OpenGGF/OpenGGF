@@ -736,7 +736,7 @@ class TestSonicCdOpeningWorldEgl {
                         cut = capture(module); cutPixels = image;
                         assertArrayEquals(beforeCut.cpu().bytes(), cut.cpu().bytes());
                         assertEquals(beforeCut.cpu().provenance(), cut.cpu().provenance());
-                        assertEquals(beforeCut.camera(), cut.camera()); assertEquals(beforeCut.scroll(), cut.scroll());
+                        assertEquals(beforeCut.camera(), cut.camera()); assertScroll(beforeCut.scroll(), cut.scroll());
                         assertEquals(beforeCut.objects().ringGlobals(), cut.objects().ringGlobals());
                         assertEquals(beforeCut.objects().spillGlobals(), cut.objects().spillGlobals());
                         retiredFull = registry.capture(); retiredCourse = registry.captureCourse();
@@ -1014,17 +1014,37 @@ class TestSonicCdOpeningWorldEgl {
         assertEquals(expected.objects().displayedFrame(), actual.objects().displayedFrame());
         assertEquals(expected.camera(), actual.camera()); assertScroll(expected.scroll(), actual.scroll());
         assertEquals(expected.levelFrames(), actual.levelFrames());
-        assertEquals(expected.publication(), actual.publication());
+        assertPublication(expected.publication(), actual.publication());
         var a = expected.bank().tiles(); var b = actual.bank().tiles();
         assertEquals(24, b.length);
         for (int i = 0; i < 24; i++) for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x++)
             assertEquals(a[i].getPixel(x, y), b[i].getPixel(x, y));
+    }
+    private static void assertPlane(com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.State expected,
+                                    com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.State actual) {
+        assertEquals(4096, expected.nameTable().length()); assertEquals(4096, actual.nameTable().length());
+        assertArrayEquals(expected.nameTable().copy(), actual.nameTable().copy());
+    }
+    private static void assertCopies(SonicCdPlayerPresentation.DrawCopies expected,
+                                     SonicCdPlayerPresentation.DrawCopies actual) {
+        assertEquals(expected.fgX16_16(), actual.fgX16_16()); assertEquals(expected.fgY16_16(), actual.fgY16_16());
+        assertEquals(expected.bg().bg1(), actual.bg().bg1()); assertEquals(expected.bg().bg2(), actual.bg().bg2());
+        assertEquals(expected.bg().bg3(), actual.bg().bg3()); assertEquals(expected.fgFlags(), actual.fgFlags());
+        assertEquals(expected.bgFlags().bg1(), actual.bgFlags().bg1());
+        assertEquals(expected.bgFlags().bg2(), actual.bgFlags().bg2()); assertEquals(expected.bgFlags().bg3(), actual.bgFlags().bg3());
+    }
+    private static void assertPublication(SonicCdPlayerPresentation.ScrollPublication expected,
+                                          SonicCdPlayerPresentation.ScrollPublication actual) {
+        assertSame(expected.owner(), actual.owner());
+        assertEquals(expected.prepared(), actual.prepared()); assertEquals(expected.published(), actual.published());
+        assertPlane(expected.plane(), actual.plane());
     }
     private static void assertScroll(Object expected, Object actual) {
         var a = assertInstanceOf(SonicCdPlayerPresentation.ScrollCapture.class, expected);
         var b = assertInstanceOf(SonicCdPlayerPresentation.ScrollCapture.class, actual);
         assertSame(a.owner(), b.owner());
         assertEquals(a.state(), b.state());
+        assertPlane(a.plane(), b.plane()); assertCopies(a.copies(), b.copies());
         var x = a.background(); var y = b.background();
         assertEquals(x.cameraBgX(), y.cameraBgX()); assertEquals(x.cameraBgY(), y.cameraBgY());
         assertEquals(x.cameraBg2X(), y.cameraBg2X()); assertEquals(x.cameraBg2Y(), y.cameraBg2Y());

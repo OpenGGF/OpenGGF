@@ -4069,3 +4069,48 @@ preservation starts after Init with empty display/mostlyzero history/cursor,
 and picture raw bases/flips are paired rather than Cartesian. No live Spring
 contact, native PlaneB World service, PLC residency, native timing/pixels or
 complete-game/region result follows from these port/component checks.
+
+### Native Plane B CPU service, copies and publication — 24 October 2026
+
+The presentation now retains one immutable PlaneB image and a native draw-copy
+image alongside its one FG/BG arithmetic state. Explicit ClearScreen seed,
+one load scroll and forced liveFG0400 precede initial442block drawing;560
+unwritten bytes retain the clear seed. Each genuine selector8 copies all32
+camera bytes/eight flag bytes, draws once after art/beforeFinish, and consumes
+only copied BG flags. Live flags/fractions stay authoritative; repeated paused
+services recopy them, lag skips service, and death/lock can repeat draw without
+BG arithmetic. No load/fade V-int or extra clock is fabricated.
+Selected PlaneN is published with prior prepared ScrollFrame/SAT N while CPU
+advances N+1. All4096bytes/copies restore without source work; restart clears
+plane/copies/publication, retaining only existing justified deformation ingress.
+Terrain PLC is a composed service with its own stable identity and stale-owner
+guard; all interface methods forward. Existing native opening restore preflight
+covers the extended publication before unrelated writes. Rendering, native FG
+streaming/flag consumption and364pattern reservation remain unchanged.
+Native owners: Main:225-249,821-847; PP Scroll:807-820,892-995,1092-1198, pin1ecc5f3a.
+
+Independent review found one P2: WorldLoad still expected raw Frame service
+identity. Root's pre-import test-onlyR2 checks nonnull/different/stable wrapper,
+keeping all entry/input assertions. No productionP1/P2 was found. Root5314
+completed508/6failures/1error/0skips: World32, TerrainLoad27, EGL8, TerrainBoot8,
+RestartCarry21, Presentation10, Plane43, BG54, FG63, Frame165, Runtime66, API11.
+All seven failures/errors were three old raw-Frame lookup/cast sites in the
+Tools Boot class; all other selected checks passed. All12XML were inspected.
+Root's first Boot migration66860 then failed compilation because the direct
+module getter is package-private; noJUnit ran. Test-onlyR4 keeps Boot's package
+and uses a same-CD-package SonicCdTestAccess bridge, with wrapper identity
+checks. No production accessor, game service, reflection or owner is added.
+All8 Boot cases passed in Root60964,0failures/errors/skips, exit23:26:32BST,
+176squeue/34.246sMaven. The original508 run is not called green and overlapping
+counts are not summed. Production is unchanged after5314. The508 run used
+actual regional media/S2, Java25, surfaceless EGL, normal7GiB/8core,1squeue/
+131sMaven, exit23:16:32BST; correctedBoot also used actual media/EGL.
+
+Original fivefile freeze and reviewed reports are preserved. New Plane-callback
+finite-read failure lacks a direct World test (existing CPU BG failure differs);
+source closure is reviewed, with generic callback failure separately exercised.
+The39/442 count assertions use pure component expected Results, not independently
+measured native draw calls. The renderer still uses development planes: no native
+PlaneB image, native priority/PLC/timing, route/act/game or region-parity claim.
+The next client must consume selected immutable words with explicit residency
+authority; it may not replay observations or advance source state during draw.
