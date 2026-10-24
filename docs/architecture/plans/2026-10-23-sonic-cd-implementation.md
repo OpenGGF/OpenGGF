@@ -3257,3 +3257,25 @@ Root56397 atf03955e65 plus ONLY the two camera files passed61/0/0/0 at16:29:52BS
 unchanged field, the fractional camera high word, signed-boundary raw words,
 null owners and word-centre validation. Existing56foreground cases also pass.
 This pure value unit does not prove a completed death frame or restart route.
+
+
+### Powerup/Game Over raw art service, 24 October 2026
+
+The new pure CdPowerupArtRuntime models LoadShieldArt (Powerup/Main.asm:157-186):
+BCLR7 gates the lookup, byte SUBQ2/word double selects one of five registered
+raw copies, DBF copies exactly1024bytes into complete caller-supplied CPU RAM,
+and a1152byte DMA replaces the whole resident window atA880. The trailing128CPU
+bytes are preserved, including nonzero carry; no source padding or defaultRAM
+is invented. Inactive bit7 skips the lookup for anylowbyte, while unboundactive
+pointer offsets stop before a Result. Powerup remains external, returned once
+withbit7cleared; the component holds no mutableglobal/clock/capturebank. State
+compares immutable bytes bycontent. Caller still owns actualVInt admission,
+logical/global commit and DMA publication; draw/restore cannot resubmit it.
+
+Root41425 at9694cefe1 plus these2newfiles passed20/0/0/0 at16:44:06BST
+(100squeue,1m30execution), fresh2XMLJava25confirmed:18source-literal service
+cases and2existingraw assetdecoder cases. Fivecopies, request-bit behavior,
+bounded invalidselectors, retainedtail/fullupload, immutablebytes and replay
+are covered with constructed format input. No media identity, native timing,
+GPUupload or GameOver world support is inferred. Runtime/atlas/snapshot wiring
+and the349-pattern C2picture remain next integration work.
