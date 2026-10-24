@@ -19,25 +19,23 @@ field and the complete error.
 
 ### What does "needs Run" mean?
 
-<!-- Reconcile with the route advice and result text fixes on bugfix/ai-stageplay-dayoff-bugs. -->
+When a route with **Speed: Walk** fails, the planner rehearses the same
+terrain at a run before it gives up. If running gets there, the route's full
+diagnosis (**F1**, or **Direction details**) says *terrain near x=…: needs Run*.
+The number is where the walking attempt stalled, usually at the foot of a slope
+or loop that a stroll cannot climb. Change **Speed** to **Run** and plan again.
 
-When a route with **Speed: Walk** fails, the planner tries the same terrain at a
-run. If running gets there, **Direction details** adds *terrain near x=…: needs
-Run*. The number is where the walking attempt stalled, usually at the foot of a
-slope or loop that a stroll cannot climb. Change **Speed** to **Run** and plan
-again.
-
-The planner only makes this check if it has search budget left after the
-walk. If a failed walk shows no advice, it may simply have run out of budget:
-raise **Frames** under **Advanced** (the time the route may take) and plan
-again. When *Day Off* planned Sonic's run through Green Hill's loop, the
-default 300 frames gave no advice, and 419 frames produced *needs Run*.
+The rehearsal may take longer than the route was allowed. Then the advice says
+*needs Run and more Attempt frames* (or just *needs more Attempt frames*): also
+raise **Frames** under **Advanced**, which sets how long the route may take.
+The rehearsal runs within the default limits, so the advice appears without
+changing any settings first; it never applies a route by itself.
 
 ### Why did my route fail?
 
 | Message | Meaning and fix |
 | --- | --- |
-| Search limit reached; reachability is unknown. | The search ran out of frames, search nodes or time. This is not proof that the destination is unreachable. Choose a nearer destination, use Run, or raise **Frames** and **Search nodes** under **Advanced**. |
+| Search limit reached. | The search ran out of frames, search nodes or time. This is not proof that the destination is unreachable. Read the advice in **F1**; otherwise choose a nearer destination, use Run, or raise **Frames** and **Search nodes** under **Advanced**. |
 | No route found in this search. | No combination it tried got there. Try a destination on the far side of the obstacle, a Jump start, or Run. |
 | Playback could not confirm the route. | A route was found, but playing it back from the start of the shot ended somewhere else: a fall, a hit, or a stop that overshot. Try **Gentle** or **Hard** stop, or move the destination. |
 | Scene or assets changed; plan again. | The scene, the ROM or a level file changed while it planned. Plan again. |
@@ -74,7 +72,8 @@ off **Start on floor** in **Actor properties**.
 
 ### The picker says "No floor" or "Snap off"
 
-`Snap off`: press **S** to turn snapping on. `No floor`: there is no terrain
+`Snap off`: press **S** to turn snapping back on. Placement pickers start with
+snap on; camera framing starts with it off. `No floor`: there is no terrain
 below the crosshair within reach; move it over solid ground.
 
 ### Place on floor shows "Refused floor"
@@ -192,8 +191,6 @@ Voices, like all sound, play only during playback.
 
 ## Sound
 
-<!-- Reconcile with the music naming fix on bugfix/ai-stageplay-dayoff-bugs. -->
-
 ### No music when I press play
 
 Cues play only when playback passes them. Start from frame 0, or before the cue.
@@ -203,10 +200,13 @@ Cues play only when playback passes them. Start from frame 0, or before the cue.
 A scene with any music cue takes over music for the whole scene. Add a music cue
 to each shot that needs music.
 
-### Music on the first frame of a Sonic 2 shot fades out
+### A song number plays the wrong song
 
-Move the cue a few frames into the shot. *Day Off* starts its Emerald Hill music
-8 frames in.
+Music and sound numbers are the ones each game itself uses, as listed in its
+disassembly: Sonic 2's Emerald Hill is `$82` (130), not 129. Pick songs by name
+in the editor, or write `"music": "EMERALD_HILL"` in a screenplay; the
+`catalog` command lists every song's name and number. Scenes made with older
+development builds that used other numbers must be updated by hand.
 
 ### "ROM cue gain must be 1"
 
