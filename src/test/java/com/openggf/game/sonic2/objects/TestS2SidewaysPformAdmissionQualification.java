@@ -79,8 +79,14 @@ class TestS2SidewaysPformAdmissionQualification {
             assertEquals(before, identities(m));
             IllegalStateException failure = assertThrows(IllegalStateException.class,
                     () -> registry(m).capture());
-            assertTrue(failure.getMessage().contains("no registered id for object reference"),
-                    failure.getMessage());
+            String missingChild = "RewindIdentityTable has no registered id for object reference " + child + ".";
+            assertEquals("Invalid rewind reference at " + SidewaysPformObjectInstance.class.getName()
+                            + "#linkedPlatform on " + f.parent.getClass().getName()
+                            + " [id=" + id(m, f.parent) + ", slot=" + parentSlot
+                            + ", spawn=" + f.parent.getSpawn() + "]: " + missingChild,
+                    failure.getMessage(), "capture must fail on this parent's exact link to the rejected child");
+            assertNotNull(failure.getCause());
+            assertEquals(missingChild, failure.getCause().getMessage());
             // Free a genuine occupant. Initialization must not retry next pass.
             ObjectInstance occupant = m.getActiveObjects().stream()
                     .filter(PressureOccupant.class::isInstance).findFirst().orElseThrow();
@@ -131,6 +137,10 @@ class TestS2SidewaysPformAdmissionQualification {
         SidewaysPformObjectInstance parent = link(child);
         int parentSlot = parent.getSlotIndex();
         int childSlot = child.getSlotIndex();
+        ObjectRefId parentId = id(m, parent);
+        ObjectRefId childId = id(m, child);
+        assertNotNull(parentId);
+        assertNotNull(childId);
         assertFalse(m.isRemembered(spawn));
         assertDoesNotThrow(() -> registry(m).capture());
         camera.x = 0x2000;
@@ -147,10 +157,50 @@ class TestS2SidewaysPformAdmissionQualification {
         PressureOccupant second = m.createDynamicObject(() -> new PressureOccupant(occupantSpawn(2)));
         assertEquals(parentSlot, first.getSlotIndex());
         assertEquals(childSlot, second.getSlotIndex());
+        ObjectRefId firstId = id(m, first);
+        ObjectRefId secondId = id(m, second);
+        assertNotNull(firstId);
+        assertNotNull(secondId);
         camera.x = 0;
         m.postCameraPlacementUpdate(camera.x);
         m.update(0, null, null, 3);
-        assertEquals(2, m.attempts, "camera return admits the placed pair again");
+        assertEquals(2, m.attempts, "camera return attempts a second child admission");
+        SidewaysPformObjectInstance returnedChild = m.child;
+        assertNotNull(returnedChild);
+        SidewaysPformObjectInstance returnedParent = link(returnedChild);
+        assertNotNull(returnedParent);
+        assertNotSame(child, returnedChild);
+        assertNotSame(parent, returnedParent);
+        assertFalse(returnedParent.isDestroyed());
+        assertFalse(returnedChild.isDestroyed());
+        assertSame(returnedChild, link(returnedParent));
+        assertSame(returnedParent, link(returnedChild));
+        assertTrue(m.getActiveObjects().contains(returnedParent));
+        assertTrue(m.getActiveObjects().contains(returnedChild));
+        assertEquals(childSlot + 1, returnedParent.getSlotIndex());
+        assertEquals(childSlot + 2, returnedChild.getSlotIndex());
+        ObjectRefId returnedParentId = id(m, returnedParent);
+        ObjectRefId returnedChildId = id(m, returnedChild);
+        assertNotNull(returnedParentId);
+        assertNotNull(returnedChildId);
+        assertNotEquals(returnedParentId, returnedChildId);
+        assertFalse(Set.of(parentId, childId).contains(returnedParentId));
+        assertFalse(Set.of(parentId, childId).contains(returnedChildId));
+        var table = m.captureIdentityContext().requireIdentityTable();
+        assertSame(returnedParent, table.resolveObject(returnedParentId, true));
+        assertSame(returnedChild, table.resolveObject(returnedChildId, true));
+        assertNull(table.idFor(parent));
+        assertNull(table.idFor(child));
+        assertTrue(m.getActiveObjects().contains(first));
+        assertTrue(m.getActiveObjects().contains(second));
+        assertFalse(first.isDestroyed());
+        assertFalse(second.isDestroyed());
+        assertEquals(parentSlot, first.getSlotIndex());
+        assertEquals(childSlot, second.getSlotIndex());
+        assertEquals(firstId, table.idFor(first));
+        assertEquals(secondId, table.idFor(second));
+        assertEquals(4, m.getActiveObjects().size(), "returned pair must coexist with both real reused-slot occupants");
+        assertDoesNotThrow(() -> registry(m).capture());
     }
 
     @Test

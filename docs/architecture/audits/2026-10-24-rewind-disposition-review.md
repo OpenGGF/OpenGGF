@@ -2683,7 +2683,10 @@ The final corrected retirement command was:
 It passed **1 case, 0 failures/errors/skips**, with an 18-second queue wait and
 27.929 seconds Maven execution. It confirms pair removal from the live graph,
 child retirement, unremembered placement, exact parent/child SST reuse and a
-fresh placed pair on camera return. The final qualification source SHA-256 is
+second child submission attempt on camera return. That last assertion alone did
+not establish fresh live admission, registration, reciprocal links or successful
+capture after return; the follow-up below addresses that evidence limit.
+The original qualification source SHA-256 is
 `9ff7263ac4267de9642ab052b835fbc2a0f4903e934fe3c6a76a654f00ddac52`.
 Only that corrected method changed after the preceding retry. The nine
 unchanged pressure cases and 23 existing passes are not repeated as a ceremony.
@@ -2720,6 +2723,82 @@ receipts are retained. The new citation ranges were checked against the pinned
 Git objects, and documentation fences/links and `git diff --check` are checked
 before the local evidence commit. No push, integration or worktree removal is
 part of this slice. The parent owns combined delivery and final guards.
+
+### Sideways qualification assertion and open-ledger follow-up
+
+This implementation follow-up preserves local commit
+`f350a9007b85bfcdd6f5b94b192f3c0eeaa20882` and its history on the same owned
+branch/worktree. Accepted review found two assertion limits and an absent
+canonical open-bug entry. The original pressure matcher accepted a generic
+missing-reference substring, so another failing owner/field could satisfy it;
+the original return check counted a pre-admission attempt rather than proving
+a fresh live pair. The earlier golden red's inspected XML remains actual
+`SidewaysPformObjectInstance#linkedPlatform` evidence, while the weaker retained
+assertions are not retroactively described as having enforced that context.
+
+The pressure cases now compare the actual exception's complete field and
+parent context: exact `SidewaysPformObjectInstance#linkedPlatform`, owner class,
+registered parent ID, actual SST slot and current spawn. They also match the
+missing reference to this particular rejected child and its underlying cause.
+An unrelated field, parent, slot or missing target cannot satisfy the equality;
+no production message or strict codec is changed.
+
+The return check now requires new parent and child instances, both live in the
+manager, reciprocal links, distinct newly registered IDs resolving to those
+same instances, the next actual free SSTs after the two reused slots, absence of
+the retired objects from the identity table, and successful strict capture.
+Both genuine pressure occupants must remain live at the original reclaimed
+SSTs with their unchanged registered IDs. The attempt counter is described as
+an attempt, and the manager must contain exactly those four objects. No slot
+reservation, occupant removal or fabricated capacity is added to make this
+claim pass.
+
+The [canonical open-bug ledger](../../status/known-bugs.md#s2-sideways-platform-allocation-and-strict-rewind-gap)
+now records the unrepaired allocation/strict-rewind gap and links the retained
+qualification. Removal requires native empty/live fixed-Tails state, failed
+pointer/boundary/offset writes, paired deletion/respawn release, and reversible
+strict capture/restore to be resolved. The intentional-discrepancy ledger and
+release notes remain unchanged. The documentation checklist and hook mapping
+were inspected: `Known-Discrepancies` maps only to the unchanged intentional
+ledger, so its required policy value remains `n/a`.
+
+Affected validation ran with the same verified environment and command
+prefix above, using only the nine pressure cases and retirement method:
+
+```bash
+"${qualification_maven[@]}" '-Dtest=TestS2SidewaysPformAdmissionQualification#characterizeRealAdmissionAndFreshReplay+admittedPairRetiresAndReleasesRememberFlagAndSlots' test -B
+```
+
+The tested input was `f350a9007` plus this qualification patch, SHA-256
+`bd74251920c88045988c603f961e3152792b0dbac74aa21b56782c87c2762850`;
+the ledger/audit prose also differed. The completed run passed **10 cases,
+0 failures, 0 errors, 0 skips**: all nine parameterized pressure cases and the
+retirement/return case. It waited 811 seconds for shared admission; Maven
+reported 29.546 seconds execution. These intervals are separate; other work
+time is unmeasured. XML inspection confirmed each exact case identity, all
+failure/error/skip elements, Java `25.0.5.0.2`, `mse=off`, the exact selector
+and this task's working directory. The reports were then consumed.
+
+The failed-admission cases now establish the exact field, owning parent
+ID/SST/spawn and rejected target from the actual capture exception. Under this
+same fixture, camera return establishes a fresh live reciprocal parent/child
+pair with fresh identities, registered instances, the next free real SSTs and
+successful capture while both reused-SST pressure occupants remain present.
+The earlier attempt-only claim is therefore replaced with this narrower,
+discriminating runtime proof. The open exhausted-tail capture gap remains
+unrepaired, and the existing native fixed-Tails/modeling and broader coverage
+limits above remain in force.
+
+No production or scanner-obligation change requires another guard or an
+unchanged existing multi-class run. Protected production/resource/tool/policy
+paths are byte-identical to `f350a9007`: the production blob remains
+`583a6d6822d4f50f6f9bb6e15b6fcd4808cbd02e`, all ten bridges stay count one,
+the frozen store stays 119, and pins/package permissions are unchanged.
+New ledger/test/audit links, heading anchors, shell snippets, Markdown fences
+and `git diff --check` pass. Only documentation changed after this run.
+This follow-up creates a new local commit; no history rewrite, production
+change, integration, push, broad/full suite, subdelegation or worktree removal
+is part of it. The parent owns any fresh review and future composition.
 
 ## S3K monitor contents admission
 
