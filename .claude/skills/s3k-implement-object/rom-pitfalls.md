@@ -5968,3 +5968,19 @@ low-priority far-sphere/overlap behavior as a separate remaining gap. Never
 reshape the reference or fit the asset mapping to hide it. This table is S3K;
 the pointer-alias versus inferred-geometry lesson applies across games.
 Origin: Root Blue Sphere original-RGB mapping comparison,2026-10-17.
+
+## Rejected monitor contents have neither an icon nor a reward
+
+`Obj_MonitorSpawnIcon` (sonic3k.asm:40685-40710) attempts contents first and
+branches to `.skipiconcreation` on allocation failure, then independently attempts
+the explosion. Both allocations follow the monitor's SST, including when Java
+enters the break path through a player callback. Preserve that anchor and order.
+Java construction can prepare embedded icon state before admission, but rejected
+contents must clear icon/reward activation and must not become the retained child.
+ObjectManager marks rejected children destroyed before identity registration and
+never calls their unload hook. Keeping one makes strict rewind capture fail;
+keeping its activation can grant a reward the native failure branch never creates.
+Use real manager pressure for zero, one and two free tail slots and capture before
+another object dispatch. Do not weaken the reference codec or replace the bridge
+solely to change its spelling. Origin: 2026-10-24 monitor admission audit,
+`529b348aecf8884c0677f12c6aa64583883ffe81`.
