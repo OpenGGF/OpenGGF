@@ -5315,3 +5315,68 @@ manager reads, delayed ring/reward capture, one-shot title release, rewind
 assembly floor and park/resume are concrete controls. Independent design review
 is pending. Special-stage/results ownership is being grounded separately; neither
 proposal is an implemented or validated part of this delivery.
+
+### Composed domain verification and SMPS review closure
+
+At850948ad9fccf29dff0e99a8765bf5c23a68fd73, the composed domain request
+passed302 unique invocations across23 physical reports, zero failures/errors/
+skips. Fresh compilation covered4346 production and4456 test/maintained sources.
+Every report carried the exact requested selector, Java25.0.5.0.2, surfaceless EGL
+and all four verified absolute ROM paths. All103 GameLoop cases and36 ending
+owner controls ran; SMPS owner controls contributed13, and S1/S2/S3K one-up
+controls contributed24. Literal palette-capacity pixels, native white fades,
+donor RGB rewind and donated-team policies executed alongside native ending and
+headless ownership controls. The required S3K selection ran60 cases: Bootstrap6,
+Decoding3, game-package LevelLoading36, AIZ1 skip8 and legacy LevelLoading7.
+No assumed ROM/display skip is counted as that coverage.
+
+Admission waiting was observed through361 seconds; the exact eventual admission
+time was not captured. Maven execution reported1:32. Queue time is separate from
+execution; other elapsed delivery time is unmeasured. All46 XML/text reports were
+inspected for identities/properties/skips and consumed. The worktree remained
+clean at the tested commit throughout. This is composed focused evidence, not a
+complete smoke-suite claim.
+
+Independent SMPS source review accepted the code and exact104 caller migrations,
+receiving-manager pairing, unchanged11 explicit four-argument callers, default
+snapshot/resolver semantics and121-to119 frozen delta. Full binary diff SHA-256
+against97eb86f18 was
+`41ed9ee8b6eed82bcad318981b078faeb1f252d108398de11dc6e89bad73be0e`.
+The review's two P3 findings are resolved in parent prose: the earlier retention
+paragraph is labeled superseded, and the unsupported constructor ABI change is
+explicit. Removed public sequencer/backend convenience constructors require
+unsupported external source/binary consumers to migrate to explicit destinations
+and rebuild. Supported pins remain unchanged; no compatibility repinning follows.
+The reviewer did not run tests or inspect artifacts.
+
+The forthcoming final change-based request retains all3756 smoke candidates in
+76 ordinary batches plus a separate fresh guard JVM. Expected execution is a
+coarse90–150 minutes plus admission; the180-minute invocation budget excludes
+queue waiting. It stops on its timeout, launcher/tool failure or source drift;
+JUnit failures and skips must be inspected and attributed before integration.
+New or worsened failures block delivery. This is ordinary smoke, never the
+release-only full suite. The exact final command and result follow on completion.
+
+The next bonus session implementation is isolated on850948ad9 and cannot modify
+this delivery's source. Its reviewed brief preserves three distinct exception
+contracts, the bootstrap helper's guarded expression, and exact native pilot
+selectors. Special-stage/results grounding separately recommends a stateful
+loop-lifetime collaborator; its shared per-frame boundary flag and public virtual
+callbacks require independent design review. These future slices have no runtime
+success claim here.
+
+The composed focused command used the existing main checkout variable:
+
+```bash
+SELECTION='TestGameLoop,TestGameLoopEndingSession,TestViewportLifecycleContract,TestSbz1CreditsDemoBug,TestSonic1EndingSequenceHeadless,TestKis2EndingContinue,TestS3kEndingTransitionPresentation,TestDonorPaletteRewind,TestPaletteTextureCapacity,TestNativeWhitePaletteFade,TestScopedPalettePresentationRewind,TestDonatedTeamPalettes,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestSmpsRestoreOwnerContract,TestHeadlessAudioOwnership,TestHeadlessGameBootAudioIdentity,TestS1OneUpRestoreRom,TestS2OneUpRestoreRom,TestS3kOneUpRestoreRom'
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "${MAIN_CHECKOUT}/tools/testing/maven_queue.py" -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Dtest=${SELECTION}" \
+  "-Dsonic1.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=${MAIN_CHECKOUT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dkis2.rom.path=${MAIN_CHECKOUT}/kis2.gen" \
+  "-Dsonic.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" test -B
+```

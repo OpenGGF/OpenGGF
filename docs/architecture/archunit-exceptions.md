@@ -627,12 +627,14 @@ failures/errors/skips. The broader smoke request later timed out; integration an
 [continuation plan](plans/2026-10-24-architecture-continuation.md) records the
 qualified boundaries, exact replacement accounting and required behavior gates.
 
-The two legacy `SmpsSequencer` restore-owner lookup constructors remain qualified
-exceptions. They sample the configured audio root at construction; replacing this
-with a retained backend owner would change lifetime semantics across104 callers.
-Existing explicit `MusicRestoreSink` overloads serve newly owned callers. No
-demonstrated restore defect justifies the broad migration here; allowance delta0.
-The continuation plan records the alternative and evidence needed to reopen it.
+At the earlier136-record qualification checkpoint, the two legacy
+`SmpsSequencer` restore-owner lookup constructors were retained. They sampled the
+configured audio root at construction; a retained backend destination would
+change lifetime semantics across104 callers. Existing explicit `MusicRestoreSink`
+overloads served newly owned callers. That source-only qualification established
+the lifetime difference without demonstrating a restore defect, and its allowance
+delta was0. The explicit lifetime migration below supersedes that retention
+decision through a deliberate architectural contract change.
 
 The subsequent intact `PaletteLoader` move from `data` to `level` removes its ten
 canonical-palette decoding dependencies (136 → 126), with no replacement frozen
@@ -770,5 +772,10 @@ requires it in its constructor. Normal snapshots retain the actual sink and
 live-reference reconstruction preserves it; explicit resolvers may choose another
 sink. No blanket identity assertion changes that resolver contract. The legacy
 singleton config binder and deferred presentation natural-restore callback stay
-unchanged. Focused evidence and limits are appended to the existing
+unchanged. Removing public convenience constructors on `SmpsSequencer` and the
+concrete SMPS backends changes their unsupported source and binary contracts.
+External users must supply their existing restore destination through the
+explicit constructor forms and rebuild against matching engine artifacts. These
+constructors are outside the supported recursive API; no repinning is warranted.
+Focused evidence and limits are appended to the existing
 [continuation artifact](plans/2026-10-24-architecture-continuation.md).
