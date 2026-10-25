@@ -9662,7 +9662,7 @@ constructor allowance or production hook changes.
 | Area | Falsifiable observations |
 | --- | --- |
 | Coordination preparation/application, new/existing owner × base/donor paths | Callback replaces backend and realizes another producer; existing-owner callback retires a real previously open producer. Prepared/current/factory owner identities differ; backend attempt observes old logical tuple and unpublished candidate membership. New-owner publication reinstalls the prepared owner; existing-owner publication adds membership to the current set while registrations stay on the prepared owner. Base replacement sees membership and logical publication before closing. |
-| Construction reentry during admission policy | Old factory receiver gets outer policy, replacement factory retains nested policy; later sink callback sees newly published queue/registry/resolver; outer session local remains old while factory/coordination/sink reads use the replacement; nested producer is not retired atomically. |
+| Construction reentry during admission policy | Old factory receiver gets outer policy, replacement factory retains nested policy; the original non-null sink-callback checks did not distinguish nested publications from outer replacements. The P2 follow-up below captures nested queue/registry/resolver identities before outer construction resumes, observes their replacement at both later sink callbacks, and verifies registry/resolver factory and queue wiring. Outer session local remains old while factory/coordination/sink reads use the replacement; nested producer is not retired atomically. |
 | Restore-policy failure after factory publication | Exact thrown object and actual callback/factory/session observation; tuning/coordination/factory survive while producer/session/queue/registry/resolver/parity/frame-rate publication is absent; subsequent profile publication refreshes that factory, subsequent ROM publication prepares its loader and advances generation without refreshing or realizing it. |
 | Native-stage timing | Actual stateful-policy callback observes the increment before any session/factory/producer publication; two failures preserve the same exception and count twice; third construction succeeds, and retirement retains native configuration/count. |
 | Off-owner base mutation | Real session owner check throws from captureSnapshot after backend configuration and logical generation/profile/loader publication; held acknowledgement/selected identity, capture identity/clock/pending samples, producer/history/prepared token and tempo remain intact; no sink close or carry marking occurs. |
@@ -9787,3 +9787,70 @@ commit directly after `04a5`, with hooks and the required policy/co-author
 trailers. Retain the clean T3 worktree and local branch for the parent's
 independent preservation-evidence review. No fetch, main edit, branch switch,
 subdelegation, push, integration, worktree cleanup or extraction occurs here.
+
+#### PresentationBinding baseline-review P2: outer publication identities
+
+This bounded follow-up starts directly at baseline commit
+`040b54b20b246b003935649c82203f77f279a1f4`, in the same retained T3 worktree
+and `bugfix/ai-presentation-binding-owner-20261025` branch. The sole review P2
+identified an overstatement in the construction row above: its original three
+non-null checks at the later sink callback could observe the queue, registry and
+resolver already created by nested realization. Delaying outer assignment until
+after sink validation could therefore satisfy those checks. The original final
+assertions also omitted the registry/resolver factory references. The row now
+distinguishes that original coverage limit from this strengthened observation.
+
+Only `constructionCapturesFactoryReceiverBeforePolicyButReadsLaterPhysicalSlotsLive`
+changes. Immediately after nested realization it independently captures the
+nested commands, registry and resolver identities and positively checks their
+presence, before returning from the outer policy callback. Each of the two
+existing later sink-rate callbacks must observe a different current queue,
+registry and resolver. It then checks registry `sfxInstantiation` and
+`dependencyResolver` against the independently captured nested factory,
+resolver `factory` against that same factory, and resolver `queue` against the
+current outer commands. Final assertions retain that wiring. All old assertions,
+policy/callback counts, order, exception behavior and resource cleanup remain;
+the source diff adds 26 lines inside that method and removes none. The other
+eight cases and every shared/local helper are byte-identical to `040b54b20`.
+Existing field observations suffice; no new diagnostic framework or production
+seam is introduced.
+
+The only execution uses JDK 25 and the existing queue wrapper:
+
+```text
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk PATH=/usr/lib/jvm/java-25-openjdk/bin:$PATH python3 tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestAudioPresentationBindingContract#constructionCapturesFactoryReceiverBeforePolicyButReadsLaterPhysicalSlotsLive' test -B
+```
+
+Owned session 87798 reported 0s queue wait and 28.816s Maven execution, exit 0.
+Maven reused unchanged main compilation and freshly compiled all 4,487 test
+source files. Physical XML contained exactly
+`com.openggf.audio.TestAudioPresentationBindingContract#constructionCapturesFactoryReceiverBeforePolicyButReadsLaterPhysicalSlotsLive`:
+**1 pass / 0 failures / 0 errors / 0 skips**, class time 0.482s. There were no
+fixture corrections or retries. XML confirmed Java `25.0.5.0.2`, home
+`/usr/lib/jvm/java-25-openjdk`, the literal method selector and 1 GiB Surefire
+heap; ROM and graphics-backend properties were absent. This no-device fixture
+does not require an engine graphics context or EGL. The nine-case fleet and
+unaffected helpers/guards were not rerun. No production mutation was used to
+test the new assertions; their identity and wiring checks reject the specified
+delayed-assignment/current-factory alternatives directly.
+The literal case-ID plus final LF hashes to
+`bc9ce58548c6817c7ad2a41172f5940bd795a37fb39277f01e30867a3986073c`.
+
+The strengthened class Git blob is `13952f74e9e5c0d44c403d74e837519be683d46a`,
+raw SHA-256 `b2d1397e1b7c99aa516df1f6209d3a2666e5a67dc02eb3203891ccd0f39d6e35`.
+Its changed-test fingerprint (relative path + NUL + bytes + NUL) is
+`e663be93389a781c88832f5104f423c539acfce81a5a22225f6df32708d6d3f9`.
+The 4,638-file production/frozen/pin/POM comparison remains exact against
+`040b54b20`: production `src/main` tree
+`c11c9343f64e3cd5ec3d05248693fdfd2d5e6b91`, AM blob
+`5990cb9ee8fa7368d3a4ed99ee327afc4fdd92b2`, all 13 frozen blobs and their 120
+low-level records. Guards, API/permission inventories, Source policy, build
+budgets and the other eight cases remain unchanged; this focused run does not
+recertify their earlier outcomes.
+
+Session 87798 is terminal. Its inspected XML/text diagnostics were consumed;
+owned diagnostics/trace-report directories are empty. No foreign job, target or
+worker source was inspected. The two-file follow-up uses the mandatory hooks,
+seven policy trailers and parsed final GPT-6.1-Sol co-author block. Retain the
+clean local branch/worktree for parent inspection; no extraction, subdelegation,
+fetch, push, integration or worktree removal occurs.

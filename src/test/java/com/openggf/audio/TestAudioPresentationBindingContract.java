@@ -279,6 +279,9 @@ class TestAudioPresentationBindingContract {
         AtomicReference<AudioPresentationSourceFactory> capturedFactory = new AtomicReference<>();
         AtomicReference<AudioPresentationSourceFactory> nestedFactory = new AtomicReference<>();
         AtomicReference<AudioPresentationProducer> nestedProducer = new AtomicReference<>();
+        AtomicReference<Object> nestedCommands = new AtomicReference<>();
+        AtomicReference<Object> nestedRegistry = new AtomicReference<>();
+        AtomicReference<Object> nestedResolver = new AtomicReference<>();
         AtomicInteger policies = new AtomicInteger();
         List<String> order = new ArrayList<>();
         Backend next = newBackend();
@@ -295,6 +298,12 @@ class TestAudioPresentationBindingContract {
                 assertNull(root("shadowCommands"));
                 audio.setBackend(next);
                 assertEquals(60, audio.presentationFrameRate());
+                nestedCommands.set(root("shadowCommands"));
+                nestedRegistry.set(root("shadowRegistry"));
+                nestedResolver.set(root("shadowResolver"));
+                assertNotNull(nestedCommands.get());
+                assertNotNull(nestedRegistry.get());
+                assertNotNull(nestedResolver.get());
                 nestedProducer.set(rememberProducer());
                 nestedFactory.set(root("shadowFactory"));
                 assertNotSame(factory, nestedFactory.get());
@@ -307,6 +316,19 @@ class TestAudioPresentationBindingContract {
                     assertNotNull(root("shadowCommands"));
                     assertNotNull(root("shadowRegistry"));
                     assertNotNull(root("shadowResolver"));
+                    Object outerCommands = root("shadowCommands");
+                    Object outerRegistry = root("shadowRegistry");
+                    Object outerResolver = root("shadowResolver");
+                    assertNotSame(nestedCommands.get(), outerCommands,
+                            "outer queue publication precedes sink validation");
+                    assertNotSame(nestedRegistry.get(), outerRegistry,
+                            "outer registry publication precedes sink validation");
+                    assertNotSame(nestedResolver.get(), outerResolver,
+                            "outer resolver publication precedes sink validation");
+                    assertSame(nestedFactory.get(), field(outerRegistry, "sfxInstantiation"));
+                    assertSame(nestedFactory.get(), field(outerRegistry, "dependencyResolver"));
+                    assertSame(nestedFactory.get(), field(outerResolver, "factory"));
+                    assertSame(outerCommands, field(outerResolver, "queue"));
                 };
                 order.add("outer.policy.exit");
                 return outerPolicy;
@@ -337,6 +359,10 @@ class TestAudioPresentationBindingContract {
         assertSame(root("shadowSmpsSession"), field(root("shadowRegistry"), "smpsSession"));
         assertSame(field(nestedFactory.get(), "coordFlagHandlers"),
                 field(root("shadowRegistry"), "coordFlagHandlers"));
+        assertSame(nestedFactory.get(), field(root("shadowRegistry"), "sfxInstantiation"));
+        assertSame(nestedFactory.get(), field(root("shadowRegistry"), "dependencyResolver"));
+        assertSame(nestedFactory.get(), field(root("shadowResolver"), "factory"));
+        assertSame(root("shadowCommands"), field(root("shadowResolver"), "queue"));
         assertEquals(1, backend.sink.closes);
         assertEquals(0, next.sink.closes);
     }
