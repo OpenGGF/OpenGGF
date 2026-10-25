@@ -615,3 +615,14 @@ the independently scoped load/reset representation, and Sideways after its
 representation gate. This order does not authorize importing broader historical
 compositions or weakening trace comparisons. This investigation/design round
 lands no gameplay fix and changes no fixture, comparison, API or release gate.
+
+## Sideways council reconvened: deliberate compatibility boundary
+
+The user subsequently rejected memory emulation for this repair. The reconvened
+Astra/Fable/Sol/Opus council recommends fixing invalid child ownership without
+reproducing Obj7A failed-allocation writes into Tails storage. The
+[updated Sideways design](../designs/2026-10-25-s2-sideways-storage.md#reconvened-council-bounded-engine-repair-october-25)
+supersedes the physical-storage implementation target, preserves its research,
+and records admission-side-effect, independent-retirement, rewind and policy
+obligations for the implementing agent. Pair-removal semantics remain unresolved;
+this documentation update lands no runtime fix and changes no trace comparison.
