@@ -27,6 +27,7 @@ import com.openggf.game.soniccd.scroll.CdR11aBackgroundScroll;
 import com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane;
 import com.openggf.game.soniccd.scroll.CdR11aForegroundScroll;
 import com.openggf.level.LevelSpritePresentation;
+import com.openggf.level.NativeBackgroundTestAccess;
 import com.openggf.game.soniccd.objects.CdLevelGlobals;
 import com.openggf.game.soniccd.objects.CdObjectDrawQueue;
 import com.openggf.game.soniccd.objects.CdObjectState;
@@ -247,6 +248,8 @@ class TestSonicCdOpeningWorldLoad {
             assertScrollFrame(h, next.prepared(), scroll(h).background());
             assertPlane(expectedPlane.state(), next.plane());
             assertPlane(next.plane(), presentation.publishedPlane());
+            var beforeDraw = state(h); drawAndAssertNativeBackground(h); assertNormalEnsureKeepsNativeBackground(h);
+            assertState(beforeDraw, h);
             assertCopies(consumedCopies(sourceCut, expectedPlane.flags()), scroll(h).copies());
             planeCutDistinguished |= !Arrays.equals(next.plane().nameTable().copy(), nextPlane(h, scroll(h)).state().nameTable().copy());
             assertEquals(h.mode().getCamera().getX(), next.prepared().cameraX());
@@ -375,13 +378,13 @@ class TestSonicCdOpeningWorldLoad {
         var route = List.of(input(8, 0, false), input(8, 0, false), input(8, 2, false),
                 LogicalInputSnapshot.neutral(), input(0, 0, true), LogicalInputSnapshot.neutral(), input(0, 0, true));
         for (var row : route) step(h, row);
-        var after = state(h);
+        var after = state(h); drawAndAssertNativeBackground(h);
         registry.restore(full);
-        assertState(before, h);
+        assertState(before, h); drawAndAssertNativeBackground(h);
         for (var row : route) step(h, row);
         assertState(after, h);
         registry.restoreCourse(course);
-        assertState(before, h);
+        assertState(before, h); drawAndAssertNativeBackground(h);
         for (var row : route) step(h, row);
         assertState(after, h);
     }
@@ -687,8 +690,7 @@ class TestSonicCdOpeningWorldLoad {
             assertEquals(length == 0 ? Integer.MIN_VALUE : 65535, handler.getMaxScrollOffset());
             assertEquals((short) 0x9ABC, handler.getVscrollFactorBG());
             assertEquals((short) 0xFEDC, handler.getBgCameraX());
-            assertEquals(((SonicCdLevel) h.mode().getLevelManager().getCurrentLevel()).assets().terrain().layout()
-                    .columns(com.openggf.game.soniccd.level.CdR11aTerrain.Plane.BACKGROUND) * 256, handler.getBgPeriodWidth());
+            assertEquals(512, handler.getBgPeriodWidth(), "physical native Plane B period");
             assertBackground(bg, scroll(h).background());
         }
         int[] oversized = new int[257]; Arrays.fill(oversized, 0xDEADBEEF);
@@ -809,11 +811,15 @@ class TestSonicCdOpeningWorldLoad {
         assertThrows(IllegalArgumentException.class, () -> handler.restoreRewindState(oldCapture));
         assertScroll(next, scroll(h)); // Old visit rejection precedes every current tuple write.
         assertBackground(bg, scroll(h).background());
+        drawAndAssertNativeBackground(h);
         var registry = h.mode().getRewindRegistry(); var full = registry.capture(); var course = registry.captureCourse();
         step(h, LogicalInputSnapshot.neutral()); var replay = state(h);
-        registry.restore(full); assertScroll(next, scroll(h)); step(h, LogicalInputSnapshot.neutral()); assertState(replay, h);
-        registry.restoreCourse(course); assertScroll(next, scroll(h)); step(h, LogicalInputSnapshot.neutral()); assertState(replay, h);
+        registry.restore(full); assertScroll(next, scroll(h)); drawAndAssertNativeBackground(h);
+        step(h, LogicalInputSnapshot.neutral()); assertState(replay, h); drawAndAssertNativeBackground(h);
+        registry.restoreCourse(course); assertScroll(next, scroll(h)); drawAndAssertNativeBackground(h);
+        step(h, LogicalInputSnapshot.neutral()); assertState(replay, h); drawAndAssertNativeBackground(h);
         assertEquals(0x20000, scroll(h).background().cloudRam().unsignedLong(0));
+        drawAndAssertNativeBackground(h); assertNormalEnsureKeepsNativeBackground(h);
     }
 
     @Test void actualBackgroundBoundaryFailureClosesTheExistingSourceSiblingsWithoutRetry() throws Exception {
@@ -919,6 +925,165 @@ class TestSonicCdOpeningWorldLoad {
                 token -> { LevelFrameStep.serviceVBlankOnly(LevelFrameContext.from(h.mode()), token, PlcLifecyclePhase.LAG); return null; });
         assertScroll(second, scroll(h)); assertPublication(publication, presentation.captureScrollPublication());
         assertSame(picture, objects(h).displayedFrame()); assertPlane(publication.plane(), presentation.publishedPlane());
+    }
+
+
+    // Literal raw-word goldens, independent of layout/chunk transforms and residency admission.
+    @Test void nativeBackgroundDescriptorsKeepZeroAndAllRawAttributeBits() {
+        byte[] words = new byte[4096];
+        ByteBuffer.wrap(words).putShort((short) 0xE804).putShort((short) 0xFFFF);
+        var plane = new CdR11aBackgroundPlane.State(CdAssetBytes.copyOf(words));
+        var encoded = SonicCdPlayerPresentation.nativeBackgroundDescriptors(plane);
+        assertEquals(8192, encoded.length);
+        assertArrayEquals(new byte[] {4, (byte) 0xB8, 0, (byte) 0xFF,
+                (byte) 0xFF, (byte) 0xFF, 0, (byte) 0xFF, 0, 0, 0, (byte) 0xFF},
+                Arrays.copyOf(encoded, 12));
+        assertArrayEquals(new byte[] {0, 0, 0, (byte) 0xFF}, Arrays.copyOfRange(encoded, 8188, 8192));
+        assertArrayEquals(words, plane.nameTable().copy());
+        assertThrows(NullPointerException.class, () -> SonicCdPlayerPresentation.nativeBackgroundDescriptors(null));
+    }
+
+    @Test void nativeBackgroundDescriptorsRoundTripEveryWordWithoutAliasingTheImmutablePlane() {
+        for (int first = 0; first < 65536; first += 2048) {
+            byte[] raw = new byte[4096]; var words = ByteBuffer.wrap(raw);
+            for (int cell = 0; cell < 2048; cell++) words.putShort((short) (first + cell));
+            var plane = new CdR11aBackgroundPlane.State(CdAssetBytes.copyOf(raw));
+            var before = plane.nameTable().copy();
+            Arrays.fill(raw, (byte) 0x55);
+            var encoded = SonicCdPlayerPresentation.nativeBackgroundDescriptors(plane);
+            assertEquals(8192, encoded.length);
+            for (int cell = 0; cell < 2048; cell++) {
+                int at = cell * 4, g = encoded[at + 1] & 255;
+                int decoded = (encoded[at] & 255) | ((g & 7) << 8) | ((g & 0x18) << 10)
+                        | ((g & 0x60) << 6) | ((g & 0x80) << 8);
+                assertEquals(first + cell, decoded, "raw physical cell " + cell);
+                assertEquals(0, encoded[at + 2]); assertEquals(255, encoded[at + 3] & 255);
+            }
+            var again = SonicCdPlayerPresentation.nativeBackgroundDescriptors(plane);
+            assertNotSame(encoded, again); assertArrayEquals(encoded, again);
+            Arrays.fill(encoded, (byte) 0);
+            assertArrayEquals(before, plane.nameTable().copy());
+            assertArrayEquals(oracleNativeDescriptors(plane), again);
+        }
+    }
+
+    @Test void coldNativeBackgroundDrawReconcilesTheActualCacheWithoutPublishingOrSteppingSource() throws Exception {
+        var h = opening(); var presentation = (SonicCdPlayerPresentation) h.module().getScrollHandlerProvider();
+        var before = state(h); var tm = h.mode().getLevelManager().getTilemapManager();
+        assertNull(before.publication().prepared()); assertNull(before.publication().published());
+        drawAndAssertNativeBackground(h); assertState(before, h);
+        tm.setBgTilemapBaseX(512); tm.setCurrentBgPeriodWidth(1024); tm.setBgLoopBandBaseY(256);
+        tm.setBackgroundTilemapDirty(true);
+        h.module().getScrollHandlerProvider().getHandler(0).update(new int[256], 999, -999, 777, 0);
+        drawAndAssertNativeBackground(h); drawAndAssertNativeBackground(h);
+        assertState(before, h);
+        assertNull(presentation.captureScrollPublication().prepared());
+        assertNull(presentation.captureScrollPublication().published());
+        assertEquals(0, h.module().requirePlayerFrame().vIntClock().deltaSinceAdmittedCut());
+        assertNormalEnsureKeepsNativeBackground(h);
+    }
+
+    @ParameterizedTest @EnumSource(CdReleaseVariant.class)
+    void terrainNativeBackgroundUsesActualCpuPatternsWithoutRequiringGpuResidency(CdReleaseVariant variant) throws Exception {
+        var h = load(SonicCdGameModule.terrainOnlyDevelopmentPlayer(), source(variant), true);
+        var frame = h.module().requirePlayerFrame(); var body = frame.captureActor(); var shared = frame.captureShared();
+        var before = scroll(h); var camera = h.mode().getCamera().capture();
+        var atlas = GameServices.graphics().getPatternAtlas();
+        assertTrue(GameServices.graphics().isHeadlessMode()); assertFalse(GameServices.graphics().isGlInitialized());
+        assertFalse(atlas.isInitialized(), "CPU projection must not initialize an atlas");
+        int id = before.plane().nameTable().unsignedWord(0) & 0x7FF;
+        GameServices.graphics().uncachePattern(id); // Public residency removal is harmless for a CPU-only projection.
+        assertNull(atlas.getEntry(id));
+        drawAndAssertNativeBackground(h); drawAndAssertNativeBackground(h); assertNormalEnsureKeepsNativeBackground(h);
+        assertNull(atlas.getEntry(id), "Do not manufacture GPU residency while projecting headless descriptors");
+        assertSame(atlas, GameServices.graphics().getPatternAtlas()); assertFalse(atlas.isInitialized());
+        assertEquals(body, frame.captureActor()); assertEquals(shared.environment(), frame.captureShared().environment());
+        assertEquals(shared.vIntClock(), frame.captureShared().vIntClock()); assertEquals(camera, h.mode().getCamera().capture());
+        assertScroll(before, scroll(h)); assertEquals(0, frame.state().motion().routine());
+    }
+
+    @ParameterizedTest @CsvSource({"true,scroll", "true,cinematic", "true,capture",
+            "false,scroll", "false,cinematic", "false,capture"})
+    void nativeBackgroundNestedAdmissionRejectsBeforeCacheMutationAndClosesItsOwnVisit(
+            boolean openingEntry, String enclosing) throws Exception {
+        var h = openingEntry ? opening() : load(SonicCdGameModule.terrainOnlyDevelopmentPlayer(), source(CdReleaseVariant.USA), true);
+        drawAndAssertNativeBackground(h);
+        var level = h.mode().getLevelManager(); var graphics = GameServices.graphics();
+        var frame = h.module().requirePlayerFrame(); var body = frame.state(); var clock = frame.vIntClock();
+        var runtime = openingEntry ? objects(h) : null;
+        var bytes = NativeBackgroundTestAccess.descriptors(level);
+        var geometry = NativeBackgroundTestAccess.geometry(level); var flags = NativeBackgroundTestAccess.flags(level);
+        Runnable reject = () -> assertThrows(IllegalStateException.class, h.module().gameplayFrameController()::drawOverlay);
+        switch (enclosing) {
+            case "scroll" -> LevelSpritePresentation.withScroll(level, LevelSpritePresentation.captureScroll(level), reject);
+            case "cinematic" -> LevelSpritePresentation.withCinematicCamera(level, h.mode().getCamera().getX(),
+                    h.mode().getCamera().getY(), reject);
+            case "capture" -> graphics.executeCapturedCommands(reject, h.mode().getCamera().getX(),
+                    h.mode().getCamera().getY(), 320, 224);
+            default -> fail("unknown fixture scope");
+        }
+        assertTrue(frame.closed()); if (runtime != null) assertTrue(runtime.closed());
+        assertEquals(body, frame.state()); assertEquals(clock, frame.vIntClock());
+        assertArrayEquals(bytes, NativeBackgroundTestAccess.descriptors(level));
+        assertArrayEquals(geometry, NativeBackgroundTestAccess.geometry(level));
+        assertArrayEquals(flags, NativeBackgroundTestAccess.flags(level));
+        assertThrows(IllegalStateException.class, h.module().gameplayFrameController()::drawOverlay);
+        assertArrayEquals(bytes, NativeBackgroundTestAccess.descriptors(level));
+    }
+
+    @ParameterizedTest @CsvSource({"true", "false"})
+    void nativeBackgroundRejectsAChangedRuntimePatternInsteadOfAcceptingArrayCapacity(boolean openingEntry) throws Exception {
+        var h = openingEntry ? opening() : load(SonicCdGameModule.terrainOnlyDevelopmentPlayer(), source(CdReleaseVariant.USA), true);
+        drawAndAssertNativeBackground(h);
+        var frame = h.module().requirePlayerFrame(); var runtime = openingEntry ? objects(h) : null;
+        var level = h.mode().getLevelManager(); var before = NativeBackgroundTestAccess.descriptors(level);
+        var selected = ((SonicCdPlayerPresentation) h.module().getScrollHandlerProvider()).publishedPlane();
+        int id = selected.nameTable().unsignedWord(0) & 0x7FF;
+        var pattern = level.getCurrentLevel().getPattern(id); byte original = pattern.getPixel(0, 0);
+        pattern.setPixel(0, 0, (byte) ((original + 1) & 15)); // Legitimate public mutable-Level operation.
+        var body = frame.state(); var clock = frame.vIntClock();
+        var failure = assertThrows(IllegalStateException.class, h.module().gameplayFrameController()::drawOverlay);
+        assertTrue(failure.getMessage().contains("resident base-level pattern"), failure.getMessage());
+        assertTrue(frame.closed()); if (runtime != null) assertTrue(runtime.closed());
+        assertEquals(body, frame.state()); assertEquals(clock, frame.vIntClock());
+        assertArrayEquals(before, NativeBackgroundTestAccess.descriptors(level));
+        assertThrows(IllegalStateException.class, h.module().gameplayFrameController()::drawOverlay);
+    }
+
+    private static byte[] oracleNativeDescriptors(CdR11aBackgroundPlane.State plane) {
+        byte[] out = new byte[8192];
+        for (int y = 0; y < 32; y++) for (int x = 0; x < 64; x++) {
+            int cell = y * 64 + x, word = plane.nameTable().unsignedWord(cell * 2);
+            int pattern = word % 2048, palette = (word / 8192) % 4;
+            out[cell * 4] = (byte) (pattern % 256);
+            out[cell * 4 + 1] = (byte) (pattern / 256 + palette * 8
+                    + ((word / 2048) % 2) * 32 + ((word / 4096) % 2) * 64 + (word / 32768) * 128);
+            out[cell * 4 + 3] = (byte) 255;
+        }
+        return out;
+    }
+
+    private static void assertNativeBackground(Harness h) {
+        var presentation = (SonicCdPlayerPresentation) h.module().getScrollHandlerProvider();
+        var level = h.mode().getLevelManager(); var tm = level.getTilemapManager();
+        assertArrayEquals(oracleNativeDescriptors(presentation.publishedPlane()), NativeBackgroundTestAccess.descriptors(level));
+        assertArrayEquals(new int[] {64, 32, 0, 0, 512, 32, 0, -1}, NativeBackgroundTestAccess.geometry(level));
+        assertArrayEquals(new boolean[] {false, true, false}, NativeBackgroundTestAccess.flags(level));
+        assertEquals(512, h.module().getScrollHandlerProvider().getHandler(0).getBgPeriodWidth());
+        assertEquals(512, GameServices.parallax().getBgPeriodWidth());
+        assertEquals(8192, tm.getBackgroundTilemapData().length);
+    }
+
+    private static void drawAndAssertNativeBackground(Harness h) {
+        h.module().gameplayFrameController().drawOverlay(); assertNativeBackground(h);
+    }
+
+    private static void assertNormalEnsureKeepsNativeBackground(Harness h) {
+        var tm = h.mode().getLevelManager().getTilemapManager();
+        tm.ensureBackgroundTilemapData((layer, x, y) -> {
+            throw new AssertionError("A clean retained native plane must not query layout geometry");
+        }, null, 0, GameServices.parallax(), h.mode().getLevelManager().isVerticalWrapEnabled());
+        assertNativeBackground(h);
     }
 
     /** Explicit component ingress for failure paths; the separate natural test supplies only controllers. */

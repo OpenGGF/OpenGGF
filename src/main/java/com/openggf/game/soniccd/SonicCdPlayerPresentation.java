@@ -16,7 +16,6 @@ import com.openggf.game.session.GameplayInputFilterAccess;
 import com.openggf.game.session.WorldSessionPolicyAccess;
 import com.openggf.game.soniccd.level.CdR11aAssets;
 import com.openggf.game.soniccd.level.CdAssetBytes;
-import com.openggf.game.soniccd.level.CdR11aTerrain;
 import com.openggf.game.soniccd.level.SonicCdLevel;
 import com.openggf.game.soniccd.objects.CdObjectDrawQueue;
 import com.openggf.game.soniccd.objects.CdOpeningObjectRuntime;
@@ -28,6 +27,7 @@ import com.openggf.game.soniccd.scroll.CdR11aBackgroundScroll;
 import com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane;
 import com.openggf.graphics.PatternAtlas;
 import com.openggf.graphics.PatternAtlasRange;
+import com.openggf.graphics.SpritePresentation;
 import com.openggf.level.LevelManager;
 import com.openggf.level.LevelSpritePresentation;
 import com.openggf.level.render.SpritePresentationRenderer;
@@ -41,8 +41,9 @@ import java.util.Objects;
 /**
  * Controlled-frame/camera adapters for the separately named private player entries.
  * Opening objects share one native pass and immutable picture; terrain-only retains
- * its existing player draw. Both compose native BG arithmetic through the development
- * planes, with no native BG section streaming/residency or pixel-parity claim, no HUD/native music and
+ * its existing player draw. Both display the selected immutable native Plane B with
+ * bounded DEV preloaded base-level art, not executed native PLC/section residency.
+ * No mixed plane/sprite priority or native pixel-parity claim, no HUD/native music and
  * no retail-route claim. Mixed plane/sprite priority remains a known presentation gap.
  * Source service is provided by the existing PLC boundary, never by draw/callback.
  */
@@ -66,7 +67,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
     private CdR11aBackgroundPlane backgroundPlane; // One immutable source binding, not another BG arithmetic owner.
     private CdR11aBackgroundPlane.State planeState; // Authoritative 4096 native bytes, advanced only by source draw service.
     private DrawCopies drawCopies;
-    private CdR11aBackgroundPlane.State publishedPlane; // Selected immutable display value; no renderer upload in this unit.
+    private CdR11aBackgroundPlane.State publishedPlane; // Selected immutable display value; GPU descriptors are derived.
     private boolean loadScrollPending;
     private Object scrollCaptureOwner = new Object();
     // CPU scroll prepared by the completed loop; V-int selects the previous one
@@ -244,7 +245,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         drawCopies = consumed;
     }
 
-    /** Read-only selected immutable image for a future renderer; no descriptor/cache/GPU operation. */
+    /** Read-only selected immutable image; drawing never advances this source publication. */
     CdR11aBackgroundPlane.State publishedPlane() { requireBound(); return publishedPlane; }
 
     void publishTerrainPlane(PlcLifecyclePhase phase) {
@@ -515,7 +516,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
     @Override public void drawOverlay() {
         try { drawCompletedOverlay(); }
         catch (RuntimeException | Error failure) {
-            if (module.openingObjectsAdmission()) module.closePlayerCycleAfterFailure(failure);
+            module.closePlayerCycleAfterFailure(failure);
             throw failure;
         }
     }
@@ -527,27 +528,131 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
             throw new IllegalStateException("Opening draw requires its completed loop, never a partial SAT");
         }
         var level = GameServices.level();
-        if (openingObjects == null) {
-            GameServices.parallax().update(0, 0, GameServices.camera(), level.getFrameCounter());
-            level.drawWithRenderOptions(GameServices.sprites(),
-                    new LevelManager.LevelRenderOptions(true, false, false, false, false, false, false));
-        } else {
-            Runnable terrain = () -> level.drawWithRenderOptions(GameServices.sprites(),
-                    LevelManager.LevelRenderOptions.tilesOnly());
-            // Before first V-int the explicit empty CPU SAT has no published
-            // render cut. Cold draw remains live but never creates one by drawing.
-            if (publishedScroll == null) terrain.run();
-            else LevelSpritePresentation.withScroll(level, publishedScroll, terrain);
-        }
+        var selectedPlane = publishedPlane();
+        var selectedScroll = openingObjects == null ? null : publishedScroll;
+        var selectedPicture = openingObjects == null ? null : openingObjects.displayedFrame();
+        var descriptors = nativeBackgroundDescriptors(selectedPlane);
+        requireNativeBackgroundResidents(level, selectedPlane, false);
+        // The shared scope owns actual idle/lifetime admission, the old-image FIFO barrier,
+        // fixed-cache settlement and the selected-image command drain. Null means the current
+        // completed-load view: no public ScrollFrame, first-input token or parallax update.
+        LevelSpritePresentation.withScrollAndBackground(level, selectedScroll, descriptors, () -> {
+            requireBound();
+            actor.requireCompletedNativeFrame();
+            if (publishedPlane != selectedPlane || (openingObjects != null
+                    && (publishedScroll != selectedScroll || openingObjects.displayedFrame() != selectedPicture))) {
+                throw new IllegalStateException("CD background publication changed during its render scope");
+            }
+            // Old commands have now drained. Recheck actual art/lookup authority before any
+            // terrain command can sample it; never repair an invalid lookup by drawing a fallback.
+            requireNativeBackgroundResidents(level, selectedPlane, true);
+            level.drawWithRenderOptions(GameServices.sprites(), openingObjects == null
+                    ? new LevelManager.LevelRenderOptions(true, false, false, false, false, false, false)
+                    : LevelManager.LevelRenderOptions.tilesOnly());
+        });
         if (openingObjects != null) {
             var camera = GameServices.camera();
             // Screen-relative immutable SAT picture; renderer adds camera back for
             // the world-coordinate graphics API. Preserve native SAT order. Plane
             // priority composition remains bounded, not full VDP parity.
-            SpritePresentationRenderer.draw(GameServices.graphics(), openingObjects.displayedFrame(),
+            SpritePresentationRenderer.draw(GameServices.graphics(), selectedPicture,
                     camera.getX(), camera.getY(), layer -> true);
         }
         GameServices.graphics().flush();
+    }
+
+
+    /**
+     * Physical 64x32 native words, already reflected by the source Plane owner, to renderer RGBA.
+     * Zero still names pattern0; descriptor alpha is FF for every cell. Residency is a draw gate,
+     * not an encoder rewrite. The native priority bit survives despite the existing overlay gap.
+     */
+    static byte[] nativeBackgroundDescriptors(CdR11aBackgroundPlane.State plane) {
+        Objects.requireNonNull(plane, "selected native Plane B");
+        byte[] descriptors = new byte[64 * 32 * 4];
+        for (int cell = 0; cell < 64 * 32; cell++) {
+            int word = plane.nameTable().unsignedWord(cell * 2);
+            descriptors[cell * 4] = (byte) word;
+            descriptors[cell * 4 + 1] = (byte) (((word >>> 8) & 7) | (((word >>> 13) & 3) << 3)
+                    | ((word & 0x0800) != 0 ? 0x20 : 0) | ((word & 0x1000) != 0 ? 0x40 : 0)
+                    | ((word & 0x8000) != 0 ? 0x80 : 0));
+            descriptors[cell * 4 + 3] = (byte) 0xFF;
+        }
+        return descriptors;
+    }
+
+    /**
+     * Explicit DEV resident-base-art policy: the authenticated800 patterns and the actual current
+     * Level are authoritative. This is not native section PLC execution/residency and adds no path
+     * fence. A CPU projection needs no atlas entries; real drawing additionally needs the current
+     * initialized atlas0 upload samples, palette texture and exact lookup entries.
+     */
+    private void requireNativeBackgroundResidents(LevelManager level, CdR11aBackgroundPlane.State selected,
+                                                   boolean lookupReady) {
+        if (!(level.getCurrentLevel() instanceof SonicCdLevel current) || current.assets() != assets
+                || assets.terrain().patternCount() != 800 || current.getPatternCount() != 800) {
+            throw new IllegalStateException("CD background requires the authenticated800 resident base-level patterns");
+        }
+        var graphics = GameServices.graphics();
+        boolean gpu = !graphics.isHeadlessMode();
+        var atlas = graphics.getPatternAtlas();
+        if (gpu && (!graphics.isGlInitialized() || atlas == null || !atlas.isInitialized()
+                || atlas.getTextureId(0) == 0 || graphics.getTilemapGpuRenderer() == null
+                || graphics.getCombinedPaletteTextureId() == null || graphics.getCombinedPaletteTextureId() == 0)) {
+            throw new IllegalStateException("CD background requires initialized current atlas and level palette");
+        }
+        // Palette selection remains the native two-bit line; actual Level/publisher owns all colours.
+        if (current.getPaletteCount() != 4) throw new IllegalStateException("CD background requires four current level palettes");
+        for (int line = 0; line < 4; line++) {
+            var palette = current.getPalette(line);
+            if (palette == null || palette.getColorCount() != 16) {
+                throw new IllegalStateException("CD background has no current level palette line " + line);
+            }
+            for (int colour = 0; colour < 16; colour++) {
+                if (palette.getColor(colour) == null) throw new IllegalStateException("CD background has an absent level colour");
+            }
+        }
+        var tilemap = level.getTilemapManager();
+        byte[] lookup = gpu && lookupReady ? tilemap.getPatternLookupData() : null;
+        boolean[] checked = new boolean[800];
+        for (int cell = 0; cell < 64 * 32; cell++) {
+            int id = selected.nameTable().unsignedWord(cell * 2) & 0x7FF;
+            if (id >= checked.length) {
+                throw new IllegalStateException("CD background references an unloaded resident base-level pattern " + id);
+            }
+            if (checked[id]) continue;
+            checked[id] = true;
+            var pattern = current.getPattern(id);
+            if (pattern == null) throw new IllegalStateException("CD background has no resident base-level pattern " + id);
+            var entry = gpu ? atlas.getEntry(id) : null; // No allocating get-entry wrapper or invented bank.
+            var sample = gpu ? SpritePresentation.patternSample(graphics, id) : null;
+            if (gpu && (entry == null || entry.patternId() != id || entry.atlasIndex() != 0 || sample == null
+                    || entry.tileX() < 0 || entry.tileX() > 255 || (entry.tileX() + 1) * 8 > atlas.getAtlasWidth()
+                    || entry.tileY() < 0 || entry.tileY() > 255 || (entry.tileY() + 1) * 8 > atlas.getAtlasHeight())) {
+                throw new IllegalStateException("CD background has no current atlas0 resident base-level pattern " + id);
+            }
+            for (int pixel = 0; pixel < 64; pixel++) {
+                int x = pixel & 7, y = pixel >>> 3, value = pattern.getPixel(x, y) & 255;
+                if (value != assets.terrain().pixel(id, x, y)) {
+                    throw new IllegalStateException("CD background changed resident base-level pattern " + id);
+                }
+                if (gpu) {
+                    long word = switch (pixel >>> 4) { case 0 -> sample.a(); case 1 -> sample.b();
+                        case 2 -> sample.c(); default -> sample.d(); };
+                    if (((word >>> ((pixel & 15) * 4)) & 15) != value) {
+                        throw new IllegalStateException("CD background has a stale resident base-level pattern upload " + id);
+                    }
+                }
+            }
+            // The generic shader ignores lookup alpha and atlasIndex; a missing/stale lookup
+            // can otherwise sample clamped or unrelated pixels even with a valid native word.
+            if (gpu && lookupReady && (lookup == null || tilemap.getPatternLookupSize() <= id
+                    || lookup.length < (id + 1) * 4 || (lookup[id * 4] & 255) != entry.tileX()
+                    || (lookup[id * 4 + 1] & 255) != entry.tileY() || lookup[id * 4 + 2] != 0
+                    || (lookup[id * 4 + 3] & 255) != 255)) {
+                throw new IllegalStateException("CD background has an invalid resident base-level pattern lookup " + id);
+            }
+        }
     }
 
     @Override public void close() { module.closeTerrainPlayer(); }
@@ -654,7 +759,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         @Override public int getBgCameraX() { return (short) requireBackground().cameraBgXWord(); }
         @Override public int getBgPeriodWidth() {
             if (assets == null) throw new IllegalStateException("CD background has no bound assets");
-            return assets.terrain().layout().columns(CdR11aTerrain.Plane.BACKGROUND) * 256;
+            return 512; // Physical64x32 Plane B, Main.asm:227-231; never the source layout extent.
         }
         @Override public Object captureRewindState() {
             if (scrollState == null) return null;

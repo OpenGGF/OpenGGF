@@ -23,6 +23,25 @@ headless tests, or audio. S3K-specific routing is in [AGENTS_S3K.md](../../AGENT
 
 The things that cost the most time when missed.
 
+
+**Immutable byte wrappers can still compare by identity.** CD `CdAssetBytes`
+does not define content equality. A record containing it, such as an art state
+or DMA request, can therefore differ after a valid decode/restore/replay even
+when every byte matches. Compare the complete byte copies and relevant scalar
+metadata at independently rebuilt service cuts. Do not weaken the production
+owner checks: `CdObjectState` equality deliberately also binds its pool and
+physical slot; cross-pool restart comparisons need an explicit value projection.
+See the [CD component and restart evidence](plans/2026-10-23-sonic-cd-implementation.md).
+
+**A standalone scroll draw can precede presentation preparation.** The arena
+mask transition can still have no sample at a cold load. Capturing that null
+and then drawing an ordinary player fails on real GL, while logic-headless and
+tiles-only checks can both pass. A standalone scope must retain actual cold
+geometry without advancing the transition, and preserve any existing sample;
+do not resample live bounds during delayed drawing or suppress the player.
+Keep native sprite-table capture semantics unchanged and test the real cold
+player path as well as immutable capture purity.
+
 **A byte memory operand at a native word reads its high byte.** The 68000 is
 big-endian: CD `Player_LvlColAir_Down` reads `move.b oYVel(a0),d2`, with no
 `+1`, then ADDQ.B/NEG.B and signed byte distance comparisons

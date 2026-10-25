@@ -28,6 +28,36 @@ import static org.mockito.Mockito.*;
 
 /** ROM-free real owner/capture behavior; no renderer or production constructor substitutes. */
 class TestLevelScrollCapture {
+    @Test void coldStandaloneScrollRetainsAnArenaMaskWithoutAdvancingTheTransition() {
+        try (var f = new ScrollFixture()) {
+            var before = f.renderer.boundsMask.capture();
+            var camera = f.camera.capture();
+            assertNull(LevelScrollPresentation.capture(f.level, AdvancedRenderFrameState.disabled()).registers().arenaMask(),
+                    "ordinary published-table capture keeps its existing cold semantics");
+            var expected = LevelScrollPresentation.captureArenaMask(f.level);
+            var retained = f.renderer.captureScroll();
+            assertNotNull(retained.registers().arenaMask(), "standalone draw may include the ordinary player pass");
+            assertEquals(expected, retained.registers().arenaMask());
+            assertEquals(before, f.renderer.boundsMask.capture());
+            assertEquals(camera, f.camera.capture());
+            assertNull(LevelScrollPresentation.capture(f.level, AdvancedRenderFrameState.disabled()).registers().arenaMask());
+            f.level.frameCounter++;
+            assertEquals(expected, retained.registers().arenaMask(), "retained geometry never resamples at draw time");
+            assertNotEquals(expected, f.renderer.captureScroll().registers().arenaMask());
+        }
+    }
+
+    @Test void standaloneScrollKeepsAnExistingTransitionSampleInsteadOfRecapturingGeometry() {
+        try (var f = new ScrollFixture()) {
+            f.renderer.boundsMask.advance(new ArenaMaskState(12, 300, 7), f.camera.getX(), f.camera.getWidth());
+            var before = f.renderer.boundsMask.capture();
+            var sample = f.renderer.boundsMask.sample();
+            assertSame(sample, f.renderer.captureScroll().registers().arenaMask());
+            assertSame(sample, LevelScrollPresentation.capture(f.level, AdvancedRenderFrameState.disabled()).registers().arenaMask());
+            assertEquals(before, f.renderer.boundsMask.capture());
+        }
+    }
+
     @Test void failedLevelConstructionReleasesStaticMockAndNextFixtureUsesRealBootstrapDependencies() {
         var previousConfig = GameServices.configuration();
         var previousGraphics = GameServices.graphics();

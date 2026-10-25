@@ -4278,3 +4278,64 @@ The three regional invocations executed; USA-only object admission is unchanged.
 This is bounded component/media/API evidence, not World contact, native timing,
 section PLC residency, rendered debug pixels, an act/game or regional parity.
 Independent source reviews found no remaining productionP1/P2 in these units.
+
+
+## Retained native Plane B client and cold-mask correction — 25 October 2026
+
+The CD client projects the selected immutable4096-byte native Plane B into
+physical64x32 RGBA descriptors and pairs it with the same published scroll/SAT.
+Native pattern/palette/H/V/priority bits survive, including opaque pattern0;
+encoding all2048 IDs is separate from admission to the authenticated800 resident
+base-level patterns. CPU draws require actual Level patterns/palettes but no GPU
+entries. GPU draws additionally require the actual current atlas0 entries,
+matching64-pixel upload samples and matching manager lookup, rechecked after
+old FIFO drain. No fake entries, allocator fallback, source advance or new BG
+owner is added. Native PLC/section residency remains explicitly unimplemented.
+The real static512px window,256px vertical wrap and origin0 cache are selected
+through the shared scope; the old draw-time parallax update is removed.
+
+Independent client review found noP1/P2 and noted a missing discriminating BG
+pixel oracle. Root28111 ran the exact four-file R2 client on4fd78f6bc:
+130/0failures/3errors/0skips after727s queue/2m13s Maven. WorldLoad46,
+OpeningEGL11,TerrainLoad27,ScrollScope27 andAPI11 passed. All three actual
+regional TerrainBoot cold-render cases errored at GraphicsManager.drawArenaMask
+because standalone scroll captured a null transition sample before first
+presentation preparation. CPU headless short-circuit and opening tilesOnly
+had concealed that actual GPU/player path. No fixture assertion was weakened.
+
+Root's captureForDrawScope snapshots actual cold mask geometry at capture,
+without advancing its transition; an existing sample is retained exactly.
+Only standalone captureScroll and nullable-background capture select it.
+The ordinary/native-table capture body, cinematic paths and S3K publication
+semantics remain byte-identical. Two tests were authored before this repair;
+the three existing actual terrain cases supply observed regressionRED.
+A bounded independent review found noP1/P2; the new pure cold test uses native
+320px width and does not independently certify wider asymmetric wing geometry.
+
+Test-onlyRootR3 also compares real native-BG terrain pixels against the same
+foreground/art/camera/scroll with transparent BG descriptors. Pixels must differ,
+then an ordinary draw must restore the native image and the source capture.
+This rejects an omitted BG draw that deterministic replay alone could miss.
+Root60908 passed71/0failures/0errors/0skips,577s queue/1m34s Maven,
+exit01:23:09BST. Exact eight XMLs/Java25/media/EGL/verifiedS2+S3K properties and
+case identities inspected: TerrainBoot8 (all three regional actual EGL cases),
+ScrollCapture9,ScrollScope27,SpritePresentation7,Lifecycle6,S3KCinematic2,
+NativePlaneEGL1 (cold/full/course/93-row replay and BG counterfactual),API11.
+It used queued --normal -Dmse=off, display variables unset, supplied media,
+soniccd.opening.egl=true and explicit surfaceless-egl/ROM properties. The original
+130-case invocation remains red. Changed checks were rerun proportionately;
+unchanged WorldLoad46/TerrainLoad27/otherOpeningEGL10 retain their earlier result,
+not a new post-repair pass. No image/output property or desktop audio was enabled.
+These are actual engine pixel/resource/replay checks, not native pixel parity,
+priority composition, section PLC, all regional GPU gameplay or act completion.
+
+The two broad-smoke boot errors are now matched on retained9598c663/currentac4e5efa
+by TestSurfacelessEglContext then TraceCaptureBootDimensionsTest in one alphabetical
+reused JVM. Root67418 and83348 each observed5/0failures/2errors/0skips; both
+Trace errors match line41/initGl332 and follow the predecessor's unconditional
+backend-property clear. Earlier isolated Trace cases passed both trees. Together
+with the matched HCZ53 and CLI182 failures, all four original broad failure
+identities reproduce on both retained trees. This does not make broad smoke
+green, cover later changes or establish a release/full-suite pass. Its diagnostics
+were consumed and deleted; the clean validation tree/merged local branch were
+removed after preserving11 unknown ignored regular files outside the repository.

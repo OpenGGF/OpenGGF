@@ -20,6 +20,8 @@ import com.openggf.graphics.RgbaImage;
 import com.openggf.graphics.ScreenshotCapture;
 import com.openggf.level.LevelManager;
 import com.openggf.level.LevelSpritePresentation;
+import com.openggf.level.NativeBackgroundTestAccess;
+import com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane;
 import com.openggf.sprites.render.PlayerResidentBanks;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tools.HeadlessGameBoot;
@@ -1137,6 +1139,168 @@ class TestSonicCdOpeningWorldEgl {
         }
     }
 
+
+    @Test void actualEglNativePlaneBSelectsThePublishedImageAndReplaysFullAndCoursePixels() throws Exception {
+        Assumptions.assumeTrue(Boolean.getBoolean("soniccd.opening.egl"), "Explicit actual EGL/media opt-in");
+        assertEquals("surfaceless-egl", System.getProperty("openggf.headless.gl"));
+        assertNull(System.getenv("DISPLAY")); assertNull(System.getenv("WAYLAND_DISPLAY"));
+        String media = System.getProperty("soniccd.media.root"); assertNotNull(media); assertFalse(media.isBlank());
+        CdGameDataSource source;
+        try (var files = Files.list(Path.of(media).resolve("USA"))) {
+            var cues = files.filter(p -> p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".cue")).toList();
+            assertEquals(1, cues.size()); source = CdStockLaunch.prepare(cues.getFirst(), CdStockLaunch.Request.r11a());
+        }
+        String inputLog = InputScriptCompiler.compileToInputLog("2 -\n60 R\n24 R+B\n7 R");
+        var movie = new Bk2MovieLoader().parseInputLogText(Path.of("native-plane-b-input-log"), inputLog.lines().toList());
+        assertEquals(93, movie.getFrameCount());
+        Path output = openCaptureOutput(inputLog, "soniccd.nativeplane.output");
+        try (var boot = new HeadlessGameBoot(320, 224)) {
+            try {
+                var loop = boot.bootSonicCdOpeningObjects(source);
+                var mode = SessionManager.getCurrentGameplayMode();
+                var module = assertInstanceOf(SonicCdGameModule.class, mode.getWorldSession().getGameModule());
+                var presentation = (SonicCdPlayerPresentation) module.getScrollHandlerProvider();
+                var registry = mode.getRewindRegistry(); var coldCut = registry.capture(); var coldState = capture(module);
+                var coldPixels = render(module, true); assertNativeGpuBackground(module);
+                assertNull(presentation.captureScrollPublication().prepared()); assertNull(presentation.captureScrollPublication().published());
+                assertCapture(coldState, module);
+                assertArrayEquals(coldPixels.pixels(), render(module, true).pixels());
+                step(loop, movie.getFrame(0)); step(loop, movie.getFrame(1));
+                var full = registry.capture(); var course = registry.captureCourse(); var checkpoint = capture(module);
+                var checkpointPixels = render(module, true);
+                var states = new ArrayList<Capture>(); var images = new ArrayList<int[]>();
+                boolean distinguishesNextCpuPlane = false, distinguishesNextCpuScroll = false;
+                for (int row = 2; row < movie.getFrameCount(); row++) {
+                    var previous = presentation.captureScrollPublication().prepared();
+                    step(loop, movie.getFrame(row)); states.add(capture(module));
+                    var selected = presentation.captureScrollPublication();
+                    assertSame(previous, selected.published(), "same V-int selection as the displayed SAT");
+                    distinguishesNextCpuScroll |= !selected.published().equals(selected.prepared());
+                    distinguishesNextCpuPlane |= !Arrays.equals(selected.plane().nameTable().copy(),
+                            nextCpuPlaneForComparison(module).nameTable().copy());
+                    images.add(render(module, true).pixels().clone());
+                    assertNativeGpuBackground(module); assertCapture(states.getLast(), module);
+                }
+                assertTrue(distinguishesNextCpuPlane, "route must distinguish selected N from the next CPU candidate N+1");
+                assertTrue(distinguishesNextCpuScroll, "route must distinguish selected and prepared scroll");
+                var finalState = capture(module); var finalPixels = render(module, true);
+                // Keep FG, scroll, art and camera fixed; only the control's descriptor alpha hides Plane B.
+                // Replay alone cannot detect an omitted background draw. This real GPU counterfactual must.
+                var withNativeBackground = render(module, false);
+                var withoutBackground = renderWithoutBackground(module);
+                assertFalse(Arrays.equals(withNativeBackground.pixels(), withoutBackground.pixels()),
+                        "the selected native Plane B must contribute visible framebuffer pixels");
+                assertCapture(finalState, module);
+                assertArrayEquals(finalPixels.pixels(), render(module, true).pixels(),
+                        "ordinary draw reinstalls the selected native image after the negative control");
+                for (boolean courseOnly : List.of(false, true)) {
+                    if (courseOnly) registry.restoreCourse(course); else registry.restore(full);
+                    assertCapture(checkpoint, module);
+                    assertArrayEquals(checkpointPixels.pixels(), render(module, true).pixels());
+                    for (int row = 2; row < movie.getFrameCount(); row++) {
+                        step(loop, movie.getFrame(row)); assertCapture(states.get(row - 2), module);
+                        assertArrayEquals(images.get(row - 2), render(module, true).pixels(), "native-plane replay row " + row);
+                    }
+                    assertCapture(finalState, module);
+                    assertArrayEquals(finalPixels.pixels(), render(module, true).pixels());
+                }
+                registry.restore(coldCut);
+                assertCapture(coldState, module);
+                assertArrayEquals(coldPixels.pixels(), render(module, true).pixels());
+                assertNull(presentation.captureScrollPublication().prepared()); assertNull(presentation.captureScrollPublication().published());
+                if (output != null) {
+                    ScreenshotCapture.savePNG(coldPixels, output.resolve("cold-native-plane-b.png"));
+                    ScreenshotCapture.savePNG(checkpointPixels, output.resolve("checkpoint-native-plane-b.png"));
+                    ScreenshotCapture.savePNG(finalPixels, output.resolve("route-native-plane-b.png"));
+                    Files.writeString(output.resolve("scope.txt"),
+                            "Actual engine captures only when this opted-in method completes. Bounded preloaded800 base-level art; "
+                            + "not native PLC/section residency or mixed BG/FG/sprite priority or native pixel parity.\n",
+                            StandardOpenOption.CREATE_NEW);
+                }
+            } finally {
+                try { SessionManager.closeGameplaySession(); }
+                finally { GraphicsManager.destroyForReinit(); }
+            }
+        }
+    }
+
+    @Test void actualEglMissingNativeLevelAtlasEntryRejectsBeforeTerrainAndClosesBothSourceSiblings() throws Exception {
+        Assumptions.assumeTrue(Boolean.getBoolean("soniccd.opening.egl"), "Explicit actual EGL/media opt-in");
+        assertEquals("surfaceless-egl", System.getProperty("openggf.headless.gl"));
+        assertNull(System.getenv("DISPLAY")); assertNull(System.getenv("WAYLAND_DISPLAY"));
+        String media = System.getProperty("soniccd.media.root"); assertNotNull(media); assertFalse(media.isBlank());
+        CdGameDataSource source;
+        try (var files = Files.list(Path.of(media).resolve("USA"))) {
+            var cues = files.filter(p -> p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".cue")).toList();
+            assertEquals(1, cues.size()); source = CdStockLaunch.prepare(cues.getFirst(), CdStockLaunch.Request.r11a());
+        }
+        try (var boot = new HeadlessGameBoot(320, 224)) {
+            try {
+                boot.bootSonicCdOpeningObjects(source);
+                var module = assertInstanceOf(SonicCdGameModule.class, SessionManager.getCurrentWorldSession().getGameModule());
+                render(module, true); assertNativeGpuBackground(module);
+                var presentation = (SonicCdPlayerPresentation) module.getScrollHandlerProvider();
+                int id = presentation.publishedPlane().nameTable().unsignedWord(0) & 0x7FF;
+                var graphics = GameServices.graphics(); var atlas = graphics.getPatternAtlas();
+                assertTrue(atlas.isInitialized()); assertNotNull(atlas.getEntry(id));
+                assertTrue(graphics.uncachePattern(id)); assertNull(atlas.getEntry(id));
+                var frame = module.requirePlayerFrame(); var body = frame.state(); var clock = frame.vIntClock();
+                var runtime = assertInstanceOf(CdOpeningObjectRuntime.class, module.getGameService(NativeDynamicObjectPass.class));
+                var level = GameServices.level(); var bytes = NativeBackgroundTestAccess.descriptors(level);
+                var geometry = NativeBackgroundTestAccess.geometry(level); var flags = NativeBackgroundTestAccess.flags(level);
+                var failure = assertThrows(IllegalStateException.class, module.gameplayFrameController()::drawOverlay);
+                assertTrue(failure.getMessage().contains("resident base-level pattern"), failure.getMessage());
+                assertTrue(frame.closed()); assertTrue(runtime.closed());
+                assertEquals(body, frame.state()); assertEquals(clock, frame.vIntClock());
+                assertArrayEquals(bytes, NativeBackgroundTestAccess.descriptors(level));
+                assertArrayEquals(geometry, NativeBackgroundTestAccess.geometry(level));
+                assertArrayEquals(flags, NativeBackgroundTestAccess.flags(level));
+                assertThrows(IllegalStateException.class, module.gameplayFrameController()::drawOverlay);
+            } finally {
+                try { SessionManager.closeGameplaySession(); }
+                finally { GraphicsManager.destroyForReinit(); }
+            }
+        }
+    }
+
+    private static byte[] oracleNativeDescriptors(CdR11aBackgroundPlane.State plane) {
+        byte[] out = new byte[8192];
+        for (int cell = 0; cell < 2048; cell++) {
+            int word = plane.nameTable().unsignedWord(cell * 2), pattern = word % 2048;
+            out[cell * 4] = (byte) (pattern % 256);
+            out[cell * 4 + 1] = (byte) (pattern / 256 + ((word / 8192) % 4) * 8
+                    + ((word / 2048) % 2) * 32 + ((word / 4096) % 2) * 64 + (word / 32768) * 128);
+            out[cell * 4 + 3] = (byte) 255;
+        }
+        return out;
+    }
+
+    private static void assertNativeGpuBackground(SonicCdGameModule module) {
+        var level = GameServices.level(); var graphics = GameServices.graphics(); var tm = level.getTilemapManager();
+        var presentation = (SonicCdPlayerPresentation) module.getScrollHandlerProvider();
+        assertArrayEquals(oracleNativeDescriptors(presentation.publishedPlane()), NativeBackgroundTestAccess.descriptors(level));
+        assertArrayEquals(new int[] {64, 32, 0, 0, 512, 32, 0, -1}, NativeBackgroundTestAccess.geometry(level));
+        assertArrayEquals(new boolean[] {false, true, false}, NativeBackgroundTestAccess.flags(level));
+        assertTrue(graphics.isGlInitialized()); assertFalse(graphics.isHeadlessMode());
+        assertTrue(graphics.getPatternAtlas().isInitialized());
+        var gpu = graphics.getTilemapGpuRenderer(); assertNotNull(gpu);
+        assertEquals(0, gpu.getBackgroundRingBaseXTiles()); assertEquals(0, gpu.getBackgroundRingBaseYTiles());
+        assertTrue(gpu.hasBackgroundBaseline(tm.getBackgroundTilemapData(), 64, 32));
+    }
+
+    private static CdR11aBackgroundPlane.State nextCpuPlaneForComparison(SonicCdGameModule module) {
+        var cut = assertInstanceOf(SonicCdPlayerPresentation.ScrollCapture.class,
+                module.getScrollHandlerProvider().getHandler(0).captureRewindState());
+        var b = cut.background();
+        var one = new CdR11aBackgroundPlane.Camera(b.cameraBgX(), b.cameraBgY());
+        var two = new CdR11aBackgroundPlane.Camera(b.cameraBg2X(), b.cameraBg2Y());
+        var three = new CdR11aBackgroundPlane.Camera(b.cameraBg3X(), b.cameraBg3Y());
+        return CdR11aBackgroundPlane.bind(module.requirePlayerFrame().assets()).incremental(cut.plane(),
+                new CdR11aBackgroundPlane.LiveCameras(one, two, three),
+                new CdR11aBackgroundPlane.CopiedCameras(one, two, three),
+                new CdR11aBackgroundPlane.FlagWords(b.scrollFlagsBg(), b.scrollFlagsBg2(), b.scrollFlagsBg3())).state();
+    }
+
     private static void step(GameLoop loop, Bk2FrameInput row) {
         loop.getInputHandler().setLogicalOverride(LogicalInputSnapshot.ofPlayers(
                 PlayerInputState.of(row.p1InputMask(), 0, row.p1ActionMask(), 0, row.p1StartPressed(), false),
@@ -1150,12 +1314,25 @@ class TestSonicCdOpeningWorldEgl {
         // Clear on EVERY draw, including the tiles-only control, to reject stale framebuffer evidence.
         level.setClearColor(); glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         graphics.resetForFixedFunction();
-        if (objects) module.gameplayFrameController().drawOverlay();
-        else {
-            GameServices.parallax().update(0, 0, GameServices.camera(), level.getFrameCounter());
-            level.drawWithRenderOptions(GameServices.sprites(),
-                    LevelManager.LevelRenderOptions.tilesOnly());
+        if (objects) {
+            module.gameplayFrameController().drawOverlay(); assertNativeGpuBackground(module);
+        } else {
+            var selected = ((SonicCdPlayerPresentation) module.getScrollHandlerProvider()).captureScrollPublication();
+            LevelSpritePresentation.withScrollAndBackground(level, selected.published(), oracleNativeDescriptors(selected.plane()),
+                    () -> level.drawWithRenderOptions(GameServices.sprites(), LevelManager.LevelRenderOptions.tilesOnly()));
         }
+        graphics.flush(); graphics.flushScreenSpace(); glFinish();
+        return ScreenshotCapture.captureFramebuffer(320, 224);
+    }
+
+    private static RgbaImage renderWithoutBackground(SonicCdGameModule module) {
+        var graphics = GameServices.graphics(); var level = GameServices.level();
+        graphics.runPendingRenderThreadTasks(); level.setClearColor();
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); graphics.resetForFixedFunction();
+        var selected = ((SonicCdPlayerPresentation) module.getScrollHandlerProvider()).captureScrollPublication();
+        // A test-only transparent descriptor image: no source-plane, gameplay, art or palette mutation.
+        LevelSpritePresentation.withScrollAndBackground(level, selected.published(), new byte[64 * 32 * 4], () ->
+                level.drawWithRenderOptions(GameServices.sprites(), LevelManager.LevelRenderOptions.tilesOnly()));
         graphics.flush(); graphics.flushScreenSpace(); glFinish();
         return ScreenshotCapture.captureFramebuffer(320, 224);
     }
@@ -1164,7 +1341,8 @@ class TestSonicCdOpeningWorldEgl {
         var graphics = GameServices.graphics(); var level = GameServices.level();
         graphics.runPendingRenderThreadTasks(); level.setClearColor();
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); graphics.resetForFixedFunction();
-        LevelSpritePresentation.withScroll(level, scroll, () ->
+        var selected = ((SonicCdPlayerPresentation) module.getScrollHandlerProvider()).publishedPlane();
+        LevelSpritePresentation.withScrollAndBackground(level, scroll, oracleNativeDescriptors(selected), () ->
                 level.drawWithRenderOptions(GameServices.sprites(), LevelManager.LevelRenderOptions.tilesOnly()));
         graphics.flush(); graphics.flushScreenSpace(); glFinish();
         return ScreenshotCapture.captureFramebuffer(320, 224);

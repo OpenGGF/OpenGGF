@@ -944,7 +944,7 @@ public final class LevelRenderer {
         scrollOperation = true;
         try {
             resolveAdvancedRenderFrameState(lm.frameCounter);
-            return LevelScrollPresentation.capture(lm, currentAdvancedRenderFrameState);
+            return LevelScrollPresentation.captureForDrawScope(lm, currentAdvancedRenderFrameState);
         } finally {
             currentAdvancedRenderFrameState = savedMode;
             scrollOperation = false;
@@ -1023,7 +1023,7 @@ public final class LevelRenderer {
             if (selected == null) {
                 // Private completed-load observation, not a public capture/publication or native update.
                 resolveAdvancedRenderFrameState(lm.frameCounter);
-                selected = LevelScrollPresentation.capture(lm, currentAdvancedRenderFrameState);
+                selected = LevelScrollPresentation.captureForDrawScope(lm, currentAdvancedRenderFrameState);
                 currentAdvancedRenderFrameState = savedMode;
             }
             validate.run();
