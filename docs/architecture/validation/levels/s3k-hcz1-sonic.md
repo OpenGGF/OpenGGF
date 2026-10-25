@@ -394,3 +394,34 @@ manifest giant_ring→ss_6→hcz_3 boundaries, then loses ownership at BK2cursor
 The newly reached hcz_3 is incomplete,63295=54642physics+8653animation,first287
 y06D4/06DA; no route certification follows from reduced counts or later progress.
 Earlier six gameplay windows remain complete-zero. No further probe/fix follows. See [exact evidence and limits](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#canonical-returned-hcz8329-water-skim-input-owner--2026-10-17).
+
+## Continuous AIZ-to-HCZ load qualification — 2026-10-25
+
+`TestS3kSonicTailsCompleteEmeraldRunPrefix#aiz1ThroughHczLoadBoundary`
+now defends one uninterrupted native 320px Sonic + CPU Tails replay from AIZ1
+through the first HCZ row (segment 9, one row consumed). It retains the original
+movie, all predecessor comparisons, timing admission and parity assertions.
+On `f7620e579` plus the narrowly adapted fresh-load correction, completed segment 8
+covers all 7,175 represented rows, including 62 lag closures, with zero physics,
+animation, bootstrap errors or warnings. Its former four row-7126 position/camera
+errors are gone. The full-chain observation also completes segment 9's 3,574
+represented rows, including 55 lag closures, without compared errors.
+
+`Level/loc_6068` and `loc_60DA` submit Nemesis descriptors before the title wait
+(sonic3k.asm:7603-7647); `loc_62CC` dispatches the card and prepares the first head
+before the next six-pattern VBlank service (sonic3k.asm:7769-7780).
+`TestS3kFreshTitlePlcLoadBoundary` checks the real load with live and recording
+drivers, ten queued HCZ descriptors before title dispatch, four card-owned KosM
+archives, the 56-to-50-pattern service boundary, and two registry restores with
+forward replay and unchanged job ordinals. The four cases are independently
+old-red (three assertion failures) and corrected-green. The affected focused
+run passes 149 cases, including all four mandatory S3K startup anchors, without
+failures, errors or skips.
+
+This qualifies the load boundary only. The full canonical chain still loses
+production ownership in HCZ1 segment 11 at input 68801, load generation 9:
+81,981 errors in the incomplete comparison, first row 1768 `y` expected `$0870`,
+actual `$0871`. The strict alternate AIZ recording's trailing ring boundary and
+remaining viewport, donor, character/team, outgoing-HCZ, lifecycle and presentation
+products remain separate. Exact commands, source fingerprints and continuation
+scope are in the [current frontier entry](../../../status/trace-frontier-log.md#2026-10-25--fresh-load-plc-order-qualifies-the-continuous-aiz-to-hcz-load-boundary).

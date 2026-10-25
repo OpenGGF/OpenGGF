@@ -155,6 +155,16 @@ checks. The [native audit](../architecture/audits/2026-10-07-s3k-parity-gap-veri
 records event PLC3 phase/readiness/save ordering and remaining presentation and
 route breadth. These local repairs do not certify either act or stage.
 
+S2 fixed-tail follow-up (2026-10-25): the
+[implementation record](../architecture/audits/2026-10-24-rewind-disposition-review.md#rejected-fixed-tail-only-implementation-and-finite-parent-boundary--2026-10-25)
+rejects a fixed-tail-only owner after reached raw-removal/reuse controls exposed
+missing physical parent-header authority. The original Sideways admission/strict
+rewind gap remains open. The independently retained tail-animation prerequisite
+preserves `anim`/`prev_anim` and the native script-change return through restore
+and forward replay; pure pose sampling follows the same boundary. These focused
+object/controller checks certify no CPZ/MCZ act, route, viewport/donor/team,
+load/respawn or GPU presentation product. Existing act-matrix gaps remain.
+
 S3K monitor admission follow-up (2026-10-24): the
 [field audit](../architecture/audits/2026-10-24-rewind-disposition-review.md#s3k-monitor-contents-admission)
 records real-manager zero/one/two-free-tail cases for stock rings and creator
@@ -273,6 +283,13 @@ continuous AIZ-to-HCZ campaign or general level-standard enforcement. Remaining
 character/team, donor, lifecycle and presentation breadth stays in the
 [AIZ1](../architecture/validation/levels/s3k-aiz1-sonic.md) and
 [HCZ1](../architecture/validation/levels/s3k-hcz1-sonic.md) matrices.
+
+Continuous AIZ-to-HCZ load qualification (2026-10-25, local candidate): the
+[HCZ1 matrix](../architecture/validation/levels/s3k-hcz1-sonic.md#continuous-aiz-to-hcz-load-qualification--2026-10-25)
+records a strict uninterrupted original-movie prefix through the first HCZ row,
+with the native load/title PLC boundary and twice-restored queue/job regression.
+The full chain still stops in returned HCZ1 at input 68801; the independent
+pilot above and this load boundary do not certify HCZ completion or other products.
 
 S3K playable completion (2026-10-13, delivery in progress): the [native ending matrix](../architecture/validation/levels/s3k-ending.md)
 records Sonic/Tails `$0D01`, Knuckles SSZ2 and all native emerald-progress branches.

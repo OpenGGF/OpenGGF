@@ -204,7 +204,14 @@ function Test-ContainsModApiAnnotation([string]$Text) {
 # Direct nested-type exposure requires member visibility; retained references
 # still reach hidden owner types, as the exact compiled surface requires.
 # The compiled signature guard remains authoritative for Java name resolution.
-function Get-ModApiSurfaceText([string]$Text) {
+function Get-ModApiSurfaceText([string]$Text, [string]$OldRef, [string]$NewRef) {
+    $python = Get-Command python3, python -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($null -eq $python) { Fail "Python 3 is required for Mod API terminal admission." }
+    # Shared lexical projection reads the compared Git blobs/index, never the
+    # mutable working-tree registry; newly classified types cannot self-exempt.
+    $projected = $Text | & $python.Source (Join-Path $PSScriptRoot "mod_api_record_surface.py") --terminal-source $OldRef $NewRef
+    if ($LASTEXITCODE -ne 0) { Fail "Cannot inspect Mod API declaration or terminal policy." }
+    $Text = $projected -join "`n"
     if ($Text -cmatch '\\u') { return $Text }
     $cleanBuilder = [System.Text.StringBuilder]::new()
     $lexBuilder = [System.Text.StringBuilder]::new()
@@ -400,7 +407,7 @@ function Validate-ModApiCoupling([string]$OldRef, [string]$NewRef, [string[]]$Di
             if (-not $path.EndsWith(".java", [StringComparison]::Ordinal)) { continue }
             $oldText = Get-BlobText $before $path
             $newText = Get-BlobText $after $path
-            if (((Test-ContainsModApiAnnotation $oldText) -or (Test-ContainsModApiAnnotation $newText)) -and (Get-ModApiSurfaceText $oldText) -cne (Get-ModApiSurfaceText $newText)) { $apiDelta = $true }
+            if (((Test-ContainsModApiAnnotation $oldText) -or (Test-ContainsModApiAnnotation $newText)) -and (Get-ModApiSurfaceText $oldText $OldRef $NewRef) -cne (Get-ModApiSurfaceText $newText $OldRef $NewRef)) { $apiDelta = $true }
         }
     }
     if ($currentChanged -and (-not $descriptorChanged -or (-not $candidateContent -and -not $candidateStructural))) {

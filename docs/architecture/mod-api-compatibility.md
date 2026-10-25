@@ -102,6 +102,32 @@ the dependency-complete runtime surface. This major/minor filename denotes a
 replaceable candidate pin; it carries no compatibility promise. Earlier 1.x and
 2.x labels were provisional development markers and carry no compatibility promise.
 
+`RunInput.physicalInput()` adds an immutable physical snapshot for an admitted
+run-host frame, matching the existing scene input value types. Its default is
+neutral, so existing run hosts remain source compatible. The engine captures
+once for the frame and keeps repeated reads stable; disabled controllers supply
+no pad state or transitions, while physical keyboard and logical replay input
+remain independent. This supports Time Attack's controller race Quick Chat
+without changing movement, jump, pause or replay mappings. Run keyboard queries
+also use `InputHandler.isPhysicalKeyPressed(int)` rather than engine shortcut
+substitutions, preventing a bumper from impersonating Q. The default-false
+`RunInput.resumedAfterPause()` marks the first callback after pause, letting a
+host rebaseline physical controls held while it was not being polled. The mutable
+`0.7` pin gains these three methods; descriptor candidate `0.7.0` and published baselines
+stay unchanged.
+
+The commit hooks compare source declarations without running Maven or reading
+compiled signatures. For nested engine-internal terminals, their shared lexical
+probe reads `ENGINE_INTERNAL_TYPES` in `ModApiSignatureSurface` from both compared
+Git trees (or HEAD and the index). Only classifications present in both snapshots
+omit component and member implementation details; nested identity, visibility and
+owning relationship still participate, as do outer and sibling API declarations.
+Adding a classification in the same edit cannot exempt a public-surface change.
+Malformed or unsupported registry initializers fail admission; historical trees
+without the registry retain conservative declaration checks. The normalized
+signature and engine-internal inventory tests remain authoritative, with version,
+descriptor and candidate/published pin coupling unchanged.
+
 The root [`mod-api-release-policy.properties`](../../mod-api-release-policy.properties)
 descriptor is the sole authority for branch topology, current version and status,
 and the published-baseline set. This guide explains that policy but does not define
@@ -358,7 +384,9 @@ initializers. Annotation defaults and annotation values remain pin content.
 Enum bodies remain conservative because enum constant subclasses can enter the
 sealed closure. Unrecognized annotated generic initializer syntax also falls
 back to complete source rather than guessing at declarator boundaries.
-Simple-name collisions may retain an otherwise hidden type. Unicode escapes,
+Simple-name collisions may retain an otherwise hidden type. When an established
+internal-terminal projection applies, Unicode escapes fail closed at that earlier
+boundary rather than guessing terminal identity. Otherwise Unicode escapes,
 non-ASCII identifiers and unbalanced lexical scopes compare the complete source
 rather than silently discard a declaration; Unicode punctuation in comments and
 literals is supported. This source-only staging heuristic does not resolve

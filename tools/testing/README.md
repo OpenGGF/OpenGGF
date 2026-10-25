@@ -642,6 +642,27 @@ execution admission after compilation releases those leases. Both children
 inherit their leases. These controls can wait behind isolated measurements even
 though the rest of the Python safety suite uses private repositories or mocks.
 
+## Local exact-candidate release pilot
+
+For local release preparation, the existing AIZ1/HCZ1 obligation tool supports
+`--run --expected-candidate <full-reviewed-SHA> --rom s3k=/absolute/original-ROM`.
+This opt-in strict mode pins the committed pilot inventory, rejects mutable
+candidate inputs, queues a clean rebuild with surfaceless EGL, checks before/after
+source/fixture/ROM state and requires all 26 exact cases once with zero skips.
+Temporary reports are inspected and removed, with no receipt/pass cache.
+`--preflight` does not execute tests; routine development without the SHA option
+retains mutable/custom-inventory behavior. See the
+[release procedure and enforcement limits](../../docs/project/release-publishing.md#local-exact-candidate-rom-qualification).
+No ROM upload or private-runner dependency is added to hosted publication.
+
+Run the focused Python safety coverage after changes to this contract:
+
+```bash
+python3 -m unittest discover -s tools/testing -p 'test_check_route_obligations.py'
+python3 -m unittest discover -s tools/testing -p 'test_*release*.py'
+python3 -m unittest discover -s tools/testing -p 'test_classify_surefire_skips.py'
+```
+
 ## Per-test memory diagnostics
 
 Start with exact likely-expensive tests rather than a full-suite memory census:

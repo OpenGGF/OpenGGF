@@ -169,7 +169,13 @@ contains_mod_api_annotation() {
 # remain reachable through retained declarations, matching the compiled surface.
 # This is not Java name resolution: the compiled signature guard remains exact.
 mod_api_surface_text() {
-    printf '%s\n' "$1" | awk '
+    if command -v python3 >/dev/null 2>&1; then surface_python=python3
+    elif command -v python >/dev/null 2>&1; then surface_python=python
+    else die "Python 3 is required for Mod API terminal admission."; fi
+    # Only classifications established in both compared Git snapshots apply.
+    # Never consult the mutable working-tree registry or run compiled tooling here.
+    terminal_source=$(printf '%s\n' "$1" | "$surface_python" "$POLICY_DIR/mod_api_record_surface.py" --terminal-source "$2" "$3") || return 1
+    printf '%s\n' "$terminal_source" | awk '
     function supported(s) { return s ~ /(^|[^A-Za-z0-9_$])(public|protected)[[:space:]]/ }
     function references(s, name,    count,tokens,k) {
         count = split(s,tokens,/[^A-Za-z0-9_$]+/)
@@ -384,7 +390,9 @@ $second"
                 old_text=$(blob_text "$before" "$path")
                 new_text=$(blob_text "$after" "$path")
                 if contains_mod_api_annotation "$old_text" || contains_mod_api_annotation "$new_text"; then
-                    [ "$(mod_api_surface_text "$old_text")" != "$(mod_api_surface_text "$new_text")" ] && api_delta=1
+                    old_surface=$(mod_api_surface_text "$old_text" "$old_ref" "$new_ref") || die "Cannot inspect Mod API declaration or terminal policy."
+                    new_surface=$(mod_api_surface_text "$new_text" "$old_ref" "$new_ref") || die "Cannot inspect Mod API declaration or terminal policy."
+                    [ "$old_surface" != "$new_surface" ] && api_delta=1
                 fi
             esac
         done

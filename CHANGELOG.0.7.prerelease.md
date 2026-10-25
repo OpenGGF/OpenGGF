@@ -216,7 +216,9 @@ Unreleased. The earlier development themes remain in
   `@`, `$` and `#`, which are common in player names.
 
 - **Time Attack communication:** Full Chat includes typed and Quick Chat, with
-  canned messages available in lobbies and during races. Room owners can choose
+  canned messages available by keyboard and controller in lobbies and during
+  races. The race chooser uses right-stick click, right-stick selection and the
+  right trigger, leaving movement and jump available. Room owners can choose
   Quick Chat or Off, while public relay servers default to a Quick Chat maximum.
   Personal settings offer default-on local profanity censorship using a small
   multilingual whole-word dictionary and an option to hide all player messages.
@@ -693,6 +695,10 @@ Unreleased. The earlier development themes remain in
   camera eases back toward its normal height as it does when standing, as Sonic 2
   and Sonic 3 & Knuckles do. A look up or down no longer holds until the dash ends.
 
+- **Tails appendage state:** The tail's animation and previous animation remain
+  independent through scripted animation changes. Flick retains its final picture
+  until the next native dispatch begins Swish, including after rewind.
+
 - **S3K level entry:** Captures that omit the title presentation complete the
   destination's deferred player assembly before its animation and art-loading
   tail, allowing ordinary movement after a fresh zone handoff. Publication also
@@ -733,6 +739,10 @@ Unreleased. The earlier development themes remain in
   teardown from consuming an absent art lease. Fresh native loads clear the
   retained random seed before sprite dispatch,
   while previews and seamless continuations preserve their sequence.
+  Fresh level loads submit their Nemesis art before the title wait, and the
+  first title iteration prepares that queue without dispatching the card twice.
+  Title entry preserves level rebinding through callbacks while keeping the
+  hardware tail outside the retained presentation owner.
   Sky Sanctuary opening bridges use the native top-contact surface and exact
   overlap band, retaining the relative landing write before floor reset; a
   companion standing on the moving cutscene bridge waits without the edge-balance
@@ -933,6 +943,15 @@ Unreleased. The earlier development themes remain in
   with synthesis enabled or disabled. Recorded controller Start reaches native
   consumers, including gameplay pause, without toggling host pause during a
   capture or complete-run audio step; physical keyboard pause remains available.
+  Native PCM live checks admit graphics prerequisites before running capture, so
+  boot, gameplay and audio failures fail instead of being skipped as unavailable GL.
+  Standing-geometry probes retire their private audio manager through its complete
+  lifecycle while preserving caller-owned audio.
+
+- **Mod API source checks:** Commit hooks allow implementation changes inside
+  established engine-internal nested terminals without a false signature-pin
+  update. Nested identity and visibility, outer and sibling API declarations,
+  and candidate/published pin enforcement remain checked against Git snapshots.
 
 - **Runtime ownership:** A loop-lifetime suspended visit keeps admission, picture
   readiness, parking, saved state, resume and retirement under one authority;
@@ -1121,3 +1140,10 @@ after it. The loop boundary moves only once that redraw completes.
 The AIZ2 background-tree maker now places all seventeen trees, one per frame,
 in the slots after itself. It retries when no slot is free and gives each tree
 its original drawing priority.
+
+## Maintenance and release preparation
+
+- **Local ROM qualification:** Release preparation can bind the existing bounded
+  AIZ1/HCZ1 route pilot to a reviewed candidate commit, reject changed inputs and
+  require every named case to execute without skips. Original ROMs remain local
+  or private; hosted builds and automatic publication retain their existing flow.

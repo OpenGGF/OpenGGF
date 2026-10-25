@@ -336,6 +336,11 @@ public class InputHandler {
 		return false;
 	}
 
+	/** Physical keyboard edge, without the debug/rewind/frame-step gamepad substitutions. */
+	public boolean isPhysicalKeyPressed(int keyCode) {
+		return isRawKeyPressed(keyCode);
+	}
+
 	/**
 	 * Returns true when at least one key transitioned from not-pressed to
 	 * pressed during the current frame. Mirrors {@link #isKeyPressed(int)}

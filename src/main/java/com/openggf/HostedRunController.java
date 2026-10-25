@@ -1,8 +1,11 @@
 package com.openggf;
 
+import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
 import com.openggf.control.LogicalInputSnapshot;
+import com.openggf.control.PhysicalInput;
+import com.openggf.control.PhysicalInputEvent;
 import com.openggf.game.GameServices;
 import com.openggf.game.ghost.GhostRenderRegistry;
 import com.openggf.game.recording.RecordingMainPlayerResolver;
@@ -75,6 +78,7 @@ final class HostedRunController {
     private com.openggf.level.objects.HudProfile hudProfile;
     private int hudTimeFrames = -1;
     private boolean hudTimeHundredths;
+    private boolean inputSuspended;
 
     HostedRunController(SonicConfigurationService configuration) {
         this.configuration = Objects.requireNonNull(configuration, "configuration");
@@ -101,6 +105,7 @@ final class HostedRunController {
         leaveReason = null;
         overlay = null;
         controlsHeld = false;
+        inputSuspended = false;
         controlsHoldApplied = false;
         levelCovered = false;
         hudProfile = null;
@@ -279,6 +284,9 @@ final class HostedRunController {
         }
     }
 
+    /** Paused iterations do not call the host, so its next physical input needs a new baseline. */
+    void suspendInput() { inputSuspended = true; }
+
     /** Asks the host whether this frame's step may run; false holds the run. */
     boolean admitStep(InputHandler input) {
         if (host == null || leaveReason != null) {
@@ -294,7 +302,9 @@ final class HostedRunController {
             holdArea();
             applyControlHold();
             applyLevelCover();
-            boolean admitted = host.admitStep(new FrameInput(input));
+            boolean resumed = inputSuspended;
+            inputSuspended = false;
+            boolean admitted = host.admitStep(new FrameInput(input, capturePhysicalInput(input), resumed));
             applySpectate();
             refreshLocalLook();
             holdPlayerInput(admitted && host.holdsPlayerInput());
@@ -303,6 +313,18 @@ final class HostedRunController {
             abort(failure);
             return true;
         }
+    }
+
+    private PhysicalInput capturePhysicalInput(InputHandler input) {
+        PhysicalInput captured = input.capturePhysicalInput();
+        if (configuration.getBoolean(SonicConfiguration.CONTROLLER_ENABLED)) {
+            return captured;
+        }
+        // Drain even when pads are disabled so their pending events cannot leak on re-enable.
+        // Keep overflow reporting conservative: discarded pad events may have crowded out keys.
+        return new PhysicalInput(captured.timestampNanos(), captured.keysDown(), List.of(),
+                captured.events().stream().filter(event -> event.kind() == PhysicalInputEvent.Kind.KEY).toList(),
+                captured.droppedEvents());
     }
 
     /**
@@ -668,7 +690,8 @@ final class HostedRunController {
         }
     }
 
-    private record FrameInput(InputHandler handler) implements RunInput {
+    private record FrameInput(InputHandler handler, PhysicalInput physicalInput,
+                              boolean resumedAfterPause) implements RunInput {
         @Override
         public LogicalInputSnapshot input() {
             return handler.logical();
@@ -676,12 +699,12 @@ final class HostedRunController {
 
         @Override
         public boolean keyDown(int key) {
-            return handler.isKeyDown(key);
+            return handler.isPhysicalKeyDown(key);
         }
 
         @Override
         public boolean keyPressed(int key) {
-            return handler.isKeyPressed(key);
+            return handler.isPhysicalKeyPressed(key);
         }
 
         @Override

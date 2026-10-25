@@ -30,6 +30,8 @@ public class TailsTailsController {
 
     private int currentAnim = ANIM_BLANK;
     private int lastParentAnim = -1;
+    // ROM prev_anim is distinct from anim across TAnim_End_FD (S2).
+    private int previousAnim = ANIM_BLANK;
     /** ROM anim_frame: the index of the NEXT script byte to read (s2.asm:41303). */
     private int frameIndex;
     private int frameTick;
@@ -56,7 +58,13 @@ public class TailsTailsController {
             int frameTick,
             int mappingFrame,
             boolean dirHFlip,
-            boolean dirVFlip) {
+            boolean dirVFlip,
+            int previousAnim) {
+        public RewindState(int currentAnim, int lastParentAnim, int frameIndex,
+                int frameTick, int mappingFrame, boolean dirHFlip, boolean dirVFlip) {
+            this(currentAnim, lastParentAnim, frameIndex, frameTick, mappingFrame,
+                    dirHFlip, dirVFlip, currentAnim);
+        }
     }
 
     public PlayerSpriteRenderer getRenderer() {
@@ -102,16 +110,15 @@ public class TailsTailsController {
         if (parentAnimId != lastParentAnim) {
             lastParentAnim = parentAnimId;
             int obj05Anim = resolveObj05Animation(parentAnimId);
-            if (obj05Anim != currentAnim) {
-                // ROM: anim_frame = 0, anim_frame_duration = 0 on animation
-                // change (s2.asm:41276-41278; sonic3k.asm:36203-36206).
-                currentAnim = obj05Anim;
-                frameIndex = 0;
-                frameTick = 0;
-                mappingFrame = -1;
-                dirHFlip = false;
-                dirVFlip = false;
-            }
+            currentAnim = obj05Anim;
+        }
+        // Tails_Animate_Part2 (s2.asm:41271-41282) detects anim/prev_anim,
+        // independently of Obj05's parent-animation selection. In particular,
+        // TAnim_End_FD changes anim without changing prev_anim or reading a frame.
+        if (currentAnim != previousAnim) {
+            previousAnim = currentAnim;
+            frameIndex = 0;
+            frameTick = 0;
         }
 
         int[] frames = getFrames(currentAnim);
@@ -137,11 +144,12 @@ public class TailsTailsController {
         // BEFORE the mapping frame is written (s2.asm:41306-41320).
         if (frameIndex >= frames.length) {
             if (currentAnim == ANIM_FLICK) {
-                // Obj05Ani_Flick ends `$FD,1` -> run Obj05Ani_Swish (s2.asm:41817).
+                // TAnim_End_FD (s2.asm:41327-41333) writes anim and returns.
+                // The next dispatch detects prev_anim and reads Swish's first frame.
+                // Separate-art S3K Animate_Sprite uses the same $FD return.
                 currentAnim = ANIM_SWISH;
-                frames = getFrames(currentAnim);
-                frameTick = getDelay(currentAnim);
-                frameIndex = 0;
+                publishDynamicArtDecision();
+                return;
             } else {
                 // ROM: $FF -> restart the animation (s2.asm:41831).
                 frameIndex = 0;
@@ -243,13 +251,14 @@ public class TailsTailsController {
     public RewindState captureRewindState() {
         return new RewindState(
                 currentAnim, lastParentAnim, frameIndex, frameTick, mappingFrame,
-                dirHFlip, dirVFlip);
+                dirHFlip, dirVFlip, previousAnim);
     }
 
     public void restoreRewindState(RewindState state) {
         if (state == null) {
             currentAnim = ANIM_BLANK;
             lastParentAnim = -1;
+            previousAnim = ANIM_BLANK;
             frameIndex = 0;
             frameTick = 0;
             mappingFrame = -1;
@@ -258,6 +267,7 @@ public class TailsTailsController {
             return;
         }
         currentAnim = state.currentAnim();
+        previousAnim = state.previousAnim();
         lastParentAnim = state.lastParentAnim();
         frameIndex = state.frameIndex();
         frameTick = state.frameTick();

@@ -26,6 +26,31 @@ import static org.mockito.Mockito.mock;
 @Isolated
 class TestGameLoopTitleCardPause {
 
+    @Test
+    void focusAndUserPauseInvalidateHostedInputEvenWithoutAPausedHostPoll() {
+        TestEnvironment.configureGameModuleFixture(new Sonic2GameModule());
+        InputHandler input = new InputHandler();
+        GameLoop loop = new GameLoop(input);
+        java.util.List<Boolean> resumed = new java.util.ArrayList<>();
+        loop.hostedRuns.begin(new com.openggf.mods.run.RunSpec("s2", 0, 0, "sonic",
+                com.openggf.game.session.GameplayRunPolicy.isolatedAct()), new com.openggf.mods.run.RunHost() {
+            @Override public boolean admitStep(com.openggf.mods.run.RunInput frame) {
+                resumed.add(frame.resumedAfterPause());
+                return true;
+            }
+        });
+        loop.hostedRuns.admitStep(input);
+        loop.pause();
+        loop.resume();
+        loop.hostedRuns.admitStep(input);
+        loop.hostedRuns.admitStep(input);
+        loop.toggleUserPause();
+        loop.toggleUserPause();
+        loop.hostedRuns.admitStep(input);
+        org.junit.jupiter.api.Assertions.assertEquals(java.util.List.of(false, true, false, true), resumed);
+        loop.hostedRuns.end(com.openggf.mods.run.RunEndReason.LEFT);
+    }
+
     @Test void admittedLevelDoesNotProcessTheOuterRecordingInputAgain() throws Exception {
         TestEnvironment.configureGameModuleFixture(new Sonic2GameModule());
         var loop=new GameLoop(new InputHandler());

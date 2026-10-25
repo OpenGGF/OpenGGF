@@ -1095,3 +1095,56 @@ time. All three sessions (`91289`, `40036`, `22707`) terminated and were reaped;
 consumed log/XML copies are removed after inspection. No additional broad local
 run is justified for these bounded fixture repairs. The same linked PR and
 app-owned watcher remain active; merging still requires user review.
+
+## 2026-10-25 local release qualification follow-up
+
+The later architecture/goals/progress audit recommended stronger local release
+preparation while retaining automatic publication. The user explicitly required
+ROMs to remain off GitHub. This bounded follow-up extends the existing pilot,
+instead of creating a second runner, inventory or durable evidence store.
+Worker base: `824a16f21cb2c2e4c98c10a20c1117c50bcf525e`, a direct child of the
+parent's pinned `f7620e579c1a8cf7b0371f9c5a438f6a4eff5ea7`; parent accepted the
+unrelated lobby-documentation commit. Isolated checkout:
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-a1094751`, local branch
+`feature/ai-strict-release-rom-qualification`. Parent owns integration and push.
+
+`check_route_obligations.py --run --expected-candidate <reviewed-full-SHA>`
+qualifies only the existing committed 26-case AIZ1/HCZ1 pilot. Strict mode checks
+candidate equality, clean committed inputs (including contents hidden from Git
+status by `assume-unchanged`), original ROM identity, source/fixture/inventory/ROM
+boundary drift, fresh queued clean rebuild and individual XML outcomes/counters.
+It rejects old reports and substituted inventories. Tests caught a fixture-hash
+gap outside the standard source root; every explicitly named fixture is now
+hashed too. Temporary reports use the current worktree's target directory and
+short local locks; test admission occurs after releasing those locks. No pass
+receipt/cache, ROM transfer, hosted graph change or mandatory private runner was
+introduced. Full-suite, guards, required ROM/trace and campaign gates remain
+separate release obligations; publication authorization and final pushed-SHA
+matching remain procedural. This tooling work does not certify a release.
+
+Focused checks on this worker's changed tree:
+
+- `python3 -m unittest discover -s tools/testing -p 'test_check_route_obligations.py'`:
+  42 passed, zero skips. Generated fake ROM bytes and private Git trees cover
+  successful exact-candidate execution, wrong/dirty/untracked/ignored candidates,
+  hidden edits, original-ROM rejection, state drift, missing/duplicate/failed/skipped
+  identities, forged XML counters, Maven failure, cancellation and cleanup/lock order.
+- `python3 -m unittest discover -s tools/testing -p 'test_*release*.py'`:
+  98 passed, zero skips. Existing release workflow/manual-ROM assertions retained.
+- `python3 -m unittest discover -s tools/testing -p 'test_classify_surefire_skips.py'`:
+  19 passed, one skip: `CheckedInPolicyTests.test_preserved_f56d4fae1_reports`,
+  reason `preserved f56d4fae1 ordinary reports not present`. This optional historical
+  archive replay is not a ROM qualification pass.
+- `JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=lua5.4 python3 tools/testing/run_categories.py --base 824a16f21cb2c2e4c98c10a20c1117c50bcf525e --preflight`:
+  actual Java 25, Lua 5.4 and PowerShell prerequisites passed; no tests executed.
+- Existing original S1 REV01, S2 REV01 and locked-on S3&K files in the main
+  checkout match the documented SHA-1 values; all were read in place only.
+  Mutable route `--preflight` with the absolute original S3&K path passed.
+- `git diff --check`, root agent-doc mirror and release-skill mirror comparisons
+  passed. Measurement hazards reviewed before reporting; no broad/full engine
+  suite, route execution, public release, workflow dispatch or external status write.
+
+The parent should retain these focused outcomes, inspect its combined change-based
+smoke obligations and qualify the eventual final committed release candidate when
+preparing a real release. A worker's prerequisite preflight and mock execution do
+not award native route coverage to either the worker commit or integration commit.

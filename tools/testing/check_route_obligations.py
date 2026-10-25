@@ -9,8 +9,8 @@ from __future__ import annotations
 
 import argparse
 from collections import Counter
+from contextlib import nullcontext
 import hashlib
-import json
 import os
 from pathlib import Path
 import re
@@ -20,13 +20,66 @@ import tempfile
 import xml.etree.ElementTree as ET
 
 from category_artifacts import stop_process_tree
-from maven_queue import handle_termination
+from maven_queue import handle_termination, worktree_build_slot
+from compare_release_traces import clean_checkout, source_state, read_json
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_INVENTORY = Path(__file__).with_name('aiz-hcz-route-obligations.json')
 ROMS = {
     's3k': {'property': 's3k.rom.path', 'sha1': 'cfbf98c36c776677290a872547ac47c53d2761d6'},
 }
+
+# Same build roots as the local memory diagnostics, plus launchers and hooks.
+# src (including trace fixtures) is hashed by the release-trace source_state.
+EXTRA_INPUTS = ('racing', 'examples', '.mvn', 'pom.xml', 'mvnw', 'mvnw.cmd',
+                'mod-api-release-policy.properties', 'tools/testing', '.githooks')
+
+
+def candidate_state(expected, inventory_path, rom_paths, root=ROOT):
+    """In-memory exact-candidate boundary; no reusable pass or receipt is written."""
+    if not re.fullmatch(r'[0-9a-f]{40}', expected):
+        raise ValueError('expected candidate must be a full lowercase commit SHA, not a moving ref')
+    state = source_state(root)
+    if state['commit'] != expected:
+        raise ValueError('wrong candidate: expected ' + expected + ', HEAD is ' + state['commit'])
+    clean_checkout(root)
+    canonical = Path(root) / 'tools/testing/aiz-hcz-route-obligations.json'
+    if inventory_path.resolve() != canonical.resolve() or inventory_path.is_symlink():
+        raise ValueError('exact candidate requires the committed AIZ1/HCZ1 pilot inventory')
+    # Ignored source/fixture inputs must not silently supplement the committed
+    # candidate. Python bytecode and target outputs are not source inputs.
+    ignored = subprocess.check_output(
+        ['git', 'ls-files', '--others', '--ignored', '--exclude-standard', '-z', '--',
+         'src', 'racing', 'examples', '.mvn', 'tools/testing', '.githooks'], cwd=root)
+    ignored = [name for name in ignored.split(b'\0') if name and not (
+        name.startswith(b'tools/testing/') and b'__pycache__' in name.split(b'/'))]
+    if ignored:
+        raise ValueError('ignored untracked build/fixture inputs: ' + ', '.join(map(os.fsdecode, ignored)))
+    names = subprocess.check_output(['git', 'ls-files', '--stage', '-z', '--', 'src', *EXTRA_INPUTS], cwd=root)
+    digest = hashlib.sha256()
+    for entry in sorted(filter(None, names.split(b'\0'))):
+        metadata, name = entry.split(b'\t', 1)
+        mode, committed, stage = metadata.split()
+        path = Path(root) / os.fsdecode(name)
+        if stage != b'0' or mode not in (b'100644', b'100755') or path.is_symlink() or not path.is_file():
+            raise ValueError('nonregular candidate input: ' + str(path))
+        digest.update(name + b'\0')
+        blob = hashlib.sha1(b'blob ' + str(path.stat().st_size).encode() + b'\0')
+        with path.open('rb') as stream:
+            while chunk := stream.read(1024 * 1024):
+                digest.update(chunk)
+                blob.update(chunk)
+        if blob.hexdigest().encode() != committed:
+            raise ValueError('candidate input differs from committed blob: ' + str(path))
+    state['build_inputs'] = digest.hexdigest()
+    state['inventory'] = hashlib.sha256(inventory_path.read_bytes()).hexdigest()
+    inventory = read_json(inventory_path)
+    preflight(inventory, rom_paths, root)
+    state['required_fixtures'] = {fixture: sha1_file(Path(root) / fixture)
+                                  for fixture in inventory.get('fixtures', [])}
+    state['roms'] = {game: (str(Path(rom_paths[game]).resolve()), sha1_file(rom_paths[game]))
+                     for game in inventory['roms']}
+    return state
 
 
 def sha1_file(path):
@@ -118,7 +171,7 @@ def preflight(inventory, rom_paths, root=ROOT):
             raise ValueError('required input fixture unavailable: ' + fixture)
 
 
-def check_reports(inventory, reports):
+def check_reports(inventory, reports, strict=False):
     expected = {identity(case) for case in inventory['cases']}
     selected_classes = {case['class'] for case in inventory['cases']}
     observed = Counter()
@@ -129,6 +182,16 @@ def check_reports(inventory, reports):
         except (OSError, ET.ParseError) as error:
             issues.append('invalid XML report ' + str(report) + ': ' + str(error))
             continue
+        if strict:
+            cases = list(suite.iter('testcase'))
+            counts = {'tests': len(cases)}
+            for attribute, tag in (('failures', 'failure'), ('errors', 'error'), ('skipped', 'skipped')):
+                counts[attribute] = sum(case.find(tag) is not None for case in cases)
+            for attribute, count in counts.items():
+                if suite.get(attribute) != str(count):
+                    issues.append('XML ' + attribute + ' counter disagrees or missing: ' + str(report))
+            if report.is_symlink() or suite.tag != 'testsuite':
+                issues.append('nonregular or unsupported XML report: ' + str(report))
         for case in suite.iter('testcase'):
             if case.get('classname') not in selected_classes:
                 continue
@@ -154,7 +217,7 @@ def excluded_groups(root):
     return ','.join(group.strip() for group in groups.split(',') if group.strip() != 'slow-suite')
 
 
-def maven_command(inventory, rom_paths, reports, root=ROOT):
+def maven_command(inventory, rom_paths, reports, root=ROOT, strict=False):
     classes = sorted({case['class'] for case in inventory['cases']})
     command = [sys.executable, str(Path(root) / 'tools/testing/maven_queue.py'), '-Dmse=off',
                '-Dtest=' + ','.join(classes),
@@ -163,6 +226,11 @@ def maven_command(inventory, rom_paths, reports, root=ROOT):
                '-DfailIfNoTests=true', '-Dsurefire.failIfNoSpecifiedTests=true']
     command += ['-D' + ROMS[game]['property'] + '=' + str(Path(rom_paths[game]).resolve())
                 for game in inventory['roms']]
+    # A strict release preparation always rebuilds the candidate, including
+    # removing stale ignored test classes. Surefire recreates the unique report
+    # directory below target after clean; no old XML can qualify this run.
+    if strict:
+        command += ['-Dopenggf.headless.gl=surfaceless-egl', 'clean']
     command += ['test', '-B']
     return command
 
@@ -195,6 +263,8 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--inventory', type=Path, default=DEFAULT_INVENTORY)
     parser.add_argument('--rom', action='append', default=[], help='s3k=/absolute/path/to/existing-ROM')
+    parser.add_argument('--expected-candidate', help='opt-in strict local release pilot: full commit SHA; '
+                        'requires committed default inventory, clean inputs and fresh queued rebuild')
     modes = parser.add_mutually_exclusive_group(required=True)
     modes.add_argument('--preflight', action='store_true')
     modes.add_argument('--reports', type=Path,
@@ -203,9 +273,13 @@ def main(argv=None):
     modes.add_argument('--run', action='store_true', help='preflight, queue the exact lane, verify fresh XML, clean up')
     args = parser.parse_args(argv)
     try:
-        inventory = json.loads(args.inventory.read_text())
+        strict = args.expected_candidate is not None
+        if strict and args.reports:
+            raise ValueError('exact candidate cannot qualify pre-existing reports; use --run or --preflight')
+        inventory = read_json(args.inventory)
         rom_paths = parse_roms(args.rom)
         preflight(inventory, rom_paths, ROOT)
+        before = candidate_state(args.expected_candidate, args.inventory, rom_paths, ROOT) if strict else None
         if args.preflight:
             print('Route pilot prerequisites verified; no tests executed.')
             return 0
@@ -213,12 +287,24 @@ def main(argv=None):
         if args.run:
             from category_control import preflight as environment_preflight
             environment_preflight(ROOT, {'guards': False})
-            target = ROOT / 'target'
-            target.mkdir(exist_ok=True)
-            with tempfile.TemporaryDirectory(prefix='route-obligations-', dir=target) as temporary:
-                reports = Path(temporary)
-                exit_code = run_queued(maven_command(inventory, rom_paths, reports, ROOT), ROOT)
-                issues = check_reports(inventory, reports)
+            # Only short target creation/inspection/cleanup sections own the
+            # worktree lock. Release it BEFORE requesting shared test admission.
+            temporary = None
+            try:
+                with worktree_build_slot(ROOT) if strict else nullcontext():
+                    target = ROOT / 'target'
+                    target.mkdir(exist_ok=True)
+                    temporary = tempfile.TemporaryDirectory(prefix='route-obligations-', dir=target)
+                reports = Path(temporary.name)
+                exit_code = run_queued(maven_command(inventory, rom_paths, reports, ROOT, strict), ROOT)
+                with worktree_build_slot(ROOT) if strict else nullcontext():
+                    issues = check_reports(inventory, reports, strict)
+                    if strict and candidate_state(args.expected_candidate, args.inventory, rom_paths, ROOT) != before:
+                        raise ValueError('candidate source, fixture, inventory or ROM changed during execution')
+            finally:
+                if temporary is not None:
+                    with worktree_build_slot(ROOT) if strict else nullcontext():
+                        temporary.cleanup()
         else:
             issues = check_reports(inventory, args.reports)
         for issue in issues:
@@ -226,7 +312,9 @@ def main(argv=None):
         if exit_code or issues:
             print('Route pilot incomplete or failed; no coverage awarded.', file=sys.stderr)
             return 1
-        print(f"Route pilot passed: {len(inventory['cases'])} exact cases; independent AIZ1/HCZ1 obligations only.")
+        candidate = ' at candidate ' + args.expected_candidate if strict else ''
+        print(f"Route pilot passed{candidate}: {len(inventory['cases'])} exact cases; zero skips; "
+              'independent AIZ1/HCZ1 obligations only, not release certification.')
         return 0
     except KeyboardInterrupt:
         print('Route pilot cancelled; validation incomplete.', file=sys.stderr)

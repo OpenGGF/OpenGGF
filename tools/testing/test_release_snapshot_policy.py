@@ -682,6 +682,148 @@ public record Rules(int value) {
                     self.record_change(prefix + before + suffix, prefix + after + suffix,
                                        'candidate signature pin')
 
+    TERMINAL_POLICY = 'src/main/java/com/openggf/mods/code/ModApiSignatureSurface.java'
+    TERMINAL_API = 'src/main/java/com/openggf/example/Outer.java'
+
+    def terminal_policy(self, *names):
+        return ('class ModApiSignatureSurface {\n'
+                'private static final Set<String> ENGINE_INTERNAL_TYPES = Set.of(\n' +
+                ',\n'.join('"' + name + '"' for name in names) + ');\n}\n')
+
+    def terminal_setup(self, owner='class Outer', names=('com.openggf.example.Outer$State',)):
+        self.write(self.TERMINAL_POLICY, self.terminal_policy(*names))
+        source = ('package com.openggf.example;\n@ModApi\npublic ' + owner + ' {\n'
+                  ' public record State(int value) { public int helper() { return value; } }\n'
+                  ' public record Sibling(int exposed) {}\n'
+                  ' public int visible() { return 1; }\n}\n')
+        self.write(self.TERMINAL_API, source)
+        self.next_baseline = self.commit('historical terminal policy and API')
+        return source
+
+    def terminal_commit_check(self, expected):
+        self.assert_terminal_staged_policy(expected)
+        head = self.commit('chore: terminal edit\n\n' + '\n'.join(
+            key + ': n/a' for key in ['Changelog', 'Guide', 'Known-Discrepancies',
+                                     'S3K-Known-Discrepancies', 'Agent-Docs',
+                                     'Configuration-Docs', 'Skills']))
+        self.assert_policy(BASELINE, self.next_baseline, head, 'develop', expected)
+
+    def assert_terminal_staged_policy(self, expected):
+        message = self.root / 'message.txt'
+        message.write_text('chore: terminal edit\n\n' + '\n'.join(
+            key + ': n/a' for key in ['Changelog', 'Guide', 'Known-Discrepancies',
+                                     'S3K-Known-Discrepancies', 'Agent-Docs',
+                                     'Configuration-Docs', 'Skills']))
+        for command in self.policies(self.base):
+            with self.subTest(implementation=command[0]):
+                result = subprocess.run(command + ['commit-msg', str(message)], cwd=self.repo,
+                                        text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                if expected is None:
+                    self.assertEqual(0, result.returncode, result.stdout)
+                else:
+                    self.assertNotEqual(0, result.returncode, result.stdout)
+                    self.assertIn(expected, result.stdout)
+
+    def test_established_nested_terminal_components_and_members_are_internal(self):
+        source = self.terminal_setup()
+        self.write(self.TERMINAL_API, source.replace('int value)', 'int value, int previousAnim)')
+                   .replace('public int helper()', 'public long helper()'))
+        self.terminal_commit_check(None)
+
+    def test_established_terminal_in_record_owner_is_internal(self):
+        source = self.terminal_setup('record Outer(int exposed)')
+        self.write(self.TERMINAL_API, source.replace('int value)', 'long value)'))
+        self.terminal_commit_check(None)
+
+    def test_native_rewind_prerequisite_uses_authoritative_registry(self):
+        path = 'src/main/java/com/openggf/sprites/managers/TailsTailsController.java'
+        # Keep the historical declaration independent of later gameplay changes.
+        source = ('package com.openggf.sprites.managers;\n@ModApi\n'
+                  'public class TailsTailsController {\n'
+                  ' public record RewindState(int currentAnim, boolean dirVFlip) {}\n}\n')
+        self.write(self.TERMINAL_POLICY, (ROOT / self.TERMINAL_POLICY).read_text())
+        self.write(path, source)
+        self.next_baseline = self.commit('historical native controller and terminal registry')
+        self.write(path, source.replace('boolean dirVFlip)', 'boolean dirVFlip, int previousAnim)'))
+        self.terminal_commit_check(None)
+
+    def test_terminal_projection_keeps_outer_and_sibling_api(self):
+        source = self.terminal_setup()
+        for before, after in [('int exposed', 'long exposed'), ('public int visible', 'public long visible')]:
+            with self.subTest(change=before):
+                self.write(self.TERMINAL_API, source.replace(before, after))
+                self.assert_terminal_staged_policy('candidate signature pin')
+
+    def test_terminal_identity_visibility_and_relationship_are_not_hidden(self):
+        source = self.terminal_setup()
+        for changed in [source.replace('record State', 'record Renamed'),
+                        source.replace('public record State', 'private record State'),
+                        source.replace(' public record State(int value) { public int helper() { return value; } }\n', ''),
+                        source.replace(' public record Sibling', ' public record Added(int x) {}\n public record Sibling'),
+                        source.replace('record State(int value) { public int helper() { return value; } }',
+                                       'class Container { public record State(int value) {} }')]:
+            with self.subTest(source=changed):
+                self.write(self.TERMINAL_API, changed)
+                self.assert_terminal_staged_policy('candidate signature pin')
+
+    def test_established_terminal_declaration_addition_still_requires_pin(self):
+        source = self.terminal_setup(names=('com.openggf.example.Outer$State',
+                                            'com.openggf.example.Outer$Added'))
+        self.write(self.TERMINAL_API, source.replace(' public record Sibling',
+                   ' public record Added(int hidden) {}\n public record Sibling'))
+        self.terminal_commit_check('candidate signature pin')
+
+    def test_terminal_projection_does_not_hide_owner_record_components(self):
+        source = self.terminal_setup('record Outer(int exposed)')
+        self.write(self.TERMINAL_API, source.replace('Outer(int exposed)', 'Outer(long exposed)'))
+        self.assert_terminal_staged_policy('candidate signature pin')
+
+    def test_same_edit_terminal_classification_cannot_hide_api_change(self):
+        source = self.terminal_setup(names=())
+        self.write(self.TERMINAL_POLICY, self.terminal_policy('com.openggf.example.Outer$State'))
+        self.write(self.TERMINAL_API, source.replace('int value)', 'long value)'))
+        self.terminal_commit_check('candidate signature pin')
+
+    def test_removed_terminal_classification_cannot_hide_api_change(self):
+        source = self.terminal_setup()
+        self.write(self.TERMINAL_POLICY, self.terminal_policy())
+        self.write(self.TERMINAL_API, source.replace('int value)', 'long value)'))
+        self.terminal_commit_check('candidate signature pin')
+
+    def test_terminal_policy_and_source_are_read_from_compared_blobs(self):
+        source = self.terminal_setup()
+        changed = source.replace('int value)', 'long value)')
+        self.write(self.TERMINAL_API, changed)
+        # Neither an unstaged corrupt registry nor an unstaged real API edit owns admission.
+        (self.repo / self.TERMINAL_POLICY).write_text('malformed working policy')
+        (self.repo / self.TERMINAL_API).write_text(source.replace('int exposed', 'long exposed'))
+        self.terminal_commit_check(None)
+        # Conversely, a working-tree restoration cannot hide a staged classification change.
+        self.write(self.TERMINAL_POLICY, self.terminal_policy())
+        (self.repo / self.TERMINAL_POLICY).write_text(self.terminal_policy('com.openggf.example.Outer$State'))
+        self.write(self.TERMINAL_API, source)
+        self.assert_terminal_staged_policy('candidate signature pin')
+
+    def test_malformed_or_unsupported_terminal_policy_fails_closed(self):
+        source = self.terminal_setup()
+        self.write(self.TERMINAL_API, source.replace('int value)', 'long value)'))
+        valid = self.terminal_policy('com.openggf.example.Outer$State')
+        for policy in [valid.replace('Set.of(', 'other('),
+                       valid.replace('"com.openggf.example.Outer$State"', 'computed()'),
+                       valid.replace(');', ',);'),
+                       valid.replace(');', ');\nprivate static final Set<String> ENGINE_INTERNAL_TYPES = Set.of();'),
+                       valid.replace('"com.openggf.example.Outer$State"', '"bad/name"')]:
+            with self.subTest(policy=policy):
+                self.write(self.TERMINAL_POLICY, policy)
+                self.assert_terminal_staged_policy('terminal policy')
+
+    def test_missing_terminal_policy_retains_conservative_admission(self):
+        source = self.terminal_setup()
+        self.git('rm', self.TERMINAL_POLICY)
+        self.next_baseline = self.commit('historical repository without terminal policy')
+        self.write(self.TERMINAL_API, source.replace('int value)', 'long value)'))
+        self.terminal_commit_check('candidate signature pin')
+
     def test_next_rollover_rejects_postbaseline_uncoupled_api_changes(self):
         self.next_baseline = self.base
         self.write('src/main/java/example/NewApi.java', '@ModApi\npublic interface NewApi {}\n')

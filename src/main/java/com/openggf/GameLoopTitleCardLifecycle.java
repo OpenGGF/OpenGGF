@@ -41,17 +41,6 @@ final class GameLoopTitleCardLifecycle {
         void recordLevelRelease(); void notifyModeChanged(GameMode oldMode);
     }
 
-    /**
-     * Level already submitted its Nemesis work on the load frame. Entering
-     * loc_62CC dispatches Obj_TitleCardInit once, then reaches the queue tail:
-     * its first VBlank precedes Process_Nem_Queue_Init, not an extra idle row.
-     */
-    void enterPending(GameplayModeContext gameplayMode,
-                      LevelManager levelManager, PlcLifecycleFrame frame) {
-        enterTitleCard(levelManager.getTitleCardZone(), levelManager.getTitleCardAct());
-        GameLoopPlcLifecycle.enterPendingTitleCard(gameplayMode, levelManager, frame, provider());
-    }
-
     GameLoopTitleCardLifecycle(Host host) { this.host = host; }
 
     TitleCardProvider provider() {

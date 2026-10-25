@@ -7641,3 +7641,157 @@ c9028e88c75f8fcabec551453e05d93aee6b782b while the PR head remained f340.
 This correction checkpoint does not include that newly observed delta. Its
 source footprint and any necessary receiving work remain separate from the
 qualified a53-based executable epoch above.
+
+
+## PR223 develop c902 receiving and affected qualification (2026-10-25)
+
+From clean qualified a93bdeacd226f12110c827d3c9bd2d942f437aa4, the PR lane
+received pinned develop c9028e88c75f8fcabec551453e05d93aee6b782b once with
+merge --no-commit --no-ff. Common base was c502c600. The incoming delta contains56
+paths;25 overlap receiving changes. Actual Git construction reported14 conflicts.
+Two disjoint immutable-source readers proposed runtime and policy/API receiving
+contracts; a bounded four-file hook author then composed only that policy slice.
+All authors stopped before validation. Root's uncommitted native camera/CPU/
+programme lane and expired tube-task work were excluded. The already committed
+be601fe01 ancestor was present in both matched route inputs; old held registry
+wording neither withdrew nor reintroduced it.
+
+The resulting pre-prose staged tree is
+0b24702241593f70e7a5a19b2296f176db706b5a, own complete input frame
+d78414e6d1bd255453bbf8466e3747592cdae2431ae990374b8d7421d49b7d62
+(13,281 source/input paths;858,523,283 payload bytes). Actual staged footprint
+is52 paths before this factual Plan append. No Main/develop source or branch was
+modified. Incoming AGENTS/CLAUDE and both changed skill pairs remain identical.
+
+Pending title entry now belongs to the existing stateless PLC bridge with a live
+level supplier and synchronous virtual entry/provider callbacks. Both root sites
+use that bridge; the superseded retained-owner enterPending method was removed.
+This preserves level rebinding during entry and hardware preparation. The new
+rebind fixture declares a successful frame.claim, matching the receiving
+claim-sensitive scan owner; removing only that line reconstructs incoming test
+bytes. The pause suspension call replaces an existing blank: stepInternalBody
+remains276 physical lines, with unchanged guard budgets.
+
+The receiving world-owned LevelInitProfile submission, title manager, fresh-load
+regression, world-bound Kos fixture and complete-run prefix remain HEAD-byte-exact.
+Incoming global/module-owned PLC lookup was not substituted for the captured
+world. The receiving four-archive bonus expectations remain intact. Tails receives
+previousAnim, the native FD return and captured rewind state, while both existing
+dynamic-art publication methods remain byte-exact, including renderer-free S2
+callbacks and S3K's renderer requirement. Unsupported fixed-tail storage was not
+resurrected. Hosted-run pause/physical capture, controller quick chat, exact private
+audio.destroy retirement and PCM prerequisite/failure propagation are received
+without changing matched audio installation or recorded-input lease cleanup.
+
+The API pin preserves all13 receiving additions and adds exactly three incoming
+methods: InputHandler.isPhysicalKeyPressed(int), RunInput.resumedAfterPause(),
+and RunInput.physicalInput(). Static composition yields22,695 sorted unique lines;
+the canonical compiled-surface/pin owners below provide the actual equality check.
+The138 communication signatures are shared ancestry, not138 new additions here.
+CURRENT and descriptor remain unpublished candidate0.7.0; no registry, platform
+allowlist or published pin changed.
+
+The hook prepass recognizes exact nested terminal binary identities classified
+in both compared Git registries, without reading an unstaged registry. It runs
+before the receiving declaration/owner/reachability lexer. Existing field/enum
+handling, initializer exclusion, hidden-owner references, inferred permits,
+fallbacks and explicit missing-PowerShell reporting remain. No whole hook file,
+older record shortcut, blanket package exemption or classification expansion was
+selected. Compatibility prose records the earlier fail-closed Unicode boundary.
+Complete conflicting historical HCZ/coverage/frontier evidence from both inputs
+was retained as separate dated evidence rather than reclassified as this run.
+
+The first check was the exact two Python safety modules; release-pilot process,
+candidate/ROM checks and lifecycle admission are mocked tests. No actual release
+pilot, profiler, dashboard watcher, JVM version probe or native/emulator capture
+was launched by that request. The original committed pilot remains26 cases across
+six classes and is not routine PR qualification. The original package-style Python command could not load the route module's
+sibling category_artifacts import. It completed107 snapshot/tree tests and one
+loader error;42 route tests did not run. Source remained exact. Only the missed
+module was then invoked with documented directory discovery, without repeating
+those107 tests. These remain separate invocations. Python outcomes:
+{"records": 108, "passed": 107, "failures": 0, "errors": 1, "skips": 0, "families": {"tools.testing.test_release_snapshot_policy.SnapshotPolicyTests": 96, "tools.testing.test_release_snapshot_policy.TreeAuditTests": 11}, "seconds": 251.036, "queue": "not queued; Python safety only", "error": "Package-style invocation could not import category_artifacts; route42didnotexecute. Snapshot107passed.", "sourcepost_exact": true, "log_bytes": 24597, "log_lines": 157, "full_log_read": true}
+
+{"unique": 42, "passed": 42, "failures": 0, "errors": 0, "skips": 0, "families": {"test_check_route_obligations.ExactCandidateTests": 18, "test_check_route_obligations.RouteObligationTests": 24}, "seconds": 0.3, "queue": "not queued; mocked Python safety only", "sourcepost_exact": true, "source_frame": "d78414e6d1bd255453bbf8466e3747592cdae2431ae990374b8d7421d49b7d62", "log_bytes": 7267, "log_lines": 47, "all_actual_ids_read": true, "actual_release_pilot_or_Maven_executed": false}
+
+| Fresh request | Actual outcome | Maven lifecycle and rounded queue |
+| --- | --- | --- |
+| ApiSdk/21824 | 82 distinct/82P/0F/0E/0S; 7 report families | 02:16 min; 60s |
+| Runtime/19717 | 233 distinct/233P/0F/0E/0S; 25 report families | 41.335 s; 0s |
+| Guards/53530 | 145 distinct/145P/0F/0E/0S; 5 report families | 47.370 s; 0s |
+
+
+Runtime emissions remain explicit. Five SEVERE callback messages belong to the
+owned retry-query, overlay/cleanup, run-end and null-ghost-list fault controls;
+their retirement and attribution assertions pass. Five ordinary host-abort
+warnings and one cleanup warning are those injected failures. Six checksum
+warnings all belong to
+TestHostedRunController#runHudProfileSurvivesReloadsAndCannotEscapeItsHandleLifetime:
+its static GameServices mock supplies only levelOrNull, so rom() is null.
+The existing romChecksumOrZero catch logs and returns0. HUD lifetime oracles
+pass; this positive synthetic fixture does not qualify a ROM fingerprint and is
+not relabelled as an intended negative. No runtime fallback or suppression was
+added. Two absent deferred-bonus-provider warnings belong to the virtual title
+destination/rebinding unit controls. The one published-attempt reset warning
+belongs to the explicit coordinator reset control. Runtime timing warnings are
+201 FAST/NONE and13 deterministic KOS estimates; the invalid collision index is
+the existing declared boundary control. No new loader fault was found in the
+selected real stock-ROM cases. ApiSdk emitted seven console FAST/NONE warnings
+and no XML streams. These limits are not native audio/art/timing certificates.
+
+The Python command shapes were:
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest tools.testing.test_check_route_obligations tools.testing.test_release_snapshot_policy -v
+(original107 passes plus one loader error), then
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tools/testing -p test_check_route_obligations.py -v
+(only the missed42 tests). No107-test repeat or Python source correction occurred. The fresh guard field
+diagnostic is empty, its current baseline has zero keys, and the compact audit
+reports257 acquired-player fields, not257 JUnit cases. The four console
+FAST/NONE guard warnings remain timing limits; no store or baseline changed.
+
+These are separate source-qualified focused epochs, not an arithmetic union or
+a replacement full-smoke result. API/SDK/Javadoc/sample checks select their
+actual owners, runtime checks cover live title rebinding, pause/physical/logical
+input, controller chat, tail state/publication, private audio retirement,
+prerequisite failures, real stock-ROM fresh title/recorded pause and mandatory
+S3K keepers. Guards cover strict root/helper caps, architectural dependencies and
+actual rewind capture/field/policy obligations without a store/cap/baseline change.
+
+All actual identities, failure/error/skip state, XML properties, recursive streams,
+text reports, full bounded consoles, generated owning diagnostics and sourcepost
+were read before exact owned diagnostic cleanup. Warnings and any classification
+limits are recorded in each request's bounded result, not treated as fault-free
+native audio/art/timing evidence. Queue delay is separate from Maven lifecycle;
+neither summed parallel intervals nor source declaration counts are elapsed
+delivery time or executed cases.
+
+Reproduction uses the preceding normal absolute OPENGGF_QUEUE_WRAPPER command
+shape from `<PR_WORKTREE>`, reviewed Java25/Lua54/null audio/surfaceless EGL,
+original three stock absolute ROM properties plus the existing kis2 property,
+and unset ambient launcher/display variables. There was no lean/resource/fork/
+heap/timeout override, extra standalone build/preflight, API resnapshot or broad
+rerun. Selectors below are exact UTF-8 comma strings; Guards alone adds -Pguards.
+
+```text
+ApiSdk: com.openggf.tests.TestModApiHookPolicy,com.openggf.mods.TestModApiSignatureSurface,com.openggf.mods.TestModApiPinPolicy,com.openggf.mods.TestModApiReleasePolicy#repositoryDescriptorRetainsUnpublishedCandidateAfterRollover,com.openggf.tools.modsdk.TestModApiJavadocTool,com.openggf.tools.modsdk.TestModApiSdkPackager,com.openggf.tools.modsdk.TestSampleModsPackage#exactlyNineMaintainedSourcesBuildThroughRealPackageAndValidateAsOneRepository
+selector SHA-256: e789ead505a2de7140cc98c397a2e18c502156cae0603ea9c3597ad3fefceca2
+```
+
+```text
+Runtime: com.openggf.TestGameLoopTitleCardOwnership,com.openggf.TestGameLoopTitleCardPause,com.openggf.TestHostedRunController,com.openggf.sprites.managers.TestS2FixedTailStoragePrerequisite,com.openggf.sprites.managers.TestTailsTailPose,com.openggf.sprites.playable.TestPlayablePlacementAudioOwnership,com.openggf.tools.TestNativePcmCapturePrerequisites,com.openggf.game.sonic2.competition.interlace.TestSonic2InterlaceTailPublication,com.openggf.sprites.managers.TestNativeCompetitionFixedAuxiliaryDispatch,com.openggf.control.TestRecordedInputOwnership,com.openggf.TestGameLoopHardwareTimingBoundaries,com.openggf.tools.TestRecordingFrameDriverHardwareTiming#heldS3kTitleCardSkipSurroundsActualProviderScanWithBoundaries,openggf.timeattack.mp.TestMultiplayerRaceCoordinator,openggf.timeattack.mp.TestTimeAttackQuickChat,com.openggf.TestS3kFreshTitlePlcLoadBoundary,com.openggf.game.sonic3k.titlecard.TestSonic3kTitleCardKosQueue#freshLevelTerrainWaitsForTitleAndNemesisButNotChildExit,com.openggf.sprites.managers.TestTailsTailsFlightSelection,com.openggf.tools.TestRecordedInputNativePause,com.openggf.TestGameLoopFreezeContractWiring,com.openggf.tools.TestS3kBonusReturnTitleOwner,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils
+selector SHA-256: f5e900ee96da3b45aec005eef3a5b749a2debbb860c81e3415b6e9bb5487a6d6
+```
+
+```text
+Guards: com.openggf.tests.TestArchitecturalSourceGuard,com.openggf.tests.TestArchUnitRules,com.openggf.game.rewind.schema.TestCapturedPolicyCompactReachabilityGuard,com.openggf.game.rewind.schema.TestExactRewindPolicyGuard,com.openggf.game.rewind.schema.TestRewindFieldDispositionGuard
+selector SHA-256: d639e0f4d37c46dde51f0e7fe6dafb4dc96fff2b163b340a3ef6c9ee2f6101ae
+```
+
+NativePcmCaptureLive's five native-support-dependent captures remain unqualified
+in this receiving cohort. The unchanged continuous prefix and45-case route
+selection were not repeated. The prior359/172 and matched f340/a93 failure
+signatures retain only their recorded source scopes; no post-c902 route pass or
+newness claim follows. All41 route causes, inherited E8DF art, warm-cache identity,
+multi-plane publication atomicity, cleanup iterator reentry and optional/GL/
+creator-kit/native gaps remain open. Prior red, incomplete and skipped broad
+epochs are not retroactively green. Hosted PR checks still determine green;
+normal-hook commit, committed-range policy and publication are subsequent steps.

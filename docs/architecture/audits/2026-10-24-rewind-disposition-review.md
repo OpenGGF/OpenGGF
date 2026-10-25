@@ -3588,3 +3588,169 @@ storage authority. The Sideways disposition and ten bridges remain unchanged.
 The historical 119-record count above belongs to that qualification; the later
 independent SourcePublication transfer accounts for the current 120-record
 baseline and does not qualify a fixed-tail storage owner.
+
+### Fixed-tail implementation prerequisite — 2026-10-25
+
+Implementation starts in isolated `bugfix/ai-s2-fixed-tails-binding` at
+`f7620e579c1a8cf7b0371f9c5a438f6a4eff5ea7`. The six native pressure cases above
+are reused as evidence; no emulator/probe is rerun. A literal independent
+animation control identified one state boundary that the seven-field Java tail
+snapshot could not express: `TAnim_End_FD` (s2.asm:41327-41333) writes `anim`
+and returns while `prev_anim`, the old mapping and animation-frame index remain.
+`Tails_Animate_Part2` (s2.asm:41271-41282) detects the change on the following
+dispatch. The previous Java implementation immediately read Swish's first frame.
+
+`TestS2FixedTailStoragePrerequisite#flickChangeRetainsTheOldFrameUntilTheNextDispatch`
+failed on the unchanged controller: at the first `$FD` dispatch its frame index,
+duration and mapping were `1/7/$09`, versus the literal `5/3/$0D`. The pre-transition
+control matched. The same run's 18 existing Sideways/flight/directional cases
+passed; the retained Sideways known-gap assertions still denote an open bug.
+The focused command used `maven_queue.py --lean -Dmse=off`, exact selector
+`TestS2FixedTailStoragePrerequisite,TestS2SidewaysPformAdmissionQualification,TestTailsTailsDirectionalAnimation,TestTailsTailsFlightSelection`,
+EGL and verified absolute S1/S2/S3K ROM properties: 19 cases, one failure, no
+errors or skips. Queue admission waited zero seconds; Maven took 1:21.
+
+The prerequisite retains the distinct previous-animation value in the controller
+and its snapshot, preserves the old seven-argument snapshot constructor, and
+returns from the `$FD` edge before reading a new frame. The new regression also
+restores exactly at that edge and verifies the following dispatch. A focused run
+with selector
+`TestS2FixedTailStoragePrerequisite,TestTailsTailsDirectionalAnimation,TestTailsTailsFlightSelection,TestSpriteManagerMainTailsTailsDispatch`
+passes all 12 cases with no errors/failures/skips; queue admission waited zero
+seconds, Maven took 1:23. Both runs used JDK 25 in this worktree and the required
+`-Dopenggf.headless.gl=surfaceless-egl`; no display fallback was used.
+Tool preflight passed with `JAVA_HOME=/usr/lib/jvm/java-25-openjdk` and
+`LUA_BIN=/usr/bin/lua5.4`, and executed no tests. Existing signature policy already
+classifies the rewind-state record as internal; no API exclusion or pin changes
+are introduced. This prerequisite alone does not fix or relax the Sideways
+allocation/reference failure. Fixed-tail storage, binding and lifecycle checks
+remain the next implementation slice; the canonical known-bug entry stays open.
+
+### Rejected fixed-tail-only implementation and finite parent boundary — 2026-10-25
+
+The same isolated tree attempted a complete 64-byte per-manager fixed-tail cell,
+with layout capability forwarding through the decorated registry, independent
+physical lineage, complete manager snapshots, and explicit Obj02 admission versus
+art rebinding. Failed Obj7A allocation reserved no child and performed only the
+native link/bounds/X writes. Bound animation, copied X/Y/status/angle/priority,
+deletion and reinstallation used the same bytes. Controller/player restore could
+not overwrite or resurrect that cell. Ordinary admitted pairs retained their
+existing anchored allocation and strict Java reference codec. No native probe or
+trace data supplied runtime values.
+
+That candidate was **rejected**, not committed. Its proposed parent resolver
+handled the live Obj7A and explicit native playable views, then rejected a missing
+or unknown code owner. This is insufficient for the supported raw-retirement
+boundary already recorded above: `ObjectLifetimeOps.deleteNoRespawn` frees the
+parent without running Obj7A's linked-target cleanup. Stageplay structural
+retirement independently has that property. Obj05 checks neither the parent ID
+nor routine before reading its address (`Obj05_Main`, s2.asm:41723-41736).
+Its 13-byte/eight-field read domain is X/Y at `$08/$0C`, X/Y velocity at
+`$10/$12`, art at `$02`, animation at `$1C`, status at `$22`, and angle at `$26`.
+A cleared parent cell or a later stock/creator occupant therefore needs physical
+header authority beyond the fixed tail's own 64 bytes. The ten-field
+`NativeSstState` projection and live-owner-only `NativeSstSlotAccess` do not
+provide it. Automatic pair cascading, a zero/class-default projection, retaining
+the departed Java parent, or an incarnation identity would each change that
+contract. None was added.
+
+Focused candidate validation used the worktree-local queued wrapper, JDK 25,
+`--lean -Dmse=off -Dopenggf.headless.gl=surfaceless-egl`, selector
+`TestS2FixedTailStoragePrerequisite,TestS2SidewaysPformAdmissionQualification,TestS2SidewaysPformGraphRewind,TestObjectManagerChildSlotAllocation,TestTailsTailsDirectionalAnimation,TestTailsTailsFlightSelection,TestSpriteManagerMainTailsTailsDispatch`,
+and the verified absolute S1/S2/S3K ROM properties. It executed 41 cases: 40 passed,
+one fixture error, zero skips. The error was the new live-tail fixture's missing
+explicit `StubObjectServices.playerQuery`, not a native result. Admission waited
+68 seconds; Maven reported 1:32. After supplying the query, one follow-up selected
+only `TestS2SidewaysPformAdmissionQualification`. Admission waited 29 seconds;
+Maven again reported 1:32. Of its 19 cases, the 17 pressure/admission/lifetime
+controls passed; the two new disconfirming cases failed, with no errors/skips:
+
+- `nativeTailStillNeedsParentStorageAfterSupportedRawDeletion(boolean)[1]`,
+  `reuse=false`: after native fixed-tail redirection and supported raw parent
+  deletion, the tail remained ID05 and retained parent word `$CFC0`, while the
+  manager had no live code owner at SST127.
+- The same method `[2]`, `reuse=true`: exact-slot admission installed a genuine
+  `PressureOccupant` at SST127, while the tail still retained that physical word.
+
+Both reached the same exact candidate exception,
+`IllegalStateException: Native tail parent has no verified field owner at SST 127`,
+at `NativeFixedTailStorage.parent`, through `TailsTailsController.update`.
+Their `assertDoesNotThrow` failed. These were reached Java controls, not a
+prediction from the type census. The passed controls covered byte preservation
+outside the native failed writes, empty/live targets, two aliases, reinstallation,
+physical deletion, placed respawn/remember release, destructive reconstruction,
+forward replay, independent managers and rejection of stale/foreign capabilities.
+They do not qualify the candidate across the disconfirming boundary.
+
+Parent accepted the finite rejection and retained the canonical Sideways gap.
+All candidate runtime code, its changed known-gap assertions and its candidate-only
+tests are removed before final-source validation. The original qualification
+remains unchanged. Only the independent animation prerequisite and its supported
+literal/rewind controls are retained. The rejected runtime code and raw logs are
+not archived. Parent owns any subsequent dynamic-parent storage design, review
+and combined validation; no wider SST emulation, fallback, API terminal or pin
+change is authorized by this attempt.
+
+### Final prerequisite-only qualification — 2026-10-25
+
+The final source retains only `TailsTailsController`'s independent previous
+animation, `$FD` return and snapshot compatibility, plus the matching
+`TailsTailPose` random-access sample boundary. Its existing sampler/controller
+comparison covers both ordinary and separate-art scripts, both facings and
+changing velocity across the transition. The separate-art script also ends in
+`$FD,1` (`AniTails_Tail02`, General/Sprites/Tails/Anim - Tails Tail.asm:17);
+`loc_1AC5C` (sonic3k.asm:36247-36251) writes animation and returns. No unrelated
+allocator, clock, player-init, renderer-binding or lifecycle change remains.
+The original Sideways production, qualification and canonical known-bug entry
+are byte-identical to the task base. The new literal regression is retained;
+candidate-only storage tests are removed.
+
+Final-source focused validation completed before changing checkout contents.
+`MAIN_CHECKOUT` below denotes the verified absolute root checkout, read without
+copying or linking its ROMs:
+
+```bash
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+python3 tools/testing/maven_queue.py --lean -Dmse=off \
+  '-Dtest=TestS2FixedTailStoragePrerequisite,TestS2SidewaysPformAdmissionQualification,TestS2SidewaysPformGraphRewind,TestObjectManagerChildSlotAllocation,TestTailsTailsDirectionalAnimation,TestTailsTailsFlightSelection,TestSpriteManagerMainTailsTailsDispatch,TestTailsTailPose,TestTailsRendering' \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  -Dsonic1.rom.path="$MAIN_CHECKOUT/s1.gen" \
+  -Dsonic2.rom.path="$MAIN_CHECKOUT/s2.gen" \
+  -Ds3k.rom.path="$MAIN_CHECKOUT/s3k.gen" test -B
+```
+
+All **39 cases across nine physical classes pass**, with zero errors/failures/
+skips: prerequisite 1, original qualification 11, pair graph 4, child-slot
+allocation 8, directional 1, flight 6, main-tail dispatch 4, pose sampling 2 and
+rendering 2. Admission waited **114 seconds** separately from Maven's **1:26**.
+These selected checks are ROM-free focused controls; supplying verified ROM
+properties is not a claim that a ROM-backed route ran. No broad suite or native
+pressure rerun was launched.
+
+The original ordinary commit hook rejected the internal nested record's changed
+declaration despite an unchanged normalized API surface. The parent independently
+reviewed policy commit `0eff72951403fbba4e16dd3ea19d8a198b775cd5`; only that commit
+was cherry-picked here as `e523f55b1`, with a task-owned stash roundtrip. All source
+and audit fingerprints matched after restoration; the release notes retain both
+the policy note and animation note. No terminal registry or signature pin changes
+were made. The source tested by the 39-case run is unchanged by that policy-only
+application.
+
+The required final normalized check then ran once against that completed compiled
+source, with queued `--normal -Dmse=off
+'-Dtest=TestModApiSignatureSurface#candidateZeroSevenSurfaceIsPinnedToTheCurrentSurface'
+-Dopenggf.headless.gl=surfaceless-egl surefire:test -B` under the same Java/Lua
+environment: **one exact physical testcase passes, zero errors/failures/skips**.
+Admission waited **5 seconds**; Maven reported **1.756 seconds**. The earlier
+mistyped method selection executed zero tests and supplies no validation evidence.
+No duplicate unchanged request was submitted.
+
+XML identities, assertions and skips were inspected before consumed reports were
+removed. Citation comparison against the pinned source found the controller's
+same four inherited stale anchors on baseline and final source, with no new
+hard/stale finding; both new literal-test citations are anchored. The two
+independent `$FD` routines above were also read directly. Mirror equality,
+new links/anchors and `git diff --check` are checked before the local commit.
+Parent owns combined smoke/pilot coverage, integration and push. This delivers
+the prerequisite and the finite rejected-design evidence; it does not deliver
+the Sideways allocation/storage correction or certify an act.
