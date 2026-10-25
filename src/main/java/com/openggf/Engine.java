@@ -343,6 +343,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 							"Live viewport recording failed", failure));
 	private long lastFrameTime;
 	private boolean paused = false;
+	private final SceneFocusPresentation sceneFocusPresentation = new SceneFocusPresentation();
 	private long userPauseIndicatorHiddenUntilNanos;
 
 	private DebugRenderer getDebugRenderer() {
@@ -773,14 +774,16 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		// Setup window focus callback
 		glfwSetWindowFocusCallback(window, (windowHandle, focused) -> {
 			if (editorChrome != null) editorChrome.focus(focused);
-			gameLoop.modSceneHost.windowFocusChanged(focused);
-			paused = applyWindowActivation(focused, inputHandler, gameLoop::pause, gameLoop::resume);
+			paused = applyWindowActivation(focused, inputHandler, gameLoop::pause, gameLoop::resume,
+					() -> gameLoop.modSceneHost.windowFocusChanged(focused),
+					() -> sceneFocusPresentation.withdraw(() -> glfwSwapBuffers(window)));
 		});
 
 		// Setup window iconify callback
 		glfwSetWindowIconifyCallback(window, (windowHandle, iconified) -> {
-			gameLoop.modSceneHost.windowIconifyChanged(iconified);
-			paused = applyWindowActivation(!iconified, inputHandler, gameLoop::pause, gameLoop::resume);
+			paused = applyWindowActivation(!iconified, inputHandler, gameLoop::pause, gameLoop::resume,
+					() -> gameLoop.modSceneHost.windowIconifyChanged(iconified),
+					() -> sceneFocusPresentation.withdraw(() -> glfwSwapBuffers(window)));
 		});
 
 		// Get the thread stack and push a new frame
@@ -2911,7 +2914,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 				// Process exactly one frame per target interval
 				if (accumulator >= frameTimeNanos) {
-					displayAndSwap(this::display, () -> glfwSwapBuffers(window));
+					sceneFocusPresentation.displayAndSwap(this::display, () -> glfwSwapBuffers(window),
+							gameLoop.modSceneHost::renderedSubmissions);
 					// Preserve remainder to prevent timing drift
 					accumulator -= frameTimeNanos;
 
@@ -3355,6 +3359,14 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	 *
 	 * @return the engine's new paused state
 	 */
+	static boolean applyWindowActivation(boolean active, InputHandler inputHandler,
+			Runnable pause, Runnable resume, Runnable notifyScene, Runnable withdrawScene) {
+		notifyScene.run();
+		boolean paused = applyWindowActivation(active, inputHandler, pause, resume);
+		if (paused) withdrawScene.run();
+		return paused;
+	}
+
 	static boolean applyWindowActivation(boolean active, InputHandler inputHandler,
 			Runnable pause, Runnable resume) {
 		if (inputHandler != null) {

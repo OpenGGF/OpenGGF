@@ -513,6 +513,10 @@ class TestEngineLiveCapturePresentation {
                 "the focus callback must gate the loop through the shared activation body");
         assertEquals(1, occurrences(source.substring(iconify, afterCallbacks), "applyWindowActivation("),
                 "the iconify callback must gate the loop through the shared activation body");
+        assertEquals(1, occurrences(source.substring(focus, iconify), "sceneFocusPresentation.withdraw("),
+                "the focus callback must withdraw already-presented scene pixels");
+        assertEquals(1, occurrences(source.substring(iconify, afterCallbacks), "sceneFocusPresentation.withdraw("),
+                "the iconify callback must withdraw already-presented scene pixels");
     }
 
     /** One connected pad with the given buttons held. */

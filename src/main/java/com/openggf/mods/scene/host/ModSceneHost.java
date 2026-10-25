@@ -66,6 +66,7 @@ public final class ModSceneHost {
     private int height = 224;
     private boolean exiting;
     private boolean suspended;
+    private long renderedSubmissions;
     private com.openggf.mods.scene.ActLaunch pendingAct;
 
     /** Install the platform owner before opening a scene. Headless hosts retain the unavailable owner. */
@@ -218,6 +219,7 @@ public final class ModSceneHost {
                 renderer.init();
             }
             renderer.render(lastFrame, projection, width, height, viewport);
+            if (!lastFrame.isEmpty()) renderedSubmissions++;
         } catch (IOException e) {
             LOG.log(Level.SEVERE, "Scene renderer unavailable", e);
         }
@@ -244,6 +246,7 @@ public final class ModSceneHost {
                 renderer.init();
             }
             renderer.render(canvas.ops(), projection, canvasWidth, canvasHeight, viewport);
+            if (!canvas.ops().isEmpty()) renderedSubmissions++;
         } catch (IOException e) {
             LOG.log(Level.SEVERE, "Scene renderer unavailable", e);
         }
@@ -313,6 +316,11 @@ public final class ModSceneHost {
     /** Immutable recording for engine diagnostics and the separately distributed creator testkit. */
     public List<SceneDrawOp> recordedFrame() {
         return List.copyOf(lastFrame);
+    }
+
+    /** Engine-thread presentation evidence. Recording without a GL submission does not count. */
+    public long renderedSubmissions() {
+        return renderedSubmissions;
     }
 
     /** Closes the open scene: calls {@link ModScene#exit} and releases its textures. */

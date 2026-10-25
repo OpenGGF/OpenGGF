@@ -103,7 +103,9 @@ Unreleased. The earlier development themes remain in
   let hosts disable member sharing by rotating the code. Passwords and complete
   invites stay out of saved settings, automatic exports and logs. Scene-owned
   clipboard writing and focus-loss notifications support the same privacy
-  controls in other mods.
+  controls in other mods. Losing focus or minimizing withdraws a presented scene,
+  including a scene over gameplay, with one neutral frame while updates pause.
+  Ordinary gameplay keeps its paused picture.
   Separate master/relay and verifier Docker images support individual containers
   or a single-host Compose deployment, with TLS, file-backed secrets, persistent
   identities, master readiness and verifier startup retries and bounded shutdown.
