@@ -151,6 +151,11 @@ public final class CdObjectMappings implements CdDrawMappings {
         // The unchanged exact-byte join validates the complete counted directory and every decoded body.
         addObject(tables, objects, CdR11aObjectAssets.Table.MONITOR_TIME_MAPPINGS, objects.monitorTime());
         addObject(tables, objects, CdR11aObjectAssets.Table.TUNNEL_DOOR_MAPPINGS, objects.tunnelDoor());
+        // ObjPataBata.SetInfo retains either actual USA oMap long $20B52E or $20B550.
+        // Pata-Bata/Main.asm:23-46,87-92 at scddisasm 1ecc5f3af: both strict three-frame
+        // visuals join the complete raw source through the unchanged exact-byte helper.
+        addObject(tables, objects, CdR11aObjectAssets.Table.PATA_BATA_NORMAL_MAPPINGS, objects.pataBataNormal());
+        addObject(tables, objects, CdR11aObjectAssets.Table.PATA_BATA_DAMAGED_MAPPINGS, objects.pataBataDamaged());
         var monitorView = objects.view(CdR11aObjectAssets.Table.MONITOR_TIME_MAPPINGS);
         var staticPieces = new ArrayList<DeclaredStaticPiece>();
         // ObjMonitorItem_Init (:451-459) adds the signed frame word and then one byte, skipping the count.

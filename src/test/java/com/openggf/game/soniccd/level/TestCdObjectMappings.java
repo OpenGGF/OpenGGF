@@ -1534,4 +1534,225 @@ class TestCdObjectMappings {
             return queue.finishAfterCamera(new CdObjectDrawQueue.DrawCameras(camera, camera, camera));
         }
     }
+
+    /** N 1ecc5f3af, Pata-Bata/Data/Mappings (Normal).asm:1-32 and (Damaged).asm:1-38.
+     * Literal format inputs only; the supplied-media test independently joins the authenticated owner.
+     */
+    private static final byte[] PATA_BATA_NORMAL_SOURCE = HexFormat.of().parseHex(
+            "00060011001C02F0070000F0F00700080002F80D0010F0080000180001F00F0019F0");
+    private static final byte[] PATA_BATA_DAMAGED_SOURCE = HexFormat.of().parseHex(
+            "00060011001C02F0070000F0F00700290002F80D0010F00800001800020000003100F00F0019F000");
+    private static final byte[] PATA_BATA_ANIMATIONS = HexFormat.of().parseHex(
+            "0004000B070000010201FF030000010201FF");
+    private static final int PATA_BATA_NORMAL_MAP = 0x20B52E, PATA_BATA_DAMAGED_MAP = 0x20B550;
+
+    @Test void declaredPataBataKeepsBothThreeFrameRootsOddBodiesRealPadAndCompleteSharedScripts() throws Exception {
+        assertEquals(34, PATA_BATA_NORMAL_SOURCE.length); assertEquals(40, PATA_BATA_DAMAGED_SOURCE.length);
+        assertEquals("9165ad8d9f95bda2639172fe900f16dad44924af5f896a0223e6b9cb8bb7087b",
+                sha256(PATA_BATA_NORMAL_SOURCE));
+        assertEquals("96d4c533000d636452afa838266996b9c4853824e7b3377868f7876492858889",
+                sha256(PATA_BATA_DAMAGED_SOURCE));
+        assertEquals("a68b2c9721811294f0f2ae43e0f78acc91ed8211a5d0da2d08d2ba230b6a25f3",
+                sha256(PATA_BATA_ANIMATIONS));
+        var mappings = declaredPataBata(); assertPataBataFrames(mappings);
+        for (int damaged = 0; damaged < 2; damaged++) {
+            byte[] source = damaged == 0 ? PATA_BATA_NORMAL_SOURCE : PATA_BATA_DAMAGED_SOURCE;
+            var visual = CdObjectVisualAssets.decode(source, 3, PATA_BATA_ANIMATIONS, 2, 50);
+            assertPataBataVisual(visual, damaged != 0);
+            var bodies = visual.mappingFrames();
+            assertEquals(List.of(6,17,28), bodies.stream().map(CdObjectVisualAssets.MappingFrame::relativeOffset).toList());
+            assertEquals(damaged == 0 ? List.of(11,11,6) : List.of(11,11,11),
+                    bodies.stream().map(f -> f.bytes().length()).toList());
+            assertEquals(1, bodies.get(1).relativeOffset() % 2, "the second real body starts odd");
+            assertEquals(damaged == 0 ? 34 : 39,
+                    bodies.get(2).relativeOffset() + bodies.get(2).bytes().length());
+            if (damaged != 0) assertEquals(0, visual.mappings().unsignedByte(39));
+            assertThrows(UnsupportedOperationException.class, () -> bodies.clear());
+            assertThrows(UnsupportedOperationException.class, () -> visual.animations().clear());
+        }
+        var truncated = Arrays.copyOf(PATA_BATA_DAMAGED_SOURCE, 38);
+        assertThrows(IllegalArgumentException.class,
+                () -> CdObjectVisualAssets.decode(truncated, 3, PATA_BATA_ANIMATIONS, 2, 50));
+        var badPad = PATA_BATA_DAMAGED_SOURCE.clone(); badPad[39] = 1;
+        assertThrows(IllegalArgumentException.class,
+                () -> CdObjectVisualAssets.decode(badPad, 3, PATA_BATA_ANIMATIONS, 2, 50));
+        var absentScriptFrame = PATA_BATA_ANIMATIONS.clone(); absentScriptFrame[8] = 3;
+        assertThrows(IllegalArgumentException.class,
+                () -> CdObjectVisualAssets.decode(PATA_BATA_NORMAL_SOURCE, 3, absentScriptFrame, 2, 50));
+        assertThrows(IllegalArgumentException.class,
+                () -> CdObjectVisualAssets.decode(PATA_BATA_DAMAGED_SOURCE, 3, PATA_BATA_ANIMATIONS, 2, 49));
+    }
+
+    @Test void bothPataBataDirectoriesKeepFullQueueSatWordAdditionAllMirrorsAndLiteralPositions() {
+        var mappings = declaredPataBata();
+        for (boolean damaged : new boolean[]{false, true}) {
+            int root = damaged ? PATA_BATA_DAMAGED_MAP : PATA_BATA_NORMAL_MAP;
+            for (int base : new int[]{0x23B0,0xA3B0,0xFFF0}) {
+                for (int flips = 0; flips < 4; flips++) {
+                    for (int frame = 0; frame < 3; frame++) {
+                        assertPataBataSat(mappings, root, frame, base, 4 | flips, pataBataPieces(damaged, frame));
+                    }
+                }
+            }
+        }
+        assertArrayEquals(bytes(0,0xF0,7,1,0x23,0xB0,1,0x70,0,0xF0,7,2,0x23,0xB8,1,0x80),
+                Arrays.copyOf(drawPataBataMapping(mappings, PATA_BATA_NORMAL_MAP, 0, 0x23B0, 4).bytes(),16));
+        assertArrayEquals(bytes(1,0,0,1,0x23,0xE1,1,0x80,0,0xF0,15,2,0x23,0xC9,1,0x70),
+                Arrays.copyOf(drawPataBataMapping(mappings, PATA_BATA_DAMAGED_MAP, 2, 0x23B0, 4).bytes(),16));
+        assertArrayEquals(bytes(0,0xF0,7,1,0xE7,0xF0,1,0x80,0,0xF0,7,2,0x18,0x19,1,0x70),
+                Arrays.copyOf(drawPataBataMapping(mappings, PATA_BATA_DAMAGED_MAP, 0, 0xFFF0, 7).bytes(),16));
+    }
+
+    @Test void actualUsaPataBataJoinsBothExactOwnerRootsAndRetainsEveryPreviousCountedAndStaticRoot() throws Exception {
+        var usa = usaMedia(); var objects = usa.objects();
+        var normal = objects.pataBataNormal(); var damaged = objects.pataBataDamaged();
+        var normalView = objects.view(CdR11aObjectAssets.Table.PATA_BATA_NORMAL_MAPPINGS);
+        var damagedView = objects.view(CdR11aObjectAssets.Table.PATA_BATA_DAMAGED_MAPPINGS);
+        var animation = objects.view(CdR11aObjectAssets.Table.PATA_BATA_ANIMATIONS);
+        assertEquals(usa.assets().identity(), objects.identity());
+        assertEquals(0xB52E, normalView.range().fileOffset()); assertEquals(34, normalView.range().length());
+        assertEquals(PATA_BATA_NORMAL_MAP, normalView.range().nativeAddress());
+        assertEquals(0xB550, damagedView.range().fileOffset()); assertEquals(40, damagedView.range().length());
+        assertEquals(PATA_BATA_DAMAGED_MAP, damagedView.range().nativeAddress());
+        assertEquals(0xB51C, animation.range().fileOffset()); assertEquals(18, animation.range().length());
+        assertEquals(0x20B51C, animation.range().nativeAddress());
+        assertArrayEquals(PATA_BATA_NORMAL_SOURCE, normalView.bytes().copy());
+        assertArrayEquals(PATA_BATA_DAMAGED_SOURCE, damagedView.bytes().copy());
+        assertArrayEquals(PATA_BATA_ANIMATIONS, animation.bytes().copy());
+        assertPataBataVisual(normal, false); assertPataBataVisual(damaged, true);
+        var resolver = CdObjectMappings.fromOpeningAssets(usa.assets(), objects);
+        assertPataBataFrames(resolver); assertMonitorPriorRoots(usa, resolver); assertMonitorTimeFrames(resolver);
+        assertHorizontalTunnelDoorFrames(resolver);
+        for (int item = 0; item < 8; item++) {
+            assertEquals(new CdObjectDrawQueue.StaticMapping(monitorPieces(item).getFirst()),
+                    resolver.resolve(MONITOR_ITEM_POINTERS[item], true, 255));
+        }
+        assertEquals(0x23B0, objects.tileWord(1, 0));
+        for (boolean isDamaged : new boolean[]{false,true}) {
+            int pointer = isDamaged ? PATA_BATA_DAMAGED_MAP : PATA_BATA_NORMAL_MAP;
+            for (int frame = 0; frame < 3; frame++) for (int flips = 0; flips < 4; flips++) {
+                assertPataBataSat(resolver, pointer, frame, 0x23B0, 4 | flips, pataBataPieces(isDamaged, frame));
+            }
+        }
+        for (var view : List.of(normalView, damagedView, animation)) {
+            byte[] detached = view.bytes().copy(); Arrays.fill(detached, (byte) 0xA5);
+        }
+        assertPataBataFrames(resolver); assertSame(normal, objects.pataBataNormal()); assertSame(damaged, objects.pataBataDamaged());
+        assertPataBataVisual(normal, false); assertPataBataVisual(damaged, true);
+    }
+
+    private static List<CdObjectDrawQueue.RawPiece> pataBataPieces(boolean damaged, int frame) {
+        return switch (frame) {
+            case 0 -> List.of(new CdObjectDrawQueue.RawPiece(-16,7,0,-16),
+                    new CdObjectDrawQueue.RawPiece(-16,7,damaged ? 0x29 : 8,0));
+            case 1 -> List.of(new CdObjectDrawQueue.RawPiece(-8,13,0x10,-16),
+                    new CdObjectDrawQueue.RawPiece(8,0,0x18,0));
+            case 2 -> damaged ? List.of(new CdObjectDrawQueue.RawPiece(0,0,0x31,0),
+                    new CdObjectDrawQueue.RawPiece(-16,15,0x19,-16))
+                    : List.of(new CdObjectDrawQueue.RawPiece(-16,15,0x19,-16));
+            default -> throw new IllegalArgumentException("Pata-Bata has three real frames");
+        };
+    }
+    private static CdObjectMappings declaredPataBata() {
+        return CdObjectMappings.declaredSourceViews(List.of(
+                new CdObjectMappings.DeclaredTable(PATA_BATA_NORMAL_MAP, CdAssetBytes.copyOf(PATA_BATA_NORMAL_SOURCE),0,3),
+                new CdObjectMappings.DeclaredTable(PATA_BATA_DAMAGED_MAP, CdAssetBytes.copyOf(PATA_BATA_DAMAGED_SOURCE),0,3)),
+                List.of());
+    }
+    private static void assertPataBataFrames(CdObjectMappings resolver) {
+        for (boolean damaged : new boolean[]{false,true}) {
+            int pointer = damaged ? PATA_BATA_DAMAGED_MAP : PATA_BATA_NORMAL_MAP;
+            for (int frame = 0; frame < 3; frame++) {
+                var expected = pataBataPieces(damaged, frame);
+                assertEquals(new CdObjectDrawQueue.FrameMapping(expected.size(), expected), resolver.resolve(pointer,false,frame));
+            }
+            for (int frame = 3; frame <= 255; frame++) {
+                int outside = frame;
+                assertThrows(UnsupportedOperationException.class, () -> resolver.resolve(pointer,false,outside));
+            }
+            for (int invalid : new int[]{-1,256}) {
+                assertThrows(IllegalArgumentException.class, () -> resolver.resolve(pointer,false,invalid));
+            }
+            for (int frame : new int[]{0,255}) {
+                assertThrows(UnsupportedOperationException.class, () -> resolver.resolve(pointer,true,frame));
+            }
+            for (int absent : new int[]{pointer + 6,pointer | 0xFF000000,pointer | 0x80000000}) {
+                assertThrows(UnsupportedOperationException.class, () -> resolver.resolve(absent,false,0));
+            }
+        }
+        assertThrows(UnsupportedOperationException.class, () -> resolver.resolve(0x20B51C,false,0));
+    }
+    private static void assertPataBataVisual(CdObjectVisualAssets visual, boolean damaged) {
+        assertEquals(0, visual.mappingTableOffset()); assertEquals(3, visual.mappingFrames().size());
+        assertArrayEquals(damaged ? PATA_BATA_DAMAGED_SOURCE : PATA_BATA_NORMAL_SOURCE, visual.mappings().copy());
+        assertArrayEquals(PATA_BATA_ANIMATIONS, visual.animationTable().copy()); assertEquals(2, visual.animations().size());
+        for (int script = 0; script < 2; script++) {
+            var actual = visual.animations().get(script); assertEquals(script == 0 ? 4 : 11, actual.relativeOffset());
+            assertEquals(script == 0 ? 7 : 3, actual.delay()); assertEquals(List.of(0,0,1,2,1), actual.frameBytes());
+            assertEquals(CdObjectVisualAssets.Terminal.LOOP_FF, actual.terminal());
+            assertArrayEquals(Arrays.copyOfRange(PATA_BATA_ANIMATIONS, script == 0 ? 4 : 11, script == 0 ? 11 : 18),
+                    actual.bytes().copy());
+        }
+        for (int frame = 0; frame < 3; frame++) {
+            assertEquals(pataBataPieces(damaged,frame), visual.mappingFrames().get(frame).pieces().stream().map(p ->
+                    new CdObjectDrawQueue.RawPiece(p.y(),p.sizeByte(),p.rawTileWord(),p.x())).toList());
+        }
+    }
+    private static void assertPataBataSat(CdObjectDrawQueue.CdDrawMappings mappings, int pointer, int frame,
+                                          int base, int flags, List<CdObjectDrawQueue.RawPiece> pieces) {
+        var sat = drawPataBataMapping(mappings,pointer,frame,base,flags); byte[] raw = sat.bytes();
+        assertEquals(pieces.size(),sat.spriteCount());
+        for (int index = 0; index < pieces.size(); index++) {
+            var p = pieces.get(index); int width = (p.sizeByte() >>> 2) + 1, height = (p.sizeByte() & 3) + 1;
+            int x = (flags & 1) == 0 ? p.x() : -p.x() - width * 8;
+            int y = (flags & 2) == 0 ? p.y() : -p.y() - height * 8;
+            assertEquals(256 + y,word(raw,index * 8)); assertEquals(p.sizeByte(),raw[index * 8 + 2] & 255);
+            assertEquals(index + 1,raw[index * 8 + 3] & 255);
+            assertEquals(((base + p.rawTileWord()) & 0xFFFF) ^ ((flags & 3) << 11),word(raw,index * 8 + 4));
+            assertEquals(384 + x,word(raw,index * 8 + 6));
+            assertEquals(new CdObjectDrawQueue.Provenance(3,0,new CdObjectDrawQueue.CdSlotRef(52),index),sat.provenance().get(index));
+        }
+        assertArrayEquals(new byte[4],Arrays.copyOfRange(raw,pieces.size() * 8,pieces.size() * 8 + 4));
+    }
+    /** Constructed ID $3E/whole slot 52; no Pata-Bata body, natural contact, route or native-parity claim. */
+    private static CdObjectDrawQueue.CpuSat drawPataBataMapping(CdObjectDrawQueue.CdDrawMappings mappings,
+                                                               int pointer, int frame, int base, int flags) {
+        var slots = new CdObjectDrawQueue.CdDrawSlots() {
+            private CdObjectDrawQueue.LiveDrawSlot current = new CdObjectDrawQueue.LiveDrawSlot(0x3E,flags,
+                    0x100,0x80,0x9999,pointer,frame,base);
+            @Override public CdObjectDrawQueue.LiveDrawSlot read(CdObjectDrawQueue.CdSlotRef ref) {
+                assertEquals(52,ref.wholeIndex()); return current;
+            }
+            @Override public void writeOnScreenBit(CdObjectDrawQueue.CdSlotRef ref, boolean on) {
+                assertEquals(52,ref.wholeIndex()); var s = current;
+                current = new CdObjectDrawQueue.LiveDrawSlot(s.idByte(),(s.spriteFlagsByte() & 127) | (on ? 128 : 0),
+                        s.xWord(),s.yWord(),s.screenYWord(),s.mappingAddressBits(),s.mapFrameByte(),s.baseTileWord());
+            }
+        };
+        var queue = new CdObjectDrawQueue(slots,mappings,new byte[CdObjectDrawQueue.SAT_BYTE_SIZE]);
+        var camera = new CdObjectDrawQueue.CameraWords(0,0); queue.beginPass();
+        assertEquals(CdObjectDrawQueue.EnqueueResult.QUEUED,queue.drawObject(new CdObjectDrawQueue.DrawCallCut(
+                new CdObjectDrawQueue.CdSlotRef(52),flags,0x100,0x80,0x10,0x10,3),camera));
+        return queue.finishAfterCamera(new CdObjectDrawQueue.DrawCameras(camera,camera,camera));
+    }
+
+    @Test void actualJapanAndEuropeKeepUsaPataBataOwnersAndPointersClosed() throws Exception {
+        var usa = usaMedia();
+        String configured = System.getProperty("soniccd.media.root");
+        for (var variant : List.of(CdReleaseVariant.JAPAN,CdReleaseVariant.EUROPE)) {
+            String directory = variant == CdReleaseVariant.JAPAN ? "Japan" : "Europe";
+            Path cue;
+            try (var files = Files.list(Path.of(configured).resolve(directory))) {
+                var cues = files.filter(f -> f.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".cue")).toList();
+                assertEquals(1,cues.size()); cue = cues.getFirst();
+            }
+            try (var source = CdProgramAssets.open(cue,Optional.of(variant),Optional.empty())) {
+                var regional = CdR11aAssetLoader.load(source,variant,CdStageKey.parse("R11A"));
+                assertEquals(variant,regional.identity().variant());
+                assertThrows(UnsupportedOperationException.class,regional::openingObjects);
+                assertThrows(IllegalArgumentException.class,
+                        () -> CdObjectMappings.fromOpeningAssets(regional,usa.objects()));
+            }
+        }
+    }
 }

@@ -5255,3 +5255,49 @@ not authority to insert an art-at-draw shortcut. That bounded source audit is
 separate. Native camera PLC/residency, Pata-Bata draw/World contact, GPU proof,
 ordinary route beyond540, native audio and JP/EU remain unowned. These validated
 components do not certify a route, complete bank loading or whole-game parity.
+
+
+### 2026-10-25 06:34 UTC — independent Pata-Bata mapping joins
+
+On component base `3d7811703fd9fd956fd8ebf91f26cd9caeae9bcf`, register only
+actual USA roots20B52E and20B550 through the existing strict byte join. The
+normal/damaged three-frame directories, odd bodies, real padding and complete
+shared scripts remain source-authenticated. Four added mapper methods preserve
+all25 inherited methods and assert declared data, actual USA joins, complete
+queue/SAT word arithmetic and JP/EU rejection. No presentation policy, resident
+art, Runtime dispatch, cleanup count or logical Pata-Bata bank is added.
+
+Root65519 ran the new actual-USA mapper method before production registration:
+**one test/zero failures/one error/zero skips**,25.684s,06:19:14Z. Its expected
+failure was unmapped native20B52E. Root93583 then ran the exact mapper plus
+existing World/EGL/API consumers: **102/0/0/0**, Maven1m48s, terminal06:22:42Z.
+The four reports are mapper29, WorldLoad49, EGL13 and API11. XML properties
+confirm Java25.0.5.0.2, supplied CD media, EGL opt-in, surfaceless backend and the
+supplied S2 donor; DISPLAY/WAYLAND were unset. The new actual-USA and JP/EU mapper methods executed without skips. This is bounded validation, not a suite or new Pata-Bata World
+claim. The code is the mapper-only subset of the frozen partial picture packet;
+its unchanged presentation and rejected544 tests/Runtime remain unimported.
+
+```text
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 python3 <main-workspace>/tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestCdObjectMappings#actualUsaPataBataJoinsBothExactOwnerRootsAndRetainsEveryPreviousCountedAndStaticRoot' -Dsoniccd.media.root=<supplied-media-root> test -B
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 python3 <main-workspace>/tools/testing/maven_queue.py -Dmse=off '-Dtest=TestCdObjectMappings,TestSonicCdOpeningWorldLoad,TestSonicCdOpeningWorldEgl,TestModApiSignatureSurface' -Dsoniccd.media.root=<supplied-media-root> -Dsoniccd.opening.egl=true -Dopenggf.headless.gl=surfaceless-egl -Dsonic2.rom.path=<supplied-S2-ROM> test -B
+```
+
+The completed camera-art audit strengthens the earlier blocker: the first
+post-scroll section equality680 selects the complete incrementalPLC9, ordered
+Pata50 at7600, Anton22 at8120, Tamabboh59 at8500. Pata aliases Mosqui's70 tiles;
+Tamabboh additionally overwrites plant/gap/booster bytes. One70-tile replacement
+alone cannot represent the batch. Native UpdateSectionArt/ProcessPLCs occur
+after CPU SAT build; the following selected V-int services decompression after
+DrawLevel. Queue cancellation preserves bytes already written, ordinary slow
+service transfers3 tiles (18 when the addressed scroll-lock high byte is set),
+and no leftover budget crosses a completed head. Pause selector8 services art;
+lag selector0 does not. The shipped queue Pop bug must remain. These are source
+contracts, not observed hardware timing or a new native capture.
+
+Next work owns complete first-batch authenticated producers and one captured
+native residency generation with partial service, request/preparation state,
+old-SAT/new-art conversion and restart carry. No object-ID pixel override,
+art-at-DrawObject upload, overlapping static spans or544 reservation is valid.
+The ordinary route still honestly stops at attempted540/ID3E. Later camera
+sources, native cold/title/load prehistory, full-USA gameplay, warp/audio and
+JP/EU parity remain open. No public integration or disclosure is authorized.
