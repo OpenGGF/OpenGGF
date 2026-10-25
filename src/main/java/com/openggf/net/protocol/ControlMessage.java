@@ -72,6 +72,8 @@ public sealed interface ControlMessage {
     @com.openggf.game.ModApi
     record JoinAccepted(String sessionToken, int playerSlot, RoomDescriptor room,
                         RoundSnapshot round) implements ControlMessage {
+        @Override
+        public String toString() { return "JoinAccepted[redacted]"; }
     }
 
     @com.openggf.game.ModApi
@@ -251,6 +253,13 @@ public sealed interface ControlMessage {
                       RoomPassword password)
             implements ControlMessage {
         public RoomCreate {
+            java.util.Objects.requireNonNull(room, "room");
+            if (accessEpoch < 0 || password != null && !room.accessPolicy().passwordRequired()
+                    || "DIRECT".equals(routing) && password != null
+                    || room.accessPolicy().passwordRequired() && ("DIRECT".equals(routing)
+                    ? instanceId == null || instanceId.isBlank() : password == null)) {
+                throw new IllegalArgumentException("invalid room creation access");
+            }
             voteTrackKeys = validatedTrackKeys(voteTrackKeys, 32);
         }
 
@@ -282,6 +291,13 @@ public sealed interface ControlMessage {
     }
 
     @com.openggf.game.ModApi
+    record MasterRequestCancel(long requestId) implements ControlMessage {
+        public MasterRequestCancel {
+            if (requestId <= 0) throw new IllegalArgumentException("invalid cancellation request ID");
+        }
+    }
+
+    @com.openggf.game.ModApi
     record RoomCreateRejected(String reason) implements ControlMessage {
     }
 
@@ -310,7 +326,8 @@ public sealed interface ControlMessage {
             implements ControlMessage {
         public RoomJoinResult {
             java.util.Objects.requireNonNull(accessPolicy, "access policy");
-            if (accessEpoch < 0 || inviteEpoch < 0 || inviteExpiresAtMillis < 0) {
+            if (accessEpoch < 0 || inviteEpoch < 0 || inviteExpiresAtMillis < 0
+                    || accessPolicy.passwordRequired() && (instanceId == null || instanceId.isBlank())) {
                 throw new IllegalArgumentException("invalid room access metadata");
             }
         }
@@ -420,7 +437,12 @@ public sealed interface ControlMessage {
     record RoomPasswordChanged(long accessEpoch) implements ControlMessage { }
 
     @com.openggf.game.ModApi
-    record RoomInviteRequest() implements ControlMessage { }
+    record RoomInviteRequest(long disclosureId) implements ControlMessage {
+        public RoomInviteRequest {
+            if (disclosureId < 0) throw new IllegalArgumentException("invalid disclosure ID");
+        }
+        public RoomInviteRequest() { this(0); }
+    }
 
     @com.openggf.game.ModApi
     record RoomInviteRotate() implements ControlMessage { }
@@ -430,7 +452,16 @@ public sealed interface ControlMessage {
 
     @com.openggf.game.ModApi
     record RoomInvite(String code, String instanceId, long accessEpoch, long inviteEpoch,
-                      long expiresAtMillis) implements ControlMessage {
+                      long expiresAtMillis, long disclosureId) implements ControlMessage {
+        public RoomInvite {
+            if (accessEpoch < 0 || inviteEpoch < 0 || expiresAtMillis < 0 || disclosureId < 0) {
+                throw new IllegalArgumentException("invalid room invite metadata");
+            }
+        }
+        public RoomInvite(String code, String instanceId, long accessEpoch, long inviteEpoch,
+                          long expiresAtMillis) {
+            this(code, instanceId, accessEpoch, inviteEpoch, expiresAtMillis, 0);
+        }
         @Override
         public String toString() { return "RoomInvite[redacted]"; }
     }

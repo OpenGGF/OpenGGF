@@ -131,6 +131,11 @@ public final class JdkRaceHostServer implements RaceRoomHost {
             }
         }
         RoomHost room = new RoomHost(config, hostIdentity, clockMillis, profiles);
+        try { room.ready().join(); }
+        catch (RuntimeException unavailable) {
+            room.close("room initialization failed");
+            throw new IllegalStateException("room initialization failed");
+        }
         ServerSocket listening = null;
         try {
             listening = new ServerSocket();

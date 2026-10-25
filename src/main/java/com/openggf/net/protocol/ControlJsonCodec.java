@@ -42,6 +42,8 @@ public final class ControlJsonCodec {
             if (requestId < 0) throw new IllegalArgumentException("invalid request ID");
         }
         public Decoded(String token, ControlMessage message) { this(token, message, 0); }
+        @Override
+        public String toString() { return "Decoded[redacted]"; }
     }
 
     public ControlJsonCodec() {
@@ -127,13 +129,13 @@ public final class ControlJsonCodec {
             root.fieldNames().forEachRemaining(field -> {
                 if (!envelopeFields.contains(field)) {
                     throw new ProtocolViolationException(
-                            "unsupported control envelope field " + field);
+                            "unsupported control envelope field");
                 }
             });
             JsonNode version = root.get("v");
             if (version == null || !version.isIntegralNumber() || !version.canConvertToInt()
                     || version.intValue() != Protocol.VERSION) {
-                throw new ProtocolViolationException("unsupported protocol version " + version);
+                throw new ProtocolViolationException("unsupported protocol version");
             }
             JsonNode msg = root.get("msg");
             if (msg == null || !msg.isObject()) {
@@ -149,7 +151,7 @@ public final class ControlJsonCodec {
                     typeNode == null || !typeNode.isTextual()
                             ? null : messageTypes.get(typeNode.textValue());
             if (messageType == null) {
-                throw new ProtocolViolationException("unsupported control message type " + typeNode);
+                throw new ProtocolViolationException("unsupported control message type");
             }
             ObjectNode messageBody = ((ObjectNode) msg).deepCopy();
             messageBody.remove("type");

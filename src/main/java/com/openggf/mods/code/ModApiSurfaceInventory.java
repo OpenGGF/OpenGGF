@@ -145,6 +145,8 @@ public final class ModApiSurfaceInventory {
             "com.openggf.net.client.LobbyPosePublisher",
             "com.openggf.net.client.MasterClient",
             "com.openggf.net.client.RaceClient",
+            "com.openggf.net.client.RoomAccessRequiredException",
+            "com.openggf.net.client.RoomInviteRejectedException",
             "com.openggf.net.client.RaceConnection",
             "com.openggf.net.client.RemoteGhostPlayback",
             "com.openggf.net.client.RemoteGhostRegistry",

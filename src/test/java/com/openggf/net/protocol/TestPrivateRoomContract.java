@@ -59,6 +59,25 @@ class TestPrivateRoomContract {
     }
 
     @Test
+    void privateRelayCreationPreservesCredentialWhileDirectRegistrationIsNonSecret() {
+        var policy = new RoomAccessPolicy(RoomAccessPolicy.Mode.PRIVATE, true);
+        var room = new ControlMessage.RoomDescriptor("Room", "s3k", 0, 0, "OPEN", null, 8, false, policy);
+        try (RoomPassword password = RoomPassword.of("a sufficiently long password")) {
+            var creation = new ControlMessage.RoomCreate(room, "RELAY", 0, "build", java.util.List.of(),
+                    null, null, 0, password);
+            var decoded = (ControlMessage.RoomCreate) codec.decode(codec.encode(null, creation, 1)).message();
+            try (RoomPassword received = decoded.password()) {
+                assertArrayEquals(password.copyCharacters(), received.copyCharacters());
+                assertTrue(decoded.room().accessPolicy().passwordRequired());
+            }
+            assertThrows(IllegalArgumentException.class, () -> new ControlMessage.RoomCreate(room,
+                    "DIRECT", 1, "build", java.util.List.of(), "ab".repeat(32), "instance", 0, password));
+            assertNull(new ControlMessage.RoomCreate(room, "DIRECT", 1, "build", java.util.List.of(),
+                    "ab".repeat(32), "instance", 0, null).password());
+        }
+    }
+
+    @Test
     void passwordBoundsPreserveWhitespaceUnicodeAndRejectMalformedUtf16() {
         assertThrows(IllegalArgumentException.class, () -> RoomPassword.of("short"));
         assertThrows(IllegalArgumentException.class, () -> RoomPassword.of("x".repeat(129)));
