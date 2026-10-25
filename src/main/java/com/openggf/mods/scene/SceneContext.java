@@ -68,6 +68,12 @@ public interface SceneContext {
      */
     default String typedText() { return ""; }
 
+    /** Global personal chat preference, live after saving Engine Settings; scenes cannot change it. */
+    default boolean censorMultiplayerProfanity() { return true; }
+
+    /** Global personal receive/display opt-out for player chat, including Quick Chat. */
+    default boolean multiplayerChatDisabled() { return false; }
+
     /** The mouse, in logical screen pixels. */
     SceneMouse mouse();
 

@@ -25,6 +25,34 @@ class TestEngineSettingsScreen {
     private static final int DISPLAY = 0, SOUND = 1, CONTROLS = 2, GAMEPLAY = 3, FILES = 4, CAPTURE = 5;
 
     @Test
+    void personalMultiplayerChatChoicesAreVisibleOnGameplayAndApplyWhenSaved() {
+        Fixture f = new Fixture();
+        f.tab(GAMEPLAY);
+        var keys = new EngineSettingsDraft(f.config).keys(EngineSettingsDraft.Category.GAMEPLAY);
+        int censorRow = keys.indexOf(MULTIPLAYER_CENSOR_PROFANITY);
+        int disableRow = keys.indexOf(MULTIPLAYER_CHAT_DISABLED);
+        assertTrue(censorRow >= 0 && disableRow > censorRow);
+        f.press(GLFW_KEY_DOWN, censorRow);
+        assertTrue(f.texts().contains("Censor Profanity"));
+        f.press(GLFW_KEY_RIGHT);
+        assertTrue(f.config.getBoolean(MULTIPLAYER_CENSOR_PROFANITY), "edits stay in the draft");
+        f.press(GLFW_KEY_DOWN, disableRow - censorRow);
+        assertTrue(f.texts().contains("Disable Multiplayer Chat"));
+        f.press(GLFW_KEY_RIGHT);
+        assertFalse(f.config.getBoolean(MULTIPLAYER_CHAT_DISABLED), "edits stay in the draft");
+        assertFalse(f.texts().contains("RESTART"));
+        f.assertTextBounds(320);
+        f.press(GLFW_KEY_ESCAPE);
+        f.press(GLFW_KEY_ENTER);
+        assertTrue(f.screen.consumeApplied());
+        assertFalse(f.config.getBoolean(MULTIPLAYER_CENSOR_PROFANITY));
+        assertTrue(f.config.getBoolean(MULTIPLAYER_CHAT_DISABLED));
+        var reloaded = SonicConfigurationService.createStandalone(directory);
+        assertFalse(reloaded.getBoolean(MULTIPLAYER_CENSOR_PROFANITY));
+        assertTrue(reloaded.getBoolean(MULTIPLAYER_CHAT_DISABLED));
+    }
+
+    @Test
     void widescreenHudAnchorHasReadableChoiceLabels() {
         assertEquals("Widescreen HUD position", EngineSettingLabels.label(DISPLAY_HUD_ANCHOR));
         assertEquals("Centered native position", EngineSettingLabels.value(DISPLAY_HUD_ANCHOR, "DEFAULT"));

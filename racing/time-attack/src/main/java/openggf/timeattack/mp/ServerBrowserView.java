@@ -5,6 +5,7 @@ import com.openggf.mods.scene.SceneKeys;
 import com.openggf.mods.ui.NameFont;
 import com.openggf.mods.ui.TextLayout;
 import com.openggf.net.protocol.ControlMessage;
+import com.openggf.net.protocol.ChatMode;
 import openggf.timeattack.ui.MenuCue;
 import openggf.timeattack.ui.ViewInput;
 
@@ -49,6 +50,7 @@ public final class ServerBrowserView {
 
     private final RoomDirectory directory;
     private final String gameId;
+    private final ChatMode requestedChatMode;
     private final Actions actions;
     private final Consumer<MenuCue> cues;
     private final LongSupplier clockMillis;
@@ -67,6 +69,12 @@ public final class ServerBrowserView {
 
     public ServerBrowserView(RoomDirectory directory, String gameId, Actions actions,
                              Consumer<MenuCue> cues, LongSupplier clockMillis) {
+        this(directory, gameId, actions, cues, clockMillis, ChatMode.FULL_CHAT);
+    }
+
+    public ServerBrowserView(RoomDirectory directory, String gameId, Actions actions,
+                             Consumer<MenuCue> cues, LongSupplier clockMillis, ChatMode requestedChatMode) {
+        this.requestedChatMode = Objects.requireNonNull(requestedChatMode, "requestedChatMode");
         this.directory = Objects.requireNonNull(directory, "directory");
         this.gameId = Objects.requireNonNull(gameId, "gameId");
         this.actions = Objects.requireNonNull(actions, "actions");
@@ -208,14 +216,20 @@ public final class ServerBrowserView {
             // Room names carry the host's display name, in any script.
             NameFont.draw(canvas, NameFont.fit(room.name(), countX - 8 - 12), 12, y - 2, VALUE);
             canvas.text(count, countX, y, VALUE);
-            canvas.text(fit(canvas, room.routing() + " / " + (room.verified() ? "VERIFIED" : "UNVERIFIED TIMES"),
+            canvas.text(fit(canvas, room.routing() + " / " + chatLabel(room.chatMode()) + " / "
+                    + (room.verified() ? "VERIFIED" : "UNVERIFIED TIMES"),
                     width - 24), 12, y + 11, room.verified() ? VERIFIED : UNVERIFIED);
         }
-        action(canvas, Focus.CREATE, "CREATE ROOM  < " + createRouting + " >", 144);
+        action(canvas, Focus.CREATE, "CREATE < " + createRouting + " > " + requestedChatMode.label(), 144);
         action(canvas, Focus.REFRESH, "REFRESH ROOMS", 160);
         action(canvas, Focus.PAGE, "PAGE  < " + (page + 1) + " / " + Math.max(1, totalPages) + " >", 176);
         canvas.text(fit(canvas, status, width - 20), 10, 194, LABEL);
         canvas.text(fit(canvas, "Left/Right page/route  R refresh  B back", width - 20), 10, 208, HINT);
+    }
+
+    private static String chatLabel(String value) {
+        ChatMode mode = ChatMode.parse(value);
+        return mode == null ? "?" : mode.label();
     }
 
     private void action(SceneCanvas canvas, Focus item, String label, int y) {

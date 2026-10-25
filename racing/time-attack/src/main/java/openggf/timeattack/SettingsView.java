@@ -1,6 +1,7 @@
 package openggf.timeattack;
 
 import com.openggf.mods.scene.SceneCanvas;
+import com.openggf.net.protocol.ChatMode;
 import com.openggf.mods.ui.NameFont;
 import com.openggf.mods.ui.TextLayout;
 import openggf.timeattack.ui.MenuCue;
@@ -24,10 +25,10 @@ public final class SettingsView {
     private static final int WARNING = 0xFFFF8060;
     private static final int FOCUS = 0x803060C0;
     private static final int HINT = 0xFF8090B0;
-    private static final int FIRST_ROW_Y = 44;
-    private static final int ROW_HEIGHT = 18;
+    private static final int FIRST_ROW_Y = 40;
+    private static final int ROW_HEIGHT = 16;
 
-    enum Row { DISPLAY_NAME, LOOK, HOST_PORT, MASTER_URL, MASTER_TLS, MINIMAP, RETRY_KEY, BACK }
+    enum Row { DISPLAY_NAME, LOOK, HOST_PORT, MASTER_URL, MASTER_TLS, MINIMAP, RETRY_KEY, CHAT_MODE, BACK }
 
     private final TimeAttackSettings settings;
     private final Runnable changed;
@@ -129,6 +130,14 @@ public final class SettingsView {
             case MINIMAP -> {
                 if (toggle) {
                     settings.setMinimap(!settings.minimap());
+                    changed();
+                }
+            }
+            case CHAT_MODE -> {
+                if (toggle) {
+                    ChatMode[] modes = ChatMode.values();
+                    int step = input.left() ? -1 : 1;
+                    settings.setChatMode(modes[Math.floorMod(settings.chatMode().ordinal() + step, modes.length)]);
                     changed();
                 }
             }
@@ -254,13 +263,16 @@ public final class SettingsView {
                 settings.masterTrustInsecure() ? WARNING : VALUE);
         row(canvas, Row.MINIMAP, "Minimap", settings.minimap() ? "< ON >" : "< OFF >", VALUE);
         row(canvas, Row.RETRY_KEY, "Retry key", RetryKey.label(settings.retryKey()), VALUE);
+        row(canvas, Row.CHAT_MODE, "Room chat", "< " + settings.chatMode().label() + " >", VALUE);
         int backY = FIRST_ROW_Y + Row.BACK.ordinal() * ROW_HEIGHT;
         if (focus == Row.BACK) canvas.fill(8, backY - 3, width - 16, 16, FOCUS);
         canvas.text("BACK", 14, backY, VALUE);
         String outcome = settings.publicationNotice();
         // Validation feedback takes precedence; publication feedback survives navigation and retry.
         String message = status.startsWith("Port ") || outcome.isEmpty() ? status : outcome;
-        if (!message.isEmpty()) canvas.text(message, 10, 194, TITLE);
+        String guidance = "Chat filters: Engine Settings";
+        canvas.text(TextLayout.ellipsis(message.isEmpty() ? guidance : message, width - 20, canvas::textWidth),
+                10, 194, message.isEmpty() ? HINT : TITLE);
         canvas.text(TextLayout.ellipsis("Up/Down select  Enter edit  B back", width - 20, canvas::textWidth),
                 10, 208, HINT);
     }

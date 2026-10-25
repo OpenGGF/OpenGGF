@@ -1,0 +1,74 @@
+# OpenGGF initial profanity starter dictionary, 2026-10-25 multiplayer communication task.
+# Original manual selection for this project; not copied or derived from an external list.
+# Small conservative starter packs, all enabled regardless of UI language.
+# Not comprehensive and not human-linguist-reviewed; no inference of intent.
+# One exact token per line. NFKC -> Locale.ROOT lowercase -> NFKC lookup.
+# Keep accents, combining marks and internal apostrophes; no transliteration or fuzzy matching.
+# Match only a complete letter/number/mark/connector run (with internal apostrophes).
+# Whole-run CJK matching deliberately misses insults embedded in a longer unspaced sentence.
+# Inflections, split words, leetspeak, homographs and other evasions are not covered.
+# Ambiguous short words and names, including con, bitte, am, ass and dick, are omitted.
+# Hard budget: at most 1024 normalized keys and 65536 UTF-8 bytes including this header.
+
+# English
+fuck
+fucking
+motherfucker
+bullshit
+shit
+cunt
+
+# French
+merde
+enculé
+salope
+
+# German
+scheiße
+scheisse
+arschloch
+hurensohn
+
+# Spanish
+mierda
+gilipollas
+
+# Italian
+cazzo
+vaffanculo
+stronzo
+
+# Portuguese
+caralho
+porra
+
+# Polish
+kurwa
+chuj
+pierdolić
+
+# Russian
+блядь
+пиздец
+хуй
+
+# Turkish
+siktir
+orospu
+
+# Japanese
+くたばれ
+クソ
+くそ
+
+# Korean
+씨발
+병신
+개새끼
+
+# Chinese (simplified and traditional forms where different)
+傻逼
+傻屄
+操你妈
+操你媽
+肏
