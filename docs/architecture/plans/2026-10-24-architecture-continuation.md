@@ -10406,3 +10406,233 @@ Its planned fresh global guards and eleven composed controller cases are parent
 work, not executed or claimed here. After the local implementation commit,
 explicit target/job ownership returns to the parent for those remaining delivery
 gates. Baseline 040b54, P2 6e070 and composition c1d19 all remain in history.
+
+### Original-production logical publication characterization after accepted Binding (2026-10-25)
+
+**Boundary and source identity.** Test worker only; independent parent evidence
+review remains required before any extraction. Own isolated T3 checkout
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-99b93e0f` was clean at d195f5472,
+renamed locally to `bugfix/ai-logical-audio-publication-owner-20261025`, and
+fast-forwarded without amendment to the exact authorized
+`1a6f9dd4f1237c8258c896d608c52fa3ee8caafc` before editing. Hooks were installed.
+Verified candidate tree `50cf074bd6214977517c2deac89282961262e3c8`, `src/main`
+tree `044389b865011c416bea48fd308b644deaf09191`, AudioManager Git blob
+`ac2021ad82307d40f3f4cb4c0db21b79c3e09934`, and SHA-256
+`800e9b511eb40f74dcccf5671f30b24770e2b2f8d865c586469dc51956330ced`.
+The parent's 31 original-body mappings and independently reviewed Binding
+manifest are supplied source evidence, not new runtime certification by this worker.
+
+Only additive cases in `TestAudioPresentationSnapshotParity` and
+`TestAudioManagerSfxCatalogReuse`, plus one minimal test-only diagnostics method,
+were developed. No existing behavioral body/assertion was removed or weakened.
+The helper invokes the existing private eager transaction and preserves its
+boolean/RuntimeException/Error disposition; it injects no failure or state.
+Physical observations use the existing actual-PresentationBinding bridge.
+No production field move, owner, new production hook, spy copy, guard, pin,
+store, API, permission, lock, virtual seam or build-policy change was made.
+The Source reset-close ring reflection is untouched.
+
+**Four required groups and original behavior.**
+
+- Eager disposition: pre-try service snapshot failure escapes by exact identity
+  before rollback; handled ordinary restore failures return false internally
+  while public void returns normally. Four diagnostic cases retain the existing
+  diagnostic object and primary/suppressed identities: current node before its
+  cause/suppressed descendants, complete cause subtree before suppressed
+  subtrees, first suppressed subtree before later ones, and a diagnostic found
+  only inside the rollback failure appended last. Rollback service callbacks
+  observe the already-restored ring/cursor/bindings and producer presentation.
+  Error after producer restore escapes without RuntimeException rollback,
+  leaving the selected presentation but the prior manager ledger.
+  The replacement case replaces backend-owned producer/factory/service once
+  in the pre-try service snapshot callback and again in forward service restore.
+  One stable source profile/generation permits genuine restores on the new
+  producers. Then-current service identities and callback order are asserted.
+  Its real inner reset append survives cursor rollback. Counter stability is
+  asserted only with no successful inner restore and no full reset.
+- Late malformed cursor: real raw PCM is submitted and three final FORWARD
+  capture packets contain nonzero samples. A genuine REVERSE packet also
+  contains nonzero samples; producer history is populated, its reverse cursor
+  exists, and its last reverse frame is armed before the false-preservation
+  eager restore. Negative order is handled with logical ring/cursor/bindings/
+  presentation restored, but history becomes empty, its epoch advances, reverse
+  cursor/activity and last-frame/crossfade state clear, and the next genuine
+  REVERSE capture packet is all zero. No array seeding/artificial producer is
+  used. The test does not pretend rollback reconstructs producer history.
+- Fallback ring: a real LEFT request first establishes raw false. A RIGHT
+  loader callback resets it true; a null-load fallback returns normally and
+  the outer operation negates then-current true to false. A fresh RIGHT request
+  independently discriminates this from assigning the inverse of original false.
+  Another callback resets true and throws the exact AssertionError; only the
+  inner reset appends and a fresh LEFT request proves no outer toggle occurred.
+  The Error escapes the existing loader/registration boundary without a new
+  hook or catch/rescue. Dispatch route, requested side, resolved ID and pitch
+  remain asserted; normal return rather than successful asset admission controls
+  the toggle.
+- Capture order: original-service ring observation replaces the profile/service,
+  changes real sound bindings/routes, advances the timeline and appends a real
+  reset, then changes the real producer's mute state. Captured bindings/route
+  IDs are pre-callback copies; frame/order/count and presentation are later
+  samples. Final snapshot comes from the then-current replacement service.
+  Its snapshot callback advances the timeline and changes another mute bit:
+  captured frame 91/mask 1 versus live frame 92/mask 3 independently pins the
+  producer/cursor-before-final-service order. Explicit false, true, and null
+  service-ring cases distinguish service preference from raw fallback.
+
+**Validation selection and prerequisites.** These selected cases have no
+`@RequiresRom` prerequisite, and XML contains no ROM-path property. Fixtures
+use Null/recording backends, NoDevice presentation, real producer/factory
+instances and capture handles; no speaker or desktop campaign was launched.
+No category/smoke/full/trace/performance run was submitted. Parent owns Binding
+delivery, global guards, composed controls and any later combined validation.
+The measurement-hazard guidance was read before reporting physical XML counts.
+
+All commands ran from this checkout. This literal environment/flag prefix was
+used for the leased `-v` probe, normal `test-compile`, and focused test commands
+(the probe uses only `-v` after the wrapper):
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS -u MAVEN_ARGS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  PATH=/usr/lib/jvm/java-25-openjdk/bin:$PATH \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  -Darchunit.freeze.store.default.allowStoreCreation=false \
+  -Darchunit.freeze.store.default.allowStoreUpdate=false \
+  -Darchunit.freeze.refreeze=false '-Dtest=SELECTOR' test -B
+```
+
+The separate normal compilation used the same environment and three freeze/EGL
+flags, `-Dmse=off test-compile -B`, without `--normal` or `-Dtest`.
+Every focused invocation also compiled changed tests normally. Java in all
+physical XML reports is `25.0.5.0.2`; EGL and all three false freeze properties
+match the command. No selected case was skipped.
+
+First literal SELECTOR (14 new parameterized/ordinary cases plus 12 controls):
+
+```text
+TestAudioPresentationSnapshotParity#eagerPreTryServiceSnapshotFailureEscapesUnchangedWithoutRollback+eagerOrdinaryRestoreFailureReturnsFalseWhilePublicVoidHidesIt+eagerDiagnosticDiscoveryRunsAfterRollbackAndPreservesTraversalIdentity+eagerErrorAfterProducerRestoreEscapesWithoutRuntimeRollback+eagerRollbackReadsReplacementProducerFactoryAndServiceAfterRestoringLogicalLedger+eagerLateCursorRejectionRestoresLogicalStateButLosesPopulatedPcmAndReverseHistory+captureSamplesCopiedBindingsThenRingCallbackThenCursorProducerAndCurrentService+logicalSnapshotCapturesAndRestoresPresentationFlagsAtSameBoundary+heldReverseDefersPresentationRestoreUntilRelease+preparedAThenSelectedBPublishesBLedgerWithAPresentation+replayAfterPreparationReplacesMetadataButRetainsAPreparation+cursorRefreshRetainsPresentationEntryCountAndAcknowledgment+clearHistoryClearsProducerTokenButRetainsManagerTargetAndAcknowledgment+negativeTimelineOrderPartiallyPublishesAfterSuccessfulProducerReturn+eagerAndHeldShareCounterButOnlyEagerRestoresOptionalForwardService,TestAudioManagerSfxCatalogReuse#fallbackRingNormalReturnInvertsTheValueResetByTheLoaderCallback+fallbackRingEscapingLoaderErrorRetainsTheCallbackResetWithoutOuterToggle+reentrantBaseReplacementCannotMixTheCapturedSourceTuple,TestAudioSourcePublicationContract#logicalRestorePublishesOnlySoundBindingsWithoutRewindingSourceOrMusic+eagerCursorFailureRollsBackBindingsAndLedgerWithoutRollingBackSources
+```
+
+Second SELECTOR, only the five failed/new cases after fixture correction:
+
+```text
+TestAudioPresentationSnapshotParity#eagerPreTryServiceSnapshotFailureEscapesUnchangedWithoutRollback+eagerRollbackReadsReplacementProducerFactoryAndServiceAfterRestoringLogicalLedger+captureSamplesCopiedBindingsThenRingCallbackThenCursorProducerAndCurrentService
+```
+
+Third SELECTOR, only the remaining corrected replacement case:
+
+```text
+TestAudioPresentationSnapshotParity#eagerRollbackReadsReplacementProducerFactoryAndServiceAfterRestoringLogicalLedger
+```
+
+| Owned command session | Observed result | Queue wait | Maven elapsed, including compile |
+| --- | --- | ---: | ---: |
+| 74262 | Leased Java version probe, exit 0, Java 25.0.5.0.2 | 14 s | Unmeasured |
+| 65677 | Normal main/test compile, exit 0 | Build/activity admission unmeasured | 1:23 |
+| 41461 | 26 cases: 21 pass, 4 failure, 1 error, 0 skip | 0 s | 26.160 s |
+| 31095 | 5 cases: 4 pass, 1 failure, 0 error/skip | 0 s | 27.235 s |
+| 46886 | 1 case: 1 pass, 0 failure/error/skip | 0 s | 27.330 s |
+
+Execution, authoring, source inspection and build/activity waits were not
+separately timed; these intervals are not summed as elapsed delivery time.
+The final single case's physical XML class time is 0.492 s.
+
+**Draft failures and bounded corrections.** Session 41461's pre-try case
+caught the intended exact failure, then its observation inadvertently called
+`releaseStateForTesting -> captureLogicalSnapshot -> service.snapshot` again,
+producing error `IllegalStateException: pre-try snapshot identity` at the
+post-check. The observation now reads the actual producer fingerprint through
+the physical bridge, avoiding service sampling. The three capture cases failed
+`expected 1 but was 0` at timeline next order: mute toggles do not append the
+command timeline. A real callback `resetRingSound` now establishes the intended
+order/count mutation, while retaining the same expected order/count assertions.
+The replacement case reached only pre-try snapshot because changing profiles
+changed the session fingerprint; producer forward restore and guarded rollback
+both rejected with `SMPS session profile fingerprint does not match` before
+service restore. Backend replacement under one profile/generation now exercises
+both intended forward/rollback callbacks without weakening fingerprint rules.
+
+Session 31095 passed pre-try and all three capture cases. Its replacement case
+then failed `expected 1 but was 2` because the real reset append persists in
+timeline history after cursor rollback. Its final assertions explicitly require
+that one extra entry and its exact `ResetRingAlternation(true)` identity/value,
+while retaining exact rollback comparison of every other logical component.
+Session 46886 passed that correction. No production repair or existing control
+change was needed. The other 21 first-run passes and four second-run passes
+are reused only for unaffected method/fixture inputs. There is no fresh final
+26-case invocation: the result is **26 distinct passing IDs across those bounded
+runs**, including all 14 new cases and all 12 controls, with the draft failures
+above preserved. It is not broad engine, guard, full-suite or extraction approval.
+
+Literal physical IDs (all prefixed `com.openggf.audio.` below):
+
+```text
+TestAudioManagerSfxCatalogReuse#fallbackRingEscapingLoaderErrorRetainsTheCallbackResetWithoutOuterToggle
+TestAudioManagerSfxCatalogReuse#fallbackRingNormalReturnInvertsTheValueResetByTheLoaderCallback
+TestAudioManagerSfxCatalogReuse#reentrantBaseReplacementCannotMixTheCapturedSourceTuple
+TestAudioPresentationSnapshotParity#captureSamplesCopiedBindingsThenRingCallbackThenCursorProducerAndCurrentService(Boolean, boolean)[1]
+TestAudioPresentationSnapshotParity#captureSamplesCopiedBindingsThenRingCallbackThenCursorProducerAndCurrentService(Boolean, boolean)[2]
+TestAudioPresentationSnapshotParity#captureSamplesCopiedBindingsThenRingCallbackThenCursorProducerAndCurrentService(Boolean, boolean)[3]
+TestAudioPresentationSnapshotParity#clearHistoryClearsProducerTokenButRetainsManagerTargetAndAcknowledgment
+TestAudioPresentationSnapshotParity#cursorRefreshRetainsPresentationEntryCountAndAcknowledgment
+TestAudioPresentationSnapshotParity#eagerAndHeldShareCounterButOnlyEagerRestoresOptionalForwardService
+TestAudioPresentationSnapshotParity#eagerDiagnosticDiscoveryRunsAfterRollbackAndPreservesTraversalIdentity(String)[1]
+TestAudioPresentationSnapshotParity#eagerDiagnosticDiscoveryRunsAfterRollbackAndPreservesTraversalIdentity(String)[2]
+TestAudioPresentationSnapshotParity#eagerDiagnosticDiscoveryRunsAfterRollbackAndPreservesTraversalIdentity(String)[3]
+TestAudioPresentationSnapshotParity#eagerDiagnosticDiscoveryRunsAfterRollbackAndPreservesTraversalIdentity(String)[4]
+TestAudioPresentationSnapshotParity#eagerErrorAfterProducerRestoreEscapesWithoutRuntimeRollback
+TestAudioPresentationSnapshotParity#eagerLateCursorRejectionRestoresLogicalStateButLosesPopulatedPcmAndReverseHistory
+TestAudioPresentationSnapshotParity#eagerOrdinaryRestoreFailureReturnsFalseWhilePublicVoidHidesIt
+TestAudioPresentationSnapshotParity#eagerPreTryServiceSnapshotFailureEscapesUnchangedWithoutRollback
+TestAudioPresentationSnapshotParity#eagerRollbackReadsReplacementProducerFactoryAndServiceAfterRestoringLogicalLedger
+TestAudioPresentationSnapshotParity#heldReverseDefersPresentationRestoreUntilRelease
+TestAudioPresentationSnapshotParity#logicalSnapshotCapturesAndRestoresPresentationFlagsAtSameBoundary
+TestAudioPresentationSnapshotParity#negativeTimelineOrderPartiallyPublishesAfterSuccessfulProducerReturn
+TestAudioPresentationSnapshotParity#preparedAThenSelectedBPublishesBLedgerWithAPresentation
+TestAudioPresentationSnapshotParity#replayAfterPreparationReplacesMetadataButRetainsAPreparation
+TestAudioSourcePublicationContract#eagerCursorFailureRollsBackBindingsAndLedgerWithoutRollingBackSources
+TestAudioSourcePublicationContract#logicalRestorePublishesOnlySoundBindingsWithoutRewindingSourceOrMusic(boolean)[1]
+TestAudioSourcePublicationContract#logicalRestorePublishesOnlySoundBindingsWithoutRewindingSourceOrMusic(boolean)[2]
+```
+
+Sorted literal `classname#name`, LF-joined with final LF, yields ID SHA-256:
+first 26 `01a741e5af8b619651981dcab2b91d4096adc441ef23bc0fe4e3593fd636b629`,
+second 5 `fd43f26152ac9c873572bfb6bd7cdd282ab6c19a8930d8c0e7a685c49c70c83f`,
+third 1 `5a17b756973cc189f103a3e660786364e5c148fe9290d0ea2028ff0f7af590fc`.
+
+**State and handoff fingerprint.** Production stayed at the exact accepted
+AudioManager blob/SHA and `src/main` tree above throughout. The three changed
+Java paths sorted lexically, each path + NUL + bytes + NUL, give:
+
+- 41461 draft: `aafea1db36523e7fbf25c32e25d61dd78ce6fda04d9a9fce4bb1080ab4b7fa5f`
+  (reconstructed in memory by reversing only the narrow fixture corrections;
+  the intermediate fingerprint below was independently matched).
+- 31095 corrected draft: `b2a21a60f9b1b286b976a39963607457d9ced890df3d6789cf5efead4da51a36`.
+- 46886 final: `6fb13a39e77e60e72ea5f9752fd49512d401fb6afd3244f2ab37932ff44fa0ee`.
+
+| Final changed Java input | Git blob |
+| --- | --- |
+| `AudioManagerTestDiagnostics.java` | `9733c98b41dde8fcd350ac7a51c29e0e658b8988` |
+| `TestAudioManagerSfxCatalogReuse.java` | `d816108150840ab1c26067ec569795c4a055d888` |
+| `TestAudioPresentationSnapshotParity.java` | `011a489e3d3d85ce9f949b65ee91ed2d616930e8` |
+
+A byte comparison of 4,638 protected main/resources/frozen/mod/POM/descriptor
+files against accepted 1a6f9 is exact. All 13 frozen blobs retain sorted
+`path:SHA256` LF mapping fingerprint
+`292100b7284abcd07373d33efce8194308ca6c0fc999aef71de5c5eadcb7e834`.
+The accepted 120 low-level records, API 22,541 rows / 1,250 types, ambient
+6 methods / 5 files and 151 permissions therefore have no source delta;
+these counts are inherited accepted accounting, not newly executed guards.
+
+All owned command handles above are terminal. Each physical XML and companion
+report was inspected for identities/failures/errors/skips/properties, then
+consumed; own `target/surefire-reports` and `target/diagnostics` are empty.
+No category run was created, so no category run ID needs acknowledgment.
+No receipt, pass cache, raw-log archive or extra engineering artifact was made.
+The local test-only commit and clean isolated worktree are intentionally
+retained for parent evidence review; no integration, push, task-branch/worktree
+cleanup, subdelegation or owner extraction is authorized by this result.
+Changelog omission is intentional: test-only characterization and continuation
+evidence do not change production behavior or a release theme.

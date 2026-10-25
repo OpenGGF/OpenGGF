@@ -395,6 +395,64 @@ class TestAudioManagerSfxCatalogReuse {
     }
 
     @Test
+    void fallbackRingNormalReturnInvertsTheValueResetByTheLoaderCallback() {
+        CountingLoader loader = new CountingLoader(EMPTY_DAC);
+        installBase(loader);
+        audio.setSoundMap(Map.of(GameSound.RING_RIGHT, BASE_ID));
+        audio.playSfx(GameSound.RING, 0.75f);
+        assertEquals(GameSound.RING_LEFT.name(), lastCommand().sfxName());
+        assertFalse(audio.captureLogicalSnapshot().ringLeft());
+        loader.afterIdLoad = () -> {
+            audio.resetRingSound();
+            assertTrue(audio.captureLogicalSnapshot().ringLeft());
+        };
+
+        // A null loader result is a normal return: fallback dispatch still toggles.
+        audio.playSfx(GameSound.RING, 1.25f);
+
+        assertEquals(1, loader.idLoads.get());
+        assertEquals(GameSound.RING_RIGHT.name(), lastCommand().sfxName());
+        assertEquals(AudioCommand.SfxRoute.RING_RESOLVED, lastCommand().route());
+        assertEquals(BASE_ID, lastCommand().sfxId());
+        assertEquals(1.25f, lastCommand().pitch());
+        assertFalse(audio.captureLogicalSnapshot().ringLeft(),
+                "outer return negates callback's true, not the original false");
+        audio.playSfx(GameSound.RING);
+        assertEquals(GameSound.RING_RIGHT.name(), lastCommand().sfxName(),
+                "a fresh request independently observes the resulting false");
+        assertTrue(audio.captureLogicalSnapshot().ringLeft());
+    }
+
+    @Test
+    void fallbackRingEscapingLoaderErrorRetainsTheCallbackResetWithoutOuterToggle() {
+        CountingLoader loader = new CountingLoader(EMPTY_DAC);
+        installBase(loader);
+        audio.setSoundMap(Map.of(GameSound.RING_RIGHT, BASE_ID));
+        audio.playSfx(GameSound.RING);
+        assertEquals(GameSound.RING_LEFT.name(), lastCommand().sfxName());
+        assertFalse(audio.captureLogicalSnapshot().ringLeft());
+        AssertionError failure = new AssertionError("escaping ring loader identity");
+        loader.afterIdLoad = () -> {
+            audio.resetRingSound();
+            assertTrue(audio.captureLogicalSnapshot().ringLeft());
+            throw failure;
+        };
+        int entries = audio.commandTimeline().entryCount();
+
+        assertSame(failure, assertThrows(AssertionError.class,
+                () -> audio.playSfx(GameSound.RING, 1.25f)));
+
+        assertEquals(1, loader.idLoads.get());
+        assertEquals(entries + 1, audio.commandTimeline().entryCount(),
+                "only the inner reset publishes before the Error escapes");
+        assertTrue(audio.captureLogicalSnapshot().ringLeft());
+        audio.playSfx(GameSound.RING);
+        assertEquals(GameSound.RING_LEFT.name(), lastCommand().sfxName());
+        assertFalse(audio.captureLogicalSnapshot().ringLeft());
+        assertEquals(1, loader.idLoads.get(), "next request selected unmapped LEFT");
+    }
+
+    @Test
     void registrationConflictOccursBeforeTimelinePublication() {
         AtomicInteger materializations = new AtomicInteger();
         CountingLoader loader = new CountingLoader(EMPTY_DAC);

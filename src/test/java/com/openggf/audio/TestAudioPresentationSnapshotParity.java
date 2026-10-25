@@ -30,6 +30,9 @@ import com.openggf.game.sonic3k.audio.smps.Sonic3kSfxData;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -275,6 +278,367 @@ class TestAudioPresentationSnapshotParity {
         assertSame(liveService, audio.captureLogicalSnapshot().forwardServiceSnapshot());
         assertEquals(before + 2, audio.logicalRestorePublicationsForTesting());
         assertDeepSnapshotEquals(selected.presentation(), audio.captureLogicalSnapshot().presentation());
+    }
+
+    @Test
+    void eagerPreTryServiceSnapshotFailureEscapesUnchangedWithoutRollback() {
+        AudioRequestService service = mock(AudioRequestService.class);
+        var state = mock(AudioPresentationForwardService.Snapshot.class);
+        when(service.snapshot()).thenReturn(state);
+        installOptionalService(service);
+        AudioLogicalSnapshot selected = audio.captureLogicalSnapshot();
+        var before = AudioManagerTestDiagnostics.producerFingerprint(audio);
+        int publications = audio.logicalRestorePublicationsForTesting();
+        RuntimeException failure = new IllegalStateException("pre-try snapshot identity");
+        when(service.snapshot()).thenThrow(failure);
+        clearInvocations(service);
+
+        assertSame(failure, assertThrows(IllegalStateException.class,
+                () -> audio.restoreLogicalSnapshot(selected)));
+
+        verify(service).snapshot();
+        verify(service, never()).restore(any());
+        assertProducerStateExactly(before, AudioManagerTestDiagnostics.presentationField(audio,
+                        "shadowProducer", com.openggf.audio.presentation.AudioPresentationProducer.class)
+                        .transactionFingerprint(),
+                "pre-try failure never enters producer restore or rollback");
+        assertEquals(publications, audio.logicalRestorePublicationsForTesting());
+    }
+
+    @Test
+    void eagerOrdinaryRestoreFailureReturnsFalseWhilePublicVoidHidesIt() {
+        AudioRequestService service = mock(AudioRequestService.class);
+        var state = mock(AudioPresentationForwardService.Snapshot.class);
+        when(service.snapshot()).thenReturn(state);
+        installOptionalService(service);
+        AudioLogicalSnapshot selected = audio.captureLogicalSnapshot();
+        audio.toggleMute(ChannelType.FM, 0);
+        audio.presentFrame(PresentationMode.SILENT);
+        AudioLogicalSnapshot before = audio.captureLogicalSnapshot();
+        RuntimeException failure = new IllegalStateException("ordinary restore identity");
+        doThrow(failure).doNothing().doThrow(failure).doNothing()
+                .when(service).restore(state);
+        int publications = audio.logicalRestorePublicationsForTesting();
+
+        assertFalse(AudioManagerTestDiagnostics.restoreLogicalSnapshotNow(audio, selected, false));
+        audio.restoreLogicalSnapshot(selected);
+
+        assertDeepSnapshotEquals(before, audio.captureLogicalSnapshot());
+        verify(service, times(4)).restore(state);
+        assertEquals(0, failure.getSuppressed().length);
+        assertEquals(publications, audio.logicalRestorePublicationsForTesting());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"node", "cause", "suppressed", "rollback"})
+    void eagerDiagnosticDiscoveryRunsAfterRollbackAndPreservesTraversalIdentity(String placement) {
+        AudioRequestService service = mock(AudioRequestService.class);
+        var selectedService = mock(AudioPresentationForwardService.Snapshot.class);
+        var liveService = mock(AudioPresentationForwardService.Snapshot.class);
+        when(service.snapshot()).thenReturn(selectedService);
+        installOptionalService(service);
+        audio.registerDonorSound(GameSound.JUMP, "selected", 0xA1);
+        AudioLogicalSnapshot selected = audio.captureLogicalSnapshot();
+        audio.registerDonorSound(GameSound.JUMP, "live", 0xA2);
+        audio.beginCommandTimelineFrame(23);
+        audio.playSfx(GameSound.RING);
+        audio.toggleMute(ChannelType.FM, 1);
+        audio.presentFrame(PresentationMode.SILENT);
+        when(service.snapshot()).thenReturn(liveService);
+        AudioLogicalSnapshot before = audio.captureLogicalSnapshot();
+        int publications = audio.logicalRestorePublicationsForTesting();
+        var wanted = new AudioDiagnosticObserverException(new IllegalStateException("wanted"));
+        var competitor = new AudioDiagnosticObserverException(new IllegalStateException("competitor"));
+        RuntimeException primary;
+        RuntimeException rollback;
+        switch (placement) {
+            case "node" -> {
+                primary = wanted;
+                primary.getCause().addSuppressed(competitor);
+                primary.addSuppressed(competitor);
+                rollback = new IllegalStateException("rollback");
+            }
+            case "cause" -> {
+                RuntimeException causeBranch = new IllegalStateException("cause branch");
+                causeBranch.addSuppressed(wanted);
+                primary = new IllegalStateException("primary", causeBranch);
+                primary.addSuppressed(competitor);
+                rollback = new IllegalStateException("rollback");
+            }
+            case "suppressed" -> {
+                primary = new IllegalStateException("primary");
+                primary.addSuppressed(new IllegalStateException("first subtree", wanted));
+                primary.addSuppressed(competitor);
+                rollback = new IllegalStateException("rollback");
+            }
+            case "rollback" -> {
+                primary = new IllegalStateException("primary");
+                primary.addSuppressed(new IllegalStateException("earlier ordinary suppressed"));
+                rollback = new IllegalStateException("rollback", wanted);
+            }
+            default -> throw new AssertionError(placement);
+        }
+        Throwable[] originalSuppressed = primary.getSuppressed();
+        List<String> events = new ArrayList<>();
+        doAnswer(call -> {
+            events.add("selected-service");
+            assertSame(selectedService, call.getArgument(0));
+            assertDeepSnapshotEquals(selected.presentation(), audio.captureLogicalSnapshot().presentation());
+            throw primary;
+        }).doAnswer(call -> {
+            events.add("rollback-service");
+            assertSame(liveService, call.getArgument(0));
+            // Logical ledger restoration must precede even a failing service rollback.
+            assertDeepSnapshotEquals(before, audio.captureLogicalSnapshot());
+            throw rollback;
+        }).when(service).restore(any());
+
+        assertSame(wanted, assertThrows(AudioDiagnosticObserverException.class,
+                () -> audio.restoreLogicalSnapshot(selected)));
+
+        assertEquals(List.of("selected-service", "rollback-service"), events);
+        Throwable[] expected = java.util.Arrays.copyOf(originalSuppressed, originalSuppressed.length + 1);
+        expected[originalSuppressed.length] = rollback;
+        assertArrayEquals(expected, primary.getSuppressed(), "rollback appends its exact failure last");
+        assertEquals(publications, audio.logicalRestorePublicationsForTesting(),
+                "no inner restore succeeds and no callback resets the shared counter");
+        assertDeepSnapshotEquals(before, audio.captureLogicalSnapshot());
+    }
+
+    @Test
+    void eagerErrorAfterProducerRestoreEscapesWithoutRuntimeRollback() {
+        AudioRequestService service = mock(AudioRequestService.class);
+        var state = mock(AudioPresentationForwardService.Snapshot.class);
+        when(service.snapshot()).thenReturn(state);
+        installOptionalService(service);
+        AudioLogicalSnapshot selected = audio.captureLogicalSnapshot();
+        audio.beginCommandTimelineFrame(31);
+        audio.playSfx(GameSound.RING);
+        audio.registerDonorSound(GameSound.JUMP, "live", 0xA2);
+        audio.toggleMute(ChannelType.FM, 1);
+        audio.presentFrame(PresentationMode.SILENT);
+        AudioLogicalSnapshot before = audio.captureLogicalSnapshot();
+        AssertionError failure = new AssertionError("service Error identity");
+        doThrow(failure).when(service).restore(state);
+        int publications = audio.logicalRestorePublicationsForTesting();
+
+        assertSame(failure, assertThrows(AssertionError.class,
+                () -> audio.restoreLogicalSnapshot(selected)));
+
+        verify(service).restore(state);
+        AudioLogicalSnapshot after = audio.captureLogicalSnapshot();
+        assertDeepSnapshotEquals(selected.presentation(), after.presentation());
+        assertEquals(before.ringLeft(), after.ringLeft());
+        assertEquals(before.commandTimelineFrame(), after.commandTimelineFrame());
+        assertEquals(before.commandTimelineNextOrder(), after.commandTimelineNextOrder());
+        assertEquals(before.donorBindings(), after.donorBindings());
+        assertEquals(0, failure.getSuppressed().length);
+        assertEquals(publications, audio.logicalRestorePublicationsForTesting());
+    }
+
+    @Test
+    void eagerRollbackReadsReplacementProducerFactoryAndServiceAfterRestoringLogicalLedger() {
+        AudioRequestService original = mock(AudioRequestService.class);
+        AudioRequestService middle = mock(AudioRequestService.class);
+        AudioRequestService replacement = mock(AudioRequestService.class);
+        var selectedService = mock(AudioPresentationForwardService.Snapshot.class);
+        var liveService = mock(AudioPresentationForwardService.Snapshot.class);
+        when(original.snapshot()).thenReturn(selectedService);
+        when(middle.snapshot()).thenReturn(liveService);
+        when(replacement.snapshot()).thenReturn(liveService);
+        AtomicReference<AudioRequestService> currentService = new AtomicReference<>(original);
+        for (AudioRequestService service : List.of(original, middle, replacement)) {
+            when(service.ringLeft()).thenReturn(null);
+        }
+        audio.setAudioProfile(new AudioTestFixtures.StubAudioProfile(new AudioTestFixtures.StubSmpsLoader()) {
+            @Override public AudioRequestService createAudioRequestService() { return currentService.get(); }
+        });
+        AudioLogicalSnapshot selected = audio.captureLogicalSnapshot();
+        audio.beginCommandTimelineFrame(51);
+        audio.playSfx(GameSound.RING);
+        audio.registerDonorSound(GameSound.JUMP, "before", 0xA3);
+        audio.toggleMute(ChannelType.FM, 2);
+        audio.presentFrame(PresentationMode.SILENT);
+        when(original.snapshot()).thenReturn(liveService);
+        AudioLogicalSnapshot before = audio.captureLogicalSnapshot();
+        // Rollback restores the cursor, not the append-only command history.
+        AudioLogicalSnapshot expectedRollback = new AudioLogicalSnapshot(
+                before.ringLeft(), before.commandTimelineFrame(), before.commandTimelineNextOrder(),
+                before.commandEntryCount() + 1, before.presentation(), before.donorGameIds(),
+                before.donorBindings(), before.forwardServiceSnapshot());
+        var oldProducer = AudioManagerTestDiagnostics.presentationField(audio, "shadowProducer", Object.class);
+        var oldFactory = audio.shadowFactoryForTesting();
+        RuntimeException primary = new IllegalStateException("replacement restore primary");
+        List<String> events = new ArrayList<>();
+        when(original.snapshot()).thenAnswer(call -> {
+            events.add("original-pre-try-snapshot");
+            currentService.set(middle);
+            audio.setBackend(new AudioTestFixtures.RecordingAudioBackend());
+            audio.presentFrame(PresentationMode.SILENT);
+            assertNotEquals(oldProducer, AudioManagerTestDiagnostics.presentationField(audio, "shadowProducer", Object.class));
+            assertNotEquals(oldFactory, audio.shadowFactoryForTesting());
+            return liveService;
+        });
+        doAnswer(call -> {
+            events.add("middle-restore");
+            assertSame(selectedService, call.getArgument(0));
+            assertDeepSnapshotEquals(selected.presentation(), audio.captureLogicalSnapshot().presentation());
+            currentService.set(replacement);
+            audio.setBackend(new AudioTestFixtures.RecordingAudioBackend());
+            audio.beginCommandTimelineFrame(99);
+            audio.registerDonorSound(GameSound.JUMP, "callback", 0xA4);
+            audio.resetRingSound();
+            audio.toggleMute(ChannelType.PSG, 0);
+            audio.presentFrame(PresentationMode.SILENT);
+            throw primary;
+        }).when(middle).restore(any());
+        doAnswer(call -> {
+            events.add("replacement-rollback");
+            assertSame(liveService, call.getArgument(0), "snapshot was captured before try on original service");
+            assertDeepSnapshotEquals(expectedRollback, audio.captureLogicalSnapshot());
+            return null;
+        }).when(replacement).restore(any());
+        int publications = audio.logicalRestorePublicationsForTesting();
+
+        assertFalse(AudioManagerTestDiagnostics.restoreLogicalSnapshotNow(audio, selected, false));
+
+        assertEquals(List.of("original-pre-try-snapshot", "middle-restore", "replacement-rollback"), events);
+        assertNotEquals(oldProducer, AudioManagerTestDiagnostics.presentationField(audio, "shadowProducer", Object.class));
+        assertNotEquals(oldFactory, audio.shadowFactoryForTesting());
+        verify(original, never()).restore(any());
+        verify(middle).restore(selectedService);
+        verify(replacement).restore(liveService);
+        assertDeepSnapshotEquals(expectedRollback, audio.captureLogicalSnapshot());
+        assertEquals(publications, audio.logicalRestorePublicationsForTesting());
+        assertEquals(new AudioCommand.ResetRingAlternation(true),
+                audio.commandTimeline().entryAt(before.commandEntryCount()).command(),
+                "the callback's real append survives restoration of the earlier cursor");
+        assertEquals(0, primary.getSuppressed().length);
+    }
+
+    @Test
+    void eagerLateCursorRejectionRestoresLogicalStateButLosesPopulatedPcmAndReverseHistory()
+            throws Exception {
+        audio.registerDonorSound(GameSound.JUMP, "selected", 0xA1);
+        AudioLogicalSnapshot selected = audio.captureLogicalSnapshot();
+        audio.registerDonorSound(GameSound.JUMP, "live", 0xA2);
+        audio.beginCommandTimelineFrame(61);
+        audio.playSfx(GameSound.RING);
+        byte[] pcm = new byte[12_000];
+        for (int i = 0; i < pcm.length; i++) pcm[i] = (byte) (i * 17);
+        audio.submitShadowRawPcmForTesting(pcm, 8_000);
+        audio.setRewindHistoryArmed(true);
+        try (LiveCaptureAudioHandle capture = audio.attachShadowCaptureForTesting(60)) {
+            short[] packet = new short[capture.maxStereoFramesPerPacket() * 2];
+            for (int i = 0; i < 3; i++) {
+                audio.presentFrame(PresentationMode.FORWARD);
+                int frames = capture.drainPresentationFrame(packet);
+                assertTrue(frames > 0);
+                assertTrue(java.util.stream.IntStream.range(0, frames * 2).anyMatch(j -> packet[j] != 0));
+            }
+            audio.beginReverseAudioPresentation();
+            audio.presentFrame(PresentationMode.REVERSE);
+            int reverseFrames = capture.drainPresentationFrame(packet);
+            assertTrue(java.util.stream.IntStream.range(0, reverseFrames * 2).anyMatch(j -> packet[j] != 0));
+            AudioLogicalSnapshot before = audio.captureLogicalSnapshot();
+            var priorProducer = AudioManagerTestDiagnostics.producerFingerprint(audio);
+            assertTrue(priorProducer.history().storedFrames() > reverseFrames);
+            assertTrue(priorProducer.history().readablePcm().samples().length > 0);
+            assertTrue(priorProducer.reverseActive());
+            assertNotNull(priorProducer.reverseCursor());
+            assertTrue(priorProducer.hasLastReverseFrame());
+            int publications = audio.logicalRestorePublicationsForTesting();
+            AudioLogicalSnapshot invalid = new AudioLogicalSnapshot(true, 999, -1, 0,
+                    selected.presentation(), selected.donorGameIds(), selected.donorBindings());
+
+            assertFalse(AudioManagerTestDiagnostics.restoreLogicalSnapshotNow(audio, invalid, false));
+
+            assertDeepSnapshotEquals(before, audio.captureLogicalSnapshot());
+            var after = AudioManagerTestDiagnostics.producerFingerprint(audio);
+            assertEquals(0, after.history().storedFrames());
+            assertEquals(0, after.history().readablePcm().samples().length);
+            assertTrue(after.history().epoch() > priorProducer.history().epoch());
+            assertNull(after.reverseCursor());
+            assertFalse(after.reverseActive());
+            assertFalse(after.hasLastReverseFrame());
+            assertEquals(0, after.releaseCrossfadeRemaining());
+            assertEquals(publications, audio.logicalRestorePublicationsForTesting());
+            audio.presentFrame(PresentationMode.REVERSE);
+            int emptyFrames = capture.drainPresentationFrame(packet);
+            assertTrue(emptyFrames > 0);
+            assertArrayEquals(new short[emptyFrames * 2], java.util.Arrays.copyOf(packet, emptyFrames * 2),
+                    "logical rollback cannot recreate consumed/cleared reverse PCM");
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource({"false,false", "true,true", ",true"})
+    void captureSamplesCopiedBindingsThenRingCallbackThenCursorProducerAndCurrentService(
+            Boolean serviceRing, boolean expectedRing) {
+        AudioRequestService original = mock(AudioRequestService.class);
+        AudioRequestService replacement = mock(AudioRequestService.class);
+        var finalServiceSnapshot = mock(AudioPresentationForwardService.Snapshot.class);
+        installOptionalService(original);
+        audio.registerDonorLoader("before-route", new AudioTestFixtures.StubSmpsLoader(), AudioTestFixtures.EMPTY_DAC);
+        audio.registerDonorSound(GameSound.JUMP, "before-route", 0xA1);
+        audio.beginCommandTimelineFrame(10);
+        audio.resetRingSound();
+        AudioLogicalSnapshot before = audio.captureLogicalSnapshot();
+        clearInvocations(original);
+        List<String> events = new ArrayList<>();
+        AtomicReference<AudioPresentationSnapshot> sampledPresentation = new AtomicReference<>();
+        when(original.ringLeft()).thenAnswer(call -> {
+            events.add("original-ring");
+            installOptionalService(replacement);
+            audio.registerDonorLoader("callback-route", new AudioTestFixtures.StubSmpsLoader(), AudioTestFixtures.EMPTY_DAC);
+            audio.registerDonorSound(GameSound.JUMP, "callback-route", 0xA2);
+            audio.beginCommandTimelineFrame(91);
+            audio.resetRingSound();
+            audio.toggleMute(ChannelType.FM, 0);
+            audio.presentFrame(PresentationMode.SILENT);
+            sampledPresentation.set(AudioManagerTestDiagnostics.presentationField(audio, "shadowProducer",
+                    com.openggf.audio.presentation.AudioPresentationProducer.class).snapshot());
+            events.add("ring-callback-finished");
+            return serviceRing;
+        });
+        when(replacement.snapshot()).thenAnswer(call -> {
+            events.add("replacement-snapshot");
+            assertEquals(1, sampledPresentation.get().fmMuteMask());
+            // A later callback proves producer and cursor were already sampled.
+            audio.beginCommandTimelineFrame(92);
+            audio.toggleMute(ChannelType.FM, 1);
+            audio.presentFrame(PresentationMode.SILENT);
+            return finalServiceSnapshot;
+        });
+
+        AudioLogicalSnapshot captured = audio.captureLogicalSnapshot();
+
+        assertEquals(List.of("original-ring", "ring-callback-finished", "replacement-snapshot"), events);
+        assertEquals(before.donorBindings(), captured.donorBindings());
+        assertEquals(before.donorGameIds(), captured.donorGameIds());
+        assertEquals(expectedRing, captured.ringLeft(), "nullable service observation falls back to raw true");
+        assertEquals(91, captured.commandTimelineFrame());
+        assertEquals(1, captured.commandTimelineNextOrder());
+        assertEquals(before.commandEntryCount() + 1, captured.commandEntryCount());
+        assertDeepSnapshotEquals(sampledPresentation.get(), captured.presentation());
+        assertEquals(1, captured.presentation().fmMuteMask());
+        assertSame(finalServiceSnapshot, captured.forwardServiceSnapshot());
+        verify(original, never()).snapshot();
+        verify(replacement).snapshot();
+        assertEquals(92, audio.commandTimeline().currentFrame());
+        assertEquals(3, AudioManagerTestDiagnostics.presentationField(audio, "shadowProducer",
+                com.openggf.audio.presentation.AudioPresentationProducer.class).snapshot().fmMuteMask());
+        doReturn(finalServiceSnapshot).when(replacement).snapshot();
+        assertEquals(Set.of(new AudioLogicalSnapshot.DonorSfxBindingSnapshot(
+                GameSound.JUMP, "callback-route", 0xA2)),
+                audio.captureLogicalSnapshot().donorBindings());
+    }
+
+    private void installOptionalService(AudioRequestService service) {
+        when(service.ringLeft()).thenReturn(null);
+        audio.setAudioProfile(new AudioTestFixtures.StubAudioProfile(new AudioTestFixtures.StubSmpsLoader()) {
+            @Override public AudioRequestService createAudioRequestService() { return service; }
+        });
     }
 
     private AudioLogicalSnapshot prepareHeldFlagTarget() {

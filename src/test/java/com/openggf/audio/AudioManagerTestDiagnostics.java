@@ -209,6 +209,23 @@ public final class AudioManagerTestDiagnostics {
         }
     }
 
+    /** Invokes the existing eager transaction without adding a production failure seam. */
+    static boolean restoreLogicalSnapshotNow(
+            AudioManager audio, AudioLogicalSnapshot snapshot, boolean preservePresentation) {
+        try {
+            Method method = AudioManager.class.getDeclaredMethod(
+                    "restoreLogicalSnapshotNow", AudioLogicalSnapshot.class, boolean.class);
+            method.setAccessible(true);
+            return (boolean) method.invoke(audio, snapshot, preservePresentation);
+        } catch (InvocationTargetException failure) {
+            if (failure.getCause() instanceof RuntimeException runtime) throw runtime;
+            if (failure.getCause() instanceof Error error) throw error;
+            throw new AssertionError(failure.getCause());
+        } catch (ReflectiveOperationException failure) {
+            throw new AssertionError(failure);
+        }
+    }
+
     /** Original publication diagnostics follow the one manager-lifetime source owner. */
     static Object sourcePublication(AudioManager audio) {
         return field(audio, "sourcePublication", Object.class);
