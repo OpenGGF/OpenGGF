@@ -1,5 +1,15 @@
 # Level test coverage backlog
 
+S2 fixed-tail follow-up (2026-10-25): the
+[implementation record](../architecture/audits/2026-10-24-rewind-disposition-review.md#rejected-fixed-tail-only-implementation-and-finite-parent-boundary--2026-10-25)
+rejects a fixed-tail-only owner after reached raw-removal/reuse controls exposed
+missing physical parent-header authority. The original Sideways admission/strict
+rewind gap remains open. The independently retained tail-animation prerequisite
+preserves `anim`/`prev_anim` and the native script-change return through restore
+and forward replay; pure pose sampling follows the same boundary. These focused
+object/controller checks certify no CPZ/MCZ act, route, viewport/donor/team,
+load/respawn or GPU presentation product. Existing act-matrix gaps remain.
+
 S3K monitor admission follow-up (2026-10-24): the
 [field audit](../architecture/audits/2026-10-24-rewind-disposition-review.md#s3k-monitor-contents-admission)
 records real-manager zero/one/two-free-tail cases for stock rings and creator

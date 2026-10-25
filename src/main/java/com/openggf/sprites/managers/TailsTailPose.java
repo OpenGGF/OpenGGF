@@ -181,8 +181,14 @@ public final class TailsTailPose {
         if (anim == ANIM_BLANK) return null;
         int[] frames = frames(separateArt, anim);
         if (frames == null) return null;
-        if (anim == ANIM_FLICK && tick >= (long) frames.length * (FLICK_DELAY + 1)) {
-            tick -= (long) frames.length * (FLICK_DELAY + 1);
+        long flickReturnTick = (long) frames.length * (FLICK_DELAY + 1);
+        if (anim == ANIM_FLICK && tick == flickReturnTick) {
+            // TAnim_End_FD writes anim and returns with the old mapping. The
+            // following dispatch detects prev_anim and begins the next script.
+            return new Pose(frames[frames.length - 1], facingLeft, false);
+        }
+        if (anim == ANIM_FLICK && tick > flickReturnTick) {
+            tick -= flickReturnTick + 1;
             anim = ANIM_SWISH;
             frames = frames(separateArt, anim);
         }

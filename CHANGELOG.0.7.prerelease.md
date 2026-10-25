@@ -437,6 +437,10 @@ Unreleased. The earlier development themes remain in
   camera eases back toward its normal height as it does when standing, as Sonic 2
   and Sonic 3 & Knuckles do. A look up or down no longer holds until the dash ends.
 
+- **Tails appendage state:** The tail's animation and previous animation remain
+  independent through scripted animation changes. Flick retains its final picture
+  until the next native dispatch begins Swish, including after rewind.
+
 - **S3K level entry:** Captures that omit the title presentation complete the
   destination's deferred player assembly before its animation and art-loading
   tail, allowing ordinary movement after a fresh zone handoff. Publication also
