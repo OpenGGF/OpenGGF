@@ -7,7 +7,6 @@ import com.openggf.game.GameServices;
 import com.openggf.audio.StreamedMusicPort;
 import com.openggf.control.InputHandler;
 import com.openggf.control.LogicalInputSnapshot;
-import com.openggf.control.MenuInput;
 import com.openggf.control.MenuRepeat;
 import com.openggf.control.MouseWheel;
 import com.openggf.control.PlayerInputState;
@@ -412,12 +411,10 @@ public final class ModSceneHost {
             this.gameplay = services == null || services.gameplay() == null ? null
                     : new com.openggf.mods.scene.SceneGameplay() {
                 private void requireLiveVisit() {
-                    if (capabilitiesRetired || context != Context.this || exiting) {
+                    if (capabilitiesRetired || exiting) {
                         throw new IllegalStateException("The scene visit has ended");
                     }
-                    if (Thread.currentThread() != sceneThread) {
-                        throw new IllegalStateException("Scene gameplay commands require the engine thread");
-                    }
+                    requireCurrentVisit();
                 }
                 @Override public List<String> availableGames() {
                     requireLiveVisit();
@@ -525,6 +522,22 @@ public final class ModSceneHost {
             this.storage = ModStorageFactory.forOwner(root, owner);
         }
 
+        private void requireCurrentVisit() {
+            if (context != this) {
+                throw new IllegalStateException("The scene visit has ended");
+            }
+            if (Thread.currentThread() != sceneThread) {
+                throw new IllegalStateException("Scene commands require the engine thread");
+            }
+        }
+
+        private boolean navigationAvailable() {
+            requireCurrentVisit();
+            // Repeated requests during the current visit's exit still decline normally.
+            return !capabilitiesRetired && !exiting && !suspended
+                    && services != null && services.navigator() != null;
+        }
+
         void resetInput() {
             input = null; logical = LogicalInputSnapshot.neutral(); physical = PhysicalInput.neutral();
             typed = "";
@@ -544,9 +557,7 @@ public final class ModSceneHost {
         void beginTick(InputHandler handler) {
             input = handler;
             physical = handler == null ? PhysicalInput.neutral() : handler.capturePhysicalInput();
-            // GLFW character events since the last frame edge; nothing else reads the menu text
-            // buffer while a scene is the active mode, and InputHandler.update() clears it anyway.
-            typed = handler == null ? "" : MenuInput.consumeText(handler);
+            typed = handler == null ? "" : handler.consumeTypedText();
             LogicalInputSnapshot raw = handler == null ? LogicalInputSnapshot.neutral() : handler.logical();
             heldButtons = buttons(raw.player1(), true);
             pressedButtons = buttons(raw.player1(), false);
@@ -602,6 +613,8 @@ public final class ModSceneHost {
         @Override public long focusLossGeneration() { return focusLossGeneration; }
 
         @Override public PhysicalInput physicalInput() { return physical; }
+
+        @Override public void captureKeyboardText() { if (input != null) input.captureKeyboardText(); }
 
         @Override public boolean censorMultiplayerProfanity() {
             return configuration.get().getBoolean(SonicConfiguration.MULTIPLAYER_CENSOR_PROFANITY);
@@ -710,12 +723,15 @@ public final class ModSceneHost {
 
         @Override
         public boolean keyDown(int key) {
-            return input != null && input.isKeyDown(key);
+            if (input == null) return false;
+            // The scene owns any claim it made, so its own reads see claimed keys.
+            return input.isKeyboardTextCaptured() ? input.isCapturedKeyDown(key) : input.isKeyDown(key);
         }
 
         @Override
         public boolean keyPressed(int key) {
-            return input != null && input.isKeyPressed(key);
+            if (input == null) return false;
+            return input.isKeyboardTextCaptured() ? input.isCapturedKeyPressed(key) : input.isKeyPressed(key);
         }
 
         @Override
@@ -759,6 +775,30 @@ public final class ModSceneHost {
         @Override
         public void exitToMasterTitle() {
             requestExit(services == null ? null : services.toMasterTitle());
+        }
+
+        @Override
+        public boolean startStockAct(int zone, int act) {
+            if (!navigationAvailable()) return false;
+            Runnable transition = services.navigator().prepareStockAct(zone, act);
+            if (transition == null) return false;
+            requestExit(transition);
+            return true;
+        }
+
+        @Override
+        public com.openggf.mods.scene.SceneLaunch currentLaunch() {
+            return navigationAvailable() ? services.navigator().currentLaunch() : null;
+        }
+
+        @Override
+        public boolean relaunch(com.openggf.mods.scene.SceneLaunch launch) {
+            java.util.Objects.requireNonNull(launch, "launch");
+            if (!navigationAvailable()) return false;
+            Runnable transition = services.navigator().prepareRelaunch(launch);
+            if (transition == null) return false;
+            requestExit(transition);
+            return true;
         }
     }
 }

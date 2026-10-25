@@ -1,0 +1,22 @@
+# Sonic 2 cast: each zone's badniks with their stock art keys. Frames, facing and sizes follow the
+# contact-sheet picks Sonic Survivors made for the same objects (examples/sonic-survivors Species).
+# zone name           artKey        archetype  facesRight halfW halfH delay frames
+0      Buzzer         buzzer        DIVER      false      24    12    8     0
+0      Coconuts       coconuts      SHOOTER    false      12    16    8     0,1
+0      Masher         masher        SURFACER   false      12    16    4     0,1
+1      Spiny          spiny         RUSHER     false      16    8     8     0,1
+1      Grabber        grabber       DIVER      false      16    12    8     0,1
+2      Whisp          whisp         DIVER      true       12    8     2     0,1
+2      Chop_Chop      chopchop      RUSHER     false      16    12    8     0,1
+3      Crawl          crawl         ARMOURED   false      20    16    10    0,1
+4      Spiker         spiker        RUSHER     false      12    16    6     0,1
+4      Sol            sol           ORBITER    false      12    12    8     0,1,2
+5      Crawlton       crawlton      DIVER      false      12    12    8     0
+5      Flasher        flasher       DIVER      false      12    8     4     0,1,2
+6      Aquis          aquis         SHOOTER    false      16    16    6     0,3,4,3
+6      Octus          octus         SHOOTER    false      16    16    6     0,1,2,3,4
+7      Shellcracker   shellcracker  ARMOURED   false      24    12    8     0,1,2
+7      Slicer         slicer        RUSHER     false      16    16    8     0,1,2
+7      Asteron        asteron       ORBITER    false      12    12    4     0,1
+8      Balkiry        balkiry       DIVER      false      24    12    4     0,1
+9      Clucker        clucker       SHOOTER    false      16    12    8     7

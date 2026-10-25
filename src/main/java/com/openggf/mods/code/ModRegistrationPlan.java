@@ -127,16 +127,13 @@ public record ModRegistrationPlan(String ownerModId, String baseGameId,
             }
         }
         // Shared title entries live in ModContext and do not require a startup scene here.
-        if ("any".equals(baseGameId) && (!objectFactories.isEmpty()
-                || !objectArt.isEmpty() || (!explicitPatches.isEmpty() && mutators.isEmpty()) || !zones.isEmpty()
-                || !objectPreviewArtKeys.isEmpty() || !characters.isEmpty() || !romObjectArt.isEmpty()
-                || !launchTeams.isEmpty() || !inputFilters.isEmpty() || !hudProfiles.isEmpty() || !serviceBundles.isEmpty() || !decodedLevelPatches.isEmpty())) {
-            throw new IllegalArgumentException(
-                    "baseGame any permits a shared startup scene, title entry or typed mutator catalogue with stock-game decorators; game-specific content is forbidden");
+        if ("any".equals(baseGameId) && (!zones.isEmpty()
+                || !characters.isEmpty() || !romObjectArt.isEmpty()
+                || !launchTeams.isEmpty() || !inputFilters.isEmpty() || !hudProfiles.isEmpty()
+                || !decodedLevelPatches.isEmpty()
+                || explicitPatches.stream().anyMatch(patch -> !List.of("s1", "s2", "s3k").contains(patch.baseGameId())))) {
+            throw new IllegalArgumentException(ModContext.ANY_GAME_RULE);
         }
-        if ("any".equals(baseGameId) && explicitPatches.stream()
-                .anyMatch(patch -> !List.of("s1", "s2", "s3k").contains(patch.baseGameId())))
-            throw new IllegalArgumentException("Shared mutator decorators must target a concrete stock game");
     }
 
     /** Expands a validated shared scene/catalogue without leaking another game's decorators. */

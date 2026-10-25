@@ -101,10 +101,14 @@ pause the race or use the same key press to retry. Typed entry remains available
 in Full Chat lobbies. Both message kinds share the two-second sender cooldown and
 the public relay's existing new-player trust mute.
 
-In the lobby, controller users open **QUICK CHAT** with the normal menu controls,
-select with up/down, confirm to send, and use Back to close. During a race, **click
-the right stick** to open or close the chooser, move that stick **up/down** to
-select, and press the **right trigger** to send. The left stick, D-pad, face
+In the lobby, select **QUICK CHAT** with the normal menu controls. Keyboard
+activation opens the numbered list; controller activation opens an eight-way
+radial menu. During a race, **click the right stick** to open or close the wheel,
+**aim that stick** at a phrase, and press the **right trigger** to send. The wheel
+uses the same aiming and send controls in the lobby; Back also closes it there.
+The center selects nothing, and squeezing the trigger there sends nothing.
+Each wedge has a short caption; the full selected phrase appears below the wheel.
+Keyboard Q/P activation keeps the numbered list. The left stick, D-pad, face
 buttons and Start keep their gameplay duties; the race continues with the chooser
 open. The first connected pad owns the race chooser. Connecting with controls
 held does not act, and disconnecting that pad closes its chooser. Disabling

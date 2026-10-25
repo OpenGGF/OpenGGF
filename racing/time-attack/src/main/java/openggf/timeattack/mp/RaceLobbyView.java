@@ -193,7 +193,8 @@ public final class RaceLobbyView {
                     cues.accept(MenuCue.CONFIRM);
                 }
                 case QUICK_CHAT -> {
-                    quickChat.open();
+                    if (input.controllerAccept()) quickChat.openController(input.physicalInput());
+                    else quickChat.open();
                     cues.accept(MenuCue.CONFIRM);
                 }
                 case CHAT_MODE -> changeChatMode(1);
@@ -355,6 +356,7 @@ public final class RaceLobbyView {
     }
 
     boolean isShowingQuickChat() { return quickChat.isOpen(); }
+    boolean isShowingRadialQuickChat() { return quickChat.isRadial(); }
 
     public void draw(SceneCanvas canvas) {
         reconcileChatMode();

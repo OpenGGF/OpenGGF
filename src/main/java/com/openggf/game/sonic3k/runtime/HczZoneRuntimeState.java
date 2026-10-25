@@ -6,7 +6,7 @@ import com.openggf.game.sonic3k.events.Sonic3kHCZEvents;
 
 import java.util.Objects;
 
-public final class HczZoneRuntimeState implements S3kZoneRuntimeState {
+public final class HczZoneRuntimeState implements S3kZoneRuntimeState, com.openggf.game.internal.DirectedEntryPresentation.Owner {
     private final int actIndex;
     private final PlayerCharacter playerCharacter;
     private final Sonic3kHCZEvents events;
@@ -27,6 +27,10 @@ public final class HczZoneRuntimeState implements S3kZoneRuntimeState {
     /** HCZ1's {@code Events_bg+$16}: the HCZ2 art is queued and act 1's tile animation stops. */
     public boolean act1TransitionArtQueued() {
         return actIndex == 0 && events.isAct1TransitionArtQueued();
+    }
+
+    @Override public boolean readyForDirectedHold() {
+        return actIndex != 1 || events.isDirectedEntrySettled();
     }
 
     /**

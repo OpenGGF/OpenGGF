@@ -109,6 +109,41 @@ class TestModTestKit {
         }
     }
 
+    @Test void suppliedSceneServicesRetainStartupNavigation() throws Exception {
+        Path repository = Files.createDirectories(work.resolve("navigation-mods"));
+        pack(repository, "owner", "", """
+                context.registerStartupScene(() -> new com.openggf.mods.scene.ModScene() {
+                    public void enter(com.openggf.mods.scene.SceneContext ctx) {
+                        ctx.storage().write("launch.txt", ctx.currentLaunch() == null ? "missing" : ctx.currentLaunch().gameId());
+                    }
+                    public void update(com.openggf.mods.scene.SceneContext ctx) {
+                        ctx.storage().write("start.txt", Boolean.toString(ctx.startStockAct(2, 1)));
+                    }
+                    public void draw(com.openggf.mods.scene.SceneContext ctx, com.openggf.mods.scene.SceneCanvas canvas) { }
+                });
+                """);
+        var calls = new ArrayList<String>();
+        var launch = new com.openggf.mods.scene.SceneLaunch("s3k", "sonic", List.of());
+        var navigator = new com.openggf.mods.scene.host.SceneNavigator() {
+            @Override public Runnable prepareStockAct(int zone, int act) {
+                calls.add(zone + ":" + act);
+                return () -> calls.add("started");
+            }
+            @Override public com.openggf.mods.scene.SceneLaunch currentLaunch() { return launch; }
+            @Override public Runnable prepareRelaunch(com.openggf.mods.scene.SceneLaunch next) { return null; }
+        };
+        Path storage = work.resolve("navigation-storage");
+        try (ModTestKit kit = ModTestKit.openTrusted(repository, storage)) {
+            var module = kit.launch(new Sonic3kGameModule(), new GameplayLaunchRequest("s3k", "sonic", List.of()));
+            kit.openScene(module, 320, 224, new com.openggf.mods.scene.host.SceneServices(
+                    null, null, null, null, null, null, null, navigator));
+            assertEquals("s3k", Files.readString(storage.resolve("mods/owner/launch.txt")));
+            kit.tick();
+            assertEquals("true", Files.readString(storage.resolve("mods/owner/start.txt")));
+            assertEquals(List.of("2:1", "started"), calls);
+        }
+    }
+
     @Test void repeatedHeadlessCloseReleasesTheSceneAndItsLibraryExactlyOnce() throws Exception {
         Path repository = Files.createDirectories(work.resolve("lifecycle-mods"));
         pack(repository, "owner", "", """

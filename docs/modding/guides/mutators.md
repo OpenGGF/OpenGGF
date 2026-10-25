@@ -23,11 +23,14 @@ Shared catalogs/providers contain no session settings; two worlds have independe
 requested, admitted and effective graphs.
 
 A shared compiled package may use `baseGame: any` for a typed mutator catalogue.
-Register one concrete `GamePatch` per stock game to provide native title/support
-metadata. The host expands the catalogue into three owned plans, filtering each
-plan's decorators to its concrete game. Such an `any` transaction cannot register
-objects, zones, characters, art overrides or zone-specific gameplay policies.
-Pure shared startup scenes keep their existing bounded registration shape.
+The catalogue can stand alone. It cannot by itself publish objects, object art,
+previews or service bundles. Add a startup scene, title entry or concrete stock-game
+`GamePatch` to give the package a code role; mixed packages may then share those
+contributions while retaining the catalogue. No scene is required for patches.
+The host expands the package into three owned plans, copying shared contributions
+and filtering each plan's patches to its concrete game. Zones, characters, ROM-art
+intake, launch teams, input/HUD policies and decoded level patches always require
+a single base game. Manifest stock overrides remain unavailable to `any` packages.
 
 ```java
 context.registerMutator(new MutatorDefinition(

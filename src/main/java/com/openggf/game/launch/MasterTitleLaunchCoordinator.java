@@ -13,6 +13,7 @@ public class MasterTitleLaunchCoordinator {
     private final LaunchProfileStore profileStore;
     private final LaunchProfileApplier profileApplier;
     private Runnable pendingLaunchCallback;
+    private java.util.Map<com.openggf.configuration.SonicConfiguration, Object> pendingSessionOverrides = java.util.Map.of();
     private Runnable afterStepLaunchCallback;
     private Runnable returnToMasterTitleHandler;
     private Runnable launchFailureHandler;
@@ -34,7 +35,10 @@ public class MasterTitleLaunchCoordinator {
         MasterTitleScreen.GameEntry entry = MasterTitleScreen.GameEntry.fromGameId(selectedGameId);
         if (!programmaticSelection) {
             profileApplier.apply(profileStore.load(entry), entry, profileStore);
+        } else {
+            pendingSessionOverrides.forEach(configService::setSessionOverride);
         }
+        pendingSessionOverrides = java.util.Map.of();
         configService.resolveDisplayAspect();
     }
 
@@ -63,7 +67,13 @@ public class MasterTitleLaunchCoordinator {
         this.pendingLaunchCallback = pendingLaunchCallback;
     }
 
+    /** Session-only settings a programmatic launch applies after the exit clears overrides. */
+    public void setPendingSessionOverrides(java.util.Map<com.openggf.configuration.SonicConfiguration, Object> overrides) {
+        pendingSessionOverrides = java.util.Map.copyOf(overrides);
+    }
+
     public void clearPendingLaunchCallback() {
+        pendingSessionOverrides = java.util.Map.of();
         pendingLaunchCallback = null;
     }
 
@@ -94,6 +104,7 @@ public class MasterTitleLaunchCoordinator {
     }
 
     private void clearCallbacks() {
+        pendingSessionOverrides = java.util.Map.of();
         pendingLaunchCallback = null;
         afterStepLaunchCallback = null;
     }

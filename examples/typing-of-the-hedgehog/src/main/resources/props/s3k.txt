@@ -1,0 +1,10 @@
+# Sonic 3 & Knuckles prop art: name artKey frame. Monitor icons are Ani_Monitor_'s icon frames
+# (General/Sprites/Monitors/Anim - Monitor.asm): 1-up 2, Eggman 3, rings 4, shoes 5, fire shield 6,
+# lightning shield 7, bubble shield 8, invincibility 9.
+monitor_eggman      monitor  3
+monitor_life        monitor  2
+monitor_shoes       monitor  5
+monitor_shield      monitor  6
+monitor_invincible  monitor  9
+monitor_rings       monitor  4
+animal              animal   0

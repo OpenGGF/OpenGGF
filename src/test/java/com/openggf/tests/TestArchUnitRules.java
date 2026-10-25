@@ -822,6 +822,18 @@ class TestArchUnitRules {
                 typeOrNested(origin, entry.getKey()) && entry.getValue().contains(targetSlice));
     }
 
+    private static boolean approvedStageplayNativeSteeringDependency(String origin, String target) {
+        // These numeric/button adapters share policy, not sprite or world ownership.
+        String steering = "com.openggf.sprites.playable.route.NativeRouteSteering";
+        return switch (origin) {
+            case "com.openggf.stageplay.route.StageplayMovementIntent" -> target.equals(steering);
+            case "com.openggf.stageplay.route.StageplayRouteSteering" -> Set.of(
+                    steering, steering + "$Buttons", steering + "$Settings",
+                    steering + "$TravelSpeed", steering + "$EndingAction").contains(target);
+            default -> false;
+        };
+    }
+
     @ArchTest
     static void stageplay_boundaries_have_explicit_owners(JavaClasses classes) {
         assertTrue(authoredStageplayServiceOwner().test(classes.get("com.openggf.mods.code.AuthoredStageplayServices")));
@@ -874,7 +886,8 @@ class TestArchUnitRules {
                     if (stageplayCoreType(origin.getName())) {
                         if (!stageplayCoreType(target.getName())) violations.add(dependency.getDescription());
                     } else if (!"stageplay".equals(targetSlice)
-                            && !approvedStageplayRuntimeDependency(origin.getName(), targetSlice)) {
+                            && !approvedStageplayRuntimeDependency(origin.getName(), targetSlice)
+                            && !approvedStageplayNativeSteeringDependency(origin.getName(), target.getName())) {
                         violations.add(dependency.getDescription());
                     }
                 } else if (originSlice != null && "stageplay".equals(targetSlice)

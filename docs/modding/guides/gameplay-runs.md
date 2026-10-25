@@ -16,8 +16,13 @@ public final class DrillsMod implements GgfMod {
 }
 ```
 
-- One entry per mod. Any patch mod may register one, including `baseGame: any` mods, which
-  may register nothing else but a startup scene and its display width.
+- One entry per mod. Any patch mod may register one, including `baseGame: any` mods.
+  A title entry, startup scene or concrete stock-game patch gives an `any` package a
+  code role that may share objects, object art, previews and service bundles across
+  games, alongside an optional mutator catalogue. Catalogue-only packages cannot
+  publish that runtime content. Per-game patches need no scene; zones, characters,
+  ROM-art intake, launch teams, input/HUD policies and decoded level patches still
+  require a single base game.
 - The entry never replaces a game's title screen. The master title shows **EXTRAS** and a
   chooser for registered entries, including when only one mod contributes an entry.
 - The scene opens without a loaded game, so ROM art (`SceneContext.art().rom()`) is not

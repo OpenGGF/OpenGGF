@@ -86,7 +86,7 @@ class TestModManifestParser {
     }
 
     @Test
-    void anyGameManifestIsConfinedToCompiledScenes() throws Exception {
+    void anyGameManifestNeedsCompiledCodeWithoutStockOverrides() throws Exception {
         String shared = canonicalPatch().replace("baseGame: s2", "baseGame: any")
                 .replace("audioOverrides:\n  12: boss-remix", "audioOverrides: {}")
                 + "entrypoint: com.example.ArcadeMod\n";

@@ -73,6 +73,56 @@ class TestRaceLobbyView {
     }
 
     @Test
+    void controllerActivationUsesTheRadialChooserAndAimedTriggerSends() {
+        ClientRaceSession session = joinedSession();
+        session.onControl(new ControlMessage.ChatModeState("QUICK_CHAT"));
+        RaceLobbyView lobby = view(session, false, null);
+        input.tapDown(lobby::update);
+        input.clear();
+        input.accept = true;
+        input.physical = controllerFrame(true, 0, 0, -1);
+        lobby.update(input);
+        assertTrue(lobby.isShowingRadialQuickChat());
+        RecordingSceneCanvas canvas = new RecordingSceneCanvas(256);
+        lobby.draw(canvas);
+        canvas.assertFillsOnScreen();
+        input.accept = false;
+        input.physical = controllerFrame(false, 1, 0, -1);
+        lobby.update(input);
+        input.physical = controllerFrame(false, 1, 0, 1);
+        lobby.update(input);
+        assertFalse(lobby.isShowingQuickChat());
+        assertEquals(List.of(new ControlMessage.QuickChat("KNOW_THE_WAY")), sent);
+    }
+
+    @Test
+    void keyboardActivationKeepsTheListEvenWhenAPadIsConnected() {
+        ClientRaceSession session = joinedSession();
+        session.onControl(new ControlMessage.ChatModeState("QUICK_CHAT"));
+        RaceLobbyView lobby = view(session, false, null);
+        input.tapDown(lobby::update);
+        input.clear();
+        input.accept = true;
+        input.pressed.add(SceneKeys.ENTER);
+        input.physical = controllerFrame(false, 0, 0, -1);
+        lobby.update(input);
+        assertTrue(lobby.isShowingQuickChat());
+        assertFalse(lobby.isShowingRadialQuickChat());
+        input.tapKey(lobby::update, SceneKeys.DIGIT_8);
+        assertEquals(List.of(new ControlMessage.QuickChat("WELL_PLAYED")), sent);
+    }
+
+    private static com.openggf.control.PhysicalInput controllerFrame(boolean confirm, float x, float y, float rt) {
+        boolean[] buttons = new boolean[15];
+        buttons[com.openggf.control.PhysicalGamepad.BUTTON_X] = confirm;
+        var pad = new com.openggf.control.PhysicalGamepad(0, "Xbox", buttons, new float[] {0, 0, x, y, -1, rt});
+        var events = confirm ? List.of(new com.openggf.control.PhysicalInputEvent(1, 0,
+                com.openggf.control.PhysicalInputEvent.Kind.BUTTON, 0,
+                com.openggf.control.PhysicalGamepad.BUTTON_X, 1)) : List.<com.openggf.control.PhysicalInputEvent>of();
+        return new com.openggf.control.PhysicalInput(0, List.of(), List.of(pad), events, 0);
+    }
+
+    @Test
     void profileRenamesAndRecoloursThroughTheRoomWhileInTheLobby() {
         openggf.timeattack.TimeAttackSettings settings = new openggf.timeattack.TimeAttackSettings();
         settings.setDisplayName("Ray");

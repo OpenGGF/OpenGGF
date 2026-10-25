@@ -1,0 +1,42 @@
+# Typing of the Hedgehog story: one stop per zone, the act that holds the zone's boss, in play
+# order. Format: game zone act code title, where code is the map's short label. Zone and act
+# are the running game's zone registry indices (Sonic1ZoneRegistry, Sonic2ZoneRegistry,
+# Sonic3kZoneRegistry; act 0 is act 1).
+# A stop whose act has no rail in rails/index.txt shows as under construction.
+
+# Sonic the Hedgehog: GHZ3 .. SLZ3 boss acts, Scrap Brain 2's chase, then the Final Zone.
+s1 0 2 GHZ Green Hill
+s1 1 2 MZ Marble
+s1 2 2 SYZ Spring Yard
+s1 3 2 LZ Labyrinth
+s1 4 2 SLZ Star Light
+s1 5 1 SBZ Scrap Brain
+s1 6 0 FZ Final Zone
+
+# Sonic the Hedgehog 2: each zone's last act, Sky Chase, Wing Fortress and the Death Egg.
+s2 0 1 EHZ Emerald Hill
+s2 1 1 CPZ Chemical Plant
+s2 2 1 ARZ Aquatic Ruin
+s2 3 1 CNZ Casino Night
+s2 4 1 HTZ Hill Top
+s2 5 1 MCZ Mystic Cave
+s2 6 1 OOZ Oil Ocean
+s2 7 2 MTZ Metropolis
+s2 8 0 SCZ Sky Chase
+s2 9 0 WFZ Wing Fortress
+s2 10 0 DEZ Death Egg
+
+# Sonic 3 & Knuckles: each zone's act 2 (Sky Sanctuary and the Doomsday have one playable act).
+s3k 0 1 AIZ Angel Island
+s3k 1 1 HCZ Hydrocity
+s3k 2 1 MGZ Marble Garden
+s3k 3 1 CNZ Carnival Night
+s3k 4 1 FBZ Flying Battery
+s3k 5 1 ICZ IceCap
+s3k 6 1 LBZ Launch Base
+s3k 7 1 MHZ Mushroom Hill
+s3k 8 1 SOZ Sandopolis
+s3k 9 1 LRZ Lava Reef
+s3k 10 0 SSZ Sky Sanctuary
+s3k 11 1 DEZ Death Egg
+s3k 12 0 DDZ The Doomsday
