@@ -206,6 +206,7 @@ class TestGameLoopBonusStageOwnership {
         set(loop, "configService", config);
         set(loop, "inputHandler", input);
         set(loop, "levelManager", levels);
+        set(loop, "gameplayMode", TestEnvironment.activeGameplayMode());
         com.openggf.TitleCardLifecycleTestAccess.provider(loop, title);
         set(loop, "playbackDebugManager", playback);
         BonusStageSessionTestAccess.provider(loop, provider);

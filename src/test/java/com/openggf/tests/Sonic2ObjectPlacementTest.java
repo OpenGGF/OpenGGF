@@ -75,6 +75,27 @@ public class Sonic2ObjectPlacementTest {
         assertEquals(0x037A, reader.readU16BE(Sonic2ObjectPlacement.OFF_OBJECTS_REV01 + 2));
     }
 
+    @Test
+    void explicitNativeCompetitionUsesRev01CasinoLayoutsOnly() throws Exception {
+        Sonic2ObjectPlacement placement = new Sonic2ObjectPlacement(RomByteReader.fromRom(GameServices.rom().getRom()));
+        List<ObjectSpawn> first = placement.load(new ZoneAct(12, 0), true);
+        List<ObjectSpawn> second = placement.load(new ZoneAct(12, 1), true);
+        assertEquals(187, first.size());
+        assertEquals(168, second.size());
+        assertEquals(0x40, first.getFirst().x());
+        assertEquals(0x158, first.getFirst().y());
+        assertEquals(0x44, first.getFirst().objectId());
+        assertTrue(first.getFirst().respawnTracked());
+        assertEquals(0x208, second.getFirst().x());
+        assertEquals(0x5f0, second.getFirst().y());
+        assertEquals(0x41, second.getFirst().objectId());
+        assertFalse(second.getFirst().respawnTracked());
+        assertFalse(first.equals(placement.load(new ZoneAct(12, 0))));
+        assertEquals(placement.load(new ZoneAct(0, 0)), placement.load(new ZoneAct(0, 0), true));
+        assertEquals(placement.load(new ZoneAct(11, 0)), placement.load(new ZoneAct(11, 0), true));
+        assertEquals(placement.load(new ZoneAct(12, 0)), placement.load(new ZoneAct(12, 0), false));
+    }
+
     private static void assertFirstSpawn(
             Sonic2ObjectPlacement placement,
             ZoneAct zoneAct,

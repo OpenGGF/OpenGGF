@@ -72,6 +72,7 @@ public final class AudioPresentationProducer {
     private int sourceFrameSamples;
     private int sourceSampleRemainder;
     private boolean forwardSfxTrackStopped;
+    private Boolean forwardNativePauseConsumed;
     private int captureCount;
     private int recordedReplayCount;
     private RecordedReplay activeReplay;
@@ -1175,6 +1176,7 @@ public final class AudioPresentationProducer {
         AudioPresentationCommandResolver.ResolutionBatch requestBatch = null;
         AudioPresentationCommandResolver.AppliedOutcome requestOutcome = null;
         AudioCommandTimeline.PreparedAppend timelineAppend = null;
+        com.openggf.audio.rewind.AudioTimelineInternalAccess.PreparedNativePause nativeAppend = null;
         Runnable parityCommit = null;
         AudioPresentationForwardService.CommittedReceipt requestReceipt = null;
         boolean loadBlocked = smpsSession.blocksForwardRequestConsumption();
@@ -1230,6 +1232,9 @@ public final class AudioPresentationProducer {
             }
             sessionMutation = smpsSession.captureLiveMutation();
             registryMutation = registry.captureLiveMutation();
+            if (forwardBoundary != null && forwardBoundary.nativePauseRequest() != null) {
+                applyResolvedSessionCommand(forwardBoundary.nativePauseRequest());
+            }
             if (!loadBlocked) {
                 commandBatch = commands.capturePendingBatch();
                 commands.applyPendingBatch(commandBatch,
@@ -1241,8 +1246,12 @@ public final class AudioPresentationProducer {
             }
             registry.beginRendering();
             forwardSfxTrackStopped = false;
+            forwardNativePauseConsumed = null;
             short[] pcm = mixSessionForwardAtRate(stereoFrames);
             registry.endRendering();
+            if (forwardBoundary != null && forwardNativePauseConsumed != null) {
+                forwardBoundary.onNativePauseConsumed();
+            }
             if (forwardBoundary != null && forwardSfxTrackStopped) {
                 forwardBoundary.onSfxTrackStop();
             }
@@ -1264,6 +1273,11 @@ public final class AudioPresentationProducer {
             } else if (forwardBoundary != null && forwardResolver != null) {
                 forwardBoundary.prepareCommit();
             }
+            if (forwardBoundary != null && forwardNativePauseConsumed != null && forwardTimeline != null) {
+                nativeAppend = com.openggf.audio.rewind.AudioTimelineInternalAccess.prepareNativePause(
+                        forwardTimeline, forwardNativePauseConsumed, forwardService.snapshot(),
+                        requestBatch == null ? 0 : 1);
+            }
             registry.commitLiveMutation(registryMutation);
             registryCommitted = true;
             smpsSession.commitLiveMutation(sessionMutation);
@@ -1277,6 +1291,12 @@ public final class AudioPresentationProducer {
                 timelineAppend.commit();
                 parityCommit.run();
             }
+            // The native edge records actual service consumption, after the
+            // resolved commands above have reached the session. Setting its
+            // pending latch earlier is not itself a serviced history event.
+            if (nativeAppend != null) nativeAppend.commit();
+            if (forwardTimeline != null) smpsSession.setNativeHistoryCursor(
+                    com.openggf.audio.rewind.AudioTimelineInternalAccess.cursor(forwardTimeline));
             if (forwardBoundary != null) {
                 requestReceipt = forwardBoundary.commit();
                 forwardCommitted = true;
@@ -1434,6 +1454,8 @@ public final class AudioPresentationProducer {
                 sourceSampleRemainder = numerator % frameRate;
                 if (smpsSession != null) {
                     SmpsServiceOutcome outcome = smpsSession.serviceForward();
+                    Boolean nativePause = smpsSession.consumeNativePauseReceipt();
+                    if (nativePause != null) forwardNativePauseConsumed = nativePause;
                     forwardSfxTrackStopped |= smpsSession.sfxTrackStoppedDuringService();
                     if (outcome == SmpsServiceOutcome.GLOBAL_STOP_CONSUMED) {
                         registry.clearForGlobalStopWithoutWrites();

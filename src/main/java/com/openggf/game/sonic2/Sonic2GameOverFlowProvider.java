@@ -27,6 +27,43 @@ import java.util.logging.Logger;
 public final class Sonic2GameOverFlowProvider implements GameOverFlowProvider {
     private static final Logger LOGGER = Logger.getLogger(Sonic2GameOverFlowProvider.class.getName());
 
+    /** Native CheckGameOver writes shared Obj39 slots 2/3, even when already occupied. */
+    public void beginNativeGameOverCard(ObjectServices services, int ownerSlot, boolean timeOver) {
+        if (ownerSlot < 0 || ownerSlot > 1) throw new IllegalArgumentException("Native owner " + ownerSlot);
+        var objects = services.objectManager();
+        if (objects == null) throw new IllegalStateException("Native death card requires its world objects");
+        var previousWord = nativeCardAt(objects, Sonic2Constants.SST_SLOT_GAME_OVER_WORD);
+        var previousOver = nativeCardAt(objects, Sonic2Constants.SST_SLOT_GAME_OVER_OVER);
+        com.openggf.level.objects.ObjectManagerInternalAccess.replaceNativeCompetitionPrefixObject(
+                objects, Sonic2Constants.SST_SLOT_GAME_OVER_WORD,
+                () -> Sonic2GameOverCardObjectInstance.nativeWrite(previousWord,
+                        timeOver ? AbstractGameOverCardObjectInstance.FRAME_TIME : null,
+                        0xB000 + ownerSlot * 0x40));
+        com.openggf.level.objects.ObjectManagerInternalAccess.replaceNativeCompetitionPrefixObject(
+                objects, Sonic2Constants.SST_SLOT_GAME_OVER_OVER,
+                () -> Sonic2GameOverCardObjectInstance.nativeWrite(previousOver,
+                        timeOver ? AbstractGameOverCardObjectInstance.FRAME_OVER_TIME
+                                : AbstractGameOverCardObjectInstance.FRAME_OVER_GAME, null));
+        services.playMusic(Sonic2Music.GAME_OVER.id);
+        Sonic2PlcService plc = services.gameService(Sonic2PlcService.class);
+        if (plc != null) {
+            try {
+                plc.transact(Sonic2PlcService.appendOperation(Sonic2Constants.PLC_GAME_OVER));
+            } catch (IOException | IllegalStateException e) {
+                LOGGER.warning("Unable to queue native PLCID_GameOver: " + e.getMessage());
+            }
+        }
+    }
+
+    private static Sonic2GameOverCardObjectInstance nativeCardAt(
+            com.openggf.level.objects.ObjectManager objects, int slot) {
+        var old = com.openggf.level.objects.NativeSstSlotAccess.currentOwner(objects, slot);
+        if (old == null || old instanceof Sonic2GameOverCardObjectInstance)
+            return (Sonic2GameOverCardObjectInstance) old;
+        throw new IllegalStateException("Native death card cannot project occupied SST " + slot
+                + " from " + old.getClass().getName());
+    }
+
     @Override
     public void beginGameOverCard(ObjectServices services, boolean timeOver) {
         AbstractGameOverCardObjectInstance.spawnPair(

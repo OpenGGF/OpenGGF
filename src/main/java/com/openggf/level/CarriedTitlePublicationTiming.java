@@ -16,7 +16,9 @@ public record CarriedTitlePublicationTiming(
             new CarriedTitlePublicationTiming(false, false, false, 0, 0, false, 0, 0, -1);
 
     public CarriedTitlePublicationTiming {
-        resetAdditionalDispatches = Math.max(0, resetAdditionalDispatches);
+        resetAdditionalDispatches =
+                resetAdditionalDispatches == com.openggf.game.TitleCardResetGates.NATIVE_WAIT_GATE
+                        ? resetAdditionalDispatches : Math.max(0, resetAdditionalDispatches);
         resetPhaseOneDispatchOverlap = Math.max(0, resetPhaseOneDispatchOverlap);
         exitAdditionalDispatches = Math.max(0, exitAdditionalDispatches);
         exitPhaseOneDispatchOverlap = Math.max(0, exitPhaseOneDispatchOverlap);

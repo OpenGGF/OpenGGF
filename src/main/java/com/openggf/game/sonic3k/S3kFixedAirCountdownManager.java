@@ -4,6 +4,7 @@ import com.openggf.game.mutators.PlayerFluidContextAccess;
 import com.openggf.game.GameServices;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.ShieldType;
+import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.objects.S3kAirCountdownObjectInstance;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectManager;
@@ -173,13 +174,19 @@ final class S3kFixedAirCountdownManager {
         }
 
         private void countdown(AbstractPlayableSprite owner) {
+            // AirCountdown_Countdown tests active $30 before routine/shield/water
+            // guards; loc_1857C reasserts anim=$17 on every such fixed-object pass
+            // (sonic3k.asm:33530-33533,33609-33614). The next player pass animates it.
+            if (owner.isDrowningPreDeath()) {
+                owner.setAnimationId(Sonic3kAnimationIds.DROWN);
+                return;
+            }
             if (PlayerFluidContextAccess.breathProtected(owner)) {
                 if (owner.getDrowningController() != null) owner.getDrowningController().replenishAir();
                 return; // Protection precedes native timer/RNG/bubble emission.
             }
             if (!owner.isInWater()
                     || owner.getDead()
-                    || owner.isDrowningPreDeath()
                     || owner.getShieldType() == ShieldType.BUBBLE) {
                 return;
             }
@@ -208,7 +215,11 @@ final class S3kFixedAirCountdownManager {
                     if (drowning != null) {
                         drowning.resetAirTimerFromFixedCountdownDeath();
                     }
-                    owner.applyDrownDeath();
+                    if (owner.applyDrownDeath()) {
+                        // AirCountdown_ReduceAir publishes anim=$17 after
+                        // Player_TouchFloor (sonic3k.asm:33594-33597).
+                        owner.setAnimationId(Sonic3kAnimationIds.DROWN);
+                    }
                     return;
                 }
                 makeItem(owner);

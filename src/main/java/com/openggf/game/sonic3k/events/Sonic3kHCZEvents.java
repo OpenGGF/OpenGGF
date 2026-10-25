@@ -266,6 +266,9 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
     private int carrierP2XVelocity;
     private boolean carrierP1TargetSide;
     private boolean carrierP2TargetSide;
+    /** loc_6A80C stores Camera_X_pos+$A0 in $3A once; sub_6A916 compares against it. */
+    private int carrierP1TargetX;
+    private int carrierP2TargetX;
     private int carrierP1BoundsYOffset;
     private int carrierP2BoundsYOffset;
     /** Child1_Act2LevelSize objects created when Player 1's carrier releases. */
@@ -500,7 +503,7 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
         int x = player.getCentreX();
         int y = player.getCentreY();
         int boundsYOffset = Math.max(0, player.getStandYRadius() - player.getYRadius());
-        int targetX = (camera().getX() & 0xFFFF) + CARRIER_TARGET_CAMERA_OFFSET;
+        int targetX = ((camera().getX() & 0xFFFF) + CARRIER_TARGET_CAMERA_OFFSET) & 0xFFFF;
         boolean targetSide = x < targetX;
         int velocity = initialCarrierXVelocity(x - targetX);
         if (p1) {
@@ -508,12 +511,14 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
             carrierP1YFixed = y << 8;
             carrierP1XVelocity = velocity;
             carrierP1TargetSide = targetSide;
+            carrierP1TargetX = targetX;
             carrierP1BoundsYOffset = boundsYOffset;
         } else {
             carrierP2XFixed = x << 8;
             carrierP2YFixed = y << 8;
             carrierP2XVelocity = velocity;
             carrierP2TargetSide = targetSide;
+            carrierP2TargetX = targetX;
             carrierP2BoundsYOffset = boundsYOffset;
         }
         player.setControlLocked(false);
@@ -540,7 +545,10 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
         int yFixed = p1 ? carrierP1YFixed : carrierP2YFixed;
         int xVelocity = p1 ? carrierP1XVelocity : carrierP2XVelocity;
         boolean previousSide = p1 ? carrierP1TargetSide : carrierP2TargetSide;
-        int targetX = (camera().getX() & 0xFFFF) + CARRIER_TARGET_CAMERA_OFFSET;
+        // sub_6A916 compares x_pos with $3A(a0), written once by loc_6A80C
+        // (sonic3k.asm:140097, 140182). Later camera motion
+        // does not move the swing centre.
+        int targetX = p1 ? carrierP1TargetX : carrierP2TargetX;
         int x = xFixed >> 8;
         boolean currentSide = x < targetX;
         int acceleration = currentSide ? CARRIER_X_ACCELERATION : -CARRIER_X_ACCELERATION;
@@ -912,12 +920,11 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
                         // itself does not create a separate title owner.
                         .showInLevelTitleCard(false)
                         .resetLevelGamestateAtInLevelTitleCardDisplay(true)
-                        // The carried Obj_LevelResults parent becomes
-                        // Obj_TitleCard before its four children receive their
-                        // native create/render dispatches. The retained owner
-                        // reaches Obj_TitleCardWait's reset on its next title
-                        // dispatch.
-                        .inLevelTitleCardResetAdditionalDispatches(0)
+                        // loc_2DD06 retains the parent SST. Obj_TitleCardWait
+                        // must consume the real higher-slot children's $34
+                        // movement latch, not an overlay dispatch countdown.
+                        .inLevelTitleCardResetAdditionalDispatches(
+                                com.openggf.game.TitleCardResetGates.NATIVE_WAIT_GATE)
                         .lockPlayerControlForInLevelTitleCard(true)
                         .inLevelTitleCardExitAdditionalDispatches(0)
                         // ROM subtracts $3600 from the live camera and its
@@ -925,6 +932,11 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
                         .preserveOffsetCameraPosition(true)
                         .postTransitionMinX(postTransitionMinX)
                         .postTransitionMaxX(postTransitionMaxX)
+                        // Change_Act2Sizes stores the real HCZ2 sizes but skips
+                        // applying X bounds. Keep both easing targets locked until
+                        // loc_6A8AE creates the retained level-size children.
+                        .postTransitionMinXTarget(postTransitionMinX)
+                        .postTransitionMaxXTarget(postTransitionMaxX)
                         .postTransitionMinY(postTransitionMinY)
                         .postTransitionMaxY(postTransitionMaxY)
                         .postTransitionMaxYTarget(postTransitionMaxYTarget)
@@ -1015,6 +1027,25 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
                 // Normal deformation — scroll handler handles everything
             }
         }
+    }
+
+    /** Rebind only after ObjectManager has recreated and restored its dynamic actors. */
+    public void reconcileWallAfterRewindRestore() {
+        if (act2BgRoutine != BG_WALL_MOVE) {
+            wallObject = null;
+            return;
+        }
+        // act2BgInit is this owner's sole wall allocation. Native Obj_HCZ2Wall
+        // reads live Events_bg on each update (sonic3k.asm:106277); a cached
+        // pre-restore actor cannot receive the event's next ordinary write.
+        var objects = Objects.requireNonNull(levelManager().getObjectManager(),
+                "HCZ wall rewind requires the restored object manager");
+        var walls = objects.activeObjectsOfType(HCZ2WallObjectInstance.class);
+        if (walls.size() > 1) {
+            throw new IllegalStateException("Ambiguous restored HCZ2 wall ownership: " + walls.size());
+        }
+        // AllocateObject can fail: no captured wall means no replacement is created here.
+        wallObject = walls.isEmpty() ? null : walls.getFirst();
     }
 
     /**
@@ -1453,6 +1484,10 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
     public void    setCarrierP1TargetSide(boolean v){ carrierP1TargetSide = v; }
     public boolean isCarrierP2TargetSide()          { return carrierP2TargetSide; }
     public void    setCarrierP2TargetSide(boolean v){ carrierP2TargetSide = v; }
+    public int     getCarrierP1TargetX()            { return carrierP1TargetX; }
+    public void    setCarrierP1TargetX(int v)       { carrierP1TargetX = v; }
+    public int     getCarrierP2TargetX()            { return carrierP2TargetX; }
+    public void    setCarrierP2TargetX(int v)       { carrierP2TargetX = v; }
     public boolean isCarrierMovementPending()       { return carrierMovementPending; }
     public void    setCarrierMovementPending(boolean v){ carrierMovementPending = v; }
     public int     getCarrierP1BoundsYOffset()      { return carrierP1BoundsYOffset; }

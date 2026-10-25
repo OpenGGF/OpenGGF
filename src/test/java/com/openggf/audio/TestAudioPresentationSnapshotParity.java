@@ -1,6 +1,7 @@
 package com.openggf.audio;
 
 import com.openggf.audio.presentation.AudioPresentationSnapshot;
+import com.openggf.audio.presentation.AudioPresentationProducer;
 import com.openggf.audio.presentation.AudioPresentationSourceFactory;
 import com.openggf.audio.presentation.AudioPresentationCommand;
 import com.openggf.audio.presentation.AudioPresentationDependencyResolver;
@@ -149,23 +150,51 @@ class TestAudioPresentationSnapshotParity {
     }
 
     @Test
-    void replayAfterPreparationReplacesMetadataButRetainsAPreparation() {
+    void replayAfterPreparationDiscardsOldPreparationAndReleaseRestoresReplayedTarget() {
         AudioLogicalSnapshot a = prepareHeldFlagTarget();
         AudioLogicalSnapshot live = audio.captureLogicalSnapshot();
         var before = audio.releaseStateForTesting().producer();
+        int publications = audio.logicalRestorePublicationsForTesting();
+        assertTrue(AudioManagerTestDiagnostics.reversePreparationAcknowledged(audio));
+        assertNotEquals(0L, before.selectedRestoreIdentity().token());
+        assertNotEquals(0L, before.selectedRestoreResolverIdentity().token());
+        assertNotEquals(0L, before.preparedSelectedRestoreIdentity().token());
         audio.replayTimelineCommandLogically(new AudioCommand.SetSpeedMultiplier(5));
         AudioLogicalSnapshot replayed = audio.deferredReverseLogicalSnapshotForTesting();
 
         assertNotEquals(a, replayed);
         assertEquals(5, replayed.presentation().speedMultiplier());
         assertEquals(a.commandEntryCount(), replayed.commandEntryCount());
-        assertTrue(AudioManagerTestDiagnostics.reversePreparationAcknowledged(audio));
-        assertProducerStateExactly(before, audio.releaseStateForTesting().producer(),
-                "detached replay borrows and restores the live session");
+        assertFalse(AudioManagerTestDiagnostics.reversePreparationAcknowledged(audio));
+        var absent = new AudioPresentationProducer.IdentityFingerprint(0L);
+        assertEquals(new AudioPresentationProducer.TransactionFingerprint(
+                        before.clock(), before.history(), before.smpsSessionIdentity(),
+                        before.voiceIdentities(), before.reverseCursor(),
+                        absent, absent, absent,
+                        before.releaseCrossfadeRemaining(), before.lastReverseLeft(),
+                        before.lastReverseRight(), before.historyArmed(), before.reverseActive(),
+                        before.reverseFrameOutput(), before.hasLastReverseFrame(),
+                        before.captureCount(), before.forwardTiming()),
+                audio.releaseStateForTesting().producer(),
+                "detached replay restores every live producer field and discards only the old selection");
         assertDeepSnapshotEquals(live, audio.captureLogicalSnapshot());
+        assertEquals(publications, audio.logicalRestorePublicationsForTesting());
         assertTrue(audio.endReverseAudioPresentation());
-        assertDeepSnapshotEquals(a.presentation(), audio.captureLogicalSnapshot().presentation());
+
+        AudioLogicalSnapshot published = audio.captureLogicalSnapshot();
+        assertDeepSnapshotEquals(replayed.presentation(), published.presentation());
+        assertNotEquals(a.presentation().speedMultiplier(), published.presentation().speedMultiplier());
+        assertEquals(replayed.ringLeft(), published.ringLeft());
+        assertEquals(live.commandEntryCount(), published.commandEntryCount());
         assertEquals(replayed.commandTimelineFrame(), audio.commandTimeline().currentFrame());
+        assertEquals(replayed.commandTimelineNextOrder(), audio.commandTimeline().nextOrder());
+        assertEquals(publications + 1, audio.logicalRestorePublicationsForTesting());
+        assertNull(audio.deferredReverseLogicalSnapshotForTesting());
+        assertFalse(AudioManagerTestDiagnostics.reversePreparationAcknowledged(audio));
+        var released = audio.releaseStateForTesting().producer();
+        assertEquals(0L, released.selectedRestoreIdentity().token());
+        assertEquals(0L, released.selectedRestoreResolverIdentity().token());
+        assertEquals(0L, released.preparedSelectedRestoreIdentity().token());
     }
 
     @Test
@@ -250,7 +279,7 @@ class TestAudioPresentationSnapshotParity {
     }
 
     @Test
-    void eagerAndHeldShareCounterButOnlyEagerRestoresOptionalForwardService() {
+    void eagerAndHeldRestoreSelectedOptionalForwardServiceAndSharePublicationCounter() {
         AudioRequestService service = mock(AudioRequestService.class);
         var selectedService = mock(AudioPresentationForwardService.Snapshot.class);
         var liveService = mock(AudioPresentationForwardService.Snapshot.class);
@@ -273,9 +302,15 @@ class TestAudioPresentationSnapshotParity {
         current.set(liveService);
         audio.beginReverseAudioPresentation();
         audio.restoreLogicalSnapshot(selected);
-        assertTrue(audio.endReverseAudioPresentation());
-        verify(service, times(1)).restore(any());
+        assertSame(selected, audio.deferredReverseLogicalSnapshotForTesting());
+        assertSame(liveService, current.get());
         assertSame(liveService, audio.captureLogicalSnapshot().forwardServiceSnapshot());
+        assertEquals(before + 1, audio.logicalRestorePublicationsForTesting());
+        assertTrue(audio.endReverseAudioPresentation());
+        verify(service, times(2)).restore(same(selectedService));
+        verify(service, times(2)).restore(any());
+        assertSame(selectedService, current.get());
+        assertSame(selectedService, audio.captureLogicalSnapshot().forwardServiceSnapshot());
         assertEquals(before + 2, audio.logicalRestorePublicationsForTesting());
         assertDeepSnapshotEquals(selected.presentation(), audio.captureLogicalSnapshot().presentation());
     }

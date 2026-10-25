@@ -117,6 +117,28 @@ public class Sonic2ZoneFeatureProvider implements ZoneFeatureProvider {
 
     @Override
     public void initZoneFeatures(Rom rom, int zoneIndex, int actIndex, int cameraX) throws IOException {
+        initializeZoneFeatures(rom, zoneIndex, actIndex, cameraX, true);
+    }
+
+    void initNativeCompetitionFeatures(com.openggf.game.session.GameplayModeContext context,
+            com.openggf.game.competition.NativeCompetitionRoster roster,
+            Rom rom, int zoneIndex, int actIndex, int cameraX) throws IOException {
+        java.util.Objects.requireNonNull(context, "native context");
+        java.util.Objects.requireNonNull(roster, "native roster");
+        java.util.Objects.requireNonNull(rom, "native ROM");
+        if (!com.openggf.game.sonic2.competition.Sonic2CompetitionLevelProfile.supportsZone(zoneIndex)
+                || actIndex < 0 || actIndex > 1
+                || com.openggf.game.competition.NativeCompetitionRoster.from(context.getWorldSession()) != roster
+                || context.getWorldSession().getGameModule().getZoneFeatureProvider() != this
+                || roster.player(0) == null || roster.player(1) == null || roster.player(0) == roster.player(1)
+                || roster.player(0).isCpuControlled() || roster.player(1).isCpuControlled()) {
+            throw new IllegalArgumentException("Native features require this active two-human competition world");
+        }
+        initializeZoneFeatures(rom, zoneIndex, actIndex, cameraX, false);
+    }
+
+    private void initializeZoneFeatures(Rom rom, int zoneIndex, int actIndex, int cameraX,
+            boolean initializeOrdinaryBumpers) throws IOException {
         // Only reinitialize if zone/act changed
         if (zoneIndex == currentZone && actIndex == currentAct) {
             return;
@@ -128,7 +150,7 @@ public class Sonic2ZoneFeatureProvider implements ZoneFeatureProvider {
 
         // Initialize CNZ features (ROM zone ID 0x0C)
         if (zoneIndex == Sonic2ZoneConstants.ROM_ZONE_CNZ) {
-            initCNZBumpers(rom, actIndex, cameraX);
+            if (initializeOrdinaryBumpers) initCNZBumpers(rom, actIndex, cameraX);
             initCNZSlotMachine(rom);
         }
 

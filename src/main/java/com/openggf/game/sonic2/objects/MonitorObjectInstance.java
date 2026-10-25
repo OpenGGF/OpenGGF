@@ -9,6 +9,8 @@ import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.sonic2.constants.Sonic2AudioConstants;
+import com.openggf.game.sonic2.competition.Sonic2CompetitionMonitorContents;
+import com.openggf.game.sonic2.competition.Sonic2CompetitionObjectAccess;
 
 import com.openggf.level.objects.AbstractMonitorObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
@@ -119,7 +121,8 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
             effectApplied = true;
         }
 
-        int initialAnim = type.id;
+        // Obj26_Init uses the question shell in 2P; Obj2E selects the item later.
+        int initialAnim = Sonic2CompetitionObjectAccess.session(services()) != null ? 9 : type.id;
         int initialFrame = broken ? BROKEN_FRAME : 0;
         ObjectRenderManager renderManager = services().renderManager();
         this.animationState = new ObjectAnimationState(
@@ -229,9 +232,10 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
         // / tst.w (Two_player_mode).w / beq return. A CPU sidekick can knock a
         // monitor down from below (handled above) but cannot break it in
         // single-player mode — only the lead character, or a human-controlled
-        // player in 2P/competition mode, may. 2P mode is unimplemented, so the
-        // sidekick is always blocked here. (s2.asm:85337-85340; S1/S3K match.)
-        if (isSidekick(player)) {
+        // player in native 2P mode, may. Preserve the ordinary follower denial.
+        // Touch_Monitor (s2.asm:85463-85473) tests native mode before Roll.
+        int nativeSlot = Sonic2CompetitionObjectAccess.slot(services(), player);
+        if (isSidekick(player) && nativeSlot < 0) {
             lastTouchBranch = "sidekick-no-break";
             return;
         }
@@ -276,23 +280,33 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
         releaseTouchingCharactersOnBreak(objectManager, player);
         player.setYSpeed((short) -player.getYSpeed());
         mappingFrame = BROKEN_FRAME;
-        MonitorContentsObjectInstance contents = spawnFreeChild(() -> new MonitorContentsObjectInstance(
-                spawn.x(), spawn.y(), type.id, player));
-        if (contents.getSlotIndex() >= 0
-                && getSlotIndex() >= 0
-                && contents.getSlotIndex() < getSlotIndex()) {
-            contents.delayFirstIconUpdateForPassedSlot();
+        if (nativeSlot >= 0) {
+            Sonic2CompetitionMonitorContents contents = spawnFreeChild(() -> new Sonic2CompetitionMonitorContents(
+                    spawn.x(), currentY, nativeSlot, player));
+            if (contents.getSlotIndex() >= 0 && getSlotIndex() >= 0
+                    && contents.getSlotIndex() < getSlotIndex()) {
+                contents.delayFirstIconUpdateForPassedSlot();
+            }
+        } else {
+            MonitorContentsObjectInstance contents = spawnFreeChild(() -> new MonitorContentsObjectInstance(
+                    spawn.x(), spawn.y(), type.id, player));
+            if (contents.getSlotIndex() >= 0
+                    && getSlotIndex() >= 0
+                    && contents.getSlotIndex() < getSlotIndex()) {
+                contents.delayFirstIconUpdateForPassedSlot();
+            }
         }
 
         ObjectRenderManager renderManager = services().renderManager();
         if (renderManager != null) {
+            int explosionY = nativeSlot >= 0 ? currentY : spawn.y();
             // ROM Obj26_SpawnSmoke allocates the explosion and gives it
             // routine 2, so its first execution runs Obj27_Init and that
             // routine plays SndID_Explosion (docs/s2disasm/s2.asm:25702-25707,
             // :46717-46734). The sound therefore belongs to the explosion's
             // own pass, not to the touch that broke the monitor.
             ExplosionObjectInstance explosion = spawnFreeChild(() ->
-                    new ExplosionObjectInstance(0x27, spawn.x(), spawn.y(), renderManager,
+                    new ExplosionObjectInstance(0x27, spawn.x(), explosionY, renderManager,
                             Sonic2Sfx.EXPLOSION.id));
             if (explosion.getSlotIndex() >= 0
                     && getSlotIndex() >= 0
@@ -387,7 +401,7 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
         if (player == null) {
             return true;
         }
-        if (isSidekick(player)) {
+        if (isSidekick(player) && Sonic2CompetitionObjectAccess.slot(services(), player) < 0) {
             // S2 one-player mode: SolidObject_Monitor_Tails always branches to
             // SolidObject_cont before checking roll anim (docs/s2disasm/s2.asm:25459-25466).
             return true;
@@ -629,7 +643,7 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
     }
 
     private boolean isSidekick(AbstractPlayableSprite player) {
-        return player.isCpuControlled();
+        return player.isCpuControlled() || Sonic2CompetitionObjectAccess.slot(services(), player) == 1;
     }
 
     @Override

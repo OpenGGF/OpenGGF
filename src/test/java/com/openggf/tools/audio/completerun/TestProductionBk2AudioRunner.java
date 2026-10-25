@@ -9,6 +9,7 @@ import com.openggf.audio.NullAudioBackend;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
+import com.openggf.control.RecordedInputOwnership;
 import com.openggf.data.RomManager;
 import com.openggf.debug.DebugOverlayManager;
 import com.openggf.debug.PerformanceProfiler;
@@ -125,6 +126,7 @@ class TestProductionBk2AudioRunner {
                 results.get(1).preRow().logicalSnapshot());
         assertTrue(input.hasLogicalOverride(),
                 "the outer runner, not the row driver, owns final cleanup");
+        assertFalse(RecordedInputOwnership.active(input), "the row's ownership must be released");
     }
 
     @Test
@@ -165,6 +167,7 @@ class TestProductionBk2AudioRunner {
             assertTrue(failure.getMessage().contains("input handler identity"));
             assertEquals(List.of("step-0"), order);
             assertEquals(0, cursor.absoluteFrame());
+            assertFalse(RecordedInputOwnership.active(input));
         }
     }
 
@@ -332,6 +335,7 @@ class TestProductionBk2AudioRunner {
         public void step() {
             assertSame(expectedInput, getInputHandler());
             assertTrue(expectedInput.hasLogicalOverride());
+            assertTrue(RecordedInputOwnership.active(expectedInput));
             order.add("step-" + step);
             audio.playMusic(0x81 + step);
             if (replaceInputDuringStep) {
@@ -342,6 +346,7 @@ class TestProductionBk2AudioRunner {
         @Override
         public void presentOuterFrame(
                 boolean modalPicker, boolean frameStepRequested) {
+            assertFalse(RecordedInputOwnership.active(expectedInput));
             order.add("present-" + step);
             step++;
         }

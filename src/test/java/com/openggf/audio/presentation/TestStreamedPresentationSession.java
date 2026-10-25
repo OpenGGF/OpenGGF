@@ -101,6 +101,13 @@ class TestStreamedPresentationSession {
 
         assertTrue(first.isComplete());
         assertTrue(second.isComplete());
+        assertThrows(IllegalStateException.class, first::snapshot);
+        assertThrows(IllegalStateException.class, second::snapshot);
+        first.stop();
+        second.stop();
+        first.stop();
+        fixture.session.detach();
+        assertEquals(0, fixture.session.trackedCursorCount());
         assertEquals(1, fixture.port.closeCount);
         assertEquals(stopsBeforeDetach + 1, fixture.port.stopCount,
                 "session retirement stops the physical cursor once");

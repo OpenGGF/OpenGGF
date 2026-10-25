@@ -1,5 +1,7 @@
 package com.openggf.game.sonic1.scroll;
 
+import com.openggf.game.internal.CheckpointBackgroundScroll;
+
 import com.openggf.level.scroll.AbstractZoneScrollHandler;
 import com.openggf.level.scroll.ScrollProjectionContext;
 import com.openggf.level.scroll.ScrollProjectionPhase;
@@ -32,7 +34,7 @@ import static com.openggf.level.scroll.M68KMath.*;
  * <p>The main Deform_SLZ routine tiles this 68-entry buffer across the screen
  * at 16-line intervals, indexed by the BG Y scroll position.
  */
-public class SwScrlSlz extends AbstractZoneScrollHandler implements ScrollProjectionSource {
+public class SwScrlSlz extends AbstractZoneScrollHandler implements Sonic1CheckpointScrollHandler, ScrollProjectionSource {
 
     private static final int SCROLL_BUFFER_SIZE = 68;
     private static final int LINES_PER_GROUP = 16;
@@ -51,13 +53,18 @@ public class SwScrlSlz extends AbstractZoneScrollHandler implements ScrollProjec
     private final ScrollEffectComposer composer = new ScrollEffectComposer();
 
     public void init(int cameraX, int cameraY) {
-        // BgScrollSpeed sets bgscreenposx = screenposx
-        bgXPos = (long) cameraX << 16;
+        // BgScroll_SLZ REV01 clears bgscreenposx after the common seed.
+        bgXPos = 0;
         // BgScroll_SLZ: bgscreenposy = screenposy / 2 + 0xC0
         bgYPos = (long) ((cameraY >> 1) + 0xC0) << 16;
         lastCameraX = cameraX;
         lastCameraY = cameraY;
         initialized = true;
+    }
+
+    @Override
+    public void init(int actId, int cameraX, int cameraY) {
+        init(cameraX, cameraY);
     }
 
     @Override
@@ -212,4 +219,39 @@ public class SwScrlSlz extends AbstractZoneScrollHandler implements ScrollProjec
     };
     }
 
+
+    @Override
+    public Object captureRewindState() {
+        return new State(
+                bgXPos, bgYPos, lastCameraX, lastCameraY, initialized, vscrollFactorBG, minScrollOffset,
+                maxScrollOffset);
+    }
+
+    @Override
+    public void restoreRewindState(Object state) {
+        if (state instanceof State saved) {
+            bgXPos = saved.bgXPos;
+            bgYPos = saved.bgYPos;
+            lastCameraX = saved.lastCameraX;
+            lastCameraY = saved.lastCameraY;
+            initialized = saved.initialized;
+            vscrollFactorBG = saved.vscrollFactorBG;
+            minScrollOffset = saved.minScrollOffset;
+            maxScrollOffset = saved.maxScrollOffset;
+        }
+    }
+
+    private record State(
+                long bgXPos, long bgYPos, int lastCameraX, int lastCameraY, boolean initialized,
+                short vscrollFactorBG, int minScrollOffset, int maxScrollOffset) { }
+
+    @Override
+    public CheckpointBackgroundScroll captureBackgroundScroll() {
+        return new CheckpointBackgroundScroll((int) (bgXPos >> 16), (int) (bgYPos >> 16), 0, 0, 0, 0);
+    }
+
+    @Override
+    public void restoreBackgroundScroll(CheckpointBackgroundScroll state) {
+        // BgScroll_SLZ REV01 clears X and replaces Y even on lamppost entry.
+    }
 }

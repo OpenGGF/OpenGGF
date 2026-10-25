@@ -219,4 +219,176 @@ class TestScopedUnderwaterPaletteFade {
             rgbaBytes.duplicate().get(lastUpload);
         }
     }
+
+    @Test
+    void blackRevealComposesSourceLineShadowAndAppearanceAndRestoresBothWhenDrawingThrows() {
+        var nativeWhite = palette(255, 255, 255);
+        var look = palette(255, 0, 0);
+        var normal = palette(255, 255, 255);
+        Palette[] water = {palette(255, 255, 255), palette(255, 255, 255),
+                palette(255, 255, 255), palette(255, 255, 255)};
+        byte[] nativeBytes = paletteRgb(nativeWhite);
+        byte[] lookBytes = paletteRgb(look);
+        graphics.setDisplayColorProfile(com.openggf.graphics.color.DisplayColorProfile.RAW_RGB);
+        graphics.setDisplayColorExpansion(com.openggf.graphics.color.DisplayColorExpansion.LIMITED);
+        graphics.cachePaletteTexture(nativeWhite, 2);
+        Object bankOwner = new Object();
+        var bank = ScopedPaletteGraphicsAccess.acquire(graphics, bankOwner,
+                new PaletteView[]{NativeIntensityPalette.shadow(nativeWhite, 2),
+                        nativeWhite, nativeWhite, nativeWhite});
+        var appearance = AppearancePalettes.acquire(graphics, null, 2, nativeWhite, true, look, 1 << 1);
+        assertNotNull(appearance);
+        try {
+            int shadowLine = ScopedPaletteGraphicsAccess.base(bank, graphics, bankOwner);
+            int appearanceLine = appearance.context().getPaletteLineBase() + 2;
+            assertTrue(shadowLine >= 4);
+            assertTrue(appearanceLine >= 4);
+            assertNotEquals(shadowLine, appearanceLine);
+            graphics.setPaletteFadePresentation(PaletteFadePresentation.Mode.TO_BLACK, 1, 1 << 2);
+            graphics.cacheUnderwaterPaletteTexture(water, normal);
+            // One native red decrement leaves CRAM channels (6,7,7). Shadow DAC
+            // codes use 17*n in Limited; the appearance uses normal 34*n.
+            assertUploadedColour(shadowLine, 102, 119, 119);
+            assertUploadedColour(appearanceLine, 204, 0, 0);
+            assertUploadedColour(0, 238, 238, 238);
+            byte[] fadedUpload = uploads.lastUpload.clone();
+            PaletteUploadPresentation.publishAndLatch(graphics);
+
+            water[0].setColor(1, color(255, 0, 0));
+            graphics.clearPaletteFadePresentation();
+            graphics.cacheUnderwaterPaletteTexture(water, normal);
+            var savedFade = PaletteUploadPresentation.captureDisplayedFade(graphics);
+            assertEquals(1 << 2, savedFade.lineMask());
+            assertTrue(savedFade.pending());
+            var failure = new IllegalStateException("recipe draw failed");
+            assertSame(failure, assertThrows(IllegalStateException.class,
+                    () -> PaletteUploadPresentation.withoutDisplayedFade(graphics, () -> {
+                        assertUploadedColour(shadowLine, 119, 119, 119);
+                        assertUploadedColour(appearanceLine, 238, 0, 0);
+                        assertUploadedColour(0, 238, 238, 238,
+                                "the pending native red write is not a draw-only input");
+                        assertEquals(PaletteFadePresentation.Mode.NONE,
+                                PaletteUploadPresentation.captureDisplayedFade(graphics).mode());
+                        assertSame(water, graphics.paletteTextures().pendingUnderwaterPalettes());
+                        assertArrayEquals(nativeBytes, paletteRgb(nativeWhite));
+                        assertArrayEquals(lookBytes, paletteRgb(look));
+                        throw failure;
+                    })));
+
+            assertArrayEquals(fadedUpload, uploads.lastUpload, "finally restores every composed row");
+            assertEquals(savedFade, PaletteUploadPresentation.captureDisplayedFade(graphics));
+            assertSame(water, graphics.paletteTextures().pendingUnderwaterPalettes());
+            assertSame(normal, graphics.paletteTextures().pendingUnderwaterLine0());
+            assertEquals(PaletteFadePresentation.Mode.NONE, graphics.getPaletteFadePresentation().mode());
+            assertArrayEquals(nativeBytes, paletteRgb(nativeWhite), "native CRAM bytes never acquire a recipe");
+            assertArrayEquals(lookBytes, paletteRgb(look), "appearance colours stay unfaded");
+            assertEquals(com.openggf.graphics.color.DisplayColorProfile.RAW_RGB, graphics.getDisplayColorProfile());
+            assertEquals(com.openggf.graphics.color.DisplayColorExpansion.LIMITED, graphics.getDisplayColorExpansion());
+            PaletteUploadPresentation.publishAndLatch(graphics);
+            assertUploadedColour(0, 238, 0, 0);
+            assertUploadedColour(shadowLine, 119, 0, 0);
+            assertUploadedColour(appearanceLine, 238, 0, 0);
+        } finally {
+            appearance.release();
+            ScopedPaletteGraphicsAccess.release(bank, bankOwner);
+        }
+        assertFalse(ScopedPaletteGraphicsAccess.valid(bank, graphics, bankOwner));
+        assertNull(appearance.context());
+    }
+
+    @Test
+    void nativeShadowIsAppliedAfterNonNeutralWaterComposition() {
+        var white = palette(255, 255, 255);
+        graphics.setDisplayColorProfile(com.openggf.graphics.color.DisplayColorProfile.RAW_RGB);
+        graphics.setDisplayColorExpansion(com.openggf.graphics.color.DisplayColorExpansion.LIMITED);
+        Object owner = new Object();
+        var bank = ScopedPaletteGraphicsAccess.acquire(graphics, owner, new PaletteView[]{
+                NativeIntensityPalette.shadow(white, 2), white, white, white});
+        try {
+            int line = ScopedPaletteGraphicsAccess.base(bank, graphics, owner);
+            graphics.cacheUnderwaterPaletteTexture(new Palette[]{palette(145, 73, 0),
+                    white, white, white}, white);
+            // Composed water lands in CRAM codes (4,2,0); shadow selects DAC
+            // codes (4,2,0), giving (68,34,0), rather than scaling displayed RGB.
+            assertUploadedColour(line, 68, 34, 0);
+            assertEquals(0, Byte.toUnsignedInt(uploads.lastUpload[line * 16 * 4 + 3]));
+            assertEquals(255, Byte.toUnsignedInt(white.red(1)), "the recipe never rewrites native colours");
+        } finally {
+            ScopedPaletteGraphicsAccess.release(bank, owner);
+        }
+    }
+
+    @Test
+    void identicalRgbCannotReuseNormalOrDifferentSourceLineShadowRows() {
+        var white = palette(255, 255, 255);
+        var black = palette(0, 0, 0);
+        Palette[] water = {white, white, white, white};
+        graphics.setDisplayColorProfile(com.openggf.graphics.color.DisplayColorProfile.RAW_RGB);
+        graphics.setDisplayColorExpansion(com.openggf.graphics.color.DisplayColorExpansion.LIMITED);
+        Object owner = new Object();
+        var bank = ScopedPaletteGraphicsAccess.acquire(graphics, owner,
+                new PaletteView[]{white, white, white, white});
+        try {
+            int line = ScopedPaletteGraphicsAccess.base(bank, graphics, owner);
+            graphics.cacheUnderwaterPaletteTexture(water, white);
+            assertUploadedColour(line, 238, 238, 238);
+            var shadow = ScopedPaletteGraphicsAccess.acquire(graphics, owner, new PaletteView[]{
+                    NativeIntensityPalette.shadow(white, 2), white, white, white});
+            assertEquals(line, ScopedPaletteGraphicsAccess.base(shadow, graphics, owner));
+            graphics.cacheUnderwaterPaletteTexture(water, white);
+            assertUploadedColour(line, 119, 119, 119,
+                    "equal raw RGB must not reuse the normal-intensity derived row");
+
+            graphics.setPaletteFadePresentation(PaletteFadePresentation.Mode.TO_WHITE, 1, 1 << 2);
+            ScopedPaletteGraphicsAccess.acquire(graphics, owner, new PaletteView[]{
+                    NativeIntensityPalette.shadow(black, 2), white, white, white});
+            graphics.cacheUnderwaterPaletteTexture(water, white);
+            assertUploadedColour(line, 17, 0, 0);
+            ScopedPaletteGraphicsAccess.acquire(graphics, owner, new PaletteView[]{
+                    NativeIntensityPalette.shadow(black, 1), white, white, white});
+            graphics.cacheUnderwaterPaletteTexture(water, white);
+            assertUploadedColour(line, 0, 0, 0,
+                    "equal raw RGB with another native fade line must invalidate residency");
+        } finally {
+            ScopedPaletteGraphicsAccess.release(bank, owner);
+        }
+    }
+
+    @Test
+    void directScopedShadowKeepsItsNativeFadeLineAndTransparentColour() {
+        var white = palette(255, 255, 255);
+        graphics.setDisplayColorProfile(com.openggf.graphics.color.DisplayColorProfile.RAW_RGB);
+        graphics.setDisplayColorExpansion(com.openggf.graphics.color.DisplayColorExpansion.LIMITED);
+        Object owner = new Object();
+        var bank = ScopedPaletteGraphicsAccess.acquire(graphics, owner, new PaletteView[]{
+                NativeIntensityPalette.shadow(white, 2), white, white, white});
+        try {
+            int line = ScopedPaletteGraphicsAccess.base(bank, graphics, owner);
+            graphics.setPaletteFadePresentation(PaletteFadePresentation.Mode.TO_BLACK, 1, 1 << 2);
+            graphics.cacheUnderwaterPaletteTexture(new Palette[]{white, white, white, white}, null);
+            assertUploadedColour(line, 102, 119, 119);
+            assertEquals(0, Byte.toUnsignedInt(uploads.lastUpload[line * 16 * 4 + 3]));
+        } finally {
+            ScopedPaletteGraphicsAccess.release(bank, owner);
+        }
+    }
+
+    private void assertUploadedColour(int line, int red, int green, int blue, String message) {
+        int offset = (line * 16 + 1) * 4;
+        assertArrayEquals(new int[]{red, green, blue, 255}, new int[]{
+                Byte.toUnsignedInt(uploads.lastUpload[offset]),
+                Byte.toUnsignedInt(uploads.lastUpload[offset + 1]),
+                Byte.toUnsignedInt(uploads.lastUpload[offset + 2]),
+                Byte.toUnsignedInt(uploads.lastUpload[offset + 3])}, message);
+    }
+
+    private static byte[] paletteRgb(PaletteView palette) {
+        byte[] bytes = new byte[16 * 3];
+        for (int i = 0; i < 16; i++) {
+            bytes[i * 3] = palette.red(i);
+            bytes[i * 3 + 1] = palette.green(i);
+            bytes[i * 3 + 2] = palette.blue(i);
+        }
+        return bytes;
+    }
 }

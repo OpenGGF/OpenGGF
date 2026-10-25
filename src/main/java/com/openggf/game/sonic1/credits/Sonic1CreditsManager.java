@@ -236,6 +236,29 @@ public class Sonic1CreditsManager {
      * Initializes demo input, positions the player, and starts fade-in.
      */
     public void onDemoZoneLoaded() {
+        // GameLoop has now applied StartLocArray/demo lamppost and snapped the
+        // final camera. BgScrollSpeed must use that entry, never the act start
+        // which the ordinary loader prepared before the credits override.
+        if (GameServices.parallaxOrNull() != null) {
+            var camera = GameServices.camera();
+            com.openggf.game.internal.CheckpointBackgroundScroll background = null;
+            if (isLzDemo()) {
+                // EndDemo_LampVar's six native BG words, read from REV01 ROM.
+                try {
+                    var rom = GameServices.rom().getRom();
+                    int address = 0x592A;
+                    background = new com.openggf.game.internal.CheckpointBackgroundScroll(
+                            rom.read16BitAddr(address), rom.read16BitAddr(address + 2),
+                            rom.read16BitAddr(address + 4), rom.read16BitAddr(address + 6),
+                            rom.read16BitAddr(address + 8), rom.read16BitAddr(address + 10));
+                } catch (IOException failure) {
+                    throw new IllegalStateException("Cannot read credits lamppost background", failure);
+                }
+            }
+            com.openggf.level.ParallaxCheckpointAccess.initialize(GameServices.parallax(), getDemoZone(), getDemoAct(),
+                    camera.getX(), camera.getY(), background);
+            GameServices.level().recomputeParallaxAfterRewindRestore();
+        }
         // Load demo input data from ROM (bulk read for atomicity)
         int addr = Sonic1CreditsDemoData.DEMO_DATA_ADDR[creditsNum];
         int size = Sonic1CreditsDemoData.DEMO_DATA_SIZE[creditsNum];

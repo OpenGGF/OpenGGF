@@ -113,15 +113,51 @@ final class LevelManagerInitializationSupport {
             Camera camera,
             GraphicsManager graphicsManager,
             long[] keptRingStatusTable) {
+        return initializeRings(levelManager, touchResponseTable, audioManager, camera,
+                graphicsManager, keptRingStatusTable, null);
+    }
+
+    /** Native assembly remains alongside ordinary ring initialization, outside the level facade. */
+    static void initializeNativeCompetitionRings(LevelManager owner,
+            com.openggf.level.rings.NativeCompetitionRingStreaming streaming) {
+        java.util.Objects.requireNonNull(streaming, "streaming");
+        if (com.openggf.game.competition.NativeCompetitionRoster.from(owner.getWorldSession()) == null) {
+            throw new IllegalStateException("Native ring initialization requires a supplied human roster");
+        }
+        owner.ringManager = initializeRings(owner, owner.touchResponseTable, owner.audioManager, owner.camera,
+                owner.graphicsManager, owner.getTransitions().bigRingReturnRingStatusTable(), streaming);
+        com.openggf.level.rings.RingDrawInternalAccess.bindNativeSlots(owner.ringManager);
+    }
+
+    static RingManager initializeRings(
+            LevelManager levelManager,
+            TouchResponseTable touchResponseTable,
+            AudioManager audioManager,
+            Camera camera,
+            GraphicsManager graphicsManager,
+            long[] keptRingStatusTable,
+            com.openggf.level.rings.NativeCompetitionRingStreaming streaming) {
+        if (streaming != null
+                && com.openggf.game.competition.NativeCompetitionRoster.from(levelManager.getWorldSession()) == null) {
+            throw new IllegalStateException("Native ring initialization requires a supplied human roster");
+        }
         Level level = levelManager.getCurrentLevel();
         RingManager rings = new RingManager(
                 level.getRings(), level.getRingSpriteSheet(), levelManager, touchResponseTable, audioManager);
+        if (streaming != null) {
+            com.openggf.level.rings.RingManagerInternalAccess.enableNativeCompetitionStreaming(rings, streaming);
+        }
         rings.reset(camera.getX());
         rings.restoreRingStatusTable(keptRingStatusTable);
         rings.ensurePatternsCached(graphicsManager, level.getPatternCount());
         var gameplayMode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
         if (gameplayMode != null) {
             gameplayMode.registerRingAdapter(rings);
+            if (streaming != null) {
+                var nativeAdapter = com.openggf.level.rings.RingManagerInternalAccess.nativeCompetitionStreamingRewindAdapter(rings);
+                gameplayMode.getRewindRegistry().deregister(nativeAdapter.key());
+                gameplayMode.getRewindRegistry().register(nativeAdapter);
+            }
         }
         return rings;
     }

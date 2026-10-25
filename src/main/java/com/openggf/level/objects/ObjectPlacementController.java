@@ -47,6 +47,11 @@ import java.util.function.Supplier;
 import java.util.logging.Logger;
 
 final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpawn> {
+    private NativeCompetitionObjectStreaming nativeCompetitionStreaming;
+    private NativeCompetitionUpfrontPlacement nativeCompetitionUpfrontPlacement;
+    private List<ObjectSpawn> nativePlacementSource;
+    private int upfrontRespawnIndex = -1;
+    private boolean nativeUpfrontActive;
     private static final Logger LOGGER = Logger.getLogger(ObjectPlacementController.class.getName());
     // ROM: ObjectsManager_GoingForward (s2.asm) uses addi.w #$280,d6 for forward load range.
     // Behind-window unload range is one chunk ($80) for forward movement.
@@ -227,6 +232,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
     ObjectPlacementController(List<ObjectSpawn> spawns, java.util.function.IntSupplier widthSupplier) {
         super(spawns, EXTRA_AHEAD, UNLOAD_BEHIND, widthSupplier);
         this.viewportWidthSupplier = widthSupplier;
+        this.nativePlacementSource = List.copyOf(spawns);
     }
 
     /**
@@ -324,7 +330,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
     boolean reallocateToFirstFreeDynamicSlot(AbstractObjectInstance object,
             SlotAllocator slotAllocator, ObjectSlotLayout slotLayout,
             ObjectInstance[] execOrder, boolean updating,
-            BitSet slotsFreedDuringObjectPass) {
+            BitSet slotsFreedDuringObjectPass, java.util.function.IntSupplier plainAllocator) {
         if (object == null || !slotLayout.isDynamicSlot(object.getSlotIndex())) {
             return false;
         }
@@ -333,7 +339,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
             slotsFreedDuringObjectPass.set(oldSlot);
         }
         slotAllocator.release(oldSlot);
-        int newSlot = slotAllocator.allocate();
+        int newSlot = plainAllocator.getAsInt();
         if (newSlot < 0) {
             slotAllocator.reserve(oldSlot);
             return false;
@@ -726,7 +732,8 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
                 : snapshot.spawnCounters()) {
             int index = entry.spawnIndex();
             if (index >= 0 && index < spawns.size()) {
-                spawnToCounter.put(spawns.get(index), entry.counter() & 0xFF);
+                spawnToCounter.put(spawns.get(index), nativeUpfrontActive
+                        ? entry.counter() : entry.counter() & 0xFF);
             }
         }
         return restoredTwoAxisCameraYCoarse;
@@ -741,8 +748,16 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
     }
 
     /** Replaces spawns and clears all tracking state. */
-    void replaceSpawnsAndReset(List<ObjectSpawn> newSpawns) {
+    void replaceSpawnsAndReset(List<ObjectSpawn> newSpawns, boolean upfrontActive) {
+        nativeUpfrontActive = upfrontActive;
         replaceSpawns(newSpawns);
+        nativePlacementSource = List.copyOf(newSpawns);
+        if (upfrontActive) {
+            upfrontRespawnIndex = Math.max(upfrontRespawnIndex, newSpawns.size());
+            objState = Arrays.copyOf(objState, upfrontRespawnIndex + 1);
+            nativeCompetitionUpfrontPlacement.reset(nativePlacementSource);
+            cursorLoadPassPending = false;
+        }
         remembered.clear();
         stayActive.clear();
         destroyedInWindow.clear();
@@ -758,6 +773,90 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
         bwdCounter = 1;
         Arrays.fill(objState, 0);
         spawnToCounter.clear();
+    }
+
+    void configureNativeCompetitionStreaming(NativeCompetitionObjectStreaming streaming) {
+        if (nativeCompetitionUpfrontPlacement != null) {
+            throw new IllegalStateException("Upfront placement and camera streaming are mutually exclusive");
+        }
+        nativeCompetitionStreaming = java.util.Objects.requireNonNull(streaming);
+        execThenLoadPlacement = true;
+    }
+
+    boolean hasNativeCompetitionStreaming() { return nativeCompetitionStreaming != null; }
+
+    void configureNativeCompetitionUpfrontPlacement(int maxXExclusive) {
+        if (nativeCompetitionStreaming != null || nativeCompetitionUpfrontPlacement != null) {
+            throw new IllegalStateException("Native placement policy is already configured");
+        }
+        nativeCompetitionUpfrontPlacement = new NativeCompetitionUpfrontPlacement(maxXExclusive);
+        // _unkF712 is separate from Object_respawn_table. Keep the shared byte in
+        // the existing captured state array without aliasing any layout entry.
+        upfrontRespawnIndex = objState.length;
+        objState = Arrays.copyOf(objState, objState.length + 1);
+        execThenLoadPlacement = true;
+    }
+
+    boolean hasNativeCompetitionUpfrontPlacement() { return nativeCompetitionUpfrontPlacement != null; }
+    NativeCompetitionUpfrontPlacement nativeCompetitionUpfrontPlacement() { return nativeCompetitionUpfrontPlacement; }
+
+    boolean loadNativeCompetitionUpfrontSpawn(ObjectSpawn spawn, java.util.function.BooleanSupplier load) {
+        // loc_1B720 -> sub_1BA0C never tests or sets a loaded bit and writes the
+        // SAME scratch respawn address to every actor (sonic3k.asm:37499-37514,
+        // 37829-37847). The ordinary per-entry respawn table remains untouched.
+        spawnToCounter.put(spawn, upfrontRespawnIndex);
+        if (!load.getAsBoolean()) {
+            spawnToCounter.remove(spawn);
+            return false;
+        }
+        active.add(spawn);
+        return true;
+    }
+
+    void resetNativeCompetitionStreaming(int cameraX) {
+        active.clear();
+        pendingCursorLoad.clear();
+        pendingCursorLoadOrder.clear();
+        nativeCompetitionStreaming.reset(spawns, cameraX);
+    }
+
+    void updateNativeCompetitionStreaming(int firstX, int secondX,
+            NativeCompetitionObjectStreaming.Loader loader) {
+        nativeCompetitionStreaming.update(firstX, secondX, loader);
+    }
+
+    int nativeCompetitionGeneralAllocationSlotLimitExclusive() {
+        return nativeCompetitionStreaming.generalAllocationSlotLimitExclusive();
+    }
+
+    Object captureNativeCompetitionStreaming() { return nativeCompetitionStreaming.capture(); }
+    void restoreNativeCompetitionStreaming(Object snapshot) { nativeCompetitionStreaming.restore(snapshot); }
+    void swapNativeCompetitionStreamingSlots() { nativeCompetitionStreaming.swapSlots(); }
+
+    boolean loadNativeCompetitionSpawn(ObjectSpawn spawn, int counter, java.util.function.BooleanSupplier load) {
+        // ChkLoadObj_2P bset precedes allocation, including failure. Preserve
+        // the shipped latch when no instance can be created (s2.asm:33631-33649).
+        if (counter >= 0) {
+            boolean alreadyLoaded = (objState[counter] & 0x80) != 0;
+            objState[counter] |= 0x80;
+            if (alreadyLoaded) return true;
+            spawnToCounter.put(spawn, counter);
+        }
+        if (!load.getAsBoolean()) {
+            spawnToCounter.remove(spawn);
+            return false;
+        }
+        active.add(spawn);
+        int index = getSpawnIndex(spawn);
+        if (index >= 0) {
+            dormant.clear(index);
+            destroyedInWindow.clear(index);
+        }
+        return true;
+    }
+
+    void clearNativeCompetitionRespawnLatch(int counter) {
+        if (counter > 0 && counter < objState.length) objState[counter] &= ~0x80;
     }
 
     void reset(int cameraX) {
@@ -777,6 +876,12 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
      * still has latched be re-created for the entry window.
      */
     void reset(int cameraX, PersistentRespawnState state) {
+        reset(cameraX, state, false);
+    }
+
+    void reset(int cameraX, PersistentRespawnState state, boolean upfrontActive) {
+        nativeUpfrontActive = upfrontActive;
+        int scratchState = upfrontActive ? objState[upfrontRespawnIndex] : 0;
         active.clear();
         remembered.clear();
         stayActive.clear();
@@ -793,6 +898,16 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
         Arrays.fill(objState, 0);
         restorePersistentRespawn(state);
 
+        if (upfrontActive) {
+            // The common init clears Object_respawn_table, not _unkF712
+            // (loc_1B6CA, sonic3k.asm:37469-37480).
+            objState[upfrontRespawnIndex] = scratchState;
+            lastCameraX = cameraX;
+            lastCameraChunk = 0;
+            cursorLoadPassPending = false;
+            nativeCompetitionUpfrontPlacement.reset(nativePlacementSource);
+            return;
+        }
         if (counterBasedRespawn) {
             resetCounterBased(cameraX);
         } else {
@@ -878,6 +993,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
     }
 
     void update(int cameraX) {
+        if (nativeUpfrontActive) return;
         if (spawns.isEmpty()) {
             return;
         }
@@ -1171,6 +1287,12 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
         int index = getSpawnIndex(spawn);
         active.remove(spawn);
         clearCursorLoadState(spawn);
+        if (nativeUpfrontActive) {
+            // Standard Sprite_OnScreen_Test clears the shared scratch bit;
+            // direct Delete_Current_Sprite does not come through this path.
+            clearCounterForSpawn(spawn);
+            return;
+        }
         if (twoAxisCursorPlacement && index >= leftCursorIndex && index < cursorIndex) {
             // S3K Load_Sprites' Y-camera pass scans the layout entries between
             // the horizontal cursors. An out_of_range delete clears the live
@@ -1740,7 +1862,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
     boolean isCounterStateBitSet(ObjectSpawn spawn, int bit) {
         // Two-axis placement owns one respawn byte per layout entry, not an
         // S1 rolling counter. Lower bits survive ordinary culling and rewind.
-        if (twoAxisCursorPlacement && bit >= 0 && bit < 7) {
+        if (!nativeUpfrontActive && twoAxisCursorPlacement && bit >= 0 && bit < 7) {
             int index = getSpawnIndex(spawn);
             return index >= 0 && (objState[index] & (1 << bit)) != 0;
         }
@@ -1752,7 +1874,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
     }
 
     void setCounterStateBit(ObjectSpawn spawn, int bit) {
-        if (twoAxisCursorPlacement && bit >= 0 && bit < 7) {
+        if (!nativeUpfrontActive && twoAxisCursorPlacement && bit >= 0 && bit < 7) {
             int index = getSpawnIndex(spawn);
             if (index >= 0) objState[index] |= 1 << bit;
             return;

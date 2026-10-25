@@ -1,11 +1,16 @@
 package com.openggf.game.sonic3k;
 
+import com.openggf.LevelFrameContext;
+import com.openggf.LevelFrameStep;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.GameServices;
 import com.openggf.game.rewind.snapshot.PatternAnimatorSnapshot;
+import com.openggf.game.resources.PlcFrameLifecycleCoordinator;
+import com.openggf.game.resources.PlcLifecyclePhase;
+import com.openggf.game.resources.PlcLifecycleService;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.level.Pattern;
@@ -96,6 +101,127 @@ class TestS3kZoneAnimateTilesPublication {
     void iczBackgroundPublishesAtTheFollowingVBlank() {
         assertQueuedUntilNextVBlank(new Route("ICZ1", Sonic3kZoneIds.ZONE_ICZ, 0, false, 0x3A00, 0x18,
                 new int[] {0x10E, 0x11D}, Sonic3kPatternAnimator::computeIczHorizontalPhase));
+    }
+
+    @Test
+    void iczPreSubmissionRestorePreservesEveryDirectRangeAndItsQueuedPublication() throws IOException {
+        GameServices.configuration().setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_ICZ, 0).withFreshLevelStartLifecycle().build();
+        Sonic3kPatternAnimator animator = animator();
+        Camera camera = fixture.camera();
+        camera.setFrozen(true);
+        // Declared camera inlet: horizontal phase $08 exercises both split transfers;
+        // Y $702 gives non-tile-aligned source rows in every vertical transfer.
+        camera.setX((short) 0x3960);
+        camera.setY((short) 0x0702);
+        assertEquals(8, animator.computeIczHorizontalPhase());
+        assertTrue(animator.pendingAniPlcTransfers().isEmpty(), "before the first submission");
+
+        byte[] earlierHorizontal = distinctTileBytes(0x200, 0x31);
+        byte[] earlierVertical = distinctTileBytes(0x1E0, 0x73);
+        writeTiles(0x10E, earlierHorizontal);
+        writeTiles(0x122, earlierVertical);
+        var registry = fixture.gameplayMode().getRewindRegistry();
+        var beforeInit = registry.capture();
+        assertTrue(GameServices.level().consumePendingInitialProcessSpritesPass());
+        assertArrayEquals(earlierHorizontal, tiles(0x10E, 0x11D), "submission retains presented horizontal art");
+        assertArrayEquals(earlierVertical, tiles(0x122, 0x130), "submission retains all four presented vertical ranges");
+        assertIczSplitPending(animator);
+        var queued = registry.capture();
+        PatternAnimatorSnapshot queuedAnimator = animator.capture();
+
+        // AnimateTiles_ICZ at the declared inlet: the horizontal $C0/$40-word split
+        // wraps Art 1, while Arts 2-5 begin at byte offsets $FC/$3C/$3C/$1C.
+        byte[] horizontal = concat(rom(Sonic3kConstants.ART_UNC_ANI_ICZ_1_ADDR + 0x80, 0x180),
+                rom(Sonic3kConstants.ART_UNC_ANI_ICZ_1_ADDR, 0x80));
+        byte[] vertical = concat(
+                concat(rom(Sonic3kConstants.ART_UNC_ANI_ICZ_2_ADDR + 0xFC, 0x100),
+                        rom(Sonic3kConstants.ART_UNC_ANI_ICZ_3_ADDR + 0x3C, 0x80)),
+                concat(rom(Sonic3kConstants.ART_UNC_ANI_ICZ_4_ADDR + 0x3C, 0x40),
+                        rom(Sonic3kConstants.ART_UNC_ANI_ICZ_5_ADDR + 0x1C, 0x20)));
+        var coordinator = new PlcFrameLifecycleCoordinator((PlcLifecycleService) null);
+        var context = LevelFrameContext.from(fixture.gameplayMode());
+        var lag = coordinator.latchBeforeFadeUpdate();
+        assertTrue(lag.claim(PlcLifecyclePhase.LAG));
+        LevelFrameStep.dispatchGameVBlank(context, lag);
+        assertArrayEquals(earlierHorizontal, tiles(0x10E, 0x11D), "lag does not publish horizontal art");
+        assertArrayEquals(earlierVertical, tiles(0x122, 0x130), "lag does not publish vertical art");
+        assertIczSplitPending(animator);
+        lag.finish();
+        var firstVBlank = coordinator.latchBeforeFadeUpdate();
+        assertTrue(firstVBlank.claim(PlcLifecyclePhase.ORDINARY_LEVEL));
+        LevelFrameStep.dispatchGameVBlank(context, firstVBlank);
+        assertArrayEquals(horizontal, tiles(0x10E, 0x11D), "both horizontal slices, including both range ends");
+        assertArrayEquals(vertical, tiles(0x122, 0x130), "all four ROM row slices, including every range end");
+        assertTrue(animator.pendingAniPlcTransfers().isEmpty());
+
+        // Capture must read a later other-owner write, rather than constructor-cached
+        // art or the animator's last published payload.
+        byte[] laterHorizontal = distinctTileBytes(0x200, 0xA4);
+        byte[] laterVertical = distinctTileBytes(0x1E0, 0xE2);
+        writeTiles(0x10E, laterHorizontal);
+        writeTiles(0x122, laterVertical);
+        var later = registry.capture();
+        writeTiles(0x10E, distinctTileBytes(0x200, 0x17));
+        writeTiles(0x122, distinctTileBytes(0x1E0, 0x58));
+        registry.restore(later);
+        assertArrayEquals(laterHorizontal, tiles(0x10E, 0x11D), "capture-time horizontal bytes from another owner");
+        assertArrayEquals(laterVertical, tiles(0x122, 0x130), "capture-time vertical bytes from another owner");
+
+        registry.restore(beforeInit);
+        assertArrayEquals(earlierHorizontal, tiles(0x10E, 0x11D), "pre-submission restore removes future horizontal art");
+        assertArrayEquals(earlierVertical, tiles(0x122, 0x130), "pre-submission restore removes future vertical art");
+        assertTrue(animator.pendingAniPlcTransfers().isEmpty(), "pre-submission restore creates no work");
+        assertTrue(GameServices.level().consumePendingInitialProcessSpritesPass());
+        PatternAnimatorSnapshot repeatedAnimator = animator.capture();
+        assertArrayEquals(queuedAnimator.scriptCounters(), repeatedAnimator.scriptCounters(), "repeated initial script counters");
+        assertArrayEquals(queuedAnimator.handlerCounters(), repeatedAnimator.handlerCounters(), "repeated initial handler counters");
+        assertArrayEquals(queuedAnimator.extra(), repeatedAnimator.extra(), "real initial pass repeats the complete animator bytes");
+        assertIczSplitPending(animator);
+        LevelFrameStep.dispatchGameVBlank(context, firstVBlank);
+        assertArrayEquals(earlierHorizontal, tiles(0x10E, 0x11D), "a stale token cannot publish newly restored work");
+        assertArrayEquals(earlierVertical, tiles(0x122, 0x130), "a stale token cannot drain vertical work twice");
+        assertIczSplitPending(animator);
+        firstVBlank.finish();
+
+        var nextVBlank = coordinator.latchBeforeFadeUpdate();
+        assertTrue(nextVBlank.claim(PlcLifecyclePhase.ORDINARY_LEVEL));
+        LevelFrameStep.dispatchGameVBlank(context, nextVBlank);
+        assertArrayEquals(horizontal, tiles(0x10E, 0x11D));
+        assertArrayEquals(vertical, tiles(0x122, 0x130));
+        nextVBlank.finish();
+        registry.restore(queued);
+        assertArrayEquals(earlierHorizontal, tiles(0x10E, 0x11D), "pending restore presents the earlier bytes immediately");
+        assertArrayEquals(earlierVertical, tiles(0x122, 0x130));
+        assertIczSplitPending(animator);
+        var restoredVBlank = coordinator.latchBeforeFadeUpdate();
+        assertTrue(restoredVBlank.claim(PlcLifecyclePhase.ORDINARY_LEVEL));
+        LevelFrameStep.dispatchGameVBlank(context, restoredVBlank);
+        assertArrayEquals(horizontal, tiles(0x10E, 0x11D), "restored pending horizontal slices publish legally");
+        assertArrayEquals(vertical, tiles(0x122, 0x130), "restored pending vertical slices publish legally");
+        assertTrue(animator.pendingAniPlcTransfers().isEmpty());
+        restoredVBlank.finish();
+    }
+
+    @Test
+    void iczAct2PreSubmissionSnapshotOwnsHorizontalArtWithoutClaimingAct1VerticalArt() {
+        HeadlessTestFixture.builder().withZoneAndAct(Sonic3kZoneIds.ZONE_ICZ, 1).build();
+        Sonic3kPatternAnimator animator = animator();
+        assertTrue(animator.pendingAniPlcTransfers().isEmpty(), "act 2 before the first submission");
+        byte[] horizontal = distinctTileBytes(0x200, 0x42);
+        byte[] vertical = distinctTileBytes(0x1E0, 0x65);
+        writeTiles(0x10E, horizontal);
+        writeTiles(0x122, vertical);
+        PatternAnimatorSnapshot before = animator.capture();
+        byte[] laterVertical = distinctTileBytes(0x1E0, 0xC9);
+        writeTiles(0x10E, distinctTileBytes(0x200, 0x86));
+        writeTiles(0x122, laterVertical);
+        animator.restore(before);
+        assertArrayEquals(horizontal, tiles(0x10E, 0x11D), "act 2 still owns its direct horizontal range before submission");
+        assertArrayEquals(laterVertical, tiles(0x122, 0x130), "act 2 must not restore act 1's vertical destinations");
+        assertTrue(animator.pendingAniPlcTransfers().isEmpty());
+        assertFalse(animator.shouldRunIczAct1VerticalCustomChannels());
     }
 
     @Test
@@ -387,6 +513,20 @@ class TestS3kZoneAnimateTilesPublication {
         for (int tile = 0; tile < segaBytes.length / 32; tile++) {
             level.getPattern(firstTile + tile).fromSegaFormat(Arrays.copyOfRange(segaBytes, tile * 32, tile * 32 + 32));
         }
+    }
+
+    private static byte[] distinctTileBytes(int length, int seed) {
+        byte[] bytes = new byte[length];
+        for (int i = 0; i < bytes.length; i++) bytes[i] = (byte) (seed + i * 13 + (i / 32) * 7);
+        return bytes;
+    }
+
+    private static void assertIczSplitPending(Sonic3kPatternAnimator animator) {
+        int[][] expected = {{0x11E, 0x80}, {0x10E, 0x180}, {0x11A, 0x80},
+                {0x122, 0x100}, {0x12A, 0x80}, {0x12E, 0x40}, {0x130, 0x20}};
+        var pending = animator.pendingAniPlcTransfers();
+        assertEquals(expected.length, pending.size(), "script then both horizontal slices then all four vertical slices");
+        for (int i = 0; i < expected.length; i++) assertArrayEquals(expected[i], pending.get(i), "submission order " + i);
     }
 
     private static void assertQueuedUntilNextVBlank(Route route) {

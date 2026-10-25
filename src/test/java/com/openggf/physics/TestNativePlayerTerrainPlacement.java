@@ -53,6 +53,33 @@ class TestNativePlayerTerrainPlacement {
         var bounded = new NativePlayerTerrainPlacement(level(),() -> { if(calls.incrementAndGet()>12) throw new IllegalStateException("cancelled"); });
         assertThrows(IllegalStateException.class,() -> bounded.exact(profile(12,13),100,44));
     }
+
+    @Test void defaultKernelKeepsBitDerivedLookupAndExactScanCharge() {
+        var owner = mock(LevelManager.class);
+        var desc = new ChunkDesc(7 | (1 << 12) | (1 << 14));
+        byte[] primaryHeights = new byte[16];
+        byte[] alternateHeights = new byte[16];
+        Arrays.fill(primaryHeights, (byte) 4);
+        Arrays.fill(alternateHeights, (byte) 8);
+        var primary = new SolidTile(8, primaryHeights, primaryHeights.clone(), (byte) 0x10);
+        var alternate = new SolidTile(9, alternateHeights, alternateHeights.clone(), (byte) 0x28);
+        when(owner.getChunkDescAt(eq((byte) 0), anyInt(), anyInt(), eq(false))).thenReturn(desc);
+        when(owner.getSolidTileForChunkDesc(desc, 12)).thenReturn(primary);
+        when(owner.getSolidTileForChunkDesc(desc, 14)).thenReturn(alternate);
+        for (int bit : new int[]{12, 14}) {
+            var charges = new java.util.concurrent.atomic.AtomicInteger();
+            var kernel = new NativePlayerTerrainScan();
+            var result = kernel.scan(owner, (short) 100, (short) 100, bit, Direction.DOWN,
+                    false, (byte) 0, false, new SensorResult(), 2047, charges::incrementAndGet);
+            assertEquals(bit == 12 ? 7 : 3, result.distance());
+            assertEquals(bit == 12 ? 8 : 9, result.tileId());
+            assertEquals(NativePlayerTerrainScan.SupportKind.GEOMETRIC_SURFACE, kernel.kind());
+            assertEquals(1, charges.get(), "a partial current tile consumes exactly one scan");
+            verify(owner).getSolidTileForChunkDesc(desc, bit);
+        }
+        verify(owner, never()).getSolidTileForChunkDesc(any(ChunkDesc.class), anyInt(), anyBoolean());
+    }
+
     @Test void orientationUsesNativeAnglePosBoundariesAndOddAngleFlags() {
         for (int angle : new int[]{0,1,255,0x20,0xE0}) {
             assertNotNull(new NativePlayerTerrainPlacement(level(angle),() -> {}).near(profile(12,13),100,40).proposal(),"Native floor angle "+angle);

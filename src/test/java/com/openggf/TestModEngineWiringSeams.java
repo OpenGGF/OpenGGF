@@ -90,7 +90,17 @@ class TestModEngineWiringSeams {
     void audioResetAndBackendReplacementReleaseStreamedSessionState() throws IOException {
         String source = source("audio/AudioManager.java");
         assertMethodOrder(source, "public synchronized void resetState()",
-                "invalidateAndReleaseStreamedMusicSession()", "beginSourceMutation()");
+                "invalidateAndReleaseStreamedMusicSession()", "sourcePublication.reset()");
+        int sourceOwnerStart = source.indexOf("    private final class SourcePublication {");
+        assertTrue(sourceOwnerStart >= 0, "source is missing SourcePublication");
+        int sourceOwnerEnd = source.indexOf("\n    }\n", sourceOwnerStart);
+        assertTrue(sourceOwnerEnd > sourceOwnerStart, "SourcePublication is not bounded");
+        String sourceOwner = source.substring(sourceOwnerStart, sourceOwnerEnd);
+        assertTrue(sourceOwner.contains(
+                "        private void reset() {\n"
+                        + "            beginSourceMutation();\n"
+                        + "            try {"),
+                "SourcePublication.reset must begin guarded source mutation");
         assertMethodOrder(source, "private void invalidateAndReleaseStreamedMusicSession()",
                 "streamedMusicSessionInvalidator.run()", "releaseStreamedMusicPort()");
         assertMethodOrder(source, "private synchronized void releaseStreamedMusicPort()",

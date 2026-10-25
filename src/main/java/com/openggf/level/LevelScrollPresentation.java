@@ -122,6 +122,37 @@ final class LevelScrollPresentation {
                 level.zoneFeatureProvider != null && level.zoneFeatureProvider.foregroundWrapsHorizontally());
     }
 
+    /** Native publication only. The ordinary sampler intentionally retains its exact
+     * getter/callback order; only its bounds-selection prefix is duplicated here.
+     */
+    static BackgroundBuildParameters.ArenaBounds captureArenaBounds(LevelManager level, boolean foregroundWraps) {
+        var camera = level.camera;
+        int currentMaxX = camera.getMaxX();
+        var rules = level.gameModule == null ? null : level.gameModule.getRules().playerMovement();
+        if (rules != null && !rules.levelBoundaryRightStrict()) {
+            var state = level.boundaryGameState();
+            boolean locked = rules.levelBoundaryLockUsesScreenLockFlag()
+                    ? state.isScreenLocked() : state.isBossFightActive();
+            // S1/S2 permit another $40 pixels in ordinary play. Do not conceal
+            // playable space merely because the camera itself stops earlier.
+            if (!locked && !state.isEndOfLevelActive()) {
+                currentMaxX += 64;
+            }
+        }
+        var bounds = LevelBoundsMaskGeometry.select(level, currentMaxX);
+        return new BackgroundBuildParameters.ArenaBounds(bounds.minX(), bounds.maxX(),
+                level.objectManager == null ? level.frameCounter : level.objectManager.getFrameCounter(),
+                foregroundWraps);
+    }
+
+    private ArenaMaskState arenaMaskForView(int xWithShake, int width) {
+        if (backgroundBuild == null || backgroundBuild.arenaBounds() == null)
+            throw new IllegalStateException("Cinematic view requires native-captured arena bounds");
+        var bounds = backgroundBuild.arenaBounds();
+        return ArenaMaskState.fromBounds(bounds.minX(), bounds.maxX(), xWithShake, width,
+                bounds.noiseFrame(), bounds.wraps());
+    }
+
     BackgroundBuildParameters backgroundBuildParameters() {
         return backgroundBuild;
     }
@@ -132,6 +163,11 @@ final class LevelScrollPresentation {
      * Background registers keep their native phase (including deliberately stationary backgrounds).
      * Column scrolls are deltas, so only the scalar/override origin moves vertically.
      */
+    LevelScrollPresentation forCinematicCamera(int x, int y, int width) {
+        int xWithShake = registers.cameraXWithShake() + (x - registers.cameraX());
+        return forCinematicCamera(x, y, arenaMaskForView(xWithShake, width));
+    }
+
     LevelScrollPresentation forCinematicCamera(int x, int y, ArenaMaskState mask) {
         int dx = x - registers.cameraX(), dy = y - registers.cameraY();
         int[] reframed = horizontal.clone();
@@ -147,12 +183,22 @@ final class LevelScrollPresentation {
                         : registers.overriddenForegroundY(),
                 registers.overrideBackgroundY(), registers.overriddenBackgroundY(), mask);
         return new LevelScrollPresentation(view, reframed, backgroundLines, backgroundColumns,
-                foregroundColumns, overrideColumns);
+                foregroundColumns, overrideColumns, phase, columnPhaseX, tilemapMode,
+                columnProjection, columnsRemap, spritePositions, backgroundBuild);
     }
 
     /** Samples a frozen native phase once for the complete director raster. */
+    LevelScrollPresentation forCinematicView(int x, int y, int width, int height) {
+        return forCinematicView(x, y, width, height, null, true);
+    }
+
     LevelScrollPresentation forCinematicView(
             int x, int y, int width, int height, ArenaMaskState mask) {
+        return forCinematicView(x, y, width, height, mask, false);
+    }
+
+    private LevelScrollPresentation forCinematicView(
+            int x, int y, int width, int height, ArenaMaskState mask, boolean capturedArena) {
         if (phase == null) {
             throw new IllegalStateException(
                     "This scroll handler has no directed presentation phase");
@@ -181,11 +227,12 @@ final class LevelScrollPresentation {
             directedLines = extendedLines;
         }
         int dy = y - registers.cameraY();
+        int xWithShake = x + output.shakeX();
         var directed =
                 new Registers(
                         x,
                         y,
-                        x + output.shakeX(),
+                        xWithShake,
                         output.foregroundY(),
                         output.backgroundY(),
                         output.backgroundX(),
@@ -199,7 +246,7 @@ final class LevelScrollPresentation {
                                 : registers.overriddenForegroundY(),
                         registers.overrideBackgroundY(),
                         registers.overriddenBackgroundY(),
-                        mask);
+                        capturedArena ? arenaMaskForView(xWithShake, width) : mask);
         return new LevelScrollPresentation(
                 directed,
                 directedWords,
@@ -220,6 +267,11 @@ final class LevelScrollPresentation {
     }
 
     /** Rebase a raster tile without resampling its camera-dependent bands or event phase. */
+    LevelScrollPresentation slice(int left, int top, int width, int height) {
+        return slice(left, top, width, height,
+                arenaMaskForView(registers.cameraXWithShake() + left, width));
+    }
+
     LevelScrollPresentation slice(int left, int top, int width, int height, ArenaMaskState mask) {
         if (left < 0 || top < 0 || width <= 0 || height <= 0) {
             throw new IllegalArgumentException("Invalid cinematic scroll tile");

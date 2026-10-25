@@ -335,16 +335,18 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
         Sonic3kCNZEvents cnz = getCnzEvents();
         if (cnz != null) {
             cnz.enterMinibossArenaFromObjectSlot();
-        }
-        if (cnz != null && (cnz.isMinibossArenaLocked()
-                || (services().camera().getX() & 0xFFFF) >= 0x3000)) {
             if (!cnz.isMinibossStartReleased()) {
                 // ROM Obj_CNZMiniboss stays fully dormant during the camera-lock
-                // approach and the Obj_Wait 2-second delay (sonic3k.asm:144889-144905):
-                // it renders nothing and does NOT set up the boss sprite until
+                // approach and the Obj_Wait 2-second delay (sonic3k.asm:144829-144845):
+                // its first routine only compares Camera_X_pos with $31E0 and rts-es,
+                // whatever the camera position when the slot was loaded. It renders
+                // nothing and does NOT set up the boss sprite until
                 // Obj_CNZMinibossGo installs Obj_CNZMinibossStart after the wait.
                 // Running updateInit() here made the boss appear (and start lowering)
-                // before Sonic entered the arena and before the BG scroll began.
+                // before Sonic entered the arena and before the BG scroll began. The
+                // former Camera_X_pos >= $3000 precondition only held while the object
+                // window loaded the slot at that camera position; wider viewports
+                // load it earlier, so it is not part of the ROM predicate.
                 pendingStartReleaseHandoff = true;
                 diagnosticSkippedStartGate = true;
                 return;

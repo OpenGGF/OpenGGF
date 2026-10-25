@@ -14,6 +14,8 @@ import com.openggf.game.sonic3k.objects.MGZTopPlatformObjectInstance;
 import com.openggf.game.sonic3k.objects.FbzEndBossInstance;
 import com.openggf.level.objects.AbstractBadnikInstance;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.boss.AbstractBossInstance;
+import com.openggf.game.rewind.GenericFieldCapturer;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
@@ -36,6 +38,16 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
  * rewind exactly this way.
  */
 class TestCapturedPolicyCompactReachabilityGuard {
+
+    @Test
+    void bossConstructionHistoryIsCapturedByBothObjectScalarPaths() throws Exception {
+        Field field = AbstractBossInstance.class.getDeclaredField("childSpawnOrdinalCounters");
+        assertEquals(RewindFieldPolicy.CAPTURED,
+                DefaultObjectRewindPolicies.exactFieldPoliciesForAudit().get(FieldKey.of(field)));
+        assertTrue(RewindCodecs.codecFor(field).isPresent());
+        assertTrue(GenericFieldCapturer.isCapturedByDefaultObjectScalarPolicy(field),
+                "a subclass falling back from compact capture must still retain ordinal history");
+    }
 
     @Test
     void optionalNativeLinksHaveClosedExactCapturedMetadata() throws Exception {

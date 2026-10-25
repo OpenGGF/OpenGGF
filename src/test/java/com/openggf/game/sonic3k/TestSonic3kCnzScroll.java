@@ -145,8 +145,10 @@ public class TestSonic3kCnzScroll {
     @Test
     public void act2ScreenEventAppliesRomYStartBandsFromPlayerX() {
         levelEvents.initLevel(ZONE_CNZ, ACT_2);
-        camera.setFocusedSprite(new Sonic("sonic", (short) 0, (short) 0));
-        camera.getFocusedSprite().setCentreX((short) 0x093F);
+        var primary = new Sonic("sonic", (short) 0, (short) 0);
+        GameServices.sprites().addSprite(primary);
+        camera.setFocusedSprite(primary);
+        primary.setCentreX((short) 0x093F);
         camera.setMinY((short) 0);
 
         cnzEvents().update(ACT_2, 0);
@@ -154,14 +156,14 @@ public class TestSonic3kCnzScroll {
         assertEquals((short) 0x0580, camera.getMinY(),
                 "CNZ2_ScreenEvent sets Camera_min_Y_pos=$580 while P1 x_pos is before $940");
 
-        camera.getFocusedSprite().setCentreX((short) 0x0940);
+        primary.setCentreX((short) 0x0940);
         cnzEvents().update(ACT_2, 1);
 
         assertEquals((short) 0, camera.getMinY(),
                 "CNZ2_ScreenEvent restores Camera_min_Y_pos=0 once P1 reaches $940");
 
         camera.setMinY((short) 0x0120);
-        camera.getFocusedSprite().setCentreX((short) 0x4600);
+        primary.setCentreX((short) 0x4600);
         cnzEvents().update(ACT_2, 2);
 
         assertEquals((short) 0x0120, camera.getMinY(),

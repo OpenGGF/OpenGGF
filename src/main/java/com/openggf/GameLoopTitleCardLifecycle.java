@@ -80,16 +80,16 @@ final class GameLoopTitleCardLifecycle {
         // hardware service boundary -- VINT_SERVICE stays owned by
         // LevelFrameStep alone.
         LevelFrameStep.dispatchGameVBlank(frameContext, frame);
-        boolean hardwareTimedProviderScan = titleCard != null
-                && titleCard.shouldAdvanceVblankClockDuringLockedPhase();
-        boolean preparedByFrameStep = hardwareTimedProviderScan;
-        if (hardwareTimedProviderScan) {
-            LevelFrameStep.executeHardwareTimedObjectScan(
-                    frameContext, frame,
-                    PlcLifecyclePhase.LEVEL_TITLE_CARD, titleCard::update);
-        } else if (titleCard != null) {
-            titleCard.update();
-        }
+        // This caller claimed the title token before querying its provider;
+        // the external scan only prepares a token it claimed itself.
+        // The world-bound operation is resolved inside the object scan, after its
+        // VBlank service, so callbacks can replace the world before dispatch.
+        // A failed scan or a phase owned by a fade cannot prepare a title tail.
+        // Ordinary providers still update without a hardware service boundary;
+        // only successful hardware scans suppress the caller's later preparation.
+        boolean preparedByFrameStep =
+                GameLoopPlcLifecycle.updateTitleCardProvider(
+                        frameContext, frame, titleCard, gameplayMode);
 
         // Publish while the provider still owns its fresh mode; completing
         // the title handoff below clears that mode and its terrain-ready gate.

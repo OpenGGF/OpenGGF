@@ -25,6 +25,71 @@ public class Sonic2SpecialStageRenderer {
     public static final int H32_HEIGHT = H32_TILES_Y * TILE_SIZE;
     private Sonic2SpecialStageDataLoader dataLoader;
 
+    private int nativeIntensityPaletteBase = -1;
+    private boolean allTerrainShadow;
+    private NativePalettePresentation nativePalettePresentation;
+
+    private record NativePalettePresentation(Object profile, Object expansion,
+            com.openggf.graphics.PaletteFadePresentation.Mode fade, int steps, int lines) { }
+
+    void useNativeIntensity(int bankBase, boolean allShadow) {
+        if (bankBase < 0) throw new IllegalArgumentException("Missing native shadow palette bank");
+        if (nativeIntensityPaletteBase != bankBase || allTerrainShadow != allShadow) {
+            nativeIntensityPaletteBase = bankBase;
+            allTerrainShadow = allShadow;
+            invalidateStaticBackground();
+        }
+    }
+
+    void refreshNativePalettePresentation() {
+        var fade = com.openggf.graphics.PaletteUploadPresentation.captureDisplayedFade(graphicsManager);
+        var current = new NativePalettePresentation(graphicsManager.getDisplayColorProfile(),
+                graphicsManager.getDisplayColorExpansion(), fade.mode(), fade.steps(), fade.lineMask());
+        if (!current.equals(nativePalettePresentation)) {
+            nativePalettePresentation = current;
+            invalidateStaticBackground();
+        }
+    }
+
+    private void selectNativeTerrainIntensity(PatternDesc desc) {
+        if (nativeIntensityPaletteBase >= 0 && (allTerrainShadow || !desc.getPriority())) {
+            desc.setPaletteIndex(nativeIntensityPaletteBase + desc.getPaletteIndex());
+        }
+    }
+
+
+    /** One native SAT for bodies, UI, objects and shadows; geometry comes from live owners. */
+    void renderNativeSprites(List<Sonic2SpecialStageSlotPool.RenderState> states,
+                             RingHudState composition) {
+        if (states.isEmpty()) return;
+        var art = new Sonic2SpecialStageSpriteAssembly.ArtBases(playerPatternBase, hudPatternBase,
+                startPatternBase, messagesPatternBase, tailsTextPatternBase, ringPatternBase,
+                bombPatternBase, starsPatternBase, explosionPatternBase, emeraldPatternBase,
+                shadowFlatPatternBase, shadowDiagPatternBase, shadowSidePatternBase);
+        int origin = specialStageViewport.innerH32OriginX();
+        var assembly = new Sonic2SpecialStageSpriteAssembly(dataLoader, art, origin);
+        var groups = assembly.assemble(states, composition,
+                intro == null ? List.of() : intro.getNativeCounterPayloads(),
+                intro == null ? 0 : intro.getNativeRingsToGoBcd(),
+                intro == null ? 0 : intro.getNativeRingsToGoChildCount());
+        com.openggf.graphics.SpriteSatInternalAccess.beginCollection(graphicsManager,
+                com.openggf.graphics.SpriteSatMaskPostProcessor.Raster.h32(origin, 0, H32_HEIGHT));
+        try {
+            for (var group : groups) {
+                Runnable producer = () -> group.fragments().forEach(graphicsManager::submitSpriteSatPiece);
+                if (group.shadow()) {
+                    com.openggf.graphics.SpriteSatInternalAccess.submitShadowGroups(
+                            graphicsManager, group.geometry(), producer);
+                } else {
+                    com.openggf.graphics.SpriteSatInternalAccess.submitGroups(
+                            graphicsManager, group.geometry(), producer);
+                }
+            }
+        } finally {
+            graphicsManager.endSpriteSatCollectionAndReplay();
+        }
+    }
+
     public void setDataLoader(Sonic2SpecialStageDataLoader dataLoader) {
         this.dataLoader = dataLoader;
     }
@@ -301,6 +366,7 @@ public class Sonic2SpecialStageRenderer {
 
                 reusableDesc.set(word);
                 PatternDesc desc = reusableDesc;
+                selectNativeTerrainIntensity(desc);
 
                 // Calculate position within H32 viewport (0-255 range)
                 // The background is 32 tiles (256px) wide and wraps horizontally
@@ -389,6 +455,7 @@ public class Sonic2SpecialStageRenderer {
 
                 reusableDesc.set(word);
                 PatternDesc desc = reusableDesc;
+                selectNativeTerrainIntensity(desc);
 
                 // Calculate position in FBO space (256x256)
                 // No scroll offset - rendered at natural tile positions
@@ -611,7 +678,8 @@ public class Sonic2SpecialStageRenderer {
                     }
 
                     reusableDesc.set(word);
-                PatternDesc desc = reusableDesc;
+                    PatternDesc desc = reusableDesc;
+                    selectNativeTerrainIntensity(desc);
                     int patternId = desc.getPatternIndex() + trackPatternBase;
 
                     // Calculate X position within the 256-pixel H32 viewport, with wrapping
@@ -675,7 +743,8 @@ public class Sonic2SpecialStageRenderer {
                     if ((word & 0x7FF) == 0) continue;
 
                     reusableDesc.set(word);
-                PatternDesc desc = reusableDesc;
+                    PatternDesc desc = reusableDesc;
+                    selectNativeTerrainIntensity(desc);
                     int patternId = desc.getPatternIndex() + trackPatternBase;
                     int drawX = SCREEN_CENTER_OFFSET + col * TILE_SIZE;
 
@@ -818,7 +887,8 @@ public class Sonic2SpecialStageRenderer {
         int mappingFrame = player.getMappingFrame();
         Sonic2SpecialStageSpriteMappings.SpriteFrame frame =
                 player.getPlayerType() == Sonic2SpecialStagePlayer.PlayerType.TAILS
-                        ? Sonic2SpecialStageSpriteMappings.getTailsFrame(mappingFrame)
+                        ? dataLoader == null ? Sonic2SpecialStageSpriteMappings.getTailsFrame(mappingFrame)
+                                : dataLoader.getTailsPlayerFrame(mappingFrame)
                         : dataLoader == null ? Sonic2SpecialStageSpriteMappings.getSonicFrame(mappingFrame)
                                 : dataLoader.getMainPlayerFrame(mappingFrame);
 
@@ -884,7 +954,9 @@ public class Sonic2SpecialStageRenderer {
         boolean playerXFlip = player.isRenderXFlip();
         boolean playerYFlip = player.isRenderYFlip();
         Sonic2SpecialStageSpriteMappings.SpriteFrame frame =
-                Sonic2SpecialStageSpriteMappings.getTailsTailsFrame(player.getTailsTailsMappingFrame());
+                dataLoader == null
+                        ? Sonic2SpecialStageSpriteMappings.getTailsTailsFrame(player.getTailsTailsMappingFrame())
+                        : dataLoader.getTailsTailFrame(player.getTailsTailsMappingFrame());
 
         for (Sonic2SpecialStageSpriteMappings.SpritePiece piece : frame.pieces) {
             int pieceX = playerXFlip ? -piece.xOffset - piece.widthTiles * TILE_SIZE : piece.xOffset;

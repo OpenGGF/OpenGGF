@@ -27,6 +27,8 @@ import com.openggf.sprites.playable.Knuckles;
 import com.openggf.game.CanonicalAnimation;
 import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.rules.RequiresRom;
+import com.openggf.tests.rules.SonicGame;
 import com.openggf.tools.HeadlessGameBoot;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -51,6 +53,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * faithful roster, honours a configured sidekick, and loads the KiS2 EHZ1
  * layout and palette. Skips without the S2 and S3K ROMs.
  */
+@RequiresRom(SonicGame.SONIC_2)
 class TestKis2HeadlessBoot {
 
     @TempDir
@@ -345,6 +348,7 @@ class TestKis2HeadlessBoot {
     void repeatedFullLoadsRecreateTheActualChipPlcPublication() throws Exception {
         var s2 = RomTestUtils.ensureSonic2RomAvailable();
         assertNotNull(s2);
+        assumeTrue(Kis2TestRoms.lockOnDumpOrNull() != null, "KiS2 lock-on dump required");
         assertNotNull(Kis2TestRoms.lockOnDumpOrNull());
         try (var rom = new Rom()) {
             assertTrue(rom.open(s2.getAbsolutePath()));

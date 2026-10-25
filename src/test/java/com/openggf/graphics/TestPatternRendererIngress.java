@@ -246,15 +246,25 @@ class TestPatternRendererIngress {
     }
 
     @Test void fullSatTileReadsReusableDescriptorAfterAdmissionCallbacks() throws Exception {
-        manager.callback = name -> { if (name.equals("alpha")) {
+        int[] alphaReads = {0};
+        manager.callback = name -> { if (name.equals("alpha") && ++alphaReads[0] == 2) {
+            // Mutate during admission, after beginBatch has already sampled its state.
             PatternDesc scratch = (PatternDesc) get(manager, "reusableReplayDesc");
             scratch.setHFlip(true); scratch.setVFlip(true); scratch.setPriority(true); scratch.setPaletteIndex(7);
         }};
         manager.beginSpriteSatCollection();
         manager.submitSpriteSatPiece(piece());
+        manager.events.clear();
         manager.endSpriteSatCollectionAndReplay();
-        assertEquals(1, manager.commands.size());
-        FloatBuffer data = (FloatBuffer) get(manager.commands.getFirst(), "instanceBuffer");
+        List<String> expectedReads = new ArrayList<>(ADMISSION);
+        expectedReads.addAll(ADMISSION);
+        assertEquals(expectedReads, manager.events, "beginBatch then admission, without a second append check");
+        assertEquals(2, alphaReads[0]);
+        List<GLCommandable> payload = nativeSatPayloadCommands();
+        assertEquals(1, payload.size());
+        assertEquals("InstancedBatchCommand", payload.getFirst().getClass().getSimpleName());
+        assertEquals(1, get(payload.getFirst(), "instanceCount"));
+        FloatBuffer data = (FloatBuffer) get(payload.getFirst(), "instanceBuffer");
         assertEquals(0f, data.get(9)); assertEquals(1f, data.get(8), "SAT keeps the decoder's explicit palette argument");
         assertEquals(.99875f, data.get(4)); assertEquals(.00125f, data.get(6));
         assertEquals(.00125f, data.get(5)); assertEquals(.99875f, data.get(7));
@@ -266,17 +276,49 @@ class TestPatternRendererIngress {
         manager.setUseSpritePriorityShader(true); manager.setCurrentSpriteTileOcclusionPaletteMask(5);
         manager.beginSpriteSatCollection(); manager.submitSpriteSatPiece(piece()); manager.endSpriteSatCollectionAndReplay();
         assertEquals(2, rejecting.begins); assertFalse(rejecting.isBatchActive());
-        assertInstanceOf(PatternRenderCommand.class, manager.commands.getFirst()); manager.discardQueuedCommands();
+        List<GLCommandable> payload = nativeSatPayloadCommands();
+        assertEquals(1, payload.size());
+        PatternRenderCommand fallback = assertInstanceOf(PatternRenderCommand.class, payload.getFirst());
+        assertEquals(5, get(fallback, "capturedTileOcclusionPaletteMask"));
+        manager.discardQueuedCommands();
         set(manager, "instancedPatternRenderer", instanced);
         IllegalStateException expected = new IllegalStateException("SAT admission");
         int[] alphaReads = {0};
         manager.callback = name -> { if (name.equals("alpha") && ++alphaReads[0] == 2) throw expected; };
-        manager.beginSpriteSatCollection(); manager.submitSpriteSatPiece(piece());
+        manager.beginSpriteSatCollection();
+        // SAT submission captures the entry's mask. A later caller override must
+        // not replace that metadata when replay resets and applies the entry state.
+        manager.setCurrentSpriteTileOcclusionPaletteMask(15);
+        manager.submitSpriteSatPiece(piece());
+        manager.setCurrentSpriteTileOcclusionPaletteMask(5);
         assertSame(expected, assertThrows(IllegalStateException.class, manager::endSpriteSatCollectionAndReplay));
         manager.callback = ignored -> {};
         assertFalse(instanced.isBatchActive()); assertEquals(0, get(instanced, "instanceCount"));
-        assertTrue(manager.commands.isEmpty()); assertTrue(manager.isUseSpritePriorityShader());
-        assertEquals(15, manager.getCurrentSpriteTileOcclusionPaletteMask(), "SAT entry resets the global override before replay");
+        assertTrue(nativeSatPayloadCommands().isEmpty()); assertTrue(manager.isUseSpritePriorityShader());
+        assertEquals(15, manager.getCurrentSpriteTileOcclusionPaletteMask(), "replay applies the captured SAT mask instead of the later caller override");
+        assertFalse((boolean) get(manager, "satReplayBatchOpen"));
+        assertFalse((boolean) get(manager, "submittingNativeSpriteOwnership"));
+        assertFalse(manager.isSpriteSatCollectionActive());
+        assertTrue(((List<?>) get(manager, "spriteSatEntries")).isEmpty());
+    }
+
+    /** Keep the real deferred ownership commands and prove they enclose only the draw payload. */
+    private List<GLCommandable> nativeSatPayloadCommands() throws Exception {
+        assertFalse(manager.commands.isEmpty(), "native replay must queue its ownership entry");
+        GLCommandable begin = manager.commands.getFirst();
+        NativeSpriteOwnership.Commands ownership = null;
+        // Find the lambda's captured owner by type, independent of compiler-generated field names.
+        for (Field field : begin.getClass().getDeclaredFields()) {
+            if (field.getType() != NativeSpriteOwnership.Commands.class) continue;
+            field.setAccessible(true);
+            ownership = (NativeSpriteOwnership.Commands) field.get(begin);
+            break;
+        }
+        assertNotNull(ownership, "the first command must capture the real native ownership owner");
+        assertSame(ownership.begin, begin, "ownership entry precedes every payload command");
+        assertSame(ownership.end, manager.commands.getLast(), "the matching ownership exit follows every payload command");
+        assertNull(get(ownership, "scope"), "native GL ownership stays deferred until command execution");
+        return List.copyOf(manager.commands.subList(1, manager.commands.size() - 1));
     }
 
     @Test void explicitConstructorsFailManagerBeforeConfigurationAndHeightBeforeDebug() {

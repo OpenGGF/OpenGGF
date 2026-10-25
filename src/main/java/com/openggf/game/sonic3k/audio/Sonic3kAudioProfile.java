@@ -70,6 +70,7 @@ public class Sonic3kAudioProfile extends AbstractAudioProfile implements com.ope
         return musicId >= Sonic3kMusic.AIZ1.id && musicId <= Sonic3kMusic.DEZ2.id;
     }
     @Override public boolean permitsLandingCue(int sfxId) { return sfxId == Sonic3kSfx.THUMP.id; }
+    @Override public int groundSlideSfxId() { return Sonic3kSfx.GROUND_SLIDE.id; }
     @Override public boolean isWarningCue(int sfxId) {
         return sfxId == Sonic3kSfx.AIR_DING.id || sfxId == Sonic3kSfx.ALARM.id
                 || sfxId == Sonic3kSfx.ROBOTNIK_SIREN.id || sfxId == Sonic3kSfx.DEATH.id

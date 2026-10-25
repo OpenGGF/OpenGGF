@@ -243,12 +243,73 @@ public class RenderOrderTest {
     public void testStageRingsRenderAtRomPriorityBucketInsideSpriteObjectPasses() throws IOException {
         String source = Files.readString(Path.of("src/main/java/com/openggf/level/LevelRenderer.java"));
 
-        assertEquals(3, countOccurrences(source, "drawStageRingsForBucket(ringManager,"),
-                "LevelRenderer should place stage-ring drawing in each sprite/object bucket path");
-        assertTrue(source.contains("bucket != RenderPriority.PLAYER_DEFAULT"),
-                "Obj25 rings use ROM priority bucket 2, so higher-bucket clouds must draw before rings");
-        assertTrue(source.contains("ringManager.draw(lm.frameCounter);"),
-                "Stage ring drawing should still go through RingManager");
+        String preparation = sourceBetween(source, "private void prepareOrDrawLiveSprites(",
+                "private void renderGhostsForLayer(");
+        String regular = sourceBetween(source, "public void renderSpriteObjectPass(",
+                "private void prepareOrDrawLiveSprites(");
+        String filtered = sourceBetween(source, "private void renderSpriteObjectPassFiltered(",
+                "private void drawStageRingsForBucket(");
+        String capture = sourceBetween(source, "SpritePresentation.Frame captureSceneSpriteTable(",
+                "private boolean cinematicDraw;");
+        String publication = sourceBetween(source, "void prepareSpritePresentation(",
+                "void publishHudCounters(");
+        String rings = sourceBetween(source, "private void drawStageRingsForBucket(",
+                "public void renderEndingBackground(");
+
+        assertTrue(regular.contains("drawPublishedSprites("));
+        assertTrue(regular.contains("prepareOrDrawLiveSprites(spriteManager);"));
+        assertTrue(regular.contains("captureSceneSpriteTable(spriteManager)"));
+        assertTrue(filtered.contains("drawPublishedSprites("));
+        assertTrue(filtered.contains("captureSceneSpriteTable(spriteManager)"));
+        assertTrue(capture.contains("prepareOrDrawLiveSprites(sprites)"));
+        assertTrue(publication.contains("renderSpriteObjectPass(sprites, false);"));
+        assertEquals(0, countOccurrences(regular + filtered, "drawStageRingsForBucket(ringManager,"),
+                "draw consumers replay the shared table instead of submitting duplicate ring entries");
+
+        int buckets = preparation.indexOf(
+                "for (int bucket = RenderPriority.MIN; bucket <= RenderPriority.MAX; bucket++)");
+        int ringCall = preparation.indexOf("drawStageRingsForBucket(ringManager,");
+        int zoneTail = preparation.indexOf("bucketSpriteSource.appendSpritesAfterPriorityBucket(bucket);");
+        int replay = preparation.indexOf("graphicsManager.endSpriteSatCollectionAndReplay();");
+        assertTrue(buckets >= 0 && buckets < ringCall && ringCall < zoneTail && zoneTail < replay,
+                "legacy stage rings join the ascending native table bucket before its zone tail and replay");
+        assertEquals(1, countOccurrences(preparation, "drawStageRingsForBucket(ringManager,"),
+                "every sprite/object consumer shares one native table producer");
+        assertTrue(rings.contains("bucket != RenderPriority.PLAYER_DEFAULT"),
+                "Obj25 rings use ROM priority bucket 2, preserving the native overlap order");
+        assertTrue(rings.contains("ringManager.draw(lm.frameCounter);"),
+                "stage-ring drawing still goes through RingManager");
+        assertTrue(rings.indexOf("ringManager.draw(lm.frameCounter);")
+                < rings.indexOf("ringManager.drawLostRings(lm.frameCounter);"),
+                "placed and lost-ring producers retain their order");
+    }
+
+    @Test
+    public void nativeRingEmissionProfilesUseTheirOwnProducerWithoutLegacyDuplication() throws IOException {
+        String source = Files.readString(Path.of("src/main/java/com/openggf/level/LevelRenderer.java"));
+        String preparation = sourceBetween(source, "private void prepareOrDrawLiveSprites(",
+                "private void renderGhostsForLayer(");
+        int placed = preparation.indexOf("RingDrawInternalAccess.drawPlaced(ringManager,");
+        int buckets = preparation.indexOf(
+                "for (int bucket = RenderPriority.MIN; bucket <= RenderPriority.MAX; bucket++)");
+        assertTrue(preparation.contains("profile.placedRingEmission() == "
+                + "com.openggf.game.internal.SpriteTableBuildProfile.PlacedRings.BEFORE_OBJECT_BUCKETS"));
+        assertTrue(placed >= 0 && placed < buckets,
+                "the native ring-list profile emits its rows before object buckets");
+        assertTrue(preparation.contains("RingDrawInternalAccess.slottedAttracted(ringManager, bucket)"),
+                "physical ring slots join the matching object bucket instead of a late global draw");
+        int legacyGuard = preparation.indexOf(
+                "if (!(lm.gameModule instanceof com.openggf.game.internal.SpriteTableBuildProfile))");
+        int legacyDraw = preparation.indexOf("drawStageRingsForBucket(ringManager,");
+        assertTrue(buckets < legacyGuard && legacyGuard < legacyDraw,
+                "native emission profiles never receive an additional legacy ring pass");
+    }
+
+    private static String sourceBetween(String source, String start, String end) {
+        int first = source.indexOf(start);
+        int last = source.indexOf(end, Math.max(0, first));
+        assertTrue(first >= 0 && last > first, "Expected source owner between " + start + " and " + end);
+        return source.substring(first, last);
     }
 
     private static void assertPostFadeExceptionRecordedBefore(String source,

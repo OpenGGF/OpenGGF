@@ -3,6 +3,7 @@ package com.openggf.game.sonic2.audio;
 import com.openggf.audio.AbstractAudioProfile;
 import com.openggf.audio.GameMusic;
 import com.openggf.audio.GameSound;
+import com.openggf.audio.NativeMailboxMusicRoutes;
 import com.openggf.audio.SegaPcmSpec;
 import com.openggf.game.audio.SegaPcmRomReader;
 import com.openggf.game.audio.RomSoundCatalog;
@@ -22,7 +23,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
 
-public class Sonic2AudioProfile extends AbstractAudioProfile {
+public class Sonic2AudioProfile extends AbstractAudioProfile implements NativeMailboxMusicRoutes {
     private static final RomSoundCatalog.Catalog NATIVE_SOUNDS = new RomSoundCatalog.Catalog(
             Arrays.stream(Sonic2Music.values()).map(music ->
                     new Entry(music.name(), music.displayName, music.nativeId, music.id)).toList(),
@@ -32,6 +33,23 @@ public class Sonic2AudioProfile extends AbstractAudioProfile {
     /** Native request IDs and names, independent of ROM loading and live playback. */
     public static RomSoundCatalog.Catalog nativeSounds() { return NATIVE_SOUNDS; }
 
+    /**
+     * Retail requests index {@code zMasterPlaylist}, not the engine's historical music ids.
+     * {@code zBGMLoad} subtracts $81, reads the playlist metadata and follows its bank/pointer
+     * index (s2.sounddriver.asm:1736-1779). The playlist order is owned by
+     * {@code zMasterPlaylist} (s2.sounddriver.asm:3823-3855). Keep existing engine ids stable;
+     * in particular, request $91 is Options while engine id $91 is EHZ 2P.
+     * The profile catalog shares the native IDs owned by {@link Sonic2Music}.
+     */
+    @Override
+    public int musicForNativeRequest(int nativeRequestId) {
+        for (Entry music : NATIVE_SOUNDS.music()) {
+            if (music.soundId() == nativeRequestId) {
+                return music.engineId();
+            }
+        }
+        return -1;
+    }
 
     private final Consumer<Sonic2SoundRequestService.Event> requestObserver;
 

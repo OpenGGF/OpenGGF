@@ -86,7 +86,6 @@ class TestAizMinibossCommonShotRetirement {
         var boss=manager.createDynamicObject(()->new TestAizMinibossFlareNativeGraph.FrozenBoss(
                 new ObjectSpawn(x,y,0x90,0,0,false,0)));
         var barrel=manager.createDynamicObject(()->new AizMinibossFlameBarrelChild(boss,0,true));
-        boss.getChildComponents().add(barrel);
         var shot=manager.createDynamicObject(()->new AizMinibossBarrelShotChild(boss,barrel,x,y+4,
                 AizMinibossBarrelShotChild.Mode.SIMPLE));
         int slot=shot.getSlotIndex();

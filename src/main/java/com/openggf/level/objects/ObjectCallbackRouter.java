@@ -63,6 +63,10 @@ final class ObjectCallbackRouter {
 
     <T> T call(ObjectInstance instance, Supplier<T> callback) {
         String owner = owners.get(instance);
+        return callWithOwner(owner, callback);
+    }
+
+    private <T> T callWithOwner(String owner, Supplier<T> callback) {
         if (owner == null || boundary == null) return callback.get();
         String previous = currentOwner;
         currentOwner = owner;
@@ -116,6 +120,34 @@ final class ObjectCallbackRouter {
         String owner = currentOwner != null ? currentOwner
                 : rememberedOwner != null ? rememberedOwner : scopedOwner.get();
         if (owner != null) owners.put(instance, owner);
+    }
+
+    /** Capture before the first unregister; this token never restores registration. */
+    RemovalCallback captureRemovalCallback(ObjectInstance receiver) {
+        return new RemovalCallback(receiver, owners.get(receiver));
+    }
+
+    final class RemovalCallback {
+        private final ObjectInstance receiver;
+        private final String owner;
+
+        private RemovalCallback(ObjectInstance receiver, String owner) {
+            this.receiver = receiver;
+            this.owner = owner;
+        }
+
+        boolean isFor(ObjectInstance instance) { return receiver == instance; }
+
+        void invoke() {
+            if (!(receiver instanceof AbstractObjectInstance instance)) return;
+            // Only this exact removal receiver may reuse this router's active owner.
+            // A second catching boundary would let native full-delete continue to onUnload.
+            if (owner != null && owner.equals(currentOwner)) {
+                instance.onRemovedFromObjectManager();
+            } else {
+                callWithOwner(owner, () -> { instance.onRemovedFromObjectManager(); return null; });
+            }
+        }
     }
 
     void runAndUnregister(ObjectInstance instance, Runnable callback) {

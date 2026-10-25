@@ -85,6 +85,126 @@ class TestPresentationPatternBatching {
         assertEquals(8, graphics.commands.size());
     }
 
+    @Test void preservedGhostColourIsAPresentationSubmissionBarrier() {
+        graphics.beginGhostRenderEffect(.5f);
+        submit(0, 0, 1);
+        graphics.beginGhostRenderEffect(.5f, true);
+        submit(1, 0, 1);
+        submit(2, 0, 1);
+        assertEquals(List.of(1, 2), graphics.commands.stream()
+                .map(c -> ((PatternRenderCommand) c).presentationPatternCount()).toList(),
+                "a grey ghost cannot absorb a coloured ghost with otherwise identical draw state");
+    }
+
+    @Test void nativePixelOperationAndBackdropArePresentationSubmissionBarriers() throws Exception {
+        var entry = ((PatternAtlas) field("patternAtlas").get(graphics)).getEntry(patternId);
+        var normal = PatternRenderCommand.obtainRows(entry, -1, 3, false, false, false,
+                0, 0, 0, 8, graphics);
+        graphics.currentShadow15Backdrop = new Shadow15Backdrop(1, 0, 0, 320, 224);
+        var shadow = PatternRenderCommand.obtainNativeShadowRows(entry, 3, false, false, false,
+                0, 0, 0, 8, graphics);
+        var sameBackdrop = PatternRenderCommand.obtainNativeShadowRows(entry, 3, false, false, false,
+                8, 0, 0, 8, graphics);
+        graphics.currentShadow15Backdrop = new Shadow15Backdrop(2, 0, 0, 320, 224);
+        var differentBackdrop = PatternRenderCommand.obtainNativeShadowRows(entry, 3, false, false, false,
+                16, 0, 0, 8, graphics);
+        try {
+            for (var command : List.of(normal, shadow, sameBackdrop, differentBackdrop))
+                command.presentation(new float[]{0, 0, 8, 0, 8, 8, 0, 8}, 0, 1);
+            assertFalse(normal.appendPresentation(shadow), "native shadow is a different pixel operation");
+            assertFalse(shadow.appendPresentation(normal), "the operation boundary works in both directions");
+            assertTrue(shadow.appendPresentation(sameBackdrop), "matching native state can still batch");
+            assertFalse(shadow.appendPresentation(differentBackdrop), "a batch owns one borrowed backdrop");
+            assertEquals(2, shadow.presentationPatternCount());
+        } finally {
+            graphics.currentShadow15Backdrop = null;
+            for (var command : List.of(normal, shadow, sameBackdrop, differentBackdrop)) command.recycle();
+        }
+    }
+
+    @Test void pooledCommandsResetShadowAndPresentationStateForBothObtainPaths() throws Exception {
+        var entry = ((PatternAtlas) field("patternAtlas").get(graphics)).getEntry(patternId);
+        for (boolean rows : new boolean[]{false, true}) {
+            graphics.currentShadow15Backdrop = new Shadow15Backdrop(1, 0, 0, 320, 224);
+            graphics.beginGhostRenderEffect(.5f, true);
+            var shadow = PatternRenderCommand.obtainNativeShadowRows(entry, 3, false, false, false,
+                    0, 0, 0, 8, graphics);
+            shadow.presentation(new float[]{0, 0, 8, 0, 8, 8, 0, 8}, 0, 1);
+            shadow.recycle();
+            assertEquals(0, shadow.presentationPatternCount());
+            assertFalse(commandField("nativeShadow15").getBoolean(shadow));
+            assertNull(commandField("shadowBackdrop").get(shadow));
+            graphics.currentShadow15Backdrop = null;
+            graphics.endGhostRenderEffect();
+            PatternRenderCommand normal;
+            if (rows) {
+                normal = PatternRenderCommand.obtainRows(entry, 1, 0, false, false, false, 0, 0, 0, 8, graphics);
+            } else {
+                var desc = new PatternDesc();
+                normal = PatternRenderCommand.obtain(entry, 1, graphics);
+                normal.capturePalette(desc.getPaletteIndex());
+                normal.finish(desc.getHFlip(), desc.getVFlip(), desc.getPriority(), 0, 0, 8f, 8f);
+            }
+            try {
+                assertSame(shadow, normal, "the regression must exercise the recycled shadow command");
+                assertEquals(0, normal.presentationPatternCount());
+                assertFalse(commandField("nativeShadow15").getBoolean(normal));
+                assertFalse(commandField("ghostColour").getBoolean(normal));
+                assertNull(commandField("shadowBackdrop").get(normal));
+            } finally { normal.recycle(); }
+        }
+    }
+
+    @Test void satCopiesKeepGhostAndNativeReplayMetadataTogether() {
+        var fragment = SpriteSatEntry.of(4, 5, 1, 1, patternId, 3, false, false, false, false);
+        var fragments = List.of(fragment);
+        var style = new SpriteSatEntry.Ghost(.5f, true);
+        var subject = new SpritePresentation.Subject("combined", SpritePresentation.Part.BODY, false);
+        var source = SpriteSatEntry.of(4, 5, 2, 2, patternId, 3, false, false, false, false)
+                .withGhost(style).withPixelOperation(SpriteSatEntry.PixelOperation.SHADOW_15)
+                .withReplayFragments(fragments).withTileOcclusionPaletteMask(5).withPresentationSubject(subject);
+        var copies = List.of(source.clipRows(1, 1), source.clipRect(1, 1, 0, 2),
+                source.withMaskReplayRole(SpriteMaskReplayRole.PRE_MASK_FRONT), source.withVisibleScanlines(6, 12),
+                source.withPresentationSubject(subject), source.withReplayFragments(fragments),
+                source.withTileOcclusionPaletteMask(5), source.withPixelOperation(SpriteSatEntry.PixelOperation.SHADOW_15),
+                source.withGhost(style));
+        for (var copy : copies) {
+            assertEquals(style, copy.ghost());
+            assertEquals(SpriteSatEntry.PixelOperation.SHADOW_15, copy.pixelOperation());
+            assertEquals(fragments, copy.replayFragments());
+            assertEquals(5, copy.tileOcclusionPaletteMask());
+            assertEquals(subject, copy.presentationSubject());
+        }
+        assertThrows(UnsupportedOperationException.class, () -> source.replayFragments().clear());
+    }
+
+    @Test void preparationCapturesShadowOperationAndGhostColourTogether() {
+        graphics.beginGhostRenderEffect(.7f, true);
+        var frame = SpritePresentation.prepare(graphics, 0, 0, () -> {
+            graphics.beginGhostRenderEffect(.5f, true);
+            graphics.withSpritePixelOperation(SpriteSatEntry.PixelOperation.SHADOW_15, () -> {
+                graphics.renderPatternWithId(patternId, new PatternDesc(), 0, 0);
+                graphics.renderPatternRowsWithId(patternId, new PatternDesc(), 3,
+                        false, false, false, 8, 0, 2, 7);
+            });
+            graphics.endGhostRenderEffect();
+        }, ignored -> new SpritePresentation.Attributes(3, false, false, false));
+        assertEquals(2, frame.tiles().size());
+        for (var tile : frame.tiles()) {
+            assertTrue(tile.ghost());
+            assertTrue(tile.ghostColour());
+            assertEquals(.5f, tile.ghostAlpha());
+            assertEquals(SpriteSatEntry.PixelOperation.SHADOW_15, tile.pixelOperation());
+        }
+        assertEquals(2, frame.tiles().getLast().rowStart());
+        assertEquals(7, frame.tiles().getLast().rowEnd());
+        assertTrue(frame.patternVersions().containsKey(patternId), "native shadow art is frozen with the frame");
+        assertTrue(graphics.isGhostRenderEffectActive());
+        assertTrue(graphics.isGhostRenderColourPreserved(), "preparation restores the caller's coloured ghost state");
+        assertEquals(.7f, graphics.getGhostRenderAlpha());
+        assertEquals(SpriteSatEntry.PixelOperation.NORMAL, graphics.currentSpritePixelOperation);
+    }
+
     @Test void capturedQueuesOwnTheirBatchWithoutMergingIntoTheOuterQueue() {
         submit(0, 0, 1);
         // Queue construction is GL-free; inspect via the existing command capture target seam.
@@ -145,6 +265,12 @@ class TestPresentationPatternBatching {
     private void submit(int x, float hue, float opacity) {
         PresentationGraphicsAccess.render(graphics, patternId, 0, false, false, false, 2, 7,
                 new float[]{x, 12, x + 8, 12, x + 8, 17, x, 17}, hue, opacity);
+    }
+    private static Field commandField(String name) {
+        try {
+            Field field = PatternRenderCommand.class.getDeclaredField(name);
+            field.setAccessible(true); return field;
+        } catch (ReflectiveOperationException failure) { throw new AssertionError(failure); }
     }
     private static Field field(String name) {
         try {

@@ -55,6 +55,7 @@ public class Sonic2SpecialStagePlayer {
 
     private int xPos;
     private int yPos;
+    private Sonic2SpecialStageManager projectionOwner;
 
     private int xVel;
     private int yVel;
@@ -107,9 +108,6 @@ public class Sonic2SpecialStagePlayer {
 
     private int collisionProperty;
 
-    private static final int SS_OFFSET_X = 0x80;  // From s2disasm line 6631
-    private static final int SS_OFFSET_Y = 0x36;  // From s2disasm line 6632 (was incorrectly 0x50)
-
     private static final int INITIAL_Z_POS_MAIN = 0x6E;
     private static final int INITIAL_Z_POS_SIDEKICK = 0x80;
     private static final int Z_POS_MIN = 0x6E;
@@ -155,7 +153,7 @@ public class Sonic2SpecialStagePlayer {
     private int ctrlRecordIndex;
     private static final int CTRL_RECORD_SIZE = 16;
 
-    private Sonic2SpecialStageManager swapPositionsOwner;
+    private SwapPositionsPort swapPositionsOwner;
     private int invulnerabilityCountdown;
     private Sonic2SpecialStagePlayer otherPlayer;
     private boolean spawned;
@@ -163,6 +161,10 @@ public class Sonic2SpecialStagePlayer {
 
     Sonic2SpecialStagePlayer(PlayerType type, boolean isMain,
                              Sonic2SpecialStageManager swapPositionsOwner) {
+        this(type, isMain, SwapPositionsPort.ordinary(swapPositionsOwner));
+    }
+
+    Sonic2SpecialStagePlayer(PlayerType type, boolean isMain, SwapPositionsPort swapPositionsOwner) {
         this.playerType = type;
         this.isMainCharacter = isMain;
         this.swapPositionsOwner = Objects.requireNonNull(
@@ -251,8 +253,8 @@ public class Sonic2SpecialStagePlayer {
         ssYSub = 0;
         ssZPos = isMainCharacter ? INITIAL_Z_POS_MAIN : INITIAL_Z_POS_SIDEKICK;
 
-        xPos = SS_OFFSET_X;
-        yPos = SS_OFFSET_Y + INITIAL_Y_POS;
+        xPos = projectionOffsetX();
+        yPos = projectionOffsetY() + INITIAL_Y_POS;
 
         xVel = 0;
         yVel = 0;
@@ -584,9 +586,21 @@ public class Sonic2SpecialStagePlayer {
     private void ssAnglePos() {
         int d0 = ssXPos;
         d0 = (d0 * SCREEN_SCALE_FACTOR) >> 8;
-        xPos = d0 + SS_OFFSET_X;
+        xPos = d0 + projectionOffsetX();
 
-        yPos = ssYPos + SS_OFFSET_Y;
+        yPos = ssYPos + projectionOffsetY();
+    }
+
+    void setProjectionOwner(Sonic2SpecialStageManager owner) {
+        projectionOwner = Objects.requireNonNull(owner, "owner");
+    }
+
+    private int projectionOffsetX() {
+        return projectionOwner == null ? 0x80 : projectionOwner.getGeometryOffsetX();
+    }
+
+    private int projectionOffsetY() {
+        return projectionOwner == null ? 0x36 : projectionOwner.getGeometryOffsetY();
     }
 
     private void ssPlayerJump(int pressedButtons) {
@@ -1060,19 +1074,19 @@ public class Sonic2SpecialStagePlayer {
     }
 
     public void setSwapPositionsFlag(boolean flag) {
-        swapPositionsOwner.setSwapPositionsFlag(flag);
+        swapPositionsOwner.set(flag);
     }
 
     public boolean getSwapPositionsFlag() {
-        return swapPositionsOwner.getSwapPositionsFlag() != 0;
+        return swapPositionsOwner.get();
     }
 
     void toggleSwapPositionsFlag() {
-        swapPositionsOwner.toggleSwapPositionsFlag();
+        swapPositionsOwner.toggle();
     }
 
     void setSwapPositionsOwner(Sonic2SpecialStageManager owner) {
-        this.swapPositionsOwner = Objects.requireNonNull(owner, "owner");
+        this.swapPositionsOwner = SwapPositionsPort.ordinary(owner);
     }
 
     public int getControlRecordEntry(int framesAgo) {

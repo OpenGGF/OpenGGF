@@ -319,6 +319,82 @@ for commands and limits. This is bounded pilot evidence; remaining matrix
 obligations and general enforcement stay open.
 
 
+## Retained HCZ handlers and incoming act-2 carrier — 2026-10-17
+
+Worker source `b9c1c8b3d` composes final hand/chopper/miniboss/drowned/monitor
+contracts. `TestSonic3kHCZEvents` checks stored swing targets after camera motion,
+current/target X-lock ownership, and real manager/player/camera restore twice
+with forward release replay; `TestSonic3kLevelEventRewindSnapshot` and
+`TestZoneEventRewindSchemaGuard` cover both distinct captured target words.
+Focused1591/0/0/4 includes broader consumers, not 1591 HCZ products; four external
+authored-AIZ JAR cases skip. Named guards113/0/0/0 pass. The hard-coded GLFW
+pixel oracle fails before scene verification; native-only original 320 Sonic+Tails
+images do not replace engine pixel equality or additional viewport/donor/roster
+products. The [audit](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#final-single-invocation-strict-qualification)
+records the three assertion-red qualifiers, summary-only returned-HCZ7134 row,
+missing exit, load7126, unqualified slice spans and absent auxiliary coverage.
+Cold traversal, full product breadth, boss and cross-load/respawn obligations
+retain their inherited gaps; Root owns combined delivery validation.
+
+
+## Fresh load and title submission ownership — 2026-10-17
+
+The same worker's followup after866 adds a short real-load test for Level's ten HCZ1 Nemesis descriptors before title dispatch, first-loop preparation, next-VBlank six-pattern drain and twice-restored queue/job ordinals. Old-red4/3F becomes4/0F/0E/0S. Focused134 plus source/authority/schema guards131 pass without skips. Canonical load-prefix through the first segment9 row passes, including complete segment8 with its prior7126 position/camera errors gone; the alternate BK2 still has exactly26179 `rings`72/0. [Evidence/commands/native observations](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#bounded-followup-qualification-and-limits).
+
+This covers the native320 Sonic+Tails load owner and short semantic replay, not cold-route traversal, an engine pixel product, cross-load timeline policy or the full matrix. Matched pre-fix slice totals4699 ondc338 and4353 on866 include mixed span deltas and the same9482 frontier; historical3738 is not attributed. Full new-source HCZ replay, other viewports/donors/teams and the exact GLFW oracle remain open.
+
+
+## R3 full strict qualification on Main460 composition — 2026-10-17
+
+Worker merge21327d78a: canonical3815 is6/1F/0E/0S, with all three prefixes,
+standalone AIZ and initial HCZ passing. Returned HCZ11 consumes14208 reference
+rows,134710 field mismatches(115689physics/19021animation), first reported
+non-camera6674 `rings`114/0 and missing giant-ring exit. HCZ90977 is2/1F/0E/0S:
+full31482 reference rows,29302 comparison records,4353 spans(3424physics/929animation),
+first9482 `air`1/0, first animation9486; independent Poindexter passes. The entire
+slice error array matches the prior4353 result. Matched4699/4353 deltas remain
+mixed;3738 is unmatched. Alternate760's one26179 ring span is reused, not rerun.
+No new entry, viewport/donor/team, pixel, cold traversal or cross-load product is
+certified. Active-level ring-reset/title-latch ownership, later route exit and
+the exact GLFW oracle remain unqualified. No new runtime fix. [Exact source,
+commands, windows and rejected load attribution](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r3-current-composed-strict-qualification--2026-10-17).
+
+
+R4 title-owner follow-up (2026-10-17): HCZ's carried results SST now receives
+its native child-movement gate through the existing request/carry contract.
+Short real allocation-hole/latch tests recreate and replay every registered
+world key twice; focused182 and guards131 pass without skips. Native slot15's
+last child movement69754 precedes clear69755/reset69756. Canonical2015 moves the
+first reported non-camera frontier6674 rings→7134 sidekick_x0175/0176, with
+133771 field mismatches over the same14208-row returned-HCZ window and missing
+exit. Independent full HCZ65594 retains exactly4353 spans/first9482air, Poindexter
+passes; earlier divergence prevents a second clean repaired-owner claim. No new
+entry, product breadth, engine pixel or cross-load timeline certification.
+[Exact evidence and limits](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r4-retained-title-parent-and-child-movement-latch--2026-10-17).
+
+
+### Returned HCZ8329 skim logical input — 2026-10-17 candidate
+
+The existing HCZ skim owner now consumes the logical A/B/C pressed edge rather
+than held/raw input (`loc_385D2`). Independent held/noedge and logical-edge/raw-
+neutral controls are genuinely old-red2/2F then pass in focused80/0F0E0S,
+including curve exit, native P2 and two registered-world owner-phase replay
+continuations; fresh authority25/0F0E0S also passes. These are declared component
+inlets at arbitrary water200, not cold traversal or new viewport/donor rows.
+One unchanged originalAD40 boot prefix directly observes active skim8328,
+ordinary exit8329 with Yspeed0 and no falsejump, then native-matching8330 velocity.
+Its live8331 cutoff is still206 errors=11camera-physics+195animation; the prefix
+itself fails an unsupported extra animation0 expectation. Existing bounded
+R10/R11 evidence already records195 with the same first3475 sidekick17/1C,
+without proving full vector identity. No corrected prefix was run. One separately
+authorized original maintained canonical49197 is1/1F0E0S: returned HCZ11 completes
+14208 rows with26153=23312physics+2841animation,0warnings/bootstrap,lag59, first
+non-camera8717 sidekick_air1/0 (previously8329 y_speed0/-680). It crosses the
+manifest giant_ring→ss_6→hcz_3 boundaries, then loses ownership at BK2cursor88306.
+The newly reached hcz_3 is incomplete,63295=54642physics+8653animation,first287
+y06D4/06DA; no route certification follows from reduced counts or later progress.
+Earlier six gameplay windows remain complete-zero. No further probe/fix follows. See [exact evidence and limits](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#canonical-returned-hcz8329-water-skim-input-owner--2026-10-17).
+
 ## Continuous AIZ-to-HCZ load qualification — 2026-10-25
 
 `TestS3kSonicTailsCompleteEmeraldRunPrefix#aiz1ThroughHczLoadBoundary`

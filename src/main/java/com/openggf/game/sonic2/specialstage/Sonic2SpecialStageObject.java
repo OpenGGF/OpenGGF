@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.specialstage;
 
+import com.openggf.physics.TrigLookupTable;
+
 /**
  * Base class for Special Stage objects (rings, bombs, emeralds).
  *
@@ -67,6 +69,14 @@ public abstract class Sonic2SpecialStageObject {
     /** Whether the object should be drawn with priority */
     protected boolean highPriority;
 
+    private Sonic2SpecialStageSlotPool nativePool;
+    private Sonic2SpecialStageSlotPool.Handle nativeHandle;
+    private Sonic2SpecialStageSlotPool.Handle nativeShadowHandle;
+    private boolean nativeInitialized;
+    protected boolean effectAnimationStarted;
+    private int shadowScreenX;
+    private int shadowScreenY;
+
     /**
      * Initializes the object with starting depth and angle.
      * @param depth Integer depth value (will be converted to fixed-point)
@@ -82,6 +92,13 @@ public abstract class Sonic2SpecialStageObject {
         this.state = State.ACTIVE;
         this.onScreen = false;
         this.highPriority = false;
+        this.nativePool = null;
+        this.nativeHandle = null;
+        this.nativeShadowHandle = null;
+        this.nativeInitialized = false;
+        this.effectAnimationStarted = false;
+        this.shadowScreenX = 0;
+        this.shadowScreenY = 0;
     }
 
     /**
@@ -129,10 +146,14 @@ public abstract class Sonic2SpecialStageObject {
         // Calculate track floor Y position (bottom of perspective ellipse)
         // This is where shadows should be rendered, at yBase + yRadius
         trackFloorY = entry.yBase + entry.yRadius;
+        updateNativeShadowScreenPosition(entry, trackFlipped);
 
         // Determine animation index based on depth
         // Lower depth = closer = larger sprite (higher anim index)
-        animIndex = calculateAnimIndex();
+        // loc_3512A preserves animation $A for effect routines.
+        if (state == State.ACTIVE) {
+            animIndex = calculateAnimIndex();
+        }
     }
 
     /**
@@ -234,6 +255,155 @@ public abstract class Sonic2SpecialStageObject {
         state = State.REMOVED;
     }
 
+    /** Bind a real allocation before this owner's first native RunObjects turn. */
+    public final void attachNativeSlot(Sonic2SpecialStageSlotPool pool,
+                                       Sonic2SpecialStageSlotPool.Handle handle) {
+        if (pool == null || !pool.isLive(handle)) {
+            throw new IllegalArgumentException("Object must bind a live special-stage allocation");
+        }
+        nativePool = pool;
+        nativeHandle = handle;
+    }
+
+    /**
+     * Obj60_Init/Obj61_Init fall through into movement after allocating their
+     * shadow. The allocator runs once, including when allocation fails
+     * ({@code Obj60_Init}/{@code Obj61_Init}, s2.asm:70795-70813,70881-70898).
+     */
+    public void initializeNativeOwner() {
+        if (nativeInitialized || nativePool == null || !nativePool.isLive(nativeHandle)) {
+            return;
+        }
+        nativeInitialized = true;
+        nativePool.setPriority(nativeHandle, isEmerald() ? 4 : 3);
+        nativePool.setRoutine(nativeHandle, 2);
+        if ((angle & 0x80) == 0) {
+            // loc_3529C uses the parent's ID with routine 4, not Obj63.
+            int shadowComponent = angle <= 0x10 || angle > 0x70 ? 2
+                    : angle <= 0x30 || angle > 0x50 ? 1 : 0;
+            Sonic2SpecialStageSlotPool.Entry parent = nativePool.entry(nativeHandle);
+            nativeShadowHandle = nativePool.allocateAfterCurrent(nativeHandle,
+                    Sonic2SpecialStageSlotPool.Kind.OBJECT_SHADOW, parent.objectId(),
+                    5, shadowComponent, nativeHandle);
+            nativePool.setRoutine(nativeShadowHandle, 4);
+        }
+    }
+
+    /**
+     * Publish writes performed by this owner's turn. Child deletion is a flag
+     * write; the child remains allocated until its own loc_3533A execution
+     * ({@code loc_3507A}/{@code loc_3516C}/{@code loc_3533A},
+     * s2.asm:70939-70947,71061-71069,71254-71262).
+     */
+    public final void updateNativeTopology() {
+        if (nativePool == null || !nativePool.isLive(nativeHandle)) {
+            return;
+        }
+        nativePool.setRoutine(nativeHandle, getNativeRoutine());
+        if (state == State.COLLECTED || state == State.EXPLODING || state == State.REMOVED) {
+            nativePool.markForDeletion(nativeShadowHandle);
+            nativeShadowHandle = null;
+        }
+        if (state == State.REMOVED) {
+            nativePool.release(nativeHandle);
+        }
+    }
+
+    protected int getNativeRoutine() {
+        if (!nativeInitialized) {
+            return 0;
+        }
+        return state == State.COLLECTED || state == State.EXPLODING ? 6 : 2;
+    }
+
+    /** loc_34F90 tests the pre-movement integer depth on effect turns. */
+    protected final void updateNativeEffectPriority() {
+        if (nativePool != null && getDepth() < 4) {
+            nativePool.setPriority(nativeHandle, 1);
+        }
+    }
+
+    public final Sonic2SpecialStageSlotPool.Handle getNativeHandle() {
+        return nativeHandle;
+    }
+
+    public final Sonic2SpecialStageSlotPool.Handle getNativeShadowHandle() {
+        return nativeShadowHandle;
+    }
+
+    public final int getNativeSlot() {
+        return nativeHandle == null ? -1 : nativeHandle.slot();
+    }
+
+    public final int getNativeAddress() {
+        return nativeHandle == null ? -1 : nativeHandle.address();
+    }
+
+    public final int getNativePriorityBucket() {
+        Sonic2SpecialStageSlotPool.Entry entry = nativePool == null ? null : nativePool.entry(nativeHandle);
+        return entry == null ? (isEmerald() ? 4 : 3) : entry.priorityBucket();
+    }
+
+    /**
+     * loc_35202 widens the original ellipse for the shadow after positioning
+     * the owner; x uses an unsigned quarter and y a signed quarter. Emeralds
+     * use the same original radii here after their separate 75% body projection.
+     * See {@code loc_35202} (s2.asm:71114-71152) and {@code loc_36088}
+     * (s2.asm:72496-72542).
+     */
+    protected final void updateNativeShadowScreenPosition(
+            Sonic2PerspectiveData.PerspectiveEntry entry, boolean trackFlipped) {
+        if (nativePool == null || !nativePool.isLive(nativeShadowHandle)) {
+            return;
+        }
+        int xRadius = (short) entry.xRadius;
+        int yRadius = (short) entry.yRadius;
+        xRadius = (short) (xRadius + ((xRadius & 0xFFFF) >>> 2));
+        yRadius = (short) (yRadius + (yRadius >> 2));
+        int effectiveXBase = trackFlipped ? 0x100 - entry.xBase : entry.xBase;
+        shadowScreenX = (short) (effectiveXBase + ((TrigLookupTable.cosHex(angle) * xRadius) >> 8));
+        // PerspectiveEntry may have arrived through a signed-byte decoder;
+        // the ROM performs one ext.w on that byte, never a second extension.
+        shadowScreenY = (short) ((byte) entry.yBase + ((TrigLookupTable.sinHex(angle) * yRadius) >> 8));
+    }
+
+    public final int getNativeShadowScreenX() {
+        return shadowScreenX;
+    }
+
+    public final int getNativeShadowScreenY() {
+        return shadowScreenY;
+    }
+
+    public final int getNativeShadowMappingFrame() {
+        Sonic2SpecialStageSlotPool.Entry shadow = nativePool == null
+                ? null : nativePool.entry(nativeShadowHandle);
+        if (shadow == null) {
+            return -1;
+        }
+        // loc_3534E uses 9 for animation 0, otherwise 10 - animation.
+        int size = animIndex == 0 ? 9 : (10 - animIndex) & 0xFF;
+        return size * 3 + shadow.component();
+    }
+
+    public final boolean isNativeShadowXFlip() {
+        return (angle & 0xFF) <= 0x30;
+    }
+
+    public final boolean isNativeShadowYFlip() {
+        return false;
+    }
+
+    public final boolean isNativeShadowVisible() {
+        return onScreen && nativePool != null && nativePool.isLive(nativeShadowHandle)
+                && !nativePool.isPendingDeletion(nativeShadowHandle);
+    }
+
+    /** Rebind only the service; all native identities are restored from values. */
+    final void bindNativePoolAfterRestore(Sonic2SpecialStageSlotPool pool) {
+        nativePool = pool;
+    }
+
     // Getters
 
     public State getState() {
@@ -284,7 +454,13 @@ public abstract class Sonic2SpecialStageObject {
                 animFrame,
                 animTimer,
                 onScreen,
-                highPriority);
+                highPriority,
+                nativeHandle,
+                nativeShadowHandle,
+                nativeInitialized,
+                effectAnimationStarted,
+                shadowScreenX,
+                shadowScreenY);
     }
 
     void restoreBaseRewindSnapshot(Sonic2SpecialStageSnapshot.BaseObjectSnapshot snapshot) {
@@ -299,6 +475,13 @@ public abstract class Sonic2SpecialStageObject {
         animTimer = snapshot.animTimer();
         onScreen = snapshot.onScreen();
         highPriority = snapshot.highPriority();
+        nativeHandle = snapshot.nativeHandle();
+        nativeShadowHandle = snapshot.nativeShadowHandle();
+        nativeInitialized = snapshot.nativeInitialized();
+        effectAnimationStarted = snapshot.effectAnimationStarted();
+        shadowScreenX = snapshot.shadowScreenX();
+        shadowScreenY = snapshot.shadowScreenY();
+        nativePool = null;
     }
 
     abstract Sonic2SpecialStageSnapshot.ObjectSnapshot captureRewindSnapshot();

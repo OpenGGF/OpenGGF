@@ -29,6 +29,71 @@ class TestKosinskiModuleQueueDmaJournal {
         assertTrue(queue.isIdle(),"logical restore must not create an unflushable physical reconcile");
     }
 
+
+    @Test void confirmedPatternsRefuseMissingTargetsAndRetainOnlyTheSuccessfulPrefixOnThrow() {
+        var queue = new KosinskiModuleQueue();
+        byte[] first = new byte[32], second = new byte[32];
+        Arrays.fill(first, (byte) 0x11); Arrays.fill(second, (byte) 0x22);
+        var empty = queue.capture();
+        assertFalse(KosModuleTransferAccess.publishPattern(queue, 32, first));
+        assertEquals(empty, queue.capture());
+        byte[] memory = sequence(128), original = memory.clone();
+        boolean[] available = {false};
+        var failure = new IllegalStateException("declared physical sink failure");
+        queue.bindDmaTarget(new KosinskiModuleQueue.DmaTarget() {
+            @Override public boolean isAvailable() { return available[0]; }
+            @Override public byte[] read(int address, int length) {
+                return Arrays.copyOfRange(memory, address, address + length);
+            }
+            @Override public void apply(KosinskiModuleQueue.DmaChunk chunk) {
+                byte[] data = chunk.data();
+                // The second write fails AFTER a partial physical mutation.
+                // Rollback receives its distinct original baseline, not this payload.
+                if (data[0] == 0x22) {
+                    System.arraycopy(data, 0, memory, chunk.destinationVramBytes(), 13);
+                    throw failure;
+                }
+                System.arraycopy(data, 0, memory, chunk.destinationVramBytes(), data.length);
+            }
+        });
+        assertFalse(KosModuleTransferAccess.publishPattern(queue, 32, first));
+        assertEquals(empty, queue.capture());
+        assertArrayEquals(original, memory);
+        available[0] = true;
+        assertTrue(KosModuleTransferAccess.publishPattern(queue, 32, first));
+        var prefix = queue.capture(); byte[] prefixPixels = memory.clone();
+        assertSame(failure, assertThrows(IllegalStateException.class,
+                () -> KosModuleTransferAccess.publishPattern(queue, 64, second)));
+        assertArrayEquals(prefixPixels, memory, "only the unconfirmed second pattern rolls back");
+        assertEquals(prefix, queue.capture(), "a throwing write cannot log an intended payload");
+        assertArrayEquals(Arrays.copyOfRange(original, 64, 96), Arrays.copyOfRange(memory, 64, 96));
+        for (int cycle = 0; cycle < 2; cycle++) {
+            queue.restore(empty); assertArrayEquals(original, memory);
+            assertTrue(KosModuleTransferAccess.publishPattern(queue, 32, first));
+            assertEquals(prefix, queue.capture()); assertArrayEquals(prefixPixels, memory);
+        }
+    }
+
+    @Test void incompletePatternConfirmationRollsBackWithoutInventingJournalCoverage() {
+        var queue = new KosinskiModuleQueue();
+        byte[] memory = sequence(96), original = memory.clone(), pattern = new byte[32];
+        Arrays.fill(pattern, (byte) 0x6A);
+        queue.bindDmaTarget(new KosinskiModuleQueue.DmaTarget() {
+            @Override public byte[] read(int address, int length) {
+                return Arrays.copyOfRange(memory, address, address + length);
+            }
+            @Override public void apply(KosinskiModuleQueue.DmaChunk chunk) {
+                byte[] data = chunk.data();
+                int length = data[0] == 0x6A ? 17 : data.length;
+                System.arraycopy(data, 0, memory, chunk.destinationVramBytes(), length);
+            }
+        });
+        var before = queue.capture();
+        assertThrows(IllegalStateException.class,
+                () -> KosModuleTransferAccess.publishPattern(queue, 32, pattern));
+        assertEquals(before, queue.capture()); assertArrayEquals(original, memory);
+    }
+
     @Test void snapshotsUseDeterministicByteValueEqualityInsteadOfArrayIdentity() {
         KosinskiModuleQueue.ArchiveState active=new KosinskiModuleQueue.ArchiveState(
                 0x100,0x102,6,4,1,1,2,0x110,true);

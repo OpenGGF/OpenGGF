@@ -6,6 +6,7 @@ import com.openggf.audio.GameSound;
 import com.openggf.audio.rewind.AudioCommand;
 import com.openggf.audio.rewind.AudioReplayReason;
 import com.openggf.game.ShieldType;
+import com.openggf.game.rewind.identity.PlayerRefId;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.SessionManager;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -70,9 +71,27 @@ class TestStageplayDonorEffectsRom {
             }
             assertTrue(leadAttack,"The main donor must enter its native Insta-Shield routine");
             assertTrue(followerAttack,"The follower donor must enter its own native Insta-Shield routine");
-            var captured=mode.getLevelManager().getObjectManager().rewindSnapshottable().capture();
-            assertTrue(captured.dynamicObjects().stream().anyMatch(entry->entry.rewindableAuxiliary()
-                    && entry.playerOwner()==follower),"Follower effects need rewind-owned auxiliary identity");
+            var objects=mode.getLevelManager().getObjectManager();
+            var identityContext=objects.captureIdentityContext();
+            var identities=identityContext.requireIdentityTable();
+            var followerRole=identities.encodePlayer(follower);
+            assertEquals(PlayerRefId.sidekick(0),followerRole);
+            assertSame(follower,identities.resolvePlayer(followerRole,true));
+            var followerShield=(AbstractObjectInstance)follower.getInstaShieldObject();
+            var followerShieldId=identities.idFor(followerShield);
+            assertNotNull(followerShieldId);
+            var captured=objects.rewindSnapshottable().capture();
+            var followerEntries=captured.dynamicObjects().stream()
+                    .filter(entry->followerShieldId.equals(entry.objectId())).toList();
+            assertEquals(1,followerEntries.size(),"The actual follower shield has one captured identity");
+            var followerEntry=followerEntries.getFirst();
+            assertTrue(followerEntry.rewindableAuxiliary(),"Follower effects need rewind-owned auxiliary identity");
+            assertEquals(followerRole,followerEntry.playerOwnerId());
+            assertNull(followerEntry.playerOwner(),"Registered owners use a role rather than a legacy incarnation");
+            assertEquals(followerShield.getClass().getName(),followerEntry.className());
+            var forwardLeadEffectState=((AbstractObjectInstance)lead.getInstaShieldObject())
+                    .captureRewindState(identityContext);
+            var forwardFollowerEffectState=followerShield.captureRewindState(identityContext);
             var timeline=EngineServices.current().audio().commandTimeline();
             int shieldSound=library.module("s3k").getAudioProfile().getSoundMap().get(GameSound.INSTA_SHIELD);
             long donorSounds=timeline.entries().stream().filter(entry->entry.command() instanceof AudioCommand.PlaySfx sfx
@@ -86,10 +105,28 @@ class TestStageplayDonorEffectsRom {
             assertEquals(objectState,((AbstractObjectInstance)lead.getInstaShieldObject()).captureRewindState());
             assertEquals(followerState,((AbstractObjectInstance)follower.getInstaShieldObject()).captureRewindState(),
                     "An already-registered auxiliary effect must reconstruct its captured animation and owner");
+            assertFalse(follower.getInstaShieldObject().isShieldFor(lead,ShieldType.BASIC));
+            var restoredIdentities=objects.captureIdentityContext().requireIdentityTable();
+            assertEquals(followerRole,restoredIdentities.encodePlayer(follower));
+            assertEquals(followerShieldId,restoredIdentities.idFor((AbstractObjectInstance)follower.getInstaShieldObject()));
+            var restoredFollowerEntries=objects.rewindSnapshottable().capture().dynamicObjects().stream()
+                    .filter(entry->followerShieldId.equals(entry.objectId())).toList();
+            assertEquals(1,restoredFollowerEntries.size());
+            var restoredFollowerEntry=restoredFollowerEntries.getFirst();
+            assertEquals(followerEntry.className(),restoredFollowerEntry.className());
+            assertTrue(restoredFollowerEntry.rewindableAuxiliary());
+            assertEquals(followerRole,restoredFollowerEntry.playerOwnerId());
+            assertNull(restoredFollowerEntry.playerOwner());
             world.resolve(scene,StageplayTimeline.sample(scene,0));
             int commands=timeline.entryCount();
             assertEquals(end,world.resolve(scene,StageplayTimeline.sample(scene,65)));
             assertEquals(commands,timeline.entryCount(),"Backward seek and silent replay cannot emit old ability sounds");
+            var replayedMode=SessionManager.getCurrentGameplayMode();
+            var replayedIdentityContext=replayedMode.getLevelManager().getObjectManager().captureIdentityContext();
+            assertEquals(forwardLeadEffectState,((AbstractObjectInstance)replayedMode.getSpriteManager()
+                    .getMainPlayable().getInstaShieldObject()).captureRewindState(replayedIdentityContext));
+            assertEquals(forwardFollowerEffectState,((AbstractObjectInstance)replayedMode.getSpriteManager()
+                    .getRegisteredSidekicks().getFirst().getInstaShieldObject()).captureRewindState(replayedIdentityContext));
             world.close();
             assertThrows(IllegalStateException.class,()->PlayerAbilityAudio.play(lead,GameSound.INSTA_SHIELD));
         }

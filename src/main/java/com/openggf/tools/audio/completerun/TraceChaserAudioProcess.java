@@ -121,7 +121,7 @@ public final class TraceChaserAudioProcess {
         try {
             process = processFactory.start(new Invocation(argv,
                     Map.of("PATH", "/usr/bin:/bin", "LC_ALL", "C", "LANG", "C",
-                            "HOME", home.toString()), work));
+                            "HOME", home.toString(), "BIZHAWK_HOME", referenceHome.toString()), work));
             stderr = new BoundedStderr(process.getErrorStream());
             reader = Thread.ofVirtual().start(stderr);
             int exit = process.waitFor();

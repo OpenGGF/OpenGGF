@@ -5,6 +5,99 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Labyrinth water transport:** Sonic 1 wind tunnels and water slides observe the
+  admitted VBlank before player movement, preserving the original suction and
+  waterfall-sound phase across lag and rewind. Jumping from a breakable pole
+  preserves its intact pose; its timeout still breaks it.
+
+- **Sonic 1 native behavior:** folded staircases release their own native slots
+  during unloading while child slots await their turn in the object walk.
+  Exploding Bomb fuses retain position fractions and status in the reused slot,
+  moving that first fragment immediately while fresh fragments initialize before
+  animating. Grounded rolling preserves the camera's vertical look bias, with
+  ordinary recentering resuming in the air. Green Hill edge walls load their
+  three original mapping frames and palette from the native ROM pointer.
+  Ending returns preserve a pending fade callback until it hands off to the title.
+  Results waits finish before the following object routine starts the next level
+  or special stage, retaining the final ordinary player-art upload.
+  Boss faces, flames and accessories occupy real slots and play their ROM
+  scripts. Green Hill's six-piece wrecking ball can hurt while deploying;
+  defeat bursts use Sonic 1's original allocation, art and lifetime. Star Light's
+  spikeballs accept native edge contact, and its escaping ship retains both
+  movement calls. Final Zone's panels, launcher and cylinders dispatch in their
+  native slots with independent animation and rewind state; its final flight
+  retains the original scripted player input. Dormant untracked
+  Scrap Brain saws retain their original objects while placement re-entry can
+  create the shipped duplicate.
+
+- **Native sprite submissions:** an internal queue retains call-time bucket
+  pressure, duplicate slot references and late slot reuse through rewind.
+  Bomb bodies, fuses and fragments submit at their native routine calls,
+  including the shipped repeated fuse submission on expiry. A body keeps its
+  Bomb pose through its in-place explosion handoff; explosion initialization
+  draws nothing before the fiery animation begins. Unported objects retain their existing
+  render path. Rewind also retains empty or rejected native passes, and converted
+  sources can exclude inferred drawing independently of accepted admissions. Attracted
+  rings submit at their actual object slots and retain native conversion art,
+  priority and independent visibility through rewind. Existing rings continue
+  during player death; converted bouncers retain the animation frame copied at
+  their own dispatch through late global animation and rewind. Native object-word
+  snapshots synchronize only proven words, leaving unrelated fixed-slot shield
+  helpers outside that memory projection while rejecting ambiguous native access.
+  Fresh S2 competition initialization owns its explicit object-memory clear;
+  bank eviction clears current live native owners in physical order while
+  preserving empty-slot residue and replacements created during notification.
+
+- **Native terrain rendering:** Retained plane images keep their original width,
+  height and wrap independently of ordinary level layouts. Camera movement
+  preserves their cells; owner revisions and rewind refresh the derived images.
+  Internal S3K competition views combine these planes with published sprite pages
+  and split scroll registers, retaining the picture through human reconstruction.
+  Complete competition entry remains gated.
+
+- **Sonic 1 level entry:** background scrolling starts from each level or credits
+  demo's final camera, and lamppost returns retain the original background camera
+  words. Scrap Brain Act 3 uses the original Labyrinth background scrolling
+  while keeping its Scrap Brain progression. Rewind restores fractional scroll
+  positions and cloud phase. Hidden
+  100-point pickups retain the shipped game's 10-point award and 100-point popup.
+  Consumed native level-entry requests hold source gameplay during their
+  blocking fade, preserving the completed event pass and the destination's
+  normal load and release. Sonic's prepared art stays pending during palette
+  fades until a native player-art service boundary. Special-stage entry retains
+  that palette handler through both the white-out and reveal, with one PLC
+  preparation per owned token. A full level load clears
+  old readiness before the fresh player's art is primed.
+  Native Results exits retain the final player-art comparison row and every
+  physical transfer through the following transition.
+
+- **Sonic 2 player and entry timing:** Super Sonic control runs between movement
+  and animation while its palette advances after objects, including hurt and
+  death. Transformation stars, timed-invincibility clear and audio requests occur
+  at transform start, and captured normal stars survive Super rewind restoration
+  and failed reconstruction retries with their original identity and animation.
+  It preserves native balance, reversion animation and invincibility timing, and
+  keeps the literal speed, acceleration and deceleration words written by water,
+  shoes, Super and Wing Fortress events across rewind, including shoes expiring
+  while still underwater. Ordinary special-stage entry presents its loading hold
+  without duplicating replay timing. Special-stage player pieces use ROM mappings
+  and resolve each tile through their DPLC requests, preserving whole native
+  sprite footprints even when the source art is scattered. Curved-track player
+  and fixed-shadow offsets retain the native gated writer across rewind, and
+  special-stage palettes follow the session ROM with canonical CRAM channels.
+  Ordinary special-stage bodies, objects and UI share the native H32 sprite
+  table and fixed scanline limits across viewport widths. Native shadow-family
+  pixels use projected terrain intensity through fades and display profiles,
+  including composed underwater rows and draw-only black reveals; stage drawing
+  retires inherited underwater rendering.
+  Leaf generators retain the native touch phase after slow contact. ARZ bubbles
+  preserve their native slot lifetime, pop animations and generator allocation
+  order, including the final out-of-range spawn and a full object pool.
+  Authored stages publish prepared stock or namespaced music through ordinary
+  presentation, honoring both automatic-playlist suppression owners. Their common
+  object art loads without a native zone header; native stages retain their title
+  timing and zone-owned spring art.
+
 - **OpenGGF Stageplay:** shared directing documents power the in-engine HUD and
   OpenGGF Editor's Stageplay workspace. Both editors share compact grouped forms,
   named choices, collapsed Advanced settings and structured F1 details with buttons,
@@ -18,6 +111,8 @@ Unreleased. The earlier development themes remain in
   Authored music control holds off automatic level playlists and entry fades through
   deferred entry and shot changes in playback/export; named music choices and exact
   ROM sound IDs agree across the screenplay, catalog and both editors; ROM cue gain is checked during authoring.
+  ICZ's arrival teleporter and MegaChopper release only their acquired player
+  controls for direction, preserving native state and rewind identities.
   Free objects, including released animals outside the main view, retain native
   appearances when switched to Puppet/Pose within their cast activation windows,
   including native sprite priority and foreground-wall occlusion in directed films.
@@ -27,20 +122,25 @@ Unreleased. The earlier development themes remain in
   collision and jump physics; floor snapping defaults on. Shared Place on floor
   direction and a batched ground CLI enumerate exact visual support and native player
   terrain proposals from decoded entry layouts or prepared scene frames, with bounded
-  work, typed refusals and one-step undo for safe editor placement. Poser mode retains manual
+  work, typed refusals and one-step undo for safe editor placement. Shared native terrain
+  scans preserve the caller's collision-array selection. Poser mode retains manual
   positioning, animation and frame selection. Every scene uses one native world
   with supplied-game performers, authored terrain and common framing, binding and
   activation-window rules. Timed object clears preserve separately owned rings;
   unpublished documents and screenplays accept only their current format. Native ROM worlds share moving objects, collision pickups, native hurt and per-actor controllers;
   bounded routes/placement targets, native flight/glide and actor/group
   camera follow use the production gameplay and rewind owners. Directed foreground,
-  characters and occlusion stay aligned through camera movement. Current native
+  characters and occlusion stay aligned through camera movement. Depth-backed scene
+  targets retain native sprite overlap and ghost blending while preserving their
+  original depth image. Current native
   scenes project background parallax/deformation at the directed camera without
   advancing native effect phases; separated performers share native object slots
   through independent activation windows. Inspect actual state
   and events through windowless simulation and placement/capability discovery. Live
   editor previews run in an isolated offscreen worker, preserving the active world;
   preview and export preserve logical-ROM windows and composite images.
+  Cross-game scene changes keep music and sound effects bound to the destination
+  game; same-game level entries preserve continuous playback.
   Record directed takes, undo edits, save/reopen and export synchronized
   lossless films. Shot-local screenplay tools and a mirrored agent skill support
   resource discovery, validation, lossless canonical-to-screenplay round trips and
@@ -76,7 +176,10 @@ Unreleased. The earlier development themes remain in
   direction with child-part frames, portable placed identities and timed clear/removal
   commands. Interrupting a native holder, including nested ending/P2 helpers, releases its
   acquired players while preserving native routine progress; seeking restores
-  that ownership. A generated ID/context catalog reports native arena and appearance
+  that ownership. The hand launcher releases acquired players for visual direction
+  while native unload retains its separate behavior. Logical viewport dimensions
+  remain exact while native SAT admission limits stay fixed.
+  A generated ID/context catalog reports native arena and appearance
   restrictions. The [Stageplay guide](docs/guide/creating/stageplay.md) has a
   first-film tutorial for the editor and screenplays, task chapters,
   troubleshooting, a glossary, a complete reference and a case study of the
@@ -85,9 +188,11 @@ Unreleased. The earlier development themes remain in
   beginner scene with native reactions, timed dialogue and a single-setting jump
   comparison.
 
-- **Recording imports:** copied BK2 recordings are bounded during decompression
+- **Recordings:** copied BK2 recordings are bounded during decompression
   and parsing, including metadata, input rows and verification sidecars. Oversized,
   ambiguous or inconsistent files are rejected without hiding healthy recordings.
+  Restarting a recording releases the retired audio reader before replacing the
+  ROM, while a live audio capture continues on the reopened source.
 
 - **Time Attack multiplayer security:** identity proofs bind the complete join
   intent to the master, direct-room or relay-room role and observed TLS
@@ -166,7 +271,9 @@ Unreleased. The earlier development themes remain in
   returns after the round. A lobby death reloads at once at the lobby spawn, with no
   lives or game over. Ghosts and their nameplates now also draw in S3K's
   sprite-masking zones (Sandopolis, Lava Reef, Sky Sanctuary and Hidden Palace), in
-  races and in the lobby. Protocol version 5. Mods get `RunArea` (a fenced spawn for a run),
+  races and in the lobby. They retain their chosen colours and blend between
+  native sprites without consuming hardware sprite capacity or opaque coverage.
+  Protocol version 5. Mods get `RunArea` (a fenced spawn for a run),
   `RunHandle.holdControls`, `RunHandle.setLevelCovered` and `SceneGameplay.launchBehind`
   (a run that plays behind its still-active scene).
 
@@ -182,6 +289,8 @@ Unreleased. The earlier development themes remain in
   reloading racers stop holding nearby ghost slots and show their state in the
   roster, and verifiers keep polling after a failed cycle. Mods can opt into the
   same act-completion retry through `RunHost.retryOnActCompletion()`.
+  Hosted Sonic 1 mid-run retries keep gameplay moving beneath the reload fade;
+  retries after act completion retain their gameplay hold.
   Round-end votes can draw from a custom pool: the room owner starts from the game's
   default pool, adds or removes any act that ends in a results tally (signpost acts
   and boss/capsule acts, never special or bonus stages), names it and chooses it when
@@ -192,10 +301,13 @@ Unreleased. The earlier development themes remain in
   every game's own HUD digits: `display.hudTimeHundredths` turns it on for normal play,
   and runs can ask for it and show their own clock there (`RunHandle.setHudTime`,
   `setHudTimeHundredths`). Time Attack uses both, so the game's TIME is the attempt's
-  time and the run panel no longer repeats it. Hosted runs can also override native HUD rows
-  with `RunHandle.setHudProfile` and align compact overlays using
-  `LevelOverlayCanvas.hudOriginX()`, preserving each game's artwork and HUD anchor setting;
-  clearing the override or ending the run restores the zone's layout.
+  time and the run panel no longer repeats it. The optional digits use the native
+  HUD's sprite budget and clipping, with matching bounds for compact HUD effects;
+  the default four-character clock keeps its original footprint. Hosted runs can
+  also override native HUD rows with `RunHandle.setHudProfile` and align compact
+  overlays using `LevelOverlayCanvas.hudOriginX()`, preserving each game's artwork
+  and HUD anchor setting; clearing the override or ending the run restores the
+  zone's layout.
   Time Attack uses it: TIME and RINGS on the top rows with no score or lives, its best
   time and split under them, and the room panel in the top-right corner. Its progress bar
   spans the screen with every racer in their colour at their true place, racers at the
@@ -302,7 +414,8 @@ Unreleased. The earlier development themes remain in
   Settings show **RESTART** only for changed
   values awaiting a restart, clearing it when restored to the running value.
   The hub remembers the last game after navigation settles, with optional
-  quiet title music. Controller hints
+  quiet title music decoded through an isolated stock audio source that preserves
+  the suspended game and bootstrap owner. Controller hints
   follow the last device used. Compact Controls, Advanced and ROM browsing pages,
   direct ROM location, bounded setup badges, explicit Save changes actions,
   clearer inherited values, calmer backgrounds and more readable text,
@@ -367,11 +480,21 @@ Unreleased. The earlier development themes remain in
   solid and crumble in the same pass, gumballs drop from the container with the
   machine's native random seed, ejected balls also push the second player, and a
   companion that drops into the exit is removed as in the original (it rejoins
-  on return). Pachinko orb rewards follow the level frame counter. All three bonus
-  traces now replay without errors. The Slot cage keeps re-centring the machine
-  through the goal wind-down, so the machine stays where the original shows it,
+  on return). Pachinko orb rewards follow the level frame counter, and round
+  bumpers show their ten-point score with the native sprite priority.
+  Each Slot-machine spike impact removes one carried ring while any remain.
+  Lightning-attracted rings award at the native object update and retain pending
+  pickups through rewind. The three standalone bonus traces replay without errors. The Slot cage keeps re-centring the machine
+  through the goal wind-down, so the machine stays where the original shows it.
+  Its background keeps moving at zero cage rotation and publishes queued rows
+  at the native VBlank boundary, including through rewind. Restoring its layout
+  preserves the published background rows while rebuilding derived geometry.
+  Foreground tiles retain their original priority so rotated walls and peppermint
+  pieces show correctly, and overlapping cells keep the original sprite priority;
   the Gumball background stays pinned as in the original instead of scrolling
-  with the camera, and Pachinko's background survives rewind.
+  with the camera, and Pachinko's background survives rewind. Saved-origin bonus
+  returns carry their interior-return load cause once, keeping later ordinary
+  loads independent.
 
 - **S3K animated scenery:** Angel Island, Hydrocity, Carnival Night, IceCap,
   Launch Base, Mushroom Hill, Sandopolis and Lava Reef animated tiles change on
@@ -389,6 +512,17 @@ Unreleased. The earlier development themes remain in
   colours on the original frame. Knuckles' Angel Island 1 starts with his own four
   palette colours, and the main palette reloads at the original camera position for
   every start without the plane intro.
+  Launch Base's Death Egg rise reassigns its native background row pointers and
+  preserves their later terrain edits through rewind.
+  Hydrocity 2 restores its moving wall and camera shake together, reconnecting
+  the event to the restored wall. Player water-splash animation resumes from
+  its saved phase instead of continuing from the abandoned timeline.
+
+- **Sonic 2 palette and ending timing:** Metropolis Act 3, Sky Chase and
+  Death Egg now run their original palette cycles. The Death Egg Robot keeps
+  following and exploding while its own colours fade to white, and hands the
+  ending its palette and music without an extra transition. Credit slides use
+  the original PAL or NTSC waits and the final fade before the closing logo.
 
 - **S3K special stage presentation:** Blue Sphere players and their tails use
   the original perspective projection through jumps, with fixed ground shadows
@@ -409,6 +543,13 @@ Unreleased. The earlier development themes remain in
   digits use the original mapping positions and trailing zero, and overlapping
   labels and sphere icons follow the console's sprite priority.
 
+- **S2 retail options:** The title opens the original ROM options screen, with
+  Sonic and Tails, Sonic alone, or Tails alone; the two-player item setting;
+  and the native sound test. Both controllers can operate the menu. Direct
+  options launches retain emerald progress, while returning through the title
+  starts a new game with the selected team. Competition stays unavailable until
+  its complete native session is connected.
+
 - **S3K SEGA screen:** The title opens as the ROM's does: 22 frames of fade to
   black, then the SEGA logo fades in over 22 frames in the console's own palette
   steps, and the chant starts as the fade ends. Pressing Start during the logo
@@ -420,12 +561,24 @@ Unreleased. The earlier development themes remain in
   routine fades the level in from black over its first 21 frames, with the player,
   HUD and card already at full colour. This covers zone changes, new games from the
   data select, restarts, special and bonus stage returns, and loads without a card.
+  The level submits its queued art during the load and prepares the first item
+  in the first title-loop step, keeping destination setup on the original frame.
+  Bonus title cards load the complete native art batch, including the unused act
+  number, then submit the stage's terrain art once the title is ready and Nemesis
+  work clears, while retaining the bonus card's own layout.
+  Hydrocity 1's direct water path publishes prepared art in three-pattern batches,
+  including after rewind; replacing or failing a load cannot reuse its selection.
+  Saved-origin bonus returns use that title/Nemesis handoff for the restored
+  level's terrain and retain its native fixed title owner and linked children
+  through their normal retirement; ordinary host loads keep their existing art ownership.
   Previously the level stayed black and then appeared at full brightness. Each fade
   step and each move of the card reaches the screen with the same frame's sprites and
   HUD, one frame after it is computed, as the original's palette and sprite uploads
-  do, and a rewind shows what was on screen. The data
+  do, and a rewind shows what was on screen without creating a pending palette
+  upload when the restored owner already matches that displayed fade. The data
   select no longer fades the whole screen, card included, back in on top. Seamless
-  act changes still do not fade, as in the original. The score, time and ring
+  act changes still do not fade, as in the original. Hydrocity resets rings and
+  time after its act-change card pieces stop sliding. The score, time and ring
   counters are drawn over the card's red banner, as on hardware. Direct boots, new
   games, restarts and bonus stage entries and returns now hand control over with
   the card still holding for its last 22 frames, as zone changes already did, instead
@@ -433,14 +586,104 @@ Unreleased. The earlier development themes remain in
   fade the card in from black.
 
 - **S3K objects and bosses:** The Angel Island end boss starts its defeat at the
-  native hit check of whichever phase it is in. When the object table is full,
+  native hit check of whichever phase it is in. Angel Island's flipping bridges
+  time their landing sound from the level clock. When the object table is full,
   pending placements wait for the next camera block crossing, which restores the
-  Hydrocity fan timing. Ending reunion loads use measured native decompression
+  Hydrocity fan timing. Hydrocity's hand launcher checks its top surface on every
+  pass, as in the original, so a rising hand catches a player rolling over it.
+  Its removal preserves Sonic and Tails' held state, as in the original, while
+  ordinary launches still release them.
+  Knuckles' glide foot probes use his own live solidity bits and collision array,
+  including inverted ceiling contacts, independently of camera focus. Glide collision
+  follows the original velocity quadrant through wall, ceiling and floor checks;
+  simultaneous contacts use S3K's floor-first response and KiS2's wall-first response.
+  Reverse probes retain the solidity bit and collision path left by preceding checks.
+  Slides apply collision corrections before their separate floor scan, keep the
+  original signed zero-speed boundary, and preserve the turn byte through get-up
+  and landing callbacks. KiS2 keeps its temporary radii across both scans.
+  All glide states apply their native camera and level-boundary prelude before
+  moving; sliding, climbing and ledge returns retain the original velocity order.
+  Sonic 3 & Knuckles ground slides also queue their ROM sound on the level clock
+  through the installed sound profile.
+  Wall climbs
+  include the signed native radius in vertical probes, powered speed and upper bound;
+  floor landings preserve the native angle, animation and turn byte before landing
+  callbacks, including values written by those callbacks. The native
+  second player keeps its ringless hurt response under human control.
+  Hydrocity solid blocks retain underside and side contacts while offscreen.
+  Snake blocks use their saved origin for camera culling and can reload when the
+  camera returns.
+  Spinning columns use cached sprite visibility to release and recapture riders
+  while preserving platform attachment. Airborne releases retain the movement
+  lock through the next player update.
+  Water skimming launches on a new jump-button press, so holding the spin-dash
+  button through release preserves the run across water.
+  A Mega Chopper that catches Sonic alone locks his controls and passes through
+  only left and right, so he must shake it off rather than roll, duck or jump.
+  The Hydrocity miniboss spends the original start-up pass before it descends,
+  so its dives, hits and whirlpool grab and release land on the original frames.
+  Its retained act-change carriers keep their captured swing targets and the
+  arena's camera lock until the original release event widens the boundaries.
+  A drowning player sinks with the original motion, even while an object holds it,
+  and in Sonic 3&K it keeps its underwater state until it dies, as in the original.
+  Sonic 3&K's fixed air countdown also selects and maintains the drowning
+  animation when object control bypasses ordinary movement animation.
+  Offscreen Tails flight recovery in Sonic 2 and Sonic 3&K resets the native
+  player status while retaining body size, water physics and fractional position.
+  A broken monitor's contents still rise and pay out after the player leaves the
+  monitor behind. Ending reunion loads use measured native decompression
   costs, and the credits start on the original frame. Timing diagnostics distinguish
   verified instruction terms from work that is still unpriced. Giant-ring capture retains
   the original blank-frame ownership and art-reload state; ordinary animation
   is released again on return. Robotnik's ship stays with the beaten boss through
-  its defeat pause before flying off, as in the original. Boss water/effect
+  its defeat pause before flying off, as in the original. Its ship component now uses
+  the original escape frame and rise/countdown timing. Its separate head and
+  flame keep their original dispatch, animation and deletion behavior through
+  rewind. Knuckles gets the EggRobo head art, and defeat explosions follow the
+  ship. Death Egg Act 1's player launchers receive their missing ROM-backed art.
+  Death Egg's gravity tubes retain native rider transfers, mount velocities and
+  body-size adjustment; Chainspike's floor probe uses its native collision radius.
+  Carnival Night's miniboss stays dormant until the arena camera gate and native
+  wait release it, including at wide viewports. Its defeated top releases standing
+  riders before deletion, preserving their status and the rewindable encounter.
+  Act 2's vertical camera boundary follows the primary player even when a custom
+  component directs the camera toward a sidekick.
+  After Knuckles' Act 2 capsule results, control returns to him and the camera
+  opens gradually toward the teleporter lane; a full object pool leaves the
+  handoff pending until allocation succeeds. The teleporter uses the native
+  charging beam, capture and lift, with ROM-backed beam graphics and rewindable
+  parent/child links, then hides Knuckles and raises the camera into the real
+  IceCap load. His fresh IceCap arrival has its native contracting beam, swing
+  release and solid pad, with allocation retry and complete-world restoration.
+  Knuckles also advances through IceCap's camera-triggered indoor refresh without
+  waiting for Sonic's snow-pile sequence.
+  The ROM-backed teleporter beam is also listed in the stock art catalogue.
+  IceCap's direct animation tiles enter the snapshot domain before their first
+  upload, preserving the earlier displayed bytes through entry rewind.
+  Sky Sanctuary's EggRobo starts on the original object pass, hovers and launches
+  with the original fractional motion, and retains its last drawn visibility
+  through camera movement and rewind. Its fly-by keeps the original waiter's
+  fractional Y residue. Its jet flame and gun arm keep their own
+  first-dispatch setup and original retirement order through recreation. The arm
+  preserves its cooldown and last parent refresh before retirement. Charging
+  shots stop with their gun, while fired shots continue independently and retain
+  the native zero shield-reaction descriptor. Art
+  priority follows the original body writes and child copies at allocation. Its
+  aim now follows the original signed word comparison, including equal and
+  wrapped coordinates. Body and attachment drawing preserve vertical facing;
+  the gun mirrors its delayed Y offset and the jet mirrors its live Y offset,
+  while shots retain their original horizontal-only facing.
+  It releases animals directly into their original walking
+  or flying launch, with native facing, random lift and stationary first drawing;
+  the launch and rendering state survive recreation. Scaled fly-by art remains
+  an implementation gap. Ordinary freed animals retire from the preceding
+  sprite-render visibility flag, with separate render and collision dimensions.
+  The Metropolis replica allocates its first orb from the original global pool;
+  that orb initializes the ring on its own dispatch and returns before orbiting,
+  drawing or publishing collision. Partial allocation keeps only the successful
+  prefix through rewind.
+
+  Boss water/effect
   children use less repeated population and ordering work while retaining native
   slots and rewind. CNZ, LRZ, DEZ, SSZ and SOZ consumers replace repeated scans
   with native-owned-slot queries. FBZ squeeze discovery skips ineligible actors
@@ -454,6 +697,11 @@ Unreleased. The earlier development themes remain in
   Results/snowboard pattern updates batch atlas writes and results refresh only
   changed counter ranges. Stable touch configurations reuse immutable profiles
   while dynamic provider flags remain live.
+
+- **S2 capsules:** Buttons, locks and animal-release pieces use the original
+  first-free object slots, including holes below the capsule. Each piece runs
+  in native slot order, preserving launch and release timing under slot pressure
+  and through rewind.
 
 - **Spin dash camera:** While a spin dash charges, and on its release frame, the
   camera eases back toward its normal height as it does when standing, as Sonic 2
@@ -469,13 +717,29 @@ Unreleased. The earlier development themes remain in
   restores the destination ring count after the title boundary temporarily
   retains the source count, including rewind across that boundary. Ordinary
   checkpoint reloads restore post activation before the first object pass.
+  Collision layout reads preserve the ROM's encoded word addressing and supported
+  aliases. Hydrocity's act handoff retains unwritten 128×128 definitions through
+  rewind.
   Opted-in checkpoint invitations defer shared art until native queue admission
   and reuse that work for their marker and bonus stars. Development
   mod captures retain the accepted loader when restoring creator-owned child graphs.
   AIZ rewind preserves completed miniboss spawn history after the native results
   owner retires.
+  End signs allocate after the retained native boss/control slot, preserving
+  later Angel Island bridge slot identities. Angel Island replaces its miniboss
+  with the end-sign control in the same physical slot, polls fatal HP after the
+  current routine, and preserves native wait words and independent music and
+  explosion lifetimes. The Angel Island miniboss body, arm and barrels retain
+  their native sprite slots through the defeat wait, continue their own animation
+  and callbacks, and retire after the physical parent flag changes. Rewind
+  preserves that parent header across the sign-control replacement.
+  The Angel Island control creates all three gradual camera workers in native
+  order, including min-Y, and releases each at its original boundary instead
+  of snapping min-Y or reserving a remembered results slot.
   Admitted title and save-menu ROM patterns survive the following level overlays,
   retaining unwritten spans while newer zero/art uploads supersede them.
+  IceCap's in-frame act handoff preserves known resident 16×16 pattern words
+  until queued publication, with the destination's collision tables and rewind.
   Prepared installation rejects detached art owners and stale generations.
   Native title-card objects retain their fixed slots and child lifetimes after
   omitted presentation, with exact graph restoration before gameplay placements.
@@ -494,21 +758,35 @@ Unreleased. The earlier development themes remain in
   Sky Sanctuary opening bridges use the native top-contact surface and exact
   overlap band, retaining the relative landing write before floor reset; a
   companion standing on the moving cutscene bridge waits without the edge-balance
-  pose, because the bridge sets its own native status bit 7. In zones that use
+  pose, because the bridge sets its own native status bit 7. Gameplay sprite tables
+  enforce native scanline piece and pixel budgets, including partial sprites,
+  offscreen consumption and overflow-armed masking. ROM HUD pieces share those
+  budgets before expanded art is replayed; wider views retain native capacities.
+  In zones that use
   sprite-table masking (Gumball, Sandopolis, Lava Reef, Hidden Palace and Sky
   Sanctuary), Tails' body again covers his tails as in the native sprite table.
   Its clouds and collapsing columns retain native foreground priority, and
   the HUD RINGS label uses its dedicated ROM R glyph.
+  Rotating SSZ posts and their carriers retain solid support while holding
+  players under positive object control, with fresh-jump release and signed
+  bit-7 contact rejection preserved.
+  Title retirement and departing EggRobo fly-bys submit the native enemy-art
+  restoration requests, with physical publication and rewind ownership retained
+  after the producer disappears. Incidental art producers preserve blocked
+  title work and respect both FIFO limits. Scaled fly-by pixels remain incomplete.
   Teleporter beams retain the selected ROM art bank through recreation,
   including SSZ transport priority and whole-sky rewind publication.
   Slot bonus-stage layouts, player starts, prize/reel tables, background
   deformation and cell animations load from the runtime ROM, with no copied asset
   fallback; panel publication retains its allocation-free path. The Slot Machine
   now rewinds completely, and its dedicated sprite uses the host mappings, pattern
-  banks and a fresh tail, so the goal fade shows the native Sonic roll tiles on
+  banks and a fresh tail. Reward rings and spikes retain native signed interpolation;
+  ring payouts play the ROM sparkle script with its retained animation cursor and
+  sprite priority. The goal fade shows the native Sonic roll tiles on
   Knuckles and keeps Tails' last body tiles; the configured donor art returns on exit.
   Its rotating layout is now displayed with the sprite table of its own frame,
-  behind the player, cage and rewards, and the goal starts its wind-down on the
+  retaining native row-major cell admission and opaque overlap order behind the
+  player, cage and rewards, and the goal starts its wind-down on the
   following frame. The goal fade dims the palette in the native red, green, blue
   steps every third frame before the level reload fades the rest, the capture
   palette cycle uses the correct colour table and changes mode a frame later,
@@ -541,7 +819,11 @@ Unreleased. The earlier development themes remain in
   identity for leaders and followers. Sonic clears the rolling state; Tails
   and Knuckles retain it with the ROM's literal radii and position adjustment.
 
-- **S3K objects:** Monkey Dude retains five independent arm and hand objects,
+- **S3K objects:** GAME OVER and TIME OVER wait for the event-owned ROM PLC3
+  job before the cards initialize or GAME saves lives/continues; ordinary level
+  service and partial-work rewind retain the native queue ordering. Hydrocity 2
+  cutscene Knuckles probes actual terrain, retaining penetration and facing on
+  the first bounce and correcting only the second floor contact. Monkey Dude retains five independent arm and hand objects,
   their physical predecessor links, native dispatch and retirement order, and
   the body's explosion state before initialization. The complete graph restores
   and replays without creating duplicate children. Its body preserves the ROM
@@ -552,6 +834,8 @@ Unreleased. The earlier development themes remain in
   Rhinobot waits for its native placeholder render sign and keeps initialization
   and delayed slot retirement as separate phases, including through rewind.
   It remains dormant while vertically hidden.
+  Marble Garden's flying-boss warning art follows the ROM's packed-byte merges
+  and final partial-block clearing.
   AIZ muzzle flares keep their native initialization, raw-animation and delayed
   retirement phases. Their physical parent link reads cleared or reused slots
   without borrowing a detached parent, and restores through rewind.
@@ -575,7 +859,9 @@ Unreleased. The earlier development themes remain in
 - **S3K breakable floors:** Cork's placed record becomes its first moving
   fragment, preserving checked sibling allocation, native motion and render
   retirement through rewind. Ice Cap uses the native mapping nibble and its
-  separate fragment velocity table.
+  separate fragment velocity table. Ice Cap's crushing-column decoration keeps
+  its original construction record through rewind while continuing to follow
+  the restored moving column.
 
 - **S3K Knuckles routes:** Locked-on Mushroom Hill deletes the standalone S&K
   intro before it can freeze the camera and take player control. Its native
@@ -593,7 +879,10 @@ Unreleased. The earlier development themes remain in
   Preserved cold Knuckles inputs now complete both Mushroom Hill acts and the
   ship handoff into playable Flying Battery, with world replay and load-history checks.
 
-- **S3K endings:** Sonic and Tails continue from Death Egg or Doomsday into
+- **S3K endings:** The final Death Egg scene preserves native terrain definitions
+  across its act handoff, uses its own collision bank and clears its unused layout
+  bytes once at scene entry, retaining later terrain edits through rewind.
+  Sonic and Tails continue from Death Egg or Doomsday into
   the Tornado rescue, earned Super Emerald restoration, reunion, ROM credits
   and their progress-dependent final scenes. Knuckles continues from the final
   Sky Sanctuary fight through his plane flight, island credits and terminal
@@ -649,10 +938,23 @@ Unreleased. The earlier development themes remain in
   fresh assembly or transition callback cannot be restored by gameplay rewind.
   An individual trace segment resolves its validated containing run's declared
   movie, preserving shared-movie priority and rejecting unsafe source aliases.
+  Continuous runs keep executing an active native level after their final
+  comparison segment closes. Playback cleanup releases only its own input
+  publication, preserving the next driver's held input and first press edge.
   Closing or rebooting a headless capture releases its owned audio ROM reference,
   so a subsequent title and saved-slot launch can read a fresh ROM in the same process.
+  Configured headless startup keeps no-device audio ownership through the native
+  title, save selection and first gameplay frame.
+  A public state projection tool records controller-driven cold Sky Sanctuary
+  paired widescreen play before and after each step and normal draw, including
+  copied ring state and local player bindings, with explicit inputs and bounded
+  temporary output.
   Silent headless boots also retire inherited audio backends before playback, keeping
-  reused capture processes off desktop audio devices.
+  reused capture processes off desktop audio devices. Configured engine startup
+  retains the supplied no-device backend through ROM detection and title entry,
+  with synthesis enabled or disabled. Recorded controller Start reaches native
+  consumers, including gameplay pause, without toggling host pause during a
+  capture or complete-run audio step; physical keyboard pause remains available.
   Native PCM live checks admit graphics prerequisites before running capture, so
   boot, gameplay and audio failures fail instead of being skipped as unavailable GL.
   Standing-geometry probes retire their private audio manager through its complete
@@ -673,7 +975,12 @@ Unreleased. The earlier development themes remain in
   from creator capture. Destination
   history starts after deferred title-card assembly, and replay cannot mutate a
   replacement owner's history. Floors and checkpoints include completed frame
-  publication; inactive outgoing worlds cannot seed new history. Audio's private
+  publication; inactive outgoing worlds cannot seed new history. Recorded playback
+  releases only the input handler and raw snapshot it published, preserving a
+  replacement driver's first input. Pending ending fades complete before exit
+  cleanup. Sonic 1 palette fades retain prepared player art; full loads clear
+  unpublished readiness, and results enter the next-level routine on the following
+  object pass. Audio's private
   manager-lifetime source owner keeps base/donor publication, generations, binding restoration and
   rollback together, preserving immutable tuples, callback ordering and partial
   reset effects while session-owned audio resources retain their own lifetime.
@@ -689,6 +996,10 @@ Unreleased. The earlier development themes remain in
   native-mutator binding owner keeps publication, displacement, exact release and
   manager-wide feedback exclusion together, preserving per-token caller/thread
   admission and callback/reset ordering.
+  Level and special-stage setup prepare the selected ROM and sound profile in one
+  transaction; identical selections retain the running presentation and live capture.
+  Terminal streamed-music cleanup releases presentation slots without recapturing
+  retired cursors, while ordinary reset commands retain transactional rollback.
   Sonic 1 and Sonic 2 selected-slot images use the shared data-select
   converter and payload validators; Sonic 3 & Knuckles keeps explicit host ROM
   donation while consuming the same patterns, palette and mapping contract.
@@ -709,7 +1020,9 @@ Unreleased. The earlier development themes remain in
   host owns its complete palette texture, publication, fade and residency lifetime, preserving CPU bank
   allocation and immediate rewind redraws. SAT replay uses a
   graphics-owned geometry value and one tile-expansion implementation while
-  preserving the existing candidate Mod API submission signature. Stock title
+  preserving the existing candidate Mod API submission signature. Captured sprites
+  keep their palette masks, coloured ghost style and constrained shadow effect
+  when a scene is copied. Stock title
   previews use detached game-owned providers, preserving animated pixels and
   catalogue ROM views without consulting a suspended game's live services.
   Title-card mapping and drawing now share one domain owner. Event and object-service
@@ -783,7 +1096,11 @@ Unreleased. The earlier development themes remain in
   A first real window measured the presentation clock running 1.29 per mille
   short of the ROM's hardware frame. The PSG half follows GPGX's integrated
   PSG and also matches its source vectors. The MAME YM2612 core and waveform
-  parity are not covered.
+  parity are not covered. Native PCM comparisons validate complete selected row
+  spans and capture digests, rejecting truncated-prefix false matches, and stream
+  PCM in bounded chunks for long captures. S1/S2
+  complete-run producer plumbing remains gated by native publication evidence
+  and independently installed artifact attestation.
 - **Audio cadence:** Each presented frame now advances the sound chips by exactly
   one NTSC hardware frame (3420 x 262 master clocks) instead of 1/60 s of chip
   time. Previously 600 frames completed only 599 hardware frames. The
@@ -799,11 +1116,15 @@ Unreleased. The earlier development themes remain in
   game, or a reset, still installs fresh hardware, and rewind restores the kept
   chips exactly. The Sonic 3 & Knuckles title screen now opens with the ROM's
   music fade-out request, which silences the PSG on entry as the console does.
+  Sonic 1's SEGA logo begins with its directly loaded ROM palette and native
+  light scan, without an additional generic fade from black.
 
 Rewind verification compares private records and complete captured opaque arrays
 by content, with explicit failures when snapshot inspection cannot complete. It also
 checks all captured ObjectManager gameplay cursors and contact buffers. Palette
 copies retain complete raw RGB comparison.
+Boss rewind also retains child construction history after those children retire,
+so future effects keep the same identities when replayed.
 Typed level and object-manager snapshot comparisons also accept equal untyped
 content. Rewinding to a point before a level's first object-load pass reloads its
 objects again (Flying Battery's act-one boss included), the Angel Island intro keeps

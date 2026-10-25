@@ -88,6 +88,17 @@ public class TestNativeRewindAdapterPublication {
         }
     }
     public static final class CreatorProbe {
+        public static void worldFactory(GameModule module, WorldSession world) {
+            module.getGameService(com.openggf.game.internal.WorldRewindAdapterFactory.class)
+                    .open(java.lang.invoke.MethodHandles.lookup(), world);
+        }
+        public static void worldAccess(WorldSession world) {
+            WorldRewindAdapterAccess.owned(java.lang.invoke.MethodHandles.lookup(), world);
+        }
+        public static void worldReserve(GameModule module, WorldSession world, RewindSnapshottable<?> adapter) {
+            NativeRewindAdapterPublication.reserveWorldDataCreation(java.lang.invoke.MethodHandles.lookup(), world,
+                    module.getGameService(com.openggf.game.internal.WorldRewindAdapterFactory.class), adapter);
+        }
         public static void direct(RewindRegistry registry, GameModule root, RewindSnapshottable<?> adapter) {
             NativeRewindAdapterPublication.register(registry,root,adapter);
         }
@@ -167,6 +178,18 @@ public class TestNativeRewindAdapterPublication {
         };
         try(var loader=new ModDependencyClassLoader("hostile",new java.net.URL[]{jar.toUri().toURL()},parent,List.of())) {
             var probe=loader.loadClass(CreatorProbe.class.getName()); assertSame(loader,probe.getClassLoader());
+            var nativeWorldRoot = new Sonic3kGameModule(); var nativeWorld = new WorldSession(nativeWorldRoot);
+            for (String method : List.of("worldFactory", "worldAccess", "worldReserve")) {
+                InvocationTargetException denied;
+                if (method.equals("worldAccess")) denied = assertThrows(InvocationTargetException.class,
+                        () -> probe.getMethod(method, WorldSession.class).invoke(null, nativeWorld));
+                else if (method.equals("worldFactory")) denied = assertThrows(InvocationTargetException.class,
+                        () -> probe.getMethod(method, GameModule.class, WorldSession.class).invoke(null, nativeWorldRoot, nativeWorld));
+                else denied = assertThrows(InvocationTargetException.class,
+                        () -> probe.getMethod(method, GameModule.class, WorldSession.class, RewindSnapshottable.class)
+                                .invoke(null, nativeWorldRoot, nativeWorld, new State("forged-world", 3)));
+                assertInstanceOf(SecurityException.class, denied.getCause(), method);
+            }
             var adapter=new State("native-service",7); var root=new HostRoot(adapter); var registry=new RewindRegistry();
             var direct=assertThrows(InvocationTargetException.class,()->probe.getMethod("direct",RewindRegistry.class,GameModule.class,RewindSnapshottable.class)
                     .invoke(null,registry,root,adapter));
@@ -279,8 +302,132 @@ public class TestNativeRewindAdapterPublication {
     }
     @Test @RequiresRom(SonicGame.SONIC_3K)
     void actualSonic3kNativeServiceRecreationKeepsWholePlcStateAndOwnedModePartition() throws Exception {
-        exerciseNativeLifetime(TestEnvironment.currentRom(),new Sonic3kGameModule(),false);
-        exerciseNativeLifetime(TestEnvironment.currentRom(),new Sonic3kGameModule(),true);
+        exerciseWorldNativeLifetime(TestEnvironment.currentRom(),new Sonic3kGameModule(),false);
+        exerciseWorldNativeLifetime(TestEnvironment.currentRom(),new Sonic3kGameModule(),true);
+    }
+
+    static void exerciseWorldNativeLifetime(Rom rom, Sonic3kGameModule root, boolean legacyDecoratedRoot) throws Exception {
+        var mode = new Mode();
+        var boundary = new ModFaultBoundary(Map.of(), new ModRuntimeFindingStore(),
+                ignored -> new ModStateSaveResult.Saved(), ignored -> { });
+        var resolved = OwnerBoundGamePatch.wrap("mode", patch(mode), boundary).apply(root, null);
+        assertNull(root.getGameService(PlcLifecycleService.class));
+        var source = StockGameDataSources.pinned(rom, root);
+        var world = legacyDecoratedRoot ? new WorldSession(resolved, resolved, source, null)
+                : new WorldSession(root, resolved, source, null);
+        var owner = WorldPlcLifecycleAccess.require(world, Sonic3kLevelTitlePlcService.class);
+        var factory = root.getGameService(WorldPlcLifecycleFactory.class);
+        assertSame(factory, root.getGameService(WorldPlcLifecycleFactory.class),
+                "native publication authenticates one stable, ROM-free factory");
+        var beforeFactoryMisuse = owner.capture();
+        assertThrows(SecurityException.class, () -> factory.open(world),
+                "a published factory is not an alternate public world-owner allocation inlet");
+        assertEquals(beforeFactoryMisuse, owner.capture());
+        assertSame(owner, WorldPlcLifecycleAccess.require(world, Sonic3kLevelTitlePlcService.class));
+        assertThrows(IllegalStateException.class, () -> RewindAdapterOwnership.bind(owner, "thief", "before-context"),
+                "the actual native world owner is reserved before any context/manager attachment");
+        var recipeAdapter = owner.recipeState();
+        assertThrows(IllegalStateException.class,
+                () -> RewindAdapterOwnership.bind(recipeAdapter, "thief", "before-recipe-context"),
+                "the exact companion is also reserved before exposure");
+        var collision = new RewindRegistry();
+        collision.register(new RewindSnapshottable<Integer>() {
+            @Override public String key() { return recipeAdapter.key(); }
+            @Override public Integer capture() { return 0; }
+            @Override public void restore(Integer value) { }
+        });
+        assertThrows(IllegalStateException.class, () -> WorldPlcLifecycleAccess.register(world, collision));
+        assertFalse(collision.capture().containsKey(owner.key()), "bundle preflight cannot insert half an owner");
+        var context = new GameplayModeContext(world);
+        context.attachGameplayManagers(new Camera(), new TimerManager(), new GameStateManager(),
+                new FadeManager(), new GameRng(GameRng.Flavour.S3K), new DefaultSolidExecutionRegistry());
+        assertSame(root, NativeRewindAdapterPublication.nativeRoot(world.rootGameModule()));
+        assertNotNull(resolved.createGame(source));
+        assertSame(owner, WorldPlcLifecycleAccess.require(world, Sonic3kLevelTitlePlcService.class));
+        assertNull(root.getGameService(PlcLifecycleService.class), "an unscoped module cannot select this world");
+        assertNull(resolved.getGameService(PlcLifecycleService.class));
+        assertTrue(root.rewindAdapters().isEmpty(), "the core world, not the module, registers native PLC state");
+        context.registerGameModuleRewindAdapters();
+        var registry = context.getRewindRegistry();
+        var controller = (RewindSnapshottable<?>) resolved.gameplayFrameController();
+        assertSame(controller, resolved.rewindAdapters().stream().filter(adapter -> adapter == controller).findFirst().orElseThrow());
+        long epoch = registry.courseLayoutVersion();
+        WorldPlcLifecycleAccess.register(world, registry);
+        context.registerGameModuleRewindAdapters();
+        assertEquals(epoch, registry.courseLayoutVersion(), "world-core and mode registration are idempotent");
+        prepareNativeQueue(owner);
+        var full = registry.capture();
+        var course = registry.captureCourse();
+        var queue = owner.capture();
+        assertEquals(1, full.entries().keySet().stream().filter(owner.key()::equals).count());
+        assertEquals(queue, full.get(owner.key()));
+        assertEquals(queue, course.get(owner.key()));
+        assertEquals(recipeAdapter.capture(), full.get(recipeAdapter.key()));
+        assertEquals(recipeAdapter.capture(), course.get(recipeAdapter.key()));
+        assertEquals(1, full.entries().keySet().stream().filter(recipeAdapter.key()::equals).count());
+        var missingRecipes = new LinkedHashMap<>(full.entries());
+        missingRecipes.remove(recipeAdapter.key());
+        assertThrows(IllegalStateException.class, () -> registry.restore(new CompositeSnapshot(missingRecipes)));
+        registry.restore(full);
+        assertEquals(recipeAdapter.capture(), full.get(recipeAdapter.key()));
+        assertFalse(course.containsKey(controller.key()));
+        assertTrue(course.containsKey("gamerng"));
+        owner.serviceVBlank(PlcLifecyclePhase.LEVEL_TITLE_CARD);
+        var advanced = owner.capture();
+        assertNotEquals(queue, advanced);
+        mode.value = 99;
+        registry.restore(full);
+        assertEquals(queue, owner.capture());
+        assertEquals(7, mode.value);
+        owner.serviceVBlank(PlcLifecyclePhase.LEVEL_TITLE_CARD);
+        assertNotNull(resolved.createGame(source));
+        assertSame(owner, WorldPlcLifecycleAccess.require(world, Sonic3kLevelTitlePlcService.class));
+        assertEquals(advanced, owner.capture(), "module game recreation must not replace or clear this world's queue");
+        WorldPlcLifecycleAccess.register(world, registry);
+        context.registerGameModuleRewindAdapters();
+        assertEquals(epoch, registry.courseLayoutVersion());
+        var otherWorld = new WorldSession(root, resolved, source, null);
+        var other = WorldPlcLifecycleAccess.require(otherWorld, Sonic3kLevelTitlePlcService.class);
+        assertNotSame(owner, other);
+        prepareNativeQueue(other);
+        var otherQueue = other.capture();
+        assertThrows(IllegalStateException.class, () -> registry.registerOrRefresh(other));
+        assertThrows(IllegalStateException.class, () -> WorldPlcLifecycleAccess.register(otherWorld, registry));
+        for (int replay = 0; replay < 2; replay++) {
+            registry.restore(full);
+            assertEquals(queue, owner.capture());
+            owner.serviceVBlank(PlcLifecyclePhase.LEVEL_TITLE_CARD);
+            assertEquals(advanced, owner.capture());
+            assertEquals(otherQueue, other.capture(), "restoring/replaying this world's queue cannot touch another world");
+        }
+        mode.value = 99;
+        registry.restoreCourse(course);
+        assertEquals(99, mode.value);
+        assertEquals(queue, owner.capture());
+        var invalid = new LinkedHashMap<>(course.entries());
+        invalid.remove(owner.key());
+        assertThrows(IllegalArgumentException.class, () -> registry.restoreCourse(new CompositeSnapshot(invalid)));
+        assertEquals(queue, owner.capture());
+        assertEquals(99, mode.value);
+        assertThrows(IllegalStateException.class, () -> RewindAdapterOwnership.bind(owner, "thief", "native"));
+        // A real adapter-layout change must still reject the retained course checkpoint.
+        registry.register(new RewindSnapshottable<Integer>() {
+            public String key() { return "native-world-lifetime-extra"; }
+            public Integer capture() { return 1; }
+            public void restore(Integer snapshot) { }
+        });
+        assertStaleCourseCheckpointRejected(context, course, epoch);
+        assertEquals(queue, owner.capture());
+        assertEquals(99, mode.value);
+        context.destroy();
+        var reopened = new GameplayModeContext(world);
+        reopened.attachGameplayManagers(new Camera(), new TimerManager(), new GameStateManager(),
+                new FadeManager(), new GameRng(GameRng.Flavour.S3K), new DefaultSolidExecutionRegistry());
+        reopened.registerGameModuleRewindAdapters();
+        assertSame(owner, WorldPlcLifecycleAccess.require(world, Sonic3kLevelTitlePlcService.class));
+        assertEquals(queue, owner.capture(), "same-world context reconstruction retains logical queue progress");
+        assertEquals(queue, reopened.getRewindRegistry().capture().get(owner.key()));
+        reopened.destroy();
     }
 
     static void exerciseNativeLifetime(Rom rom,GameModule root,boolean legacyDecoratedRoot) throws Exception {

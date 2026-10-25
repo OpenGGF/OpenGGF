@@ -68,7 +68,7 @@ public final class LevelRewindSnapshotAdapter implements RewindSnapshottable<Lev
         level.bumpEpoch();
         if (geometryReferencesChanged) {
             // Rewind can restore prior tile arrays by reference; rebuild manager-owned caches only on swaps.
-            manager.invalidateAllTilemaps();
+            com.openggf.level.LevelTilemapRewindAccess.invalidateGeometryCachesForRestore(manager);
         }
         manager.setFrameCounter(snapshot.frameCounter());
         restoreLevelHudState(snapshot);

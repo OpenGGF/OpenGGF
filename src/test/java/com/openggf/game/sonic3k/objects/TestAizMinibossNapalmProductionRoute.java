@@ -172,8 +172,7 @@ class TestAizMinibossNapalmProductionRoute {
             assertEquals(0x98, ((TouchResponseProvider) pair.projectile()).getCollisionFlags());
             assertTrue(pair.projectile().usesCurrentTouchResponseState(),
                     "loc_68C96 publishes the post-movement collision-list state");
-            assertSame(harness.boss(), readObjectField(
-                    pair.projectile(), "parent", AbstractBossInstance.class));
+            assertEquals(harness.boss().getSlotIndex(), readIntField(pair.projectile(), "parentSlot"));
             assertSame(pair.barrel(), readObjectField(
                     pair.projectile(), "barrel", AizMinibossFlameBarrelChild.class));
             assertEquals(pair.barrel().getSlotIndex(), readIntField(pair.flare(), "parentSlot"));
@@ -566,8 +565,8 @@ class TestAizMinibossNapalmProductionRoute {
                         manager, AizMinibossFlameBarrelChild.class, entry.getValue().id());
                 assertEquals(entry.getKey(), barrel.getBarrelSubtype());
                 assertEquals(entry.getValue().slot(), barrel.getSlotIndex());
-                assertSame(restoredBoss, readObjectField(barrel, "parent", AbstractBossInstance.class),
-                        "each subtype-0/2/4 barrel must retain the exact restored boss");
+                assertEquals(restoredBoss.getSlotIndex(), barrel.physicalParentSlot(),
+                        "each subtype-0/2/4 barrel retains the exact physical restored boss SST");
             }
             for (LinkedObject expected : flares) {
                 AizMinibossBarrelShotFlareChild flare = objectById(
@@ -584,8 +583,7 @@ class TestAizMinibossNapalmProductionRoute {
                 AizMinibossFlameBarrelChild owner = objectById(
                         manager, AizMinibossFlameBarrelChild.class, expected.ownerId());
                 assertEquals(expected.slot(), projectile.getSlotIndex());
-                assertSame(restoredBoss, readObjectField(
-                        projectile, "parent", AbstractBossInstance.class));
+                assertEquals(restoredBoss.getSlotIndex(), readIntField(projectile, "parentSlot"));
                 assertSame(owner, readObjectField(
                         projectile, "barrel", AizMinibossFlameBarrelChild.class),
                         "FallingShot source barrel must resolve by captured ObjectRefId");

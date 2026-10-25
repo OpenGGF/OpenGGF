@@ -3,6 +3,7 @@ package com.openggf.game.rewind;
 import com.openggf.camera.Camera;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.game.sonic1.objects.Sonic1ObjectRegistry;
+import com.openggf.game.sonic1.objects.bosses.Sonic1SYZBossInstance;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.objects.Sonic2ObjectRegistry;
 import com.openggf.graphics.GraphicsManager;
@@ -23,6 +24,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -281,31 +283,26 @@ public class TestBossChildExactStateRewind {
         holder[0] = om;
         om.reset(0);
 
-        ObjectInstance boss = findActiveByClass(om, syzBossClass);
+        Sonic1SYZBossInstance boss = (Sonic1SYZBossInstance) findActiveByClass(om, syzBossClass);
         assertNotNull(boss, "SYZ boss must be materialised as an active object");
-        List<AbstractBossChild> components = readChildComponents(boss);
-        AbstractBossChild spike = null;
-        for (AbstractBossChild c : components) {
-            if (c.getClass().getName().equals(syzSpikeClass)) {
-                spike = c;
-                break;
-            }
-        }
-        assertNotNull(spike, "SYZ boss must hold a SYZBossSpike in childComponents");
+        assertEquals(0, countByClass(om, syzSpikeClass), "native routine 0 has not executed yet");
+        // BossSpringYard_Main (_incObj/75, 76 Boss - SYZ Main and Blocks.asm:35-71)
+        // allocates the later SSTs through LoadBoss on the first object pass.
+        om.update(0, null, List.of(), 1);
+        AbstractBossChild spike = (AbstractBossChild) findActiveByClass(om, syzSpikeClass);
+        assertNotNull(spike, "the real first ship pass must allocate a live native spike");
+        assertTrue(readChildComponents(boss).isEmpty(), "native SSTs dispatch independently");
         assertTrue(RewindRecreatable.class.isAssignableFrom(spike.getClass()),
                 "SYZBossSpike must restore through RewindRecreatable generic recreate");
 
-        // SYZBossSpike now pulls its state cache from the parent boss every
-        // frame in its own update() rather than accepting pushed setters (see
-        // SYZBossSpike#update). Prime the cache fields directly to reach the
-        // same "mid block-drop, descending" non-init state the old
-        // setSpikeActive/setBossState calls drove.
-        writeBoolean(spike, "spikeActive", true);
-        writeInt(spike, "bossRoutineSecondary", 4);
-        writeInt(spike, "bossDropSubPhase", 0);
-        writeInt(spike, "bossTimer", 0);
-        for (int i = 0; i < 5; i++) {
-            invoke(spike, "updateExtension", new Class<?>[]{}, new Object[]{});
+        // BossSpringYard_SpikeMain (_incObj/75, 76 Boss - SYZ Main and Blocks.asm:660-684)
+        // reads the live parent's drop phase and adds 7 per own-slot pass.
+        boss.getState().routineSecondary = 4;
+        boss.getState().yFixed = 0x100 << 16;
+        boss.getState().y = 0x100;
+        writeInt(boss, "dropSubPhase", 0);
+        for (int clock = 2; clock <= 6; clock++) {
+            om.update(0, null, List.of(), clock);
         }
         int expectedExtensionDepth = readInt(spike, "extensionDepth");
         boolean expectedSpikeActive = readBoolean(spike, "spikeActive");
@@ -315,6 +312,11 @@ public class TestBossChildExactStateRewind {
         assertTrue(expectedExtensionDepth > 0,
                 "precondition: spike extension depth must move away from init state");
         int countBefore = countByClass(om, syzSpikeClass);
+        assertEquals(1, countBefore);
+        var capturedId = om.captureIdentityContext().requireIdentityTable().idFor(spike);
+        int capturedSlot = spike.getSlotIndex();
+        assertNotNull(capturedId);
+        om.setRewindInPlaceRestoreEnabledForTest(false);
 
         RewindRegistry rr = new RewindRegistry();
         rr.register(om.rewindSnapshottable());
@@ -326,18 +328,15 @@ public class TestBossChildExactStateRewind {
                 "SYZBossSpike count changed across rewind round-trip: before=" + countBefore
                         + " after=" + countAfter);
 
-        ObjectInstance restoredBoss = findActiveByClass(om, syzBossClass);
+        Sonic1SYZBossInstance restoredBoss = (Sonic1SYZBossInstance) findActiveByClass(om, syzBossClass);
         assertNotNull(restoredBoss, "SYZ boss must remain active after restore");
-        List<AbstractBossChild> restoredComponents = readChildComponents(restoredBoss);
-        AbstractBossChild restoredSpike = null;
-        for (AbstractBossChild c : restoredComponents) {
-            if (c.getClass().getName().equals(syzSpikeClass)) {
-                restoredSpike = c;
-                break;
-            }
-        }
-        assertNotNull(restoredSpike,
-                "boss must hold (via childComponents) a restored SYZBossSpike");
+        AbstractBossChild restoredSpike = (AbstractBossChild) findActiveByClass(om, syzSpikeClass);
+        assertNotNull(restoredSpike, "restore must reconstruct the independently registered native spike");
+        assertNotSame(boss, restoredBoss);
+        assertNotSame(spike, restoredSpike);
+        assertEquals(capturedId, om.captureIdentityContext().requireIdentityTable().idFor(restoredSpike));
+        assertEquals(capturedSlot, restoredSpike.getSlotIndex());
+        assertTrue(readChildComponents(restoredBoss).isEmpty(), "restore must not add a synthetic update edge");
         assertSame(restoredSpike, findRegisteredSame(om, restoredSpike),
                 "SYZ spike boss reference must be the SAME live registered instance");
         assertSame(restoredBoss, readObject(restoredSpike, "parent", ObjectInstance.class),
@@ -352,6 +351,11 @@ public class TestBossChildExactStateRewind {
                 "SYZ spike cached boss drop sub-phase restored exactly");
         assertEquals(expectedBossTimer, readInt(restoredSpike, "bossTimer"),
                 "SYZ spike cached boss timer restored exactly");
+        om.update(0, null, List.of(), 7);
+        assertEquals(expectedExtensionDepth + 7, readInt(restoredSpike, "extensionDepth"),
+                "the reconstructed native slot continues reading its live parent's drop state");
+        assertEquals(1, countByClass(om, syzSpikeClass), "forward ship execution must not duplicate the spike");
+        assertTrue(readChildComponents(restoredBoss).isEmpty());
     }
 
     // -------------------------------------------------------------------------

@@ -318,7 +318,7 @@ public record PhysicsProfile(
             (short) 19,    // standYRadius
             (short) 7,     // rollXRadius
             (short) 14,    // rollYRadius
-            false,          // singleFacingBalance
+            true,           // SuperSonic_BalanceOnObjLeft/Right always use Balance (s2.asm:36712-36729)
             (short) 2      // onObjectBalanceShift (SuperSonic_Balance shares Sonic shift)
     );
 }

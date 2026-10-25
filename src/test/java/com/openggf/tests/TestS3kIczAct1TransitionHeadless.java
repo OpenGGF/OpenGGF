@@ -12,6 +12,7 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
 import com.openggf.game.rewind.snapshot.PlcProgressSnapshot;
 import com.openggf.game.rewind.schema.ZoneEventSchemaSidecar;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.events.Sonic3kICZEvents;
 import com.openggf.game.sonic3k.resources.S3kKosRamDestinations;
 import com.openggf.game.timing.HardwareServiceBoundary;
@@ -146,26 +147,61 @@ class TestS3kIczAct1TransitionHeadless {
                                 CompressionType.KOSINSKI,
                                 S3kKosRamDestinations.RAM_START
                                         + 0x0A00)));
+        int blockStart = 0x0A00 / LevelConstants.BLOCK_SIZE_IN_ROM;
+        int blockCount = expectedBlocks128x128.length / LevelConstants.BLOCK_SIZE_IN_ROM;
+        Sonic3kLevel outgoingIcz1 = (Sonic3kLevel) GameServices.level().getCurrentLevel();
+        assertTrue(outgoingIcz1.getBlockCount() >= blockStart + blockCount,
+                "every retained destination byte must have an actual outgoing ROM owner");
+        // skdisasm044fa467: ICZ1BGE_Transition calls Load_Level, which copies
+        // only the layout. It does not clear RAM_start's resident definitions.
+        // Capture their immutable values BEFORE the actual executing handoff.
+        int[][] blocksBeforePublication = snapshotBlockRange(outgoingIcz1, blockStart, blockCount);
+        var rom = GameServices.rom().getRom();
+        int llb = Sonic3kConstants.LEVEL_LOAD_BLOCK_ADDR;
+        int stride = Sonic3kConstants.LEVEL_LOAD_BLOCK_ENTRY_SIZE;
+        int primaryIcz1 = rom.read32BitAddr(llb + 10 * stride + 16) & 0xFFFFFF;
+        int primaryIcz2 = rom.read32BitAddr(llb + 11 * stride + 16) & 0xFFFFFF;
+        assertEquals(primaryIcz1, primaryIcz2, "both acts use the same ROM primary definitions");
+        assertEquals(0x0A00, loader.loadSingle(LoadOp.kosinskiBase(primaryIcz2)).length,
+                "the primary write ends before the deferred secondary destination");
+        int chunkStart = 0x0408 / Chunk.CHUNK_SIZE_IN_ROM;
+        int chunkCount = expectedChunks16x16.length / Chunk.CHUNK_SIZE_IN_ROM;
+        // Load_Level retains known Block_table pattern words; LoadSolids replaces
+        // their collision indices with the independently read target ROM tables.
+        int[][] chunksBeforePublication = snapshotChunkRange(outgoingIcz1, chunkStart, chunkCount);
+        int targetSolids = rom.read32BitAddr(Sonic3kConstants.SOLID_INDEXES_ADDR + 11 * 4) & 0xFFFFFF;
+        assertEquals(0x27A761, targetSolids);
+        assertEquals(688, outgoingIcz1.getChunkCount());
+        assertEquals(589, chunkCount);
+        for (int i = 0; i < chunkCount; i++) {
+            if (i < 559) {
+                assertEquals(6, chunksBeforePublication[i].length, "known outgoing native pattern group");
+                int index = chunkStart + i;
+                chunksBeforePublication[i][4] = rom.readByte(targetSolids + index * 2) & 0xFF;
+                chunksBeforePublication[i][5] = rom.readByte(targetSolids + 0x600 + index * 2) & 0xFF;
+            } else {
+                assertEquals(0, chunksBeforePublication[i].length,
+                        "688..717 have no predecessor producer; absence is not zero RAM");
+            }
+        }
         Sonic3kLevel independentlyDeferredIcz2 =
                 (Sonic3kLevel) ((DeferredLevelResourceLoader)
                         new Sonic3k(GameServices.rom().getRom()))
                         .loadLevelWithDeferredResources(
                                 0xC0 + 11,
                                 transitionManifest.newTracker());
-        int blockStart =
-                0x0A00 / LevelConstants.BLOCK_SIZE_IN_ROM;
-        int blockCount = expectedBlocks128x128.length
-                / LevelConstants.BLOCK_SIZE_IN_ROM;
-        int chunkStart = 0x0408 / Chunk.CHUNK_SIZE_IN_ROM;
-        int chunkCount = expectedChunks16x16.length
-                / Chunk.CHUNK_SIZE_IN_ROM;
         int patternStart = 0x0122;
         int patternCount = expectedPatterns8x8.length
                 / Pattern.PATTERN_SIZE_IN_ROM;
-        int[][] blocksBeforePublication = snapshotBlockRange(
+        int[][] constructorOnlyBlocks = snapshotBlockRange(
                 independentlyDeferredIcz2, blockStart, blockCount);
-        int[][] chunksBeforePublication = snapshotChunkRange(
-                independentlyDeferredIcz2, chunkStart, chunkCount);
+        assertFalse(Arrays.deepEquals(blocksBeforePublication, constructorOnlyBlocks),
+                "a detached deferred load has no outgoing resident span and is not this handoff's oracle");
+        assert2dArrayEquals(blocksBeforePublication,
+                snapshotBlockRange(outgoingIcz1, blockStart, blockCount),
+                "the independent construction must leave the outgoing owner untouched");
+        assertEquals(129, independentlyDeferredIcz2.getChunkCount(),
+                "detached construction must not receive a synchronous predecessor");
         byte[][] patternsBeforePublication = snapshotPatternRange(
                 independentlyDeferredIcz2, patternStart, patternCount);
         int[][] expectedPublishedBlocks = applyBlockPayload(

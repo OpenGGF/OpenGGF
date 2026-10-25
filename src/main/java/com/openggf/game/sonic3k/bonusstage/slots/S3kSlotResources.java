@@ -88,6 +88,12 @@ public final class S3kSlotResources {
     public byte[] spikeFrames() { return animationFrames(0x4B656, 4); }
     public byte[] wallFrames() { return animationFrames(0x4B688, 25); }
 
+    /** Ani_Ring / Ani_RingSparkle, selected by Obj_SlotRing without resetting anim_frame. */
+    byte[] rewardRingAnimation(boolean sparkle) {
+        int table = sparkle ? 0x1A992 : 0x1AA66;
+        return reader.slice(table + reader.readU16BE(table), 6);
+    }
+
     public byte[] expandedLayout() {
         byte[] compact = layout();
         byte[] expanded = new byte[S3kSlotRomData.SLOT_EXPANDED_STRIDE * S3kSlotRomData.SLOT_EXPANDED_STRIDE];

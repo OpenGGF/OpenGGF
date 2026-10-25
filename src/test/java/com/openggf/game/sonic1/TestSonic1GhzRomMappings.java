@@ -2,6 +2,8 @@ package com.openggf.game.sonic1;
 
 import com.openggf.data.RomByteReader;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
+import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.tests.TestEnvironment;
@@ -12,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @RequiresRom(SonicGame.SONIC_1)
 public class TestSonic1GhzRomMappings {
@@ -262,5 +265,51 @@ public class TestSonic1GhzRomMappings {
                 romFrames.get(2).pieces().get(0));
         assertEquals(new SpriteMappingPiece(0, 0x10, 2, 2, 0xB7, false, false, 0, false),
                 romFrames.get(3).pieces().get(24));
+    }
+
+    @Test
+    public void ghzEdgeWallProviderSheetMatchesNativeRom() throws Exception {
+        RomByteReader reader = RomByteReader.fromRom(TestEnvironment.currentRom());
+        Sonic1ObjectArtProvider provider = new Sonic1ObjectArtProvider();
+        provider.loadArtForZone(Sonic1Constants.ZONE_GHZ);
+
+        ObjectSpriteSheet sheet = provider.getSheet(ObjectArtKeys.GHZ_EDGE_WALL);
+        assertNotNull(sheet, "GHZ edge wall sheet must be registered from the native ROM mappings");
+        // Edge_Main (_incObj/44 GHZ Edge Walls.asm:17-25): move.l #Map_Edge,obMap(a0).
+        assertEquals(0x217C, reader.readU16BE(0xE87A));
+        assertEquals(reader.readU32BE(0xE87C), Sonic1Constants.MAP_GHZ_EDGE_WALL_ADDR,
+                "Mapping address must match the native object's immediate operand");
+        assertEquals(12, sheet.getPatterns().length);
+        assertEquals(2, sheet.getPaletteIndex());
+        assertEquals(3, sheet.getFrameCount());
+
+        // Map_Edge_internal (_maps/GHZ Edge Walls.asm:4-27): shadow, light, dark.
+        List<List<SpriteMappingPiece>> expectedPieces = List.of(
+                List.of(
+                        new SpriteMappingPiece(-8, -32, 2, 2, 4, false, false, 0, false),
+                        new SpriteMappingPiece(-8, -16, 2, 2, 8, false, false, 0, false),
+                        new SpriteMappingPiece(-8, 0, 2, 2, 8, false, false, 0, false),
+                        new SpriteMappingPiece(-8, 16, 2, 2, 8, false, false, 0, false)),
+                List.of(
+                        new SpriteMappingPiece(-8, -32, 2, 2, 8, false, false, 0, false),
+                        new SpriteMappingPiece(-8, -16, 2, 2, 8, false, false, 0, false),
+                        new SpriteMappingPiece(-8, 0, 2, 2, 8, false, false, 0, false),
+                        new SpriteMappingPiece(-8, 16, 2, 2, 8, false, false, 0, false)),
+                List.of(
+                        new SpriteMappingPiece(-8, -32, 2, 2, 0, false, false, 0, false),
+                        new SpriteMappingPiece(-8, -16, 2, 2, 0, false, false, 0, false),
+                        new SpriteMappingPiece(-8, 0, 2, 2, 0, false, false, 0, false),
+                        new SpriteMappingPiece(-8, 16, 2, 2, 0, false, false, 0, false)));
+        for (int frameIndex = 0; frameIndex < sheet.getFrameCount(); frameIndex++) {
+            List<SpriteMappingPiece> pieces = sheet.getFrame(frameIndex).pieces();
+            assertEquals(expectedPieces.get(frameIndex), pieces, "Native edge wall frame " + frameIndex);
+            // Mapping bounds are half-open: [-8, 8) x [-32, 32), or 16 x 64 pixels.
+            assertEquals(-8, pieces.stream().mapToInt(SpriteMappingPiece::xOffset).min().orElseThrow());
+            assertEquals(-32, pieces.stream().mapToInt(SpriteMappingPiece::yOffset).min().orElseThrow());
+            assertEquals(8, pieces.stream().mapToInt(piece -> piece.xOffset() + piece.widthTiles() * 8)
+                    .max().orElseThrow());
+            assertEquals(32, pieces.stream().mapToInt(piece -> piece.yOffset() + piece.heightTiles() * 8)
+                    .max().orElseThrow());
+        }
     }
 }

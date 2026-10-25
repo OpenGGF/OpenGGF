@@ -153,4 +153,143 @@ class TestCourseRestoreCreatorOwnerScope {
         owner.setAccessible(true);
         return (String) owner.invoke(router, object);
     }
+
+    @Test
+    void capturedPlacementOwnerSurvivesRestoreInsideADifferentRegisteredController() throws Exception {
+        restoreRegisteredOwnerGraph(false);
+    }
+
+    @Test
+    void failedReconstructionRestoresTheOuterOwnerAndKeepsTheOriginalFaultAttribution() throws Exception {
+        restoreRegisteredOwnerGraph(true);
+    }
+
+    private void restoreRegisteredOwnerGraph(boolean failReconstruction) throws Exception {
+        String capturedOwner = "captured-restore-owner";
+        String outerOwner = "outer-restore-owner";
+        assertNotEquals(capturedOwner, outerOwner);
+        bootstrap = SharedLevel.load(SonicGame.SONIC_3K, Sonic3kZoneIds.ZONE_HCZ, 0);
+        var config = SonicConfigurationService.getInstance();
+        config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
+        config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
+        var findings = new com.openggf.mods.ModRuntimeFindingStore();
+        List<java.util.Set<String>> disabled = new ArrayList<>();
+        var boundary = new ModFaultBoundary(Map.of(), findings,
+                owners -> new com.openggf.mods.ModStateSaveResult.Saved(), disabled::add);
+        List<String> factoryOwners = new ArrayList<>();
+        RuntimeException[] factoryFailure = {null};
+        var graph = new RegisteredRestoreGraph();
+        var capturedContext = new ModContext(capturedOwner, "s3k", ModAssetRoot.forTests(capturedOwner));
+        capturedContext.registerObject("wall", (spawn, registry) -> {
+            factoryOwners.add(OwnerCallbackScope.current());
+            if (factoryFailure[0] != null) throw factoryFailure[0];
+            return new com.openggf.game.sonic3k.objects.HCZ2WallObjectInstance();
+        });
+        capturedContext.registerRewindAdapter("graph", graph);
+        GameModule capturedModule = new ModBackedGamePatch(capturedContext.freeze(), boundary)
+                .apply(GameServices.module(), null);
+        var outer = new RestoringController();
+        var outerContext = new ModContext(outerOwner, "s3k", ModAssetRoot.forTests(outerOwner));
+        outerContext.registerServiceBundle("course", () -> GameServiceBundle.builder()
+                .frameController("course", outer).build());
+        GameModule effective = new ModBackedGamePatch(outerContext.freeze(), boundary).apply(capturedModule, null);
+
+        // A real registered placement, captured through the course's contributed adapter.
+        // It needs neither a creator-class resolver nor ownership/slot injection.
+        var camera = new com.openggf.camera.Camera();
+        var spawn = new ObjectSpawn(0x100, 0x80, 0xFF, 0, 0, false, 0x80, 0,
+                capturedOwner, capturedOwner + ":wall");
+        var services = new com.openggf.level.objects.StubObjectServices() {
+            @Override public com.openggf.level.objects.ObjectManager objectManager() { return graph.manager; }
+            @Override public com.openggf.camera.Camera camera() { return camera; }
+            @Override public GameModule gameModule() { return effective; }
+        };
+        graph.manager = new com.openggf.level.objects.ObjectManager(List.of(spawn),
+                effective.createObjectRegistry(), 0, null, null, null, camera, services);
+        graph.manager.reset(0);
+        graph.manager.preloadInitialSpawnsForHydration();
+        graph.manager.setRewindInPlaceRestoreEnabledForTest(false);
+        ObjectInstance before = graph.manager.getActiveObjectForRewind(spawn);
+        assertNotNull(before);
+        assertEquals(capturedOwner, callbackOwner(graph.manager, before));
+        var beforeSnapshot = graph.capture();
+        assertEquals(spawn, beforeSnapshot.slots().getFirst().spawn());
+        assertEquals(capturedOwner, factoryOwners.getLast());
+
+        SessionManager.clear();
+        GameModuleRegistry.setCurrent(effective);
+        TestEnvironment.activeGameplayMode();
+        HeadlessTestFixture.builder().withZoneAndAct(Sonic3kZoneIds.ZONE_HCZ, 0).build();
+        CourseControl course = CourseControlProbeAccess.open(SessionManager.getCurrentGameplayMode());
+        outer.checkpoint = course.capture();
+        int constructionsBeforeRestore = factoryOwners.size();
+        var failure = new IllegalStateException("registered reconstruction failed");
+        if (failReconstruction) factoryFailure[0] = failure;
+
+        // Dispatch the controller published by registration, rather than seeding an owner frame.
+        GameplayFrameController caller = effective.gameplayFrameController();
+        if (failReconstruction) {
+            var aborted = assertThrows(ModFaultBoundary.CallbackAborted.class,
+                    () -> caller.beforeTick(course, LogicalInputSnapshot.neutral()));
+            assertSame(failure, aborted.getCause(), "the reconstruction's primary throwable survives both boundaries");
+            assertEquals(capturedOwner, aborted.owner(), "the failing factory keeps its registered owner");
+            assertEquals(List.of(java.util.Set.of(capturedOwner)), disabled);
+            assertEquals("MOD_CALLBACK_FAILED", findings.findingsFor(capturedOwner).getFirst().code());
+            assertTrue(findings.findingsFor(outerOwner).isEmpty(), "the calling controller is not blamed twice");
+        } else {
+            assertFalse(caller.beforeTick(course, LogicalInputSnapshot.neutral()));
+            ObjectInstance restored = graph.manager.getActiveObjectForRewind(spawn);
+            assertNotNull(restored);
+            assertEquals(capturedOwner, callbackOwner(graph.manager, restored));
+            assertNotSame(before, restored, "the control must exercise factory reconstruction, not in-place reuse");
+            assertEquals(beforeSnapshot.slots().getFirst().objectId(),
+                    graph.capture().slots().getFirst().objectId());
+            assertTrue(disabled.isEmpty());
+        }
+        assertEquals(constructionsBeforeRestore + 1, factoryOwners.size());
+        assertEquals(capturedOwner, factoryOwners.getLast(),
+                "reconstruction enters the captured placement owner, never the outer controller");
+        assertEquals(outerOwner, outer.ownerAfterRestore, "finally reinstates the exact outer callback owner");
+        assertNull(OwnerCallbackScope.current(), "the registered callback leaves no owner frame behind");
+    }
+
+    private static String callbackOwner(com.openggf.level.objects.ObjectManager manager,
+            ObjectInstance object) throws Exception {
+        var routerMethod = manager.getClass().getDeclaredMethod("objectCallbacks");
+        routerMethod.setAccessible(true);
+        Object router = routerMethod.invoke(manager);
+        var owner = router.getClass().getDeclaredMethod("owner", ObjectInstance.class);
+        owner.setAccessible(true);
+        return (String) owner.invoke(router, object);
+    }
+
+    private static final class RegisteredRestoreGraph implements
+            com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot> {
+        private com.openggf.level.objects.ObjectManager manager;
+        @Override public String key() { return "registered-restore-graph"; }
+        @Override public com.openggf.game.rewind.snapshot.ObjectManagerSnapshot capture() {
+            return manager.rewindSnapshottable().capture();
+        }
+        @Override public void restore(com.openggf.game.rewind.snapshot.ObjectManagerSnapshot snapshot) {
+            manager.rewindSnapshottable().restore(snapshot);
+        }
+    }
+
+    private static final class RestoringController implements GameplayFrameController,
+            com.openggf.game.rewind.RewindSnapshottable<Integer> {
+        private com.openggf.game.mode.CourseCheckpoint checkpoint;
+        private String ownerAfterRestore;
+        @Override public boolean beforeTick(CourseControl course, LogicalInputSnapshot input) {
+            try {
+                course.restore(checkpoint);
+                return false;
+            } finally {
+                ownerAfterRestore = OwnerCallbackScope.current();
+            }
+        }
+        @Override public void afterTick(CourseControl course, boolean advanced) { }
+        @Override public String key() { return "restoring-course"; }
+        @Override public Integer capture() { return 0; }
+        @Override public void restore(Integer value) { }
+    }
 }

@@ -2,6 +2,7 @@ package com.openggf.mods.code;
 
 import com.openggf.configuration.*;
 import com.openggf.control.*;
+import com.openggf.data.RomGame;
 import com.openggf.game.*;
 import com.openggf.game.modzone.ModPaletteClaim;
 import com.openggf.game.patch.*;
@@ -32,6 +33,7 @@ class TestStarpostTownAct {
     static URLClassLoader loader;
     static Path jar;
     SharedLevel bootstrap;
+    RomCatalogueFixture romCatalogue;
     HeadlessTestFixture fixture;
     GameModule effective;
     Object town, game;
@@ -61,14 +63,21 @@ class TestStarpostTownAct {
     }
     @AfterAll static void closeLoader() throws Exception { if (loader!=null) loader.close(); }
     @AfterEach void close() throws Exception {
-        if (artLibrary!=null) artLibrary.close();
-        if (bootstrap!=null) bootstrap.dispose();
-        assertTrue(findings.snapshot().isEmpty(),findings.snapshot().toString());
+        try {
+            if (artLibrary!=null) artLibrary.close();
+            if (bootstrap!=null) bootstrap.dispose();
+            assertTrue(findings.snapshot().isEmpty(),findings.snapshot().toString());
+        } finally {
+            if (romCatalogue!=null) romCatalogue.close();
+        }
     }
 
     private void launch(String farmer) throws Exception {
         bootstrap=SharedLevel.load(SonicGame.SONIC_3K,0,0);
         var config=SonicConfigurationService.getInstance();
+        var sonic1=RomTestUtils.ensureSonic1RomAvailable();
+        assertNotNull(sonic1,"Sonic 1 is required for the Starpost patch");
+        romCatalogue=RomCatalogueFixture.bind(config,GameServices.rom(),Map.of(RomGame.S1,sonic1.toPath()));
         config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE,farmer);
         config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE,"");
         config.setConfigValue(SonicConfiguration.DISPLAY_ASPECT,WidescreenAspect.WIDE_16_9.name());

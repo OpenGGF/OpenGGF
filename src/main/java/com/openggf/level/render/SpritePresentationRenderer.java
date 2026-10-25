@@ -74,12 +74,13 @@ public final class SpritePresentationRenderer {
                     if (entry.presentationSubject().head() != null)
                         SpritePresentation.bindPatternVersions(graphics, entry.presentationSubject().head().patterns());
                     graphics.setCurrentSpriteHighPriority(entry.piece().globalHighPriority());
+                    graphics.setCurrentSpriteTileOcclusionPaletteMask(entry.tileOcclusionPaletteMask());
                     SpritePresentation.withSubject(graphics, entry.presentationSubject(), () -> emitter.accept(entry));
                 }
             }
         });
         graphics.setCurrentSpriteHighPriority(false);
-        draw(graphics, frame, 0, 0, layer -> true);
+        drawNative(graphics, frame, 0, 0, layer -> true);
         } finally {
             graphics.setCurrentSpriteHighPriority(false);
             graphics.setUseSpritePriorityShader(priorityShader);
@@ -120,6 +121,45 @@ public final class SpritePresentationRenderer {
         draw(graphics,frame,cameraX,cameraY,visible,null);
     }
 
+    /** Native admitted SAT only: first opaque source wins before terrain priority is resolved. */
+    public static void drawNative(GraphicsManager graphics, Frame frame, int cameraX, int cameraY,
+                                  Predicate<Layer> visible) {
+        drawNative(graphics, frame, cameraX, cameraY, visible, null);
+    }
+
+    /**
+     * Frame tiles are stored in painter order. Native rasterization reverses that order,
+     * retaining the existing presentation projection and transforms. Trails precede the
+     * table; diagnostic primitives follow it in their original order as overlays.
+     * CPU capture retains painter order and never opens a GPU scope.
+     */
+    public static void drawNative(GraphicsManager graphics, Frame frame, int cameraX, int cameraY,
+                                  Predicate<Layer> visible, com.openggf.game.mutators.LivePresentationRuntime runtime) {
+        if (SpritePresentation.isPreparing(graphics)) {
+            draw(graphics, frame, cameraX, cameraY, visible, runtime);
+            return;
+        }
+        try {
+            frame = runtime == null ? com.openggf.level.objects.HudProfileAccess.projectPresentation(graphics, frame)
+                    : com.openggf.level.objects.HudProfileAccess.projectPresentation(runtime.world(), graphics, frame);
+            if (runtime != null && !runtime.trails().isEmpty()) drawTrails(graphics, frame, cameraX, cameraY, visible, runtime);
+            var nativeFrame = new Frame(frame.tiles().reversed(), java.util.List.of(), frame.patternVersions());
+            com.openggf.graphics.SpriteSatInternalAccess.replayNativeLayers(graphics, nativeFrame.tiles(), Tile::ghost,
+                    tiles -> drawPicture(graphics, tiles == nativeFrame.tiles() ? nativeFrame
+                                    : new Frame(tiles, java.util.List.of(), nativeFrame.patternVersions()),
+                            cameraX, cameraY, visible, runtime, 1));
+            if (!frame.primitives().isEmpty()) {
+                var overlays = frame.primitives().stream()
+                        .map(primitive -> new Primitive(0, primitive.layer(), primitive.primitive(), primitive.subject())).toList();
+                drawPicture(graphics, new Frame(java.util.List.of(), overlays, java.util.Map.of()),
+                        cameraX, cameraY, visible, runtime, 1);
+            }
+        } catch (RuntimeException | Error failure) {
+            if (runtime != null) runtime.releaseTrailArt();
+            throw failure;
+        }
+    }
+
     /** Presentation state is sampled by the logical loop; draw consumes immutable values only. */
     public static void draw(GraphicsManager graphics, Frame frame, int cameraX, int cameraY,
                             Predicate<Layer> visible,com.openggf.game.mutators.LivePresentationRuntime runtime) {
@@ -154,7 +194,7 @@ public final class SpritePresentationRenderer {
                 tiles.add(new Tile(tile.layer(),id,tile.palette(),tile.hFlip(),tile.vFlip(),tile.priority(),
                         tile.x()+pose.cameraX()-cameraX,tile.y()+pose.cameraY()-cameraY,tile.width(),tile.height(),
                         tile.priorityShader(),tile.occlusionMask(),tile.ghost(),tile.ghostAlpha(),tile.rowStart(),tile.rowEnd(),tile.subject(),
-                        tile.ghostColour()));
+                        tile.ghostColour(),tile.pixelOperation()));
             }
             // Every retained actor stays clearly readable; the newest echoes are nearly opaque.
             float opacity=.65f+.30f*poseIndex++/Math.max(1,poses.size()-1);
@@ -206,10 +246,11 @@ public final class SpritePresentationRenderer {
                         : transforms.computeIfAbsent(body, ignored ->
                             com.openggf.game.mutators.SpritePictureTransform.forTile(tile, cameraX, cameraY, policies));
                 boolean pictureGeometry = !transform.identity() || opacity != 1;
-                float[] quad = pictureGeometry ? transform.quad(tile, cameraX, cameraY) : null;
+                boolean shadow = tile.pixelOperation() == com.openggf.graphics.SpriteSatEntry.PixelOperation.SHADOW_15;
+                float[] quad = pictureGeometry || shadow ? transform.quad(tile, cameraX, cameraY) : null;
                 if (viewport != null) {
                     boolean outside;
-                    if (pictureGeometry) outside = viewport.outside(quad, cameraX, cameraY);
+                    if (pictureGeometry || shadow) outside = viewport.outside(quad, cameraX, cameraY);
                     else if (tile.rowClipped()) {
                         // The native row path emits integer-positioned 8-pixel strips.
                         float left = (int) (tile.x() + cameraX) - cameraX;
@@ -218,14 +259,18 @@ public final class SpritePresentationRenderer {
                     } else outside = viewport.outside(tile.x(), tile.y(), tile.x() + tile.width(), tile.y() + tile.height());
                     if (outside) continue;
                 }
+                // Native high-priority tiles bypass terrain palettes. Only actual
+                // instancing carries each tile's effective mask inside the batch.
+                int tileMask = tile.priority() ? 0 : tile.occlusionMask();
                 if (previous == null || previousPictureGeometry != pictureGeometry || previous.priorityShader() != tile.priorityShader()
-                        || (previous.occlusionMask() != tile.occlusionMask()
+                        || previous.pixelOperation() != tile.pixelOperation()
+                        || ((previous.priority() ? 0 : previous.occlusionMask()) != tileMask
                             && !com.openggf.graphics.PresentationGraphicsAccess.maskIsPerInstance(graphics))
                         || previous.ghost() != tile.ghost() || previous.ghostAlpha() != tile.ghostAlpha()
                         || previous.ghostColour() != tile.ghostColour()) {
                     graphics.flushPatternBatch();
                     graphics.setUseSpritePriorityShader(tile.priorityShader());
-                    graphics.setCurrentSpriteTileOcclusionPaletteMask(tile.occlusionMask());
+                    graphics.setCurrentSpriteTileOcclusionPaletteMask(tileMask);
                     if (tile.ghost()) graphics.beginGhostRenderEffect(tile.ghostAlpha(), tile.ghostColour());
                     else graphics.endGhostRenderEffect();
                     graphics.beginPatternBatch();
@@ -233,7 +278,7 @@ public final class SpritePresentationRenderer {
                 previous = tile;
                 previousPictureGeometry = pictureGeometry;
                 graphics.setUseSpritePriorityShader(tile.priorityShader());
-                graphics.setCurrentSpriteTileOcclusionPaletteMask(tile.occlusionMask());
+                graphics.setCurrentSpriteTileOcclusionPaletteMask(tileMask);
                 if (tile.ghost()) graphics.beginGhostRenderEffect(tile.ghostAlpha(), tile.ghostColour());
                 else graphics.endGhostRenderEffect();
                 desc.setPaletteIndex(tile.palette());
@@ -242,7 +287,10 @@ public final class SpritePresentationRenderer {
                 desc.setPriority(tile.priority());
                 float x = tile.x() + cameraX, y = tile.y() + cameraY;
                 SpritePresentation.withSubject(graphics,tile.subject(),()-> {
-                if(pictureGeometry) {
+                if (shadow) {
+                    com.openggf.graphics.SpriteSatInternalAccess.renderShadowTile(graphics, tile, cameraX, cameraY,
+                            quad, opacity);
+                } else if(pictureGeometry) {
                     com.openggf.graphics.PresentationGraphicsAccess.render(graphics, tile.patternId(), tile.palette(),
                             tile.hFlip(), tile.vFlip(), tile.priority(), tile.rowStart(), tile.rowEnd(),
                             quad,transform.hue(),opacity);

@@ -6,6 +6,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.TreeSet;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -53,6 +54,28 @@ class TestRewindRoundTripHarnessCoverage {
                         new RoundTripSweepResult.Unprobed(RewindRoundTripHarness.MISSING_ROM_REASON)));
         assertThrows(AssertionError.class, () -> RewindRoundTripHarnessCoverage.assertResult(name,
                 new RoundTripSweepResult.Unprobed("restore crashed")));
+    }
+
+    @Test
+    void nativeS1BossComponentsRetainTheirExactCoverageDispositions() {
+        String prefix = "com.openggf.game.sonic1.objects.bosses.";
+        Map<String, String> graphs = Map.of(
+                "GHZBossWreckingBall$NativeComponent", "TestS1GhzBossGraphRewind",
+                "FZBossVisualComponent", "TestS1FzBossGraphRewind",
+                "S1EggmanVisualComponent",
+                "TestS1EggmanNativeComponents#midScriptRewindRecreatesIdentityAndProducesTheSameForwardFramesWithoutRespawn");
+        for (var graph : graphs.entrySet()) {
+            String name = prefix + graph.getKey();
+            assertEquals(graph.getValue(), RewindRoundTripHarness.declaredGraphCoverage().get(name));
+            assertEquals(RewindRoundTripHarnessCoverage.Outcome.GRAPH,
+                    RewindRoundTripHarnessCoverage.assertResult(name, RewindRoundTripHarness.probeClass(name)));
+            assertFalse(RewindRoundTripHarnessCoverage.isolatedClasses().contains(name));
+        }
+        String explosion = prefix + "S1BossExplosion";
+        assertTrue(RewindRoundTripHarnessCoverage.isolatedClasses().contains(explosion));
+        assertFalse(RewindRoundTripHarness.declaredGraphCoverage().containsKey(explosion));
+        assertEquals(RewindRoundTripHarnessCoverage.Outcome.ISOLATED,
+                RewindRoundTripHarnessCoverage.assertResult(explosion, RewindRoundTripHarness.probeClass(explosion)));
     }
 
     @Test

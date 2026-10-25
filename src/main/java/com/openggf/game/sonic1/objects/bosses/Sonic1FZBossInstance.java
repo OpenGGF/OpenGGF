@@ -3,6 +3,7 @@ package com.openggf.game.sonic1.objects.bosses;
 import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.camera.Camera;
+import com.openggf.data.RomByteReader;
 import com.openggf.game.GameRng;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic1.constants.Sonic1AnimationIds;
@@ -10,7 +11,6 @@ import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.game.sonic1.resources.Sonic1PlcService;
-import com.openggf.level.objects.boss.BossExplosionObjectInstance;
 import com.openggf.game.sonic1.scroll.Sonic1ZoneConstants;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectArtKeys;
@@ -26,11 +26,11 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
-import com.openggf.sprites.animation.SpriteAnimationScript;
-import com.openggf.sprites.animation.SpriteAnimationSet;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import java.util.List;
 import java.util.ArrayList;
+import java.io.IOException;
 
 /**
  * Object 0x85 — Final Zone Boss (Eggman in machine with crushing cylinders and plasma launcher).
@@ -51,11 +51,13 @@ import java.util.ArrayList;
  *  12: SHIP_TRANSFORM — Switch to Map_Eggman, ascend to escape ship
  *  14: FINAL_FLIGHT   — Escape flight, player control lock, ending trigger
  *
- * Sub-objects (routines 4-12) in the ROM are visual overlays that track the parent.
- * In our engine these are handled as rendering overlays within this class.
+ * Routines 4-12 occupy independently dispatched visual SSTs; their positions,
+ * animation clocks and deletion branches are owned by those components.
  */
 public class Sonic1FZBossInstance extends AbstractBossInstance
         implements SolidObjectProvider, SolidObjectListener, RewindRecreatable, ObjectVisualFacing.Source {
+    // REV01 Ani_SEgg table, shared with the SBZ2 Eggman cutscene.
+    private static final int SEGG_ANIMATION_TABLE = 0x1A1B2;
     @Override public ObjectVisualFacing.Basis nativeFacing() {
         // handleCombatCollision points bit 0 toward the player; escape preserves this same owner.
         return (state.renderFlags & 1) != 0 ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.LEFT;
@@ -69,11 +71,11 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
     public void releasePlayersForVisualDirection() {
         for (var player : visualControlOwners.players()) {
             player.setControlLocked(false);
+            player.setForcedInputMask(0);
         }
         visualControlOwners.clear();
     }
 
-    private static final SpriteAnimationSet SEGG_ANIMATIONS = Sonic1BossAnimations.getSEggAnimations();
 
     // State machine constants (objoff_34 values in the ROM)
     private static final int STATE_WAIT = 0;
@@ -147,11 +149,9 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
     // Whether we've transitioned to Map_Eggman (escape ship form)
     private boolean escapingInShip;
 
-    // Eggman face/flame overlays (sub-objects in ROM, rendered inline here)
-    // These track state for the 6 sub-objects defined in BossFinal_ObjData
-    private int legsFrame;
-    private int legsTimer;
     private boolean showDamaged;
+    private boolean renderedLastPass;
+    private boolean displayedThisPass;
 
     // obColProp flag for escape phase hittability
     private boolean escapeHittable;
@@ -177,9 +177,10 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
         state.xVel = 0;
         state.yVel = 0;
 
-        // ROM: Initial position from BossFinal_ObjData — boss_fz_x+$160, boss_fz_y+$80
-        state.x = BOSS_FZ_X + 0x160;
-        state.y = BOSS_FZ_Y + 0x80;
+        // BossFinal_ObjData's first row belongs to the controller/Eggman.
+        // The $25B0/$0590 second row is the independent control panel.
+        state.x = 0x100;
+        state.y = 0x100;
         state.xFixed = state.x << 16;
         state.yFixed = state.y << 16;
 
@@ -189,13 +190,11 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
 
         damageCooldown = 0;
         seggAnim = Sonic1BossAnimations.ANIM_SEGG_STAND;
-        seggAnimPrev = -1;
+        seggAnimPrev = 0;
         seggAnimScriptFrame = 0;
         seggAnimTimeFrame = 0;
         seggFrame = 0;
         escapingInShip = false;
-        legsFrame = 0;
-        legsTimer = 0;
         showDamaged = false;
         escapeHittable = false;
         escapeHitTimer = 0;
@@ -211,17 +210,23 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
     private void spawnChildComponents() {
         if (services().objectManager() == null) return;
 
-        // Spawn 4 cylinders with subtypes 0, 2, 4, 6 (ROM: loc_19E3E)
+        // BossFinal_Main (85,84,86 Boss - FZ Main, Cylinders, and Plasma Balls.asm:76-135):
+        // five FindNextFreeObj visual rows, then FindFreeObj launcher, then four
+        // FindNextFreeObj cylinders. Partial failures retain the successful prefix.
+        for (int routine = 4; routine <= 12; routine += 2) {
+            final int childRoutine = routine;
+            FZBossVisualComponent component = spawnChild(() -> new FZBossVisualComponent(this, childRoutine));
+            if (component.isDestroyed()) break;
+        }
+        FZPlasmaLauncher launcher = spawnFreeChild(() -> new FZPlasmaLauncher(this));
+        if (launcher.isDestroyed()) return;
+        plasmaLauncher = launcher;
         for (int i = 0; i < 4; i++) {
             final int subtype = i * 2;
-            FZCylinder cylinder = spawnFreeChild(() -> new FZCylinder(this, subtype));
+            FZCylinder cylinder = spawnChild(() -> new FZCylinder(this, subtype));
+            if (cylinder.isDestroyed()) break;
             cylinders[i] = cylinder;
-            childComponents.add(cylinder);
         }
-
-        // Spawn plasma launcher (ROM: loc_19E20)
-        plasmaLauncher = spawnFreeChild(() -> new FZPlasmaLauncher(this));
-        childComponents.add(plasmaLauncher);
     }
 
     private void ensureChildComponentsSpawned() {
@@ -229,6 +234,8 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
         if (services().objectManager() == null) return;
         spawnChildComponents();
         childComponentsSpawned = true;
+        // BossFinal_LoadBoss explicitly seeds bit7 on a0, not on each visual child.
+        renderedLastPass = true;
     }
 
     void adoptCylinderForRewind(FZCylinder cylinder) {
@@ -241,18 +248,7 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
         int subtype = cylinder.subtypeForRewind();
         int index = subtype >> 1;
         if (index >= 0 && index < cylinders.length) {
-            FZCylinder previous = cylinders[index];
-            if (previous != null && previous != cylinder) {
-                childComponents.remove(previous);
-            }
             cylinders[index] = cylinder;
-        }
-        childComponents.removeIf(child ->
-                child instanceof FZCylinder existing
-                        && existing != cylinder
-                        && existing.subtypeForRewind() == subtype);
-        if (!childComponents.contains(cylinder)) {
-            childComponents.add(cylinder);
         }
         childComponentsSpawned = true;
     }
@@ -261,15 +257,7 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
         if (launcher == null) {
             return;
         }
-        if (plasmaLauncher != null && plasmaLauncher != launcher) {
-            childComponents.remove(plasmaLauncher);
-        }
-        childComponents.removeIf(child ->
-                child instanceof FZPlasmaLauncher && child != launcher);
         plasmaLauncher = launcher;
-        if (!childComponents.contains(launcher)) {
-            childComponents.add(launcher);
-        }
         childComponentsSpawned = true;
     }
 
@@ -322,6 +310,7 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
         escapeHitTimer = 0x1E;
         escapeHittable = false;
         showDamaged = true;
+        state.hitCount = 0;
         services().playSfx(Sonic1Sfx.HIT_BOSS.id);
     }
 
@@ -352,6 +341,7 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
             case STATE_SHIP_TRANSFORM -> updateShipTransform();
             case STATE_FINAL_FLIGHT -> updateFinalFlight(player, vIntRunCount);
         }
+        displayedThisPass = true; // BossFinal_Eggman always reaches DisplaySprite.
     }
 
     // === State 0: WAIT (loc_19E90 / BossFinal_Eggman_Wait) ===
@@ -558,7 +548,6 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
         state.y = state.yFixed >> 16;
 
         // ROM: move.b #6,obFrame — starjump frame
-        seggAnim = Sonic1BossAnimations.ANIM_SEGG_STARJUMP;
         seggFrame = 6;
 
         // ROM: addi.w #$10,obVelY — gravity
@@ -683,6 +672,7 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
         if (state.xVel == 0 && state.yVel == 0) {
             state.routineSecondary = STATE_SHIP_TRANSFORM;
             state.yVel = -0x180;
+            state.hitCount = 1; // BossFinal_Eggman_Jump's escape hit counter.
             // ROM: move.b #1,obColProp — mark as hittable (for escape sequence)
             escapeHittable = false; // Not yet — set in ship transform
         }
@@ -716,8 +706,6 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
             escapeHitTimer = 0;
             escapeCollisionFlags = ESCAPE_COLLISION_FLAGS;
         }
-
-        updateEscapeLegs();
 
         // Expand camera boundary + animate
         expandCameraBoundary();
@@ -756,11 +744,10 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
             }
         }
 
-        updateEscapeLegs();
-
         // ROM: Player control lock when player X >= boss_fz_end + $90
         for (AbstractPlayableSprite participant : finalFlightParticipants(player)) {
-            int playerX = participant.getCentreX() & 0xFFFF;
+            // Both native player-X comparisons branch with signed BLT.
+            int playerX = participant.getCentreX();
 
             // ROM: loc_1A216 — lock player controls past threshold
             if (playerX >= BOSS_FZ_END + 0x90) {
@@ -770,17 +757,26 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
                 // x_speed (FZ trace f4200: ROM x_speed stays 0x0255). The prior
                 // setXSpeed(0) zeroed it and diverged.
                 visualControlOwners.acquire(participant).setControlLocked(true);
+                participant.setForcedInputMask(0);
+                participant.writeLogicalInputAndCurrentFollowerHistory(0, false);
                 participant.setGSpeed((short) 0);
 
-                // ROM: tst.w obVelY(a0) / bpl loc_1A248 — only when the boss is still
-                // rising (velY < 0, i.e. Eggman escaped un-hit) does ROM force btnUp to
-                // make Sonic look up. On a successful-hit run the boss is defeated and
-                // falls (velY=$60), so velY >= 0 here and ROM takes no extra action.
+                // BossFinal_Eggman_Escape .watchEggman (REV01 $1A9E4):
+                // tst.w obVelY / bpl.s .ending skips BOTH the Up write and the
+                // ledge clamp when the ship is no longer rising. Keep the forced
+                // mask as the next player dispatch's logical-controller owner;
+                // the late word write also replaces this pass's held/press history.
+                if ((short) state.yVel >= 0) {
+                    continue;
+                }
+                participant.setForcedInputMask(AbstractPlayableSprite.INPUT_UP);
+                participant.writeLogicalInputAndCurrentFollowerHistory(
+                        AbstractPlayableSprite.INPUT_UP, false);
             }
 
             // ROM: Cap player X at boss_fz_end + $E0
             if (playerX >= BOSS_FZ_END + 0xE0) {
-                participant.setCentreX((short) (BOSS_FZ_END + 0xE0));
+                NativePositionOps.writeXPosPreserveSubpixel(participant, BOSS_FZ_END + 0xE0);
             }
         }
 
@@ -793,11 +789,6 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
 
         // Expand camera boundary
         expandCameraBoundary();
-
-        // ROM: sub-object routine 6 keeps calling BossDefeated while damaged escape sprite is active.
-        if (showDamaged) {
-            triggerBossDefeatedExplosion(vIntRunCount);
-        }
 
         updateSeggAnimation();
     }
@@ -814,72 +805,34 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
         return players;
     }
 
-    private void updateEscapeLegs() {
-        if (!escapingInShip || legsFrame > 2) {
-            return;
-        }
-        if (legsTimer == 0) {
-            legsTimer = 0x14;
-        }
-        legsTimer--;
-        if (legsTimer <= 0) {
-            legsFrame++;
-        }
-    }
-
     private void updateSeggAnimation() {
-        SpriteAnimationScript script = SEGG_ANIMATIONS.getScript(seggAnim);
-        if (script == null || script.frames().isEmpty()) {
-            return;
-        }
-
+        RomByteReader reader;
+        try { reader = services().romReader(); }
+        catch (IOException e) { throw new IllegalStateException("Cannot read Ani_SEgg from active ROM", e); }
+        if (reader == null) return; // ROM-free harness supplies no replacement asset bytes.
         if (seggAnim != seggAnimPrev) {
             seggAnimPrev = seggAnim;
             seggAnimScriptFrame = 0;
             seggAnimTimeFrame = 0;
         }
 
-        seggAnimTimeFrame--;
+        seggAnimTimeFrame = (byte) (seggAnimTimeFrame - 1);
         if (seggAnimTimeFrame >= 0) {
             return;
         }
 
-        seggAnimTimeFrame = script.delay() & 0xFF;
-
-        if (seggAnimScriptFrame < 0 || seggAnimScriptFrame >= script.frames().size()) {
+        int script = reader.readPointer16(SEGG_ANIMATION_TABLE, seggAnim);
+        seggAnimTimeFrame = reader.readU8(script);
+        int frame = reader.readU8(script + 1 + seggAnimScriptFrame);
+        if (frame == 0xFF) {
             seggAnimScriptFrame = 0;
+            frame = reader.readU8(script + 1);
+        } else if (frame == 0xFE) {
+            seggAnimScriptFrame = (seggAnimScriptFrame - reader.readU8(script + 2 + seggAnimScriptFrame)) & 0xFF;
+            frame = reader.readU8(script + 1 + seggAnimScriptFrame);
         }
-
-        seggFrame = script.frames().get(seggAnimScriptFrame) & 0x1F;
-        seggAnimScriptFrame++;
-
-        if (seggAnimScriptFrame < script.frames().size()) {
-            return;
-        }
-
-        switch (script.endAction()) {
-            case HOLD -> seggAnimScriptFrame = script.frames().size() - 1;
-            case LOOP_BACK -> {
-                int loopBack = script.endParam();
-                if (loopBack <= 0) {
-                    seggAnimScriptFrame = 0;
-                } else {
-                    int target = script.frames().size() - loopBack;
-                    seggAnimScriptFrame = Math.max(target, 0);
-                }
-            }
-            case SWITCH -> {
-                int nextAnim = script.endParam();
-                if (nextAnim == seggAnim) {
-                    seggAnimScriptFrame = 0;
-                } else {
-                    seggAnim = nextAnim;
-                    seggAnimPrev = -1;
-                }
-            }
-            case LOOP -> seggAnimScriptFrame = 0;
-            default -> seggAnimScriptFrame = 0;
-        }
+        seggFrame = frame & 0x1F;
+        seggAnimScriptFrame = (seggAnimScriptFrame + 1) & 0xFF;
     }
 
     /**
@@ -1047,22 +1000,15 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
     }
 
     private void spawnDefeatExplosionAt(int sourceX, int sourceY) {
-        ObjectRenderManager renderManager = services().renderManager();
-        if (renderManager == null || services().objectManager() == null) {
-            return;
-        }
-
-        int random = services().rng().nextWord();
-        int xOffset = ((random & 0xFF) >> 2) - 0x20;
-        int yOffset = (((random >> 8) & 0xFF) >> 2) - 0x20;
-        final int finalSourceX = sourceX + xOffset;
-        final int finalSourceY = sourceY + yOffset;
-        spawnFreeChild(() -> new BossExplosionObjectInstance(
-                finalSourceX,
-                finalSourceY,
-                Sonic1ObjectIds.EXPLOSION,
-                Sonic1Sfx.BOSS_EXPLOSION.id,
-                BossExplosionObjectInstance.S1_PRIORITY_BUCKET));
+        var manager = services().objectManager();
+        if (manager == null) return;
+        // BossDefeated: allocation precedes RNG, and Y is biased downward.
+        manager.createDynamicObjectWithReservedSlot(() -> {
+            int random = services().rng().nextWord();
+            int x = (sourceX + ((random & 0xFF) >> 2) - 0x20) & 0xFFFF;
+            int y = (sourceY + (((random >>> 8) & 0xFF) >> 3)) & 0xFFFF;
+            return new S1BossExplosion(x, y, services().renderManager());
+        });
     }
 
     private void requestEndingTransition() {
@@ -1087,6 +1033,13 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
         // later cylinder slots update the parent's y_pos. During the cylinder
         // attack, contact therefore observes the boss's frame-start position.
         return state.routineSecondary == STATE_CYLINDER_ATTACK;
+    }
+
+    @Override
+    public boolean usesInstanceSolidStateLatchKey() {
+        // Solid_NoCollision reads this live Obj85 SST's pushing bit. Its moving
+        // dynamic-spawn record is presentation data, not the latch's identity.
+        return true;
     }
 
     /**
@@ -1176,15 +1129,26 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
     // === Rendering ===
 
     private boolean isBossOnScreen() {
-        Camera camera = services().camera();
-        int screenX = state.x - camera.getX();
-        int viewportWidth = camera.getWidth() & 0xFFFF;
-        return screenX >= -64 && screenX <= viewportWidth + 64;
+        return renderedLastPass;
+    }
+
+    boolean isInEscapeShip() { return escapingInShip; }
+
+    @Override
+    public void refreshPostCameraRenderState() {
+        if (!displayedThisPass) return;
+        displayedThisPass = false;
+        var camera = services().camera();
+        int sx = (short) (state.x - camera.getX());
+        int sy = (short) (state.y - camera.getY());
+        int width = getOnScreenHalfWidth();
+        renderedLastPass = sx >= -width && sx < camera.getWidth() + width
+                && sy >= -32 && sy < camera.getHeight() + 32;
     }
 
     @Override
     public int getPriorityBucket() {
-        return 4; // ROM: obPriority = 4 (adjusted for escape = 2)
+        return 4; // The damaged cockpit alone changes its own priority to 2.
     }
 
     @Override
@@ -1205,34 +1169,7 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
             if (eggmanRenderer != null && eggmanRenderer.isReady()) {
                 boolean flipped = (state.renderFlags & 1) != 0;
 
-                // Keep the base escape ship body visible in all escape-hit states.
-                eggmanRenderer.drawFrameIndex(0, state.x, state.y, flipped, false);
-
-                if (!showDamaged) {
-                    // Panic face (frame 6) before escape hit.
-                    eggmanRenderer.drawFrameIndex(6, state.x, state.y, flipped, false);
-                }
-
-                // Flame overlay — escape flame
-                eggmanRenderer.drawFrameIndex(11, state.x, state.y, flipped, false);
-            }
-
-            // Draw FZ legs overlay if legs are visible (sub-object routine 8)
-            if (!showDamaged && state.routineSecondary >= STATE_SHIP_TRANSFORM && legsFrame <= 2) {
-                PatternSpriteRenderer legsRenderer = renderManager.getRenderer(ObjectArtKeys.FZ_LEGS);
-                if (legsRenderer != null && legsRenderer.isReady()) {
-                    boolean flipped = (state.renderFlags & 1) != 0;
-                    legsRenderer.drawFrameIndex(legsFrame, state.x, state.y, flipped, false);
-                }
-            }
-
-            // Post-hit escape visuals overlay Map_FZDamaged on top of the base ship.
-            if (showDamaged) {
-                PatternSpriteRenderer damagedRenderer = renderManager.getRenderer(ObjectArtKeys.FZ_DAMAGED);
-                if (damagedRenderer != null && damagedRenderer.isReady()) {
-                    boolean flipped = (state.renderFlags & 1) != 0;
-                    damagedRenderer.drawFrameIndex((state.lastUpdatedVIntRunCount >> 2) & 1, state.x, state.y, flipped, false);
-                }
+                eggmanRenderer.drawFrameIndex(seggFrame, state.x, state.y, flipped, false);
             }
         }
     }

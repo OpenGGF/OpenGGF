@@ -870,6 +870,10 @@ public class TornadoObjectInstance extends AbstractObjectInstance
             teamPlayer.setYSpeed((short) 0);
             teamPlayer.setGSpeed((short) 0);
         });
+        // ObjB2_Move_Leader_edge (s2.asm:79137-79139) writes only Sonic_Speeds.
+        if (player.getClass() == com.openggf.sprites.playable.Sonic.class) {
+            com.openggf.sprites.playable.PlayableSpriteInternalAccess.publishNativeSpeedWords(player, 0x600, 0xC, 0x80);
+        }
         applyTeamWaitingAnimation(player);
     }
 

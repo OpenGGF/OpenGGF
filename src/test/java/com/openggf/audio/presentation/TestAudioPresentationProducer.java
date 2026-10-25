@@ -2,10 +2,15 @@ package com.openggf.audio.presentation;
 
 import com.openggf.audio.AudioBenchmarkMemoryProbe;
 import com.openggf.audio.LiveCaptureAudioHandle;
+import com.openggf.audio.StreamedMusicPort;
 import com.openggf.audio.output.AudioPresentationSink;
 import com.openggf.audio.output.NoDeviceAudioSink;
 import com.openggf.audio.presentation.AudioPresentationCommand.MusicVoiceEntry;
 import com.openggf.audio.presentation.AudioPresentationCommand.ReplaceMusic;
+import com.openggf.audio.presentation.AudioPresentationCommand.PushMusicOverride;
+import com.openggf.audio.presentation.AudioPresentationCommand.ReplaceRawPcm;
+import com.openggf.audio.presentation.AudioPresentationCommand.ResetRingAlternation;
+import com.openggf.audio.presentation.AudioPresentationCommand.SampleVoiceDescriptor;
 import com.openggf.audio.presentation.AudioPresentationCommand.SetSpeedMultiplier;
 import com.openggf.audio.presentation.AudioPresentationCommand.StartSampleSfx;
 import com.openggf.audio.presentation.AudioPresentationCommand.StopAllSfx;
@@ -17,6 +22,7 @@ import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import com.openggf.audio.session.SmpsDriverSession;
 import com.openggf.audio.session.SmpsSessionTestSupport;
 import static org.mockito.Mockito.*;
@@ -27,6 +33,7 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -35,8 +42,139 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 class TestAudioPresentationProducer {
+    @Test
+    void closeAfterStreamedDetachKeepsRetiredSnapshotsStrictAndRetiresEveryHandle() {
+        StreamedMusicPort port = mock(StreamedMusicPort.class);
+        AudioPresentationSourceFactory factory = streamedFactory(port);
+        AudioVoiceRegistry registry = new AudioVoiceRegistry(factory, factory,
+                new SmpsCoordFlagHandlerOwner(new SmpsCoordFlagRuntimeState()), ignored -> { });
+        SmpsDriverSession session = spy(SmpsSessionTestSupport.installed(48_000));
+        RecordingSink sink = spy(new RecordingSink(48_000, 800));
+        AudioPresentationProducer producer = new AudioPresentationProducer(48_000, 60, 800, 2,
+                registry, new AudioPresentationCommandQueue(registry::isRendering),
+                new AudioPresentationMixer(800, registry::onVoiceFailure), sink, session);
+        LiveCaptureAudioHandle capture = producer.attachCapture(60);
+        var replay = producer.recordReplay(1);
+        try {
+            registry.apply(new ReplaceMusic(factory.streamedStockOverride(1, 0x81)));
+            PresentationVoice voice = registry.orderedVoiceAt(0);
+            voice.mixInto(new long[2], 1);
+            assertTrue(voice.snapshot() instanceof PresentationVoiceSnapshot.Streamed);
+            factory.retireStreamedMusicPort();
+            port.close();
+            assertThrows(IllegalStateException.class, voice::snapshot);
+
+            producer.close();
+            producer.close();
+
+            assertTrue(producer.isClosed());
+            assertThrows(IllegalStateException.class, voice::snapshot);
+            assertEquals(0, registry.orderedVoiceCount());
+            assertFalse(registry.hasActiveMusicMetadata());
+            assertEquals(0, factory.streamedCursorCountForTesting());
+            assertThrows(IllegalStateException.class,
+                    () -> capture.drainPresentationFrame(new short[1600]));
+            assertTrue(replay.isClosed());
+            assertThrows(IllegalStateException.class, session::captureSnapshot);
+            verify(sink, times(1)).close();
+            verify(session, times(1)).close();
+            capture.close();
+            replay.close();
+        } finally {
+            producer.close();
+            factory.retireStreamedMusicPort();
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void terminalCloseAttemptsSuspendedAndLaterVoicesAfterFailureAndReentrantClose(boolean errorFirst) {
+        StreamedMusicPort port = mock(StreamedMusicPort.class);
+        AudioPresentationSourceFactory factory = spy(streamedFactory(port));
+        AudioVoiceRegistry registry = new AudioVoiceRegistry(factory, factory,
+                new SmpsCoordFlagHandlerOwner(new SmpsCoordFlagRuntimeState()), ignored -> { });
+        SmpsDriverSession session = spy(SmpsSessionTestSupport.installed(48_000));
+        RecordingSink sink = spy(new RecordingSink(48_000, 800));
+        AudioPresentationProducer producer = new AudioPresentationProducer(48_000, 60, 800, 2,
+                registry, new AudioPresentationCommandQueue(registry::isRendering),
+                new AudioPresentationMixer(800, registry::onVoiceFailure), sink, session);
+        LiveCaptureAudioHandle capture = producer.attachCapture(60);
+        try {
+            registry.apply(new ReplaceMusic(factory.streamedStockOverride(1, 0x81)));
+            PresentationVoice base = registry.orderedVoiceAt(0);
+            registry.apply(new PushMusicOverride(factory.streamedStockOverride(2, 0x82)));
+            PresentationVoice suspended = registry.orderedVoiceAt(0);
+            registry.apply(new PushMusicOverride(factory.streamedStockOverride(3, 0x83)));
+            registry.orderedVoiceAt(0).mixInto(new long[2], 1);
+            registry.setSfxBlocked(false);
+            SampleBackedVoice raw = spy(SampleBackedVoice.oneShot(4, 0,
+                    new DecodedPcm("failed-disposal", 2, 48_000, new short[] {10, 20, 30, 40}),
+                    48_000, 1, 1));
+            ReplaceRawPcm rawCommand = ReplaceRawPcm.fromVoice(raw, new byte[] {1, 2});
+            doReturn(raw).when(factory).recreateVoice(rawCommand.voice());
+            registry.apply(rawCommand);
+            SampleBackedVoice last = spy(SampleBackedVoice.oneShot(5, 0,
+                    new DecodedPcm("last-disposal", 2, 48_000, new short[] {30, 40, 50, 60}),
+                    48_000, 1, 1));
+            SampleVoiceDescriptor lastDescriptor = SampleVoiceDescriptor.fromVoice(last);
+            doReturn(last).when(factory).recreateVoice(lastDescriptor);
+            registry.apply(new StartSampleSfx(lastDescriptor));
+            assertEquals(3, registry.orderedVoiceCount(), "active music, raw PCM and sample SFX must all be admitted");
+            registry.apply(new ResetRingAlternation(false));
+            registry.setPendingRestore(true);
+            registry.setSfxBlocked(true);
+            Throwable first = errorFirst ? new AssertionError("first stop")
+                    : new IllegalStateException("first stop");
+            Throwable later = errorFirst ? new IllegalStateException("later stop")
+                    : new AssertionError("later stop");
+            clearInvocations(port);
+            doAnswer(invocation -> {
+                assertTrue(producer.isClosed());
+                assertThrows(IllegalStateException.class,
+                        () -> capture.drainPresentationFrame(new short[1600]));
+                assertEquals(0, registry.orderedVoiceCount());
+                AudioPresentationSnapshot empty = registry.snapshot();
+                assertTrue(empty.overrideStack().isEmpty());
+                assertFalse(empty.pendingRestore());
+                assertFalse(empty.sfxBlocked());
+                assertTrue(empty.ringLeft());
+                assertEquals(0, empty.nextVoiceId());
+                producer.close();
+                throw first;
+            }).when(port).stop();
+            doThrow(later).when(raw).stop();
+
+            Throwable thrown = assertThrows(Throwable.class, producer::close);
+
+            assertSame(first, thrown);
+            assertArrayEquals(new Throwable[] {later}, thrown.getSuppressed());
+            assertThrows(IllegalStateException.class, base::snapshot);
+            assertThrows(IllegalStateException.class, suspended::snapshot);
+            assertTrue(last.isComplete(), "failure must not strand later owned voices");
+            assertEquals(1, factory.streamedCursorCountForTesting(),
+                    "only the cursor whose physical stop failed remains for session retirement");
+            assertEquals(0, registry.orderedVoiceCount());
+            assertTrue(producer.isClosed());
+            producer.close();
+            verify(port, times(1)).stop();
+            verify(raw, times(1)).stop();
+            verify(last, times(1)).stop();
+            verify(sink, times(1)).close();
+            verify(session, times(1)).close();
+            assertThrows(IllegalStateException.class, session::captureSnapshot);
+            assertThrows(IllegalStateException.class,
+                    () -> capture.drainPresentationFrame(new short[1600]));
+        } finally {
+            doNothing().when(port).stop();
+            producer.close();
+            factory.retireStreamedMusicPort();
+            port.close();
+        }
+    }
+
     @Test
     void speakerReplacementRequestedDuringAcceptFinishesTheFrameThenNotifiesTheScene() {
         var owner = new AtomicReference<AudioPresentationProducer>();
@@ -754,6 +892,43 @@ class TestAudioPresentationProducer {
                 new AudioPresentationCommandQueue(registry::isRendering),
                 new AudioPresentationMixer(maxFrames, registry::onVoiceFailure),
                 sink);
+    }
+
+    private static AudioPresentationSourceFactory streamedFactory(StreamedMusicPort port) {
+        AtomicReference<StreamedMusicPort.State> state = new AtomicReference<>();
+        when(port.outputRate()).thenReturn(48_000);
+        when(port.hasStockOverride(anyInt())).thenReturn(true);
+        when(port.hasSource()).thenAnswer(invocation -> state.get() != null);
+        when(port.captureState()).thenAnswer(invocation -> Optional.ofNullable(state.get()));
+        doAnswer(invocation -> {
+            int musicId = invocation.getArgument(0);
+            state.set(new StreamedMusicPort.State(new StreamedMusicPort.TrackRef("stock", "" + musicId),
+                    musicId, 0, 0, StreamedMusicPort.FadeState.idle(), 1));
+            return null;
+        }).when(port).playStockOverride(anyInt());
+        when(port.restoreState(any())).thenAnswer(invocation -> {
+            state.set(invocation.getArgument(0));
+            return true;
+        });
+        doAnswer(invocation -> {
+            state.set(null);
+            return null;
+        }).when(port).stop();
+        when(port.mixInto(any(short[].class), anyInt())).thenAnswer(invocation -> {
+            int frames = invocation.getArgument(1);
+            short[] output = invocation.getArgument(0);
+            StreamedMusicPort.State before = state.get();
+            if (before == null) return 0;
+            Arrays.fill(output, 0, frames * 2, (short) 100);
+            state.set(new StreamedMusicPort.State(before.track(), before.logicalMusicId(),
+                    before.sourceFramePosition() + frames, before.pauseMask(), before.fade(), before.rate()));
+            return frames;
+        });
+        AudioPresentationSourceFactory factory = new AudioPresentationSourceFactory(() -> true,
+                new SmpsCoordFlagHandlerOwner(new SmpsCoordFlagRuntimeState()),
+                AudioPresentationSourceFactory.Settings.defaults());
+        factory.installStreamedMusicPort(port);
+        return factory;
     }
 
     private static Fixture fixture(

@@ -604,86 +604,46 @@ public class TestS2Htz1Headless {
                 "HTZ earthquake should remain active throughout the offset-sync observation window");
     }
 
-    /**
-     * Test that verifies Sonic can walk through the earthquake zone without hitting invisible walls.
-     */
+    /** Local positioned regression: cross the old invisible-wall coordinate during a natural earthquake. */
     @Test
-    public void testWalkThroughEarthquakeZoneNoStall() {
-        System.out.println("=== HTZ Earthquake Zone Walk-Through Test ===");
-
-        // Start from level spawn
-        sprite.setX((short) 96);
-        sprite.setY((short) 1007);
+    public void testPositionedWalkThroughEarthquakeZoneNoStall() {
+        // Debug coordinates are top-left. This local inlet avoids claiming that
+        // holding Right at the act spawn traverses the intervening level.
+        sprite.setX((short) (BUG_X - 100));
+        sprite.setY((short) BUG_Y);
         sprite.setAir(false);
         fixture.camera().updatePosition(true);
-
-        // Let sprite settle
-        for (int i = 0; i < 10; i++) {
+        for (int frame = 0; frame < 20; frame++) {
             fixture.stepFrame(false, false, false, false, false);
         }
+        assertTrue(sprite.getX() < BUG_X, "Settle before the target, not beyond it");
+        assertFalse(sprite.getDead(), "The local inlet must be playable");
+        assertTrue(htzState().earthquakeActive(),
+                "The production camera event must activate the earthquake before the walk");
 
-        System.out.println("Starting at: (" + sprite.getX() + ", " + sprite.getY() + ")");
-
-        int frameCounter = 0;
         int stalledFrames = 0;
-        short lastX = sprite.getX();
-        boolean passedBugLocation = false;
-
-        // Walk right for a long time to reach and pass the bug location
-        for (int i = 0; i < 2000; i++) {
-            frameCounter++;
+        int lastX = sprite.getX();
+        boolean crossedDuringEarthquake = false;
+        for (int frame = 0; frame < 200 && sprite.getX() < BUG_X + 64; frame++) {
             fixture.stepFrame(false, false, false, true, false);
-
-            short currentX = sprite.getX();
-
-            // Check if we've passed the bug location
-            if (currentX >= BUG_X && !passedBugLocation) {
-                passedBugLocation = true;
-                System.out.println("Passed bug location at frame " + frameCounter);
-                System.out.println("Position: (" + currentX + ", " + sprite.getY() + ")");
-                System.out.println("gSpeed: " + sprite.getGSpeed());
+            int currentX = sprite.getX();
+            assertFalse(sprite.getDead(), "Died before crossing the earthquake coordinate at frame " + frame);
+            if (currentX >= BUG_X) {
+                assertTrue(htzState().earthquakeActive(), "Earthquake must be active at the actual crossing");
+                crossedDuringEarthquake = true;
             }
-
-            // Detect stalls (gSpeed drop to 0 while on ground)
-            if (currentX == lastX && !sprite.getAir() && sprite.getGSpeed() < 10) {
+            if (currentX == lastX && !sprite.getAir() && Math.abs(sprite.getGSpeed()) < 10) {
                 stalledFrames++;
-                if (stalledFrames > 10) {
-                    System.out.println("\n*** STALL DETECTED at frame " + frameCounter + " ***");
-                    System.out.println("Position: (" + currentX + ", " + sprite.getY() + ")");
-                    System.out.println("This indicates an invisible wall!");
-
-                    // Log earthquake state
-                    boolean htzShake = htzState().earthquakeActive();
-                    boolean screenShake = GameServices.gameState().isScreenShakeActive();
-                    int bgYOffset = htzState().cameraBgYOffset();
-                    int shakeY = GameServices.parallax().getShakeOffsetY();
-
-                    System.out.println("HTZ shake active: " + htzShake);
-                    System.out.println("Screen shake active: " + screenShake);
-                    System.out.println("cameraBgYOffset: " + bgYOffset);
-                    System.out.println("shakeOffsetY: " + shakeY);
-
-                    fail("Sonic stalled at position (" + currentX + ", " + sprite.getY() +
-                            ") - invisible wall detected!");
-                }
+                assertTrue(stalledFrames <= 10,
+                        "Stalled during earthquake at (" + currentX + "," + sprite.getY() + ")");
             } else {
                 stalledFrames = 0;
             }
-
             lastX = currentX;
-
-            // Progress report
-            if (frameCounter % 500 == 0) {
-                System.out.println("Frame " + frameCounter + ": (" + currentX + ", " + sprite.getY() + ")");
-            }
         }
-
-        System.out.println("Final position: (" + sprite.getX() + ", " + sprite.getY() + ")");
-        if (passedBugLocation) {
-            System.out.println("SUCCESS: Passed the bug location without stalling!");
-        } else {
-            System.out.println("Note: Did not reach the bug location in 2000 frames");
-        }
+        assertTrue(crossedDuringEarthquake, "Must actually cross X=" + BUG_X + " during the earthquake");
+        assertTrue(sprite.getX() >= BUG_X + 64,
+                "Must continue beyond the target; final position (" + sprite.getX() + "," + sprite.getY() + ")");
     }
 
     // ========== Helper Methods ==========

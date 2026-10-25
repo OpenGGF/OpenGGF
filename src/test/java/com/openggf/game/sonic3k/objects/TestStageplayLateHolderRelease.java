@@ -127,16 +127,36 @@ class TestStageplayLateHolderRelease {
         object.setServices(services);
         object.releasePlayersForVisualDirection();
         verifyNoInteractions(player);
-        set(object, "armed", true); set(object, "playerCaptured", true); set(object, "playerHidden", true);
+        set(object, "armed", true); set(object, "playerHidden", true);
+        ((com.openggf.level.objects.PlayerControlOwners) get(object, "objectControlOwners")).add(player);
         ((com.openggf.level.objects.PlayerControlOwners) get(object, "visualControlOwners")).add(player);
         object.releasePlayersForVisualDirection();
         verify(player).applyObjectControlState(ObjectControlState.NONE);
         verify(player).setControlLocked(false);
-        verify(player).setHidden(false);
+        verify(player, never()).setHidden(anyBoolean());
+        verify(player, never()).setObjectMappingFrameControl(anyBoolean());
+        verify(player, never()).setMappingFrame(anyInt());
+        verify(player, never()).setCentreY(anyShort());
         verify(services, never()).camera();
         verify(services, never()).playSfx(anyInt());
-        assertFalse((boolean) get(object, "playerCaptured"));
+        assertTrue(((com.openggf.level.objects.PlayerControlOwners) get(object, "objectControlOwners")).isEmpty());
+        assertTrue((boolean) get(object, "playerHidden"), "The native camera-rise phase is not a visual hiding flag");
         assertTrue((boolean) get(object, "armed"), "Direction preserves the native route progress");
+    }
+
+    @Test void cnzArmOnlyInterruptionDoesNotClaimUnacquiredObjectControl() throws Exception {
+        var player = mock(AbstractPlayableSprite.class);
+        var object = new CnzTeleporterInstance(new ObjectSpawn(100, 100, 1, 0, 0, false, 100));
+        var services = mock(ObjectServices.class);
+        object.setServices(services);
+        set(object, "armed", true);
+        ((com.openggf.level.objects.PlayerControlOwners) get(object, "visualControlOwners")).add(player);
+        object.releasePlayersForVisualDirection();
+        verify(player).setControlLocked(false);
+        verifyNoMoreInteractions(player);
+        verifyNoInteractions(services);
+        assertTrue((boolean) get(object, "armed"));
+        assertFalse((boolean) get(object, "playerHidden"));
     }
 
     @Test void cannonInterruptionUsesNativeControlCooldownWithoutLaunch() throws Exception {

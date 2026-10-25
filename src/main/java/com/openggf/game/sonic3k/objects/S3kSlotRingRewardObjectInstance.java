@@ -18,30 +18,35 @@ import java.util.List;
  *
  * <p>ROM reference: {@code Obj_SlotRing}. The object interpolates its position toward the cage
  * center each frame (1/16th of remaining distance), and when its timer expires it awards one
- * bonus-stage ring and deletes itself.
+ * bonus-stage ring, plays the retained-cursor sparkle script, then deletes itself.
  */
 public final class S3kSlotRingRewardObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
 
     private static final int EXPIRY_FRAMES = 0x1A;
-    private static final int SPARKLE_FRAMES = 8;  // approximate sparkle duration (ROM routine 1)
     private final S3kSlotStageController controller;
     private int framesRemaining = EXPIRY_FRAMES;
     private boolean active;
     private boolean inSparkle;
-    private int sparkleTimer;
+    private final byte[] spinScript;
+    private final byte[] sparkleScript;
+    private int animationFrame;
+    private int animationTimer;
+    private int mappingFrame;
+    private boolean deleteNextUpdate;
 
     // ROM $34/$38: 32-bit fixed-point position (pixel:16 | sub:16)
-    private long currentX32;
-    private long currentY32;
+    private int currentX32;
+    private int currentY32;
     // ROM $3C/$3E: target pixel position (cage center)
     private int targetX;
     private int targetY;
-    private int lastFrameCounter;
     private boolean suppressObjectManagerUpdate;
 
     public S3kSlotRingRewardObjectInstance(ObjectSpawn spawn, S3kSlotStageController controller) {
         super(spawn, "S3kSlotRingReward");
         this.controller = controller;
+        spinScript = controller == null ? null : controller.rewardRingAnimation(false);
+        sparkleScript = controller == null ? null : controller.rewardRingAnimation(true);
     }
 
     private S3kSlotRingRewardObjectInstance(ObjectSpawn spawn) {
@@ -70,13 +75,15 @@ public final class S3kSlotRingRewardObjectInstance extends AbstractObjectInstanc
         active = true;
         framesRemaining = EXPIRY_FRAMES;
         inSparkle = false;
-        sparkleTimer = 0;
+        animationFrame = 0;
+        animationTimer = 0;
+        mappingFrame = 0;
+        deleteNextUpdate = false;
         setDestroyed(false);
-        this.currentX32 = (long) spawnX << 16;
-        this.currentY32 = (long) spawnY << 16;
+        this.currentX32 = spawnX << 16;
+        this.currentY32 = spawnY << 16;
         this.targetX = centerX;
         this.targetY = centerY;
-        this.lastFrameCounter = 0;
     }
 
     public boolean isActive() {
@@ -89,7 +96,7 @@ public final class S3kSlotRingRewardObjectInstance extends AbstractObjectInstanc
      * <p>Only meaningful while active.
      */
     public int getInterpolatedX() {
-        return (int) (currentX32 >> 16);
+        return currentX32 >>> 16;
     }
 
     /**
@@ -98,7 +105,7 @@ public final class S3kSlotRingRewardObjectInstance extends AbstractObjectInstanc
      * <p>Only meaningful while active.
      */
     public int getInterpolatedY() {
-        return (int) (currentY32 >> 16);
+        return currentY32 >>> 16;
     }
 
     @Override
@@ -113,24 +120,22 @@ public final class S3kSlotRingRewardObjectInstance extends AbstractObjectInstanc
         if (isDestroyed() || !active) {
             return;
         }
-        lastFrameCounter = frameCounter;
-
-        // ROM Obj_SlotRing routine 1: sparkle animation after ring grant
+        // loc_1AA62 deletes on the pass AFTER Animate_Sprite consumes $FC.
+        if (deleteNextUpdate) {
+            setDestroyed(true);
+            active = false;
+            return;
+        }
         if (inSparkle) {
-            if (--sparkleTimer <= 0) {
-                setDestroyed(true);
-                active = false;
-            }
+            animate(sparkleScript);
             return;
         }
 
-        // ROM Obj_SlotRing routine 0: interpolation toward cage center
-        //   d0 = current - target ; asr.l #4,d0 ; sub.l d0,$34
-        //   equivalent: current += (target - current) >> 4
-        long dx = ((long) targetX << 16) - currentX32;
-        currentX32 += dx >> 4;
-        long dy = ((long) targetY << 16) - currentY32;
-        currentY32 += dy >> 4;
+        // loc_1AA02 (sonic3k.asm:35898-35919): SUB.L/ASR.L/SUB.L.
+        // Keep signed 32-bit wrap and rounding; reversing the subtraction loses low bits.
+        currentX32 -= (currentX32 - (targetX << 16)) >> 4;
+        currentY32 -= (currentY32 - (targetY << 16)) >> 4;
+        animate(spinScript);
 
         if (--framesRemaining > 0) {
             return;
@@ -148,26 +153,31 @@ public final class S3kSlotRingRewardObjectInstance extends AbstractObjectInstanc
         addLiveRings(playerEntity, 1);
         services().addBonusStageRings(1);
         services().playSfx(GameSound.RING);
-        // ROM Obj_SlotRing routine 0 -> 1 (sonic3k.asm:35923-35927): the cage's
-        // active-reward count ($30(a0) on the cage, reached via this object's
-        // $2E(a0) pointer) is decremented with `subq.w #1,(a1)` at the exact
-        // grant instant -- immediately before GiveRing and the routine bump to
-        // the sparkle handler (loc_1AA56) -- not when the sparkle visual later
-        // finishes. The sparkle plays for several more frames (Ani_RingSparkle)
-        // but is purely cosmetic: it does not hold up the cage's state-1 "all
-        // rewards accounted for" check (sonic3k.asm:99462-99555 loc_4C0AA/
-        // loc_4C172, tst.w $30(a0)) that gates the release transition. Reporting
-        // this object as no-longer-pending only at S3kSlotRingRewardObjectInstance
-        // destruction (after SPARKLE_FRAMES) held the cage's active count high 8
-        // frames too long, pushing the release angle-alignment check
-        // (S3kSlotBonusCageObjectInstance.updateRelease) past its window and
-        // delaying the cage-ejection y_vel/x_vel launch by a full 16-frame
-        // rotation period (observed: TestS3kSlotsBonusTraceReplay frame 332
-        // expected y_speed=-0x400 vs engine's still-0x0000, released 15 frames
-        // late at frame 347 instead of 332).
+        // loc_1AA02 (sonic3k.asm:35923-35927): retire the cage counter at grant,
+        // then fall through to loc_1AA56 without resetting anim_frame/timer.
         controller.onRewardExpired();
         inSparkle = true;
-        sparkleTimer = SPARKLE_FRAMES;
+        animate(sparkleScript);
+    }
+
+    /** Animate_Sprite (sonic3k.asm:36197-36279), animation id remains zero. */
+    private void animate(byte[] script) {
+        if (--animationTimer >= 0) {
+            return;
+        }
+        animationTimer = script[0] & 0xFF;
+        int command = script[1 + animationFrame] & 0xFF;
+        if (command == 0xFF) {
+            animationFrame = 0;
+            command = script[1] & 0xFF;
+        } else if (command == 0xFC) {
+            deleteNextUpdate = true;
+            animationTimer = 0;
+            animationFrame++;
+            return;
+        }
+        mappingFrame = command;
+        animationFrame++;
     }
 
     public void suppressObjectManagerUpdate() {
@@ -191,12 +201,12 @@ public final class S3kSlotRingRewardObjectInstance extends AbstractObjectInstanc
 
     @Override
     public int getPriorityBucket() {
-        return RenderPriority.clamp(0);
+        return RenderPriority.fromS3kWord(0x180); // loc_4C172: prize ring bucket 3
     }
 
     @Override
     public boolean isHighPriority() {
-        return true;
+        return false; // loc_4C172: make_art_tile(ArtTile_Ring,1,0)
     }
 
     @Override
@@ -207,6 +217,10 @@ public final class S3kSlotRingRewardObjectInstance extends AbstractObjectInstanc
         if (services().ringManager() == null) {
             return;
         }
-        services().ringManager().drawRingAt(getInterpolatedX(), getInterpolatedY(), lastFrameCounter);
+        if (mappingFrame < 4) {
+            services().ringManager().drawRingFrameAt(getInterpolatedX(), getInterpolatedY(), mappingFrame);
+        } else {
+            services().ringManager().drawSparkleAt(getInterpolatedX(), getInterpolatedY(), mappingFrame - 4);
+        }
     }
 }

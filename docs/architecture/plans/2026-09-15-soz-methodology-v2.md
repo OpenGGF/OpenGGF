@@ -3357,8 +3357,10 @@ replay path crops tiles to it (instanced batch `addPatternRows`, direct
 `PatternRenderCommand.obtainRows`, and the `SpritePresentation` builder/renderer via
 `Tile.rowStart/rowEnd`). Tile rows are no longer clipped, which removes the V-flip
 mirroring. The marker test now also requires no flip, palette or mapping-priority bits.
-Not modelled: the 20-sprite and 320-pixel line limits, and GPGX's arming from the
-previous line's pixel overflow.
+At this checkpoint the 20-sprite/320-pixel limits and previous-line pixel-overflow
+arming remained unmodelled. The [2026-10-22 shared SAT follow-up](../designs/2026-10-22-native-sprite-scanline-budgets.md)
+implements those admission rules; the historical pixel comparison below remains
+scoped to this earlier scanline-mask change.
 
 Rejected on the way: passing `PatternDesc` into the new graphics-layer crop methods
 tripped `TestArchUnitRules.low_level_layers_do_not_depend_on_runtime_layers` (10 new

@@ -140,7 +140,8 @@ class TestS2CompleteRunReferenceProducer {
         Files.createDirectory(valid.output());
         assertThrows(java.nio.file.FileAlreadyExistsException.class, () -> producer.capture(valid));
         Files.delete(valid.output());
-        assertThrows(IllegalStateException.class, () -> producer.capture(valid));
+        Exception unavailable = assertThrows(Exception.class, () -> producer.capture(valid));
+        assertTrue(unavailable.getMessage().contains("reviewed duplicate capture"), unavailable::getMessage);
         assertFalse(Files.exists(valid.output()));
     }
 

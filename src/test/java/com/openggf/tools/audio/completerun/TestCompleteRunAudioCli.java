@@ -173,14 +173,18 @@ class TestCompleteRunAudioCli {
     @Test
     void freshJvmBootstrapsTheS1ProfileButItsUnavailableDispatcherEmitsNoStandardOutput() throws Exception {
         Path java = Path.of(System.getProperty("java.home"), "bin", "java");
-        Process process = new ProcessBuilder(java.toString(), "-cp", System.getProperty("java.class.path"),
+        ProcessBuilder builder = new ProcessBuilder(java.toString(), "-cp", System.getProperty("java.class.path"),
                 CompleteRunAudioTool.class.getName(), "producer-status", "s1_rev01_complete_emeralds.v1")
-                .directory(Path.of(".").toFile()).start();
+                .directory(Path.of(".").toFile());
+        builder.environment().remove("JAVA_TOOL_OPTIONS");
+        builder.environment().remove("JDK_JAVA_OPTIONS");
+        builder.environment().remove("_JAVA_OPTIONS");
+        Process process = builder.start();
 
         assertEquals(4, process.waitFor());
         assertEquals("", new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8));
-        assertTrue(new String(process.getErrorStream().readAllBytes(), StandardCharsets.UTF_8)
-                .startsWith("PRODUCER_UNAVAILABLE:"));
+        String stderr = new String(process.getErrorStream().readAllBytes(), StandardCharsets.UTF_8);
+        assertTrue(stderr.startsWith("PRODUCER_UNAVAILABLE:"), stderr);
     }
 
     @Test

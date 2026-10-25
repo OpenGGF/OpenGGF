@@ -50,6 +50,15 @@ public class Sonic2SpecialStageRing extends Sonic2SpecialStageObject {
 
         // Handle sparkle animation for collected rings
         if (state == State.COLLECTED) {
+            // loc_35010 runs loc_34F90 before movement, then continues depth
+            // movement until loc_3516C deletes the owner. The $FF in
+            // byte_36324 loops the animation; it does not delete the ring.
+            updateNativeEffectPriority();
+            decrementDepth(drawingIndex4, speedFactor);
+            if (depthFixed <= 0) {
+                markForRemoval();
+                return;
+            }
             updateSparkleAnimation();
             return;
         }
@@ -58,7 +67,7 @@ public class Sonic2SpecialStageRing extends Sonic2SpecialStageObject {
         decrementDepth(drawingIndex4, speedFactor);
 
         // Check if object has passed the player
-        if (getDepth() <= 0) {
+        if (depthFixed <= 0) {
             markForRemoval();
             return;
         }
@@ -82,13 +91,13 @@ public class Sonic2SpecialStageRing extends Sonic2SpecialStageObject {
      * Uses faster frame delay (1) compared to spin animation (5).
      */
     private void updateSparkleAnimation() {
-        animTimer++;
-        if (animTimer >= SPARKLE_ANIM_DELAY) {
-            animTimer = 0;
-            animFrame++;
-            if (animFrame >= SPARKLE_FRAME_COUNT) {
-                markForRemoval();
-            }
+        if (!effectAnimationStarted) {
+            effectAnimationStarted = true;
+            animFrame = 0;
+            animTimer = SPARKLE_ANIM_DELAY;
+        } else if (--animTimer < 0) {
+            animTimer = SPARKLE_ANIM_DELAY;
+            animFrame = (animFrame + 1) % SPARKLE_FRAME_COUNT;
         }
     }
 
@@ -105,6 +114,7 @@ public class Sonic2SpecialStageRing extends Sonic2SpecialStageObject {
         animIndex = SPARKLE_ANIM;
         animFrame = 0;
         animTimer = 0;
+        effectAnimationStarted = false;
         return true;
     }
 

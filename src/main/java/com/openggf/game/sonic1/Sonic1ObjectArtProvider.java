@@ -4,6 +4,8 @@ import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.GameServices;
 import com.openggf.game.ObjectArtProvider;
+import com.openggf.game.internal.HudSatLayout;
+import com.openggf.game.internal.HudSatLayoutSource;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.level.objects.HudStaticArt;
 import com.openggf.level.objects.AnimalType;
@@ -34,7 +36,7 @@ import java.util.logging.Logger;
  * ObjectArtProvider for Sonic 1.
  * Loads HUD art and game object art (lamppost, etc.) from the Sonic 1 ROM.
  */
-public class Sonic1ObjectArtProvider implements ObjectArtProvider {
+public class Sonic1ObjectArtProvider implements ObjectArtProvider, HudSatLayoutSource {
     private static final Logger LOGGER = Logger.getLogger(Sonic1ObjectArtProvider.class.getName());
     private static final int ANIMAL_TILE_BANK_SIZE = 18;
     private static final int RESULTS_SCORE_DIGIT_PAIR_COUNT = 8;
@@ -74,6 +76,7 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
     private Pattern[] hudLivesNumbers;
     private Pattern[] hudHexDigits;
     private HudStaticArt hudStaticArt;
+    private HudSatLayout hudSatLayout;
     private int animalTypeA = AnimalType.RABBIT.ordinal();
     private int animalTypeB = AnimalType.FLICKY.ordinal();
     private int currentZoneIndex = Integer.MIN_VALUE;
@@ -106,6 +109,7 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
         RomByteReader reader = RomByteReader.fromRom(rom);
         this.romReader = reader;
         Sonic1ObjectArt art = new Sonic1ObjectArt(rom, reader);
+        hudSatLayout = Sonic1HudStaticArtFactory.loadSatLayout(reader);
 
         hudDigitPatterns = art.loadUncompressedPatterns(
                 Sonic1Constants.ART_UNC_HUD_NUMBERS_ADDR,
@@ -844,31 +848,15 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
         // Hud_Base_Score initializes E______0. Hud_Score writes only six
         // variable digits; Map_Got/Map_SSR and both bonuses reuse the fixed
         // trailing zero at $6F0-$6F1.
-        copyPatternPair(dest, startIndex, hudTextPatterns, HUD_TEXT_E_PAIR_INDEX);
+        Sonic1HudStaticArtFactory.copyPatternPair(dest, startIndex, hudTextPatterns, HUD_TEXT_E_PAIR_INDEX);
         for (int pair = 1; pair < RESULTS_SCORE_DIGIT_PAIR_COUNT - 1; pair++) {
             dest[startIndex + pair * 2].copyFrom(new Pattern());
             dest[startIndex + pair * 2 + 1].copyFrom(new Pattern());
         }
         int trailingPairIndex = startIndex + ((RESULTS_SCORE_DIGIT_PAIR_COUNT - 1) * 2);
-        copyPatternPair(dest, trailingPairIndex, hudDigitPatterns, 0);
+        Sonic1HudStaticArtFactory.copyPatternPair(dest, trailingPairIndex, hudDigitPatterns, 0);
     }
 
-    private void copyPatternPair(Pattern[] dest, int destIndex, Pattern[] src, int srcIndex) {
-        if (src == null || srcIndex < 0 || srcIndex + 1 >= src.length) {
-            return;
-        }
-        if (destIndex < 0 || destIndex + 1 >= dest.length) {
-            return;
-        }
-        if (dest[destIndex] == null) {
-            dest[destIndex] = new Pattern();
-        }
-        if (dest[destIndex + 1] == null) {
-            dest[destIndex + 1] = new Pattern();
-        }
-        dest[destIndex].copyFrom(src[srcIndex]);
-        dest[destIndex + 1].copyFrom(src[srcIndex + 1]);
-    }
 
     /**
      * Loads spring art (Nem_HSpring + Nem_VSpring) and creates sprite sheets and animations.
@@ -3117,13 +3105,20 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             registerSheet(ObjectArtKeys.BOSS_BALL, ballSheet);
         }
 
-        // Boss defeat explosions use getBossExplosionRenderer() which looks for the S2 key.
-        // Register S1's standard explosion art under that key so BossExplosionObjectInstance works.
-        // S1 explosion has 5 frames (vs S2's 7); frames 5-6 will be no-ops (graceful bounds check).
+        loadBossExplosionArt();
+    }
+
+    private void loadBossExplosionArt() {
         ObjectSpriteSheet explosionSheet = sheets.get(ObjectArtKeys.EXPLOSION);
         if (explosionSheet != null) {
-            registerSheet(ObjectArtKeys.BOSS_EXPLOSION,
-                    explosionSheet);
+            // Expl_Main's move.l #Map_ExplodeBomb,obMap (REV01 $948A).
+            // Unlike Map_ExplodeItem, this five-frame table references shared
+            // frames BEFORE the table and uses fiery tiles $40/$50 in frames1/2.
+            int mappingAddress = romReader.readU32BE(0x948C);
+            List<SpriteMappingFrame> mappings = S1SpriteDataLoader.loadMappingFramesWithSignedOffsets(
+                    romReader, mappingAddress, 5);
+            registerSheet(ObjectArtKeys.BOSS_EXPLOSION, new ObjectSpriteSheet(
+                    explosionSheet.getPatterns(), mappings, explosionSheet.getPaletteIndex(), 1));
         }
     }
 
@@ -3460,6 +3455,11 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
         return hudStaticArt;
     }
 
+    @Override
+    public HudSatLayout getHudSatLayout() {
+        return hudSatLayout;
+    }
+
     private void overrideLivesArtFromDonor() {
         if (!com.openggf.game.CrossGameFeatureProvider.isS3kDonorActive()) {
             return;
@@ -3584,21 +3584,7 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
     }
 
     static Palette buildS1KnucklesLivesHudPaletteOverride(Palette basePalette) {
-        if (basePalette == null) {
-            return null;
-        }
-        Palette override = basePalette.deepCopy();
-        setColor(override, 12, 255, 73, 109);
-        setColor(override, 13, 219, 0, 36);
-        setColor(override, 14, 109, 0, 36);
-        return override;
-    }
-
-    private static void setColor(Palette palette, int index, int r, int g, int b) {
-        Palette.Color color = palette.getColor(index);
-        color.r = (byte) r;
-        color.g = (byte) g;
-        color.b = (byte) b;
+        return Sonic1HudStaticArtFactory.createKnucklesLivesPalette(basePalette);
     }
 
     // ========================================================================

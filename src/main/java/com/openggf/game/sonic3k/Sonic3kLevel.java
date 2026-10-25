@@ -35,11 +35,61 @@ import java.util.logging.Logger;
  *   <li>LevelLoadBlock entries are 24 bytes with embedded PLC and palette indices</li>
  * </ul>
  */
-public class Sonic3kLevel extends AbstractLevel {
+public class Sonic3kLevel extends AbstractLevel implements com.openggf.game.internal.EncodedCollisionLayout {
+    S3kCollisionLayout collisionLayout;
+    /** Immutable construction asset; MOVEA.W positive words address this current-ROM prefix. */
+    private final byte[] collisionRomPrefix;
     private final boolean[] backgroundCollisionRows = new boolean[Sonic3kConstants.MAP_HEIGHT];
     private static final Logger LOG = Logger.getLogger(Sonic3kLevel.class.getName());
 
     private static final int BLOCK_GRID_SIDE = 8;
+
+    // Validation may allocate decoded placeholders without writing Block_table.
+    // Keep that distinction in the existing COW geometry objects: rewind restores
+    // those same objects, without adding state to the public LevelSnapshot.
+    private static final class UnwrittenPatternChunk extends Chunk { }
+    private final java.util.Map<int[][], java.util.BitSet> snapshotUnwrittenPatterns =
+            new java.util.WeakHashMap<>();
+    private static final int NATIVE_BLOCK_TABLE_BYTES = 0x1800;
+
+    /** Immutable, sparse native pattern bytes; null entries have no known writer. */
+    static final class ResidentChunkPatterns {
+        static final ResidentChunkPatterns EMPTY = new ResidentChunkPatterns(new byte[0][]);
+        private final byte[][] entries;
+
+        private ResidentChunkPatterns(byte[][] entries) {
+            this.entries = new byte[entries.length][];
+            for (int i = 0; i < entries.length; i++) {
+                this.entries[i] = entries[i] == null ? null : entries[i].clone();
+            }
+        }
+
+        int extent() { return entries.length; }
+
+        byte[] entry(int index) {
+            return index < entries.length && entries[index] != null ? entries[index].clone() : null;
+        }
+    }
+
+    synchronized ResidentChunkPatterns residentChunkPatterns() {
+        int limit = Math.min(chunkCount, NATIVE_BLOCK_TABLE_BYTES / Chunk.CHUNK_SIZE_IN_ROM);
+        int knownEnd = 0;
+        for (int i = 0; i < limit; i++) {
+            if (!(chunks[i] instanceof UnwrittenPatternChunk)) knownEnd = i + 1;
+        }
+        byte[][] entries = new byte[knownEnd][];
+        for (int i = 0; i < knownEnd; i++) {
+            if (chunks[i] instanceof UnwrittenPatternChunk) continue;
+            byte[] bytes = new byte[Chunk.CHUNK_SIZE_IN_ROM];
+            int[] state = chunks[i].saveState();
+            for (int word = 0; word < 4; word++) {
+                bytes[word * 2] = (byte) (state[word] >>> 8);
+                bytes[word * 2 + 1] = (byte) state[word];
+            }
+            entries[i] = bytes;
+        }
+        return new ResidentChunkPatterns(entries);
+    }
 
     private byte[] primaryCollisionIndexTable = new byte[0];
     private byte[] secondaryCollisionIndexTable = new byte[0];
@@ -152,7 +202,33 @@ public class Sonic3kLevel extends AbstractLevel {
             int levelPaletteAddr, Integer minXOverride, List<ObjectSpawn> objects,
             List<RingSpawn> rings, RingSpriteSheet ringSpriteSheet, boolean publishGraphicsOnLoad,
             TerrainArtSources terrainArtSources, byte[] retainedPatterns) throws IOException {
+        this(rom, zoneIndex, resourcePlan, primaryCollisionAddr, secondaryCollisionAddr,
+                interleavedCollision, layoutAddr, levelBoundariesAddr, characterPaletteAddr,
+                levelPaletteAddr, minXOverride, objects, rings, ringSpriteSheet,
+                publishGraphicsOnLoad, terrainArtSources, retainedPatterns, new byte[0]);
+    }
+
+    Sonic3kLevel(Rom rom, int zoneIndex, LevelResourcePlan resourcePlan,
+            int primaryCollisionAddr, int secondaryCollisionAddr, boolean interleavedCollision,
+            int layoutAddr, int levelBoundariesAddr, int characterPaletteAddr,
+            int levelPaletteAddr, Integer minXOverride, List<ObjectSpawn> objects,
+            List<RingSpawn> rings, RingSpriteSheet ringSpriteSheet, boolean publishGraphicsOnLoad,
+            TerrainArtSources terrainArtSources, byte[] retainedPatterns, byte[] retainedBlocks) throws IOException {
+        this(rom, zoneIndex, resourcePlan, primaryCollisionAddr, secondaryCollisionAddr,
+                interleavedCollision, layoutAddr, levelBoundariesAddr, characterPaletteAddr,
+                levelPaletteAddr, minXOverride, objects, rings, ringSpriteSheet, publishGraphicsOnLoad,
+                terrainArtSources, retainedPatterns, retainedBlocks, ResidentChunkPatterns.EMPTY);
+    }
+
+    Sonic3kLevel(Rom rom, int zoneIndex, LevelResourcePlan resourcePlan,
+            int primaryCollisionAddr, int secondaryCollisionAddr, boolean interleavedCollision,
+            int layoutAddr, int levelBoundariesAddr, int characterPaletteAddr,
+            int levelPaletteAddr, Integer minXOverride, List<ObjectSpawn> objects,
+            List<RingSpawn> rings, RingSpriteSheet ringSpriteSheet, boolean publishGraphicsOnLoad,
+            TerrainArtSources terrainArtSources, byte[] retainedPatterns, byte[] retainedBlocks,
+            ResidentChunkPatterns retainedChunks) throws IOException {
         super(zoneIndex);
+        collisionRomPrefix = rom.readBytes(0, 0x8000);
         this.terrainArtSources = terrainArtSources;
         this.publishGraphicsOnLoad = publishGraphicsOnLoad;
         this.objects = objects != null ? objects : Collections.emptyList();
@@ -168,7 +244,8 @@ public class Sonic3kLevel extends AbstractLevel {
         loadSolidTiles(rom);
         loadChunksWithCollision(rom, resourcePlan, primaryCollisionAddr, secondaryCollisionAddr,
                 interleavedCollision);
-        loadBlocksWithPlan(rom, resourcePlan);
+        retainUnwrittenChunkPatterns(retainedChunks);
+        loadBlocksWithPlan(rom, resourcePlan, retainedBlocks);
         loadMap(rom, layoutAddr);
         loadBoundaries(rom, levelBoundariesAddr);
         validateResourceReferences();
@@ -184,6 +261,7 @@ public class Sonic3kLevel extends AbstractLevel {
 
     private Sonic3kLevel(InMemoryBuilder source) {
         super(source.zoneIndex);
+        collisionRomPrefix = new byte[0];
         minXOverride = null;
         source.requireComplete();
         source.validateResourceReferences();
@@ -550,11 +628,11 @@ public class Sonic3kLevel extends AbstractLevel {
 
     @Override
     public boolean hasBackgroundCollisionRowAt(int y) {
-        // Find_Tile_BG selects a row with (y >> 5) & $7C, i.e. a 32-row
-        // 128-pixel block grid. Rows whose interleaved BG pointer word is zero
+        // Find_Tile_BG masks an already-shifted word row. ScreenInit pairs
+        // the normal $FFFF/$7C and looping $7FF/$3C registers. Rows whose interleaved BG pointer word is zero
         // have no layout source and must not wrap through the declared visual
         // BG height.
-        int row = (y & 0x0FFF) >>> 7;
+        int row = (((y & 0xFFFF) >>> 5) & ((collisionScreenYWrapValue() >>> 5) & 0x7C)) >>> 2;
         return backgroundCollisionRows[row];
     }
 
@@ -704,6 +782,22 @@ public class Sonic3kLevel extends AbstractLevel {
         decodeChunks(chunkBuffer, primaryIndices, secondaryIndices);
 
         LOG.info("S3K chunk count: " + chunkCount + " (" + chunkBuffer.length + " bytes)");
+    }
+
+    private void retainUnwrittenChunkPatterns(ResidentChunkPatterns retained) {
+        // skdisasm044fa467 ICZ1BGE_Transition -> Load_Level leaves Block_table
+        // resident. The target's non-deferred ROM writes win; LoadSolids owns
+        // current collision indices independently of those four pattern words.
+        int targetWrittenCount = chunkCount;
+        ensureChunkCapacity(Math.max(chunkCount, retained.extent()));
+        for (int i = targetWrittenCount; i < retained.extent(); i++) {
+            byte[] bytes = retained.entry(i);
+            if (bytes == null) continue;
+            Chunk chunk = new Chunk();
+            chunk.fromSegaFormat(bytes, readCollisionIndex(primaryCollisionIndexTable, i),
+                    readCollisionIndex(secondaryCollisionIndexTable, i));
+            chunks[i] = chunk;
+        }
     }
 
     private void decodeChunks(byte[] data, int[] primary, int[] secondary) {
@@ -890,9 +984,12 @@ public class Sonic3kLevel extends AbstractLevel {
      */
     public int[][] snapshotChunks() {
         int[][] snapshot = new int[chunkCount][];
+        java.util.BitSet unwritten = new java.util.BitSet(chunkCount);
         for (int i = 0; i < chunkCount; i++) {
             snapshot[i] = chunks[i].saveState();
+            if (chunks[i] instanceof UnwrittenPatternChunk) unwritten.set(i);
         }
+        snapshotUnwrittenPatterns.put(snapshot, unwritten);
         return snapshot;
     }
 
@@ -902,13 +999,22 @@ public class Sonic3kLevel extends AbstractLevel {
      * sharing the previous array (LevelSnapshot contract) are not mutated.
      */
     public void restoreChunks(int[][] snapshot) {
-        Chunk[] newChunks = chunks.clone();
-        for (int i = 0; i < snapshot.length && i < chunkCount; i++) {
-            Chunk chunk = new Chunk();
+        java.util.BitSet unwritten = snapshotUnwrittenPatterns.get(snapshot);
+        // An owned snapshot is the entire prior table, including its extent.
+        // Temporary precomputation overlays must not leave a newly known tail.
+        // External full-state prefixes retain their existing partial-write semantics.
+        Chunk[] newChunks = unwritten != null ? new Chunk[snapshot.length] : chunks.clone();
+        for (int i = 0; i < snapshot.length && i < newChunks.length; i++) {
+            // An opaque snapshot made here preserves provenance. An external
+            // full six-word state is an explicit pattern write, like the existing
+            // mutation surface's restoreChunkState operation.
+            Chunk chunk = unwritten != null && unwritten.get(i)
+                    ? new UnwrittenPatternChunk() : new Chunk();
             chunk.restoreState(snapshot[i]);
             newChunks[i] = chunk;
         }
         chunks = newChunks;
+        chunkCount = newChunks.length;
     }
 
     /**
@@ -981,7 +1087,7 @@ public class Sonic3kLevel extends AbstractLevel {
         int oldCount = chunkCount;
         chunks = Arrays.copyOf(chunks, minCount);
         for (int i = oldCount; i < minCount; i++) {
-            chunks[i] = new Chunk();
+            chunks[i] = new UnwrittenPatternChunk();
         }
         chunkCount = minCount;
     }
@@ -998,15 +1104,46 @@ public class Sonic3kLevel extends AbstractLevel {
         blockCount = minCount;
     }
 
-    private void loadBlocksWithPlan(Rom rom, LevelResourcePlan plan) throws IOException {
+    private void loadBlocksWithPlan(Rom rom, LevelResourcePlan plan, byte[] retained) throws IOException {
         ResourceLoader loader = new ResourceLoader(rom);
-
-        byte[] blockBuffer = loader.loadWithOverlaysAligned(
-                plan.getBlockOps(), 0x10000, LevelConstants.BLOCK_SIZE_IN_ROM);
+        byte[] blockBuffer = loader.loadWithRetainedBytes(plan.getBlockOps(), 0x8000, retained);
+        if (blockBuffer.length % LevelConstants.BLOCK_SIZE_IN_ROM != 0)
+            throw new IOException("Unaligned resident 128x128 definition write");
 
         decodeBlocks(blockBuffer);
 
         LOG.info("S3K block count: " + blockCount + " (" + blockBuffer.length + " bytes)");
+    }
+
+    /** Immutable construction carry of only resident 128x128 definition bytes, never arbitrary RAM. */
+    byte[] residentBlockBytes() {
+        if (blockCount * 128 > 0x8000) throw new IllegalStateException("Native 128x128 resident extent exceeded");
+        byte[] packed = new byte[blockCount * 128];
+        for (int block = 0; block < blockCount; block++)
+            for (int row = 0; row < 8; row++) for (int col = 0; col < 8; col++) {
+                int word = blocks[block].getChunkDesc(col, row).get();
+                int offset = block * 128 + row * 16 + col * 2;
+                packed[offset] = (byte) (word >>> 8);packed[offset + 1] = (byte) word;
+            }
+        return packed;
+    }
+
+    @Override public boolean hasEncodedCollisionLayout() { return collisionLayout != null; }
+    @Override public ChunkDesc collisionChunkDescAt(byte layer, int x, int y) {
+        return collisionLayout.descriptor(this, layer, x, y, collisionScreenYWrapValue());
+    }
+
+    int collisionRomByteAt(int address) {
+        if (address < 0 || address >= collisionRomPrefix.length)
+            throw new IllegalStateException(String.format("Unmodelled collision ROM address $%06X", address));
+        return collisionRomPrefix[address] & 0xFF;
+    }
+
+    private int collisionScreenYWrapValue() {
+        // LevelSetup's $FFFF/$7C until the live ScreenInit installs looping registers.
+        var manager = GameServices.levelOrNull();
+        return manager != null && manager.getCurrentLevel() == this
+                ? GameServices.camera().screenYWrapValue() : 0xFFFF;
     }
 
     private void decodeBlocks(byte[] data) {
@@ -1068,23 +1205,27 @@ public class Sonic3kLevel extends AbstractLevel {
         // (FBZ2 writes rows 28-31) before full-plane refreshes.
         int mapHeight = Math.max(Sonic3kConstants.MAP_HEIGHT,
                 Math.max(fgLayoutHeightBlocks, bgLayoutHeightBlocks));
-        map = new Map(Sonic3kConstants.MAP_LAYERS, mapWidth, mapHeight);
+        collisionLayout = new S3kCollisionLayout(layoutData, mapWidth, mapHeight);
+        map = collisionLayout.newMap(this, null);
 
-        // Parse FG/BG layout pointers.
-        // S3K stores row pointers as interleaved word pairs:
-        //   row0: FG_ptr, BG_ptr
-        //   row1: FG_ptr, BG_ptr
-        //   ...
-        // (each row-pair = 4 bytes).
-        parseLayoutLayer(layoutData, Sonic3kConstants.LEVEL_LAYOUT_HEADER_SIZE,
-                4, fgColsPerRow, fgRows, map, 0, mapWidth, mapHeight);
-        parseLayoutLayer(layoutData, Sonic3kConstants.LEVEL_LAYOUT_HEADER_SIZE + 2,
-                4, bgColsPerRow, bgRows, map, 1, mapWidth, mapHeight);
         LOG.info("S3K map loaded successfully");
     }
 
     /** Load_Level's in-place scene layout swap; the canonical zone/act stays unchanged. */
     public void applySceneLayout(Rom rom, int layoutAddr) throws IOException { loadMap(rom, layoutAddr); }
+
+    /** Internal scene-owner operation, invoked only by the actual ScreenInit mutation. */
+    public void clearUnusedSceneLayoutTail() {
+        if (collisionLayout == null) throw new IllegalStateException("No encoded scene layout owner");
+        collisionLayout.clearUnusedLayoutTail(this);
+    }
+
+    /** Internal native row-pointer mutation, invoked inside the zone mutation pipeline. */
+    public void copyLayoutRowPointer(int layer, int sourceRow, int destRow) {
+        if (collisionLayout == null) throw new IllegalStateException("No encoded layout row owner");
+        collisionLayout.copyRowPointer(this, layer, sourceRow, destRow);
+        if (layer == 1) backgroundCollisionRows[destRow] = backgroundCollisionRows[sourceRow];
+    }
 
     /** Logical layout geometry is separate from the shared level snapshot's table bytes. */
     public record SceneLayoutSnapshot(int width, int height, byte[] mapData,
@@ -1097,7 +1238,8 @@ public class Sonic3kLevel extends AbstractLevel {
     }
 
     public void restoreSceneLayout(SceneLayoutSnapshot snapshot) {
-        map = new Map(2, snapshot.width(), snapshot.height(), snapshot.mapData());
+        map = collisionLayout == null ? new Map(2, snapshot.width(), snapshot.height(), snapshot.mapData())
+                : collisionLayout.newMap(this, snapshot.mapData());
         fgLayoutWidthBlocks=snapshot.fgWidth(); fgLayoutHeightBlocks=snapshot.fgHeight();
         bgLayoutWidthBlocks=snapshot.bgWidth(); bgLayoutHeightBlocks=snapshot.bgHeight();
         System.arraycopy(snapshot.backgroundRows(), 0, backgroundCollisionRows, 0, backgroundCollisionRows.length);
@@ -1109,7 +1251,9 @@ public class Sonic3kLevel extends AbstractLevel {
         for (int i=0;i<updated.length;i++) {
             int[] state=updated[i].saveState();
             state[4]=readCollisionIndex(primary,i); state[5]=readCollisionIndex(secondary,i);
-            Chunk chunk=new Chunk(); chunk.restoreState(state); updated[i]=chunk;
+            Chunk chunk = updated[i] instanceof UnwrittenPatternChunk
+                    ? new UnwrittenPatternChunk() : new Chunk();
+            chunk.restoreState(state); updated[i]=chunk;
         }
         chunks=updated;
     }
@@ -1162,35 +1306,6 @@ public class Sonic3kLevel extends AbstractLevel {
             return fallback;
         }
         return Math.min(value, fallback);
-    }
-
-    /**
-     * Parses a single layout layer (FG or BG) from S3K layout data.
-     *
-     * <p>Each layer has a table of word-sized row pointers (relative to layout start + 8),
-     * and each row pointer leads to chunk index bytes for that row.
-     */
-    private void parseLayoutLayer(byte[] layoutData, int rowPtrOffset, int rowPtrStride,
-                                  int colsPerRow, int rows,
-                                  Map map, int layer,
-                                  int mapWidth, int mapHeight) {
-        for (int row = 0; row < Math.min(rows, mapHeight); row++) {
-            // Read word-sized row pointer
-            int ptrPos = rowPtrOffset + row * rowPtrStride;
-            if (ptrPos + 1 >= layoutData.length) break;
-
-            int rowPointerWord = ((layoutData[ptrPos] & 0xFF) << 8) | (layoutData[ptrPos + 1] & 0xFF);
-            int rowDataAddr = decodeLayoutRowOffset(rowPointerWord);
-            if (rowDataAddr < 0 || rowDataAddr >= layoutData.length) {
-                continue;
-            }
-
-            for (int col = 0; col < Math.min(colsPerRow, mapWidth); col++) {
-                int srcIdx = rowDataAddr + col;
-                if (srcIdx >= layoutData.length) break;
-                map.setValue(layer, col, row, layoutData[srcIdx]);
-            }
-        }
     }
 
     static int decodeLayoutRowOffset(int rowPointerWord) {

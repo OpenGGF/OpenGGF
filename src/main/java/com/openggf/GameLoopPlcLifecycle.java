@@ -1,10 +1,13 @@
 package com.openggf;
 
+import com.openggf.game.EndingProvider;
 import com.openggf.game.GameModule;
 import com.openggf.game.TitleCardProvider;
 import com.openggf.game.internal.FreshLevelTitleBoundaryPublication;
 import com.openggf.game.internal.LevelEntryPresentation;
 import com.openggf.game.internal.LevelPaletteFadeOwner;
+import com.openggf.game.internal.WorldTitleCardUpdate;
+import com.openggf.game.resources.PlcFrameLifecycleCoordinator;
 import com.openggf.game.resources.PlcFrameLifecycleCoordinator.PlcLifecycleFrame;
 import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.game.session.GameplayModeContext;
@@ -12,6 +15,7 @@ import com.openggf.graphics.FadeManager;
 import com.openggf.level.LevelManager;
 
 import java.util.function.BiConsumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 /** Bridges GameLoop-owned modes and fades to the session PLC lifecycle. */
@@ -19,10 +23,43 @@ final class GameLoopPlcLifecycle {
     private GameLoopPlcLifecycle() {
     }
 
+    /** Palette-fade rows publish VBlank work before the fade and iteration body. */
+    static void runLogicalIteration(PlcFrameLifecycleCoordinator lifecycle,
+                                    GameplayModeContext context, Runnable updateFade,
+                                    Function<PlcLifecycleFrame, Void> body) {
+        lifecycle.runLogicalIteration(
+                frame -> {
+                    if (frame.isOwnedBy(PlcLifecyclePhase.PALETTE_FADE)) {
+                        LevelFrameStep.dispatchGameVBlank(LevelFrameContext.from(context), frame);
+                    }
+                }, updateFade, body);
+    }
+
     static void runPhase(PlcLifecycleFrame frame, PlcLifecyclePhase phase, Runnable body) {
         frame.claim(phase);
         body.run();
         prepare(frame, phase);
+    }
+
+    static PlcLifecyclePhase endingPhase(EndingProvider provider) {
+        if (provider == null) {
+            return PlcLifecyclePhase.ENDING;
+        }
+        return provider.plcLifecyclePhaseOverride().orElseGet(() ->
+                switch (provider.getCurrentPhase()) {
+                    case CREDITS_TEXT -> PlcLifecyclePhase.CREDITS_TEXT;
+                    case CREDITS_DEMO -> PlcLifecyclePhase.CREDITS_DEMO;
+                    case POST_CREDITS, FINISHED -> PlcLifecyclePhase.POST_CREDITS;
+                    case CUTSCENE -> PlcLifecyclePhase.ENDING;
+                });
+    }
+
+    static void runNativeScreen(PlcLifecycleFrame frame, com.openggf.game.GameMode mode, Runnable body) {
+        if (mode == com.openggf.game.GameMode.COMPETITION) {
+            com.openggf.game.competition.NativeCompetitionIterationAccess.runAdmitted(frame, body);
+        } else {
+            runPhase(frame, com.openggf.game.nativemenu.NativeMenuController.phase(mode), body);
+        }
     }
 
     static void prepare(PlcLifecycleFrame frame, PlcLifecyclePhase phase) {
@@ -48,6 +85,24 @@ final class GameLoopPlcLifecycle {
                     frame, PlcLifecyclePhase.LEVEL_TITLE_CARD, () -> { });
             level.get().advanceTitleCardVblankOnly();
         }
+    }
+
+    /** Returns whether the provider's hardware scan owns this iteration's preparation. */
+    static boolean updateTitleCardProvider(LevelFrameContext frameContext, PlcLifecycleFrame frame,
+                                           TitleCardProvider titleCard, GameplayModeContext context) {
+        boolean hardwareTimedProviderScan = titleCard != null
+                && titleCard.shouldAdvanceVblankClockDuringLockedPhase();
+        if (hardwareTimedProviderScan) {
+            LevelFrameStep.executeHardwareTimedObjectScan(frameContext, frame,
+                    PlcLifecyclePhase.LEVEL_TITLE_CARD,
+                    () -> WorldTitleCardUpdate.dispatch(titleCard, context.getWorldSession()));
+            // The caller already attempted to claim this token. Prepare only its
+            // surviving title phase, after the scan and all hardware boundaries.
+            prepare(frame, PlcLifecyclePhase.LEVEL_TITLE_CARD);
+        } else if (titleCard != null) {
+            WorldTitleCardUpdate.dispatch(titleCard, context.getWorldSession());
+        }
+        return hardwareTimedProviderScan;
     }
 
     /** Samples the current module at the caller's pre-load or post-load boundary. */

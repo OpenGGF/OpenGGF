@@ -486,3 +486,46 @@ git add CHANGELOG.md docs/architecture/research/audio/2026-08-10-s1-complete-run
         docs/architecture/validation/audio/2026-08-10-s1-complete-run-audio-parity-validation.md
 git commit -m "fix(audio): match the complete S1 emerald audio run"
 ```
+
+### 2026-10-22 S1 raw producer plumbing checkpoint
+
+Based on OpenGGF `94c40570` and pinned TraceChaser `322851cb`, the S1
+reference and OpenGGF producer classes now exist. The OpenGGF entry delegates
+to the shared authenticated production startup. The reference staging seam
+checks the profile's ROM SHA-1, current emerald BK2 SHA-256 and run-manifest
+SHA-256 before streaming raw observations into a caller-owned transactional
+writer. Public bindings remain unavailable, with no runtime hashes, observer
+identities or observed-layer claims installed.
+
+`S1CompleteRunReferenceRawAdapter` reads the native recorder's actual
+`openggf.s1-complete-run-audio-raw.v1`: separate frame envelopes, numeric
+unsigned 64-bit payloads, M68K `$F000..$F5BF` baseline, native services,
+snapshot transactions, resets and direct-parent promotions. The projector
+emits frame chip writes with persistent YM address latches and global chip
+ordinals. Managed callback evidence remains unobserved; its deferred consume
+may refer to a later row. This parser validates bounded structural chip
+ownership and source-format transactions, not complete native hook,
+continuation, token-allocation or managed-correlation attestation. ROM-free
+contract vectors cover conversion, source-owned snapshots, failure rollback,
+deterministic test-only storage and a full 224,241-row streaming scan. These
+vectors are not a native capture or complete-run parity result.
+
+The native source already provides `run.sh --mode trace --trace-profile
+complete_run_audio_reference`, producing `audio_reference_raw.jsonl` and
+`override-resume.attestation.json`. A fixed Java process adapter for this
+S1 route remains absent; the separate complete-audio launcher supports S2
+and S3K. Raw metadata reports the exported native API ABI 5; the S1 observer
+configuration independently uses ABI 4 for M68K A7 marker payloads.
+
+The native owner must extend or replace the raw contract before canonical
+buffered-native publication: serialize the complete terminal native frontier
+and sufficient baseline deferred-reservation/token-allocation identity to
+validate carried generations independently. Raw.v1 currently contains no
+terminal frontier, lag or per-row complete driver image; baseline service
+images are current boundary RAM, including for completed pending services,
+not historical service state. Consequently this implementation supplies no
+canonical state decoder or terminal-frontier claim, and rejects buffered
+publication from raw.v1 before creating output. Reviewed duplicate captures
+of the current emerald movie and installed runtime identities are still
+required. Legacy song-window captures from another BK2 and the paired
+600-row PCM diagnostics before comparison row 860 do not meet these gates.

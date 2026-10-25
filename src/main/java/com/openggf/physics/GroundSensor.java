@@ -23,6 +23,10 @@ public class GroundSensor extends Sensor {
      */
     private static LevelManager overrideLevelManager;
 
+    // Native helpers can retain Collision_addr independently of their live d5 bit.
+    // Ordinary sensors keep the existing bit-derived path when this is null.
+    private final Boolean secondaryCollisionPathOverride;
+
     // Full-height tile constant
     private static final byte FULL_TILE = 16;
 
@@ -30,7 +34,7 @@ public class GroundSensor extends Sensor {
     private static final byte FLAGGED_ANGLE = 0x03;
 
     private static final Runnable UNBOUNDED_SCAN = () -> {} ;
-    private final NativePlayerTerrainScan verticalScan = new NativePlayerTerrainScan();
+    private final NativePlayerTerrainScan verticalScan = new NativePlayerTerrainScan(this::getSolidTile);
 
     private final SensorResult reusableResult = new SensorResult();
     private final SensorResult bgScanResult = new SensorResult();
@@ -55,6 +59,13 @@ public class GroundSensor extends Sensor {
 
     public GroundSensor(AbstractPlayableSprite sprite, Direction direction, byte x, byte y, boolean active) {
         super(sprite, direction, x, y, active);
+        secondaryCollisionPathOverride = null;
+    }
+
+    GroundSensor(AbstractPlayableSprite sprite, Direction direction, byte x, byte y,
+                 boolean active, boolean secondaryCollisionPath) {
+        super(sprite, direction, x, y, active);
+        secondaryCollisionPathOverride = secondaryCollisionPath;
     }
 
     @Override
@@ -459,11 +470,13 @@ public class GroundSensor extends Sensor {
      * {@code lm} must be non-null: the scan entry points resolve it once per scan,
      * and {@code scanBackgroundCollision} null-guards before any helper is reached.
      */
-    private static SolidTile getSolidTile(LevelManager lm, ChunkDesc desc, int solidityBit) {
+    private SolidTile getSolidTile(LevelManager lm, ChunkDesc desc, int solidityBit) {
         if (desc == null || !desc.isSolidityBitSet(solidityBit)) {
             return null;
         }
-        return lm.getSolidTileForChunkDesc(desc, solidityBit);
+        return secondaryCollisionPathOverride == null
+                ? lm.getSolidTileForChunkDesc(desc, solidityBit)
+                : lm.getSolidTileForChunkDesc(desc, solidityBit, secondaryCollisionPathOverride);
     }
 
     private SensorResult createResultWithDistance(SensorResult target,

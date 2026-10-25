@@ -17,6 +17,11 @@ public class S3kSlotStageController {
         this.stageState = stageState;
     }
 
+    /** Internal object asset intake; each child retains the ROM animation cursor across scripts. */
+    public byte[] rewardRingAnimation(boolean sparkle) {
+        return stageState.romData().rewardRingAnimation(sparkle);
+    }
+
     public void bootstrap() {
         stageState.setStatTable(0);
         stageState.setScalarIndex1(0x40);
@@ -247,11 +252,10 @@ public class S3kSlotStageController {
     }
 
     public boolean consumeRewardRing(int carriedRingCount) {
-        if (carriedRingCount + stageState.rewardCounter() <= 0) {
+        // Obj_SlotSpike / loc_4C3CA tests live Ring_count, which already includes
+        // every prior grant/loss. rewardCounter records the net delta separately.
+        if (carriedRingCount <= 0) {
             return false;
-        }
-        if (stageState.rewardCounter() > 0) {
-            return stageState.decrementRewardCounter();
         }
         stageState.decrementRewardCounterUnchecked();
         return true;

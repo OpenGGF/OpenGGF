@@ -13,6 +13,8 @@
 uniform sampler2D Palette;
 uniform sampler2D IndexedColorTexture;
 uniform sampler2D TilePriorityTexture;  // FBO texture with high-priority tile info
+uniform int NativeSpriteOwnership;
+uniform int TilePriorityAvailable;
 uniform float PaletteLine;
 uniform float TotalPaletteLines;
 uniform int TileOcclusionPaletteMask;   // bit N = priority tiles using palette line N occlude this sprite
@@ -60,12 +62,17 @@ void main()
     // Subtract ViewportOffset to get viewport-local coordinates, then normalize.
     // No Y-flip needed: OpenGL texture V coordinates already match the FBO orientation
     vec2 screenCoord = (gl_FragCoord.xy - ViewportOffset) / ScreenSize;
-    vec4 tilePriority = texture(TilePriorityTexture, screenCoord);
+    vec4 tilePriority = TilePriorityAvailable == 1 ? texture(TilePriorityTexture, screenCoord) : vec4(0.0);
 
     // Low-priority sprite behind high-priority tile: discard
     // tilePriority > 0.5 means there's a high-priority tile pixel at this location
     int tilePaletteLine = int(round(tilePriority.g * 3.0));
     if (tilePriority.r > 0.5 && (TileOcclusionPaletteMask & (1 << tilePaletteLine)) != 0) {
+        if (NativeSpriteOwnership == 1) {
+            // An opaque SAT winner still excludes later sprites when terrain supplies its color.
+            FragColor = vec4(0.0);
+            return;
+        }
         discard;
     }
 

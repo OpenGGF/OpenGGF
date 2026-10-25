@@ -176,13 +176,18 @@ public class Sonic1LZWaterEvents {
     }
 
     /**
-     * {@code ObjectManager.vblaCounter} is the engine's ROM-visible VBlank
-     * clock for the current level frame. LZWaterFeatures runs before the object
-     * dispatcher but reads that already-published value; it must not predict
-     * the dispatcher's subsequent increment.
+     * The engine publishes the admitted gameplay VBlank in ObjectManager.update,
+     * after this pre-object routine. Native VBlank_Exit has already incremented
+     * v_vblank_count before Level_MainLoop calls LZWaterFeatures and ExecuteObjects
+     * (sonic.asm:684-687,2998-3006). Read that admitted tick here without advancing
+     * the shared owner. Lag/pause closures do not run this pre-object routine.
+     *
+     * <p>Under shipped FixBugs=0 the low-byte sound gate also clobbers d0 used
+     * for suction (LZWindTunnels, _inc/LZWaterFeatures.asm:376-403), so observing
+     * the preceding tick moves a gameplay write, not just the waterfall sound.
      */
     static int romVisibleVblaByteBeforeObjectExecution(int storedVblaCounter) {
-        return storedVblaCounter & 0xFF;
+        return (storedVblaCounter + 1) & 0xFF;
     }
 
     public Sonic1LZWaterEvents() {

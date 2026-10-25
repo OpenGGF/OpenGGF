@@ -113,7 +113,7 @@ class TestAizMinibossNapalmRoute {
                     "ObjectSpawn subtype must remain the FallingShot child subtype");
             AizMinibossFlameBarrelChild barrel = observation.barrel();
             assertNotNull(barrel);
-            assertSame(harness.boss(), readObjectField(projectile, "parent", AbstractBossInstance.class));
+            assertEquals(harness.boss().getSlotIndex(), (int) readObjectField(projectile, "parentSlot", Integer.class));
             assertTrue(projectile.getBarrelSubtype() == 0
                             || projectile.getBarrelSubtype() == 2
                             || projectile.getBarrelSubtype() == 4,

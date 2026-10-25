@@ -648,6 +648,15 @@ public final class Sonic3kPlcArtRegistry {
     private static void addHczEntries(int actIndex,
                                       List<StandaloneArtEntry> standalone,
                                       List<LevelArtEntry> levelArt) {
+        if (actIndex == 1) {
+            // Obj_RobotnikHeadInit/sub_67B14 swaps Knuckles' head mappings and
+            // queues ArtKosM_EggRoboHead into the shared native ship tile bank.
+            // Keep the sheet resident so the actual module DMA and rewind
+            // refresh its existing Pattern objects through the provider.
+            levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.EGG_ROBO_HEAD,
+                    Sonic3kConstants.MAP_EGG_ROBO_HEAD_ADDR,
+                    Sonic3kConstants.ART_TILE_ROBOTNIK_SHIP, 0, null, 4));
+        }
         // Act-specific lead badnik
         if (actIndex == 0) {
             standalone.add(new StandaloneArtEntry(
@@ -1672,6 +1681,14 @@ public final class Sonic3kPlcArtRegistry {
     private static void addIczEntries(int actIndex,
                                       List<StandaloneArtEntry> standalone,
                                       List<LevelArtEntry> levelArt) {
+        if (actIndex == 0) {
+            // Obj_ICZTeleporter uses $255E: mapping $12/$16 therefore reads
+            // the genuine PLC_1E_1F beam at tile $570/$574, on palette line 2.
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.ICZ_TELEPORTER,
+                    Sonic3kConstants.MAP_SSZ_HPZ_TELEPORTER_ADDR,
+                    Sonic3kConstants.ARTTILE_ICZ_TELEPORT - 0x12, 1, null));
+        }
         levelArt.add(new LevelArtEntry(
                 Sonic3kObjectArtKeys.COLLAPSING_PLATFORM_ICZ,
                 Sonic3kConstants.MAP_ICZ_COLLAPSING_BRIDGE_ADDR,
@@ -3190,6 +3207,13 @@ public final class Sonic3kPlcArtRegistry {
     private static void addDezEntries(int actIndex,
                                       List<StandaloneArtEntry> standalone,
                                       List<LevelArtEntry> levelArt) {
+        if (actIndex == 0) {
+            // Obj_FBZDEZPlayerLauncher $3B942 selects frame 1 and DEZMisc2 in DEZ.
+            // PLC $36 supplies this block in DEZ1; fresh DEZ2's PLC $38 does not.
+            levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.FBZ_DEZ_PLAYER_LAUNCHER,
+                    Sonic3kConstants.MAP_FBZ_DEZ_PLAYER_LAUNCHER_ADDR,
+                    Sonic3kConstants.ARTTILE_DEZ_MISC2, 1, null, new int[]{1}));
+        }
         // StillSprite groups: subtypes 48-50
         // base 0x3FF: subtypes 48, 49 (beams)
         levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.STILL_DEZ_BEAM,

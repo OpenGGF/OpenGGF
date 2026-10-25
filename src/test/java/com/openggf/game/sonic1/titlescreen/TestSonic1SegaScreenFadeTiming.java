@@ -4,6 +4,7 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
 import com.openggf.game.TitleScreenProvider;
+import com.openggf.game.titlescreen.SegaPaletteFade;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
@@ -17,21 +18,19 @@ class TestSonic1SegaScreenFadeTiming {
     private static final int FADE_FRAMES = 22;
 
     @Test
-    void segaLogoTimerWaitsUntilFadeFromBlackCompletes() throws Exception {
+    void segaLogoStartsItsOwnPaletteCycleWithoutASeparateFadeFromBlack() throws Exception {
         Sonic1TitleScreenManager manager = managerInSegaState();
         InputHandler input = new InputHandler();
 
-        for (int i = 0; i < FADE_FRAMES - 1; i++) {
-            manager.update(input);
-            assertEquals(0, intField(manager, "segaLogoTimer"),
-                    "S1 SEGA animation must not advance during fade-from-black");
-            assertEquals(TitleScreenProvider.State.SEGA_LOGO, manager.getState());
-        }
+        assertEquals(SegaPaletteFade.Mode.NONE, invoke(manager, "segaLogoFadeMode"),
+                "GM_Sega loads Pal_SegaBG directly into the active palette before Sega_WaitPal");
 
         manager.update(input);
 
         assertEquals(1, intField(manager, "segaLogoTimer"),
-                "S1 SEGA animation starts on the first frame after fade-from-black");
+                "the first update belongs to PalCycle_Sega, with no generic entry fade");
+        assertEquals(TitleScreenProvider.State.SEGA_LOGO, manager.getState());
+        assertEquals(SegaPaletteFade.Mode.NONE, invoke(manager, "segaLogoFadeMode"));
     }
 
     @Test
@@ -102,6 +101,12 @@ class TestSonic1SegaScreenFadeTiming {
 
     private static Method method(String name, Class<?>... parameterTypes) throws NoSuchMethodException {
         return Sonic1TitleScreenManager.class.getDeclaredMethod(name, parameterTypes);
+    }
+
+    private static Object invoke(Object target, String name) throws Exception {
+        Method method = method(name);
+        method.setAccessible(true);
+        return method.invoke(target);
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
