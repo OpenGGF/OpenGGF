@@ -11237,3 +11237,107 @@ then candidate 26 matched -> 288 consumers -> 72 ROM/boot (mandatory S3K 60) ->
 and reports consumed. Target/job ownership now returns explicitly to parent;
 no further worker tests, source changes, integration, push, branch/worktree removal
 or other owner-family work is pending or authorized here.
+
+### LogicalPublication parent validation and delivery disposition — 2026-10-25
+
+Parent independently mapped the accepted four Java blobs to final worker commit
+`d98f53b20c3e3240dc960507aa9c748809fe0d74`, tree
+`dc45b5eee57e9510b6ad6c8519fd7592284fbea0`. The source-only review's final
+four-file fingerprint is reproduced from committed bytes:
+`8623db6f3da9070a5647a7138450c233c5fe179f5b24051fe88f03defa09a588`.
+AudioManager remains blob `4a48f130ee9c361d677efe423bcfc536194de753`;
+the guard-only strengthening accepted during review is present exactly.
+This parent appendix changes prose only. No executable input changed after
+the accepted worker checks or between the two parent runs below.
+
+**Proportionate combined selection.** The actual category plan against pinned
+pre-task destination `147fc3eb03afb720b4ece90a2f970616c7e599c5` selects 3,782
+ordinary smoke candidates. Its all-category expansion is caused by the
+test-only AudioManagerTestDiagnostics helper. That helper's actual-owner ring
+observation and the Source-contract observation migration do not change engine
+algorithms. The production change transfers the complete publication protocol;
+independent review verified moved bodies, callback-time collaborator reads,
+virtual calls, synchronization, public signatures and partial-failure order.
+Real factory-local PCM, rollback, diagnostic, reentry and history-loss controls
+discriminate the preserved behavior. Parent therefore substitutes the worker's
+bounded original-production and extracted controls, fresh complete global
+guards, and eleven composed controller cases for the helper-driven ordinary
+smoke expansion. No broad smoke or release-only full-suite pass is claimed.
+New/worsened failures, unexpected skips or unexplained accounting growth would
+block integration and require bounded investigation.
+
+Both parent invocations used the queued wrapper from this owned worktree,
+Java 25, surfaceless EGL, four verified absolute ROM properties, and strict
+false freeze flags. DISPLAY, WAYLAND_DISPLAY, XAUTHORITY, JAVA_TOOL_OPTIONS,
+JDK_JAVA_OPTIONS and MAVEN_ARGS were unset. With OPENGGF_ROM_ROOT denoting the
+existing ROM directory, the shared Maven arguments were:
+
+```bash
+python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  -Darchunit.freeze.store.default.allowStoreCreation=false \
+  -Darchunit.freeze.store.default.allowStoreUpdate=false \
+  -Darchunit.freeze.refreeze=false \
+  "-Dsonic1.rom.path=$OPENGGF_ROM_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$OPENGGF_ROM_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$OPENGGF_ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dkis2.rom.path=$OPENGGF_ROM_ROOT/kis2.gen" \
+  <selection> test -B
+```
+
+The two exact selections and observed results were:
+
+| Session | Selection | Cases/failures/errors/skips | Queue wait | Maven elapsed |
+| --- | --- | --- | ---: | ---: |
+| 98707 | `-Pguards` without an ArchUnit field filter | 797/0/0/0, 95 reports | 0 s | 5:05 |
+| 99671 | Controller selector below | 11/0/0/0, four reports | 0 s | 26.516 s |
+
+```text
+TestGameLoopSuspension,TestGameLoopZoneActHandoffS1#rootRequestRunsFadeLoadTitleAndFirstInputWithoutExtraPass,TestGameLoopZoneActHandoffS2#rootRequestRunsFadeLoadTitleAndFirstInputWithoutExtraPass,TestKis2SpecialStageControllerLifecycle#entryResultsReturnKeepsChipProvider
+```
+
+The complete guards include all 34 ArchUnit cases (27 field-engine cases with
+the short classname and seven qualified Jupiter cases), all 42 audio
+architecture cases, four session-authority cases, and the new
+`logicalPublicationOwnsExactlyTwoColdFieldsAndTheCompletePublicationProtocol`.
+The global guards profile does not select TestModApiSignatureSurface; the
+worker's explicit eleven API/classfile/pin/marker/terminal controls remain the
+applicable compiled API evidence. Overlapping selections are not summed.
+
+The controller run contains seven actual suspension cases, the S1 root request
+pilot, both S2 root request variants and the composed KiS2 entry/results/return
+case. The S2 suspension report logs the same 82 null-FileChannel preload
+exceptions as the preceding parent controller selection; the other three
+reports contain none. All eleven test identities pass. This extraction neither
+repairs that inherited loader issue nor establishes native-emulator parity.
+
+Parent inspected every report's identities, failures/errors/skips and properties:
+Java `25.0.5.0.2`, EGL, four absolute ROM paths, three dotted false freeze flags,
+and absence of an ArchUnit field filter. Rehashed ROM SHA-1 identities match the
+documented S1/S2/S3K values and KiS2
+`6cd0537a3aee0e012bb86d5837ddff9342595004`. All thirteen frozen files remain
+exact to d98f53, with 120 raw low-level records. Sorted case-ID fingerprints are
+`06f1441c3e60ce87b70824a1a405fa04549340bec1536c8174eba6678f86ebb6`
+(guards) and
+`1595be6a3d9f7d364fdef4ea64a8527ff1c8437bae3a776a532a12107cce5870`
+(controllers). Both handles are terminal; parent consumed the inspected XML and
+companion reports. No category run or acknowledgment remains pending.
+
+Fetch and fast-forward pull found main develop unchanged at 147fc3. Its four
+dirty reference submodules and five user files remain outside this work.
+Source acceptance and these bounded parent checks support integration of the
+reviewed candidate; push and exact owned-worktree cleanup remain subsequent
+delivery operations, not results certified by the worker.
+
+**Next finite frontier.** Independent source/design review at 147fc3 qualifies
+complete admission-state and lease-protocol ownership in the existing
+LevelMusicAccess. Retention is coherent; the proposed transfer earns its place
+only by moving both counters and every acquisition/query/category/release
+decision together under the exact manager monitor. Its future production
+boundary is AudioManager and LevelMusicAccess, with existing public static and
+Control APIs retained, no reset epoch and no additional global lookup. The
+fixture census is two files/three cases: TestLevelManager and both
+TestGameDataSourceSharedFetches audio-init cases. Future work must characterize
+original production after this delivery, including raw S2 mailbox timing and
+real publication controls; silent admission-only fixtures are insufficient.
+This is a qualified next candidate, not implementation or runtime acceptance.
