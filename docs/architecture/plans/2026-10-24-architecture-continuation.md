@@ -12525,3 +12525,227 @@ extra owner frame must not silently mask a foreign caller. No characterization,
 implementation, API/security change or new candidate family is authorized by
 this checkpoint. Diagnostic delivery remains independent. Existing CPU palette,
 scene residency and fixed-tail storage dispositions remain unchanged.
+
+### Native audio-mutator binding original-production characterization — 2026-10-25
+
+**Authority and disposition.** This is a TEST-ONLY baseline, not a production
+transfer. Parent adopted the independent design review's complete protocol cut
+for possible later authorization. Its routing census is corrected here: pinned
+AudioManager has **18 ordinary `mutatorMusicIntent` call expressions**, three
+`mutatorSfxIntent` expressions, and reset's separate direct STOP. Both SOURCE
+expressions are already included in the 18; the review's “19 ordinary” wording
+was a counting error. The actual music expressions are at pinned lines 787,
+821, 832, 850, 1317, 1328, 1339, 1405, 1511, 2453, 2515, 2561, 2576, 2606,
+2678, 2883, 3554 and 3577; SFX is at 1372, 1673 and 1823, reset STOP at 2788.
+This is a source census, not individual runtime coverage of every expression.
+
+The separate bound checkout is `/mnt/LinuxData/T3/worktrees/OpenGGF/t3-32e866c3`,
+renamed only locally to `bugfix/ai-audio-mutator-binding-owner-20261025`.
+It started clean at exact base `03e20f57efcb0bdcc38d6518a27e9b9b1d76eb6a`, tree
+`00853f1fb469bc52d0635d123ed3902dfd1832fe`; no fetch/rebase or main write followed
+the pin. Mandatory hooks were installed. Production remains byte-exact:
+
+| Identity | Git object |
+| --- | --- |
+| `src/main/java` tree | `c573f8e9587bc756caa595a26b6132408b3c84e4` |
+| `AudioManager.java` | `fffaa4eae488fa9711ccac6f86397a96b1835375` |
+| `AudioMutatorAccess.java` | `5c645420f62968876eb211ea6c45092c245a19fa` |
+
+**Java freeze.** The only added Java path is
+`src/test/java/com/openggf/audio/TestAudioMutatorBindingContract.java`, Git blob
+`6b3c70000917b24de6cda4188f0bf06826d72787`, content SHA-256
+`b5c9269fee9dce7276922e4b300b9924b96be86192efca67163546519e8db918`.
+Sorting relative Java paths, then hashing each UTF-8 path, NUL, exact file bytes,
+NUL gives SHA-256
+`28650b812adab28c46f14b87ba6c40bd488d306af5d1c1230d5ee5119784a512`.
+No existing test, assertion, fixture, helper, resource, guard, API/pin/store,
+production or policy file changed. Existing Root-field test reads remain intact.
+Independent parent SOURCE review receives this frozen overlay without target/job
+access; runtime results below are this worker's observations, not that review's.
+
+The new class is ROM-free and independently runnable, with no rendering/device
+requirement. It constructs `spy(AudioManager.class)` directly. A child loader
+redefines only committed Probe/ForeignListener class resources; it does not compile
+code, spoof ownership or replace the production caller inspector. Engine-loaded
+positive controls reach all ten guarded entries, and foreign failures must carry
+the production security message and an AudioMutatorAccess boundary stack frame.
+No state-field relocation, submission-depth introspection or trace hydration is
+used. Existing native programs, PCM, world lifetime and replay remain real-ROM
+controls rather than being replaced by these bounded ordering seams.
+
+**Finite new inventory: 222 unique cases.** All rows below have XML classname
+`com.openggf.audio.TestAudioMutatorBindingContract`; append `#` and the exact
+member suffix. A bracket range denotes every integer invocation suffix in that
+range. Unparameterized XML names omit `()`.
+
+| Exact XML member suffix | Count |
+| --- | ---: |
+| `foreignCapabilityRejectsBeforeThreadIdentityOrNativeWork(Entry, Call, State)[1..120]` | 120 |
+| `engineProbePositiveControlReachesEveryCapability(Entry, Call)[1..30]` | 30 |
+| `activeIsUnrestrictedForeignIdentityObservation(Call, State)[1..12]` | 12 |
+| `bindCallerListenerAndNullPrecedence(Call)[1..3]` | 3 |
+| `engineStaleAndWrongThreadAdmissionPrecedesNativeWork(Entry)[1..10]` | 10 |
+| `publicationPrecedesDisplacementAndNestedBindReturnsAnInactiveOuterToken` | 1 |
+| `displacementCanResetPublishedReplacementBeforeOuterBindReturns` | 1 |
+| `displacedFailureKeepsPublishedButUnreturnedReplacement(boolean)[1..2]` | 2 |
+| `managerExclusionSurvivesReplacementCloseResetNestingAndUnwind(Transition, Failure, boolean)[1..18]` | 18 |
+| `secondManagerRemainsIndependentDuringSubmissionAndDestroyDoesNotUnbind` | 1 |
+| `resetStopFailureConsumesIdentityAndPreventsStreamAndSourceEffects(boolean)[1..2]` | 2 |
+| `successfulResetKeepsCallbackReplacementAndOrdersStreamThenSourceReset` | 1 |
+| `ordinaryFeedbackIsSynchronousUnlockedAndBothSourcePublicationsHoldMonitor` | 1 |
+| `profileQueriesReadCurrentVirtualProfileIncludingNull` | 1 |
+| `preparationFailurePrecedesWarningAndSubmission(Entry)[1..5]` | 5 |
+| `liveWarningRejectionFollowsPreparationOutsideExclusion(Entry)[1..2]` | 2 |
+| `resumePreparesThenUsesVirtualMusicWithoutAdditionalWarningGate` | 1 |
+| `landingUsesVirtualSfxThenLiveReplayQueryOnlyForFalse(boolean, boolean)[1..4]` | 4 |
+| `replacementDuringPreparationDoesNotRecheckOldTokenBeforeSubmission(Entry)[1..3]` | 3 |
+| `replacementDuringWarningDoesNotRecheckOldTokenBeforeSubmission(Entry)[1..2]` | 2 |
+| `nativeSfxClassifiesAtCommandBoundaryAndRereadsCurrentListenerForNextIntent` | 1 |
+| `semanticSfxObservesOldIdBeforeCallbackAndUsesCurrentMappingAfterward` | 1 |
+
+Parameter enumeration is deterministic. Entry order is `permitsMusic`,
+`isOverride`, `isWarning`, `warningActive`, `prepareMusic`, `prepareLandingCue`,
+`playTemporaryMusic`, `resumeNativeMusic`, `playLandingCue`, `close`. Call order
+is DIRECT, HIDDEN, REFLECTION. State order is CURRENT, INACTIVE, OTHER_THREAD,
+INACTIVE_OTHER_THREAD. Cartesian sources enumerate left-to-right, with the
+rightmost dimension varying fastest. Transition order is REPLACE, CLOSE, RESET;
+Failure order is NONE, RUNTIME, ERROR; boolean order is false, true. Filtered
+Entry sources retain their declared order; the five preparation entries start
+at `prepareMusic` and end at `playLandingCue`. This maps every index to its
+actual inputs, including all nine guarded capabilities plus close, and the
+intentional unguarded `active()` exception.
+
+Installation cases observe publication during displacement, old-token close,
+reentrant third installation, returned-but-inactive and published-but-unreturned
+tokens, and exact RuntimeException/Error propagation. Submission cases observe
+music and native-SFX feedback during/after replacement, close, nested failure and
+reset: exclusion must last until the outermost return, while reset STOP bypasses
+it after identity removal. Reset retains a callback-created replacement; a
+throwing STOP leaves the port installed and profile unchanged and prevents the
+stream invalidator from running. Successful reset proves STOP, invalidation,
+port close, source clearing and surviving replacement. Separate cases cover
+manager independence, destroy retaining its binding, synchronous unlocked
+ordinary feedback/displacement versus synchronized reset/both SOURCE callbacks,
+live virtual profile queries, preparation-before-warning, resume's missing
+additional warning gate, landing false-return/live replay-query order, no
+post-preparation/warning ownership recheck, current-listener dispatch and semantic
+SFX's old observed ID/current post-callback mapping. The controls do not require
+any new production failure hook or characterization framework.
+
+**Commands and prerequisite evidence.** The leased
+`python3 tools/testing/maven_queue.py -v` reported Java 25.0.5.0.2. All lifecycle
+commands ran from this checkout through its current queued wrapper with
+`-Dmse=off`, Java 25 and `-B`. DISPLAY, WAYLAND_DISPLAY, XAUTHORITY,
+JAVA_TOOL_OPTIONS, JDK_JAVA_OPTIONS and _JAVA_OPTIONS were unset; test commands
+also unset MAVEN_OPTS and MAVEN_ARGS. No test required rendering, so EGL was
+omitted. Every test command supplied these unchanged strict properties:
+
+```text
+-Darchunit.freeze.store.default.allowStoreCreation=false
+-Darchunit.freeze.store.default.allowStoreUpdate=false
+-Darchunit.freeze.refreeze=false
+```
+
+Fresh `python3 tools/testing/maven_queue.py -Dmse=off test-compile -B` compiled
+4,354 main and 4,493 test sources. Maven lifecycle test commands subsequently
+performed their own compiler checks; these were not additional suite selections.
+The exact test selectors were:
+
+```text
+-Dtest=TestAudioMutatorBindingContract
+-Dtest=TestAudioMutatorBindingContract#resetStopFailureConsumesIdentityAndPreventsStreamAndSourceEffects+successfulResetKeepsCallbackReplacementAndOrdersStreamThenSourceReset
+-Dtest=TestAudioMutatorAccess,TestAudioMutatorRuntime,TestAudioMutatorHistory#naturalOneUpBetweenTicksAndAcceptedAudioReplayAcrossKeyframes,TestAudioSourcePublicationContract#creatorFailureAfterBasePublicationKeepsThePublishedTuple+basePreparationFailureKeepsTupleAndDoesNotNotifyCreator+postpublicationCallbackReplacementUsesTheThenCurrentPresentationFactory+rejectedNestedResetStillNotifiesCreatorAndInvalidatesStreamedSessionFirst,TestLevelMusicAccessContract#directControlsGateBeforeMutatorsObservationRecordingAndFadeCount+rawSuppressionStillNotifiesTheMutatorBeforeSkippingPreparationAndObservation,TestSmpsRestoreOwnerContract#rewindSuppressionStillReachesARestoreIntentWithoutTimelineOrMirror+restoreSinkFailurePropagatesWithoutRecordingOrTransferringTheRequest+sonic3kNaturalRestoreRemainsDeferredAndExactlyOnce
+```
+
+Each selector was one argument to
+`python3 tools/testing/maven_queue.py -Dmse=off <selector> <properties> test -B`.
+The two new-class runs had no ROM property. For portable reproduction of the
+maintained run, OPENGGF_ROM_ROOT denotes the existing common root-ROM directory;
+actual absolute property arguments were verified in every XML report:
+
+```text
+-Dsonic1.rom.path=${OPENGGF_ROM_ROOT}/s1.gen
+-Dsonic2.rom.path=${OPENGGF_ROM_ROOT}/s2.gen
+-Ds3k.rom.path=${OPENGGF_ROM_ROOT}/s3k.gen
+-Dkis2.rom.path=${OPENGGF_ROM_ROOT}/kis2.gen
+```
+
+Existing root files were discovered and rehashed without copies, links or
+renames. SHA-1 identities were S1 `69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b`
+(524,288 bytes, CRC AFE05EEE), S2 REV01
+`8bca5dcef1af3e00098666fd892dc1c2a76333f9` (1,048,576, CRC 7B905383), S3&K
+`cfbf98c36c776677290a872547ac47c53d2761d6` (4,194,304, CRC 63522553) and KiS2
+`6cd0537a3aee0e012bb86d5837ddff9342595004` (3,407,872, CRC 2AC1E7C6).
+Only the S3K annotated cases in this selection require actual ROM programs;
+the extra path arguments do not claim S1/S2/KiS2 execution coverage.
+
+| Terminal command handle | Selection | Cases/F/E/S | Admission wait | Maven elapsed | JUnit suite time |
+| --- | --- | --- | --- | --- | --- |
+| 54209 | Fresh own main/test compile | no tests | build-only; no test admission | 1:18 | n/a |
+| 91150 | New ROM-free class, initial draft | 222/0/3/0 | reported 0 s | 25.400 s | 0.868 s |
+| 48749 | Corrected reset members only | 3/0/0/0 | reported 0 s | 25.212 s | 0.665 s |
+| 13094 | Maintained native/world/routing controls | 37/0/0/0 | reported 0 s | 28.332 s | six suites, 1.394 s sum |
+
+JUnit suite sums are not wall-clock delivery time; unmeasured preparation,
+reasoning and tool gaps are unknown. No queue request was duplicated or restarted.
+Initial selection/count forecasts were published before submission. All commands
+were terminal before the evidence/commit phase; no further Maven is planned.
+
+**Draft correction and bounded reuse.** The initial draft blob was
+`7510f4ba37512b5f558e052c0041da4a39610e34`. Its three errors were
+`org.mockito.exceptions.misusing.UnfinishedStubbingException`, before the reset
+under test, at `resetStopFailureConsumesIdentityAndPreventsStreamAndSourceEffects(boolean)[1]`,
+that member's `[2]`, and
+`successfulResetKeepsCallbackReplacementAndOrdersStreamThenSourceReset`.
+Both affected member bodies nested `audio.outputSampleRate()` inside unfinished
+`when(port.outputRate()).thenReturn(...)` stubbing. The sole correction reads
+that sample rate into a local before stubbing in those two members. No helper,
+other test body, Probe/ForeignListener resource source, shared fixture, production,
+flag or environment changed. The other **219** passing cases retain their original
+coverage; only the three corrected cases were rerun. This is **222 distinct
+new cases with passing observations across those runs**, not a claimed single
+222/0/0/0 run or 225 distinct passes. No production defect was inferred or repaired.
+
+Sorted full XML `classname#name` identities with one LF after each have SHA-256
+`168a6ef598ad349913b20c154f4c37fbb9b34567eb5ad77c49d6aeef6996d912`
+for all 222 new IDs, `9ace9ebd8c40aa263ce3986c52f81105515d7fe76dfbb77d45554cd6e88a19bd`
+for the unchanged 219 passing IDs, and
+`dae5fb1c30ead3b375e669a3c228a130ad91f71e4b9a62224ff72345d02cc101`
+for the corrected three. These are compact evidence within this existing
+artifact, not a pass cache or retained validation receipt.
+
+The maintained 37 unique IDs reconcile as access 8, runtime 18, isolated history
+1, source publication 5 (including both boolean instances of publication failure),
+level music 2 and restore 3. Full access/runtime selection and the exact method
+selectors above define the complete set. Its sorted XML-ID SHA-256 is
+`2a78cba99d02685c2de7a1854ddcc1151067acec92306428705342803a46dd4a`.
+The maintained test blobs, unchanged from the base, are:
+
+| Test class | Git blob |
+| --- | --- |
+| `audio.TestAudioMutatorAccess` | `d592bde3e19610c58c341f8e77a96329afce6321` |
+| `audio.TestAudioSourcePublicationContract` | `5c9463a690ebdc32c3b38c90c2d81e5d058982ce` |
+| `audio.TestLevelMusicAccessContract` | `8aa8b1ea71f0f6b279c8873e94db8ba1bf7ea175` |
+| `audio.TestSmpsRestoreOwnerContract` | `c27d0bb340b49eb02d53a7e80dd21d30a2b3de58` |
+| `game.mutators.TestAudioMutatorRuntime` | `b34664117d233cd7321747d814d340cd1b37db1a` |
+| `game.mutators.TestAudioMutatorHistory` | `f6cb45bcc73ff43f133ef6d9586aa912e139e9a6` |
+
+Measurement hazards were consulted before reporting. XML identities, F/E/S,
+Java version, property presence/absence and required ROM matches were inspected;
+no annotated case silently skipped. Maintained report output contained no
+FileChannel mentions; the known unrelated S2 null-FileChannel issue remains
+unrepaired and outside this selection. No broad/full suite, parent architecture
+or API guard duplication, trace, performance, native emulator or rendering
+campaign was run. Neither these results nor unchanged production imply runtime
+certification of a hypothetical ownership transfer.
+
+All owned XML/text reports (two per new-class run and twelve for maintained
+controls) were inspected and consumed. The own diagnostic directory was empty;
+no category result/acknowledgment, raw archive, pass cache or receipt remains.
+Only the added test and this appended continuation evidence are committed.
+The clean separate worktree is retained. After commit/source mapping and final
+own-target inspection, the worker hands target/job ownership back to the parent
+and launches nothing more. Parent independent source/test review remains a
+separate required gate before any later production authorization. No integration,
+push, main write, worktree/branch cleanup, subdelegation or new candidate work
+is authorized by this baseline.
