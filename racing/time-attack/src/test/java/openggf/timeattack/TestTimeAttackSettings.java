@@ -17,10 +17,22 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /** The mod-owned Time Attack settings and their settings page. */
 class TestTimeAttackSettings {
     @Test
+    void legacyRoomInvitesAreDiscardedAndNeverPublishedAgain() {
+        String invite = "192.0.2.10:27888#private-room-pin";
+        TimeAttackSettings settings = TimeAttackSettings.parse(
+                "displayName=Racer\nlastJoinAddress=" + invite + "\n");
+        MemoryModStorage storage = new MemoryModStorage();
+        assertTrue(settings.save(storage));
+        String saved = storage.read(TimeAttackSettings.FILE_NAME).orElseThrow();
+        assertFalse(saved.contains(invite));
+        assertFalse(saved.contains("lastJoinAddress="));
+        assertEquals("Racer", TimeAttackSettings.load(storage).displayName());
+    }
+
+    @Test
     void defaultsMatchTheFormerEngineSettings() {
         TimeAttackSettings settings = TimeAttackSettings.load(new MemoryModStorage());
         assertEquals(27888, settings.hostPort());
-        assertEquals("", settings.lastJoinAddress());
         assertEquals("", settings.displayName());
         assertEquals("", settings.masterUrl());
         assertFalse(settings.masterTrustInsecure());
@@ -34,7 +46,6 @@ class TestTimeAttackSettings {
         TimeAttackSettings settings = new TimeAttackSettings();
         settings.setRetryKey(com.openggf.mods.scene.SceneKeys.F6);
         settings.setHostPort(30000);
-        settings.setLastJoinAddress("[2001:db8::1]:27888#code");
         settings.setDisplayName("Knuckles é");
         settings.setMasterUrl("wss://master.example:8443/master");
         settings.setMasterTrustInsecure(true);
@@ -45,7 +56,6 @@ class TestTimeAttackSettings {
         TimeAttackSettings loaded = TimeAttackSettings.load(storage);
         assertEquals(com.openggf.mods.scene.SceneKeys.F6, loaded.retryKey());
         assertEquals(30000, loaded.hostPort());
-        assertEquals("[2001:db8::1]:27888#code", loaded.lastJoinAddress());
         assertEquals("Knuckles é", loaded.displayName());
         assertEquals("wss://master.example:8443/master", loaded.masterUrl());
         assertTrue(loaded.masterTrustInsecure());

@@ -47,7 +47,6 @@ public final class TimeAttackSettings {
 
     private int retryKey = com.openggf.mods.scene.SceneKeys.R;
     private int hostPort = DEFAULT_HOST_PORT;
-    private String lastJoinAddress = "";
     private String displayName = "";
     private String masterUrl = "";
     private boolean masterTrustInsecure;
@@ -145,7 +144,6 @@ public final class TimeAttackSettings {
                         // keep the default port
                     }
                 }
-                case "lastJoinAddress" -> settings.setLastJoinAddress(value);
                 case "displayName" -> settings.setDisplayName(value);
                 case "masterUrl" -> settings.setMasterUrl(value);
                 case "masterTrustInsecure" -> settings.masterTrustInsecure = "true".equalsIgnoreCase(value);
@@ -220,7 +218,6 @@ public final class TimeAttackSettings {
         StringBuilder out = new StringBuilder("# Time Attack settings\n")
                 .append("retryKey=").append(retryKey).append('\n')
                 .append("hostPort=").append(hostPort).append('\n')
-                .append("lastJoinAddress=").append(lastJoinAddress).append('\n')
                 .append("displayName=").append(displayName).append('\n')
                 .append("masterUrl=").append(masterUrl).append('\n')
                 .append("masterTrustInsecure=").append(masterTrustInsecure).append('\n')
@@ -262,14 +259,6 @@ public final class TimeAttackSettings {
             throw new IllegalArgumentException("port must be 1-65535");
         }
         hostPort = port;
-    }
-
-    public String lastJoinAddress() {
-        return lastJoinAddress;
-    }
-
-    public void setLastJoinAddress(String address) {
-        lastJoinAddress = singleLine(address, MAX_TEXT_LENGTH);
     }
 
     public String displayName() {

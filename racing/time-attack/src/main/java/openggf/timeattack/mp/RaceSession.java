@@ -71,7 +71,7 @@ import java.util.logging.Logger;
  */
 public final class RaceSession implements AutoCloseable {
     private final Logger LOGGER = Logger.getLogger(RaceSession.class.getName());
-    /** Storage file holding the last LAN invite this player hosted. */
+    /** Historical export filename. Existing user files are left untouched. */
     public static final String INVITE_FILE = "lan-invite.txt";
     private static final int MAX_ROOM_PLAYERS = 8;
     // RoomDescriptor names are bounded by the master and room hosts (RoomBroker boundedField).
@@ -135,9 +135,6 @@ public final class RaceSession implements AutoCloseable {
     private State state = State.IDLE;
     private String status = "";
     private String notice;
-    private String pendingInvite;
-    private int inviteRetryTicks;
-    private static final int PUBLICATION_RETRY_TICKS = 60;
     private boolean closed;
     private Attempt attempt;
 
@@ -226,7 +223,6 @@ public final class RaceSession implements AutoCloseable {
             fail("Invalid LAN invite: " + e.getMessage());
             return;
         }
-        String trimmed = invite.trim();
         String configuredName = settings.displayName();
         start("Joining LAN room...", State.IDLE, op -> {
             PlayerIdentity me = identity();
@@ -239,10 +235,7 @@ public final class RaceSession implements AutoCloseable {
                     room.act(), DEFAULT_JOIN_WINDOW_SECONDS, room.characterPolicy(), room.lockedCharacter());
             String chosen = room.lockedCharacter() != null ? room.lockedCharacter() : character;
             return () -> {
-                settings.setLastJoinAddress(trimmed);
-                boolean saved = settings.save(storage);
                 enterLobby(client, false, round, chosen, null, name, "");
-                if (!saved) notice = "Settings active - save pending";
             };
         });
     }
@@ -444,26 +437,9 @@ public final class RaceSession implements AutoCloseable {
         flushPendingPublications();
     }
 
-    /** Flushes accepted settings and invite text on resume or owner exit; failures remain pending. */
+    /** Flushes accepted settings on resume or owner exit; failures remain pending. */
     public void flushPendingPublications() {
         if (!settings.flushPending(storage)) notice = "Settings active - save pending";
-        if (pendingInvite != null) publishInvite();
-    }
-
-    private boolean publishInvite() {
-        boolean saved;
-        try {
-            saved = storage != null && storage.write(INVITE_FILE, pendingInvite);
-        } catch (RuntimeException failure) {
-            saved = false;
-        }
-        if (saved) {
-            pendingInvite = null;
-        } else {
-            inviteRetryTicks = PUBLICATION_RETRY_TICKS;
-            notice = "LAN invite active - save pending";
-        }
-        return saved;
     }
 
     // ── Engine-thread pump ───────────────────────────────────────────────
@@ -475,7 +451,6 @@ public final class RaceSession implements AutoCloseable {
     public void poll() {
         if (closed) return;
         if (settings.retryPending(storage)) notice = "Settings saved";
-        if (pendingInvite != null && --inviteRetryTicks <= 0 && publishInvite()) notice = "LAN invite saved";
         Runnable completion;
         while ((completion = completions.poll()) != null) {
             completion.run();
@@ -684,11 +659,6 @@ public final class RaceSession implements AutoCloseable {
         launchedRound = -1;
         state = State.LOBBY;
         status = "";
-        if (invite != null) {
-            LOGGER.info("LAN invite (replace HOST_IP with this computer's LAN address): " + invite);
-            pendingInvite = invite + "\n";
-            publishInvite();
-        }
     }
 
     /** The host room validates ghosts against the act the host actually loaded (engine thread). */

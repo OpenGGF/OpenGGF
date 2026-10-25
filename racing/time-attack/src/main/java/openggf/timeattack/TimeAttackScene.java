@@ -93,7 +93,7 @@ public final class TimeAttackScene implements ModScene {
             status = "Previous settings could not be imported";
             settings = TimeAttackSettings.load(storage);
         }
-        joinInvite = settings.lastJoinAddress();
+        joinInvite = "";
         session = new RaceSession(identityDir, ghostStore, settings, storage,
                 (spec, host) -> ctx.gameplay().launch(spec, host), this::newRuntime, System::currentTimeMillis);
         // Every join (Hello) and lobby entry announces the look the settings hold for that game/character.
@@ -263,7 +263,7 @@ public final class TimeAttackScene implements ModScene {
                 state.pressGo();
             } else if (focus == inviteRow) {
                 inviteEditor = new TextEntry("LAN INVITE", joinInvite, TimeAttackSettings.MAX_TEXT_LENGTH,
-                        INVITE_CHARACTERS);
+                        INVITE_CHARACTERS).masked();
             } else if (focus == settingsRow) {
                 settingsView = new SettingsView(settings, this::settingsChanged, this::cue,
                         state.currentGameId(), state.currentCharacter(),
@@ -551,7 +551,7 @@ public final class TimeAttackScene implements ModScene {
             drawRow(canvas, label, "< " + value + " >", index++);
         }
         if (joining()) {
-            drawRow(canvas, "Invite", joinInvite.isBlank() ? "Select to enter" : joinInvite, index++);
+            drawRow(canvas, "Invite", joinInvite.isBlank() ? "Select to enter" : "*** ***", index++);
         }
         String action = switch (state.mode()) {
             case SOLO -> "START RUN";

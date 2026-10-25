@@ -363,7 +363,7 @@ class TestTimeAttackScene {
             tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN); // JOIN LAN ROOM
             tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
             idleUntil("the lobby", () -> scene.raceSession().state() == openggf.timeattack.mp.RaceSession.State.LOBBY);
-            assertEquals(invite, scene.settings().lastJoinAddress());
+            assertFalse(scene.settings().encode().contains(invite));
             assertEquals(1, onRoomThread(room, () -> room.room().playerCount()));
             assertFalse(host.capturesTextInput(), "lobby");
             tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN); // a guest's lobby opens on READY UP; chat is next

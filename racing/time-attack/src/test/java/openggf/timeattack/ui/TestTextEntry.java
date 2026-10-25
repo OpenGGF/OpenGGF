@@ -14,6 +14,33 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /** The text field behind LAN invites, chat, the display name and the master URL. */
 class TestTextEntry {
     @Test
+    void passwordInputPreservesExactUnicodeAndMasksItsValueAndLength() {
+        TextEntry field = TextEntry.password("ROOM PASSWORD");
+        String password = "  e\u0301\u3000Private\uD83D\uDE80  ";
+        new FakeViewInput().commit(field::update, password);
+        assertEquals(password, field.text());
+        RecordingSceneCanvas canvas = new RecordingSceneCanvas(320);
+        field.draw(canvas);
+        assertFalse(canvas.joined().contains("Private"));
+        assertFalse(canvas.joined().contains(field.length() + "/"));
+        assertTrue(canvas.joined().contains("********"));
+        field.clear();
+        assertEquals("", field.text());
+        assertEquals(0, field.length());
+    }
+
+    @Test
+    void maskedInviteInputNeverDrawsTheAddressOrPin() {
+        TextEntry field = new TextEntry("LAN INVITE", "192.0.2.4:27888#secret-pin", 192, ".:/#-_").masked();
+        RecordingSceneCanvas canvas = new RecordingSceneCanvas(320);
+        field.draw(canvas);
+        assertFalse(canvas.joined().contains("192.0.2.4"));
+        assertFalse(canvas.joined().contains("secret-pin"));
+        assertTrue(canvas.joined().contains("Hidden"));
+        canvas.assertFillsOnScreen();
+    }
+
+    @Test
     void acceptsAlnumAndAllowedExtras() {
         TextEntry field = new TextEntry("T", "", 64, ".:-");
         for (char c : "192.168.1.5:27888".toCharArray()) {
