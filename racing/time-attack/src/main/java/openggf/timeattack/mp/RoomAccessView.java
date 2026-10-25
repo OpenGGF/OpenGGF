@@ -101,6 +101,7 @@ public final class RoomAccessView {
                 case PASSWORD -> { }
             }
         }
+        if (!privateRoom && wasPrivate) password.clear();
         if (focus != before || privateRoom != wasPrivate || membersCanInvite != couldInvite) {
             notice = "";
             cues.accept(MenuCue.NAVIGATE);
@@ -109,6 +110,7 @@ public final class RoomAccessView {
             switch (focus) {
                 case ACCESS -> {
                     privateRoom = !privateRoom;
+                    if (!privateRoom) password.clear();
                     cues.accept(MenuCue.NAVIGATE);
                 }
                 case PASSWORD -> {
@@ -176,6 +178,7 @@ public final class RoomAccessView {
     /** The window lost focus: leave the editor so later keys cannot type into a field out of sight. */
     public void focusLost() {
         editing = false;
+        password.clear();
     }
 
     /** The owner discards the form: the password is erased. */

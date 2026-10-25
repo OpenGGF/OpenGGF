@@ -143,12 +143,35 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
         return runtime != null;
     }
 
+    private java.util.function.Consumer<ControlMessage> accessListener = message -> { };
+
+    public void setAccessListener(java.util.function.Consumer<ControlMessage> listener) {
+        accessListener = java.util.Objects.requireNonNull(listener, "listener");
+    }
+
+    public ControlMessage.RoomInviteRequest requestInvite() {
+        ControlMessage.RoomInviteRequest request = session.beginInviteRequest();
+        transport.sendControl(request);
+        return request;
+    }
+    public void rotateInvite() { transport.sendControl(new ControlMessage.RoomInviteRotate()); }
+    public void setMemberInvites(boolean allowed) { transport.sendControl(new ControlMessage.RoomInviteSharing(allowed)); }
+    public void changePassword(com.openggf.net.protocol.RoomPassword password) {
+        transport.sendControl(new ControlMessage.RoomPasswordChange(password));
+    }
+
     /** Single network drain, used by both lobby and gameplay contexts. */
     public void pump() {
         for (RaceClient.InboundEvent event : transport.drainInbound()) {
             switch (event) {
                 case RaceClient.Control control -> {
                     session.onControl(control.message());
+                    if (control.message() instanceof ControlMessage.RoomAccessState
+                            || control.message() instanceof ControlMessage.RoomInvite
+                            || control.message() instanceof ControlMessage.RoomInviteRejected
+                            || control.message() instanceof ControlMessage.RoomPasswordChanged) {
+                        accessListener.accept(control.message());
+                    }
                     if (control.message() instanceof ControlMessage.RoomState state) {
                         registry.onRoomState(state.players());
                         lobbyRegistry.onRoomState(state.players());

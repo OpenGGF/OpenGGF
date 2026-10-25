@@ -11,6 +11,9 @@ import com.openggf.net.client.DirectRoomRegistration;
 import com.openggf.net.client.MasterClient;
 import com.openggf.net.client.RaceClient;
 import com.openggf.net.client.RaceConnection;
+import com.openggf.net.client.RoomAccessRequiredException;
+import com.openggf.net.client.RoomJoinOptions;
+import com.openggf.net.client.RoomInviteRejectedException;
 import com.openggf.net.host.HostMasterLink;
 import com.openggf.net.host.jdk.JdkRaceHostServer;
 import com.openggf.net.hub.RoomHostConfig;
@@ -21,6 +24,9 @@ import com.openggf.net.identity.PlayerAppearance;
 import com.openggf.net.identity.PlayerIdentity;
 import com.openggf.net.protocol.ControlMessage;
 import com.openggf.net.protocol.Protocol;
+import com.openggf.net.protocol.RoomAccessPolicy;
+import com.openggf.net.protocol.RoomInviteCode;
+import com.openggf.net.protocol.RoomPassword;
 import openggf.timeattack.GhostStore;
 import openggf.timeattack.TimeAttackLaunchRequest;
 import openggf.timeattack.TimeAttackRuntime;
@@ -82,7 +88,31 @@ public final class RaceSession implements AutoCloseable {
     private static final long AWAIT_SLICE_MILLIS = 50;
 
     /** Where the session is. */
-    public enum State { IDLE, CONNECTING, BROWSING, LOBBY, RACING }
+    public enum State { IDLE, CONNECTING, PASSWORD_REQUIRED, BROWSING, LOBBY, RACING }
+
+    public record PasswordPrompt(String roomName, String hostIdentity) { }
+
+    private sealed interface PendingJoin permits ManualJoin, CodeJoin {
+        State fallback();
+        PasswordPrompt prompt();
+    }
+
+    private record ManualJoin(DirectJoinAddress address, String character, String fingerprint,
+                              String instanceId, long accessEpoch) implements PendingJoin {
+        @Override public State fallback() { return State.IDLE; }
+        @Override public PasswordPrompt prompt() {
+            return new PasswordPrompt("Private LAN room", address.hostFingerprint());
+        }
+        @Override public String toString() { return "ManualJoin[redacted]"; }
+    }
+
+    private record CodeJoin(String code, ControlMessage.RoomJoinResult resolved) implements PendingJoin {
+        @Override public State fallback() { return State.BROWSING; }
+        @Override public PasswordPrompt prompt() {
+            return new PasswordPrompt("Private room", resolved.hostServerId());
+        }
+        @Override public String toString() { return "CodeJoin[redacted]"; }
+    }
 
     /**
      * The route and rules the menu chose for a hosted room or a master browse, with the round-end
@@ -137,6 +167,7 @@ public final class RaceSession implements AutoCloseable {
     private String notice;
     private boolean closed;
     private Attempt attempt;
+    private PendingJoin pendingJoin;
 
     private JdkRaceHostServer host;
     private MasterClient master;
@@ -177,7 +208,12 @@ public final class RaceSession implements AutoCloseable {
      * @param fingerprint the determinism fingerprint of {@code setup.gameId()} on this build
      */
     public void hostLan(RoundSetup setup, String fingerprint) {
+        hostLan(setup, fingerprint, RoomAccessPolicy.PUBLIC, null);
+    }
+
+    public void hostLan(RoundSetup setup, String fingerprint, RoomAccessPolicy policy, RoomPassword password) {
         Objects.requireNonNull(setup, "setup");
+        requireCredentials(policy, password);
         leave();
         Optional<String> rejected = VoteTrackPools.rejection(setup.gameId(), setup.voteTrackKeys(),
                 setup.lockedCharacter());
@@ -188,56 +224,177 @@ public final class RaceSession implements AutoCloseable {
         int port = settings.hostPort();
         String configuredName = settings.displayName();
         String look = lookSource.apply(setup.gameId(), setup.character()).encode();
-        start("Starting LAN room...", State.IDLE, op -> {
+        String configuredMaster = settings.masterUrl();
+        boolean localTrust = settings.masterTrustInsecure();
+        start("Starting LAN room...", State.IDLE, password, op -> {
             PlayerIdentity me = identity();
             String name = displayName(me, configuredName);
             JdkRaceHostServer server = op.own(JdkRaceHostServer.startTls(port,
-                    roomConfig(name, setup, fingerprint), me, TrackValidationProfileSource.none()),
-                    JdkRaceHostServer::close);
+                    roomConfig(name, setup, fingerprint, policy, op.password), me,
+                    TrackValidationProfileSource.none()), JdkRaceHostServer::close);
+            op.await(server.room().ready(), RaceClient.JOIN_TIMEOUT_MILLIS, ignored -> { });
             String pin = server.tlsCertificateSha256();
-            String invite = "HOST_IP:" + server.port() + "#"
-                    + DirectJoinAddress.shareCode(pin, me.fingerprint());
-            RaceClient client = op.own(op.await(RaceClient.connect(
-                    URI.create("wss://127.0.0.1:" + server.port() + "/race"), me, name, look, fingerprint,
-                    pin, me.fingerprint()), RaceClient.JOIN_TIMEOUT_MILLIS + 2000, RaceClient::close),
-                    RaceClient::close);
-            ControlMessage.RoundConfig round = roundConfigFor(setup);
+            String invite = "HOST_IP:" + server.port() + "#" + DirectJoinAddress.shareCode(pin, me.fingerprint());
+            MasterClient registered = null;
+            ControlMessage.RoomCreated registration = null;
+            if (!configuredMaster.isBlank()) {
+                MasterClient candidate = null;
+                try {
+                    URI uri = masterEndpoint(configuredMaster, localTrust);
+                    candidate = op.own(op.await(MasterClient.connect(uri, me, name, fingerprint,
+                            localTrust ? insecureMasterSslContext() : null),
+                            MasterClient.MASTER_REPLY_TIMEOUT_MILLIS + 2000, MasterClient::close), MasterClient::close);
+                    registration = registerDirect(op, candidate, server, setup, fingerprint);
+                    registered = candidate;
+                } catch (Exception unavailable) {
+                    if (candidate != null) candidate.close();
+                    if (op.cancelled) throw new CancellationException("left while connecting");
+                }
+            }
+            RaceClient client;
+            try (RoomJoinOptions options = new RoomJoinOptions(op.password, server.room().instanceId(),
+                    server.room().accessEpoch())) {
+                client = op.own(op.await(RaceClient.connect(
+                        URI.create("wss://127.0.0.1:" + server.port() + "/race"), me, name, look, fingerprint,
+                        pin, me.fingerprint(), options), RaceClient.JOIN_TIMEOUT_MILLIS + 2000, RaceClient::close),
+                        RaceClient::close);
+            }
+            MasterClient ownerLink = registered;
+            ControlMessage.RoomCreated created = registration;
             return () -> {
                 host = server;
-                enterLobby(client, true, round, setup.character(), invite, name, look);
+                master = ownerLink;
+                masterRoomId = created == null ? null : created.roomId();
+                browseSetup = setup;
+                browseFingerprint = fingerprint;
+                startMasterLink(server);
+                enterLobby(client, true, roundConfigFor(setup), setup.character(), invite, name, look);
+                if (ownerLink == null) notice = "Short code unavailable. Use the manual LAN invite.";
             };
         });
     }
 
-    /**
-     * Joins a LAN room from a complete invite ({@code address#share-code}).
-     *
-     * @param fingerprint the determinism fingerprint of the game the room races
-     */
     public void joinLan(String invite, String character, String fingerprint) {
         leave();
         DirectJoinAddress address;
         try {
             address = DirectJoinAddress.parse(invite, settings.hostPort());
-        } catch (IllegalArgumentException e) {
-            fail("Invalid LAN invite: " + e.getMessage());
+        } catch (IllegalArgumentException invalid) {
+            fail("Invalid LAN invite");
             return;
         }
+        connectManual(address, character, fingerprint, null, null, -1);
+    }
+
+    private void connectManual(DirectJoinAddress address, String chosenCharacter, String fingerprint,
+                               RoomPassword password, String instanceId, long accessEpoch) {
         String configuredName = settings.displayName();
-        start("Joining LAN room...", State.IDLE, op -> {
+        start("Joining LAN room...", State.IDLE, password, op -> {
             PlayerIdentity me = identity();
             String name = displayName(me, configuredName);
-            RaceClient client = op.own(op.await(RaceClient.connect(address.uri(), me, name, "", fingerprint,
-                    address.certificateSha256(), address.hostFingerprint()),
-                    RaceClient.JOIN_TIMEOUT_MILLIS + 2000, RaceClient::close), RaceClient::close);
-            ControlMessage.RoomDescriptor room = client.joinAccepted().room();
-            ControlMessage.RoundConfig round = new ControlMessage.RoundConfig(room.gameId(), room.zone(),
-                    room.act(), DEFAULT_JOIN_WINDOW_SECONDS, room.characterPolicy(), room.lockedCharacter());
-            String chosen = room.lockedCharacter() != null ? room.lockedCharacter() : character;
+            try (RoomJoinOptions options = new RoomJoinOptions(op.password, instanceId, accessEpoch)) {
+                RaceClient client;
+                try {
+                    client = op.own(op.await(RaceClient.connect(address.uri(), me, name, "", fingerprint,
+                            address.certificateSha256(), address.hostFingerprint(), options),
+                            RaceClient.JOIN_TIMEOUT_MILLIS + 2000, RaceClient::close), RaceClient::close);
+                } catch (RoomAccessRequiredException required) {
+                    if (op.password != null) throw required;
+                    return () -> promptForPassword(new ManualJoin(address, chosenCharacter, fingerprint,
+                            required.instanceId(), required.accessEpoch()));
+                }
+                return joined(client, false, chosenCharacter, DEFAULT_JOIN_WINDOW_SECONDS, null, name, "");
+            }
+        });
+    }
+
+    private void promptForPassword(PendingJoin join) {
+        pendingJoin = join;
+        state = State.PASSWORD_REQUIRED;
+        status = "";
+    }
+
+    public PasswordPrompt passwordPrompt() {
+        return pendingJoin == null ? null : pendingJoin.prompt();
+    }
+
+    public void submitPassword(RoomPassword password) {
+        Objects.requireNonNull(password, "password");
+        if (state != State.PASSWORD_REQUIRED || pendingJoin == null) return;
+        PendingJoin joining = pendingJoin;
+        pendingJoin = null;
+        switch (joining) {
+            case ManualJoin manual -> connectManual(manual.address(), manual.character(), manual.fingerprint(),
+                    password, manual.instanceId(), manual.accessEpoch());
+            case CodeJoin code -> connectCode(code, password);
+        }
+    }
+
+    public void joinCode(String input) {
+        if (state != State.BROWSING || master == null) return;
+        String code;
+        try { code = RoomInviteCode.parse(input).canonical(); }
+        catch (IllegalArgumentException invalid) {
+            notice = "Enter a valid six-character invite code";
+            return;
+        }
+        MasterClient client = master;
+        start("Finding room...", State.BROWSING, op -> {
+            ControlMessage.RoomJoinResult result = op.await(client.resolveInvite(code),
+                    MasterClient.MASTER_REPLY_TIMEOUT_MILLIS + 1000, ignored -> { });
+            if (result.accessPolicy().passwordRequired()) {
+                return () -> promptForPassword(new CodeJoin(code, result));
+            }
+            return connectResolved(op, client, result, null);
+        });
+    }
+
+    private void connectCode(CodeJoin code, RoomPassword password) {
+        MasterClient client = master;
+        start("Joining room...", State.BROWSING, password, op -> {
+            PlayerIdentity me = identity();
+            String name = displayName(me, settings.displayName());
+            String look = lookSource.apply(browseSetup.gameId(), browseSetup.character()).encode();
+            RaceConnection connection = op.own(op.await(client.joinInvite(code.code(), code.resolved(), me,
+                    name, look, browseFingerprint, op.password),
+                    MasterClient.MASTER_REPLY_TIMEOUT_MILLIS + RaceClient.JOIN_TIMEOUT_MILLIS + 2000,
+                    RaceConnection::close), RaceConnection::close);
+            Runnable lobby = joined(connection, false, browseSetup.character(), browseSetup.windowSeconds(),
+                    null, name, look);
             return () -> {
-                enterLobby(client, false, round, chosen, null, name, "");
+                masterRoomId = code.resolved().roomId();
+                startMasterLink(null);
+                lobby.run();
             };
         });
+    }
+
+    private Runnable connectResolved(Attempt op, MasterClient client, ControlMessage.RoomJoinResult result,
+                                     RoomPassword password) throws Exception {
+        PlayerIdentity me = identity();
+        String name = displayName(me, settings.displayName());
+        String look = lookSource.apply(browseSetup.gameId(), browseSetup.character()).encode();
+        RaceConnection connection;
+        try (RoomJoinOptions options = new RoomJoinOptions(password, result.instanceId(), result.accessEpoch())) {
+            connection = op.own(op.await(client.joinResolved(result, me, name, look, browseFingerprint, options),
+                    MasterClient.MASTER_REPLY_TIMEOUT_MILLIS + RaceClient.JOIN_TIMEOUT_MILLIS + 2000,
+                    RaceConnection::close), RaceConnection::close);
+        }
+        Runnable lobby = joined(connection, false, browseSetup.character(), browseSetup.windowSeconds(), null, name, look);
+        return () -> {
+            masterRoomId = result.roomId();
+            startMasterLink(null);
+            lobby.run();
+        };
+    }
+
+    private Runnable joined(RaceConnection connection, boolean owner, String chosenCharacter, int windowSeconds,
+                             String invite, String name, String look) {
+        ControlMessage.RoomDescriptor room = connection.joinAccepted().room();
+        ControlMessage.RoundConfig round = new ControlMessage.RoundConfig(room.gameId(), room.zone(), room.act(),
+                windowSeconds, room.characterPolicy(), room.lockedCharacter());
+        String chosen = room.lockedCharacter() != null ? room.lockedCharacter() : chosenCharacter;
+        return () -> enterLobby(connection, owner, round, chosen, invite, name, look);
     }
 
     /** Connects to the configured master server and opens the room browser for the setup's game. */
@@ -251,9 +408,7 @@ public final class RaceSession implements AutoCloseable {
         }
         URI uri;
         try {
-            uri = NetworkEndpoints.webSocket(URI.create(configured.trim()));
-            if (settings.masterTrustInsecure() && !NetworkEndpoints.literalLoopback(uri.getHost()))
-                throw new IllegalArgumentException("insecure TLS trust is local-development only");
+            uri = masterEndpoint(configured, settings.masterTrustInsecure());
         } catch (IllegalArgumentException e) {
             fail("Invalid master server URL: " + e.getMessage());
             return;
@@ -309,14 +464,16 @@ public final class RaceSession implements AutoCloseable {
      * {@code DIRECT} rooms on the in-process host advertised with its certificate pin.
      */
     public void createMasterRoom(String routing) {
-        if (state != State.BROWSING || master == null) {
-            return;
-        }
+        createMasterRoom(routing, RoomAccessPolicy.PUBLIC, null);
+    }
+
+    public void createMasterRoom(String routing, RoomAccessPolicy policy, RoomPassword password) {
+        requireCredentials(policy, password);
+        if (state != State.BROWSING || master == null) return;
         MasterClient client = master;
         RoundSetup setup = browseSetup;
         String fingerprint = browseFingerprint;
-        Optional<String> rejected = VoteTrackPools.rejection(setup.gameId(), setup.voteTrackKeys(),
-                setup.lockedCharacter());
+        Optional<String> rejected = VoteTrackPools.rejection(setup.gameId(), setup.voteTrackKeys(), setup.lockedCharacter());
         if (rejected.isPresent()) {
             notice = "Cannot create the room: " + rejected.get();
             return;
@@ -325,41 +482,62 @@ public final class RaceSession implements AutoCloseable {
         int port = settings.hostPort();
         String configuredName = settings.displayName();
         String look = lookSource.apply(setup.gameId(), setup.character()).encode();
-        start("Creating room...", State.BROWSING, op -> {
+        start("Creating room...", State.BROWSING, password, op -> {
             PlayerIdentity me = identity();
             String name = displayName(me, configuredName);
-            List<String> votePool = setup.voteTrackKeys();
             JdkRaceHostServer server = !direct ? null : op.own(JdkRaceHostServer.startTls(port,
-                    roomConfig(name, setup, fingerprint), me, TrackValidationProfileSource.none()),
+                    roomConfig(name, setup, fingerprint, policy, op.password), me, TrackValidationProfileSource.none()),
                     JdkRaceHostServer::close);
-            ControlMessage.RoomDescriptor descriptor = new ControlMessage.RoomDescriptor(roomName(name),
-                    setup.gameId(), setup.zone(), setup.act(), setup.characterPolicy(),
-                    setup.lockedCharacter(), MAX_ROOM_PLAYERS, false);
-            String roomId = op.await(DirectRoomRegistration.createRoom(client, descriptor, direct ? "DIRECT" : "RELAY",
-                    direct ? server.port() : 0, fingerprint, votePool,
-                    direct ? server.tlsCertificateSha256() : null),
-                    MasterClient.MASTER_REPLY_TIMEOUT_MILLIS + 1000,
-                    late -> client.leaveRoom(late.roomId())).roomId();
-            op.own(roomId, client::leaveRoom);
+            ControlMessage.RoomCreated created;
             if (direct) {
-                client.bindHostLink(HostMasterLink.forServer(server, new HostMasterLink.MessageSink() {
-                    @Override public void sendControl(ControlMessage message) { client.sendControl(message); }
-                    @Override public void sendBinary(byte[] data) { client.sendBinary(data); }
-                }));
-                // A failed join must not leave the browser's master socket feeding a closed host.
-                op.own(client, linked -> linked.bindHostLink(null));
+                op.await(server.room().ready(), RaceClient.JOIN_TIMEOUT_MILLIS, ignored -> { });
+                created = registerDirect(op, client, server, setup, fingerprint);
+            } else {
+                created = op.await(client.createRoom(descriptor(name, setup, policy), "RELAY", 0, fingerprint,
+                        setup.voteTrackKeys(), null, null, 0, op.password),
+                        MasterClient.MASTER_REPLY_TIMEOUT_MILLIS + 1000, late -> client.leaveRoom(late.roomId()));
+                op.own(created.roomId(), client::leaveRoom);
             }
-            RaceConnection connection = op.own(op.await(client.joinRoom(roomId, me, name, look, fingerprint),
-                    MasterClient.MASTER_REPLY_TIMEOUT_MILLIS + RaceClient.JOIN_TIMEOUT_MILLIS,
-                    RaceConnection::close), RaceConnection::close);
-            ControlMessage.RoundConfig round = roundConfigFor(setup);
+            ControlMessage.RoomJoinResult resolved = op.await(client.requestJoin(created.roomId()),
+                    MasterClient.MASTER_REPLY_TIMEOUT_MILLIS + 1000, ignored -> { });
+            RaceConnection connection;
+            try (RoomJoinOptions options = new RoomJoinOptions(op.password, created.instanceId(), created.accessEpoch())) {
+                connection = op.own(op.await(client.joinResolved(resolved, me, name, look, fingerprint, options),
+                        MasterClient.MASTER_REPLY_TIMEOUT_MILLIS + RaceClient.JOIN_TIMEOUT_MILLIS + 2000,
+                        RaceConnection::close), RaceConnection::close);
+            }
+            String manual = server == null ? null : "HOST_IP:" + server.port() + "#"
+                    + DirectJoinAddress.shareCode(server.tlsCertificateSha256(), me.fingerprint());
             return () -> {
                 host = server;
-                masterRoomId = roomId;
+                masterRoomId = created.roomId();
                 startMasterLink(server);
-                enterLobby(connection, true, round, setup.character(), null, name, look);
+                enterLobby(connection, true, roundConfigFor(setup), setup.character(), manual, name, look);
             };
         });
+    }
+
+    private ControlMessage.RoomCreated registerDirect(Attempt op, MasterClient client, JdkRaceHostServer server,
+                                                       RoundSetup setup, String fingerprint) throws Exception {
+        ControlMessage.RoomCreated created = op.await(DirectRoomRegistration.createRoom(client,
+                server.room().descriptor(), "DIRECT", server.port(), fingerprint, setup.voteTrackKeys(),
+                server.tlsCertificateSha256(), server.room().instanceId(), server.room().accessEpoch()),
+                MasterClient.MASTER_REPLY_TIMEOUT_MILLIS + 1000, late -> client.leaveRoom(late.roomId()));
+        op.own(created.roomId(), client::leaveRoom);
+        client.bindHostLink(HostMasterLink.forServer(server, new HostMasterLink.MessageSink() {
+            @Override public void sendControl(ControlMessage message) { client.sendControl(message); }
+            @Override public void sendBinary(byte[] data) { client.sendBinary(data); }
+        }));
+        op.own(client, linked -> linked.bindHostLink(null));
+        CompletableFuture<Void> installed = new CompletableFuture<>();
+        server.execute(() -> {
+            try {
+                server.room().setInviteService(client.inviteService(created.roomId()), created.inviteEpoch());
+                installed.complete(null);
+            } catch (RuntimeException failure) { installed.completeExceptionally(failure); }
+        });
+        op.await(installed, 2000, ignored -> { });
+        return created;
     }
 
     /**
@@ -367,9 +545,14 @@ public final class RaceSession implements AutoCloseable {
      * session leaves.
      */
     public void cancel() {
-        if (state != State.CONNECTING || attempt == null) {
+        if (state == State.PASSWORD_REQUIRED && pendingJoin != null) {
+            State fallback = pendingJoin.fallback();
+            pendingJoin = null;
+            if (fallback == State.BROWSING && master != null && master.isOpen()) state = State.BROWSING;
+            else leave();
             return;
         }
+        if (state != State.CONNECTING || attempt == null) return;
         State fallback = attempt.fallback;
         cancelAttempt();
         if (fallback == State.BROWSING && master != null) {
@@ -383,6 +566,7 @@ public final class RaceSession implements AutoCloseable {
     /** Leaves the room or browser and closes every socket and thread the session owns. */
     public void leave() {
         cancelAttempt();
+        pendingJoin = null;
         if (masterLink != null) {
             masterLink.close();
             masterLink = null;
@@ -704,7 +888,8 @@ public final class RaceSession implements AutoCloseable {
 
     /** True while connecting work started from the browser is in flight. */
     public boolean connectingFromBrowser() {
-        return state == State.CONNECTING && attempt != null && attempt.fallback == State.BROWSING;
+        return state == State.CONNECTING && attempt != null && attempt.fallback == State.BROWSING
+                || state == State.PASSWORD_REQUIRED && pendingJoin != null && pendingJoin.fallback() == State.BROWSING;
     }
 
     public MultiplayerRaceCoordinator coordinator() {
@@ -727,6 +912,10 @@ public final class RaceSession implements AutoCloseable {
     /** The LAN invite template for a LAN host ({@code HOST_IP:port#code}), or null. */
     public String lanInvite() {
         return lanInvite;
+    }
+
+    public String manualInviteFallback() {
+        return master == null || !master.isOpen() ? lanInvite : null;
     }
 
     /** The master room listing while browsing, or null. */
@@ -771,11 +960,15 @@ public final class RaceSession implements AutoCloseable {
     // ── Connecting operations ────────────────────────────────────────────
 
     private void start(String connectingStatus, State fallback, Operation operation) {
+        start(connectingStatus, fallback, null, operation);
+    }
+
+    private void start(String connectingStatus, State fallback, RoomPassword password, Operation operation) {
         if (closed) {
             return;
         }
         cancelAttempt();
-        Attempt current = new Attempt(fallback);
+        Attempt current = new Attempt(fallback, password);
         attempt = current;
         state = State.CONNECTING;
         status = connectingStatus;
@@ -807,9 +1000,8 @@ public final class RaceSession implements AutoCloseable {
     }
 
     private void operationFailed(State fallback, String what, Throwable failure) {
-        String reason = rootMessage(failure);
-        LOGGER.log(Level.WARNING, "Time Attack multiplayer: " + what + " failed: " + reason);
-        String message = "Failed: " + reason;
+        String message = failureNotice(failure);
+        LOGGER.warning("Time Attack multiplayer operation failed");
         if (fallback == State.BROWSING && master != null && master.isOpen()) {
             state = State.BROWSING;
             status = "";
@@ -847,11 +1039,13 @@ public final class RaceSession implements AutoCloseable {
         }
 
         private final State fallback;
+        private final RoomPassword password;
         private final List<Owned<?>> owned = new ArrayList<>();
         private volatile boolean cancelled;
 
-        Attempt(State fallback) {
+        Attempt(State fallback, RoomPassword password) {
             this.fallback = fallback;
+            this.password = copyPassword(password);
         }
 
         /** Tracks {@code resource}; if the attempt was cancelled it is closed and the work stops. */
@@ -896,6 +1090,7 @@ public final class RaceSession implements AutoCloseable {
                 return false;
             }
             owned.clear();
+            if (password != null) password.close();
             return true;
         }
 
@@ -906,6 +1101,7 @@ public final class RaceSession implements AutoCloseable {
                     return;
                 }
                 cancelled = true;
+                if (password != null) password.close();
                 closing = new ArrayList<>(owned);
                 owned.clear();
             }
@@ -950,10 +1146,47 @@ public final class RaceSession implements AutoCloseable {
         lookSource = Objects.requireNonNull(source, "source");
     }
 
-    private static RoomHostConfig roomConfig(String name, RoundSetup setup, String fingerprint) {
+    private static RoomHostConfig roomConfig(String name, RoundSetup setup, String fingerprint,
+                                             RoomAccessPolicy policy, RoomPassword password) {
         return new RoomHostConfig(roomName(name), setup.gameId(), setup.zone(), setup.act(),
                 setup.characterPolicy(), setup.lockedCharacter(), Protocol.MAX_PLAYERS_DIRECT, fingerprint,
-                setup.voteTrackKeys());
+                setup.voteTrackKeys(), false, policy, password, null);
+    }
+
+    private static ControlMessage.RoomDescriptor descriptor(String name, RoundSetup setup, RoomAccessPolicy policy) {
+        return new ControlMessage.RoomDescriptor(roomName(name), setup.gameId(), setup.zone(), setup.act(),
+                setup.characterPolicy(), setup.lockedCharacter(), MAX_ROOM_PLAYERS, false, policy);
+    }
+
+    private static void requireCredentials(RoomAccessPolicy policy, RoomPassword password) {
+        Objects.requireNonNull(policy, "policy");
+        if (policy.passwordRequired() != (password != null)) throw new IllegalArgumentException("invalid room credentials");
+    }
+
+    private static RoomPassword copyPassword(RoomPassword password) {
+        if (password == null) return null;
+        char[] value = password.copyCharacters();
+        try { return new RoomPassword(value); }
+        finally { java.util.Arrays.fill(value, '\0'); }
+    }
+
+    private static URI masterEndpoint(String configured, boolean localTrust) {
+        URI uri = NetworkEndpoints.webSocket(URI.create(configured.trim()));
+        if (localTrust && !NetworkEndpoints.literalLoopback(uri.getHost()))
+            throw new IllegalArgumentException("insecure TLS trust is local-development only");
+        return uri;
+    }
+
+    private static String failureNotice(Throwable failure) {
+        Throwable cause = failure;
+        while (cause.getCause() != null && cause.getCause() != cause) cause = cause.getCause();
+        if (cause instanceof RoomInviteRejectedException limited && limited.retryAfterMillis() > 0) {
+            return "Invite unavailable. Try again in " + Math.max(1, (limited.retryAfterMillis() + 999) / 1000) + " seconds.";
+        }
+        if (cause instanceof TimeoutException) return "Connection timed out";
+        if (cause instanceof RaceClient.JoinRejectedException || cause instanceof RoomAccessRequiredException)
+            return "Room access unavailable. Check the password or request a fresh invitation.";
+        return "Connection unavailable. Check the invite and connection settings.";
     }
 
     private static ControlMessage.RoundConfig roundConfigFor(RoundSetup setup) {
@@ -1015,7 +1248,7 @@ public final class RaceSession implements AutoCloseable {
                     Thread.sleep(MASTER_LINK_TICK_MILLIS);
                     for (RaceClient.InboundEvent event : client.drainInbound()) {
                         if (event instanceof RaceClient.Disconnected disconnected) {
-                            LOGGER.warning("Master connection closed: " + disconnected.reason());
+                            LOGGER.warning("Master connection closed");
                         }
                     }
                     if (server != null && ++ticks % HEARTBEAT_TICKS == 0) {

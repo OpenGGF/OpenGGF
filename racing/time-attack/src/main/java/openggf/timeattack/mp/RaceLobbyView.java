@@ -21,14 +21,11 @@ import java.util.function.Supplier;
 
 /**
  * The race lobby between rounds, drawn as a Time Attack scene view: the room's players (names in
- * each player's colour, in any script), chat history (with the LAN invite for a LAN host), the
+ * each player's colour, in any script), chat history and private invite actions, the
  * host's START ROUND, chat entry, PROFILE (rename and change look, announced to the room while
  * it is in the lobby), track votes (keys 1-3) and LEAVE ROOM. The network pump and the round launch belong to
  * {@link RaceSession#poll()}, which runs every tick before this view, so an open chat editor or
  * details page can never delay a round start.
- *
- * <p>Scenes have no clipboard, so the LAN invite is shown in full on its details page (and saved
- * to the mod's storage by the session) for the host to read out or copy.
  */
 public final class RaceLobbyView {
     private static final int BACKGROUND = 0x101830;
@@ -37,12 +34,12 @@ public final class RaceLobbyView {
     private static final int DIM = 0xFF8C8C8C;
     private static final int HINT = 0xFF8090B0;
 
-    private enum Focus { PLAYERS, HISTORY, READY, START, RULE, CHAT, PROFILE, LEAVE }
+    private enum Focus { PLAYERS, HISTORY, READY, START, RULE, CHAT, PROFILE, INVITE, LEAVE }
 
     private final MultiplayerRaceCoordinator coordinator;
     private final boolean host;
     private final ControlMessage.RoundConfig configuredRound;
-    private final String shareCode;
+    private Runnable inviteAction;
     private final Runnable leaveHandler;
     private final Consumer<MenuCue> cues;
     private final Supplier<ProfileView> profiles;
@@ -78,10 +75,13 @@ public final class RaceLobbyView {
         this.coordinator = Objects.requireNonNull(coordinator, "coordinator");
         this.host = host;
         this.configuredRound = Objects.requireNonNull(configuredRound, "configuredRound");
-        this.shareCode = shareCode;
         this.leaveHandler = Objects.requireNonNull(leaveHandler, "leaveHandler");
         this.cues = Objects.requireNonNull(cues, "cues");
         this.focus = Focus.READY;
+    }
+
+    public void setInviteAction(Runnable open) {
+        inviteAction = Objects.requireNonNull(open, "open");
     }
 
     /** Called with the owner's newly chosen ready rule (the scene saves it in the settings). */
@@ -132,6 +132,11 @@ public final class RaceLobbyView {
                 }
                 case NONE -> { }
             }
+            return;
+        }
+        if (inviteAction != null && input.keyPressed(SceneKeys.I)) {
+            inviteAction.run();
+            cues.accept(MenuCue.CONFIRM);
             return;
         }
         if (input.back()) {
@@ -195,6 +200,7 @@ public final class RaceLobbyView {
                     }
                 }
                 case RULE -> changeReadyRule(1);
+                case INVITE -> { inviteAction.run(); cues.accept(MenuCue.CONFIRM); }
                 case HISTORY -> {
                     details = true;
                     cues.accept(MenuCue.CONFIRM);
@@ -252,6 +258,7 @@ public final class RaceLobbyView {
         }
         choices.add(Focus.CHAT);
         if (profiles != null) choices.add(Focus.PROFILE);
+        if (inviteAction != null) choices.add(Focus.INVITE);
         choices.add(Focus.LEAVE);
         return choices;
     }
@@ -374,6 +381,7 @@ public final class RaceLobbyView {
                         betweenRounds()));
                 case CHAT -> actions.add(action(item, "CHAT", true));
                 case PROFILE -> actions.add(action(item, "NAME AND LOOK", canEditProfile()));
+                case INVITE -> actions.add(action(item, "ROOM INVITE", true));
                 case LEAVE -> actions.add(action(item, "LEAVE ROOM", true));
                 case PLAYERS, HISTORY -> { }
             }
@@ -428,11 +436,11 @@ public final class RaceLobbyView {
         List<RaceLobbyScreen.Row> rows = new ArrayList<>();
         for (String line : history) rows.add(chatRow(line));
         if (rows.isEmpty()) {
-            rows.add(new RaceLobbyScreen.Note(shareCode == null ? "NO MESSAGES YET" : "OPEN FOR THE LAN INVITE",
+            rows.add(new RaceLobbyScreen.Note("NO MESSAGES YET",
                     RaceLobbyScreen.DISABLED, false));
         }
         String right = focused ? "A: OPEN" : chatPage > 0 ? "OLDER" : "";
-        return new RaceLobbyScreen.Secondary(shareCode == null ? "CHAT" : "CHAT + INVITE", right, rows,
+        return new RaceLobbyScreen.Secondary("CHAT", right, rows,
                 focused, history.isEmpty() ? -1 : chatPage);
     }
 
@@ -524,22 +532,10 @@ public final class RaceLobbyView {
         int perLine = Math.max(1, (width - 24) / 10);
         int y = 10;
         List<String> lines = new ArrayList<>();
-        if (shareCode != null) {
-            canvas.text("LAN INVITE", 10, y, TITLE);
-            y += 16;
-            lines.add("Replace HOST_IP with this");
-            lines.add("computer's LAN address:");
-            lines.addAll(TextEntry.wrap(shareCode, perLine));
-            lines.add("(also in lan-invite.txt in the");
-            lines.add("Time Attack mod's storage)");
-        } else {
-            canvas.text("CHAT HISTORY", 10, y, TITLE);
-            y += 16;
-        }
+        canvas.text("CHAT HISTORY", 10, y, TITLE);
+        y += 16;
         List<String> history = coordinator.session().chatLines();
-        if (history.isEmpty() && shareCode == null) {
-            lines.add("No messages yet");
-        }
+        if (history.isEmpty()) lines.add("No messages yet");
         for (String line : lines) {
             if (y > 190) break;
             canvas.text(line, 12, y, VALUE);

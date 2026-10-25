@@ -6,6 +6,7 @@ import com.openggf.mods.ui.NameFont;
 import com.openggf.mods.ui.TextLayout;
 import openggf.timeattack.ui.MenuCue;
 import openggf.timeattack.ui.NameText;
+import openggf.timeattack.ui.TextEntry;
 import openggf.timeattack.ui.ViewInput;
 
 import java.util.ArrayList;
@@ -42,14 +43,18 @@ public final class InviteCodeView {
     private static final int CARD_H = 48;
     private static final int ROWS_Y = 98;
     private static final int ROW_H = 16;
-    private static final int EYE_W = 58;
+    private static final int EYE_W = 68;
 
     /** What the view asks its owner to do. */
-    public enum Action { FETCH, COPY, ROTATE, TOGGLE_SHARING }
+    public enum Action { FETCH, COPY, ROTATE, TOGGLE_SHARING, CHANGE_PASSWORD, HIDE }
 
     /** The owner's current view of the room's invite; {@code code} is null until fetched. */
     public record Snapshot(String code, long expiresAtMillis, long inviteEpoch, boolean canInvite, boolean host,
-                           boolean membersCanInvite, String status) {
+                           boolean membersCanInvite, String status, boolean manual, boolean privateRoom) {
+        public Snapshot(String code, long expiresAtMillis, long inviteEpoch, boolean canInvite, boolean host,
+                        boolean membersCanInvite, String status) {
+            this(code, expiresAtMillis, inviteEpoch, canInvite, host, membersCanInvite, status, false, false);
+        }
         @Override
         public String toString() {
             return "Snapshot[code=" + (code == null ? "none" : "redacted") + ", epoch=" + inviteEpoch
@@ -57,7 +62,7 @@ public final class InviteCodeView {
         }
     }
 
-    private enum Focus { REVEAL, COPY, ROTATE, SHARING, BACK }
+    private enum Focus { REVEAL, COPY, ROTATE, SHARING, PASSWORD, BACK }
 
     private final Supplier<Snapshot> snapshots;
     private final Consumer<Action> actions;
@@ -107,6 +112,7 @@ public final class InviteCodeView {
         int vertical = input.up() ? -1 : input.down() ? 1 : 0;
         if (vertical != 0) focus = choices.get(Math.floorMod(choices.indexOf(focus) + vertical, choices.size()));
         if (focus != before) {
+            withdraw();
             notice = "";
             cues.accept(MenuCue.NAVIGATE);
         }
@@ -122,12 +128,12 @@ public final class InviteCodeView {
     /** Takes the owner's latest snapshot and withdraws a reveal it no longer supports. */
     private void observe(Snapshot next, long now) {
         boolean permissionChanged = next.canInvite() != shown.canInvite() || next.host() != shown.host()
-                || next.membersCanInvite() != shown.membersCanInvite();
+                || next.membersCanInvite() != shown.membersCanInvite() || next.manual() != shown.manual();
         shown = next;
         if (permissionChanged || !next.canInvite()) hide();
         if (revealed && (next.inviteEpoch() != revealedEpoch || !live(next, now)
                 || now - revealedAt >= REVEAL_MILLIS)) {
-            revealed = false;
+            withdraw();
         }
         if (revealRequestedAt >= 0) {
             if (now - revealRequestedAt >= REVEAL_MILLIS) {
@@ -148,7 +154,7 @@ public final class InviteCodeView {
         switch (item) {
             case REVEAL -> {
                 if (revealed || revealRequestedAt >= 0) {
-                    hide();
+                    withdraw();
                     cues.accept(MenuCue.CANCEL);
                 } else if (live(shown, now)) {
                     reveal(shown, now);
@@ -171,15 +177,17 @@ public final class InviteCodeView {
                     notice = "Press again: the current code stops working";
                     cues.accept(MenuCue.NAVIGATE);
                 } else {
-                    hide();
+                    withdraw();
                     actions.accept(Action.ROTATE);
                     cues.accept(MenuCue.CONFIRM);
                 }
             }
             case SHARING -> {
+                withdraw();
                 actions.accept(Action.TOGGLE_SHARING);
                 cues.accept(MenuCue.CONFIRM);
             }
+            case PASSWORD -> { withdraw(); actions.accept(Action.CHANGE_PASSWORD); }
             case BACK -> close();
         }
     }
@@ -199,18 +207,25 @@ public final class InviteCodeView {
 
     /** Masks the code and forgets a pending reveal; the owner calls this when the window loses focus. */
     public void hide() {
-        if (rotateArmedAt >= 0) notice = "";
+        notice = "";
         revealed = false;
         revealRequestedAt = -1;
         rotateArmedAt = -1;
+        shown = new Snapshot(null, 0, shown.inviteEpoch(), shown.canInvite(), shown.host(),
+                shown.membersCanInvite(), shown.status(), shown.manual(), shown.privateRoom());
     }
 
     public boolean closed() {
         return closed;
     }
 
-    private void close() {
+    private void withdraw() {
         hide();
+        actions.accept(Action.HIDE);
+    }
+
+    private void close() {
+        withdraw();
         closed = true;
         cues.accept(MenuCue.CANCEL);
     }
@@ -219,8 +234,11 @@ public final class InviteCodeView {
         if (!shown.canInvite()) return List.of(Focus.BACK);
         List<Focus> choices = new ArrayList<>(List.of(Focus.REVEAL, Focus.COPY));
         if (shown.host()) {
-            choices.add(Focus.ROTATE);
-            choices.add(Focus.SHARING);
+            if (!shown.manual()) {
+                choices.add(Focus.ROTATE);
+                choices.add(Focus.SHARING);
+            }
+            if (shown.privateRoom()) choices.add(Focus.PASSWORD);
         }
         choices.add(Focus.BACK);
         return choices;
@@ -228,9 +246,10 @@ public final class InviteCodeView {
 
     /** {x, y, w, h} of an item's hit box: the eye button in the card, the rest as rows below it. */
     private int[] bounds(Focus item, int width) {
-        if (item == Focus.REVEAL) return new int[] {width - 20 - EYE_W, CARD_Y + 12, EYE_W, 24};
+        if (item == Focus.REVEAL) return new int[] {width - 20 - EYE_W,
+                shown.manual() ? 116 : CARD_Y + 12, EYE_W, 24};
         int row = choices().indexOf(item) - (shown.canInvite() ? 1 : 0);
-        return new int[] {8, ROWS_Y + row * ROW_H - 4, width - 16, ROW_H};
+        return new int[] {8, (shown.manual() ? 152 : ROWS_Y) + row * ROW_H - 4, width - 16, ROW_H};
     }
 
     public void draw(SceneCanvas canvas) {
@@ -238,14 +257,27 @@ public final class InviteCodeView {
         lastWidth = width;
         long now = clockMillis.getAsLong();
         canvas.clear(BACKGROUND);
-        canvas.text("ROOM INVITE", 10, 10, TITLE);
+        canvas.text(shown.manual() ? "MANUAL LAN INVITE" : "ROOM INVITE", 10, 10, TITLE);
         String role = shown.host() ? "HOST" : "MEMBER";
         canvas.text(role, width - 10 - canvas.textWidth(role), 10, HINT);
         canvas.text(fit(canvas, shown.canInvite() ? "Friends join this room with the code below"
                 : "Invites are switched off for members", width - 20), 10, 24, HINT);
 
-        canvas.fill(12, CARD_Y, width - 24, CARD_H, CARD);
-        if (shown.canInvite()) {
+        canvas.fill(12, CARD_Y, width - 24, shown.manual() ? 106 : CARD_H, CARD);
+        if (shown.canInvite() && shown.manual()) {
+            boolean visible = revealed && shown.inviteEpoch() == revealedEpoch && live(shown, now);
+            String value = visible ? shown.code() : MASK;
+            int y = 44;
+            for (String line : TextEntry.wrap(value, Math.max(1, (width - 48) / canvas.textWidth("W")))) {
+                canvas.text(line, 24, y, visible ? VALUE : LABEL);
+                y += 11;
+            }
+            if (visible) {
+                canvas.text(fit(canvas, "Replace HOST_IP with your LAN address", width - 48), 24, 101, HINT);
+                canvas.text(fit(canvas, "Share the complete pinned invite", width - 48), 24, 112, HINT);
+            }
+            drawEye(canvas, width, visible);
+        } else if (shown.canInvite()) {
             boolean visible = revealed && shown.inviteEpoch() == revealedEpoch && live(shown, now);
             String code = visible ? shown.code() : MASK;
             int scale = NameFont.width(code) * 2 <= width - 52 - EYE_W ? 2 : 1;
@@ -272,9 +304,10 @@ public final class InviteCodeView {
 
     private String label(Focus item) {
         return switch (item) {
-            case COPY -> "COPY CODE";
+            case COPY -> shown.manual() ? "COPY LAN INVITE" : "COPY CODE";
             case ROTATE -> rotateArmedAt >= 0 ? "NEW CODE - PRESS AGAIN" : "NEW CODE";
             case SHARING -> "MEMBERS CAN INVITE  < " + (shown.membersCanInvite() ? "ON" : "OFF") + " >";
+            case PASSWORD -> "CHANGE ROOM PASSWORD";
             case BACK -> "BACK";
             case REVEAL -> "";
         };

@@ -189,7 +189,7 @@ class TestRaceLobbyView {
     }
 
     @Test
-    void hostInvitePageShowsTheCompleteTemplate() {
+    void historyDoesNotDiscloseTheLegacyManualInvite() {
         String invite = "HOST_IP:27888#" + "Ab-_".repeat(21) + "AB";
         RaceLobbyView lobby = view(new ClientRaceSession(() -> 0), true, invite);
         input.tapUp(lobby::update); // Invite/history
@@ -197,7 +197,9 @@ class TestRaceLobbyView {
         RecordingSceneCanvas canvas = new RecordingSceneCanvas(320);
         lobby.draw(canvas);
         String joined = String.join("", canvas.lines);
-        assertTrue(joined.contains(invite), canvas.joined());
+        assertFalse(joined.contains(invite), canvas.joined());
+        assertFalse(joined.contains("HOST_IP"), canvas.joined());
+        assertFalse(joined.contains("lan-invite.txt"), canvas.joined());
     }
 
     @Test
@@ -365,4 +367,21 @@ class TestRaceLobbyView {
         assertFalse(menu.fills.stream().anyMatch(fill -> fill[4] == 0xFFFFFFFF && fill[2] == 1),
                 "without a level behind, the page clears the screen first");
     }
+    @Test
+    void hostsAndMembersHaveAnExplicitInviteAction() {
+        for (boolean host : new boolean[] {false, true}) {
+            RaceLobbyView lobby = view(new ClientRaceSession(() -> 0), host, null);
+            AtomicInteger opens = new AtomicInteger();
+            lobby.setInviteAction(opens::incrementAndGet);
+            input.tapKey(lobby::update, SceneKeys.I);
+            assertEquals(1, opens.get());
+            for (int width : new int[] {320, 400, 640}) {
+                RecordingSceneCanvas canvas = new RecordingSceneCanvas(width);
+                lobby.draw(canvas);
+                canvas.assertFillsOnScreen();
+                assertTrue(lobby.screen(width, 224).plain().contains("ROOM INVITE"));
+            }
+        }
+    }
+
 }
