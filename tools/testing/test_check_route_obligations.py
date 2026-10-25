@@ -6,6 +6,8 @@ import io
 import importlib.util
 from pathlib import Path
 import tempfile
+import subprocess
+import shutil
 import unittest
 from unittest import mock
 import xml.etree.ElementTree as ET
@@ -221,6 +223,256 @@ class RouteObligationTests(unittest.TestCase):
         self.assertIn('-Dopenggf.surefire.reports=' + str(self.reports), command)
         self.assertTrue(any(arg.startswith('-Dsurefire.excludedGroups=') and 'slow-suite' not in arg
                             for arg in command))
+
+
+class ExactCandidateTests(unittest.TestCase):
+    """Real private Git tree and generated fake ROM bytes; Maven is a test double."""
+    report = RouteObligationTests.report
+
+    def setUp(self):
+        RouteObligationTests.setUp(self)
+        self.inventory_path = self.root / 'tools/testing/aiz-hcz-route-obligations.json'
+        self.inventory_path.parent.mkdir(parents=True)
+        self.inventory_path.write_text(json.dumps(self.inventory))
+        (self.root / '.gitignore').write_text('target/\nreports/\noriginal-rom.bin\nignored.bin\n'
+                                             'tools/testing/ignored.py\n')
+        self.git('init', '-q')
+        self.git('config', 'user.name', 'Safety Test')
+        self.git('config', 'user.email', 'test@example.invalid')
+        self.git('add', '.')
+        self.git('commit', '-qm', 'Generated safety fixture')
+        self.candidate = self.git('rev-parse', 'HEAD')
+        roms = copy.deepcopy(gate.ROMS)
+        roms['s3k']['sha1'] = gate.sha1_file(self.rom)
+        self.rom_patch = mock.patch.dict(gate.ROMS, roms)
+        self.rom_patch.start()
+        self.addCleanup(self.rom_patch.stop)
+
+    def git(self, *args):
+        return subprocess.check_output(['git', *args], cwd=self.root, text=True,
+                                       stderr=subprocess.PIPE).strip()
+
+    def state(self, candidate=None):
+        return gate.candidate_state(candidate or self.candidate, self.inventory_path,
+                                    {'s3k': self.rom}, self.root)
+
+    def run_gate(self, runner=None, mode='--run', extra=()):
+        output = io.StringIO()
+        with mock.patch.object(gate, 'ROOT', self.root), \
+                mock.patch.object(gate, 'DEFAULT_INVENTORY', self.inventory_path), \
+                mock.patch('category_control.preflight'), \
+                mock.patch.object(gate, 'run_queued', side_effect=runner) as queued, \
+                contextlib.redirect_stderr(output), contextlib.redirect_stdout(output):
+            code = gate.main(['--inventory', str(self.inventory_path), mode, *extra,
+                              '--expected-candidate', self.candidate,
+                              '--rom', 's3k=' + str(self.rom)])
+        return code, output.getvalue(), queued
+
+    def executed(self, command, root):
+        self.assertIn('clean', command)
+        self.assertIn('-Dopenggf.headless.gl=surfaceless-egl', command)
+        self.assertNotIn('-Pfull-suite', command)
+        reports = next(arg.split('=', 1)[1] for arg in command
+                       if arg.startswith('-Dopenggf.surefire.reports='))
+        self.reports = Path(reports)
+        self.report()
+        path = self.reports / 'TEST-route.xml'
+        suite = ET.parse(path).getroot()
+        suite.attrib.update(tests='2', failures='0', errors='0', skipped='0')
+        ET.ElementTree(suite).write(path)
+        return 0
+
+    def test_successful_exact_candidate_uses_fresh_rebuild_and_removes_evidence(self):
+        code, output, queued = self.run_gate(self.executed)
+        self.assertEqual(0, code, output)
+        queued.assert_called_once()
+        self.assertIn('at candidate ' + self.candidate, output)
+        self.assertIn('zero skips', output)
+        self.assertIn('not release certification', output)
+        self.assertEqual([], list((self.root / 'target').iterdir()))
+
+    def test_clean_recreates_report_directory_and_admission_has_no_worktree_lock(self):
+        from contextlib import contextmanager
+        locked = False
+        @contextmanager
+        def lock(root):
+            nonlocal locked
+            self.assertFalse(locked)
+            locked = True
+            try:
+                yield
+            finally:
+                locked = False
+        def clean_and_execute(command, root):
+            self.assertFalse(locked, 'never request shared admission while holding local build lock')
+            reports = Path(next(arg.split('=', 1)[1] for arg in command
+                                if arg.startswith('-Dopenggf.surefire.reports=')))
+            shutil.rmtree(root / 'target')
+            reports.mkdir(parents=True)
+            return self.executed(command, root)
+        with mock.patch.object(gate, 'worktree_build_slot', side_effect=lock):
+            code, output, _ = self.run_gate(clean_and_execute)
+        self.assertEqual(0, code, output)
+        self.assertFalse(locked)
+
+    def test_cancelled_queue_removes_temporary_reports_and_awards_no_coverage(self):
+        def cancel(command, root):
+            raise KeyboardInterrupt
+        code, output, _ = self.run_gate(cancel)
+        self.assertEqual(130, code, output)
+        self.assertNotIn('Route pilot passed', output)
+        self.assertEqual([], list((self.root / 'target').iterdir()))
+
+    def test_wrong_commit_or_moving_ref_fails_closed(self):
+        for candidate in ('0' * 40, 'HEAD', self.candidate[:12]):
+            with self.subTest(candidate=candidate), self.assertRaises(ValueError):
+                self.state(candidate)
+
+    def test_dirty_staged_and_untracked_inputs_rejected(self):
+        source = self.root / 'src/test/java/example/Route.java'
+        original = source.read_text()
+        for staged in (False, True):
+            source.write_text(original + '\n// local change')
+            if staged:
+                self.git('add', str(source))
+            with self.assertRaisesRegex(ValueError, 'clean checkout'):
+                self.state()
+            source.write_text(original)
+            self.git('add', str(source))
+        extra = source.with_name('Extra.java')
+        extra.write_text('class Extra {}')
+        with self.assertRaisesRegex(ValueError, 'clean checkout'):
+            self.state()
+
+    def test_ignored_untracked_source_cannot_supplement_candidate(self):
+        (self.root / 'src/ignored.bin').write_bytes(b'generated non-ROM input')
+        with self.assertRaisesRegex(ValueError, 'ignored untracked'):
+            self.state()
+
+    def test_ignored_untracked_tooling_cannot_supplement_candidate(self):
+        (self.root / 'tools/testing/ignored.py').write_text('injected = True\n')
+        with self.assertRaisesRegex(ValueError, 'ignored untracked'):
+            self.state()
+
+    def test_assume_unchanged_dirty_source_is_rejected_before_launch(self):
+        relative = 'src/test/java/example/Route.java'
+        self.git('update-index', '--assume-unchanged', relative)
+        with (self.root / relative).open('a') as stream:
+            stream.write('\n// hidden local edit')
+        with self.assertRaisesRegex(ValueError, 'committed blob'):
+            self.state()
+
+    def test_dirty_candidate_rejects_before_queue_and_target_creation(self):
+        with (self.root / 'src/test/java/example/Route.java').open('a') as stream:
+            stream.write('\n// local edit')
+        code, output, queued = self.run_gate(self.executed)
+        self.assertEqual(2, code, output)
+        queued.assert_not_called()
+        self.assertFalse((self.root / 'target').exists())
+
+    def test_custom_inventory_cannot_narrow_release_pilot(self):
+        inventory = self.root / 'target/narrow.json'
+        inventory.parent.mkdir()
+        inventory.write_text(json.dumps(self.inventory))
+        with self.assertRaisesRegex(ValueError, 'committed AIZ1/HCZ1'):
+            gate.candidate_state(self.candidate, inventory, {'s3k': self.rom}, self.root)
+
+    def test_missing_or_wrong_original_rom_rejected(self):
+        self.rom.write_bytes(b'different generated fake ROM')
+        with self.assertRaisesRegex(ValueError, 'wrong ROM identity'):
+            self.state()
+        self.rom.unlink()
+        with self.assertRaisesRegex(ValueError, 'ROM unavailable'):
+            self.state()
+
+    def test_exact_preflight_does_not_execute_or_award_qualification(self):
+        code, output, queued = self.run_gate(mode='--preflight')
+        self.assertEqual(0, code, output)
+        queued.assert_not_called()
+        self.assertIn('no tests executed', output)
+        self.assertNotIn('passed', output)
+
+    def test_existing_reports_never_qualify_exact_candidate(self):
+        code, output, queued = self.run_gate(mode='--reports', extra=(str(self.reports),))
+        self.assertEqual(2, code, output)
+        queued.assert_not_called()
+        self.assertIn('pre-existing reports', output)
+
+    def test_candidate_fixture_inventory_and_rom_drift_during_queue_or_execution(self):
+        paths = [self.root / 'src/test/java/example/Route.java',
+                 self.root / 'fixture/inputs.bk2', self.inventory_path, self.rom,
+                 self.root / 'tools/testing/checker.py']
+        for path in paths:
+            with self.subTest(path=path):
+                original = path.read_bytes() if path.exists() else None
+                def drift(command, root):
+                    result = self.executed(command, root)
+                    path.write_bytes((original or b'') + b'\n')
+                    return result
+                code, output, _ = self.run_gate(drift)
+                self.assertEqual(2, code, output)
+                self.assertNotIn('Route pilot passed', output)
+                self.assertEqual([], list((self.root / 'target').iterdir()))
+                if original is None:
+                    path.unlink()
+                else:
+                    path.write_bytes(original)
+
+    def test_head_change_during_execution_rejected(self):
+        def drift(command, root):
+            self.executed(command, root)
+            self.git('commit', '--allow-empty', '-qm', 'Different candidate')
+            return 0
+        code, output, _ = self.run_gate(drift)
+        self.assertEqual(2, code, output)
+        self.assertIn('wrong candidate', output)
+
+    def test_source_and_fixture_fingerprints_detect_git_assume_unchanged_drift(self):
+        for relative in ('src/test/java/example/Route.java', 'fixture/inputs.bk2',
+                         'tools/testing/aiz-hcz-route-obligations.json'):
+            with self.subTest(relative=relative):
+                path = self.root / relative
+                original = path.read_bytes()
+                self.git('update-index', '--assume-unchanged', relative)
+                # The fixture lives outside src only in this unit test; the
+                # production fixture paths are src/test/resources/traces.
+                def drift(command, root):
+                    self.executed(command, root)
+                    path.write_bytes(original + b'\n')
+                    return 0
+                code, output, _ = self.run_gate(drift)
+                self.assertEqual(2, code, output)
+                path.write_bytes(original)
+                self.git('update-index', '--no-assume-unchanged', relative)
+
+    def test_required_skips_and_forged_skip_counters_never_qualify(self):
+        for outcome in ('skipped', 'failure', 'error', 'counter', 'missing', 'duplicate'):
+            with self.subTest(outcome=outcome):
+                def bad(command, root):
+                    self.executed(command, root)
+                    path = self.reports / 'TEST-route.xml'
+                    suite = ET.parse(path).getroot()
+                    if outcome == 'counter':
+                        suite.set('skipped', '1')
+                    elif outcome == 'missing':
+                        suite.remove(suite[0])
+                    elif outcome == 'duplicate':
+                        suite.append(copy.deepcopy(suite[0]))
+                    else:
+                        ET.SubElement(suite[0], outcome)
+                    ET.ElementTree(suite).write(path)
+                    return 0
+                code, output, _ = self.run_gate(bad)
+                self.assertEqual(1, code, output)
+                self.assertNotIn('Route pilot passed', output)
+                self.assertEqual([], list((self.root / 'target').iterdir()))
+
+    def test_maven_failure_cannot_qualify_even_with_all_passing_xml(self):
+        def failed(command, root):
+            self.executed(command, root)
+            return 1
+        code, output, _ = self.run_gate(failed)
+        self.assertEqual(1, code, output)
 
 
 if __name__ == '__main__':

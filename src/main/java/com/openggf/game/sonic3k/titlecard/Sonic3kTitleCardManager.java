@@ -478,17 +478,6 @@ public class Sonic3kTitleCardManager
      */
     private void enterLevelRoutineTitleLoop(int zoneIndex, int actIndex) {
         freshLevelTransitionMode = true;
-        var plc = GameServices.module().getGameService(
-                com.openggf.game.sonic3k.Sonic3kLevelTitlePlcService.class);
-        if (plc != null) {
-            try {
-                plc.beginFreshZoneTitle(zoneIndex, actIndex,
-                        com.openggf.game.session.ActiveGameplayTeamResolver.resolveMainCharacterCode(
-                                GameServices.configuration()));
-            } catch (java.io.IOException exception) {
-                throw new IllegalStateException("Cannot prepare fresh title PLCs", exception);
-            }
-        }
         var objectManager = GameServices.level().getObjectManager();
         freshLevelTitleOwnerReplacedAtAssembly = objectManager != null
                 && objectManager.getActiveObjects().stream()

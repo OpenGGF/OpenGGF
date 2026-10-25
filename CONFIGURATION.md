@@ -804,7 +804,9 @@ normalization. Passwords are never saved in `settings.txt`.
 
 The lobby's invite panel starts masked. Its eye reveals the code for up to ten
 seconds; Copy writes it without revealing it. Focus loss, expiry, navigation or
-a permission change hides it again. Codes have six case-insensitive letters or
+a permission change hides it again. Losing focus or minimizing also replaces
+the presented lobby with a neutral frame while updates pause, so an already
+revealed code does not remain on screen. Codes have six case-insensitive letters or
 digits, displayed in groups of three, and expire ten minutes after issuance.
 Looking up or copying a code does not extend its lifetime. After expiry, an
 authorized reveal/copy can request a fresh code. Expiry leaves admitted players

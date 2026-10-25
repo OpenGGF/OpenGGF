@@ -150,3 +150,34 @@ Inspect skips, acknowledge consumed diagnostics, and retain no validation caches
   environment. The change-based plan selects 3,808 smoke candidate classes
   across all ten categories plus separate guards. Coherent packaging and this
   combined selection remain the next delivery gates.
+- Coherent packaging on `5ac8f8058` passed, including the Time Attack validator
+  with no findings and the standalone server build. The first combined smoke
+  invocation completed 66 of 77 batches: 36,266 cases, two failures, one error
+  and 90 skips. It is incomplete; the process is no longer live and its final
+  retained batch succeeded. No terminal cause was captured. The two failures
+  reproduce exactly on destination baseline `c502c600b`: the existing audio
+  reset source-order assertion and HCZ miniboss raw-GLFW initialization without
+  a display. The error is our merged polymorphic fixture supplying chat's string
+  `mode` for the new access enum. Restrict those named fixtures to string fields.
+  Skips include opt-in diagnostics/benchmarks, legacy graphics prerequisites and
+  route assumptions; none is counted as a pass. Consumed diagnostics were read
+  and acknowledged.
+- Focus-presentation fix `6acb4e28f` is integrated directly. Invalidating state
+  alone was rejected after six pixel failures proved old revealed pixels stayed
+  visible while Engine paused. Actual scene and overlay submissions now identify
+  the last successfully swapped frame. Blur/minimization withdraws those pixels
+  with one neutral presentation without updates, creator redraw or capture.
+  Ten new EGL cases and 51 related cases passed without skips in the worker.
+  These verify production rendering with injected presentation callbacks, not
+  native compositor behavior.
+- Destination advanced again to `94c75d8a8` with audit remediation. Its merge
+  applies without conflicts; the gameplay/PLC, release tooling and mirrored
+  guidance changes remain intact. Final checks must cover this reconciled tree,
+  the fixture correction and focus-presentation change. Repeat the complete
+  category selection because the earlier invocation did not finish; do not
+  treat its unrun suffix or guards as passed.
+- The reconciled eight-class selection passed 86 cases, zero failures, errors
+  or skips, using Java 25 and explicit `-Dopenggf.headless.gl=surfaceless-egl`.
+  Selectors: `TestControlCodecPolymorphism,TestPrivateRoomContract,TestChatProtocol,TestModApiSignatureSurface,TestEngineSceneFocusPresentation,TestEngineLiveCapturePresentation,TestSceneClipboardAndFocus,TestPrivateLobbyScreenRendering`.
+  Admission waited 690 seconds; Maven execution took 91 seconds. This repairs
+  the exact codec fixture error and verifies the new presentation behavior.

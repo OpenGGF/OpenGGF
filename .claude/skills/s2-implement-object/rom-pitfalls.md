@@ -2685,6 +2685,14 @@ the first visible X was already `$0724` rather than the shooter X `$0720`.
    it should execute later in the same object pass; if it lands in a lower or
    already-processed slot, the manager's slot-order rules should defer it.
 
+The same dispatch distinction applies to `$FD` animation changes. Retain both
+`anim` and `prev_anim`: `TAnim_End_FD` (s2.asm:41327-41333) writes the new
+animation and returns without reading its first frame. `Tails_Animate_Part2`
+(s2.asm:41271-41282) observes the mismatch on the following dispatch. A snapshot
+that stores only the current animation loses this one-dispatch boundary; keep a
+literal transition capture/restore control. Origin: S2 fixed-tail storage task,
+`TestS2FixedTailStoragePrerequisite` (also applicable to other native `$FD` readers).
+
 **ROM citation.** Generic `$FC` handling:
 `docs/s2disasm/s2.asm:30481-30487`. Obj22 shoot routine and arrow init/move:
 `docs/s2disasm/s2.asm:51570-51607`. Obj22 firing script:

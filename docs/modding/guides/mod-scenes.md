@@ -182,7 +182,10 @@ cancel pending copy/reveal intent. The callback runs through the scene owner's
 fault boundary even while ordinary updates pause. `focusLossGeneration()` is
 the context's monotonically increasing loss counter. Focus handling discards
 retained scene drawings, so a suspended scene cannot redisplay an old revealed
-value without drawing again.
+value without drawing again. If the last presented frame contains a scene or
+scene overlay, focus loss or minimization replaces it with a neutral frame.
+That withdrawal does not run scene updates, redraw creator content or capture
+another gameplay frame. Normal rendering resumes when the window is active.
 
 Gamepad timestamps describe polling observation, not hardware delivery. The live
 window polls during its frame wait, but rendering/OS scheduling can still delay

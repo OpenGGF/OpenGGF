@@ -44,8 +44,16 @@ Every new per-game divergence must document:
 - Do not add raw game-name branches in shared runtime code.
 - Do not add broad feature-set bags or compatibility bridges as a parallel rule source.
 - Do not raise rule-record component-count guard thresholds without architecture review.
-- `CollisionRules` is pinned at 21 record components by the current Mod API 0.7 candidate: its three
-  flat air-collision components are synchronized ABI aliases for the nested `AirCollisionRules`
-  component, not independent rule sources. Do not add another component. Decomposing or removing
-  those candidate aliases requires recursive-surface review; after publication,
-  such a change also requires a deliberate compatibility transition.
+- `CollisionRules` currently has 19 record components, including the nested
+  `AirCollisionRules air` component. Air behavior lives in that nested record;
+  there are no synchronized flat air-field aliases in the current source/signature
+  contract. A component-count guard ceiling is an upper bound, not the current
+  shape or permission to refill removed slots. Keep new gates with the smallest
+  accurate owner and review any decomposition or added field.
+- These records remain part of the unpublished Mod API 0.7 candidate. A surface
+  change needs recursive-inventory review and an updated normalized candidate
+  signature pin under the [compatibility policy](mod-api-compatibility.md).
+  Candidate mutability is not an exemption from those checks; after publication,
+  incompatible changes also need a deliberate compatibility transition. The
+  [release descriptor](../../mod-api-release-policy.properties) remains the sole
+  version/publication authority.
