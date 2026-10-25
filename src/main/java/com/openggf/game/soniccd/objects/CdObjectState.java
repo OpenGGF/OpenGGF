@@ -28,6 +28,8 @@ public final class CdObjectState {
         // after the primary byte, aliasing the following secondary byte.
         ROUTINE(0x24), SOLID_TYPE(0x25), ROUTINE_2(0x25), ANGLE(0x26), SUBTYPE(0x28),
         LAYER(0x29), SUBTYPE2(0x29),
+        // Raw ObjMoveGrv/ObjMove reads (Object Functions.asm:53-64,100): storage only, also on non-player slots.
+        RAW_CONTROL_2C(0x2C), STAND_LINK_3D(0x3D),
         // ObjRing_Init:.InitSubObj / ObjRing_Collect: one-based member at oVar34.
         RING_MEMBER(0x34),
         // Obj3DRamp_Main (3D Ramp/Main.asm:230,294,326): launch timer byte at oVar2E. Storage only.
@@ -46,6 +48,8 @@ public final class CdObjectState {
     public enum WordField {
         TILE(2), X(8), X_FRACTION(0x0A), Y(0x0C), Y_FRACTION(0x0E),
         X_VELOCITY(0x10), Y_VELOCITY(0x12),
+        // oMonItemDel EQU oAnimTime; Monitor and Time Post/Main.asm:415,482,625 accesses a WORD at $1E.
+        MONITOR_ITEM_DELETE(0x1E),
         // ObjMosqui_Init / ObjRing_Init:.InitSubObj: original anchors, not current X shadows.
         MOSQUI_ANCHOR_X(0x2A), RING_ANCHOR_X(0x32),
         // Obj3DPlant_Init / Obj3DRamp_Init (3D Ramp/Main.asm:51,59,74,220): the family's shared original X at

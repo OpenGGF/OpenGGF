@@ -4710,3 +4710,59 @@ The temporary diagnostic was then removed byte-for-byte. This identifies a live
 shoes Monitor, not a natural contact, break or reward. It adds no runtime route
 predicate. Broad-smoke/full-game/native-playback/regional-parity claims remain
 excluded; the prior broad baseline-attributed failures remain unchanged history.
+
+### Source-ordered Monitor and item body components — 25 October 2026 GMT
+
+Private/local continuation from `eddee5d17d0464a2eb058b7c3b1d9d7823d6ef41`.
+New ID19 Monitor and ID1A item owners use the existing saved bank, shared raw
+movement, actual plain Solid and object floor/animation/DrawObject functions.
+Exactly three storage aliases expose raw control2C, stand link3D and deletion
+word1E. No Frame, Runtime, global store, renderer or existing owner changes.
+Native prefixes stay live when a later callback fails; effect lists describe
+completed work and are never replay instructions. The Runtime binding remains
+future work, so normal gameplay still stops at the ID19 dispatch.
+
+The Monitor handles routines0/2/4/6/8 and monitor subtypes0..7. It preserves
+sprite visibility/read order, timeStop's animation-only gate, actual saved-byte
+addressing, live item-then-explosion allocation, dirty slot bytes and the direct
+Break draw. Item preserves byte-wrapped/signed-relative static-pointer math,
+old-negative-velocity motion, reward on clean call33 after32 moves, deletion
+word29 and the returning DrawObject after deletion. Only source kind4 reaches
+a mandatory synchronous award callback; other rewards and posts/HUD remain
+typed boundaries. Real Frame rewards, sound ordering, physical child scheduling
+and authenticated World pictures are not certified by these component tests.
+
+The original external tests preceded production and remain frozen. Root R2
+repairs only the author's five known test groups: invalid compound var syntax;
+two expected final DrawObject bit7 mutations; explicit offscreen input for the
+time-attack despawn test; and next-call SAT visibility input in the layer test.
+The harness models DrawObject, not the later DrawObjects publication. Root68205
+tests-only compile failed at absent body/alias APIs, with no JUnit execution.
+The exact original three production files were then imported freshly.
+
+Observed Root81938, queued `--lean -Dmse=off` exact selection
+`TestCdMonitor,TestCdMonitorItem,TestCdObjectPool`, no optional media dependency:
+**146 tests, one failure, zero errors/skips**, immediate admission, Maven1m20s,
+terminal `2026-10-25T03:00:47Z`. All59 Item and12 pool cases passed; Monitor
+74/75 passed. All three XML reports and Java25 were inspected. The independent
+review found the same remaining test defect: a fixture with only push bit5
+changed the player but no object byte, so skipping the unchanged object image
+could not trigger the expected missing-publication rejection.
+
+Root R3 changes only that method's first subcase to matching object/player
+standing bits and link40. Native GetOffObject now clears the object's bit3
+(Object Solid.asm:15-55); StopObjPush still only clears the player's push link.
+This creates the intended unequal object image without altering production.
+Root54605 reran that exact method: **1/0/0/0**, immediate admission, Maven24.589s,
+terminal `2026-10-25T03:02:30Z`; exact XML/Java25 checked. Both the object and
+other-slot rejection subcases completed. Keep the146 red run and repaired-one
+result separate. No broad repeated run was needed for this test-only change.
+
+The source review found no production P1/P2; its remaining test P2 is reconciled
+above. Original R1, Root R2 and R3 files remain externally preserved. Final Root
+Monitor test SHA-256 is `32fe83d7bf5a73a118f219109adb769f146726402a6ec589700effe44b84a45a`.
+Optional gaps remain: negative relative mapping word, final saved-bank byte
+vectors, and the real adapter/physical pass/World render obligations. Exact APIs,
+all134 declared component shapes, full native citations and immutable hashes are
+in private `monitor-bodies-codex.md` and `monitor-bodies-review.md`.
+No native/region/whole-game, natural contact/break/reward or audio claim is made.
