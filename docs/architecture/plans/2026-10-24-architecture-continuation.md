@@ -11810,3 +11810,307 @@ source/evidence reconciliations, not new runtime or whole-repository completion
 claims. Eleven previously accepted lifecycle/palette/KiS2-publication/SMPS files
 were independently compared at f056 and remain byte-identical to their reviewed
 versions; that verifies retained bodies without adding runtime coverage.
+
+
+### Diagnostic installation/lease original-production characterization — 2026-10-25
+
+**Authority and frozen source.** This is additive test/evidence work only, after
+parent-delivered develop/origin/develop
+`0db2c6e168d83449d5b2481e379954a016d3bb59`, tree
+`9908b3ec08ad96c848853558578a349617a58dd7`. The T3-created isolated checkout is
+`t3-f35c8d32`; only its local branch was renamed to
+`bugfix/ai-audio-diagnostic-installation-owner-20261025`. There was no independent
+fetch, rebase, source absorption, main-workspace write, push or subdelegation.
+AudioManager is the exact blob `39fbbc9823d7a5fff913565c1c0bd7fd704e8db1`;
+`src/main` remains tree `91f1c66674b2843c945a7f2d67f5f290892a4104`.
+The starting lease and diagnostic test blobs were respectively
+`2d01b7e1bd2a1a30f61dbf1ef67adc2a8d2e51c0` and
+`ebab0fd3f0c2e731788b1d669323de3a63a11aa1`.
+
+Parent supplied the source reconciliation from research/design commit
+`f0566b9251a1507e6dc51b49aa399fafee013c57` (AudioManager
+`4a48f130ee9c361d677efe423bcfc536194de753`) to delivered 0db: only the two music
+counters became cold final LevelMusicAccess plus its package-final accessor.
+The complete diagnostic, source, physical Binding, Held, Capture, Logical and
+frame bodies, two production acquisition callers, and seven maintained test
+files were reconciled byte-exact by the parent. Source qualification
+`arch-broad-final-root-frontier-reassessment-20261025-r1` and independent design
+`arch-broad-diagnostic-installation-owner-design-review-20261025-r1` qualify the
+complete private per-manager installation/lease responsibility, not an
+extraction authorization or defect allegation. Retention remains coherent.
+No owner, source/producer/frame algorithm, public API terminal, annotation,
+permission, guard, POM or pin changes here.
+
+**Source correction and fixture mapping.** The brief's phrase “null component
+normalization” was corrected against delivered AudioManager: the observer-set
+compact constructor rejects null request, admission, driverService, chipWrite
+and sfxContention in that declaration order. Only the five public individual
+setters normalize null to their NONE singleton. Acquisition's null-set rejection
+precedes occupancy rejection. The characterization preserves all three separate
+boundaries. A source-only draft proposing backend clearing through
+`setBackendForLaunch(null)` was rejected before execution: the requireNonNull
+right-hand side throws before assigning the field. Supported `destroy()` instead
+exposes factory clearing and subsequent current-slot rereads. No extra seam was
+needed or added.
+
+The corrected original-source census remains 104 direct manager calls across
+31 test/helper files: 14 acquisitions, 41 request, 22 chip, 16 driver, six
+admission and five contention setters. The earlier 105/32/23 count included
+`OwnedSmpsAudioStream.setChipWriteObserver` in
+`S2OverrideResumeEngineCapture`; it was not a manager call. These are baseline
+research counts, not counts of this newly expanded test source. The seven Root
+request emissions and two production acquisition sites are unchanged. The
+absence of tracked literal reflection of the six private Root slots is not
+proof of every layout consumer. New tests use the existing presentation-field
+reader only for actual current producer/factory observation, with no state
+injection or copied composed owners. Lease transaction receivers are genuinely
+constructed `spy(AudioManager.class)` instances. Scoped existing Mockito
+construction interception provides controlled factory setter receivers for
+propagation tests; it is deliberately separate from the real-session controls.
+
+**Complete additive case inventory.** Every original case, assertion and helper
+in both files is retained verbatim in order (six lease and 30 diagnostic tests).
+The 13 added lease cases are:
+
+- `observerTupleRejectsNullComponentsInDeclarationOrder`: five ordered compact
+  constructor rejection boundaries, distinct from setter normalization.
+- `everyIndividualSlotOccupiesByIdentityAndNullSettersNormalizeToNone`: each
+  occupied slot rejects acquisition, including a request observer claiming
+  equality with NONE; null acquisition wins over occupied-state rejection;
+  clearing each slot with null admits an all-NONE lease.
+- `allNoneLeaseStillRejectsEveryReplacementBeforeNullNormalization`: an inert
+  tuple still owns the lease and rejects all five null replacements.
+- `sixPublicEntriesAndTokenOperationsUseTheSameManagerMonitor`: public
+  synchronized modifiers, actual setter callback monitor observations, blocked
+  token active/close calls on that same manager monitor, no token monitor during
+  close, off-thread active close failure, and off-thread inactive duplicate
+  close returning before the thread check.
+- `forwardPropagationRereadsBackendAndPublishesOnlyAfterAllSetters`: exact
+  setter receiver/observer sequence through backend replacement; the new
+  backend's admission remains NONE while later setters receive the desired
+  tuple, then a later reinstall samples the completed manager publication.
+- `rollbackUsesCurrentBackendAtEachSetterWithoutUndoingRetiredEffects`: Error
+  identity, exact forward/rollback receiver order across two replacements,
+  retained old-receiver effects and subsequent acquisition availability.
+- `failedOuterTransactionRetainsNestedRootPublicationButRollsPhysicalSlotsBack`:
+  the captured previous tuple drives physical rollback while a successful nested
+  Root request publication remains; rollback is not a global atomic undo.
+- `runtimeAndErrorFailuresKeepExactIdentityAndLiteralRollbackSuppression`:
+  RuntimeException/Error in both forward/rollback roles, exact primary and
+  suppressed identities, interrupted physical rollback, no token publication.
+- `identicalForwardAndRollbackSentinelProducesSelfSuppressionFailure`: the
+  bounded same-sentinel discriminator for literal addSuppressed semantics.
+- `failedCloseWithRollbackErrorStaysActiveAndRetryable`: exact close Error and
+  rollback RuntimeException suppression, retained lease/replacement rejection,
+  then successful retry.
+- `nestedAcquisitionPublishesBeforeOuterTokenAndRemainsActiveAfterDisplacement`:
+  no in-flight reservation, nested token active before outer publication,
+  mixed physical effects, wrong-thread-before-ownership-loss ordering and
+  active-flag/current-slot distinction after displacement and outer close.
+- `nestedCloseAndReacquisitionExposeUnconditionalOuterLeaseClearing`: one
+  guarded reentrant close/reacquisition, unconditional outer clearing, mixed
+  effects, active ownership-lost replacement and an admitted third token.
+- `backendReinstallationSamplesEachCurrentSlotInsteadOfOneCapturedTuple`:
+  launch reinstall's actual receiver/observer sequence after reentrant slot
+  changes distinguishes per-setter reads from an eagerly captured tuple.
+
+The nine added diagnostic cases are:
+
+- `leasedObserversReachFirstRealPresentationAndEveryRebuiltSession`: exact
+  first constructor chip burst under lease, actual FM/SFX service, admission,
+  contention, request, lifecycle and sink frame effects; exact constructor
+  bursts on base-profile, ROM, reset, backend and launch replacement, plus
+  destroy/reconstruction without revocation. The original preconstruction
+  override/restore case remains an independent positive control.
+- `bootWriteCallbackReplacesLiveObserverAfterTheFactoryIsInstalled`:
+  unlocked ordinary scene-source construction, current real factory presence
+  during the first boot write, exact first-write/remainder partition across a
+  reentrant replacement, and additional real forward writes on the live slot.
+- `sessionConstructorArgumentAndLiveFactoryInstallationsSampleDistinctBoundaries`:
+  controlled existing Mockito session construction observes the initial chip
+  argument, reentrantly changes the Root slot, and verifies a real factory's
+  later live driver/chip/contention installations followed by session install.
+  This distinguishes argument sampling from actual boot execution without
+  claiming physical effects from a mocked session.
+- `factoryPropagationRereadsActualReceiverAfterASetterRebuildsPresentation`:
+  exact setter receiver/observer order through forward factory replacement.
+- `factoryRollbackRereadsCurrentReceiverAfterForwardAndRollbackRebuilds`:
+  exact actual setter order through forward and rollback replacements, primary
+  exception identity and subsequent acquisition availability.
+- `clearingFactoryDuringSetterFailsAtTheNextRereadAndRollbackSkipsIt`:
+  ordinary destroy clears the current factory; the next dereference fails and
+  rollback skips the now-absent target rather than using a stale receiver.
+- `unleasedResetClearsSlotsBeforePartialBackendFailureAndLeavesOldPresentation`:
+  root slots clear before reinstall, partial physical effects remain, old
+  producer/factory survive because teardown was not reached, and acquisition
+  identity occupancy confirms all five Root slots are already NONE.
+- `leasedResetFailurePreservesInstallationAndRetryRetiresPresentation`:
+  contrasting leased reset failure keeps the observer installation and active
+  token, and retry reaches physical retirement without revoking ownership.
+- `requestFailureIsDirectWhileConstructionQuarantinesAndPauseResumeWrapAfterEffects`:
+  exact direct request exception identity, real-session construction survival,
+  subsequent live quarantine identity, and scene pause/resume physical effects
+  preceding notifications, including original-cause wrapping and already-marked
+  exception identity. Neither request emission nor those notifications acquire
+  a new manager monitor.
+
+No test forces orphaned reentrant handles inactive: ownership-lost active flags
+are part of the characterized outcome. These isolated observer-only managers
+are destroyed and become unreachable; no token/epoch repair or hidden-state
+hydration is performed. Original ordinary retryable cleanup remains covered.
+
+
+**Initial runtime observations and corrected expectations.** Invocation A ran
+against parent 0db with lease-test blob
+`41e23ab06cd46bdfd523fece7625e47de63332e5` and diagnostic-test blob
+`d2257c35e8dd3ae67084f23a34ed46aa5a7a37db` (before the following two corrections
+and ninth diagnostic control). Session 91967 completed with Maven exit 1:
+109 cases / two assertion failures / zero errors / zero skips across seven
+physical reports. All 88 retained selected control cases passed; 19 of the
+21 initial additions passed. Queue wait was 0 s; Maven elapsed was 1:19,
+including fresh compilation of 4,354 production sources and test compilation.
+Unmeasured authoring/inspection time is unknown and is not queue or execution
+time. Sorted newline-terminated physical case-ID SHA-256 was
+`c83f35f91b3347284595d014b213cecabf8ed515bb1b97f461f05404e14f6002`.
+
+The only failures were the newly added
+`leasedObserversReachFirstRealPresentationAndEveryRebuiltSession` (last sink
+frame assertion: expected one, actual zero) and the initial
+`constructorSamplesChipObserverBeforeTheLaterLiveFactoryInstallation`
+(expected the complete 202-write burst on the initial observer, actual only
+`YM:0:28:00`). Neither is a production regression or a failed retained control.
+Source/runtime investigation established:
+
+1. AudioManager passes the sampled chip slot into the session constructor
+   before publishing/installing the live factory. The constructor creates the
+   physical device with deferred initialization. Actual boot executes later
+   in `AudioPresentationProducer` construction via `SmpsDriverSession.install`,
+   after the factory is published and all four live observers installed.
+   Therefore changing the chip observer in the first boot callback reaches the
+   already-current real factory/session; subsequent boot writes go immediately
+   to the replacement. The corrected case positively asserts the first old
+   write, the exact remaining 201 writes on the replacement, actual factory
+   presence, and further forward writes. A separate controlled constructor
+   discriminator checks the earlier argument-sampling/later-installation
+   boundary. It does not substitute for the real physical controls.
+2. Destroy closes and clears the current sink. Realizing a new producer alone
+   uses the no-device fallback until the ordinary host lifecycle explicitly
+   calls `ensurePresentationSink`. The lease/reconstruction case now performs
+   that supported host step before rebuilding and demanding an observed frame
+   from its backend sink. The already-passing constructor, lease retention,
+   request, service, admission/contention and initial frame observations were
+   kept. No production repair or new seam was introduced.
+
+Invocation A's exact XML identities, assertions, failures/errors/skips and
+properties were inspected before consumption. They report Java 25.0.5.0.2 at
+`/usr/lib/jvm/java-25-openjdk`, all three dotted freeze properties false, the
+requested exact selector, and no ROM-path properties. Its XML/text reports and
+invocation log were consumed before submitting only the affected cases and the
+new constructor discriminator; unchanged passing groups are not rerun.
+
+
+**Exact commands, final bounded result and identity.** Both invocations ran from
+this checkout with the following environment and Maven argument prefix, using
+one command session/observer per job and checking the queue before submission.
+No owned running/waiting job existed at either submission. No raw Maven command,
+extra version JVM, rendering backend, desktop, device or ROM path was needed.
+The effective selected source files have no RequiresRom or excluded-tag
+annotation; no missing prerequisite became a hidden skip.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS -u MAVEN_ARGS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py -Dmse=off \
+  -Darchunit.freeze.store.default.allowStoreCreation=false \
+  -Darchunit.freeze.store.default.allowStoreUpdate=false \
+  -Darchunit.freeze.refreeze=false <selector> test -B
+```
+
+Invocation A used this exact selector:
+
+```text
+-Dtest=TestAudioManagerDiagnosticObserverLease,TestAudioDiagnosticObservers,TestAudioPresentationBindingContract,TestAudioBackendLifetime,TestAudioManagerResetState,TestCompleteRunAudioObserverLease,TestAudioCommandTimeline#requestObserverFailureCreatesNoCommandAndDoesNotAdvanceRing
+```
+
+Its physical report distribution was lease 19/0/0/0, diagnostic 38/2/0/0,
+Binding 9/0/0/0, backend lifetime 2/0/0/0, reset 35/0/0/0, complete-run lease
+5/0/0/0 and the single timeline method 1/0/0/0 (cases/failures/errors/skips).
+The parameterized reset selector produced 35 actual cases; annotation counts
+were not substituted for executed identities. The seven exact selectors
+within seven classes retain ordinary POM smoke exclusions; no broad smoke or
+release-only full suite was submitted.
+
+Invocation B, session 75907, used only:
+
+```text
+-Dtest=TestAudioDiagnosticObservers#leasedObserversReachFirstRealPresentationAndEveryRebuiltSession+bootWriteCallbackReplacesLiveObserverAfterTheFactoryIsInstalled+sessionConstructorArgumentAndLiveFactoryInstallationsSampleDistinctBoundaries
+```
+
+It completed exit 0 with three cases / zero failures / zero errors / zero skips,
+one physical report, queue wait 0 s and Maven elapsed 24.213 s. Its sorted
+newline-terminated physical case-ID SHA-256 is
+`308db773bd781b4e121e82c8561da542559e8401f94a7c767cf75fa5c766a947`.
+XML again reports Java 25.0.5.0.2, the exact requested selector, and all three
+dotted false freeze properties. Reported test execution for those three cases
+was 0.516 s; that is distinct from Maven compilation/setup and queue time.
+
+The final lease-test blob remains A's
+`41e23ab06cd46bdfd523fece7625e47de63332e5`; final diagnostic-test blob is
+`ce3f05ec7d0085fc9037502844ffc24526575e3e`.
+The sorted newline-terminated two-test `path:SHA256` map is
+`cf5e455f4488236e614849abf475562eac018dfd130de3610c1954f9ec5d034f`.
+To attribute A's passing cases to the final source without repeating them,
+reverse application of just the two corrected test edits and new constructor
+case reconstructed A's complete diagnostic blob byte-exact. All 36 other
+complete diagnostic test members were identical, including helpers unchanged
+outside test members. The sorted newline-terminated
+`memberName:SHA256(memberText.rstrip())` map for those 36 members is
+`916f3b9c90f2dd2e9ad088e2c1b0dc63fde06eb7d136ed71ff0a6f1a8afae3b8`.
+The affected member fingerprints (SHA-256, from @Test through the next
+@Test/helper, trailing whitespace stripped) are:
+
+| Member | Invocation A | Final / invocation B |
+| --- | --- | --- |
+| leased real-presentation/rebuild case | `32dd83e17eaa56ca38889db61699ac8de4e86ab61db1265918c25befeae65905` | `a5122e7a5c69259c0f45e98b63cd11d5a332b824858d223970f00df0e8848fe4` |
+| initial constructor prediction / corrected boot callback case | `b4ab5992237f36137e1099bc00ac08b5c6e8c6fed0fd929fd536c9c12018554d` | `214a3259869c7ec2858761f101f4ece98482b2a984f6489b40058583c8478850` |
+| added controlled constructor boundary | absent | `c1febdce1889ad9f0c9cf787ecb6342c5f51e428890eef8b9222370aeb8aac37` |
+
+Thus the bounded evidence covers all 22 final additions and all 88 retained
+selected control cases: 107 unchanged passing cases from A plus the three
+passing affected/new cases from B. This is not a claim that invocation A passed
+or that an unchanged full group was rerun on the final file. In particular,
+the bounded same-sentinel control reproduced literal self-suppression:
+IllegalArgumentException escapes with the reused original sentinel as its
+cause, with no suppressed exception on either. Universal preservation of the
+primary failure is false for that case. Ordinary distinct failures preserve
+primary identity and append the exact rollback failure as suppressed.
+
+**Unchanged enforcement and limits.** All 13 frozen files compare byte-exact
+with 0db, including 120 raw low-level records. Their sorted newline-terminated
+`path:SHA256` map is still
+`292100b7284abcd07373d33efce8194308ca6c0fc999aef71de5c5eadcb7e834`.
+The API pin is unchanged at 22,541 rows / 1,250 TYPE rows, SHA-256
+`fe27be6e9c4153dd477939165b4a457fa942f47f0dad446b5eb76908357f0148`.
+The accepted ambient six-method/five-file baseline and its guard are unchanged;
+the source core-runtime package-pair permission set still contains 151 entries.
+POM, descriptor, terminals, markers, all source/pins and all guard bodies remain
+exact. These are source/store identity checks, not a fresh compiled global
+structural or API-guard pass. No broad smoke, full suite, trace, performance,
+BizHawk/emulator, native capture, speaker or desktop campaign was performed.
+No runtime defect or new extraction is alleged. Controlled factory/session
+mocking proves setter/argument boundaries only; real-session tests prove boot,
+live service and physical observer effects separately.
+
+All original file lines were checked as a verbatim ordered subsequence; the
+only tracked changes are additions to the two authorized test files and this
+existing continuation. git diff --check passes. Mandatory repository hooks
+remain enabled. Invocation B's XML identities, failures/errors/skips and
+properties were inspected, then its XML/text report and invocation log were
+consumed, as for A; no receipts, pass cache or raw-log archive was created.
+Both owned command sessions are terminal and no owned queue job remains.
+The local test/evidence commit keeps exact parent 0db without amend. This
+checkout and branch are retained for independent parent evidence review;
+parent owns integration, push, eventual cleanup and any subsequent authorized
+implementation. At handback target/job ownership returns to the parent and
+this worker stops without another build, test or candidate family.
