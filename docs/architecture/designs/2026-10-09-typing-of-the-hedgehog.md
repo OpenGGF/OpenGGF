@@ -1156,3 +1156,14 @@ unchanged across drawing. Evidence is in the external task's `rendering-fixed/`.
 The temporary stage survey is removed; its rejected/proposed approach and limits
 are recorded above, while the shipped selector and course regressions cover
 ongoing authoring needs.
+
+The upstream merge required two adjacent additive resolutions: retain keyboard
+capture beside multiplayer preferences in `ModSceneHost`, and retain both sets
+of `SceneContext` signatures in sorted order. Relative to `c502c600b`, Typing adds
+29 signatures and removes none. A combined focused run of
+`TestTypingHedgehogSections,TestTypingHedgehogRails,TestModSceneHost,TestSceneChatPreferences,TestModApiSignatureSurface,TestModApiPinPolicy`
+with EGL, the three verified absolute ROM paths and the explicit slow-tag
+override passed 76 cases, zero skips. This reran all selected courses after the
+entry/projection service change, the original rail qualification and the
+reconciled scene/API contracts. Combined smoke and final capture inspection
+remain outstanding at this checkpoint.

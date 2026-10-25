@@ -218,4 +218,18 @@ class TestServerBrowserView {
         view.draw(canvas);
         assertTrue(canvas.joined().contains("Master connection lost"), canvas.joined());
     }
+    @Test
+    void browserShowsEffectiveRoomModeAndTheRequestedCreationMode() {
+        ControlMessage.RoomSummary room = new ControlMessage.RoomSummary("room", "Room", "s2", 0, 0,
+                "OPEN", 1, 8, "RELAY", true, "QUICK_CHAT");
+        ServerBrowserView view = new ServerBrowserView(new Directory(List.of(room)), "s2", actions,
+                cues::add, () -> 0L, com.openggf.net.protocol.ChatMode.FULL_CHAT);
+        input.idle(view::update);
+        RecordingSceneCanvas canvas = new RecordingSceneCanvas(320);
+        view.draw(canvas);
+        assertTrue(canvas.joined().contains("RELAY / Quick Chat"), canvas.joined());
+        assertTrue(canvas.joined().contains("Full Chat"), canvas.joined());
+        canvas.assertFillsOnScreen();
+    }
+
 }

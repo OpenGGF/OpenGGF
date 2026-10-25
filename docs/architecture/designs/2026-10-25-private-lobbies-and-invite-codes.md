@@ -19,17 +19,24 @@ enabled by default with a host-only option. Security/privacy take priority over
 code length. The user confirmed that player-hosted games may use the master
 service; offline short-code discovery is unnecessary.
 
-Recommended choices made by this design, rather than additional user
-requirements:
+The user subsequently chose six-character codes and a rate limit of five
+attempts per minute. That supersedes the original 16-character recommendation
+in commit `f7620e579`. The 10-minute absolute lifetime below is this design's
+proposed default, not a user-specified duration.
+
+Other choices made by this design, rather than additional user requirements:
 
 - `PUBLIC` remains listed and needs no password. `PRIVATE` is unlisted and
   requires a password, including when joining with an invite or a manual
   address. Unlisting is a privacy choice; the password is the admission gate.
 - A code locates a room; it never grants membership, bypasses trust/build/ban
   checks, supplies an upload token or replaces authentication.
-- Use 16 random base32 characters, displayed in four groups. The underlying
-  code is alphanumeric; separators are presentation only. Codes are resolved
-  by the configured master service for both remote and player-hosted games.
+- Use six random base32 characters, displayed as two groups of three, with a
+  10-minute absolute expiry. The underlying code is alphanumeric; separators are
+  presentation only. Codes are resolved by the configured master service for
+  both remote and player-hosted games. Enforce five resolve attempts per rolling
+  minute per authenticated player identity and per observed source address,
+  across connections and codes.
 - Access mode is fixed at creation for the initial delivery. Password changes,
   invite regeneration and the member-sharing setting are owner operations.
   Existing admitted players stay connected when credentials change.
@@ -140,7 +147,9 @@ creation is not a first-player password bypass.
    access mode and access epoch before sending the password. An alias pointing
    to a different instance or a changed access epoch requires fresh user entry;
    never send a retained password to the replacement. Code removal/rotation
-   fails resolution normally. If fallback needs another grant after expiry,
+   fails resolution normally. If the invitation expires while the user types,
+   request a fresh code; do not renew it through the pending lookup. If fallback
+   needs another grant after expiry,
    perform the same bounded re-resolution and checks; do not extend grants
    across arbitrary human input time.
 4. **Authenticate.** Connect over the existing trusted/pinned TLS path and
@@ -176,7 +185,11 @@ be used with the password; address knowledge is not secret authorization.
 
 Attach grants must include room-instance and invite/policy epochs where
 applicable and be checked again on consumption. Private discovery and attach
-authorization must not bypass the host gate. Cover all of:
+authorization must not bypass the host gate. A code-derived attach grant expires
+at the earlier of its existing 30-second deadline and the invitation's absolute
+deadline. Resolve/attach cannot extend an invitation. This applies to code joins
+for public rooms too; ordinary public-browser joins keep their existing grants.
+Cover all of:
 
 - JDK and Netty raw direct endpoints, including offline/manual LAN joins;
 - master-listed direct joining and its host-tunneled relay fallback;
@@ -244,10 +257,10 @@ the entire network service has constant response time. These follow OWASP's
 
 ## Invite format, lifetime and permissions
 
-Generate 80 uniform random bits using `SecureRandom`, encoded as 16 characters
+Generate 30 uniform random bits using `SecureRandom`, encoded as six characters
 from `0123456789ABCDEFGHJKMNPQRSTVWXYZ`. Display, for example,
-`7K3M 9X2R Q5TW 8N6C`. Accept ASCII lowercase, presentation spaces/hyphens and
-documented `O → 0`, `I/L → 1` aliases, then require exactly 16 canonical symbols.
+`7K3 M9X`. Accept ASCII lowercase, presentation spaces/hyphens and
+documented `O → 0`, `I/L → 1` aliases, then require exactly six canonical symbols.
 Cap raw input before normalization. Do not use Unicode lookalikes, modulo-biased
 sampling, timestamps, room IDs, host addresses or deterministic seeds. Retry an
 active collision with a bounded generation loop; never replace another room's
@@ -255,25 +268,70 @@ mapping.
 
 This is a private locator, not an authenticated session token. For `Q` online
 guesses and `L` live codes, the union bound for finding any code is
-`min(1, Q × L / 2^80)`, assuming independent uniform codes. For one million live
-codes and one billion guesses that bound is approximately `8.3 × 10^-10`.
-This design judgment balances typing with privacy; it is not a promise that a
-leaked code is safe. Short six/eight-character identifiers are rejected because
-the active global population increases guessing success. Existing session
+`min(1, Q × L / 2^30)`, assuming independent uniform codes and counting every live
+alias. The namespace has 1,073,741,824 possibilities. Eight base32 characters
+would have 1,024 times the guessing space; six is the user's usability choice.
+For illustration, one source making 50 guesses during ten minutes against
+1,000 live codes has an any-room hit bound of approximately `4.7 × 10^-5`
+(0.0047%). These are illustrative assumptions, not measured service population
+or a bound on all attackers. The per-identity/address rate limit does not bound
+aggregate guesses from a botnet or many network sources.
+
+Expiry limits the useful lifetime of a leaked code and bounds guesses against
+one particular issuance. With a continuously maintained live population `L`
+and aggregate guess rate `r`, sustained guessing exposure over time `T` remains
+approximately `r × T × L / 2^30`; replacing expired codes does not eliminate it.
+Codes remain unpredictable random locators, but this shorter choice provides
+less discovery privacy than the original recommendation. Private passwords and
+existing identity/trust gates remain mandatory; a guessed locator grants no
+membership. Host IP privacy still requires relay routing. Existing session
 credentials keep their independent, stronger generation and lifetime rules;
 OWASP recommends at least 128 random bits for
 [custom session identifiers](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html).
 
 Resolution is an authenticated, rate-limited WebSocket request body, not a URL
-path, query parameter or public GET endpoint. Bound attempts per identity,
-source and service, including aggregate negative lookups. Store a domain-separated
+path, query parameter or public GET endpoint. The master admits at most five
+resolve attempts in any rolling 60 seconds for each identity and each observed
+source IP. Both budgets must permit the attempt; every submitted lookup counts,
+including successful and malformed codes. Check the budgets before normalization
+or index lookup. Return a generic rate-limited response with retry timing that
+does not reveal code validity. A client cooldown is only presentation; the server
+owns enforcement.
+
+Bucket state spans all rooms and master connections, survives socket reconnect
+and identity rotation at the same address, and expires only after its active
+window has elapsed. Keep the table bounded and shed excess new-source work
+rather than evicting live buckets to reset limits. Derive addresses from trusted
+transport metadata, never caller headers or payloads. The same five-per-minute
+source budget is shared by users behind one NAT, an explicit usability tradeoff;
+show retry timing. Normal transport/service admission still bounds aggregate
+work, with aggregate lookup/issuance monitoring. Five per minute is not a
+service-wide security guarantee against distributed guessing.
+
+Store a domain-separated
 SHA-256 lookup digest in the directory index; a slow password KDF is unnecessary
 for a random locator. Only the authorized room/creator control state retains the
 raw code in memory for disclosure. A memory-compromised authority remains able
 to read it; hashing the index does not change that.
 
-One active code per room instance. It lasts for the live registration until
-regeneration, room close, registration expiry or master restart. The master owns
+One active code per room instance. It expires ten minutes after issuance, or
+earlier on regeneration, room close, registration expiry or master restart.
+Resolving, revealing, copying and issuing grants never extend the deadline.
+The server checks expiry on every lookup/attach; periodic pruning is cleanup,
+not the enforcement boundary. Retire the mapping and invalidate unused
+code-derived grants on expiry; already admitted players stay connected.
+
+Do not continuously regenerate expired codes in the background. An explicit
+authorized reveal/copy request after expiry may issue a fresh code with a new
+deadline and epoch, subject to bounded issuance and the current member-sharing
+policy. Members cannot replace an unexpired code; the owner may regenerate it.
+Show a time-remaining indicator beside the fixed mask; at expiry hide and discard
+the old display value. Delayed responses include expiry/epoch and cannot reveal
+an already expired value. A room may remain online without an active invite.
+Known direct endpoints remain usable with the private password: expiry revokes
+the locator and unused code-derived routing grants, not prior endpoint knowledge.
+
+The master owns
 collision checks and atomic alias replacement; the player host receives the
 current code through its authenticated, room-owner-bound master link. Stale
 registrations, owner disconnect and room removal must retire their aliases using
@@ -287,6 +345,16 @@ or verifier survives restart through
 ordinary settings. A custom master is selected explicitly in the UI; codes are
 unique within that resolver, not globally across arbitrary independent masters.
 Never send a code to a list of guessed resolver services.
+
+Bound live registrations, pending allocations and issuance rate. Check collisions
+against the live index atomically and retry within the existing bounded loop;
+rotation/renewal must also differ from that room's immediately previous code,
+retaining at most one previous digest per live room for this check.
+The code is not a permanent room identifier: an expired value may eventually be
+randomly allocated again. Do not retain an unbounded history or promise that a
+short code is globally unique forever. Before requesting a private password,
+show the resolved room/host identity and preserve the existing instance/epoch
+recheck after input so a changed mapping never receives the retained password.
 
 The owner can reveal/copy/regenerate. An admitted member can request reveal/copy
 only when `membersCanInvite=true`; this is checked on the authoritative room
@@ -338,7 +406,8 @@ Time Attack changes:
 - In lobby details, show a fixed mask, a clickable eye and a separate Copy
   action to authorized viewers. Copy need not reveal; feedback says “Copied”
   without showing the code. Rehide after 10 seconds and on navigation, leave,
-  focus loss, rotation or a permission change. Never persist reveal state.
+  focus loss, code expiry, rotation or a permission change. Show time remaining
+  without revealing the code. Never persist reveal state.
 - Provide keyboard/gamepad reveal/hide and copy actions plus an accessible
   action label. Hidden text must not expose the raw code via tooltip, accessible
   name, layout measurement, debug overlay or narration. Revealed text is
@@ -443,6 +512,16 @@ must supply focused tests for these behaviors:
 - Invite parsing has deterministic alphabet/normalization/bounds tests; injected
   generator collisions test retry ownership without flaky statistical assertions.
   Invalid, rotated, expired and restarted-room codes resolve consistently.
+- Six symbols carry 30 random bits. Server-enforced rolling resolve limits count
+  valid, invalid and malformed attempts across codes/connections: the sixth
+  attempt is denied, reconnect/identity changes cannot reset the source budget,
+  and NAT peers share the documented source limit. A saturated limiter table
+  cannot evict an active bucket to allow more guessing.
+- Ten-minute expiry is absolute. Lookup/reveal/copy cannot extend it; grants do
+  not outlive it; stale replies remain hidden; explicit authorized renewal after
+  expiry issues a new epoch. Expiry affects neither an admitted player nor the
+  separately documented manual-address/password path. A code expired during
+  password entry requires a fresh invitation, never silent remapping.
 - Non-owner control attempts fail. Member reveal/copy works by default and is
   denied server-side when disabled. Disabling rotates, stale grants/callbacks
   fail, and admitted members remain connected.
@@ -499,6 +578,16 @@ proposal incorporates: expired grants during human input, FIFO reply races from
 asynchronous password setup, fingerprint-wide registration teardown, unstable
 tunneled source keys, and absent clipboard/focus scene APIs. These are design
 corrections with source evidence, not runtime fixes or completed test claims.
+
+The subsequent short-code decision uses the user's six-character/five-attempts
+choice. A bounded independent calculation confirmed the 30-bit space, the
+active-population guessing bound and the distinction between absolute expiry
+and sustained rotation. The original long-lived 80-bit locator is superseded.
+The general combination of short human-entered codes, finite validity and
+throttling is also described in
+[RFC 8628 §5.1](https://www.rfc-editor.org/rfc/rfc8628.html#section-5.1);
+that reference does not establish that this lobby service's aggregate risk is
+negligible or turn the room locator into an OAuth/session credential.
 
 Related references: [multiplayer design](2026-07-04-multiplayer-time-attack-design.md),
 [security design](2026-07-04-time-attack-security-design.md),

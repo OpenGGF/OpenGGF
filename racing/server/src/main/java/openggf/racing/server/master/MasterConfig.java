@@ -48,10 +48,15 @@ public record MasterConfig(
         long verifierLeaseSeconds,
         String publicBaseUrl,
         long maxRecordingStorageBytes,
-        long recordingUploadMinIntervalMillis) {
+        long recordingUploadMinIntervalMillis,
+        String chatModeLimit) {
     private static final long MIN_VERIFIER_STALE_SECONDS = 120;
 
     public MasterConfig {
+        chatModeLimit = chatModeLimit == null ? "QUICK_CHAT" : chatModeLimit;
+        if (com.openggf.net.protocol.ChatMode.parse(chatModeLimit) == null) {
+            throw new IllegalArgumentException("chatModeLimit must be FULL_CHAT, QUICK_CHAT or OFF");
+        }
         port = port == null ? 27_900 : port;
         dbPath = blankToDefault(dbPath, "master-identities.db");
         adminPort = adminPort == null ? 27_901 : adminPort;
@@ -95,6 +100,52 @@ public record MasterConfig(
                 ? 1_000 : recordingUploadMinIntervalMillis;
     }
 
+    /** Source compatibility for existing server configuration callers. */
+    public MasterConfig(Integer port,
+                        String tlsCertPath,
+                        String tlsKeyPath,
+                        boolean plaintextForTest,
+                        String dbPath,
+                        Integer adminPort,
+                        String adminToken,
+                        long establishedAgeHours,
+                        int establishedCleanRounds,
+                        long trustedAgeDays,
+                        int trustedCleanRounds,
+                        int identityPowBits,
+                        int attackModePowBits,
+                        boolean attackMode,
+                        int maxRoomsPerIdentity,
+                        int maxRoomsPerIp,
+                        long roomHeartbeatTimeoutSeconds,
+                        int browserPageSize,
+                        long identityGcInactiveDays,
+                        int newIdentityCacheSize,
+                        long newIdentityCacheTtlMinutes,
+                        int maxRecordingBytes,
+                        long uploadDeadlineSeconds,
+                        long verifiedUploadDeadlineSeconds,
+                        long recordingRetentionDays,
+                        long verdictGraceMillis,
+                        int spotCheckTopTimes,
+                        long cheatBanDays,
+                        String verifierRegistrationToken,
+                        long verifierStaleSeconds,
+                        long verifierLeaseSeconds,
+                        String publicBaseUrl,
+                        long maxRecordingStorageBytes,
+                        long recordingUploadMinIntervalMillis) {
+        this(port, tlsCertPath, tlsKeyPath, plaintextForTest, dbPath, adminPort, adminToken,
+                establishedAgeHours, establishedCleanRounds, trustedAgeDays, trustedCleanRounds,
+                identityPowBits, attackModePowBits, attackMode, maxRoomsPerIdentity, maxRoomsPerIp,
+                roomHeartbeatTimeoutSeconds, browserPageSize, identityGcInactiveDays,
+                newIdentityCacheSize, newIdentityCacheTtlMinutes, maxRecordingBytes,
+                uploadDeadlineSeconds, verifiedUploadDeadlineSeconds, recordingRetentionDays,
+                verdictGraceMillis, spotCheckTopTimes, cheatBanDays, verifierRegistrationToken,
+                verifierStaleSeconds, verifierLeaseSeconds, publicBaseUrl, maxRecordingStorageBytes,
+                recordingUploadMinIntervalMillis, null);
+    }
+
     /** Compatibility constructor for phase-3 call sites and configurations. */
     public MasterConfig(Integer port, String tlsCertPath, String tlsKeyPath,
                         boolean plaintextForTest, String dbPath, Integer adminPort,
@@ -113,6 +164,15 @@ public record MasterConfig(
                 roomHeartbeatTimeoutSeconds, browserPageSize, identityGcInactiveDays,
                 newIdentityCacheSize, newIdentityCacheTtlMinutes,
                 0, 0, 0, 0, 0, 0, 0, null, 0, 0, "", 0, 0);
+    }
+
+    /** The requested relay mode restricted by the public server's configured maximum. */
+    public String relayChatMode(String requested) {
+        var choice = com.openggf.net.protocol.ChatMode.parse(requested);
+        if (choice == null) {
+            throw new IllegalArgumentException("unknown room chat mode");
+        }
+        return choice.intersect(com.openggf.net.protocol.ChatMode.parse(chatModeLimit)).name();
     }
 
     public static MasterConfig defaults() {

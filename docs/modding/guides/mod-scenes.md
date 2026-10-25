@@ -377,6 +377,21 @@ Send gameplay/control text only: never encode ROM or content assets into
 messages. Creators receive no sockets, threads or filesystem handles through
 this facade. Existing fixtures may leave `SceneContext.network()` unsupported.
 
+### Personal multiplayer chat preferences
+
+`SceneContext.censorMultiplayerProfanity()` and `multiplayerChatDisabled()` expose
+the player's read-only global chat preferences, defaulting to `true` and `false`.
+Read them when updating player-chat presentation; they take effect after saving
+Engine Settings. Keep gameplay/control messages separate from human chat: these
+preferences do not filter or suppress the generic `ScenePeer` transport.
+
+The shared racing `ClientRaceSession` accepts preference snapshots and owns its
+bounded, cached player-message history. Room hosts enforce Full Chat, Quick Chat
+or Off independently of those personal display choices. Full Chat includes Quick
+Chat; quick requests transmit semantic phrase IDs and hosts attach the current
+track context. The unpublished 0.7 candidate includes these additions with racing
+protocol 6; rebuild client mods against its regenerated signature pin.
+
 ## 3. Drawing
 
 `SceneCanvas` draws in order, later on top, in game pixels:

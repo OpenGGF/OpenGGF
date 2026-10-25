@@ -898,7 +898,7 @@ public final class EngineSettingsScreen {
             case DISPLAY -> "Aspect ratio, window, shaders and colour.";
             case AUDIO -> "Music, sound effects and the sound chip.";
             case INPUT -> "Keyboard, controllers and every shortcut key.";
-            case GAMEPLAY -> "Rewind, debug tools and what happens at startup.";
+            case GAMEPLAY -> "Multiplayer chat, rewind, debug tools and startup.";
             case FILES -> "Where your ROM images live.";
             case RECORDING -> "Video capture of your play sessions.";
             case LAUNCH -> "Per-game launch profiles.";

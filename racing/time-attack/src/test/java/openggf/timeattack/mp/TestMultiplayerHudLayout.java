@@ -162,6 +162,29 @@ class TestMultiplayerHudLayout {
         assertEquals(0xFF70FF70, podium.lines().getLast().nameColor());
     }
 
+    @Test
+    void wideChatLinesStayClearOfTheThreePersonRoundPodium() {
+        MultiplayerHudState source = state("ROUND_END", 2);
+        MultiplayerHudState withChat = new MultiplayerHudState(true, "ROUND_END", 0, 0,
+                source.standings(), List.of("Racer: " + "a wide chat message ".repeat(8),
+                        "Another racer: " + "another wide message ".repeat(8)),
+                false, null, source.totalPlayers(), source.farPlayers(), source.characterPolicy(),
+                source.voteOptions(), source.voteCounts(), source.voteRemainingMillis(),
+                source.voteResultTrackKey(), source.podiumRows(), source.localRank());
+        for (int width : new int[] {320, 424}) {
+            HudTextLayout.Panel podium = MultiplayerHudRenderer.layout(width, 224, withChat, 8192, true);
+            HudTextLayout.Panel chat = MultiplayerHudRenderer.chatLayout(width, 224, withChat);
+            assertEquals(4, podium.lines().size(), "round notice and all three podium places");
+            assertNotNull(chat);
+            assertEquals(2, chat.lines().size());
+            assertTrue(chat.x() < podium.x() + podium.width() && podium.x() < chat.x() + chat.width(),
+                    "wide messages exercise the horizontally overlapping case");
+            assertTrue(chat.y() + chat.height() + 4 <= podium.y(), "chat must clear the result notice");
+            assertContained(chat, width);
+            assertContained(podium, width);
+        }
+    }
+
     private static void assertContained(HudTextLayout.Panel panel, int width) {
         assertTrue(panel.x() >= 0 && panel.y() >= 0);
         assertTrue(panel.x() + panel.width() <= width);
