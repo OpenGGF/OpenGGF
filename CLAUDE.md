@@ -377,6 +377,15 @@ version for a new release. Read
 `release-publishing` skill for publication or a skipped release job. Confirm
 the release and downloads before reporting that it shipped.
 
+For local release preparation, run the committed AIZ1/HCZ1 route pilot with
+`check_route_obligations.py --run --expected-candidate <reviewed-full-SHA>`
+and an absolute original S3&K ROM path. The strict candidate/source/fixture/ROM
+and zero-skip checks supplement full-suite, guards, required ROM/trace and
+campaign gates; the pilot does not certify an entire release. ROMs stay local
+or on a private fixture runner. Hosted builds/publication do not depend on that
+runner; manual ROM validation remains opt-in. See the publishing guide for the
+command and procedural limits.
+
 Follow the user's global branch/integration workflow. Never switch the main
 workspace branch. New branches use isolated `.worktrees/` checkouts and
 `feature/ai-*` or `bugfix/ai-*` names, based on the current main branch.

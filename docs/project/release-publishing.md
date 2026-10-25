@@ -42,6 +42,9 @@ preparing the release. See [release rollover](release-rollover.md).
    Complete the release gates and prepare the reviewed release in a separate
    `master` worktree. Follow [release rollover](release-rollover.md) when
    promoting versions. Read the version from that commit's `pom.xml`.
+   Run the exact-candidate local route pilot below on the final committed
+   candidate too. Qualification of a development ancestor does not qualify a
+   later version bump, merge resolution or promotion commit.
 2. Check the remote `v<version>` tag before pushing. The workflow rejects an
    existing tag rather than overwriting a published release. A later push
    with the same POM version will build but fail the existing-tag check; use
@@ -75,6 +78,64 @@ preparing the release. See [release rollover](release-rollover.md).
    are intermediate results. Report publication after checking the release
    itself. For a failed or cancelled run, inspect its tag and any partial
    release before retrying.
+
+## Local exact-candidate ROM qualification
+
+Keep original ROMs on the maintainer's machine or a private fixture runner.
+Do not copy, symlink or upload them for this procedure. Hosted test totals do
+not establish ROM qualification. Automatic master publication and the separate
+manual `validate_roms` opt-in remain unchanged; neither requires a private
+runner to finish hosted builds or publish.
+
+In the isolated final release-candidate checkout, use a full commit SHA taken
+from the reviewed candidate, rather than resolving a moving branch or using
+the current HEAD as an implicit expectation:
+
+```bash
+python3 tools/testing/check_route_obligations.py --run \
+  --expected-candidate "$RELEASE_CANDIDATE" \
+  --rom "s3k=$S3K_ROM_PATH"
+```
+
+Set `RELEASE_CANDIDATE` to that reviewed 40-character lowercase SHA and
+`S3K_ROM_PATH` to the absolute existing original locked-on S3&K ROM. Use Java 25;
+run the testing guide's actual tool preflight with Lua 5.4 before release checks.
+`--preflight` in place of `--run` checks candidate/ROM/fixture prerequisites
+without executing or awarding coverage. Omit `--expected-candidate` for routine
+mutable development; only the strict `--run` invocation binds qualification.
+
+The strict mode reuses the committed
+`tools/testing/aiz-hcz-route-obligations.json` inventory: 26 meaningful native
+Sonic+Tails cases across six classes, covering independent AIZ1/HCZ1 routes,
+seven AIZ1 and ten HCZ1 rewind spots, five HCZ1 arena widths, and both outgoing
+reload boundaries. It does not permit a substituted inventory or old `--reports`.
+It enforces HEAD equality, a clean checkout (optional research submodules
+excluded), committed build/source contents, and no ignored extra source/fixture
+inputs. It verifies the inventory's original S3&K SHA-1 and required fixtures,
+then compares commit, source/build, fixture, inventory and ROM state at the
+before/after boundaries, including queue waiting. Git `assume-unchanged` cannot
+hide edited build inputs. Keep the checkout and inputs stable throughout; this
+is boundary fingerprinting, not continuous filesystem surveillance.
+
+Execution queues a clean rebuild with `-Dmse=off` and surfaceless EGL, uses a
+unique temporary report directory under this checkout's `target/`, and requires
+every exact case once, with no failure, error or skip. XML counters must agree
+with individual cases and Maven must succeed. Short worktree locks protect
+report creation, inspection and cleanup; no lock is held while requesting test
+admission. Reports are consumed and removed on completion/cancellation; no pass
+cache or receipt is retained. Record the concise command, commit, outcomes and
+coverage limits in the existing release/task validation record.
+
+This remains a **bounded route pilot**, not whole-release certification or a
+joined AIZ-to-HCZ campaign. Full ordinary validation, fresh-JVM guards, required
+ROM/trace checks and campaign gates remain release obligations. Verify original
+S1/S2 ROM identities for their required checks separately; this pilot requires
+only S3&K. Use the existing release skip classifier with truthful input
+capabilities, trace coverage assertions and baseline/candidate trace comparator
+for their respective lanes. They do not turn a missing/skipped pilot case into
+coverage. Completion of these other gates, review of permitted skips and known
+trace failures, matching the eventual pushed SHA, and authorization to publish
+remain procedural: this local tool is not a GitHub status or publication gate.
 
 ## Bundled first-party mods
 

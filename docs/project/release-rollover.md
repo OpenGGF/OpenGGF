@@ -149,6 +149,14 @@ the ones that needed it last time.
 
 ## Verification
 
+- After committing the final promotion/version metadata, run the
+  [local exact-candidate ROM pilot](release-publishing.md#local-exact-candidate-rom-qualification)
+  with `--expected-candidate` set to the reviewed final SHA in that candidate's
+  own checkout. Any subsequent commit needs qualification of its new SHA.
+  The 26-case AIZ1/HCZ1 pilot supplements full-suite/guards, required ROM/trace
+  validation and campaign gates; it does not certify them. Original ROMs remain
+  local/private. Hosted builds and automatic master publication retain their
+  existing graph; the manual ROM job stays opt-in.
 - After the required release checks, run
   `python3 tools/testing/maven_queue.py -Dmse=off -DskipTests clean package`
   in each promoted branch's own worktree and confirm `AppVersion` reports the new

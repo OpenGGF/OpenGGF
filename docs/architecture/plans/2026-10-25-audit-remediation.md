@@ -39,13 +39,22 @@ focused evidence. They do not push or modify the main workspace.
 | Roadmap reconciliation | Source-backed implementation/qualification status, Stageplay scope, finite configuration tiers, timing dispositions and corrected architecture prose | `e4fb59d17`: 99 links/anchors and factual/structural checks passed |
 | Native fixed-slot correction | ROM-backed empty/live fixed-tail storage, admission failure, retirement and strict restore/replay | Sol implementation running |
 | Continuous campaign boundary | Current named AIZ-to-HCZ frontier and smallest ROM-owned correction, retaining strict comparisons | Baseline reproduced; reviewed `760b2005d` adaptation under focused/trace validation |
-| Release preparation | Explicit exact-candidate qualification and required case accounting, consistent with publication policy | Sol implementation running; user confirmed local/private ROMs and independent hosted publication |
+| Release preparation | Explicit exact-candidate qualification and required case accounting, consistent with publication policy | `a2cf1b322`: Python safety and actual tool/strict-ROM prerequisite preflight passed; real route run remains parent validation |
 
 The user confirmed that ROMs must not be placed on GitHub and accepted stronger
 local preparation. Preserve hosted publication and manual ROM opt-in. The local
 tool must bind its named subset to the expected candidate and reject missing or
 skipped evidence; it must not describe the existing 26-case pilot as complete
 release qualification or replace the other public-release gates.
+
+The strict-mode worker reports 42 route-tool safety checks and 98 release-policy
+safety checks passing without skips. Skip-classifier checks pass 19 cases and
+skip `CheckedInPolicyTests.test_preserved_f56d4fae1_reports` because its historical
+archive is absent. Actual Java 25/Lua 5.4/PowerShell preflight and committed-SHA
+strict prerequisites with the original local S3&K ROM pass. No native route,
+smoke or full suite was run for that worker; parent will exercise the strict
+26-case pilot against the composed committed candidate as affected domain/tool
+integration evidence, separately from broad smoke.
 
 Session/global ownership and restore-order concerns are source-level maintenance
 risks. They do not authorize an indiscriminate service-locator migration or new
@@ -97,8 +106,9 @@ Corrected canonical/prefix validation is in flight; no frontier closure is claim
 The fixed-tail worker's 12-case native animation prerequisite passes without skips,
 but the conservative hook treats a nested engine-internal snapshot component as
 a public API change. The established normalized terminal remains unchanged.
-Parent is investigating a narrow policy correction; hooks and signature pins
-must not be bypassed or artificially changed.
+An isolated Sol policy worker now owns the narrow correction and both-shell
+negative controls; hooks and signature pins must not be bypassed or artificially
+changed. The normal candidate signature check remains separate.
 
 The parent integration checkout is
 `.worktrees/ai-audit-remediation-20261025` on
