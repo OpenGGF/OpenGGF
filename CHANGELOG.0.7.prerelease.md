@@ -624,6 +624,11 @@ Unreleased. The earlier development themes remain in
   Silent headless boots also retire inherited audio backends before playback, keeping
   reused capture processes off desktop audio devices.
 
+- **Mod API source checks:** Commit hooks allow implementation changes inside
+  established engine-internal nested terminals without a false signature-pin
+  update. Nested identity and visibility, outer and sibling API declarations,
+  and candidate/published pin enforcement remain checked against Git snapshots.
+
 - **Runtime ownership:** A loop-lifetime suspended visit keeps admission, picture
   readiness, parking, saved state, resume and retirement under one authority;
   the title keeps its card, textures and zoom presentation. Live rewind retains

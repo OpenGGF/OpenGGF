@@ -102,6 +102,18 @@ the dependency-complete runtime surface. This major/minor filename denotes a
 replaceable candidate pin; it carries no compatibility promise. Earlier 1.x and
 2.x labels were provisional development markers and carry no compatibility promise.
 
+The commit hooks compare source declarations without running Maven or reading
+compiled signatures. For nested engine-internal terminals, their shared lexical
+probe reads `ENGINE_INTERNAL_TYPES` in `ModApiSignatureSurface` from both compared
+Git trees (or HEAD and the index). Only classifications present in both snapshots
+omit component and member implementation details; nested identity, visibility and
+owning relationship still participate, as do outer and sibling API declarations.
+Adding a classification in the same edit cannot exempt a public-surface change.
+Malformed or unsupported registry initializers fail admission; historical trees
+without the registry retain conservative declaration checks. The normalized
+signature and engine-internal inventory tests remain authoritative, with version,
+descriptor and candidate/published pin coupling unchanged.
+
 The root [`mod-api-release-policy.properties`](../../mod-api-release-policy.properties)
 descriptor is the sole authority for branch topology, current version and status,
 and the published-baseline set. This guide explains that policy but does not define
