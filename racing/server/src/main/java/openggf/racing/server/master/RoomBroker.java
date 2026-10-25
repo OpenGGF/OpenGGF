@@ -838,7 +838,9 @@ public final class RoomBroker {
                 && ladder.tierOf(member.fingerprint) != TrustLadder.Tier.TRUSTED) {
             return "verified rooms require TRUSTED";
         }
-        if (room.playerCount() >= room.descriptor().maxPlayers()) return "room full";
+        // Directory counts are periodic discovery snapshots, not slot leases:
+        // a departure may already have freed capacity in the owning RoomHost.
+        // Keep the NEW-identity pressure policy; the room enforces actual capacity.
         boolean underPressure = room.playerCount() * 5 >= room.descriptor().maxPlayers() * 4;
         if (underPressure && ladder.tierOf(member.fingerprint) == TrustLadder.Tier.NEW) {
             return "room under pressure";
