@@ -840,12 +840,44 @@ class TestSonicCdOpeningWorldLoad {
         assertThrows(IllegalStateException.class, () -> step(h, LogicalInputSnapshot.neutral()));
     }
 
-    @Test void ordinaryRampApproachPassesOwnedSpringsTagsAndVerticalDoorAndStopsAtTheMonitorDispatcher() throws Exception {
+    @Test void ordinaryRampApproachPassesOwnedSpringsTagsVerticalDoorAndMonitorAndReplays() throws Exception {
         var h = opening();
+        for (int call = 0; call < 323; call++) step(h, input(8, 0, false));
+        var registry = h.mode().getRewindRegistry();
+        var full = registry.capture(); var course = registry.captureCourse(); var before = state(h);
+        var expected = new java.util.ArrayList<State>();
+        for (int call = 323; call < 400; call++) {
+            step(h, input(8, 0, false));
+            if (call == 323) {
+                var monitor = objects(h).placement().pool().state(59);
+                // Actual row74 admission: native Init replaces bit7 before its first Main.
+                assertEquals(0x19, monitor.id()); assertEquals(2, monitor.routine());
+                assertEquals(4, monitor.unsignedByte(CdObjectState.ByteField.SUBTYPE));
+                assertEquals(45, monitor.unsignedByte(CdObjectState.ByteField.SAVED_FLAGS_ID));
+                assertEquals(0x46, monitor.unsignedByte(CdObjectState.ByteField.COLLISION_TYPE));
+                assertEquals(0x20AA4E, monitor.longBits(CdObjectState.LongField.MAPPINGS));
+                assertEquals(0x850, monitor.centreX()); assertEquals(0x2D8, monitor.centreY());
+            }
+            expected.add(state(h));
+        }
+        registry.restore(full); assertState(before, h);
+        for (var row : expected) { step(h, input(8, 0, false)); assertState(row, h); }
+        registry.restoreCourse(course); assertState(before, h);
+        for (var row : expected) { step(h, input(8, 0, false)); assertState(row, h); }
+    }
+
+    @Test void ordinaryRightRouteStopsAtTheSpinTunnelDoorDispatcher() throws Exception {
+        var h = opening(); var runtime = objects(h); var frame = h.module().requirePlayerFrame();
+        var pool = runtime.placement().pool();
         var failure = assertThrows(UnsupportedOperationException.class, () -> {
-            for (int call = 0; call < 400; call++) step(h, input(8, 0, false));
+            for (int call = 0; call < 518; call++) step(h, input(8, 0, false));
         });
-        assertTrue(failure.getMessage().startsWith("Unowned CD object ID $19 at live physical slot "), failure.getMessage());
+        assertEquals("Unowned CD object ID $d at live physical slot 37", failure.getMessage());
+        var door = pool.state(37);
+        assertEquals(0x0D, door.id()); assertEquals(0, door.routine());
+        assertEquals(1, door.unsignedByte(CdObjectState.ByteField.SUBTYPE));
+        assertEquals(0x96F, door.centreX()); assertEquals(0x318, door.centreY());
+        assertTrue(runtime.closed()); assertTrue(frame.closed());
     }
 
     // ClearScreen/InitLevelDrawBG: this is post-initial-draw, before any represented V-int.

@@ -1,5 +1,6 @@
 package com.openggf.game.soniccd;
 
+import com.openggf.game.soniccd.audio.CdFmSoundAssets;
 import com.openggf.game.soniccd.level.CdR11aAssetLoader;
 import com.openggf.game.soniccd.level.CdR11aProfile;
 import com.openggf.game.soniccd.media.CdProgramAssets;
@@ -45,7 +46,10 @@ public final class CdStockLaunch {
         try (var media = CdProgramAssets.open(cue, request.requestedVariant(), Optional.empty())) {
             CdRetailRelease release = knownContent(media, request.requestedContentKey());
             var assets = CdR11aAssetLoader.load(media, release.variant(), request.stage());
-            return new CdGameDataSource(release, assets);
+            // Only USA's authenticated MDINIT bank is admitted. Regional static preparation stays supported.
+            Optional<CdFmSoundAssets> fmSoundAssets = release.variant() == CdReleaseVariant.USA
+                    ? Optional.of(CdFmSoundAssets.fromPrograms(media)) : Optional.empty();
+            return new CdGameDataSource(release, assets, fmSoundAssets);
         }
     }
 

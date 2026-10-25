@@ -154,16 +154,17 @@ class TestSonicCdOpeningWorldEgl {
                         pictureBase + 108, pictureBase + 136, pictureBase + 199, pictureBase + 269,
                         pictureBase + 274, pictureBase + 313, pictureBase + 349, pictureBase + 364);
                 var expectedPicture = com.openggf.game.soniccd.resources.CdObjectPresentation.convert(pickupCpu,
-                        com.openggf.game.soniccd.resources.CdObjectPresentation.usaR11aTunnelDoorVerticalDevPreloadedArt(
+                        com.openggf.game.soniccd.resources.CdObjectPresentation.usaR11aMonitorTimeDevPreloadedArt(
                                 module.requirePlayerFrame().artState(), runtime.powerupArtState(), source.assets().openingObjects(),
                                 source.assets().openingObjects().frontierArtBank(),
                                 source.assets().openingObjects().contactArtBank(),
                                 source.assets().openingObjects().floatBlockArtBank(),
                                 source.assets().openingObjects().springArtBank(),
                                 source.assets().openingObjects().tunnelDoorArtBank(),
+                                source.assets().openingObjects().monitorTimeArtBank(),
                                 banks.player(), banks.ring(), banks.mosqui(), banks.plant(), banks.ramp(),
                                 banks.explosion(), banks.points(), banks.flower(), banks.powerup(), banks.floatBlock(), banks.spring(),
-                                banks.tunnelDoorVertical()));
+                                banks.tunnelDoorVertical(), banks.monitorTime()));
                 assertEquals(expectedPicture, runtime.displayedFrame(), "Next V-int uses the pickup CPU table and now-serviced art");
                 int playerBase = com.openggf.graphics.PatternAtlasRange.OBJECTS.base();
                 assertTrue(runtime.displayedFrame().patternVersions().keySet().stream()
@@ -1730,5 +1731,463 @@ class TestSonicCdOpeningWorldEgl {
         assertTrue(opaque > 0); assertEquals(6 * 64, opaque + transparent);
         assertTrue(changed > 0, "Actual GPU must draw inside this pose's isolated native opaque Door pixels, independently of Sonic");
     }
+
+    // BEGIN constructed Monitor World proof. All native expectations are source-derived, not execution observations.
+    @Test void actualEglConstructedShoesMonitorWorldBreaksAwardsReplaysAndRetires494Patterns() throws Exception {
+        Assumptions.assumeTrue(Boolean.getBoolean("soniccd.opening.egl"), "Explicit actual EGL/media opt-in");
+        assertEquals("surfaceless-egl", System.getProperty("openggf.headless.gl"));
+        assertNull(System.getenv("DISPLAY")); assertNull(System.getenv("WAYLAND_DISPLAY"));
+        String media = System.getProperty("soniccd.media.root"); assertNotNull(media); assertFalse(media.isBlank());
+        CdGameDataSource source;
+        try (var files = Files.list(Path.of(media).resolve("USA"))) {
+            var cues = files.filter(f -> f.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".cue")).toList();
+            assertEquals(1, cues.size()); source = CdStockLaunch.prepare(cues.getFirst(), CdStockLaunch.Request.r11a());
+        }
+        String log = InputScriptCompiler.compileToInputLog("1358 -");
+        var movie = new Bk2MovieLoader().parseInputLogText(Path.of("constructed-shoes-monitor-world-input"), log.lines().toList());
+        Path output = openCaptureOutput(log, "soniccd.monitor.output");
+        String construction = "ENGINE constructed USA R11A shoes Monitor component; NOT a natural route/contact.\n"
+                + "Row0 actual Sonic Init. At its CLOSED_CUT clear ALL96 dynamic slots, retain the saved-object bank/placement cursors and reserved actors. Construct ONLY slot40 ID19, X=cameraX+192, Y=cameraY+96, subtype4, savedID7, layer0, all other bytes from that cleared slot. No source callback/effect replay.\n"
+                + "Rows1/2 actual Monitor Init then one visible Main: map0 then box16. Before row3 ONLY stage the current completed Sonic at MonitorX, MonitorY-22, zero X/GVel, YVel0100, routine2, angle0, flags6, spriteFlags4, radii7/14, animation2, playerJump1, charge/moveLock/stick/control0. Preserve previousAnimation, both previous-angle bytes, the complete animation cursor, header, ALL four actor timers, history/index, rotation and object links. Clear actor Display publication and rebind that SAME actor.\n"
+                + "Actual Body MONITOR touch precedes dynamic pass: parent Break emits FM_DESTROY; Find allocates item32 then explosion33, BOTH already visited so both wait. No Monitor routine/frame/saved-bit or item routine/timer/position write follows construction.\n"
+                + "Before row4 ONLY move that same Sonic to the authenticated load plan initial centre, routine2/angle0/flags0/spriteFlags4/radii9,19/animation0; velocities/jump/charge/moveLock/stick/control0. Preserve the SAME cursor/header/ALL timers/history/rotation/links/previousAnimation/angle copies, clear Display and rebind. This standing MODE may genuinely request FM_CHARGESTOP; every Body sound is included. No further staging.\n"
+                + "Item movement calls1..32 at rows4..35; award call33 at row36 writes real USA shoes1320/flag1/physicsC00,18,80 and SHOESMUS6C, no Past FADEPCM82 (raw timeZone1). Next Display row37 gives1319. Explosion25=1 deletes without Points/Flower; item Delete30 row66; next publication row67 has no item.\n"
+                + "Full AND course replay from pre-break row2 repeats EXACTLY row3 contact and row4 move-away ingress. Full AND course replay from nonzero-award row36 repeats NO staging, rows37..67. Every replay compares complete captures AND framebuffer at EVERY row.\n"
+                + "Then neutral ordinary GameLoop rows68..1357 consume the genuinely earned timer to expiry (row1356) and one further Display. No reward/global/physics/timer setter, artificial expiry seed or monitor/item mutation. Independent native MODE/Display sound expectations include ChargeStop where its actual terrain predicate is reached.\n"
+                + "At the final retirement cut ONLY, upload all494 actual current-policy tile versions into their already-owned atlas IDs, including UNUSED suffix+412..493, to prove every entry is removed. This upload is teardown coverage, NOT proof that every tile drew on screen.\n"
+                + "Independent counted16/broken17 and header-free shoes4 SAT/geometry/nibble/current-palette opaque ARGB/zero-terrain oracles, omitted-visible-tile negative and native Plane B terrain controls. USA DEV preload/current display policy; excludes native palette, mixed native priority, native PLC residency/service, hardware audio, timing, natural-route and full-game parity.\n";
+        if (output != null) {
+            Files.writeString(output.resolve("construction.txt"), construction, StandardOpenOption.CREATE_NEW);
+            Files.writeString(output.resolve("monitor-state.csv"),
+                    "ENGINE-row,monitorX,monitorY,parentRoutine,parentFrame,itemID,itemY16_16,itemYVel,itemRoutine,shoesTimer,shoesFlag,cameraX,cameraY,sounds\n",
+                    StandardOpenOption.CREATE_NEW);
+        }
+        try (var boot = new HeadlessGameBoot(320, 224)) {
+            try {
+                var loop = boot.bootSonicCdOpeningObjects(source);
+                var mode = SessionManager.getCurrentGameplayMode();
+                var module = assertInstanceOf(SonicCdGameModule.class, mode.getWorldSession().getGameModule());
+                var runtime = assertInstanceOf(CdOpeningObjectRuntime.class, module.getGameService(NativeDynamicObjectPass.class));
+                var frame = module.requirePlayerFrame(); var actor = module.requirePlayerActor();
+                assertSame(source, mode.getWorldSession().getDataSource());
+                assertEquals(GameMode.LEVEL, loop.getCurrentGameMode());
+                assertEquals(NullAudioBackend.class, GameServices.audio().getBackend().getClass());
+                assertNull(GameServices.audio().captureLogicalSnapshot().presentation().activeMusic());
+                step(loop, movie.getFrame(0)); // Actual Sonic Init, no synthesized actor/header.
+                assertEquals(List.of(), actor.lastSoundRequests());
+                var pool = runtime.placement().pool(); pool.clearDynamicSlots(); // Explicit ALL96 dynamic-slot ingress.
+                assertTrue(pool.capture().slots().stream().allMatch(s -> Arrays.equals(new byte[64], s.copyBytes())));
+                int monitorX = GameServices.camera().getX() + 192, monitorY = GameServices.camera().getY() + 96;
+                var bounds = frame.environment().movement().bounds();
+                assertTrue(monitorX - 24 >= bounds.left() && monitorX + 24 < bounds.right());
+                assertTrue(monitorY >= 72 && monitorY + 24 < bounds.bottom() + 224);
+                // Solidity selects a probe; a top-solid tile can contain air above its floor shape.
+                // Check the actual motion/glyph envelope, ending at centre+16, not below it in the ground.
+                var terrainLookup = new com.openggf.game.soniccd.level.CdTerrainCollision(source.assets().terrain());
+                var terrainProbe = new com.openggf.game.soniccd.player.CdPlayerTerrain(source.assets().terrain());
+                for (int y = monitorY - 72; y <= monitorY + 16; y += 8) for (int x = monitorX - 24; x <= monitorX + 24; x += 8) {
+                    var placement = terrainLookup.lookup(x, y, 4);
+                    assertFalse(placement instanceof com.openggf.game.soniccd.level.CdTerrainCollision.Unavailable);
+                    assertTrue(terrainProbe.floor(x,y,13,0,16,4).distance() >= 0,
+                            "Construction floor penetration at " + x + "," + y);
+                    assertTrue(terrainProbe.wall(x,y,14,0,16,4).distance() >= 0,
+                            "Construction wall penetration at " + x + "," + y);
+                }
+                assertEquals(0, runtime.placement().savedFlag(7, 1) & 1);
+                pool.write(pool.state(40).moveByte(ID, 0x19).moveWord(X, monitorX).moveWord(Y, monitorY)
+                        .moveByte(SUBTYPE, 4).moveByte(SAVED_FLAGS_ID, 7).moveByte(LAYER, 0));
+                monitorWorldStep(loop, movie.getFrame(1), module, List.of());
+                assertEquals(2, pool.state(40).routine()); assertEquals(0, pool.state(40).unsignedByte(MAP_FRAME));
+                assertEquals(0x46, pool.state(40).unsignedByte(COLLISION_TYPE));
+                assertEquals(0x20AA4E, pool.state(40).longBits(MAPPINGS)); assertEquals(0x05A8, pool.state(40).word(TILE));
+                assertEquals(0x84, pool.state(40).spriteFlags()); assertEquals(4, pool.state(40).unsignedByte(ANIMATION));
+                assertEquals(14, pool.state(40).unsignedByte(X_RADIUS)); assertEquals(14, pool.state(40).unsignedByte(Y_RADIUS));
+                assertEquals(3, pool.state(40).unsignedByte(PRIORITY)); assertEquals(15, pool.state(40).unsignedByte(WIDTH));
+                monitorWorldStep(loop, movie.getFrame(2), module, List.of());
+                assertEquals(16, pool.state(40).unsignedByte(MAP_FRAME)); assertEquals(2, pool.state(40).routine());
+                assertMonitorWorldSat(runtime.cpuSat(), GameServices.camera().getX(), GameServices.camera().getY(), monitorX, monitorY, 16, null);
+                int base = com.openggf.graphics.PatternAtlasRange.OBJECTS.base();
+                var banks = new CdOpeningObjectRuntime.LogicalBanks(base, base + 24, base + 38, base + 108, base + 136,
+                        base + 199, base + 269, base + 274, base + 313, base + 349, base + 364, base + 400);
+                assertEquals(base + 412, banks.monitorTime()); assertEquals(banks.tunnelDoorVertical() + 12, banks.monitorTime());
+                var objects = source.assets().openingObjects(); var art = objects.monitorTimeArtBank();
+                var binding = art.binding(com.openggf.game.soniccd.level.CdR11aAsset.ART_MONITOR_TIME_POSTS);
+                assertEquals(0x5A8, binding.firstTileId()); assertEquals(82, binding.tileCount());
+                assertEquals(0x05A8, binding.baseWord()); assertEquals(0xB500, binding.plc().vramAddress());
+                var policy = monitorWorldPolicy(module, objects, banks);
+                int[] nativeFirst = {0x780, 0x7AE, 0x3A0, 0x424, 0x441, 0x680, 0x6C6, 0x6D7, 0x544, 0x334, 0x520, 0x328, 0x5A8};
+                int[] counts = {24, 14, 70, 28, 63, 70, 5, 39, 36, 15, 36, 12, 82};
+                var atlas = GameServices.graphics().getPatternAtlas(); int logical = base;
+                for (int span = 0; span < counts.length; span++) for (int tile = 0; tile < counts[span]; tile++) {
+                    int id = logical++; assertEquals(id, policy.resolve(nativeFirst[span] + tile).logicalPatternId());
+                    assertEquals(1, atlas.registeredRangesForTesting().stream()
+                            .filter(range -> id >= range.base() && id < range.base() + range.size()).count(), "reservation " + id);
+                }
+                assertEquals(base + 494, logical, "Exact thirteen-span reservation, including every Monitor suffix ID");
+                var registry = mode.getRewindRegistry(); var preFull = registry.capture(); var preCourse = registry.captureCourse();
+                var before = capture(module); var beforePixels = render(module, true); assertCapture(before, module);
+                var rows = new ArrayList<Capture>(); var pixels = new ArrayList<int[]>();
+                var phasePictures = new ArrayList<RgbaImage>(); var phaseControls = new ArrayList<RgbaImage>();
+                var previousCpu = runtime.cpuSat(); int previousX = GameServices.camera().getX(), previousY = GameServices.camera().getY();
+                int previousItemY = 0; var savedBefore = before.objects().placement().savedFlags().copy();
+                var scoreBefore = runtime.scoreGlobals(); var ringsBefore = runtime.ringGlobals();
+                var contactBefore = runtime.contactGlobals(); var levelBefore = runtime.levelGlobals();
+                for (int row = 3; row <= 67; row++) {
+                    if (row == 3) stageMonitorWorldPlayer(module, monitorX, monitorY - 22, true);
+                    if (row == 4) {
+                        var initial = source.assets().loadPlan().initialCentre();
+                        stageMonitorWorldPlayer(module, initial.centreX(), initial.centreY(), false);
+                    }
+                    List<CdOpeningObjectRuntime.SoundRequest> extra = row == 3
+                            ? List.of(new CdOpeningObjectRuntime.MonitorFm(com.openggf.game.soniccd.objects.CdMonitor.FmSound.FM_DESTROY))
+                            : row == 36 ? List.of(new CdOpeningObjectRuntime.MonitorItemSubCpu(
+                                    com.openggf.game.soniccd.player.CdPlayerSpeedShoesReward.SubCpuCommand.SCMD_SHOESMUS)) : List.of();
+                    monitorWorldStep(loop, movie.getFrame(row), module, extra);
+                    assertSame(actor, module.requirePlayerActor());
+                    assertEquals(8, pool.state(40).routine()); assertEquals(17, pool.state(40).unsignedByte(MAP_FRAME));
+                    assertEquals(0, pool.state(40).unsignedByte(COLLISION_TYPE)); assertEquals(1, runtime.placement().savedFlag(7, 1) & 1);
+                    var expectedSaved = savedBefore.clone(); expectedSaved[24] |= 1;
+                    assertArrayEquals(expectedSaved, runtime.placement().capture().savedFlags().copy(), "ONLY Monitor saved bit0 changes");
+                    assertEquals(scoreBefore, runtime.scoreGlobals()); assertEquals(contactBefore, runtime.contactGlobals());
+                    assertEquals(levelBefore, runtime.levelGlobals());
+                    assertEquals(ringsBefore.rings(), runtime.ringGlobals().rings()); assertEquals(ringsBefore.lives(), runtime.ringGlobals().lives());
+                    assertEquals(ringsBefore.timeStopTimer(), runtime.ringGlobals().timeStopTimer());
+                    assertTrue(pool.capture().slots().stream().allMatch(s -> s.id() == 0 || s.identity().wholeIndex() == 40
+                            || s.identity().wholeIndex() == 32 || s.identity().wholeIndex() == 33), "No Points, Flower or extra object allocation");
+                    if (row == 3) {
+                        assertTrue(frame.state().motion().yVelocity() < 0, "Actual Body MONITOR downward bounce precedes SAME-pass Break");
+                        assertEquals(0x1A, pool.state(32).id()); assertEquals(0, pool.state(32).routine());
+                        assertEquals(monitorY << 16, pool.state(32).longBits(Y_POSITION));
+                        assertEquals(0x18, pool.state(33).id()); assertEquals(0, pool.state(33).routine());
+                        assertEquals(1, pool.state(33).unsignedByte(ROUTINE_2)); assertEquals(1, pool.state(33).subtype());
+                        assertEquals(0, frame.state().timers().speedShoes()); assertEquals(0, frame.environment().movement().gates().speedShoes());
+                    }
+                    if (row >= 4 && row <= 65) {
+                        int moves = Math.min(row - 3, 32);
+                        int displacement = -0x300 * moves + 0x18 * moves * (moves - 1) / 2;
+                        var item = pool.state(32); assertEquals(0x1A, item.id()); assertEquals(monitorX << 16, item.longBits(X_POSITION));
+                        assertEquals((monitorY << 16) + (displacement << 8), item.longBits(Y_POSITION), "OLD negative Y velocity supplies all32 moves");
+                        assertEquals((short) (-0x300 + moves * 0x18), item.signedWord(Y_VELOCITY));
+                        assertEquals(0x20AACF, item.longBits(MAPPINGS)); assertEquals(4, item.unsignedByte(MAP_FRAME));
+                        assertEquals(0x85A8, item.word(TILE)); assertEquals(0xA4, item.spriteFlags());
+                        assertEquals(3, item.unsignedByte(PRIORITY)); assertEquals(8, item.unsignedByte(WIDTH));
+                        assertEquals(row < 36 ? 2 : 4, item.routine());
+                        if (row >= 36) assertEquals(29 - (row - 36), item.word(MONITOR_ITEM_DELETE));
+                    }
+                    if (row >= 4 && row <= 24) {
+                        assertEquals(0x18, pool.state(33).id()); assertEquals(1, pool.state(33).unsignedByte(ROUTINE_2));
+                        assertEquals(row == 24 ? 4 : 2, pool.state(33).routine());
+                        assertEquals(Math.min((row - 4) / 4, 4), pool.state(33).unsignedByte(MAP_FRAME));
+                    }
+                    if (row >= 25) assertArrayEquals(new byte[64], pool.state(33).copyBytes(), "Non-badnik Explosion deletes, never Flower/Points");
+                    if (row >= 66) assertArrayEquals(new byte[64], pool.state(32).copyBytes(), "Delete30 clears the entire item slot");
+                    assertEquals(row < 36 ? 0 : 1320 - (row - 36), frame.state().timers().speedShoes());
+                    assertEquals(row < 36 ? 0 : 1, frame.environment().movement().gates().speedShoes());
+                    assertEquals(new com.openggf.game.soniccd.player.CdPlayerMovement.Physics(row < 36 ? 0x600 : 0xC00,
+                            row < 36 ? 0xC : 0x18, 0x80), frame.environment().movement().physics());
+                    assertEquals(0, frame.state().timers().invincibility()); assertEquals(0, frame.environment().globals().invincible());
+                    if (row == 36) {
+                        assertEquals(0x6C, com.openggf.game.soniccd.player.CdPlayerSpeedShoesReward.SubCpuCommand.SCMD_SHOESMUS.nativeId());
+                        assertEquals(0x82, com.openggf.game.soniccd.player.CdPlayerSpeedShoesReward.SubCpuCommand.SCMD_FADEPCM.nativeId());
+                        assertEquals(1, frame.environment().movement().gates().timeZone());
+                    }
+                    assertMonitorWorldSat(runtime.cpuSat(), GameServices.camera().getX(), GameServices.camera().getY(),
+                            monitorX, monitorY, 17, row >= 4 && row < 66 ? pool.state(32).centreY() : null);
+                    var completed = capture(module); rows.add(completed);
+                    var publication = completed.publication().published();
+                    assertEquals(previousX, publication.cameraX()); assertEquals(previousY, publication.cameraY());
+                    assertEquals(com.openggf.game.soniccd.resources.CdObjectPresentation.convert(previousCpu,
+                            monitorWorldPolicy(module, objects, banks)), runtime.displayedFrame(), "Actual prior SAT with NOW-serviced resident windows");
+                    var image = render(module, true); pixels.add(image.pixels().clone());
+                    var terrain = renderTerrain(module, publication); assertNativeGpuBackground(module);
+                    assertTerrainOutsideSprites(image, terrain, runtime.displayedFrame());
+                    if (row == 3 || row >= 26) {
+                        boolean displayedItem = row >= 26 && row <= 66;
+                        int displayFrame = row == 3 ? 16 : 17;
+                        var literal = monitorWorldLiteralTiles(monitorX - previousX, monitorY - previousY, displayFrame,
+                                displayedItem ? previousItemY - previousY : null);
+                        assertMonitorWorldPixels(runtime.displayedFrame(), image, terrain, art, banks.monitorTime(), literal);
+                        if (row == 3 || row == 36) {
+                            assertMonitorWorldOmittedTileRejected(runtime.displayedFrame(), image, terrain, art, banks.monitorTime(), literal);
+                            phasePictures.add(image); phaseControls.add(terrain);
+                        }
+                    }
+                    assertArrayEquals(image.pixels(), render(module, true).pixels()); assertCapture(completed, module);
+                    previousCpu = runtime.cpuSat(); previousX = GameServices.camera().getX(); previousY = GameServices.camera().getY();
+                    previousItemY = pool.state(32).centreY();
+                    if (output != null) Files.writeString(output.resolve("monitor-state.csv"), String.format(Locale.ROOT,
+                            "%d,%d,%d,%d,%d,%d,%08X,%d,%d,%d,%d,%d,%d,%s%n", row, monitorX, monitorY,
+                            pool.state(40).routine(), pool.state(40).unsignedByte(MAP_FRAME), pool.state(32).id(),
+                            pool.state(32).longBits(Y_POSITION), pool.state(32).signedWord(Y_VELOCITY), pool.state(32).routine(),
+                            frame.state().timers().speedShoes(), frame.environment().movement().gates().speedShoes(),
+                            GameServices.camera().getX(), GameServices.camera().getY(), runtime.lastSoundRequests().toString().replace(',', ';')),
+                            StandardOpenOption.APPEND);
+                }
+                var end = capture(module); var endPixels = render(module, true); assertCapture(end, module);
+                // Pre-break replay repeats just the two declared actor ingress operations; never the pool clear/construction.
+                for (boolean courseOnly : List.of(false, true)) {
+                    if (courseOnly) registry.restoreCourse(preCourse); else registry.restore(preFull);
+                    assertCapture(before, module); assertArrayEquals(beforePixels.pixels(), render(module, true).pixels());
+                    for (int row = 3; row <= 67; row++) {
+                        if (row == 3) stageMonitorWorldPlayer(module, monitorX, monitorY - 22, true);
+                        if (row == 4) {
+                            var initial = source.assets().loadPlan().initialCentre();
+                            stageMonitorWorldPlayer(module, initial.centreX(), initial.centreY(), false);
+                        }
+                        step(loop, movie.getFrame(row)); assertCapture(rows.get(row - 3), module);
+                        assertArrayEquals(pixels.get(row - 3), render(module, true).pixels(), "Monitor pre-break full/course replay row " + row);
+                        assertCapture(rows.get(row - 3), module);
+                    }
+                }
+                // Recreate the REAL nonzero-award cut by exact pre-break replay, then capture both registry partitions there.
+                registry.restore(preFull);
+                for (int row = 3; row <= 36; row++) {
+                    if (row == 3) stageMonitorWorldPlayer(module, monitorX, monitorY - 22, true);
+                    if (row == 4) {
+                        var initial = source.assets().loadPlan().initialCentre();
+                        stageMonitorWorldPlayer(module, initial.centreX(), initial.centreY(), false);
+                    }
+                    step(loop, movie.getFrame(row)); assertCapture(rows.get(row - 3), module);
+                    assertArrayEquals(pixels.get(row - 3), render(module, true).pixels());
+                }
+                assertEquals(1320, frame.state().timers().speedShoes());
+                var awardFull = registry.capture(); var awardCourse = registry.captureCourse();
+                for (boolean courseOnly : List.of(false, true)) {
+                    if (courseOnly) registry.restoreCourse(awardCourse); else registry.restore(awardFull);
+                    assertCapture(rows.get(33), module); assertArrayEquals(pixels.get(33), render(module, true).pixels());
+                    for (int row = 37; row <= 67; row++) {
+                        step(loop, movie.getFrame(row)); assertCapture(rows.get(row - 3), module);
+                        assertArrayEquals(pixels.get(row - 3), render(module, true).pixels(), "Nonzero award full/course replay row " + row);
+                        assertCapture(rows.get(row - 3), module);
+                    }
+                    assertCapture(end, module); assertArrayEquals(endPixels.pixels(), render(module, true).pixels());
+                }
+                // No artificial timer seed: consume the remaining1289 Displays of the award, then prove no repeated expiry.
+                for (int row = 68; row <= 1357; row++) {
+                    monitorWorldStep(loop, movie.getFrame(row), module, List.of());
+                    assertEquals(Math.max(0, 1320 - (row - 36)), frame.state().timers().speedShoes());
+                    assertEquals(row < 1356 ? 1 : 0, frame.environment().movement().gates().speedShoes());
+                    assertEquals(new com.openggf.game.soniccd.player.CdPlayerMovement.Physics(row < 1356 ? 0xC00 : 0x600,
+                            row < 1356 ? 0x18 : 0xC, 0x80), frame.environment().movement().physics());
+                    assertEquals(scoreBefore, runtime.scoreGlobals()); assertEquals(contactBefore, runtime.contactGlobals());
+                    assertEquals(levelBefore, runtime.levelGlobals());
+                    assertEquals(0x19, pool.state(40).id()); assertEquals(8, pool.state(40).routine());
+                    assertEquals(17, pool.state(40).unsignedByte(MAP_FRAME)); assertEquals(1, runtime.placement().savedFlag(7, 1) & 1);
+                    assertArrayEquals(new byte[64], pool.state(32).copyBytes()); assertArrayEquals(new byte[64], pool.state(33).copyBytes());
+                }
+                var expired = capture(module); var expiredPixels = render(module, true); assertNativeGpuBackground(module);
+                assertTerrainOutsideSprites(expiredPixels, render(module, false), runtime.displayedFrame()); assertCapture(expired, module);
+                if (output != null) {
+                    for (int pose = 0; pose < phasePictures.size(); pose++) {
+                        String label = pose == 0 ? "box16-before-break" : "real-award-shoes4-broken17";
+                        ScreenshotCapture.savePNG(phasePictures.get(pose), output.resolve("ENGINE-constructed-monitor-" + label + ".png"));
+                        ScreenshotCapture.savePNG(phaseControls.get(pose), output.resolve("ENGINE-native-plane-terrain-" + label + ".png"));
+                    }
+                    ScreenshotCapture.savePNG(expiredPixels, output.resolve("ENGINE-earned-shoes-expired.png"));
+                }
+                // Fill ALL already-reserved IDs from the actual current policy solely to make retirement exhaustive.
+                // No injected glyph, missing geometry surrogate, SAT change, new scope or gameplay owner.
+                var retirementPolicy = monitorWorldPolicy(module, objects, banks); logical = base;
+                for (int span = 0; span < counts.length; span++) for (int tile = 0; tile < counts[span]; tile++) {
+                    var sample = retirementPolicy.resolve(nativeFirst[span] + tile); assertEquals(logical++, sample.logicalPatternId());
+                    var v = sample.version(); long[] words = {v.a(), v.b(), v.c(), v.d()}; var pattern = new com.openggf.level.Pattern();
+                    for (int at = 0; at < 64; at++) pattern.setPixel(at % 8, at / 8, (byte) ((words[at / 16] >>> ((at % 16) * 4)) & 15));
+                    GameServices.graphics().cachePatternTexture(pattern, sample.logicalPatternId());
+                }
+                assertEquals(base + 494, logical); assertCapture(expired, module);
+                for (int offset = 0; offset < 494; offset++) {
+                    var entry = atlas.getEntry(base + offset); assertNotNull(entry, "Every retirement witness is installed: " + offset);
+                    assertTrue(glIsTexture(atlas.getTextureId(entry.atlasIndex())));
+                }
+                module.closeTerrainPlayer(); assertTrue(runtime.closed()); assertTrue(frame.closed());
+                assertSame(atlas, GameServices.graphics().getPatternAtlas());
+                for (int offset = 0; offset < 494; offset++) assertNull(atlas.getEntry(base + offset),
+                        "ALL494 retired logical IDs; explicit Monitor suffix+412..493: " + offset);
+                assertEquals(NullAudioBackend.class, GameServices.audio().getBackend().getClass());
+            } finally {
+                try { SessionManager.closeGameplaySession(); }
+                finally { GraphicsManager.destroyForReinit(); }
+            }
+        }
+        if (output != null) Files.writeString(output.resolve("outcome.txt"),
+                "PASS: constructed actual ID19 Init/Main/Body-MONITOR touch/Break, earlier-slot item/explosion visits,32 native rise moves, call33 REAL USA award/next-Display decrement/genuine expiry, no Points/Flower, Delete30, counted/static SAT and exact native-decoded current-palette/terrain EGL pixels plus omitted-tile negatives, pre-break/nonzero-award full/course complete-state and per-row pixel replay, ALL494 installed retirement witnesses absent; session/graphics/boot closed.\n"
+                + construction, StandardOpenOption.CREATE_NEW); // AFTER every assertion, all494 cleanup and finally closures.
+    }
+
+    /** Explicit actor-only construction at an existing completed cut; ALL header/timer/cursor/history bytes preserved. */
+    private static void stageMonitorWorldPlayer(SonicCdGameModule module, int x, int y, boolean rollingContact) {
+        var runtime = (CdOpeningObjectRuntime) module.getGameService(NativeDynamicObjectPass.class);
+        assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT, runtime.phase());
+        module.requirePlayerActor().requireCompletedNativeFrame();
+        var frame = module.requirePlayerFrame(); var actor = frame.captureActor(); var old = actor.state(); var m = old.motion();
+        assertEquals(2, m.routine());
+        var motion = new com.openggf.game.soniccd.player.CdPlayerMotionState(x << 16, y << 16, 0, rollingContact ? 0x100 : 0, 0,
+                2, 0, rollingContact ? 6 : 0, 4, rollingContact ? 7 : 9, rollingContact ? 14 : 19,
+                rollingContact ? 2 : 0, m.previousAnimation(), rollingContact ? 1 : 0, 0, 0, 0, 0,
+                m.previousPrimaryAngle(), m.previousSecondaryAngle());
+        var state = new com.openggf.game.soniccd.player.CdPlayerBody.State(motion, old.animation(), old.header(), old.timers(),
+                old.history(), old.rotationDistance(), old.objectLinks());
+        frame.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(), state, java.util.Optional.empty()));
+        module.requirePlayerActor().rebindAfterRestore();
+        assertSame(old.header(), frame.state().header()); assertSame(old.timers(), frame.state().timers());
+    }
+
+    /** Native neutral MODE predicates, then Display expiry: complete expected Body sound list, never a filtered ledger. */
+    private static List<CdPlayerFrameRuntime.Sound> monitorWorldPlayerSounds(CdPlayerFrameRuntime frame) {
+        var s = frame.state(); var m = s.motion(); var e = frame.environment(); var g = e.movement().gates();
+        assertEquals(2, m.routine()); assertEquals(0, m.charge()); assertEquals(0, m.moveLock());
+        assertEquals(0, m.flags() & 8); assertEquals(0, m.playerControl() & 0xCD);
+        assertEquals(0, g.zoneAct()); assertEquals(1, g.timeZone()); assertEquals(0, g.waterSlide());
+        assertEquals(0, g.windTunnel()); assertEquals(0, e.globals().invincible()); assertEquals(0, e.globals().bossMusic());
+        var sounds = new ArrayList<CdPlayerFrameRuntime.Sound>();
+        // MoveGround.CheckBalance, Sonic/Main.asm:837-941: neutral, no charge/support/lock, zero GVel, ordinary angle.
+        if ((m.flags() & 6) == 0 && ((m.angle() + 0x20) & 0xC0) == 0 && m.groundVelocity() == 0) {
+            var floor = new com.openggf.game.soniccd.player.CdPlayerTerrain(frame.assets().terrain())
+                    .floor(m.centreX16_16() >>> 16, (m.centreY16_16() >>> 16) + m.yRadius(), 13, 0, 16, m.spriteFlags());
+            if (floor.distance() >= 12) sounds.add(new CdPlayerFrameRuntime.MovementSound(
+                    com.openggf.game.soniccd.player.CdPlayerMovement.Sound.FM_CHARGESTOP));
+            else sounds.add(new CdPlayerFrameRuntime.ChargeSound(
+                    com.openggf.game.soniccd.player.CdPlayerCharge.Sound.FM_CHARGESTOP)); // CheckCharge:1033-1036, even at zero charge.
+        }
+        assertNotEquals(4, m.flags() & 6, "No grounded rolling/charge owner is constructed in this fixture");
+        // ObjSonic_Display:373-441 follows MODE. No invincibility/boss owner masks this actual earned expiry.
+        if (g.speedShoes() != 0 && s.timers().speedShoes() == 1)
+            sounds.add(new CdPlayerFrameRuntime.BodySound(com.openggf.game.soniccd.player.CdPlayerBody.Sound.SCMD_R1AMUS));
+        return List.copyOf(sounds);
+    }
+
+    private static void monitorWorldStep(GameLoop loop, Bk2FrameInput input, SonicCdGameModule module,
+                                         List<CdOpeningObjectRuntime.SoundRequest> objectSounds) {
+        var expectedPlayer = monitorWorldPlayerSounds(module.requirePlayerFrame());
+        var expected = new ArrayList<CdOpeningObjectRuntime.SoundRequest>();
+        expectedPlayer.forEach(sound -> expected.add(new CdOpeningObjectRuntime.PlayerSound(sound))); expected.addAll(objectSounds);
+        step(loop, input);
+        var runtime = (CdOpeningObjectRuntime) module.getGameService(NativeDynamicObjectPass.class);
+        assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT, runtime.phase());
+        assertEquals(expectedPlayer, module.requirePlayerActor().lastSoundRequests(), "ALL Body owners in native call order, including ChargeStop/expiry");
+        assertEquals(expected, runtime.lastSoundRequests(), "Complete Body prefix then actual Monitor/item calls, never effect replay");
+    }
+
+    private static com.openggf.game.soniccd.resources.CdObjectPresentation.PatternSource monitorWorldPolicy(
+            SonicCdGameModule module, com.openggf.game.soniccd.level.CdR11aObjectAssets objects,
+            CdOpeningObjectRuntime.LogicalBanks banks) throws Exception {
+        var runtime = (CdOpeningObjectRuntime) module.getGameService(NativeDynamicObjectPass.class);
+        return com.openggf.game.soniccd.resources.CdObjectPresentation.usaR11aMonitorTimeDevPreloadedArt(
+                module.requirePlayerFrame().artState(), runtime.powerupArtState(), objects, objects.frontierArtBank(), objects.contactArtBank(),
+                objects.floatBlockArtBank(), objects.springArtBank(), objects.tunnelDoorArtBank(), objects.monitorTimeArtBank(),
+                banks.player(), banks.ring(), banks.mosqui(), banks.plant(), banks.ramp(), banks.explosion(), banks.points(), banks.flower(),
+                banks.powerup(), banks.floatBlock(), banks.spring(), banks.tunnelDoorVertical(), banks.monitorTime());
+    }
+
+    /** Literal N MM:157-167 and MM:55-60. Static item has ONE piece despite counted frame4 having four. */
+    private static void assertMonitorWorldSat(CdObjectDrawQueue.CpuSat sat, int cameraX, int cameraY,
+                                              int monitorX, int monitorY, int parentFrame, Integer itemY) {
+        int[][] parent = parentFrame == 16 ? new int[][] {{-16, 6, 0x05A8, -16}, {-16, 6, 0x0DA8, 0}, {8, 12, 0x05AE, -16}}
+                : new int[][] {{0, 13, 0x05B2, -16}};
+        int parentSeen = 0, itemSeen = 0; byte[] raw = sat.bytes();
+        assertTrue(sat.provenance().stream().anyMatch(p -> p.slotRef().wholeIndex() == 0));
+        for (int entry = 0; entry < sat.spriteCount(); entry++) {
+            var origin = sat.provenance().get(entry); int whole = origin.slotRef().wholeIndex();
+            if (whole != 40 && whole != 32) continue;
+            assertEquals(3, origin.queueBucket()); int[] p; int centreY;
+            if (whole == 40) { assertTrue(parentSeen < parent.length); p = parent[parentSeen]; centreY = monitorY;
+                assertEquals(parentSeen++, origin.mappingPieceOrdinal()); }
+            else { assertNotNull(itemY); assertEquals(0, itemSeen++); assertEquals(0, origin.mappingPieceOrdinal());
+                p = new int[] {-10, 5, 0x85CA, -8}; centreY = itemY; }
+            int at = entry * 8;
+            assertEquals((centreY - cameraY + 128 + p[0]) & 0xFFFF, ((raw[at] & 255) << 8) | (raw[at + 1] & 255));
+            assertEquals(p[1], raw[at + 2] & 255); assertEquals(entry + 1, raw[at + 3] & 255);
+            assertEquals(p[2], ((raw[at + 4] & 255) << 8) | (raw[at + 5] & 255));
+            assertEquals((monitorX - cameraX + 128 + p[3]) & 511, ((raw[at + 6] & 255) << 8) | (raw[at + 7] & 255));
+        }
+        assertEquals(parent.length, parentSeen); assertEquals(itemY == null ? 0 : 1, itemSeen);
+    }
+
+    private record MonitorWorldTile(int offset, int x, int y, boolean hFlip, boolean priority) { }
+
+    /** Test-only literal geometry, independent of production converter/mapping decoder/SpritePieceRenderer. */
+    private static List<MonitorWorldTile> monitorWorldLiteralTiles(int x, int y, int parentFrame, Integer itemY) {
+        var out = new ArrayList<MonitorWorldTile>();
+        if (parentFrame == 16) {
+            // Reverse counted piece order; source tiles are column-major, the right panel is horizontally mirrored.
+            for (int col = 0; col < 4; col++) out.add(new MonitorWorldTile(6 + col, x - 16 + 8 * col, y + 8, false, false));
+            for (int row = 0; row < 3; row++) for (int col = 0; col < 2; col++)
+                out.add(new MonitorWorldTile(col * 3 + row, x + 8 - 8 * col, y - 16 + 8 * row, true, false));
+            for (int row = 0; row < 3; row++) for (int col = 0; col < 2; col++)
+                out.add(new MonitorWorldTile(col * 3 + row, x - 16 + 8 * col, y - 16 + 8 * row, false, false));
+        } else {
+            assertEquals(17, parentFrame);
+            for (int row = 0; row < 2; row++) for (int col = 0; col < 4; col++)
+                out.add(new MonitorWorldTile(10 + col * 2 + row, x - 16 + col * 8, y + row * 8, false, false));
+        }
+        if (itemY != null) for (int row = 0; row < 2; row++) for (int col = 0; col < 2; col++)
+            out.add(new MonitorWorldTile(0x22 + col * 2 + row, x - 8 + col * 8, itemY - 10 + row * 8, false, true));
+        return List.copyOf(out);
+    }
+
+    private static void assertMonitorWorldPixels(com.openggf.graphics.SpritePresentation.Frame picture, RgbaImage image,
+            RgbaImage terrain, com.openggf.game.soniccd.level.CdR11aObjectAssets.MonitorTimeArtBank art,
+            int logicalBase, List<MonitorWorldTile> literal) {
+        var tiles = picture.tiles().stream().filter(t -> t.patternId() >= logicalBase && t.patternId() < logicalBase + 82).toList();
+        assertEquals(literal.size(), tiles.size(), "Exact counted/static tile geometry; atlas presence/change alone is insufficient");
+        var graphics = GameServices.graphics(); var palette = GameServices.level().getCurrentLevel().getPalette(0);
+        assertFalse(graphics.getPaletteFadePresentation().affects(0)); int[] paletteArgb = new int[16];
+        for (int index = 1; index < 16; index++) {
+            var colour = palette.getColor(index);
+            paletteArgb[index] = 0xFF000000 | com.openggf.graphics.color.DisplayColorConverter.toPackedRgb(colour.r & 255,
+                    colour.g & 255, colour.b & 255, graphics.getDisplayColorProfile(), graphics.getDisplayColorExpansion());
+        }
+        int opaque = 0, transparent = 0, changed = 0;
+        for (int index = 0; index < literal.size(); index++) {
+            var p = literal.get(index); var tile = tiles.get(index);
+            assertEquals(logicalBase + p.offset(), tile.patternId()); assertEquals((float) p.x(), tile.x()); assertEquals((float) p.y(), tile.y());
+            assertEquals(8f, tile.width()); assertEquals(8f, tile.height()); assertEquals(0, tile.palette());
+            assertEquals(p.hFlip(), tile.hFlip()); assertFalse(tile.vFlip()); assertEquals(p.priority(), tile.priority());
+            assertEquals(com.openggf.graphics.SpritePresentation.Layer.OBJECT, tile.layer());
+            assertTrue(tile.priorityShader()); assertEquals(0, tile.occlusionMask()); assertFalse(tile.ghost()); assertFalse(tile.ghostColour());
+            assertEquals(1f, tile.ghostAlpha()); assertEquals(0, tile.rowStart()); assertEquals(8, tile.rowEnd()); assertFalse(tile.rowClipped());
+            assertEquals(com.openggf.graphics.SpritePresentation.Subject.WORLD, tile.subject());
+            var decoded = new com.openggf.level.Pattern(); decoded.fromSegaFormat(art.tile(0x5A8 + p.offset()).copy());
+            var version = picture.patternVersions().get(tile.patternId()); assertNotNull(version);
+            long[] words = {version.a(), version.b(), version.c(), version.d()};
+            for (int at = 0; at < 64; at++) assertEquals(decoded.getPixel(at % 8, at / 8) & 15,
+                    (int) ((words[at / 16] >>> ((at % 16) * 4)) & 15), "Native Monitor source nibble " + p.offset() + ":" + at);
+            for (var other : picture.tiles()) {
+                if (other.patternId() >= logicalBase && other.patternId() < logicalBase + 82) continue;
+                assertTrue(other.x() + other.width() <= tile.x() || other.x() >= tile.x() + tile.width()
+                        || other.y() + other.height() <= tile.y() || other.y() >= tile.y() + tile.height(), "No other owner may overlap the Monitor oracle footprint");
+            }
+            for (int dy = 0; dy < 8; dy++) for (int dx = 0; dx < 8; dx++) {
+                int px = p.x() + dx, py = p.y() + dy; assertTrue(px >= 0 && px < 320 && py >= 0 && py < 224);
+                int pixel = decoded.getPixel(p.hFlip() ? 7 - dx : dx, dy) & 15; int at = py * 320 + px;
+                assertEquals(pixel == 0 ? terrain.pixels()[at] : paletteArgb[pixel], image.pixels()[at],
+                        "Exact native Monitor geometry + current palette/terrain ARGB " + p.offset() + ":" + dx + ":" + dy);
+                if (pixel == 0) transparent++; else { opaque++; if ((image.pixels()[at] & 0xFFFFFF) != (terrain.pixels()[at] & 0xFFFFFF)) changed++; }
+            }
+        }
+        assertTrue(opaque > 0); assertTrue(transparent > 0); assertEquals(literal.size() * 64, opaque + transparent); assertTrue(changed > 0);
+    }
+
+    private static void assertMonitorWorldOmittedTileRejected(com.openggf.graphics.SpritePresentation.Frame picture, RgbaImage image,
+            RgbaImage terrain, com.openggf.game.soniccd.level.CdR11aObjectAssets.MonitorTimeArtBank art,
+            int logicalBase, List<MonitorWorldTile> literal) {
+        int omitted = -1, removed = 0, retained = 0;
+        for (int i = 0; i < literal.size(); i++) {
+            var tile = literal.get(i); int changed = 0;
+            for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x++) {
+                int at = (tile.y() + y) * 320 + tile.x() + x;
+                if ((image.pixels()[at] & 0xFFFFFF) != (terrain.pixels()[at] & 0xFFFFFF)) changed++;
+            }
+            if (omitted < 0 && changed > 0) { omitted = i; removed = changed; } else retained += changed;
+        }
+        assertTrue(omitted >= 0 && removed > 0 && retained > 0, "Remove one visibly contributing tile while retaining other actual geometry");
+        var missing = literal.get(omitted); var partial = image.copy();
+        for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x++) {
+            int at = (missing.y() + y) * 320 + missing.x() + x; partial.pixels()[at] = terrain.pixels()[at];
+        }
+        assertThrows(AssertionError.class, () -> assertMonitorWorldPixels(picture, partial, terrain, art, logicalBase, literal),
+                "An omitted visible Monitor tile MUST fail even while the other geometry remains visible");
+    }
+    // END constructed Monitor World proof.
 
 }

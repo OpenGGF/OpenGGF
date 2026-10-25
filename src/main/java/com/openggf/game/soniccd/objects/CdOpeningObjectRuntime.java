@@ -13,6 +13,7 @@ import com.openggf.game.soniccd.player.CdPlayerMath;
 import com.openggf.game.soniccd.player.CdPlayerMovement;
 import com.openggf.game.soniccd.player.CdPlayerTouchResponse;
 import com.openggf.game.soniccd.player.CdPlayerTerrain;
+import com.openggf.game.soniccd.player.CdPlayerSpeedShoesReward;
 import com.openggf.game.soniccd.resources.CdObjectPresentation;
 import com.openggf.game.soniccd.resources.CdPowerupArtRuntime;
 import com.openggf.graphics.SpritePresentation;
@@ -40,11 +41,11 @@ import static com.openggf.game.soniccd.objects.CdObjectState.WordField.*;
  *
  * <p>Explicit DEV policy: USA R11A Present, goodFuture=0, projDestroyed=0, absent
  * reserved owners 1..31, initially zero CPU SAT/empty picture, and preloaded actual
- * Ring/Mosqui/3D-plant/3D-ramp-booster/explosion/points/flower/Floating-Block/normal-Spring/vertical-Tunnel-Door art (the inert Animal path draws nothing).
+ * Ring/Mosqui/3D-plant/3D-ramp-booster/explosion/points/flower/Floating-Block/normal-Spring/vertical-Tunnel-Door/Monitor-time art (the inert Animal path draws nothing).
  * The 36-tile powerup window starts cold zero and changes only at the selector-8 LoadShieldArt cut.
  * The initial Ring, contact, score and level globals are caller-declared DEV ingress, never an entry proof.
  * Live dynamic IDs $10 Ring, $11 LostRing, $3D Mosqui, $24 Animal, $2C 3D plant and $2A 3D ramp,
- * aftermath IDs $18/$1C/$1F, $12 Floating Block, normal $0A Spring, $34 Spin tunnel tag, $35 vertical Tunnel Door and the death row's $3B Game/Time Over are owned.
+ * aftermath IDs $18/$1C/$1F, $12 Floating Block, normal $0A Spring, $34 Spin tunnel tag, $35 vertical Tunnel Door, $19 Monitor/$1A shoes item and the death row's $3B Game/Time Over are owned.
  * Every other ID fails at its live dispatch; standing-object MODE remains a typed player boundary.
  * This does not execute native title/HUD/PLC/section-art/audio/plane publication.
  * The loader, not declarations or this composition, authenticates asset bytes.</p>
@@ -64,7 +65,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
 
     /**
      * Stable bases in ONE root-governed atlas range exclusive to this picture.
-     * Root reserves/binds its twelve disjoint subdivisions; this value neither
+     * Root reserves/binds its thirteen disjoint subdivisions; this value neither
      * claims graphics ownership nor recommends the arbitrary IDs used by tests.
      * The three-argument form derives the sequential frontier spans the production
      * module uses: plant = mosqui + 70 and ramp = plant + 28.
@@ -73,10 +74,11 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
      * at flower + 39. The 15-tile FloatBlock span follows the powerup window,
      * then the 36-tile normal Spring span follows FloatBlock (native $520..$543),
      * then the 12-tile vertical Tunnel Door span follows Spring (native $328..$333),
-     * for 412 patterns in all. The canonical form takes all twelve bases explicitly.
+     * then the 82-tile Monitor/time span follows Door (native $5A8..$5F9),
+     * for 494 patterns in all. The canonical form takes all thirteen bases explicitly.
      */
     public record LogicalBanks(int player, int ring, int mosqui, int plant, int ramp,
-                               int explosion, int points, int flower, int powerup, int floatBlock, int spring, int tunnelDoorVertical) {
+                               int explosion, int points, int flower, int powerup, int floatBlock, int spring, int tunnelDoorVertical, int monitorTime) {
         public LogicalBanks(int player, int ring, int mosqui) {
             this(player, ring, mosqui, mosqui + 70, mosqui + 70 + 28);
         }
@@ -99,6 +101,12 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         public LogicalBanks(int player, int ring, int mosqui, int plant, int ramp, int explosion, int points,
                             int flower, int powerup, int floatBlock, int spring) {
             this(player, ring, mosqui, plant, ramp, explosion, points, flower, powerup, floatBlock, spring, spring + 36);
+        }
+        /** Compatibility with the previous twelve-span canonical constructor. */
+        public LogicalBanks(int player, int ring, int mosqui, int plant, int ramp, int explosion, int points,
+                            int flower, int powerup, int floatBlock, int spring, int tunnelDoorVertical) {
+            this(player, ring, mosqui, plant, ramp, explosion, points, flower, powerup, floatBlock, spring,
+                    tunnelDoorVertical, tunnelDoorVertical + 12);
         }
     }
 
@@ -135,15 +143,35 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     }
 
     /**
-     * Required narrow port to the EXISTING shared primaryAngle byte, not oAngle.
-     * Mosqui returns this write without applying it. Root must write that byte
+     * Required legacy port to the EXISTING shared primaryAngle byte, not oAngle.
+     * Mosqui, Flower and LostRing return this write without applying it. Root must write that byte
      * exactly once, without restoring a Frame capture or running another owner.
      * Invocation is in returned-effect order, before the next physical dispatch.
+     * Monitor's synchronous floor cut instead calls Frame's existing writer directly once;
+     * it never invokes this external port as well. The legacy owners retain their existing contract.
      */
     @FunctionalInterface public interface PrimaryAngleWrite { void write(int unsignedByte); }
 
+    /**
+     * The R11A asset family supplies no MMZ global-layer owner. Source ObjMonitor_Solid
+     * (Monitor and Time Post/Main.asm:242-259) reads that byte only for zone6. Stop before
+     * entering the body on that reached zone; borrowing an object byte below grants no MMZ admission.
+     */
+    public enum UnsupportedMonitorBindingBoundary { MMZ_GLOBAL_LAYER }
+    public static final class UnsupportedMonitorBinding extends UnsupportedOperationException {
+        private final UnsupportedMonitorBindingBoundary boundary;
+        private final int wholeIndex;
+        private UnsupportedMonitorBinding(int wholeIndex) {
+            super("MMZ_GLOBAL_LAYER at Monitor whole slot " + wholeIndex + ": no current native global-layer owner");
+            boundary = UnsupportedMonitorBindingBoundary.MMZ_GLOBAL_LAYER;
+            this.wholeIndex = wholeIndex;
+        }
+        public UnsupportedMonitorBindingBoundary boundary() { return boundary; }
+        public int wholeIndex() { return wholeIndex; }
+    }
+
     /** Ordered requests only, no playback and no claim to the omitted service/music ledger. */
-    public sealed interface SoundRequest permits PlayerSound, RingFm, RingSubCpu, MosquiFm, LostRingFm, GameOverSubCpu, SpringFm, TunnelDoorVerticalFm { }
+    public sealed interface SoundRequest permits PlayerSound, RingFm, RingSubCpu, MosquiFm, LostRingFm, GameOverSubCpu, SpringFm, TunnelDoorVerticalFm, MonitorFm, MonitorItemSubCpu { }
     public record PlayerSound(CdPlayerFrameRuntime.Sound sound) implements SoundRequest {
         public PlayerSound { Objects.requireNonNull(sound, "player sound"); }
     }
@@ -166,6 +194,14 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     /** ObjTunnelDoorV's source FM_A4 cut; metadata only, separate from shared Solid FM. */
     public record TunnelDoorVerticalFm(CdTunnelDoorVertical.FmSound sound) implements SoundRequest {
         public TunnelDoorVerticalFm { Objects.requireNonNull(sound, "vertical Tunnel Door FM sound"); }
+    }
+    /** Monitor Break's synchronous PlayFMSound before its first object store; no shared-contact alias. */
+    public record MonitorFm(CdMonitor.FmSound sound) implements SoundRequest {
+        public MonitorFm { Objects.requireNonNull(sound, "Monitor FM sound"); }
+    }
+    /** Commands completed after the one native five-store shoes patch; no playback or powerup/art request. */
+    public record MonitorItemSubCpu(CdPlayerSpeedShoesReward.SubCpuCommand command) implements SoundRequest {
+        public MonitorItemSubCpu { Objects.requireNonNull(command, "Monitor item sub-CPU command"); }
     }
     /** ObjGameOver's SubCPUCmd requests (Game Over/Main.asm:28-29,87-88); no handshake, PCM fade or music. */
     public record GameOverSubCpu(CdGameOver.SubCpuCommand command) implements SoundRequest {
@@ -246,6 +282,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     private final CdSpring spring;
     private final CdTunnelDoorVertical tunnelDoorVertical;
     private final CdSpinTunnelTag spinTunnelTag;
+    private final CdMonitor monitor;
+    private final CdMonitorItem monitorItem;
     private final CdPowerupArtRuntime powerupArt;
     private final CdObjectDrawQueue queue;
     private final LogicalBanks banks;
@@ -255,6 +293,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     private final CdR11aObjectAssets.FloatBlockArtBank floatBlockArt;
     private final CdR11aObjectAssets.SpringArtBank springArt;
     private final CdR11aObjectAssets.TunnelDoorArtBank tunnelDoorArt;
+    // One immutable authenticated decode; not a mutable/captured owner or a residency claim.
+    private final CdR11aObjectAssets.MonitorTimeArtBank monitorTimeArt;
     private CdRingGlobals ringGlobals;
     // Level/Main.asm:178-184 ClearFlowers covers the three ringLoss animation values.
     private CdRingSpillGlobals spillGlobals = new CdRingSpillGlobals(0, 0, 0);
@@ -279,6 +319,9 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     private boolean inSpringLaunch;
     private boolean inSpinTunnelCommit;
     private boolean inTunnelDoorFm;
+    private boolean inMonitorAngle;
+    private boolean inMonitorFm;
+    private boolean inMonitorAward;
     private int dispatchWholeIndex = -1;
 
     /**
@@ -319,7 +362,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
      * ingress. initialPowerup is the complete LoadShieldArt window: .ClearFlowers zeroes its CPU buffer (:178-184),
      * ClearScreen leaves VRAM $A880 (Level/Functions (General).asm:182-228) and :312's LoadShieldArt returns at once
      * after :167 clears powerup (Powerup/Main.asm:157-159). Root supplies both; their content is not policed here.
-     * All twelve bank spans are validated against the supplied window before construction. Installs the supplied
+     * All thirteen bank spans are validated against the supplied window before construction. Installs the supplied
      * windows only: no service, reset, upload or capture/restore.
      */
     public static CdOpeningObjectRuntime usaR11aRestartDevEmptySatPreloadedArt(
@@ -367,14 +410,15 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         var floatBlockArt = objects.floatBlockArtBank();
         var springArt = objects.springArtBank(); // One actual normal36 decode; no diagonal/section-PLC claim.
         var tunnelDoorArt = objects.tunnelDoorArtBank(); // One actual twelve-tile bank; no native PLC/residency claim.
+        var monitorTimeArt = objects.monitorTimeArtBank(); // Exactly one immutable actual82 decode for both conversion sites.
         var placement = placementIngress.apply(assets);
         var mappings = CdObjectMappings.fromOpeningAssets(assets, objects);
-        // Validate all twelve physical/logical bank extents and overlaps now, even for an empty picture.
-        CdObjectPresentation.usaR11aTunnelDoorVerticalDevPreloadedArt(frame.artState(), initialPowerup, objects, frontier, contact,
-                floatBlockArt, springArt, tunnelDoorArt, banks.player(), banks.ring(), banks.mosqui(), banks.plant(), banks.ramp(),
-                banks.explosion(), banks.points(), banks.flower(), banks.powerup(), banks.floatBlock(), banks.spring(), banks.tunnelDoorVertical());
+        // Validate all thirteen physical/logical spans (494 patterns), including overlaps and empty SAT admission.
+        CdObjectPresentation.usaR11aMonitorTimeDevPreloadedArt(frame.artState(), initialPowerup, objects, frontier, contact,
+                floatBlockArt, springArt, tunnelDoorArt, monitorTimeArt, banks.player(), banks.ring(), banks.mosqui(), banks.plant(), banks.ramp(),
+                banks.explosion(), banks.points(), banks.flower(), banks.powerup(), banks.floatBlock(), banks.spring(), banks.tunnelDoorVertical(), banks.monitorTime());
         return new CdOpeningObjectRuntime(assets, frame, initialGlobals, initialContact, initialScore, initialLevel, initial,
-                banks, preScrollForeground, primaryAngleWrite, objects, frontier, contact, floatBlockArt, springArt, tunnelDoorArt, placement, mappings, initialPowerup);
+                banks, preScrollForeground, primaryAngleWrite, objects, frontier, contact, floatBlockArt, springArt, tunnelDoorArt, monitorTimeArt, placement, mappings, initialPowerup);
     }
 
     private CdOpeningObjectRuntime(CdR11aAssets assets, CdPlayerFrameRuntime frame, CdRingGlobals initialGlobals,
@@ -386,6 +430,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                                    CdR11aObjectAssets.FloatBlockArtBank floatBlockArt,
                                    CdR11aObjectAssets.SpringArtBank springArt,
                                    CdR11aObjectAssets.TunnelDoorArtBank tunnelDoorArt,
+                                    CdR11aObjectAssets.MonitorTimeArtBank monitorTimeArt,
                                    CdObjectPlacementRuntime placement, CdObjectMappings mappings,
                                    CdPowerupArtRuntime.State initialPowerup) {
         this.assets = assets;
@@ -396,6 +441,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         this.floatBlockArt = floatBlockArt;
         this.springArt = springArt;
         this.tunnelDoorArt = tunnelDoorArt;
+        this.monitorTimeArt = monitorTimeArt;
         this.placement = placement;
         this.banks = banks;
         this.primaryAngleWrite = primaryAngleWrite;
@@ -447,6 +493,12 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                 (pool, slot) -> drawDynamic(pool, slot.wholeIndex()), this::playTunnelDoorVerticalFm);
         // Immutable pure tag bound to the actual raw Powerup mapping owner, not a declared pointer or new art bank.
         spinTunnelTag = new CdSpinTunnelTag(CdSpinTunnelTag.Assets.fromObjectAssets(objects));
+        var monitorAssets = CdMonitor.Assets.fromObjectAssets(objects);
+        monitor = new CdMonitor(placement, monitorAssets, solid, new CdPlayerTerrain(assets.terrain()),
+                this::commitMonitorSolid, this::commitMonitorPrimaryAngle,
+                (pool, slot) -> drawDynamic(pool, slot.wholeIndex()), this::playMonitorFm);
+        monitorItem = new CdMonitorItem(placement, monitorAssets, this::awardMonitorItem,
+                (pool, slot) -> drawDynamic(pool, slot.wholeIndex()));
     }
 
     public Phase phase() { return phase; }
@@ -508,10 +560,10 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
             if (servicePhase != PlcLifecyclePhase.LAG) {
                 // VInt_Level:827 SAT DMA, then :829-837 Sonic art and LoadShieldArt. At the completed boundary,
                 // convert PREVIOUS CPU SAT using NOW-serviced immutable player and powerup resident pixels.
-                var pixels = CdObjectPresentation.usaR11aTunnelDoorVerticalDevPreloadedArt(frame.artState(), powerupArtState,
-                        objects, frontierArt, contactArt, floatBlockArt, springArt, tunnelDoorArt,
+                var pixels = CdObjectPresentation.usaR11aMonitorTimeDevPreloadedArt(frame.artState(), powerupArtState,
+                        objects, frontierArt, contactArt, floatBlockArt, springArt, tunnelDoorArt, monitorTimeArt,
                         banks.player(), banks.ring(), banks.mosqui(), banks.plant(), banks.ramp(), banks.explosion(), banks.points(),
-                        banks.flower(), banks.powerup(), banks.floatBlock(), banks.spring(), banks.tunnelDoorVertical());
+                        banks.flower(), banks.powerup(), banks.floatBlock(), banks.spring(), banks.tunnelDoorVertical(), banks.monitorTime());
                 var nextDisplay = CdObjectPresentation.convert(queue.cpuSat(), pixels);
                 checkActive(Phase.SERVICING);
                 displayed = nextDisplay;
@@ -865,6 +917,14 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                         }
                         // CallReturned/Despawn describe already applied work; never replay them.
                     }
+                } else if (id == CdMonitor.OBJECT_ID) {
+                    runMonitor(whole); // Current S3/global inputs after every earlier live physical owner.
+                } else if (id == CdMonitorItem.OBJECT_ID) {
+                    var primary = frame.state();
+                    monitorItem.run(whole, Optional.of(new CdMonitorItem.PrimarySupport(
+                            primary.header().slotId(), primary.motion().flags())));
+                    // Actual dynamic support is read by the body from this same live pool, only when ObjMove needs it.
+                    // Award/Draw callbacks already committed; never replay returned metadata or the item prefix.
                 } else if (id == CdSpinTunnelTag.OBJECT_ID) {
                     runSpinTunnelTag(whole); // Fresh actual pool/motion/gates at this physical visit; no sound or Body rerun.
                 } else if (id == CdTunnelDoorVertical.OBJECT_ID) {
@@ -1030,7 +1090,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
      */
     private void runSpinTunnelTag(int whole) {
         checkActive(Phase.DYNAMIC_SLOTS);
-        if (inDrawCallback || inSolidCommit || inSpringLaunch || inSpinTunnelCommit || inTunnelDoorFm || whole != dispatchWholeIndex) {
+        if (inDrawCallback || inSolidCommit || inSpringLaunch || inSpinTunnelCommit || inTunnelDoorFm
+                || inMonitorAngle || inMonitorFm || inMonitorAward || whole != dispatchWholeIndex) {
             throw new IllegalStateException("Spin tunnel tag requires the current synchronous physical dispatch");
         }
         var pool = placement.pool();
@@ -1065,7 +1126,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     /** Entire same-owner 96-slot value CAS plus exact Init-only a0 and Frame expected-motion preflight. */
     private void commitSpinTunnelTag(CdObjectPool.Snapshot cut, CdSpinTunnelTag.Result result) {
         checkActive(Phase.DYNAMIC_SLOTS);
-        if (inDrawCallback || inSolidCommit || inSpringLaunch || inSpinTunnelCommit || inTunnelDoorFm) {
+        if (inDrawCallback || inSolidCommit || inSpringLaunch || inSpinTunnelCommit || inTunnelDoorFm
+                || inMonitorAngle || inMonitorFm || inMonitorAward) {
             throw new IllegalStateException("Spin tunnel tag commit must be synchronous and non-reentrant");
         }
         inSpinTunnelCommit = true;
@@ -1105,6 +1167,143 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         } finally { inSpinTunnelCommit = false; }
     }
 
+    /**
+     * ObjMonitor's exact current source cut. Authenticated assets remain USA R11A; another zone byte
+     * is not admission to that zone's source/world. Zone6 explicitly needs an unowned global layer.
+     * For every other byte the body short-circuits BEFORE that global read. Its mandatory layer
+     * argument borrows the ACTUAL object's layer as an UNUSED value, never a synthetic global zero.
+     */
+    private void runMonitor(int whole) {
+        var live = requireMonitorDispatch(placement.pool().state(whole).identity());
+        var environment = frame.environment(); var gates = environment.movement().gates();
+        int zone = gates.zoneAct() >>> 8;
+        if (zone == 6) throw new UnsupportedMonitorBinding(whole);
+        int unusedBorrowedObjectLayer = live.unsignedByte(LAYER);
+        monitor.run(whole, new CdMonitor.Globals(gates.timeZone(), gates.timeWarpDirection(), preScrollForeground.xWord(),
+                environment.globals().timeAttackMode(), zone, unusedBorrowedObjectLayer, ringGlobals.timeStopTimer()),
+                new CdMonitor.SolidInputs(solidPlayer(), new CdSolidObject.Gates(environment.globals().debugMode(), gates.miniSonic()), solidGlobals()));
+    }
+
+    /** Current identity alone carries no pool token; always validate the actual bound live image too. */
+    private CdObjectState requireMonitorDispatch(CdObjectState.Identity identity) {
+        checkActive(Phase.DYNAMIC_SLOTS);
+        Objects.requireNonNull(identity, "Monitor physical identity");
+        if (identity.wholeIndex() != dispatchWholeIndex) {
+            throw new IllegalStateException("Monitor callback must belong to the current physical dispatch");
+        }
+        var pool = placement.pool(); var live = pool.state(dispatchWholeIndex);
+        pool.validateWrite(live);
+        if (live.id() != CdMonitor.OBJECT_ID || !live.identity().equals(identity)) {
+            throw new IllegalStateException("Monitor callback requires the actual bound live ID $19 image");
+        }
+        return live;
+    }
+
+    private void requireMonitorCallbackCut() {
+        checkActive(Phase.DYNAMIC_SLOTS);
+        if (inDrawCallback || inSolidCommit || inSpringLaunch || inSpinTunnelCommit || inTunnelDoorFm
+                || inMonitorAngle || inMonitorFm || inMonitorAward) {
+            throw new IllegalStateException("Monitor callbacks must be synchronous and non-reentrant");
+        }
+    }
+
+    /**
+     * ObjMonitor_Solid:242-259 / Main:352-357. One actual plain Solid return at the live falling-byte0
+     * Main cut. Validate the same-owner entire96-slot value cut, every returned image and Frame's
+     * expected player/globals before S4 writes. Then publish S4, adopt S3 once, and forward nested
+     * ContactFmSound in returned source order. No fabricated Result, effect replay or capture patch.
+     */
+    private void commitMonitorSolid(CdMonitor.SolidCall call) {
+        requireMonitorCallbackCut(); inSolidCommit = true;
+        try {
+            Objects.requireNonNull(call, "completed Monitor Solid call");
+            var pool = placement.pool(); var cut = call.callCut(); var result = call.result();
+            pool.validateRestore(cut); pool.validateWrite(result.object());
+            requireMonitorDispatch(result.object().identity());
+            var before = cut.slots().get(result.object().identity().dynamicIndex());
+            if (before.id() != CdMonitor.OBJECT_ID || result.object().id() != CdMonitor.OBJECT_ID
+                    || before.routine() != 2 || before.unsignedByte(ROUTINE_2) != 0 || (before.spriteFlags() & 0x80) == 0
+                    || result.entry() != CdSolidObject.Entry.SOLID_OBJECT) {
+                throw new IllegalStateException("Monitor Solid return differs from the live plain Solid Main cut");
+            }
+            if (!pool.capture().slots().equals(cut.slots())) {
+                throw new IllegalStateException("CD pool changed after the Monitor Solid call cut");
+            }
+            var images = new ArrayList<CdObjectState>(1 + result.otherSlots().size());
+            images.add(result.object()); images.addAll(result.otherSlots());
+            for (var image : images) pool.validateWrite(image);
+            frame.validateObjectSolidResult(call.expectedPlayer(), call.expectedGlobals(), result);
+            // No callback between fully preflighted pool publication and the one Frame adoption.
+            commitTouchImages(cut, images);
+            frame.applyObjectSolidResult(call.expectedPlayer(), call.expectedGlobals(), result);
+            for (var fm : result.fmRequests()) appendSound(new PlayerSound(new CdPlayerFrameRuntime.ContactFmSound(fm)));
+            checkActive(Phase.DYNAMIC_SLOTS);
+        } finally { inSolidCommit = false; }
+    }
+
+    /** ObjGetFloorDist:157-179 returns after the raw motion publication and before landing correction. */
+    private void commitMonitorPrimaryAngle(int expectedPrimaryAngle, int primaryAngle) {
+        requireMonitorCallbackCut(); inMonitorAngle = true;
+        try {
+            var live = requireMonitorDispatch(placement.pool().state(dispatchWholeIndex).identity());
+            if (live.routine() != 2 || live.unsignedByte(ROUTINE_2) == 0 || (live.spriteFlags() & 0x80) == 0
+                    || (expectedPrimaryAngle & ~0xFF) != 0
+                    || frame.environment().movement().globals().primaryAngle() != expectedPrimaryAngle) {
+                throw new IllegalStateException("Monitor floor angle requires its actual current falling/expected-byte cut");
+            }
+            frame.applyObjectPrimaryAngle(primaryAngle); // Exactly once, including same-value native stores.
+            checkActive(Phase.DYNAMIC_SLOTS); // The external legacy angle port is deliberately not called too.
+        } finally { inMonitorAngle = false; }
+    }
+
+    /** ObjMonitor_Break:381-385 calls FM_DESTROY BEFORE routine+4/collision0 or any child/saved write. */
+    private void playMonitorFm(CdMonitor.FmSound sound) {
+        requireMonitorCallbackCut(); inMonitorFm = true;
+        try {
+            var live = requireMonitorDispatch(placement.pool().state(dispatchWholeIndex).identity());
+            if (live.routine() != 4) throw new IllegalStateException("Monitor FM requires its live Break entry before body writes");
+            appendSound(new MonitorFm(sound));
+            checkActive(Phase.DYNAMIC_SLOTS);
+        } finally { inMonitorFm = false; }
+    }
+
+    /**
+     * .GiveItem/.GiveSpeedShoes (Main:480-482,570-589). Body's routine4/word29 prefix is already
+     * live; never repeat it. Project only current Frame values, execute the shared pure five-store
+     * primitive, preflight/apply once BEFORE the ordered SubCPU ledger, then return its completed
+     * semantic commands. No ring/contact/level/powerup store, second timer/physics bank or replay.
+     */
+    private CdMonitorItem.AwardResult awardMonitorItem(CdMonitorItem.AwardCall call) {
+        requireMonitorCallbackCut(); inMonitorAward = true;
+        try {
+            Objects.requireNonNull(call, "Monitor item award call");
+            if (call.identity().wholeIndex() != dispatchWholeIndex) {
+                throw new IllegalStateException("Monitor item award must belong to the current physical dispatch");
+            }
+            var pool = placement.pool(); var live = pool.state(dispatchWholeIndex);
+            pool.validateWrite(live);
+            if (live.id() != CdMonitorItem.OBJECT_ID || !live.identity().equals(call.identity())
+                    || call.rawAnimation() != 4 || live.unsignedByte(ANIMATION) != 4
+                    || live.routine() != 4 || live.word(MONITOR_ITEM_DELETE) != 29) {
+                throw new IllegalStateException("Monitor item award requires the live kind4/routine4/word29 source prefix");
+            }
+            var movement = frame.environment().movement();
+            var before = new CdPlayerSpeedShoesReward.State(movement.gates().speedShoes(),
+                    frame.state().timers().speedShoes(), movement.physics());
+            var result = CdPlayerSpeedShoesReward.give(before, assets.identity().variant(), movement.gates().timeZone());
+            var completed = result.commands().stream().map(command -> switch (command) {
+                case SCMD_FADEPCM -> CdMonitorItem.AwardSound.SCMD_FADEPCM;
+                case SCMD_SHOESMUS -> CdMonitorItem.AwardSound.SCMD_SHOESMUS;
+            }).toList();
+            var observation = new CdMonitorItem.AwardResult(completed);
+            frame.validateObjectSpeedShoesReward(before, result);
+            frame.applyObjectSpeedShoesReward(before, result);
+            for (var command : result.commands()) appendSound(new MonitorItemSubCpu(command));
+            checkActive(Phase.DYNAMIC_SLOTS);
+            return observation;
+        } finally { inMonitorAward = false; }
+    }
+
     /** Actual current physical DoorV identity at its synchronous native callback cut. */
     private CdObjectState requireTunnelDoorVerticalDispatch(CdObjectState.Identity identity) {
         checkActive(Phase.DYNAMIC_SLOTS);
@@ -1129,7 +1328,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
      */
     private void commitTunnelDoorVerticalSolid(CdTunnelDoorVertical.SolidCall call) {
         checkActive(Phase.DYNAMIC_SLOTS);
-        if (inDrawCallback || inSolidCommit || inSpringLaunch || inSpinTunnelCommit || inTunnelDoorFm) {
+        if (inDrawCallback || inSolidCommit || inSpringLaunch || inSpinTunnelCommit || inTunnelDoorFm
+                || inMonitorAngle || inMonitorFm || inMonitorAward) {
             throw new IllegalStateException("DoorV Solid commit must be synchronous and non-reentrant");
         }
         inSolidCommit = true;
@@ -1165,7 +1365,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
      */
     private void playTunnelDoorVerticalFm(CdTunnelDoorVertical.FmSound sound) {
         checkActive(Phase.DYNAMIC_SLOTS);
-        if (inDrawCallback || inSolidCommit || inSpringLaunch || inSpinTunnelCommit || inTunnelDoorFm) {
+        if (inDrawCallback || inSolidCommit || inSpringLaunch || inSpinTunnelCommit || inTunnelDoorFm
+                || inMonitorAngle || inMonitorFm || inMonitorAward) {
             throw new IllegalStateException("DoorV FM call must follow its completed range prefix synchronously");
         }
         inTunnelDoorFm = true;
@@ -1202,7 +1403,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
      */
     private void commitSpringSolid(CdSpring.SolidCall call) {
         checkActive(Phase.DYNAMIC_SLOTS);
-        if (inDrawCallback || inSolidCommit || inSpringLaunch || inSpinTunnelCommit || inTunnelDoorFm) {
+        if (inDrawCallback || inSolidCommit || inSpringLaunch || inSpinTunnelCommit || inTunnelDoorFm
+                || inMonitorAngle || inMonitorFm || inMonitorAward) {
             throw new IllegalStateException("Spring Solid commit must be synchronous and non-reentrant");
         }
         inSolidCommit = true;
@@ -1238,7 +1440,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     /** Spring's native object-action prefix is already live; this distinct Frame value-CAS adopts S3 once. */
     private void commitSpringLaunch(CdSpring.LaunchCall call) {
         checkActive(Phase.DYNAMIC_SLOTS);
-        if (inDrawCallback || inSolidCommit || inSpringLaunch || inSpinTunnelCommit || inTunnelDoorFm) {
+        if (inDrawCallback || inSolidCommit || inSpringLaunch || inSpinTunnelCommit || inTunnelDoorFm
+                || inMonitorAngle || inMonitorFm || inMonitorAward) {
             throw new IllegalStateException("Spring launch must be synchronous and non-reentrant");
         }
         inSpringLaunch = true;
@@ -1257,7 +1460,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     /** Dedicated PlayFMSound cut after successful launch, before Down's animation and wrapper DrawObject. */
     private void playSpringFm(CdSpring.FmSound sound) {
         checkActive(Phase.DYNAMIC_SLOTS);
-        if (inDrawCallback || inSolidCommit || inSpringLaunch || inSpinTunnelCommit || inTunnelDoorFm) {
+        if (inDrawCallback || inSolidCommit || inSpringLaunch || inSpinTunnelCommit || inTunnelDoorFm
+                || inMonitorAngle || inMonitorFm || inMonitorAward) {
             throw new IllegalStateException("Spring FM call must follow its completed launch synchronously");
         }
         requireSpringDispatch(placement.pool().state(dispatchWholeIndex).identity());
@@ -1272,7 +1476,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
      */
     private void commitTopSolid(CdFloatBlock.TopSolidCall call) {
         checkActive(Phase.DYNAMIC_SLOTS);
-        if (inDrawCallback || inSolidCommit || inSpringLaunch || inSpinTunnelCommit || inTunnelDoorFm) {
+        if (inDrawCallback || inSolidCommit || inSpringLaunch || inSpinTunnelCommit || inTunnelDoorFm
+                || inMonitorAngle || inMonitorFm || inMonitorAward) {
             throw new IllegalStateException("TopSolid commit must be synchronous and non-reentrant");
         }
         inSolidCommit = true;
@@ -1303,6 +1508,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     private void drawDynamic(CdObjectPool pool, int whole) {
         checkActive(Phase.DYNAMIC_SLOTS);
         if (inDrawCallback || inSolidCommit || inSpringLaunch || inSpinTunnelCommit || inTunnelDoorFm
+                || inMonitorAngle || inMonitorFm || inMonitorAward
                 || pool != placement.pool() || whole != dispatchWholeIndex) {
             throw new IllegalStateException("DrawObject must synchronously use the current bound physical dispatch");
         }

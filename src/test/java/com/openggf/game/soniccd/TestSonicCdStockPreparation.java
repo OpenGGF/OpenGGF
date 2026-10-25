@@ -1,5 +1,7 @@
 package com.openggf.game.soniccd;
 
+import com.openggf.game.soniccd.audio.CdFmSoundAssets;
+import com.openggf.game.soniccd.media.CdMmdHeader;
 import com.openggf.game.soniccd.release.CdRetailReleases;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
@@ -9,6 +11,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.ReadOnlyBufferException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
@@ -88,6 +91,131 @@ class TestSonicCdStockPreparation {
         var request = new CdStockLaunch.Request(CdStageKey.parse("R11A"), Optional.empty(),
                 Optional.of(CdRetailReleases.EUROPE.key()));
         assertThrows(IOException.class, () -> CdStockLaunch.prepare(cue, request));
+    }
+
+    @Test void constructorRejectsNullReleaseWithoutInventingAnAuthenticatedOwner() {
+        assertThrows(NullPointerException.class,
+                () -> new CdGameDataSource(null, null, Optional.empty()));
+    }
+
+    @ParameterizedTest(name = "{0}: stage preflight still precedes media I/O")
+    @EnumSource(CdReleaseVariant.class)
+    void unsupportedStageStillPreflightsEveryRequestedRegion(CdReleaseVariant variant) {
+        var request = new CdStockLaunch.Request(CdStageKey.parse("R11B"), Optional.of(variant),
+                Optional.of(CdRetailReleases.USA.key()));
+        assertThrows(UnsupportedOperationException.class,
+                () -> CdStockLaunch.prepare(temporary.resolve("missing.cue"), request));
+    }
+
+    @ParameterizedTest(name = "{0}: explicit FM retention policy after preparation closes its owner")
+    @EnumSource(CdReleaseVariant.class)
+    void preparedSourceRetainsAuthenticatedUsaFmAndExplicitlyOmitsUnsupportedRegionalFm(CdReleaseVariant variant)
+            throws Exception {
+        Path cue = suppliedCue(variant);
+        var source = CdStockLaunch.prepare(cue, CdStockLaunch.Request.r11a());
+        var binding = source.assets().identity();
+        assertEquals(variant, source.release().variant());
+        assertEquals(variant, binding.variant());
+        assertEquals(source.release().normalizedSha256(), binding.observedWholeDiscSha256());
+        assertEquals("scd:detached-stage-v1:" + source.release().key() + ":R11A:"
+                + binding.observedWholeDiscSha256() + ":" + binding.mmdSha256(), source.identity(),
+                "the authenticated whole-disc identity already binds MDINIT without a token bump");
+        assertTrue(source.rom().isEmpty());
+        assertFalse(source.identity().contains(cue.toString()));
+        assertEquals(variant == CdReleaseVariant.USA, source.fmSoundAssets().isPresent());
+
+        var rebuilt = new CdGameDataSource(source.release(), source.assets(), source.fmSoundAssets());
+        assertSame(source.release(), rebuilt.release());
+        assertSame(source.assets(), rebuilt.assets());
+        assertEquals(source.identity(), rebuilt.identity());
+        assertEquals(source.fmSoundAssets(), rebuilt.fmSoundAssets());
+        assertThrows(NullPointerException.class,
+                () -> new CdGameDataSource(null, source.assets(), source.fmSoundAssets()));
+        assertThrows(NullPointerException.class,
+                () -> new CdGameDataSource(source.release(), null, source.fmSoundAssets()));
+        assertThrows(NullPointerException.class,
+                () -> new CdGameDataSource(source.release(), source.assets(), null));
+        assertThrows(NullPointerException.class, () -> source.openAsset(null));
+        for (String unsupported : new String[]{"MDINIT.MMD;1", "audio/fm/bank.bin", "out/misc/fm_driver.bin",
+                cue.toString()}) {
+            assertThrows(FileNotFoundException.class, () -> source.openAsset(unsupported), unsupported);
+        }
+        if (variant != CdReleaseVariant.USA) {
+            assertTrue(source.fmSoundAssets().isEmpty(), "JP/EU static preparation does not admit a USA FM bank");
+            return;
+        }
+        assertThrows(IllegalArgumentException.class,
+                () -> new CdGameDataSource(source.release(), source.assets(), Optional.empty()),
+                "a USA source cannot silently drop required authenticated FM data");
+
+        // prepare() has returned only after closing the original CdProgramAssets/CUE owner.
+        var fm = source.fmSoundAssets().orElseThrow();
+        assertSame(fm, rebuilt.fmSoundAssets().orElseThrow());
+        assertEquals(CdReleaseVariant.USA, fm.source().variant());
+        assertEquals(binding.observedWholeDiscSha256(), fm.source().wholeDiscSha256());
+        assertEquals(CdRetailReleases.USA.normalizedSha256(), fm.source().wholeDiscSha256());
+        assertEquals(CdNativeFile.MDINIT, fm.source().file());
+        assertEquals("abd4735cb55aac797402d611b6d732276f02f1394ef39e7e1af6cd9dbd6fdf7e",
+                fm.source().mdinitSha256());
+        assertEquals(new CdMmdHeader(0x40, 0, 0xFF2000, 0x7FF, 0xFF2000, 0, 0), fm.source().header());
+        assertEquals(934, fm.source().unresolvedRelocationBytes());
+        assertEquals(0x1DA, CdFmSoundAssets.FILE_OFFSET);
+        assertEquals(0, CdFmSoundAssets.Z80_ORIGIN);
+        assertEquals(6870, fm.bank().length());
+        assertEquals("23f3df846b228c8de5b55cb6503318f05df1a49c5bdfe282ceecf2502ce5bc99",
+                sha(fm.bank().copy()));
+        assertEquals(0x6EB, fm.unsignedWordLE(0x6DD));
+        assertEquals(0x78B, fm.unsignedWordLE(0x6D7));
+        assertEquals("e2ef7beee36bb541a881edc5d77ef151775c2de735f1c3696ed057f0910e4ae3",
+                sha(fm.readZ80(0x6EB, 160).copy()));
+        int[] ids = {0x93, 0x95, 0x96, 0x98, 0xA4, 0xAB};
+        int[] pointers = {0x8EB, 0x95E, 0x98D, 0xA0B, 0xD59, 0xE83};
+        int[] priorities = {0x7D, 0x70, 0x70, 0x70, 0x6D, 0x7D};
+        for (int i = 0; i < ids.length; i++) {
+            assertEquals(pointers[i], fm.sfxHeaderAddress(ids[i]));
+            assertEquals(priorities[i], fm.nativePriorityByte(ids[i]));
+        }
+        assertArrayEquals(HexFormat.of().parseHex("74090101800468090005"), fm.readZ80(0x95E, 10).copy());
+        assertEquals(79, fm.declaredPriorities().length());
+        assertEquals("3a9de3bdbc16c73921451cee1f1d231195ae0b2e655b45f6fd3d8ba62bdd783c",
+                sha(fm.declaredPriorities().copy()));
+        assertEquals(4, fm.nativePriorityByte(0xDF), "native unchecked row 80 is not a declared priority");
+        assertEquals(0xE6A, fm.unsignedWordLE(fm.sfxHeaderAddress(0xAB)));
+        assertEquals(fm.unsignedWordLE(fm.sfxHeaderAddress(0xAA)), fm.unsignedWordLE(fm.sfxHeaderAddress(0xAB)));
+        assertArrayEquals(HexFormat.of().parseHex("f2f2"), fm.readZ80(0xE8D, 2).copy());
+        assertEquals(0, fm.readZ80(0x1AD6, 0).length());
+        for (int address : new int[]{0x1AD6, 0x1C00, 0xA00000, 0x2001DA, 0xFF20DA}) {
+            assertThrows(IndexOutOfBoundsException.class, () -> fm.readZ80(address, 1));
+        }
+        int original = fm.bank().unsignedByte(0);
+        byte[] copy = fm.bank().copy();
+        copy[0] ^= 0x55;
+        assertEquals(original, fm.bank().unsignedByte(0));
+        byte[] headerCopy = fm.readZ80(0x95E, 10).copy();
+        headerCopy[0] ^= 0x55;
+        assertEquals(0x74, fm.readZ80(0x95E, 10).unsignedByte(0));
+        assertThrows(ReadOnlyBufferException.class, () -> fm.bank().buffer().put(0, (byte) 1));
+        assertThrows(ReadOnlyBufferException.class, () -> fm.readZ80(0x95E, 10).buffer().put(0, (byte) 1));
+    }
+
+    @Test void constructorRejectsCrossDiscStagesAndForeignFmWithoutForgingPrivateOwners() throws Exception {
+        var usa = CdStockLaunch.prepare(suppliedCue(CdReleaseVariant.USA), CdStockLaunch.Request.r11a());
+        var japan = CdStockLaunch.prepare(suppliedCue(CdReleaseVariant.JAPAN), CdStockLaunch.Request.r11a());
+        var europe = CdStockLaunch.prepare(suppliedCue(CdReleaseVariant.EUROPE), CdStockLaunch.Request.r11a());
+        assertTrue(usa.fmSoundAssets().isPresent());
+        assertTrue(japan.fmSoundAssets().isEmpty());
+        assertTrue(europe.fmSoundAssets().isEmpty());
+        assertEquals(japan.assets().identity().mmdSha256(), europe.assets().identity().mmdSha256());
+        assertNotEquals(japan.assets().identity().observedWholeDiscSha256(),
+                europe.assets().identity().observedWholeDiscSha256());
+        assertThrows(IllegalArgumentException.class,
+                () -> new CdGameDataSource(usa.release(), japan.assets(), usa.fmSoundAssets()));
+        assertThrows(IllegalArgumentException.class,
+                () -> new CdGameDataSource(japan.release(), europe.assets(), Optional.empty()));
+        assertThrows(IllegalArgumentException.class,
+                () -> new CdGameDataSource(japan.release(), japan.assets(), usa.fmSoundAssets()));
+        assertThrows(IllegalArgumentException.class,
+                () -> new CdGameDataSource(europe.release(), europe.assets(), usa.fmSoundAssets()));
     }
 
     private static Path suppliedCue(CdReleaseVariant variant) throws IOException {

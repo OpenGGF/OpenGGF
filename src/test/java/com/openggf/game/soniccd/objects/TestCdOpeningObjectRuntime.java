@@ -3278,4 +3278,609 @@ class TestCdOpeningObjectRuntime {
                 new CdPlayerBody.Globals(b.levelFrames(), b.cameraXCentre(), b.timeAttackMode(), b.debugMode(), b.debugCheat(),
                         b.timeWarpTimer(), g.invincible(), b.bossMusic()), env.dynamicSlots()), f.frame.environment());
     }
+
+    // BEGIN Monitor Runtime R1 tests-first additions. Native source pin
+    // 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff. Constructed same-owner cuts over the existing
+    // media-gated fixture; never World/route/native-entry evidence. ALL JAVA UNRUN by this author.
+
+    @Test void monitorThirteenthBankPreservesEveryLegacyConstructorAndAll494Patterns() {
+        assertThrows(NullPointerException.class, () -> new CdOpeningObjectRuntime.MonitorFm(null));
+        assertThrows(NullPointerException.class, () -> new CdOpeningObjectRuntime.MonitorItemSubCpu(null));
+        assertEquals(12374, BANKS.monitorTime());
+        var all = new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138, 208, 236, 299, 369, 374, 413, 449, 464, 500, 512);
+        assertEquals(494, all.monitorTime() + 82 - all.player());
+        assertEquals(all, new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138));
+        assertEquals(all, new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138, 208, 236));
+        assertEquals(all, new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138, 208, 236, 299, 369, 374));
+        assertEquals(all, new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138, 208, 236, 299, 369, 374, 413));
+        assertEquals(all, new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138, 208, 236, 299, 369, 374, 413, 449));
+        assertEquals(all, new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138, 208, 236, 299, 369, 374, 413, 449, 464));
+        assertEquals(all, new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138, 208, 236, 299, 369, 374, 413, 449, 464, 500));
+        assertEquals(900, new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138, 208, 236, 299, 369, 374, 413, 449, 464, 500, 900).monitorTime());
+        assertEquals(0x82, com.openggf.game.soniccd.player.CdPlayerSpeedShoesReward.SubCpuCommand.SCMD_FADEPCM.nativeId());
+        assertEquals(0x6C, com.openggf.game.soniccd.player.CdPlayerSpeedShoesReward.SubCpuCommand.SCMD_SHOESMUS.nativeId());
+    }
+
+    @Test void monitorAllThirteenSpansRejectOverlapAndEndOverflowEvenWithAnEmptySatAtBothIngresses() throws Exception {
+        var assets = load(); var saved = CdAssetBytes.copyOf(new byte[CdObjectPlacementRuntime.SAVED_BANK_BYTES]);
+        var window = new CdPowerupArtRuntime.State(new byte[0x480], new byte[0x480]);
+        for (int base : List.of(10000, 11000, 12000, 12070, 12098, 12161, 12231, 12236,
+                12275, 12311, 12326, 12362, 12373, -1, Integer.MAX_VALUE - 80)) {
+            var banks = new CdOpeningObjectRuntime.LogicalBanks(10000, 11000, 12000, 12070, 12098,
+                    12161, 12231, 12236, 12275, 12311, 12326, 12362, base);
+            try (var frame = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, 0)) {
+                assertThrows(IllegalArgumentException.class, () -> CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(
+                        assets, frame, INITIAL, CONTACT, SCORE, LEVEL, new byte[640], banks, PRE, value -> { }));
+                assertThrows(IllegalArgumentException.class, () -> restart(assets, frame, saved, window, new byte[640], banks));
+                assertFalse(frame.closed()); assertEquals(0, frame.vIntClock().deltaSinceAdmittedCut());
+            }
+        }
+    }
+
+    // ObjMonitor_Init:300-330: replacement flags4 bypass Solid/Animate on the first call.
+    @Test void monitorFreshInitClearsTheActualLoadedBitAndWaitsForTheRealSpriteBuildVisibility() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var placement = f.runtime.placement(); var pool = placement.pool();
+            placement.bsetSavedFlag(7, 1, CdObjectPlacementRuntime.SavedBit.LOADED);
+            placement.bsetSavedFlag(7, 1, CdObjectPlacementRuntime.SavedBit.MEMBER_3);
+            var before = monitorImage(f, pool.state(40), 0, 0xFF, 4, 0x100, 0x780, 7)
+                    .moveWord(X_FRACTION, 0x1234).moveWord(Y_FRACTION, 0x5678)
+                    .moveByte(MAP_FRAME, 4).moveByte(PREVIOUS_ANIMATION, 7).moveByte(ANIMATION_TIME, 0x65)
+                    .moveByte(RAW_CONTROL_2C, 0xA4);
+            pool.write(before); var actor = f.frame.state(); var env = f.frame.environment(); var sounds = f.runtime.lastSoundRequests();
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            var expected = before.moveByte(ROUTINE, 2).moveByte(Y_RADIUS, 14).moveByte(X_RADIUS, 14)
+                    .moveByte(SPRITE_FLAGS, 4).moveByte(WIDTH, 15).moveByte(PRIORITY, 3).moveWord(TILE, 0x5A8)
+                    .moveByte(COLLISION_TYPE, 0x46).moveByte(ANIMATION, 4);
+            assertEquals(expected, f.slot(40)); assertEquals(4, placement.savedFlag(7, 1));
+            assertEquals(actor, f.frame.state()); assertEquals(env, f.frame.environment()); assertEquals(sounds, f.runtime.lastSoundRequests());
+            var sat = f.runtime.finishAfterCamera(POST);
+            assertEquals(4, sat.provenance().stream().filter(v -> v.slotRef().wholeIndex() == 40).count());
+            assertEquals(0x84, f.slot(40).spriteFlags(), "only the real sprite build installs the next call's bit7");
+            f.runtime.finishOrdinaryTail();
+        }
+    }
+
+    @Test void monitorAlreadyDestroyedInitReturnsBeforeDrawAndPreservesUnwrittenBytes() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var placement = f.runtime.placement(); var pool = placement.pool();
+            seedSpinTunnelLoaded(placement, 7, 1);
+            var before = monitorImage(f, pool.state(40), 0, 0x84, 4, 0x100, 0x780, 7)
+                    .moveByte(COLLISION_TYPE, 0xA7).moveByte(ANIMATION, 6).moveByte(ANIMATION_TIME, 0x33);
+            pool.write(before); f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(before.moveByte(ROUTINE, 8).moveByte(MAP_FRAME, 17).moveByte(Y_RADIUS, 14).moveByte(X_RADIUS, 14)
+                    .moveWord(TILE, 0x5A8).moveByte(PRIORITY, 3).moveByte(WIDTH, 15).moveByte(SPRITE_FLAGS, 4), f.slot(40));
+            assertEquals(0x55, placement.savedFlag(7, 1));
+            var sat = f.runtime.finishAfterCamera(POST);
+            assertTrue(sat.provenance().stream().noneMatch(v -> v.slotRef().wholeIndex() == 40));
+            f.runtime.finishOrdinaryTail();
+        }
+    }
+
+    @Test void monitorPriorVisibilityAndTheExistingTimeStopWordGateOnlyTheirNativeCuts() throws Exception {
+        for (int stop : List.of(0, 1, 0xFFFF)) for (int visible : List.of(4, 0x84)) {
+            try (var f = new Fixture(new CdRingGlobals(0, 3, 0, 0, 0, stop, 0, 0))) {
+                springDeviceCut(f); var pool = f.runtime.placement().pool();
+                seedSolidPlayer(f, 8, 40, 1, 0x180, 0x100, 0x02001234, 0x07005678);
+                var before = monitorImage(f, pool.state(40), 2, visible, 4, 0x100, 0x780, 0).moveByte(FLAGS, 8)
+                        .moveByte(ANIMATION, 4).moveByte(PREVIOUS_ANIMATION, 4).moveByte(ANIMATION_FRAME, 2)
+                        .moveByte(ANIMATION_TIME, 7).moveByte(MAP_FRAME, 4);
+                pool.write(before); var player = f.frame.state(); var env = f.frame.environment();
+                var sounds = new ArrayList<>(f.runtime.lastSoundRequests());
+                f.runtime.runDynamicSlotsAfterReservedSlots();
+                if (visible == 4) {
+                    assertEquals(player, f.frame.state()); assertEquals(env, f.frame.environment());
+                } else {
+                    assertEquals(0, f.frame.state().objectLinks().standObject());
+                    assertEquals(0, f.frame.state().motion().flags() & 8);
+                    sounds.add(new CdOpeningObjectRuntime.PlayerSound(new CdPlayerFrameRuntime.ContactFmSound(CdPlayerTouchResponse.FmSound.FM_CHARGESTOP)));
+                }
+                assertEquals(stop == 0 && visible == 0x84 ? 6 : 7, f.slot(40).unsignedByte(ANIMATION_TIME));
+                assertEquals(4, f.slot(40).unsignedByte(MAP_FRAME)); assertEquals(4, f.slot(40).spriteFlags());
+                assertEquals(stop, f.runtime.ringGlobals().timeStopTimer()); assertEquals(sounds, f.runtime.lastSoundRequests());
+                f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+                assertEquals(stop, f.runtime.ringGlobals().timeStopTimer(), "no invented time-stop decrement in the ordinary tail");
+            }
+        }
+    }
+
+    @Test void monitorActualSolidCommitsTheWholePlayerAndBothAngleBuffersBeforeALaterPhysicalConsumer() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var pool = f.runtime.placement().pool();
+            seedSolidPlayer(f, 8, 41, 0, 0x234, 0x100, 0x01008000, 0x075F1234);
+            seedTunnelDoorGlobals(f, 1, 0x3456, 0x55, 0x66);
+            var self = monitorImage(f, pool.state(40), 2, 0x84, 4, 0x100, 0x780, 0)
+                    .moveByte(ANIMATION, 4).moveWord(X_VELOCITY, 0x123);
+            var oldStand = monitorImage(f, pool.state(41), 8, 4, 4, 0x100, 0x780, 0).moveByte(FLAGS, 0xA8).moveByte(MAP_FRAME, 17);
+            pool.write(self); pool.write(oldStand);
+            pool.write(spring(f, pool.state(42), 2, 4, 0, 0).moveByte(ROUTINE_2, 5)
+                    .moveWord(X_FRACTION, 0x4567).moveWord(Y_FRACTION, 0x89AB));
+            var untouched = pool.state(127).moveWord(TUNNEL_DOOR_TIMER, 0xDEAD); pool.write(untouched);
+            var actor = f.frame.state(); var env = f.frame.environment(); var display = f.frame.display();
+            var expected = CdSolidObject.fromAssets(f.assets).run(CdSolidObject.Entry.SOLID_OBJECT, self,
+                    tunnelDoorPlayer(f), new CdSolidObject.Gates(env.globals().debugMode(), env.movement().gates().miniSonic()),
+                    tunnelDoorGlobals(f), pool.capture());
+            // The real terrain/probe owns its distance and branch. No fabricated floor result or landing assertion.
+            assertTrue(expected.globalWrites().contains(CdSolidObject.GlobalField.PRIMARY_ANGLE));
+            var sounds = new ArrayList<>(f.runtime.lastSoundRequests());
+            expected.fmRequests().forEach(v -> sounds.add(new CdOpeningObjectRuntime.PlayerSound(new CdPlayerFrameRuntime.ContactFmSound(v))));
+            f.runtime.runDynamicSlotsAfterReservedSlots(); assertTunnelDoorSolidApplied(f, actor, env, expected);
+            assertEquals(display, f.frame.display()); assertEquals(untouched, f.slot(127));
+            var released = expected.otherSlots().stream().filter(v -> v.identity().wholeIndex() == 41).findFirst().orElseThrow();
+            assertEquals(released.moveByte(SPRITE_FLAGS, 4), f.slot(41));
+            assertEquals(expected.player().actor().motion().centreX16_16() >>> 16, f.slot(42).centreX());
+            assertEquals(expected.player().actor().motion().centreY16_16() >>> 16, f.slot(42).centreY());
+            assertEquals(0x4567, f.slot(42).word(X_FRACTION)); assertEquals(0x89AB, f.slot(42).word(Y_FRACTION));
+            assertEquals(sounds, f.runtime.lastSoundRequests()); f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+        }
+    }
+
+    @Test void monitorFallUsesRealRawGravityAndFloorThenWritesTheFramePrimaryAngleAtThatCallOnly() throws Exception {
+        for (int control : List.of(0, 4)) {
+            try (var f = new Fixture(new CdRingGlobals(0, 3, 0, 0, 0, 1, 0, 0))) {
+                springDeviceCut(f); var pool = f.runtime.placement().pool(); seedTunnelDoorGlobals(f, 0, 0x3456, 0x55, 0x66);
+                var before = monitorImage(f, pool.state(40), 2, 0x84, 4, 0x100, 0x700, 0)
+                        .moveWord(X_FRACTION, 0x1234).moveWord(Y_FRACTION, 0x5678)
+                        .moveWord(X_VELOCITY, 0x100).moveWord(Y_VELOCITY, -0x180)
+                        .moveByte(ROUTINE_2, 4).moveByte(RAW_CONTROL_2C, control).moveByte(ANIMATION_TIME, 9);
+                pool.write(before); var actor = f.frame.state(); var env = f.frame.environment(); var sounds = f.runtime.lastSoundRequests();
+                var moved = before.moveLong(CdObjectState.LongField.X_POSITION, 0x01011234)
+                        .moveLong(CdObjectState.LongField.Y_POSITION, 0x06FED678).moveWord(Y_VELOCITY, control == 0 ? -0x148 : -0x180);
+                var floor = CdObjectCollisionCheck.objGetFloorDist(new com.openggf.game.soniccd.player.CdPlayerTerrain(f.assets.terrain()), moved);
+                if (floor.distance() < 0) moved = moved.addWord(Y, floor.distance()).moveWord(Y_VELOCITY, 0).moveByte(ROUTINE_2, 0);
+                int externalWrites = f.angleWrites.size(); f.runtime.runDynamicSlotsAfterReservedSlots();
+                assertEquals(moved.moveByte(SPRITE_FLAGS, 4), f.slot(40)); assertEquals(actor, f.frame.state());
+                assertEquals(floor.primaryAngle(), f.frame.environment().movement().globals().primaryAngle());
+                assertEquals(env.movement().globals().secondaryAngle(), f.frame.environment().movement().globals().secondaryAngle());
+                assertEquals(env.movement().physics(), f.frame.environment().movement().physics());
+                assertEquals(externalWrites, f.angleWrites.size(), "Monitor directly uses Frame's writer, never a second external angle port");
+                assertEquals(sounds, f.runtime.lastSoundRequests()); assertEquals(1, f.runtime.ringGlobals().timeStopTimer());
+                f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+            }
+        }
+    }
+
+    @Test void monitorMmzGlobalLayerIsAnExplicitTypedUnownedBoundaryBeforeAnyBodyPrefix() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var pool = f.runtime.placement().pool(); monitorEnvironment(f, 0, 0, 6, 0);
+            var before = monitorImage(f, pool.state(40), 0, 0x84, 4, 0x100, 0x780, 7).moveByte(LAYER, 0xA5);
+            pool.write(before); var actor = f.frame.state(); var env = f.frame.environment();
+            var bank = f.runtime.placement().capture().savedFlags().copy();
+            var error = assertThrows(CdOpeningObjectRuntime.UnsupportedMonitorBinding.class, f.runtime::runDynamicSlotsAfterReservedSlots);
+            assertEquals(CdOpeningObjectRuntime.UnsupportedMonitorBindingBoundary.MMZ_GLOBAL_LAYER, error.boundary());
+            assertEquals(40, error.wholeIndex()); assertEquals(before, f.slot(40));
+            assertEquals(actor, f.frame.state()); assertEquals(env, f.frame.environment());
+            assertArrayEquals(bank, f.runtime.placement().capture().savedFlags().copy());
+            assertTrue(f.runtime.closed()); assertTrue(f.frame.closed());
+        }
+    }
+
+    @Test void monitorTimeAttackZeroSubtypeBypassesEvenAnUnownedRoutineWithoutDrawOrInit() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var pool = f.runtime.placement().pool(); monitorEnvironment(f, 1, 0, 0, 1);
+            var before = monitorImage(f, pool.state(40), 0xFF, 4, 0, 0x100, 0x780, 7);
+            pool.write(before); f.runtime.runDynamicSlotsAfterReservedSlots(); assertEquals(before, f.slot(40));
+            var sat = f.runtime.finishAfterCamera(POST);
+            assertTrue(sat.provenance().stream().noneMatch(v -> v.slotRef().wholeIndex() == 40)); f.runtime.finishOrdinaryTail();
+        }
+    }
+
+    @Test void monitorBreakReadsActualRawTimeZoneDirectionAndTheOneLinearSavedBank() throws Exception {
+        int[][] rows = {{1, 0, 7, 1}, {0x82, 1, 7, 1}, {0x80, 1, 7, 0}, {0x82, 0xFF, 7, 2}, {4, 0, 8, 1}};
+        for (int[] row : rows) try (var f = new Fixture()) {
+            springDeviceCut(f); var placement = f.runtime.placement(); var pool = placement.pool();
+            monitorEnvironment(f, row[0], row[1], 0, 0);
+            placement.bsetSavedFlag(row[2], row[3], CdObjectPlacementRuntime.SavedBit.LOADED);
+            var bank = placement.capture().savedFlags().copy();
+            pool.write(monitorImage(f, pool.state(40), 4, 0x84, 4, 0x100, 0x780, 7).moveByte(ANIMATION, 4));
+            var sounds = new ArrayList<>(f.runtime.lastSoundRequests()); f.runtime.runDynamicSlotsAfterReservedSlots();
+            byte[] expected = bank.clone(); expected[2 + 3 * row[2] + row[3]] |= 1;
+            assertArrayEquals(expected, placement.capture().savedFlags().copy());
+            assertEquals(8, f.slot(40).routine()); assertEquals(17, f.slot(40).unsignedByte(MAP_FRAME));
+            assertEquals(0x1A, f.slot(32).id()); assertEquals(0, f.slot(32).routine());
+            assertEquals(0x18, f.slot(33).id()); assertEquals(0, f.slot(33).routine());
+            sounds.add(new CdOpeningObjectRuntime.MonitorFm(CdMonitor.FmSound.FM_DESTROY));
+            assertEquals(sounds, f.runtime.lastSoundRequests(), "Break has one direct sound and no metadata replay");
+            f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+        }
+    }
+
+    @Test void monitorActualBodyTouchBouncesThenBreaksInTheSameLivePassWithoutScoreOrChainReward() throws Exception {
+        try (var f = new Fixture()) {
+            f.firstCycle(); var pool = f.runtime.placement().pool(); pool.clearDynamicSlots();
+            seedSpinTunnelMotion(f, spinTunnelMotion(f, 0x01000000, 0x07000000, 0, 0x100, 0, 6, 2));
+            pool.write(monitorImage(f, pool.state(40), 2, 0x84, 4, 0x100, 0x710, 7)
+                    .moveByte(ANIMATION, 4).moveByte(COLLISION_TYPE, 0x46));
+            f.service(0); f.runtime.spawnBeforeReservedSlots(); var publication = f.body(2);
+            var response = publication.result().effects().stream().filter(CdPlayerBody.ObjectTouchResponse.class::isInstance)
+                    .map(CdPlayerBody.ObjectTouchResponse.class::cast).findFirst().orElseThrow().result();
+            assertEquals(CdPlayerTouchResponse.Exit.MONITOR_DOWNWARD_BOUNCE, response.exit());
+            assertEquals(4, f.slot(40).routine()); assertEquals(response.changedSlots().getFirst(), f.slot(40));
+            var actor = f.frame.state(); var env = f.frame.environment(); var rings = f.runtime.ringGlobals();
+            var score = f.runtime.scoreGlobals(); var contact = f.runtime.contactGlobals();
+            var sounds = new ArrayList<CdOpeningObjectRuntime.SoundRequest>();
+            publication.sounds().forEach(v -> sounds.add(new CdOpeningObjectRuntime.PlayerSound(v)));
+            sounds.add(new CdOpeningObjectRuntime.MonitorFm(CdMonitor.FmSound.FM_DESTROY));
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(actor, f.frame.state()); assertEquals(env, f.frame.environment());
+            assertEquals(rings, f.runtime.ringGlobals()); assertEquals(score, f.runtime.scoreGlobals()); assertEquals(contact, f.runtime.contactGlobals());
+            assertEquals(8, f.slot(40).routine()); assertEquals(0, f.slot(40).unsignedByte(COLLISION_TYPE));
+            assertEquals(1, f.runtime.placement().savedFlag(7, 1)); assertEquals(sounds, f.runtime.lastSoundRequests());
+            assertEquals(0x1A, f.slot(32).id()); assertEquals(0, f.slot(32).routine());
+            assertEquals(0x18, f.slot(33).id()); assertEquals(1, f.slot(33).unsignedByte(ROUTINE_2));
+            assertTrue(pool.capture().slots().stream().noneMatch(s -> s.id() == CdPoints.OBJECT_ID));
+            f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+        }
+    }
+
+    @Test void monitorEarlierChildrenWaitAndLaterChildrenRunAtTheirActualPhysicalVisit() throws Exception {
+        for (int parent : List.of(32, 40)) try (var f = new Fixture()) {
+            springDeviceCut(f); var pool = f.runtime.placement().pool();
+            pool.write(monitorImage(f, pool.state(parent), 4, 0x84, 4, 0x100, 0x780, 7).moveByte(ANIMATION, 4));
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            int item = parent == 32 ? 33 : 32; int explosion = parent == 32 ? 34 : 33;
+            assertEquals(0x1A, f.slot(item).id()); assertEquals(parent == 32 ? 2 : 0, f.slot(item).routine());
+            assertEquals(parent == 32 ? 0x77D : 0x780, f.slot(item).centreY());
+            assertEquals(parent == 32 ? 0xFD18 : 0, f.slot(item).word(Y_VELOCITY));
+            assertEquals(0x18, f.slot(explosion).id()); assertEquals(parent == 32 ? 2 : 0, f.slot(explosion).routine());
+            assertEquals(1, f.slot(explosion).unsignedByte(ROUTINE_2));
+            assertTrue(pool.capture().slots().stream().noneMatch(s -> s.id() == CdPoints.OBJECT_ID));
+            assertEquals(SCORE, f.runtime.scoreGlobals()); f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+            if (parent == 32) {
+                // Native explosion Done: nonzero explodeBadnik deletes without points/flower.
+                pool.write(f.slot(explosion).moveByte(ROUTINE, 4));
+                f.service(0); f.runtime.spawnBeforeReservedSlots(); f.body(3); f.runtime.runDynamicSlotsAfterReservedSlots();
+                assertArrayEquals(new byte[64], f.slot(explosion).copyBytes());
+                assertTrue(pool.capture().slots().stream().noneMatch(s -> s.id() == CdPoints.OBJECT_ID || s.id() == CdFlower.OBJECT_ID));
+                f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+            }
+        }
+    }
+
+    @Test void monitorBreakPreservesDirtyEarlierFreeSlotBytesAndTheFirstFreeSearchRemainsIdOnly() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var pool = f.runtime.placement().pool();
+            var dirty = pool.state(32).moveWord(X_FRACTION, 0x1234).moveWord(Y_FRACTION, 0x5678)
+                    .moveByte(ROUTINE, 6).moveByte(RAW_CONTROL_2C, 0xA4).moveByte(ANIMATION_TIME, 0xB5);
+            pool.write(dirty); pool.write(monitorImage(f, pool.state(40), 4, 0x84, 4, 0x100, 0x780, 7).moveByte(ANIMATION, 4).moveByte(LAYER, 0xA5));
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(dirty.moveByte(ID, 0x1A).moveWord(X, 0x100).moveWord(Y, 0x780).moveByte(ANIMATION, 4).moveByte(LAYER, 0xA5), f.slot(32));
+            assertEquals(0, f.slot(33).routine()); f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+            f.service(0); f.runtime.spawnBeforeReservedSlots(); f.body(3);
+            var error = assertThrows(CdMonitorItem.UnsupportedMonitorItem.class, f.runtime::runDynamicSlotsAfterReservedSlots);
+            assertEquals(CdMonitorItem.UnsupportedBoundary.ROUTINE_DISPATCH, error.boundary());
+            assertEquals(6, f.slot(32).routine()); assertTrue(f.runtime.closed()); assertTrue(f.frame.closed());
+        }
+    }
+
+    @Test void monitorNoFreeOrOneFreeSlotStillBreaksAndNeverRetriesOrInventsAnExplosion() throws Exception {
+        for (int free : List.of(0, 1)) try (var f = new Fixture()) {
+            springDeviceCut(f); var pool = f.runtime.placement().pool();
+            for (int whole = 32; whole < 128; whole++) pool.write(pool.state(whole).moveByte(ID, CdAnimal.OBJECT_ID)
+                    .moveWord(X, 0x100).moveWord(Y, 0x780));
+            if (free == 1) pool.deleteObject(32);
+            pool.write(monitorImage(f, pool.state(40), 4, 0x84, 4, 0x100, 0x780, 7).moveByte(ANIMATION, 4));
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(free, pool.capture().slots().stream().filter(s -> s.id() == 0x1A).count());
+            assertTrue(pool.capture().slots().stream().noneMatch(s -> s.id() == 0x18));
+            assertEquals(1, f.runtime.placement().savedFlag(7, 1)); assertEquals(8, f.slot(40).routine());
+            assertEquals(17, f.slot(40).unsignedByte(MAP_FRAME)); f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+        }
+    }
+
+    // Main:465-482,624-638. Ordinals count this actual item body's calls, not World frames.
+    @Test void monitorCleanItemMoves32TimesAwardsOn33ThenDeletesOnTheThirtiethWordTimerCall() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); f.makePlayerAbsent(); var pool = f.runtime.placement().pool();
+            pool.write(pool.state(40).moveByte(ID, 0x1A).moveWord(X, 0x850).moveWord(Y, 0x2D8).moveByte(ANIMATION, 4));
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(0x02D50000, f.slot(40).longBits(CdObjectState.LongField.Y_POSITION));
+            assertEquals(0xFD18, f.slot(40).word(Y_VELOCITY)); monitorFinish(f);
+            for (int call = 2; call <= 32; call++) { monitorBegin(f, call + 1); f.runtime.runDynamicSlotsAfterReservedSlots(); monitorFinish(f); }
+            assertEquals(0x02A68000, f.slot(40).longBits(CdObjectState.LongField.Y_POSITION));
+            assertEquals(0, f.slot(40).word(Y_VELOCITY)); assertEquals(2, f.slot(40).routine());
+            assertEquals(0, f.frame.environment().movement().gates().speedShoes());
+            monitorBegin(f, 34); f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(4, f.slot(40).routine()); assertEquals(29, f.slot(40).word(MONITOR_ITEM_DELETE));
+            assertEquals(1320, f.frame.state().timers().speedShoes());
+            assertEquals(List.of(new CdOpeningObjectRuntime.MonitorItemSubCpu(
+                    com.openggf.game.soniccd.player.CdPlayerSpeedShoesReward.SubCpuCommand.SCMD_SHOESMUS)), f.runtime.lastSoundRequests());
+            monitorFinish(f);
+            for (int call = 1; call <= 30; call++) {
+                monitorBegin(f, 34 + call); f.runtime.runDynamicSlotsAfterReservedSlots();
+                if (call < 30) assertEquals(29 - call, f.slot(40).word(MONITOR_ITEM_DELETE));
+                else assertArrayEquals(new byte[64], f.slot(40).copyBytes());
+                var sat = f.runtime.finishAfterCamera(POST);
+                if (call == 30) assertTrue(sat.provenance().stream().noneMatch(v -> v.slotRef().wholeIndex() == 40),
+                        "native post-delete Draw queues a pointer; live ID0 skips it at drain");
+                f.runtime.finishOrdinaryTail();
+                assertEquals(1320, f.frame.state().timers().speedShoes(), "absent primary never runs Display");
+                assertTrue(f.runtime.lastSoundRequests().isEmpty(), "Delete never repeats the award");
+            }
+        }
+    }
+
+    @Test void monitorItemStandingMoveBorrowsTheActualPrimaryHeaderIdAndStatusByte() throws Exception {
+        for (int id : List.of(0, 0x1E)) for (int flags : List.of(0, 1)) {
+            try (var f = new Fixture()) {
+                springDeviceCut(f); var pool = f.runtime.placement().pool();
+                var actor = f.frame.captureActor(); var s = actor.state(); var m = s.motion();
+                var motion = spinTunnelMotion(f, m.centreX16_16(), m.centreY16_16(), 0, 0, 0, flags, 0);
+                f.frame.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(), new CdPlayerBody.State(motion, s.animation(),
+                        new CdPlayerBody.Header(id, s.header().mappingAddress(), s.header().tile(), s.header().priority(), s.header().width()),
+                        s.timers(), s.history(), s.rotationDistance(), s.objectLinks()), actor.display()));
+                var before = pool.state(40).moveByte(ID, 0x1A).moveByte(ANIMATION, 4).moveByte(FLAGS, 8)
+                        .moveByte(STAND_LINK_3D, 0).moveWord(X, 0x100).moveWord(X_FRACTION, 0x1234)
+                        .moveWord(Y, 0x780).moveWord(Y_FRACTION, 0x5678).moveWord(X_VELOCITY, 0x180);
+                pool.write(before); var player = f.frame.state(); f.runtime.runDynamicSlotsAfterReservedSlots();
+                int local = id != 0x1E ? 0x180 : flags == 0 ? 0x80 : 0x280;
+                assertEquals(0x01001234 + (local << 8), f.slot(40).longBits(CdObjectState.LongField.X_POSITION));
+                assertEquals(0x077D5678, f.slot(40).longBits(CdObjectState.LongField.Y_POSITION));
+                assertEquals(0x180, f.slot(40).word(X_VELOCITY)); assertEquals(0xFD18, f.slot(40).word(Y_VELOCITY));
+                assertEquals(player, f.frame.state()); monitorFinish(f);
+            }
+        }
+    }
+
+    @Test void monitorItemReadsActualLaterDynamicSupportBeforeThatUnownedIdFailsAtItsOwnVisit() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var pool = f.runtime.placement().pool();
+            pool.write(pool.state(40).moveByte(ID, 0x1A).moveByte(ANIMATION, 4).moveByte(FLAGS, 8).moveByte(STAND_LINK_3D, 42)
+                    .moveWord(X, 0x100).moveWord(Y, 0x780).moveWord(X_VELOCITY, 0x180));
+            pool.write(pool.state(42).moveByte(ID, 0x1E).moveByte(FLAGS, 1));
+            assertThrows(UnsupportedOperationException.class, f.runtime::runDynamicSlotsAfterReservedSlots);
+            assertEquals(0x01028000, f.slot(40).longBits(CdObjectState.LongField.X_POSITION));
+            assertEquals(2, f.slot(40).routine()); assertEquals(0xFD18, f.slot(40).word(Y_VELOCITY));
+            assertEquals(0x1E, f.slot(42).id()); assertTrue(f.runtime.closed()); assertTrue(f.frame.closed());
+        }
+    }
+
+    @Test void monitorShoesAwardUsesFiveActualFrameStoresAndWholeRawTimeZoneCommandsAfterTheOrdinaryBodySound() throws Exception {
+        for (int raw : List.of(0, 1, 0x80, 0x81, 0xFF)) try (var f = new Fixture()) {
+            springDeviceCut(f); var pool = f.runtime.placement().pool(); monitorEnvironment(f, raw, 0, 0, 0);
+            pool.write(monitorItemImage(f, pool.state(40), 2, 4, 0x100, 0x780).moveWord(Y_VELOCITY, 0));
+            var before = f.frame.state(); var env = f.frame.environment(); var display = f.frame.display();
+            var ring = f.runtime.ringGlobals(); var contact = f.runtime.contactGlobals(); var score = f.runtime.scoreGlobals();
+            var level = f.runtime.levelGlobals(); var powerup = f.runtime.powerupArtState(); var bank = f.runtime.placement().capture().savedFlags().copy();
+            assertEquals(List.of(new CdOpeningObjectRuntime.PlayerSound(new CdPlayerFrameRuntime.ChargeSound(
+                    com.openggf.game.soniccd.player.CdPlayerCharge.Sound.FM_CHARGESTOP))), f.runtime.lastSoundRequests());
+            var sounds = new ArrayList<>(f.runtime.lastSoundRequests());
+            if (raw == 0) sounds.add(new CdOpeningObjectRuntime.MonitorItemSubCpu(
+                    com.openggf.game.soniccd.player.CdPlayerSpeedShoesReward.SubCpuCommand.SCMD_FADEPCM));
+            sounds.add(new CdOpeningObjectRuntime.MonitorItemSubCpu(
+                    com.openggf.game.soniccd.player.CdPlayerSpeedShoesReward.SubCpuCommand.SCMD_SHOESMUS));
+            f.runtime.runDynamicSlotsAfterReservedSlots(); assertMonitorFiveStores(f, before, env);
+            assertEquals(4, f.slot(40).routine()); assertEquals(29, f.slot(40).word(MONITOR_ITEM_DELETE));
+            assertEquals(display, f.frame.display()); assertEquals(sounds, f.runtime.lastSoundRequests());
+            assertEquals(ring, f.runtime.ringGlobals()); assertEquals(contact, f.runtime.contactGlobals()); assertEquals(score, f.runtime.scoreGlobals());
+            assertEquals(level, f.runtime.levelGlobals());
+            assertArrayEquals(powerup.cpuBuffer().copy(), f.runtime.powerupArtState().cpuBuffer().copy());
+            assertArrayEquals(powerup.residentBank().copy(), f.runtime.powerupArtState().residentBank().copy());
+            assertArrayEquals(bank, f.runtime.placement().capture().savedFlags().copy());
+            monitorFinish(f); assertEquals(29, f.slot(40).word(MONITOR_ITEM_DELETE)); assertEquals(1320, f.frame.state().timers().speedShoes());
+        }
+    }
+
+    @Test void monitorOtherRewardsKeepTheirTypedSourcePrefixAndEarlierBreakWhileClosingBothOwnersWithoutRetry() throws Exception {
+        int[] kinds = {0, 1, 2, 3, 5, 6, 7, 255};
+        var boundaries = List.of(CdMonitorItem.UnsupportedBoundary.REWARD_ONE_UP, CdMonitorItem.UnsupportedBoundary.REWARD_RINGS,
+                CdMonitorItem.UnsupportedBoundary.REWARD_SHIELD, CdMonitorItem.UnsupportedBoundary.REWARD_INVINCIBILITY,
+                CdMonitorItem.UnsupportedBoundary.REWARD_TIME_STOP, CdMonitorItem.UnsupportedBoundary.REWARD_COMBINE_RING,
+                CdMonitorItem.UnsupportedBoundary.REWARD_S, CdMonitorItem.UnsupportedBoundary.REWARD_S);
+        for (int i = 0; i < kinds.length; i++) try (var f = new Fixture()) {
+            springDeviceCut(f); var pool = f.runtime.placement().pool();
+            pool.write(monitorImage(f, pool.state(39), 4, 0x84, 4, 0x100, 0x780, 7).moveByte(ANIMATION, 4));
+            var item = monitorItemImage(f, pool.state(40), 2, 4, 0x100, 0x780).moveByte(ANIMATION, kinds[i]).moveWord(Y_VELOCITY, 0);
+            pool.write(item); var actor = f.frame.state(); var env = f.frame.environment();
+            var sounds = new ArrayList<>(f.runtime.lastSoundRequests()); sounds.add(new CdOpeningObjectRuntime.MonitorFm(CdMonitor.FmSound.FM_DESTROY));
+            var error = assertThrows(CdMonitorItem.UnsupportedMonitorItem.class, f.runtime::runDynamicSlotsAfterReservedSlots);
+            assertEquals(boundaries.get(i), error.boundary()); assertEquals(kinds[i], error.value());
+            assertEquals(item.moveByte(ROUTINE, 4).moveWord(MONITOR_ITEM_DELETE, 29), f.slot(40));
+            assertEquals(8, f.slot(39).routine()); assertEquals(1, f.runtime.placement().savedFlag(7, 1));
+            assertEquals(actor, f.frame.state()); assertEquals(env, f.frame.environment()); assertEquals(sounds, f.runtime.lastSoundRequests());
+            assertTrue(f.runtime.closed()); assertTrue(f.frame.closed());
+            assertThrows(IllegalStateException.class, f.runtime::runDynamicSlotsAfterReservedSlots);
+            assertEquals(item.moveByte(ROUTINE, 4).moveWord(MONITOR_ITEM_DELETE, 29), f.slot(40));
+        }
+    }
+
+    @Test void monitorEarlierSpringLaunchIsVisibleToMonitorSolidAndALaterMirrorInTheSamePass() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var pool = f.runtime.placement().pool();
+            seedSpringPlayer(f, 0x01008000, 0x07671234, 0x100, 0x100, 2, 0, 0, 0);
+            pool.write(spring(f, pool.state(39), 2, 0x84, 0, 0));
+            pool.write(monitorImage(f, pool.state(40), 2, 0x84, 4, 0x100, 0x78E, 0).moveByte(ANIMATION, 4));
+            pool.write(spring(f, pool.state(42), 2, 4, 0, 0).moveByte(ROUTINE_2, 5));
+            var sounds = new ArrayList<>(f.runtime.lastSoundRequests()); f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(4, f.slot(39).routine()); assertEquals(-0x1000, f.frame.state().motion().yVelocity());
+            assertEquals(0x076D1234, f.frame.state().motion().centreY16_16(), "rising-above Monitor sees the already launched player");
+            assertEquals(0x100, f.slot(42).centreX()); assertEquals(0x76D, f.slot(42).centreY());
+            assertEquals(16, f.slot(40).unsignedByte(MAP_FRAME));
+            sounds.add(new CdOpeningObjectRuntime.SpringFm(CdSpring.FmSound.FM_SPRING));
+            assertEquals(sounds, f.runtime.lastSoundRequests()); monitorFinish(f);
+        }
+    }
+
+    @Test void monitorEarlierTagRollIsVisibleToMonitorAndTheLaterShoesAwardPreservesThoseActualMotionWrites() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var pool = f.runtime.placement().pool();
+            seedSpinTunnelMotion(f, spinTunnelMotion(f, 0x01001234, 0x0757BEEF, 0x100, 0x100, 0, 2, 0));
+            pool.write(spinTunnelTag(f, pool.state(39), 2, 4, 0, 0x100, 0x757, 0));
+            pool.write(monitorImage(f, pool.state(40), 2, 0x84, 4, 0x100, 0x778, 0).moveByte(ANIMATION, 4));
+            pool.write(monitorItemImage(f, pool.state(41), 2, 4, 0x100, 0x740).moveWord(Y_VELOCITY, 0));
+            var sounds = new ArrayList<>(f.runtime.lastSoundRequests()); f.runtime.runDynamicSlotsAfterReservedSlots();
+            var motion = f.frame.state().motion();
+            assertEquals(0xA00, motion.xVelocity()); assertEquals(-0xA00, motion.groundVelocity(), "angle $60 selects the inverted ground sign");
+            assertEquals(0x075CBEEF, motion.centreY16_16()); assertEquals(6, motion.flags());
+            assertEquals(2, motion.animation()); assertEquals(14, motion.yRadius()); assertEquals(7, motion.xRadius());
+            assertEquals(0, f.slot(40).flags() & 8, "native Monitor rolling branch does not land the newly rolled player");
+            assertEquals(1320, f.frame.state().timers().speedShoes());
+            sounds.add(new CdOpeningObjectRuntime.MonitorItemSubCpu(com.openggf.game.soniccd.player.CdPlayerSpeedShoesReward.SubCpuCommand.SCMD_SHOESMUS));
+            assertEquals(sounds, f.runtime.lastSoundRequests()); monitorFinish(f);
+        }
+    }
+
+    @Test void monitorLaterUnknownIdRetainsTheCommittedFiveStoresAndOrderedCommandsWithoutRollback() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var pool = f.runtime.placement().pool(); monitorEnvironment(f, 0, 0, 0, 0);
+            pool.write(monitorItemImage(f, pool.state(40), 2, 4, 0x100, 0x780).moveWord(Y_VELOCITY, 0));
+            pool.write(pool.state(42).moveByte(ID, 0x7E));
+            var before = f.frame.state(); var env = f.frame.environment(); var sounds = new ArrayList<>(f.runtime.lastSoundRequests());
+            sounds.add(new CdOpeningObjectRuntime.MonitorItemSubCpu(com.openggf.game.soniccd.player.CdPlayerSpeedShoesReward.SubCpuCommand.SCMD_FADEPCM));
+            sounds.add(new CdOpeningObjectRuntime.MonitorItemSubCpu(com.openggf.game.soniccd.player.CdPlayerSpeedShoesReward.SubCpuCommand.SCMD_SHOESMUS));
+            assertThrows(UnsupportedOperationException.class, f.runtime::runDynamicSlotsAfterReservedSlots);
+            assertMonitorFiveStores(f, before, env); assertEquals(29, f.slot(40).word(MONITOR_ITEM_DELETE));
+            assertEquals(sounds, f.runtime.lastSoundRequests()); assertTrue(f.runtime.closed()); assertTrue(f.frame.closed());
+            assertThrows(IllegalStateException.class, f.runtime::runDynamicSlotsAfterReservedSlots);
+            assertEquals(sounds, f.runtime.lastSoundRequests());
+        }
+    }
+
+    @Test void monitorCountedShoesAndStaticItemBuildExactSatAndUseTheNowServiced494PatternPolicy() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); f.makePlayerAbsent(); var pool = f.runtime.placement().pool();
+            pool.write(monitorImage(f, pool.state(40), 8, 0x84, 4, 0x100, 0x780, 0).moveByte(MAP_FRAME, 4));
+            pool.write(pool.state(41).moveByte(ID, 0x1A).moveByte(ANIMATION, 4).moveWord(X, 0x140).moveWord(Y, 0x780));
+            f.runtime.runDynamicSlotsAfterReservedSlots(); var sat = f.runtime.finishAfterCamera(POST);
+            assertEquals(4, sat.provenance().stream().filter(v -> v.slotRef().wholeIndex() == 40).count());
+            assertEquals(1, sat.provenance().stream().filter(v -> v.slotRef().wholeIndex() == 41).count());
+            int parent = satEntry(sat, 40), item = satEntry(sat, 41);
+            assertArrayEquals(new byte[] {
+                    0, (byte) 0xEB, 5, 1, 5, (byte) 0xCA, 1, 0x78,
+                    0, (byte) 0xE5, 6, 2, 5, (byte) 0xA8, 1, 0x70,
+                    0, (byte) 0xE5, 6, 3, 13, (byte) 0xA8, 1, (byte) 0x80,
+                    0, (byte) 0xFD, 12, 4, 5, (byte) 0xAE, 1, 0x70
+            }, java.util.Arrays.copyOfRange(sat.bytes(), parent, parent + 32));
+            assertArrayEquals(new byte[] {0, (byte) 0xE8, 5, 5, (byte) 0x85, (byte) 0xCA, 1, (byte) 0xB8},
+                    java.util.Arrays.copyOfRange(sat.bytes(), item, item + 8));
+            assertEquals(0x20AACF, f.slot(41).longBits(MAPPINGS)); assertEquals(0xA4, f.slot(41).spriteFlags());
+            f.runtime.finishOrdinaryTail(); f.service(0x80);
+            var objects = f.assets.openingObjects(); var pixels = monitorPixels(f);
+            var previous = CdObjectPresentation.usaR11aTunnelDoorVerticalDevPreloadedArt(f.frame.artState(), f.runtime.powerupArtState(), objects,
+                    objects.frontierArtBank(), objects.contactArtBank(), objects.floatBlockArtBank(), objects.springArtBank(), objects.tunnelDoorArtBank(),
+                    BANKS.player(), BANKS.ring(), BANKS.mosqui(), BANKS.plant(), BANKS.ramp(), BANKS.explosion(), BANKS.points(), BANKS.flower(),
+                    BANKS.powerup(), BANKS.floatBlock(), BANKS.spring(), BANKS.tunnelDoorVertical());
+            int[][] spans = {{0x780, 24}, {0x7AE, 14}, {0x3A0, 70}, {0x424, 28}, {0x441, 63}, {0x680, 70},
+                    {0x6C6, 5}, {0x6D7, 39}, {0x544, 36}, {0x334, 15}, {0x520, 36}, {0x328, 12}};
+            int checked = 0;
+            for (int[] span : spans) for (int i = 0; i < span[1]; i++) {
+                assertEquals(previous.resolve(span[0] + i), pixels.resolve(span[0] + i)); checked++;
+            }
+            for (int i = 0; i < 82; i++) {
+                var pattern = pixels.resolve(0x5A8 + i);
+                assertEquals(BANKS.monitorTime() + i, pattern.logicalPatternId());
+                assertEquals(CdObjectPresentation.patternVersion(objects.monitorTimeArtBank().tile(0x5A8 + i)), pattern.version()); checked++;
+            }
+            assertEquals(494, checked);
+            assertEquals(CdObjectPresentation.convert(sat, pixels), f.runtime.displayedFrame());
+            var shown = f.runtime.displayedFrame();
+            var icons = shown.tiles().stream().filter(t -> t.patternId() >= BANKS.monitorTime() + 0x22
+                    && t.patternId() < BANKS.monitorTime() + 0x26).toList();
+            assertEquals(8, icons.size()); assertEquals(4, icons.stream().filter(t -> t.priority()).count());
+            for (int tile = 0x22; tile < 0x26; tile++) assertEquals(
+                    CdObjectPresentation.patternVersion(objects.monitorTimeArtBank().tile(0x5A8 + tile)),
+                    shown.patternVersions().get(BANKS.monitorTime() + tile));
+            assertEquals(82, objects.monitorTimeArtBank().binding(
+                    com.openggf.game.soniccd.level.CdR11aAsset.ART_MONITOR_TIME_POSTS).bytes().length() / 32);
+        }
+    }
+
+    @Test void monitorNonzeroRewardSavedFlagsAndItemWordRestoreAndReplayTheNextActualDisplay1319() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var pool = f.runtime.placement().pool();
+            pool.write(monitorItemImage(f, pool.state(40), 2, 4, 0x100, 0x740).moveWord(Y_VELOCITY, 0));
+            pool.write(monitorImage(f, pool.state(41), 4, 0x84, 4, 0x140, 0x780, 7).moveByte(ANIMATION, 4));
+            f.runtime.runDynamicSlotsAfterReservedSlots(); monitorFinish(f);
+            var actor = f.frame.captureActor(); var shared = f.frame.captureShared(); var objects = f.runtime.captureClosedCut();
+            var cpu = f.runtime.cpuSat(); var picture = f.runtime.displayedFrame();
+            assertEquals(1320, actor.state().timers().speedShoes()); assertEquals(29, f.slot(40).word(MONITOR_ITEM_DELETE));
+            assertEquals(1, f.runtime.placement().savedFlag(7, 1)); assertEquals(0x1A, f.slot(32).id());
+            int publications = f.artPublications.size();
+            monitorBegin(f, 3); assertEquals(1319, f.frame.state().timers().speedShoes());
+            f.runtime.runDynamicSlotsAfterReservedSlots(); var nextCpu = f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+            var nextActor = f.frame.captureActor(); var nextShared = f.frame.captureShared(); var next = f.runtime.captureClosedCut();
+            var uploads = List.copyOf(f.artPublications.subList(publications, f.artPublications.size()));
+            assertEquals(28, f.slot(40).word(MONITOR_ITEM_DELETE));
+            f.service(0x80); // Held selector8 changes the displayed picture, no Body/timer; remains a closed capture cut.
+            assertEquals(1319, f.frame.state().timers().speedShoes());
+            int replayStart = f.artPublications.size();
+            f.frame.validateActorRestore(actor); f.frame.validateSharedRestore(shared); f.runtime.validateRestore(objects);
+            f.frame.restoreActor(actor); f.frame.restoreShared(shared); f.runtime.restore(objects);
+            assertEquals(actor, f.frame.captureActor()); assertEquals(shared.environment(), f.frame.environment());
+            assertSpinTunnelArt(shared.artState(), f.frame.artState()); assertEquals(shared.vIntClock(), f.frame.vIntClock());
+            assertSame(cpu, f.runtime.cpuSat()); assertSame(picture, f.runtime.displayedFrame()); assertMonitorSnapshot(objects, f.runtime.captureClosedCut());
+            monitorBegin(f, 3); f.runtime.runDynamicSlotsAfterReservedSlots(); var replay = f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+            assertEquals(nextActor, f.frame.captureActor()); assertEquals(nextShared.environment(), f.frame.environment());
+            assertSpinTunnelArt(nextShared.artState(), f.frame.artState()); assertEquals(nextShared.vIntClock(), f.frame.vIntClock());
+            assertArrayEquals(nextCpu.bytes(), replay.bytes()); assertEquals(nextCpu.provenance(), replay.provenance());
+            assertMonitorSnapshot(next, f.runtime.captureClosedCut());
+            var replayUploads = f.artPublications.subList(replayStart, f.artPublications.size()); assertEquals(uploads.size(), replayUploads.size());
+            for (int i = 0; i < uploads.size(); i++) assertSpinTunnelArt(uploads.get(i), replayUploads.get(i));
+        }
+    }
+
+    private static CdObjectState monitorImage(Fixture f, CdObjectState image, int routine, int sprite, int subtype,
+                                               int x, int y, int saved) throws java.io.IOException {
+        return image.moveByte(ID, 0x19).moveByte(ROUTINE, routine).moveByte(SPRITE_FLAGS, sprite).moveByte(SUBTYPE, subtype)
+                .moveByte(SAVED_FLAGS_ID, saved).moveWord(X, x).moveWord(Y, y).moveWord(TILE, 0x5A8)
+                .moveByte(WIDTH, 15).moveByte(Y_RADIUS, 14).moveByte(X_RADIUS, 14).moveByte(PRIORITY, 3)
+                .moveLong(MAPPINGS, CdMonitor.Assets.fromObjectAssets(f.assets.openingObjects()).mappingsAddress());
+    }
+
+    private static CdObjectState monitorItemImage(Fixture f, CdObjectState image, int routine, int animation,
+                                                   int x, int y) throws java.io.IOException {
+        var assets = CdMonitor.Assets.fromObjectAssets(f.assets.openingObjects());
+        int pointer = assets.mappingsAddress() + (short) assets.visual().mappings().unsignedWord((animation * 2) & 255) + 1;
+        return image.moveByte(ID, 0x1A).moveByte(ROUTINE, routine).moveByte(ANIMATION, animation).moveByte(MAP_FRAME, animation)
+                .moveByte(SPRITE_FLAGS, 0x24).moveWord(TILE, 0x85A8).moveByte(PRIORITY, 3).moveByte(WIDTH, 8)
+                .moveLong(MAPPINGS, pointer).moveWord(X, x).moveWord(Y, y);
+    }
+
+    /** Actual closed Frame ingress, never a second global owner or a media/zone execution certificate. */
+    private static void monitorEnvironment(Fixture f, int rawZone, int direction, int zone, int timeAttack) {
+        var shared = f.frame.captureShared(); var e = shared.environment(); var m = e.movement(); var g = m.gates(); var b = e.globals();
+        var gates = new CdPlayerMovement.Gates((zone << 8) | (g.zoneAct() & 255), rawZone, g.miniSonic(), g.waterSlide(),
+                g.windTunnel(), g.speedShoes(), direction);
+        var body = new CdPlayerBody.Globals(b.levelFrames(), b.cameraXCentre(), timeAttack, b.debugMode(), b.debugCheat(),
+                b.timeWarpTimer(), b.invincible(), b.bossMusic());
+        f.frame.restoreShared(new CdPlayerFrameRuntime.SharedState(shared.owner(), new CdPlayerBody.Environment(
+                new CdPlayerMovement.Environment(m.physics(), m.bounds(), gates, m.globals()), e.controls(), body, e.dynamicSlots()),
+                shared.artState(), shared.paused(), shared.vIntClock()));
+    }
+
+    private static void monitorBegin(Fixture f, int levelFrames) {
+        f.service(0); f.runtime.spawnBeforeReservedSlots(); f.body(levelFrames);
+    }
+
+    private static void monitorFinish(Fixture f) { f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail(); }
+
+    private static void assertMonitorFiveStores(Fixture f, CdPlayerBody.State before, CdPlayerBody.Environment env) {
+        var t = before.timers(); var m = env.movement(); var g = m.gates();
+        assertEquals(new CdPlayerBody.State(before.motion(), before.animation(), before.header(),
+                new CdPlayerBody.Timers(t.hurt(), t.invincibility(), 1320, t.reset()), before.history(), before.rotationDistance(), before.objectLinks()), f.frame.state());
+        assertEquals(new CdPlayerBody.Environment(new CdPlayerMovement.Environment(new CdPlayerMovement.Physics(0xC00, 0x18, 0x80), m.bounds(),
+                new CdPlayerMovement.Gates(g.zoneAct(), g.timeZone(), g.miniSonic(), g.waterSlide(), g.windTunnel(), 1, g.timeWarpDirection()), m.globals()),
+                env.controls(), env.globals(), env.dynamicSlots()), f.frame.environment());
+    }
+
+    private static CdObjectPresentation.PatternSource monitorPixels(Fixture f) throws java.io.IOException {
+        var objects = f.assets.openingObjects();
+        return CdObjectPresentation.usaR11aMonitorTimeDevPreloadedArt(f.frame.artState(), f.runtime.powerupArtState(), objects,
+                objects.frontierArtBank(), objects.contactArtBank(), objects.floatBlockArtBank(), objects.springArtBank(),
+                objects.tunnelDoorArtBank(), objects.monitorTimeArtBank(), BANKS.player(), BANKS.ring(), BANKS.mosqui(), BANKS.plant(), BANKS.ramp(),
+                BANKS.explosion(), BANKS.points(), BANKS.flower(), BANKS.powerup(), BANKS.floatBlock(), BANKS.spring(), BANKS.tunnelDoorVertical(), BANKS.monitorTime());
+    }
+
+    private static void assertMonitorSnapshot(CdOpeningObjectRuntime.Snapshot expected, CdOpeningObjectRuntime.Snapshot actual) {
+        assertEquals(expected.placement().status(), actual.placement().status());
+        assertEquals(expected.placement().pool().slots(), actual.placement().pool().slots());
+        assertArrayEquals(expected.placement().savedFlags().copy(), actual.placement().savedFlags().copy());
+        assertEquals(expected.ringGlobals(), actual.ringGlobals()); assertEquals(expected.spillGlobals(), actual.spillGlobals());
+        assertEquals(expected.devGlobals(), actual.devGlobals()); assertEquals(expected.contactGlobals(), actual.contactGlobals());
+        assertEquals(expected.scoreGlobals(), actual.scoreGlobals()); assertEquals(expected.levelGlobals(), actual.levelGlobals());
+        assertEquals(expected.lastSoundRequests(), actual.lastSoundRequests()); assertEquals(expected.displayedFrame(), actual.displayedFrame());
+        assertArrayEquals(expected.powerupArtState().cpuBuffer().copy(), actual.powerupArtState().cpuBuffer().copy());
+        assertArrayEquals(expected.powerupArtState().residentBank().copy(), actual.powerupArtState().residentBank().copy());
+    }
+    // END Monitor Runtime R1 tests-first additions.
 }

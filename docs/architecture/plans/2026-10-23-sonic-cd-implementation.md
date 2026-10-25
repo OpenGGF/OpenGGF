@@ -4766,3 +4766,106 @@ vectors, and the real adapter/physical pass/World render obligations. Exact APIs
 all134 declared component shapes, full native citations and immutable hashes are
 in private `monitor-bodies-codex.md` and `monitor-bodies-review.md`.
 No native/region/whole-game, natural contact/break/reward or audio claim is made.
+
+
+### Live Monitor reward, 494-pattern World and detached FM retention — 25 October 2026 GMT
+
+Private/local continuation from `6f8f47e1333643e36b6abeed05bf432031e651a3`.
+The real physical ID19/1A walk now composes the existing Monitor/item bodies,
+shared Solid, raw gravity/floor, saved-object bank and single Frame shoes owner.
+All96 call-cut slot images and the expected actor/globals are checked before
+publication; pool images commit before the one Frame patch and ordered sound
+requests. Falling writes the primary angle directly once; the legacy external
+angle adapter is not also called. The MMZ global-layer read remains a typed
+boundary before body entry. Deleted-item DrawObject can report live ID0; the
+shared SAT builder owns skipping it. Completed metadata is never replayed.
+
+One actual Monitor/time art bank is retained in the common factory. Both cold
+admission and now-serviced conversion select the existing thirteen-span policy;
+the World reserves and removes all494 patterns. Runtime Snapshot ownership is
+unchanged. Other item rewards, posts/HUD/warp, reserved powerups and unsupported
+regions remain explicit boundaries. Source-only Runtime/World review found no
+production P1/P2; the original World preflight P2 was confined to a test fixture.
+
+Tests-only Root76438 failed to compile at absent bank/sound APIs, no JUnit ran.
+After exact production import, Root54190 ran all121 Runtime cases (97 old+24 new):
+**121/0/0/0**, immediate admission, Maven1m23s, terminal03:18:28Z; actual media,
+Java25/backend and exact XML were checked. The original Runtime/test mirrors are
+unchanged (`827c28f2...`, `87201b63...`).
+
+The new constructed actual-EGL component proof keeps fixed source-backed assets
+and the actual GameLoop. It clears all96 dynamic slots once, seeds one subtype4
+Monitor40, and stages only Sonic's contact and move-away states at closed cuts.
+Those operations are disclosed in the test, capture construction metadata and
+outcome. The actual Body touch precedes same-pass Break; earlier item32 and
+explosion33 wait.32 old-velocity rise moves precede real award call33: flag1,
+USA timer1320, physicsC00/18/80 and command6C. Next actual Display gives1319.
+The alternate explosion creates no Points/Flower; item Delete30 and the genuinely
+earned expiry both run. Pre-break and nonzero-award full/course restores compare
+complete state and framebuffer on every replay row. Expiry is forward-only.
+
+Independent counted/static SAT, decoded tile nibble/current-palette opaque ARGB,
+transparent-terrain and omitted-visible-tile negative checks cover the rendered
+geometry. At teardown all494 actual tile versions are installed as witnesses,
+including unused suffix tiles, then all must be absent after module retirement.
+This is retirement coverage, not evidence that every tile drew. PASS is written
+only after all assertions and session/graphics/boot closure.
+
+Root47242 and diagnostic75238 first failed the original coarse solidity-mask
+preflight before any contact. An actual top-solid block at x168/y1907 had floor
+distance11, so its selector flag did not imply occupied space. Root R3 narrows
+the precondition to the actual glyph/motion envelope and actual shape distances;
+coordinates, physics and downstream pixel/reward assertions are unchanged.
+Root91135 then exposed a missing expected ChargeSound: the native short-floor
+CheckCharge branch requests ChargeStop even at charge0. Root R4 changes only
+that new sound-helper expectation. Production was not adjusted to a fixture.
+
+With the old412 client, Root9419 reached the intended cleanup RED after the
+contact/reward/pixel/replay/expiry checks: pattern131484, the first suffix tile,
+remained in the atlas. With the exact494 client Root80562 passed **1/0/0/0**,
+immediate admission, Maven1m24s, terminal03:43:49Z. Exact method/Java25/media/EGL
+properties and zero skips were inspected. Five labelled ENGINE PNGs, input,
+state CSV, construction and final outcome stay in the private task capture
+root; quiet-hours visuals were queued, not emitted. This is constructed engine
+coverage, not a natural contact, native palette/priority/PLC/audio/timing,
+regional or whole-game parity claim.
+
+The unchanged400-Right route now finishes. Root5317 failed only its stale
+unowned19 expectation. The replacement asserts actual call324 Monitor admission
+at whole59/subtype4/saved45/X850/Y2D8 and replays every row324..400 through full
+and course restores. A bounded ordinary-input probe then observed the next
+unowned dispatch on attempted call518: **ID0D, physical37**, player wordY65482.
+The first probe's error handler accidentally called the module's live-owner
+getter after its fail-closed exception; retaining the already-owned Frame
+reference exposed the original exception in Root46997, **1/0/0/0**, terminal
+03:56:06Z. The temporary diagnostic was removed. A permanent regression checks
+ID0D/routine0/subtype1/X96F/Y318 and both closed owners. No natural Monitor hit
+or shoes reward was observed on this Right-only route.
+
+Stock preparation separately retains `Optional<CdFmSoundAssets>` from the SAME
+still-open authenticated programs used for the stage, before try-with-resources
+closes them. USA requires presence; Japan/Europe explicitly require absence.
+Release, stage and FM full-disc identities must agree. The existing source
+identity and three exact named streams remain unchanged. The bank's readable
+6870-byte slice shares its privately copied7514-byte backing; no file handle,
+source fallback, duplicate payload, driver installation or playback is added.
+Tests-only Root78691 failed to compile at pending getter/three-argument API,
+with no JUnit. Exact production mirrors were then imported; independent review
+found no P1/P2. Negative-constructor guard reachability remains explicitly
+limited by private authentic owners, not a reason to invent forged fixtures.
+
+Combined affected validation on HEAD6f plus the eight integrated Java files:
+
+```text
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 python3 <main-workspace>/tools/testing/maven_queue.py --normal -Dmse=off '-Dtest=TestSonicCdStockPreparation,TestCdFmSoundAssets,TestCdProgramAssets,TestCdMmdImage,TestCdRetailReleases,TestGameDataSourceSessionOwnership,TestGameDataSourceSharedFetches,TestModApiSignatureSurface,TestSonicCdOpeningWorldLoad,TestSonicCdOpeningWorldEgl,TestCdPlayerFrameRuntime,TestHeadlessAudioOwnership,TestHeadlessGameBootAudioIdentity,TestSonicCdTerrainPlayerLoad,TestSonicCdTerrainPlayerBoot' -Dsoniccd.media.root=<supplied-media-root> -Dsoniccd.opening.egl=true -Dopenggf.headless.gl=surfaceless-egl -Dsonic2.rom.path=<verified-S2-REV01> test -B
+```
+
+Root20780: **424 tests, zero failures/errors/skips**,15 current XML identities,
+immediate admission, Maven1m17s, terminal `2026-10-25T04:00:10Z`. Counts: stock17,
+FM7, programs4, MMD5, releases12, source ownership5/shared fetches10, API11,
+World47/EGL13, Frame253, audio ownership2/native boot3, terrain load27/boot8.
+Every XML had Java25 and actual media/EGL settings; all regional retention,
+all13 actual-EGL methods, both natural-route regressions and no-device cases
+executed. This proportionate affected-consumer batch covers the concrete CD
+source/World changes; it is not smoke/full-suite/native audio or full-game
+certification. Earlier broad baseline-attributed failures remain history.
