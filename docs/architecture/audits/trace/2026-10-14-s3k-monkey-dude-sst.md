@@ -2270,3 +2270,58 @@ then `sub_6A916` reads that retained target; Java `updateCarrier` recomputes it
 from live camera X. The HCZ event owner was announced before any edit. A bounded
 read-only production discriminator is being used to establish the executed
 values, rather than fitting a target or extending shared setup/timing authority.
+
+
+## HCZ retained Act 2 carrier target — 2026-10-25
+
+The represented `hcz_2` segment starts in HCZ1 and contains the native in-place
+Act 2 transition: actual act changes at row 6183 and apparent act at 6640.
+Native `loc_6A80C` captures camera X+$A0 once in the carrier's `$3A` word
+(`sonic3k.asm:140086-140100`); `sub_6A916` reads that retained word
+(`sonic3k.asm:140178-140196`). Java instead recomputed the target from the moving
+camera on every update. A comparison-only production observer measured capture
+X `$0116`, camera `$0080`, target `$0120`, velocity `$F140`. Later X `$00C1`
+equalled the live camera target `$00C1`, incorrectly reversed the direction test
+and produced velocity `$0340` rather than `$0640`. This establishes the carrier
+as the cause of the first P1 X difference at 6804, without a fitted offset.
+
+The HCZ event owner now retains independent native P1/P2 target words. The
+existing zone-event scalar schema captures both, without a shared loading,
+setup, physics or timing change. Two independent old-red controls fail at the
+expected X `$00F5` versus old `$00F2`, including registered player/event restore
+before capture, after capture and during motion, then forward replay after a
+divergent recapture. Result: 2 tests, 2 assertion failures, zero errors/skips,
+80 seconds Maven, zero queue wait. The finished focused selector is
+`TestSonic3kHCZEvents,TestSonic3kLevelEventRewindSnapshot,TestHczTransitionBubbleInstance,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`:
+**110 tests, zero failures/errors/skips**, 32 seconds queue wait, 88 seconds Maven,
+120.967 seconds wrapper elapsed. Source fingerprint over `3256c57a6` and owned
+source edits is `ba26c3115dcda2215eb7e4a47cbb5608270a838b01e95c6fabdc842283ec2f37`.
+Only citation line digits were corrected afterwards; runtime and tests match.
+
+The existing chain-only selector was replayed with `-Ptrace-replay`, one fork,
+alphabetical order and the unchanged original-ROM/Java25/Lua5.4/surfaceless EGL
+environment. Result: **1 test, 1 assertion failure, zero errors/skips**, zero queue
+wait, 108 seconds Maven / 109.256 seconds wrapper elapsed. Diagnostic source
+fingerprint is `737ca70b6847f9a112a23f9399f18f2c565b5c780d14b27b8cb458062fa1963e`.
+Rows 6804 and 7140 now match; the premature ownership replacement at input 71601
+is gone. All 14,208 stored segment-11 rows are walked, but the required
+`giant_ring` exit is not observed. Report `complete=true` describes comparison
+row traversal, not a passing route: there are 137,113 strict differences
+(118,131 physics / 18,982 animation), 59 lag rows and zero bootstrap errors.
+The first comparison remains excluded monitor/rings row 3832 (104/94).
+Five canonical companions end before these changed owners and reuse their
+previous passing evidence. No whole-route or HCZ2 breadth is certified.
+
+The first remaining P1 motion difference is row 8329 Y velocity, native `$0000`
+versus engine `$F980`; positions and all velocities match through 8328. A
+second comparison-only input-owner discriminator returns the same chain failure
+(1/1F/0E/0S; zero queue wait, 55.635 seconds Maven / 56.513 seconds wrapper;
+fingerprint `11f55a13762de87e162b8d2dc82957ce3a9540e8273596cd4a9397fdc5f69714`).
+At 8329 raw press, live logical press, recorded follower-history press, forced
+press and the movement press input are all false. Held jump remains true. The
+HCZ water-skim object then writes exactly `$F980` from `isJumpPressed()`, while
+native `HCZWaterSplash_CheckSkimPlayers` loads each logical controller word
+(`sonic3k.asm:75409-75425`) and `HCZWaterSplash_UpdateSkimmingPlayer` tests its
+low press byte (`sonic3k.asm:75471-75474`). Shared input dispatch is ruled out by
+this measurement; the bounded HCZ feature guard is the next correction. Both
+passive observers were restored byte-for-byte and their diagnostics consumed.

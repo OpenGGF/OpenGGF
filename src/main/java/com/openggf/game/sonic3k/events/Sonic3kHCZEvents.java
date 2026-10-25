@@ -264,6 +264,9 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
     private int carrierP2XFixed;
     private int carrierP2YFixed;
     private int carrierP2XVelocity;
+    /** Native carrier $3A target word, captured by loc_6A80C rather than following Camera_X_pos. */
+    private int carrierP1TargetX;
+    private int carrierP2TargetX;
     private boolean carrierP1TargetSide;
     private boolean carrierP2TargetSide;
     private int carrierP1BoundsYOffset;
@@ -314,6 +317,8 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
         carrierUpdatedBeforeDynamicObjects = false;
         carrierP1Active = false;
         carrierP2Active = false;
+        carrierP1TargetX = 0;
+        carrierP2TargetX = 0;
         transitionBubbleSpawnFrames = 0;
         levelSizeTransitionActive = false;
         levelSizeMaxXGradient = 0;
@@ -500,19 +505,21 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
         int x = player.getCentreX();
         int y = player.getCentreY();
         int boundsYOffset = Math.max(0, player.getStandYRadius() - player.getYRadius());
-        int targetX = (camera().getX() & 0xFFFF) + CARRIER_TARGET_CAMERA_OFFSET;
+        int targetX = ((camera().getX() & 0xFFFF) + CARRIER_TARGET_CAMERA_OFFSET) & 0xFFFF;
         boolean targetSide = x < targetX;
         int velocity = initialCarrierXVelocity(x - targetX);
         if (p1) {
             carrierP1XFixed = x << 8;
             carrierP1YFixed = y << 8;
             carrierP1XVelocity = velocity;
+            carrierP1TargetX = targetX;
             carrierP1TargetSide = targetSide;
             carrierP1BoundsYOffset = boundsYOffset;
         } else {
             carrierP2XFixed = x << 8;
             carrierP2YFixed = y << 8;
             carrierP2XVelocity = velocity;
+            carrierP2TargetX = targetX;
             carrierP2TargetSide = targetSide;
             carrierP2BoundsYOffset = boundsYOffset;
         }
@@ -540,7 +547,10 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
         int yFixed = p1 ? carrierP1YFixed : carrierP2YFixed;
         int xVelocity = p1 ? carrierP1XVelocity : carrierP2XVelocity;
         boolean previousSide = p1 ? carrierP1TargetSide : carrierP2TargetSide;
-        int targetX = (camera().getX() & 0xFFFF) + CARRIER_TARGET_CAMERA_OFFSET;
+        // sub_6A916 reads the retained $3A word installed at capture; live
+        // camera follow must not change the carrier's acceleration boundary
+        // (sonic3k.asm:140086-140100,140178-140196).
+        int targetX = p1 ? carrierP1TargetX : carrierP2TargetX;
         int x = xFixed >> 8;
         boolean currentSide = x < targetX;
         int acceleration = currentSide ? CARRIER_X_ACCELERATION : -CARRIER_X_ACCELERATION;

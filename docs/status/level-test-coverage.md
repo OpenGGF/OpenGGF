@@ -1368,3 +1368,16 @@ canonical six still has one chain assertion failure; native P2 now matches,
 while source HCZ1 segment 11 first differs at rings 3832 and P1 motion at miniboss
 5065. The replacement destination at input 70718 is HCZ2; this does not qualify
 an HCZ2 route. See the appended HCZ1/HCZ2 matrices and existing causal audit.
+
+
+HCZ retained-carrier continuation (2026-10-25): native capture retains the
+camera-derived target; the corrected HCZ event owner now does too. Independent
+P1/P2 old-red and registered before/pending/moving restore controls are qualified
+by 110 passing local/anchor cases with no skips. The affected chain walks all
+14,208 stored segment-11 rows without the former input-71601 replacement, but
+still fails its required giant-ring exit (1/1F/0E/0S), with 137,113 strict
+differences and first monitor/rings difference 3832 (104/94). First P1 motion
+moves to 8329: a measured held-versus-logical-press error in the HCZ water-skim
+handler. This is local progress, not route certification. The existing HCZ audit
+records exact source, selectors, queue/execution times and excluded shared
+monitor-content lifetime boundary; rings/setup timing remain outside this task.

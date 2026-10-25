@@ -6014,3 +6014,11 @@ Use real manager pressure for zero, one and two free tail slots and capture befo
 another object dispatch. Do not weaken the reference codec or replace the bridge
 solely to change its spelling. Origin: 2026-10-24 monitor admission audit,
 `529b348aecf8884c0677f12c6aa64583883ffe81`.
+
+
+HCZ Act 2 carrier targets are captured words, not live camera expressions.
+`loc_6A80C` (sonic3k.asm:140086-140100) stores camera X+$A0 once;
+`sub_6A916` (sonic3k.asm:140178-140196) reads that word after the camera moves.
+Retain it per native participant and include it in registered event rewind.
+A direction test against the live camera can reverse at equality and change
+acceleration even when player velocities are suppressed by object control.
