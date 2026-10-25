@@ -8809,8 +8809,9 @@ exact blob `9a8da712962f904ba60922264522a39d5f3b28b9`. The original ROM companio
 blob `24d9b3561b9e41aed4234d997e3ecd0510262fa7` becomes
 `d73108eb8e10ae50aafa003cca16f3f3c4b75352`: its original private observer delegates
 to a package-visible overload adding explicit/distinct-manager fixture options;
-the golden accessor becomes package-visible. Original three test methods, inputs,
-assertions and pinned observations are unchanged. Separate loader caches remain.
+the golden accessor becomes package-visible. The original parameterized method
+and its three cases retain their inputs, assertions and pinned observations.
+Separate loader caches remain.
 The original 18 executed identities still hash to
 `4900ba63adaeb3690a250b8fad9d75e823661bc1ba2683bfd65e2d30e067d682`.
 
@@ -9854,3 +9855,260 @@ worker source was inspected. The two-file follow-up uses the mandatory hooks,
 seven policy trailers and parsed final GPT-6.1-Sol co-author block. Retain the
 clean local branch/worktree for parent inspection; no extraction, subdelegation,
 fetch, push, integration or worktree removal occurs.
+
+### Logical source publication: parent acceptance and coupled qualification
+
+Independent source review accepted `04a5a6c7290b43db3952433b7317544e47fcb25b`
+against direct parent `a7770fd69b744265e78b3c9454136ed9bf36a10f`, with no P1,
+P2 or P3 findings. The reviewer matched all 21 moved bodies after normalization,
+reconstructed reset's effect order, checked all 135 non-private root headers,
+and reproduced the six-field closure, Java fingerprints and exact raw-record
+accounting above. This is source acceptance, not independent certification of
+the worker's runtime observations.
+
+The change-based planner against `ade6b66d2a9d1ce8499ac4719224bc0ed6a8db40`
+selects all **3,777 smoke candidates** plus guards. Its all-category fallback
+comes from the test-only diagnostic helper and the low-level store file. The
+helper addition only observes the actual private source owner; the three-line
+store edit accounts for the reviewed typed ROM boundary. There is no POM,
+selection-policy, rule-algorithm, public-header, producer, sequencer, factory,
+timing or physics algorithm change. The parent uses proportionate validation:
+the worker's complete affected 292 behavior controls, a complete fresh guard
+profile and the real controller/lifecycle selection below. This neither narrows
+a category invocation nor claims a broad SourcePublication smoke pass. The
+separate frozen suspension run certifies its own source, not this candidate.
+
+Both parent runs used unchanged commit `04a5a6c7`, tree
+`c79dfd6dd65d90669710b5e7b73d9dea3584f17d`, AM blob
+`5990cb9ee8fa7368d3a4ed99ee327afc4fdd92b2`. With `OPENGGF_ROM_ROOT` denoting
+the existing main-checkout ROM root, the exact launch shape was:
+
+```bash
+roms=("-Dsonic1.rom.path=${OPENGGF_ROM_ROOT}/Sonic The Hedgehog (W) (REV01) [!].gen"
+      "-Dsonic2.rom.path=${OPENGGF_ROM_ROOT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen"
+      "-Ds3k.rom.path=${OPENGGF_ROM_ROOT}/Sonic and Knuckles & Sonic 3 (W) [!].gen"
+      "-Dkis2.rom.path=${OPENGGF_ROM_ROOT}/kis2.gen")
+freeze=(-Darchunit.freeze.store.default.allowStoreCreation=false
+        -Darchunit.freeze.store.default.allowStoreUpdate=false
+        -Darchunit.freeze.refreeze=false)
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS -u MAVEN_ARGS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "${freeze[@]}" "${roms[@]}" -Pguards test -B
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS -u MAVEN_ARGS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "${freeze[@]}" "${roms[@]}" \
+  '-Dtest=TestS3kAiz1SkipHeadless,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.tests.TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestGameLoopSuspension,TestGameLoopZoneActHandoffS1#rootRequestRunsFadeLoadTitleAndFirstInputWithoutExtraPass,TestGameLoopZoneActHandoffS2#rootRequestRunsFadeLoadTitleAndFirstInputWithoutExtraPass,TestKis2SpecialStageControllerLifecycle#entryResultsReturnKeepsChipProvider' test -B
+```
+
+Session **89045** completed the entire fresh `-Pguards` profile: **795 / 0 / 0 /
+0**, 95 reports and 795 unique IDs. There was no ArchUnit field filter: all 34
+`TestArchUnitRules` cases and all 40 audio-presentation architecture cases ran.
+Queue wait was **317 s**; Maven reported **5:33** execution (its displayed
+precision). Every XML report checked Java **25.0.5.0.2**, explicit EGL, all four
+absolute original-ROM properties and all three false freeze flags. All 13 frozen
+files were byte-compared with the candidate; low-level raw count remains 120.
+Sorted case IDs, LF-joined with final LF, hash to
+`a32c7aeecde2796f298ee4671b37ebff82bf0dc6a4d08009a1370228170c3d32`.
+The sorted frozen `path:SHA256` mapping, LF-joined with final LF, hashes to
+`292100b7284abcd07373d33efce8194308ca6c0fc999aef71de5c5eadcb7e834`.
+
+After those reports were inspected and consumed, session **94003** completed
+**71 / 0 / 0 / 0**, nine reports and 71 unique IDs. It waited **859 s**, then Maven
+ran for **32.384 s**. Actual class counts were S3K stability **60** (AIZ 8,
+game-package loading 36, tests-package loading 7, bootstrap 6, decoding 3), real
+S2 suspension **7**, native root-request S1 **1** and S2 **2**, and exact KiS2
+entry/results/full return **1**. The S2 music control observes a real playing
+position before fade and restores that same position. KiS2 retains its declared
+checkpoint/outcome stimuli and complete normal-return assertions. These bounded
+controller paths establish neither a campaign nor native-emulator parity.
+
+Every report again checked Java/EGL/freeze/ROM properties. The four original ROM
+SHA-1 identities were read and verified, including KiS2
+`6cd0537a3aee0e012bb86d5837ddff9342595004`; no ROM was copied, renamed or linked
+by this validation. Sorted case IDs hash to
+`3ebab7388aa0d62cdd63223968642578c171910822139207200dd2706802604e`.
+The S2 suspension report retained **38** occurrences of the known null
+`FileChannel.position(long)` preload message; the other eight reports contained
+none. This different selection's message count is not repair evidence, and its
+passing assertions do not certify that unrepaired preload path.
+
+The controller selection overlaps worker S3K controls; full guards overlap its
+91 focused guards. Do not sum these selections into a distinct grand total.
+All parent XML and companion text were inspected and consumed. Both handles are
+terminal; source stayed clean and unchanged. No unchanged review-only rerun,
+release full suite, trace campaign, performance run or physical-speaker check
+occurred. Parent latest-main reconciliation, integration, push and exact owned
+worktree cleanup remain pending.
+
+### SMPS authority: parent review and composed validation
+
+Independent source review accepted implementation
+`ade6b66d2a9d1ce8499ac4719224bc0ed6a8db40` against composition
+`a56d871e9b45353d94ffdb4f7eb331841080a8f1`, with no blocking code findings.
+The sole prose correction distinguishes the original parameterized ROM method
+from its three executed cases; it is folded above. The parent independently
+reproduced the nine-file production manifest
+`aade7f37d9e202edbefc3b5d503ccb0ffa767c5abaf96d81f11fe64364f2c42e`.
+Production and test bytes remain those reviewed and tested by the worker.
+
+The change-based planner against the reviewed suspension composition
+`11db9f2945920804f308e9fa7d449b858c5e088f` selects all **3,775 smoke
+candidates** and guards because Engine is shared infrastructure. For this
+additive binding cut, bounded ordinary coverage is proportionate: the complete
+seven-site receiving census and native tool compile are accounted for; every
+existing constructor remains; only authority selection in the existing helper
+and the appended constructor forms change. Manager, factory, sequencer, frame,
+timing, physics, asset and snapshot algorithms remain unchanged. The worker's
+167 domain, 21 bounded boot/stability and 75 guard cases cover the direct new
+contract and existing consumers, with independently mapped source bytes.
+
+The parent adds a **combined suspension/SMPS lifecycle selection**, including
+all four complete required S3K stability classes, and then a separate complete
+fresh guard invocation. This exercises the combined source state through real
+park/resume, Engine installation, the configured pixel context and explicit
+authority behavior. It also broadens the worker's bounded S3K methods without
+selecting an exhaustive route matrix. The existing full smoke-category request
+for suspension remains tied to its frozen 11db9f2 inputs; its results do not
+certify the new SMPS bytes. No release-only full suite is selected.
+
+The exact ordinary selector is:
+
+```text
+TestGameLoopSuspensionOwnership,TestEngineSuspensionRendering,TestGameLoopSuspension,TestEngine#firstResumeUsesTheSavedAspectWithoutAnotherMenuVisit+pausedGameSetupAspectReachesTheFirstResumeThroughTheMenu+titleAudioBackendReinstallHonorsAudioEnabledLifecycle,TestSmpsExplicitConfigAuthorityContract,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils
+```
+
+It is expected to execute 140 cases: the 55 temporal controls, one synthetic
+Engine pixel/phase control, seven S2 cases, three Engine cases, fourteen explicit
+authority cases and sixty S3K stability cases. Exact XML identities, counts and
+skips must establish the actual selection. Commands use this worktree's queue,
+Java 25, Lua 5.4, explicit surfaceless EGL and all four verified absolute original
+ROM properties, with desktop and Java-launcher option variables unset. The
+following fresh invocation uses `-Pguards test -B` without manual narrowing.
+
+Expected execution is 1–2 minutes for the ordinary selection and approximately
+six minutes for complete guards, with queue waiting additional and unknown.
+New or worsened failures block delivery; source mutation invalidates the
+affected evidence. Completed unchanged worker selections are reused only for
+their exact mapped source/coverage. Before integration, the parent will pin the
+then-current destination, reconcile upstream changes and verify the committed
+code mapping again. No composed result, integration, push or cleanup is claimed
+at this planning checkpoint.
+
+#### Parent combined controls and complete guards
+
+Against code-identical documentation child
+`1df6f36200be24f7782af41427538a76bac9bda4`, parent session 71661 passed
+**140/0/0/0** across ten physical reports. All 140 case identities were unique:
+55 suspension temporal controls, one configured Engine pixel/phase control,
+seven S2 cases, three Engine cases, fourteen explicit-authority cases and the
+complete sixty-case S3K stability selection. The two LevelLoading classes
+contributed 36 and 7, AIZ skip 8, BootstrapResolver 6 and DecodingUtils 3.
+Queue wait was 136s; Maven execution was 36.114s. Sorted
+`classname#name + newline` identities hash to
+`c80d2f7b7db67407894b9fd7c6fed265b355cbbbdd8558b9ac6e0822003d9da3`.
+
+The parent checked every XML failure/error/skip node, identity and property:
+Java 25.0.5.0.2, explicit surfaceless EGL and four absolute original-ROM paths.
+The first inspection script used the wrong package for the two resolver/decoder
+classes; its assertion stopped before report cleanup. Correcting those two
+inspection names confirmed the same completed run, without rerunning tests.
+The S2 report contains 82 FileChannel messages, preserving the independently
+recorded preload limitation; all other reports contain none. This is not an
+audio-preload repair or a claim that passing JUnit counts remove that limit.
+All consumed reports were deleted.
+
+Parent session 84622 then ran the complete fresh `-Pguards test -B` selection,
+without a method filter. It passed **793/0/0/0** across 95 physical reports,
+with 793 distinct identities. Queue wait was 341s; Maven execution was 5:24.
+Every report had the same Java/EGL/four-ROM properties, with no skipped or failed
+case. Its sorted identity hash is
+`d3b6d39568e7a1aa86eeeff983dd3deda837fe4840e6c4b26383dd7a5683053e`.
+All 13 frozen-store files were byte-compared with pre-injection composition
+a56d871e9 after completion; the manifest remains
+`ae4803e8096787ef94ca96320ea78432fb2c57ad068d5c20eb052b4b10166204`.
+Compiled API and accounting controls retain 22,541 rows / 1,250 types,
+119 low-level records, ambient 6/5 and 151 permissions. Reports were consumed.
+
+The exact common parent command environment unsets DISPLAY, WAYLAND_DISPLAY,
+XAUTHORITY, JAVA_TOOL_OPTIONS, JDK_JAVA_OPTIONS and MAVEN_ARGS, sets
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk and LUA_BIN=/usr/bin/lua5.4, and invokes
+the local `maven_queue.py --normal -Dmse=off` with explicit
+`-Dopenggf.headless.gl=surfaceless-egl` and the four verified original absolute
+ROM properties. The first invocation adds the selector above and `test -B`;
+the second adds `-Pguards test -B`. Tool preflight passed in that environment.
+No production/test/guard-policy input changed between these checks. Subsequent
+record edits are prose only. The source review, worker domain/compile evidence,
+parent combined controls and complete guards have distinct stated coverage;
+their overlapping cases are not added into a fabricated unique total.
+
+Both parent sessions are terminal exit 0. Integration into the updated main
+destination, push and owned-worktree cleanup remain pending; the independent
+suspension smoke-category request still certifies only its frozen 11db9f2 tree.
+
+### Suspended visit: completed parent smoke and delivery gate
+
+The single parent request at frozen `11db9f2945920804f308e9fa7d449b858c5e088f`
+completed after the checkpoint above. Its base remained
+`a9d88d2c980c6562008e21c916d2b4d28362fd6f`; no source, test, tooling or prose
+input changed during validation. Initial and final working-input fingerprints
+both equal
+`ada59236048f8a4841fff60163bc7414db04e32ad1a625e65f401454d2cf5aaf`.
+Java 25 and the actual display-free EGL launch environment were preflighted.
+All 76 ordinary command records select `-Psmoke`, and the separate fresh
+structural invocation selects `-Pguards`; none selects release-only full-suite.
+Every command carries the four verified absolute supplied-ROM properties.
+
+Run `20261024T213855Z-008b7f70`, owned session **61664**, is terminal:
+
+| Selection | Completion | Cases | Failures | Errors | Skips | Measured execution |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| Ordinary smoke, 3,772 candidate classes | 76/76 batches; 3,749 reports | 39,436 | 1 | 0 | 97 | 6,522.05 s |
+| Fresh complete guards | 1/1 batch; 95 reports | 793 | 0 | 0 | 0 | 299.67 s |
+
+Preparation passed in **29.61 s**. The final guard admission waited **180 s**.
+Per-batch waits were reported independently; aggregate queue time and delivery
+wall time were not measured. Runner execution clocks start after admission,
+and preparation subtracts build-wait time, so those execution figures exclude
+test-queue waiting. Overlapping worker intervals must not be added to them.
+
+The ordinary lane's one failure is exactly the previously attributed
+`TestHczMinibossNativeRendering#allOrbitPhasesMatchRomSpriteCompositionInNativePixels`:
+`AssertionFailedError`, `GLFW must initialize for pixel verification ==> expected:
+<true> but was: <false>`, line 53. Fixture blob
+`a50b3625683284ded48f5cbbda96fa9c6845c66d` is identical at baseline
+`97eb86f186b432722024ca419a00b901b38f5ec2`, the integration base and tested head.
+The recorded exact isolated baseline session **80669** reproduced that assertion
+with the same Java 25/EGL/four-ROM environment (1/1/0/0, queue 396 s, Maven 1:26).
+No unchanged attribution rerun was needed. This remains unavailable HCZ pixel
+verification, not a successful native-pixel result.
+
+All **97** skip identities and reasons were inspected; neither failure nor skip
+details were omitted. They comprise opt-in measurements/soaks/captures and
+optional tool/reference prerequisites, 32 absent act-geometry cases, the known
+CPZ spin-tube assumption, and legacy GLFW/EGL prerequisites. No missing-ROM-path
+skip was present. The last added skip was the unrequested local S1 audio timeline
+capture. No unexpected affected suspension control was skipped. The earlier
+two TraceCaptureBootDimensions errors are not carried forward as current
+failures: the updated property-isolation controls and both boot cases passed in
+the parent 32-case selection, and the completed ordinary run has zero errors.
+
+All 13 frozen-store files remain byte-identical to the integration base, including
+119 low-level records. Checked-in creation/update defaults stay false; fresh
+guards enforce the no-auto-update contract. API pins/descriptors, ambient 6/5
+and package permissions 151 remain unchanged. The complete category result,
+final fingerprint, sole failure, skips and all 77 command scopes were inspected,
+then `run_categories.py --acknowledge 20261024T213855Z-008b7f70` deleted the entire
+run directory. No pass cache, receipt or raw-log archive remains.
+
+The exit status is **1** because of that matched inherited prerequisite failure.
+This is a completed bounded smoke selection with a known failure, not a green
+smoke or full-suite claim. No new or worsened failure remains unattributed.
+The user's delivery policy permits integration with that attributed baseline
+failure. This gate covers the suspension/upstream composition at `11db`;
+separate SMPS and SourcePublication candidates retain their own content-matched
+review and validation obligations. Latest-main reconciliation, policy validation,
+push and exact owned-worktree cleanup follow this gate.
