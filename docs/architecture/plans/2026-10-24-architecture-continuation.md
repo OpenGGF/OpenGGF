@@ -9618,3 +9618,92 @@ form one local commit directly after a777. No subdelegation, main editing,
 fetch, integration, push or WT lifecycle cleanup occurs. All owned command handles
 are terminal; retain the clean branch/WT for independent parent code review and
 stop here.
+
+### Logical source publication: parent acceptance and coupled qualification
+
+Independent source review accepted `04a5a6c7290b43db3952433b7317544e47fcb25b`
+against direct parent `a7770fd69b744265e78b3c9454136ed9bf36a10f`, with no P1,
+P2 or P3 findings. The reviewer matched all 21 moved bodies after normalization,
+reconstructed reset's effect order, checked all 135 non-private root headers,
+and reproduced the six-field closure, Java fingerprints and exact raw-record
+accounting above. This is source acceptance, not independent certification of
+the worker's runtime observations.
+
+The change-based planner against `ade6b66d2a9d1ce8499ac4719224bc0ed6a8db40`
+selects all **3,777 smoke candidates** plus guards. Its all-category fallback
+comes from the test-only diagnostic helper and the low-level store file. The
+helper addition only observes the actual private source owner; the three-line
+store edit accounts for the reviewed typed ROM boundary. There is no POM,
+selection-policy, rule-algorithm, public-header, producer, sequencer, factory,
+timing or physics algorithm change. The parent uses proportionate validation:
+the worker's complete affected 292 behavior controls, a complete fresh guard
+profile and the real controller/lifecycle selection below. This neither narrows
+a category invocation nor claims a broad SourcePublication smoke pass. The
+separate frozen suspension run certifies its own source, not this candidate.
+
+Both parent runs used unchanged commit `04a5a6c7`, tree
+`c79dfd6dd65d90669710b5e7b73d9dea3584f17d`, AM blob
+`5990cb9ee8fa7368d3a4ed99ee327afc4fdd92b2`. With `OPENGGF_ROM_ROOT` denoting
+the existing main-checkout ROM root, the exact launch shape was:
+
+```bash
+roms=("-Dsonic1.rom.path=${OPENGGF_ROM_ROOT}/Sonic The Hedgehog (W) (REV01) [!].gen"
+      "-Dsonic2.rom.path=${OPENGGF_ROM_ROOT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen"
+      "-Ds3k.rom.path=${OPENGGF_ROM_ROOT}/Sonic and Knuckles & Sonic 3 (W) [!].gen"
+      "-Dkis2.rom.path=${OPENGGF_ROM_ROOT}/kis2.gen")
+freeze=(-Darchunit.freeze.store.default.allowStoreCreation=false
+        -Darchunit.freeze.store.default.allowStoreUpdate=false
+        -Darchunit.freeze.refreeze=false)
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS -u MAVEN_ARGS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "${freeze[@]}" "${roms[@]}" -Pguards test -B
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS -u MAVEN_ARGS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "${freeze[@]}" "${roms[@]}" \
+  '-Dtest=TestS3kAiz1SkipHeadless,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.tests.TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestGameLoopSuspension,TestGameLoopZoneActHandoffS1#rootRequestRunsFadeLoadTitleAndFirstInputWithoutExtraPass,TestGameLoopZoneActHandoffS2#rootRequestRunsFadeLoadTitleAndFirstInputWithoutExtraPass,TestKis2SpecialStageControllerLifecycle#entryResultsReturnKeepsChipProvider' test -B
+```
+
+Session **89045** completed the entire fresh `-Pguards` profile: **795 / 0 / 0 /
+0**, 95 reports and 795 unique IDs. There was no ArchUnit field filter: all 34
+`TestArchUnitRules` cases and all 40 audio-presentation architecture cases ran.
+Queue wait was **317 s**; Maven reported **5:33** execution (its displayed
+precision). Every XML report checked Java **25.0.5.0.2**, explicit EGL, all four
+absolute original-ROM properties and all three false freeze flags. All 13 frozen
+files were byte-compared with the candidate; low-level raw count remains 120.
+Sorted case IDs, LF-joined with final LF, hash to
+`a32c7aeecde2796f298ee4671b37ebff82bf0dc6a4d08009a1370228170c3d32`.
+The sorted frozen `path:SHA256` mapping, LF-joined with final LF, hashes to
+`292100b7284abcd07373d33efce8194308ca6c0fc999aef71de5c5eadcb7e834`.
+
+After those reports were inspected and consumed, session **94003** completed
+**71 / 0 / 0 / 0**, nine reports and 71 unique IDs. It waited **859 s**, then Maven
+ran for **32.384 s**. Actual class counts were S3K stability **60** (AIZ 8,
+game-package loading 36, tests-package loading 7, bootstrap 6, decoding 3), real
+S2 suspension **7**, native root-request S1 **1** and S2 **2**, and exact KiS2
+entry/results/full return **1**. The S2 music control observes a real playing
+position before fade and restores that same position. KiS2 retains its declared
+checkpoint/outcome stimuli and complete normal-return assertions. These bounded
+controller paths establish neither a campaign nor native-emulator parity.
+
+Every report again checked Java/EGL/freeze/ROM properties. The four original ROM
+SHA-1 identities were read and verified, including KiS2
+`6cd0537a3aee0e012bb86d5837ddff9342595004`; no ROM was copied, renamed or linked
+by this validation. Sorted case IDs hash to
+`3ebab7388aa0d62cdd63223968642578c171910822139207200dd2706802604e`.
+The S2 suspension report retained **38** occurrences of the known null
+`FileChannel.position(long)` preload message; the other eight reports contained
+none. This different selection's message count is not repair evidence, and its
+passing assertions do not certify that unrepaired preload path.
+
+The controller selection overlaps worker S3K controls; full guards overlap its
+91 focused guards. Do not sum these selections into a distinct grand total.
+All parent XML and companion text were inspected and consumed. Both handles are
+terminal; source stayed clean and unchanged. No unchanged review-only rerun,
+release full suite, trace campaign, performance run or physical-speaker check
+occurred. Parent latest-main reconciliation, integration, push and exact owned
+worktree cleanup remain pending.
+
