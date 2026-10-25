@@ -1344,3 +1344,61 @@ test, POM and asset inputs remained unchanged; the final follow-up commit adds
 only this evidence. Consumed worker-local Surefire and diagnostic output is removed;
 no category execution run or retained validation receipt was created. The local
 branch/worktree remain for parent review and integration, with no push or PR.
+
+
+## Updated develop Quick Chat composition (2026-10-25)
+
+The retained follow-up branch at `b66b446a8` merges exact develop
+`c9028e88c75f8fcabec551453e05d93aee6b782b`, which advances the prior base
+`94c75d8a8` through controller Quick Chat. The 16-file delta adds hosted immutable
+physical input and a post-pause baseline marker, physical keyboard edges without
+controller shortcut aliases, controller chooser behavior and its tests, four
+GameLoop pause hooks, and additive API/documentation updates. The merge has no
+textual conflicts. The signature pin is the exact union: every Typing and upstream
+line is retained, with exactly three additions over the prior Typing pin and no
+extra lines. Both sets of candidate API documentation remain; published pins and
+the release descriptor are unchanged.
+
+The initial affected guard command below executed 121 cases: one failure, zero
+errors/skips. `TestArchitecturalSourceGuard#rootDispatchMethodsDoNotGrowBeyondCurrentBudgets`
+reported `GameLoop#stepInternalBody` at 277 lines against 276. The other 86 source
+checks and all 34 ArchUnit cases passed. The integration correction moves the
+notification/admission predicate into existing `GameLoopPauseInput.holdPausedFrame`.
+It retains both live pause reads and marks hosted input suspended even when a
+paused frame step is admitted. Focus/user-pause and native admission PAUSED hooks
+remain in place. Four real-host cases check the pause/frame-step matrix and the
+once-only baseline marker. Neither the 276-line dispatcher budget nor the 2,367-line
+class budget changes; no architecture allowance changes.
+
+Validation is bounded to hosted/controller Quick Chat, pause/title/menu transitions,
+physical and controlled input, the candidate API signature/pin and affected source/
+ArchUnit guards. It does not repeat the completed 800 guards, broad smoke, all Typing
+stages, or native trace sweeps. The parent's frozen `ef8d0714f` smoke recovery and its
+target are outside this worktree and remain untouched.
+
+
+Merge/source commit: `d4bf35286b0722c72b6b1657ec8d896117963a65`. Both successful
+selections tested these exact production/test/POM/asset inputs before commit; the
+following evidence commit changes only this document. The affected guards passed
+**121 cases, zero failures/errors/skips** (87 source plus 34 ArchUnit), completing
+at 2026-10-25 17:14:09 UTC. The focused composition passed **405 cases, zero
+failures/errors/skips**, completing at 17:14:50 UTC. Physical reports confirmed
+hosted-controller 34, multiplayer coordinator 39, Quick Chat six, title/pause seven
+(including the four new matrix cases), menu transitions six, controlled course
+input three, API signatures eleven and pin policy four, with zero skips throughout.
+
+Exact commands (the guard command first reproduced the 277/276 failure, then
+passed after the bounded correction). The runtime command reuses the `q` array
+and original-ROM `ROM_ROOT` defined above; it retains the default slow-tag exclusion.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestArchitecturalSourceGuard,TestArchUnitRules' -Pguards test -B
+"${q[@]}" '-Dtest=TestMultiplayerRaceCoordinator,TestTimeAttackQuickChat,TestHostedRunController,TestHostedRunLeadIn,TestHostedRunActCompletionWiring,TestGameLoop,TestGameLoopTitleCardPause,TestGameLoopTitleCardOwnership,TestGameLoopMenuTransitions,TestGameLoopSuspension,TestGameLoopSuspensionOwnership,TestControlledFrameRuntime,TestControlledCourseInput,TestOwnerControllerNativeInput,TestScenePhysicalInput,TestInputHandlerLogicalSnapshot,TestInputHandlerGamepadSuppression,TestModApiSignatureSurface,TestModApiPinPolicy,TestModSceneHost' test -B
+```
+
+These are focused composition and affected-guard results, not broad/full-suite or
+hardware-pad qualification. The earlier 800 guards and Typing stages remain tied
+to their earlier recorded source. No unrelated failures, guard limits or published
+API pins were changed. Consumed worker-local Maven diagnostics are removed after
+inspection; the clean branch/worktree remain for parent integration without push,
+PR creation or worktree removal.
