@@ -113024,3 +113024,47 @@ is separate. No HCZ outgoing boundary, whole campaign, other viewport/donor/team
 render/audio, complete auxiliary coverage, exhaustive trace sweep, smoke or
 full-suite qualification is claimed.
 Parent owns combined review, validation, integration and push.
+
+### Protocol-owner reconciliation and qualification, October 25
+
+Frozen composition `4e5938d4104a032b027b3615d5dea1fba9b6d7da` reproduced this
+frontier with six canonical/prefix cases (one inherited failure, no errors/skips)
+and one alternate case (one inherited failure, no errors/skips). Segments 8/9
+remain clean, segment 11 remains incomplete at 81,981 errors with first row 1768
+`y` `$0870/$0871`, and the walk stops at input 68801/load generation 9. The
+alternate retains only trailing row 26179 `rings` 72/0. The strict pilot passed
+26 required cases without failures, errors or skips. These are named subset and
+frontier results, not whole-campaign certification.
+
+Merge `fcc4d0d282b8f01c560e5a237b6d486231eb296a` combines frozen `4e5938d` with
+concurrent multiplayer communication `c502c600bb4df3a411438b1cd3814466aed9a83d`
+without conflicts or changes to those runtime inputs. The independent checkout
+is `t3-f55c17c1`, branch `feature/ai-audit-upstream-reconciliation-20261025`.
+Its 25-class upstream/coupling check passed 306 cases, including the exact
+normalized candidate API method, with zero failures/errors/skips. Ordinary
+smoke on frozen `4e5938d` accounts for all 76 batches after the original timeout
+and bounded continuation: 39,916 cases, three matched inherited failures, no
+errors, 97 inspected skips. It remains red, with no pixel/capture credit for
+unmet prerequisites. The [audit plan](../architecture/plans/2026-10-25-audit-remediation.md#completed-frozen-candidate-validation)
+records exact identities, timing and coverage limits.
+
+Fresh guards on both compositions found the audit's retained title owner at 262
+effective lines against its 253 budget and rejected its `GameLoop` parameter.
+The correction moves the initial hardware scan/tail into the existing stateless
+`GameLoopPlcLifecycle` bridge; both entry sites retain synchronous virtual
+entry/provider callbacks. The presentation owner returns to 253 lines without
+weakening guards. Sol review rejected an eager-level draft: callback/hardware
+preparation can rebind the live level, and two controls failed on that draft.
+The accepted live level supplier passes both. Parent job 36790 completed the
+five-class owner/pause/fresh-title/source-guard selection at 14:51:57 UTC:
+135 physical cases, zero failures/errors/skips, Java 25/EGL; queue 386 seconds,
+Maven 91 seconds. No input, fixture, comparison or timing-authority changes.
+
+The next committed candidate will run the strict 26-case pilot, the exact
+canonical/prefix and alternate commands above, and fresh complete guards, once
+each with source frozen. CLI EGL replaces inherited JDK launcher options; display
+and launcher-option variables are unset. Record the tested SHA and actual
+frontiers here after completion. HCZ segment 11, the alternate trailing rings
+publication and S2 Sideways native parent-slot storage remain open; no outgoing
+HCZ, full-campaign or public-release claim follows. Parent retains integration,
+push and cleanup ownership.

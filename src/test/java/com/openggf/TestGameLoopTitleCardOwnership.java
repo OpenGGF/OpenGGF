@@ -147,6 +147,38 @@ class TestGameLoopTitleCardOwnership {
         verify(title).initializeFreshLevelTransition(4, 1); verify(p, never()).setXSpeed(anyShort());
         verify(camera, never()).updatePosition(true); assertEquals(1, loop.characters); assertEquals(1, loop.locks);
     }
+
+    @ParameterizedTest @ValueSource(booleans = {false, true})
+    void pendingTitleTailUsesLevelReboundDuringEntryOrHardwareScan(boolean duringHardwareScan) {
+        mode(GameMode.LEVEL);
+        when(level.consumeTitleCardRequest()).thenReturn(true);
+        when(level.getTitleCardZone()).thenReturn(4);
+        when(level.getTitleCardAct()).thenReturn(1);
+        when(title.shouldAdvanceVblankClockDuringLockedPhase()).thenReturn(true);
+        var rebound = mock(LevelManager.class);
+        var gameplay = mock(GameplayModeContext.class);
+        var world = mock(WorldSession.class);
+        when(world.getGameModule()).thenReturn(module);
+        when(gameplay.getWorldSession()).thenReturn(world);
+        when(gameplay.hardwareTiming()).thenReturn(mock(com.openggf.game.timing.HardwareTimingService.class));
+        raw("gameplayMode", gameplay);
+        var frame = (PlcLifecycleFrame) raw("activePlcLifecycleFrame");
+        var phase = com.openggf.game.resources.PlcLifecyclePhase.LEVEL_TITLE_CARD;
+        when(frame.isOwnedBy(phase)).thenReturn(true);
+        Runnable rebind = () -> raw("levelManager", rebound);
+        if (duringHardwareScan) {
+            doAnswer(c -> { rebind.run(); return null; }).when(frame).prepareAfterLoop(phase);
+        } else {
+            loop.entering = rebind;
+        }
+
+        assertTrue(loop.presentPendingTitleCardDuringSuppressedRunRow());
+
+        verify(title).initialize(4, 1);
+        verify(frame).prepareAfterLoop(phase);
+        verify(level, never()).advanceTitleCardVblankOnly();
+        verify(rebound).advanceTitleCardVblankOnly();
+    }
     @ParameterizedTest @ValueSource(booleans={false,true})
     void ordinaryEntryResetsMainAndLocksAllWhileFrozenCameraIsRetained(boolean frozen) {
         var main = mock(AbstractPlayableSprite.class); var side = mock(AbstractPlayableSprite.class);

@@ -146,26 +146,150 @@ qualification and known-bug text are unchanged; no rejected storage code remains
 An independent Sol static review of `dfc7d9784`, `a2cf1b322` and `aa5fb2d34`
 found no actionable issues. It ran no builds/tests and excluded the later
 animation and hook changes; this review is not substitute execution evidence.
-The final change-based plan at `1bd1dadea` selects 3,788 smoke candidate classes
-and guards. Actual Java 25/Lua 5.4/PowerShell preflight passes with display variables
-unset and `JDK_JAVA_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl`. The final plan
-will be inspected after composition. Allow roughly an hour of execution plus
-queue time, with a 90-minute execution limit and the runner's ten-minute
-no-output bound. Failure attribution remains by exact test and assertion. A Sol
-validation worker executes the parent's frozen plan in this checkout: strict
-26-case pilot, affected canonical/prefix and alternate replays, then the complete
-change-based smoke selection. The added shared tail animation state justifies
-rechecking those affected replays after composition. The inherited canonical and
-alternate failures must retain their exact recorded boundaries; they are not
-silently waived by total count. No source edits occur while validation owns the
-checkout. The parent remains responsible for disposition and delivery.
+## Completed frozen-candidate validation
 
-The parent integration checkout is
-`.worktrees/ai-audit-remediation-20261025` on
-`feature/ai-audit-remediation-20261025`. The main workspace's four dirty reference
-submodules and five untracked user files are preserved. Another task advanced main
-to `824a16f21` with an unrelated lobby-document revision; preserve it at integration.
-All implementation-worker jobs are terminal. Main was fetched and fast-forward
-checked again before candidate freeze; `develop` remains `824a16f21`. Update this
-checkpoint with combined results, remaining boundaries and cleanup state after
-validation completes.
+The composed frozen candidate is `4e5938d4104a032b027b3615d5dea1fba9b6d7da`.
+Actual Java 25/Lua 5.4/PowerShell preflight passed. Its strict pilot completed all
+26 required physical cases with zero failures, errors or skips (Maven 2:27,
+queue 0 seconds). Canonical/prefix replay completed six cases, one inherited
+failure, no errors/skips (Maven 2:04, queue 101 seconds); the alternate completed
+one case with its one inherited failure, no errors/skips (38.247 seconds, queue
+0). The exact frontiers in the linked October 25 entry remain unchanged:
+segments 8 and 9 are clean; segment 11 is incomplete with 81,981 errors,
+first row 1768 `y` `$0870/$0871`, stop input 68801/load generation 9. The
+alternate retains only trailing row 26179 `rings` 72/0.
+
+The change-based smoke inventory was 3,788 classes in 76 batches. Run
+`20261025T115236Z-8d2376cf` hit its 90-minute execution limit after 69 complete
+batches and partial batch 70: 37,773 cases, two failures, zero errors, 92 skips.
+Preparation was 26.62 seconds and execution 5,373.58 seconds (90:00.20 together);
+reported queue wait was 626 seconds and wall time 6,035.88 seconds. This timeout
+remains incomplete as an individual invocation.
+
+Continuation `20261025T134910Z-5b6db30b` used the existing `run_plan` API through a
+temporary adapter to execute every one of the 338 pending candidates in original
+batches 70–76, with unchanged order/exclusions. It completed 2,279 cases, one
+failure, zero errors and five skips, then 800 guards with two new source-guard
+failures and no errors/skips. Execution was 28:51.79, reported queue 17:25 and wall
+46:18.01. Excluding superseded partial batch 70, all 76 ordinary batches account
+for **39,916 cases, three failures, zero errors and 97 skips**. No failure/skip
+records were omitted. Both run directories were acknowledged; the temporary
+adapter and logs were deleted. Worker intervals overlap and must not be summed
+as delivery elapsed time.
+
+All three ordinary failures were matched independently on clean
+`f7620e579c1a8cf7b0371f9c5a438f6a4eff5ea7` and frozen `4e5938d`:
+
+- `TestModEngineWiringSeams#audioResetAndBackendReplacementReleaseStreamedSessionState`
+  fails at line 92/helper 219 because its source-text assertion expects inline
+  `beginSourceMutation()` in `resetState()`. Existing extraction `04a5a6c729`
+  delegates to `sourcePublication.reset()`, which still begins that mutation.
+- `TestHczMinibossNativeRendering#allOrbitPhasesMatchRomSpriteCompositionInNativePixels`
+  fails at line 53, `GLFW must initialize for pixel verification`. Its raw GLFW
+  setup does not consume the configured EGL context; no pixels were compared.
+  The two-method matched arms each physically ran two cases, two failures, no
+  errors/skips. Full exception types, assertions and stacks were byte-identical;
+  baseline/current queue waits were 8/120 seconds and Maven times 81/89 seconds.
+- `TestCompleteRunAudioCli#freshJvmBootstrapsTheS1ProfileButItsUnavailableDispatcherEmitsNoStandardOutput`
+  fails at line 182. Each matched exact-method `-Psmoke clean test` arm ran one
+  case with one failure, no errors/skips; full XML type/message/stack matched.
+  The earlier exit-4 and empty-stdout assertions passed. Unchanged `ProcessBuilder`
+  inherits `JDK_JAVA_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl`; a launcher
+  notice before application stderr is the source-backed mechanism inference,
+  not a retained raw-child-stderr observation. Baseline/current queue waits were
+  37.2/409.1 seconds; execution leases were 77.0/81.9 seconds. No extra arm ran.
+
+The first 92 skips cover opt-in benchmarks, pictures, captures, native GPU/soak
+checks; legacy GLFW shader/data-select/foreground prerequisites; unavailable mod
+JAR properties; unsupported Infinite Sonic platform/flyer acts; and the CPZ spin
+tube capture prerequisite. The final five exact skips are:
+
+- `TestS3kSlotsGlassNative#glassOccludesPlayerAfterRealBonusFrame`
+  (`openggf.test.gl.native`).
+- `TestSecondStrikeHczAirRecovery#zeroRingNativeBubbleRefillsReturnsAndRecreatesForWholeWorldReplay`
+  (`secondstrike.hcz.air.mod`).
+- `TestWestMgzBossNativeArena#packagedCreatorKnucklesHasAnOrdinaryDamageFreeSideResponse`
+  (`secondstrike.mgz.packaged.arena`).
+- `TestS1OpenGgfAudioCapture#capturesTheCompleteReferenceControlledInterval`
+  (local deterministic BizHawk reference).
+- `TestS1Ghz1OpenGgfAudioTimelineCapture#captureRequestedOutput`
+  (no requested timeline capture).
+
+These are not missing-ROM skips. Ordinary smoke remains red with matched
+inherited failures and the stated coverage limits; it is not fully green.
+
+## Upstream reconciliation and protocol-owner correction
+
+Concurrent main advance `c502c600bb4df3a411438b1cd3814466aed9a83d` adds multiplayer
+communication, preferences, the scene bridge and the unpublished candidate API
+pin. Merge `fcc4d0d282b8f01c560e5a237b6d486231eb296a` preserves it and frozen
+`4e5938d`. All 71 upstream files merged cleanly; the changelog was the only shared
+changed path. Every disjoint input retained its original bytes. No unrelated
+gameplay, audio algorithm, physics or renderer owner changed.
+
+The combined change-based plan against `4e5938d` selects all 3,797 smoke classes
+because configuration, racing and API paths are shared/unclassified. The parent's
+proportionate replacement is all 20 Java test classes changed in
+`824a16f21..c502c600`, plus TestModApiSignatureSurface, TestModApiHookPolicy,
+TestSceneChatPreferences, TestModSceneHost, TestMultiplayerChatConfiguration,
+TestEngineSettingsScreen, TestS3kFreshTitlePlcLoadBoundary and
+TestPlayablePlacementAudioOwnership, deduplicated to exactly 25 classes. This
+covers the new consumers, pin/hook coupling and audit load/disposal boundaries;
+the upstream's own broader subsystem checks are recorded in its
+[committed plan](2026-10-25-multiplayer-communication.md).
+
+At `fcc4d0d28`, that queued selection passed **306 physical cases**, no
+failures/errors/skips (queue 602 seconds, Maven 2:14). Exact XML suite identities
+match all 25 classes. The physical method
+`com.openggf.mods.TestModApiSignatureSurface#candidateZeroSevenSurfaceIsPinnedToTheCurrentSurface`
+ran once and passed. Both Bash and PowerShell `ci-push 4e5938d..fcc4d0d28 develop`
+passed, each auditing 14,733 entries; diff, AGENTS/CLAUDE and skill mirrors passed.
+The separate fresh guards completed 800 cases with the same two new audit
+source-guard failures as the frozen run, zero errors/skips. Diagnostics were
+consumed. These failures are not inherited from the pre-audit base:
+
+- `TestArchitecturalSourceGuard#releaseCriticalLargeClassesDoNotGrowWithoutExtraction`:
+  `GameLoopTitleCardLifecycle.java` grew to 262 effective lines against 253.
+- `TestArchitecturalSourceGuard#titleLifecycleOwnsPresentationBindingAndSharedReleaseWithNarrowLiveHost`:
+  `enterPending(GameLoop, ...)` introduces a forbidden root backreference.
+
+The accepted correction moves the first-title hardware scan/tail into the
+existing stateless `GameLoopPlcLifecycle.enterPendingTitleCard` bridge. Both
+GameLoop entries use synchronous entry/provider callbacks; the retained
+presentation owner returns to 253 effective lines. No guard, exclusion, API pin,
+fixture, comparison or timing authority changes. An initial draft captured the
+level before callbacks; Sol review r2 rejected it because entry or hardware
+preparation can rebind the current level. Two new parameterized controls were
+old-red (two failures, no errors/skips; queue 74 seconds, Maven 85 seconds).
+The accepted supplier resolves the live level again for the tail.
+
+Parent job 36790 finished at 14:51:57 UTC on `fcc4d0d28` plus exactly four accepted
+runtime/test files. Its exact focused selection was TestGameLoopTitleCardLifecycle
+(2), TestGameLoopTitleCardOwnership (40, including both rebind controls),
+TestGameLoopTitleCardPause (2), TestS3kFreshTitlePlcLoadBoundary (4) and
+TestArchitecturalSourceGuard (87): **135 cases, zero failures/errors/skips**,
+queue 386 seconds, Maven 91 seconds. Physical XML and Java 25/EGL properties were
+inspected, then diagnostics deleted. This unchanged selection is not repeated.
+
+## Final qualification and delivery checkpoint
+
+The independent reconciliation checkout is `t3-f55c17c1`, branch
+`feature/ai-audit-upstream-reconciliation-20261025`. The original parent checkout
+at `.worktrees/ai-audit-remediation-20261025` remains frozen at `4e5938d`. Main
+`develop` remains `c502c600`, fetched/fast-forward checked at 14:40 UTC; its dirty
+reference submodules and unrelated user files are preserved. The parent owns
+registry updates, main integration, push and eventual checkout cleanup.
+
+After committing the accepted owner correction and this evidence, freeze source
+for exactly four final checks: the strict 26-case pilot with its full committed
+expected SHA, the six-case canonical/prefix selection above, the one-case
+alternate, then a fresh complete `-Pguards` JVM. Use Java 25, Lua 5.4, verified
+absolute S1/S2/S3K ROM paths and explicit CLI EGL; unset DISPLAY, WAYLAND_DISPLAY,
+JDK_JAVA_OPTIONS, JAVA_TOOL_OPTIONS and _JAVA_OPTIONS, with ALSOFT_DRIVERS=null.
+Keep each queued request alive and target ownership sequential. Inspect physical
+cases, skips and complete frontier reports before consuming diagnostics. Do not
+repeat ordinary smoke or the 306/135-case focused selections. The protocol-owner
+change justifies these affected route/trace/guard checks; it does not authorize
+other runtime repairs. Update this checkpoint after those checks, recording the
+tested commit and remaining HCZ/Sideways gaps. A later prose-only commit does not
+require repeating unchanged executable checks. Integration and push stay pending.

@@ -899,7 +899,7 @@ public class GameLoop {
                 || !levelManager.consumeTitleCardRequest()) {
             return false;
         }
-        titleCardLifecycle.enterPending(this, resolveGameplayModeContext(), activePlcLifecycleFrame);
+        GameLoopPlcLifecycle.enterPendingTitleCard(() -> levelManager, resolveGameplayModeContext(), activePlcLifecycleFrame, this::enterTitleCard, this::getTitleCardProvider);
         return true;
     }
 
@@ -1559,7 +1559,7 @@ public class GameLoop {
 
         // Check if a title card was requested (new level loaded)
         if (levelManager.consumeTitleCardRequest()) {
-            titleCardLifecycle.enterPending(this, resolveGameplayModeContext(), activePlcLifecycleFrame);
+            GameLoopPlcLifecycle.enterPendingTitleCard(() -> levelManager, resolveGameplayModeContext(), activePlcLifecycleFrame, this::enterTitleCard, this::getTitleCardProvider);
             levelIterationAdmission.finishPlaybackBoundary(
                     false, playbackDebugManager, userRecordingControls);
             updateNonGameplayAudio(doFrameStep);

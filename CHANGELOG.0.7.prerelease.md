@@ -476,6 +476,8 @@ Unreleased. The earlier development themes remain in
   while previews and seamless continuations preserve their sequence.
   Fresh level loads submit their Nemesis art before the title wait, and the
   first title iteration prepares that queue without dispatching the card twice.
+  Title entry preserves level rebinding through callbacks while keeping the
+  hardware tail outside the retained presentation owner.
   Sky Sanctuary opening bridges use the native top-contact surface and exact
   overlap band, retaining the relative landing write before floor reset; a
   companion standing on the moving cutscene bridge waits without the edge-balance

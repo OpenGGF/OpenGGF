@@ -11,6 +11,9 @@ import com.openggf.game.session.GameplayModeContext;
 import com.openggf.graphics.FadeManager;
 import com.openggf.level.LevelManager;
 
+import java.util.function.BiConsumer;
+import java.util.function.Supplier;
+
 /** Bridges GameLoop-owned modes and fades to the session PLC lifecycle. */
 final class GameLoopPlcLifecycle {
     private GameLoopPlcLifecycle() {
@@ -25,6 +28,25 @@ final class GameLoopPlcLifecycle {
     static void prepare(PlcLifecycleFrame frame, PlcLifecyclePhase phase) {
         if (frame.isOwnedBy(phase)) {
             frame.prepareAfterLoop(phase);
+        }
+    }
+
+    /**
+     * Level submitted Nemesis before the first loc_62CC wait. Initialization
+     * dispatches Obj_TitleCardInit once; finish its hardware scan/tail without
+     * dispatching the next card routine (loc_62CC, sonic3k.asm:7769-7780).
+     * Synchronous callbacks preserve virtual entry/provider seams and live
+     * level rebinding; this bridge retains neither loop nor presentation state.
+     */
+    static void enterPendingTitleCard(Supplier<LevelManager> level, GameplayModeContext context,
+                                      PlcLifecycleFrame frame, BiConsumer<Integer, Integer> enter,
+                                      Supplier<TitleCardProvider> provider) {
+        enter.accept(level.get().getTitleCardZone(), level.get().getTitleCardAct());
+        TitleCardProvider titleCard = provider.get();
+        if (titleCard != null && titleCard.shouldAdvanceVblankClockDuringLockedPhase()) {
+            LevelFrameStep.executeHardwareTimedObjectScan(LevelFrameContext.from(context),
+                    frame, PlcLifecyclePhase.LEVEL_TITLE_CARD, () -> { });
+            level.get().advanceTitleCardVblankOnly();
         }
     }
 
