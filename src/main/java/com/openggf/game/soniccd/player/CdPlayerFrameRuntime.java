@@ -510,6 +510,39 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
     }
 
     /**
+     * Value-CAS for one timeWarpDir.b store at a closed post-Body object cut.
+     * ObjTimePost_Main (Monitor and Time Post/Main.asm:164-168, pin
+     * 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff) writes FF, then 01 for Future.
+     * Root owns the live object identity, source prefix and synchronous call order;
+     * these byte values neither certify a call nor grant phase authority.
+     */
+    public void validateObjectTimePostDirection(int expectedRawDirection, int rawDirection) {
+        requireOpenIdle(); requireClosedFrame();
+        if ((expectedRawDirection & ~0xFF) != 0 || (rawDirection & ~0xFF) != 0) {
+            throw new IllegalArgumentException("Time Post direction requires native unsigned bytes");
+        }
+        if (environment.movement().gates().timeWarpDirection() != expectedRawDirection) {
+            throw new IllegalArgumentException("Stale Time Post direction call cut");
+        }
+    }
+
+    /**
+     * Adopt exactly one native byte through the existing Movement gate owner.
+     * Same-value stores are legal. Actor, Display, timers, every other gate/global,
+     * art, inputs, clocks, sounds and capture shape remain unchanged.
+     */
+    public void applyObjectTimePostDirection(int expectedRawDirection, int rawDirection) {
+        validateObjectTimePostDirection(expectedRawDirection, rawDirection);
+        var m = environment.movement(); var g = m.gates();
+        var gates = new CdPlayerMovement.Gates(g.zoneAct(), g.timeZone(), g.miniSonic(), g.waterSlide(),
+                g.windTunnel(), g.speedShoes(), rawDirection);
+        var movement = new CdPlayerMovement.Environment(m.physics(), m.bounds(), gates, m.globals());
+        var next = new CdPlayerBody.Environment(movement, environment.controls(), environment.globals(),
+                environment.dynamicSlots());
+        environment = next;
+    }
+
+    /**
      * ObjGetFloorDist's final shared scratch byte, published by the dynamic object owner after Body.
      * Collision Check.asm:166-175 writes primaryAngle even when its odd value returns zero in d3.
      * This does not write the player's oAngle/previous angles or the secondary scratch buffer.

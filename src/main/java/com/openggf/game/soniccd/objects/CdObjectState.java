@@ -36,6 +36,8 @@ public final class CdObjectState {
         RAMP_TIMER(0x2E),
         // ObjPoints (HUD and Points/Main.asm:11,40,47): oPntsTimer EQU oVar2A, a byte lifetime. Storage only.
         POINTS_TIMER(0x2A),
+        // ObjTimePost_Spin (Monitor and Time Post/Main.asm:60,180): overlapping post byte, not new storage.
+        TIME_POST_SPIN(0x2A),
         // ObjSpring .DisplayOnly (Spring/Main.asm:156-159): signed parent-relative bytes. Storage only.
         SPRING_PARENT_X_OFFSET(0x38), SPRING_PARENT_Y_OFFSET(0x39),
         // ObjTunnelDoorV_Reset (Tunnel Door/Main.asm:77): ADDQ.B at HIGH oVar3A, never low $3B. Storage only.

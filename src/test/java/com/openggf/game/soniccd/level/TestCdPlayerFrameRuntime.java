@@ -48,6 +48,109 @@ import static org.junit.jupiter.api.Assertions.*;
  * Constructed bytes are not an authenticated retail MMD/native execution.
  */
 class TestCdPlayerFrameRuntime {
+    // BEGIN Time Post direction byte value port; Root owns the source object/phase.
+    @ParameterizedTest @ValueSource(ints = {0, 1, 128, 255})
+    void timePostDirectionChangesOnlyItsRawGateByteAndPreservesTheCompleteCut(int next) throws IOException {
+        var fixture = new Fixture();
+        try (var f = speedShoesDirtyFrame(fixture)) {
+            var actor = f.captureActor(); var shared = f.captureShared(); var before = observe(f);
+            int uploads = fixture.dmas.size();
+            f.bindArtPublication((dma, value) -> fail("A direction-byte store cannot publish art"));
+            f.validateObjectTimePostDirection(255, next);
+            assertEquals(before, observe(f)); assertSame(shared.environment(), f.environment());
+            f.applyObjectTimePostDirection(255, next);
+            var e = shared.environment(); var m = e.movement(); var g = m.gates();
+            var expected = new CdPlayerBody.Environment(new CdPlayerMovement.Environment(m.physics(), m.bounds(),
+                    new CdPlayerMovement.Gates(g.zoneAct(), g.timeZone(), g.miniSonic(), g.waterSlide(),
+                            g.windTunnel(), g.speedShoes(), next), m.globals()),
+                    e.controls(), e.globals(), e.dynamicSlots());
+            assertEquals(expected, f.environment()); assertEquals(actor, f.captureActor());
+            assertSharedValues(new CdPlayerFrameRuntime.SharedState(shared.owner(), expected, shared.artState(),
+                    shared.paused(), shared.vIntClock()), f.captureShared());
+            assertEquals(next == 255 ? Set.of() : Set.of("gates"), differences(before, observe(f)));
+            assertEquals(uploads, fixture.dmas.size());
+        }
+    }
+
+    @Test void timePostFutureRequiresTheAlreadyCommittedFfBeforeItsSecondByteStore() throws IOException {
+        try (var f = new Fixture().runtime()) {
+            var actor = f.captureActor();
+            f.applyObjectTimePostDirection(0, 255);
+            var afterFirst = observe(f); var environment = f.environment();
+            assertThrows(IllegalArgumentException.class, () -> f.validateObjectTimePostDirection(0, 1));
+            assertThrows(IllegalArgumentException.class, () -> f.applyObjectTimePostDirection(0, 1));
+            assertEquals(afterFirst, observe(f)); assertSame(environment, f.environment());
+            f.applyObjectTimePostDirection(255, 1);
+            assertEquals(1, f.environment().movement().gates().timeWarpDirection());
+            assertEquals(actor, f.captureActor());
+            f.applyObjectTimePostDirection(1, 1); // Same-value native stores do not consume a token.
+            assertEquals(1, f.environment().movement().gates().timeWarpDirection());
+        }
+    }
+
+    @ParameterizedTest @ValueSource(ints = {-1, 256, 65535})
+    void timePostDirectionRejectsEitherNonByteBeforeChangingAnyValue(int invalid) throws IOException {
+        try (var f = speedShoesDirtyFrame(new Fixture())) {
+            var before = observe(f); var environment = f.environment(); var state = f.state();
+            assertThrows(IllegalArgumentException.class, () -> f.validateObjectTimePostDirection(invalid, 1));
+            assertThrows(IllegalArgumentException.class, () -> f.applyObjectTimePostDirection(invalid, 1));
+            assertThrows(IllegalArgumentException.class, () -> f.validateObjectTimePostDirection(255, invalid));
+            assertThrows(IllegalArgumentException.class, () -> f.applyObjectTimePostDirection(255, invalid));
+            assertEquals(before, observe(f)); assertSame(environment, f.environment()); assertSame(state, f.state());
+        }
+    }
+
+    @Test void timePostDirectionRequiresTheExistingClosedFrameCutWithoutConsumingItsInputOrTurn() throws IOException {
+        try (var f = new Fixture().runtime()) {
+            var selection = f.prepareInput(8);
+            assertThrows(IllegalStateException.class, () -> f.validateObjectTimePostDirection(0, 255));
+            assertThrows(IllegalStateException.class, () -> f.applyObjectTimePostDirection(0, 255));
+            f.serviceVBlank(selection.phase());
+            assertThrows(IllegalStateException.class, () -> f.validateObjectTimePostDirection(0, 255));
+            assertThrows(IllegalStateException.class, () -> f.applyObjectTimePostDirection(0, 255));
+            assertEquals(CdPlayerBody.Boundary.INIT_RETURN, f.runBody(1).result().boundary());
+            assertEquals(0, f.environment().movement().gates().timeWarpDirection());
+            f.close();
+            assertThrows(IllegalStateException.class, () -> f.validateObjectTimePostDirection(0, 255));
+            assertThrows(IllegalStateException.class, () -> f.applyObjectTimePostDirection(0, 255));
+        }
+    }
+
+    @Test void timePostDirectionRejectsReentryWhileTheRealServiceStillCompletesOnce() throws IOException {
+        try (var f = new Fixture().runtime()) {
+            int[] calls = {0}; var selection = f.prepareInput(8);
+            f.serviceVBlank(selection.phase(), () -> {
+                calls[0]++;
+                assertThrows(IllegalStateException.class, () -> f.validateObjectTimePostDirection(0, 1));
+                assertThrows(IllegalStateException.class, () -> f.applyObjectTimePostDirection(0, 1));
+            });
+            assertEquals(1, calls[0]); assertEquals(1, f.vIntClock().deltaSinceAdmittedCut());
+            assertEquals(8, f.environment().controls().rawHeld());
+            assertEquals(CdPlayerBody.Boundary.INIT_RETURN, f.runBody(1).result().boundary());
+            assertEquals(0, f.environment().movement().gates().timeWarpDirection());
+        }
+    }
+
+    @Test void timePostDirectionNonzeroSharedCaptureRestoresAndTheUnownedWarpStillStopsTheNextMain() throws IOException {
+        try (var f = new Fixture().runtime()) {
+            service(f, 0); f.runBody(1);
+            f.applyObjectTimePostDirection(0, 1);
+            var actor = f.captureActor(); var active = f.captureShared(); var first = observe(f);
+            f.applyObjectTimePostDirection(1, 255);
+            var second = observe(f);
+            f.restoreShared(active); assertSharedValues(active, f.captureShared()); assertEquals(first, observe(f));
+            f.applyObjectTimePostDirection(1, 255); assertEquals(second, observe(f)); assertEquals(actor, f.captureActor());
+            service(f, 0);
+            var stopped = assertThrows(CdPlayerMovement.UnsupportedMotion.class, () -> f.runBody(2));
+            assertEquals(CdPlayerMovement.UnsupportedBoundary.TIME_WARP_ACTIVE, stopped.boundary());
+            // Standalone Frame consumes a failed Body turn; the World adapter owns fail-closed admission.
+            assertFalse(f.closed()); assertEquals(255, f.environment().movement().gates().timeWarpDirection());
+            assertEquals(actor, f.captureActor());
+            assertThrows(IllegalStateException.class, () -> f.runBody(2));
+        }
+    }
+    // END Time Post direction byte value port additions.
+
     // BEGIN shared native GiveSpeedShoes value port: values never certify source phase or identity.
     @ParameterizedTest @EnumSource(CdReleaseVariant.class)
     void speedShoesRewardChangesExactlyFiveStoresAndPreservesEveryOtherFrameValue(CdReleaseVariant sourceVariant)

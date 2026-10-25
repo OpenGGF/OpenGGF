@@ -4869,3 +4869,78 @@ all13 actual-EGL methods, both natural-route regressions and no-device cases
 executed. This proportionate affected-consumer batch covers the concrete CD
 source/World changes; it is not smoke/full-suite/native audio or full-game
 certification. Earlier broad baseline-attributed failures remain history.
+
+
+### Time Post and FM queue components, closed direction port — 25 October 2026 GMT
+
+Private/local continuation from `5d2bca4027ee1b0e52cf1a1336660a89b9a03b32`.
+New Time Post and main-CPU FM queue components remain separate from Runtime,
+World, warp, driver installation and playback. One overlapping State byte alias
+names post spin at2A. The direction port writes only the existing Movement gate;
+there is no new global store, snapshot field, sound effect or actor mutation.
+
+Time Post uses the existing authenticated full Monitor family, one saved bank,
+shared animator and native wrapper. It preserves Init/Main/Spin/Done order,
+nonzero-contact clear before an MMZ layer read,60-byte spin and dirty/unwritten
+bytes. Missing reached layer is typed rather than supplied as zero. Past writes
+FF; Future writes FF then01 through synchronous expected-value callbacks. Voice
+77/76 is synchronously requested before wrapper Draw/despawn, preserving actual
+prefixes if a later callback fails. Returned effects describe completed work and
+are never replayed. HUD subtypeA remains a genuine reserved-slot boundary;
+activation does not bypass the existing unowned warp continuation.
+
+Malformed animation reads preserve only native reset/decrement/speed/index
+prefixes before a finite-view stop. The existing animator owns successful
+transitions once. The retail family does not reach every generic FE/FD/error
+branch; no fallback script or enlarged address authority was added. The post's
+saved helper uses the exact766-byte linear bank and the invocation's updated
+direction for a later warp-despawn calculation.
+
+The FM owner is pure three-byte main queue state plus UNCOMMITTED transition
+plans. PlayFMSound uses low d0 byte and first zero slot, preserves zero-to-zero
+stores and drops a fourth nonzero request. Flush always brackets Stop/Start,
+then interleaves each nonzero fixed Z80 write and corresponding main-byte clear
+in source order.1C09 is sndPlay;1C0A/1C0B are the first two arbitration cells;
+1C0C is never written. Explicit empty values are not native cold-RAM authority.
+No driver RAM, arbitration, bus/clock service, synthesis or playback is installed.
+
+Both external test files were frozen before production. Tests-only26454 failed
+to compile at absent owner APIs; no JUnit ran. After exact import and the sole
+State alias, queued Root1753:
+
+```text
+python3 <main-workspace>/tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestCdTimePost,TestCdFmRequestQueue,TestCdMonitor,TestCdMonitorItem,TestCdObjectPool' test -B
+```
+
+Observed **251/0/0/0**, immediate admission, Maven1m20s, terminal04:06:29Z.
+All five XML identities/Java25 were checked: Time Post87, FM queue18, Monitor75,
+item59, pool12. Independent static review found no P1/P2, with separate callback,
+reserved-slot, animator and sparse-plan coverage limits. Its P3 off-by-one subtype
+citation is corrected only in the integration copy; external originals remain
+frozen. An initial author output-location error moved only the two known-created
+Time Post Java files unchanged from checkout scratch to the authorized external
+root before validation; unknown files were untouched.
+
+The Frame direction port preflights existing open/idle/closed-frame phase,
+unsigned expected/new bytes and exact current value, then builds replacement
+Movement/Body environments and assigns once. Same-value stores are legal.
+All actor/Display/timer/art/input/clock values and other gates survive. Its six
+new methods declare11 invocations; the253 inherited invocations are unchanged.
+Tests were frozen04:11:03.429688Z before production. Tests-only71291 failed at
+absent methods, no JUnit. Production was authored once at04:12:38.139429Z.
+
+Root9159 exact Frame class: **264 tests/one failure/zero errors/skips**, immediate,
+Maven1m21s, terminal04:14:00Z. The one new test wrongly expected standalone Frame
+closure after unsupported Body. Existing runBody's finally consumes the failed
+turn and clears pending/reentry state; its World adapter owns fail-closed
+admission. The typed TIME_WARP_ACTIVE result and all value checks already passed.
+Only that test's lifecycle assertion/name changed; production stayed unchanged.
+Root28938 reran the exact repaired method: **1/0/0/0**, immediate, Maven1m18s,
+terminal04:17:15Z, exact XML/Java25 checked. It now proves nonzero shared restore,
+replay, unchanged actor, typed next-Main warp stop and no repeated Body without
+another service. The264 red run and repaired-one pass remain separate results.
+
+These are component/value-port checks, not real Time Post touch/activation,
+reserved HUD execution, World restore, native sound timing, demo/regional or
+whole-game parity. The existing dynamic-only pool is not widened. Runtime
+binding and the selected SPECIAL collision response remain separate work.
