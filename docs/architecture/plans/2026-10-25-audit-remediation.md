@@ -615,3 +615,87 @@ the independently scoped load/reset representation, and Sideways after its
 representation gate. This order does not authorize importing broader historical
 compositions or weakening trace comparisons. This investigation/design round
 lands no gameplay fix and changes no fixture, comparison, API or release gate.
+
+## Fresh-load CPU boundary feasibility — 2026-10-25
+
+The rings implementation follow-up starts at exact clean base
+`61be1910ac29d5606410be315ec881a5745a75d3`, task branch
+`bugfix/ai-aiz-ring-reset-boundary-20261025`, worktree `t3-9ba1b3b9`.
+**The premature ring reset remains unresolved.** The bounded source audit found
+no faithful post-Kos CPU completion signal expressible by the existing production
+owners and timing authority. This is a missing continuation model, not evidence
+that full console emulation is necessary. No runtime patch was made.
+
+The semantic owner split remains appropriate: S3K's fresh-load owner must finish
+its synchronous setup before the shared transition boundary publishes the
+policy-selected destination rings, independently of position publication and
+before initial sprite dispatch. A callback expressing that order alone does not
+qualify its physical scheduling. Additional source inspection narrows the gap:
+
+- `LoadLevelLoadBlock2 (sonic3k.asm:38714-38782)` calls synchronous `Kos_Decomp`
+  for the selected block/chunk streams, copies the layout, then conditionally
+  submits the secondary PLC and loads the palette. These are direct calls,
+  not pending `Queue_Kos` jobs with a polled readiness bank. Prepared host construction and
+  `KosinskiInspectionCache` already decode these values; their completion time
+  cannot authenticate when native CPU execution returns from this routine.
+- `loc_6310 (sonic3k.asm:7788-7801)` masks interrupts around `j_LevelSetup`.
+  `LevelSetup (sonic3k.asm:102231-102275)` dispatches both plane initializers.
+  For this destination, `HCZ1_ScreenInit (sonic3k.asm:105722-105725)` and
+  `HCZ1_BackgroundInit (sonic3k.asm:105732-105753)` each reach
+  `Refresh_PlaneFull (sonic3k.asm:103110-103122)`: sixteen rows of thirty-two
+  blocks, through `Setup_TileRowDraw (sonic3k.asm:102923-103022)` and direct
+  `VInt_DrawLevel (sonic3k.asm:102405-102469)` VDP writes. Wrap/flip branches and
+  deformation depend on actual ROM data and destination state. Moving an event
+  initialization callback cannot account for that native work or interrupt mask.
+- `ResumableKosinskiDecoder` counts commands. The direct queue's
+  `DirectPreparation.serviceBoundary` completes its decoder at one
+  `PRE_MAIN_LOOP` service. Neither prices synchronous `Kos_Decomp` CPU
+  progress. `S3kVIntInstructionCycles` explicitly excludes FIFO/bus waits and
+  unpriced callees including `VInt_DrawLevel`; its ledger is diagnostic.
+
+A read-only fixture audit confirms the last timing event is module ordinal 42
+at physical row 26208. The unchanged `hardware_timing.jsonl` SHA-256 is
+`b8ebb4662c7361984e21541824166fbd597970171eed5025b6fdadbee6b4df24`;
+the other fixture hashes match the investigation above. There is no later
+completion event. Rings remain 72 on all 48 physical rows 26179–26226, then
+become zero at 26227. Rows 26209–26224
+advance the lag bank from 1 through 16; 26225–26226 hold both V-int and lag;
+26227 advances lag to 17 while publishing zero rings and assembled players.
+The latter row is `VBLANK_ONLY` despite those gameplay changes. These observations
+disconfirm queue-empty reset, a "next non-lag frame" gate, and inferring the
+reset from the two unchanged-counter rows. They locate no production continuation
+inside a lag interrupt. The prior native before/after-PC observations above
+remain the reset evidence; no new native replay was needed.
+
+The [timing contract](../designs/2026-07-27-cross-game-hardware-timing-trace-contract.md#2026-08-02-suppressed-row-boundary-clarification)
+does not permit a partial CPU prefix from held counters. Its external-completion
+contract also requires an actual polled readiness owner while the main loop can
+continue; synchronous setup does not satisfy that shape. Renaming it a queue
+job, adding a rings-derived event, promoting diagnostic cycles, or fitting an
+elapsed delay would add unsupported authority. Moving the reset to `complete()`
+would still hide it beyond the compared tail, as the prior passive run proves.
+
+The finite prerequisite is a fresh-load continuation design, confined to the
+selected ROM setup path: retain the terrain-wait return; represent progress of
+the synchronous data/setup work and its interrupt-enabled/masked sections;
+authenticate their completion through production-owned work and interrupt/VDP
+semantics; then publish counters and admit initial sprite dispatch. Qualify the
+proposed boundaries against independent native PC/interrupt observations on a
+second destination and checkpoint path before treating them as a release clock.
+Do not extend the timing registry without a separate contract decision. Once
+that prerequisite is supported, implement independent rewind phases and the
+non-72 source, zero/nonzero destination, omitted-tail, checkpoint, idempotence,
+exactly-once dispatch, S1/S2 and no-title controls listed above. This follow-up
+does not implement a CPU/VDP emulator or claim those controls passed.
+
+Validation is documentation-only: source/ROM identity and immutable fixture
+inspection, citation/link checks and ordinary Git policy hooks. The audited
+boundary, title, art, load-profile, loader, recording-driver and execution-model
+sources are unchanged from `d3fa3d519f6acb7285d538b5f972807036f1019e`; the
+current `src/main` tree is `d42d563b0aba4604cf32466f830c4a99e26a2cda`.
+The inherited one-case failure and 26,041 compared-frame frontier above remain
+at their original tested source, not a new run on this base. No Maven/native
+jobs, queue/execution timings, skips or new behavioral results exist for this
+follow-up. No frontier moved, so no new trace-frontier or release-note claim is
+made. Parent owns independent challenge/review, any combined validation,
+integration/push and worktree cleanup.
