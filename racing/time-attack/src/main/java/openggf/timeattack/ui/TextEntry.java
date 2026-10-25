@@ -54,6 +54,7 @@ public final class TextEntry {
     private String prompt = "";
     private String error = "";
     private boolean masked;
+    private boolean rejectedPasswordInput;
 
     /** An {@link Kind#ASCII} field: letters, digits and {@code allowedExtraChars}, at most {@code maxLength}. */
     public TextEntry(String title, String initial, int maxLength, String allowedExtraChars) {
@@ -99,6 +100,7 @@ public final class TextEntry {
         text.setLength(0);
         codePoints = 0;
         error = "";
+        rejectedPasswordInput = false;
     }
 
     /** A line drawn under the title, explaining what to enter. */
@@ -118,6 +120,14 @@ public final class TextEntry {
 
     /** Appends one code point when the field allows it and has room; true when it was added. */
     public boolean feedCodePoint(int codePoint) {
+        if (kind == Kind.PASSWORD) {
+            if (rejectedPasswordInput) return false;
+            if (!allowed(codePoint) || codePoints >= maxLength) {
+                rejectedPasswordInput = true;
+                error = "Password input refused. Backspace clears it.";
+                return false;
+            }
+        }
         int value = codePoint;
         if ((kind == Kind.TEXT || kind == Kind.NAME) && value != ' '
                 && (Character.isWhitespace(value) || Character.isSpaceChar(value))) {
@@ -139,6 +149,9 @@ public final class TextEntry {
     }
 
     private boolean allowed(int value) {
+        if (kind == Kind.PASSWORD) {
+            return Character.isValidCodePoint(value) && (value < 0xD800 || value > 0xDFFF);
+        }
         if (kind == Kind.ASCII) {
             return (value < 128 && Character.isLetterOrDigit(value)) || allowedExtraChars.indexOf(value) >= 0;
         }
@@ -189,8 +202,7 @@ public final class TextEntry {
     /** Replaces the text, filtering and clamping it as typing would. */
     public void setText(String value) {
         Objects.requireNonNull(value, "value");
-        text.setLength(0);
-        codePoints = 0;
+        clear();
         value.codePoints().forEach(this::feedCodePoint);
     }
 
@@ -210,6 +222,7 @@ public final class TextEntry {
             return Result.CANCELLED;
         }
         if (input.keyPressed(SceneKeys.ENTER) || input.keyPressed(SceneKeys.KP_ENTER)) {
+            if (rejectedPasswordInput) return Result.NONE;
             if (kind == Kind.NAME && !DisplayNames.isCanonical(acceptedName())) {
                 error = "Type at least one visible character";
                 return Result.NONE;
@@ -217,13 +230,14 @@ public final class TextEntry {
             return Result.ACCEPTED;
         }
         if (input.keyPressed(SceneKeys.BACKSPACE)) {
-            backspace();
+            if (rejectedPasswordInput) clear();
+            else backspace();
             error = "";
         }
         String typed = input.typedText();
         if (!typed.isEmpty()) {
             typed.codePoints().forEach(this::feedCodePoint);
-            error = "";
+            if (!rejectedPasswordInput) error = "";
         }
         return Result.NONE;
     }

@@ -208,4 +208,29 @@ class TestTextEntry {
         String drawn = String.join("", canvas.lines.subList(1, canvas.lines.size() - 2));
         assertEquals(invite + "_", drawn);
     }
+    @org.junit.jupiter.api.Test
+    void passwordPreservesJoinersAndPrivateUseCharactersWithoutACharacterClassRule() {
+        TextEntry field = TextEntry.password("ROOM PASSWORD");
+        String secret = "  exact👩‍💻\uE000 password  ";
+        new FakeViewInput().commit(field::update, secret);
+        assertEquals(secret, field.text());
+    }
+
+    @org.junit.jupiter.api.Test
+    void oversizedPasswordCannotAcceptASilentlyTruncatedPrefix() {
+        TextEntry field = TextEntry.password("ROOM PASSWORD");
+        FakeViewInput input = new FakeViewInput();
+        input.commit(field::update, "a".repeat(129));
+        input.clear();
+        input.pressed.add(com.openggf.mods.scene.SceneKeys.ENTER);
+        assertEquals(TextEntry.Result.NONE, field.update(input));
+        assertFalse(field.error().isEmpty());
+        input.tapKey(field::update, com.openggf.mods.scene.SceneKeys.BACKSPACE);
+        assertEquals("", field.text());
+        input.commit(field::update, "a".repeat(128));
+        input.clear();
+        input.pressed.add(com.openggf.mods.scene.SceneKeys.ENTER);
+        assertEquals(TextEntry.Result.ACCEPTED, field.update(input));
+    }
+
 }

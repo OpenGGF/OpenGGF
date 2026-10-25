@@ -410,7 +410,7 @@ public final class RaceSession implements AutoCloseable {
         try {
             uri = masterEndpoint(configured, settings.masterTrustInsecure());
         } catch (IllegalArgumentException e) {
-            fail("Invalid master server URL: " + e.getMessage());
+            fail("Invalid master server URL");
             return;
         }
         boolean trustInsecure = settings.masterTrustInsecure();

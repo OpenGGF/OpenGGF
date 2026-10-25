@@ -417,7 +417,10 @@ public final class TimeAttackScene implements ModScene {
                 state.windowSeconds(), votePool);
         switch (mode) {
             case HOST_LAN -> openAccess((policy, password) -> session.hostLan(setup, fingerprint.get(), policy, password));
-            case JOIN_LAN -> session.joinLan(joinInvite, request.character(), fingerprint.get());
+            case JOIN_LAN -> {
+                session.joinLan(joinInvite, request.character(), fingerprint.get());
+                joinInvite = "";
+            }
             case BROWSE -> session.browse(setup, fingerprint.get());
             case SOLO -> { }
         }
