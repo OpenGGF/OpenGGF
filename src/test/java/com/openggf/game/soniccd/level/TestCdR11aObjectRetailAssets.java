@@ -223,6 +223,8 @@ class TestCdR11aObjectRetailAssets {
                 "954bf4fd9df8e85b782482c17f65e68d32101f1e43e21fd4a7fe4058a91b5275");
         hashes.put(MONITOR_TIME_ANIMATIONS, MONITOR_TIME_ANIMATIONS_SHA256);
         hashes.put(MONITOR_TIME_MAPPINGS, MONITOR_TIME_MAPPINGS_SHA256);
+        hashes.put(TUNNEL_DOOR_ANIMATIONS, SPIN_TUNNEL_DOOR_ANIMATION_SHA256);
+        hashes.put(TUNNEL_DOOR_MAPPINGS, SPIN_TUNNEL_DOOR_MAPPING_SHA256);
         for (var table : CdR11aObjectAssets.Table.values()) {
             var view = objects.view(table);
             assertEquals(table, view.table());
@@ -1675,5 +1677,245 @@ class TestCdR11aObjectRetailAssets {
         assertThrows(UnsupportedOperationException.class, () -> objects.tileWord(9, 0));
         assertThrows(UnsupportedOperationException.class, () -> objects.tileWord(0, 1));
         assertEquals(0x05A8, binding.baseWord());
+    }
+
+    /** Source-literal complete Door animation/mapping includes from Spin Tunnel/Data, N=1ecc5f3a. */
+    private static final byte[] SPIN_TUNNEL_DOOR_ANIMATION_BYTES = sourceBytes(
+            0, 2, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0xFC);
+    private static final byte[] SPIN_TUNNEL_DOOR_MAPPING_BYTES = hexBytes(
+            "0010000402D0030000E4F0010004E40002F80C0006E8F804000A0800");
+    private static final String SPIN_TUNNEL_DOOR_ANIMATION_SHA256 =
+            "398c620335d02e870c94e8f8144c33e355b9bd1440fe530eff2031ea16600fb0";
+    private static final String SPIN_TUNNEL_DOOR_MAPPING_SHA256 =
+            "7260a75372713a37c9acb8b62f653a3d17c824b5e2eb88d6661789dd9cdaca92";
+
+    @ParameterizedTest(name = "{0} optional horizontal Tunnel Door tables and existing shared art")
+    @EnumSource(CdReleaseVariant.class)
+    void horizontalTunnelDoorAuthenticatesActualOwnerAndRetainsTheSharedBankAfterMediaClose(CdReleaseVariant variant)
+            throws Exception {
+        String configured = System.getProperty("soniccd.media.root");
+        Assumptions.assumeTrue(configured != null && !configured.isBlank(), "Set soniccd.media.root for supplied-media checks");
+        String directory = switch (variant) { case USA -> "USA"; case JAPAN -> "Japan"; case EUROPE -> "Europe"; };
+        Path cue;
+        try (var files = Files.list(Path.of(configured).resolve(directory))) {
+            var cues = files.filter(p -> p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".cue")).toList();
+            assertEquals(1, cues.size(), "Configured regional media must contain exactly one CUE");
+            cue = cues.getFirst();
+        }
+        CdR11aAssets owner;
+        CdR11aObjectAssets visualFirst = null, bankFirst = null;
+        try (var source = CdProgramAssets.open(cue, Optional.of(variant), Optional.empty())) {
+            owner = CdR11aAssetLoader.load(source, variant, CdStageKey.parse("R11A"));
+            var image = source.mmd(CdNativeFile.R11A);
+            // Both other regions happen to share these source bytes at the USA offsets. Equality grants no owner.
+            assertArrayEquals(SPIN_TUNNEL_DOOR_ANIMATION_BYTES, image.readFile(0x3F02A, 14));
+            assertArrayEquals(SPIN_TUNNEL_DOOR_MAPPING_BYTES, image.readFile(0x3F038, 28));
+            if (variant != CdReleaseVariant.USA) {
+                assertEquals("241be9620fbad1229792fedd1604066ae3e7d943cb7cc27bc94a4a837452d9b6",
+                        CdR11aProfile.sha256(image.readFile(0, image.fileBytes())));
+                assertThrows(UnsupportedOperationException.class, owner::openingObjects);
+                assertThrows(UnsupportedOperationException.class, () -> CdR11aObjectAssets.load(
+                        owner.profile(), owner.identity(), image, owner.loadPlan()));
+                var usa = CdR11aProfile.forStage(CdReleaseVariant.USA, CdStageKey.parse("R11A"));
+                var asserted = new CdR11aAssets.Identity(CdReleaseVariant.USA, usa.stage(), usa.file(), usa.domain(),
+                        usa.expectedMmdSha256(), owner.identity().observedWholeDiscSha256());
+                assertThrows(IOException.class, () -> CdR11aObjectAssets.load(usa, asserted, image, owner.loadPlan()));
+            } else {
+                visualFirst = owner.openingObjects();
+                bankFirst = CdR11aObjectAssets.load(owner.profile(), owner.identity(), image, owner.loadPlan());
+                verifyHorizontalTunnelDoorCold(visualFirst);
+                verifyHorizontalTunnelDoorCold(bankFirst);
+                verifyHorizontalTunnelDoorNativeReferences(image, owner);
+                for (int offset : new int[]{0x3E64, 0x6280, 0x629A, 0x62F6, 0x6324, 0x633C,
+                        0x3F02A, 0x3F02C, 0x3F037, 0x3F038, 0x3F03A, 0x3F03C, 0x3F047, 0x3F048, 0x3F053,
+                        0xCF60, 0xCF86, 0xFC02, 0x36AFE, 0x36B96}) {
+                    byte[] changed = image.readFile(0, image.fileBytes()); changed[offset] ^= 1;
+                    assertThrows(IOException.class, () -> CdR11aObjectAssets.load(owner.profile(), owner.identity(),
+                            CdMmdImage.parse(changed), owner.loadPlan()), "changed file offset " + offset);
+                }
+            }
+        }
+        assertEquals(variant, owner.identity().variant());
+        assertThrows(UnsupportedOperationException.class, () -> owner.decoded(ART_TUNNEL_DOOR));
+        if (variant != CdReleaseVariant.USA) { return; }
+        assertNotNull(visualFirst); assertNotNull(bankFirst);
+        // First new table/visual/art reads on both owners occur only after the supplied-media source closes.
+        verifyHorizontalTunnelDoorRetained(owner, visualFirst, bankFirst);
+    }
+
+    private static void verifyHorizontalTunnelDoorCold(CdR11aObjectAssets objects) throws Exception {
+        var views = CdR11aObjectAssets.class.getDeclaredField("views"); views.setAccessible(true);
+        assertEquals(9, ((Map<?, ?>) views.get(objects)).size());
+        var optional = CdR11aObjectAssets.class.getDeclaredField("frontierViews"); optional.setAccessible(true);
+        assertTrue(((Map<?, ?>) optional.get(objects)).isEmpty());
+        for (String name : List.of("tunnelDoor", "tunnelDoorVertical", "tunnelDoorArtBank", "monitorTimeArtBank")) {
+            var field = CdR11aObjectAssets.class.getDeclaredField(name); field.setAccessible(true);
+            assertNull(field.get(objects), "startup must not read new tables or decode any shared Door art");
+        }
+        assertEquals(List.of(ART_RINGS, ART_MOSQUI), objects.initialArtBank().bindings().stream()
+                .map(CdR11aObjectAssets.ArtBinding::source).toList());
+        assertEquals(84, objects.initialArtBank().bindings().stream().mapToInt(CdR11aObjectAssets.ArtBinding::tileCount).sum());
+    }
+
+    private static void verifyHorizontalTunnelDoorNativeReferences(CdMmdImage image, CdR11aAssets owner) {
+        assertEquals("7aa54c36ab94dbe14068a18613c574b883ce446337bfaa9c571ec3523aff14e2",
+                CdR11aProfile.sha256(image.readFile(0, image.fileBytes())));
+        // ObjectIndex ID $0D -> ObjTunnelDoor, Spin Tunnel/Main (Door).asm:7-20.
+        assertEquals(0x206280, owner.view(CdR11aAsset.OBJECT_INDEX).bytes().unsignedLong((0xD - 1) * 4));
+        assertArrayEquals(hexBytes("00206280"), image.readFile(0x3E64, 4));
+        assertArrayEquals(hexBytes("700010280024303B00124EBB000E"), image.readFile(0x6280, 14));
+        var index = ByteBuffer.wrap(image.readFile(0x629A, 8));
+        assertEquals(0x62F2, 0x629A + index.getShort());
+        assertEquals(0x632C, 0x629A + index.getShort());
+        assertEquals(0x633C, 0x629A + index.getShort());
+        assertEquals(0x6346, 0x629A + index.getShort());
+        // Init's actual MOVE.L operand and Animate's actual LEA disambiguate source labels and identical scripts.
+        assertArrayEquals(hexBytes("54280024217C0023F0380004117C00010018002800040001"
+                + "117C002C00190C28000200286606117C00180019117C00080016700C4EB90020CF26"), image.readFile(0x62F2, 58));
+        var mapOperand = ByteBuffer.wrap(image.readFile(0x62F6, 8));
+        assertEquals((short) 0x217C, mapOperand.getShort());
+        assertEquals(TUNNEL_DOOR_MAPPINGS.range().nativeAddress(), mapOperand.getInt());
+        assertEquals(4, mapOperand.getShort());
+        assertArrayEquals(hexBytes("700C"), image.readFile(0x6324, 2));
+        assertEquals(0x20CF26, absoluteTarget(image, 0x6326, 0x4EB9));
+        assertEquals(TUNNEL_DOOR_ANIMATIONS.range().nativeAddress(), absoluteTarget(image, 0x633C, 0x43F9));
+        var animate = ByteBuffer.wrap(image.readFile(0x6342, 4));
+        assertEquals((short) 0x6000, animate.getShort());
+        assertEquals(0x5CFA, 0x6344 + animate.getShort());
+        assertArrayEquals(hexBytes("43F90020CF48D040383B001845FB4014720012280029D2413A321000314500024E75"),
+                image.readFile(0xCF26, 34));
+        assertEquals(62, ByteBuffer.wrap(image.readFile(0xCF60, 2)).getShort());
+        assertArrayEquals(hexBytes("8328"), image.readFile(0xCF86, 2));
+        byte[] actual = image.readFile(0, image.fileBytes());
+        for (byte[] include : List.of(SPIN_TUNNEL_DOOR_ANIMATION_BYTES, SPIN_TUNNEL_DOOR_MAPPING_BYTES)) {
+            var hits = new java.util.ArrayList<Integer>();
+            for (int at = 0; at <= actual.length - include.length; at++) {
+                if (Arrays.equals(actual, at, at + include.length, include, 0, include.length)) { hits.add(at); }
+            }
+            assertEquals(include == SPIN_TUNNEL_DOOR_ANIMATION_BYTES ? List.of(0xCE8C, 0x3F02A) : List.of(0x3F038), hits);
+        }
+        // PLCLists/PLC_Std row 1 is the existing Art_TunnelDoor source, not splash or another decode bank.
+        assertEquals(0xFBFA, 0xFBC6 + (short) owner.view(CdR11aAsset.PLC_LISTS).bytes().unsignedWord(2));
+        assertEquals(13, ByteBuffer.wrap(image.readFile(0xFBFA, 2)).getShort());
+        assertArrayEquals(hexBytes("00236AFE6500"), image.readFile(0xFC02, 6));
+        var row = owner.loadPlan().plcs().get(1).entries().get(1);
+        assertEquals(ART_TUNNEL_DOOR, row.source());
+        assertEquals(owner.profile().range(ART_TUNNEL_DOOR), row.sourceRange());
+        assertEquals(0x6500, row.vramAddress());
+        assertEquals("cbbd577ac9af46007b2618fd0481753435aae38e0f68fe0ae7ed17df74b0cb7b",
+                CdR11aProfile.sha256(image.readFile(0x36AFE, 154)));
+    }
+
+    private static void verifyHorizontalTunnelDoorRetained(CdR11aAssets owner, CdR11aObjectAssets objects,
+                                                           CdR11aObjectAssets bankFirst) throws Exception {
+        var initial = objects.initialArtBank();
+        var oldTables = Arrays.stream(CdR11aObjectAssets.Table.values()).limit(34).toList();
+        var oldViews = oldTables.stream().map(objects::view).toList();
+        var oldHashes = oldViews.stream().map(v -> CdR11aProfile.sha256(v.bytes().copy())).toList();
+        var artCache = CdR11aObjectAssets.class.getDeclaredField("tunnelDoorArtBank"); artCache.setAccessible(true);
+        var verticalCache = CdR11aObjectAssets.class.getDeclaredField("tunnelDoorVertical"); verticalCache.setAccessible(true);
+        assertNull(artCache.get(objects)); assertNull(verticalCache.get(objects));
+        var visual = objects.tunnelDoor();
+        assertSame(visual, objects.tunnelDoor());
+        assertNull(artCache.get(objects), "decoding visual tables must not decode art");
+        assertNull(verticalCache.get(objects), "horizontal accessor must not decode the vertical visual");
+        assertArrayEquals(SPIN_TUNNEL_DOOR_MAPPING_BYTES, visual.mappings().copy());
+        assertArrayEquals(SPIN_TUNNEL_DOOR_ANIMATION_BYTES, visual.animationTable().copy());
+        assertEquals(SPIN_TUNNEL_DOOR_MAPPING_SHA256, CdR11aProfile.sha256(visual.mappings().copy()));
+        assertEquals(SPIN_TUNNEL_DOOR_ANIMATION_SHA256, CdR11aProfile.sha256(visual.animationTable().copy()));
+        var mapView = objects.view(TUNNEL_DOOR_MAPPINGS);
+        var scriptView = objects.view(TUNNEL_DOOR_ANIMATIONS);
+        assertSame(mapView, objects.view(TUNNEL_DOOR_MAPPINGS));
+        assertSame(scriptView, objects.view(TUNNEL_DOOR_ANIMATIONS));
+        assertArrayEquals(SPIN_TUNNEL_DOOR_MAPPING_BYTES, mapView.bytes().copy());
+        assertArrayEquals(SPIN_TUNNEL_DOOR_ANIMATION_BYTES, scriptView.bytes().copy());
+        assertEquals(List.of(16, 4), visual.mappingFrames().stream()
+                .map(CdObjectVisualAssets.MappingFrame::relativeOffset).toList());
+        assertEquals(List.of(new CdObjectVisualAssets.Piece(-8, 12, 6, -24),
+                new CdObjectVisualAssets.Piece(-8, 4, 10, 8)), visual.mappingFrames().getFirst().pieces());
+        assertEquals(List.of(new CdObjectVisualAssets.Piece(-48, 3, 0, -28),
+                new CdObjectVisualAssets.Piece(-16, 1, 4, -28)), visual.mappingFrames().getLast().pieces());
+        for (int i = 0; i < 2; i++) {
+            var frame = visual.mappingFrames().get(i);
+            assertEquals(11, frame.bytes().length());
+            assertArrayEquals(Arrays.copyOfRange(SPIN_TUNNEL_DOOR_MAPPING_BYTES, frame.relativeOffset(),
+                    frame.relativeOffset() + 11), frame.bytes().copy());
+            assertEquals(0, visual.mappings().unsignedByte(frame.relativeOffset() + 11));
+        }
+        assertEquals(1, visual.animations().size());
+        var script = visual.animations().getFirst();
+        assertEquals(2, script.relativeOffset()); assertEquals(0, script.delay());
+        assertEquals(List.of(0, 0, 1, 1, 1, 1, 1, 1, 1, 1), script.frameBytes());
+        assertEquals(CdObjectVisualAssets.Terminal.ADVANCE_ROUTINE_FC, script.terminal());
+        assertArrayEquals(Arrays.copyOfRange(SPIN_TUNNEL_DOOR_ANIMATION_BYTES, 2, 14), script.bytes().copy());
+        var bank = objects.tunnelDoorArtBank();
+        var binding = bank.binding(ART_TUNNEL_DOOR);
+        assertSame(bank, objects.tunnelDoorArtBank());
+        var vertical = objects.tunnelDoorVertical();
+        assertArrayEquals(TUNNEL_DOOR_VERTICAL_SOURCE_BYTES, vertical.mappings().copy());
+        assertSame(vertical, objects.tunnelDoorVertical());
+        assertTrue(vertical.animations().isEmpty());
+        assertSame(bank, objects.tunnelDoorArtBank());
+        assertSame(binding, objects.tunnelDoorArtBank().binding(ART_TUNNEL_DOOR));
+        assertEquals(List.of(binding), bank.bindings());
+        assertEquals(1, binding.plcId()); assertEquals(0x6500, binding.plc().vramAddress());
+        assertEquals(0x8328, binding.baseWord()); assertEquals(0x328, binding.firstTileId());
+        assertEquals(12, binding.tileCount()); assertEquals(384, binding.bytes().length());
+        assertEquals(owner.profile().range(ART_TUNNEL_DOOR), binding.decode().sourceBlobRange());
+        assertEquals(153, binding.decode().readerInputRange().length());
+        assertEquals(153, binding.decode().consumedInputBytes());
+        assertEquals("dc7be7cdc86c642af5aafd7462269397a6d901678241fde33a35b9209eaf22a0",
+                CdR11aProfile.sha256(binding.bytes().copy()));
+        assertEquals("867546aca5f1590ffcf4b95b55ef99f4e370301c62addd69391eb0d481729ba1",
+                CdR11aProfile.sha256(bank.tile(0x328).copy()));
+        assertEquals("3408ac8644182dd294f69868c3d3c320bf35b5f084d83adc21d91c67166bd261",
+                CdR11aProfile.sha256(bank.tile(0x333).copy()));
+        for (int i = 0; i < 12; i++) { assertArrayEquals(binding.bytes().slice(i * 32, 32).copy(), bank.tile(0x328 + i).copy()); }
+        for (var v : List.of(visual, vertical)) {
+            for (var frame : v.mappingFrames()) {
+                for (var piece : frame.pieces()) {
+                    int first = (binding.baseWord() + piece.rawTileWord()) & 0x7FF;
+                    assertTrue(first >= 0x328 && first + piece.tileCount() <= 0x334);
+                    for (int i = 0; i < piece.tileCount(); i++) { assertEquals(32, bank.tile(first + i).length()); }
+                }
+            }
+        }
+        assertEquals(0x8328, objects.tileWord(0xC, 0));
+        for (int subtype = 1; subtype <= 255; subtype++) {
+            int unsupported = subtype;
+            assertThrows(UnsupportedOperationException.class, () -> objects.tileWord(0xC, unsupported));
+        }
+        assertThrows(UnsupportedOperationException.class, () -> objects.tileWord(0xD, 0));
+        for (var other : CdR11aAsset.values()) {
+            if (other != ART_TUNNEL_DOOR) { assertThrows(UnsupportedOperationException.class, () -> bank.binding(other)); }
+        }
+        for (int absent : new int[]{0, 0x327, 0x334, 0x7FF}) {
+            assertThrows(UnsupportedOperationException.class, () -> bank.tile(absent));
+        }
+        assertThrows(UnsupportedOperationException.class, bank.bindings()::clear);
+        assertThrows(ReadOnlyBufferException.class, () -> bank.tile(0x328).buffer().put((byte) 0));
+        assertThrows(ReadOnlyBufferException.class, () -> visual.mappings().buffer().put((byte) 0));
+        assertThrows(ReadOnlyBufferException.class, () -> scriptView.bytes().buffer().put((byte) 0));
+        byte[] changed = mapView.bytes().copy(); changed[4] ^= 1;
+        assertNotEquals(changed[4], mapView.bytes().copy()[4]);
+        changed = bank.tile(0x328).copy(); changed[0] ^= 1;
+        assertNotEquals(changed[0], bank.tile(0x328).copy()[0]);
+        for (int i = 0; i < oldTables.size(); i++) {
+            assertSame(oldViews.get(i), objects.view(oldTables.get(i)));
+            assertEquals(oldHashes.get(i), CdR11aProfile.sha256(objects.view(oldTables.get(i)).bytes().copy()));
+        }
+        assertSame(initial, objects.initialArtBank());
+        assertEquals(List.of(ART_RINGS, ART_MOSQUI), initial.bindings().stream()
+                .map(CdR11aObjectAssets.ArtBinding::source).toList());
+        // Reverse access order, on a separately authenticated owner, retains exactly the same per-owner bank.
+        var reverseBank = bankFirst.tunnelDoorArtBank();
+        var optional = CdR11aObjectAssets.class.getDeclaredField("frontierViews"); optional.setAccessible(true);
+        assertFalse(((Map<?, ?>) optional.get(bankFirst)).containsKey(TUNNEL_DOOR_MAPPINGS));
+        assertFalse(((Map<?, ?>) optional.get(bankFirst)).containsKey(TUNNEL_DOOR_ANIMATIONS));
+        bankFirst.tunnelDoorVertical();
+        var reverseVisual = bankFirst.tunnelDoor();
+        assertSame(reverseBank, bankFirst.tunnelDoorArtBank());
+        assertArrayEquals(visual.mappings().copy(), reverseVisual.mappings().copy());
+        assertArrayEquals(binding.bytes().copy(), reverseBank.binding(ART_TUNNEL_DOOR).bytes().copy());
     }
 }

@@ -150,6 +150,7 @@ public final class CdObjectMappings implements CdDrawMappings {
         // ObjMonitor_Init stores MapSpr_MonitorTime (Monitor and Time Post/Main.asm:304,648-650).
         // The unchanged exact-byte join validates the complete counted directory and every decoded body.
         addObject(tables, objects, CdR11aObjectAssets.Table.MONITOR_TIME_MAPPINGS, objects.monitorTime());
+        addObject(tables, objects, CdR11aObjectAssets.Table.TUNNEL_DOOR_MAPPINGS, objects.tunnelDoor());
         var monitorView = objects.view(CdR11aObjectAssets.Table.MONITOR_TIME_MAPPINGS);
         var staticPieces = new ArrayList<DeclaredStaticPiece>();
         // ObjMonitorItem_Init (:451-459) adds the signed frame word and then one byte, skipping the count.

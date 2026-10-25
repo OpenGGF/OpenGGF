@@ -66,7 +66,11 @@ public final class CdR11aObjectAssets {
         TUNNEL_DOOR_VERTICAL_MAPPINGS("MapSpr_FlapDoorV", 0xCE9A, 28),
         // Monitor and Time Post/Main.asm:304,366,455,644-650; actual USA operands join both full includes.
         MONITOR_TIME_ANIMATIONS("Ani_Monitor", 0xA9C6, 136),
-        MONITOR_TIME_MAPPINGS("MapSpr_MonitorTime", 0xAA4E, 450);
+        MONITOR_TIME_MAPPINGS("MapSpr_MonitorTime", 0xAA4E, 450),
+        // Spin Tunnel/Main (Door).asm:57,83 and Data (Act 1 Present).asm:536-540; actual USA operands.
+        // Separate normal Door views; both orientations use the existing standard 12-tile TunnelDoorArtBank.
+        TUNNEL_DOOR_ANIMATIONS("Ani_TunnelDoor", 0x3F02A, 14),
+        TUNNEL_DOOR_MAPPINGS("MapSpr_TunnelDoor", 0x3F038, 28);
 
         private final String nativeLabel;
         private final int offset;
@@ -298,6 +302,7 @@ public final class CdR11aObjectAssets {
     private TunnelDoorArtBank tunnelDoorArtBank;
     private CdObjectVisualAssets monitorTime;
     private MonitorTimeArtBank monitorTimeArtBank;
+    private CdObjectVisualAssets tunnelDoor;
 
     private CdR11aObjectAssets(CdR11aAssets.Identity identity, Map<Table, View> views, List<Delta> deltas,
                                 List<TouchSize> dimensions, CdObjectVisualAssets rings,
@@ -635,6 +640,15 @@ public final class CdR11aObjectAssets {
             monitorTimeArtBank = new MonitorTimeArtBank(List.of(new ArtBinding(source, 1, entry, baseWord, read)));
         }
         return monitorTimeArtBank;
+    }
+
+    /** Normal Spin Tunnel Door: two counted frames and its one real FC script, sharing the existing standard art. */
+    public synchronized CdObjectVisualAssets tunnelDoor() {
+        if (tunnelDoor == null) {
+            tunnelDoor = CdObjectVisualAssets.decode(read(Table.TUNNEL_DOOR_MAPPINGS), 2,
+                    read(Table.TUNNEL_DOOR_ANIMATIONS), 1, 12);
+        }
+        return tunnelDoor;
     }
 
     /** Obj3DPlant_Init (3D Ramp/Main.asm:57-90): ADD.W consumes signed offsets in two distinct bodies. */

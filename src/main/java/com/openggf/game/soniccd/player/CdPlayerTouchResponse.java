@@ -14,10 +14,11 @@ import java.util.Objects;
 import java.util.OptionalInt;
 
 /**
- * Pure R11A response for one selected MONITOR, ENEMY or HAZARD touch handler.
+ * Pure R11A response for one selected MONITOR, ENEMY, HAZARD or owned SPECIAL flag handler.
  * Source: scddisasm 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff,
- * Level/Palmtree Panic/Player Object Collision.asm:102-298 (Player_TouchMonitor, Player_TouchEnemy, .DamageEnemy,
- * .KillEnemy, Player_TouchHazard, HurtPlayer, KillPlayer), Level/_Objects/HUD and Points/Main.asm:157-180
+ * Level/Palmtree Panic/Player Object Collision.asm:102-395 (Player_TouchMonitor, Player_TouchEnemy, .DamageEnemy,
+ * .KillEnemy, Player_TouchHazard, HurtPlayer, KillPlayer and the seven Player_TouchSpecial flag branches),
+ * Level/_Objects/HUD and Points/Main.asm:157-180
  * (AddPoints), Level/Object Spawner.asm:329-340 (FindObjSlot) and Player_ResetOnFloor through
  * {@link CdPlayerMovement#resetOnFloor(CdPlayerMotionState, int)}. Shipped FixBugs=0 behavior.
  *
@@ -120,7 +121,11 @@ public final class CdPlayerTouchResponse {
         /** .GoingDown/.End2 (:118-125): nonnegative YVel, animation is not 2. */
         MONITOR_DOWNWARD_NO_WRITE(false),
         /** .GoingDown (:121-122): NEG.W then ADDQ.B #2 to object routine. */
-        MONITOR_DOWNWARD_BOUNCE(false);
+        MONITOR_DOWNWARD_BOUNCE(false),
+        /** Player_TouchSpecial .FlagCollision or rolling .CheckIfRoll (:383-395): one byte increment. */
+        SPECIAL_FLAG_INCREMENT(false),
+        /** .CheckIfRoll/.End4 (:389-395): animation is not 2; no writes. */
+        SPECIAL_ROLL_NO_WRITE(false);
 
         private final boolean explicitMinusOne;
         Exit(boolean explicitMinusOne) { this.explicitMinusOne = explicitMinusOne; }
@@ -174,6 +179,20 @@ public final class CdPlayerTouchResponse {
                 .view(CdR11aObjectAssets.Table.ENEMY_POINTS).bytes());
     }
 
+    /**
+     * Exact selected Player_TouchSpecial flag ownership (:302-322), including the $C0 group.
+     * Raw native byte only; $0B hazard, $0C MechaBlu, boss and .End3 paths remain unowned.
+     * This is handler admission, not an object-ID rule or an outer scan/movement gate.
+     */
+    public static boolean ownsSpecialFlagCollision(int rawCollisionTypeByte) {
+        byteValue(rawCollisionTypeByte);
+        if ((rawCollisionTypeByte & 0xC0) != 0xC0) return false;
+        return switch (rawCollisionTypeByte & 0x3F) {
+            case 0x1F, 0x17, 0x21, 0x23, 0x2F, 0x3A, 0x3B -> true;
+            default -> false;
+        };
+    }
+
     /** One selected handler call. The snapshot must be the scanner's own call-cut input. */
     public Result respond(CdPlayerObjectTouch.HandlerBoundary selected, Actor actor, PlayerGlobals player,
                           WorldGlobals world, CdObjectPool.Snapshot callCut) {
@@ -191,9 +210,32 @@ public final class CdPlayerTouchResponse {
             case ENEMY -> { requireGroup(group, 0); touchEnemy(c, a1); }
             case HAZARD -> { requireGroup(group, 0x80); touchHazard(c, a1); }
             case MONITOR -> { requireGroup(group, 0x40); touchMonitor(c, a1); }
-            default -> throw new IllegalArgumentException("Only ENEMY/HAZARD/MONITOR handlers are owned here: " + selected.kind());
+            case SPECIAL -> {
+                requireGroup(group, 0xC0);
+                if (!ownsSpecialFlagCollision(slot.unsignedByte(CdObjectState.ByteField.COLLISION_TYPE))) {
+                    throw new IllegalArgumentException("Unowned Player_TouchSpecial selector");
+                }
+                touchSpecialFlag(c, a1);
+            }
+            default -> throw new IllegalArgumentException("Only selected ENEMY/HAZARD/MONITOR and SPECIAL flag handlers are owned here: " + selected.kind());
         }
         return c.finish();
+    }
+
+    /**
+     * Player_TouchSpecial .FlagCollision/.CheckIfRoll (:383-395). Shipped FixBugs=0:
+     * only animation 2 gates the three roll selectors; hurt, invincibility, shield, time-warp
+     * and debug globals are not tested here. Both RTS paths leave d0 and all player/world values alone.
+     * respond has already rejected every unowned SPECIAL selector before this call.
+     */
+    private static void touchSpecialFlag(Cursor c, int a1) {
+        int selector = c.slot(a1).unsignedByte(CdObjectState.ByteField.COLLISION_TYPE) & 0x3F;
+        if ((selector == 0x2F || selector == 0x3A || selector == 0x3B) && c.anim != 2) {
+            c.exit = Exit.SPECIAL_ROLL_NO_WRITE;
+            return;
+        }
+        c.write(c.slot(a1).addByte(CdObjectState.ByteField.COLLISION_STATUS, 1));
+        c.exit = Exit.SPECIAL_FLAG_INCREMENT;
     }
 
     /**

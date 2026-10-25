@@ -2332,6 +2332,220 @@ class TestCdPlayerBody {
         assertEquals(before.slots(), pool.capture().slots());
     }
 
+
+    // SPECIAL flag composition: N 1ecc5f3a Player_TouchSpecial :302-322,383-395;
+    // Sonic/Main.asm :324-351,373-410. Reuses real fixture decoders; all new Java remains UNRUN.
+    @ParameterizedTest @ValueSource(ints = {0xDF, 0xD7, 0xE1, 0xE3, 0xEF, 0xFA, 0xFB})
+    void specialAllSevenSelectorsUseRealResponseOwnerWithoutChangingTheBodyCall(int type) {
+        Fixture f = new Fixture(); Actor a = new Actor(); f.rawHeld = f.rawTap = 0x10;
+        a.x = 0x00401234; a.y = 0x004CABCD; a.hurt = 91; a.invinc = 5; a.rotationDistance = 0xA5;
+        f.invincible = 0x80; f.slots = CdPlayerBody.DynamicSlots.UNIMPLEMENTED;
+        CdObjectPool pool = new CdObjectPool();
+        var selected = touchSlot(pool, 33, type, 64, 81).moveByte(CdObjectState.ByteField.ID, 0)
+                .moveByte(CdObjectState.ByteField.COLLISION_STATUS, 0xFF)
+                .moveWord(CdObjectState.WordField.X_FRACTION, 0x1357)
+                .moveWord(CdObjectState.WordField.Y_FRACTION, 0x2468)
+                .moveLong(CdObjectState.LongField.MAPPINGS, 0xC3D4A1B2);
+        pool.write(selected); var ring = touchSlot(pool, 34, 0x47, 64, 81); touchSlot(pool, 35, 0x40, 64, 81);
+        Contact contact = new Contact(); contact.timeWarp = 0xFF; contact.shield = 0x80; contact.combineRing = 0xA5;
+        contact.score = 4900;
+        var context = responseTouch(pool, contact); var before = pool.capture();
+        var owner = f.owner(); var input = a.state(); var env = f.environment();
+        var r = owner.step(input, env, Optional.of(context));
+        var control = owner.step(input, env, Optional.of(responseTouch(new CdObjectPool(), contact)));
+        var result = response(r);
+        assertEquals(CdPlayerTouchResponse.Exit.SPECIAL_FLAG_INCREMENT, result.exit());
+        byte[] bytes = selected.copyBytes(); bytes[0x21] = 0;
+        assertEquals(1, result.changedSlots().size()); assertArrayEquals(bytes, result.changedSlots().getFirst().copyBytes());
+        assertEquals(selected.identity(), result.changedSlots().getFirst().identity());
+        assertEquals(control.state(), r.state()); assertEquals(control.environment(), r.environment());
+        assertEquals(control.display(), r.display()); assertEquals(result.actor().motion(), r.state().motion());
+        assertEquals(2, result.actor().motion().animation()); assertEquals(90, result.actor().hurt());
+        assertEquals(0xA5, result.actor().rotationDistance());
+        assertEquals(new CdPlayerTouchResponse.PlayerGlobals(0xFF, 0x80, 0x80, 0xA5, 0, 0, 9, 0), result.player());
+        assertEquals(context.response().orElseThrow().world(), result.world());
+        assertEquals(context.response().orElseThrow().contact(), responseEffect(r).contact());
+        assertTrue(result.calls().isEmpty()); assertEquals(OptionalInt.empty(), result.d0()); assertTrue(bodySounds(r).isEmpty());
+        assertEquals(List.of(new CdPlayerBody.TouchScanCompleted(2)), touchVisits(r));
+        assertFalse(r.effects().stream().anyMatch(CdPlayerBody.ObjectTouchResult.class::isInstance));
+        assertTrue(indexCall(r, CdPlayerBody.NativeCall.DISPLAY) < indexCall(r, CdPlayerBody.NativeCall.RECORD_POSITION));
+        assertTrue(indexCall(r, CdPlayerBody.NativeCall.RECORD_POSITION) < indexCall(r, CdPlayerBody.NativeCall.ANIMATE));
+        assertTrue(indexCall(r, CdPlayerBody.NativeCall.ANIMATE) < indexOf(r, CdPlayerBody.ObjectTouchResponse.class));
+        assertTrue(indexOf(r, CdPlayerBody.ObjectTouchResponse.class) < indexOf(r, CdPlayerBody.TouchScanCompleted.class));
+        assertTrue(indexOf(r, CdPlayerBody.TouchScanCompleted.class) < indexCall(r, CdPlayerBody.NativeCall.SPECIAL_CHUNKS));
+        assertEquals(before.slots(), pool.capture().slots()); assertSame(selected, pool.state(33)); assertSame(ring, pool.state(34));
+        assertEquals(r, owner.step(input, env, Optional.of(context)));
+    }
+
+    @ParameterizedTest @ValueSource(ints = {0xEF, 0xFA, 0xFB})
+    void specialRollNoWriteStopsBeforeLaterRingAndInvalidSelector(int type) {
+        Fixture f = new Fixture(); Actor a = new Actor(); CdObjectPool pool = new CdObjectPool();
+        var selected = touchSlot(pool, 33, type, 64, 76).moveByte(CdObjectState.ByteField.COLLISION_STATUS, 0xFE);
+        pool.write(selected); var ring = touchSlot(pool, 34, 0x47, 64, 76); touchSlot(pool, 35, 0x40, 64, 76);
+        var context = responseTouch(pool, new Contact()); var before = pool.capture();
+        var r = f.owner().step(a.state(), f.environment(), Optional.of(context));
+        assertEquals(CdPlayerTouchResponse.Exit.SPECIAL_ROLL_NO_WRITE, response(r).exit());
+        assertNotEquals(2, response(r).actor().motion().animation());
+        assertTrue(response(r).changedSlots().isEmpty()); assertTrue(response(r).calls().isEmpty());
+        assertEquals(OptionalInt.empty(), response(r).d0());
+        assertEquals(List.of(new CdPlayerBody.TouchScanCompleted(2)), touchVisits(r));
+        assertFalse(r.effects().stream().anyMatch(CdPlayerBody.ObjectTouchResult.class::isInstance));
+        assertTrue(indexOf(r, CdPlayerBody.ObjectTouchResponse.class) < indexCall(r, CdPlayerBody.NativeCall.SPECIAL_CHUNKS));
+        assertEquals(before.slots(), pool.capture().slots()); assertSame(selected, pool.state(33)); assertSame(ring, pool.state(34));
+    }
+
+    // FD targets must name one of the fixture's actual sixty Ani_Sonic scripts; pure response tests cover all256 bytes.
+    @ParameterizedTest @CsvSource({"0,false", "1,false", "2,true", "3,false", "26,false", "42,false", "59,false"})
+    void specialRollReadsActualAnimatorAnimationWithoutUsingRollStatus(int animation, boolean writes) {
+        Fixture f = new Fixture(); Actor a = new Actor(); a.flags = 2; a.y = 200 << 16; a.anim = a.prev = 5;
+        a.cursor = new CdPlayerBody.AnimationCursor(1, 0, 4); f.wind = 1;
+        f.animationCommand = 0xFD; f.animationOperand = animation;
+        CdObjectPool pool = new CdObjectPool(); var selected = touchSlot(pool, 32, 0xEF, 64, 200)
+                .moveByte(CdObjectState.ByteField.COLLISION_STATUS, 0xFE); pool.write(selected);
+        var context = responseTouch(pool, new Contact()); var owner = f.owner();
+        var r = owner.step(a.state(), f.environment(), Optional.of(context)); var result = response(r);
+        assertEquals(animation, result.actor().motion().animation()); assertEquals(5, result.actor().motion().previousAnimation());
+        assertEquals(2, result.actor().motion().flags(), "roll status bit2 stays clear even for animation 2");
+        assertEquals(56, result.actor().motion().yVelocity(), "no response bounce or hurt");
+        assertEquals(writes ? CdPlayerTouchResponse.Exit.SPECIAL_FLAG_INCREMENT
+                : CdPlayerTouchResponse.Exit.SPECIAL_ROLL_NO_WRITE, result.exit());
+        if (writes) {
+            byte[] bytes = selected.copyBytes(); bytes[0x21] = (byte) 0xFF;
+            assertEquals(1, result.changedSlots().size()); assertArrayEquals(bytes, result.changedSlots().getFirst().copyBytes());
+        } else assertTrue(result.changedSlots().isEmpty());
+        assertTrue(result.calls().isEmpty()); assertEquals(OptionalInt.empty(), result.d0());
+        assertEquals(1, r.effects().stream().filter(CdPlayerBody.AnimationPublication.class::isInstance).count());
+        assertEquals(List.of(new CdPlayerBody.TouchScanCompleted(1)), touchVisits(r)); assertSame(selected, pool.state(32));
+    }
+
+    @ParameterizedTest @ValueSource(ints = {0xDF, 0xD7, 0xE1, 0xE3, 0xEF, 0xFA, 0xFB})
+    void specialOwnedSelectionsWithoutOwnerStillFailTyped(int type) {
+        Fixture f = new Fixture(); Actor a = new Actor(); a.flags = 2; a.y = 0x90 << 16; f.special[3] = 2;
+        CdObjectPool pool = new CdObjectPool(); var selected = touchSlot(pool, 33, type, 64, 0x90);
+        touchSlot(pool, 34, 0x47, 64, 0x90); var cut = pool.capture(); var input = a.state(); var env = f.environment();
+        var context = touchContext(pool);
+        assertTrue(context.response().isEmpty());
+        var failure = assertThrows(CdPlayerBody.UnsupportedTouchHandler.class,
+                () -> f.owner().step(input, env, Optional.of(context)));
+        assertEquals(CdPlayerObjectTouch.Kind.SPECIAL, failure.kind()); assertSame(selected, failure.selectedSlot());
+        assertEquals(cut.slots(), pool.capture().slots()); assertEquals(0, input.history().index());
+    }
+
+    @Test void specialUnownedSelectorsRemainTypedWithActualOwner() {
+        var owned = List.of(0xDF, 0xD7, 0xE1, 0xE3, 0xEF, 0xFA, 0xFB);
+        // Keep every width, including native half-width80, away from coordinate-word wrap.
+        for (int type = 0xC1; type <= 0xFF; type++) {
+            if (owned.contains(type)) continue;
+            Fixture f = new Fixture(); Actor a = new Actor(); a.x = 0x100 << 16; a.flags = 2; a.y = 0x90 << 16; f.special[3] = 2;
+            CdObjectPool pool = new CdObjectPool(); var selected = touchSlot(pool, 33, type, 0x100, 0x90);
+            touchSlot(pool, 34, 0x47, 0x100, 0x90); var cut = pool.capture();
+            var context = responseTouch(pool, new Contact()); var input = a.state(); var env = f.environment();
+            var failure = assertThrows(CdPlayerBody.UnsupportedTouchHandler.class,
+                    () -> f.owner().step(input, env, Optional.of(context)));
+            assertEquals(CdPlayerObjectTouch.Kind.SPECIAL, failure.kind()); assertSame(selected, failure.selectedSlot());
+            assertEquals(cut.slots(), pool.capture().slots()); assertEquals(0, input.history().index());
+        }
+    }
+
+    @ParameterizedTest @CsvSource({"0,0,0", "1,0,0", "120,0,119", "65535,0,65534", "120,210,120"})
+    void specialDisplayAndMainOrderRemainOutsideTheSelectedHandler(int entryHurt, int warpTimer, int postDisplayHurt) {
+        Fixture f = new Fixture(); Actor a = new Actor(); a.hurt = entryHurt; a.invinc = 5;
+        f.timeWarpTimer = warpTimer; f.invincible = 0x80; f.debugMode = 1; f.debugCheat = 0xFFFF;
+        CdObjectPool pool = new CdObjectPool(); var selected = touchSlot(pool, 32, 0xDF, 64, 76);
+        Contact contact = new Contact(); contact.timeWarp = contact.shield = 0xFF; contact.rings = 0;
+        var context = responseTouch(pool, contact); var owner = f.owner(); var input = a.state(); var env = f.environment();
+        var r = owner.step(input, env, Optional.of(context));
+        var control = owner.step(input, env, Optional.of(responseTouch(new CdObjectPool(), contact)));
+        assertEquals(CdPlayerTouchResponse.Exit.SPECIAL_FLAG_INCREMENT, response(r).exit());
+        assertEquals(postDisplayHurt, response(r).actor().hurt()); assertEquals(postDisplayHurt, r.state().timers().hurt());
+        assertEquals(4, r.state().timers().invincibility());
+        assertEquals(control.state(), r.state()); assertEquals(control.environment(), r.environment());
+        assertEquals(control.display(), r.display()); assertEquals(contact.context().world(), response(r).world());
+        assertEquals(contact.context().contact(), responseEffect(r).contact());
+        assertTrue(response(r).calls().isEmpty()); assertEquals(OptionalInt.empty(), response(r).d0());
+        byte[] bytes = selected.copyBytes(); bytes[0x21] = 1;
+        assertEquals(1, response(r).changedSlots().size()); assertArrayEquals(bytes, response(r).changedSlots().getFirst().copyBytes());
+        assertTrue(indexCall(r, CdPlayerBody.NativeCall.DISPLAY) < indexOf(r, CdPlayerBody.ObjectTouchResponse.class));
+        assertTrue(indexCall(r, CdPlayerBody.NativeCall.ANIMATE) < indexOf(r, CdPlayerBody.ObjectTouchResponse.class));
+        assertTrue(indexOf(r, CdPlayerBody.ObjectTouchResponse.class) < indexCall(r, CdPlayerBody.NativeCall.SPECIAL_CHUNKS));
+        assertSame(selected, pool.state(32));
+    }
+
+    @Test void specialNegativeControlAndGiveUpAnimationKeepOuterTouchGate() {
+        Fixture f = new Fixture(); Actor a = new Actor(); a.ctrl = 0x80; CdObjectPool pool = new CdObjectPool();
+        touchSlot(pool, 32, 0xDF, 64, 76); var context = responseTouch(pool, new Contact());
+        var negative = f.owner().step(a.state(), f.environment(), Optional.of(context));
+        assertTrue(touchVisits(negative).isEmpty());
+        assertFalse(negative.effects().stream().anyMatch(CdPlayerBody.ObjectTouchResponse.class::isInstance));
+        assertTrue(calls(negative).contains(CdPlayerBody.NativeCall.SPECIAL_CHUNKS));
+        a.ctrl = 0; a.flags = 2; a.y = 200 << 16; a.anim = a.prev = 5;
+        a.cursor = new CdPlayerBody.AnimationCursor(1, 0, 4); f.wind = 1;
+        f.animationCommand = 0xFD; f.animationOperand = 0x2B;
+        touchSlot(pool, 32, 0xDF, 64, 200); var before = pool.capture();
+        var giveUp = f.owner().step(a.state(), f.environment(), Optional.of(responseTouch(pool, new Contact())));
+        assertEquals(0x2B, giveUp.state().motion().animation()); assertTrue(touchVisits(giveUp).isEmpty());
+        assertFalse(giveUp.effects().stream().anyMatch(CdPlayerBody.ObjectTouchResponse.class::isInstance));
+        assertTrue(calls(giveUp).contains(CdPlayerBody.NativeCall.SPECIAL_CHUNKS));
+        assertEquals(before.slots(), pool.capture().slots());
+    }
+
+    @Test void specialMovementTimeWarpGateStillPrecedesSelectedHandler() {
+        Fixture f = new Fixture(); Actor a = new Actor(); f.warpDir = 1; CdObjectPool pool = new CdObjectPool();
+        touchSlot(pool, 32, 0xDF, 64, 76); var cut = pool.capture(); var context = responseTouch(pool, new Contact());
+        var failure = assertThrows(CdPlayerMovement.UnsupportedMotion.class,
+                () -> f.owner().step(a.state(), f.environment(), Optional.of(context)));
+        assertEquals(CdPlayerMovement.UnsupportedBoundary.TIME_WARP_ACTIVE, failure.boundary());
+        assertEquals(cut.slots(), pool.capture().slots());
+    }
+
+    @Test void specialLateChunksFailurePublishesNoSlotStatusOrEarlierDisplaySounds() {
+        Fixture f = new Fixture(); Actor a = new Actor(); a.flags = 2; a.y = 0x90 << 16;
+        a.invinc = 1; f.invincible = 1;
+        CdObjectPool pool = new CdObjectPool(); touchSlot(pool, 33, 0xDF, 64, 0x90);
+        var context = responseTouch(pool, new Contact()); var before = pool.capture();
+        var input = a.state(); var env = f.environment(); var safe = f.owner();
+        var control = safe.step(input, env, Optional.of(context));
+        assertEquals(CdPlayerTouchResponse.Exit.SPECIAL_FLAG_INCREMENT, response(control).exit());
+        assertEquals(1, response(control).changedSlots().size());
+        assertEquals(List.of(new CdPlayerBody.SoundRequest(CdPlayerBody.Sound.SCMD_R1AMUS)), bodySounds(control));
+        f.special[3] = 2; var failing = f.owner(); List<CdPlayerBody.Result> publications = new ArrayList<>();
+        for (int attempt = 0; attempt < 2; attempt++) {
+            var failure = assertThrows(CdPlayerBody.UnsupportedBody.class,
+                    () -> publications.add(failing.step(input, env, Optional.of(context))));
+            assertEquals(CdPlayerBody.UnsupportedBoundary.ROLL_TUNNEL_OWNER, failure.boundary());
+        }
+        assertTrue(publications.isEmpty()); assertEquals(before.slots(), pool.capture().slots());
+        assertEquals(1, input.timers().invincibility()); assertEquals(1, env.globals().invincible());
+        assertEquals(0, input.history().index()); assertEquals(0, input.animation().mapFrame());
+        assertEquals(control, safe.step(input, env, Optional.of(context)));
+    }
+
+    @Test void specialSavedCutReplaysAfterLiveMutationAndRestore() {
+        Fixture f = new Fixture(); Actor a = new Actor(); CdObjectPool pool = new CdObjectPool();
+        touchSlot(pool, 33, 0xDF, 64, 76); var context = responseTouch(pool, new Contact());
+        var input = a.state(); var env = f.environment(); var owner = f.owner(); var saved = context.snapshot();
+        var first = owner.step(input, env, Optional.of(context));
+        pool.write(pool.state(33).moveByte(CdObjectState.ByteField.COLLISION_TYPE, 0xCB));
+        assertEquals(first, owner.step(input, env, Optional.of(context)));
+        var fresh = responseTouch(pool, new Contact());
+        assertEquals(CdPlayerObjectTouch.Kind.SPECIAL, assertThrows(CdPlayerBody.UnsupportedTouchHandler.class,
+                () -> owner.step(input, env, Optional.of(fresh))).kind());
+        pool.restore(saved);
+        assertEquals(first, owner.step(input, env, Optional.of(responseTouch(pool, new Contact()))));
+        assertEquals(saved.slots(), pool.capture().slots());
+        assertEquals(0, pool.state(33).unsignedByte(CdObjectState.ByteField.COLLISION_STATUS));
+        assertEquals(0, input.history().index()); assertEquals(0, input.animation().mapFrame());
+    }
+
+    @Test void specialHandlerContextsAndResultsKeepTheirExistingShapes() {
+        assertEquals(3, CdPlayerBody.ResponseContext.class.getRecordComponents().length);
+        assertEquals(3, CdPlayerBody.TouchContext.class.getRecordComponents().length);
+        assertEquals(5, CdPlayerTouchResponse.Actor.class.getRecordComponents().length);
+        assertEquals(8, CdPlayerTouchResponse.PlayerGlobals.class.getRecordComponents().length);
+        assertEquals(6, CdPlayerTouchResponse.WorldGlobals.class.getRecordComponents().length);
+        assertEquals(7, CdPlayerTouchResponse.Result.class.getRecordComponents().length);
+    }
+
     private static Actor supportActor() {
         Actor a = new Actor(); a.x = 0x05B00000; a.y = 0x01ED0000; a.flags = 8;
         a.objectLinks = new CdPlayerBody.ObjectLinks(127, 32); return a;

@@ -45,9 +45,10 @@ import static com.openggf.game.soniccd.objects.CdObjectState.WordField.*;
  * The 36-tile powerup window starts cold zero and changes only at the selector-8 LoadShieldArt cut.
  * The initial Ring, contact, score and level globals are caller-declared DEV ingress, never an entry proof.
  * Live dynamic IDs $10 Ring, $11 LostRing, $3D Mosqui, $24 Animal, $2C 3D plant and $2A 3D ramp,
- * aftermath IDs $18/$1C/$1F, $12 Floating Block, normal $0A Spring, $34 Spin tunnel tag, $35 vertical Tunnel Door, $19 Monitor/$1A shoes item and the death row's $3B Game/Time Over are owned.
+ * aftermath IDs $18/$1C/$1F, $12 Floating Block, normal $0A Spring, $34 Spin tunnel tag, $35 vertical Tunnel Door, $19 Monitor/Time Post and $1A shoes item and the death row's $3B Game/Time Over are owned.
  * Every other ID fails at its live dispatch; standing-object MODE remains a typed player boundary.
- * This does not execute native title/HUD/PLC/section-art/audio/plane publication.
+ * Time Post activation submits only typed voice metadata; the next actual Main retains Movement's
+ * TIME_WARP_ACTIVE boundary. This does not execute native title/HUD/PLC/section-art/audio/plane publication.
  * The loader, not declarations or this composition, authenticates asset bytes.</p>
  *
  * <p>Root prepares input on the exact bound Frame before service, owns the
@@ -171,7 +172,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     }
 
     /** Ordered requests only, no playback and no claim to the omitted service/music ledger. */
-    public sealed interface SoundRequest permits PlayerSound, RingFm, RingSubCpu, MosquiFm, LostRingFm, GameOverSubCpu, SpringFm, TunnelDoorVerticalFm, MonitorFm, MonitorItemSubCpu { }
+    public sealed interface SoundRequest permits PlayerSound, RingFm, RingSubCpu, MosquiFm, LostRingFm, GameOverSubCpu, SpringFm, TunnelDoorVerticalFm, MonitorFm, MonitorItemSubCpu, TimePostSubCpu { }
     public record PlayerSound(CdPlayerFrameRuntime.Sound sound) implements SoundRequest {
         public PlayerSound { Objects.requireNonNull(sound, "player sound"); }
     }
@@ -202,6 +203,10 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     /** Commands completed after the one native five-store shoes patch; no playback or powerup/art request. */
     public record MonitorItemSubCpu(CdPlayerSpeedShoesReward.SubCpuCommand command) implements SoundRequest {
         public MonitorItemSubCpu { Objects.requireNonNull(command, "Monitor item sub-CPU command"); }
+    }
+    /** Time Post's synchronous SubCPUCmd cut, before wrapper DrawObject/despawn; typed request only, no playback. */
+    public record TimePostSubCpu(CdTimePost.SubCpuCommand command) implements SoundRequest {
+        public TimePostSubCpu { Objects.requireNonNull(command, "Time Post sub-CPU command"); }
     }
     /** ObjGameOver's SubCPUCmd requests (Game Over/Main.asm:28-29,87-88); no handshake, PCM fade or music. */
     public record GameOverSubCpu(CdGameOver.SubCpuCommand command) implements SoundRequest {
@@ -283,6 +288,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     private final CdTunnelDoorVertical tunnelDoorVertical;
     private final CdSpinTunnelTag spinTunnelTag;
     private final CdMonitor monitor;
+    private final CdTimePost timePost;
     private final CdMonitorItem monitorItem;
     private final CdPowerupArtRuntime powerupArt;
     private final CdObjectDrawQueue queue;
@@ -322,6 +328,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     private boolean inMonitorAngle;
     private boolean inMonitorFm;
     private boolean inMonitorAward;
+    private boolean inTimePostDirection;
+    private boolean inTimePostSubCpu;
     private int dispatchWholeIndex = -1;
 
     /**
@@ -497,6 +505,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         monitor = new CdMonitor(placement, monitorAssets, solid, new CdPlayerTerrain(assets.terrain()),
                 this::commitMonitorSolid, this::commitMonitorPrimaryAngle,
                 (pool, slot) -> drawDynamic(pool, slot.wholeIndex()), this::playMonitorFm);
+        timePost = new CdTimePost(placement, monitorAssets, this::commitTimePostDirection, this::requestTimePostSubCpu,
+                (pool, slot) -> drawDynamic(pool, slot.wholeIndex()));
         monitorItem = new CdMonitorItem(placement, monitorAssets, this::awardMonitorItem,
                 (pool, slot) -> drawDynamic(pool, slot.wholeIndex()));
     }
@@ -918,7 +928,9 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                         // CallReturned/Despawn describe already applied work; never replay them.
                     }
                 } else if (id == CdMonitor.OBJECT_ID) {
-                    runMonitor(whole); // Current S3/global inputs after every earlier live physical owner.
+                    // ObjMonitor:279-280 selects from the ACTUAL live subtype at this physical visit.
+                    if (placement.pool().state(whole).subtype() < 8) runMonitor(whole);
+                    else runTimePost(whole);
                 } else if (id == CdMonitorItem.OBJECT_ID) {
                     var primary = frame.state();
                     monitorItem.run(whole, Optional.of(new CdMonitorItem.PrimarySupport(
@@ -1091,7 +1103,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     private void runSpinTunnelTag(int whole) {
         checkActive(Phase.DYNAMIC_SLOTS);
         if (inDrawCallback || inSolidCommit || inSpringLaunch || inSpinTunnelCommit || inTunnelDoorFm
-                || inMonitorAngle || inMonitorFm || inMonitorAward || whole != dispatchWholeIndex) {
+                || inMonitorAngle || inMonitorFm || inMonitorAward
+                || inTimePostDirection || inTimePostSubCpu || whole != dispatchWholeIndex) {
             throw new IllegalStateException("Spin tunnel tag requires the current synchronous physical dispatch");
         }
         var pool = placement.pool();
@@ -1127,7 +1140,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     private void commitSpinTunnelTag(CdObjectPool.Snapshot cut, CdSpinTunnelTag.Result result) {
         checkActive(Phase.DYNAMIC_SLOTS);
         if (inDrawCallback || inSolidCommit || inSpringLaunch || inSpinTunnelCommit || inTunnelDoorFm
-                || inMonitorAngle || inMonitorFm || inMonitorAward) {
+                || inMonitorAngle || inMonitorFm || inMonitorAward
+                || inTimePostDirection || inTimePostSubCpu) {
             throw new IllegalStateException("Spin tunnel tag commit must be synchronous and non-reentrant");
         }
         inSpinTunnelCommit = true;
@@ -1168,6 +1182,80 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     }
 
     /**
+     * ObjTimePostTimeIcon/ObjTimePost (Monitor and Time Post/Main.asm:64-173), native pin
+     * 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff. Borrow the actual current Movement bytes,
+     * time-attack byte, zone high byte and PRE-scroll camera. MMZ's global layer has no owner:
+     * only the body decides whether its read is reached, after clearing nonzero contact.
+     * No Monitor early layer guard, guessed layer zero, second store or completed-effect replay.
+     */
+    private void runTimePost(int whole) {
+        requireTimePostDispatch(placement.pool().state(whole).identity());
+        var environment = frame.environment(); var gates = environment.movement().gates();
+        timePost.run(whole, new CdTimePost.Globals(gates.timeZone(), gates.timeWarpDirection(), preScrollForeground.xWord(),
+                environment.globals().timeAttackMode(), gates.zoneAct() >>> 8, OptionalInt.empty()));
+        // Direction and voice callbacks already completed synchronously. In particular, NEVER forward
+        // the returned SubCpuRequest again. The body has also completed wrapper DrawObject/despawn.
+    }
+
+    /** Identity carries an index, not an owner token: validate the actual image in this ONE bound pool. */
+    private CdObjectState requireTimePostDispatch(CdObjectState.Identity identity) {
+        checkActive(Phase.DYNAMIC_SLOTS);
+        Objects.requireNonNull(identity, "Time Post physical identity");
+        if (identity.wholeIndex() != dispatchWholeIndex) {
+            throw new IllegalStateException("Time Post callback must belong to the current physical dispatch");
+        }
+        var pool = placement.pool(); var live = pool.state(dispatchWholeIndex);
+        pool.validateWrite(live);
+        if (live.id() != CdTimePost.OBJECT_ID || live.subtype() < 8 || !live.identity().equals(identity)) {
+            throw new IllegalStateException("Time Post callback requires the actual bound live ID $19 post image");
+        }
+        return live;
+    }
+
+    private void requireTimePostCallbackCut() {
+        checkActive(Phase.DYNAMIC_SLOTS);
+        if (inDrawCallback || inSolidCommit || inSpringLaunch || inSpinTunnelCommit || inTunnelDoorFm
+                || inMonitorAngle || inMonitorFm || inMonitorAward || inTimePostDirection || inTimePostSubCpu) {
+            throw new IllegalStateException("Time Post callbacks must be synchronous and non-reentrant");
+        }
+    }
+
+    /** ObjTimePost_Main:156-166 has already published spin60/routine4/contact0 and its saved BSET. */
+    private void commitTimePostDirection(CdTimePost.DirectionCall call) {
+        requireTimePostCallbackCut(); inTimePostDirection = true;
+        try {
+            Objects.requireNonNull(call, "Time Post direction call");
+            var live = requireTimePostDispatch(call.identity());
+            if (live.routine() != 4 || live.unsignedByte(TIME_POST_SPIN) != 60 || live.unsignedByte(COLLISION_STATUS) != 0
+                    || (call.rawDirection() != 0xFF && (live.subtype() == 8 || call.rawDirection() != 1
+                    || call.expectedRawDirection() != 0xFF))) {
+                throw new IllegalStateException("Time Post direction requires its actual activation prefix and native store");
+            }
+            // Preflight the ACTUAL existing gate, then apply ONE byte store, including FF -> FF.
+            // Future's second call expects the already committed FF, never the entry direction.
+            frame.validateObjectTimePostDirection(call.expectedRawDirection(), call.rawDirection());
+            frame.applyObjectTimePostDirection(call.expectedRawDirection(), call.rawDirection());
+            checkActive(Phase.DYNAMIC_SLOTS);
+        } finally { inTimePostDirection = false; }
+    }
+
+    /** ObjTimePost_Main.PlaySound:169-170; mandatory before wrapper DrawObject:81 / despawn:82. */
+    private void requestTimePostSubCpu(CdTimePost.SubCpuCommand command) {
+        requireTimePostCallbackCut(); inTimePostSubCpu = true;
+        try {
+            var live = requireTimePostDispatch(placement.pool().state(dispatchWholeIndex).identity());
+            boolean past = live.subtype() == 8;
+            var expected = past ? CdTimePost.SubCpuCommand.SCMD_PASTSFX : CdTimePost.SubCpuCommand.SCMD_FUTURESFX;
+            if (live.routine() != 4 || live.unsignedByte(TIME_POST_SPIN) != 60 || live.unsignedByte(COLLISION_STATUS) != 0
+                    || command != expected || frame.environment().movement().gates().timeWarpDirection() != (past ? 0xFF : 1)) {
+                throw new IllegalStateException("Time Post voice requires its live activation prefix and completed direction stores");
+            }
+            appendSound(new TimePostSubCpu(command));
+            checkActive(Phase.DYNAMIC_SLOTS);
+        } finally { inTimePostSubCpu = false; }
+    }
+
+    /**
      * ObjMonitor's exact current source cut. Authenticated assets remain USA R11A; another zone byte
      * is not admission to that zone's source/world. Zone6 explicitly needs an unowned global layer.
      * For every other byte the body short-circuits BEFORE that global read. Its mandatory layer
@@ -1193,7 +1281,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         }
         var pool = placement.pool(); var live = pool.state(dispatchWholeIndex);
         pool.validateWrite(live);
-        if (live.id() != CdMonitor.OBJECT_ID || !live.identity().equals(identity)) {
+        if (live.id() != CdMonitor.OBJECT_ID || live.subtype() >= 8 || !live.identity().equals(identity)) {
             throw new IllegalStateException("Monitor callback requires the actual bound live ID $19 image");
         }
         return live;
@@ -1202,7 +1290,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     private void requireMonitorCallbackCut() {
         checkActive(Phase.DYNAMIC_SLOTS);
         if (inDrawCallback || inSolidCommit || inSpringLaunch || inSpinTunnelCommit || inTunnelDoorFm
-                || inMonitorAngle || inMonitorFm || inMonitorAward) {
+                || inMonitorAngle || inMonitorFm || inMonitorAward
+                || inTimePostDirection || inTimePostSubCpu) {
             throw new IllegalStateException("Monitor callbacks must be synchronous and non-reentrant");
         }
     }
@@ -1329,7 +1418,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     private void commitTunnelDoorVerticalSolid(CdTunnelDoorVertical.SolidCall call) {
         checkActive(Phase.DYNAMIC_SLOTS);
         if (inDrawCallback || inSolidCommit || inSpringLaunch || inSpinTunnelCommit || inTunnelDoorFm
-                || inMonitorAngle || inMonitorFm || inMonitorAward) {
+                || inMonitorAngle || inMonitorFm || inMonitorAward
+                || inTimePostDirection || inTimePostSubCpu) {
             throw new IllegalStateException("DoorV Solid commit must be synchronous and non-reentrant");
         }
         inSolidCommit = true;
@@ -1366,7 +1456,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     private void playTunnelDoorVerticalFm(CdTunnelDoorVertical.FmSound sound) {
         checkActive(Phase.DYNAMIC_SLOTS);
         if (inDrawCallback || inSolidCommit || inSpringLaunch || inSpinTunnelCommit || inTunnelDoorFm
-                || inMonitorAngle || inMonitorFm || inMonitorAward) {
+                || inMonitorAngle || inMonitorFm || inMonitorAward
+                || inTimePostDirection || inTimePostSubCpu) {
             throw new IllegalStateException("DoorV FM call must follow its completed range prefix synchronously");
         }
         inTunnelDoorFm = true;
@@ -1404,7 +1495,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     private void commitSpringSolid(CdSpring.SolidCall call) {
         checkActive(Phase.DYNAMIC_SLOTS);
         if (inDrawCallback || inSolidCommit || inSpringLaunch || inSpinTunnelCommit || inTunnelDoorFm
-                || inMonitorAngle || inMonitorFm || inMonitorAward) {
+                || inMonitorAngle || inMonitorFm || inMonitorAward
+                || inTimePostDirection || inTimePostSubCpu) {
             throw new IllegalStateException("Spring Solid commit must be synchronous and non-reentrant");
         }
         inSolidCommit = true;
@@ -1441,7 +1533,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     private void commitSpringLaunch(CdSpring.LaunchCall call) {
         checkActive(Phase.DYNAMIC_SLOTS);
         if (inDrawCallback || inSolidCommit || inSpringLaunch || inSpinTunnelCommit || inTunnelDoorFm
-                || inMonitorAngle || inMonitorFm || inMonitorAward) {
+                || inMonitorAngle || inMonitorFm || inMonitorAward
+                || inTimePostDirection || inTimePostSubCpu) {
             throw new IllegalStateException("Spring launch must be synchronous and non-reentrant");
         }
         inSpringLaunch = true;
@@ -1461,7 +1554,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     private void playSpringFm(CdSpring.FmSound sound) {
         checkActive(Phase.DYNAMIC_SLOTS);
         if (inDrawCallback || inSolidCommit || inSpringLaunch || inSpinTunnelCommit || inTunnelDoorFm
-                || inMonitorAngle || inMonitorFm || inMonitorAward) {
+                || inMonitorAngle || inMonitorFm || inMonitorAward
+                || inTimePostDirection || inTimePostSubCpu) {
             throw new IllegalStateException("Spring FM call must follow its completed launch synchronously");
         }
         requireSpringDispatch(placement.pool().state(dispatchWholeIndex).identity());
@@ -1477,7 +1571,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     private void commitTopSolid(CdFloatBlock.TopSolidCall call) {
         checkActive(Phase.DYNAMIC_SLOTS);
         if (inDrawCallback || inSolidCommit || inSpringLaunch || inSpinTunnelCommit || inTunnelDoorFm
-                || inMonitorAngle || inMonitorFm || inMonitorAward) {
+                || inMonitorAngle || inMonitorFm || inMonitorAward
+                || inTimePostDirection || inTimePostSubCpu) {
             throw new IllegalStateException("TopSolid commit must be synchronous and non-reentrant");
         }
         inSolidCommit = true;
@@ -1509,6 +1604,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         checkActive(Phase.DYNAMIC_SLOTS);
         if (inDrawCallback || inSolidCommit || inSpringLaunch || inSpinTunnelCommit || inTunnelDoorFm
                 || inMonitorAngle || inMonitorFm || inMonitorAward
+                || inTimePostDirection || inTimePostSubCpu
                 || pool != placement.pool() || whole != dispatchWholeIndex) {
             throw new IllegalStateException("DrawObject must synchronously use the current bound physical dispatch");
         }

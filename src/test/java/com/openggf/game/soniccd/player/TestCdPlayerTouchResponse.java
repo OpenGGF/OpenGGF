@@ -711,6 +711,233 @@ class TestCdPlayerTouchResponse {
         }
     }
 
+
+    // SPECIAL flag slice: literal expectations from N 1ecc5f3a, Player_TouchSpecial :302-322,
+    // .FlagCollision :383-385 and .CheckIfRoll :389-395. Tests frozen before production; JAVA UNRUN.
+    @Test void specialOwnershipPredicateNamesExactlySevenNativeBytes() {
+        var nativeTypes = List.of(0xDF, 0xD7, 0xE1, 0xE3, 0xEF, 0xFA, 0xFB);
+        for (int raw = 0; raw <= 0xFF; raw++) {
+            assertEquals(nativeTypes.contains(raw), CdPlayerTouchResponse.ownsSpecialFlagCollision(raw),
+                    "raw oColType " + raw);
+        }
+        for (int invalid : new int[]{-1, 256, 0x1DF, Integer.MIN_VALUE, Integer.MAX_VALUE}) {
+            assertThrows(IllegalArgumentException.class,
+                    () -> CdPlayerTouchResponse.ownsSpecialFlagCollision(invalid));
+        }
+    }
+
+    @ParameterizedTest @CsvSource({"223", "215", "225", "227", "239", "250", "251"})
+    void specialFlagSelectorsIncrementOnlyStatusWithByteWrap(int type) {
+        for (int[] vector : new int[][]{{0, 1}, {0xFE, 0xFF}, {0xFF, 0}}) {
+            var w = specialWorld(type, vector[0], 0x19); var p = new Player(); p.anim = 2;
+            var cut = w.pool.capture(); var selected = selectSpecial(cut);
+            var r = response().respond(selected, p.actor(), w.playerGlobals(), w.worldGlobals(), cut);
+            assertSpecialOnlyStatus(w, p, cut, r, vector[1]);
+            assertEquals(Exit.SPECIAL_FLAG_INCREMENT, r.exit());
+            assertSame(cut.slots().get(8), selected.selectedSlot().orElseThrow());
+        }
+    }
+
+    @ParameterizedTest @CsvSource({"239", "250", "251"})
+    void specialRollSelectorsTestEveryAnimationByteRatherThanRollingStatus(int type) {
+        for (int animation = 0; animation <= 0xFF; animation++) {
+            var w = specialWorld(type, 0xFF, 0x19); var p = new Player();
+            p.anim = animation; p.flags = animation == 2 ? 0 : 4;
+            var cut = w.pool.capture(); var r = response().respond(selectSpecial(cut), p.actor(),
+                    w.playerGlobals(), w.worldGlobals(), cut);
+            assertSpecialUnchangedValues(w, p, cut, r);
+            if (animation == 2) {
+                assertSpecialOnlyStatus(w, p, cut, r, 0);
+                assertEquals(Exit.SPECIAL_FLAG_INCREMENT, r.exit());
+            } else {
+                assertTrue(r.changedSlots().isEmpty(), "non-roll animation " + animation);
+                assertEquals(Exit.SPECIAL_ROLL_NO_WRITE, r.exit());
+            }
+        }
+    }
+
+    @ParameterizedTest @CsvSource({"223", "215", "225", "227"})
+    void specialDirectFlagSelectorsIgnoreAnimation(int type) {
+        for (int animation : new int[]{0, 1, 2, 3, 0x1A, 0x2B, 0xFF}) {
+            var w = specialWorld(type, 0xFE, 0x19); var p = new Player(); p.anim = animation;
+            var cut = w.pool.capture(); var r = response().respond(selectSpecial(cut), p.actor(),
+                    w.playerGlobals(), w.worldGlobals(), cut);
+            assertSpecialOnlyStatus(w, p, cut, r, 0xFF);
+            assertEquals(Exit.SPECIAL_FLAG_INCREMENT, r.exit());
+        }
+    }
+
+    @ParameterizedTest @CsvSource({"223", "215", "225", "227", "239", "250", "251"})
+    void specialFlagHandlersHaveNoInnerHurtOrGlobalGate(int type) {
+        // hurt, invincible, shield, timeWarp, debugCheat, debugMode, miniSonic: one at a time, then all.
+        for (int[] gates : new int[][]{{0,0,0,0,0,0,0}, {0xFFFF,0,0,0,0,0,0},
+                {0,0xFF,0,0,0,0,0}, {0,0,0x80,0,0,0,0}, {0,0,0,0xFF,0,0,0},
+                {0,0,0,0,0xFFFF,0,0}, {0,0,0,0,0,0x8000,0}, {0,0,0,0,0,0,1},
+                {0xFFFF,0xFF,0xFF,0xFF,0xFFFF,0xFFFF,1}}) {
+            var w = specialWorld(type, 0, 0x19); var p = new Player(); p.anim = 2;
+            p.hurt = gates[0]; w.invincible = gates[1]; w.shield = gates[2]; w.timeWarp = gates[3];
+            w.debugCheat = gates[4]; w.debugMode = gates[5]; w.mini = gates[6];
+            p.flags = 0x74; p.ctrl = 0xFF; p.routine = 6;
+            w.rings = 0; w.scoreChain = 0xFFFF; w.score = -1; w.next = 0; w.hudLives = 0xA5;
+            var cut = w.pool.capture(); var r = response().respond(selectSpecial(cut), p.actor(),
+                    w.playerGlobals(), w.worldGlobals(), cut);
+            assertSpecialOnlyStatus(w, p, cut, r, 1);
+            assertEquals(Exit.SPECIAL_FLAG_INCREMENT, r.exit());
+        }
+    }
+
+    @ParameterizedTest @CsvSource({"223", "215", "225", "227", "239", "250", "251"})
+    void specialDirtyIdZeroSelectionIsNotAnAllocationOrIdException(int type) {
+        var w = specialWorld(type, 0xFE, 0); var p = new Player(); p.anim = 2;
+        var cut = w.pool.capture(); var selected = selectSpecial(cut);
+        assertEquals(40, selected.selectedSlot().orElseThrow().identity().wholeIndex());
+        assertEquals(0, selected.selectedSlot().orElseThrow().id());
+        var r = response().respond(selected, p.actor(), w.playerGlobals(), w.worldGlobals(), cut);
+        assertSpecialOnlyStatus(w, p, cut, r, 0xFF);
+        assertEquals(0, r.changedSlots().getFirst().id());
+        assertEquals(0, cut.slots().getFirst().id(), "earlier free whole 32 is not allocated");
+        assertSame(cut.slots().getFirst(), w.pool.state(32));
+    }
+
+    @ParameterizedTest @CsvSource({"0", "2"})
+    void specialSelectionRequiresSamePoolAndExactImageEvenForRollNoWrite(int animation) {
+        var w = specialWorld(0xEF, 0xFE, 0x19); var p = new Player(); p.anim = animation;
+        var owner = response(); var cut = w.pool.capture(); var selected = selectSpecial(cut);
+        var samePool = w.pool.capture(); assertNotSame(cut, samePool);
+        var first = owner.respond(selected, p.actor(), w.playerGlobals(), w.worldGlobals(), cut);
+        assertEquals(first, owner.respond(selected, p.actor(), w.playerGlobals(), w.worldGlobals(), samePool));
+        w.pool.write(w.pool.state(40).moveByte(ByteField.MAP_FRAME, 0x7F));
+        var stale = w.pool.capture();
+        assertThrows(IllegalArgumentException.class,
+                () -> owner.respond(selected, p.actor(), w.playerGlobals(), w.worldGlobals(), stale));
+        var foreign = specialWorld(0xEF, 0xFE, 0x19).pool.capture();
+        assertArrayEquals(cut.slots().get(8).copyBytes(), foreign.slots().get(8).copyBytes());
+        assertEquals(cut.slots().get(8).identity(), foreign.slots().get(8).identity());
+        assertThrows(IllegalArgumentException.class,
+                () -> owner.respond(selected, p.actor(), w.playerGlobals(), w.worldGlobals(), foreign));
+        assertEquals(first, owner.respond(selected, p.actor(), w.playerGlobals(), w.worldGlobals(), cut));
+        assertEquals(stale.slots(), w.pool.capture().slots());
+    }
+
+    @Test void specialUnownedSelectorsStillRejectRatherThanReturnNoWrite() {
+        var owned = List.of(0xDF, 0xD7, 0xE1, 0xE3, 0xEF, 0xFA, 0xFB);
+        for (int type = 0xC1; type <= 0xFF; type++) {
+            if (owned.contains(type)) continue;
+            // Includes $CB hazard, $CC MechaBlu, $FC..$FF bosses and native .End3 selectors.
+            var w = specialWorld(type, 0xFE, 0x19); var p = new Player(); p.anim = 2;
+            var cut = w.pool.capture(); var selected = selectSpecial(cut);
+            assertThrows(IllegalArgumentException.class,
+                    () -> response().respond(selected, p.actor(), w.playerGlobals(), w.worldGlobals(), cut));
+            assertEquals(cut.slots(), w.pool.capture().slots());
+            assertEquals(0xFE, cut.slots().get(8).unsignedByte(ByteField.COLLISION_STATUS));
+        }
+    }
+
+    @Test void specialKindRejectsWrongCollisionGroupsBeforeAnyWrites() throws ReflectiveOperationException {
+        // Only an adversarial boundary is constructed; real pool images and pure format owners remain real.
+        // The scanner's private constructor keeps malformed kinds out of ordinary callers.
+        var constructor = CdPlayerObjectTouch.HandlerBoundary.class.getDeclaredConstructor(
+                CdPlayerObjectTouch.Kind.class, CdObjectState.class);
+        constructor.setAccessible(true);
+        for (int low : new int[]{0x1F, 0x17, 0x21, 0x23, 0x2F, 0x3A, 0x3B}) {
+            for (int group : new int[]{0, 0x40, 0x80}) {
+                var w = specialWorld(group | low, 0xFE, 0x19); var p = new Player(); p.anim = 2;
+                var cut = w.pool.capture();
+                var malformed = constructor.newInstance(CdPlayerObjectTouch.Kind.SPECIAL, cut.slots().get(8));
+                assertThrows(IllegalArgumentException.class,
+                        () -> response().respond(malformed, p.actor(), w.playerGlobals(), w.worldGlobals(), cut));
+                assertEquals(cut.slots(), w.pool.capture().slots());
+            }
+        }
+    }
+
+    @ParameterizedTest @CsvSource({"0", "2"})
+    void specialFirstOverlapEndsTheScanEvenWhenRollDoesNotWrite(int animation) {
+        var w = new World(); var p = new Player(); p.anim = animation;
+        w.place(32, 0x19, 0xEF, p.x, p.y); w.place(33, 0x10, 0x47, p.x, p.y);
+        w.place(34, 0x19, 0x40, p.x, p.y); // Invalid dimensions must never be consulted after overlap 32.
+        var cut = w.pool.capture(); var selected = select(p, cut);
+        assertEquals(CdPlayerObjectTouch.Kind.SPECIAL, selected.kind());
+        assertSame(cut.slots().getFirst(), selected.selectedSlot().orElseThrow());
+        var r = response().respond(selected, p.actor(), w.playerGlobals(), w.worldGlobals(), cut);
+        assertSpecialUnchangedValues(w, p, cut, r);
+        assertEquals(animation == 2 ? Exit.SPECIAL_FLAG_INCREMENT : Exit.SPECIAL_ROLL_NO_WRITE, r.exit());
+        if (animation == 2) {
+            byte[] bytes = cut.slots().getFirst().copyBytes(); bytes[0x21] = 1;
+            assertEquals(1, r.changedSlots().size()); assertArrayEquals(bytes, r.changedSlots().getFirst().copyBytes());
+            assertEquals(32, r.changedSlots().getFirst().identity().wholeIndex());
+        } else assertTrue(r.changedSlots().isEmpty());
+        assertEquals(2, cut.slots().get(1).routine(), "later ring is not collected");
+    }
+
+    @Test void specialResultAndSavedCallCutRemainImmutableAcrossLiveMutationAndRestore() {
+        var w = specialWorld(0xDF, 0xFF, 0x19); var p = new Player();
+        var cut = w.pool.capture(); var selected = selectSpecial(cut); var owner = response();
+        var first = owner.respond(selected, p.actor(), w.playerGlobals(), w.worldGlobals(), cut);
+        assertSpecialOnlyStatus(w, p, cut, first, 0);
+        assertThrows(UnsupportedOperationException.class, () -> first.changedSlots().clear());
+        assertThrows(UnsupportedOperationException.class, () -> first.calls().clear());
+        byte[] detached = first.changedSlots().getFirst().copyBytes(); detached[0x21] = 0x55;
+        byte[] original = cut.slots().get(8).copyBytes(); original[0x21] = 0x66;
+        w.pool.deleteObject(40);
+        assertEquals(first, owner.respond(selected, p.actor(), w.playerGlobals(), w.worldGlobals(), cut));
+        w.pool.restore(cut); var restored = w.pool.capture();
+        assertEquals(first, owner.respond(selectSpecial(restored), p.actor(), w.playerGlobals(), w.worldGlobals(), restored));
+        assertEquals(0, first.changedSlots().getFirst().unsignedByte(ByteField.COLLISION_STATUS));
+        assertEquals(0xFF, cut.slots().get(8).unsignedByte(ByteField.COLLISION_STATUS));
+        assertEquals(cut.slots(), w.pool.capture().slots());
+    }
+
+    @Test void specialExitsAppendAndNeverInventMoveqMinusOne() {
+        assertEquals(List.of(Exit.DAMAGE_ENEMY, Exit.KILL_ENEMY, Exit.NO_HURT, Exit.HURT,
+                Exit.KILL_PLAYER, Exit.KILL_PLAYER_DEBUG_NO_WRITE, Exit.MONITOR_UPWARD_NO_WRITE,
+                Exit.MONITOR_UPWARD_BOUNCE, Exit.MONITOR_DOWNWARD_NO_WRITE, Exit.MONITOR_DOWNWARD_BOUNCE),
+                Arrays.asList(Exit.values()).subList(0, 10));
+        assertEquals(List.of(Exit.SPECIAL_FLAG_INCREMENT, Exit.SPECIAL_ROLL_NO_WRITE),
+                Arrays.asList(Exit.values()).subList(10, 12));
+        var w = specialWorld(0xDF, 0, 0x19); var p = new Player();
+        for (var exit : List.of(Exit.SPECIAL_FLAG_INCREMENT, Exit.SPECIAL_ROLL_NO_WRITE)) {
+            assertFalse(exit.explicitMinusOne());
+            assertThrows(IllegalArgumentException.class, () -> new Result(p.actor(), w.playerGlobals(), w.worldGlobals(),
+                    List.of(), List.of(), OptionalInt.of(-1), exit));
+            assertDoesNotThrow(() -> new Result(p.actor(), w.playerGlobals(), w.worldGlobals(),
+                    List.of(), List.of(), OptionalInt.empty(), exit));
+        }
+    }
+
+    private static World specialWorld(int type, int status, int id) {
+        var w = World.mosqui(type); var slot = w.pool.state(40);
+        for (var field : ByteField.values()) slot = slot.moveByte(field, 0xA5 ^ field.byteOffset());
+        for (var field : WordField.values()) slot = slot.moveWord(field, 0x5A00 | field.byteOffset());
+        for (var field : CdObjectState.LongField.values()) slot = slot.moveLong(field, 0xC3D4A1B2);
+        slot = slot.moveByte(ByteField.ID, id).moveByte(ByteField.SPRITE_FLAGS, 0x84)
+                .moveByte(ByteField.COLLISION_TYPE, type).moveByte(ByteField.COLLISION_STATUS, status)
+                .moveWord(WordField.X, 0x0270).moveWord(WordField.Y, 0x0760)
+                .moveWord(WordField.X_FRACTION, 0x1357).moveWord(WordField.Y_FRACTION, 0x2468);
+        w.pool.write(slot); return w;
+    }
+    private static CdPlayerObjectTouch.HandlerBoundary selectSpecial(CdObjectPool.Snapshot cut) {
+        var slot = cut.slots().get(8);
+        var selected = assertInstanceOf(CdPlayerObjectTouch.HandlerBoundary.class, new CdPlayerObjectTouch(sizes()).scan(
+                new CdPlayerObjectTouch.PlayerCut(slot.centreX(), slot.centreY(), 0x13, 0, 0), cut));
+        assertEquals(CdPlayerObjectTouch.Kind.SPECIAL, selected.kind());
+        assertSame(slot, selected.selectedSlot().orElseThrow()); return selected;
+    }
+    private static void assertSpecialUnchangedValues(World w, Player p, CdObjectPool.Snapshot cut, Result r) {
+        assertEquals(p.actor(), r.actor()); assertEquals(w.playerGlobals(), r.player()); assertEquals(w.worldGlobals(), r.world());
+        assertTrue(r.calls().isEmpty(), "no FindObjSlot, ResetOnFloor, points, sub-CPU or FM calls");
+        assertEquals(OptionalInt.empty(), r.d0(), "these RTS branches never write d0");
+        assertEquals(cut.slots(), w.pool.capture().slots());
+    }
+    private static void assertSpecialOnlyStatus(World w, Player p, CdObjectPool.Snapshot cut, Result r, int status) {
+        assertSpecialUnchangedValues(w, p, cut, r);
+        var original = cut.slots().get(8); byte[] bytes = original.copyBytes(); bytes[0x21] = (byte) status;
+        assertEquals(1, r.changedSlots().size()); var image = r.changedSlots().getFirst();
+        assertEquals(original.identity(), image.identity()); assertArrayEquals(bytes, image.copyBytes());
+        assertEquals(0x1357, image.word(WordField.X_FRACTION)); assertEquals(0x2468, image.word(WordField.Y_FRACTION));
+        assertSame(original, w.pool.state(40)); assertNotSame(original, image);
+    }
+
     private static void assertMonitorUnownedValues(World w, Result r) {
         assertEquals(w.playerGlobals(), r.player()); assertEquals(w.worldGlobals(), r.world());
         assertTrue(r.calls().isEmpty()); assertEquals(OptionalInt.empty(), r.d0());

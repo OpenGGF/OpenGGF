@@ -165,7 +165,7 @@ class TestCdR11aObjectAssets {
 
     @Test
     void metadataNamesOriginalUsaFileRangesWithoutChangingTheExistingAssetEnumeration() {
-        assertEquals(34, CdR11aObjectAssets.Table.values().length);
+        assertEquals(36, CdR11aObjectAssets.Table.values().length);
         for (var table : CdR11aObjectAssets.Table.values()) {
             assertEquals(CdNativeFile.R11A, table.range().file());
             assertEquals(CdMmdImage.Domain.ORIGINAL_WORD_RAM, table.range().domain());
@@ -775,7 +775,7 @@ class TestCdR11aObjectAssets {
         var table = CdR11aObjectAssets.Table.TUNNEL_DOOR_VERTICAL_MAPPINGS;
         assertEquals(31, table.ordinal(), "append after all 31 existing tables");
         assertEquals(table, CdR11aObjectAssets.Table.values()[31]);
-        assertEquals(34, CdR11aObjectAssets.Table.values().length);
+        assertEquals(36, CdR11aObjectAssets.Table.values().length);
         assertEquals("MapSpr_FlapDoorV", table.nativeLabel());
         assertEquals(new CdR11aProfile.FileRange(CdNativeFile.R11A,
                 CdMmdImage.Domain.ORIGINAL_WORD_RAM, 0xCE9A, 28), table.range());
@@ -977,7 +977,7 @@ class TestCdR11aObjectAssets {
     void monitorTimeAppendsTwoUsaTablesAndPreservesEveryPriorOrdinal() throws Exception {
         var scripts = CdR11aObjectAssets.Table.MONITOR_TIME_ANIMATIONS;
         var maps = CdR11aObjectAssets.Table.MONITOR_TIME_MAPPINGS;
-        assertEquals(34, CdR11aObjectAssets.Table.values().length);
+        assertEquals(36, CdR11aObjectAssets.Table.values().length);
         assertEquals(32, scripts.ordinal());
         assertEquals(33, maps.ordinal());
         assertEquals(List.of("Ani_Monitor", "MapSpr_MonitorTime"), List.of(scripts.nativeLabel(), maps.nativeLabel()));
@@ -1177,5 +1177,183 @@ class TestCdR11aObjectAssets {
                 + "4C0008010050F8080108500005D8050042F8E803004CF8E803084C0008010050F8080108500005D8010046FC"
                 + "E803004CF8E803084C0008010050F8080108500003F0060000F0F006080000080C0006F001000D000AF001F8"
                 + "0D0032F001F80D003AF0");
+    }
+
+    @Test
+    void horizontalTunnelDoorAppendsTwoUsaTablesWithoutAnotherArtSourceOrBank() throws Exception {
+        var scripts = CdR11aObjectAssets.Table.TUNNEL_DOOR_ANIMATIONS;
+        var maps = CdR11aObjectAssets.Table.TUNNEL_DOOR_MAPPINGS;
+        assertEquals(36, CdR11aObjectAssets.Table.values().length);
+        assertEquals(34, scripts.ordinal());
+        assertEquals(35, maps.ordinal());
+        assertEquals(List.of("Ani_TunnelDoor", "MapSpr_TunnelDoor"), List.of(scripts.nativeLabel(), maps.nativeLabel()));
+        assertEquals(new CdR11aProfile.FileRange(CdNativeFile.R11A,
+                CdMmdImage.Domain.ORIGINAL_WORD_RAM, 0x3F02A, 14), scripts.range());
+        assertEquals(new CdR11aProfile.FileRange(CdNativeFile.R11A,
+                CdMmdImage.Domain.ORIGINAL_WORD_RAM, 0x3F038, 28), maps.range());
+        assertEquals(0x23F02A, scripts.range().nativeAddress());
+        assertEquals(0x23F038, maps.range().nativeAddress());
+        assertEquals(scripts.range().endExclusive(), maps.range().fileOffset());
+        assertEquals(0x3F054, maps.range().endExclusive());
+        for (var added : List.of(scripts, maps)) {
+            for (var prior : Arrays.stream(CdR11aObjectAssets.Table.values()).limit(34).toList()) {
+                assertTrue(prior.range().endExclusive() <= added.range().fileOffset()
+                        || added.range().endExclusive() <= prior.range().fileOffset(), prior.name());
+            }
+        }
+        var accessor = CdR11aObjectAssets.class.getMethod("tunnelDoor");
+        assertEquals(CdObjectVisualAssets.class, accessor.getReturnType());
+        assertTrue(Modifier.isSynchronized(accessor.getModifiers()));
+        assertEquals(0, accessor.getExceptionTypes().length);
+        assertEquals(CdR11aObjectAssets.TunnelDoorArtBank.class,
+                CdR11aObjectAssets.class.getMethod("tunnelDoorArtBank").getReturnType());
+        assertEquals(154, CdR11aAsset.ART_TUNNEL_DOOR.length());
+        assertEquals(0x36AFE, CdR11aAsset.ART_TUNNEL_DOOR.fileOffset(CdReleaseVariant.USA));
+        assertEquals(37, Arrays.stream(CdR11aAsset.values()).filter(a -> a.kind() == CdR11aAsset.Kind.TABLE).count());
+    }
+
+    @Test
+    void constructedHorizontalTunnelDoorRangesStayDetachedAndCannotAuthenticateAnOwner() throws Exception {
+        byte[] fake = new byte[CdR11aProfile.FILE_BYTES];
+        ByteBuffer.wrap(fake).putInt(8, 0x200100).putInt(12, 0x20010C).putInt(16, 0x200112);
+        byte[] scripts = horizontalTunnelDoorAnimations(), maps = horizontalTunnelDoorMappings();
+        System.arraycopy(scripts, 0, fake, 0x3F02A, scripts.length);
+        System.arraycopy(maps, 0, fake, 0x3F038, maps.length);
+        fake[0x3F029] = 0x4E; fake[0x3F054] = 0x4E;
+        var image = CdMmdImage.parse(fake);
+        for (var table : List.of(CdR11aObjectAssets.Table.TUNNEL_DOOR_ANIMATIONS,
+                CdR11aObjectAssets.Table.TUNNEL_DOOR_MAPPINGS)) {
+            var bytes = table.range().read(image);
+            assertArrayEquals(table == CdR11aObjectAssets.Table.TUNNEL_DOOR_ANIMATIONS ? scripts : maps, bytes.copy());
+            assertEquals(table.range().length(), bytes.length());
+            assertThrows(ReadOnlyBufferException.class, () -> bytes.buffer().put((byte) 0));
+            assertThrows(IndexOutOfBoundsException.class, () -> bytes.unsignedByte(bytes.length()));
+            byte[] changed = bytes.copy(); changed[1] ^= 1;
+            assertNotEquals(changed[1], bytes.copy()[1]);
+        }
+        Arrays.fill(fake, (byte) 0);
+        assertEquals(16, CdR11aObjectAssets.Table.TUNNEL_DOOR_MAPPINGS.range().read(image).unsignedWord(0));
+        var profile = CdR11aProfile.forStage(CdReleaseVariant.USA, CdStageKey.parse("R11A"));
+        var asserted = new CdR11aAssets.Identity(CdReleaseVariant.USA, profile.stage(), profile.file(),
+                profile.domain(), profile.expectedMmdSha256(), "constructed tables are not authenticated media");
+        var error = assertThrows(IOException.class, () -> CdR11aObjectAssets.load(profile, asserted, image, null));
+        assertTrue(error.getMessage().contains("MMD content"));
+    }
+
+    @Test
+    void horizontalTunnelDoorFormatKeepsReversedBodiesOneRealScriptAndTwelveTileBounds() {
+        byte[] maps = horizontalTunnelDoorMappings(), scripts = horizontalTunnelDoorAnimations();
+        var visual = CdObjectVisualAssets.decode(maps, 2, scripts, 1, 12);
+        assertArrayEquals(maps, visual.mappings().copy());
+        assertArrayEquals(scripts, visual.animationTable().copy());
+        assertEquals(0, visual.mappingTableOffset());
+        assertEquals(List.of(16, 4), visual.mappingFrames().stream()
+                .map(CdObjectVisualAssets.MappingFrame::relativeOffset).toList());
+        assertEquals(List.of(11, 11), visual.mappingFrames().stream().map(f -> f.bytes().length()).toList());
+        assertEquals(List.of(new CdObjectVisualAssets.Piece(-8, 0xC, 6, -24),
+                new CdObjectVisualAssets.Piece(-8, 4, 10, 8)), visual.mappingFrames().get(0).pieces());
+        assertEquals(List.of(new CdObjectVisualAssets.Piece(-48, 3, 0, -28),
+                new CdObjectVisualAssets.Piece(-16, 1, 4, -28)), visual.mappingFrames().get(1).pieces());
+        assertEquals(0, visual.mappings().unsignedByte(15));
+        assertEquals(0, visual.mappings().unsignedByte(27));
+        var animation = visual.animations().getFirst();
+        assertEquals(1, visual.animations().size());
+        assertEquals(2, animation.relativeOffset());
+        assertEquals(0, animation.delay());
+        assertEquals(List.of(0, 0, 1, 1, 1, 1, 1, 1, 1, 1), animation.frameBytes());
+        assertEquals(CdObjectVisualAssets.Terminal.ADVANCE_ROUTINE_FC, animation.terminal());
+        assertArrayEquals(Arrays.copyOfRange(scripts, 2, 14), animation.bytes().copy());
+        assertEquals(11, visual.mappingFrames().stream().flatMap(f -> f.pieces().stream())
+                .mapToInt(p -> p.tileOffset() + p.tileCount() - 1).max().orElseThrow());
+        Arrays.fill(maps, (byte) 0); Arrays.fill(scripts, (byte) 0);
+        assertEquals(16, visual.mappings().unsignedWord(0));
+        assertEquals(0xFC, animation.bytes().unsignedByte(11));
+        assertThrows(UnsupportedOperationException.class, visual.mappingFrames()::clear);
+        assertThrows(UnsupportedOperationException.class, visual.mappingFrames().getFirst().pieces()::clear);
+        assertThrows(UnsupportedOperationException.class, visual.animations()::clear);
+        assertThrows(UnsupportedOperationException.class, animation.frameBytes()::clear);
+        assertThrows(ReadOnlyBufferException.class, () -> visual.mappings().buffer().put((byte) 0));
+        assertThrows(ReadOnlyBufferException.class, () -> visual.animationTable().buffer().put((byte) 0));
+        assertThrows(ReadOnlyBufferException.class, () -> animation.bytes().buffer().put((byte) 0));
+    }
+
+    @Test
+    void horizontalTunnelDoorUsesStrictPointerBodyScriptAndArtChecksWithoutFallback() {
+        byte[] maps = horizontalTunnelDoorMappings(), scripts = horizontalTunnelDoorAnimations();
+        for (int target : new int[]{0, 2, 4, 5, 15, 28, 0x8000, 0xFFFF}) {
+            byte[] bad = maps.clone(); ByteBuffer.wrap(bad).putShort(0, (short) target);
+            assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decode(bad, 2, scripts, 1, 12));
+        }
+        for (int at : new int[]{4, 16}) {
+            byte[] bad = maps.clone(); bad[at] = 3;
+            assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decode(bad, 2, scripts, 1, 12));
+        }
+        for (int at : new int[]{6, 18}) {
+            byte[] bad = maps.clone(); bad[at] = 0x10;
+            assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decode(bad, 2, scripts, 1, 12));
+        }
+        for (int at : new int[]{15, 27}) {
+            byte[] bad = maps.clone(); bad[at] = 1;
+            assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decode(bad, 2, scripts, 1, 12));
+        }
+        for (int target : new int[]{0, 1, 3, 14, 0x8000, 0xFFFF}) {
+            byte[] bad = scripts.clone(); ByteBuffer.wrap(bad).putShort(0, (short) target);
+            assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decode(maps, 2, bad, 1, 12));
+        }
+        for (int command : new int[]{0, 2, 0xFD}) {
+            byte[] bad = scripts.clone(); bad[13] = (byte) command;
+            assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decode(maps, 2, bad, 1, 12));
+        }
+        for (int firstFrame : new int[]{2, 0x81, 0xFC}) {
+            byte[] bad = scripts.clone(); bad[3] = (byte) firstFrame;
+            assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decode(maps, 2, bad, 1, 12));
+        }
+        assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decode(maps, 2, scripts, 1, 11));
+        assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decode(maps, 3, scripts, 1, 12));
+        assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decode(maps, 2, scripts, 0, 12));
+        assertThrows(IllegalArgumentException.class,
+                () -> CdObjectVisualAssets.decode(Arrays.copyOf(maps, 26), 2, scripts, 1, 12));
+        assertThrows(IllegalArgumentException.class,
+                () -> CdObjectVisualAssets.decode(Arrays.copyOf(maps, 29), 2, scripts, 1, 12));
+        assertThrows(IllegalArgumentException.class,
+                () -> CdObjectVisualAssets.decode(maps, 2, Arrays.copyOf(scripts, 13), 1, 12));
+        assertThrows(IllegalArgumentException.class,
+                () -> CdObjectVisualAssets.decode(maps, 2, Arrays.copyOf(scripts, 16), 1, 12));
+    }
+
+    @Test
+    void horizontalTunnelDoorUsesTheSameSelectorCWordAndExactSharedTileInterval() {
+        byte[] raw = verticalTunnelDoorTileIds();
+        int base = CdR11aObjectAssets.decodeTileWord(raw, 0xC, 0);
+        assertEquals(0x8328, base);
+        var visual = CdObjectVisualAssets.decode(horizontalTunnelDoorMappings(), 2,
+                horizontalTunnelDoorAnimations(), 1, 12);
+        var used = new java.util.TreeSet<Integer>();
+        for (var frame : visual.mappingFrames()) {
+            for (var piece : frame.pieces()) {
+                int first = (base + piece.rawTileWord()) & 0x7FF;
+                assertEquals(0x8000, (base + piece.rawTileWord()) & 0xF800);
+                for (int tile = first; tile < first + piece.tileCount(); tile++) { used.add(tile); }
+            }
+        }
+        assertEquals(java.util.stream.IntStream.range(0x328, 0x334).boxed().toList(), List.copyOf(used));
+        for (int subtype = 1; subtype <= 255; subtype++) {
+            int unsupported = subtype;
+            assertThrows(UnsupportedOperationException.class,
+                    () -> CdR11aObjectAssets.decodeTileWord(raw, 0xC, unsupported));
+        }
+        assertThrows(UnsupportedOperationException.class, () -> CdR11aObjectAssets.decodeTileWord(raw, 0xD, 0));
+        ByteBuffer.wrap(raw).putShort(62, (short) 0x8123);
+        assertEquals(0x8123, CdR11aObjectAssets.decodeTileWord(raw, 0xC, 0));
+    }
+
+    /** Spin Tunnel/Data/Mappings (Door).asm:1-27 at N=1ecc5f3a; source directives, not an extracted fixture. */
+    private static byte[] horizontalTunnelDoorMappings() {
+        return java.util.HexFormat.of().parseHex("0010000402d0030000e4f0010004e40002f80c0006e8f804000a0800");
+    }
+
+    /** Spin Tunnel/Data/Animations (Door).asm:1-3 at N=1ecc5f3a; delay, ten frames, real FC terminal. */
+    private static byte[] horizontalTunnelDoorAnimations() {
+        return new byte[]{0, 2, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, (byte) 0xFC};
     }
 }

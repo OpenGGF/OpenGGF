@@ -4944,3 +4944,91 @@ These are component/value-port checks, not real Time Post touch/activation,
 reserved HUD execution, World restore, native sound timing, demo/regional or
 whole-game parity. The existing dynamic-only pool is not widened. Runtime
 binding and the selected SPECIAL collision response remain separate work.
+
+### 25 October, 05:11 GMT — SPECIAL flags, live Time Post and reserved storage
+
+Local continuation from52de6329b; no remote/main-workspace integration or public
+publication. The real selected SPECIAL response now owns exactly raw C0-group
+selectors1F/17/21/23 and roll-only2F/3A/3B. Direct flags increment only selected
+collision-status byte; roll flags require actual post-Animator animation2.
+The same call-cut/actual ResponseContext is required. Other SPECIAL branches,
+HUD and warp continuation remain typed missing owners. No record shape, scan
+order, player/world write or new inner hurt/invincibility gate was added.
+
+The live ID19 dispatcher reads current subtype: below8 goes to Monitor, otherwise
+Time Post. One Time Post shares the actual Monitor assets and placement owner.
+Its synchronous callbacks validate current physical identity, source activation
+prefix, existing Frame phase and expected direction. The FF and optional Future
+01 stores use the one existing gate-byte port; the voice ledger append happens
+before wrapper draw/despawn. Returned completed effects are never forwarded
+again. A later failure retains completed saved/object/direction/voice prefixes.
+No second direction store, audio handshake/playback or next-Main warp owner is
+introduced. The Snapshot partition is unchanged by this composition.
+
+Separate reserved storage covers actual whole slots1..31, excluding Frame0 and
+dynamic32..127. Images/captures are immutable and owner-bound; complete restore
+preflight and full-bank value CAS precede any write. Its clear factory names the
+native ClearObjects cut, not completed HUD/title initialization. This checkpoint
+does not yet install that bank into Runtime or admit secondary-player gameplay.
+The horizontal Door asset join adds lazy14-byte script/28-byte mappings at native
+23F02A/23F038, one exact two-frame mapper registration, and reuses the existing
+12-tile Door bank. All prior asset views, eager startup loads and494-pattern
+policy remain. Equal JP/EU bytes at these ranges do not admit those owners.
+
+Tests-first and observed validation, all on this local objects tree:
+
+- Reserved bank/assets tests-only82031 failed compilation before absent APIs;
+  after exact production import,13203 ran105/0/0/0: bank22, assets39, retail6,
+  pool12, visual26. Actual media, both regional parameter sets, Java25 and all5
+  XML identities were checked. Immediate admission, Maven1m29s,04:31:00Z.
+- Mapper70643 with old production failed at unmapped23F038, the intended
+  behavioral RED. Exact one-line registration followed. Mapper's25 cases
+  passed in94188 with actual media; the aggregate run below was red elsewhere.
+- SPECIAL61324 failed compilation before the new predicate/exits.94188 ran
+  Response167/Body272/Mapper25:464 tests, one failure, one error, zero skips.
+  Both defects were new Body fixtures: animation target255 is outside the
+  actual60-script asset, and a wide hitbox atX64 wraps before overlap. RootR2
+  uses last valid59 and moves actor/selected/ring together toX100hex, preserving
+  selector coverage and assertions. Narrow63080 reran both methods:8/0/0/0,
+  immediate, Maven28.400s,04:48:03Z. No production repair or464-green claim.
+- Time Post Runtime90996 tests-only compile failed at absent TimePostSubCpu;
+  no JUnit ran. Imported exact production and the two known DrawDone-bit7
+  assertion corrections.23918 ran140/one failure/zero errors/skips, immediate,
+  Maven1m23s,05:05:09Z. The new replay test omitted the earlier real MODE
+  ChargeStop. RootR3 replaces its count with exact ordered ChargeStop+voice;
+  other prefixes/replay assertions and production are unchanged.
+-8738 executed that repaired method1/0/0/0, Frame264/0/0/0 and WorldLoad47/0/0/0.
+  Its13 EGL cases failed before engine launch because Root's command inherited
+  DISPLAY=:0. The mistaken extra TestSonicCdApi selector matched no class and
+  is not API coverage. Total325/13failures/0errors/skips, Maven1m22s,05:08:32Z.
+-39776 reran only the affected13 EGL cases with DISPLAY/WAYLAND_DISPLAY unset,
+  plus the real TestModApiSignatureSurface11:24/0/0/0, immediate,
+  Maven45.165s,05:10:19Z. All current XML identities, Java25.0.5.0.2, supplied
+  media, explicit EGL opt-in/backend and S2REV01 path were verified. No images
+  were viewed/emitted during the quiet window.
+
+Representative commands (placeholders protect user-supplied paths):
+
+```text
+python3 <main-workspace>/tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestCdReservedObjectBank,TestCdR11aObjectAssets,TestCdR11aObjectRetailAssets,TestCdObjectPool,TestCdObjectVisualAssets' -Dsoniccd.media.root=<supplied-media-root> test -B
+python3 <main-workspace>/tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestCdPlayerTouchResponse,TestCdPlayerBody,TestCdObjectMappings' -Dsoniccd.media.root=<supplied-media-root> test -B
+python3 <main-workspace>/tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestCdPlayerBody#specialRollReadsActualAnimatorAnimationWithoutUsingRollStatus+specialUnownedSelectorsRemainTypedWithActualOwner' -Dsoniccd.media.root=<supplied-media-root> test -B
+python3 <main-workspace>/tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestCdOpeningObjectRuntime' -Dsoniccd.media.root=<supplied-media-root> -Dopenggf.headless.gl=surfaceless-egl test -B
+python3 <main-workspace>/tools/testing/maven_queue.py -Dmse=off '-Dtest=TestCdOpeningObjectRuntime#timePostNonzeroDirectionSpinSavedSoundAndAllExistingPartitionsRestoreAndReplay,TestCdPlayerFrameRuntime,TestSonicCdOpeningWorldLoad,TestSonicCdOpeningWorldEgl,TestSonicCdApi' -Dsoniccd.media.root=<supplied-media-root> -Dsoniccd.opening.egl=true -Dopenggf.headless.gl=surfaceless-egl -Dsonic2.rom.path=<verified-S2-REV01> test -B
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 python3 <main-workspace>/tools/testing/maven_queue.py -Dmse=off '-Dtest=TestSonicCdOpeningWorldEgl,TestModApiSignatureSurface' -Dsoniccd.media.root=<supplied-media-root> -Dsoniccd.opening.egl=true -Dopenggf.headless.gl=surfaceless-egl -Dsonic2.rom.path=<verified-S2-REV01> test -B
+```
+
+Independent static reviews found no remaining P1/P2 in the reserved/assets,
+SPECIAL/mapper and Time Post Runtime/Frame candidates. Their disclosed fixture
+findings were source-attributed and fixed only in Root copies. The Frame comment
+now cites163-168, including the first FF store. Frozen originals remain intact.
+The140-red plus repaired-one pass remain separate results; no140-green claim.
+The Frame264 pass supersedes its earlier standalone-lifecycle fixture failure.
+
+These are bounded component/constructed Runtime and existing World/EGL checks.
+Time Post spin continuation with absent primary is not a playable warp flow.
+Horizontal Door body/real reserved-bank Runtime binding, splash, secondary
+player, HUD, native clocks/PLC/audio and regional parity remain unfinished.
+The ordinary Right-only frontier remains attempted518 at live ID0D whole37.
+Historical baseline-attributed broad-smoke failures and later-coverage limits
+remain as previously recorded; no new broad/full-suite or whole-game claim.
