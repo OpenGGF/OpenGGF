@@ -470,7 +470,6 @@ final class PaletteTextureOwner {
 	 * picture keeps the captured CRAM generation until the next V-int publication.
 	 */
 	void restoreDisplayedPaletteFade(PaletteUploadPresentation.DisplayedFade state) {
-        var previousMode = publishedPaletteFade.mode();
 		int previousMask = publishedPaletteFade.lineMask();
 		boolean changed = state.mode() == PaletteFadePresentation.Mode.NONE
 				? publishedPaletteFade.clear()
@@ -478,8 +477,7 @@ final class PaletteTextureOwner {
 		paletteFadePublicationPending = state.pending();
 		displayedPaletteFadeHeld = true;
 		if (changed) {
-            if (scopedUnderwaterBasis != null && (isWhitePaletteFade(previousMode)
-                    || isWhitePaletteFade(publishedPaletteFade.mode()))) {
+            if (scopedUnderwaterBasis != null) {
                 // Keep captured raw water inputs detached from later palette writers.
                 scopedUnderwaterBasis = scopedUnderwaterBasis.withFade(publishedPaletteFade);
                 scopedUnderwaterDirty = true;
@@ -495,10 +493,17 @@ final class PaletteTextureOwner {
         try {
             restoreDisplayedPaletteFade(new PaletteUploadPresentation.DisplayedFade(
                     PaletteFadePresentation.Mode.NONE, 0, 0, saved.pending()));
+            // A latched water cache keeps the native publication's raw RGB inputs.
+            // Recompose those inputs for this draw without admitting pending writes.
+            refreshScopedUnderwaterResidency();
             draw.run();
         } finally {
-            restoreDisplayedPaletteFade(saved);
-            displayedPaletteFadeHeld = held;
+            try {
+                restoreDisplayedPaletteFade(saved);
+                refreshScopedUnderwaterResidency();
+            } finally {
+                displayedPaletteFadeHeld = held;
+            }
         }
     }
 
@@ -684,6 +689,7 @@ final class PaletteTextureOwner {
 					: (sourceIndex == totalLines ? UNDERWATER_BASE_NORMAL : UNDERWATER_BASE_SHIFTED);
 			writeUnderwaterContentKeyByte(sourceTag);
 			PaletteView source = (PaletteView) underwaterPaletteRowSources[sourceIndex];
+			writeUnderwaterContentKeyByte(underwaterPaletteRecipeKey(source));
 			if (source == null) {
 				continue;
 			}
@@ -692,7 +698,7 @@ final class PaletteTextureOwner {
 			// (FadeIn_FromBlack also walks v_palette_water) transforms the composed
 			// bytes, and the content key built from them changes with each fade step.
             boolean fadeRow = !whiteFade && sourceIndex < totalLines
-                    && paletteFadeAffects(fadeMode, fadeMask, appearancePaletteRows.fadeLine(sourceIndex));
+                    && paletteFadeAffects(fadeMode, fadeMask, underwaterPaletteFadeLine(sourceIndex));
 			for (int colorIndex = 0; colorIndex < 16; colorIndex++) {
 				byte r = source.red(colorIndex);
 				byte g = source.green(colorIndex);
@@ -763,7 +769,7 @@ final class PaletteTextureOwner {
 			if (rowCase == UNDERWATER_ROW_DERIVED) {
 				int normalOffset = totalLines * 16 * 3;
 				int shiftedOffset = (totalLines + 1) * 16 * 3;
-                var rowWhiteMode = whiteFade && paletteFadeAffects(fadeMode, fadeMask, appearancePaletteRows.fadeLine(row))
+                var rowWhiteMode = whiteFade && paletteFadeAffects(fadeMode, fadeMask, underwaterPaletteFadeLine(row))
                         ? fadeMode : PaletteFadePresentation.Mode.NONE;
 				if (!underwaterDerivedRowKeyMatches(row, rgbOffset, normalOffset, shiftedOffset,
                         rowWhiteMode, fadeSteps)) {
@@ -783,13 +789,19 @@ final class PaletteTextureOwner {
 				int r = Byte.toUnsignedInt(underwaterPaletteSourceRgb[rgbOffset++]);
 				int g = Byte.toUnsignedInt(underwaterPaletteSourceRgb[rgbOffset++]);
 				int b = Byte.toUnsignedInt(underwaterPaletteSourceRgb[rgbOffset++]);
-                if (whiteFade && paletteFadeAffects(fadeMode, fadeMask, appearancePaletteRows.fadeLine(row))) {
+                if (whiteFade && paletteFadeAffects(fadeMode, fadeMask, underwaterPaletteFadeLine(row))) {
                     int faded = PaletteFadePresentation.fadeRgb(r, g, b, fadeMode, fadeSteps);
                     r = (faded >>> 16) & 255;
                     g = (faded >>> 8) & 255;
                     b = faded & 255;
                 }
-				writePaletteColor(paletteBuffer, r, g, b, colorIndex);
+				if (underwaterPaletteRowSources[row] instanceof NativeIntensityPalette) {
+					int rgb = underwaterNativeShadowRgb(r, g, b);
+					paletteBuffer.put((byte) (rgb >>> 16)).put((byte) (rgb >>> 8)).put((byte) rgb)
+							.put((byte) (colorIndex == 0 ? 0 : 255));
+				} else {
+					writePaletteColor(paletteBuffer, r, g, b, colorIndex);
+				}
 			}
 		}
 		paletteBuffer.flip();
@@ -803,6 +815,23 @@ final class PaletteTextureOwner {
 		underwaterPaletteContentKeyValid = true;
         scopedUnderwaterDirty=false;underwaterCompositionLines=totalLines;
 		return underwaterPaletteTextureId;
+	}
+
+	private int underwaterPaletteFadeLine(int row) {
+		return underwaterPaletteRowSources[row] instanceof NativeIntensityPalette intensity
+				? intensity.nativeSourceLine() : appearancePaletteRows.fadeLine(row);
+	}
+
+	/** Zero is ordinary colour; shadow recipes retain their native source line (0..3). */
+	private static byte underwaterPaletteRecipeKey(PaletteView source) {
+		return (byte) (source instanceof NativeIntensityPalette intensity ? intensity.nativeSourceLine() + 1 : 0);
+	}
+
+	/** Convert the composed water colour, after its existing scaling and fade. */
+	private int underwaterNativeShadowRgb(int r, int g, int b) {
+		return DisplayColorConverter.toNativeShadowPackedRgb(PaletteFadePresentation.toGenesisChannel(r),
+				PaletteFadePresentation.toGenesisChannel(g), PaletteFadePresentation.toGenesisChannel(b),
+				displayColorProfile, displayColorExpansion);
 	}
 
 	private PaletteView getRenderContextPaletteForEffectiveLine(int effectiveLine) {
@@ -846,12 +875,13 @@ final class PaletteTextureOwner {
 		if (key == null || key[0] != (byte) displayColorProfile.ordinal()
 				|| key[1] != (byte) displayColorExpansion.ordinal()
                 || key[2] != (byte) whiteMode.ordinal()
-                || key[3] != (byte) (whiteMode == PaletteFadePresentation.Mode.NONE ? 0 : whiteSteps)) {
+                || key[3] != (byte) (whiteMode == PaletteFadePresentation.Mode.NONE ? 0 : whiteSteps)
+				|| key[4] != underwaterPaletteRecipeKey((PaletteView) underwaterPaletteRowSources[row])) {
 			return false;
 		}
-		return underwaterDerivedRowKeyRangeMatches(key, 4, donorOffset)
-				&& underwaterDerivedRowKeyRangeMatches(key, 4 + 16 * 3, normalOffset)
-				&& underwaterDerivedRowKeyRangeMatches(key, 4 + 2 * 16 * 3, shiftedOffset);
+		return underwaterDerivedRowKeyRangeMatches(key, 5, donorOffset)
+				&& underwaterDerivedRowKeyRangeMatches(key, 5 + 16 * 3, normalOffset)
+				&& underwaterDerivedRowKeyRangeMatches(key, 5 + 2 * 16 * 3, shiftedOffset);
 	}
 
 	private boolean underwaterDerivedRowKeyRangeMatches(byte[] key, int keyOffset, int sourceOffset) {
@@ -868,7 +898,7 @@ final class PaletteTextureOwner {
             PaletteFadePresentation.Mode whiteMode, int whiteSteps) {
 		byte[] key = underwaterDerivedRowKeys[row];
 		if (key == null) {
-			key = new byte[4 + 3 * 16 * 3];
+			key = new byte[5 + 3 * 16 * 3];
 			underwaterDerivedRowKeys[row] = key;
 			underwaterDerivedRowRgba[row] = new int[16 * 4];
 		}
@@ -876,9 +906,10 @@ final class PaletteTextureOwner {
 		key[1] = (byte) displayColorExpansion.ordinal();
         key[2] = (byte) whiteMode.ordinal();
         key[3] = (byte) (whiteMode == PaletteFadePresentation.Mode.NONE ? 0 : whiteSteps);
-		System.arraycopy(underwaterPaletteSourceRgb, donorOffset, key, 4, 16 * 3);
-		System.arraycopy(underwaterPaletteSourceRgb, normalOffset, key, 4 + 16 * 3, 16 * 3);
-		System.arraycopy(underwaterPaletteSourceRgb, shiftedOffset, key, 4 + 2 * 16 * 3, 16 * 3);
+		key[4] = underwaterPaletteRecipeKey((PaletteView) underwaterPaletteRowSources[row]);
+		System.arraycopy(underwaterPaletteSourceRgb, donorOffset, key, 5, 16 * 3);
+		System.arraycopy(underwaterPaletteSourceRgb, normalOffset, key, 5 + 16 * 3, 16 * 3);
+		System.arraycopy(underwaterPaletteSourceRgb, shiftedOffset, key, 5 + 2 * 16 * 3, 16 * 3);
 
 		int[] rgba = underwaterDerivedRowRgba[row];
 		for (int colorIndex = 0; colorIndex < 16; colorIndex++) {
@@ -893,7 +924,14 @@ final class PaletteTextureOwner {
                 b = faded & 255;
             }
 			int rgbaOffset = colorIndex * 4;
-			DisplayColorConverter.writeRgbBytes(r, g, b, displayColorProfile, displayColorExpansion, rgba, rgbaOffset);
+			if (underwaterPaletteRowSources[row] instanceof NativeIntensityPalette) {
+				int rgb = underwaterNativeShadowRgb(r, g, b);
+				rgba[rgbaOffset] = (rgb >>> 16) & 255;
+				rgba[rgbaOffset + 1] = (rgb >>> 8) & 255;
+				rgba[rgbaOffset + 2] = rgb & 255;
+			} else {
+				DisplayColorConverter.writeRgbBytes(r, g, b, displayColorProfile, displayColorExpansion, rgba, rgbaOffset);
+			}
 			rgba[rgbaOffset + 3] = colorIndex == 0 ? 0 : 255;
 		}
 		underwaterDerivedRowRecomputeCount++;

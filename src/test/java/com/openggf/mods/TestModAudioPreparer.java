@@ -4,6 +4,8 @@ import com.openggf.io.ModAssetRoot;
 import com.openggf.io.ModInputLimits;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -20,7 +22,13 @@ import java.security.MessageDigest;
 import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 class TestModAudioPreparer {
     @TempDir Path temp;
@@ -160,6 +168,160 @@ class TestModAudioPreparer {
         assertTrue(session.tracks().isEmpty(), "owner-atomic failure removes the cached track too");
         assertTrue(session.sfx().isEmpty());
         assertTrue(session.findings().stream().anyMatch(f -> f.message().contains("SFX duration")));
+    }
+
+    @Test
+    void aDacVariantSharesTheCleanDecodeAndPreparesItsOwnRendering() throws Exception {
+        short[] tone = new short[16_000];
+        for (int i = 0; i < tone.length; i++) tone[i] = (short) Math.round(Math.sin(i * 2 * Math.PI * 440 / 16_000) * 12_000);
+        ModDescriptor owner = descriptor("voices", List.of(), Map.of("audio/line.wav", wav(16_000, tone)));
+        ModSfxDac dac = new ModSfxDac(8_000, 4, 3_400, 0f, 2_400);
+        ModSfxRegistry sfx = new ModSfxRegistry(List.of(
+                new ModAudioSfx(new SfxKey("voices", "line"), "audio/line.wav", 1),
+                new ModAudioSfx(new SfxKey("voices", "line-md"), "audio/line.wav", 1, dac)));
+        ModAudioPreparer preparer = new ModAudioPreparer(root(), ModInputLimits.production(),
+                new ModRuntimeFindingStore(), new RecordingSink(new ModStateSaveResult.Saved()));
+
+        PreparedAudioSession session = preparer.prepare(
+                new EffectiveModCatalog(List.of(owner)), new ModTrackRegistry(List.of()), sfx, 16_000);
+
+        assertTrue(session.failedOwners().isEmpty(), session.findings().toString());
+        var clean = session.sfx().stream().filter(s -> s.key().localName().equals("line")).findFirst().orElseThrow();
+        var retro = session.sfx().stream().filter(s -> s.key().localName().equals("line-md")).findFirst().orElseThrow();
+        assertEquals(clean.pcm().sampleCount(), retro.pcm().sampleCount(), "the rendering keeps the clean timing");
+        assertEquals(clean.sourceSha256(), retro.sourceSha256());
+        assertArrayEquals(tone, clean.pcm().copySamples(), "the clean entry plays as recorded");
+        short[] rendered = retro.pcm().copySamples();
+        var levels = new java.util.TreeSet<Short>();
+        for (int i = 200; i < rendered.length - 200; i++) levels.add(rendered[i]);
+        assertTrue(levels.size() <= 16, "4-bit quantisation without recovery leaves at most 16 levels: " + levels.size());
+        int holds = 0;
+        for (int i = 201; i < rendered.length - 200; i++) if (rendered[i] != rendered[i - 1]) holds++;
+        assertTrue(holds <= rendered.length / 2 + 2, "an 8 kHz hold changes at most every other 16 kHz frame");
+        session.close();
+    }
+
+    @ParameterizedTest
+    @CsvSource({"1000, 1, 8000, 4", "999, 1, 8000, 3", "2000, 2, 8000, 4", "1999, 2, 8000, 3",
+            "1600, 1, 16000, 3", "1599, 1, 16000, 2"})
+    void dacVariantBudgetRejectsBeforeRenderingTheFirstUnadmittedVariant(
+            long budget, int channels, int outputRate, int admitted) throws Exception {
+        // 100 mono frames occupy 200 bytes; stereo or 16 kHz output occupies 400.
+        // Even the smallest cap admits the initial decode: 2 * 244 encoded + 2 * 200 PCM = 888.
+        ModDescriptor owner = descriptor("variant-budget", List.of(), Map.of(
+                "audio/line.wav", wav(8_000, channels, new short[100 * channels])));
+        List<ModAudioSfx> sfx = new ArrayList<>();
+        sfx.add(new ModAudioSfx(new SfxKey("variant-budget", "clean"), "audio/line.wav", 1));
+        List<ModSfxDac> variants = new ArrayList<>();
+        for (int index = 0; index < 5; index++) {
+            ModSfxDac dac = spy(new ModSfxDac(8_000, 2 + index, 3_400, 0, 2_400));
+            variants.add(dac);
+            sfx.add(new ModAudioSfx(new SfxKey("variant-budget", "dac-" + index), "audio/line.wav", 1, dac));
+        }
+        RecordingPcmProbe allocations = new RecordingPcmProbe();
+        RecordingSink sink = new RecordingSink(new ModStateSaveResult.Saved());
+        ModAudioPreparer preparer = new ModAudioPreparer(root(),
+                ModInputLimits.loweringBuilder().maxAudioCacheBytes(budget).build(),
+                new ModRuntimeFindingStore(), sink, new PcmDecoder(allocations), new PcmResampler());
+
+        try (PreparedAudioSession session = preparer.prepare(new EffectiveModCatalog(List.of(owner)),
+                ModTrackRegistry.EMPTY, new ModSfxRegistry(sfx), outputRate)) {
+            assertEquals(Set.of("variant-budget"), session.failedOwners());
+            assertTrue(session.sfx().isEmpty(), "budget rejection is owner-atomic");
+            assertTrue(session.findings().stream().anyMatch(f -> f.code().equals("AUDIO_PREPARATION_FAILED")
+                    && f.message().contains("cache budget")), session.findings().toString());
+            assertEquals(List.of(Set.of("variant-budget")), sink.calls);
+            assertEquals(1, allocations.allocations, "all variants share one clean decode");
+            for (int index = 0; index < variants.size(); index++) {
+                // Spies execute the real renderer; rejection must prevent even entering apply().
+                verify(variants.get(index), times(index < admitted ? 1 : 0)).apply(any(PcmData.class));
+            }
+        }
+    }
+
+    @Test
+    void equivalentDacVariantsSharePcmAndReuseThePreviousCacheAtTheExactBudget() throws Exception {
+        ModDescriptor owner = descriptor("variant-sharing", List.of(), Map.of(
+                "audio/line.wav", wav(8_000, new short[100])));
+        List<ModAudioSfx> sfx = new ArrayList<>();
+        sfx.add(new ModAudioSfx(new SfxKey("variant-sharing", "clean"), "audio/line.wav", 1));
+        List<ModSfxDac> variants = new ArrayList<>();
+        List<ModSfxDac> duplicates = new ArrayList<>();
+        for (int index = 0; index < 4; index++) {
+            ModSfxDac dac = spy(new ModSfxDac(8_000, 2 + index, 3_400, 0, 2_400));
+            ModSfxDac duplicate = spy(new ModSfxDac(8_000, 2 + index, 3_400, 0, 2_400));
+            variants.add(dac);
+            duplicates.add(duplicate);
+            sfx.add(new ModAudioSfx(new SfxKey("variant-sharing", "dac-" + index), "audio/line.wav", 1, dac));
+            sfx.add(new ModAudioSfx(new SfxKey("variant-sharing", "quieter-" + index),
+                    "audio/line.wav", 0.5f, duplicate));
+        }
+        RecordingPcmProbe allocations = new RecordingPcmProbe();
+        ModAudioPreparer preparer = new ModAudioPreparer(root(),
+                ModInputLimits.loweringBuilder().maxAudioCacheBytes(1_000).build(),
+                new ModRuntimeFindingStore(), new RecordingSink(new ModStateSaveResult.Saved()),
+                new PcmDecoder(allocations), new PcmResampler());
+        ModSfxRegistry registry = new ModSfxRegistry(sfx);
+
+        // The second preparation also exercises admission of previously cached variants.
+        for (int preparation = 0; preparation < 2; preparation++) {
+            try (PreparedAudioSession session = preparer.prepare(new EffectiveModCatalog(List.of(owner)),
+                    ModTrackRegistry.EMPTY, registry, 8_000)) {
+                assertTrue(session.failedOwners().isEmpty(), session.findings().toString());
+                assertEquals(9, session.sfx().size());
+                for (int index = 0; index < variants.size(); index++) {
+                    PreparedSfx rendered = session.sfx().get(1 + index * 2);
+                    PreparedSfx quieter = session.sfx().get(2 + index * 2);
+                    assertSame(rendered.pcm(), quieter.pcm(), "equivalent configurations share PCM despite gain");
+                    assertNotSame(session.sfx().getFirst().pcm(), rendered.pcm());
+                    assertEquals(0.5f, quieter.gain());
+                    if (index > 0) assertNotSame(session.sfx().get(1).pcm(), rendered.pcm());
+                }
+            }
+        }
+        assertEquals(1, allocations.allocations);
+        for (int index = 0; index < variants.size(); index++) {
+            verify(variants.get(index), times(1)).apply(any(PcmData.class));
+            verify(duplicates.get(index), never()).apply(any(PcmData.class));
+        }
+    }
+
+    @Test
+    void dacVariantBudgetCountsRetainedOwnersAndDiscardsRejectedOwnerReservations() throws Exception {
+        byte[] recording = wav(8_000, new short[100]);
+        ModDescriptor retained = descriptor("retained", List.of(), Map.of("audio/clean.wav", recording));
+        ModDescriptor rejected = descriptor("rejected", List.of(), Map.of("audio/line.wav", recording));
+        ModDescriptor survivor = descriptor("survivor", List.of(), Map.of("audio/line.wav", recording));
+        ModSfxDac survivorDac = spy(new ModSfxDac(8_000, 2, 3_400, 0, 2_400));
+        ModTrackRegistry tracks = new ModTrackRegistry(List.of(
+                track("retained", "clean", "audio/clean.wav", false, 0, OptionalLong.empty())));
+        List<ModAudioSfx> sfx = new ArrayList<>();
+        List<ModSfxDac> rejectedVariants = new ArrayList<>();
+        for (int index = 0; index < 5; index++) {
+            ModSfxDac dac = spy(new ModSfxDac(8_000, 2 + index, 3_400, 0, 2_400));
+            rejectedVariants.add(dac);
+            sfx.add(new ModAudioSfx(new SfxKey("rejected", "dac-" + index), "audio/line.wav", 1, dac));
+        }
+        sfx.add(new ModAudioSfx(new SfxKey("survivor", "effect"), "audio/line.wav", 1, survivorDac));
+        RecordingPcmProbe allocations = new RecordingPcmProbe();
+        RecordingSink sink = new RecordingSink(new ModStateSaveResult.Saved());
+        ModAudioPreparer preparer = new ModAudioPreparer(root(),
+                ModInputLimits.loweringBuilder().maxAudioCacheBytes(1_000).build(),
+                new ModRuntimeFindingStore(), sink, new PcmDecoder(allocations), new PcmResampler());
+
+        try (PreparedAudioSession session = preparer.prepare(
+                new EffectiveModCatalog(List.of(retained, rejected, survivor)), tracks,
+                new ModSfxRegistry(sfx), 8_000)) {
+            assertEquals(Set.of("rejected"), session.failedOwners());
+            assertEquals(List.of("retained"), session.tracks().stream().map(t -> t.key().modId()).toList());
+            assertEquals(List.of("survivor"), session.sfx().stream().map(s -> s.key().modId()).toList());
+            assertEquals(List.of(Set.of("rejected")), sink.calls);
+            assertEquals(1, allocations.allocations, "different owners also share identical source bytes");
+            for (int index = 0; index < rejectedVariants.size(); index++) {
+                verify(rejectedVariants.get(index), times(index < 4 ? 1 : 0)).apply(any(PcmData.class));
+            }
+            verify(survivorDac, times(1)).apply(any(PcmData.class));
+        }
     }
 
     @Test
@@ -391,10 +553,14 @@ class TestModAudioPreparer {
     }
 
     private static byte[] wav(int rate, short[] samples) {
+        return wav(rate, 1, samples);
+    }
+
+    private static byte[] wav(int rate, int channels, short[] samples) {
         ByteBuffer out = ByteBuffer.allocate(44 + samples.length * 2).order(ByteOrder.LITTLE_ENDIAN);
         out.putInt(0x46464952).putInt(out.capacity() - 8).putInt(0x45564157);
-        out.putInt(0x20746d66).putInt(16).putShort((short) 1).putShort((short) 1)
-                .putInt(rate).putInt(rate * 2).putShort((short) 2).putShort((short) 16);
+        out.putInt(0x20746d66).putInt(16).putShort((short) 1).putShort((short) channels)
+                .putInt(rate).putInt(rate * channels * 2).putShort((short) (channels * 2)).putShort((short) 16);
         out.putInt(0x61746164).putInt(samples.length * 2);
         for (short sample : samples) out.putShort(sample);
         return out.array();

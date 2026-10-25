@@ -3,6 +3,9 @@ package openggf.timeattack.ui;
 import com.openggf.mods.scene.SceneButtons;
 import com.openggf.mods.scene.SceneContext;
 import com.openggf.mods.scene.SceneKeys;
+import com.openggf.control.PhysicalInput;
+import com.openggf.control.PhysicalGamepad;
+import com.openggf.control.PhysicalInputEvent;
 
 /**
  * One tick of menu input for the Time Attack views: repeated directions, confirm and back
@@ -41,6 +44,21 @@ public interface ViewInput {
         return "";
     }
 
+    default PhysicalInput physicalInput() { return PhysicalInput.neutral(); }
+
+    /** Keyboard presses win a simultaneous activation; raw pad presence alone is not activation. */
+    default boolean controllerAccept() {
+        if (!accept() || keyPressed(SceneKeys.ENTER) || keyPressed(SceneKeys.KP_ENTER)) return false;
+        PhysicalInput physical = physicalInput();
+        if (physical.gamepads().isEmpty() || physical.events().stream()
+                .anyMatch(event -> event.kind() == PhysicalInputEvent.Kind.KEY && event.pressed())) return false;
+        int primary = physical.gamepads().getFirst().deviceId();
+        return physical.events().stream().anyMatch(event -> event.deviceId() == primary && event.pressed()
+                && event.kind() == PhysicalInputEvent.Kind.BUTTON
+                && (event.code() == PhysicalGamepad.BUTTON_X || event.code() == PhysicalGamepad.BUTTON_B
+                    || event.code() == PhysicalGamepad.BUTTON_START));
+    }
+
     /** This tick's input from a scene context. */
     static ViewInput of(SceneContext ctx) {
         return new ViewInput() {
@@ -62,6 +80,7 @@ public interface ViewInput {
             @Override public boolean keyPressed(int key) { return ctx.keyPressed(key); }
             @Override public boolean keyDown(int key) { return ctx.keyDown(key); }
             @Override public String typedText() { return ctx.typedText(); }
+            @Override public PhysicalInput physicalInput() { return ctx.physicalInput(); }
         };
     }
 }

@@ -88,7 +88,8 @@ Unreleased. The earlier development themes remain in
   Ordinary special-stage bodies, objects and UI share the native H32 sprite
   table and fixed scanline limits across viewport widths. Native shadow-family
   pixels use projected terrain intensity through fades and display profiles,
-  and stage drawing retires inherited underwater rendering.
+  including composed underwater rows and draw-only black reveals; stage drawing
+  retires inherited underwater rendering.
   Leaf generators retain the native touch phase after slow contact. ARZ bubbles
   preserve their native slot lifetime, pop animations and generator allocation
   order, including the final out-of-range spawn and a full object pool.
@@ -217,8 +218,9 @@ Unreleased. The earlier development themes remain in
 
 - **Time Attack communication:** Full Chat includes typed and Quick Chat, with
   canned messages available by keyboard and controller in lobbies and during
-  races. The race chooser uses right-stick click, right-stick selection and the
-  right trigger, leaving movement and jump available. Room owners can choose
+  races. Controller activation opens an eight-way radial chooser with direct
+  right-stick aiming and right-trigger sending; keyboard activation keeps the
+  numbered list. Movement and jump stay available. Room owners can choose
   Quick Chat or Off, while public relay servers default to a Quick Chat maximum.
   Personal settings offer default-on local profanity censorship using a small
   multilingual whole-word dictionary and an option to hide all player messages.
@@ -1140,6 +1142,33 @@ after it. The loop boundary moves only once that redraw completes.
 The AIZ2 background-tree maker now places all seventeen trees, one per frame,
 in the slots after itself. It retries when no slot is free and gives each tree
 its original drawing priority.
+
+- **[Typing of the Hedgehog](examples/typing-of-the-hedgehog/README.md):**
+  a typing action mod for any supplied Sonic 1, Sonic 2 and Sonic 3 & Knuckles ROMs.
+  Sonic runs between fights, homing-attacks badniks when their words are completed,
+  rescues animals and wins back spilled letter-rings. ROM-art bosses use typed dodges,
+  phrases, taunt echoes and trivia. The widescreen hub offers Story, Arcade, Boss Rush,
+  Endless, records, options and Tails' Typing School, with an original voice cast and
+  clean or Mega Drive-style playback. All 31 story stops have courses: the four retained
+  continuous routes plus shorter selected sections, with native movement between ground
+  fights, Tornado escort waves in Sky Chase and a Super Sonic flying finale in Doomsday.
+  Route authoring shares Stageplay's native steering and braking for destinations and
+  fight stops; selected sections rehearse native terrain while holding the stock world.
+  Their widescreen views reuse Stageplay's scoped native scroll and palette presentation.
+  Independent ROM sheets supply late boss art, including Doomsday's plane-built ship.
+  Checkpoints preserve pause, slow motion and retries, and menus offer each stage's
+  supported modes.
+  The example uses the shared Java 25 builder and accepts explicit ROM/artifact paths.
+- **Multi-game controlled mods:** one code mod can provide per-game patches with shared
+  objects and services, alongside an optional mutator catalogue. Patches need no scene,
+  including in development captures; catalogue-only packages retain their bounded role.
+  Startup scenes can launch stock acts and switch supplied games
+  or teams; frame controllers supply reproducible pad input and capture layout-aware
+  typed text. Course restores preserve engine ownership, and supplied testkit scene
+  capabilities survive storage isolation. Custom SFX can declare a load-time DAC
+  rendering. These additions retain the unpublished Mod API 0.7 candidate.
+- **Metropolis boss art:** the Sonic 2 act-3 arena registers its ROM boss sheet both
+  at level load and through the boss PLC.
 
 ## Maintenance and release preparation
 

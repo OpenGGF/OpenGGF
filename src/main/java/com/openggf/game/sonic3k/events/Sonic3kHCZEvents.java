@@ -1357,6 +1357,16 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
     }
 
     /**
+     * HCZ2_Resize signals Events_fg_5 after $C00; HCZ2BGE_WallMove then
+     * transitions and refreshes Plane B before HCZ2BGE_Normal. A director
+     * entering beyond that wall must let those native dispatches finish.
+     */
+    public boolean isDirectedEntrySettled() {
+        return (!eventsFg5 && camera().getX() < ACT2_CAM_X_WALL_CHASE_END)
+                || act2BgRoutine == BG_NORMAL;
+    }
+
+    /**
      * Whether the HCZ2 wall-chase BG high-priority overlay is currently active.
      * Drives {@link com.openggf.game.sonic3k.runtime.HczZoneRuntimeState#wallChaseBgOverlayActive()}
      * and the registered {@code HczWallChaseBgOverlayEffect}.

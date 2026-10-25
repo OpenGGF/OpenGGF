@@ -25,7 +25,8 @@ public final class ModAudioManifestParser {
     private static final Set<String> ROOT = Set.of("formatVersion", "tracks", "sfx");
     private static final Set<String> TRACK = Set.of("id", "assetPath", "loop", "loopStartFrame",
             "loopEndFrame", "gain", "tempoEffects");
-    private static final Set<String> SFX = Set.of("id", "assetPath", "gain");
+    private static final Set<String> SFX = Set.of("id", "assetPath", "gain", "dac");
+    private static final Set<String> DAC = Set.of("sampleRate", "bits", "lowpassHz", "recoveryMix", "recoveryHighpassHz");
     private static final Pattern NUMERIC_TOKEN = Pattern.compile(
             "[+-]?(?:0[xX][0-9A-Fa-f_]+|0[oO][0-7_]+|0[bB][01_]+|"
                     + "(?:[0-9][0-9_]*|\\.[0-9_]+)(?:\\.[0-9_]*)?(?:[eE][+-]?[0-9_]+)?)");
@@ -121,6 +122,15 @@ public final class ModAudioManifestParser {
                 out.append("  - id: ").append(yamlId(value.key().localName())).append('\n')
                         .append("    assetPath: ").append(value.assetPath()).append('\n')
                         .append("    gain: ").append(Float.toString(value.gain())).append('\n');
+                if (value.dac() != null) {
+                    ModSfxDac dac = value.dac();
+                    out.append("    dac:\n")
+                            .append("      sampleRate: ").append(dac.sampleRate()).append('\n')
+                            .append("      bits: ").append(dac.bits()).append('\n')
+                            .append("      lowpassHz: ").append(dac.lowpassHz()).append('\n')
+                            .append("      recoveryMix: ").append(Float.toString(dac.recoveryMix())).append('\n')
+                            .append("      recoveryHighpassHz: ").append(dac.recoveryHighpassHz()).append('\n');
+                }
             }
         }
         try {
@@ -160,9 +170,21 @@ public final class ModAudioManifestParser {
             only(item, SFX, "SFX");
             String id = text(required(item, "id"), "SFX id");
             String path = ModAudioValidation.requireAudioPath(text(required(item, "assetPath"), "assetPath"), limits.maxEntryNameBytes());
-            values.add(new ModAudioSfx(new SfxKey(owner, id), path, finiteFloat(required(item, "gain"), "gain")));
+            JsonNode dacNode = item.get("dac");
+            ModSfxDac dac = dacNode == null ? null : parseDac(nonNull(dacNode, "dac"));
+            values.add(new ModAudioSfx(new SfxKey(owner, id), path, finiteFloat(required(item, "gain"), "gain"), dac));
         }
         return List.copyOf(values);
+    }
+
+    private ModSfxDac parseDac(JsonNode node) throws ModManifestException {
+        if (!node.isObject()) throw new ModManifestException("dac must be a mapping");
+        only(node, DAC, "dac");
+        return new ModSfxDac(integer(required(node, "sampleRate"), "dac sampleRate"),
+                integer(required(node, "bits"), "dac bits"),
+                integer(required(node, "lowpassHz"), "dac lowpassHz"),
+                finiteFloat(required(node, "recoveryMix"), "dac recoveryMix"),
+                integer(required(node, "recoveryHighpassHz"), "dac recoveryHighpassHz"));
     }
 
     private void preflight(String yaml) throws ModManifestException {

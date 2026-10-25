@@ -1063,6 +1063,12 @@ without first removing that alias.
 `Camera.updatePosition(true)` *after* the level load, and prefer
 `@ExtendWith(SingletonResetExtension.class)` over manual teardown. Set
 `startup.legalDisclaimer=false` in tests that boot the full `Engine`.
+To inspect the object art a loaded act registered, read
+`GameServices.level().getObjectRenderManager().getArtProvider()`.
+`Sonic1GameModule.getObjectArtProvider()` returns a new, empty provider on every call,
+so asking the module reports zero sheets for every Sonic 1 act; the Sonic 2 and S3K
+modules happen to hand back the loaded one (Typing of the Hedgehog art tables,
+2026-10-09).
 
 **Direct object steps do not publish camera bounds.** `ObjectManager` updates
 `AbstractObjectInstance`'s cached bounds before the object pass; constructing a
@@ -1299,6 +1305,13 @@ Storing concrete `level.Palette` rows in a new graphics helper introduced 27
 frozen architecture violations despite passing pixel checks. Detached RGB bytes
 preserve publication/value equality and pending writes without adding runtime
 layer dependencies; verify the architecture rule as well as actual water pixels.
+
+Native shadow is an intensity recipe, not pre-dimmed RGB. Underwater rows retain
+its native source line for fade selection, compose water before final DAC
+conversion, and key both intensity and source line even when raw RGB matches.
+An ordinary-colour cache entry cannot serve that shadow recipe. Draw-only
+black reveals recompose the captured water basis and restore the displayed
+fade after failure while native writes remain pending (2026-10-25).
 
 **SAT capacity belongs to mapping pieces, not expanded tiles.** HUD letters and
 numeric art can have scattered cache addresses while sharing one native SAT
@@ -2628,3 +2641,32 @@ loses either legitimate replacement or reachable suppressed-service protection.
 Keep raw lifecycle queries and ordinary strict registry refresh unchanged. The
 [bounded KiS2 evidence](plans/2026-10-24-architecture-continuation.md#bounded-kis2-native-rewind-publication-repair-following-composition)
 separates actual repeated full-load evidence from the composed SS controller gate.
+
+### Held native worlds still need presentation retirement
+
+A controller's `HOLD` prevents `ObjectManager` updates, including the normal
+retirement pass. Deleting a presentation record or setting its auxiliary object
+`destroyed` cannot drain a permanently held world. Keep ownership of the created
+auxiliary objects and retire stale ones through `removeDynamicObject` at the
+controller's stable frame boundary. Exercise repeated create/remove and generation
+clears while the native clock stays held; one successful encounter cannot detect
+unbounded accumulation in Endless. Origin: Typing selected sections, 2026-10-25.
+
+A hold also freezes the native published sprite/scroll presentation. Changing
+live player coordinates and the camera can leave a correct state CSV paired
+with stale, empty or misaligned pixels. Directed held-world views need the
+existing scoped cinematic projection and live sprite draw, with native clocks
+still unchanged. Validate actual terrain and player pixels. Draw every row when
+the content has draw-driven countdowns; capture stride can otherwise change the
+visible state rather than merely sample it. Origin: the same section captures.
+
+### Sprite priority belongs to the object part, not its art key
+
+A shared sheet can serve high- and low-priority objects. DDZ missiles and the
+battleship's target share `ddz_misc`; HCZ boss parts also have native object
+priority beyond their mapping-piece bits. Carry that object/part property through
+the presentation record, then preserve the mapping pieces' own priority and palette
+bits. Deriving priority from cast membership or the sheet name changes terrain
+occlusion. Likewise, Lava Reef's Robotnik head uses palette 0 while its machine
+sheet defaults to palette 1. Validate the actual owner and part, not only whether
+its mapping frame contains nonzero pixels. Origin: Typing section art, 2026-10-25.

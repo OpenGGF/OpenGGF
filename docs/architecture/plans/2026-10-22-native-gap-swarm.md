@@ -7795,3 +7795,192 @@ multi-plane publication atomicity, cleanup iterator reentry and optional/GL/
 creator-kit/native gaps remain open. Prior red, incomplete and skipped broad
 epochs are not retroactively green. Hosted PR checks still determine green;
 normal-hook commit, committed-range policy and publication are subsequent steps.
+
+
+### 2026-10-25 pinned d3fa Typing/navigation receiving boundary
+
+Received d3fa3d519f6acb7285d538b5f972807036f1019e once onto clean
+1e524bdf781983e3de5b196f72e01fd98749e322, common base
+c9028e88c75f8fcabec551453e05d93aee6b782b. Incoming: 377 paths,
+44,102 additions/300 deletions, 21 overlapping paths. Three actual conflicts:
+GameLoop, OwnerBoundCallbacks and the trace-round briefing. Resolved footprint:
+375 paths before this append. Root mutable native work stays excluded; committed
+atomic-audio ancestry was neither withdrawn nor replayed.
+
+CallbackHandler retains exact source/value identity and native-provider
+authentication; nonnull nativeInput remains inside the owned boundary. Root
+dispatch spans stay 58/276 with zero concrete Sonic references. Navigation retains
+native-menu completion, world-qualified title/PLC and recorded-input ownership.
+Course restore suspends only ambient creator ownership after checkpoint/session/
+layout admission, and reinstates it in finally. Captured owner A reconstructs
+inside controller B; injected failure retains A attribution and restores B.
+Neither pin exposes readonly-callback authority; that discriminator was not
+manufactured. The two Stageplay steering files and ArchUnit retain receiving
+bytes, withholding the incoming dependency allowance while accepting numeric
+course steering and compatibility tests.
+
+Frozen cinematic retained/private residency, arena/wrap metadata, entry-mode
+resolution, logical350/H40, immutable masks, raw native FIFO and removal tokens
+retain their owners. The valid palette RED expected shadow red102 versus actual
+ordinary red238. Sole production repair: PaletteTextureOwner +46/-13, preserving
+native-source-line fade selection, final shadow conversion after existing water
+scaling/fading, and recipe/source-line identity in both existing caches. Ordinary
+ratios, alpha, raw capture, pending publication and reveal/finally stay intact.
+Nonneutral water, equal-RGB replacement, source-line and direct-row controls
+accompany it. No public API, parallel owner, shader, allocator, cap, guard or
+baseline exception was introduced.
+
+Pin union: 22,682 common + 13 receiving + 29 incoming = 22,724. Actual compiled
+snapshot equality and pin/descriptor checks passed; count alone was not the gate.
+CURRENT 0.7.0/candidate descriptor stay unchanged. The plan selected 97 disjoint
+source families 12/37/42/6, all changed ordinary Test* owners and direct consumers.
+All 27 ordinary Typing sections remain, with no typinghog.sections filter;
+two slow-suite exhaustive classes stay excluded. Source families are not JUnit
+identities. Bounded API/SDK, runtime, full affected palette/profile/water, actual
+EGL and fresh guards cover these hunks. Unchanged 43,039 smoke cases and matched 45
+routes were not repeated. Planning 35-60 active minutes plus compilation and
+unknown queue was an allowance, not measured duration or a timeout.
+
+Input epochs stay separate; no later pass rewrites an earlier red input.
+
+| Invocation | Frozen tree | Actual result | Maven execution | Printed queue wait |
+| --- | --- | --- | --- | --- |
+| PaletteRed | 01fcb61cb8a3181b86bd5d7a2581fb8192552343 | 1 unique / 0P / 0F / 1E / 0S | 01:32 min | 0s |
+| PaletteRedValid | ee49cf8326b607f5b031470bdf762d68c890b288 | 1 unique / 0P / 1F / 0E / 0S | 31.939 s | 0s |
+| ApiSdk | 6d790b5dcec1cce37ce241fa52bf90a7e34ead00 | 0 JUnit; main compiled; six testCompile errors in three new array declarations | 01:25 min | 650s |
+| ApiSdkR4 | 198c7e4297ea8d17f66c568052e96676db61f679 | 81 unique / 81P / 0F / 0E / 0S | 40.330 s | 1s |
+| CoreRuntime | 198c7e4297ea8d17f66c568052e96676db61f679 | 312 unique / 312P / 0F / 0E / 0S | 38.611 s | 0s |
+| CreatorPresentation | 198c7e4297ea8d17f66c568052e96676db61f679 | 340 unique / 337P / 2F / 1E / 0S | 01:13 min | 38s |
+| CreatorFixtureR5 | 06633309585dd3cc6133a8510cdb12e0f301533a | 42 unique / 42P / 0F / 0E / 0S | 41.747 s | 0s |
+| Guards | 06633309585dd3cc6133a8510cdb12e0f301533a | 146 unique / 146P / 0F / 0E / 0S | 45.494 s | 0s |
+
+Python voice safety ran first: 11 tests passed in 0.010s, using documented discovery
+and PYTHONDONTWRITEBYTECODE=1. Synthetic two-clip WAV caches were temporary; no
+real voice publication, TTS, credential, network or DSP generation occurred.
+Its source is unchanged in later epochs. Queue waits above are separate from
+execution; overlapping source/coordination intervals are not summed into delivery
+elapsed time.
+
+First palette fixture:one row where admission requires four, yielding 1E before
+rendering assertions. Source review corrected that prerequisite and its new final
+red-water expectation to 119,0,0 before the valid production RED. First final API
+request:parent-added PaletteView[] water arrays violated the unchanged public
+Palette[] uploader. Only two expressions and one declaration changed type; bank
+recipes remain PaletteView[]. No API broadened and no JUnit ran in that failed
+compile. These parent fixture mistakes are not attributed to upstream.
+
+R4 API 81/Core 312 identities belong to tree198c7e4/input frame
+e0012706189815124cfd88914c24d08c6884496b4ddf53f8d44506d459942180.
+API covers exact 22,724/Javadoc/SDK/package checks. Core's 56 SEVERE emissions in 32
+identities are explicit callback/save/null/foreign-owner/world-data negatives;
+all throwable/owner assertions were read. Four invalid-zone/one invalid-collision
+warnings are declared bounds controls, not positive ROM faults or extra cases.
+
+R4 Creator 340 has 337 passes and three failing identities. All six actual EGL,
+nine scoped-water, four course-owner and unchanged palette controls pass. The new
+HCZ test lacked native underwater status; two players now acquire it before the
+original carrier call. Both Doomsday fixtures failed at synthetic pre-frame ground
+snap. Native loc_81554 explicitly sets air=false:airborne seeding/guard suppression
+is unjustified. The two fixtures opt into existing withFreshLevelStartLifecycle
+only for S3K/ZONE_DDZ/act0. Full-file inverses retain every original oracle,
+coordinate, row, input, filter and resource. Collision addressing, definition
+padding, native controller and shared harness remain untouched. FF82AF is inside
+modeled layout RAM; the exception did not prove arbitrary-RAM support was needed.
+
+R5 HCZ 11/SectionArt 4/Sections 27 passes 42 cases; all27 unique sections complete.
+DDZ reports FINALE/boss=true/cleared=true. Avoiding an unauthorized synthetic
+probe does not certify arbitrary encoded geometry or runtime newness. Final
+tested executable tree 06633309585dd3cc6133a8510cdb12e0f301533a, own input frame
+fa613ae20f02aab888703aca4723af46d794cfdea1a163630fb4b07e258dfb4b.
+R5 differs from R4 only in those three test fixtures. Unchanged component passes
+retain R4 attribution; no fictitious whole340 rerun/full-green suite is claimed.
+
+Fresh -Pguards JVM: 146 cases, source 87/Arch 34/compact 9/exact 14/field 1/coverage 1.
+Complete field diagnostic: 0 bytes/baseline 0 keys. Compact 257 fields are not 257
+JUnit cases. This selection emits no lifecycle CSV; previously inspected 510 rows
+retain historical attribution, not new cases/waivers.
+
+Every actual XML identity/property/recursive stream/text report/full bounded
+console/skip/fault/dump/sourcepost was inspected before exact owned diagnostics
+were consumed. Java25/Lua5.4/null AL/surfaceless EGL, original ROM CRC/SHA and
+current Main wrapper/import pins bound each request. No full clean, old class
+copyback/classpath fallback, extra standalone build/preflight, custom heap/fork/
+timeout, hook bypass or broad/route rerun occurred. Useful source/classes/WT
+remain; unknown older outputs were not swept or archived.
+
+Positive HCZ sonic3kSections[2] emits 38 presentation-shadow SMPS SFX boundary
+refusals in both R4 and R5. The existing voice owner refuses blocked requests;
+caller/effect/newness remain unqualified. This OPEN sound limitation is not 38
+tests, intended test negatives, native-sound closure or a suppression request.
+FAST/KosM estimates retain ordinary timing limits. R4 creator's single SEVERE is
+deliberately failed reconstruction; attempt-reset is a coordinator negative.
+No unrelated audio change was made.
+
+Historical f340: 189F/108S, interrupted3da, a53 ordinary 43,039/guards 805 and matched
+f340/a93 45-route 4P/41F keep their epochs. All 41 route causes, inherited E8DF art
+(prior 25 occurrences/19 positive identities), asset/music/PLC effects, warm donor
+cache, multi-plane atomicity, cleanup iterator reentry and optional/legacyGL/
+creator-kit/native limits remain open. Old passive/native/DEZ plans received no
+execution here. No new emulator/profile/trace/route observation or post-d3fa route
+qualification is claimed.
+
+Portable reproduction uses original own cwd/target and stock files:
+```bash
+export JAVA_HOME=<JDK25_HOME> LUA_BIN=<LUA54_BIN> ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless
+export PYTHONDONTWRITEBYTECODE=1
+unset JDK_JAVA_OPTIONS JAVA_TOOL_OPTIONS _JAVA_OPTIONS MAVEN_OPTS JAVA_OPTS MAVEN_ARGS
+unset DISPLAY WAYLAND_DISPLAY LD_LIBRARY_PATH LIBGL_DRIVERS_PATH LIBGL_ALWAYS_SOFTWARE MESA_LOADER_DRIVER_OVERRIDE
+cd <PR_WORKTREE>
+python3 -m unittest discover -s tools/audio/tests -p test_typing_hedgehog_voice.py -v
+S1_ROM="$OPENGGF_ROM_DIR/Sonic The Hedgehog (W) (REV01) [!].gen"
+S2_ROM="$OPENGGF_ROM_DIR/Sonic The Hedgehog 2 (W) (REV01) [!].gen"
+S3K_ROM="$OPENGGF_ROM_DIR/Sonic and Knuckles & Sonic 3 (W) [!].gen"
+KIS2_ROM="$OPENGGF_ROM_DIR/kis2.gen"
+```
+
+Selectors below are exact comma strings. Both palette inputs select the same
+method; failedApiSdk/correctedApiSdkR4 share12 classes. CreatorFixtureR5 retains
+the full default matrix. Guards alone adds -Pguards.
+
+```text
+PaletteRed: com.openggf.graphics.TestScopedUnderwaterPaletteFade#blackRevealComposesSourceLineShadowAndAppearanceAndRestoresBothWhenDrawingThrows
+selector SHA-256: 37269290b8f55ac43db29a15a672a5145db38dd7e2b6128f37174ec4e263fb67
+```
+
+```text
+ApiSdkR4: com.openggf.mods.TestModApiSignatureSurface,com.openggf.mods.TestModApiPinPolicy,com.openggf.mods.TestModApiReleasePolicy,com.openggf.mods.TestModApiRuntimePolicy,com.openggf.mods.TestNoProvisionalModApiShims,com.openggf.tools.modsdk.TestModApiJavadocTool,com.openggf.tools.modsdk.TestModApiSdkPackager,com.openggf.tools.modsdk.TestModSdkArtifactVerifier,com.openggf.tools.modsdk.TestSampleModsPackage,com.openggf.tools.modsdk.TestAudioConverter,com.openggf.tools.modsdk.TestJarPackager,com.openggf.tools.modsdk.TestModJarValidator
+selector SHA-256: 427a5f58467f798adcd0483726079a12359311fa80d012aa21869edf209f02cb
+```
+
+```text
+CoreRuntime: com.openggf.mods.TestModAudioManifestParser,com.openggf.mods.TestModAudioPreparer,com.openggf.mods.TestModManifestParser,com.openggf.mods.code.TestAnyGameSceneRegistration,com.openggf.mods.code.TestDevelopmentPatchLoader,com.openggf.mods.code.TestMutatorRegistration,com.openggf.mods.code.TestOwnerControllerNativeInput,com.openggf.mods.scene.host.TestModSceneHost,com.openggf.mods.testing.TestModTestKit,com.openggf.mods.code.TestDevelopmentPatchRewindResolver,com.openggf.mods.TestDevelopmentModSource,com.openggf.TestDevelopmentModBoot,com.openggf.mods.code.TestNativeRewindAdapterPublication,com.openggf.game.patch.TestDelegatingGameModuleCoversInterface,com.openggf.mods.code.TestModContextAndFaultBoundary,com.openggf.mods.code.TestModClassLoaders,com.openggf.mods.scene.host.TestSceneChatPreferences,com.openggf.mods.code.TestOwnerFrameDisposition,com.openggf.mods.code.TestNativeObjectFieldCallbacks,com.openggf.TestEngine#aModuleRequiringSkippedIntrosPinsTheSkipUntilOverridesClear+requiredModuleAspectPinsTheSessionUntilOverridesClear,com.openggf.TestGameLoopMenuTransitions,com.openggf.TestGameLoopTitleCardPause,com.openggf.control.TestKeyboardTextCapture,com.openggf.sprites.playable.route.TestNativeRouteSteering,com.openggf.stageplay.route.TestStageplayNativeRouteSteering,com.openggf.game.sonic2.TestSonic2MtzBossArtRegistration,com.openggf.game.sonic2.TestSonic2PlcParser#testMtzBossPlcHasArtDispatchRegistrations+commonOnlyArtLoadsRealRomSheetsWithoutLookingUpAZoneHeader+testWfzRuntimePlcsHaveArtDispatchRegistrations,com.openggf.TestRecordedInputHostPause,com.openggf.control.TestRecordedInputOwnership,com.openggf.mods.code.TestS3kNativeWorldCallbackDispatch,com.openggf.mods.code.TestOwnerBoundGamePatch#actualSessionControllerUsesTheSameProxyAndStaysOutsideCourseRollback+rewindCaptureRestoreResetAndNestedCallbacksHaveStableOwnerBoundaries,com.openggf.game.launch.TestLaunchProfilePatchAvailability,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils
+selector SHA-256: ad4e1d86b95d14b9af21aca30e62eaef83203f514457b6ef756ce401eacb08fc
+```
+
+```text
+CreatorPresentation: com.openggf.mods.code.TestTypingHedgehogCore,com.openggf.mods.code.TestTypingHedgehogHub,com.openggf.mods.code.TestTypingHedgehogDestinationMacro,com.openggf.mods.code.TestTypingHedgehogHubScene,com.openggf.mods.code.TestTypingHedgehogHud,com.openggf.mods.code.TestTypingHedgehogPace,com.openggf.mods.code.TestTypingHedgehogPackage,com.openggf.mods.code.TestTypingHedgehogRailFormat,com.openggf.mods.code.TestTypingHedgehogSectionsManifest,com.openggf.mods.code.TestTypingHedgehogVoiceAssets,com.openggf.mods.code.TestControlledCourseInput,com.openggf.mods.code.TestCourseRestoreCreatorOwnerScope,com.openggf.mods.code.TestModRegistryFixedSstObjects,com.openggf.mods.code.TestTypingHedgehogAnimals,com.openggf.mods.code.TestTypingHedgehogArtS3k,com.openggf.mods.code.TestTypingHedgehogArtSonic1,com.openggf.mods.code.TestTypingHedgehogArtSonic2,com.openggf.mods.code.TestTypingHedgehogBosses,com.openggf.mods.code.TestTypingHedgehogCourse,com.openggf.mods.code.TestTypingHedgehogHubRom,com.openggf.mods.code.TestTypingHedgehogPresentationOwnership,com.openggf.mods.code.TestTypingHedgehogSectionArt,com.openggf.mods.code.TestTypingHedgehogSections,com.openggf.mods.code.TestTypingHedgehogSectionRendering,openggf.timeattack.mp.TestTimeAttackQuickChat,openggf.timeattack.mp.TestRaceLobbyView,openggf.timeattack.mp.TestMultiplayerRaceCoordinator,openggf.timeattack.ui.TestViewInput,openggf.timeattack.TestTimeAttackModPackage,com.openggf.graphics.TestScopedUnderwaterPaletteFade,com.openggf.graphics.TestPaletteUploadLatch,com.openggf.graphics.TestUnderwaterPaletteUpload,com.openggf.graphics.TestNativeIntensityPalette,com.openggf.level.TestCinematicScrollPublication#fullViewCameraAndSlicesReuseOneFrozenRetainedGenerationWithoutNativeOwnerCalls+cameraOnlyScopeInstallsColdFrozenPlanesAndRestoresNativeResidencyAfterAnAbort+entryModeResolvesOnceUnderNativeCameraWhileArenaAndBuildRemainPublicationFrozen,com.openggf.level.TestRetainedPlaneDescriptors#cinematicCaptureIgnoresLaterMutationReplacementAndDeactivationWithoutLiveReads+cinematicInactivePlaneCannotAcquireANewLiveAuthority+cinematicReusedRevisionReplacesAndRestoresImagesByFrozenGenerationIdentity,com.openggf.graphics.TestCinematicBackgroundResidency,com.openggf.game.sonic3k.events.TestSonic3kHCZEvents,com.openggf.graphics.TestAppearancePalettes,com.openggf.graphics.color.TestDisplayColorConverter,com.openggf.graphics.color.TestDisplayColorProfileController,com.openggf.graphics.TestNativeWhitePaletteFade,com.openggf.graphics.TestPaletteFadePresentation
+selector SHA-256: 31cc1c963c01739ab58e82dee81d4d8e724d052c1802fd779d2a3a0ce1e9a58c
+```
+
+```text
+CreatorFixtureR5: com.openggf.game.sonic3k.events.TestSonic3kHCZEvents,com.openggf.mods.code.TestTypingHedgehogSectionArt,com.openggf.mods.code.TestTypingHedgehogSections
+selector SHA-256: a54c5b3077d58e90b65b77ff4931919a52b3208cd2a6b3e8fc25708ae7289a16
+```
+
+```text
+Guards: com.openggf.tests.TestArchitecturalSourceGuard,com.openggf.tests.TestArchUnitRules,com.openggf.game.rewind.schema.TestCapturedPolicyCompactReachabilityGuard,com.openggf.game.rewind.schema.TestExactRewindPolicyGuard,com.openggf.game.rewind.schema.TestRewindFieldDispositionGuard,com.openggf.game.rewind.coverage.TestRewindCoverageGuard
+selector SHA-256: a4b384bc14e051943859267f8c370fcb7b1ff55ac5ff1d887c7376f4fbbf3c10
+```
+
+```bash
+python3 "$OPENGGF_QUEUE_WRAPPER" --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -DmodApi.destinationBranch=develop "-Dsonic1.rom.path=$S1_ROM" "-Dsonic2.rom.path=$S2_ROM" "-Ds3k.rom.path=$S3K_ROM" "-Dkis2.rom.path=$KIS2_ROM" "-Dtest=$SELECTOR" test -B
+# Guards only: same command with -Pguards before test -B.
+```
+
+Wrapper SHA-256: 77d3a3e53dfc213729a57b41d5d11dc1b2145a158a01fa0ca6313a61c3639720.
+Wrapper/import and original ROM metadata gate every submission; earlier CRC/SHA
+is reused only with unchanged identity. Fresh remote metadata reports develop
+61be1910ac29d5606410be315ec881a5745a75d3,103 paths after pinned d3fa.
+Inclusion/mergeability is not inferred from these inputs. Normal-hook merge,
+committed-range/resource policy, fresh conflict check, publication and hosted CI
+remain subsequent steps; this append alone claims neither ready nor green.

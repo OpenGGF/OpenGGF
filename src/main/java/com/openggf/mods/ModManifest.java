@@ -77,7 +77,7 @@ public record ModManifest(int formatVersion, String id, String name,
         if ("any".equals(baseGame) && (entrypoint == null || !audioOverrides.isEmpty()
                 || !artOverrides.isEmpty() || insertAfter != null || patternWindows.isPresent())) {
             throw new IllegalArgumentException(
-                    "baseGame any requires a compiled shared scene or typed mutator catalogue without stock overrides, progression or pattern windows");
+                    "baseGame any requires a compiled entrypoint without stock overrides, progression or pattern windows");
         }
     }
 

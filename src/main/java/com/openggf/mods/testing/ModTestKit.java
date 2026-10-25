@@ -196,7 +196,8 @@ public final class ModTestKit implements AutoCloseable {
         if (factory == null) throw new IllegalArgumentException("Module has no registered startup scene");
         SceneServices supplied = Objects.requireNonNull(services, "scene services");
         SceneServices isolated = new SceneServices(supplied.audio(), supplied.romArt(), storageRoot,
-                supplied.mouse(), supplied.toGameTitle(), supplied.toMasterTitle(), supplied.romLibrary());
+                supplied.mouse(), supplied.toGameTitle(), supplied.toMasterTitle(), supplied.romLibrary(),
+                supplied.validateAct(), supplied.gameplay(), supplied.navigator());
         scene.open(factory, isolated, width, height);
     }
     public ModSceneHost sceneHost() { return scene; }

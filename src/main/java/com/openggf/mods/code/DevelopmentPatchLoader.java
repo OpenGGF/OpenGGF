@@ -130,7 +130,8 @@ public final class DevelopmentPatchLoader {
             var config = GameServices.configuration();
             var logicalRoms = LogicalRomResolver.fromRomManager(GameServices.rom());
             var patchContext = new PatchContext(logicalRoms::openOrThrow, config);
-            GameModule effective = new ModBackedGamePatch(nativePlan, boundary).apply(base, patchContext);
+            GameModule effective = nativePlan.hasContent()
+                    ? new ModBackedGamePatch(nativePlan, boundary).apply(base, patchContext) : base;
             for (GamePatch patch : nativePlan.explicitPatches()) {
                 var owned = com.openggf.mods.runtime.OwnerBoundGamePatch.wrap(manifest.id(), patch, boundary);
                 // Match the launch resolver: another game's decorator or a declined

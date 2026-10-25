@@ -176,6 +176,19 @@ ObjectManager increments after this callback, although native VBlank_Exit has
 already incremented before LZWaterFeatures. See the
 [water-clock evidence](../architecture/audits/2026-10-22-s1-chain-gap-closure.md).
 
+Drawing only every Nth gameplay row is not always passive sampling
+(2026-10-25, Typing selected sections). Its launch banner decrements during
+drawing, so a stride of 120 prolonged START across the whole recorded segment.
+Draw every row when presentation owns a countdown, then select stills from that
+run. Inspect synchronized state before choosing frames. Correct coordinates and
+clock assertions also cannot certify a held world's pixels: native published
+scroll/SAT can remain stale after a directed camera or pose changes. Require
+terrain/player pixel checks through the actual presentation owner.
+Sample presentation ownership axes as well as game names: the first three
+ground-course pixel cases passed, while later HCZ Boss Rush and flight captures
+still exposed black ROM colours and an uncovered viewport edge. Logic completion
+and an art-selection gate do not certify those additional presentation paths.
+
 A test-batch-only snapshot mismatch need not be a leaked gameplay flag
 (2026-10-24, Day Off follow-up, `a04ae4b20`). MHZ2's catapult failed in the
 exact 50-class batch but passed alone and after its 27-class prefix. Its two
@@ -851,6 +864,18 @@ master hub and selected native title before certifying the route. The corrected
 recipe reaches the Sonic 1 title and Green Hill menu without changing Engine
 startup, native input or gameplay readiness.
 
+A strided capture can alias a one-frame animation (2026-10-10, Typing of the Hedgehog,
+`8c511e1f7`): GHZ `GBall_Ball` toggles mapping frame every row. `EVERY=2` samples only
+one parity and can show a plain brown ball even though the other parity is checkered.
+Judge the two mapping frames or an unstrided capture before blaming the art registration.
+`GameplayCaptureTool` also divides its requested FPS by the stride: `EVERY=2 FPS=30`
+encodes 15fps (verified with ffprobe), twice the duration of a 60Hz gameplay sequence.
+Its native state CSV does not include an example mod's virtual rings/lives/score; the
+Typing course HUD and controller tests, rather than native `rings=0`, own those values.
+Draw-timed HUD effects also advance only on presented captures: this mod's 50-draw START!
+banner lasts 100 executed rows at `EVERY=2`. Judge cue exclusivity on presented rows and
+measure fight duration from controller phase rows; do not infer either clock from the other.
+
 FFmpeg PCM length can differ from a Vorbis stream's declared length (2026-10-09,
 Eggman's Sky compression): a generated 9,606-frame mono control retained exactly
 9,606 frames in its Ogg granule count, while FFmpeg's native and libvorbis decoders
@@ -985,6 +1010,20 @@ native hub drawing take about 27 ms and repeatedly starve the speaker queue.
 `MenuAudioProbeTool` checks the actual destination, nonzero cues and a physical
 speaker cursor, and reports warm-up underruns separately. PCM equality alone
 cannot certify continuous playback; slowing the cue envelope did not fix it.
+
+A transcript that matches is not proof of one utterance (2026-10-09, Typing of the
+Hedgehog voice auditions): Eleven v4 repeated "Rank S! Outstanding!" at least
+four times in one 10.8-second take. Whisper turbo transcribed the raw take, and one
+rendering of it, as a single utterance, so the literal word check passed; the raw
+transcription also stamped every word at the clip end. Other renderings of the same
+take were transcribed with four repeats. Bound the clip length against the script and
+refuse edits whose word times are degenerate before trusting a word check.
+
+FFmpeg is not the authority on Ogg Vorbis length (2026-10-09, same task): it decoded
+42,408 frames from a 0.9-second clip whose final granule position and stb_vorbis
+(the engine's `OggPcmDecoder`) both gave the encoded 42,536; the batch's other 95
+clips agreed. Take queue leases from the granule and check them with the engine
+decoder.
 
 Test-boundary retained heap is not necessarily a leak (2026-10-07 test-throughput
 task): the positioned MHZ capture retained about 22 MiB after its callback while

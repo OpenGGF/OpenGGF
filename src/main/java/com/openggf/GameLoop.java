@@ -81,6 +81,7 @@ import com.openggf.testmode.TraceCameraFocusController;
 import com.openggf.trace.replay.TraceSuppressedRowClosure;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -143,6 +144,7 @@ public class GameLoop {
     /** The open mod scene, if any; {@link ModSceneLauncher} opens, draws and leaves it. */
     final ModSceneActBridge modSceneActBridge;
     final com.openggf.mods.scene.host.ModSceneHost modSceneHost = new com.openggf.mods.scene.host.ModSceneHost();
+    final ModSceneNavigation modSceneNavigation = new ModSceneNavigation(this);
     private final PresenceManager presenceManager;
     private final EscapeToMasterTitleController escapeToMasterTitleController;
     final GameLoopSuspension suspension = new GameLoopSuspension(this);
@@ -1110,7 +1112,7 @@ public class GameLoop {
                             () -> updateNonGameplayAudio(false)),
                     this::syncPlaybackInputBridge, this::beginGameplayAudioFrameForTick,
                     () -> advanceGameplayAudioFrameForTick(false),
-                    () -> { audioManager.resume(); initializeTitleScreenMode(); });
+                    () -> { audioManager.resume(); if (!modSceneNavigation.reopenStartupScene()) initializeTitleScreenMode(); });
             return;
         }
         if (lifecycleContext == null || !lifecycleContext.isGameplayRuntimeReady()) {
@@ -1224,7 +1226,7 @@ public class GameLoop {
                 com.openggf.game.TitleInputOwnership.routeQuit(masterScreen, () -> fadeOutTo(applicationExitHandler));
             }
             finishMasterTitleFrame();
-        if (masterScreen != null) masterScreen.finishPendingModApply();
+            modSceneNavigation.onMasterTitleFrame(masterScreen);
             return;
         }
 
@@ -1273,8 +1275,8 @@ public class GameLoop {
 
         boolean doFrameStep = !GameLoopPauseInput.configurationPaused(currentGameMode)
                 && GameLoopPauseInput.frameStep(inputHandler, configService, isPaused());
-        if (isPaused()) hostedRuns.suspendInput();
-        if (isPaused() && !doFrameStep) {
+        boolean holdPausedFrame = GameLoopPauseInput.holdPausedFrame(this::isPaused, doFrameStep, hostedRuns);
+        if (holdPausedFrame) {
             inputHandler.update();
             return;
         }
@@ -2407,23 +2409,14 @@ public class GameLoop {
     }
 
     void launchGameByEntry(MasterTitleScreen.GameEntry entry, Runnable afterGameLoaded) {
-        MasterTitleScreen masterScreen = currentMasterTitleScreen();
-        if (masterScreen == null) {
-            throw new IllegalStateException("No master title screen available");
-        }
-        if (resolveFadeManager().isActive()) {
-            throw new IllegalStateException(
-                    "Cannot launch game: a master-title fade is already in flight");
-        }
-        masterTitleLaunchCoordinator.setPendingLaunchCallback(afterGameLoaded);
-        try {
-            masterScreen.selectEntry(entry);
-            exitMasterTitleScreen(masterScreen);
-        } catch (RuntimeException e) {
-            // The fade callback will never fire, so drop the staged launch callback.
-            masterTitleLaunchCoordinator.clearPendingLaunchCallback();
-            throw e;
-        }
+        launchGameByEntry(entry, afterGameLoaded, Map.of());
+    }
+
+    /** As above, applying session-only settings after the master-title exit clears overrides. */
+    void launchGameByEntry(MasterTitleScreen.GameEntry entry, Runnable afterGameLoaded,
+            Map<SonicConfiguration, Object> sessionOverrides) {
+        GameLoopMenuTransitions.launchGameByEntry(currentMasterTitleScreen(), this::resolveFadeManager,
+                masterTitleLaunchCoordinator, entry, afterGameLoaded, sessionOverrides, this::exitMasterTitleScreen);
     }
 
     private void runAfterStepMasterTitleLaunchCallbackIfPresent() {
@@ -2634,7 +2627,7 @@ public class GameLoop {
         return null;
     }
 
-    private void startLevelFromTitleScreenImmediate(int zone, int act) {
+    void startLevelFromTitleScreenImmediate(int zone, int act) {
         setGameMode(GameMode.LEVEL);
         GameServices.gameState().startNewGameFromTitle();
         try {

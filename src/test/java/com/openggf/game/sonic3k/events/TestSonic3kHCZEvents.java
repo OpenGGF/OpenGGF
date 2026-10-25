@@ -586,4 +586,109 @@ class TestSonic3kHCZEvents {
                     .orElseThrow();
         }
     }
+
+    @Test
+    void directedEntryReadinessFollowsNativeWallTransitionWithoutDispatchingIt() throws Exception {
+        SwScrlHcz handler = new SwScrlHcz();
+        installParallaxHandler(Sonic3kZoneIds.ZONE_HCZ, handler);
+        AbstractPlayableSprite player = placePlayer(0x0B00, 0x0700);
+        var camera = GameServices.camera();
+        camera.setX((short) 0x0800);
+        camera.setY((short) 0x0600);
+        Sonic3kLevelEventManager manager = new Sonic3kLevelEventManager();
+        manager.initLevel(Sonic3kZoneIds.ZONE_HCZ, 1);
+        Sonic3kHCZEvents events = manager.getHczEventsForTest();
+        List<DirectedEntryState> states = new ArrayList<>();
+
+        tickAct2(events, 0); // HCZ2BGE_WallMoveInit falls through into WallMove.
+        camera.setX((short) 0x0BFF);
+        states.add(new DirectedEntryState("wall before $C00", manager.capture(), camera.capture(), true));
+        camera.setX((short) 0x0C00);
+        states.add(new DirectedEntryState("at $C00 before FG dispatch", manager.capture(), camera.capture(), false));
+        camera.setX((short) 0x0C01);
+        states.add(new DirectedEntryState("after $C00 before FG dispatch", manager.capture(), camera.capture(), false));
+
+        tickAct2(events, 1); // HCZ2_Resize signals Events_fg_5; WallMove selects state 8.
+        assertTrue(events.isEventsFg5());
+        camera.setX((short) 0x0BFF);
+        states.add(new DirectedEntryState("signalled transition below $C00",
+                manager.capture(), camera.capture(), false));
+        camera.setX((short) 0x0C00);
+        tickAct2(events, 2); // HCZ2BGE_NormalTransition selects the Plane B refresh.
+        assertEquals(SwScrlHcz.Hcz2BgPhase.NORMAL, handler.getHcz2BgPhase());
+        states.add(new DirectedEntryState("normal deformation still awaiting refresh",
+                manager.capture(), camera.capture(), false));
+        tickAct2(events, 3); // HCZ2BGE_NormalRefresh reaches HCZ2BGE_Normal.
+        assertTrue(events.isEventsFg5(), "normal readiness does not require clearing the native FG signal");
+        states.add(new DirectedEntryState("normal after refresh", manager.capture(), camera.capture(), true));
+
+        for (DirectedEntryState state : states) {
+            manager.restore(state.events());
+            camera.restore(state.camera());
+            assertReadinessQueryLeavesState(manager, events, List.of(player), handler,
+                    state.settled(), state.description());
+        }
+    }
+
+    @Test
+    void directedEntryReadinessDoesNotAdvanceRetainedCarriers() {
+        TestablePlayableSprite p1 = new TestablePlayableSprite("sonic", (short) 0x00F6, (short) 0x07F0);
+        TestablePlayableSprite p2 = new TestablePlayableSprite("tails", (short) 0x0140, (short) 0x07E8);
+        p2.setCpuControlled(true);
+        p1.setInWater(true);
+        p2.setInWater(true);
+        GameServices.sprites().addSprite(p1, "sonic");
+        GameServices.sprites().addSprite(p2, "tails");
+        GameServices.camera().setFocusedSprite(p1);
+        GameServices.camera().setX((short) 0x0080);
+        Sonic3kLevelEventManager manager = new Sonic3kLevelEventManager();
+        manager.initLevel(Sonic3kZoneIds.ZONE_HCZ, 1);
+        Sonic3kHCZEvents events = manager.getHczEventsForTest();
+        events.startPostTransitionCutscene();
+        assertTrue(events.isCutsceneActive());
+        assertReadinessQueryLeavesState(manager, events, List.of(p1, p2), null, true,
+                "readiness before the wall does not service the retained carrier object pass");
+    }
+
+    private static void assertReadinessQueryLeavesState(Sonic3kLevelEventManager manager,
+            Sonic3kHCZEvents events, List<? extends AbstractPlayableSprite> players,
+            SwScrlHcz handler, boolean settled, String description) {
+        var before = manager.capture();
+        var camera = GameServices.camera().capture();
+        var playerStates = players.stream().map(TestSonic3kHCZEvents::entryPlayerState).toList();
+        boolean bgCollision = GameServices.gameState().isBackgroundCollisionFlag();
+        var scroll = handler == null ? null
+                : List.of(handler.getHcz2BgPhase(), handler.getBgCameraX(), handler.getVscrollFactorBG());
+        for (int query = 0; query < 3; query++) {
+            assertEquals(settled, events.isDirectedEntrySettled(), description);
+        }
+        var after = manager.capture();
+        assertEquals(List.of(before.currentZone(), before.currentAct(), before.eventRoutineFg(),
+                        before.eventRoutineBg(), before.frameCounter(), before.timerFrames(), before.bossActive()),
+                List.of(after.currentZone(), after.currentAct(), after.eventRoutineFg(),
+                        after.eventRoutineBg(), after.frameCounter(), after.timerFrames(), after.bossActive()), description);
+        org.junit.jupiter.api.Assertions.assertArrayEquals(before.eventDataFg(), after.eventDataFg(), description);
+        org.junit.jupiter.api.Assertions.assertArrayEquals(before.eventDataBg(), after.eventDataBg(), description);
+        org.junit.jupiter.api.Assertions.assertArrayEquals(before.extra(), after.extra(),
+                description + ": native event and retained-carrier sidecars");
+        assertEquals(camera, GameServices.camera().capture(), description);
+        assertEquals(playerStates, players.stream().map(TestSonic3kHCZEvents::entryPlayerState).toList(), description);
+        assertEquals(bgCollision, GameServices.gameState().isBackgroundCollisionFlag(), description);
+        if (handler != null) {
+            assertEquals(scroll, List.of(handler.getHcz2BgPhase(), handler.getBgCameraX(),
+                    handler.getVscrollFactorBG()), description);
+        }
+    }
+
+    private static List<Object> entryPlayerState(AbstractPlayableSprite player) {
+        return List.of(player.getCentreX(), player.getCentreY(), player.getXSpeed(), player.getYSpeed(),
+                player.getGSpeed(), player.isObjectControlled(), player.isObjectControlAllowsCpu(),
+                player.isObjectControlSuppressesMovement(), player.isControlLocked(), player.getAir(),
+                player.getForcedAnimationId(), player.getAnimationId(), player.getAnimationFrameIndex(),
+                player.getAnimationTick());
+    }
+
+    private record DirectedEntryState(String description,
+            com.openggf.game.rewind.snapshot.LevelEventSnapshot events,
+            com.openggf.game.rewind.snapshot.CameraSnapshot camera, boolean settled) { }
 }

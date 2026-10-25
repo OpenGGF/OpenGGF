@@ -21,6 +21,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.parallel.Isolated;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.util.List;
 import java.util.Map;
@@ -72,13 +73,29 @@ class TestMutatorRegistration {
     }
 
     @Test
-    void sharedCatalogueRoutesEachDecoratorOnlyToItsNativeGame() {
+    void mixedCodeCatalogueSharesContentAndRoutesEachDecoratorOnlyToItsNativeGame() {
         var shared = context("owner", "any");
         shared.registerMutator(definition("gravity"));
         shared.registerGamePatch(patch("s3k"));
         shared.registerGamePatch(patch("s1"));
         shared.registerGamePatch(patch("s2"));
-        for (var plan : shared.freeze().stockScenePlans()) {
+        var factories = new AtomicInteger();
+        shared.registerObject("object", (spawn, registry) -> { factories.incrementAndGet(); return null; });
+        shared.registerObjectArt("sheet", new BakedSheetRef("art/sheet.bin"));
+        shared.registerObjectPreview("object", "sheet");
+        shared.registerServiceBundle("session", () -> {
+            factories.incrementAndGet();
+            return GameServiceBundle.builder().build();
+        });
+        var plans = shared.freeze().stockScenePlans();
+        assertEquals(List.of("s1", "s2", "s3k"), plans.stream().map(ModRegistrationPlan::baseGameId).toList());
+        assertEquals(0, factories.get(), "Registration and expansion must defer creator factories");
+        for (var plan : plans) {
+            assertNull(plan.startupScene());
+            assertEquals(Set.of("owner:object"), plan.objectFactories().keySet());
+            assertEquals(Set.of("owner:sheet"), plan.objectArt().keySet());
+            assertEquals(Map.of("owner:object", "owner:sheet"), plan.objectPreviewArtKeys());
+            assertEquals(Set.of("session"), plan.serviceBundles().keySet());
             assertEquals(1, plan.explicitPatches().size());
             assertEquals(plan.baseGameId(), plan.explicitPatches().getFirst().baseGameId());
             assertEquals("owner:lab-" + plan.baseGameId(), plan.explicitPatches().getFirst().id());
@@ -87,23 +104,12 @@ class TestMutatorRegistration {
     }
 
     @Test
-    void sharedDecoratorsRequireTypedContentAndCannotSmuggleGameSpecificRegistrations() {
-        var noCatalogue = context("owner", "any");
-        noCatalogue.registerGamePatch(patch("s2"));
-        var failure = assertThrows(ModRegistrationException.class, noCatalogue::freeze);
-        assertSame(failure, assertThrows(ModRegistrationException.class, noCatalogue::freeze));
-
+    void sharedCodeCatalogueRejectsForeignPatchTargetsAndPoisonsTheTransaction() {
         var foreign = context("owner", "any");
         foreign.registerMutator(definition("gravity"));
-        failure = assertThrows(ModRegistrationException.class, () -> foreign.registerGamePatch(patch("custom")));
+        var failure = assertThrows(ModRegistrationException.class,
+                () -> foreign.registerGamePatch(patch("custom")));
         assertSame(failure, assertThrows(ModRegistrationException.class, foreign::freeze));
-
-        var gameSpecific = context("owner", "any");
-        gameSpecific.registerMutator(definition("gravity"));
-        gameSpecific.registerGamePatch(patch("s1"));
-        gameSpecific.registerObject("object", (spawn, registry) -> null);
-        failure = assertThrows(ModRegistrationException.class, gameSpecific::freeze);
-        assertSame(failure, assertThrows(ModRegistrationException.class, gameSpecific::freeze));
     }
 
     @Test
@@ -115,40 +121,72 @@ class TestMutatorRegistration {
         assertFalse(old.hasContent());
     }
 
-    @Test
-    void sharedCatalogueCannotPublishGameSpecificServiceOrDecodedPatch() {
-        var services = context("owner", "any");
-        services.registerMutator(definition("gravity"));
-        services.registerServiceBundle("session", () -> {
-            fail("A forbidden shared service factory must never execute");
-            return GameServiceBundle.builder().build();
-        });
-        var failure = assertThrows(ModRegistrationException.class, services::freeze);
-        assertSame(failure, assertThrows(ModRegistrationException.class, services::freeze));
+    @ParameterizedTest @ValueSource(strings={"object", "art", "service"})
+    void catalogueOnlyCannotPublishSharedRuntimeContent(String contribution) {
+        var catalogue = context("owner", "any");
+        catalogue.registerMutator(definition("gravity"));
+        var factories = new AtomicInteger();
+        switch (contribution) {
+            case "object" -> catalogue.registerObject("object", (spawn, registry) -> {
+                factories.incrementAndGet(); return null;
+            });
+            case "art" -> catalogue.registerObjectArt("sheet", new BakedSheetRef("art/sheet.bin"));
+            case "service" -> catalogue.registerServiceBundle("session", () -> {
+                factories.incrementAndGet(); return GameServiceBundle.builder().build();
+            });
+            default -> throw new AssertionError(contribution);
+        }
+        var failure = assertThrows(ModRegistrationException.class, catalogue::freeze);
+        assertSame(failure, assertThrows(ModRegistrationException.class, catalogue::freeze));
+        assertSame(failure, assertThrows(ModRegistrationException.class,
+                () -> catalogue.registerGamePatch(patch("s1"))));
+        assertEquals(0, factories.get(), "Rejected registration must never invoke creator factories");
+    }
 
+    @ParameterizedTest @ValueSource(strings={"catalogue", "scene", "title", "patch"})
+    void decodedPatchesNeedASingleGameEvenWithAValidCodeRole(String role) {
         var placements = context("owner", "any");
         placements.registerMutator(definition("gravity"));
+        switch (role) {
+            case "scene" -> placements.registerStartupScene(() -> { fail("Scene must stay deferred"); return null; });
+            case "title" -> placements.registerTitleEntry("Code", () -> { fail("Title must stay deferred"); return null; });
+            case "patch" -> placements.registerGamePatch(patch("s1"));
+            case "catalogue" -> { }
+            default -> throw new AssertionError(role);
+        }
         placements.decodedLevelPatch("placements", LevelPatch.empty());
-        failure = assertThrows(ModRegistrationException.class, placements::freeze);
+        var failure = assertThrows(ModRegistrationException.class, placements::freeze);
         assertSame(failure, assertThrows(ModRegistrationException.class, placements::freeze));
     }
 
-    public interface ProbeService { String callbackOwner(); }
+    public interface ProbeService { String callbackOwner(); int application(); }
 
-    @ParameterizedTest @ValueSource(strings={"s1", "s2", "s3k"})
-    void nativeServiceWrapperRetainsCatalogueAndWorldProvider(String game) {
-        var context = context("owner", game);
+    @ParameterizedTest @CsvSource({"s1,false", "s2,false", "s3k,false", "s1,true", "s2,true", "s3k,true"})
+    void nativeServiceWrapperRetainsCatalogueAndWorldProvider(String game, boolean shared) {
+        var context = context("owner", shared ? "any" : game);
         context.registerMutator(definition("gravity"));
         var factories = new AtomicInteger();
         context.registerServiceBundle("session", () -> {
-            factories.incrementAndGet();
-            return GameServiceBundle.builder().service(ProbeService.class, OwnerCallbackScope::current).build();
+            int application = factories.incrementAndGet();
+            return GameServiceBundle.builder().service(ProbeService.class, new ProbeService() {
+                public String callbackOwner() { return OwnerCallbackScope.current(); }
+                public int application() { return application; }
+            }).build();
         });
         var patch = LevelPatch.empty();
-        context.decodedLevelPatch("placements", patch);
-        var plan = context.freeze();
-        assertEquals(0, factories.get(), "Freeze must not execute creator service factories");
-        assertSame(patch, plan.decodedLevelPatches().get("placements"));
+        if (shared) {
+            context.registerGamePatch(patch("s1"));
+            context.registerGamePatch(patch("s2"));
+            context.registerGamePatch(patch("s3k"));
+            context.registerObject("object", (spawn, registry) -> null);
+        } else context.decodedLevelPatch("placements", patch);
+        var plans = context.freeze().stockScenePlans();
+        var plan = plans.stream().filter(candidate -> game.equals(candidate.baseGameId())).findFirst().orElseThrow();
+        assertEquals(0, factories.get(), "Freeze and expansion must not execute creator service factories");
+        if (shared) {
+            assertNull(plan.startupScene());
+            assertEquals(List.of(game), plan.explicitPatches().stream().map(GamePatch::baseGameId).toList());
+        } else assertSame(patch, plan.decodedLevelPatches().get("placements"));
         assertThrows(UnsupportedOperationException.class, () -> plan.serviceBundles().clear());
         var boundary = new ModFaultBoundary(Map.of(), new ModRuntimeFindingStore(),
                 ignored -> new ModStateSaveResult.Saved(), ignored -> { });
@@ -161,13 +199,26 @@ class TestMutatorRegistration {
         com.openggf.tests.TestEnvironment.configureGameModuleFixture(nativeModule);
         GameModule decorated = new ModBackedGamePatch(plan, boundary).apply(nativeModule, null);
         assertEquals(1, factories.get());
-        assertEquals("owner", decorated.getGameService(ProbeService.class).callbackOwner());
+        var service = decorated.getGameService(ProbeService.class);
+        assertEquals("owner", service.callbackOwner());
+        assertEquals(1, service.application());
         var catalogue = decorated.getGameService(MutatorCatalog.class);
         assertSame(boundary, catalogue.faults());
         assertEquals(List.of("owner:gravity"), catalogue.definitions().stream().map(owned -> owned.key()).toList());
         var provider = decorated.getGameService(WorldSessionPolicyProvider.class);
         assertNotNull(provider, "The outer service decorator must retain the native mutator world provider");
         assertSame(provider, decorated.getGameService(WorldSessionPolicyProvider.class));
+        GameModule reapplied = new ModBackedGamePatch(plan, boundary).apply(nativeModule, null);
+        assertEquals(2, factories.get(), "Each application needs a fresh service bundle");
+        var fresh = reapplied.getGameService(ProbeService.class);
+        assertNotSame(service, fresh);
+        assertEquals(2, fresh.application());
+        assertEquals("owner", fresh.callbackOwner());
+        var freshProvider = reapplied.getGameService(WorldSessionPolicyProvider.class);
+        assertNotNull(freshProvider);
+        assertSame(freshProvider, reapplied.getGameService(WorldSessionPolicyProvider.class));
+        assertEquals(List.of("owner:gravity"), reapplied.getGameService(MutatorCatalog.class)
+                .definitions().stream().map(owned -> owned.key()).toList());
     }
 
     private static ModContext context(String owner, String game) {

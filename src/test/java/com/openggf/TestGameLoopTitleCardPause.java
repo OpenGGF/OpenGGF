@@ -15,6 +15,8 @@ import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Isolated;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -25,6 +27,39 @@ import static org.mockito.Mockito.mock;
 
 @Isolated
 class TestGameLoopTitleCardPause {
+
+    @ParameterizedTest
+    @CsvSource({"false,false,false", "false,true,false", "true,false,true", "true,true,false"})
+    void pausedFrameInputRebaselinesOnceEvenWhenFrameStepIsAdmitted(
+            boolean paused, boolean frameStep, boolean held) {
+        TestEnvironment.configureGameModuleFixture(new Sonic2GameModule());
+        var input = new InputHandler();
+        var runs = new HostedRunController(SonicConfigurationService.getInstance());
+        var resumed = new java.util.ArrayList<Boolean>();
+        runs.begin(new com.openggf.mods.run.RunSpec("s2", 0, 0, "sonic",
+                com.openggf.game.session.GameplayRunPolicy.isolatedAct()), new com.openggf.mods.run.RunHost() {
+            @Override public boolean admitStep(com.openggf.mods.run.RunInput frame) {
+                resumed.add(frame.resumedAfterPause());
+                return true;
+            }
+        });
+        try {
+            runs.admitStep(input);
+            var pauseReads = new java.util.concurrent.atomic.AtomicInteger();
+            org.junit.jupiter.api.Assertions.assertEquals(held, GameLoopPauseInput.holdPausedFrame(() -> {
+                pauseReads.incrementAndGet();
+                return paused;
+            }, frameStep, runs));
+            org.junit.jupiter.api.Assertions.assertEquals(2, pauseReads.get(),
+                    "Notification and admission retain their separate pause reads");
+            runs.admitStep(input);
+            runs.admitStep(input);
+            org.junit.jupiter.api.Assertions.assertEquals(java.util.List.of(false, paused, false), resumed,
+                    "A paused frame step also marks exactly one following host callback for rebaseline");
+        } finally {
+            runs.end(com.openggf.mods.run.RunEndReason.LEFT);
+        }
+    }
 
     @Test
     void focusAndUserPauseInvalidateHostedInputEvenWithoutAPausedHostPoll() {

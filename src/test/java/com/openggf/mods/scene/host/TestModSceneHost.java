@@ -577,4 +577,197 @@ class TestModSceneHost {
         assertEquals(1, empty.width());
         assertEquals(0, empty.image().pixel(0, 0));
     }
+
+    @Test
+    void stockActAndRelaunchRequestsRunTheNavigatorsTransitionOnceAndRefuseWhenItDeclines() {
+        List<String> transitions = new ArrayList<>();
+        var running = new com.openggf.mods.scene.SceneLaunch("s2", "sonic", List.of("tails"));
+        SceneNavigator navigator = new SceneNavigator() {
+            @Override public Runnable prepareStockAct(int zone, int act) {
+                return zone == 99 ? null : () -> transitions.add("act " + zone + "/" + act);
+            }
+            @Override public com.openggf.mods.scene.SceneLaunch currentLaunch() { return running; }
+            @Override public Runnable prepareRelaunch(com.openggf.mods.scene.SceneLaunch launch) {
+                return "s1".equals(launch.gameId()) ? null : () -> transitions.add("relaunch " + launch.gameId());
+            }
+        };
+        SceneContext[] retained = new SceneContext[1];
+        ModSceneHost host = new ModSceneHost();
+        host.open(owned(() -> new ModScene() {
+            @Override public void enter(SceneContext ctx) { retained[0] = ctx; }
+            @Override public void update(SceneContext ctx) { }
+            @Override public void draw(SceneContext ctx, SceneCanvas canvas) { }
+        }), new SceneServices(null, null, temp, null, () -> { }, () -> { }, null, navigator), 320, 224);
+        assertSame(running, retained[0].currentLaunch());
+        assertFalse(retained[0].startStockAct(99, 0), "a refused act leaves the scene open");
+        assertFalse(retained[0].relaunch(new com.openggf.mods.scene.SceneLaunch("s1", "sonic", List.of())));
+        assertTrue(retained[0].startStockAct(4, 1));
+        assertFalse(retained[0].relaunch(new com.openggf.mods.scene.SceneLaunch("s3k", "sonic", List.of())),
+                "only one exit transition per visit");
+        assertEquals(List.of("act 4/1"), transitions);
+        host.close();
+    }
+
+    @Test
+    void retainedNavigationCannotRetireAReopenedVisit() {
+        var navigator = new NavigationProbe();
+        var first = new NavigationScene();
+        var second = new NavigationScene();
+        var host = new ModSceneHost();
+        try {
+            host.open(owned(() -> first), navigationServices(navigator), 320, 224);
+            first.context.exitToMasterTitle();
+            host.open(owned(() -> second), navigationServices(navigator), 320, 224);
+
+            assertThrows(IllegalStateException.class, () -> first.context.startStockAct(4, 1));
+            assertThrows(IllegalStateException.class, first.context::currentLaunch);
+            assertThrows(IllegalStateException.class, () -> first.context.relaunch(navigator.running));
+            assertTrue(navigator.calls.isEmpty(), "the departed visit cannot even prepare navigation");
+            assertEquals(List.of("s2"), second.context.gameplay().availableGames(),
+                    "stale navigation must not retire the new visit's capabilities");
+            host.update(null);
+            assertEquals(1, second.updates, "stale navigation must not start exiting the new scene");
+            assertTrue(second.context.startStockAct(4, 1));
+            assertEquals(List.of("prepare act 4/1", "act 4/1"), navigator.calls);
+        } finally {
+            host.close();
+        }
+    }
+
+    @Test
+    void navigationRejectsWorkerThreadsWithoutAffectingTheActiveVisit() throws Exception {
+        var navigator = new NavigationProbe();
+        var scene = new NavigationScene();
+        var host = new ModSceneHost();
+        try {
+            host.open(owned(() -> scene), navigationServices(navigator), 320, 224);
+            var failures = new ArrayList<Throwable>();
+            List<Runnable> commands = List.of(() -> scene.context.startStockAct(4, 1),
+                    () -> scene.context.currentLaunch(), () -> scene.context.relaunch(navigator.running));
+            Thread worker = Thread.ofVirtual().start(() -> {
+                for (Runnable command : commands) {
+                    try { command.run(); }
+                    catch (Throwable failure) { failures.add(failure); }
+                }
+            });
+            worker.join();
+            assertEquals(3, failures.size());
+            failures.forEach(failure -> assertInstanceOf(IllegalStateException.class, failure));
+            assertTrue(navigator.calls.isEmpty(), "workers must not reach the navigator");
+            assertEquals(List.of("s2"), scene.context.gameplay().availableGames());
+            host.update(null);
+            assertEquals(1, scene.updates);
+            assertSame(navigator.running, scene.context.currentLaunch());
+            assertTrue(scene.context.relaunch(navigator.running));
+            assertFalse(scene.context.startStockAct(4, 1), "the admitted transition remains one-shot");
+            assertNull(scene.context.currentLaunch(), "retired visits cannot query the navigator");
+            assertEquals(List.of("current", "prepare relaunch s2", "relaunch s2"), navigator.calls);
+        } finally {
+            host.close();
+        }
+    }
+
+    @Test
+    void closedNavigationCannotReachItsFormerNavigator() {
+        var navigator = new NavigationProbe();
+        var scene = new NavigationScene();
+        var host = new ModSceneHost();
+        host.open(owned(() -> scene), navigationServices(navigator), 320, 224);
+        host.close();
+        assertThrows(IllegalStateException.class, () -> scene.context.startStockAct(4, 1));
+        assertThrows(IllegalStateException.class, scene.context::currentLaunch);
+        assertThrows(IllegalStateException.class, () -> scene.context.relaunch(navigator.running));
+        assertTrue(navigator.calls.isEmpty());
+    }
+
+    @Test
+    void suspendedVisitCannotNavigateUntilItResumes() {
+        var navigator = new NavigationProbe();
+        var scene = new NavigationScene();
+        var host = new ModSceneHost();
+        try {
+            host.open(owned(() -> scene), navigationServices(navigator), 320, 224);
+            host.suspend();
+            assertFalse(scene.context.startStockAct(4, 1));
+            assertNull(scene.context.currentLaunch());
+            assertFalse(scene.context.relaunch(navigator.running));
+            assertTrue(navigator.calls.isEmpty());
+            host.resume(new com.openggf.mods.scene.ActResult(new com.openggf.game.ZoneKey.Mod("cards", "garden"),
+                    com.openggf.game.ActExit.LEFT, 0, 0, Map.of()));
+            assertTrue(scene.context.startStockAct(4, 1));
+            assertEquals(List.of("prepare act 4/1", "act 4/1"), navigator.calls);
+        } finally {
+            host.close();
+        }
+    }
+
+    private SceneServices navigationServices(NavigationProbe navigator) {
+        var gameplay = new com.openggf.mods.scene.SceneGameplay() {
+            @Override public List<String> availableGames() { return List.of("s2"); }
+            @Override public com.openggf.mods.run.RunHandle launch(com.openggf.mods.run.RunSpec spec,
+                    com.openggf.mods.run.RunHost host) { throw new AssertionError("Unexpected run launch"); }
+        };
+        return new SceneServices(null, null, temp, null, () -> { }, () -> { }, null, null, gameplay, navigator);
+    }
+
+    private static final class NavigationScene extends ProbeSceneBase {
+        SceneContext context;
+        int updates;
+        @Override public void enter(SceneContext ctx) { context = ctx; }
+        @Override public void update(SceneContext ctx) { updates++; }
+    }
+
+    private static final class NavigationProbe implements SceneNavigator {
+        final List<String> calls = new ArrayList<>();
+        final com.openggf.mods.scene.SceneLaunch running =
+                new com.openggf.mods.scene.SceneLaunch("s2", "sonic", List.of("tails"));
+        @Override public Runnable prepareStockAct(int zone, int act) {
+            calls.add("prepare act " + zone + "/" + act);
+            return () -> calls.add("act " + zone + "/" + act);
+        }
+        @Override public com.openggf.mods.scene.SceneLaunch currentLaunch() {
+            calls.add("current");
+            return running;
+        }
+        @Override public Runnable prepareRelaunch(com.openggf.mods.scene.SceneLaunch launch) {
+            calls.add("prepare relaunch " + launch.gameId());
+            return () -> calls.add("relaunch " + launch.gameId());
+        }
+    }
+
+    @Test
+    void scenesWithoutANavigatorCannotStartGameplay() {
+        SceneContext[] retained = new SceneContext[1];
+        ModSceneHost host = new ModSceneHost();
+        host.open(owned(() -> new ModScene() {
+            @Override public void enter(SceneContext ctx) { retained[0] = ctx; }
+            @Override public void update(SceneContext ctx) { }
+            @Override public void draw(SceneContext ctx, SceneCanvas canvas) { }
+        }), services(new ArrayList<>()), 320, 224);
+        assertFalse(retained[0].startStockAct(0, 0));
+        assertNull(retained[0].currentLaunch());
+        host.close();
+    }
+
+    @Test
+    void typedTextAndKeyboardCaptureReachTheScene() {
+        InputHandler input = new InputHandler();
+        SceneContext[] retained = new SceneContext[1];
+        List<String> typed = new ArrayList<>();
+        ModSceneHost host = new ModSceneHost();
+        host.open(owned(() -> new ModScene() {
+            @Override public void enter(SceneContext ctx) { retained[0] = ctx; }
+            @Override public void update(SceneContext ctx) {
+                ctx.captureKeyboardText();
+                typed.add(ctx.typedText() + "|" + ctx.keyDown(com.openggf.mods.scene.SceneKeys.A));
+            }
+            @Override public void draw(SceneContext ctx, SceneCanvas canvas) { }
+        }), services(new ArrayList<>()), 320, 224);
+        input.handleKeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_A, org.lwjgl.glfw.GLFW.GLFW_PRESS);
+        com.openggf.control.MenuInput.handleCharEvent(input, 'a');
+        host.update(input);
+        assertEquals(List.of("a|true"), typed);
+        assertFalse(input.isKeyDown(org.lwjgl.glfw.GLFW.GLFW_KEY_A), "the scene's claim hides A from host shortcuts");
+        host.close();
+    }
 }

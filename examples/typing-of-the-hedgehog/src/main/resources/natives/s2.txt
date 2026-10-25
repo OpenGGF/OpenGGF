@@ -1,0 +1,30 @@
+# Sonic 2 stock badnik bodies that may join a typing fight: class simple name, the cast art key
+# that draws them, and whether a fight may convert them (yes) or must leave them to the stock game
+# (no). Read by the course (loaded fight targets) and the rail builder (the same conversion), so
+# both agree. Classes without a cast species stay out until the cast covers them.
+AquisBadnikInstance                aquis                  yes
+AsteronBadnikInstance              asteron                yes
+BalkiryBadnikInstance              balkiry                yes
+BuzzerBadnikInstance               buzzer                 yes
+ChopChopBadnikInstance             chopchop               yes
+CluckerBadnikInstance              clucker                yes
+CoconutsBadnikInstance             coconuts               yes
+CrawlBadnikInstance                crawl                  yes
+CrawltonBadnikInstance             crawlton               yes
+FlasherBadnikInstance              flasher                yes
+GrabberBadnikInstance              grabber                yes
+GrounderBadnikInstance             -                      no   # no cast species yet
+MasherBadnikInstance               masher                 yes
+NebulaBadnikInstance               -                      no   # no cast species yet
+OctusBadnikInstance                octus                  yes
+RexonBadnikInstance                -                      no   # no cast species yet
+ShellcrackerBadnikInstance         shellcracker           yes
+SlicerBadnikInstance               slicer                 yes
+SolBadnikInstance                  sol                    yes
+SpikerBadnikInstance               spiker                 yes
+SpinyBadnikInstance                spiny                  yes
+SpinyOnWallBadnikInstance          spiny                  yes
+TurtloidBadnikInstance             -                      no   # no cast species yet
+WFZStickBadnikInstance             -                      no   # no cast species yet
+WFZUnknownBadnikInstance           -                      no   # no cast species yet
+WhispBadnikInstance                whisp                  yes

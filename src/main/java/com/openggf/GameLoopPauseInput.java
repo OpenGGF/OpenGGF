@@ -67,6 +67,12 @@ final class GameLoopPauseInput {
         return paused && input.isKeyPressed(config.getInt(SonicConfiguration.FRAME_STEP_KEY));
     }
 
+    /** Hosted input needs a new baseline after pause, including an admitted frame step. */
+    static boolean holdPausedFrame(BooleanSupplier paused, boolean frameStep, HostedRunController hostedRuns) {
+        if (paused.getAsBoolean()) hostedRuns.suspendInput();
+        return paused.getAsBoolean() && !frameStep;
+    }
+
     static boolean requestTakeover(GameMode mode, InputHandler input,
                                    SonicConfigurationService config, boolean paused,
                                    BooleanSupplier requestTakeover) {
