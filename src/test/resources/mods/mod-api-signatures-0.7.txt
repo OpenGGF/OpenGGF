@@ -940,6 +940,9 @@ CF-ANNOTATION TYPE com.openggf.mods.scene.SceneBackground visible @com.openggf.g
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneButtons visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneCanvas visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneClip visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.scene.SceneClipboard visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.scene.SceneClipboard$Result visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.scene.SceneClipboard$Write visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneContext visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneDraw visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneGameplay visible @com.openggf.game.ModApi
@@ -3476,6 +3479,11 @@ FIELD com.openggf.mods.scene.SceneButtons public,static,final int LEFT
 FIELD com.openggf.mods.scene.SceneButtons public,static,final int RIGHT
 FIELD com.openggf.mods.scene.SceneButtons public,static,final int START
 FIELD com.openggf.mods.scene.SceneButtons public,static,final int UP
+FIELD com.openggf.mods.scene.SceneClipboard public,static,final int MAX_TEXT_LENGTH
+FIELD com.openggf.mods.scene.SceneClipboard$Result public,static,final com.openggf.mods.scene.SceneClipboard$Result DENIED
+FIELD com.openggf.mods.scene.SceneClipboard$Result public,static,final com.openggf.mods.scene.SceneClipboard$Result PENDING
+FIELD com.openggf.mods.scene.SceneClipboard$Result public,static,final com.openggf.mods.scene.SceneClipboard$Result SUCCESS
+FIELD com.openggf.mods.scene.SceneClipboard$Result public,static,final com.openggf.mods.scene.SceneClipboard$Result UNAVAILABLE
 FIELD com.openggf.mods.scene.SceneKeys public,static,final int A
 FIELD com.openggf.mods.scene.SceneKeys public,static,final int APOSTROPHE
 FIELD com.openggf.mods.scene.SceneKeys public,static,final int B
@@ -12777,6 +12785,7 @@ METHOD com.openggf.mods.scene.ActResult public,final  java.lang.String toString(
 METHOD com.openggf.mods.scene.DebuggableScene public,abstract  boolean debugJump(java.lang.String)
 METHOD com.openggf.mods.scene.ModScene public  boolean capturesTextInput()
 METHOD com.openggf.mods.scene.ModScene public  void exit(com.openggf.mods.scene.SceneContext)
+METHOD com.openggf.mods.scene.ModScene public  void focusLost(com.openggf.mods.scene.SceneContext)
 METHOD com.openggf.mods.scene.ModScene public  void resume(com.openggf.mods.scene.SceneContext,com.openggf.mods.scene.ActResult)
 METHOD com.openggf.mods.scene.ModScene public  void resumed(com.openggf.mods.scene.SceneContext,com.openggf.mods.run.RunEndReason)
 METHOD com.openggf.mods.scene.ModScene public,abstract  void draw(com.openggf.mods.scene.SceneContext,com.openggf.mods.scene.SceneCanvas)
@@ -12859,11 +12868,18 @@ METHOD com.openggf.mods.scene.SceneClip public  int y()
 METHOD com.openggf.mods.scene.SceneClip public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.mods.scene.SceneClip public,final  int hashCode()
 METHOD com.openggf.mods.scene.SceneClip public,final  java.lang.String toString()
+METHOD com.openggf.mods.scene.SceneClipboard public,abstract  com.openggf.mods.scene.SceneClipboard$Write writeText(java.lang.String)
+METHOD com.openggf.mods.scene.SceneClipboard public,static  com.openggf.mods.scene.SceneClipboard unavailable()
+METHOD com.openggf.mods.scene.SceneClipboard$Result public,static  com.openggf.mods.scene.SceneClipboard$Result valueOf(java.lang.String)
+METHOD com.openggf.mods.scene.SceneClipboard$Result public,static  com.openggf.mods.scene.SceneClipboard$Result[] values()
+METHOD com.openggf.mods.scene.SceneClipboard$Write public,abstract  com.openggf.mods.scene.SceneClipboard$Result result()
 METHOD com.openggf.mods.scene.SceneContext public  com.openggf.control.PhysicalInput physicalInput()
+METHOD com.openggf.mods.scene.SceneContext public  com.openggf.mods.scene.SceneClipboard clipboard()
 METHOD com.openggf.mods.scene.SceneContext public  com.openggf.mods.scene.SceneGameplay gameplay()
 METHOD com.openggf.mods.scene.SceneContext public  com.openggf.mods.scene.SceneMusic music()
 METHOD com.openggf.mods.scene.SceneContext public  com.openggf.mods.scene.SceneNetwork network()
 METHOD com.openggf.mods.scene.SceneContext public  java.lang.String typedText()
+METHOD com.openggf.mods.scene.SceneContext public  long focusLossGeneration()
 METHOD com.openggf.mods.scene.SceneContext public  void startAct(com.openggf.mods.scene.ActLaunch)
 METHOD com.openggf.mods.scene.SceneContext public,abstract  boolean buttonDown(int)
 METHOD com.openggf.mods.scene.SceneContext public,abstract  boolean buttonPressed(int)
@@ -16720,6 +16736,8 @@ NESTED com.openggf.mods.mutators.TransportPolicy com.openggf.mods.mutators.Trans
 NESTED com.openggf.mods.scene.RomSpriteRequest com.openggf.mods.scene.RomSpriteRequest$Compression
 NESTED com.openggf.mods.scene.RomSpriteRequest com.openggf.mods.scene.RomSpriteRequest$DplcLayout
 NESTED com.openggf.mods.scene.SceneBackdrop com.openggf.mods.scene.SceneBackdrop$Band
+NESTED com.openggf.mods.scene.SceneClipboard com.openggf.mods.scene.SceneClipboard$Result
+NESTED com.openggf.mods.scene.SceneClipboard com.openggf.mods.scene.SceneClipboard$Write
 NESTED com.openggf.mods.scene.SceneMusicPreparation com.openggf.mods.scene.SceneMusicPreparation$State
 NESTED com.openggf.mods.scene.SceneNoteEvent com.openggf.mods.scene.SceneNoteEvent$Kind
 NESTED com.openggf.mods.scene.ScenePeer com.openggf.mods.scene.ScenePeer$Message
@@ -20721,6 +20739,7 @@ TYPE enum public,static,final com.openggf.mods.mutators.SpritePresentationPolicy
 TYPE enum public,static,final com.openggf.mods.mutators.TransportPolicy$Kind SUPER java.lang.Enum<com.openggf.mods.mutators.TransportPolicy$Kind>
 TYPE enum public,static,final com.openggf.mods.scene.RomSpriteRequest$Compression SUPER java.lang.Enum<com.openggf.mods.scene.RomSpriteRequest$Compression>
 TYPE enum public,static,final com.openggf.mods.scene.RomSpriteRequest$DplcLayout SUPER java.lang.Enum<com.openggf.mods.scene.RomSpriteRequest$DplcLayout>
+TYPE enum public,static,final com.openggf.mods.scene.SceneClipboard$Result SUPER java.lang.Enum<com.openggf.mods.scene.SceneClipboard$Result>
 TYPE enum public,static,final com.openggf.mods.scene.SceneMusicPreparation$State SUPER java.lang.Enum<com.openggf.mods.scene.SceneMusicPreparation$State>
 TYPE enum public,static,final com.openggf.mods.scene.SceneNoteEvent$Kind SUPER java.lang.Enum<com.openggf.mods.scene.SceneNoteEvent$Kind>
 TYPE enum public,static,final com.openggf.mods.scene.ScenePeer$State SUPER java.lang.Enum<com.openggf.mods.scene.ScenePeer$State>
@@ -20885,6 +20904,7 @@ TYPE interface public,abstract com.openggf.mods.scene.SceneArt SUPER <none>
 TYPE interface public,abstract com.openggf.mods.scene.SceneAudio SUPER <none>
 TYPE interface public,abstract com.openggf.mods.scene.SceneBackground SUPER <none>
 TYPE interface public,abstract com.openggf.mods.scene.SceneCanvas SUPER <none>
+TYPE interface public,abstract com.openggf.mods.scene.SceneClipboard SUPER <none>
 TYPE interface public,abstract com.openggf.mods.scene.SceneContext SUPER <none>
 TYPE interface public,abstract com.openggf.mods.scene.SceneGameplay SUPER <none>
 TYPE interface public,abstract com.openggf.mods.scene.SceneLevelKit SUPER <none>
@@ -20956,6 +20976,7 @@ TYPE interface public,abstract,static com.openggf.level.objects.PerObjectRewindS
 TYPE interface public,abstract,static com.openggf.level.objects.PerObjectRewindSnapshot$PlayableSubclassRewindExtra SUPER <none>
 TYPE interface public,abstract,static com.openggf.level.resources.KosinskiModuleQueue$DmaTarget SUPER <none>
 TYPE interface public,abstract,static com.openggf.mods.mutators.MutatorDefinition$PolicyFactory SUPER <none>
+TYPE interface public,abstract,static com.openggf.mods.scene.SceneClipboard$Write SUPER <none>
 TYPE interface public,abstract,static com.openggf.mods.ui.CompactFont$RunSink SUPER <none>
 TYPE interface public,abstract,static com.openggf.mods.ui.TextLayout$Metrics SUPER <none>
 TYPE interface public,abstract,static com.openggf.net.client.GhostStreamPublisher$BinarySender SUPER <none>
@@ -22439,6 +22460,9 @@ TYPE-ANNOTATION com.openggf.mods.scene.SceneBackground @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneButtons @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneCanvas @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneClip @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.scene.SceneClipboard @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.scene.SceneClipboard$Result @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.scene.SceneClipboard$Write @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneContext @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneDraw @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneGameplay @com.openggf.game.ModApi

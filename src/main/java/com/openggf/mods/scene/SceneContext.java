@@ -68,6 +68,12 @@ public interface SceneContext {
      */
     default String typedText() { return ""; }
 
+    /** Bounded write-only clipboard access. Contexts without a platform owner report unavailable. */
+    default SceneClipboard clipboard() { return SceneClipboard.unavailable(); }
+
+    /** Number of foreground losses during this visit, delivered before any subsequent presentation. */
+    default long focusLossGeneration() { return 0; }
+
     /** The mouse, in logical screen pixels. */
     SceneMouse mouse();
 

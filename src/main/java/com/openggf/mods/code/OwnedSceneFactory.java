@@ -33,6 +33,11 @@ public final class OwnedSceneFactory {
         return ownerModId;
     }
 
+    /** Engine-internal authority check for visit-owned capabilities during creator callbacks. */
+    public boolean isCallbackActive() {
+        return ownerModId.equals(OwnerCallbackScope.current());
+    }
+
     /** A fresh scene from the creator's factory; every call into it runs inside the fault boundary. */
     public ModScene create() {
         ModScene scene = boundary.call(ownerModId,
@@ -102,6 +107,11 @@ public final class OwnedSceneFactory {
         @Override
         public void resumed(SceneContext ctx, com.openggf.mods.run.RunEndReason reason) {
             boundary.run(ownerModId, () -> scene.resumed(ctx, reason));
+        }
+
+        @Override
+        public void focusLost(SceneContext ctx) {
+            boundary.run(ownerModId, () -> scene.focusLost(ctx));
         }
 
         @Override

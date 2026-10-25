@@ -46,6 +46,8 @@ public final class ModApiVersion {
      * with bounded packet buffering and scene-owned stop/fade/close lifetime.
      * Scene-owned direct peer text messaging is asynchronous and bounded, with
      * socket/thread ownership and lifetime kept in the engine.
+     * Scene clipboard writes consume bounded foreground user activation, and owner-bounded
+     * focus-loss callbacks invalidate revealed text even while scene updates are paused.
      * Unicode display names (NameFont, DisplayNames, typed scene text), player looks
      * (PlayerAppearance, CharacterLooks, coloured ghost poses, RunHandle player
      * appearance) and protocol v4 profile messages extend the candidate.

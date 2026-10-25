@@ -773,12 +773,15 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		// Setup window focus callback
 		glfwSetWindowFocusCallback(window, (windowHandle, focused) -> {
 			if (editorChrome != null) editorChrome.focus(focused);
+			gameLoop.modSceneHost.windowFocusChanged(focused);
 			paused = applyWindowActivation(focused, inputHandler, gameLoop::pause, gameLoop::resume);
 		});
 
 		// Setup window iconify callback
-		glfwSetWindowIconifyCallback(window, (windowHandle, iconified) ->
-				paused = applyWindowActivation(!iconified, inputHandler, gameLoop::pause, gameLoop::resume));
+		glfwSetWindowIconifyCallback(window, (windowHandle, iconified) -> {
+			gameLoop.modSceneHost.windowIconifyChanged(iconified);
+			paused = applyWindowActivation(!iconified, inputHandler, gameLoop::pause, gameLoop::resume);
+		});
 
 		// Get the thread stack and push a new frame
 		try (MemoryStack stack = stackPush()) {
@@ -829,6 +832,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 		// Set window handle for clipboard operations (GLFW-based, no AWT dependency)
 		debugOverlayManager.setWindowHandle(window);
+		gameLoop.modSceneHost.installClipboardPlatform(
+				com.openggf.mods.scene.host.SceneClipboardPlatform.glfw(window));
 
 		// Initial viewport uses physical framebuffer pixels, including high-DPI displays.
 		try (MemoryStack stack = stackPush()) {
@@ -2918,6 +2923,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			}
 
 			glfwPollEvents();
+			gameLoop.modSceneHost.flushClipboardWrites();
 			inputHandler.pollPhysicalGamepads();
 
 			boolean modeChanged = displayWindowController.apply(
@@ -2977,6 +2983,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				return;
 			}
 			glfwPollEvents();
+			gameLoop.modSceneHost.flushClipboardWrites();
 			inputHandler.pollPhysicalGamepads();
 		}
 	}
