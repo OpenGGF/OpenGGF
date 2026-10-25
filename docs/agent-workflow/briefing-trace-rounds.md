@@ -99,6 +99,15 @@ Also inspect the actual profile selection: that complete `-Pguards` run did
 not select `TestModApiSignatureSurface`; its eleven API cases were separate
 focused worker evidence, not part of the parent's 796 guard cases.
 
+Use the current importer metadata for ownership origins, rather than assuming
+JVM lambda names. During diagnostic-installation extraction under Java 25,
+ArchUnit attributed lambda accessors to the enclosing `pause()` and `resume()`
+methods. The new guard's synthetic-name assumption failed; its corrected
+allowlist names those exact origins. Inspect the actual receiver, member and
+origin together; do not broaden a guard to every lambda or every manager call.
+The [diagnostic ownership evidence](../architecture/plans/2026-10-24-architecture-continuation.md)
+records the guard-only correction and separate focused rerun.
+
 A Stageplay pixel oracle can compare two black S3K pictures while object art is
 still dormant or the native initial palette reveal is black (2026-10-24, facing
 correction, base `ac46111bc`). Require nonempty native sprite pixels and their

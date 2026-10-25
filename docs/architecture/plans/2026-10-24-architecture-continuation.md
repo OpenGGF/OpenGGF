@@ -12437,3 +12437,91 @@ and launches no further Maven. Parent owns fresh complete global guards and
 eleven composed controllers, then integration, push and exact checkout/branch
 cleanup. No worker main write, push, integration, cleanup or next candidate
 work occurs.
+
+### Diagnostic installation parent validation and frontier checkpoint — 2026-10-25
+
+Parent mapped source acceptance to implementation
+`651505eff0665c4767db1b76f5d79478873d5175`, exact child of fbed407d, tree
+`b362b6ed91e1f47314fbc056569bb5f06a1cf548`. Committed AM and guard blobs remain
+`fffaa4eae488fa9711ccac6f86397a96b1835375` and
+`33d86e1824867979730ea492dc463c8c97775eef`; pair fingerprint remains
+`dccf70cdf30d4417c9b88e6451ac5aee34f8075f04b97559dc1d7c89d7bab532`.
+Both accepted characterization files remain exact. Source review independently
+reconstructed complete baseline AM, verified all prior guard bytes and accepted
+the complete installation/lease policy without a general facade or widened rule.
+Parent took sole target/job ownership after terminal worker jobs and handback.
+
+**Combined selection.** The actual category plan against pre-task destination
+`0db2c6e168d83449d5b2481e379954a016d3bb59` selects 1,363 ordinary smoke candidates
+in audio/common/rewind/tooling. This is the subsystem/semantic dependency
+expansion, not an unclassified-file fallback. The changed production is a private
+installation/lease transfer: public APIs, request/PCM/clock/frame/source/loader/
+restore algorithms and all unrelated owners remain exact after the reviewed
+field/read/delegate normalization. Original-production reentry, rollback,
+reset/close failure, monitor, constructor and live-target controls discriminate
+the affected semantics. Parent therefore uses the worker's matched 110, separate
+ownership guard and 74 engine/API cases plus fresh complete guards and actual
+composed controllers instead of the ordinary expansion. No broad smoke,
+full-suite or emulator-parity result is claimed. New failures, unexpected skips
+or unexplained ownership/accounting changes would stop delivery for bounded
+investigation; no pin, store, budget or permission change would hide them.
+
+Both parent commands used the queued normal lane with Java 25, owned surfaceless
+EGL, four verified absolute ROM properties and all three dotted false freeze
+flags. Desktop and JVM-injection variables were unset. The ordinary engine/ROM
+common argument list above supplies those same values; the parent selections
+were `-Pguards` without an ArchUnit field filter and this exact controller list:
+
+```text
+-Dtest=TestGameLoopSuspension,TestGameLoopZoneActHandoffS1#rootRequestRunsFadeLoadTitleAndFirstInputWithoutExtraPass,TestGameLoopZoneActHandoffS2#rootRequestRunsFadeLoadTitleAndFirstInputWithoutExtraPass,TestKis2SpecialStageControllerLifecycle#entryResultsReturnKeepsChipProvider
+```
+
+| Session | Cases/failures/errors/skips | Physical reports | Queue wait | Maven elapsed |
+| --- | --- | ---: | ---: | ---: |
+| 79703, fresh complete guards | 799/0/0/0 | 95 | 0 s | 5:10 |
+| 82082, composed controllers | 11/0/0/0 | 4 | 0 s | 27.558 s |
+
+Guard coverage includes all 34 ArchUnit cases, all 44 audio-architecture cases,
+four session-authority cases and
+`diagnosticInstallationOwnsColdManagerLifetimeStateAndTheCompleteLeaseProtocol`.
+The worker's explicit eleven compiled API/pin/marker/terminal cases remain
+separate evidence: the global guards profile does not select that class.
+Overlapping cases are not summed. The controllers cover seven suspension cases,
+S1 root request/fade/load/title/release, both S2 variants and genuine KiS2
+entry/results/full return. The suspension report contains 82 known null-
+FileChannel preload messages; the other three contain none. The preceding same
+selection logged 72. Such count variation establishes no loader repair.
+
+Parent inspected all XML identities, failures/errors/skips, Java 25.0.5.0.2,
+EGL, four path properties and rehashed ROM identities, the three false freeze
+flags and absence of a field filter. All thirteen frozen files remain exact to
+0db, including 120 raw low-level records. Sorted case-ID SHA-256 values are
+`61c26fecb78527cdf45160ed3f67af07b0d760f0081d2855c1170b5216b191ea`
+(guards) and
+`1595be6a3d9f7d364fdef4ea64a8527ff1c8437bae3a776a532a12107cce5870`
+(controllers). Both handles are terminal. All 190 guard and eight controller
+XML/text files, the empty rewind-disposition diagnostic and 513-row lifecycle
+inventory were inspected and consumed. No category run/acknowledgment is pending.
+Fetch/fast-forward pull found main develop unchanged at 0db; its four dirty
+reference submodules and five user files remain preserved. Integration, push
+and exact owned checkout cleanup are subsequent delivery operations.
+
+**Current finite frontier.** Engine, GameLoop and LevelManager are byte-exact
+to the independently assessed f056 source. The AM production delta from 0db is
+only this accepted installation transfer. Its remaining outer state governs
+backend/launch-port composition, routing and intent suppression, outer-frame
+arbitration, standalone voice IDs and natural-restore intent; the seven retained
+private responsibility references and existing timeline do not duplicate those
+decisions. This is a responsibility judgment, not a class-size or allowance
+target, and does not assert whole-repository exhaustion.
+
+One concrete follow-up question emerged from that field audit: package-held
+`mutatorBinding` and `mutatorSubmissionDepth` participate in AudioMutatorAccess's
+world/thread capability, displacement callback and manager-wide feedback guard.
+A source-only qualification is checking whether complete binding/feedback
+authority earns a transfer or should remain request-routing composition. Its
+caller-loader checks use stack-sensitive EngineCallerAccess boundaries, so an
+extra owner frame must not silently mask a foreign caller. No characterization,
+implementation, API/security change or new candidate family is authorized by
+this checkpoint. Diagnostic delivery remains independent. Existing CPU palette,
+scene residency and fixed-tail storage dispositions remain unchanged.
