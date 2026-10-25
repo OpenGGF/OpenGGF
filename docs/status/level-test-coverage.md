@@ -2,8 +2,9 @@
 
 Sonic CD opening-object update (2026-10-25): the same partial act matrix now
 records the explicit USA object entry, current camera-art service, Boulder,
-diagonal Spring and Spikes construction/render/replay,567-pattern cleanup and
-the controller-only advance through561 to the later Checkpoint stop in582. These
+diagonal Spring, Spikes and Checkpoint construction/render/replay,579-pattern
+cleanup, actual Checkpoint saved-data death/restart within a separately constructed
+scene, and the controller-only advance through603 to Anton inside604. These
 extend the historical terrain-only checks below; they do not certify the act,
 native cold/title/PLC timing, full-USA gameplay or JP/EU object parity.
 

@@ -17,6 +17,7 @@ import static com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.Region
 import static com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.Region.AT_83E0;
 import static com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.Region.AT_8480;
 import static com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.Region.AT_9000;
+import static com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.Region.AT_D960;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -441,12 +442,12 @@ class TestCdR11aCameraArtResidency {
     }
 
     @Test
-    void legacyOrdinalsAndEightDisjointRegionsCoverExactlyFourHundredFortyPhysicalTiles() {
+    void legacyOrdinalsAndNineDisjointRegionsCoverExactlyFourHundredFiftyTwoPhysicalTiles() {
         var expectedRegions = new CdR11aCameraArtResidency.Region[]{
-                AT_7400, AT_8120, AT_8480, AT_6E00, AT_7CC0, AT_83E0, AT_9000, AT_6400
+                AT_7400, AT_8120, AT_8480, AT_6E00, AT_7CC0, AT_83E0, AT_9000, AT_6400, AT_D960
         };
-        int[] starts = {0x7400, 0x8120, 0x8480, 0x6E00, 0x7CC0, 0x83E0, 0x9000, 0x6400};
-        int[] lengths = {0x8C0, 0x2C0, 0xB80, 0x600, 0x460, 0xA0, 0x1400, 0x100};
+        int[] starts = {0x7400, 0x8120, 0x8480, 0x6E00, 0x7CC0, 0x83E0, 0x9000, 0x6400, 0xD960};
+        int[] lengths = {0x8C0, 0x2C0, 0xB80, 0x600, 0x460, 0xA0, 0x1400, 0x100, 0x180};
         assertArrayEquals(expectedRegions, CdR11aCameraArtResidency.Region.values());
         int[] owners = new int[2048];
         int totalTiles = 0;
@@ -462,9 +463,9 @@ class TestCdR11aCameraArtResidency {
                 owners[address >>> 5]++;
             }
         }
-        assertEquals(440, totalTiles);
+        assertEquals(452, totalTiles);
         for (int id = 0; id < 2048; id++) {
-            assertEquals((id >= 0x370 && id < 0x520) || (id >= 0x320 && id < 0x328) ? 1 : 0, owners[id], "physical ID " + id);
+            assertEquals((id >= 0x370 && id < 0x520) || (id >= 0x320 && id < 0x328) || (id >= 0x6CB && id < 0x6D7) ? 1 : 0, owners[id], "physical ID " + id);
         }
     }
 
@@ -477,7 +478,7 @@ class TestCdR11aCameraArtResidency {
         assertRegion(fullThree, AT_8120, ANTON, allKnown(704));
         assertRegion(fullThree, AT_8480, third, allKnown(2944));
         for (var state : new CdR11aCameraArtResidency.State[]{seed(), fullThree}) {
-            for (var region : new CdR11aCameraArtResidency.Region[]{AT_6E00, AT_7CC0, AT_83E0, AT_9000, AT_6400}) {
+            for (var region : new CdR11aCameraArtResidency.Region[]{AT_6E00, AT_7CC0, AT_83E0, AT_9000, AT_6400, AT_D960}) {
                 assertRegion(state, region, new byte[region.byteLength()], new byte[region.byteLength()]);
                 assertThrows(IndexOutOfBoundsException.class, () -> state.region(region).knownByte(-1));
                 assertThrows(IndexOutOfBoundsException.class,
@@ -811,6 +812,75 @@ class TestCdR11aCameraArtResidency {
         for(int tile=0;tile<8;tile++)assertDiagnosticTile(captured,0x320+tile,tile+1);
         assertBoundary(captured,0x328,OUTSIDE_OWNED_WINDOW,0x6500);
         assertRegion(seed(),AT_6400,new byte[256],new byte[256]);
+    }
+
+
+    @Test
+    void checkpointWindowOwnsExactlyTwelveInitiallyUnknownTilesBetweenPointsAndFlower() {
+        var completeThree = CdR11aCameraArtResidency.knownSeed(bytes(MOSQUI), bytes(ANTON),
+                bytes(distinctBytes(2944, 0x57)));
+        assertEquals(8, AT_D960.ordinal());
+        assertEquals(0xD960, AT_D960.destinationWord());
+        assertEquals(0x180, AT_D960.byteLength());
+        assertEquals(12, AT_D960.tileCount());
+        for (var state : new CdR11aCameraArtResidency.State[]{seed(), completeThree}) {
+            assertRegion(state, AT_D960, new byte[384], new byte[384]);
+            for (int id = 0x6CB; id <= 0x6D6; id++) assertBoundary(state, id, UNKNOWN_PATTERN, id << 5);
+            for (int id : new int[]{0x6CA, 0x6D7}) assertBoundary(state, id, OUTSIDE_OWNED_WINDOW, id << 5);
+        }
+    }
+
+    @Test
+    void everyCheckpointTileCutReplaysCurrentBytesWithoutTouchingAnyEarlierRegion() {
+        byte[] diagnostic = literalDiagnosticTiles(0x61, 0x62, 0x63, 0x64, 0x65, 0x66,
+                0x67, 0x68, 0x69, 0x6A, 0x6B, 0x6C);
+        var cuts = new java.util.ArrayList<CdR11aCameraArtResidency.State>();
+        cuts.add(seed());
+        for (int tile = 0; tile < 12; tile++) cuts.add(CdR11aCameraArtResidency.writeTile(
+                cuts.getLast(), 0xD960 + tile * 32, bytes(diagnostic).slice(tile * 32, 32)));
+        for (int completed = 0; completed <= 12; completed++) {
+            var captured = cuts.get(completed);
+            byte[] expected = new byte[384], mask = new byte[384];
+            System.arraycopy(diagnostic, 0, expected, 0, completed * 32);
+            Arrays.fill(mask, 0, completed * 32, (byte) 1);
+            assertRegion(captured, AT_D960, expected, mask);
+            assertRegionsUnchangedExcept(cuts.getFirst(), captured, AT_D960);
+            for (int tile = 0; tile < 12; tile++) {
+                if (tile < completed) assertDiagnosticTile(captured, 0x6CB + tile, 0x61 + tile);
+                else assertBoundary(captured, 0x6CB + tile, UNKNOWN_PATTERN, 0xD960 + tile * 32);
+            }
+            var replay = captured;
+            for (int tile = completed; tile < 12; tile++) replay = CdR11aCameraArtResidency.writeTile(
+                    replay, 0xD960 + tile * 32, bytes(diagnostic).slice(tile * 32, 32));
+            assertEquals(cuts.getLast(), replay);
+            assertEquals(cuts.getLast().hashCode(), replay.hashCode());
+        }
+        var replacement = CdR11aCameraArtResidency.writeTile(cuts.getLast(), 0xDAC0,
+                bytes(literalDiagnosticTiles(0xF2)));
+        assertSingleTileCommit(cuts.getLast(), replacement, 0xDAC0, literalDiagnosticTiles(0xF2));
+        assertDiagnosticTile(replacement, 0x6D6, 0xF2);
+        assertDiagnosticTile(cuts.getLast(), 0x6D6, 0x6C);
+    }
+
+    @Test
+    void checkpointKnownZeroAndOutOfWindowFailurePreserveTheCompletedImmutablePrefix() {
+        var initial = seed();
+        var zero = CdR11aCameraArtResidency.writeTile(initial, 0xD960, bytes(new byte[32]));
+        assertNotEquals(initial, zero);
+        assertNotEquals(initial.hashCode(), zero.hashCode());
+        assertSingleTileCommit(initial, zero, 0xD960, new byte[32]);
+        assertArrayEquals(new byte[32], CdR11aCameraArtResidency.readTile(zero, 0x6CB).copy());
+        assertBoundary(initial, 0x6CB, UNKNOWN_PATTERN, 0xD960);
+        var complete = commit(zero, 0xD980, literalDiagnosticTiles(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11), 11);
+        for (int destination : new int[]{0xD940, 0xDAE0}) {
+            var fault = assertThrows(CdR11aCameraArtResidency.OwnershipBoundary.class,
+                    () -> CdR11aCameraArtResidency.writeTile(complete, destination, bytes(new byte[32])));
+            assertEquals(OUTSIDE_OWNED_WINDOW, fault.boundary());
+            assertEquals(destination, fault.destinationWord());
+        }
+        assertArrayEquals(new byte[32], CdR11aCameraArtResidency.readTile(complete, 0x6CB).copy());
+        for (int tile = 1; tile < 12; tile++) assertDiagnosticTile(complete, 0x6CB + tile, tile);
+        assertRegionsUnchangedExcept(initial, complete, AT_D960);
     }
 
     private static CdAssetBytes bytes(byte[] value) { return CdAssetBytes.copyOf(value); }

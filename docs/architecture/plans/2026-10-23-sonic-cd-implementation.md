@@ -6062,3 +6062,107 @@ payload/live-water/camera/time prerequisite. Its source-only reports and frozen
 asset candidate are separate future work; they are not imported or counted in
 this Spikes result. FM TrackUpdate likewise remains a source-only proposal with
 a required internal projection bridge and unresolved suffix-address accounting.
+
+
+## Checkpoint save, fresh-visit load and Anton frontier — 25 October 2026
+
+Private/local candidate over `ea8dabcf67df7d02f7a2a39496ff7cea93b7e8bd`;
+main and retained primary are untouched. This extends the explicit USA opening
+object entry, not the default static entry or complete-USA certification.
+
+Checkpoint is native ID13, not Boulder1B. Authenticated USA mapping/script
+operands bind four frames and one script, with a tenth finite camera-art source
+(Java211/native212). The single current physical owner adds twelve initially
+unknown tiles at D960..DAE0; explicit DEV cold writes authenticate those bytes,
+restart carries current bytes/masks verbatim, and the picture policy eagerly
+snapshots twelve current versions alongside the previous567 (579 total).
+No actor-selected immutable art fallback or claimed native cold-PLC history.
+
+The actual pool body preserves Init's return (no Main fallthrough), dirty free
+child ADD4, full32-bit parent pointer and raw24-bit bus reads, physical child
+ordering, angle+8 before shared math, word stores retaining fractions, and real
+delay3 animation. Contact uses the existing E3 SPECIAL response; Main clears
+collision/activates, commits checkpoint then spawn as two stores, executes the
+source-ordered18-store SaveData helper, then requests AE once before Draw.
+Saved bytes are31 addressed bytes with knowledge, including water-height/routine
+aliasing. One Runtime aggregate captures saved/live values; synchronous private
+phase/source/cursor/CAS ports own publication. Metadata is never replay authority.
+
+Fresh restart uses actual LoadCheckpointData destinations and unknown-aware CAS,
+then SetupCamera, shared BG init, load scroll and the actual postscroll cameraX
+for one initial section-list append. New-visit ClearFlowers clears the carried
+Ring timeStop/timer/frame before LoadData; it preserves their actual handoff
+values until that writer. Saved time0 restores raw0000FF3B (frames59, seconds
+byte underflow), not normalized time or elapsed HUD. Native HUD ticking remains
+explicitly omitted: raw paused WORD, in-service shared Kill, ledger rotation
+and max-time+Start disposition still need ownership before enabling it.
+
+Observed focused checks used the main-workspace Maven queue wrapper from the
+private objects tree, Java25.0.5.0.2, supplied media, and explicit skips. Assets90
+and store/save70 passed. Body/Aux initially had three dirty-ID fixture errors;
+corrected Body3 + Load35 + Frame6 + Setup4 passed48. Runtime/carry/API325 had
+eight new fixture failures: seven empty-ledger assumptions ignored completed
+Body sounds; priorityFF is valid after native mask7, so the late failure case
+now reaches malformed frameFF in DrawObjects. The corrected eight passed.
+No production sound/priority behavior changed to fit those oracles.
+
+Actual EGL retirement negative23407 selected those8 plus the new Checkpoint
+World test:9/1/0/0, failing only after contact/save/spin/animation/ordered pixels
+and full/course replay on the first residual atlas entry131639 (base+567).
+Presentation then changed exactly the count/comment567->579/+12 atop the new
+Module methods. Positive27422 selected the two Checkpoint World tests plus a
+temporary controller frontier observation:3/0/0/0, no skips, Maven1m30 finished
+17:49:10Z after30s queue. Its command was `maven_queue.py --normal -Dmse=off
+-Dtest=TestSonicCdOpeningWorldEgl#actualEglConstructedCheckpointWorldSavesSpinsAnimatesReplaysAndRetires579Patterns+actualEglConstructedCheckpointContactDiesNativelyRestartsLoadsAndReplaysOnlyTheFreshEpoch,TestSonicCdOpeningWorldLoad#checkpointNaturalRightFrontierObservation
+-Dsoniccd.opening.egl=true -Dopenggf.headless.gl=surfaceless-egl
+-Dsoniccd.media.root=<Downloads/Sonic-CD/media> -Dsonic2.rom.path=<existing S2 ROM> test`
+with DISPLAY/WAYLAND absent and LUA_BIN=lua5.4. This is a bounded selection,
+not a whole act, broad smoke or full-suite pass. Combined consumers25852 passed1149/0/0/0 across18 exact selected fresh XML,
+including Runtime283, all18 EGL and50 World/load cases, Java25/media/EGL/S2
+checked, Maven1m36/18:02:13Z with no queue wait. Fresh guards68483 passed
+728/0/0/0 across90 fresh XML, Java25/Lua5.4, Maven5m09/18:09:27Z, no queue wait.
+
+The constructed contact scene has one initial pole/actor ingress, then44 real
+neutral rows: final31 saved bytes/knowledge and one AE;32 real ball spin visits;
+frames2/3/FF animation; current12 patterns, literal SAT, actual ordered World,
+PlaneB and isolated renderer omission controls. Six full/course cut pairs replay
+state and pixels without ingress. All579 entries are installed for retirement
+(old missing entries use test-only transparent witnesses), then removed while
+actual shared entries retain identity. This is not all579 rendered in gameplay.
+Twelve unchanged320x224 ENGINE PNGs, input/construction and post-cleanup outcome
+are under Downloads `native/engine-checkpoint-r1`, not emulator references.
+
+A separate once-constructed pole plus upright Spikes scene completes save at
+row2, actual shared Kill at row6, native dead/reset and NEXT-beforeFrame fresh
+Runtime/Frame/actor/scroll/load generation. It verifies saved31 preservation,
+fresh cleared XY fractions, real cameras/clouds/raw-time load, Ring7/frame1,
+one section0 append and actual Boulder service through new row7/remaining1.
+Old-epoch full/course snapshots reject; fresh cuts0/1/3 produce28 forward rows
+with state/pixel replay. It intentionally stops before Animals on new row8.
+This is an actual engine restart proof, not a controller-only checkpoint hit.
+
+Controller-only Right now completes Checkpoint Init at582 and through603;
+full/course replay across581/582 passed. Inside604, earlier physical bodies
+complete before unowned Anton3F at55. The observed untouched slot is X2832/Y1061,
+subtypeFF, saved membership3A, routine0. Later Boulder56/Spring57/Spikes58 remain
+unexecuted. The temporary observation is replaced by permanent assertions for
+582 and603 replay plus this exact partial604 boundary. No failed pass is resumed,
+and no natural Checkpoint contact or completed604 is claimed. Native source
+maps3F to ObjAnton; its body/current-art/terrain publication is the next frontier.
+
+
+The final affected-consumer command used the same media/EGL/donor flags and18
+exact classes: TestCdR11aObjectAssets, TestCdR11aObjectRetailAssets,
+TestCdR11aCameraArtResidency, TestCdCheckpointSaveData, TestCdCheckpointLiveAux,
+TestCdCheckpoint, TestCdCheckpointLoadData, TestCdCheckpointPicture,
+TestCdObjectMappings, TestCdR11aSectionArt, TestCdSpikesPicture,
+TestCdPlayerFrameRuntime, TestCdR11aForegroundScroll, TestCdOpeningObjectRuntime,
+TestSonicCdOpeningWorldLoad, TestSonicCdRestartCarry, TestSonicCdOpeningWorldEgl,
+TestModApiSignatureSurface. Fresh guards used `maven_queue.py --normal -Dmse=off
+-Pguards test -B` in a fresh JVM. This bounded affected-consumer selection
+replaces broad smoke: new Frame/camera ports preserve old algorithms, their full
+consumer classes and all old/new World products are exercised, and no unrelated
+donor/build/timing behavior changes. Remaining whole-act/native clock/reference
+obligations stay open. The permanent route test now also passes603 replay. The
+one-off diagnostic observer is removed. Fixed-input review96d5b374 found no
+P1/P2 in the new restart proof/Root corrections; all execution is Root-attributed.

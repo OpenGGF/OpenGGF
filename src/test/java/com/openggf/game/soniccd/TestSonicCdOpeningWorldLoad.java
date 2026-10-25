@@ -939,7 +939,7 @@ class TestSonicCdOpeningWorldLoad {
         registry.restore(full);assertState(before,h);step(h,input(8,0,false));assertState(at540,h);step(h,input(8,0,false));assertState(at541,h);
         registry.restoreCourse(course);assertState(before,h);step(h,input(8,0,false));assertState(at540,h);step(h,input(8,0,false));assertState(at541,h);
     }
-    @Test void ordinaryRightRouteCompletesSpikesAt561ReplaysThenStopsAtCheckpoint582() throws Exception {
+    @Test void ordinaryRightRouteCompletesCheckpointAt582ReplaysThenStopsAtAnton604() throws Exception {
         var h=opening();var runtime=objects(h);var frame=h.module().requirePlayerFrame();var pool=runtime.placement().pool();
         for(int call=0;call<560;call++)step(h,input(8,0,false));
         assertEquals(0,pool.state(46).id());
@@ -979,16 +979,44 @@ class TestSonicCdOpeningWorldLoad {
         registry.restoreCourse(course);assertState(before,h);step(h,input(8,0,false));assertState(at561,h);
         for(int call=562;call<=581;call++)step(h,input(8,0,false));
         assertFalse(runtime.closed());assertFalse(frame.closed());
-        var failure=assertThrows(UnsupportedOperationException.class,()->step(h,input(8,0,false)));
-        assertEquals("Unowned CD object ID $13 at live physical slot 34",failure.getMessage());
-        // Object Index (Act1 Present).asm:26 owns ID13 as Checkpoint. Earlier physical Init prefixes survive call582.
+        var full581=registry.capture();var course581=registry.captureCourse();var at581=state(h);
+        var savedBeforeInit=runtime.checkpointState();
+        step(h,input(8,0,false)); // Completed582: actual Checkpoint Init returns, later35 child Main runs this pass.
         var door=pool.state(32);assertEquals(0x35,door.id());assertEquals(2,door.routine());
         assertEquals(0x20CE9A,door.longBits(CdObjectState.LongField.MAPPINGS));assertEquals(0x8328,door.word(CdObjectState.WordField.TILE));
         var diagonal=pool.state(33);assertEquals(0x0A,diagonal.id());assertEquals(0x14,diagonal.routine());
         assertEquals(0x209BF0,diagonal.longBits(CdObjectState.LongField.MAPPINGS));assertEquals(2688,diagonal.centreX());assertEquals(1104,diagonal.centreY());
-        var checkpoint=pool.state(34);assertEquals(0x13,checkpoint.id());assertEquals(0,checkpoint.routine());
-        assertEquals(2760,checkpoint.centreX());assertEquals(744,checkpoint.centreY());assertEquals(0,checkpoint.longBits(CdObjectState.LongField.MAPPINGS));
+        var checkpoint=pool.state(34);assertEquals(0x13,checkpoint.id());assertEquals(2,checkpoint.routine());
+        assertEquals(2760,checkpoint.centreX());assertEquals(744,checkpoint.centreY());assertEquals(0x23F120,checkpoint.longBits(CdObjectState.LongField.MAPPINGS));
+        assertArrayEquals(java.util.HexFormat.of().parseHex("130406cb0023f1200ac8000002e8000000000000000018000408000000000000e300000002000000020000000000000000000000000000000000000000000000"),checkpoint.copyBytes());
+        var ball=pool.state(35);assertEquals(0x13,ball.id());assertEquals(4,ball.routine());
+        assertEquals(0xFFFFD880,ball.longBits(CdObjectState.LongField.CHECKPOINT_PARENT));
+        assertEquals(2760,ball.centreX());assertEquals(712,ball.centreY());assertEquals(0,ball.unsignedByte(CdObjectState.ByteField.CHECKPOINT_ACTIVE));
+        assertEquals(0,runtime.levelGlobals().checkpoint());assertEquals(0,runtime.levelGlobals().spawnMode());
+        assertEquals(savedBeforeInit,runtime.checkpointState()); // Natural route initializes this pole, not an invented contact/save.
         assertEquals(153497088,frame.state().motion().centreX16_16());assertEquals(10844672,frame.state().motion().centreY16_16());
+        assertEquals(0x0200,runtime.sectionArtState().sectionWord());assertEquals(0,runtime.sectionArtState().remainingTilesWord());
+        assertEquals(0,runtime.sectionArtState().queue().headSource());assertFalse(runtime.closed());assertFalse(frame.closed());
+        var at582=state(h);
+        registry.restore(full581);assertState(at581,h);step(h,input(8,0,false));assertState(at582,h);assertEquals(savedBeforeInit,runtime.checkpointState());
+        registry.restoreCourse(course581);assertState(at581,h);step(h,input(8,0,false));assertState(at582,h);assertEquals(savedBeforeInit,runtime.checkpointState());
+        for(int call=583;call<=602;call++)step(h,input(8,0,false));
+        var full602=registry.capture();var course602=registry.captureCourse();var at602=state(h);
+        step(h,input(8,0,false));assertFalse(runtime.closed());assertFalse(frame.closed());var at603=state(h);
+        registry.restore(full602);assertState(at602,h);step(h,input(8,0,false));assertState(at603,h);assertEquals(savedBeforeInit,runtime.checkpointState());
+        registry.restoreCourse(course602);assertState(at602,h);step(h,input(8,0,false));assertState(at603,h);assertEquals(savedBeforeInit,runtime.checkpointState());
+        var pataBefore604=pool.state(52);
+        var failure=assertThrows(UnsupportedOperationException.class,()->step(h,input(8,0,false)));
+        assertEquals("Unowned CD object ID $3f at live physical slot 55",failure.getMessage());
+        // Object Index (Act1 Present).asm owns3F=Anton. Earlier physical bodies complete;604 itself does not.
+        var anton=pool.state(55);assertEquals(0x3F,anton.id());assertEquals(0,anton.routine());
+        assertEquals(2832,anton.centreX());assertEquals(1061,anton.centreY());assertEquals(0xFF,anton.subtype());assertEquals(0x3A,anton.savedFlagsId());
+        assertArrayEquals(java.util.HexFormat.of().parseHex("3f000000000000000b10000004250000000000000000000000000000000000000000003a00000000ff0000000000000000000000000000000000000000000000"),anton.copyBytes());
+        assertEquals(0x1B,pool.state(56).id());assertEquals(0,pool.state(56).routine());assertEquals(0,pool.state(56).longBits(CdObjectState.LongField.MAPPINGS));
+        assertEquals(0x0A,pool.state(57).id());assertEquals(0,pool.state(57).routine());assertEquals(0x26,pool.state(58).id());assertEquals(0,pool.state(58).routine());
+        assertFalse(Arrays.equals(pataBefore604.copyBytes(),pool.state(52).copyBytes()),"Earlier52 executes before the actual Anton55 boundary");
+        assertEquals(2,pool.state(34).routine());assertEquals(4,pool.state(35).routine());assertEquals(savedBeforeInit,runtime.checkpointState());
+        assertEquals(162147840,frame.state().motion().centreX16_16());assertEquals(29340160,frame.state().motion().centreY16_16());
         assertEquals(0x0200,runtime.sectionArtState().sectionWord());assertEquals(0,runtime.sectionArtState().remainingTilesWord());
         assertEquals(0,runtime.sectionArtState().queue().headSource());assertTrue(runtime.closed());assertTrue(frame.closed());
     }

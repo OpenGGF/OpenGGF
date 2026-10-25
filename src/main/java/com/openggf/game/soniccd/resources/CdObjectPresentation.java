@@ -841,5 +841,97 @@ public final class CdObjectPresentation {
         return nativeId -> nativeId >= first && nativeId < first + count
                 ? extra.resolve(nativeId) : previous.resolve(nativeId);
     }
+
+    /**
+     * Current Checkpoint12 extends C26/current567 to seventeen spans and579 patterns.
+     * ObjCheckpoint_Init (Checkpoint/Main.asm:74-75,101-102 at scddisasm
+     * 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff) writes literal $06CB and
+     * the actual $23F120 mapping pointer. PLC_Level (Data (Act 1 Present).asm:47-52)
+     * places the $800C producer at $D960. That metadata is no preload authority.
+     * All twelve bytes-per-tile versions are eagerly copied from the one current
+     * physical State, including unreferenced tiles in a particular SAT frame.
+     * The old567 binding/overlap validation runs first and remains unchanged.
+     * Unknown ingress rejects, with no object-selected producer fallback.
+     */
+    public static PatternSource usaR11aCurrentCameraDevPreloadedArt(CdPlayerArtRuntime.State nowServicedPlayer,
+                                                                   CdPowerupArtRuntime.State nowServicedPowerup,
+                                                                   CdR11aObjectAssets objects,
+                                                                   CdR11aObjectAssets.FrontierArtBank frontier,
+                                                                   CdR11aObjectAssets.ContactArtBank contact,
+                                                                   CdR11aObjectAssets.FloatBlockArtBank floatBlock,
+                                                                   CdR11aObjectAssets.SpringArtBank spring,
+                                                                   CdR11aObjectAssets.TunnelDoorArtBank tunnelDoor,
+                                                                   CdR11aObjectAssets.MonitorTimeArtBank monitorTime,
+                                                                   CdR11aCameraArtResidency.State cameraResidency,
+                                                                   int playerLogicalBase, int ringLogicalBase,
+                                                                   int mosquiLogicalBase, int plantLogicalBase,
+                                                                   int rampLogicalBase, int explosionLogicalBase,
+                                                                   int pointsLogicalBase, int flowerLogicalBase,
+                                                                   int powerupLogicalBase, int floatBlockLogicalBase,
+                                                                   int springLogicalBase, int tunnelDoorVerticalLogicalBase,
+                                                                   int monitorTimeLogicalBase, int boulderLogicalBase,
+                                                                   int diagonalSpringLogicalBase, int spikesLogicalBase,
+                                                                   int checkpointLogicalBase) {
+        var previous = usaR11aCurrentCameraDevPreloadedArt(nowServicedPlayer, nowServicedPowerup, objects,
+                frontier, contact, floatBlock, spring, tunnelDoor, monitorTime, cameraResidency,
+                playerLogicalBase, ringLogicalBase, mosquiLogicalBase, plantLogicalBase, rampLogicalBase,
+                explosionLogicalBase, pointsLogicalBase, flowerLogicalBase, powerupLogicalBase,
+                floatBlockLogicalBase, springLogicalBase, tunnelDoorVerticalLogicalBase,
+                monitorTimeLogicalBase, boulderLogicalBase, diagonalSpringLogicalBase, spikesLogicalBase);
+        // ObjCheckpoint_Init writes literal $06CB; it never calls SetObjectTileID.
+        int first = 0x6CB, count = 12;
+        var visual = objects.checkpoint();
+        var region = CdR11aCameraArtResidency.Region.AT_D960;
+        if (visual.mappingTableOffset() != 0 || visual.mappingFrames().size() != 4
+                || visual.animations().size() != 1
+                || region.destinationWord() != first * 32 || region.byteLength() != count * 32) {
+            throw new IllegalArgumentException("Checkpoint disagrees with its authenticated mapping or physical extent");
+        }
+        var referenced = new HashSet<Integer>();
+        for (var frame : visual.mappingFrames()) for (var piece : frame.pieces()) {
+            for (int tile = 0; tile < piece.tileCount(); tile++) {
+                int offset = piece.tileOffset() + tile;
+                if (offset < 0 || offset >= count) {
+                    throw new IllegalArgumentException("Checkpoint mapping exceeds its twelve current patterns");
+                }
+                referenced.add(offset);
+            }
+        }
+        if (referenced.size() != count) {
+            throw new IllegalArgumentException("Checkpoint frames must address all twelve current patterns");
+        }
+        byte[] current = new byte[count * 32];
+        for (int tile = 0; tile < count; tile++) {
+            byte[] bytes = CdR11aCameraArtResidency.readTile(cameraResidency, first + tile).copy();
+            System.arraycopy(bytes, 0, current, tile * 32, 32);
+        }
+        var extraSpan = new PixelSpan(first, checkpointLogicalBase, CdAssetBytes.copyOf(current));
+        var extra = declaredPixelBank(List.of(extraSpan));
+        var oldRanges = new ArrayList<int[]>();
+        oldRanges.add(new int[]{CdPlayerArtRuntime.VRAM_BYTE_ADDRESS / 32, nowServicedPlayer.residentBank().length() / 32});
+        oldRanges.add(new int[]{CdPowerupArtRuntime.VRAM_BYTE_ADDRESS / 32, nowServicedPowerup.residentBank().length() / 32});
+        for (var binding : List.of(objects.initialArtBank().binding(CdR11aAsset.ART_RINGS),
+                objects.initialArtBank().binding(CdR11aAsset.ART_MOSQUI),
+                frontier.binding(CdR11aAsset.ART_3D_PLANT), frontier.binding(CdR11aAsset.ART_3D_RAMP_BOOST),
+                contact.binding(CdR11aAsset.ART_EXPLOSIONS), contact.binding(CdR11aAsset.ART_POINTS),
+                contact.binding(CdR11aAsset.ART_FLOWER), floatBlock.binding(CdR11aAsset.ART_FLOAT_BLOCK),
+                spring.binding(CdR11aAsset.ART_SPRINGS), tunnelDoor.binding(CdR11aAsset.ART_TUNNEL_DOOR),
+                monitorTime.binding(CdR11aAsset.ART_MONITOR_TIME_POSTS))) {
+            oldRanges.add(new int[]{binding.firstTileId(), binding.tileCount()});
+        }
+        oldRanges.add(new int[]{objects.tileWord(0x0B, 0), 19});
+        oldRanges.add(new int[]{objects.tileWord(0x0F, 0), 46});
+        oldRanges.add(new int[]{objects.tileWord(0x0A, 0), 8});
+        long extraEnd = (long) checkpointLogicalBase + count;
+        for (int[] range : oldRanges) {
+            int oldLogicalFirst = previous.resolve(range[0]).logicalPatternId();
+            if (first < range[0] + range[1] && range[0] < first + count
+                    || checkpointLogicalBase < (long) oldLogicalFirst + range[1] && oldLogicalFirst < extraEnd) {
+                throw new IllegalArgumentException("Overlapping Checkpoint native or logical picture binding");
+            }
+        }
+        return nativeId -> nativeId >= first && nativeId < first + count
+                ? extra.resolve(nativeId) : previous.resolve(nativeId);
+    }
 }
 // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>

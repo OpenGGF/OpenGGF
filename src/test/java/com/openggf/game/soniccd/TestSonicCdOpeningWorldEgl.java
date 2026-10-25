@@ -164,7 +164,7 @@ class TestSonicCdOpeningWorldEgl {
                                 source.assets().openingObjects().monitorTimeArtBank(), runtime.sectionArtState().residency(),
                                 banks.player(), banks.ring(), banks.mosqui(), banks.plant(), banks.ramp(),
                                 banks.explosion(), banks.points(), banks.flower(), banks.powerup(), banks.floatBlock(), banks.spring(),
-                                banks.tunnelDoorVertical(), banks.monitorTime(), banks.boulder(), banks.diagonalSpring(), banks.spikes()));
+                                banks.tunnelDoorVertical(), banks.monitorTime(), banks.boulder(), banks.diagonalSpring(), banks.spikes(), banks.checkpoint()));
                 assertEquals(expectedPicture, runtime.displayedFrame(), "Next V-int uses the pickup CPU table and now-serviced art");
                 int playerBase = com.openggf.graphics.PatternAtlasRange.OBJECTS.base();
                 assertTrue(runtime.displayedFrame().patternVersions().keySet().stream()
@@ -2090,7 +2090,7 @@ class TestSonicCdOpeningWorldEgl {
                 module.requirePlayerFrame().artState(), runtime.powerupArtState(), objects, objects.frontierArtBank(), objects.contactArtBank(),
                 objects.floatBlockArtBank(), objects.springArtBank(), objects.tunnelDoorArtBank(), objects.monitorTimeArtBank(), runtime.sectionArtState().residency(),
                 banks.player(), banks.ring(), banks.mosqui(), banks.plant(), banks.ramp(), banks.explosion(), banks.points(), banks.flower(),
-                banks.powerup(), banks.floatBlock(), banks.spring(), banks.tunnelDoorVertical(), banks.monitorTime(), banks.boulder(), banks.diagonalSpring(), banks.spikes());
+                banks.powerup(), banks.floatBlock(), banks.spring(), banks.tunnelDoorVertical(), banks.monitorTime(), banks.boulder(), banks.diagonalSpring(), banks.spikes(), banks.checkpoint());
     }
 
     /** Literal N MM:157-167 and MM:55-60. Static item has ONE piece despite counted frame4 having four. */
@@ -2244,7 +2244,7 @@ class TestSonicCdOpeningWorldEgl {
                 var banks = new CdOpeningObjectRuntime.LogicalBanks(base, base + 24, base + 38);
                 assertEquals(base + 494, banks.boulder()); assertEquals(banks.monitorTime() + 82, banks.boulder());
                 var objects = source.assets().openingObjects();
-                var sources = objects.sectionArtSources(); assertEquals(9, sources.sources().size());
+                var sources = objects.sectionArtSources(); assertEquals(10, sources.sources().size());
                 var boulder = sources.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_BOULDER);
                 assertEquals(2, boulder.canonicalPlcId()); assertEquals(0, boulder.canonicalRowIndex());
                 assertEquals(0x6E80, boulder.canonicalPlc().vramAddress()); assertEquals(19, boulder.tileCount());
@@ -2597,7 +2597,7 @@ class TestSonicCdOpeningWorldEgl {
                 var banks = new CdOpeningObjectRuntime.LogicalBanks(baseId, baseId + 24, baseId + 38);
                 assertEquals(baseId + 513, banks.diagonalSpring()); assertEquals(banks.boulder() + 19, banks.diagonalSpring());
                 var objects = source.assets().openingObjects(); var sources = objects.sectionArtSources();
-                assertEquals(9, sources.sources().size());
+                assertEquals(10, sources.sources().size());
                 var diagonal = sources.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_DIAGONAL_SPRING);
                 assertEquals(1, diagonal.canonicalPlcId()); assertEquals(5, diagonal.canonicalRowIndex());
                 assertEquals(0x9200, diagonal.canonicalPlc().vramAddress()); assertEquals(46, diagonal.tileCount());
@@ -3084,7 +3084,7 @@ class TestSonicCdOpeningWorldEgl {
                 int base = com.openggf.graphics.PatternAtlasRange.OBJECTS.base();
                 var banks = new CdOpeningObjectRuntime.LogicalBanks(base, base + 24, base + 38);
                 assertEquals(base + 559, banks.spikes()); assertEquals(banks.diagonalSpring() + 46, banks.spikes());
-                var sources = objects.sectionArtSources(); assertEquals(9, sources.sources().size());
+                var sources = objects.sectionArtSources(); assertEquals(10, sources.sources().size());
                 var spikes = sources.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_SPIKES);
                 assertEquals(1, spikes.canonicalPlcId()); assertEquals(0, spikes.canonicalRowIndex());
                 assertEquals(0x6400, spikes.canonicalPlc().vramAddress()); assertEquals(8, spikes.tileCount());
@@ -3453,5 +3453,788 @@ class TestSonicCdOpeningWorldEgl {
     }
 
     // END constructed Spikes World proof.
+
+    // BEGIN constructed Checkpoint World proof. SOURCE-ONLY literals; Root owns all execution and repairs.
+
+    @Test void actualEglConstructedCheckpointWorldSavesSpinsAnimatesReplaysAndRetires579Patterns() throws Exception {
+        Assumptions.assumeTrue(Boolean.getBoolean("soniccd.opening.egl"), "Explicit actual EGL/media opt-in");
+        assertEquals("surfaceless-egl", System.getProperty("openggf.headless.gl"));
+        assertNull(System.getenv("DISPLAY")); assertNull(System.getenv("WAYLAND_DISPLAY"));
+        String media = System.getProperty("soniccd.media.root"); assertNotNull(media); assertFalse(media.isBlank());
+        CdGameDataSource source;
+        try (var files = Files.list(Path.of(media).resolve("USA"))) {
+            var cues = files.filter(p -> p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".cue")).toList();
+            assertEquals(1, cues.size()); source = CdStockLaunch.prepare(cues.getFirst(), CdStockLaunch.Request.r11a());
+        }
+        String bootLog = InputScriptCompiler.compileToInputLog("2 -");
+        var bootInputs = new Bk2MovieLoader().parseInputLogText(Path.of("ENGINE-checkpoint-two-ordinary-boot-rows"), bootLog.lines().toList());
+        String sceneLog = InputScriptCompiler.compileToInputLog("44 -");
+        var movie = new Bk2MovieLoader().parseInputLogText(Path.of("ENGINE-constructed-checkpoint-neutral-input"), sceneLog.lines().toList());
+        assertEquals(2, bootInputs.getFrameCount()); assertEquals(44, movie.getFrameCount());
+        String construction = "ENGINE constructed actual-USA R11A Checkpoint component; not an emulator capture or natural contact route.\n"
+                + "Actual HeadlessGameBoot and two ordinary neutral controller rows first. At ONE initial CLOSED_CUT clear all96 dynamics; keep placement cursors/saved flags/reserved actors. Construct ONLY whole40, ID13, integerXY=currentCamera+(160,56), subtype2 at28/subtype2byte0 at29, native placement flags0. SavedID/routine/frame/map/tile/active/collision/animation/parent bytes remain cleared.\n"
+                + "Restore/rebind the SAME completed primary Sonic ONCE at (PoleX.ABCD,(PoleY-24).1234), XV/YV/GVel0, routine2/angle0/flags2/sprite4/radii9,19/animation0/jump,charge,lock,stick,control0. Preserve previous animation/angles, animation cursor/header/timers/history/rotation/links/owner; clear only actor Display publication. Assert real two-foot terrain clearance; no terrain edits or alternate pose retry.\n"
+                + "After that initial cut NO actor/pole/ball setters, rebind, source reload, store/effect replay, forced bit7 or manual child. Row1 real Init ASSIGNS spr4 and RETURNS: earlier32 was already visited, so its newly allocated routine4 ball is not run/drawn. Row2 actual Body SPECIAL23/E3 increments pole status; earlier32 reads inactive parent before pole40 clears collision/activates/checkpoint2/spawn1, completes SaveData then requestsAE once. Row3 starts actual ball spin; rows3..34 give32 +8 visits; row34 routine6/angle0, row35 real animation frame2/timer3, row39 frame3/timer3, row43 FF loop to2.\n"
+                + "World live water/time are represented actual clear/raw DEV0, not elapsed native HUD time; verify final31 saved bytes/knowledge including the real overlapping water addresses, actual post-Body XY/bottom/mini and eight PRE-scroll cameras. World cannot distinguish same-value duplicate water stores; Root's private18-store cursor guards that ordering beforeAE. Nonzero water-alias/time vectors belong to separate component evidence.\n"
+                + "Every ordinary row checks complete reached Body sounds using the existing oracle plus its later ChargeStop branch, then exactly one actual typed CheckpointFm(AE) at contact. Literal4-piece pole/2-piece ball SAT and12/4 cells retain06CB mapping attributes; all12 current physical tiles are reached over frames0,1,2,3. Ordered World pixels use current terrain/native PlaneB; isolated and explicitly TEST contrast renderer controls omit individual nonempty cells/pieces without changing gameplay.\n"
+                + "Full/course closed cuts0 preInit,1 postInit,2 contact,18 midSpin,34 startAnimate,35 nonzero timer restore complete state/pixels then forward44 with NO ingress. Saved/live checkpoint owner is compared explicitly in addition to the unchanged existing aggregate oracle.\n"
+                + "ALL579 actual atlas entries must exist before close; only missing older567 entries get TEST-only transparent upload witnesses, never checkpoint pixels. All579 must be absent after module close; actual terrain/other producer entry identities survive. Optional labelled ENGINE PNG/input/construction/PASS files are written ONLY after module retirement AND finally session/graphics/boot cleanup.\n"
+                + "UNRUN author source. Root owns RED/compile/positive/review/repairs, actual Module/clear/load/restart integration and independent natural route. No restart, native timing/pixel parity, all579 scene-rendered, JP/EU or full-game claim.\n";
+        var observations = new StringBuilder(); var artifacts = new java.util.LinkedHashMap<String, RgbaImage>();
+        int[] nativeFirst = {0x780,0x7AE,0x3A0,0x424,0x441,0x680,0x6C6,0x6D7,0x544,0x334,0x520,0x328,0x5A8,0x374,0x490,0x320,0x6CB};
+        int[] counts = {24,14,70,28,63,70,5,39,36,15,36,12,82,19,46,8,12};
+        assertEquals(17, nativeFirst.length); assertEquals(17, counts.length); assertEquals(579, Arrays.stream(counts).sum());
+        try (var boot = new HeadlessGameBoot(320, 224)) {
+            try {
+                var loop = boot.bootSonicCdOpeningObjects(source); var mode = SessionManager.getCurrentGameplayMode();
+                var module = assertInstanceOf(SonicCdGameModule.class, mode.getWorldSession().getGameModule());
+                var runtime = assertInstanceOf(CdOpeningObjectRuntime.class, module.getGameService(NativeDynamicObjectPass.class));
+                var frame = module.requirePlayerFrame(); var objects = source.assets().openingObjects();
+                assertSame(source, mode.getWorldSession().getDataSource()); assertEquals(GameMode.LEVEL, loop.getCurrentGameMode());
+                assertEquals(NullAudioBackend.class, GameServices.audio().getBackend().getClass());
+                assertNull(GameServices.audio().captureLogicalSnapshot().presentation().activeMusic());
+                for (int row = 0; row < 2; row++) step(loop, bootInputs.getFrame(row));
+                assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT, runtime.phase());
+                assertEquals(2, frame.state().motion().routine()); assertEquals(0, frame.state().timers().hurt());
+                assertEquals(0, frame.state().objectLinks().standObject()); assertEquals(0, frame.state().objectLinks().pushObject());
+                assertEquals(0, runtime.levelGlobals().checkpoint()); assertEquals(0, runtime.levelGlobals().spawnMode());
+                assertEquals(0, frame.environment().globals().debugCheat()); assertEquals(0, frame.environment().globals().debugMode());
+                assertEquals(0, frame.environment().globals().invincible()); assertEquals(0, frame.environment().movement().gates().miniSonic());
+                assertEquals(0, runtime.contactGlobals().timeWarp()); assertEquals(0, runtime.contactGlobals().shield());
+                assertEquals(0, runtime.contactGlobals().combineRing());
+                int base = com.openggf.graphics.PatternAtlasRange.OBJECTS.base();
+                var banks = new CdOpeningObjectRuntime.LogicalBanks(base,base+24,base+38,base+108,base+136,base+199,
+                        base+269,base+274,base+313,base+349,base+364,base+400,base+412,base+494,base+513,base+559);
+                assertEquals(base + 567, banks.checkpoint()); assertEquals(banks.spikes() + 8, banks.checkpoint());
+                assertEquals(banks, new CdOpeningObjectRuntime.LogicalBanks(base,base+24,base+38,base+108,base+136,base+199,
+                        base+269,base+274,base+313,base+349,base+364,base+400,base+412,base+494,base+513,base+559,base+567));
+                var sources = objects.sectionArtSources(); assertEquals(10, sources.sources().size());
+                var art = sources.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_CHECKPOINT);
+                assertEquals(0, art.canonicalPlcId()); assertEquals(1, art.canonicalRowIndex());
+                assertEquals(0xD960, art.canonicalPlc().vramAddress()); assertEquals(12, art.tileCount());
+                assertEquals(0x800C, art.readerBytes().unsignedWord(0)); assertEquals(384, art.decode().bytes().length());
+                var mapping = objects.view(com.openggf.game.soniccd.level.CdR11aObjectAssets.Table.CHECKPOINT_MAPPINGS);
+                assertEquals(0x23F120, mapping.range().nativeAddress()); assertEquals(66, mapping.bytes().length());
+                assertArrayEquals(java.util.HexFormat.of().parseHex("0008001e002a0036"
+                        +"04e8030000f8e80308000008010004f8080108040000"
+                        +"02f8010006f8f8010806000002f8010008f8f8010808000002f801000af8f801080a0000"),mapping.bytes().copy());
+                assertArrayEquals(new int[]{8,30,42,54}, java.util.stream.IntStream.range(0,4).map(i -> mapping.bytes().unsignedWord(i*2)).toArray());
+                assertArrayEquals(java.util.HexFormat.of().parseHex("0002030203ff"),
+                        objects.view(com.openggf.game.soniccd.level.CdR11aObjectAssets.Table.CHECKPOINT_ANIMATIONS).bytes().copy());
+                assertEquals(0, objects.checkpoint().mappingTableOffset()); assertEquals(4, objects.checkpoint().mappingFrames().size());
+                assertEquals(1, objects.checkpoint().animations().size());
+                for (int tile = 0; tile < 12; tile++) assertArrayEquals(art.decode().bytes().slice(tile*32,32).copy(),
+                        com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(runtime.sectionArtState().residency(),0x6CB+tile).copy(),
+                        "Actual cold current physical AT_D960 bytes, never per-object fallback " + tile);
+                var atlas = GameServices.graphics().getPatternAtlas(); var policy = monitorWorldPolicy(module, objects, banks); int logical = base;
+                for (int span = 0; span < counts.length; span++) for (int tile = 0; tile < counts[span]; tile++) {
+                    int id = logical++; assertEquals(id, policy.resolve(nativeFirst[span]+tile).logicalPatternId());
+                    assertEquals(1, atlas.registeredRangesForTesting().stream().filter(r -> id >= r.base() && id < r.base()+r.size()).count());
+                }
+                assertEquals(base+579, logical);
+                var live = runtime.checkpointState().live(); assertEquals(0xFF, live.knownMask());
+                for (var field : com.openggf.game.soniccd.objects.CdCheckpointLiveAux.Field.values())
+                    assertEquals(0, com.openggf.game.soniccd.objects.CdCheckpointLiveAux.read(live, field), "Owned cold clear/raw DEV0 " + field);
+                var pool = runtime.placement().pool(); pool.clearDynamicSlots();
+                assertEquals(96, pool.capture().slots().size());
+                assertTrue(pool.capture().slots().stream().allMatch(s -> Arrays.equals(new byte[64], s.copyBytes())));
+                int poleX = GameServices.camera().getX()+160, poleY = GameServices.camera().getY()+56;
+                pool.write(pool.state(40).moveByte(ID,0x13).moveWord(X,poleX).moveWord(Y,poleY)
+                        .moveByte(SUBTYPE,2).moveByte(SUBTYPE2,0).moveByte(FLAGS,0).moveByte(SPRITE_FLAGS,0));
+                stageCheckpointWorldPlayer(module, (poleX<<16)|0xABCD, ((poleY-24)<<16)|0x1234);
+                var terrainProbe = new com.openggf.game.soniccd.player.CdPlayerTerrain(frame.assets().terrain());
+                for (int foot : new int[]{poleX-9,poleX+9})
+                    assertTrue(terrainProbe.floor(foot&0xFFFF,(poleY-5)&0xFFFF,13,0,16,4).distance() >= 0,
+                            "Initial real two-foot terrain clearance is required; no alternate pose/terrain repair");
+                assertEquals(0, pool.state(40).routine()); assertEquals(0, pool.state(40).longBits(MAPPINGS));
+                assertEquals(0, pool.state(40).unsignedByte(COLLISION_TYPE)); assertEquals(0, pool.state(40).unsignedByte(CHECKPOINT_ACTIVE));
+                assertEquals(0, pool.state(40).savedFlagsId()); assertEquals(0, pool.state(32).id());
+                assertTrue(com.openggf.game.soniccd.player.CdPlayerTouchResponse.ownsSpecialFlagCollision(0xE3));
+                var registry = mode.getRewindRegistry();
+                var fullCuts = new ArrayList<>(List.of(registry.capture())); var courseCuts = new ArrayList<>(List.of(registry.captureCourse()));
+                var states = new ArrayList<>(List.of(capture(module))); var pictures = new ArrayList<>(List.of(render(module,true)));
+                assertCheckpointWorldCapture(states.getFirst(), module);
+                var initial = states.getFirst(); var reached = new java.util.TreeSet<Integer>();
+                var math = new com.openggf.game.soniccd.player.CdPlayerMath(frame.assets().player()); int aeCalls = 0;
+                for (int row = 1; row <= 44; row++) {
+                    var previous = capture(module); long clock = frame.vIntClock().absoluteValue().orElseThrow();
+                    int levelFrames = GameServices.level().getFrameCounter();
+                    checkpointWorldStep(loop,movie.getFrame(row-1),module,row==2);
+                    assertEquals(clock+1,frame.vIntClock().absoluteValue().orElseThrow()); assertEquals(levelFrames+1,GameServices.level().getFrameCounter());
+                    aeCalls += (int) runtime.lastSoundRequests().stream().filter(CdOpeningObjectRuntime.CheckpointFm.class::isInstance).count();
+                    assertCheckpointWorldObjects(module,poleX,poleY,row,math);
+                    assertCheckpointWorldNonwrites(initial,module,row);
+                    assertEquals(live,runtime.checkpointState().live(),"Save and ordinary rows never tick/invent/normalize live auxiliary values");
+                    if (row<2) assertEquals(initial.objects().checkpointState(),runtime.checkpointState(),"Init does not save");
+                    else if (row==2) {
+                        var motion = frame.state().motion(); assertEquals(2,motion.flags()&6,"Actual airborne E3 contact, before any floor landing");
+                        assertEquals(0xABCD,motion.centreX16_16()&0xFFFF); assertEquals(0x4A34,motion.centreY16_16()&0xFFFF);
+                        assertCheckpointWorldSaved(module,previous);
+                    } else assertEquals(states.get(2).objects().checkpointState(),runtime.checkpointState(),"No resave after active prefix");
+                    var completed = capture(module); var selected = completed.publication().published();
+                    assertEquals(previous.publication().prepared(),selected,"Native V-int selects previous completed scroll");
+                    assertEquals(com.openggf.game.soniccd.resources.CdObjectPresentation.convert(previous.cpu(),monitorWorldPolicy(module,objects,banks)),
+                            runtime.displayedFrame(),"Prior CPU SAT with NOW-serviced player/powerup/current C27 pixels");
+                    assertCheckpointWorldSat(runtime.cpuSat(),GameServices.camera().getX(),GameServices.camera().getY(),pool.state(40),row>=2?pool.state(32):null);
+                    var image = render(module,true); var terrain = renderTerrain(module,selected);
+                    assertNativeGpuBackground(module); assertTerrainOutsideSprites(image,terrain,runtime.displayedFrame());
+                    if (row>=2) {
+                        var priorPole = previous.objects().placement().pool().slots().get(40-32);
+                        var priorBall = row>=3?previous.objects().placement().pool().slots().getFirst():null;
+                        assertCheckpointWorldSat(previous.cpu(),selected.cameraX(),selected.cameraY(),priorPole,priorBall);
+                        var literal = checkpointWorldLiteralTiles(priorPole,priorBall,selected.cameraX(),selected.cameraY());
+                        observations.append("row=").append(row).append(" clock=").append(frame.vIntClock().absoluteValue().orElseThrow())
+                                .append(' ').append(assertCheckpointWorldPixels(runtime.displayedFrame(),image,terrain,
+                                        runtime.sectionArtState().residency(),banks.checkpoint(),literal)).append('\n');
+                        for (var cell : literal) {
+                            reached.add(cell.offset()); var entry = atlas.getEntry(banks.checkpoint()+cell.offset()); assertNotNull(entry);
+                            assertTrue(glIsTexture(atlas.getTextureId(entry.atlasIndex())));
+                            assertEquals(runtime.displayedFrame().patternVersions().get(banks.checkpoint()+cell.offset()),
+                                    com.openggf.graphics.SpritePresentation.patternSample(GameServices.graphics(),banks.checkpoint()+cell.offset()));
+                        }
+                        if (row==2 || row==3 || row==36 || row==40) {
+                            var only = checkpointWorldOnly(runtime.displayedFrame(),banks.checkpoint());
+                            var isolated = renderDiagonalWorldPicture(module,only,null);
+                            assertCheckpointWorldPixels(only,isolated,terrain,runtime.sectionArtState().residency(),banks.checkpoint(),literal);
+                            int contrastRgb = diagonalWorldContrastRgb(0);
+                            var contrast = renderDiagonalWorldPicture(module,com.openggf.graphics.SpritePresentation.Frame.empty(),contrastRgb);
+                            var contrastGlyph = renderDiagonalWorldPicture(module,only,contrastRgb);
+                            assertCheckpointWorldPixels(only,contrastGlyph,contrast,runtime.sectionArtState().residency(),banks.checkpoint(),literal);
+                            assertCheckpointWorldOmissions(module,only,contrastGlyph,contrast,runtime.sectionArtState().residency(),banks.checkpoint(),literal,contrastRgb);
+                            assertFalse(Arrays.equals(terrain.pixels(),renderWithoutBackground(module).pixels()),"Selected actual native Plane B contributes to transparent-pixel control");
+                            artifacts.put("ENGINE-constructed-checkpoint-row"+row+".png",image);
+                            artifacts.put("ENGINE-native-plane-control-row"+row+".png",terrain);
+                            artifacts.put("ENGINE-render-only-isolated-checkpoint-row"+row+".png",isolated);
+                        }
+                    }
+                    assertArrayEquals(image.pixels(),render(module,true).pixels(),"Renderer controls never change the selected World publication");
+                    assertCheckpointWorldCapture(completed,module); states.add(completed); pictures.add(image);
+                    fullCuts.add(registry.capture()); courseCuts.add(registry.captureCourse());
+                }
+                assertEquals(1,aeCalls); assertEquals(java.util.stream.IntStream.range(0,12).boxed().collect(java.util.stream.Collectors.toSet()),reached);
+                assertEquals(2,pool.state(32).unsignedByte(ANIMATION_TIME),"Row44 is a real nonzero frame2 timer2");
+                for (int cut : new int[]{0,1,2,18,34,35}) for (boolean courseOnly : List.of(false,true)) {
+                    if (courseOnly) registry.restoreCourse(courseCuts.get(cut)); else registry.restore(fullCuts.get(cut));
+                    assertCheckpointWorldCapture(states.get(cut),module);
+                    assertArrayEquals(pictures.get(cut).pixels(),render(module,true).pixels()); assertCheckpointWorldCapture(states.get(cut),module);
+                    for (int row = cut+1; row<=44; row++) {
+                        checkpointWorldStep(loop,movie.getFrame(row-1),module,row==2); // NO restaging/rebind/reload/default reset/callback replay.
+                        assertCheckpointWorldObjects(module,poleX,poleY,row,math); assertCheckpointWorldCapture(states.get(row),module);
+                        assertArrayEquals(pictures.get(row).pixels(),render(module,true).pixels(),"Checkpoint full/course cut/row="+cut+"/"+row);
+                        assertCheckpointWorldCapture(states.get(row),module);
+                    }
+                }
+                var beforeRetirement = capture(module); int transparentWitnesses = 0;
+                for (int offset = 0; offset<579; offset++) {
+                    int id = base+offset;
+                    if (atlas.getEntry(id)==null) {
+                        assertTrue(offset<567,"All12 checkpoint versions must be naturally installed by actual rendered frames");
+                        GameServices.graphics().cachePatternTexture(new com.openggf.level.Pattern(),id); transparentWitnesses++;
+                    }
+                    var entry = atlas.getEntry(id); assertNotNull(entry,"ALL579 installed retirement witness " + id);
+                    assertTrue(glIsTexture(atlas.getTextureId(entry.atlasIndex())));
+                }
+                assertCheckpointWorldCapture(beforeRetirement,module);
+                var shared = new java.util.HashMap<Integer,Object>();
+                for (int id=0;id<=0x7FF;id++) { var entry=atlas.getEntry(id); if(entry!=null) shared.put(id,entry); }
+                for(var range:atlas.registeredRangesForTesting()) for(int id=range.base();id<range.base()+range.size();id++) {
+                    if(id>=base && id<base+579) continue; var entry=atlas.getEntry(id); if(entry!=null) shared.put(id,entry);
+                }
+                assertFalse(shared.isEmpty()); assertTrue(shared.keySet().stream().anyMatch(id -> id<=0x7FF));
+                observations.append("all579-installed; TEST-only-old-missing-transparent-witnesses=").append(transparentWitnesses)
+                        .append("; actual-shared-entry-identities=").append(shared.size()).append('\n');
+                module.closeTerrainPlayer(); assertTrue(runtime.closed()); assertTrue(frame.closed());
+                assertSame(atlas,GameServices.graphics().getPatternAtlas());
+                // Proposed behavioral RED against J567: first residual is base+567, only AFTER the complete proof prefix.
+                for(int offset=0;offset<579;offset++) assertNull(atlas.getEntry(base+offset),"ALL579 owned IDs retired " +(base+offset));
+                shared.forEach((id,entry)->assertSame(entry,atlas.getEntry(id),"Actual other-producer identity survives " +id));
+                assertEquals(NullAudioBackend.class,GameServices.audio().getBackend().getClass());
+            } finally {
+                try { SessionManager.closeGameplaySession(); }
+                finally { GraphicsManager.destroyForReinit(); }
+            }
+        }
+        // This block is reached only after579 retirement AND session/graphics/owned boot-context closures.
+        Path output = openCaptureOutput(bootLog+"\n; ONE constructed closed-cut ingress, then controller-only scene\n"+sceneLog,"soniccd.checkpoint.output");
+        if(output!=null) {
+            Files.writeString(output.resolve("construction.txt"),construction,StandardOpenOption.CREATE_NEW);
+            for(var artifact:artifacts.entrySet()) ScreenshotCapture.savePNG(artifact.getValue(),output.resolve(artifact.getKey()));
+            Files.writeString(output.resolve("outcome.txt"),
+                    "PASS: ENGINE constructed actual-USA Checkpoint World; actual Init/earlier32 child order/Body SPECIAL E3 contact, final31 saved bytes+knowledge/pre-scroll8 cameras/raw DEV0/live nonwrites/oneAE,32 real spin visits, native delay3 frames2/3/FF loop, literal4/2 piece SAT/current12 patterns/ordered terrain+native PlaneB pixels/isolated renderer contrast omissions, selected full/course state+pixel forward replay without ingress, ALL579 installed retirement witnesses removed and actual shared identities preserved; module/session/graphics/boot cleanup returned. World zero alias cannot prove nonzero alias or repeated same-value store execution; no restart/natural route/emulator/native parity/all579 rendered/full-game claim.\n"
+                            +construction+observations,StandardOpenOption.CREATE_NEW);
+        }
+    }
+
+    /** ONE initial closed-cut actor ingress; never called from a replay or row loop. */
+    private static void stageCheckpointWorldPlayer(SonicCdGameModule module,int x16_16,int y16_16) {
+        var runtime=(CdOpeningObjectRuntime)module.getGameService(NativeDynamicObjectPass.class);
+        assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT,runtime.phase()); module.requirePlayerActor().requireCompletedNativeFrame();
+        var frame=module.requirePlayerFrame();var actor=frame.captureActor();var old=actor.state();var m=old.motion();
+        assertEquals(2,m.routine());assertEquals(0,old.objectLinks().standObject());assertEquals(0,old.objectLinks().pushObject());
+        var motion=new com.openggf.game.soniccd.player.CdPlayerMotionState(x16_16,y16_16,0,0,0,2,0,2,4,9,19,0,
+                m.previousAnimation(),0,0,0,0,0,m.previousPrimaryAngle(),m.previousSecondaryAngle());
+        var state=new com.openggf.game.soniccd.player.CdPlayerBody.State(motion,old.animation(),old.header(),old.timers(),old.history(),old.rotationDistance(),old.objectLinks());
+        frame.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(),state,java.util.Optional.empty())); module.requirePlayerActor().rebindAfterRestore();
+        assertSame(old.animation(),frame.state().animation());assertSame(old.header(),frame.state().header());assertSame(old.timers(),frame.state().timers());
+        assertSame(old.history(),frame.state().history());assertEquals(old.rotationDistance(),frame.state().rotationDistance());assertEquals(old.objectLinks(),frame.state().objectLinks());
+    }
+
+    /** Complete reached neutral Body prefix, including the separate later CheckCharge stop after a movement stop. */
+    private static void checkpointWorldStep(GameLoop loop,Bk2FrameInput input,SonicCdGameModule module,boolean checkpointFm) {
+        var frame=module.requirePlayerFrame();var m=frame.state().motion();
+        assertEquals(0,frame.state().objectLinks().standObject());assertEquals(0,frame.state().objectLinks().pushObject());
+        assertEquals(0,frame.environment().movement().globals().lookMode());assertEquals(0,frame.environment().movement().gates().speedShoes());
+        var player=new ArrayList<>(monitorWorldPlayerSounds(frame));
+        if((m.flags()&6)==0 && ((m.angle()+0x20)&0xC0)==0 && m.groundVelocity()==0) {
+            var floor=new com.openggf.game.soniccd.player.CdPlayerTerrain(frame.assets().terrain()).floor(
+                    m.centreX16_16()>>>16,(m.centreY16_16()>>>16)+m.yRadius(),13,0,16,m.spriteFlags());
+            if(floor.distance()>=12 && m.previousPrimaryAngle()!=3 && m.previousSecondaryAngle()!=3)
+                player.add(new CdPlayerFrameRuntime.ChargeSound(com.openggf.game.soniccd.player.CdPlayerCharge.Sound.FM_CHARGESTOP));
+        }
+        var expected=new ArrayList<CdOpeningObjectRuntime.SoundRequest>();player.forEach(s->expected.add(new CdOpeningObjectRuntime.PlayerSound(s)));
+        if(checkpointFm) expected.add(new CdOpeningObjectRuntime.CheckpointFm(com.openggf.game.soniccd.objects.CdCheckpoint.FmSound.FM_CHECKPOINT_AE));
+        assertEquals(0xAE,com.openggf.game.soniccd.objects.CdCheckpoint.FmSound.FM_CHECKPOINT_AE.nativeId());
+        step(loop,input);var runtime=(CdOpeningObjectRuntime)module.getGameService(NativeDynamicObjectPass.class);
+        assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT,runtime.phase());assertEquals(player,module.requirePlayerActor().lastSoundRequests());
+        assertEquals(expected,runtime.lastSoundRequests(),"Entire ordered ordinary Body ledger, then AE exactly at the actual save, never replay effects");
+    }
+
+    /** Native Checkpoint/Main:71-117,126-143,149-189; compare ALL64 bytes, including every unwritten byte/fraction. */
+    private static void assertCheckpointWorldObjects(SonicCdGameModule module,int x,int y,int row,
+            com.openggf.game.soniccd.player.CdPlayerMath math) {
+        var runtime=(CdOpeningObjectRuntime)module.getGameService(NativeDynamicObjectPass.class);var pool=runtime.placement().pool();
+        assertTrue(pool.capture().slots().stream().allMatch(s->s.id()==0 || s.identity().wholeIndex()==32 || s.identity().wholeIndex()==40));
+        byte[] pole=new byte[64];pole[0]=0x13;pole[1]=(byte)0x84;checkpointWorldPut(pole,2,2,0x06CB);checkpointWorldPut(pole,4,4,0x23F120);
+        checkpointWorldPut(pole,8,2,x);checkpointWorldPut(pole,12,2,y);pole[0x16]=24;pole[0x18]=4;pole[0x19]=8;pole[0x24]=2;pole[0x28]=2;
+        pole[0x20]=(byte)(row==1?0xE3:0);pole[0x21]=(byte)(row==1?0:1);pole[0x2E]=(byte)(row==1?0:1);
+        assertArrayEquals(pole,pool.state(40).copyBytes(),"Complete pole image; spr4 assignment plus real DrawObjects bit7, no invented writes row="+row);
+        byte[] ball=new byte[64];ball[0]=0x13;ball[1]=(byte)(row==1?4:0x84);checkpointWorldPut(ball,2,2,0x06CB);checkpointWorldPut(ball,4,4,0x23F120);
+        ball[0x16]=8;ball[0x18]=3;ball[0x19]=8;ball[0x1A]=1;ball[0x24]=(byte)(row<34?4:6);
+        checkpointWorldPut(ball,0x2A,2,x);checkpointWorldPut(ball,0x2C,2,y-24);checkpointWorldPut(ball,0x30,4,0xFFFFDA00);
+        int bx=x,by=y-32;
+        if(row>=3) {
+            int angle=(Math.min(32,row-2)*8)&255;var values=math.calcSine(angle);
+            bx=(x+(((short)values.sine()*8)>>>8))&0xFFFF;by=(y-24+(((short)values.cosine()*-8)>>>8))&0xFFFF;
+            ball[0x2E]=1;ball[0x34]=(byte)angle;
+        }
+        checkpointWorldPut(ball,8,2,bx);checkpointWorldPut(ball,12,2,by);
+        if(row>=35) {
+            int animationRow=row-35;ball[0x1A]=(byte)(2+((animationRow/4)&1));ball[0x1B]=(byte)(1+((animationRow/4)&1));
+            ball[0x1E]=(byte)(3-animationRow%4);
+        }
+        assertArrayEquals(ball,pool.state(32).copyBytes(),"Actual earlier32 visit/32-step native table orbit/real animation and nonwrites row="+row);
+        assertEquals(0,pool.state(32).word(X_FRACTION));assertEquals(0,pool.state(32).word(Y_FRACTION));
+        if(row==1) {assertEquals(0,runtime.levelGlobals().checkpoint());assertEquals(0,runtime.levelGlobals().spawnMode());}
+        else {assertEquals(2,runtime.levelGlobals().checkpoint());assertEquals(1,runtime.levelGlobals().spawnMode());}
+        if(row==18) {assertEquals(0x80,pool.state(32).unsignedByte(CHECKPOINT_BALL_ANGLE));assertEquals(x,pool.state(32).centreX());assertEquals(y-16,pool.state(32).centreY());}
+        if(row==34) {assertEquals(0,pool.state(32).unsignedByte(CHECKPOINT_BALL_ANGLE));assertEquals(x,pool.state(32).centreX());assertEquals(y-32,pool.state(32).centreY());}
+    }
+
+    private static void checkpointWorldPut(byte[] image,int at,int width,int value) {
+        for(int i=0;i<width;i++) image[at+i]=(byte)(value>>>((width-1-i)*8));
+    }
+
+    private static void assertCheckpointWorldNonwrites(Capture initial,SonicCdGameModule module,int row) {
+        var runtime=(CdOpeningObjectRuntime)module.getGameService(NativeDynamicObjectPass.class);var before=initial.objects();var level=before.levelGlobals();
+        var ring=before.ringGlobals();
+        assertEquals(6,ring.ringAnimationTimer());assertEquals(1,ring.ringAnimationFrame());
+        // Native UpdateGlobalAnims.Rings (Level/Main.asm:520-525): the ordinary tail runs once per row.
+        var expectedRing=new com.openggf.game.soniccd.objects.CdRingGlobals(ring.rings(),ring.lives(),ring.livesFlags(),
+                ring.updateHudRings(),ring.updateHudLives(),ring.timeStopTimer(),(6-row)&7,(1+(row+1)/8)&3);
+        assertEquals(expectedRing,runtime.ringGlobals());assertEquals(before.contactGlobals(),runtime.contactGlobals());
+        assertEquals(before.scoreGlobals(),runtime.scoreGlobals());assertEquals(before.devGlobals(),runtime.devGlobals());
+        assertEquals(new com.openggf.game.soniccd.objects.CdLevelGlobals(level.levelRestart(),level.updateHudTime(),row<2?0:2,row<2?0:1,
+                level.plcLoadFlags(),level.flowerCount(),level.fadeEnableDisplay(),level.powerup(),level.timeOver()),runtime.levelGlobals());
+        assertArrayEquals(before.placement().savedFlags().copy(),runtime.placement().capture().savedFlags().copy(),"Checkpoint has no saved-object-bank membership");
+        var old=initial.shared().environment().movement().gates();var now=module.requirePlayerFrame().environment().movement().gates();
+        assertEquals(old.timeZone(),now.timeZone());assertEquals(old.timeWarpDirection(),now.timeWarpDirection());assertEquals(old.miniSonic(),now.miniSonic());
+    }
+
+    /** Literal address writes, NOT a second invocation of SaveData; eight cameras are sampled from the PRE-scroll cut. */
+    private static void assertCheckpointWorldSaved(SonicCdGameModule module,Capture beforeContact) {
+        var runtime=(CdOpeningObjectRuntime)module.getGameService(NativeDynamicObjectPass.class);var frame=module.requirePlayerFrame();
+        var owner=runtime.checkpointState();var live=beforeContact.objects().checkpointState().live();var saved=owner.saved();
+        assertEquals(live,owner.live());assertEquals(0xFF,live.knownMask());
+        var scroll=assertInstanceOf(SonicCdPlayerPresentation.ScrollCapture.class,beforeContact.scroll());var bg=scroll.background();
+        int[] cameras={scroll.state().cameraX(),scroll.state().cameraY16_16()>>>16,bg.cameraBgX()>>>16,bg.cameraBgY()>>>16,
+                bg.cameraBg2X()>>>16,bg.cameraBg2Y()>>>16,bg.cameraBg3X()>>>16,bg.cameraBg3Y()>>>16};
+        int waterRoutine=com.openggf.game.soniccd.objects.CdCheckpointLiveAux.read(live,com.openggf.game.soniccd.objects.CdCheckpointLiveAux.Field.WATER_ROUTINE);
+        int height=com.openggf.game.soniccd.objects.CdCheckpointLiveAux.read(live,com.openggf.game.soniccd.objects.CdCheckpointLiveAux.Field.WATER_HEIGHT2);
+        int full=com.openggf.game.soniccd.objects.CdCheckpointLiveAux.read(live,com.openggf.game.soniccd.objects.CdCheckpointLiveAux.Field.WATER_FULLSCREEN);
+        int rawTime=com.openggf.game.soniccd.objects.CdCheckpointLiveAux.read(live,com.openggf.game.soniccd.objects.CdCheckpointLiveAux.Field.TIME_LONG);
+        assertEquals(0,rawTime,"Explicit DEV HUD omission/raw0, not an elapsed native timer");assertEquals(0,height);assertEquals(0,waterRoutine);assertEquals(0,full);
+        byte[] expected=new byte[31];expected[0]=1;
+        checkpointWorldPut(expected,1,2,frame.state().motion().centreX16_16()>>>16);checkpointWorldPut(expected,3,2,frame.state().motion().centreY16_16()>>>16);
+        checkpointWorldPut(expected,5,4,Integer.compareUnsigned(rawTime,0x00050000)>=0?0x00050000:rawTime);
+        assertEquals(beforeContact.shared().environment().movement().bounds().bottom(),frame.environment().movement().bounds().bottom());
+        checkpointWorldPut(expected,9,2,frame.environment().movement().bounds().bottom());
+        for(int i=0;i<8;i++) checkpointWorldPut(expected,11+i*2,2,cameras[i]);
+        checkpointWorldPut(expected,27,2,height);expected[28]=(byte)waterRoutine;expected[29]=(byte)full;
+        expected[30]=(byte)frame.environment().movement().gates().miniSonic();
+        int[] addresses=java.util.stream.IntStream.concat(java.util.stream.IntStream.concat(java.util.stream.IntStream.rangeClosed(0xFF1523,0xFF1527),
+                java.util.stream.IntStream.rangeClosed(0xFF152A,0xFF152D)),java.util.stream.IntStream.concat(java.util.stream.IntStream.rangeClosed(0xFF1530,0xFF1544),
+                java.util.stream.IntStream.of(0xFF1591))).toArray();
+        assertEquals(31,addresses.length);assertEquals(31,saved.knownMask().length());
+        byte[] allKnown=new byte[31];Arrays.fill(allKnown,(byte)1);assertArrayEquals(allKnown,saved.knownMask().copy());
+        for(int i=0;i<31;i++) assertEquals(expected[i]&255,saved.knownByte(addresses[i]).orElseThrow(),"Every actual saved byte/address "+Integer.toHexString(addresses[i]));
+        assertEquals(((height&0xFF00)|waterRoutine),saved.read(com.openggf.game.soniccd.objects.CdCheckpointSaveData.SavedField.WATER_HEIGHT_WORD));
+        assertEquals(waterRoutine,saved.read(com.openggf.game.soniccd.objects.CdCheckpointSaveData.SavedField.WATER_ROUTINE));
+        assertEquals(18,com.openggf.game.soniccd.objects.CdCheckpointSaveData.Store.values().length,"Source18 including repeated routine store; NOT an observed store trace");
+    }
+
+    /** Extend the existing byte-exact aggregate oracle without modifying any older helper/test. */
+    private static void assertCheckpointWorldCapture(Capture expected,SonicCdGameModule module) {
+        assertCapture(expected,module);var runtime=(CdOpeningObjectRuntime)module.getGameService(NativeDynamicObjectPass.class);
+        assertEquals(expected.objects().checkpointState(),runtime.checkpointState());
+        assertEquals(expected.objects().checkpointState(),runtime.captureClosedCut().checkpointState());
+    }
+
+    /** Independent N Mappings:1-63 literals: pole4 pieces/12 cells; each ball2 pieces/4 cells. */
+    private static int[][] checkpointWorldPieces(int frame) {
+        if(frame==0) return new int[][]{{-24,3,0,-8},{-24,3,0x0800,0},{8,1,4,-8},{8,1,0x0804,0}};
+        if(frame>=1 && frame<=3) {int first=4+frame*2;return new int[][]{{-8,1,first,-8},{-8,1,first|0x0800,0}};}
+        throw new AssertionError("Unowned literal Checkpoint frame "+frame);
+    }
+
+    private static void assertCheckpointWorldSat(CdObjectDrawQueue.CpuSat sat,int cameraX,int cameraY,
+            com.openggf.game.soniccd.objects.CdObjectState pole,com.openggf.game.soniccd.objects.CdObjectState ball) {
+        assertTrue(sat.provenance().stream().anyMatch(p->p.slotRef().wholeIndex()==0),"Actual Sonic shares native SAT");
+        byte[] raw=sat.bytes();int poleSeen=0,ballSeen=0,lastBall=-1,firstPole=-1;
+        for(int entry=0;entry<sat.spriteCount();entry++) {
+            var provenance=sat.provenance().get(entry);int whole=provenance.slotRef().wholeIndex();if(whole!=32 && whole!=40) continue;
+            var object=whole==40?pole:ball;assertNotNull(object);int ordinal=whole==40?poleSeen++:ballSeen++;
+            var pieces=checkpointWorldPieces(object.unsignedByte(MAP_FRAME));assertTrue(ordinal<pieces.length);int[] p=pieces[ordinal];
+            assertEquals(whole==40?4:3,provenance.queueBucket());assertEquals(0,provenance.queueOrdinal());assertEquals(ordinal,provenance.mappingPieceOrdinal());
+            int at=entry*8;assertEquals((object.centreY()-cameraY+128+p[0])&0xFFFF,((raw[at]&255)<<8)|(raw[at+1]&255));
+            assertEquals(p[1],raw[at+2]&255);assertEquals(entry+1,raw[at+3]&255);
+            int tileWord=((raw[at+4]&255)<<8)|(raw[at+5]&255);assertEquals(0x06CB+p[2],tileWord);assertEquals(0,tileWord&0xE000,"Native hardware priority0/palette0, distinct from queue3/4");
+            assertEquals((object.centreX()-cameraX+128+p[3])&511,((raw[at+6]&255)<<8)|(raw[at+7]&255));
+            if(whole==32) lastBall=entry;else if(firstPole<0) firstPole=entry;
+        }
+        assertEquals(4,poleSeen);assertEquals(ball==null?0:2,ballSeen);if(ball!=null) assertTrue(lastBall<firstPole,"Native ball bucket3 precedes pole bucket4");
+    }
+
+    private record CheckpointWorldCell(int offset,int x,int y,boolean hFlip,int piece) { }
+    private static List<CheckpointWorldCell> checkpointWorldLiteralTiles(com.openggf.game.soniccd.objects.CdObjectState pole,
+            com.openggf.game.soniccd.objects.CdObjectState ball,int cameraX,int cameraY) {
+        var out=new ArrayList<CheckpointWorldCell>();
+        // Renderer is reverse SAT: pole bucket4 first, then ball bucket3, then actual player bucket2.
+        var objects=new ArrayList<com.openggf.game.soniccd.objects.CdObjectState>();objects.add(pole);if(ball!=null) objects.add(ball);
+        for(var object:objects) {
+            int[][] pieces=checkpointWorldPieces(object.unsignedByte(MAP_FRAME));
+            for(int piece=pieces.length-1;piece>=0;piece--) {
+                var p=pieces[piece];int height=(p[1]&3)+1;assertEquals(0,p[1]>>>2);boolean h=(p[2]&0x0800)!=0;
+                for(int cell=0;cell<height;cell++) out.add(new CheckpointWorldCell((p[2]&0x07FF)+cell,
+                        object.centreX()-cameraX+p[3],object.centreY()-cameraY+p[0]+cell*8,h,(object==pole?0:4)+piece));
+            }
+        }
+        assertEquals(ball==null?12:16,out.size());return List.copyOf(out);
+    }
+
+    /** Independent current-tile nibble/palette geometry oracle in actual painter order, including all holes and overlaps. */
+    private static String assertCheckpointWorldPixels(com.openggf.graphics.SpritePresentation.Frame picture,RgbaImage image,
+            RgbaImage terrain,com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.State residency,int base,List<CheckpointWorldCell> literal) {
+        assertTrue(picture.primitives().isEmpty());var tiles=picture.tiles().stream().filter(t->t.patternId()>=base && t.patternId()<base+12).toList();
+        assertEquals(literal.size(),tiles.size());var graphics=GameServices.graphics();assertFalse(graphics.isWaterEnabled());assertFalse(graphics.getPaletteFadePresentation().affects(0));
+        int[] argb=new int[16];var palette=GameServices.level().getCurrentLevel().getPalette(0);
+        for(int i=1;i<16;i++){var c=palette.getColor(i);argb[i]=0xFF000000|com.openggf.graphics.color.DisplayColorConverter.toPackedRgb(c.r&255,c.g&255,c.b&255,
+                graphics.getDisplayColorProfile(),graphics.getDisplayColorExpansion());}
+        int left=literal.stream().mapToInt(CheckpointWorldCell::x).min().orElseThrow(),top=literal.stream().mapToInt(CheckpointWorldCell::y).min().orElseThrow();
+        int right=literal.stream().mapToInt(p->p.x()+8).max().orElseThrow(),bottom=literal.stream().mapToInt(p->p.y()+8).max().orElseThrow();
+        assertTrue(left>=0 && top>=0 && right<=320 && bottom<=224,"Entire current pole/ball geometry in viewport");
+        int[] expected=terrain.pixels().clone();int index=0,opaque=0,transparent=0,changed=0;
+        for(var tile:picture.tiles()) {
+            if(tile.patternId()<base || tile.patternId()>=base+12){paintDiagonalWorldOtherSprite(picture,tile,expected,left,top,right,bottom);continue;}
+            var p=literal.get(index++);assertEquals(base+p.offset(),tile.patternId());assertEquals((float)p.x(),tile.x());assertEquals((float)p.y(),tile.y());
+            assertEquals(8f,tile.width());assertEquals(8f,tile.height());assertEquals(0,tile.palette());assertEquals(p.hFlip(),tile.hFlip());assertFalse(tile.vFlip());assertFalse(tile.priority());
+            assertEquals(com.openggf.graphics.SpritePresentation.Layer.OBJECT,tile.layer());assertTrue(tile.priorityShader());assertEquals(0,tile.occlusionMask());
+            assertFalse(tile.ghost());assertFalse(tile.ghostColour());assertEquals(1f,tile.ghostAlpha());assertEquals(0,tile.rowStart());assertEquals(8,tile.rowEnd());assertFalse(tile.rowClipped());
+            assertEquals(com.openggf.graphics.SpritePresentation.Subject.WORLD,tile.subject());
+            var decoded=new com.openggf.level.Pattern();decoded.fromSegaFormat(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(residency,0x6CB+p.offset()).copy());
+            var version=picture.patternVersions().get(base+p.offset());assertNotNull(version);long[] words={version.a(),version.b(),version.c(),version.d()};
+            for(int n=0;n<64;n++)assertEquals(decoded.getPixel(n%8,n/8)&15,(int)((words[n/16]>>>((n%16)*4))&15),"Current physical checkpoint nibble "+p.offset()+":"+n);
+            for(int dy=0;dy<8;dy++)for(int dx=0;dx<8;dx++){
+                int value=decoded.getPixel(p.hFlip()?7-dx:dx,dy)&15,at=(p.y()+dy)*320+p.x()+dx;
+                if(value==0)transparent++;else{opaque++;expected[at]=argb[value];if(argb[value]!=terrain.pixels()[at])changed++;}
+            }
+        }
+        assertEquals(literal.size(),index);
+        for(int y=top;y<bottom;y++)for(int x=left;x<right;x++)assertEquals(expected[y*320+x],image.pixels()[y*320+x],"Complete ordered Checkpoint/other-sprite/current native-plane pixels "+x+":"+y);
+        assertEquals(literal.size()*64,opaque+transparent);assertTrue(opaque>0);assertTrue(transparent>0);assertTrue(changed>0);
+        return "cells="+literal.size()+" opaque="+opaque+" transparent="+transparent+" changed="+changed;
+    }
+
+    /** Same actual renderer, TEST-only backdrop; omission changes only a derived picture, never source/current art or actors. */
+    private static void assertCheckpointWorldOmissions(SonicCdGameModule module,com.openggf.graphics.SpritePresentation.Frame picture,
+            RgbaImage full,RgbaImage terrain,com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.State residency,int base,
+            List<CheckpointWorldCell> literal,int contrastRgb) {
+        int pieceCount=literal.stream().mapToInt(CheckpointWorldCell::piece).max().orElseThrow()+1,witnessedCells=0,witnessedPieces=0;
+        for(int selector=0;selector<literal.size()+pieceCount;selector++) {
+            boolean whole=selector>=literal.size();int selected=whole?selector-literal.size():selector,sourceOpaque=0;
+            var retained=new ArrayList<com.openggf.graphics.SpritePresentation.Tile>();
+            for(int i=0;i<literal.size();i++) {
+                var p=literal.get(i);boolean omit=whole?p.piece()==selected:i==selected;
+                if(!omit){retained.add(picture.tiles().get(i));continue;}
+                var decoded=new com.openggf.level.Pattern();decoded.fromSegaFormat(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(residency,0x6CB+p.offset()).copy());
+                for(int y=0;y<8;y++)for(int x=0;x<8;x++)if((decoded.getPixel(x,y)&15)!=0)sourceOpaque++;
+            }
+            var partial=renderDiagonalWorldPicture(module,checkpointWorldFrame(retained,picture),contrastRgb);
+            if(sourceOpaque==0){assertArrayEquals(full.pixels(),partial.pixels(),"Genuine empty source cell supplies no invented omission witness");continue;}
+            assertFalse(Arrays.equals(full.pixels(),partial.pixels()),"Actual renderer omission witness cell/piece "+selector);
+            assertThrows(AssertionError.class,()->assertCheckpointWorldPixels(picture,partial,terrain,residency,base,literal));
+            if(whole)witnessedPieces++;else witnessedCells++;
+        }
+        assertTrue(witnessedCells>1);assertEquals(pieceCount,witnessedPieces);
+    }
+
+    private static com.openggf.graphics.SpritePresentation.Frame checkpointWorldOnly(com.openggf.graphics.SpritePresentation.Frame full,int base) {
+        assertTrue(full.primitives().isEmpty());return checkpointWorldFrame(full.tiles().stream().filter(t->t.patternId()>=base && t.patternId()<base+12).toList(),full);
+    }
+    private static com.openggf.graphics.SpritePresentation.Frame checkpointWorldFrame(List<com.openggf.graphics.SpritePresentation.Tile> tiles,
+            com.openggf.graphics.SpritePresentation.Frame source) {
+        var versions=new java.util.HashMap<Integer,com.openggf.graphics.SpritePresentation.PatternVersion>();
+        for(var tile:tiles)versions.put(tile.patternId(),source.patternVersions().get(tile.patternId()));
+        return new com.openggf.graphics.SpritePresentation.Frame(tiles,List.of(),versions);
+    }
+
+    // END constructed Checkpoint World proof.
+    // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>
+
+    // BEGIN constructed Checkpoint -> actual native death -> fresh World restart proof.
+    /**
+     * ONE initial component cut, then only ordinary GameLoop/controller calls. Native source pin
+     * 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff: Spikes/Main:36-83;
+     * Player Object Collision:229-298; Sonic/Main:2397-2494; Load Saved Data:44-87;
+     * PP Scroll:61-170; Load Level Data:37-39; Section Art Load:7-22.
+     * ENGINE actual-USA EGL evidence, never native pixel/timing parity or a natural checkpoint route.
+     */
+    @Test void actualEglConstructedCheckpointContactDiesNativelyRestartsLoadsAndReplaysOnlyTheFreshEpoch() throws Exception {
+        Assumptions.assumeTrue(Boolean.getBoolean("soniccd.opening.egl"), "Explicit actual EGL/media opt-in");
+        assertEquals("surfaceless-egl", System.getProperty("openggf.headless.gl"));
+        assertNull(System.getenv("DISPLAY")); assertNull(System.getenv("WAYLAND_DISPLAY"));
+        String media = System.getProperty("soniccd.media.root"); assertNotNull(media); assertFalse(media.isBlank());
+        CdGameDataSource source;
+        try (var files = Files.list(Path.of(media).resolve("USA"))) {
+            var cues = files.filter(p -> p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".cue")).toList();
+            assertEquals(1, cues.size()); source = CdStockLaunch.prepare(cues.getFirst(), CdStockLaunch.Request.r11a());
+        }
+        String bootLog = InputScriptCompiler.compileToInputLog("2 -");
+        var bootInputs = new Bk2MovieLoader().parseInputLogText(Path.of("ENGINE-checkpoint-restart-two-boot-rows"), bootLog.lines().toList());
+        // Finite failure budget, NOT a claimed native restart call or a fitted gameplay clock.
+        String sceneLog = InputScriptCompiler.compileToInputLog("512 -");
+        var movie = new Bk2MovieLoader().parseInputLogText(Path.of("ENGINE-checkpoint-native-death-neutral-bound"), sceneLog.lines().toList());
+        assertEquals(2, bootInputs.getFrameCount()); assertEquals(512, movie.getFrameCount());
+        try (var boot = new HeadlessGameBoot(320, 224)) {
+            try {
+                var loop = boot.bootSonicCdOpeningObjects(source); var mode = SessionManager.getCurrentGameplayMode();
+                var module = assertInstanceOf(SonicCdGameModule.class, mode.getWorldSession().getGameModule());
+                var old = assertInstanceOf(CdOpeningObjectRuntime.class, module.getGameService(NativeDynamicObjectPass.class));
+                var oldFrame = module.requirePlayerFrame(); var oldActor = module.requirePlayerActor();
+                assertSame(source, mode.getWorldSession().getDataSource()); assertSame(source.assets(), oldFrame.assets());
+                assertEquals(GameMode.LEVEL, loop.getCurrentGameMode());
+                assertEquals(NullAudioBackend.class, GameServices.audio().getBackend().getClass());
+                assertNull(GameServices.audio().captureLogicalSnapshot().presentation().activeMusic());
+                for (int row = 0; row < 2; row++) step(loop, bootInputs.getFrame(row));
+                assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT, old.phase()); oldActor.requireCompletedNativeFrame();
+                assertEquals(2, oldFrame.state().motion().routine()); assertEquals(0, oldFrame.state().timers().hurt());
+                assertEquals(0, oldFrame.state().timers().reset());
+                assertEquals(0, oldFrame.state().objectLinks().standObject()); assertEquals(0, oldFrame.state().objectLinks().pushObject());
+                assertEquals(0, oldFrame.environment().globals().debugCheat()); assertEquals(0, oldFrame.environment().globals().debugMode());
+                assertEquals(0, oldFrame.environment().globals().invincible()); assertEquals(0, oldFrame.environment().movement().gates().miniSonic());
+                assertEquals(0, old.contactGlobals().timeWarp()); assertEquals(0, old.contactGlobals().shield()); assertEquals(0, old.contactGlobals().combineRing());
+                assertEquals(0, old.ringGlobals().rings()); assertEquals(3, old.ringGlobals().lives());
+                assertEquals(6, old.ringGlobals().ringAnimationTimer()); assertEquals(1, old.ringGlobals().ringAnimationFrame());
+                assertEquals(0, old.levelGlobals().checkpoint()); assertEquals(0, old.levelGlobals().spawnMode());
+                assertEquals(3, old.levelGlobals().plcLoadFlags() & 3, "Actual title-loaded skip branch required for checkpoint restart");
+                var coldLive = old.checkpointState().live(); assertEquals(0xFF, coldLive.knownMask());
+                for (var field : com.openggf.game.soniccd.objects.CdCheckpointLiveAux.Field.values())
+                    assertEquals(0, com.openggf.game.soniccd.objects.CdCheckpointLiveAux.read(coldLive, field), "Actual represented clear/raw DEV0 " + field);
+
+                // The SAME initial cut/provenance as C27, plus an actual owned upright native hazard.
+                // No routine/map/tile/collision/active/bit7/child/helper/result ingress.
+                var pool = old.placement().pool(); pool.clearDynamicSlots();
+                assertEquals(96, pool.capture().slots().size());
+                assertTrue(pool.capture().slots().stream().allMatch(s -> Arrays.equals(new byte[64], s.copyBytes())));
+                int poleX = GameServices.camera().getX() + 160, poleY = GameServices.camera().getY() + 56;
+                pool.write(pool.state(40).moveByte(ID, 0x13).moveWord(X, poleX).moveWord(Y, poleY)
+                        .moveByte(SUBTYPE, 2).moveByte(SUBTYPE2, 0).moveByte(FLAGS, 0).moveByte(SPRITE_FLAGS, 0));
+                pool.write(pool.state(48).moveByte(ID, 0x26).moveWord(X, poleX).moveWord(Y, poleY + 8)
+                        .moveByte(SUBTYPE, 0).moveByte(SUBTYPE2, 0).moveByte(FLAGS, 0).moveByte(SPRITE_FLAGS, 0));
+                stageCheckpointWorldPlayer(module, (poleX << 16) | 0xABCD, ((poleY - 24) << 16) | 0x1234); // ONE restore/rebind.
+                var terrain = new com.openggf.game.soniccd.player.CdPlayerTerrain(oldFrame.assets().terrain());
+                // Initial feet at PoleY-5; Solid's actual stand feet at (PoleY+8)-8 = PoleY.
+                // If either footprint is obstructed, STOP: no alternate pose, height, hazard or terrain tuning.
+                for (int foot : new int[]{poleX - 9, poleX + 9}) for (int footY : new int[]{poleY - 5, poleY})
+                    assertTrue(terrain.floor(foot & 0xFFFF, footY & 0xFFFF, 13, 0, 16, 4).distance() >= 0,
+                            "Fixed initial/actual Solid terrain prerequisite; no fallback construction");
+                for (int slot : new int[]{40, 48}) {
+                    assertEquals(0, pool.state(slot).routine()); assertEquals(0, pool.state(slot).longBits(MAPPINGS));
+                    assertEquals(0, pool.state(slot).unsignedByte(COLLISION_TYPE)); assertEquals(0, pool.state(slot).savedFlagsId());
+                }
+                var initial = capture(module); var initialRing = old.ringGlobals();
+                var registry = mode.getRewindRegistry(); long generation = GameServices.level().getCompletedProductionLoadGeneration();
+                int base = com.openggf.graphics.PatternAtlasRange.OBJECTS.base(); var banks = new CdOpeningObjectRuntime.LogicalBanks(base, base + 24, base + 38);
+                assertEquals(base + 567, banks.checkpoint()); var objects = source.assets().openingObjects();
+                var reached = new java.util.TreeSet<Integer>(); int aeRequests = 0;
+                int deathRow = -1, goneRow = -1, restartRow = -1, newVisitRow = -1;
+                Capture savedCut = null, beforeRestart = null, retired = null;
+                com.openggf.game.rewind.CompositeSnapshot retiredFull = null, retiredCourse = null;
+                var freshInputs = new ArrayList<Bk2FrameInput>(); var freshStates = new ArrayList<Capture>();
+                var freshPixels = new ArrayList<RgbaImage>();
+                var freshFull = new ArrayList<com.openggf.game.rewind.CompositeSnapshot>();
+                var freshCourse = new ArrayList<com.openggf.game.rewind.CompositeSnapshot>();
+                for (int row = 1; row <= movie.getFrameCount(); row++) {
+                    var before = capture(module); var input = movie.getFrame(row - 1);
+                    step(loop, input); // Sole authority after the one initial component cut.
+                    var runtime = assertInstanceOf(CdOpeningObjectRuntime.class, module.getGameService(NativeDynamicObjectPass.class));
+                    var frame = module.requirePlayerFrame(); var state = frame.state(); var motion = state.motion();
+                    assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT, runtime.phase());
+                    assertSame(source, mode.getWorldSession().getDataSource()); assertSame(source.assets(), frame.assets());
+                    assertSame(module, mode.getWorldSession().getGameModule(), "Stable module owns a fresh per-load Runtime/Frame/actor visit");
+                    if (runtime == old) {
+                        assertEquals(generation, GameServices.level().getCompletedProductionLoadGeneration()); assertFalse(old.closed());
+                        assertEquals(initial.levelFrames() + row, GameServices.level().getFrameCounter());
+                        assertEquals(initial.shared().vIntClock().absoluteValue().orElseThrow() + row, frame.vIntClock().absoluteValue().orElseThrow());
+                        int ae = (int) runtime.lastSoundRequests().stream().filter(CdOpeningObjectRuntime.CheckpointFm.class::isInstance).count();
+                        aeRequests += ae; assertEquals(row == 2 ? 1 : 0, ae, "AE is reached only after actual SaveData completion");
+                        assertEquals(coldLive, runtime.checkpointState().live(), "Ordinary rows omit HUD time and do not invent water writers");
+                        if (row <= 2) {
+                            assertEquals(2, motion.routine(), "No hazard death before/at actual E3 checkpoint contact");
+                            assertEquals(0, frame.state().objectLinks().standObject()); assertEquals(0, pool.state(48).flags() & 8);
+                            assertEquals((poleX << 16) | 0xABCD, motion.centreX16_16());
+                            assertEquals(((poleY - 24) << 16) | (row == 1 ? 0x1234 : 0x4A34), motion.centreY16_16());
+                            assertEquals(0, pool.state(48).unsignedByte(COLLISION_TYPE), "Upright Spikes is direct Solid/Hurt, never a scanner hazard");
+                            if (row == 1) {
+                                assertEquals(initial.objects().checkpointState(), runtime.checkpointState());
+                                assertEquals(0, runtime.levelGlobals().checkpoint()); assertEquals(0, runtime.levelGlobals().spawnMode());
+                                assertEquals(0xE3, pool.state(40).unsignedByte(COLLISION_TYPE)); assertEquals(0, pool.state(40).unsignedByte(CHECKPOINT_ACTIVE));
+                                assertEquals(4, pool.state(32).routine(), "Earlier32's actual child allocation is not dispatched in Init's row");
+                            } else {
+                                assertEquals(2, runtime.levelGlobals().checkpoint()); assertEquals(1, runtime.levelGlobals().spawnMode());
+                                assertEquals(1, pool.state(40).unsignedByte(CHECKPOINT_ACTIVE)); assertEquals(0, pool.state(40).unsignedByte(COLLISION_TYPE));
+                                assertEquals(new CdOpeningObjectRuntime.CheckpointFm(com.openggf.game.soniccd.objects.CdCheckpoint.FmSound.FM_CHECKPOINT_AE),
+                                        runtime.lastSoundRequests().stream().filter(CdOpeningObjectRuntime.CheckpointFm.class::isInstance).findFirst().orElseThrow());
+                                assertCheckpointWorldSaved(module, before); savedCut = capture(module);
+                            }
+                        }
+                        if (row > 2) {
+                            assertNotNull(savedCut); assertSame(savedCut.objects().checkpointState().saved(), runtime.checkpointState().saved());
+                            assertEquals(2, runtime.levelGlobals().checkpoint()); assertEquals(1, runtime.levelGlobals().spawnMode());
+                        }
+                        if (deathRow < 0 && motion.routine() == 6) {
+                            deathRow = row;
+                            // Native ObjMove uses prior YV, then gravity+$38. With fraction1234 and SpikeY=PoleY+8,
+                            // rows1..5 stay above the29-pixel Solid overlap; row6 first stands at SpikeY-27.
+                            assertEquals(6, deathRow); assertNotNull(savedCut); assertEquals(0, runtime.ringGlobals().rings());
+                            assertEquals(0x18, motion.animation()); assertEquals(-0x700, motion.yVelocity());
+                            assertEquals(0, motion.xVelocity()); assertEquals(0, motion.groundVelocity());
+                            assertEquals((poleY - 19) << 16 | 0x5A34, motion.centreY16_16(), "Actual Solid WORD snap retains fraction; post-Solid rewind sees YV0");
+                            assertEquals(48, frame.state().objectLinks().standObject()); assertEquals(8, pool.state(48).flags() & 8);
+                            assertEquals(0x8000, state.header().tile() & 0x8000); assertEquals(0, state.header().priority());
+                            assertTrue(runtime.lastSoundRequests().contains(new CdOpeningObjectRuntime.PlayerSound(
+                                    new CdPlayerFrameRuntime.ContactFmSound(com.openggf.game.soniccd.player.CdPlayerTouchResponse.FmSound.FM_HURT))),
+                                    "Actual shared KillPlayer FM93, no helper/result replay");
+                            assertEquals(3, runtime.ringGlobals().lives());
+                        }
+                        if (goneRow < 0 && motion.routine() == 8) {
+                            goneRow = row; assertTrue(goneRow > deathRow && deathRow > 2);
+                            assertEquals(60, state.timers().reset()); assertEquals(2, runtime.ringGlobals().lives());
+                            assertEquals(initialRing.updateHudLives() + 1, runtime.ringGlobals().updateHudLives());
+                        } else if (goneRow >= 0) {
+                            assertEquals(8, motion.routine()); assertEquals(60 - (row - goneRow), state.timers().reset(), "Actual native reset WORD counts once per ordinary call");
+                        }
+                        if (runtime.levelGlobals().levelRestart() != 0) {
+                            restartRow = row; assertEquals(goneRow + 60, restartRow); assertNotNull(beforeRestart);
+                            assertEquals(1, runtime.levelGlobals().levelRestart()); assertEquals(0, state.timers().reset());
+                            retired = capture(module); retiredFull = registry.capture(); retiredCourse = registry.captureCourse();
+                            assertArrayEquals(beforeRestart.cpu().bytes(), retired.cpu().bytes()); assertEquals(beforeRestart.cpu().provenance(), retired.cpu().provenance());
+                            assertEquals(beforeRestart.camera(), retired.camera()); assertScroll(beforeRestart.scroll(), retired.scroll());
+                            assertEquals(beforeRestart.objects().ringGlobals(), retired.objects().ringGlobals(), "Restart branch skips ordinary animation tail");
+                            assertEquals(beforeRestart.objects().sectionArtState(), retired.objects().sectionArtState());
+                            assertCheckpointWorldCapture(retired, module); render(module, true); assertCheckpointWorldCapture(retired, module);
+                        }
+                        int ordinaryRows = row - (restartRow == row ? 1 : 0);
+                        assertEquals(new com.openggf.game.soniccd.objects.CdRingGlobals(initialRing.rings(), goneRow < 0 ? 3 : 2,
+                                initialRing.livesFlags(), initialRing.updateHudRings(), initialRing.updateHudLives() + (goneRow < 0 ? 0 : 1),
+                                initialRing.timeStopTimer(), (6 - ordinaryRows) & 7, (1 + (ordinaryRows + 1) / 8) & 3), runtime.ringGlobals(),
+                                "Natural Ring tail before retirement, with all six other represented fields accounted for");
+                        if (motion.routine() == 8 && state.timers().reset() == 1) beforeRestart = capture(module);
+                        if (row <= 44) {
+                            var completed = capture(module); var image = render(module, true); assertNativeGpuBackground(module);
+                            var published = capture(module).publication().published(); var terrainImage = renderTerrain(module, published);
+                            assertTerrainOutsideSprites(image, terrainImage, runtime.displayedFrame());
+                            if (row >= 2) {
+                                var priorPole = before.objects().placement().pool().slots().get(40 - 32);
+                                var priorBall = row >= 3 ? before.objects().placement().pool().slots().getFirst() : null;
+                                var literal = checkpointWorldLiteralTiles(priorPole, priorBall, published.cameraX(), published.cameraY());
+                                assertCheckpointWorldPixels(runtime.displayedFrame(), image, terrainImage, runtime.sectionArtState().residency(), banks.checkpoint(), literal);
+                                for (var cell : literal) {
+                                    reached.add(cell.offset()); var atlas = GameServices.graphics().getPatternAtlas();
+                                    var entry = atlas.getEntry(banks.checkpoint() + cell.offset()); assertNotNull(entry);
+                                    assertTrue(glIsTexture(atlas.getTextureId(entry.atlasIndex())), "Actual current checkpoint texture on owned EGL context");
+                                }
+                            }
+                            assertCheckpointWorldCapture(completed, module);
+                        }
+                    } else {
+                        if (newVisitRow < 0) {
+                            newVisitRow = row; assertEquals(restartRow + 1, newVisitRow); assertNotNull(retired);
+                            assertTrue(old.closed()); assertTrue(oldFrame.closed()); assertNotSame(oldFrame, frame); assertNotSame(oldActor, module.requirePlayerActor());
+                            assertEquals(generation + 1, GameServices.level().getCompletedProductionLoadGeneration());
+                            assertCheckpointRestartLoaded(retired, module);
+                        }
+                        int newRow = row - newVisitRow + 1;
+                        assertTrue(newRow >= 1 && newRow <= 7); assertEquals(generation + 1, GameServices.level().getCompletedProductionLoadGeneration());
+                        assertEquals(newRow, GameServices.level().getFrameCounter()); assertEquals(newRow, frame.environment().globals().levelFrames());
+                        assertEquals(newRow, frame.vIntClock().absoluteValue().orElseThrow());
+                        assertEquals(2, frame.state().motion().routine()); assertEquals(0, frame.state().timers().reset());
+                        assertEquals(2, runtime.levelGlobals().checkpoint()); assertEquals(0, runtime.levelGlobals().spawnMode());
+                        assertEquals(0, runtime.levelGlobals().levelRestart()); assertEquals(0, runtime.levelGlobals().updateHudTime());
+                        assertEquals(2, runtime.ringGlobals().lives()); assertEquals(0, runtime.ringGlobals().rings());
+                        assertEquals((8 - newRow) & 7, runtime.ringGlobals().ringAnimationTimer()); assertEquals(1, runtime.ringGlobals().ringAnimationFrame());
+                        assertEquals(0, runtime.ringGlobals().timeStopTimer()); assertEquals(0, runtime.ringGlobals().livesFlags());
+                        assertEquals(retired.objects().ringGlobals().updateHudLives(), runtime.ringGlobals().updateHudLives());
+                        assertEquals(retired.objects().ringGlobals().updateHudRings(), runtime.ringGlobals().updateHudRings());
+                        assertSame(retired.objects().checkpointState().saved(), runtime.checkpointState().saved());
+                        assertEquals(0x0000FF3B, com.openggf.game.soniccd.objects.CdCheckpointLiveAux.read(runtime.checkpointState().live(),
+                                com.openggf.game.soniccd.objects.CdCheckpointLiveAux.Field.TIME_LONG), "Actual raw saved0 -> frames59/seconds-byte underflow, HUD remains omitted");
+                        assertCheckpointRestartSection(retired, module, newRow);
+                        var stable = capture(module); var image = render(module, true);
+                        assertNativeGpuBackground(module); assertTrue(Arrays.stream(image.pixels()).distinct().count() > 8);
+                        assertTerrainOutsideSprites(image, renderTerrain(module, stable.publication().published()), runtime.displayedFrame());
+                        assertCheckpointWorldCapture(stable, module);
+                        if (newRow == 1) {
+                            var staleFull = retiredFull; var staleCourse = retiredCourse;
+                            assertThrows(IllegalArgumentException.class, () -> registry.restore(staleFull)); assertCheckpointWorldCapture(stable, module);
+                            assertThrows(IllegalArgumentException.class, () -> registry.restoreCourse(staleCourse)); assertCheckpointWorldCapture(stable, module);
+                            assertArrayEquals(image.pixels(), render(module, true).pixels()); assertCheckpointWorldCapture(stable, module);
+                        }
+                        freshInputs.add(input); freshStates.add(stable); freshPixels.add(image);
+                        freshFull.add(registry.capture()); freshCourse.add(registry.captureCourse());
+                        if (newRow == 7) break; // Do not consume the next Animals source after Boulder completes on row8.
+                    }
+                }
+                assertEquals(1, aeRequests); assertEquals(6, deathRow); assertTrue(goneRow > deathRow);
+                assertEquals(goneRow + 60, restartRow); assertEquals(restartRow + 1, newVisitRow); assertEquals(7, freshStates.size());
+                assertEquals(java.util.stream.IntStream.range(0, 12).boxed().collect(java.util.stream.Collectors.toSet()), reached,
+                        "Actual old-visit current12 display/pixels reached before retirement; no reconstructed postrestart glyph fallback");
+                assertNotNull(savedCut); assertNotNull(retired); assertSame(savedCut.objects().checkpointState().saved(), retired.objects().checkpointState().saved());
+                assertEquals(1, ((CdOpeningObjectRuntime) module.getGameService(NativeDynamicObjectPass.class)).sectionArtState().remainingTilesWord());
+                assertTrue(((CdOpeningObjectRuntime) module.getGameService(NativeDynamicObjectPass.class)).displayedFrame().tiles().stream()
+                        .anyMatch(t -> t.patternId() >= base && t.patternId() < base + 24), "Fresh visit actually displays Sonic through the ordinary publication");
+                int replayRows = 0;
+                // Indices0/1/3 mean completed fresh rows1/2/4. No restore/replay crosses the epoch boundary.
+                for (int cut : new int[]{0, 1, 3}) for (boolean courseOnly : List.of(false, true)) {
+                    if (courseOnly) registry.restoreCourse(freshCourse.get(cut)); else registry.restore(freshFull.get(cut));
+                    assertCheckpointWorldCapture(freshStates.get(cut), module);
+                    assertArrayEquals(freshPixels.get(cut).pixels(), render(module, true).pixels()); assertCheckpointWorldCapture(freshStates.get(cut), module);
+                    for (int index = cut + 1; index < freshStates.size(); index++) {
+                        step(loop, freshInputs.get(index)); replayRows++;
+                        assertCheckpointWorldCapture(freshStates.get(index), module);
+                        assertArrayEquals(freshPixels.get(index).pixels(), render(module, true).pixels(), "Fresh checkpoint full/course cut/index=" + cut + "/" + index);
+                        assertCheckpointWorldCapture(freshStates.get(index), module);
+                    }
+                    assertEquals(generation + 1, GameServices.level().getCompletedProductionLoadGeneration());
+                }
+                assertEquals(28, replayRows); assertCheckpointWorldCapture(freshStates.getLast(), module);
+                assertEquals(NullAudioBackend.class, GameServices.audio().getBackend().getClass());
+            } finally {
+                try { SessionManager.closeGameplaySession(); }
+                finally { GraphicsManager.destroyForReinit(); }
+            }
+        }
+        // No PASS/artifact output: returning requires session/graphics/owned boot cleanup as well as every assertion.
+    }
+
+    /** Scalar/native-order consequences at the FIRST actual completed new World row, never a load invocation. */
+    private static void assertCheckpointRestartLoaded(Capture retired, SonicCdGameModule module) {
+        var runtime = (CdOpeningObjectRuntime) module.getGameService(NativeDynamicObjectPass.class); var frame = module.requirePlayerFrame();
+        var saved = retired.objects().checkpointState().saved(); var state = frame.state(); var m = state.motion();
+        int x = saved.read(com.openggf.game.soniccd.objects.CdCheckpointSaveData.SavedField.PRIMARY_X);
+        int y = saved.read(com.openggf.game.soniccd.objects.CdCheckpointSaveData.SavedField.PRIMARY_Y);
+        int bottom = saved.read(com.openggf.game.soniccd.objects.CdCheckpointSaveData.SavedField.BOTTOM_BOUND);
+        assertEquals(1, saved.read(com.openggf.game.soniccd.objects.CdCheckpointSaveData.SavedField.SPAWN_MODE));
+        assertTrue(x >= 160 && x < 0x680 && y >= 0x60 && y < 0x800, "Fixed admitted PP0 SetupCamera branch, no fallback/default-start path");
+        assertEquals(x << 16, m.centreX16_16()); assertEquals(y << 16, m.centreY16_16(), "Fresh cleared fractions, not the contact's ABCD/4A34");
+        assertEquals(x, module.requirePlayerActor().getCentreX()); assertEquals(y, module.requirePlayerActor().getCentreY());
+        assertEquals(2, m.routine()); assertEquals(0, m.xVelocity()); assertEquals(0, m.yVelocity()); assertEquals(0, m.groundVelocity());
+        assertEquals(0, m.flags()); assertEquals(0, state.history().index());
+        assertArrayEquals(retired.actor().state().history().bytes().copy(), state.history().bytes().copy(), "Init has no RecordPos call");
+        assertArrayEquals(retired.shared().artState().residentBank().copy(), frame.artState().residentBank().copy());
+        assertArrayEquals(retired.objects().powerupArtState().residentBank().copy(), runtime.powerupArtState().residentBank().copy());
+        assertTrue(runtime.displayedFrame().tiles().isEmpty(), "Fresh first V-int selected the actual cleared prior SAT");
+        assertNotSame(retired.actor().owner(), frame.captureActor().owner()); assertNotSame(retired.shared().owner(), frame.captureShared().owner());
+        var oldScroll = assertInstanceOf(SonicCdPlayerPresentation.ScrollCapture.class, retired.scroll());
+        var now = assertInstanceOf(SonicCdPlayerPresentation.ScrollCapture.class, capture(module).scroll());
+        assertNotSame(oldScroll.owner(), now.owner()); assertNotSame(retired.publication().owner(), capture(module).publication().owner());
+        // PP SetupCamera WORD clamps; this fixed opening cut does not reach a clamp or 3D-ramp remap.
+        int cx = x - 160, cy = y - 0x60;
+        assertTrue(cx < module.requirePlayerFrame().assets().loadPlan().bounds().right()); assertTrue(cy < bottom);
+        assertEquals(cx, GameServices.camera().getX()); assertEquals(cy, GameServices.camera().getY());
+        assertEquals(cx, now.state().cameraX()); assertEquals(cy << 16, now.state().cameraY16_16());
+        assertEquals(bottom, frame.environment().movement().bounds().bottom()); assertEquals(bottom, now.state().destBottomBound());
+        assertEquals(0, now.state().scrollXDiff()); assertEquals(0, now.state().scrollYDiff());
+        assertEquals(cx << 16, now.copies().fgX16_16()); assertEquals(cy << 16, now.copies().fgY16_16());
+        assertEquals(0x0400, now.copies().fgFlags(), "Actual load-scroll forced FG HIGH flag is copied by first V-int before ordinary scroll clears it");
+        assertEquals(0, now.state().scrollFlags());
+        var selected = capture(module).publication().published(); assertNotNull(selected);
+        assertEquals(cx, selected.cameraX()); assertEquals(cy, selected.cameraY());
+        assertNotEquals(saved.read(com.openggf.game.soniccd.objects.CdCheckpointSaveData.SavedField.FG_Y), cy,
+                "Saved cameras are intermediate LoadData WORD stores; actual SetupCamera follows restored XY");
+        var bg = now.background();
+        assertEquals((cx >>> 1) << 16, bg.cameraBgX()); assertEquals((3 * (cx >>> 4)) << 16, bg.cameraBg2X());
+        assertEquals((3 * (cx >>> 3)) << 16, bg.cameraBg3X());
+        assertEquals(cy << 16, bg.cameraBgY()); assertEquals(cy << 16, bg.cameraBg2Y()); assertEquals(cy << 16, bg.cameraBg3Y());
+        assertEquals((cy << 16) | cy, bg.vscroll());
+        int[] cloudSpeeds = {0x10000, 0xE000, 0xC000, 0xA000, 0x8000, 0x6000, 0x4800, 0x4000, 0x2800, 0x2000,
+                0x2000, 0x4000, 0x8000, 0xC000, 0x10000, 0xC000, 0x8000, 0x4000, 0x2000};
+        byte[] clouds = new byte[512];
+        for (int i = 0; i < cloudSpeeds.length; i++) checkpointWorldPut(clouds, i * 4, 4, cloudSpeeds[i] * 2);
+        assertArrayEquals(clouds, bg.cloudRam().copy(), "ClearFlowers/Init19 then one actual load scroll plus first ordinary scroll, no fabricated load V-int");
+        assertEquals(1, frame.vIntClock().absoluteValue().orElseThrow()); assertEquals(1, GameServices.level().getFrameCounter());
+        assertEquals(7, runtime.ringGlobals().ringAnimationTimer()); assertEquals(1, runtime.ringGlobals().ringAnimationFrame(),
+                "New-visit ClearFlowers clears carried timer/frame BEFORE its first actual ordinary tail");
+        assertEquals(0, runtime.ringGlobals().timeStopTimer(), "ClearFlowers owns this WORD too; actual old value is0, no dirty ingress API is invented");
+        assertEquals(0xFF, runtime.checkpointState().live().knownMask());
+        for (var field : com.openggf.game.soniccd.objects.CdCheckpointLiveAux.Field.values()) if (field != com.openggf.game.soniccd.objects.CdCheckpointLiveAux.Field.TIME_LONG)
+            assertEquals(0, com.openggf.game.soniccd.objects.CdCheckpointLiveAux.read(runtime.checkpointState().live(), field), "Actual represented water clear plus R11A routine restore " + field);
+        assertEquals(0, runtime.levelGlobals().updateHudTime()); assertEquals(0, runtime.levelGlobals().spawnMode());
+        assertEquals(0, runtime.levelGlobals().levelRestart()); assertEquals(2, runtime.levelGlobals().checkpoint());
+    }
+
+    /** Inspect the actual append/prepare/service state; never call LoadSection/prepare/decode to manufacture it. */
+    private static void assertCheckpointRestartSection(Capture retired, SonicCdGameModule module, int newRow) {
+        var runtime = (CdOpeningObjectRuntime) module.getGameService(NativeDynamicObjectPass.class); var section = runtime.sectionArtState();
+        var plan = module.requirePlayerFrame().assets().loadPlan(); var selected = plan.sections().getFirst();
+        assertEquals(0x680, selected.rightThresholdWord()); assertEquals(2, selected.initialPlcId()); assertEquals(8, selected.updatePlcId());
+        assertEquals(retired.objects().sectionArtState().sectionWord() & 0xFF, section.sectionWord(), "LoadSectionArt writes the section HIGH byte once; ordinary section0 update preserves it");
+        var list = plan.plcs().get(selected.initialPlcId()); assertEquals(2, list.nativeId()); assertEquals(7, list.entries().size());
+        int[] destinations = {0x6E80, 0x7100, 0x7400, 0x8120, 0x8480, 0x8820, 0x9EE0};
+        var decoder = section.decoder().orElseThrow();
+        assertEquals(list.entries().getFirst().sourceRange().nativeAddress(), decoder.nativeAddress());
+        assertEquals(19, decoder.headerWord() & 0x7FFF); assertEquals(19 - 3 * (newRow - 1), section.remainingTilesWord());
+        assertEquals(section.remainingTilesWord(), decoder.remainingTiles()); assertEquals(decoder.sourcePointer(), section.queue().headSource());
+        assertEquals(0x6E80 + 96 * (newRow - 1), section.queue().headDestination());
+        byte[] queue = new byte[96];
+        for (int i = 0; i < list.entries().size(); i++) {
+            var entry = list.entries().get(i); assertEquals(destinations[i], entry.vramAddress());
+            long sourceAddress = i == 0 ? decoder.sourcePointer() : entry.sourceRange().nativeAddress();
+            checkpointWorldPut(queue, i * 6, 4, (int) sourceAddress);
+            checkpointWorldPut(queue, i * 6 + 4, 2, i == 0 ? section.queue().headDestination() : destinations[i]);
+        }
+        assertArrayEquals(queue, section.queue().bytes().copy(), "Exactly one complete initial-list APPEND, no update-list replacement or duplicate entries");
+        assertFalse(section.stopped());
+        if (newRow == 1) {
+            assertEquals(0, section.processBudgetWord()); assertEquals(19, section.remainingTilesWord());
+            assertEquals(retired.objects().sectionArtState().residency(), section.residency(), "LoadSection APPEND and first-tail prepare write no VRAM; exact current-art carry");
+            assertTrue(decoder.sourcePointer() > decoder.nativeAddress(), "First actual ordinary ProcessPLCs prepared the real header/table/prefetch");
+        } else assertEquals(0, section.processBudgetWord(), "Each completed3-tile service drains its native budget WORD to0");
+        assertEquals(0, section.hintWord()); assertEquals(0, section.padWord());
+        for (int tile = 0; tile < 12; tile++) assertArrayEquals(
+                com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(retired.objects().sectionArtState().residency(), 0x6CB + tile).copy(),
+                com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(section.residency(), 0x6CB + tile).copy(),
+                "Current checkpoint12 survive actual Boulder service; no cold preload/default glyph fallback " + tile);
+    }
+    // END constructed Checkpoint restart proof; original17 tests and all inherited bytes remain untouched.
 
 }

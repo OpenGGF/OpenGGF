@@ -704,9 +704,9 @@ class TestCdR11aSectionArt {
         }
         var objects = assets.openingObjects();
         var sources = objects.sectionArtSources();
-        assertEquals(9, sources.sources().size());
+        assertEquals(10, sources.sources().size());
         assertEquals(List.of(ART_PATA_BATA, ART_ANTON, ART_TAMABBOH, ART_MOSQUI, ART_3D_PLANT,
-                ART_3D_RAMP_BOOST, ART_BOULDER, ART_DIAGONAL_SPRING, ART_SPIKES),
+                ART_3D_RAMP_BOOST, ART_BOULDER, ART_DIAGONAL_SPRING, ART_SPIKES, ART_CHECKPOINT),
                 sources.sources().stream().map(source -> source.source()).toList());
         var mosqui = sources.source(ART_MOSQUI).decode().bytes();
         var plant = sources.source(ART_3D_PLANT).decode().bytes();

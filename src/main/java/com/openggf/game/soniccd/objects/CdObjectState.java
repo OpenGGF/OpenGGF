@@ -41,7 +41,9 @@ public final class CdObjectState {
         // ObjSpring .DisplayOnly (Spring/Main.asm:156-159): signed parent-relative bytes. Storage only.
         SPRING_PARENT_X_OFFSET(0x38), SPRING_PARENT_Y_OFFSET(0x39),
         // ObjTunnelDoorV_Reset (Tunnel Door/Main.asm:77): ADDQ.B at HIGH oVar3A, never low $3B. Storage only.
-        TUNNEL_DOOR_TIMER_HIGH(0x3A);
+        TUNNEL_DOOR_TIMER_HIGH(0x3A),
+        // Checkpoint/Main.asm:7-11: overlapping native storage aliases only.
+        CHECKPOINT_ACTIVE(0x2E), CHECKPOINT_BALL_ANGLE(0x34);
         private final int offset;
         ByteField(int offset) { this.offset = offset; }
         public int byteOffset() { return offset; }
@@ -70,7 +72,9 @@ public final class CdObjectState {
         // ObjSpring (Spring/Main.asm:151,162,238): signed launch speed, parent low address, original X. Storage only.
         SPRING_SPEED(0x30), SPRING_PARENT(0x34), SPRING_ANCHOR_X(0x36),
         // ObjTunnelDoorV_Main (Tunnel Door/Main.asm:62): CLR.W oVar3A clears $3A and $3B. Storage only.
-        TUNNEL_DOOR_TIMER(0x3A);
+        TUNNEL_DOOR_TIMER(0x3A),
+        // Checkpoint/Main.asm:7-8: ball orbit anchors, not retained parent objects.
+        CHECKPOINT_BALL_X(0x2A), CHECKPOINT_BALL_Y(0x2C);
         private final int offset;
         WordField(int offset) { this.offset = offset; }
         public int byteOffset() { return offset; }
@@ -81,7 +85,9 @@ public final class CdObjectState {
         // ObjPataBata (Pata-Bata/Main.asm:19-20,42,49,74): overlapping storage aliases only.
         PATA_BATA_ANCHOR_Y(0x2C), PATA_BATA_X_DELTA(0x30),
         // ObjMosqui_Init:.SetInfo (Mosqui/Main.asm:51-54). Storage only; no body execution here.
-        MOSQUI_X_DELTA(0x2C), MOSQUI_ANIMATION_SCRIPT(0x30);
+        MOSQUI_X_DELTA(0x2C), MOSQUI_ANIMATION_SCRIPT(0x30),
+        // Checkpoint/Main.asm:10,108,154: raw FULL MOVE.L a0 parent bits. Storage only.
+        CHECKPOINT_PARENT(0x30);
         private final int offset;
         LongField(int offset) { this.offset = offset; }
         public int byteOffset() { return offset; }

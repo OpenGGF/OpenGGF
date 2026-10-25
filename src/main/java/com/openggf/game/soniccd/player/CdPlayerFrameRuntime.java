@@ -468,6 +468,124 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
                 new CdPlayerArtRuntime.State(new byte[0x300], new byte[0x300], 0, false));
     }
 
+
+    /** Narrow addressed stores during LoadCheckpointData, before this fresh visit can take input. */
+    public enum CheckpointLoadField {
+        PRIMARY_X(0xFFFF), PRIMARY_Y(0xFFFF), CURRENT_BOTTOM(0xFFFF),
+        LEFT_BOUND(0xFFFF), MINI_SONIC(0xFF);
+        private final int maximum;
+        CheckpointLoadField(int maximum) { this.maximum = maximum; }
+    }
+
+    /** Expected/current plain values; the callback-scoped private port supplies load-phase authority. */
+    public record CheckpointLoadStore(CheckpointLoadField field, int expectedValue, int value) {
+        public CheckpointLoadStore {
+            Objects.requireNonNull(field, "checkpoint load field");
+            if (((expectedValue | value) & ~field.maximum) != 0) {
+                throw new IllegalArgumentException("Checkpoint load store exceeds its native field width");
+            }
+        }
+    }
+
+    @FunctionalInterface public interface CheckpointLoadInitializer {
+        void initialize(CheckpointLoadPort port);
+    }
+
+    /**
+     * Privately minted for one construction callback. No whole-state restore, input, Body,
+     * display, art, clock, saved bytes, camera or sound authority exists here. Retained ports
+     * reject after either normal return or failure, including after later rewind restore.
+     */
+    public static final class CheckpointLoadPort {
+        private final CdPlayerFrameRuntime owner;
+        private boolean active = true;
+        private CheckpointLoadPort(CdPlayerFrameRuntime owner) { this.owner = owner; }
+        private void requireActive() {
+            if (!active || owner.closed || !owner.inOperation || owner.pending != null || owner.bodyEntitled) {
+                throw new IllegalStateException("Checkpoint load port is outside its fresh construction cut");
+            }
+        }
+        public int read(CheckpointLoadField field) {
+            requireActive(); Objects.requireNonNull(field, "checkpoint load field");
+            var motion = owner.state.motion(); var movement = owner.environment.movement();
+            return switch (field) {
+                case PRIMARY_X -> motion.centreX16_16() >>> 16;
+                case PRIMARY_Y -> motion.centreY16_16() >>> 16;
+                case CURRENT_BOTTOM -> movement.bounds().bottom();
+                case LEFT_BOUND -> movement.bounds().left();
+                case MINI_SONIC -> movement.gates().miniSonic();
+            };
+        }
+        public void store(CheckpointLoadStore call) {
+            Objects.requireNonNull(call, "checkpoint load store"); requireActive();
+            if (read(call.field()) != call.expectedValue()) {
+                throw new IllegalArgumentException("Stale checkpoint load field");
+            }
+            var field = call.field(); int value = call.value();
+            if (field == CheckpointLoadField.PRIMARY_X || field == CheckpointLoadField.PRIMARY_Y) {
+                var motion = owner.state.motion();
+                int x = field == CheckpointLoadField.PRIMARY_X
+                        ? (value << 16) | (motion.centreX16_16() & 0xFFFF) : motion.centreX16_16();
+                int y = field == CheckpointLoadField.PRIMARY_Y
+                        ? (value << 16) | (motion.centreY16_16() & 0xFFFF) : motion.centreY16_16();
+                owner.state = checkpointPosition(owner.state, x, y);
+                return;
+            }
+            var e = owner.environment; var movement = e.movement(); var bounds = movement.bounds();
+            var gates = movement.gates();
+            var nextBounds = field == CheckpointLoadField.CURRENT_BOTTOM
+                    ? new CdPlayerMovement.Bounds(bounds.left(), bounds.right(), value, bounds.bossFight())
+                    : field == CheckpointLoadField.LEFT_BOUND
+                    ? new CdPlayerMovement.Bounds(value, bounds.right(), bounds.bottom(), bounds.bossFight()) : bounds;
+            var nextGates = field == CheckpointLoadField.MINI_SONIC
+                    ? new CdPlayerMovement.Gates(gates.zoneAct(), gates.timeZone(), value, gates.waterSlide(),
+                            gates.windTunnel(), gates.speedShoes(), gates.timeWarpDirection()) : gates;
+            var nextMovement = new CdPlayerMovement.Environment(movement.physics(), nextBounds, nextGates, movement.globals());
+            var nextEnvironment = new CdPlayerBody.Environment(nextMovement, e.controls(), e.globals(), e.dynamicSlots());
+            owner.environment = nextEnvironment;
+        }
+    }
+
+    /**
+     * Fresh checkpoint restart ingress. LoadCheckpointData (Load Saved Data.asm:49-84 at
+     * scddisasm 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff) replaces DefaultStart.
+     * ClearObjects leaves both coordinate longs zero before the callback; LevelSizeLoad's
+     * existing bounds/centres and the explicit restart residue retain their current owners.
+     * Root executes the actual ordered saved reads and addressed stores in this callback,
+     * then SetupCamera/InitLevelScroll/load-time LevelScroll outside it. No input, native
+     * clear replay, SaveData, timer, Body, FM or camera initialization runs in this factory.
+     */
+    public static CdPlayerFrameRuntime checkpointRestartDevelopment(CdR11aAssets assets, long declaredNativeVIntSeed,
+                                                                     RestartIngress carried,
+                                                                     CheckpointLoadInitializer initializer) {
+        Objects.requireNonNull(initializer, "checkpoint load initializer");
+        var owner = externalTouchRequiredDevelopment(assets, declaredNativeVIntSeed, carried);
+        owner.state = checkpointPosition(owner.state, 0, 0);
+        owner.inOperation = true;
+        var port = new CheckpointLoadPort(owner);
+        try {
+            initializer.initialize(port);
+            return owner;
+        } catch (RuntimeException | Error failure) {
+            owner.closed = true;
+            owner.artPublication = null;
+            throw failure;
+        } finally {
+            port.active = false;
+            owner.inOperation = false;
+        }
+    }
+
+    private static CdPlayerBody.State checkpointPosition(CdPlayerBody.State before, int x, int y) {
+        var m = before.motion();
+        var next = new CdPlayerMotionState(x, y, m.xVelocity(), m.yVelocity(), m.groundVelocity(), m.routine(),
+                m.angle(), m.flags(), m.spriteFlags(), m.xRadius(), m.yRadius(), m.animation(), m.previousAnimation(),
+                m.playerJump(), m.charge(), m.moveLock(), m.stick(), m.playerControl(),
+                m.previousPrimaryAngle(), m.previousSecondaryAngle());
+        return new CdPlayerBody.State(next, before.animation(), before.header(), before.timers(), before.history(),
+                before.rotationDistance(), before.objectLinks());
+    }
+
     private record ColdCut(CdPlayerBody.State state, CdPlayerBody.Environment environment) { }
 
     private static ColdCut coldDevelopmentCut(CdR11aAssets assets, CdPlayerBody.DynamicSlots dynamicSlots) {

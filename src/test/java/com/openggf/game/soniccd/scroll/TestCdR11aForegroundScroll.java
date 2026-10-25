@@ -572,6 +572,49 @@ class TestCdR11aForegroundScroll {
     }
 
     /** Constructed format input to the actual load-plan decoder, not authenticated media or runtime fallback. */
+
+    @Test void checkpointSetupReplacesOnlyCameraWordsAfterSavedLoadPreservingTheirFractionsAndOtherRam() {
+        var before=new State(0x1111,0x2222BEEF,0x43,0x54,0x1234,0xFEDC,0xF5A5,0x6789,0xABCD,0xA55A,0xB612);
+        var result=checkpointSetupCamera(before,0xAC8,0x2E8,DEFAULT_BOUNDS);
+        assertEquals(new State(0xA28,0x0288BEEF,0x43,0x54,0x1234,0xFEDC,0xF5A5,0x6789,0xABCD,0xA55A,0xB612),result);
+        assertEquals(0x2222BEEF,before.cameraY16_16());assertEquals(result,checkpointSetupCamera(before,0xAC8,0x2E8,DEFAULT_BOUNDS));
+    }
+
+    @Test void checkpointSetupUsesUnsignedXBorrowRightCapAndTheEarlierSignedPlayerYCap() {
+        var before=new State(0x1111,0x2222ABCD,0x10,0x10,0,0,0,0x710,0,0,0);
+        int[][] vectors={{0,0,0x2897,0x710,0,0},{159,95,0x2897,0x710,0,0},{160,96,0x2897,0x710,0,0},
+                {0xFFFF,0x7FFF,0x2897,0x710,0x2897,0x710},{0xFFFF,0x8000,0xFFFF,0x710,0xFF5F,0},
+                {0x1234,0xFFFF,0x2000,0x710,0x1194,0},{0x1234,0x100,0x2000,0xFFFF,0x1194,0xFFFF},
+                {0x1234,0x100,0x2000,0x8000,0x1194,0x8000}};
+        for(int[] v:vectors) {
+            var bounds=new CdPlayerMovement.Bounds(0xBEEF,v[2],v[3],0xA5);var result=checkpointSetupCamera(before,v[0],v[1],bounds);
+            assertEquals(v[4],result.cameraX());assertEquals(v[5],result.cameraYWord());assertEquals(0xABCD,result.cameraY16_16()&0xFFFF);
+            assertEquals(before.destLeftBound(),result.destLeftBound());assertEquals(before.destBottomBound(),result.destBottomBound());
+        }
+    }
+
+    @Test void checkpointSetupFeedsActualBackgroundInitWhichReplacesSavedWordsInNativeOrder() {
+        var fg=checkpointSetupCamera(new State(0x1111,0x2222BEEF,0x10,0x10,0,0,0,0x710,0,0,0),0xAC8,0x2E8,DEFAULT_BOUNDS);
+        var bg=new CdR11aBackgroundScroll.State(0x11111234,0x22223456,0x33335678,0x4444789A,0x55559ABC,0x6666BCDE,
+                CdAssetBytes.copyOf(new byte[8]),0,0,0,CdAssetBytes.copyOf(new byte[512]),CdAssetBytes.copyOf(new byte[512]),CdAssetBytes.copyOf(new byte[1024]),0);
+        // MOVEQ zeroes upper halves before source WORD reads at PP Scroll:66-69.
+        var result=CdR11aBackgroundScroll.init(bg,new CdR11aBackgroundScroll.InitRegisters(fg.cameraYWord(),fg.cameraX(),0xAC8));
+        assertEquals(0x02340000,result.cameraBgY());assertEquals(0x0234789A,result.cameraBg2Y());assertEquals(0x0234BCDE,result.cameraBg3Y());
+        assertEquals(0x05141234,result.cameraBgX());assertEquals(0x01E65678,result.cameraBg2X());assertEquals(0x03CF9ABC,result.cameraBg3X());
+        assertEquals(0x22223456,bg.cameraBgY());assertEquals(0x288BEEF,fg.cameraY16_16());
+    }
+
+    @Test void checkpointSetupRejectsUnownedWidthOrNullInputsWithoutChangingTheSavedCameraTuple() {
+        var before=new State(0x1111,0x2222BEEF,0x10,0x10,0,0,0,0x710,0,0,0);
+        assertThrows(NullPointerException.class,()->checkpointSetupCamera(null,0,0,DEFAULT_BOUNDS));
+        assertThrows(NullPointerException.class,()->checkpointSetupCamera(before,0,0,null));
+        for(int bad:new int[]{-1,65536}) {
+            assertThrows(IllegalArgumentException.class,()->checkpointSetupCamera(before,bad,0,DEFAULT_BOUNDS));
+            assertThrows(IllegalArgumentException.class,()->checkpointSetupCamera(before,0,bad,DEFAULT_BOUNDS));
+        }
+        assertEquals(0x2222BEEF,before.cameraY16_16());
+    }
+
     private static CdR11aLoadPlan loadPlan(int x, int y, int left, int right, int top, int bottom,
                                           int centreY) throws IOException {
         var profile = CdR11aProfile.forStage(CdReleaseVariant.USA, CdStageKey.parse("R11A"));

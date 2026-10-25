@@ -2783,6 +2783,103 @@ class TestCdPlayerFrameRuntime {
         return keys;
     }
 
+
+    // Native LoadCheckpointData uses a fresh-visit, callback-scoped writer before any input/Body.
+    @Test void checkpointLoadPortBeginsWithClearedCoordinatesAndPreservesEveryOtherCarriedPartition() throws IOException {
+        var assets=new Fixture().assets();var carry=checkpointFrameCarry();
+        var baseline=CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets,7,carry);
+        var frame=CdPlayerFrameRuntime.checkpointRestartDevelopment(assets,7,carry,port->{
+            assertEquals(0,port.read(CdPlayerFrameRuntime.CheckpointLoadField.PRIMARY_X));
+            assertEquals(0,port.read(CdPlayerFrameRuntime.CheckpointLoadField.PRIMARY_Y));
+            int[] values={0x1234,0xFEDC,0x4567,0xFF60,0xE1};int i=0;
+            for(var field:CdPlayerFrameRuntime.CheckpointLoadField.values())
+                port.store(new CdPlayerFrameRuntime.CheckpointLoadStore(field,port.read(field),values[i++]));
+        });
+        assertEquals(Set.of("motion","bounds","gates"),differences(observe(baseline),observe(frame)));
+        assertEquals(0x12340000,frame.state().motion().centreX16_16());
+        assertEquals(0xFEDC0000,frame.state().motion().centreY16_16());
+        assertEquals(0x4567,frame.environment().movement().bounds().bottom());
+        assertEquals(0xFF60,frame.environment().movement().bounds().left());
+        assertEquals(0xE1,frame.environment().movement().gates().miniSonic());
+        assertEquals(baseline.state().objectLinks(),frame.state().objectLinks());
+        assertArrayEquals(carry.history().copy(),frame.state().history().bytes().copy());
+        assertArrayEquals(carry.artCpu().copy(),frame.artState().cpuBuffer().copy());
+        assertArrayEquals(carry.artResident().copy(),frame.artState().residentBank().copy());
+        assertEquals(0,frame.state().history().index());assertEquals(0,frame.state().motion().routine());
+        assertEquals(OptionalLong.of(7),frame.vIntClock().absoluteValue());assertEquals(0,frame.vIntClock().deltaSinceAdmittedCut());
+        assertFalse(frame.paused());assertTrue(frame.display().isEmpty());assertFalse(frame.closed());
+    }
+
+    @Test void checkpointLoadPortRejectsStaleValuesAndBadWidthsBeforeAnyWrite() throws IOException {
+        CdPlayerFrameRuntime.checkpointRestartDevelopment(new Fixture().assets(),0,checkpointFrameCarry(),port->{
+            var before=new java.util.EnumMap<CdPlayerFrameRuntime.CheckpointLoadField,Integer>(CdPlayerFrameRuntime.CheckpointLoadField.class);
+            for(var field:CdPlayerFrameRuntime.CheckpointLoadField.values())before.put(field,port.read(field));
+            for(var field:CdPlayerFrameRuntime.CheckpointLoadField.values()) {
+                int current=port.read(field);
+                assertThrows(IllegalArgumentException.class,()->port.store(new CdPlayerFrameRuntime.CheckpointLoadStore(field,current^1,0)));
+            }
+            assertThrows(NullPointerException.class,()->port.read(null));
+            assertThrows(NullPointerException.class,()->port.store(null));
+            for(var field:CdPlayerFrameRuntime.CheckpointLoadField.values()) {
+                assertEquals(before.get(field).intValue(),port.read(field));int maximum=field==CdPlayerFrameRuntime.CheckpointLoadField.MINI_SONIC?255:65535;
+                assertThrows(IllegalArgumentException.class,()->new CdPlayerFrameRuntime.CheckpointLoadStore(field,-1,0));
+                assertThrows(IllegalArgumentException.class,()->new CdPlayerFrameRuntime.CheckpointLoadStore(field,0,maximum+1));
+            }
+        });
+    }
+
+    @Test void checkpointLoadPortPreservesAllOtherFieldsAcrossEverySameValueAndWrappingWordStore() throws IOException {
+        var frame=CdPlayerFrameRuntime.checkpointRestartDevelopment(new Fixture().assets(),0,checkpointFrameCarry(),port->{
+            for(var field:CdPlayerFrameRuntime.CheckpointLoadField.values()) {
+                int current=port.read(field);port.store(new CdPlayerFrameRuntime.CheckpointLoadStore(field,current,current));assertEquals(current,port.read(field));
+                int maximum=field==CdPlayerFrameRuntime.CheckpointLoadField.MINI_SONIC?255:65535;
+                port.store(new CdPlayerFrameRuntime.CheckpointLoadStore(field,current,maximum));assertEquals(maximum,port.read(field));
+                port.store(new CdPlayerFrameRuntime.CheckpointLoadStore(field,maximum,0));assertEquals(0,port.read(field));
+            }
+        });
+        assertEquals(0,frame.state().motion().centreX16_16());assertEquals(0,frame.state().motion().centreY16_16());
+        assertEquals(0,frame.state().motion().xVelocity());assertEquals(0,frame.state().motion().yVelocity());
+        assertEquals(0,frame.environment().movement().bounds().left());assertEquals(0,frame.environment().movement().bounds().bottom());
+    }
+
+    @Test void checkpointLoadPortCannotBeRetainedAsAClosedFrameWriterOrCapturedCapability() throws IOException {
+        var ports=new CdPlayerFrameRuntime.CheckpointLoadPort[1];
+        var frame=CdPlayerFrameRuntime.checkpointRestartDevelopment(new Fixture().assets(),0,checkpointFrameCarry(),port->ports[0]=port);
+        var before=observe(frame);var saved=frame.captureActor();
+        for(var field:CdPlayerFrameRuntime.CheckpointLoadField.values()) {
+            assertThrows(IllegalStateException.class,()->ports[0].read(field));
+            assertThrows(IllegalStateException.class,()->ports[0].store(new CdPlayerFrameRuntime.CheckpointLoadStore(field,0,0)));
+        }
+        frame.restoreActor(saved);assertEquals(before,observe(frame));
+        assertThrows(IllegalStateException.class,()->ports[0].read(CdPlayerFrameRuntime.CheckpointLoadField.PRIMARY_X));
+    }
+
+    @Test void checkpointLoadCallbackFailureInvalidatesItsPortAndRetainsTheEarlierObservedStore() throws IOException {
+        var ports=new CdPlayerFrameRuntime.CheckpointLoadPort[1];var reached=new ArrayList<Integer>();var failure=new IllegalStateException("reached native load stop");
+        var thrown=assertThrows(IllegalStateException.class,()->CdPlayerFrameRuntime.checkpointRestartDevelopment(new Fixture().assets(),0,checkpointFrameCarry(),port->{
+            ports[0]=port;port.store(new CdPlayerFrameRuntime.CheckpointLoadStore(CdPlayerFrameRuntime.CheckpointLoadField.PRIMARY_X,0,0xBEEF));
+            reached.add(port.read(CdPlayerFrameRuntime.CheckpointLoadField.PRIMARY_X));throw failure;
+        }));
+        assertSame(failure,thrown);assertEquals(List.of(0xBEEF),reached);
+        assertThrows(IllegalStateException.class,()->ports[0].read(CdPlayerFrameRuntime.CheckpointLoadField.PRIMARY_X));
+    }
+
+    @Test void checkpointLoadFactoryValidatesRequiredIngressBeforeCallingTheInitializer() throws IOException {
+        var assets=new Fixture().assets();var carry=checkpointFrameCarry();var calls=new ArrayList<Integer>();
+        CdPlayerFrameRuntime.CheckpointLoadInitializer callback=port->calls.add(1);
+        assertThrows(NullPointerException.class,()->CdPlayerFrameRuntime.checkpointRestartDevelopment(null,0,carry,callback));
+        assertThrows(NullPointerException.class,()->CdPlayerFrameRuntime.checkpointRestartDevelopment(assets,0,null,callback));
+        assertThrows(NullPointerException.class,()->CdPlayerFrameRuntime.checkpointRestartDevelopment(assets,0,carry,null));
+        assertThrows(IllegalArgumentException.class,()->CdPlayerFrameRuntime.checkpointRestartDevelopment(assets,-1,carry,callback));
+        assertTrue(calls.isEmpty());
+    }
+
+    private static CdPlayerFrameRuntime.RestartIngress checkpointFrameCarry() {
+        byte[] history=new byte[256],cpu=new byte[768],resident=new byte[768];
+        Arrays.fill(history,(byte)0xA5);Arrays.fill(cpu,(byte)0xB6);Arrays.fill(resident,(byte)0xC7);
+        return new CdPlayerFrameRuntime.RestartIngress(CdAssetBytes.copyOf(history),CdAssetBytes.copyOf(cpu),CdAssetBytes.copyOf(resident),1,2,3,4,0x1234,0x80);
+    }
+
     private static final class Fixture {
         CdReleaseVariant variant = CdReleaseVariant.USA;
         boolean failPublication;

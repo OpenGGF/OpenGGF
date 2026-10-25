@@ -163,6 +163,7 @@ public final class CdObjectMappings implements CdDrawMappings {
         // ObjSpikes_Init stores actual USA $20C1F0 (Spikes/Main.asm:21,87-89). Retain the full24
         // include and its real EVEN byte; one counted frame, four pieces/eight distinct tiles, no script.
         addObject(tables, objects, CdR11aObjectAssets.Table.SPIKES_MAPPINGS, objects.spikes());
+        addObject(tables, objects, CdR11aObjectAssets.Table.CHECKPOINT_MAPPINGS, objects.checkpoint());
         var monitorView = objects.view(CdR11aObjectAssets.Table.MONITOR_TIME_MAPPINGS);
         var staticPieces = new ArrayList<DeclaredStaticPiece>();
         // ObjMonitorItem_Init (:451-459) adds the signed frame word and then one byte, skipping the count.

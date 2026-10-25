@@ -212,7 +212,7 @@ public final class CdR11aSectionArt {
 
     /**
      * Explicit authenticated-assets opt-in. Reuses the actual USA plan and all
-     * nine finite source views, including Spikes at PLC_Std row0; never decodes
+     * ten finite source views, including Checkpoint at PLC_Level row1; never decodes
      * or preloads their output here. Canonical metadata describes the source;
      * the actual queued entry retains its destination and source-range authority.
      * Asset/region authentication remains owned by the existing asset pipeline.
@@ -221,7 +221,7 @@ public final class CdR11aSectionArt {
         Objects.requireNonNull(assets, "assets");
         var plan = assets.loadPlan();
         var bank = assets.openingObjects().sectionArtSources();
-        if (bank.sources().size() != 9) throw new IllegalArgumentException("Nine reviewed source views required");
+        if (bank.sources().size() != 10) throw new IllegalArgumentException("Ten reviewed source views required");
         var sources = new ArrayList<SourceProgram>();
         for (var source : bank.sources()) {
             var entry = source.canonicalPlc();

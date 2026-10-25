@@ -78,7 +78,10 @@ public final class CdR11aObjectAssets {
         // Boulder/Main.asm:30,57-59; actual USA MOVE.L at $9618 stores $209654. Includes the real EVEN byte.
         BOULDER_MAPPINGS("MapSpr_Boulder", 0x9654, 14),
         // Spikes/Main.asm:21,87-89; actual USA MOVE.L at $C130 stores $20C1F0. Full include plus real pad.
-        SPIKES_MAPPINGS("MapSpr_Spikes", 0xC1F0, 24);
+        SPIKES_MAPPINGS("MapSpr_Spikes", 0xC1F0, 24),
+        // Checkpoint/Main.asm:74,101,188; actual USA MOVE.L/LEA operands use the shared $23F120 root.
+        CHECKPOINT_ANIMATIONS("Ani_Checkpoint", 0x3F11A, 6),
+        CHECKPOINT_MAPPINGS("MapSpr_Checkpoint", 0x3F120, 66);
 
         private final String nativeLabel;
         private final int offset;
@@ -340,6 +343,7 @@ public final class CdR11aObjectAssets {
     private PataBataArtBank pataBataArtBank;
     private CdObjectVisualAssets boulder;
     private CdObjectVisualAssets spikes;
+    private CdObjectVisualAssets checkpoint;
 
     private CdR11aObjectAssets(CdR11aAssets.Identity identity, Map<Table, View> views, List<Delta> deltas,
                                 List<TouchSize> dimensions, CdObjectVisualAssets rings,
@@ -765,6 +769,19 @@ public final class CdR11aObjectAssets {
         return spikes;
     }
 
+    /**
+     * Checkpoint/Main.asm:74-75,101-107,187-189: parent and ball share four native counted frames
+     * and one real FF script. The native literal base $06CB is not a SetObjectTileID selector.
+     * This reads raw visuals only; no art decode, object, save data or current residency is admitted.
+     */
+    public synchronized CdObjectVisualAssets checkpoint() {
+        if (checkpoint == null) {
+            checkpoint = CdObjectVisualAssets.decode(read(Table.CHECKPOINT_MAPPINGS), 4,
+                    read(Table.CHECKPOINT_ANIMATIONS), 1, 12);
+        }
+        return checkpoint;
+    }
+
     /** Obj3DPlant_Init (3D Ramp/Main.asm:57-90): ADD.W consumes signed offsets in two distinct bodies. */
     public static PlantOffsets decodePlantOffsets(byte[] input) {
         var bytes = exact(input, 14, "Obj3DPlant_Offsets1/Obj3DPlant_Offsets2");
@@ -996,6 +1013,14 @@ public final class CdR11aObjectAssets {
             // the source through $3806D ($C0). One immutable NemesisRead is shared by this cached source.
             // Physical patterns $320..$327 at $6400..$6500 remain the existing current owner's responsibility.
             var spikes = decodeSectionArt(CdR11aAsset.ART_SPIKES, 8, 86);
+            // PLC_Level ID0 row1 (Data (Act 1 Present).asm:47-52; ID3 aliases the same list) owns
+            // Art_Checkpoint's $D960 destination. Actual header $800C at $35DC6 declares XOR/12 tiles.
+            // Independent finite models establish Java211/native212 from the complete 212-byte source.
+            // Native's final inline post-symbol refill reads the real source $00 at $35E99, before the
+            // last three nibbles; Java ends at $35E98 ($40). Adjacent data at $35E9A is never consumed.
+            // Cache this one immutable decode here; physical $6CB..$6D6 remains the existing current
+            // owner's responsibility. This adds no CheckpointArtBank, preload or tile resolver.
+            var checkpointRead = decodeSectionArt(CdR11aAsset.ART_CHECKPOINT, 12, 211);
             // NemDecMain preloads two bytes (Functions (General).asm:415-418); the native decoder refills
             // below nine bits BEFORE emitting a run, including the final run (:436-441,471-490).
             // Native finite lengths therefore differ from Java's final pre-symbol peek lengths. These are
@@ -1013,7 +1038,8 @@ public final class CdR11aObjectAssets {
                             frontier.binding(CdR11aAsset.ART_3D_RAMP_BOOST).decode()),
                     sectionArtSource(CdR11aAsset.ART_BOULDER, 2, 0, 0x6E80, 19, 271, boulder),
                     sectionArtSource(CdR11aAsset.ART_DIAGONAL_SPRING, 1, 5, 0x9200, 46, 780, diagonal),
-                    sectionArtSource(CdR11aAsset.ART_SPIKES, 1, 0, 0x6400, 8, 87, spikes)));
+                    sectionArtSource(CdR11aAsset.ART_SPIKES, 1, 0, 0x6400, 8, 87, spikes),
+                    sectionArtSource(CdR11aAsset.ART_CHECKPOINT, 0, 1, 0xD960, 12, 212, checkpointRead)));
         }
         return sectionArtSources;
     }

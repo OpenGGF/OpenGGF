@@ -18,6 +18,8 @@ import com.openggf.game.soniccd.level.CdR11aAssets;
 import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.SonicCdLevel;
 import com.openggf.game.soniccd.objects.CdObjectDrawQueue;
+import com.openggf.game.soniccd.objects.CdCheckpointLoadData;
+import com.openggf.game.soniccd.objects.CdCheckpointSaveData;
 import com.openggf.game.soniccd.objects.CdOpeningObjectRuntime;
 import com.openggf.game.soniccd.player.CdPlayableSonic;
 import com.openggf.game.soniccd.player.CdPlayerMotionState;
@@ -56,11 +58,11 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
     private CdPlayableSonic actor;
     private CdOpeningObjectRuntime openingObjects;
     // This module exclusively reserves OBJECTS. Normal terrain reset replaces the
-    // atlas; retained-level reset keeps this reservation and removes just our 567
+    // atlas; retained-level reset keeps this reservation and removes just our 579
     // picture patterns. Never clear other producers' ranges or infer ownership
     // from a range with matching coordinates. Rewind cannot move to another atlas.
     private PatternAtlas openingAtlas;
-    private static final int OPENING_PICTURE_PATTERNS = 24 + 14 + 70 + 28 + 63 + 70 + 5 + 39 + 36 + 15 + 36 + 12 + 82 + 19 + 46 + 8;
+    private static final int OPENING_PICTURE_PATTERNS = 24 + 14 + 70 + 28 + 63 + 70 + 5 + 39 + 36 + 15 + 36 + 12 + 82 + 19 + 46 + 8 + 12;
     private CdR11aForegroundScroll.State scrollState;
     private CdR11aBackgroundScroll background;
     private CdR11aBackgroundScroll.State backgroundState; // The visit's ONE retained native BG image.
@@ -69,6 +71,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
     private DrawCopies drawCopies;
     private CdR11aBackgroundPlane.State publishedPlane; // Selected immutable display value; GPU descriptors are derived.
     private boolean loadScrollPending;
+    private boolean checkpointSetupPending;
     private Object scrollCaptureOwner = new Object();
     // CPU scroll prepared by the completed loop; V-int selects the previous one
     // alongside the Runtime's previous CPU SAT. These are immutable render inputs,
@@ -96,7 +99,14 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         if (frame != null && !frame.closed()) throw new IllegalStateException("Retire the previous CD frame owner first");
         Objects.requireNonNull(assets);
         Objects.requireNonNull(buffers, "explicit background buffer ingress");
-        var nextForeground = CdR11aForegroundScroll.coldFromLoadPlan(assets.loadPlan(), 320, 224);
+        boolean checkpoint = module.checkpointRestartStaged();
+        var bounds = assets.loadPlan().bounds();
+        // Main.ClearCamera:210-216, then LevelSizeLoad:19-34. A checkpoint has
+        // not taken DefaultStart/SetupCamera/InitLevelScroll at this source cut.
+        var nextForeground = checkpoint
+                ? new CdR11aForegroundScroll.State(0, 0, 0x10, 0x10, 0, 0, 0,
+                        bounds.bottom(), bounds.left(), 0, 0)
+                : CdR11aForegroundScroll.coldFromLoadPlan(assets.loadPlan(), 320, 224);
         var nextBackgroundOwner = CdR11aBackgroundScroll.bind(assets);
         var nextPlaneOwner = CdR11aBackgroundPlane.bind(assets);
         // ClearCamera (Main:210-216) clears all six BG longs, crossings/padding and flags.
@@ -110,8 +120,9 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
                 buffers.deformationRam(), buffers.hscrollRam(), 0);
         // DefaultStart MOVEQ #0 + SetupCamera's WORD operations leave upper d0/d1 zero
         // (PP Scroll:76-109). Supply integer words, NEVER cameraY16_16's register bits.
-        var nextBackground = CdR11aBackgroundScroll.init(cleared, new CdR11aBackgroundScroll.InitRegisters(
-                nextForeground.cameraYWord(), nextForeground.cameraX(), assets.loadPlan().initialCentre().centreX()));
+        var nextBackground = checkpoint ? cleared
+                : CdR11aBackgroundScroll.init(cleared, new CdR11aBackgroundScroll.InitRegisters(
+                        nextForeground.cameraYWord(), nextForeground.cameraX(), assets.loadPlan().initialCentre().centreX()));
         // Main:225 -> ClearScreen (Functions (General).asm:196-207) clears Plane B. Initial
         // drawing at the actual $70B camera leaves 560 bytes untouched, so it cannot replace this seed.
         var clearedPlane = new CdR11aBackgroundPlane.State(CdAssetBytes.copyOf(new byte[CdR11aBackgroundPlane.NAME_TABLE_BYTES]));
@@ -130,6 +141,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         drawCopies = clearedCopies;
         publishedPlane = null; // No completed initial draw yet; loadScrollPending prevents admission.
         loadScrollPending = true;
+        checkpointSetupPending = checkpoint;
         scroll.resetProjection();
         scrollCaptureOwner = new Object();
         preparedScroll = null;
@@ -152,9 +164,13 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
      * manufacture controller samples, clocks or a V-int here. This is post-InitLevelDraw only.
      * No actor, object, input, animation, art or level-frame service is executed here.
      */
-    void completeLoadScroll(CdPlayerFrameRuntime sourceFrame) {
+    void completeLoadScroll(CdPlayerFrameRuntime sourceFrame) { completeLoadScroll(sourceFrame, 0); }
+
+    /** Main:246 reads the actual carried HUD byte before Main:304, with no timer service. */
+    void completeLoadScroll(CdPlayerFrameRuntime sourceFrame, int sourceHudTime) {
         Objects.requireNonNull(sourceFrame, "pre-Init frame");
-        if (!loadScrollPending || sourceFrame.assets() != assets || frame != null) {
+        if ((sourceHudTime & ~0xFF) != 0) throw new IllegalArgumentException("Expected the raw HUD time byte");
+        if (!loadScrollPending || checkpointSetupPending || sourceFrame.assets() != assets || frame != null) {
             throw new IllegalStateException("CD load scroll requires its fresh source visit and runs exactly once");
         }
         var m = sourceFrame.state().motion();
@@ -162,7 +178,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
                 || m.yVelocity() != 0 || m.playerControl() != 0 || m.animation() != 0) {
             throw new IllegalStateException("Load-time scroll requires the cleared player slot before ObjSonic_Init");
         }
-        var next = CdR11aForegroundScroll.stepForBackground(scrollState, foregroundInput(sourceFrame, 0));
+        var next = CdR11aForegroundScroll.stepForBackground(scrollState, foregroundInput(sourceFrame, sourceHudTime));
         var nextBackground = background.step(backgroundState, backgroundInput(next.state(), m));
         // BSET #2,scrollFlags (Main:247) addresses the HIGH byte. This is live FG only;
         // Plane B initialization consumes neither live flags nor the still-cleared draw copies.
@@ -178,6 +194,121 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         planeState = initialized.state();
         publishedPlane = initialized.state();
         loadScrollPending = false;
+    }
+
+    /**
+     * Scalar reads remain available through the fresh UNBOUND checkpoint visit, including
+     * after load scroll and before bindFrame. Post-scroll LoadSectionArt reads THIS owner,
+     * never the engine camera projection. This gate grants no store or capture authority.
+     */
+    private void requireCheckpointLoadRead() {
+        module.validateTerrainPlayerRequest();
+        if (!module.checkpointRestartStaged() || frame != null || actor != null || assets == null
+                || scrollState == null || background == null || backgroundState == null
+                || module.requireRuntimeSource().assets() != assets) {
+            throw new IllegalStateException("Checkpoint load scalar read requires its current unbound source visit");
+        }
+    }
+
+    private void requireCheckpointLoadStore() {
+        requireCheckpointLoadRead();
+        if (!loadScrollPending || !checkpointSetupPending) {
+            throw new IllegalStateException("Checkpoint camera stores precede SetupCamera and load scroll only");
+        }
+    }
+
+    /** Only LoadCheckpointData:59-67 targets, in their existing FG/BG owners. */
+    int readCheckpointLoadWord(CdCheckpointLoadData.StoreTarget target) {
+        requireCheckpointLoadRead();
+        return switch (Objects.requireNonNull(target, "checkpoint camera target")) {
+            case DEST_BOTTOM_BOUND -> scrollState.destBottomBound();
+            case FG_X -> scrollState.cameraX();
+            case FG_Y -> scrollState.cameraYWord();
+            case BG_X -> backgroundState.cameraBgXWord();
+            case BG_Y -> backgroundState.cameraBgYWord();
+            case BG2_X -> backgroundState.cameraBg2XWord();
+            case BG2_Y -> backgroundState.cameraBg2YWord();
+            case BG3_X -> backgroundState.cameraBg3XWord();
+            case BG3_Y -> backgroundState.cameraBg3YWord();
+            default -> throw new IllegalArgumentException("Not a Presentation checkpoint WORD target");
+        };
+    }
+
+    /** One addressed WORD store; no whole camera restore and no mutation after SetupCamera. */
+    void storeCheckpointLoadWord(CdCheckpointLoadData.StoreCall call) {
+        Objects.requireNonNull(call, "checkpoint camera store");
+        requireCheckpointLoadStore();
+        if (call.expectedValue().isEmpty()
+                || readCheckpointLoadWord(call.target()) != call.expectedValue().getAsInt()) {
+            throw new IllegalArgumentException("Stale checkpoint camera WORD");
+        }
+        int value = call.value();
+        if ((value & ~0xFFFF) != 0) throw new IllegalArgumentException("Expected an unsigned camera WORD");
+        var f = scrollState;
+        if (call.target() == CdCheckpointLoadData.StoreTarget.DEST_BOTTOM_BOUND
+                || call.target() == CdCheckpointLoadData.StoreTarget.FG_X
+                || call.target() == CdCheckpointLoadData.StoreTarget.FG_Y) {
+            scrollState = new CdR11aForegroundScroll.State(
+                    call.target() == CdCheckpointLoadData.StoreTarget.FG_X ? value : f.cameraX(),
+                    call.target() == CdCheckpointLoadData.StoreTarget.FG_Y
+                            ? storeIntegerWord(f.cameraY16_16(), value) : f.cameraY16_16(),
+                    f.horizontalCrossed(), f.verticalCrossed(), f.scrollXDiff(), f.scrollYDiff(), f.scrollFlags(),
+                    call.target() == CdCheckpointLoadData.StoreTarget.DEST_BOTTOM_BOUND ? value : f.destBottomBound(),
+                    f.destLeftBound(), f.bottomBoundShift(), f.scrollLock());
+            return;
+        }
+        var b = backgroundState;
+        backgroundState = new CdR11aBackgroundScroll.State(
+                call.target() == CdCheckpointLoadData.StoreTarget.BG_X ? storeIntegerWord(b.cameraBgX(), value) : b.cameraBgX(),
+                call.target() == CdCheckpointLoadData.StoreTarget.BG_Y ? storeIntegerWord(b.cameraBgY(), value) : b.cameraBgY(),
+                call.target() == CdCheckpointLoadData.StoreTarget.BG2_X ? storeIntegerWord(b.cameraBg2X(), value) : b.cameraBg2X(),
+                call.target() == CdCheckpointLoadData.StoreTarget.BG2_Y ? storeIntegerWord(b.cameraBg2Y(), value) : b.cameraBg2Y(),
+                call.target() == CdCheckpointLoadData.StoreTarget.BG3_X ? storeIntegerWord(b.cameraBg3X(), value) : b.cameraBg3X(),
+                call.target() == CdCheckpointLoadData.StoreTarget.BG3_Y ? storeIntegerWord(b.cameraBg3Y(), value) : b.cameraBg3Y(),
+                b.crossingRam(), b.scrollFlagsBg(), b.scrollFlagsBg2(), b.scrollFlagsBg3(), b.cloudRam(),
+                b.deformationRam(), b.hscrollRam(), b.vscroll());
+    }
+
+    private static int storeIntegerWord(int before, int value) { return (value << 16) | (before & 0xFFFF); }
+
+    /** PP Scroll:66-111/135-170, after all helper stores and before Main:246. */
+    void completeCheckpointSetup(CdPlayerFrameRuntime sourceFrame) {
+        Objects.requireNonNull(sourceFrame, "loaded checkpoint Frame");
+        requireCheckpointLoadStore();
+        if (sourceFrame.closed() || sourceFrame.assets() != assets) {
+            throw new IllegalArgumentException("Checkpoint SetupCamera requires this fresh Frame");
+        }
+        var m = sourceFrame.state().motion();
+        var next = CdR11aForegroundScroll.checkpointSetupCamera(scrollState, m.centreX16_16() >>> 16,
+                m.centreY16_16() >>> 16, sourceFrame.environment().movement().bounds());
+        // MOVEQ0 at PP Scroll:66-67 establishes the register upper words. BG1 Y
+        // is a LONG write; BG2/3 WORD writes retain their existing fractional halves.
+        var nextBackground = CdR11aBackgroundScroll.init(backgroundState,
+                new CdR11aBackgroundScroll.InitRegisters(next.cameraYWord(), next.cameraX(), m.centreX16_16() >>> 16));
+        scrollState = next;
+        backgroundState = nextBackground;
+        checkpointSetupPending = false;
+    }
+
+    /** Bound dynamic SaveData reads borrow the ONE live pre-scroll camera image, never DrawCopies. */
+    int currentCheckpointCameraWord(CdCheckpointSaveData.Source source) {
+        requireBound();
+        return switch (Objects.requireNonNull(source, "checkpoint camera source")) {
+            case FG_X -> scrollState.cameraX();
+            case FG_Y -> scrollState.cameraYWord();
+            case BG_X -> backgroundState.cameraBgXWord();
+            case BG_Y -> backgroundState.cameraBgYWord();
+            case BG2_X -> backgroundState.cameraBg2XWord();
+            case BG2_Y -> backgroundState.cameraBg2YWord();
+            case BG3_X -> backgroundState.cameraBg3XWord();
+            case BG3_Y -> backgroundState.cameraBg3YWord();
+            default -> throw new IllegalArgumentException("Not a checkpoint camera source WORD");
+        };
+    }
+
+    void requireCheckpointReadOwner(CdPlayerFrameRuntime sourceFrame) {
+        requireBound();
+        if (frame != sourceFrame) throw new IllegalStateException("Checkpoint reads belong to another Frame visit");
     }
 
     SonicCdGameModule.BackgroundBuffers captureBackgroundBuffers() {
@@ -304,7 +435,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
             }
         } finally {
             frame = null; actor = null; openingObjects = null; assets = null; scrollState = null; heldPhase = null;
-            background = null; backgroundState = null; loadScrollPending = false;
+            background = null; backgroundState = null; loadScrollPending = false; checkpointSetupPending = false;
             backgroundPlane = null; planeState = null; drawCopies = null; publishedPlane = null;
             preparedScroll = null;
             publishedScroll = null;

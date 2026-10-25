@@ -165,7 +165,7 @@ class TestCdR11aObjectAssets {
 
     @Test
     void metadataNamesOriginalUsaFileRangesWithoutChangingTheExistingAssetEnumeration() {
-        assertEquals(41, CdR11aObjectAssets.Table.values().length);
+        assertEquals(43, CdR11aObjectAssets.Table.values().length);
         for (var table : CdR11aObjectAssets.Table.values()) {
             assertEquals(CdNativeFile.R11A, table.range().file());
             assertEquals(CdMmdImage.Domain.ORIGINAL_WORD_RAM, table.range().domain());
@@ -775,7 +775,7 @@ class TestCdR11aObjectAssets {
         var table = CdR11aObjectAssets.Table.TUNNEL_DOOR_VERTICAL_MAPPINGS;
         assertEquals(31, table.ordinal(), "append after all 31 existing tables");
         assertEquals(table, CdR11aObjectAssets.Table.values()[31]);
-        assertEquals(41, CdR11aObjectAssets.Table.values().length);
+        assertEquals(43, CdR11aObjectAssets.Table.values().length);
         assertEquals("MapSpr_FlapDoorV", table.nativeLabel());
         assertEquals(new CdR11aProfile.FileRange(CdNativeFile.R11A,
                 CdMmdImage.Domain.ORIGINAL_WORD_RAM, 0xCE9A, 28), table.range());
@@ -977,7 +977,7 @@ class TestCdR11aObjectAssets {
     void monitorTimeAppendsTwoUsaTablesAndPreservesEveryPriorOrdinal() throws Exception {
         var scripts = CdR11aObjectAssets.Table.MONITOR_TIME_ANIMATIONS;
         var maps = CdR11aObjectAssets.Table.MONITOR_TIME_MAPPINGS;
-        assertEquals(41, CdR11aObjectAssets.Table.values().length);
+        assertEquals(43, CdR11aObjectAssets.Table.values().length);
         assertEquals(32, scripts.ordinal());
         assertEquals(33, maps.ordinal());
         assertEquals(List.of("Ani_Monitor", "MapSpr_MonitorTime"), List.of(scripts.nativeLabel(), maps.nativeLabel()));
@@ -1183,7 +1183,7 @@ class TestCdR11aObjectAssets {
     void horizontalTunnelDoorAppendsTwoUsaTablesWithoutAnotherArtSourceOrBank() throws Exception {
         var scripts = CdR11aObjectAssets.Table.TUNNEL_DOOR_ANIMATIONS;
         var maps = CdR11aObjectAssets.Table.TUNNEL_DOOR_MAPPINGS;
-        assertEquals(41, CdR11aObjectAssets.Table.values().length);
+        assertEquals(43, CdR11aObjectAssets.Table.values().length);
         assertEquals(34, scripts.ordinal());
         assertEquals(35, maps.ordinal());
         assertEquals(List.of("Ani_TunnelDoor", "MapSpr_TunnelDoor"), List.of(scripts.nativeLabel(), maps.nativeLabel()));
@@ -1362,7 +1362,7 @@ class TestCdR11aObjectAssets {
         var tables = List.of(CdR11aObjectAssets.Table.PATA_BATA_ANIMATIONS,
                 CdR11aObjectAssets.Table.PATA_BATA_NORMAL_MAPPINGS,
                 CdR11aObjectAssets.Table.PATA_BATA_DAMAGED_MAPPINGS);
-        assertEquals(41, CdR11aObjectAssets.Table.values().length);
+        assertEquals(43, CdR11aObjectAssets.Table.values().length);
         assertEquals(tables, Arrays.stream(CdR11aObjectAssets.Table.values()).skip(36).limit(3).toList());
         assertEquals(List.of(36, 37, 38), tables.stream().map(Enum::ordinal).toList());
         assertEquals(List.of("Ani_PataBata", "MapSpr_PataBata1", "MapSpr_PataBata2"),
@@ -1581,7 +1581,7 @@ class TestCdR11aObjectAssets {
         assertEquals(CdAssetBytes.class, source.getMethod("readerBytes").getReturnType());
         assertEquals(int.class, source.getMethod("tileCount").getReturnType());
         // Structure only: no reflective construction of an asserted authenticated owner or source bank.
-        assertEquals(41, CdR11aObjectAssets.Table.values().length);
+        assertEquals(43, CdR11aObjectAssets.Table.values().length);
     }
 
     @Test
@@ -1628,7 +1628,7 @@ class TestCdR11aObjectAssets {
     void boulderAppendsOneExactUsaMappingAndOnlyOnePublicVisualAccessor() throws Exception {
         var table = CdR11aObjectAssets.Table.BOULDER_MAPPINGS;
         assertEquals(39, table.ordinal());
-        assertEquals(41, CdR11aObjectAssets.Table.values().length);
+        assertEquals(43, CdR11aObjectAssets.Table.values().length);
         assertEquals("MapSpr_Boulder", table.nativeLabel());
         assertEquals(new CdR11aProfile.FileRange(CdNativeFile.R11A,
                 CdMmdImage.Domain.ORIGINAL_WORD_RAM, 0x9654, 14), table.range());
@@ -1763,7 +1763,7 @@ class TestCdR11aObjectAssets {
         assertEquals(CdObjectVisualAssets.class, getter.getReturnType());
         assertTrue(Modifier.isSynchronized(getter.getModifiers()));
         assertEquals(0, getter.getExceptionTypes().length);
-        assertEquals(41, CdR11aObjectAssets.Table.values().length);
+        assertEquals(43, CdR11aObjectAssets.Table.values().length);
         assertEquals(200, CdR11aObjectAssets.Table.SPRING_MAPPINGS.range().length());
         assertEquals(14, CdR11aObjectAssets.Table.SPRING_ANIMATIONS.range().length());
         assertTrue(Arrays.stream(CdR11aObjectAssets.class.getDeclaredClasses())
@@ -1884,7 +1884,7 @@ class TestCdR11aObjectAssets {
     @Test
     void spikesAppendsOneUsaTableAndOnlyALazyStaticVisualAccessor() throws Exception {
         var table = CdR11aObjectAssets.Table.SPIKES_MAPPINGS;
-        assertEquals(40, table.ordinal()); assertEquals(41, CdR11aObjectAssets.Table.values().length);
+        assertEquals(40, table.ordinal()); assertEquals(43, CdR11aObjectAssets.Table.values().length);
         assertEquals("MapSpr_Spikes", table.nativeLabel());
         assertEquals(new CdR11aProfile.FileRange(CdNativeFile.R11A,
                 CdMmdImage.Domain.ORIGINAL_WORD_RAM, 0xC1F0, 24), table.range());
@@ -2038,6 +2038,186 @@ class TestCdR11aObjectAssets {
             "SPRING_MAPPINGS", "SPRING_SPEEDS", "POWERUP_MAPPINGS", "TUNNEL_DOOR_VERTICAL_MAPPINGS",
             "MONITOR_TIME_ANIMATIONS", "MONITOR_TIME_MAPPINGS", "TUNNEL_DOOR_ANIMATIONS", "TUNNEL_DOOR_MAPPINGS",
             "PATA_BATA_ANIMATIONS", "PATA_BATA_NORMAL_MAPPINGS", "PATA_BATA_DAMAGED_MAPPINGS", "BOULDER_MAPPINGS");
+
+
+    /** Checkpoint tables use the actual USA $23F120 root, not historical $20 labels. */
+    @Test
+    void checkpointAppendsTwoExactTablesAndOneLazyAccessorWithoutANewOwner() throws Exception {
+        assertEquals(43, CdR11aObjectAssets.Table.values().length);
+        var animations = CdR11aObjectAssets.Table.CHECKPOINT_ANIMATIONS;
+        var mappings = CdR11aObjectAssets.Table.CHECKPOINT_MAPPINGS;
+        assertEquals(41, animations.ordinal()); assertEquals(42, mappings.ordinal());
+        assertEquals("Ani_Checkpoint", animations.nativeLabel());
+        assertEquals("MapSpr_Checkpoint", mappings.nativeLabel());
+        assertEquals(new CdR11aProfile.FileRange(CdNativeFile.R11A,
+                CdMmdImage.Domain.ORIGINAL_WORD_RAM, 0x3F11A, 6), animations.range());
+        assertEquals(new CdR11aProfile.FileRange(CdNativeFile.R11A,
+                CdMmdImage.Domain.ORIGINAL_WORD_RAM, 0x3F120, 66), mappings.range());
+        assertEquals(0x23F120, mappings.range().nativeAddress());
+        assertEquals(animations.range().endExclusive(), mappings.range().fileOffset());
+        for (var addition : List.of(animations, mappings)) {
+            for (var prior : Arrays.stream(CdR11aObjectAssets.Table.values()).limit(41).toList()) {
+                assertTrue(addition.range().endExclusive() <= prior.range().fileOffset()
+                        || prior.range().endExclusive() <= addition.range().fileOffset(), prior.name());
+            }
+        }
+        var priorNames = new ArrayList<>(SPIKES_PRIOR_TABLE_NAMES); priorNames.add("SPIKES_MAPPINGS");
+        assertEquals(priorNames, Arrays.stream(CdR11aObjectAssets.Table.values()).limit(41).map(Enum::name).toList());
+        var getter = CdR11aObjectAssets.class.getMethod("checkpoint");
+        assertEquals(0, getter.getParameterCount()); assertEquals(CdObjectVisualAssets.class, getter.getReturnType());
+        assertTrue(Modifier.isPublic(getter.getModifiers())); assertTrue(Modifier.isSynchronized(getter.getModifiers()));
+        assertEquals(0, getter.getExceptionTypes().length);
+        assertTrue(Arrays.stream(CdR11aObjectAssets.class.getDeclaredClasses())
+                .noneMatch(type -> type.getSimpleName().contains("Checkpoint")));
+        assertTrue(Arrays.stream(CdR11aObjectAssets.class.getDeclaredMethods())
+                .noneMatch(method -> method.getName().equals("checkpointArtBank")));
+        var source = CdR11aAsset.ART_CHECKPOINT;
+        assertEquals(CdR11aAsset.Kind.SOURCE_BLOB, source.kind());
+        assertEquals(CdR11aAsset.Encoding.NEMESIS, source.encodingForReviewedConsumer());
+        assertEquals(212, source.length());
+        for (var variant : CdReleaseVariant.values()) { assertEquals(0x35DC6, source.fileOffset(variant)); }
+        assertEquals(0x35E9A, source.fileOffset(CdReleaseVariant.USA) + source.length());
+    }
+
+    @Test
+    void constructedCheckpointRetainsEveryFramePiecePadScriptAndRawFlip() {
+        byte[] maps = checkpointMappings(), scripts = checkpointAnimations();
+        var visual = CdObjectVisualAssets.decode(maps, 4, scripts, 1, 12);
+        assertEquals("709d0648dfb32425f46281c236ededaef80750fc6250062f3bce77f9427a446f",
+                CdR11aProfile.sha256(visual.mappings().copy()));
+        assertEquals("9034c893821cd15055e34cddb2388653690958995d7118f7c78896e6ccb5c551",
+                CdR11aProfile.sha256(visual.animationTable().copy()));
+        assertEquals(0, visual.mappingTableOffset()); assertEquals(66, visual.mappings().length());
+        assertEquals(List.of(8,30,42,54), visual.mappingFrames().stream()
+                .map(CdObjectVisualAssets.MappingFrame::relativeOffset).toList());
+        assertEquals(List.of(21,11,11,11), visual.mappingFrames().stream().map(f -> f.bytes().length()).toList());
+        assertEquals(List.of(new CdObjectVisualAssets.Piece(-24,3,0,-8),
+                new CdObjectVisualAssets.Piece(-24,3,0x800,0),
+                new CdObjectVisualAssets.Piece(8,1,4,-8),
+                new CdObjectVisualAssets.Piece(8,1,0x804,0)), visual.mappingFrames().getFirst().pieces());
+        for (int frame = 1; frame < 4; frame++) {
+            int tile = 4 + frame * 2;
+            assertEquals(List.of(new CdObjectVisualAssets.Piece(-8,1,tile,-8),
+                    new CdObjectVisualAssets.Piece(-8,1,0x800 | tile,0)), visual.mappingFrames().get(frame).pieces());
+        }
+        for (int frame = 0; frame < 4; frame++) {
+            var value = visual.mappingFrames().get(frame);
+            assertArrayEquals(Arrays.copyOfRange(maps,value.relativeOffset(),
+                    value.relativeOffset() + value.bytes().length()),value.bytes().copy());
+        }
+        for (int pad : new int[]{29,41,53,65}) { assertEquals(0,visual.mappings().unsignedByte(pad)); }
+        assertEquals(12,visual.mappingFrames().stream().flatMap(f -> f.pieces().stream())
+                .mapToInt(p -> p.tileOffset() + p.tileCount()).max().orElseThrow());
+        var animation = visual.animations().getFirst();
+        assertEquals(1,visual.animations().size()); assertEquals(2,animation.relativeOffset());
+        assertEquals(3,animation.delay()); assertEquals(List.of(2,3),animation.frameBytes());
+        assertEquals(CdObjectVisualAssets.Terminal.LOOP_FF,animation.terminal());
+        assertArrayEquals(Arrays.copyOfRange(scripts,2,6),animation.bytes().copy());
+        // All H/V combinations and priority/palette bits are data; no presentation or tile resolver is involved.
+        for (int flip : new int[]{0,0x800,0x1000,0x1800}) {
+            byte[] attributed = checkpointMappings();
+            ByteBuffer.wrap(attributed).putShort(11,(short) (0xE000 | flip));
+            var raw = CdObjectVisualAssets.decode(attributed,4,checkpointAnimations(),1,12);
+            assertEquals(0xE000 | flip,raw.mappingFrames().getFirst().pieces().getFirst().rawTileWord());
+            assertEquals(0,raw.mappingFrames().getFirst().pieces().getFirst().tileOffset());
+            assertEquals(4,raw.mappingFrames().getFirst().pieces().getFirst().tileCount());
+        }
+        maps[29] = 1; scripts[2] = 9;
+        assertEquals(0,visual.mappings().unsignedByte(29)); assertEquals(3,animation.delay());
+        assertThrows(UnsupportedOperationException.class,visual.mappingFrames()::clear);
+        assertThrows(UnsupportedOperationException.class,visual.mappingFrames().getFirst().pieces()::clear);
+        assertThrows(UnsupportedOperationException.class,visual.animations()::clear);
+        assertThrows(UnsupportedOperationException.class,animation.frameBytes()::clear);
+        assertThrows(ReadOnlyBufferException.class, () -> visual.mappings().buffer().put((byte) 1));
+        assertThrows(ReadOnlyBufferException.class, () -> visual.animationTable().buffer().put((byte) 1));
+        assertThrows(ReadOnlyBufferException.class, () -> visual.mappingFrames().getFirst().bytes().buffer().put((byte) 1));
+    }
+
+    @Test
+    void constructedCheckpointRejectsUnreviewedDirectoriesTailsScriptsAndArtExtents() {
+        for (int length : new int[]{0,8,64,67}) {
+            assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decode(
+                    Arrays.copyOf(checkpointMappings(),length),4,checkpointAnimations(),1,12));
+        }
+        for (int target : new int[]{0,2,7,9,66,0x8000,0xFFFF}) {
+            byte[] maps = checkpointMappings(); ByteBuffer.wrap(maps).putShort(0,(short) target);
+            assertThrows(IllegalArgumentException.class,
+                    () -> CdObjectVisualAssets.decode(maps,4,checkpointAnimations(),1,12));
+        }
+        for (int pad : new int[]{29,41,53,65}) {
+            byte[] maps = checkpointMappings(); maps[pad] = 1;
+            assertThrows(IllegalArgumentException.class,
+                    () -> CdObjectVisualAssets.decode(maps,4,checkpointAnimations(),1,12));
+        }
+        for (int offset : new int[]{8,30,42,54}) {
+            byte[] maps = checkpointMappings(); maps[offset] = (byte) 129;
+            assertThrows(IllegalArgumentException.class,
+                    () -> CdObjectVisualAssets.decode(maps,4,checkpointAnimations(),1,12));
+        }
+        byte[] badSize = checkpointMappings(); badSize[10] = 16;
+        byte[] badTile = checkpointMappings(); ByteBuffer.wrap(badTile).putShort(57,(short) 11);
+        for (byte[] maps : List.of(badSize,badTile)) {
+            assertThrows(IllegalArgumentException.class,
+                    () -> CdObjectVisualAssets.decode(maps,4,checkpointAnimations(),1,12));
+        }
+        assertThrows(IllegalArgumentException.class,
+                () -> CdObjectVisualAssets.decode(checkpointMappings(),4,checkpointAnimations(),1,11));
+        for (int command : new int[]{0x80,0xFD,0xFE}) {
+            byte[] scripts = checkpointAnimations(); scripts[5] = (byte) command;
+            assertThrows(IllegalArgumentException.class,
+                    () -> CdObjectVisualAssets.decode(checkpointMappings(),4,scripts,1,12));
+        }
+        byte[] absentFrame = checkpointAnimations(); absentFrame[3] = 4;
+        assertThrows(IllegalArgumentException.class,
+                () -> CdObjectVisualAssets.decode(checkpointMappings(),4,absentFrame,1,12));
+        assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decode(
+                checkpointMappings(),4,Arrays.copyOf(checkpointAnimations(),5),1,12));
+    }
+
+    @Test
+    void checkpointLiteralBaseDoesNotBroadenAnySelectorOrSubtypeTwoContract() {
+        byte[] ids = verticalTunnelDoorTileIds();
+        int[][] reviewed = {{0,0x23A0},{1,0x23B0},{5,0x4334},{0xA,0x0320},
+                {0xB,0x0374},{0xC,0x8328},{0xF,0x0490}};
+        for (int[] entry : reviewed) {
+            assertEquals(entry[1],CdR11aObjectAssets.decodeTileWord(ids,entry[0],0));
+            for (int subtype = 1; subtype <= 255; subtype++) {
+                int rejected = subtype;
+                assertThrows(UnsupportedOperationException.class,
+                        () -> CdR11aObjectAssets.decodeTileWord(ids,entry[0],rejected));
+            }
+        }
+        // Native checkpoint writes literal $06CB; it is not ObjectTileIDs selector $13.
+        assertThrows(UnsupportedOperationException.class, () -> CdR11aObjectAssets.decodeTileWord(ids,0x13,0));
+        assertEquals(0xD960,0x06CB * 32); assertEquals(0xDAE0,(0x06CB + 12) * 32);
+    }
+
+    @Test
+    void constructedCheckpointRangesCannotAuthenticateAnObjectOwner() throws Exception {
+        byte[] file = new byte[CdR11aProfile.FILE_BYTES];
+        ByteBuffer.wrap(file).putInt(8,0x200100).putInt(12,0x20010C).putInt(16,0x200112);
+        System.arraycopy(checkpointMappings(),0,file,0x3F120,66);
+        System.arraycopy(checkpointAnimations(),0,file,0x3F11A,6);
+        var image = CdMmdImage.parse(file); file[0x3F161] = 1;
+        var view = CdR11aObjectAssets.Table.CHECKPOINT_MAPPINGS.range().read(image);
+        assertArrayEquals(checkpointMappings(),view.copy());
+        assertThrows(ReadOnlyBufferException.class, () -> view.buffer().put((byte) 1));
+        var profile = CdR11aProfile.forStage(CdReleaseVariant.USA,CdStageKey.parse("R11A"));
+        var identity = new CdR11aAssets.Identity(CdReleaseVariant.USA,profile.stage(),profile.file(),profile.domain(),
+                profile.expectedMmdSha256(),"constructed checkpoint source is not authentication");
+        assertThrows(IOException.class, () -> CdR11aObjectAssets.load(profile,identity,image,null));
+    }
+
+    /** Hand-literal N Checkpoint/Data/Mappings.asm:1-63, including all four real EVEN bytes. */
+    private static byte[] checkpointMappings() {
+        return java.util.HexFormat.of().parseHex(
+                "0008001e002a003604e8030000f8e80308000008010004f808010804000002f8010006f8f80108060000"
+                + "02f8010008f8f8010808000002f801000af8f801080a0000");
+    }
+    /** N Checkpoint/Data/Animations.asm:1-3, full directory and the only actual script. */
+    private static byte[] checkpointAnimations() {
+        return java.util.HexFormat.of().parseHex("0002030203ff");
+    }
 
     // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>
 }

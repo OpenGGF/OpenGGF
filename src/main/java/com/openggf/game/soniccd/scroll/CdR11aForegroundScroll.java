@@ -122,6 +122,32 @@ public final class CdR11aForegroundScroll {
                 bounds.bottom(), bounds.left(), 0, 0);
     }
 
+
+    /**
+     * LevelSizeLoad_StartPos checkpoint path through SetupCamera (Palmtree Panic/Scroll
+     * (Act 1 Present).asm:66-109 at scddisasm 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff).
+     * Run only AFTER native saved-camera stores. The incoming player Y word is first capped
+     * at zero when negative; X borrow/right cap is unsigned, bottom comparison signed.
+     * These are WORD camera stores: preserve Y fraction and every non-camera-word field.
+     * This executes no load, saved read, bound store, background init, scroll, input or tick.
+     * Source MOVEQ makes the resulting integer words valid zero-upper InitRegisters inputs.
+     */
+    public static State checkpointSetupCamera(State before, int playerXWord, int playerYWord,
+                                               CdPlayerMovement.Bounds bounds) {
+        Objects.requireNonNull(before, "pre-SetupCamera state");
+        Objects.requireNonNull(bounds, "current loaded bounds");
+        wordValue(playerXWord); wordValue(playerYWord);
+        int x = playerXWord < 160 ? 0 : uw(playerXWord - 160);
+        if (x >= bounds.right()) x = bounds.right();
+        int cappedY = sw(playerYWord) < 0 ? 0 : playerYWord;
+        int y = cappedY < 0x60 ? 0 : uw(cappedY - 0x60);
+        if (sw(y) >= sw(bounds.bottom())) y = bounds.bottom();
+        return new State(x, (y << 16) | (before.cameraY16_16() & 0xFFFF),
+                before.horizontalCrossed(), before.verticalCrossed(), before.scrollXDiff(),
+                before.scrollYDiff(), before.scrollFlags(), before.destBottomBound(),
+                before.destLeftBound(), before.bottomBoundShift(), before.scrollLock());
+    }
+
     /**
      * Level_MainLoop's dead-camera branch (Level/Main.asm:405-418), after ALL object slots and
      * before LevelScroll. The caller owns levelRestart/debug/routine admission. Native skips

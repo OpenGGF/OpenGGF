@@ -6,14 +6,16 @@ This current entry extends the historical terrain-only inventory below. The
 explicit USA opening-object DEV entry now owns source-ordered player/object
 passes, native SAT, current camera-art bytes, Plane B, life/restart and same-world
 full/course restore. It is still separate from the static default. Native title,
-immediate cold PLC history, audio playback, time travel, checkpoint/completion and
+immediate cold PLC history, audio playback, time travel, complete checkpoint/act closure and
 whole-act/region/viewport/donor/roster breadth remain open.
 
 | Route / rewind spot | Actual bounded evidence | Remaining limit |
 | --- | --- | --- |
 | Ring/contact/hurt/death/restart and constructed object products | Existing USA World/EGL checks remain in the final consumer selection; restart carries actual current art/table/section rather than reseeding | See the dated implementation record for individual constructed versus controller-only products; no whole-act claim |
 | Pata-Bata539 →540 →541 | Controller-only Right route, real physical52 Init and complete camera PLC9; full/course replay across queued and completed Tamabboh state | Pata remains offscreen here; CPU replay is not a new Pata GPU proof |
-| Spikes61 at561 →Checkpoint34 at582 | Controller-only Right completes561 including real Spikes Init/Main/Draw/tail; full/course restore across560/561 then advance through581;582 rejects unowned Checkpoint13 after Door32/diagonal33 Init prefixes |582 is incomplete; no natural Spikes hit, Checkpoint save or native-parity claim |
+| Spikes61 at561 →Checkpoint34 at582 →Anton55 inside604 | Controller-only Right completes Checkpoint Init/child dispatch at582 and through603; full/course581/582 replay observed;604 stops at untouched Anton3F after earlier physical bodies | Natural route initializes the pole without contact/save;604 is incomplete; permanent603 replay and combined18-class consumers passed; no completed604 |
+| Constructed Checkpoint contact →orbit →animation →579 retirement | One initial pole/actor cut,44 ordinary neutral rows, final31 saved bytes/knowledge and AE,32 spin visits, real2/3 animation, current12/SAT/ordered GPU/PlaneB/omission checks, six full/course cut pairs | Twelve actual ENGINE PNGs; full saved18-store order is enforced by private component cursor, not inferred from equal World water bytes; no native image/timing parity |
+| Constructed Checkpoint save →actual Spikes Kill/reset →fresh load | One initial pole/Spikes/actor cut then GameLoop only; saved31 survives, fresh XY fractions/cameras/clouds/raw0000FF3B/Ring7,1/one initial section append, old epoch rejects;28 fresh replay rows/pixels | Fresh continuation stops at new row7/remaining1 before Animals; HUD remains explicit DEV0; no natural-route Checkpoint contact or complete native startup/title/PLC timing |
 | Constructed Boulder preInit →Init/DrawObjects →next Main →display | USA320×224 Sonic alone, four native flips, dirty initial SOLID_TYPE1 witness through real shared Solid; literal two-piece SAT, all19 current tile versions, complete opaque/transparent geometry and omission controls | All96 dynamics clear and Sonic is placed far left at each scene's initial closed cut; no natural-route render/contact or native palette/priority/timing comparison |
 | Every selected Boulder full/course cut →forward replay | Sixteen selected cuts,32 full/course restores plus forward state/pixel comparisons, no reconstruction or producer reseed | Only the declared scene/entry/viewport/roster; broader event and lifecycle products remain missing |
 | Diagonal Spring preInit →launch →animation/FC →Reset | Eight constructed scenes: both strengths × four native flips, actual Body/DrawObjects/shared Solid, same-call FM/animation, prior SAT + NOW current46 art; full7/7/8-piece geometry and real terrain/Plane B controls | Initial-only slot clear/actor placement; real player overlap is composited in order, full Spring isolation and contrast omission controls are renderer-only, not a natural-route or native image reference |
@@ -21,6 +23,12 @@ whole-act/region/viewport/donor/roster breadth remain open.
 | Constructed Spikes Init →Hurt →LostRing continuation | Actual Ring earned in92 controller rows, four initial-only flip scenes; upright direct Hurt after Solid versus vertical scanner Hurt before the object pass; different earlier32 LostRing ordering, all16 cells/eight current tiles and ordered World/PlaneB/omission controls | Explicit actor/slot ingress; same-value fullY rewind here, nonzero wrap only in component tests; no natural contact/emulator comparison |
 | Every selected Spikes cut and567 retirement | Five cuts per scene,40 full/course restores with forward state/pixel replay; all567 entries installed for cleanup and retired while800 actual other-producer entries retain identity | Twelve actual row2 PNGs; later-frame pixels asserted; retirement upload is not all567 rendered in gameplay |
 | Current art alias and module retirement | Relocated Anton overwrites18 of19 Boulder tiles; declared106-tile9100 write replaces all46 diagonal tiles in the same owner; partial transfer/carry replay; all559 actual current-policy entries installed at teardown then absent, shared entries identical | Declared BigRing-range transfer is not BigRing gameplay execution; cleanup upload is not proof all559 tiles were drawn; cold seed is explicit DEV history |
+
+Checkpoint candidate over `ea8dabcf67` passed final affected consumers25852:
+**1149/0/0/0 across18 classes**, including Runtime283, all18 EGL and50 World/load
+cases, actual media/Java25/surfaceless EGL/S2 donor, exact fresh XML and skips
+checked. Fresh guards68483 passed **728/0/0/0**,90 fresh XML, Java25/Lua5.4.
+These are bounded results, not act certification.
 
 Spikes source context is parent `8f283a959` plus the local candidate described in the
 [implementation record](../../plans/2026-10-23-sonic-cd-implementation.md).

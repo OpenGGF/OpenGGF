@@ -676,20 +676,20 @@ class TestCdOpeningObjectRuntime {
         var otherAssets = loadFresh();
         try (var frame = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets)) {
             assertThrows(IllegalArgumentException.class, () -> CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(
-                    otherAssets, frame, INITIAL, CONTACT, SCORE, LEVEL, new byte[640], BANKS, PRE, value -> { }));
+                    otherAssets, frame, INITIAL, CONTACT, SCORE, LEVEL, declaredCheckpointBindings(), new byte[640], BANKS, PRE, value -> { }));
         }
         try (var terrain = CdPlayerFrameRuntime.terrainOnlyDevelopment(assets)) {
             assertThrows(IllegalArgumentException.class, () -> CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(
-                    assets, terrain, INITIAL, CONTACT, SCORE, LEVEL, new byte[640], BANKS, PRE, value -> { }));
+                    assets, terrain, INITIAL, CONTACT, SCORE, LEVEL, declaredCheckpointBindings(), new byte[640], BANKS, PRE, value -> { }));
         }
         try (var frame = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets)) {
             assertThrows(IllegalArgumentException.class, () -> CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(
-                    assets, frame, INITIAL, CONTACT, SCORE, LEVEL, new byte[639], BANKS, PRE, value -> { }));
+                    assets, frame, INITIAL, CONTACT, SCORE, LEVEL, declaredCheckpointBindings(), new byte[639], BANKS, PRE, value -> { }));
             byte[] nonempty = new byte[640]; nonempty[0] = 1;
             assertThrows(IllegalArgumentException.class, () -> CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(
-                    assets, frame, INITIAL, CONTACT, SCORE, LEVEL, nonempty, BANKS, PRE, value -> { }));
+                    assets, frame, INITIAL, CONTACT, SCORE, LEVEL, declaredCheckpointBindings(), nonempty, BANKS, PRE, value -> { }));
             assertThrows(IllegalArgumentException.class, () -> CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(
-                    assets, frame, INITIAL, CONTACT, SCORE, LEVEL, new byte[640], new CdOpeningObjectRuntime.LogicalBanks(0, 0, 0), PRE, value -> { }));
+                    assets, frame, INITIAL, CONTACT, SCORE, LEVEL, declaredCheckpointBindings(), new byte[640], new CdOpeningObjectRuntime.LogicalBanks(0, 0, 0), PRE, value -> { }));
         }
     }
 
@@ -918,7 +918,7 @@ class TestCdOpeningObjectRuntime {
                 var banks = new CdOpeningObjectRuntime.LogicalBanks(10000, 11000, 12000, 12070, 12098,
                         12161, 12231, 12236, 12275, floating);
                 assertThrows(IllegalArgumentException.class, () -> CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(
-                        assets, frame, INITIAL, CONTACT, SCORE, LEVEL, new byte[640], banks, PRE, value -> { }), "base " + floating);
+                        assets, frame, INITIAL, CONTACT, SCORE, LEVEL, declaredCheckpointBindings(), new byte[640], banks, PRE, value -> { }), "base " + floating);
                 assertFalse(frame.closed()); assertEquals(0, frame.vIntClock().deltaSinceAdmittedCut());
             }
         }
@@ -1003,7 +1003,7 @@ class TestCdOpeningObjectRuntime {
                     12161, 12231, 12236, 12275, 12311, spring);
             try (var frame = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, 0)) {
                 assertThrows(IllegalArgumentException.class, () -> CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(
-                        assets, frame, INITIAL, CONTACT, SCORE, LEVEL, new byte[640], banks, PRE, value -> { }));
+                        assets, frame, INITIAL, CONTACT, SCORE, LEVEL, declaredCheckpointBindings(), new byte[640], banks, PRE, value -> { }));
                 assertThrows(IllegalArgumentException.class, () -> restart(assets, frame, saved, window, new byte[640], banks));
                 assertFalse(frame.closed()); assertEquals(0, frame.vIntClock().deltaSinceAdmittedCut());
             }
@@ -1450,7 +1450,7 @@ class TestCdOpeningObjectRuntime {
         try (var frame = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets)) {
             // Plant base inside the Mosqui span: the frontier pixel policy rejects at construction.
             assertThrows(IllegalArgumentException.class, () -> CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(
-                    assets, frame, INITIAL, CONTACT, SCORE, LEVEL, new byte[640], new CdOpeningObjectRuntime.LogicalBanks(10000, 11000, 12000, 12069, 12098),
+                    assets, frame, INITIAL, CONTACT, SCORE, LEVEL, declaredCheckpointBindings(), new byte[640], new CdOpeningObjectRuntime.LogicalBanks(10000, 11000, 12000, 12069, 12098),
                     PRE, value -> { }));
         }
         try (var f = new Fixture()) {
@@ -1557,7 +1557,7 @@ class TestCdOpeningObjectRuntime {
         var assets = load();
         try (var frame = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets)) {
             assertThrows(IllegalArgumentException.class, () -> CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(
-                    assets, frame, INITIAL, CONTACT, SCORE, LEVEL, new byte[640],
+                    assets, frame, INITIAL, CONTACT, SCORE, LEVEL, declaredCheckpointBindings(), new byte[640],
                     new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138, 208, 236, 298, 369, 374), PRE, value -> { }));
             assertFalse(frame.closed());
             assertEquals(0, frame.captureShared().vIntClock().deltaSinceAdmittedCut());
@@ -1999,7 +1999,7 @@ class TestCdOpeningObjectRuntime {
         var assets = load();
         try (var frame = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, 0)) {
             assertThrows(NullPointerException.class, () -> CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(
-                    assets, frame, INITIAL, CONTACT, SCORE, null, new byte[640], BANKS, PRE, value -> { }));
+                    assets, frame, INITIAL, CONTACT, SCORE, null, declaredCheckpointBindings(), new byte[640], BANKS, PRE, value -> { }));
             assertFalse(frame.closed());
             assertEquals(0, frame.captureShared().vIntClock().deltaSinceAdmittedCut());
         }
@@ -2134,7 +2134,7 @@ class TestCdOpeningObjectRuntime {
             try (var frame = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, 0)) {
                 var banks = new CdOpeningObjectRuntime.LogicalBanks(10000, 11000, 12000, 12070, 12098, 12161, 12231, 12236, powerup);
                 assertThrows(IllegalArgumentException.class, () -> CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(
-                        assets, frame, INITIAL, CONTACT, SCORE, LEVEL, new byte[640], banks, PRE, value -> { }), "base " + powerup);
+                        assets, frame, INITIAL, CONTACT, SCORE, LEVEL, declaredCheckpointBindings(), new byte[640], banks, PRE, value -> { }), "base " + powerup);
                 assertFalse(frame.closed());
                 assertEquals(0, frame.captureShared().vIntClock().deltaSinceAdmittedCut());
             }
@@ -2442,7 +2442,7 @@ class TestCdOpeningObjectRuntime {
     private static CdOpeningObjectRuntime restart(CdR11aAssets assets, CdPlayerFrameRuntime frame, CdAssetBytes bank,
                                                   CdPowerupArtRuntime.State powerup, byte[] sat,
                                                   CdOpeningObjectRuntime.LogicalBanks banks) throws Exception {
-        return CdOpeningObjectRuntime.usaR11aRestartDevEmptySatPreloadedArt(assets, frame, INITIAL, CONTACT, SCORE, LEVEL,
+        return CdOpeningObjectRuntime.usaR11aRestartDevEmptySatPreloadedArt(assets, frame, INITIAL, CONTACT, SCORE, LEVEL, declaredCheckpointBindings(),
                 bank, powerup, cameraArtDevIngress(assets), sat, banks, PRE, value -> { });
     }
 
@@ -2492,12 +2492,19 @@ class TestCdOpeningObjectRuntime {
         Fixture(CdLevelGlobals level) throws Exception { this(INITIAL, CONTACT, SCORE, level, OptionalLong.of(0)); }
         Fixture(CdRingGlobals initial, CdPlayerBody.ContactGlobals contact, CdOpeningObjectRuntime.ScoreGlobals score,
                 CdLevelGlobals level, OptionalLong seed) throws Exception {
+            this(initial, contact, score, level, seed, declaredCheckpointBindings());
+        }
+        Fixture(CdOpeningObjectRuntime.CheckpointBindings checkpointBindings) throws Exception {
+            this(INITIAL, CONTACT, SCORE, LEVEL, OptionalLong.of(0), checkpointBindings);
+        }
+        Fixture(CdRingGlobals initial, CdPlayerBody.ContactGlobals contact, CdOpeningObjectRuntime.ScoreGlobals score,
+                CdLevelGlobals level, OptionalLong seed, CdOpeningObjectRuntime.CheckpointBindings checkpointBindings) throws Exception {
             assets = load();
             frame = seed.isPresent() ? CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, seed.getAsLong())
                     : CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets);
             frame.bindArtPublication((request, state) -> artPublications.add(state));
             runtime = CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(assets, frame, initial, contact, score,
-                    level, new byte[640], BANKS, PRE, value -> { angleWrites.add(value); onAngle.accept(value); });
+                    level, checkpointBindings, new byte[640], BANKS, PRE, value -> { angleWrites.add(value); onAngle.accept(value); });
         }
         /** Restart-factory composition: Root's carry is explicit ingress, never a route or a foreign restore. */
         Fixture(CdLevelGlobals level, CdAssetBytes savedFlags, CdPowerupArtRuntime.State powerup,
@@ -2506,7 +2513,7 @@ class TestCdOpeningObjectRuntime {
             frame = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, 0, player);
             frame.bindArtPublication((request, state) -> artPublications.add(state));
             runtime = CdOpeningObjectRuntime.usaR11aRestartDevEmptySatPreloadedArt(assets, frame, INITIAL, CONTACT, SCORE,
-                    level, savedFlags, powerup, cameraArtDevIngress(assets), new byte[640], BANKS, PRE,
+                    level, declaredCheckpointBindings(), savedFlags, powerup, cameraArtDevIngress(assets), new byte[640], BANKS, PRE,
                     value -> { angleWrites.add(value); onAngle.accept(value); });
         }
         void service(int held) { service(held, PRE); }
@@ -2963,7 +2970,7 @@ class TestCdOpeningObjectRuntime {
                     12161, 12231, 12236, 12275, 12311, 12326, door);
             try (var frame = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, 0)) {
                 assertThrows(IllegalArgumentException.class, () -> CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(
-                        assets, frame, INITIAL, CONTACT, SCORE, LEVEL, new byte[640], banks, PRE, value -> { }));
+                        assets, frame, INITIAL, CONTACT, SCORE, LEVEL, declaredCheckpointBindings(), new byte[640], banks, PRE, value -> { }));
                 assertThrows(IllegalArgumentException.class, () -> restart(assets, frame, saved, window, new byte[640], banks));
                 assertFalse(frame.closed()); assertEquals(0, frame.vIntClock().deltaSinceAdmittedCut());
             }
@@ -3311,7 +3318,7 @@ class TestCdOpeningObjectRuntime {
                     12161, 12231, 12236, 12275, 12311, 12326, 12362, base);
             try (var frame = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, 0)) {
                 assertThrows(IllegalArgumentException.class, () -> CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(
-                        assets, frame, INITIAL, CONTACT, SCORE, LEVEL, new byte[640], banks, PRE, value -> { }));
+                        assets, frame, INITIAL, CONTACT, SCORE, LEVEL, declaredCheckpointBindings(), new byte[640], banks, PRE, value -> { }));
                 assertThrows(IllegalArgumentException.class, () -> restart(assets, frame, saved, window, new byte[640], banks));
                 assertFalse(frame.closed()); assertEquals(0, frame.vIntClock().deltaSinceAdmittedCut());
             }
@@ -4373,7 +4380,7 @@ class TestCdOpeningObjectRuntime {
         assertThrows(NullPointerException.class, () -> new CdOpeningObjectRuntime.TunnelDoorFm(null));
         assertEquals(CdTunnelDoor.FmSound.FM_A4,
                 new CdOpeningObjectRuntime.TunnelDoorFm(CdTunnelDoor.FmSound.FM_A4).sound());
-        assertEquals(16, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+        assertEquals(17, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
         var compact = new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138);
         assertEquals(494, compact.monitorTime() + 82 - compact.player());
         assertEquals(12, compact.monitorTime() - compact.tunnelDoorVertical());
@@ -4963,7 +4970,7 @@ class TestCdOpeningObjectRuntime {
                     () -> com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(state.residency(), 0x409));
             assertThrows(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.OwnershipBoundary.class,
                     () -> com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(state.residency(), 0x440));
-            assertEquals(16, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+            assertEquals(17, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
             var compact = new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138);
             assertEquals(494, compact.monitorTime() + 82 - compact.player());
             assertEquals(state, f.runtime.captureClosedCut().sectionArtState());
@@ -5189,7 +5196,7 @@ class TestCdOpeningObjectRuntime {
         var ingress = new CdOpeningObjectRuntime.CameraArtRestartIngress(resident, CdAssetBytes.copyOf(table), 0x005A);
         try (var frame = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, 0)) {
             var publications = new ArrayList<CdPlayerArtRuntime.State>(); frame.bindArtPublication((request, state) -> publications.add(state));
-            try (var runtime = CdOpeningObjectRuntime.usaR11aRestartDevEmptySatPreloadedArt(assets, frame, INITIAL, CONTACT, SCORE, LEVEL,
+            try (var runtime = CdOpeningObjectRuntime.usaR11aRestartDevEmptySatPreloadedArt(assets, frame, INITIAL, CONTACT, SCORE, LEVEL, declaredCheckpointBindings(),
                     CdAssetBytes.copyOf(new byte[CdObjectPlacementRuntime.SAVED_BANK_BYTES]),
                     new CdPowerupArtRuntime.State(new byte[0x480], new byte[0x480]), ingress, new byte[640], BANKS, PRE, value -> { })) {
                 var state = runtime.sectionArtState(); assertEquals(resident, state.residency()); assertArrayEquals(table, state.codeTable().copy());
@@ -5214,7 +5221,7 @@ class TestCdOpeningObjectRuntime {
         var assets = load(); try (var frame = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, 0)) {
             frame.bindArtPublication((request, state) -> { });
             assertThrows(NullPointerException.class, () -> CdOpeningObjectRuntime.usaR11aRestartDevEmptySatPreloadedArt(assets, frame,
-                    INITIAL, CONTACT, SCORE, LEVEL, CdAssetBytes.copyOf(new byte[CdObjectPlacementRuntime.SAVED_BANK_BYTES]),
+                    INITIAL, CONTACT, SCORE, LEVEL, declaredCheckpointBindings(), CdAssetBytes.copyOf(new byte[CdObjectPlacementRuntime.SAVED_BANK_BYTES]),
                     new CdPowerupArtRuntime.State(new byte[0x480], new byte[0x480]), null, new byte[640], BANKS, PRE, value -> { }));
             assertFalse(frame.closed()); assertEquals(0, frame.vIntClock().deltaSinceAdmittedCut());
         }
@@ -5422,6 +5429,11 @@ class TestCdOpeningObjectRuntime {
         for (int offset = 0; offset < spikes.decode().bytes().length(); offset += 32)
             resident = com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.writeTile(resident,
                     spikes.canonicalPlc().vramAddress() + offset, spikes.decode().bytes().slice(offset, 32));
+        // Explicit TEST C27 ingress: twelve complete actual source tiles, never a production restart fallback.
+        var checkpoint = objects.sectionArtSources().source(com.openggf.game.soniccd.level.CdR11aAsset.ART_CHECKPOINT);
+        for (int offset = 0; offset < checkpoint.decode().bytes().length(); offset += 32)
+            resident = com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.writeTile(resident,
+                    checkpoint.canonicalPlc().vramAddress() + offset, checkpoint.decode().bytes().slice(offset, 32));
         return new CdOpeningObjectRuntime.CameraArtRestartIngress(resident, CdAssetBytes.copyOf(new byte[512]), 0);
     }
 
@@ -5479,7 +5491,7 @@ class TestCdOpeningObjectRuntime {
     @Test void boulderFourteenthBankPreservesEveryOldConstructorAndTheOneAggregate() {
         var expected = new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138, 208, 236, 299, 369, 374,
                 413, 449, 464, 500, 512, 594);
-        assertEquals(16, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+        assertEquals(17, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
         assertEquals(513, expected.boulder() + 19 - expected.player());
         assertEquals(expected, new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138));
         assertEquals(expected, new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138, 208, 236));
@@ -5506,7 +5518,7 @@ class TestCdOpeningObjectRuntime {
     @Test void boulderColdDevSeedsExactlyNineteenCompleteTilesFromTheSameSevenSourceBank() throws Exception {
         try (var f = new Fixture()) {
             var objects = f.assets.openingObjects(); var bank = objects.sectionArtSources();
-            assertSame(bank, objects.sectionArtSources()); assertEquals(9, bank.sources().size());
+            assertSame(bank, objects.sectionArtSources()); assertEquals(10, bank.sources().size());
             var source = bank.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_BOULDER);
             assertEquals(2, source.canonicalPlcId()); assertEquals(0, source.canonicalRowIndex());
             assertEquals(f.assets.loadPlan().plcs().get(2).entries().getFirst(), source.canonicalPlc());
@@ -5516,7 +5528,7 @@ class TestCdOpeningObjectRuntime {
             int known = 0;
             for (var region : com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.Region.values())
                 for (byte value : resident.region(region).knownMask().copy()) known += value;
-            assertEquals((70 + 28 + 63 + 19 + 46 + 8) * 32, known, "legacy three preloads plus explicit Boulder, diagonal and Spikes DEV writes");
+            assertEquals((70 + 28 + 63 + 19 + 46 + 8 + 12) * 32, known, "legacy three preloads plus explicit Boulder, diagonal, Spikes and Checkpoint DEV writes");
             var lower = resident.region(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.Region.AT_6E00);
             for (int offset = 0; offset < 0x600; offset++) {
                 boolean expected = offset >= 0x80 && offset < 0x2E0;
@@ -5549,9 +5561,9 @@ class TestCdOpeningObjectRuntime {
         try (var frame = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, 0)) {
             for (var banks : bad) {
                 assertThrows(IllegalArgumentException.class, () -> CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(
-                        assets, frame, INITIAL, CONTACT, SCORE, LEVEL, new byte[640], banks, PRE, value -> { }));
+                        assets, frame, INITIAL, CONTACT, SCORE, LEVEL, declaredCheckpointBindings(), new byte[640], banks, PRE, value -> { }));
                 assertThrows(IllegalArgumentException.class, () -> CdOpeningObjectRuntime.usaR11aRestartDevEmptySatPreloadedArt(
-                        assets, frame, INITIAL, CONTACT, SCORE, LEVEL, CdAssetBytes.copyOf(new byte[CdObjectPlacementRuntime.SAVED_BANK_BYTES]),
+                        assets, frame, INITIAL, CONTACT, SCORE, LEVEL, declaredCheckpointBindings(), CdAssetBytes.copyOf(new byte[CdObjectPlacementRuntime.SAVED_BANK_BYTES]),
                         new CdPowerupArtRuntime.State(new byte[0x480], new byte[0x480]), carry, new byte[640], banks, PRE, value -> { }));
                 assertFalse(frame.closed()); assertEquals(0, frame.vIntClock().deltaSinceAdmittedCut());
             }
@@ -5698,7 +5710,7 @@ class TestCdOpeningObjectRuntime {
             var carried = resident;
             try (var frame = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(f.assets, 0)) {
                 var publications = new ArrayList<CdPlayerArtRuntime.State>(); frame.bindArtPublication((request, state) -> publications.add(state));
-                try (var runtime = CdOpeningObjectRuntime.usaR11aRestartDevEmptySatPreloadedArt(f.assets, frame, INITIAL, CONTACT, SCORE, LEVEL,
+                try (var runtime = CdOpeningObjectRuntime.usaR11aRestartDevEmptySatPreloadedArt(f.assets, frame, INITIAL, CONTACT, SCORE, LEVEL, declaredCheckpointBindings(),
                         CdAssetBytes.copyOf(new byte[CdObjectPlacementRuntime.SAVED_BANK_BYTES]), new CdPowerupArtRuntime.State(new byte[0x480], new byte[0x480]),
                         ingress, new byte[640], BANKS, PRE, value -> fail("restart has no angle callback"))) {
                     assertSame(carried, runtime.sectionArtState().residency()); assertArrayEquals(table, runtime.sectionArtState().codeTable().copy());
@@ -5733,7 +5745,7 @@ class TestCdOpeningObjectRuntime {
         var carry = new CdOpeningObjectRuntime.CameraArtRestartIngress(partial, CdAssetBytes.copyOf(new byte[512]), 0);
         try (var frame = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, 0)) {
             var failure = assertThrows(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.OwnershipBoundary.class,
-                    () -> CdOpeningObjectRuntime.usaR11aRestartDevEmptySatPreloadedArt(assets, frame, INITIAL, CONTACT, SCORE, LEVEL,
+                    () -> CdOpeningObjectRuntime.usaR11aRestartDevEmptySatPreloadedArt(assets, frame, INITIAL, CONTACT, SCORE, LEVEL, declaredCheckpointBindings(),
                             CdAssetBytes.copyOf(new byte[CdObjectPlacementRuntime.SAVED_BANK_BYTES]), new CdPowerupArtRuntime.State(new byte[0x480], new byte[0x480]),
                             carry, new byte[640], BANKS, PRE, value -> { }));
             assertEquals(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.Boundary.UNKNOWN_PATTERN, failure.boundary());
@@ -5954,7 +5966,7 @@ class TestCdOpeningObjectRuntime {
         var full = new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594,613);
         var old14 = new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594);
         assertEquals(full, old14); assertEquals(full, new CdOpeningObjectRuntime.LogicalBanks(100,124,138));
-        assertEquals(16, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+        assertEquals(17, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
         assertEquals("diagonalSpring", CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents()[14].getName());
         assertEquals(559, full.diagonalSpring() + 46 - full.player()); assertEquals(12475, BANKS.diagonalSpring());
         assertEquals(919, new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,900).diagonalSpring());
@@ -5985,9 +5997,9 @@ class TestCdOpeningObjectRuntime {
             var actor = frame.captureActor(); var shared = frame.captureShared();
             for (var banks : invalid) {
                 assertThrows(IllegalArgumentException.class, () -> CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(
-                        assets, frame, INITIAL, CONTACT, SCORE, LEVEL, new byte[640], banks, PRE, value -> fail("no callback")));
+                        assets, frame, INITIAL, CONTACT, SCORE, LEVEL, declaredCheckpointBindings(), new byte[640], banks, PRE, value -> fail("no callback")));
                 assertThrows(IllegalArgumentException.class, () -> CdOpeningObjectRuntime.usaR11aRestartDevEmptySatPreloadedArt(
-                        assets, frame, INITIAL, CONTACT, SCORE, LEVEL, CdAssetBytes.copyOf(new byte[CdObjectPlacementRuntime.SAVED_BANK_BYTES]),
+                        assets, frame, INITIAL, CONTACT, SCORE, LEVEL, declaredCheckpointBindings(), CdAssetBytes.copyOf(new byte[CdObjectPlacementRuntime.SAVED_BANK_BYTES]),
                         new CdPowerupArtRuntime.State(new byte[0x480], new byte[0x480]), carry, new byte[640], banks, PRE, value -> fail("no callback")));
                 assertEquals(actor, frame.captureActor()); assertEquals(shared.environment(), frame.environment());
                 assertSame(shared.artState(), frame.artState()); assertEquals(shared.vIntClock(), frame.vIntClock()); assertFalse(frame.closed());
@@ -5998,7 +6010,7 @@ class TestCdOpeningObjectRuntime {
     @Test void diagonalColdSeedUsesExactlyTheEighthCanonicalSourceAndFortySixCompleteCurrentTiles() throws Exception {
         try (var f = new Fixture()) {
             var objects = f.assets.openingObjects(); var bank = objects.sectionArtSources(); assertSame(bank, objects.sectionArtSources());
-            assertEquals(9, bank.sources().size()); var source = bank.sources().get(7);
+            assertEquals(10, bank.sources().size()); var source = bank.sources().get(7);
             assertEquals(com.openggf.game.soniccd.level.CdR11aAsset.ART_DIAGONAL_SPRING, source.source());
             assertSame(source, bank.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_DIAGONAL_SPRING));
             assertEquals(1, source.canonicalPlcId()); assertEquals(5, source.canonicalRowIndex());
@@ -6013,7 +6025,7 @@ class TestCdOpeningObjectRuntime {
             int known = 0;
             for (var region : com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.Region.values())
                 for (byte value : resident.region(region).knownMask().copy()) known += value;
-            assertEquals((70+28+63+19+46+8)*32, known);
+            assertEquals((70+28+63+19+46+8+12)*32, known);
             for (int tile : List.of(0x480,0x48F,0x4BE,0x4BF,0x51F)) boulderUnknown(resident, tile);
             assertEquals(0, state.sectionWord()); assertEquals(0, state.remainingTilesWord()); assertEquals(0, state.queue().headSource());
             assertTrue(state.decoder().isEmpty()); assertArrayEquals(new byte[512], state.codeTable().copy());
@@ -6263,7 +6275,7 @@ class TestCdOpeningObjectRuntime {
             try(var frame=CdPlayerFrameRuntime.externalTouchRequiredDevelopment(f.assets,0)) {
                 var actor=frame.captureActor();var shared=frame.captureShared();var publications=new ArrayList<CdPlayerArtRuntime.State>();
                 frame.bindArtPublication((request,state)->publications.add(state));
-                try(var runtime=CdOpeningObjectRuntime.usaR11aRestartDevEmptySatPreloadedArt(f.assets,frame,INITIAL,CONTACT,SCORE,LEVEL,
+                try(var runtime=CdOpeningObjectRuntime.usaR11aRestartDevEmptySatPreloadedArt(f.assets,frame,INITIAL,CONTACT,SCORE,LEVEL, declaredCheckpointBindings(),
                         CdAssetBytes.copyOf(new byte[CdObjectPlacementRuntime.SAVED_BANK_BYTES]),new CdPowerupArtRuntime.State(new byte[0x480],new byte[0x480]),
                         carry,new byte[640],BANKS,PRE,value->fail("restart performs no helper calls"))) {
                     assertSame(exact,runtime.sectionArtState().residency());assertArrayEquals(table,runtime.sectionArtState().codeTable().copy());
@@ -6296,7 +6308,7 @@ class TestCdOpeningObjectRuntime {
             try(var frame=CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets,0)) {
                 var actor=frame.captureActor();var shared=frame.captureShared();var publications=new ArrayList<CdPlayerArtRuntime.State>();frame.bindArtPublication((request,state)->publications.add(state));
                 var fault=assertThrows(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.OwnershipBoundary.class,()->
-                        CdOpeningObjectRuntime.usaR11aRestartDevEmptySatPreloadedArt(assets,frame,INITIAL,CONTACT,SCORE,LEVEL,
+                        CdOpeningObjectRuntime.usaR11aRestartDevEmptySatPreloadedArt(assets,frame,INITIAL,CONTACT,SCORE,LEVEL, declaredCheckpointBindings(),
                                 CdAssetBytes.copyOf(new byte[CdObjectPlacementRuntime.SAVED_BANK_BYTES]),new CdPowerupArtRuntime.State(new byte[0x480],new byte[0x480]),
                                 carry,new byte[640],BANKS,PRE,value->fail("admission has no helper callback")));
                 assertEquals(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.Boundary.UNKNOWN_PATTERN,fault.boundary());
@@ -6535,7 +6547,7 @@ class TestCdOpeningObjectRuntime {
 
     @Test void spikesSixteenthBankPreservesEveryOlderConstructorAndOneCachedActualBody() {
         var full = new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594,613,659);
-        assertEquals(16, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+        assertEquals(17, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
         assertEquals("spikes", CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents()[15].getName());
         assertEquals(full, new CdOpeningObjectRuntime.LogicalBanks(100,124,138));
         assertEquals(full, new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236));
@@ -6548,7 +6560,7 @@ class TestCdOpeningObjectRuntime {
         assertEquals(full, new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594));
         assertEquals(full, new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594,613));
         assertEquals(567, full.spikes()+8-full.player()); assertEquals(BANKS.diagonalSpring()+46,BANKS.spikes());
-        assertEquals(List.of(3,5,8,9,10,11,12,13,14,15,16), java.util.Arrays.stream(CdOpeningObjectRuntime.LogicalBanks.class.getDeclaredConstructors())
+        assertEquals(List.of(3,5,8,9,10,11,12,13,14,15,16,17), java.util.Arrays.stream(CdOpeningObjectRuntime.LogicalBanks.class.getDeclaredConstructors())
                 .map(java.lang.reflect.Constructor::getParameterCount).sorted().toList());
         assertEquals(1, java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredFields()).filter(v->v.getType()==CdSpikes.class).count());
         assertFalse(java.util.Arrays.stream(CdOpeningObjectRuntime.Snapshot.class.getDeclaredFields()).anyMatch(v->
@@ -6559,7 +6571,7 @@ class TestCdOpeningObjectRuntime {
     @Test void spikesColdSeedsOnlyEightCompleteNinthCanonicalTilesAndKeepsTheSourceBankCached() throws Exception {
         try(var f=new Fixture()) {
             var objects=f.assets.openingObjects();var bank=objects.sectionArtSources();assertSame(bank,objects.sectionArtSources());
-            assertEquals(9,bank.sources().size());var source=bank.sources().get(8);
+            assertEquals(10,bank.sources().size());var source=bank.sources().get(8);
             assertSame(source,bank.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_SPIKES));
             assertEquals(1,source.canonicalPlcId());assertEquals(0,source.canonicalRowIndex());assertEquals(8,source.tileCount());
             assertEquals(0x8008,source.readerBytes().unsignedWord(0));assertEquals(256,source.decode().bytes().length());
@@ -6569,7 +6581,7 @@ class TestCdOpeningObjectRuntime {
             for(byte mask:region.knownMask().copy())assertEquals(1,mask);
             int known=0;for(var r:com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.Region.values())
                 for(byte mask:state.residency().region(r).knownMask().copy())known+=mask;
-            assertEquals((70+28+63+19+46+8)*32,known);
+            assertEquals((70+28+63+19+46+8+12)*32,known);
             assertEquals(0,state.remainingTilesWord());assertEquals(0,state.queue().headSource());assertTrue(state.decoder().isEmpty());
             assertArrayEquals(new byte[512],state.codeTable().copy());assertEquals(0,state.sectionWord());
         }
@@ -6602,9 +6614,9 @@ class TestCdOpeningObjectRuntime {
             var actor=frame.captureActor();var shared=frame.captureShared();
             for(var banks:bad) {
                 assertThrows(IllegalArgumentException.class,()->CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(
-                        assets,frame,INITIAL,CONTACT,SCORE,LEVEL,new byte[640],banks,PRE,value->fail("no admission callback")));
+                        assets,frame,INITIAL,CONTACT,SCORE,LEVEL, declaredCheckpointBindings(),new byte[640],banks,PRE,value->fail("no admission callback")));
                 assertThrows(IllegalArgumentException.class,()->CdOpeningObjectRuntime.usaR11aRestartDevEmptySatPreloadedArt(
-                        assets,frame,INITIAL,CONTACT,SCORE,LEVEL,CdAssetBytes.copyOf(new byte[CdObjectPlacementRuntime.SAVED_BANK_BYTES]),
+                        assets,frame,INITIAL,CONTACT,SCORE,LEVEL, declaredCheckpointBindings(),CdAssetBytes.copyOf(new byte[CdObjectPlacementRuntime.SAVED_BANK_BYTES]),
                         new CdPowerupArtRuntime.State(new byte[0x480],new byte[0x480]),carry,new byte[640],banks,PRE,value->fail("no admission callback")));
                 assertEquals(actor,frame.captureActor());assertEquals(shared.environment(),frame.environment());assertSame(shared.artState(),frame.artState());
                 assertEquals(shared.vIntClock(),frame.vIntClock());assertFalse(frame.closed());
@@ -6618,7 +6630,7 @@ class TestCdOpeningObjectRuntime {
             for(int i=0;i<table.length;i++)table[i]=(byte)(i^0x5D);var carry=new CdOpeningObjectRuntime.CameraArtRestartIngress(resident,CdAssetBytes.copyOf(table),0x035A);
             try(var frame=CdPlayerFrameRuntime.externalTouchRequiredDevelopment(f.assets,0)) {
                 var actor=frame.captureActor();var shared=frame.captureShared();var publications=new ArrayList<CdPlayerArtRuntime.State>();frame.bindArtPublication((r,s)->publications.add(s));
-                try(var runtime=CdOpeningObjectRuntime.usaR11aRestartDevEmptySatPreloadedArt(f.assets,frame,INITIAL,CONTACT,SCORE,LEVEL,
+                try(var runtime=CdOpeningObjectRuntime.usaR11aRestartDevEmptySatPreloadedArt(f.assets,frame,INITIAL,CONTACT,SCORE,LEVEL, declaredCheckpointBindings(),
                         CdAssetBytes.copyOf(new byte[CdObjectPlacementRuntime.SAVED_BANK_BYTES]),new CdPowerupArtRuntime.State(new byte[0x480],new byte[0x480]),
                         carry,new byte[640],BANKS,PRE,value->fail("restart has no helper callback"))) {
                     assertSame(resident,runtime.sectionArtState().residency());assertArrayEquals(table,runtime.sectionArtState().codeTable().copy());
@@ -6647,7 +6659,7 @@ class TestCdOpeningObjectRuntime {
             try(var frame=CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets,0)) {
                 var actor=frame.captureActor();var shared=frame.captureShared();var mask=exact.region(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.Region.AT_6400).knownMask();
                 var fault=assertThrows(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.OwnershipBoundary.class,()->
-                        CdOpeningObjectRuntime.usaR11aRestartDevEmptySatPreloadedArt(assets,frame,INITIAL,CONTACT,SCORE,LEVEL,
+                        CdOpeningObjectRuntime.usaR11aRestartDevEmptySatPreloadedArt(assets,frame,INITIAL,CONTACT,SCORE,LEVEL, declaredCheckpointBindings(),
                                 CdAssetBytes.copyOf(new byte[CdObjectPlacementRuntime.SAVED_BANK_BYTES]),new CdPowerupArtRuntime.State(new byte[0x480],new byte[0x480]),
                                 carry,new byte[640],BANKS,PRE,value->fail("no admission callback")));
                 assertEquals(0x320+missing,fault.nativePatternId());assertEquals(actor,frame.captureActor());assertEquals(shared.environment(),frame.environment());
@@ -7052,4 +7064,574 @@ class TestCdOpeningObjectRuntime {
             state=com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.writeTile(state,0x6400+tile*32,CdAssetBytes.copyOf(bytes));}return state;
     }
     // END common Spikes Runtime R1 tests-first additions.
+
+    // BEGIN Checkpoint Runtime R1. SOURCE-ONLY: all Java checks below are UNRUN by this author.
+    // J ea8dabcf67df7d02f7a2a39496ff7cea93b7e8bd; N 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff.
+    // ObjCheckpoint_SaveData/Main/Ball (Checkpoint/Main.asm:18-43,126-181).
+    // Declared component cameras/primary bytes below are NOT proof of World RAM, entry or a natural route.
+    // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>
+
+    @Test void checkpointSeventeenthBankKeepsAllSixteenOldBasesAndOneAggregateCapture() {
+        var full = new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594,613,659,667);
+        assertEquals(full, new CdOpeningObjectRuntime.LogicalBanks(100,124,138));
+        assertEquals(full, new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594,613,659));
+        assertEquals(17, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+        assertEquals("checkpoint", CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents()[16].getName());
+        assertEquals(579, full.checkpoint()+12-full.player());
+        assertEquals(List.of(3,5,8,9,10,11,12,13,14,15,16,17),
+                java.util.Arrays.stream(CdOpeningObjectRuntime.LogicalBanks.class.getDeclaredConstructors())
+                        .map(java.lang.reflect.Constructor::getParameterCount).sorted().toList());
+        assertEquals(1, java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredFields()).filter(v->v.getType()==CdCheckpoint.class).count());
+        for (var type : List.of(CdOpeningObjectRuntime.class, CdOpeningObjectRuntime.Snapshot.class)) {
+            assertEquals(1, java.util.Arrays.stream(type.getDeclaredFields())
+                    .filter(v->v.getType()==CdOpeningObjectRuntime.CheckpointOwnerState.class).count());
+            assertFalse(java.util.Arrays.stream(type.getDeclaredFields()).anyMatch(v->
+                    v.getType()==CdCheckpointSaveData.State.class && java.lang.reflect.Modifier.isPublic(v.getModifiers())));
+        }
+        assertFalse(java.util.Arrays.stream(CdOpeningObjectRuntime.Snapshot.class.getDeclaredFields()).anyMatch(v->
+                v.getType()==CdCheckpoint.class || v.getType()==CdCheckpoint.Result.class || v.getType()==CdCheckpoint.GlobalCall.class
+                        || v.getType()==CdCheckpoint.SaveCall.class || v.getType()==CdOpeningObjectRuntime.CheckpointReads.class));
+        assertEquals(List.of(11), java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
+                .filter(m->m.getName().equals("usaR11aOpeningDevEmptySatPreloadedArt")).map(java.lang.reflect.Method::getParameterCount).toList());
+        assertEquals(List.of(14), java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
+                .filter(m->m.getName().equals("usaR11aRestartDevEmptySatPreloadedArt")).map(java.lang.reflect.Method::getParameterCount).toList());
+    }
+
+    @Test void checkpointBindingsAndTypedFmRequireActualOwnersAndExplicitOptionalLoadCut() {
+        var owner = checkpointDeclaredState(0x00021E11, 0xFF);
+        var reads = new CheckpointTestReads();
+        assertThrows(NullPointerException.class, ()->new CdOpeningObjectRuntime.CheckpointOwnerState(null, owner.saved()));
+        assertThrows(NullPointerException.class, ()->new CdOpeningObjectRuntime.CheckpointOwnerState(owner.live(), null));
+        assertThrows(NullPointerException.class, ()->new CdOpeningObjectRuntime.CheckpointBindings(null, reads, java.util.OptionalInt.empty()));
+        assertThrows(NullPointerException.class, ()->new CdOpeningObjectRuntime.CheckpointBindings(owner, null, java.util.OptionalInt.empty()));
+        assertThrows(NullPointerException.class, ()->new CdOpeningObjectRuntime.CheckpointBindings(owner, reads, null));
+        for (int raw : new int[]{-1,0x10000})
+            assertThrows(IllegalArgumentException.class, ()->new CdOpeningObjectRuntime.CheckpointBindings(owner, reads, java.util.OptionalInt.of(raw)));
+        assertThrows(NullPointerException.class, ()->new CdOpeningObjectRuntime.CheckpointFm(null));
+        assertEquals(0xAE, new CdOpeningObjectRuntime.CheckpointFm(CdCheckpoint.FmSound.FM_CHECKPOINT_AE).sound().nativeId());
+        assertEquals(2, CdOpeningObjectRuntime.CheckpointOwnerState.class.getRecordComponents().length);
+        assertEquals(3, CdOpeningObjectRuntime.CheckpointBindings.class.getRecordComponents().length);
+        assertEquals(List.of("readCameraWord","readPrimaryByte"), java.util.Arrays.stream(CdOpeningObjectRuntime.CheckpointReads.class.getDeclaredMethods())
+                .map(java.lang.reflect.Method::getName).sorted().toList());
+        assertTrue(java.util.Arrays.stream(CdOpeningObjectRuntime.CheckpointReads.class.getDeclaredMethods()).allMatch(m->m.getParameterCount()==1));
+    }
+
+    @Test void checkpointColdSeedsTwelveCompleteTilesFromTheSameTenthActualSourceOnly() throws Exception {
+        try (var f = new Fixture()) {
+            var o=f.assets.openingObjects();var bank=o.sectionArtSources();assertSame(bank,o.sectionArtSources());
+            assertEquals(10,bank.sources().size());var s=bank.sources().get(9);
+            assertEquals(com.openggf.game.soniccd.level.CdR11aAsset.ART_CHECKPOINT,s.source());
+            assertSame(s,bank.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_CHECKPOINT));
+            assertEquals(0,s.canonicalPlcId());assertEquals(1,s.canonicalRowIndex());
+            assertEquals(f.assets.loadPlan().plcs().get(0).entries().get(1),s.canonicalPlc());
+            assertEquals(0xD960,s.canonicalPlc().vramAddress());assertEquals(12,s.tileCount());
+            assertEquals(0x800C,s.readerBytes().unsignedWord(0));assertEquals(384,s.decode().bytes().length());
+            var state=f.runtime.sectionArtState();cameraArtBytes(state.residency(),0xD960,s.decode().bytes());
+            int known=0;for(var r:com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.Region.values())
+                for(byte b:state.residency().region(r).knownMask().copy())known+=b;
+            assertEquals((70+28+63+19+46+8+12)*32,known);
+            assertEquals(0,state.remainingTilesWord());assertEquals(0,state.queue().headSource());assertTrue(state.decoder().isEmpty());
+            assertEquals(0,state.sectionWord());assertArrayEquals(new byte[512],state.codeTable().copy());
+            assertThrows(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.OwnershipBoundary.class,
+                    ()->com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(state.residency(),0x6D7));
+        }
+    }
+
+    @Test void checkpointCurrentTwelveReplacementsPreserveAllOld567SamplesAndBothNeighbors() throws Exception {
+        try (var f=new Fixture()) {
+            var original=f.runtime.sectionArtState().residency();var changed=checkpointChanged(original);
+            var previous=spikesPixels(f,changed);var pixels=checkpointPixels(f,changed);
+            int[] first={0x780,0x7AE,0x3A0,0x424,0x441,0x680,0x6C6,0x6D7,0x544,0x334,0x520,0x328,0x5A8,0x374,0x490,0x320};
+            int[] counts={24,14,70,28,63,70,5,39,36,15,36,12,82,19,46,8};
+            var ids=new java.util.HashSet<Integer>();
+            for(int span=0;span<first.length;span++)for(int tile=0;tile<counts[span];tile++) {
+                var old=previous.resolve(first[span]+tile);var now=pixels.resolve(first[span]+tile);
+                assertEquals(old,now);assertTrue(ids.add(now.logicalPatternId()));
+            }
+            assertEquals(567,ids.size());
+            for(int tile=0;tile<12;tile++) {
+                var now=pixels.resolve(0x6CB+tile);assertEquals(BANKS.checkpoint()+tile,now.logicalPatternId());
+                assertTrue(ids.add(now.logicalPatternId()));
+                assertEquals(CdObjectPresentation.patternVersion(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(changed,0x6CB+tile)),now.version());
+                assertNotEquals(CdObjectPresentation.patternVersion(cameraArtSource(f,com.openggf.game.soniccd.level.CdR11aAsset.ART_CHECKPOINT).slice(tile*32,32)),now.version());
+            }
+            assertEquals(579,ids.size());assertEquals(previous.resolve(0x6CA),pixels.resolve(0x6CA));assertEquals(previous.resolve(0x6D7),pixels.resolve(0x6D7));
+        }
+    }
+
+    @Test void checkpointNewSpanRejectsEachLegacyOverlapAndBothBoundsAtBothFactoriesWithoutFrameEffects() throws Exception {
+        var a=load();var carry=cameraArtDevIngress(a);int[] old={100,124,138,208,236,299,369,374,413,449,464,500,512,594,613,659};
+        var invalid=new ArrayList<Integer>();for(int base:old)invalid.add(base);invalid.add(-1);invalid.add(Integer.MAX_VALUE-10);
+        try(var frame=CdPlayerFrameRuntime.externalTouchRequiredDevelopment(a,0)) {
+            var actor=frame.captureActor();var shared=frame.captureShared();
+            for(int base:invalid) {
+                var banks=new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594,613,659,base);
+                assertThrows(IllegalArgumentException.class,()->CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(
+                        a,frame,INITIAL,CONTACT,SCORE,LEVEL,declaredCheckpointBindings(),new byte[640],banks,PRE,v->fail("no callback")));
+                assertThrows(IllegalArgumentException.class,()->CdOpeningObjectRuntime.usaR11aRestartDevEmptySatPreloadedArt(
+                        a,frame,INITIAL,CONTACT,SCORE,LEVEL,declaredCheckpointBindings(),CdAssetBytes.copyOf(new byte[CdObjectPlacementRuntime.SAVED_BANK_BYTES]),
+                        new CdPowerupArtRuntime.State(new byte[0x480],new byte[0x480]),carry,new byte[640],banks,PRE,v->fail("no callback")));
+                assertEquals(actor,frame.captureActor());assertEquals(shared.environment(),frame.environment());assertSame(shared.artState(),frame.artState());
+                assertEquals(shared.vIntClock(),frame.vIntClock());assertFalse(frame.closed());
+            }
+        }
+    }
+
+    @Test void checkpointActualInitUsesDirtyFirstFreeLaterChildAndDoesNotFallThroughToContact() throws Exception {
+        try(var f=new Fixture()) {
+            springDeviceCut(f);var bodyPrefix=f.runtime.lastSoundRequests();var p=f.runtime.placement().pool();
+            for(int whole=32;whole<40;whole++)p.write(p.state(whole).moveByte(ID,CdAnimal.OBJECT_ID).moveWord(X,0x100));
+            var dirty=p.state(41).moveByte(ROUTINE,0).moveByte(FLAGS,0xA5).moveWord(X_FRACTION,0x1234).moveWord(Y_FRACTION,0x5678)
+                    .moveWord(X_VELOCITY,0x789A).moveByte(ANIMATION_TIME,0x55);
+            p.write(dirty);var source=checkpointImage(f,p.state(40),0).moveByte(COLLISION_STATUS,0xFE);p.write(source);
+            var before=f.runtime.checkpointState();f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(2,f.slot(40).routine());assertEquals(0xE3,f.slot(40).unsignedByte(COLLISION_TYPE));
+            assertEquals(0,f.slot(40).unsignedByte(CHECKPOINT_ACTIVE));assertEquals(0xFE,f.slot(40).unsignedByte(COLLISION_STATUS));
+            assertEquals(4,f.slot(41).routine());assertEquals(0,f.slot(41).unsignedByte(CHECKPOINT_BALL_ANGLE));
+            assertEquals(0xFFFFD000+40*64,f.slot(41).longBits(CdObjectState.LongField.CHECKPOINT_PARENT));
+            assertEquals(0xA5,f.slot(41).flags());assertEquals(0x1234,f.slot(41).word(X_FRACTION));assertEquals(0x5678,f.slot(41).word(Y_FRACTION));
+            assertEquals(0x789A,f.slot(41).word(X_VELOCITY));assertEquals(0x55,f.slot(41).unsignedByte(ANIMATION_TIME));
+            assertSame(before,f.runtime.checkpointState());assertEquals(LEVEL,f.runtime.levelGlobals());assertEquals(bodyPrefix,f.runtime.lastSoundRequests());
+            var sat=f.runtime.finishAfterCamera(POST);assertTrue(sat.provenance().stream().anyMatch(v->v.slotRef().wholeIndex()==41));f.runtime.finishOrdinaryTail();
+        }
+    }
+
+    @Test void checkpointEarlierChildWaitsUntilNextPhysicalPassWhileLaterChildRunsNow() throws Exception {
+        for(boolean earlier:List.of(true,false))try(var f=new Fixture()) {
+            springDeviceCut(f);var p=f.runtime.placement().pool();
+            if(!earlier)for(int w=32;w<40;w++)p.write(p.state(w).moveByte(ID,CdAnimal.OBJECT_ID).moveWord(X,0x100));
+            p.write(checkpointImage(f,p.state(40),0));f.runtime.runDynamicSlotsAfterReservedSlots();
+            int child=earlier?32:41;assertEquals(CdCheckpoint.OBJECT_ID,f.slot(child).id());
+            var sat=f.runtime.finishAfterCamera(POST);
+            assertEquals(!earlier,sat.provenance().stream().anyMatch(v->v.slotRef().wholeIndex()==child));f.runtime.finishOrdinaryTail();
+            f.makePlayerAbsent();monitorBegin(f,3);f.runtime.runDynamicSlotsAfterReservedSlots();
+            var next=f.runtime.finishAfterCamera(POST);assertTrue(next.provenance().stream().anyMatch(v->v.slotRef().wholeIndex()==child));f.runtime.finishOrdinaryTail();
+        }
+    }
+
+    @Test void checkpointFullPoolMissDeletesOnlyItsActualSourceAndKeepsSavedGlobalsAndOtherNinetyFiveImages() throws Exception {
+        try(var f=new Fixture()) {
+            springDeviceCut(f);var bodyPrefix=f.runtime.lastSoundRequests();var p=f.runtime.placement().pool();
+            for(int w=32;w<128;w++)p.write(p.state(w).moveByte(ID,CdAnimal.OBJECT_ID).moveWord(X,0x100));
+            p.write(checkpointImage(f,p.state(40),0));var before=p.capture().slots();var saved=f.runtime.checkpointState();
+            f.runtime.runDynamicSlotsAfterReservedSlots();assertEquals(0,f.slot(40).id());assertArrayEquals(new byte[64],f.slot(40).copyBytes());
+            for(int w=32;w<128;w++)if(w!=40)assertEquals(before.get(w-32),f.slot(w));
+            assertSame(saved,f.runtime.checkpointState());assertEquals(LEVEL,f.runtime.levelGlobals());assertEquals(bodyPrefix,f.runtime.lastSoundRequests());monitorFinish(f);
+        }
+    }
+
+    @Test void checkpointRawDynamicAndReservedOddParentReadsUseActualBytesWithoutIdentityOrAlignmentGates() throws Exception {
+        for(boolean dynamic:List.of(true,false))try(var f=new Fixture()) {
+            if(!dynamic)f.runtime.writeReservedImage(f.runtime.reservedState(5).moveByteAt(0x2F,1));
+            springDeviceCut(f);var p=f.runtime.placement().pool();int bus=(dynamic?0xFFD000+50*64:0xFFD000+5*64)+0x2F;
+            if(dynamic)p.write(p.state(50).moveLong(CdObjectState.LongField.MOSQUI_X_DELTA,1));
+            int raw=(0xAB000000|bus)-0x2E;
+            p.write(checkpointImage(f,p.state(40),4).moveLong(CdObjectState.LongField.CHECKPOINT_PARENT,raw));
+            f.runtime.runDynamicSlotsAfterReservedSlots();assertEquals(1,f.slot(40).unsignedByte(CHECKPOINT_ACTIVE));
+            assertEquals(8,f.slot(40).unsignedByte(CHECKPOINT_BALL_ANGLE));assertEquals(raw,f.slot(40).longBits(CdObjectState.LongField.CHECKPOINT_PARENT));monitorFinish(f);
+        }
+    }
+
+    @Test void checkpointPrimaryOddAddressUsesOnlyTheRequiredByteBridgeAndPreservesOriginalRawBoundary() throws Exception {
+        var reads=new CheckpointTestReads();var owner=checkpointDeclaredState(0x00021E11,0xFF);
+        try(var f=new Fixture(new CdOpeningObjectRuntime.CheckpointBindings(owner,reads,java.util.OptionalInt.empty()))) {
+            springDeviceCut(f);int raw=0xACFFD001;
+            reads.primary=offset->{assertEquals(0x2F,offset);return 1;};
+            f.runtime.placement().pool().write(checkpointImage(f,f.slot(40),4).moveLong(CdObjectState.LongField.CHECKPOINT_PARENT,raw));
+            f.runtime.runDynamicSlotsAfterReservedSlots();assertEquals(List.of(0x2F),reads.primaryOffsets);assertEquals(8,f.slot(40).unsignedByte(CHECKPOINT_BALL_ANGLE));monitorFinish(f);
+        }
+        reads=new CheckpointTestReads();final var missingReads=reads;
+        try(var f=new Fixture(new CdOpeningObjectRuntime.CheckpointBindings(owner,missingReads,java.util.OptionalInt.empty()))) {
+            springDeviceCut(f);int raw=0xACFFD001;
+            missingReads.primary=offset->{throw new CdCheckpoint.UnownedParentByte(0xFFD000+offset);};
+            f.runtime.placement().pool().write(checkpointImage(f,f.slot(40),4).moveLong(CdObjectState.LongField.CHECKPOINT_PARENT,raw));
+            var fault=assertThrows(CdCheckpoint.UnownedParentByte.class,f.runtime::runDynamicSlotsAfterReservedSlots);
+            assertEquals(raw+0x2E,fault.rawAddressBits());assertTrue(f.runtime.closed());assertEquals(0,f.slot(40).unsignedByte(CHECKPOINT_ACTIVE));
+        }
+    }
+
+    @Test void checkpointParentOutOfOwnedRangeAndInvalidPrimaryWidthNeverFabricateRamOrRewriteUnrelatedFailures() throws Exception {
+        for(int raw:new int[]{0x12345678,0x12FFF000-0x2E,0xABFFD000-0x2F})try(var f=new Fixture()) {
+            springDeviceCut(f);var bodyPrefix=f.runtime.lastSoundRequests();f.runtime.placement().pool().write(checkpointImage(f,f.slot(40),4).moveLong(CdObjectState.LongField.CHECKPOINT_PARENT,raw));
+            var fault=assertThrows(CdCheckpoint.UnownedParentByte.class,f.runtime::runDynamicSlotsAfterReservedSlots);
+            assertEquals(raw+0x2E,fault.rawAddressBits());assertEquals(0,f.slot(40).unsignedByte(CHECKPOINT_ACTIVE));assertEquals(bodyPrefix,f.runtime.lastSoundRequests());
+        }
+        for(boolean invalid:List.of(true,false)) {
+            var reads=new CheckpointTestReads();var sentinel=new IllegalArgumentException("actual unrelated primary failure");
+            reads.primary=offset->{if(invalid)return 0x100;throw sentinel;};
+            try(var f=new Fixture(new CdOpeningObjectRuntime.CheckpointBindings(checkpointDeclaredState(1,0xFF),reads,java.util.OptionalInt.empty()))) {
+                springDeviceCut(f);f.runtime.placement().pool().write(checkpointImage(f,f.slot(40),4)
+                        .moveLong(CdObjectState.LongField.CHECKPOINT_PARENT,0xABFFD000));
+                var fault=assertThrows(IllegalArgumentException.class,f.runtime::runDynamicSlotsAfterReservedSlots);if(!invalid)assertSame(sentinel,fault);
+            }
+        }
+    }
+
+    @Test void checkpointActualSpecial23ContactPublishesRealFrameCentresEighteenSavedStoresAliasAndTypedFm() throws Exception {
+        var reads=new CheckpointTestReads();var initial=checkpointDeclaredState(0x00021E11,0xFF);
+        try(var f=new Fixture(new CdOpeningObjectRuntime.CheckpointBindings(initial,reads,java.util.OptionalInt.empty()))) {
+            f.firstCycle();f.runtime.placement().pool().clearDynamicSlots();seedContactPlayer(f);
+            f.runtime.placement().pool().write(checkpointImage(f,f.slot(40),2).moveWord(X,64).moveWord(Y,0x758).moveByte(SPRITE_FLAGS,0x84).moveByte(COLLISION_TYPE,0xE3));
+            f.service(0);f.runtime.spawnBeforeReservedSlots();var body=f.body(2);
+            assertEquals(1,f.slot(40).unsignedByte(COLLISION_STATUS),"real SPECIAL23 response increments the actual object status");
+            var actor=f.frame.state();var environment=f.frame.environment();
+            reads.onCamera=source->{
+                assertEquals(CdOpeningObjectRuntime.Phase.DYNAMIC_SLOTS,f.runtime.phase());
+                assertEquals(1,f.runtime.levelGlobals().spawnMode());assertEquals(1,f.runtime.levelGlobals().checkpoint());
+                assertEquals(0,f.slot(40).unsignedByte(COLLISION_TYPE));assertEquals(1,f.slot(40).unsignedByte(CHECKPOINT_ACTIVE));
+                assertEquals(0x5A,f.runtime.checkpointState().saved().read(CdCheckpointSaveData.SavedField.WATER_ROUTINE));
+                assertEquals(environment.movement().bounds().bottom(),f.runtime.checkpointState().saved().read(CdCheckpointSaveData.SavedField.BOTTOM_BOUND));
+                assertThrows(CdCheckpointSaveData.UnknownSavedByte.class,()->f.runtime.checkpointState().saved().read(CdCheckpointSaveData.SavedField.TIME_LONG));
+            };
+            f.runtime.runDynamicSlotsAfterReservedSlots();var saved=f.runtime.checkpointState().saved();
+            assertEquals(actor.motion().centreX16_16()>>>16,saved.read(CdCheckpointSaveData.SavedField.PRIMARY_X));
+            assertEquals(actor.motion().centreY16_16()>>>16,saved.read(CdCheckpointSaveData.SavedField.PRIMARY_Y));
+            assertEquals(environment.movement().gates().miniSonic(),saved.read(CdCheckpointSaveData.SavedField.MINI_SONIC));
+            assertEquals(1,saved.read(CdCheckpointSaveData.SavedField.SPAWN_MODE));
+            assertEquals(0x125A,saved.read(CdCheckpointSaveData.SavedField.WATER_HEIGHT_WORD));assertEquals(0x81,saved.read(CdCheckpointSaveData.SavedField.WATER_FULLSCREEN));
+            assertEquals(0x00021E11,saved.read(CdCheckpointSaveData.SavedField.TIME_LONG));
+            assertSame(initial.live(),f.runtime.checkpointState().live());assertEquals(8,reads.cameras.size());
+            assertEquals(checkpointCameraSources(),reads.cameras);
+            for(byte known:saved.knownMask().copy())assertEquals(1,known);
+            assertEquals(List.of(new CdOpeningObjectRuntime.CheckpointFm(CdCheckpoint.FmSound.FM_CHECKPOINT_AE)),f.runtime.lastSoundRequests());
+            assertEquals(actor,f.frame.state());assertEquals(environment,f.frame.environment());assertNotNull(body);monitorFinish(f);
+        }
+    }
+
+    @Test void checkpointSuccessfulSaveUsesRawUnsignedFiveMinuteClampWithoutChangingLiveTime() throws Exception {
+        for(int raw:new int[]{0x0004FFFF,0x00050000,0x00050001,0xFF000001}) {
+            var reads=new CheckpointTestReads();var initial=checkpointDeclaredState(raw,0xFF);
+            try(var f=new Fixture(new CdOpeningObjectRuntime.CheckpointBindings(initial,reads,java.util.OptionalInt.empty()))) {
+                springDeviceCut(f);f.runtime.placement().pool().write(checkpointImage(f,f.slot(40),2).moveByte(COLLISION_STATUS,1));
+                f.runtime.runDynamicSlotsAfterReservedSlots();
+                assertEquals(Integer.compareUnsigned(raw,0x00050000)<0?raw:0x00050000,f.runtime.checkpointState().saved().read(CdCheckpointSaveData.SavedField.TIME_LONG));
+                assertEquals(raw,CdCheckpointLiveAux.read(f.runtime.checkpointState().live(),CdCheckpointLiveAux.Field.TIME_LONG));monitorFinish(f);
+            }
+        }
+    }
+
+    @Test void checkpointGatedMainDoesNotReadMissingWaterOrCameraUntilItsActualContact() throws Exception {
+        for(boolean active:List.of(true,false)) {
+            var reads=new CheckpointTestReads();reads.onCamera=s->fail("no camera when native Main returns");
+            var initial=checkpointDeclaredState(1,0);
+            try(var f=new Fixture(new CdOpeningObjectRuntime.CheckpointBindings(initial,reads,java.util.OptionalInt.empty()))) {
+                springDeviceCut(f);var bodyPrefix=f.runtime.lastSoundRequests();f.runtime.placement().pool().write(checkpointImage(f,f.slot(40),2)
+                        .moveByte(CHECKPOINT_ACTIVE,active?1:0).moveByte(COLLISION_STATUS,active?1:0));
+                f.runtime.runDynamicSlotsAfterReservedSlots();assertSame(initial,f.runtime.checkpointState());assertEquals(LEVEL,f.runtime.levelGlobals());
+                assertTrue(reads.cameras.isEmpty());assertEquals(bodyPrefix,f.runtime.lastSoundRequests());monitorFinish(f);
+            }
+        }
+    }
+
+    @Test void checkpointUnknownWaterFailsAtItsReachedReadWithThreeSavedStoresAndBothGlobalsRetained() throws Exception {
+        var reads=new CheckpointTestReads();var initial=checkpointDeclaredState(0x00021E11,0x0F);
+        try(var f=new Fixture(new CdOpeningObjectRuntime.CheckpointBindings(initial,reads,java.util.OptionalInt.empty()))) {
+            springDeviceCut(f);var bodyPrefix=f.runtime.lastSoundRequests();f.runtime.placement().pool().write(checkpointImage(f,f.slot(40),2).moveByte(COLLISION_STATUS,1));
+            var actor=f.frame.state();var fault=assertThrows(CdCheckpointLiveAux.UnknownLiveByte.class,f.runtime::runDynamicSlotsAfterReservedSlots);
+            assertEquals(0xFFF64D,fault.nativeAddress());var saved=f.runtime.checkpointState().saved();
+            assertEquals(1,saved.read(CdCheckpointSaveData.SavedField.SPAWN_MODE));
+            assertEquals(actor.motion().centreX16_16()>>>16,saved.read(CdCheckpointSaveData.SavedField.PRIMARY_X));
+            assertEquals(actor.motion().centreY16_16()>>>16,saved.read(CdCheckpointSaveData.SavedField.PRIMARY_Y));
+            assertEquals(0xFFF64D, fault.nativeAddress());assertThrows(CdCheckpointSaveData.UnknownSavedByte.class,()->saved.read(CdCheckpointSaveData.SavedField.WATER_ROUTINE));
+            assertEquals(1,f.runtime.levelGlobals().checkpoint());assertEquals(1,f.runtime.levelGlobals().spawnMode());
+            assertEquals(1,f.slot(40).unsignedByte(CHECKPOINT_ACTIVE));assertEquals(0,f.slot(40).unsignedByte(COLLISION_TYPE));
+            assertSame(initial.live(),f.runtime.checkpointState().live());assertTrue(reads.cameras.isEmpty());assertEquals(bodyPrefix,f.runtime.lastSoundRequests());
+            assertTrue(f.runtime.closed());assertTrue(f.frame.closed());assertThrows(IllegalStateException.class,f.runtime::captureClosedCut);
+        }
+    }
+
+    @Test void checkpointCameraFailureRetainsExactNativeSavedPrefixAndNoFmOrWrapperDraw() throws Exception {
+        for(int failing=0;failing<8;failing++) {
+            var reads=new CheckpointTestReads();var sentinel=new IllegalStateException("actual reached camera failure");final int cut=failing;
+            reads.onCamera=s->{if(checkpointCameraSources().indexOf(s)==cut)throw sentinel;};
+            try(var f=new Fixture(new CdOpeningObjectRuntime.CheckpointBindings(checkpointDeclaredState(1,0xFF),reads,java.util.OptionalInt.empty()))) {
+                springDeviceCut(f);var bodyPrefix=f.runtime.lastSoundRequests();f.runtime.placement().pool().write(checkpointImage(f,f.slot(40),2).moveByte(COLLISION_STATUS,1));
+                assertSame(sentinel,assertThrows(IllegalStateException.class,f.runtime::runDynamicSlotsAfterReservedSlots));var saved=f.runtime.checkpointState().saved();
+                for(int i=0;i<8;i++) {
+                    var field=CdCheckpointSaveData.SavedField.valueOf(checkpointCameraSources().get(i).name());
+                    if(i<cut)assertEquals(reads.cameraValue(checkpointCameraSources().get(i)),saved.read(field));
+                    else assertThrows(CdCheckpointSaveData.UnknownSavedByte.class,()->saved.read(field));
+                }
+                assertEquals(0x5A,saved.read(CdCheckpointSaveData.SavedField.WATER_ROUTINE));
+                assertThrows(CdCheckpointSaveData.UnknownSavedByte.class,()->saved.read(CdCheckpointSaveData.SavedField.TIME_LONG));
+                assertEquals(cut+1,reads.cameras.size());assertEquals(bodyPrefix,f.runtime.lastSoundRequests());assertTrue(f.runtime.closed());
+            }
+        }
+    }
+
+    @Test void checkpointCameraBridgeRejectsWidthReentryAndSourceGlobalOrFrameMutationAtTheReadCut() throws Exception {
+        for(int scenario=0;scenario<5;scenario++) {
+            var reads=new CheckpointTestReads();final int mode=scenario;
+            try(var f=new Fixture(new CdOpeningObjectRuntime.CheckpointBindings(checkpointDeclaredState(1,0xFF),reads,java.util.OptionalInt.empty()))) {
+                springDeviceCut(f);var bodyPrefix=f.runtime.lastSoundRequests();f.runtime.placement().pool().write(checkpointImage(f,f.slot(40),2).moveByte(COLLISION_STATUS,1));
+                reads.onCamera=s->{
+                    if(mode==0)reads.cameraOverride=0x10000;
+                    if(mode==1)assertThrows(IllegalStateException.class,f.runtime::captureClosedCut);
+                    if(mode==2)f.runtime.placement().pool().write(f.slot(40).moveByte(FLAGS,0x5A));
+                    if(mode==3)checkpointSet(f.runtime,"levelGlobals",new CdLevelGlobals(0,0,9,1,3,0,2,0,0));
+                    if(mode==4)f.frame.applyObjectYVelocity(0x123);
+                };
+                if(mode==0) assertThrows(IllegalArgumentException.class,f.runtime::runDynamicSlotsAfterReservedSlots);
+                else assertThrows(IllegalStateException.class,f.runtime::runDynamicSlotsAfterReservedSlots);
+                var saved=f.runtime.checkpointState().saved();assertThrows(CdCheckpointSaveData.UnknownSavedByte.class,()->saved.read(CdCheckpointSaveData.SavedField.FG_X));
+                assertEquals(bodyPrefix,f.runtime.lastSoundRequests());assertTrue(f.runtime.closed());
+            }
+        }
+    }
+
+    @Test void checkpointTwoOrderedSameValueGlobalStoresStillAuthorizeOneActualSaveAndOneFm() throws Exception {
+        var reads=new CheckpointTestReads();var initial=checkpointDeclaredState(1,0xFF);
+        var level=new CdLevelGlobals(0,0,1,1,3,0,2,0,0);
+        try(var f=new Fixture(INITIAL,CONTACT,SCORE,level,OptionalLong.of(0),
+                new CdOpeningObjectRuntime.CheckpointBindings(initial,reads,java.util.OptionalInt.empty()))) {
+            springDeviceCut(f);f.runtime.placement().pool().write(checkpointImage(f,f.slot(40),2).moveByte(COLLISION_STATUS,1));
+            reads.onCamera=s->assertEquals(2,checkpointGet(f.runtime,"checkpointGlobalStores"));
+            f.runtime.runDynamicSlotsAfterReservedSlots();assertEquals(level,f.runtime.levelGlobals());
+            assertEquals(8,reads.cameras.size());assertEquals(1,f.runtime.lastSoundRequests().stream().filter(CdOpeningObjectRuntime.CheckpointFm.class::isInstance).count());
+            assertEquals(0,checkpointGet(f.runtime,"checkpointGlobalStores"));assertEquals(false,checkpointGet(f.runtime,"checkpointSaveCompleted"));monitorFinish(f);
+        }
+    }
+
+    @Test void checkpointCompletedFmPrefixSurvivesLaterWrapperDrawFailureWithoutCommandReplay() throws Exception {
+        var reads=new CheckpointTestReads();
+        try(var f=new Fixture(new CdOpeningObjectRuntime.CheckpointBindings(checkpointDeclaredState(1,0xFF),reads,java.util.OptionalInt.empty()))) {
+            springDeviceCut(f);f.runtime.placement().pool().write(checkpointImage(f,f.slot(40),2)
+                    .moveByte(COLLISION_STATUS,1).moveByte(PRIORITY,0xFF).moveByte(MAP_FRAME,0xFF));
+            // Native DrawObject masks priority to7 and only enqueues; mapping bytes are reached during DrawObjects.
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertThrows(UnsupportedOperationException.class,()->f.runtime.finishAfterCamera(POST));
+            assertEquals(1,f.runtime.lastSoundRequests().stream().filter(CdOpeningObjectRuntime.CheckpointFm.class::isInstance).count());
+            assertEquals(8,reads.cameras.size());for(byte b:f.runtime.checkpointState().saved().knownMask().copy())assertEquals(1,b);
+            assertTrue(f.runtime.closed());assertThrows(IllegalStateException.class,f.runtime::runDynamicSlotsAfterReservedSlots);
+            assertEquals(1,f.runtime.lastSoundRequests().stream().filter(CdOpeningObjectRuntime.CheckpointFm.class::isInstance).count());
+        }
+    }
+
+    @Test void checkpointPrivateCallbacksRejectEveryExistingMutualGuardPhaseSourceAndGlobalCasBeforePublication() throws Exception {
+        try(var f=new Fixture()) {
+            springDeviceCut(f);var p=f.runtime.placement().pool();var source=checkpointImage(f,p.state(40),2)
+                    .moveByte(CHECKPOINT_ACTIVE,1).moveByte(COLLISION_TYPE,0).moveByte(COLLISION_STATUS,1);p.write(source);
+            var g=f.runtime.levelGlobals();var next=new CdLevelGlobals(g.levelRestart(),g.updateHudTime(),source.subtype(),g.spawnMode(),g.plcLoadFlags(),g.flowerCount(),g.fadeEnableDisplay(),g.powerup(),g.timeOver());
+            var call=new CdCheckpoint.GlobalCall(source,g,next,CdCheckpoint.GlobalField.CHECKPOINT);
+            checkpointReject(f,"commitCheckpointGlobal",CdCheckpoint.GlobalCall.class,call);
+            boulderSet(f.runtime,"phase",CdOpeningObjectRuntime.Phase.DYNAMIC_SLOTS);boulderSet(f.runtime,"operating",true);
+            boulderSet(f.runtime,"dispatchWholeIndex",40);boulderSet(f.runtime,"inCheckpointDispatch",true);
+            try {
+                for(String guard:diagonalGuards()) {
+                    boulderSet(f.runtime,guard,true);checkpointReject(f,"commitCheckpointGlobal",CdCheckpoint.GlobalCall.class,call);
+                    checkpointReject(f,"saveCheckpoint",CdCheckpoint.SaveCall.class,new CdCheckpoint.SaveCall(source,g,f.runtime.checkpointState().saved()));
+                    checkpointReject(f,"playCheckpointFm",CdCheckpoint.FmSound.class,CdCheckpoint.FmSound.FM_CHECKPOINT_AE);boulderSet(f.runtime,guard,false);
+                }
+                boulderSet(f.runtime,"dispatchWholeIndex",41);checkpointReject(f,"commitCheckpointGlobal",CdCheckpoint.GlobalCall.class,call);boulderSet(f.runtime,"dispatchWholeIndex",40);
+                p.write(source.moveByte(FLAGS,0xA5));checkpointReject(f,"commitCheckpointGlobal",CdCheckpoint.GlobalCall.class,call);p.write(source);
+                checkpointSet(f.runtime,"levelGlobals",next);checkpointReject(f,"commitCheckpointGlobal",CdCheckpoint.GlobalCall.class,call);checkpointSet(f.runtime,"levelGlobals",g);
+                checkpointReject(f,"saveCheckpoint",CdCheckpoint.SaveCall.class,new CdCheckpoint.SaveCall(source,g,f.runtime.checkpointState().saved()));
+                checkpointReject(f,"playCheckpointFm",CdCheckpoint.FmSound.class,CdCheckpoint.FmSound.FM_CHECKPOINT_AE);
+            } finally {boulderSet(f.runtime,"inCheckpointDispatch",false);boulderUnstage(f);}
+        }
+    }
+
+    @Test void checkpointRealSaveHelperRereadsRoutineAtBothNativeInstructionsAndPreservesByteAlias() {
+        var reads=new ArrayList<CdCheckpointSaveData.Source>();var stores=new ArrayList<CdCheckpointSaveData.Store>();
+        var actual=new CdCheckpointSaveData.State[]{CdCheckpointSaveData.State.unknown()};int[] routineReads={0};
+        var result=CdCheckpointSaveData.save(actual[0],new CdCheckpointSaveData.Port() {
+            public CdCheckpointSaveData.State currentState(){return actual[0];}
+            public int read(CdCheckpointSaveData.Source source) {
+                reads.add(source);
+                if(source==CdCheckpointSaveData.Source.WATER_ROUTINE)return ++routineReads[0]==1?0x55:0xAA;
+                if(source==CdCheckpointSaveData.Source.WATER_HEIGHT2)return 0x1234;
+                return source.width()==4?0x00021E11:1;
+            }
+            public void commit(CdCheckpointSaveData.StoreCall call) {
+                assertEquals(actual[0],call.expectedState());stores.add(call.store());actual[0]=call.finalState();
+            }
+        });
+        assertEquals(18,reads.size());assertEquals(2,routineReads[0]);
+        assertEquals(List.of(CdCheckpointSaveData.Store.values()),stores);assertEquals(stores,result.completedStores());
+        assertEquals(stores.stream().map(CdCheckpointSaveData.Store::source).toList(),reads);
+        assertEquals(0x12AA,result.state().read(CdCheckpointSaveData.SavedField.WATER_HEIGHT_WORD));assertEquals(0xAA,result.state().read(CdCheckpointSaveData.SavedField.WATER_ROUTINE));
+    }
+
+    @Test void checkpointNonzeroOwnerCaptureRestoresAndReplaysTheWholeActivationSpinAnimationCourseWithoutResaveEffects() throws Exception {
+        var reads=new CheckpointTestReads();var initial=checkpointDeclaredState(0x00021E11,0xFF);
+        try(var f=new Fixture(new CdOpeningObjectRuntime.CheckpointBindings(initial,reads,java.util.OptionalInt.empty()))) {
+            springDeviceCut(f);f.runtime.placement().pool().write(checkpointImage(f,f.slot(40),0));
+            f.runtime.runDynamicSlotsAfterReservedSlots();monitorFinish(f);f.makePlayerAbsent();
+            f.runtime.placement().pool().write(f.slot(40).moveByte(COLLISION_STATUS,1));
+            var before=f.runtime.captureClosedCut();var actor=f.frame.captureActor();var shared=f.frame.captureShared();
+            checkpointCourse(f,3,39);var expected=f.runtime.captureClosedCut();var expectedActor=f.frame.captureActor();var expectedShared=f.frame.captureShared();
+            assertEquals(6,f.slot(32).routine());assertTrue(List.of(2,3).contains(f.slot(32).unsignedByte(MAP_FRAME)));
+            assertEquals(0,f.slot(32).unsignedByte(CHECKPOINT_BALL_ANGLE));assertEquals(8,reads.cameras.size());
+            var saved=expected.checkpointState();assertNotEquals(initial.saved(),saved.saved());assertSame(initial.live(),saved.live());
+            f.frame.restoreActor(actor);f.frame.restoreShared(shared);f.runtime.restore(before);assertSame(initial,f.runtime.checkpointState());
+            int readsBefore=reads.cameras.size();assertEquals(8,readsBefore);
+            checkpointCourse(f,3,39);var replay=f.runtime.captureClosedCut();
+            assertMonitorSnapshot(expected,replay);assertEquals(expected.reserved().slots(),replay.reserved().slots());
+            assertEquals(expected.sectionArtState(),replay.sectionArtState());assertEquals(saved,replay.checkpointState());
+            assertEquals(expectedActor,f.frame.captureActor());assertEquals(expectedShared.environment(),f.frame.environment());
+            assertEquals(expectedShared.vIntClock(),f.frame.vIntClock());assertEquals(16,reads.cameras.size());
+            int count=reads.cameras.size();f.runtime.restore(replay);assertEquals(count,reads.cameras.size());
+        }
+    }
+
+    @Test void checkpointRestartCarriesNonzeroOwnerChangedTwelveMasksRawTableAndSectionVerbatim() throws Exception {
+        try(var f=new Fixture()) {
+            var owner=checkpointDeclaredSuppliedOwner();var resident=checkpointChanged(f.runtime.sectionArtState().residency());byte[] table=new byte[512];
+            for(int i=0;i<table.length;i++)table[i]=(byte)(i^0xA5);var camera=new CdOpeningObjectRuntime.CameraArtRestartIngress(resident,CdAssetBytes.copyOf(table),0x035A);
+            var reads=new CheckpointTestReads();reads.onCamera=s->fail("restart must not save/read cameras");
+            try(var frame=CdPlayerFrameRuntime.externalTouchRequiredDevelopment(f.assets,0)) {
+                var before=frame.captureActor();var shared=frame.captureShared();
+                try(var runtime=CdOpeningObjectRuntime.usaR11aRestartDevEmptySatPreloadedArt(f.assets,frame,INITIAL,CONTACT,SCORE,LEVEL,
+                        new CdOpeningObjectRuntime.CheckpointBindings(owner,reads,java.util.OptionalInt.empty()),CdAssetBytes.copyOf(new byte[CdObjectPlacementRuntime.SAVED_BANK_BYTES]),
+                        new CdPowerupArtRuntime.State(new byte[0x480],new byte[0x480]),camera,new byte[640],BANKS,PRE,v->fail("no callback"))) {
+                    assertSame(owner,runtime.checkpointState());assertSame(owner,runtime.captureClosedCut().checkpointState());
+                    assertSame(resident,runtime.sectionArtState().residency());assertArrayEquals(table,runtime.sectionArtState().codeTable().copy());
+                    assertEquals(0x035A,runtime.sectionArtState().sectionWord());assertEquals(0,runtime.sectionArtState().queue().headSource());
+                    assertTrue(runtime.sectionArtState().decoder().isEmpty());assertEquals(0,runtime.sectionArtState().remainingTilesWord());
+                    assertEquals(before,frame.captureActor());assertEquals(shared.environment(),frame.environment());assertEquals(shared.vIntClock(),frame.vIntClock());
+                    assertTrue(reads.cameras.isEmpty());assertTrue(runtime.lastSoundRequests().isEmpty());
+                }
+            }
+        }
+    }
+
+    @Test void checkpointRestartUnknownFirstOrLastTileRejectsWithoutSeedRepairOrFrameMutation() throws Exception {
+        var a=load();for(int missing:List.of(0,11)) {
+            var resident=checkpointSeedExcept(a,missing);var carry=new CdOpeningObjectRuntime.CameraArtRestartIngress(resident,CdAssetBytes.copyOf(new byte[512]),0x035A);
+            var mask=resident.region(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.Region.AT_D960).knownMask();
+            try(var frame=CdPlayerFrameRuntime.externalTouchRequiredDevelopment(a,0)) {
+                var actor=frame.captureActor();var shared=frame.captureShared();
+                var fault=assertThrows(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.OwnershipBoundary.class,()->
+                        CdOpeningObjectRuntime.usaR11aRestartDevEmptySatPreloadedArt(a,frame,INITIAL,CONTACT,SCORE,LEVEL,declaredCheckpointBindings(),
+                                CdAssetBytes.copyOf(new byte[CdObjectPlacementRuntime.SAVED_BANK_BYTES]),new CdPowerupArtRuntime.State(new byte[0x480],new byte[0x480]),
+                                carry,new byte[640],BANKS,PRE,v->fail("no callback")));
+                assertEquals(0x6CB+missing,fault.nativePatternId());assertArrayEquals(mask.copy(),resident.region(
+                        com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.Region.AT_D960).knownMask().copy());
+                assertEquals(actor,frame.captureActor());assertEquals(shared.environment(),frame.environment());assertEquals(shared.vIntClock(),frame.vIntClock());assertFalse(frame.closed());
+            }
+        }
+    }
+
+    @Test void checkpointPreviousSatConvertsWithNowCurrentTwelveWhileOlderPictureRemainsFrozen() throws Exception {
+        try(var f=new Fixture()) {
+            springDeviceCut(f);f.runtime.placement().pool().write(checkpointImage(f,f.slot(40),2).moveByte(CHECKPOINT_ACTIVE,1));
+            f.runtime.runDynamicSlotsAfterReservedSlots();monitorFinish(f);f.makePlayerAbsent();monitorBegin(f,3);
+            var oldPicture=f.runtime.displayedFrame();var oldVersions=oldPicture.patternVersions();
+            assertTrue(oldVersions.keySet().stream().anyMatch(i->i>=BANKS.checkpoint()&&i<BANKS.checkpoint()+12));
+            f.runtime.runDynamicSlotsAfterReservedSlots();monitorFinish(f);
+            var section=f.runtime.sectionArtState();var changed=checkpointChanged(section.residency());
+            var next=diagonalSectionCopy(section,changed,section.queue());
+            f.runtime.restore((CdOpeningObjectRuntime.Snapshot)horizontalReplacePartition(f.runtime.captureClosedCut(),
+                    com.openggf.game.soniccd.resources.CdR11aSectionArt.State.class,next));
+            f.service(0);var now=f.runtime.displayedFrame();
+            for(var entry:now.patternVersions().entrySet())if(entry.getKey()>=BANKS.checkpoint()&&entry.getKey()<BANKS.checkpoint()+12) {
+                int tile=entry.getKey()-BANKS.checkpoint();assertEquals(CdObjectPresentation.patternVersion(
+                        com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(changed,0x6CB+tile)),entry.getValue());
+                assertNotEquals(oldVersions.get(entry.getKey()),entry.getValue());
+            }
+            assertEquals(oldVersions,oldPicture.patternVersions());f.runtime.spawnBeforeReservedSlots();f.body(4);
+            f.runtime.runDynamicSlotsAfterReservedSlots();monitorFinish(f);
+        }
+    }
+
+    @Test void checkpointOptionalLoadSectionAppendsSelectedFullListUpdatesOnlyHighAndRestoreNeverAppendsAgain() throws Exception {
+        var a=load();var old=cameraArtDevIngress(a);byte[] table=new byte[512];for(int i=0;i<512;i++)table[i]=(byte)(i*7);
+        var carry=new CdOpeningObjectRuntime.CameraArtRestartIngress(old.residency(),CdAssetBytes.copyOf(table),0x045A);
+        var bindings=new CdOpeningObjectRuntime.CheckpointBindings(checkpointDeclaredSuppliedOwner(),new CheckpointTestReads(),java.util.OptionalInt.of(0x680));
+        try(var frame=CdPlayerFrameRuntime.externalTouchRequiredDevelopment(a,0);
+            var runtime=CdOpeningObjectRuntime.usaR11aRestartDevEmptySatPreloadedArt(a,frame,INITIAL,CONTACT,SCORE,LEVEL,bindings,
+                    CdAssetBytes.copyOf(new byte[CdObjectPlacementRuntime.SAVED_BANK_BYTES]),new CdPowerupArtRuntime.State(new byte[0x480],new byte[0x480]),
+                    carry,new byte[640],BANKS,PRE,v->fail("no load callback"))) {
+            var s=runtime.sectionArtState();int index=0;while(0x680>=a.loadPlan().sections().get(index).rightThresholdWord())index++;
+            var section=a.loadPlan().sections().get(index);var rows=a.loadPlan().plcs().get(section.initialPlcId()).entries();
+            assertEquals((index*2<<8)|0x5A,s.sectionWord());assertSame(old.residency(),s.residency());assertArrayEquals(table,s.codeTable().copy());
+            assertEquals(0,s.remainingTilesWord());assertEquals(0,s.processBudgetWord());assertTrue(s.decoder().isEmpty());
+            var expected=new ArrayList<com.openggf.game.soniccd.resources.CdR11aPlcBuffer.Entry>();
+            for(var row:rows)expected.add(new com.openggf.game.soniccd.resources.CdR11aPlcBuffer.Entry(row.sourceRange().nativeAddress(),row.vramAddress()));
+            assertEquals(com.openggf.game.soniccd.resources.CdR11aPlcBuffer.append(com.openggf.game.soniccd.resources.CdR11aPlcBuffer.cleared(),expected),s.queue());
+            var capture=runtime.captureClosedCut();runtime.restore(capture);assertSame(s,runtime.sectionArtState());runtime.restore(capture);
+            assertEquals(s.queue(),runtime.sectionArtState().queue());assertTrue(runtime.lastSoundRequests().isEmpty());assertEquals(0,frame.vIntClock().deltaSinceAdmittedCut());
+        }
+    }
+
+    private static CdOpeningObjectRuntime.CheckpointBindings declaredCheckpointBindings() {
+        // Explicit UNKNOWN component ingress. Neither absent live data nor primary RAM is replaced by zero.
+        return new CdOpeningObjectRuntime.CheckpointBindings(new CdOpeningObjectRuntime.CheckpointOwnerState(
+                CdCheckpointLiveAux.unknown(),CdCheckpointSaveData.State.unknown()),new CdOpeningObjectRuntime.CheckpointReads() {
+            public int readCameraWord(CdCheckpointSaveData.Source source) {throw new UnsupportedOperationException("declared component has no camera bridge: "+source);}
+            public int readPrimaryByte(int offset) {throw new CdCheckpoint.UnownedParentByte(0xFFD000+offset);}
+        },java.util.OptionalInt.empty());
+    }
+    private static CdOpeningObjectRuntime.CheckpointOwnerState checkpointDeclaredState(int time,int mask) {
+        return new CdOpeningObjectRuntime.CheckpointOwnerState(CdCheckpointLiveAux.declaredDevIngress(CdAssetBytes.copyOf(new byte[]{
+                (byte)(time>>>24),(byte)(time>>>16),(byte)(time>>>8),(byte)time,0x12,0x34,0x5A,(byte)0x81}),mask),CdCheckpointSaveData.State.unknown());
+    }
+    private static CdOpeningObjectRuntime.CheckpointOwnerState checkpointDeclaredSuppliedOwner() {
+        byte[] bytes=new byte[31],known=new byte[31];for(int i=0;i<31;i++){bytes[i]=(byte)(0x91+i);known[i]=(byte)(i%3==0?0:1);}
+        return new CdOpeningObjectRuntime.CheckpointOwnerState(checkpointDeclaredState(0xA5021E11,0xDF).live(),
+                CdCheckpointSaveData.State.supplied(CdAssetBytes.copyOf(bytes),CdAssetBytes.copyOf(known)));
+    }
+    private static List<CdCheckpointSaveData.Source> checkpointCameraSources() {
+        return List.of(CdCheckpointSaveData.Source.FG_X,CdCheckpointSaveData.Source.FG_Y,CdCheckpointSaveData.Source.BG_X,CdCheckpointSaveData.Source.BG_Y,
+                CdCheckpointSaveData.Source.BG2_X,CdCheckpointSaveData.Source.BG2_Y,CdCheckpointSaveData.Source.BG3_X,CdCheckpointSaveData.Source.BG3_Y);
+    }
+    private static final class CheckpointTestReads implements CdOpeningObjectRuntime.CheckpointReads {
+        final List<CdCheckpointSaveData.Source> cameras=new ArrayList<>();
+        final List<Integer> primaryOffsets=new ArrayList<>();
+        Consumer<CdCheckpointSaveData.Source> onCamera=s->{};
+        java.util.function.IntUnaryOperator primary=offset->{throw new CdCheckpoint.UnownedParentByte(0xFFD000+offset);};
+        Integer cameraOverride;
+        int cameraValue(CdCheckpointSaveData.Source source) {return 0x2345+checkpointCameraSources().indexOf(source)*0x111;}
+        public int readCameraWord(CdCheckpointSaveData.Source source) {
+            assertTrue(checkpointCameraSources().contains(source));cameras.add(source);onCamera.accept(source);
+            return cameraOverride==null?cameraValue(source):cameraOverride;
+        }
+        public int readPrimaryByte(int offset) {assertTrue(offset>=0&&offset<64);primaryOffsets.add(offset);return primary.applyAsInt(offset);}
+    }
+    private static CdObjectState checkpointImage(Fixture f,CdObjectState s,int routine) throws java.io.IOException {
+        return s.moveByte(ID,CdCheckpoint.OBJECT_ID).moveByte(ROUTINE,routine).moveByte(SUBTYPE,1)
+                .moveByte(SPRITE_FLAGS,4).moveByte(WIDTH,8).moveByte(Y_RADIUS,0x18).moveByte(PRIORITY,4)
+                .moveWord(X,0x100).moveWord(Y,0x780).moveWord(TILE,0x6CB)
+                .moveWord(CHECKPOINT_BALL_X,0x100).moveWord(CHECKPOINT_BALL_Y,0x768)
+                .moveLong(MAPPINGS,f.assets.openingObjects().view(com.openggf.game.soniccd.level.CdR11aObjectAssets.Table.CHECKPOINT_MAPPINGS).range().nativeAddress());
+    }
+    private static void checkpointCourse(Fixture f,int first,int count) {
+        for(int i=0;i<count;i++){monitorBegin(f,first+i);f.runtime.runDynamicSlotsAfterReservedSlots();monitorFinish(f);}
+    }
+    private static void checkpointSet(CdOpeningObjectRuntime target,String name,Object value) {
+        try {boulderSet(target,name,value);}catch(Exception e){throw new AssertionError(e);}
+    }
+    private static Object checkpointGet(Object target,String name) {
+        try {var field=target.getClass().getDeclaredField(name);field.setAccessible(true);return field.get(target);}catch(Exception e){throw new AssertionError(e);}
+    }
+    private static void checkpointReject(Fixture f,String name,Class<?> type,Object call) throws Exception {
+        var pool=f.runtime.placement().pool();var before=pool.capture().slots();var actor=f.frame.state();var env=f.frame.environment();
+        var owner=f.runtime.checkpointState();var level=f.runtime.levelGlobals();var sounds=f.runtime.lastSoundRequests();var resident=f.runtime.sectionArtState();
+        var method=CdOpeningObjectRuntime.class.getDeclaredMethod(name,type);method.setAccessible(true);
+        var fault=assertThrows(java.lang.reflect.InvocationTargetException.class,()->method.invoke(f.runtime,call));
+        assertTrue(fault.getCause() instanceof IllegalStateException||fault.getCause() instanceof IllegalArgumentException);
+        assertEquals(before,pool.capture().slots());assertEquals(actor,f.frame.state());assertEquals(env,f.frame.environment());
+        assertSame(owner,f.runtime.checkpointState());assertEquals(level,f.runtime.levelGlobals());assertEquals(sounds,f.runtime.lastSoundRequests());assertSame(resident,f.runtime.sectionArtState());
+    }
+    private static CdObjectPresentation.PatternSource checkpointPixels(Fixture f,com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.State resident) throws java.io.IOException {
+        var o=f.assets.openingObjects();return CdObjectPresentation.usaR11aCurrentCameraDevPreloadedArt(f.frame.artState(),f.runtime.powerupArtState(),o,
+                o.frontierArtBank(),o.contactArtBank(),o.floatBlockArtBank(),o.springArtBank(),o.tunnelDoorArtBank(),o.monitorTimeArtBank(),resident,
+                BANKS.player(),BANKS.ring(),BANKS.mosqui(),BANKS.plant(),BANKS.ramp(),BANKS.explosion(),BANKS.points(),BANKS.flower(),BANKS.powerup(),
+                BANKS.floatBlock(),BANKS.spring(),BANKS.tunnelDoorVertical(),BANKS.monitorTime(),BANKS.boulder(),BANKS.diagonalSpring(),BANKS.spikes(),BANKS.checkpoint());
+    }
+    private static com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.State checkpointChanged(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.State original) {
+        var state=original;for(int tile=0;tile<12;tile++){byte[] bytes=new byte[32];java.util.Arrays.fill(bytes,(byte)(0xC1+tile));
+            state=com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.writeTile(state,0xD960+tile*32,CdAssetBytes.copyOf(bytes));}return state;
+    }
+    private static com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.State checkpointSeedExcept(CdR11aAssets a,int missing) throws java.io.IOException {
+        var o=a.openingObjects();var front=o.frontierArtBank();var state=com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.devSeed(
+                o.initialArtBank().binding(com.openggf.game.soniccd.level.CdR11aAsset.ART_MOSQUI).bytes(),
+                front.binding(com.openggf.game.soniccd.level.CdR11aAsset.ART_3D_PLANT).bytes(),front.binding(com.openggf.game.soniccd.level.CdR11aAsset.ART_3D_RAMP_BOOST).bytes());
+        for(var id:List.of(com.openggf.game.soniccd.level.CdR11aAsset.ART_BOULDER,com.openggf.game.soniccd.level.CdR11aAsset.ART_DIAGONAL_SPRING,
+                com.openggf.game.soniccd.level.CdR11aAsset.ART_SPIKES,com.openggf.game.soniccd.level.CdR11aAsset.ART_CHECKPOINT)) {
+            var source=o.sectionArtSources().source(id);for(int tile=0;tile<source.tileCount();tile++)if(id!=com.openggf.game.soniccd.level.CdR11aAsset.ART_CHECKPOINT||tile!=missing)
+                state=com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.writeTile(state,source.canonicalPlc().vramAddress()+tile*32,source.decode().bytes().slice(tile*32,32));
+        }return state;
+    }
+    // END Checkpoint Runtime R1.
 }

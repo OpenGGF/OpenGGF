@@ -112952,3 +112952,26 @@ proof passed after the test-only per-pixel oracle correction in51554; source,
 negative controls and bounded evidence are in the dated CD implementation plan.
 No full-suite/full-game or broad-smoke-green claim; prior baseline-attributed
 smoke failures remain separately recorded. Next finite native owner: Monitor19.
+
+## 2026-10-25 — private Sonic CD controller frontier, not a native trace
+
+- Private `feature/ai-sonic-cd-objects-local` candidate over `ea8dabcf67`:
+  actual USA GameLoop Right completes Checkpoint13 Init at582 and through603;
+  full/course581/582 replay passes. Inside604 it rejects `Unowned CD object
+  ID $3f at live physical slot 55` (Anton, X2832/Y1061, subtypeFF, routine0).
+  Earlier pool bodies have committed; later56/57/58 have not run. Never resume
+  the failed pass or label604 complete. Frame X/Y at the stop are raw16.16
+  162147840/29340160; this is a host-loop boundary, not V5 native parity data.
+- Queue command27422 selected two actual Checkpoint EGL products plus
+  `TestSonicCdOpeningWorldLoad#checkpointNaturalRightFrontierObservation` with
+  actual CD media/S2 donor, Java25 and surfaceless EGL:3/0/0/0, no skips.
+  The temporary observer is replaced by
+  `ordinaryRightRouteCompletesCheckpointAt582ReplaysThenStopsAtAnton604`;
+  its permanent582/603 replay and exact partial604 assertions passed in
+  consumers25852 (1149/0/0/0,18 classes, fresh XML/no skips); fresh guards68483
+  passed728/0/0/0.
+- No native trace fixture/timing row was changed or used to hydrate gameplay.
+  The natural route did not activate this Checkpoint. Separate initial-only
+  constructed World cases prove contact/save/ball animation/current pixels,
+  real death/reset/fresh load and same-new-epoch replay. USA whole-game,
+  JP/EU gameplay, HUD clock and broader act breadth remain uncertified.

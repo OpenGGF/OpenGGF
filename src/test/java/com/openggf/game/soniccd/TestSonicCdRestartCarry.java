@@ -3,6 +3,8 @@ package com.openggf.game.soniccd;
 import com.openggf.game.LevelLoadCause;
 import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.objects.CdLevelGlobals;
+import com.openggf.game.soniccd.objects.CdCheckpointLiveAux;
+import com.openggf.game.soniccd.objects.CdCheckpointSaveData;
 import com.openggf.game.soniccd.objects.CdObjectPlacementRuntime;
 import com.openggf.game.soniccd.objects.CdOpeningObjectRuntime;
 import com.openggf.game.soniccd.objects.CdRingGlobals;
@@ -51,7 +53,7 @@ class TestSonicCdRestartCarry {
         var ring = new CdRingGlobals(0, 0, 0, 0, 1, 0, 0, 0);
         var failure = assertThrows(SonicCdGameModule.UnsupportedRestart.class, () ->
                 SonicCdGameModule.restartCarry(ring, f.level(), f.contact(), f.score(), f.saved(),
-                        f.environment(), f.actor(), f.art(), f.powerup(), f.background(), cameraArt()));
+                        f.environment(), f.actor(), f.art(), f.powerup(), f.background(), cameraArt(), checkpointOwner()));
         assertEquals(SonicCdGameModule.RestartBoundary.GAME_OVER_EXIT, failure.boundary());
     }
 
@@ -75,7 +77,7 @@ class TestSonicCdRestartCarry {
                 gates, m.globals()), e.controls(), globals, e.dynamicSlots());
         var failure = assertThrows(SonicCdGameModule.UnsupportedRestart.class, () ->
                 SonicCdGameModule.restartCarry(f.ring(), level, f.contact(), f.score(), f.saved(),
-                        environment, f.actor(), f.art(), f.powerup(), f.background(), cameraArt()));
+                        environment, f.actor(), f.art(), f.powerup(), f.background(), cameraArt(), checkpointOwner()));
         assertEquals(SonicCdGameModule.RestartBoundary.RESTART_PATH, failure.boundary());
     }
 
@@ -85,7 +87,7 @@ class TestSonicCdRestartCarry {
                 CdObjectPlacementRuntime.SAVED_BANK_BYTES + 1}) {
             assertThrows(IllegalArgumentException.class, () -> SonicCdGameModule.restartCarry(f.ring(), f.level(),
                     f.contact(), f.score(), CdAssetBytes.copyOf(new byte[size]), f.environment(),
-                    f.actor(), f.art(), f.powerup(), f.background(), cameraArt()));
+                    f.actor(), f.art(), f.powerup(), f.background(), cameraArt(), checkpointOwner()));
         }
     }
 
@@ -119,7 +121,7 @@ class TestSonicCdRestartCarry {
                     f.background().deformationRam(), bytes(length, 1)));
         }
         assertThrows(NullPointerException.class, () -> SonicCdGameModule.restartCarry(f.ring(), f.level(),
-                f.contact(), f.score(), f.saved(), f.environment(), f.actor(), f.art(), f.powerup(), null, cameraArt()));
+                f.contact(), f.score(), f.saved(), f.environment(), f.actor(), f.art(), f.powerup(), null, cameraArt(), checkpointOwner()));
         assertThrows(NullPointerException.class, () -> new SonicCdGameModule.BackgroundBuffers(
                 null, f.background().hscrollRam()));
         assertThrows(NullPointerException.class, () -> new SonicCdGameModule.BackgroundBuffers(
@@ -131,9 +133,114 @@ class TestSonicCdRestartCarry {
                            CdPlayerBody.Environment environment, CdPlayerBody.State actor,
                            CdPlayerArtRuntime.State art, CdPowerupArtRuntime.State powerup,
                            SonicCdGameModule.BackgroundBuffers background) { }
+
+    @Test void checkpointRestartCarriesIncomingBytesUntilTheActualSavedLoadAndKeepsSectionHigh() {
+        var f=fixture();var l=f.level();var owner=checkpointOwner();var art=cameraArt();
+        var checkpoint=new CdLevelGlobals(l.levelRestart(),l.updateHudTime(),2,1,l.plcLoadFlags() | 2,l.flowerCount(),l.fadeEnableDisplay(),l.powerup(),l.timeOver());
+        var next=SonicCdGameModule.restartCarry(f.ring(),checkpoint,f.contact(),f.score(),f.saved(),f.environment(),f.actor(),f.art(),f.powerup(),f.background(),art,owner);
+        assertSame(owner,next.checkpointState());assertSame(owner.saved(),next.checkpointState().saved());
+        assertEquals(0xDEADBEEF,CdCheckpointLiveAux.read(next.checkpointState().live(),CdCheckpointLiveAux.Field.TIME_LONG));
+        assertEquals(0x56,CdCheckpointLiveAux.read(next.checkpointState().live(),CdCheckpointLiveAux.Field.WATER_ROUTINE));
+        assertEquals(2,next.level().checkpoint());assertEquals(1,next.level().spawnMode());
+        assertEquals(l.updateHudTime(),next.level().updateHudTime(),"load-time LevelScroll sees the carried byte before Main304");
+        assertEquals(f.ring(),next.ring(),"LoadCheckpointData, rather than the carry builder, clears rings/livesFlags");
+        assertEquals(0xAB12,next.cameraArt().sectionWord(),"checkpoint retains title-loaded path; actual LoadSectionArt owns the next HIGH store");
+        assertSame(art.residency(),next.cameraArt().residency());
+    }
+
+    @Test void checkpointCarryDoesNotPrereadTheSavedPayloadOrInventItWhenUnknown() {
+        var f=fixture();var l=f.level();var checkpoint=new CdLevelGlobals(l.levelRestart(),0,2,1,l.plcLoadFlags() | 2,0,2,0,0);
+        var unknown=new CdOpeningObjectRuntime.CheckpointOwnerState(CdCheckpointLiveAux.unknown(),CdCheckpointSaveData.State.unknown());
+        var next=SonicCdGameModule.restartCarry(f.ring(),checkpoint,f.contact(),f.score(),f.saved(),f.environment(),f.actor(),f.art(),f.powerup(),f.background(),cameraArt(),unknown);
+        assertSame(unknown,next.checkpointState());
+        assertThrows(CdCheckpointSaveData.UnknownSavedByte.class,()->next.checkpointState().saved().read(CdCheckpointSaveData.SavedField.SPAWN_MODE));
+    }
+
+    @Test void checkpointZeroRestartAlsoCarriesTheSavedAndLiveOwnerUntilTheNewVisitWriters() {
+        var f=fixture();var owner=checkpointOwner();
+        var next=SonicCdGameModule.restartCarry(f.ring(),f.level(),f.contact(),f.score(),f.saved(),f.environment(),f.actor(),f.art(),f.powerup(),f.background(),cameraArt(),owner);
+        assertSame(owner,next.checkpointState());assertEquals(0,next.level().checkpoint());assertEquals(0,next.level().spawnMode());
+        assertEquals(0x12,next.cameraArt().sectionWord(),"existing checkpoint0 title-omitted DEV HIGH clear remains explicit");
+    }
+
+    @Test void checkpointRestartRejectsWarpBeforeReadingAnyUnknownSavedByteOrRetiringOwners() {
+        var f=fixture();var l=f.level();
+        var warp=new CdLevelGlobals(l.levelRestart(),0,2,2,l.plcLoadFlags(),0,2,0,0);
+        var unknown=new CdOpeningObjectRuntime.CheckpointOwnerState(CdCheckpointLiveAux.unknown(),CdCheckpointSaveData.State.unknown());
+        var failure=assertThrows(SonicCdGameModule.UnsupportedRestart.class,()->SonicCdGameModule.restartCarry(f.ring(),warp,f.contact(),f.score(),f.saved(),f.environment(),f.actor(),f.art(),f.powerup(),f.background(),cameraArt(),unknown));
+        assertEquals(SonicCdGameModule.RestartBoundary.RESTART_PATH,failure.boundary());
+        assertEquals(0,unknown.live().knownMask());
+    }
+
+    @Test void checkpointCarryRequiresItsOneExplicitSavedAndLivePartition() {
+        var f=fixture();
+        assertThrows(NullPointerException.class,()->SonicCdGameModule.restartCarry(f.ring(),f.level(),f.contact(),f.score(),f.saved(),f.environment(),f.actor(),f.art(),f.powerup(),f.background(),cameraArt(),null));
+    }
+
+    @Test void checkpointWithoutTitleLoadedBitStopsBeforeReadingUnknownSavedPayload() {
+        var f = fixture(); var l = f.level();
+        var unknown = new CdOpeningObjectRuntime.CheckpointOwnerState(
+                CdCheckpointLiveAux.unknown(), CdCheckpointSaveData.State.unknown());
+        for (int flags : new int[] {0, 1, 0xA1, 2}) {
+            var checkpoint = new CdLevelGlobals(1, l.updateHudTime(), 2, 1,
+                    flags, l.flowerCount(), l.fadeEnableDisplay(), l.powerup(), 0);
+            var failure = assertThrows(SonicCdGameModule.UnsupportedRestart.class, () ->
+                    SonicCdGameModule.restartCarry(f.ring(), checkpoint, f.contact(), f.score(), f.saved(),
+                            f.environment(), f.actor(), f.art(), f.powerup(), f.background(), cameraArt(), unknown));
+            assertEquals(SonicCdGameModule.RestartBoundary.RESTART_PATH, failure.boundary());
+        }
+        assertEquals(0, unknown.live().knownMask());
+        assertEquals(0, unknown.saved().knownMask().unsignedByte(0));
+    }
+
+    @Test void bothCarryPathsPreservePartialKnowledgeAndDeferTheNewVisitClears() {
+        var f = fixture(); var l = f.level();
+        byte[] raw = new byte[31]; byte[] mask = new byte[31];
+        raw[0] = (byte) 0x81; mask[0] = 1;
+        raw[1] = 0x12; mask[1] = 1;
+        var saved = CdCheckpointSaveData.State.supplied(CdAssetBytes.copyOf(raw), CdAssetBytes.copyOf(mask));
+        var live = CdCheckpointLiveAux.declaredDevIngress(
+                CdAssetBytes.copyOf(new byte[] {0, 5, 0, 0, 0, 0, 0x56, 0}), 0x42);
+        var owner = new CdOpeningObjectRuntime.CheckpointOwnerState(live, saved);
+        for (boolean checkpoint : new boolean[] {false, true}) {
+            var level = checkpoint ? new CdLevelGlobals(1, l.updateHudTime(), 2, 1,
+                    l.plcLoadFlags() | 2, l.flowerCount(), l.fadeEnableDisplay(), l.powerup(), 0) : l;
+            var next = SonicCdGameModule.restartCarry(f.ring(), level, f.contact(), f.score(), f.saved(),
+                    f.environment(), f.actor(), f.art(), f.powerup(), f.background(), cameraArt(), owner);
+            assertSame(owner, next.checkpointState());
+            assertSame(live, next.checkpointState().live());
+            assertSame(saved, next.checkpointState().saved());
+            assertEquals(0x42, next.checkpointState().live().knownMask());
+            assertEquals(0x81, next.checkpointState().saved().read(CdCheckpointSaveData.SavedField.SPAWN_MODE));
+            assertThrows(CdCheckpointSaveData.UnknownSavedByte.class,
+                    () -> next.checkpointState().saved().read(CdCheckpointSaveData.SavedField.PRIMARY_X));
+            assertThrows(CdCheckpointLiveAux.UnknownLiveByte.class,
+                    () -> CdCheckpointLiveAux.read(next.checkpointState().live(), CdCheckpointLiveAux.Field.TIME_LONG));
+            assertEquals(checkpoint ? f.ring().rings() : 0, next.ring().rings());
+            assertEquals(checkpoint ? l.updateHudTime() : 0, next.level().updateHudTime());
+        }
+    }
+
+
+    @Test void clearFlowersNewVisitResetsOnlyRingTimersAndTheFirstTailUsesTheClearedPhase() {
+        var before=new CdRingGlobals(0xFFFF,0xFF,0xA5,0x80,0x55,0xFFFF,8,2);
+        var cleared=SonicCdGameModule.clearFlowersRingGlobals(before);
+        assertEquals(new CdRingGlobals(0xFFFF,0xFF,0xA5,0x80,0x55,0,0,0),cleared);
+        var first=cleared.advanceGlobalRingAnimation();
+        assertEquals(7,first.ringAnimationTimer());assertEquals(1,first.ringAnimationFrame());assertEquals(0,first.timeStopTimer());
+        assertEquals(0xFFFF,before.timeStopTimer());assertEquals(8,before.ringAnimationTimer());assertEquals(2,before.ringAnimationFrame());
+        assertThrows(NullPointerException.class,()->SonicCdGameModule.clearFlowersRingGlobals(null));
+    }
+
+    private static CdOpeningObjectRuntime.CheckpointOwnerState checkpointOwner() {
+        return new CdOpeningObjectRuntime.CheckpointOwnerState(CdCheckpointLiveAux.declaredDevIngress(
+                CdAssetBytes.copyOf(new byte[]{(byte)0xDE,(byte)0xAD,(byte)0xBE,(byte)0xEF,0x12,0x34,0x56,(byte)0x9A}),0xFF),
+                CdCheckpointSaveData.State.unknown());
+    }
+
     private static SonicCdGameModule.RestartCarry carry(Fixture f) {
         return SonicCdGameModule.restartCarry(f.ring(), f.level(), f.contact(), f.score(), f.saved(),
-                f.environment(), f.actor(), f.art(), f.powerup(), f.background(), cameraArt());
+                f.environment(), f.actor(), f.art(), f.powerup(), f.background(), cameraArt(), checkpointOwner());
     }
     private static Fixture fixture() {
         var motion = new CdPlayerMotionState(0x12345678, 0x76543210, 11, 22, 33, 8, 4, 2, 4,
@@ -163,7 +270,7 @@ class TestSonicCdRestartCarry {
     @Test void restartCarriesCurrentCameraBytesAndNemesisTableButClearsOnlySectionHighByte() {
         var f = fixture(); var input = cameraArt();
         var next = SonicCdGameModule.restartCarry(f.ring(),f.level(),f.contact(),f.score(),f.saved(),
-                f.environment(),f.actor(),f.art(),f.powerup(),f.background(),input);
+                f.environment(),f.actor(),f.art(),f.powerup(),f.background(),input, checkpointOwner());
         assertSame(input.residency(),next.cameraArt().residency());
         assertArrayEquals(input.codeTable512().copy(),next.cameraArt().codeTable512().copy());
         assertEquals(0x12,next.cameraArt().sectionWord());
@@ -177,7 +284,7 @@ class TestSonicCdRestartCarry {
     @Test void currentCameraRestartRequiresExplicitCompleteIngressWithoutColdFallback() {
         var f=fixture();var input=cameraArt();
         assertThrows(NullPointerException.class,()->SonicCdGameModule.restartCarry(f.ring(),f.level(),f.contact(),f.score(),f.saved(),
-                f.environment(),f.actor(),f.art(),f.powerup(),f.background(),null));
+                f.environment(),f.actor(),f.art(),f.powerup(),f.background(),null, checkpointOwner()));
         for(int length:new int[]{0,511,513}) assertThrows(IllegalArgumentException.class,()->
                 new CdOpeningObjectRuntime.CameraArtRestartIngress(input.residency(),bytes(length,0),0));
         for(int word:new int[]{-1,0x10000}) assertThrows(IllegalArgumentException.class,()->

@@ -71,6 +71,14 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+A device-time sound ledger may already contain the completed Body prefix
+(2026-10-25, CD Checkpoint). A no-FM or failed-save assertion must preserve that
+prefix and reject additional device requests, not require an empty ledger or
+clear legitimate prior sounds. Native DrawObject also masks priority to three
+bits and only enqueues: priorityFF is valid, while a malformed mapping frame is
+reached later in DrawObjects. Keep failure tests at their actual source phase;
+do not add production validation to make an invented boundary throw.
+
 A flipped object can change the collision entry and allocation timing (2026-10-25,
 CD Spikes). Upright collision0 reaches direct Hurt after Solid in physical40,
 after free physical32 was visited. Vertical collision83 reaches Body scanner

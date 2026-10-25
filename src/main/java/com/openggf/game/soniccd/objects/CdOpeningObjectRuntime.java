@@ -45,19 +45,19 @@ import static com.openggf.game.soniccd.objects.CdObjectState.WordField.*;
  * <p>Explicit DEV policy: USA R11A Present, goodFuture=0, projDestroyed=0, and
  * an actual reserved bank 1..31 at the declared DEV ClearObjects-equivalent cut,
  * initially zero CPU SAT/empty picture, and preloaded actual
- * Ring/Mosqui/3D-plant/3D-ramp-booster/explosion/points/flower/Floating-Block/normal-Spring/shared-horizontal-and-vertical-Tunnel-Door/Monitor-time/Boulder/diagonal-Spring/common-Spikes art (the inert Animal path draws nothing).
+ * Ring/Mosqui/3D-plant/3D-ramp-booster/explosion/points/flower/Floating-Block/normal-Spring/shared-horizontal-and-vertical-Tunnel-Door/Monitor-time/Boulder/diagonal-Spring/common-Spikes/Checkpoint art (the inert Animal path draws nothing).
  * The 36-tile powerup window starts cold zero and changes only at the selector-8 LoadShieldArt cut.
  * The initial Ring, contact, score and level globals are caller-declared DEV ingress, never an entry proof.
  * Live dynamic IDs $10 Ring, $11 LostRing, $3D Mosqui, $3E Pata-Bata, $24 Animal, $2C 3D plant and $2A 3D ramp,
  * aftermath IDs $18/$1C/$1F, $12 Floating Block, normal and diagonal $0A Spring, $34 Spin tunnel tag, $0D horizontal Door,
- * $35 vertical Tunnel Door, $1B Boulder, $26 common Spikes, $19 Monitor/Time Post and $1A shoes item and the death row's $3B Game/Time Over are owned.
+ * $35 vertical Tunnel Door, $1B Boulder, $26 common Spikes, $13 Checkpoint, $19 Monitor/Time Post and $1A shoes item and the death row's $3B Game/Time Over are owned.
  * The zero reserved bank is NOT post-native HUD/title initialization: later native owners of slots 2..31
  * (Level/Main.asm:261-274) remain omitted by this DEV policy. Primary slot 0 stays exclusively in Frame;
  * dynamic slots 32..127 stay exclusively in placement's existing pool. ID $0B splash execution stays unowned.
  * Every other ID fails at its live dispatch; standing-object MODE remains a typed player boundary.
  * Time Post activation submits only typed voice metadata; the next actual Main retains Movement's
  * TIME_WARP_ACTIVE boundary. Bounded current-camera PLC requests/preparation/service use the actual plan and
- * nine finite sources, with one immutable resident generation; later unowned producers stop when reached.
+ * ten finite sources, with one immutable resident generation; later unowned producers stop when reached.
  * This does not execute native title/HUD/immediate-PLC prehistory, palette cycling or audio playback.
  * The loader, not declarations or this composition, authenticates asset bytes.</p>
  *
@@ -78,7 +78,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
 
     /**
      * Stable bases in ONE root-governed atlas range exclusive to this picture.
-     * Root reserves/binds its sixteen disjoint subdivisions; this value neither
+     * Root reserves/binds its seventeen disjoint subdivisions; this value neither
      * claims graphics ownership nor recommends the arbitrary IDs used by tests.
      * The three-argument form derives the sequential frontier spans the production
      * module uses: plant = mosqui + 70 and ramp = plant + 28.
@@ -91,10 +91,18 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
      * then the 19-tile Boulder span follows Monitor/time (native $374..$386),
      * then the 46-tile diagonal Spring span follows Boulder (native $490..$4BD),
      * then the 8-tile common Spikes span follows diagonal Spring (native $320..$327),
-     * for 567 patterns in all. The canonical form takes all sixteen bases explicitly.
+     * then the 12-tile Checkpoint span follows Spikes (native $6CB..$6D6),
+     * for 579 patterns in all. The canonical form takes all seventeen bases explicitly.
      */
     public record LogicalBanks(int player, int ring, int mosqui, int plant, int ramp,
-                               int explosion, int points, int flower, int powerup, int floatBlock, int spring, int tunnelDoorVertical, int monitorTime, int boulder, int diagonalSpring, int spikes) {
+                               int explosion, int points, int flower, int powerup, int floatBlock, int spring, int tunnelDoorVertical, int monitorTime, int boulder, int diagonalSpring, int spikes, int checkpoint) {
+        /** Compatibility16 preserves every explicit old base; native Checkpoint adds twelve output patterns. */
+        public LogicalBanks(int player, int ring, int mosqui, int plant, int ramp, int explosion, int points,
+                            int flower, int powerup, int floatBlock, int spring, int tunnelDoorVertical, int monitorTime,
+                            int boulder, int diagonalSpring, int spikes) {
+            this(player, ring, mosqui, plant, ramp, explosion, points, flower, powerup, floatBlock, spring,
+                    tunnelDoorVertical, monitorTime, boulder, diagonalSpring, spikes, spikes + 8);
+        }
         public LogicalBanks(int player, int ring, int mosqui) {
             this(player, ring, mosqui, mosqui + 70, mosqui + 70 + 28);
         }
@@ -163,6 +171,43 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         }
     }
 
+    /** One value partition; independent live-input and saved-byte owners retain their knowledge exactly. */
+    public record CheckpointOwnerState(CdCheckpointLiveAux.State live, CdCheckpointSaveData.State saved) {
+        public CheckpointOwnerState {
+            Objects.requireNonNull(live, "actual checkpoint live bytes and knowledge");
+            Objects.requireNonNull(saved, "actual checkpoint saved bytes and knowledge");
+        }
+    }
+
+    /**
+     * Reached scalar reads from Root's actual owners, synchronous and non-mutating.
+     * Only the eight FG/BG selectors enter readCameraWord. Only actual whole0 byte offsets0..63
+     * enter readPrimaryByte; an unrepresented byte throws CdCheckpoint.UnownedParentByte.
+     * No closed-cut capture, source fallback, aggregate RAM or implicit zero is authorized.
+     */
+    public interface CheckpointReads {
+        int readCameraWord(CdCheckpointSaveData.Source source);
+        int readPrimaryByte(int byteOffset);
+    }
+
+    /**
+     * Required declared ingress. Optional loadSectionCameraX is the actual post-load-scroll WORD
+     * at PP Load Level Data.asm:37-39 -> LoadSectionArt (Section Art Load.asm:7-22), not inferred
+     * from final checkpoint/spawn bytes. Empty explicitly omits that native load branch under DEV.
+     * Present admits one HIGH-byte store plus LoadPLC append only, not WaitPLC/title/fade completion.
+     */
+    public record CheckpointBindings(CheckpointOwnerState initial, CheckpointReads reads,
+                                     OptionalInt loadSectionCameraX) {
+        public CheckpointBindings {
+            Objects.requireNonNull(initial, "required initial checkpoint owner value");
+            Objects.requireNonNull(reads, "required actual checkpoint read bridges");
+            Objects.requireNonNull(loadSectionCameraX, "explicit presence of load-time section operation");
+            if (loadSectionCameraX.isPresent() && (loadSectionCameraX.getAsInt() & ~0xFFFF) != 0) {
+                throw new IllegalArgumentException("LoadSectionArt requires an unsigned camera X WORD");
+            }
+        }
+    }
+
     /**
      * Explicit DEV globals this composition owns because no native writer is admitted:
      * goodFuture (Object Time Check.asm:12-44, Animal/Main.asm via CheckAnimalPrescence)
@@ -224,7 +269,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     }
 
     /** Ordered requests only, no playback and no claim to the omitted service/music ledger. */
-    public sealed interface SoundRequest permits PlayerSound, RingFm, RingSubCpu, MosquiFm, LostRingFm, GameOverSubCpu, SpringFm, TunnelDoorVerticalFm, TunnelDoorFm, MonitorFm, MonitorItemSubCpu, TimePostSubCpu { }
+    public sealed interface SoundRequest permits PlayerSound, RingFm, RingSubCpu, MosquiFm, LostRingFm, GameOverSubCpu, SpringFm, TunnelDoorVerticalFm, TunnelDoorFm, MonitorFm, MonitorItemSubCpu, TimePostSubCpu, CheckpointFm { }
     public record PlayerSound(CdPlayerFrameRuntime.Sound sound) implements SoundRequest {
         public PlayerSound { Objects.requireNonNull(sound, "player sound"); }
     }
@@ -264,6 +309,10 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     public record TimePostSubCpu(CdTimePost.SubCpuCommand command) implements SoundRequest {
         public TimePostSubCpu { Objects.requireNonNull(command, "Time Post sub-CPU command"); }
     }
+    /** Checkpoint's completed synchronous FM_AE request, metadata only; no driver execution or replay. */
+    public record CheckpointFm(CdCheckpoint.FmSound sound) implements SoundRequest {
+        public CheckpointFm { Objects.requireNonNull(sound, "Checkpoint FM sound"); }
+    }
     /** ObjGameOver's SubCPUCmd requests (Game Over/Main.asm:28-29,87-88); no handshake, PCM fade or music. */
     public record GameOverSubCpu(CdGameOver.SubCpuCommand command) implements SoundRequest {
         public GameOverSubCpu { Objects.requireNonNull(command, "Game Over sub-CPU command"); }
@@ -294,6 +343,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         private final CdLevelGlobals levelGlobals;
         private final CdPowerupArtRuntime.State powerupArtState;
         private final CdR11aSectionArt.State sectionArtState;
+        private final CheckpointOwnerState checkpointState;
 
         private Snapshot(Object owner, CdObjectPlacementRuntime.Snapshot placement, CdReservedObjectBank.Snapshot reserved,
                          CdRingGlobals ringGlobals,
@@ -302,7 +352,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                          List<SoundRequest> sounds, DevGlobals devGlobals,
                          CdPlayerBody.ContactGlobals contactGlobals, ScoreGlobals scoreGlobals,
                          CdLevelGlobals levelGlobals, CdPowerupArtRuntime.State powerupArtState,
-                         CdR11aSectionArt.State sectionArtState) {
+                         CdR11aSectionArt.State sectionArtState, CheckpointOwnerState checkpointState) {
             this.owner = owner;
             this.placement = placement;
             this.reserved = reserved;
@@ -317,6 +367,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
             this.levelGlobals = levelGlobals;
             this.powerupArtState = powerupArtState;
             this.sectionArtState = sectionArtState;
+            this.checkpointState = checkpointState;
         }
         public CdObjectPlacementRuntime.Snapshot placement() { return placement; }
         /** Immutable reserved partition for Root's full closed-cut comparator; no live bank or helper cut. */
@@ -329,6 +380,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         public CdLevelGlobals levelGlobals() { return levelGlobals; }
         public CdPowerupArtRuntime.State powerupArtState() { return powerupArtState; }
         public CdR11aSectionArt.State sectionArtState() { return sectionArtState; }
+        public CheckpointOwnerState checkpointState() { return checkpointState; }
         public SpritePresentation.Frame displayedFrame() { return displayedFrame; }
         public List<SoundRequest> lastSoundRequests() { return sounds; }
     }
@@ -354,6 +406,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     private final CdGameOver gameOver;
     private final CdBoulder boulder;
     private final CdSpikes spikes;
+    private final CdCheckpoint checkpoint;
+    private final CheckpointReads checkpointReads;
     private final CdFloatBlock floatBlock;
     private final CdSpring spring;
     private final CdTunnelDoorVertical tunnelDoorVertical;
@@ -381,6 +435,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     private CdPlayerBody.ContactGlobals contactGlobals;
     private ScoreGlobals scoreGlobals;
     private CdLevelGlobals levelGlobals;
+    // Sole mutable checkpoint value; no Frame/camera/pause/clock or duplicate saved-object bank.
+    private CheckpointOwnerState checkpointState;
     // The one owned LoadShieldArt window; only the selector-8 V-int cut and restore replace this immutable value.
     private CdPowerupArtRuntime.State powerupArtState;
     // ONE camera-art aggregate; service/tail/restore replace it, never a separate resident or PLC store.
@@ -409,6 +465,14 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     private boolean inMonitorAward;
     private boolean inTimePostDirection;
     private boolean inTimePostSubCpu;
+    // Ephemeral callback validation only; cleared in runCheckpoint finally, never captured/replayed.
+    private boolean inCheckpointDispatch;
+    private int checkpointGlobalStores;
+    private CdObjectState checkpointActivationSource;
+    private CdLevelGlobals checkpointActivationLevel;
+    private boolean checkpointSaveCompleted;
+    private boolean checkpointFmRequested;
+    private CdCheckpointSaveData.State checkpointSavedAtCompletion;
     private int dispatchWholeIndex = -1;
 
     /**
@@ -434,17 +498,19 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     public static CdOpeningObjectRuntime usaR11aOpeningDevEmptySatPreloadedArt(
             CdR11aAssets assets, CdPlayerFrameRuntime frame, CdRingGlobals initialGlobals,
             CdPlayerBody.ContactGlobals initialContact, ScoreGlobals initialScore, CdLevelGlobals initialLevel,
+            CheckpointBindings checkpointBindings,
             byte[] initialCpuSatBytes, LogicalBanks banks, CameraWords preScrollForeground,
             PrimaryAngleWrite primaryAngleWrite) throws IOException {
         // The cold DEV window above: .ClearFlowers zeroes the complete CPU buffer, InitVDP's fill its resident copy.
-        return create(assets, frame, initialGlobals, initialContact, initialScore, initialLevel,
+        return create(assets, frame, initialGlobals, initialContact, initialScore, initialLevel, checkpointBindings,
                 CdObjectPlacementRuntime::fromAssets, new CdPowerupArtRuntime.State(new byte[0x480], new byte[0x480]),
                 null, initialCpuSatBytes, banks, preScrollForeground, primaryAngleWrite);
     }
 
     /**
-     * Restart sibling of the factory above for Root's in-module LevelStart reconstruction (lives != 0, no checkpoint,
-     * present: Level/Main.asm:19-329). Same arguments, order and validation, plus two explicit immutable carry windows
+     * Restart sibling for Root's explicitly admitted in-module LevelStart reconstruction
+     * (Level/Main.asm:19-329). Checkpoint live/saved bytes are carried exactly; Root owns the native clear/load branches.
+     * Same arguments, order and validation, plus two explicit immutable carry windows
      * and no defaults. initialSavedObjectFlags is the exact carried savedObjFlags bank, through the placement's restart
      * ingress. initialPowerup is the complete LoadShieldArt window: .ClearFlowers zeroes its CPU buffer (:178-184),
      * ClearScreen leaves VRAM $A880 (Level/Functions (General).asm:182-228) and :312's LoadShieldArt returns at once
@@ -452,19 +518,21 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
      * Required cameraArt carries current camera bytes, last represented table and raw section WORD verbatim.
      * Its new owner clears only CPU queue/decoder/count/budget/hint/pad; no cold fallback, implicit HIGH reset,
      * load/fade/title or immediate PLC3/Std1 history is invented. Its table is not asserted to be the native Ring
-     * table after unrepresented LoadPLCImm. All sixteen spans/current drawable tiles validate before construction,
-     * even for an empty SAT. Installs supplied windows only: no service/upload/replay.
+     * table after unrepresented LoadPLCImm. All seventeen spans/current drawable tiles validate before construction,
+     * even for an empty SAT. Installs supplied windows and explicitly selected LoadSectionArt metadata only:
+     * no service/upload/replay or invented WaitPLC/title/fade completion.
      */
     public static CdOpeningObjectRuntime usaR11aRestartDevEmptySatPreloadedArt(
             CdR11aAssets assets, CdPlayerFrameRuntime frame, CdRingGlobals initialGlobals,
             CdPlayerBody.ContactGlobals initialContact, ScoreGlobals initialScore, CdLevelGlobals initialLevel,
+            CheckpointBindings checkpointBindings,
             CdAssetBytes initialSavedObjectFlags, CdPowerupArtRuntime.State initialPowerup,
             CameraArtRestartIngress cameraArt, byte[] initialCpuSatBytes, LogicalBanks banks, CameraWords preScrollForeground,
             PrimaryAngleWrite primaryAngleWrite) throws IOException {
         Objects.requireNonNull(initialSavedObjectFlags, "explicit carried saved-object bank");
         Objects.requireNonNull(initialPowerup, "explicit restart powerup CPU/resident windows");
         Objects.requireNonNull(cameraArt, "required explicit restart current-camera carry");
-        return create(assets, frame, initialGlobals, initialContact, initialScore, initialLevel,
+        return create(assets, frame, initialGlobals, initialContact, initialScore, initialLevel, checkpointBindings,
                 source -> CdObjectPlacementRuntime.fromAssets(source, initialSavedObjectFlags), initialPowerup,
                 cameraArt, initialCpuSatBytes, banks, preScrollForeground, primaryAngleWrite);
     }
@@ -479,6 +547,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     private static CdOpeningObjectRuntime create(
             CdR11aAssets assets, CdPlayerFrameRuntime frame, CdRingGlobals initialGlobals,
             CdPlayerBody.ContactGlobals initialContact, ScoreGlobals initialScore, CdLevelGlobals initialLevel,
+            CheckpointBindings checkpointBindings,
             Function<CdR11aAssets, CdObjectPlacementRuntime> placementIngress, CdPowerupArtRuntime.State initialPowerup,
             CameraArtRestartIngress cameraArt, byte[] initialCpuSatBytes, LogicalBanks banks, CameraWords preScrollForeground,
             PrimaryAngleWrite primaryAngleWrite) throws IOException {
@@ -488,6 +557,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         Objects.requireNonNull(initialContact, "explicit initial contact bytes");
         Objects.requireNonNull(initialScore, "explicit initial score globals");
         Objects.requireNonNull(initialLevel, "explicit initial level globals");
+        Objects.requireNonNull(checkpointBindings, "required actual checkpoint owner/read/load bindings");
         Objects.requireNonNull(banks, "explicit logical bank bases");
         Objects.requireNonNull(preScrollForeground, "explicit pre-scroll foreground");
         Objects.requireNonNull(primaryAngleWrite, "required existing shared primaryAngle writer");
@@ -511,7 +581,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         // SAME authenticated object owner/source bank: reuse its actual seed decodes; never reopen via fromAssets.
         var sourceBank = objects.sectionArtSources();
         var plan = assets.loadPlan();
-        if (sourceBank.sources().size() != 9) throw new IllegalArgumentException("Nine reviewed camera source views required");
+        if (sourceBank.sources().size() != 10) throw new IllegalArgumentException("Ten reviewed camera source views required");
         var programs = new ArrayList<CdR11aSectionArt.SourceProgram>();
         for (var source : sourceBank.sources()) {
             var entry = source.canonicalPlc(); var reader = source.readerInputRange(); var blob = entry.sourceRange();
@@ -544,7 +614,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                 throw new IllegalArgumentException("Boulder DEV preload requires the actual canonical PLC2 row0 nineteen tiles");
             }
             // PLC_Cam1_Full row0 (Palmtree Panic/Data (Act 1 Present).asm:85-88): explicit DEV preload,
-            // exactly nineteen complete tile writes from the SAME authenticated nine-source bank. No PLC
+            // exactly nineteen complete tile writes from the SAME authenticated ten-source bank. No PLC
             // execution/decoder/table/count/history is fabricated; Animals and all adjacent gaps stay UNKNOWN.
             var decoded = source.decode().bytes();
             for (int offset = 0; offset < decoded.length(); offset += 32) {
@@ -579,25 +649,42 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                 resident = CdR11aCameraArtResidency.writeTile(resident,
                         spikesSource.canonicalPlc().vramAddress() + offset, spikesDecoded.slice(offset, 32));
             }
+            // PLC_Level row1 (Data (Act 1 Present).asm:47-52). Cold DEV ONLY, AFTER all old writes.
+            // SAME retained ten-source bank and cached actual decode; exactly twelve complete writes.
+            var checkpointSource = sourceBank.source(CdR11aAsset.ART_CHECKPOINT);
+            var checkpointDecoded = checkpointSource.decode().bytes();
+            if (checkpointSource.canonicalPlcId() != 0 || checkpointSource.canonicalRowIndex() != 1
+                    || checkpointSource.canonicalPlc().vramAddress() != 0xD960 || checkpointSource.tileCount() != 12
+                    || checkpointDecoded.length() != 384) {
+                throw new IllegalArgumentException("Checkpoint DEV preload requires actual canonical PLC0 row1 twelve tiles");
+            }
+            for (int offset = 0; offset < checkpointDecoded.length(); offset += 32) {
+                resident = CdR11aCameraArtResidency.writeTile(resident,
+                        checkpointSource.canonicalPlc().vramAddress() + offset, checkpointDecoded.slice(offset, 32));
+            }
             initialSectionArt = sectionArt.devState(resident, CdAssetBytes.copyOf(new byte[512]), 0);
         } else {
             initialSectionArt = sectionArt.devState(cameraArt.residency(), cameraArt.codeTable512(), cameraArt.sectionWord());
+        }
+        // Actual selected load operation, once, AFTER adopting carry verbatim. No prepare/decode/service/write.
+        if (checkpointBindings.loadSectionCameraX().isPresent()) {
+            initialSectionArt = sectionArt.loadSection(initialSectionArt, checkpointBindings.loadSectionCameraX().getAsInt());
         }
         var placement = placementIngress.apply(assets);
         // Actual declared DEV ClearObjects-equivalent ingress for cold AND restart, never a restore default.
         var reserved = CdReservedObjectBank.clearedAfterLevelStart();
         var mappings = CdObjectMappings.fromOpeningAssets(assets, objects);
-        // Validate all sixteen physical/logical spans (567 patterns), including overlaps and empty SAT admission.
+        // Validate all seventeen physical/logical spans (579 patterns), including overlaps and empty SAT admission.
         CdObjectPresentation.usaR11aCurrentCameraDevPreloadedArt(frame.artState(), initialPowerup, objects, frontier, contact,
                 floatBlockArt, springArt, tunnelDoorArt, monitorTimeArt, initialSectionArt.residency(), banks.player(), banks.ring(), banks.mosqui(), banks.plant(), banks.ramp(),
-                banks.explosion(), banks.points(), banks.flower(), banks.powerup(), banks.floatBlock(), banks.spring(), banks.tunnelDoorVertical(), banks.monitorTime(), banks.boulder(), banks.diagonalSpring(), banks.spikes());
-        return new CdOpeningObjectRuntime(assets, frame, initialGlobals, initialContact, initialScore, initialLevel, initial,
+                banks.explosion(), banks.points(), banks.flower(), banks.powerup(), banks.floatBlock(), banks.spring(), banks.tunnelDoorVertical(), banks.monitorTime(), banks.boulder(), banks.diagonalSpring(), banks.spikes(), banks.checkpoint());
+        return new CdOpeningObjectRuntime(assets, frame, initialGlobals, initialContact, initialScore, initialLevel, checkpointBindings, initial,
                 banks, preScrollForeground, primaryAngleWrite, objects, frontier, contact, floatBlockArt, springArt, tunnelDoorArt, monitorTimeArt, placement, reserved, mappings, initialPowerup, sectionArt, initialSectionArt);
     }
 
     private CdOpeningObjectRuntime(CdR11aAssets assets, CdPlayerFrameRuntime frame, CdRingGlobals initialGlobals,
                                    CdPlayerBody.ContactGlobals initialContact, ScoreGlobals initialScore,
-                                   CdLevelGlobals initialLevel, byte[] initial, LogicalBanks banks, CameraWords camera,
+                                   CdLevelGlobals initialLevel, CheckpointBindings checkpointBindings, byte[] initial, LogicalBanks banks, CameraWords camera,
                                    PrimaryAngleWrite primaryAngleWrite, CdR11aObjectAssets objects,
                                    CdR11aObjectAssets.FrontierArtBank frontier,
                                    CdR11aObjectAssets.ContactArtBank contact,
@@ -625,6 +712,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         contactGlobals = initialContact;
         scoreGlobals = initialScore;
         levelGlobals = initialLevel;
+        checkpointState = checkpointBindings.initial(); // Adopt exact supplied bytes AND knowledge; no clear/time-zero guess.
+        checkpointReads = checkpointBindings.reads();
         powerupArtState = initialPowerup;
         this.sectionArt = sectionArt;
         sectionArtState = initialSectionArt;
@@ -668,6 +757,16 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         spikes = new CdSpikes(placement, CdSpikes.BodyAssets.fromObjectAssets(objects), solid,
                 this::commitSpikesSolid, this::commitSpikesYRewind, this::commitSpikesHurt,
                 (pool, slot) -> drawDynamic(pool, slot.wholeIndex()));
+        checkpoint = new CdCheckpoint(placement,
+                CdCheckpoint.Assets.fromObjectAssets(objects, new CdPlayerMath(assets.player())),
+                new CdCheckpoint.GlobalPort() {
+                    @Override public CdLevelGlobals current() { return readCheckpointLevel(); }
+                    @Override public void commit(CdCheckpoint.GlobalCall call) { commitCheckpointGlobal(call); }
+                    @Override public int readParentByte(int rawAddressBits) { return readCheckpointParentByte(rawAddressBits); }
+                }, new CdCheckpoint.SaveDataPort() {
+                    @Override public CdCheckpointSaveData.State currentState() { return currentCheckpointSavedState(); }
+                    @Override public CdCheckpointSaveData.Result save(CdCheckpoint.SaveCall call) { return saveCheckpoint(call); }
+                }, this::playCheckpointFm, (pool, slot) -> drawDynamic(pool, slot.wholeIndex()));
         floatBlock = new CdFloatBlock(placement, CdFloatBlock.Assets.fromObjectAssets(objects),
                 solid, this::commitTopSolid,
                 (pool, slot) -> drawDynamic(pool, slot.wholeIndex()));
@@ -729,6 +828,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     public CdPowerupArtRuntime.State powerupArtState() { return powerupArtState; }
     /** Exact immutable camera queue/table/decoder/residency aggregate; diagnostic access survives a typed stop. */
     public CdR11aSectionArt.State sectionArtState() { return sectionArtState; }
+    public CheckpointOwnerState checkpointState() { return checkpointState; }
     public List<SoundRequest> lastSoundRequests() { return sounds; }
 
     /** Supply the NEXT ordinary cycle's actual pre-scroll camera before preparing Frame input. */
@@ -789,7 +889,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                 var pixels = CdObjectPresentation.usaR11aCurrentCameraDevPreloadedArt(frame.artState(), powerupArtState,
                         objects, frontierArt, contactArt, floatBlockArt, springArt, tunnelDoorArt, monitorTimeArt, sectionArtState.residency(),
                         banks.player(), banks.ring(), banks.mosqui(), banks.plant(), banks.ramp(), banks.explosion(), banks.points(),
-                        banks.flower(), banks.powerup(), banks.floatBlock(), banks.spring(), banks.tunnelDoorVertical(), banks.monitorTime(), banks.boulder(), banks.diagonalSpring(), banks.spikes());
+                        banks.flower(), banks.powerup(), banks.floatBlock(), banks.spring(), banks.tunnelDoorVertical(), banks.monitorTime(), banks.boulder(), banks.diagonalSpring(), banks.spikes(), banks.checkpoint());
                 var nextDisplay = CdObjectPresentation.convert(queue.cpuSat(), pixels);
                 checkActive(Phase.SERVICING);
                 displayed = nextDisplay;
@@ -1195,6 +1295,11 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                     spikes.run(whole, new CdSpikes.Globals(gates.timeZone(), gates.timeWarpDirection(),
                             preScrollForeground.xWord()), new CdSpikes.Inputs(solidPlayer(), solidGates(), solidGlobals(),
                             spikesPlayerGlobals(), spikesWorldGlobals()));
+                } else if (id == CdCheckpoint.OBJECT_ID) {
+                    // Live actual ID13; raw native despawn globals and pre-scroll FG, no activation/visibility gate.
+                    // The body owns children/object stores; global/save/FM ports publish synchronously.
+                    // Never replay ChildCreated, GlobalStored, SaveCompleted or any completed metadata.
+                    runCheckpoint(whole);
                 } else if (id == CdBoulder.OBJECT_ID) {
                     // ObjBoulder_Main (Boulder/Main.asm:41-48) reads the actual primary at this physical
                     // visit; its own sprite sign is the only outer Solid gate. No good-future/route gate.
@@ -1293,7 +1398,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     public Snapshot captureClosedCut() {
         requireCut();
         return new Snapshot(captureOwner, placement.capture(), reserved.capture(), ringGlobals, spillGlobals, queue.captureClosedCut(), displayed, sounds,
-                devGlobals, contactGlobals, scoreGlobals, levelGlobals, powerupArtState, sectionArtState);
+                devGlobals, contactGlobals, scoreGlobals, levelGlobals, powerupArtState, sectionArtState, checkpointState);
     }
 
     /** Pure partition preflight. A foreign snapshot rejects before any owned partition is changed. */
@@ -1323,6 +1428,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         // be supplied independently through this API. Authenticate the whole partition before any write.
         // Never call prepare/service/update/decode/queue here merely to validate a restore.
         Objects.requireNonNull(snapshot.sectionArtState, "captured current-camera aggregate");
+        Objects.requireNonNull(snapshot.checkpointState, "captured checkpoint owner value");
     }
 
     /** Prevalidates ALL owned partitions; no service/body/queue draw/pixels/sound/initialization is replayed. */
@@ -1343,6 +1449,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
             levelGlobals = snapshot.levelGlobals;
             powerupArtState = snapshot.powerupArtState; // Exactly the captured window: no cold reset or load replay.
             sectionArtState = snapshot.sectionArtState; // ONE exact immutable aggregate, no prepare/decode/queue replay.
+            checkpointState = snapshot.checkpointState; // Authenticated captureOwner first, then exact value; no save/tick/clear/FM.
             displayed = snapshot.displayedFrame;
             sounds = snapshot.sounds;
             expectedPlayerCut = null;
@@ -1382,6 +1489,338 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
      * runs between its complete preflight and object/player publication. The optional DrawObject and mandatory
      * reloaded CheckObjDespawn tail are later cuts: a failure there retains the already completed prefix.
      */
+
+    /** One real physical body call, never an effect replay or a retained callback entitlement. */
+    private void runCheckpoint(int whole) {
+        checkActive(Phase.DYNAMIC_SLOTS);
+        if (inCheckpointDispatch || whole != dispatchWholeIndex) {
+            throw new IllegalStateException("Checkpoint must run at its one current physical visit");
+        }
+        resetCheckpointDispatch();
+        inCheckpointDispatch = true;
+        try {
+            var gates = frame.environment().movement().gates();
+            checkpoint.run(whole, new CdCheckpoint.DespawnGlobals(gates.timeZone(),
+                    gates.timeWarpDirection(), preScrollForeground.xWord()));
+        } finally {
+            resetCheckpointDispatch();
+        }
+    }
+
+    private void resetCheckpointDispatch() {
+        inCheckpointDispatch = false;
+        checkpointGlobalStores = 0;
+        checkpointActivationSource = null;
+        checkpointActivationLevel = null;
+        checkpointSaveCompleted = false;
+        checkpointFmRequested = false;
+        checkpointSavedAtCompletion = null;
+    }
+
+    /** Reuses the existing shared Solid flag, so every old callback and DrawObject rejects nested entry. */
+    private void requireCheckpointCallbackCut() {
+        checkActive(Phase.DYNAMIC_SLOTS);
+        if (inDrawCallback || inSolidCommit || inSpringLaunch || inSpinTunnelCommit || inTunnelDoorFm
+                || inHorizontalTunnelDoorSolid || inHorizontalTunnelDoorFm
+                || inMonitorAngle || inMonitorFm || inMonitorAward || inTimePostDirection || inTimePostSubCpu) {
+            throw new IllegalStateException("Checkpoint callbacks must be synchronous and non-reentrant");
+        }
+        requireCheckpointDispatch();
+    }
+
+    private CdObjectState requireCheckpointDispatch() {
+        checkActive(Phase.DYNAMIC_SLOTS);
+        if (!inCheckpointDispatch || dispatchWholeIndex < CdObjectPool.FIRST_WHOLE_INDEX
+                || dispatchWholeIndex >= CdObjectPool.END_WHOLE_INDEX) {
+            throw new IllegalStateException("No actual current Checkpoint dispatch");
+        }
+        var live = placement.pool().state(dispatchWholeIndex);
+        placement.pool().validateWrite(live);
+        if (live.id() != CdCheckpoint.OBJECT_ID) {
+            throw new IllegalStateException("Checkpoint callback requires the live bound ID13 source");
+        }
+        return live;
+    }
+
+    private CdLevelGlobals readCheckpointLevel() {
+        requireCheckpointCallbackCut();
+        return levelGlobals; // The actual existing level owner, never a projection or guessed Frame global.
+    }
+
+    /** ObjCheckpoint_Main:133-138: two instructions, two aggregate assignments, including same-value stores. */
+    private void commitCheckpointGlobal(CdCheckpoint.GlobalCall call) {
+        requireCheckpointCallbackCut();
+        inSolidCommit = true;
+        try {
+            Objects.requireNonNull(call, "actual reached Checkpoint global store");
+            var live = requireCheckpointDispatch();
+            placement.pool().validateWrite(call.expectedSourceObject());
+            requireCheckpointContactPrefix(live);
+            if (!live.equals(call.expectedSourceObject()) || !levelGlobals.equals(call.expectedLevel())
+                    || checkpointGlobalStores > 1 || checkpointSaveCompleted || checkpointFmRequested) {
+                throw new IllegalStateException("Stale Checkpoint source/level/store cut");
+            }
+            var g = levelGlobals;
+            CdLevelGlobals expected;
+            if (checkpointGlobalStores == 0 && call.field() == CdCheckpoint.GlobalField.CHECKPOINT) {
+                expected = new CdLevelGlobals(g.levelRestart(), g.updateHudTime(), live.subtype(), g.spawnMode(),
+                        g.plcLoadFlags(), g.flowerCount(), g.fadeEnableDisplay(), g.powerup(), g.timeOver());
+            } else if (checkpointGlobalStores == 1 && call.field() == CdCheckpoint.GlobalField.SPAWN_MODE
+                    && live.equals(checkpointActivationSource) && g.equals(checkpointActivationLevel)) {
+                expected = new CdLevelGlobals(g.levelRestart(), g.updateHudTime(), g.checkpoint(), 1,
+                        g.plcLoadFlags(), g.flowerCount(), g.fadeEnableDisplay(), g.powerup(), g.timeOver());
+            } else {
+                throw new IllegalStateException("Checkpoint globals require checkpoint then spawnMode, once each");
+            }
+            if (!expected.equals(call.finalLevel())) {
+                throw new IllegalArgumentException("Checkpoint native store may change only its addressed level byte");
+            }
+            // All preflight precedes this ONE native global publication; no external callback follows inside the guard.
+            levelGlobals = call.finalLevel();
+            checkpointActivationSource = live;
+            checkpointActivationLevel = call.finalLevel();
+            checkpointGlobalStores++;
+        } finally {
+            inSolidCommit = false;
+        }
+    }
+
+    private static void requireCheckpointContactPrefix(CdObjectState source) {
+        if (source.routine() != 2 || source.unsignedByte(CHECKPOINT_ACTIVE) != 1
+                || source.unsignedByte(COLLISION_TYPE) != 0 || source.unsignedByte(COLLISION_STATUS) == 0) {
+            throw new IllegalStateException("Checkpoint Main contact prefix has not reached its native global/save/FM cuts");
+        }
+    }
+
+    private CdObjectState requireCheckpointActivation() {
+        var live = requireCheckpointDispatch();
+        requireCheckpointContactPrefix(live);
+        if (checkpointGlobalStores != 2 || checkpointActivationSource == null || checkpointActivationLevel == null
+                || !live.equals(checkpointActivationSource) || !levelGlobals.equals(checkpointActivationLevel)
+                || levelGlobals.checkpoint() != live.subtype() || levelGlobals.spawnMode() != 1) {
+            throw new IllegalStateException("Checkpoint save/FM requires both completed ordered actual global stores");
+        }
+        return live;
+    }
+
+    private CdCheckpointSaveData.State currentCheckpointSavedState() {
+        requireCheckpointCallbackCut();
+        requireCheckpointActivation();
+        return checkpointState.saved();
+    }
+
+    /**
+     * ObjCheckpoint_SaveData (Checkpoint/Main.asm:18-43): exactly one helper execution over the actual saved owner.
+     * The local port checks reached source/store cursors, current source/global/Frame cut and saved expected-value CAS.
+     * No source snapshot is assembled in advance. A missing reached byte/camera preserves each earlier publication.
+     */
+    private CdCheckpointSaveData.Result saveCheckpoint(CdCheckpoint.SaveCall call) {
+        requireCheckpointCallbackCut();
+        inSolidCommit = true;
+        try {
+            Objects.requireNonNull(call, "actual reached Checkpoint save call");
+            var source = requireCheckpointActivation();
+            placement.pool().validateWrite(call.expectedSourceObject());
+            if (checkpointSaveCompleted || checkpointFmRequested || !source.equals(call.expectedSourceObject())
+                    || !levelGlobals.equals(call.expectedLevel()) || !checkpointState.saved().equals(call.expectedSaved())) {
+                throw new IllegalStateException("Stale Checkpoint save source/level/saved state");
+            }
+            // Values below guard callback consistency only. Each native input is still read fresh when reached.
+            var actor = frame.state();
+            var environment = frame.environment();
+            var live = checkpointState.live();
+            var expectedLevel = levelGlobals;
+            class SavePort implements CdCheckpointSaveData.Port {
+                private final CdCheckpointSaveData.Store[] stores = CdCheckpointSaveData.Store.values();
+                private CdCheckpointSaveData.State published = call.expectedSaved();
+                private int cursor;
+                private boolean awaitingStore;
+                private int reachedRaw;
+
+                private void verify() {
+                    verifyCheckpointSaveCut(source, expectedLevel, actor, environment, live);
+                    if (!published.equals(checkpointState.saved())) {
+                        throw new IllegalStateException("Actual Checkpoint saved owner differs from completed store prefix");
+                    }
+                }
+
+                @Override public CdCheckpointSaveData.State currentState() {
+                    verify();
+                    return checkpointState.saved();
+                }
+
+                @Override public int read(CdCheckpointSaveData.Source selector) {
+                    verify();
+                    Objects.requireNonNull(selector, "reached Checkpoint source");
+                    if (cursor >= stores.length || awaitingStore || selector != stores[cursor].source()) {
+                        throw new IllegalStateException("Checkpoint source read differs from native store cursor");
+                    }
+                    int value = switch (selector) {
+                        case SPAWN_MODE -> levelGlobals.spawnMode();
+                        case PRIMARY_X -> frame.state().motion().centreX16_16() >>> 16;
+                        case PRIMARY_Y -> frame.state().motion().centreY16_16() >>> 16;
+                        case BOTTOM_BOUND -> frame.environment().movement().bounds().bottom();
+                        case MINI_SONIC -> frame.environment().movement().gates().miniSonic();
+                        // Each reached read goes to the SAME live value owner. WATER_ROUTINE is reached TWICE.
+                        case WATER_ROUTINE -> CdCheckpointLiveAux.read(checkpointState.live(), CdCheckpointLiveAux.Field.WATER_ROUTINE);
+                        case WATER_HEIGHT2 -> CdCheckpointLiveAux.read(checkpointState.live(), CdCheckpointLiveAux.Field.WATER_HEIGHT2);
+                        case WATER_FULLSCREEN -> CdCheckpointLiveAux.read(checkpointState.live(), CdCheckpointLiveAux.Field.WATER_FULLSCREEN);
+                        case TIME_LONG -> CdCheckpointLiveAux.read(checkpointState.live(), CdCheckpointLiveAux.Field.TIME_LONG);
+                        // Actual pre-scroll Presentation words, never FG-only prepared camera, closed captures or DrawCopies.
+                        case FG_X, FG_Y, BG_X, BG_Y, BG2_X, BG2_Y, BG3_X, BG3_Y -> checkpointReads.readCameraWord(selector);
+                    };
+                    verify(); // Also catches a swallowed Runtime reentry, stale source, changed globals or Frame writes.
+                    requireCheckpointWidth(value, selector.width());
+                    reachedRaw = value;
+                    awaitingStore = true;
+                    return value;
+                }
+
+                @Override public void commit(CdCheckpointSaveData.StoreCall storeCall) {
+                    verify();
+                    Objects.requireNonNull(storeCall, "reached Checkpoint saved store");
+                    if (cursor >= stores.length || !awaitingStore || storeCall.store() != stores[cursor]
+                            || !published.equals(storeCall.expectedState())) {
+                        throw new IllegalStateException("Checkpoint saved store differs from native cursor or expected-state CAS");
+                    }
+                    int expectedRaw = reachedRaw;
+                    if (stores[cursor] == CdCheckpointSaveData.Store.TIME_LONG
+                            && Integer.compareUnsigned(expectedRaw, 0x00050000) >= 0) {
+                        // Native CMP/BCS then MOVE.L clamp; live time remains untouched (Checkpoint/Main.asm:35-40).
+                        expectedRaw = 0x00050000;
+                    }
+                    validateCheckpointSavedStore(storeCall, expectedRaw);
+                    var next = new CheckpointOwnerState(checkpointState.live(), storeCall.finalState());
+                    // ONE aggregate assignment per actual native saved store; every earlier known/unknown byte survives.
+                    checkpointState = next;
+                    published = storeCall.finalState();
+                    cursor++;
+                    awaitingStore = false;
+                }
+
+                private void finished(CdCheckpointSaveData.Result result) {
+                    verify();
+                    if (cursor != stores.length || awaitingStore || result == null
+                            || !result.state().equals(published)
+                            || !result.completedStores().equals(List.of(stores))) {
+                        throw new IllegalStateException("Checkpoint helper did not complete exactly eighteen native stores");
+                    }
+                }
+            }
+            var port = new SavePort();
+            var result = CdCheckpointSaveData.save(checkpointState.saved(), port);
+            port.finished(result); // Helper has returned; no completion entitlement exists on any thrown prefix.
+            checkpointSavedAtCompletion = result.state();
+            checkpointSaveCompleted = true; // Only now may the body's next synchronous FM request be admitted.
+            return result;
+        } finally {
+            inSolidCommit = false;
+        }
+    }
+
+    /** No captured Frame partition or closed-cut API: consistency checks on the exact live immutable values only. */
+    private void verifyCheckpointSaveCut(CdObjectState source, CdLevelGlobals level,
+                                         CdPlayerBody.State actor, CdPlayerBody.Environment environment,
+                                         CdCheckpointLiveAux.State live) {
+        if (!inSolidCommit || !requireCheckpointActivation().equals(source) || !levelGlobals.equals(level)
+                || !frame.state().equals(actor) || !frame.environment().equals(environment)
+                || !checkpointState.live().equals(live)) {
+            throw new IllegalStateException("Checkpoint save read/store changed the actual source/global/Frame/live cut");
+        }
+    }
+
+    /**
+     * Verify every one of the actual31 saved addresses, including knowledge. The destination word at1542
+     * overlaps routine1543; this verifies addressed bytes, never invents a separate height/routine shadow.
+     */
+    private static void validateCheckpointSavedStore(CdCheckpointSaveData.StoreCall call, int expectedRaw) {
+        if (call.rawValue() != expectedRaw) {
+            throw new IllegalArgumentException("Checkpoint saved store does not contain its reached native source/clamp value");
+        }
+        requireCheckpointWidth(expectedRaw, call.store().width());
+        int[] starts = {0xFF1523, 0xFF152A, 0xFF1530, 0xFF1591};
+        int[] lengths = {5, 4, 21, 1};
+        int first = call.store().nativeAddress();
+        int end = first + call.store().width();
+        for (int span = 0; span < starts.length; span++) {
+            for (int address = starts[span]; address < starts[span] + lengths[span]; address++) {
+                OptionalInt expected = address >= first && address < end
+                        ? OptionalInt.of((expectedRaw >>> (8 * (end - address - 1))) & 0xFF)
+                        : call.expectedState().knownByte(address);
+                if (!expected.equals(call.finalState().knownByte(address))) {
+                    throw new IllegalArgumentException("Checkpoint saved store changed an unaddressed value or knowledge byte");
+                }
+            }
+        }
+    }
+
+    private static void requireCheckpointWidth(int value, int width) {
+        if ((width == 1 && (value & ~0xFF) != 0) || (width == 2 && (value & ~0xFFFF) != 0)) {
+            throw new IllegalArgumentException("Checkpoint bridge/source exceeds its actual unsigned native width");
+        }
+    }
+
+    /** ObjCheckpoint_Main:140-143, exactly once after a fresh completed helper, before wrapper DrawObject. */
+    private void playCheckpointFm(CdCheckpoint.FmSound sound) {
+        requireCheckpointCallbackCut();
+        inSolidCommit = true;
+        try {
+            requireCheckpointActivation();
+            if (sound != CdCheckpoint.FmSound.FM_CHECKPOINT_AE || !checkpointSaveCompleted || checkpointFmRequested
+                    || checkpointSavedAtCompletion == null || !checkpointSavedAtCompletion.equals(checkpointState.saved())) {
+                throw new IllegalStateException("Checkpoint FM_AE requires this visit's successfully published native save");
+            }
+            appendSound(new CheckpointFm(sound)); // Typed ordered metadata; never an audio executor or a replay command.
+            checkpointFmRequested = true;
+            checkActive(Phase.DYNAMIC_SLOTS);
+        } finally {
+            inSolidCommit = false;
+        }
+    }
+
+    /**
+     * ObjCheckpoint_Ball:154-155 supplies FULL wrapping parent+2E bits. Resolve only the addressed24bit bus byte.
+     * Actual dynamic32..127 and reserved1..31 retain full64 bytes. No alignment, ID, parent lifetime or token gate.
+     * Primary0 reads only Root's actually represented bytes; no fabricated whole-player RAM exists here.
+     */
+    private int readCheckpointParentByte(int rawAddressBits) {
+        requireCheckpointCallbackCut();
+        inSolidCommit = true;
+        try {
+            var source = requireCheckpointDispatch();
+            var level = levelGlobals;
+            var actor = frame.state();
+            var environment = frame.environment();
+            var owner = checkpointState;
+            int bus = rawAddressBits & 0xFFFFFF;
+            if (bus < 0xFFD000 || bus >= 0xFFF000) throw new CdCheckpoint.UnownedParentByte(rawAddressBits);
+            int displacement = bus - 0xFFD000;
+            int whole = displacement >>> 6;
+            int offset = displacement & 63;
+            int value;
+            if (whole >= CdObjectPool.FIRST_WHOLE_INDEX) {
+                value = Byte.toUnsignedInt(placement.pool().state(whole).copyBytes()[offset]);
+            } else if (whole >= CdReservedObjectBank.FIRST_WHOLE_INDEX) {
+                value = Byte.toUnsignedInt(reserved.state(whole).copyBytes()[offset]);
+            } else {
+                try {
+                    value = checkpointReads.readPrimaryByte(offset);
+                } catch (CdCheckpoint.UnownedParentByte unknown) {
+                    // Root knows only the canonical primary offset; preserve the body's original raw32 request.
+                    throw new CdCheckpoint.UnownedParentByte(rawAddressBits);
+                }
+            }
+            if (!source.equals(requireCheckpointDispatch()) || !level.equals(levelGlobals)
+                    || !actor.equals(frame.state()) || !environment.equals(frame.environment()) || !owner.equals(checkpointState)) {
+                throw new IllegalStateException("Checkpoint parent-byte bridge changed its actual source/global/Frame cut");
+            }
+            requireCheckpointWidth(value, 1);
+            return value;
+        } finally {
+            inSolidCommit = false;
+        }
+    }
+
     private void runSpinTunnelTag(int whole) {
         checkActive(Phase.DYNAMIC_SLOTS);
         if (inDrawCallback || inSolidCommit || inSpringLaunch || inSpinTunnelCommit || inTunnelDoorFm

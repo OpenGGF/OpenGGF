@@ -231,6 +231,8 @@ class TestCdR11aObjectRetailAssets {
         hashes.put(PATA_BATA_DAMAGED_MAPPINGS, "96d4c533000d636452afa838266996b9c4853824e7b3377868f7876492858889");
         hashes.put(BOULDER_MAPPINGS, BOULDER_MAPPING_SHA256);
         hashes.put(SPIKES_MAPPINGS, SPIKES_MAPPING_SHA256);
+        hashes.put(CHECKPOINT_ANIMATIONS, CHECKPOINT_ANIMATION_SHA256);
+        hashes.put(CHECKPOINT_MAPPINGS, CHECKPOINT_MAPPING_SHA256);
         assertEquals(CdR11aObjectAssets.Table.values().length, hashes.size(), "every admitted table has a pinned digest");
         for (var table : CdR11aObjectAssets.Table.values()) {
             var view = objects.view(table);
@@ -2198,10 +2200,10 @@ class TestCdR11aObjectRetailAssets {
 
 
     private static final List<CdR11aAsset> SECTION_SOURCES = List.of(CdR11aAsset.ART_PATA_BATA,
-            CdR11aAsset.ART_ANTON, CdR11aAsset.ART_TAMABBOH, ART_MOSQUI, ART_3D_PLANT, ART_3D_RAMP_BOOST, CdR11aAsset.ART_BOULDER, CdR11aAsset.ART_DIAGONAL_SPRING, CdR11aAsset.ART_SPIKES);
-    private static final int[] SECTION_TILES = {50, 22, 59, 70, 28, 63, 19, 46, 8};
-    private static final int[] SECTION_JAVA_BYTES = {714, 484, 1142, 846, 393, 677, 270, 779, 86};
-    private static final int[] SECTION_NATIVE_BYTES = {715, 485, 1143, 847, 393, 678, 271, 780, 87};
+            CdR11aAsset.ART_ANTON, CdR11aAsset.ART_TAMABBOH, ART_MOSQUI, ART_3D_PLANT, ART_3D_RAMP_BOOST, CdR11aAsset.ART_BOULDER, CdR11aAsset.ART_DIAGONAL_SPRING, CdR11aAsset.ART_SPIKES, CdR11aAsset.ART_CHECKPOINT);
+    private static final int[] SECTION_TILES = {50, 22, 59, 70, 28, 63, 19, 46, 8, 12};
+    private static final int[] SECTION_JAVA_BYTES = {714, 484, 1142, 846, 393, 677, 270, 779, 86, 211};
+    private static final int[] SECTION_NATIVE_BYTES = {715, 485, 1143, 847, 393, 678, 271, 780, 87, 212};
     private static final String[] SECTION_BLOB_SHA256 = {
             "e492d968000f8097ed65ddaaf3734c11dce4d389ea74488610defa87f923f34f",
             "d51cfb7ef7c2bf4d6fe52da4042f09eae26130838ed503c3e64956607cce3d2a",
@@ -2211,7 +2213,8 @@ class TestCdR11aObjectRetailAssets {
             "1fbee908474abae3f81f527d437fa6479a2c91902e0f65df78108de39e4a57c0",
             "6335b858cc043dcce7de3f716a506c5d393342298729c04739673331f0e4e55f",
             "3cf30cb03a63f3d160c0b2dbbd0cf1f7803871f860125a5b44bf0a1cc0dc362a",
-            "4d6ff2ea465d6436ca113d8305d91ea8bca8f699b7621410d1d257679e3923ea"};
+            "4d6ff2ea465d6436ca113d8305d91ea8bca8f699b7621410d1d257679e3923ea",
+            "e6af441ac5e051484bcd2993ad2736262b9c8f9a379bc714711e045f3f83e7bf"};
     private static final String[] SECTION_NATIVE_SHA256 = {
             "a415ffa282fb1e90378a97f458f05e379a6d82d1a006751d1b85c6efcfc736e3",
             "e0e121da920926a86b5a445ba9df766931ee4cac91d4e611a3b30fcf5ebba556",
@@ -2221,7 +2224,8 @@ class TestCdR11aObjectRetailAssets {
             "1fbee908474abae3f81f527d437fa6479a2c91902e0f65df78108de39e4a57c0",
             "bf9f0cf2200b515b5f84c8daf70b4d78dcbcd92d432e2f305aebdc7aa0fb2f48",
             "3cf30cb03a63f3d160c0b2dbbd0cf1f7803871f860125a5b44bf0a1cc0dc362a",
-            "e6b3bfee35febba9961f852f78580f1571883b49453e21c17af008cdab8d4304"};
+            "e6b3bfee35febba9961f852f78580f1571883b49453e21c17af008cdab8d4304",
+            "e6af441ac5e051484bcd2993ad2736262b9c8f9a379bc714711e045f3f83e7bf"};
     private static final String[] SECTION_DECODED_SHA256 = {
             "8e7cc0d2af986240146ffd214038f1b2715c71227226261be477cb689eac8943",
             "2e0a7e3f6719c8afa2c569d5078824dd7c522a04eeee75fa773830ceea95b101",
@@ -2231,7 +2235,8 @@ class TestCdR11aObjectRetailAssets {
             "e52c4daa8995ac4365b3674cabf8bc81fc52db73d729e756dac757d79942b7a7",
             "abdbe20715a2c4784fae851622bb276dc1630abc339efb1e13b99a5ddc4d0c7d",
             "1ae40f48422bc8b884ae4c85288d3f363737cd3e6979c458b93aac15ed581c8b",
-            "75e3391d4045ec96fa925a79bba808a88425444e43d4694f105e7085057c2f72"};
+            "75e3391d4045ec96fa925a79bba808a88425444e43d4694f105e7085057c2f72",
+            "b376ac203a8c3cf754d2d9bcc4a55dbcb287ead82bbb304b19b7fb5181f2c3a3"};
     private static final String[] SECTION_FIRST_TILE_HEX = {
             "0000000000000000000000000000000000000000000000000000000000000000",
             "0000000000000000000cc00c0cced0c6cce0d0eeee000d00000000d000000024",
@@ -2241,7 +2246,8 @@ class TestCdR11aObjectRetailAssets {
             "99999999966777779677777797777777977777779777777797777777dfffffff",
             "0000000800000008000000080000006800000668000066680000666800007668",
             "9899886698998666989986689899888898899999988899999888888819999999",
-            "0009000000080000000700000007000000060000009690000086800000868000"};
+            "0009000000080000000700000007000000060000009690000086800000868000",
+            "0000009900000986000009680000098800000998000000190000009600000097"};
     private static final String[] SECTION_LAST_TILE_HEX = {
             "ccc888bfcccccaf0cc81c880cb11bfdcc119bfccc99bf00cccff000cccc000cd",
             "4388888028666688261666882611668828199689298888998299999090110000",
@@ -2251,7 +2257,8 @@ class TestCdR11aObjectRetailAssets {
             "bbbbbbbbbbbbbbbb999999999999999999999999999999999999999911111111",
             "7777889977778899778888997888889978888899788888907888890000000000",
             "0000000000000000000000000000000090000000900000009000000000000000",
-            "8776778087767780877677808776778087767780877677808766678087666780"};
+            "8776778087767780877677808776778087767780877677808766678087666780",
+            "cccccccccecccccccecccccc0ceccccc0ceccccc00ceeccc000cceee00000ccc"};
 
     @ParameterizedTest(name = "{0} complete first camera PLC sources and native finite readers")
     @EnumSource(CdReleaseVariant.class)
@@ -2348,10 +2355,10 @@ class TestCdR11aObjectRetailAssets {
         var oldDigests = oldBindings.stream().map(b -> CdR11aProfile.sha256(b.bytes().copy())).toList();
         var bank = objects.sectionArtSources(); assertSame(bank, objects.sectionArtSources());
         assertEquals(SECTION_SOURCES, bank.sources().stream().map(CdR11aObjectAssets.SectionArtSource::source).toList());
-        int[] plcIds = {9,9,9,2,2,2,2,1,1}, rows = {0,1,2,2,4,5,0,5,0};
-        int[] vram = {0x7600,0x8120,0x8500,0x7400,0x8480,0x8820,0x6E80,0x9200,0x6400};
-        int[] headers = {0x8032,0x0016,0x803B,0x0046,0x801C,0x803F,0x8013,0x002E,0x8008};
-        int[] lastNative = {0x80,0x00,0x00,0x80,0x80,0x00,0x80,0x00,0x00};
+        int[] plcIds = {9,9,9,2,2,2,2,1,1,0}, rows = {0,1,2,2,4,5,0,5,0,1};
+        int[] vram = {0x7600,0x8120,0x8500,0x7400,0x8480,0x8820,0x6E80,0x9200,0x6400,0xD960};
+        int[] headers = {0x8032,0x0016,0x803B,0x0046,0x801C,0x803F,0x8013,0x002E,0x8008,0x800C};
+        int[] lastNative = {0x80,0x00,0x00,0x80,0x80,0x00,0x80,0x00,0x00,0x00};
         for (int i = 0; i < SECTION_SOURCES.size(); i++) {
             var asset = SECTION_SOURCES.get(i); var source = bank.source(asset);
             assertSame(source, bank.sources().get(i)); assertEquals(asset, source.source());
@@ -2902,7 +2909,7 @@ class TestCdR11aObjectRetailAssets {
         var legacy = bank.sources().subList(0,8).toArray(CdR11aObjectAssets.SectionArtSource[]::new);
         var legacyDecodes = Arrays.stream(legacy).map(CdR11aObjectAssets.SectionArtSource::decode).toList();
         var source = bank.source(CdR11aAsset.ART_SPIKES);
-        assertSame(source,bank.sources().get(8)); assertSame(source,bank.sources().getLast());
+        assertSame(source,bank.sources().get(8)); assertEquals(10,bank.sources().size());
         assertSame(source,bank.source(owner.loadPlan().plcs().get(1).entries().getFirst()));
         assertSame(source.decode(),bank.source(CdR11aAsset.ART_SPIKES).decode());
         assertEquals(1,source.canonicalPlcId()); assertEquals(0,source.canonicalRowIndex());
@@ -3031,6 +3038,246 @@ class TestCdR11aObjectRetailAssets {
     private static final String SPIKES_MAPPING_SHA256 =
             "db6b4414c086240e34231326d9832e5785550bdd914ef9d933cea9079bc78607";
     private static final byte[] SPIKES_MAPPING_BYTES = hexBytes("000204f0050000f000050004f0f005000000000500040000");
+
+
+    /** Actual USA operands authenticate the raw tables; this does not execute checkpoint behavior or SaveData. */
+    @ParameterizedTest(name = "{0} checkpoint literal base, four native frames and tenth immutable source")
+    @EnumSource(CdReleaseVariant.class)
+    void checkpointAuthenticatesActualOperandsAndFiniteViewsAfterMediaClose(CdReleaseVariant variant)
+            throws Exception {
+        String configured = System.getProperty("soniccd.media.root");
+        Assumptions.assumeTrue(configured != null && !configured.isBlank(),
+                "Set soniccd.media.root for supplied-media checks");
+        String directory = switch (variant) { case USA -> "USA"; case JAPAN -> "Japan"; case EUROPE -> "Europe"; };
+        Path cue;
+        try (var files = Files.list(Path.of(configured).resolve(directory))) {
+            var cues = files.filter(v -> v.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".cue")).toList();
+            assertEquals(1,cues.size()); cue = cues.getFirst();
+        }
+        CdR11aAssets owner;
+        CdMmdImage retained;
+        CdR11aObjectAssets visualFirst = null, sourceFirst = null;
+        try (var program = CdProgramAssets.open(cue,Optional.of(variant),Optional.empty())) {
+            owner = CdR11aAssetLoader.load(program,variant,CdStageKey.parse("R11A"));
+            retained = program.mmd(CdNativeFile.R11A);
+            assertEquals(262144,retained.fileBytes());
+            assertEquals(variant == CdReleaseVariant.USA
+                    ? "7aa54c36ab94dbe14068a18613c574b883ce446337bfaa9c571ec3523aff14e2"
+                    : "241be9620fbad1229792fedd1604066ae3e7d943cb7cc27bc94a4a837452d9b6",
+                    CdR11aProfile.sha256(retained.readFile(0,retained.fileBytes())));
+            assertArrayEquals(CHECKPOINT_MAPPING_BYTES,retained.readFile(0x3F120,66));
+            assertArrayEquals(CHECKPOINT_ANIMATION_BYTES,retained.readFile(0x3F11A,6));
+            assertEquals(SECTION_BLOB_SHA256[9],
+                    CdR11aProfile.sha256(owner.view(CdR11aAsset.ART_CHECKPOINT).bytes().copy()));
+            if (variant != CdReleaseVariant.USA) {
+                // Independently located actual operands, not an inferred regional delta.
+                assertEquals(0x205E5C,ByteBuffer.wrap(retained.readFile(0x3E78,4)).getInt());
+                assertArrayEquals(hexBytes("217c0023f1200004317c06cb0002"),retained.readFile(0x5E82,14));
+                assertArrayEquals(hexBytes("237c0023f1200004337c06cb0002"),retained.readFile(0x5EDE,14));
+                assertArrayEquals(hexBytes("43f90023f11a6000fd3e"),retained.readFile(0x5FC2,10));
+                assertFalse(Arrays.equals(hexBytes("217c0023f1200004"),retained.readFile(0x5E74,8)));
+                assertFalse(Arrays.equals(hexBytes("237c0023f1200004"),retained.readFile(0x5ED0,8)));
+                assertFalse(Arrays.equals(hexBytes("43f90023f11a6000fd3e"),retained.readFile(0x5FB4,10)));
+                assertThrows(UnsupportedOperationException.class,owner::openingObjects);
+                assertThrows(UnsupportedOperationException.class, () -> CdR11aObjectAssets.load(
+                        owner.profile(),owner.identity(),retained,owner.loadPlan()));
+                var usa = CdR11aProfile.forStage(CdReleaseVariant.USA,CdStageKey.parse("R11A"));
+                var asserted = new CdR11aAssets.Identity(CdReleaseVariant.USA,usa.stage(),usa.file(),usa.domain(),
+                        usa.expectedMmdSha256(),owner.identity().observedWholeDiscSha256());
+                assertThrows(IOException.class, () -> CdR11aObjectAssets.load(usa,asserted,retained,owner.loadPlan()));
+            } else {
+                visualFirst = owner.openingObjects(); sourceFirst = owner.openingObjects();
+                verifyCheckpointCold(visualFirst); verifyCheckpointCold(sourceFirst);
+                verifyCheckpointNativeReferences(retained,owner);
+                for (int offset : new int[]{0x3E7C,0x5E76,0x5E7E,0x5ED2,0x5EDA,0x5FB6,
+                        0x3F11A,0x3F11F,0x3F120,0x3F161,0xFBF4,0xFBF8,0x35DC6,0x35E98,0x35E99}) {
+                    byte[] changed = retained.readFile(0,retained.fileBytes()); changed[offset] ^= 1;
+                    assertThrows(IOException.class, () -> CdR11aObjectAssets.load(owner.profile(),owner.identity(),
+                            CdMmdImage.parse(changed),owner.loadPlan()),"changed checkpoint authentication byte " + offset);
+                }
+            }
+        }
+        assertThrows(UnsupportedOperationException.class, () -> owner.decoded(CdR11aAsset.ART_CHECKPOINT));
+        if (variant != CdReleaseVariant.USA) { return; }
+        assertNotNull(visualFirst); assertNotNull(sourceFirst);
+        var objects = visualFirst; var reverseObjects = sourceFirst;
+        // Both first-request orders begin after closure of the real disc owner.
+        var visual = objects.checkpoint(); assertSame(visual,objects.checkpoint());
+        var sourceCache = CdR11aObjectAssets.class.getDeclaredField("sectionArtSources"); sourceCache.setAccessible(true);
+        assertNull(sourceCache.get(objects),"raw checkpoint access must not decode any source");
+        var optional = CdR11aObjectAssets.class.getDeclaredField("frontierViews"); optional.setAccessible(true);
+        assertEquals(List.of(CHECKPOINT_ANIMATIONS,CHECKPOINT_MAPPINGS),
+                ((Map<?, ?>) optional.get(objects)).keySet().stream()
+                        .map(value -> (CdR11aObjectAssets.Table) value).sorted().toList());
+        var bank = objects.sectionArtSources(); var reverse = reverseObjects.sectionArtSources();
+        assertSame(bank,objects.sectionArtSources()); assertSame(reverse,reverseObjects.sectionArtSources());
+        var visualCache = CdR11aObjectAssets.class.getDeclaredField("checkpoint"); visualCache.setAccessible(true);
+        assertNull(visualCache.get(reverseObjects),"source access cannot decode checkpoint visuals");
+        assertFalse(((Map<?, ?>) optional.get(reverseObjects)).containsKey(CHECKPOINT_MAPPINGS));
+        assertFalse(((Map<?, ?>) optional.get(reverseObjects)).containsKey(CHECKPOINT_ANIMATIONS));
+        assertEquals(SECTION_SOURCES,bank.sources().stream().map(CdR11aObjectAssets.SectionArtSource::source).toList());
+        assertEquals(10,bank.sources().size());
+        var prior = bank.sources().subList(0,9).toArray(CdR11aObjectAssets.SectionArtSource[]::new);
+        var priorReads = Arrays.stream(prior).map(CdR11aObjectAssets.SectionArtSource::decode).toList();
+        var source = bank.source(CdR11aAsset.ART_CHECKPOINT);
+        assertSame(source,bank.sources().get(9)); assertSame(source,bank.sources().getLast());
+        assertSame(source.decode(),bank.source(CdR11aAsset.ART_CHECKPOINT).decode());
+        assertEquals(0,source.canonicalPlcId()); assertEquals(1,source.canonicalRowIndex());
+        assertEquals(0xD960,source.canonicalPlc().vramAddress()); assertEquals(12,source.tileCount());
+        for (int plc : new int[]{0,3}) {
+            var actual = owner.loadPlan().plcs().get(plc).entries().get(1);
+            assertSame(source,bank.source(actual)); assertEquals(0xD960,actual.vramAddress());
+        }
+        assertEquals(4,visual.mappingFrames().size()); assertEquals(0,visual.mappingTableOffset());
+        assertArrayEquals(CHECKPOINT_MAPPING_BYTES,visual.mappings().copy());
+        assertArrayEquals(CHECKPOINT_ANIMATION_BYTES,visual.animationTable().copy());
+        assertEquals(CHECKPOINT_MAPPING_SHA256,CdR11aProfile.sha256(visual.mappings().copy()));
+        assertEquals(CHECKPOINT_ANIMATION_SHA256,CdR11aProfile.sha256(visual.animationTable().copy()));
+        assertEquals(List.of(8,30,42,54),visual.mappingFrames().stream()
+                .map(CdObjectVisualAssets.MappingFrame::relativeOffset).toList());
+        for (int frame = 0; frame < 4; frame++) {
+            var mapping = visual.mappingFrames().get(frame);
+            int consumed = frame == 0 ? 21 : 11;
+            assertEquals(consumed,mapping.bytes().length());
+            assertArrayEquals(Arrays.copyOfRange(CHECKPOINT_MAPPING_BYTES,mapping.relativeOffset(),
+                    mapping.relativeOffset()+consumed),mapping.bytes().copy());
+            if (frame == 0) {
+                assertEquals(List.of(new CdObjectVisualAssets.Piece(-24,3,0,-8),
+                        new CdObjectVisualAssets.Piece(-24,3,0x800,0),
+                        new CdObjectVisualAssets.Piece(8,1,4,-8),
+                        new CdObjectVisualAssets.Piece(8,1,0x804,0)),mapping.pieces());
+            } else {
+                int tile = 4+frame*2;
+                assertEquals(List.of(new CdObjectVisualAssets.Piece(-8,1,tile,-8),
+                        new CdObjectVisualAssets.Piece(-8,1,0x800|tile,0)),mapping.pieces());
+            }
+        }
+        for (int pad : new int[]{29,41,53,65}) { assertEquals(0,visual.mappings().unsignedByte(pad)); }
+        assertEquals(11,lastUsedTile(visual));
+        assertEquals(1,visual.animations().size());
+        var animation = visual.animations().getFirst();
+        assertEquals(2,animation.relativeOffset()); assertEquals(3,animation.delay());
+        assertEquals(List.of(2,3),animation.frameBytes()); assertEquals(CdObjectVisualAssets.Terminal.LOOP_FF,animation.terminal());
+        assertArrayEquals(hexBytes("030203ff"),animation.bytes().copy());
+        assertSame(objects.view(CHECKPOINT_MAPPINGS),objects.view(CHECKPOINT_MAPPINGS));
+        assertSame(objects.view(CHECKPOINT_ANIMATIONS),objects.view(CHECKPOINT_ANIMATIONS));
+        var blob = owner.profile().range(CdR11aAsset.ART_CHECKPOINT);
+        assertEquals(new CdR11aProfile.FileRange(CdNativeFile.R11A,CdMmdImage.Domain.ORIGINAL_WORD_RAM,0x35DC6,212),blob);
+        assertEquals(blob,source.decode().sourceBlobRange()); assertEquals(blob,source.readerInputRange());
+        assertEquals(new CdR11aProfile.FileRange(blob.file(),blob.domain(),0x35DC6,211),source.decode().readerInputRange());
+        assertEquals(211,source.decode().consumedInputBytes()); assertEquals(384,source.decode().bytes().length());
+        assertEquals(0x800C,source.readerBytes().unsignedWord(0));
+        assertEquals(0x40,source.readerBytes().unsignedByte(210)); assertEquals(0,source.readerBytes().unsignedByte(211));
+        assertArrayEquals(hexBytes("00088044"),retained.readFile(0x35E9A,4));
+        assertEquals(SECTION_BLOB_SHA256[9],CdR11aProfile.sha256(blob.read(retained).copy()));
+        assertEquals("1889f8fdcb3662a8c31d9252c2b00656d6ba261bdf097ffd04a7d100f8ec69b2",
+                CdR11aProfile.sha256(source.decode().readerInputRange().read(retained).copy()));
+        assertEquals(SECTION_NATIVE_SHA256[9],CdR11aProfile.sha256(source.readerBytes().copy()));
+        assertEquals(SECTION_DECODED_SHA256[9],CdR11aProfile.sha256(source.decode().bytes().copy()));
+        assertArrayEquals(hexBytes(SECTION_FIRST_TILE_HEX[9]),source.decode().bytes().slice(0,32).copy());
+        assertArrayEquals(hexBytes(SECTION_LAST_TILE_HEX[9]),source.decode().bytes().slice(352,32).copy());
+        var javaWalk = CdNemesisAsset.decode(retained.readFile(0x35DC6,211),384,384);
+        assertEquals(211,javaWalk.consumedInputBytes()); assertArrayEquals(source.decode().bytes().copy(),javaWalk.bytes().copy());
+        var javaCut = assertThrows(IOException.class, () -> CdNemesisAsset.decode(retained.readFile(0x35DC6,210),384,384));
+        assertEquals("Unexpected end of input data",javaCut.getMessage());
+        assertThrows(IOException.class, () -> CdNemesisAsset.decode(blob.read(retained).copy(),352,384));
+        assertThrows(IllegalArgumentException.class, () -> CdNemesisAsset.decode(blob.read(retained).copy(),384,383));
+        for (int extent : new int[]{212,213}) {
+            var extended = CdNemesisAsset.decode(retained.readFile(0x35DC6,extent),384,384);
+            assertEquals(211,extended.consumedInputBytes()); assertArrayEquals(javaWalk.bytes().copy(),extended.bytes().copy());
+        }
+        var nativeWalk = walkNativeSectionSource(source.readerBytes().copy());
+        assertEquals(212,nativeWalk.consumedInputBytes()); assertArrayEquals(source.decode().bytes().copy(),nativeWalk.bytes());
+        var nativeCut = assertThrows(IOException.class, () -> walkNativeSectionSource(retained.readFile(0x35DC6,211)));
+        assertEquals("short native post-symbol refill",nativeCut.getMessage());
+        var nativeExtended = walkNativeSectionSource(retained.readFile(0x35DC6,213));
+        assertEquals(212,nativeExtended.consumedInputBytes()); assertArrayEquals(nativeWalk.bytes(),nativeExtended.bytes());
+        assertArrayEquals(source.readerBytes().copy(),reverse.source(CdR11aAsset.ART_CHECKPOINT).readerBytes().copy());
+        assertArrayEquals(source.decode().bytes().copy(),reverse.source(CdR11aAsset.ART_CHECKPOINT).decode().bytes().copy());
+        assertArrayEquals(visual.mappings().copy(),reverseObjects.checkpoint().mappings().copy());
+        assertArrayEquals(visual.animationTable().copy(),reverseObjects.checkpoint().animationTable().copy());
+        var relocated = new CdR11aLoadPlan.PlcEntry(CdR11aAsset.ART_CHECKPOINT,blob,0x6000);
+        assertSame(source,bank.source(relocated)); assertEquals(0xD960,source.canonicalPlc().vramAddress());
+        for (var wrong : List.of(new CdR11aProfile.FileRange(blob.file(),blob.domain(),0x35DC7,212),
+                new CdR11aProfile.FileRange(blob.file(),blob.domain(),0x35DC6,211),
+                new CdR11aProfile.FileRange(blob.file(),blob.domain(),0x35DC6,213))) {
+            assertThrows(IllegalArgumentException.class,
+                    () -> bank.source(new CdR11aLoadPlan.PlcEntry(CdR11aAsset.ART_CHECKPOINT,wrong,0xD960)));
+        }
+        assertThrows(UnsupportedOperationException.class,bank.sources()::clear);
+        assertThrows(ReadOnlyBufferException.class, () -> source.readerBytes().buffer().put((byte) 1));
+        assertThrows(ReadOnlyBufferException.class, () -> source.decode().bytes().buffer().put((byte) 1));
+        assertThrows(ReadOnlyBufferException.class, () -> visual.mappings().buffer().put((byte) 1));
+        assertThrows(ReadOnlyBufferException.class, () -> visual.animationTable().buffer().put((byte) 1));
+        byte[] detached = source.readerBytes().copy(); detached[211] = 1;
+        byte[] detachedPixels = source.decode().bytes().copy(); detachedPixels[0] ^= 1;
+        assertEquals(0,source.readerBytes().unsignedByte(211)); assertEquals(0,source.decode().bytes().unsignedByte(0));
+        for (int i = 0; i < 9; i++) {
+            assertSame(prior[i],bank.sources().get(i)); assertSame(priorReads.get(i),bank.sources().get(i).decode());
+        }
+        assertSame(objects.initialArtBank().binding(ART_MOSQUI).decode(),bank.source(ART_MOSQUI).decode());
+        assertSame(objects.pataBataArtBank().binding(CdR11aAsset.ART_PATA_BATA).decode(),
+                bank.source(CdR11aAsset.ART_PATA_BATA).decode());
+        assertSame(objects.frontierArtBank().binding(ART_3D_PLANT).decode(),bank.source(ART_3D_PLANT).decode());
+        assertSame(objects.frontierArtBank().binding(ART_3D_RAMP_BOOST).decode(),bank.source(ART_3D_RAMP_BOOST).decode());
+        for (var bindings : List.of(objects.initialArtBank().bindings(),objects.frontierArtBank().bindings(),
+                objects.contactArtBank().bindings(),objects.floatBlockArtBank().bindings(),objects.springArtBank().bindings(),
+                objects.tunnelDoorArtBank().bindings(),objects.monitorTimeArtBank().bindings(),objects.pataBataArtBank().bindings())) {
+            assertTrue(bindings.stream().noneMatch(value -> value.source() == CdR11aAsset.ART_CHECKPOINT));
+        }
+    }
+
+    private static void verifyCheckpointCold(CdR11aObjectAssets objects) throws Exception {
+        var views = CdR11aObjectAssets.class.getDeclaredField("views"); views.setAccessible(true);
+        assertEquals(9,((Map<?, ?>) views.get(objects)).size());
+        var optional = CdR11aObjectAssets.class.getDeclaredField("frontierViews"); optional.setAccessible(true);
+        assertTrue(((Map<?, ?>) optional.get(objects)).isEmpty());
+        for (String name : List.of("checkpoint","sectionArtSources","frontierArtBank","contactArtBank","floatBlockArtBank",
+                "springArtBank","monitorTimeArtBank","tunnelDoorArtBank","pataBataArtBank","spikes","boulder")) {
+            var field = CdR11aObjectAssets.class.getDeclaredField(name); field.setAccessible(true);
+            assertNull(field.get(objects),"cold optional checkpoint cache " + name);
+        }
+        assertEquals(List.of(ART_RINGS,ART_MOSQUI),objects.initialArtBank().bindings().stream()
+                .map(CdR11aObjectAssets.ArtBinding::source).toList());
+        assertEquals(84,objects.initialArtBank().bindings().stream().mapToInt(CdR11aObjectAssets.ArtBinding::tileCount).sum());
+    }
+
+    private static void verifyCheckpointNativeReferences(CdMmdImage image,CdR11aAssets owner) {
+        assertEquals(0x205E4E,ByteBuffer.wrap(image.readFile(0x3E7C,4)).getInt());
+        assertArrayEquals(hexBytes("217c0023f1200004317c06cb0002"),image.readFile(0x5E74,14));
+        assertArrayEquals(hexBytes("237c0023f1200004337c06cb0002"),image.readFile(0x5ED0,14));
+        assertEquals(CHECKPOINT_MAPPINGS.range().nativeAddress(),ByteBuffer.wrap(image.readFile(0x5E76,4)).getInt());
+        assertEquals(CHECKPOINT_MAPPINGS.range().nativeAddress(),ByteBuffer.wrap(image.readFile(0x5ED2,4)).getInt());
+        assertArrayEquals(hexBytes("43f90023f11a6000fd3e"),image.readFile(0x5FB4,10));
+        assertEquals(CHECKPOINT_ANIMATIONS.range().nativeAddress(),ByteBuffer.wrap(image.readFile(0x5FB6,4)).getInt());
+        assertEquals(0x5CFA,0x5FBC+ByteBuffer.wrap(image.readFile(0x5FBC,2)).getShort());
+        assertArrayEquals(CHECKPOINT_MAPPING_BYTES,image.readFile(0x3F120,66));
+        assertArrayEquals(CHECKPOINT_ANIMATION_BYTES,image.readFile(0x3F11A,6));
+        assertArrayEquals(hexBytes("00010023c4ee000000235dc6d960"),image.readFile(0xFBEC,14));
+        for (int plc : new int[]{0,3}) {
+            assertEquals(0xFBEC,0xFBC6+ByteBuffer.wrap(image.readFile(0xFBC6+plc*2,2)).getShort());
+            var row = owner.loadPlan().plcs().get(plc).entries().get(1);
+            assertEquals(CdR11aAsset.ART_CHECKPOINT,row.source());
+            assertEquals(owner.profile().range(CdR11aAsset.ART_CHECKPOINT),row.sourceRange());
+            assertEquals(0x235DC6,row.sourceRange().nativeAddress()); assertEquals(0xD960,row.vramAddress());
+        }
+        assertEquals(0x800C,Short.toUnsignedInt(ByteBuffer.wrap(image.readFile(0x35DC6,2)).getShort()));
+        var points = owner.loadPlan().plcs().get(1).entries().get(11);
+        var flower = owner.loadPlan().plcs().get(1).entries().get(12);
+        assertEquals(0xD960,points.vramAddress()+5*32); assertEquals(0xDAE0,flower.vramAddress());
+        assertEquals(0xDAE0,0xD960+12*32);
+        assertArrayEquals(hexBytes("0ac802e813024000"),image.readFile(0x7C46,8)); // Row104, subtype2, not saved flags.
+    }
+
+    private static final String CHECKPOINT_MAPPING_SHA256 =
+            "709d0648dfb32425f46281c236ededaef80750fc6250062f3bce77f9427a446f";
+    private static final String CHECKPOINT_ANIMATION_SHA256 =
+            "9034c893821cd15055e34cddb2388653690958995d7118f7c78896e6ccb5c551";
+    /** Source-literal N complete mapping/script includes; no extracted binary fixture. */
+    private static final byte[] CHECKPOINT_MAPPING_BYTES = hexBytes(
+            "0008001e002a003604e8030000f8e80308000008010004f808010804000002f8010006f8f80108060000"
+            + "02f8010008f8f8010808000002f801000af8f801080a0000");
+    private static final byte[] CHECKPOINT_ANIMATION_BYTES = hexBytes("0002030203ff");
 
     // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>
 }
