@@ -5776,3 +5776,90 @@ still require implementation/authentication. The independent FM PlaySoundID
 planner remains frozen externally, unimported/unrun in this checkpoint; there
 is no audio-playback milestone. Full USA, JP/EU gameplay parity, native cold/
 title/PLC timing, warp/checkpoint/completion and broader route products remain open.
+
+## Pure FM PlaySoundID and shipped StopSound plans — 25 October 2026
+
+Private parent `3626da4f7573b6a5fbb1a8fc207f4219d0a54440`, same reference pin.
+This is an independent audio-format foundation, not an audio playback milestone
+or a new World service. Existing main request queues and arbitration remain
+separate pure owners; gameplay sound ledgers are not replayed or treated as a
+consumption cursor.
+
+New CdFmPlaySound models the fixed PlaySoundID/PlaySFX initialization and
+StopSound closure, including reached key-off/YM register leaves. It takes an
+immutable supplied RAM value and returns an **uncommitted** projected value and
+ordered byte-store/YM intents, or a bounded fault with only the reached planned
+prefix. A new call from a fault value is a fresh entry, not mid-instruction
+resume. There is no Z80 CPU/register/stack execution, timing, bus operation,
+track bytecode/UpdateTrack, synthesis, CDDA/PCM, driver lifecycle or executor.
+
+The actual NativeView accepts only the existing private usable CdFmSoundAssets
+owner. Full bank length1AD6/SHA and retained instruction/table/leaf signatures
+are checked. Source[0000,1AD6) is defined; omitted bank tail, gap, variables and
+stack are not invented zeros. Variables[1C00,1D60) are owned but undefined until
+explicit resident ingress. A declared-format view instead takes an8192-byte
+backing plus exact defined/write/instruction masks and three Layout addresses,
+with no authenticity claim. Arrays, masks and result lists are copied;
+unknown backing is canonicalized but never exported as certified RAM. Value
+equality retains current bytes/masks/ownership and actual-versus-declared source
+identity rather than relying on CdAssetBytes wrapper identity.
+
+Every reached read uses the current projection. Words read LE low first, then
+the16-bit-wrapped high address; addresses outside8KB do not mirror into RAM.
+Writes are permitted only in reviewed data and explicit resident ownership.
+Known reviewed instruction writes produce SELF_MODIFICATION; other unreviewed
+installed code/data writes produce UNOWNED_WRITE. These are planner support
+boundaries, not invented native memory protection. Ingress cannot alter bound
+instructions; identical already-defined instruction content is allowed. Reviewed
+TrackInitData322..32D, SFXTrackPtrs3BB..3C6, DriverInfo/SFX data6D7..1AD6 and
+variables remain separate from protected instruction spans.
+
+FixBugs=0 quirks stay literal: raw dispatch80/81..8F returns,00..7F/E0..FF stops,
+90..DF initializes SFX; unchecked channel/table reads are not clamped. Channel07
+can select the0921 data address via the shipped pointer arithmetic. Count0
+executes256 DJNZ rows, countFF executes255. Aliased writes affect later reads.
+StopSound keeps its wrong IX=TrackInitData and stride2, not a sensible six-track
+reset:343 clearing stores, six same-value table RMWs,352 total byte stores and79
+ordered YM intents,431 steps total. Supplied table overlays can suppress later
+track intents without mutating the source. Native source is
+`Sound Drivers/FM/_Driver.asm:545-556,670-722,774-995,1050-1088`, with variable
+and table layouts pinned in the independent research/review.
+
+The external R1 tests froze before one production pass. Independent static
+review found no concrete P1/P2/P3, with an accurately reported gap: its optional
+actual-asset helper was not annotated or called by JUnit, and the successful
+LE-wrap case omitted the full untouched-byte/mask comparison. RootR2 preserves
+all17 original tests, adds that comparison and one real optional JUnit media
+case. It constructs the existing retained USA owner, closes its disc source,
+then invokes every anchor, real95 initialization and StopSound checks. Missing
+media is an explicit assumption skip; the executed command supplies actual media.
+No authenticated owner is forged.
+
+Root60128 was a tests-only compilation negative with the production owner
+absent, exit1/no JUnit execution; elapsed Maven time was not retained. Importing
+the unchanged R1 production SHA256
+`9eb0153a09ae41185c282e86fc9bad94957fb07d073dfe08f5cdf7cddf9869e0`
+then gives36356 **70/0/0/0**, Maven1m36s, terminal12:30:05Z: PlaySound18,
+request queue18, arbitration27, retained assets7. All four fresh XML identities,
+Java25/media properties and skip counts were checked. The new actual-USA case
+is a completed testcase, not merely a present helper. Public surface89436 passed
+**11/0/0/0**, Maven32.152s, terminal12:34:06Z, after26s queue wait.
+
+This bounded new owner has no runtime callers and changes no shared audio
+algorithm, interface, build, graphics or gameplay owner. The four actual/declared
+format classes and public-surface checks address its consumers; repeating the
+whole engine or prior728-guard run would not establish missing lifecycle or
+playback integration. Those earlier guards apply to the diagonal checkpoint,
+not this later source. No fresh full-smoke/full-suite or native parity claim.
+
+```text
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 python3 <main-workspace>/tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestCdFmPlaySound,TestCdFmSoundAssets,TestCdFmRequestQueue,TestCdFmSoundArbitration' -Dsoniccd.media.root=<supplied-media-root> test -B
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 python3 <main-workspace>/tools/testing/maven_queue.py --normal -Dmse=off '-Dtest=TestModApiSignatureSurface' test -B
+```
+
+Next audio work must join actual queued requests, arbitration and initialization
+at their native ownership/service boundaries, then implement reached track
+updates before synthesis/playback. It must retain undefined RAM and support
+faults rather than silently booting a fabricated driver. Spikes remains the
+separate ordinary route frontier; no audio plan is used to claim that pass or
+USA/regional gameplay complete.
