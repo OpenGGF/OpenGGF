@@ -37,8 +37,8 @@ focused evidence. They do not push or modify the main workspace.
 | --- | --- | --- |
 | Capture assurance and disposal | Narrow prerequisite admission, non-graphics failure control, complete isolated audio disposal | `dfc7d9784`: 32 focused tests passed, zero failures/errors/skips |
 | Roadmap reconciliation | Source-backed implementation/qualification status, Stageplay scope, finite configuration tiers, timing dispositions and corrected architecture prose | `e4fb59d17`: 99 links/anchors and factual/structural checks passed |
-| Native fixed-slot correction | ROM-backed empty/live fixed-tail storage, admission failure, retirement and strict restore/replay | Sol implementation running |
-| Continuous campaign boundary | Current named AIZ-to-HCZ frontier and smallest ROM-owned correction, retaining strict comparisons | Baseline reproduced; reviewed `760b2005d` adaptation under focused/trace validation |
+| Native fixed-slot qualification | Preserve the native animation prerequisite; qualify storage/removal boundaries without inventing parent bytes | Fixed-tail-only candidate rejected at supported raw deletion/reuse; original storage gap remains open |
+| Continuous campaign boundary | Current named AIZ-to-HCZ frontier and smallest ROM-owned correction, retaining strict comparisons | `aa5fb2d34`: load correction passes 149 focused and 43 authority checks; strict prefix reaches HCZ's first row |
 | Release preparation | Explicit exact-candidate qualification and required case accounting, consistent with publication policy | `a2cf1b322`: Python safety and actual tool/strict-ROM prerequisite preflight passed; real route run remains parent validation |
 
 The user confirmed that ROMs must not be placed on GitHub and accepted stronger
@@ -100,8 +100,16 @@ HCZ1/load generation 9. Alternate session 12519 retains its sole row 26179
 `rings` difference, with no errors/skips. The parent reviewed the exact historical
 `760b2005d` runtime/test change and native corroboration and authorized a narrow
 adaptation to the present instance lifecycle owner. Independent pre-fix regression:
-four cases, three failures; corrected four cases pass inside focused session 3120.
-Corrected canonical/prefix validation is in flight; no frontier closure is claimed.
+four cases, three failures; corrected four cases pass inside focused session 3120
+(149 total cases). At `aa5fb2d34`, canonical/prefix session 52854 completes with
+six cases, one inherited failure, zero errors/skips. All three strict prefixes and
+the known-green AIZ/HCZ prerequisites pass. Segment 8's four row-7126 errors are
+removed; completed segment 9 also has no mismatches. Segment 11 still stops at
+input 68801, with 81,981 incomplete-comparison errors and first row 1768 `y`
+`$0870/$0871`. Alternate session 4338 retains its sole trailing rings difference;
+authority session 60839 passes all 43 cases. These are bounded frontier advances,
+not complete campaign qualification. Exact commands and fingerprints are in the
+October 25 [frontier entry](../../status/trace-frontier-log.md#2026-10-25--fresh-load-plc-order-qualifies-the-continuous-aiz-to-hcz-load-boundary).
 
 The fixed-tail worker's 12-case native animation prerequisite passes without skips,
 but the conservative hook treats a nested engine-internal snapshot component as
@@ -109,6 +117,18 @@ a public API change. The established normalized terminal remains unchanged.
 An isolated Sol policy worker now owns the narrow correction and both-shell
 negative controls; hooks and signature pins must not be bypassed or artificially
 changed. The normal candidate signature check remains separate.
+
+The independently executed normalized candidate check passed one physical case
+before storage edits. The later fixed-tail-only candidate exposes the already
+documented dynamic-parent storage boundary: supported raw deletion and Stageplay
+retirement do not execute Obj7A's linked-target cleanup. Obj05 then reads 13 bytes
+across eight fields at a cleared or reused parent slot, without an occupant guard.
+A live-object resolver, class-default bytes or automatic cascade cannot reproduce
+that contract. The parent rejected shipping the candidate's unknown-parent throw
+and stopped expansion into generic SST storage. The worker retains the finite
+disconfirming evidence in the existing rewind audit and restores the candidate
+edits; the independent animation prerequisite can land after the hook correction.
+The original Sideways allocation-pressure defect remains open.
 
 The parent integration checkout is
 `.worktrees/ai-audit-remediation-20261025` on

@@ -117,6 +117,13 @@ character/team, donor, lifecycle and presentation breadth stays in the
 [AIZ1](../architecture/validation/levels/s3k-aiz1-sonic.md) and
 [HCZ1](../architecture/validation/levels/s3k-hcz1-sonic.md) matrices.
 
+Continuous AIZ-to-HCZ load qualification (2026-10-25, local candidate): the
+[HCZ1 matrix](../architecture/validation/levels/s3k-hcz1-sonic.md#continuous-aiz-to-hcz-load-qualification--2026-10-25)
+records a strict uninterrupted original-movie prefix through the first HCZ row,
+with the native load/title PLC boundary and twice-restored queue/job regression.
+The full chain still stops in returned HCZ1 at input 68801; the independent
+pilot above and this load boundary do not certify HCZ completion or other products.
+
 S3K playable completion (2026-10-13, delivery in progress): the [native ending matrix](../architecture/validation/levels/s3k-ending.md)
 records Sonic/Tails `$0D01`, Knuckles SSZ2 and all native emerald-progress branches.
 Bounded native lifecycle, roster, donor and whole-world replay checks pass; seven

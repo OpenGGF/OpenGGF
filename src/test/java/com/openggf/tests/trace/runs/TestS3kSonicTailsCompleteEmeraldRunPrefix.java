@@ -57,4 +57,10 @@ class TestS3kSonicTailsCompleteEmeraldRunPrefix extends AbstractRunChainTest {
     void twoSpecialStageReturnsThroughThirdEntry() throws Exception {
         assertChainReplayThroughSegmentRow(RUN_DIR, 5, 1);
     }
+
+    /** Includes the fresh HCZ title/Nemesis wait and destination publication. */
+    @Test
+    void aiz1ThroughHczLoadBoundary() throws Exception {
+        assertChainReplayThroughSegmentRow(RUN_DIR, 9, 1);
+    }
 }

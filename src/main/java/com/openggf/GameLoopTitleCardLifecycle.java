@@ -56,6 +56,22 @@ final class GameLoopTitleCardLifecycle {
     void destination(PostTitleCardDestination destination) { postTitleCardDestination = destination; }
     LevelFrameResult releaseResult() { return titleReleaseResult; }
 
+    /**
+     * Level already submitted Nemesis work before the first loc_62CC wait.
+     * Initialization represents Obj_TitleCardInit once; finish that iteration's
+     * hardware scan/tail without dispatching its next routine in the same pass
+     * (loc_62CC, sonic3k.asm:7769-7780).
+     */
+    void enterPending(GameLoop loop, GameplayModeContext gameplayMode, PlcLifecycleFrame frame) {
+        loop.enterTitleCard(host.level().getTitleCardZone(), host.level().getTitleCardAct());
+        TitleCardProvider titleCard = loop.getTitleCardProvider();
+        if (titleCard != null && titleCard.shouldAdvanceVblankClockDuringLockedPhase()) {
+            LevelFrameStep.executeHardwareTimedObjectScan(LevelFrameContext.from(gameplayMode),
+                    frame, PlcLifecyclePhase.LEVEL_TITLE_CARD, () -> { });
+            host.level().advanceTitleCardVblankOnly();
+        }
+    }
+
     boolean update(
             boolean doFrameStep,
             TitleCardProvider titleCard,
