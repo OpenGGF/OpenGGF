@@ -160,6 +160,9 @@ public final class CdObjectMappings implements CdDrawMappings {
         addObject(tables, objects, CdR11aObjectAssets.Table.PATA_BATA_DAMAGED_MAPPINGS, objects.pataBataDamaged());
         // ObjBoulder_Init stores actual USA MapSpr_Boulder $209654 (Boulder/Main.asm:30,57-59).
         addObject(tables, objects, CdR11aObjectAssets.Table.BOULDER_MAPPINGS, objects.boulder());
+        // ObjSpikes_Init stores actual USA $20C1F0 (Spikes/Main.asm:21,87-89). Retain the full24
+        // include and its real EVEN byte; one counted frame, four pieces/eight distinct tiles, no script.
+        addObject(tables, objects, CdR11aObjectAssets.Table.SPIKES_MAPPINGS, objects.spikes());
         var monitorView = objects.view(CdR11aObjectAssets.Table.MONITOR_TIME_MAPPINGS);
         var staticPieces = new ArrayList<DeclaredStaticPiece>();
         // ObjMonitorItem_Init (:451-459) adds the signed frame word and then one byte, skipping the count.
@@ -261,3 +264,4 @@ public final class CdObjectMappings implements CdDrawMappings {
                 "CD mapping $%08X static=%s frame=%d: %s", pointer, staticPiece, frame, reason));
     }
 }
+// Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>

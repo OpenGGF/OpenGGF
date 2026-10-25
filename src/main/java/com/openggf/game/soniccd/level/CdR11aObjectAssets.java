@@ -76,7 +76,9 @@ public final class CdR11aObjectAssets {
         PATA_BATA_NORMAL_MAPPINGS("MapSpr_PataBata1", 0xB52E, 34),
         PATA_BATA_DAMAGED_MAPPINGS("MapSpr_PataBata2", 0xB550, 40),
         // Boulder/Main.asm:30,57-59; actual USA MOVE.L at $9618 stores $209654. Includes the real EVEN byte.
-        BOULDER_MAPPINGS("MapSpr_Boulder", 0x9654, 14);
+        BOULDER_MAPPINGS("MapSpr_Boulder", 0x9654, 14),
+        // Spikes/Main.asm:21,87-89; actual USA MOVE.L at $C130 stores $20C1F0. Full include plus real pad.
+        SPIKES_MAPPINGS("MapSpr_Spikes", 0xC1F0, 24);
 
         private final String nativeLabel;
         private final int offset;
@@ -337,6 +339,7 @@ public final class CdR11aObjectAssets {
     private CdObjectVisualAssets pataBataDamaged;
     private PataBataArtBank pataBataArtBank;
     private CdObjectVisualAssets boulder;
+    private CdObjectVisualAssets spikes;
 
     private CdR11aObjectAssets(CdR11aAssets.Identity identity, Map<Table, View> views, List<Delta> deltas,
                                 List<TouchSize> dimensions, CdObjectVisualAssets rings,
@@ -756,6 +759,12 @@ public final class CdR11aObjectAssets {
         return boulder;
     }
 
+    /** Common Spikes/Main.asm:21,87-89: one counted static frame, eight source tiles, no animation script. */
+    public synchronized CdObjectVisualAssets spikes() {
+        if (spikes == null) { spikes = CdObjectVisualAssets.decodeStatic(read(Table.SPIKES_MAPPINGS), 1, 8); }
+        return spikes;
+    }
+
     /** Obj3DPlant_Init (3D Ramp/Main.asm:57-90): ADD.W consumes signed offsets in two distinct bodies. */
     public static PlantOffsets decodePlantOffsets(byte[] input) {
         var bytes = exact(input, 14, "Obj3DPlant_Offsets1/Obj3DPlant_Offsets2");
@@ -793,15 +802,16 @@ public final class CdR11aObjectAssets {
      * Only Mosqui's selector 0, Pata-Bata's selector 1 (Pata-Bata/Main.asm:21-22), FloatBlock's selector 5
      * (Floating Block/Main.asm:43-44), Boulder's selector $B (Boulder/Main.asm:34-35), and Tunnel Door's
      * selector $C (Tunnel Door/Main.asm:41-42), and primary diagonal Spring's selector $F
-     * (Spring/Main.asm:217-220), each at subtype2 0, are admitted; Ring writes literal $A7AE.
+     * (Spring/Main.asm:217-220), and common Spikes' selector $A (Spikes/Main.asm:24-25),
+     * each at subtype2 0, are admitted; Ring writes literal $A7AE.
      */
     public static int decodeTileWord(byte[] input, int selector, int subtype2) {
         if (selector < 0 || selector > 0x7FFF || (subtype2 & ~0xFF) != 0) {
             throw new IllegalArgumentException("Object tile selector/subtype width");
         }
         var bytes = exact(input, 74, "ObjectTileIDs");
-        if ((selector != 0 && selector != 1 && selector != 5 && selector != 0xB && selector != 0xC && selector != 0xF) || subtype2 != 0) {
-            throw new UnsupportedOperationException("Only Mosqui selector 0 / Pata-Bata selector 1 / FloatBlock selector 5 / Boulder selector $B / Tunnel Door selector $C / primary diagonal Spring selector $F at subtype2 0 are reviewed");
+        if ((selector != 0 && selector != 1 && selector != 5 && selector != 0xA && selector != 0xB && selector != 0xC && selector != 0xF) || subtype2 != 0) {
+            throw new UnsupportedOperationException("Only Mosqui selector 0 / Pata-Bata selector 1 / FloatBlock selector 5 / common Spikes selector $A / Boulder selector $B / Tunnel Door selector $C / primary diagonal Spring selector $F at subtype2 0 are reviewed");
         }
         int target = (short) bytes.unsignedWord(selector * 2);
         int end = bytes.length();
@@ -814,7 +824,7 @@ public final class CdR11aObjectAssets {
         }
         if (end - target < 2) {
             throw new IllegalArgumentException((selector == 0 ? "Mosqui" : selector == 1 ? "Pata-Bata" : selector == 5 ? "FloatBlock"
-                    : selector == 0xB ? "Boulder" : selector == 0xC ? "Tunnel Door" : "Primary diagonal Spring")
+                    : selector == 0xA ? "Common Spikes" : selector == 0xB ? "Boulder" : selector == 0xC ? "Tunnel Door" : "Primary diagonal Spring")
                     + " tile word crosses its selected body");
         }
         return bytes.unsignedWord(target);
@@ -959,7 +969,8 @@ public final class CdR11aObjectAssets {
      * Explicit USA-only source opt-in. The complete first incremental camera PLC is ID 9, rows 0/1/2
      * (PLC_Cam2_Incr, Data (Act 1 Present).asm:183-190); PLC2 rows 2/4/5 describe the reload/seed producers.
      * Boulder appends canonical PLC2 row 0 (:85-88); diagonal Spring appends PLC_Std ID1 row5 (:66-67).
-     * Both are immutable source provenance without a separate live art bank or a new current residency owner.
+     * Common Spikes appends canonical PLC_Std ID1 row0 (:56-57). All are immutable source provenance
+     * without a separate live art bank or a new current residency owner.
      * Existing banks and eager startup remain separate. This neither executes a PLC nor publishes residency.
      */
     public synchronized SectionArtSourceBank sectionArtSources() throws IOException {
@@ -979,6 +990,12 @@ public final class CdR11aObjectAssets {
             // One immutable NemesisRead is cached here; physical $9200..$97C0 remains the existing current
             // residency's responsibility, including later BigRing overwrites. No producer-specific tile bank.
             var diagonal = decodeSectionArt(CdR11aAsset.ART_DIAGONAL_SPRING, 46, 779);
+            // Actual USA header $8008 declares XOR/eight tiles at $38018. Independent finite source models
+            // establish Java86/native87, not an extent inferred from the 86-byte source inventory. The native
+            // final post-symbol refill reads SwingingPlatform's genuine $00 at $3806E; Java consumes only
+            // the source through $3806D ($C0). One immutable NemesisRead is shared by this cached source.
+            // Physical patterns $320..$327 at $6400..$6500 remain the existing current owner's responsibility.
+            var spikes = decodeSectionArt(CdR11aAsset.ART_SPIKES, 8, 86);
             // NemDecMain preloads two bytes (Functions (General).asm:415-418); the native decoder refills
             // below nine bits BEFORE emitting a run, including the final run (:436-441,471-490).
             // Native finite lengths therefore differ from Java's final pre-symbol peek lengths. These are
@@ -995,7 +1012,8 @@ public final class CdR11aObjectAssets {
                     sectionArtSource(CdR11aAsset.ART_3D_RAMP_BOOST, 2, 5, 0x8820, 63, 678,
                             frontier.binding(CdR11aAsset.ART_3D_RAMP_BOOST).decode()),
                     sectionArtSource(CdR11aAsset.ART_BOULDER, 2, 0, 0x6E80, 19, 271, boulder),
-                    sectionArtSource(CdR11aAsset.ART_DIAGONAL_SPRING, 1, 5, 0x9200, 46, 780, diagonal)));
+                    sectionArtSource(CdR11aAsset.ART_DIAGONAL_SPRING, 1, 5, 0x9200, 46, 780, diagonal),
+                    sectionArtSource(CdR11aAsset.ART_SPIKES, 1, 0, 0x6400, 8, 87, spikes)));
         }
         return sectionArtSources;
     }

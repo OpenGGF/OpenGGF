@@ -48,6 +48,316 @@ import static org.junit.jupiter.api.Assertions.*;
  * Constructed bytes are not an authenticated retail MMD/native execution.
  */
 class TestCdPlayerFrameRuntime {
+
+    // Direct object Hurt ports: source-derived values at closed cuts, never object/phase authority. JAVA UNRUN.
+    @Test void objectPreHurtYRewindUsesSignedWordShiftFullLongWrapAndEveryFractionBit() throws IOException {
+        int[][] vectors = {{0, 1, 0xFFFFFF00}, {0, -1, 0x100}, {0x1234, 0x7FFF, 0xFF801334},
+                {0xFFFFFFFF, -0x8000, 0x007FFFFF}, {0x80000000, -0x8000, 0x80800000},
+                {0x00010001, 0x101, 0xFFFFFF01}, {0xFFFDBEEF, -0x234, 0xFFFFF2EF}, {0x12345678, 0, 0x12345678}};
+        for (var v : vectors) {
+            var fixture = new Fixture(); var f = spinTunnelDirtyFrame(fixture); var old = f.captureActor(); var s = old.state();
+            var motion = hurtMotion(s.motion(), v[0], v[1], s.motion().flags());
+            f.restoreActor(new CdPlayerFrameRuntime.ActorState(old.owner(), new CdPlayerBody.State(motion, s.animation(),
+                    s.header(), s.timers(), s.history(), s.rotationDistance(), s.objectLinks()), old.display()));
+            var before = f.captureActor(); var shared = f.captureShared(); var a = hurtActor(f); int uploads = fixture.dmas.size();
+            f.bindArtPublication((request, state) -> fail("Y prefix has no art publication authority"));
+            f.validateObjectPreHurtYRewind(a, v[2]); assertEquals(before, f.captureActor()); assertEquals(shared, f.captureShared());
+            f.applyObjectPreHurtYRewind(a, v[2]);
+            var expected = new CdPlayerBody.State(hurtMotion(motion, v[2], v[1], motion.flags()), s.animation(),
+                    s.header(), s.timers(), s.history(), s.rotationDistance(), s.objectLinks());
+            assertEquals(new CdPlayerFrameRuntime.ActorState(before.owner(), expected, before.display()), f.captureActor());
+            assertSame(s.animation(), f.state().animation()); assertSame(s.header(), f.state().header());
+            assertSame(s.timers(), f.state().timers()); assertSame(s.history(), f.state().history());
+            assertSame(s.objectLinks(), f.state().objectLinks()); assertSame(before.display(), f.display());
+            assertSame(shared.environment(), f.environment()); assertSame(shared.artState(), f.artState());
+            assertSame(shared.vIntClock(), f.vIntClock()); assertEquals(shared, f.captureShared());
+            assertEquals(uploads, fixture.dmas.size());
+            var after = f.captureActor(); f.restoreActor(before); f.applyObjectPreHurtYRewind(a, v[2]);
+            assertEquals(after, f.captureActor()); assertEquals(shared, f.captureShared());
+        }
+    }
+
+    @Test void objectPreHurtYRewindRejectsIntegerOnlyUnsignedOrOtherwiseWrongArithmeticWithoutAPrefix() throws IOException {
+        var f = spinTunnelDirtyFrame(new Fixture()); var a = hurtActor(f); var m = a.motion();
+        int exact = 0xFFFFF2EF;
+        assertEquals(exact, m.centreY16_16() - (m.yVelocity() << 8));
+        for (int wrong : new int[]{exact ^ 1, m.centreY16_16(), m.centreY16_16() - m.yVelocity(),
+                m.centreY16_16() - ((m.yVelocity() & 0xFFFF) << 8), (exact & 0xFFFF0000) | (m.centreY16_16() & 0xFFFF)}) {
+            var actor = f.captureActor(); var shared = f.captureShared();
+            assertThrows(IllegalArgumentException.class, () -> f.validateObjectPreHurtYRewind(a, wrong));
+            assertThrows(IllegalArgumentException.class, () -> f.applyObjectPreHurtYRewind(a, wrong));
+            assertEquals(actor, f.captureActor()); assertEquals(shared, f.captureShared());
+            assertSame(actor.state(), f.state()); assertSame(shared.environment(), f.environment());
+        }
+    }
+
+    @ParameterizedTest @ValueSource(strings = {"CENTRE_X_WORD", "X_FRACTION", "CENTRE_Y_WORD", "Y_FRACTION",
+            "X_VELOCITY", "Y_VELOCITY", "GROUND_VELOCITY", "ROUTINE", "ANGLE", "FLAGS", "SPRITE_FLAGS",
+            "X_RADIUS", "Y_RADIUS", "ANIMATION", "PREVIOUS_ANIMATION", "PLAYER_JUMP", "CHARGE", "MOVE_LOCK",
+            "STICK", "PLAYER_CONTROL", "PREVIOUS_PRIMARY_ANGLE", "PREVIOUS_SECONDARY_ANGLE", "TILE", "PRIORITY",
+            "HURT", "ROTATION_DISTANCE"})
+    void objectHurtPortsCasEveryExpectedActorFieldIncludingFieldsTheyCannotWrite(String field) throws IOException {
+        var f = hurtFrame(new Fixture(), 0xB9, 0, 0, 0); var a = hurtActor(f); var stale = hurtActorChanged(a, field);
+        var g = hurtGlobals(f); var pool = hurtPool(); var r = directFrameHurt(f, g, pool, 5);
+        var actor = f.captureActor(); var shared = f.captureShared(); int y = a.motion().centreY16_16() - (a.motion().yVelocity() << 8);
+        assertThrows(IllegalArgumentException.class, () -> f.validateObjectPreHurtYRewind(stale, y));
+        assertThrows(IllegalArgumentException.class, () -> f.applyObjectPreHurtYRewind(stale, y));
+        hurtAssertRejected(f, stale, g, r);
+        assertEquals(actor, f.captureActor()); assertEquals(shared, f.captureShared());
+    }
+
+    @ParameterizedTest @CsvSource({"0,0,0", "0,4,0", "1,0,0", "1,4,0", "0,0,64", "0,4,64", "1,0,64", "1,4,64"})
+    void objectHurtAdoptsRealNormalResultsAndPreservesCompleteCapturePartitions(int mini, int roll, int water) throws IOException {
+        var fixture = new Fixture(); var f = hurtFrame(fixture, 0xB9 | roll | water, mini, 0, 0);
+        var before = f.captureActor(); var shared = f.captureShared(); var a = hurtActor(f); var g = hurtGlobals(f);
+        var pool = hurtPool(); var cut = pool.capture(); var r = directFrameHurt(f, g, pool, 5); int uploads = fixture.dmas.size();
+        assertEquals(CdPlayerTouchResponse.Exit.HURT, r.exit()); assertEquals(2, r.player().shield());
+        assertEquals(0xC7, r.player().combineRing()); assertTrue(r.changedSlots().isEmpty());
+        assertEquals(roll == 0 ? List.of(new CdPlayerTouchResponse.ResetOnFloor()) : List.of(
+                new CdPlayerTouchResponse.ResetOnFloor(), new CdPlayerTouchResponse.PlayFm(CdPlayerTouchResponse.FmSound.FM_CHARGESTOP)), r.calls());
+        f.bindArtPublication((request, state) -> fail("Hurt port must not publish art or execute sound observations"));
+        f.validateObjectHurtResult(a, g, r); assertEquals(before, f.captureActor()); assertEquals(shared, f.captureShared());
+        f.applyObjectHurtResult(a, g, r); hurtAssertAdopted(f, before, shared, r);
+        assertSame(before.state().header(), f.state().header()); assertSame(shared.environment().movement().gates(), f.environment().movement().gates());
+        assertEquals(cut.slots(), pool.capture().slots()); assertEquals(uploads, fixture.dmas.size());
+        var after = f.captureActor(); var afterShared = f.captureShared(); hurtAssertRejected(f, a, g, r);
+        f.restoreActor(before); f.restoreShared(shared); f.applyObjectHurtResult(a, g, r);
+        assertEquals(after, f.captureActor()); assertEquals(afterShared, f.captureShared()); assertEquals(uploads, fixture.dmas.size());
+    }
+
+    @ParameterizedTest @CsvSource({"0,0", "0,4", "1,0", "1,4"})
+    void objectHurtAdoptsRealKillWithPostResetStickWordAndRetainsChargeAndHurt(int mini, int roll) throws IOException {
+        var fixture = new Fixture(); var f = hurtFrame(fixture, 0xB9 | roll, mini, 0, 0);
+        var before = f.captureActor(); var shared = f.captureShared(); var a = hurtActor(f);
+        var g = hurtPlayerGlobals(hurtGlobals(f), 2, 0); var pool = hurtPool(); var cut = pool.capture();
+        var r = directFrameHurt(f, g, pool, 0); int uploads = fixture.dmas.size();
+        assertEquals(CdPlayerTouchResponse.Exit.KILL_PLAYER, r.exit()); assertEquals(a.hurt(), r.actor().hurt());
+        assertEquals(a.motion().charge(), r.actor().motion().charge());
+        int y = (a.motion().centreY16_16() >>> 16) - (roll == 0 ? 0 : mini == 0 ? 5 : 2); y &= 0xFFFF;
+        assertEquals(y >>> 8, r.actor().motion().stick()); assertEquals(y & 0xFF, r.actor().rotationDistance());
+        assertEquals(roll == 0 ? List.of(new CdPlayerTouchResponse.ResetOnFloor(),
+                new CdPlayerTouchResponse.PlayFm(CdPlayerTouchResponse.FmSound.FM_HURT)) : List.of(
+                new CdPlayerTouchResponse.ResetOnFloor(), new CdPlayerTouchResponse.PlayFm(CdPlayerTouchResponse.FmSound.FM_CHARGESTOP),
+                new CdPlayerTouchResponse.PlayFm(CdPlayerTouchResponse.FmSound.FM_HURT)), r.calls());
+        f.bindArtPublication((request, state) -> fail("Kill port executes no call observations"));
+        f.validateObjectHurtResult(a, g, r); assertEquals(before, f.captureActor()); assertEquals(shared, f.captureShared());
+        f.applyObjectHurtResult(a, g, r); hurtAssertAdopted(f, before, shared, r);
+        assertSame(before.state().timers(), f.state().timers()); assertEquals(0, f.environment().globals().invincible());
+        assertEquals(cut.slots(), pool.capture().slots()); assertEquals(uploads, fixture.dmas.size());
+    }
+
+    @ParameterizedTest @ValueSource(ints = {1, 256, 32768, 65535})
+    void objectKillDebugNoWritePreservesTheAlreadyCommittedLongYPrefixAndAllReferences(int debug) throws IOException {
+        var fixture = new Fixture(); var f = hurtFrame(fixture, 0xBD, 0, 0, debug); var a = hurtActor(f);
+        f.applyObjectPreHurtYRewind(a, 0xFFFFF2EF);
+        var before = f.captureActor(); var shared = f.captureShared(); var g = hurtPlayerGlobals(hurtGlobals(f), 2, 0);
+        var pool = hurtPool(); var cut = pool.capture(); var r = directFrameHurt(f, g, pool, 0); int uploads = fixture.dmas.size();
+        assertEquals(CdPlayerTouchResponse.Exit.KILL_PLAYER_DEBUG_NO_WRITE, r.exit());
+        assertEquals(hurtActor(f), r.actor()); assertEquals(g, r.player()); assertTrue(r.calls().isEmpty());
+        f.validateObjectHurtResult(hurtActor(f), g, r); f.applyObjectHurtResult(hurtActor(f), g, r);
+        assertEquals(before, f.captureActor()); assertEquals(shared, f.captureShared());
+        assertSame(before.state(), f.state()); assertSame(shared.environment(), f.environment());
+        assertEquals(0xFFFFF2EF, f.state().motion().centreY16_16());
+        assertEquals(cut.slots(), pool.capture().slots()); assertEquals(uploads, fixture.dmas.size());
+    }
+
+    @Test void objectHurtFailureAfterYPrefixRetainsThatPrefixAndPublishesNoPartOfTheResult() throws IOException {
+        var fixture = new Fixture(); var f = hurtFrame(fixture, 0xBD, 0, 0, 0); var a = hurtActor(f);
+        f.applyObjectPreHurtYRewind(a, 0xFFFFF2EF);
+        var before = f.captureActor(); var shared = f.captureShared(); var g = hurtPlayerGlobals(hurtGlobals(f), 2, 0);
+        var pool = hurtPool(); var cut = pool.capture(); var r = directFrameHurt(f, g, pool, 5); int uploads = fixture.dmas.size();
+        assertEquals(1, r.changedSlots().size()); assertEquals(0xFFFF, r.changedSlots().getFirst().centreY());
+        var bad = hurtReplace(r, hurtActorChanged(r.actor(), "PREVIOUS_ANIMATION"), r.player(), r.exit());
+        hurtAssertRejected(f, hurtActor(f), g, bad);
+        assertEquals(before, f.captureActor()); assertEquals(shared, f.captureShared());
+        assertEquals(0xFFFFF2EF, f.state().motion().centreY16_16());
+        assertEquals(cut.slots(), pool.capture().slots()); assertEquals(uploads, fixture.dmas.size());
+    }
+
+    @Test void objectHurtCasUsesExactlyTheFiveFrameOwnedGlobalsRatherThanAllEightHelperInputs() throws IOException {
+        for (int field : new int[]{1, 4, 5, 6, 7}) {
+            var f = hurtFrame(new Fixture(), 0xB9, 0, 0, 0); var current = hurtGlobals(f);
+            var stale = hurtPlayerGlobals(current, field, hurtGlobalValue(current, field) ^ 1);
+            var r = directFrameHurt(f, stale, hurtPool(), 5);
+            hurtAssertRejected(f, hurtActor(f), stale, r);
+        }
+        for (int field : new int[]{0, 2, 3}) {
+            var f = hurtFrame(new Fixture(), 0xB9, 0, 0, 0); var before = f.captureActor(); var shared = f.captureShared();
+            var g = hurtGlobals(f); g = hurtPlayerGlobals(g, field, hurtGlobalValue(g, field) ^ 1);
+            var r = directFrameHurt(f, g, hurtPool(), 5);
+            f.validateObjectHurtResult(hurtActor(f), g, r); f.applyObjectHurtResult(hurtActor(f), g, r);
+            hurtAssertAdopted(f, before, shared, r);
+        }
+    }
+
+    @Test void objectHurtRejectsEveryUnownedResultFieldAndInvalidNativeExitBeforeAggregateWrites() throws IOException {
+        for (boolean kill : new boolean[]{false, true}) {
+            var f = hurtFrame(new Fixture(), 0xB9, 0, 0, 0); var a = hurtActor(f); var g = hurtGlobals(f);
+            if (kill) g = hurtPlayerGlobals(g, 2, 0);
+            var r = directFrameHurt(f, g, hurtPool(), kill ? 0 : 5);
+            var fields = new ArrayList<>(List.of("CENTRE_X_WORD", "X_FRACTION", "CENTRE_Y_WORD", "Y_FRACTION", "ANGLE",
+                    "SPRITE_FLAGS", "X_RADIUS", "Y_RADIUS", "PREVIOUS_ANIMATION", "MOVE_LOCK", "PLAYER_CONTROL",
+                    "PREVIOUS_PRIMARY_ANGLE", "PREVIOUS_SECONDARY_ANGLE", "FLAGS_BIT_0", "FLAGS_BIT_3", "FLAGS_BIT_6", "FLAGS_BIT_7"));
+            fields.addAll(kill ? List.of("CHARGE", "HURT") : List.of("TILE", "PRIORITY", "STICK", "ROTATION_DISTANCE"));
+            for (var field : fields) hurtAssertRejected(f, a, g,
+                    hurtReplace(r, hurtActorChanged(r.actor(), field), r.player(), r.exit()));
+            for (var exit : CdPlayerTouchResponse.Exit.values()) {
+                if (exit == CdPlayerTouchResponse.Exit.HURT || exit == CdPlayerTouchResponse.Exit.KILL_PLAYER
+                        || exit == CdPlayerTouchResponse.Exit.KILL_PLAYER_DEBUG_NO_WRITE) continue;
+                hurtAssertRejected(f, a, g, hurtReplace(r, r.actor(), r.player(), exit));
+            }
+            for (int field : new int[]{0, 4, 5, 7}) hurtAssertRejected(f, a, g, hurtReplace(r, r.actor(),
+                    hurtPlayerGlobals(r.player(), field, hurtGlobalValue(r.player(), field) ^ 1), r.exit()));
+            if (kill) for (int field : new int[]{2, 3}) hurtAssertRejected(f, a, g, hurtReplace(r, r.actor(),
+                    hurtPlayerGlobals(r.player(), field, hurtGlobalValue(r.player(), field) ^ 1), r.exit()));
+            else hurtAssertRejected(f, a, g, hurtReplace(r, r.actor(), hurtPlayerGlobals(r.player(), 1, 0), r.exit()));
+        }
+    }
+
+    @Test void objectHurtRequiredTerminalStoresRejectForgedValuesButPermitSameValueNativeStores() throws IOException {
+        var f = hurtFrame(new Fixture(), 0xBD, 0, 0, 0); var a = hurtActor(f); var g = hurtGlobals(f);
+        var r = directFrameHurt(f, g, hurtPool(), 5);
+        for (var field : List.of("ROUTINE", "X_VELOCITY", "Y_VELOCITY", "GROUND_VELOCITY", "ANIMATION", "PLAYER_JUMP", "CHARGE", "HURT"))
+            hurtAssertRejected(f, a, g, hurtReplace(r, hurtActorChanged(r.actor(), field), r.player(), r.exit()));
+        hurtAssertRejected(f, a, g, hurtReplace(r, r.actor(), hurtPlayerGlobals(r.player(), 6, 1), r.exit()));
+        f.applyObjectHurtResult(a, g, r);
+        var sameActor = hurtActor(f); var sameGlobals = hurtGlobals(f);
+        var same = directFrameHurt(f, sameGlobals, hurtPool(), 5); var before = f.captureActor(); var shared = f.captureShared();
+        assertEquals(sameActor, same.actor()); assertEquals(sameGlobals.scoreChain(), same.player().scoreChain());
+        f.validateObjectHurtResult(sameActor, sameGlobals, same); f.applyObjectHurtResult(sameActor, sameGlobals, same);
+        assertEquals(before, f.captureActor()); assertEquals(shared, f.captureShared());
+    }
+
+    @Test void objectKillDebugResultCannotSmuggleAnyActorOrPlayerGlobalChange() throws IOException {
+        var f = hurtFrame(new Fixture(), 0xBD, 0, 0, 1); var a = hurtActor(f);
+        var g = hurtPlayerGlobals(hurtGlobals(f), 2, 0); var r = directFrameHurt(f, g, hurtPool(), 0);
+        for (var field : List.of("Y_VELOCITY", "CENTRE_Y_WORD", "HURT", "ROTATION_DISTANCE", "TILE", "CHARGE"))
+            hurtAssertRejected(f, a, g, hurtReplace(r, hurtActorChanged(r.actor(), field), r.player(), r.exit()));
+        for (int field = 0; field < 8; field++) hurtAssertRejected(f, a, g, hurtReplace(r, r.actor(),
+                hurtPlayerGlobals(g, field, hurtGlobalValue(g, field) ^ 1), r.exit()));
+    }
+
+    @Test void objectHurtPortsRejectNullPendingEntitledClosedAndReentrantCutsWithoutConsumingThem() throws IOException {
+        var f = new Fixture().runtime(); var a = hurtActor(f); var g = hurtGlobals(f); var r = directFrameHurt(f, g, hurtPool(), 5);
+        assertThrows(NullPointerException.class, () -> f.validateObjectPreHurtYRewind(null, 0));
+        assertThrows(NullPointerException.class, () -> f.applyObjectPreHurtYRewind(null, 0));
+        assertThrows(NullPointerException.class, () -> f.validateObjectHurtResult(null, g, r));
+        assertThrows(NullPointerException.class, () -> f.applyObjectHurtResult(null, g, r));
+        assertThrows(NullPointerException.class, () -> f.validateObjectHurtResult(a, null, r));
+        assertThrows(NullPointerException.class, () -> f.applyObjectHurtResult(a, null, r));
+        assertThrows(NullPointerException.class, () -> f.validateObjectHurtResult(a, g, null));
+        assertThrows(NullPointerException.class, () -> f.applyObjectHurtResult(a, g, null));
+        var selection = f.prepareInput(8); hurtAssertGuarded(f, a, g, r);
+        int[] calls = {0}; f.serviceVBlank(selection.phase(), () -> { calls[0]++; hurtAssertGuarded(f, a, g, r); });
+        assertEquals(1, calls[0]); assertEquals(8, f.environment().controls().rawHeld());
+        hurtAssertGuarded(f, a, g, r);
+        assertEquals(CdPlayerBody.Boundary.INIT_RETURN, f.runBody(1).result().boundary());
+        var state = f.state(); var env = f.environment(); var art = f.artState(); var display = f.display(); var clock = f.vIntClock();
+        f.close(); hurtAssertGuarded(f, hurtActor(f), hurtGlobals(f), r);
+        assertSame(state, f.state()); assertSame(env, f.environment()); assertSame(art, f.artState());
+        assertSame(display, f.display()); assertSame(clock, f.vIntClock());
+    }
+
+    private static CdPlayerTouchResponse.Actor hurtActor(CdPlayerFrameRuntime f) {
+        var s = f.state(); return new CdPlayerTouchResponse.Actor(s.motion(), s.header().tile(), s.header().priority(),
+                s.timers().hurt(), s.rotationDistance());
+    }
+    private static CdPlayerTouchResponse.PlayerGlobals hurtGlobals(CdPlayerFrameRuntime f) {
+        var e = f.environment(); var b = e.globals();
+        return new CdPlayerTouchResponse.PlayerGlobals(0xA5, b.invincible(), 3, 0xC7, b.debugCheat(), b.debugMode(),
+                e.movement().globals().scoreChain(), e.movement().gates().miniSonic());
+    }
+    private static int hurtGlobalValue(CdPlayerTouchResponse.PlayerGlobals g, int field) {
+        return new int[]{g.timeWarp(), g.invincible(), g.shield(), g.combineRing(), g.debugCheat(), g.debugMode(), g.scoreChain(), g.miniSonic()}[field];
+    }
+    private static CdPlayerTouchResponse.PlayerGlobals hurtPlayerGlobals(CdPlayerTouchResponse.PlayerGlobals g, int field, int value) {
+        int[] v = {g.timeWarp(), g.invincible(), g.shield(), g.combineRing(), g.debugCheat(), g.debugMode(), g.scoreChain(), g.miniSonic()};
+        v[field] = value; return new CdPlayerTouchResponse.PlayerGlobals(v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7]);
+    }
+    private static CdPlayerMotionState hurtMotion(CdPlayerMotionState m, int y, int yv, int flags) {
+        return new CdPlayerMotionState(m.centreX16_16(), y, m.xVelocity(), yv, m.groundVelocity(), m.routine(), m.angle(), flags,
+                m.spriteFlags(), m.xRadius(), m.yRadius(), m.animation(), m.previousAnimation(), m.playerJump(), m.charge(),
+                m.moveLock(), m.stick(), m.playerControl(), m.previousPrimaryAngle(), m.previousSecondaryAngle());
+    }
+    private static CdPlayerTouchResponse.Actor hurtActorChanged(CdPlayerTouchResponse.Actor a, String field) {
+        return switch (field) {
+            case "TILE" -> new CdPlayerTouchResponse.Actor(a.motion(), a.tile() ^ 1, a.priority(), a.hurt(), a.rotationDistance());
+            case "PRIORITY" -> new CdPlayerTouchResponse.Actor(a.motion(), a.tile(), a.priority() ^ 1, a.hurt(), a.rotationDistance());
+            case "HURT" -> new CdPlayerTouchResponse.Actor(a.motion(), a.tile(), a.priority(), a.hurt() ^ 1, a.rotationDistance());
+            case "ROTATION_DISTANCE" -> new CdPlayerTouchResponse.Actor(a.motion(), a.tile(), a.priority(), a.hurt(), a.rotationDistance() ^ 1);
+            default -> new CdPlayerTouchResponse.Actor(spinTunnelChanged(a.motion(), field), a.tile(), a.priority(), a.hurt(), a.rotationDistance());
+        };
+    }
+    private static CdPlayerFrameRuntime hurtFrame(Fixture fixture, int flags, int mini, int cheat, int debug) throws IOException {
+        var f = spinTunnelDirtyFrame(fixture); var a = f.captureActor(); var s = a.state();
+        f.restoreActor(new CdPlayerFrameRuntime.ActorState(a.owner(), new CdPlayerBody.State(hurtMotion(s.motion(),
+                s.motion().centreY16_16(), s.motion().yVelocity(), flags), s.animation(), s.header(), s.timers(), s.history(),
+                s.rotationDistance(), s.objectLinks()), a.display()));
+        var shared = f.captureShared(); var e = shared.environment(); var m = e.movement(); var b = e.globals(); var gates = m.gates();
+        var next = new CdPlayerBody.Environment(new CdPlayerMovement.Environment(m.physics(), m.bounds(),
+                new CdPlayerMovement.Gates(gates.zoneAct(), gates.timeZone(), mini, gates.waterSlide(), gates.windTunnel(),
+                        gates.speedShoes(), gates.timeWarpDirection()), m.globals()), e.controls(),
+                new CdPlayerBody.Globals(b.levelFrames(), b.cameraXCentre(), b.timeAttackMode(), debug, cheat, b.timeWarpTimer(),
+                        b.invincible(), b.bossMusic()), e.dynamicSlots());
+        f.restoreShared(new CdPlayerFrameRuntime.SharedState(shared.owner(), next, shared.artState(), shared.paused(), shared.vIntClock()));
+        return f;
+    }
+    private static CdObjectPool hurtPool() {
+        var pool = new CdObjectPool(); pool.write(pool.state(61).moveByte(CdObjectState.ByteField.ID, 0x26)
+                .moveWord(CdObjectState.WordField.X, 0xFFFF).moveWord(CdObjectState.WordField.Y, 0x040E));
+        pool.write(pool.state(32).moveWord(CdObjectState.WordField.X_FRACTION, 0x1357)
+                .moveWord(CdObjectState.WordField.Y_FRACTION, 0x2468).moveByte(CdObjectState.ByteField.ROUTINE, 0xFE));
+        return pool;
+    }
+    private static CdPlayerTouchResponse.Result directFrameHurt(CdPlayerFrameRuntime f, CdPlayerTouchResponse.PlayerGlobals g,
+            CdObjectPool pool, int rings) {
+        var cut = pool.capture(); return CdPlayerTouchResponse.hurtPlayer(hurtActor(f), g,
+                new CdPlayerTouchResponse.WorldGlobals(rings, 0xA5, 0xC7, 0x89ABCDEF, 0xFEDCBA98, 0xE9), cut.slots().get(29), cut);
+    }
+    private static CdPlayerTouchResponse.Result hurtReplace(CdPlayerTouchResponse.Result r, CdPlayerTouchResponse.Actor a,
+            CdPlayerTouchResponse.PlayerGlobals g, CdPlayerTouchResponse.Exit exit) {
+        return new CdPlayerTouchResponse.Result(a, g, r.world(), r.changedSlots(), r.calls(),
+                exit.explicitMinusOne() ? OptionalInt.of(-1) : OptionalInt.empty(), exit);
+    }
+    private static void hurtAssertRejected(CdPlayerFrameRuntime f, CdPlayerTouchResponse.Actor a,
+            CdPlayerTouchResponse.PlayerGlobals g, CdPlayerTouchResponse.Result r) {
+        var actor = f.captureActor(); var shared = f.captureShared(); var observation = observe(f);
+        assertThrows(IllegalArgumentException.class, () -> f.validateObjectHurtResult(a, g, r));
+        assertThrows(IllegalArgumentException.class, () -> f.applyObjectHurtResult(a, g, r));
+        assertEquals(actor, f.captureActor()); assertEquals(shared, f.captureShared()); assertEquals(observation, observe(f));
+        assertSame(actor.state(), f.state()); assertSame(shared.environment(), f.environment());
+    }
+    private static void hurtAssertGuarded(CdPlayerFrameRuntime f, CdPlayerTouchResponse.Actor a,
+            CdPlayerTouchResponse.PlayerGlobals g, CdPlayerTouchResponse.Result r) {
+        var state = f.state(); var env = f.environment(); var art = f.artState(); var display = f.display(); var clock = f.vIntClock();
+        assertThrows(IllegalStateException.class, () -> f.validateObjectPreHurtYRewind(a, 0));
+        assertThrows(IllegalStateException.class, () -> f.applyObjectPreHurtYRewind(a, 0));
+        assertThrows(IllegalStateException.class, () -> f.validateObjectHurtResult(a, g, r));
+        assertThrows(IllegalStateException.class, () -> f.applyObjectHurtResult(a, g, r));
+        assertSame(state, f.state()); assertSame(env, f.environment()); assertSame(art, f.artState());
+        assertSame(display, f.display()); assertSame(clock, f.vIntClock());
+    }
+    private static void hurtAssertAdopted(CdPlayerFrameRuntime f, CdPlayerFrameRuntime.ActorState before,
+            CdPlayerFrameRuntime.SharedState shared, CdPlayerTouchResponse.Result r) {
+        var s = before.state(); var h = s.header(); var t = s.timers(); var a = r.actor();
+        var expected = new CdPlayerBody.State(a.motion(), s.animation(), new CdPlayerBody.Header(h.slotId(), h.mappingAddress(),
+                a.tile(), a.priority(), h.width()), new CdPlayerBody.Timers(a.hurt(), t.invincibility(), t.speedShoes(), t.reset()),
+                s.history(), a.rotationDistance(), s.objectLinks());
+        assertEquals(new CdPlayerFrameRuntime.ActorState(before.owner(), expected, before.display()), f.captureActor());
+        var e = shared.environment(); var m = e.movement(); var g = m.globals(); var b = e.globals();
+        var movementGlobals = new CdPlayerMovement.Globals(g.lookMode(), g.cameraYCentre(), g.primaryAngle(), g.secondaryAngle(),
+                g.boredTimer(), r.player().scoreChain(), g.debugAngle(), g.debugAngleShift(), g.debugQuadrant(), g.debugFloorDistance());
+        var environment = new CdPlayerBody.Environment(new CdPlayerMovement.Environment(m.physics(), m.bounds(), m.gates(), movementGlobals),
+                e.controls(), new CdPlayerBody.Globals(b.levelFrames(), b.cameraXCentre(), b.timeAttackMode(), b.debugMode(), b.debugCheat(),
+                        b.timeWarpTimer(), r.player().invincible(), b.bossMusic()), e.dynamicSlots());
+        assertEquals(new CdPlayerFrameRuntime.SharedState(shared.owner(), environment, shared.artState(), shared.paused(), shared.vIntClock()), f.captureShared());
+        assertSame(s.animation(), f.state().animation()); assertSame(s.history(), f.state().history());
+        assertSame(s.objectLinks(), f.state().objectLinks()); assertSame(before.display(), f.display());
+        assertSame(m.physics(), f.environment().movement().physics()); assertSame(m.bounds(), f.environment().movement().bounds());
+        assertSame(e.controls(), f.environment().controls()); assertSame(e.dynamicSlots(), f.environment().dynamicSlots());
+        assertSame(shared.artState(), f.artState()); assertSame(shared.vIntClock(), f.vIntClock());
+    }
+    // END direct object Hurt Frame ports.
     // BEGIN Time Post direction byte value port; Root owns the source object/phase.
     @ParameterizedTest @ValueSource(ints = {0, 1, 128, 255})
     void timePostDirectionChangesOnlyItsRawGateByteAndPreservesTheCompleteCut(int next) throws IOException {

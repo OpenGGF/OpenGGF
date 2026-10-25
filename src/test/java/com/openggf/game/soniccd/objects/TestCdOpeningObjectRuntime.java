@@ -4373,7 +4373,7 @@ class TestCdOpeningObjectRuntime {
         assertThrows(NullPointerException.class, () -> new CdOpeningObjectRuntime.TunnelDoorFm(null));
         assertEquals(CdTunnelDoor.FmSound.FM_A4,
                 new CdOpeningObjectRuntime.TunnelDoorFm(CdTunnelDoor.FmSound.FM_A4).sound());
-        assertEquals(15, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+        assertEquals(16, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
         var compact = new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138);
         assertEquals(494, compact.monitorTime() + 82 - compact.player());
         assertEquals(12, compact.monitorTime() - compact.tunnelDoorVertical());
@@ -4963,7 +4963,7 @@ class TestCdOpeningObjectRuntime {
                     () -> com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(state.residency(), 0x409));
             assertThrows(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.OwnershipBoundary.class,
                     () -> com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(state.residency(), 0x440));
-            assertEquals(15, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+            assertEquals(16, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
             var compact = new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138);
             assertEquals(494, compact.monitorTime() + 82 - compact.player());
             assertEquals(state, f.runtime.captureClosedCut().sectionArtState());
@@ -5417,6 +5417,11 @@ class TestCdOpeningObjectRuntime {
         for (int offset = 0; offset < diagonal.decode().bytes().length(); offset += 32)
             resident = com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.writeTile(resident,
                     diagonal.canonicalPlc().vramAddress() + offset, diagonal.decode().bytes().slice(offset, 32));
+        // Explicit TEST ingress for eagerly validated C26; never a production restart seed or native history.
+        var spikes = objects.sectionArtSources().source(com.openggf.game.soniccd.level.CdR11aAsset.ART_SPIKES);
+        for (int offset = 0; offset < spikes.decode().bytes().length(); offset += 32)
+            resident = com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.writeTile(resident,
+                    spikes.canonicalPlc().vramAddress() + offset, spikes.decode().bytes().slice(offset, 32));
         return new CdOpeningObjectRuntime.CameraArtRestartIngress(resident, CdAssetBytes.copyOf(new byte[512]), 0);
     }
 
@@ -5474,7 +5479,7 @@ class TestCdOpeningObjectRuntime {
     @Test void boulderFourteenthBankPreservesEveryOldConstructorAndTheOneAggregate() {
         var expected = new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138, 208, 236, 299, 369, 374,
                 413, 449, 464, 500, 512, 594);
-        assertEquals(15, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+        assertEquals(16, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
         assertEquals(513, expected.boulder() + 19 - expected.player());
         assertEquals(expected, new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138));
         assertEquals(expected, new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138, 208, 236));
@@ -5501,7 +5506,7 @@ class TestCdOpeningObjectRuntime {
     @Test void boulderColdDevSeedsExactlyNineteenCompleteTilesFromTheSameSevenSourceBank() throws Exception {
         try (var f = new Fixture()) {
             var objects = f.assets.openingObjects(); var bank = objects.sectionArtSources();
-            assertSame(bank, objects.sectionArtSources()); assertEquals(8, bank.sources().size());
+            assertSame(bank, objects.sectionArtSources()); assertEquals(9, bank.sources().size());
             var source = bank.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_BOULDER);
             assertEquals(2, source.canonicalPlcId()); assertEquals(0, source.canonicalRowIndex());
             assertEquals(f.assets.loadPlan().plcs().get(2).entries().getFirst(), source.canonicalPlc());
@@ -5511,7 +5516,7 @@ class TestCdOpeningObjectRuntime {
             int known = 0;
             for (var region : com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.Region.values())
                 for (byte value : resident.region(region).knownMask().copy()) known += value;
-            assertEquals((70 + 28 + 63 + 19 + 46) * 32, known, "legacy three preloads plus explicit Boulder and diagonal DEV writes");
+            assertEquals((70 + 28 + 63 + 19 + 46 + 8) * 32, known, "legacy three preloads plus explicit Boulder, diagonal and Spikes DEV writes");
             var lower = resident.region(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.Region.AT_6E00);
             for (int offset = 0; offset < 0x600; offset++) {
                 boolean expected = offset >= 0x80 && offset < 0x2E0;
@@ -5949,7 +5954,7 @@ class TestCdOpeningObjectRuntime {
         var full = new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594,613);
         var old14 = new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594);
         assertEquals(full, old14); assertEquals(full, new CdOpeningObjectRuntime.LogicalBanks(100,124,138));
-        assertEquals(15, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+        assertEquals(16, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
         assertEquals("diagonalSpring", CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents()[14].getName());
         assertEquals(559, full.diagonalSpring() + 46 - full.player()); assertEquals(12475, BANKS.diagonalSpring());
         assertEquals(919, new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,900).diagonalSpring());
@@ -5993,7 +5998,7 @@ class TestCdOpeningObjectRuntime {
     @Test void diagonalColdSeedUsesExactlyTheEighthCanonicalSourceAndFortySixCompleteCurrentTiles() throws Exception {
         try (var f = new Fixture()) {
             var objects = f.assets.openingObjects(); var bank = objects.sectionArtSources(); assertSame(bank, objects.sectionArtSources());
-            assertEquals(8, bank.sources().size()); var source = bank.sources().get(7);
+            assertEquals(9, bank.sources().size()); var source = bank.sources().get(7);
             assertEquals(com.openggf.game.soniccd.level.CdR11aAsset.ART_DIAGONAL_SPRING, source.source());
             assertSame(source, bank.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_DIAGONAL_SPRING));
             assertEquals(1, source.canonicalPlcId()); assertEquals(5, source.canonicalRowIndex());
@@ -6008,7 +6013,7 @@ class TestCdOpeningObjectRuntime {
             int known = 0;
             for (var region : com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.Region.values())
                 for (byte value : resident.region(region).knownMask().copy()) known += value;
-            assertEquals((70+28+63+19+46)*32, known);
+            assertEquals((70+28+63+19+46+8)*32, known);
             for (int tile : List.of(0x480,0x48F,0x4BE,0x4BF,0x51F)) boulderUnknown(resident, tile);
             assertEquals(0, state.sectionWord()); assertEquals(0, state.remainingTilesWord()); assertEquals(0, state.queue().headSource());
             assertTrue(state.decoder().isEmpty()); assertArrayEquals(new byte[512], state.codeTable().copy());
@@ -6522,4 +6527,529 @@ class TestCdOpeningObjectRuntime {
         assertSame(stop,fault);assertNotNull(captured[0]);return captured[0];
     }
     // END diagonal Spring Runtime R1 tests-first additions.
+
+    // BEGIN common Spikes Runtime R1 tests FIRST; all Java UNRUN by this source-only author.
+    // J=8f283a9597999c991a9233c19cf8543fd21b892b; N=1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff.
+    // Actual shared pure Results and actual pool captures; constructed device ingress is not route evidence.
+    // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>
+
+    @Test void spikesSixteenthBankPreservesEveryOlderConstructorAndOneCachedActualBody() {
+        var full = new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594,613,659);
+        assertEquals(16, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+        assertEquals("spikes", CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents()[15].getName());
+        assertEquals(full, new CdOpeningObjectRuntime.LogicalBanks(100,124,138));
+        assertEquals(full, new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236));
+        assertEquals(full, new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374));
+        assertEquals(full, new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413));
+        assertEquals(full, new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449));
+        assertEquals(full, new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464));
+        assertEquals(full, new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500));
+        assertEquals(full, new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512));
+        assertEquals(full, new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594));
+        assertEquals(full, new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594,613));
+        assertEquals(567, full.spikes()+8-full.player()); assertEquals(BANKS.diagonalSpring()+46,BANKS.spikes());
+        assertEquals(List.of(3,5,8,9,10,11,12,13,14,15,16), java.util.Arrays.stream(CdOpeningObjectRuntime.LogicalBanks.class.getDeclaredConstructors())
+                .map(java.lang.reflect.Constructor::getParameterCount).sorted().toList());
+        assertEquals(1, java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredFields()).filter(v->v.getType()==CdSpikes.class).count());
+        assertFalse(java.util.Arrays.stream(CdOpeningObjectRuntime.Snapshot.class.getDeclaredFields()).anyMatch(v->
+                v.getType()==CdSpikes.class || v.getType()==CdSpikes.Result.class || v.getType()==CdSpikes.SolidCall.class
+                        || v.getType()==CdSpikes.YRewindCall.class || v.getType()==CdSpikes.HurtCall.class || v.getType()==CdSpikes.Inputs.class));
+    }
+
+    @Test void spikesColdSeedsOnlyEightCompleteNinthCanonicalTilesAndKeepsTheSourceBankCached() throws Exception {
+        try(var f=new Fixture()) {
+            var objects=f.assets.openingObjects();var bank=objects.sectionArtSources();assertSame(bank,objects.sectionArtSources());
+            assertEquals(9,bank.sources().size());var source=bank.sources().get(8);
+            assertSame(source,bank.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_SPIKES));
+            assertEquals(1,source.canonicalPlcId());assertEquals(0,source.canonicalRowIndex());assertEquals(8,source.tileCount());
+            assertEquals(0x8008,source.readerBytes().unsignedWord(0));assertEquals(256,source.decode().bytes().length());
+            assertEquals(f.assets.loadPlan().plcs().get(1).entries().getFirst(),source.canonicalPlc());assertEquals(0x6400,source.canonicalPlc().vramAddress());
+            var state=f.runtime.sectionArtState();cameraArtBytes(state.residency(),0x6400,source.decode().bytes());
+            var region=state.residency().region(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.Region.AT_6400);
+            for(byte mask:region.knownMask().copy())assertEquals(1,mask);
+            int known=0;for(var r:com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.Region.values())
+                for(byte mask:state.residency().region(r).knownMask().copy())known+=mask;
+            assertEquals((70+28+63+19+46+8)*32,known);
+            assertEquals(0,state.remainingTilesWord());assertEquals(0,state.queue().headSource());assertTrue(state.decoder().isEmpty());
+            assertArrayEquals(new byte[512],state.codeTable().copy());assertEquals(0,state.sectionWord());
+        }
+    }
+
+    @Test void spikesCurrentPolicyResolvesAll567DistinctSamplesAndOnlyItsEightCurrentValues() throws Exception {
+        try(var f=new Fixture()) {
+            var original=f.runtime.sectionArtState().residency();var changed=spikesChanged(original);var pixels=spikesPixels(f,changed);
+            int[] first={0x780,0x7AE,0x3A0,0x424,0x441,0x680,0x6C6,0x6D7,0x544,0x334,0x520,0x328,0x5A8,0x374,0x490,0x320};
+            int[] count={24,14,70,28,63,70,5,39,36,15,36,12,82,19,46,8};var ids=new java.util.HashSet<Integer>();
+            for(int span=0;span<first.length;span++)for(int tile=0;tile<count[span];tile++)assertTrue(ids.add(pixels.resolve(first[span]+tile).logicalPatternId()));
+            assertEquals(567,ids.size());var source=cameraArtSource(f,com.openggf.game.soniccd.level.CdR11aAsset.ART_SPIKES);
+            for(int tile=0;tile<8;tile++) {
+                var resolved=pixels.resolve(0x320+tile);assertEquals(BANKS.spikes()+tile,resolved.logicalPatternId());
+                assertEquals(CdObjectPresentation.patternVersion(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(changed,0x320+tile)),resolved.version());
+                assertNotEquals(CdObjectPresentation.patternVersion(source.slice(tile*32,32)),resolved.version());
+            }
+            cameraArtBytes(original,0x6400,source);assertThrows(UnsupportedOperationException.class,()->pixels.resolve(0x31F));
+            assertThrows(UnsupportedOperationException.class,()->pixels.resolve(0x4BE));
+        }
+    }
+
+    @Test void spikesSixteenBankEveryPairAndBothBoundsRejectAtBothFactoriesBeforeFrameMutation() throws Exception {
+        var assets=load();var carry=cameraArtDevIngress(assets);
+        int[] bases={100,124,138,208,236,299,369,374,413,449,464,500,512,594,613,659};
+        int[] sizes={24,14,70,28,63,70,5,39,36,15,36,12,82,19,46,8};var bad=new ArrayList<CdOpeningObjectRuntime.LogicalBanks>();
+        for(int left=0;left<16;left++)for(int right=left+1;right<16;right++){var next=bases.clone();next[right]=bases[left];bad.add(spikesBanks(next));}
+        for(int index=0;index<16;index++)for(int value:new int[]{-1,Integer.MAX_VALUE-sizes[index]+2}){var next=bases.clone();next[index]=value;bad.add(spikesBanks(next));}
+        assertEquals(152,bad.size());try(var frame=CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets,0)) {
+            var actor=frame.captureActor();var shared=frame.captureShared();
+            for(var banks:bad) {
+                assertThrows(IllegalArgumentException.class,()->CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(
+                        assets,frame,INITIAL,CONTACT,SCORE,LEVEL,new byte[640],banks,PRE,value->fail("no admission callback")));
+                assertThrows(IllegalArgumentException.class,()->CdOpeningObjectRuntime.usaR11aRestartDevEmptySatPreloadedArt(
+                        assets,frame,INITIAL,CONTACT,SCORE,LEVEL,CdAssetBytes.copyOf(new byte[CdObjectPlacementRuntime.SAVED_BANK_BYTES]),
+                        new CdPowerupArtRuntime.State(new byte[0x480],new byte[0x480]),carry,new byte[640],banks,PRE,value->fail("no admission callback")));
+                assertEquals(actor,frame.captureActor());assertEquals(shared.environment(),frame.environment());assertSame(shared.artState(),frame.artState());
+                assertEquals(shared.vIntClock(),frame.vIntClock());assertFalse(frame.closed());
+            }
+        }
+    }
+
+    @Test void spikesRestartCarriesChangedEightMasksTableAndRawSectionVerbatimWithoutAService() throws Exception {
+        try(var f=new Fixture()) {
+            var original=f.runtime.sectionArtState().residency();var resident=spikesChanged(original);byte[] table=new byte[512];
+            for(int i=0;i<table.length;i++)table[i]=(byte)(i^0x5D);var carry=new CdOpeningObjectRuntime.CameraArtRestartIngress(resident,CdAssetBytes.copyOf(table),0x035A);
+            try(var frame=CdPlayerFrameRuntime.externalTouchRequiredDevelopment(f.assets,0)) {
+                var actor=frame.captureActor();var shared=frame.captureShared();var publications=new ArrayList<CdPlayerArtRuntime.State>();frame.bindArtPublication((r,s)->publications.add(s));
+                try(var runtime=CdOpeningObjectRuntime.usaR11aRestartDevEmptySatPreloadedArt(f.assets,frame,INITIAL,CONTACT,SCORE,LEVEL,
+                        CdAssetBytes.copyOf(new byte[CdObjectPlacementRuntime.SAVED_BANK_BYTES]),new CdPowerupArtRuntime.State(new byte[0x480],new byte[0x480]),
+                        carry,new byte[640],BANKS,PRE,value->fail("restart has no helper callback"))) {
+                    assertSame(resident,runtime.sectionArtState().residency());assertArrayEquals(table,runtime.sectionArtState().codeTable().copy());
+                    assertEquals(0x035A,runtime.sectionArtState().sectionWord());assertEquals(0,runtime.sectionArtState().queue().headSource());
+                    assertTrue(runtime.sectionArtState().decoder().isEmpty());assertEquals(0,runtime.sectionArtState().remainingTilesWord());
+                    for(var region:com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.Region.values())assertEquals(resident.region(region),runtime.sectionArtState().residency().region(region));
+                    assertEquals(actor,frame.captureActor());assertEquals(shared.environment(),frame.environment());assertEquals(shared.vIntClock(),frame.vIntClock());
+                    assertTrue(publications.isEmpty());assertTrue(runtime.lastSoundRequests().isEmpty());assertTrue(runtime.displayedFrame().tiles().isEmpty());
+                }
+            }
+            cameraArtBytes(original,0x6400,cameraArtSource(f,com.openggf.game.soniccd.level.CdR11aAsset.ART_SPIKES));
+        }
+    }
+
+    @Test void spikesRestartUnknownFirstOrLastRefusesWithoutManufacturingMaskOrChangingFrame() throws Exception {
+        var assets=load();for(int missing:List.of(0,7)) {
+            var objects=assets.openingObjects();var frontier=objects.frontierArtBank();
+            var resident=com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.devSeed(objects.initialArtBank().binding(
+                    com.openggf.game.soniccd.level.CdR11aAsset.ART_MOSQUI).bytes(),frontier.binding(com.openggf.game.soniccd.level.CdR11aAsset.ART_3D_PLANT).bytes(),
+                    frontier.binding(com.openggf.game.soniccd.level.CdR11aAsset.ART_3D_RAMP_BOOST).bytes());
+            for(var id:List.of(com.openggf.game.soniccd.level.CdR11aAsset.ART_BOULDER,com.openggf.game.soniccd.level.CdR11aAsset.ART_DIAGONAL_SPRING,com.openggf.game.soniccd.level.CdR11aAsset.ART_SPIKES)) {
+                var source=objects.sectionArtSources().source(id);for(int tile=0;tile<source.tileCount();tile++)if(id!=com.openggf.game.soniccd.level.CdR11aAsset.ART_SPIKES||tile!=missing)
+                    resident=com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.writeTile(resident,source.canonicalPlc().vramAddress()+tile*32,source.decode().bytes().slice(tile*32,32));
+            }
+            var exact=resident;var carry=new CdOpeningObjectRuntime.CameraArtRestartIngress(exact,CdAssetBytes.copyOf(new byte[512]),0x005A);
+            try(var frame=CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets,0)) {
+                var actor=frame.captureActor();var shared=frame.captureShared();var mask=exact.region(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.Region.AT_6400).knownMask();
+                var fault=assertThrows(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.OwnershipBoundary.class,()->
+                        CdOpeningObjectRuntime.usaR11aRestartDevEmptySatPreloadedArt(assets,frame,INITIAL,CONTACT,SCORE,LEVEL,
+                                CdAssetBytes.copyOf(new byte[CdObjectPlacementRuntime.SAVED_BANK_BYTES]),new CdPowerupArtRuntime.State(new byte[0x480],new byte[0x480]),
+                                carry,new byte[640],BANKS,PRE,value->fail("no admission callback")));
+                assertEquals(0x320+missing,fault.nativePatternId());assertEquals(actor,frame.captureActor());assertEquals(shared.environment(),frame.environment());
+                assertEquals(shared.vIntClock(),frame.vIntClock());assertSame(shared.artState(),frame.artState());assertFalse(frame.closed());
+                assertArrayEquals(mask.copy(),exact.region(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.Region.AT_6400).knownMask().copy());
+            }
+        }
+    }
+
+    @Test void spikesActualInitFallsThroughAtAllFlipsAndOnlyVerticalFlipSetsHazardByte() throws Exception {
+        for(int flip=0;flip<4;flip++)try(var f=new Fixture()) {
+            springDeviceCut(f);var pool=f.runtime.placement().pool();seedSolidPlayer(f,0,0,0,0,0,0x01001234,0x07005678);
+            var dirty=spikesImage(f,pool.state(40),0,flip,0).moveByte(COLLISION_TYPE,0x17).moveWord(TILE,0xDEAD)
+                    .moveWord(X_FRACTION,0xA55A).moveWord(Y_FRACTION,0x5AA5).moveByte(ROUTINE_2,0xC7);
+            pool.write(dirty);var actor=f.frame.state();f.runtime.runDynamicSlotsAfterReservedSlots();var actual=f.slot(40);
+            assertEquals(2,actual.routine());assertEquals(0x20C1F0,actual.longBits(MAPPINGS));assertEquals(0x320,actual.word(TILE));
+            assertEquals((flip&2)==0?16:18,actual.unsignedByte(WIDTH));assertEquals(8,actual.unsignedByte(Y_RADIUS));assertEquals(3,actual.unsignedByte(PRIORITY));
+            assertEquals((flip&2)==0?0x17:0x83,actual.unsignedByte(COLLISION_TYPE));assertEquals(0xA55A,actual.word(X_FRACTION));
+            assertEquals(0x5AA5,actual.word(Y_FRACTION));assertEquals(0xC7,actual.unsignedByte(ROUTINE_2));assertEquals(actor,f.frame.state());
+            var sat=f.runtime.finishAfterCamera(POST);assertEquals(4,sat.provenance().stream().filter(v->v.slotRef().wholeIndex()==40).count());f.runtime.finishOrdinaryTail();
+        }
+    }
+
+    @Test void spikesBadTileSubtypeRetainsOnlyItsNativeInitPrefixBeforeLaterDispatch() throws Exception {
+        try(var f=new Fixture()) {
+            springDeviceCut(f);var pool=f.runtime.placement().pool();var dirty=spikesImage(f,pool.state(40),0,0,0).moveByte(SUBTYPE2,1)
+                    .moveWord(TILE,0xDEAD).moveByte(WIDTH,0xA5).moveByte(Y_RADIUS,0x5A);pool.write(dirty);pool.write(pool.state(41).moveByte(ID,0x7E));
+            var actor=f.frame.state();var fault=assertThrows(CdSpikes.UnsupportedSpikes.class,f.runtime::runDynamicSlotsAfterReservedSlots);
+            assertEquals(CdSpikes.UnsupportedBoundary.TILE_ID_SUBTYPE2,fault.boundary());
+            assertEquals(dirty.addByte(ROUTINE,2).moveLong(MAPPINGS,0x20C1F0).moveByte(SPRITE_FLAGS,4).moveByte(PRIORITY,3),f.slot(40));
+            assertEquals(actor,f.frame.state());assertEquals(0x7E,f.slot(41).id());assertTrue(f.runtime.closed());assertTrue(f.frame.closed());
+        }
+    }
+
+    @Test void spikesUnsignedBorrowAbsDyHasExactThirtyTwoBoundaryAndNoOuterVisibilityGate() throws Exception {
+        int[][] rows={{0x761,0x780,1},{0x760,0x780,0},{0x79F,0x780,1},{0x7A0,0x780,0},{0,0xFFFF,0},{0xFFFF,0,0}};
+        for(var row:rows)try(var f=new Fixture()) {
+            springDeviceCut(f);var pool=f.runtime.placement().pool();seedSolidPlayer(f,8,40,1,0x123,0,0x01001234,(row[0]<<16)|0x5678);
+            pool.write(spikesImage(f,pool.state(40),2,4,8).moveWord(Y,row[1]));var sounds=new ArrayList<>(f.runtime.lastSoundRequests());
+            if(row[2]!=0)sounds.add(new CdOpeningObjectRuntime.PlayerSound(new CdPlayerFrameRuntime.ContactFmSound(CdPlayerTouchResponse.FmSound.FM_CHARGESTOP)));
+            f.runtime.runDynamicSlotsAfterReservedSlots();assertEquals(sounds,f.runtime.lastSoundRequests());
+            assertEquals(row[2]==0?40:0,f.frame.state().objectLinks().standObject());
+            // Extreme unsigned-Y ingress intentionally stops before an unrelated finite-SAT policy boundary.
+        }
+    }
+
+    @Test void spikesDirectNormalDebugCheatKillAndFullWordDebugNoWriteAreActualSourceCalls() throws Exception {
+        int[][] rows={{1,0,0,4},{0x100,0,0,4},{0,0,0,6},{0,1,0,2},{0,0,2,4},{0,0,3,4}};
+        for(var row:rows)try(var f=new Fixture(INITIAL,new CdPlayerBody.ContactGlobals(0,row[2],0xA5),SCORE)) {
+            springDeviceCut(f);spikesSeedPlayer(f,8,40,0,0x123,0x01001234,0x0767FF80,0);spikesDebug(f,row[1],row[0]);
+            var pool=f.runtime.placement().pool();pool.write(spikesImage(f,pool.state(40),2,0x84,8));var world=spikesWorld(f);
+            f.runtime.runDynamicSlotsAfterReservedSlots();assertEquals(row[3],f.frame.state().motion().routine());assertEquals(world,spikesWorld(f));
+            assertEquals(row[3]==4?0x78:0,f.frame.state().timers().hurt());assertEquals(2,f.slot(40).routine());
+            assertEquals(0x20C1F0,f.slot(40).longBits(MAPPINGS));monitorFinish(f);
+        }
+    }
+
+    @Test void spikesActualDirectHurtBranchesPublishOnlyTheOwnedActorContactAndOrderedFmOnce() throws Exception {
+        int[][] rows={{1,0,0,8},{0x100,0,0,8},{0,0,0,8},{0,1,0,8},{0,0,2,8},{0,0,3,8},{1,0,0,0x48},{1,0,0,0x0C},{0,0,0,0x0C}};
+        for(var row:rows)try(var f=new Fixture(INITIAL,new CdPlayerBody.ContactGlobals(0,row[2],0xA5),SCORE)) {
+            springDeviceCut(f);spikesSeedPlayer(f,row[3],40,7,0x123,0x01001234,0x0767FF80,0);spikesDebug(f,row[1],row[0]);
+            var pool=f.runtime.placement().pool();pool.write(spikesImage(f,pool.state(40),2,0x84,8));var world=spikesWorld(f);
+            var call=spikesReachedHurt(f);var expected=call.result();var source=f.slot(40);var display=f.frame.display();var animation=f.frame.state().animation();
+            var sounds=spikesHurtSounds(f,expected);spikesInvoke(f,"commitSpikesHurt",CdSpikes.HurtCall.class,call);
+            assertEquals(expected.actor(),tunnelDoorPlayer(f).actor());assertEquals(expected.player(),spikesPlayerGlobals(f));assertEquals(world,spikesWorld(f));
+            assertEquals(source,f.slot(40));assertEquals(display,f.frame.display());assertEquals(animation,f.frame.state().animation());assertEquals(sounds,f.runtime.lastSoundRequests());
+            assertTrue(expected.changedSlots().isEmpty());assertEquals(List.of(),expected.calls().stream().filter(CdPlayerTouchResponse.AddPoints.class::isInstance).toList());
+            if(expected.exit()==CdPlayerTouchResponse.Exit.KILL_PLAYER) {
+                var fm=expected.calls().stream().filter(CdPlayerTouchResponse.PlayFm.class::isInstance).map(CdPlayerTouchResponse.PlayFm.class::cast).map(CdPlayerTouchResponse.PlayFm::sound).toList();
+                assertEquals((row[3]&4)!=0?List.of(CdPlayerTouchResponse.FmSound.FM_CHARGESTOP,CdPlayerTouchResponse.FmSound.FM_HURT):List.of(CdPlayerTouchResponse.FmSound.FM_HURT),fm);
+            } else if(expected.exit()==CdPlayerTouchResponse.Exit.HURT) {
+                assertEquals(0x78,f.frame.state().timers().hurt());assertEquals((row[3]&0x40)!=0?-0x200:-0x400,f.frame.state().motion().yVelocity());
+                assertEquals(row[2]&~1,f.runtime.contactGlobals().shield());assertEquals((row[2]&1)==0?0:0xA5,f.runtime.contactGlobals().combineRing());
+            } else {assertEquals(call.expectedActor(),expected.actor());assertEquals(call.expectedPlayer(),expected.player());assertTrue(expected.calls().isEmpty());}
+            boulderUnstage(f);
+        }
+    }
+
+    @Test void spikesPublicPhysicalDispatchPerformsHurtThenDrawAndRetainsPrefixesBeforeLaterUnknown() throws Exception {
+        try(var f=new Fixture(INITIAL,new CdPlayerBody.ContactGlobals(0,3,0xA5),SCORE)) {
+            springDeviceCut(f);spikesSeedPlayer(f,8,40,7,0x123,0x01001234,0x0767FF80,0);var pool=f.runtime.placement().pool();
+            pool.write(spikesImage(f,pool.state(40),0,0x80,8));pool.write(pool.state(41).moveByte(ID,0x7E));var before=f.frame.display();
+            var fault=assertThrows(UnsupportedOperationException.class,f.runtime::runDynamicSlotsAfterReservedSlots);
+            assertTrue(fault.getMessage().contains("41"));assertEquals(2,f.slot(40).routine());assertEquals(0x20C1F0,f.slot(40).longBits(MAPPINGS));
+            assertEquals(4,f.frame.state().motion().routine());assertEquals(0x78,f.frame.state().timers().hurt());
+            assertEquals(0x0764DC80,f.frame.state().motion().centreY16_16()); // 0765FF80 - 00012300, native LONG subtraction.
+            assertEquals(2,f.runtime.contactGlobals().shield());assertEquals(0xA5,f.runtime.contactGlobals().combineRing());assertEquals(before,f.frame.display());
+            assertEquals(0,f.slot(40).spriteFlags()&0x80);assertTrue(f.runtime.closed());assertTrue(f.frame.closed());
+            assertThrows(IllegalStateException.class,f.runtime::runDynamicSlotsAfterReservedSlots);
+        }
+    }
+
+    @Test void spikesSolidPublishesPostGlobalsOtherSlotsFractionsAndLinksBeforeHurt() throws Exception {
+        try(var f=new Fixture(INITIAL,new CdPlayerBody.ContactGlobals(0,3,5),SCORE)) {
+            springDeviceCut(f);spikesSeedPlayer(f,8,41,0,0x100,0x01008000,0x07671234,0);seedTunnelDoorGlobals(f,0,0x3456,0x55,0x66);
+            var pool=f.runtime.placement().pool();pool.write(pool.state(41).moveByte(FLAGS,0xA8));
+            pool.write(spikesImage(f,pool.state(40),2,0x84,0).moveWord(X_VELOCITY,0x123));var before=f.frame.state();var env=f.frame.environment();
+            var call=spikesSolidCall(f);assertEquals(CdSolidObject.Path.STAND_ON,call.result().path());
+            assertEquals(List.of(41),call.result().otherSlots().stream().map(v->v.identity().wholeIndex()).toList());spikesStage(f,40);
+            spikesInvoke(f,"commitSpikesSolid",CdSpikes.SolidCall.class,call);assertTunnelDoorSolidApplied(f,before,env,call.result());
+            assertEquals(0xA300,f.frame.state().motion().centreX16_16()&0xFFFF);assertEquals(0x1234,f.frame.state().motion().centreY16_16()&0xFFFF);
+            assertEquals(0xA0,f.slot(41).flags());assertEquals(40,f.frame.state().objectLinks().standObject());boulderUnstage(f);
+        }
+    }
+
+    @Test void spikesAllThreePortsRejectEveryExistingMutualGuardWrongPhaseAndPhysicalVisit() throws Exception {
+        try(var f=new Fixture(INITIAL,new CdPlayerBody.ContactGlobals(0,3,7),SCORE)) {
+            springDeviceCut(f);spikesSeedPlayer(f,8,40,0,0x123,0x01001234,0x0767FF80,0);var pool=f.runtime.placement().pool();pool.write(spikesImage(f,pool.state(40),2,0x84,8));
+            var solid=spikesSolidCall(f);var hurt=spikesReachedHurt(f);var actor=tunnelDoorPlayer(f).actor();
+            var y=new CdSpikes.YRewindCall(f.slot(40).identity(),actor,actor.motion().centreY16_16()-(((short)actor.motion().yVelocity())<<8));boulderUnstage(f);
+            String[] names={"commitSpikesSolid","commitSpikesYRewind","commitSpikesHurt"};Class<?>[] types={CdSpikes.SolidCall.class,CdSpikes.YRewindCall.class,CdSpikes.HurtCall.class};
+            Object[] calls={solid,y,hurt};for(int i=0;i<names.length;i++)spikesReject(f,names[i],types[i],calls[i]);
+            spikesStage(f,41);for(int i=0;i<names.length;i++)spikesReject(f,names[i],types[i],calls[i]);spikesStage(f,40);
+            for(var guard:diagonalGuards()) {boulderSet(f.runtime,guard,true);for(int i=0;i<names.length;i++)spikesReject(f,names[i],types[i],calls[i]);boulderSet(f.runtime,guard,false);}
+            boulderUnstage(f);
+        }
+    }
+
+    @Test void spikesSharedCommitFlagRejectsAllSiblingCallbacksAndDrawWithoutAnotherFlag() throws Exception {
+        try(var f=new Fixture()) {
+            springDeviceCut(f);spikesStage(f,40);boulderSet(f.runtime,"inSolidCommit",true);
+            for(String name:List.of("commitBoulderSolid","commitTopSolid","commitSpringSolid","commitSpringLaunch","playSpringFm","commitTunnelDoorVerticalSolid",
+                    "playTunnelDoorVerticalFm","preflightTunnelDoorSolid","commitTunnelDoorSolid","playTunnelDoorFm","commitMonitorSolid","commitMonitorPrimaryAngle",
+                    "playMonitorFm","awardMonitorItem","commitTimePostDirection","requestTimePostSubCpu","commitSpinTunnelTag")) {
+                var method=java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods()).filter(v->v.getName().equals(name)).findFirst().orElseThrow();method.setAccessible(true);
+                Object[] args=new Object[method.getParameterCount()];for(int i=0;i<args.length;i++)if(method.getParameterTypes()[i]==int.class)args[i]=0;
+                var fault=assertThrows(java.lang.reflect.InvocationTargetException.class,()->method.invoke(f.runtime,args));assertInstanceOf(IllegalStateException.class,fault.getCause(),name);
+            }
+            var draw=CdOpeningObjectRuntime.class.getDeclaredMethod("drawDynamic",CdObjectPool.class,int.class);draw.setAccessible(true);
+            var fault=assertThrows(java.lang.reflect.InvocationTargetException.class,()->draw.invoke(f.runtime,f.runtime.placement().pool(),40));assertInstanceOf(IllegalStateException.class,fault.getCause());
+            boulderSet(f.runtime,"inSolidCommit",false);boulderUnstage(f);
+        }
+    }
+
+    @Test void spikesSolidPreflightsAll96FullImagesForeignOwnersAndExactFrameCasBeforeAnyWrite() throws Exception {
+        for(int scenario=0;scenario<8;scenario++)try(var f=new Fixture();var other=new Fixture()) {
+            springDeviceCut(f);spikesSeedPlayer(f,8,41,0,0x100,0x01008000,0x07671234,0);var pool=f.runtime.placement().pool();
+            pool.write(spikesImage(f,pool.state(40),2,0x84,0));pool.write(pool.state(41).moveByte(FLAGS,8));var call=spikesSolidCall(f);
+            if(scenario==0)pool.write(pool.state(127).moveWord(TUNNEL_DOOR_TIMER,0xA55A));
+            if(scenario==1)pool.write(pool.state(40).moveByte(ID,0x7E));
+            if(scenario==2){var p=other.runtime.placement().pool();p.write(spikesImage(other,p.state(40),2,0x84,0));call=spikesSolidCall(other);}
+            if(scenario==3)spikesSeedPlayer(f,8,41,0,0x100,0x01008001,0x07671234,0);
+            if(scenario==4)seedTunnelDoorGlobals(f,0,0xA55A,0x12,0x34);
+            if(scenario==5||scenario==6){var images=new ArrayList<>(call.callCut().slots());if(scenario==5)images.removeLast();else images.set(95,other.runtime.placement().pool().state(127));
+                call=new CdSpikes.SolidCall((CdObjectPool.Snapshot)horizontalReplacePartition(call.callCut(),List.class,images),call.expectedPlayer(),call.expectedGlobals(),call.result());}
+            if(scenario==7){var p=other.runtime.placement().pool();p.write(spikesImage(other,p.state(40),2,0x84,0));var foreign=spikesSolidCall(other);call=new CdSpikes.SolidCall(call.callCut(),call.expectedPlayer(),call.expectedGlobals(),foreign.result());}
+            spikesStage(f,40);try{spikesReject(f,"commitSpikesSolid",CdSpikes.SolidCall.class,call);}finally{boulderUnstage(f);}
+        }
+    }
+
+    @Test void spikesYPrefixIsOneFullLongStoreAndSurvivesRejectedNextHurtWithoutPoolContactOrFm() throws Exception {
+        try(var f=new Fixture(INITIAL,new CdPlayerBody.ContactGlobals(0,3,0xA5),SCORE)) {
+            springDeviceCut(f);spikesSeedPlayer(f,8,40,0,0x123,0x01001234,0x0767FF80,0);var pool=f.runtime.placement().pool();pool.write(spikesImage(f,pool.state(40),2,0x84,8));
+            var call=spikesReachedHurt(f);assertEquals(0x0764DC80,call.expectedActor().motion().centreY16_16());var actor=f.frame.state();
+            var images=pool.capture().slots();var contact=f.runtime.contactGlobals();var sounds=f.runtime.lastSoundRequests();
+            pool.write(pool.state(127).moveWord(TUNNEL_DOOR_TIMER,0xA55A));spikesReject(f,"commitSpikesHurt",CdSpikes.HurtCall.class,call);
+            assertEquals(actor,f.frame.state());assertEquals(contact,f.runtime.contactGlobals());assertEquals(sounds,f.runtime.lastSoundRequests());assertEquals(images.get(8),f.slot(40));
+            boulderUnstage(f);
+        }
+    }
+
+    @Test void spikesYPrefixValidatesCurrentActorFullWordHurtAndLiveGatesWithoutAPostSolidDistanceGate() throws Exception {
+        for(int scenario=0;scenario<8;scenario++)try(var f=new Fixture()) {
+            springDeviceCut(f);spikesSeedPlayer(f,8,40,0,0x123,0x01001234,0x0700FF80,0);var pool=f.runtime.placement().pool();pool.write(spikesImage(f,pool.state(40),2,0x84,8));
+            var actor=tunnelDoorPlayer(f).actor();var call=new CdSpikes.YRewindCall(f.slot(40).identity(),actor,actor.motion().centreY16_16()-(((short)actor.motion().yVelocity())<<8));spikesStage(f,40);
+            if(scenario==0){spikesInvoke(f,"commitSpikesYRewind",CdSpikes.YRewindCall.class,call);assertEquals(call.finalYBits(),f.frame.state().motion().centreY16_16());}
+            else {
+                if(scenario==1)pool.write(f.slot(40).moveByte(SPRITE_FLAGS,0x86));if(scenario==2)pool.write(f.slot(40).moveByte(FLAGS,0));
+                if(scenario==3)boulderSet(f.runtime,"contactGlobals",new CdPlayerBody.ContactGlobals(1,0,0));if(scenario==4)seedTunnelDoorGlobals(f,1,0,0,0);
+                if(scenario==5)spikesSeedPlayer(f,8,40,0,0x123,0x01001234,0x0700FF80,0x100);
+                if(scenario==6)spikesSeedPlayer(f,8,40,0,0x123,0x01001235,0x0700FF80,0);
+                if(scenario==7)call=new CdSpikes.YRewindCall(call.sourceIdentity(),call.expectedActor(),call.finalYBits()+1);
+                spikesReject(f,"commitSpikesYRewind",CdSpikes.YRewindCall.class,call);
+            }
+            boulderUnstage(f);
+        }
+    }
+
+    @Test void spikesHurtEmptyChangedCutStillCasChecksSourceWorldContactFrameAndEveryPoolByte() throws Exception {
+        for(int scenario=0;scenario<10;scenario++)try(var f=new Fixture(INITIAL,new CdPlayerBody.ContactGlobals(0,3,0xA5),SCORE);var other=new Fixture()) {
+            springDeviceCut(f);spikesSeedPlayer(f,8,40,0,0x123,0x01001234,0x0767FF80,0);var pool=f.runtime.placement().pool();pool.write(spikesImage(f,pool.state(40),2,0x84,8));
+            var call=spikesReachedHurt(f);assertTrue(call.result().changedSlots().isEmpty());
+            if(scenario==0)pool.write(pool.state(127).moveWord(TUNNEL_DOOR_TIMER,0xA55A));if(scenario==1)pool.write(f.slot(40).moveWord(X_FRACTION,0xA55A));
+            if(scenario==2)boulderSet(f.runtime,"ringGlobals",new CdRingGlobals(1,3,0,0,0,0,0,0));
+            if(scenario==3)boulderSet(f.runtime,"scoreGlobals",new CdOpeningObjectRuntime.ScoreGlobals(1,5000,0));
+            if(scenario==4)boulderSet(f.runtime,"contactGlobals",new CdPlayerBody.ContactGlobals(0,2,0xA5));
+            if(scenario==5)spikesDebug(f,1,0);if(scenario==6)seedTunnelDoorGlobals(f,0,0xA55A,0,0);
+            if(scenario==7)spikesSeedPlayer(f,8,40,0,0x123,0x01001235,0x0764DC80,0);
+            if(scenario==8||scenario==9){var images=new ArrayList<>(call.callCut().slots());if(scenario==8)images.removeLast();else images.set(95,other.runtime.placement().pool().state(127));
+                var cut=(CdObjectPool.Snapshot)horizontalReplacePartition(call.callCut(),List.class,images);call=new CdSpikes.HurtCall(cut,call.sourceA2(),call.expectedActor(),call.expectedPlayer(),call.expectedWorld(),call.result());}
+            try{spikesReject(f,"commitSpikesHurt",CdSpikes.HurtCall.class,call);}finally{boulderUnstage(f);}
+        }
+    }
+
+    @Test void spikesFirstFreeDirtyEarlierAllocationPreservesAllOther59BytesAndDoesNotDispatchItTwice() throws Exception {
+        try(var f=new Fixture(new CdRingGlobals(3,3,0,0,0,0,0,0))) {
+            springDeviceCut(f);spikesSeedPlayer(f,8,40,0,0x123,0x01001234,0x0767FF80,0);var pool=f.runtime.placement().pool();pool.write(spikesImage(f,pool.state(40),2,0x84,8));
+            var dirty=pool.state(32);for(var field:CdObjectState.ByteField.values())if(field!=ID)dirty=dirty.moveByte(field,0xA5);
+            dirty=dirty.moveByte(ID,0).moveWord(X_FRACTION,0xBEEF).moveWord(Y_FRACTION,0xCAFE);pool.write(dirty);
+            var call=spikesReachedHurt(f);assertEquals(List.of(32),call.result().changedSlots().stream().map(v->v.identity().wholeIndex()).toList());
+            var expected=dirty.moveByte(ID,0x11).moveWord(X,call.expectedActor().motion().centreX16_16()>>>16).moveWord(Y,call.expectedActor().motion().centreY16_16()>>>16);
+            assertEquals(expected,call.result().changedSlots().getFirst());spikesInvoke(f,"commitSpikesHurt",CdSpikes.HurtCall.class,call);assertEquals(expected,f.slot(32));
+            assertEquals(3,f.runtime.ringGlobals().rings());assertEquals(0xBEEF,f.slot(32).word(X_FRACTION));assertEquals(0xCAFE,f.slot(32).word(Y_FRACTION));boulderUnstage(f);
+        }
+    }
+
+    @Test void spikesPublicEarlierLostRingWaitsWhileLaterPhysicalLostRingSeesTheAllocationThisPass() throws Exception {
+        for(boolean earlier:List.of(true,false))try(var f=new Fixture(new CdRingGlobals(3,3,0,0,0,0,0,0))) {
+            springDeviceCut(f);spikesSeedPlayer(f,8,40,0,0x123,0x01001234,0x0767FF80,0);var pool=f.runtime.placement().pool();
+            if(!earlier)for(int whole=32;whole<40;whole++)pool.write(pool.state(whole).moveByte(ID,0x24).moveWord(X,0x100).moveWord(Y,0x780));
+            pool.write(spikesImage(f,pool.state(40),2,0x84,8));f.runtime.runDynamicSlotsAfterReservedSlots();
+            if(earlier){assertEquals(0x11,f.slot(32).id());assertEquals(0,f.slot(32).routine());assertEquals(3,f.runtime.ringGlobals().rings());}
+            else {assertEquals(0x11,f.slot(41).id());assertEquals(2,f.slot(41).routine());assertEquals(0,f.runtime.ringGlobals().rings());assertNotEquals(new CdRingSpillGlobals(0,0,0),f.runtime.spillGlobals());}
+            monitorFinish(f);
+        }
+    }
+
+    @Test void spikesFullPoolActualFindObjSlotMissNeverFreesTheSourceOrWritesRingLivesOrScore() throws Exception {
+        try(var f=new Fixture(new CdRingGlobals(3,3,0,0,0,0,0,0))) {
+            springDeviceCut(f);spikesSeedPlayer(f,8,40,0,0x123,0x01001234,0x0767FF80,0);var pool=f.runtime.placement().pool();
+            for(int whole=32;whole<128;whole++)pool.write(pool.state(whole).moveByte(ID,0x24));pool.write(spikesImage(f,pool.state(40),2,0x84,8));
+            var call=spikesReachedHurt(f);assertEquals(List.of(new CdPlayerTouchResponse.FindObjSlot(java.util.OptionalInt.empty()),new CdPlayerTouchResponse.ResetOnFloor()),call.result().calls());
+            assertTrue(call.result().changedSlots().isEmpty());var world=spikesWorld(f);spikesInvoke(f,"commitSpikesHurt",CdSpikes.HurtCall.class,call);
+            assertEquals(world,spikesWorld(f));assertEquals(0x26,f.slot(40).id());boulderUnstage(f);
+        }
+    }
+
+
+    @Test void spikesHurtPreflightsActualForeignLaterDirtyAndFrameInvalidResultsBeforeAnyChildStore() throws Exception {
+        for(int scenario=0;scenario<4;scenario++)try(var f=new Fixture(new CdRingGlobals(3,3,0,0,0,0,0,0));var other=new Fixture()) {
+            springDeviceCut(f);spikesSeedPlayer(f,8,40,0,0x123,0x01001234,0x0767FF80,0);var pool=f.runtime.placement().pool();pool.write(spikesImage(f,pool.state(40),2,0x84,8));
+            var call=spikesReachedHurt(f);var result=call.result();var actor=f.frame.captureActor();
+            if(scenario==0) {
+                var foreign=other.runtime.placement().pool();foreign.write(spikesImage(other,foreign.state(40),2,0x84,8));
+                result=CdPlayerTouchResponse.hurtPlayer(call.expectedActor(),call.expectedPlayer(),call.expectedWorld(),foreign.state(40),foreign.capture());
+            } else {
+                if(scenario==1)pool.write(pool.state(32).moveByte(ID,0x24));
+                if(scenario==2)pool.write(pool.state(32).moveWord(Y_FRACTION,0xA55A));
+                if(scenario==3)spikesSeedPlayer(f,8,40,0,0x123,0x01001235,call.expectedActor().motion().centreY16_16(),0);
+                result=CdPlayerTouchResponse.hurtPlayer(tunnelDoorPlayer(f).actor(),call.expectedPlayer(),call.expectedWorld(),f.slot(40),pool.capture());
+                pool.restore(call.callCut());f.frame.restoreActor(actor);
+            }
+            var bad=new CdSpikes.HurtCall(call.callCut(),call.sourceA2(),call.expectedActor(),call.expectedPlayer(),call.expectedWorld(),result);
+            try{spikesReject(f,"commitSpikesHurt",CdSpikes.HurtCall.class,bad);}finally{boulderUnstage(f);}
+        }
+    }
+
+    @Test void spikesYAndHurtChangedImagesArePlainValuesWithNoPersistentTokenOrMetadataReplay() throws Exception {
+        try(var f=new Fixture(INITIAL,new CdPlayerBody.ContactGlobals(0,3,0xA5),SCORE)) {
+            springDeviceCut(f);spikesSeedPlayer(f,8,40,0,0x123,0x01001234,0x0767FF80,0);f.runtime.placement().pool().write(spikesImage(f,f.slot(40),2,0x84,8));
+            var call=spikesReachedHurt(f);var reconstructed=new CdSpikes.HurtCall(call.callCut(),call.sourceA2(),call.expectedActor(),call.expectedPlayer(),call.expectedWorld(),call.result());
+            spikesInvoke(f,"commitSpikesHurt",CdSpikes.HurtCall.class,reconstructed);spikesReject(f,"commitSpikesHurt",CdSpikes.HurtCall.class,call);boulderUnstage(f);
+        }
+    }
+
+    @Test void spikesPreviousSatUsesNowCurrentSpikesAfterPlaneCallbackAndSlowServiceInThatOrder() throws Exception {
+        try(var f=new Fixture()) {
+            cameraArtIdle(f);cameraArtBegin(f,0);f.runtime.spawnBeforeReservedSlots();f.body(2);var pool=f.runtime.placement().pool();pool.clearDynamicSlots();
+            pool.write(spikesImage(f,pool.state(40),2,0x84,0));f.runtime.runDynamicSlotsAfterReservedSlots();var sat=f.runtime.finishAfterCamera(POST);f.runtime.finishOrdinaryTail();
+            assertEquals(4,sat.provenance().stream().filter(v->v.slotRef().wholeIndex()==40).count());var original=f.runtime.sectionArtState();
+            var changed=spikesChanged(original.residency());var row=f.assets.openingObjects().sectionArtSources().source(com.openggf.game.soniccd.level.CdR11aAsset.ART_SPIKES).canonicalPlc();
+            var queue=com.openggf.game.soniccd.resources.CdR11aPlcBuffer.append(com.openggf.game.soniccd.resources.CdR11aPlcBuffer.cleared(),
+                    List.of(new com.openggf.game.soniccd.resources.CdR11aPlcBuffer.Entry(row.sourceRange().nativeAddress(),row.vramAddress())));
+            var prepared=diagonalSectionCopy(original,changed,queue);var field=CdOpeningObjectRuntime.class.getDeclaredField("sectionArt");field.setAccessible(true);
+            prepared=((com.openggf.game.soniccd.resources.CdR11aSectionArt)field.get(f.runtime)).prepare(prepared);
+            f.runtime.restore((CdOpeningObjectRuntime.Snapshot)horizontalReplacePartition(f.runtime.captureClosedCut(),com.openggf.game.soniccd.resources.CdR11aSectionArt.State.class,prepared));
+            var oldPicture=f.runtime.displayedFrame();var oldVersions=oldPicture.patternVersions();var before=f.runtime.sectionArtState();var display=CdOpeningObjectRuntime.class.getDeclaredField("displayed");display.setAccessible(true);
+            var selection=f.frame.prepareInput(0x80);f.runtime.serviceVBlank(selection.phase(),()->{
+                assertSame(before,f.runtime.sectionArtState());try{assertSame(oldPicture,display.get(f.runtime));}catch(IllegalAccessException failure){throw new AssertionError(failure);}
+            },0);
+            assertEquals(5,f.runtime.sectionArtState().remainingTilesWord());assertArrayEquals(sat.bytes(),f.runtime.cpuSat().bytes());
+            var source=cameraArtSource(f,com.openggf.game.soniccd.level.CdR11aAsset.ART_SPIKES);var pixels=spikesPixels(f,f.runtime.sectionArtState().residency());
+            for(int tile=0;tile<8;tile++)assertEquals(CdObjectPresentation.patternVersion(tile<3?source.slice(tile*32,32):
+                    com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(changed,0x320+tile)),pixels.resolve(0x320+tile).version());
+            assertEquals(CdObjectPresentation.convert(sat,pixels),f.runtime.displayedFrame());assertEquals(oldVersions,oldPicture.patternVersions());
+        }
+    }
+
+    @Test void spikesQueuedPartialAndFullArtRestoreNonzeroHurtContactSoundAndEveryExistingPartitionOnce() throws Exception {
+        for(int services:List.of(0,1,3))try(var f=new Fixture(INITIAL,new CdPlayerBody.ContactGlobals(0,3,0xA5),SCORE)) {
+            springDeviceCut(f);spikesSeedPlayer(f,0x0C,40,7,0x123,0x01001234,0x0767FF80,0);var pool=f.runtime.placement().pool();pool.write(spikesImage(f,pool.state(40),2,0x84,8));
+            f.runtime.runDynamicSlotsAfterReservedSlots();f.runtime.finishAfterCamera(POST);f.runtime.finishOrdinaryTail();assertEquals(0x78,f.frame.state().timers().hurt());
+            var original=f.runtime.sectionArtState();var source=f.assets.openingObjects().sectionArtSources().source(com.openggf.game.soniccd.level.CdR11aAsset.ART_SPIKES);
+            var queue=com.openggf.game.soniccd.resources.CdR11aPlcBuffer.append(com.openggf.game.soniccd.resources.CdR11aPlcBuffer.cleared(),List.of(
+                    new com.openggf.game.soniccd.resources.CdR11aPlcBuffer.Entry(source.canonicalPlc().sourceRange().nativeAddress(),0x6400)));
+            var state=diagonalSectionCopy(original,spikesChanged(original.residency()),queue);var field=CdOpeningObjectRuntime.class.getDeclaredField("sectionArt");field.setAccessible(true);
+            var owner=(com.openggf.game.soniccd.resources.CdR11aSectionArt)field.get(f.runtime);if(services!=0)state=owner.prepare(state);
+            f.runtime.restore((CdOpeningObjectRuntime.Snapshot)horizontalReplacePartition(f.runtime.captureClosedCut(),com.openggf.game.soniccd.resources.CdR11aSectionArt.State.class,state));
+            for(int service=0;service<services;service++){var selected=f.frame.prepareInput(service==0?0x80:0);f.runtime.serviceVBlank(selected.phase(),()->{},0);}
+            assertEquals(services==1?5:0,f.runtime.sectionArtState().remainingTilesWord());
+            if(services==0){assertNotEquals(0,f.runtime.sectionArtState().queue().headSource());assertTrue(f.runtime.sectionArtState().decoder().isEmpty());}
+            var cut=f.runtime.captureClosedCut();var actor=f.frame.captureActor();var shared=f.frame.captureShared();var cpu=f.runtime.cpuSat();var picture=f.runtime.displayedFrame();var sounds=f.runtime.lastSoundRequests();
+            assertEquals(0x78,actor.state().timers().hurt());assertEquals(2,cut.contactGlobals().shield());assertEquals(0xA5,cut.contactGlobals().combineRing());assertFalse(sounds.isEmpty());
+            int held=f.frame.paused()?0:0x80;var selection=f.frame.prepareInput(held);f.runtime.serviceVBlank(selection.phase(),()->{},0);var next=f.runtime.captureClosedCut();var nextShared=f.frame.captureShared();
+            f.frame.validateActorRestore(actor);f.frame.validateSharedRestore(shared);f.runtime.validateRestore(cut);f.frame.restoreActor(actor);f.frame.restoreShared(shared);f.runtime.restore(cut);
+            assertSame(cpu,f.runtime.cpuSat());assertSame(picture,f.runtime.displayedFrame());assertSame(sounds,f.runtime.lastSoundRequests());assertEquals(actor,f.frame.captureActor());assertEquals(shared.environment(),f.frame.environment());
+            assertEquals(cut.placement().pool().slots(),pool.capture().slots());assertEquals(cut.contactGlobals(),f.runtime.contactGlobals());assertEquals(cut.ringGlobals(),f.runtime.ringGlobals());assertEquals(cut.scoreGlobals(),f.runtime.scoreGlobals());
+            assertEquals(cut.spillGlobals(),f.runtime.spillGlobals());assertEquals(cut.levelGlobals(),f.runtime.levelGlobals());assertEquals(cut.devGlobals(),f.runtime.devGlobals());assertEquals(cut.powerupArtState(),f.runtime.powerupArtState());
+            var again=f.frame.prepareInput(held);f.runtime.serviceVBlank(again.phase(),()->{},0);assertEquals(next.sectionArtState(),f.runtime.sectionArtState());assertEquals(next.displayedFrame(),f.runtime.displayedFrame());
+            assertEquals(nextShared.vIntClock(),f.frame.vIntClock());assertEquals(next.lastSoundRequests(),f.runtime.lastSoundRequests());
+        }
+    }
+
+
+    @Test void spikesContactTimeWarpIsIndependentOfTheUnownedFrameTimeWarpTimer() throws Exception {
+        try(var f=new Fixture(INITIAL,new CdPlayerBody.ContactGlobals(0,3,0xA5),SCORE)) {
+            springDeviceCut(f);spikesSeedPlayer(f,8,40,0,0x123,0x01001234,0x0767FF80,0);
+            var shared=f.frame.captureShared();var e=shared.environment();var b=e.globals();
+            f.frame.restoreShared(new CdPlayerFrameRuntime.SharedState(shared.owner(),new CdPlayerBody.Environment(e.movement(),e.controls(),
+                    new CdPlayerBody.Globals(b.levelFrames(),b.cameraXCentre(),b.timeAttackMode(),b.debugMode(),b.debugCheat(),0xA5,b.invincible(),b.bossMusic()),e.dynamicSlots()),
+                    shared.artState(),shared.paused(),shared.vIntClock()));
+            f.runtime.placement().pool().write(spikesImage(f,f.slot(40),2,0x84,8));f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(4,f.frame.state().motion().routine());assertEquals(0x78,f.frame.state().timers().hurt());
+            assertEquals(0xA5,f.frame.environment().globals().timeWarpTimer());assertEquals(0,f.runtime.contactGlobals().timeWarp());monitorFinish(f);
+        }
+    }
+
+    @Test void spikesActualMainHonoursCurrentTimeWarpInvincibilityFullHurtAndVerticalFlipOnlyAfterSolid() throws Exception {
+        int[][] rows={{1,0,0,0},{0,1,0,0},{0,0,0x100,0},{0,0,0,2}};
+        for(var row:rows)try(var f=new Fixture(INITIAL,new CdPlayerBody.ContactGlobals(row[0],3,0xA5),SCORE)) {
+            springDeviceCut(f);spikesSeedPlayer(f,8,40,0,0x123,0x01001234,0x0767FF80,row[2]);seedTunnelDoorGlobals(f,row[1],0x3456,0x55,0x66);
+            var pool=f.runtime.placement().pool();pool.write(spikesImage(f,pool.state(40),2,0x84|row[3],8));var call=spikesSolidCall(f);
+            var state=f.frame.state();var env=f.frame.environment();var contact=f.runtime.contactGlobals();
+            f.runtime.runDynamicSlotsAfterReservedSlots();assertTunnelDoorSolidApplied(f,state,env,call.result());
+            assertEquals(contact,f.runtime.contactGlobals());assertEquals(row[2],f.frame.state().timers().hurt());assertEquals(0x3456,f.frame.environment().movement().globals().scoreChain());monitorFinish(f);
+        }
+    }
+
+    @Test void spikesSolidCutRejectsOutsideNativeAbsDyButYAndHurtDoNotRepeatThatOuterTest() throws Exception {
+        try(var f=new Fixture()) {
+            springDeviceCut(f);spikesSeedPlayer(f,8,40,1,0x123,0x01001234,0x0700FF80,0);f.runtime.placement().pool().write(spikesImage(f,f.slot(40),2,4,8));
+            var call=spikesSolidCall(f);spikesStage(f,40);spikesReject(f,"commitSpikesSolid",CdSpikes.SolidCall.class,call);boulderUnstage(f);
+        }
+    }
+
+    private static CdOpeningObjectRuntime.LogicalBanks spikesBanks(int[] b) {
+        return new CdOpeningObjectRuntime.LogicalBanks(b[0],b[1],b[2],b[3],b[4],b[5],b[6],b[7],b[8],b[9],b[10],b[11],b[12],b[13],b[14],b[15]);
+    }
+    private static CdObjectState spikesImage(Fixture f,CdObjectState image,int routine,int sprite,int flags) throws java.io.IOException {
+        var assets=CdSpikes.BodyAssets.fromObjectAssets(f.assets.openingObjects());
+        return image.moveByte(ID,0x26).moveByte(ROUTINE,routine).moveByte(SPRITE_FLAGS,sprite).moveByte(FLAGS,flags)
+                .moveLong(MAPPINGS,assets.mappingsAddress()).moveWord(TILE,0x320).moveByte(WIDTH,16).moveByte(Y_RADIUS,8).moveByte(PRIORITY,3)
+                .moveWord(X,0x100).moveWord(Y,0x780);
+    }
+    private static void spikesSeedPlayer(Fixture f,int flags,int stand,int charge,int yv,int x,int y,int hurt) {
+        seedSolidPlayer(f,flags,stand,charge,0x234,yv,x,y);var actor=f.frame.captureActor();var s=actor.state();
+        f.frame.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(),new CdPlayerBody.State(s.motion(),s.animation(),s.header(),
+                new CdPlayerBody.Timers(hurt,s.timers().invincibility(),s.timers().speedShoes(),s.timers().reset()),s.history(),s.rotationDistance(),s.objectLinks()),actor.display()));
+    }
+    private static void spikesDebug(Fixture f,int debug,int cheat) {
+        var shared=f.frame.captureShared();var e=shared.environment();var b=e.globals();
+        f.frame.restoreShared(new CdPlayerFrameRuntime.SharedState(shared.owner(),new CdPlayerBody.Environment(e.movement(),e.controls(),
+                new CdPlayerBody.Globals(b.levelFrames(),b.cameraXCentre(),b.timeAttackMode(),debug,cheat,b.timeWarpTimer(),b.invincible(),b.bossMusic()),e.dynamicSlots()),
+                shared.artState(),shared.paused(),shared.vIntClock()));
+    }
+    private static CdPlayerTouchResponse.PlayerGlobals spikesPlayerGlobals(Fixture f) {
+        var e=f.frame.environment();var b=e.globals();var m=e.movement();var c=f.runtime.contactGlobals();
+        return new CdPlayerTouchResponse.PlayerGlobals(c.timeWarp(),b.invincible(),c.shield(),c.combineRing(),b.debugCheat(),b.debugMode(),m.globals().scoreChain(),m.gates().miniSonic());
+    }
+    private static CdPlayerTouchResponse.WorldGlobals spikesWorld(Fixture f) {
+        var r=f.runtime.ringGlobals();var s=f.runtime.scoreGlobals();return new CdPlayerTouchResponse.WorldGlobals(r.rings(),r.lives(),r.updateHudLives(),s.score(),s.nextLifeScore(),s.updateHudScore());
+    }
+    private static CdSpikes.SolidCall spikesSolidCall(Fixture f) {
+        var pool=f.runtime.placement().pool();var cut=pool.capture();var player=tunnelDoorPlayer(f);var globals=tunnelDoorGlobals(f);var e=f.frame.environment();
+        var result=CdSolidObject.fromAssets(f.assets).run(CdSolidObject.Entry.SOLID_OBJECT,pool.state(40),player,
+                new CdSolidObject.Gates(e.globals().debugMode(),e.movement().gates().miniSonic()),globals,cut);return new CdSpikes.SolidCall(cut,player,globals,result);
+    }
+    private static void spikesStage(Fixture f,int whole) throws Exception {
+        boulderSet(f.runtime,"phase",CdOpeningObjectRuntime.Phase.DYNAMIC_SLOTS);boulderSet(f.runtime,"operating",true);boulderSet(f.runtime,"dispatchWholeIndex",whole);
+    }
+    private static void spikesInvoke(Fixture f,String name,Class<?> type,Object call) {
+        try {var method=CdOpeningObjectRuntime.class.getDeclaredMethod(name,type);method.setAccessible(true);method.invoke(f.runtime,call);}
+        catch(java.lang.reflect.InvocationTargetException fault){if(fault.getCause() instanceof RuntimeException failure)throw failure;if(fault.getCause() instanceof Error failure)throw failure;throw new AssertionError(fault.getCause());}
+        catch(ReflectiveOperationException fault){throw new AssertionError(fault);}
+    }
+    private static CdSpikes.HurtCall spikesReachedHurt(Fixture f) throws Exception {
+        spikesStage(f,40);var call=new CdSpikes.HurtCall[1];var stop=new IllegalStateException("actual source stopped before direct Hurt publication");
+        var body=new CdSpikes(f.runtime.placement(),CdSpikes.BodyAssets.fromObjectAssets(f.assets.openingObjects()),CdSolidObject.fromAssets(f.assets),
+                value->spikesInvoke(f,"commitSpikesSolid",CdSpikes.SolidCall.class,value),value->spikesInvoke(f,"commitSpikesYRewind",CdSpikes.YRewindCall.class,value),
+                value->{call[0]=value;throw stop;},(p,s)->fail("Hurt stop precedes DrawObject"));var e=f.frame.environment();
+        var fault=assertThrows(IllegalStateException.class,()->body.run(40,new CdSpikes.Globals(e.movement().gates().timeZone(),e.movement().gates().timeWarpDirection(),PRE.xWord()),
+                new CdSpikes.Inputs(tunnelDoorPlayer(f),new CdSolidObject.Gates(e.globals().debugMode(),e.movement().gates().miniSonic()),tunnelDoorGlobals(f),spikesPlayerGlobals(f),spikesWorld(f))));
+        assertSame(stop,fault);assertNotNull(call[0]);return call[0];
+    }
+    private static List<CdOpeningObjectRuntime.SoundRequest> spikesHurtSounds(Fixture f,CdPlayerTouchResponse.Result result) {
+        var sounds=new ArrayList<>(f.runtime.lastSoundRequests());for(var call:result.calls())if(call instanceof CdPlayerTouchResponse.PlayFm fm)
+            sounds.add(new CdOpeningObjectRuntime.PlayerSound(new CdPlayerFrameRuntime.ContactFmSound(fm.sound())));return List.copyOf(sounds);
+    }
+    private static void spikesReject(Fixture f,String name,Class<?> type,Object call) throws Exception {
+        var contact=f.runtime.contactGlobals();var ring=f.runtime.ringGlobals();var score=f.runtime.scoreGlobals();var spill=f.runtime.spillGlobals();var level=f.runtime.levelGlobals();
+        diagonalReject(f,name,type,call);assertEquals(contact,f.runtime.contactGlobals());assertEquals(ring,f.runtime.ringGlobals());assertEquals(score,f.runtime.scoreGlobals());
+        assertEquals(spill,f.runtime.spillGlobals());assertEquals(level,f.runtime.levelGlobals());
+    }
+    private static CdObjectPresentation.PatternSource spikesPixels(Fixture f,com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.State resident) throws java.io.IOException {
+        var o=f.assets.openingObjects();return CdObjectPresentation.usaR11aCurrentCameraDevPreloadedArt(f.frame.artState(),f.runtime.powerupArtState(),o,
+                o.frontierArtBank(),o.contactArtBank(),o.floatBlockArtBank(),o.springArtBank(),o.tunnelDoorArtBank(),o.monitorTimeArtBank(),resident,
+                BANKS.player(),BANKS.ring(),BANKS.mosqui(),BANKS.plant(),BANKS.ramp(),BANKS.explosion(),BANKS.points(),BANKS.flower(),BANKS.powerup(),
+                BANKS.floatBlock(),BANKS.spring(),BANKS.tunnelDoorVertical(),BANKS.monitorTime(),BANKS.boulder(),BANKS.diagonalSpring(),BANKS.spikes());
+    }
+    private static com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.State spikesChanged(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.State original) {
+        var state=original;for(int tile=0;tile<8;tile++){byte[] bytes=new byte[32];java.util.Arrays.fill(bytes,(byte)(0xA1+tile));
+            state=com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.writeTile(state,0x6400+tile*32,CdAssetBytes.copyOf(bytes));}return state;
+    }
+    // END common Spikes Runtime R1 tests-first additions.
 }

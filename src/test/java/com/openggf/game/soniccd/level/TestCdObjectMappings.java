@@ -1756,4 +1756,74 @@ class TestCdObjectMappings {
             }
         }
     }
+
+    /** Literal N Spikes/Data/Mappings.asm:1-23 plus Main.asm:89 EVEN, not generated from a visual. */
+    private static final byte[] SPIKES_SOURCE = HexFormat.of().parseHex(
+            "000204f0050000f000050004f0f005000000000500040000");
+    private static final int SPIKES_MAP = 0x20C1F0;
+    private static final List<CdObjectDrawQueue.RawPiece> SPIKES_PIECES = List.of(
+            new CdObjectDrawQueue.RawPiece(-16,5,0,-16), new CdObjectDrawQueue.RawPiece(0,5,4,-16),
+            new CdObjectDrawQueue.RawPiece(-16,5,0,0), new CdObjectDrawQueue.RawPiece(0,5,4,0));
+
+    @Test void declaredSpikesRetainsFull24DirectoryPadAndOnlyTheRegisteredCountedPointer() throws Exception {
+        assertEquals(24,SPIKES_SOURCE.length); assertEquals(0,SPIKES_SOURCE[23]);
+        assertEquals("db6b4414c086240e34231326d9832e5785550bdd914ef9d933cea9079bc78607",sha256(SPIKES_SOURCE));
+        var mappings=declared(SPIKES_MAP,SPIKES_SOURCE,0,1);
+        assertEquals(new CdObjectDrawQueue.FrameMapping(4,SPIKES_PIECES),mappings.resolve(SPIKES_MAP,false,0));
+        for(int frame=1;frame<=255;frame++) {int outside=frame;assertThrows(UnsupportedOperationException.class,()->mappings.resolve(SPIKES_MAP,false,outside));}
+        for(int pointer:new int[]{SPIKES_MAP+1,SPIKES_MAP+2,SPIKES_MAP+3,SPIKES_MAP+23,SPIKES_MAP|0xFF000000})
+            assertThrows(UnsupportedOperationException.class,()->mappings.resolve(pointer,false,0));
+        assertThrows(UnsupportedOperationException.class,()->mappings.resolve(SPIKES_MAP,true,0));
+        var visual=CdObjectVisualAssets.decodeStatic(SPIKES_SOURCE,1,8);
+        assertEquals(0,visual.mappingTableOffset());assertEquals(1,visual.mappingFrames().size());
+        assertEquals(2,visual.mappingFrames().getFirst().relativeOffset());assertEquals(21,visual.mappingFrames().getFirst().bytes().length());
+        assertTrue(visual.animations().isEmpty());assertEquals(0,visual.animationTable().length());
+        assertArrayEquals(SPIKES_SOURCE,visual.mappings().copy());
+        assertThrows(IllegalArgumentException.class,()->CdObjectVisualAssets.decodeStatic(SPIKES_SOURCE,1,7));
+        var patterns=new TreeSet<Integer>();int cells=0;
+        for(var p:SPIKES_PIECES)for(int t=0;t<4;t++) {patterns.add(p.rawTileWord()+t);cells++;}
+        assertEquals(16,cells);assertEquals(new TreeSet<>(List.of(0,1,2,3,4,5,6,7)),patterns);
+    }
+
+    @Test void spikesQueueUsesEveryRawAttributeAndAllFourNativeMirrorsWithoutIdDispatch() {
+        // Mutated declared attributes are format inputs, never a claim about authenticated USA pieces.
+        byte[] raw=SPIKES_SOURCE.clone();int[] attributes={0xE800,0x1004,0x9800,0x6004};
+        for(int p=0;p<4;p++)putWord(raw,5+p*5,attributes[p]);
+        var mappings=declared(SPIKES_MAP,raw,0,1);
+        int[][] xs={{0x170,0x170,0x180,0x180},{0x180,0x180,0x170,0x170}};
+        int[][] ys={{0xF0,0x100,0xF0,0x100},{0x100,0xF0,0x100,0xF0}};
+        for(int base:new int[]{0x0320,0xA320,0x07FE,0xFFFE})for(int flip=0;flip<4;flip++) {
+            var sat=drawPataBataMapping(mappings,SPIKES_MAP,0,base,4|flip);byte[] bytes=sat.bytes();
+            assertEquals(4,sat.spriteCount());
+            for(int p=0;p<4;p++) {
+                assertEquals(ys[(flip>>>1)&1][p],word(bytes,p*8));assertEquals(xs[flip&1][p],word(bytes,p*8+6));
+                assertEquals(5,bytes[p*8+2]&255);assertEquals(p+1,bytes[p*8+3]&255);
+                assertEquals(((base+attributes[p])&0xFFFF)^((flip&3)<<11),word(bytes,p*8+4));
+            }
+            assertArrayEquals(new byte[4],Arrays.copyOfRange(bytes,32,36));
+        }
+    }
+
+    @Test void actualUsaSpikesJoinsTheRetainedFullSourceAndPreservesEveryPriorRootAndMonitorRawPointer() throws Exception {
+        var usa=usaMedia();var objects=usa.objects();var view=objects.view(CdR11aObjectAssets.Table.SPIKES_MAPPINGS);
+        assertEquals(0xC1F0,view.range().fileOffset());assertEquals(24,view.range().length());assertEquals(SPIKES_MAP,view.range().nativeAddress());
+        assertArrayEquals(SPIKES_SOURCE,view.bytes().copy());var visual=objects.spikes();assertSame(visual,objects.spikes());
+        assertArrayEquals(SPIKES_SOURCE,visual.mappings().copy());assertTrue(visual.animations().isEmpty());assertEquals(0,visual.animationTable().length());
+        assertEquals(0x0320,objects.tileWord(0xA,0));
+        var mappings=CdObjectMappings.fromOpeningAssets(usa.assets(),objects);
+        assertEquals(SPIKES_PIECES,mappings.resolve(SPIKES_MAP,false,0).pieces());
+        assertThrows(UnsupportedOperationException.class,()->mappings.resolve(SPIKES_MAP,false,1));
+        assertThrows(UnsupportedOperationException.class,()->mappings.resolve(SPIKES_MAP,true,0));
+        assertThrows(UnsupportedOperationException.class,()->mappings.resolve(SPIKES_MAP+2,false,0));
+        assertMonitorPriorRoots(usa,mappings);assertMonitorTimeFrames(mappings);assertHorizontalTunnelDoorFrames(mappings);assertPataBataFrames(mappings);
+        for(int frame=0;frame<3;frame++)assertEquals(objects.springDiagonal().mappingFrames().get(frame).pieces().stream()
+                .map(p->new CdObjectDrawQueue.RawPiece(p.y(),p.sizeByte(),p.rawTileWord(),p.x())).toList(),mappings.resolve(0x209BF0,false,frame).pieces());
+        assertEquals(List.of(new CdObjectDrawQueue.RawPiece(-8,2,0,-20),new CdObjectDrawQueue.RawPiece(-16,15,3,-12)),
+                mappings.resolve(0x209654,false,0).pieces());
+        for(int item=0;item<8;item++)assertEquals(new CdObjectDrawQueue.StaticMapping(monitorPieces(item).getFirst()),
+                mappings.resolve(MONITOR_ITEM_POINTERS[item],true,255));
+        byte[] detached=view.bytes().copy();Arrays.fill(detached,(byte)0xA5);
+        assertEquals(SPIKES_PIECES,mappings.resolve(SPIKES_MAP,false,0).pieces());assertArrayEquals(SPIKES_SOURCE,visual.mappings().copy());
+    }
 }
+// Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>

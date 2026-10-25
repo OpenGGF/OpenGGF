@@ -45,19 +45,19 @@ import static com.openggf.game.soniccd.objects.CdObjectState.WordField.*;
  * <p>Explicit DEV policy: USA R11A Present, goodFuture=0, projDestroyed=0, and
  * an actual reserved bank 1..31 at the declared DEV ClearObjects-equivalent cut,
  * initially zero CPU SAT/empty picture, and preloaded actual
- * Ring/Mosqui/3D-plant/3D-ramp-booster/explosion/points/flower/Floating-Block/normal-Spring/shared-horizontal-and-vertical-Tunnel-Door/Monitor-time/Boulder/diagonal-Spring art (the inert Animal path draws nothing).
+ * Ring/Mosqui/3D-plant/3D-ramp-booster/explosion/points/flower/Floating-Block/normal-Spring/shared-horizontal-and-vertical-Tunnel-Door/Monitor-time/Boulder/diagonal-Spring/common-Spikes art (the inert Animal path draws nothing).
  * The 36-tile powerup window starts cold zero and changes only at the selector-8 LoadShieldArt cut.
  * The initial Ring, contact, score and level globals are caller-declared DEV ingress, never an entry proof.
  * Live dynamic IDs $10 Ring, $11 LostRing, $3D Mosqui, $3E Pata-Bata, $24 Animal, $2C 3D plant and $2A 3D ramp,
  * aftermath IDs $18/$1C/$1F, $12 Floating Block, normal and diagonal $0A Spring, $34 Spin tunnel tag, $0D horizontal Door,
- * $35 vertical Tunnel Door, $1B Boulder, $19 Monitor/Time Post and $1A shoes item and the death row's $3B Game/Time Over are owned.
+ * $35 vertical Tunnel Door, $1B Boulder, $26 common Spikes, $19 Monitor/Time Post and $1A shoes item and the death row's $3B Game/Time Over are owned.
  * The zero reserved bank is NOT post-native HUD/title initialization: later native owners of slots 2..31
  * (Level/Main.asm:261-274) remain omitted by this DEV policy. Primary slot 0 stays exclusively in Frame;
  * dynamic slots 32..127 stay exclusively in placement's existing pool. ID $0B splash execution stays unowned.
  * Every other ID fails at its live dispatch; standing-object MODE remains a typed player boundary.
  * Time Post activation submits only typed voice metadata; the next actual Main retains Movement's
  * TIME_WARP_ACTIVE boundary. Bounded current-camera PLC requests/preparation/service use the actual plan and
- * eight finite sources, with one immutable resident generation; later unowned producers stop when reached.
+ * nine finite sources, with one immutable resident generation; later unowned producers stop when reached.
  * This does not execute native title/HUD/immediate-PLC prehistory, palette cycling or audio playback.
  * The loader, not declarations or this composition, authenticates asset bytes.</p>
  *
@@ -78,7 +78,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
 
     /**
      * Stable bases in ONE root-governed atlas range exclusive to this picture.
-     * Root reserves/binds its fifteen disjoint subdivisions; this value neither
+     * Root reserves/binds its sixteen disjoint subdivisions; this value neither
      * claims graphics ownership nor recommends the arbitrary IDs used by tests.
      * The three-argument form derives the sequential frontier spans the production
      * module uses: plant = mosqui + 70 and ramp = plant + 28.
@@ -90,10 +90,11 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
      * then the 82-tile Monitor/time span follows Door (native $5A8..$5F9),
      * then the 19-tile Boulder span follows Monitor/time (native $374..$386),
      * then the 46-tile diagonal Spring span follows Boulder (native $490..$4BD),
-     * for 559 patterns in all. The canonical form takes all fifteen bases explicitly.
+     * then the 8-tile common Spikes span follows diagonal Spring (native $320..$327),
+     * for 567 patterns in all. The canonical form takes all sixteen bases explicitly.
      */
     public record LogicalBanks(int player, int ring, int mosqui, int plant, int ramp,
-                               int explosion, int points, int flower, int powerup, int floatBlock, int spring, int tunnelDoorVertical, int monitorTime, int boulder, int diagonalSpring) {
+                               int explosion, int points, int flower, int powerup, int floatBlock, int spring, int tunnelDoorVertical, int monitorTime, int boulder, int diagonalSpring, int spikes) {
         public LogicalBanks(int player, int ring, int mosqui) {
             this(player, ring, mosqui, mosqui + 70, mosqui + 70 + 28);
         }
@@ -116,6 +117,13 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         public LogicalBanks(int player, int ring, int mosqui, int plant, int ramp, int explosion, int points,
                             int flower, int powerup, int floatBlock, int spring) {
             this(player, ring, mosqui, plant, ramp, explosion, points, flower, powerup, floatBlock, spring, spring + 36);
+        }
+        /** Compatibility with the previous fifteen-span canonical constructor, preserving every explicit prior base. */
+        public LogicalBanks(int player, int ring, int mosqui, int plant, int ramp, int explosion, int points,
+                            int flower, int powerup, int floatBlock, int spring, int tunnelDoorVertical, int monitorTime,
+                            int boulder, int diagonalSpring) {
+            this(player, ring, mosqui, plant, ramp, explosion, points, flower, powerup, floatBlock, spring,
+                    tunnelDoorVertical, monitorTime, boulder, diagonalSpring, diagonalSpring + 46);
         }
         /** Compatibility with the previous fourteen-span canonical constructor, preserving every explicit prior base. */
         public LogicalBanks(int player, int ring, int mosqui, int plant, int ramp, int explosion, int points,
@@ -345,6 +353,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     private final CdLostRing lostRing;
     private final CdGameOver gameOver;
     private final CdBoulder boulder;
+    private final CdSpikes spikes;
     private final CdFloatBlock floatBlock;
     private final CdSpring spring;
     private final CdTunnelDoorVertical tunnelDoorVertical;
@@ -443,7 +452,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
      * Required cameraArt carries current camera bytes, last represented table and raw section WORD verbatim.
      * Its new owner clears only CPU queue/decoder/count/budget/hint/pad; no cold fallback, implicit HIGH reset,
      * load/fade/title or immediate PLC3/Std1 history is invented. Its table is not asserted to be the native Ring
-     * table after unrepresented LoadPLCImm. All fifteen spans/current drawable tiles validate before construction,
+     * table after unrepresented LoadPLCImm. All sixteen spans/current drawable tiles validate before construction,
      * even for an empty SAT. Installs supplied windows only: no service/upload/replay.
      */
     public static CdOpeningObjectRuntime usaR11aRestartDevEmptySatPreloadedArt(
@@ -502,7 +511,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         // SAME authenticated object owner/source bank: reuse its actual seed decodes; never reopen via fromAssets.
         var sourceBank = objects.sectionArtSources();
         var plan = assets.loadPlan();
-        if (sourceBank.sources().size() != 8) throw new IllegalArgumentException("Eight reviewed camera source views required");
+        if (sourceBank.sources().size() != 9) throw new IllegalArgumentException("Nine reviewed camera source views required");
         var programs = new ArrayList<CdR11aSectionArt.SourceProgram>();
         for (var source : sourceBank.sources()) {
             var entry = source.canonicalPlc(); var reader = source.readerInputRange(); var blob = entry.sourceRange();
@@ -535,7 +544,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                 throw new IllegalArgumentException("Boulder DEV preload requires the actual canonical PLC2 row0 nineteen tiles");
             }
             // PLC_Cam1_Full row0 (Palmtree Panic/Data (Act 1 Present).asm:85-88): explicit DEV preload,
-            // exactly nineteen complete tile writes from the SAME authenticated eight-source bank. No PLC
+            // exactly nineteen complete tile writes from the SAME authenticated nine-source bank. No PLC
             // execution/decoder/table/count/history is fabricated; Animals and all adjacent gaps stay UNKNOWN.
             var decoded = source.decode().bytes();
             for (int offset = 0; offset < decoded.length(); offset += 32) {
@@ -556,6 +565,20 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                 resident = CdR11aCameraArtResidency.writeTile(resident,
                         diagonalSource.canonicalPlc().vramAddress() + offset, diagonalDecoded.slice(offset, 32));
             }
+            // PLC_Std row0 (Palmtree Panic/Data (Act 1 Present).asm:54-57): cold DEV preload ONLY,
+            // AFTER legacy/Boulder19/diagonal46. Reuse source9's SAME cached finite decode, never reopen art.
+            // Exactly eight complete writes; no PLC execution, table/history fabrication or restart repair.
+            var spikesSource = sourceBank.source(CdR11aAsset.ART_SPIKES);
+            var spikesDecoded = spikesSource.decode().bytes();
+            if (spikesSource.canonicalPlcId() != 1 || spikesSource.canonicalRowIndex() != 0
+                    || spikesSource.canonicalPlc().vramAddress() != 0x6400 || spikesSource.tileCount() != 8
+                    || spikesSource.readerBytes().unsignedWord(0) != 0x8008 || spikesDecoded.length() != 256) {
+                throw new IllegalArgumentException("Spikes DEV preload requires actual canonical PLC1 row0 eight XOR tiles");
+            }
+            for (int offset = 0; offset < spikesDecoded.length(); offset += 32) {
+                resident = CdR11aCameraArtResidency.writeTile(resident,
+                        spikesSource.canonicalPlc().vramAddress() + offset, spikesDecoded.slice(offset, 32));
+            }
             initialSectionArt = sectionArt.devState(resident, CdAssetBytes.copyOf(new byte[512]), 0);
         } else {
             initialSectionArt = sectionArt.devState(cameraArt.residency(), cameraArt.codeTable512(), cameraArt.sectionWord());
@@ -564,10 +587,10 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         // Actual declared DEV ClearObjects-equivalent ingress for cold AND restart, never a restore default.
         var reserved = CdReservedObjectBank.clearedAfterLevelStart();
         var mappings = CdObjectMappings.fromOpeningAssets(assets, objects);
-        // Validate all fifteen physical/logical spans (559 patterns), including overlaps and empty SAT admission.
+        // Validate all sixteen physical/logical spans (567 patterns), including overlaps and empty SAT admission.
         CdObjectPresentation.usaR11aCurrentCameraDevPreloadedArt(frame.artState(), initialPowerup, objects, frontier, contact,
                 floatBlockArt, springArt, tunnelDoorArt, monitorTimeArt, initialSectionArt.residency(), banks.player(), banks.ring(), banks.mosqui(), banks.plant(), banks.ramp(),
-                banks.explosion(), banks.points(), banks.flower(), banks.powerup(), banks.floatBlock(), banks.spring(), banks.tunnelDoorVertical(), banks.monitorTime(), banks.boulder(), banks.diagonalSpring());
+                banks.explosion(), banks.points(), banks.flower(), banks.powerup(), banks.floatBlock(), banks.spring(), banks.tunnelDoorVertical(), banks.monitorTime(), banks.boulder(), banks.diagonalSpring(), banks.spikes());
         return new CdOpeningObjectRuntime(assets, frame, initialGlobals, initialContact, initialScore, initialLevel, initial,
                 banks, preScrollForeground, primaryAngleWrite, objects, frontier, contact, floatBlockArt, springArt, tunnelDoorArt, monitorTimeArt, placement, reserved, mappings, initialPowerup, sectionArt, initialSectionArt);
     }
@@ -641,6 +664,9 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         var solid = CdSolidObject.fromAssets(assets);
         boulder = new CdBoulder(placement, CdBoulder.Assets.fromObjectAssets(objects),
                 solid, this::commitBoulderSolid,
+                (pool, slot) -> drawDynamic(pool, slot.wholeIndex()));
+        spikes = new CdSpikes(placement, CdSpikes.BodyAssets.fromObjectAssets(objects), solid,
+                this::commitSpikesSolid, this::commitSpikesYRewind, this::commitSpikesHurt,
                 (pool, slot) -> drawDynamic(pool, slot.wholeIndex()));
         floatBlock = new CdFloatBlock(placement, CdFloatBlock.Assets.fromObjectAssets(objects),
                 solid, this::commitTopSolid,
@@ -763,7 +789,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                 var pixels = CdObjectPresentation.usaR11aCurrentCameraDevPreloadedArt(frame.artState(), powerupArtState,
                         objects, frontierArt, contactArt, floatBlockArt, springArt, tunnelDoorArt, monitorTimeArt, sectionArtState.residency(),
                         banks.player(), banks.ring(), banks.mosqui(), banks.plant(), banks.ramp(), banks.explosion(), banks.points(),
-                        banks.flower(), banks.powerup(), banks.floatBlock(), banks.spring(), banks.tunnelDoorVertical(), banks.monitorTime(), banks.boulder(), banks.diagonalSpring());
+                        banks.flower(), banks.powerup(), banks.floatBlock(), banks.spring(), banks.tunnelDoorVertical(), banks.monitorTime(), banks.boulder(), banks.diagonalSpring(), banks.spikes());
                 var nextDisplay = CdObjectPresentation.convert(queue.cpuSat(), pixels);
                 checkActive(Phase.SERVICING);
                 displayed = nextDisplay;
@@ -1162,6 +1188,13 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                     // publish synchronously inside the bound body; its returned completed metadata is not replayed.
                     spring.run(whole, new CdSpring.Globals(preScrollForeground.xWord()), new CdSpring.SolidInputs(solidPlayer(),
                             new CdSolidObject.Gates(environment.globals().debugMode(), gates.miniSonic()), solidGlobals()));
+                } else if (id == CdSpikes.OBJECT_ID) {
+                    // ObjSpikes_Main (Spikes/Main.asm:36-83): raw globals and CURRENT primary/contact/world
+                    // at THIS physical visit. No visibility/goodFuture/activation gate outside the native body.
+                    // Solid, Y LONG, direct Hurt, Draw and tail already execute once; never replay Result effects.
+                    spikes.run(whole, new CdSpikes.Globals(gates.timeZone(), gates.timeWarpDirection(),
+                            preScrollForeground.xWord()), new CdSpikes.Inputs(solidPlayer(), solidGates(), solidGlobals(),
+                            spikesPlayerGlobals(), spikesWorldGlobals()));
                 } else if (id == CdBoulder.OBJECT_ID) {
                     // ObjBoulder_Main (Boulder/Main.asm:41-48) reads the actual primary at this physical
                     // visit; its own sprite sign is the only outer Solid gate. No good-future/route gate.
@@ -1989,6 +2022,213 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         }
         requireSpringDispatch(placement.pool().state(dispatchWholeIndex).identity());
         appendSound(new SpringFm(sound));
+    }
+
+    /** All three synchronous Spikes publications share the EXISTING guard with every sibling callback/Draw. */
+    private void requireSpikesCallbackCut() {
+        checkActive(Phase.DYNAMIC_SLOTS);
+        if (inDrawCallback || inSolidCommit || inSpringLaunch || inSpinTunnelCommit || inTunnelDoorFm
+                || inHorizontalTunnelDoorSolid || inHorizontalTunnelDoorFm
+                || inMonitorAngle || inMonitorFm || inMonitorAward
+                || inTimePostDirection || inTimePostSubCpu) {
+            throw new IllegalStateException("Spikes commit must be synchronous and non-reentrant");
+        }
+    }
+
+    private CdObjectState requireSpikesDispatch(CdObjectState.Identity identity) {
+        Objects.requireNonNull(identity, "current Spikes physical identity");
+        if (identity.wholeIndex() != dispatchWholeIndex) {
+            throw new IllegalStateException("Spikes callback must belong to the current physical dispatch");
+        }
+        var live = placement.pool().state(dispatchWholeIndex);
+        placement.pool().validateWrite(live);
+        if (!live.identity().equals(identity) || live.id() != CdSpikes.OBJECT_ID || live.routine() != 2) {
+            throw new IllegalStateException("Spikes callback requires the live ID $26 Main image");
+        }
+        return live;
+    }
+
+    /** Native .ChkStand reached guards (:57-69), read AFTER Solid. No second outer absDY test here. */
+    private void requireSpikesHurtGates(CdObjectState live) {
+        var actor = solidPlayer().actor();
+        if ((live.spriteFlags() & 2) != 0 || (live.flags() & 8) == 0
+                || contactGlobals.timeWarp() != 0 || frame.environment().globals().invincible() != 0
+                || actor.motion().routine() >= 4 || actor.hurt() != 0) {
+            throw new IllegalStateException("Spikes prefix/Hurt requires current upright standing and native player gates");
+        }
+    }
+
+    private CdPlayerTouchResponse.PlayerGlobals spikesPlayerGlobals() {
+        var environment = frame.environment(); var body = environment.globals(); var movement = environment.movement();
+        return new CdPlayerTouchResponse.PlayerGlobals(contactGlobals.timeWarp(), body.invincible(),
+                contactGlobals.shield(), contactGlobals.combineRing(), body.debugCheat(), body.debugMode(),
+                movement.globals().scoreChain(), movement.gates().miniSonic());
+    }
+
+    private CdPlayerTouchResponse.WorldGlobals spikesWorldGlobals() {
+        return new CdPlayerTouchResponse.WorldGlobals(ringGlobals.rings(), ringGlobals.lives(), ringGlobals.updateHudLives(),
+                scoreGlobals.score(), scoreGlobals.nextLifeScore(), scoreGlobals.updateHudScore());
+    }
+
+    /** Complete same-owner images AND all live values, including untouched/ID-zero/tail bytes. No new capture. */
+    private void validateSpikesPoolCut(CdObjectPool.Snapshot cut) {
+        validateDynamicCapture(cut);
+        for (var expected : cut.slots()) {
+            if (!placement.pool().state(expected.identity().wholeIndex()).equals(expected)) {
+                throw new IllegalStateException("CD pool changed after the Spikes native call cut");
+            }
+        }
+    }
+
+    /** Final distinct physical images; an otherSlot/child cannot alias a0 or another output. Pure preflight. */
+    private void validateSpikesImages(CdObjectPool.Snapshot cut, List<CdObjectState> images) {
+        var pool = placement.pool(); var seen = new boolean[CdObjectPool.DYNAMIC_COUNT];
+        for (var image : images) {
+            pool.validateWrite(image);
+            int index = image.identity().dynamicIndex();
+            if (seen[index] || !image.identity().equals(cut.slots().get(index).identity())
+                    || image.copyBytes().length != CdObjectState.BYTE_SIZE) {
+                throw new IllegalArgumentException("Spikes outputs require distinct complete same-owner physical images");
+            }
+            seen[index] = true;
+        }
+    }
+
+    /**
+     * Cut1: ObjSpikes_Main:38-55, native SUB.W/BCC/NEG.W absDY on the PRE-Solid player only.
+     * No incoming bit7 requirement: an offscreen SolidObject/GetOff is a real call. Every pool/result/Frame
+     * and FM preflight precedes S4. Publish actual images, Frame once and ordered shared FM once.
+     */
+    private void commitSpikesSolid(CdSpikes.SolidCall call) {
+        requireSpikesCallbackCut(); inSolidCommit = true;
+        try {
+            Objects.requireNonNull(call, "completed Spikes Solid call");
+            var cut = call.callCut(); var result = call.result();
+            validateSpikesPoolCut(cut);
+            var live = requireSpikesDispatch(result.object().identity());
+            var before = cut.slots().get(live.identity().dynamicIndex());
+            if (!live.equals(before) || result.object().id() != CdSpikes.OBJECT_ID || result.object().routine() != 2
+                    || result.entry() != CdSolidObject.Entry.SOLID_OBJECT) {
+                throw new IllegalStateException("Spikes Solid return differs from the live native Main call");
+            }
+            int playerY = call.expectedPlayer().actor().motion().centreY16_16() >>> 16;
+            int distance = (playerY - before.centreY()) & 0xFFFF;
+            if (playerY < before.centreY()) distance = (-distance) & 0xFFFF;
+            if (distance >= 0x20) throw new IllegalStateException("Spikes Solid lies outside the native pre-call absDY branch");
+            var images = new ArrayList<CdObjectState>(1 + result.otherSlots().size());
+            images.add(result.object()); images.addAll(result.otherSlots());
+            validateSpikesImages(cut, images);
+            frame.validateObjectSolidResult(call.expectedPlayer(), call.expectedGlobals(), result);
+            var ledger = new ArrayList<>(sounds);
+            for (var fm : result.fmRequests()) ledger.add(new PlayerSound(new CdPlayerFrameRuntime.ContactFmSound(fm)));
+            var nextSounds = List.copyOf(ledger);
+            // ALL preflight is complete. No callback or new validation authority intervenes between these writes.
+            commitTouchImages(cut, images);
+            frame.applyObjectSolidResult(call.expectedPlayer(), call.expectedGlobals(), result);
+            sounds = nextSounds;
+        } finally { inSolidCommit = false; }
+    }
+
+    /**
+     * Cut2: ObjSpikes_Main:70-75 is a standalone LONG-Y store, including fractional carry/borrow.
+     * It changes no pool/contact/world/sound state. A later direct Hurt failure retains this actual prefix.
+     */
+    private void commitSpikesYRewind(CdSpikes.YRewindCall call) {
+        requireSpikesCallbackCut(); inSolidCommit = true;
+        try {
+            Objects.requireNonNull(call, "native Spikes Y LONG prefix");
+            var live = requireSpikesDispatch(call.sourceIdentity());
+            requireSpikesHurtGates(live);
+            frame.validateObjectPreHurtYRewind(call.expectedActor(), call.finalYBits());
+            frame.applyObjectPreHurtYRewind(call.expectedActor(), call.finalYBits());
+        } finally { inSolidCommit = false; }
+    }
+
+    /**
+     * Cut3: fresh actual source/capture AFTER the Y prefix, then direct HurtPlayer (:76), not the touch scanner.
+     * PP Player Object Collision.asm:229-298 and Player_ResetOnFloor (Sonic/Main.asm:2295-2330) own all values.
+     * Plain records convey values, not tokens or commands. Do not rerun Hurt/Reset/Kill, dispatch the child or
+     * replay observations. Every cut, image, contact/world, call/FM and Frame check finishes BEFORE S4.
+     */
+    private void commitSpikesHurt(CdSpikes.HurtCall call) {
+        requireSpikesCallbackCut(); inSolidCommit = true;
+        try {
+            Objects.requireNonNull(call, "completed direct Spikes Hurt call");
+            var cut = call.callCut(); var result = call.result();
+            validateSpikesPoolCut(cut); // Required even when changedSlots is EMPTY.
+            var live = requireSpikesDispatch(call.sourceA2().identity());
+            requireSpikesHurtGates(live);
+            var expectedPlayer = call.expectedPlayer(); var expectedWorld = call.expectedWorld();
+            if (!live.equals(call.sourceA2()) || !live.equals(cut.slots().get(live.identity().dynamicIndex()))
+                    || !call.expectedActor().equals(solidPlayer().actor())
+                    || !expectedPlayer.equals(spikesPlayerGlobals()) || !expectedWorld.equals(spikesWorldGlobals())) {
+                throw new IllegalStateException("Stale Spikes direct Hurt source/player/contact/world call cut");
+            }
+            if (!result.world().equals(expectedWorld)) {
+                throw new IllegalArgumentException("Direct HurtPlayer cannot change rings/lives/HUD/score world values");
+            }
+            boolean find = expectedPlayer.shield() == 0 && expectedWorld.rings() != 0;
+            boolean kill = expectedPlayer.shield() == 0 && expectedWorld.rings() == 0 && expectedPlayer.debugCheat() == 0;
+            var exit = kill ? (expectedPlayer.debugMode() == 0 ? CdPlayerTouchResponse.Exit.KILL_PLAYER
+                    : CdPlayerTouchResponse.Exit.KILL_PLAYER_DEBUG_NO_WRITE) : CdPlayerTouchResponse.Exit.HURT;
+            if (result.exit() != exit) throw new IllegalArgumentException("Direct HurtPlayer exit disagrees with the current native branch");
+            var player = result.player();
+            int shield = exit == CdPlayerTouchResponse.Exit.HURT ? expectedPlayer.shield() & ~1 : expectedPlayer.shield();
+            int combine = exit == CdPlayerTouchResponse.Exit.HURT && (expectedPlayer.shield() & 1) == 0 ? 0 : expectedPlayer.combineRing();
+            if (player.timeWarp() != expectedPlayer.timeWarp() || player.shield() != shield || player.combineRing() != combine
+                    || player.debugCheat() != expectedPlayer.debugCheat() || player.debugMode() != expectedPlayer.debugMode()
+                    || player.miniSonic() != expectedPlayer.miniSonic()) {
+                throw new IllegalArgumentException("Direct HurtPlayer changes an unowned global/contact value");
+            }
+            // Precreate the complete immutable Root contact value before ANY response writes.
+            var nextContact = new CdPlayerBody.ContactGlobals(expectedPlayer.timeWarp(), shield, combine);
+            var firstFree = OptionalInt.empty();
+            if (find) {
+                // FindObjSlot (Object Spawner.asm:329-340) scans ALL96 ID bytes in physical order, without clearing.
+                for (var image : cut.slots()) if (image.id() == 0) { firstFree = OptionalInt.of(image.identity().wholeIndex()); break; }
+            }
+            var expectedCalls = new ArrayList<CdPlayerTouchResponse.Call>();
+            if (find) expectedCalls.add(new CdPlayerTouchResponse.FindObjSlot(firstFree));
+            if (exit != CdPlayerTouchResponse.Exit.KILL_PLAYER_DEBUG_NO_WRITE) {
+                expectedCalls.add(new CdPlayerTouchResponse.ResetOnFloor());
+                if ((call.expectedActor().motion().flags() & 4) != 0) {
+                    expectedCalls.add(new CdPlayerTouchResponse.PlayFm(CdPlayerTouchResponse.FmSound.FM_CHARGESTOP));
+                }
+                if (exit == CdPlayerTouchResponse.Exit.KILL_PLAYER) {
+                    expectedCalls.add(new CdPlayerTouchResponse.PlayFm(CdPlayerTouchResponse.FmSound.FM_HURT));
+                }
+            }
+            // Exact observations forbid AddPoints/SubCPU/FM_DESTROY, duplicate allocation/reset, wrong FM/order.
+            if (!result.calls().equals(expectedCalls)) {
+                throw new IllegalArgumentException("Direct HurtPlayer native call observations disagree with the reached branch");
+            }
+            var images = result.changedSlots(); validateSpikesImages(cut, images);
+            if (images.size() != (firstFree.isPresent() ? 1 : 0)) {
+                throw new IllegalArgumentException("Direct HurtPlayer publishes only the actual optional first-free LostRing image");
+            }
+            if (firstFree.isPresent()) {
+                int whole = firstFree.getAsInt(); var before = cut.slots().get(whole - CdObjectPool.FIRST_WHOLE_INDEX);
+                var expected = before.moveByte(ID, CdLostRing.OBJECT_ID)
+                        .moveWord(X, call.expectedActor().motion().centreX16_16() >>> 16)
+                        .moveWord(Y, call.expectedActor().motion().centreY16_16() >>> 16);
+                if (whole == dispatchWholeIndex || !images.getFirst().equals(expected)) {
+                    throw new IllegalArgumentException("LostRing allocation may write only ID/X.w/Y.w over the exact dirty first-free image");
+                }
+            }
+            frame.validateObjectHurtResult(call.expectedActor(), expectedPlayer, result); // Exactly Frame's five owned/read globals.
+            var ledger = new ArrayList<>(sounds);
+            for (var observation : result.calls()) {
+                if (observation instanceof CdPlayerTouchResponse.PlayFm fm) {
+                    ledger.add(new PlayerSound(new CdPlayerFrameRuntime.ContactFmSound(fm.sound())));
+                }
+            }
+            var nextSounds = List.copyOf(ledger);
+            // No callback and no discoverable late preflight follows. World is checked unchanged, never rewritten.
+            commitTouchImages(cut, images);
+            frame.applyObjectHurtResult(call.expectedActor(), expectedPlayer, result);
+            contactGlobals = nextContact;
+            sounds = nextSounds;
+        } finally { inSolidCommit = false; }
     }
 
     /**

@@ -5863,3 +5863,202 @@ updates before synthesis/playback. It must retain undefined RAM and support
 faults rather than silently booting a fabricated driver. Spikes remains the
 separate ordinary route frontier; no audio plan is used to claim that pass or
 USA/regional gameplay complete.
+
+
+## Spikes assets, current pixels and direct Hurt publication — 25 October 2026
+
+Parent is local `8f283a9597999c991a9233c19cf8543fd21b892b`; reference remains
+`1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff`. The component results below are followed by
+observed live Runtime and constructed World evidence. Final combined consumers
+and fresh structural guards passed as recorded below; this remains bounded
+validation, not a complete game or regional-parity result.
+
+Actual retained USA bytes authenticate Spikes ID26, MapSpr_Spikes root20C1F0,
+full24-byte mapping including its alignment bytes, one static frame with four
+size05 pieces, sixteen cells and eight distinct patterns. The actual MOVE.L at
+C130 is217C0020C1F00004. SelectorA/subtype2 zero reads0320; PLC_Std1/row0 is
+ART_SPIKES at238018 to6400, header8008. The inventory and Java reader need86
+bytes; the native decoder requires87, including the real following00 at3806E.
+The independent source models agree on256 decoded bytes, SHA256
+`75e3391d4045ec96fa925a79bba808a88425444e43d4694f105e7085057c2f72`.
+Those finite-reader models are source research, not native execution. JP/EU have
+root20C1FE and remain unadmitted. No production asset is taken from disassembly.
+
+The existing source bank appends Spikes as source9, preserving earlier identities
+and extents. The one physical store appends AT_6400 at ordinal7, extent6400..6500;
+its440 owned tiles are not440 known tiles. Both historical three-input seeds
+leave these eight new tiles UNKNOWN. The gap6500..6E00 remains outside ownership.
+Only explicit complete32-byte writes establish knowledge; there is no Spikes
+pixel bank, automatic restore seed or producer fallback. New current-picture C26
+calls unchanged C25 first, then eagerly snapshots every current320..327 tile,
+validates logical/native overlap with all fifteen old spans even for an empty
+SAT, and appends eight bindings:567 patterns in sixteen spans. All old559 logical
+IDs and NOW player/powerup/current-camera versions remain governed by C25.
+
+The shared direct HurtPlayer entry takes the actual source a2 and a fresh complete
+same-owner pool cut, then calls the same existing pure Hurt owner below scanner
+and Hazard gates. It does not fabricate a HandlerBoundary or replay a touch result.
+Frame adds only validate/apply pairs for the full32-bit pre-Hurt Y rewind and the
+returning Hurt result. The Y pair compares the complete current Actor, verifies
+Y minus signedYV shifted8 and preserves every other field. The Hurt pair checks
+the five Frame-owned/read globals and the native exit-specific fields; contact,
+world globals, actual96-slot CAS, phase/source identity and sound publication
+remain Runtime obligations. All aggregate values are constructed before adoption.
+Old Frame and response algorithms/capture structures are unchanged.
+
+CdSpikes preserves Init fallthrough and source order: routine/map/sprite/priority
+prefix before selectorA, width/radius afterward; one actual shared Solid call
+when unsigned word DY is below32, including incoming bit7 clear. Upright standing
+contact uses actual post-Solid values, commits the LONG Y rewind before capturing
+a fresh direct-Hurt cut, then reloads live source and Draw output before the
+native current-X/saved-bit/despawn tail. Vertical-flip collision83 is a distinct
+scanner path. Shared Solid can release a primary-slot stand0 alias; Hurt keeps
+post-Solid links and scratch angles. LostRing allocation writes only its native
+ID and integer XY over the actual first free image. Ordinary Hurt does not emit
+FM93; reached Reset/Kill requests retain their native order. Completed effects
+are observations, never a replay program.
+
+Observed component checks, all with Java25 and actual supplied media:
+
+- Assets/store tests-only93124 rejected missing APIs before production import.
+  Positive78333 passed117/0/0/0: unit61, regional21 and physical-store35;
+  Maven1m32s, terminal12:50:32Z, after20s admission wait.
+- Direct-Hurt/body tests-only30593 rejected missing APIs, with no JUnit execution.
+  First positive73816 ran628/2/0/0, Maven1m22s, terminal13:18:30Z. Response191
+  and Frame314 passed. Two Spikes fixture expectations were wrong: a bored2B
+  actor with object bit3 clear reaches Solid.GetOff/d0=0 before StandOn, and the
+  reached saved-bank index769/766 throws IndexOutOfBoundsException. RootR3 pins
+  that actual GetOff reason/zero return and corrects the exception; production
+  is unchanged. Rerun29477 passed all123 Spikes cases, Maven27.061s,
+  terminal13:23:24Z. This is505 passed plus a separate repaired123 rerun,
+  not a claim that one fresh628 run passed.
+- Picture tests-only82106 rejected the absent C26 overload, Maven22.486s,
+  terminal13:26:39Z, no JUnit execution. Positive97139 passed77/0/0/0:
+  mappings32, section service37 and new Spikes picture8; Maven1m36s,
+  terminal13:29:37Z. It exercises the actual Std Spikes source transfers in slow3/3/2
+  and fast18 service, immediate final POP without next-head work, current-byte
+  replacement and partial snapshot replay. The Root mapper test repair only
+  corrects a new prior-Boulder geometry assertion to the actual retained map.
+
+Fresh XML identities, media/Java properties, errors and skips were inspected;
+every stated positive has zero skips. Frozen author originals remain external,
+with separate Root repair revisions. Independent static reviews accept the final
+asset/store, direct-Hurt/body and picture candidates with the documented fixture
+repairs; they are not independent execution evidence. A dry change-based plan
+selects3744 smoke classes because this private CD namespace is unclassified.
+No such broad job was launched; the focused consumers and remaining World/guard
+obligations must be assessed against the actual final change. There is no
+full-suite, native-parity, natural Spikes contact, GPU or full-USA claim here.
+
+
+### Live Spikes, actual World pixels and the next route boundary
+
+The Runtime candidate adds only a sixteenth LogicalBanks component, preserving
+all shorter constructors and deriving the fifteen-argument compatibility base
+as diagonalSpring+46. It caches one actual-pool body with the shared Solid owner.
+Nine-source validation and cold-only eight-tile DEV writes precede both C26
+conversion cuts. Restart carries the supplied bytes, knowledge masks, table and
+section verbatim; no new seed, source selection, service or capture partition is
+introduced. All three private publications use the existing mutual guard. Each
+complete96-image CAS and Actor/global/image/contact/FM preflight finishes before
+pool writes; images, Frame, contact and the already-constructed FM ledger publish
+once. A failure in the later Hurt cut retains the preceding LONG Y store.
+
+Tests-only52300 rejected the absent banks16/spikes accessor, Maven25.210s,
+terminal13:43:15Z, no JUnit execution. Importing unchanged frozen Runtime
+`d74b54de8454a60b47d21d103e0a1ce3d6f32f29c09062eb0d3b9264e3bcb319`
+and its257 tests gave9204 **258/0/0/0**, Maven1m25s, terminal13:49:08Z:
+Runtime257 plus one temporary actual controller-route observation. All228 old
+Runtime test identities remain; only demonstrated bank/source/known-byte and
+explicit DEV helper-seed expectations migrate. Independent static review found
+no P1/P2 in the Runtime and constructed World packet.
+
+Ordinary controller-only Right now **completes call561**, including physical61
+Spikes Init/Main/Draw/tail: ID26/routine2/X2643/Y1038/map20C1F0/tile0320,
+priority3/width16/Yradius8/collision0/sprite4. It completes through call581;
+**call582 remains incomplete**, rejecting ID13/physical34 before Checkpoint writes.
+N ObjectIndex (Act1 Present):26 identifies Checkpoint, distinct from Boulder1B
+at34. Physical32 vertical Door and33 diagonal Spring have already initialized
+before that stop. Player prefix is X153497088/Y10844672 in16.16, XV1536/YV2696,
+routine2/flags2; section0200/count0/queue-head0. Checkpoint remains routine0,
+X2760/Y744/map0. Its raw offset28 is subtype2, not saved ID; saved ID23 is0.
+The temporary observer is removed. The permanent test restores full and course
+cuts around560->561, advances without construction to581, then checks the exact
+582 failure and completed earlier prefixes. It never resumes a failed pass.
+There is no natural Spikes hit or natural diagonal launch claim.
+
+One constructed USA320x224 Sonic-only EGL product first earns a Ring through
+actual controller input:92 rows of the retained102-row proposal. From that
+pristine closed cut, each of four independent native flips clears96 dynamic
+slots, seeds only physical40 ID/XY/subtypes/placement flips and stages/rebinds the
+actual actor once. No object routine/map/tile/collision/bit7 or helper result is
+injected. Upright collision0 reaches direct Hurt after real landing and after
+physical32's visit; its new ID11 LostRing stays routine0 and Ring count1 until
+next pass. Vertical collision83 instead reaches Body scanner Hurt before the
+object walk, so32 initializes and clears rings in the same pass. These are
+separate native entries with distinct ordered sound ledgers. Landing zeros YV,
+so this World case certifies a same-value full32-bit rewind; nonzero carry/borrow
+is separately exercised by actual body/Frame/Runtime component tests.
+
+Literal four-piece/16-cell SAT geometry, every current320..327 tile, native
+priority/flip/painter order, actual Plane B transparency and complete glyph
+omission sensitivity are checked for all four flips. Legitimate player overlap
+remains in the World; isolated glyph and outside-palette contrast controls are
+explicitly renderer-only. Five selected cuts per scene give40 full/course
+restores, with forward state/pixel replay and no rebind, reseed or source reload.
+All567 current-policy entries are explicitly installed for retirement, then
+removed while800 actual other-producer entries retain identity. This upload is
+not a claim that every owned tile appeared in the scene.
+
+Behavioral negative39372 ran2/2/0/0, Maven29.573s, terminal14:09:40Z after755s
+admission wait. The new EGL product reached the intended FIRST residual owned
+entry131631=base+559 after every preceding gameplay/pixel/replay assertion. The
+other failure was Root's new Door word oracle0328 instead of the retained full
+8328 (Object Tile IDs, word_20CF86:40), corrected in a separate test copy.
+Only the production reservation comment/count changes559->567/+8. Positive14365
+then passed **2/0/0/0**, Maven1m26s, terminal14:20:22Z after298s admission wait:
+the same EGL product and the permanent controller/replay/boundary test.
+Fresh XML Java25, actual media, surfaceless EGL, exact existing S2 donor and all
+skip/error identities were checked. No images existed from the negative run.
+
+Twelve unchanged actual ENGINE PNGs (World, native-plane-only engine comparison,
+render-only isolated glyph; one row2 image for each flip) plus input, explicit
+construction and PASS outcome are retained under Downloads
+`native/engine-spikes-r1`. Success artifacts are written only after retirement
+and session/graphics/boot teardown. These are engine component images, not
+emulator references. Later-frame pixels are asserted, not additional saved PNGs.
+No new native capture was launched. Full-USA gameplay, other regions, viewport/
+roster/entry breadth, native startup/timing/pixel parity, Checkpoint save/restart,
+warp/completion and sound playback remain open.
+
+Final combined consumers44611 passed **1288/0/0/0** across eleven classes,
+Maven1m16s, terminal14:36:44Z after339s admission wait. All eleven fresh XML
+identities, Java25, actual media, explicit EGL opt-in and existing S2 donor
+properties were checked, including errors/skips. The selection covers touch191,
+Frame314, Body272, Spikes123, playable-pass4, Runtime257, restart23, World-load50,
+EGL16, terrain-player27 and public-surface11. Fresh structural guards99234 passed **728/0/0/0**, Maven4m53s,
+terminal14:49:02Z; all90 fresh XML identities, Java25, errors and skips were
+inspected. This is a fresh Spikes result, separate from the earlier diagonal
+guards. The command uses a new JVM and LUA_BIN=lua5.4. This is a proportionate focused selection
+for the private CD owners and their consumers; no common engine algorithm, Mod
+API or build policy changed. The unclassified3744-class smoke fallback is not
+launched, and no full-suite result is claimed.
+
+
+```text
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 python3 <main-workspace>/tools/testing/maven_queue.py --normal -Dmse=off '-Dtest=TestCdPlayerTouchResponse,TestCdPlayerFrameRuntime,TestCdPlayerBody,TestCdSpikes,TestCdPlayableSonicObjectPass,TestCdOpeningObjectRuntime,TestSonicCdRestartCarry,TestSonicCdOpeningWorldLoad,TestSonicCdOpeningWorldEgl,TestSonicCdTerrainPlayerLoad,TestModApiSignatureSurface' -Dsoniccd.media.root=<supplied-media-root> -Dsoniccd.opening.egl=true -Dopenggf.headless.gl=surfaceless-egl -Dsonic2.rom.path=<verified-S2-REV01> test -B
+```
+
+
+```text
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 python3 <main-workspace>/tools/testing/maven_queue.py --normal -Dmse=off -Pguards test -B
+```
+
+The private checkpoint retains only the26 owned files (22 Java, four existing
+engineering/coverage documents). Main and the retained primary worktree remain
+unchanged; no fetch, pull, merge, push, PR or public disclosure is performed.
+The next object is Checkpoint13, with a distinct D960 art span and a real saved
+payload/live-water/camera/time prerequisite. Its source-only reports and frozen
+asset candidate are separate future work; they are not imported or counted in
+this Spikes result. FM TrackUpdate likewise remains a source-only proposal with
+a required internal projection bridge and unresolved suffix-address accounting.

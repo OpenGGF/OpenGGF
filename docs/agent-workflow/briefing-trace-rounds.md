@@ -71,6 +71,15 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+A flipped object can change the collision entry and allocation timing (2026-10-25,
+CD Spikes). Upright collision0 reaches direct Hurt after Solid in physical40,
+after free physical32 was visited. Vertical collision83 reaches Body scanner
+Hurt before the walk, so32 initializes its LostRing in the same pass. Preserve
+these separate sound/global/pool prefixes instead of forcing one contact route
+or replaying response metadata. Landing also zeroes YV before Spikes' LONG-Y
+rewind: a correct World case can certify a same-value32-bit store while nonzero
+fractional carry/borrow still needs its component cases.
+
 A source-opaque pixel need not differ from its background (2026-10-25, CD
 diagonal Spring). Requiring every nonempty tile to change native-terrain RGB
 rejected a correctly rendered tile. Preserve the actual ordered World and

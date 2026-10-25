@@ -35,6 +35,29 @@ import java.util.OptionalInt;
  * publish nothing.
  */
 public final class CdPlayerTouchResponse {
+
+    // BEGIN direct native HurtPlayer value entry.
+    /**
+     * Pure direct HurtPlayer entry (PP Player Object Collision.asm:229-298, source pin
+     * 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff), below every scanner/Hazard/Body gate.
+     * The caller owns reached guards and live freshness of the complete pool. The complete a2
+     * image must agree with this cut, including its actual pool owner and physical identity.
+     * No asset table, selected handler, ID/group rule, pool publication or sound execution is involved.
+     * ID-zero a2 remains the same address if FindObjSlot allocates it before the unsigned X compare.
+     */
+    public static Result hurtPlayer(Actor actor, PlayerGlobals player, WorldGlobals world,
+                                    CdObjectState sourceA2, CdObjectPool.Snapshot callCut) {
+        Objects.requireNonNull(actor, "actor"); Objects.requireNonNull(player, "player globals");
+        Objects.requireNonNull(world, "world globals"); Objects.requireNonNull(sourceA2, "HurtPlayer source a2");
+        Objects.requireNonNull(callCut, "call-cut snapshot");
+        if (!sourceA2.equals(callCut.slots().get(sourceA2.identity().dynamicIndex()))) {
+            throw new IllegalArgumentException("HurtPlayer source is not the complete same-owner call-cut image");
+        }
+        var c = new Cursor(actor, player, world, callCut);
+        hurtPlayer(c, sourceA2.identity().wholeIndex());
+        return c.finish();
+    }
+    // END direct native HurtPlayer value entry.
     /** EnemyPoints: four native words (Player Object Collision.asm:200-204). */
     public static final int ENEMY_POINTS_BYTES = 8;
 

@@ -939,15 +939,16 @@ class TestSonicCdOpeningWorldLoad {
         registry.restore(full);assertState(before,h);step(h,input(8,0,false));assertState(at540,h);step(h,input(8,0,false));assertState(at541,h);
         registry.restoreCourse(course);assertState(before,h);step(h,input(8,0,false));assertState(at540,h);step(h,input(8,0,false));assertState(at541,h);
     }
-    @Test void ordinaryRightRouteCompletesDiagonalSpringInitThenStopsAtLaterSpikesInTheSameCall561() throws Exception {
+    @Test void ordinaryRightRouteCompletesSpikesAt561ReplaysThenStopsAtCheckpoint582() throws Exception {
         var h=opening();var runtime=objects(h);var frame=h.module().requirePlayerFrame();var pool=runtime.placement().pool();
         for(int call=0;call<560;call++)step(h,input(8,0,false));
         assertEquals(0,pool.state(46).id());
         assertEquals(0x3E,pool.state(52).id());assertEquals(2,pool.state(52).routine());
         assertEquals(2466,pool.state(52).centreX());assertEquals(628,pool.state(52).centreY());
         assertEquals(0,runtime.sectionArtState().remainingTilesWord());assertEquals(0,runtime.sectionArtState().queue().headSource());
-        var failure=assertThrows(UnsupportedOperationException.class,()->step(h,input(8,0,false)));
-        assertEquals("Unowned CD object ID $26 at live physical slot 61",failure.getMessage());
+        var registry=h.mode().getRewindRegistry();var full=registry.capture();var course=registry.captureCourse();
+        var before=state(h);
+        step(h,input(8,0,false)); // Completed ordinary call561, including native Spikes Init/Main/Draw/tail.
         // Native record94 0A0D04A01B004000 has completed its real Init before the later physical stop.
         var rock=pool.state(46);assertEquals(0x1B,rock.id());assertEquals(2,rock.routine());
         assertEquals(2573,rock.centreX());assertEquals(1184,rock.centreY());assertEquals(4,rock.spriteFlags());
@@ -966,11 +967,30 @@ class TestSonicCdOpeningWorldLoad {
         assertEquals(628,pool.state(52).centreY());assertEquals(0x8000,pool.state(52).word(CdObjectState.WordField.X_FRACTION));
         assertEquals(0x5FFF,pool.state(52).word(CdObjectState.WordField.Y_FRACTION));
         assertEquals(0x10,pool.state(54).id());assertEquals(2,pool.state(54).routine());
-        var spikes=pool.state(61);assertEquals(0x26,spikes.id());assertEquals(0,spikes.routine());
-        assertEquals(2643,spikes.centreX());assertEquals(1038,spikes.centreY());assertEquals(0,spikes.longBits(CdObjectState.LongField.MAPPINGS));
-        // Later Ring members may be initialized by an earlier parent. This failed physical pass is NOT a completed call561.
-        assertEquals(0x0200,runtime.sectionArtState().sectionWord());
-        assertTrue(runtime.closed());assertTrue(frame.closed());
+        var spikes=pool.state(61);assertEquals(0x26,spikes.id());assertEquals(2,spikes.routine());
+        assertEquals(2643,spikes.centreX());assertEquals(1038,spikes.centreY());assertEquals(4,spikes.spriteFlags());
+        assertEquals(0x20C1F0,spikes.longBits(CdObjectState.LongField.MAPPINGS));assertEquals(0x0320,spikes.word(CdObjectState.WordField.TILE));
+        assertEquals(3,spikes.unsignedByte(CdObjectState.ByteField.PRIORITY));assertEquals(16,spikes.unsignedByte(CdObjectState.ByteField.WIDTH));
+        assertEquals(8,spikes.unsignedByte(CdObjectState.ByteField.Y_RADIUS));assertEquals(0,spikes.unsignedByte(CdObjectState.ByteField.COLLISION_TYPE));
+        assertEquals(0,spikes.flags());
+        assertEquals(0x0200,runtime.sectionArtState().sectionWord());assertEquals(0,runtime.sectionArtState().remainingTilesWord());
+        assertFalse(runtime.closed());assertFalse(frame.closed());var at561=state(h);
+        registry.restore(full);assertState(before,h);step(h,input(8,0,false));assertState(at561,h);
+        registry.restoreCourse(course);assertState(before,h);step(h,input(8,0,false));assertState(at561,h);
+        for(int call=562;call<=581;call++)step(h,input(8,0,false));
+        assertFalse(runtime.closed());assertFalse(frame.closed());
+        var failure=assertThrows(UnsupportedOperationException.class,()->step(h,input(8,0,false)));
+        assertEquals("Unowned CD object ID $13 at live physical slot 34",failure.getMessage());
+        // Object Index (Act1 Present).asm:26 owns ID13 as Checkpoint. Earlier physical Init prefixes survive call582.
+        var door=pool.state(32);assertEquals(0x35,door.id());assertEquals(2,door.routine());
+        assertEquals(0x20CE9A,door.longBits(CdObjectState.LongField.MAPPINGS));assertEquals(0x8328,door.word(CdObjectState.WordField.TILE));
+        var diagonal=pool.state(33);assertEquals(0x0A,diagonal.id());assertEquals(0x14,diagonal.routine());
+        assertEquals(0x209BF0,diagonal.longBits(CdObjectState.LongField.MAPPINGS));assertEquals(2688,diagonal.centreX());assertEquals(1104,diagonal.centreY());
+        var checkpoint=pool.state(34);assertEquals(0x13,checkpoint.id());assertEquals(0,checkpoint.routine());
+        assertEquals(2760,checkpoint.centreX());assertEquals(744,checkpoint.centreY());assertEquals(0,checkpoint.longBits(CdObjectState.LongField.MAPPINGS));
+        assertEquals(153497088,frame.state().motion().centreX16_16());assertEquals(10844672,frame.state().motion().centreY16_16());
+        assertEquals(0x0200,runtime.sectionArtState().sectionWord());assertEquals(0,runtime.sectionArtState().remainingTilesWord());
+        assertEquals(0,runtime.sectionArtState().queue().headSource());assertTrue(runtime.closed());assertTrue(frame.closed());
     }
 
     // ClearScreen/InitLevelDrawBG: this is post-initial-draw, before any represented V-int.

@@ -7,7 +7,7 @@ import java.util.Objects;
 import java.util.OptionalInt;
 
 /**
- * Pure immutable sparse-known current pattern bytes in the R11A $6E00..$A400 envelope.
+ * Pure immutable sparse-known current pattern bytes at $6400..$6500 and $6E00..$A400.
  * There is one value at each owned physical address, regardless of which actor
  * or producer previously used it. The sole tile-read input is a final native
  * 11-bit pattern ID; SAT attributes must already have been removed by its owner.
@@ -24,13 +24,15 @@ import java.util.OptionalInt;
  * PLC_Cam1_Full (:85-100) places Boulder19 at $6E80; PLC_Cam4_Full
  * (:138-153) and PLC_Cam4_Incr (:209-222) relocate Anton22 to $6E00,
  * overwriting eighteen Boulder tiles while retaining its final $70C0 tile.
- * These are physical aliases in one value, never separate producer banks.</p>
+ * These are physical aliases in one value, never separate producer banks.
+ * PLC_Std (:54-57) owns Spikes8 at $6400; its $8008 header ends at $6500.
+ * The intervening $6500..$6E00 gap remains unowned.</p>
  *
  * <p>Supplied bytes carry no asset authentication or cold/title history claim.
  * No decoder, PLC queue, section selection, clock, graphics, object bank, or
- * lifecycle is performed here. The seven disjoint regions own 432 physical
+ * lifecycle is performed here. The eight disjoint regions own 440 physical
  * tiles, without certifying that their bytes are known. Both legacy factories
- * leave all four added complements UNKNOWN until explicit complete-tile writes.
+ * leave all five added regions UNKNOWN until explicit complete-tile writes.
  * Player $F000, powerup $A880 and Spring $A400 remain outside this half-open
  * envelope. Camera writes outside ownership stop at a typed boundary.
  * The caller retains each returned tile commit before attempting the next one;
@@ -53,7 +55,8 @@ public final class CdR11aCameraArtResidency {
         AT_6E00(0x6E00, 0x600),
         AT_7CC0(0x7CC0, 0x460),
         AT_83E0(0x83E0, 0xA0),
-        AT_9000(0x9000, 0x1400);
+        AT_9000(0x9000, 0x1400),
+        AT_6400(0x6400, 0x100);
 
         private final int destinationWord;
         private final int byteLength;
@@ -171,7 +174,7 @@ public final class CdR11aCameraArtResidency {
     /**
      * Explicit DEV source preload, not native cold entry or restart history.
      * Mosqui2240, Plant896 and Ramp2016 must be the caller's current exact bytes.
-     * Anton's entire $2C0 window, the $8800 gap and all four complementary
+     * Anton's entire $2C0 window, the $8800 gap and all five added
      * regions remain UNKNOWN. No Boulder or other added art is implicitly seeded.
      */
     public static State devSeed(CdAssetBytes mosqui2240, CdAssetBytes plant896, CdAssetBytes ramp2016) {
@@ -191,14 +194,15 @@ public final class CdR11aCameraArtResidency {
                 new RegionSnapshot(Region.AT_6E00, new byte[0x600], new byte[0x600]),
                 new RegionSnapshot(Region.AT_7CC0, new byte[0x460], new byte[0x460]),
                 new RegionSnapshot(Region.AT_83E0, new byte[0xA0], new byte[0xA0]),
-                new RegionSnapshot(Region.AT_9000, new byte[0x1400], new byte[0x1400])
+                new RegionSnapshot(Region.AT_9000, new byte[0x1400], new byte[0x1400]),
+                new RegionSnapshot(Region.AT_6400, new byte[0x100], new byte[0x100])
         });
     }
 
     /**
-     * Explicit known ingress for the three historical windows only. All four
+     * Explicit known ingress for the three historical windows only. All five
      * complementary regions remain UNKNOWN; this is not a certificate for all
-     * 432 physical tiles. Its existence establishes no authenticity or native
+     * 440 physical tiles. Its existence establishes no authenticity or native
      * entry provenance; no default zero/cold/restart factory is supplied.
      */
     public static State knownSeed(CdAssetBytes at7400, CdAssetBytes at8120, CdAssetBytes at8480) {
@@ -212,7 +216,8 @@ public final class CdR11aCameraArtResidency {
                 new RegionSnapshot(Region.AT_6E00, new byte[0x600], new byte[0x600]),
                 new RegionSnapshot(Region.AT_7CC0, new byte[0x460], new byte[0x460]),
                 new RegionSnapshot(Region.AT_83E0, new byte[0xA0], new byte[0xA0]),
-                new RegionSnapshot(Region.AT_9000, new byte[0x1400], new byte[0x1400])
+                new RegionSnapshot(Region.AT_9000, new byte[0x1400], new byte[0x1400]),
+                new RegionSnapshot(Region.AT_6400, new byte[0x100], new byte[0x100])
         });
     }
 

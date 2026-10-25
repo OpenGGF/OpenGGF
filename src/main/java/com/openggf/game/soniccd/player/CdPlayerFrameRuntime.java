@@ -31,6 +31,151 @@ import java.util.OptionalLong;
  * startup interrupt count, hardware timing model or playable-route certificate.
  */
 public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoCloseable {
+
+    // BEGIN direct object HurtPlayer publication ports.
+    /**
+     * Preflight the separate LONG-Y prefix before an actual object HurtPlayer call. Native Spikes
+     * (Level/_Objects/Spikes/Main.asm:70-76, pin 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff)
+     * subtracts sign-extended YVel shifted by8, modulo32 bits, including fraction carry/borrow.
+     * Root owns object identity, phase and reached gates; these expected values confer none of them.
+     */
+    public void validateObjectPreHurtYRewind(CdPlayerTouchResponse.Actor expectedActor, int finalYLongBits) {
+        requireOpenIdle(); requireClosedFrame(); Objects.requireNonNull(expectedActor, "pre-Hurt actor");
+        var h = state.header();
+        var current = new CdPlayerTouchResponse.Actor(state.motion(), h.tile(), h.priority(),
+                state.timers().hurt(), state.rotationDistance());
+        if (!expectedActor.equals(current)) {
+            throw new IllegalArgumentException("Stale pre-Hurt actor cut");
+        }
+        var m = expectedActor.motion();
+        if (finalYLongBits != m.centreY16_16() - (((short) m.yVelocity()) << 8)) {
+            throw new IllegalArgumentException("Pre-Hurt Y must be the native full-long velocity rewind");
+        }
+    }
+
+    /** Publish only the checked Y LONG; every other partition/reference and earlier Display survives. */
+    public void applyObjectPreHurtYRewind(CdPlayerTouchResponse.Actor expectedActor, int finalYLongBits) {
+        validateObjectPreHurtYRewind(expectedActor, finalYLongBits);
+        var m = expectedActor.motion();
+        var motion = new CdPlayerMotionState(m.centreX16_16(), finalYLongBits, m.xVelocity(), m.yVelocity(),
+                m.groundVelocity(), m.routine(), m.angle(), m.flags(), m.spriteFlags(), m.xRadius(), m.yRadius(),
+                m.animation(), m.previousAnimation(), m.playerJump(), m.charge(), m.moveLock(), m.stick(),
+                m.playerControl(), m.previousPrimaryAngle(), m.previousSecondaryAngle());
+        var nextState = new CdPlayerBody.State(motion, state.animation(), state.header(), state.timers(),
+                state.history(), state.rotationDistance(), state.objectLinks());
+        state = nextState;
+    }
+
+    /**
+     * Value-CAS for direct HurtPlayer's three native exits, not a second source execution. PP Player
+     * Object Collision.asm:229-298 and Sonic/Main.asm:2295-2330 at the pin above own every store.
+     * Shipped FixBugs=0: preserve charge/hurt on Kill, links and non-reset fields on both real exits,
+     * and the entire already-prefixed actor on a full-word debug no-write return.
+     * Frame owns exactly invincible/scoreChain and reads debugCheat/debugMode/miniSonic here.
+     * Root preflights contact/world/slot images and publishes their native effects independently.
+     */
+    public void validateObjectHurtResult(CdPlayerTouchResponse.Actor expectedActor,
+                                         CdPlayerTouchResponse.PlayerGlobals expectedPlayer,
+                                         CdPlayerTouchResponse.Result result) {
+        requireOpenIdle(); requireClosedFrame();
+        Objects.requireNonNull(expectedActor, "HurtPlayer actor");
+        Objects.requireNonNull(expectedPlayer, "HurtPlayer globals"); Objects.requireNonNull(result, "HurtPlayer result");
+        var h = state.header(); var movement = environment.movement(); var bodyGlobals = environment.globals();
+        var current = new CdPlayerTouchResponse.Actor(state.motion(), h.tile(), h.priority(),
+                state.timers().hurt(), state.rotationDistance());
+        if (!expectedActor.equals(current) || expectedPlayer.invincible() != bodyGlobals.invincible()
+                || expectedPlayer.scoreChain() != movement.globals().scoreChain()
+                || expectedPlayer.debugCheat() != bodyGlobals.debugCheat()
+                || expectedPlayer.debugMode() != bodyGlobals.debugMode()
+                || expectedPlayer.miniSonic() != movement.gates().miniSonic()) {
+            throw new IllegalArgumentException("Stale HurtPlayer actor/Frame-global cut");
+        }
+        var exit = result.exit();
+        if (exit != CdPlayerTouchResponse.Exit.HURT && exit != CdPlayerTouchResponse.Exit.KILL_PLAYER
+                && exit != CdPlayerTouchResponse.Exit.KILL_PLAYER_DEBUG_NO_WRITE) {
+            throw new IllegalArgumentException("Only direct HurtPlayer native exits are admitted");
+        }
+        var next = result.actor(); var globals = result.player();
+        if (globals.timeWarp() != expectedPlayer.timeWarp() || globals.debugCheat() != expectedPlayer.debugCheat()
+                || globals.debugMode() != expectedPlayer.debugMode() || globals.miniSonic() != expectedPlayer.miniSonic()) {
+            throw new IllegalArgumentException("HurtPlayer changes a readonly helper global");
+        }
+        if (exit == CdPlayerTouchResponse.Exit.KILL_PLAYER_DEBUG_NO_WRITE) {
+            if (expectedPlayer.debugMode() == 0 || !next.equals(expectedActor) || !globals.equals(expectedPlayer)) {
+                throw new IllegalArgumentException("KillPlayer debug return must preserve the complete call cut");
+            }
+            return;
+        }
+        boolean kill = exit == CdPlayerTouchResponse.Exit.KILL_PLAYER;
+        if (globals.scoreChain() != 0 || globals.invincible() != (kill ? 0 : expectedPlayer.invincible())) {
+            throw new IllegalArgumentException("HurtPlayer result disagrees with its native Frame-global stores");
+        }
+        var m = expectedActor.motion(); var n = next.motion();
+        if (n.centreX16_16() != m.centreX16_16()
+                || (n.centreY16_16() & 0xFFFF) != (m.centreY16_16() & 0xFFFF)
+                || n.angle() != m.angle() || n.spriteFlags() != m.spriteFlags()
+                || n.previousAnimation() != m.previousAnimation() || n.moveLock() != m.moveLock()
+                || n.playerControl() != m.playerControl() || n.previousPrimaryAngle() != m.previousPrimaryAngle()
+                || n.previousSecondaryAngle() != m.previousSecondaryAngle()) {
+            throw new IllegalArgumentException("HurtPlayer changes an unowned motion field or fraction");
+        }
+        // Validate Reset's exact publication bounds; do not rerun Reset or replay its call metadata.
+        boolean rolling = (m.flags() & 4) != 0, miniature = expectedPlayer.miniSonic() != 0;
+        int resetYWord = ((m.centreY16_16() >>> 16) - (rolling ? (miniature ? 2 : 5) : 0)) & 0xFFFF;
+        if ((n.centreY16_16() >>> 16) != resetYWord
+                || n.xRadius() != (rolling ? (miniature ? 5 : 9) : m.xRadius())
+                || n.yRadius() != (rolling ? (miniature ? 0xA : 0x13) : m.yRadius())
+                || n.flags() != ((m.flags() & ~0x36) | 2) || n.playerJump() != 0 || n.groundVelocity() != 0) {
+            throw new IllegalArgumentException("HurtPlayer changes fields outside its reached native reset stores");
+        }
+        if (kill) {
+            if (expectedPlayer.debugMode() != 0 || n.routine() != 6 || n.xVelocity() != 0 || n.yVelocity() != -0x700
+                    || n.animation() != 0x18 || n.charge() != m.charge() || next.hurt() != expectedActor.hurt()
+                    || n.stick() != (resetYWord >>> 8) || next.rotationDistance() != (resetYWord & 0xFF)
+                    || next.tile() != (expectedActor.tile() | 0x8000) || next.priority() != 0
+                    || globals.shield() != expectedPlayer.shield() || globals.combineRing() != expectedPlayer.combineRing()) {
+                throw new IllegalArgumentException("KillPlayer changes an unowned field or omits a native terminal store");
+            }
+        } else {
+            int speed = (m.flags() & 0x40) != 0 ? 0x100 : 0x200;
+            if (n.routine() != 4 || n.yVelocity() != -2 * speed
+                    || (n.xVelocity() != -speed && n.xVelocity() != speed)
+                    || n.animation() != 0x1A || n.charge() != 0 || next.hurt() != 0x78 || n.stick() != m.stick()
+                    || next.tile() != expectedActor.tile() || next.priority() != expectedActor.priority()
+                    || next.rotationDistance() != expectedActor.rotationDistance()) {
+                throw new IllegalArgumentException("HurtPlayer changes an unowned field or omits a native terminal store");
+            }
+        }
+    }
+
+    /**
+     * Adopt only checked Actor/invincible/scoreChain values once at the closed object cut. Build all
+     * immutable replacements before aggregate assignments. No pool/contact/world publication, call
+     * replay, FM execution, Body/display/camera dispatch, callback, input, art or clock work occurs.
+     * Root calls this synchronously after its complete cross-owner preflight, without a callback gap.
+     */
+    public void applyObjectHurtResult(CdPlayerTouchResponse.Actor expectedActor,
+                                      CdPlayerTouchResponse.PlayerGlobals expectedPlayer,
+                                      CdPlayerTouchResponse.Result result) {
+        validateObjectHurtResult(expectedActor, expectedPlayer, result);
+        if (result.exit() == CdPlayerTouchResponse.Exit.KILL_PLAYER_DEBUG_NO_WRITE) return;
+        boolean kill = result.exit() == CdPlayerTouchResponse.Exit.KILL_PLAYER;
+        var actor = result.actor(); var globals = result.player(); var h = state.header(); var timers = state.timers();
+        var nextHeader = kill ? new CdPlayerBody.Header(h.slotId(), h.mappingAddress(), actor.tile(), actor.priority(), h.width()) : h;
+        var nextTimers = kill ? timers : new CdPlayerBody.Timers(actor.hurt(), timers.invincibility(), timers.speedShoes(), timers.reset());
+        var nextState = new CdPlayerBody.State(actor.motion(), state.animation(), nextHeader, nextTimers,
+                state.history(), actor.rotationDistance(), state.objectLinks());
+        var m = environment.movement(); var g = m.globals(); var b = environment.globals();
+        var movementGlobals = new CdPlayerMovement.Globals(g.lookMode(), g.cameraYCentre(), g.primaryAngle(), g.secondaryAngle(),
+                g.boredTimer(), globals.scoreChain(), g.debugAngle(), g.debugAngleShift(), g.debugQuadrant(), g.debugFloorDistance());
+        var nextBodyGlobals = kill ? new CdPlayerBody.Globals(b.levelFrames(), b.cameraXCentre(), b.timeAttackMode(), b.debugMode(),
+                b.debugCheat(), b.timeWarpTimer(), globals.invincible(), b.bossMusic()) : b;
+        var nextEnvironment = new CdPlayerBody.Environment(new CdPlayerMovement.Environment(m.physics(), m.bounds(), m.gates(),
+                movementGlobals), environment.controls(), nextBodyGlobals, environment.dynamicSlots());
+        state = nextState;
+        environment = nextEnvironment;
+    }
+    // END direct object HurtPlayer publication ports.
     private static final long ULONG_MASK = 0xFFFFFFFFL;
 
     /**

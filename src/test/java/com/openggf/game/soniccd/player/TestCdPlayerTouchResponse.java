@@ -46,6 +46,221 @@ import static org.junit.jupiter.api.Assertions.*;
  * reads actual supplied media only when soniccd.media.root is configured.
  */
 class TestCdPlayerTouchResponse {
+
+    // Direct native HurtPlayer entry: constructed real-pool cuts, no scanner or asset table. JAVA UNRUN.
+    @Test void directHurtWritesOnlyLostRingIdAndPositionWordsIntoTheDirtyFirstFreeSlot() {
+        var w = specialWorld(0, 0xA5, 0x26); var p = new Player();
+        var dirty = w.pool.state(32);
+        for (var field : ByteField.values()) dirty = dirty.moveByte(field, 0xA5 ^ field.byteOffset());
+        for (var field : WordField.values()) dirty = dirty.moveWord(field, 0x5A00 | field.byteOffset());
+        for (var field : CdObjectState.LongField.values()) dirty = dirty.moveLong(field, 0x89ABCDEF);
+        dirty = dirty.moveByte(ByteField.ID, 0).moveWord(WordField.X_FRACTION, 0xBEEF)
+                .moveWord(WordField.Y_FRACTION, 0xCAFE);
+        w.pool.write(dirty); p.flags = 0xB9; p.stick = 0x85; p.ctrl = 0xA5; p.spr = 0xD5;
+        var cut = w.pool.capture(); var source = cut.slots().get(8);
+        var r = CdPlayerTouchResponse.hurtPlayer(p.actor(), w.playerGlobals(), w.worldGlobals(), source, cut);
+        byte[] bytes = dirty.copyBytes(); bytes[0] = 0x11;
+        bytes[8] = 2; bytes[9] = 0x60; bytes[12] = 7; bytes[13] = 0x6B;
+        assertEquals(1, r.changedSlots().size()); assertArrayEquals(bytes, r.changedSlots().getFirst().copyBytes());
+        assertEquals(dirty.identity(), r.changedSlots().getFirst().identity());
+        var e = p.copy(); e.charge = 0; e.routine = 4; e.flags = 0x8B; e.xv = -0x200;
+        e.yv = -0x400; e.gv = 0; e.anim = 0x1A; e.hurt = 0x78; e.jump = 0;
+        assertEquals(e.actor(), r.actor());
+        assertEquals(new PlayerGlobals(0, 0, 0, 0, 0, 0, 0, 0), r.player());
+        assertEquals(w.worldGlobals(), r.world()); assertEquals(5, r.world().rings());
+        assertEquals(List.of(new FindObjSlot(OptionalInt.of(32)), new ResetOnFloor()), r.calls());
+        assertEquals(Exit.HURT, r.exit()); assertEquals(OptionalInt.of(-1), r.d0());
+        assertSame(source, w.pool.state(40)); assertSame(dirty, w.pool.state(32));
+        assertEquals(cut.slots(), w.pool.capture().slots());
+        assertThrows(UnsupportedOperationException.class, () -> r.changedSlots().clear());
+        assertThrows(UnsupportedOperationException.class, () -> r.calls().clear());
+    }
+
+    @ParameterizedTest @CsvSource({"32760,32776,-512", "32768,32760,512", "0,65535,-512",
+            "65535,0,512", "608,608,512", "607,608,-512"})
+    void directHurtUsesUnsignedNativeXWordsAndPreservesBothActorFractions(int x, int sourceX, int xv) {
+        var w = World.mosqui(0, sourceX, 0xFFFF); var p = new Player(); p.x = x;
+        var cut = w.pool.capture(); var r = CdPlayerTouchResponse.hurtPlayer(p.actor(), w.playerGlobals(),
+                w.worldGlobals(), cut.slots().get(8), cut);
+        assertEquals(xv, r.actor().motion().xVelocity());
+        assertEquals(p.motion().centreX16_16(), r.actor().motion().centreX16_16());
+        assertEquals(p.motion().centreY16_16(), r.actor().motion().centreY16_16());
+        assertEquals(0x1234, r.actor().motion().centreX16_16() & 0xFFFF);
+        assertEquals(0xABCD, r.actor().motion().centreY16_16() & 0xFFFF);
+        assertEquals(w.worldGlobals(), r.world()); assertEquals(cut.slots(), w.pool.capture().slots());
+    }
+
+    @ParameterizedTest @CsvSource({"1,0,167", "2,2,0", "3,2,167", "128,128,0", "129,128,167", "255,254,167"})
+    void directHurtTestsTheWholeShieldByteThenOnlyItsOldBitZero(int shield, int finalShield, int combine) {
+        var w = World.mosqui(0); w.shield = shield; w.combineRing = 0xA7; w.rings = 0;
+        var p = new Player(); var cut = w.pool.capture();
+        var r = CdPlayerTouchResponse.hurtPlayer(p.actor(), w.playerGlobals(), w.worldGlobals(), cut.slots().get(8), cut);
+        assertEquals(Exit.HURT, r.exit()); assertEquals(finalShield, r.player().shield());
+        assertEquals(combine, r.player().combineRing()); assertTrue(r.changedSlots().isEmpty());
+        assertEquals(List.of(new ResetOnFloor()), r.calls()); // Normal Hurt has no FM_HURT.
+        assertEquals(w.worldGlobals(), r.world()); assertEquals(cut.slots(), w.pool.capture().slots());
+    }
+
+    @ParameterizedTest @CsvSource({"0,0,9,19,65533,-1024,-512", "1,0,5,10,0,-1024,-512",
+            "0,64,9,19,65533,-512,-256", "1,64,5,10,0,-512,-256"})
+    void directRollingHurtUsesTheSharedResetWordWrapAndOnlyItsOptionalFmAb(int mini, int water, int xr,
+            int yr, int y, int yv, int xv) {
+        var w = World.mosqui(0); w.mini = mini; var p = new Player(); p.y = 2; p.flags = 0x3D | water;
+        p.xr = 7; p.yr = 14; p.anim = 2; p.stick = 0x85; p.ctrl = 0xA5;
+        var cut = w.pool.capture(); var r = CdPlayerTouchResponse.hurtPlayer(p.actor(), w.playerGlobals(),
+                w.worldGlobals(), cut.slots().get(8), cut);
+        var e = p.copy(); e.y = y; e.flags = 0x0B | water; e.xr = xr; e.yr = yr; e.routine = 4;
+        e.charge = 0; e.jump = 0; e.xv = xv; e.yv = yv; e.gv = 0; e.anim = 0x1A; e.hurt = 0x78;
+        assertEquals(e.actor(), r.actor()); assertEquals(2, r.changedSlots().getFirst().centreY());
+        assertEquals(0xABCD, r.actor().motion().centreY16_16() & 0xFFFF);
+        assertEquals(List.of(new FindObjSlot(OptionalInt.of(32)), new ResetOnFloor(),
+                new PlayFm(FmSound.FM_CHARGESTOP)), r.calls());
+        assertEquals(w.worldGlobals(), r.world()); assertEquals(cut.slots(), w.pool.capture().slots());
+    }
+
+    @Test void directHurtDoesNotApplyAnyScannerHazardBodyOrRoutineGate() {
+        for (int type : new int[]{0, 0x40, 0x80, 0xC0, 0xFF}) {
+            var w = World.mosqui(type); w.timeWarp = 0xFF; w.invincible = 0x80; w.shield = 1;
+            w.debugCheat = 0xFFFF; w.debugMode = 0x8000; var p = new Player();
+            p.hurt = 0xFFFF; p.routine = 0xFF; p.ctrl = 0xFF; p.spr = 0; p.y = 0x8000;
+            var cut = w.pool.capture(); var r = CdPlayerTouchResponse.hurtPlayer(p.actor(), w.playerGlobals(),
+                    w.worldGlobals(), cut.slots().get(8), cut);
+            assertEquals(Exit.HURT, r.exit()); assertEquals(4, r.actor().motion().routine());
+            assertEquals(0x78, r.actor().hurt()); assertEquals(0xFF, r.player().timeWarp());
+            assertEquals(0x80, r.player().invincible()); assertEquals(0xFFFF, r.player().debugCheat());
+            assertEquals(0x8000, r.player().debugMode()); assertEquals(0xFF, r.actor().motion().playerControl());
+            assertEquals(0, r.actor().motion().spriteFlags()); assertTrue(r.changedSlots().isEmpty());
+            assertEquals(List.of(new ResetOnFloor()), r.calls()); assertEquals(w.worldGlobals(), r.world());
+            assertEquals(cut.slots(), w.pool.capture().slots());
+        }
+    }
+
+    @Test void directHurtFindsEveryPhysicalDynamicSlotWithoutClearingDirtyBytesAndHandlesExhaustion() {
+        for (int free = 32; free <= 128; free++) {
+            var w = World.mosqui(0); var p = new Player();
+            for (int whole = 32; whole < 128; whole++) w.pool.write(w.pool.state(whole)
+                    .moveByte(ByteField.ID, whole == free ? 0 : 0x26)
+                    .moveWord(WordField.X_FRACTION, 0xA000 | whole)
+                    .moveWord(WordField.Y_FRACTION, 0xB000 | whole)
+                    .moveByte(ByteField.ROUTINE, 0xFE));
+            var cut = w.pool.capture(); var source = cut.slots().get(95);
+            var r = CdPlayerTouchResponse.hurtPlayer(p.actor(), w.playerGlobals(), w.worldGlobals(), source, cut);
+            assertEquals(List.of(new FindObjSlot(free == 128 ? OptionalInt.empty() : OptionalInt.of(free)),
+                    new ResetOnFloor()), r.calls());
+            if (free == 128) assertTrue(r.changedSlots().isEmpty());
+            else assertEquals(List.of(cut.slots().get(free - 32).moveByte(ByteField.ID, 0x11)
+                    .moveWord(WordField.X, p.x).moveWord(WordField.Y, p.y)), r.changedSlots());
+            assertEquals(Exit.HURT, r.exit()); assertEquals(w.worldGlobals(), r.world());
+            assertEquals(cut.slots(), w.pool.capture().slots());
+        }
+    }
+
+    @Test void directIdZeroSourceCanAllocateItselfThenComparesAgainstItsOverwrittenX() {
+        var w = World.mosqui(0, 0xFFFF, 0xFFFF); var p = new Player(); p.x = 0;
+        for (int whole = 32; whole < 40; whole++) w.occupy(whole);
+        w.pool.write(w.pool.state(40).moveByte(ByteField.ID, 0));
+        var cut = w.pool.capture(); var source = cut.slots().get(8);
+        var r = CdPlayerTouchResponse.hurtPlayer(p.actor(), w.playerGlobals(), w.worldGlobals(), source, cut);
+        assertEquals(0x200, r.actor().motion().xVelocity(), "Allocation overwrote a2.X before the unsigned compare");
+        assertEquals(List.of(source.moveByte(ByteField.ID, 0x11).moveWord(WordField.X, 0)
+                .moveWord(WordField.Y, p.y)), r.changedSlots());
+        assertEquals(List.of(new FindObjSlot(OptionalInt.of(40)), new ResetOnFloor()), r.calls());
+        assertEquals(0xFFFF, source.centreX()); assertEquals(cut.slots(), w.pool.capture().slots());
+    }
+
+    @Test void directZeroRingCheatAndFullWordDebugDeathPathsPreserveTheirExactNativeNonwrites() {
+        for (int cheat : new int[]{0, 1, 0x100, 0xFFFF}) for (int debug : new int[]{0, 1, 0x100, 0x8000}) {
+            var w = World.mosqui(0); w.rings = 0; w.debugCheat = cheat; w.debugMode = debug; w.invincible = 0xA5;
+            var p = new Player(); p.flags = 0xBD; p.y = 0x0703; p.stick = 0x85; p.hurt = 0xBEEF;
+            var cut = w.pool.capture(); var r = CdPlayerTouchResponse.hurtPlayer(p.actor(), w.playerGlobals(),
+                    w.worldGlobals(), cut.slots().get(8), cut);
+            var e = p.copy();
+            if (cheat != 0) {
+                e.y = 0x06FE; e.flags = 0x8B; e.xr = 9; e.yr = 19; e.charge = 0; e.jump = 0;
+                e.routine = 4; e.xv = -0x200; e.yv = -0x400; e.gv = 0; e.anim = 0x1A; e.hurt = 0x78;
+                assertEquals(Exit.HURT, r.exit()); assertEquals(0xA5, r.player().invincible());
+                assertEquals(0, r.player().combineRing());
+                assertEquals(List.of(new ResetOnFloor(), new PlayFm(FmSound.FM_CHARGESTOP)), r.calls());
+            } else if (debug != 0) {
+                assertEquals(Exit.KILL_PLAYER_DEBUG_NO_WRITE, r.exit()); assertEquals(w.playerGlobals(), r.player());
+                assertTrue(r.calls().isEmpty());
+            } else {
+                e.y = 0x06FE; e.flags = 0x8B; e.xr = 9; e.yr = 19; e.jump = 0;
+                e.routine = 6; e.xv = 0; e.yv = -0x700; e.gv = 0; e.anim = 0x18;
+                e.stick = 6; e.rotation = 0xFE; e.tile |= 0x8000; e.priority = 0;
+                assertEquals(Exit.KILL_PLAYER, r.exit()); assertEquals(0, r.player().invincible());
+                assertEquals(w.combineRing, r.player().combineRing());
+                assertEquals(List.of(new ResetOnFloor(), new PlayFm(FmSound.FM_CHARGESTOP),
+                        new PlayFm(FmSound.FM_HURT)), r.calls());
+            }
+            assertEquals(e.actor(), r.actor()); assertTrue(r.changedSlots().isEmpty());
+            assertEquals(w.worldGlobals(), r.world()); assertEquals(cheat, r.player().debugCheat());
+            assertEquals(debug, r.player().debugMode()); assertEquals(cheat == 0 && debug != 0 ? 4 : 0, r.player().scoreChain());
+            assertEquals(cut.slots(), w.pool.capture().slots());
+        }
+    }
+
+    @Test void directHurtRejectsEveryStaleSourceFieldAndForeignPoolButAcceptsEqualSameOwnerCuts() {
+        var w = specialWorld(0, 0xA5, 0x26); var p = new Player(); var cut = w.pool.capture();
+        var source = cut.slots().get(8); var same = w.pool.capture();
+        var first = CdPlayerTouchResponse.hurtPlayer(p.actor(), w.playerGlobals(), w.worldGlobals(), source, cut);
+        assertEquals(first, CdPlayerTouchResponse.hurtPlayer(p.actor(), w.playerGlobals(), w.worldGlobals(), source, same));
+        for (var field : ByteField.values()) {
+            var changed = source.moveByte(field, source.unsignedByte(field) ^ 1);
+            assertThrows(IllegalArgumentException.class, () -> CdPlayerTouchResponse.hurtPlayer(p.actor(),
+                    w.playerGlobals(), w.worldGlobals(), source, CdObjectPool.overlay(cut, List.of(changed))));
+        }
+        for (var field : WordField.values()) {
+            var changed = source.moveWord(field, source.word(field) ^ 1);
+            assertThrows(IllegalArgumentException.class, () -> CdPlayerTouchResponse.hurtPlayer(p.actor(),
+                    w.playerGlobals(), w.worldGlobals(), changed, cut));
+        }
+        for (var field : CdObjectState.LongField.values()) {
+            var changed = source.moveLong(field, source.longBits(field) ^ 1);
+            assertThrows(IllegalArgumentException.class, () -> CdPlayerTouchResponse.hurtPlayer(p.actor(),
+                    w.playerGlobals(), w.worldGlobals(), changed, cut));
+        }
+        var foreign = specialWorld(0, 0xA5, 0x26).pool.capture();
+        assertArrayEquals(source.copyBytes(), foreign.slots().get(8).copyBytes());
+        assertThrows(IllegalArgumentException.class, () -> CdPlayerTouchResponse.hurtPlayer(p.actor(),
+                w.playerGlobals(), w.worldGlobals(), source, foreign));
+        assertThrows(IllegalArgumentException.class, () -> CdPlayerTouchResponse.hurtPlayer(p.actor(),
+                w.playerGlobals(), w.worldGlobals(), foreign.slots().get(8), cut));
+        w.pool.write(source.moveByte(ByteField.MAP_FRAME, source.unsignedByte(ByteField.MAP_FRAME) ^ 1));
+        assertThrows(IllegalArgumentException.class, () -> CdPlayerTouchResponse.hurtPlayer(p.actor(),
+                w.playerGlobals(), w.worldGlobals(), source, w.pool.capture()));
+        assertEquals(first, CdPlayerTouchResponse.hurtPlayer(p.actor(), w.playerGlobals(), w.worldGlobals(), source, cut));
+    }
+
+    @Test void directHurtNullInputsRejectBeforeProducingAnyResultOrPoolWrites() {
+        var w = World.mosqui(0); var p = new Player(); var cut = w.pool.capture(); var source = cut.slots().get(8);
+        assertThrows(NullPointerException.class, () -> CdPlayerTouchResponse.hurtPlayer(null, w.playerGlobals(), w.worldGlobals(), source, cut));
+        assertThrows(NullPointerException.class, () -> CdPlayerTouchResponse.hurtPlayer(p.actor(), null, w.worldGlobals(), source, cut));
+        assertThrows(NullPointerException.class, () -> CdPlayerTouchResponse.hurtPlayer(p.actor(), w.playerGlobals(), null, source, cut));
+        assertThrows(NullPointerException.class, () -> CdPlayerTouchResponse.hurtPlayer(p.actor(), w.playerGlobals(), w.worldGlobals(), null, cut));
+        assertThrows(NullPointerException.class, () -> CdPlayerTouchResponse.hurtPlayer(p.actor(), w.playerGlobals(), w.worldGlobals(), source, null));
+        assertEquals(cut.slots(), w.pool.capture().slots());
+    }
+    @Test void directHurtKeepsEveryReadonlyGlobalAtItsNativeWidthAcrossAllThreeExits() {
+        for (int branch = 0; branch < 3; branch++) {
+            var w = World.mosqui(0); var p = new Player();
+            w.rings = branch == 0 ? 0xFFFF : 0; w.lives = 0xA5; w.hudLives = 0xC7;
+            w.score = 0x89ABCDEF; w.next = 0xFEDCBA98; w.hudScore = 0xE9;
+            w.timeWarp = 0xF1; w.invincible = 0xE2; w.combineRing = 0xD3;
+            w.debugMode = branch == 2 ? 0x8001 : 0; w.scoreChain = 0xB5A6; w.mini = 0x97;
+            var globals = w.playerGlobals(); var world = w.worldGlobals(); var cut = w.pool.capture();
+            var r = CdPlayerTouchResponse.hurtPlayer(p.actor(), globals, world, cut.slots().get(8), cut);
+            assertEquals(world, r.world()); assertEquals(globals.timeWarp(), r.player().timeWarp());
+            assertEquals(globals.debugCheat(), r.player().debugCheat()); assertEquals(globals.debugMode(), r.player().debugMode());
+            assertEquals(globals.miniSonic(), r.player().miniSonic());
+            assertEquals(branch == 1 ? 0 : 0xE2, r.player().invincible());
+            assertEquals(branch == 2 ? 0xB5A6 : 0, r.player().scoreChain());
+            assertEquals(branch == 0 ? 0 : 0xD3, r.player().combineRing());
+            assertEquals(branch == 0 ? Exit.HURT : branch == 1 ? Exit.KILL_PLAYER : Exit.KILL_PLAYER_DEBUG_NO_WRITE, r.exit());
+            assertEquals(cut.slots(), w.pool.capture().slots());
+        }
+    }
+    // END direct native HurtPlayer entry tests.
     // EnemyPoints dc.w 10,20,50,100 (:200-204). Constructed format input; runtime binds only fromAssets.
     private static final byte[] ENEMY_POINTS = {0, 10, 0, 20, 0, 50, 0, 100};
 

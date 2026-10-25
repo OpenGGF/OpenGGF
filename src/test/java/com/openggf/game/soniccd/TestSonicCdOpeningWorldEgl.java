@@ -164,7 +164,7 @@ class TestSonicCdOpeningWorldEgl {
                                 source.assets().openingObjects().monitorTimeArtBank(), runtime.sectionArtState().residency(),
                                 banks.player(), banks.ring(), banks.mosqui(), banks.plant(), banks.ramp(),
                                 banks.explosion(), banks.points(), banks.flower(), banks.powerup(), banks.floatBlock(), banks.spring(),
-                                banks.tunnelDoorVertical(), banks.monitorTime(), banks.boulder(), banks.diagonalSpring()));
+                                banks.tunnelDoorVertical(), banks.monitorTime(), banks.boulder(), banks.diagonalSpring(), banks.spikes()));
                 assertEquals(expectedPicture, runtime.displayedFrame(), "Next V-int uses the pickup CPU table and now-serviced art");
                 int playerBase = com.openggf.graphics.PatternAtlasRange.OBJECTS.base();
                 assertTrue(runtime.displayedFrame().patternVersions().keySet().stream()
@@ -2090,7 +2090,7 @@ class TestSonicCdOpeningWorldEgl {
                 module.requirePlayerFrame().artState(), runtime.powerupArtState(), objects, objects.frontierArtBank(), objects.contactArtBank(),
                 objects.floatBlockArtBank(), objects.springArtBank(), objects.tunnelDoorArtBank(), objects.monitorTimeArtBank(), runtime.sectionArtState().residency(),
                 banks.player(), banks.ring(), banks.mosqui(), banks.plant(), banks.ramp(), banks.explosion(), banks.points(), banks.flower(),
-                banks.powerup(), banks.floatBlock(), banks.spring(), banks.tunnelDoorVertical(), banks.monitorTime(), banks.boulder(), banks.diagonalSpring());
+                banks.powerup(), banks.floatBlock(), banks.spring(), banks.tunnelDoorVertical(), banks.monitorTime(), banks.boulder(), banks.diagonalSpring(), banks.spikes());
     }
 
     /** Literal N MM:157-167 and MM:55-60. Static item has ONE piece despite counted frame4 having four. */
@@ -2244,7 +2244,7 @@ class TestSonicCdOpeningWorldEgl {
                 var banks = new CdOpeningObjectRuntime.LogicalBanks(base, base + 24, base + 38);
                 assertEquals(base + 494, banks.boulder()); assertEquals(banks.monitorTime() + 82, banks.boulder());
                 var objects = source.assets().openingObjects();
-                var sources = objects.sectionArtSources(); assertEquals(8, sources.sources().size());
+                var sources = objects.sectionArtSources(); assertEquals(9, sources.sources().size());
                 var boulder = sources.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_BOULDER);
                 assertEquals(2, boulder.canonicalPlcId()); assertEquals(0, boulder.canonicalRowIndex());
                 assertEquals(0x6E80, boulder.canonicalPlc().vramAddress()); assertEquals(19, boulder.tileCount());
@@ -2597,7 +2597,7 @@ class TestSonicCdOpeningWorldEgl {
                 var banks = new CdOpeningObjectRuntime.LogicalBanks(baseId, baseId + 24, baseId + 38);
                 assertEquals(baseId + 513, banks.diagonalSpring()); assertEquals(banks.boulder() + 19, banks.diagonalSpring());
                 var objects = source.assets().openingObjects(); var sources = objects.sectionArtSources();
-                assertEquals(8, sources.sources().size());
+                assertEquals(9, sources.sources().size());
                 var diagonal = sources.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_DIAGONAL_SPRING);
                 assertEquals(1, diagonal.canonicalPlcId()); assertEquals(5, diagonal.canonicalRowIndex());
                 assertEquals(0x9200, diagonal.canonicalPlc().vramAddress()); assertEquals(46, diagonal.tileCount());
@@ -3024,5 +3024,434 @@ class TestSonicCdOpeningWorldEgl {
     }
 
     // END constructed diagonal Spring World proof.
+
+
+    // BEGIN constructed Spikes World proof. All literal outcomes are UNRUN until actual Root execution.
+
+    @Test void actualEglConstructedSpikesWorldDirectHurtAllFlipsReplaysAndRetires567Patterns() throws Exception {
+        Assumptions.assumeTrue(Boolean.getBoolean("soniccd.opening.egl"), "Explicit actual EGL/media opt-in");
+        assertEquals("surfaceless-egl", System.getProperty("openggf.headless.gl"));
+        assertNull(System.getenv("DISPLAY")); assertNull(System.getenv("WAYLAND_DISPLAY"));
+        String media = System.getProperty("soniccd.media.root"); assertNotNull(media); assertFalse(media.isBlank());
+        CdGameDataSource source;
+        try (var files = Files.list(Path.of(media).resolve("USA"))) {
+            var cues = files.filter(f -> f.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".cue")).toList();
+            assertEquals(1, cues.size()); source = CdStockLaunch.prepare(cues.getFirst(), CdStockLaunch.Request.r11a());
+        }
+        String pickupLog = InputScriptCompiler.compileToInputLog("2 -\n60 R\n24 R+B\n16 R");
+        var pickup = new Bk2MovieLoader().parseInputLogText(Path.of("ENGINE-first-ring-before-constructed-spikes"), pickupLog.lines().toList());
+        assertEquals(102, pickup.getFrameCount());
+        String sceneLog = InputScriptCompiler.compileToInputLog("4 -");
+        var movie = new Bk2MovieLoader().parseInputLogText(Path.of("ENGINE-constructed-spikes-four-neutral-rows"), sceneLog.lines().toList());
+        assertEquals(4, movie.getFrameCount());
+        String construction = "ENGINE constructed actual-USA R11A Spikes component, not a natural Spikes route or native emulator capture.\n"
+                + "Execute the EXISTING 102-row first-Ring proposal only through its first real pickup; require rings1, then retain that pristine CLOSED_CUT. Never forge Ring globals.\n"
+                + "Restore the same pristine cut for each native flip0..3. At that initial cut ONLY clear all96 dynamics, seed actual whole40 with ID26/XY/subtypes0/BOTH native placement low flip bytes, and restore/rebind the SAME native actor ONCE. No object routine/frame/tile/map/timer/collision/bit7/helper/Hurt-result ingress.\n"
+                + "SpikesXY=pristineCamera+(160,56), actorXY=(SpikesX.ABCD,SpikesY-29.1234), XV/YV/GVel0, routine2/angle0/flags2/sprite4/radii9,19/animation0/jump,charge,lock,stick,control0. Preserve previousAnimation/previousangles and animation/header/timers/history/rotation/links/owner; clear only actor display publication. Require actual terrain clearance before each constructed scene.\n"
+                + "Row1 actual Init falls through Main: shared Solid still runs with bit7clear and GetOff does no landing. Real DrawObjects sets bit7. Row2 upright collision0 prevents scanner admission; actual landing sets stand40 and zero YV before the wrapper's fullLONG Y subtraction. This is explicitly a SAME-VALUE 32-bit prefix at (SpikesY-27).4A34, not nonzero/fraction-wrap coverage.\n"
+                + "Upright direct Hurt is after Body and after physical32's visit: actor4/anim1A/hurt120/XV+200/YV-400 and earlier32 has ONLY ID11+integerXY/routine0, rings remain1; NEXT pass actual32 Init/Main clears rings and emits FM94. Ordinary Hurt has no FM93. Native vertical flips set collision83: their separate row2 Body scanner Hurt precedes32, so LostRing Init/Main/FM94 already runs in row2; no upright direct-Hurt assertion is applied there.\n"
+                + "Row3 upright Hurt's actual ObjMove retains stand40 until Spikes' shared above-range GetOff releases flags/link; GetOff does not alter routine/hurt. Row4 remains a bounded ordinary continuation. Whole reached Body sound prefix is checked via monitorWorldPlayerSounds for Main; airborne unrolled Hurt has no Display/MODE/touch/charge owner and no collision reset sound.\n"
+                + "All4 flips use real CPU DrawObjects/SAT, literal four size05 pieces/16cells/reused8 patterns and selected priorSAT+NOW current physical AT6400 art. Ordered World pixels preserve legitimate player overlap; render-only isolated glyph/native PlaneB plus explicitly TEST outside-palette contrast controls exercise omissions without moving actors.\n"
+                + "Selected full/course CLOSED cuts restore complete captured state and pixels, then advance without rebind/reseed/reload. Install and verify all567 actual current-policy IDs only for retirement; remove base..base+566 while actual terrain/other-producer entry identities survive. Images/input/construction/PASS are written ONLY after module retirement plus session/graphics/boot cleanup.\n"
+                + "UNRUN source literals before Root execution. No completed call561, natural Spikes route, native timing/startup/pixel parity, JP/EU, restart-flow or full-game claim. Nonzero fullY rewind/fraction-wrap belongs to the separate actual component tests.\n";
+        var observations = new StringBuilder();
+        var artifacts = new java.util.LinkedHashMap<String, RgbaImage>();
+        int[] nativeFirst = {0x780,0x7AE,0x3A0,0x424,0x441,0x680,0x6C6,0x6D7,0x544,0x334,0x520,0x328,0x5A8,0x374,0x490,0x320};
+        int[] counts = {24,14,70,28,63,70,5,39,36,15,36,12,82,19,46,8};
+        assertEquals(16, nativeFirst.length); assertEquals(16, counts.length); assertEquals(567, Arrays.stream(counts).sum());
+        try (var boot = new HeadlessGameBoot(320, 224)) {
+            try {
+                var loop = boot.bootSonicCdOpeningObjects(source);
+                var mode = SessionManager.getCurrentGameplayMode();
+                var module = assertInstanceOf(SonicCdGameModule.class, mode.getWorldSession().getGameModule());
+                var runtime = assertInstanceOf(CdOpeningObjectRuntime.class, module.getGameService(NativeDynamicObjectPass.class));
+                var frame = module.requirePlayerFrame(); var objects = source.assets().openingObjects();
+                assertSame(source, mode.getWorldSession().getDataSource()); assertEquals(GameMode.LEVEL, loop.getCurrentGameMode());
+                assertEquals(NullAudioBackend.class, GameServices.audio().getBackend().getClass());
+                int pickupRow = -1;
+                for (int row = 0; row < pickup.getFrameCount(); row++) {
+                    step(loop, pickup.getFrame(row)); render(module, true);
+                    if (runtime.ringGlobals().rings() > 0) { pickupRow = row + 1; break; }
+                }
+                assertTrue(pickupRow > 0, "Actual existing first-Ring input must earn rings before construction");
+                assertEquals(1, runtime.ringGlobals().rings()); assertEquals(2, frame.state().motion().routine());
+                assertTrue(runtime.lastSoundRequests().contains(new CdOpeningObjectRuntime.RingFm(CdRing.FmSound.FM_RING)));
+                assertEquals(0, frame.state().objectLinks().standObject()); assertEquals(0, frame.state().objectLinks().pushObject());
+                assertEquals(0, runtime.contactGlobals().timeWarp()); assertEquals(0, runtime.contactGlobals().shield());
+                assertEquals(0, runtime.contactGlobals().combineRing()); assertEquals(0, frame.environment().globals().invincible());
+                assertEquals(0, frame.environment().globals().debugMode()); assertEquals(0, frame.environment().movement().gates().miniSonic());
+                observations.append("actual-first-ring-input-rows=").append(pickupRow).append(" rings=1\n");
+                int base = com.openggf.graphics.PatternAtlasRange.OBJECTS.base();
+                var banks = new CdOpeningObjectRuntime.LogicalBanks(base, base + 24, base + 38);
+                assertEquals(base + 559, banks.spikes()); assertEquals(banks.diagonalSpring() + 46, banks.spikes());
+                var sources = objects.sectionArtSources(); assertEquals(9, sources.sources().size());
+                var spikes = sources.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_SPIKES);
+                assertEquals(1, spikes.canonicalPlcId()); assertEquals(0, spikes.canonicalRowIndex());
+                assertEquals(0x6400, spikes.canonicalPlc().vramAddress()); assertEquals(8, spikes.tileCount());
+                assertEquals(0x8008, spikes.readerBytes().unsignedWord(0)); assertEquals(256, spikes.decode().bytes().length());
+                var mapping = objects.view(com.openggf.game.soniccd.level.CdR11aObjectAssets.Table.SPIKES_MAPPINGS);
+                assertEquals(0x20C1F0, mapping.range().nativeAddress()); assertEquals(24, mapping.bytes().length());
+                assertArrayEquals(java.util.HexFormat.of().parseHex("000204f0050000f000050004f0f005000000000500040000"), mapping.bytes().copy());
+                assertEquals(0, objects.spikes().mappingTableOffset()); assertEquals(1, objects.spikes().mappingFrames().size());
+                assertEquals(4, objects.spikes().mappingFrames().getFirst().pieces().size());
+                assertTrue(objects.spikes().animations().isEmpty()); assertEquals(0, objects.spikes().animationTable().length());
+                assertEquals(0x320, objects.tileWord(0xA, 0));
+                for (int tile = 0; tile < 8; tile++) assertArrayEquals(spikes.decode().bytes().slice(tile * 32, 32).copy(),
+                        com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(runtime.sectionArtState().residency(), 0x320 + tile).copy(),
+                        "Actual USA source equals explicit current DEV cold residency, not a draw fallback: " + tile);
+                var atlas = GameServices.graphics().getPatternAtlas(); var policy = monitorWorldPolicy(module, objects, banks); int logical = base;
+                for (int span = 0; span < counts.length; span++) for (int tile = 0; tile < counts[span]; tile++) {
+                    int id = logical++; assertEquals(id, policy.resolve(nativeFirst[span] + tile).logicalPatternId());
+                    assertEquals(1, atlas.registeredRangesForTesting().stream().filter(r -> id >= r.base() && id < r.base() + r.size()).count());
+                }
+                assertEquals(base + 567, logical, "C26 has sixteen spans; all earlier logical IDs are unchanged");
+                var registry = mode.getRewindRegistry(); var pristine = registry.capture(); var pool = runtime.placement().pool();
+                for (int flip = 0; flip < 4; flip++) {
+                    registry.restore(pristine);
+                    assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT, runtime.phase());
+                    pool.clearDynamicSlots(); assertEquals(96, pool.capture().slots().size());
+                    assertTrue(pool.capture().slots().stream().allMatch(s -> Arrays.equals(new byte[64], s.copyBytes())));
+                    int spikesX = GameServices.camera().getX() + 160, spikesY = GameServices.camera().getY() + 56;
+                    pool.write(pool.state(40).moveByte(ID, 0x26).moveWord(X, spikesX).moveWord(Y, spikesY)
+                            .moveByte(SUBTYPE, 0).moveByte(SUBTYPE2, 0).moveByte(SPRITE_FLAGS, flip).moveByte(FLAGS, flip));
+                    stageSpikesWorldPlayer(module, (spikesX << 16) | 0xABCD, ((spikesY - 29) << 16) | 0x1234);
+                    var probe = new com.openggf.game.soniccd.player.CdPlayerTerrain(frame.assets().terrain());
+                    for (int foot : new int[]{spikesX + 9, spikesX - 9}) for (int centreY : new int[]{spikesY - 29, spikesY - 27})
+                        assertTrue(probe.floor(foot & 0xFFFF, (centreY + 19) & 0xFFFF, 13, 0, 16, 4).distance() >= 0,
+                                "Actual two-foot clearance for initial Body and reached shared Solid floor; flip=" + flip);
+                    assertEquals(0, pool.state(40).routine()); assertEquals(0, pool.state(40).unsignedByte(COLLISION_TYPE));
+                    assertEquals(flip, pool.state(40).spriteFlags()); assertEquals(flip, pool.state(40).flags());
+                    var fullCuts = new ArrayList<>(List.of(registry.capture()));
+                    var courseCuts = new ArrayList<>(List.of(registry.captureCourse()));
+                    var states = new ArrayList<>(List.of(capture(module))); var pictures = new ArrayList<>(List.of(render(module, true)));
+                    assertCapture(states.getFirst(), module);
+                    var reached = new java.util.TreeSet<Integer>();
+                    var previousCpu = runtime.cpuSat(); int previousX = GameServices.camera().getX(), previousY = GameServices.camera().getY();
+                    for (int row = 1; row <= 4; row++) {
+                        long clock = frame.vIntClock().absoluteValue().orElseThrow(); int levelFrames = GameServices.level().getFrameCounter();
+                        spikesWorldStep(loop, movie.getFrame(row - 1), module, flip, row);
+                        assertEquals(clock + 1, frame.vIntClock().absoluteValue().orElseThrow());
+                        assertEquals(levelFrames + 1, GameServices.level().getFrameCounter());
+                        assertSpikesWorldContact(module, spikesX, spikesY, flip, row);
+                        assertTrue(pool.capture().slots().stream().allMatch(s -> s.id() == 0 || s.identity().wholeIndex() == 40
+                                || s.identity().wholeIndex() == 32), "Only actual constructed Spikes and the real earlier-slot LostRing are admitted");
+                        assertSpikesWorldSat(runtime.cpuSat(), GameServices.camera().getX(), GameServices.camera().getY(), spikesX, spikesY, flip);
+                        var completed = capture(module); var published = completed.publication().published();
+                        assertEquals(previousX, published.cameraX()); assertEquals(previousY, published.cameraY());
+                        assertEquals(com.openggf.game.soniccd.resources.CdObjectPresentation.convert(previousCpu,
+                                monitorWorldPolicy(module, objects, banks)), runtime.displayedFrame(), "Prior CPU SAT plus NOW-serviced C26 art");
+                        var image = render(module, true); var terrain = renderTerrain(module, published);
+                        assertNativeGpuBackground(module); assertTerrainOutsideSprites(image, terrain, runtime.displayedFrame());
+                        if (row >= 2) {
+                            assertSpikesWorldSat(previousCpu, previousX, previousY, spikesX, spikesY, flip);
+                            var literal = spikesWorldLiteralTiles(spikesX - published.cameraX(), spikesY - published.cameraY(), flip);
+                            observations.append("flip=").append(flip).append(" row=").append(row).append(" clock=")
+                                    .append(frame.vIntClock().absoluteValue().orElseThrow()).append(' ')
+                                    .append(assertSpikesWorldPixels(runtime.displayedFrame(), image, terrain,
+                                            runtime.sectionArtState().residency(), banks.spikes(), literal)).append('\n');
+                            var only = spikesWorldOnly(runtime.displayedFrame(), banks.spikes());
+                            var isolated = renderDiagonalWorldPicture(module, only, null);
+                            assertSpikesWorldPixels(only, isolated, terrain, runtime.sectionArtState().residency(), banks.spikes(), literal);
+                            int rgb = diagonalWorldContrastRgb(0);
+                            var contrast = renderDiagonalWorldPicture(module, com.openggf.graphics.SpritePresentation.Frame.empty(), rgb);
+                            var contrastGlyph = renderDiagonalWorldPicture(module, only, rgb);
+                            assertSpikesWorldPixels(only, contrastGlyph, contrast, runtime.sectionArtState().residency(), banks.spikes(), literal);
+                            assertSpikesWorldOmissions(only, contrastGlyph, contrast, runtime.sectionArtState().residency(), banks.spikes(), literal);
+                            for (var tile : literal) {
+                                reached.add(tile.offset()); var entry = atlas.getEntry(banks.spikes() + tile.offset()); assertNotNull(entry);
+                                assertTrue(glIsTexture(atlas.getTextureId(entry.atlasIndex())));
+                                assertEquals(runtime.displayedFrame().patternVersions().get(banks.spikes() + tile.offset()),
+                                        com.openggf.graphics.SpritePresentation.patternSample(GameServices.graphics(), banks.spikes() + tile.offset()));
+                            }
+                            assertFalse(Arrays.equals(terrain.pixels(), renderWithoutBackground(module).pixels()), "Actual native Plane B contributes to transparency control");
+                            assertArrayEquals(image.pixels(), render(module, true).pixels(), "Render-only controls leave authoritative World publication unchanged");
+                            if (row == 2) {
+                                artifacts.put("ENGINE-constructed-spikes-flip" + flip + "-row2.png", image);
+                                artifacts.put("ENGINE-native-plane-spikes-flip" + flip + "-row2.png", terrain);
+                                artifacts.put("ENGINE-render-only-isolated-spikes-flip" + flip + "-row2.png", isolated);
+                            }
+                        }
+                        assertCapture(completed, module); states.add(completed); pictures.add(image);
+                        fullCuts.add(registry.capture()); courseCuts.add(registry.captureCourse());
+                        previousCpu = runtime.cpuSat(); previousX = GameServices.camera().getX(); previousY = GameServices.camera().getY();
+                    }
+                    assertEquals(java.util.stream.IntStream.range(0, 8).boxed().collect(java.util.stream.Collectors.toSet()), reached);
+                    for (int cut : new int[]{0,1,2,3,4}) for (boolean courseOnly : List.of(false, true)) {
+                        if (courseOnly) registry.restoreCourse(courseCuts.get(cut)); else registry.restore(fullCuts.get(cut));
+                        assertCapture(states.get(cut), module); assertArrayEquals(pictures.get(cut).pixels(), render(module, true).pixels());
+                        assertCapture(states.get(cut), module);
+                        for (int row = cut + 1; row <= 4; row++) {
+                            spikesWorldStep(loop, movie.getFrame(row - 1), module, flip, row); // No actor ingress, rebind, reseed or source reload.
+                            assertSpikesWorldContact(module, spikesX, spikesY, flip, row); assertCapture(states.get(row), module);
+                            assertArrayEquals(pictures.get(row).pixels(), render(module, true).pixels(), "flip/cut/row=" + flip + "/" + cut + "/" + row);
+                            assertCapture(states.get(row), module);
+                        }
+                    }
+                }
+                // Actual CURRENT policy retirement witnesses: all567 installed explicitly, no all567 scene claim.
+                var beforeRetirement = capture(module); var retirement = monitorWorldPolicy(module, objects, banks); logical = base;
+                for (int span = 0; span < counts.length; span++) for (int tile = 0; tile < counts[span]; tile++) {
+                    var sample = retirement.resolve(nativeFirst[span] + tile); assertEquals(logical++, sample.logicalPatternId());
+                    var v = sample.version(); long[] words = {v.a(),v.b(),v.c(),v.d()}; var pattern = new com.openggf.level.Pattern();
+                    for (int at = 0; at < 64; at++) pattern.setPixel(at % 8, at / 8, (byte) ((words[at / 16] >>> ((at % 16) * 4)) & 15));
+                    GameServices.graphics().cachePatternTexture(pattern, sample.logicalPatternId());
+                }
+                assertEquals(base + 567, logical); assertCapture(beforeRetirement, module);
+                for (int tile = 0; tile < 567; tile++) {
+                    var entry = atlas.getEntry(base + tile); assertNotNull(entry, "Installed actual current retirement witness " + tile);
+                    assertTrue(glIsTexture(atlas.getTextureId(entry.atlasIndex())));
+                }
+                var shared = new java.util.HashMap<Integer, Object>();
+                for (int id = 0; id <= 0x7FF; id++) { var entry = atlas.getEntry(id); if (entry != null) shared.put(id, entry); }
+                for (var range : atlas.registeredRangesForTesting()) for (int id = range.base(); id < range.base() + range.size(); id++) {
+                    if (id >= base && id < base + 567) continue;
+                    var entry = atlas.getEntry(id); if (entry != null) shared.put(id, entry);
+                }
+                assertFalse(shared.isEmpty()); assertTrue(shared.keySet().stream().anyMatch(id -> id <= 0x7FF));
+                observations.append("all567-installed-current-policy; actual-other-producer-identities=").append(shared.size()).append('\n');
+                module.closeTerrainPlayer(); assertTrue(runtime.closed()); assertTrue(frame.closed());
+                assertSame(atlas, GameServices.graphics().getPatternAtlas());
+                // Behavioral RED against old559: FIRST residual ID is base+559 (131631), after all preceding assertions.
+                for (int tile = 0; tile < 567; tile++) assertNull(atlas.getEntry(base + tile), "Retired owned current ID " + (base + tile));
+                shared.forEach((id, entry) -> assertSame(entry, atlas.getEntry(id), "Preserved actual other-producer identity " + id));
+                assertEquals(NullAudioBackend.class, GameServices.audio().getBackend().getClass());
+            } finally {
+                try { SessionManager.closeGameplaySession(); }
+                finally { GraphicsManager.destroyForReinit(); }
+            }
+        }
+        // No success artifacts (including input or pictures) exist before all module/session/graphics/boot cleanup returns.
+        Path output = openCaptureOutput(pickupLog + "\n; separate constructed scene, repeated from pristine for flips0..3\n" + sceneLog, "soniccd.spikes.output");
+        if (output != null) {
+            Files.writeString(output.resolve("construction.txt"), construction, StandardOpenOption.CREATE_NEW);
+            for (var artifact : artifacts.entrySet()) ScreenshotCapture.savePNG(artifact.getValue(), output.resolve(artifact.getKey()));
+            Files.writeString(output.resolve("outcome.txt"),
+                    "PASS: ENGINE constructed actual-USA Spikes component; real first-Ring prefix, upright direct-Hurt after actual Solid and separate vertical scanner path, same-value fullY32 prefix, actual earlier32 delayed/same-pass LostRing order, complete Body/FM ledgers, all4 XYflips/four pieces/16cells/eight current AT6400 patterns, ordered native-plane World and renderer-only isolated/contrast omission controls, selected full/course state+pixel restore/forward, all567 actual retirement witnesses removed with actual shared entry identities preserved, then session/graphics/boot cleanup. No natural Spikes route, emulator capture, nonzero fullY rewind, completed call561, native timing/pixel/parity, JP/EU or full-game certification.\n"
+                            + construction + observations, StandardOpenOption.CREATE_NEW);
+        }
+    }
+
+    /** Initial CLOSED_CUT native actor ingress, exactly once per independent flip scene. */
+    private static void stageSpikesWorldPlayer(SonicCdGameModule module, int x16_16, int y16_16) {
+        var runtime = (CdOpeningObjectRuntime) module.getGameService(NativeDynamicObjectPass.class);
+        assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT, runtime.phase()); module.requirePlayerActor().requireCompletedNativeFrame();
+        var frame = module.requirePlayerFrame(); var actor = frame.captureActor(); var old = actor.state(); var m = old.motion();
+        assertEquals(2, m.routine()); assertEquals(0, old.objectLinks().standObject()); assertEquals(0, old.objectLinks().pushObject());
+        assertEquals(0, old.timers().hurt());
+        var motion = new com.openggf.game.soniccd.player.CdPlayerMotionState(x16_16, y16_16, 0, 0, 0,
+                2, 0, 2, 4, 9, 19, 0, m.previousAnimation(), 0, 0, 0, 0, 0, m.previousPrimaryAngle(), m.previousSecondaryAngle());
+        var state = new com.openggf.game.soniccd.player.CdPlayerBody.State(motion, old.animation(), old.header(), old.timers(),
+                old.history(), old.rotationDistance(), old.objectLinks());
+        frame.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(), state, java.util.Optional.empty()));
+        module.requirePlayerActor().rebindAfterRestore();
+        assertSame(old.animation(), frame.state().animation()); assertSame(old.header(), frame.state().header());
+        assertSame(old.timers(), frame.state().timers()); assertSame(old.history(), frame.state().history());
+        assertEquals(old.rotationDistance(), frame.state().rotationDistance()); assertEquals(old.objectLinks(), frame.state().objectLinks());
+    }
+
+    /** Complete Main prefix uses the existing oracle; Hurt's admitted airborne unrolled branch has no sound owner. */
+    private static void spikesWorldStep(GameLoop loop, Bk2FrameInput input, SonicCdGameModule module, int flip, int row) {
+        var frame = module.requirePlayerFrame(); var before = frame.state(); var m = before.motion();
+        var expectedPlayer = new ArrayList<CdPlayerFrameRuntime.Sound>();
+        if (m.routine() == 2) {
+            expectedPlayer.addAll(monitorWorldPlayerSounds(frame));
+            // Same full neutral CheckBalance then CheckCharge prefix as the existing Boulder/diagonal helpers.
+            if ((m.flags() & 6) == 0 && ((m.angle() + 0x20) & 0xC0) == 0 && m.groundVelocity() == 0) {
+                var floor = new com.openggf.game.soniccd.player.CdPlayerTerrain(frame.assets().terrain())
+                        .floor(m.centreX16_16() >>> 16, (m.centreY16_16() >>> 16) + m.yRadius(), 13, 0, 16, m.spriteFlags());
+                if (floor.distance() >= 12 && m.previousPrimaryAngle() != 3 && m.previousSecondaryAngle() != 3)
+                    expectedPlayer.add(new CdPlayerFrameRuntime.ChargeSound(com.openggf.game.soniccd.player.CdPlayerCharge.Sound.FM_CHARGESTOP));
+            }
+        } else {
+            assertEquals(4, m.routine()); assertTrue(row >= 3);
+            assertEquals(2, m.flags() & 6); assertEquals(0, m.charge()); assertEquals(0, m.moveLock());
+            assertEquals(0, m.flags() & 0x40); assertEquals(120, before.timers().hurt());
+            // N Sonic/Main:2351-2366,2372-2391: no Display/MODE/touch/charge; no rolling bit -> no ResetOnFloor FM.
+            // The post-step literal air motion/flags in assertSpikesWorldContact reject collision/landing/kill alternatives.
+        }
+        var expected = new ArrayList<CdOpeningObjectRuntime.SoundRequest>();
+        expectedPlayer.forEach(sound -> expected.add(new CdOpeningObjectRuntime.PlayerSound(sound)));
+        if (((flip & 2) != 0 && row == 2) || ((flip & 2) == 0 && row == 3))
+            expected.add(new CdOpeningObjectRuntime.LostRingFm(com.openggf.game.soniccd.objects.CdLostRing.Sound.FM_RINGLOSS));
+        step(loop, input);
+        var runtime = (CdOpeningObjectRuntime) module.getGameService(NativeDynamicObjectPass.class);
+        assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT, runtime.phase());
+        assertEquals(expectedPlayer, module.requirePlayerActor().lastSoundRequests(), "Complete reached Body prefix; ordinary unrolled Hurt emits no FM93");
+        assertEquals(expected, runtime.lastSoundRequests(), "Actual ordered Body prefix then reached physical LostRing FM94, with no effect replay");
+        assertFalse(runtime.lastSoundRequests().contains(new CdOpeningObjectRuntime.PlayerSound(new CdPlayerFrameRuntime.ContactFmSound(
+                com.openggf.game.soniccd.player.CdPlayerTouchResponse.FmSound.FM_HURT))), "Ordinary Hurt is not KillPlayer's FM93 path");
+    }
+
+    /** N Spikes/Main:19-83, Solid:15-55,65-146,344-430; Collision:228-268; Sonic/Main:2351-2391. */
+    private static void assertSpikesWorldContact(SonicCdGameModule module, int x, int y, int flip, int row) {
+        var runtime = (CdOpeningObjectRuntime) module.getGameService(NativeDynamicObjectPass.class);
+        var pool = runtime.placement().pool(); var live = pool.state(40); var state = module.requirePlayerFrame().state(); var m = state.motion();
+        boolean vertical = (flip & 2) != 0;
+        assertEquals(0x26, live.id()); assertEquals(2, live.routine()); assertEquals(0x20C1F0, live.longBits(MAPPINGS));
+        assertEquals(0x320, live.word(TILE)); assertEquals(3, live.unsignedByte(PRIORITY));
+        assertEquals(vertical ? 0x12 : 0x10, live.unsignedByte(WIDTH)); assertEquals(8, live.unsignedByte(Y_RADIUS));
+        assertEquals(vertical ? 0x83 : 0, live.unsignedByte(COLLISION_TYPE)); assertEquals(0, live.unsignedByte(MAP_FRAME));
+        assertEquals(0, live.unsignedByte(ROUTINE_2)); assertEquals(0, live.unsignedByte(ANIMATION_TIME));
+        assertEquals(x, live.centreX()); assertEquals(y, live.centreY()); assertEquals(0x84 | flip, live.spriteFlags());
+        assertEquals(0, live.longBits(X_POSITION) & 0xFFFF); assertEquals(0, live.longBits(Y_POSITION) & 0xFFFF);
+        assertEquals(0, live.unsignedByte(SUBTYPE)); assertEquals(0, live.subtype2());
+        assertEquals(9, m.xRadius()); assertEquals(19, m.yRadius()); assertEquals(0, m.groundVelocity());
+        assertEquals(0, m.playerJump()); assertEquals(0, m.charge()); assertEquals(0, m.moveLock()); assertEquals(0, m.playerControl());
+        assertEquals(0, state.objectLinks().pushObject());
+        if (row == 1) {
+            assertEquals((x << 16) | 0xABCD, m.centreX16_16()); assertEquals(((y - 29) << 16) | 0x1234, m.centreY16_16());
+            assertEquals(2, m.routine()); assertEquals(2, m.flags()); assertEquals(0x38, m.yVelocity()); assertEquals(0, m.xVelocity());
+            assertEquals(0, state.timers().hurt()); assertEquals(0, state.objectLinks().standObject()); assertEquals(flip, live.flags());
+            assertEquals(1, runtime.ringGlobals().rings()); assertEquals(0, pool.state(32).id());
+        } else {
+            int landingY = ((y - (vertical ? 29 : 27)) << 16) | 0x4A34;
+            int expectedY = row == 2 ? landingY : row == 3 ? landingY - (0x400 << 8) : landingY - (0x400 << 8) - (0x3D0 << 8);
+            assertEquals(((x + 2 * (row - 2)) << 16) | 0xABCD, m.centreX16_16()); assertEquals(expectedY, m.centreY16_16());
+            assertEquals(4, m.routine()); assertEquals(0x1A, m.animation()); assertEquals(120, state.timers().hurt());
+            assertEquals(0x200, m.xVelocity()); assertEquals(-0x400 + 0x30 * (row - 2), m.yVelocity());
+            assertEquals(!vertical && row == 2 ? 0x0A : 2, m.flags());
+            assertEquals(!vertical && row == 2 ? 40 : 0, state.objectLinks().standObject());
+            assertEquals(flip | (!vertical && row == 2 ? 8 : 0), live.flags());
+            if (!vertical && row == 2) {
+                int postSolidY32 = ((y - 27) << 16) | 0x4A34, postSolidYVelocity = 0;
+                assertEquals(postSolidY32 - (postSolidYVelocity << 8), m.centreY16_16(), "Actual new landing: fullLONG same-value prefix, not nonzero rewind coverage");
+                assertEquals(1, runtime.ringGlobals().rings(), "Earlier physical32 cannot Init after direct Hurt at40 in this pass");
+                byte[] expectedLost = new byte[64]; expectedLost[0] = 0x11;
+                expectedLost[8] = (byte) (x >>> 8); expectedLost[9] = (byte) x;
+                expectedLost[12] = (byte) ((y - 27) >>> 8); expectedLost[13] = (byte) (y - 27);
+                assertArrayEquals(expectedLost, pool.state(32).copyBytes(), "Native Hurt stores ONLY ID and integer XY in actual earlier32");
+            } else {
+                assertEquals(0, runtime.ringGlobals().rings(), "Actual earlier32 Init, not Hurt, clears Rings");
+                var lost = pool.state(32); assertEquals(0x11, lost.id()); assertEquals(2, lost.routine());
+                assertEquals(0x47, lost.unsignedByte(COLLISION_TYPE)); assertEquals(3, lost.unsignedByte(PRIORITY));
+                assertEquals(8, lost.unsignedByte(WIDTH)); assertEquals(8, lost.unsignedByte(X_RADIUS)); assertEquals(8, lost.unsignedByte(Y_RADIUS));
+                assertEquals(1, pool.capture().slots().stream().filter(s -> s.id() == 0x11).count());
+                assertEquals(0x80, runtime.ringGlobals().updateHudRings()); assertEquals(0, runtime.ringGlobals().livesFlags());
+                assertEquals(0xFE - (row - (vertical ? 2 : 3)), runtime.spillGlobals().timerByte());
+            }
+        }
+    }
+
+    /** Hand literals: N Spikes/Data/Mappings.asm:1-24, root20C1F0, one frame/four size05 pieces. */
+    private static int[][] spikesWorldLiteralPieces() {
+        return new int[][]{{-16,5,0,-16},{0,5,4,-16},{-16,5,0,0},{0,5,4,0}};
+    }
+
+    private static void assertSpikesWorldSat(CdObjectDrawQueue.CpuSat sat, int cameraX, int cameraY, int x, int y, int flip) {
+        int[][] pieces = spikesWorldLiteralPieces(); assertEquals(4, pieces.length); byte[] raw = sat.bytes(); int seen = 0;
+        assertTrue(sat.provenance().stream().anyMatch(p -> p.slotRef().wholeIndex() == 0), "Actual primary player shares native SAT");
+        for (int entry = 0; entry < sat.spriteCount(); entry++) {
+            var origin = sat.provenance().get(entry); if (origin.slotRef().wholeIndex() != 40) continue;
+            assertTrue(seen < 4); var p = pieces[seen];
+            assertEquals(3, origin.queueBucket()); assertEquals(seen++, origin.mappingPieceOrdinal());
+            // A later-frame LostRing can share bucket3 before40; its real ordinal must be retained.
+            boolean earlierRingQueued = sat.provenance().stream().anyMatch(pv -> pv.slotRef().wholeIndex() == 32 && pv.queueBucket() == 3);
+            assertEquals(earlierRingQueued ? 1 : 0, origin.queueOrdinal());
+            if (earlierRingQueued) for (int earlier = 0; earlier < sat.spriteCount(); earlier++) {
+                if (sat.provenance().get(earlier).slotRef().wholeIndex() == 32) assertTrue(earlier < entry, "Real earlier-slot Ring precedes Spikes in shared bucket3");
+            }
+            int relativeX = (flip & 1) != 0 ? -p[3] - 16 : p[3], relativeY = (flip & 2) != 0 ? -p[0] - 16 : p[0]; int at = entry * 8;
+            assertEquals((y - cameraY + 128 + relativeY) & 0xFFFF, ((raw[at] & 255) << 8) | (raw[at + 1] & 255));
+            assertEquals(5, raw[at + 2] & 255); assertEquals(entry + 1, raw[at + 3] & 255);
+            int word = ((raw[at + 4] & 255) << 8) | (raw[at + 5] & 255);
+            assertEquals((0x320 + p[2]) ^ (flip << 11), word); assertEquals(0, word & 0xE000);
+            assertEquals((x - cameraX + 128 + relativeX) & 511, ((raw[at + 6] & 255) << 8) | (raw[at + 7] & 255));
+        }
+        assertEquals(4, seen);
+    }
+
+    private record SpikesWorldTile(int offset, int x, int y, boolean hFlip, boolean vFlip, int piece) { }
+    private static List<SpikesWorldTile> spikesWorldLiteralTiles(int x, int y, int flip) {
+        int[][] pieces = spikesWorldLiteralPieces(); var result = new ArrayList<SpikesWorldTile>(); boolean h = (flip & 1) != 0, v = (flip & 2) != 0;
+        for (int piece = 3; piece >= 0; piece--) {
+            var p = pieces[piece]; int left = h ? -p[3] - 16 : p[3], top = v ? -p[0] - 16 : p[0];
+            for (int row = 0; row < 2; row++) for (int col = 0; col < 2; col++) result.add(new SpikesWorldTile(
+                    p[2] + col * 2 + row, x + left + (h ? 1 - col : col) * 8, y + top + (v ? 1 - row : row) * 8, h, v, piece));
+        }
+        assertEquals(16, result.size()); return List.copyOf(result);
+    }
+
+    private static String assertSpikesWorldPixels(com.openggf.graphics.SpritePresentation.Frame picture, RgbaImage image,
+            RgbaImage terrain, com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.State residency,
+            int base, List<SpikesWorldTile> literal) {
+        var tiles = picture.tiles().stream().filter(t -> t.patternId() >= base && t.patternId() < base + 8).toList();
+        assertEquals(16, literal.size()); assertEquals(16, tiles.size()); assertTrue(picture.primitives().isEmpty());
+        var graphics = GameServices.graphics(); assertFalse(graphics.isWaterEnabled()); assertFalse(graphics.getPaletteFadePresentation().affects(0));
+        var palette = GameServices.level().getCurrentLevel().getPalette(0); int[] argb = new int[16];
+        for (int i = 1; i < 16; i++) {
+            var c = palette.getColor(i); argb[i] = 0xFF000000 | com.openggf.graphics.color.DisplayColorConverter.toPackedRgb(
+                    c.r & 255, c.g & 255, c.b & 255, graphics.getDisplayColorProfile(), graphics.getDisplayColorExpansion());
+        }
+        int left = literal.stream().mapToInt(SpikesWorldTile::x).min().orElseThrow(), top = literal.stream().mapToInt(SpikesWorldTile::y).min().orElseThrow();
+        int right = literal.stream().mapToInt(p -> p.x() + 8).max().orElseThrow(), bottom = literal.stream().mapToInt(p -> p.y() + 8).max().orElseThrow();
+        assertTrue(left >= 0 && top >= 0 && right <= 320 && bottom <= 224, "Complete32x32 glyph remains in actual viewport");
+        assertEquals(32, right - left); assertEquals(32, bottom - top);
+        int[] expected = terrain.pixels().clone(); int opaque = 0, transparent = 0, changed = 0, index = 0;
+        var sampled = new java.util.TreeSet<Integer>();
+        for (var tile : picture.tiles()) {
+            if (tile.patternId() < base || tile.patternId() >= base + 8) {
+                paintDiagonalWorldOtherSprite(picture, tile, expected, left, top, right, bottom); continue;
+            }
+            var p = literal.get(index++); assertEquals(base + p.offset(), tile.patternId());
+            assertEquals((float) p.x(), tile.x()); assertEquals((float) p.y(), tile.y()); assertEquals(8f, tile.width()); assertEquals(8f, tile.height());
+            assertEquals(0, tile.palette()); assertEquals(p.hFlip(), tile.hFlip()); assertEquals(p.vFlip(), tile.vFlip()); assertFalse(tile.priority());
+            assertEquals(com.openggf.graphics.SpritePresentation.Layer.OBJECT, tile.layer()); assertTrue(tile.priorityShader());
+            assertEquals(0, tile.occlusionMask()); assertFalse(tile.ghost()); assertFalse(tile.ghostColour()); assertEquals(1f, tile.ghostAlpha());
+            assertEquals(0, tile.rowStart()); assertEquals(8, tile.rowEnd()); assertFalse(tile.rowClipped());
+            assertEquals(com.openggf.graphics.SpritePresentation.Subject.WORLD, tile.subject());
+            var decoded = new com.openggf.level.Pattern(); decoded.fromSegaFormat(
+                    com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(residency, 0x320 + p.offset()).copy());
+            sampled.add(p.offset()); var version = picture.patternVersions().get(base + p.offset()); assertNotNull(version);
+            long[] words = {version.a(), version.b(), version.c(), version.d()};
+            for (int at = 0; at < 64; at++) assertEquals(decoded.getPixel(at % 8, at / 8) & 15,
+                    (int) ((words[at / 16] >>> ((at % 16) * 4)) & 15), "Actual current native320 tile=" + p.offset() + ":" + at);
+            for (int dy = 0; dy < 8; dy++) for (int dx = 0; dx < 8; dx++) {
+                int value = decoded.getPixel(p.hFlip() ? 7 - dx : dx, p.vFlip() ? 7 - dy : dy) & 15, at = (p.y() + dy) * 320 + p.x() + dx;
+                if (value == 0) transparent++; else { opaque++; expected[at] = argb[value]; if (argb[value] != terrain.pixels()[at]) changed++; }
+            }
+        }
+        assertEquals(16, index); assertEquals(java.util.stream.IntStream.range(0,8).boxed().collect(java.util.stream.Collectors.toSet()), sampled);
+        for (int y = top; y < bottom; y++) for (int x = left; x < right; x++)
+            assertEquals(expected[y * 320 + x], image.pixels()[y * 320 + x], "Full ordered current-palette/native-plane glyph " + x + ":" + y);
+        assertTrue(opaque > 0); assertTrue(transparent > 0); assertTrue(changed > 0); assertEquals(1024, opaque + transparent);
+        return "pieces=4 cells=16 current-patterns=8 opaque=" + opaque + " transparent=" + transparent + " changed=" + changed;
+    }
+
+    /** Each16 literal cell and each4 piece is independently omitted on the explicitly TEST contrast control. */
+    private static void assertSpikesWorldOmissions(com.openggf.graphics.SpritePresentation.Frame picture, RgbaImage image,
+            RgbaImage terrain, com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.State residency,
+            int base, List<SpikesWorldTile> literal) {
+        int witnessedCells = 0, witnessedPieces = 0;
+        for (int selector = 0; selector < 20; selector++) {
+            boolean wholePiece = selector >= 16; int selected = wholePiece ? selector - 16 : selector;
+            var partial = image.copy(); int removed = 0, sourceOpaque = 0;
+            for (int index = 0; index < literal.size(); index++) {
+                var p = literal.get(index); if (!(wholePiece ? p.piece() == selected : index == selected)) continue;
+                var decoded = new com.openggf.level.Pattern(); decoded.fromSegaFormat(
+                        com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(residency, 0x320 + p.offset()).copy());
+                for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x++) {
+                    int at = (p.y() + y) * 320 + p.x() + x;
+                    if ((decoded.getPixel(p.hFlip() ? 7 - x : x, p.vFlip() ? 7 - y : y) & 15) != 0) sourceOpaque++;
+                    if (image.pixels()[at] != terrain.pixels()[at]) removed++; partial.pixels()[at] = terrain.pixels()[at];
+                }
+            }
+            if (sourceOpaque == 0) { assertEquals(0, removed); continue; } // No invented opaque witness for actual empty source pixels.
+            assertTrue(removed > 0, "Real nonempty cell/piece contrast omission witness " + selector);
+            if (wholePiece) witnessedPieces++; else witnessedCells++;
+            assertThrows(AssertionError.class, () -> assertSpikesWorldPixels(picture, partial, terrain, residency, base, literal));
+        }
+        assertTrue(witnessedCells > 1); assertEquals(4, witnessedPieces);
+    }
+
+    /** Render-only isolated real glyph; never rewrites the World/actor/SAT/art/clock or selected publication. */
+    private static com.openggf.graphics.SpritePresentation.Frame spikesWorldOnly(com.openggf.graphics.SpritePresentation.Frame full, int base) {
+        assertTrue(full.primitives().isEmpty());
+        var tiles = full.tiles().stream().filter(t -> t.patternId() >= base && t.patternId() < base + 8).toList();
+        var versions = new java.util.HashMap<Integer, com.openggf.graphics.SpritePresentation.PatternVersion>();
+        for (var tile : tiles) versions.put(tile.patternId(), full.patternVersions().get(tile.patternId()));
+        return new com.openggf.graphics.SpritePresentation.Frame(tiles, List.of(), versions);
+    }
+
+    // END constructed Spikes World proof.
 
 }

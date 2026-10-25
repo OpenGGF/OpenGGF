@@ -212,14 +212,16 @@ public final class CdR11aSectionArt {
 
     /**
      * Explicit authenticated-assets opt-in. Reuses the actual USA plan and all
-     * eight finite bank views; never decodes or preloads their output here.
+     * nine finite source views, including Spikes at PLC_Std row0; never decodes
+     * or preloads their output here. Canonical metadata describes the source;
+     * the actual queued entry retains its destination and source-range authority.
      * Asset/region authentication remains owned by the existing asset pipeline.
      */
     public static CdR11aSectionArt fromAssets(CdR11aAssets assets) throws IOException {
         Objects.requireNonNull(assets, "assets");
         var plan = assets.loadPlan();
         var bank = assets.openingObjects().sectionArtSources();
-        if (bank.sources().size() != 8) throw new IllegalArgumentException("Eight reviewed source views required");
+        if (bank.sources().size() != 9) throw new IllegalArgumentException("Nine reviewed source views required");
         var sources = new ArrayList<SourceProgram>();
         for (var source : bank.sources()) {
             var entry = source.canonicalPlc();
@@ -464,3 +466,4 @@ public final class CdR11aSectionArt {
         if ((value & ~0xFFFF) != 0) throw new IllegalArgumentException("Native WORD must be unsigned16");
     }
 }
+// Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>

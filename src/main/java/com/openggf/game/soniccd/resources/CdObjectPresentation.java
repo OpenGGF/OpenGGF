@@ -747,4 +747,99 @@ public final class CdObjectPresentation {
         return nativeId -> nativeId >= first && nativeId < first + count
                 ? extra.resolve(nativeId) : previous.resolve(nativeId);
     }
+
+    /**
+     * Spikes appends eight bindings to the unchanged C25/current559 policy, giving 567 patterns in
+     * sixteen logical spans. ObjSpikes_Init selects ObjectTileIDs $A/subtype2 zero ($0320) and stores
+     * MapSpr_Spikes $20C1F0 (scddisasm 1ecc5f3af, Spikes/Main.asm:21-25,87-89). Four size05 pieces
+     * reuse eight patterns. PLC_Std row0 describes ART_SPIKES at $238018 -> $6400, header $8008;
+     * this metadata is evidence, never a producer bank or a preload performed by this factory.
+     *
+     * <p>C25 validates first. All eight tiles are eagerly copied ONLY from the supplied immutable
+     * current physical State, even for an empty SAT. UNKNOWN ingress rejects without source fallback.
+     * The AT_6400 half-open extent is exactly $6400..$6500; adjacent Door $328 and the unowned gap
+     * remain separate. Every old native/logical span is checked for overlap, and all old IDs, NOW
+     * player/powerup windows and current camera versions retain their existing policy. DEV seeding,
+     * service order, capture and renderer publication remain with the caller.</p>
+     */
+    public static PatternSource usaR11aCurrentCameraDevPreloadedArt(CdPlayerArtRuntime.State nowServicedPlayer,
+                                                                   CdPowerupArtRuntime.State nowServicedPowerup,
+                                                                   CdR11aObjectAssets objects,
+                                                                   CdR11aObjectAssets.FrontierArtBank frontier,
+                                                                   CdR11aObjectAssets.ContactArtBank contact,
+                                                                   CdR11aObjectAssets.FloatBlockArtBank floatBlock,
+                                                                   CdR11aObjectAssets.SpringArtBank spring,
+                                                                   CdR11aObjectAssets.TunnelDoorArtBank tunnelDoor,
+                                                                   CdR11aObjectAssets.MonitorTimeArtBank monitorTime,
+                                                                   CdR11aCameraArtResidency.State cameraResidency,
+                                                                   int playerLogicalBase, int ringLogicalBase,
+                                                                   int mosquiLogicalBase, int plantLogicalBase,
+                                                                   int rampLogicalBase, int explosionLogicalBase,
+                                                                   int pointsLogicalBase, int flowerLogicalBase,
+                                                                   int powerupLogicalBase, int floatBlockLogicalBase,
+                                                                   int springLogicalBase, int tunnelDoorVerticalLogicalBase,
+                                                                   int monitorTimeLogicalBase, int boulderLogicalBase,
+                                                                   int diagonalSpringLogicalBase, int spikesLogicalBase) {
+        var previous = usaR11aCurrentCameraDevPreloadedArt(nowServicedPlayer, nowServicedPowerup, objects,
+                frontier, contact, floatBlock, spring, tunnelDoor, monitorTime, cameraResidency,
+                playerLogicalBase, ringLogicalBase, mosquiLogicalBase, plantLogicalBase, rampLogicalBase,
+                explosionLogicalBase, pointsLogicalBase, flowerLogicalBase, powerupLogicalBase,
+                floatBlockLogicalBase, springLogicalBase, tunnelDoorVerticalLogicalBase,
+                monitorTimeLogicalBase, boulderLogicalBase, diagonalSpringLogicalBase);
+        int first = objects.tileWord(0x0A, 0), count = 8;
+        var visual = objects.spikes();
+        var region = CdR11aCameraArtResidency.Region.AT_6400;
+        if (first != 0x320 || visual.mappingTableOffset() != 0 || visual.mappingFrames().size() != 1
+                || !visual.animations().isEmpty() || visual.animationTable().length() != 0
+                || region.destinationWord() != first * 32 || region.byteLength() != count * 32) {
+            throw new IllegalArgumentException("Spikes disagrees with its authenticated static mapping or physical extent");
+        }
+        var referenced = new HashSet<Integer>();
+        int cells = 0;
+        for (var piece : visual.mappingFrames().getFirst().pieces()) {
+            for (int tile = 0; tile < piece.tileCount(); tile++) {
+                int offset = piece.tileOffset() + tile;
+                if (offset < 0 || offset >= count) {
+                    throw new IllegalArgumentException("Spikes mapping exceeds its eight current patterns");
+                }
+                referenced.add(offset);
+                cells++;
+            }
+        }
+        if (visual.mappingFrames().getFirst().pieces().size() != 4 || cells != 16 || referenced.size() != count) {
+            throw new IllegalArgumentException("Spikes static frame must reuse eight patterns in sixteen cells");
+        }
+        byte[] current = new byte[count * 32];
+        for (int tile = 0; tile < count; tile++) {
+            byte[] bytes = CdR11aCameraArtResidency.readTile(cameraResidency, first + tile).copy();
+            System.arraycopy(bytes, 0, current, tile * 32, 32);
+        }
+        var extraSpan = new PixelSpan(first, spikesLogicalBase, CdAssetBytes.copyOf(current));
+        var extra = declaredPixelBank(List.of(extraSpan));
+        var oldRanges = new ArrayList<int[]>();
+        oldRanges.add(new int[]{CdPlayerArtRuntime.VRAM_BYTE_ADDRESS / 32, nowServicedPlayer.residentBank().length() / 32});
+        oldRanges.add(new int[]{CdPowerupArtRuntime.VRAM_BYTE_ADDRESS / 32, nowServicedPowerup.residentBank().length() / 32});
+        for (var binding : List.of(objects.initialArtBank().binding(CdR11aAsset.ART_RINGS),
+                objects.initialArtBank().binding(CdR11aAsset.ART_MOSQUI),
+                frontier.binding(CdR11aAsset.ART_3D_PLANT), frontier.binding(CdR11aAsset.ART_3D_RAMP_BOOST),
+                contact.binding(CdR11aAsset.ART_EXPLOSIONS), contact.binding(CdR11aAsset.ART_POINTS),
+                contact.binding(CdR11aAsset.ART_FLOWER), floatBlock.binding(CdR11aAsset.ART_FLOAT_BLOCK),
+                spring.binding(CdR11aAsset.ART_SPRINGS), tunnelDoor.binding(CdR11aAsset.ART_TUNNEL_DOOR),
+                monitorTime.binding(CdR11aAsset.ART_MONITOR_TIME_POSTS))) {
+            oldRanges.add(new int[]{binding.firstTileId(), binding.tileCount()});
+        }
+        oldRanges.add(new int[]{objects.tileWord(0x0B, 0), 19});
+        oldRanges.add(new int[]{objects.tileWord(0x0F, 0), 46});
+        long extraEnd = (long) spikesLogicalBase + count;
+        for (int[] range : oldRanges) {
+            int oldLogicalFirst = previous.resolve(range[0]).logicalPatternId();
+            if (first < range[0] + range[1] && range[0] < first + count
+                    || spikesLogicalBase < (long) oldLogicalFirst + range[1] && oldLogicalFirst < extraEnd) {
+                throw new IllegalArgumentException("Overlapping Spikes native or logical picture binding");
+            }
+        }
+        return nativeId -> nativeId >= first && nativeId < first + count
+                ? extra.resolve(nativeId) : previous.resolve(nativeId);
+    }
 }
+// Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>

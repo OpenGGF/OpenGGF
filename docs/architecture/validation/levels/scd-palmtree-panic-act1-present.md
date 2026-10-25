@@ -13,21 +13,31 @@ whole-act/region/viewport/donor/roster breadth remain open.
 | --- | --- | --- |
 | Ring/contact/hurt/death/restart and constructed object products | Existing USA World/EGL checks remain in the final consumer selection; restart carries actual current art/table/section rather than reseeding | See the dated implementation record for individual constructed versus controller-only products; no whole-act claim |
 | Pata-Bata539 →540 →541 | Controller-only Right route, real physical52 Init and complete camera PLC9; full/course replay across queued and completed Tamabboh state | Pata remains offscreen here; CPU replay is not a new Pata GPU proof |
-| Boulder46 →diagonal Spring47 →Spikes61, call561 | Controller-only Right completes both real Init routines, visits Pata52 Main (fractional words checked) and Ring54 Init, then rejects unowned Spikes26/slot61 before writes | Same call561 remains incomplete; no natural diagonal launch/contact/GPU claim |
+| Spikes61 at561 →Checkpoint34 at582 | Controller-only Right completes561 including real Spikes Init/Main/Draw/tail; full/course restore across560/561 then advance through581;582 rejects unowned Checkpoint13 after Door32/diagonal33 Init prefixes |582 is incomplete; no natural Spikes hit, Checkpoint save or native-parity claim |
 | Constructed Boulder preInit →Init/DrawObjects →next Main →display | USA320×224 Sonic alone, four native flips, dirty initial SOLID_TYPE1 witness through real shared Solid; literal two-piece SAT, all19 current tile versions, complete opaque/transparent geometry and omission controls | All96 dynamics clear and Sonic is placed far left at each scene's initial closed cut; no natural-route render/contact or native palette/priority/timing comparison |
 | Every selected Boulder full/course cut →forward replay | Sixteen selected cuts,32 full/course restores plus forward state/pixel comparisons, no reconstruction or producer reseed | Only the declared scene/entry/viewport/roster; broader event and lifecycle products remain missing |
 | Diagonal Spring preInit →launch →animation/FC →Reset | Eight constructed scenes: both strengths × four native flips, actual Body/DrawObjects/shared Solid, same-call FM/animation, prior SAT + NOW current46 art; full7/7/8-piece geometry and real terrain/Plane B controls | Initial-only slot clear/actor placement; real player overlap is composited in order, full Spring isolation and contrast omission controls are renderer-only, not a natural-route or native image reference |
 | Every selected diagonal full/course cut →forward replay | Six cuts per scene,96 full/course restores with complete state/pixel forward replay, no reconstruction/reseed/rebind | Only this USA320×224 Sonic-only DEV product; broader viewport/donor/roster/entry/exit products remain missing |
+| Constructed Spikes Init →Hurt →LostRing continuation | Actual Ring earned in92 controller rows, four initial-only flip scenes; upright direct Hurt after Solid versus vertical scanner Hurt before the object pass; different earlier32 LostRing ordering, all16 cells/eight current tiles and ordered World/PlaneB/omission controls | Explicit actor/slot ingress; same-value fullY rewind here, nonzero wrap only in component tests; no natural contact/emulator comparison |
+| Every selected Spikes cut and567 retirement | Five cuts per scene,40 full/course restores with forward state/pixel replay; all567 entries installed for cleanup and retired while800 actual other-producer entries retain identity | Twelve actual row2 PNGs; later-frame pixels asserted; retirement upload is not all567 rendered in gameplay |
 | Current art alias and module retirement | Relocated Anton overwrites18 of19 Boulder tiles; declared106-tile9100 write replaces all46 diagonal tiles in the same owner; partial transfer/carry replay; all559 actual current-policy entries installed at teardown then absent, shared entries identical | Declared BigRing-range transfer is not BigRing gameplay execution; cleanup upload is not proof all559 tiles were drawn; cold seed is explicit DEV history |
 
-Source context is parent `a18ca432d` plus the diagonal Spring candidate described in the
+Spikes source context is parent `8f283a959` plus the local candidate described in the
 [implementation record](../../plans/2026-10-23-sonic-cd-implementation.md).
-Final affected consumers54167:1036/0/0/0 across17 classes, including all50 World
+Historical diagonal consumers54167:1036/0/0/0 across17 classes, including all50 World
 and15 EGL cases, actual media/Java25/surfaceless EGL/S2 donor. Separate fresh
 guards64613:728/0/0/0. The old513 cleanup was killed at new ownedID131585 before
 the two-line559 cleanup passed the combined selection.
 Component failures and narrow source-backed repairs are recorded separately;
 these are bounded checks, not complete smoke, native parity or USA MVP.
+
+Current Spikes component evidence:117 assets/store,505 direct-Hurt/Frame plus
+123 repaired body rerun,77 picture/section,257 Runtime and positive14365 two
+actual World/route products. All stated positives have zero skips. Old559 cleanup
+was rejected at ownedID131631 before the two-line567 fix passed. Final combined44611 passed1288/0/0/0 across eleven affected classes, including
+all50 World-load and16 EGL cases, Java25/actual media/EGL/S2 donor checked. Fresh
+Spikes guards99234 passed728/0/0/0 across90 classes, Java25 and skip/error
+identities checked. The earlier diagonal guards remain historical evidence.
 
 ## Historical terrain-only inventory
 
