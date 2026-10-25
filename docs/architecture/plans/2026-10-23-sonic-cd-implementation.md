@@ -5032,3 +5032,48 @@ player, HUD, native clocks/PLC/audio and regional parity remain unfinished.
 The ordinary Right-only frontier remains attempted518 at live ID0D whole37.
 Historical baseline-attributed broad-smoke failures and later-coverage limits
 remain as previously recorded; no new broad/full-suite or whole-game claim.
+
+### 25 October, 05:17 GMT — horizontal Door body component
+
+Local continuation from33dc1d9d4. ID0D now has a separate normal horizontal Door
+body, borrowing the actual authenticated14-byte script/28-byte mappings and the
+existing shared12-tile bank. Init falls into Main in the same dispatch; Main
+checks the real primary then reads actual reserved whole1 even when its ID is0.
+Only the actual all64-byte cleared secondary image is admitted today. The body
+calls the real shared TopSolidObject for that image and rejects secondary
+player/global/other-slot writes or alias-sensitive effects before commit. Active
+secondary stand-link0 aliases primary natively; it is deliberately not modeled
+by passing secondary values through the existing primary-only Frame patch.
+
+Each helper uses one ephemeral actual dynamic capture, mandatory synchronous
+preflight/commit and actual live readback. The body checks object/other-slot
+publication and unchanged inactive secondary storage. Native opening uses signed
+negative Y velocity and wrapped BMI/unsigned rectangle edges. Subtype0 successful
+first-fit allocation publishes dirty-preserved splash0B before FM_A4; full pool
+or nonzero subtype requests no sound. Splash dispatch itself remains unowned.
+Shared animation consumes ten frame bytes, FC on call11, then Reset on the next
+dispatch. Wrapper draw reloads actual bit7 before despawn/saved-bank work.
+Completed effects never instruct another commit, allocation, draw or sound.
+
+Both new files were frozen externally after tests-first authoring, unchanged on
+import: body SHA256d68b591fb67cfc93e809f15dd43a1997a4f8014d73e1a6a72f4d336c17e7dbfb,
+test718d160ab473d94ce2e42a3b2dfddf5d7be11c3e332cc3ee1ac3bf5eaa431d7d.
+Tests-only98819 failed compilation at absent CdTunnelDoor; no JUnit ran. Exact
+production import followed. Queued focused validation:
+
+```text
+env -u DISPLAY -u WAYLAND_DISPLAY python3 <main-workspace>/tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestCdTunnelDoor,TestCdSolidObject,TestCdObjectPool' -Dsoniccd.media.root=<supplied-media-root> test -B
+```
+
+Root47941: **195/0/0/0**, immediate admission, Maven1m25s, terminal05:16:01Z.
+Current XML identities and Java25.0.5.0.2/media property were checked: Door95,
+Solid88, pool12, no skips. These are component/native-format cases; Solid's media
+case binds the real asset owner but is not a route or rendered Door proof.
+
+Independent static review found no concrete P1/P2. Its P3 correctly notes the
+first-helper globals fixture has no actual global write on blank terrain;
+that assertion proves unchanged-globals continuity, not nonempty angle-store
+publication. Actual Runtime commit, reserved bank capture/restart, live route,
+real Frame phase/CAS, pixels, splash, native audio/PLC and active secondary
+remain separate work. No runtime admission,95-case native parity, whole-game,
+full-suite or public delivery claim follows this focused component pass.
