@@ -233,3 +233,30 @@ Inspect skips, acknowledge consumed diagnostics, and retain no validation caches
   display environment variables unset. Expected execution is 30–60 minutes
   plus unknown queue waiting; source drift, infrastructure failure, execution
   budget or output-silence limits leave coverage explicitly incomplete.
+- The owner-category run completed all 24 batches on `0d78e95ca`: 9,130 cases,
+  four failures, zero errors and 76 skips. Fresh guards completed 800 cases,
+  three failures, zero errors/skips. The two inherited audio/GLFW failures
+  remained unchanged. New ordinary failures were relay Scale/SocketStress
+  capacity recovery; the exact matched destination `d3fa3d519` selection passed
+  all four cases (Scale, RELAY, JDK and NETTY). All failure/skip details were
+  inspected without omitted records and diagnostics acknowledged. Skip reasons
+  were opt-in captures/measurements, graphics prerequisites, optional external
+  mod packages and route eligibility, with no missing-ROM reason.
+- Relay fix `b77215acc` is integrated. A bounded probe measured cached discovery
+  count 4, authoritative room count 3 and capacity 4 at rejection. A stale
+  directory count is not a slot lease; final capacity belongs to `RoomHost`.
+  Remove that veto while retaining NEW-identity pressure, private admission,
+  epoch and grant checks. A real-room regression also rejects actual overflow
+  and requires a fresh session token on recovery. The unchanged candidate
+  reproduced both failures in 11 cases; the final 12-class selection passed
+  131 cases without failures, errors or skips.
+- Repair the three guard integrations without widening runtime authority.
+  Exempt only the imported/qualified JDK `SecretKeyFactory`, with a project
+  lookalike negative. Follow the presentation helper in the capture-order guard.
+  Extract activation callback wiring from `Engine.init`, reducing it from 177
+  to 164 lines and lowering its former 170-line ratchet. The six-class affected
+  run passed 104 of 105 cases; its only failure was the stale exact ratchet,
+  which then passed in its single-method rerun. Engine/scene/pixel behavior and
+  all 42 singleton-closure cases passed without skips. Full final guards and
+  combined recovery/session/pixel checks remain the next checks; do not replay
+  the unchanged owner-category suite after these bounded repairs.

@@ -505,7 +505,9 @@ class TestEngineLiveCapturePresentation {
         String source = Files.readString(Path.of("src/main/java/com/openggf/Engine.java"));
         int focus = source.indexOf("glfwSetWindowFocusCallback(window");
         int iconify = source.indexOf("glfwSetWindowIconifyCallback(window", Math.max(focus, 0));
-        int afterCallbacks = source.indexOf("// Get the thread stack", Math.max(iconify, 0));
+        int afterCallbacks = source.indexOf("private void installEditorTextInputCallback()", Math.max(iconify, 0));
+        assertTrue(source.contains("installWindowActivationCallbacks();"),
+                "window initialization must install the activation callbacks");
         assertTrue(focus >= 0 && iconify > focus && afterCallbacks > iconify,
                 "the window focus/iconify callbacks were reordered or renamed; re-point this guard");
 

@@ -765,26 +765,13 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			}
 		});
 
-		// Setup window focus callback
+		// Setup window close callback
 		glfwSetWindowCloseCallback(window, windowHandle -> {
 			glfwSetWindowShouldClose(windowHandle, false);
 			requestApplicationExit();
 		});
 
-		// Setup window focus callback
-		glfwSetWindowFocusCallback(window, (windowHandle, focused) -> {
-			if (editorChrome != null) editorChrome.focus(focused);
-			paused = applyWindowActivation(focused, inputHandler, gameLoop::pause, gameLoop::resume,
-					() -> gameLoop.modSceneHost.windowFocusChanged(focused),
-					() -> sceneFocusPresentation.withdraw(() -> glfwSwapBuffers(window)));
-		});
-
-		// Setup window iconify callback
-		glfwSetWindowIconifyCallback(window, (windowHandle, iconified) -> {
-			paused = applyWindowActivation(!iconified, inputHandler, gameLoop::pause, gameLoop::resume,
-					() -> gameLoop.modSceneHost.windowIconifyChanged(iconified),
-					() -> sceneFocusPresentation.withdraw(() -> glfwSwapBuffers(window)));
-		});
+		installWindowActivationCallbacks();
 
 		// Get the thread stack and push a new frame
 		try (MemoryStack stack = stackPush()) {
@@ -863,6 +850,20 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		}
 
 		lastFrameTime = System.nanoTime();
+	}
+
+	private void installWindowActivationCallbacks() {
+		glfwSetWindowFocusCallback(window, (windowHandle, focused) -> {
+			if (editorChrome != null) editorChrome.focus(focused);
+			paused = applyWindowActivation(focused, inputHandler, gameLoop::pause, gameLoop::resume,
+					() -> gameLoop.modSceneHost.windowFocusChanged(focused),
+					() -> sceneFocusPresentation.withdraw(() -> glfwSwapBuffers(window)));
+		});
+		glfwSetWindowIconifyCallback(window, (windowHandle, iconified) -> {
+			paused = applyWindowActivation(!iconified, inputHandler, gameLoop::pause, gameLoop::resume,
+					() -> gameLoop.modSceneHost.windowIconifyChanged(iconified),
+					() -> sceneFocusPresentation.withdraw(() -> glfwSwapBuffers(window)));
+		});
 	}
 
 	private void installEditorTextInputCallback() {
