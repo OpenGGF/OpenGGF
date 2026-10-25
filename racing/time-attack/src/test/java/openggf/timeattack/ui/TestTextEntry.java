@@ -14,6 +14,33 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /** The text field behind LAN invites, chat, the display name and the master URL. */
 class TestTextEntry {
     @Test
+    void passwordInputPreservesExactUnicodeAndMasksItsValueAndLength() {
+        TextEntry field = TextEntry.password("ROOM PASSWORD");
+        String password = "  e\u0301\u3000Private\uD83D\uDE80  ";
+        new FakeViewInput().commit(field::update, password);
+        assertEquals(password, field.text());
+        RecordingSceneCanvas canvas = new RecordingSceneCanvas(320);
+        field.draw(canvas);
+        assertFalse(canvas.joined().contains("Private"));
+        assertFalse(canvas.joined().contains(field.length() + "/"));
+        assertTrue(canvas.joined().contains("********"));
+        field.clear();
+        assertEquals("", field.text());
+        assertEquals(0, field.length());
+    }
+
+    @Test
+    void maskedInviteInputNeverDrawsTheAddressOrPin() {
+        TextEntry field = new TextEntry("LAN INVITE", "192.0.2.4:27888#secret-pin", 192, ".:/#-_").masked();
+        RecordingSceneCanvas canvas = new RecordingSceneCanvas(320);
+        field.draw(canvas);
+        assertFalse(canvas.joined().contains("192.0.2.4"));
+        assertFalse(canvas.joined().contains("secret-pin"));
+        assertTrue(canvas.joined().contains("Hidden"));
+        canvas.assertFillsOnScreen();
+    }
+
+    @Test
     void acceptsAlnumAndAllowedExtras() {
         TextEntry field = new TextEntry("T", "", 64, ".:-");
         for (char c : "192.168.1.5:27888".toCharArray()) {
@@ -181,4 +208,29 @@ class TestTextEntry {
         String drawn = String.join("", canvas.lines.subList(1, canvas.lines.size() - 2));
         assertEquals(invite + "_", drawn);
     }
+    @org.junit.jupiter.api.Test
+    void passwordPreservesJoinersAndPrivateUseCharactersWithoutACharacterClassRule() {
+        TextEntry field = TextEntry.password("ROOM PASSWORD");
+        String secret = "  exact👩‍💻\uE000 password  ";
+        new FakeViewInput().commit(field::update, secret);
+        assertEquals(secret, field.text());
+    }
+
+    @org.junit.jupiter.api.Test
+    void oversizedPasswordCannotAcceptASilentlyTruncatedPrefix() {
+        TextEntry field = TextEntry.password("ROOM PASSWORD");
+        FakeViewInput input = new FakeViewInput();
+        input.commit(field::update, "a".repeat(129));
+        input.clear();
+        input.pressed.add(com.openggf.mods.scene.SceneKeys.ENTER);
+        assertEquals(TextEntry.Result.NONE, field.update(input));
+        assertFalse(field.error().isEmpty());
+        input.tapKey(field::update, com.openggf.mods.scene.SceneKeys.BACKSPACE);
+        assertEquals("", field.text());
+        input.commit(field::update, "a".repeat(128));
+        input.clear();
+        input.pressed.add(com.openggf.mods.scene.SceneKeys.ENTER);
+        assertEquals(TextEntry.Result.ACCEPTED, field.update(input));
+    }
+
 }

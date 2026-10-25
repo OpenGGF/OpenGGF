@@ -49,6 +49,8 @@ public final class ModApiVersion {
      * with bounded packet buffering and scene-owned stop/fade/close lifetime.
      * Scene-owned direct peer text messaging is asynchronous and bounded, with
      * socket/thread ownership and lifetime kept in the engine.
+     * Scene clipboard writes consume bounded foreground user activation, and owner-bounded
+     * focus-loss callbacks invalidate revealed text even while scene updates are paused.
      * Unicode display names (NameFont, DisplayNames, typed scene text), player looks
      * (PlayerAppearance, CharacterLooks, coloured ghost poses, RunHandle player
      * appearance) and protocol v4 profile messages extend the candidate.
@@ -75,7 +77,9 @@ public final class ModApiVersion {
      * Shared network contracts include direct/relay room clients, JDK room hosting,
      * identity, bounded ghost transport and protocol messages/codecs. Protocol 6 adds
      * Full/Quick/Off communication with semantic quick content, a local English
-     * catalogue and read-only global personal chat display preferences. Protocol v3 uses
+     * catalogue and read-only global personal chat display preferences. Protocol 7 combines
+     * these controls with private admission, invite authority and correlated master requests.
+     * Protocol v3 uses
      * explicit player upsert/leave deltas after the joining client's initial room snapshot;
      * remote ghost registries expose the same incremental membership operations. Operator
      * servers and verifier tools remain separate and outside the creator API.

@@ -14,6 +14,15 @@ public final class DirectRoomRegistration {
     public static CompletableFuture<ControlMessage.RoomCreated> createRoom(
             MasterClient master, ControlMessage.RoomDescriptor descriptor,
             String routing, int directPort, String determinismFingerprint,
+            List<String> voteTrackKeys, String certificateSha256,
+            String instanceId, long accessEpoch) {
+        return master.createRoom(descriptor, routing, directPort, determinismFingerprint,
+                voteTrackKeys, certificateSha256, instanceId, accessEpoch, null);
+    }
+
+    public static CompletableFuture<ControlMessage.RoomCreated> createRoom(
+            MasterClient master, ControlMessage.RoomDescriptor descriptor,
+            String routing, int directPort, String determinismFingerprint,
             List<String> voteTrackKeys, String certificateSha256) {
         return master.createRoom(descriptor, routing, directPort,
                 determinismFingerprint, voteTrackKeys, certificateSha256);

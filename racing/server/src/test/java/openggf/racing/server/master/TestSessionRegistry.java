@@ -114,6 +114,74 @@ class TestSessionRegistry {
     }
 
     @Test
+    void disconnectRemovesOnlyTheExactConnectionAndGeneration() throws Exception {
+        com.openggf.net.hub.HubConnection source = new TestRoomBroker.FakeConnection();
+        SessionRegistry.RegistrationLease old = new SessionRegistry.RegistrationLease(source, 1);
+        SessionRegistry.RegistrationLease current = new SessionRegistry.RegistrationLease(source, 2);
+        SessionRegistry.RoomEntry first = registry.create(desc("A"), "DIRECT", "fp", "ip", 1,
+                "build", java.util.List.of(), null, old);
+        SessionRegistry.RoomEntry second = registry.create(desc("B"), "DIRECT", "fp", "ip", 1,
+                "build", java.util.List.of(), null, current);
+        assertEquals(java.util.List.of(first), registry.removeByLease(old));
+        assertEquals(second, registry.find(second.roomId()).orElseThrow());
+        assertTrue(registry.removeByLease(new SessionRegistry.RegistrationLease(
+                new TestRoomBroker.FakeConnection(), 2)).isEmpty());
+    }
+
+    @Test
+    void unpublishedReservationsCountTowardCapsAndCanceledReservationsCannotPublish() throws Exception {
+        SessionRegistry.RegistrationLease lease = new SessionRegistry.RegistrationLease(
+                new TestRoomBroker.FakeConnection(), 1);
+        SessionRegistry.RoomEntry first = registry.reserve(desc("A"), "RELAY", "fp", "ip", 0,
+                "build", java.util.List.of(), null, lease, "instance-a", 0);
+        registry.reserve(desc("B"), "RELAY", "fp", "ip", 0,
+                "build", java.util.List.of(), null, lease, "instance-b", 0);
+        assertTrue(registry.list(null).isEmpty());
+        assertTrue(registry.find(first.roomId()).isEmpty());
+        assertThrows(SessionRegistry.RoomCreateException.class, () -> registry.create(
+                desc("C"), "RELAY", "fp", "ip", 0, "build"));
+        registry.remove(first.roomId());
+        assertTrue(!registry.publish(first));
+        assertTrue(registry.list(null).isEmpty());
+        assertTrue(registry.create(desc("C"), "RELAY", "fp", "ip", 0, "build") != null);
+    }
+
+    @Test
+    void trackUpdatesPreservePrivatePolicyInstanceAndEpochs() throws Exception {
+        SessionRegistry.RegistrationLease lease = new SessionRegistry.RegistrationLease(
+                new TestRoomBroker.FakeConnection(), 1);
+        SessionRegistry.RoomEntry room = registry.create(desc("A"), "DIRECT", "fp", "ip", 1,
+                "build", java.util.List.of(), null, lease);
+        com.openggf.net.protocol.RoomAccessPolicy privatePolicy = new com.openggf.net.protocol.RoomAccessPolicy(
+                com.openggf.net.protocol.RoomAccessPolicy.Mode.PRIVATE, false);
+        assertTrue(registry.updateAccess(room.roomId(), lease, privatePolicy, 4, 7));
+        assertTrue(registry.updateChatMode(room.roomId(), "fp", "OFF"));
+        assertTrue(registry.updateTrack(room.roomId(), "fp", 1, 1));
+        SessionRegistry.RoomEntry updated = registry.find(room.roomId()).orElseThrow();
+        assertEquals(privatePolicy, updated.descriptor().accessPolicy());
+        assertEquals("OFF", updated.descriptor().chatMode());
+        assertEquals(lease, updated.lease());
+        assertEquals(room.instanceId(), updated.instanceId());
+        assertEquals(4, updated.accessEpoch());
+        assertEquals(7, updated.inviteEpoch());
+        assertTrue(registry.listed(null).isEmpty());
+        assertEquals(1, registry.list(null).size());
+        assertTrue(registry.updateAccess(room.roomId(), lease, privatePolicy, 5, 8));
+        assertEquals("OFF", registry.find(room.roomId()).orElseThrow().descriptor().chatMode());
+    }
+
+    @Test
+    void globalCapacityIncludesPendingRegistrationsAndIsReleasedByCancellation() throws Exception {
+        SessionRegistry bounded = new SessionRegistry(() -> now, MasterConfig.defaults(), 1);
+        SessionRegistry.RoomEntry pending = bounded.reserve(desc("Pending"), "RELAY", "owner", "ip", 0,
+                "build", java.util.List.of(), null, null, "instance", 0);
+        assertThrows(SessionRegistry.RoomCreateException.class, () -> bounded.create(
+                desc("Other"), "DIRECT", "another-owner", "another-ip", 1, "build"));
+        bounded.remove(pending.roomId());
+        assertTrue(bounded.create(desc("Other"), "DIRECT", "another-owner", "another-ip", 1, "build") != null);
+    }
+
+    @Test
     void configLoadsFromYamlWithDefaults(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir)
             throws Exception {
         java.nio.file.Path yaml = dir.resolve("master.yaml");

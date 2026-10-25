@@ -21,7 +21,11 @@ public record DirectJoinAddress(URI uri, String certificateSha256,
         return Base64.getUrlEncoder().withoutPadding().encodeToString(packed);
     }
 
+    @Override
+    public String toString() { return "DirectJoinAddress[redacted]"; }
+
     public static DirectJoinAddress parse(String address, int defaultPort) {
+        if (address != null && address.length() > 2048) throw new IllegalArgumentException("invalid LAN invite");
         if (address == null || address.isBlank()) {
             throw new IllegalArgumentException("LAN invite is empty");
         }
@@ -33,15 +37,16 @@ public record DirectJoinAddress(URI uri, String certificateSha256,
         try {
             packed = Base64.getUrlDecoder().decode(parts[1]);
         } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("invalid LAN share code", e);
+            throw new IllegalArgumentException("invalid LAN share code");
         }
         if (packed.length != CODE_BYTES || !Base64.getUrlEncoder().withoutPadding()
                 .encodeToString(packed).equals(parts[1])) {
             throw new IllegalArgumentException("invalid LAN share code length or encoding");
         }
         String addressPart = parts[0];
-        URI supplied = URI.create(addressPart.contains("://")
-                ? addressPart : "wss://" + addressPart);
+        final URI supplied;
+        try { supplied = URI.create(addressPart.contains("://") ? addressPart : "wss://" + addressPart); }
+        catch (IllegalArgumentException invalid) { throw new IllegalArgumentException("invalid LAN host"); }
         int port = supplied.getPort() == -1 ? defaultPort : supplied.getPort();
         if (!"wss".equalsIgnoreCase(supplied.getScheme()) || supplied.getHost() == null
                 || supplied.getUserInfo() != null || supplied.getQuery() != null
@@ -56,7 +61,7 @@ public record DirectJoinAddress(URI uri, String certificateSha256,
                     HexFormat.of().formatHex(packed, 0, PIN_BYTES),
                     HexFormat.of().formatHex(packed, PIN_BYTES, CODE_BYTES));
         } catch (URISyntaxException e) {
-            throw new IllegalArgumentException("invalid LAN host", e);
+            throw new IllegalArgumentException("invalid LAN host");
         }
     }
 

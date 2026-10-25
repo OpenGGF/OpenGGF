@@ -571,10 +571,12 @@ class TestArchitecturalSourceGuard {
                 "liveCapturePresentation.present(");
         assertOrdered(source, "handleLiveCaptureShortcut();",
                 "updateDisplayShaderInput()");
-        // next presents through the displayAndSwap seam rather than inline
-        // display()/glfwSwapBuffers() calls, so the ordering is structural: the
-        // swap runnable only runs after the display supplier returns true.
-        assertOrdered(source, "displayAndSwap(this::display,", "glfwSwapBuffers(window));");
+        assertOrdered(source, "sceneFocusPresentation.displayAndSwap(this::display,",
+                "glfwSwapBuffers(window),");
+        assertOrdered(source, "glfwSwapBuffers(window),", "gameLoop.modSceneHost::renderedSubmissions");
+        String presenter = Files.readString(SRC_MAIN.resolve("com/openggf/SceneFocusPresentation.java"));
+        assertOrdered(presenter, "Engine.displayAndSwap(display, swap)",
+                "scenePresented = sceneSubmissions.getAsLong() != before");
     }
 
     @Test
@@ -686,7 +688,7 @@ class TestArchitecturalSourceGuard {
     private static final int LOW_LEVEL_GAMEPLAY_SERVICE_LOOKUP_BUDGET = 0;
     private static final List<MethodBudget> ROOT_DISPATCH_METHOD_BUDGETS = List.of(
             new MethodBudget(ENGINE_PATH, "draw", 3),
-            new MethodBudget(ENGINE_PATH, "init", 170),
+            new MethodBudget(ENGINE_PATH, "init", 164),
             // 2026-07-02: display 206 -> 217 for the live-rewind VHS picture-search
             // pass (RewindVhsEffectPass.apply between the fade pass and the
             // PRESENTATION display-shader phase; the pass itself is a collaborator).

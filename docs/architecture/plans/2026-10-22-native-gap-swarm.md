@@ -7984,3 +7984,171 @@ is reused only with unchanged identity. Fresh remote metadata reports develop
 Inclusion/mergeability is not inferred from these inputs. Normal-hook merge,
 committed-range/resource policy, fresh conflict check, publication and hosted CI
 remain subsequent steps; this append alone claims neither ready nor green.
+
+
+### 2026-10-25: private-lobby develop receipt, bounded qualification and publication boundary
+
+Receive develop 61be1910ac29d5606410be315ec881a5745a75d3 once onto
+1302f46f7de0858bdb58a6d5f4f8ba82f7029a96, with common base
+d3fa3d519f6acb7285d538b5f972807036f1019e. The actual incoming delta is
+103 paths. Git reports two conflicts, both prose. Preserve the full receiving
+briefing hazard catalogue and incoming native ring-reset/callback-frame notes.
+Preserve the complete receiving Monkey Dude audit and append the exact incoming
+HCZ investigation, retaining its pinned historical source attribution. That
+audit text is not receipt or execution of a foreign native-lane fix. No Root
+mutable native source was received.
+
+The automatic executable composition retains Engine's constructor-bound native
+gameplay-mode publisher and all four received native capture modes. It adds the
+incoming scene-focus collaborator, clipboard ownership and post-event drains.
+Capture precedes successful swap; an aborted presentation cannot replace the last
+presented scene identity. The incoming init budget tightens 170 to 164; actual
+init span remains 164, GameLoop spans remain 58/276, and no cap, baseline,
+allowlist or architecture assertion is relaxed. Existing atomic audio/preclose,
+world PLC/results, recorded-input, frozen-water recipe, masks, exact logical
+width/native SAT admission, raw FIFO/address ownership, and removal-token bytes
+remain unchanged outside the incoming delta. All 481 registered critical/source
+pins match the coherent input.
+
+Private-lobby authority remains at actual host admission, not discovery counts.
+Request correlation, membership/access/invite epochs, cancellation and disposal
+of late completions remain intact. Invites discover rooms without bypassing
+password gates. Fallback applies only to classified reachability failures, not
+identity, certificate, protocol, password, invite or generic timeout failures.
+Clipboard authority remains one live visit/update/platform-thread/owner callback;
+one physical gesture permits one bounded write, with a deadline recheck at
+execution. Focus, suspension and close invalidate pending work. These contracts
+were not replaced by compatibility fallbacks.
+
+API composition preserves the 13 receiving rule/mode signatures. Incoming adds
+397 and removes five final record toString declarations, replacing those five
+with non-final redacted implementations. The exact reviewed sorted union is
+23,116 lines, SHA-256
+4ce99c705ce6abf6c39dec8f1bb9eb475073af697047eadf9d270c45a5d958c9.
+Compiled canonical-surface and exact-pin tests actually pass this union; its
+cardinality alone is not the check. CURRENT 0.7.0 and the candidate descriptor
+are unchanged. Wire protocol 7 is separate from the Mod API candidate version.
+No regenerated pin was accepted to hide a difference.
+
+Frozen tested tree c16b5eabf1c68da4328a2010253f5f632dfb59b7;
+own mtime/content input frame
+cd032b7fb69fd26e59a15d1abf1ee236273398baa87705ced95b82d25ede3a4d,
+13,616 paths / 864,246,314 bytes. Checkout mtimes are worktree-specific; this
+is not a portable cross-worktree frame claim. The subsequent change is this
+factual Plan append only, with the complete preceding prefix retained.
+
+The affected scope is two disjoint 50-source-class ordinary cohorts and a fresh
+seven-class guard JVM. It covers every changed ordinary test class, immediate
+network/scene/input/capture/SDK/package consumers, and affected architecture,
+singleton and rewind contracts. Shipping sample/Time Attack packages replace
+unchanged broad audio repeats. It does not repeat the old 43,039-case smoke,
+matched 45-route comparison, Python/tool preflight or native/emulator work.
+Shared behavior is bounded by the reviewed ownership/ingress changes and their
+immediate consumers; path count alone is not grounds for another broad run.
+Planning allowance was 10–20 active minutes plus compilation and unknown queue;
+the observations below are per-request Maven time and separate queue waiting.
+
+| Request / original session | Actual JUnit identities | Source families | Maven execution | Printed queue |
+| --- | --- | --- | --- | --- |
+| Network / 37195 | 425P / 0F / 0E / 0S | 50 | 2:14 | 0s |
+| EngineScenes / 90181 | 539P / 0F / 0E / 0S | 50 | 2:05 | 0s |
+| Guards / 76200 | 188P / 0F / 0E / 0S | 7 | 48.365s | 0s |
+
+These are actual discovered identities, not expected source-method counts or a
+new union-green suite. Earlier epochs remain separately attributed. The guard
+cases are source 87, ArchUnit 34, singleton closure 42, compact 9, exact policy 14,
+field disposition 1 and coverage 1. The complete current field diagnostic is
+zero bytes, matching zero baseline keys. The compact audit's 257 fields are not
+JUnit cases. No new lifecycle CSV is emitted; historical 510-row evidence is
+not a new waiver or new cases.
+
+Readback covers every actual identity/F/E/skip, all XML properties, recursive
+streams, text reports, full bounded console, diagnostics and sourcepost:
+Network 50 XML / 3,550 properties / 27 streams / 128,861 stream bytes;
+EngineScenes 50 / 3,550 / 81 / 491,043; Guards 7 / 497 / 1 / 48.
+Each group has 71 common properties, exact reviewed selector/ROM/EGL/Java25
+operands, no dump, and exact sourcepost. Console sizes are respectively
+160,682 / 519,790 / 13,367 bytes. Each original invocation completes once.
+The 101, 101 and 16 exact owned raw outputs are consumed after readback.
+Useful compiled classes/source/worktree and unknown older outputs are retained.
+
+Network warnings are actual local test-mode TLS and explicit adversarial
+rate/hash/identity/strike controls. Both failingTaskDoesNotStopTheRoomThread
+invocations inject the failure and assert the healthy room. The tunnel
+guestHandshakesAndStreamsThroughTheTunnel case sends binary data without an
+active AttemptStart and gets one outside-active-attempt warning while proving
+transport survival; it does not qualify accepted ghost-stream gameplay.
+No warning is suppressed to make that claim.
+
+EngineScenes has four supplier-null ring.wav shadow warnings:
+successiveHeadlessSessionsStartWithFreshAudioAndReleaseInputLast,
+failedConfiguredStartupDestroysTheInstalledBackendAndAllowsRetry, and both
+synthesis-enabled/disabled real-ROM configured-startup controls. Their explicit
+GameSound.RING calls seed dirty audio lifetime/counters before the real title
+entry; the supplier reports missing WAV data for that synthetic seed. The ownership/reset
+assertions pass, but this is not audible-ring/native-SFX or asset qualification.
+These warnings are not relabelled as deliberately injected warning controls.
+
+TimeAttackScene.lanJoinThroughTheSceneRacesARoundAndLeavingClosesTheConnection
+emits one unsupported launchBehind warning. Its fake host leaves behindSupported
+false and calls the interface's unsupported default. RaceSession catches it and
+disables lobby-level launch; real socket round/leave assertions still pass.
+Other existing behindSupported=true fixture cases cover fake behind-run
+ownership. Neither is proof of native gameplay behind the lobby.
+Remaining severe/caught faults are individually read declared backend, capture,
+save, callback, foreign-owner, invalid-ROM, cancellation, authentication and
+failed-launch controls. They are not positive-ROM loader faults or extra cases.
+PowerShell is available and the 47 hook-policy cases exercise the helper's
+conditional two-implementation path; no new version/preflight probe is run.
+
+Actual configured EGL cases execute, including private lobby pixels, focus
+withdrawal/capture modes and scene state preservation. Clipboard/focus fixtures
+use in-memory writers and injected events, and network tests use local ephemeral
+TCP/TLS sockets. They do not prove OS clipboard delivery, real window-manager
+callbacks or physical-pad delivery; no shared desktop automation occurs.
+FAST/NONE estimates retain their unmeasured/native-timing limits.
+
+The inherited 41 matched route failures, E8DF art-loading gap, 38 positive HCZ
+SMPS boundary refusals, optional/legacy GL/creator-kit coverage, warm donor cache,
+multi-plane publication atomicity and dynamic cleanup-iterator limits remain
+OPEN with their original source attribution. No asset/music/native-route closure,
+failure-newness inference, broad green claim or policy waiver follows here.
+
+Portable reproduction uses the same original stock absolute ROMs, configured
+Java25/Lua5.4/null AL/EGL environment and own target as the preceding section.
+Set SELECTOR to the exact group below; Guards alone adds -Pguards.
+
+```text
+Network: openggf.racing.e2e.TestDirectConnectEndToEnd,openggf.racing.e2e.TestMasterEndToEnd,openggf.racing.e2e.TestMultipleAttemptsEndToEnd,openggf.racing.e2e.TestRelayFallbackTunnel,openggf.racing.server.host.TestRaceHostServer,openggf.racing.server.master.TestGuestTunnelBounds,openggf.racing.server.master.TestInviteDirectory,openggf.racing.server.master.TestMasterServer,openggf.racing.server.master.TestMasterTransportLifecycle,openggf.racing.server.master.TestMasterTunnelRateIsolation,openggf.racing.server.master.TestPasswordSourceBudget,openggf.racing.server.master.TestPrivateRoomBroker,openggf.racing.server.master.TestPrivateRoomTransports,openggf.racing.server.master.TestRelayRoomManager,openggf.racing.server.master.TestRoomBroker,openggf.racing.server.master.TestRoomBrokerAdversarial,openggf.racing.server.master.TestSessionRegistry,com.openggf.net.client.TestClientRaceSession,com.openggf.net.client.TestClientRaceSessionChat,com.openggf.net.client.TestClientRaceSessionVote,com.openggf.net.client.TestClientRoomInvites,com.openggf.net.client.TestDirectJoinAddress,com.openggf.net.client.TestHandshakeIntentBinding,com.openggf.net.client.TestMasterClient,com.openggf.net.client.TestMasterClientTimeoutRecovery,com.openggf.net.client.TestMasterPowLifecycle,com.openggf.net.client.TestPrivateRoomClient,com.openggf.net.client.TestRaceClientInboundBudget,com.openggf.net.client.TestRaceClientLoopback,com.openggf.net.client.TestTlsAuthenticationRelay,com.openggf.net.host.TestConnectionHygiene,com.openggf.net.host.TestHostMasterLink,com.openggf.net.host.jdk.TestJdkRaceHostLifecycle,com.openggf.net.host.jdk.TestJdkRaceHostServer,com.openggf.net.host.jdk.TestWebSocketFrames,com.openggf.net.hub.TestPrivateRoomAdmission,com.openggf.net.hub.TestRoomHost,com.openggf.net.hub.TestRoomHostAdversarial,com.openggf.net.hub.TestRoomHostChat,com.openggf.net.hub.TestRoomHostGhostLifecycle,com.openggf.net.hub.TestRoomHostLobby,com.openggf.net.hub.TestRoomHostVote,com.openggf.net.hub.TestRoomInviteAuthority,com.openggf.net.protocol.TestChatProtocol,com.openggf.net.protocol.TestControlCodec,com.openggf.net.protocol.TestControlCodecAdversarial,com.openggf.net.protocol.TestControlCodecPolymorphism,com.openggf.net.protocol.TestPrivateRoomContract,com.openggf.net.protocol.TestProtocolFuzzing,com.openggf.tests.TestNetIsolationRules
+selector SHA-256: ebb7198dac4df1d6a1ca78e2ab01cd9e84cac2cc5b8b51d810a072c0e5c6a3a0
+```
+
+```text
+EngineScenes: openggf.timeattack.TestLegacyTimeAttackSettings,openggf.timeattack.TestTimeAttackScene,openggf.timeattack.TestTimeAttackSettings,openggf.timeattack.TestTimeAttackModPackage,openggf.timeattack.mp.TestInviteCodeView,openggf.timeattack.mp.TestLobbyInviteController,openggf.timeattack.mp.TestRaceLobbyView,openggf.timeattack.mp.TestRaceSession,openggf.timeattack.mp.TestRoomAccessView,openggf.timeattack.mp.TestServerBrowserView,openggf.timeattack.ui.TestTextEntry,com.openggf.TestEngine,com.openggf.TestEngineConfiguredHeadlessStartup,com.openggf.TestEngineConfiguredHeadlessStartupRom,com.openggf.TestEngineLiveCapturePresentation,com.openggf.TestEngineModCallbackAbortBoundary,com.openggf.TestEngineResourceLifetime,com.openggf.TestEngineSceneFocusPresentation,com.openggf.TestEngineSuspensionRendering,com.openggf.TestGameLoopNativeMenus,com.openggf.TestRecordedInputHostPause,com.openggf.audio.TestAudioManagerStreamedPortOwnership,com.openggf.capture.LiveCaptureControllerTest,com.openggf.capture.LiveCapturePresentationCoordinatorTest,com.openggf.control.TestKeyboardTextCapture,com.openggf.control.TestRecordedInputOwnership,com.openggf.control.TestScenePhysicalInput,com.openggf.game.nativemenu.TestNativeMenuController,com.openggf.mods.TestModApiPinPolicy,com.openggf.mods.TestModApiReleasePolicy,com.openggf.mods.TestModApiRuntimePolicy,com.openggf.mods.TestModApiSignatureSurface,com.openggf.mods.code.TestModContextAndFaultBoundary,com.openggf.mods.scene.host.TestModSceneHost,com.openggf.mods.scene.host.TestModSceneHostGameplay,com.openggf.mods.scene.host.TestPresentationPolicies,com.openggf.mods.scene.host.TestPrivateLobbyScreenRendering,com.openggf.mods.scene.host.TestSceneClipboardAndFocus,com.openggf.mods.scene.host.TestSceneNetworkLifetime,com.openggf.mods.scene.host.TestSceneRomAudioSourcesPublication,com.openggf.render.TestNativeMenuRenderDispatch,com.openggf.tests.TestModApiHookPolicy,com.openggf.tools.TestHeadlessAudioOwnership,com.openggf.tools.TestHeadlessBackendPropertyIsolation,com.openggf.tools.TestHeadlessGameBootAudioIdentity,com.openggf.tools.TestSonic2NativeMenuLaunch,com.openggf.tools.modsdk.TestModApiJavadocTool,com.openggf.tools.modsdk.TestModApiSdkPackager,com.openggf.tools.modsdk.TestModSdkArtifactVerifier,com.openggf.tools.modsdk.TestSampleModsPackage
+selector SHA-256: 7606c2427e8a1b24871e5cba8aeeb265d5e80fd25ae070e9f637b34016ef0191
+```
+
+```text
+Guards: com.openggf.tests.TestArchitecturalSourceGuard,com.openggf.tests.TestArchUnitRules,com.openggf.game.TestProductionSingletonClosureGuard,com.openggf.game.rewind.schema.TestCapturedPolicyCompactReachabilityGuard,com.openggf.game.rewind.schema.TestExactRewindPolicyGuard,com.openggf.game.rewind.schema.TestRewindFieldDispositionGuard,com.openggf.game.rewind.coverage.TestRewindCoverageGuard
+selector SHA-256: 1543beaade208c5a27f6cbc579ac30e465e60005b193861a974ade6424d4072e
+```
+
+Selector manifest SHA-256 (UTF-8 group name NUL comma-selector NUL, registered
+Network/EngineScenes/Guards order):
+e830e58ea40f54494e5c716bc8b893ceba2562f45dfae2422d2abe4924cc75e6.
+
+```bash
+python3 "$OPENGGF_QUEUE_WRAPPER" --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -DmodApi.destinationBranch=develop "-Dsonic1.rom.path=$S1_ROM" "-Dsonic2.rom.path=$S2_ROM" "-Ds3k.rom.path=$S3K_ROM" "-Dkis2.rom.path=$KIS2_ROM" "-Dtest=$SELECTOR" test -B
+# Guards only: same command with -Pguards before test -B.
+```
+
+Main queue wrapper remains
+77d3a3e53dfc213729a57b41d5d11dc1b2145a158a01fa0ca6313a61c3639720;
+all imports are repinned at submission. Original stock CRC/SHA identity is reused
+only while exact file metadata is unchanged, otherwise rehashed. No ROM copy,
+link, alias, stale class fallback, custom heap/fork/timeout, extra build,
+preflight, unchanged broad rerun or native observation occurs.
+
+Normal-hook merge, actual committed-range/resource policy, final remote conflict
+check, PR-head publication/readiness and hosted checks follow this append.
+This source record does not claim those subsequent outcomes in advance.

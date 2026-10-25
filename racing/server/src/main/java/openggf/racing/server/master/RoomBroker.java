@@ -3,6 +3,7 @@ package openggf.racing.server.master;
 import com.openggf.net.hub.HostHandshake;
 import com.openggf.net.hub.HubConnection;
 import com.openggf.net.hub.SessionTokenIssuer;
+import com.openggf.net.hub.RoomInviteService;
 import com.openggf.net.identity.PlayerIdentity;
 import com.openggf.net.identity.ProofOfWork;
 import openggf.racing.protocol.ControlCodec;
@@ -10,6 +11,8 @@ import com.openggf.net.identity.DisplayNames;
 import com.openggf.net.protocol.ControlMessage;
 import com.openggf.net.protocol.Protocol;
 import com.openggf.net.protocol.ProtocolViolationException;
+import com.openggf.net.protocol.RoomAccessPolicy;
+import com.openggf.net.protocol.RoomPassword;
 
 import java.security.SecureRandom;
 import java.nio.charset.StandardCharsets;
@@ -23,6 +26,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.LongSupplier;
 import java.util.function.Predicate;
@@ -30,7 +35,22 @@ import java.util.function.Predicate;
 /** Authenticated master-browser connection and room-directory state machine. */
 public final class RoomBroker {
     public interface RelayRoomDirectory {
+        interface PreparedRoom extends AutoCloseable {
+            void publish(RoomInviteService inviteService);
+            @Override void close();
+        }
+
         String createRelayRoom(SessionRegistry.RoomEntry entry);
+        default CompletableFuture<PreparedRoom> prepareRelayRoom(
+                SessionRegistry.RoomEntry entry, RoomPassword password) {
+            if (entry.descriptor().accessPolicy().passwordRequired()) {
+                return CompletableFuture.failedFuture(new IllegalStateException("private relay unavailable"));
+            }
+            return CompletableFuture.completedFuture(new PreparedRoom() {
+                @Override public void publish(RoomInviteService service) { createRelayRoom(entry); }
+                @Override public void close() { }
+            });
+        }
         void noteGuestTier(String fingerprint, boolean isNew);
         boolean attach(HubConnection connection, String roomId, String fingerprint,
                        String displayName);
@@ -59,6 +79,40 @@ public final class RoomBroker {
     // abandoned browser joins for the lifetime of a master connection.
     private static final long JOIN_GRANT_TTL_MILLIS = 30_000;
     private static final long GC_INTERVAL_MILLIS = 3_600_000;
+    private static final long CREATE_TIMEOUT_MILLIS = 10_000;
+    private static final int MAX_PENDING_CREATES = 64;
+    private static final int MAX_PENDING_PER_CONNECTION = 2;
+    private static final int MAX_RECENT_CREATES = 8;
+
+    private record AttachGrant(String instanceId, long accessEpoch, long inviteEpoch,
+                               long expiresAtMillis, InviteDirectory.Resolution invite) { }
+
+    private static final class AttachGrants {
+        private final LinkedHashMap<String, AttachGrant> grants = new LinkedHashMap<>();
+
+        void grant(SessionRegistry.RoomEntry room, long now, InviteDirectory.Resolution invite) {
+            expire(now);
+            long deadline = now + JOIN_GRANT_TTL_MILLIS;
+            if (invite != null) deadline = Math.min(deadline, invite.expiresAtMillis());
+            grants.remove(room.roomId());
+            grants.put(room.roomId(), new AttachGrant(room.instanceId(), room.accessEpoch(),
+                    room.inviteEpoch(), deadline, invite));
+            while (grants.size() > JOIN_LIMIT) grants.pollFirstEntry();
+        }
+
+        AttachGrant consume(String roomId, long now) {
+            AttachGrant grant = grants.remove(roomId);
+            return grant != null && now < grant.expiresAtMillis() ? grant : null;
+        }
+
+        void expire(long now) { grants.values().removeIf(grant -> now >= grant.expiresAtMillis()); }
+    }
+
+    private record PendingCreate(Member member, long requestId,
+                                 SessionRegistry.RoomEntry entry, long expiresAtMillis) { }
+    private record CreatedRequest(SessionRegistry.RoomEntry entry, long expiresAtMillis) { }
+    private record AccessChange(SessionRegistry.RegistrationLease lease, String instanceId,
+                                long accessEpoch, long fromInviteEpoch, long toInviteEpoch) { }
 
     /** Broker-loop-confined LRU set with expiry fixed at the latest grant. */
     private static final class ExpiringGrants {
@@ -105,7 +159,10 @@ public final class RoomBroker {
         final HubConnection connection;
         final HostHandshake handshake;
         final long connectedAtMillis;
-        final ExpiringGrants joinGrantedRooms = new ExpiringGrants(JOIN_LIMIT, JOIN_GRANT_TTL_MILLIS);
+        final SessionRegistry.RegistrationLease lease;
+        final AttachGrants joinGrantedRooms = new AttachGrants();
+        final Map<Long, PendingCreate> pendingCreates = new HashMap<>();
+        final Map<Long, CreatedRequest> createdRequests = new HashMap<>();
         final ArrayDeque<Long> joinRequests = new ArrayDeque<>();
         State state = State.HANDSHAKE;
         String fingerprint;
@@ -118,10 +175,12 @@ public final class RoomBroker {
         int strikes;
         long lastListMillis = Long.MIN_VALUE;
 
-        Member(HubConnection connection, HostHandshake handshake, long connectedAtMillis) {
+        Member(HubConnection connection, HostHandshake handshake, long connectedAtMillis,
+               long generation) {
             this.connection = connection;
             this.handshake = handshake;
             this.connectedAtMillis = connectedAtMillis;
+            lease = new SessionRegistry.RegistrationLease(connection, generation);
         }
     }
 
@@ -136,6 +195,9 @@ public final class RoomBroker {
     private final DirectTunnelDirectory tunnels;
     private final Predicate<String> knownTrack;
     private final VerifierRegistry verifiers;
+    private final Executor brokerLoop;
+    private final InviteDirectory invites;
+    private final PasswordSourceBudget passwordSources;
     private final SecureRandom random = new SecureRandom();
     private final SessionTokenIssuer tokens = new SessionTokenIssuer();
     private final AtomicBoolean attackMode;
@@ -143,7 +205,10 @@ public final class RoomBroker {
     private final Map<String, String> tokenFingerprints = new HashMap<>();
     private final ExpiringGrants identityPowStamps;
     private final Map<HubConnection, AttachResult> attachResults = new HashMap<>();
+    private final Map<String, AccessChange> accessChanges = new HashMap<>();
     private long nextGcMillis;
+    private long registrationGeneration;
+    private int pendingCreateCount;
 
     public RoomBroker(PlayerIdentity masterIdentity, MasterConfig config,
                       SessionRegistry registry, IdentityStore store, TrustLadder ladder,
@@ -166,6 +231,15 @@ public final class RoomBroker {
                       NewIdentityCache cache, LongSupplier clock, RelayRoomDirectory relays,
                       DirectTunnelDirectory tunnels, Predicate<String> knownTrack,
                       VerifierRegistry verifiers) {
+        this(masterIdentity, config, registry, store, ladder, cache, clock, relays,
+                tunnels, knownTrack, verifiers, Runnable::run);
+    }
+
+    public RoomBroker(PlayerIdentity masterIdentity, MasterConfig config,
+                      SessionRegistry registry, IdentityStore store, TrustLadder ladder,
+                      NewIdentityCache cache, LongSupplier clock, RelayRoomDirectory relays,
+                      DirectTunnelDirectory tunnels, Predicate<String> knownTrack,
+                      VerifierRegistry verifiers, Executor brokerLoop) {
         this.masterIdentity = masterIdentity;
         this.config = config;
         this.registry = registry;
@@ -177,6 +251,9 @@ public final class RoomBroker {
         this.tunnels = tunnels;
         this.knownTrack = knownTrack;
         this.verifiers = verifiers;
+        this.brokerLoop = brokerLoop;
+        invites = new InviteDirectory(clock);
+        passwordSources = new PasswordSourceBudget(clock);
         identityPowStamps = new ExpiringGrants(config.newIdentityCacheSize(),
                 TimeUnit.MINUTES.toMillis(config.newIdentityCacheTtlMinutes()));
         attackMode = new AtomicBoolean(config.attackMode());
@@ -187,7 +264,8 @@ public final class RoomBroker {
         members.put(connection, new Member(connection,
                 new HostHandshake(masterIdentity.fingerprint(), null,
                         com.openggf.net.protocol.AuthenticationTranscript.Role.MASTER,
-                        com.openggf.net.hub.HandshakeTransport.binding(connection)), clock.getAsLong()));
+                        com.openggf.net.hub.HandshakeTransport.binding(connection)),
+                clock.getAsLong(), ++registrationGeneration));
     }
 
     /** Evict every live connection for a newly sanctioned identity on the broker loop. */
@@ -241,7 +319,7 @@ public final class RoomBroker {
             strike(member, "invalid session token");
             return;
         }
-        dispatch(member, decoded.message());
+        dispatch(member, decoded.message(), decoded.requestId());
     }
 
     public void onDisconnected(HubConnection connection) {
@@ -252,26 +330,38 @@ public final class RoomBroker {
         }
         tokens.revoke(member.token);
         tokenFingerprints.remove(member.token);
+        cancelPendingCreates(member);
         removeHostedRooms(member);
     }
 
     public void tick() {
         long now = clock.getAsLong();
         identityPowStamps.expire(now);
+        invites.prune();
         for (Member member : List.copyOf(members.values())) {
             member.joinGrantedRooms.expire(now);
+            member.createdRequests.values().removeIf(created -> now >= created.expiresAtMillis());
+            for (PendingCreate pending : List.copyOf(member.pendingCreates.values())) {
+                if (now >= pending.expiresAtMillis()) {
+                    cancelPendingCreate(pending);
+                    send(member, new ControlMessage.RoomCreateRejected("room creation timed out"),
+                            pending.requestId());
+                }
+            }
             if (member.state != State.ADMITTED && member.state != State.HANDED_OFF
                     && now - member.connectedAtMillis > ADMISSION_TIMEOUT_MILLIS) {
                 reject(member, "handshake timeout");
             }
         }
-        List<String> directRooms = registry.list(null).stream()
+        List<SessionRegistry.RoomEntry> directRooms = registry.list(null).stream()
                 .filter(room -> "DIRECT".equals(room.routing()))
-                .map(SessionRegistry.RoomEntry::roomId).toList();
+                .toList();
         registry.expireStale();
-        for (String roomId : directRooms) {
-            if (registry.find(roomId).isEmpty()) {
-                tunnels.unregisterHost(roomId);
+        for (SessionRegistry.RoomEntry room : directRooms) {
+            if (registry.find(room.roomId()).isEmpty()) {
+                invites.remove(room.roomId(), room.lease());
+                accessChanges.remove(room.roomId());
+                tunnels.unregisterHost(room.roomId());
             }
         }
         if (now >= nextGcMillis) {
@@ -301,6 +391,45 @@ public final class RoomBroker {
     boolean isAdmitted(HubConnection connection) {
         Member member = members.get(connection);
         return member != null && member.state == State.ADMITTED;
+    }
+
+    /** Broker-loop gate before room or tunneled password work reaches any verifier. */
+    public boolean allowRoomText(HubConnection connection, String text) {
+        return !isPasswordSubmission(text) || allowPasswordSubmission(connection);
+    }
+
+    static boolean isPasswordSubmission(String text) {
+        final ControlCodec.DecodedControl decoded;
+        try {
+            decoded = ControlCodec.decodeRoom(text);
+        } catch (ProtocolViolationException invalid) {
+            return false;
+        }
+        switch (decoded.message()) {
+            case ControlMessage.RoomAccessSubmit submit -> {
+                if (submit.password() != null) submit.password().close();
+                return true;
+            }
+            case ControlMessage.RoomPasswordChange change -> {
+                if (change.password() != null) change.password().close();
+            }
+            case ControlMessage.RoomCreate create -> {
+                if (create.password() != null) create.password().close();
+            }
+            default -> { }
+        }
+        return false;
+    }
+
+    boolean allowPasswordSubmission(HubConnection connection) {
+        Member member = members.get(connection);
+        if (member == null || member.state != State.HANDED_OFF
+                || !passwordSources.admit(connection.remoteHost())) {
+            connection.sendText(ControlCodec.encode(null,
+                    new ControlMessage.JoinRejected("room admission rate limited")));
+            return false;
+        }
+        return true;
     }
 
     public java.util.Optional<String> fingerprintForSessionToken(String token) {
@@ -394,12 +523,15 @@ public final class RoomBroker {
         send(member, new ControlMessage.JoinAccepted(member.token, -1, null, null));
     }
 
-    private void dispatch(Member member, ControlMessage message) {
+    private void dispatch(Member member, ControlMessage message, long requestId) {
         switch (message) {
-            case ControlMessage.RoomCreate create -> createRoom(member, create);
-            case ControlMessage.RoomListRequest request -> listRooms(member, request);
-            case ControlMessage.RoomJoinRequest request -> joinRoom(member, request);
-            case ControlMessage.RelayAttach attach -> attach(member, attach.roomId());
+            case ControlMessage.RoomCreate create -> createRoom(member, create, requestId);
+            case ControlMessage.RoomListRequest request -> listRooms(member, request, requestId);
+            case ControlMessage.RoomJoinRequest request -> joinRoom(member, request, requestId);
+            case ControlMessage.RoomInviteResolve request -> resolveInvite(member, request, requestId);
+            case ControlMessage.RoomInviteControl request -> controlInvite(member, request, requestId);
+            case ControlMessage.MasterRequestCancel cancel -> cancelCreate(member, cancel.requestId());
+            case ControlMessage.RelayAttach attach -> attach(member, attach.roomId(), requestId);
             case ControlMessage.Heartbeat heartbeat -> heartbeat(member, heartbeat);
             case ControlMessage.RoomLeave leave -> leaveRoom(member, leave.roomId());
             case ControlMessage.RoomTrackUpdate update -> updateTrack(member, update);
@@ -408,105 +540,221 @@ public final class RoomBroker {
         }
     }
 
-    private void createRoom(Member member, ControlMessage.RoomCreate create) {
+    private void createRoom(Member member, ControlMessage.RoomCreate create, long requestId) {
+        try {
+            beginCreate(member, create, requestId);
+        } finally {
+            if (create.password() != null) create.password().close();
+        }
+    }
+
+    private void beginCreate(Member member, ControlMessage.RoomCreate create, long requestId) {
+        java.util.function.Consumer<String> refused = reason -> send(member,
+                new ControlMessage.RoomCreateRejected(reason), requestId);
+        if (ladder.isBanned(member.fingerprint)) {
+            refused.accept("account sanctioned");
+            return;
+        }
         String routing = create.routing();
         ControlMessage.RoomDescriptor descriptor = create.room();
         if (!("DIRECT".equals(routing) || "RELAY".equals(routing)) || descriptor == null) {
-            send(member, new ControlMessage.RoomCreateRejected("invalid room routing"));
+            refused.accept("invalid room routing");
             strike(member, "invalid room routing");
             return;
         }
         if (!validDescriptorFields(descriptor, create.determinismFingerprint())) {
-            send(member, new ControlMessage.RoomCreateRejected("invalid room fields"));
+            refused.accept("invalid room fields");
             return;
         }
         if (descriptor.maxPlayers() < 1 || descriptor.maxPlayers() > Protocol.MAX_PLAYERS_RELAY) {
-            send(member, new ControlMessage.RoomCreateRejected("invalid player limit"));
+            refused.accept("invalid player limit");
             return;
         }
         String poolProblem = voteTrackPoolProblem(descriptor.gameId(), create.voteTrackKeys());
         if (poolProblem != null) {
-            send(member, new ControlMessage.RoomCreateRejected("invalid vote track pool: " + poolProblem));
+            refused.accept("invalid vote track pool: " + poolProblem);
             return;
         }
         if (descriptor.verified() && !"RELAY".equals(routing)) {
-            send(member, new ControlMessage.RoomCreateRejected(
-                    "verified rooms are relay-only"));
+            refused.accept(
+                    "verified rooms are relay-only");
             return;
         }
         if (descriptor.verified()
                 && ladder.tierOf(member.fingerprint) != TrustLadder.Tier.TRUSTED) {
-            send(member, new ControlMessage.RoomCreateRejected(
-                    "verified rooms require TRUSTED"));
+            refused.accept(
+                    "verified rooms require TRUSTED");
             return;
         }
         if (descriptor.verified() && (verifiers == null
                 || !verifiers.verifierAvailable(create.determinismFingerprint()))) {
-            send(member, new ControlMessage.RoomCreateRejected(
-                    "no verifier available for this build"));
+            refused.accept(
+                    "no verifier available for this build");
             return;
         }
         if ("DIRECT".equals(routing)
                 && descriptor.maxPlayers() > Protocol.MAX_PLAYERS_DIRECT) {
-            send(member, new ControlMessage.RoomCreateRejected(
-                    "direct rooms are capped at 8 players - use relay routing"));
+            refused.accept(
+                    "direct rooms are capped at 8 players - use relay routing");
             return;
         }
         if ("DIRECT".equals(routing)
                 && (create.directPort() < 1 || create.directPort() > 65_535)) {
-            send(member, new ControlMessage.RoomCreateRejected("invalid direct port"));
+            refused.accept("invalid direct port");
             return;
         }
         if ("DIRECT".equals(routing) && (create.certificateSha256() == null
                 || !create.certificateSha256().matches("[0-9a-f]{64}"))) {
-            send(member, new ControlMessage.RoomCreateRejected(
-                    "direct rooms require a TLS certificate pin"));
+            refused.accept(
+                    "direct rooms require a TLS certificate pin");
             return;
         }
         if (!ladder.canCreateRoom(member.fingerprint)) {
-            send(member, new ControlMessage.RoomCreateRejected(
-                    "new identities cannot create rooms"));
+            refused.accept(
+                    "new identities cannot create rooms");
+            return;
+        }
+        boolean direct = "DIRECT".equals(routing);
+        if (create.accessEpoch() < 0
+                || direct && (create.password() != null
+                || create.instanceId() != null && !boundedField(create.instanceId(), 128)
+                || descriptor.accessPolicy().passwordRequired()
+                && !boundedField(create.instanceId(), 128))
+                || !direct && descriptor.accessPolicy().passwordRequired() != (create.password() != null)) {
+            refused.accept("invalid room access configuration");
+            return;
+        }
+        member.createdRequests.values().removeIf(created -> clock.getAsLong() >= created.expiresAtMillis());
+        if (member.pendingCreates.containsKey(requestId) || requestId > 0
+                && (member.createdRequests.containsKey(requestId)
+                || member.createdRequests.size() >= MAX_RECENT_CREATES)
+                || member.pendingCreates.size() >= MAX_PENDING_PER_CONNECTION
+                || pendingCreateCount >= MAX_PENDING_CREATES) {
+            refused.accept("room creation busy");
             return;
         }
         SessionRegistry.RoomEntry entry = null;
         try {
-            entry = registry.create(descriptor, routing,
-                    member.fingerprint, member.connection.remoteHost(), create.directPort(),
+            String instanceId = direct ? create.instanceId() : java.util.UUID.randomUUID().toString();
+            entry = registry.reserve(descriptor, routing, member.fingerprint,
+                    member.connection.remoteHost(), create.directPort(),
                     create.determinismFingerprint(), create.voteTrackKeys(),
-                    create.certificateSha256());
-            if ("RELAY".equals(routing)) {
-                relays.createRelayRoom(entry);
-                member.joinGrantedRooms.grant(entry.roomId(), clock.getAsLong());
-            } else {
+                    create.certificateSha256(), member.lease, instanceId,
+                    direct ? create.accessEpoch() : 0);
+            if (direct) {
                 tunnels.registerHost(entry.roomId(), member.connection);
-            }
-            send(member, new ControlMessage.RoomCreated(entry.roomId()));
-        } catch (SessionRegistry.RoomCreateException | RuntimeException e) {
-            if (entry != null) {
-                registry.remove(entry.roomId());
-                if ("RELAY".equals(entry.routing())) {
-                    relays.hostLeft(entry.roomId());
-                } else {
-                    tunnels.unregisterHost(entry.roomId());
+                if (entry.instanceId() != null) {
+                    invites.register(entry.roomId(), member.lease, entry.instanceId());
                 }
+                if (!registry.publish(entry)) throw new IllegalStateException("registration canceled");
+                sendCreated(member, entry, requestId);
+                return;
             }
-            send(member, new ControlMessage.RoomCreateRejected(e.getMessage()));
+            PendingCreate pending = new PendingCreate(member, requestId, entry,
+                    clock.getAsLong() + CREATE_TIMEOUT_MILLIS);
+            member.pendingCreates.put(requestId, pending);
+            pendingCreateCount++;
+            relays.prepareRelayRoom(entry, create.password()).whenComplete((prepared, error) -> {
+                try {
+                    brokerLoop.execute(() -> completeCreate(pending, prepared, error));
+                } catch (RuntimeException stopped) {
+                    if (prepared != null) prepared.close();
+                }
+            });
+        } catch (SessionRegistry.RoomCreateException | RuntimeException failure) {
+            PendingCreate pending = member.pendingCreates.get(requestId);
+            if (pending != null) cancelPendingCreate(pending);
+            if (entry != null) removeRoom(entry);
+            refused.accept(failure instanceof SessionRegistry.RoomCreateException
+                    ? failure.getMessage() : "room creation unavailable");
         }
     }
 
-    private void listRooms(Member member, ControlMessage.RoomListRequest request) {
+    private void completeCreate(PendingCreate pending, RelayRoomDirectory.PreparedRoom prepared,
+                                Throwable failure) {
+        Member member = pending.member();
+        if (member.pendingCreates.get(pending.requestId()) == pending
+                && members.get(member.connection) == member && member.state == State.ADMITTED
+                && clock.getAsLong() >= pending.expiresAtMillis()) {
+            cancelPendingCreate(pending);
+            if (prepared != null) prepared.close();
+            send(member, new ControlMessage.RoomCreateRejected("room creation timed out"), pending.requestId());
+            return;
+        }
+        if (member.pendingCreates.get(pending.requestId()) != pending
+                || members.get(member.connection) != member || member.state != State.ADMITTED
+                || clock.getAsLong() >= pending.expiresAtMillis()
+                || ladder.isBanned(member.fingerprint)) {
+            cancelPendingCreate(pending);
+            if (prepared != null) prepared.close();
+            return;
+        }
+        member.pendingCreates.remove(pending.requestId());
+        pendingCreateCount--;
+        if (failure != null || prepared == null) {
+            registry.remove(pending.entry().roomId());
+            if (prepared != null) prepared.close();
+            send(member, new ControlMessage.RoomCreateRejected("room creation unavailable"),
+                    pending.requestId());
+            return;
+        }
+        SessionRegistry.RoomEntry entry = pending.entry();
+        try {
+            invites.register(entry.roomId(), member.lease, entry.instanceId());
+            prepared.publish(inviteService(entry));
+            if (!registry.publish(entry)) throw new IllegalStateException("registration canceled");
+            member.joinGrantedRooms.grant(entry, clock.getAsLong(), null);
+            sendCreated(member, entry, pending.requestId());
+        } catch (RuntimeException unavailable) {
+            removeRoom(entry);
+            prepared.close();
+            send(member, new ControlMessage.RoomCreateRejected("room creation unavailable"),
+                    pending.requestId());
+        }
+    }
+
+    private void sendCreated(Member member, SessionRegistry.RoomEntry entry, long requestId) {
+        if (requestId > 0) member.createdRequests.put(requestId,
+                new CreatedRequest(entry, clock.getAsLong() + CREATE_TIMEOUT_MILLIS));
+        send(member, new ControlMessage.RoomCreated(entry.roomId(), entry.instanceId(),
+                entry.accessEpoch(), entry.inviteEpoch()), requestId);
+    }
+
+    private void cancelPendingCreate(PendingCreate pending) {
+        if (pending.member().pendingCreates.remove(pending.requestId(), pending)) {
+            pendingCreateCount--;
+            registry.remove(pending.entry().roomId());
+        }
+    }
+
+    private void cancelPendingCreates(Member member) {
+        for (PendingCreate pending : List.copyOf(member.pendingCreates.values())) {
+            cancelPendingCreate(pending);
+        }
+    }
+
+    private void cancelCreate(Member member, long requestId) {
+        if (requestId < 1) return;
+        PendingCreate pending = member.pendingCreates.get(requestId);
+        if (pending != null) cancelPendingCreate(pending);
+        CreatedRequest created = member.createdRequests.remove(requestId);
+        if (created == null || clock.getAsLong() >= created.expiresAtMillis()) return;
+        SessionRegistry.RoomEntry room = registry.find(created.entry().roomId()).orElse(null);
+        if (room != null && member.lease.equals(room.lease())
+                && java.util.Objects.equals(room.instanceId(), created.entry().instanceId())) removeRoom(room);
+    }
+
+    private void listRooms(Member member, ControlMessage.RoomListRequest request, long requestId) {
         long now = clock.getAsLong();
         if (member.lastListMillis != Long.MIN_VALUE
                 && now - member.lastListMillis < LIST_INTERVAL_MILLIS) {
-            // Every list request needs a reply to preserve the client's FIFO
-            // request/reply positions, even when enumeration is throttled.
             send(member, new ControlMessage.RoomListResult(List.of(), request.page(),
-                    Protocol.ROOM_LIST_RATE_LIMITED));
+                    Protocol.ROOM_LIST_RATE_LIMITED), requestId);
             return;
         }
         member.lastListMillis = now;
         int page = Math.max(0, request.page());
-        List<SessionRegistry.RoomEntry> all = registry.list(request.gameFilter());
+        List<SessionRegistry.RoomEntry> all = registry.listed(request.gameFilter());
         int from = (int) Math.min(all.size(),
                 Math.min(Integer.MAX_VALUE, (long) page * config.browserPageSize()));
         int to = Math.min(all.size(), from + config.browserPageSize());
@@ -519,92 +767,230 @@ public final class RoomBroker {
                     room.routing(), descriptor.verified(), descriptor.chatMode()));
         }
         send(member, new ControlMessage.RoomListResult(summaries, page,
-                registry.totalPagesForCount(all.size())));
+                registry.totalPagesForCount(all.size())), requestId);
     }
 
-    private void joinRoom(Member member, ControlMessage.RoomJoinRequest request) {
+    private void joinRoom(Member member, ControlMessage.RoomJoinRequest request, long requestId) {
+        SessionRegistry.RoomEntry room = registry.find(request.roomId()).orElse(null);
+        if (room != null && room.descriptor().accessPolicy().passwordRequired()
+                && !room.hostFingerprint().equals(member.fingerprint)) room = null;
+        joinRoom(member, room, null, requestId);
+    }
+
+    private void resolveInvite(Member member, ControlMessage.RoomInviteResolve request, long requestId) {
+        InviteDirectory.Lookup lookup = invites.resolve(request.code(), member.fingerprint,
+                member.connection.remoteHost());
+        switch (lookup) {
+            case InviteDirectory.Lookup.RateLimited limited -> send(member,
+                    new ControlMessage.RoomInviteRejected("invite lookup rate limited",
+                            limited.retryAfterMillis()), requestId);
+            case InviteDirectory.Lookup.Unavailable ignored -> send(member,
+                    new ControlMessage.RoomInviteRejected("invite unavailable", 0), requestId);
+            case InviteDirectory.Lookup.Found found -> {
+                InviteDirectory.Resolution invite = found.resolution();
+                SessionRegistry.RoomEntry room = registry.find(invite.roomId()).orElse(null);
+                if (room == null || !invite.lease().equals(room.lease())
+                        || !invite.instanceId().equals(room.instanceId())
+                        || invite.epoch() != room.inviteEpoch()) {
+                    send(member, new ControlMessage.RoomInviteRejected("invite unavailable", 0), requestId);
+                } else {
+                    joinRoom(member, room, invite, requestId);
+                }
+            }
+        }
+    }
+
+    private void joinRoom(Member member, SessionRegistry.RoomEntry room,
+                          InviteDirectory.Resolution invite, long requestId) {
         long now = clock.getAsLong();
         while (!member.joinRequests.isEmpty()
                 && now - member.joinRequests.peekFirst() >= JOIN_WINDOW_MILLIS) {
             member.joinRequests.removeFirst();
         }
+        String problem;
         if (member.joinRequests.size() >= JOIN_LIMIT) {
-            send(member, new ControlMessage.RoomJoinRejected("join rate limited"));
+            problem = "join rate limited";
+        } else {
+            member.joinRequests.addLast(now);
+            problem = joinProblem(member, room);
+        }
+        if (problem != null) {
+            send(member, new ControlMessage.RoomJoinRejected(problem), requestId);
             return;
         }
-        member.joinRequests.addLast(now);
-        SessionRegistry.RoomEntry room = registry.find(request.roomId()).orElse(null);
-        if (room == null) {
-            send(member, new ControlMessage.RoomJoinRejected("room not found"));
-            return;
-        }
-        if (!java.util.Objects.equals(member.determinismFingerprint,
-                room.determinismFingerprint())) {
-            send(member, new ControlMessage.RoomJoinRejected(
-                    "determinism fingerprint mismatch"));
-            return;
-        }
-        if (room.descriptor().verified()
-                && ladder.tierOf(member.fingerprint) != TrustLadder.Tier.TRUSTED) {
-            send(member, new ControlMessage.RoomJoinRejected(
-                    "verified rooms require TRUSTED"));
-            return;
-        }
-        boolean underPressure = room.descriptor().maxPlayers() > 0
-                && room.playerCount() * 5 >= room.descriptor().maxPlayers() * 4;
-        if (underPressure && ladder.tierOf(member.fingerprint) == TrustLadder.Tier.NEW) {
-            send(member, new ControlMessage.RoomJoinRejected("room under pressure"));
-            return;
-        }
-        member.joinGrantedRooms.grant(room.roomId(), now);
+        member.joinGrantedRooms.grant(room, now, invite);
         send(member, new ControlMessage.RoomJoinResult(room.roomId(), room.routing(),
                 "DIRECT".equals(room.routing()) ? room.hostAddress() : null,
                 room.directPort(), "DIRECT".equals(room.routing())
                 ? room.hostFingerprint() : masterIdentity.fingerprint(),
-                room.determinismFingerprint(), room.certificateSha256()));
+                room.determinismFingerprint(), room.certificateSha256(), room.instanceId(),
+                room.descriptor().accessPolicy(), room.accessEpoch(), room.inviteEpoch(),
+                invite == null ? 0 : invite.expiresAtMillis()), requestId);
     }
 
-    private void attach(Member member, String roomId) {
-        if (!member.joinGrantedRooms.consume(roomId, clock.getAsLong())) {
-            send(member, new ControlMessage.RoomJoinRejected("join not granted"));
+    private String joinProblem(Member member, SessionRegistry.RoomEntry room) {
+        if (room == null) return "room not found";
+        if (ladder.isBanned(member.fingerprint)) return "account sanctioned";
+        if (!java.util.Objects.equals(member.determinismFingerprint, room.determinismFingerprint())) {
+            return "determinism fingerprint mismatch";
+        }
+        if (room.descriptor().verified()
+                && ladder.tierOf(member.fingerprint) != TrustLadder.Tier.TRUSTED) {
+            return "verified rooms require TRUSTED";
+        }
+        // Directory counts are periodic discovery snapshots, not slot leases:
+        // a departure may already have freed capacity in the owning RoomHost.
+        // Keep the NEW-identity pressure policy; the room enforces actual capacity.
+        boolean underPressure = room.playerCount() * 5 >= room.descriptor().maxPlayers() * 4;
+        if (underPressure && ladder.tierOf(member.fingerprint) == TrustLadder.Tier.NEW) {
+            return "room under pressure";
+        }
+        return null;
+    }
+
+    private void attach(Member member, String roomId, long requestId) {
+        AttachGrant grant = member.joinGrantedRooms.consume(roomId, clock.getAsLong());
+        SessionRegistry.RoomEntry room = registry.find(roomId).orElse(null);
+        if (grant == null || room == null || !java.util.Objects.equals(grant.instanceId(), room.instanceId())
+                || grant.accessEpoch() != room.accessEpoch()
+                || grant.inviteEpoch() != room.inviteEpoch()
+                || grant.invite() != null && !invites.isCurrent(grant.invite())) {
+            send(member, new ControlMessage.RoomJoinRejected("join not granted"), requestId);
             return;
         }
-        SessionRegistry.RoomEntry room = registry.find(roomId).orElse(null);
-        if (room == null) {
-            send(member, new ControlMessage.RoomJoinRejected("room not found"));
+        String problem = joinProblem(member, room);
+        if (problem != null) {
+            send(member, new ControlMessage.RoomJoinRejected(problem), requestId);
             return;
         }
         if ("RELAY".equals(room.routing())) {
             boolean isNew = ladder.tierOf(member.fingerprint) == TrustLadder.Tier.NEW;
             relays.noteGuestTier(member.fingerprint, isNew);
-            if (!relays.attach(member.connection, roomId, member.fingerprint,
-                    member.displayName)) {
-                send(member, new ControlMessage.RoomJoinRejected("room not found"));
+            if (!relays.attach(member.connection, roomId, member.fingerprint, member.displayName)) {
+                send(member, new ControlMessage.RoomJoinRejected("room not found"), requestId);
                 return;
             }
-            attachResults.put(member.connection,
-                    new AttachResult(AttachMode.ROOM, roomId, -1));
+            attachResults.put(member.connection, new AttachResult(AttachMode.ROOM, roomId, -1));
         } else {
             OptionalInt guestId = tunnels.openGuest(roomId, member.connection);
             if (guestId.isEmpty()) {
-                send(member, new ControlMessage.RoomJoinRejected("relay unavailable"));
+                send(member, new ControlMessage.RoomJoinRejected("relay unavailable"), requestId);
                 return;
             }
             attachResults.put(member.connection,
                     new AttachResult(AttachMode.TUNNEL_GUEST, roomId, guestId.getAsInt()));
         }
+        cancelPendingCreates(member);
+        Member owner = room.lease() == null ? null : members.get(room.lease().source());
+        if (owner != null && room.hostFingerprint().equals(member.fingerprint)) {
+            owner.createdRequests.values().removeIf(created ->
+                    created.entry().roomId().equals(roomId) && created.entry().lease().equals(room.lease()));
+        }
         member.state = State.HANDED_OFF;
+    }
+
+    private RoomInviteService inviteService(SessionRegistry.RoomEntry registration) {
+        return (instanceId, accessEpoch, inviteEpoch, operation, membersCanInvite) -> {
+            CompletableFuture<ControlMessage.RoomInviteControlResult> result = new CompletableFuture<>();
+            try {
+                brokerLoop.execute(() -> {
+                    try {
+                        result.complete(applyInviteControl(registration.roomId(), registration.lease(),
+                                instanceId, accessEpoch, inviteEpoch, operation, membersCanInvite));
+                    } catch (RuntimeException failure) {
+                        result.completeExceptionally(failure);
+                    }
+                });
+            } catch (RuntimeException stopped) {
+                result.completeExceptionally(stopped);
+            }
+            return result;
+        };
+    }
+
+    private void controlInvite(Member member, ControlMessage.RoomInviteControl request, long requestId) {
+        try {
+            SessionRegistry.RoomEntry room = registry.find(request.roomId()).orElse(null);
+            if (room == null || !"DIRECT".equals(room.routing())) {
+                throw new InviteDirectory.UnavailableException(0);
+            }
+            send(member, applyInviteControl(request.roomId(), member.lease, request.instanceId(),
+                    request.accessEpoch(), request.inviteEpoch(), request.operation(),
+                    request.membersCanInvite()), requestId);
+        } catch (InviteDirectory.UnavailableException unavailable) {
+            send(member, new ControlMessage.RoomInviteRejected("invite unavailable",
+                    unavailable.retryAfterMillis()), requestId);
+        } catch (RuntimeException unavailable) {
+            send(member, new ControlMessage.RoomInviteRejected("invite unavailable", 0), requestId);
+        }
+    }
+
+    private ControlMessage.RoomInviteControlResult applyInviteControl(String roomId,
+            SessionRegistry.RegistrationLease lease, String instanceId, long accessEpoch,
+            long inviteEpoch, ControlMessage.InviteOperation operation, boolean membersCanInvite) {
+        SessionRegistry.RoomEntry room = registry.find(roomId).orElse(null);
+        if (room == null || !lease.equals(room.lease()) || !java.util.Objects.equals(room.instanceId(), instanceId)
+                || operation == null) {
+            throw new InviteDirectory.UnavailableException(0);
+        }
+        if (operation == ControlMessage.InviteOperation.FETCH && "DIRECT".equals(room.routing())
+                && room.inviteEpoch() == 0 && accessEpoch == room.accessEpoch() && inviteEpoch > 0) {
+            long floor = invites.seedEpochFloor(roomId, lease, inviteEpoch);
+            registry.updateAccess(roomId, lease, room.descriptor().accessPolicy(), accessEpoch, floor);
+            room = registry.find(roomId).orElseThrow();
+        }
+        AccessChange committed = accessChanges.get(roomId);
+        if (operation == ControlMessage.InviteOperation.ACCESS_CHANGED && committed != null
+                && lease.equals(committed.lease()) && instanceId.equals(committed.instanceId())
+                && accessEpoch == committed.accessEpoch() && inviteEpoch == committed.fromInviteEpoch()
+                && room.accessEpoch() == committed.accessEpoch()
+                && room.inviteEpoch() == committed.toInviteEpoch()) {
+            return inviteResult(room.descriptor().accessPolicy(), room.accessEpoch(),
+                    invites.current(roomId, lease));
+        }
+        boolean fetch = operation == ControlMessage.InviteOperation.FETCH;
+        long expectedAccessEpoch = operation == ControlMessage.InviteOperation.ACCESS_CHANGED
+                ? room.accessEpoch() + 1 : room.accessEpoch();
+        if (fetch && (accessEpoch > room.accessEpoch() || inviteEpoch > room.inviteEpoch())
+                || !fetch && (room.inviteEpoch() != inviteEpoch || accessEpoch != expectedAccessEpoch)) {
+            throw new InviteDirectory.UnavailableException(0);
+        }
+        long nextAccessEpoch = operation == ControlMessage.InviteOperation.ACCESS_CHANGED
+                ? accessEpoch : room.accessEpoch();
+        RoomAccessPolicy old = room.descriptor().accessPolicy();
+        RoomAccessPolicy policy = operation == ControlMessage.InviteOperation.SET_SHARING
+                ? new RoomAccessPolicy(old.mode(), membersCanInvite) : old;
+        boolean rotate = operation == ControlMessage.InviteOperation.ROTATE
+                || operation == ControlMessage.InviteOperation.ACCESS_CHANGED
+                || operation == ControlMessage.InviteOperation.SET_SHARING;
+        InviteDirectory.Invitation invitation = rotate
+                ? invites.rotate(roomId, lease) : invites.reveal(roomId, lease);
+        if (!registry.updateAccess(roomId, lease, policy, nextAccessEpoch, invitation.epoch())) {
+            throw new InviteDirectory.UnavailableException(0);
+        }
+        if (operation == ControlMessage.InviteOperation.ACCESS_CHANGED) {
+            accessChanges.put(roomId, new AccessChange(lease, instanceId, nextAccessEpoch,
+                    inviteEpoch, invitation.epoch()));
+        }
+        return inviteResult(policy, nextAccessEpoch, invitation);
+    }
+
+    private static ControlMessage.RoomInviteControlResult inviteResult(RoomAccessPolicy policy,
+            long accessEpoch, InviteDirectory.Invitation invitation) {
+        return new ControlMessage.RoomInviteControlResult(policy, new ControlMessage.RoomInvite(
+                invitation.code(), invitation.instanceId(), accessEpoch,
+                invitation.epoch(), invitation.expiresAtMillis()));
     }
 
     private void heartbeat(Member member, ControlMessage.Heartbeat heartbeat) {
         registry.find(heartbeat.roomId()).filter(room ->
-                room.hostFingerprint().equals(member.fingerprint))
+                member.lease.equals(room.lease()))
                 .ifPresent(room -> registry.heartbeat(room.roomId(), heartbeat.playerCount()));
     }
 
     private void updateTrack(Member member, ControlMessage.RoomTrackUpdate update) {
         SessionRegistry.RoomEntry room = registry.find(update.roomId()).orElse(null);
-        if (room == null || !room.hostFingerprint().equals(member.fingerprint)) {
+        if (room == null || !member.lease.equals(room.lease())) {
             strike(member, "unauthorized room track update");
             return;
         }
@@ -656,7 +1042,7 @@ public final class RoomBroker {
         SessionRegistry.RoomEntry room = registry.find(update.roomId()).orElse(null);
         // Relay descriptors come from RelayRoomManager; a creator cannot advertise a mode
         // that differs from the public host's enforced policy.
-        if (room != null && "DIRECT".equals(room.routing())) {
+        if (room != null && member.lease.equals(room.lease()) && "DIRECT".equals(room.routing())) {
             registry.updateChatMode(update.roomId(), member.fingerprint, update.mode());
         }
     }
@@ -670,10 +1056,17 @@ public final class RoomBroker {
 
     private void leaveRoom(Member member, String roomId) {
         SessionRegistry.RoomEntry room = registry.find(roomId).orElse(null);
-        if (room == null || !room.hostFingerprint().equals(member.fingerprint)) {
+        if (room == null || !member.lease.equals(room.lease())) {
             return;
         }
+        removeRoom(room);
+    }
+
+    private void removeRoom(SessionRegistry.RoomEntry room) {
+        String roomId = room.roomId();
         registry.remove(roomId);
+        invites.remove(roomId, room.lease());
+        accessChanges.remove(roomId);
         if ("RELAY".equals(room.routing())) {
             relays.hostLeft(roomId);
         } else {
@@ -699,6 +1092,7 @@ public final class RoomBroker {
         attachResults.remove(member.connection);
         tokens.revoke(member.token);
         tokenFingerprints.remove(member.token);
+        cancelPendingCreates(member);
         removeHostedRooms(member);
         member.connection.close(reason);
     }
@@ -708,7 +1102,9 @@ public final class RoomBroker {
             return;
         }
         for (SessionRegistry.RoomEntry room
-                : registry.removeByHostFingerprint(member.fingerprint)) {
+                : registry.removeByLease(member.lease)) {
+            invites.remove(room.roomId(), room.lease());
+            accessChanges.remove(room.roomId());
             if ("RELAY".equals(room.routing())) {
                 relays.hostLeft(room.roomId());
             } else {
@@ -719,5 +1115,9 @@ public final class RoomBroker {
 
     private static void send(Member member, ControlMessage message) {
         member.connection.sendText(ControlCodec.encode(null, message));
+    }
+
+    private static void send(Member member, ControlMessage message, long requestId) {
+        member.connection.sendText(ControlCodec.encode(null, message, requestId));
     }
 }

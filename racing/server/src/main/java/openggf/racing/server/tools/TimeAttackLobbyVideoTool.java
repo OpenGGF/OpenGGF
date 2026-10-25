@@ -214,6 +214,10 @@ public final class TimeAttackLobbyVideoTool {
         capture.tap(GLFW_KEY_RIGHT);                             // HOST LAN
         for (int i = 0; i < 4; i++) capture.tap(GLFW_KEY_DOWN); // past policy, window and vote pool
         capture.tap(GLFW_KEY_ENTER);                             // CREATE LAN ROOM
+        await(() -> safe(() -> field(scene, "accessView") != null), 120, "room access");
+        capture.tap(GLFW_KEY_DOWN);
+        capture.tap(GLFW_KEY_DOWN);
+        capture.tap(GLFW_KEY_ENTER);
         await(() -> state().equals("LOBBY"), 1200, "the lobby");
         chapter("Lobby level loading");
         await(() -> capture.engine().getCurrentGameMode() == GameMode.LEVEL, 1200, "the lobby level");

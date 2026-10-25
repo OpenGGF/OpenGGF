@@ -346,3 +346,272 @@ pre-existing dirty reference submodules and five untracked user files retain
 their original status. Required execution evidence is reused rather than rerun
 for integration alone. Push and task-checkout retirement are recorded in the
 parent's delivery result and temporary-agent lifecycle record.
+
+## Alternate AIZ trailing-ring investigation (October 25, source d3fa3d519)
+
+Investigation only: the engine publishes the destination ring bank too early in
+`FreshLevelTransitionBoundaryController.publishInitial()`. No production repair
+is included. The isolated checkout was clean at the requested full SHA
+`d3fa3d519f6acb7285d538b5f972807036f1019e`, branch
+`bugfix/ai-aiz-trailing-rings-investigation-20261025`, worktree `t3-70b923f5`.
+Hooks were installed; main and other checkouts were not changed. Historical
+qualification at `53b4d0363`/`94c75d8a8` was not reused as current execution.
+Historical introducer `71b357e7ae0586b28b9077a86c4f263a76841f46` deliberately
+paired destination rings with player publication; `ec1d6b8dc` subsequently
+identified the remaining alternate ring-reset staging frontier. Both were read
+before any diagnostic adaptation.
+
+The original `${ROM_ROOT}/{s1,s2,s3k}.gen` files were
+verified against the repository CRC32/SHA-1 identities. In particular S3&K was
+CRC32 `63522553`, SHA-1 `cfbf98c36c776677290a872547ac47c53d2761d6`.
+The immutable input SHA-256 identities were:
+
+- `traces/s3k/aiz_completerun/metadata.json`:
+  `93f47c154d0bc83cf38a2a3c4b987a13a7796dd92cfae1508b58b61c0d1d8de4`.
+- `traces/s3k/aiz_completerun/physics.csv.gz`:
+  `1b60c8120b60aaf815e42123a58307e1b088201da6d6767c9703e40d16a51ce8`.
+- `traces/s3k/aiz_completerun/aux_state.jsonl.gz`:
+  `e580a0d5cf616cbc8ffbe0f46d565cf9a9ff2425a4ee5156da1f6af5ac6829bb`.
+- `traces/s3k/_movies/s3k-complete-sonic-tails.bk2`:
+  `82eabfbc65e33c160ce209baa1ca3f967cb677fe22350bc100625d8c41a8e1bf`.
+
+These paths are relative to `src/test/resources/`. Disassembly pin was
+`8b2cf3c4178f2382f844da67798de4befc50c5e0`; TraceChaser pin was
+`322851cbfa2e1c1803332142e11ab74b4eb34eea`.
+
+### Reproduction, clocks and native control
+
+The focused command, from the owned checkout, was the following, with
+`ROM_ROOT` set to the original absolute main-checkout ROM directory (no copies
+or links). `BIZHAWK_HOME` below denotes that main checkout's existing
+`docs/BizHawk-2.11-linux-x64` installation. Machine-specific home paths are
+expressed as variables to obey repository prose policy:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u JDK_JAVA_OPTIONS -u JAVA_TOOL_OPTIONS -u _JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk PATH=/usr/lib/jvm/java-25-openjdk/bin:$PATH \
+  LUA_BIN=/usr/bin/lua5.4 ALSOFT_DRIVERS=null \
+  python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  -Dsonic1.rom.path=${ROM_ROOT}/s1.gen \
+  -Dsonic2.rom.path=${ROM_ROOT}/s2.gen \
+  -Ds3k.rom.path=${ROM_ROOT}/s3k.gen \
+  -Ptrace-segments '-Dtest=TestS3kAizZoneSliceTraceReplay#replayMatchesTrace' test -B
+```
+
+The unchanged baseline finished 19:21:37 UTC: Maven exit 1, **one physical case,
+one failure, zero errors/skips**, 26,041 compared frames, exactly one
+non-cascading physics span at row 26179 `rings` 72/0. Animation, bootstrap and
+warnings were zero. Physical XML identifies precisely `replayMatchesTrace`;
+fork properties confirm Java `25.0.5.0.2` and EGL. Maven time was 1:32, queue
+wait 0, execution lease 93.5 seconds. The same command with
+`OGGF_RINGS_PROBE=1` and passive prints in the replay loop, boundary controller
+and `LevelManager.initPlayerAndCheckpoint()` finished 19:26:44 UTC with exactly
+the same counts/frontier: Maven 1:34, queue 28.8 seconds, lease 95.3 seconds,
+physical case duration 12.548 seconds (baseline 12.308). No comparator,
+fixture, tolerance or gameplay value was changed. Prints were removed afterward.
+
+`TraceFrame.parseCsvRow`/`parseV5Row` parse frame/rings/counters as hexadecimal. Row 26179 is
+CSV frame `$6643`, **the last compared state-change row**, not the physical tail.
+There are 26,228 physical rows, ending at index 26227/frame `$6673`.
+`TraceExecutionModel.deriveSonic3kPhase()` classifies row 26179 as
+`FULL_LEVEL_FRAME` because position changes with unchanged LF/lag; later rows
+are `VBLANK_ONLY`, including the final reset. `stateEquals()` excludes rings,
+and `shouldCompareGameplayStateForReplay()` omits VBlank-only rows. S3K's
+comparison helper retains the current row's strict rings. The one-row report
+therefore does not establish that the disagreement lasts only one hardware frame.
+
+The producer observes completed hardware frame `941 + 1 + row`; its input is
+BK2 index `941 + row` (TraceChaser `S3KCompleteRunSegmenter`/capture-loop
+contract). Thus row 26179 is completed native frame 27121/input index 27120;
+row 26227 is completed frame 27169/input 27168. The engine's previous-input
+selection for the recorded pre-level prefix is separate from these labels.
+The passive print's input index was calculated from that contract, not a direct
+read of the private driver cursor. At row 26179 the observed recording-driver
+execution count changes 26109→26110, while SpriteManager LF and ObjectManager
+execution count remain zero. These are not native V-int or movie clocks.
+
+The independent temporary C# observer used the pinned TraceChaser
+`GpgxHost.Open`, original BK2 `SyncSettings`/sequential button rows, `Advance()`
+and read-only execute callbacks. It built through
+`BIZHAWK_HOME="$BIZHAWK_HOME" tools/tracechaser/bizhawk-headless/build.sh`.
+The installed runtime's managed 2.11 identity/preflight was verified. Its Mono
+launch used that existing runtime's `dll` for `MONO_PATH`/`LD_LIBRARY_PATH`, an
+owned `target/native-bizhawk-data` for `BIZHAWK_DATA_HOME`, no display or live
+audio, and `maven_queue.maven_slot(..., kind='native-rings-observer', estimate=60)`
+with the unchanged default 7 GiB/8-core reservation. No native or engine RAM was
+written. This was observation, not trace production/publication or pixel evidence.
+
+The first native launch omitted `BIZHAWK_HOME` in its child environment and
+failed closed in `BizHawkInstallation.Validate` before opening the ROM: exit 1,
+no advanced frames (queue 64.2 seconds). After repairing that prerequisite, one
+launch completed at 19:30:12 UTC with exit 0 and `COMPLETE frames=27172`, queue
+55.8 seconds, execution lease 80.6 seconds. Its temporary wrapper called
+`sys.exit(0)` inside the lease context, so queue telemetry labels the context
+`interrupted`; the native child's exit/complete marker and observations establish
+its completed scope, not that telemetry label.
+
+All **150 overlapping frame-end rows 26078–26227**, six field groups per row
+(rings, LF, V-int low word, lag count, player XY, camera XY), matched the committed
+fixture exactly: 900 group comparisons, zero differences. Native callbacks prove:
+
+- During advancement to 27121/row 26179, `loc_6310` begins with rings 72 and
+  zeroed player positions. `Get_LevelSizeStart` publishes `$0280,$0020` and
+  `$01E0,$0000` camera, then `loc_7870` waits with three terrain modules and
+  rings still 72. Frame-end PC `$001D1C` is in `Wait_VSync`.
+- Terrain modules are zero by row 26208, but rings remain 72. Subsequent samples
+  execute synchronous CPU setup/decompression, including lag VBlanks and later
+  PLC submission. Queue-empty is demonstrably not the counter reset edge.
+- During advancement to 27169/physical row 26227, PC `$63BC` immediately before
+  `move.w d0,(Ring_count).w` observes 72; PC `$63C0` immediately afterward
+  observes 0. Both have V-int `$69F9`, LF 0, `Last_star_post_hit=0` and module
+  count 0. The original ROM bytes at `$63B4` are
+  `7000 4A38 FE2A 6648 31C0 FE20 21C0 FE22`; the write's address/operand and
+  zero-starpost branch were checked against the original ROM.
+
+Execute callbacks expose the *previous* `CompletedFrame` while the next frame
+is advancing. The probe also recorded its independently assigned `advancingTo`;
+the reset belongs to row 26227, not the callback's previous completed-row label
+26226. The before/after instruction observations are the disconfirming control
+against a recorder-only or HUD-only explanation. `Ring_count` is the actual
+`$FFFE20` global bank, not an engine display latch. Native fresh title setup has
+not yet spawned ordinary player code at the early position publication; these
+observations do not demonstrate damage or a loss during playable gameplay.
+`HUD_DrawInitial` separately writes literal zero digits, so displayed digits
+cannot stand in for the retained bank.
+
+### Production owner map and finite corrective boundary
+
+The native order is explicit in `loc_6310 (sonic3k.asm:7788-7801)`:
+`Get_LevelSizeStart`, `DeformBgLayer`, blocking `LoadLevelLoadBlock`, synchronous
+`LoadLevelLoadBlock2`, then `j_LevelSetup`. Only afterward does
+`loc_63B4 (sonic3k.asm:7826-7835)` clear the no-starpost counters, before
+`loc_6468 (sonic3k.asm:7880-7887)` calls `SpawnLevelMainSprites` and the initial
+object pass. `loc_7870 (sonic3k.asm:9772-9780)` is the terrain module wait;
+`LoadLevelLoadBlock2 (sonic3k.asm:38714-38782)` decodes block/chunk streams and
+loads layout/PLC/palette; `j_LevelSetup (sonic3k.asm:38706-38708)` calls
+`LevelSetup`, whose implementation starts at line 102231.
+
+Current engine owners represent the data and some boundaries, but **no equivalent
+post-module synchronous CPU-setup/reset completion edge was found**:
+
+- Data for `LoadLevelLoadBlock2` is already decoded by
+  `Sonic3k.buildLevel()`/`Sonic3kLevel` construction: resource-plan chunk/block
+  operations, `loadChunksWithCollision`, `loadBlocksWithPlan`, `loadMap`, palette
+  and boundary loads. Prepared builds may do this on the resource worker and
+  `installPreparedLevel()` publishes it. This host decoding is not a native
+  CPU-service completion callback after the terrain wait.
+- The late `LoadLevelLoadBlock` **art** producer is
+  `Sonic3kTitleCardManager.publishFreshLevelRuntimeArtHandoffIfNeeded()` →
+  `Sonic3k.queueFreshLevelRuntimeArt()` → `S3kRuntimeArtCoordinator`'s module
+  queue. Its PRE_MAIN_LOOP/other hardware service callbacks retire prepared
+  art jobs. `freshLevelArtWaitsForModuleQueue()` reads physical module occupancy;
+  it does not execute or account for `LoadLevelLoadBlock2`/`j_LevelSetup`.
+- Setup effects are distributed through `Sonic3kLevelInitProfile.levelLoadSteps`,
+  `LevelManager.initLevelEventsForLevel()`/`Sonic3kLevelEventManager`, camera and
+  zone setup. `prepareInitialLevelScroll()` models the initial deformation
+  through `InitialProcessSpritesExecutor`; it is not a synchronous CPU setup
+  completion signal. S3K inherits `LevelInitProfile.completeInitialPresentationPlcs()`'s
+  no-op, so that existing hook cannot authenticate this missing edge either.
+- `LevelManager.initPlayerAndCheckpoint()` replaces `LevelGamestate` during
+  load. `resetPlayerForLevelStart()` selects fresh/checkpoint rings; the boundary
+  saves that destination count and restores source 72 at row 26107. This
+  replacement is not the lasting loss. `publishInitial()` later calls
+  `publishDestinationRings()` at row 26179, prematurely writing saved zero.
+  `complete()` skips that write when `initialPublished` is true.
+- `spawnPlayerAtStartPosition`, `spawnSidekicks` and zone-player setup prepare
+  the destination players during the load. The boundary captures/holds them;
+  `publishInitial()` exposes the initial position; `complete()` restores their
+  full state and dispatches the retained `InitialProcessSpritesLifecycle` via
+  `consumePendingInitialProcessSpritesPass()`/`InitialProcessSpritesExecutor`.
+  Live `GameLoopTitleCardLifecycle` and `RecordingFrameDriver` both call the
+  shared publication owner. Their publication/completion predicates currently
+  follow terrain-start/module occupancy. Neither is the missing post-CPU edge.
+
+A repair must separate start-position publication from the destination-counter
+publication at the **native post-terrain CPU-setup boundary**, before the initial
+spawn/dispatch. The finite next scope is to represent/authenticate that existing
+native setup progression in its S3K production load owner, then route an
+exactly-once counter-publication operation through the shared transition boundary.
+The destination value remains the profile/policy-selected bank, including
+nonzero/checkpoint/return semantics; do not hardcode zero. Its independent
+publication phase must be captured/restored alongside the existing initial-player
+phase. Preserve S1/S2, omitted presentation and no-title continuation consumers.
+
+**Rejected shortcut:** merely remove the initial write and put it in `complete()`.
+No `complete()` call occurred through physical row 26227 in the passive replay;
+that change could make the existing comparator green while silently omitting the
+native tail reset. Queue-empty alone would also reset early (row 26208 here).
+A fixture row, lag count or fitted elapsed delay supplies no production authority.
+There is no reviewed implementation for the missing CPU edge in this investigation.
+
+Required negative controls for subsequent work: a non-72 source bank must survive
+start-position publication and held terrain/setup; the actual production bank must
+then receive its selected destination value at the reset edge **including physical
+VBLANK_ONLY tail observations**, with no repeated publication after a later write.
+Exercise a selected nonzero destination/checkpoint bank, repeat publication and
+completion, restore independently before/after player and counter publication,
+and replay the initial object dispatch exactly once. Preserve S1/S2 and no-title
+continuation behavior. `TestFreshLevelBoundaryRewindHeadless` currently asserts
+zero at early publication and no reset at completion; those expectations came
+from the mistaken pairing and need source-backed revision, not fixture tolerance.
+The current implementation is the early-reset negative; a candidate that simply
+never resets must fail the tail control. This does not attribute HCZ's separate returned-hand or drowning frontiers to
+the reset defect. HCZ's lead owns any combined campaign qualification; no canonical, broad smoke, CI, push or PR work was run here.
+
+All passive Java edits were restored byte-for-byte to the starting commit.
+Temporary native probe/build and consumed XML/trace diagnostics are removed after
+inspection. Only this evidence prose is retained; parent owns review, integration
+and worktree retirement. The causal defect is established; the source-backed
+post-CPU progression representation remains the explicit implementation gap.
+
+## Native-frontier investigations and Sideways council disposition
+
+The follow-up began at `d3fa3d519f6acb7285d538b5f972807036f1019e` and
+requested two Sol investigations plus an Astra/Fable/Sol/Opus architecture
+council. HCZ's Sol lead used two read-only Sol helpers; the alternate AIZ
+investigator worked alone. The four architecture candidates were independent,
+followed by a fresh Opus cross-review and parent synthesis. Architecture work
+ran no builds, tests or native probes. This delivery contains documentation only.
+
+The two investigative commits are `4576d1df1904623d1cfee50a9bed516cbef75a99`
+(HCZ) and `dc839afe1e4fd5c692af755894824535000db597` (alternate rings).
+Their measured inputs remain the pinned runtime, not this later documentation
+composition. Source and test diagnostics were consumed; the recorded commands,
+identities, failures and causal limits are preserved in their existing artifacts.
+
+| Work | Finding and next boundary | Priority and complexity |
+| --- | --- | --- |
+| Returned HCZ continuity | The hand launcher omits its post-motion solid check; the eventual ownership stop is a real drowning/death restart. Repair and qualify the narrow launcher phase before attributing downstream divergences. | Highest campaign urgency. The first repair is bounded; whole-HCZ closure remains an uncertain larger investigation. |
+| Alternate AIZ rings | Position publication clears the actual bank too early. Native reset follows additional CPU setup for which no equivalent production edge was found. | Required for strict transition fidelity. Shared timing/lifecycle work makes it more substantial than moving one assignment. No playable damage loss was demonstrated. |
+| S2 Sideways | Both failed-allocation aliases and surviving admitted links need physical coordinate semantics across clear/reuse. | Medium overall, high conditional impact; natural occurrence is unmeasured. High architecture/verification complexity. Establish the complete representation contract before implementation. |
+
+The [HCZ evidence](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#returned-hcz-landing-and-death-reload-attribution--2026-10-25)
+separates the first landing cause from later drowning. Historical foreign repair
+`5096be6cc1b7b8bbc9bcc9bf0646803ab7e9f5b5` was inspected, not integrated.
+No result proves the launcher alone explains the death or certifies the outgoing
+HCZ campaign boundary. The alternate reset remains independently attributed.
+
+The [Sideways synthesis](../designs/2026-10-25-s2-sideways-storage.md)
+selects physical coordinates and one manager-mounted fixed-cell authority with
+complete occupant contracts. It retains explicit world lineage/capabilities,
+named clear/carry operations, independent fixed dispatch/DPLC, and a single
+composed restore authority. It rejects the initial candidates' unknown-occupant
+throws, opaque creator state, animation caps, nullable ignored restores and
+blanket clear-on-manager-reset rules. A wholesale canonical-field migration is
+not the default; it remains a reconsideration if exact single-owner live fields
+cannot express the demonstrated native domain.
+
+No candidate was implementation-ready. The finite prerequisite is an inventory
+of actual native writers/aliases and supported admissions, ROM consumer bounds,
+clear/install/carry callers, snapshot writers, creator/API migration and admitted
+single-member retirement. The thirteen-byte tail read is not the entire scope:
+the child's `$36` cross-write and physical endpoint deletion also matter.
+Two-player behavior and unusual mapping/DMA presentation remain unqualified;
+they cannot be silently excluded to declare the supported repair complete.
+
+The recommended implementation order is the narrow HCZ launcher correction,
+the independently scoped load/reset representation, and Sideways after its
+representation gate. This order does not authorize importing broader historical
+compositions or weakening trace comparisons. This investigation/design round
+lands no gameplay fix and changes no fixture, comparison, API or release gate.

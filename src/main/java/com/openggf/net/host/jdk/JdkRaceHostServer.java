@@ -21,8 +21,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.LongSupplier;
 import javax.net.ssl.SSLContext;
@@ -49,6 +49,8 @@ import javax.net.ssl.SSLContext;
  */
 @com.openggf.game.ModApi
 public final class JdkRaceHostServer implements RaceRoomHost {
+    private enum Lifecycle { OPEN, CLOSING, RETIRING_ROOM, CLOSED }
+
     private final RoomHost room;
     private final JdkHostLimits limits;
     private final SSLContext tls;
@@ -58,7 +60,7 @@ public final class JdkRaceHostServer implements RaceRoomHost {
     private final ConnectionHygiene.ConnectionCounter perAddress;
     private final Set<WebSocketConnection> connections = ConcurrentHashMap.newKeySet();
     private final Set<Thread> ioThreads = ConcurrentHashMap.newKeySet();
-    private final AtomicBoolean closed = new AtomicBoolean();
+    private final AtomicReference<Lifecycle> lifecycle = new AtomicReference<>(Lifecycle.OPEN);
     private final AtomicInteger nextConnectionId = new AtomicInteger();
     private final System.Logger logger = System.getLogger(JdkRaceHostServer.class.getName());
     private volatile Thread roomThread;
@@ -131,24 +133,35 @@ public final class JdkRaceHostServer implements RaceRoomHost {
             }
         }
         RoomHost room = new RoomHost(config, hostIdentity, clockMillis, profiles);
+        try { room.ready().join(); }
+        catch (RuntimeException unavailable) {
+            room.close("room initialization failed");
+            throw new IllegalStateException("room initialization failed");
+        }
         ServerSocket listening = null;
+        JdkRaceHostServer host = null;
         try {
             listening = new ServerSocket();
             listening.setReuseAddress(true);
             listening.bind(new InetSocketAddress(port));
-        } catch (IOException e) {
-            closeQuietly(listening);
-            throw new UncheckedIOException("cannot bind race host port " + port, e);
-        }
-        JdkRaceHostServer host = new JdkRaceHostServer(room, limits, context, pin, listening);
-        try {
-            host.roomExecutor.scheduleAtFixedRate(() -> host.guarded("room tick", room::tick),
+            host = new JdkRaceHostServer(room, limits, context, pin, listening);
+            JdkRaceHostServer started = host;
+            host.roomExecutor.scheduleAtFixedRate(() -> started.guarded("room tick", room::tick),
                     limits.tickMillis(), limits.tickMillis(), TimeUnit.MILLISECONDS);
             host.acceptor = host.startIoThread("race-host-accept-" + listening.getLocalPort(),
                     host::acceptLoop);
             return host;
+        } catch (IOException e) {
+            closeQuietly(listening);
+            room.close("host startup failed");
+            throw new UncheckedIOException("cannot bind race host port " + port, e);
         } catch (RuntimeException | Error e) {
-            host.close();
+            if (host != null) {
+                host.close();
+            } else {
+                closeQuietly(listening);
+                room.close("host startup failed");
+            }
             throw e;
         }
     }
@@ -166,11 +179,22 @@ public final class JdkRaceHostServer implements RaceRoomHost {
     @Override
     public void execute(Runnable task) {
         Objects.requireNonNull(task, "task");
-        if (closed.get()) {
+        Lifecycle state = lifecycle.get();
+        if (state != Lifecycle.OPEN) {
+            // Tunnel close synchronously reports its disconnect through this same owner.
+            if (state == Lifecycle.RETIRING_ROOM && Thread.currentThread() == roomThread) {
+                task.run();
+                return;
+            }
             throw new IllegalStateException("race host is closed");
         }
         try {
-            roomExecutor.execute(() -> guarded("room task", task));
+            roomExecutor.execute(() -> {
+                Lifecycle current = lifecycle.get();
+                if (current == Lifecycle.OPEN || current == Lifecycle.CLOSING) {
+                    guarded("room task", task);
+                }
+            });
         } catch (RejectedExecutionException e) {
             throw new IllegalStateException("race host is closed", e);
         }
@@ -183,7 +207,7 @@ public final class JdkRaceHostServer implements RaceRoomHost {
 
     @Override
     public void close() {
-        if (!closed.compareAndSet(false, true)) {
+        if (!lifecycle.compareAndSet(Lifecycle.OPEN, Lifecycle.CLOSING)) {
             return;
         }
         long deadline = System.nanoTime()
@@ -197,26 +221,40 @@ public final class JdkRaceHostServer implements RaceRoomHost {
         for (WebSocketConnection connection : connections) {
             connection.abort();
         }
-        // Readers queue their onDisconnected before exiting; wait for them before shutdown.
+        if (Thread.currentThread() == roomThread) {
+            retireRoom();
+        } else {
+            roomExecutor.execute(this::retireRoom);
+        }
         while (!ioThreads.isEmpty() && System.nanoTime() < deadline) {
             for (Thread thread : ioThreads) {
                 interrupted |= joinUntil(thread, deadline);
             }
         }
-        roomExecutor.shutdown();
         if (Thread.currentThread() != roomThread) {
             try {
                 long remaining = Math.max(0L, deadline - System.nanoTime());
                 if (!roomExecutor.awaitTermination(remaining, TimeUnit.NANOSECONDS)) {
-                    roomExecutor.shutdownNow();
+                    // Keep queued retirement so an interrupted task cannot strand the room.
+                    roomThread.interrupt();
                 }
             } catch (InterruptedException e) {
                 interrupted = true;
-                roomExecutor.shutdownNow();
+                roomThread.interrupt();
             }
         }
         if (interrupted) {
             Thread.currentThread().interrupt();
+        }
+    }
+
+    private void retireRoom() {
+        lifecycle.set(Lifecycle.RETIRING_ROOM);
+        try {
+            room.close("host closed");
+        } finally {
+            lifecycle.set(Lifecycle.CLOSED);
+            roomExecutor.shutdown();
         }
     }
 
@@ -291,12 +329,12 @@ public final class JdkRaceHostServer implements RaceRoomHost {
     // ---- internals ----
 
     private void acceptLoop() {
-        while (!closed.get()) {
+        while (lifecycle.get() == Lifecycle.OPEN) {
             Socket socket;
             try {
                 socket = serverSocket.accept();
             } catch (IOException e) {
-                if (closed.get() || serverSocket.isClosed()) {
+                if (lifecycle.get() != Lifecycle.OPEN || serverSocket.isClosed()) {
                     return;
                 }
                 logger.log(System.Logger.Level.WARNING, "race host accept failed", e);

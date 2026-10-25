@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/** The race lobby scene view: host start, chat, history/invite page, votes and leave. */
+/** The race lobby scene view: host start, chat, private invite actions, votes and leave. */
 class TestRaceLobbyView {
     private static final ControlMessage.RoundConfig ROUND =
             new ControlMessage.RoundConfig("s2", 0, 0, 300, "OPEN", null);
@@ -261,7 +261,7 @@ class TestRaceLobbyView {
     }
 
     @Test
-    void hostInvitePageShowsTheCompleteTemplate() {
+    void historyDoesNotDiscloseTheLegacyManualInvite() {
         String invite = "HOST_IP:27888#" + "Ab-_".repeat(21) + "AB";
         RaceLobbyView lobby = view(joinedSession(), true, invite);
         input.tapUp(lobby::update); // Invite/history
@@ -269,7 +269,9 @@ class TestRaceLobbyView {
         RecordingSceneCanvas canvas = new RecordingSceneCanvas(320);
         lobby.draw(canvas);
         String joined = String.join("", canvas.lines);
-        assertTrue(joined.contains(invite), canvas.joined());
+        assertFalse(joined.contains(invite), canvas.joined());
+        assertFalse(joined.contains("HOST_IP"), canvas.joined());
+        assertFalse(joined.contains("lan-invite.txt"), canvas.joined());
     }
 
     @Test
@@ -436,6 +438,23 @@ class TestRaceLobbyView {
                 "without a level behind, the page clears the screen first");
     }
     @Test
+    void hostsAndMembersHaveAnExplicitInviteAction() {
+        for (boolean host : new boolean[] {false, true}) {
+            RaceLobbyView lobby = view(joinedSession(), host, null);
+            AtomicInteger opens = new AtomicInteger();
+            lobby.setInviteAction(opens::incrementAndGet);
+            input.tapKey(lobby::update, SceneKeys.I);
+            assertEquals(1, opens.get());
+            for (int width : new int[] {320, 400, 640}) {
+                RecordingSceneCanvas canvas = new RecordingSceneCanvas(width);
+                lobby.draw(canvas);
+                canvas.assertFillsOnScreen();
+                assertTrue(lobby.screen(width, 224).plain().contains("ROOM INVITE"));
+            }
+        }
+    }
+
+    @Test
     void fullOffersTypedAndQuickWhileQuickHasOnlyTheCannedChooser() {
         ClientRaceSession session = joinedSession();
         RaceLobbyView lobby = view(session, false, null);
@@ -460,6 +479,8 @@ class TestRaceLobbyView {
     void modeChangesCloseOpenComposersAndOffKeepsRoomDetailsAndInvites() {
         ClientRaceSession session = joinedSession();
         RaceLobbyView lobby = view(session, false, "HOST_IP:27888#invite");
+        AtomicInteger opens = new AtomicInteger();
+        lobby.setInviteAction(opens::incrementAndGet);
         input.tapDown(lobby::update);
         input.tapEnter(lobby::update);
         assertTrue(lobby.isEditingChat());
@@ -474,11 +495,16 @@ class TestRaceLobbyView {
         input.idle(lobby::update);
         assertFalse(lobby.isShowingQuickChat());
         assertFalse(lobby.screen(320, 224).plain().contains("QUICK CHAT"));
+        assertTrue(lobby.screen(320, 224).plain().contains("ROOM INVITE"));
         input.tapUp(lobby::update);
         input.tapEnter(lobby::update);
         RecordingSceneCanvas canvas = new RecordingSceneCanvas(320);
         lobby.draw(canvas);
-        assertTrue(String.join("", canvas.lines).contains("HOST_IP:27888#invite"));
+        assertTrue(canvas.joined().contains("Room chat is off"), canvas.joined());
+        assertFalse(canvas.joined().contains("HOST_IP:27888#invite"), canvas.joined());
+        input.tapEscape(lobby::update);
+        input.tapKey(lobby::update, SceneKeys.I);
+        assertEquals(1, opens.get());
         assertTrue(sent.isEmpty());
     }
 
@@ -486,6 +512,8 @@ class TestRaceLobbyView {
     void personalDisableHidesBothKindsFromCardAndDetailsButStillAllowsSending() {
         ClientRaceSession session = joinedSession();
         RaceLobbyView lobby = view(session, false, "HOST_IP:27888#invite");
+        AtomicInteger opens = new AtomicInteger();
+        lobby.setInviteAction(opens::incrementAndGet);
         session.onControl(new ControlMessage.ChatBroadcast(1, "Player", "typed secret"));
         session.onControl(new ControlMessage.QuickChatBroadcast(1, "Player", "BRUTAL", "s2", 0, 0));
         String shown = lobby.screen(320, 224).plain();
@@ -503,11 +531,15 @@ class TestRaceLobbyView {
         assertFalse(hidden.contains("typed secret"), hidden);
         assertFalse(hidden.contains("Brutal"), hidden);
         assertTrue(hidden.contains("QUICK CHAT"), hidden);
+        assertTrue(hidden.contains("ROOM INVITE"), hidden);
         lobby.draw(canvas);
         assertFalse(canvas.drewName("Player: typed secret", 12, 0xFFFFFFFF));
         assertFalse(canvas.drewName("Player: Brutal!", 12, 0xFFFFFFFF));
-        assertTrue(String.join("", canvas.lines).contains("HOST_IP:27888#invite"));
+        assertTrue(canvas.joined().contains("Chat hidden in Engine Settings"), canvas.joined());
+        assertFalse(canvas.joined().contains("HOST_IP:27888#invite"), canvas.joined());
         input.tapEscape(lobby::update);
+        input.tapKey(lobby::update, SceneKeys.I);
+        assertEquals(1, opens.get());
         input.tapDown(lobby::update); // History -> Ready
         input.tapDown(lobby::update); // typed chat remains available
         input.tapEnter(lobby::update);
@@ -567,10 +599,11 @@ class TestRaceLobbyView {
                 new ControlMessage.PlayerInfo(0, "abcdef", "Owner", "sonic"),
                 new ControlMessage.PlayerInfo(1, "123456", "A waiting racer with a long name", "tails"))));
         RaceLobbyView lobby = viewWithProfile(session, new openggf.timeattack.TimeAttackSettings(), true);
+        lobby.setInviteAction(() -> { });
         lobby.showStatus("Waiting for the next round");
         for (int width : new int[] {320, 400}) {
             RaceLobbyScreen.Screen screen = lobby.screen(width, 224);
-            assertEquals(8, screen.cards().stream().flatMap(card -> card.rows().stream())
+            assertEquals(9, screen.cards().stream().flatMap(card -> card.rows().stream())
                     .filter(RaceLobbyScreen.Action.class::isInstance).count());
             RecordingSceneCanvas canvas = new RecordingSceneCanvas(width);
             lobby.draw(canvas);

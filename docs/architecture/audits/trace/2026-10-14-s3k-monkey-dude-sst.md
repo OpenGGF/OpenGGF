@@ -7982,3 +7982,164 @@ be consumed only after normal preservation and fullsize/SHA prechecks, with
 all59current class hashes/mtimes preserved. Source/config/native/API pins stay
 exact. No canonical3475 caller, route/native-at-PC/rewind/fullguard/otherfrontier
 proof follows. R80's conditional original canonical measurement is separate.
+
+## Returned HCZ landing and death-reload attribution — 2026-10-25
+
+Bounded investigation in `bugfix/ai-hcz-continuity-investigation-20261025`,
+owned checkout `t3-43f29579`, starting clean at
+`d3fa3d519f6acb7285d538b5f972807036f1019e`, exactly the parent's pinned base.
+Hooks were installed. Runtime, fixtures, comparisons and timing authority were
+never edited. Two bounded Sol helpers independently read history/native source;
+neither ran tests or changed files. Historical `53b4d0363` / delivered
+`94c75d8a8` counts were not treated as current verification.
+
+### Current baseline and commands
+
+Physical Surefire XML confirms Java 25.0.5.0.2, CLI surfaceless EGL, original
+absolute ROM paths and this checkout's working directory. The original main
+checkout's `{s1,s2,s3k}.gen` bytes match all CRC32/SHA-1 identities in `AGENTS.md`;
+no ROM copy/link was made. `ROM_ROOT` below resolves that original checkout.
+Exact commands:
+
+```bash
+ROM_ROOT="$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")"
+q() {
+  env -u DISPLAY -u WAYLAND_DISPLAY -u JDK_JAVA_OPTIONS -u JAVA_TOOL_OPTIONS -u _JAVA_OPTIONS \
+    JAVA_HOME=/usr/lib/jvm/java-25-openjdk PATH=/usr/lib/jvm/java-25-openjdk/bin:$PATH \
+    LUA_BIN=/usr/bin/lua5.4 ALSOFT_DRIVERS=null \
+    python3 tools/testing/maven_queue.py -Dmse=off \
+    -Dopenggf.headless.gl=surfaceless-egl \
+    "-Dsonic1.rom.path=$ROM_ROOT/s1.gen" \
+    "-Dsonic2.rom.path=$ROM_ROOT/s2.gen" \
+    "-Ds3k.rom.path=$ROM_ROOT/s3k.gen" "$@"
+}
+q -Ptrace-replay -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical '-Dtest=TestS3kAizTraceReplay#replayMatchesTrace,TestS3kSonicTailsHczSegmentTraceReplay#replayMatchesTrace,TestS3kSonicTailsCompleteEmeraldRunPrefix,TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds' test -B
+# Temporary diagnostic cases described below; removed after investigation.
+q -Ptrace-replay -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical '-Dtest=TestHCZHandLauncherObjectInstance#risingHandResolvesTopSolidAfterWritingItsNewY,TestHczContinuityInvestigation#observeCurrentContinuity' test -B
+```
+
+The clean baseline completed at **19:24:38 UTC: six physical cases, one chain
+assertion failure, zero errors/skips**, exit 1. All three prefixes and standalone
+AIZ/HCZ passed. Chain segments 0/2/4/6/8/9 completed with zero physics/animation/
+bootstrap errors or warnings. Segments 8/9 represent 7,175/3,574 rows, including
+62/55 lag rows. Standalone AIZ/HCZ compared 20,463/3,519 frames; their advertised
+missing auxiliary schemas still limit coverage. Segment 11 is incomplete:
+**81,981 differences (69,334 physics / 12,647 animation), first non-camera
+physics row 1768 `y` `$0870/$0871`, last mismatching row 5725**, 50 lag rows,
+zero bootstrap errors/warnings. The assertion remains lost production ownership
+at input 68801, HCZ1/load generation 9. Suppressed unmatched hardware completions
+remain incomplete-run diagnostics. Counts are not independent defects or a
+completed 14,208-row comparison.
+
+Baseline queue waiting was 56 seconds; Maven execution, including compilation,
+was 2:59; submission-to-finish about 236 seconds. The first diagnostic attempt
+ran no tests: temporary `getOnObject()` and package-private `getYOffset()` access
+failed test compilation at 19:27:10 UTC (34 seconds queue, 24.371 seconds Maven).
+After correcting only those accessors, the second diagnostic completed at
+**19:28:52 UTC: two cases / two expected assertion failures / zero errors/skips**,
+exit 1 (7 seconds queue, 52.561 seconds Maven, about 60 seconds submission-to-finish).
+Queue waiting is separate from execution; parallel helper time is not added to
+elapsed time.
+
+### First causal owner: the rising hand omits SolidObjectTop
+
+History was inspected before writing the diagnostic. Foreign commit
+`5096be6cc1b7b8bbc9bcc9bf0646803ab7e9f5b5` repairs this exact owner and is not
+an ancestor of `d3fa`. Its full runtime diff was reviewed, not applied: an
+after-Y solid pass, retained per-player standing bits for the next grab/release
+checks, and capture/restore/binding handling for those bits. Its parent-to-current
+launcher delta adds native-facing presentation helpers and citation remaps;
+preserve these in any adaptation. Broader foreign composition
+`b6c4898e2790938ce76ec14ef7e2e8c22c6e9530` spans 36 files and is not a bounded
+launcher transfer. No foreign branch was integrated.
+
+The committed native `hcz_2` physics/aux and passive current-engine observer
+establish these ordered states:
+
+| Row | Native | Current engine |
+| --- | --- | --- |
+| 1767 | P1 `$242C,$0871`, status `$44`, no standing; hand slot 36 at `$0898` | Matching P1 position/fractions/velocities; hand `$0898`, offset `$20`, no standing/riding |
+| 1768 | Hand rises to `$0890`; P1 `$2435,$0870`, status `$4C`, interact 36, control zero | Hand `$0890`, offset `$18`; P1 `$2435,$0871`, Y fraction `$8300`, no standing/riding or object control |
+| 1769 | Continued ride gives P1 Y `$0871` | Fresh landing runs one row late: P1 Y `$0870`, riding the hand |
+| 1770 | P1 X `$2447` leaves `[2400,2440)`; OnObj clears | Hand moves to `$0898` but P1 stays Y `$0870`, standing/riding; the stale ride persists through observed row 1774 |
+
+`HCZHandLauncher_UpdateSolid` (sonic3k.asm:65864-65872) writes the new Y before
+`SolidObjectTop`, with `d1=$20`, `d3=$11`.
+`loc_1E45A` (sonic3k.asm:42044-42063) computes the rolling landing from surface
+`$0890-$11=$087F` and feet-plus-four `$0871+$0E+4=$0883`: `d0=-4`, then
+`$0871-4+3=$0870`, preserving Y fraction `$8300`. The previous `$0898` surface
+gives positive overlap and rejects landing.
+`MvSonicOnPtfm` (sonic3k.asm:41687-41722) places the continued rider at `$0871`.
+Native input and `object_control` are zero: this is ordinary landing, not a
+grab, jump edge or movement lock. Interact `$2A` at 1767 is stale; Status_OnObj
+is clear, so it does not establish standing.
+
+Current `HCZHandLauncherObjectInstance` selects `MANUAL_CHECKPOINT`, which
+receives no automatic tail checkpoint. Rising/returning branches write `currentY`
+without resolving a solid. Grab/release checks instead call `checkpointAll()`
+before that write. Reusing historical
+`risingHandResolvesTopSolidAfterWritingItsNewY` with an empty contact batch fails
+on its first rising dispatch: **expected one checkpoint, observed zero**.
+The actual chain independently confirms the motion and absent landing. Matching
+hand Y and player fractions reject fan phase, surface-height constants and
+fractional position as explanations for this first mismatch.
+
+### Actual stop cause and causal limit
+
+The temporary observer subclasses `AbstractRunChainTest` and only reads existing
+production state from `afterProductionStep`. It captures comparator cursor and
+segment before stepping, and states that trace row plus
+`productionOutputRowObserver - 1`; here the physical index is `63075 + traceRow`.
+Rows 1758–1774 identify the launcher by spawn `$2420,$0878`, not an assumed
+engine slot. Other output is bounded to generation/death/drowning edges and every
+256th returned-HCZ row. Successful test-only source fingerprint:
+`c75c1c57ddcb5f6eebb7ff85cd548d047b4151a7db9b96ff30011c095a75c7b8`;
+first non-executing attempt:
+`67dbd7da43e054977d4eb1b1b31f89abe5f4865667e522b41748f6579b45871a`.
+Each is SHA-256 of sorted changed/new `src` paths, each followed by NUL and
+complete file bytes, relative to `d3fa`. Production/fixtures equal baseline.
+
+- Returned HCZ is admitted on `INTERIOR_RETURN@gen8/z1a0`.
+- At **row 4942 / movie 68017**, engine P1 `$283D,$0783` enters drowning
+  pre-death: dead false, drowning/pre-death true. Native P1 is alive/routine 2
+  at `$3729,$06EC`.
+- At **row 5637 / movie 68712**, engine P1 `$26A6,$0822` becomes dead, drowning
+  true, pre-death false. Native P1 is alive/routine 2 at `$3716,$06D7`.
+- At **row 5726 / movie 68801**, the production receipt is
+  **`DEATH_RESTART@gen9/z1a0`**. P1 respawns at `$1580,$066C`, with cleared
+  death/drowning state. Native P1 remains alive/routine 2 at `$3716,$06D5`.
+  The coordinator correctly rejects the new generation before source closure.
+
+The observer reproduces the baseline's exact 81,981 counts, first field/values,
+incomplete status and ownership assertion. This rejects a changed instrumented
+route and a false initial-load/coordinator-admission diagnosis. The immediate
+stop is **an actual gameplay death reload**. Whether the landing defect alone
+causes the later drowning remains unproven; intervening owners were not repaired
+or isolated. Historical hand-only `5096be6cc` reports first error 1891 and a
+different KosM abort; adding separate Mega Chopper control commit
+`1eaa2cc4ac1302f43273e0f11d40cfaba408180e` reports first error 3475 and later
+death-restart 70718. Evidence commit
+`b8a6024db31c44e0af6972b25c314f90a1845ad1` retains these observations in this
+audit's foreign history. These are historical results, not fresh current-source
+passes, single-defect causation or grounds to relax timing authority.
+
+### Finite corrective boundary
+
+Restore one launcher solid pass after the final Y write when native permits
+it. Grab, escape and release must read retained incoming standing bits rather
+than perform an early solid pass. Preserve current native-facing helpers and
+per-player binding/rewind semantics. Reuse all four focused controls from
+`5096be6cc`, then inspect actual landing/continued ride/edge exit at 1767–1770
+and two-way registered restore plus forward replay. No shared solid heights,
+tolerances, queues, bootstrap, death admission or inputs need changing for this
+owner.
+
+Parent review should qualify the narrow candidate against all three prefixes,
+standalone AIZ/HCZ and the affected HCZ slice by exact fields/spans. If the next
+current frontier becomes 1891, review Mega Chopper separately; do not bundle
+the broader foreign composition. The drowning prerequisites and outgoing HCZ
+closure remain open campaign work. No native recapture, alternate replay,
+broad smoke, full suite, pixel/audio, other viewport/donor/team or whole-campaign
+claim follows. Temporary diagnostics are consumed and test sources removed at
+handoff; this investigation retains evidence prose only. Parent owns review,
+integration, delivery and cleanup.

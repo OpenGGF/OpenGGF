@@ -26,7 +26,10 @@ class TestControlCodecPolymorphism {
             assertTrue(encoded.contains("\"type\":\"" + subtype.getSimpleName() + "\""), subtype::getName);
             ControlCodec.DecodedControl decoded = ControlCodec.decode(encoded);
             assertEquals("token", decoded.token());
-            assertEquals(message, decoded.message(), subtype::getName);
+            assertEquals(subtype, decoded.message().getClass());
+            assertEquals(encoded, ControlCodec.encode("token", decoded.message()), subtype::getName);
+            closePassword(message);
+            closePassword(decoded.message());
         }
     }
 
@@ -38,7 +41,22 @@ class TestControlCodecPolymorphism {
                 () -> ControlCodec.decode("{\"v\":" + Protocol.VERSION + ",\"token\":null,\"msg\":{\"type\":\"FutureType\"}}"));
     }
 
+    private static void closePassword(ControlMessage message) {
+        RoomPassword password = switch (message) {
+            case ControlMessage.RoomAccessSubmit submit -> submit.password();
+            case ControlMessage.RoomPasswordChange change -> change.password();
+            case ControlMessage.RoomCreate create -> create.password();
+            default -> null;
+        };
+        if (password != null) password.close();
+    }
+
     private static Object instantiate(Class<?> type) throws Exception {
+        if (type == RoomPassword.class) return RoomPassword.of("a sufficiently long test password");
+        if (type == ControlMessage.MasterRequestCancel.class) return new ControlMessage.MasterRequestCancel(1);
+        if (type == ControlMessage.RoomCreate.class) return new ControlMessage.RoomCreate(
+                new ControlMessage.RoomDescriptor("Room", "s3k", 0, 0, "OPEN", null, 8, false),
+                "RELAY", 0, "build");
         // Polymorphism fixtures must satisfy the client-side semantic checks too.
         if (type == ControlMessage.RoundSnapshot.class) {
             return new ControlMessage.RoundSnapshot("LOBBY", null, 0, 0, List.of());
@@ -66,11 +84,11 @@ class TestControlCodecPolymorphism {
             Object[] arguments = new Object[components.length];
             for (int index = 0; index < components.length; index++) {
                 parameterTypes[index] = components[index].getType();
-                arguments[index] = switch (components[index].getName()) {
+                arguments[index] = parameterTypes[index] == String.class ? switch (components[index].getName()) {
                     case "chatMode", "mode" -> ChatMode.FULL_CHAT.name();
                     case "phraseId" -> QuickChatPhrase.BRUTAL.name();
                     default -> instantiate(parameterTypes[index]);
-                };
+                } : instantiate(parameterTypes[index]);
             }
             Constructor<?> constructor = type.getDeclaredConstructor(parameterTypes);
             return constructor.newInstance(arguments);

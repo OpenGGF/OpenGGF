@@ -7,15 +7,32 @@ import java.util.List;
 public sealed interface ControlMessage {
     @com.openggf.game.ModApi
     record RoomDescriptor(String name, String gameId, int zone, int act, String characterPolicy,
-                          String lockedCharacter, int maxPlayers, boolean verified, String chatMode) {
+                          String lockedCharacter, int maxPlayers, boolean verified,
+                          RoomAccessPolicy accessPolicy, String chatMode) {
         public RoomDescriptor {
+            java.util.Objects.requireNonNull(accessPolicy, "access policy");
             validatedChatMode(chatMode);
         }
 
-        public RoomDescriptor(String name, String gameId, int zone, int act, String characterPolicy,
-                              String lockedCharacter, int maxPlayers, boolean verified) {
-            this(name, gameId, zone, act, characterPolicy, lockedCharacter, maxPlayers, verified,
-                    ChatMode.FULL_CHAT.name());
+        public RoomDescriptor(String name, String gameId, int zone, int act,
+                              String characterPolicy, String lockedCharacter,
+                              int maxPlayers, boolean verified, RoomAccessPolicy accessPolicy) {
+            this(name, gameId, zone, act, characterPolicy, lockedCharacter, maxPlayers,
+                    verified, accessPolicy, ChatMode.FULL_CHAT.name());
+        }
+
+        public RoomDescriptor(String name, String gameId, int zone, int act,
+                              String characterPolicy, String lockedCharacter,
+                              int maxPlayers, boolean verified, String chatMode) {
+            this(name, gameId, zone, act, characterPolicy, lockedCharacter, maxPlayers,
+                    verified, RoomAccessPolicy.PUBLIC, chatMode);
+        }
+
+        public RoomDescriptor(String name, String gameId, int zone, int act,
+                              String characterPolicy, String lockedCharacter,
+                              int maxPlayers, boolean verified) {
+            this(name, gameId, zone, act, characterPolicy, lockedCharacter, maxPlayers,
+                    verified, RoomAccessPolicy.PUBLIC, ChatMode.FULL_CHAT.name());
         }
     }
 
@@ -80,6 +97,8 @@ public sealed interface ControlMessage {
     @com.openggf.game.ModApi
     record JoinAccepted(String sessionToken, int playerSlot, RoomDescriptor room,
                         RoundSnapshot round) implements ControlMessage {
+        @Override
+        public String toString() { return "JoinAccepted[redacted]"; }
     }
 
     @com.openggf.game.ModApi
@@ -279,11 +298,29 @@ public sealed interface ControlMessage {
     @com.openggf.game.ModApi
     record RoomCreate(RoomDescriptor room, String routing, int directPort,
                       String determinismFingerprint, List<String> voteTrackKeys,
-                      String certificateSha256)
+                      String certificateSha256, String instanceId, long accessEpoch,
+                      RoomPassword password)
             implements ControlMessage {
         public RoomCreate {
+            java.util.Objects.requireNonNull(room, "room");
+            if (accessEpoch < 0 || password != null && !room.accessPolicy().passwordRequired()
+                    || "DIRECT".equals(routing) && password != null
+                    || room.accessPolicy().passwordRequired() && ("DIRECT".equals(routing)
+                    ? instanceId == null || instanceId.isBlank() : password == null)) {
+                throw new IllegalArgumentException("invalid room creation access");
+            }
             voteTrackKeys = validatedTrackKeys(voteTrackKeys, 32);
         }
+
+        public RoomCreate(RoomDescriptor room, String routing, int directPort,
+                          String determinismFingerprint, List<String> voteTrackKeys,
+                          String certificateSha256) {
+            this(room, routing, directPort, determinismFingerprint, voteTrackKeys,
+                    certificateSha256, null, 0, null);
+        }
+
+        @Override
+        public String toString() { return "RoomCreate[redacted]"; }
 
         public RoomCreate(RoomDescriptor room, String routing, int directPort,
                           String determinismFingerprint) {
@@ -297,7 +334,16 @@ public sealed interface ControlMessage {
     }
 
     @com.openggf.game.ModApi
-    record RoomCreated(String roomId) implements ControlMessage {
+    record RoomCreated(String roomId, String instanceId, long accessEpoch, long inviteEpoch)
+            implements ControlMessage {
+        public RoomCreated(String roomId) { this(roomId, null, 0, 0); }
+    }
+
+    @com.openggf.game.ModApi
+    record MasterRequestCancel(long requestId) implements ControlMessage {
+        public MasterRequestCancel {
+            if (requestId <= 0) throw new IllegalArgumentException("invalid cancellation request ID");
+        }
     }
 
     @com.openggf.game.ModApi
@@ -323,8 +369,26 @@ public sealed interface ControlMessage {
     @com.openggf.game.ModApi
     record RoomJoinResult(String roomId, String routing, String directHost,
                           int directPort, String hostServerId,
-                          String determinismFingerprint, String certificateSha256)
+                          String determinismFingerprint, String certificateSha256,
+                          String instanceId, RoomAccessPolicy accessPolicy, long accessEpoch,
+                          long inviteEpoch, long inviteExpiresAtMillis)
             implements ControlMessage {
+        public RoomJoinResult {
+            java.util.Objects.requireNonNull(accessPolicy, "access policy");
+            if (accessEpoch < 0 || inviteEpoch < 0 || inviteExpiresAtMillis < 0
+                    || accessPolicy.passwordRequired() && (instanceId == null || instanceId.isBlank())) {
+                throw new IllegalArgumentException("invalid room access metadata");
+            }
+        }
+
+        public RoomJoinResult(String roomId, String routing, String directHost,
+                              int directPort, String hostServerId,
+                              String determinismFingerprint, String certificateSha256) {
+            this(roomId, routing, directHost, directPort, hostServerId,
+                    determinismFingerprint, certificateSha256, null,
+                    RoomAccessPolicy.PUBLIC, 0, 0, 0);
+        }
+
         public RoomJoinResult(String roomId, String routing, String directHost,
                               int directPort, String hostServerId,
                               String determinismFingerprint) {
@@ -368,6 +432,8 @@ public sealed interface ControlMessage {
 
     @com.openggf.game.ModApi
     record RelayGuestText(int guestId, String text) implements ControlMessage {
+        @Override
+        public String toString() { return "RelayGuestText[redacted]"; }
     }
 
     @com.openggf.game.ModApi
@@ -395,6 +461,83 @@ public sealed interface ControlMessage {
             }
         }
     }
+
+    @com.openggf.game.ModApi
+    record RoomAccessChallenge(String challengeId, String instanceId, long accessEpoch,
+                               RoomAccessPolicy accessPolicy) implements ControlMessage { }
+
+    @com.openggf.game.ModApi
+    record RoomAccessSubmit(String challengeId, RoomPassword password) implements ControlMessage {
+        @Override
+        public String toString() { return "RoomAccessSubmit[redacted]"; }
+    }
+
+    @com.openggf.game.ModApi
+    record RoomAccessState(String instanceId, RoomAccessPolicy accessPolicy,
+                           long accessEpoch, long inviteEpoch) implements ControlMessage { }
+
+    @com.openggf.game.ModApi
+    record RoomPasswordChange(RoomPassword password) implements ControlMessage {
+        @Override
+        public String toString() { return "RoomPasswordChange[redacted]"; }
+    }
+
+    @com.openggf.game.ModApi
+    record RoomPasswordChanged(long accessEpoch) implements ControlMessage { }
+
+    @com.openggf.game.ModApi
+    record RoomInviteRequest(long disclosureId) implements ControlMessage {
+        public RoomInviteRequest {
+            if (disclosureId < 0) throw new IllegalArgumentException("invalid disclosure ID");
+        }
+        public RoomInviteRequest() { this(0); }
+    }
+
+    @com.openggf.game.ModApi
+    record RoomInviteInvalidated(String instanceId) implements ControlMessage { }
+
+    @com.openggf.game.ModApi
+    record RoomInviteRotate() implements ControlMessage { }
+
+    @com.openggf.game.ModApi
+    record RoomInviteSharing(boolean membersCanInvite) implements ControlMessage { }
+
+    @com.openggf.game.ModApi
+    record RoomInvite(String code, String instanceId, long accessEpoch, long inviteEpoch,
+                      long expiresAtMillis, long disclosureId) implements ControlMessage {
+        public RoomInvite {
+            if (accessEpoch < 0 || inviteEpoch < 0 || expiresAtMillis < 0 || disclosureId < 0) {
+                throw new IllegalArgumentException("invalid room invite metadata");
+            }
+        }
+        public RoomInvite(String code, String instanceId, long accessEpoch, long inviteEpoch,
+                          long expiresAtMillis) {
+            this(code, instanceId, accessEpoch, inviteEpoch, expiresAtMillis, 0);
+        }
+        @Override
+        public String toString() { return "RoomInvite[redacted]"; }
+    }
+
+    @com.openggf.game.ModApi
+    record RoomInviteRejected(String reason, long retryAfterMillis) implements ControlMessage { }
+
+    @com.openggf.game.ModApi
+    record RoomInviteResolve(String code) implements ControlMessage {
+        @Override
+        public String toString() { return "RoomInviteResolve[redacted]"; }
+    }
+
+    @com.openggf.game.ModApi
+    enum InviteOperation { FETCH, ROTATE, SET_SHARING, ACCESS_CHANGED }
+
+    @com.openggf.game.ModApi
+    record RoomInviteControl(String roomId, String instanceId, long accessEpoch,
+                             long inviteEpoch, InviteOperation operation,
+                             boolean membersCanInvite) implements ControlMessage { }
+
+    @com.openggf.game.ModApi
+    record RoomInviteControlResult(RoomAccessPolicy accessPolicy, RoomInvite invite)
+            implements ControlMessage { }
 
     /** Direct host to master: the room's current effective communication capabilities. */
     @com.openggf.game.ModApi

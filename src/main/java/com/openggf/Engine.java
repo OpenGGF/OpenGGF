@@ -343,6 +343,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 							"Live viewport recording failed", failure));
 	private long lastFrameTime;
 	private boolean paused = false;
+	private final SceneFocusPresentation sceneFocusPresentation = new SceneFocusPresentation();
 	private long userPauseIndicatorHiddenUntilNanos;
 
 	private DebugRenderer getDebugRenderer() {
@@ -765,21 +766,13 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			}
 		});
 
-		// Setup window focus callback
+		// Setup window close callback
 		glfwSetWindowCloseCallback(window, windowHandle -> {
 			glfwSetWindowShouldClose(windowHandle, false);
 			requestApplicationExit();
 		});
 
-		// Setup window focus callback
-		glfwSetWindowFocusCallback(window, (windowHandle, focused) -> {
-			if (editorChrome != null) editorChrome.focus(focused);
-			paused = applyWindowActivation(focused, inputHandler, gameLoop::pause, gameLoop::resume);
-		});
-
-		// Setup window iconify callback
-		glfwSetWindowIconifyCallback(window, (windowHandle, iconified) ->
-				paused = applyWindowActivation(!iconified, inputHandler, gameLoop::pause, gameLoop::resume));
+		installWindowActivationCallbacks();
 
 		// Get the thread stack and push a new frame
 		try (MemoryStack stack = stackPush()) {
@@ -830,6 +823,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 		// Set window handle for clipboard operations (GLFW-based, no AWT dependency)
 		debugOverlayManager.setWindowHandle(window);
+		gameLoop.modSceneHost.installClipboardPlatform(
+				com.openggf.mods.scene.host.SceneClipboardPlatform.glfw(window));
 
 		// Initial viewport uses physical framebuffer pixels, including high-DPI displays.
 		try (MemoryStack stack = stackPush()) {
@@ -856,6 +851,20 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		}
 
 		lastFrameTime = System.nanoTime();
+	}
+
+	private void installWindowActivationCallbacks() {
+		glfwSetWindowFocusCallback(window, (windowHandle, focused) -> {
+			if (editorChrome != null) editorChrome.focus(focused);
+			paused = applyWindowActivation(focused, inputHandler, gameLoop::pause, gameLoop::resume,
+					() -> gameLoop.modSceneHost.windowFocusChanged(focused),
+					() -> sceneFocusPresentation.withdraw(() -> glfwSwapBuffers(window)));
+		});
+		glfwSetWindowIconifyCallback(window, (windowHandle, iconified) -> {
+			paused = applyWindowActivation(!iconified, inputHandler, gameLoop::pause, gameLoop::resume,
+					() -> gameLoop.modSceneHost.windowIconifyChanged(iconified),
+					() -> sceneFocusPresentation.withdraw(() -> glfwSwapBuffers(window)));
+		});
 	}
 
 	private void installEditorTextInputCallback() {
@@ -2912,7 +2921,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 				// Process exactly one frame per target interval
 				if (accumulator >= frameTimeNanos) {
-					displayAndSwap(this::display, () -> glfwSwapBuffers(window));
+					sceneFocusPresentation.displayAndSwap(this::display, () -> glfwSwapBuffers(window),
+							gameLoop.modSceneHost::renderedSubmissions);
 					// Preserve remainder to prevent timing drift
 					accumulator -= frameTimeNanos;
 
@@ -2924,6 +2934,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			}
 
 			glfwPollEvents();
+			gameLoop.modSceneHost.flushClipboardWrites();
 			inputHandler.pollPhysicalGamepads();
 
 			boolean modeChanged = displayWindowController.apply(
@@ -2983,6 +2994,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				return;
 			}
 			glfwPollEvents();
+			gameLoop.modSceneHost.flushClipboardWrites();
 			inputHandler.pollPhysicalGamepads();
 		}
 	}
@@ -3355,6 +3367,14 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	 *
 	 * @return the engine's new paused state
 	 */
+	static boolean applyWindowActivation(boolean active, InputHandler inputHandler,
+			Runnable pause, Runnable resume, Runnable notifyScene, Runnable withdrawScene) {
+		notifyScene.run();
+		boolean paused = applyWindowActivation(active, inputHandler, pause, resume);
+		if (paused) withdrawScene.run();
+		return paused;
+	}
+
 	static boolean applyWindowActivation(boolean active, InputHandler inputHandler,
 			Runnable pause, Runnable resume) {
 		if (inputHandler != null) {

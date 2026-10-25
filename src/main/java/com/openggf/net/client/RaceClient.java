@@ -35,7 +35,7 @@ import javax.net.ssl.X509ExtendedTrustManager;
  */
 @com.openggf.game.ModApi
 public final class RaceClient implements RaceConnection {
-    public static final long JOIN_TIMEOUT_MILLIS = 3000;
+    public static final long JOIN_TIMEOUT_MILLIS = 20_000;
 
     @com.openggf.game.ModApi
     public static final class JoinRejectedException extends RuntimeException {
@@ -116,6 +116,14 @@ public final class RaceClient implements RaceConnection {
             URI wsUri, PlayerIdentity identity, String displayName, String appearance,
             String determinismFingerprint, String certificateSha256,
             String expectedServerId) {
+        return connect(wsUri, identity, displayName, appearance, determinismFingerprint,
+                certificateSha256, expectedServerId, RoomJoinOptions.publicRoom());
+    }
+
+    public static CompletableFuture<RaceClient> connect(
+            URI wsUri, PlayerIdentity identity, String displayName, String appearance,
+            String determinismFingerprint, String certificateSha256, String expectedServerId,
+            RoomJoinOptions options) {
         try { NetworkEndpointPolicy.requireWebSocket(wsUri); }
         catch (IllegalArgumentException invalid) { return CompletableFuture.failedFuture(invalid); }
         if ((certificateSha256 == null) != (expectedServerId == null)
@@ -140,9 +148,12 @@ public final class RaceClient implements RaceConnection {
                 AuthenticationTranscript.Role.ROOM_DIRECT,
                 tls == null ? () -> AuthenticationTranscript.LOCAL_PLAINTEXT : tls::binding);
         CompletableFuture<RaceClient> joined = new CompletableFuture<>();
+        ClientAccessGate gate = new ClientAccessGate(options);
+        joined.whenComplete((value, error) -> gate.close());
 
         WebSocket.Listener listener = new WebSocket.Listener() {
             private final FrameAssembler assembler = new FrameAssembler();
+            private boolean identityProofSent;
 
             @Override
             public void onOpen(WebSocket ws) {
@@ -170,6 +181,9 @@ public final class RaceClient implements RaceConnection {
                 try {
                     byte[] packet = assembler.onBinaryPart(data, last);
                     if (packet != null) {
+                        if (client.joinAccepted == null) {
+                            throw new ProtocolViolationException("binary before room admission");
+                        }
                         if (packet.length == 0) {
                             throw new ProtocolViolationException("empty binary packet");
                         }
@@ -233,8 +247,20 @@ public final class RaceClient implements RaceConnection {
                             client.serverId = welcome.serverId();
                             client.enqueueSendText(client.codec.encode(
                                     null, handshake.onWelcome(welcome)));
+                            identityProofSent = true;
+                        }
+                        case ControlMessage.RoomAccessChallenge challenge -> {
+                            if (!identityProofSent) throw new ProtocolViolationException("access challenge before identity");
+                            ControlMessage.RoomAccessSubmit submission = gate.onChallenge(challenge);
+                            if (submission != null) {
+                                try (var password = submission.password()) {
+                                    client.enqueueSendText(client.codec.encode(null, submission));
+                                }
+                            }
                         }
                         case ControlMessage.JoinAccepted accepted -> {
+                            if (!identityProofSent) throw new ProtocolViolationException("admission before identity");
+                            gate.requireAdmission(accepted);
                             client.joinAccepted = accepted;
                             client.open = true;
                             joined.complete(client);
@@ -244,7 +270,7 @@ public final class RaceClient implements RaceConnection {
                                     new JoinRejectedException(rejected.reason()));
                             ws.abort();
                         }
-                        default -> client.enqueueInbound(ws, new Control(message));
+                        default -> throw new ProtocolViolationException("unexpected message before room admission");
                     }
                 } catch (Exception e) {
                     joined.completeExceptionally(e);
@@ -261,10 +287,11 @@ public final class RaceClient implements RaceConnection {
         };
 
         HttpClient.Builder http = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofMillis(JOIN_TIMEOUT_MILLIS));
+                .connectTimeout(Duration.ofMillis(3000));
         if (tls != null) http.sslContext(tls);
         http.build()
                 .newWebSocketBuilder()
+                .connectTimeout(Duration.ofMillis(3000))
                 .buildAsync(wsUri, listener)
                 .whenComplete((ws, error) -> {
                     if (error != null) {

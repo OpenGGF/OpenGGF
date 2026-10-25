@@ -176,6 +176,24 @@ ObjectManager increments after this callback, although native VBlank_Exit has
 already incremented before LZWaterFeatures. See the
 [water-clock evidence](../architecture/audits/2026-10-22-s1-chain-gap-closure.md).
 
+The last compared row is not necessarily a trace's physical tail (2026-10-25,
+alternate AIZ ring-reset investigation). Row 26179 was the last compared
+state-change row, while the fixture continued through row 26227 and changed
+the actual ring bank there. `VBLANK_ONLY` filtering omitted that final reset;
+one reported mismatch did not establish a one-frame disagreement. Inspect the
+complete physical rows and phase predicates, then assert both retained state
+and the eventual write at their production boundaries. A patch that merely
+never resets can pass the original comparison. The [native and engine evidence](../architecture/plans/2026-10-25-audit-remediation.md#alternate-aiz-trailing-ring-investigation-october-25-source-d3fa3d519)
+records the actual write and the missing engine setup boundary.
+
+An execute callback during native frame advancement can expose the previous
+`CompletedFrame`. Record the intended advancement separately from the last
+completed frame and associate instruction observations with that advancement.
+The same investigation's before/after ring-write callbacks belonged to physical
+row 26227, although their previous-completed-frame label named row 26226. Keep
+movie input index, completed hardware frame, trace row, V-int and engine
+execution counts distinct; a shared integer label does not establish alignment.
+
 Drawing only every Nth gameplay row is not always passive sampling
 (2026-10-25, Typing selected sections). Its launch banner decrements during
 drawing, so a stride of 120 prolonged START across the whole recorded segment.
@@ -1470,6 +1488,7 @@ repair an unsupported debug combination by changing shared combat rules.
 | Rule | Signature | What it looks like |
 |---|---|---|
 | 25 | `-Dmse=off` missing | CLI `-D` properties silently never reach the fork |
+| 25a | A graphics flag only in `MAVEN_OPTS` | Tool preflight passes, but the test fork selects GLFW and skips an EGL picture test. Pass the backend to the test JVM and inspect skips; `JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl` reaches both processes. |
 | 26 | Self-report about process state | A suite *is* running when you were told none was |
 | 27 | `git checkout -- <path>` | Restores from the **index**, not HEAD |
 | 30 | Mass errors | An environment artefact until proven otherwise |

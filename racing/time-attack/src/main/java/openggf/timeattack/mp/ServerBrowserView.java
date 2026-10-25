@@ -11,7 +11,6 @@ import openggf.timeattack.ui.ViewInput;
 
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.LongSupplier;
@@ -34,13 +33,15 @@ public final class ServerBrowserView {
     private static final int FOCUS = 0x803060C0;
     private static final int HINT = 0xFF8090B0;
 
-    private enum Focus { ROOMS, CREATE, REFRESH, PAGE }
+    private enum Focus { ROOMS, CREATE, CODE, REFRESH, PAGE }
 
     /** What the browser asks its owner to do. */
     public interface Actions {
         void join(ControlMessage.RoomSummary room);
 
         void create(String routing);
+
+        default void joinCode() { }
 
         void back();
     }
@@ -120,6 +121,11 @@ public final class ServerBrowserView {
             cues.accept(MenuCue.NAVIGATE);
         }
         if (input.keyPressed(SceneKeys.R)) manualRefresh(now);
+        if (input.keyPressed(SceneKeys.J)) {
+            actions.joinCode();
+            cues.accept(MenuCue.CONFIRM);
+            return;
+        }
         if (input.keyPressed(SceneKeys.C)) {
             actions.create(createRouting);
             cues.accept(MenuCue.CONFIRM);
@@ -140,6 +146,7 @@ public final class ServerBrowserView {
                     actions.create(createRouting);
                     cues.accept(MenuCue.CONFIRM);
                 }
+                case CODE -> { actions.joinCode(); cues.accept(MenuCue.CONFIRM); }
                 case REFRESH -> manualRefresh(now);
                 case PAGE -> {
                     int previousPage = page;
@@ -177,7 +184,7 @@ public final class ServerBrowserView {
         int count = rooms.size();
         int current = focus == Focus.ROOMS ? Math.min(selected, Math.max(0, count - 1))
                 : count + focus.ordinal() - 1;
-        int next = Math.floorMod(current + delta, count + 3);
+        int next = Math.floorMod(current + delta, count + 4);
         if (next < count) {
             focus = Focus.ROOMS;
             selected = next;
@@ -220,11 +227,12 @@ public final class ServerBrowserView {
                     + (room.verified() ? "VERIFIED" : "UNVERIFIED TIMES"),
                     width - 24), 12, y + 11, room.verified() ? VERIFIED : UNVERIFIED);
         }
-        action(canvas, Focus.CREATE, "CREATE < " + createRouting + " > " + requestedChatMode.label(), 144);
-        action(canvas, Focus.REFRESH, "REFRESH ROOMS", 160);
-        action(canvas, Focus.PAGE, "PAGE  < " + (page + 1) + " / " + Math.max(1, totalPages) + " >", 176);
+        action(canvas, Focus.CREATE, "CREATE < " + createRouting + " > " + requestedChatMode.label(), 138);
+        action(canvas, Focus.CODE, "JOIN BY CODE", 152);
+        action(canvas, Focus.REFRESH, "REFRESH ROOMS", 166);
+        action(canvas, Focus.PAGE, "PAGE  < " + (page + 1) + " / " + Math.max(1, totalPages) + " >", 180);
         canvas.text(fit(canvas, status, width - 20), 10, 194, LABEL);
-        canvas.text(fit(canvas, "Left/Right page/route  R refresh  B back", width - 20), 10, 208, HINT);
+        canvas.text(fit(canvas, "J join code  R refresh  B back", width - 20), 10, 208, HINT);
     }
 
     private static String chatLabel(String value) {
@@ -258,11 +266,7 @@ public final class ServerBrowserView {
         if (completion == null) return;
         refreshInFlight = false;
         if (completion.error() != null) {
-            Throwable error = completion.error();
-            Throwable cause = error instanceof CompletionException && error.getCause() != null
-                    ? error.getCause() : error;
-            status = "Refresh failed: " + (cause.getMessage() == null
-                    ? cause.getClass().getSimpleName() : cause.getMessage());
+            status = "Room list unavailable";
             cues.accept(MenuCue.ERROR);
             return;
         }

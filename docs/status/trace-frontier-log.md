@@ -115555,3 +115555,37 @@ Ordinary smoke remains red with the three matched inherited failures and 97
 skips recorded in the audit plan; it was not repeated. Later changes are result
 prose only, with executable inputs identical to this tested commit. Parent
 retains main integration, push and registry/worktree cleanup ownership.
+
+### 2026-10-25 — returned HCZ landing and actual death-reload attribution
+
+Bounded investigation on clean `d3fa3d519f6acb7285d538b5f972807036f1019e`,
+`bugfix/ai-hcz-continuity-investigation-20261025` / checkout `t3-43f29579`.
+The [current-source causal record](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#returned-hcz-landing-and-death-reload-attribution--2026-10-25)
+gives exact queued Java 25/EGL/original-ROM commands, source fingerprints,
+historical commit diffs reviewed before diagnosis, and qualification limits.
+
+Fresh canonical/prefix selection finished 19:24:38 UTC: six physical cases,
+one inherited chain failure, zero errors/skips; all three prefixes and standalone
+AIZ/HCZ pass. Segments 8/9 stay complete/clean at 7,175/3,574 represented rows
+(62/55 lag). Segment 11 is unchanged/incomplete: 81,981 differences
+(69,334 physics / 12,647 animation), first non-camera physics row 1768 `y`
+`$0870/$0871`, last mismatch 5725, stop input 68801/load generation 9.
+Queue 56 seconds, Maven 2:59; no full-suite or smoke claim.
+
+The native hand lands Sonic at row 1768 after writing Y `$0890`. The engine
+matches hand motion but omits its manual solid checkpoint, lands one row late
+and retains riding past the native edge exit. Historical foreign `5096be6cc`
+already corrects this phase contract; its full launcher diff was reviewed but
+not applied. A reused rising-hand negative observes zero checkpoints instead
+of one. A passive chain observer reproduces the exact unchanged report and
+records P1 drowning pre-death at row 4942, dead at 5637, followed by the real
+`DEATH_RESTART@gen9/z1a0` at row 5726/movie 68801. The coordinator correctly
+rejects that new generation. The link from the hand defect alone to drowning
+is not established.
+
+The two diagnostic cases finish 19:28:52 UTC, two expected failures and zero
+errors/skips (queue 7 seconds, Maven 52.561 seconds); an earlier temporary-test
+compile failure executed no tests. Runtime, fixtures, comparisons and timing
+authority remain unchanged. Temporary test sources/reports are consumed; only
+evidence prose remains. Parent owns any candidate adaptation, qualification,
+integration, delivery and cleanup.

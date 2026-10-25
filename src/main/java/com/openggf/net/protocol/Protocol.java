@@ -7,7 +7,8 @@ public final class Protocol {
     // 5: ready (SetReady/PlayerReady/ReadyReset, SetReadyRule/ReadyRule) and lobby presence
     //    (binary lobby frames and aggregates between rounds).
     // 6: room chat modes, quick chat and explicit directory chat-mode metadata.
-    public static final int VERSION = 6;
+    // 7: private admission, invitation controls and correlated master requests.
+    public static final int VERSION = 7;
     // A full 256-player roster with bounded labels must fit in one control frame.
     public static final int MAX_CONTROL_BYTES = 64 * 1024;
     public static final int MAX_BINARY_BYTES = 4096;

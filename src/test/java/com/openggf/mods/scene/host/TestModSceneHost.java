@@ -171,6 +171,7 @@ class TestModSceneHost {
 
     private static InputHandler input() {
         InputHandler input = mock(InputHandler.class);
+        when(input.capturePhysicalInput()).thenReturn(com.openggf.control.PhysicalInput.neutral());
         when(input.logical()).thenReturn(LogicalInputSnapshot.neutral());
         return input;
     }
@@ -492,6 +493,7 @@ class TestModSceneHost {
             }
         }), services(new ArrayList<>()), 320, 224);
         InputHandler input = mock(InputHandler.class);
+        when(input.capturePhysicalInput()).thenReturn(com.openggf.control.PhysicalInput.neutral());
         int down = com.openggf.sprites.playable.AbstractPlayableSprite.INPUT_DOWN;
         for (int tick = 0; tick < 30; tick++) {
             PlayerInputState pad = PlayerInputState.of(down, tick == 0 ? down : 0, 0, 0, false, false);

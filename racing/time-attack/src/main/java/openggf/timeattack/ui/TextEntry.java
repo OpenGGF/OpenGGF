@@ -36,7 +36,7 @@ public final class TextEntry {
     public enum Result { NONE, ACCEPTED, CANCELLED }
 
     /** Which characters the field takes. */
-    public enum Kind { ASCII, TEXT, NAME }
+    public enum Kind { ASCII, TEXT, NAME, PASSWORD }
 
     private static final int BACKGROUND = 0x101830;
     private static final int TITLE = 0xFFFFE070;
@@ -53,6 +53,8 @@ public final class TextEntry {
     private int codePoints;
     private String prompt = "";
     private String error = "";
+    private boolean masked;
+    private boolean rejectedPasswordInput;
 
     /** An {@link Kind#ASCII} field: letters, digits and {@code allowedExtraChars}, at most {@code maxLength}. */
     public TextEntry(String title, String initial, int maxLength, String allowedExtraChars) {
@@ -84,6 +86,23 @@ public final class TextEntry {
         return new TextEntry(title, initial, Kind.NAME, DisplayNames.MAX_CODE_POINTS, "");
     }
 
+    public static TextEntry password(String title) {
+        return new TextEntry(title, "", Kind.PASSWORD, 128, "").masked();
+    }
+
+    public TextEntry masked() {
+        masked = true;
+        return this;
+    }
+
+    public void clear() {
+        for (int i = 0; i < text.length(); i++) text.setCharAt(i, '\0');
+        text.setLength(0);
+        codePoints = 0;
+        error = "";
+        rejectedPasswordInput = false;
+    }
+
     /** A line drawn under the title, explaining what to enter. */
     public TextEntry withPrompt(String value) {
         prompt = Objects.requireNonNullElse(value, "");
@@ -101,8 +120,17 @@ public final class TextEntry {
 
     /** Appends one code point when the field allows it and has room; true when it was added. */
     public boolean feedCodePoint(int codePoint) {
+        if (kind == Kind.PASSWORD) {
+            if (rejectedPasswordInput) return false;
+            if (!allowed(codePoint) || codePoints >= maxLength) {
+                rejectedPasswordInput = true;
+                error = "Password input refused. Backspace clears it.";
+                return false;
+            }
+        }
         int value = codePoint;
-        if (kind != Kind.ASCII && value != ' ' && (Character.isWhitespace(value) || Character.isSpaceChar(value))) {
+        if ((kind == Kind.TEXT || kind == Kind.NAME) && value != ' '
+                && (Character.isWhitespace(value) || Character.isSpaceChar(value))) {
             value = ' '; // an IME's ideographic space types an ordinary one
         }
         if (!allowed(value) || codePoints >= maxLength) {
@@ -121,6 +149,9 @@ public final class TextEntry {
     }
 
     private boolean allowed(int value) {
+        if (kind == Kind.PASSWORD) {
+            return Character.isValidCodePoint(value) && (value < 0xD800 || value > 0xDFFF);
+        }
         if (kind == Kind.ASCII) {
             return (value < 128 && Character.isLetterOrDigit(value)) || allowedExtraChars.indexOf(value) >= 0;
         }
@@ -171,8 +202,7 @@ public final class TextEntry {
     /** Replaces the text, filtering and clamping it as typing would. */
     public void setText(String value) {
         Objects.requireNonNull(value, "value");
-        text.setLength(0);
-        codePoints = 0;
+        clear();
         value.codePoints().forEach(this::feedCodePoint);
     }
 
@@ -192,6 +222,7 @@ public final class TextEntry {
             return Result.CANCELLED;
         }
         if (input.keyPressed(SceneKeys.ENTER) || input.keyPressed(SceneKeys.KP_ENTER)) {
+            if (rejectedPasswordInput) return Result.NONE;
             if (kind == Kind.NAME && !DisplayNames.isCanonical(acceptedName())) {
                 error = "Type at least one visible character";
                 return Result.NONE;
@@ -199,13 +230,14 @@ public final class TextEntry {
             return Result.ACCEPTED;
         }
         if (input.keyPressed(SceneKeys.BACKSPACE)) {
-            backspace();
+            if (rejectedPasswordInput) clear();
+            else backspace();
             error = "";
         }
         String typed = input.typedText();
         if (!typed.isEmpty()) {
             typed.codePoints().forEach(this::feedCodePoint);
-            error = "";
+            if (!rejectedPasswordInput) error = "";
         }
         return Result.NONE;
     }
@@ -217,7 +249,10 @@ public final class TextEntry {
         if (!prompt.isEmpty()) {
             canvas.text(TextLayout.ellipsis(prompt, canvas.width() - 20, canvas::textWidth), 10, 24, HINT);
         }
-        if (kind == Kind.ASCII) {
+        if (masked) {
+            canvas.fill(8, 40, canvas.width() - 16, 24, BOX);
+            canvas.text("********", 16, 48, TEXT);
+        } else if (kind == Kind.ASCII) {
             drawAscii(canvas);
         } else {
             drawUnicode(canvas);
@@ -225,7 +260,7 @@ public final class TextEntry {
         if (!error.isEmpty()) {
             canvas.text(TextLayout.ellipsis(error, canvas.width() - 20, canvas::textWidth), 10, 178, WARNING);
         }
-        canvas.text(codePoints + "/" + maxLength, 10, 192, HINT);
+        canvas.text(masked ? "Hidden" : codePoints + "/" + maxLength, 10, 192, HINT);
         canvas.text(TextLayout.ellipsis("Enter OK  Esc cancel  Bksp delete", canvas.width() - 20,
                 canvas::textWidth), 10, 206, HINT);
     }
