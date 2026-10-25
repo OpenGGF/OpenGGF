@@ -57,6 +57,7 @@ public final class ClientRaceSession {
 
     public void applyJoin(ControlMessage.JoinAccepted accepted) {
         invalidateInvite();
+        kickReason = null;
         instanceId = null;
         accessEpoch = 0;
         inviteEpoch = 0;
@@ -130,6 +131,9 @@ public final class ClientRaceSession {
                 }
             }
             case ControlMessage.RoomInviteRejected ignored -> invalidateInvite();
+            case ControlMessage.RoomInviteInvalidated invalidated -> {
+                if (java.util.Objects.equals(instanceId, invalidated.instanceId())) invalidateInvite();
+            }
             case ControlMessage.RoomState state -> players = sortedPlayers(state.players());
             case ControlMessage.PlayerUpsert upsert -> {
                 List<ControlMessage.PlayerInfo> updated = new ArrayList<>(players);

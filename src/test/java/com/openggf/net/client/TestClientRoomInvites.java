@@ -68,4 +68,20 @@ class TestClientRoomInvites {
         assertNull(session.invite());
         assertThrows(IllegalStateException.class, session::beginInviteRequest);
     }
+    @Test
+    void pendingAuthorityChangeHidesCodeWithoutPretendingTheEpochChanged() {
+        var session = session();
+        var request = session.beginInviteRequest();
+        session.onControl(reply(request.disclosureId(), 1, 10_000));
+        assertNotNull(session.invite());
+        session.onControl(new ControlMessage.RoomInviteInvalidated("instance"));
+        assertNull(session.invite());
+        assertEquals(1, session.inviteEpoch());
+        session.onControl(reply(request.disclosureId(), 1, 10_000));
+        assertNull(session.invite());
+        var fresh = session.beginInviteRequest();
+        session.onControl(reply(fresh.disclosureId(), 1, 10_000));
+        assertNotNull(session.invite());
+    }
+
 }

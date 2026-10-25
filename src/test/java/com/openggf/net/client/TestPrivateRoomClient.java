@@ -107,6 +107,19 @@ class TestPrivateRoomClient {
                     assertEquals(0, count(host));
                 }
             }
+            var socket = new TestMasterClientTimeoutRecovery.SilentSocket();
+            try (MasterClient master = TestMasterClientTimeoutRecovery.admittedClient(socket);
+                 RoomPassword password = RoomPassword.of(PASSWORD);
+                 RoomJoinOptions options = new RoomJoinOptions(password, host.room().instanceId(), 0)) {
+                RaceConnection joined = master.joinResolved(prepared(host, owner, host.tlsCertificateSha256()),
+                        guest, "Guest", "", "test", options).get(5, TimeUnit.SECONDS);
+                try {
+                    assertTrue(joined instanceof RaceClient);
+                    assertTrue(joined.isOpen());
+                    assertEquals(1, count(host));
+                    assertTrue(socket.sent.isEmpty());
+                } finally { joined.close(); }
+            }
         }
     }
 
@@ -173,6 +186,24 @@ class TestPrivateRoomClient {
     }
 
     @Test
+    void canceledInvitePreparationNeverAttachesAfterAValidLateResolution() throws Exception {
+        var socket = new TestMasterClientTimeoutRecovery.SilentSocket();
+        var codec = new ControlJsonCodec();
+        try (MasterClient master = TestMasterClientTimeoutRecovery.admittedClient(socket)) {
+            var expected = new ControlMessage.RoomJoinResult("room", "RELAY", null, 0, "host", "test", null,
+                    "instance", RoomAccessPolicy.PUBLIC, 0, 1, System.currentTimeMillis()+600_000);
+            var joining = master.joinInvite("7K3M9X", expected,
+                    PlayerIdentity.loadOrCreate(dir.resolve("guest")), "Guest", "", "test", null);
+            long requestId = codec.decode(socket.sent.getFirst()).requestId();
+            assertTrue(joining.cancel(false));
+            TestMasterClientTimeoutRecovery.receive(master, socket, expected, requestId);
+            assertTrue(joining.isCancelled());
+            assertEquals(1, socket.sent.size());
+            assertTrue(master.isOpen());
+        }
+    }
+
+    @Test
     void fallbackClassificationExcludesSecurityProtocolAndPasswordFailuresEvenWithReachabilityCause() {
         assertTrue(MasterClient.allowsRelayFallback(new CompletionException(new ConnectException())));
         assertTrue(MasterClient.allowsRelayFallback(new UnknownHostException()));
@@ -180,7 +211,7 @@ class TestPrivateRoomClient {
         assertFalse(MasterClient.allowsRelayFallback(new java.io.IOException()));
         for (Throwable terminal : List.of(new SSLHandshakeException("untrusted"),
                 new java.security.GeneralSecurityException("identity"), new ProtocolViolationException("protocol"),
-                new RaceClient.JoinRejectedException("denied"), new RoomAccessRequiredException("instance", 0, PRIVATE))) {
+                new RaceClient.JoinRejectedException("denied"), new RoomInviteRejectedException(1000), new RoomAccessRequiredException("instance", 0, PRIVATE))) {
             terminal.initCause(new ConnectException());
             assertFalse(MasterClient.allowsRelayFallback(new CompletionException(terminal)));
         }

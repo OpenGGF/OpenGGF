@@ -112,7 +112,12 @@ class TestRoomInviteAuthority {
         CompletableFuture<ControlMessage.RoomInviteControlResult> failedAck = new CompletableFuture<>();
         room.setInviteService((instance, access, invite, operation, sharing) -> operation == ControlMessage.InviteOperation.FETCH
                 ? CompletableFuture.completedFuture(result(room, false, 0, 3, now + 600_000)) : failedAck);
+        host.text.removeIf(text -> codec.decode(text).message() instanceof ControlMessage.RoomInviteInvalidated);
+        guest.text.removeIf(text -> codec.decode(text).message() instanceof ControlMessage.RoomInviteInvalidated);
         command(room, host, new ControlMessage.RoomInviteSharing(false));
+        assertNotNull(last(host, ControlMessage.RoomInviteInvalidated.class));
+        assertNotNull(last(guest, ControlMessage.RoomInviteInvalidated.class));
+        assertEquals(0, room.inviteEpoch());
         failedAck.completeExceptionally(new TimeoutException()); room.tick();
         assertTrue(room.accessPolicy().membersCanInvite());
         command(room, guest, new ControlMessage.RoomInviteRequest(5)); room.tick();

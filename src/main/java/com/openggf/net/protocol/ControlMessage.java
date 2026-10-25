@@ -445,6 +445,9 @@ public sealed interface ControlMessage {
     }
 
     @com.openggf.game.ModApi
+    record RoomInviteInvalidated(String instanceId) implements ControlMessage { }
+
+    @com.openggf.game.ModApi
     record RoomInviteRotate() implements ControlMessage { }
 
     @com.openggf.game.ModApi

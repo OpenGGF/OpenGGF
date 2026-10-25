@@ -1111,6 +1111,7 @@ CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RoomDescriptor visibl
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RoomInvite visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RoomInviteControl visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RoomInviteControlResult visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RoomInviteInvalidated visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RoomInviteRejected visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RoomInviteRequest visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RoomInviteResolve visible @com.openggf.game.ModApi
@@ -2032,6 +2033,7 @@ CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomInvite public  <init>(ja
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomInvite public  <init>(java.lang.String,java.lang.String,long,long,long,long)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomInviteControl public  <init>(java.lang.String,java.lang.String,long,long,com.openggf.net.protocol.ControlMessage$InviteOperation,boolean)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomInviteControlResult public  <init>(com.openggf.net.protocol.RoomAccessPolicy,com.openggf.net.protocol.ControlMessage$RoomInvite)
+CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomInviteInvalidated public  <init>(java.lang.String)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomInviteRejected public  <init>(java.lang.String,long)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomInviteRequest public  <init>()
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomInviteRequest public  <init>(long)
@@ -4263,6 +4265,7 @@ INTERFACE com.openggf.net.protocol.ControlMessage$RoomCreated com.openggf.net.pr
 INTERFACE com.openggf.net.protocol.ControlMessage$RoomInvite com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$RoomInviteControl com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$RoomInviteControlResult com.openggf.net.protocol.ControlMessage
+INTERFACE com.openggf.net.protocol.ControlMessage$RoomInviteInvalidated com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$RoomInviteRejected com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$RoomInviteRequest com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$RoomInviteResolve com.openggf.net.protocol.ControlMessage
@@ -13879,6 +13882,10 @@ METHOD com.openggf.net.protocol.ControlMessage$RoomInviteControlResult public  c
 METHOD com.openggf.net.protocol.ControlMessage$RoomInviteControlResult public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.net.protocol.ControlMessage$RoomInviteControlResult public,final  int hashCode()
 METHOD com.openggf.net.protocol.ControlMessage$RoomInviteControlResult public,final  java.lang.String toString()
+METHOD com.openggf.net.protocol.ControlMessage$RoomInviteInvalidated public  java.lang.String instanceId()
+METHOD com.openggf.net.protocol.ControlMessage$RoomInviteInvalidated public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.net.protocol.ControlMessage$RoomInviteInvalidated public,final  int hashCode()
+METHOD com.openggf.net.protocol.ControlMessage$RoomInviteInvalidated public,final  java.lang.String toString()
 METHOD com.openggf.net.protocol.ControlMessage$RoomInviteRejected public  java.lang.String reason()
 METHOD com.openggf.net.protocol.ControlMessage$RoomInviteRejected public  long retryAfterMillis()
 METHOD com.openggf.net.protocol.ControlMessage$RoomInviteRejected public,final  boolean equals(java.lang.Object)
@@ -16866,6 +16873,7 @@ NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlM
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomInvite
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomInviteControl
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomInviteControlResult
+NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomInviteInvalidated
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomInviteRejected
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomInviteRequest
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomInviteResolve
@@ -17157,6 +17165,7 @@ PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.Control
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomInvite
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomInviteControl
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomInviteControlResult
+PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomInviteInvalidated
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomInviteRejected
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomInviteRequest
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomInviteResolve
@@ -19307,6 +19316,7 @@ RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomInviteControl opera
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomInviteControl roomId java.lang.String
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomInviteControlResult accessPolicy com.openggf.net.protocol.RoomAccessPolicy
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomInviteControlResult invite com.openggf.net.protocol.ControlMessage$RoomInvite
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomInviteInvalidated instanceId java.lang.String
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomInviteRejected reason java.lang.String
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomInviteRejected retryAfterMillis long
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomInviteRequest disclosureId long
@@ -21449,6 +21459,7 @@ TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RoomDesc
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RoomInvite SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RoomInviteControl SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RoomInviteControlResult SUPER java.lang.Record
+TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RoomInviteInvalidated SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RoomInviteRejected SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RoomInviteRequest SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RoomInviteResolve SUPER java.lang.Record
@@ -22688,6 +22699,7 @@ TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RoomDescriptor @com.open
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RoomInvite @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RoomInviteControl @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RoomInviteControlResult @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RoomInviteInvalidated @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RoomInviteRejected @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RoomInviteRequest @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RoomInviteResolve @com.openggf.game.ModApi

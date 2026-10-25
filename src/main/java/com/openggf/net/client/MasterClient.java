@@ -251,7 +251,7 @@ public final class MasterClient implements AutoCloseable {
     public CompletableFuture<RaceConnection> joinRoom(
             String roomId, PlayerIdentity roomIdentity, String displayName, String appearance,
             String determinismFingerprint) {
-        return requestJoin(roomId).thenCompose(result -> {
+        return joinAfterPreparation(requestJoin(roomId), result -> {
             try (RoomJoinOptions options = optionsFor(result, null)) {
                 return joinResolved(result, roomIdentity, displayName, appearance, determinismFingerprint, options);
             }
@@ -280,7 +280,7 @@ public final class MasterClient implements AutoCloseable {
             requireLiveInvite(expected);
             options = optionsFor(expected, password);
         } catch (RuntimeException invalid) { return CompletableFuture.failedFuture(invalid); }
-        CompletableFuture<RaceConnection> joined = resolveInvite(code).thenCompose(fresh -> {
+        CompletableFuture<RaceConnection> joined = joinAfterPreparation(resolveInvite(code), fresh -> {
             requireSameRoom(expected, fresh);
             requireLiveInvite(fresh);
             return joinResolved(fresh, roomIdentity, displayName, appearance, determinismFingerprint, options);
@@ -338,18 +338,72 @@ public final class MasterClient implements AutoCloseable {
         final URI uri;
         try { uri = new URI("wss", null, result.directHost(), result.directPort(), "/race", null, null); }
         catch (URISyntaxException invalid) { return CompletableFuture.failedFuture(new IllegalArgumentException("invalid direct room endpoint")); }
-        return RaceClient.connect(uri, identity, displayName, appearance, build,
-                result.certificateSha256(), result.hostServerId(), options)
-                .thenApply(client -> (RaceConnection)client)
-                .exceptionallyCompose(failure -> {
-                    if (!allowsRelayFallback(failure)) return CompletableFuture.failedFuture(failure);
-                    if (result.inviteExpiresAtMillis() != 0) {
-                        try { requireLiveInvite(result); }
-                        catch (RuntimeException expired) { return CompletableFuture.failedFuture(expired); }
-                    }
-                    return relayHandshake(result.roomId(), identity, displayName, appearance, build,
-                            result.hostServerId(), options);
-                });
+        CompletableFuture<RaceConnection> joined = new CompletableFuture<>();
+        AtomicReference<CompletableFuture<? extends RaceConnection>> active = new AtomicReference<>();
+        joined.whenComplete((connection, failure) -> {
+            if (joined.isCancelled()) stopJoin(active.get());
+        });
+        CompletableFuture<RaceClient> direct = RaceClient.connect(uri, identity, displayName, appearance,
+                build, result.certificateSha256(), result.hostServerId(), options);
+        active.set(direct);
+        direct.whenComplete((client, failure) -> {
+            if (joined.isDone()) {
+                if (client != null) client.close();
+                return;
+            }
+            if (failure == null || !allowsRelayFallback(failure)) {
+                finishJoin(joined, client, failure);
+                return;
+            }
+            if (result.inviteExpiresAtMillis() != 0) {
+                try { requireLiveInvite(result); }
+                catch (RuntimeException expired) { joined.completeExceptionally(expired); return; }
+            }
+            CompletableFuture<RaceConnection> relay = relayHandshake(result.roomId(), identity, displayName,
+                    appearance, build, result.hostServerId(), options);
+            active.set(relay);
+            if (joined.isDone()) stopJoin(relay);
+            relay.whenComplete((connection, error) -> finishJoin(joined, connection, error));
+        });
+        return joined;
+    }
+
+    private static CompletableFuture<RaceConnection> joinAfterPreparation(
+            CompletableFuture<ControlMessage.RoomJoinResult> preparation,
+            java.util.function.Function<ControlMessage.RoomJoinResult, CompletableFuture<RaceConnection>> connect) {
+        CompletableFuture<RaceConnection> joined = new CompletableFuture<>();
+        AtomicReference<CompletableFuture<RaceConnection>> active = new AtomicReference<>();
+        joined.whenComplete((connection, failure) -> {
+            if (joined.isCancelled()) {
+                preparation.cancel(true);
+                stopJoin(active.get());
+            }
+        });
+        preparation.whenComplete((result, failure) -> {
+            if (joined.isDone()) return;
+            if (failure != null) { joined.completeExceptionally(failure); return; }
+            try {
+                CompletableFuture<RaceConnection> attempt = connect.apply(result);
+                active.set(attempt);
+                if (joined.isDone()) stopJoin(attempt);
+                attempt.whenComplete((connection, error) -> finishJoin(joined, connection, error));
+            } catch (RuntimeException error) { joined.completeExceptionally(error); }
+        });
+        return joined;
+    }
+
+    private static void finishJoin(CompletableFuture<RaceConnection> joined,
+                                   RaceConnection connection, Throwable failure) {
+        if (failure != null) joined.completeExceptionally(failure);
+        else if (!joined.complete(connection)) connection.close();
+    }
+
+    private static void stopJoin(CompletableFuture<? extends RaceConnection> attempt) {
+        if (attempt == null) return;
+        if (!attempt.cancel(true) && !attempt.isCompletedExceptionally()) {
+            RaceConnection connection = attempt.getNow(null);
+            if (connection != null) connection.close();
+        }
     }
 
     /** Only classified reachability failures can reuse a prepared relay grant. */
@@ -361,6 +415,7 @@ public final class MasterClient implements AutoCloseable {
                     || current instanceof ProtocolViolationException
                     || current instanceof RaceClient.JoinRejectedException
                     || current instanceof RoomAccessRequiredException
+                    || current instanceof RoomInviteRejectedException
                     || current instanceof IllegalArgumentException) return false;
             current = current.getCause();
         }

@@ -218,6 +218,7 @@ public final class RoomHost {
         inviteOperationGeneration++;
         inviteOperationPending = false;
         if (passwordChange != null) passwordChange.providerPending = false;
+        broadcast(new ControlMessage.RoomInviteInvalidated(instanceId()));
     }
 
     public void setInviteService(RoomInviteService service, long registeredInviteEpoch) {
@@ -570,6 +571,9 @@ public final class RoomHost {
             return;
         }
         inviteOperationPending = true;
+        if (operation != ControlMessage.InviteOperation.FETCH) {
+            broadcast(new ControlMessage.RoomInviteInvalidated(instanceId()));
+        }
         long operationGeneration = ++inviteOperationGeneration;
         long providerGeneration = inviteServiceGeneration;
         long access = accessEpoch;
@@ -604,6 +608,7 @@ public final class RoomHost {
                 }
                 accessPolicy = result.accessPolicy();
                 inviteEpoch = result.invite().inviteEpoch();
+                accessAuthorityUnavailable = false;
                 broadcast(accessState());
                 if (passwordChange != null) {
                     submitPasswordChange(passwordChange);
@@ -656,6 +661,7 @@ public final class RoomHost {
             }
             PasswordChange change = new PasswordChange(accessEpoch, member);
             passwordChange = change;
+            broadcast(new ControlMessage.RoomInviteInvalidated(instanceId()));
             passwordService.prepare(password).whenComplete((verifier, error) -> post(() -> {
                 if (passwordChange != change || accessEpoch != change.fromEpoch) {
                     if (verifier != null) verifier.close();
