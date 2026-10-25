@@ -195,28 +195,41 @@ Two ROM-state-driven hooks that exist specifically to avoid zone carve-outs:
 
 ## LevelManager decomposition
 
-`LevelManager` is a thin coordinator and public compatibility facade. Keep new behaviour in
-the collaborator that owns it:
+`LevelManager` remains the public compatibility facade and a substantial level
+lifecycle/transition composition root. Extracted collaborators own bounded work,
+but the manager still composes load modes and contexts, progression/checkpoint
+handoffs, prepared resource adoption, seamless mutation versus reload dispatch,
+synchronous ScreenEvents reload context, and frame/rewind boundary publication.
+It is not yet a thin facade. Preserve those ordering and partial-failure contracts
+when moving behavior; put new bounded work in the collaborator that owns it:
 
 | Class | Responsibility |
 |---|---|
-| `LevelManager` | Thin coordinator, level load orchestration |
+| `LevelManager` | Retained load/transition composition and public compatibility entry points; delegates bounded execution while preserving ordering and boundary ownership |
 | `LevelTilemapManager` | Tilemap loading, chunk/block management, VRAM upload |
 | `LevelRenderer` | Normal level, sprite/object, ending-background render passes |
 | `LevelPlayableArtInitializer` | Player/sidekick renderer setup, DPLC bank reservation, dust/tail art |
 | `LevelDirtyRegionDispatcher` | `MutableLevel` dirty-set consumption and mutation-effect dispatch |
 | `LevelWaterCoordinator` | Water provider loading, dynamic water advancement, playable underwater state |
 | `LevelCheckpointCoordinator` | Checkpoint/respawn state, checkpoint restore, rewind checkpoint capture |
-| `LevelActTransitionExecutor` | ROM-aligned in-place act-transition reload choreography |
+| `LevelActTransitionExecutor` | ROM-aligned in-place act-transition reload execution and resource handoff; manager retains dispatch, synchronous context and surrounding frame/rewind boundary composition |
 | `LevelLoadPreparer` | One level build running ahead of a seamless transition on a daemon thread; the install always joins it, so it changes timing only. Games opt in through `PreparableLevelLoader` (S3K: `Sonic3k.prepareLevelBuild`/`installPreparedLevel`) |
 | `LevelTilemapPrebuilder` | Builds FG/BG tilemaps for a not-yet-installed level over its own `LevelGeometry.forLevel` and `LevelLayoutLookup.blockAt`; the live manager adopts them via `adoptPrebuiltTilemaps` and `swapToPrebuiltTilemaps` |
 | `LevelLostRingSpawnCoordinator` | Lost-ring scattering, deferred spawn timing and dynamic-slot reservations; resets release reservations, and its level-scoped rewind adapter restores queued owners by sprite code and reclaims external reservations after subsystem restore |
-| `LevelTransitionCoordinator` | Transition request/consume state for acts, warps, title cards, respawns |
+| `LevelTransitionCoordinator` | Transition request/consume and return state for acts, stages, title cards, respawns and host return, plus exact synchronous reload context; it does not execute the load |
 | `LevelDebugRenderer` | Debug overlay rendering (collision, chunks, paths) |
 | `LevelGeometry` *(record)* | Immutable level dimension/boundary data |
 | `LevelDebugContext` *(record)* | Snapshot of debug state for rendering |
 
 Level loading reads from the ROM through classes in `com.openggf.data`.
+
+S3K endings also retain their native level owners: Sonic/Tails use `$0D01` and
+Knuckles continues in `$0A01` after SSZ2. `Sonic3kEndingEvents`,
+`EndingZoneRuntimeState`/`SszZoneRuntimeState` and `S3kEndingCoordinator` compose
+native scene, credits and terminal/title work; the shared ending-provider session
+above is not a replacement for them. See the
+[native ending lifecycle decision](designs/2026-10-13-s3k-ending-lifecycle.md) and
+[bounded qualification matrix](validation/levels/s3k-ending.md).
 
 ## MutableLevel
 
