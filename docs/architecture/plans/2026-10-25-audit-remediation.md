@@ -675,10 +675,11 @@ job, adding a rings-derived event, promoting diagnostic cycles, or fitting an
 elapsed delay would add unsupported authority. Moving the reset to `complete()`
 would still hide it beyond the compared tail, as the prior passive run proves.
 
-The finite prerequisite is a fresh-load continuation design, confined to the
-selected ROM setup path: retain the terrain-wait return; represent progress of
-the synchronous data/setup work and its interrupt-enabled/masked sections;
-authenticate their completion through production-owned work and interrupt/VDP
+The finite prerequisite is a fresh-load continuation design through `loc_63B4`,
+not merely the return from `j_LevelSetup`. It must include the subsequent
+animation, collision, water, control and fixed-object setup before counter
+publication. Represent its progress and interrupt-enabled/masked sections;
+authenticate completion through production-owned work and interrupt/VDP
 semantics; then publish counters and admit initial sprite dispatch. Qualify the
 proposed boundaries against independent native PC/interrupt observations on a
 second destination and checkpoint path before treating them as a release clock.
@@ -699,3 +700,152 @@ jobs, queue/execution timings, skips or new behavioral results exist for this
 follow-up. No frontier moved, so no new trace-frontier or release-note claim is
 made. Parent owns independent challenge/review, any combined validation,
 integration/push and worktree cleanup.
+
+### Bounded continuation proposal and go/no-go gates
+
+Design follow-up on retained commit `78c5bf8ab69fcee6388e3353fd1411e4e952b66b`;
+same worktree, base/runtime tree and disassembly pin. Independent Sol review
+corrected the prefix extent: `loc_6310 (sonic3k.asm:7788-7835)` reaches
+`Animate_Init`, `LoadSolids`, water handling and control/object writes before
+`loc_63B4`. In particular, `Animate_Init (sonic3k.asm:56413-56416)` calls
+`sub_279D4 (sonic3k.asm:54157-54198)`, which can submit animation DMA. A setup
+return callback before those operations would still publish rings prematurely.
+
+**Proposal:** one S3K fresh-load continuation, supplied by a new **internal
+semantic capability** on `Sonic3kLevelInitProfile`, owns this finite sequence.
+Shared `LevelManager` drives it; an S3K adapter registered through existing
+`GameModule.rewindAdapters()` alone captures its cursor. Shared code sees progress,
+counter-publication and assembly-admission results, never S3K routine names.
+Do not add methods to the public Mod API or a new `HardwareWorkKind`. Existing
+effect owners retain their data; the continuation orders their publication.
+Admission follows an actual fresh `Level:` load, independent of title visibility;
+preview, restoration and genuine in-place continuation retain their current path.
+
+The following is the complete ownership partition for this prefix and its
+transfer. Each row denotes a source operation, not a fixed-duration callback.
+"Early" permits immutable preparation only; it grants no runtime publication.
+
+| Native operation / publication phase | Current eager or deferred effect → proposed sole production owner | Suspended state and rewind ownership |
+| --- | --- | --- |
+| Position/deformation before terrain; terrain-wait return | `FreshLevelTransitionBoundaryController.publishInitial` keeps position/camera publication, without rings. `Sonic3kLevelInitProfile.prepareInitialLevelScroll` belongs before terrain, not again inside the later `InitialProcessSpritesExecutor`. `S3kRuntimeArtCoordinator` retains actual terrain jobs and their return gate. | Shared boundary captures position-publication bit, saved players/camera and assembly token; camera/parallax adapters own published values. Art/timing adapters own job handles. S3K continuation latches return once and records remaining physical-time uncertainty. |
+| `LoadLevelLoadBlock2`: blocks/chunks, layout | `Sonic3k.buildLevel` / `Sonic3kLevel` resource plan may prepare immutable decoded data early. The S3K continuation orders destination RAM visibility; it must audit interrupt readers before treating a whole decoded bank as atomic. | Continuation owns selected ROM descriptors, stream/command/copy cursor and committed ranges; level adapter owns visible geometry. Immutable prepared buffers need no second mutable authority. |
+| Same routine: conditional secondary `Load_PLC`, `LoadPalette` | Resource-plan PLC art preload is preparation. `Sonic3kLevelTitlePlcService` needs a source-selected secondary submission operation; it alone owns Nemesis occupancy. Existing palette ownership path publishes the CPU palette at this call, distinct from later CRAM visibility. | Continuation records submission/palette phase once; PLC snapshot owns FIFO progress, palette snapshot owns published bank. No synthetic Kos job or early queue admission. |
+| SR `$2700`, `j_LevelSetup`: reset setup words, dispatch both plane initializers, scroll copies and VDP writes | `Sonic3kLevelEventManager` owns event state; camera/parallax owners retain scroll state. S3K continuation separates their current eager initialization / deferred `prepareInitialScreenObjects` work into native order. Direct plane-write progress needs a new, bounded S3K setup presentation component, not the renderer's host completion callback. | Event/camera adapters capture published words. Continuation captures initializer/row/block/port-write cursor, mask and pending interrupt state. A qualified presentation component must capture its FIFO/transfer progress; none exists today. |
+| SR `$2300`, `Animate_Init` | Split `Sonic3kLevelAnimationManager.runInitialLevelAnimationPass`: `Sonic3kPatternAnimator.runAnimateInitTransfers` runs here; post-object `Animate_Tiles` remains later. `Sonic3kAniPlcPublicationQueue` owns DMA submissions and visibility through existing V-int publication. Other native `Animate_Init` branches need their selected profile operations, not an HCZ-wide fallback. | Pattern animator snapshot owns counters, pending uploads and presented bytes; continuation owns only whether/suboperation at which the call completed. Predecoding ROM art is early; queuing DMA or mutating counters is observable. |
+| `LoadSolids` | Early ROM collision decode remains in `Sonic3kLevel`. S3K load owner selects/installs the active primary/secondary collision bank at this operation, preserving the native format branch. | Immutable banks can be prepared; continuation records selected bank/publication. Existing level/collision binding restore must reproduce it, rather than rerunning load. |
+| `Handle_Onscreen_Water_Height` | `LevelWaterCoordinator` / `WaterSystem` own dynamic/mean/current/target water and full-screen state. A source-specific S3K setup operation must run the applicable tunnel/dynamic-height and trailing terrain effects on the **pre-spawn** players. Initial water configuration is not this call. `H_int_counter` publication needs an explicit S3K water/presentation owner; existing derived water state is not proof of that latch. | Water snapshot owns its bank; player/event adapters own resulting writes. Continuation records subcall progress. Missing interrupt/presentation latch state must be added to that owner's snapshot before qualification. |
+| Save `Ctrl_2` in `_unkFF7C`; clear four control words, lock controls, clear level-start; install conditional wave/splash/pollen owners | S3K setup control operation uses production input, player locks and camera state; no exact `_unkFF7C` latch owner is identified. `Sonic3kZoneFeatureProvider` owns wave-splash setup; `Sonic3kObjectRegistry.installFixedSstObjects` / event manager own splash SST5 and pollen SST4. Prepared factories publish here, without a second installation at assembly. | Input/player/camera snapshots own controls/flags; continuation retains the control latch. Object snapshots own identities/slots. Wave cache initialization is not native installation: feature ownership needs a rewindable installed gate, separate from resource/GPU readiness. Continuation records completed installs, not duplicate object state. |
+| `loc_63B4`: conditional P1/P2 rings/timer/extra-life and saved-bank clears | Shared boundary publishes the **existing policy-selected** destination ring bank once on S3K's authenticated counter edge. S3K operation owns native `Last_star_post_hit` branching and companion timer/flags/`Saved_status_secondary`/`Saved2_status_secondary`/`Respawn_table_keep` writes; do not hardcode zero or reinterpret checkpoint policy. Current `initPlayerAndCheckpoint` / `resetPlayerForLevelStart` may prepare selection, not expose it early. | Separate shared `countersPublished` bit and selected bank; `LevelRewindSnapshotAdapter` owns visible main rings, threshold flags and timer. Checkpoint/transition/player owners retain their saved banks; P2 equivalence needs the audit below. Never restore a stale whole state over intervening writes. |
+| `loc_6404` through `loc_6468`, then existing assembly | Field assignments/gaps are below. Split only the late oscillator reset from `Sonic3kGameModule.onLevelLoad`. Publish HUD/timer/level-start flags with native hub exceptions. Shared boundary transfers once to saved players plus `InitialProcessSpritesLifecycle`, retaining placement/fixed dispatch and post-object animation owners. | Existing adapters own published fields, including `OscillationStaticAdapter`; continuation records tail completion. Shared `LevelTransitionRewindAdapter` owns position/counter/assembly publication bits and selected bank. Preserve subordinate snapshots; restoring the cursor dispatches nothing. Missing fields need a consumer/owner decision, not duplicate generic RAM. |
+
+`LoadSolids (sonic3k.asm:9575-9599)` is pointer selection, not collision
+decompression. `Handle_Onscreen_Water_Height (sonic3k.asm:8506-8556)` includes
+subcalls and H-int/full-screen publication. `loc_63B4 (sonic3k.asm:7826-7854)`
+and `loc_6404 (sonic3k.asm:7856-7883)` distinguish conditional counter clears
+from unconditional tail setup. The table does not move the earlier fresh-load
+RNG/DMA clears, title PLC submissions or music to this later prefix.
+The saved `_unkFF7C` reader is in the later competition/debug branch
+`loc_663A (sonic3k.asm:8001-8018)`; mapping that write does not authorize
+implementing competition. Single-player reader analysis must justify its
+retention/disposal, with unsupported consumer breadth explicit. Likewise, do
+not delay an entire eager manager reset when some of its fields clear earlier.
+
+Tail assignments are restart → `LevelTransitionCoordinator`, super status →
+`Sonic3kSuperStateController`, rocks routine → `LrzZoneRuntimeState`, oscillator →
+`OscillationManager`, HUD timer/level-start → `LevelGamestate` / camera. Existing
+`LevelGamestate.isTimeOver()` derives from `LevelTimer`, so it is **not yet an
+equivalent owner** of the independently cleared native time-over flag on a
+checkpoint path. Exact P2 ring/timer, debug-placement, teleport timer/flag,
+P1/P2 totals, monitor counts and loser-time counterparts were not identified.
+The proposed S3K setup operation owns their zero-store timing, but stage 1 must
+assign any observable value to its real consumer and snapshot owner (including
+HUD dirty bits), or prove it inert in the admitted single-player path. Do not
+add unused mirror fields merely to mark writes complete. These are explicit
+semantic-inventory gaps, not silently implemented entries.
+
+**Physical driving and missing evidence.** Live title lifecycle and
+`RecordingFrameDriver` must invoke the same shared advance operation; rendering
+or `provider.update()` must not serve as the clock. Start at the retiring terrain
+service, consuming only a proved residual budget, not at the next title update.
+`LevelFrameStep` / `PlcFrameLifecycleCoordinator` need one production owner of
+accepted interrupts: the current unconditional title V-int dispatch cannot
+continue during masked setup, nor may a lag interrupt prepare extra queue work.
+Finish terrain return,
+run the interrupt-enabled data prefix, enter masked screen setup, re-enable
+interrupts, finish the post-screen prefix, publish counters, complete the tail,
+then transfer once. No title object scan, ordinary gameplay, oscillation tick or
+queue preparation is implied by a partial prefix. A host re-entry resumes the
+saved operation/subcursor; a load replacement retires that generation's cursor.
+Snapshot the residual physical budget, mask, pending interrupt and publication
+bits. Masked physical intervals advance setup work without inventing V-int
+counter/services; re-enabling accepts pending interrupts according to a derived
+production interrupt rule. Current one-closure-per-iteration infrastructure does
+not supply that rule. Existing lag/starvation classification supplies neither
+the cursor nor completion. Extending replay's partial-prefix authority requires
+an explicit design/contract review; do not smuggle it through a suppressed row.
+
+Finite cost candidates are source path counts: actual Kos descriptors/refills/
+copy lengths; layout copy count; selected PLC/palette/pointer/control stores;
+both plane traversals, tile wrap/flip branches and deformation; actual animation
+script/DMA submissions; water subcalls; and reset-tail operations. Immutable
+results can stay precomputed only after a reader audit proves no interrupt,
+palette/DMA, slot-allocation or presentation effect escapes before its phase.
+This removes host work without removing native elapsed work. Derive instruction
+costs from the verified native implementation; do not price Java callbacks.
+The synchronous Kos routine needs its own path counts, not the queue decoder's
+per-service budget. The layout copy has a source-fixed count; water/script/plane
+branches need their selected inputs. A descriptor count alone prices neither.
+
+The open timing inputs are the physical entry phase/residual budget at the
+terrain return, applicable interrupt paths/costs, and VDP acceptance progress.
+Precisely, `Refresh_PlaneFull` → `VInt_VRAMWrite (sonic3k.asm:102457-102469)`
+executes `move.l (a0)+,(a6)` against the VDP data port. Counting writes is finite,
+but their stalls need source-backed mode/beam/FIFO/contending-transfer state or
+proven conservative bounds. Animation-DMA submission after SR `$2300` also
+needs ordering against the next accepted interrupt; the diagnostic ledger
+cannot supply a complete interrupt cost or port schedule.
+
+Bounds are useful only if the whole possible completion interval, including
+entry-phase and interrupt uncertainty, falls within one physical observation
+window **and** every intervening publication/interrupt order is unambiguous.
+Otherwise they cannot determine the reset edge. No such bounds have been
+established. If direct VDP writes cannot meet this test without a larger
+presentation timing model, stop specifically at that operation and review its
+cost/scope; this is not proof that a general CPU interpreter or console emulator
+is required. The prefix has no asynchronously polled setup readiness bank, so a
+new external-completion event is not a substitute. No trace-schema change is
+proposed; a different authority needs separate approval/design.
+
+**Finite implementation/negative-control sequence; all remain future work:**
+
+1. Prove the operation/reader inventory and timing bounds above on the selected
+   fresh-load profiles. Reuse existing native PC evidence and ROM inputs;
+   obtain missing work/interrupt/port-path evidence, not additional traces of
+   elapsed delays. Kill the proposal if any effect has duplicate ownership,
+   an unbounded/unpriced prerequisite, or ambiguous critical frame/order.
+2. Add the internal capability and rewindable cursor in isolation. Separate
+   position, counter and assembly phases; split the two animation calls and
+   initial deformation. Controls must fail the present early reset and also a
+   deliberately never-reset candidate. Do not enable a half-timed runtime path.
+3. Integrate both drivers through that single owner. Demonstrate a non-72 source
+   survives position publication and held setup; selected zero and nonzero
+   destination banks publish at `loc_63B4`, including every physical omitted
+   tail observation. Exercise native checkpoint/saved-entry branching, rewind
+   before/after position, mid-work/mask/DMA, before/after counters and after
+   transfer; forward replay twice with all owner snapshots. Repeated calls must
+   preserve a later ring write and dispatch initial sprites exactly once.
+4. Preserve intentionally omitted presentation (same semantic work, explicit
+   existing fast-forward policy), genuine no-title continuation, S1/S2 and the
+   four S3K startup anchors. Strict recording cannot fast-forward because its
+   presentation is hidden. Qualify alternate and independent canonical AIZ→HCZ
+   prefixes plus a checkpoint entry with different camera/water branch inputs;
+   qualify any claimed second region/timing mode against its native path.
+   Stop if correctness depends on movie/row/lag count, a fitted cost, extra
+   timing authority, or silently dropping a physical observation.
+
+**Readiness: no-go for runtime implementation of an exact reset clock.** The
+semantic split and operation owners are concrete; physical start-phase,
+interrupt and direct-port closure plus the identified latch owners are not yet
+qualified. No runtime/test/fixture edits or Maven/native jobs were performed in
+this design slice. Existing matrix/backlog gaps and the unresolved frontier
+remain accurate; no new behavioral coverage is claimed.
