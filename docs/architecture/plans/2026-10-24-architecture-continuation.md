@@ -11722,3 +11722,91 @@ local implementation commit retains 62b891a as its exact parent without amend.
 At local handback the worker explicitly returns target/job ownership to the
 parent and runs no further builds/tests; fresh complete global guards and the
 composed11 controller gates remain parent-owned delivery checks.
+
+### LevelMusicAccess parent validation and next frontier — 2026-10-25
+
+Parent mapped the independently accepted five Java blobs to implementation
+`a1830c6732dbb60530f47ab52c850b09195972ea`, its exact parent 62b891a, and tree
+`e42770a4f39ac3f2288df8c0c099eaa71d6265b1`. The committed five-file fingerprint
+is `eefe5bb540d50c568a3ef94960e3e4d41d2081ca9123610ae2f35f45569b7287`;
+both accepted characterization files remain exact. Parent took sole target/job
+ownership after the explicit worker handback and terminal worker sessions.
+
+The actual change-based plan against destination
+`f0566b9251a1507e6dc51b49aa399fafee013c57` selects 3,783 smoke candidates.
+Its all-category fallback is TestLevelManager's shared-test-infrastructure
+classification; this change replaces the receiver fixture in only one case.
+Production ingress bodies, physical/source/logical owners, frame algorithms,
+public APIs and synchronization remain unchanged outside the reviewed complete
+admission transfer. The genuine Root/mailbox, monitor/lifetime, callback and
+Stageplay characterizations, exact fixture/coordinator controls, mandatory S3K
+60 and compiled API checks therefore support a proportionate focused selection.
+Parent adds fresh complete guards and actual composed controllers rather than
+the shared-fixture-driven ordinary expansion. This is bounded validation, not a
+broad smoke or release-only full-suite pass. A new failure, unexpected skip or
+unexplained accounting delta would block integration for narrow investigation.
+
+Both parent runs used the same queued Java 25/EGL/four verified ROM/strict false
+freeze arguments and unset desktop/JVM-injection environment recorded above.
+The separate selections appended before `test -B` were `-Pguards` (no ArchUnit
+field filter) and this exact controller selector:
+
+```text
+-Dtest=TestGameLoopSuspension,TestGameLoopZoneActHandoffS1#rootRequestRunsFadeLoadTitleAndFirstInputWithoutExtraPass,TestGameLoopZoneActHandoffS2#rootRequestRunsFadeLoadTitleAndFirstInputWithoutExtraPass,TestKis2SpecialStageControllerLifecycle#entryResultsReturnKeepsChipProvider
+```
+
+| Session | Cases/failures/errors/skips | Physical reports | Queue wait | Maven elapsed |
+| --- | --- | ---: | ---: | ---: |
+| 33726, complete guards | 798/0/0/0 | 95 | 0 s | 5:05 |
+| 87109, composed controllers | 11/0/0/0 | 4 | 0 s | 26.209 s |
+
+The guards include all 34 ArchUnit cases, all 43 audio-architecture cases,
+four session-authority cases and the new
+`levelMusicAccessOwnsColdManagerLifetimeAdmissionAndTheCompleteControlProtocol`.
+The eleven compiled API/pin/marker/terminal cases belong to the worker's explicit
+71-case selection; the global guards profile does not select that class.
+Overlapping selections are not summed. The controllers cover seven suspension
+cases, S1 root request/fade/load/title/release, both S2 variants and genuine KiS2
+entry/results/full return. The suspension report contains 72 occurrences of the
+known null-FileChannel preload message; the other three contain none. The
+preceding same-selector parent run recorded 82. This count variation is not a
+loader repair, native parity or newly qualified runtime behavior.
+
+Parent inspected every XML identity, failure/error/skip and effective properties:
+Java 25.0.5.0.2, surfaceless EGL, four absolute ROM paths with rehashed identities,
+all three dotted false freeze flags, and no field filter. The thirteen frozen
+files remain exact to f056, including 120 raw low-level records. Sorted case-ID
+SHA-256 values are
+`1ac67b50a8703eee6a717bc6290922cb752360ee1d0fe9e260145b2316f6677b`
+(guards) and
+`1595be6a3d9f7d364fdef4ea64a8527ff1c8437bae3a776a532a12107cce5870`
+(controllers). All handles are terminal. Parent consumed 190 guard and eight
+controller XML/text files plus the generated empty rewind disposition and
+513-row lifecycle inventory; no diagnostics or category acknowledgment remains.
+Fetch/fast-forward pull found destination develop unchanged at f056, preserving
+the four dirty reference submodules and five user files. The remaining delivery
+operations are integration, push and exact owned-checkout cleanup.
+
+**Finite frontier disposition.** Independent source reassessment at f056 retains
+Engine application composition, GameLoop outer-frame authority, LevelManager
+world installation/sampling, and AudioManager frame/routing/replay composition.
+It does not reopen CPU palette, scene residency or fixed-tail storage decisions.
+It qualifies one further candidate: complete diagnostic installation and lease
+authority, including five observer slots, active lease, transactional propagation
+and rollback, reset preservation and release. A separate design review accepts
+that boundary within AudioManager alone, with no implementation authorization.
+Its corrected caller census is 104 direct manager calls across 31 test/helper
+files, including 22 chip-write calls; the earlier 105/32/23 counted an
+OwnedSmpsAudioStream setter as a manager call. Two production acquisitions remain.
+Characterization can begin only after this delivery/cleanup and reconciliation
+against its final source. Retention is also coherent; a fan-out/state-bag cut
+would not qualify. No next candidate family is proposed by that review.
+
+Parent also reconciled the canonical follow-ups: KiS2's real-return removal
+condition is met and the Sideways strict-rewind/storage bug remains open. The
+historical HCZ graphics-isolation failure was addressed upstream in 419395478;
+its old broad-smoke result must not be described as a current failure. These are
+source/evidence reconciliations, not new runtime or whole-repository completion
+claims. Eleven previously accepted lifecycle/palette/KiS2-publication/SMPS files
+were independently compared at f056 and remain byte-identical to their reviewed
+versions; that verifies retained bodies without adding runtime coverage.
