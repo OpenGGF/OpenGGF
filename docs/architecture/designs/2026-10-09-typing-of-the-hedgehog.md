@@ -1240,3 +1240,107 @@ fresh guards; it does not repair the inherited source-order assertion in
 `TestModEngineWiringSeams#audioResetAndBackendReplacementReleaseStreamedSessionState`
 or the legacy GLFW prerequisite in
 `TestHczMinibossNativeRendering#allOrbitPhasesMatchRomSpriteCompositionInNativePixels`.
+
+
+Focused evidence uses production/test contents committed as
+`0ca56dd3b5b05197f53ccabf53c19b9fa2aad671`, following merge
+`6e02693b0d23ce699c64769419d6aba8be5ff2af`. The initial 31-case lean run of
+`TestMutatorRegistration,TestAnyGameSceneRegistration,TestDevelopmentPatchLoader`
+reproduced three catalogue-content rejection failures and three loader errors
+(`Backing patch requires content`), with zero skips. The any-game role cases and six native-service application cases otherwise passed. With the two fixes,
+the focused registration/loader/service/API selection passed 170 cases, the manifest
+parser passed 13, upstream PLC/audio/tail/controlled-input/S3K composition passed
+305, and Typing passed 37; all had zero failures, errors and skips. Physical XML
+confirmed 19 mutator-registration cases, nine any-game cases, three real loader
+cases, both level-loading classes (36 and seven), 27 sections, four retained rail
+cases and six pixel cases. The subsequent guard corrections below have their own affected validation.
+
+The commands below share this Linux launch environment and ROM inputs;
+`ROM_ROOT` is the absolute original ROM directory (kept machine-local).
+All three files were discovered in the original root and their CRC32/SHA-1 identities
+matched the repository table. All gameplay/rendering fixtures use their existing
+no-device audio owners. Only the exact Typing selection removes the slow-suite tag.
+
+```bash
+ROM_ROOT=/absolute/path/to/original/rom-root
+q=(env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4
+   python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl
+   -Dsonic1.rom.path="${ROM_ROOT}/s1.gen"
+   -Dsonic2.rom.path="${ROM_ROOT}/s2.gen"
+   -Ds3k.rom.path="${ROM_ROOT}/s3k.gen")
+"${q[@]}" '-Dtest=TestMutatorRegistration,TestAnyGameSceneRegistration,TestDevelopmentPatchLoader,TestDevelopmentPatchRewindResolver,TestDevelopmentModSource,TestDevelopmentModBoot,TestNativeRewindAdapterPublication,TestDelegatingGameModuleCoversInterface,TestModClassLoaders,TestModApiSignatureSurface,TestModApiPinPolicy,TestModApiHookPolicy,TestModSceneHost,TestSceneChatPreferences,TestModContextAndFaultBoundary,TestModManifest' test -B
+"${q[@]}" '-Dtest=TestGameLoop,TestGameLoopTitleCardLifecycle,TestGameLoopTitleCardOwnership,TestGameLoopTitleCardPause,TestS3kFreshTitlePlcLoadBoundary,TestPlcFrameLifecycleCoordinator,TestPlcLifecycleDriverParity,TestSonic3kTitleCardKosQueue,TestPlayablePlacementAudioOwnership,TestNativePlayerTerrainPlacement,TestStageplayGroundSurvey,TestAudioManagerStreamedPortOwnership,TestS2FixedTailStoragePrerequisite,TestTailsTailsDirectionalAnimation,TestTailsTailsFlightSelection,TestSpriteManagerMainTailsTailsDispatch,TestTailsTailPose,TestTailsRendering,TestControlledFrameRuntime,TestControlledCourseInput,TestOwnerControllerNativeInput,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' test -B
+"${q[@]}" '-Dtest=TestTypingHedgehogSections,TestTypingHedgehogRails,TestTypingHedgehogSectionRendering' '-Dsurefire.excludedGroups=tracechaser-integration,performance-measurement,audio-reference,audio-stress,audio-local-wave,fbz-route' test -B
+"${q[@]}" -Pguards test -B
+```
+
+The first command's `TestModManifest` token matched no class; the actual parser
+ran separately, with the same display/JDK/Lua environment:
+`python3 tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestModManifestParser' test -B`.
+The initial red run used that environment with `--lean -Dmse=off
+-Dopenggf.headless.gl=surfaceless-egl` and the three-class selector above, without
+ROM overrides. Preflight was
+`python3 tools/testing/run_categories.py --base 94c75d8a8f2d59061e6cc01d3041e61f86f30d65 --preflight`
+in the same environment; it passed prerequisites without executing tests. The queued
+version probe reported Java 25.0.5.0.2. Hook safety passed 54 cases via
+`python3 -m unittest tools.testing.test_release_snapshot_policy tools.testing.test_check_route_obligations`;
+that invocation also reported one route-module import error. Correcting its invocation
+to `python3 tools/testing/test_check_route_obligations.py` passed all 42 route-tool cases.
+Guide relative links, the AGENTS/CLAUDE mirror and follow-up whitespace checks passed.
+
+
+The fresh guard command above executed 800 cases on `0ca56dd3b`: four failures,
+zero errors/skips. Two ratchets rejected GameLoop's combined size (277-line
+`stepInternalBody` against 276; 2,375 effective class lines against 2,367).
+The other failures were Typing's direct temporary-directory allocation and the
+new Stageplay adapters' shared numeric steering dependency. These are Typing
+integration failures, distinct from the parent's two inherited ordinary failures.
+
+The correction extracts programmatic launch staging into the existing
+`GameLoopMenuTransitions` owner, retaining the null-title check before lazy fade
+acquisition, active-fade rejection, session override/callback staging, selection,
+deferred exit and failure cleanup. Navigation finishes pending mod application
+before relaunch admission, in the same order as before. No size budget is raised.
+Six small behavior cases pin team transfer after override clearing, once-only
+callback delivery, missing-title/active-fade rejection, selection/exit failure
+cleanup and mod-apply/relaunch ordering. Typing's art helper registers its existing
+temporary tree with `TestTempFiles` while retaining its immediate `finally` cleanup.
+The Stageplay guard allows exactly `StageplayMovementIntent` to call the shared
+`NativeRouteSteering` kernel and `StageplayRouteSteering` to use that kernel plus
+its `Buttons`, `Settings`, `TravelSpeed` and `EndingAction` values. Document/value
+checks still run first; editor/tools prohibitions and other owners are unchanged.
+
+
+The repaired guard selection passed all 122 cases (87 source guard, one temp-file
+guard, 34 ArchUnit), zero failures/errors/skips:
+`python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl
+'-Dtest=TestArchitecturalSourceGuard,TestNoLeakedTemporaryFiles,TestArchUnitRules'
+-Pguards test -B`, with the same display/JDK/Lua environment. Both root size limits
+remain byte-for-byte unchanged; only production orchestration was extracted.
+
+
+The ownership corrections are committed as
+`d0ed0ecb9e0b9f9cb6df090f2c86ddf326887e6f`. The affected behavioral command passed
+247 cases, zero failures/errors/skips, including all six new transition cases,
+shared native/Stageplay steering and the real Typing art helper:
+
+```bash
+"${q[@]}" '-Dtest=TestGameLoopMenuTransitions,TestGameLoop,TestGameLoopTitleCardOwnership,TestMasterTitleExitCoordinator,TestLaunchProfilePatchAvailability,TestTraceSessionLauncherFailureCleanup,TestModSceneHost,TestSceneChatPreferences,TestControlledFrameRuntime,TestControlledCourseInput,TestOwnerControllerNativeInput,TestNativeRouteSteering,TestStageplayNativeRouteSteering,TestTypingHedgehogHubScene,TestTypingHedgehogArtSonic1' test -B
+```
+
+These two focused reruns tested the exact runtime/test inputs of `d0ed0ecb9` before
+commit. The earlier registration/loader, upstream composition and 37-case Typing
+results remain attributed to `0ca56dd3b`; the later changes affect master-title
+orchestration and test ownership only. No ordinary broad suite or native trace
+sweep was launched by this follow-up.
+
+
+Final fresh `"${q[@]}" -Pguards test -B` on committed source
+`d0ed0ecb9e0b9f9cb6df090f2c86ddf326887e6f` passed **800 cases, zero failures,
+errors or skips**, completing at 2026-10-25 16:47:16 UTC. Queue admission took
+373 seconds; Maven reported 5m53s execution. Physical reports confirmed the repaired
+87-case source guard, one temp-file guard and 34-case ArchUnit suite. Runtime,
+test, POM and asset inputs remained unchanged; the final follow-up commit adds
+only this evidence. Consumed worker-local Surefire and diagnostic output is removed;
+no category execution run or retained validation receipt was created. The local
+branch/worktree remain for parent review and integration, with no push or PR.
