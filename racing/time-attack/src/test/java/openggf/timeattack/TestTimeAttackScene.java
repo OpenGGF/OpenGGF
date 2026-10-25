@@ -363,7 +363,7 @@ class TestTimeAttackScene {
             tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN); // JOIN LAN ROOM
             tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
             idleUntil("the lobby", () -> scene.raceSession().state() == openggf.timeattack.mp.RaceSession.State.LOBBY);
-            assertEquals(invite, scene.settings().lastJoinAddress());
+            assertFalse(scene.settings().encode().contains(invite));
             assertEquals(1, onRoomThread(room, () -> room.room().playerCount()));
             assertFalse(host.capturesTextInput(), "lobby");
             tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN); // a guest's lobby opens on READY UP; chat is next
@@ -505,4 +505,96 @@ class TestTimeAttackScene {
         room.execute(() -> result.complete(read.get()));
         return result.get(5, java.util.concurrent.TimeUnit.SECONDS);
     }
+    @Test
+    void creationModalCapturesInputAndFocusLossErasesThePrivatePassword() throws Exception {
+        fingerprint = Optional.of(FP);
+        open(List.of("s2"));
+        chooseMode(1);
+        for (int i = 0; i < 4; i++) tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN);
+        tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
+        assertTrue(host.capturesTextInput(), "creation is a modal even before its password editor opens");
+        tap(org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT);
+        tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN);
+        tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
+        type("a long private room password");
+        tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
+        scene.focusLost(null);
+        tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN);
+        tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN);
+        tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
+        assertEquals(openggf.timeattack.mp.RaceSession.State.IDLE, scene.raceSession().state());
+        assertTrue(host.capturesTextInput());
+        assertTrue(launched.isEmpty());
+        tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE);
+        assertFalse(host.capturesTextInput());
+    }
+
+    @Test
+    void privateManualJoinPromptsLocallyAndCancelReturnsToTheMenuWithoutAPlayer() throws Exception {
+        var roomIdentity = com.openggf.net.identity.PlayerIdentity.loadOrCreate(temp.resolve("private-host"));
+        try (var password = com.openggf.net.protocol.RoomPassword.of("a private room password");
+             var room = com.openggf.net.host.jdk.JdkRaceHostServer.startTls(0,
+                     new com.openggf.net.hub.RoomHostConfig("Private", "s2", 0, 0, "OPEN", null, 8, FP,
+                             List.of(), false, new com.openggf.net.protocol.RoomAccessPolicy(
+                             com.openggf.net.protocol.RoomAccessPolicy.Mode.PRIVATE, true), password, null),
+                     roomIdentity, com.openggf.net.hub.TrackValidationProfileSource.none())) {
+            room.room().ready().get(10, java.util.concurrent.TimeUnit.SECONDS);
+            String invite = "127.0.0.1:" + room.port() + "#" + com.openggf.net.client.DirectJoinAddress.shareCode(
+                    room.tlsCertificateSha256(), roomIdentity.fingerprint());
+            fingerprint = Optional.of(FP);
+            open(List.of("s2"));
+            chooseMode(2);
+            tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN);
+            tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
+            type(invite);
+            tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
+            tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN);
+            tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
+            idleUntil("private password modal", () -> scene.raceSession().state()
+                    == openggf.timeattack.mp.RaceSession.State.PASSWORD_REQUIRED);
+            assertTrue(host.capturesTextInput());
+            assertTrue(launched.isEmpty());
+            assertEquals(0, onRoomThread(room, () -> room.room().playerCount()));
+            type("a private room password");
+            scene.focusLost(null);
+            tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
+            assertEquals(openggf.timeattack.mp.RaceSession.State.PASSWORD_REQUIRED, scene.raceSession().state());
+            assertEquals(0, onRoomThread(room, () -> room.room().playerCount()));
+            tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE);
+            assertEquals(openggf.timeattack.mp.RaceSession.State.IDLE, scene.raceSession().state());
+            assertFalse(host.capturesTextInput());
+        }
+    }
+
+    @Test
+    void browserCodeAndCreationModalsCaptureTextAndDrawBeforeTheBrowser() throws Exception {
+        try (var master = openggf.racing.server.master.MasterServer.start(
+                openggf.racing.server.master.TestMasterServer.testConfig(), temp.resolve("browser-master"))) {
+            fingerprint = Optional.of(FP);
+            open(List.of("s2"));
+            scene.settings().setMasterUrl("ws://127.0.0.1:" + master.port() + "/master");
+            chooseMode(3);
+            for (int i = 0; i < 4; i++) tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN);
+            tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
+            idleUntil("browser", () -> scene.raceSession().state() == openggf.timeattack.mp.RaceSession.State.BROWSING);
+            tap(org.lwjgl.glfw.GLFW.GLFW_KEY_J);
+            assertTrue(host.capturesTextInput());
+            type("7K3 M9X");
+            var canvas = new openggf.timeattack.ui.RecordingSceneCanvas(320);
+            scene.draw(null, canvas);
+            assertTrue(canvas.joined().contains("JOIN BY CODE"));
+            assertFalse(canvas.joined().contains("7K3 M9X"));
+            scene.focusLost(null);
+            assertFalse(host.capturesTextInput());
+            tap(org.lwjgl.glfw.GLFW.GLFW_KEY_C);
+            assertTrue(host.capturesTextInput());
+            scene.draw(null, canvas);
+            assertTrue(canvas.joined().contains("CREATE ROOM"));
+            assertFalse(canvas.joined().contains("TIME ATTACK ROOMS"));
+            tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE);
+            assertFalse(host.capturesTextInput());
+            assertEquals(openggf.timeattack.mp.RaceSession.State.BROWSING, scene.raceSession().state());
+        }
+    }
+
 }

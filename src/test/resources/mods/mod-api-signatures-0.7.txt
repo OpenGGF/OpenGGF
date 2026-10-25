@@ -940,6 +940,9 @@ CF-ANNOTATION TYPE com.openggf.mods.scene.SceneBackground visible @com.openggf.g
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneButtons visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneCanvas visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneClip visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.scene.SceneClipboard visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.scene.SceneClipboard$Result visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.scene.SceneClipboard$Write visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneContext visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneDraw visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneGameplay visible @com.openggf.game.ModApi
@@ -1031,6 +1034,9 @@ CF-ANNOTATION TYPE com.openggf.net.client.RemoteGhostPlayback$RenderState visibl
 CF-ANNOTATION TYPE com.openggf.net.client.RemoteGhostRegistry visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.client.RemoteGhostRegistry$FarPlayer visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.client.RemoteGhostRegistry$RemoteGhost visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.net.client.RoomAccessRequiredException visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.net.client.RoomInviteRejectedException visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.net.client.RoomJoinOptions visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.ghost.GhostFrame visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.ghost.GhostFrameCodec visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.host.HostMasterLink visible @com.openggf.game.ModApi
@@ -1055,6 +1061,8 @@ CF-ANNOTATION TYPE com.openggf.net.hub.RoomHostHooks$ProfileListener visible @ja
 CF-ANNOTATION TYPE com.openggf.net.hub.RoomHostHooks$RoundOutcomeListener visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.hub.RoomHostHooks$RoundOutcomeListener visible @java.lang.FunctionalInterface
 CF-ANNOTATION TYPE com.openggf.net.hub.RoomHostHooks$VerificationHooks visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.net.hub.RoomInviteService visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.net.hub.RoomInviteService visible @java.lang.FunctionalInterface
 CF-ANNOTATION TYPE com.openggf.net.hub.TrackValidationProfile visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.hub.TrackValidationProfileSource visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.hub.ViolationSink visible @com.openggf.game.ModApi
@@ -1076,9 +1084,11 @@ CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$ChatBroadcast visible
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$ChatModeState visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$Heartbeat visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$Hello visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$InviteOperation visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$JoinAccepted visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$JoinRejected visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$Kick visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$MasterRequestCancel visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$Ping visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$PlayerInfo visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$PlayerLeft visible @com.openggf.game.ModApi
@@ -1098,17 +1108,31 @@ CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RelayAttach visible @
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RelayGuestClose visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RelayGuestOpen visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RelayGuestText visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RoomAccessChallenge visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RoomAccessState visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RoomAccessSubmit visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RoomChatModeUpdate visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RoomCreate visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RoomCreateRejected visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RoomCreated visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RoomDescriptor visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RoomInvite visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RoomInviteControl visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RoomInviteControlResult visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RoomInviteInvalidated visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RoomInviteRejected visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RoomInviteRequest visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RoomInviteResolve visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RoomInviteRotate visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RoomInviteSharing visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RoomJoinRejected visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RoomJoinRequest visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RoomJoinResult visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RoomLeave visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RoomListRequest visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RoomListResult visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RoomPasswordChange visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RoomPasswordChanged visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RoomState visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RoomSummary visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RoomTrackUpdate visible @com.openggf.game.ModApi
@@ -1142,6 +1166,10 @@ CF-ANNOTATION TYPE com.openggf.net.protocol.Protocol visible @com.openggf.game.M
 CF-ANNOTATION TYPE com.openggf.net.protocol.ProtocolViolationException visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.QuickChatPhrase visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ReadyRules visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.net.protocol.RoomAccessPolicy visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.net.protocol.RoomAccessPolicy$Mode visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.net.protocol.RoomInviteCode visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.net.protocol.RoomPassword visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.physics.BackgroundPlaneCollisionProvider visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.physics.BackgroundPlaneCollisionProvider visible @java.lang.FunctionalInterface
 CF-ANNOTATION TYPE com.openggf.physics.BackgroundPlaneCollisionProvider$State visible @com.openggf.game.ModApi
@@ -1943,6 +1971,9 @@ CONSTRUCTOR com.openggf.net.client.RemoteGhostPlayback$RenderState public  <init
 CONSTRUCTOR com.openggf.net.client.RemoteGhostRegistry public  <init>()
 CONSTRUCTOR com.openggf.net.client.RemoteGhostRegistry$FarPlayer public  <init>(int,java.lang.String,java.lang.String,int,int,int)
 CONSTRUCTOR com.openggf.net.client.RemoteGhostRegistry$RemoteGhost public  <init>(int,java.lang.String,java.lang.String,com.openggf.net.client.RemoteGhostPlayback$RenderState)
+CONSTRUCTOR com.openggf.net.client.RoomAccessRequiredException public  <init>(java.lang.String,long,com.openggf.net.protocol.RoomAccessPolicy)
+CONSTRUCTOR com.openggf.net.client.RoomInviteRejectedException public  <init>(long)
+CONSTRUCTOR com.openggf.net.client.RoomJoinOptions public  <init>(com.openggf.net.protocol.RoomPassword,java.lang.String,long)
 CONSTRUCTOR com.openggf.net.ghost.GhostFrame public  <init>(int,int,int,boolean,boolean,boolean,int,boolean)
 CONSTRUCTOR com.openggf.net.ghost.GhostFrame public  <init>(int,int,int,boolean,boolean,boolean,int,boolean,boolean)
 CONSTRUCTOR com.openggf.net.host.HostMasterLink public  <init>(java.util.function.Consumer<com.openggf.net.hub.HubConnection>,java.util.function.BiConsumer<com.openggf.net.hub.HubConnection,java.lang.String>,java.util.function.BiConsumer<com.openggf.net.hub.HubConnection,byte[]>,java.util.function.Consumer<com.openggf.net.hub.HubConnection>,com.openggf.net.host.HostMasterLink$MessageSink)
@@ -1957,6 +1988,8 @@ CONSTRUCTOR com.openggf.net.hub.RoomHost public  <init>(com.openggf.net.hub.Room
 CONSTRUCTOR com.openggf.net.hub.RoomHostConfig public  <init>(java.lang.String,java.lang.String,int,int,java.lang.String,java.lang.String,int,java.lang.String)
 CONSTRUCTOR com.openggf.net.hub.RoomHostConfig public  <init>(java.lang.String,java.lang.String,int,int,java.lang.String,java.lang.String,int,java.lang.String,java.util.List<java.lang.String>)
 CONSTRUCTOR com.openggf.net.hub.RoomHostConfig public  <init>(java.lang.String,java.lang.String,int,int,java.lang.String,java.lang.String,int,java.lang.String,java.util.List<java.lang.String>,boolean)
+CONSTRUCTOR com.openggf.net.hub.RoomHostConfig public  <init>(java.lang.String,java.lang.String,int,int,java.lang.String,java.lang.String,int,java.lang.String,java.util.List<java.lang.String>,boolean,com.openggf.net.protocol.RoomAccessPolicy,com.openggf.net.protocol.RoomPassword,java.lang.String)
+CONSTRUCTOR com.openggf.net.hub.RoomHostConfig public  <init>(java.lang.String,java.lang.String,int,int,java.lang.String,java.lang.String,int,java.lang.String,java.util.List<java.lang.String>,boolean,com.openggf.net.protocol.RoomAccessPolicy,com.openggf.net.protocol.RoomPassword,java.lang.String,java.lang.String)
 CONSTRUCTOR com.openggf.net.hub.RoomHostConfig public  <init>(java.lang.String,java.lang.String,int,int,java.lang.String,java.lang.String,int,java.lang.String,java.util.List<java.lang.String>,boolean,java.lang.String)
 CONSTRUCTOR com.openggf.net.hub.RoomHostHooks public  <init>(boolean,com.openggf.net.hub.RoomHostHooks$ChatGate,com.openggf.net.hub.RoomHostHooks$RoundOutcomeListener,java.lang.String,java.util.function.Predicate<java.lang.String>)
 CONSTRUCTOR com.openggf.net.hub.RoomHostHooks public  <init>(boolean,com.openggf.net.hub.RoomHostHooks$ChatGate,com.openggf.net.hub.RoomHostHooks$RoundOutcomeListener,java.lang.String,java.util.function.Predicate<java.lang.String>,java.util.function.Predicate<java.lang.String>)
@@ -1968,6 +2001,7 @@ CONSTRUCTOR com.openggf.net.identity.PlayerAppearance public  <init>(int,java.ut
 CONSTRUCTOR com.openggf.net.identity.PlayerAppearance$Entry public  <init>(int,int)
 CONSTRUCTOR com.openggf.net.protocol.ControlJsonCodec public  <init>()
 CONSTRUCTOR com.openggf.net.protocol.ControlJsonCodec$Decoded public  <init>(java.lang.String,com.openggf.net.protocol.ControlMessage)
+CONSTRUCTOR com.openggf.net.protocol.ControlJsonCodec$Decoded public  <init>(java.lang.String,com.openggf.net.protocol.ControlMessage,long)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$AttemptFinish public  <init>(int,int,int,int,java.lang.String,java.lang.String,java.lang.String)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$AttemptReset public  <init>(int)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$AttemptStart public  <init>(int)
@@ -1980,6 +2014,7 @@ CONSTRUCTOR com.openggf.net.protocol.ControlMessage$Hello public  <init>(int,jav
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$JoinAccepted public  <init>(java.lang.String,int,com.openggf.net.protocol.ControlMessage$RoomDescriptor,com.openggf.net.protocol.ControlMessage$RoundSnapshot)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$JoinRejected public  <init>(java.lang.String)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$Kick public  <init>(java.lang.String)
+CONSTRUCTOR com.openggf.net.protocol.ControlMessage$MasterRequestCancel public  <init>(long)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$Ping public  <init>(long)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$PlayerInfo public  <init>(int,java.lang.String,java.lang.String,java.lang.String)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$PlayerInfo public  <init>(int,java.lang.String,java.lang.String,java.lang.String,boolean)
@@ -2000,21 +2035,42 @@ CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RelayAttach public  <init>(j
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RelayGuestClose public  <init>(int,java.lang.String)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RelayGuestOpen public  <init>(int)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RelayGuestText public  <init>(int,java.lang.String)
+CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomAccessChallenge public  <init>(java.lang.String,java.lang.String,long,com.openggf.net.protocol.RoomAccessPolicy)
+CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomAccessState public  <init>(java.lang.String,com.openggf.net.protocol.RoomAccessPolicy,long,long)
+CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomAccessSubmit public  <init>(java.lang.String,com.openggf.net.protocol.RoomPassword)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomChatModeUpdate public  <init>(java.lang.String,java.lang.String)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomCreate public  <init>(com.openggf.net.protocol.ControlMessage$RoomDescriptor,java.lang.String,int,java.lang.String)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomCreate public  <init>(com.openggf.net.protocol.ControlMessage$RoomDescriptor,java.lang.String,int,java.lang.String,java.util.List<java.lang.String>)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomCreate public  <init>(com.openggf.net.protocol.ControlMessage$RoomDescriptor,java.lang.String,int,java.lang.String,java.util.List<java.lang.String>,java.lang.String)
+CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomCreate public  <init>(com.openggf.net.protocol.ControlMessage$RoomDescriptor,java.lang.String,int,java.lang.String,java.util.List<java.lang.String>,java.lang.String,java.lang.String,long,com.openggf.net.protocol.RoomPassword)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomCreateRejected public  <init>(java.lang.String)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomCreated public  <init>(java.lang.String)
+CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomCreated public  <init>(java.lang.String,java.lang.String,long,long)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomDescriptor public  <init>(java.lang.String,java.lang.String,int,int,java.lang.String,java.lang.String,int,boolean)
+CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomDescriptor public  <init>(java.lang.String,java.lang.String,int,int,java.lang.String,java.lang.String,int,boolean,com.openggf.net.protocol.RoomAccessPolicy)
+CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomDescriptor public  <init>(java.lang.String,java.lang.String,int,int,java.lang.String,java.lang.String,int,boolean,com.openggf.net.protocol.RoomAccessPolicy,java.lang.String)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomDescriptor public  <init>(java.lang.String,java.lang.String,int,int,java.lang.String,java.lang.String,int,boolean,java.lang.String)
+CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomInvite public  <init>(java.lang.String,java.lang.String,long,long,long)
+CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomInvite public  <init>(java.lang.String,java.lang.String,long,long,long,long)
+CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomInviteControl public  <init>(java.lang.String,java.lang.String,long,long,com.openggf.net.protocol.ControlMessage$InviteOperation,boolean)
+CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomInviteControlResult public  <init>(com.openggf.net.protocol.RoomAccessPolicy,com.openggf.net.protocol.ControlMessage$RoomInvite)
+CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomInviteInvalidated public  <init>(java.lang.String)
+CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomInviteRejected public  <init>(java.lang.String,long)
+CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomInviteRequest public  <init>()
+CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomInviteRequest public  <init>(long)
+CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomInviteResolve public  <init>(java.lang.String)
+CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomInviteRotate public  <init>()
+CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomInviteSharing public  <init>(boolean)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomJoinRejected public  <init>(java.lang.String)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomJoinRequest public  <init>(java.lang.String)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomJoinResult public  <init>(java.lang.String,java.lang.String,java.lang.String,int,java.lang.String,java.lang.String)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomJoinResult public  <init>(java.lang.String,java.lang.String,java.lang.String,int,java.lang.String,java.lang.String,java.lang.String)
+CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomJoinResult public  <init>(java.lang.String,java.lang.String,java.lang.String,int,java.lang.String,java.lang.String,java.lang.String,java.lang.String,com.openggf.net.protocol.RoomAccessPolicy,long,long,long)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomLeave public  <init>(java.lang.String)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomListRequest public  <init>(java.lang.String,int)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomListResult public  <init>(java.util.List<com.openggf.net.protocol.ControlMessage$RoomSummary>,int,int)
+CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomPasswordChange public  <init>(com.openggf.net.protocol.RoomPassword)
+CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomPasswordChanged public  <init>(long)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomState public  <init>(java.util.List<com.openggf.net.protocol.ControlMessage$PlayerInfo>)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomSummary public  <init>(java.lang.String,java.lang.String,java.lang.String,int,int,java.lang.String,int,int,java.lang.String,boolean)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomSummary public  <init>(java.lang.String,java.lang.String,java.lang.String,int,int,java.lang.String,int,int,java.lang.String,boolean,java.lang.String)
@@ -2046,6 +2102,8 @@ CONSTRUCTOR com.openggf.net.protocol.GhostPackets$RelayGuestBinary public  <init
 CONSTRUCTOR com.openggf.net.protocol.GhostPackets$RosterEntry public  <init>(int,int,int,int)
 CONSTRUCTOR com.openggf.net.protocol.ProtocolViolationException public  <init>(java.lang.String)
 CONSTRUCTOR com.openggf.net.protocol.ProtocolViolationException public  <init>(java.lang.String,java.lang.Throwable)
+CONSTRUCTOR com.openggf.net.protocol.RoomAccessPolicy public  <init>(com.openggf.net.protocol.RoomAccessPolicy$Mode,boolean)
+CONSTRUCTOR com.openggf.net.protocol.RoomPassword public  <init>(char[])
 CONSTRUCTOR com.openggf.physics.BackgroundPlaneCollisionProvider$State public  <init>(boolean,int,int)
 CONSTRUCTOR com.openggf.physics.CollisionEvent public  <init>(com.openggf.physics.CollisionEvent$EventType,java.lang.String,int,int,int,byte,boolean,boolean)
 CONSTRUCTOR com.openggf.physics.CollisionSystem public  <init>()
@@ -3458,6 +3516,11 @@ FIELD com.openggf.mods.scene.SceneButtons public,static,final int LEFT
 FIELD com.openggf.mods.scene.SceneButtons public,static,final int RIGHT
 FIELD com.openggf.mods.scene.SceneButtons public,static,final int START
 FIELD com.openggf.mods.scene.SceneButtons public,static,final int UP
+FIELD com.openggf.mods.scene.SceneClipboard public,static,final int MAX_TEXT_LENGTH
+FIELD com.openggf.mods.scene.SceneClipboard$Result public,static,final com.openggf.mods.scene.SceneClipboard$Result DENIED
+FIELD com.openggf.mods.scene.SceneClipboard$Result public,static,final com.openggf.mods.scene.SceneClipboard$Result PENDING
+FIELD com.openggf.mods.scene.SceneClipboard$Result public,static,final com.openggf.mods.scene.SceneClipboard$Result SUCCESS
+FIELD com.openggf.mods.scene.SceneClipboard$Result public,static,final com.openggf.mods.scene.SceneClipboard$Result UNAVAILABLE
 FIELD com.openggf.mods.scene.SceneKeys public,static,final int A
 FIELD com.openggf.mods.scene.SceneKeys public,static,final int APOSTROPHE
 FIELD com.openggf.mods.scene.SceneKeys public,static,final int B
@@ -3602,6 +3665,7 @@ FIELD com.openggf.net.client.ClientRaceSession$Phase public,static,final com.ope
 FIELD com.openggf.net.client.ClientRaceSession$Phase public,static,final com.openggf.net.client.ClientRaceSession$Phase ROUND_END
 FIELD com.openggf.net.client.ClientRaceSession$Phase public,static,final com.openggf.net.client.ClientRaceSession$Phase RUNNING
 FIELD com.openggf.net.client.ClientRaceSession$Phase public,static,final com.openggf.net.client.ClientRaceSession$Phase VOTE
+FIELD com.openggf.net.client.MasterClient public,static,final int MAX_PENDING_REQUESTS
 FIELD com.openggf.net.client.MasterClient public,static,final long MASTER_REPLY_TIMEOUT_MILLIS
 FIELD com.openggf.net.client.RaceClient public,static,final long JOIN_TIMEOUT_MILLIS
 FIELD com.openggf.net.client.RemoteGhostPlayback public,static,final int CATCHUP_SLACK_FRAMES
@@ -3642,6 +3706,7 @@ FIELD com.openggf.net.hub.HostRoundEngine$Phase public,static,final com.openggf.
 FIELD com.openggf.net.hub.HostRoundEngine$Phase public,static,final com.openggf.net.hub.HostRoundEngine$Phase RUNNING
 FIELD com.openggf.net.hub.HostRoundEngine$Phase public,static,final com.openggf.net.hub.HostRoundEngine$Phase VOTE
 FIELD com.openggf.net.hub.RoomHost public,static,final int STANDINGS_PAGE_SIZE
+FIELD com.openggf.net.hub.RoomHost public,static,final long ACCESS_TIMEOUT_MILLIS
 FIELD com.openggf.net.hub.RoomHost public,static,final long ADMISSION_TIMEOUT_MILLIS
 FIELD com.openggf.net.hub.RoomHost public,static,final long STANDINGS_PAGE_INTERVAL_MILLIS
 FIELD com.openggf.net.hub.TrackValidationProfile public,static,final int BOUNDS_MARGIN_PX
@@ -3656,6 +3721,10 @@ FIELD com.openggf.net.identity.PlayerAppearance public,static,final int NO_BASE_
 FIELD com.openggf.net.protocol.ChatMode public,static,final com.openggf.net.protocol.ChatMode FULL_CHAT
 FIELD com.openggf.net.protocol.ChatMode public,static,final com.openggf.net.protocol.ChatMode OFF
 FIELD com.openggf.net.protocol.ChatMode public,static,final com.openggf.net.protocol.ChatMode QUICK_CHAT
+FIELD com.openggf.net.protocol.ControlMessage$InviteOperation public,static,final com.openggf.net.protocol.ControlMessage$InviteOperation ACCESS_CHANGED
+FIELD com.openggf.net.protocol.ControlMessage$InviteOperation public,static,final com.openggf.net.protocol.ControlMessage$InviteOperation FETCH
+FIELD com.openggf.net.protocol.ControlMessage$InviteOperation public,static,final com.openggf.net.protocol.ControlMessage$InviteOperation ROTATE
+FIELD com.openggf.net.protocol.ControlMessage$InviteOperation public,static,final com.openggf.net.protocol.ControlMessage$InviteOperation SET_SHARING
 FIELD com.openggf.net.protocol.GhostPackets public,static,final int MAX_AGGREGATE_FRAMES_PER_ENTRY
 FIELD com.openggf.net.protocol.GhostPackets public,static,final int MAX_UPSTREAM_FRAMES_PER_PACKET
 FIELD com.openggf.net.protocol.GhostPackets public,static,final int ROSTER_STATUS_FINISHED
@@ -3690,6 +3759,15 @@ FIELD com.openggf.net.protocol.ReadyRules public,static,final com.openggf.net.pr
 FIELD com.openggf.net.protocol.ReadyRules public,static,final com.openggf.net.protocol.ReadyRules DEFAULT_BY_SIZE
 FIELD com.openggf.net.protocol.ReadyRules public,static,final com.openggf.net.protocol.ReadyRules REQUIRED
 FIELD com.openggf.net.protocol.ReadyRules public,static,final int MAX_PLAYERS_REQUIRED_BY_DEFAULT
+FIELD com.openggf.net.protocol.RoomAccessPolicy public,static,final com.openggf.net.protocol.RoomAccessPolicy PUBLIC
+FIELD com.openggf.net.protocol.RoomAccessPolicy$Mode public,static,final com.openggf.net.protocol.RoomAccessPolicy$Mode PRIVATE
+FIELD com.openggf.net.protocol.RoomAccessPolicy$Mode public,static,final com.openggf.net.protocol.RoomAccessPolicy$Mode PUBLIC
+FIELD com.openggf.net.protocol.RoomInviteCode public,static,final int LENGTH
+FIELD com.openggf.net.protocol.RoomInviteCode public,static,final int MAX_RAW_LENGTH
+FIELD com.openggf.net.protocol.RoomInviteCode public,static,final java.lang.String ALPHABET
+FIELD com.openggf.net.protocol.RoomPassword public,static,final int MAX_CODE_POINTS
+FIELD com.openggf.net.protocol.RoomPassword public,static,final int MAX_UTF8_BYTES
+FIELD com.openggf.net.protocol.RoomPassword public,static,final int MIN_CODE_POINTS
 FIELD com.openggf.physics.BackgroundPlaneCollisionProvider public,static,final com.openggf.physics.BackgroundPlaneCollisionProvider FOREGROUND_ONLY
 FIELD com.openggf.physics.BackgroundPlaneCollisionProvider$State public,static,final com.openggf.physics.BackgroundPlaneCollisionProvider$State INACTIVE
 FIELD com.openggf.physics.CollisionEvent$EventType public,static,final com.openggf.physics.CollisionEvent$EventType POST_ADJUSTMENT
@@ -4183,6 +4261,7 @@ INTERFACE com.openggf.net.client.RaceClient$Disconnected com.openggf.net.client.
 INTERFACE com.openggf.net.client.RaceClient$GhostData com.openggf.net.client.RaceClient$InboundEvent
 INTERFACE com.openggf.net.client.RaceClient$LobbyGhostData com.openggf.net.client.RaceClient$InboundEvent
 INTERFACE com.openggf.net.client.RaceClient$Roster com.openggf.net.client.RaceClient$InboundEvent
+INTERFACE com.openggf.net.client.RoomJoinOptions java.lang.AutoCloseable
 INTERFACE com.openggf.net.host.RaceRoomHost java.lang.AutoCloseable
 INTERFACE com.openggf.net.host.jdk.JdkRaceHostServer com.openggf.net.host.RaceRoomHost
 INTERFACE com.openggf.net.protocol.ControlMessage$AttemptFinish com.openggf.net.protocol.ControlMessage
@@ -4197,6 +4276,7 @@ INTERFACE com.openggf.net.protocol.ControlMessage$Hello com.openggf.net.protocol
 INTERFACE com.openggf.net.protocol.ControlMessage$JoinAccepted com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$JoinRejected com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$Kick com.openggf.net.protocol.ControlMessage
+INTERFACE com.openggf.net.protocol.ControlMessage$MasterRequestCancel com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$Ping com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$PlayerLeft com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$PlayerLook com.openggf.net.protocol.ControlMessage
@@ -4215,16 +4295,30 @@ INTERFACE com.openggf.net.protocol.ControlMessage$RelayAttach com.openggf.net.pr
 INTERFACE com.openggf.net.protocol.ControlMessage$RelayGuestClose com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$RelayGuestOpen com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$RelayGuestText com.openggf.net.protocol.ControlMessage
+INTERFACE com.openggf.net.protocol.ControlMessage$RoomAccessChallenge com.openggf.net.protocol.ControlMessage
+INTERFACE com.openggf.net.protocol.ControlMessage$RoomAccessState com.openggf.net.protocol.ControlMessage
+INTERFACE com.openggf.net.protocol.ControlMessage$RoomAccessSubmit com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$RoomChatModeUpdate com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$RoomCreate com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$RoomCreateRejected com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$RoomCreated com.openggf.net.protocol.ControlMessage
+INTERFACE com.openggf.net.protocol.ControlMessage$RoomInvite com.openggf.net.protocol.ControlMessage
+INTERFACE com.openggf.net.protocol.ControlMessage$RoomInviteControl com.openggf.net.protocol.ControlMessage
+INTERFACE com.openggf.net.protocol.ControlMessage$RoomInviteControlResult com.openggf.net.protocol.ControlMessage
+INTERFACE com.openggf.net.protocol.ControlMessage$RoomInviteInvalidated com.openggf.net.protocol.ControlMessage
+INTERFACE com.openggf.net.protocol.ControlMessage$RoomInviteRejected com.openggf.net.protocol.ControlMessage
+INTERFACE com.openggf.net.protocol.ControlMessage$RoomInviteRequest com.openggf.net.protocol.ControlMessage
+INTERFACE com.openggf.net.protocol.ControlMessage$RoomInviteResolve com.openggf.net.protocol.ControlMessage
+INTERFACE com.openggf.net.protocol.ControlMessage$RoomInviteRotate com.openggf.net.protocol.ControlMessage
+INTERFACE com.openggf.net.protocol.ControlMessage$RoomInviteSharing com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$RoomJoinRejected com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$RoomJoinRequest com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$RoomJoinResult com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$RoomLeave com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$RoomListRequest com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$RoomListResult com.openggf.net.protocol.ControlMessage
+INTERFACE com.openggf.net.protocol.ControlMessage$RoomPasswordChange com.openggf.net.protocol.ControlMessage
+INTERFACE com.openggf.net.protocol.ControlMessage$RoomPasswordChanged com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$RoomState com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$RoomTrackUpdate com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$RoundConfigure com.openggf.net.protocol.ControlMessage
@@ -4243,6 +4337,7 @@ INTERFACE com.openggf.net.protocol.ControlMessage$TrackVoteResult com.openggf.ne
 INTERFACE com.openggf.net.protocol.ControlMessage$TrackVoteTally com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$UpdateProfile com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$Welcome com.openggf.net.protocol.ControlMessage
+INTERFACE com.openggf.net.protocol.RoomPassword java.lang.AutoCloseable
 INTERFACE com.openggf.physics.CollisionSystem com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.CollisionSystemSnapshot>
 INTERFACE com.openggf.sprites.AbstractSprite com.openggf.sprites.Sprite
 INTERFACE com.openggf.sprites.managers.AbstractSpriteMovementManager com.openggf.sprites.managers.SpriteMovementManager
@@ -12763,6 +12858,7 @@ METHOD com.openggf.mods.scene.ActResult public,final  java.lang.String toString(
 METHOD com.openggf.mods.scene.DebuggableScene public,abstract  boolean debugJump(java.lang.String)
 METHOD com.openggf.mods.scene.ModScene public  boolean capturesTextInput()
 METHOD com.openggf.mods.scene.ModScene public  void exit(com.openggf.mods.scene.SceneContext)
+METHOD com.openggf.mods.scene.ModScene public  void focusLost(com.openggf.mods.scene.SceneContext)
 METHOD com.openggf.mods.scene.ModScene public  void resume(com.openggf.mods.scene.SceneContext,com.openggf.mods.scene.ActResult)
 METHOD com.openggf.mods.scene.ModScene public  void resumed(com.openggf.mods.scene.SceneContext,com.openggf.mods.run.RunEndReason)
 METHOD com.openggf.mods.scene.ModScene public,abstract  void draw(com.openggf.mods.scene.SceneContext,com.openggf.mods.scene.SceneCanvas)
@@ -12845,16 +12941,23 @@ METHOD com.openggf.mods.scene.SceneClip public  int y()
 METHOD com.openggf.mods.scene.SceneClip public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.mods.scene.SceneClip public,final  int hashCode()
 METHOD com.openggf.mods.scene.SceneClip public,final  java.lang.String toString()
+METHOD com.openggf.mods.scene.SceneClipboard public,abstract  com.openggf.mods.scene.SceneClipboard$Write writeText(java.lang.String)
+METHOD com.openggf.mods.scene.SceneClipboard public,static  com.openggf.mods.scene.SceneClipboard unavailable()
+METHOD com.openggf.mods.scene.SceneClipboard$Result public,static  com.openggf.mods.scene.SceneClipboard$Result valueOf(java.lang.String)
+METHOD com.openggf.mods.scene.SceneClipboard$Result public,static  com.openggf.mods.scene.SceneClipboard$Result[] values()
+METHOD com.openggf.mods.scene.SceneClipboard$Write public,abstract  com.openggf.mods.scene.SceneClipboard$Result result()
 METHOD com.openggf.mods.scene.SceneContext public  boolean censorMultiplayerProfanity()
 METHOD com.openggf.mods.scene.SceneContext public  boolean multiplayerChatDisabled()
 METHOD com.openggf.mods.scene.SceneContext public  boolean relaunch(com.openggf.mods.scene.SceneLaunch)
 METHOD com.openggf.mods.scene.SceneContext public  boolean startStockAct(int,int)
 METHOD com.openggf.mods.scene.SceneContext public  com.openggf.control.PhysicalInput physicalInput()
+METHOD com.openggf.mods.scene.SceneContext public  com.openggf.mods.scene.SceneClipboard clipboard()
 METHOD com.openggf.mods.scene.SceneContext public  com.openggf.mods.scene.SceneGameplay gameplay()
 METHOD com.openggf.mods.scene.SceneContext public  com.openggf.mods.scene.SceneLaunch currentLaunch()
 METHOD com.openggf.mods.scene.SceneContext public  com.openggf.mods.scene.SceneMusic music()
 METHOD com.openggf.mods.scene.SceneContext public  com.openggf.mods.scene.SceneNetwork network()
 METHOD com.openggf.mods.scene.SceneContext public  java.lang.String typedText()
+METHOD com.openggf.mods.scene.SceneContext public  long focusLossGeneration()
 METHOD com.openggf.mods.scene.SceneContext public  void captureKeyboardText()
 METHOD com.openggf.mods.scene.SceneContext public  void startAct(com.openggf.mods.scene.ActLaunch)
 METHOD com.openggf.mods.scene.SceneContext public,abstract  boolean buttonDown(int)
@@ -13258,9 +13361,13 @@ METHOD com.openggf.net.client.ClientRaceSession public  com.openggf.net.client.C
 METHOD com.openggf.net.client.ClientRaceSession public  com.openggf.net.identity.PlayerAppearance appearance(int)
 METHOD com.openggf.net.client.ClientRaceSession public  com.openggf.net.protocol.ChatMode chatMode()
 METHOD com.openggf.net.client.ClientRaceSession public  com.openggf.net.protocol.ControlMessage$RoomDescriptor room()
+METHOD com.openggf.net.client.ClientRaceSession public  com.openggf.net.protocol.ControlMessage$RoomInvite invite()
+METHOD com.openggf.net.client.ClientRaceSession public  com.openggf.net.protocol.ControlMessage$RoomInviteRequest beginInviteRequest()
 METHOD com.openggf.net.client.ClientRaceSession public  com.openggf.net.protocol.ControlMessage$RoundConfig roundConfig()
 METHOD com.openggf.net.client.ClientRaceSession public  com.openggf.net.protocol.ControlMessage$StandingsRow localStandingsRow()
+METHOD com.openggf.net.client.ClientRaceSession public  com.openggf.net.protocol.RoomAccessPolicy accessPolicy()
 METHOD com.openggf.net.client.ClientRaceSession public  int localSlot()
+METHOD com.openggf.net.client.ClientRaceSession public  java.lang.String instanceId()
 METHOD com.openggf.net.client.ClientRaceSession public  java.lang.String kickReason()
 METHOD com.openggf.net.client.ClientRaceSession public  java.lang.String lastVoteResultTrackKey()
 METHOD com.openggf.net.client.ClientRaceSession public  java.lang.String readyRule()
@@ -13271,12 +13378,15 @@ METHOD com.openggf.net.client.ClientRaceSession public  java.util.List<com.openg
 METHOD com.openggf.net.client.ClientRaceSession public  java.util.List<com.openggf.net.protocol.ControlMessage$VoteCount> voteCounts()
 METHOD com.openggf.net.client.ClientRaceSession public  java.util.List<java.lang.String> chatLines()
 METHOD com.openggf.net.client.ClientRaceSession public  java.util.List<java.lang.String> voteOptions()
+METHOD com.openggf.net.client.ClientRaceSession public  long accessEpoch()
 METHOD com.openggf.net.client.ClientRaceSession public  long clockOffsetMillis()
 METHOD com.openggf.net.client.ClientRaceSession public  long hubNowEstimateMillis()
+METHOD com.openggf.net.client.ClientRaceSession public  long inviteEpoch()
 METHOD com.openggf.net.client.ClientRaceSession public  long remainingCountdownMillis()
 METHOD com.openggf.net.client.ClientRaceSession public  long remainingWindowMillis()
 METHOD com.openggf.net.client.ClientRaceSession public  long voteRemainingMillis()
 METHOD com.openggf.net.client.ClientRaceSession public  void applyJoin(com.openggf.net.protocol.ControlMessage$JoinAccepted)
+METHOD com.openggf.net.client.ClientRaceSession public  void invalidateInvite()
 METHOD com.openggf.net.client.ClientRaceSession public  void onControl(com.openggf.net.protocol.ControlMessage)
 METHOD com.openggf.net.client.ClientRaceSession public  void setChatPreferences(boolean,boolean)
 METHOD com.openggf.net.client.ClientRaceSession public  void setQuickChatFormatter(java.util.function.Function<com.openggf.net.chat.QuickChatContent,java.lang.String>)
@@ -13284,13 +13394,14 @@ METHOD com.openggf.net.client.ClientRaceSession$Phase public,static  com.openggf
 METHOD com.openggf.net.client.ClientRaceSession$Phase public,static  com.openggf.net.client.ClientRaceSession$Phase[] values()
 METHOD com.openggf.net.client.DirectJoinAddress public  java.lang.String certificateSha256()
 METHOD com.openggf.net.client.DirectJoinAddress public  java.lang.String hostFingerprint()
+METHOD com.openggf.net.client.DirectJoinAddress public  java.lang.String toString()
 METHOD com.openggf.net.client.DirectJoinAddress public  java.net.URI uri()
 METHOD com.openggf.net.client.DirectJoinAddress public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.net.client.DirectJoinAddress public,final  int hashCode()
-METHOD com.openggf.net.client.DirectJoinAddress public,final  java.lang.String toString()
 METHOD com.openggf.net.client.DirectJoinAddress public,static  com.openggf.net.client.DirectJoinAddress parse(java.lang.String,int)
 METHOD com.openggf.net.client.DirectJoinAddress public,static  java.lang.String shareCode(java.lang.String,java.lang.String)
 METHOD com.openggf.net.client.DirectRoomRegistration public,static  java.util.concurrent.CompletableFuture<com.openggf.net.protocol.ControlMessage$RoomCreated> createRoom(com.openggf.net.client.MasterClient,com.openggf.net.protocol.ControlMessage$RoomDescriptor,java.lang.String,int,java.lang.String,java.util.List<java.lang.String>,java.lang.String)
+METHOD com.openggf.net.client.DirectRoomRegistration public,static  java.util.concurrent.CompletableFuture<com.openggf.net.protocol.ControlMessage$RoomCreated> createRoom(com.openggf.net.client.MasterClient,com.openggf.net.protocol.ControlMessage$RoomDescriptor,java.lang.String,int,java.lang.String,java.util.List<java.lang.String>,java.lang.String,java.lang.String,long)
 METHOD com.openggf.net.client.GhostStreamPublisher public  byte[] streamHashSha256()
 METHOD com.openggf.net.client.GhostStreamPublisher public  int currentAttemptId()
 METHOD com.openggf.net.client.GhostStreamPublisher public  int framesPublished()
@@ -13306,13 +13417,18 @@ METHOD com.openggf.net.client.LobbyPosePublisher public  void end()
 METHOD com.openggf.net.client.LobbyPosePublisher public  void onFrame(com.openggf.net.ghost.GhostFrame)
 METHOD com.openggf.net.client.MasterClient public  boolean isOpen()
 METHOD com.openggf.net.client.MasterClient public  com.openggf.net.client.RaceConnection attachRelay(java.lang.String)
+METHOD com.openggf.net.client.MasterClient public  com.openggf.net.hub.RoomInviteService inviteService(java.lang.String)
 METHOD com.openggf.net.client.MasterClient public  java.lang.String masterSessionToken()
 METHOD com.openggf.net.client.MasterClient public  java.util.List<com.openggf.net.client.RaceClient$InboundEvent> drainInbound()
+METHOD com.openggf.net.client.MasterClient public  java.util.concurrent.CompletableFuture<com.openggf.net.client.RaceConnection> joinInvite(java.lang.String,com.openggf.net.protocol.ControlMessage$RoomJoinResult,com.openggf.net.identity.PlayerIdentity,java.lang.String,java.lang.String,java.lang.String,com.openggf.net.protocol.RoomPassword)
+METHOD com.openggf.net.client.MasterClient public  java.util.concurrent.CompletableFuture<com.openggf.net.client.RaceConnection> joinResolved(com.openggf.net.protocol.ControlMessage$RoomJoinResult,com.openggf.net.identity.PlayerIdentity,java.lang.String,java.lang.String,java.lang.String,com.openggf.net.client.RoomJoinOptions)
 METHOD com.openggf.net.client.MasterClient public  java.util.concurrent.CompletableFuture<com.openggf.net.client.RaceConnection> joinRoom(java.lang.String,com.openggf.net.identity.PlayerIdentity,java.lang.String,java.lang.String)
 METHOD com.openggf.net.client.MasterClient public  java.util.concurrent.CompletableFuture<com.openggf.net.client.RaceConnection> joinRoom(java.lang.String,com.openggf.net.identity.PlayerIdentity,java.lang.String,java.lang.String,java.lang.String)
 METHOD com.openggf.net.client.MasterClient public  java.util.concurrent.CompletableFuture<com.openggf.net.protocol.ControlMessage$RoomCreated> createRoom(com.openggf.net.protocol.ControlMessage$RoomDescriptor,java.lang.String,int,java.lang.String)
 METHOD com.openggf.net.client.MasterClient public  java.util.concurrent.CompletableFuture<com.openggf.net.protocol.ControlMessage$RoomCreated> createRoom(com.openggf.net.protocol.ControlMessage$RoomDescriptor,java.lang.String,int,java.lang.String,java.util.List<java.lang.String>)
+METHOD com.openggf.net.client.MasterClient public  java.util.concurrent.CompletableFuture<com.openggf.net.protocol.ControlMessage$RoomCreated> createRoom(com.openggf.net.protocol.ControlMessage$RoomDescriptor,java.lang.String,int,java.lang.String,java.util.List<java.lang.String>,java.lang.String,java.lang.String,long,com.openggf.net.protocol.RoomPassword)
 METHOD com.openggf.net.client.MasterClient public  java.util.concurrent.CompletableFuture<com.openggf.net.protocol.ControlMessage$RoomJoinResult> requestJoin(java.lang.String)
+METHOD com.openggf.net.client.MasterClient public  java.util.concurrent.CompletableFuture<com.openggf.net.protocol.ControlMessage$RoomJoinResult> resolveInvite(java.lang.String)
 METHOD com.openggf.net.client.MasterClient public  java.util.concurrent.CompletableFuture<com.openggf.net.protocol.ControlMessage$RoomListResult> listRooms(java.lang.String,int)
 METHOD com.openggf.net.client.MasterClient public  void bindHostLink(com.openggf.net.host.HostMasterLink)
 METHOD com.openggf.net.client.MasterClient public  void close()
@@ -13320,6 +13436,7 @@ METHOD com.openggf.net.client.MasterClient public  void heartbeat(java.lang.Stri
 METHOD com.openggf.net.client.MasterClient public  void leaveRoom(java.lang.String)
 METHOD com.openggf.net.client.MasterClient public  void sendBinary(byte[])
 METHOD com.openggf.net.client.MasterClient public  void sendControl(com.openggf.net.protocol.ControlMessage)
+METHOD com.openggf.net.client.MasterClient public,static  boolean allowsRelayFallback(java.lang.Throwable)
 METHOD com.openggf.net.client.MasterClient public,static  java.util.concurrent.CompletableFuture<com.openggf.net.client.MasterClient> connect(java.net.URI,com.openggf.net.identity.PlayerIdentity,java.lang.String,java.lang.String,javax.net.ssl.SSLContext)
 METHOD com.openggf.net.client.MasterClient public,static  java.util.concurrent.CompletableFuture<com.openggf.net.client.RaceConnection> completeRoomHandshake(com.openggf.net.client.RaceConnection,com.openggf.net.identity.PlayerIdentity,java.lang.String,java.lang.String)
 METHOD com.openggf.net.client.RaceClient public  boolean isOpen()
@@ -13334,6 +13451,7 @@ METHOD com.openggf.net.client.RaceClient public  void sendControl(com.openggf.ne
 METHOD com.openggf.net.client.RaceClient public,static  java.util.concurrent.CompletableFuture<com.openggf.net.client.RaceClient> connect(java.net.URI,com.openggf.net.identity.PlayerIdentity,java.lang.String,java.lang.String)
 METHOD com.openggf.net.client.RaceClient public,static  java.util.concurrent.CompletableFuture<com.openggf.net.client.RaceClient> connect(java.net.URI,com.openggf.net.identity.PlayerIdentity,java.lang.String,java.lang.String,java.lang.String,java.lang.String)
 METHOD com.openggf.net.client.RaceClient public,static  java.util.concurrent.CompletableFuture<com.openggf.net.client.RaceClient> connect(java.net.URI,com.openggf.net.identity.PlayerIdentity,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String)
+METHOD com.openggf.net.client.RaceClient public,static  java.util.concurrent.CompletableFuture<com.openggf.net.client.RaceClient> connect(java.net.URI,com.openggf.net.identity.PlayerIdentity,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String,com.openggf.net.client.RoomJoinOptions)
 METHOD com.openggf.net.client.RaceClient$Control public  com.openggf.net.protocol.ControlMessage message()
 METHOD com.openggf.net.client.RaceClient$Control public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.net.client.RaceClient$Control public,final  int hashCode()
@@ -13397,6 +13515,16 @@ METHOD com.openggf.net.client.RemoteGhostRegistry$RemoteGhost public  java.lang.
 METHOD com.openggf.net.client.RemoteGhostRegistry$RemoteGhost public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.net.client.RemoteGhostRegistry$RemoteGhost public,final  int hashCode()
 METHOD com.openggf.net.client.RemoteGhostRegistry$RemoteGhost public,final  java.lang.String toString()
+METHOD com.openggf.net.client.RoomAccessRequiredException public  com.openggf.net.protocol.RoomAccessPolicy accessPolicy()
+METHOD com.openggf.net.client.RoomAccessRequiredException public  java.lang.String instanceId()
+METHOD com.openggf.net.client.RoomAccessRequiredException public  long accessEpoch()
+METHOD com.openggf.net.client.RoomInviteRejectedException public  long retryAfterMillis()
+METHOD com.openggf.net.client.RoomJoinOptions public  boolean hasPassword()
+METHOD com.openggf.net.client.RoomJoinOptions public  java.lang.String expectedInstanceId()
+METHOD com.openggf.net.client.RoomJoinOptions public  java.lang.String toString()
+METHOD com.openggf.net.client.RoomJoinOptions public  long expectedAccessEpoch()
+METHOD com.openggf.net.client.RoomJoinOptions public  void close()
+METHOD com.openggf.net.client.RoomJoinOptions public,static  com.openggf.net.client.RoomJoinOptions publicRoom()
 METHOD com.openggf.net.ghost.GhostFrame public  boolean finished()
 METHOD com.openggf.net.ghost.GhostFrame public  boolean hFlip()
 METHOD com.openggf.net.ghost.GhostFrame public  boolean highPriority()
@@ -13497,6 +13625,7 @@ METHOD com.openggf.net.hub.HubConnection public,abstract  java.lang.String remot
 METHOD com.openggf.net.hub.HubConnection public,abstract  void close(java.lang.String)
 METHOD com.openggf.net.hub.HubConnection public,abstract  void sendBinary(byte[])
 METHOD com.openggf.net.hub.HubConnection public,abstract  void sendText(java.lang.String)
+METHOD com.openggf.net.hub.RoomHost public  boolean accessChangePending()
 METHOD com.openggf.net.hub.RoomHost public  boolean isReady(int)
 METHOD com.openggf.net.hub.RoomHost public  boolean readyToStart()
 METHOD com.openggf.net.hub.RoomHost public  boolean requestStartRound(com.openggf.net.protocol.ControlMessage$RoundConfig)
@@ -13504,10 +13633,15 @@ METHOD com.openggf.net.hub.RoomHost public  com.openggf.net.hub.GhostHub hub()
 METHOD com.openggf.net.hub.RoomHost public  com.openggf.net.hub.HostRoundEngine round()
 METHOD com.openggf.net.hub.RoomHost public  com.openggf.net.protocol.ControlMessage$RoomDescriptor descriptor()
 METHOD com.openggf.net.hub.RoomHost public  com.openggf.net.protocol.ReadyRules readyRule()
+METHOD com.openggf.net.hub.RoomHost public  com.openggf.net.protocol.RoomAccessPolicy accessPolicy()
 METHOD com.openggf.net.hub.RoomHost public  int playerCount()
 METHOD com.openggf.net.hub.RoomHost public  java.lang.String determinismFingerprint()
 METHOD com.openggf.net.hub.RoomHost public  java.lang.String identityFingerprintForSlot(int)
+METHOD com.openggf.net.hub.RoomHost public  java.lang.String instanceId()
 METHOD com.openggf.net.hub.RoomHost public  java.util.List<com.openggf.net.protocol.ControlMessage$PlayerInfo> players()
+METHOD com.openggf.net.hub.RoomHost public  java.util.concurrent.CompletableFuture<com.openggf.net.hub.RoomHost> ready()
+METHOD com.openggf.net.hub.RoomHost public  long accessEpoch()
+METHOD com.openggf.net.hub.RoomHost public  long inviteEpoch()
 METHOD com.openggf.net.hub.RoomHost public  void applyTrackValidationProfile(com.openggf.net.hub.TrackValidationProfile)
 METHOD com.openggf.net.hub.RoomHost public  void close(java.lang.String)
 METHOD com.openggf.net.hub.RoomHost public  void expectFingerprint(com.openggf.net.hub.HubConnection,java.lang.String)
@@ -13516,14 +13650,19 @@ METHOD com.openggf.net.hub.RoomHost public  void onConnected(com.openggf.net.hub
 METHOD com.openggf.net.hub.RoomHost public  void onDisconnected(com.openggf.net.hub.HubConnection)
 METHOD com.openggf.net.hub.RoomHost public  void onText(com.openggf.net.hub.HubConnection,java.lang.String)
 METHOD com.openggf.net.hub.RoomHost public  void sendToSlot(int,com.openggf.net.protocol.ControlMessage)
+METHOD com.openggf.net.hub.RoomHost public  void setInviteService(com.openggf.net.hub.RoomInviteService)
+METHOD com.openggf.net.hub.RoomHost public  void setInviteService(com.openggf.net.hub.RoomInviteService,long)
 METHOD com.openggf.net.hub.RoomHost public  void tick()
 METHOD com.openggf.net.hub.RoomHostConfig public  boolean verified()
+METHOD com.openggf.net.hub.RoomHostConfig public  com.openggf.net.protocol.RoomAccessPolicy accessPolicy()
+METHOD com.openggf.net.hub.RoomHostConfig public  com.openggf.net.protocol.RoomPassword password()
 METHOD com.openggf.net.hub.RoomHostConfig public  int act()
 METHOD com.openggf.net.hub.RoomHostConfig public  int maxPlayers()
 METHOD com.openggf.net.hub.RoomHostConfig public  int zone()
 METHOD com.openggf.net.hub.RoomHostConfig public  java.lang.String characterPolicy()
 METHOD com.openggf.net.hub.RoomHostConfig public  java.lang.String chatMode()
 METHOD com.openggf.net.hub.RoomHostConfig public  java.lang.String gameId()
+METHOD com.openggf.net.hub.RoomHostConfig public  java.lang.String instanceId()
 METHOD com.openggf.net.hub.RoomHostConfig public  java.lang.String lockedCharacter()
 METHOD com.openggf.net.hub.RoomHostConfig public  java.lang.String requiredDeterminismFingerprint()
 METHOD com.openggf.net.hub.RoomHostConfig public  java.lang.String roomName()
@@ -13550,6 +13689,7 @@ METHOD com.openggf.net.hub.RoomHostHooks$ProfileListener public,abstract  void o
 METHOD com.openggf.net.hub.RoomHostHooks$RoundOutcomeListener public,abstract  void onRoundComplete(java.lang.String,boolean)
 METHOD com.openggf.net.hub.RoomHostHooks$VerificationHooks public  void onPendingExpired(java.lang.String,int,int)
 METHOD com.openggf.net.hub.RoomHostHooks$VerificationHooks public,abstract  void onFinishNeedingVerification(java.lang.String,int,java.lang.String,com.openggf.net.protocol.ControlMessage$AttemptFinish,java.lang.String,java.lang.String,java.lang.String,boolean)
+METHOD com.openggf.net.hub.RoomInviteService public,abstract  java.util.concurrent.CompletableFuture<com.openggf.net.protocol.ControlMessage$RoomInviteControlResult> control(java.lang.String,long,long,com.openggf.net.protocol.ControlMessage$InviteOperation,boolean)
 METHOD com.openggf.net.hub.TrackValidationProfile public  int levelHeightPx()
 METHOD com.openggf.net.hub.TrackValidationProfile public  int levelWidthPx()
 METHOD com.openggf.net.hub.TrackValidationProfile public  int maxFramesPerSecond()
@@ -13597,11 +13737,13 @@ METHOD com.openggf.net.protocol.ControlJsonCodec public  com.openggf.net.protoco
 METHOD com.openggf.net.protocol.ControlJsonCodec public  com.openggf.net.protocol.ControlJsonCodec$Decoded decode(java.lang.String,int)
 METHOD com.openggf.net.protocol.ControlJsonCodec public  com.openggf.net.protocol.ControlJsonCodec$Decoded decodeRoom(java.lang.String)
 METHOD com.openggf.net.protocol.ControlJsonCodec public  java.lang.String encode(java.lang.String,com.openggf.net.protocol.ControlMessage)
+METHOD com.openggf.net.protocol.ControlJsonCodec public  java.lang.String encode(java.lang.String,com.openggf.net.protocol.ControlMessage,long)
 METHOD com.openggf.net.protocol.ControlJsonCodec$Decoded public  com.openggf.net.protocol.ControlMessage message()
+METHOD com.openggf.net.protocol.ControlJsonCodec$Decoded public  java.lang.String toString()
 METHOD com.openggf.net.protocol.ControlJsonCodec$Decoded public  java.lang.String token()
+METHOD com.openggf.net.protocol.ControlJsonCodec$Decoded public  long requestId()
 METHOD com.openggf.net.protocol.ControlJsonCodec$Decoded public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.net.protocol.ControlJsonCodec$Decoded public,final  int hashCode()
-METHOD com.openggf.net.protocol.ControlJsonCodec$Decoded public,final  java.lang.String toString()
 METHOD com.openggf.net.protocol.ControlMessage$AttemptFinish public  int attemptId()
 METHOD com.openggf.net.protocol.ControlMessage$AttemptFinish public  int finishFrame()
 METHOD com.openggf.net.protocol.ControlMessage$AttemptFinish public  int firstInputFrame()
@@ -13651,13 +13793,15 @@ METHOD com.openggf.net.protocol.ControlMessage$Hello public  java.lang.String pu
 METHOD com.openggf.net.protocol.ControlMessage$Hello public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.net.protocol.ControlMessage$Hello public,final  int hashCode()
 METHOD com.openggf.net.protocol.ControlMessage$Hello public,final  java.lang.String toString()
+METHOD com.openggf.net.protocol.ControlMessage$InviteOperation public,static  com.openggf.net.protocol.ControlMessage$InviteOperation valueOf(java.lang.String)
+METHOD com.openggf.net.protocol.ControlMessage$InviteOperation public,static  com.openggf.net.protocol.ControlMessage$InviteOperation[] values()
 METHOD com.openggf.net.protocol.ControlMessage$JoinAccepted public  com.openggf.net.protocol.ControlMessage$RoomDescriptor room()
 METHOD com.openggf.net.protocol.ControlMessage$JoinAccepted public  com.openggf.net.protocol.ControlMessage$RoundSnapshot round()
 METHOD com.openggf.net.protocol.ControlMessage$JoinAccepted public  int playerSlot()
 METHOD com.openggf.net.protocol.ControlMessage$JoinAccepted public  java.lang.String sessionToken()
+METHOD com.openggf.net.protocol.ControlMessage$JoinAccepted public  java.lang.String toString()
 METHOD com.openggf.net.protocol.ControlMessage$JoinAccepted public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.net.protocol.ControlMessage$JoinAccepted public,final  int hashCode()
-METHOD com.openggf.net.protocol.ControlMessage$JoinAccepted public,final  java.lang.String toString()
 METHOD com.openggf.net.protocol.ControlMessage$JoinRejected public  java.lang.String reason()
 METHOD com.openggf.net.protocol.ControlMessage$JoinRejected public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.net.protocol.ControlMessage$JoinRejected public,final  int hashCode()
@@ -13666,6 +13810,10 @@ METHOD com.openggf.net.protocol.ControlMessage$Kick public  java.lang.String rea
 METHOD com.openggf.net.protocol.ControlMessage$Kick public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.net.protocol.ControlMessage$Kick public,final  int hashCode()
 METHOD com.openggf.net.protocol.ControlMessage$Kick public,final  java.lang.String toString()
+METHOD com.openggf.net.protocol.ControlMessage$MasterRequestCancel public  long requestId()
+METHOD com.openggf.net.protocol.ControlMessage$MasterRequestCancel public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.net.protocol.ControlMessage$MasterRequestCancel public,final  int hashCode()
+METHOD com.openggf.net.protocol.ControlMessage$MasterRequestCancel public,final  java.lang.String toString()
 METHOD com.openggf.net.protocol.ControlMessage$Ping public  long t0ClientMillis()
 METHOD com.openggf.net.protocol.ControlMessage$Ping public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.net.protocol.ControlMessage$Ping public,final  int hashCode()
@@ -13760,32 +13908,58 @@ METHOD com.openggf.net.protocol.ControlMessage$RelayGuestOpen public,final  int 
 METHOD com.openggf.net.protocol.ControlMessage$RelayGuestOpen public,final  java.lang.String toString()
 METHOD com.openggf.net.protocol.ControlMessage$RelayGuestText public  int guestId()
 METHOD com.openggf.net.protocol.ControlMessage$RelayGuestText public  java.lang.String text()
+METHOD com.openggf.net.protocol.ControlMessage$RelayGuestText public  java.lang.String toString()
 METHOD com.openggf.net.protocol.ControlMessage$RelayGuestText public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.net.protocol.ControlMessage$RelayGuestText public,final  int hashCode()
-METHOD com.openggf.net.protocol.ControlMessage$RelayGuestText public,final  java.lang.String toString()
+METHOD com.openggf.net.protocol.ControlMessage$RoomAccessChallenge public  com.openggf.net.protocol.RoomAccessPolicy accessPolicy()
+METHOD com.openggf.net.protocol.ControlMessage$RoomAccessChallenge public  java.lang.String challengeId()
+METHOD com.openggf.net.protocol.ControlMessage$RoomAccessChallenge public  java.lang.String instanceId()
+METHOD com.openggf.net.protocol.ControlMessage$RoomAccessChallenge public  long accessEpoch()
+METHOD com.openggf.net.protocol.ControlMessage$RoomAccessChallenge public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.net.protocol.ControlMessage$RoomAccessChallenge public,final  int hashCode()
+METHOD com.openggf.net.protocol.ControlMessage$RoomAccessChallenge public,final  java.lang.String toString()
+METHOD com.openggf.net.protocol.ControlMessage$RoomAccessState public  com.openggf.net.protocol.RoomAccessPolicy accessPolicy()
+METHOD com.openggf.net.protocol.ControlMessage$RoomAccessState public  java.lang.String instanceId()
+METHOD com.openggf.net.protocol.ControlMessage$RoomAccessState public  long accessEpoch()
+METHOD com.openggf.net.protocol.ControlMessage$RoomAccessState public  long inviteEpoch()
+METHOD com.openggf.net.protocol.ControlMessage$RoomAccessState public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.net.protocol.ControlMessage$RoomAccessState public,final  int hashCode()
+METHOD com.openggf.net.protocol.ControlMessage$RoomAccessState public,final  java.lang.String toString()
+METHOD com.openggf.net.protocol.ControlMessage$RoomAccessSubmit public  com.openggf.net.protocol.RoomPassword password()
+METHOD com.openggf.net.protocol.ControlMessage$RoomAccessSubmit public  java.lang.String challengeId()
+METHOD com.openggf.net.protocol.ControlMessage$RoomAccessSubmit public  java.lang.String toString()
+METHOD com.openggf.net.protocol.ControlMessage$RoomAccessSubmit public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.net.protocol.ControlMessage$RoomAccessSubmit public,final  int hashCode()
 METHOD com.openggf.net.protocol.ControlMessage$RoomChatModeUpdate public  java.lang.String mode()
 METHOD com.openggf.net.protocol.ControlMessage$RoomChatModeUpdate public  java.lang.String roomId()
 METHOD com.openggf.net.protocol.ControlMessage$RoomChatModeUpdate public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.net.protocol.ControlMessage$RoomChatModeUpdate public,final  int hashCode()
 METHOD com.openggf.net.protocol.ControlMessage$RoomChatModeUpdate public,final  java.lang.String toString()
 METHOD com.openggf.net.protocol.ControlMessage$RoomCreate public  com.openggf.net.protocol.ControlMessage$RoomDescriptor room()
+METHOD com.openggf.net.protocol.ControlMessage$RoomCreate public  com.openggf.net.protocol.RoomPassword password()
 METHOD com.openggf.net.protocol.ControlMessage$RoomCreate public  int directPort()
 METHOD com.openggf.net.protocol.ControlMessage$RoomCreate public  java.lang.String certificateSha256()
 METHOD com.openggf.net.protocol.ControlMessage$RoomCreate public  java.lang.String determinismFingerprint()
+METHOD com.openggf.net.protocol.ControlMessage$RoomCreate public  java.lang.String instanceId()
 METHOD com.openggf.net.protocol.ControlMessage$RoomCreate public  java.lang.String routing()
+METHOD com.openggf.net.protocol.ControlMessage$RoomCreate public  java.lang.String toString()
 METHOD com.openggf.net.protocol.ControlMessage$RoomCreate public  java.util.List<java.lang.String> voteTrackKeys()
+METHOD com.openggf.net.protocol.ControlMessage$RoomCreate public  long accessEpoch()
 METHOD com.openggf.net.protocol.ControlMessage$RoomCreate public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.net.protocol.ControlMessage$RoomCreate public,final  int hashCode()
-METHOD com.openggf.net.protocol.ControlMessage$RoomCreate public,final  java.lang.String toString()
 METHOD com.openggf.net.protocol.ControlMessage$RoomCreateRejected public  java.lang.String reason()
 METHOD com.openggf.net.protocol.ControlMessage$RoomCreateRejected public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.net.protocol.ControlMessage$RoomCreateRejected public,final  int hashCode()
 METHOD com.openggf.net.protocol.ControlMessage$RoomCreateRejected public,final  java.lang.String toString()
+METHOD com.openggf.net.protocol.ControlMessage$RoomCreated public  java.lang.String instanceId()
 METHOD com.openggf.net.protocol.ControlMessage$RoomCreated public  java.lang.String roomId()
+METHOD com.openggf.net.protocol.ControlMessage$RoomCreated public  long accessEpoch()
+METHOD com.openggf.net.protocol.ControlMessage$RoomCreated public  long inviteEpoch()
 METHOD com.openggf.net.protocol.ControlMessage$RoomCreated public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.net.protocol.ControlMessage$RoomCreated public,final  int hashCode()
 METHOD com.openggf.net.protocol.ControlMessage$RoomCreated public,final  java.lang.String toString()
 METHOD com.openggf.net.protocol.ControlMessage$RoomDescriptor public  boolean verified()
+METHOD com.openggf.net.protocol.ControlMessage$RoomDescriptor public  com.openggf.net.protocol.RoomAccessPolicy accessPolicy()
 METHOD com.openggf.net.protocol.ControlMessage$RoomDescriptor public  int act()
 METHOD com.openggf.net.protocol.ControlMessage$RoomDescriptor public  int maxPlayers()
 METHOD com.openggf.net.protocol.ControlMessage$RoomDescriptor public  int zone()
@@ -13797,6 +13971,53 @@ METHOD com.openggf.net.protocol.ControlMessage$RoomDescriptor public  java.lang.
 METHOD com.openggf.net.protocol.ControlMessage$RoomDescriptor public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.net.protocol.ControlMessage$RoomDescriptor public,final  int hashCode()
 METHOD com.openggf.net.protocol.ControlMessage$RoomDescriptor public,final  java.lang.String toString()
+METHOD com.openggf.net.protocol.ControlMessage$RoomInvite public  java.lang.String code()
+METHOD com.openggf.net.protocol.ControlMessage$RoomInvite public  java.lang.String instanceId()
+METHOD com.openggf.net.protocol.ControlMessage$RoomInvite public  java.lang.String toString()
+METHOD com.openggf.net.protocol.ControlMessage$RoomInvite public  long accessEpoch()
+METHOD com.openggf.net.protocol.ControlMessage$RoomInvite public  long disclosureId()
+METHOD com.openggf.net.protocol.ControlMessage$RoomInvite public  long expiresAtMillis()
+METHOD com.openggf.net.protocol.ControlMessage$RoomInvite public  long inviteEpoch()
+METHOD com.openggf.net.protocol.ControlMessage$RoomInvite public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.net.protocol.ControlMessage$RoomInvite public,final  int hashCode()
+METHOD com.openggf.net.protocol.ControlMessage$RoomInviteControl public  boolean membersCanInvite()
+METHOD com.openggf.net.protocol.ControlMessage$RoomInviteControl public  com.openggf.net.protocol.ControlMessage$InviteOperation operation()
+METHOD com.openggf.net.protocol.ControlMessage$RoomInviteControl public  java.lang.String instanceId()
+METHOD com.openggf.net.protocol.ControlMessage$RoomInviteControl public  java.lang.String roomId()
+METHOD com.openggf.net.protocol.ControlMessage$RoomInviteControl public  long accessEpoch()
+METHOD com.openggf.net.protocol.ControlMessage$RoomInviteControl public  long inviteEpoch()
+METHOD com.openggf.net.protocol.ControlMessage$RoomInviteControl public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.net.protocol.ControlMessage$RoomInviteControl public,final  int hashCode()
+METHOD com.openggf.net.protocol.ControlMessage$RoomInviteControl public,final  java.lang.String toString()
+METHOD com.openggf.net.protocol.ControlMessage$RoomInviteControlResult public  com.openggf.net.protocol.ControlMessage$RoomInvite invite()
+METHOD com.openggf.net.protocol.ControlMessage$RoomInviteControlResult public  com.openggf.net.protocol.RoomAccessPolicy accessPolicy()
+METHOD com.openggf.net.protocol.ControlMessage$RoomInviteControlResult public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.net.protocol.ControlMessage$RoomInviteControlResult public,final  int hashCode()
+METHOD com.openggf.net.protocol.ControlMessage$RoomInviteControlResult public,final  java.lang.String toString()
+METHOD com.openggf.net.protocol.ControlMessage$RoomInviteInvalidated public  java.lang.String instanceId()
+METHOD com.openggf.net.protocol.ControlMessage$RoomInviteInvalidated public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.net.protocol.ControlMessage$RoomInviteInvalidated public,final  int hashCode()
+METHOD com.openggf.net.protocol.ControlMessage$RoomInviteInvalidated public,final  java.lang.String toString()
+METHOD com.openggf.net.protocol.ControlMessage$RoomInviteRejected public  java.lang.String reason()
+METHOD com.openggf.net.protocol.ControlMessage$RoomInviteRejected public  long retryAfterMillis()
+METHOD com.openggf.net.protocol.ControlMessage$RoomInviteRejected public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.net.protocol.ControlMessage$RoomInviteRejected public,final  int hashCode()
+METHOD com.openggf.net.protocol.ControlMessage$RoomInviteRejected public,final  java.lang.String toString()
+METHOD com.openggf.net.protocol.ControlMessage$RoomInviteRequest public  long disclosureId()
+METHOD com.openggf.net.protocol.ControlMessage$RoomInviteRequest public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.net.protocol.ControlMessage$RoomInviteRequest public,final  int hashCode()
+METHOD com.openggf.net.protocol.ControlMessage$RoomInviteRequest public,final  java.lang.String toString()
+METHOD com.openggf.net.protocol.ControlMessage$RoomInviteResolve public  java.lang.String code()
+METHOD com.openggf.net.protocol.ControlMessage$RoomInviteResolve public  java.lang.String toString()
+METHOD com.openggf.net.protocol.ControlMessage$RoomInviteResolve public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.net.protocol.ControlMessage$RoomInviteResolve public,final  int hashCode()
+METHOD com.openggf.net.protocol.ControlMessage$RoomInviteRotate public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.net.protocol.ControlMessage$RoomInviteRotate public,final  int hashCode()
+METHOD com.openggf.net.protocol.ControlMessage$RoomInviteRotate public,final  java.lang.String toString()
+METHOD com.openggf.net.protocol.ControlMessage$RoomInviteSharing public  boolean membersCanInvite()
+METHOD com.openggf.net.protocol.ControlMessage$RoomInviteSharing public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.net.protocol.ControlMessage$RoomInviteSharing public,final  int hashCode()
+METHOD com.openggf.net.protocol.ControlMessage$RoomInviteSharing public,final  java.lang.String toString()
 METHOD com.openggf.net.protocol.ControlMessage$RoomJoinRejected public  java.lang.String reason()
 METHOD com.openggf.net.protocol.ControlMessage$RoomJoinRejected public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.net.protocol.ControlMessage$RoomJoinRejected public,final  int hashCode()
@@ -13805,13 +14026,18 @@ METHOD com.openggf.net.protocol.ControlMessage$RoomJoinRequest public  java.lang
 METHOD com.openggf.net.protocol.ControlMessage$RoomJoinRequest public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.net.protocol.ControlMessage$RoomJoinRequest public,final  int hashCode()
 METHOD com.openggf.net.protocol.ControlMessage$RoomJoinRequest public,final  java.lang.String toString()
+METHOD com.openggf.net.protocol.ControlMessage$RoomJoinResult public  com.openggf.net.protocol.RoomAccessPolicy accessPolicy()
 METHOD com.openggf.net.protocol.ControlMessage$RoomJoinResult public  int directPort()
 METHOD com.openggf.net.protocol.ControlMessage$RoomJoinResult public  java.lang.String certificateSha256()
 METHOD com.openggf.net.protocol.ControlMessage$RoomJoinResult public  java.lang.String determinismFingerprint()
 METHOD com.openggf.net.protocol.ControlMessage$RoomJoinResult public  java.lang.String directHost()
 METHOD com.openggf.net.protocol.ControlMessage$RoomJoinResult public  java.lang.String hostServerId()
+METHOD com.openggf.net.protocol.ControlMessage$RoomJoinResult public  java.lang.String instanceId()
 METHOD com.openggf.net.protocol.ControlMessage$RoomJoinResult public  java.lang.String roomId()
 METHOD com.openggf.net.protocol.ControlMessage$RoomJoinResult public  java.lang.String routing()
+METHOD com.openggf.net.protocol.ControlMessage$RoomJoinResult public  long accessEpoch()
+METHOD com.openggf.net.protocol.ControlMessage$RoomJoinResult public  long inviteEpoch()
+METHOD com.openggf.net.protocol.ControlMessage$RoomJoinResult public  long inviteExpiresAtMillis()
 METHOD com.openggf.net.protocol.ControlMessage$RoomJoinResult public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.net.protocol.ControlMessage$RoomJoinResult public,final  int hashCode()
 METHOD com.openggf.net.protocol.ControlMessage$RoomJoinResult public,final  java.lang.String toString()
@@ -13830,6 +14056,14 @@ METHOD com.openggf.net.protocol.ControlMessage$RoomListResult public  java.util.
 METHOD com.openggf.net.protocol.ControlMessage$RoomListResult public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.net.protocol.ControlMessage$RoomListResult public,final  int hashCode()
 METHOD com.openggf.net.protocol.ControlMessage$RoomListResult public,final  java.lang.String toString()
+METHOD com.openggf.net.protocol.ControlMessage$RoomPasswordChange public  com.openggf.net.protocol.RoomPassword password()
+METHOD com.openggf.net.protocol.ControlMessage$RoomPasswordChange public  java.lang.String toString()
+METHOD com.openggf.net.protocol.ControlMessage$RoomPasswordChange public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.net.protocol.ControlMessage$RoomPasswordChange public,final  int hashCode()
+METHOD com.openggf.net.protocol.ControlMessage$RoomPasswordChanged public  long accessEpoch()
+METHOD com.openggf.net.protocol.ControlMessage$RoomPasswordChanged public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.net.protocol.ControlMessage$RoomPasswordChanged public,final  int hashCode()
+METHOD com.openggf.net.protocol.ControlMessage$RoomPasswordChanged public,final  java.lang.String toString()
 METHOD com.openggf.net.protocol.ControlMessage$RoomState public  java.util.List<com.openggf.net.protocol.ControlMessage$PlayerInfo> players()
 METHOD com.openggf.net.protocol.ControlMessage$RoomState public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.net.protocol.ControlMessage$RoomState public,final  int hashCode()
@@ -14008,6 +14242,24 @@ METHOD com.openggf.net.protocol.ReadyRules public  boolean required(int)
 METHOD com.openggf.net.protocol.ReadyRules public,static  com.openggf.net.protocol.ReadyRules parse(java.lang.String)
 METHOD com.openggf.net.protocol.ReadyRules public,static  com.openggf.net.protocol.ReadyRules valueOf(java.lang.String)
 METHOD com.openggf.net.protocol.ReadyRules public,static  com.openggf.net.protocol.ReadyRules[] values()
+METHOD com.openggf.net.protocol.RoomAccessPolicy public  boolean membersCanInvite()
+METHOD com.openggf.net.protocol.RoomAccessPolicy public  boolean passwordRequired()
+METHOD com.openggf.net.protocol.RoomAccessPolicy public  com.openggf.net.protocol.RoomAccessPolicy$Mode mode()
+METHOD com.openggf.net.protocol.RoomAccessPolicy public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.net.protocol.RoomAccessPolicy public,final  int hashCode()
+METHOD com.openggf.net.protocol.RoomAccessPolicy public,final  java.lang.String toString()
+METHOD com.openggf.net.protocol.RoomAccessPolicy$Mode public,static  com.openggf.net.protocol.RoomAccessPolicy$Mode valueOf(java.lang.String)
+METHOD com.openggf.net.protocol.RoomAccessPolicy$Mode public,static  com.openggf.net.protocol.RoomAccessPolicy$Mode[] values()
+METHOD com.openggf.net.protocol.RoomInviteCode public  boolean equals(java.lang.Object)
+METHOD com.openggf.net.protocol.RoomInviteCode public  int hashCode()
+METHOD com.openggf.net.protocol.RoomInviteCode public  java.lang.String canonical()
+METHOD com.openggf.net.protocol.RoomInviteCode public  java.lang.String display()
+METHOD com.openggf.net.protocol.RoomInviteCode public  java.lang.String toString()
+METHOD com.openggf.net.protocol.RoomInviteCode public,static  com.openggf.net.protocol.RoomInviteCode parse(java.lang.String)
+METHOD com.openggf.net.protocol.RoomPassword public  java.lang.String toString()
+METHOD com.openggf.net.protocol.RoomPassword public,static  com.openggf.net.protocol.RoomPassword of(java.lang.String)
+METHOD com.openggf.net.protocol.RoomPassword public,synchronized  char[] copyCharacters()
+METHOD com.openggf.net.protocol.RoomPassword public,synchronized  void close()
 METHOD com.openggf.physics.BackgroundPlaneCollisionProvider public  com.openggf.physics.BackgroundPlaneCollisionProvider$State state(com.openggf.level.LevelManager)
 METHOD com.openggf.physics.BackgroundPlaneCollisionProvider public  int backgroundX(com.openggf.physics.BackgroundPlaneCollisionProvider$State,int,com.openggf.physics.Direction)
 METHOD com.openggf.physics.BackgroundPlaneCollisionProvider public  int backgroundY(com.openggf.physics.BackgroundPlaneCollisionProvider$State,int)
@@ -16659,6 +16911,8 @@ NESTED com.openggf.mods.mutators.TransportPolicy com.openggf.mods.mutators.Trans
 NESTED com.openggf.mods.scene.RomSpriteRequest com.openggf.mods.scene.RomSpriteRequest$Compression
 NESTED com.openggf.mods.scene.RomSpriteRequest com.openggf.mods.scene.RomSpriteRequest$DplcLayout
 NESTED com.openggf.mods.scene.SceneBackdrop com.openggf.mods.scene.SceneBackdrop$Band
+NESTED com.openggf.mods.scene.SceneClipboard com.openggf.mods.scene.SceneClipboard$Result
+NESTED com.openggf.mods.scene.SceneClipboard com.openggf.mods.scene.SceneClipboard$Write
 NESTED com.openggf.mods.scene.SceneMusicPreparation com.openggf.mods.scene.SceneMusicPreparation$State
 NESTED com.openggf.mods.scene.SceneNoteEvent com.openggf.mods.scene.SceneNoteEvent$Kind
 NESTED com.openggf.mods.scene.ScenePeer com.openggf.mods.scene.ScenePeer$Message
@@ -16708,9 +16962,11 @@ NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlM
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$ChatModeState
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$Heartbeat
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$Hello
+NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$InviteOperation
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$JoinAccepted
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$JoinRejected
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$Kick
+NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$MasterRequestCancel
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$Ping
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$PlayerInfo
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$PlayerLeft
@@ -16730,17 +16986,31 @@ NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlM
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RelayGuestClose
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RelayGuestOpen
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RelayGuestText
+NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomAccessChallenge
+NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomAccessState
+NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomAccessSubmit
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomChatModeUpdate
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomCreate
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomCreateRejected
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomCreated
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomDescriptor
+NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomInvite
+NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomInviteControl
+NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomInviteControlResult
+NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomInviteInvalidated
+NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomInviteRejected
+NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomInviteRequest
+NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomInviteResolve
+NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomInviteRotate
+NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomInviteSharing
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomJoinRejected
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomJoinRequest
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomJoinResult
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomLeave
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomListRequest
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomListResult
+NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomPasswordChange
+NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomPasswordChanged
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomState
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomSummary
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomTrackUpdate
@@ -16769,6 +17039,7 @@ NESTED com.openggf.net.protocol.GhostPackets com.openggf.net.protocol.GhostPacke
 NESTED com.openggf.net.protocol.GhostPackets com.openggf.net.protocol.GhostPackets$FramesBatch
 NESTED com.openggf.net.protocol.GhostPackets com.openggf.net.protocol.GhostPackets$RelayGuestBinary
 NESTED com.openggf.net.protocol.GhostPackets com.openggf.net.protocol.GhostPackets$RosterEntry
+NESTED com.openggf.net.protocol.RoomAccessPolicy com.openggf.net.protocol.RoomAccessPolicy$Mode
 NESTED com.openggf.physics.BackgroundPlaneCollisionProvider com.openggf.physics.BackgroundPlaneCollisionProvider$State
 NESTED com.openggf.physics.CollisionEvent com.openggf.physics.CollisionEvent$EventType
 NESTED com.openggf.physics.FrameCollisionPlan com.openggf.physics.FrameCollisionPlan$Phase
@@ -16994,6 +17265,7 @@ PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.Control
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$JoinAccepted
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$JoinRejected
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$Kick
+PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$MasterRequestCancel
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$Ping
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$PlayerLeft
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$PlayerLook
@@ -17012,16 +17284,30 @@ PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.Control
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RelayGuestClose
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RelayGuestOpen
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RelayGuestText
+PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomAccessChallenge
+PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomAccessState
+PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomAccessSubmit
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomChatModeUpdate
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomCreate
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomCreateRejected
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomCreated
+PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomInvite
+PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomInviteControl
+PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomInviteControlResult
+PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomInviteInvalidated
+PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomInviteRejected
+PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomInviteRequest
+PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomInviteResolve
+PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomInviteRotate
+PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomInviteSharing
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomJoinRejected
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomJoinRequest
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomJoinResult
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomLeave
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomListRequest
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomListResult
+PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomPasswordChange
+PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomPasswordChanged
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomState
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomTrackUpdate
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoundConfigure
@@ -19026,12 +19312,15 @@ RECORD-COMPONENT com.openggf.net.hub.HostRoundEngine$FinishOutcome attemptId int
 RECORD-COMPONENT com.openggf.net.hub.HostRoundEngine$FinishOutcome outsideBroadcastCap boolean
 RECORD-COMPONENT com.openggf.net.hub.HostRoundEngine$FinishOutcome rank int
 RECORD-COMPONENT com.openggf.net.hub.HostRoundEngine$FinishOutcome slot int
+RECORD-COMPONENT com.openggf.net.hub.RoomHostConfig accessPolicy com.openggf.net.protocol.RoomAccessPolicy
 RECORD-COMPONENT com.openggf.net.hub.RoomHostConfig act int
 RECORD-COMPONENT com.openggf.net.hub.RoomHostConfig characterPolicy java.lang.String
 RECORD-COMPONENT com.openggf.net.hub.RoomHostConfig chatMode java.lang.String
 RECORD-COMPONENT com.openggf.net.hub.RoomHostConfig gameId java.lang.String
+RECORD-COMPONENT com.openggf.net.hub.RoomHostConfig instanceId java.lang.String
 RECORD-COMPONENT com.openggf.net.hub.RoomHostConfig lockedCharacter java.lang.String
 RECORD-COMPONENT com.openggf.net.hub.RoomHostConfig maxPlayers int
+RECORD-COMPONENT com.openggf.net.hub.RoomHostConfig password com.openggf.net.protocol.RoomPassword
 RECORD-COMPONENT com.openggf.net.hub.RoomHostConfig requiredDeterminismFingerprint java.lang.String
 RECORD-COMPONENT com.openggf.net.hub.RoomHostConfig roomName java.lang.String
 RECORD-COMPONENT com.openggf.net.hub.RoomHostConfig verified boolean
@@ -19056,6 +19345,7 @@ RECORD-COMPONENT com.openggf.net.identity.PlayerAppearance palette java.util.Lis
 RECORD-COMPONENT com.openggf.net.identity.PlayerAppearance$Entry colour int
 RECORD-COMPONENT com.openggf.net.identity.PlayerAppearance$Entry index int
 RECORD-COMPONENT com.openggf.net.protocol.ControlJsonCodec$Decoded message com.openggf.net.protocol.ControlMessage
+RECORD-COMPONENT com.openggf.net.protocol.ControlJsonCodec$Decoded requestId long
 RECORD-COMPONENT com.openggf.net.protocol.ControlJsonCodec$Decoded token java.lang.String
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$AttemptFinish attemptId int
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$AttemptFinish finishFrame int
@@ -19085,6 +19375,7 @@ RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$JoinAccepted round com.
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$JoinAccepted sessionToken java.lang.String
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$JoinRejected reason java.lang.String
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$Kick reason java.lang.String
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$MasterRequestCancel requestId long
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$Ping t0ClientMillis long
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$PlayerInfo character java.lang.String
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$PlayerInfo displayName java.lang.String
@@ -19125,16 +19416,33 @@ RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RelayGuestClose reason 
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RelayGuestOpen guestId int
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RelayGuestText guestId int
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RelayGuestText text java.lang.String
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomAccessChallenge accessEpoch long
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomAccessChallenge accessPolicy com.openggf.net.protocol.RoomAccessPolicy
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomAccessChallenge challengeId java.lang.String
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomAccessChallenge instanceId java.lang.String
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomAccessState accessEpoch long
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomAccessState accessPolicy com.openggf.net.protocol.RoomAccessPolicy
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomAccessState instanceId java.lang.String
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomAccessState inviteEpoch long
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomAccessSubmit challengeId java.lang.String
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomAccessSubmit password com.openggf.net.protocol.RoomPassword
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomChatModeUpdate mode java.lang.String
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomChatModeUpdate roomId java.lang.String
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomCreate accessEpoch long
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomCreate certificateSha256 java.lang.String
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomCreate determinismFingerprint java.lang.String
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomCreate directPort int
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomCreate instanceId java.lang.String
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomCreate password com.openggf.net.protocol.RoomPassword
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomCreate room com.openggf.net.protocol.ControlMessage$RoomDescriptor
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomCreate routing java.lang.String
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomCreate voteTrackKeys java.util.List<java.lang.String>
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomCreateRejected reason java.lang.String
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomCreated accessEpoch long
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomCreated instanceId java.lang.String
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomCreated inviteEpoch long
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomCreated roomId java.lang.String
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomDescriptor accessPolicy com.openggf.net.protocol.RoomAccessPolicy
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomDescriptor act int
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomDescriptor characterPolicy java.lang.String
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomDescriptor chatMode java.lang.String
@@ -19144,13 +19452,38 @@ RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomDescriptor maxPlaye
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomDescriptor name java.lang.String
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomDescriptor verified boolean
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomDescriptor zone int
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomInvite accessEpoch long
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomInvite code java.lang.String
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomInvite disclosureId long
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomInvite expiresAtMillis long
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomInvite instanceId java.lang.String
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomInvite inviteEpoch long
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomInviteControl accessEpoch long
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomInviteControl instanceId java.lang.String
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomInviteControl inviteEpoch long
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomInviteControl membersCanInvite boolean
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomInviteControl operation com.openggf.net.protocol.ControlMessage$InviteOperation
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomInviteControl roomId java.lang.String
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomInviteControlResult accessPolicy com.openggf.net.protocol.RoomAccessPolicy
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomInviteControlResult invite com.openggf.net.protocol.ControlMessage$RoomInvite
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomInviteInvalidated instanceId java.lang.String
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomInviteRejected reason java.lang.String
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomInviteRejected retryAfterMillis long
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomInviteRequest disclosureId long
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomInviteResolve code java.lang.String
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomInviteSharing membersCanInvite boolean
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomJoinRejected reason java.lang.String
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomJoinRequest roomId java.lang.String
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomJoinResult accessEpoch long
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomJoinResult accessPolicy com.openggf.net.protocol.RoomAccessPolicy
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomJoinResult certificateSha256 java.lang.String
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomJoinResult determinismFingerprint java.lang.String
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomJoinResult directHost java.lang.String
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomJoinResult directPort int
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomJoinResult hostServerId java.lang.String
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomJoinResult instanceId java.lang.String
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomJoinResult inviteEpoch long
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomJoinResult inviteExpiresAtMillis long
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomJoinResult roomId java.lang.String
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomJoinResult routing java.lang.String
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomLeave roomId java.lang.String
@@ -19159,6 +19492,8 @@ RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomListRequest page in
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomListResult page int
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomListResult rooms java.util.List<com.openggf.net.protocol.ControlMessage$RoomSummary>
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomListResult totalPages int
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomPasswordChange password com.openggf.net.protocol.RoomPassword
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomPasswordChanged accessEpoch long
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomState players java.util.List<com.openggf.net.protocol.ControlMessage$PlayerInfo>
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomSummary act int
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomSummary characterPolicy java.lang.String
@@ -19234,6 +19569,8 @@ RECORD-COMPONENT com.openggf.net.protocol.GhostPackets$RosterEntry cellX int
 RECORD-COMPONENT com.openggf.net.protocol.GhostPackets$RosterEntry cellY int
 RECORD-COMPONENT com.openggf.net.protocol.GhostPackets$RosterEntry playerSlot int
 RECORD-COMPONENT com.openggf.net.protocol.GhostPackets$RosterEntry status int
+RECORD-COMPONENT com.openggf.net.protocol.RoomAccessPolicy membersCanInvite boolean
+RECORD-COMPONENT com.openggf.net.protocol.RoomAccessPolicy mode com.openggf.net.protocol.RoomAccessPolicy$Mode
 RECORD-COMPONENT com.openggf.physics.BackgroundPlaneCollisionProvider$State active boolean
 RECORD-COMPONENT com.openggf.physics.BackgroundPlaneCollisionProvider$State cameraDiffX int
 RECORD-COMPONENT com.openggf.physics.BackgroundPlaneCollisionProvider$State cameraDiffY int
@@ -20370,6 +20707,9 @@ TYPE class public,final com.openggf.net.client.MasterClient SUPER java.lang.Obje
 TYPE class public,final com.openggf.net.client.RaceClient SUPER java.lang.Object
 TYPE class public,final com.openggf.net.client.RemoteGhostPlayback SUPER java.lang.Object
 TYPE class public,final com.openggf.net.client.RemoteGhostRegistry SUPER java.lang.Object
+TYPE class public,final com.openggf.net.client.RoomAccessRequiredException SUPER java.lang.RuntimeException
+TYPE class public,final com.openggf.net.client.RoomInviteRejectedException SUPER java.lang.RuntimeException
+TYPE class public,final com.openggf.net.client.RoomJoinOptions SUPER java.lang.Object
 TYPE class public,final com.openggf.net.ghost.GhostFrameCodec SUPER java.lang.Object
 TYPE class public,final com.openggf.net.host.HostMasterLink SUPER java.lang.Object
 TYPE class public,final com.openggf.net.host.jdk.JdkRaceHostServer SUPER java.lang.Object
@@ -20381,6 +20721,8 @@ TYPE class public,final com.openggf.net.identity.PlayerIdentity SUPER java.lang.
 TYPE class public,final com.openggf.net.protocol.ControlJsonCodec SUPER java.lang.Object
 TYPE class public,final com.openggf.net.protocol.GhostPackets SUPER java.lang.Object
 TYPE class public,final com.openggf.net.protocol.Protocol SUPER java.lang.Object
+TYPE class public,final com.openggf.net.protocol.RoomInviteCode SUPER java.lang.Object
+TYPE class public,final com.openggf.net.protocol.RoomPassword SUPER java.lang.Object
 TYPE class public,final com.openggf.physics.SensorResult SUPER java.lang.Object
 TYPE class public,final com.openggf.sprites.NativePositionOps SUPER java.lang.Object
 TYPE class public,final com.openggf.sprites.managers.TailsFlightController SUPER java.lang.Object
@@ -20618,6 +20960,7 @@ TYPE enum public,static,final com.openggf.mods.mutators.SpritePresentationPolicy
 TYPE enum public,static,final com.openggf.mods.mutators.TransportPolicy$Kind SUPER java.lang.Enum<com.openggf.mods.mutators.TransportPolicy$Kind>
 TYPE enum public,static,final com.openggf.mods.scene.RomSpriteRequest$Compression SUPER java.lang.Enum<com.openggf.mods.scene.RomSpriteRequest$Compression>
 TYPE enum public,static,final com.openggf.mods.scene.RomSpriteRequest$DplcLayout SUPER java.lang.Enum<com.openggf.mods.scene.RomSpriteRequest$DplcLayout>
+TYPE enum public,static,final com.openggf.mods.scene.SceneClipboard$Result SUPER java.lang.Enum<com.openggf.mods.scene.SceneClipboard$Result>
 TYPE enum public,static,final com.openggf.mods.scene.SceneMusicPreparation$State SUPER java.lang.Enum<com.openggf.mods.scene.SceneMusicPreparation$State>
 TYPE enum public,static,final com.openggf.mods.scene.SceneNoteEvent$Kind SUPER java.lang.Enum<com.openggf.mods.scene.SceneNoteEvent$Kind>
 TYPE enum public,static,final com.openggf.mods.scene.ScenePeer$State SUPER java.lang.Enum<com.openggf.mods.scene.ScenePeer$State>
@@ -20627,6 +20970,8 @@ TYPE enum public,static,final com.openggf.mods.ui.FocusRegions$Direction SUPER j
 TYPE enum public,static,final com.openggf.mods.ui.TextLayout$Alignment SUPER java.lang.Enum<com.openggf.mods.ui.TextLayout$Alignment>
 TYPE enum public,static,final com.openggf.net.client.ClientRaceSession$Phase SUPER java.lang.Enum<com.openggf.net.client.ClientRaceSession$Phase>
 TYPE enum public,static,final com.openggf.net.hub.HostRoundEngine$Phase SUPER java.lang.Enum<com.openggf.net.hub.HostRoundEngine$Phase>
+TYPE enum public,static,final com.openggf.net.protocol.ControlMessage$InviteOperation SUPER java.lang.Enum<com.openggf.net.protocol.ControlMessage$InviteOperation>
+TYPE enum public,static,final com.openggf.net.protocol.RoomAccessPolicy$Mode SUPER java.lang.Enum<com.openggf.net.protocol.RoomAccessPolicy$Mode>
 TYPE enum public,static,final com.openggf.physics.CollisionEvent$EventType SUPER java.lang.Enum<com.openggf.physics.CollisionEvent$EventType>
 TYPE enum public,static,final com.openggf.physics.FrameCollisionPlan$Phase SUPER java.lang.Enum<com.openggf.physics.FrameCollisionPlan$Phase>
 TYPE enum public,static,final com.openggf.sprites.playable.SidekickCpuController$DespawnCause SUPER java.lang.Enum<com.openggf.sprites.playable.SidekickCpuController$DespawnCause>
@@ -20780,6 +21125,7 @@ TYPE interface public,abstract com.openggf.mods.scene.SceneArt SUPER <none>
 TYPE interface public,abstract com.openggf.mods.scene.SceneAudio SUPER <none>
 TYPE interface public,abstract com.openggf.mods.scene.SceneBackground SUPER <none>
 TYPE interface public,abstract com.openggf.mods.scene.SceneCanvas SUPER <none>
+TYPE interface public,abstract com.openggf.mods.scene.SceneClipboard SUPER <none>
 TYPE interface public,abstract com.openggf.mods.scene.SceneContext SUPER <none>
 TYPE interface public,abstract com.openggf.mods.scene.SceneGameplay SUPER <none>
 TYPE interface public,abstract com.openggf.mods.scene.SceneLevelKit SUPER <none>
@@ -20797,6 +21143,7 @@ TYPE interface public,abstract com.openggf.mods.ui.PixelCanvas SUPER <none>
 TYPE interface public,abstract com.openggf.net.client.RaceConnection SUPER <none>
 TYPE interface public,abstract com.openggf.net.host.RaceRoomHost SUPER <none>
 TYPE interface public,abstract com.openggf.net.hub.HubConnection SUPER <none>
+TYPE interface public,abstract com.openggf.net.hub.RoomInviteService SUPER <none>
 TYPE interface public,abstract com.openggf.net.hub.TrackValidationProfileSource SUPER <none>
 TYPE interface public,abstract com.openggf.net.hub.ViolationSink SUPER <none>
 TYPE interface public,abstract com.openggf.physics.BackgroundPlaneCollisionProvider SUPER <none>
@@ -20850,6 +21197,7 @@ TYPE interface public,abstract,static com.openggf.level.objects.PerObjectRewindS
 TYPE interface public,abstract,static com.openggf.level.objects.PerObjectRewindSnapshot$PlayableSubclassRewindExtra SUPER <none>
 TYPE interface public,abstract,static com.openggf.level.resources.KosinskiModuleQueue$DmaTarget SUPER <none>
 TYPE interface public,abstract,static com.openggf.mods.mutators.MutatorDefinition$PolicyFactory SUPER <none>
+TYPE interface public,abstract,static com.openggf.mods.scene.SceneClipboard$Write SUPER <none>
 TYPE interface public,abstract,static com.openggf.mods.ui.CompactFont$RunSink SUPER <none>
 TYPE interface public,abstract,static com.openggf.mods.ui.TextLayout$Metrics SUPER <none>
 TYPE interface public,abstract,static com.openggf.net.client.GhostStreamPublisher$BinarySender SUPER <none>
@@ -21053,6 +21401,7 @@ TYPE record public,final com.openggf.net.hub.RoomHostConfig SUPER java.lang.Reco
 TYPE record public,final com.openggf.net.hub.RoomHostHooks SUPER java.lang.Record
 TYPE record public,final com.openggf.net.hub.TrackValidationProfile SUPER java.lang.Record
 TYPE record public,final com.openggf.net.identity.PlayerAppearance SUPER java.lang.Record
+TYPE record public,final com.openggf.net.protocol.RoomAccessPolicy SUPER java.lang.Record
 TYPE record public,final com.openggf.physics.CollisionEvent SUPER java.lang.Record
 TYPE record public,final com.openggf.physics.FrameCollisionPlan SUPER java.lang.Record
 TYPE record public,final com.openggf.sprites.SensorConfiguration SUPER java.lang.Record
@@ -21240,6 +21589,7 @@ TYPE record public,static,final com.openggf.net.protocol.ControlMessage$Hello SU
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$JoinAccepted SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$JoinRejected SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$Kick SUPER java.lang.Record
+TYPE record public,static,final com.openggf.net.protocol.ControlMessage$MasterRequestCancel SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$Ping SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$PlayerInfo SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$PlayerLeft SUPER java.lang.Record
@@ -21259,17 +21609,31 @@ TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RelayAtt
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RelayGuestClose SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RelayGuestOpen SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RelayGuestText SUPER java.lang.Record
+TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RoomAccessChallenge SUPER java.lang.Record
+TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RoomAccessState SUPER java.lang.Record
+TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RoomAccessSubmit SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RoomChatModeUpdate SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RoomCreate SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RoomCreateRejected SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RoomCreated SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RoomDescriptor SUPER java.lang.Record
+TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RoomInvite SUPER java.lang.Record
+TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RoomInviteControl SUPER java.lang.Record
+TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RoomInviteControlResult SUPER java.lang.Record
+TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RoomInviteInvalidated SUPER java.lang.Record
+TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RoomInviteRejected SUPER java.lang.Record
+TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RoomInviteRequest SUPER java.lang.Record
+TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RoomInviteResolve SUPER java.lang.Record
+TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RoomInviteRotate SUPER java.lang.Record
+TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RoomInviteSharing SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RoomJoinRejected SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RoomJoinRequest SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RoomJoinResult SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RoomLeave SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RoomListRequest SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RoomListResult SUPER java.lang.Record
+TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RoomPasswordChange SUPER java.lang.Record
+TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RoomPasswordChanged SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RoomState SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RoomSummary SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RoomTrackUpdate SUPER java.lang.Record
@@ -22326,6 +22690,9 @@ TYPE-ANNOTATION com.openggf.mods.scene.SceneBackground @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneButtons @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneCanvas @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneClip @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.scene.SceneClipboard @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.scene.SceneClipboard$Result @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.scene.SceneClipboard$Write @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneContext @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneDraw @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneGameplay @com.openggf.game.ModApi
@@ -22417,6 +22784,9 @@ TYPE-ANNOTATION com.openggf.net.client.RemoteGhostPlayback$RenderState @com.open
 TYPE-ANNOTATION com.openggf.net.client.RemoteGhostRegistry @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.client.RemoteGhostRegistry$FarPlayer @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.client.RemoteGhostRegistry$RemoteGhost @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.net.client.RoomAccessRequiredException @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.net.client.RoomInviteRejectedException @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.net.client.RoomJoinOptions @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.ghost.GhostFrame @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.ghost.GhostFrameCodec @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.host.HostMasterLink @com.openggf.game.ModApi
@@ -22441,6 +22811,8 @@ TYPE-ANNOTATION com.openggf.net.hub.RoomHostHooks$ProfileListener @java.lang.Fun
 TYPE-ANNOTATION com.openggf.net.hub.RoomHostHooks$RoundOutcomeListener @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.hub.RoomHostHooks$RoundOutcomeListener @java.lang.FunctionalInterface
 TYPE-ANNOTATION com.openggf.net.hub.RoomHostHooks$VerificationHooks @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.net.hub.RoomInviteService @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.net.hub.RoomInviteService @java.lang.FunctionalInterface
 TYPE-ANNOTATION com.openggf.net.hub.TrackValidationProfile @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.hub.TrackValidationProfileSource @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.hub.ViolationSink @com.openggf.game.ModApi
@@ -22462,9 +22834,11 @@ TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$ChatBroadcast @com.openg
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$ChatModeState @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$Heartbeat @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$Hello @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$InviteOperation @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$JoinAccepted @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$JoinRejected @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$Kick @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$MasterRequestCancel @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$Ping @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$PlayerInfo @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$PlayerLeft @com.openggf.game.ModApi
@@ -22484,17 +22858,31 @@ TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RelayAttach @com.openggf
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RelayGuestClose @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RelayGuestOpen @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RelayGuestText @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RoomAccessChallenge @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RoomAccessState @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RoomAccessSubmit @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RoomChatModeUpdate @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RoomCreate @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RoomCreateRejected @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RoomCreated @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RoomDescriptor @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RoomInvite @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RoomInviteControl @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RoomInviteControlResult @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RoomInviteInvalidated @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RoomInviteRejected @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RoomInviteRequest @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RoomInviteResolve @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RoomInviteRotate @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RoomInviteSharing @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RoomJoinRejected @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RoomJoinRequest @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RoomJoinResult @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RoomLeave @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RoomListRequest @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RoomListResult @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RoomPasswordChange @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RoomPasswordChanged @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RoomState @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RoomSummary @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RoomTrackUpdate @com.openggf.game.ModApi
@@ -22528,6 +22916,10 @@ TYPE-ANNOTATION com.openggf.net.protocol.Protocol @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ProtocolViolationException @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.QuickChatPhrase @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ReadyRules @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.net.protocol.RoomAccessPolicy @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.net.protocol.RoomAccessPolicy$Mode @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.net.protocol.RoomInviteCode @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.net.protocol.RoomPassword @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.physics.BackgroundPlaneCollisionProvider @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.physics.BackgroundPlaneCollisionProvider @java.lang.FunctionalInterface
 TYPE-ANNOTATION com.openggf.physics.BackgroundPlaneCollisionProvider$State @com.openggf.game.ModApi

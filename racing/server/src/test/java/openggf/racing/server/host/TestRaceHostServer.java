@@ -14,6 +14,8 @@ import com.openggf.net.identity.PlayerIdentity;
 import openggf.racing.protocol.ControlCodec;
 import com.openggf.net.protocol.ControlMessage;
 import com.openggf.net.protocol.Protocol;
+import com.openggf.net.protocol.RoomAccessPolicy;
+import com.openggf.net.protocol.RoomPassword;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
@@ -126,6 +128,71 @@ class TestRaceHostServer {
         assertEquals(0, accepted.playerSlot());
         assertFalse(accepted.room().verified());
         socket.sendClose(WebSocket.NORMAL_CLOSURE, "done").join();
+    }
+
+    @ParameterizedTest
+    @EnumSource(RaceHostImpl.class)
+    void privateRawEndpointRequiresPasswordBeforeSlotOrRosterIncludingCreator(RaceHostImpl impl,
+                                                                              @TempDir Path dir)
+            throws Exception {
+        PlayerIdentity owner = PlayerIdentity.loadOrCreate(dir.resolve("owner"));
+        RoomAccessPolicy policy = new RoomAccessPolicy(RoomAccessPolicy.Mode.PRIVATE, true);
+        try (RoomPassword password = RoomPassword.of("a private room with a required password")) {
+            server = impl.start(0, new RoomHostConfig("Private", "s3k", 0, 0, "OPEN", null, 8,
+                    FP, List.of(), false, policy, password, "private-raw-" + impl), owner,
+                    TrackValidationProfileSource.none());
+        }
+        try (RawWebSocketClient missing = RawWebSocketClient.connect(server.port())) {
+            ControlMessage.RoomAccessChallenge missingChallenge = assertInstanceOf(
+                    ControlMessage.RoomAccessChallenge.class, missing.join(owner, "Owner", FP));
+            assertTrue(missingChallenge.accessPolicy().passwordRequired());
+            assertNull(missing.sessionToken());
+            missing.sendText(ControlCodec.encode(null,
+                    new ControlMessage.RoomAccessSubmit(missingChallenge.challengeId(), null)));
+            assertInstanceOf(ControlMessage.JoinRejected.class, missing.nextControl());
+            assertEquals(0, playerCount());
+        }
+        Probe probe = new Probe();
+        WebSocket socket = connect(probe);
+        ClientHandshake handshake = new ClientHandshake(owner, "Owner", FP);
+        socket.sendText(ControlCodec.encode(null, handshake.hello()), true).join();
+        ControlMessage.Welcome welcome = (ControlMessage.Welcome) awaitMessage(probe, ControlMessage.Welcome.class);
+        socket.sendText(ControlCodec.encode(null, handshake.onWelcome(welcome)), true).join();
+        ControlMessage.RoomAccessChallenge challenge = (ControlMessage.RoomAccessChallenge)
+                awaitMessage(probe, ControlMessage.RoomAccessChallenge.class);
+        assertEquals(policy, challenge.accessPolicy());
+        assertEquals(0, playerCount());
+        assertTrue(probe.texts.isEmpty(), "private identity must publish no membership or roster");
+        try (RoomPassword wrong = RoomPassword.of("the wrong private room password")) {
+            socket.sendText(ControlCodec.encode(null,
+                    new ControlMessage.RoomAccessSubmit(challenge.challengeId(), wrong)), true).join();
+        }
+        awaitMessage(probe, ControlMessage.JoinRejected.class);
+        assertEquals(0, playerCount());
+
+        Probe acceptedProbe = new Probe();
+        WebSocket acceptedSocket = connect(acceptedProbe);
+        ClientHandshake retry = new ClientHandshake(owner, "Owner", FP);
+        acceptedSocket.sendText(ControlCodec.encode(null, retry.hello()), true).join();
+        welcome = (ControlMessage.Welcome) awaitMessage(acceptedProbe, ControlMessage.Welcome.class);
+        acceptedSocket.sendText(ControlCodec.encode(null, retry.onWelcome(welcome)), true).join();
+        challenge = (ControlMessage.RoomAccessChallenge) awaitMessage(acceptedProbe, ControlMessage.RoomAccessChallenge.class);
+        try (RoomPassword correct = RoomPassword.of("a private room with a required password")) {
+            acceptedSocket.sendText(ControlCodec.encode(null,
+                    new ControlMessage.RoomAccessSubmit(challenge.challengeId(), correct)), true).join();
+        }
+        ControlMessage.JoinAccepted admitted = (ControlMessage.JoinAccepted)
+                awaitMessage(acceptedProbe, ControlMessage.JoinAccepted.class);
+        assertEquals(0, admitted.playerSlot());
+        assertEquals(policy, admitted.room().accessPolicy());
+        assertEquals(1, playerCount());
+        acceptedSocket.sendClose(WebSocket.NORMAL_CLOSURE, "done").join();
+    }
+
+    private int playerCount() throws Exception {
+        CompletableFuture<Integer> count = new CompletableFuture<>();
+        server.execute(() -> count.complete(server.room().playerCount()));
+        return count.get(5, TimeUnit.SECONDS);
     }
 
     @ParameterizedTest

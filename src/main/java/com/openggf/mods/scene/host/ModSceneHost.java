@@ -60,17 +60,66 @@ public final class ModSceneHost {
     private SceneFontAtlas font;
     private ModScene scene;
     private Context context;
+    private SceneClipboardPlatform clipboardPlatform = SceneClipboardPlatform.unavailable();
     private int width = 320;
     private int height = 224;
     private boolean exiting;
     private boolean suspended;
+    private long renderedSubmissions;
     private com.openggf.mods.scene.ActLaunch pendingAct;
+
+    /** Install the platform owner before opening a scene. Headless hosts retain the unavailable owner. */
+    public void installClipboardPlatform(SceneClipboardPlatform platform) {
+        if (scene != null) throw new IllegalStateException("Close the scene before replacing its platform");
+        clipboardPlatform = java.util.Objects.requireNonNull(platform);
+    }
+
+    /** Drain writes on the GLFW event thread after event polling, including while updates pause. */
+    public void flushClipboardWrites() {
+        if (context != null) context.clipboard.flush();
+    }
+
+    public void windowFocusChanged(boolean focused) {
+        boolean lost = clipboardPlatform.focusChanged(focused);
+        invalidateClipboardActivation();
+        if (lost) notifyFocusLost();
+    }
+
+    public void windowIconifyChanged(boolean iconified) {
+        boolean lost = clipboardPlatform.iconifyChanged(iconified);
+        invalidateClipboardActivation();
+        if (lost) notifyFocusLost();
+    }
+
+    private void invalidateClipboardActivation() {
+        if (context != null) {
+            context.clipboard.invalidate();
+            context.mouseGestureArmed = false;
+        }
+    }
+
+    private void notifyFocusLost() {
+        if (scene == null || context == null || exiting) return;
+        context.focusLossGeneration++;
+        context.resetInput();
+        // A suspended visit can otherwise present its old recording without drawing again.
+        lastFrame = List.of();
+        try {
+            scene.focusLost(context);
+        } catch (ModFaultBoundary.CallbackAborted failure) {
+            Runnable back = context != null && context.services != null
+                    ? context.services.toMasterTitle() : null;
+            close();
+            if (back != null) back.run();
+        }
+    }
 
     /** Suspends ticking/drawing without closing the scene, context or ROM library. */
     public void suspend() {
         if (scene == null || exiting || suspended) throw new IllegalStateException("Scene cannot suspend");
         suspended = true;
         context.resetInput();
+        invalidateClipboardActivation();
         if (context.music != null) context.music.suspendPlayback();
         if (context.donorMusic != null) context.donorMusic.suspend();
         releaseGpuResources();
@@ -116,7 +165,7 @@ public final class ModSceneHost {
         if (font == null) {
             font = SceneFontAtlas.load();
         }
-        context = new Context(factory.ownerModId(), services);
+        context = new Context(factory, services);
         exiting = false;
         try {
             scene = factory.create();
@@ -134,8 +183,10 @@ public final class ModSceneHost {
         }
         try {
             context.beginTick(input);
-            scene.update(context);
-            context.ticks++;
+            context.updating = true;
+            try { scene.update(context); }
+            finally { if (context != null) context.updating = false; }
+            if (context != null) context.ticks++;
         } catch (RuntimeException | Error failure) {
             close();
             throw failure;
@@ -167,6 +218,7 @@ public final class ModSceneHost {
                 renderer.init();
             }
             renderer.render(lastFrame, projection, width, height, viewport);
+            if (!lastFrame.isEmpty()) renderedSubmissions++;
         } catch (IOException e) {
             LOG.log(Level.SEVERE, "Scene renderer unavailable", e);
         }
@@ -193,6 +245,7 @@ public final class ModSceneHost {
                 renderer.init();
             }
             renderer.render(canvas.ops(), projection, canvasWidth, canvasHeight, viewport);
+            if (!canvas.ops().isEmpty()) renderedSubmissions++;
         } catch (IOException e) {
             LOG.log(Level.SEVERE, "Scene renderer unavailable", e);
         }
@@ -264,6 +317,11 @@ public final class ModSceneHost {
         return List.copyOf(lastFrame);
     }
 
+    /** Engine-thread presentation evidence. Recording without a GL submission does not count. */
+    public long renderedSubmissions() {
+        return renderedSubmissions;
+    }
+
     /** Closes the open scene: calls {@link ModScene#exit} and releases its textures. */
     public void close() {
         ModScene closing = scene;
@@ -318,6 +376,10 @@ public final class ModSceneHost {
         private final com.openggf.mods.scene.SceneGameplay gameplay;
         private final Thread sceneThread = Thread.currentThread();
         private boolean capabilitiesRetired;
+        private boolean updating;
+        private boolean mouseGestureArmed = true;
+        private long focusLossGeneration;
+        private final ManagedSceneClipboard clipboard;
         private long ticks;
         private InputHandler input;
         private LogicalInputSnapshot logical = LogicalInputSnapshot.neutral();
@@ -338,8 +400,13 @@ public final class ModSceneHost {
         private int lastY = -1;
         private boolean mouseLast;
 
-        Context(String owner, SceneServices services) {
-            this.owner = owner;
+        Context(OwnedSceneFactory factory, SceneServices services) {
+            this.owner = factory.ownerModId();
+            String owner = this.owner;
+            this.clipboard = new ManagedSceneClipboard(clipboardPlatform,
+                    () -> updating && context == this && !capabilitiesRetired && !exiting && !suspended
+                            && pendingAct == null && Thread.currentThread() == sceneThread
+                            && factory.isCallbackActive());
             this.services = services;
             this.gameplay = services == null || services.gameplay() == null ? null
                     : new com.openggf.mods.scene.SceneGameplay() {
@@ -504,10 +571,22 @@ public final class ModSceneHost {
             logical = raw.withMenuPolicy((pressedButtons & (SceneButtons.A | SceneButtons.C | SceneButtons.START)) != 0,
                     (pressedButtons & SceneButtons.B) != 0);
             mouse = readMouse(handler);
+            physical.events().stream().filter(event -> event.pressed())
+                    .mapToLong(event -> event.timestampNanos()).max().ifPresent(clipboard::userGesture);
+            if (handler != null) {
+                boolean mouseDown = handler.isMouseButtonDown(GLFW.GLFW_MOUSE_BUTTON_LEFT)
+                        || handler.isMouseButtonDown(GLFW.GLFW_MOUSE_BUTTON_RIGHT);
+                if (!mouseDown) mouseGestureArmed = true;
+                if (mouseGestureArmed && (handler.isMouseButtonPressed(GLFW.GLFW_MOUSE_BUTTON_LEFT)
+                        || handler.isMouseButtonPressed(GLFW.GLFW_MOUSE_BUTTON_RIGHT))) {
+                    clipboard.userGesture(physical.timestampNanos());
+                }
+            }
         }
 
         void retireCapabilities() {
             capabilitiesRetired = true;
+            clipboard.retire();
             network.close();
         }
 
@@ -528,6 +607,10 @@ public final class ModSceneHost {
                 }
             }
         }
+
+        @Override public com.openggf.mods.scene.SceneClipboard clipboard() { return clipboard; }
+
+        @Override public long focusLossGeneration() { return focusLossGeneration; }
 
         @Override public PhysicalInput physicalInput() { return physical; }
 

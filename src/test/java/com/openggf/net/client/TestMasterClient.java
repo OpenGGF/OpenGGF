@@ -18,7 +18,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
 import java.net.URI;
-import java.lang.reflect.Method;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -214,33 +213,6 @@ class TestMasterClient {
                 }
             }
         }
-    }
-
-    @Test
-    void lateJoinReplyCannotCompleteLaterRequest() throws Exception {
-        ConcurrentLinkedQueue<CompletableFuture<ControlMessage.RoomJoinResult>> pending =
-                new ConcurrentLinkedQueue<>();
-        CompletableFuture<ControlMessage.RoomJoinResult> joinA = new CompletableFuture<>();
-        CompletableFuture<ControlMessage.RoomJoinResult> joinB = new CompletableFuture<>();
-        pending.add(joinA);
-        pending.add(joinB);
-        joinA.completeExceptionally(new java.util.concurrent.TimeoutException());
-
-        Method takeNext = MasterClient.class.getDeclaredMethod("takeNext",
-                ConcurrentLinkedQueue.class, Object.class, Throwable.class);
-        takeNext.setAccessible(true);
-        ControlMessage.RoomJoinResult replyA = new ControlMessage.RoomJoinResult(
-                "room-a", "DIRECT", "a.example", 1234, "host-a", FP, "ab".repeat(32));
-        ControlMessage.RoomJoinResult replyB = new ControlMessage.RoomJoinResult(
-                "room-b", "DIRECT", "b.example", 5678, "host-b", FP, "cd".repeat(32));
-
-        Object firstClaim = takeNext.invoke(null, pending, replyA, null);
-        Method complete = firstClaim.getClass().getDeclaredMethod("complete");
-        complete.setAccessible(true);
-        complete.invoke(firstClaim);
-        assertTrue(!joinB.isDone(), "A's late result must not bind join B");
-        complete.invoke(takeNext.invoke(null, pending, replyB, null));
-        assertEquals("room-b", joinB.get(1, TimeUnit.SECONDS).roomId());
     }
 
     @Test

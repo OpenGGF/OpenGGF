@@ -4,6 +4,7 @@ import com.openggf.net.client.ClientHandshake;
 import com.openggf.net.ghost.GhostFrameCodec;
 import com.openggf.net.hub.HandshakeTransport;
 import com.openggf.net.hub.HubConnection;
+import com.openggf.net.hub.RoomHost;
 import com.openggf.net.hub.TrackValidationProfileSource;
 import com.openggf.net.identity.PlayerIdentity;
 import com.openggf.net.protocol.AuthenticationTranscript;
@@ -276,6 +277,94 @@ class TestRoomBrokerAdversarial {
     }
 
     @Test
+    void releasedRelaySlotCanRejoinBeforeFullDirectoryCountRefreshes(@TempDir Path dir)
+            throws Exception {
+        try (Fixture f = new Fixture(dir)) {
+            PlayerIdentity owner = PlayerIdentity.loadOrCreate(dir.resolve("owner"));
+            PlayerIdentity guest = PlayerIdentity.loadOrCreate(dir.resolve("guest"));
+            f.establish(owner);
+            f.establish(guest);
+            Connection host = new Connection();
+            String hostToken = f.admit(host, owner);
+            f.send(host, hostToken, new ControlMessage.RoomCreate(
+                    new ControlMessage.RoomDescriptor("Capacity", "s3k", 0, 0,
+                            "OPEN", null, 2, false), "RELAY", 0, FP));
+            String roomId = assertInstanceOf(ControlMessage.RoomCreated.class, host.last()).roomId();
+            f.send(host, hostToken, new ControlMessage.RelayAttach(roomId));
+            assertEquals(RoomBroker.AttachMode.ROOM, f.broker.takeAttachResult(host).orElseThrow().mode());
+            RoomHost room = f.relays.find(roomId).orElseThrow().room();
+            proveRelayIdentity(room, host, owner);
+            assertEquals(1, room.playerCount());
+
+            Connection first = new Connection();
+            String firstToken = f.admit(first, guest);
+            f.send(first, firstToken, new ControlMessage.RoomJoinRequest(roomId));
+            assertInstanceOf(ControlMessage.RoomJoinResult.class, first.last());
+            f.send(first, firstToken, new ControlMessage.RelayAttach(roomId));
+            assertTrue(f.broker.takeAttachResult(first).isPresent());
+            proveRelayIdentity(room, first, guest);
+            assertEquals(2, room.playerCount());
+            ControlMessage.JoinAccepted original = first.received.stream()
+                    .filter(ControlMessage.JoinAccepted.class::isInstance)
+                    .map(ControlMessage.JoinAccepted.class::cast)
+                    .filter(accepted -> accepted.room() != null).findFirst().orElseThrow();
+            assertEquals(2, room.playerCount());
+            for (int tick = 0; tick < RelayRoomManager.PLAYER_COUNT_INTERVAL_TICKS; tick++) {
+                f.relays.tickAll();
+            }
+            assertEquals(2, f.registry.find(roomId).orElseThrow().playerCount());
+
+            room.onDisconnected(first);
+            f.broker.onDisconnected(first);
+            assertEquals(1, room.playerCount());
+            assertEquals(2, f.registry.find(roomId).orElseThrow().playerCount(),
+                    "discovery still has the previous full-room snapshot");
+            Connection replacement = new Connection();
+            String replacementToken = f.admit(replacement, guest);
+            f.send(replacement, replacementToken, new ControlMessage.RoomJoinRequest(roomId));
+            assertInstanceOf(ControlMessage.RoomJoinResult.class, replacement.last(),
+                    "periodic discovery counts must not deny a released authoritative slot");
+            f.send(replacement, replacementToken, new ControlMessage.RelayAttach(roomId));
+            assertTrue(f.broker.takeAttachResult(replacement).isPresent());
+            proveRelayIdentity(room, replacement, guest);
+            ControlMessage.JoinAccepted recovered = replacement.received.stream()
+                    .filter(ControlMessage.JoinAccepted.class::isInstance)
+                    .map(ControlMessage.JoinAccepted.class::cast)
+                    .filter(accepted -> accepted.room() != null).findFirst().orElseThrow();
+            assertEquals(original.playerSlot(), recovered.playerSlot());
+            assertNotEquals(original.sessionToken(), recovered.sessionToken());
+            assertTrue(replacement.received.stream().anyMatch(
+                    ControlMessage.RoomAccessChallenge.class::isInstance));
+            assertEquals(2, room.playerCount());
+
+            PlayerIdentity extra = PlayerIdentity.loadOrCreate(dir.resolve("overflow"));
+            f.establish(extra);
+            Connection overflow = new Connection();
+            String overflowToken = f.admit(overflow, extra);
+            f.send(overflow, overflowToken, new ControlMessage.RoomJoinRequest(roomId));
+            assertInstanceOf(ControlMessage.RoomJoinResult.class, overflow.last());
+            f.send(overflow, overflowToken, new ControlMessage.RelayAttach(roomId));
+            assertTrue(f.broker.takeAttachResult(overflow).isPresent());
+            proveRelayIdentity(room, overflow, extra);
+            assertEquals("room full", assertInstanceOf(ControlMessage.JoinRejected.class,
+                    overflow.last()).reason(), "the room actor still owns final capacity enforcement");
+            assertEquals(2, room.playerCount());
+            assertNull(host.closed);
+            f.relays.hostLeft(roomId);
+        }
+    }
+
+    private static void proveRelayIdentity(RoomHost room, Connection connection, PlayerIdentity identity)
+            throws Exception {
+        ClientHandshake handshake = new ClientHandshake(identity, "Peer", FP, null,
+                HandshakeTransport.role(connection),
+                () -> AuthenticationTranscript.LOCAL_PLAINTEXT);
+        room.onText(connection, ControlCodec.encode(null, handshake.hello()));
+        room.onText(connection, ControlCodec.encode(null, handshake.onWelcome(
+                assertInstanceOf(ControlMessage.Welcome.class, connection.last()))));
+    }
+
+    @Test
     void refusedTunnelAttachConsumesGrantBeforeRetry(@TempDir Path dir) throws Exception {
         try (Fixture f = new Fixture(dir)) {
             PlayerIdentity owner = PlayerIdentity.loadOrCreate(dir.resolve("owner"));
@@ -347,7 +436,8 @@ class TestRoomBrokerAdversarial {
                             new ControlMessage.RoomTrackUpdate(room, 0, 1),
                             new ControlMessage.Heartbeat(room, Integer.MAX_VALUE),
                             new ControlMessage.AttemptStart(random.nextInt()),
-                            new ControlMessage.RoomCreate(null, "UNKNOWN", -1, FP),
+                            new ControlMessage.RoomCreate(new ControlMessage.RoomDescriptor(
+                                    "Attack", "s3k", 0, 0, "OPEN", null, 8, false), "UNKNOWN", -1, FP),
                             new ControlMessage.Hello(Integer.MAX_VALUE, "%%%", "Peer", FP, ""),
                             new ControlMessage.AuthProof(Base64.getEncoder().encodeToString(new byte[64])),
                             new ControlMessage.PowSolution(null, random.nextLong()));
@@ -421,9 +511,7 @@ class TestRoomBrokerAdversarial {
                             validRoom, "DIRECT", 27888, FP), false,
                             ControlMessage.RoomCreateRejected.class),
                     new Case("room-control-at-broker", new ControlMessage.AttemptStart(random.nextInt()),
-                            true, null),
-                    new Case("create-missing-descriptor", new ControlMessage.RoomCreate(
-                            null, "RELAY", 0, FP), true, ControlMessage.RoomCreateRejected.class));
+                            true, null));
             for (int op = 0; op < cases.size(); op++) {
                 Case scenario = cases.get(op);
                 String context = "seed=" + SEED + " state=ADMITTED_OWN_TOKEN op=" + op
@@ -467,6 +555,34 @@ class TestRoomBrokerAdversarial {
                 f.broker.onDisconnected(attack);
                 assertFalse(f.broker.isSessionTokenValid(token), context);
             }
+        }
+    }
+
+    @Test
+    void malformedRoomDescriptorIsRejectedAtWireBoundaryWithoutPublishing(@TempDir Path dir)
+            throws Exception {
+        try (Fixture f = new Fixture(dir)) {
+            PlayerIdentity owner = PlayerIdentity.loadOrCreate(dir.resolve("owner"));
+            f.establish(owner);
+            Connection witness = new Connection();
+            String token = f.admit(witness, owner);
+            String roomId = f.create(witness, token, "RELAY");
+            SessionRegistry.RoomEntry original = f.registry.find(roomId).orElseThrow();
+            Connection attacker = new Connection();
+            String attackToken = f.admit(attacker,
+                    PlayerIdentity.loadOrCreate(dir.resolve("attacker")));
+            ControlMessage.RoomCreate valid = new ControlMessage.RoomCreate(original.descriptor(),
+                    "RELAY", 0, FP);
+            var mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            var envelope = (com.fasterxml.jackson.databind.node.ObjectNode) mapper.readTree(
+                    ControlCodec.encode(attackToken, valid));
+            ((com.fasterxml.jackson.databind.node.ObjectNode) envelope.get("msg")).putNull("room");
+            for (int i = 0; i < 3; i++) f.broker.onText(attacker, envelope.toString());
+            assertNotNull(attacker.closed);
+            assertFalse(f.broker.isSessionTokenValid(attackToken));
+            assertEquals(original, f.registry.find(roomId).orElseThrow());
+            assertEquals(1, f.registry.list(null).size());
+            assertEquals(1, f.relays.roomCount());
         }
     }
 
