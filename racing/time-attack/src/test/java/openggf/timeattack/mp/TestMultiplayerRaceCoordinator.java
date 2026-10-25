@@ -726,7 +726,7 @@ class TestMultiplayerRaceCoordinator {
         input.trigger = 1;
         assertTrue(step(rig, input, held, false, 103));
         assertFalse(rig.coordinator().isQuickChatOpen());
-        assertTrue(rig.transport().sentControl.contains(new ControlMessage.QuickChat("TOO_SLOW")));
+        assertTrue(rig.transport().sentControl.contains(new ControlMessage.QuickChat("THATS_NO_GOOD")));
         assertEquals(held, input.input().player1().heldMask());
         assertTrue(input.input().player1().actionHeldMask() != 0);
         assertFalse(rig.runtime().holdsPlayerInput());
@@ -752,6 +752,7 @@ class TestMultiplayerRaceCoordinator {
         input.click = false;
         input.trigger = -1;
         input.faceButtons = true;
+        input.stickY = -1;
         rig.coordinator().pollLocalInput(input);
         assertTrue(rig.coordinator().isQuickChatOpen(), "movement and jump buttons belong to gameplay");
         input.trigger = 1;
@@ -797,7 +798,7 @@ class TestMultiplayerRaceCoordinator {
 
     private static final class ControllerInput implements RunInput {
         boolean connected = true, click, faceButtons, retry, resumed;
-        float stickY, trigger = -1;
+        float stickX, stickY, trigger = -1;
         LogicalInputSnapshot logical = LogicalInputSnapshot.neutral();
         @Override public LogicalInputSnapshot input() { return logical; }
         @Override public boolean keyDown(int key) { return keyPressed(key); }
@@ -807,7 +808,7 @@ class TestMultiplayerRaceCoordinator {
             boolean[] buttons = new boolean[15];
             buttons[com.openggf.control.PhysicalGamepad.BUTTON_RIGHT_THUMB] = click;
             buttons[com.openggf.control.PhysicalGamepad.BUTTON_A] = faceButtons;
-            float[] axes = {0, 0, 0, stickY, -1, trigger};
+            float[] axes = {0, 0, stickX, stickY, -1, trigger};
             var pad = new com.openggf.control.PhysicalGamepad(0, "Xbox", buttons, axes);
             return new com.openggf.control.PhysicalInput(0, List.of(), connected ? List.of(pad) : List.of(), List.of(), 0);
         }
@@ -843,6 +844,7 @@ class TestMultiplayerRaceCoordinator {
         input.click = true;
         rig.coordinator().pollLocalInput(input);
         input.click = false;
+        input.stickY = -1;
         input.trigger = 1;
         rig.coordinator().pollLocalInput(input);
         assertEquals(1, rig.transport().sentControl.stream().filter(ControlMessage.QuickChat.class::isInstance).count());
@@ -874,6 +876,7 @@ class TestMultiplayerRaceCoordinator {
         assertFalse(rig.coordinator().admit(input));
         assertTrue(rig.coordinator().isQuickChatOpen());
         input.click = false;
+        input.stickY = -1;
         input.trigger = 1;
         assertFalse(rig.coordinator().admit(input));
         assertFalse(rig.coordinator().isQuickChatOpen());

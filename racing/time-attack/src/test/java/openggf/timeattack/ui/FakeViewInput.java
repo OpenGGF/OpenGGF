@@ -17,6 +17,7 @@ public final class FakeViewInput implements ViewInput {
     public final Set<Integer> pressed = new HashSet<>();
     public final Set<Integer> held = new HashSet<>();
     public String typed = "";
+    public com.openggf.control.PhysicalInput physical = com.openggf.control.PhysicalInput.neutral();
 
     @Override public boolean up() { return up; }
     @Override public boolean down() { return down; }
@@ -27,10 +28,12 @@ public final class FakeViewInput implements ViewInput {
     @Override public boolean keyPressed(int key) { return pressed.contains(key); }
     @Override public boolean keyDown(int key) { return held.contains(key) || pressed.contains(key); }
     @Override public String typedText() { return typed; }
+    @Override public com.openggf.control.PhysicalInput physicalInput() { return physical; }
 
     public void clear() {
         up = down = left = right = accept = back = false;
         typed = "";
+        physical = com.openggf.control.PhysicalInput.neutral();
         pressed.clear();
         held.clear();
     }
