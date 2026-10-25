@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.audio.GameSound;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
@@ -78,7 +80,8 @@ import java.util.List;
  * @see BonusBlockObjectInstance Drop target with hit tracking
  */
 public class HexBumperObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseListener, RewindRecreatable {
+        implements TouchResponseProvider, TouchResponseListener, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // ObjD7 is a radial bumper; oscillation direction does not turn a facing body.
 
     // ========================================================================
     // ROM Constants

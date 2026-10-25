@@ -41,7 +41,7 @@ public class SwScrlMczTest {
 
     @BeforeEach
     public void setUp() throws IOException {
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.resetAll();
         mockRom = new MockMczRom();
         ParallaxTables tables = new ParallaxTables(mockRom);
         handler = new SwScrlMcz(tables);

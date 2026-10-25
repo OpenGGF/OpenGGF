@@ -1,5 +1,6 @@
 package com.openggf.audio.driver;
 
+import com.openggf.game.GameServices;
 import com.openggf.audio.AudioBenchmarkMemoryProbe;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
@@ -141,7 +142,7 @@ public class TestSmpsFadeAudioThroughput {
         driver.setRegion(SmpsSequencer.Region.NTSC);
         // Intentionally no read-mode override: measure the production default.
 
-        SmpsSequencer musicSeq = new SmpsSequencer(musicData, dacData, driver, Sonic2SmpsSequencerConfig.CONFIG);
+        SmpsSequencer musicSeq = new SmpsSequencer(musicData, dacData, driver, GameServices.audio(), Sonic2SmpsSequencerConfig.CONFIG);
         musicSeq.setSampleRate(SAMPLE_RATE);
         driver.addSequencer(musicSeq, false);
 

@@ -30,7 +30,7 @@ public class TestDonorCapabilities {
                 return java.util.Map.of();
             }
             public int resolveNativeId(CanonicalAnimation canonical) { return -1; }
-            public com.openggf.data.PlayerSpriteArtProvider getPlayerArtProvider(
+            public com.openggf.sprites.art.PlayerSpriteArtProvider getPlayerArtProvider(
                     com.openggf.data.RomByteReader reader) {
                 return null;
             }

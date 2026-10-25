@@ -1,8 +1,6 @@
 package com.openggf.graphics;
 
 import org.lwjgl.system.MemoryUtil;
-import com.openggf.game.GameServices;
-import com.openggf.level.PatternDesc;
 
 import java.nio.FloatBuffer;
 import java.util.ArrayDeque;
@@ -131,25 +129,21 @@ public class PatternRenderCommand implements GLCommandable {
     private static final int ATTRIB_TEXCOORD = 1;
     private static final int ATTRIB_PALETTE = 2;
 
-    /**
-     * Obtain a PatternRenderCommand from the pool or create a new one.
-     */
-    public static PatternRenderCommand obtain(PatternAtlas.Entry entry, int paletteTextureId, PatternDesc desc, int x, int y) {
-        return obtain(entry, paletteTextureId, desc, x, y, GameServices.graphics());
-    }
-
-    public static PatternRenderCommand obtain(PatternAtlas.Entry entry, int paletteTextureId, PatternDesc desc,
-            int x, int y, GraphicsManager graphicsManager) {
-        return obtain(entry, paletteTextureId, desc, (float) x, (float) y, 8f, 8f, graphicsManager);
-    }
-
-    public static PatternRenderCommand obtain(PatternAtlas.Entry entry, int paletteTextureId, PatternDesc desc,
-            float x, float y, float width, float height, GraphicsManager graphicsManager) {
+    /** Acquire and initialize the manager/atlas prefix before the caller samples attributes. */
+    static PatternRenderCommand obtain(PatternAtlas.Entry entry, int paletteTextureId, GraphicsManager graphicsManager) {
         PatternRenderCommand cmd = pool.pollFirst();
         if (cmd == null) {
             cmd = new PatternRenderCommand();
         }
-        cmd.init(entry, paletteTextureId, desc, x, y, width, height, graphicsManager);
+        cmd.graphicsManager = Objects.requireNonNull(graphicsManager, "graphicsManager");
+        cmd.presentationQuad=null;cmd.presentationCount=0;cmd.presentationHue=0;cmd.presentationOpacity=1;
+        cmd.nativeShadow15=false;cmd.shadowBackdrop=null;
+        cmd.paletteTextureId = paletteTextureId;
+        cmd.u0 = entry.u0();
+        cmd.v0 = entry.v0();
+        cmd.u1 = entry.u1();
+        cmd.v1 = entry.v1();
+        cmd.atlasIndex = entry.atlasIndex();
         return cmd;
     }
 
@@ -234,25 +228,18 @@ public class PatternRenderCommand implements GLCommandable {
         // Private constructor for pooling
     }
 
-    private void init(PatternAtlas.Entry entry, int paletteTextureId, PatternDesc desc, float x, float y,
-            float width, float height,
-            GraphicsManager graphicsManager) {
-        this.graphicsManager = Objects.requireNonNull(graphicsManager, "graphicsManager");
-        presentationQuad=null;presentationCount=0;presentationHue=0;presentationOpacity=1;
-        nativeShadow15=false;shadowBackdrop=null;
-        this.paletteTextureId = paletteTextureId;
-        this.u0 = entry.u0();
-        this.v0 = entry.v0();
-        this.u1 = entry.u1();
-        this.v1 = entry.v1();
-        this.atlasIndex = entry.atlasIndex();
-        this.paletteIndex = desc.getPaletteIndex();
+    /** The virtual underwater getter can mutate the caller's later attributes or throw. */
+    void capturePalette(int paletteIndex) {
+        this.paletteIndex = paletteIndex;
         this.paletteReplay=SpritePresentation.subject(graphicsManager).paletteReplay();
         this.paletteReplayUnderwater=graphicsManager.isUseUnderwaterPaletteForBackground();
-        this.hFlip = desc.getHFlip();
-        this.vFlip = desc.getVFlip();
+    }
+
+    void finish(boolean hFlip, boolean vFlip, boolean piecePriority, float x, float y, float width, float height) {
+        this.hFlip = hFlip;
+        this.vFlip = vFlip;
         this.textureCoordinatesResolved = false;
-        this.piecePriority = desc.getPriority();
+        this.piecePriority = piecePriority;
         this.capturedTileOcclusionPaletteMask = graphicsManager.getCurrentSpriteTileOcclusionPaletteMask();
         this.ghostEffectActive = graphicsManager.isGhostRenderEffectActive();
         this.ghostColour = graphicsManager.isGhostRenderColourPreserved();
@@ -354,7 +341,7 @@ public class PatternRenderCommand implements GLCommandable {
             throw new IllegalStateException("SHADOW_15 execution requires a live native shadow backdrop");
         int effectivePalette=paletteReplay==null?paletteIndex:paletteReplay.palette(graphicsManager,paletteIndex);
         if(effectivePalette<0)return;
-        if (!nativeShadow15) graphicsManager.refreshScopedUnderwaterResidency();
+        if (!nativeShadow15) graphicsManager.paletteTextures().refreshScopedUnderwaterResidency();
         if(paletteReplay!=null) {
             Integer current=graphicsManager.scopedReplayPaletteTexture(paletteReplayUnderwater);
             if(current==null)return;

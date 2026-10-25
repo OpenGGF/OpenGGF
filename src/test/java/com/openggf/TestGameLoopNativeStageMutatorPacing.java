@@ -109,7 +109,7 @@ class TestGameLoopNativeStageMutatorPacing {
         when(pumpContext.isGameplayRuntimeReady()).thenReturn(true);
         when(pumpContext.getActiveBonusStageProvider()).thenReturn(provider);
         var input = new InputHandler(); var loop = new PumpLoop(input); var audio = mock(AudioManager.class);
-        install(loop, pumpContext, audio); set(loop, "activeBonusStageProvider", provider);
+        install(loop, pumpContext, audio); BonusStageSessionTestAccess.provider(loop, provider);
         set(loop, "camera", GameServices.camera()); loop.setGameMode(GameMode.BONUS_STAGE);
         loop.body = () -> fixture.stepIdleFrames(1);
         int before = GameServices.level().getFrameCounter();
@@ -150,7 +150,7 @@ class TestGameLoopNativeStageMutatorPacing {
         context.setActiveBonusStageProvider(provider);
         assertTrue(provider.supportsRewind()); assertFalse(provider.updateDuringLevelFrame());
         var input = new InputHandler(InputBindingFactory.supplier(config())); var loop = new GameLoop(input);
-        set(loop, "activeBonusStageProvider", provider); loop.setGameMode(GameMode.BONUS_STAGE);
+        BonusStageSessionTestAccess.provider(loop, provider); loop.setGameMode(GameMode.BONUS_STAGE);
         var audio = mock(AudioManager.class); set(loop, "audioManager", audio);
         set(loop, "outerFramePresentation", new OuterFramePresentation(audio));
         int before = GameServices.level().getFrameCounter(); clearInvocations(provider);
@@ -203,7 +203,7 @@ class TestGameLoopNativeStageMutatorPacing {
         when(context.getWorldSession()).thenReturn(world);
         when(context.isGameplayRuntimeReady()).thenReturn(true);
         var input = new InputHandler(); var loop = new PumpLoop(input); var audio = mock(AudioManager.class);
-        install(loop, context, audio); set(loop, "activeSpecialStageProvider", provider); set(loop, "camera", null);
+        install(loop, context, audio); SpecialStageLifecycleTestAccess.write(loop, "activeSpecialStageProvider", provider); set(loop, "camera", null);
         loop.setGameMode(GameMode.SPECIAL_STAGE);
         var nativeInput = (GameLoopSpecialStageInput) get(loop, "specialStagePacingInput");
         loop.body = () -> NativeSpecialStageFrame.step(provider, world, () -> {
@@ -238,7 +238,7 @@ class TestGameLoopNativeStageMutatorPacing {
     private static SonicConfigurationService config() { return SonicConfigurationService.getInstance(); }
     private static void install(PumpLoop loop, GameplayModeContext context, AudioManager audio) throws Exception {
         set(loop, "gameplayMode", context); set(loop, "audioManager", audio); set(loop, "fadeManager", mock(FadeManager.class));
-        set(loop, "outerFramePresentation", new OuterFramePresentation(audio)); set(loop, "titleCardProvider", null);
+        set(loop, "outerFramePresentation", new OuterFramePresentation(audio)); com.openggf.TitleCardLifecycleTestAccess.provider(loop, null);
     }
     private static Object get(GameLoop loop, String name) throws Exception { Field f = GameLoop.class.getDeclaredField(name); f.setAccessible(true); return f.get(loop); }
     private static void set(GameLoop loop, String name, Object value) throws Exception { Field f = GameLoop.class.getDeclaredField(name); f.setAccessible(true); f.set(loop, value); }

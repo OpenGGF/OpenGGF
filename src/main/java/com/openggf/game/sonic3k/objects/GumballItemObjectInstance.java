@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.audio.GameMusic;
 import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
@@ -62,7 +64,7 @@ import java.util.logging.Logger;
  * ROM collision size: 0xD7 &amp; 0x3F = 0x17 (size index 23).
  */
 public class GumballItemObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseListener, SpawnRewindRecreatable {
+        implements TouchResponseProvider, TouchResponseListener, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
 
     private static final Logger LOGGER = Logger.getLogger(GumballItemObjectInstance.class.getName());
 

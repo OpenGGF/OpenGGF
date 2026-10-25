@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
@@ -29,7 +31,14 @@ import java.util.List;
  * Collision flags: 0x8B (enemy projectile).
  */
 public class HtzFireProjectileObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, SpawnCoordinateZeroScalarArgsRewindRecreatable {
+        implements TouchResponseProvider, SpawnCoordinateZeroScalarArgsRewindRecreatable, ObjectVisualFacing.Source {
+    @Override
+    public ObjectVisualFacing.Basis nativeFacing() {
+        // loc_230C2 creates the unflipped LEFT-facing fireball; loc_23084
+        // mirrors its partner with render_flags.x_flip. vFlip/animation keep
+        // their native rise/fall poses; velocity is not used to infer facing.
+        return hFlip ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.LEFT;
+    }
 
     private static final int PRIORITY = 3;
     private static final int GRAVITY = 0x18;           // ROM: addi.w #$18,y_vel(a0)

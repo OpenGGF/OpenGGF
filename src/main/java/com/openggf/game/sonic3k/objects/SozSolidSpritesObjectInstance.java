@@ -8,7 +8,9 @@ import java.util.List;
 
 /** SKL $49, Obj_SOZSolidSprites ($41F44): two static full-solid terrain sprites. */
 public final class SozSolidSpritesObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SpawnRewindRecreatable, RomObjectCodePointerProvider {
+        implements SolidObjectProvider, SpawnRewindRecreatable, RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
+
+    // Native rock/terrain frames and break pieces have no horizontal-facing body; placement flips retain geometry.
     public SozSolidSpritesObjectInstance(ObjectSpawn spawn) { super(spawn, "SOZSolidSprites"); }
 
     @Override public void update(int vIntRunCount, PlayableEntity player) { checkpointAll(); }

@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.PlayableEntity;
@@ -32,7 +34,8 @@ import java.util.List;
  * No collision_flags (not a touchable enemy).
  */
 public class CluckerBaseObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, RewindRecreatable {
+        implements SolidObjectProvider, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // ObjAD is only the solid mount; the separately placed ObjAE Clucker is not its child.
 
     // From disassembly ObjAD_Main: move.w #$1B,d1 / move.w #8,d2 / move.w #8,d3
     private static final int SOLID_HALF_WIDTH = 0x1B;

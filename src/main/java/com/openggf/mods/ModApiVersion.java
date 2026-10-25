@@ -114,18 +114,31 @@ public final class ModApiVersion {
      * Creator reconstruction uses ObjectReconstructionContext; host dynamic-entry
      * queues and whole-object-manager snapshot shapes remain engine internals.
      * Stageplay v6 unifies native and initially cleared worlds, donor performers and
-     * directed framing; v1-v5 documents retain explicit compatibility execution policies.
+     * directed framing. Unpublished Stageplay formats are replaced directly, without migrations.
      * Stageplay route motion settings and actor-declared movement abilities remain in candidate 0.7.
-     * Stageplay v7 adds object source/mode keys, visual child-part frames and timed world commands;
+     * Stageplay v8 uses semantic Left/Right facing for player and object keys. Native logical
+     * direction owns pixel mirroring, including deliberate turn/skid art and child offsets.
+     * Stageplay v7 added object source/mode keys, visual child-part frames and timed world commands;
      * registry/graph/ROM presentation owners remain internal. Stable placement targets, bounded
      * native intents and native observations remain portable.
      * Stageplay adds immutable directing documents, pure timeline evaluation,
      * owner-bound cutscene playback, bounded sample voices and explicit native
      * player/camera borrowing with captured handover and fault revocation.
+     * PlayerSpriteArtProvider and SpindashDustArtProvider now live in sprites.art;
+     * this intentional unpublished candidate break requires recompiling mods, donor
+     * implementations and callers even when their manifest still accepts 0.7.0.
+     * The complete Game abstraction now lives in game beside GameModule and ModGame;
+     * its class identity, ModGame superclass and factory/getter return descriptors change.
+     * Rebuild compiled mods, donors and callers against matching SDK/engine artifacts,
+     * including callers whose source infers the game type; the 0.7.0 range is unchanged.
      * Reusable dialogue typers and skins, grapheme-safe reveal schedules and
      * shared dialogue layout keep creator styling portable between both editors.
      * Native retail options and competition screens have explicit host game modes;
      * competition participant and session services remain engine internals.
+     * Stageplay's required voices list adds per-speaker PSG tone/rhythm/pitch/variation/length/level,
+     * object dialogue speakers, cast identity on native object observations and bounded transient PCM.
+     * Stageplay v8 also adds the required per-speaker voices list. These unpublished format and
+     * signature changes retain candidate 0.7.0 without migration.
      */
     public static final SemanticVersion CURRENT = SemanticVersion.parse("0.7.0");
     public static final List<SemanticVersion> SUPPORTED_CONTRACTS = List.of(CURRENT);

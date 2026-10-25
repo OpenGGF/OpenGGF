@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.AbstractBadnikInstance;
 
 import com.openggf.debug.DebugRenderContext;
@@ -47,7 +48,10 @@ import java.util.List;
  *   y_pos offset = +$B
  *   x_pos offset = -8 (or +8 if x_flip)
  */
-public class CluckerBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable {
+public class CluckerBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
 
     // Collision size index from disassembly: collision_flags = 6
     // Set during routine 4->6 transition (move.b #6,collision_flags(a0))

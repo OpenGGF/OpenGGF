@@ -1,4 +1,6 @@
 package com.openggf.game.sonic2.objects;
+
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.ObjectAnimationState;
 
 import com.openggf.debug.DebugRenderContext;
@@ -49,7 +51,8 @@ import java.util.List;
  * operand byte, NOT a frame loop-back. So script 2 ($FD,3) runs anim 3 and
  * script 3 ($FD,2) runs anim 2, alternating between the two.
  */
-public class MTZLavaBubbleObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class MTZLavaBubbleObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj71 animates lava-surface scenery without a horizontally facing body.
 
     // Animation scripts from Ani_obj71 (s2.asm lines 24028-24040)
     private static final SpriteAnimationSet ANIMATIONS;

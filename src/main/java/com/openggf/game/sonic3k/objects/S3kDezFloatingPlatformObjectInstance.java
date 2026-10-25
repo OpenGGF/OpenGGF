@@ -6,6 +6,7 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
@@ -15,7 +16,9 @@ import java.util.List;
 
 /** SKL $4A, Obj_DEZFloatingPlatform / loc_25A7E (sonic3k.asm:51234-51278). */
 public final class S3kDezFloatingPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SpawnRewindRecreatable, RomObjectCodePointerProvider {
+        implements SolidObjectProvider, SpawnRewindRecreatable, RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
+
+    // Native travel and reverse-gravity transforms move pad/platform geometry without logical horizontal facing.
     private int anchorX;
     private int anchorY;
     private int currentX;

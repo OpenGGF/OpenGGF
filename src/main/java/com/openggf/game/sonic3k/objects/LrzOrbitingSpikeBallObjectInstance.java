@@ -7,6 +7,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
@@ -65,7 +66,9 @@ import java.util.List;
  * position.
  */
 public final class LrzOrbitingSpikeBallObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, RewindRecreatable, RomObjectCodePointerProvider {
+        implements TouchResponseProvider, RewindRecreatable, RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
+
+    // Native angular phase places radial balls and chain geometry; rotation is not logical horizontal facing.
 
     /** Which ROM object this placement is. */
     public enum Axis { HORIZONTAL, VERTICAL }

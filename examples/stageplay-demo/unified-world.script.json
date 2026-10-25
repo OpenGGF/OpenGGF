@@ -1,5 +1,5 @@
 {
-  "version": 6,
+  "version": 7,
   "name": "One world, complete framing",
   "width": 384,
   "height": 216,
@@ -152,7 +152,7 @@
         {
           "frame": 0,
           "kind": "ROM_MUSIC",
-          "soundId": 129
+          "soundId": 130
         }
       ]
     },
@@ -274,7 +274,7 @@
         {
           "frame": 0,
           "kind": "ROM_MUSIC",
-          "soundId": 129
+          "soundId": 130
         }
       ],
       "transition": {

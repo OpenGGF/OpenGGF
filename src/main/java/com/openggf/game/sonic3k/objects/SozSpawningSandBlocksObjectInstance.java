@@ -10,7 +10,9 @@ import java.util.List;
 
 /** SKL $39, Obj_SOZSpawningSandBlocks ($40276), including independently allocated blocks. */
 public final class SozSpawningSandBlocksObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SpawnRewindRecreatable, RomObjectCodePointerProvider {
+        implements SolidObjectProvider, SpawnRewindRecreatable, RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
+
+    // Native cork/block, debris and vertical sand-column children are geometry without logical horizontal facing.
     // loc_402CC/loc_402EE read Oscillating_table+$16. The manager starts
     // after the native control word, so $14 selects position, not velocity.
     private static final int OSCILLATION_POSITION_OFFSET = 0x14;

@@ -1,5 +1,7 @@
 package com.openggf.editor.project;
 
+import com.openggf.stageplay.StageplayDocument.Facing;
+
 import com.openggf.audio.AudioManager;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.control.InputHandler;
@@ -33,7 +35,7 @@ import static org.lwjgl.opengl.GL11.*;
  */
 @Isolated
 class TestStageplayRouteOverlayPictures {
-    private static final int WIDTH=1280, HEIGHT=720;
+    private static final int WIDTH=1920, HEIGHT=1080;
     @Test void captureProposedFailedAndAppliedRoutePlayback() throws Exception {
         assumeTrue(Boolean.getBoolean("openggf.stageplay.hudPictures"), "Explicit HUD picture refresh only");
         assertEquals("surfaceless-egl",System.getProperty("openggf.headless.gl"));
@@ -59,6 +61,7 @@ class TestStageplayRouteOverlayPictures {
                     public StageplayRouteJob.Update pollRoute(){return session.pollRoute();}
                     public void requestRouteApply(StageplayDocument d,Path root) throws java.io.IOException {session.requestRouteApply(d,root);}
                     public void cancelRoute(){session.cancelRoute();}
+                    public StageplayGround.Report ground(StageplayDocument d,Path root,int frame,StageplayGround.Batch batch)throws java.io.IOException{return session.ground(d,root,frame,batch);}
                 });
                 workspace.activate();workspace.selectActor("hero");workspace.seek(30);
                 var level=new LevelEditorController();
@@ -69,9 +72,23 @@ class TestStageplayRouteOverlayPictures {
                     public StageplayWorkspace stageplay(){return workspace;}
                 },1);
                 assertTrue(chrome.setActive(true));
+                workspace.invoke(StageplayWorkspace.Action.ADD_ACTOR); workspace.menu().pick("x");
+                for(int warm=0;warm<4;warm++)draw(chrome,session,workspace);
+                video.frame(output.resolve("engine-add-actor-picker.png"));
+                workspace.cancelPositionPick(); workspace.menu().close();
+                workspace.invoke(StageplayWorkspace.Action.DIALOGUE); workspace.menu().runAction(0); workspace.menu().runAction(0);
+                workspace.menu().setValue("text","Ready for a day off."); workspace.menu().submit();
+                assertNull(workspace.menu().error());
+                draw(chrome,session,workspace); video.frame(output.resolve("engine-new-dialogue.png"));
+                workspace.invoke(StageplayWorkspace.Action.UNDO); workspace.menu().close();
                 workspace.invoke(StageplayWorkspace.Action.ROUTE_HELPER);
                 workspace.menu().setValue("x","400");workspace.menu().setValue("y","624");
                 assertEquals("Walk",workspace.menu().values().get("travelSpeed"));
+                workspace.menu().pick("x");workspace.pickPoint(320,600);workspace.positionPicker().refreshFloor();
+                assertNotNull(workspace.positionPicker().floor(),workspace.positionPicker().detail());
+                for(int warm=0;warm<4;warm++)draw(chrome,session,workspace);
+                video.frame(output.resolve("engine-position-picker.png"));
+                workspace.cancelPositionPick();assertEquals("400",workspace.menu().values().get("x"));
                 for(int i=0;i<120;i++){
                     draw(chrome,session,workspace);
                     glViewport(0,0,WIDTH,HEIGHT);
@@ -89,6 +106,13 @@ class TestStageplayRouteOverlayPictures {
                 StageplayStore.write(output.resolve("engine-source.stageplay"),source);
                 assertNotNull(workspace.routeOverlay()); assertFalse(workspace.routeOverlay().applied());
                 assertEquals("Route proposed",workspace.routeOverlay().title());
+                workspace.invoke(StageplayWorkspace.Action.ROUTE_HELPER);
+                draw(chrome,session,workspace);glViewport(0,0,WIDTH,HEIGHT);
+                modal.render(workspace.menu(),new org.joml.Matrix4f().ortho2D(0,WIDTH*224f/HEIGHT,0,224).get(new float[16]),Math.round(WIDTH*224f/HEIGHT));
+                video.frame(output.resolve("engine-route-ready-menu.png"));
+                workspace.menu().openDetails();draw(chrome,session,workspace);glViewport(0,0,WIDTH,HEIGHT);
+                modal.render(workspace.menu(),new org.joml.Matrix4f().ortho2D(0,WIDTH*224f/HEIGHT,0,224).get(new float[16]),Math.round(WIDTH*224f/HEIGHT));
+                video.frame(output.resolve("engine-route-found-details.png"));
                 workspace.menu().close();
                 for(int i=0;i<60;i++){draw(chrome,session,workspace);video.frame(i==0?output.resolve("engine-proposed.png"):null);}
                 // The film renderer owns no route state. Redrawing its opaque view removes every
@@ -125,8 +149,29 @@ class TestStageplayRouteOverlayPictures {
                 assertEquals("Route search limit reached.",workspace.status());
                 assertTrue(workspace.routeOverlay().reason().contains("Reachability is still unknown"));
                 Files.writeString(output.resolve("engine-failed-result.json"),StageplayRouteProtocol.encodeResult(failed));
+                workspace.invoke(StageplayWorkspace.Action.ROUTE_HELPER);
+                draw(chrome,session,workspace);glViewport(0,0,WIDTH,HEIGHT);
+                modal.render(workspace.menu(),new org.joml.Matrix4f().ortho2D(0,WIDTH*224f/HEIGHT,0,224).get(new float[16]),Math.round(WIDTH*224f/HEIGHT));
+                video.frame(output.resolve("engine-route-failed-menu.png"));
+                workspace.menu().openDetails();
+                draw(chrome,session,workspace);glViewport(0,0,WIDTH,HEIGHT);
+                modal.render(workspace.menu(),new org.joml.Matrix4f().ortho2D(0,WIDTH*224f/HEIGHT,0,224).get(new float[16]),Math.round(WIDTH*224f/HEIGHT));
+                video.frame(output.resolve("engine-route-details.png"));
+                var detailInput=new InputHandler();
+                detailInput.handleKeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_UP,1);detailInput.refreshLogicalSnapshot();workspace.menu().update(detailInput);detailInput.update();
+                detailInput.handleKeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_UP,0);detailInput.update();
+                detailInput.handleKeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER,1);detailInput.refreshLogicalSnapshot();workspace.menu().update(detailInput);detailInput.update();
+                draw(chrome,session,workspace);glViewport(0,0,WIDTH,HEIGHT);
+                modal.render(workspace.menu(),new org.joml.Matrix4f().ortho2D(0,WIDTH*224f/HEIGHT,0,224).get(new float[16]),Math.round(WIDTH*224f/HEIGHT));
+                video.frame(output.resolve("engine-route-more-details.png"));
                 workspace.menu().close();
                 for(int i=0;i<60;i++){draw(chrome,session,workspace);video.frame(i==0?output.resolve("engine-failed.png"):null);}
+                var panel = com.openggf.editor.hud.EditorHudLayout.of(WIDTH,HEIGHT,source.width(),source.height(),true).workbench();
+                int scale = com.openggf.editor.hud.EditorHudLayout.uiScale(WIDTH,HEIGHT);
+                var still = ImageIO.read(output.resolve("engine-failed.png").toFile());
+                assertEquals(StageplayRouteOverlay.FAILURE,still.getRGB(Math.round((panel.x()+73)*scale),
+                        Math.round((panel.bottom()-110)*scale)) & 0xFFFFFF,
+                        "Goal legend swatch must match the failed goal diamond");
                 // A camera draft changes only projection, never the samples.
                 var path=workspace.routeOverlay().path();workspace.invoke(StageplayWorkspace.Action.CAMERA_MODE);
                 var input=new InputHandler();input.handleKeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_D,org.lwjgl.glfw.GLFW.GLFW_PRESS);
@@ -182,8 +227,8 @@ class TestStageplayRouteOverlayPictures {
                 .withWorldCommands(List.of(new WorldCommand("clear0",0,WorldCommandKind.CLEAR_OBJECTS,"",ObjectTarget.none()),
                         new WorldCommand("clear30",30,WorldCommandKind.CLEAR_OBJECTS,"",ObjectTarget.none())))
                 .withActors(List.of(new Actor("hero","Sonic","s2","sonic",List.of(
-                        new ActorKey(0,100,656,0,-1,false,true,1,Interpolation.HOLD),
-                        new ActorKey(30,100,656,0,-1,false,true,1,Interpolation.HOLD)))))
+                        new ActorKey(0,100,656,0,-1, Facing.RIGHT,true,1,Interpolation.HOLD),
+                        new ActorKey(30,100,656,0,-1, Facing.RIGHT,true,1,Interpolation.HOLD)))))
                 .withPuppets(List.of(new PuppetTrack("hero",true,0,List.of())));
     }
     private static byte[] read(int[] v){

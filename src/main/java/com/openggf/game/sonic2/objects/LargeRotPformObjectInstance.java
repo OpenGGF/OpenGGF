@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.sonic2.S2SpriteDataLoader;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.OscillationManager;
@@ -51,7 +53,8 @@ import java.util.logging.Logger;
  * </ul>
  */
 public class LargeRotPformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, RewindRecreatable {
+        implements SolidObjectProvider, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj6E orbits a platform/indent without a horizontally facing body.
 
     private static final Logger LOGGER = Logger.getLogger(LargeRotPformObjectInstance.class.getName());
 

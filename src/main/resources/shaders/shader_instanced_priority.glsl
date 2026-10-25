@@ -75,14 +75,16 @@ void main()
 
     // Map the index to palette coordinates (16 colors per line)
     float paletteX = (index + 0.5) / 16.0;
-    float paletteY = (paletteLine + 0.5) / TotalPaletteLines;
+    // Each sampler owns its capacity; normal and underwater textures can differ.
+    float paletteY = (paletteLine + 0.5) / float(textureSize(Palette, 0).y);
+    float underwaterPaletteY = (paletteLine + 0.5) / float(textureSize(UnderwaterPalette, 0).y);
 
     // Check if underwater (screen-space mode) and sample appropriate palette
     vec4 indexedColor;
     if (WaterEnabled == 1) {
         if (WaterlineScreenY < 0.0) {
             // Waterline above screen - entire screen is underwater
-            indexedColor = texture(UnderwaterPalette, vec2(paletteX, paletteY));
+            indexedColor = texture(UnderwaterPalette, vec2(paletteX, underwaterPaletteY));
         } else {
             // Waterline on screen - check per-pixel
             // gl_FragCoord is in window coordinates, so remove the viewport's
@@ -90,7 +92,7 @@ void main()
             float normalizedY = 1.0 - ((gl_FragCoord.y - ViewportOffset.y) / WindowHeight);
             float pixelYFromTop = normalizedY * ScreenHeight;
             if (pixelYFromTop >= WaterlineScreenY) {
-                indexedColor = texture(UnderwaterPalette, vec2(paletteX, paletteY));
+                indexedColor = texture(UnderwaterPalette, vec2(paletteX, underwaterPaletteY));
             } else {
                 indexedColor = texture(Palette, vec2(paletteX, paletteY));
             }

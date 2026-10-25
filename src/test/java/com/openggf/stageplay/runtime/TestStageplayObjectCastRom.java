@@ -1,5 +1,7 @@
 package com.openggf.stageplay.runtime;
 
+import com.openggf.stageplay.StageplayDocument.Facing;
+
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
@@ -29,7 +31,7 @@ class TestStageplayObjectCastRom {
     }
     private static ObjectActor actor(String id, int objectId, double x) {
         return new ObjectActor(id, id, "s2", 0, 0, objectId, 0, -1, List.of(
-                new ObjectKey(0, x, 600, 0, -1, false, true, Interpolation.HOLD, ObjectMode.FREE)), List.of());
+                new ObjectKey(0, x, 600, 0, -1, Facing.LEFT, true, Interpolation.HOLD, ObjectMode.FREE)), List.of());
     }
 
     @Test void openingClearAllowsExplicitNativeCastThenBadnikClearKeepsObjectsAndRingsAndReplays() throws Exception {
@@ -111,7 +113,7 @@ class TestStageplayObjectCastRom {
              var world = world(library)) {
             var spawn = library.level("s2", 0, 0).getObjects().stream().filter(s -> s.objectId() == Sonic2ObjectIds.MONITOR).findFirst().orElseThrow();
             var role = new ObjectActor("loaded", "Loaded", "s2", 0, 0, spawn.objectId(), spawn.subtype(), spawn.layoutIndex(), List.of(
-                    new ObjectKey(0, spawn.x(), spawn.y(), 0, -1, false, true, Interpolation.HOLD, ObjectMode.FREE)), List.of());
+                    new ObjectKey(0, spawn.x(), spawn.y(), 0, -1, Facing.LEFT, true, Interpolation.HOLD, ObjectMode.FREE)), List.of());
             var scene = StageplayDocument.empty("s2", 0, 0, Math.max(0, spawn.x() - 100), Math.max(0, spawn.y() - 100), 320, 224).withDurationFrames(20)
                     .withWorldCommands(List.of(new WorldCommand("clear", 0, WorldCommandKind.CLEAR_OBJECTS, "", ObjectTarget.none()))).withObjectActors(List.of(role));
             var frame = world.resolve(scene, StageplayTimeline.sample(scene, 0));
@@ -157,7 +159,7 @@ class TestStageplayObjectCastRom {
         try (var library = SceneRomLibrary.open(Map.of("s2", Path.of(System.getProperty("sonic2.rom.path"))));
              var world = world(library)) {
             var animal = new ObjectActor("animal", "Animal", "s2", 0, 0, 0, 0, -1, List.of(
-                    new ObjectKey(0, 100, 600, 0, -1, false, true, Interpolation.HOLD, ObjectMode.FREE)),
+                    new ObjectKey(0, 100, 600, 0, -1, Facing.LEFT, true, Interpolation.HOLD, ObjectMode.FREE)),
                     List.of(), ObjectSourceKind.RELEASED_ANIMAL);
             var scene = StageplayDocument.empty("s2", 0, 0, 0, 500, 320, 224).withDurationFrames(30)
                     .withWorldCommands(List.of(new WorldCommand("empty", 0, WorldCommandKind.CLEAR_OBJECTS, "", ObjectTarget.none())))
@@ -197,7 +199,7 @@ class TestStageplayObjectCastRom {
         try (var library = SceneRomLibrary.open(Map.of("s2", Path.of(System.getProperty("sonic2.rom.path"))));
              var world = world(library)) {
             var boss = new ObjectActor("boss", "Boss", "s2", 0, 1, Sonic2ObjectIds.EHZ_BOSS, 0, -1, List.of(
-                    new ObjectKey(0, 100, 600, 0, -1, false, true, Interpolation.HOLD, ObjectMode.POSE)), List.of());
+                    new ObjectKey(0, 100, 600, 0, -1, Facing.LEFT, true, Interpolation.HOLD, ObjectMode.POSE)), List.of());
             var scene = StageplayDocument.empty("s2", 0, 1, 0, 500, 320, 224).withDurationFrames(20).withObjectActors(List.of(boss));
             var frame = world.resolve(scene, StageplayTimeline.sample(scene, 0));
             var inspection = world.objectInspection().getFirst();

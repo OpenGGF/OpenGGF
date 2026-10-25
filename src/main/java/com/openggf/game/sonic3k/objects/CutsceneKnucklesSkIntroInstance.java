@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
@@ -40,7 +41,12 @@ import java.util.List;
  * ROM keeps SK_alone_flag clear and deletes this owner before it claims P1.
  */
 public final class CutsceneKnucklesSkIntroInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable {
+        implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // This native cutscene actor keeps the unmirrored Knuckles direction; motion and reaction poses do not turn its logical facing.
+        return ObjectVisualFacing.Basis.RIGHT;
+    }
+
 
     private final PlayerControlOwners directedControlPlayers =
             new PlayerControlOwners();

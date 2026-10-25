@@ -6752,3 +6752,250 @@ python3 "$OPENGGF_QUEUE_WRAPPER" --normal -Dmse=off \
   "-Dsonic2.rom.path=$OPENGGF_ROM_DIR/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
   "-Ds3k.rom.path=$OPENGGF_ROM_DIR/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
 ```
+
+
+## PR223 develop 159 receiving checkpoint (2026-10-25)
+
+This local receiving checkpoint merges committed common `1d7201b2e19d69c6c0ca93910fb174feb6185e56`
+with pinned develop `159655c8460dac15912dc4326491386a75368666`, whose common base is
+`591c679b39c61f162a839cde6baaedd387135bc4`. It reuses the received ancestry once,
+including the earlier fixture leaves. It does not receive Root's uncommitted
+native-camera/CPU/programme tree. The 178 incoming commits changed 1,204 paths;
+31 content conflicts were resolved by intent. The complete staged join has
+additional receiving fixtures and prose, not 1,204 newly authored implementations.
+The separately committed post-common leaves through `96ae2aa0` remain outside
+this checkpoint; its stronger matched-source transaction is the next receiving
+boundary before PR publication. No remote publication, readiness transition or
+new broad run has occurred at this checkpoint.
+
+### Receiving contracts and rejected shortcuts
+
+The join retains native FIFO admissions, repeated pointers, current physical
+owners, independent monitor-content SSTs, Word2C known-cell/owner checks,
+world-bound PLC/DATA inventories, provider/context results dispatch, captured
+palette/mask/ghost/shadow operands, exact logical viewports and the candidate API
+union. Incoming loop/title/bonus/ending, palette and audio lifetime extractions
+remain their actual receiving owners. No whole-file import, compatibility field,
+source-cap rollback, baseline expansion or API waiver was used. GameLoop keeps
+zero concrete Sonic references and the strict incoming lifecycle/dispatcher
+budgets. The native palette owner retains intensity conversion, fade-source rows,
+lease-failure retry and the restored-owner no-op publication guard.
+
+Monitor fixtures now inspect the actual independent sibling identities, recipient
+metadata and contents-slot timing. A contents destroy clears activity/recipient
+without recreating shell ownership. Bomb's constructor-facing characterization
+is distinct from Bom_Main's first dispatch; its new real-manager witness checks
+both initialized directions without running native initialization in metadata
+queries. Renderer ABI fixtures use acquire/capture/finish and admit/append;
+private palette upload failures are injected at the real GL owner, rather than
+restoring an override or a production test seam.
+
+The first G1 failures rejected two test assumptions. An extreme offscreen tile
+is tested through the actual tile-expansion owner; it is not falsely reported as
+SAT-admitted. A command list also contains native ownership entry/exit commands:
+the ingress oracle preserves exactly one payload and verifies its matching scope,
+instead of changing a draw-count expectation from one to three. Captured mask 15
+is installed before admission; the caller's later mask 5 remains a separate
+failure-restoration control. The one actual palette regression was the omitted
+restored-fade equality guard during extraction. Restoring that existing comparison
+preserves the captured pending flag without creating a new V-int request.
+
+G2 exposed two fixture ABI/prerequisite gaps: recording ownership inspection now
+reads the real nested SourcePublication; the bonus failure fixture supplies its
+constructor-owned RunLevelLoadTracker while retaining the exact wrapper/cause and
+then-current finally binding. All 13 KiS2 cases originally stopped at
+Path.of(null), before patch execution. The existing original lock-on dump was
+verified (CRC32 `2AC1E7C6`, SHA-1 `6CD0537A3AEE0E012BB86D5837DDFF9342595004`)
+and supplied through `kis2.rom.path`; no ROM alias, copy, directory edit or skip
+was introduced.
+
+Two otherwise passing Stageplay PCM rows also exposed genuine caught loader
+faults: S2-to-S3K parsed SFX AB/B9 with the old S2 profile, and S3K-to-S1 attempted
+an S3 driver read at `$F6960` beyond the 524288-byte reader. The next profile
+setter repaired the final tuple, so later PCM success did not close that
+intermediate failure. A new exact-ROM factory guard first failed at the actual
+old-profile/new-reader construction. The temporary local correction detaches only
+when a different nonnull profile is installed, retaining the original cold and
+same-profile path. Four owning controls pin cold replacement, exact reinstall,
+same-profile/new-reader and distinct-profile replacement. The seven-class affected
+request then passed with the original cross-game song/SFX/PCM, capture, restart
+and load oracles, and without those loader faults. This serial correction is not
+claimed equivalent to atomic SOURCE notification, preparation rollback or capture
+publication. The already committed `96ae2aa0` transaction is to be received and
+adapted to SourcePublication next; the temporary hunk is not a replacement for it.
+
+G3 found exact receiving metadata gaps. Competition arena facing now belongs to
+its native kind and live subtype: elephant and horizontal spring polarities are
+distinct; fixed geometry has no invented body direction. Goal is explicitly
+nondirectional, item direction belongs to its angle-selected pose, and independent
+native children keep their own anchors. Three additive controls cover every kind,
+flags, live orientation and no routine/admission advance. Native update/render,
+allocation, timing, fields and rewind bodies remain unchanged. The raw-GLFW debt
+inventory shrank by only the two retired HCZ-miniboss calls; the actual existing
+shared-context pixel fixture executes, and all historical rejection controls stay.
+
+Audio architecture tests now name only the existing native-secondary emission
+boundary and package-private feedback submission. They retain the original seven
+non-secondary observer sites, require four secondary source sites and four
+compiled observer reads, and require one compiled feedback-suppression call. One
+later aggregate assertion was missed in the first receiving pass: the fresh
+54-case request reached that still-old seven-total assertion. Its final split
+preserves seven original plus four separately checked secondary sites. No runtime
+source, caller-wide waiver, source cap or low-level record inventory changed.
+
+### Actual invocations, kept as separate source epochs
+
+Every Maven row below used the current absolute queue wrapper from the owned
+PR worktree, reviewed Java 25.0.5.0.2/Lua 5.4, null audio, surfaceless EGL and
+unset ambient launcher/display variables. Ordinary focused requests used
+`--normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl
+-DmodApi.destinationBranch=develop`, the three original absolute stock ROM
+properties and `test -B`. Guards additionally used `-Pguards` in a fresh JVM.
+The KiS2 repair row additionally supplied the verified original lock-on property.
+No custom heap, fork, timeout, resource override, preflight/version repeat,
+manual CI, native capture or route retiming was used.
+
+| Invocation | Tested tree | Actual result | Maven lifecycle / reported queue |
+| --- | --- | --- | --- |
+| Fresh build 5656 | `8cdd9ff4d7f714c1cc50951c3a7976df2c838d04` | Main compile stops at three diagnostics from the obsolete Game import; 0 JUnit | 57.886 s / build-only, not queued |
+| Build 17287 after the one import repair | `3c5d1d55c7771f57851aeeb0b1548ca463b4d997` | Main compiles 4,563 sources; testCompile stops at 27 ABI diagnostics; 0 JUnit | 01:25 / build-only |
+| Fresh closure build 7519 | `42d13ca255f72f1732d76862b6f2f7879a683cf9` | All 4,816 test sources compile; 0 JUnit | 29.132 s / build-only |
+| Original G1 34607 | same `42d13ca2` | 448 distinct: 442 pass, 6 failures, 0 errors/skips, 38 families | 48.899 s / 0 s |
+| Corrected nine owners 77449 | `4c2edc8d06673d79d88e333fa88f998a734482be` | 90 distinct pass, 0 failures/errors/skips | 01:32 / 0 s |
+| Original G2 59891 | same `4c2edc8d` | 749 distinct: 733 pass, 2 failures, 14 errors, 0 skips, 42 families | 46.199 s / queue not separately retained |
+| Fixture qualification and original-source loader RED 89649 | `5005facc27b08f5c456d731dd6f6d53bb76e4e3c` | 50 distinct: 49 pass, one intended wrong-ROM factory failure; 0 errors/skips. Bonus 21, recording 2 and KiS2 13 all pass | 33.225 s / 162 s |
+| Level-audio affected 99935 | `84c30da73f438bd522455bcd7f86856c50b99513` | 57 distinct pass, 0 failures/errors/skips; all four new source controls and original whole 25-case PCM class execute | 01:36 / 0 s |
+| Original G3 98007 | same `84c30da7` | 247 distinct: 243 pass, 4 failures, 0 errors/skips, 14 families | 01:13 / 57 s |
+| Metadata and real HCZ pixels 62273 | `64ce5700392e9f21d56452ef82cebb947a95d0bb` | 12 distinct pass: facing 11 plus actual pixel 1; 0 failures/errors/skips | 01:36 / 0 s |
+| Three affected guards 70396 | same `64ce5700` | 54 distinct: 53 pass, 1 later observer-aggregate failure; 0 errors/skips | 42.214 s / 4 s |
+| Final whole audio architecture 53269 | `d1360874c2fcf12c000f0a194dfd8ba7889e8439` | 45 distinct pass, 0 failures/errors/skips | 38.624 s / 4 s |
+
+No rows are added into an aggregate green result. The 243 unchanged G3 passes
+include strict source 87, ArchUnit 34, physics 32, compact reachability 9,
+ExactPolicy 14, coverage 1, FieldDisposition 1 and the other passed owners.
+Current FieldDisposition has **zero gaps and zero baseline keys**; the older two
+LBZ keys belong to their historical epochs. All 510 lifecycle caller/count rows
+match the committed baseline exactly. Low-level source records (120) and codec
+field diagnostics are not JUnit cases or new exemptions. All source caps,
+physics per-caller counts, public source interfaces, API 0.7.0 and the normalized
+candidate pin remain strict. The actual candidate pin is
+`f9f5af31d614e94fafdbf3ecd75a6a991cb262a3950f3c14bddc319a5557fa06`.
+
+The changed Python receiving safety modules passed **155 actual tests**, with
+zero failures/errors/skips: release snapshot policy 95, category planner 39,
+preparation 16 and launcher 5. Runtime was 238.518 seconds. Temporary repositories,
+mocked execution/admission and Python Java/encoder stubs were used; this is not
+engine or native execution. Their intervals overlap Maven work and are not added
+as elapsed delivery time. Earlier Python59 and unrelated audio72 epochs are not
+repeated or relabeled.
+
+### Reproduction selectors and evidence limits
+
+Use `<PR_WORKTREE>` as cwd, `$OPENGGF_QUEUE_WRAPPER` for the current Main wrapper,
+and `$OPENGGF_ROM_DIR` for the existing original stock-image directory. The
+common shape is:
+
+```bash
+python3 "$OPENGGF_QUEUE_WRAPPER" --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl -DmodApi.destinationBranch=develop \
+  "-Dsonic1.rom.path=$OPENGGF_ROM_DIR/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$OPENGGF_ROM_DIR/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$OPENGGF_ROM_DIR/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dtest=$SELECTOR" test -B
+```
+
+The original source-family selector manifests follow. A source-class count is
+not a predicted JUnit count. Replace `$SELECTOR` with the exact comma list;
+G3 and guard repair rows also add `-Pguards`.
+
+G1: 38 source classes; comma-selector SHA-256 `1a3f07acbabc317c4ee61753c8496a0f5e6f7648269b2887602de2b29aa764fe`.
+
+```text
+com.openggf.graphics.TestSpriteSatLimits,com.openggf.graphics.TestGraphicsManagerSpriteSatReplay,com.openggf.graphics.TestSpriteSatPixels,com.openggf.graphics.TestNativeSpriteOwnershipPixels,com.openggf.graphics.TestNativeShadow15Pixels,com.openggf.graphics.TestNativeIntensityPalette,com.openggf.graphics.TestNativeWhitePaletteFade,com.openggf.graphics.TestPalettePublicationDispatch,com.openggf.graphics.TestPaletteUploadLatch,com.openggf.graphics.TestPaletteTextureCapacity,com.openggf.graphics.TestScopedPaletteGraphicsAccess,com.openggf.graphics.TestUnderwaterPaletteUpload,com.openggf.graphics.TestPatternRendererIngress,com.openggf.graphics.TestGraphicsProjectionScope,com.openggf.graphics.TestPresentationPatternBatching,com.openggf.capture.GlReadPixelsGrabberTest,com.openggf.game.sonic2.slotmachine.TestCNZSlotMachineViewport,com.openggf.game.rewind.TestS3kMonitorGraphRewind,com.openggf.game.sonic3k.objects.TestS3kMonitorContentsLifecycle,com.openggf.game.sonic1.objects.badniks.TestSonic1BombBodyNativeSubmission,com.openggf.game.sonic1.objects.badniks.TestSonic1BombFuseConversion,com.openggf.game.sonic1.objects.badniks.TestSonic1BombNativeSpriteSubmission,com.openggf.game.sonic1.objects.bosses.TestS1FzNativeComponents,com.openggf.game.sonic1.objects.bosses.TestS1FzEscapeNativeInput,com.openggf.game.sonic2.objects.TestSonic2BubbleNativeLifecycle,com.openggf.game.sonic3k.objects.TestTeleporterBeamRendering,com.openggf.game.sonic3k.objects.bosses.TestHczEndBossTerminalOwnership,com.openggf.level.objects.TestObjectVisualFacing,com.openggf.level.objects.TestObjectManagerRewindSnapshot,com.openggf.tests.TestRingManager,com.openggf.level.objects.TestStageplayObjectDirection,com.openggf.level.objects.TestStageplayNativeStateRelease,com.openggf.mods.TestModApiSignatureSurface,com.openggf.mods.TestModApiPinPolicy,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils
+```
+
+G2: 42 source classes; comma-selector SHA-256 `1ba4edc1f8d55237c4254139a376b51d8abcf4d804c84a0bd4612649b6b66b02`.
+
+```text
+com.openggf.audio.TestAudioNativePause,com.openggf.audio.TestAudioSecondaryNativeRequest,com.openggf.audio.TestAudioPresentationSnapshotParity,com.openggf.audio.TestAudioManagerRawRingRequestAlternation,com.openggf.audio.TestAudioMutatorBindingContract,com.openggf.audio.TestAudioSourcePublicationContract,com.openggf.audio.TestAudioPresentationBindingContract,com.openggf.audio.TestAudioManagerDiagnosticObserverLease,com.openggf.audio.TestAudioMutatorAccess,com.openggf.audio.TestAudioDiagnosticObservers,com.openggf.audio.TestAudioPresentationBoundary,com.openggf.audio.TestAudioLogicalSnapshot,com.openggf.audio.TestAudioManagerResetState,com.openggf.audio.TestAudioManagerRuntimeInstallation,com.openggf.audio.TestUnifiedAudioPresentationIntegration,com.openggf.audio.TestAudioManagerStreamedPortOwnership,com.openggf.audio.presentation.TestStreamedAudioVoiceRegistry,com.openggf.audio.presentation.TestAudioPresentationProducer,com.openggf.TestGameLoopTitleCardOwnership,com.openggf.TestGameLoopTitleCardLifecycle,com.openggf.TestGameLoopTitleCardPause,com.openggf.TestGameLoopFreshLevelHandoff,com.openggf.mods.code.TestS3kNativeWorldCallbackDispatch,com.openggf.TestGameLoopBonusStageSession,com.openggf.game.TestBonusStageTransitionCoordinator,com.openggf.TestGameLoopEndingSession,com.openggf.TestEndingReturnFadeOwnership,com.openggf.tools.TestSonic2NativeEndingEntry,com.openggf.game.sonic3k.objects.TestGameLoopBonusStageOwnership,com.openggf.TestGameLoopSpecialStageResultsHandoff,com.openggf.mods.code.TestNativeRewindAdapterPublication,com.openggf.mods.code.TestKis2NativeRewindPublicationOwnership,com.openggf.tools.TestHeadlessGameBootAudioIdentity,com.openggf.tools.TestHeadlessAudioOwnership,com.openggf.tools.TestRecordingRestartAudioOwnership,com.openggf.TestEngineConfiguredHeadlessStartupRom,com.openggf.game.sonic2.titlescreen.TestSonic2IntroInputPhases,com.openggf.game.sonic3k.competition.TestS3kCompetitionNativeHost,com.openggf.game.sonic3k.competition.TestS3kCompetitionRosterRestore,com.openggf.game.sonic2.competition.TestSonic2CompetitionRosterRestore,com.openggf.game.sonic2.audio.TestSonic2NativeMailboxMusicRoutes,com.openggf.stageplay.runtime.TestStageplayAudioLifecycle
+```
+
+G3: 14 source classes; comma-selector SHA-256 `175ef990792636cd692d2fe6a024d34b52a0cbe3b7a729ff1d38e081cfd509be`.
+
+```text
+com.openggf.tests.TestArchitecturalSourceGuard,com.openggf.tests.TestArchUnitRules,com.openggf.level.objects.TestObjectPhysicsStandardizationGuard,com.openggf.game.rewind.schema.TestCapturedPolicyCompactReachabilityGuard,com.openggf.game.rewind.schema.TestExactRewindPolicyGuard,com.openggf.game.rewind.schema.TestRewindFieldDispositionGuard,com.openggf.game.rewind.coverage.TestRewindCoverageGuard,com.openggf.audio.TestAudioPresentationArchitectureGuard,com.openggf.level.objects.TestNativeHolderReleaseGuard,com.openggf.level.objects.TestNativeObjectFacingGuard,com.openggf.stageplay.TestStageplayFacingGuard,com.openggf.tests.TestHeadlessStateTeardownGuard,com.openggf.tools.TestRawGlfwTestSetupGuard,com.openggf.tools.TestHeadlessBackendPropertyIsolation
+```
+
+G1_repair exact selector:
+
+```text
+com.openggf.graphics.TestGraphicsManagerSpriteSatReplay,com.openggf.graphics.TestPatternRendererIngress,com.openggf.level.objects.TestObjectVisualFacing,com.openggf.game.sonic1.objects.badniks.TestSonic1BombBodyNativeSubmission,com.openggf.graphics.TestPaletteUploadLatch,com.openggf.graphics.TestPalettePublicationDispatch,com.openggf.graphics.TestNativeWhitePaletteFade,com.openggf.graphics.TestNativeShadow15Pixels,com.openggf.graphics.TestScopedPaletteGraphicsAccess
+```
+
+G2SetupRed exact selector:
+
+```text
+com.openggf.TestGameLoopBonusStageSession,com.openggf.tools.TestRecordingRestartAudioOwnership,com.openggf.mods.code.TestKis2NativeRewindPublicationOwnership,com.openggf.level.TestGameDataSourceSharedFetches
+```
+
+LevelAudioAffected exact selector:
+
+```text
+com.openggf.level.TestGameDataSourceSharedFetches,com.openggf.stageplay.runtime.TestStageplayAudioLifecycle,com.openggf.tools.TestHeadlessGameBootAudioIdentity,com.openggf.tools.TestRecordingRestartAudioOwnership,com.openggf.TestGameLoopSuspension,com.openggf.TestGameLoopFreshLevelHandoff,com.openggf.TestEngineConfiguredHeadlessStartupRom
+```
+
+G3Owners exact selector:
+
+```text
+com.openggf.level.objects.TestObjectVisualFacing,com.openggf.game.sonic3k.objects.TestHczMinibossNativeRendering
+```
+
+G3AffectedGuards exact selector:
+
+```text
+com.openggf.audio.TestAudioPresentationArchitectureGuard,com.openggf.level.objects.TestNativeObjectFacingGuard,com.openggf.tools.TestRawGlfwTestSetupGuard
+```
+
+AudioGuardFinal exact selector:
+
+```text
+com.openggf.audio.TestAudioPresentationArchitectureGuard
+```
+
+The G2SetupRed shape also adds `"-Dkis2.rom.path=$OPENGGF_KIS2_ROM"`, naming the
+existing verified lock-on dump. Python used `PYTHONDONTWRITEBYTECODE=1` and
+unittest modules `test_release_snapshot_policy`, `test_run_categories`,
+`test_run_category_preparation` and `test_stageplay_launcher` from the repository's
+testing-module search path, with no JVM/encoder/preflight invocation.
+
+Every XML identity, property set, recursive stream, text report, bounded console,
+generated diagnostic and source post-frame was inspected. No omission, fresh
+dump, launcher failure or source drift was found in these requests. Original
+G1 source attribution explicitly reconstructs the pre-repair frame for the one
+palette edit made after terminal; the correction was not part of that old run.
+Consumed owned reports/logs/diagnostics were removed; useful source/classes and
+unrelated target trees remain. Initial class directories were renamed under the
+actual own-tree lock before fresh compilation, never copied back or put on a
+classpath. Their 22,315 files were accounted as compiler output, exact Maven
+resources or the known filtered version file; retirement is a later cleanup step.
+
+Open warning limits remain separate. Original G1's 21 missing-WAV shadow
+emissions occur in 19 ROM-free ring behavior identities and do not certify SFX
+or PCM. G2's 36 block-224/blockCount-27 warnings occur in 36 positive competition
+identities (23 TestS3kCompetitionNativeHost, 13 TestS3kCompetitionRosterRestore); their runtime cause, frequency-newness and
+mapping/art coverage remain unknown. These are not negative controls or waived
+asset findings. G2's declared callback/device/release faults are separately
+accounted; the caught cross-ROM loader failures above were real positive-run
+faults, and only their focused corrected source has the later absence evidence.
+The final 57 also retains two startup fixture missing-WAV shadow warnings and
+unmeasured Kos queue timing fallbacks; neither is a native waveform/timing claim.
+
+All historical epochs stay intact: complete f340's 189 failures/108 skips, the
+abnormally interrupted 3da run and its separate stranded batch, the 2a9 category
+41 route failures/97 skips and subsequent independent fixes. Route causes and
+newness are not established here. Warm donor-cache image identity, multi-plane
+publication atomicity, dynamic cleanup reentry and remaining optional/GL/creator-kit
+coverage stay bounded/open. No route oracle/input/time fitting, native observation,
+provider activation, Main/develop push or PR merge occurred. A new smoke plan,
+actual remote-base check, committed-range policy, PR publication/readiness and
+CI monitoring remain delivery work; none is inferred from these focused passes.

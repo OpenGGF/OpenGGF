@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.solid.ContactKind;
@@ -42,7 +44,7 @@ import java.util.List;
  * trigger box from {@code word_8A2FC}.
  */
 public class IczBreakableWallObjectInstance extends AbstractObjectInstance
-        implements RewindRecreatable, SolidObjectProvider, RomObjectCodePointerProvider {
+        implements RewindRecreatable, SolidObjectProvider, RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
 
     /**
      * Word 0 of this object's S3K SST holds its live ROM code pointer.

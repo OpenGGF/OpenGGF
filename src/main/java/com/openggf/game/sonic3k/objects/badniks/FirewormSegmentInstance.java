@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.rewind.identity.ObjectRefId;
@@ -45,7 +46,11 @@ import java.util.List;
  * hurting the moment the head is gone.
  */
 public final class FirewormSegmentInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, RewindRecreatable {
+        implements TouchResponseProvider, RewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // The native segment retains its own delayed head-turn bit; preserve the current swim/turn pose.
+        return flipX ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.LEFT;
+    }
 
     /** {@code ObjDat3_8F9FC}: {@code dc.w $200} (sonic3k.asm:196549). */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x0200);

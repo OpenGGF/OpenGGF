@@ -7,6 +7,7 @@ import com.openggf.game.sonic3k.objects.CnzCannonInstance;
 import com.openggf.game.sonic3k.objects.HPZSSEntryControlObjectInstance;
 import com.openggf.game.sonic3k.objects.IczTeleporterInstance;
 import com.openggf.game.sonic3k.objects.badniks.MegaChopperBadnikInstance;
+import com.openggf.level.objects.ObjectVisualFacing.Basis;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import org.junit.jupiter.api.Test;
 import java.lang.reflect.Field;
@@ -78,7 +79,8 @@ class TestStageplayNativeStateRelease {
             var beamBefore = nativeProgress(beam);
             clearInvocations(fixture.player, fixture.unrelated);
 
-            act(direction, pad, action);
+            // The pad and expanding beam have fixed geometry, without a body-facing mirror.
+            act(direction, pad, action, Basis.NON_DIRECTIONAL, Basis.RIGHT);
 
             verify(fixture.player).applyObjectControlState(
                     com.openggf.sprites.playable.ObjectControlState.NONE);
@@ -113,7 +115,7 @@ class TestStageplayNativeStateRelease {
             var nativeBefore = nativeProgress(chopper);
             clearInvocations(fixture.player, fixture.unrelated);
 
-            act(direction, chopper, action);
+            act(direction, chopper, action, chopper.nativeFacing(), chopper.nativeFacing());
 
             verify(fixture.player).setForcedInputMask(0);
             verify(fixture.player).setControlLocked(false);
@@ -131,26 +133,28 @@ class TestStageplayNativeStateRelease {
                 chopper.update(2, fixture.player);
                 verify(fixture.player).setForcedInputMask(AbstractPlayableSprite.INPUT_RIGHT);
                 clearInvocations(fixture.player);
-                direction.direct(chopper, heldTemplate(),
-                        new StageplayObjectDirection.Direction(100, 100, false, true, 0, -1));
+                var facing = chopper.nativeFacing();
+                direction.direct(chopper, heldTemplate(chopper, facing),
+                        new StageplayObjectDirection.Direction(100, 100, facing, true, 0, -1));
                 verify(fixture.player).setForcedInputMask(0);
                 verify(fixture.player, never()).setControlLocked(anyBoolean());
             }
         }
     }
 
-    private static void act(StageplayObjectDirection direction, ObjectInstance object, String action) {
+    private static void act(StageplayObjectDirection direction, ObjectInstance object, String action,
+                            Basis nativeFacing, Basis requestedFacing) {
         switch (action) {
             case "remove" -> direction.removeDynamic(object);
             case "clear" -> direction.clearObjects();
-            default -> direction.direct(object, heldTemplate(),
-                    new StageplayObjectDirection.Direction(100, 100, false, true, 0, -1));
+            default -> direction.direct(object, heldTemplate(object, nativeFacing),
+                    new StageplayObjectDirection.Direction(100, 100, requestedFacing, true, 0, -1));
         }
     }
 
-    private static StageplayObjectDirection.VisualTemplate heldTemplate() {
-        return new StageplayObjectDirection.VisualTemplate(100, 100,
-                List.of(new StageplayObjectDirection.VisualPart("root/0", 4, false, 0, 0,
+    private static StageplayObjectDirection.VisualTemplate heldTemplate(ObjectInstance object, Basis facing) {
+        return new StageplayObjectDirection.VisualTemplate(object.getX(), object.getY(), facing,
+                List.of(new StageplayObjectDirection.VisualPart("root/0", 4, false, 0, 0, facing, 0,
                         List.of(new StageplayObjectDirection.VisualPose(0, List.of(), List.of())))),
                 List.of(), List.of(), List.of());
     }

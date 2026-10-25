@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.bosses;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
@@ -54,7 +55,12 @@ import java.util.logging.Logger;
  * palette-line, and priority selections.</p>
  */
 public final class LbzFinalBoss2Instance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseAttackable, SpawnRewindRecreatable {
+        implements TouchResponseProvider, TouchResponseAttackable, SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // The native side selector mirrors the left-facing encounter basis toward the player on the other side.
+        return renderXFlip ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.LEFT;
+    }
+
     // Player-only native control tail; directing must not advance this controller's
     // routine, timers, world flags, camera or level transition.
     private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();

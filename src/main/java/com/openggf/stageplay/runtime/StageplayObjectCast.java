@@ -27,10 +27,12 @@ final class StageplayObjectCast implements AutoCloseable {
     private ObjectRegistry registry;
     private int commandIndex;
     private final Map<String, Boolean> badnikRoles = new HashMap<>();
+    private final Map<String, Integer> initialFlags;
 
     StageplayObjectCast(GameplayModeContext context, StageplayDocument document, SetSource source,
                         int start, int end, List<ObjectSpawn> originalObjects,
-                        Map<String, VisualTemplate> templates) {
+                        Map<String, VisualTemplate> templates, Map<String, Integer> initialFlags) {
+        this.initialFlags = Map.copyOf(initialFlags);
         this.context = Objects.requireNonNull(context); this.source = source; this.start = start; this.end = end;
         for (var spawn : originalObjects) if (spawn.layoutIndex() >= 0) placements.put(PlacementIdentity.of(source.gameId(), source.zone(), source.act(), spawn), spawn);
         Set<PlacementIdentity> initiallyRemoved = new HashSet<>();
@@ -155,7 +157,11 @@ final class StageplayObjectCast implements AutoCloseable {
             requireNativeContext(role.actor, source);
             if (role.actor.layoutIndex() >= 0)
                 role.root = direction.materializePlaced(placements.get(identity(role.actor)));
-            else role.root = StageplayObjectTemplateBake.create(objects, registry, role.actor, role.anchor);
+            else {
+                Integer flags = initialFlags.get(role.actor.id());
+                if (flags == null) throw new IllegalArgumentException("Missing native initial-facing preparation for " + role.actor.id());
+                role.root = StageplayObjectTemplateBake.create(objects, registry, role.actor, role.anchor, flags);
+            }
             if (role.root == null || role.root instanceof PlaceholderObjectInstance)
                 throw new IllegalArgumentException("No concrete native object factory/slot for " + role.actor.id());
             direction.claimAuthored(role.actor.id(), role.root);
@@ -210,10 +216,18 @@ final class StageplayObjectCast implements AutoCloseable {
         }
     }
 
+    /** Pure document direction enters native presentation through this adapter only. */
+    static ObjectVisualFacing.Basis nativeFacing(Facing facing) {
+        return switch (facing) {
+            case LEFT -> ObjectVisualFacing.Basis.LEFT;
+            case RIGHT -> ObjectVisualFacing.Basis.RIGHT;
+        };
+    }
+
     private Direction visual(Role role, ObjectKey key, int frame) {
         Map<String, PartSelection> parts = new LinkedHashMap<>();
         for (var part : key.parts()) parts.put(part.partId(), new PartSelection(part.animation(), part.pose()));
-        return new Direction(role.x, role.y, key.flipX(), key.visible(), key.animation(), key.pose(), parts,
+        return new Direction(role.x, role.y, nativeFacing(key.facing()), key.visible(), key.animation(), key.pose(), parts,
                 Math.max(0, frame - role.phaseStart));
     }
 
@@ -261,8 +275,12 @@ final class StageplayObjectCast implements AutoCloseable {
     }
 
     LiveObject observation(ObjectInstance object) {
-        for (var role : roles) if (role.root == object && role.mode != ObjectMode.FREE)
-            return observation(role);
+        for (var role : roles) if (role.root == object) {
+            if (role.mode != ObjectMode.FREE) return observation(role);
+            var spawn = object.getSpawn();
+            return new LiveObject(spawn.layoutIndex(), spawn.objectId(), spawn.subtype(), object.getX(), object.getY(),
+                    object.getClass().getSimpleName(), role.actor.id());
+        }
         var spawn = object.getSpawn();
         return new LiveObject(spawn.layoutIndex(), spawn.objectId(), spawn.subtype(), object.getX(), object.getY(), object.getClass().getSimpleName());
     }
@@ -288,7 +306,7 @@ final class StageplayObjectCast implements AutoCloseable {
 
     private static LiveObject observation(Role role) {
         return new LiveObject(role.actor.layoutIndex(), role.actor.objectId(), role.actor.subtype(),
-                (int) Math.round(role.x), (int) Math.round(role.y), "Stageplay:" + role.actor.id() + ":" + role.mode);
+                (int) Math.round(role.x), (int) Math.round(role.y), "Stageplay:" + role.actor.id() + ":" + role.mode, role.actor.id());
     }
 
     Snapshot capture() {

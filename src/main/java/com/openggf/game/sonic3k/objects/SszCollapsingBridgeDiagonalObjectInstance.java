@@ -6,6 +6,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SlopedSolidProvider;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SpawnRewindRecreatable;
@@ -44,7 +45,9 @@ import java.util.logging.Logger;
  * the diagonal, and parks at {@code x_pos $7FFF} when the width runs out.
  */
 public final class SszCollapsingBridgeDiagonalObjectInstance extends AbstractObjectInstance
-        implements SlopedSolidProvider, SpawnRewindRecreatable {
+        implements SlopedSolidProvider, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+    // Native walkway/column shape and falling debris are terrain geometry without logical horizontal facing.
     private static final Logger LOGGER =
             Logger.getLogger(SszCollapsingBridgeDiagonalObjectInstance.class.getName());
 

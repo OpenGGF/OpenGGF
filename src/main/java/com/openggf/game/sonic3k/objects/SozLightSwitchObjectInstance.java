@@ -14,7 +14,9 @@ import com.openggf.sprites.playable.ObjectControlState;
 import java.util.List;
 
 /** SKL $41, Obj_SOZLightSwitch ($40E5E)..sub_40F52. One multisprite hanging switch. */
-public final class SozLightSwitchObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
+public final class SozLightSwitchObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+    // Native switch/handle poses and mounting sides describe geometric controls without logical facing.
     private final FbzParticipantStateTable players=new FbzParticipantStateTable(2);
     private int extension;
     public SozLightSwitchObjectInstance(ObjectSpawn spawn){super(spawn,"SOZLightSwitch");}

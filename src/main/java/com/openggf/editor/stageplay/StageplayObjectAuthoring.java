@@ -1,5 +1,7 @@
 package com.openggf.editor.stageplay;
 
+import com.openggf.stageplay.StageplayDocument.Facing;
+
 import com.openggf.editor.project.EditorProjectMenu;
 import com.openggf.game.MenuTextEditor;
 import com.openggf.stageplay.StageplayController;
@@ -32,6 +34,17 @@ final class StageplayObjectAuthoring {
                             Supplier<List<com.openggf.stageplay.runtime.StageplayObjectInspection>> inspection) {
         this.menu = menu; this.controller = controller; this.edit = edit; this.preview = preview;
         this.inspection = inspection;
+    }
+
+    static void objectChoices(EditorProjectMenu menu) {
+        var values=menu.values();var labels=new java.util.LinkedHashMap<String,String>();
+        try {
+            if(values.get("sourceKind").equals("RELEASED_ANIMAL")){menu.configureField("object","Animal",List.of(),Map.of());return;}
+            com.openggf.stageplay.StageplayObjectCatalog.inspect(values.get("game"),Integer.parseInt(values.get("zone")),Integer.parseInt(values.get("act"))).entries()
+                    .forEach(entry->labels.put(Integer.toString(entry.objectId()),entry.name()));
+            labels.putIfAbsent(values.get("object"),"Other object");
+            menu.configureField("object","Object",List.copyOf(labels.keySet()),labels);
+        }catch(IllegalArgumentException ignored){ /* Validation remains with Apply; incomplete numeric edits are allowed. */ }
     }
 
     void show() {
@@ -79,7 +92,7 @@ final class StageplayObjectAuthoring {
                     var id = id("object");
                     var actor = new ObjectActor(id, object.type(), frame.set().gameId(), frame.set().zone(),
                             frame.set().act(), object.objectId(), object.subtype(), object.layoutIndex(),
-                            placementBoundaryKeys(frame.set(), new ObjectKey(0, object.x(), object.y(), 0, -1, false, true,
+                            placementBoundaryKeys(frame.set(), new ObjectKey(0, object.x(), object.y(), 0, -1, Facing.RIGHT, true,
                                     Interpolation.HOLD, ObjectMode.FREE)), List.of());
                     edit.accept(d -> d.withObjectActors(append(d.objectActors(), actor)));
                     actorMenu(id);
@@ -93,7 +106,7 @@ final class StageplayObjectAuthoring {
 
     private void properties(ObjectActor actor) {
         var set = StageplayTimeline.sample(document(), controller.frame()).set();
-        var key = actor == null ? new ObjectKey(0, 96, 96, 0, -1, false, true, Interpolation.HOLD, ObjectMode.FREE)
+        var key = actor == null ? new ObjectKey(0, 96, 96, 0, -1, Facing.RIGHT, true, Interpolation.HOLD, ObjectMode.FREE)
                 : actor.keys().getFirst();
         menu.showForm(actor == null ? "Cast ROM object" : "Object properties", List.of(
                 text("name", "Name", actor == null ? "ROM object" : actor.name()),
@@ -109,8 +122,7 @@ final class StageplayObjectAuthoring {
             String actorId = actor == null ? id("object") : actor.id();
             var mode = ObjectMode.valueOf(upper(values,"mode"));
             var first = new ObjectKey(0, decimal(values,"x"), decimal(values,"y"),
-                    mode == ObjectMode.FREE ? 0 : key.animation(), mode == ObjectMode.FREE ? -1 : key.pose(),
-                    key.flipX(), key.visible(), mode == ObjectMode.FREE ? Interpolation.HOLD : key.interpolation(),
+                    mode == ObjectMode.FREE ? 0 : key.animation(), mode == ObjectMode.FREE ? -1 : key.pose(), key.facing(), key.visible(), mode == ObjectMode.FREE ? Interpolation.HOLD : key.interpolation(),
                     mode, mode == ObjectMode.FREE ? List.of() : key.parts());
             var keys = actor == null ? boundaryKeys(first) : replaceKey(actor.keys(), first);
             int layout = integer(values,"layout"), zone = integer(values,"zone"), act = integer(values,"act");
@@ -136,7 +148,10 @@ final class StageplayObjectAuthoring {
                 action("Puppet move / stop commands", () -> commands(actorId)),
                 action("Remove from world at playhead", () -> removeAtPlayhead(actorId)),
                 action("Available parts / appearance exclusions", () -> parts(actorId)),
-                action("Delete authored role", () -> edit.accept(d -> d.withWorldCommands(d.worldCommands().stream()
+                action("Delete authored role and dialogue", () -> edit.accept(d -> d
+                        .withDialogue(d.dialogue().stream().filter(c -> !c.speakerActor().equals(actorId)).toList())
+                        .withVoices(d.voices().stream().filter(v -> !v.speakerActor().equals(actorId)).toList())
+                        .withWorldCommands(d.worldCommands().stream()
                                 .filter(c -> !c.actorId().equals(actorId)).toList())
                         .withObjectActors(d.objectActors().stream().filter(a -> !a.id().equals(actorId)).toList()))),
                 action("Back to cast", this::show),
@@ -185,7 +200,7 @@ final class StageplayObjectAuthoring {
                 number("x", "World X", key.x()), number("y", "World Y", key.y()),
                 number("animation", "Pure ROM animation (0 default)", key.animation()),
                 number("pose", "Mapping frame (-1 = animation / held fallback)", key.pose()),
-                text("flip", "Flip X: true / false", Boolean.toString(key.flipX())),
+                new EditorProjectMenu.Field("facing", "Facing", key.facing() == Facing.LEFT ? "Left" : "Right", List.of("Left", "Right")),
                 text("visible", "Visible: true / false", Boolean.toString(key.visible())),
                 text("interpolation", "HOLD / LINEAR / SMOOTH", key.interpolation().name())));
         if (bulkParts) fields.add(new EditorProjectMenu.Field("parts", "Part overrides: root/0:animation:frame; ...",
@@ -196,7 +211,7 @@ final class StageplayObjectAuthoring {
             var keys = new ArrayList<>(actor.keys());
             keys.removeIf(k -> k.frame() == frame || k.frame() == at);
             if (!bool(values,"delete")) keys.add(new ObjectKey(at, decimal(values,"x"), decimal(values,"y"),
-                    integer(values,"animation"), integer(values,"pose"), bool(values,"flip"), bool(values,"visible"),
+                    integer(values,"animation"), integer(values,"pose"), Facing.valueOf(upper(values,"facing")), bool(values,"visible"),
                     Interpolation.valueOf(upper(values,"interpolation")), ObjectMode.valueOf(upper(values,"mode")),
                     bulkParts ? parseParts(values.get("parts")) : key.parts()));
             keys.sort(Comparator.comparingInt(ObjectKey::frame));
@@ -243,7 +258,7 @@ final class StageplayObjectAuthoring {
                 var part = new ObjectPartPose(values.get("partId"), integer(values,"animation"), integer(values,"pose"));
                 if (index >= 0) parts.set(index, part); else parts.add(part);
             }
-            var replacement = new ObjectKey(frame, key.x(), key.y(), key.animation(), key.pose(), key.flipX(),
+            var replacement = new ObjectKey(frame, key.x(), key.y(), key.animation(), key.pose(), key.facing(),
                     key.visible(), key.interpolation(), key.mode(), parts);
             replace(withKeys(actor, replaceKey(actor.keys(), replacement)));
             partOverrides(actorId, frame);
@@ -373,8 +388,7 @@ final class StageplayObjectAuthoring {
     private List<ObjectKey> boundaryKeys(ObjectKey initial) {
         var keys = new ArrayList<>(List.of(initial));
         for (var change : document().sceneChanges()) {
-            keys.add(new ObjectKey(change.frame(), initial.x(), initial.y(), initial.animation(), initial.pose(),
-                    initial.flipX(), initial.visible(), initial.interpolation(), initial.mode(), initial.parts()));
+            keys.add(new ObjectKey(change.frame(), initial.x(), initial.y(), initial.animation(), initial.pose(), initial.facing(), initial.visible(), initial.interpolation(), initial.mode(), initial.parts()));
         }
         return keys;
     }
@@ -386,7 +400,7 @@ final class StageplayObjectAuthoring {
         return keys.stream().map(key -> {
             var set = StageplayTimeline.sample(document(), key.frame()).set();
             boolean present = set.gameId().equals(game) && set.zone() == zone && set.act() == act;
-            return new ObjectKey(key.frame(), key.x(), key.y(), key.animation(), key.pose(), key.flipX(), present && (key.visible() || revealMatching),
+            return new ObjectKey(key.frame(), key.x(), key.y(), key.animation(), key.pose(), key.facing(), present && (key.visible() || revealMatching),
                     key.interpolation(), key.mode(), key.parts());
         }).toList();
     }

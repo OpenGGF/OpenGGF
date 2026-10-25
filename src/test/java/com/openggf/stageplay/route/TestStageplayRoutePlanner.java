@@ -193,7 +193,7 @@ class TestStageplayRoutePlanner {
         var walk=new StageplayRouteRequest("hero",0,512,205,300,1024,120000,60000,1,null,1,RouteMotion.DEFAULT);
         try(var probe=probe(terrain.level)) {
             var initial=probe.capture();var slow=search(probe,walk);assertFalse(slow.found());
-            assertTrue(slow.message().matches("(?s).*terrain near x=[0-9]+: needs Run \\(matched native-terrain probe reaches and settles\\).*"),slow.message());
+            assertTrue(slow.message().matches("(?s).*terrain near x=[0-9]+: needs Run(?: and more Attempt frames)? \\(matched native-terrain probe reaches and settles\\).*"),slow.message());
             assertFalse(slow.message().contains("Spindash"));
             probe.restore(initial);var fast=search(probe,request(512,205));assertTrue(fast.found(),fast.message());
         }

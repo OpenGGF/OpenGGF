@@ -8,6 +8,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
@@ -43,7 +44,20 @@ import java.util.List;
  * fire-shield immunity. Bit3 would select deflection; it is not set here.
  */
 public final class LrzFireballLauncherObjectInstance extends AbstractObjectInstance
-        implements RewindRecreatable, RomObjectCodePointerProvider {
+        implements RewindRecreatable, RomObjectCodePointerProvider, ObjectVisualFacing.PlacementSource {
+
+    @Override
+    public ObjectVisualFacing.Basis nativeFacing() {
+        // loc_42C1A emits at X+8 with +$200; mirrored negates both the muzzle side
+        // and launch direction. Flicker frames do not turn that native owner.
+        return mirrored ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
+
+    @Override
+    public int initialPlacementFlags(com.openggf.level.objects.ObjectVisualFacing.Basis facing, int sourceFlags) {
+        if (nativeFacing() == ObjectVisualFacing.Basis.NON_DIRECTIONAL) return sourceFlags;
+        return facing == com.openggf.level.objects.ObjectVisualFacing.Basis.LEFT ? sourceFlags | 1 : sourceFlags & ~1;
+    }
 
     /** {@code move.w #$280,priority(a0)} (sonic3k.asm:88203). */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x0280);

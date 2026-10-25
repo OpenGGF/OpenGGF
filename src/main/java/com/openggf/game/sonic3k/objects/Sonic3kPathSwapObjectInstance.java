@@ -6,6 +6,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.InlinePlaneSwitcher;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
@@ -23,7 +24,9 @@ import java.util.List;
  * 39699-39720, 39740-39776).
  */
 public final class Sonic3kPathSwapObjectInstance extends AbstractObjectInstance
-        implements RewindRecreatable, InlinePlaneSwitcher, RomWorldPositionedObject {
+        implements RewindRecreatable, InlinePlaneSwitcher, RomWorldPositionedObject, ObjectVisualFacing.NonDirectional {
+
+    // The native plane/path marker is invisible and has no facing body or visual child.
 
     public Sonic3kPathSwapObjectInstance(ObjectSpawn spawn) {
         super(spawn, "PathSwap");

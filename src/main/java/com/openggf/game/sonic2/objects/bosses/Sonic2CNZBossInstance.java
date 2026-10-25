@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects.bosses;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.camera.Camera;
 import com.openggf.game.sonic2.audio.Sonic2Music;
 import com.openggf.game.PlayableEntity;
@@ -40,7 +41,11 @@ import java.util.List;
  * - 8: Bounce/settle after defeat
  * - A: Flee off-screen
  */
-public class Sonic2CNZBossInstance extends AbstractBossInstance implements SpawnRewindRecreatable {
+public class Sonic2CNZBossInstance extends AbstractBossInstance implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // This routine owns bit 0: its target/turn and escape code set it for logical right.
+        return (state.renderFlags & 1) != 0 ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.LEFT;
+    }
 
     // Boss routine states (ROM: boss_routine)
     private static final int ROUTINE_PATROL = 0x00;

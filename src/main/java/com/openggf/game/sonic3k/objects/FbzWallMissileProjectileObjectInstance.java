@@ -1,4 +1,6 @@
 package com.openggf.game.sonic3k.objects;
+
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
@@ -8,7 +10,7 @@ import java.util.List;
 /** Parentless horizontal child of Obj_FBZWallMissile. */
 public final class FbzWallMissileProjectileObjectInstance
     extends AbstractObjectInstance
-    implements TouchResponseProvider, SpawnRewindRecreatable {
+    implements TouchResponseProvider, SpawnRewindRecreatable, ObjectVisualFacing.PoseOwned {
   private int x, y, xFixed, velocity, frame;
   FbzWallMissileProjectileObjectInstance(ObjectSpawn s, short velocity) {
     super(s, "FBZWallMissileProjectile");

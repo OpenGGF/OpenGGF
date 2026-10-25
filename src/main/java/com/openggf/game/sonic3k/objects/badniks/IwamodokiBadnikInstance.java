@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
@@ -52,7 +53,11 @@ import java.util.List;
  * script is never shown: the fuse opens on {@code byte_8FC30}'s second pair.
  */
 public final class IwamodokiBadnikInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, RewindRecreatable, RomObjectCodePointerProvider {
+        implements SolidObjectProvider, RewindRecreatable, RomObjectCodePointerProvider, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // The native rock only rises/falls and breaks into radial shrapnel; it has no horizontal-facing state.
+        return ObjectVisualFacing.Basis.NON_DIRECTIONAL;
+    }
 
     /** {@code ObjDat_Iwamodoki}: {@code dc.w $280} (sonic3k.asm:188198). */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x0280);

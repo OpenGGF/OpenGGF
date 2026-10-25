@@ -8,7 +8,9 @@ import com.openggf.game.rewind.schema.RewindCaptureContext;
 import java.util.List;
 import java.util.logging.Logger;
 
-public class ExplosionObjectInstance extends AbstractObjectInstance implements SpawnServicesRewindRecreatable {
+public class ExplosionObjectInstance extends AbstractObjectInstance implements SpawnServicesRewindRecreatable, ObjectVisualFacing.Container {
+    // Obj27 owns a radial explosion; optional animal/points children retain independent facing groups and anchors.
+
     private static final Logger LOGGER = Logger.getLogger(ExplosionObjectInstance.class.getName());
     private final ObjectRenderManager renderManager;
     private DestructionEffects.AnimalFactory animalFactory;

@@ -37,6 +37,13 @@ headless tests, or audio. S3K-specific routing is in [AGENTS_S3K.md](../../AGENT
 
 The things that cost the most time when missed.
 
+Offscreen desktop form pictures reuse an existing `ImGuiEditorChrome` when one is
+already alive in the capture. A nested host caused a missing-current-context
+assertion during teardown; restoring the previous handle alone then crashed at
+`ImFontAtlas::Clear`. Keep one chrome owner per active capture, with sequentially
+owned contexts for standalone surveys. See the
+[menu readability audit](audits/2026-10-24-stageplay-menu-readability.md).
+
 A headless boot must release its audio base-ROM reference before closing the
 owned ROM. A later title boot installs its audio profile before the new ROM;
 otherwise the loader reads the previous, closed FileChannel. Close/reboot
@@ -198,6 +205,18 @@ mirroring just the image breaks the assembly. A direction change before SKID als
 means its art must depict the old travel direction. Inspect decoded ROM pixels,
 then test complete poses in both directions (including accessories and offsets).
 See [the mod audit](audits/2026-10-20-super-sonic-bros-facing.md).
+
+Day Off repeated the raw-flip mistake in its rightward Motobug drive (2026-10-24,
+base `ac46111bc`): `flipX=false` means left for Motobug and right for Sonic.
+Stageplay now accepts only `Facing.LEFT/RIGHT` in performer keys. Native owners
+resolve the captured logical direction through `ObjectVisualFacing`; factory
+coverage rejects undeclared owners. Preserve deliberate native turn/skid/look-back
+mapping poses. A grouping root such as an animal capsule does not impose one
+mirror on independently directed children: capture each native facing group and
+turn around its own anchor. Placement flags remain source data, with explicit
+constructor mappings only where the native owner defines them. See the
+[Stageplay facing/priority audit](audits/2026-10-24-stageplay-facing-priority.md).
+
 
 **A scene kit's zone number is not its decoder level index.** When re-encoding
 S1 kit blocks into an additive act, use the decoder's level table, not the public
@@ -736,6 +755,18 @@ Capture before consumption and replay both the armed and occupied-rearm cases;
 a mid-count snapshot does not cover them. The cold Tails DEZ2 pad at input46581
 exposed an 8px change on the first replayed frame where ordinary play stayed put.
 
+**Unordered player sets must encode membership, not identity-hash iteration.**
+Recreating sprites changes identity-map bucket order even when the same team
+occupies the same mechanism. Earlier tests and unrelated metadata allocations
+can expose this without leaving an engine singleton dirty. The Day Off review
+on `a04ae4b20` found MHZ2 catapult snapshots swapping main/sidekick IDs at bytes
+39 and 44 of `childRiders`. `RewindCodecs.CollectionCodec` now canonicalizes
+unordered player sets by participant ID, as identity-keyed player maps already
+do. Sort a capture-only copy; preserve live gameplay iteration and the encounter
+order of lists and sequenced sets. The deterministic player-reference regression
+assigns participant slots opposite to measured hash order rather than fitting
+allocations or clearing more state in tests.
+
 **Slot-encoded identity sets must not hold dead objects.** Touch-overlap sets and
 instance-keyed solid latches are captured as slot numbers because Java identity
 does not survive a restore. A member that has since been deleted keeps its old
@@ -776,6 +807,14 @@ publish the parent's ROM retirement flag before removing its identity:
 An exact-id sidecar may encode an already-retired parent as null so a child
 awaiting its next update remains an orphan; do not silently accept an unregistered
 live owner.
+Admission rejection is another boundary: ObjectManager marks the constructed
+child destroyed before assigning an identity and does not call its unload hook.
+Retain owner references only after successful admission. If a managed child
+represents embedded icon/reward state, clear that activation on rejection too.
+S3K monitor contents exposed both the invalid snapshot reference and an unearned
+reward. Test zero, one and two available tail slots with a real manager and
+capture before the next child dispatch; weakening identity validation hides the
+ownership error. The independent explosion attempt still follows the icon attempt.
 DEZ's tunnel controller has the opposite lifetime: its ring-trail channel starts
 10 updates before the player channels and can delete its spawner while they still
 run. `DEZTunnelControl_Done` never dereferences that completed channel, so release
@@ -2573,3 +2612,19 @@ preserve native allocation order, routine advancement and lifecycle flags. The
 [AIZ correction evidence](plans/2026-10-24-architecture-continuation.md#fifth-loop-focused-results-correction-and-acceptance)
 distinguishes this admission boundary from arbitrary early collector retirement,
 which remains a separate unproven lifecycle contract.
+
+**A native decorator's publication owner is distinct from its canonical base.**
+KiS2 creates a fresh chip PLC service and substitutes it in the exposed rewind
+inventory, while `base()` still exposes the stock service with the same key.
+Canonical-base admission classifies the chip service as generic and correctly
+rejects its next incarnation. Use the internal publication-owner role throughout
+cold/live/reset, anchored by actual session-root identity in the resolved module's
+verified lineage. A shared base does not prove sibling publisher identity. Inspect
+all lineage nodes after finding the owner, never dispatch foreign provenance, and
+deny native admission when an inner creator publication inventory cannot be proved.
+Reserve both fully validated native identity inventories before creator callbacks;
+register only the selected owner's publications. Merging the two inventories by key
+loses either legitimate replacement or reachable suppressed-service protection.
+Keep raw lifecycle queries and ordinary strict registry refresh unchanged. The
+[bounded KiS2 evidence](plans/2026-10-24-architecture-continuation.md#bounded-kis2-native-rewind-publication-repair-following-composition)
+separates actual repeated full-load evidence from the composed SS controller gate.

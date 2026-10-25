@@ -1,4 +1,4 @@
-package com.openggf.game.sonic2.objects;
+package com.openggf.game.sonic2.specialstage;
 
 import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.SpriteMappingPiece;
@@ -30,7 +30,7 @@ public final class Sonic2SpecialStageResultsMappings {
     public static final int VRAM_TITLE_CARD = 0x0580;    // Full title card art (E, N, O at start)
     public static final int VRAM_RESULTS_ART = 0x0590;   // Results art (emeralds, bonus graphics)
     public static final int VRAM_HUD = 0x06CA;           // HUD art (SCORE, TIME, RINGS text)
-    public static final int VRAM_NUMBERS = 0x0520;       // Numbers art (bonus digits) - matches SpecialStageResultsScreenObjectInstance
+    public static final int VRAM_NUMBERS = 0x0520;       // Numbers art (bonus digits) - matches Sonic2SpecialStageResultsScreen
 
     // Art type constants for pieces
     public static final int ART_TYPE_SS_LETTERS = 0;     // Special stage letters at VRAM $02

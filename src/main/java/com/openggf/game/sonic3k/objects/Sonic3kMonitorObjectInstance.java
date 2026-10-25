@@ -16,6 +16,7 @@ import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
@@ -60,7 +61,9 @@ import java.util.logging.Logger;
 public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
         implements TouchResponseProvider, TouchResponseListener,
         SolidObjectProvider, SolidObjectListener, RomObjectCodePointerProvider, RewindRecreatable,
-        RomWorldPositionedObject {
+        RomWorldPositionedObject, ObjectVisualFacing.NonDirectional {
+
+    // Obj_Monitor draws box/icon frames and explosion effects without a native horizontal-facing owner.
     private static final Logger LOGGER = Logger.getLogger(Sonic3kMonitorObjectInstance.class.getName());
 
     // From disassembly: solid params d1=$19, d2=$10, d3=$11
@@ -346,7 +349,7 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
 
     /**
      * Break the monitor: spawn explosion, start icon rising, mark persistence.
-     * ROM: Mon_BreakOpen (sonic3k.asm ~line 40685)
+     * ROM: Obj_MonitorSpawnIcon (sonic3k.asm:40685-40710).
      */
     private void breakMonitor(AbstractPlayableSprite player, int frameCounter) {
         broken = true;
@@ -371,7 +374,8 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
                 && renderManager.getExplosionRenderer() != null) {
             // ROM Obj_MonitorSpawnIcon creates Obj_MonitorContents, then
             // Obj_Explosion, with AllocateObjectAfterCurrent both times
-            // (docs/skdisasm/sonic3k.asm:40680-40699; allocator at 37911-37925).
+            // Obj_MonitorSpawnIcon (sonic3k.asm:40685-40710), allocator
+            // AllocateObjectAfterCurrent (sonic3k.asm:37957-37972).
             objectManager.addDynamicObjectAfterSlot(
                     new ExplosionObjectInstance(0x27, posX(), posY(), renderManager),
                     getSlotIndex());
@@ -885,6 +889,19 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
         /** Rewind probe constructor. */
         private MonitorContentsSlot(ObjectSpawn spawn) {
             this(spawn, null);
+        }
+
+        @Override
+        public void setDestroyed(boolean destroyed) {
+            super.setDestroyed(destroyed);
+            if (destroyed) {
+                // Obj_MonitorSpawnIcon skips contents initialization when
+                // AllocateObjectAfterCurrent fails (sonic3k.asm:40680-40691).
+                // A rejected Java construction must retain neither a routine
+                // nor the breaking player, even before the next object pass.
+                iconActive = false;
+                effectTarget = null;
+            }
         }
 
         @Override

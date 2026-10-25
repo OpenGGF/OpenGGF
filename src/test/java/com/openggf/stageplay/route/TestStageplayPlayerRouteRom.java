@@ -1,5 +1,7 @@
 package com.openggf.stageplay.route;
 
+import com.openggf.stageplay.StageplayDocument.Facing;
+
 import static com.openggf.stageplay.StageplayDocument.*;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -32,6 +34,75 @@ class TestStageplayPlayerRouteRom {
     @RequiresRom(SonicGame.SONIC_1)
     void ghzRouteIsQualifiedByNativePlayerInputs() throws Exception {
         verify("s1", "sonic1.rom.path");
+    }
+
+    /**
+     * Sonic_Loops plane switching (_incObj/01 Sonic.asm:1536-1611) belongs to collision, so the
+     * isolated route probe must run it too. Without it the probe met GHZ1's first loop as a ramp
+     * and launched at x~5515, so a Run route that the live world completes could never qualify.
+     */
+    @Test
+    @RequiresRom(SonicGame.SONIC_1)
+    void ghzLoopRouteSwitchesNativeLoopPlanesInTheIsolatedProbe() throws Exception {
+        try (var library = SceneRomLibrary.open(Map.of("s1", Path.of(System.getProperty("sonic1.rom.path"))));
+                var resources = new StageplayResources(library, false)) {
+            retireInitialWorld(library);
+            var source = new SetSource("s1", 0, 0, "", "");
+            var module = library.module("s1");
+            try (var probe = PlayablePuppet.createNativeWorldProbe(resources.routeTerrain(source), module, 0, 0,
+                    module, "sonic", SpriteArtSet.EMPTY, 5100, 686, 0, true, false)) {
+                double highest = Double.MAX_VALUE;
+                for (int frame = 0; frame < 200; frame++) {
+                    probe.tick(false, true, false, frame);
+                    var sample = probe.sample();
+                    if (frame > 10) assertTrue(sample.onGround(), "Loop must not launch the probe at frame " + frame
+                            + " x=" + sample.x() + " y=" + sample.y());
+                    highest = Math.min(highest, sample.y());
+                }
+                assertTrue(highest < 560, "The probe must run over the top of the loop, reached y=" + highest);
+            }
+            var actor = new Actor("hero", "Sonic", "s1", "sonic",
+                    List.of(new ActorKey(0, 5100, 686, 0, -1, Facing.RIGHT, true, 1, Interpolation.HOLD)));
+            var scene = StageplayDocument.empty("s1", 0, 0, 5260, 470, 480, 270)
+                    .withSet(source)
+                    .withDurationFrames(420)
+                    .withActors(List.of(actor))
+                    .withPuppets(List.of(new PuppetTrack("hero", true, 0, List.of())));
+            var request = new StageplayRouteRequest("hero", 0, 5860, 621, 419, 1024, 120_000, 60_000, 1, null, 1,
+                    new RouteMotion(StartAction.WALK, TravelSpeed.RUN, EndingAction.HARD_STOP, EndingFacing.LEFT));
+            var result = StageplayRoutePlanner.plan(resources, library, scene, request, "ghz-loop-run", () -> false);
+            assertEquals(StageplayRouteResult.Status.VERIFIED, result.status(), result.message());
+            assertTrue(result.path().stream().anyMatch(point -> point.grounded() && point.y() < 560),
+                    "The verified route must follow the loop rather than bypass it");
+            assertEquals(request.targetX(), result.path().getLast().x(), 6);
+            assertNull(SessionManager.getCurrentWorldSession());
+        }
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {300, 419})
+    @RequiresRom(SonicGame.SONIC_1)
+    void ghzWalkAdviceDoesNotDisappearAtTheDefaultAttemptWindow(int frames) throws Exception {
+        try (var library = SceneRomLibrary.open(Map.of("s1", Path.of(System.getProperty("sonic1.rom.path"))));
+                var resources = new StageplayResources(library, false)) {
+            retireInitialWorld(library);
+            var actor = new Actor("hero", "Sonic", "s1", "sonic", List.of(
+                    new ActorKey(0, 5100, 686, 0, -1, Facing.RIGHT, true, 1, Interpolation.HOLD)));
+            var track = new PuppetTrack("hero", true, 0, List.of());
+            var scene = StageplayDocument.empty("s1", 0, 0, 5260, 470, 480, 270)
+                    .withDurationFrames(800).withActors(List.of(actor)).withPuppets(List.of(track));
+            var request = new StageplayRouteRequest("hero", 0, 5860, 620, frames);
+            try (var probe = resources.createRouteProbe(scene.set(), actor, actor.keys().getFirst(), track)) {
+                var result = StageplayRoutePlanner.search(scene, request, probe, () -> false,
+                        System.nanoTime() + 60_000_000_000L);
+                assertFalse(result.found());
+                assertTrue(result.message().contains("needs Run"), result.message());
+                if (frames == 300) assertTrue(result.message().contains("more Attempt frames"), result.message());
+                assertTrue(result.commands().isEmpty(), "Diagnostic evidence never becomes an applicable route");
+                assertTrue(result.nodes() <= request.maxNodes());
+                assertTrue(result.ticks() <= request.maxTicks());
+            }
+        }
     }
 
     @Test
@@ -144,8 +215,8 @@ class TestStageplayPlayerRouteRom {
                         "s2",
                         "sonic",
                         List.of(
-                                new ActorKey(0, 100, 656, 0, -1, false, true, 1, Interpolation.HOLD),
-                                new ActorKey(30, 100, 656, 0, -1, false, true, 1, Interpolation.HOLD)));
+                                new ActorKey(0, 100, 656, 0, -1, Facing.RIGHT, true, 1, Interpolation.HOLD),
+                                new ActorKey(30, 100, 656, 0, -1, Facing.RIGHT, true, 1, Interpolation.HOLD)));
         return StageplayDocument.empty("s2", 0, 0, 0, 528, 640, 224)
                 .withSet(source)
                 .withDurationFrames(330)
@@ -193,7 +264,7 @@ class TestStageplayPlayerRouteRom {
                             "sonic",
                             List.of(
                                     new ActorKey(
-                                            0, anchor.x(), anchor.y(), 0, -1, false, true, 1, Interpolation.HOLD)));
+                                            0, anchor.x(), anchor.y(), 0, -1, Facing.RIGHT, true, 1, Interpolation.HOLD)));
             var after = new PuppetCommand("outside", 160, PuppetCommandKind.STOP, 0, 0, 0, 0);
             var replaced =
                     new PuppetCommand(

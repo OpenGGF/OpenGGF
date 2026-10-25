@@ -1,5 +1,6 @@
 package com.openggf.audio.driver;
 
+import com.openggf.game.GameServices;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsSequencer;
@@ -138,7 +139,7 @@ public class TestSmpsFadeHybridParity {
         driver.setRegion(SmpsSequencer.Region.NTSC);
         driver.setReadModeForTesting(mode);
 
-        SmpsSequencer musicSeq = new SmpsSequencer(musicData, dacData, driver, Sonic2SmpsSequencerConfig.CONFIG);
+        SmpsSequencer musicSeq = new SmpsSequencer(musicData, dacData, driver, GameServices.audio(), Sonic2SmpsSequencerConfig.CONFIG);
         musicSeq.setSampleRate(SAMPLE_RATE);
         driver.addSequencer(musicSeq, false);
 
@@ -162,7 +163,7 @@ public class TestSmpsFadeHybridParity {
             if (withSfx && !sfxTriggered && framesRendered >= PRE_ROLL_FRAMES + SFX_OFFSET_FRAMES) {
                 AbstractSmpsData sfxData = loader.loadSfx(SFX_RING);
                 assertNotNull(sfxData, "SFX data should load");
-                SmpsSequencer sfxSeq = new SmpsSequencer(sfxData, dacData, driver, Sonic2SmpsSequencerConfig.CONFIG);
+                SmpsSequencer sfxSeq = new SmpsSequencer(sfxData, dacData, driver, GameServices.audio(), Sonic2SmpsSequencerConfig.CONFIG);
                 sfxSeq.setSampleRate(SAMPLE_RATE);
                 sfxSeq.setSfxMode(true);
                 driver.addSequencer(sfxSeq, true);

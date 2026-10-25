@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -38,7 +40,7 @@ import java.util.List;
  */
 public class DoorObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider, RewindRecreatable,
-        RomObjectCodePointerProvider {
+        RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
 
     private static final int ROM_CODE_POINTER_HIGH_WORD = 0x0003;
 

@@ -10,6 +10,7 @@ import com.openggf.game.rewind.PlaybackController;
 import com.openggf.game.solid.DefaultSolidExecutionRegistry;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.graphics.FadeManager;
+import com.openggf.tests.TestEnvironment;
 import com.openggf.timer.TimerManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,7 +27,7 @@ class TestGameplayModeContextPlaybackController {
 
     @BeforeEach
     void configureServices() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.resetEngineOnly();
     }
 
     private static GameplayModeContext buildAttachedContext() {

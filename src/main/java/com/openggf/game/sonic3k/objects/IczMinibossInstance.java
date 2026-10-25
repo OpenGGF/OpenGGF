@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
@@ -35,7 +36,12 @@ import java.util.List;
  * as owned state so rewind captures the encounter with the parent.
  */
 public final class IczMinibossInstance extends AbstractBossInstance
-        implements SpawnRewindRecreatable, MultiBucketRenderable {
+        implements SpawnRewindRecreatable, MultiBucketRenderable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // The fixed frontal snowman and orbiting ice/shards have no native horizontal-facing state.
+        return ObjectVisualFacing.Basis.NON_DIRECTIONAL;
+    }
+
 
     private static final int ROUTINE_INIT = 0x00;
     private static final int ROUTINE_DESCEND = 0x02;

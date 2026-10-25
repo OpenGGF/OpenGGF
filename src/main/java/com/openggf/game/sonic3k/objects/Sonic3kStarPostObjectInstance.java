@@ -13,6 +13,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.RomWorldPositionedObject;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -60,7 +61,9 @@ import java.util.logging.Logger;
  * </ul>
  */
 public class Sonic3kStarPostObjectInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable, RomWorldPositionedObject {
+        implements SpawnRewindRecreatable, RomWorldPositionedObject, ObjectVisualFacing.NonDirectional {
+
+    // Native post, orbiting star and bonus-star children have no logical horizontal facing.
     private static final Logger LOGGER = Logger.getLogger(Sonic3kStarPostObjectInstance.class.getName());
 
     // Activation zone dimensions (ROM: dx + 8 < $10, dy + $40 < $68)

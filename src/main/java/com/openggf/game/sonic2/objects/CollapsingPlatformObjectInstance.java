@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
@@ -35,7 +37,8 @@ import java.util.logging.Logger;
  * - ARZ: 8 fragments, uses level art tiles (0x55, 0x59, 0xA3, 0xA7)
  */
 public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, RewindRecreatable {
+        implements SolidObjectProvider, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj1F owns a slab and its falling pieces; slope/placement mirroring stays native geometry.
 
     private static final Logger LOGGER = Logger.getLogger(CollapsingPlatformObjectInstance.class.getName());
 

@@ -1,4 +1,4 @@
-package com.openggf.game.sonic2.objects;
+package com.openggf.game.sonic2.specialstage;
 
 import com.openggf.game.ResultsScreen;
 import com.openggf.game.PlayerCharacter;
@@ -39,8 +39,8 @@ import java.util.logging.Logger;
  * <p>
  * Based on Obj6F from s2.asm.
  */
-public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
-    private static final Logger LOGGER = Logger.getLogger(SpecialStageResultsScreenObjectInstance.class.getName());
+public class Sonic2SpecialStageResultsScreen implements ResultsScreen {
+    private static final Logger LOGGER = Logger.getLogger(Sonic2SpecialStageResultsScreen.class.getName());
 
     // State machine constants (inlined from AbstractResultsScreen — this screen
     // is a standalone overlay managed by GameLoop, not a level object)
@@ -217,7 +217,7 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
     private static final int PERFECT_DIGIT_OFFSET = 0;      // $520 - $520 for Frame 16
     private static final int DIGITS_PER_VALUE = 8;          // 4 digits x 2 tiles each
 
-    public SpecialStageResultsScreenObjectInstance(int ringsCollected, boolean gotEmerald,
+    public Sonic2SpecialStageResultsScreen(int ringsCollected, boolean gotEmerald,
                                                     int stageIndex, int totalEmeraldCount,
                                                     ObjectServices services) {
         this(ringsCollected, 0, gotEmerald, stageIndex, totalEmeraldCount, services);
@@ -230,7 +230,7 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
      *                         {@code Ring_count_2P} -> {@code Bonus_Countdown_2}
      *                         (docs/s2disasm/s2.asm:6784-6785)
      */
-    public SpecialStageResultsScreenObjectInstance(int ringsCollected, int ringsCollectedP2,
+    public Sonic2SpecialStageResultsScreen(int ringsCollected, int ringsCollectedP2,
                                                     boolean gotEmerald,
                                                     int stageIndex, int totalEmeraldCount,
                                                     ObjectServices services) {

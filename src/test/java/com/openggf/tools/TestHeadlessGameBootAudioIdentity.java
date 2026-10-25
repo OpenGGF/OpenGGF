@@ -79,7 +79,7 @@ class TestHeadlessGameBootAudioIdentity {
     void replacingTheBackendWithTheSameImplementationDoesNotMatchOrReinstallItsOwner() throws Exception {
         boot.boot(RomTestUtils.ensureSonic2RomAvailable().toPath(), 0, 0);
         assertTrue(boot.hasInstalledHeadlessAudioBackend());
-        var replacement = new HeadlessSmpsAudioBackend(services.configuration(), services.profiler());
+        var replacement = new HeadlessSmpsAudioBackend(services.configuration(), services.profiler(), services.audio());
         services.audio().setBackend(replacement);
         assertFalse(boot.hasInstalledHeadlessAudioBackend());
         assertTrue(services.audio().hasInstalledBackend(replacement), "the query must leave the replacement installed");

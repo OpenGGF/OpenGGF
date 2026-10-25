@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.PlayableEntity;
 
@@ -30,7 +31,10 @@ import java.util.Objects;
  * </ol>
  */
 public final class CaterkillerJrHeadInstance extends AbstractS3kBadnikInstance
-        implements SpawnRewindRecreatable {
+        implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
 
     private static final int COLLISION_SIZE_INDEX = 0x17;
     private static final int PRIORITY_BUCKET = 5;

@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
@@ -20,7 +22,9 @@ import java.util.logging.Logger;
  * Displays different frames based on proximity to the player.
  * Based on Obj49_ChkDel logic.
  */
-public class EHZWaterfallObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class EHZWaterfallObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj49 is an animated waterfall segment with no horizontal-facing body.
+
     private static final Logger LOGGER = Logger.getLogger(EHZWaterfallObjectInstance.class.getName());
 
     private int mappingFrame;

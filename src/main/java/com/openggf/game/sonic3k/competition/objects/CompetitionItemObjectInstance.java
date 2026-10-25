@@ -13,6 +13,7 @@ import com.openggf.level.objects.NativeSpriteSubmissionAccess;
 import com.openggf.level.objects.NativeSpriteSubmissionSource;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.physics.TrigLookupTable;
@@ -24,9 +25,12 @@ import java.util.List;
  * sub_3643C/sub_36926 (sonic3k.asm:73281-73938). Miniature touch is deliberately
  * separate from ordinary character touch: TouchResponse_CompetitionMode uses
  * an eight-pixel-wide player box and y_radius-3 (20595-20609).
+ * All kinds draw unflipped. The wheel's angleStep controls its orbit, while
+ * updateProjectile selects an angle-derived mapping pose; neither supplies a
+ * horizontal body mirror for the item or its independently allocated effects.
  */
 public final class CompetitionItemObjectInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable, TouchResponseProvider, NativeSpriteSubmissionSource {
+        implements SpawnRewindRecreatable, TouchResponseProvider, NativeSpriteSubmissionSource, ObjectVisualFacing.PoseOwned {
     public static final String ART_KEY = "competition_item";
     public enum Kind { WHEEL, EFFECT, DROPPING_SLIDE, SLIDE, DROPPING_SPRING, SPRING,
         DROPPING_PROJECTILE, PROJECTILE }

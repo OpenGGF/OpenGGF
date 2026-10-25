@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -17,7 +19,7 @@ import java.util.List;
  *
  * <p>ROM reference: {@code Obj_LBZCupElevatorPole} (sonic3k.asm:53227-53251).
  */
-public final class LbzCupElevatorPoleInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
+public final class LbzCupElevatorPoleInstance extends AbstractObjectInstance implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
     private static final int SHORT_HEIGHT = 0x30;
     private static final int LONG_HEIGHT = 0x60;
 

@@ -2,7 +2,6 @@ package com.openggf.graphics;
 
 import com.openggf.game.session.SessionManager;
 import com.openggf.level.Pattern;
-import com.openggf.level.PatternDesc;
 import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -35,7 +34,7 @@ class TestGraphicsManagerReinit {
     }
 
     @Test
-    void repeatedHeadlessDestroyDrainsCommandsAndStaticPools() {
+    void repeatedHeadlessDestroyDrainsCommandsAndStaticPools() throws Exception {
         for (int cycle = 0; cycle < 3; cycle++) {
             GraphicsManager.destroyForReinit();
             TestEnvironment.resetAll();
@@ -43,8 +42,9 @@ class TestGraphicsManagerReinit {
             manager.initHeadless();
             manager.cachePatternTexture(new Pattern(), 0);
             PatternAtlas.Entry entry = manager.getPatternAtlasEntry(0);
-            PatternRenderCommand command = PatternRenderCommand.obtain(
-                    entry, -1, new PatternDesc(), 0, 0, manager);
+            PatternRenderCommand command = PatternRenderCommand.obtain(entry, -1, manager);
+            command.capturePalette(7);
+            command.finish(cycle == 0, cycle == 1, cycle == 2, .25f, .5f, 8.75f, 4.125f);
             manager.registerCommand(command);
             PatternRenderCommand.ensureNativeScratch();
             GLCommand.ensureNativeScratch();
@@ -61,6 +61,10 @@ class TestGraphicsManagerReinit {
                     "process-lifetime native scratch must be releasable for reinit");
             assertFalse(GLCommand.hasNativeScratch());
             assertFalse(GLCommandGroup.hasNativeScratch());
+            var owner = PatternRenderCommand.class.getDeclaredField("graphicsManager"); owner.setAccessible(true);
+            assertNull(owner.get(command), "a retired queued lease cannot retain its manager after reinit");
+            var leased = PatternRenderCommand.class.getDeclaredField("leased"); leased.setAccessible(true);
+            assertFalse(leased.getBoolean(command));
         }
     }
 }

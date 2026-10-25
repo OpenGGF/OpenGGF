@@ -1,4 +1,6 @@
 package com.openggf.game.sonic2.objects;
+
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.audio.GameMusic;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.resources.Sonic2PlcService;
@@ -44,7 +46,9 @@ import java.util.logging.Logger;
  * <li>Spawn results screen (Obj3A), play end-level jingle</li>
  * </ol>
  */
-public class SignpostObjectInstance extends BoxObjectInstance implements PostPlayerUpdateHook, RewindRecreatable {
+public class SignpostObjectInstance extends BoxObjectInstance implements PostPlayerUpdateHook, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj0D owns a rotating sign and sparkles/results, not a horizontally facing body.
+
     public static final String AUTHORED_GOAL_KEY = "openggf:authored-goal";
     private static final Logger LOGGER = Logger.getLogger(SignpostObjectInstance.class.getName());
 

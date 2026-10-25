@@ -13,6 +13,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
@@ -46,7 +47,9 @@ import java.util.logging.Logger;
  * ROM references: Obj_CollapsingPlatform (sonic3k.asm), loc_20594, loc_205CE.
  */
 public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInstance
-        implements SlopedSolidProvider, SolidObjectListener, RomObjectCodePointerProvider, SpawnRewindRecreatable {
+        implements SlopedSolidProvider, SolidObjectListener, RomObjectCodePointerProvider, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+    // Native slopes and falling mapping-piece children are terrain geometry; their flips are not logical facing.
 
     private static final Logger LOG = Logger.getLogger(Sonic3kCollapsingPlatformObjectInstance.class.getName());
 

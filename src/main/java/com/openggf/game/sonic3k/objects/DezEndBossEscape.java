@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
@@ -8,7 +9,12 @@ import com.openggf.sprites.playable.Knuckles;
 import java.util.List;
 
 /** Ordered SST children of the Act 2 boss's entry and defeat tables. */
-final class DezEndBossEscape extends DezEndBossSprite implements RewindRecreatable {
+final class DezEndBossEscape extends DezEndBossSprite implements RewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // The Robotnik escape sets flipX together with positive xVelocity; door/path/debris variants have no facing.
+        return kind == ROBOTNIK ? (flipX ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.LEFT) : ObjectVisualFacing.Basis.NON_DIRECTIONAL;
+    }
+
     static final int ROBOTNIK=0,DOOR=1,PATH=2,DEBRIS=3;
     private DezEndBossInstance parent;
     private int kind;

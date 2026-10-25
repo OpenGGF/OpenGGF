@@ -1,5 +1,7 @@
 package com.openggf.editor.hud;
 
+import com.openggf.stageplay.StageplayDocument.Facing;
+
 import com.openggf.InputBindingFactory;
 import com.openggf.control.GamepadStateSource;
 import com.openggf.control.InputHandler;
@@ -36,6 +38,30 @@ class TestStageplayHud {
         tick();
     }
 
+    @Test void pickerUsesTheFormerPanelAndDockSpaceAndFitsLargeFrames() {
+        var ordinary=StageplayHud.layout(1280,720,480,270);
+        var picker=EditorHudLayout.positionPicker(1280,720,480,270);
+        assertNull(picker.workbench());assertTrue(picker.game().w()>ordinary.game().w());
+        assertTrue(picker.game().y()>=picker.topBar().bottom());assertTrue(picker.game().bottom()<=picker.promptBar().y());
+        var large=EditorHudLayout.positionPicker(1280,720,1920,1080);
+        assertTrue(large.game().right()<=large.width());assertTrue(large.game().bottom()<=large.promptBar().y());
+    }
+
+    @Test void routeResultSentenceFitsTheActualSidePanelWithoutEllipsis() {
+        var request = new com.openggf.stageplay.route.StageplayRouteRequest("hero", 0, 400, 300, 300);
+        var result = com.openggf.stageplay.route.StageplayRouteResult.failure(
+                com.openggf.stageplay.route.StageplayRouteResult.Status.BUDGET_EXCEEDED,
+                "Try Run. Reachability is still unknown.", "0".repeat(64), request, 1024, 26686);
+        var route = new com.openggf.stageplay.editor.StageplayRouteOverlay(result, false);
+        for (int[] size : new int[][] {{1280, 720}, {1920, 1080}, {1024, 576}}) {
+            var panel = StageplayHud.layout(size[0], size[1], 480, 270).workbench();
+            assertEquals(route.summary(), EditorHudCanvas.fit(route.summary(), panel.w() - 36,
+                    EditorHudCanvas.Size.SMALL), "Route result must be a complete sentence at " + size[0]);
+        }
+        assertTrue(route.reason().contains("Reachability is still unknown"));
+        assertTrue(route.reason().contains("Try Run"));
+    }
+
     @Test void routeExplanationWrapsAtWordsWithoutLosingText() {
         String explanation = "Search limit reached. Try a closer goal or increase the search budget. Reachability is still unknown.";
         for (int width : new int[] {260, 280, 420}) {
@@ -59,7 +85,7 @@ class TestStageplayHud {
         hud.reactivated();
         tick();
         press(BUTTON_X);
-        assertEquals("Actor key at frame 20", workspace.menu().title());
+        assertEquals("Actor key", workspace.menu().title());
         workspace.menu().setValue("x", "240");
         workspace.menu().setValue("pose", "5");
         workspace.menu().submit();
@@ -107,8 +133,8 @@ class TestStageplayHud {
     void timelineContainsActorKeysCameraCaptionsAndAudioInFrameOrder() {
         var base = workspace.controller().document();
         var actor = new StageplayDocument.Actor("hero", "Hero", "s2", "sonic", List.of(
-                new StageplayDocument.ActorKey(0, 50, 60, 0, -1, false, true, 1, StageplayDocument.Interpolation.LINEAR),
-                new StageplayDocument.ActorKey(40, 90, 60, 0, 3, false, true, 1, StageplayDocument.Interpolation.HOLD)));
+                new StageplayDocument.ActorKey(0, 50, 60, 0, -1, Facing.RIGHT, true, 1, StageplayDocument.Interpolation.LINEAR),
+                new StageplayDocument.ActorKey(40, 90, 60, 0, 3, Facing.RIGHT, true, 1, StageplayDocument.Interpolation.HOLD)));
         workspace.controller().replace(base.withActors(List.of(actor))
                 .withCaptions(List.of(new StageplayDocument.Caption("line", 15, 25, "Hello", 0, 0, -1)))
                 .withAudio(List.of(new StageplayDocument.AudioCue("sound", 10, StageplayDocument.AudioKind.ROM_SFX, "s2", 1, "", 1))));

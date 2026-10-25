@@ -1,5 +1,6 @@
 package com.openggf.game.sonic1.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.level.objects.AbstractBadnikInstance;
 import com.openggf.graphics.GLCommand;
@@ -46,7 +47,10 @@ import java.util.List;
  *   <li>Frame 3 (.shut2): body mouth shut + tail vFlipped</li>
  * </ul>
  */
-public class Sonic1JawsBadnikInstance extends AbstractBadnikInstance implements SpawnRewindRecreatable {
+public class Sonic1JawsBadnikInstance extends AbstractBadnikInstance implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
 
     // From disassembly: move.b #$A,obColType(a0) (enemy, collision size index $A)
     private static final int COLLISION_SIZE_INDEX = 0x0A;

@@ -89,7 +89,7 @@ class TestGameLoopFreshLevelHandoff {
 
     @Test
     void genericProviderRetainsItsFadeFromBlack() throws Exception {
-        set(loop, "titleCardProvider", mock(TitleCardProvider.class));
+        com.openggf.TitleCardLifecycleTestAccess.provider(loop, mock(TitleCardProvider.class));
         invoke("doZoneAct", new Class<?>[]{int.class, int.class, int.class}, 1, 0, -1);
         assertEquals(FadeManager.FadeState.FADING_FROM_BLACK, context.getFadeManager().getState());
     }

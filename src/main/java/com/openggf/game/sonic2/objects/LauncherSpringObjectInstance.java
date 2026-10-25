@@ -1,4 +1,6 @@
 package com.openggf.game.sonic2.objects;
+
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.level.objects.BoxObjectInstance;
 
@@ -43,7 +45,13 @@ import java.util.Map;
  * <b>Disassembly Reference:</b> s2.asm obj85 (loc_2AD26 - loc_2AE76)
  */
 public class LauncherSpringObjectInstance extends BoxObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable, ObjectVisualFacing.Source {
+    @Override
+    public ObjectVisualFacing.Basis nativeFacing() {
+        // loc_2B018 always launches the diagonal head UP-RIGHT, even with
+        // x_flip set: that bit mirrors art only. loc_2AE0C launches vertically.
+        return isDiagonal() ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.NON_DIRECTIONAL;
+    }
 
     // Subtype constants
     // Note: Bit 7 (0x80) indicates "slope running" mode for diagonal springs,

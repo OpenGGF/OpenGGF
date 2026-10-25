@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects.bosses;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.camera.Camera;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.PlayableEntity;
@@ -37,7 +38,11 @@ import java.util.List;
  * - SUBA: Defeat bounce/settle
  * - SUBC: Flee off-screen
  */
-public class Sonic2ARZBossInstance extends AbstractBossInstance implements RewindRecreatable {
+public class Sonic2ARZBossInstance extends AbstractBossInstance implements RewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // This routine owns bit 0: its target/turn and escape code set it for logical right.
+        return (state.renderFlags & 1) != 0 ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.LEFT;
+    }
 
     private static final int RENDER_X_FLIP = 0x01;
 

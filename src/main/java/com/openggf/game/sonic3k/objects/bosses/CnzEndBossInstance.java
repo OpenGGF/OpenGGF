@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.bosses;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
@@ -48,7 +49,12 @@ import java.io.IOException;
  * attraction curve is the exact {@code dword_6EC7E} table.
  */
 public final class CnzEndBossInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseAttackable, SpawnRewindRecreatable {
+        implements TouchResponseProvider, TouchResponseAttackable, SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // The native target/turn routine owns facingRight independently of the selected mapping frame.
+        return facingRight ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.LEFT;
+    }
+
     // Player-only native control tail; directing must not advance this controller's
     // routine, timers, world flags, camera or level transition.
     private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();

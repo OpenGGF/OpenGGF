@@ -1,5 +1,7 @@
 package com.openggf.stageplay;
 
+import com.openggf.stageplay.StageplayDocument.Facing;
+
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -15,7 +17,7 @@ class TestStageplayDocument {
     }
 
     static ActorKey key(int frame, double x, int animation, int pose, Interpolation interpolation) {
-        return new ActorKey(frame, x, 200, animation, pose, false, true, 1, interpolation);
+        return new ActorKey(frame, x, 200, animation, pose, Facing.RIGHT, true, 1, interpolation);
     }
 
     static Actor actor(List<ActorKey> keys) {
@@ -58,7 +60,7 @@ class TestStageplayDocument {
         assertThrows(IllegalArgumentException.class,
                 () -> new CameraKey(0, 0, 0, Double.POSITIVE_INFINITY, Interpolation.HOLD));
         assertThrows(IllegalArgumentException.class,
-                () -> new ActorKey(0, 0, 0, 0, -1, false, true, 0, Interpolation.HOLD));
+                () -> new ActorKey(0, 0, 0, 0, -1, Facing.RIGHT, true, 0, Interpolation.HOLD));
         assertThrows(IllegalArgumentException.class, () -> scene().withDurationFrames(0));
     }
 

@@ -3,8 +3,6 @@ package com.openggf.game.rewind.schema;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.identity.PlayerRefId;
 import com.openggf.game.rewind.identity.RewindIdentityTable;
-import com.openggf.game.session.EngineContext;
-import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.SessionManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.TestEnvironment;
@@ -14,6 +12,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -32,8 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestRewindPlayerReferenceCodecs {
     @BeforeEach
     void setUpRuntime() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.resetEngineOnly();
     }
 
     @AfterEach
@@ -193,6 +191,93 @@ class TestRewindPlayerReferenceCodecs {
     }
 
     @Test
+    void unorderedPlayerSetsCaptureStableMembershipAcrossRecreatedIdentities() {
+        var original = new IdentityPlayerSetFixture();
+        original.players.add(player("sonic"));
+        original.players.add(player("sonic"));
+        original.players.add(null);
+        var oldOrder = original.players.stream().filter(java.util.Objects::nonNull).toList();
+        var before = CompactFieldCapturer.capture(original, context(oldOrder.get(0), oldOrder.get(1)));
+
+        var recreated = new IdentityPlayerSetFixture();
+        recreated.players.add(player("sonic"));
+        recreated.players.add(player("sonic"));
+        recreated.players.add(null);
+        var newOrder = recreated.players.stream().filter(java.util.Objects::nonNull).toList();
+        // Assign participant slots opposite to the observed identity-hash order.
+        // This guarantees a different bucket order without relying on heap history.
+        var freshContext = context(newOrder.get(1), newOrder.get(0));
+        var liveOrder = new ArrayList<>(recreated.players);
+        var equivalent = CompactFieldCapturer.capture(recreated, freshContext);
+        assertEquals(liveOrder, new ArrayList<>(recreated.players), "capture must not reorder the live set");
+        assertArrayEquals(before.scalarData(), equivalent.scalarData(),
+                "unordered membership must encode participant IDs, not allocation-dependent bucket order");
+        assertArrayEquals(before.opaqueValues(), equivalent.opaqueValues());
+
+        var set = recreated.players;
+        CompactFieldCapturer.restore(recreated, before, freshContext);
+        assertSame(set, recreated.players, "final identity sets restore in place");
+        assertEquals(3, recreated.players.size());
+        assertTrue(recreated.players.containsAll(newOrder));
+        assertTrue(recreated.players.contains(null));
+        assertFalse(recreated.players.contains(oldOrder.getFirst()));
+        assertArrayEquals(before.scalarData(), CompactFieldCapturer.capture(recreated, freshContext).scalarData());
+    }
+
+    @Test
+    void mushroomCatapultRiderSnapshotsIgnoreRecreatedIdentityHashOrder() throws Exception {
+        var spawn = new com.openggf.level.objects.ObjectSpawn(100, 200, 0x13, 0, 0, false, 0);
+        var contact = new com.openggf.level.objects.SolidContact(true, false, false, true, false);
+        var original = new com.openggf.game.sonic3k.objects.MhzMushroomCatapultObjectInstance(spawn);
+        original.onPieceContact(1, player("sonic"), contact, 0);
+        original.onPieceContact(1, player("sonic"), contact, 0);
+        var field = original.getClass().getDeclaredField("childRiders");
+        field.setAccessible(true);
+        @SuppressWarnings("unchecked")
+        var oldRiders = (Set<AbstractPlayableSprite>) field.get(original);
+        var oldOrder = new ArrayList<>(oldRiders);
+        var before = CompactFieldCapturer.captureDefaultObjectSubclassScalars(
+                original, context(oldOrder.get(0), oldOrder.get(1)));
+
+        var recreated = new com.openggf.game.sonic3k.objects.MhzMushroomCatapultObjectInstance(spawn);
+        recreated.onPieceContact(1, player("sonic"), contact, 0);
+        recreated.onPieceContact(1, player("sonic"), contact, 0);
+        @SuppressWarnings("unchecked")
+        var newRiders = (Set<AbstractPlayableSprite>) field.get(recreated);
+        var newOrder = new ArrayList<>(newRiders);
+        var freshContext = context(newOrder.get(1), newOrder.get(0));
+        assertArrayEquals(before.scalarData(), CompactFieldCapturer.captureDefaultObjectSubclassScalars(
+                recreated, freshContext).scalarData(), "the catapult's equivalent rider set must have identical state");
+
+        CompactFieldCapturer.restoreDefaultObjectSubclassScalars(recreated, before, freshContext);
+        assertSame(newRiders, field.get(recreated));
+        assertTrue(newRiders.containsAll(newOrder));
+        assertArrayEquals(before.scalarData(), CompactFieldCapturer.captureDefaultObjectSubclassScalars(
+                recreated, freshContext).scalarData());
+    }
+
+    @Test
+    void orderedPlayerSetsAndListsRetainTheirEncounterOrder() {
+        var main = player("main");
+        var sidekick = player("sidekick");
+        var fixture = new OrderedPlayerCollectionFixture();
+        fixture.players.add(sidekick);
+        fixture.players.add(main);
+        fixture.queue.add(sidekick);
+        fixture.queue.add(main);
+        fixture.queue.add(sidekick);
+        var before = CompactFieldCapturer.capture(fixture, context(main, sidekick));
+
+        var newMain = player("main");
+        var newSidekick = player("sidekick");
+        var freshContext = context(newMain, newSidekick);
+        CompactFieldCapturer.restore(fixture, before, freshContext);
+        assertEquals(List.of(newSidekick, newMain), new ArrayList<>(fixture.players));
+        assertEquals(List.of(newSidekick, newMain, newSidekick), fixture.queue);
+        assertArrayEquals(before.scalarData(), CompactFieldCapturer.capture(fixture, freshContext).scalarData());
+    }
+
+    @Test
     void playerReferenceCaptureRequiresIdentityContext() {
         PlayerReferenceFixture fixture = new PlayerReferenceFixture(player("main"), null);
 
@@ -223,6 +308,15 @@ class TestRewindPlayerReferenceCodecs {
             states.put(sidekick, 9);
             states.put(null, 11);
         }
+    }
+
+    private static final class IdentityPlayerSetFixture {
+        final Set<AbstractPlayableSprite> players = Collections.newSetFromMap(new IdentityHashMap<>());
+    }
+
+    private static final class OrderedPlayerCollectionFixture {
+        final Set<AbstractPlayableSprite> players = new LinkedHashSet<>();
+        final List<AbstractPlayableSprite> queue = new ArrayList<>();
     }
 
     private static final class ReorderedIdentityMap extends IdentityHashMap<AbstractPlayableSprite, Integer> {

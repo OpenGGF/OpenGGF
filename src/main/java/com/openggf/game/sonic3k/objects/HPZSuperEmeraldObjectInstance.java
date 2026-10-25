@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.game.EmeraldRewardKind;
@@ -27,7 +29,7 @@ import java.util.List;
 
 /** ROM {@code Obj_HPZSuperEmerald} (SKL object $B4). */
 public final class HPZSuperEmeraldObjectInstance extends AbstractObjectInstance
-        implements RewindRecreatable, SolidObjectProvider {
+        implements RewindRecreatable, SolidObjectProvider, ObjectVisualFacing.NonDirectional {
 
     private final PlayerControlOwners directedControlPlayers =
             new PlayerControlOwners();

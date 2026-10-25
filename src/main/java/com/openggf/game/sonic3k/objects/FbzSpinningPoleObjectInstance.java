@@ -1,4 +1,6 @@
 package com.openggf.game.sonic3k.objects;
+
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.*;
@@ -11,7 +13,7 @@ import java.util.List;
  * mappings/DPLCs are owned by the playable sprite.
  */
 public final class FbzSpinningPoleObjectInstance
-    extends AbstractObjectInstance implements SpawnRewindRecreatable {
+    extends AbstractObjectInstance implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
   private static final int[] FRAMES = {0x5C, 0x5C, 0x5D, 0x5D, 0x5D, 0x5E,
                                        0x5E, 0x5E, 0x5F, 0x5F, 0x60, 0x60,
                                        0x60, 0x61, 0x61, 0x61};

@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.OscillationManager;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -60,7 +62,7 @@ import java.util.logging.Logger;
  */
 public class FloatingPlatformObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider, RomObjectCodePointerProvider,
-        RewindRecreatable {
+        RewindRecreatable, ObjectVisualFacing.NonDirectional {
 
     private static final Logger LOG = Logger.getLogger(FloatingPlatformObjectInstance.class.getName());
 

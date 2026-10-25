@@ -1,5 +1,7 @@
 package com.openggf.stageplay.runtime;
 
+import com.openggf.stageplay.StageplayDocument.Facing;
+
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.SessionManager;
 import com.openggf.mods.scene.host.SceneRomLibrary;
@@ -52,6 +54,6 @@ class TestStageplayEnsembleRom {
 
     private static Actor actor(String id, String character, int x, int y) {
         return new Actor(id, id, "s2", character,
-                List.of(new ActorKey(0, x, y, 0, -1, false, true, 1, Interpolation.HOLD)));
+                List.of(new ActorKey(0, x, y, 0, -1, Facing.RIGHT, true, 1, Interpolation.HOLD)));
     }
 }

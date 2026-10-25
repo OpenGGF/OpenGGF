@@ -46,6 +46,7 @@ public final class StageplayRouteOverlay {
     public List<StageplayRoutePoint> path() { return result.path(); }
     public boolean applied() { return applied; }
     public boolean successful() { return result.success(); }
+    public int goalColor() { return result.success() ? GROUND : FAILURE; }
     public String title() { return title; }
     public String statusText() {
         return result.success() ? title + "." : switch (result.status()) {
@@ -67,7 +68,25 @@ public final class StageplayRouteOverlay {
         return readable(m.startingAction().name()) + " / " + readable(m.travelSpeed().name())
                 + " / " + readable(m.endingAction().name()) + " / " + readable(m.endingFacing().name());
     }
+    /** Performance duration follows its authored commands, not the full search work count. */
+    public int performanceFrames() {
+        int end=java.util.stream.Stream.concat(result.commands().stream().map(com.openggf.stageplay.StageplayDocument.PuppetCommand::frame),
+                result.objectCommands().stream().map(com.openggf.stageplay.StageplayDocument.ObjectCommand::frame))
+                .max(Integer::compareTo).orElse(path().isEmpty()?result.request().startFrame():path().getLast().frame());
+        return Math.max(0,end-result.request().startFrame()+1);
+    }
+
     public String reason() { return reason; }
+    public String summary(){return switch(result.status()){
+        case VERIFIED->applied?"Route applied.":"Route found; review it before applying.";
+        case VISUAL_TERRAIN->"Object route found; native AI stays off.";
+        case BUDGET_EXCEEDED->"Search limit reached.";
+        case SEARCH_EXHAUSTED->"No route found in this search.";
+        case UNSUPPORTED->"This route is unsupported; open Details.";
+        case CANCELLED->"Route planning cancelled.";
+        case VERIFICATION_FAILED->"Playback could not confirm the route.";
+        case STALE_INPUT->"Scene or assets changed; plan again.";
+    };}
 
     public static float screenX(double world, StageplayTimeline.CameraPose camera,
                                 int filmWidth, float left, float width) {
@@ -115,7 +134,7 @@ public final class StageplayRouteOverlay {
         // The goal is a separate marker. Never connect it to an unsuccessful/unfinished path.
         float x = screenX(result.request().targetX(), camera, filmWidth, left, width);
         float y = screenY(result.request().targetY(), camera, filmHeight, top, height);
-        int goal = result.success() ? GROUND : FAILURE;
+        int goal = goalColor();
         stroke(painter, x, y - 6, x + 6, y, goal, 2);
         stroke(painter, x + 6, y, x, y + 6, goal, 2);
         stroke(painter, x, y + 6, x - 6, y, goal, 2);

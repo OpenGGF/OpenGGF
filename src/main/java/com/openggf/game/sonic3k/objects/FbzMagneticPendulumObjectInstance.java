@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -23,7 +25,7 @@ import java.util.List;
 
 /** Locked-on {@code Obj_FBZMagneticPendulum} ($FF), $3D460-$3D9AE. */
 public final class FbzMagneticPendulumObjectInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable {
+        implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
     /** ROM angle:$27 word: signed angle byte followed by its fractional byte. */
     private int anglePhase;
     private int angularVelocity;

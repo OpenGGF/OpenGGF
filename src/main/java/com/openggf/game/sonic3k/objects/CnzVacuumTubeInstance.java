@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
@@ -44,7 +46,7 @@ import java.util.Map;
  * same inline controller flow to a small per-player state map rather than
  * pretending the object uses an external waypoint family.
  */
-public final class CnzVacuumTubeInstance extends AbstractObjectInstance implements RewindRecreatable {
+public final class CnzVacuumTubeInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
     private static final int HORIZONTAL_RANGE = 0x50;
     private static final int HORIZONTAL_HEIGHT_OFFSET = 0x20;
     private static final int LIFT_HALF_WIDTH = 0x18;

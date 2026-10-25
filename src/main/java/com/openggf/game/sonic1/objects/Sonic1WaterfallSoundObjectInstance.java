@@ -1,5 +1,7 @@
 package com.openggf.game.sonic1.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.audio.AudioManager;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
@@ -27,7 +29,7 @@ import java.util.List;
  *       jsr     (PlaySound_Special).l
  * </pre>
  */
-public class Sonic1WaterfallSoundObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
+public class Sonic1WaterfallSoundObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
 
     // From disassembly: andi.b #$3F,d0 — play every 64 frames
     private static final int PLAY_INTERVAL_MASK = 0x3F;

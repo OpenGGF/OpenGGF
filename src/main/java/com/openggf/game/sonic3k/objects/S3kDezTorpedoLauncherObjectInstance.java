@@ -6,13 +6,28 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 
 import java.util.List;
 
 /** SKL $4D, Obj_DEZTorpedoLauncher / loc_471D6..loc_47284 (sonic3k.asm:93057-93118). */
 public final class S3kDezTorpedoLauncherObjectInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable {
+        implements SpawnRewindRecreatable, ObjectVisualFacing.PlacementSource {
+
+    @Override
+    public ObjectVisualFacing.Basis nativeFacing() {
+        // loc_47228 starts the torpedo at -$400 and negates X for status bit 0;
+        // the same mirror selects the launcher's muzzle, including recoil poses.
+        return (spawn.renderFlags() & 1) != 0
+                ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.LEFT;
+    }
+
+    @Override
+    public int initialPlacementFlags(com.openggf.level.objects.ObjectVisualFacing.Basis facing, int sourceFlags) {
+        if (nativeFacing() == ObjectVisualFacing.Basis.NON_DIRECTIONAL) return sourceFlags;
+        return facing == com.openggf.level.objects.ObjectVisualFacing.Basis.RIGHT ? sourceFlags | 1 : sourceFlags & ~1;
+    }
     private boolean initialized;
     private boolean renderedOnScreen;
     private int countdown;

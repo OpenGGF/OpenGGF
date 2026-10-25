@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.AbstractBadnikInstance;
 
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
@@ -29,7 +30,10 @@ import java.util.List;
  * then descends back to its starting position.
  * Based on disassembly Obj4A (lines 59860-60026).
  */
-public class OctusBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable {
+public class OctusBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
 
     private enum State {
         INIT,               // routine 0: Obj4A_Init, falls until it lands, then returns

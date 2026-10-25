@@ -115,7 +115,10 @@ class TestGraphicsProjectionScope {
         var entry = new PatternAtlas.Entry(0, 0, 0, 0, 0, 0f, 0f, 1f, 1f);
         PatternRenderCommand command;
         try (var scope = GraphicsProjectionAccess.openProjection(graphics, temporary)) {
-            command = PatternRenderCommand.obtain(entry, 0, new PatternDesc(), 4, 0, graphics);
+            var desc = new PatternDesc();
+            command = PatternRenderCommand.obtain(entry, 0, graphics);
+            command.capturePalette(desc.getPaletteIndex());
+            command.finish(desc.getHFlip(), desc.getVFlip(), desc.getPriority(), 4, 0, 8f, 8f);
             graphics.registerCommand(command);
         }
         try {
@@ -159,15 +162,19 @@ class TestGraphicsProjectionScope {
         try (var scope = GraphicsProjectionAccess.openProjection(graphics, companion)) {
             // Deliberately violate the documented boundary: switching projection
             // cannot repair a batch begun under the old source, even for new art.
-            assertTrue(batched.addPattern(entry, 0, new PatternDesc(), 4, 0));
-            assertTrue(instanced.addPattern(entry, 0, new PatternDesc(), 4, 0));
+            assertTrue(batched.admitPattern(entry));
+            batched.appendAdmittedPattern(entry, 0, false, false, 4, 0);
+            assertTrue(instanced.admitPattern(entry));
+            instanced.appendAdmittedPattern(entry, 0, false, false, false, 4, 0);
             assertEquals(216f, array(batched, "vertexData")[1]);
             assertEquals(216f, array(instanced, "instanceData")[1]);
             assertSame(companion.matrix(), graphics.getProjectionMatrixBuffer());
             batched.endBatch().discard(); instanced.endBatch().discard();
             batched.beginBatch(); instanced.beginBatch();
-            assertTrue(batched.addPattern(entry, 0, new PatternDesc(), 4, 0));
-            assertTrue(instanced.addPattern(entry, 0, new PatternDesc(), 4, 0));
+            assertTrue(batched.admitPattern(entry));
+            batched.appendAdmittedPattern(entry, 0, false, false, 4, 0);
+            assertTrue(instanced.admitPattern(entry));
+            instanced.appendAdmittedPattern(entry, 0, false, false, false, 4, 0);
             assertEquals(248f, array(batched, "vertexData")[1]);
             assertEquals(248f, array(instanced, "instanceData")[1]);
             batched.endBatch().discard(); instanced.endBatch().discard();

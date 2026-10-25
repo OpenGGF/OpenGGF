@@ -1,5 +1,7 @@
 package com.openggf.editor.stageplay;
 
+import com.openggf.stageplay.StageplayDocument.Facing;
+
 import com.openggf.control.InputHandler;
 import com.openggf.editor.project.EditorProjectMenu;
 import com.openggf.stageplay.StageplayDocument;
@@ -73,7 +75,7 @@ class TestStageplayDirectingWorkspace {
     }
 
     @Test void liveFollowViewSeedsPanCaptureRecordingAndFormWithoutRewritingItsAuthoredSeed() {
-        var key=new StageplayDocument.ActorKey(0,100,200,0,-1,false,true,1,StageplayDocument.Interpolation.HOLD);
+        var key=new StageplayDocument.ActorKey(0,100,200,0,-1, Facing.RIGHT,true,1,StageplayDocument.Interpolation.HOLD);
         var follow=new StageplayDocument.CameraFollow(List.of("lead"),12,8,4,.2,5,-6);
         var scene=StageplayDocument.empty("s2",0,0,100,200,320,224)
                 .withActors(List.of(new StageplayDocument.Actor("lead","Sonic","s2","sonic",List.of(key))))
@@ -157,7 +159,7 @@ class TestStageplayDirectingWorkspace {
     @Test void fullKeyBudgetAllowsFramingButRejectsCaptureAndKeepsLastValidCameraTake() {
         var workspace = workspace();
         var keys = java.util.stream.IntStream.range(0,33_333).mapToObj(frame ->
-                new StageplayDocument.ActorKey(frame,100,200,0,-1,false,true,1,StageplayDocument.Interpolation.HOLD)).toList();
+                new StageplayDocument.ActorKey(frame,100,200,0,-1, Facing.RIGHT,true,1,StageplayDocument.Interpolation.HOLD)).toList();
         var before = workspace.controller().document().withDurationFrames(36_000).withActors(List.of(
                 new StageplayDocument.Actor("a","A","s2","sonic",keys),
                 new StageplayDocument.Actor("b","B","s2","sonic",keys),

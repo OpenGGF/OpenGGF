@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
@@ -41,7 +42,12 @@ import java.util.List;
  * {@code Map_Knuckles} for {@code Map_SSZKnucklesTired}.
  */
 public final class CutsceneKnucklesSszInstance extends AbstractObjectInstance
-        implements RewindRecreatable {
+        implements RewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // Native Knuckles render bit 0 is logical left; animation-specific look-backs keep their art.
+        return flipX ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
+
     /** {@code move.w #$100,x_pos(a1)}. */
     static final int SPAWN_X = 0x100;
     /** {@code ObjSlot_CutsceneKnux}: {@code move.w #$180,priority}, then {@code $80} at routine 0. */

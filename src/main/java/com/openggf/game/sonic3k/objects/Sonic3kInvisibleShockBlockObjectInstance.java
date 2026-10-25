@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SolidContact;
 
 /**
@@ -10,7 +11,9 @@ import com.openggf.level.objects.SolidContact;
  * Subtype dimensions, face selection, hurt ordering and immunity are shared.
  */
 public final class Sonic3kInvisibleShockBlockObjectInstance
-        extends Sonic3kInvisibleHurtBlockHObjectInstance {
+        extends Sonic3kInvisibleHurtBlockHObjectInstance implements ObjectVisualFacing.NonDirectional {
+
+    // The native hurt/solid face selector belongs to invisible collision geometry, not a facing performer.
     private boolean initialized;
     private boolean contactsEnabled;
 

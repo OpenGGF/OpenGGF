@@ -65,7 +65,7 @@ public final class ObjectVisualGraphicsAccess {
     }
 
     public static List<Integer> palette(GraphicsManager graphics, int line) {
-        PaletteView palette = graphics.objectVisualPalette(line);
+        PaletteView palette = graphics.paletteTextures().objectVisualPalette(line);
         if (palette == null) {
             throw new IllegalStateException("Native palette line " + line + " is not initialized");
         }

@@ -9,6 +9,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectLifetimeOps;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -28,7 +29,9 @@ import java.util.List;
  * The parent sets {@code routine} to contract the beam; on underflow the beam clears the
  * parent's {@code $38} flag and draws main frame 9. Its next own dispatch deletes it.
  */
-public final class TeleporterBeamObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public final class TeleporterBeamObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+    // Native vertical beam segment frames form an energy effect without logical horizontal facing.
     private static final int PHASE_SPAWN = 0;
     private static final int PHASE_WAIT = 1;
     private static final int PHASE_EXPAND = 2;

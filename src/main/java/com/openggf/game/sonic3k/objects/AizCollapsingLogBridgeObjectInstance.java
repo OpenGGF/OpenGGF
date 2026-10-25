@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.solid.PlayerSolidContactResult;
@@ -36,7 +38,7 @@ import java.util.Set;
  * Object 0x2C - AIZ Collapsing Log Bridge (Sonic 3 & Knuckles).
  */
 public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, RewindRecreatable, RomObjectCodePointerProvider {
+        implements SolidObjectProvider, RewindRecreatable, RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
 
     /**
      * Word 0 of this object's S3K SST holds its live ROM code pointer.

@@ -60,7 +60,7 @@ public final class MenuAudioProbeTool {
             var config = SonicConfigurationService.createStandalone(configDirectory);
             config.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, false);
             audio.resetState();
-            audio.setBackend(new LWJGLAudioBackend(config));
+            audio.setBackend(new LWJGLAudioBackend(config, null, audio, audio));
             audio.ensurePresentationSink();
             if (audio.consumedPresentationStereoFrames() < 0)
                 throw new IllegalStateException("No physical speaker cursor; cannot measure underruns");

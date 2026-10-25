@@ -8,6 +8,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
@@ -48,7 +49,9 @@ import java.util.List;
  * {@code width_pixels + $B}, the idiom the shared reconstruction already assumes.
  */
 public final class LrzSolidMovingPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, RewindRecreatable, RomObjectCodePointerProvider {
+        implements SolidObjectProvider, RewindRecreatable, RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
+
+    // Obj_LRZSolidMovingPlatforms flips displacement phase, while the rectangular body has no facing.
 
     /** {@code move.w #$180,priority(a0)} (sonic3k.asm:51056). */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x0180);

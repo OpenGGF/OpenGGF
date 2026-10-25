@@ -2,8 +2,6 @@ package com.openggf.game;
 
 import com.openggf.tests.TestEnvironment;
 import com.openggf.game.session.SessionManager;
-import com.openggf.game.session.EngineServices;
-import com.openggf.game.session.EngineContext;
 import com.openggf.camera.Camera;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic1.Sonic1ConveyorState;
@@ -34,8 +32,7 @@ public class TestPostLoadAssemblyBehavior {
 
     @BeforeEach
     public void resetCamera() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.resetAll();
         GameServices.camera().resetState();
     }
 

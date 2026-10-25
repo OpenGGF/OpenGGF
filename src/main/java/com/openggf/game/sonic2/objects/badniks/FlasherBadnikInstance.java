@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.AbstractBadnikInstance;
 
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
@@ -20,7 +21,11 @@ import java.util.List;
  *
  * ROM reference: ObjA3 in s2.asm.
  */
-public class FlasherBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable {
+public class FlasherBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
+
     private static final int COLLISION_SIZE_INDEX = 0x06; // subObjData ... ,6
 
     // Routine timers/velocities from ObjA3.

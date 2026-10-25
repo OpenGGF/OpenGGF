@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.AbstractBadnikInstance;
 import com.openggf.level.objects.AnimalObjectInstance;
 
@@ -34,7 +35,11 @@ import java.util.List;
  * Based on disassembly Obj9A (s2.asm:74332-74418).
  */
 public class TurtloidBadnikInstance extends AbstractBadnikInstance
-        implements SolidObjectProvider, RewindRecreatable {
+        implements SolidObjectProvider, RewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // The native routine always flies left, including its stationary attack pause; facing is not velocity-at-this-instant.
+        return ObjectVisualFacing.Basis.LEFT;
+    }
 
     // Movement: move.w #-$80,x_vel(a0)
     private static final int X_VELOCITY = -0x80;

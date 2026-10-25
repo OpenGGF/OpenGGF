@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
@@ -30,7 +31,12 @@ import java.util.List;
  * routine table, hit handling, defeat explosion controller, and act-end
  * signpost handoff while reusing the engine's shared boss touch-response path.
  */
-public final class MhzMinibossInstance extends AbstractBossInstance implements SpawnRewindRecreatable {
+public final class MhzMinibossInstance extends AbstractBossInstance implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // The fixed frontal machine and its tree/axe attack geometry have no native horizontal-facing state.
+        return ObjectVisualFacing.Basis.NON_DIRECTIONAL;
+    }
+
     private static final int HIT_COUNT = 6;
     private static final int COLLISION_SIZE = 0x0F;
     // Collision response size $0F resolves to a $18-pixel Y radius in

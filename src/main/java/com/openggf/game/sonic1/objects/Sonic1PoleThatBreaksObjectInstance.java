@@ -11,6 +11,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
@@ -35,7 +36,9 @@ import java.util.List;
  * Disassembly reference: docs/s1disasm/_incObj/0B Pole that Breaks.asm
  */
 public class Sonic1PoleThatBreaksObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseListener, SpawnRewindRecreatable {
+        implements TouchResponseProvider, TouchResponseListener, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+// Pole grip side and break frames describe mounted geometry, not a horizontal-facing body.
 
     // move.w #make_art_tile(ArtTile_LZ_Pole,2,0),obGfx(a0)
     private static final int DISPLAY_PRIORITY = 4;

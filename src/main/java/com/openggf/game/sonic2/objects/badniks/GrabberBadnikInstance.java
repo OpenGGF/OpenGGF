@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.AbstractBadnikInstance;
 
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
@@ -26,7 +27,11 @@ import java.util.List;
  *
  * Based on ObjA7 from Sonic 2 disassembly.
  */
-public class GrabberBadnikInstance extends AbstractBadnikInstance implements SpawnRewindRecreatable {
+public class GrabberBadnikInstance extends AbstractBadnikInstance implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
+
     private static final int COLLISION_SIZE_INDEX = 0x0B; // From disassembly
 
     // Movement constants from disassembly

@@ -36,6 +36,17 @@ See the [Stageplay guide](../../docs/guide/creating/stageplay.md) for audio asse
 native player binding and trigger-based playback. The example cannot be combined
 with another controller that already owns native frame admission.
 
+## Start here
+
+- [`first-take.screenplay.json`](first-take.screenplay.json) is the ten-second
+  film from [Your first Stageplay film](../../docs/guide/creating/stageplay-first-film.md):
+  Sonic 1's Sonic and Sonic 2's Tails in Green Hill. Supply S1 and S2 ROMs.
+- [`day-off/`](day-off/) is *Day Off*, the 75-second film shown with the
+  Stageplay promo: a Sonic 1 Motobug takes a day off in three games. It has the
+  screenplay, the compiled scene and four original nine-slice dialogue frames.
+  Supply all three ROMs. [How Day Off was made](../../docs/guide/creating/stageplay-day-off.md)
+  walks through its techniques.
+
 ## Your first scene: Wait for me
 
 Start with the [screenplay](src/main/resources/scenes/wait-for-me.screenplay.json)
@@ -78,8 +89,8 @@ frame 285 instead of 293. Compare source frames 180–449 at normal speed. That
 measured result describes this route, not a general obstacle solver.
 
 The [authoring reference](../../docs/guide/creating/stageplay-authoring.md) provides
-compile, simulate and render commands. Keep screenplay JSON as the source for
-scripted revisions; editor edits save the portable scene, not a screenplay round-trip.
+compile, simulate and render commands. Editor edits save the scene; use **Export
+screenplay** or `decompile` to bring them back to a screenplay.
 For a film with a separate continuous music bed, make a new take with a supported
 `MUSIC_STOP` cue at frame zero. It retains native SFX; keep the combined music/SFX
 capture for standalone playback. Verify matching world, actors and camera before
@@ -120,8 +131,8 @@ python3 tools/stageplay/stageplay.py render \
 ```
 
 Build the current engine first (`--build help`), choose a new output for each take,
-and keep media outside the checkout. Every bundled screenplay is version six;
-canonical scenes are version seven and open directly in the current engine.
+and keep media outside the checkout. Every bundled screenplay is version seven;
+canonical scenes are version eight and open directly in the current engine.
 Inspect the simulated native positions, velocities and goal statuses before
 rendering: the authored timeline alone cannot resolve Puppet movement.
 
@@ -201,7 +212,7 @@ unnecessary objects or split the shot if that budget is exhausted.
 ## Unified native world sample
 
 [Screenplay](unified-world.script.json) and [canonical scene](unified-world.stageplay)
-show the current version-seven canonical model (screenplay six): S1 Sonic, S2 Tails and S3K Knuckles perform
+show the current version-eight canonical model (screenplay seven): S1 Sonic, S2 Tails and S3K Knuckles perform
 native movement together, beside a posed actor. The 384×216 film holds fractional
 zoom 1.2 in both a populated world and the same world after `CLEAR_OBJECTS`.
 Rings remain separately owned. Supply all three ROMs to simulate or render it

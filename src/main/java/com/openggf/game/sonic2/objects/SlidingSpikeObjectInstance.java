@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
@@ -19,7 +21,9 @@ import java.util.List;
  * SlidingSpike (Obj43) - Oil Ocean paired sliding spike obstacle.
  */
 public class SlidingSpikeObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, RewindRecreatable {
+        implements TouchResponseProvider, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj43 slides matching upright spike obstacles; paired travel is not horizontal body facing.
+
     private static final int COLLISION_FLAGS = 0xA5;
     private static final int WIDTH_PIXELS = 0x18;
     private static final int HALF_HEIGHT = 0x28;

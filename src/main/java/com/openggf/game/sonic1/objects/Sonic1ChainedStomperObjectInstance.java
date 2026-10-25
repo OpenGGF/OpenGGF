@@ -9,6 +9,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -65,7 +66,9 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/31 Chained Stompers.asm
  */
 public class Sonic1ChainedStomperObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, TouchResponseProvider, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, TouchResponseProvider, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+// CStom parts are a vertical block, spike row, chain and ceiling mount, all without horizontal facing.
 
     // ---- Sub-object configuration from CStom_Var ----
     // dc.b routine, y-offset, frame

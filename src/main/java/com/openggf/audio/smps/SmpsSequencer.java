@@ -6,7 +6,6 @@ import com.openggf.audio.driver.SmpsDriverServiceObserver;
 import com.openggf.audio.rewind.SmpsSourceDescriptor;
 import com.openggf.audio.rewind.SmpsSequencerSnapshot;
 import com.openggf.audio.rewind.SmpsTrackSnapshot;
-import com.openggf.game.GameServices;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -679,23 +678,11 @@ public class SmpsSequencer implements CoordFlagContext {
         }
     }
 
-    public SmpsSequencer(AbstractSmpsData smpsData, DacData dacData, SmpsSequencerConfig config) {
-        this(smpsData, dacData, DETACHED_WRITE_TARGET,
-                SmpsSequencerHost.NONE, GameServices.audio(), config, null,
-                SourceDescriptorTrust.LEGACY_RECOMPUTE);
-    }
-
     public SmpsSequencer(AbstractSmpsData smpsData, DacData dacData, MusicRestoreSink audioManager,
             SmpsSequencerConfig config) {
         this(smpsData, dacData, DETACHED_WRITE_TARGET,
                 SmpsSequencerHost.NONE, audioManager, config, null,
                 SourceDescriptorTrust.LEGACY_RECOMPUTE);
-    }
-
-    public SmpsSequencer(AbstractSmpsData smpsData, DacData dacData,
-            SmpsLogicalWriteTarget synth,
-            SmpsSequencerConfig config) {
-        this(smpsData, dacData, synth, GameServices.audio(), config);
     }
 
     public SmpsSequencer(AbstractSmpsData smpsData, DacData dacData,

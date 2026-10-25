@@ -7,6 +7,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SlopedSolidProvider;
@@ -35,7 +36,9 @@ import java.util.Set;
  * Disassembly reference: docs/s1disasm/_incObj/5E Seesaw.asm
  */
 public class Sonic1SeesawObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, SlopedSolidProvider, RewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, SlopedSolidProvider, RewindRecreatable, ObjectVisualFacing.PoseOwned {
+
+    // See_ChgFrame mirrors the tilt pose; neither the beam nor its radial ball has logical horizontal facing.
 
     // From disassembly: move.b #$30,obActWid(a0)
     private static final int COLLISION_HALF_WIDTH = 0x30;

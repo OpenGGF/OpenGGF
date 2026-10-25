@@ -7,6 +7,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
@@ -51,7 +52,9 @@ import java.util.List;
  * the subtype sets its height.
  */
 public final class LrzSpikeBallLauncherObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, RewindRecreatable, RomObjectCodePointerProvider {
+        implements SolidObjectProvider, RewindRecreatable, RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
+
+    // The launcher is an upward platform opening; its radial ball draws unflipped and has no horizontal facing.
 
     /** {@code move.w #$280,priority(a0)} (sonic3k.asm:89899). */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x0280);

@@ -229,9 +229,12 @@ class TestRecordingRestartAudioOwnership {
 
     @SuppressWarnings("unchecked")
     private static <T> T basePart(AudioManager audio, String name) throws Exception {
-        Field field = AudioManager.class.getDeclaredField("baseAudioSource");
+        Field publicationField = AudioManager.class.getDeclaredField("sourcePublication");
+        publicationField.setAccessible(true);
+        Object publication = publicationField.get(audio);
+        Field field = publication.getClass().getDeclaredField("baseAudioSource");
         field.setAccessible(true);
-        Object source = field.get(audio);
+        Object source = field.get(publication);
         var accessor = source.getClass().getDeclaredMethod(name);
         accessor.setAccessible(true);
         return (T) accessor.invoke(source);

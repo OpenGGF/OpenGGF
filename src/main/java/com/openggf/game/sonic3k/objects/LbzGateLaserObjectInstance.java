@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
@@ -16,7 +18,7 @@ import java.util.List;
  * The resident parent owns a subtype-derived timer and periodically allocates
  * two falling laser halves. The second half is the harmful $98 touch object.
  */
-public final class LbzGateLaserObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
+public final class LbzGateLaserObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
     private static final int WIDTH_PIXELS = 0x1C;
     private static final int HEIGHT_PIXELS = 0x04;
     private static final int BASE_RENDER_FLAGS = 0x04;

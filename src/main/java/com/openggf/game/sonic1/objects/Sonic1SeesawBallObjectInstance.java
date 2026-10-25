@@ -11,6 +11,7 @@ import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
@@ -31,7 +32,9 @@ import java.util.List;
  * Disassembly reference: docs/s1disasm/_incObj/5E Seesaw.asm (See_Spikeball through See_SpikeFall)
  */
 public class Sonic1SeesawBallObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, RewindRecreatable {
+        implements TouchResponseProvider, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+    // See spikeball draws unflipped in both flight directions; ballistic X speed is not a facing owner.
 
     // Ball Y offsets per parent seesaw frame (See_Speeds)
     // dc.w -8, -$1C, -$2F, -$1C, -8

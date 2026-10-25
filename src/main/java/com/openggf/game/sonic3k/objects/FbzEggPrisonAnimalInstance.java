@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.*;
@@ -10,7 +12,12 @@ import java.util.List;
 
 /** Exact {@code loc_89CE2/loc_89D02/loc_89D18} FBZ prison animal child. */
 public final class FbzEggPrisonAnimalInstance extends AbstractObjectInstance
-        implements com.openggf.level.objects.ObjectVisualAnimationSource, SpawnRewindRecreatable {
+        implements com.openggf.level.objects.ObjectVisualAnimationSource, SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // Same native predicate as appendRenderCommands, including zero after launch/landing.
+        return xVelocity < 0 ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
+
     private static final int[] Y_VELOCITIES = {-0x380,-0x300,-0x280,-0x200};
     private static final int[] X_OFFSETS = {0,0x10,-0x10,0x1C,-0x1C};
     private int x, y, xSub, ySub, xVelocity, yVelocity, savedYVelocity, waitTimer;

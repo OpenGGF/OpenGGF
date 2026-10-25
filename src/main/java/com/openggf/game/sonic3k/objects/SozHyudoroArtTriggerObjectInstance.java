@@ -9,7 +9,9 @@ import com.openggf.level.objects.*;
 import java.util.List;
 
 /** SKL $AB, Obj_SOZHyudoroCapsuleLoadArt: P1-only raw capsule PLC / enemy art replacement. */
-public final class SozHyudoroArtTriggerObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
+public final class SozHyudoroArtTriggerObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+    // This native art/path trigger is invisible and has no directional visual body or children.
     private boolean applied;
     public SozHyudoroArtTriggerObjectInstance(ObjectSpawn spawn){super(spawn,"SOZHyudoroArtTrigger");}
     @Override public void update(int vIntRunCount,PlayableEntity player) {

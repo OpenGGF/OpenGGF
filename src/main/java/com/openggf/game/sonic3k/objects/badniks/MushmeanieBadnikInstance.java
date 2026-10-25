@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
@@ -25,7 +26,10 @@ import java.util.List;
  * runs the normal badnik defeat path.
  */
 public final class MushmeanieBadnikInstance extends AbstractS3kBadnikInstance
-        implements SpawnRewindRecreatable {
+        implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
 
     @Override public boolean supportsGroundedFieldMotion() { return true; }
 

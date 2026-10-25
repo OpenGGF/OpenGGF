@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.AbstractBadnikInstance;
 
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
@@ -46,7 +47,11 @@ import java.util.List;
  *   but detection is skipped (loc_38B10 bra.w loc_38B2C). During the 40-frame
  *   attack window itself, no movement, no direction timer decrement.
  */
-public class SpinyBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable {
+public class SpinyBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
+
     private static final int COLLISION_SIZE_INDEX = 0x0B;
 
     // Movement constants

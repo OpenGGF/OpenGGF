@@ -1,4 +1,6 @@
 package com.openggf.game.sonic2.objects;
+
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.BoxObjectInstance;
 
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
@@ -37,7 +39,8 @@ import java.util.Set;
  * Subtype 0xFF: Seesaw without ball (ball not spawned).
  */
 public class SeesawObjectInstance extends BoxObjectInstance
-        implements SolidObjectProvider, SlopedSolidProvider, RewindRecreatable {
+        implements SolidObjectProvider, SlopedSolidProvider, RewindRecreatable, ObjectVisualFacing.Container {
+    // Obj14 plank tilt is native geometry; its Sol child turns around its own anchor.
 
     /**
      * Slope data for tilted state (frame 0 or 2).

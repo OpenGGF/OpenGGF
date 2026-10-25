@@ -13,6 +13,7 @@ import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SpawnRewindRecreatable;
@@ -50,7 +51,9 @@ import java.util.logging.Logger;
  * ROM reference: docs/s1disasm/_incObj/6F SBZ Spin Platform Conveyor.asm
  */
 public class Sonic1SpinConveyorObjectInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable, SolidObjectProvider {
+        implements SpawnRewindRecreatable, SolidObjectProvider, ObjectVisualFacing.NonDirectional {
+
+// SpinConvey path and spin phases move mechanical discs, including spawned discs, without facing.
 
     private static final Logger LOGGER = Logger.getLogger(Sonic1SpinConveyorObjectInstance.class.getName());
 

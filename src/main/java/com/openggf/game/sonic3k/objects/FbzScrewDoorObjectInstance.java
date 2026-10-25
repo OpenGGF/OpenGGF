@@ -1,4 +1,6 @@
 package com.openggf.game.sonic3k.objects;
+
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.*;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -8,7 +10,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import java.util.List;
 /** Locked-on Obj_FBZScrewDoor ($7A), sonic3k.asm $3BBEA-$3BD5C. */
 public final class FbzScrewDoorObjectInstance extends AbstractObjectInstance
-    implements SolidObjectProvider, SpawnRewindRecreatable {
+    implements SolidObjectProvider, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
   private static final int[][] SIZE = {{8, 0x20}, {8, 0x20}, {0x20, 8},
                                        {0x20, 8}, {0x40, 8}, {0x40, 8}};
   private static final int[][] FRAMES = {{0, 3, 2, 1},   {0, 1, 2, 3},

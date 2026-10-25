@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
@@ -27,7 +29,7 @@ import java.util.List;
  */
 public class HCZBlockObjectInstance extends AbstractObjectInstance
         implements RewindRecreatable, SolidObjectProvider,
-        RomObjectCodePointerProvider {
+        RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
 
     private static final String ART_KEY = Sonic3kObjectArtKeys.HCZ_BLOCK;
     private static final int PRIORITY = 5; // ROM: move.w #$280,priority(a0)

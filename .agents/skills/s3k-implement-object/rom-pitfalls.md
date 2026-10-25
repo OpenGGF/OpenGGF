@@ -6590,3 +6590,20 @@ routine has a P1-dead gate; do not copy a host helper's early return into the
 native per-slot producer without checking that branch.
 Origin: native sprite/ring phase follow-up to `323239a13`, 2026-10-22; both ROM
 copy instructions independently verified as `11 78 FE B7 00 22`.
+
+
+## Rejected monitor contents have neither an icon nor a reward
+
+`Obj_MonitorSpawnIcon` (sonic3k.asm:40685-40710) attempts contents first and
+branches to `.skipiconcreation` on allocation failure, then independently attempts
+the explosion. Both allocations follow the monitor's SST, including when Java
+enters the break path through a player callback. Preserve that anchor and order.
+Java construction can prepare embedded icon state before admission, but rejected
+contents must clear icon/reward activation and must not become the retained child.
+ObjectManager marks rejected children destroyed before identity registration and
+never calls their unload hook. Keeping one makes strict rewind capture fail;
+keeping its activation can grant a reward the native failure branch never creates.
+Use real manager pressure for zero, one and two free tail slots and capture before
+another object dispatch. Do not weaken the reference codec or replace the bridge
+solely to change its spelling. Origin: 2026-10-24 monitor admission audit,
+`529b348aecf8884c0677f12c6aa64583883ffe81`.

@@ -13,6 +13,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
@@ -68,7 +69,9 @@ import java.util.List;
  * {@code flip_speed = 4}, {@code anim = 0}).
  */
 public final class S3kDezGravityPuzzleObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+    // Native shaft and six marker-panel frames describe gravity settings, not horizontal-facing bodies.
 
     /** {@code move.w #$23,d1 / #$30,d2 / #$31,d3} before {@code SolidObjectFull2} (:96167-96170). */
     private static final SolidObjectParams SOLID_PARAMS = SolidObjectParams.of(0x23, 0x30, 0x31);

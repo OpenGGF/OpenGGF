@@ -1,4 +1,6 @@
 package com.openggf.game.sonic2.objects;
+
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.level.objects.ObjectAnimationState;
 
@@ -29,7 +31,8 @@ import java.util.List;
  * <b>Disassembly Reference:</b> s2.asm lines 45379-45485 (Obj0B code)
  */
 public class TippingFloorObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, RewindRecreatable {
+        implements SolidObjectProvider, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj0B rotates a floor slab; tilt and placement mirroring remain native geometry.
 
     // Animation IDs
     private static final int ANIM_FORWARD = 0;  // Frames 0->1->2->3->4

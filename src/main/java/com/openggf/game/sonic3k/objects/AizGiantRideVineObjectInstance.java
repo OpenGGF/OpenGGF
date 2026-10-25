@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
@@ -27,7 +29,7 @@ import java.util.List;
  * Obj_AIZGiantRideVine (sonic3k.asm:46789-47003).
  */
 public class AizGiantRideVineObjectInstance extends AbstractObjectInstance
-        implements PostPlayerUpdateHook, SpawnRewindRecreatable {
+        implements PostPlayerUpdateHook, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
     private static final int ROOT_FRAME = 0x21;
     private static final int HANDLE_FRAME = 0x20;
     private static final int PRIORITY_BUCKET = 4; // priority $200

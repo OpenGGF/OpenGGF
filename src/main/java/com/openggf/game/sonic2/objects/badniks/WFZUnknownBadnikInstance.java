@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.graphics.GLCommand;
@@ -20,7 +21,12 @@ import java.util.List;
  * ArtTile_ArtNem_Unknown ($03FA, same tile base as WFZ hook), priority 4,
  * width $0C, and collision_flags $09.
  */
-public class WFZUnknownBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable {
+public class WFZUnknownBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // ObjBB only displays a stationary hook-shaped piece; it has no horizontal-facing routine.
+        return ObjectVisualFacing.Basis.NON_DIRECTIONAL;
+    }
+
     private static final int COLLISION_SIZE_INDEX = 0x09;
     private static final int WIDTH_PIXELS = 0x0C;
 

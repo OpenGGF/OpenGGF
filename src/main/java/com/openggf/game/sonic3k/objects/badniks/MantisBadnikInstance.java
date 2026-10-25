@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
@@ -31,7 +32,10 @@ import java.util.List;
  * {@code ArtKosM_Mantis} / {@code Map_Mantis}.
  */
 public final class MantisBadnikInstance extends AbstractS3kBadnikInstance
-        implements SpawnRewindRecreatable {
+        implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
 
     private static final int COLLISION_SIZE_INDEX = 0x1A;
     private static final int PRIORITY_BUCKET = 5;

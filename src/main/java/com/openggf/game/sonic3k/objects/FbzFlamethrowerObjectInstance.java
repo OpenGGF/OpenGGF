@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.solid.SolidCheckpointBatch;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -23,7 +25,17 @@ import java.util.List;
 
 /** Locked-on {@code Obj_FBZFlamethrower} ($E4), $3CC9E-$3CFCA. */
 public final class FbzFlamethrowerObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable, ObjectVisualFacing.PlacementSource {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // Lateral flame creation and the muzzle draw both use this exact left predicate.
+        return !isLateral() ? ObjectVisualFacing.Basis.NON_DIRECTIONAL
+                : renderFlipX() ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
+    @Override public int initialPlacementFlags(com.openggf.level.objects.ObjectVisualFacing.Basis facing, int sourceFlags) {
+        return !isLateral() ? sourceFlags : (sourceFlags & ~1)
+                | (facing == com.openggf.level.objects.ObjectVisualFacing.Basis.LEFT ? 1 : 0);
+    }
+
     private final FbzParticipantStateTable riders = new FbzParticipantStateTable(1);
     private int mappingFrame;
     private int flameAngle;

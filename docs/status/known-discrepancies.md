@@ -237,7 +237,7 @@ We use **extended pattern ID ranges** with fixed bases that don't overlap:
 
 **Shared-base contexts** (`0x40000`):
 - S2 Title Card (`TitleCardManager.PATTERN_BASE`) — gameplay scope, not active during cutscenes
-- S2 Special Stage Results (`SpecialStageResultsScreenObjectInstance.PATTERN_BASE`)
+- S2 Special Stage Results (`Sonic2SpecialStageResultsScreen.PATTERN_BASE`)
 - S1 Special Stage Results Screen (`Sonic1SpecialStageResultsScreen.PATTERN_BASE`)
 - S3K AIZ Intro Art Loader (`AizIntroArtLoader.INTRO_PATTERN_BASE`) — only active during AIZ1 intro
 - S2 Title Screen (`TitleScreenDataLoader`) — only active before any gameplay

@@ -12,7 +12,9 @@ import java.util.List;
 /** SKL $43, Obj_SOZSwingingPlatform/sub_4154C/sub_41636, locked-on ROM. */
 public final class SozSwingingPlatformObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable,
-        RomObjectCodePointerProvider {
+        RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
+
+    // Native vine/platform display segments deform or swing as geometry without horizontal-facing bodies.
     private int x, y;
     private int angle = 0x4000, velocity, pause, previousAngle;
     private boolean initialized, active, reversing;

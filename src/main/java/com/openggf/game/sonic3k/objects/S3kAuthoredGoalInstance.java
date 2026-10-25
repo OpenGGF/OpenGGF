@@ -6,6 +6,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import java.util.List;
@@ -14,7 +15,9 @@ import java.util.List;
  * Authored-level goal: layout identity owns the trigger; the native Obj_EndSign/results graph
  * owns presentation and completion. The game-owned key is independent of every numeric stock object ID.
  */
-public final class S3kAuthoredGoalInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
+public final class S3kAuthoredGoalInstance extends AbstractObjectInstance implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+    // The authored marker delegates to a sign/results presentation, whose lettering and portraits have no logical facing.
     public static final String OBJECT_KEY = "openggf:authored-goal";
     private boolean triggered;
 

@@ -9,6 +9,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
@@ -59,7 +60,9 @@ import java.util.logging.Logger;
  * way — while {@code byte_466A0} feeds the cloud a damped recoil from index {@code $26} down.
  */
 public final class SszBouncyCloudObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+    // The native cloud and puff children draw unflipped; stored launch facing belongs to separate player slots.
     private static final Logger LOGGER =
             Logger.getLogger(SszBouncyCloudObjectInstance.class.getName());
 

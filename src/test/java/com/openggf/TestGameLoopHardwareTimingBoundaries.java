@@ -52,7 +52,7 @@ class TestGameLoopHardwareTimingBoundaries {
             return null;
         }).when(provider).update();
         when(provider.isFinished()).thenReturn(false);
-        setField(loop, "activeSpecialStageProvider", provider);
+        SpecialStageLifecycleTestAccess.write(loop, "activeSpecialStageProvider", provider);
         loop.changeGameModeWithoutRewindBoundary(GameMode.SPECIAL_STAGE);
 
         loop.step();
@@ -76,7 +76,7 @@ class TestGameLoopHardwareTimingBoundaries {
             events.add("TITLE_CARD_SCAN");
             return null;
         }).when(provider).update();
-        setField(loop, "titleCardProvider", provider);
+        com.openggf.TitleCardLifecycleTestAccess.provider(loop, provider);
         loop.changeGameModeWithoutRewindBoundary(GameMode.TITLE_CARD);
 
         loop.step();

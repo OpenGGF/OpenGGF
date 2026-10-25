@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
@@ -37,7 +39,14 @@ import java.util.logging.Logger;
  *   <li>Anim 2 (Firing): delay $07, frames 3,4,$FC,4,3,1,$FD,0 ($FC advances to ShootArrow)</li>
  * </ul>
  */
-public class ArrowShooterObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class ArrowShooterObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.Source {
+    @Override
+    public ObjectVisualFacing.Basis nativeFacing() {
+        // Obj22_Arrow_Init shares the shooter's x_flip: +$400 when clear,
+        // -$400 when set. Every spawned arrow inherits this barrel direction.
+        return hFlip ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
+
     private static final Logger LOGGER = Logger.getLogger(ArrowShooterObjectInstance.class.getName());
 
     private static final int DETECTION_DISTANCE = 0x40; // 64 pixels

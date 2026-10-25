@@ -1,7 +1,6 @@
 package com.openggf.tests;
 
 import com.openggf.camera.Camera;
-import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.GameplaySessionFactory;
 import com.openggf.game.session.SessionManager;
@@ -63,7 +62,7 @@ class TestS3kIczFreezerObject {
     @BeforeEach
     void setUp() {
         SessionManager.clear();
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.resetEngineOnly();
         AbstractObjectInstance.updateCameraBounds(0, 0, 1024, 1024, 0);
     }
 

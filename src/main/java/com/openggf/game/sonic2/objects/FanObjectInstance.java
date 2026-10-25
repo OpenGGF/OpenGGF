@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.OscillationManager;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
@@ -30,7 +32,15 @@ import java.util.List;
  * <p>
  * Render flag bit 0 controls X-flip for horizontal fans.
  */
-public class FanObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class FanObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.Source {
+    @Override
+    public ObjectVisualFacing.Basis nativeFacing() {
+        // Obj3F_Horizontal/loc_2A894 and ArtNem_OOZFanHoriz put the fan's
+        // front on the LEFT with x_flip clear. Subtype bit 0 reverses airflow
+        // (suction), not the fan's front; vertical fans have no horizontal facing.
+        if (isVertical) return ObjectVisualFacing.Basis.NON_DIRECTIONAL;
+        return xFlipped ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.LEFT;
+    }
 
     // Timer durations (in frames)
     private static final int ACTIVE_DURATION = 0xB4;  // 180 frames

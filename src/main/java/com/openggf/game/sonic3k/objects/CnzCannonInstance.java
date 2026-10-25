@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -51,7 +53,7 @@ import java.util.List;
  * test while still matching the ROM's forced rolling and release semantics.
  */
 public final class CnzCannonInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable, RomObjectCodePointerProvider {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable, RomObjectCodePointerProvider, ObjectVisualFacing.PoseOwned {
 
     @Override
     public void releasePlayersForVisualDirection() {

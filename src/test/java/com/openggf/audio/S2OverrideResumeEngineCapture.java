@@ -86,7 +86,7 @@ public final class S2OverrideResumeEngineCapture {
                     "S2 DAC data is absent from the ROM");
 
             HeadlessSmpsAudioBackend backend = new HeadlessSmpsAudioBackend(
-                    SonicConfigurationService.getInstance(), null);
+                    SonicConfigurationService.getInstance(), null, com.openggf.game.GameServices.audio());
             try {
                 backend.setAudioProfile(new Sonic2AudioProfile());
                 backend.playSmps(base, dacData,

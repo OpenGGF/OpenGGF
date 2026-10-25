@@ -14,6 +14,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
@@ -60,7 +61,9 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/33 Pushable Blocks.asm
  */
 public class Sonic1PushBlockObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+// PushB blocks and their vertical geyser children have no horizontal-facing body.
 
     // From disassembly: move.b #$F,obHeight(a0) / move.b #$F,obWidth(a0)
     private static final int HALF_HEIGHT = 0x0F;

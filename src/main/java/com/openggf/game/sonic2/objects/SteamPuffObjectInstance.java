@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
@@ -29,7 +31,13 @@ import java.util.List;
  * </ul>
  */
 public class SteamPuffObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, SpawnRenderFlipRewindRecreatable {
+        implements TouchResponseProvider, SpawnRenderFlipRewindRecreatable, ObjectVisualFacing.Source {
+    @Override
+    public ObjectVisualFacing.Basis nativeFacing() {
+        // loc_2674C creates the right-side plume unflipped and mirrors the
+        // left-side plume. The native xFlipped owner also drives its mapping draw.
+        return xFlipped ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
 
     // ROM: move.b #$18,width_pixels(a1) at loc_2674C (s2.asm line 52111).
     // In the ROM this width feeds the MarkObjGone off-screen culling test. The

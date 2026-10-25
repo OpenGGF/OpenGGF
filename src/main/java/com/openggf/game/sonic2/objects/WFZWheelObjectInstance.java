@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.PlayableEntity;
@@ -37,7 +39,8 @@ import java.util.List;
  * <p>
  * Art: ArtNem_WfzConveyorBeltWheel at ROM 0x8D7D8, ArtTile $03EA, palette line 2, priority set.
  */
-public class WFZWheelObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class WFZWheelObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // ObjBA is a wheel decoration with no horizontal-facing body or child.
 
     public WFZWheelObjectInstance(ObjectSpawn spawn) {
         super(spawn, "WFZWheel");

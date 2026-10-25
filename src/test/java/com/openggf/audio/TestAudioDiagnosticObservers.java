@@ -8,6 +8,11 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockConstruction;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.any;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openggf.audio.driver.SfxContentionObserver;
@@ -33,6 +38,10 @@ import com.openggf.audio.presentation.PresentationMode;
 import com.openggf.audio.presentation.PresentationVoiceSnapshot;
 import com.openggf.audio.presentation.SampleBackedVoice;
 import com.openggf.audio.presentation.ResolvedSmpsSfxSource;
+import com.openggf.audio.presentation.AudioPresentationProducer;
+import com.openggf.audio.presentation.AudioPresentationFrameView;
+import com.openggf.audio.presentation.ScenePcmSource;
+import com.openggf.audio.output.AudioPresentationSink;
 import com.openggf.audio.presentation.SmpsAssetKey;
 import com.openggf.audio.presentation.SmpsSfxInstantiation;
 import com.openggf.audio.rewind.SmpsDriverSnapshot;
@@ -56,6 +65,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
+import org.mockito.MockedConstruction;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -445,7 +457,7 @@ class TestAudioDiagnosticObservers {
         audio.setAudioProfile(backendProfile);
         audio.setRom(mock(Rom.class));
         HeadlessSmpsAudioBackend backend = new HeadlessSmpsAudioBackend(
-                SonicConfigurationService.getInstance(), null);
+                SonicConfigurationService.getInstance(), null, audio);
         backend.setAdmissionObserver(decision -> {
             admitted.add(decision.result().resolvedSoundId());
             backendDecisions.add(decision.result());
@@ -1485,6 +1497,465 @@ class TestAudioDiagnosticObservers {
                 explicitNoneDriver.captureSnapshot());
     }
 
+    @Test
+    void leasedObserversReachFirstRealPresentationAndEveryRebuiltSession() {
+        loader.musicResults.put(0x81, new LongRunningMusicData(0x81));
+        loader.sfxResults.put(0xA0, new OneTickFmSfxData(0xA0));
+        List<String> writes = new ArrayList<>();
+        List<Integer> requests = new ArrayList<>();
+        List<Integer> admissions = new ArrayList<>();
+        List<Integer> contentions = new ArrayList<>();
+        List<LifecycleEvent> lifecycle = new ArrayList<>();
+        List<ServiceEvent> services = new ArrayList<>();
+        RecordingPresentationBackend backend = new RecordingPresentationBackend();
+        audio.setBackend(backend);
+        var set = new AudioManager.DiagnosticObserverSet(
+                (kind, id) -> requests.add(id),
+                decision -> admissions.add(decision.result().resolvedSoundId()),
+                new SmpsDriverServiceObserver() {
+                    @Override public void onLifecycle(LifecycleEvent event) { lifecycle.add(event); }
+                    @Override public void onServiceBegin(ServiceEvent event) { services.add(event); }
+                }, recordingChipObserver(writes), new SfxContentionObserver() {
+                    @Override public void onSfxAdmitted(Admission admission) {
+                        contentions.add(admission.source().descriptor().id());
+                    }
+                });
+        try (var lease = audio.acquireDiagnosticObservers(set)) {
+            audio.setAudioProfile(profile(null));
+            audio.setRom(mock(Rom.class));
+            assertEquals(60, audio.presentationFrameRate());
+            assertEquals(expectedConstructorSilenceWrites(), writes,
+                    "the first real session observes physical construction, before a request");
+            var firstFactory = presentationFactory();
+            audio.playMusic(0x81);
+            audio.playSfx(0xA0);
+            audio.presentFrame(PresentationMode.FORWARD);
+            assertEquals(List.of(0x81, 0xA0), requests);
+            assertEquals(List.of(0xA0), admissions);
+            assertEquals(List.of(0xA0), contentions);
+            assertFalse(services.isEmpty(), "the session must actually service real SMPS data");
+            assertEquals(1, backend.frames);
+            assertTrue(writes.size() > expectedConstructorSilenceWrites().size(),
+                    "live installation must observe writes after the constructor burst");
+            assertTrue(lifecycle.stream().anyMatch(event -> event.kind() == LifecycleKind.DRIVER_CREATED));
+
+            writes.clear();
+            audio.setAudioProfile(profile(null));
+            assertNotSame(firstFactory, presentationFactory());
+            assertEquals(expectedConstructorSilenceWrites(), writes,
+                    "base-profile replacement constructs another observed physical session");
+            assertTrue(lease.active());
+            writes.clear();
+            var beforeRom = presentationFactory();
+            audio.setRom(mock(Rom.class));
+            assertNotSame(beforeRom, presentationFactory());
+            assertEquals(expectedConstructorSilenceWrites(), writes);
+
+            writes.clear();
+            audio.resetState();
+            assertTrue(lease.active());
+            assertNull(presentationFactory());
+            assertSame(set.chipWrite(), backend.chip);
+            audio.setAudioProfile(profile(null));
+            audio.setRom(mock(Rom.class));
+            audio.presentationFrameRate();
+            assertEquals(expectedConstructorSilenceWrites(), writes,
+                    "leased reset preserves the installation through reconstruction");
+
+            writes.clear();
+            RecordingPresentationBackend replacement = new RecordingPresentationBackend();
+            audio.setBackend(replacement);
+            assertSame(set.chipWrite(), replacement.chip);
+            assertTrue(lease.active());
+            audio.presentationFrameRate();
+            assertEquals(expectedConstructorSilenceWrites(), writes);
+
+            writes.clear();
+            RecordingPresentationBackend launch = new RecordingPresentationBackend();
+            audio.setBackendForLaunch(launch);
+            assertSame(set.chipWrite(), launch.chip);
+            audio.presentationFrameRate();
+            assertEquals(expectedConstructorSilenceWrites(), writes);
+
+            writes.clear();
+            audio.destroy();
+            assertTrue(lease.active(), "destroy does not revoke diagnostic ownership");
+            assertNull(presentationFactory());
+            audio.ensurePresentationSink();
+            audio.presentationFrameRate();
+            assertEquals(expectedConstructorSilenceWrites(), writes);
+            audio.playMusic(0x81);
+            audio.presentFrame(PresentationMode.FORWARD);
+            assertEquals(List.of(0x81, 0xA0, 0x81), requests);
+            assertEquals(1, launch.frames);
+        }
+    }
+
+    @Test
+    void bootWriteCallbackReplacesLiveObserverAfterTheFactoryIsInstalled() {
+        loader.musicResults.put(0x81, new LongRunningMusicData(0x81));
+        List<String> constructor = new ArrayList<>();
+        List<String> live = new ArrayList<>();
+        ChipWriteObserver later = recordingChipObserver(live);
+        ChipWriteObserver recorder = recordingChipObserver(constructor);
+        AtomicInteger callbacks = new AtomicInteger();
+        audio.setChipWriteObserver(new ChipWriteObserver() {
+            @Override public void onYm2612Write(int port, int register, int value) {
+                assertFalse(Thread.holdsLock(audio), "scene-source construction is unlocked");
+                recorder.onYm2612Write(port, register, value);
+                if (callbacks.getAndIncrement() == 0) {
+                    assertNotNull(presentationFactory(), "factory is published before driver boot");
+                    audio.setChipWriteObserver(later);
+                }
+            }
+            @Override public void onPsgWrite(int value) { recorder.onPsgWrite(value); }
+        });
+        audio.setAudioProfile(profile(null));
+        audio.setRom(mock(Rom.class));
+        audio.setScenePcmSource(null);
+        List<String> expected = expectedConstructorSilenceWrites();
+        assertEquals(expected.subList(0, 1), constructor);
+        assertEquals(expected.subList(1, expected.size()), live,
+                "the installed factory retargets the booting session after its first write");
+        int bootRemainder = live.size();
+        audio.playMusic(0x81);
+        audio.presentFrame(PresentationMode.FORWARD);
+        assertTrue(live.size() > bootRemainder, "subsequent real forward writes retain the live replacement");
+        assertEquals(expected.subList(0, 1), constructor);
+    }
+
+    @Test
+    void sessionConstructorArgumentAndLiveFactoryInstallationsSampleDistinctBoundaries() {
+        ChipWriteObserver initial = recordingChipObserver(new ArrayList<>());
+        ChipWriteObserver later = recordingChipObserver(new ArrayList<>());
+        List<String> order = new ArrayList<>();
+        audio.setChipWriteObserver(initial);
+        // This controlled constructor observes argument/installation order only.
+        // The adjacent real-session tests independently prove physical boot and live writes.
+        try (var sessions = mockConstruction(SmpsDriverSession.class, (session, context) -> {
+            assertSame(initial, context.arguments().get(2));
+            assertNull(presentationFactory());
+            order.add("session.constructor");
+            audio.setChipWriteObserver(later);
+            doAnswer(invocation -> {
+                assertSame(SmpsDriverServiceObserver.NONE, invocation.getArgument(0));
+                order.add("live.driver");
+                return null;
+            }).when(session).setDriverServiceObserver(any());
+            doAnswer(invocation -> {
+                assertSame(later, invocation.getArgument(0));
+                order.add("live.chip");
+                return null;
+            }).when(session).setChipWriteObserver(any());
+            doAnswer(invocation -> {
+                assertSame(SfxContentionObserver.NONE, invocation.getArgument(0));
+                order.add("live.contention");
+                return null;
+            }).when(session).setSfxContentionObserver(any());
+            doAnswer(invocation -> {
+                order.add("session.install");
+                return null;
+            }).when(session).install();
+        })) {
+            audio.presentationFrameRate();
+            assertEquals(1, sessions.constructed().size());
+            assertNotNull(presentationFactory(), "the live factory itself is real in this control");
+            assertEquals(List.of("session.constructor", "live.driver", "live.chip",
+                    "live.contention", "session.install"), order);
+            audio.destroy();
+        }
+    }
+
+    @Test
+    void factoryPropagationRereadsActualReceiverAfterASetterRebuildsPresentation() {
+        List<FactoryInstallation> calls = new ArrayList<>();
+        AtomicReference<Consumer<FactoryInstallation>> callback = new AtomicReference<>(ignored -> { });
+        var desired = diagnosticSet(ChipWriteObserver.NONE);
+        try (var construction = observeFactoryInstallations(calls, callback)) {
+            audio.presentationFrameRate();
+            var first = construction.constructed().getFirst();
+            calls.clear();
+            callback.set(call -> {
+                assertTrue(Thread.holdsLock(audio));
+                if (call.receiver() == first && call.slot().equals("admission")) {
+                    audio.setBackend(new NullAudioBackend());
+                    audio.presentationFrameRate();
+                }
+            });
+            try (var lease = audio.acquireDiagnosticObservers(desired)) {
+                var second = construction.constructed().get(1);
+                assertEquals(List.of(
+                        factoryCall(first, "admission", desired.admission()),
+                        factoryCall(second, "admission", AudioAdmissionObserver.NONE),
+                        factoryCall(second, "driver", SmpsDriverServiceObserver.NONE),
+                        factoryCall(second, "chip", ChipWriteObserver.NONE),
+                        factoryCall(second, "contention", SfxContentionObserver.NONE),
+                        factoryCall(second, "driver", desired.driverService()),
+                        factoryCall(second, "chip", desired.chipWrite()),
+                        factoryCall(second, "contention", desired.sfxContention())), calls);
+                assertTrue(lease.active());
+            }
+        }
+    }
+
+    @Test
+    void factoryRollbackRereadsCurrentReceiverAfterForwardAndRollbackRebuilds() {
+        List<FactoryInstallation> calls = new ArrayList<>();
+        AtomicReference<Consumer<FactoryInstallation>> callback = new AtomicReference<>(ignored -> { });
+        var desired = diagnosticSet(recordingChipObserver(new ArrayList<>()));
+        IllegalStateException sentinel = new IllegalStateException("factory forward");
+        try (var construction = observeFactoryInstallations(calls, callback)) {
+            audio.presentationFrameRate();
+            var first = construction.constructed().getFirst();
+            calls.clear();
+            AtomicInteger phase = new AtomicInteger();
+            callback.set(call -> {
+                if (call.receiver() == first && call.slot().equals("chip")
+                        && call.observer() == desired.chipWrite()) {
+                    audio.setBackend(new NullAudioBackend());
+                    audio.presentationFrameRate();
+                    phase.set(1);
+                    throw sentinel;
+                }
+                if (phase.get() == 1 && call.slot().equals("admission")) {
+                    phase.set(2);
+                    audio.setBackend(new NullAudioBackend());
+                    audio.presentationFrameRate();
+                }
+            });
+            assertSame(sentinel, assertThrows(IllegalStateException.class,
+                    () -> audio.acquireDiagnosticObservers(desired)));
+            assertArrayEquals(new Throwable[0], sentinel.getSuppressed());
+            var second = construction.constructed().get(1);
+            var third = construction.constructed().get(2);
+            assertEquals(List.of(
+                    factoryCall(first, "admission", desired.admission()),
+                    factoryCall(first, "driver", desired.driverService()),
+                    factoryCall(first, "chip", desired.chipWrite()),
+                    factoryCall(second, "admission", AudioAdmissionObserver.NONE),
+                    factoryCall(second, "driver", SmpsDriverServiceObserver.NONE),
+                    factoryCall(second, "chip", ChipWriteObserver.NONE),
+                    factoryCall(second, "contention", SfxContentionObserver.NONE),
+                    factoryCall(second, "admission", AudioAdmissionObserver.NONE),
+                    factoryCall(third, "admission", AudioAdmissionObserver.NONE),
+                    factoryCall(third, "driver", SmpsDriverServiceObserver.NONE),
+                    factoryCall(third, "chip", ChipWriteObserver.NONE),
+                    factoryCall(third, "contention", SfxContentionObserver.NONE),
+                    factoryCall(third, "driver", SmpsDriverServiceObserver.NONE),
+                    factoryCall(third, "chip", ChipWriteObserver.NONE),
+                    factoryCall(third, "contention", SfxContentionObserver.NONE)), calls);
+            callback.set(ignored -> { });
+            try (var retry = audio.acquireDiagnosticObservers(desired)) { assertTrue(retry.active()); }
+        }
+    }
+
+    @Test
+    void clearingFactoryDuringSetterFailsAtTheNextRereadAndRollbackSkipsIt() {
+        List<FactoryInstallation> calls = new ArrayList<>();
+        AtomicReference<Consumer<FactoryInstallation>> callback = new AtomicReference<>(ignored -> { });
+        var desired = diagnosticSet(ChipWriteObserver.NONE);
+        try (var construction = observeFactoryInstallations(calls, callback)) {
+            audio.presentationFrameRate();
+            var first = construction.constructed().getFirst();
+            calls.clear();
+            callback.set(call -> { if (call.slot().equals("driver")) audio.destroy(); });
+            assertThrows(NullPointerException.class, () -> audio.acquireDiagnosticObservers(desired));
+            assertEquals(List.of(factoryCall(first, "admission", desired.admission()),
+                    factoryCall(first, "driver", desired.driverService())), calls);
+            assertNull(presentationFactory());
+            try (var retry = audio.acquireDiagnosticObservers(desired)) { assertTrue(retry.active()); }
+        }
+    }
+
+    @Test
+    void unleasedResetClearsSlotsBeforePartialBackendFailureAndLeavesOldPresentation() {
+        RecordingPresentationBackend backend = new RecordingPresentationBackend();
+        audio.setBackend(backend);
+        List<Integer> requests = new ArrayList<>();
+        var set = diagnosticSet(recordingChipObserver(new ArrayList<>()));
+        audio.setRequestObserver((kind, id) -> requests.add(id));
+        audio.setAdmissionObserver(set.admission());
+        audio.setDriverServiceObserver(set.driverService());
+        audio.setChipWriteObserver(set.chipWrite());
+        audio.setSfxContentionObserver(set.sfxContention());
+        audio.setAudioProfile(profile(null));
+        audio.setRom(mock(Rom.class));
+        audio.playMusic(0x81);
+        audio.presentFrame(PresentationMode.SILENT);
+        AudioPresentationProducer previous = AudioManagerTestDiagnostics.presentationField(
+                audio, "shadowProducer", AudioPresentationProducer.class);
+        var factory = presentationFactory();
+        backend.failChip = new IllegalStateException("reset chip");
+        assertSame(backend.failChip, assertThrows(IllegalStateException.class, audio::resetState));
+        assertSame(AudioAdmissionObserver.NONE, backend.admission);
+        assertSame(SmpsDriverServiceObserver.NONE, backend.driver);
+        assertSame(ChipWriteObserver.NONE, backend.chip);
+        assertSame(set.sfxContention(), backend.contention,
+                "reset does not perform a replacement transaction or physical rollback");
+        assertSame(factory, presentationFactory());
+        assertSame(previous, AudioManagerTestDiagnostics.presentationField(audio, "shadowProducer", AudioPresentationProducer.class));
+        assertFalse(previous.isClosed(), "the later reset teardown was never reached");
+        audio.playMusic(0xE0);
+        assertEquals(List.of(0x81), requests, "request slot was already cleared");
+        backend.failChip = null;
+        // Identity occupancy proves all five manager slots are NONE despite the retained factory.
+        try (var lease = audio.acquireDiagnosticObservers(new AudioManager.DiagnosticObserverSet(
+                AudioRequestObserver.NONE, AudioAdmissionObserver.NONE, SmpsDriverServiceObserver.NONE,
+                ChipWriteObserver.NONE, SfxContentionObserver.NONE))) { assertTrue(lease.active()); }
+        audio.resetState();
+        assertTrue(previous.isClosed());
+    }
+
+    @Test
+    void leasedResetFailurePreservesInstallationAndRetryRetiresPresentation() {
+        RecordingPresentationBackend backend = new RecordingPresentationBackend();
+        audio.setBackend(backend);
+        var set = diagnosticSet(recordingChipObserver(new ArrayList<>()));
+        try (var lease = audio.acquireDiagnosticObservers(set)) {
+            audio.setAudioProfile(profile(null));
+            audio.setRom(mock(Rom.class));
+            audio.presentationFrameRate();
+            AudioPresentationProducer previous = AudioManagerTestDiagnostics.presentationField(
+                    audio, "shadowProducer", AudioPresentationProducer.class);
+            backend.failChip = new IllegalStateException("leased reset chip");
+            assertSame(backend.failChip, assertThrows(IllegalStateException.class, audio::resetState));
+            assertTrue(lease.active());
+            assertSame(set.admission(), backend.admission);
+            assertSame(set.driverService(), backend.driver);
+            assertSame(set.chipWrite(), backend.chip);
+            assertSame(set.sfxContention(), backend.contention);
+            assertFalse(previous.isClosed());
+            assertThrows(IllegalStateException.class, () -> audio.setRequestObserver(null));
+            backend.failChip = null;
+            audio.resetState();
+            assertTrue(previous.isClosed());
+            assertTrue(lease.active());
+        }
+    }
+
+    @Test
+    void requestFailureIsDirectWhileConstructionQuarantinesAndPauseResumeWrapAfterEffects() {
+        loader.musicResults.put(0x81, new LongRunningMusicData(0x81));
+        loader.musicResults.put(0x82, new LongRunningMusicData(0x82));
+        IllegalStateException requestFailure = new IllegalStateException("direct request");
+        audio.setRequestObserver((kind, id) -> {
+            assertFalse(Thread.holdsLock(audio), "request callback remains on the unlocked Root path");
+            throw requestFailure;
+        });
+        assertSame(requestFailure, assertThrows(IllegalStateException.class, () -> audio.playMusic(0x81)));
+        assertNull(requestFailure.getCause());
+        assertArrayEquals(new Throwable[0], requestFailure.getSuppressed());
+        audio.setRequestObserver(null);
+        IllegalStateException constructionFailure = new IllegalStateException("constructor chip");
+        List<RuntimeException> quarantined = new ArrayList<>();
+        AtomicInteger chipCalls = new AtomicInteger();
+        var set = diagnosticSet(new ChipWriteObserver() {
+            @Override public void onYm2612Write(int port, int register, int value) {
+                chipCalls.incrementAndGet();
+                throw constructionFailure;
+            }
+            @Override public void onPsgWrite(int value) { }
+        });
+        try (var lease = audio.acquireDiagnosticObservers(set)) {
+            audio.setAudioProfile(profile(null));
+            audio.setRom(mock(Rom.class));
+            audio.playMusic(0x81);
+            audio.presentFrame(PresentationMode.SILENT);
+            assertTrue(chipCalls.get() > 0);
+            assertEquals(List.of(0x81), sourceIds(activeDriverSnapshot()));
+            presentationFactory().setDiagnosticErrorSink(quarantined::add);
+            audio.playMusic(0x82);
+            audio.presentFrame(PresentationMode.FORWARD);
+            assertFalse(quarantined.isEmpty());
+            assertTrue(quarantined.stream().allMatch(failure -> failure == constructionFailure),
+                    "the real session's quarantine receives the original chip exception");
+            assertTrue(lease.active());
+        }
+        List<String> order = new ArrayList<>();
+        audio.setScenePcmSource(new ScenePcmSource() {
+            @Override public void render(short[] target, int frames) { }
+            @Override public void onHostPause() { order.add("physical.pause"); }
+            @Override public boolean onHostResume() { order.add("physical.resume"); return true; }
+        });
+        IllegalStateException notificationFailure = new IllegalStateException("notification");
+        AudioDiagnosticObserverException alreadyWrapped = new AudioDiagnosticObserverException(notificationFailure);
+        audio.setDriverServiceObserver(new SmpsDriverServiceObserver() {
+            @Override public void onLifecycle(LifecycleEvent event) {
+                assertFalse(Thread.holdsLock(audio));
+                order.add("diagnostic." + event.kind());
+                if (event.kind() == LifecycleKind.PAUSE) throw notificationFailure;
+                if (event.kind() == LifecycleKind.RESUME) throw alreadyWrapped;
+            }
+        });
+        var wrapped = assertThrows(AudioDiagnosticObserverException.class, audio::pause);
+        assertSame(notificationFailure, wrapped.getCause());
+        assertArrayEquals(new Throwable[0], wrapped.getSuppressed());
+        assertSame(alreadyWrapped, assertThrows(AudioDiagnosticObserverException.class, audio::resume));
+        assertEquals(List.of("physical.pause", "diagnostic.PAUSE", "physical.resume", "diagnostic.RESUME"), order);
+        audio.setDriverServiceObserver(null);
+    }
+
+    private static AudioManager.DiagnosticObserverSet diagnosticSet(ChipWriteObserver chip) {
+        return new AudioManager.DiagnosticObserverSet((kind, id) -> { }, decision -> { },
+                new SmpsDriverServiceObserver() { }, chip, new SfxContentionObserver() { });
+    }
+
+    private record FactoryInstallation(AudioPresentationSourceFactory receiver, String slot, Object observer) { }
+
+    private static FactoryInstallation factoryCall(AudioPresentationSourceFactory receiver, String slot, Object observer) {
+        return new FactoryInstallation(receiver, slot, observer);
+    }
+
+    /** Controlled propagation receivers only; real constructor/live effects have separate controls above. */
+    private static MockedConstruction<AudioPresentationSourceFactory> observeFactoryInstallations(
+            List<FactoryInstallation> calls, AtomicReference<Consumer<FactoryInstallation>> callback) {
+        return mockConstruction(AudioPresentationSourceFactory.class, (factory, context) -> {
+            doAnswer(invocation -> recordFactoryInstallation(calls, callback, factory, "admission", invocation.getArgument(0)))
+                    .when(factory).setAdmissionObserver(any());
+            doAnswer(invocation -> recordFactoryInstallation(calls, callback, factory, "driver", invocation.getArgument(0)))
+                    .when(factory).setDriverServiceObserver(any());
+            doAnswer(invocation -> recordFactoryInstallation(calls, callback, factory, "chip", invocation.getArgument(0)))
+                    .when(factory).setChipWriteObserver(any());
+            doAnswer(invocation -> recordFactoryInstallation(calls, callback, factory, "contention", invocation.getArgument(0)))
+                    .when(factory).setSfxContentionObserver(any());
+        });
+    }
+
+    private static Object recordFactoryInstallation(List<FactoryInstallation> calls,
+            AtomicReference<Consumer<FactoryInstallation>> callback,
+            AudioPresentationSourceFactory factory, String slot, Object observer) {
+        var call = factoryCall(factory, slot, observer);
+        calls.add(call);
+        callback.get().accept(call);
+        return null;
+    }
+
+    private static final class RecordingPresentationBackend extends NullAudioBackend {
+        private int frames;
+        private AudioAdmissionObserver admission;
+        private SmpsDriverServiceObserver driver;
+        private ChipWriteObserver chip;
+        private SfxContentionObserver contention;
+        private IllegalStateException failChip;
+
+        @Override public void setAdmissionObserver(AudioAdmissionObserver observer) { admission = observer; }
+        @Override public void setDriverServiceObserver(SmpsDriverServiceObserver observer) { driver = observer; }
+        @Override public void setChipWriteObserver(ChipWriteObserver observer) {
+            chip = observer;
+            if (failChip != null) throw failChip;
+        }
+        @Override public void setSfxContentionObserver(SfxContentionObserver observer) { contention = observer; }
+        @Override public AudioPresentationSink createPresentationSink(
+                Consumer<Throwable> failureHandler, Consumer<String> warningHandler) {
+            return new AudioPresentationSink() {
+                @Override public int sampleRate() { return 48_000; }
+                @Override public void accept(AudioPresentationFrameView frame) { frames++; }
+                @Override public void onReverseBoundary() { }
+                @Override public void close() { }
+            };
+        }
+    }
+
     private static SmpsDriverServiceObserver throwingRestoreObserver(
             String message) {
         return new SmpsDriverServiceObserver() {
@@ -1601,34 +2072,15 @@ class TestAudioDiagnosticObservers {
     }
 
     private void setPresentationSfxBlocked(boolean blocked) {
-        try {
-            var field = AudioManager.class.getDeclaredField("shadowRegistry");
-            field.setAccessible(true);
-            ((com.openggf.audio.presentation.AudioVoiceRegistry) field.get(audio))
-                    .setSfxBlocked(blocked);
-        } catch (ReflectiveOperationException failure) {
-            throw new AssertionError(failure);
-        }
+        AudioManagerTestDiagnostics.presentationField(audio, "shadowRegistry", AudioVoiceRegistry.class).setSfxBlocked(blocked);
     }
 
     private AudioPresentationSourceFactory presentationFactory() {
-        try {
-            var field = AudioManager.class.getDeclaredField("shadowFactory");
-            field.setAccessible(true);
-            return (AudioPresentationSourceFactory) field.get(audio);
-        } catch (ReflectiveOperationException failure) {
-            throw new AssertionError(failure);
-        }
+        return AudioManagerTestDiagnostics.presentationField(audio, "shadowFactory", AudioPresentationSourceFactory.class);
     }
 
     private AudioVoiceRegistry presentationRegistry() {
-        try {
-            var field = AudioManager.class.getDeclaredField("shadowRegistry");
-            field.setAccessible(true);
-            return (AudioVoiceRegistry) field.get(audio);
-        } catch (ReflectiveOperationException failure) {
-            throw new AssertionError(failure);
-        }
+        return AudioManagerTestDiagnostics.presentationField(audio, "shadowRegistry", AudioVoiceRegistry.class);
     }
 
     private static void clearFactorySfxCache(

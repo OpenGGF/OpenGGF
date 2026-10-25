@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -24,7 +26,7 @@ import java.util.List;
 /** Locked-on {@code Obj_FBZExitDoor} ($CE), {@code loc_70C20-loc_70C72}. */
 public final class FbzExitDoorInstance extends AbstractObjectInstance
         implements TouchResponseProvider, TouchResponseListener,
-        PoweredScreenAttackSpecial, SpawnRewindRecreatable {
+        PoweredScreenAttackSpecial, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
     private int currentX;
     private int currentY;
     private int xSub;

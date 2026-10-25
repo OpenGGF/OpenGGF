@@ -473,6 +473,69 @@ an unreviewed third-party type. Before publication, removals, narrowing changes,
 record-shape changes, and unannotation require intentional candidate review and a
 pin rewrite; after publication they require an explicit compatibility decision.
 
+## Game contract candidate migration
+
+The reviewed unpublished 0.7 candidate intentionally moves the complete annotated
+abstract class `com.openggf.data.Game` to `com.openggf.game.Game`, beside
+`GameModule`, `ModGame` and `StandaloneGameSpec`. Its twelve abstract methods,
+implicit public constructor, checked exceptions, generic sound map, nullable ROM
+contract and default no-op runtime-art callback are preserved. No forwarding class
+is provided. The standalone owner wrapper keeps its existing identity, fault and
+ROM boundaries and inherits the same no-op runtime-art callback.
+
+This changes class identity, `ModGame`'s superclass and factory/getter JVM return
+descriptors. Replace explicit imports and rebuild all compiled mods, donor
+implementations and callers against matching SDK and engine artifacts. Callers
+using inferred types and declarative standalone specifications also need rebuilding.
+An unchanged `>=0.7.0 <0.8.0` manifest cannot distinguish the old binary contract;
+this migration does not add automatic rejection of every old binary. Existing
+native compiled-mod policy is unchanged. See the
+[creator migration](../modding/getting-started.md#game-contract-import-migration)
+and [standalone guidance](../modding/standalone-games.md).
+
+This is an intentional incompatible candidate-pin rewrite. `ModApiVersion.CURRENT`
+remains `0.7.0`; the release descriptor stays byte-identical with candidate status,
+`develop`/`next` and no published baseline. Regeneration changes exactly 26 old
+Game-bearing rows to 26 renamed rows, preserving the 22,482 unique sorted rows and
+1,246 annotated types/classfile markers. The accepted art-provider migration's 14
+rows are disjoint. Curated roots, internal terminals and platform allowlists stay
+unchanged. Qualified retention as a compatibility-sensitive loader boundary was
+reviewed; intact relocation earns the candidate migration because this contract
+assembles source-backed levels and runtime capabilities rather than low-level bytes.
+
+## Player-art provider candidate migration
+
+The reviewed unpublished 0.7 candidate intentionally relocates both complete
+`@ModApi` interfaces to their existing sprite-art domain:
+
+| Previous import | Replacement import |
+| --- | --- |
+| `com.openggf.data.PlayerSpriteArtProvider` | `com.openggf.sprites.art.PlayerSpriteArtProvider` |
+| `com.openggf.data.SpindashDustArtProvider` | `com.openggf.sprites.art.SpindashDustArtProvider` |
+
+This breaks old source imports and compiled interface names, including the return
+descriptors of donor factories. Rebuild all compiled mods, donor implementations
+and callers against the same updated engine candidate; old candidate binaries are
+retired, with no forwarding interfaces. An unchanged manifest `engineApiRange`
+accepting `0.7.0` cannot distinguish the old binary contract from this replacement.
+See the [creator migration steps](../modding/getting-started.md#player-art-provider-import-migration).
+
+This is an intentional incompatible candidate-pin rewrite under the unpublished
+policy above, not an API-neutral refactor. `ModApiVersion.CURRENT` remains `0.7.0`;
+its description records the break. The release descriptor is byte-identical:
+`candidate`, no published baselines, and the existing `develop`/`next` topology.
+There are exactly 14 removed signature lines and 14 replacements differing only
+in the two provider FQNs after sorting. The recursive annotated inventory retains
+its cardinality, canonical `Palette`/`SpriteArtSet` closure, roots, internal
+terminals and platform allowlist. The palette method retains its default-null
+body and its existing declaration without a checked exception; the two art-load
+methods retain `throws IOException`.
+
+Construction and donation stay with game modules. Supplied-ROM scene decoding,
+configured donor selection, registered mod suppliers, palette refresh/order,
+Tails banks, aliases and restoration retain their existing implementations.
+No factory, registry, callback, facade or model replacement is introduced.
+
 ## 0.7 reset inventory
 
 The reset removed provisional compatibility shims before establishing the first
@@ -1082,3 +1145,10 @@ current screenplay v6 actions supply an explicit policy or their normal defaults
 There is no serialized-format migration. The mutable 0.7 signature pin and runtime
 candidate description change together; API version/status and the release policy
 descriptor remain unchanged, as required for ordinary candidate regeneration.
+
+Stageplay character speech adds required canonical `voices` and screenplay root
+`voices` overrides, `SpeakerVoice`/tone/rhythm types, and cast IDs on native object
+observations. Object cast IDs now resolve as dialogue speakers. Generated, bounded
+transient PCM uses the existing scene sample lifetime. These unpublished shapes
+change directly; the candidate remains 0.7.0 and its normalized `0.7` pin is replaced
+in place. Rebuild compiled mods that construct or consume these records.

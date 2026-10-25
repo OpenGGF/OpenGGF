@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.AbstractBadnikInstance;
 
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
@@ -32,7 +33,10 @@ import java.util.List;
  * persist between frames and accumulate velocity offsets during the lunge.
  * We simulate this by tracking persistent segment positions in arrays.
  */
-public class CrawltonBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable {
+public class CrawltonBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
 
     // ROM Obj9E_Init allocates a second SST slot for the multi-sprite body child
     // (see reserveMultiSpriteChildSlot). Tracked so it is allocated exactly once.

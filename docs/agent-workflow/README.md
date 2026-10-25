@@ -2,6 +2,8 @@
 
 Support material to help agents implement OpenGGF objects/zones/trace-fixes with less context loss.
 
+- [Stageplay speech sync](../guide/creating/stageplay-authoring.md#validate-inspect-and-timeline): `timeline` emits the production PSG speech events beside exact text reveal frames (2026-10-24 voice audition task).
+
 - [Racing deployment witness](../../racing/deploy/README.md#deployment-witness): `racing-server deployment-smoke` checks real TLS relay, recording upload, ROM replay and an external signed verdict using fresh isolated fixtures (2026-10-23 Docker deployment).
 - [Racing socket stress tool](../../racing/README.md#adversarial-and-capacity-testing):
   reproducible local room-capacity, hostile-state and lifecycle checks, with explicitly
@@ -37,7 +39,8 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
 
 - [ColdCampaign pool journal](../../src/test/java/com/openggf/tools/ColdCampaignPoolJournal.java): opt-in **maintained-driver-call protocol**, with no installed campaign instrumentation. The tested R30 typed extension adds all Animal/EggRobo phase transitions and last actual removal snapshots to bounded raw SST ownership, explicit input/restore keys and sample/write passivity checks; source-epoch absence and motion-only limits stay explicit. The [existing plan](../architecture/plans/2026-10-13-s3k-playable-completion.md#r30r34-matched-typed-pool-evidence-and-preservation--2026-10-17) records both803/781c arms, post-footer qualification and reversible markers (R32–R34).
 
-- [Stageplay capture](../../src/main/java/com/openggf/tools/StageplayCaptureTool.java): render a saved `.stageplay` scene with supplied ROMs to synchronized lossless MKV; see the [guide](../guide/creating/stageplay.md). [Stageplay HUD pictures](../../src/test/java/com/openggf/editor/project/TestStageplayHudPictures.java) use explicit `-Dopenggf.stageplay.hudPictures=true`, surfaceless EGL and an absolute S2 REV01 ROM path, writing `target/stageplay-hud/` for visual review; desktop has its equivalent `TestStageplayChromePictures` in OpenGGF Editor. Origin: 2026-10-21 Stageplay delivery.
+- [S2 fixed-tail pressure diagnostic](../../tools/bizhawk/README.md#s2-fixed-tail-pressure-diagnostic): original-ROM headless instruction/RAM observations with declared last-slot/two-parent setup, empty/live/reinstalled fixed targets and physical retirement; comparison-only, finite coverage (2026-10-24 Sideways ownership research).
+- [Stageplay capture](../../src/main/java/com/openggf/tools/StageplayCaptureTool.java): render a saved `.stageplay` scene with supplied ROMs to synchronized lossless MKV; see [render](../guide/creating/stageplay-authoring.md#render). [Stageplay HUD pictures](../../src/test/java/com/openggf/editor/project/TestStageplayHudPictures.java) use explicit `-Dopenggf.stageplay.hudPictures=true`, surfaceless EGL and an absolute S2 REV01 ROM path, writing `target/stageplay-hud/` for visual review; desktop has its equivalent `TestStageplayChromePictures` in OpenGGF Editor. The guide screenshots in `docs/guide/creating/images/stageplay/` are 256-colour palette PNGs reduced from these pictures (plus `TestStageplayRouteOverlayPictures`); refresh them from the same tests when the UI changes. Origin: 2026-10-21 Stageplay delivery.
 - [Stageplay authoring CLI](../../tools/stageplay/stageplay.py): compiles and losslessly decompiles shot-local screenplays, discovers supplied-ROM resources, samples/validates scenes and renders offline. [Command reference](../guide/creating/stageplay-authoring.md); skill `stageplay-authoring`. Origin: 2026-10-21 directing extension.
 - [Stageplay route helper](../../src/main/java/com/openggf/tools/StageplayRouteTool.java): bounded shot-entry native-input search with cold LIVE qualification, or visual object floor/headroom paths; same cancellable logic worker and content-bound result in both editors. Inputs are canonical scenes and supplied ROMs; see [route limits](../guide/creating/stageplay-authoring.md#route-helper). Origin: 2026-10-22 complete-cast task.
 
@@ -410,7 +413,7 @@ Local Maven tests: [`tools/testing/maven_queue.py`](../../tools/testing/maven_qu
 - `TimeAttackLobbyVideoTool` (`racing-server capture-lobby OUTPUT ROOT s1|s2|s3k`): display-free first boot into a hosted LAN room's lobby level with three loopback peers (international names/looks, lobby presence replaying the player's own poses at an offset); records the menu over the level, ready, hidden-menu play, menu return and the round hand-over as stills, `lobby.mp4` and `state.csv` with received lobby ghost positions (2026-10-22 lobby-level lane).
 
 Stageplay's `level`, `catalog`, `simulate` and live offscreen preview/capture owners
-support reproducible native ensemble routes; see the [authoring guide](../guide/creating/stageplay-authoring.md#native-rom-worlds-screenplay-6-document-7)
+support reproducible native ensemble routes; see the [authoring guide](../guide/creating/stageplay-authoring.md#simulate)
 and [live-world plan](../architecture/plans/2026-10-21-stageplay-live-world-plan.md).
 
 - [Stageplay object coverage](../../src/main/java/com/openggf/tools/StageplayObjectCoverageTool.java): generate every native byte ID per registered source context, with factory, art and visual-mode reasons; constructor-free inventory, originating in the 2026-10-22 complete-cast task.

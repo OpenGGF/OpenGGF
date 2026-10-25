@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.GenericFieldCapturer;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -11,7 +13,7 @@ import java.util.List;
 
 /** Locked-on {@code Obj_FBZSnakePlatform} ($75), sonic3k.asm $3B52E-$3B6CE. */
 public final class FbzSnakePlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, RewindRecreatable {
+        implements SolidObjectProvider, RewindRecreatable, ObjectVisualFacing.NonDirectional {
     private static final int[][] ROUTES = {
             {0x10F1,0x118C,0x118C,0x770,0x10F1,0x770,-1,0x3C},
             {0x1174,0x120F,0x1174,0x7F0,0x120F,0x7F0,-1,0x3C},

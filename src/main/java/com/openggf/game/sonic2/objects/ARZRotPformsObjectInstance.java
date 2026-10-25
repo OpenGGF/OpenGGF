@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.sonic2.S2SpriteDataLoader;
 import com.openggf.game.PlayableEntity;
@@ -63,7 +65,8 @@ import java.util.logging.Logger;
  * </ul>
  */
 public class ARZRotPformsObjectInstance extends AbstractObjectInstance
-        implements MultiPieceSolidProvider, RewindRecreatable {
+        implements MultiPieceSolidProvider, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj83 owns three platforms and chains; angular phase is not horizontal body facing.
 
     private static final Logger LOGGER = Logger.getLogger(ARZRotPformsObjectInstance.class.getName());
 

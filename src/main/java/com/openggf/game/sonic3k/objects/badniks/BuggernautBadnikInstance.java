@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.level.WaterSystem;
@@ -47,7 +48,10 @@ import java.util.List;
  * <h3>Animation:</h3>
  * Frames 0→1→2 loop (speed 0 = every frame). Wing flapping cycle.
  */
-public final class BuggernautBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable {
+public final class BuggernautBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
 
     // --- ObjDat_Buggernaut constants ---
 

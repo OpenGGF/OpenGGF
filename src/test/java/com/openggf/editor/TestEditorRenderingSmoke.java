@@ -1,9 +1,8 @@
 package com.openggf.editor;
 
+import com.openggf.tests.TestEnvironment;
 import com.openggf.debug.DebugColor;
 import com.openggf.game.session.EditorCursorState;
-import com.openggf.game.session.EngineContext;
-import com.openggf.game.session.EngineServices;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GLCommandable;
 import com.openggf.graphics.GraphicsManager;
@@ -45,7 +44,7 @@ class TestEditorRenderingSmoke {
 
     @BeforeEach
     void setUp() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.resetEngineOnly();
     }
 
     @AfterEach

@@ -1,5 +1,6 @@
 package com.openggf.audio.smps;
 
+import com.openggf.game.GameServices;
 import com.openggf.audio.synth.ChipWriteObserver;
 import com.openggf.audio.synth.VirtualSynthesizer;
 import com.openggf.game.sonic2.audio.Sonic2SmpsSequencerConfig;
@@ -101,7 +102,7 @@ class TestSmpsFmVoiceWriteProfiles {
     private static List<String> captureRefresh(AbstractSmpsData source, SmpsSequencerConfig config) {
         VirtualSynthesizer synth = new VirtualSynthesizer();
         RecordingObserver observer = new RecordingObserver();
-        SmpsSequencer sequencer = new SmpsSequencer(source, EMPTY_DAC, synth, config);
+        SmpsSequencer sequencer = new SmpsSequencer(source, EMPTY_DAC, synth, GameServices.audio(), config);
         SmpsSequencer.Track fm = sequencer.getTracks().stream()
                 .filter(track -> track.type == SmpsSequencer.TrackType.FM)
                 .findFirst()
@@ -117,7 +118,7 @@ class TestSmpsFmVoiceWriteProfiles {
             int volumeOffset) {
         VirtualSynthesizer synth = new VirtualSynthesizer();
         RecordingObserver observer = new RecordingObserver();
-        SmpsSequencer sequencer = new SmpsSequencer(source, EMPTY_DAC, synth, config);
+        SmpsSequencer sequencer = new SmpsSequencer(source, EMPTY_DAC, synth, GameServices.audio(), config);
         SmpsSequencer.Track fm = sequencer.getTracks().stream()
                 .filter(track -> track.type == SmpsSequencer.TrackType.FM)
                 .findFirst()

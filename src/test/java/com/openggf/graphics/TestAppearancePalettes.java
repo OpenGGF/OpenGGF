@@ -93,7 +93,7 @@ class TestAppearancePalettes {
             assertColour(RED, row, 3);
 
             // The shared line itself is never recoloured.
-            assertSame(live, graphics.cachedPaletteLine(0));
+            assertSame(live, graphics.paletteTextures().cachedPaletteLine(0));
             assertColour(2 << 9 | 0x020, live, 2);
 
             // Lines 1-3 follow their own uploads.
@@ -103,13 +103,13 @@ class TestAppearancePalettes {
 
             // Each private row fades with the row it mirrors.
             int base = context.getPaletteLineBase();
-            assertEquals(0, graphics.appearancePaletteRows().fadeLine(base));
-            assertEquals(1, graphics.appearancePaletteRows().fadeLine(base + 1));
-            assertEquals(base + 4, graphics.appearancePaletteRows().fadeLine(base + 4));
+            assertEquals(0, graphics.paletteTextures().appearancePaletteRows().fadeLine(base));
+            assertEquals(1, graphics.paletteTextures().appearancePaletteRows().fadeLine(base + 1));
+            assertEquals(base + 4, graphics.paletteTextures().appearancePaletteRows().fadeLine(base + 4));
 
             block.release();
             assertNull(block.context());
-            assertTrue(graphics.appearancePaletteRows().isEmpty());
+            assertTrue(graphics.paletteTextures().appearancePaletteRows().isEmpty());
         } finally {
             graphics.cleanup();
             RenderContext.reset();
@@ -154,15 +154,15 @@ class TestAppearancePalettes {
             for (int i = 0; i < 16; i++) colour(water0, i, 0x0A0 | (i % 4) << 9);
             Palette[] water = {water0, new Palette(), new Palette(), new Palette()};
 
-            PaletteView row = graphics.appearancePaletteRows().underwaterRow(base, water, live, water0);
+            PaletteView row = graphics.paletteTextures().appearancePaletteRows().underwaterRow(base, water, live, water0);
             assertNotNull(row);
             assertTrue(same(water0, row, 6), "stock entries take the zone's water colour");
             // Overrides follow the water's per-entry shift; a channel the stock entry lacks (red
             // here) uses the line's average shift, which is neutral for this all-blue line.
             assertColour(RED, row, 2);
             assertColour(GREEN, row, 4);
-            assertTrue(same(water[1], graphics.appearancePaletteRows().underwaterRow(base + 1, water, live, water0), 0));
-            assertNull(graphics.appearancePaletteRows().underwaterRow(base + 4, water, live, water0));
+            assertTrue(same(water[1], graphics.paletteTextures().appearancePaletteRows().underwaterRow(base + 1, water, live, water0), 0));
+            assertNull(graphics.paletteTextures().appearancePaletteRows().underwaterRow(base + 4, water, live, water0));
             block.release();
         } finally {
             graphics.cleanup();
@@ -195,25 +195,25 @@ class TestAppearancePalettes {
             graphics.cachePaletteTexture(live, donor.getPaletteLineBase());
             var donorBlock = AppearancePalettes.acquire(graphics, donor, 0, live, true, overrides, 1 << 1);
 
-            PaletteView nativeWater = graphics.appearancePaletteRows().underwaterRow(
+            PaletteView nativeWater = graphics.paletteTextures().appearancePaletteRows().underwaterRow(
                     nativeBlock.context().getPaletteLineBase(), waterRows, live, water);
             assertRgb(nativeWater, 1, 110, 255, 162);
             assertRgb(nativeWater, 2, 30, 50, 100);
             for (var block : new AppearancePalettes.Block[]{otherCharacter, donorBlock}) {
-                PaletteView shifted = graphics.appearancePaletteRows().underwaterRow(
+                PaletteView shifted = graphics.paletteTextures().appearancePaletteRows().underwaterRow(
                         block.context().getPaletteLineBase(), waterRows, live, water);
                 assertRgb(shifted, 1, 143, 188, 162);
                 assertRgb(shifted, 2, 0, 125, 179);
-                assertSame(shifted, graphics.appearancePaletteRows().underwaterRow(
+                assertSame(shifted, graphics.paletteTextures().appearancePaletteRows().underwaterRow(
                         block.context().getPaletteLineBase(), waterRows, live, water));
             }
             live.colors[1].r = 1;
             graphics.cachePaletteTexture(live, 0);
-            PaletteView changed = graphics.appearancePaletteRows().underwaterRow(
+            PaletteView changed = graphics.paletteTextures().appearancePaletteRows().underwaterRow(
                     nativeBlock.context().getPaletteLineBase(), waterRows, live, water);
             assertSame(nativeWater, changed);
             assertRgb(changed, 1, 100, 200, 80);
-            assertRgb(graphics.appearancePaletteRows().underwaterRow(
+            assertRgb(graphics.paletteTextures().appearancePaletteRows().underwaterRow(
                     otherCharacter.context().getPaletteLineBase(), null, null, null), 1, 221, 151, 181);
             nativeBlock.release();
             otherCharacter.release();

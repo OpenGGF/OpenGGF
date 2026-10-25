@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects.bosses;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
@@ -37,7 +38,11 @@ import java.util.function.Supplier;
  * - SUBA: Flying off sequence (with tertiary sub-states)
  */
 public class Sonic2EHZBossInstance extends AbstractBossInstance
-        implements SpawnConstructionContextRewindRecreatable {
+        implements SpawnConstructionContextRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // This routine owns bit 0: its target/turn and escape code set it for logical right.
+        return (state.renderFlags & 1) != 0 ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.LEFT;
+    }
 
     // State machine constants
     private static final int SUB0_APPROACH_DIAGONAL = 0x00;

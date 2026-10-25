@@ -1,10 +1,11 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.level.objects.*;
 
 /** loc_7F64A: opening shield plus its independent loc_7F6FA visor SST. */
-final class DezEndBossShield extends DezEndBossSprite implements RewindRecreatable, TouchResponseProvider {
+final class DezEndBossShield extends DezEndBossSprite implements RewindRecreatable, TouchResponseProvider, ObjectVisualFacing.NonDirectional {
     private DezEndBossSprite parent;
     private int state;
     private int timer;
@@ -72,7 +73,7 @@ final class DezEndBossShield extends DezEndBossSprite implements RewindRecreatab
     int stateForTest() { return state; }
     int childDyForTest() { return childDy; }
 
-    static final class Visor extends DezEndBossSprite implements RewindRecreatable {
+    static final class Visor extends DezEndBossSprite implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
         private DezEndBossShield parent;
         private Visor(ObjectSpawn spawn) { super(spawn, "DEZEndBossVisor"); }
         Visor(DezEndBossShield parent) {

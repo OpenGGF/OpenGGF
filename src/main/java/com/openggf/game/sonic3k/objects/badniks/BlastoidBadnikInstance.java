@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.mutators.PlayerFluidContextAccess;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kLevelTriggerManager;
@@ -66,7 +67,10 @@ import java.util.List;
  * 2 and 3 every tick. Shield bounce deflectable (bit 3).
  */
 public final class BlastoidBadnikInstance extends AbstractS3kBadnikInstance
-        implements SpawnRewindRecreatable, TouchResponseListener {
+        implements SpawnRewindRecreatable, TouchResponseListener, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
 
     // --- Constants from ObjDat_Blastoid ---
 

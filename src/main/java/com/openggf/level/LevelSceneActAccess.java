@@ -14,7 +14,7 @@ public final class LevelSceneActAccess {
         Exit { Objects.requireNonNull(reason); state = Map.copyOf(state); }
     }
     /** Native provider selection precedes every optional scene override. */
-    public static int[] nativeStart(com.openggf.data.Game game, int zone, int act,
+    public static int[] nativeStart(com.openggf.game.Game game, int zone, int act,
             LevelDescriptor levelData, boolean additiveAct) {
         int spawnX = levelData.startX();
         int spawnY = levelData.startY();

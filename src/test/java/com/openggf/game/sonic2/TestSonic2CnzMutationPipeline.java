@@ -2,6 +2,7 @@ package com.openggf.game.sonic2;
 
 import com.openggf.game.session.EngineServices;
 import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.rules.SonicGame;
 
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameServices;
@@ -41,11 +42,7 @@ class TestSonic2CnzMutationPipeline {
 
     @BeforeEach
     void setUp() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        SessionManager.clear();
-        GameModuleRegistry.reset();
-        GameModuleRegistry.setCurrent(new Sonic2GameModule());
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_2);
     }
 
     @AfterEach

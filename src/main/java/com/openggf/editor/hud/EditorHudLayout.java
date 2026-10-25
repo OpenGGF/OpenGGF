@@ -83,6 +83,17 @@ public final class EditorHudLayout {
         return new EditorHudLayout(scale, width, height, stage, bench, new int[] {gameX, gameY, gameW, gameH, gameScale});
     }
 
+    /** A transient position picker gives the level the area normally used by panels and the dock. */
+    static EditorHudLayout positionPicker(int framebufferWidth,int framebufferHeight,int logicalWidth,int logicalHeight) {
+        int scale=uiScale(framebufferWidth,framebufferHeight),width=framebufferWidth/scale,height=framebufferHeight/scale;
+        Rect stage=new Rect(GAP,TOP_BAR+GAP,width-2*GAP,Math.max(1,height-TOP_BAR-PROMPT_BAR-2*GAP));
+        double fit=Math.min(stage.w()*scale/Math.max(1,logicalWidth),stage.h()*scale/Math.max(1,logicalHeight));
+        double magnification=fit>=1?Math.floor(fit):fit;
+        int w=Math.max(1,(int)(logicalWidth*magnification)),h=Math.max(1,(int)(logicalHeight*magnification));
+        int x=Math.round(stage.x()*scale+(stage.w()*scale-w)/2),y=Math.round(stage.y()*scale+(stage.h()*scale-h)/2);
+        return new EditorHudLayout(scale,width,height,stage,null,new int[]{x,y,w,h,fit>=1?(int)magnification:0});
+    }
+
     public int uiScale() { return uiScale; }
     public int width() { return width; }
     public int height() { return height; }

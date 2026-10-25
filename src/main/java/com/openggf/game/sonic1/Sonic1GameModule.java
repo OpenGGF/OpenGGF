@@ -1,7 +1,7 @@
 package com.openggf.game.sonic1;
 
 import com.openggf.audio.GameAudioProfile;
-import com.openggf.data.Game;
+import com.openggf.game.Game;
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.GameOverFlowProvider;
@@ -658,7 +658,7 @@ public class Sonic1GameModule implements GameModule, com.openggf.game.internal.S
         }
 
         @Override
-        public com.openggf.data.PlayerSpriteArtProvider getPlayerArtProvider(
+        public com.openggf.sprites.art.PlayerSpriteArtProvider getPlayerArtProvider(
                 com.openggf.data.RomByteReader reader) {
             var art = new Sonic1PlayerArt(reader);
             return art::loadForCharacter;
@@ -672,7 +672,7 @@ public class Sonic1GameModule implements GameModule, com.openggf.game.internal.S
         }
 
         @Override
-        public com.openggf.data.PlayerSpriteArtProvider createPlayerArtProvider(RomByteReader reader) {
+        public com.openggf.sprites.art.PlayerSpriteArtProvider createPlayerArtProvider(RomByteReader reader) {
             return Sonic1DonorCapabilities.INSTANCE.getPlayerArtProvider(reader);
         }
 

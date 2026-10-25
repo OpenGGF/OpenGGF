@@ -8,6 +8,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.sprites.NativePositionOps;
@@ -47,7 +48,9 @@ import java.util.List;
  * {@code $C00} out of a hub whichever way down is.
  */
 public final class S3kDezGravityHubObjectInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable {
+        implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+    // Native invisible field/path logic controls separately owned players; it has no facing body or visual children.
 
     /** {@code addi.w #$20,d0 / cmpi.w #$40,d0 / bhs} (:95606-95613), both axes. */
     private static final int WINDOW_BIAS = 0x20;

@@ -9,7 +9,9 @@ import java.util.List;
 
 /** Obj_SOZDoor ($41B70): follows the shared trigger byte at one pixel per pass. */
 public final class SozDoorObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SpawnRewindRecreatable, RomObjectCodePointerProvider {
+        implements SolidObjectProvider, SpawnRewindRecreatable, RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
+
+    // Native sliding/rising door, pillar or sand-wall frames are geometric surfaces without horizontal facing.
     private boolean initialized;
     private int displacement;
     private int x, y;

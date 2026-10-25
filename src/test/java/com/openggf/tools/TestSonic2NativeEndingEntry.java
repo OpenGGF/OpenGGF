@@ -72,8 +72,8 @@ class TestSonic2NativeEndingEntry {
                 // Consume the actual request with the production shell, not a private-method shortcut.
                 loop.step();
                 assertEquals(GameMode.ENDING_CUTSCENE, loop.getCurrentGameMode());
-                assertInstanceOf(Sonic2EndingProvider.class, get(loop, "endingProvider"));
-                assertFalse((Boolean) get(loop, "endingTransitionPending"));
+                assertInstanceOf(Sonic2EndingProvider.class, get(get(loop, "endingSession"), "endingProvider"));
+                assertFalse((Boolean) get(get(loop, "endingSession"), "endingTransitionPending"));
                 assertEquals(FadeManager.FadeState.NONE, fade.getState(), "neither extra outgoing nor reveal fade");
                 assertEquals(List.of(0xF9, 0x8A), requests.subList(requests.indexOf(0xF9), requests.size()),
                         "native ending music follows the boss mailbox command without a generic fade");

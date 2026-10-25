@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.RewindStateful;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -36,7 +38,7 @@ import java.util.Map;
  * player and drives the traversal without calling any helper that rewrites
  * collision radii.
  */
-public final class CnzSpiralTubeInstance extends AbstractObjectInstance implements RewindRecreatable {
+public final class CnzSpiralTubeInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
     private static final int PHASE_DETECT = 0x00;
     private static final int PHASE_SWAY = 0x02;
     private static final int PHASE_DESCEND = 0x04;

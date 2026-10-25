@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
@@ -23,7 +25,15 @@ import java.util.List;
  * <p>ROM reference: {@code Obj_LBZSpinLauncher} (sonic3k.asm:56503-56662).
  */
 public final class LbzSpinLauncherObjectInstance extends AbstractObjectInstance
-        implements SlopedSolidProvider, SolidObjectListener, SpawnRewindRecreatable {
+        implements SlopedSolidProvider, SolidObjectListener, SpawnRewindRecreatable, ObjectVisualFacing.PlacementSource {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // The same direction that the native rider/launch routine installs on the player.
+        return (facingLeft()) ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
+    @Override public int initialPlacementFlags(com.openggf.level.objects.ObjectVisualFacing.Basis facing, int sourceFlags) {
+        return (sourceFlags & ~1) | (facing == com.openggf.level.objects.ObjectVisualFacing.Basis.LEFT ? 1 : 0);
+    }
+
     private static final int ON_SCREEN_HALF_SIZE = 0x20;
     private static final int SOLID_HALF_WIDTH = 0x2B;
     private static final int SOLID_HALF_HEIGHT = 0x10;

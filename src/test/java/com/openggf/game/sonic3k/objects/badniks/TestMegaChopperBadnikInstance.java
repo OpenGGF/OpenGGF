@@ -3,7 +3,7 @@ package com.openggf.game.sonic3k.objects.badniks;
 import com.openggf.game.GameServices;
 import com.openggf.game.LevelGamestate;
 import com.openggf.game.session.SessionManager;
-import com.openggf.game.sonic3k.Sonic3kGameModule;
+import com.openggf.tests.rules.SonicGame;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
@@ -40,9 +40,7 @@ public class TestMegaChopperBadnikInstance {
 
     @BeforeEach
     public void setUp() throws Exception {
-        SessionManager.clear();
-        SessionManager.openGameplaySession(new Sonic3kGameModule());
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_3K);
 
         Field levelStateField = GameServices.level().getClass().getDeclaredField("levelGamestate");
         levelStateField.setAccessible(true);

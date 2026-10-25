@@ -1,5 +1,7 @@
 package com.openggf.stageplay.route;
 
+import com.openggf.stageplay.StageplayDocument.Facing;
+
 import com.openggf.game.GameServices;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.SessionManager;
@@ -71,10 +73,10 @@ class TestStageplayObjectRouteRom {
                     if (targetX < 0 || targetX > 32767) continue;
                     var target = terrain.floor(targetX, floor.y(), 0);
                     if (!target.found()) continue;
-                    var puppetAnchor = new ObjectKey(freeLead, spawn.x(), floor.y() - foot, 0, -1, false, true,
+                    var puppetAnchor = new ObjectKey(freeLead, spawn.x(), floor.y() - foot, 0, -1, Facing.LEFT, true,
                             Interpolation.HOLD, ObjectMode.PUPPET);
                     var keys = freeLead == 0 ? List.of(puppetAnchor) : List.of(
-                            new ObjectKey(0, spawn.x(), floor.y() - foot, 0, -1, false, true,
+                            new ObjectKey(0, spawn.x(), floor.y() - foot, 0, -1, Facing.LEFT, true,
                                     Interpolation.HOLD, ObjectMode.FREE), puppetAnchor);
                     var actor = new ObjectActor("walker", "Walker", game, zone, act, objectId, spawn.subtype(), -1,
                             keys, List.of());

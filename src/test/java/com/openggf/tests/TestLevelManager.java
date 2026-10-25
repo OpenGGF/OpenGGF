@@ -167,7 +167,8 @@ public class TestLevelManager {
     public void preparedLevelMusicPublishesOnlyAfterPendingTransitionReleases()
             throws Exception {
         LevelManager levelManager = GameServices.level();
-        AudioManager audio = mock(AudioManager.class);
+        AudioManager audio = org.mockito.Mockito.spy(AudioManager.class);
+        org.mockito.Mockito.doNothing().when(audio).playMusic(org.mockito.ArgumentMatchers.anyInt());
         GameModule module = mock(GameModule.class);
         LevelInitProfile profile = mock(LevelInitProfile.class);
         when(module.getLevelInitProfile()).thenReturn(profile);

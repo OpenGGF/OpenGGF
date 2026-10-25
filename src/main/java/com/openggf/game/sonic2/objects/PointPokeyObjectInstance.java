@@ -1,4 +1,6 @@
 package com.openggf.game.sonic2.objects;
+
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.sonic2.slotmachine.CNZPrizeSoundState;
 import com.openggf.level.objects.BoxObjectInstance;
 
@@ -54,7 +56,8 @@ import java.util.logging.Logger;
  * <b>Disassembly Reference:</b> s2.asm ObjD6 (Point Pokey / CNZ Cage)
  */
 public class PointPokeyObjectInstance extends BoxObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // ObjD6 owns a cage, reels, rings and radial ObjD3 spike prizes; payout trajectories do not face a body.
 
     private static final Logger LOGGER = Logger.getLogger(PointPokeyObjectInstance.class.getName());
 

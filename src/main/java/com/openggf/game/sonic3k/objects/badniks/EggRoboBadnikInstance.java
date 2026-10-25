@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
@@ -55,7 +56,11 @@ import java.util.List;
  * (filed in {@code docs/status/s3k-known-bugs.md}).
  */
 public final class EggRoboBadnikInstance extends AbstractS3kBadnikInstance
-        implements SpawnRewindRecreatable {
+        implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
+
     /** {@code dc.w $280} in every {@code ObjDat3} this object uses. */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x280);
     /** {@code ObjDat3_919A6}: {@code dc.b $14,$18,1,6} — width, height, frame, collision. */

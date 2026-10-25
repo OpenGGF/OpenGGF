@@ -15,7 +15,9 @@ import java.io.IOException;
 import java.util.List;
 
 /** SKL $AE: Obj_LRZ2CutsceneKnuckles ($63B22), including the $1600 fresh-load request. */
-public final class LrzBoulderCutsceneObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
+public final class LrzBoulderCutsceneObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable, ObjectVisualFacing.Container {
+
+    // The controller has no facing body; Knuckles owns his direction independently of the rolling boulder.
     // Player-only native control tail; directing must not advance this controller's
     // routine, timers, world flags, camera or level transition.
     private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();

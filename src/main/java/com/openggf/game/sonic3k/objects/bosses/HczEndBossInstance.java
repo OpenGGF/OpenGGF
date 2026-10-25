@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects.bosses;
 
 import com.openggf.game.CharacterKey;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
@@ -46,7 +47,12 @@ import java.util.logging.Logger;
  * and follow the boss through explicit parent links.
  */
 public class HczEndBossInstance extends AbstractBossInstance
-        implements SpawnConstructionContextRewindRecreatable {
+        implements SpawnConstructionContextRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // The native target/turn routine owns facingRight independently of the selected mapping frame.
+        return facingRight ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.LEFT;
+    }
+
     private static final Logger LOG = Logger.getLogger(HczEndBossInstance.class.getName());
 
     // =========================================================================

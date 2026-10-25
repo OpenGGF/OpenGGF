@@ -1,5 +1,7 @@
 package com.openggf.stageplay.runtime;
 
+import com.openggf.stageplay.StageplayDocument.Facing;
+
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.SessionManager;
 import com.openggf.level.objects.AnimalObjectInstance;
@@ -27,7 +29,7 @@ class TestStageplayObjectClearingRom {
             // Use the ICZ placement verified alive before clearing in the task's real scene simulation.
             // Free animals retain their native camera-relative lifetime; arbitrary scenery is not a stable fixture.
             var animal = new ObjectActor("animal", "Released animal", "s3k", 5, 1, 0, 0, -1,
-                    List.of(new ObjectKey(0, 2152, 864, 0, -1, false, true, Interpolation.HOLD, ObjectMode.FREE)),
+                    List.of(new ObjectKey(0, 2152, 864, 0, -1, Facing.LEFT, true, Interpolation.HOLD, ObjectMode.FREE)),
                     List.of(), ObjectSourceKind.RELEASED_ANIMAL);
             var scene = StageplayDocument.empty("s3k", 5, 1, 1936, 768, 320, 224).withDurationFrames(60)
                     .withObjectActors(List.of(animal))

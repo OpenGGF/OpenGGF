@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
@@ -37,7 +39,7 @@ import java.util.logging.Logger;
  * loc_2B5D4 (spawner loop), loc_2B6A0 (log falling), loc_2B6BC (log at water),
  * loc_2B6D8 (solid + draw), loc_2B72C (splash animation).
  */
-public class AizFallingLogObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class AizFallingLogObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
 
     private static final Logger LOG = Logger.getLogger(AizFallingLogObjectInstance.class.getName());
 

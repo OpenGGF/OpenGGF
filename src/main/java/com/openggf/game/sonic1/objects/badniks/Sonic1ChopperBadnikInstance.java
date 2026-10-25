@@ -1,5 +1,6 @@
 package com.openggf.game.sonic1.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.AbstractBadnikInstance;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
@@ -37,7 +38,11 @@ import java.util.List;
  *   <li>2 (still): frame 0 at speed 7 - used when below threshold and descending</li>
  * </ul>
  */
-public class Sonic1ChopperBadnikInstance extends AbstractBadnikInstance implements SpawnRewindRecreatable {
+public class Sonic1ChopperBadnikInstance extends AbstractBadnikInstance implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // The native fish only jumps vertically and always draws without an X flip; it has no horizontal-facing state.
+        return ObjectVisualFacing.Basis.NON_DIRECTIONAL;
+    }
 
     // From disassembly: obColType = $9 (enemy, collision size index $9)
     private static final int COLLISION_SIZE_INDEX = 0x09;

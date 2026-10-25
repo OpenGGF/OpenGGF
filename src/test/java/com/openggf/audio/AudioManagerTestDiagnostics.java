@@ -5,6 +5,7 @@ import com.openggf.audio.driver.SmpsDriverServiceObserver;
 import com.openggf.audio.presentation.AudioPresentationParityProbe;
 import com.openggf.audio.presentation.AudioPresentationProducer;
 import com.openggf.audio.rewind.SmpsDriverSnapshot;
+import com.openggf.audio.rewind.AudioLogicalSnapshot;
 import com.openggf.audio.session.SmpsDriverSession;
 import com.openggf.audio.smps.DacData;
 
@@ -45,6 +46,23 @@ public final class AudioManagerTestDiagnostics {
 
     public static void resetLogicalRestorePublications(AudioManager audio) {
         audio.resetLogicalRestorePublicationsForTesting();
+    }
+
+    public static AudioLogicalSnapshot selectedReverseSnapshot(AudioManager audio) {
+        return audio.deferredReverseLogicalSnapshotForTesting();
+    }
+
+    // Layout-only reads remain test-side; no production accessor is added.
+    public static boolean reversePreparationAcknowledged(AudioManager audio) {
+        return heldReverseField(audio, "deferredReverseLogicalPrepared", Boolean.class);
+    }
+
+    public static boolean postBoundaryReverseTarget(AudioManager audio) {
+        return heldReverseField(audio, "postBoundaryReverseTarget", Boolean.class);
+    }
+
+    public static boolean reverseReleaseFailureArmed(AudioManager audio) {
+        return heldReverseField(audio, "failNextReverseRelease", Object.class) != null;
     }
 
     /**
@@ -101,7 +119,7 @@ public final class AudioManagerTestDiagnostics {
      */
     public static SmpsDriverSnapshot primeAdmittedSmpsMusic(
             AudioManager audio) {
-        SmpsDriverSession session = field(
+        SmpsDriverSession session = presentationField(
                 audio, "shadowSmpsSession", SmpsDriverSession.class);
         SmpsDriver driver = sessionDriver(session);
         SmpsDriverSnapshot before = driver.captureSnapshot();
@@ -176,6 +194,75 @@ public final class AudioManagerTestDiagnostics {
         } catch (ReflectiveOperationException failure) {
             throw new IllegalStateException(
                     "cannot open a scoped session SMPS epoch", failure);
+        }
+    }
+
+    /** Observes a slot on the actual manager-lifetime physical binding. */
+    public static <T> T presentationField(AudioManager audio, String name, Class<T> type) {
+        Object binding = field(audio, "presentationBinding", Object.class);
+        try {
+            Field field = binding.getClass().getDeclaredField(name);
+            field.setAccessible(true);
+            return type.cast(field.get(binding));
+        } catch (ReflectiveOperationException failure) {
+            throw new IllegalStateException("cannot read PresentationBinding." + name, failure);
+        }
+    }
+
+    /** Invokes the existing eager transaction without adding a production failure seam. */
+    static boolean restoreLogicalSnapshotNow(
+            AudioManager audio, AudioLogicalSnapshot snapshot, boolean preservePresentation) {
+        try {
+            Method method = AudioManager.class.getDeclaredMethod(
+                    "restoreLogicalSnapshotNow", AudioLogicalSnapshot.class, boolean.class);
+            method.setAccessible(true);
+            return (boolean) method.invoke(audio, snapshot, preservePresentation);
+        } catch (InvocationTargetException failure) {
+            if (failure.getCause() instanceof RuntimeException runtime) throw runtime;
+            if (failure.getCause() instanceof Error error) throw error;
+            throw new AssertionError(failure.getCause());
+        } catch (ReflectiveOperationException failure) {
+            throw new AssertionError(failure);
+        }
+    }
+
+    /** Raw fallback observation follows the actual manager-lifetime logical owner. */
+    public static boolean rawRingLeft(AudioManager audio) {
+        Object owner = field(audio, "logicalPublication", Object.class);
+        try {
+            Field field = owner.getClass().getDeclaredField("ringLeft");
+            field.setAccessible(true);
+            return field.getBoolean(owner);
+        } catch (ReflectiveOperationException failure) {
+            throw new IllegalStateException("cannot read logical publication ring", failure);
+        }
+    }
+
+    /** Observes the actual binding owner without a production testing accessor. */
+    static AudioMutatorAccess.Binding currentMutatorBinding(AudioManager audio) {
+        AudioMutatorAccess owner = AudioManager.mutatorAccess(audio);
+        try {
+            Field field = AudioMutatorAccess.class.getDeclaredField("currentBinding");
+            field.setAccessible(true);
+            return AudioMutatorAccess.Binding.class.cast(field.get(owner));
+        } catch (ReflectiveOperationException failure) {
+            throw new IllegalStateException("cannot read AudioMutatorAccess.currentBinding", failure);
+        }
+    }
+
+    /** Original publication diagnostics follow the one manager-lifetime source owner. */
+    static Object sourcePublication(AudioManager audio) {
+        return field(audio, "sourcePublication", Object.class);
+    }
+
+    private static <T> T heldReverseField(AudioManager audio, String name, Class<T> type) {
+        Object owner = field(audio, "heldReverseRestore", Object.class);
+        try {
+            Field field = owner.getClass().getDeclaredField(name);
+            field.setAccessible(true);
+            return type.cast(field.get(owner));
+        } catch (ReflectiveOperationException failure) {
+            throw new IllegalStateException("cannot read held reverse restore." + name, failure);
         }
     }
 

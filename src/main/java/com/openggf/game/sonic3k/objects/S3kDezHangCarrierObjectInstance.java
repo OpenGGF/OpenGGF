@@ -6,6 +6,7 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.sprites.NativePositionOps;
@@ -16,7 +17,9 @@ import java.util.List;
 
 /** SKL $4C, Obj_DEZHangCarrier / sub_4703E (sonic3k.asm:92890-93048). */
 public class S3kDezHangCarrierObjectInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable {
+        implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+    // Native carrier travel moves a hanging grip whose placement flips are mounting, not logical facing.
     private int xFixed;
     private int yFixed;
     private int xVelocity;

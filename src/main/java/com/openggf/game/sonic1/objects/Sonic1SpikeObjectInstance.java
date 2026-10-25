@@ -13,6 +13,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
@@ -21,6 +22,7 @@ import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.level.objects.ObjectVisualFacing.Basis;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
@@ -48,7 +50,27 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/36 Spikes.asm
  */
 public class Sonic1SpikeObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable, ObjectVisualFacing.PlacementSource {
+
+    @Override
+    public ObjectVisualFacing.Basis nativeFacing() {
+        // Spikes_SideWays' pointy-end check documents clear status bit 0 as left;
+        // FixBugs=0 still uses that art but also hurts at the blunt end. Keep the
+        // spear direction separate from movementType's extend/retract phase.
+        if (!isSideways()) {
+            return ObjectVisualFacing.Basis.NON_DIRECTIONAL;
+        }
+        return (spawn.renderFlags() & 1) != 0
+                ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.LEFT;
+    }
+
+    @Override
+    public int initialPlacementFlags(Basis facing, int sourceFlags) {
+        if (!isSideways()) {
+            return sourceFlags;
+        }
+        return facing == Basis.RIGHT ? sourceFlags | 1 : sourceFlags & ~1;
+    }
 
     // Spik_Var table: frame index and actWidth per visual type (high nybble)
     // From disassembly: dc.b frame, width pairs

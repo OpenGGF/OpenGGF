@@ -6,6 +6,7 @@ import com.openggf.game.TitleCardProvider;
 import com.openggf.game.internal.FreshLevelTitleBoundaryPublication;
 import com.openggf.game.internal.LevelEntryPresentation;
 import com.openggf.game.internal.LevelPaletteFadeOwner;
+import com.openggf.game.internal.WorldTitleCardUpdate;
 import com.openggf.game.resources.PlcFrameLifecycleCoordinator;
 import com.openggf.game.resources.PlcFrameLifecycleCoordinator.PlcLifecycleFrame;
 import com.openggf.game.resources.PlcLifecyclePhase;
@@ -38,6 +39,19 @@ final class GameLoopPlcLifecycle {
         prepare(frame, phase);
     }
 
+    static PlcLifecyclePhase endingPhase(EndingProvider provider) {
+        if (provider == null) {
+            return PlcLifecyclePhase.ENDING;
+        }
+        return provider.plcLifecyclePhaseOverride().orElseGet(() ->
+                switch (provider.getCurrentPhase()) {
+                    case CREDITS_TEXT -> PlcLifecyclePhase.CREDITS_TEXT;
+                    case CREDITS_DEMO -> PlcLifecyclePhase.CREDITS_DEMO;
+                    case POST_CREDITS, FINISHED -> PlcLifecyclePhase.POST_CREDITS;
+                    case CUTSCENE -> PlcLifecyclePhase.ENDING;
+                });
+    }
+
     static void runNativeScreen(PlcLifecycleFrame frame, com.openggf.game.GameMode mode, Runnable body) {
         if (mode == com.openggf.game.GameMode.COMPETITION) {
             com.openggf.game.competition.NativeCompetitionIterationAccess.runAdmitted(frame, body);
@@ -52,17 +66,34 @@ final class GameLoopPlcLifecycle {
         }
     }
 
-    static PlcLifecyclePhase endingPhase(EndingProvider provider) {
-        if (provider == null) {
-            return PlcLifecyclePhase.ENDING;
+    /** The initialized title has already represented the first object scan. */
+    static void enterPendingTitleCard(GameplayModeContext context, LevelManager levelManager,
+                                      PlcLifecycleFrame frame, TitleCardProvider titleCard) {
+        if (titleCard != null && titleCard.shouldAdvanceVblankClockDuringLockedPhase()) {
+            // initialize has represented Obj_TitleCardInit; do not also run
+            // its next routine during the same represented object scan.
+            LevelFrameStep.executeHardwareTimedObjectScan(LevelFrameContext.from(context),
+                    frame, PlcLifecyclePhase.LEVEL_TITLE_CARD, () -> { });
+            levelManager.advanceTitleCardVblankOnly();
         }
-        return provider.plcLifecyclePhaseOverride().orElseGet(() ->
-                switch (provider.getCurrentPhase()) {
-                    case CREDITS_TEXT -> PlcLifecyclePhase.CREDITS_TEXT;
-                    case CREDITS_DEMO -> PlcLifecyclePhase.CREDITS_DEMO;
-                    case POST_CREDITS, FINISHED -> PlcLifecyclePhase.POST_CREDITS;
-                    case CUTSCENE -> PlcLifecyclePhase.ENDING;
-                });
+    }
+
+    /** Returns whether the provider's hardware scan owns this iteration's preparation. */
+    static boolean updateTitleCardProvider(LevelFrameContext frameContext, PlcLifecycleFrame frame,
+                                           TitleCardProvider titleCard, GameplayModeContext context) {
+        boolean hardwareTimedProviderScan = titleCard != null
+                && titleCard.shouldAdvanceVblankClockDuringLockedPhase();
+        if (hardwareTimedProviderScan) {
+            LevelFrameStep.executeHardwareTimedObjectScan(frameContext, frame,
+                    PlcLifecyclePhase.LEVEL_TITLE_CARD,
+                    () -> WorldTitleCardUpdate.dispatch(titleCard, context.getWorldSession()));
+            // The caller already attempted to claim this token. Prepare only its
+            // surviving title phase, after the scan and all hardware boundaries.
+            prepare(frame, PlcLifecyclePhase.LEVEL_TITLE_CARD);
+        } else if (titleCard != null) {
+            WorldTitleCardUpdate.dispatch(titleCard, context.getWorldSession());
+        }
+        return hardwareTimedProviderScan;
     }
 
     /** Samples the current module at the caller's pre-load or post-load boundary. */

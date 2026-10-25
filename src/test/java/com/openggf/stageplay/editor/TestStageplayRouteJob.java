@@ -1,5 +1,7 @@
 package com.openggf.stageplay.editor;
 
+import com.openggf.stageplay.StageplayDocument.Facing;
+
 import com.openggf.stageplay.StageplayDocument;
 import com.openggf.stageplay.StageplayStore;
 import com.openggf.stageplay.route.*;
@@ -22,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestStageplayRouteJob {
     private static StageplayDocument source() {
         return StageplayDocument.empty("s2",0,0,0,0,320,224).withDurationFrames(120)
-                .withActors(List.of(new Actor("hero","Hero","s2","sonic",List.of(new ActorKey(0,100,200,0,-1,false,true,1,Interpolation.HOLD)))))
+                .withActors(List.of(new Actor("hero","Hero","s2","sonic",List.of(new ActorKey(0,100,200,0,-1, Facing.RIGHT,true,1,Interpolation.HOLD)))))
                 .withPuppets(List.of(new PuppetTrack("hero",false,0,List.of())));
     }
     @Test void shippedWorkerCommandUsesTheHostClasspathAndTheLauncherOwnsTestOverrides() throws Exception {

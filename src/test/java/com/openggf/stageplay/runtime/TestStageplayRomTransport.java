@@ -1,5 +1,7 @@
 package com.openggf.stageplay.runtime;
 
+import com.openggf.stageplay.StageplayDocument.Facing;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.openggf.data.PhysicalImage;
@@ -103,7 +105,7 @@ class TestStageplayRomTransport {
     @Test void gamesIncludeCrossGameCastAndRomAudioButNotVoicePlaceholderGames() {
         var scene=StageplayDocument.empty("s1",0,0,0,0,320,224);
         var actor=new StageplayDocument.Actor("guest","Guest","s2","tails",List.of(
-                new StageplayDocument.ActorKey(0,0,0,0,-1,false,true,1,StageplayDocument.Interpolation.HOLD)));
+                new StageplayDocument.ActorKey(0,0,0,0,-1, Facing.RIGHT,true,1,StageplayDocument.Interpolation.HOLD)));
         scene=scene.withActors(List.of(actor)).withAudio(List.of(
                 new StageplayDocument.AudioCue("voice",0,StageplayDocument.AudioKind.VOICE,"s1",-1,"voice.wav",1),
                 new StageplayDocument.AudioCue("music",0,StageplayDocument.AudioKind.ROM_MUSIC,"s3k",1,"",1)));
@@ -111,7 +113,7 @@ class TestStageplayRomTransport {
     }
 
     @Test void gamesIncludeObjectDonorsWithoutPlayerOrAudioReferences() {
-        var key = new StageplayDocument.ObjectKey(0, 0, 0, 0, -1, false, true,
+        var key = new StageplayDocument.ObjectKey(0, 0, 0, 0, -1, Facing.LEFT, true,
                 StageplayDocument.Interpolation.HOLD, StageplayDocument.ObjectMode.FREE);
         var object = new StageplayDocument.ObjectActor("guest", "Guest", "s3k", 0, 0, 1, 0, -1,
                 List.of(key), List.of());

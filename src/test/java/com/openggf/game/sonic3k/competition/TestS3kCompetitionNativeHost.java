@@ -60,7 +60,7 @@ class TestS3kCompetitionNativeHost {
         var engine = EngineServices.current(); engine.graphics().initHeadless();
         // Same production no-device backend selected by HeadlessGameBoot. No
         // GLFW initialization, physical input polling or audio-device request.
-        var audio = new HeadlessSmpsAudioBackend(engine.configuration(), engine.profiler());
+        var audio = new HeadlessSmpsAudioBackend(engine.configuration(), engine.profiler(), engine.audio(), engine.audio());
         engine.audio().setBackend(audio); assertTrue(engine.audio().hasInstalledBackend(audio));
         byte[] block = new byte[80]; ByteBuffer bytes = ByteBuffer.wrap(block);
         for (int arena = 0; arena < 5; arena++) {

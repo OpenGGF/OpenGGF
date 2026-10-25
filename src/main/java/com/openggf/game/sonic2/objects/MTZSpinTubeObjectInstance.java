@@ -1,4 +1,6 @@
 package com.openggf.game.sonic2.objects;
+
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.RewindStateful;
 import com.openggf.level.objects.ObjectAnimationState;
@@ -49,7 +51,9 @@ import java.util.logging.Logger;
  * <p>
  * Disassembly reference: s2.asm lines 52943-53215 (Obj67), misc/obj67.asm (path data)
  */
-public class MTZSpinTubeObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class MTZSpinTubeObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj67 owns a tube flash/path controller; transported players keep their own facing.
+
     private static final Logger LOGGER = Logger.getLogger(MTZSpinTubeObjectInstance.class.getName());
 
     // Path traversal speed (0x1000 in ROM at loc_27368/loc_27374)

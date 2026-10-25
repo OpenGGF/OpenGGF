@@ -9,6 +9,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
@@ -44,7 +45,9 @@ import java.util.List;
  * (:88071-88075). The height feeds the solid box directly, so the act 2 door is a shorter obstacle.
  */
 public final class LrzDoorObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, RewindRecreatable, RomObjectCodePointerProvider {
+        implements SolidObjectProvider, RewindRecreatable, RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
+
+    // Native door frames and vertical opening travel have no horizontal-facing body.
 
     /** {@code move.w #$200,priority(a0)} (sonic3k.asm:88067). */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x0200);

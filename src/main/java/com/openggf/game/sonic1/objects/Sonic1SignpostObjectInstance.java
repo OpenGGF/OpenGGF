@@ -14,6 +14,7 @@ import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.objects.SignpostSparkleObjectInstance;
@@ -42,7 +43,9 @@ import java.util.logging.Logger;
  * </ul>
  */
 public class Sonic1SignpostObjectInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable {
+        implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+// Sign spin portraits and sparkle children belong to a sign, without a logical horizontal facing.
     public static final String AUTHORED_GOAL_KEY = "openggf:authored-goal";
 
     // Player-only native control tail; directing must not advance this controller's

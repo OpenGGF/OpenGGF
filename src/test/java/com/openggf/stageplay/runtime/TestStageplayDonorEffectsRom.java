@@ -1,5 +1,7 @@
 package com.openggf.stageplay.runtime;
 
+import com.openggf.stageplay.StageplayDocument.Facing;
+
 import com.openggf.audio.GameSound;
 import com.openggf.audio.rewind.AudioCommand;
 import com.openggf.audio.rewind.AudioReplayReason;
@@ -312,8 +314,8 @@ class TestStageplayDonorEffectsRom {
     }
 
     private static StageplayDocument scene() {
-        var cast=List.of(new Actor("lead","Lead","s3k","sonic",List.of(new ActorKey(0,96,655,0,-1,false,true,1,Interpolation.HOLD))),
-                new Actor("follower","Follower","s3k","sonic",List.of(new ActorKey(0,128,655,0,-1,false,true,1,Interpolation.HOLD))));
+        var cast=List.of(new Actor("lead","Lead","s3k","sonic",List.of(new ActorKey(0,96,655,0,-1, Facing.RIGHT,true,1,Interpolation.HOLD))),
+                new Actor("follower","Follower","s3k","sonic",List.of(new ActorKey(0,128,655,0,-1, Facing.RIGHT,true,1,Interpolation.HOLD))));
         return new StageplayDocument(VERSION,"Donor effects",90,320,224,
                 new SetSource("s2",0,0,"",""),cast,
                 List.of(new CameraKey(0,0,500,1,Interpolation.HOLD)),List.of(),List.of(),List.of(),List.of(),List.of(),List.of(),List.of(),

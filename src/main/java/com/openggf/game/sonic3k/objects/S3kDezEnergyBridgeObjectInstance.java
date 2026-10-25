@@ -9,6 +9,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -63,7 +64,9 @@ import java.util.List;
  * {@code Delete_Sprite_If_Not_In_Range} reads back, so it is recorded rather than modelled.
  */
 public final class S3kDezEnergyBridgeObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+    // Native energy-bridge phase and mounting flips describe a geometric surface without logical facing.
 
     /** {@code word_47DD6} (:93918-93922), indexed by {@code (subtype & $C) >> 1} as words. */
     private static final int[] PERIOD_MASKS = { 0x7F, 0xFF, 0x1FF, 0x3FF };

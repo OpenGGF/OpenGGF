@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.difficulty.AizTreeExitRecipe;
 import com.openggf.game.sonic3k.objects.badniks.MonkeyDudeBadnikInstance;
@@ -30,7 +32,7 @@ import java.util.Map;
  * <p>Primary disassembly references:
  * Obj_AIZHollowTree / sub_1F7CE / AIZTree_SetPlayerPos (sonic3k.asm:43641-43860).
  */
-public class AizHollowTreeObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
+public class AizHollowTreeObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable, ObjectVisualFacing.Container {
     private static final int TREE_CAPTURE_MIN_X = 0x2C99;
     private static final int TREE_CAPTURE_MAX_X = 0x2D66;
 

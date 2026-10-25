@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -27,7 +29,7 @@ import java.util.Map;
  * ({@code sonic3k.asm:56727-56889}).
  */
 public final class LbzLoweringGrappleObjectInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable {
+        implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
     private static final int PLAYER_SLOT_COUNT = 2;
     private static final int STEP_PIXELS = 2; // ROM $3A.
     private static final int SUBTYPE_DISTANCE_MASK = 0x7F;

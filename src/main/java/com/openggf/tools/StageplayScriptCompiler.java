@@ -20,7 +20,9 @@ import java.util.Set;
  * Compiles shot-local directing recipes into the portable Stageplay contract. No ROM or UI needed.
  */
 public final class StageplayScriptCompiler {
-    public static final int VERSION = 6;
+    public static final int VERSION = 7;
+    /** Shared authoring default for new editor and screenplay dialogue lines. */
+    public static final int DEFAULT_DIALOGUE_Y = 12;
     public static final int MAX_BYTES = 32 * 1024 * 1024;
     private static final ObjectMapper JSON =
             new ObjectMapper(
@@ -62,6 +64,7 @@ public final class StageplayScriptCompiler {
                             "shots",
                             "dialogueTypers",
                             "dialogueSkins",
+                            "voices",
                             "objectCast",
                             "order");
             int version = integer(script, "version", -1);
@@ -376,7 +379,7 @@ public final class StageplayScriptCompiler {
                                             "y",
                                             "animation",
                                             "pose",
-                                            "flipX",
+                                            "facing",
                                             "visible",
                                             "interpolation",
                                             "mode",
@@ -408,7 +411,7 @@ public final class StageplayScriptCompiler {
         defaults(key, "y", 0);
         defaults(key, "animation", 0);
         defaults(key, "pose", -1);
-        defaults(key, "flipX", false);
+        defaults(key, "facing", "RIGHT");
         defaults(key, "visible", true);
         defaults(key, "mode", "FREE");
         defaults(key, "interpolation", text(key, "mode").equals("FREE") ? "HOLD" : "LINEAR");
@@ -583,6 +586,16 @@ public final class StageplayScriptCompiler {
             throws IOException {
         ArrayNode typers = document.putArray("dialogueTypers"),
                 skins = document.putArray("dialogueSkins");
+        ArrayNode voices = document.putArray("voices");
+        for (var item : optionalArray(script, "voices")) {
+            var voice = object(item, "speaker voice", "speakerActor", "speakerName", "tone", "rhythm", "pitch",
+                    "variation", "lengthFrames", "level").deepCopy();
+            defaults(voice, "speakerActor", ""); defaults(voice, "speakerName", "");
+            defaults(voice, "tone", "SQUARE"); defaults(voice, "rhythm", "WORD");
+            defaults(voice, "pitch", 72); defaults(voice, "variation", 4);
+            defaults(voice, "lengthFrames", 6); defaults(voice, "level", 80);
+            voices.add(voice);
+        }
         for (var item : optionalArray(script, "dialogueTypers")) {
             var typer =
                     object(
@@ -675,7 +688,7 @@ public final class StageplayScriptCompiler {
             defaults(cue, "skinId", "");
             defaults(cue, "typerId", "");
             defaults(cue, "x", 12);
-            defaults(cue, "y", 12);
+            defaults(cue, "y", DEFAULT_DIALOGUE_Y);
             defaults(cue, "width", width - 24);
             defaults(cue, "height", Math.min(70, height - 24));
             defaults(cue, "portraitAsset", "");
@@ -700,7 +713,7 @@ public final class StageplayScriptCompiler {
                                                 "y",
                                                 "animation",
                                                 "pose",
-                                                "flipX",
+                                                "facing",
                                                 "visible",
                                                 "scale",
                                                 "interpolation"
@@ -729,7 +742,7 @@ public final class StageplayScriptCompiler {
         defaults(key, "y", 0);
         defaults(key, "animation", 0);
         defaults(key, "pose", -1);
-        defaults(key, "flipX", false);
+        defaults(key, "facing", "RIGHT");
         defaults(key, "visible", true);
         defaults(key, "scale", 1);
         defaults(key, "interpolation", puppet ? "HOLD" : "LINEAR");
@@ -764,7 +777,7 @@ public final class StageplayScriptCompiler {
                                                 };
                                         case "audio" ->
                                                 new String[] {
-                                                    "id", "frame", "kind", "gameId", "soundId",
+                                                    "id", "frame", "kind", "gameId", "soundId", "music",
                                                     "asset", "gain"
                                                 };
                                         default ->
@@ -790,6 +803,16 @@ public final class StageplayScriptCompiler {
                     throw new IOException("Audio cue lies outside its shot");
                 event.put("frame", offset + frame);
                 defaults(event, "gameId", gameId);
+                if (event.has("music")) {
+                    if (!text(event,"kind").equals("ROM_MUSIC"))
+                        throw new IOException("music is available only for ROM_MUSIC cues");
+                    if (event.has("soundId")) throw new IOException("Choose either music or soundId");
+                    try {
+                        event.put("soundId",com.openggf.game.audio.RomSoundCatalog.music(
+                                text(event,"gameId"),text(event,"music")).soundId());
+                    } catch (IllegalArgumentException failure) { throw new IOException(failure.getMessage(),failure); }
+                    event.remove("music");
+                }
                 defaults(event, "soundId", 0);
                 defaults(event, "asset", "");
                 defaults(event, "gain", 1);
@@ -852,6 +875,8 @@ public final class StageplayScriptCompiler {
             throws IOException {
         if (!(value instanceof ObjectNode node))
             throw new IOException(label + " must be an object");
+        if ((label.equals("actor key") || label.equals("object key")) && node.has("flipX"))
+            throw new IOException("Raw flipX is not facing; use facing: LEFT or RIGHT for " + label);
         if (allowed.length != 0) {
             Set<String> names = Set.of(allowed);
             var fields = node.fieldNames();

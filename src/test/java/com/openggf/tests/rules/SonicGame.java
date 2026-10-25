@@ -1,6 +1,6 @@
 package com.openggf.tests.rules;
 
-import com.openggf.data.Game;
+import com.openggf.game.Game;
 
 /**
  * Identifies which Sonic game a test requires.

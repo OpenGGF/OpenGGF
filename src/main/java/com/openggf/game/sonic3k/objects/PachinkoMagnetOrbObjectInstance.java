@@ -9,6 +9,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -28,7 +29,9 @@ import java.util.List;
  * <p>ROM reference: {@code Obj_PachinkoMagnetOrb}. The orb tracks capture/orbit state
  * per player slot rather than sharing one global state across the object.
  */
-public class PachinkoMagnetOrbObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class PachinkoMagnetOrbObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+    // Native bumper/orb/platform geometry has no horizontal facing; contact and orbit affect separate players.
 
     private static final int CATCH_RANGE = 0x38;
     private static final int RELEASE_COOLDOWN = 30;

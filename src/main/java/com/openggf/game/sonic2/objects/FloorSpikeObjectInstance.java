@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.PlayableEntity;
@@ -33,7 +35,8 @@ import java.util.List;
  * </ul>
  */
 public class FloorSpikeObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, RewindRecreatable {
+        implements TouchResponseProvider, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj6D extends an upward spike vertically; it has no horizontal facing.
 
     // From disassembly: move.b #$84,collision_flags(a0)
     // Top nibble $8 = harmful/spike, bottom nibble $4 = size index

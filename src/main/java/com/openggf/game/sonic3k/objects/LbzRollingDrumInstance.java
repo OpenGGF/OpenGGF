@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.GroundMode;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
@@ -28,7 +30,7 @@ import java.util.Map;
  * {@code _unkF7B0+0/+1} store native P1/P2 angle bytes while riding.
  */
 public final class LbzRollingDrumInstance extends AbstractObjectInstance
-        implements RomObjectCodePointerProvider, SpawnRewindRecreatable {
+        implements RomObjectCodePointerProvider, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
     private static final int TOP_BOTTOM_Y_BIAS = 0x53;
     private static final int VERTICAL_RANGE = 0xA6;
     private static final int LOWER_HALF_Y = 0x53;

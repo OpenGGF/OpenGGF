@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.ShieldType;
@@ -38,7 +40,7 @@ import java.util.logging.Logger;
  */
 public class AizLrzRockObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider, RomObjectCodePointerProvider,
-        SpawnRewindRecreatable {
+        SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
 
     private static final Logger LOG = Logger.getLogger(AizLrzRockObjectInstance.class.getName());
 

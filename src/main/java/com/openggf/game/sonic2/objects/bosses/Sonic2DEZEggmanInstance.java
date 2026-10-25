@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects.bosses;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.graphics.GLCommand;
@@ -37,7 +38,11 @@ import java.util.List;
  * Animation: Ani_objC5_objC6 anim 0 = speed 5, frames {2, 3, 4} looping.
  * Art: Combined RobotnikUpper + RobotnikRunning + RobotnikLower, mappings ObjC6_MapUnc_3D0EE.
  */
-public class Sonic2DEZEggmanInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class Sonic2DEZEggmanInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // ObjC6 Eggman always faces right while escaping; no selected pose changes that logical direction.
+        return ObjectVisualFacing.Basis.RIGHT;
+    }
 
     // ========================================================================
     // STATE CONSTANTS

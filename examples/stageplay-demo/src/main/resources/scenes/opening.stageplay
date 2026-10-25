@@ -1,5 +1,5 @@
 {
-  "version": 7,
+  "version": 8,
   "name": "A scene in Emerald Hill",
   "durationFrames": 900,
   "width": 320,
@@ -24,7 +24,7 @@
           "y": 640,
           "animation": 0,
           "pose": -1,
-          "flipX": false,
+          "facing": "RIGHT",
           "visible": true,
           "scale": 1,
           "interpolation": "LINEAR"
@@ -35,7 +35,7 @@
           "y": 640,
           "animation": 5,
           "pose": -1,
-          "flipX": false,
+          "facing": "RIGHT",
           "visible": true,
           "scale": 1,
           "interpolation": "HOLD"
@@ -46,7 +46,7 @@
           "y": 640,
           "animation": 0,
           "pose": -1,
-          "flipX": false,
+          "facing": "RIGHT",
           "visible": true,
           "scale": 1,
           "interpolation": "LINEAR"
@@ -57,7 +57,7 @@
           "y": 640,
           "animation": 0,
           "pose": -1,
-          "flipX": false,
+          "facing": "RIGHT",
           "visible": true,
           "scale": 1,
           "interpolation": "LINEAR"
@@ -76,7 +76,7 @@
           "y": 640,
           "animation": 5,
           "pose": -1,
-          "flipX": true,
+          "facing": "LEFT",
           "visible": true,
           "scale": 1,
           "interpolation": "HOLD"
@@ -87,7 +87,7 @@
           "y": 640,
           "animation": 0,
           "pose": -1,
-          "flipX": false,
+          "facing": "RIGHT",
           "visible": true,
           "scale": 1,
           "interpolation": "LINEAR"
@@ -98,7 +98,7 @@
           "y": 640,
           "animation": 0,
           "pose": -1,
-          "flipX": false,
+          "facing": "RIGHT",
           "visible": true,
           "scale": 1,
           "interpolation": "LINEAR"
@@ -200,7 +200,7 @@
       "frame": 0,
       "kind": "ROM_MUSIC",
       "gameId": "s2",
-      "soundId": 129,
+      "soundId": 130,
       "asset": "",
       "gain": 1
     },
@@ -235,5 +235,4 @@
         "offsetY": 0
       }
     }
-  ]
-}
+  ],"voices":[]}

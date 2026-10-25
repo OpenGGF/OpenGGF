@@ -10,6 +10,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
@@ -44,7 +45,9 @@ import java.util.Map;
  * <p>
  * <b>Disassembly reference:</b> docs/s1disasm/_incObj/67 Running Disc.asm
  */
-public class Sonic1RunningDiscObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
+public class Sonic1RunningDiscObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+// Disc angular phase positions a surface spot; it does not give the spot horizontal facing.
 
     // From disassembly: move.b #4,obRender(a0) — render flags (screen-relative coords)
     // From disassembly: move.b #4,obPriority(a0)

@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
@@ -27,7 +29,7 @@ import java.util.List;
  * mapping frame and emits the falling log chips used during the trunk break
  * animation.
  */
-public final class MhzMinibossTreeInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
+public final class MhzMinibossTreeInstance extends AbstractObjectInstance implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
     private static final int BOSS_TREE_FRAME_OFFSET = 0x42;
     private static final int DEFAULT_MAPPING_FRAME = 5;
     private static final int PRIORITY_BUCKET = 7; // ObjDat_MHZMinibossTree priority $380

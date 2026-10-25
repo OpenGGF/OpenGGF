@@ -16,14 +16,14 @@ public final class PaletteUploadPresentation {
      */
     public static void cacheLevelPalette(GraphicsManager graphics, PaletteView palette, int line) {
         if (graphics != null) {
-            graphics.cacheLatchablePaletteTexture(palette, line);
+            graphics.paletteTextures().cacheLatchablePaletteTexture(palette, line);
         }
     }
 
     /** Uploads everything written since the previous publication and keeps latching. */
     public static void publishAndLatch(GraphicsManager graphics) {
         if (graphics != null) {
-            graphics.setPaletteUploadLatched(true);
+            graphics.paletteTextures().setPaletteUploadLatched(true);
         }
     }
 
@@ -32,12 +32,12 @@ public final class PaletteUploadPresentation {
 
     /** The fade CRAM currently holds (one V-int behind the requested fade while latched). */
     public static PaletteFadePresentation displayedFade(GraphicsManager graphics) {
-        return graphics.displayedPaletteFade();
+        return graphics.paletteTextures().displayedPaletteFade();
     }
 
     /** Captures the displayed fade generation for a rewind snapshot of the V-int publication. */
     public static DisplayedFade captureDisplayedFade(GraphicsManager graphics) {
-        return graphics == null ? null : graphics.captureDisplayedPaletteFade();
+        return graphics == null ? null : graphics.paletteTextures().captureDisplayedPaletteFade();
     }
 
     /**
@@ -46,13 +46,13 @@ public final class PaletteUploadPresentation {
      */
     public static void restoreDisplayedFade(GraphicsManager graphics, DisplayedFade state) {
         if (graphics != null && state != null) {
-            graphics.restoreDisplayedPaletteFade(state);
+            graphics.paletteTextures().restoreDisplayedPaletteFade(state);
         }
     }
 
     /** Cinematic entry reveal, scoped through the completed draw without advancing the native fade. */
     public static void withoutDisplayedFade(GraphicsManager graphics, Runnable draw) {
-        graphics.withoutDisplayedPaletteFade(draw);
+        graphics.paletteTextures().withoutDisplayedPaletteFade(draw);
     }
 
     /** Uploads anything pending and returns to immediate uploads. */
@@ -61,7 +61,7 @@ public final class PaletteUploadPresentation {
             // A rewind redraw also holds the displayed fade when this scene has
             // no level upload latch. Its next publication must release that hold
             // and flush the requested generation before returning to direct CRAM.
-            graphics.setPaletteUploadLatched(false);
+            graphics.paletteTextures().setPaletteUploadLatched(false);
         }
     }
 }

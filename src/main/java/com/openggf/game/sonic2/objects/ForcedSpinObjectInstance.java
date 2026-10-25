@@ -1,4 +1,6 @@
 package com.openggf.game.sonic2.objects;
+
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.BoxObjectInstance;
 
 import com.openggf.audio.GameSound;
@@ -53,7 +55,8 @@ import java.util.Map;
  * in the opposite direction, state resets and the OPPOSITE action is applied.
  * </p>
  */
-public class ForcedSpinObjectInstance extends BoxObjectInstance implements RewindRecreatable {
+public class ForcedSpinObjectInstance extends BoxObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj84 is an invisible crossing trigger; xFlipped selects enable/disable, not facing.
 
     // Width lookup table from disassembly word_211E8
     private static final int[] WIDTH_TABLE = {0x20, 0x40, 0x80, 0x100};

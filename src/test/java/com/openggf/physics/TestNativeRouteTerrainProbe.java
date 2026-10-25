@@ -56,6 +56,17 @@ class TestNativeRouteTerrainProbe {
         assertTrue(new NativeRouteTerrainProbe(level, provider).dynamicCollision());
         verifyNoInteractions(level);
     }
+    @Test void boundedProbeChargesInsideClearanceAndFloorLoops() {
+        var level = mock(LevelManager.class);
+        var calls = new java.util.concurrent.atomic.AtomicInteger();
+        Runnable stop = () -> { if (calls.incrementAndGet() == 3) throw new IllegalStateException("cancelled inside scan"); };
+        var probe = new NativeRouteTerrainProbe(level,BackgroundPlaneCollisionProvider.FOREGROUND_ONLY,stop);
+        assertThrows(IllegalStateException.class,() -> probe.clear(0,0,200,200,0));
+        assertEquals(3,calls.get());
+        calls.set(0);
+        assertThrows(IllegalStateException.class,() -> probe.floor(100,100,0));
+        assertEquals(3,calls.get());
+    }
     private static SolidTile tile(int height) {
         byte[] values = new byte[16]; Arrays.fill(values, (byte) height);
         return new SolidTile(7, values, values.clone(), (byte) 0);

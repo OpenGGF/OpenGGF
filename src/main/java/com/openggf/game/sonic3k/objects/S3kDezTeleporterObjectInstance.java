@@ -9,6 +9,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.physics.Direction;
@@ -57,7 +58,9 @@ import java.util.List;
  * that latch to decide how far to nudge the player as control is returned.
  */
 public final class S3kDezTeleporterObjectInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable {
+        implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+    // Native invisible field/path logic controls separately owned players; it has no facing body or visual children.
 
     /** ROM {@code addq.w #3,d0} (:94992) and {@code cmpi.w #$10,d0} (:94998). */
     private static final int CAPTURE_X_BIAS = 3;

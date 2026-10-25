@@ -17,6 +17,7 @@ import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SolidRoutineProfile;
@@ -44,7 +45,9 @@ import java.util.logging.Logger;
  */
 public class Sonic1MonitorObjectInstance extends AbstractMonitorObjectInstance
         implements SpawnRewindRecreatable, TouchResponseProvider, TouchResponseListener,
-        SolidObjectProvider {
+        SolidObjectProvider, ObjectVisualFacing.NonDirectional {
+
+// Monitor frames and the rising icon/explosion children have no native horizontal-facing owner.
     private static final Logger LOGGER = Logger.getLogger(Sonic1MonitorObjectInstance.class.getName());
 
     // From disassembly: obHeight/obWidth = $0E

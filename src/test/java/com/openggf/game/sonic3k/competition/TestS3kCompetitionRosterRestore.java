@@ -63,7 +63,7 @@ class TestS3kCompetitionRosterRestore {
         TestEnvironment.configureRomFixture(GameServices.rom().getRom());
         var engine = EngineServices.current();
         engine.graphics().initHeadless();
-        var audio = new HeadlessSmpsAudioBackend(engine.configuration(),engine.profiler());
+        var audio = new HeadlessSmpsAudioBackend(engine.configuration(),engine.profiler(),engine.audio(),engine.audio());
         engine.audio().setBackend(audio);
         assertTrue(engine.audio().hasInstalledBackend(audio));
         var bytes = ByteBuffer.allocate(80);

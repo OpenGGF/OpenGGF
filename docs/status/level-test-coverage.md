@@ -155,6 +155,14 @@ checks. The [native audit](../architecture/audits/2026-10-07-s3k-parity-gap-veri
 records event PLC3 phase/readiness/save ordering and remaining presentation and
 route breadth. These local repairs do not certify either act or stage.
 
+S3K monitor admission follow-up (2026-10-24): the
+[field audit](../architecture/audits/2026-10-24-rewind-disposition-review.md#s3k-monitor-contents-admission)
+records real-manager zero/one/two-free-tail cases for stock rings and creator
+Eggman contents, exact graph recreation and forward retirement, remembered
+respawn and touch before/after the monitor's dispatch. These are bounded object
+contracts, not complete act routes. Viewport/donor/character/team breadth, GPU
+pixels and full-route contact coverage remain inherited obligations.
+
 S2 badnik ownership rewind follow-up (2026-10-24): the
 [field audit](../architecture/audits/2026-10-24-rewind-disposition-review.md#rexon-and-sol-owner-follow-up)
 records two nearby Rexon/Sol families, sparse/retired links, flying fireballs,

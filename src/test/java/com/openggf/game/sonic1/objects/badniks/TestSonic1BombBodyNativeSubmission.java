@@ -35,9 +35,13 @@ class TestSonic1BombBodyNativeSubmission {
         assertEquals(0, h.body.getPriorityBucket());
         assertEquals(0, h.body.getCollisionFlags());
         assertEquals(0, integer(h.body, "mappingFrame"));
+        assertEquals(ObjectVisualFacing.Basis.LEFT, ObjectVisualFacing.resolve(h.body),
+                "Construction retains placement facing before Bom_Main");
 
         h.step(1, null);
         assertEquals(List.of(call(40, 3)), calls(h));
+        assertEquals(ObjectVisualFacing.Basis.LEFT, ObjectVisualFacing.resolve(h.body),
+                "Bom_Main and the immediate waiting-to-walking action each toggle direction");
         assertEquals(0x5F, h.body.getLiveObjectId());
         assertEquals(0x9A, h.body.getCollisionFlags());
         assertEquals(1535, integer(h.body, "timer"));
@@ -53,6 +57,34 @@ class TestSonic1BombBodyNativeSubmission {
         assertEquals(4, integer(h.body, "mappingFrame"));
         assertEquals(158, h.body.getX(), "bchg tests the OLD bit before negating walking speed");
         assertEquals(0xC000, motion(h.body).xSub, "native SpeedToPos uses 16-bit fractions");
+    }
+
+    @Test
+    void firstNearbyPlayerDispatchChangesPlacementFacingToInitializedNativeFacing() throws Exception {
+        Harness h = harness(40, false);
+        Sonic1BombBadnikInstance mirrored = h.manager.createDynamicObjectAtSlot(
+                () -> new Sonic1BombBadnikInstance(new ObjectSpawn(160, 96, 0x5F, 0, 1, false, 96)), 41);
+        assertNotNull(mirrored);
+        assertEquals(ObjectVisualFacing.Basis.LEFT, ObjectVisualFacing.resolve(h.body));
+        assertEquals(ObjectVisualFacing.Basis.RIGHT, ObjectVisualFacing.resolve(mirrored));
+
+        TestPlayableSprite player = new TestPlayableSprite();
+        player.setCentreX((short)160);
+        player.setCentreY((short)96);
+        h.step(1, player);
+        assertEquals(142, integer(h.body, "timer"));
+        assertEquals(142, integer(mirrored, "timer"));
+        assertTrue(calls(h).contains(call(40, 3)));
+        assertTrue(calls(h).contains(call(41, 3)));
+        // Nearby-player activation naturally retains Bom_Main's toggle instead of
+        // entering the waiting-to-walking action that would toggle it a second time.
+        assertEquals(ObjectVisualFacing.Basis.RIGHT, ObjectVisualFacing.resolve(h.body));
+        assertEquals(ObjectVisualFacing.Basis.LEFT, ObjectVisualFacing.resolve(mirrored));
+
+        h.step(2, null);
+        assertEquals(ObjectVisualFacing.Basis.RIGHT, ObjectVisualFacing.resolve(h.body),
+                "Later dispatches cannot repeat Bom_Main's initialization toggle");
+        assertEquals(ObjectVisualFacing.Basis.LEFT, ObjectVisualFacing.resolve(mirrored));
     }
 
     @ParameterizedTest

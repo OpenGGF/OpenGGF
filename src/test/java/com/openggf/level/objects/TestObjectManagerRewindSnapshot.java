@@ -2,7 +2,6 @@ package com.openggf.level.objects;
 
 import com.openggf.tests.TestEnvironment;
 import com.openggf.game.session.SessionManager;
-import com.openggf.game.session.EngineServices;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.rewind.RewindSnapshotDiff;
 import com.openggf.game.rewind.identity.PlayerRefId;
@@ -38,8 +37,7 @@ class TestObjectManagerRewindSnapshot {
 
     @BeforeEach
     void setUp() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.resetAll();
     }
 
     @AfterEach

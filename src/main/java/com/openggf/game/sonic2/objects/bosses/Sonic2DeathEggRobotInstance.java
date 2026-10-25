@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects.bosses;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
@@ -57,7 +58,12 @@ import java.util.function.Supplier;
  * - Type 2: Jet-Stomp (fly up, target player, stomp down, screen shake)
  * - Type 4: Stomp-Turn-Bombs (walk toward player, drop 2 bombs)
  */
-public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements RewindRecreatable {
+public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements RewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // Target selection and the arm offset signs use this native direction; pose art is left alone.
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
+
     // Player-only native control tail; directing must not advance this controller's
     // routine, timers, world flags, camera or level transition.
     private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();

@@ -1,5 +1,6 @@
 package com.openggf.graphics;
 
+import com.openggf.tests.TestEnvironment;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.EngineContext;
@@ -21,7 +22,7 @@ public class TestGraphicsManagerSpriteSatReplay {
     @BeforeEach
     public void setUp() {
         GraphicsManager.destroyForReinit();
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.resetEngineOnly();
         graphicsManager = GraphicsManager.getInstance();
         graphicsManager.initHeadless();
     }
@@ -365,6 +366,37 @@ public class TestGraphicsManagerSpriteSatReplay {
         graphicsManager.cancelSpritePresentationCollection();
         assertFalse(graphicsManager.isSpriteSatCollectionActive()); assertFalse(getBooleanField(graphicsManager, "spriteMaskRequested"));
         assertTrue(collectedEntries().isEmpty()); assertNull(fragmentsField.get(graphicsManager));
+    }
+
+    @Test
+    void wholeTileFallbackRetainsExpandedPaletteFlagsAndFloatGeometryAtIntegerExtremes() throws Exception {
+        int id = PatternAtlasRange.OBJECTS.base();
+        graphicsManager.cachePatternTexture(createSolidPattern((byte) 1), id);
+        for (int flags = 0; flags < 8; flags++) {
+            boolean h = (flags & 1) != 0, v = (flags & 2) != 0, priority = (flags & 4) != 0;
+            // Characterize the receiving command builder, not native SAT admission:
+            // the viewport correctly rejects these offscreen integer-extreme coordinates.
+            var replayCommands = graphicsManager.buildSpriteSatReplayCommands(List.of(SpriteSatEntry.of(
+                    Integer.MAX_VALUE, Integer.MIN_VALUE, 1, 1, id, 0x123, 7,
+                    h, v, priority, false)));
+            try {
+                assertEquals(1, replayCommands.size());
+                Object command = replayCommands.getFirst();
+                assertEquals(7, field(command, "paletteIndex"));
+                assertEquals(h, field(command, "hFlip")); assertEquals(v, field(command, "vFlip"));
+                assertEquals(priority, field(command, "piecePriority"));
+                assertEquals(false, field(command, "textureCoordinatesResolved"));
+                assertEquals((float) Integer.MAX_VALUE, getFloatField(command, "x"));
+                assertEquals(224f - (float) Integer.MIN_VALUE - 8f, getFloatField(command, "y"),
+                        "whole commands convert to float before subtracting; obtainRows has int overflow here");
+            } finally {
+                replayCommands.forEach(GLCommandable::discard); replayCommands.clear();
+            }
+        }
+    }
+
+    private static Object field(Object target, String name) throws Exception {
+        Field field = target.getClass().getDeclaredField(name); field.setAccessible(true); return field.get(target);
     }
 
     @SuppressWarnings("unchecked")

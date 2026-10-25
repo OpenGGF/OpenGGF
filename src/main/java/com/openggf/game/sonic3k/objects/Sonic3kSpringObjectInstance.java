@@ -15,6 +15,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SlopedSolidProvider;
 import com.openggf.level.objects.SpawnRewindRecreatable;
@@ -62,7 +63,25 @@ import java.util.Set;
  */
 public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider, SolidObjectListener, SlopedSolidProvider, SpawnRewindRecreatable,
-        RomObjectCodePointerProvider {
+        RomObjectCodePointerProvider, ObjectVisualFacing.PlacementSource {
+
+    @Override
+    public ObjectVisualFacing.Basis nativeFacing() {
+        // sub_23190/sub_2350A negate the negative spring power only for an
+        // unmirrored horizontal/diagonal launch. Gravity swaps vertical variants,
+        // not logical X direction; bounce poses remain relative to this owner.
+        return switch (springType) {
+            case TYPE_HORIZONTAL, TYPE_DIAGONAL_UP, TYPE_DIAGONAL_DOWN -> isFlippedHorizontal()
+                    ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+            default -> ObjectVisualFacing.Basis.NON_DIRECTIONAL;
+        };
+    }
+
+    @Override
+    public int initialPlacementFlags(com.openggf.level.objects.ObjectVisualFacing.Basis facing, int sourceFlags) {
+        if (nativeFacing() == ObjectVisualFacing.Basis.NON_DIRECTIONAL) return sourceFlags;
+        return facing == com.openggf.level.objects.ObjectVisualFacing.Basis.LEFT ? sourceFlags | 1 : sourceFlags & ~1;
+    }
 
     // Obj_Spring's routine pointer is $00023050 in the locked-on ROM. S3K's
     // sidekick off-screen watchdog compares word 0 of this pointer against its

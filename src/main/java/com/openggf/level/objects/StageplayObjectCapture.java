@@ -24,6 +24,7 @@ final class StageplayObjectCapture {
     final List<PaletteColors> palettes = new ArrayList<>();
     final Map<PaletteColors, Integer> paletteIds = new LinkedHashMap<>();
     final List<String> limitations = new ArrayList<>();
+    Map<ObjectInstance, String> paths;
 
     StageplayObjectCapture(StageplayObjectDirection owner, ObjectInstance root, GraphicsManager graphics) {
         this.owner = owner;
@@ -35,7 +36,7 @@ final class StageplayObjectCapture {
     }
 
     VisualTemplate capture() {
-        Map<ObjectInstance, String> paths = owner.structuralPaths(root);
+        paths = owner.structuralPaths(root);
         List<ObjectInstance> members = owner.graph(root);
         Set<ObjectInstance> inline = Collections.newSetFromMap(new IdentityHashMap<>());
         for (ObjectInstance member : members) {
@@ -64,12 +65,16 @@ final class StageplayObjectCapture {
                 captureEntry(paths.get(entry.instance()), entry, b + RenderPriority.MIN);
             }
         }
+        // There is no facing-bearing appearance to resolve until some native
+        // visual exists. Keep the same readiness rejection for dynamic children.
+        VisualTemplate.requireInitializedParts(parts);
         limitations.add(
                 "Native PLC, palette and child-graph state is held at capture; mapping poses"
                         + " use that frozen ROM art bank");
         return new VisualTemplate(
                 anchorX,
                 anchorY,
+                ObjectVisualFacing.resolve(root),
                 parts,
                 patterns,
                 palettes,
@@ -109,15 +114,17 @@ final class StageplayObjectCapture {
         if (!residual.primitives().isEmpty()) {
             throw new UnsupportedRenderOrderException(root.getName());
         }
+        FacingGroup group = null;
         String prefix = path + "/bucket" + bucket + (entry.high() ? "h" : "l");
         if (!residual.tiles().isEmpty() || !residual.primitives().isEmpty()) {
+            group = facingGroup(entry.instance());
             parts.add(
                     new VisualPart(
                             prefix + "/native",
                             bucket,
                             entry.high(),
                             entry.slot(),
-                            -1,
+                            -1, group.basis(), group.pivotX(),
                             List.of(convert(-1, residual))));
             limitations.add(
                     prefix
@@ -147,18 +154,36 @@ final class StageplayObjectCapture {
             }
             if (poses.stream()
                     .anyMatch(p -> !p.tiles().isEmpty() || !p.primitives().isEmpty())) {
+                // Observing a mapping draw is insufficient: every pose may be
+                // empty (Map_Offscreen), so resolve ownership only for real parts.
+                if (group == null) group = facingGroup(entry.instance());
                 parts.add(
                         new VisualPart(
                                 prefix + "/draw" + ordinal,
                                 bucket,
                                 entry.high(),
                                 entry.slot(),
-                                defaultPose,
+                                defaultPose, group.basis(), group.pivotX(),
                                 poses,
                                 animations));
             }
             ordinal++;
         }
+    }
+
+    private record FacingGroup(ObjectVisualFacing.Basis basis, float pivotX) { }
+
+    private FacingGroup facingGroup(ObjectInstance member) {
+        ObjectInstance group = root;
+        if (root instanceof ObjectVisualFacing.Container && member != root) {
+            String target = paths.get(member);
+            group = paths.entrySet().stream()
+                    .filter(e -> e.getKey() != root && !(e.getKey() instanceof ObjectVisualFacing.Container)
+                            && (target.equals(e.getValue()) || target.startsWith(e.getValue() + "/")))
+                    .min(Comparator.comparingInt(e -> e.getValue().length()))
+                    .map(Map.Entry::getKey).orElse(root);
+        }
+        return new FacingGroup(ObjectVisualFacing.resolve(group), group.getX() - anchorX);
     }
 
     SpritePresentation.Frame prepare(ObjectSpriteCapture.Draw draw, int pose) {

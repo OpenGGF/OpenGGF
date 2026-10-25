@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects.bosses;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
@@ -27,7 +28,12 @@ import java.util.List;
  * dispatcher with boss_subtype values for the main submarine, laser shooter,
  * spike chain, laser projectile, and ground wave.
  */
-public class Sonic2OOZBossInstance extends AbstractBossInstance implements SpawnRewindRecreatable {
+public class Sonic2OOZBossInstance extends AbstractBossInstance implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // The native target-facing routine sets flipped when the player is to the right.
+        return flipped ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.LEFT;
+    }
+
     private static final int SUB_MAIN = 0x02;
     private static final int SUB_LASER_SHOOTER = 0x04;
     private static final int SUB_SPIKE_CHAIN = 0x06;

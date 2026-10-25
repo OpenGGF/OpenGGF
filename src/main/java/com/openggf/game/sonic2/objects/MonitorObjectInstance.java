@@ -1,4 +1,6 @@
 package com.openggf.game.sonic2.objects;
+
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.audio.GameMusic;
 import com.openggf.level.objects.ObjectAnimationState;
 import com.openggf.level.objects.ExplosionObjectInstance;
@@ -43,7 +45,9 @@ import java.util.List;
 import java.util.logging.Logger;
 
 public class MonitorObjectInstance extends AbstractMonitorObjectInstance implements TouchResponseProvider, TouchResponseListener,
-        SolidObjectProvider, SolidObjectListener, RewindRecreatable {
+        SolidObjectProvider, SolidObjectListener, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj26 owns the monitor shell, rising reward icon and explosion; none has horizontal facing.
+
     private static final Logger LOGGER = Logger.getLogger(MonitorObjectInstance.class.getName());
     private static final int HALF_RADIUS = 0x0E;
     private static final int BROKEN_FRAME = 0x0B;

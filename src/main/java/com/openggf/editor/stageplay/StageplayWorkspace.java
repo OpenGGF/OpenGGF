@@ -1,11 +1,15 @@
 package com.openggf.editor.stageplay;
 
+import com.openggf.stageplay.StageplayDocument.Facing;
+
 import com.openggf.control.InputHandler;
+import com.openggf.game.MenuDetailsScreen;
 import com.openggf.editor.project.EditorProjectMenu;
 import com.openggf.game.MenuTextEditor;
 import com.openggf.stageplay.StageplayController;
 import com.openggf.stageplay.StageplayDocument;
 import com.openggf.stageplay.StageplayDialogue;
+import com.openggf.stageplay.StageplayGround;
 import com.openggf.stageplay.StageplayStore;
 import com.openggf.stageplay.StageplayTimeline;
 import com.openggf.tools.StageplayScriptCompiler;
@@ -44,6 +48,10 @@ public final class StageplayWorkspace {
         default StageplayTimeline.Frame resolvePreview(StageplayDocument document, Path assetRoot, StageplayTimeline.Frame draft) throws IOException {
             return draft;
         }
+        default StageplayGround.Report ground(StageplayDocument document, Path root, int frame,
+                                             StageplayGround.Batch batch) throws IOException {
+            throw new IOException("Place on floor is unavailable in this host");
+        }
         default List<com.openggf.stageplay.runtime.StageplayObjectInspection> objectInspection() { return List.of(); }
         default void stop() { }
         default java.util.Set<com.openggf.game.CharacterDefinition.MovementAbility> movementAbilities(Actor actor, Path root) throws IOException {
@@ -67,13 +75,13 @@ public final class StageplayWorkspace {
         EXPORT_SCREENPLAY("Export screenplay"), SAVE("Save"), SAVE_AS("Save as"),
         SCENE("Scene / set"), ADD_ACTOR("Add actor"), EDIT_ACTOR("Actor properties"),
         DELETE_ACTOR("Remove actor"), SET_KEY("Direct actor / set key"), DELETE_KEY("Remove actor key / action"),
-        PUPPET_ACTIONS("Puppet actions"), ROUTE_HELPER("Plan collision route"), OBJECTS("ROM object cast / clear"),
+        PUPPET_ACTIONS("Puppet actions"), ROUTE_HELPER("Plan route"), PLACE_ON_FLOOR("Place on floor"), OBJECTS("ROM object cast / clear"),
         CAMERA_MODE("Direct camera (C)"), SET_CAMERA_KEY("Capture camera key (K)"), CAMERA_KEY("Camera keys"),
         RECORD_CAMERA("Record camera take (R)"), CAMERA_EFFECTS("Camera shake / quake"),
         SCENE_CHANGES("Scene changes / transitions"), FILM_FORMAT("Film format presets"), CAPTION("Captions"), DIALOGUE("Dialogue lines"),
-        DIALOGUE_TYPERS("Dialogue typers"), DIALOGUE_SKINS("Dialogue decorations"), AUDIO("Audio cues"),
+        DIALOGUE_TYPERS("Dialogue typers"), DIALOGUE_SKINS("Dialogue decorations"), SPEAKER_VOICE("Speaker voice"), AUDIO("Audio cues"),
         RECORD("Record actor take (R)"), PLAY("Play / pause"), STOP("Stop"),
-        UNDO("Undo"), REDO("Redo"), EXPORT("Export film"), EXIT("Level editor");
+        UNDO("Undo"), REDO("Redo"), EXPORT("Export film"), DETAILS("Direction details"), EXIT("Level editor");
         private final String label;
         Action(String label) { this.label = label; }
         public String label() { return label; }
@@ -111,6 +119,62 @@ public final class StageplayWorkspace {
     private String previewError;
     private boolean cameraMode;
     private boolean cameraInputEnabled = true;
+    private StageplayPositionPicker picker;
+    private EditorProjectMenu.PositionField pickerField;
+    private long pickerGeneration;
+    private int pickerFrame;
+    private StageplayDocument pickerDocument;
+    private Path pickerRoot;
+    public boolean pickingPosition(){return picker!=null;}
+    public StageplayPositionPicker positionPicker(){return picker;}
+    public void pickPoint(double x,double y){if(picker!=null)picker.point(x,y);}
+    public void panPicker(double dx,double dy){if(picker!=null)picker.pan(dx,dy);}
+    public void togglePickerSnap(){if(picker!=null)picker.toggleSnap();}
+    public void paintPositionPicker(StageplayPositionPicker.Painter painter,float x,float y,float width,float height) {
+        if(picker==null)return;
+        var view=previewFrame().camera();
+        picker.paint(painter,x,y,width,height,new StageplayPositionPicker.View(view.x(),view.y(),view.zoom()));
+    }
+    public void confirmPositionPick(){finishPositionPick(true);}
+    public void cancelPositionPick(){finishPositionPick(false);}
+    private void beginPositionPick(EditorProjectMenu.PositionField field){
+        var values=menu.values();double x=Double.parseDouble(values.get(field.x()));
+        double y=field.y()==null?java.util.Optional.ofNullable(selectedActorPose()).map(StageplayTimeline.ActorPose::y).orElse(previewFrame().camera().y()+controller.document().height()/2.0)
+                :Double.parseDouble(values.get(field.y()));
+        if(!Double.isFinite(x)||!Double.isFinite(y))throw new IllegalArgumentException("Position needs finite numbers");
+        pickerField=field;pickerGeneration=menu.generation();pickerFrame=controller.frame();pickerDocument=controller.document();pickerRoot=assetRoot;
+        var frame=previewFrame();
+        java.util.function.BiFunction<Integer,Integer,List<StageplayPositionPicker.Floor>> ground=field.floor()?(cx,cy)->{
+            try {
+                String actor=menu.values().getOrDefault("actor",controller.selectedActorId());
+                StageplayGround.Visual visual=menu.values().containsKey("halfWidth")?new StageplayGround.Visual(integer(menu.values(),"halfWidth"),integer(menu.values(),"height"),integer(menu.values(),"footOffset"),StageplayGround.ObjectPath.of(integer(menu.values(),"collisionPath"))):null;
+                StageplayGround.Performer performer;
+                if (menu.values().containsKey("character") && menu.values().containsKey("game")) {
+                    // Add actor has no saved identity yet; query the role being authored.
+                    actor = "";
+                    performer = new StageplayGround.Player(menu.values().get("game"),menu.values().get("character"),
+                            integer(menu.values(),"collision"));
+                } else performer = StageplayGround.performerOf(pickerDocument,actor,visual);
+                int top=Math.max(Short.MIN_VALUE,cy-32),bottom=Math.min(Short.MAX_VALUE,cy+256);
+                var q=new StageplayGround.Query("picker",cx,top,bottom,performer,actor);
+                var report=host.ground(pickerDocument,pickerRoot,controller.frame(),new StageplayGround.Batch(List.of(q),100,100000,0));
+                var answer=report.answer("picker");
+                if(answer.outcome()!=StageplayGround.Outcome.FOUND||answer.truncated())return List.of();
+                return answer.placements().stream().map(p->new StageplayPositionPicker.Floor(p.x(),p.y(),p.surfaceY())).toList();
+            }catch(IOException failure){throw new java.io.UncheckedIOException(failure);}
+        }:null;
+        picker=new StageplayPositionPicker(x,y,controller.document().width(),controller.document().height(),new StageplayPositionPicker.View(frame.camera().x(),frame.camera().y(),frame.camera().zoom()),field.snap(),ground);
+        menu.suspend();
+    }
+    private void finishPositionPick(boolean accept){
+        if(picker==null)return;
+        var selected=picker; if(accept)selected.refreshFloor(); picker=null;menu.resume();
+        if(accept&&controller.frame()==pickerFrame&&menu.generation()==pickerGeneration&&controller.document().equals(pickerDocument)&&assetRoot.equals(pickerRoot)){
+            menu.setValue(pickerField.x(),EditorProjectMenu.coordinate(Double.toString(selected.x())));
+            if(pickerField.y()!=null)menu.setValue(pickerField.y(),EditorProjectMenu.coordinate(Double.toString(selected.pickedY())));
+        }
+        pickerField=null;pickerDocument=null;pickerRoot=null;
+    }
     private StageplayTimeline.CameraPose cameraDraft;
     private boolean startedThisTick;
     private boolean previewSoundActive;
@@ -121,7 +185,23 @@ public final class StageplayWorkspace {
         this.host = Objects.requireNonNull(host);
         controller = new StageplayController(StageplayDocument.empty("s2", 0, 0, 0, 0, 320, 224));
         assetRoot = host.initialAssetRoot();
+        menu.onShow(m -> StageplayMenuPresentation.configure(m,menuContext(),controller.selectedActorId()));
+        menu.onPositionPick(this::beginPositionPick);
     }
+
+    /** Translate semantic document choices inside the existing authoring boundary. */
+    private StageplayMenuPresentation.Context menuContext() {
+        var players=new java.util.LinkedHashMap<String,String>();
+        var objects=new java.util.LinkedHashMap<String,String>();
+        controller.document().actors().forEach(a->players.put(a.id(),a.name()));
+        controller.document().objectActors().forEach(a->objects.put(a.id(),a.name()));
+        var choices=Map.of("Interpolation",enumNames(Interpolation.values()),"Transition",enumNames(Transition.values()),
+                "WaitCondition",enumNames(WaitCondition.values()),"ObjectSourceKind",enumNames(ObjectSourceKind.values()),
+                "ObjectMode",enumNames(ObjectMode.values()),"AudioKind",enumNames(AudioKind.values()),
+                "WorldCommandKind",enumNames(WorldCommandKind.values()),"ObjectCommandKind",enumNames(ObjectCommandKind.values()));
+        return new StageplayMenuPresentation.Context(players,objects,choices,StageplayObjectAuthoring::objectChoices);
+    }
+    private static List<String> enumNames(Enum<?>[] values) {return java.util.Arrays.stream(values).map(Enum::name).toList();}
 
     public StageplayController controller() { return controller; }
     public EditorProjectMenu menu() { return menu; }
@@ -137,6 +217,18 @@ public final class StageplayWorkspace {
         return previewFrame().baseCamera();
     }
     public String status() { return status; }
+    public String statusSummary(){
+        if(previewError!=null)return "Preview needs attention; open Direction details.";
+        for(String verb:List.of("Saved","Opened","Imported","Exported"))if(status.startsWith(verb+" "))return verb+" scene.";
+        return StageplayMenuPresentation.sentence(status);
+    }
+    public void directionDetails(){
+        var overlay=routeOverlay();
+        String route=overlay==null?"":"\n"+overlay.reason()+"\n"+overlay.motionSummary()
+                +"\n"+overlay.path().size()+" samples, "+overlay.result().expandedNodes()+" nodes, "+overlay.result().simulatedTicks()+" ticks.";
+        menu.showActions("Direction details",List.of(action("Back",()->{})));
+        menu.setHelp("Current status and directing controls.",status+"\n"+selectedActorStatus()+route+"\nCamera: WASD / arrows pan, Q / E zoom, K captures framing, R records. Position fields open the level picker; F2 edits numbers. Goals remain native input attempts.");
+    }
     public Path path() { return path; }
     public Path assetRoot() { return assetRoot; }
 
@@ -183,7 +275,7 @@ public final class StageplayWorkspace {
     }
 
     /** Workspace changes preserve the scene and unsaved history. */
-    public void deactivate() { cancelRoute(); stop(); menu.close(); cameraDraft = null; cameraMode = false; active = false; }
+    public void deactivate() { cancelPositionPick(); cancelRoute(); stop(); menu.close(); cameraDraft = null; cameraMode = false; active = false; }
 
     public void seek(int frame) { stop(); controller.seek(frame); cameraDraft = null; }
     public void selectActor(String id) { stop(); controller.selectActor(id); }
@@ -210,6 +302,7 @@ public final class StageplayWorkspace {
                 case DELETE_KEY -> deleteKey();
                 case PUPPET_ACTIONS -> puppetMenu();
                 case ROUTE_HELPER -> routeMenu();
+                case PLACE_ON_FLOOR -> groundForm();
                 case OBJECTS -> new StageplayObjectAuthoring(menu, controller, this::edit, this::previewFrame,
                         () -> { previewFrame(); return host.objectInspection(); }).show();
                 case CAMERA_MODE -> {
@@ -226,6 +319,11 @@ public final class StageplayWorkspace {
                 case DIALOGUE -> dialogueMenu();
                 case DIALOGUE_TYPERS -> typerMenu();
                 case DIALOGUE_SKINS -> skinMenu();
+                case SPEAKER_VOICE -> {
+                    String actor = controller.selectedActorId();
+                    if (actor.isEmpty()) throw new IllegalArgumentException("Select a cast member to edit their voice");
+                    voiceForm(actor, "");
+                }
                 case AUDIO -> audioMenu();
                 case RECORD -> { if (recording()) stop(); else startTake(); }
                 case PLAY -> { if (controller.playing() || recording()) stop(); else play(); }
@@ -233,6 +331,7 @@ public final class StageplayWorkspace {
                 case UNDO -> { controller.undo(); cameraDraft = null; }
                 case REDO -> { controller.redo(); cameraDraft = null; }
                 case EXPORT -> exportForm();
+                case DETAILS -> directionDetails();
                 case EXIT -> deactivate();
             }
         } catch (RuntimeException failure) { report(failure); }
@@ -243,6 +342,12 @@ public final class StageplayWorkspace {
         if (!active && !menu.isOpen()) return false;
         try { pollRoute(); }
         catch(RuntimeException failure) { cancelRoute(); report(failure); }
+        if(picker!=null){
+            if(controller.frame()!=pickerFrame||menu.generation()!=pickerGeneration||!controller.document().equals(pickerDocument)||!assetRoot.equals(pickerRoot)){cancelPositionPick();return true;}
+            var result=picker.tick(input);
+            if(result==StageplayPositionPicker.Result.CONFIRM)confirmPositionPick();else if(result==StageplayPositionPicker.Result.CANCEL)cancelPositionPick();
+            return true;
+        }
         if (menu.update(input)) { resetZoomRepeat(); return true; }
         try {
             if (recording()) {
@@ -316,9 +421,10 @@ public final class StageplayWorkspace {
         var draft = takeDocument(takeKeys);
         var pose = StageplayTimeline.sample(draft, frame).actors().stream()
                 .filter(a -> a.actorId().equals(takeActor)).findFirst().orElseThrow();
+        var held = draft.actors().stream().filter(a -> a.id().equals(takeActor)).findFirst().orElseThrow()
+                .keys().stream().filter(k -> k.frame() <= frame).reduce((a,b) -> b).orElseThrow();
         var key = new ActorKey(frame, pose.x() + (right ? 2 : 0) - (left ? 2 : 0),
-                pose.y() + (down ? 2 : 0) - (up ? 2 : 0), pose.animation(), pose.pose(),
-                left || (!right && pose.flipX()), pose.visible(), pose.scale(), Interpolation.HOLD);
+                pose.y() + (down ? 2 : 0) - (up ? 2 : 0), pose.animation(), pose.pose(), (left ? Facing.LEFT : right ? Facing.RIGHT : held.facing()), pose.visible(), pose.scale(), Interpolation.HOLD);
         var keys = new ArrayList<>(takeKeys);
         keys.removeIf(k -> k.frame() == frame); keys.add(key); keys.sort(Comparator.comparingInt(ActorKey::frame));
         // Validate the whole scene budget before publishing a draft that either frontend can draw.
@@ -335,6 +441,13 @@ public final class StageplayWorkspace {
     public StageplayTimeline.Frame previewFrame() {
         var document = previewDocument();
         var frame = resolvePreview(document, controller.frame());
+        if(picker!=null){
+            var cursorView=picker.camera();
+            var view=new StageplayTimeline.CameraPose(cursorView.x(),cursorView.y(),cursorView.zoom());
+            var draft=new StageplayTimeline.Frame(frame.frame(),frame.actors(),view,frame.captions(),frame.set(),frame.transition(),view,frame.dialogue(),frame.puppets(),frame.world());
+            try { var resolved=host.resolvePreview(document,assetRoot,draft);picker.resolvedCamera(new StageplayPositionPicker.View(resolved.camera().x(),resolved.camera().y(),resolved.camera().zoom()));return resolved; }
+            catch(IOException failure){report(failure);return frame;}
+        }
         if (cameraDraft == null || controller.playing()) return frame;
         // Boundary clipping may suppress some native shake. A moved draft still uses
         // the authored seeded motion, then lets the preview owner bound both layers.
@@ -746,7 +859,7 @@ public final class StageplayWorkspace {
                     var camera=StageplayTimeline.sample(controller.document(),frame).baseCamera();
                     keys.add(new ActorKey(frame,frame==0?decimal(v,"x"):camera.x()+controller.document().width()/2.0,
                             frame==0?decimal(v,"y"):camera.y()+controller.document().height()/2.0,
-                            0,-1,false,true,1,Interpolation.HOLD));
+                            0,-1, Facing.RIGHT,true,1,Interpolation.HOLD));
                 }
             } else keys.addAll(actor.keys());
             var value=new Actor(id,v.get("name"),v.get("game"),v.get("character"),keys);
@@ -768,13 +881,13 @@ public final class StageplayWorkspace {
                 menu.setSubtitle("This is one undoable change. Puppet keeps shot placements and visibility; Poser starts from those placements. Undo restores all previous keys and commands.");
             } else apply.run();
         });
-        menu.setSubtitle("Puppet uses native movement and jumps. Floor snap searches near the feet, up to 128 pixels below; disable it for an airborne start. Poser controls position, animation and frames. Existing scenes keep their original mode.");
+        menu.setSubtitle("Puppet uses native movement and jumps. Floor snap attaches locally within 14 pixels of the feet; use Place on floor to search a wider band, or disable it for an airborne start. Poser controls position, animation and frames. Existing scenes keep their original mode.");
     }
 
     private static StageplayDocument withCast(StageplayDocument d,List<Actor> actors,List<PuppetTrack> puppets) {
         return new StageplayDocument(d.version(),d.name(),d.durationFrames(),d.width(),d.height(),d.set(),actors,d.camera(),
                 d.captions(),d.audio(),d.cameraEffects(),d.sceneChanges(),d.dialogueTypers(),d.dialogueSkins(),d.dialogue(),puppets,
-                d.objectActors(),d.worldCommands());
+                d.objectActors(),d.worldCommands(),d.voices());
     }
 
     /** Native physics owns motion, scale and animation; authored keys retain shot placement and visibility. */
@@ -783,7 +896,7 @@ public final class StageplayWorkspace {
         var keys=new ArrayList<ActorKey>(); ActorKey anchor=actor.keys().getFirst();
         for (var key:actor.keys()) {
             if (boundaries.contains(key.frame())) anchor=key;
-            keys.add(new ActorKey(key.frame(),anchor.x(),anchor.y(),0,-1,anchor.flipX(),key.visible(),1,Interpolation.HOLD));
+            keys.add(new ActorKey(key.frame(),anchor.x(),anchor.y(),0,-1, anchor.facing(),key.visible(),1,Interpolation.HOLD));
         }
         return new Actor(actor.id(),actor.name(),actor.gameId(),actor.character(),keys);
     }
@@ -868,20 +981,20 @@ public final class StageplayWorkspace {
         int frame=controller.document().sceneChanges().stream().filter(c -> c.frame()<=controller.frame()).mapToInt(SceneChange::frame).max().orElse(0);
         var key=actor.keys().stream().filter(k -> k.frame()==frame).findFirst().orElseThrow();
         menu.showForm("Shot placement at frame "+frame,List.of(number("x","World centre X",key.x()),number("y","World centre Y / floor search",key.y()),
-                text("flip","Face left: true / false",Boolean.toString(key.flipX()))),"Apply placement",v -> edit(d -> {
-            var replacement=new ActorKey(frame,decimal(v,"x"),decimal(v,"y"),0,-1,bool(v,"flip"),key.visible(),1,Interpolation.HOLD);
+                new EditorProjectMenu.Field("facing","Facing",display(key.facing()),List.of("Left","Right"))),"Apply placement",v -> edit(d -> {
+            var replacement=new ActorKey(frame,decimal(v,"x"),decimal(v,"y"),0,-1, Facing.valueOf(v.get("facing").toUpperCase(java.util.Locale.ROOT)),key.visible(),1,Interpolation.HOLD);
             var candidate=new Actor(actor.id(),actor.name(),actor.gameId(),actor.character(),withKey(actor.keys(),replacement));
             var normalized=physicalKeys(candidate,d.sceneChanges());
             return d.withActors(d.actors().stream().map(a -> a.id().equals(actor.id())?normalized:a).toList());
         }));
-        menu.setSubtitle("Placement resets the actor at the start of this shot. Floor snap searches up to 128 pixels below the feet; disable Start on floor in Actor properties for an airborne start. Use Move to destination for movement.");
+        menu.setSubtitle("Placement resets the actor at the start of this shot. Floor snap attaches locally within 14 pixels of the feet; use Place on floor for a wider search, or disable Start on floor in Actor properties for an airborne start. Use Move to destination for movement.");
     }
 
     private void puppetVisibilityForm(Actor actor) {
         int frame=controller.frame();
         var key=actor.keys().stream().filter(k -> k.frame()<=frame).reduce((a,b)->b).orElseThrow();
         menu.showForm("Visibility at frame "+frame,List.of(text("visible","Visible: true / false",Boolean.toString(key.visible()))),"Apply visibility",v -> edit(d ->
-                replaceActor(d,actor,withKey(actor.keys(),new ActorKey(frame,key.x(),key.y(),0,-1,key.flipX(),bool(v,"visible"),1,Interpolation.HOLD)))));
+                replaceActor(d,actor,withKey(actor.keys(),new ActorKey(frame,key.x(),key.y(),0,-1, key.facing(),bool(v,"visible"),1,Interpolation.HOLD)))));
     }
 
     private Actor selectedActor() {
@@ -892,12 +1005,13 @@ public final class StageplayWorkspace {
     private void keyForm() {
         Actor actor = selectedActor(); int frame = controller.frame();
         var pose = StageplayTimeline.sample(controller.document(), frame).actors().stream().filter(a -> a.actorId().equals(actor.id())).findFirst().orElseThrow();
-        var interpolation = actor.keys().stream().filter(k -> k.frame() <= frame).reduce((a,b) -> b).orElseThrow().interpolation();
+        var held = actor.keys().stream().filter(k -> k.frame() <= frame).reduce((a,b) -> b).orElseThrow();
+        var interpolation = held.interpolation();
         menu.showForm("Actor key at frame " + frame, List.of(number("x","World centre X",pose.x()),number("y","World centre Y",pose.y()),
                 number("animation","Animation",pose.animation()),number("pose","Pose frame (-1 = animation)",pose.pose()),
-                text("flip","Flip X: true / false",Boolean.toString(pose.flipX())), text("visible","Visible: true / false",Boolean.toString(pose.visible())),
+                new EditorProjectMenu.Field("facing","Facing",display(held.facing()),List.of("Left","Right")), text("visible","Visible: true / false",Boolean.toString(pose.visible())),
                 number("scale","Scale",pose.scale()),text("interpolation","HOLD / LINEAR / SMOOTH",interpolation.name())), "Set key", v -> {
-            var key = new ActorKey(frame,decimal(v,"x"),decimal(v,"y"),integer(v,"animation"),integer(v,"pose"),bool(v,"flip"),bool(v,"visible"),decimal(v,"scale"),Interpolation.valueOf(v.get("interpolation").toUpperCase(java.util.Locale.ROOT)));
+            var key = new ActorKey(frame,decimal(v,"x"),decimal(v,"y"),integer(v,"animation"),integer(v,"pose"), Facing.valueOf(v.get("facing").toUpperCase(java.util.Locale.ROOT)),bool(v,"visible"),decimal(v,"scale"),Interpolation.valueOf(v.get("interpolation").toUpperCase(java.util.Locale.ROOT)));
             edit(d -> replaceActor(d,actor,withKey(actor.keys(),key)));
         });
     }
@@ -1064,7 +1178,8 @@ public final class StageplayWorkspace {
                 var actor = actors.get(i);
                 if (actor.keys().stream().anyMatch(k -> k.frame() == change.frame())) continue;
                 var pose = sample.actors().stream().filter(p -> p.actorId().equals(actor.id())).findFirst().orElseThrow();
-                var key = new ActorKey(change.frame(),pose.x(),pose.y(),pose.animation(),pose.pose(),pose.flipX(),pose.visible(),pose.scale(),Interpolation.HOLD);
+                var held = actor.keys().stream().filter(k -> k.frame() <= change.frame()).reduce((a,b) -> b).orElseThrow();
+                var key = new ActorKey(change.frame(),pose.x(),pose.y(),pose.animation(),pose.pose(), held.facing(),pose.visible(),pose.scale(),Interpolation.HOLD);
                 actors.set(i,new Actor(actor.id(),actor.name(),actor.gameId(),actor.character(),withKey(actor.keys(),key)));
             }
         }
@@ -1075,7 +1190,7 @@ public final class StageplayWorkspace {
             var keys = new ArrayList<>(object.keys());
             for (var change : changes) if (keys.stream().noneMatch(k -> k.frame() == change.frame())) {
                 var key = object.keys().stream().filter(k -> k.frame() <= change.frame()).reduce((a,b) -> b).orElseThrow();
-                keys.add(new ObjectKey(change.frame(), key.x(), key.y(), key.animation(), key.pose(), key.flipX(),
+                keys.add(new ObjectKey(change.frame(), key.x(), key.y(), key.animation(), key.pose(), key.facing(),
                         key.visible(), key.interpolation(), key.mode(), key.parts()));
             }
             keys.sort(Comparator.comparingInt(ObjectKey::frame));
@@ -1085,7 +1200,7 @@ public final class StageplayWorkspace {
                     for (var change : changes) if (change.frame() <= key.frame()) incoming = change.set();
                     boolean matches = object.gameId().equals(incoming.gameId()) && object.zone() == incoming.zone()
                             && object.act() == incoming.act();
-                    return new ObjectKey(key.frame(), key.x(), key.y(), key.animation(), key.pose(), key.flipX(),
+                    return new ObjectKey(key.frame(), key.x(), key.y(), key.animation(), key.pose(), key.facing(),
                             key.visible() && matches, key.interpolation(), key.mode(), key.parts());
                 }).toList());
             }
@@ -1094,12 +1209,12 @@ public final class StageplayWorkspace {
         }
         return new StageplayDocument(doc.version(),doc.name(),doc.durationFrames(),doc.width(),doc.height(),doc.set(),
                 actors,camera,doc.captions(),doc.audio(),doc.cameraEffects(),changes,doc.dialogueTypers(),doc.dialogueSkins(),doc.dialogue(),doc.puppets(),
-                objects,doc.worldCommands());
+                objects,doc.worldCommands(),doc.voices());
     }
 
 
     private static StageplayDocument removeActor(StageplayDocument d,String id) {
-        return withCast(d,d.actors().stream().filter(a -> !a.id().equals(id)).toList(),d.puppets().stream().filter(p -> !p.actorId().equals(id)).toList());
+        return withCast(d.withVoices(d.voices().stream().filter(v -> !v.speakerActor().equals(id)).toList()),d.actors().stream().filter(a -> !a.id().equals(id)).toList(),d.puppets().stream().filter(p -> !p.actorId().equals(id)).toList());
     }
 
     private void deleteActor() {
@@ -1112,7 +1227,14 @@ public final class StageplayWorkspace {
                 action("Keep dialogue as offscreen speech", () -> edit(d -> {
                     var cues = d.dialogue().stream().map(c -> c.speakerActor().equals(actor.id())
                             ? dialogueSpeaker(c, "", StageplayDialogue.speakerName(d,c)) : c).toList();
-                    return removeActor(d.withDialogue(cues),actor.id());
+                    var voices = new ArrayList<>(d.voices());
+                    var voice = com.openggf.stageplay.StageplaySpeech.voice(d, actor.id(), "");
+                    for (var line : d.dialogue()) if (line.speakerActor().equals(actor.id())) {
+                        String name = StageplayDialogue.speakerName(d, line);
+                        if (voices.stream().noneMatch(v -> v.speakerActor().isEmpty() && v.speakerName().equals(name)))
+                            voices.add(new SpeakerVoice("", name, voice.tone(), voice.rhythm(), voice.pitch(), voice.variation(), voice.lengthFrames(), voice.level()));
+                    }
+                    return removeActor(d.withDialogue(cues).withVoices(voices),actor.id());
                 })), action("Remove actor and their dialogue", () -> edit(d -> removeActor(d.withDialogue(d.dialogue().stream()
                         .filter(c -> !c.speakerActor().equals(actor.id())).toList()),actor.id()))), action("Keep actor", () -> { })));
     }
@@ -1137,12 +1259,17 @@ public final class StageplayWorkspace {
                 action("Choose typer", () -> dialogueProfileMenu(cue,true)),
                 action("Custom reveal timing", () -> revealForm(cue)),
                 action("Use typer timing", () -> edit(d -> replaceDialogue(d,dialogueTiming(cue,List.of())))),
-                action("Delete line", () -> edit(d -> d.withDialogue(d.dialogue().stream().filter(c -> !c.id().equals(cue.id())).toList())))));
+                action("Delete line", () -> edit(d -> d.withDialogue(d.dialogue().stream().filter(c -> !c.id().equals(cue.id())).toList()))),
+                action("Speaker voice", () -> voiceForm(cue.speakerActor(), cue.speakerActor().isEmpty() ? cue.speakerName() : ""))));
     }
 
     private void speakerMenu(DialogueCue cue) {
         var choices = new ArrayList<EditorProjectMenu.Action>();
         for (var actor : controller.document().actors()) choices.add(action(actor.name()+" ("+actor.character()+")", () -> {
+            if (cue == null) dialogueForm(newDialogue(actor.id(),""));
+            else edit(d -> replaceDialogue(d,dialogueSpeaker(cue,actor.id(),"")));
+        }));
+        for (var actor : controller.document().objectActors()) choices.add(action(actor.name()+" (object)", () -> {
             if (cue == null) dialogueForm(newDialogue(actor.id(),""));
             else edit(d -> replaceDialogue(d,dialogueSpeaker(cue,actor.id(),"")));
         }));
@@ -1153,12 +1280,54 @@ public final class StageplayWorkspace {
         menu.showActions("Who is speaking?", choices);
     }
 
+    private void voiceForm(String actorId, String offscreenName) {
+        voiceForm(actorId, offscreenName, com.openggf.stageplay.StageplaySpeech.voice(controller.document(), actorId, offscreenName));
+    }
+
+    private void voicePresetMenu(String actorId, String offscreenName) {
+        var actions = new ArrayList<EditorProjectMenu.Action>();
+        var defaults = com.openggf.stageplay.StageplaySpeech.defaultVoice(controller.document(), actorId, offscreenName);
+        for (var preset : com.openggf.stageplay.StageplaySpeech.Preset.values()) {
+            var voice = preset.voice(actorId, offscreenName);
+            actions.add(action(preset.label() + (voice.equals(defaults) ? " (default)" : ""),
+                    () -> voiceForm(actorId, offscreenName, voice)));
+        }
+        menu.showActions("Voice presets", actions);
+        menu.setSubtitle("Choose, then adjust or apply.");
+    }
+
+    private void voiceForm(String actorId, String offscreenName, SpeakerVoice voice) {
+        var doc = controller.document();
+        String name = actorId.isEmpty() ? offscreenName : doc.actors().stream().filter(a -> a.id().equals(actorId))
+                .map(Actor::name).findFirst().orElseGet(() -> doc.objectActors().stream().filter(a -> a.id().equals(actorId))
+                        .map(ObjectActor::name).findFirst().orElseThrow());
+        menu.showForm(name + " / voice", List.of(
+                new EditorProjectMenu.Field("tone", "Tone", voice.tone().name(), List.of("PRESETS", "DEFAULT", "OFF", "SQUARE", "CHIME", "HOLLOW", "BUZZ")),
+                new EditorProjectMenu.Field("rhythm", "Blip on each", voice.rhythm().name(), List.of("WORD", "LETTER")),
+                number("pitch", "Pitch (48=C3, 72=C5, 96=C7)", voice.pitch()),
+                number("variation", "Pitch variation (0-12 semitones)", voice.variation()),
+                number("length", "Blip length (1-18 frames)", voice.lengthFrames()),
+                number("level", "Voice level (0-100%)", voice.level())), "Apply voice", values -> edit(d -> {
+            var voices = new ArrayList<>(d.voices());
+            voices.removeIf(v -> actorId.isEmpty() ? v.speakerActor().isEmpty() && v.speakerName().equals(offscreenName)
+                    : v.speakerActor().equals(actorId));
+            if (!values.get("tone").equals("DEFAULT")) voices.add(new SpeakerVoice(actorId, offscreenName,
+                    VoiceTone.valueOf(values.get("tone")), VoiceRhythm.valueOf(values.get("rhythm")),
+                    integer(values,"pitch"), integer(values,"variation"), integer(values,"length"), integer(values,"level")));
+            return d.withVoices(voices);
+        }));
+        menu.onValueChanged((key, value) -> {
+            if (key.equals("tone") && value.equals("PRESETS")) voicePresetMenu(actorId, offscreenName);
+        });
+        menu.setSubtitle("PRESETS chooses. DEFAULT resets.");
+    }
+
     private DialogueCue newDialogue(String actor, String name) {
         var d = controller.document();
         int margin = Math.min(12,Math.max(0,(d.width()-80)/2));
         int height = Math.min(72,d.height());
         return new DialogueCue(nextId("dialogue",d),controller.frame(),Math.min(controller.frame()+180,d.durationFrames()),
-                actor,name,"Hello.","","",margin,Math.max(0,d.height()-height-margin),d.width()-margin*2,height,"",List.of());
+                actor,name,"Hello.","","",margin,com.openggf.tools.StageplayScriptCompiler.DEFAULT_DIALOGUE_Y,d.width()-margin*2,height,"",List.of());
     }
 
     private void dialogueForm(DialogueCue cue) {
@@ -1175,7 +1344,9 @@ public final class StageplayWorkspace {
             return replaceDialogue(d,new DialogueCue(cue.id(),integer(v,"start"),integer(v,"end"),cue.speakerActor(),v.get("name"),line,
                     cue.skinId(),cue.typerId(),integer(v,"x"),integer(v,"y"),integer(v,"width"),integer(v,"height"),v.get("portrait"),cue.revealFrames()));
         }));
-        menu.setSubtitle("Speaker: "+StageplayDialogue.speakerName(controller.document(),cue)+". Choose decoration and typer from the line menu. Panels use film pixels.");
+        menu.setHelp("Write "+StageplayDialogue.speakerName(controller.document(),cue)+"'s line.",
+                "End is exclusive. Choose the speaker, decoration and typer from the line menu. Advanced keeps the speaker name override, panel geometry and optional portrait. "
+                + "A blank name uses the actor's name; offscreen speakers use Name. Dimensions use film pixels. Type \\n for a line break. Portrait paths stay beneath the scene folder.");
     }
 
     private void dialogueProfileMenu(DialogueCue cue, boolean typer) {
@@ -1321,17 +1492,192 @@ public final class StageplayWorkspace {
     }
 
     private void audioForm(AudioCue cue) {
+        String game = cue == null ? controller.document().set().gameId() : cue.gameId();
+        int initialSound = cue == null ? com.openggf.game.audio.RomSoundCatalog.sfx(game).getFirst().soundId() : cue.soundId();
         menu.showForm("Audio cue",List.of(number("frame","Frame",cue==null?controller.frame():cue.frame()),
                 text("kind","ROM_MUSIC / ROM_SFX / VOICE / MUSIC_STOP",cue==null?"ROM_SFX":cue.kind().name()),
                 text("game","ROM: s1 / s2 / s3k",cue==null?controller.document().set().gameId():cue.gameId()),
-                number("sound","ROM sound ID (decimal)",cue==null?0:cue.soundId()),
+                number("sound","ROM sound ID (decimal)",initialSound),
                 text("asset","Relative WAV / Ogg file",cue==null?"":cue.asset()),number("gain","Gain (0..1)",cue==null?1:cue.gain())),"Apply audio",v -> edit(d -> {
             String id=cue==null?nextId("audio",d):cue.id();
             var values=new ArrayList<>(d.audio()); values.removeIf(c->c.id().equals(id));
-            values.add(new AudioCue(id,integer(v,"frame"),AudioKind.valueOf(v.get("kind").toUpperCase(java.util.Locale.ROOT)),v.get("game"),integer(v,"sound"),v.get("asset"),decimal(v,"gain")));
+            AudioKind kind = AudioKind.valueOf(v.get("kind").toUpperCase(java.util.Locale.ROOT));
+            int sound = integer(v,"sound");
+            if (kind == AudioKind.ROM_MUSIC) com.openggf.game.audio.RomSoundCatalog.music(v.get("game"),sound);
+            if (kind == AudioKind.ROM_SFX) com.openggf.game.audio.RomSoundCatalog.sfx(v.get("game"),sound);
+            values.add(new AudioCue(id,integer(v,"frame"),kind,v.get("game"),sound,v.get("asset"),decimal(v,"gain")));
             return d.withAudio(values);
         }));
-        menu.setSubtitle("Voice paths are relative to the saved scene. Sound seeking is not simulated; play starts cues at the playhead.");
+        configureAudioChoices(initialSound, false);
+        menu.onValueChanged((key,value) -> {
+            if (key.equals("game") || key.equals("kind")) configureAudioChoices(initialSound, true);
+        });
+        menu.setHelp("Choose a sound and when it plays.",
+                "Music and sound effects use each ROM's native IDs. Pick a name, or use F2 for the exact decimal ID. "
+                        + "The Sonic 3 & Knuckles catalog uses the combined game soundtrack. "
+                        + "Voice paths are relative to the saved scene. Seeking is silent; playback starts cues at the playhead.");
+    }
+
+    private void configureAudioChoices(int initialSound, boolean changedSource) {
+        var values = menu.values();
+        String kind = values.get("kind"), game = values.get("game");
+        var entries = kind.equals("ROM_MUSIC") ? com.openggf.game.audio.RomSoundCatalog.music(game)
+                : kind.equals("ROM_SFX") ? com.openggf.game.audio.RomSoundCatalog.sfx(game) : List.<com.openggf.game.audio.RomSoundCatalog.Entry>of();
+        if (entries.isEmpty()) { menu.configureField("sound","Sound ID",List.of(),Map.of()); return; }
+        var labels = new java.util.LinkedHashMap<String,String>();
+        entries.forEach(entry -> labels.put(Integer.toString(entry.soundId()),
+                entry.title().replace(" Zone", "") + " ($" + String.format(java.util.Locale.ROOT,"%02X",entry.soundId()) + ")"));
+        if (changedSource && !labels.containsKey(values.get("sound")))
+            menu.setValue("sound",Integer.toString(entries.getFirst().soundId()));
+        // Keep an existing/custom number editable when it is outside the chosen catalog.
+        // The shared Field retains its opening value; Apply still validates the selected kind.
+        labels.putIfAbsent(Integer.toString(initialSound),"Custom ID " + initialSound);
+        menu.configureField("sound",kind.equals("ROM_MUSIC")?"Music":"Sound",List.copyOf(labels.keySet()),labels);
+    }
+
+    private record GroundContext(StageplayDocument document, Path root, String actor, int frame,
+                                 long generation, double authoredY) { }
+
+    private void groundForm() {
+        var document = controller.document();
+        String id = controller.selectedActorId();
+        requireGroundPlacement(document, id, controller.frame());
+        var object = document.objectActors().stream().filter(a -> a.id().equals(id)).findFirst();
+        double x, y;
+        if (object.isPresent()) {
+            var key = groundObjectKey(object.get(), controller.frame());
+            x = key.x(); y = key.y();
+        } else {
+            var key = selectedActor().keys().stream().filter(k -> k.frame() <= controller.frame())
+                    .reduce((a, b) -> b).orElseThrow();
+            x = key.x(); y = key.y();
+        }
+        var context = new GroundContext(document, assetRoot, id, controller.frame(),
+                StageplayGround.generation(controller), y);
+        int centre = (int) Math.clamp(y, Short.MIN_VALUE + 128.0, Short.MAX_VALUE - 128.0);
+        var fields = new ArrayList<EditorProjectMenu.Field>(List.of(
+                number("x", "World X", Math.round(x)),
+                number("top", "Top native surface row (inclusive)", centre - 128),
+                number("bottom", "Bottom native surface row (inclusive)", centre + 128)));
+        if (object.isPresent()) {
+            fields.add(number("halfWidth", "Visual half-width", 8));
+            fields.add(number("height", "Visual height", 28));
+            fields.add(number("footOffset", "Anchor-to-foot offset", 14));
+            fields.add(number("collisionPath", "Object path: 0 / 1", 0));
+        }
+        menu.showForm("Place on floor: " + id + " at frame " + context.frame(), fields, "Query terrain", values -> io(() -> {
+            requireGroundFresh(context);
+            StageplayGround.Visual visual = object.isEmpty() ? null : new StageplayGround.Visual(
+                    integer(values, "halfWidth"), integer(values, "height"), integer(values, "footOffset"),
+                    StageplayGround.ObjectPath.of(integer(values, "collisionPath")));
+            var query = new StageplayGround.Query("placement", integer(values, "x"), integer(values, "top"),
+                    integer(values, "bottom"), StageplayGround.performerOf(document, id, visual), id);
+            var report = host.ground(document, context.root(), context.frame(), new StageplayGround.Batch(List.of(query), 20000));
+            requireGroundFresh(context);
+            if (!(report.basis() instanceof StageplayGround.SceneFrame basis) || basis.frame() != context.frame()
+                    || !basis.set().equals(StageplayRouteContract.source(document, context.frame())))
+                throw new IllegalArgumentException("Ground report does not describe the requested scene frame");
+            groundResults(context, query, report);
+        }));
+        menu.setSubtitle("Native floor rows. Queries do not edit the scene. Terrain only: no object platforms. Review proposals before applying; F1 retains surface rows, radii and evidence.");
+    }
+
+    private void groundResults(GroundContext context, StageplayGround.Query query, StageplayGround.Report report) {
+        var answer = report.answer(query.id());
+        var actions = new ArrayList<EditorProjectMenu.Action>();
+        var detail = new StringBuilder("Terrain only. F1: evidence/caveats. Outcome: " + answer.outcome() + (answer.truncated() ? " (truncated)" : "")
+                + "\nCaveats: " + report.basis().caveats() + "\n");
+        boolean complete = answer.outcome() == StageplayGround.Outcome.FOUND && !answer.truncated();
+        for (var placement : answer.placements()) {
+            String label = "X " + placement.x() + ", authored Y " + placement.y() + ", floor "
+                    + placement.surfaceY() + ", angle " + placement.angle();
+            detail.append(label).append(": ").append(placement.evidence()).append('\n');
+            actions.add(action((complete ? "Apply: " : "Review only: ") + label,
+                    () -> applyGround(context, query, answer, placement)));
+        }
+        for (var refusal : answer.refusals()) {
+            String label = "Refused floor " + refusal.surfaceY() + ": " + refusal.reason();
+            detail.append(label).append(": ").append(refusal.detail()).append('\n');
+            actions.add(action(label, () -> {
+                menu.showActions(label, List.of(action("Back to placements", () -> groundResults(context, query, report))));
+                menu.setSubtitle(refusal.detail());
+            }));
+        }
+        int selected = answer.nearest(context.authoredY()).map(answer.placements()::indexOf).orElse(actions.size());
+        actions.add(action("Query another band", this::groundForm));
+        actions.add(action("Cancel", () -> { }));
+        detail.append("Player terrain proposals need native playback verification after application. ")
+                .append("Applying changes the document described by this query. F1 shows all evidence and refusals.");
+        menu.showActions("Place on floor: " + answer.outcome(), actions, selected);
+        String summary=complete?"Choose a floor, then verify it in playback.":answer.outcome()==StageplayGround.Outcome.NONE_IN_BAND?"No usable floor in this range.":"The floor search is incomplete; try again.";
+        menu.setHelp("Choose a placement or search again.",detail.toString());menu.setStatusLine(summary,complete?EditorProjectMenu.Tone.SUCCESS:EditorProjectMenu.Tone.WARNING);
+        status = "Ground query: " + answer.outcome() + ", " + answer.placements().size() + " placements, "
+                + answer.refusals().size() + " refusals" + (answer.truncated() ? "; truncated, query again before applying" : "");
+    }
+
+    private void requireGroundFresh(GroundContext context) {
+        if (StageplayGround.generation(controller) != context.generation()
+                || !controller.document().equals(context.document()) || !Objects.equals(assetRoot, context.root())
+                || !controller.selectedActorId().equals(context.actor()) || controller.frame() != context.frame())
+            throw new IllegalStateException("Stale ground result: scene, asset root, selected actor or playhead changed. Query again.");
+    }
+
+    private void applyGround(GroundContext context, StageplayGround.Query query,
+                             StageplayGround.Answer answer, StageplayGround.Placement placement) {
+        requireGroundFresh(context);
+        requireGroundPlacement(context.document(), context.actor(), context.frame());
+        if (answer.outcome() != StageplayGround.Outcome.FOUND || answer.truncated()
+                || !answer.placements().contains(placement))
+            throw new IllegalStateException("A complete ground query is required before applying a placement");
+        boolean proof = query.performer() instanceof StageplayGround.Visual
+                ? placement.evidence() instanceof StageplayGround.VisualSupport
+                : placement.evidence() instanceof StageplayGround.PlayerTerrainProposal player && player.distance() == 0;
+        if (!proof || placement.x() != query.x() || placement.surfaceY() < query.top() || placement.surfaceY() > query.bottom())
+            throw new IllegalStateException("Ground placement has no matching terrain evidence");
+        edit(document -> {
+            var actor = document.actors().stream().filter(a -> a.id().equals(context.actor())).findFirst();
+            if (actor.isPresent()) {
+                int end = StageplayRouteContract.shotEnd(document, context.frame());
+                // Every visibility key holds the shot-entry centre; moving only the boundary is invalid.
+                var keys = actor.get().keys().stream().map(key -> key.frame() < context.frame() || key.frame() >= end ? key
+                        : new ActorKey(key.frame(), placement.x(), placement.y(), key.animation(), key.pose(), key.facing(), key.visible(), key.scale(), key.interpolation())).toList();
+                return replaceActor(document, actor.get(), keys);
+            }
+            return document.withObjectActors(document.objectActors().stream().map(object -> {
+                if (!object.id().equals(context.actor())) return object;
+                var key = groundObjectKey(object, context.frame());
+                var keys = new ArrayList<>(object.keys());
+                keys.removeIf(k -> k.frame() == context.frame());
+                keys.add(new ObjectKey(context.frame(), placement.x(), placement.y(), key.animation(), key.pose(), key.facing(), key.visible(), key.interpolation(), key.mode(), key.parts()));
+                keys.sort(Comparator.comparingInt(ObjectKey::frame));
+                return new ObjectActor(object.id(), object.name(), object.gameId(), object.zone(), object.act(),
+                        object.objectId(), object.subtype(), object.layoutIndex(), keys, object.commands(), object.sourceKind());
+            }).toList());
+        });
+        status = "Placed " + context.actor() + " at X " + placement.x() + ", authored Y " + placement.y()
+                + " (native floor " + placement.surfaceY() + "). Verify the edited scene in playback.";
+    }
+
+    private static ObjectKey groundObjectKey(ObjectActor object, int frame) {
+        return object.keys().stream().filter(k -> k.frame() <= frame).reduce((a, b) -> b).orElseThrow();
+    }
+
+    private static void requireGroundPlacement(StageplayDocument document, String id, int frame) {
+        var actor = document.actors().stream().filter(a -> a.id().equals(id)).findFirst();
+        if (actor.isPresent()) {
+            StageplayGround.performerOf(document, id, null);
+            if (frame != 0 && document.sceneChanges().stream().noneMatch(c -> c.frame() == frame))
+                throw new IllegalArgumentException("Place physical players only at a shot boundary; use movement actions inside the shot");
+            return;
+        }
+        var object = document.objectActors().stream().filter(a -> a.id().equals(id)).findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Select a cast member first"));
+        int end = StageplayRouteContract.shotEnd(document, frame);
+        if (groundObjectKey(object,frame).mode() == ObjectMode.FREE
+                || object.keys().stream().anyMatch(k -> k.frame() > frame && k.frame() < end && k.mode() == ObjectMode.FREE))
+            throw new IllegalArgumentException("Place on floor cannot relocate FREE or release-to-FREE objects in this shot");
+        // StageplayDocument already rejects duplicate placed identities globally,
+        // which is stronger than rejecting overlapping bindings at this playhead.
     }
 
     private void routeMenu() {
@@ -1347,12 +1693,81 @@ public final class StageplayWorkspace {
         actions.add(action("Back", () -> { }));
         menu.showActions("Collision route",actions);
         var result = routeUpdate.result();
-        menu.setSubtitle((result == null ? routeUpdate.message() : new com.openggf.stageplay.editor.StageplayRouteOverlay(result,false).reason()) + (result == null ? "" : "\n" + result.path().size() + " path samples, "
-                + result.expandedNodes() + " nodes, " + result.simulatedTicks() + " simulated ticks. "
-                + (result.nativeVerified() ? "Native input replay verified."
-                        : result.status()==com.openggf.stageplay.route.StageplayRouteResult.Status.VISUAL_TERRAIN
-                                ? "Visual terrain route; object AI stays suspended." : "No applicable route.")
-                + " Apply replaces commands in the requested frame window."));
+        var overlay=result==null?null:new com.openggf.stageplay.editor.StageplayRouteOverlay(result,false);
+        String summary=result==null?routeUpdate.phase()==StageplayRouteJob.Phase.CHECKING?"Checking route inputs.":"Finding a route.":overlay.summary();
+        menu.setHelp("Review the path before applying it.",result==null?routeUpdate.message():result.message()+"\n"+overlay.motionSummary()+"\n"+result.path().size()+" samples, "+result.expandedNodes()+" nodes, "+result.simulatedTicks()+" ticks.");
+        menu.setStatusLine(summary,result==null?EditorProjectMenu.Tone.INFO:result.success()?EditorProjectMenu.Tone.SUCCESS:EditorProjectMenu.Tone.WARNING);
+        if(result!=null) configureRouteDetails(result,overlay);
+    }
+
+    private void configureRouteDetails(com.openggf.stageplay.route.StageplayRouteResult result,
+                                       com.openggf.stageplay.editor.StageplayRouteOverlay overlay) {
+        String who=controller.document().actors().stream().filter(a->a.id().equals(result.request().actorId()))
+                .map(Actor::name).findFirst().orElseGet(()->controller.document().objectActors().stream()
+                        .filter(a->a.id().equals(result.request().actorId())).map(ObjectActor::name).findFirst().orElse("This actor"));
+        String meaning=switch(result.status()) {
+            case BUDGET_EXCEEDED -> who+" might reach the goal, but the search ran out of budget before confirming it.";
+            case SEARCH_EXHAUSTED -> "The search did not find a route with these settings.";
+            case VERIFIED -> who+" reached the goal in a fresh playback check.";
+            case VISUAL_TERRAIN -> "This object can follow the terrain; its native behavior stays paused.";
+            case UNSUPPORTED -> "The planner cannot check this actor or starting point.";
+            case CANCELLED -> "Route planning was cancelled.";
+            case VERIFICATION_FAILED -> "Playback did not confirm the proposed route.";
+            case STALE_INPUT -> "The scene or its assets changed. Plan the route again.";
+        };
+        String status=switch(result.status()) {
+            case BUDGET_EXCEEDED -> "Search limit reached";
+            case SEARCH_EXHAUSTED -> "No route found";
+            case VERIFIED -> "Route found";
+            case VISUAL_TERRAIN -> "Object route found";
+            case UNSUPPORTED -> "Route unsupported";
+            case CANCELLED -> "Route cancelled";
+            case VERIFICATION_FAILED -> "Playback check failed";
+            case STALE_INPUT -> "Route needs replanning";
+        };
+        if(result.success()) {
+            long jumps=result.commands().stream().filter(c->c.kind()==PuppetCommandKind.JUMP).count();
+            status+=" · "+String.format(java.util.Locale.ROOT,"%.1f",overlay.performanceFrames()/60.0)
+                    +" s"+(jumps==0?"":" · "+jumps+(jumps==1?" jump":" jumps"));
+        }
+        var sections=new ArrayList<MenuDetailsScreen.Section>();
+        var advice=new ArrayList<MenuDetailsScreen.Row>();
+        String diagnosis=result.message().toLowerCase(java.util.Locale.ROOT);
+        if(java.util.regex.Pattern.compile("(needs|try|use|switch to) run\\b").matcher(diagnosis).find())
+            advice.add(new MenuDetailsScreen.Row("","• Use Run"));
+        if(java.util.regex.Pattern.compile("more (attempt )?frames").matcher(diagnosis).find())
+            advice.add(new MenuDetailsScreen.Row("","• Allow more frames"));
+        if(java.util.regex.Pattern.compile("(needs|try|use) spindash\\b").matcher(diagnosis).find())
+            advice.add(new MenuDetailsScreen.Row("","• Use Spindash"));
+        if(!advice.isEmpty())sections.add(new MenuDetailsScreen.Section("Try",advice,false));
+        var motion=result.request().motion();
+        String settings=result.request().footprint()==null?"Start "+routeSetting(motion.startingAction())
+                +" · Speed "+routeSetting(motion.travelSpeed())+" · Stop "+routeSetting(motion.endingAction())
+                +" · Face "+routeSetting(motion.endingFacing()):"Walk · Speed "+result.request().objectSpeed()+" px/frame";
+        sections.add(new MenuDetailsScreen.Section("Settings",List.of(new MenuDetailsScreen.Row("",settings)),false));
+        sections.add(new MenuDetailsScreen.Section("Search",List.of(new MenuDetailsScreen.Row("",
+                result.path().size()+" samples · "+result.expandedNodes()+" nodes · "+result.simulatedTicks()+" ticks")),true));
+        var buttons=new ArrayList<MenuDetailsScreen.Action>();
+        var actions=menu.actionEntries();
+        boolean apply=routeUpdate.phase()==StageplayRouteJob.Phase.READY;
+        // A ready route's next step is Apply; otherwise the next step is another plan.
+        String primary=apply?"Check inputs and apply route":"Plan another route";
+        for(String label:List.of(primary,"Plan another route","Check inputs and apply route","Cancel route"))
+            for(int i=0;i<actions.size();i++) if(actions.get(i).label().equals(label)) {
+                int index=i;String shown=label.startsWith("Check inputs")?"Apply":label;
+                if(buttons.stream().anyMatch(b->b.label().equals(shown))) continue;
+                buttons.add(new MenuDetailsScreen.Action(shown,()->menu.runAction(index),label.equals(primary)));
+            }
+        menu.setDetailsContent(new MenuDetailsScreen.Content("Route details",status,meaning,
+                result.success()?MenuDetailsScreen.Tone.SUCCESS:MenuDetailsScreen.Tone.WARNING,sections,
+                menu.helpText(),buttons,apply?"Apply replaces commands in the requested window":""));
+    }
+
+    private static String routeSetting(Enum<?> value) {
+        return switch(value.name()) {
+            case "INHERIT" -> "Keep"; case "GENTLE_STOP" -> "Gentle"; case "HARD_STOP" -> "Hard";
+            default -> value.name().charAt(0)+value.name().substring(1).toLowerCase(java.util.Locale.ROOT);
+        };
     }
 
     private void routeForm() {
@@ -1414,13 +1829,18 @@ public final class StageplayWorkspace {
             host.startRoute(document,assetRoot,request);
             controller.selectActor(id); proposedOverlay=null;
             routeSource=document; routeRoot=assetRoot; routeSelection=controller.selectedActorId(); routeRequest=request;
-            routeUpdate=null; status="Route planning started in a separate logic worker. Reopen Plan collision route to cancel or review.";
+            routeUpdate=null; status="Route planning started in a separate logic worker. Reopen Plan route to cancel or review.";
         }));
         menu.onValueChanged((key, value) -> {
             if (key.equals("startingAction") && value.equals("Spindash")) menu.setValue("travelSpeed", "Run");
         });
-        menu.setSubtitle(objectRoute?"Objects: visual foreground only.":"Spindash selects Run. Airborne actors land first.");
-        status="Apply replaces commands only in the requested route window. Players start at shot entry; objects can retain an earlier native Free prefix.";
+        if (objectRoute) menu.setSubtitle("Objects: visual foreground only.");
+        else menu.setHelp("Find a playable path to a destination.",
+                "Player routes start at shot entry. Advanced keeps route frames and search budgets; unchanged limits are 1024 nodes, 120000 probe ticks and 60000 ms. "
+                + "Spindash selects Run. Airborne actors land first. Endings use native braking/coasting; Keep retains facing. "
+                + "Find route runs an isolated worker. Review the observed path before Apply, which replaces commands only in the requested window. "
+                + "A bounded failure does not prove the destination is unreachable.");
+        status="Choose a destination, then find a route.";
     }
 
     private static String display(Enum<?> value) {

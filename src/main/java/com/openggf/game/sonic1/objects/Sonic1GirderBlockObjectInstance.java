@@ -7,6 +7,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
@@ -39,7 +40,9 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/70 Girder Block.asm
  */
 public class Sonic1GirderBlockObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+// Girder movement cycles a rectangular platform through waypoints without a body facing.
 
     // From disassembly: move.b #$60,obActWid(a0)
     private static final int ACTIVE_WIDTH = 0x60;

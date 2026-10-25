@@ -8,7 +8,9 @@ import java.util.List;
 
 /** Placed Obj_SpriteMask $8B: subtype selects mapping height and SAT priority. */
 public final class SozSpriteMaskObjectInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable, RomWorldPositionedObject {
+        implements SpawnRewindRecreatable, RomWorldPositionedObject, ObjectVisualFacing.NonDirectional {
+
+    // The native sprite mask is occluding geometry with no logical horizontal facing.
     public SozSpriteMaskObjectInstance(ObjectSpawn spawn){super(spawn,"SOZSpriteMask");}
     @Override public void update(int vIntRunCount,PlayableEntity player){}
     @Override public int getPriorityBucket(){return spawn.subtype()&7;}

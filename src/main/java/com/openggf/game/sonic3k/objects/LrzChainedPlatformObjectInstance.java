@@ -21,7 +21,9 @@ import java.util.List;
  * All path/spawn data and mappings come from the supplied ROM.
  */
 public final class LrzChainedPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SpawnRewindRecreatable, RomObjectCodePointerProvider {
+        implements SolidObjectProvider, SpawnRewindRecreatable, RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
+
+    // Obj_LRZChainedPlatforms moves independent rectangular platforms around a loop without facing.
     private static final int PATH_OFFSETS = 0x4A890;
     private static final int GROUP_OFFSETS = 0x4A914;
     private int anchorX, anchorY, xFixed, yFixed, subtype;

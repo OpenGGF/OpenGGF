@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
@@ -13,7 +14,10 @@ import com.openggf.level.objects.SpawnRewindRecreatable;
  * max speed {@code $100} and acceleration {@code 4}, then runs the raw
  * eight-step wing animation.
  */
-public final class ButterdroidBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable {
+public final class ButterdroidBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
 
     @Override public boolean supportsGroundedFieldMotion() { return true; }
 

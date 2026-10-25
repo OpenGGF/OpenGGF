@@ -56,7 +56,7 @@ class TraceCaptureSessionTest {
         SonicConfigurationService config = SonicConfigurationService.getInstance();
         config.resetToDefaults();
         audio.setBackend(new HeadlessSmpsAudioBackend(
-                config, PerformanceProfiler.getInstance()));
+                config, PerformanceProfiler.getInstance(), audio));
     }
 
     @AfterEach

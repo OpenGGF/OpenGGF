@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k;
 
 import com.openggf.GameLoop;
+import com.openggf.BonusStageSessionTestAccess;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
@@ -22,7 +23,6 @@ import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import java.lang.reflect.Method;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -128,15 +128,9 @@ public class TestBonusStageReturnWaterRestore {
 
         BonusStageProvider provider = GameModuleRegistry.getCurrent().getBonusStageProvider();
 
-        Method doEnterBonusStage = GameLoop.class.getDeclaredMethod(
-                "doEnterBonusStage", BonusStageProvider.class, BonusStageType.class, BonusStageState.class);
-        doEnterBonusStage.setAccessible(true);
-        doEnterBonusStage.invoke(loop, provider, BonusStageType.GLOWING_SPHERE, savedState);
+        BonusStageSessionTestAccess.entered(loop, provider, BonusStageType.GLOWING_SPHERE, savedState);
 
-        Method doExitBonusStage = GameLoop.class.getDeclaredMethod(
-                "doExitBonusStage", BonusStageProvider.class, BonusStageState.class);
-        doExitBonusStage.setAccessible(true);
-        doExitBonusStage.invoke(loop, provider, savedState);
+        BonusStageSessionTestAccess.exited(loop, provider, savedState);
 
         assertEquals(HCZ1_LATE_WATER_LEVEL, waterSystem.getWaterLevelY(ZONE_HCZ, ACT_1),
                 "Bonus-stage return should restore the saved water level immediately");

@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.audio.GameSound;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.PlayableEntity;
@@ -35,7 +37,7 @@ import java.util.List;
  * 64px radius using the low byte at {@code Level_frame_counter+1}; X flip reverses the cycle.
  */
 public class CnzBumperObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseListener, SpawnRewindRecreatable {
+        implements TouchResponseProvider, TouchResponseListener, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
 
     private static final int COLLISION_FLAGS = 0x40 | 0x17;
     private static final int BOUNCE_VELOCITY = 0x700;

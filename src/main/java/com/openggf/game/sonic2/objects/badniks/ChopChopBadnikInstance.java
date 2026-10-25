@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.AbstractBadnikInstance;
 
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
@@ -37,7 +38,11 @@ import java.util.List;
  * - Vertical range: -32 to +31 pixels (asymmetric, +-0x20 band)
  * - Only attacks if already moving toward the player
  */
-public class ChopChopBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable {
+public class ChopChopBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
+
     // Collision size from subObjData in disassembly
     /** Obj91 bubble child: {@code move.b #4,priority(a1)} (s2.asm:74201). */
     private static final int CHOP_CHOP_BUBBLE_PRIORITY_BUCKET = RenderPriority.bucket(4);

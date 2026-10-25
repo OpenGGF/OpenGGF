@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.graphics.GLCommand;
@@ -26,7 +27,11 @@ import java.util.List;
  * alternating VBlank frames, and fires a stinger via {@code AllocateObjectAfterCurrent}.
  * The init routine also spawns an exhaust flame child (routine 4) in the next slot.
  */
-public class BuzzerBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable {
+public class BuzzerBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
+
     private static final int COLLISION_SIZE_INDEX = 0x0A; // collision_flags = $0A
     private static final int X_VEL = 0x100;
     private static final int MOVE_TIMER_INIT = 0x100;

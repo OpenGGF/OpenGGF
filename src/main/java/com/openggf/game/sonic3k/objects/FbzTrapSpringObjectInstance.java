@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -22,7 +24,7 @@ import java.util.List;
 
 /** Locked-on {@code Obj_FBZTrapSpring} ($E3), $3CB34-$3CC56. */
 public final class FbzTrapSpringObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
     private final FbzParticipantStateTable participants = new FbzParticipantStateTable(1);
     private int animation;
     private int previousAnimation = -1;

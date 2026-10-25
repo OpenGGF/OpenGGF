@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.AbstractBadnikInstance;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.RomObjectSnapshot;
@@ -23,7 +24,12 @@ import java.util.List;
  * Masher (0x5C) - Leaping piranha fish Badnik from EHZ.
  * Jumps up and down from a waterfall spawn point.
  */
-public class MasherBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable {
+public class MasherBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // The native fish only jumps vertically and always draws without an X flip; it has no horizontal-facing state.
+        return ObjectVisualFacing.Basis.NON_DIRECTIONAL;
+    }
+
     private static final int COLLISION_SIZE_INDEX = 0x09; // collision_flags(a0)
     private static final int INITIAL_Y_VEL = -0x400; // move.w #-$400,y_vel(a0)
     private static final int JUMP_Y_VEL = -0x500; // move.w #-$500,y_vel(a0)

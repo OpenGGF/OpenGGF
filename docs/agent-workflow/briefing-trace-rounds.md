@@ -71,6 +71,15 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+A renderer command list is not a draw-payload count (2026-10-25, PR223 receiving).
+Native SAT replay also queues ownership entry/exit commands. Preserve the original
+payload count and verify its exact surrounding owner scope; treating every command
+as a PatternRenderCommand hides this boundary. Test extreme tile expansion through
+its real expansion owner separately from native viewport admission. Descriptor
+callbacks and masks must be sampled at the actual admission point. The
+[receiving checkpoint](../architecture/plans/2026-10-22-native-gap-swarm.md#pr223-develop-159-receiving-checkpoint-2026-10-25)
+records the failed characterizations and corrected controls.
+
 A passing restart can hide eager-loader faults (2026-10-24, recording audio).
 The catalogue fixture repair let a restart complete, but S2 caught 82 SFX/DAC
 failures while its new profile still received the retired reader. The owning
@@ -148,6 +157,81 @@ ObjectManager increments after this callback, although native VBlank_Exit has
 already incremented before LZWaterFeatures. See the
 [water-clock evidence](../architecture/audits/2026-10-22-s1-chain-gap-closure.md).
 
+A test-batch-only snapshot mismatch need not be a leaked gameplay flag
+(2026-10-24, Day Off follow-up, `a04ae4b20`). MHZ2's catapult failed in the
+exact 50-class batch but passed alone and after its 27-class prefix. Its two
+differing scalar bytes encoded the same rider IDs in opposite identity-hash
+iteration orders. Engine resets cannot reset JVM allocation history. Decode the
+fields first and reproduce equivalent state under deliberately opposite hash
+orders; fix canonical encoding in the production codec instead of masking the
+diff or fitting test teardown. The exact original batch remains the integration
+check; the deterministic regression prevents accidental green heap layouts from
+being mistaken for a repair.
+
+ArchUnit field rules can ignore Surefire's method filter (2026-10-24, held
+reverse-target extraction). A selector naming two `TestArchUnitRules` members
+executed all 27 field rules and the selected cycle method: the intended 48-case
+guard selection actually executed 74 cases. Inspect physical XML identities and
+counts before reporting coverage or adding totals; a `Class#method` argument
+alone does not establish the executed set. The [ownership evidence](../architecture/plans/2026-10-24-architecture-continuation.md#held-reverse-target-owner-reviewed-extraction)
+records the unchanged selection and its actual expansion.
+
+ArchUnit's field engine can report `TestArchUnitRules` as its XML testcase
+classname while Jupiter reports `com.openggf.tests.TestArchUnitRules`. The
+PresentationBinding gate observed 27 field cases plus seven Jupiter cases in
+one 34-case suite. Count by the report suite and inspect member identities;
+matching only the fully qualified testcase classname undercounts coverage.
+Also inspect the actual profile selection: that complete `-Pguards` run did
+not select `TestModApiSignatureSurface`; its eleven API cases were separate
+focused worker evidence, not part of the parent's 796 guard cases.
+
+Use the current importer metadata for ownership origins, rather than assuming
+JVM lambda names. During diagnostic-installation extraction under Java 25,
+ArchUnit attributed lambda accessors to the enclosing `pause()` and `resume()`
+methods. The new guard's synthetic-name assumption failed; its corrected
+allowlist names those exact origins. Inspect the actual receiver, member and
+origin together; do not broaden a guard to every lambda or every manager call.
+The [diagnostic ownership evidence](../architecture/plans/2026-10-24-architecture-continuation.md)
+records the guard-only correction and separate focused rerun.
+
+An added composition getter can change a preservation oracle even when it is
+package-private and final. During native audio-mutator ownership extraction,
+ten rejected-operation cases observed the new getter on `spy(AudioManager.class)`;
+the original field read made no manager-instance call. A static concrete ingress
+for the exact supplied manager preserved that boundary without weakening the
+accepted assertions. Keep caller-loader inspection at its original public
+boundary before delegating through any new owner frame. The
+[mutator ownership evidence](../architecture/plans/2026-10-24-architecture-continuation.md)
+records the withdrawn freeze, exact replacement and complete consumer rerun.
+
+A Stageplay pixel oracle can compare two black S3K pictures while object art is
+still dormant or the native initial palette reveal is black (2026-10-24, facing
+correction, base `ac46111bc`). Require nonempty native sprite pixels and their
+absence control. Rhinobot needs its actual wait/sign-scan/release/Init dispatches;
+run them through `ObjectManager` so camera bounds publish too. For cinematic
+comparisons match `StageplayLiveWorld.draw`'s `withoutDisplayedFade` scope, because
+authored transitions own the reveal. Renderer allocation alone does not establish
+published enemy-art bytes. `TestStageplayObjectFacingRendering` checks these
+prerequisites before comparing both source flips and both logical directions.
+
+FFmpeg input seeking into a Stageplay Matroska/FLAC export is not a sample-accurate
+speech-onset oracle (2026-10-24 voice audition, base `ac46111bc`). An eight-second
+input `-ss` cut produced 383,992 rather than 384,000 stereo sample frames and
+moved the next line's first nonzero PCM from expected sample 19,203 to 18,179.
+Decoding from the beginning and cutting exact sample indices retained all 384,000
+frames and the correct reveal onset. Decode the master PCM once, slice by
+`frame * sampleRate / 60`, and pair that WAV with the video cut; measure the encoded
+AAC true peak separately. Do not change the engine's timing to fit a seeked clip.
+
+S2 manager-only camera/retirement fixtures must publish the separate
+`postCameraPlacementUpdate()` phase before the following object pass
+(2026-10-24, Sideways admission qualification at `8f34cad77`).
+`ObjectManager.update(cameraX, ...)` alone does not advance the S2 unload-camera
+latch; a moved camera can leave a pair apparently alive against the reset-time
+coarse camera. Check live graph removal and SST reuse as well as flags on stale
+Java references. The [qualification evidence](../architecture/audits/2026-10-24-rewind-disposition-review.md#s2-sideways-platform-allocation-failure-qualification)
+separates these fixture faults from the actual strict-capture gap.
+
 Stageplay native music requests may not appear in the logical command timeline
 until outer audio presentation drains the native mailbox (2026-10-24, promo
 bugfixes, base `632a5f8c3`). Simulation ticks alone made the uncontrolled positive
@@ -155,6 +239,14 @@ control appear silent. Present every frame when testing late playlist admission;
 assert an uncontrolled scene starts native music before trusting a stopped scene's
 absence. `TestStageplayAudioLifecycle.authoredMusicOwnsTheLateNativeLevelEntry`
 uses both the no-control case and actual presented requests.
+
+Final PCM capture belongs to the current presentation producer. A Stageplay native
+shot replacement retires that producer and its capture lease even when the audio
+manager survives (2026-10-24, Day Off corrections, base `81f25c89f`). Follow the
+exporter's close/reopen capture sequence at the boundary. Pair final-window PCM
+energy with the active source identity and both driver/sequencer fade state;
+nonzero samples alone can belong to the previous song. The audio lifecycle matrix
+checks the last second after entry cues at 0/8/40, rather than only request lists.
 
 A synthetic route probe using `SpriteArtSet.EMPTY` cannot certify posture-gated
 native abilities (2026-10-23, Stageplay route motion). It has no animation profile,
@@ -228,9 +320,15 @@ errors on the pinned baseline, while the isolated dimension check with explicit
 `-Dopenggf.headless.gl=surfaceless-egl` passed. JAVA_TOOL_OPTIONS also prepends a
 launcher notice to child stderr and breaks exact CLI-output assertions. Attribute
 these cases with bounded matched tests and preserve their coverage limits; a
-launch setting alone does not prove which backend a later test used. The fixture
-now restores its incoming property after each test, intended to prevent this reuse
-contamination without treating the property as immutable.
+launch setting alone does not prove which backend a later test used.
+The 2026-10-24 architecture composition reproduced the same two errors with the
+ordered five-case baseline/current pair; both isolated two-case checks passed.
+The subsequent correction gives global class teardown ownership of restoring
+the incoming backend property, including absent and empty values. Its regression
+runs the actual clearing fixture through JUnit before inspecting the property;
+the fixture itself remains a negative control for removing that restoration.
+See the [historical attribution](../architecture/plans/2026-10-24-architecture-continuation.md#completed-composed-smoke-and-baseline-attribution)
+and [correction evidence](../architecture/audits/2026-10-24-recurring-agent-mistakes.md).
 
 A mock-only OpenGL test can terminate the JVM when a helper adds an unmocked
 GL owner (2026-10-22, Stageplay smoke). `FboHelper` began preserving unpack-PBO

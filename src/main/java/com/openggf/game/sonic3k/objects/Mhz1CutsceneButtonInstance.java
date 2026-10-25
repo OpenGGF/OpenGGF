@@ -17,6 +17,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidExecutionMode;
@@ -37,7 +38,9 @@ import java.util.List;
  */
 public final class Mhz1CutsceneButtonInstance extends AbstractObjectInstance
         implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable,
-        RomObjectCodePointerProvider {
+        RomObjectCodePointerProvider, ObjectVisualFacing.Container {
+
+    // The switch/door geometry stays native while the peering Knuckles child owns its own logical direction.
     // Obj_MHZ1CutsceneButton installs its main code pointer
     // MHZ1CutsceneButton_Main at 0x00062xxx, so word 0 of the stood-on object
     // SST is high word 0x0006 (docs/skdisasm/sonic3k.asm:130112-130182). S3K

@@ -13,6 +13,7 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SpawnCoordinateZeroScalarArgsRewindRecreatable;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchResponseAttackable;
@@ -49,7 +50,20 @@ import java.util.List;
  * back up already shattered (ROM loc_34364 early-out).
  */
 public class MGZHeadTriggerObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseAttackable, SpawnRewindRecreatable {
+        implements TouchResponseProvider, TouchResponseAttackable, SpawnRewindRecreatable, ObjectVisualFacing.PlacementSource {
+
+    @Override
+    public ObjectVisualFacing.Basis nativeFacing() {
+        // loc_34480 watches/fires left at -$400; flipped reverses to right.
+        // Blink and shatter poses retain this owner rather than redefining facing.
+        return flipped ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.LEFT;
+    }
+
+    @Override
+    public int initialPlacementFlags(com.openggf.level.objects.ObjectVisualFacing.Basis facing, int sourceFlags) {
+        if (nativeFacing() == ObjectVisualFacing.Basis.NON_DIRECTIONAL) return sourceFlags;
+        return facing == com.openggf.level.objects.ObjectVisualFacing.Basis.RIGHT ? sourceFlags | 1 : sourceFlags & ~1;
+    }
 
     private static final String ART_KEY = Sonic3kObjectArtKeys.MGZ_HEAD_TRIGGER;
 

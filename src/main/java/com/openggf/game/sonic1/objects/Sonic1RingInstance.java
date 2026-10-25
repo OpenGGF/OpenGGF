@@ -6,6 +6,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
@@ -39,7 +40,9 @@ import java.util.List;
  * </ul>
  */
 public class Sonic1RingInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseListener, RewindRecreatable {
+        implements TouchResponseProvider, TouchResponseListener, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+// Ring roots/children rotate and sparkle; no ring has a logical horizontal facing.
 
     /**
      * The ring's published touch profile. Identical to what

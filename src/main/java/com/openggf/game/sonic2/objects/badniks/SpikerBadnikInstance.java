@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.AbstractBadnikInstance;
 
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
@@ -24,7 +25,11 @@ import java.util.List;
  * Moves horizontally, pauses, and throws a drill once when the player is near.
  * Based on disassembly Obj92.
  */
-public class SpikerBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable {
+public class SpikerBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
+
     private static final int COLLISION_SIZE_INDEX = 0x12; // From Obj92_SubObjData
 
     private static final int MOVE_TIMER_INIT = 0x40;   // objoff_2A = $40

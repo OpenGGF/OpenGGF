@@ -1,17 +1,15 @@
 package com.openggf.game.sonic3k.events;
 
-import com.openggf.game.session.EngineServices;
 import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.rules.SonicGame;
 
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.game.DamageCause;
-import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.session.SessionManager;
-import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
@@ -52,10 +50,7 @@ class TestSonic3kMgz2EndBossEvents {
 
     @BeforeEach
     void setUp() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        GameServices.configuration().resetToDefaults();
-        GameModuleRegistry.setCurrent(new Sonic3kGameModule());
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_3K);
         TestablePlayableSprite main = new TestablePlayableSprite("sonic", (short) 0x3A10, (short) 0x0680);
         installNoHitSensors(main);
         GameServices.sprites().addSprite(main);

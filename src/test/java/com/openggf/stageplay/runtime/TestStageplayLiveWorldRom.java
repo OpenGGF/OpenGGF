@@ -1,5 +1,7 @@
 package com.openggf.stageplay.runtime;
 
+import com.openggf.stageplay.StageplayDocument.Facing;
+
 import com.openggf.game.session.SessionManager;
 import com.openggf.mods.scene.host.SceneRomLibrary;
 import com.openggf.stageplay.StageplayDocument;
@@ -129,7 +131,7 @@ class TestStageplayLiveWorldRom {
         var actors=first.actors().stream().map(a -> {
             var key=a.keys().getFirst();
             return new Actor(a.id(),a.name(),a.gameId(),a.character(),List.of(key,
-                    new ActorKey(120,key.x(),key.y(),0,-1,false,true,1,Interpolation.HOLD)));
+                    new ActorKey(120,key.x(),key.y(),0,-1, Facing.RIGHT,true,1,Interpolation.HOLD)));
         }).toList();
         var scene=new StageplayDocument(StageplayDocument.VERSION,"Boundary replay",240,320,224,first.set(),actors,
                 List.of(first.camera().getFirst(),new CameraKey(120,5280,1888,1,Interpolation.HOLD)),List.of(),List.of(),List.of(),
@@ -160,5 +162,5 @@ class TestStageplayLiveWorldRom {
                 List.of(), List.of(), List.of(), List.of(new PuppetTrack("lead", false, 0, List.of()),
                 new PuppetTrack("partner", false, 0, List.of())));
     }
-    private static ActorKey key(int x, int y) { return new ActorKey(0, x, y, 0, -1, false, true, 1, Interpolation.HOLD); }
+    private static ActorKey key(int x, int y) { return new ActorKey(0, x, y, 0, -1, Facing.RIGHT, true, 1, Interpolation.HOLD); }
 }

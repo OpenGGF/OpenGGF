@@ -18,12 +18,16 @@ public final class StageplayController {
     private int frame;
     private boolean playing;
     private String selectedActorId = "";
+    private long generation;
 
     public StageplayController(StageplayDocument document) {
         replace(document);
     }
 
     public StageplayDocument document() { return document; }
+
+    /** Monotonic authoring/transport identity, including changes later undone. */
+    long generation() { return generation; }
 
     /** Loads a document as saved and starts a fresh authoring/transport session. */
     public void replace(StageplayDocument value) {
@@ -34,6 +38,7 @@ public final class StageplayController {
         frame = 0;
         playing = false;
         selectedActorId = "";
+        generation++;
     }
 
     /** One successful operation is one undo step; rejected/no-op edits preserve history. */
@@ -43,6 +48,7 @@ public final class StageplayController {
         push(undo, document);
         redo.clear();
         document = next;
+        generation++;
         reconcile();
         return true;
     }
@@ -51,6 +57,7 @@ public final class StageplayController {
         if (undo.isEmpty()) return false;
         push(redo, document);
         document = undo.removeLast();
+        generation++;
         reconcile();
         return true;
     }
@@ -59,6 +66,7 @@ public final class StageplayController {
         if (redo.isEmpty()) return false;
         push(undo, document);
         document = redo.removeLast();
+        generation++;
         reconcile();
         return true;
     }
@@ -75,15 +83,21 @@ public final class StageplayController {
         return predicate.test(document) || undo.stream().anyMatch(predicate) || redo.stream().anyMatch(predicate);
     }
     public int frame() { return frame; }
-    public void seek(int value) { frame = Math.clamp(value, 0, document.durationFrames() - 1); }
+    public void seek(int value) {
+        int next = Math.clamp(value, 0, document.durationFrames() - 1);
+        if (next != frame) { frame = next; generation++; }
+    }
 
     /** Playing again at the end restarts from frame zero. */
     public void play() {
+        int previousFrame = frame;
+        boolean wasPlaying = playing;
         if (frame == document.durationFrames() - 1) frame = 0;
         playing = document.durationFrames() > 1;
+        if (previousFrame != frame || wasPlaying != playing) generation++;
     }
 
-    public void pause() { playing = false; }
+    public void pause() { if (playing) { playing = false; generation++; } }
     public boolean playing() { return playing; }
 
     /** Advances one presentation frame; never mutates gameplay or commits outcomes. */
@@ -91,9 +105,11 @@ public final class StageplayController {
         if (!playing) return false;
         if (frame >= document.durationFrames() - 1) {
             playing = false;
+            generation++;
             return false;
         }
         frame++;
+        generation++;
         if (frame == document.durationFrames() - 1) playing = false;
         return true;
     }
@@ -107,7 +123,7 @@ public final class StageplayController {
                 && document.objectActors().stream().noneMatch(actor -> actor.id().equals(id))) {
             throw new IllegalArgumentException("Unknown actor: " + id);
         }
-        selectedActorId = id;
+        if (!selectedActorId.equals(id)) { selectedActorId = id; generation++; }
     }
 
     private void reconcile() {

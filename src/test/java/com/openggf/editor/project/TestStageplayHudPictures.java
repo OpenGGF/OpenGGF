@@ -1,5 +1,7 @@
 package com.openggf.editor.project;
 
+import com.openggf.stageplay.StageplayDocument.Facing;
+
 import com.openggf.Engine;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
@@ -46,6 +48,52 @@ import static org.lwjgl.opengl.GL11.*;
  */
 @Isolated
 class TestStageplayHudPictures {
+    @Test void captureDayoffAudioCue() throws Exception {
+        assumeTrue(Boolean.getBoolean("openggf.stageplay.hudPictures"), "Explicit HUD picture refresh only");
+        assertEquals("surfaceless-egl", System.getProperty("openggf.headless.gl"));
+        try (var boot = new HeadlessGameBoot(1280,720,320,224,320,224)) {
+            boot.setBootToTitle(true); boot.boot(Path.of(System.getProperty("sonic2.rom.path")),0,0);
+            try (var renderer = new EditorProjectMenuRenderer()) {
+                var scene = StageplayDocument.empty("s2",0,0,0,500,320,224).withAudio(List.of(
+                        new StageplayDocument.AudioCue("music",0,StageplayDocument.AudioKind.ROM_MUSIC,"s2",130,"",1)));
+                var workspace = new StageplayWorkspace(() -> scene); workspace.activate();
+                workspace.invoke(StageplayWorkspace.Action.AUDIO); workspace.menu().runAction(1); workspace.menu().runAction(0);
+                renderObjectMenu(renderer,workspace); capture("dayoff-audio",1280,720);
+                workspace.menu().openDetails();renderObjectMenu(renderer,workspace);capture("dayoff-audio-details",1280,720);
+            } finally { com.openggf.game.session.EngineServices.current().graphics().cleanup(); }
+        }
+    }
+
+    @Test
+    void captureReadabilityCheckpoint() throws Exception {
+        assumeTrue(Boolean.getBoolean("openggf.stageplay.hudPictures"), "Explicit HUD picture refresh only");
+        assertEquals("surfaceless-egl",System.getProperty("openggf.headless.gl"));
+        try(var boot=new HeadlessGameBoot(1280,720,320,224,320,224)) {
+            boot.setBootToTitle(true);boot.boot(Path.of(System.getProperty("sonic2.rom.path")),0,0);
+            try(var renderer=new EditorProjectMenuRenderer()) {
+                StageplayMenuSurvey.captureCheckpoint((name,workspace)->{
+                    renderObjectMenu(renderer,workspace);capture(name,1280,720);
+                    if(name.equals("survey-route-player")) {
+                        var input=new InputHandler();for(int i=0;i<7;i++)objectMenuPress(workspace,input,GLFW_KEY_DOWN);
+                        renderObjectMenu(renderer,workspace);capture("survey-route-player-apply",1280,720);
+                    }
+                });
+            } finally { com.openggf.game.session.EngineServices.current().graphics().cleanup(); }
+        }
+    }
+
+    @Test
+    void captureCompleteMenuSurvey() throws Exception {
+        assumeTrue(Boolean.getBoolean("openggf.stageplay.hudPictures"), "Explicit menu survey only");
+        assertEquals("surfaceless-egl",System.getProperty("openggf.headless.gl"));
+        try(var boot=new HeadlessGameBoot(1280,720,320,224,320,224)) {
+            boot.setBootToTitle(true);boot.boot(Path.of(System.getProperty("sonic2.rom.path")),0,0);
+            try(var renderer=new EditorProjectMenuRenderer()) {
+                StageplayMenuSurvey.capture((name,workspace)->{ renderObjectMenu(renderer,workspace);capture(name,1280,720); });
+            } finally { com.openggf.game.session.EngineServices.current().graphics().cleanup(); }
+        }
+    }
+
     @Test
     void captureCollisionRouteAndVisualFootprintForms() throws Exception {
         assumeTrue(Boolean.getBoolean("openggf.stageplay.hudPictures"), "Explicit Stageplay HUD picture refresh only");
@@ -60,7 +108,7 @@ class TestStageplayHudPictures {
                 var scene=routeFormScene();var workspace=new StageplayWorkspace(() -> scene);workspace.activate();workspace.selectActor("hero");
                 workspace.invoke(StageplayWorkspace.Action.ROUTE_HELPER);workspace.menu().setValue("x","240");workspace.menu().setValue("y","648");
                 renderObjectMenu(renderer,workspace);capture("route-player-form",1280,720);
-                workspace.menu().close();workspace.invoke(StageplayWorkspace.Action.ROUTE_HELPER);workspace.menu().setValue("actor","prop");
+                workspace.menu().close();workspace.selectActor("prop");workspace.invoke(StageplayWorkspace.Action.ROUTE_HELPER);
                 workspace.menu().setValue("halfWidth","12");workspace.menu().setValue("height","24");workspace.menu().setValue("footOffset","12");
                 var input=new InputHandler();for(int i=0;i<12;i++)objectMenuPress(workspace,input,GLFW_KEY_DOWN);
                 renderObjectMenu(renderer,workspace);capture("route-object-footprint-form",1280,720);
@@ -72,10 +120,10 @@ class TestStageplayHudPictures {
     }
     private static StageplayDocument routeFormScene() {
         return StageplayDocument.empty("s2",0,0,0,500,320,224).withActors(List.of(
-                new StageplayDocument.Actor("hero","Sonic","s2","sonic",List.of(new StageplayDocument.ActorKey(0,128,648,0,-1,false,true,1,StageplayDocument.Interpolation.HOLD)))))
+                new StageplayDocument.Actor("hero","Sonic","s2","sonic",List.of(new StageplayDocument.ActorKey(0,128,648,0,-1, Facing.RIGHT,true,1,StageplayDocument.Interpolation.HOLD)))))
                 .withPuppets(List.of(new StageplayDocument.PuppetTrack("hero",true,0,List.of())))
                 .withObjectActors(List.of(new StageplayDocument.ObjectActor("prop","Walking prop","s2",0,0,65,0,-1,
-                        List.of(new StageplayDocument.ObjectKey(0,128,648,0,-1,false,true,StageplayDocument.Interpolation.HOLD,StageplayDocument.ObjectMode.PUPPET)),List.of())));
+                        List.of(new StageplayDocument.ObjectKey(0,128,648,0,-1, Facing.LEFT,true,StageplayDocument.Interpolation.HOLD,StageplayDocument.ObjectMode.PUPPET)),List.of())));
     }
 
     @Test
@@ -89,14 +137,14 @@ class TestStageplayHudPictures {
             Path output = Path.of("target", "stageplay-hud").toAbsolutePath(); Files.createDirectories(output);
             Path source = output.resolve("screenplay-source.json");
             Files.writeString(source, """
-                    {"version":6,"name":"Two-way take","width":320,"height":224,
+                    {"version":7,"name":"Two-way take","width":320,"height":224,
                      "cast":[{"id":"hero","name":"Sonic","gameId":"s2","character":"sonic","puppet":false}],
                      "shots":[{"id":"opening","durationFrames":120,
                      "set":{"gameId":"s2","zone":0,"act":0},
                      "camera":[{"frame":0,"x":0,"y":500}],"actors":{"hero":[
                      {"frame":0,"x":128,"y":648,"animation":5},{"frame":30,"x":128,"y":648,"animation":5},
                      {"frame":90,"x":256,"y":648,"animation":5},{"frame":119,"x":256,"y":648,"animation":5}]},
-                     "audio":[{"frame":0,"kind":"ROM_MUSIC","gameId":"s2","soundId":129}]}]}
+                     "audio":[{"frame":0,"kind":"ROM_MUSIC","gameId":"s2","soundId":130}]}]}
                     """);
             var workspace = new StageplayWorkspace(() -> StageplayDocument.empty("s2",0,0,0,500,320,224));
             workspace.activate(); workspace.invoke(StageplayWorkspace.Action.IMPORT_SCREENPLAY);
@@ -211,7 +259,7 @@ class TestStageplayHudPictures {
                     .withSceneChanges(List.of(new StageplayDocument.SceneChange("next-shot",240,
                             new StageplayDocument.SetSource("s2",0,1,"",""),StageplayDocument.Transition.FADE_BLACK,30)))
                     .withCaptions(List.of(new StageplayDocument.Caption("greeting", 0, 180, "Ready for another adventure?", 12, 190, -1)))
-                    .withAudio(List.of(new StageplayDocument.AudioCue("music", 0, StageplayDocument.AudioKind.ROM_MUSIC, "s2", 129, "", 1)))
+                    .withAudio(List.of(new StageplayDocument.AudioCue("music", 0, StageplayDocument.AudioKind.ROM_MUSIC, "s2", 130, "", 1)))
                         .withDialogueTypers(List.of(new StageplayDocument.DialogueTyper("conversation",3,8,0)))
                         .withDialogueSkins(List.of(new StageplayDocument.DialogueSkin("warm",0xfff5f0df,0xffffcf66,
                                 0xff172338,0xffa8b8cf,6,"",0,true)))
@@ -285,7 +333,7 @@ class TestStageplayHudPictures {
 
     private static StageplayDocument.ActorKey key(int frame, double x, double y, int pose) {
         // S2 mapping frame zero is empty. WAIT (5) resolves the shipped standing frames.
-        return new StageplayDocument.ActorKey(frame, x, y, 5, pose, false, true, 1, StageplayDocument.Interpolation.LINEAR);
+        return new StageplayDocument.ActorKey(frame, x, y, 5, pose, Facing.RIGHT, true, 1, StageplayDocument.Interpolation.LINEAR);
     }
 
     private static void render(EditorHudRuntime chrome, SceneSurface surface, StageplayDocument scene, int width, int height) {

@@ -12,6 +12,7 @@ import com.openggf.level.objects.NativeSpriteSubmissionAccess;
 import com.openggf.level.objects.NativeSpriteSubmissionSource;
 import com.openggf.level.objects.ObjectAnimationState;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.TouchResponseProvider;
@@ -37,7 +38,7 @@ import java.util.function.Supplier;
  * trace/comparison state. Session transitions belong to the session, not these SST routines.
  */
 public final class CompetitionArenaObjectInstance extends AbstractObjectInstance
-        implements RewindRecreatable, TouchResponseProvider, NativeSpriteSubmissionSource {
+        implements RewindRecreatable, TouchResponseProvider, NativeSpriteSubmissionSource, ObjectVisualFacing.Source {
     public enum Kind {
         TRIANGLE(null, 0), BLADE("competition_blade", 5),
         RETRACTING_SPRING("competition_retracting_spring", 4),
@@ -925,6 +926,32 @@ public final class CompetitionArenaObjectInstance extends AbstractObjectInstance
     }
     public int nativeRenderY() { return y; }
     public boolean nativeRenderXFlip() { return xFlip(); }
+
+    @Override
+    public ObjectVisualFacing.Basis nativeFacing() {
+        return switch (kind) {
+            // The elephant's submitted tip extends left of originX when unflipped.
+            case ELEPHANT -> nativeRenderXFlip()
+                    ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.LEFT;
+            // spring() launches away from the right-hand face when unflipped.
+            // Its base retains the assembly's native relative offset and flip.
+            case SPRING, RETRACTING_SPRING -> {
+                int orientation = (subtype >>> 4) & 7;
+                yield orientation == 1 || orientation == 3
+                        ? (nativeRenderXFlip() ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT)
+                        : ObjectVisualFacing.Basis.NON_DIRECTIONAL;
+            }
+            // Collision-only owners have no body; the remaining drawings are
+            // mounting geometry or native poses, not a shared horizontal facing.
+            // In particular, droplet/splash and rock-fragment velocities do not
+            // reorient their independently positioned native mappings.
+            case TRIANGLE, BLADE, BALLOON, SAND_BAR, BUTTON, DRIPPER, FAN, BUMPER,
+                    MUD, PATH_SWAP, FLOOR_BUTTON, ROCK, INVISIBLE_PLATFORM, ROCK_SHARD,
+                    ROCK_DEBRIS, BLADE_LEFT, BLADE_RIGHT, SPRING_BASE, DROPLET, SPLASH ->
+                    ObjectVisualFacing.Basis.NON_DIRECTIONAL;
+        };
+    }
+
     public boolean nativeRenderYFlip() {
         if (kind == Kind.ELEPHANT) return false;
         if (kind == Kind.SPRING || kind == Kind.RETRACTING_SPRING) {

@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.data.Rom;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.RewindTransient;
@@ -42,7 +43,12 @@ import java.util.logging.Logger;
  *  12  (0x0C) - Exit: walk offscreen, unlock controls, install the title card slot
  *  14  (engine) - Allocated Obj_TitleCard slot's first dispatch: queue title card art, delete self
  */
-public class CutsceneKnucklesAiz1Instance extends AbstractObjectInstance implements SpawnRewindRecreatable {
+public class CutsceneKnucklesAiz1Instance extends AbstractObjectInstance implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // The intro actor uses native player-style facingLeft, unlike the legacy-named later cutscene fields.
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
+
 
     private static final Logger LOG = Logger.getLogger(CutsceneKnucklesAiz1Instance.class.getName());
 

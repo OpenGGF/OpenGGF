@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects.bosses;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.camera.Camera;
 import com.openggf.game.sonic2.audio.Sonic2Music;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
@@ -47,7 +48,11 @@ import java.util.List;
  * - SUBC (0x0C): Escape right
  */
 public class Sonic2MCZBossInstance extends AbstractBossInstance
-        implements SpawnRewindRecreatable, TouchResponseListener {
+        implements SpawnRewindRecreatable, TouchResponseListener, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // The native target-facing routine sets flipped when the player is to the right.
+        return flipped ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.LEFT;
+    }
 
     // State machine constants (ROM: boss_routine values)
     private static final int SUB0_RISING = 0x00;

@@ -11,7 +11,9 @@ import java.io.IOException;
 
 /** SKL $4E, Obj_DEZLiftPad / sub_4748E / sub_4757A (sonic3k.asm:93137-93361). */
 public final class S3kDezLiftPadObjectInstance extends AbstractObjectInstance
-        implements RewindRecreatable, SolidObjectProvider, RomObjectCodePointerProvider {
+        implements RewindRecreatable, SolidObjectProvider, RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
+
+    // Native lift pad, articulated arm and joints form geometric machinery without horizontal-facing bodies.
     private Arm arm;
     private boolean initialized;
     private int anchorX, anchorY, currentX, currentY;

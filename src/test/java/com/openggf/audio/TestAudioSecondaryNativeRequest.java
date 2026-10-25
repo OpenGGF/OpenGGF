@@ -209,7 +209,7 @@ class TestAudioSecondaryNativeRequest {
         assertEquals(1, profile.classifications);
         assertEquals(1, audio.commandTimeline().entryCount());
         assertInstanceOf(AudioCommand.PlaySegaPcm.class, lastCommand());
-        assertEquals(0, audio.mutatorSubmissionDepth);
+        assertEquals(0, mutatorSubmissionDepth());
         assertTrue(audio.captureLogicalSnapshot().ringLeft());
         assertEquals(0, audio.shadowParitySnapshot().presentedFrames());
     }
@@ -221,7 +221,7 @@ class TestAudioSecondaryNativeRequest {
         profile.systemFailure = failure;
         try (var binding = observeIntents(audio)) {
             assertSame(failure, assertThrows(IllegalStateException.class, () -> request(0xFA)));
-            assertEquals(0, audio.mutatorSubmissionDepth);
+            assertEquals(0, mutatorSubmissionDepth());
             assertEquals(List.of("intent:COMMAND:250"), observations,
                     "failed profile dispatch precedes raw observation, as in the existing fallback");
             assertEquals(0, audio.commandTimeline().entryCount());
@@ -252,6 +252,16 @@ class TestAudioSecondaryNativeRequest {
 
     private void request(int nativeId) {
         AudioManagerInternalAccess.playSecondaryNativeRequest(audio, nativeId);
+    }
+
+    private int mutatorSubmissionDepth() {
+        try {
+            var field = AudioMutatorAccess.class.getDeclaredField("submissionDepth");
+            field.setAccessible(true);
+            return field.getInt(AudioManager.mutatorAccess(audio));
+        } catch (ReflectiveOperationException failure) {
+            throw new AssertionError("cannot read AudioMutatorAccess.submissionDepth", failure);
+        }
     }
 
     private void installProfile(Sonic2AudioProfile profile) {

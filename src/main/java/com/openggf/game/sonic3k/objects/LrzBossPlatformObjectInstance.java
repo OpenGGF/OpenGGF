@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.runtime.LrzBossActState;
@@ -11,7 +13,7 @@ import java.util.List;
 
 /** Obj_LRZ3Platform ($AD): generators, rising platforms and their animated undersides. */
 public final class LrzBossPlatformObjectInstance extends AbstractObjectInstance
-        implements SlopedSolidProvider, RewindRecreatable, RomObjectCodePointerProvider {
+        implements SlopedSolidProvider, RewindRecreatable, RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
     private static final int PLACED = 0, RISING = 1, FALLING = 2, UNDERSIDE = 3, APPROACH = 4, FLOATING = 5, DEBRIS = 6;
     private final SubpixelMotion.State motion = new SubpixelMotion.State(0,0,0,0,0,0);
     private int mode, subtype, timer, riseTimer, animationTimer, animationFrame;

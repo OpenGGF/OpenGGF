@@ -68,6 +68,7 @@ final class StageplayHud implements com.openggf.stageplay.editor.StageplayRouteO
         workspace.setCameraInputEnabled(page != Page.COMMANDS);
         pad.sample(input.capturePhysicalInput().gamepads());
         controllerPrompts = MenuInput.controller(input);
+        if(workspace.pickingPosition())return true;
         if (workspace.recording()) {
             if (input.isKeyPressed(GLFW_KEY_SPACE) || input.isKeyPressed(GLFW_KEY_ESCAPE)
                     || pad.pressed(EAST) || pad.pressed(SOUTH)) workspace.stop();
@@ -230,6 +231,19 @@ final class StageplayHud implements com.openggf.stageplay.editor.StageplayRouteO
         c.rect(0, game.y(), game.x(), game.h(), BACKDROP, 1);
         c.rect(game.right(), game.y(), layout.width() - game.right(), game.h(), BACKDROP, 1);
         c.frame(game.x() - 2, game.y() - 2, game.w() + 4, game.h() + 4, 1, ACCENT, 1);
+        if(workspace.pickingPosition()){
+            c.clip(game);
+            try {workspace.paintPositionPicker(new com.openggf.editor.stageplay.StageplayPositionPicker.Painter(){
+                public void line(float x1,float y1,float x2,float y2,int rgb,float width){c.line(x1,y1,x2,y2,rgb,width);}
+                public void rect(float x,float y,float w,float h,int rgb){c.rect(x,y,w,h,rgb,1);}
+                public void text(String text,float x,float y,int rgb){c.text(text,x,y,Size.SMALL,rgb,1);}
+                public float textWidth(String text){return EditorHudCanvas.textWidth(text,Size.SMALL);}
+            },game.x(),game.y(),game.w(),game.h());}
+            finally {c.unclip();}
+            c.text("Pick position",8,6,Size.BODY,GOLD,1);
+            c.fittedText(com.openggf.editor.stageplay.StageplayPositionPicker.HINT,8,layout.height()-16,layout.width()-16,Size.SMALL,TEXT_DIM,1);
+            return;
+        }
         c.rect(0, 0, layout.width(), layout.topBar().h(), PANEL, 1);
         c.text("STAGEPLAY", 8, 6, Size.BODY, GOLD, 1);
         c.fittedText(document.name() + (controller.dirty() ? " *" : ""), 108, 7,
@@ -253,6 +267,14 @@ final class StageplayHud implements com.openggf.stageplay.editor.StageplayRouteO
         hits = List.copyOf(nextHits);
     }
 
+    private static String friendly(String text) {
+        String readable=java.util.regex.Pattern.compile("\\b[A-Z][A-Z_]{2,}\\b").matcher(text).replaceAll(m -> java.util.Arrays.stream(m.group().split("_"))
+                .map(w -> w.charAt(0)+w.substring(1).toLowerCase(java.util.Locale.ROOT)).collect(java.util.stream.Collectors.joining(" ")));
+        return readable.replace("S1 /", "Sonic 1 /").replace("S2 /", "Sonic 2 /").replace("S3K /", "Sonic 3 & K /")
+                .replace("/ sonic /", "/ Sonic /").replace("/ tails /", "/ Tails /").replace("/ knuckles /", "/ Knuckles /")
+                .replace("Rom Music", "Music").replace("Rom Sfx", "Sound effect");
+    }
+
     private List<StageplayDocument.Actor> documentActors() { return workspace.controller().document().actors(); }
 
     private void drawPanel(EditorHudCanvas c, Rect panel, List<Hit> nextHits) {
@@ -267,8 +289,7 @@ final class StageplayHud implements com.openggf.stageplay.editor.StageplayRouteO
         }
         List<Row> rows = rows();
         var route = workspace.routeOverlay();
-        var routeLines = route == null ? List.<String>of() : wrapRouteText(route.motionSummary()+". "+route.reason(), panel.w() - 28);
-        float routeHeight = route == null ? 0 : 68 + routeLines.size() * 11;
+        float routeHeight = route == null ? 0 : 62;
         visibleRows = Math.max(1, (int) ((panel.h() - 110 - routeHeight) / 27));
         selected = rows.isEmpty() ? 0 : Math.clamp(selected, 0, rows.size() - 1);
         int first = Math.max(0, Math.min(selected - visibleRows / 2, rows.size() - visibleRows));
@@ -287,20 +308,22 @@ final class StageplayHud implements com.openggf.stageplay.editor.StageplayRouteO
                     : workspace.controller().document().objectActors().get(i - documentActors().size()).id()).equals(workspace.controller().selectedActorId());
             if (selectedActor) label = "* " + label;
             c.fittedText(label, area.x() + 6, area.y() + 4, area.w() - 12, Size.SMALL, TEXT, 1);
-            c.fittedText(selectedActor ? workspace.selectedActorStatus() : row.detail(), area.x() + 6, area.y() + 15, area.w() - 12, Size.SMALL, TEXT_DIM, 1);
+            c.fittedText(friendly(row.detail()), area.x() + 6, area.y() + 15, area.w() - 12, Size.SMALL, TEXT_DIM, 1);
             nextHits.add(new Hit(area, () -> { selected = index; row.action().run(); }));
         }
         float bottom = panel.bottom() - 67;
         if (route != null) {
             float x = panel.x() + 10, y = bottom - routeHeight - 10;
             c.rect(x - 2, y - 5, panel.w() - 16, 1, LINE, 1);
-            c.text(route.title(), x, y, Size.SMALL, route.successful() ? GOOD : WARN, 1);
-            c.text("Cyan: walk", x, y + 14, Size.SMALL, com.openggf.stageplay.editor.StageplayRouteOverlay.GROUND, 1);
-            c.text("Gold: air / takeoff", x + 85, y + 14, Size.SMALL, com.openggf.stageplay.editor.StageplayRouteOverlay.AIR, 1);
-            c.text("Square: start   Diamond: goal", x, y + 26, Size.SMALL, TEXT_DIM, 1);
-            c.text(route.applied() ? "White cross: actual position" : "Red cross: stopped attempt", x, y + 37, Size.SMALL, TEXT_DIM, 1);
-            for (int i = 0; i < routeLines.size(); i++)
-                c.text(routeLines.get(i), x, y + 52 + i * 11, Size.SMALL, TEXT, 1);
+            c.rect(x,y+2,3,3,route.successful()?GOOD:WARN,1);
+            c.fittedText(route.summary(), x+8, y, panel.w()-36, Size.SMALL, route.successful()?GOOD:WARN,1);
+            c.rect(x,y+14,6,6,com.openggf.stageplay.editor.StageplayRouteOverlay.GROUND,1);c.text("Walk",x+10,y+14,Size.SMALL,TEXT_DIM,1);
+            c.rect(x+60,y+14,6,6,com.openggf.stageplay.editor.StageplayRouteOverlay.AIR,1);c.text("Air",x+70,y+14,Size.SMALL,TEXT_DIM,1);
+            c.rect(x,y+26,6,6,com.openggf.stageplay.editor.StageplayRouteOverlay.GROUND,1);c.text("Start",x+10,y+26,Size.SMALL,TEXT_DIM,1);
+            c.rect(x+60,y+26,6,6,route.goalColor(),1);c.text("Goal",x+70,y+26,Size.SMALL,TEXT_DIM,1);
+            c.rect(x,y+37,6,6,route.applied()?0xFFFFFF:com.openggf.stageplay.editor.StageplayRouteOverlay.FAILURE,1);
+            c.text(route.applied() ? "Actual" : "Stopped", x+10, y + 37, Size.SMALL, TEXT_DIM, 1);
+            c.text("F1 Commands / Direction details",x,y+50,Size.SMALL,TEXT_FAINT,1);
         }
         c.fittedText(rows.isEmpty() ? "" : (selected + 1) + " / " + rows.size() + "   Up / Down to browse",
                 panel.x() + 8, bottom - 10, panel.w() - 16, Size.SMALL, TEXT_FAINT, 1);
@@ -315,7 +338,7 @@ final class StageplayHud implements com.openggf.stageplay.editor.StageplayRouteO
             button(c, nextHits, new Rect(panel.x() + 6 + (i % 2) * (half + 6), bottom + (i / 2) * 21, half, 18),
                     labels[i], () -> workspace.invoke(action), false);
         }
-        c.fittedText(route == null ? workspace.status() : route.statusText(), panel.x() + 8,
+        c.fittedText(route == null ? workspace.statusSummary() : "", panel.x() + 8,
                 panel.bottom() - 16, panel.w() - 16, Size.SMALL, TEXT_DIM, 1);
     }
 

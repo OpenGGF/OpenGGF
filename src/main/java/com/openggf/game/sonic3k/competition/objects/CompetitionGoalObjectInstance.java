@@ -9,12 +9,17 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.NativeSpriteSubmissionAccess;
 import com.openggf.level.objects.NativeSpriteSubmissionSource;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 
 import java.util.List;
 
-/** S3KL $65, Obj_2PGoalMarker (sonic3k.asm:73992-74247). */
-public final class CompetitionGoalObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable, NativeSpriteSubmissionSource {
+/**
+ * S3KL $65, Obj_2PGoalMarker (sonic3k.asm:73992-74247).
+ * The marker draws unflipped; its independently allocated HUD records retain
+ * their native screen positions and have no shared horizontal body direction.
+ */
+public final class CompetitionGoalObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable, NativeSpriteSubmissionSource, ObjectVisualFacing.NonDirectional {
     public static final String ART_KEY = "competition_goal";
     private int animationFrame;
     private int animationTimer;

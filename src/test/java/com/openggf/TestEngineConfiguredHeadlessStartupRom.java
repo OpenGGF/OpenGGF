@@ -118,7 +118,7 @@ class TestEngineConfiguredHeadlessStartupRom {
         assertFalse(audio.captureLogicalSnapshot().ringLeft(), "begin in a reused, dirty audio lifetime");
         assertTrue(audio.captureLogicalSnapshot().commandEntryCount() > 0);
         AudioBackend supplied = synthesisEnabled
-                ? spy(new HeadlessSmpsAudioBackend(services.configuration(), services.profiler()))
+                ? spy(new HeadlessSmpsAudioBackend(services.configuration(), services.profiler(), services.audio(), services.audio()))
                 : spy(new NullAudioBackend());
         InputHandler input = new InputHandler();
         input.setLogicalOverride(LogicalInputSnapshot.neutral());

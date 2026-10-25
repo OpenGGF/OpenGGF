@@ -10,6 +10,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
@@ -45,7 +46,9 @@ import java.util.List;
  * {@code Level_frame_counter+1} (:88169-88174).
  */
 public final class LrzBigDoorObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, RewindRecreatable, RomObjectCodePointerProvider {
+        implements SolidObjectProvider, RewindRecreatable, RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
+
+    // Native door frames and vertical opening travel have no horizontal-facing body.
 
     /** {@code move.w #$280,priority(a0)} (sonic3k.asm:88122). */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x0280);

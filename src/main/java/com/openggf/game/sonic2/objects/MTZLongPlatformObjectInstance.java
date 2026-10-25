@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.ButtonVineTriggerManager;
 import com.openggf.game.sonic2.S2SpriteDataLoader;
@@ -60,7 +62,8 @@ import java.util.List;
  * Bit 7 of initial subtype triggers child cog spawn via AllocateObjectAfterCurrent.
  */
 public class MTZLongPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj65 owns a platform and cog child; mirrored attachment/travel is geometry, not facing.
 
     // Obj65_Properties table (s2.asm line 52362)
     // {width_pixels, y_radius, movementData, childSubtype}

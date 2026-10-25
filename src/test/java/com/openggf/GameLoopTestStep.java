@@ -24,11 +24,12 @@ public final class GameLoopTestStep {
                 .latchBeforeFadeUpdate();
         Field activeFrame = GameLoop.class.getDeclaredField("activePlcLifecycleFrame");
         activeFrame.setAccessible(true);
-        Method method = GameLoop.class.getDeclaredMethod(methodName, parameterTypes);
+        Object target = SpecialStageLifecycleTestAccess.methodTarget(loop, methodName);
+        Method method = (target instanceof GameLoop ? GameLoop.class : target.getClass()).getDeclaredMethod(methodName, parameterTypes);
         method.setAccessible(true);
         activeFrame.set(loop, frame);
         try {
-            return method.invoke(loop, arguments);
+            return method.invoke(target, arguments);
         } catch (InvocationTargetException failure) {
             Throwable cause = failure.getCause();
             if (cause instanceof Exception exception) {

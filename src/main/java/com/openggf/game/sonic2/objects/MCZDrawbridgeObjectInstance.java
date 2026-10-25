@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.PlayableEntity;
@@ -56,7 +58,8 @@ import java.util.logging.Logger;
  * </ul>
  */
 public class MCZDrawbridgeObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, RewindRecreatable {
+        implements SolidObjectProvider, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj81 rotates eight logs; hinge placement and angular direction are geometric, not facing.
 
     private static final Logger LOGGER = Logger.getLogger(MCZDrawbridgeObjectInstance.class.getName());
 

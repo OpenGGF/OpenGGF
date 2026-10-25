@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -31,7 +32,8 @@ import java.util.List;
  * carries its own, so the two can expire independently.
  */
 public final class FirewormBadnikInstance extends AbstractObjectInstance
-        implements RewindRecreatable, RomObjectCodePointerProvider {
+        implements RewindRecreatable, RomObjectCodePointerProvider, ObjectVisualFacing.Container {
+
 
     /** {@code cmpi.w #$80,d2} on {@code Find_SonicTails}'s nearer-player X distance. */
     private static final int SPAWN_DISTANCE = 0x80;

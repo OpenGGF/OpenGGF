@@ -74,7 +74,7 @@ public final class ProductionBk2AudioRunner {
         InputHandler input = new InputHandler(
                 InputBindingFactory.supplier(context.configuration()));
         HeadlessSmpsAudioBackend backend = new HeadlessSmpsAudioBackend(
-                context.configuration(), context.profiler());
+                context.configuration(), context.profiler(), audio, audio);
         Bk2InputCursor cursor = new Bk2InputCursor(movie);
         Engine engine = new Engine(context);
         GameLoop loop = engine.getGameLoop();

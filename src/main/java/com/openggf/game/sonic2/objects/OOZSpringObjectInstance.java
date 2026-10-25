@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.audio.GameSound;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
@@ -37,7 +39,15 @@ import java.util.Set;
  * OOZSpring (Obj45) - pressure spring from Oil Ocean Zone.
  */
 public class OOZSpringObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable, ObjectVisualFacing.Source {
+    @Override
+    public ObjectVisualFacing.Basis nativeFacing() {
+        // Obj45_LaunchCharacterHorizontal negates the negative launch speed
+        // only with x_flip clear. Vertical compression/launch has no horizontal front.
+        if (!horizontal) return ObjectVisualFacing.Basis.NON_DIRECTIONAL;
+        return isXFlipped() ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
+
     private static final int STRONG_STRENGTH = -0x1000;
     private static final int WEAK_STRENGTH = -0x0A00;
     private static final int HORIZONTAL_IDLE_FRAME = 0x0A;

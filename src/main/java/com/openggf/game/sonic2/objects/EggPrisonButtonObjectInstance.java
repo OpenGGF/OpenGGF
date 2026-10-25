@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -29,7 +31,8 @@ import java.util.List;
  */
 public class EggPrisonButtonObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider,
-        SpawnNullableReferenceRewindRecreatable {
+        SpawnNullableReferenceRewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj3E button only depresses vertically; it does not share the released animals' facing.
 
     // ROM constants from s2.asm
     private static final int BUTTON_HALF_WIDTH = 0x1B;  // 27 pixels

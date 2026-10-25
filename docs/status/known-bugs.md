@@ -51,6 +51,29 @@ native presentation obligations remain in the [coverage backlog](level-test-cove
 3. [Trace Replay Recorder Coverage Follow-Up](#trace-replay-recorder-coverage-follow-up)
 4. [S3K AIZ Items Carried From The 2026-03-25 Working List](#s3k-aiz-items-carried-from-the-2026-03-25-working-list)
 5. [S2 EHZ Boss Animation Tables Contain Three Extra Frames](#s2-ehz-boss-animation-tables-contain-three-extra-frames)
+6. [S2 Sideways Platform Allocation and Strict Rewind Gap](#s2-sideways-platform-allocation-and-strict-rewind-gap)
+
+---
+
+## S2 Sideways Platform Allocation and Strict Rewind Gap
+
+**Location:** `SidewaysPformObjectInstance#createChildPlatform` / `linkedPlatform`.
+
+**Symptom:** With no free SST after the parent, child admission rejects the
+constructed platform but the parent retains its unregistered reference. Strict
+rewind capture fails at `SidewaysPformObjectInstance#linkedPlatform`. The
+[retained real-manager qualification](../../src/test/java/com/openggf/game/sonic2/objects/TestS2SidewaysPformAdmissionQualification.java)
+characterizes this open failure; passing its known-gap assertions is not a fix.
+
+**Cause and removal condition:** The pinned native failure branch aliases the
+fixed `Tails_Tails` SST, skips child initialization, and still performs reciprocal
+pointer, boundary and offset writes. Resolve the native empty/live fixed-Tails
+states, failed pointer writes, paired deletion/respawn release and reversible
+strict capture/restore before removing this entry or revising the known-gap
+assertions. A null/self substitute is not established by the native branch.
+The [source/runtime audit](../architecture/audits/2026-10-24-rewind-disposition-review.md#s2-sideways-platform-allocation-failure-qualification)
+records the exact pin, citations, reproduction, commands and coverage limits.
+Production remains unchanged; broader fixed-slot ownership is deferred.
 
 ---
 

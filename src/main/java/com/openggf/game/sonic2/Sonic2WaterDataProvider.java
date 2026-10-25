@@ -1,6 +1,6 @@
 package com.openggf.game.sonic2;
 
-import com.openggf.data.PaletteLoader;
+import com.openggf.level.PaletteLoader;
 import com.openggf.data.Rom;
 import com.openggf.game.DynamicWaterHandler;
 import com.openggf.game.OscillationManager;

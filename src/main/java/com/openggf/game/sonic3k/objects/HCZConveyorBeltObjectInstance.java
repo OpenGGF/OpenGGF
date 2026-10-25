@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.debug.DebugColor;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.PlayableEntity;
@@ -42,7 +44,7 @@ import java.util.Map;
  * Status bit 0 (render_flags bit 0) controls orientation: 0 = rightward, 1 = leftward.
  */
 public class HCZConveyorBeltObjectInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable {
+        implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
 
     // ===== Conveyor belt boundary data table (word_31124, sonic3k.asm:66327-66343) =====
     // Each entry: { leftX, rightX } defining the horizontal bounds of a belt.

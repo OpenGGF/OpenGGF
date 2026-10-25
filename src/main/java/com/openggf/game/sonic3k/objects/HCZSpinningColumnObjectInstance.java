@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.OscillationManager;
 import com.openggf.game.PlayableEntity;
@@ -30,7 +32,7 @@ import java.util.List;
  * <p>ROM reference: Obj_HCZSpinningColumn (sonic3k.asm:68148-68219).
  */
 public class HCZSpinningColumnObjectInstance extends AbstractObjectInstance
-        implements RewindRecreatable, SolidObjectProvider, SolidObjectListener, RomObjectCodePointerProvider {
+        implements RewindRecreatable, SolidObjectProvider, SolidObjectListener, RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
 
     /**
      * Word 0 of this object's S3K SST holds its live ROM code pointer.

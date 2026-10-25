@@ -12,6 +12,7 @@ import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
@@ -49,7 +50,9 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/4C &amp; 4D Lava Geyser Maker.asm
  */
 public class Sonic1LavaGeyserObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, RewindRecreatable {
+        implements TouchResponseProvider, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+// Geyser head/body/third-piece assembly rises or falls vertically without horizontal facing.
 
     // ========================================================================
     // Constants from disassembly

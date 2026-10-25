@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageResultsScreen;
 import com.openggf.data.RomByteReader;
 import com.openggf.data.RomManager;
 import com.openggf.game.sonic2.Sonic2ObjectArt;
@@ -32,17 +33,17 @@ class TestSonic2ResultsFixedZeroArt {
         RomManager romManager = mock(RomManager.class);
         when(romManager.isRomAvailable()).thenReturn(true);
         var services = new TestObjectServices().withRom(TestEnvironment.currentRom()).withRomManager(romManager);
-        var results = new SpecialStageResultsScreenObjectInstance(17, true, 0, 1, services);
-        var load = SpecialStageResultsScreenObjectInstance.class.getDeclaredMethod("loadArt");
+        var results = new Sonic2SpecialStageResultsScreen(17, true, 0, 1, services);
+        var load = Sonic2SpecialStageResultsScreen.class.getDeclaredMethod("loadArt");
         load.setAccessible(true);
         load.invoke(results);
-        var field = SpecialStageResultsScreenObjectInstance.class.getDeclaredField("combinedPatterns");
+        var field = Sonic2SpecialStageResultsScreen.class.getDeclaredField("combinedPatterns");
         field.setAccessible(true);
         var patterns = (Pattern[]) field.get(results);
         assertNotNull(patterns);
         assertZeroPair(patterns, 0x6F0 - 2);
 
-        var update = SpecialStageResultsScreenObjectInstance.class.getDeclaredMethod("updateBonusPatterns");
+        var update = Sonic2SpecialStageResultsScreen.class.getDeclaredMethod("updateBonusPatterns");
         update.setAccessible(true);
         update.invoke(results);
         assertZeroPair(patterns, 0x6F0 - 2);

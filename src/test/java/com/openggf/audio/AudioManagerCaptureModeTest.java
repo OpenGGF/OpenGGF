@@ -4,6 +4,7 @@ import com.openggf.audio.AudioTestFixtures.RecordingAudioBackend;
 import com.openggf.audio.output.AudioPresentationSink;
 import com.openggf.audio.output.NoDeviceAudioSink;
 import com.openggf.audio.presentation.AudioPresentationProducer;
+import com.openggf.audio.presentation.AudioPresentationFrameView;
 import com.openggf.audio.presentation.AudioPresentationSnapshot;
 import com.openggf.audio.presentation.PresentationMode;
 import com.openggf.audio.presentation.PresentationVoiceSnapshot;
@@ -20,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import java.lang.reflect.Field;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -31,6 +33,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.spy;
 
 /**
  * Offline capture compatibility API over the single authoritative
@@ -91,7 +95,7 @@ class AudioManagerCaptureModeTest {
         SonicConfigurationService config = SonicConfigurationService.getInstance();
         config.resetToDefaults();
         audio.setBackend(new HeadlessSmpsAudioBackend(
-                config, PerformanceProfiler.getInstance(), 44_100));
+                config, PerformanceProfiler.getInstance(), 44_100, audio));
 
         audio.beginCaptureMode(44_100, 60);
 
@@ -382,7 +386,7 @@ class AudioManagerCaptureModeTest {
         SonicConfigurationService config = SonicConfigurationService.getInstance();
         config.resetToDefaults();
         audio.setBackend(new HeadlessSmpsAudioBackend(
-                config, PerformanceProfiler.getInstance()));
+                config, PerformanceProfiler.getInstance(), audio));
 
         AudioTestFixtures.StubSmpsLoader loader =
                 new AudioTestFixtures.StubSmpsLoader();
@@ -462,7 +466,7 @@ class AudioManagerCaptureModeTest {
         SonicConfigurationService config = SonicConfigurationService.getInstance();
         config.resetToDefaults();
         audio.setBackend(new HeadlessSmpsAudioBackend(
-                config, PerformanceProfiler.getInstance()));
+                config, PerformanceProfiler.getInstance(), audio));
 
         AudioPresentationSink sinkBefore = presentationSink(audio);
         assertInstanceOf(NoDeviceAudioSink.class, sinkBefore,
@@ -497,7 +501,7 @@ class AudioManagerCaptureModeTest {
         SonicConfigurationService config = SonicConfigurationService.getInstance();
         config.resetToDefaults();
         audio.setBackend(new HeadlessSmpsAudioBackend(
-                config, PerformanceProfiler.getInstance()));
+                config, PerformanceProfiler.getInstance(), audio));
         try {
             audio.setRewindHistoryArmed(true);
             assertTrue(audio.releaseStateForTesting().producer().historyArmed());
@@ -589,6 +593,198 @@ class AudioManagerCaptureModeTest {
         live.close();
     }
 
+    @Test
+    void offlineValidationPrecedesRealizationButSampleValidationFollowsIt() {
+        AudioManager audio = AudioManager.getInstance();
+        audio.resetState();
+        RuntimeException realizationFailure = new IllegalStateException("realization refused");
+        audio.setBackend(new NullAudioBackend() {
+            @Override public AudioPresentationTuning presentationTuning() {
+                assertTrue(Thread.holdsLock(audio), "capture admission holds the manager monitor");
+                throw realizationFailure;
+            }
+        });
+
+        assertThrows(IllegalArgumentException.class, () -> audio.beginCaptureMode(-1, 0));
+        assertSame(realizationFailure, assertThrows(IllegalStateException.class,
+                () -> audio.beginCaptureMode(-1, 60)),
+                "realization fails before even an invalid sample rate is checked");
+        assertThrows(IllegalStateException.class, () -> audio.drainCaptureFrame(null));
+
+        audio.setBackend(new RecordingAudioBackend());
+        audio.beginCaptureMode(48_000, 60);
+        assertThrows(IllegalStateException.class, () -> audio.beginCaptureMode(-1, 0),
+                "duplicate admission precedes both rate validations");
+    }
+
+    @Test
+    void sampleRateMismatchPrecedesPositiveFrameRateMismatch() {
+        AudioManager audio = AudioManager.getInstance();
+        audio.resetState();
+        SonicConfigurationService.getInstance().resetToDefaults();
+        audio.setBackend(new RecordingAudioBackend());
+        assertTrue(assertThrows(IllegalArgumentException.class,
+                () -> audio.beginCaptureMode(44_100, 30)).getMessage().contains("sample rate"));
+        assertTrue(assertThrows(IllegalArgumentException.class,
+                () -> audio.beginCaptureMode(48_000, 30)).getMessage().contains("frame rate"));
+        assertThrows(IllegalStateException.class, () -> audio.drainCaptureFrame(null));
+        audio.beginCaptureMode(48_000, 60);
+        assertEquals(800, audio.drainCaptureFrame(new short[1600]));
+    }
+
+    @Test
+    void offlineValidationUsesVirtualManagerSampleRateDispatch() {
+        // Only the virtual rate read is intercepted; admission and packets use
+        // a real isolated manager and its real no-device producer.
+        // Construct the spy itself: copying a previously constructed manager
+        // also copies instance-bound owners that still enclose the original.
+        AudioManager isolated = spy(AudioManager.class);
+        try {
+            SonicConfigurationService.getInstance().resetToDefaults();
+            isolated.setBackend(new RecordingAudioBackend());
+            doReturn(44_100).when(isolated).outputSampleRate();
+            isolated.beginCaptureMode(44_100, 60);
+            assertEquals(800, isolated.drainCaptureFrame(new short[1600]),
+                    "validation dispatch does not change the producer's 48 kHz clock");
+        } finally {
+            isolated.destroy();
+        }
+    }
+
+    @Test
+    void sampleRateCallbackAttachesToTheCurrentProducerAfterReentry() throws Exception {
+        AudioManager audio = AudioManager.getInstance();
+        audio.resetState();
+        SonicConfigurationService.getInstance().resetToDefaults();
+        AtomicReference<Runnable> onRate = new AtomicReference<>();
+        AudioPresentationSink sink = new AudioPresentationSink() {
+            @Override public int sampleRate() {
+                Runnable callback = onRate.getAndSet(null);
+                if (callback != null) callback.run();
+                return 48_000;
+            }
+            @Override public void accept(AudioPresentationFrameView frame) { }
+            @Override public void onReverseBoundary() { }
+            @Override public void close() { }
+        };
+        audio.setBackend(new NullAudioBackend() {
+            @Override public AudioPresentationSink createPresentationSink(
+                    Consumer<Throwable> failure, Consumer<String> warning) { return sink; }
+        });
+        audio.presentationFrameRate();
+        Object previous = producer(audio);
+        onRate.set(() -> {
+            assertTrue(Thread.holdsLock(audio));
+            audio.setBackend(new RecordingAudioBackend());
+            audio.presentationFrameRate();
+        });
+
+        audio.beginCaptureMode(48_000, 60);
+
+        assertFalse(previous == producer(audio));
+        assertEquals(1, AudioManagerTestDiagnostics.producerFingerprint(audio).captureCount());
+        assertEquals(800, audio.drainCaptureFrame(new short[1600]),
+                "the lease belongs to the producer published during the virtual rate read");
+    }
+
+    @Test
+    void acceptedCloseRetiresReferencesEvenWhenSinkTeardownThrows() throws Exception {
+        AudioManager audio = AudioManager.getInstance();
+        audio.resetState();
+        SonicConfigurationService.getInstance().resetToDefaults();
+        RuntimeException teardownFailure = new IllegalStateException("sink teardown");
+        AudioPresentationSink sink = new AudioPresentationSink() {
+            @Override public int sampleRate() { return 48_000; }
+            @Override public void accept(AudioPresentationFrameView frame) { }
+            @Override public void onReverseBoundary() { }
+            @Override public void close() {
+                assertFalse(Thread.holdsLock(audio), "destroy has no method-wide manager lock");
+                throw teardownFailure;
+            }
+        };
+        audio.setBackend(new NullAudioBackend() {
+            @Override public AudioPresentationSink createPresentationSink(
+                    Consumer<Throwable> failure, Consumer<String> warning) { return sink; }
+        });
+        audio.beginCaptureMode(48_000, 60);
+        LiveCaptureAudioHandle live = audio.beginLiveCaptureAudio(60);
+        Object previous = producer(audio);
+
+        assertSame(teardownFailure, assertThrows(IllegalStateException.class, audio::destroy));
+        assertSame(previous, producer(audio), "throwing teardown skips manager-wide nulling");
+        assertSame(sink, presentationSink(audio));
+        assertThrows(IllegalArgumentException.class, () -> audio.beginCaptureMode(48_000, 0),
+                "the accepted close cleared offline admission before teardown escaped");
+        assertThrows(IllegalStateException.class, () -> audio.drainCaptureFrame(null));
+        assertThrows(IllegalStateException.class, () -> live.drainPresentationFrame(null));
+
+        audio.setBackend(new RecordingAudioBackend());
+        assertThrows(IllegalStateException.class, () -> live.drainPresentationFrame(new short[1600]),
+                "the retired live handle must not be resurrected by later rebuild marking");
+        audio.beginCaptureMode(48_000, 60);
+        audio.beginLiveCaptureAudio(60).close();
+    }
+
+    @Test
+    void throwingReentrantCloseReconcilesTheCurrentlyPublishedProducer() {
+        AudioManager audio = AudioManager.getInstance();
+        audio.resetState();
+        SonicConfigurationService.getInstance().resetToDefaults();
+        RuntimeException teardownFailure = new IllegalStateException("outer sink teardown");
+        AudioPresentationSink sink = new AudioPresentationSink() {
+            @Override public int sampleRate() { return 48_000; }
+            @Override public void accept(AudioPresentationFrameView frame) { }
+            @Override public void onReverseBoundary() { }
+            @Override public void close() {
+                assertFalse(Thread.holdsLock(audio));
+                audio.setBackend(new RecordingAudioBackend());
+                audio.presentationFrameRate();
+                audio.beginCaptureMode(48_000, 60);
+                throw teardownFailure;
+            }
+        };
+        audio.setBackend(new NullAudioBackend() {
+            @Override public AudioPresentationSink createPresentationSink(
+                    Consumer<Throwable> failure, Consumer<String> warning) { return sink; }
+        });
+        audio.beginCaptureMode(48_000, 60);
+        LiveCaptureAudioHandle live = audio.beginLiveCaptureAudio(60);
+
+        assertSame(teardownFailure, assertThrows(IllegalStateException.class, audio::destroy));
+        assertEquals(2, AudioManagerTestDiagnostics.producerFingerprint(audio).captureCount());
+        assertEquals(800, audio.drainCaptureFrame(new short[1600]));
+        assertEquals(800, live.drainPresentationFrame(new short[1600]),
+                "finally must not retire leases rebound to the callback's open producer");
+        assertThrows(IllegalStateException.class, () -> audio.beginLiveCaptureAudio(60));
+        assertThrows(IllegalStateException.class, () -> audio.beginCaptureMode(48_000, 60));
+        live.close();
+    }
+
+    @Test
+    void reentrantCloseThatClearsTheProducerPreservesFinallyFailurePrecedence() {
+        AudioManager audio = AudioManager.getInstance();
+        audio.resetState();
+        SonicConfigurationService.getInstance().resetToDefaults();
+        RuntimeException teardownFailure = new IllegalStateException("superseded teardown");
+        AudioPresentationSink sink = new AudioPresentationSink() {
+            @Override public int sampleRate() { return 48_000; }
+            @Override public void accept(AudioPresentationFrameView frame) { }
+            @Override public void onReverseBoundary() { }
+            @Override public void close() {
+                audio.destroy(); // reentrant close sees the old producer already closed
+                throw teardownFailure;
+            }
+        };
+        audio.setBackend(new NullAudioBackend() {
+            @Override public AudioPresentationSink createPresentationSink(
+                    Consumer<Throwable> failure, Consumer<String> warning) { return sink; }
+        });
+        audio.beginCaptureMode(48_000, 60);
+        assertThrows(NullPointerException.class, audio::destroy,
+                "the current null producer read in finally supersedes the sink exception");
+        assertThrows(IllegalStateException.class, () -> audio.drainCaptureFrame(null));
+    }
+
     private static boolean hasSampleAsset(
             AudioPresentationSnapshot presentation, String assetId) {
         for (PresentationVoiceSnapshot voice : presentation.voices()) {
@@ -631,15 +827,11 @@ class AudioManagerCaptureModeTest {
 
     private static AudioPresentationSink presentationSink(AudioManager audio)
             throws Exception {
-        Field field = AudioManager.class.getDeclaredField("presentationSink");
-        field.setAccessible(true);
-        return (AudioPresentationSink) field.get(audio);
+        return AudioManagerTestDiagnostics.presentationField(audio, "presentationSink", AudioPresentationSink.class);
     }
 
     private static Object producer(AudioManager audio) throws Exception {
-        Field field = AudioManager.class.getDeclaredField("shadowProducer");
-        field.setAccessible(true);
-        return field.get(audio);
+        return AudioManagerTestDiagnostics.presentationField(audio, "shadowProducer", Object.class);
     }
 
     private record CaptureModeProfile(

@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
 
 import com.openggf.debug.DebugRenderContext;
@@ -42,7 +44,7 @@ import java.util.logging.Logger;
  * Mappings: Map_HCZWaterWall, Map_HCZWaterWallDebris.
  * Art: ArtKosM_HCZGeyserHorz (0x390C02), ArtKosM_HCZGeyserVert (0x391394).
  */
-public class HCZWaterWallObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
+public class HCZWaterWallObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
 
     private static final Logger LOG = Logger.getLogger(HCZWaterWallObjectInstance.class.getName());
 

@@ -1,5 +1,6 @@
 package com.openggf.game.sonic1.objects.bosses;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.camera.Camera;
 import com.openggf.data.RomByteReader;
@@ -54,9 +55,13 @@ import java.io.IOException;
  * animation clocks and deletion branches are owned by those components.
  */
 public class Sonic1FZBossInstance extends AbstractBossInstance
-        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable, ObjectVisualFacing.Source {
     // REV01 Ani_SEgg table, shared with the SBZ2 Eggman cutscene.
     private static final int SEGG_ANIMATION_TABLE = 0x1A1B2;
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // handleCombatCollision points bit 0 toward the player; escape preserves this same owner.
+        return (state.renderFlags & 1) != 0 ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.LEFT;
+    }
 
     // Player-only native control tail; directing must not advance this controller's
     // routine, timers, world flags, camera or level transition.

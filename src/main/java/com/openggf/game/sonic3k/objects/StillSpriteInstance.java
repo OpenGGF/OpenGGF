@@ -5,6 +5,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.PlaceholderObjectInstance;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
@@ -22,7 +23,9 @@ import java.util.List;
  * ROM reference: sonic3k.asm lines 60239-60412
  */
 public class StillSpriteInstance extends AbstractObjectInstance
-        implements RewindRecreatable, com.openggf.level.objects.RomObjectCodePointerProvider {
+        implements RewindRecreatable, com.openggf.level.objects.RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
+
+    // The ROM table selects static decorative mapping geometry; placement flips do not create a logical facing owner.
 
     @Override
     public int romObjectCodePointerHighWord() {

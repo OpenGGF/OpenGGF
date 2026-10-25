@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.GameRng;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -45,7 +47,7 @@ import java.util.List;
  * until {@code ObjCheckCeilingDist} reports impact.
  */
 public class IczStalagtiteObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, TouchResponseProvider, RewindRecreatable, RomObjectCodePointerProvider {
+        implements SolidObjectProvider, TouchResponseProvider, RewindRecreatable, RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
 
     /**
      * Word 0 of this object's S3K SST holds its live ROM code pointer.

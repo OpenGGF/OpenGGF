@@ -98,9 +98,8 @@ class TestAcceleratedSmpsPlayback {
             }
             var before = failing.audio.captureLogicalSnapshot().presentation().forwardTiming();
             var musicBefore = failing.music();
-            var field = AudioManager.class.getDeclaredField("shadowSmpsSession");
-            field.setAccessible(true);
-            var session = (com.openggf.audio.session.SmpsDriverSession) field.get(failing.audio);
+            var session = AudioManagerTestDiagnostics.presentationField(failing.audio,
+                    "shadowSmpsSession", com.openggf.audio.session.SmpsDriverSession.class);
             com.openggf.audio.session.SmpsSessionTestSupport.setPhysicalWriteInterceptor(session,
                     ignored -> { throw new IllegalStateException("source service failure"); });
             assertThrows(IllegalStateException.class,
@@ -121,9 +120,8 @@ class TestAcceleratedSmpsPlayback {
                 playback.render(1);
                 playback.audio.setForwardPlaybackRate(2.25);
             }
-            var field = AudioManager.class.getDeclaredField("shadowProducer");
-            field.setAccessible(true);
-            var producer = field.get(failing.audio);
+            var producer = AudioManagerTestDiagnostics.presentationField(
+                    failing.audio, "shadowProducer", Object.class);
             var serviceField = producer.getClass().getDeclaredField("forwardService");
             serviceField.setAccessible(true);
             var service = mock(com.openggf.audio.presentation.AudioPresentationForwardService.class);

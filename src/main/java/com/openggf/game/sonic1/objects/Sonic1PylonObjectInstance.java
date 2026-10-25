@@ -9,6 +9,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -48,7 +49,9 @@ import java.util.List;
  * <p>
  * Reference: docs/s1disasm/_incObj/5C Pylon.asm
  */
-public class Sonic1PylonObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
+public class Sonic1PylonObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+// Pylon camera parallax positions static foreground geometry without horizontal facing.
 
     // From disassembly: move.b #$10,obActWid(a0)
     private static final int ACTIVE_WIDTH = 0x10;

@@ -10,7 +10,9 @@ import java.util.List;
 
 /** SKL $3B, Obj_SOZLoopFallthrough ($4044A), shipped-ROM loop exit controller. */
 public final class SozLoopFallthroughObjectInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable {
+        implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+    // This native art/path trigger is invisible and has no directional visual body or children.
     private final FbzParticipantStateTable participants = new FbzParticipantStateTable(1);
 
     public SozLoopFallthroughObjectInstance(ObjectSpawn spawn) {

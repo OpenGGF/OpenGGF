@@ -1,5 +1,7 @@
 package com.openggf.stageplay.runtime;
 
+import com.openggf.stageplay.StageplayDocument.Facing;
+
 import com.openggf.level.Level;
 import com.openggf.io.PngCodec;
 import com.openggf.stageplay.StageplayDialogue;
@@ -29,6 +31,7 @@ public final class StageplayResources implements AutoCloseable {
     private StageplayOfflinePreview livePreview;
     private com.openggf.mods.scene.host.SceneSurface nativePosers;
     private final Map<StageplayDocument.SetSource, Level> terrains = new HashMap<>();
+    private final Map<StageplayDocument.SetSource, Level> entryTerrains = new HashMap<>();
     private final Map<StageplayDocument.SetSource, SceneLevelKit> sets = new HashMap<>();
     private Map<String, SceneImage> dialogueImages = Map.of();
     private Map<String, Integer> dialogueImageBytes = Map.of();
@@ -52,11 +55,11 @@ public final class StageplayResources implements AutoCloseable {
     public List<String> availableGames() { requireOpen(); return available; }
     public void setProjectRoot(Path root) {
         requireOpen(); projectRoot = root == null ? null : root.toAbsolutePath().normalize(); sets.clear();
-        assetReader = null; terrains.clear(); resetWorld(); livePreview = null; clearDialogue();
+        assetReader = null; terrains.clear(); entryTerrains.clear(); resetWorld(); livePreview = null; clearDialogue();
     }
     /** A bounded owner snapshot reader, used by registered cutscenes without filesystem access. */
     public void setAssetReader(StageplayAssets.Reader reader) {
-        requireOpen(); assetReader = Objects.requireNonNull(reader); sets.clear(); terrains.clear(); resetWorld(); livePreview = null; clearDialogue();
+        requireOpen(); assetReader = Objects.requireNonNull(reader); sets.clear(); terrains.clear(); entryTerrains.clear(); resetWorld(); livePreview = null; clearDialogue();
     }
     private void clearDialogue() {
         preparedDialogue = null; dialogueImages = Map.of(); dialogueLayouts = Map.of();
@@ -75,12 +78,13 @@ public final class StageplayResources implements AutoCloseable {
         requireOpen();
         if (source.levelProject().isEmpty()) throw new IllegalArgumentException("Only authored sets may be registered");
         sets.put(Objects.requireNonNull(source), Objects.requireNonNull(kit));
-        terrains.remove(source); resetWorld();
+        terrains.remove(source); entryTerrains.remove(source); resetWorld();
     }
     /** Registered authored terrain is shared by its pictured set and isolated native world. */
     public void registerSet(StageplayDocument.SetSource source, Level level) {
         registerSet(source, authored(level));
-        terrains.put(source, Objects.requireNonNull(level)); resetWorld();
+        terrains.put(source, Objects.requireNonNull(level));
+        entryTerrains.put(source, com.openggf.level.MutableLevel.snapshot(level)); resetWorld();
     }
 
     /** Resolves the native world; editor preview pixels and state come from an isolated worker. */
@@ -167,7 +171,7 @@ public final class StageplayResources implements AutoCloseable {
                 nativePixel(anchor.y(), false),
                 track.collisionPath(),
                 track.snapToFloor(),
-                anchor.flipX());
+                (anchor.facing() == Facing.LEFT));
     }
 
     /** Foreground query from an explicitly owned, initialized native route visit. */
@@ -178,6 +182,65 @@ public final class StageplayResources implements AutoCloseable {
         if (objects == null) throw new IllegalArgumentException("Native route visit has no injected collision owner");
         return new com.openggf.physics.NativeRouteTerrainProbe(ownedLevel,
                 objects.getObjectServices().backgroundPlaneCollisionProvider());
+    }
+
+    /** Decoded entry terrain: no session, event replay, objects or world registration. */
+    public com.openggf.stageplay.StageplayGround.Report ground(StageplayDocument.SetSource source,
+            com.openggf.stageplay.StageplayGround.Batch batch, java.util.function.BooleanSupplier cancelled) {
+        var basis = new com.openggf.stageplay.StageplayGround.EntryLayout(source);
+        var work = new GroundWork(batch, cancelled);
+        try {
+            requireOpen(); work.check(); requirePhysicalLibrary(); requireGroundDonors(batch);
+            var services = com.openggf.game.session.EngineServices.current();
+            var level = com.openggf.game.session.GameplaySessionFactory.createCollisionOnlyLevel(library.module(source.gameId()),
+                    entryTerrain(source),source.zone(),source.act(),services);
+            work.check();
+            return surveyGround(basis,batch,work,level,com.openggf.physics.BackgroundPlaneCollisionProvider.FOREGROUND_ONLY,(q,p) -> null);
+        } catch (Exception failure) {
+            return StageplayGroundSurvey.unavailable(basis,batch,work,Objects.toString(failure.getMessage(),failure.getClass().getSimpleName()));
+        }
+    }
+
+    /** Queries this resource owner's prepared live world, or its existing isolated preview worker. */
+    public com.openggf.stageplay.StageplayGround.Report ground(StageplayDocument document, int frame,
+            com.openggf.stageplay.StageplayGround.Batch batch, java.util.function.BooleanSupplier cancelled) {
+        var set = StageplayTimeline.sample(document,Math.clamp(frame,0,document.durationFrames()-1)).set();
+        var basis = new com.openggf.stageplay.StageplayGround.SceneFrame(set,Math.max(0,frame));
+        var work = new GroundWork(batch,cancelled);
+        try {
+            requireOpen(); work.check();
+            if (frame < 0 || frame >= document.durationFrames()) throw new IllegalArgumentException("Ground frame outside scene");
+            if (liveWorld == null) {
+                if (livePreview == null) livePreview = new StageplayOfflinePreview(StageplayPreviewAssets.source(projectRoot,assetReader));
+                return livePreview.ground(document,frame,batch,cancelled);
+            }
+            liveWorld.resolve(document,StageplayTimeline.sample(document,frame),work::check,work::tick);
+            work.check();
+            requireGroundDonors(batch);
+            var level = liveWorld.groundLevel();
+            return surveyGround(basis,batch,work,level,level.getObjectManager().getObjectServices().backgroundPlaneCollisionProvider(),liveWorld::groundUnsupported);
+        } catch (Exception failure) {
+            // Interrupted preparation has an uncertain cursor; reset before another preview request.
+            if (work.snapshot().stopped() != com.openggf.stageplay.StageplayGround.StopReason.NONE && liveWorld != null) liveWorld.reset();
+            return StageplayGroundSurvey.unavailable(basis,batch,work,Objects.toString(failure.getMessage(),failure.getClass().getSimpleName()));
+        }
+    }
+    private Level entryTerrain(StageplayDocument.SetSource source) {
+        var terrain = terrain(source);
+        return entryTerrains.getOrDefault(source,terrain);
+    }
+    private void requireGroundDonors(com.openggf.stageplay.StageplayGround.Batch batch) {
+        for (var q : batch.queries()) if (q.performer() instanceof com.openggf.stageplay.StageplayGround.Player p
+                && !available.contains(p.game())) throw new IllegalStateException("Supply the " + p.game() + " donor ROM");
+    }
+    private com.openggf.stageplay.StageplayGround.Report surveyGround(com.openggf.stageplay.StageplayGround.Basis basis,
+            com.openggf.stageplay.StageplayGround.Batch batch, GroundWork work, com.openggf.level.LevelManager level,
+            com.openggf.physics.BackgroundPlaneCollisionProvider provider,
+            java.util.function.BiFunction<com.openggf.stageplay.StageplayGround.Query,com.openggf.sprites.playable.PlayablePlacementProfile,com.openggf.stageplay.StageplayGround.Reason> unsupported) {
+        return StageplayGroundSurvey.answer(basis,batch,work,
+                new com.openggf.physics.NativeRouteTerrainProbe(level,provider,work::scan),
+                new com.openggf.physics.NativePlayerTerrainPlacement(level,work::scan),
+                p -> com.openggf.sprites.playable.PlayablePlacementProfile.capture(library.module(p.game()),level,p.character(),p.path()),unsupported);
     }
 
     private static int nativePixel(double value, boolean horizontal) {
@@ -212,6 +275,7 @@ public final class StageplayResources implements AutoCloseable {
                     if (!project.gameId().equals(source.gameId()))
                         throw new IOException("Authored level and scene set use different games");
                     terrains.put(source, project.level());
+                    entryTerrains.put(source, com.openggf.level.MutableLevel.snapshot(project.level()));
                     return authored(project.level());
                 } catch (IOException error) { throw new UncheckedIOException("Cannot load the authored Stageplay set", error); }
             }
@@ -236,7 +300,7 @@ public final class StageplayResources implements AutoCloseable {
                 if (key.pose() < 0 && art.animationFrames(key.animation()).length == 0)
                     throw new IllegalArgumentException("Missing animation " + key.animation() + " for " + actor.name());
                 rom(actor.gameId()).characterAccessoryPose(actor.character(), key.animation(), key.pose(),
-                        0, key.flipX(), 0, 0);
+                        0, (key.facing() == Facing.LEFT), 0, 0);
             }
         }
         if (!document.puppets().isEmpty()) {
@@ -392,5 +456,5 @@ public final class StageplayResources implements AutoCloseable {
         };
     }
     private void requireOpen() { if (closed) throw new IllegalStateException("Stageplay resources are closed"); }
-    @Override public void close() { if (!closed) { closed = true; if (nativePosers != null) nativePosers.close(); if (liveWorld != null) liveWorld.close(); if (livePreview != null) livePreview.close(); sets.clear(); terrains.clear(); clearDialogue(); release.run(); } }
+    @Override public void close() { if (!closed) { closed = true; if (nativePosers != null) nativePosers.close(); if (liveWorld != null) liveWorld.close(); if (livePreview != null) livePreview.close(); sets.clear(); terrains.clear(); entryTerrains.clear(); clearDialogue(); release.run(); } }
 }

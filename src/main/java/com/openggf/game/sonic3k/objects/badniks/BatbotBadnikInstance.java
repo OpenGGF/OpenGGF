@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
@@ -18,7 +19,10 @@ import java.util.List;
  * visual children created by {@code ChildObjDat_8946C} still occupy real SST
  * slots and therefore participate in native allocation timing.
  */
-public final class BatbotBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable {
+public final class BatbotBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
 
     private static final int COLLISION_SIZE = 0x0D;
     private static final int PRIORITY_BUCKET = 5;

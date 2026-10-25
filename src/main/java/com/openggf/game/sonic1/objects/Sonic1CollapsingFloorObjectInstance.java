@@ -14,6 +14,7 @@ import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
@@ -62,7 +63,9 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/53 Collapsing Floors.asm
  */
 public class Sonic1CollapsingFloorObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, SpawnRomZoneRewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRomZoneRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+// CFlo flips choose fragment fall order; floor pieces have no logical horizontal facing.
 
     // From disassembly: move.w #$20,d1 (half-width for PlatformObject)
     private static final int PLATFORM_HALF_WIDTH = 0x20;

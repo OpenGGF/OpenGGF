@@ -7,6 +7,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
@@ -58,7 +59,21 @@ import java.util.List;
  * ({@code d1 $23} horizontal, {@code $1B} vertical) and the same {@code d2 $10} / {@code d3 $11}.
  */
 public final class LrzFlameThrowerObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, RewindRecreatable, RomObjectCodePointerProvider {
+        implements SolidObjectProvider, RewindRecreatable, RomObjectCodePointerProvider, ObjectVisualFacing.PlacementSource {
+
+    @Override
+    public ObjectVisualFacing.Basis nativeFacing() {
+        // loc_43E14 emits cos*4 through the right nozzle; mirrored reverses X.
+        // loc_43F4A's vertical nozzle has no logical horizontal facing.
+        if (axis == Axis.VERTICAL) return ObjectVisualFacing.Basis.NON_DIRECTIONAL;
+        return mirrored ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
+
+    @Override
+    public int initialPlacementFlags(com.openggf.level.objects.ObjectVisualFacing.Basis facing, int sourceFlags) {
+        if (nativeFacing() == ObjectVisualFacing.Basis.NON_DIRECTIONAL) return sourceFlags;
+        return facing == com.openggf.level.objects.ObjectVisualFacing.Basis.LEFT ? sourceFlags | 1 : sourceFlags & ~1;
+    }
 
     /** Which routine the subtype's bit 7 selects. */
     public enum Axis {

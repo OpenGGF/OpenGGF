@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.PlayableEntity;
 import com.openggf.level.objects.DestructionEffects;
@@ -20,7 +21,11 @@ import java.util.List;
  * This implementation preserves the key gameplay behavior: alternating wait/active
  * cycles, subtype-driven vertical stepping and independently dispatched coconut throws.
  */
-public final class MonkeyDudeBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable {
+public final class MonkeyDudeBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
+
     private static final int COLLISION_SIZE_INDEX = 0x0B; // ObjDat_MonkeyDude flags $0B
     private static final int PRIORITY_BUCKET = 5;         // ObjDat_MonkeyDude priority $280
 

@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.camera.Camera;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
@@ -34,7 +36,8 @@ import java.util.List;
  * This object is NOT loaded from level object data - it is created automatically
  * when CPZ loads and uses camera-relative positioning.
  */
-public class CPZPylonObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class CPZPylonObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj7C is foreground parallax scenery with no horizontal facing.
 
     // Maximum camera X value (masked) for visibility
     private static final int VISIBILITY_THRESHOLD = 0x2E0;

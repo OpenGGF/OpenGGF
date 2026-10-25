@@ -14,7 +14,7 @@ import com.openggf.game.rewind.RewindDeterminismAuditor;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.level.Pattern;
-import com.openggf.data.PlayerSpriteArtProvider;
+import com.openggf.sprites.art.PlayerSpriteArtProvider;
 import com.openggf.sprites.art.SpriteArtSet;
 import com.openggf.sprites.managers.SpriteManagerInternalAccess;
 import com.openggf.sprites.render.PlayerSpriteRenderer;
@@ -320,7 +320,7 @@ class TestS3kCanonicalEntryLifecycle {
             if (nativeActor) {
                 assertNotNull(follower.getSpindashDustController());
                 assertRendererSource(follower.getSpindashDustController().getRenderer(),
-                        ((com.openggf.data.SpindashDustArtProvider) GameServices.level().getGame())
+                        ((com.openggf.sprites.art.SpindashDustArtProvider) GameServices.level().getGame())
                                 .loadSpindashDustArt(character));
                 assertNotNull(follower.getTailsTailsController());
                 assertRendererSource(follower.getTailsTailsController().getRenderer(),

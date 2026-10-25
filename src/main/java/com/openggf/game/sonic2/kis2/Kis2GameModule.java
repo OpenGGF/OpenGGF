@@ -1,7 +1,7 @@
 package com.openggf.game.sonic2.kis2;
 
-import com.openggf.data.Game;
-import com.openggf.data.PlayerSpriteArtProvider;
+import com.openggf.game.Game;
+import com.openggf.sprites.art.PlayerSpriteArtProvider;
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.BuiltInRomDetectors;
@@ -40,7 +40,8 @@ import java.util.logging.Logger;
  * optional {@link LogicalRom#KIS2} image through the patch context; when the
  * user-supplied dump is absent the module keeps tier-one behaviour exactly.
  */
-final class Kis2GameModule extends DelegatingGameModule implements com.openggf.game.resources.PlayerArtTransferProfile {
+final class Kis2GameModule extends DelegatingGameModule implements com.openggf.game.resources.PlayerArtTransferProfile,
+        com.openggf.game.internal.NativeRewindPublicationOwner {
 
     private static final Logger LOGGER = Logger.getLogger(Kis2GameModule.class.getName());
 

@@ -1,6 +1,6 @@
 package com.openggf.mods.code;
 
-import com.openggf.data.Game;
+import com.openggf.game.Game;
 import com.openggf.data.Rom;
 import com.openggf.game.GameModule;
 import com.openggf.game.ObjectArtProvider;

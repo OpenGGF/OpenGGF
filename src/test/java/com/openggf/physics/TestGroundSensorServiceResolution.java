@@ -21,7 +21,6 @@ class TestGroundSensorServiceResolution {
 
     private static final List<String> SCAN_HELPERS = List.of(
             "scanVertical",
-            "scanTileVertical",
             "scanHorizontal",
             "scanHorizontalLayer",
             "evaluateWallTile",
@@ -41,6 +40,16 @@ class TestGroundSensorServiceResolution {
                         Arrays.asList(method.getParameterTypes()).contains(LevelManager.class),
                         name + " must take LevelManager as a parameter instead of resolving services per tile");
             }
+        }
+    }
+
+    @Test
+    void extractedVerticalHelpersReceiveTheSameExplicitOwner() {
+        for (String name : List.of("scan", "scanTileVertical", "getSolidTile")) {
+            var methods = Arrays.stream(NativePlayerTerrainScan.class.getDeclaredMethods())
+                    .filter(m -> m.getName().equals(name)).toList();
+            assertFalse(methods.isEmpty());
+            for (var method : methods) assertTrue(Arrays.asList(method.getParameterTypes()).contains(LevelManager.class));
         }
     }
 

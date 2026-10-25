@@ -9,6 +9,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -39,7 +40,9 @@ import java.util.List;
  * Direction is determined by renderFlags bit 0 (status bit 0 in ROM):
  * 0 = facing right, 1 = facing left.
  */
-public class Sonic3kTwistedRampObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class Sonic3kTwistedRampObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+    // The invisible ramp gates on player direction; the ramp has no facing body of its own.
 
     /** Minimum horizontal speed required to trigger (0x400 = 1024 subpixels). */
     private static final int SPEED_THRESHOLD = 0x400;

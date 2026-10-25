@@ -1,4 +1,6 @@
 package com.openggf.game.sonic3k.objects;
+
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
@@ -7,7 +9,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import java.util.List;
 /** Locked-on Obj_FBZPropeller ($7C), sonic3k.asm $3C1B6-$3C208. */
 public final class FbzPropellerObjectInstance extends AbstractObjectInstance
-    implements TouchResponseProvider, SpawnRewindRecreatable {
+    implements TouchResponseProvider, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
   private static final int[] FLAGS = {0xB6, 0, 0xB6, 0xB7};
   private int frame, flags = 0xB6;
   public FbzPropellerObjectInstance(ObjectSpawn s) { super(s, "FBZPropeller"); }

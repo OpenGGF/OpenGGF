@@ -1,4 +1,6 @@
 package com.openggf.game.sonic1.objects.badniks;
+
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 
 import com.openggf.level.objects.AbstractBadnikInstance;
@@ -33,7 +35,13 @@ import java.util.List;
  * <p>
  * Animation selection is based on terrain angle (flat/upslope/downslope) via Crab_SetAni.
  */
-public class Sonic1CrabmeatBadnikInstance extends AbstractBadnikInstance implements SpawnRewindRecreatable {
+public class Sonic1CrabmeatBadnikInstance extends AbstractBadnikInstance implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
+
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // updateMove toggles this legacy-named field, then chooses positive
+        // WALK_VELOCITY when it is true. It therefore means logical RIGHT.
+        return facingLeft ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.LEFT;
+    }
 
     // From disassembly: obColType = 6 (enemy, collision size index 6)
     // Size 6: width=$14 (20px), height=$14 (20px)

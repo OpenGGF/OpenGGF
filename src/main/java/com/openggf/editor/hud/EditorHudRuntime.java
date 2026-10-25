@@ -62,7 +62,9 @@ public final class EditorHudRuntime implements EditorWindowChrome {
         }
         boolean showingStageplay = stageplayActive();
         boolean workbench = showingStageplay || hud.controller().depth() != EditorHierarchyDepth.WORLD;
-        layout = showingStageplay ? StageplayHud.layout(framebufferWidth, framebufferHeight, logicalWidth, logicalHeight)
+        layout = showingStageplay ? host.stageplay().pickingPosition()
+                ? EditorHudLayout.positionPicker(framebufferWidth,framebufferHeight,logicalWidth,logicalHeight)
+                : StageplayHud.layout(framebufferWidth, framebufferHeight, logicalWidth, logicalHeight)
                 : EditorHudLayout.of(framebufferWidth, framebufferHeight, logicalWidth, logicalHeight, workbench);
         pointerScale = windowWidth > 0 ? framebufferWidth / (double) windowWidth / layout.uiScale() : Double.NaN;
         hud.setPointerScale(pointerScale);

@@ -1,5 +1,7 @@
 package com.openggf.stageplay.runtime;
 
+import com.openggf.stageplay.StageplayDocument.Facing;
+
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -25,7 +27,7 @@ import static org.mockito.Mockito.*;
 class TestStageplayObjectCast {
     private static ObjectActor actor(String game, int zone, int act) {
         return new ObjectActor("object", "Object", game, zone, act, 1, 0, -1,
-                List.of(new ObjectKey(0, 100, 200, 0, -1, false, true, Interpolation.HOLD, ObjectMode.FREE)), List.of());
+                List.of(new ObjectKey(0, 100, 200, 0, -1, Facing.LEFT, true, Interpolation.HOLD, ObjectMode.FREE)), List.of());
     }
 
     @Test void nativeFreeRequiresExactSourceContextWithActionableFailure() {
@@ -55,26 +57,26 @@ class TestStageplayObjectCast {
         assertArrayEquals(new double[]{1, 0}, StageplayObjectCast.move(0, 0, 1, 0, 20));
     }
 
-    @Test void nativeAnchorsRejectWrappedCoordinatesAndRetainPortableAuthoringFlags() {
+    @Test void nativeAnchorsRejectWrappedCoordinatesAndKeepSourceFlagsIndependentOfFacing() {
         var actor = actor("s2", 0, 0);
-        var key = new ObjectKey(0, 100.4, 200.4, 0, -1, true, true, Interpolation.HOLD, ObjectMode.FREE);
+        var key = new ObjectKey(0, 100.4, 200.4, 0, -1, Facing.RIGHT, true, Interpolation.HOLD, ObjectMode.FREE);
         var spawn = StageplayObjectTemplateBake.spawn(actor, key);
-        assertEquals(100, spawn.x()); assertEquals(200, spawn.y()); assertEquals(1, spawn.renderFlags());
+        assertEquals(100, spawn.x()); assertEquals(200, spawn.y()); assertEquals(0, spawn.renderFlags());
         assertEquals(-1, spawn.layoutIndex()); assertFalse(spawn.respawnTracked());
         for (double coordinate : List.of(-1.0, 65536.0))
             assertThrows(IllegalArgumentException.class, () -> StageplayObjectTemplateBake.spawn(actor,
-                    new ObjectKey(0, coordinate, 200, 0, -1, false, true, Interpolation.HOLD, ObjectMode.FREE)));
+                    new ObjectKey(0, coordinate, 200, 0, -1, Facing.LEFT, true, Interpolation.HOLD, ObjectMode.FREE)));
     }
 
     @Test void inactivePlacedPuppetUsesOnlyPreparedVisualAcrossOpeningClearAndReplay() {
         var fixture = new PlacedFixture();
         var role = new ObjectActor("loaded", "Loaded", "s2", 0, 0, 1, 7, 8, List.of(
-                new ObjectKey(0, 100, 200, 0, -1, false, true, Interpolation.HOLD, ObjectMode.PUPPET)), List.of());
+                new ObjectKey(0, 100, 200, 0, -1, Facing.LEFT, true, Interpolation.HOLD, ObjectMode.PUPPET)), List.of());
         var scene = com.openggf.stageplay.StageplayDocument.empty("s2", 0, 0, 0, 0, 320, 224).withObjectActors(List.of(role))
                 .withWorldCommands(List.of(new WorldCommand("clear", 0, WorldCommandKind.CLEAR_OBJECTS, "", ObjectTarget.none()),
                         new WorldCommand("remove", 10, WorldCommandKind.REMOVE_OBJECT, "loaded", ObjectTarget.none())));
         try (var cast = new StageplayObjectCast(fixture.context, scene, scene.set(), 0, scene.durationFrames(),
-                List.of(fixture.spawn), Map.of("loaded", fixture.template))) {
+                List.of(fixture.spawn), Map.of("loaded", fixture.template), scene.objectActors().stream().collect(java.util.stream.Collectors.toMap(ObjectActor::id, a -> 0)))) {
             cast.beforeTick(0);
             assertEquals(0, fixture.constructors.get(), "Directed placement must never invoke a shared-world factory");
             assertTrue(fixture.objects.getActiveObjects().isEmpty());
@@ -107,12 +109,12 @@ class TestStageplayObjectCast {
         var fixture = new PlacedFixture(com.openggf.game.GameId.S1);
         int bomb = com.openggf.game.sonic1.constants.Sonic1ObjectIds.BOMB;
         var role = new ObjectActor("bomb", "Bomb", "s1", 0, 0, bomb, 0, -1, List.of(
-                new ObjectKey(0, 100, 200, 0, -1, false, true, Interpolation.HOLD, ObjectMode.FREE)), List.of());
+                new ObjectKey(0, 100, 200, 0, -1, Facing.LEFT, true, Interpolation.HOLD, ObjectMode.FREE)), List.of());
         var scene = com.openggf.stageplay.StageplayDocument.empty("s1", 0, 0, 0, 0, 320, 224)
                 .withObjectActors(List.of(role)).withWorldCommands(List.of(
                         new WorldCommand("clear", 1, WorldCommandKind.CLEAR_BADNIKS, "", ObjectTarget.none())));
         try (var cast = new StageplayObjectCast(fixture.context, scene, scene.set(), 0,
-                scene.durationFrames(), List.of(fixture.spawn), Map.of())) {
+                scene.durationFrames(), List.of(fixture.spawn), Map.of(), scene.objectActors().stream().collect(java.util.stream.Collectors.toMap(ObjectActor::id, a -> 0)))) {
             cast.beforeTick(0);
             var nativeRoot = fixture.objects.getActiveObjects().stream()
                     .filter(object -> object.getSpawn().objectId() == bomb).findFirst().orElseThrow();
@@ -128,11 +130,11 @@ class TestStageplayObjectCast {
     @Test void placedVisualReturningToFreeUsesExactOriginalPlacementInsteadOfVisualAnchor() {
         var fixture = new PlacedFixture();
         var role = new ObjectActor("loaded", "Loaded", "s2", 0, 0, 1, 7, 8, List.of(
-                new ObjectKey(0, 100, 200, 0, -1, false, true, Interpolation.HOLD, ObjectMode.POSE),
-                new ObjectKey(10, 100, 200, 0, -1, false, true, Interpolation.HOLD, ObjectMode.FREE)), List.of());
+                new ObjectKey(0, 100, 200, 0, -1, Facing.LEFT, true, Interpolation.HOLD, ObjectMode.POSE),
+                new ObjectKey(10, 100, 200, 0, -1, Facing.LEFT, true, Interpolation.HOLD, ObjectMode.FREE)), List.of());
         var scene = com.openggf.stageplay.StageplayDocument.empty("s2", 0, 0, 0, 0, 320, 224).withObjectActors(List.of(role));
         try (var cast = new StageplayObjectCast(fixture.context, scene, scene.set(), 0, scene.durationFrames(),
-                List.of(fixture.spawn), Map.of("loaded", fixture.template))) {
+                List.of(fixture.spawn), Map.of("loaded", fixture.template), scene.objectActors().stream().collect(java.util.stream.Collectors.toMap(ObjectActor::id, a -> 0)))) {
             cast.beforeTick(0); assertEquals(0, fixture.constructors.get());
             cast.beforeTick(10);
             assertEquals(1, fixture.constructors.get()); assertSame(fixture.spawn, fixture.constructed.get());
@@ -147,10 +149,10 @@ class TestStageplayObjectCast {
     @Test void nativeSourceChangeFailsBeforePlacedRolesCanMaterializeInTheDestinationAct() {
         var fixture = new PlacedFixture();
         var role = new ObjectActor("loaded", "Loaded", "s2", 0, 0, 1, 7, 8,
-                List.of(new ObjectKey(0, 100, 200, 0, -1, false, true, Interpolation.HOLD, ObjectMode.PUPPET)), List.of());
+                List.of(new ObjectKey(0, 100, 200, 0, -1, Facing.LEFT, true, Interpolation.HOLD, ObjectMode.PUPPET)), List.of());
         var scene = com.openggf.stageplay.StageplayDocument.empty("s2", 0, 0, 0, 0, 320, 224).withObjectActors(List.of(role));
         try (var cast = new StageplayObjectCast(fixture.context, scene, scene.set(), 0, scene.durationFrames(),
-                List.of(fixture.spawn), Map.of("loaded", fixture.template))) {
+                List.of(fixture.spawn), Map.of("loaded", fixture.template), scene.objectActors().stream().collect(java.util.stream.Collectors.toMap(ObjectActor::id, a -> 0)))) {
             cast.beforeTick(0);
             when(fixture.context.getLevelManager().getCurrentAct()).thenReturn(1);
             assertTrue(assertThrows(IllegalStateException.class, () -> cast.beforeTick(1)).getMessage().contains("use a new shot"));
@@ -165,8 +167,8 @@ class TestStageplayObjectCast {
         final GameplayModeContext context = mock(GameplayModeContext.class);
         final ObjectManager objects;
         final StageplayObjectDirection direction;
-        final VisualTemplate template = new VisualTemplate( 5000, 80, List.of(new VisualPart("root/0", 4, false,
-                0, 0, List.of(new VisualPose(0, List.of(), List.of())))), List.of(), List.of(), List.of());
+        final VisualTemplate template = new VisualTemplate( 5000, 80, com.openggf.level.objects.ObjectVisualFacing.Basis.RIGHT, List.of(new VisualPart("root/0", 4, false,
+                0, 0, com.openggf.level.objects.ObjectVisualFacing.Basis.RIGHT, 0, List.of(new VisualPose(0, List.of(), List.of())))), List.of(), List.of(), List.of());
         PlacedFixture() { this(com.openggf.game.GameId.S2); }
         PlacedFixture(com.openggf.game.GameId game) {
             var graphics = new GraphicsManager(); graphics.setHeadlessMode(true);

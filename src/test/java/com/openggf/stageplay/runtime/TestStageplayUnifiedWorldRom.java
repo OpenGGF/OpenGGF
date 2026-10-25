@@ -1,5 +1,7 @@
 package com.openggf.stageplay.runtime;
 
+import com.openggf.stageplay.StageplayDocument.Facing;
+
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.SessionManager;
 import com.openggf.level.MutableLevel;
@@ -131,7 +133,7 @@ class TestStageplayUnifiedWorldRom {
             var base = physical("");
             var lead = new Actor("lead", "Sonic", "s2", "sonic", base.actors().getFirst().keys());
             var follower = new Actor("follower", "Tails", "s3k", "tails", List.of(new ActorKey(0,
-                    128, 655, 0, -1, false, true, 1, Interpolation.HOLD)));
+                    128, 655, 0, -1, Facing.RIGHT, true, 1, Interpolation.HOLD)));
             var scene = new StageplayDocument(VERSION, "Independent follower flight", 90, base.width(), base.height(),
                     base.set(), List.of(lead, follower), base.camera(), List.of(), List.of(), List.of(), List.of(),
                     List.of(), List.of(), List.of(), List.of(new PuppetTrack("lead", true, 0, List.of()),
@@ -160,7 +162,7 @@ class TestStageplayUnifiedWorldRom {
                 var follow = new CameraFollow(List.of("hero"), 0, 0, 0, smoothing, 0, 0);
                 var scene = StageplayDocument.empty("s2", 0, 0, 0, 500, 320, 224).withDurationFrames(40)
                         .withActors(List.of(new Actor("hero", "Hero", "s2", "sonic", List.of(
-                                new ActorKey(0, 160, 655, 0, -1, false, true, 1, Interpolation.HOLD)))))
+                                new ActorKey(0, 160, 655, 0, -1, Facing.RIGHT, true, 1, Interpolation.HOLD)))))
                         .withPuppets(List.of(new PuppetTrack("hero", true, 0, List.of())))
                         .withCamera(List.of(new CameraKey(0, 0, 500, 1, Interpolation.HOLD, follow)))
                         .withWorldCommands(List.of(new WorldCommand("clear", 0, WorldCommandKind.CLEAR_OBJECTS,
@@ -194,7 +196,7 @@ class TestStageplayUnifiedWorldRom {
     }
 
     private static StageplayDocument physical(String project) {
-        var key = new ActorKey(0, 96, 655, 0, -1, false, true, 1, Interpolation.HOLD);
+        var key = new ActorKey(0, 96, 655, 0, -1, Facing.RIGHT, true, 1, Interpolation.HOLD);
         return new StageplayDocument(VERSION, "Native donor", 60, 640, 448,
                 new SetSource("s2", 0, 0, "", project),
                 List.of(new Actor("tails", "Tails", "s3k", "tails", List.of(key))),

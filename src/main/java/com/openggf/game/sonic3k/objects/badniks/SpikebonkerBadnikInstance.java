@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.difficulty.DeathEggGuardRecipe;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -49,7 +50,10 @@ import java.util.List;
  * {@code Swing_UpAndDown}.
  */
 public final class SpikebonkerBadnikInstance extends AbstractS3kBadnikInstance
-        implements SpawnRewindRecreatable {
+        implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
 
     /** {@code ObjDat_Spikebonker} collision flags (:199227). */
     private static final int COLLISION_SIZE_INDEX = 0x1A;

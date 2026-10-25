@@ -1,5 +1,7 @@
 package com.openggf.stageplay.runtime;
 
+import com.openggf.stageplay.StageplayDocument.Facing;
+
 import com.openggf.LevelFrameContext;
 import com.openggf.LevelFrameStep;
 import com.openggf.audio.NullAudioBackend;
@@ -85,12 +87,17 @@ public final class StageplayLiveWorld implements AutoCloseable {
     }
 
     public Frame resolve(StageplayDocument document, Frame authored) {
+        return resolve(document, authored, () -> {}, () -> {});
+    }
+
+    Frame resolve(StageplayDocument document, Frame authored, Runnable check, Runnable beforeTick) {
+        check.run();
         if (closed) throw new IllegalStateException("Live world is closed");
         int first = 0; SetSource set = document.set();
         for (var change : document.sceneChanges()) if (change.frame() <= authored.frame()) {
             first = change.frame(); set = change.set();
         }
-        if (this.document != document && !document.equals(this.document) || start != first) begin(document, set, first);
+        if (this.document != document && !document.equals(this.document) || start != first) begin(document, set, first, check);
         if (authored.frame() == cursor) return last;
         boolean replay = authored.frame() < cursor || authored.frame() > cursor + 1;
         var checkpoint = checkpoints.floorEntry(authored.frame());
@@ -101,6 +108,7 @@ public final class StageplayLiveWorld implements AutoCloseable {
         try (var silence = replay ? EngineServices.current().audio().beginRewindReplay(cursor, authored.frame(),
                 com.openggf.audio.rewind.AudioReplayReason.SEEK) : null) {
         while (cursor < authored.frame()) {
+            beforeTick.run();
             int frame = ++cursor;
             tick(frame);
             last = sample(StageplayTimeline.sample(document, frame));
@@ -113,7 +121,27 @@ public final class StageplayLiveWorld implements AutoCloseable {
         return last;
     }
 
-    private void begin(StageplayDocument document, SetSource set, int first) {
+    com.openggf.level.LevelManager groundLevel() {
+        if (owned == null) throw new IllegalStateException("Prepare a scene frame first");
+        return owned.getLevelManager();
+    }
+    com.openggf.stageplay.StageplayGround.Reason groundUnsupported(com.openggf.stageplay.StageplayGround.Query query,
+            com.openggf.sprites.playable.PlayablePlacementProfile profile) {
+        if (owned.getGameStateManager().isReverseGravityActive()) return com.openggf.stageplay.StageplayGround.Reason.REVERSE_GRAVITY;
+        if (query.cast().isEmpty()) return null;
+        for (var p : cast) {
+            if (!p.actor.id().equals(query.cast())) continue;
+            if (p.sprite.getTopSolidBit() != profile.topSolidBit() || p.sprite.getLrbSolidBit() != profile.lrbSolidBit()
+                    || p.sprite.getXRadius() != profile.xRadius() || p.sprite.getYRadius() != profile.yRadius())
+                return com.openggf.stageplay.StageplayGround.Reason.NON_STOCK_STATE;
+            if (p.sprite.isLoopLowPlane()) return com.openggf.stageplay.StageplayGround.Reason.LOOP_PLANE;
+            if (p.sprite.getRolling() || p.sprite.isSuperSonic()) return com.openggf.stageplay.StageplayGround.Reason.NON_STOCK_STATE;
+        }
+        return null;
+    }
+
+    private void begin(StageplayDocument document, SetSource set, int first, Runnable check) {
+        check.run();
         if (owned != null && SessionManager.getCurrentGameplayMode() != owned)
             throw new IllegalStateException("Offline Stageplay lost its session ownership");
         if (owned == null) requireUnoccupied();
@@ -121,6 +149,7 @@ public final class StageplayLiveWorld implements AutoCloseable {
                 .mapToInt(SceneChange::frame).min().orElse(document.durationFrames());
         var performers = new ArrayList<Performer>();
         for (var track : document.puppets()) {
+            check.run();
             var actor = document.actors().stream().filter(a -> a.id().equals(track.actorId())).findFirst().orElseThrow();
             if (actor.keys().stream().noneMatch(k -> k.frame() >= first && k.frame() < end && k.visible())) continue;
             var anchor = actor.keys().stream().filter(k -> k.frame() == first).findFirst().orElseThrow();
@@ -137,7 +166,9 @@ public final class StageplayLiveWorld implements AutoCloseable {
         List<com.openggf.level.objects.ObjectSpawn> preparationPlacements = null;
         var suppressedPlacements = new HashSet<com.openggf.level.objects.StageplayObjectDirection.PlacementIdentity>();
         var objectTemplates = new LinkedHashMap<String, com.openggf.level.objects.StageplayObjectDirection.VisualTemplate>();
+        var objectInitialFlags = new LinkedHashMap<String, Integer>();
         for (var actor : document.objectActors()) {
+            check.run();
             var anchor = actor.keys().stream().filter(key -> key.frame() == first).findFirst().orElseThrow();
             if (actor.layoutIndex() >= 0 && actor.gameId().equals(set.gameId()) && actor.zone() == set.zone() && actor.act() == set.act()
                     && (!anchor.visible() || anchor.mode() != ObjectMode.FREE))
@@ -148,7 +179,10 @@ public final class StageplayLiveWorld implements AutoCloseable {
             if (firstVisible == null) continue;
             for (var key : actor.keys()) if (key.frame() >= first && key.frame() < end && key.visible() && key.mode() == ObjectMode.FREE)
                 StageplayObjectCast.requireNativeContext(actor, set);
-            if (firstVisible.mode() != ObjectMode.FREE) {
+            boolean picture = firstVisible.mode() != ObjectMode.FREE;
+            boolean freeFacing = actor.layoutIndex() < 0 && actor.keys().stream().anyMatch(key ->
+                    key.frame() >= first && key.frame() < end && key.visible() && key.mode() == ObjectMode.FREE);
+            if (picture || freeFacing) {
                 com.openggf.level.objects.ObjectSpawn originalPlacement = null;
                 if (actor.layoutIndex() >= 0) {
                     if (preparationPlacements == null) preparationPlacements = List.copyOf((authoredTerrain == null
@@ -157,7 +191,9 @@ public final class StageplayLiveWorld implements AutoCloseable {
                             && spawn.objectId() == actor.objectId() && spawn.subtype() == actor.subtype()).findFirst()
                             .orElseThrow(() -> new IllegalArgumentException("Unknown portable placed object for " + actor.id()));
                 }
-                objectTemplates.put(actor.id(), StageplayObjectTemplateBake.prepare(library, actor, anchor, originalPlacement));
+                var prepared = StageplayObjectTemplateBake.prepareSource(library, actor, anchor, originalPlacement, picture, freeFacing);
+                if (picture) objectTemplates.put(actor.id(), prepared.picture());
+                if (freeFacing) objectInitialFlags.put(actor.id(), prepared.initialPlacementFlags());
             }
         }
         var services = EngineServices.current();
@@ -184,7 +220,15 @@ public final class StageplayLiveWorld implements AutoCloseable {
             services.graphics().bindRuntimeManagedReferences(owned.getCamera(), owned.getFadeManager());
             var team = GameplayTeamBootstrap.registerActiveTeam(module, owned.getSpriteManager(), config);
             var nativeCast = new ArrayList<AbstractPlayableSprite>(); nativeCast.add(team.mainSprite()); nativeCast.addAll(team.sidekicks());
-            owned.getLevelManager().loadZoneAndAct(set.zone(), set.act());
+            // A soundtrack is authored for the whole scene. Native load presentation can
+            // queue fades before StageplayAudio starts, and dispatch them after its entry cue.
+            // Hold the shared entry policy before submission; all game-specific housekeeping
+            // and ordinary native effects still execute, and no frame or game is singled out.
+            boolean soundtrack = document.audio().stream().anyMatch(cue ->
+                    cue.kind() == AudioKind.ROM_MUSIC || cue.kind() == AudioKind.MUSIC_STOP);
+            try (var music = soundtrack ? com.openggf.audio.LevelMusicAccess.suppressAutomaticEntry(services.audio()) : null) {
+                owned.getLevelManager().loadZoneAndAct(set.zone(), set.act());
+            }
             originalObjects = module instanceof StageplayWorldModule stageplay ? stageplay.originalObjects()
                     : List.copyOf(owned.getLevelManager().getCurrentLevel().getObjects());
             owned.getLevelManager().skipPendingInitialTitleCardPresentation();
@@ -217,7 +261,7 @@ public final class StageplayLiveWorld implements AutoCloseable {
                 sprite.setCpuController(null); // each participant has its own scripted controller, never follow AI
                 NativePositionOps.writeXPosResetSubpixel(sprite, nativePixel(performer.anchor.x(), true));
                 NativePositionOps.writeYPosResetSubpixel(sprite, nativePixel(performer.anchor.y(), false));
-                sprite.setDirection(performer.anchor.flipX() ? Direction.LEFT : Direction.RIGHT);
+                sprite.setDirection((performer.anchor.facing() == Facing.LEFT) ? Direction.LEFT : Direction.RIGHT);
                 sprite.setTopSolidBit((byte) (performer.track.collisionPath() == 0 ? 0x0C : 0x0E));
                 sprite.setLrbSolidBit((byte) (performer.track.collisionPath() == 0 ? 0x0D : 0x0F));
                 sprite.setAir(true);
@@ -233,7 +277,7 @@ public final class StageplayLiveWorld implements AutoCloseable {
             director = boundedCamera(StageplayTimeline.sample(document, first).baseCamera());
             validateTargets();
             if (!document.objectActors().isEmpty() || !document.worldCommands().isEmpty())
-                objectCast = new StageplayObjectCast(owned, document, set, first, end, originalObjects, objectTemplates);
+                objectCast = new StageplayObjectCast(owned, document, set, first, end, originalObjects, objectTemplates, objectInitialFlags);
             checkpoints.put(cursor, capture());
         } catch (IOException error) { closeOwned(); throw new UncheckedIOException("Cannot load live Stageplay world", error); }
         catch (RuntimeException | Error failure) { closeOwned(); throw failure; }
@@ -507,7 +551,7 @@ public final class StageplayLiveWorld implements AutoCloseable {
             var riding = owned.getLevelManager().getObjectManager().getRidingObject(sprite);
             actors.add(new LiveActor(p.actor.id(), p.rings, p.ringDelta, sprite.isHurt(), sprite.getDead(), sprite.isOnObject(),
                     riding == null || riding.getSpawn() == null ? -1 : riding.getSpawn().layoutIndex(),
-                    sprite.getSecondaryAbility().name(), sprite.getDoubleJumpFlag(), sprite.getDoubleJumpProperty() & 255,
+                    reportedAbility(sprite), sprite.getDoubleJumpFlag(), sprite.getDoubleJumpProperty() & 255,
                     sprite.getAnimationId(), sprite.getMappingFrame(), p.targetStatus));
         }
         var nativeObjects = owned.getLevelManager().getObjectManager().getActiveObjects().stream().filter(o -> o.getSpawn() != null)
@@ -541,6 +585,15 @@ public final class StageplayLiveWorld implements AutoCloseable {
         var camera = boundedCamera(new CameraPose(base.x() + shakeX, base.y() + shakeY, zoom));
         return new Frame(cursor, poses, camera, authored.captions(), source, authored.transition(), base, authored.dialogue(), samples,
                 new WorldSample(owned.getLevelManager().getFrameCounter(), owned.getLevelManager().getObjectManager().getVblaCounter(), actors, objects, rings, events));
+    }
+
+    private static String reportedAbility(AbstractPlayableSprite sprite) {
+        var capability = sprite.getGameRules().playerCapability();
+        return switch (sprite.getSecondaryAbility()) {
+            case INSTA_SHIELD -> capability.instaShieldEnabled() ? "INSTA_SHIELD" : "NONE";
+            case FLY -> capability.tailsFlightEnabled() ? "FLY" : "NONE";
+            default -> sprite.getSecondaryAbility().name();
+        };
     }
 
     /** Clamp evaluated framing to loaded level bounds, independently of gameplay-owned arena locks. */

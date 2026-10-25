@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
@@ -38,7 +40,8 @@ import java.util.List;
  * - 16 pieces: 8 pairs of 3x4 tiles forming a tall vertical beam spanning Y -$70 to $90.
  */
 public class VerticalLaserObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, SpawnAndCoordinateZeroScalarArgsRewindRecreatable {
+        implements TouchResponseProvider, SpawnAndCoordinateZeroScalarArgsRewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // ObjB7 is a downward vertical beam with no horizontal-facing body or children.
 
     // From ObjB7_SubObjData: priority = 4, width_pixels = $18
     private static final int PRIORITY = 4;

@@ -77,9 +77,16 @@ final class StageplayDialogueRenderer {
                                 StageplayDocument.DialogueCue cue, StageplayDocument.DialogueSkin skin) {
         var speaker = frame.actors().stream().filter(actor -> actor.actorId().equals(cue.speakerActor())
                 && actor.visible()).findFirst().orElse(null);
-        if (speaker == null) return;
-        int x = (int) Math.round((speaker.x() - frame.camera().x()) * frame.camera().zoom());
-        int y = (int) Math.round((speaker.y() - frame.camera().y()) * frame.camera().zoom());
+        double worldX, worldY;
+        if (speaker != null) { worldX = speaker.x(); worldY = speaker.y(); }
+        else {
+            var object = frame.world() == null ? null : frame.world().objects().stream()
+                    .filter(value -> value.actorId().equals(cue.speakerActor())).findFirst().orElse(null);
+            if (object == null) return; // Unresolved/hidden/removed objects never get an invented tail position.
+            worldX = object.x(); worldY = object.y();
+        }
+        int x = (int) Math.round((worldX - frame.camera().x()) * frame.camera().zoom());
+        int y = (int) Math.round((worldY - frame.camera().y()) * frame.camera().zoom());
         if (x < 0 || x >= document.width() || y < 0 || y >= document.height()) return;
         int edgeY, direction;
         if (y < cue.y()) { edgeY = cue.y(); direction = -1; }

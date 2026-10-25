@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 
@@ -16,7 +17,9 @@ import com.openggf.level.objects.SolidObjectListener;
  * <p>
  * ROM: Obj_InvisibleHurtBlockVertical / sub_1F734 (sonic3k.asm)
  */
-public class Sonic3kInvisibleHurtBlockVObjectInstance extends Sonic3kInvisibleBlockObjectInstance implements SolidObjectListener {
+public class Sonic3kInvisibleHurtBlockVObjectInstance extends Sonic3kInvisibleBlockObjectInstance implements SolidObjectListener, ObjectVisualFacing.NonDirectional {
+
+    // The native hurt/solid face selector belongs to invisible collision geometry, not a facing performer.
 
     public Sonic3kInvisibleHurtBlockVObjectInstance(ObjectSpawn spawn) {
         super(spawn, "InvisibleHurtBlockV");

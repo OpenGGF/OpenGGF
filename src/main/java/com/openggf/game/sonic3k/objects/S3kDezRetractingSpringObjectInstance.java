@@ -10,6 +10,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectAnimationState;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
@@ -72,7 +73,10 @@ import java.util.List;
  */
 public final class S3kDezRetractingSpringObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable,
-        RomObjectCodePointerProvider {
+        RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
+
+    // sub_22F98 launches vertically. loc_48124's XOR-of-flips offset slides the
+    // mounted spring horizontally; that extension is not horizontal body facing.
 
     /** {@code moveq #0,d1 / move.b width_pixels(a0),d1} with {@code width_pixels = $10} (:94149, :94205-94206). */
     private static final int SOLID_HALF_WIDTH = 0x10;

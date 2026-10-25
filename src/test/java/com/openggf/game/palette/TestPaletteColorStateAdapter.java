@@ -1,16 +1,20 @@
 package com.openggf.game.palette;
 
 import com.openggf.game.rewind.snapshot.PaletteColorSnapshot;
+import com.openggf.game.GameId;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.graphics.RenderContext;
 import com.openggf.level.Palette;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -183,5 +187,120 @@ public class TestPaletteColorStateAdapter {
 
         assertArrayEquals(new byte[] {1, 2, 3}, snap.normalRgb());
         assertArrayEquals(new byte[] {4, 5, 6}, snap.underwaterRgb());
+    }
+
+    @Test
+    void donorRestoreRebindsCurrentRowsAndPreservesTheirAliasesAndUncapturedRows() {
+        RenderContext.reset();
+        try {
+            var context = RenderContext.getOrCreateDonor(GameId.S2);
+            Palette original = makePalettes(1, (byte) 0x20)[0];
+            context.setPalette(0, original);
+            Palette second = makePalettes(1, (byte) 0x40)[0];
+            context.setPalette(2, second);
+            byte[] expected = rgbOf(new Palette[]{original, second});
+            Palette[] normal = makePalettes(1, (byte) 0x10);
+            Palette[] water = makePalettes(1, (byte) 0x30);
+            byte[] expectedNormal = rgbOf(normal);
+            byte[] expectedWater = rgbOf(water);
+            GraphicsManager graphics = mock(GraphicsManager.class);
+            when(graphics.isGlInitialized()).thenReturn(true);
+            var adapter = new PaletteColorStateAdapter(() -> normal, () -> water, () -> graphics,
+                    RenderContext::getDonorContexts);
+            var captured = adapter.capture();
+            original.colors[2].r = 1;
+            second.colors[2].b = 3;
+            normal[0].colors[2].r = 1;
+            water[0].colors[2].b = 3;
+            Palette replacement = makePalettes(1, (byte) 0x60)[0];
+            Palette.Color alias = replacement.colors[2];
+            context.setPalette(0, replacement);
+            Palette added = makePalettes(1, (byte) 0x70)[0];
+            byte[] addedBefore = rgbOf(new Palette[]{added});
+            context.setPalette(1, added);
+
+            adapter.restore(captured);
+
+            assertArrayEquals(expected, rgbOf(new Palette[]{replacement, second}));
+            assertArrayEquals(expectedNormal, rgbOf(normal));
+            assertArrayEquals(expectedWater, rgbOf(water));
+            assertSame(replacement, context.getPalette(0));
+            assertSame(alias, replacement.colors[2]);
+            assertEquals(1, original.colors[2].r, "detached row remains detached");
+            assertArrayEquals(addedBefore, rgbOf(new Palette[]{added}), "absent captured row stays live");
+            var uploads = inOrder(graphics);
+            uploads.verify(graphics).cachePaletteTexture(normal[0], 0);
+            uploads.verify(graphics).cachePaletteTexture(replacement, context.getEffectivePaletteLine(0));
+            uploads.verify(graphics).cachePaletteTexture(second, context.getEffectivePaletteLine(2));
+            uploads.verify(graphics).cacheUnderwaterPaletteTexture(water, normal[0]);
+            verify(graphics, never()).cachePaletteTexture(added, context.getEffectivePaletteLine(1));
+            assertSame(context, RenderContext.getOrCreateDonor(GameId.S2));
+        } finally {
+            RenderContext.reset();
+        }
+    }
+
+    @Test
+    void twoAdaptersObservingTheSameLiveBankCannotAdoptEachOthersCapture() {
+        RenderContext.reset();
+        try {
+            var context = RenderContext.getOrCreateDonor(GameId.S2);
+            Palette row = makePalettes(1, (byte) 0x20)[0];
+            Palette.Color alias = row.colors[2];
+            context.setPalette(0, row);
+            byte[] capturedRgb = rgbOf(new Palette[]{row});
+            var first = new PaletteColorStateAdapter(() -> null, () -> null, () -> null,
+                    RenderContext::getDonorContexts);
+            var second = new PaletteColorStateAdapter(() -> null, () -> null, () -> null,
+                    RenderContext::getDonorContexts);
+            var capture = first.capture();
+            second.capture(); // Same live bank, already observed by both independent adapters.
+            alias.r = 1;
+            byte[] liveRgb = rgbOf(new Palette[]{row});
+
+            second.restore(capture);
+            assertArrayEquals(liveRgb, rgbOf(new Palette[]{row}), "adapter identity remains independent of bank identity");
+            first.restore(capture);
+            assertArrayEquals(capturedRgb, rgbOf(new Palette[]{row}));
+            assertSame(context, RenderContext.getOrCreateDonor(GameId.S2));
+            assertSame(alias, row.colors[2]);
+        } finally {
+            RenderContext.reset();
+        }
+    }
+
+    @Test
+    void donorResetAndReplacementCannotAdoptAnOldCaptureByGameOrGpuRow() {
+        RenderContext.reset();
+        try {
+            var context = RenderContext.getOrCreateDonor(GameId.S2);
+            Palette original = makePalettes(1, (byte) 0x20)[0];
+            context.setPalette(0, original);
+            GraphicsManager graphics = mock(GraphicsManager.class);
+            when(graphics.isGlInitialized()).thenReturn(true);
+            var adapter = new PaletteColorStateAdapter(() -> null, () -> null, () -> graphics,
+                    RenderContext::getDonorContexts);
+            var captured = adapter.capture();
+            original.colors[2].r = 1;
+            RenderContext.reset();
+            adapter.restore(captured);
+            assertTrue(RenderContext.getDonorContexts().isEmpty(), "restore never recreates a retired bank");
+            var replacement = RenderContext.getOrCreateDonor(GameId.S2);
+            assertEquals(context.getPaletteLineBase(), replacement.getPaletteLineBase(), "reused numeric bank");
+            Palette row = makePalettes(1, (byte) 0x60)[0];
+            replacement.setPalette(0, row);
+            byte[] expected = rgbOf(new Palette[]{row});
+
+            adapter.restore(captured);
+            // A new gameplay palette owner also cannot inherit the previous owner's bindings.
+            new PaletteColorStateAdapter(() -> null, () -> null, () -> graphics,
+                    RenderContext::getDonorContexts).restore(captured);
+
+            assertArrayEquals(expected, rgbOf(new Palette[]{row}));
+            assertEquals(1, original.colors[2].r);
+            verify(graphics, never()).cachePaletteTexture(any(), anyInt());
+        } finally {
+            RenderContext.reset();
+        }
     }
 }

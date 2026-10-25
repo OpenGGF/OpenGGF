@@ -60,7 +60,7 @@ public final class SpriteSheetDump {
         String character = null;
         boolean headReview = false;
         int firstFrame = 0, reviewCount = Integer.MAX_VALUE, headScale = 150;
-        com.openggf.data.PlayerSpriteArtProvider characterProvider = null;
+        com.openggf.sprites.art.PlayerSpriteArtProvider characterProvider = null;
         for (int i = 3; i < args.length; i++) {
             String[] kv = args[i].split("=", 2);
             switch (kv[0]) {
@@ -94,9 +94,9 @@ public final class SpriteSheetDump {
             var module = com.openggf.game.GameServices.module();
             Object live = module.createGame(com.openggf.game.session.SessionManager.getCurrentWorldSession()
                     .getDataSource());
-            characterProvider = (com.openggf.data.PlayerSpriteArtProvider) live;
+            characterProvider = (com.openggf.sprites.art.PlayerSpriteArtProvider) live;
             romArt = SceneRomArtFactory.create(com.openggf.game.GameServices.rom().getRom(), game,
-                    () -> (com.openggf.data.PlayerSpriteArtProvider) live, module::loadTailsTailArt);
+                    () -> (com.openggf.sprites.art.PlayerSpriteArtProvider) live, module::loadTailsTailArt);
         } else {
             romArt = SceneRomArtFactory.create(rom, game, () -> null, () -> null);
         }

@@ -8,6 +8,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -24,7 +25,9 @@ import java.util.List;
  * his jump and is now laughing at the player).
  */
 public class S3kCutsceneButtonObjectInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable {
+        implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+    // Obj_CutsceneButton renders only the switch; the cutscene character is separately owned.
 
     private static final int INIT_Y_OFFSET = 4;
     private static final int PRIORITY = 4;

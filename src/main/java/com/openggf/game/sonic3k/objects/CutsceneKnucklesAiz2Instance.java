@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.graphics.GLCommand;
@@ -18,7 +19,12 @@ import java.util.List;
  * <p>ROM reference: CutsceneKnux_AIZ2.
  */
 public class CutsceneKnucklesAiz2Instance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable {
+        implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // This legacy-named field is the native cutscene X-flip bit. Set mirrors the right-facing Knuckles basis to left.
+        return facingRight ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
+
 
     private static final int OBJECT_ID = 0x82;
     private static final int INIT_X = 0x4B8E;

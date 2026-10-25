@@ -1,5 +1,7 @@
 package com.openggf.editor.stageplay;
 
+import com.openggf.stageplay.StageplayDocument.Facing;
+
 import com.openggf.control.InputHandler;
 import com.openggf.stageplay.StageplayDocument;
 import com.openggf.stageplay.editor.StageplayRouteJob;
@@ -19,7 +21,7 @@ class TestStageplayRouteWorkspace {
     @TempDir Path root;
     private StageplayDocument source() {
         return StageplayDocument.empty("s2",0,0,0,0,320,224).withDurationFrames(120)
-                .withActors(List.of(new Actor("hero","Hero","s2","sonic",List.of(new ActorKey(0,100,200,0,-1,false,true,1,Interpolation.HOLD)))))
+                .withActors(List.of(new Actor("hero","Hero","s2","sonic",List.of(new ActorKey(0,100,200,0,-1, Facing.RIGHT,true,1,Interpolation.HOLD)))))
                 .withPuppets(List.of(new PuppetTrack("hero",false,0,List.of())));
     }
     private class Host implements StageplayWorkspace.Host {
@@ -77,7 +79,7 @@ class TestStageplayRouteWorkspace {
     }
     @Test void objectFormTransmitsExplicitVisualFootprintAndDoesNotPretendNativeInput(){
         var captured=new java.util.concurrent.atomic.AtomicReference<StageplayRouteRequest>();
-        var object=new ObjectActor("prop","Walking prop","s2",0,0,65,0,-1,List.of(new ObjectKey(0,100,200,0,-1,false,true,Interpolation.HOLD,ObjectMode.PUPPET)),List.of());
+        var object=new ObjectActor("prop","Walking prop","s2",0,0,65,0,-1,List.of(new ObjectKey(0,100,200,0,-1, Facing.LEFT,true,Interpolation.HOLD,ObjectMode.PUPPET)),List.of());
         var workspace=new StageplayWorkspace(new StageplayWorkspace.Host(){
             public StageplayDocument initialDocument(){return StageplayDocument.empty("s2",0,0,0,0,320,224).withObjectActors(List.of(object));}
             public Path initialAssetRoot(){return root;}
@@ -91,8 +93,8 @@ class TestStageplayRouteWorkspace {
     @Test void interiorObjectKeyOpensTheFormButChangingItsIdToAPlayerStillRejectsTheRequest(){
         var captured=new java.util.concurrent.atomic.AtomicReference<StageplayRouteRequest>();
         var object=new ObjectActor("prop","Initialized prop","s2",0,0,65,0,-1,List.of(
-                new ObjectKey(0,100,200,0,-1,false,true,Interpolation.HOLD,ObjectMode.FREE),
-                new ObjectKey(30,100,200,0,-1,false,true,Interpolation.HOLD,ObjectMode.PUPPET)),List.of());
+                new ObjectKey(0,100,200,0,-1, Facing.LEFT,true,Interpolation.HOLD,ObjectMode.FREE),
+                new ObjectKey(30,100,200,0,-1, Facing.LEFT,true,Interpolation.HOLD,ObjectMode.PUPPET)),List.of());
         var document=source().withObjectActors(List.of(object));
         var workspace=new StageplayWorkspace(new StageplayWorkspace.Host(){
             public StageplayDocument initialDocument(){return document;}
@@ -127,7 +129,7 @@ class TestStageplayRouteWorkspace {
 
     @Test void walkingObjectUsesTheSameProposedAndAppliedOverlayModel() {
         var actor=new ObjectActor("walker","Walker","s2",0,0,65,0,-1,List.of(
-                new ObjectKey(0,100,200,0,-1,false,true,Interpolation.HOLD,ObjectMode.PUPPET)),List.of());
+                new ObjectKey(0,100,200,0,-1, Facing.LEFT,true,Interpolation.HOLD,ObjectMode.PUPPET)),List.of());
         var document=StageplayDocument.empty("s2",0,0,0,0,320,224).withDurationFrames(120).withObjectActors(List.of(actor));
         var update=new java.util.concurrent.atomic.AtomicReference<StageplayRouteJob.Update>();
         var workspace=new StageplayWorkspace(new StageplayWorkspace.Host(){
@@ -184,10 +186,27 @@ class TestStageplayRouteWorkspace {
         assertEquals(motion,workspace.controller().document().puppets().getFirst().commands().getFirst().motion());
     }
 
+    @Test void routeFrontPageShowsNamesAndAppliesCollapsedSearchDefaults() {
+        var host=new Host();var workspace=new StageplayWorkspace(host);workspace.activate();workspace.invoke(ROUTE_HELPER);
+        var labels=new java.util.ArrayList<String>();
+        var font=new com.openggf.graphics.PixelFont(){
+            @Override public void drawText(String value,int x,int y,float scale,float r,float g,float b,float a){labels.add(value);}
+        };
+        workspace.menu().render(font,320);
+        assertTrue(labels.contains("Hero"));assertFalse(labels.contains("hero"));
+        assertTrue(labels.contains("Motion"));assertTrue(labels.contains("+ Advanced"));
+        assertTrue(labels.contains("Find route"));
+        assertFalse(labels.contains("Search nodes"));assertFalse(labels.contains("Probe ticks"));
+        workspace.menu().setValue("x","150");workspace.menu().setValue("y","200");workspace.menu().submit();
+        assertNull(workspace.menu().error());assertEquals(1024,host.request.maxNodes());
+        assertEquals(120000,host.request.maxTicks());assertEquals(60000,host.request.maxMillis());
+        assertEquals(RouteMotion.DEFAULT,host.request.motion());
+    }
+
     @Test void unavailableSpindashIsNotAmongCyclingStartChoices() {
         var workspace=new StageplayWorkspace(new Host());workspace.activate();workspace.invoke(ROUTE_HELPER);
-        // Starting action follows actor, X, Y and frame budget.
-        choose(workspace,4);assertEquals("Jump",workspace.menu().values().get("startingAction"));
+        // Start stays visible in the Motion group; headings do not consume selection rows.
+        choose(workspace,2);assertEquals("Jump",workspace.menu().values().get("startingAction"));
         press(workspace,new InputHandler(),GLFW_KEY_ENTER);
         assertEquals("Walk",workspace.menu().values().get("startingAction"));
     }
@@ -214,8 +233,71 @@ class TestStageplayRouteWorkspace {
         assertTrue(workspace.menu().isOpen());
         assertEquals("Spindash (unavailable)",workspace.menu().values().get("startingAction"));
         workspace.menu().submit();assertTrue(workspace.menu().error().contains("unavailable"));
-        workspace.invoke(ROUTE_HELPER);choose(workspace,4);
+        workspace.invoke(ROUTE_HELPER);choose(workspace,2);
         assertEquals("Walk",workspace.menu().values().get("startingAction"));
+    }
+
+    @Test void planningStatusUsesTheCurrentPlanRouteCommandName() {
+        assertTrue(start(new Host()).status().contains("Reopen Plan route"));
+    }
+
+    @Test void routeDetailsShowsTheDiagnosisOnceAndRetainsWorkCounts() {
+        var host = new Host();
+        var workspace = start(host);
+        String diagnosis = "Walk cannot reach this goal; try Run.";
+        var result = StageplayRouteResult.failure(StageplayRouteResult.Status.BUDGET_EXCEEDED,
+                diagnosis, "0".repeat(64), host.request, 1024, 26686,
+                List.of(new StageplayRoutePoint(0, 100, 200, true)));
+        host.update = new StageplayRouteJob.Update(1, StageplayRouteJob.Phase.FAILED, diagnosis, result);
+        workspace.tick(new InputHandler());
+        workspace.invoke(ROUTE_HELPER);
+        assertEquals(1, workspace.menu().detailsText().split(java.util.regex.Pattern.quote(diagnosis), -1).length - 1);
+        assertTrue(workspace.menu().detailsText().contains("1 samples, 1024 nodes, 26686 ticks"));
+        workspace.menu().close();
+        workspace.directionDetails();
+        assertEquals(1, workspace.menu().detailsText().split(java.util.regex.Pattern.quote(diagnosis), -1).length - 1);
+    }
+
+    @Test void routeF1UsesAPlainResultSectionsAndButtonsWithEngineeringBehindMore() {
+        var host=new Host();var workspace=start(host);
+        String diagnostic="Native terrain search exhausted its bounded work budget: reachability is not disproved; needs Run and more Attempt frames";
+        var result=StageplayRouteResult.failure(StageplayRouteResult.Status.BUDGET_EXCEEDED,
+                diagnostic,"0".repeat(64),host.request,8,432,List.of(new StageplayRoutePoint(0,100,200,true)));
+        host.update=new StageplayRouteJob.Update(1,StageplayRouteJob.Phase.FAILED,diagnostic,result);
+        workspace.tick(new InputHandler());workspace.invoke(ROUTE_HELPER);workspace.menu().openDetails();
+        var text=new java.util.ArrayList<String>();
+        var font=new com.openggf.graphics.PixelFont(){@Override public void drawText(String t,int x,int y,float scale,float r,float g,float b,float a){text.add(t);}};
+        workspace.menu().render(font,398);
+        assertTrue(text.contains("Route details"),text.toString());
+        assertTrue(text.contains("Search limit reached"));
+        assertTrue(text.contains("Try"));assertTrue(text.contains("• Use Run"));assertTrue(text.contains("• Allow more frames"));
+        assertTrue(text.contains("Settings"));assertTrue(text.contains("Search"));
+        assertTrue(text.contains("1 samples · 8 nodes · 432 ticks"));
+        assertTrue(text.contains("Plan another route"));assertTrue(text.contains("Cancel route"));assertTrue(text.contains("Back"));
+        assertFalse(String.join(" ",text).contains("Native terrain"));
+        assertFalse(String.join(" ",text).contains("Apply replaces"));
+        press(workspace,new InputHandler(),GLFW_KEY_UP);press(workspace,new InputHandler(),GLFW_KEY_ENTER);
+        text.clear();workspace.menu().render(font,398);
+        assertTrue(String.join(" ",text).contains("Native terrain"),"More retains the exact engineering diagnosis");
+    }
+
+    @Test void successfulRouteDetailsKeepApplyFreshAndBackAndReplanKeepTheirActions() {
+        for(String action:List.of("back","apply","replan")) {
+            var host=new Host();var workspace=start(host);var before=workspace.controller().document();
+            host.update=new StageplayRouteJob.Update(1,StageplayRouteJob.Phase.READY,"ready",host.result());
+            workspace.tick(new InputHandler());workspace.invoke(ROUTE_HELPER);workspace.menu().openDetails();
+            var text=new java.util.ArrayList<String>();
+            workspace.menu().render(new com.openggf.graphics.PixelFont(){@Override public void drawText(String t,int x,int y,float scale,float r,float g,float b,float a){text.add(t);}},398);
+            assertTrue(text.contains("Route found · 0.5 s"),text.toString());
+            assertTrue(text.indexOf("Apply")<text.indexOf("Plan another route"),"A ready route leads with Apply: "+text);
+            assertFalse(text.contains("Try"));assertTrue(text.contains("Apply replaces commands in the requested window"));
+            switch(action) {
+                case "back" -> {press(workspace,new InputHandler(),GLFW_KEY_ESCAPE);assertTrue(workspace.menu().isOpen());assertFalse(workspace.menu().showingDetails());}
+                case "apply" -> {press(workspace,new InputHandler(),GLFW_KEY_ENTER);assertEquals(1,host.applyRequests);}
+                case "replan" -> {press(workspace,new InputHandler(),GLFW_KEY_DOWN);press(workspace,new InputHandler(),GLFW_KEY_ENTER);assertEquals("Plan route",workspace.menu().title());assertFalse(workspace.menu().showingDetails());}
+            }
+            assertEquals(before,workspace.controller().document(),"Buttons retain the existing fresh-check and undo boundaries");
+        }
     }
 
     private static void choose(StageplayWorkspace workspace,int index){

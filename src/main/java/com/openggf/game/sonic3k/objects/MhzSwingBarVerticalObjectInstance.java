@@ -9,6 +9,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidObjectProvider;
@@ -32,7 +33,9 @@ import java.util.Map;
  * horizontal auto-release path.
  */
 public final class MhzSwingBarVerticalObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SpawnRewindRecreatable, RomObjectCodePointerProvider {
+        implements SolidObjectProvider, SpawnRewindRecreatable, RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
+
+    // The native bar/vine controls separately owned riders; its fixed geometry has no horizontal facing.
 
     /**
      * Word 0 of this object's S3K SST holds its live ROM code pointer.

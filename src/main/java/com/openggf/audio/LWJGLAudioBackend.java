@@ -16,18 +16,24 @@ import java.util.function.Consumer;
 public class LWJGLAudioBackend extends AbstractSmpsAudioBackend {
     private int deviceSampleRate = 48_000;
 
-    public LWJGLAudioBackend() {
-        this(SonicConfigurationService.createStandalone(), null);
-    }
-
-    public LWJGLAudioBackend(SonicConfigurationService configService) {
-        this(configService, null);
-    }
-
     public LWJGLAudioBackend(
             SonicConfigurationService configService,
-            PerformanceProfiler profiler) {
-        super(configService, profiler);
+            PerformanceProfiler profiler,
+            MusicRestoreSink musicRestoreSink) {
+        super(configService, profiler, musicRestoreSink);
+    }
+
+    /**
+     * Uses the supplied manager's current factory for subsequent legacy bindings,
+     * independently of the restore sink. The three-argument constructor retains
+     * lazy per-binding singleton selection.
+     */
+    public LWJGLAudioBackend(
+            SonicConfigurationService configService,
+            PerformanceProfiler profiler,
+            MusicRestoreSink musicRestoreSink,
+            AudioManager legacyConfigAuthority) {
+        super(configService, profiler, musicRestoreSink, legacyConfigAuthority);
     }
 
     @Override

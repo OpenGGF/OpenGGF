@@ -8,7 +8,9 @@ import java.util.List;
 
 /** SKL $3A, Obj_SOZPathSwap ($1D106): path swap with per-player crossing debounce. */
 public final class SozPathSwapObjectInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable {
+        implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+    // This native art/path trigger is invisible and has no directional visual body or children.
     private final FbzParticipantStateTable participants = new FbzParticipantStateTable(3);
     public SozPathSwapObjectInstance(ObjectSpawn spawn) { super(spawn, "SOZPathSwap"); }
     @Override public void update(int vIntRunCount, PlayableEntity leader) {

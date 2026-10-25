@@ -1,4 +1,6 @@
 package com.openggf.game.sonic2.objects;
+
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.BoxObjectInstance;
 
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
@@ -30,7 +32,8 @@ import java.util.List;
  * <b>Disassembly Reference:</b> s2.asm lines 58068-58201 (ObjD2)
  */
 public class CNZRectBlocksObjectInstance extends BoxObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // ObjD2 translates/folds rectangular blocks without a horizontal-facing body or child.
 
     /**
      * Animation frame data from byte_2B654.

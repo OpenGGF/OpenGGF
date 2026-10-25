@@ -16,6 +16,7 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SpawnRewindRecreatable;
@@ -50,7 +51,9 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/3C Smashable Wall.asm
  */
 public class Sonic1BreakableWallObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+// Smashable wall sections and their scattered mapping pieces have no horizontal-facing body.
 
     // From disassembly: move.w #$1B,d1
     private static final int HALF_WIDTH = 0x1B;

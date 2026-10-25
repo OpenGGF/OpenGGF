@@ -53,6 +53,55 @@ class TestSpritePreparationSnapshots {
         assertEquals(idle, scene(100, false), "future preparations cannot change retained snapshots");
     }
 
+    @Test void satDecoderRetainsScratchIdentityRawCachedDisagreementAndSynchronousOverrides() {
+        var seen = new ArrayList<PatternDesc>();
+        Frame frame = SpritePresentation.prepare(graphics, 0, 0, this::submitDecoderControl, opaque -> {
+            PatternDesc desc = assertInstanceOf(PatternDesc.class, opaque);
+            assertEquals(0xF805 + seen.size(), desc.get());
+            assertEquals(7, desc.getPaletteIndex(), "raw bits encode three while cached palette is seven");
+            assertTrue(desc.getHFlip()); assertTrue(desc.getVFlip()); assertTrue(desc.getPriority());
+            if (!seen.isEmpty()) assertSame(seen.getFirst(), desc, "SAT scratch is reused synchronously");
+            assertTrue(graphics.spritePresentationBuilder.tiles.isEmpty() || seen.size() == 1);
+            seen.add(desc);
+            desc.setPaletteIndex(11); desc.setHFlip(false); desc.setPriority(false);
+            graphics.beginGhostRenderEffect(.375f, true);
+            return new Attributes(9, false, true, false);
+        });
+        assertEquals(2, seen.size());
+        assertEquals(List.of(0x20005, 0x20006), frame.tiles().stream().map(Tile::patternId).toList());
+        for (Tile tile : frame.tiles()) {
+            assertEquals(9, tile.palette()); assertFalse(tile.hFlip()); assertTrue(tile.vFlip());
+            assertFalse(tile.priority()); assertTrue(tile.ghost()); assertTrue(tile.ghostColour());
+            assertEquals(.375f, tile.ghostAlpha());
+        }
+        assertFalse(graphics.isGhostRenderEffectActive());
+        assertEquals(11, seen.getLast().getPaletteIndex(), "decoder mutations remain observable after return");
+    }
+
+    @Test void decoderThrowWinsBeforeTileAppendAndRestoresScopesWithoutReplacingDescriptor() {
+        PatternDesc desc = new PatternDesc(0x123); desc.setPaletteIndex(7);
+        IllegalStateException expected = new IllegalStateException("decoder failure");
+        assertSame(expected, assertThrows(IllegalStateException.class, () -> SpritePresentation.prepare(graphics, 0, 0,
+                () -> graphics.renderPatternWithIdScaled(9000, desc, 1.25f, 2.5f, 3.75f, 4.5f), opaque -> {
+                    assertSame(desc, opaque);
+                    assertEquals(0x123, desc.get()); assertEquals(7, desc.getPaletteIndex());
+                    desc.setVFlip(true);
+                    assertTrue(graphics.spritePresentationBuilder.tiles.isEmpty());
+                    graphics.beginGhostRenderEffect(.25f);
+                    throw expected;
+                })));
+        assertTrue(desc.getVFlip()); assertNull(graphics.spritePresentationBuilder);
+        assertFalse(graphics.isSpriteSatCollectionActive()); assertFalse(graphics.isGhostRenderEffectActive());
+    }
+
+    private void submitDecoderControl() {
+        graphics.beginSpriteSatCollection();
+        graphics.submitSpriteSatPiece(new com.openggf.level.render.SpritePieceRenderer.PreparedPiece(
+                10, 20, 1, 2, 0x20005, 0x123, 7, true, true, true, false,
+                SpriteMaskReplayRole.NORMAL, 0, 1, 0, 2, null));
+        graphics.endSpriteSatCollectionAndReplay();
+    }
+
     private Frame scene(int cameraX, boolean debris) {
         return SpritePresentationRenderer.prepare(graphics, cameraX, 200, () -> {
             PatternDesc descriptor = new PatternDesc();

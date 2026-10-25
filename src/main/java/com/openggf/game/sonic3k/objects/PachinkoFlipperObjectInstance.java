@@ -8,6 +8,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SlopedSolidProvider;
 import com.openggf.level.objects.SolidContact;
@@ -30,7 +31,20 @@ import java.util.List;
  * the surface, and launches them when jump is pressed.
  */
 public class PachinkoFlipperObjectInstance extends AbstractObjectInstance
-        implements SlopedSolidProvider, SolidObjectListener, SpawnRewindRecreatable {
+        implements SlopedSolidProvider, SolidObjectListener, SpawnRewindRecreatable, ObjectVisualFacing.PlacementSource {
+
+    @Override
+    public ObjectVisualFacing.Basis nativeFacing() {
+        // sub_49D72's native tip/launch side is right before the status-X mirror.
+        // Preserve the selected flipper pose and the rider's independent facing.
+        return isFlippedHorizontal() ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
+
+    @Override
+    public int initialPlacementFlags(com.openggf.level.objects.ObjectVisualFacing.Basis facing, int sourceFlags) {
+        if (nativeFacing() == ObjectVisualFacing.Basis.NON_DIRECTIONAL) return sourceFlags;
+        return facing == com.openggf.level.objects.ObjectVisualFacing.Basis.LEFT ? sourceFlags | 1 : sourceFlags & ~1;
+    }
 
     private static final SolidObjectParams SOLID_PARAMS = new SolidObjectParams(0x20, 0x1C, 0x1D);
 

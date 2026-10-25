@@ -4,7 +4,7 @@ import com.openggf.audio.NullAudioBackend;
 import com.openggf.camera.Camera;
 import com.openggf.control.LogicalInputSnapshot;
 import com.openggf.control.PlayerInputState;
-import com.openggf.data.PlayerSpriteArtProvider;
+import com.openggf.sprites.art.PlayerSpriteArtProvider;
 import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelLoadCause;

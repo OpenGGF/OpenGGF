@@ -1,6 +1,6 @@
 package com.openggf.level;
 
-import com.openggf.data.Game;
+import com.openggf.game.Game;
 import com.openggf.game.ZoneKey;
 import com.openggf.game.ZoneRegistry;
 import org.junit.jupiter.api.Test;

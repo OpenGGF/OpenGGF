@@ -5,6 +5,7 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
@@ -16,7 +17,9 @@ import java.util.List;
 
 /** SKL $4B, Obj_DEZTiltingBridge / loc_46E1C..loc_46F54 (sonic3k.asm:92745-92886). */
 public final class S3kDezTiltingBridgeObjectInstance extends AbstractObjectInstance
-        implements RewindRecreatable, SolidObjectProvider, RomObjectCodePointerProvider {
+        implements RewindRecreatable, SolidObjectProvider, RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
+
+    // Native linked block positions and tilt/height order are terrain geometry without logical horizontal facing.
     private S3kDezTiltingBridgeObjectInstance parent;
     private boolean initialized;
     private boolean child;

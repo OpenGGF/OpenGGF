@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 
 import com.openggf.audio.GameSound;
@@ -89,7 +91,8 @@ import java.util.List;
  * @see HexBumperObjectInstance Hex bumper with 4-direction quantized physics
  */
 public class BonusBlockObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseListener, RewindRecreatable {
+        implements TouchResponseProvider, TouchResponseListener, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // ObjD8 uses a geometric contact normal and score popups, not a facing body.
 
     // ========================================================================
     // ROM Constants

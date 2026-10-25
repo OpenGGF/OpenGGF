@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
@@ -25,7 +27,13 @@ import java.util.List;
  * - X-flip clear: velocity = +2 (rightward)
  * - X-flip set: velocity = -2 (leftward)
  */
-public class CNZConveyorBeltObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class CNZConveyorBeltObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.Source {
+    @Override
+    public ObjectVisualFacing.Basis nativeFacing() {
+        // Obj72's belt owns its transport direction in objoff_36 (velocityX),
+        // initialized positive and negated for x_flip; it has no turning animation.
+        return velocityX < 0 ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
 
     // From disassembly: move.w #$30,objoff_3C(a0) / move.w #$70,objoff_3C(a0)
     private static final int HEIGHT_NORMAL = 0x30;   // 48 pixels

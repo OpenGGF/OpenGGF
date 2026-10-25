@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
@@ -48,7 +49,12 @@ import java.util.List;
  * shared Tunnelbot routines for swing motion, drill animation, ceiling contact,
  * debris, hit flash, and defeat flow.
  */
-public final class MgzMinibossInstance extends AbstractBossInstance implements SpawnRewindRecreatable {
+public final class MgzMinibossInstance extends AbstractBossInstance implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // The native target/turn routine owns facingRight independently of the selected mapping frame.
+        return facingRight ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.LEFT;
+    }
+
 
     private static final int ROUTINE_INIT = 0;
     private static final int ROUTINE_WAIT_CAMERA = 2;

@@ -15,7 +15,11 @@ import java.util.List;
 
 /** SKL $57: Obj_DEZTunnelLauncher ($481F2), controller $484B0 and ring trail $487E4. */
 public final class S3kDezTunnelLauncherObjectInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable {
+        implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+    // The countdown housing/digits and ring trail are geometric tunnel effects.
+    // Captured-player facing and path tangents belong to separate player/pose state,
+    // not a horizontal-facing body on the housing or its ring children.
     private int timer, digit, mappingFrame, digitFrame;
     private boolean countdown;
     private final int[] captured = new int[2];

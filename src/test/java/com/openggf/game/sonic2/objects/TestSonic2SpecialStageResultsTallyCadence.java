@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageResultsScreen;
 import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
 import com.openggf.level.objects.TestObjectServices;
@@ -42,9 +43,9 @@ class TestSonic2SpecialStageResultsTallyCadence {
                 .withGameState(new GameStateManager());
     }
 
-    private SpecialStageResultsScreenObjectInstance screen(int p1Rings, int p2Rings,
+    private Sonic2SpecialStageResultsScreen screen(int p1Rings, int p2Rings,
                                                            boolean gotEmerald) {
-        return new SpecialStageResultsScreenObjectInstance(
+        return new Sonic2SpecialStageResultsScreen(
                 p1Rings, p2Rings, gotEmerald, 0, 0, services);
     }
 
@@ -53,7 +54,7 @@ class TestSonic2SpecialStageResultsTallyCadence {
      * passes the tally itself took, i.e. the number of {@code Obj6F_TallyScore}
      * executions including the exhausted one that advances the routine.
      */
-    private int tallyPasses(SpecialStageResultsScreenObjectInstance screen) {
+    private int tallyPasses(Sonic2SpecialStageResultsScreen screen) {
         int frame = 0;
         int firstDrainFrame = -1;
         int p1 = screen.getDisplayedRingCount();

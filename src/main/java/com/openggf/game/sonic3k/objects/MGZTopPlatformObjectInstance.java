@@ -18,6 +18,7 @@ import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
@@ -68,7 +69,9 @@ import java.util.Map;
  */
 public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider, SolidObjectListener, ObjectControlledSolidContactController,
-        RomObjectCodePointerProvider, SpawnRewindRecreatable {
+        RomObjectCodePointerProvider, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+    // Obj_MGZTopPlatform draws its spinning top unflipped through ground, flight and launcher states; velocity is not facing.
     private static final String ART_KEY = Sonic3kObjectArtKeys.MGZ_TOP_PLATFORM;
 
     // ROM: move.w #$280, priority(a0)

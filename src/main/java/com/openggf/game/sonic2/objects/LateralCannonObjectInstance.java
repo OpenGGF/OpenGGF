@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
@@ -58,7 +60,8 @@ import java.util.List;
  * </ul>
  */
 public class LateralCannonObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // ObjBE extends a symmetric platform (Map_objBE); it has no barrel/projectile or horizontal facing.
 
     // ========================================================================
     // ROM Constants

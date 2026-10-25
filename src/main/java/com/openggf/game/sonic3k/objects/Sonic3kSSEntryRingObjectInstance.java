@@ -20,6 +20,7 @@ import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -63,7 +64,9 @@ import java.util.logging.Logger;
  * <p>
  * Reference: docs/skdisasm/sonic3k.asm Obj_SSEntryRing (lines 128211-128530)
  */
-public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+    // Native ring rotation/formation and collection flashes have no logical horizontal-facing owner.
 
     private final PlayerControlOwners directedControlPlayers =
             new PlayerControlOwners();

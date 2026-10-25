@@ -7,6 +7,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.physics.Direction;
@@ -24,7 +25,9 @@ import java.util.Map;
  * <p>Invisible controller for the spiral descent after the top-platform launcher.
  * ROM reference: Obj_MGZTwistingLoop (sonic3k.asm:70227-70427).
  */
-public class MGZTwistingLoopObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class MGZTwistingLoopObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+    // Obj_MGZTwistingLoop is an invisible player-path owner with no facing body or visual children.
     private static final int CAPTURE_X_BIAS = 0x24;
     private static final int CAPTURE_Y_RANGE = 0x20;
     private static final int ACTIVE_RELEASE_COOLDOWN = 8;

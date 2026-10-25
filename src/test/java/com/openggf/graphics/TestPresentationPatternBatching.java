@@ -25,7 +25,7 @@ class TestPresentationPatternBatching {
         patternId = PatternAtlasRange.OBJECTS.base();
         atlas.cachePatternHeadless(new Pattern(), patternId);
         field("patternAtlas").set(graphics, atlas);
-        field("combinedPaletteTextureId").set(graphics, 1);
+        PaletteTextureTestAccess.set(graphics, "combinedPaletteTextureId", 1);
         var instanced = new InstancedPatternRenderer(graphics, com.openggf.game.GameServices.configuration());
         var supported = InstancedPatternRenderer.class.getDeclaredField("supported");
         supported.setAccessible(true); supported.set(instanced, true);
@@ -136,9 +136,15 @@ class TestPresentationPatternBatching {
             assertNull(commandField("shadowBackdrop").get(shadow));
             graphics.currentShadow15Backdrop = null;
             graphics.endGhostRenderEffect();
-            var normal = rows
-                    ? PatternRenderCommand.obtainRows(entry, 1, 0, false, false, false, 0, 0, 0, 8, graphics)
-                    : PatternRenderCommand.obtain(entry, 1, new PatternDesc(), 0, 0, graphics);
+            PatternRenderCommand normal;
+            if (rows) {
+                normal = PatternRenderCommand.obtainRows(entry, 1, 0, false, false, false, 0, 0, 0, 8, graphics);
+            } else {
+                var desc = new PatternDesc();
+                normal = PatternRenderCommand.obtain(entry, 1, graphics);
+                normal.capturePalette(desc.getPaletteIndex());
+                normal.finish(desc.getHFlip(), desc.getVFlip(), desc.getPriority(), 0, 0, 8f, 8f);
+            }
             try {
                 assertSame(shadow, normal, "the regression must exercise the recycled shadow command");
                 assertEquals(0, normal.presentationPatternCount());

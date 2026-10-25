@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
@@ -36,7 +37,12 @@ import java.util.List;
  * mirrors that byte directly so the MHZ1 button can signal the cleanup routine.
  */
 public final class Mhz1CutsceneKnucklesInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable {
+        implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // Invisible event/player-control owner. The rival sprite is a separate native actor, not this controller.
+        return ObjectVisualFacing.Basis.NON_DIRECTIONAL;
+    }
+
 
     private final PlayerControlOwners directedControlPlayers =
             new PlayerControlOwners();

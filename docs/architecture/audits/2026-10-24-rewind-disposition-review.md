@@ -46,8 +46,8 @@ obligation is not a passing test claim.
 | 19 | [`sonic3k.objects.LbzMinibossInstance#panels`](../../../src/main/java/com/openggf/game/sonic3k/objects/LbzMinibossInstance.java) | Closed with a private owner-local `RewindStateful` holder and typed value snapshots. The default compact owner capture includes the holder; restoration constructs fresh nonstatic helpers in captured centre/ring/index order. No transient policy is used. | `TestS3kLbzMinibossGraphRewind.progressedPanelRingsRestoreFreshAndReplayRotationDetachAndRetirement` executes ten managed destructive fresh-restore cases at five progressed boundaries with Sonic/Tails attack sources, nonempty immediate draw/collision controls and 300-tick replay through detach and retirement. The focused owner disposition check confirms actual compact field capture. See the LBZ panel-ring follow-up for rejected payload evidence and renderer-input/route limits. |
 | 20 | [`sonic3k.objects.LightningSparkObjectInstance#sparkTiles`](../../../src/main/java/com/openggf/game/sonic3k/objects/LightningSparkObjectInstance.java) | Owner-local `sparkArtState` captures immutable pixel/script values, including independent and null constructor recipes. Its private named `SparkArtState` helper owns all live art/script/upload fields and their capture/restore behavior; the owner has no sideband fields or exclusions. Default compact owner/base capture remains enabled. | [`TestLightningSparkArtRewind`](../../../src/test/java/com/openggf/game/sonic3k/objects/TestLightningSparkArtRewind.java) uses the real ROM provider, destructive managed restoration, exact art values and production EGL pixels through visible/blank frames and retirement. See the [bounded follow-up](#lightning-spark-art-follow-up) and its review correction for baseline failures, rejected shapes and donor/route limits. |
 | 21 | [`sonic3k.objects.badniks.CaterkillerJrHeadInstance#bodySegments`](../../../src/main/java/com/openggf/game/sonic3k/objects/badniks/CaterkillerJrHeadInstance.java) | Closed with central `TRANSIENT`. `afterRewindRestoreSettled` rebuilds the list only after each body's captured owner identity resolves, filters live bodies belonging to this exact head, and sorts by captured segment index. | [`TestS3kBadnikChildGraphRewind.caterkillerJrHeadRestoresBodySegmentListToRestoredChildren`](../../../src/test/java/com/openggf/game/rewind/TestS3kBadnikChildGraphRewind.java) restores two adjacent heads and twelve fresh bodies, checks exact parent inventories, rejects stale pre-restore references, restores changed indices/scalars, and drops a divergent extra head. This is exact graph evidence rather than an isolated scalar pass. |
-| 22 | [`sonic3k.objects.bosses.LbzEndBossInstance#launchedSpikeBallRomSubtypes`](../../../src/main/java/com/openggf/game/sonic3k/objects/bosses/LbzEndBossInstance.java) | Retained diagnostic-history obligation. `launchSpikeBall` appends ROM subtypes, but gameplay selection uses the separately captured `launchCount` and table. The public test accessor reads the history. Reconstruction initializes a new empty history. | `TestLbzEndBossInstance` checks native spawn behavior but contains no destructive rewind test for this history. Establish the accessor's intended rewind contract and verify current-child subtype/launchCount replay before an explicit diagnostic-only exclusion. Do not fabricate past launches from surviving children. |
-| 23 | [`sonic3k.objects.bosses.LbzFinalBoss1Instance#spawned`](../../../src/main/java/com/openggf/game/sonic3k/objects/bosses/LbzFinalBoss1Instance.java) | Retained graph inventory obligation. The list stores SpawnRecord values with child kinds and references. It is used to initialize nested turret children when unmanaged and to expose kind-specific inventories. Generic recreation does not restore historical records. | `TestLbzFinalBoss1Instance` checks choreography but does not invoke registry capture/restore despite being named by the isolated sweep. Require a managed graph restore with exact kind/child relations and nested turret/retirement replay, and separately define the unmanaged-owner contract. |
+| 22 | [`sonic3k.objects.bosses.LbzEndBossInstance#launchedSpikeBallRomSubtypes`](../../../src/main/java/com/openggf/game/sonic3k/objects/bosses/LbzEndBossInstance.java) | Removed the unused attempt history and its test-only getter. The maintained sequence test observes actual admitted projectile submissions. Gameplay retains `launchCount` and its table; no historical reconstruction or exclusion is introduced. | [`TestLbzEndBossLaunchRewind`](../../../src/test/java/com/openggf/game/rewind/TestLbzEndBossLaunchRewind.java) exercises destructive real-manager restore after two earlier balls retire, the next subtype, admission rejection, exact identities/slots/clocks and forward retirement. See the [bounded follow-up](#lbz-end-boss-launch-history-follow-up) for ownership alternatives, observed results and limits. |
+| 23 | [`sonic3k.objects.bosses.LbzFinalBoss1Instance#spawned`](../../../src/main/java/com/openggf/game/sonic3k/objects/bosses/LbzFinalBoss1Instance.java) | Closed by removing the historical inventory in the bounded follow-up below. Three local segment references preserve immediate unmanaged bootstrap after all direct children are allocated; managed nested initialization remains deferred. Historical diagnostics move into the choreography fixture. | [`TestLbzFinalBoss1GraphRewind`](../../../src/test/java/com/openggf/game/sonic3k/objects/TestLbzFinalBoss1GraphRewind.java) checks destructive reconstruction before and after nested initialization, overlapping owners, exact boss/segment identities and slots, every nested allocation prefix, retirement and forward replay. [`TestLbzFinalBoss1Instance`](../../../src/test/java/com/openggf/game/sonic3k/objects/TestLbzFinalBoss1Instance.java) separately checks null-manager bootstrap and public no-table owner snapshots. See the follow-up for commands, results and limits. |
 
 ## Three static-state entries
 
@@ -2241,3 +2241,1350 @@ identities and zero skip/failure results were inspected; no pass cache or catego
 run was created. No live Maven request remains. The same branch/worktree is
 retained, and this result remains pending parent review/integration rather than
 a claim about the untested loop-6 composition or parent delivery gates.
+
+## LBZ end-boss launch history follow-up
+
+This field-only slice starts at `3ca14002fa2fafeabe1d3e6e370a3f559b6cba4e`
+in `/mnt/LinuxData/T3/worktrees/OpenGGF/t3-62e0e355`, branch
+`bugfix/ai-lbz-endboss-launch-inventory-20261024`. The parent owns composed
+API/S3K/guard validation, release prose and integration. Only the exact
+`LbzEndBossInstance#launchedSpikeBallRomSubtypes` baseline key is removed;
+this follow-up does not revise aggregate parent counts or certify the whole boss.
+
+Two bounded shapes were compared before implementation:
+
+1. Retain the diagnostic attempt log and capture its integer values through an
+   owner-local value holder. This would preserve the accessor's old historical
+   meaning, including failed admissions, but adds snapshot state with no gameplay
+   consumer. Reconstructing that log from live balls is invalid: retired balls
+   and rejected allocations have no surviving managed representation.
+2. Remove the unused history/getter and move observations into the maintained
+   tests. This is the chosen shape. The sequence assertion records accepted
+   projectiles at the real ObjectManager submission boundary; the separate
+   admission test records attempts and their admission result explicitly. Neither
+   test substitutes current live-child count for historical attempt count.
+
+`loc_73A36 (sonic3k.asm:153539-153543)` plays the launcher SFX and enters
+`loc_73F1C (sonic3k.asm:154009-154016)`, whose counter/table selection uses
+`byte_73F3A (sonic3k.asm:154018-154020)`. The runtime diff only deletes the
+field, initializer, append and getter. It leaves the existing Java SFX,
+`LAUNCH_SUBTYPE_TABLE[launchCount++ & 7]`, spawn/record order and native
+allocation primitive untouched. It adds no override, policy, annotation,
+retired-reference payload, API pin or framework allowance.
+
+The new bounded manager test advances the actual camera gate, intro, rise,
+fire timer and platform gate. Two admitted balls (subtypes 0 and 2) complete
+falling/rolling/explosion and retire before the third attempt's timer borrow.
+Capture then contains no ball. After uninterrupted forward execution the test
+empties the real manager, restores fresh instances through its registry path,
+and compares current managed identities, exact slots, parents, clock, launch
+counter, routine/timers/flags and RNG seed. Forward comparison includes every
+frame's managed positions, ball motion/timer/collision state, submission
+subtype/initial velocity, SFX-before-submission order and retirement. A positive
+control requires the higher-slot admitted ball to move and decrement its timer
+on the allocation pass.
+
+The exhaustion variant fills the native SST window with real, scalar-captured
+test occupants before capture. The third attempt (subtype 1) has no identity
+or slot; one occupant retires on the following manager pass. The next scheduled
+attempt consumes subtype 2 and that exact freed slot. Restoring the snapshot
+replays this boundary without reserving ownerless bits again, injecting flags
+or rebuilding past launches. Test observers retain value records, not live
+historical references in runtime snapshots.
+
+The completed focused invocation on the base SHA plus this slice's uncommitted
+runtime/test/baseline changes passed **28 distinct cases, zero failures, errors
+or skips**. Per-class XML was read, including both parameterized identities
+`retiredLaunchesDoNotReappearAndNextAttemptReplaysExactly(boolean)[1]` and `[2]`:
+
+- `TestLbzEndBossLaunchRewind`: 2 cases (admitted third attempt; rejected third
+  attempt followed by admitted fourth), both pass.
+- `TestS3kLbzEndBossChildLinksRewind`: all 5 cases pass, including
+  `midFightRewindRebuildsRisingTubesAndLaunchedSpikeBall`.
+- `TestLbzEndBossInstance`: all 20 cases pass, including the migrated submission
+  sequence and existing smoke/debris, hit, camera and defeat checks.
+- `TestRewindFieldDispositionGuard`: its one case passes. The actual audit output
+  contains exactly the unchanged other keys and omits this field. No aggregate
+  parent count is edited.
+
+Exact commands from this checkout (the test command was submitted once).
+`MAIN_CHECKOUT` denotes the main OpenGGF checkout used for the current wrapper;
+`ROM_ROOT` is that same checkout containing the three existing `.gen` files.
+Only machine-local path prefixes are parameterized below:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  PATH=/usr/lib/jvm/java-25-openjdk/bin:/usr/local/bin:/usr/bin:/bin \
+  LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -v
+
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  PATH=/usr/lib/jvm/java-25-openjdk/bin:/usr/local/bin:/usr/bin:/bin \
+  LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestLbzEndBossLaunchRewind,TestLbzEndBossInstance,TestS3kLbzEndBossChildLinksRewind,TestRewindFieldDispositionGuard' \
+  "-Dsonic1.rom.path=$ROM_ROOT/s1.gen" \
+  "-Dsonic2.rom.path=$ROM_ROOT/s2.gen" \
+  "-Ds3k.rom.path=$ROM_ROOT/s3k.gen" test -B
+```
+
+The version probe waited 316 seconds for admission and reported Java
+25.0.5.0.2/Maven 3.10.0. Lua reports 5.4.9. The focused request waited 99 seconds;
+Maven reported 1:32 execution including the fresh worktree compilation. The XML
+confirms Java 25 and `surfaceless-egl` in every test fork. All three existing
+absolute ROMs match AGENTS.md CRC32/SHA-1; these particular checks are ROM-free,
+so those properties do not establish ROM route coverage. No test or build
+failure was observed, and no matched baseline rerun was needed for attribution.
+No queued job was duplicated, rerouted or cancelled.
+
+`git diff --check`, assigned-row/follow-up link checks and
+`python3 tools/disasm/disasm_citations.py check docs/architecture/audits/2026-10-24-rewind-disposition-review.md`
+pass (7 citations verified; 2 inherited citations unverifiable). Consumed
+Surefire XML/text and the field-audit diagnostic are removed after inspection;
+no category run, retained log archive or pass cache was created. This bounded
+selection replaces a broad local run for the seven-line diagnostic removal;
+parent-owned composed API/S3K/full guard selections remain outside this slice.
+The terrain seam supplies floor and wall contacts; this is a ROM-free managed
+lifecycle proof with surrounding existing graph/choreography coverage, not a
+cold LBZ route, renderer/pixel, multi-owner, defeat-controller or full-boss
+certification. Constructor-only `romSubtype` on an already restored live ball
+and the base class's deferred construction-ordinal bookkeeping are outside this
+field obligation; the test compares actual managed ObjectRefId and native
+launch/motion state instead of inventing retired historical values.
+
+## LBZ final-boss-1 spawn inventory follow-up
+
+This slice starts at pinned main `3ca14002fa2fafeabe1d3e6e370a3f559b6cba4e`
+in `/mnt/LinuxData/T3/worktrees/OpenGGF/t3-351a2104`, on
+`bugfix/ai-lbz-finalboss-spawned-rewind-20261024`. Ownership is limited to
+`LbzFinalBoss1Instance#spawned`, its affected tests and this audit entry. The
+parent owns composed guards, API checks, the four S3K stability classes,
+aggregate counts/release prose, integration and push. No nested checkout,
+subdelegation or branch switch was used; hooks were installed in this checkout.
+
+### Construction inventory and two complete ownership shapes
+
+At the pinned source, `recordChild` (near line 1195) appends every `SpawnRecord`,
+including rejected allocations and objects that later retire. Neither allocation
+rejection nor removal prunes this history. The sole production list consumer
+(near line 502) initializes the nested tables of the three turret segments when
+`services().objectManager()` is null. The getters near lines 1295/1302 and the
+unused package helper are diagnostics. Production constructs the boss through
+the LBZ-specific `$CA`/`$CD` registry entries and the ride ship's free-slot handoff.
+The public constructor also supports direct unmanaged construction; its lack of
+a Mod API annotation does not make an absent manager invalid.
+
+Two complete shapes were compared:
+
+1. **Capture a bounded live inventory.** Keep ordered kinds and registered child
+   identities, reject failed allocations from the inventory, prune every retired
+   family, and rebind after all shells exist. A scalar recipe plus settled
+   identity lookup would be another encoding of this shape. Neither encoding may
+   retain retired history. This also needs an explicit no-table branch: the
+   existing `List<SpawnRecord>` has no collection codec, and replacing it with
+   strict identity references would require a table even for public owner-only
+   snapshots. Unmanaged children have neither manager identities nor a managed
+   recreation owner. Preserving immediate unmanaged bootstrap and no-table
+   behavior therefore adds separate local recipe/compatibility machinery, plus
+   lifecycle bookkeeping for diagnostic kinds across turret, projectile and
+   launch families. Capturing the original append-only history or merely adding
+   a `CAPTURED` entry is not a complete implementation. This shape was rejected
+   because that machinery would serve an otherwise diagnostic inventory.
+2. **Remove persistent history and keep bootstrap local.** Allocate the same
+   direct children in the same order; retain only the new top/middle/bottom
+   segment references on the initialization stack. With no manager, initialize
+   their nested tables after the direct allocation pass. With a manager, leave
+   them for their ordinary first dispatch. Keep historical emission observations
+   outside production state and use the manager's actual graph for rewind tests.
+   This is the selected shape. Every native allocation expression, primitive,
+   ordering gate, timer, deletion, respawn and owner link stays in its existing
+   path. The internal diagnostic enum/accessors/helper and `SpawnRecord` are
+   removed with the list; no published API pin changes.
+
+The choreography fixture observes `ObjectConstructionContext.construct` while
+calling its real implementation, recording only returned instances belonging to
+its own services. This is necessary because the existing semantic child hook
+omits unmanaged `spawnFreeChild` calls. It preserves history for emission-count
+assertions without production hooks, a rewind exclusion or identity capture of
+retired objects. The observer's class/kind grouping also includes already
+emitted explosions; it does not drive allocations or object ticks.
+
+### Discriminating contracts and graph evidence
+
+The unchanged-runtime null-manager test observes exactly seven direct children
+and six immediately initialized nested children in order, then proves the first
+segment updates do not allocate them again. The public no-table test captures
+and restores an empty constructor instance before services exist, and an
+initialized unmanaged owner after scalar divergence. It restores position and HP
+without allocating or replacing the fixture's children. This remains an
+owner-only snapshot contract, not an aggregate unmanaged-world rewind promise.
+No manager requirement or constructor restriction is introduced.
+
+The graph fixture uses real `ObjectManager` allocation with the S3K registry's
+LBZ stock context and `setRewindInPlaceRestoreEnabledForTest(false)`. It removes
+all live objects, admits a divergent boss, then restores the snapshot. Camera
+and shared RNG participate in the same registry; the fade's audio service is a
+mock, without opening a device. The tests verify:
+
+- Seven direct children before deferred segment initialization; reconstruction
+  allocates no nested suffix early. Forward replay builds exactly two heads for
+  each of the top/middle segments and two guns for the bottom segment, in slots
+  after their actual segment owner.
+- Exact captured object IDs, slots and boss/segment links before and after fresh
+  reconstruction. Two bosses occupy the same coordinates, discriminating exact
+  ownership from proximity or first-live-owner lookup.
+- All seven free-slot prefixes (zero through six) across the independent nested
+  tables. Inert real occupants preserve pressure through restore; failed suffixes
+  neither heal nor retry before or after a progressed snapshot.
+- The HP-five detach branch, retirement of the exact top segment and its two
+  heads, 24 forward dispatches from the pre-detach snapshot, and another 12 from
+  a post-retirement snapshot. Retired IDs stay absent; every registry snapshot
+  matches uninterrupted execution through `RewindSnapshotDiff`.
+
+The short graph cases deliberately advance the seeded heads away from a firing
+notch, keeping muzzle/head lifetime outside this obligation. They are native
+allocation/ownership checks, not full LBZ2 route, rendered-pixel, all-character,
+complete finale or independently ROM-correlated timing certification. Existing
+ROM-backed choreography assertions continue to exercise those local routines.
+
+### Commands, red/green results and diagnostic cleanup
+
+All Maven requests use the absolute updated queue wrapper from this checkout,
+Java 25 and Lua 5.4, with the surfaceless EGL flag unchanged. The existing S1,
+S2 and S3&K paths below were read and their CRC32/SHA-1 values matched the setup
+contract; no ROM was renamed, copied or linked. The queued `-v` probe reported
+Java `25.0.5.0.2` after 370 seconds of admission waiting. `lua5.4 -v` reported
+`5.4.9`.
+
+The common environment/ROM arguments for the commands were:
+
+```bash
+export JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4
+QUEUE_WRAPPER="$HOME/code/projects/OpenGGF/tools/testing/maven_queue.py"
+ROM_ROOT="$HOME/code/projects/OpenGGF"
+```
+
+The baseline command, initially including the migrated choreography class, was:
+
+```bash
+python3 "$QUEUE_WRAPPER" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestLbzFinalBoss1Instance,TestLbzFinalBoss1GraphRewind,TestLbzFinalBoss1FieldDisposition' "-Dsonic1.rom.path=$ROM_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=$ROM_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=$ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
+Fixture-development results are distinguished from runtime failures. The first
+request stopped at test compilation because two overloaded capture method
+references were ambiguous (218 seconds waiting; Maven reported 1:21 execution).
+Explicit lambdas repaired them. The next two requests each ran 37 cases with one
+intended disposition failure and ten fixture errors: first a missing LBZ
+registry context returned placeholders, then an absent audio service stopped the
+fade. Their reported waiting/execution intervals were 111/27.734 and 4/29.612
+seconds. The next request ran 37 cases with eight failures and no errors/skips:
+the disposition failure plus seven pressure cases whose bare reserved bits were
+not reconstructible occupants (9 seconds waiting; 28.184 seconds execution).
+The three complete graph cases and all 26 choreography/unmanaged checks passed.
+These fixture faults do not establish production regressions.
+
+After replacing bare reservations with real inert occupants, the exact bounded
+baseline command omitted the already passing, unchanged choreography class:
+
+```bash
+python3 "$QUEUE_WRAPPER" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestLbzFinalBoss1GraphRewind,TestLbzFinalBoss1FieldDisposition' "-Dsonic1.rom.path=$ROM_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=$ROM_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=$ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
+That completed run had 11 cases, one failure, no errors and no skips (48 seconds
+waiting; 25.686 seconds execution). All ten graph cases passed on unchanged
+production. The sole failure was
+`TestLbzFinalBoss1FieldDisposition#actualDefaultCaptureHasNoUnownedSpawnInventory`,
+reporting exactly
+`com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance#spawned`,
+`type=List path=compact`. This is the qualifying red control for removal.
+
+The candidate selection adds the ride ship's directly affected handoff and
+existing cameo checks:
+
+```bash
+python3 "$QUEUE_WRAPPER" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestLbzFinalBoss1Instance,TestLbzFinalBoss1GraphRewind,TestLbzFinalBoss1FieldDisposition,TestLbz2RobotnikShipRewind,TestLbz2RideCameoInstances' "-Dsonic1.rom.path=$ROM_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=$ROM_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=$ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
+The candidate completed with **58 cases, zero failures, zero errors and zero
+skips**: `TestLbzFinalBoss1FieldDisposition` 1, `TestLbzFinalBoss1GraphRewind` 10,
+`TestLbzFinalBoss1Instance` 26, `TestLbz2RobotnikShipRewind` 8 and
+`TestLbz2RideCameoInstances` 13. Admission waited 1 second; Maven reported 1:26
+execution. These intervals are not elapsed delivery time. Every fresh XML
+`classname#name` and its failure/error/skip elements was inspected, including all
+parameterized prefix cases. The candidate source was the pinned base plus this
+checkout's final boss/test changes; only this audit's result prose changed after
+that run. The disposition control changed from the exact assigned gap to no
+owner gaps while retaining the actual default compact capture path.
+
+Consumed XML/text/dump reports and invocation diagnostics are removed before
+handoff; no category runner was used, so there is no category run ID to
+acknowledge. `git diff --check` and the new audit's local link checks pass.
+Only the exact assigned baseline key is removed; no aggregate baseline counts
+are edited. No complete guards, API/S3K stability selection, broad smoke,
+release-only full suite, integration, push or task-worktree cleanup is claimed.
+
+## S2 Sideways Platform allocation-failure qualification
+
+This independent qualification starts at `97eb86f186b432722024ca419a00b901b38f5ec2`
+and fast-forwards its isolated T3 task branch
+`bugfix/ai-s2-sideways-admission-owner-20261024` to
+`8f34cad77297663523100fb7fdbf120cd9b259c1` before edits. The production
+`SidewaysPformObjectInstance` Git blob is unchanged at
+`583a6d6822d4f50f6f9bb6e15b6fcd4808cbd02e`, SHA-256
+`4fa8ca206cc93956b0969f15b75dc0e47d6134df3b18199a34f8ed652dc553c1`.
+The assigned question is whether rejected child admission permits a bounded,
+native-correct ownership repair. It is not an allowance-removal exercise.
+
+The native failure branch prevents assuming either a null or a self link.
+Evidence was read only from the recorded S2 submodule Git object
+`34fc7f130a96db171e1a1c43e28e0bad81cd6ca7`; the user-dirty working reference
+was not checked out, reset, updated or fetched. Its `s2.asm` blob is
+`b6fde6212f05cc9179ee8c9053c0484bf0581349`, and `s2.constants.asm` is
+`7857fe5ad3221cfab36e9086b17e892fcb09013b`.
+
+- `Obj7A_Init` (s2.asm:56295-56310) initializes the parent through
+  `Obj7A_LoadSubObject` with `a1=a0`. For the single-platform subtypes, the
+  first `dbf` exits without allocating, and the two link writes therefore
+  establish a self link.
+- `AllocateObjectAfterCurrent` (s2.asm:33705-33726) starts `a1` at `a0`, tests
+  occupied entries and advances it by `next_object` before each `dbf`. With
+  no free later slot, including a parent in the last dynamic slot, it returns
+  with a nonzero test result and `a1=Dynamic_Object_RAM_End`. `lea` and `dbf`
+  do not restore the pointer or change the last occupied-ID test's flags.
+- `Obj7A_SubObjectLoop` / `Obj7A_SubObjectLoop_End`
+  (s2.asm:56313-56351) skips the child ID/routine/art initialization on that
+  nonzero result but still exits the child count loop and writes both
+  `objoff_3C` links. It then writes both boundaries, offsets the parent by
+  `parentXOffset`, and adds `childXOffset` through the returned `a1`.
+- The pinned `object_size_bits` / `object_size`
+  (s2.constants.asm:189-193) select the shipped `$40` branch.
+  `Dynamic_Object_RAM_End` / `Tails_Tails`
+  (s2.constants.asm:1139-1151) identify the exhausted pointer as the fixed
+  Tails-tail slot, `$FFFFD000`, rather than a newly allocated platform.
+- `loc_294C4` (s2.asm:56374-56387) skips paired deletion only for an exact
+  self link. Otherwise it calls `DeleteObject2` through the link, then clears
+  the parent's live respawn bit and deletes the parent. `DeleteObject2`
+  (s2.asm:30334-30345) clears the pointed-to slot. The exhausted alias thus
+  matters to retirement as well as graph capture. `Obj05_Main`
+  (s2.asm:41723-41728) normally rewrites that fixed tail's position from its
+  character; it does not turn it into an Obj7A child.
+
+These are source-derived register/control-flow conclusions, not an emulator
+capture. `fixBugs = 0` (s2.asm:27) is the governing native policy. Clearing the
+Java rejected child to null/self, retaining a fabricated admitted child, or
+teaching strict capture to ignore it would not reproduce this branch. The
+current `linkedPlatform` field can point only to another Sideways platform;
+it cannot express the native fixed-tail alias or its deletion. Resolving that
+representation and fixed-slot owner is additional work beyond the assigned
+single-object reject-only cut. No production repair is selected from this
+source evidence alone.
+
+The real-manager golden baseline is reproduced at the same source. A dynamic
+parent is constructed and submitted at SST 40 through
+`createDynamicObjectAtSlot`; every other dynamic SST 16-127 contains a real,
+registered, `RewindRecreatable` inert occupant. The pressure graph itself
+captures before initialization. One normal manager dispatch then constructs
+the child under the existing services scope and submits it through the real
+`addDynamicObjectAfterSlot` allocator. The recording override delegates to that
+allocator; it does not mock admission or mint identities. The rejected child
+has slot -1, is destroyed, has no identity and remains reachable through the
+parent's reciprocal link. Immediate strict capture fails at exactly
+`SidewaysPformObjectInstance#linkedPlatform` with
+`RewindIdentityTable has no registered id for object reference`.
+
+The golden command ran **1 case, 1 failure, 0 errors, 0 skips**. This is an
+actual capture failure, not a compile/import/signature failure. Admission waited
+440 seconds; Maven reported 1:23 execution. XML confirmed Java `25.0.5.0.2`,
+the own-worktree working directory, `mse=off`, exact selected identity
+`TestS2SidewaysPformAdmissionQualification#strictCaptureAfterExhaustedTail`,
+and the complete contextual missing-reference error. The production blob above
+was unchanged; the uncommitted qualification source had SHA-256
+`2091b99b5889bf368c62f76c1d49f4ea138d31487ab408038762959ff1825734`.
+That intentionally red acceptance method is diagnostic evidence, not a
+committed failing test or a claimed repair.
+
+`MAIN_CHECKOUT` denotes the existing main checkout, which supplies the current
+queue wrapper. Commands run from this isolated task checkout with no ROM
+properties and no desktop/graphics context:
+
+```bash
+qualification_maven=(env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY
+  -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4
+  PATH="/usr/lib/jvm/java-25-openjdk/bin:$PATH"
+  python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" --lean -Dmse=off)
+"${qualification_maven[@]}" '-Dtest=TestS2SidewaysPformAdmissionQualification#strictCaptureAfterExhaustedTail' test -B
+```
+
+The follow-up command used the same command prefix:
+
+```bash
+"${qualification_maven[@]}" '-Dtest=TestS2SidewaysPformAdmissionQualification#characterizeRealAdmissionAndFreshReplay+admittedPairRetiresAndReleasesRememberFlagAndSlots+noManagerBootstrapRetainsExistingUnmanagedPair,TestS2SidewaysPformGraphRewind,TestObjectManagerChildSlotAllocation,TestObjectManagerRewindReferenceClosure,TestObjectManagerDynamicChainRewindRestore,TestScalarOnlyCodecDeletion#s2SidewaysPformGraphRecreateClassesImplementRewindRecreatable,TestRewindSchemaRegistry#exactDefaultObjectPolicyCapturesSidewaysPlatformLink' test -B
+```
+
+That completed **34 cases: 32 passes, 1 failure, 1 error, 0 skips**. All nine
+real-manager pressure cases passed: subtype `$06` with a full pool, occupied tail
+and free earlier slots, parent at SST 127, an explicit earlier hole with no later
+hole, one later hole and two noncontiguous later holes; subtype `$0C` with a full
+pool, one later hole and two later holes. Rejected candidates stay outside the
+identity registry and strict capture still fails. A tail-only case frees a
+genuine later occupant and confirms no initialization retry after capacity
+returns. Admitted children use the parent's explicit SST anchor, select the first
+later hole, and move in the same ascending dispatch pass. Both admitted subtypes
+capture immediately, restore destructively with exact parent/child IDs and SSTs,
+restore every pressure occupant at its captured SST, rebuild reciprocal fresh
+links, and match the next parent/child positions on forward replay.
+
+The other 23 passing cases are the existing Sideways graph/lifetime checks (4),
+child-slot allocation checks (8), strict reference-closure checks (8), dynamic
+reconstruction chain (1), Sideways `RewindRecreatable` contract (1) and exact
+default link schema (1). The existing unmanaged-link negative control still
+rejects capture. This run waited 1,340 seconds for admission; Maven reported
+28.764 seconds execution. Every exact XML case identity, failure/error/skip
+element and the Java/mse/selector/working-directory properties were inspected.
+
+The two new peripheral fixture faults are separate from the reproduced capture
+gap. `admittedPairRetiresAndReleasesRememberFlagAndSlots` incorrectly expected
+the retained Java parent reference to become destroyed; the manager's placed
+unload removes it without setting that flag. The corrected check uses absence
+from the live graph and reclaimed SSTs, while retaining child retirement,
+remember-flag release and cursor-return respawn assertions.
+`noManagerBootstrapRetainsExistingUnmanagedPair` updated its object after the
+temporary construction context closed without binding services. It now injects
+the explicit no-manager stub before update, matching the existing services
+contract. Neither fault establishes another production defect.
+
+The corrected-peripheral command was:
+
+```bash
+"${qualification_maven[@]}" '-Dtest=TestS2SidewaysPformAdmissionQualification#admittedPairRetiresAndReleasesRememberFlagAndSlots+noManagerBootstrapRetainsExistingUnmanagedPair,TestSingletonLifecycleGuard#ambientGameplayModeSetupsDoNotGrowWithoutLifecycleTriage' test -B
+```
+
+It ran **3 cases: 2 passes, 1 failure, 0 errors/skips**, waiting 66 seconds and
+reporting 28.129 seconds Maven execution. The no-manager bootstrap contract and
+ambient-setup guard passed. The retirement fixture still omitted the separate
+S2 post-camera placement phase: `ObjectManager.objectUnloadCameraX()` reads the
+previous `postCameraPlacementUpdate()` latch, which remained zero after reset.
+The corrected fixture now publishes that phase before the next object pass,
+including on camera return. The two new fixture faults and this omitted phase
+are not attributed to the production admission gap. This retry's qualification
+source SHA-256 was
+`df5e1cf4eec0a8cf495e438cbf03ce664f275d53865b8d644bf4d19bb621439f`.
+
+The final corrected retirement command was:
+
+```bash
+"${qualification_maven[@]}" '-Dtest=TestS2SidewaysPformAdmissionQualification#admittedPairRetiresAndReleasesRememberFlagAndSlots' test -B
+```
+
+It passed **1 case, 0 failures/errors/skips**, with an 18-second queue wait and
+27.929 seconds Maven execution. It confirms pair removal from the live graph,
+child retirement, unremembered placement, exact parent/child SST reuse and a
+second child submission attempt on camera return. That last assertion alone did
+not establish fresh live admission, registration, reciprocal links or successful
+capture after return; the follow-up below addresses that evidence limit.
+The original qualification source SHA-256 is
+`9ff7263ac4267de9642ab052b835fbc2a0f4903e934fe3c6a76a654f00ddac52`.
+Only that corrected method changed after the preceding retry. The nine
+unchanged pressure cases and 23 existing passes are not repeated as a ceremony.
+The deliberately red diagnostic method is removed, and the retained
+qualification class explicitly labels its rejected-child assertions as an open
+capture gap rather than repaired behavior. The different command results above
+are separate completed runs, not one green combined run. Waiting and Maven
+execution intervals are separate; other delivery time is unmeasured.
+
+Final disposition: **qualified capture gap; production unchanged; native fixed
+slot ownership deferred**. All ten dynamic-add bridges remain **QUALIFIED
+RETAIN**, count one each. The 119-record frozen store, six ambient setup keys,
+package permissions, descriptor, API version/pins, allocator and strict codecs
+are unchanged. The next owner must account for both empty and live fixed
+`Tails_Tails` SST states, the failed allocation's link/boundary/offset writes,
+and paired deletion/respawn release before choosing an admissible Java link
+representation and reversible capture/restore behavior. No representation or
+broader framework is selected here, and no null/self substitute is justified by
+this branch.
+
+Coverage is bounded logic qualification with a real S2 manager, SST allocator,
+identity registry, reconstructible pressure occupants and strict compact
+snapshots. It is not an emulator/ROM execution, full act/trace sweep, player
+collision or art validation, arbitrary roster/donor/viewport certification,
+out-of-cursor dispatch probe, full guards or smoke-suite result. Pressure uses
+the 320-pixel viewport; the unchanged graph class separately checks endpoint
+buckets at widths 320/528/800. Failed exhausted-tail capture prevents a fresh
+restore of the exhausted case; it is explicitly not certified by the successful
+pair restores. The existing level-route/matrix gaps remain inherited.
+
+All own XML case identities, properties and failure/error/skip elements were
+inspected and consumed after each run; no logs, pass caches or validation
+receipts are retained. The new citation ranges were checked against the pinned
+Git objects, and documentation fences/links and `git diff --check` are checked
+before the local evidence commit. No push, integration or worktree removal is
+part of this slice. The parent owns combined delivery and final guards.
+
+### Sideways qualification assertion and open-ledger follow-up
+
+This implementation follow-up preserves local commit
+`f350a9007b85bfcdd6f5b94b192f3c0eeaa20882` and its history on the same owned
+branch/worktree. Accepted review found two assertion limits and an absent
+canonical open-bug entry. The original pressure matcher accepted a generic
+missing-reference substring, so another failing owner/field could satisfy it;
+the original return check counted a pre-admission attempt rather than proving
+a fresh live pair. The earlier golden red's inspected XML remains actual
+`SidewaysPformObjectInstance#linkedPlatform` evidence, while the weaker retained
+assertions are not retroactively described as having enforced that context.
+
+The pressure cases now compare the actual exception's complete field and
+parent context: exact `SidewaysPformObjectInstance#linkedPlatform`, owner class,
+registered parent ID, actual SST slot and current spawn. They also match the
+missing reference to this particular rejected child and its underlying cause.
+An unrelated field, parent, slot or missing target cannot satisfy the equality;
+no production message or strict codec is changed.
+
+The return check now requires new parent and child instances, both live in the
+manager, reciprocal links, distinct newly registered IDs resolving to those
+same instances, the next actual free SSTs after the two reused slots, absence of
+the retired objects from the identity table, and successful strict capture.
+Both genuine pressure occupants must remain live at the original reclaimed
+SSTs with their unchanged registered IDs. The attempt counter is described as
+an attempt, and the manager must contain exactly those four objects. No slot
+reservation, occupant removal or fabricated capacity is added to make this
+claim pass.
+
+The [canonical open-bug ledger](../../status/known-bugs.md#s2-sideways-platform-allocation-and-strict-rewind-gap)
+now records the unrepaired allocation/strict-rewind gap and links the retained
+qualification. Removal requires native empty/live fixed-Tails state, failed
+pointer/boundary/offset writes, paired deletion/respawn release, and reversible
+strict capture/restore to be resolved. The intentional-discrepancy ledger and
+release notes remain unchanged. The documentation checklist and hook mapping
+were inspected: `Known-Discrepancies` maps only to the unchanged intentional
+ledger, so its required policy value remains `n/a`.
+
+Affected validation ran with the same verified environment and command
+prefix above, using only the nine pressure cases and retirement method:
+
+```bash
+"${qualification_maven[@]}" '-Dtest=TestS2SidewaysPformAdmissionQualification#characterizeRealAdmissionAndFreshReplay+admittedPairRetiresAndReleasesRememberFlagAndSlots' test -B
+```
+
+The tested input was `f350a9007` plus this qualification patch, SHA-256
+`bd74251920c88045988c603f961e3152792b0dbac74aa21b56782c87c2762850`;
+the ledger/audit prose also differed. The completed run passed **10 cases,
+0 failures, 0 errors, 0 skips**: all nine parameterized pressure cases and the
+retirement/return case. It waited 811 seconds for shared admission; Maven
+reported 29.546 seconds execution. These intervals are separate; other work
+time is unmeasured. XML inspection confirmed each exact case identity, all
+failure/error/skip elements, Java `25.0.5.0.2`, `mse=off`, the exact selector
+and this task's working directory. The reports were then consumed.
+
+The failed-admission cases now establish the exact field, owning parent
+ID/SST/spawn and rejected target from the actual capture exception. Under this
+same fixture, camera return establishes a fresh live reciprocal parent/child
+pair with fresh identities, registered instances, the next free real SSTs and
+successful capture while both reused-SST pressure occupants remain present.
+The earlier attempt-only claim is therefore replaced with this narrower,
+discriminating runtime proof. The open exhausted-tail capture gap remains
+unrepaired, and the existing native fixed-Tails/modeling and broader coverage
+limits above remain in force.
+
+No production or scanner-obligation change requires another guard or an
+unchanged existing multi-class run. Protected production/resource/tool/policy
+paths are byte-identical to `f350a9007`: the production blob remains
+`583a6d6822d4f50f6f9bb6e15b6fcd4808cbd02e`, all ten bridges stay count one,
+the frozen store stays 119, and pins/package permissions are unchanged.
+New ledger/test/audit links, heading anchors, shell snippets, Markdown fences
+and `git diff --check` pass. Only documentation changed after this run.
+This follow-up creates a new local commit; no history rewrite, production
+change, integration, push, broad/full suite, subdelegation or worktree removal
+is part of it. The parent owns any fresh review and future composition.
+
+### Fixed-tail storage and lifetime grounding; candidate remains gated
+
+This records the subsequent read-only research, without implementing a state
+owner or running a probe. Its Java basis was composed
+`fc520ae0b4a41b42903b6ad5a40247ef0ebd329e`, compared with main
+`97eb86f186b432722024ca419a00b901b38f5ec2`. The relevant object-slot, tail,
+snapshot and publication sources are unchanged in the documentation base
+`0396a458181a0ca654846f8c82ac7a412ffa3cd5`; the owned branch fast-forwards there
+from accepted `190220882f6b0a32f7f32c236d31df23baee882f` before this prose edit.
+The native evidence below is exclusively the recorded S2 Git object
+`34fc7f130a96db171e1a1c43e28e0bad81cd6ca7`, with shipped `fixBugs = 0`.
+Reference working trees were not reset or updated. Earlier Java qualification
+results above remain historical observations; this research adds no runtime pass.
+
+**Source evidence: storage writes and actual consumers.** The important alias
+is established by offsets, not similar field names: `parent = objoff_3E`
+(s2.constants.asm:73-76), whereas Obj7A writes a longword at `$3C`.
+
+| Native boundary | Reads, writes and consequence |
+| --- | --- |
+| `Obj7A_LoadSubObject` (s2.asm:56321-56327), first entered with `a1=a0` | Parent mappings/art, render flags, priority, width and original X at `$30` are initialized. The failed allocation skips that initialization for the target, and also skips its ID/routine and X/Y copies in `Obj7A_SubObjectLoop` (s2.asm:56313-56319). It does not create an Obj7A at the fixed tail address. |
+| `Obj7A_SubObjectLoop_End` (s2.asm:56329-56351) | Writes the parent address to target `$3C..$3F`, thereby replacing the target's `$3E` parent word; writes the target address to parent `$3C`; writes minimum/maximum words to both `$32/$34`; sets parent `$36` only for subtype `$0C`; adds the parent X offset and adds the child offset to the target's **existing** X word at `$08`. The target X fraction is untouched. Target ID, routine, art/mappings, render flags, priority, width, original-X word, direction and other residue are not initialized by this failure tail. |
+| `Obj7A_Main` / `loc_294F4` (s2.asm:56353-56424) | Parent movement consumes its X, direction and boundaries, writes X/direction, then calls the existing platform-contact routine. `PlatformObject` (s2.asm:35728-35762) and `RideObject_SetRide` (s2.asm:35986-36040) maintain standing/status and player contact state; that status is also readable through the redirected tail parent. Endpoint retirement reads bounds and the coarse camera. |
+| `Obj05_Main` (s2.asm:41723-41764) | Reads the overwritten parent word, then copies that storage's angle, status and X/Y; reads its art priority and animation. FixBugs=0 uses the parent's bare pushing-status bit. Its own previous-parent-animation byte is `$30`, established by `Obj05_parent_prev_anim` (s2.asm:41710), **not** the written `$32/$34` words. Thus a live tail can follow the platform rather than the original playable. |
+| `Tails_Animate_Part2` (s2.asm:41271-41332), `TAnim_GetTailFrame` (s2.asm:41484-41514) | Tail animation consumes/mutates its own animation, previous animation, frame, duration, mapping frame, status and render flips. The directional branch additionally reads X/Y velocity through the redirected parent. `LoadTailsTailsDynPLC` (s2.asm:41637-41650) consumes the resulting mapping frame and updates the separate global `TailsTails_LastLoadedDPLC`; `DisplaySprite` then consumes tail presentation state. The global DPLC cache is outside the 64-byte tail SST. |
+| `loc_294C4` (s2.asm:56374-56387), `DeleteObject2` (s2.asm:30334-30345) | Unless the link equals the parent itself, clear the entire **current pointed-to slot**, then release the parent's respawn flag and delete the parent. This is physical-storage deletion, not deletion of a remembered Java incarnation. |
+
+**Source-derived cadence and lifetime, not emulator observations.**
+`RunObjects` / `RunObject` (s2.asm:29805-29846) walks the full level-only range
+after dynamic slots and skips an ID-zero entry; its dead-player path separately
+pauses dynamics while still processing level-only objects
+(`RunObjectsWhenPlayerIsDead`, s2.asm:29854-29860). An empty fixed target does
+not execute Obj05, but the failure's writes remain in storage. An active target
+executes later in the same normal walk and can consume the overwritten parent.
+Its copied X can overwrite the earlier child-offset addition at that later
+dispatch. Empty identity must not be treated as proof of zero storage.
+
+Later `Obj02_Init_Continued` (s2.asm:38934-38946) writes the tail ID and parent
+word; it does not clear the whole target. `Obj05_Init` (s2.asm:41713-41720)
+initializes its ordinary header without erasing all the unwanted words. The
+direct gameplay `Tails_Tails` stores found in the pinned source install ID/parent
+at that player-init boundary, rather than reinstalling them every normal player
+tick. In contrast, `Level_ClrRam` (s2.asm:4806-4808) clears both object and
+level-only storage. A Java manager rebuild alone does not establish which native
+clearing boundary occurred.
+
+Two failed parents can retain the same physical target. The later write controls
+the tail's parent, but either platform's later retirement can clear the target.
+If that fixed slot is reinstalled, an older platform link still points to its
+current storage. An `ObjectRefId` for an earlier occupant would express a
+different lifetime. The separate DPLC cache must follow its own native writes;
+clearing the tail SST does not by itself establish a cache reset. These are
+control-flow consequences; their reached runtime states and presentation effects
+remain unobserved natively.
+
+**Existing Java models do not yet close that storage boundary.**
+`NativeSstState` is a ten-component live-field projection, without integer X/Y,
+ID/routine, the parent address or complete `$30..$3F` residue.
+`NativeSstSlotAccess.currentOwner` searches live managed objects.
+`ObjectNativeSstOverwrite` preserves a projection during code-owner replacement;
+its exhausted choice is the last dynamic slot, whereas this after-current failure
+targets the following fixed slot. Its sole production `createUnchecked` caller
+is `EndingIslandLiftObjectInstance`. Reusing that operation unchanged would
+model the wrong allocation failure. S2's `ObjectSlotLayout` processes 128 slots
+in the object manager; `SpriteManager` separately dispatches native tail support
+after the dynamic walk. The allocator bitset and `ObjectManagerSnapshot` owned
+inventory are not retained empty-SST bytes.
+
+`TailsTailsController` instead holds a final `AbstractPlayableSprite` parent,
+renderer and art-decision capability, plus seven animation-state values. Update
+reads that playable; drawing uses its render centre. Neither its snapshot nor
+the player aggregate records native tail ID/routine, aliasable parent storage,
+dormant residue or physical deletion/reinstallation. Codec scratch buffers,
+render scratch, `LockOnAddressSpace` ROM readers and decompression destination
+constants are not object-RAM owners. The candidate therefore needs actual owned
+state; replacing a Java reference with an integer or an opaque handle alone
+would conceal the gap.
+
+**Known direct census and proposed owner scope.** The source census found eight
+tail construction sites in seven files: `LevelPlayableArtInitializer` (two
+paths), `S3kSlotPlayerArt`, `S3kSlotBonusStageRuntime`,
+`EndingNativePlayerBinding`, `NativePlayerArtBindings`, `PlayablePuppet` and
+`StageplayNativeCast`. The remaining direct symbol files are
+`TailsTailsController`, `SpriteManager`, `PlayableSpriteController`,
+`AbstractPlayableSprite`, `PerObjectRewindSnapshot`, `Tails`, `LocalPlayerLook`,
+`StageplayLiveWorld` and `ModApiSignatureSurface`: 16 production files including
+the declaration/API inventory. Four directly name the tail rewind-state type:
+the two native-art bindings, playable controller and per-object snapshot.
+Late-dispatch callers additionally include `LevelFrameStep`,
+`RecordingFrameDriver`, `TraceReplayFixture` and the S3K initial fixed-slot
+dispatcher. Sideways has its registry factory, private child constructor,
+recreate path, raw anchored admission and reconstruction registration; its exact
+link policy remains in `DefaultObjectRewindPolicies` with strict reference codecs.
+
+The existing native-slot bridge has six production clients besides its own
+declaration: ending island lift, ending flight child, ending rescue director,
+AIZ flare child, SSZ arrival controller and Monkey Dude arm. It occurs in 24
+test files; the tail-controller symbol occurs in 16 test files. These lexical
+direct censuses do not close every native writer, public caller, reflective
+creator or transitive reused-slot consumer. No global RAM completeness is claimed.
+
+The concrete candidate is a **per-manager native fixed-tail storage owner with
+explicit controller binding**, gated before implementation. It must own complete
+target storage in empty and live states, with immutable semantic layout metadata;
+Obj7A writes, Obj05 execution, presentation, deletion and capture must alias that
+same state. Native address values would resolve complete owned storage in the
+same manager/timeline, independently of the current code incarnation. Unknown
+ordinary Java references must still fail strictly. A foreign/stale storage
+reference must not silently resolve in another manager merely because its
+numeric address is equal.
+
+The bounded change budget would cover new storage/layout/binding code plus
+`ObjectManager`, `ObjectManagerSnapshot`, `NativeSstSlotAccess`,
+`Sonic2ObjectRegistry`, `SidewaysPformObjectInstance` and its captured-field
+contract; `LevelManager`, `GameplayModeContext`, `SpriteManager` and
+`LevelFrameStep`; and the controller/factory/presentation/snapshot census above.
+This is more than a Sideways-only edit. Its benefit is one real authority for
+presence, parent alias, unwanted writes, deletion and restoration. If closing
+the parent view requires arbitrary additional SST-owner projections, the bounded
+candidate ends and the parent must explicitly assess that broader scope.
+
+Construction/art refresh must remain distinct from native incarnation admission:
+rebuilding a controller or renderer must not resurrect a physically deleted tail.
+The snapshot design must name a single authoritative state owner across player,
+controller, native-art and object-manager snapshots, including destructive
+restore ordering and controller swaps; the current seven-value record does not
+decide that policy. Standalone/donor controllers and extra team tails must not all
+be bound to the one native physical target. Shared code selects semantic layout
+capabilities, without game/zone branches or service locators inside objects.
+
+`DefaultObjectServices.objectManager()` follows the level's current manager,
+so that lookup alone cannot validate a reference retained across a rebuild.
+Independent managers/worlds, even with the same module and address values, need
+disjoint mutable storage and explicit verified reset/transfer rules. Any module
+publication must respect accepted `b5371e7130ea7e97da879085ce5b1e0aa064ee97`:
+stable native publication ownership, lineage anchored to the actual root, exact
+incarnation admission and canonical plus selected reservation. A shared module
+publication is not permission to share per-manager RAM. Supported
+`ObjectServices`, `AbstractObjectInstance`, `ObjectManager`/helper and controller
+signatures/reachable snapshot types require an explicit compatibility decision;
+no new annotation/exclusion or silent pin change is justified. **Prediction
+only:** target frozen delta zero, all ten bridges retained count one, store 119
+unchanged. That is not a verified API/package-closure result.
+
+Two viable alternatives remain explicit. A real fixed-slot Obj05 dispatch owner
+could reuse object recreation/identity machinery for active code while retaining
+inactive storage separately. It would require semantic processing-range support,
+removal of duplicate late dispatch, and the same controller/render/rewind caller
+closure; an artificial live object in an empty slot would not suffice. Qualified
+retention is the recommended immediate choice: keep the open bug and accepted
+qualification, then establish the missing native storage/consumer evidence. The
+recommendation rests on incomplete authoritative state, not high cost or an
+inability to remove another allowance.
+
+**Proposed probe and checks; not executed or launched.** The smallest useful
+native probe reuses one controlled pressure setup, with empty and already-active
+fixed-tail variants. Observe complete parent/target bytes at allocator return,
+after Obj7A writes, at fixed-tail dispatch and after retirement; observe the
+actual parent-word resolution, animation/frame/render state, DPLC cache/request
+effects and a later real tail installation. A two-failed-parent variant
+discriminates physical aliasing from incarnation identity. Record pre-entry
+residue rather than assuming unwritten fields are zero. Do not hydrate engine
+gameplay from those observations. This closes specific unknowns: live consumer
+effects, dormant residue, installation/deletion cadence and whether the proposed
+finite storage boundary is closed.
+
+Only after that gate would focused implementation checks cover independent
+managers/worlds; empty/live/reinstalled targets and multiple aliases; parent-last
+and free-earlier/no-free-later pressure; higher-slot same-pass motion;
+constructor/service/admission order and no retry; pair deletion, respawn/remember
+state and occupied-slot reuse; destructive restore/replay across writes,
+dispatch and retirement; strict foreign/stale-address and unmanaged-reference
+negatives; and tail animation, donor banks, rendering/controller swaps and
+snapshot restoration. The retained Sideways qualification/graph/schema tests,
+child-slot/strict-reference/reconstruction tests, tail dispatch/pose/directional/
+flight/rendering tests, donor-art tests and bonus/ending/Stageplay consumers are
+maintained obligations, not newly executed validation. The
+[canonical open bug](../../status/known-bugs.md#s2-sideways-platform-allocation-and-strict-rewind-gap)
+stays open. Existing continuation/audit artifacts would hold any future evidence;
+this documentation follow-up creates no probe, runtime policy or new report type.
+
+Documentation verification used
+`python3 tools/disasm/disasm_citations.py check --strict --limit 12 docs/architecture/audits/2026-10-24-rewind-disposition-review.md`.
+The executable check passed using pinned Git objects: whole-file counts were
+32 anchored and 16 unverifiable citations, with no hard/stale findings. Of the
+19 new citations, 17 were anchored; the two constant assignments (`parent` and
+`Obj05_parent_prev_anim`) are outside the checker's colon-label parser and were
+verified directly against their pinned Git-object definitions. All 19 new
+ranges were also checked directly. New Markdown structure and the canonical
+bug link/anchor, source consistency against the stated Java revisions, and
+`git diff --check` are checked before the documentation commit. No optional
+checkout repair, Maven/test command, target/job access or emulator run is needed
+or performed. Code, tests, the open-bug entry, stores, permissions and pins stay
+byte-identical to the documentation base. No integration, push or worktree
+removal is part of this follow-up.
+
+### Bounded native fixed-tail pressure observation
+
+This reference-research follow-up starts from accepted
+`c008b4d209f7e3a7b930f243f075c9837d970729` (tree
+`0cf220b04b2dda46f3e26224863dfa91f5c6479b`). It does not implement the storage
+candidate. The [probe and launch instructions](../../../tools/bizhawk/README.md#s2-fixed-tail-pressure-diagnostic)
+preserve the finite experiment; raw observations/builds stay in the owned
+external task root `s2-fixed-tail-native-pressure-20261024`. Main, foreign
+validation trees and dirty optional checkouts are not modified or built in.
+
+**Runtime and build authority.** TraceChaser source is exported from Git object
+`322851cbfa2e1c1803332142e11ab74b4eb34eea` into that root, including the existing
+native-headless owner. S2 source is read only from pinned Git object
+`34fc7f130a96db171e1a1c43e28e0bad81cd6ca7`. The original S2 REV01 ROM is read
+by absolute path without copying/linking it; SHA-1 is
+`8bca5dcef1af3e00098666fd892dc1c2a76333f9`. The explicit existing Linux
+installation under `MAIN_CHECKOUT/docs/BizHawk-2.11-linux-x64` passes the
+unmodified installation preflight: exact **2.11.0.0**, **30 Lua capabilities**.
+Static Assembly metadata independently reports 2.11.0.0 for all seven
+versioned files. No display is needed; child DISPLAY/WAYLAND_DISPLAY/XAUTHORITY
+are removed and ordinary host advancement disables video/sound rendering.
+
+The user Linux archive SHA-256 is
+`9a018fd85b3824f121d962de82a954bee045acf4adddecd903e72174f4effe8c`, different
+from installer-lock `cdaf9650d880bae660d63a388430f630b8d8a96b1ba59ebf0e0195a645c3bab8`.
+The installed Common DLL is
+`438a49d6a45d9fcac17016240ae205d1af7a4632865f6f70468b684b82323f33`, different
+from native source-lock stock `f20cd009f6f5b0a95bd47b66c48dc8de85afcd7ae0cc6aab3486baf55f501fb4`.
+Installed cores, compressed GPGX and native loader do match their recorded stock
+hashes (`0144e6e2…`, `c4231296…`, `d2367818…`). These are separate compatibility
+and provenance facts: the archive is not lock-verified, no installer/lock is
+relaxed, and neither archive nor installation is rewritten. Existing main host
+binaries are not assumed to match source or used. Pinned `build.sh` builds the
+host externally with the locked Roslyn compiler; xbuild emits its existing
+v4.8 toolset warnings but exits zero. Its test assembly is compiled by that
+script, with no test execution.
+
+**Declared setup and finite coverage.** The pre-execution `setup-manifest.json`
+and source hash define six cases: empty/live/reinstall, each with the last
+dynamic slot or final two dynamic slots. `RunObject` (s2.asm:29832-29846) is
+hooked before the selected slot's ID read, after the Sidekick's dispatch. Setup
+requires native CPZ2/unlocked gameplay, a live initialized Sidekick/tail and
+ID-empty selected parent slots. Each parent SST is cleared once and given
+ID `$7A`, subtype `$06`, routine zero, original X = camera X + `$A8` (second
+parent + `$80`) and Y = camera Y + `$200`. This uses
+`Obj7A_Properties` / `Obj7A_Init` (s2.asm:56281-56310); native initialization
+then applies the actual property offsets/bounds. Parent remember indices
+`$BC/$BD` use initially-clear bits within the respawn-data array; setup sets
+those bits once. These synthetic indices establish native bit release, not
+placement-loader admission or a natural remembered respawn route.
+
+Empty/reinstall cases clear all 64 fixed-tail bytes once. Reinstall cases also
+declare one Sidekick routine-byte reset after its dispatch. Subsequent
+`Obj02_Init_Continued` (s2.asm:38934-38952) installation stores, all Obj7A/Obj05
+writes and retirement are native execution. The separate DPLC cache and DMA
+queue are never initialized by setup. Every setup byte write records old/new
+values; complete pre-entry residue is retained in the observations. This skips
+the route/placement sequence to the constructed platforms and natural Sidekick
+death/respawn. It supplies no authoritative engine input or canonical fixture.
+
+The original CPZ2 BK2 and its SyncSettings drive fresh cores from power-on.
+Ingress is limited to 11,000 input rows; observation to 360 frames after setup;
+each process to 180 seconds. Eighteen instruction hooks verify literal ROM
+bytes before registration. They sample allocator return and Z/A1/caller;
+post-failure pointer/bounds/X writes; ID-zero/live fixed walks; actual Obj05
+parent copies/animation and separate DPLC/DMA decisions; native installation;
+and current-physical-target deletion, full-slot clearing and remember release.
+Positive counts, byte effects and frame continuity are checked; unmet required
+events are incomplete coverage. The finite window is not extended or corrected
+in flight to obtain expected outcomes.
+
+Compilation/preflight retain `worktree_build_slot` plus shared
+`build_activity_slot` through compiler children. Both release before ordinary
+`maven_slot(kind='native:s2-fixed-tail-pressure', estimate=600)` admission, with
+default conservative reservations and inherited leases through sequential Mono
+children. No performance lane, priority override, Maven engine tests or trace
+campaign is used. Exact argv and separated preparation/admission/execution
+timings belong to the external preparation/host records.
+
+**Observed native result, not source inference.** Run
+`run-20261024T160307Z` completed all six cases with process exit zero, case and
+host `execution_status=completed`, no unmet assertions and no launch-log error,
+exception or warning. Each setup occurs at original input row **8791** and ends
+at **9151**, with 361 contiguous frame-end observations (the setup frame plus
+360 following frames), 361 actual fixed-slot walks and unbroken event sequences.
+Callbacks on row 8791 report 8790 as the host's previously completed frame;
+that row's frame-end record reports 8791. Input row, callback boundary and
+completed-frame identity are kept distinct.
+
+| Case | Exhausted parents / confirmed clears | Obj05 main / redirected copies | Native installs / Obj05 init | Tail DMA requests / accepted | Retirement input rows |
+| --- | --- | --- | --- | --- | --- |
+| live-last | 1 / 1 | 153 / 153 | 0 / 0 | 0 / 0 | 8944 |
+| empty-last | 1 / 1 | 0 / 0 | 0 / 0 | 0 / 0 | 8944 |
+| reinstall-last | 1 / 1 | 152 / 0 | 1 / 1 | 16 / 16 | 8944 |
+| live-two | 2 / 2 | 153 / 153 | 0 / 0 | 0 / 0 | 8944, 8965 |
+| empty-two | 2 / 2 | 0 / 0 | 0 / 0 | 0 / 0 | 8944, 8965 |
+| reinstall-two | 2 / 2 | 152 / 0 | 1 / 1 | 16 / 16 | 8944, 8965 |
+
+All **nine** allocation returns have PC `$18014`, A1 `$FFFFD000`, SR `$2300`
+(Z clear) and caller `$2940C`. Only parent-self initialization reaches
+`Obj7A_LoadSubObject`; no rejected child is initialized. Complete target-byte
+comparisons preserve every byte outside X-word `$08/$09`, bounds `$32..$35`
+and reciprocal pointer `$3C..$3F`. Empty targets remain ID zero while retaining
+the unwanted bounds, X offset and parent pointer. Both parents in two-parent
+cases point at `$FFFFD000`; target parent changes `$CF80` then `$CFC0` in that
+same pass. A live target first executes against `$CFC0` on row 8791. Its X word
+becomes `$FFF9` (single) or `$0079` (two), copied from the moved parent and
+replacing the earlier target-offset result. Angle/status copies also match the
+actual resolved parent bytes. This observes the `$3C` longword overwriting the
+real `$3E` parent alias, rather than inferring an alias from a field name.
+
+Empty cases have **361 ID-zero walks and zero Obj05 executions**. Reinstall
+cases are initially skipped, then the separately declared trigger reaches real
+`Obj02_Init_Continued` on row **8792**. At completed installation, only target
+ID and parent-word bytes differ from its install-entry snapshot; the unwanted
+`$32/$34` bounds, upper `$3C` word and X residue remain until their actual later
+consumers. Parent word is now `$B040`, followed by one genuine Obj05 init. At
+row 8944, the older platform's `DeleteObject2` sees **current ID05, parent
+$B040**, then clears that entire physical SST and releases its own remember bit.
+In `live-two`, the first platform instead deletes the tail whose parent is the
+second platform `$CFC0`; at row 8965 that second platform clears the same,
+already-empty storage. Parent SSTs are also fully cleared and both synthetic
+remember bits released. This is physical-address lifetime, not retained occupant
+identity.
+
+Animation/DPLC observations are independent of the pair links. Live cases run
+153 DPLC decisions each, with mapping frame/cache zero and advancing animation
+duration; **zero** DMA requests match that cache-hit branch. Reinstall cases run
+152 decisions each, visit 15 mapping/cache values and generate 16 requests each.
+Read-only decoding of the **original ROM** `MapRUnc_Tails` descriptors checks
+all **610** observed decisions and all 32 source/destination/length tuples;
+each accepted queue call advances its pointer by 14 bytes. No decision is left
+open. The first inspection incorrectly compared all 32 bits of D2; the ROM
+consumer uses D2.w/D3.w, so inspection was corrected to those widths while raw
+register capture stays unchanged. No setup or native output was changed, and
+no native case was rejected, retried or extended to obtain these results.
+
+**Commands, fingerprints and limits.** With absolute `MAIN_CHECKOUT`, original
+`S2_ROM`, explicit `BIZHAWK_HOME` and the owned `TASK_ROOT`, the executed run is:
+
+```bash
+python3 -B tools/bizhawk/run_s2_fixed_tail_pressure.py --phase run \
+  --task-root "$TASK_ROOT" --bizhawk-home "$BIZHAWK_HOME" \
+  --rom "$S2_ROM" --movie "$MAIN_CHECKOUT/src/test/resources/traces/s2/cpz2/s2-lvl-select-CPZ.bk2"
+```
+
+Initial preparation invoked the staged, unmodified
+`bizhawk/preflight_bizhawk_2_11.sh --bizhawk-home "$BIZHAWK_HOME"` and
+`bizhawk-headless/build.sh` under the two build leases, then the exact Roslyn
+compile argv now retained in the launcher's `prepare` phase. External
+`prepare.json` records every original argv. Preflight took **0.123 s**, pinned
+host build **2.234 s**, and probe compilation **0.635 s**; each associated lease
+wait was below 0.002 s. Native admission waited **570.163 s** separately from
+**26.589 s** sequential execution (individual Mono processes 4.37–4.47 s).
+These are process/preparation timings, not isolated CPU or frame-cost measures.
+
+| Input / executed artifact | SHA-256 |
+| --- | --- |
+| Original CPZ2 BK2, including original SyncSettings | `7e28cf822d5dbbe64646965cd857f264bf51d3349075af94db1a818cac7311e4` |
+| Fresh pinned host executable | `2a919f1ccdb1b218b05a7d9fd3b92e96a3323c4b46b78415c49b4d708f3cff0e` |
+| Executed probe executable | `8dc21cf225d4220784f1257c9f290a86f1212f9182c7a966033070ecc787e77a` |
+| Executed/final C# probe source | `84ddbac1930bfb7784cbc86bd8a91c26c3f85b39966051fd47776a593d329e92` |
+| Launcher used for native execution | `d13a3360a3cf5c220deae66acc643eb5e5a0b3fb0f88376f56ca3a28114ace48` |
+| Retained launcher after read-only completion/DPLC validation | `789b121a50ff6dd800ba1e42da197331186c2281f5db7da8f4f91ad3d85dcea5` |
+
+The retained launcher adds explicit required-output/hash/sequence/caller checks,
+the ROM-descriptor comparison and failure/timeout reporting. Its
+`verify_output` was exercised against **each existing case**, with no additional
+native execution or C# change; the final prepare/run CLI pair as one invocation
+is not claimed newly executed. All six observation hashes match their original
+case summaries; per-case full hashes, setup writes, complete slot/register
+records and runtime hashes remain under that external run. Final Python AST,
+CLI help, links, literal hook-opcode and pinned native citation checks accompany
+`git diff --check`; no Maven engine tests or broader native campaign is run.
+The final citation check reports **35 anchored, 16 unverifiable historical/source
+references**, with no hard/stale finding; new native ranges are also read
+directly from the recorded Git object. Post-run hashes confirm both user
+archives and all four fingerprinted runtime inputs unchanged. The original
+movie also matches its committed Git blob. All process/queue handles are terminal.
+
+The preceding source-only statements of unobserved behavior describe the c008
+checkpoint; this run supersedes them **only for this declared setup**. Native
+failed writes, live consumption, later installation and physical alias deletion
+are now reached evidence. Natural pressure/placement-loader admission and
+respawn, arbitrary dormant residue, destructive engine rewind and general
+controller/manager lifetime remain outside this native probe. The DPLC cache
+is zero at retirement in these cases, so survival of a **nonzero** cache across
+that boundary remains source-only. There is no framebuffer/pixel acceptance.
+The Java strict-capture gap stays open; per-manager complete storage, real
+consumer binding, capture/reset authority and public caller compatibility remain
+the next owner's obligations. No null/self substitute or codec tolerance is
+justified. Production blob `583a6d6822d4f50f6f9bb6e15b6fcd4808cbd02e`, all ten
+count-one bridges, 119 store records, tests, APIs, pins and the known-bug entry
+remain unchanged. No storage-owner implementation begins here.
+
+### Launcher runtime binding and compiler ownership follow-up
+
+Independent review accepted the six native cases above but found two launcher
+failure paths at `41131c29fbc3718d67ed40a4195b3f01a64f270a` (tree
+`a1fc67111533143b3dbad2fb711ebff86943f9c2`). Source inspection confirmed both:
+`run` checked prepared probe/host hashes without checking its newly selected
+installation, and `subprocess.run(timeout=...)` could kill only the immediate
+build shell while compiler descendants retained execution and inherited leases.
+Neither finding invalidates the successful recorded run, and no compiler orphan
+was observed from that run. This bounded follow-up leaves that base/history,
+the C# probe and every engine/Java/API/store/guard byte intact; no upstream merge
+or rebase participates.
+
+Preparation now fingerprints the canonical selected installation, all required
+strict-preflight files, every file under its DLL tree and potentially shadowing
+staged dependencies. `run` compares that binding and repeats the **unmodified**
+explicit-installation preflight under worktree/build-activity leases before
+requesting native admission. Those leases release before ordinary admission;
+the binding is checked again after waiting and after execution. Changed or
+different selected installations, changed/added DLLs, changed staged dependencies
+and failed preflight cannot obtain native execution. A legacy preparation record
+without the binding requires a new owned preparation directory; accepted old
+observations are preserved, rather than retroactively given new launch authority.
+The actual installation records **125 files**, with no staged dependency DLLs
+in this build. Installer locks/version/capability checks are not edited or relaxed.
+
+Every command now starts in an owned session/process group. The existing
+`category_artifacts.stop_process_tree` supplies TERM/KILL escalation and leader
+wait; a scoped Linux child subreaper adopts orphaned compiler descendants and
+`waitpid` reaps only that owned group before `command` returns or unwinds. SIGINT
+and SIGTERM are masked only during cleanup, then restored. The same cleanup
+also covers a successful parent that leaves helpers. There is no process/queue
+sweep or foreign-group kill. The caller retains both build leases throughout
+cleanup, and inherited descriptors stay with compiler children until they exit.
+
+Focused command:
+
+```bash
+python3 -B tools/bizhawk/test_s2_fixed_tail_pressure.py -v
+```
+
+The final **11 cases pass in 1.174 s**, with no skips. Exact IDs in
+`test_s2_fixed_tail_pressure.py` are:
+
+| Class | Case IDs |
+| --- | --- |
+| `RuntimeBindingTests` | `test_matching_runtime_revalidates_before_admission`; `test_different_selected_installation_rejected_before_admission`; `test_changed_installation_dependency_rejected_before_admission`; `test_new_installation_dependency_rejected_before_admission`; `test_changed_staged_dependency_rejected_before_admission`; `test_failed_strict_preflight_rejected_before_admission`; `test_runtime_change_while_queued_rejected_before_native`; `test_fresh_prepare_does_not_inject_absent_mono_search_directory` |
+| `OwnedCompilerCleanupTests` | `test_timeout_reaps_descendants_before_build_leases_release`; `test_cancellation_reaps_descendants_before_build_leases_release`; `test_successful_parent_cannot_leave_compiler_descendants` |
+
+Runtime controls exercise launcher ordering and rejection before admission or
+native launch. Process controls use harmless, owned Python compiler-like trees,
+including a grandchild that ignores TERM. Real timeout and SIGTERM cancellation,
+plus normal parent exit, establish that both parent/grandchild PIDs are gone and
+the owned group is reaped **while both fixture lease locks remain held**. A
+separate owned peer group remains alive as the negative kill-scope control.
+Fixture cleanup itself adopts/reaps only these known groups if an assertion
+fails. The first test fixture omitted two files used by legacy provenance
+serialization; completing that fixture fixed its two setup errors without
+changing product expectations.
+
+**Complete supported path, one native case.** The first fresh preparation under
+the external task root's `launcher-followup` stopped before host compilation:
+its nonexistent future host directory in `MONO_PATH` made Mono print a warning
+alongside the otherwise correct compiler version, correctly failing the pinned
+exact-version check. This was another previously unexecuted fresh-path launcher
+issue, not a native observation or a reason to relax that check. Preparation now
+uses only the existing runtime DLL directory in `MONO_PATH`; `run` adds the built
+host directory. The focused fresh-prepare control covers this correction. The
+failed preparation records/logs remain external and no native job ran from it.
+
+An absent, separately owned `launcher-followup-supported` directory then
+exercised the actual final prepare/run CLI pair, with the same verified original
+ROM/movie and exactly **one** `reinstall-two` case:
+
+```bash
+python3 -B tools/bizhawk/run_s2_fixed_tail_pressure.py --phase prepare \
+  --task-root "$TASK_ROOT/launcher-followup-supported" --bizhawk-home "$BIZHAWK_HOME" \
+  --rom "$S2_ROM" --movie "$MAIN_CHECKOUT/src/test/resources/traces/s2/cpz2/s2-lvl-select-CPZ.bk2" --case reinstall-two
+python3 -B tools/bizhawk/run_s2_fixed_tail_pressure.py --phase run \
+  --task-root "$TASK_ROOT/launcher-followup-supported" --bizhawk-home "$BIZHAWK_HOME" \
+  --rom "$S2_ROM" --movie "$MAIN_CHECKOUT/src/test/resources/traces/s2/cpz2/s2-lvl-select-CPZ.bk2" --case reinstall-two
+```
+
+Both preparation and pre-admission preflight report 2.11.0.0 and **30 verified
+capabilities**. The pinned host/probe build succeeds, retaining the existing
+xbuild v4.8 warnings, without changing hashes/version checks. Preparation took
+0.164 s preflight, 3.571 s host build and 0.866 s probe compile; its build-lease
+wait was 0.003 s. Run preflight took 0.215 s with a separate 0.013 s build-lease
+wait. Ordinary native admission then waited **39.389 s**, separate from **4.800 s**
+of admitted execution/verification (**4.622 s** Mono command). No engine Maven
+test, broad/full run or performance lane is used. The test assembly is compiled
+by the unchanged host build script, without executing its test suite.
+
+Run `launcher-followup-supported/run-20261024T164347Z` has host/case/output-check
+`execution_status=completed`, native exit zero and no unmet assertion. Inspection
+finds **1,594 events**, 361 uninterrupted frame-end observations and fixed walks,
+setup/end rows 8791/9151, two exact exhausted returns (PC `$18014`, caller
+`$2940C`, A1 `$FFFFD000`, SR `$2300`), two post-failure pointer/bounds/X writes
+with other target bytes retained, one real installation/Obj05 init on row 8792,
+152 Obj05 main/DPLC decisions and 16 accepted DMA requests. Two physical clears
+occur at rows 8944/8965: the first deletes ID05 currently parented to `$B040`,
+the second clears already-empty storage. Complete SST clearing, synthetic
+remember-bit release, event sequences, required files and provenance are checked.
+The binding remains equal after execution. Request acceptance is **CPU-RAM DMA
+queue acceptance**, not published VRAM or pixel proof.
+
+The observation SHA-256 is
+`c839bd9ef42d3801decdd8f2b37aad729eefc378efe62e2bd5a29447b5826b13`, exactly
+the accepted original `reinstall-two` case. The original six observation hashes
+remain unchanged; they were inspected, not rerun. New provenance identifies
+executed launcher SHA-256
+`2130e8db10d52b41a4eb7e67ae0850cff6b379557d29949c9bf62bc978490a89`;
+the focused test source is
+`a5932bd68d3c6d93bb4f3f4483416354f7767cee12d2afe4e63f4929cee14076`.
+Host/probe executable hashes remain `2a919f1c…` / `8dc21cf2…`, and the unchanged
+C# source remains `84ddbac1…` (full hashes above). Runtime/archive mismatches
+remain disclosed compatibility/provenance facts, not lock verification.
+
+This closes the prior limitation about the complete launcher flow being
+unexecuted, for this one supported input/runtime/case. The bounded storage owner
+remains **unqualified and unauthorized**. Natural placement/respawn, arbitrary
+dormant residue, nonzero-cache retirement, other reset paths and Java
+manager/controller/timeline/rewind ownership remain unproved or source-derived.
+The open bug, 119 frozen records and all ten bridges remain unchanged. Python
+syntax/source, usage links, pinned citations and `git diff --check` accompany
+the focused checks; all owned process/job handles are terminal before handoff.
+
+### Spawn-boundary cancellation follow-up
+
+Round-two source review closed runtime binding but identified one remaining
+launcher gap at `35caea37a83b4d85de503f74d9ec37d320d61ab2` (tree
+`4dfa167bc66c20e180d783c52d6d536a6753dfee`). `Popen` preceded the cleanup
+`try/finally`: a real cancellation after OS child creation, before its result
+was assigned, could bypass group cleanup and unwind build leases. This was a
+source-established failure path; it does not imply an orphan from either
+successful native recording.
+
+Two deterministic controls were added **before changing the launcher**:
+
+```bash
+python3 -B tools/bizhawk/test_s2_fixed_tail_pressure.py \
+  OwnedCompilerCleanupTests.test_spawn_boundary_sigterm_reaps_descendants_before_build_leases_release \
+  OwnedCompilerCleanupTests.test_spawn_boundary_sigint_reaps_descendants_before_build_leases_release -v
+```
+
+Each wrapper first invokes real `Popen`, waits for its owned compiler-like child
+and grandchild, then sends a **real SIGTERM or SIGINT** to the caller before
+returning the process object. Both controls fail against the unchanged 35caea
+launcher in **0.154 s**, specifically because the owned descendants still exist
+when fixture lease finalizers execute. This discriminates the uncovered spawn
+interval from the existing ready-child cancellation control. The outer fixture
+subreaper then kills/reaps only that known test-owned leaked group; no foreign
+process/queue sweep is used, and no fixture process is left behind.
+
+The correction places process creation inside the cleanup-protected region,
+with an initially absent process reference. SIGINT/SIGTERM parent handlers
+temporarily record delivery during `Popen`; pending delivery reaches the
+original handlers only after the returned object is bound and cleanup is
+registered. Handler swaps briefly block these signals in the **parent only**,
+before/after the spawn extent, never across `Popen`; the child's inherited mask
+is unchanged. Existing ignored signals remain ignored. Parent handlers are
+restored before pending delivery; a fatal default is delivered after owned
+cleanup. Timeout, ready-child cancellation and normal-exit group ownership keep
+using the existing stop/reap helper and the same lease ordering. No general
+subprocess framework or child pre-exec callback is introduced.
+
+The affected full Python selection then passes **14 cases in 1.444 s**, with
+zero failures/errors/skips:
+
+```bash
+python3 -B tools/bizhawk/test_s2_fixed_tail_pressure.py -v
+```
+
+The prior eight `RuntimeBindingTests` and three ownership cases remain covered.
+New exact IDs are the two spawn-boundary IDs above and
+`OwnedCompilerCleanupTests.test_child_cancellation_mask_and_ignored_handler_preserved`.
+All ownership fixtures also inspect the actual exec'd child's signal state:
+SIGINT/SIGTERM are unblocked, SIGTERM retains its default child disposition, and
+an intentionally ignored SIGINT remains ignored. They verify parent handler
+restoration, complete parent/grandchild reaping while both lease locks remain
+held, and survival of a separate peer group. Thus both cancellation intervals
+and the positive child signal contract are exercised with harmless owned
+subprocesses rather than mocked cancellation exceptions.
+
+Tested launcher SHA-256 is
+`3551bacc53a950f2b82c1476722463243ed30fe58a12d9dfa2aea11997be10f4`;
+test source is
+`3a31d3f69f4f082d6b665ce3cd6f7f68a95ea5d180dded358c1eebcf96bff6e9`.
+Python AST comparison with 35caea confirms `command` is the only changed
+existing launcher function; the two spawn-delivery helpers are new. Runtime
+binding, strict preflight, output verification, process-group cleanup and main
+admission logic are unchanged. Syntax/source, pinned citation and
+`git diff --check` checks accompany the focused tests.
+
+No native case is rerun: this changes parent-side cancellation registration,
+without changing child arguments/environment or positive-path inherited signal
+behavior, which the actual child controls verify. The previously recorded full
+prepare/run and all accepted six-case native observations retain their original
+provenance and facts. C# blob `70a1fecdde27f0ff1b4fc10ef21ceb8e017cf1b6`,
+engine/Java/API/guard files, 119 records and ten bridges remain unchanged. No
+Maven/engine tests, builds, emulator launches, upstream composition or storage
+implementation occur in this follow-up. A storage owner remains unqualified
+and unauthorized; natural placement/respawn, arbitrary dormant residue,
+nonzero-cache retirement, other reset paths, Java manager/controller/timeline/
+rewind ownership and published VRAM/pixels are not newly established. Only
+launcher/tests/this audit change; all owned handles are terminal at handoff.
+
+## S3K monitor contents admission
+
+Bounded worker base: `591c679b39c61f162a839cde6baaedd387135bc4`, branch
+`bugfix/ai-s3k-monitor-admission-20261024`, checkout
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-9664868d`. This is a behavior correction
+from the native allocation-bridge audit, not an allowance reduction. All ten
+dynamic-add bridges remain **QUALIFIED RETAIN**, one occurrence each; the monitor
+contents and explosion calls remain directly visible and in their original order.
+
+The base records skdisasm `8b2cf3c4178f2382f844da67798de4befc50c5e0`.
+Evidence was read with `git -C docs/skdisasm show <pin>:sonic3k.asm`, without
+updating or resetting the working submodule. `Obj_MonitorSpawnIcon`
+(sonic3k.asm:40685-40710) allocates contents, branches to `.skipiconcreation`
+on failure, then separately allocates the explosion and branches to
+`.skipexplosioncreation` on failure. Both attempts use the monitor's own SST as
+the anchor. `AllocateObjectAfterCurrent` (sonic3k.asm:37957-37972) scans later
+slots. Remembering the shell follows both attempts; failed contents never reach
+`loc_1D7CE` / `sub_1D820` (sonic3k.asm:40730-40778) or its reward routine.
+
+The real manager marks a rejected child destroyed and returns before identity
+registration, without an unload callback. The old parent retained that child
+and continued its embedded icon. Capture immediately after touch, before parent
+dispatch, therefore threw `RewindIdentityTable has no registered id for object
+reference` at `Sonic3kMonitorObjectInstance#monitorContentsSlot`. Without capture,
+the full-tail ring monitor still awarded ten rings. Neither claim was assumed
+from the source audit alone.
+
+`TestS3kMonitorGraphRewind` now fills the tail with registered, reconstructible
+inert occupants, leaving zero, one or two noncontiguous free slots. A recording
+manager delegates both calls to the production ObjectManager allocator and
+identity registry; it does not mock admission or reserve bare bits. The six
+stock-ring / creator-factory-Eggman cases check immediate capture, exact IDs and
+slots, both allocation results/order/anchors, broken/remembered flags, icon and
+reward state, unchanged break SFX, zero RNG consumption, destructive graph
+restore, every forward snapshot through retirement, pre-break reallocation and
+remembered respawn. Both admitted links must restore bidirectionally and exactly.
+Two additional dispatch cases break from SST 3 and 80: the monitor remains the
+allocation anchor and its already-passed slot defers icon motion until the next
+pass. Another case independently checks that rejection cannot award a reward.
+
+The initial test submission had an ambiguous JUnit method reference and stopped
+at compilation (no tests executed). After correction, seven cases executed and
+failed: two real invalid-reference failures, one real rejected reward, and four
+incorrect test assumptions about context-free capture. The admitted monitor's
+public no-table capture already rejects its non-null managed child link; that
+strict contract is preserved. Correcting those four assertions, without changing
+production, produced **11 cases: three failures, eight passes, zero errors/skips**.
+The failing identities were
+`nativeAdmissionCapturesBeforeDispatchAndReplaysExactGraph(int, boolean)[1,4]`
+(zero free slots, stock/factory) and
+`rejectedContentsNeverAwardEvenWithoutAnImmediateCapture`. Cases `[2,3,5,6]`,
+both `touchDuringAnotherSlotKeepsMonitorAnchorAndDispatchPhase(int)` invocations,
+and the two original graph methods passed on the unchanged production base.
+
+The fix keeps a local candidate until admission succeeds. Rejection clears the
+parent's `iconActive` and `effectTarget`, leaving no retained unregistered link.
+It intentionally keeps initialization before insertion: identity registration
+reads the child's parent-derived icon position through `getSpawn()`. Starting
+the icon after insertion would change the admitted child's spawn/identity recipe.
+Inactive seeded motion values remain captured but never advance or pay out.
+Moving the whole icon into the child was rejected as unnecessary: it would change
+dispatch, drawing and protected callback ownership to solve a local admission
+error. `applyPowerup` and its existing manager/creator fault boundary stay with
+the parent. The null-manager path, creator content selection and exact placement
+contract in `creator-helpers.md` remain supported. No codec, capture override,
+exclusion, API pin, framework, global state or allowance changes are involved.
+
+All Maven commands run from the worker checkout using this environment:
+
+```bash
+MAIN_CHECKOUT=$(git worktree list --porcelain | sed -n '1s/^worktree //p')
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestS3kMonitorGraphRewind' test -B
+```
+
+That is the corrected RED command. The initial two submissions instead selected
+`TestS3kMonitorGraphRewind#nativeAdmissionCapturesBeforeDispatchAndReplaysExactGraph+rejectedContentsNeverAwardEvenWithoutAnImmediateCapture`.
+The initial compile-only attempt waited 69 seconds and Maven reported 1:23;
+the seven-case run waited 5 seconds and reported 25.445 seconds; corrected RED
+waited 28 seconds and reported 27.173 seconds. These are distinct queue/execution
+observations, not total delivery time.
+
+The affected GREEN command uses the same wrapper/environment/flags with the exact
+selector below, plus the verified absolute existing ROM properties:
+
+```text
+-Dtest=com.openggf.game.rewind.TestS3kMonitorGraphRewind,com.openggf.game.sonic3k.objects.TestSonic3kMonitorContentOverride,com.openggf.game.sonic3k.objects.TestSonic3kMonitorObjectInstance,com.openggf.tests.TestSonic3kMonitorObjectInstance,com.openggf.level.objects.TestObjectManagerChildSlotAllocation,com.openggf.level.objects.TestNativeObjectSlotOccupancy,com.openggf.tests.objects.TestObjectManagerSlotRecycleIdentity
+-Dsonic1.rom.path=$MAIN_CHECKOUT/Sonic The Hedgehog (W) (REV01) [!].gen
+-Dsonic2.rom.path=$MAIN_CHECKOUT/Sonic The Hedgehog 2 (W) (REV01) [!].gen
+-Ds3k.rom.path=$MAIN_CHECKOUT/Sonic and Knuckles & Sonic 3 (W) [!].gen
+```
+
+The three files match the documented CRC32/SHA-1 identities. The queued version
+probe reported Java 25.0.5.0.2; `/usr/bin/lua5.4 -v` reported 5.4.9. The affected
+selection passed **47 cases across seven exact classes, zero failures, errors or
+skips**: graph 11, creator contents 4, native monitor fixture 20, the second
+physical monitor fixture 2, child allocation 8, raw occupancy 1 and recycled
+identity 1. The formerly failing graph identities now pass. Final graph assertions
+also cover unchanged SFX requests and remembered reload after all three capacity
+outcomes. The tested state is the base above plus this commit's production and
+test changes; only documentation changed after the completed run. Admission
+waited 81 seconds; Maven reported 1:30. All XML identities and absence of
+failures/errors/skips were inspected, then the consumed reports were removed.
+No category run, pass cache or validation receipt was created. The bounded
+citation check against the recorded pin completed successfully (15 exact, one
+nearby and 31 unverifiable historical/source references); the native ranges
+above were also read directly from Git objects. `git diff --check` passed.
+No live Maven handle remains and no duplicate request or resource-flag change
+was used for admission. The local branch/checkout remain for parent review; the
+worker neither pushes nor removes them. Parent owns combined guards/API/S3K stability,
+integration and push; this worker claims no full route, GPU rendering, exhaustive
+trace or release-suite certification. Existing parent-owned break SFX is retained
+even when explosion allocation fails; native `loc_1E61A`
+(sonic3k.asm:42224-42227) instead requests it in the admitted explosion's dispatch.
+That inherited timing difference is outside this correction. No creator semantic
+was narrowed to conceal a disagreement with native behavior.
+
+### Fixed-tail Java lifetime qualification after native pressure evidence
+
+Source-only reassessment used engine composition `07bee64020b0ec8c218278a8555d271630985ab6`
+and the accepted final probe/launcher `10117e9fc9034048682441c43b7640e85c1716f2`.
+The preceding six-case native observations remain accepted within their recorded
+setup and comparison limits. They establish a **64-byte** fixed cell at slot
+`$80` / address `$FFFFD000`; no 80-byte storage model is proposed.
+
+Qualified retention remains the result. A fixed-tail cell is finite for the
+ordinary stock 1P Obj7A endpoint lifecycle, which clears the linked current cell
+before deleting its parent. Supported Java removal is broader:
+`ObjectLifetimeOps.deleteNoRespawn` and Stageplay structural retirement can free
+the parent's SST without executing Obj7A's linked-target cleanup. Sideways has no
+unload override supplying that cleanup. Automatically cascading these removals
+would invent a lifecycle rule. Preserving physical storage instead allows the
+retained parent address to denote a later stock or creator occupant.
+
+Obj05's actual parent read set is 13 bytes across eight fields: X/Y words at
+`$08/$0C`, directional X/Y velocity words at `$10/$12`, the art word's priority
+bit at `$02`, animation byte `$1C`, status byte `$22`, and angle byte `$26`.
+It checks neither parent ID nor routine. The existing NativeSstState projection
+does not supply this domain for every possible replacement occupant, and
+NativeSstSlotAccess resolves live objects rather than dormant storage. Missing
+bytes cannot be filled with zero, inferred from class identity or replaced by an
+incarnation ObjectRefId. The native source citations and direct consumer analysis
+are retained in the earlier fixed-tail grounding and pressure sections.
+
+Manager replacement, WorldSession identity and a verified native RAM clear are
+different boundaries. Full/preview/art initialization, parking, editor teardown,
+Stageplay world/team changes and seamless carry cannot all imply the same cell
+reset. A live storage capability from a retired owner must also differ from a
+captured physical coordinate resolved inside the explicitly selected restoration
+owner, even when two worlds share a module and equal addresses.
+
+Current snapshots have multiple writers: player/controller seven-value tail
+state, delayed native art rebinding, ending art binding and occupied object
+reconstruction. The separate DynamicArtLifecycleService DPLC cache already has
+its own state owner. A future cell must define one canonical restore authority
+and the precedence of those projections; adding another last-writer copy does
+not establish it. Standalone/donor tail constructors and their public restore
+behavior remain compatibility obligations.
+
+The next foundational question is therefore physical parent-header authority
+across generic deletion, reused slots and authored retirement, together with
+explicit storage lifetime and snapshot precedence. Another empty/live native
+pressure repeat would not answer it. Natural placement/respawn, arbitrary
+dormant residue, nonzero-cache retirement, Java rewind and published VRAM/pixels
+remain outside the current observations. No bounded storage owner is qualified
+or authorized. All ten count-one bridge allowances and the 119-record store
+remain unchanged; the canonical Sideways bug and strict missing-reference
+qualification remain open.
+
+### Parent cleanup of native pressure diagnostics — 2026-10-25
+
+After the reusable probe, launcher, safety controls and qualified findings were
+delivered, parent removed this run's `s2-fixed-tail-native-pressure-20261024`
+scratch tree. Its three ownership records named the retired task worktree;
+all three staged 388-file source subsets matched TraceChaser pin
+`322851cbfa2e1c1803332142e11ab74b4eb34eea`. The remaining files were generated
+build products and declared noncanonical preflight/provenance/observation
+outputs. No symlink or matching live process remained. The earlier external
+artifact paths are historical locations, not retained fixtures; the committed
+tools and recorded inputs, identities, hashes and bounded conclusions remain.
+No ROM, movie, user archive or main reference checkout was removed or changed.
+
+This cleanup executed no native case and supplies no additional coverage or
+storage authority. The Sideways disposition and ten bridges remain unchanged.
+The historical 119-record count above belongs to that qualification; the later
+independent SourcePublication transfer accounts for the current 120-record
+baseline and does not qualify a fixed-tail storage owner.

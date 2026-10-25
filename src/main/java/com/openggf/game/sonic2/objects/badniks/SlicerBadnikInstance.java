@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.AbstractBadnikInstance;
 
 import com.openggf.debug.DebugRenderContext;
@@ -37,7 +38,11 @@ import java.util.List;
  *   Routine 6 (THROW_WINDUP): Raise arms (frame 3), wait 8 frames
  *   Routine 8 (AFTER_THROW): Display until off-screen (frame 4, no claws)
  */
-public class SlicerBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable {
+public class SlicerBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
+
     // From ObjA1_SubObjData: collision_flags = 6 (enemy, size index 6)
     private static final int COLLISION_SIZE_INDEX = 0x06;
 

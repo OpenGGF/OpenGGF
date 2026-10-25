@@ -1,5 +1,7 @@
 package com.openggf.stageplay;
 
+import com.openggf.stageplay.StageplayDocument.Facing;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.junit.jupiter.api.Test;
@@ -20,7 +22,7 @@ class TestStageplayObjectDocument {
     }
 
     private static ObjectKey key(int frame, double x, ObjectMode mode) {
-        return new ObjectKey(frame, x, 200, 0, -1, false, true,
+        return new ObjectKey(frame, x, 200, 0, -1, Facing.LEFT, true,
                 mode == ObjectMode.FREE ? Interpolation.HOLD : Interpolation.LINEAR, mode);
     }
 
@@ -31,7 +33,7 @@ class TestStageplayObjectDocument {
     private static StageplayDocument directed() {
         return scene().withObjectActors(List.of(actor(List.of(
                         key(0, 100, ObjectMode.FREE), key(20, 100, ObjectMode.PUPPET),
-                        new ObjectKey(40, 120, 200, 2, 3, true, true, Interpolation.HOLD, ObjectMode.POSE,
+                        new ObjectKey(40, 120, 200, 2, 3, Facing.RIGHT, true, Interpolation.HOLD, ObjectMode.POSE,
                                 List.of(new ObjectPartPose("root/0", 1, 4))), key(60, 100, ObjectMode.FREE)),
                 List.of(new ObjectCommand("walk", 20, ObjectCommandKind.MOVE_TO, 140, 200, 2),
                         new ObjectCommand("stop", 30, ObjectCommandKind.STOP, 0, 0, 0)))))
@@ -89,11 +91,11 @@ class TestStageplayObjectDocument {
     }
 
     @Test void modeChangesRejectIgnoredFreeEditsAndCommandsOutsidePuppetIntervals() {
-        assertThrows(IllegalArgumentException.class, () -> new ObjectKey(0, 0, 0, 1, -1, false, true,
+        assertThrows(IllegalArgumentException.class, () -> new ObjectKey(0, 0, 0, 1, -1, Facing.LEFT, true,
                 Interpolation.HOLD, ObjectMode.FREE));
-        assertThrows(IllegalArgumentException.class, () -> new ObjectKey(0, 0, 0, 0, -1, false, true,
+        assertThrows(IllegalArgumentException.class, () -> new ObjectKey(0, 0, 0, 0, -1, Facing.LEFT, true,
                 Interpolation.LINEAR, ObjectMode.FREE));
-        assertThrows(IllegalArgumentException.class, () -> new ObjectKey(0, 0, 0, 0, -1, false, true,
+        assertThrows(IllegalArgumentException.class, () -> new ObjectKey(0, 0, 0, 0, -1, Facing.LEFT, true,
                 Interpolation.HOLD, ObjectMode.FREE, List.of(new ObjectPartPose("root/0", 0, 1))));
         assertThrows(IllegalArgumentException.class, () -> scene().withObjectActors(List.of(actor(
                 List.of(key(0, 100, ObjectMode.FREE), key(20, 110, ObjectMode.FREE)), List.of()))));
@@ -105,7 +107,7 @@ class TestStageplayObjectDocument {
         assertThrows(IllegalArgumentException.class, () -> new ObjectCommand("stop", 0, ObjectCommandKind.STOP, 1, 0, 0));
         assertThrows(IllegalArgumentException.class, () -> directed().withDurationFrames(60));
         assertThrows(IllegalArgumentException.class, () -> new ObjectPartPose("root/../3", 0, 0));
-        assertThrows(IllegalArgumentException.class, () -> new ObjectKey(0, 1, 2, 0, -1, false, true,
+        assertThrows(IllegalArgumentException.class, () -> new ObjectKey(0, 1, 2, 0, -1, Facing.LEFT, true,
                 Interpolation.HOLD, ObjectMode.POSE, List.of(new ObjectPartPose("root/0", 0, 1), new ObjectPartPose("root/0", 0, 2))));
     }
 
@@ -120,7 +122,7 @@ class TestStageplayObjectDocument {
         var anchored = scene().withCamera(List.of(scene().camera().getFirst(), new CameraKey(100, 0, 0, 1, Interpolation.HOLD)))
                 .withSceneChanges(List.of(new SceneChange("next", 100, scene().set(), Transition.CUT, 0)));
         assertThrows(IllegalArgumentException.class, () -> anchored.withObjectActors(List.of(placed)));
-        var hidden = new ObjectKey(100, 100, 200, 0, -1, false, false, Interpolation.HOLD, ObjectMode.FREE);
+        var hidden = new ObjectKey(100, 100, 200, 0, -1, Facing.LEFT, false, Interpolation.HOLD, ObjectMode.FREE);
         var withAnchor = new ObjectActor("loaded", "Loaded", "s2", 0, 0, 0x92, 3, 5,
                 List.of(key(0, 100, ObjectMode.PUPPET), hidden), List.of());
         assertEquals(2, anchored.withObjectActors(List.of(withAnchor)).objectActors().getFirst().keys().size());

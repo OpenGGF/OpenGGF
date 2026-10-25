@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
@@ -42,7 +44,8 @@ import java.util.Set;
  * </table>
  */
 public class OOZPoppingPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, RewindRecreatable {
+        implements SolidObjectProvider, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj33 owns a vertical piston and its upward burner flame; neither has horizontal facing.
 
     // ========================================================================
     // ROM Constants

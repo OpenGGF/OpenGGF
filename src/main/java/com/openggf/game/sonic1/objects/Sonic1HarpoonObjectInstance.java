@@ -6,9 +6,11 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.level.objects.ObjectVisualFacing.Basis;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.PlayableEntity;
 
@@ -47,7 +49,26 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/16 Harpoon.asm
  */
 public class Sonic1HarpoonObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, SpawnRewindRecreatable {
+        implements TouchResponseProvider, SpawnRewindRecreatable, ObjectVisualFacing.PlacementSource {
+
+    @Override
+    public ObjectVisualFacing.Basis nativeFacing() {
+        // Harp animation bit 1 selects the vertical family. Map_Harp.h_extended
+        // extends from X=-8 to X=40, so the unflipped horizontal spear points right.
+        if ((animIndex & 2) != 0) {
+            return ObjectVisualFacing.Basis.NON_DIRECTIONAL;
+        }
+        return (spawn.renderFlags() & 1) != 0
+                ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
+
+    @Override
+    public int initialPlacementFlags(Basis facing, int sourceFlags) {
+        if ((animIndex & 2) != 0) {
+            return sourceFlags;
+        }
+        return facing == Basis.LEFT ? sourceFlags | 1 : sourceFlags & ~1;
+    }
 
     // ---- Constants from disassembly ----
 

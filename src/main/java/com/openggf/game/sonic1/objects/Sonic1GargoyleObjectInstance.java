@@ -9,12 +9,14 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.level.objects.ObjectVisualFacing.Basis;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -45,7 +47,19 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/62 Gargoyle.asm
  */
 public class Sonic1GargoyleObjectInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable {
+        implements SpawnRewindRecreatable, ObjectVisualFacing.PlacementSource {
+
+    @Override
+    public ObjectVisualFacing.Basis nativeFacing() {
+        // Gar_FireBall copies the head's status: set keeps +$200, clear negates it.
+        // Both head and projectile therefore share the head's logical direction.
+        return facingRight ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.LEFT;
+    }
+
+    @Override
+    public int initialPlacementFlags(Basis facing, int sourceFlags) {
+        return facing == Basis.RIGHT ? sourceFlags | 1 : sourceFlags & ~1;
+    }
 
     // ========================================================================
     // ROM Constants

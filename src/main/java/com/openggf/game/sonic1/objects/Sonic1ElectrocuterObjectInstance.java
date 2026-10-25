@@ -9,6 +9,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -31,7 +32,9 @@ import java.util.List;
  * ROM reference: docs/s1disasm/_incObj/6E Electrocuter.asm
  */
 public class Sonic1ElectrocuterObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, SpawnRewindRecreatable {
+        implements TouchResponseProvider, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+// Elec animation is an orb discharge; placement flips preserve its mounting, not horizontal facing.
 
     // obColType value when the zap frame (frame 4) is displayed.
     // $A4 = HURT($80) | size index $24

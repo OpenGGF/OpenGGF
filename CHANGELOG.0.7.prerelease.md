@@ -98,17 +98,30 @@ Unreleased. The earlier development themes remain in
   timing and zone-owned spring art.
 
 - **OpenGGF Stageplay:** shared directing documents power the in-engine HUD and
-  OpenGGF Editor's Stageplay workspace. Author actor movement, animation/poses,
+  OpenGGF Editor's Stageplay workspace. Both editors share compact grouped forms,
+  named choices, collapsed Advanced settings and structured F1 details with buttons,
+  plain route advice and a dim More toggle for full diagnostics. In-level
+  position picking pans through the level with coordinate tags and optional queried
+  floor snapping, marked by a yellow floor line and dashed guide; placement pickers
+  start snapped and numeric entry stays available. Uniform HUD rows keep primary actions visible at the standard size;
+  expanded settings can scroll. Author actor movement, logical Left/Right facing, animation/poses,
   camera movement, smooth animated zoom, earthquake effects, captions, ROM audio and WAV/Ogg voices;
   direct scene changes across locations, acts and games with cuts, fades and wipes.
-  Authored music control holds off automatic level playlists through deferred entry
-  and shot changes in playback/export; ROM cue gain is checked during authoring.
+  Authored music control holds off automatic level playlists and entry fades through
+  deferred entry and shot changes in playback/export; named music choices and exact
+  ROM sound IDs agree across the screenplay, catalog and both editors; ROM cue gain is checked during authoring.
   ICZ's arrival teleporter and MegaChopper release only their acquired player
   controls for direction, preserving native state and rewind identities.
   Free objects, including released animals outside the main view, retain native
-  appearances when switched to Puppet/Pose within their cast activation windows.
+  appearances when switched to Puppet/Pose within their cast activation windows,
+  including native sprite priority and foreground-wall occlusion in directed films.
+  Capturing a native appearance preserves its animation phase and reports visual
+  readiness before requiring facing ownership.
   Puppet mode follows destinations and urgency through native acceleration, terrain
-  collision and jump physics; floor snapping defaults on. Poser mode retains manual
+  collision and jump physics; floor snapping defaults on. Shared Place on floor
+  direction and a batched ground CLI enumerate exact visual support and native player
+  terrain proposals from decoded entry layouts or prepared scene frames, with bounded
+  work, typed refusals and one-step undo for safe editor placement. Poser mode retains manual
   positioning, animation and frame selection. Every scene uses one native world
   with supplied-game performers, authored terrain and common framing, binding and
   activation-window rules. Timed object clears preserve separately owned rings;
@@ -124,19 +137,24 @@ Unreleased. The earlier development themes remain in
   and events through windowless simulation and placement/capability discovery. Live
   editor previews run in an isolated offscreen worker, preserving the active world;
   preview and export preserve logical-ROM windows and composite images.
+  Cross-game scene changes keep music and sound effects bound to the destination
+  game; same-game level entries preserve continuous playback.
   Record directed takes, undo edits, save/reopen and export synchronized
   lossless films. Shot-local screenplay tools and a mirrored agent skill support
   resource discovery, validation, lossless canonical-to-screenplay round trips and
-  offline filmmaking; both editors import/export the same screenplay. A bounded
+  offline filmmaking; encoder paths resolve from the caller's directory. Both editors
+  import/export the same screenplay and start new dialogue at the same top margin.
+  Simulation reports abilities from each performer's own game capabilities. A bounded
   route helper preserves per-route starting action, a slow stroll or live native Run speed,
   gentle/hard/overshoot endings and final facing (Spindash requires Run),
-  and emits native movement/jump intents over actual collision terrain
-  with observed native charge/release and cold LIVE verification, penalised back-up
+  and emits native movement/jump intents over actual collision terrain, including
+  Sonic 1 loop plane switching, with observed native charge/release and cold LIVE verification, penalised back-up
   run-ups only after direct steering fails, and location-specific speed advice
-  supported by a matched Run probe, plus visual walking-object routes over slopes and
+  supported by a matched Run probe with its own bounded diagnostic horizon and
+  explicit advice when more attempt frames are needed, plus visual walking-object routes over slopes and
   steps up to eight pixels. Both editors show the simulated route before Apply,
   with grounded/airborne segments and endpoints over the picture, plus route state,
-  legends and readable failure explanations in editor chrome; applied
+  matching goal legends and complete short result sentences in editor chrome; applied
   plans remain visible during authoring playback without entering saved scenes or films.
   Centred camera pushes preserve their framing centre,
   fractional origins survive composition, and the world framebuffer is reused.
@@ -147,6 +165,10 @@ Unreleased. The earlier development themes remain in
   relationships, and both editors keep a usable constrained authoring window.
   Named dialogue, reusable typing profiles and creator PNG skins give mod scenes
   clear speakers and deterministic text reveal in playback, both editors and exports.
+  Player and object speakers have distinct Genesis PSG speech noises synchronized to
+  that reveal, with named voice presets and compact per-speaker tone, rhythm, pitch,
+  variation, length and level controls, including silence. Object dialogue pointers
+  follow native cast positions; screenplay import/export preserves voice settings.
   Mods play the same scenes with held native gameplay and optional explicit
   main-player handover. ROM object roles add Free native behavior and visual Puppet/Pose
   direction with child-part frames, portable placed identities and timed clear/removal
@@ -154,12 +176,15 @@ Unreleased. The earlier development themes remain in
   acquired players while preserving native routine progress; seeking restores
   that ownership. The hand launcher releases acquired players for visual direction
   while native unload retains its separate behavior. Logical viewport dimensions
-  remain exact while native SAT admission limits stay fixed. A generated ID/context
-  catalog reports native arena and appearance
-  restrictions. See the [guide](docs/guide/creating/stageplay.md) and
-  [directing examples](examples/stageplay-demo/README.md), including a 26-second
-  beginner scene with a story-first tutorial/promo, native reactions, timed dialogue
-  and a single-setting jump comparison.
+  remain exact while native SAT admission limits stay fixed.
+  A generated ID/context catalog reports native arena and appearance
+  restrictions. The [Stageplay guide](docs/guide/creating/stageplay.md) has a
+  first-film tutorial for the editor and screenplays, task chapters,
+  troubleshooting, a glossary, a complete reference and a case study of the
+  *Day Off* film, whose screenplay joins the
+  [directing examples](examples/stageplay-demo/README.md) beside a 26-second
+  beginner scene with native reactions, timed dialogue and a single-setting jump
+  comparison.
 
 - **Recordings:** copied BK2 recordings are bounded during decompression
   and parsing, including metadata, input rows and verification sidecars. Oversized,
@@ -348,7 +373,9 @@ Unreleased. The earlier development themes remain in
   Limited caps palette RGB at 238 after fades and profile conversion, including
   creator colours, with live normal and underwater palette refresh. The palette
   backdrop and headless gameplay captures use the same saved setting. Underwater
-  donor, appearance and texture colours share one tint policy.
+  donor, appearance and texture colours share one tint policy. Palette sampling
+  follows each texture's own row capacity when sidekick banks are reclaimed or
+  independent graphics hosts retain different texture sizes.
 
 - **Main menu:** Compact and bold lettering now share one pixel-font family,
   with clear navy lettering on gold launch buttons. Holding Escape freezes a
@@ -748,7 +775,9 @@ Unreleased. The earlier development themes remain in
   player instead of vanishing while the status remained. Rewinding in Mushroom
   Hill restores mushroom-cap bounces, curled vines, catapults, dropping platforms,
   launched Mushmeanie shells and the act 2 Knuckles cutscene's player lift
-  exactly. Launch Base falling platforms keep their riders and Marble Garden
+  exactly. Unordered rider sets encode stable team membership independently of
+  allocation history, while ordered collections retain their encounter order.
+  Launch Base falling platforms keep their riders and Marble Garden
   sinking mud keeps each player's sink depth through rewind. Rewinding to the first
   frame of a Lava Reef load replays its background setup: act 2 no longer refills
   its background or adds a second Death Egg, and Knuckles keeps act 1's background
@@ -895,8 +924,14 @@ Unreleased. The earlier development themes remain in
   consumers, including gameplay pause, without toggling host pause during a
   capture or complete-run audio step; physical keyboard pause remains available.
 
-- **Runtime ownership:** Live rewind retains its gameplay owner and outgoing
-  input, audio and fade cleanup through suspension and replacement. Destination
+- **Runtime ownership:** A loop-lifetime suspended visit keeps admission, picture
+  readiness, parking, saved state, resume and retirement under one authority;
+  the title keeps its card, textures and zoom presentation. Live rewind retains
+  its gameplay owner and outgoing
+  input, audio and fade cleanup through suspension and replacement. Native lock-on
+  rewind publications keep their selected module owner across fresh service
+  incarnations, while both exposed and suppressed native services remain protected
+  from creator capture. Destination
   history starts after deferred title-card assembly, and replay cannot mutate a
   replacement owner's history. Floors and checkpoints include completed frame
   publication; inactive outgoing worlds cannot seed new history. Recorded playback
@@ -904,16 +939,43 @@ Unreleased. The earlier development themes remain in
   replacement driver's first input. Pending ending fades complete before exit
   cleanup. Sonic 1 palette fades retain prepared player art; full loads clear
   unpublished readiness, and results enter the next-level routine on the following
-  object pass. Audio's installed
-  source stays in one immutable, typed tuple. Terminal streamed-music cleanup
-  releases presentation slots without recapturing retired cursors, while ordinary
-  reset commands retain transactional rollback. Sonic 1 and Sonic 2 selected-slot images use the shared data-select
+  object pass. Audio's private
+  manager-lifetime source owner keeps base/donor publication, generations, binding restoration and
+  rollback together, preserving immutable tuples, callback ordering and partial
+  reset effects while session-owned audio resources retain their own lifetime.
+  A narrow logical publication owner keeps fallback ring state, snapshot sampling,
+  eager rollback and fixed held ledger publication together, preserving current
+  collaborator reads and existing partial effects across producer replacement.
+  A permanent per-manager level-music admission owner keeps both scope counts,
+  request-category decisions and token release together, preserving manager
+  locking, callback order and scope lifetimes across resets and replacement.
+  A private diagnostic installation owner keeps complete observer installation,
+  rollback, lease ownership and reset policy together, preserving live target
+  sampling, manager locking and existing reentrant partial effects. A permanent
+  native-mutator binding owner keeps publication, displacement, exact release and
+  manager-wide feedback exclusion together, preserving per-token caller/thread
+  admission and callback/reset ordering.
+  Terminal streamed-music cleanup releases presentation slots without recapturing
+  retired cursors, while ordinary reset commands retain transactional rollback.
+  Sonic 1 and Sonic 2 selected-slot images use the shared data-select
   converter and payload validators; Sonic 3 & Knuckles keeps explicit host ROM
   donation while consuming the same patterns, palette and mapping contract.
+  One loop-lifetime special-stage lifecycle now owns entry presentation, retained
+  provider identity, captured results and return completion through the existing
+  virtual controller seams. Shared rewind admission stays in the game loop; a
+  loop-lifetime title owner keeps its lazy provider binding, presentation, locks
+  and complete release sequence together through the existing entry and rendering
+  seams, preserving input timing and native destination assembly.
   Architecture ratchets measure the dispatcher bodies behind profiling wrappers,
   reject stale rewind and dependency allowances, and identify raw lifecycle calls
   by caller rather than a shared total. Shared menu animation and execution-time
-  graphics injection close the remaining menu/framework seams. SAT replay uses a
+  graphics injection close the remaining menu/framework seams. Ending provider
+  state, credits-demo execution and ending cleanup share one session owner while
+  the game loop retains frame admission. Bonus visits likewise keep admission,
+  provider publication, deferred assembly and return restoration in one loop-owned
+  session, preserving the shared frame and title-card boundaries. Each graphics
+  host owns its complete palette texture, publication, fade and residency lifetime, preserving CPU bank
+  allocation and immediate rewind redraws. SAT replay uses a
   graphics-owned geometry value and one tile-expansion implementation while
   preserving the existing candidate Mod API submission signature. Captured sprites
   keep their palette masks, coloured ghost style and constrained shadow effect
@@ -924,7 +986,23 @@ Unreleased. The earlier development themes remain in
   bridge allowances pin callers and call counts, and special-stage rewind coverage
   follows the registered provider through replacement and retirement. Standalone
   audio callers supply their selected profile to the reusable presentation host;
-  desktop sound-test composition lives with the developer tools. Rewinding a
+  desktop sound-test composition lives with the developer tools. SMPS backends
+  keep their explicitly supplied restore-request destination for their usable
+  lifetime, including later source construction after engine-root reconfiguration.
+  Production backends also retain their supplied manager as legacy configuration
+  authority, querying its current factory after resets; existing constructors keep
+  lazy singleton selection, independently of restoration. SoundTest windows retain
+  their configured destination for WAV export. A private manager-lifetime binding
+  owns incremental physical presentation assembly, source-dependent replacement
+  and sink retirement while preserving source publication, capture continuity and
+  held-rewind policy with their existing owners. Capture
+  admission, rebuild continuity and retirement share one manager-owned lifetime
+  boundary, preserving live recordings across presentation replacements. Held
+  rewind target selection, boundary replacement and release retries share a private
+  manager-lifetime owner while retaining existing presentation and failure behavior.
+  Native SMPS
+  loaders retain their own ROM references while the shared cache and hexadecimal
+  dispatch base stays ROM-free. Rewinding a
   partially collapsed Sonic 1 false floor preserves the remaining break sequence
   and cleanup. Sonic 2 falling fragments retain their mapping pieces and resolve
   current renderers after rewind. ICZ miniboss snapshots restore progressed helpers;
@@ -937,10 +1015,28 @@ Unreleased. The earlier development themes remain in
   saved swing anchors restore with their encounter. Freezer debris keeps its
   managed lifetime, S1 ring groups retain ordered placement recipes, and lightning
   sparks restore their supplied art and refresh atlas residency.
+  Donated teams keep each character's normal and underwater palette policy through
+  art refresh. Rewinding a donor's Super colors restores the first redraw while
+  keeping replacement palette banks isolated from older captures.
   Registry metadata and bonus-stage capabilities own
   root table selection, bootstrap repair and debug behavior. Sonic 1 music parsing
   lives beside its game-owned loader, and level-animation composition contracts
-  live with their managers.
+  live with their managers. Palette ROM and byte decoding lives beside the
+  canonical palette model without changing its input or color semantics.
+  The unpublished art-provider candidate moves `PlayerSpriteArtProvider` and
+  `SpindashDustArtProvider` from `com.openggf.data` to `com.openggf.sprites.art`,
+  preserving game-owned construction and donation. This intentionally breaks
+  old imports and binaries: mods, donor implementations and callers must rebuild
+  against matching artifacts even when their manifest range still accepts `0.7.0`.
+  See the [import migration](docs/modding/getting-started.md#player-art-provider-import-migration).
+  The complete annotated abstract `Game` moves from `com.openggf.data` to
+  `com.openggf.game`, beside its module and standalone composition contracts.
+  Its methods and behavior are preserved; imports, class identity, `ModGame`'s
+  superclass and factory/getter binary descriptors change. Rebuild compiled mods,
+  donors and callers, including inferred-type and declarative standalone users,
+  against matching SDK/engine artifacts. The unchanged candidate manifest range
+  cannot distinguish old binaries and does not automatically reject every one.
+  See the [Game migration](docs/modding/getting-started.md#game-contract-import-migration).
   Object-service guards also recognize forbidden
   method references. Remaining
   migrations and exact allowance accounting live in the
@@ -1000,6 +1096,9 @@ display hold and retirement through their native movement and visibility latches
 Hidden-monitor conversion retains the occupied native SST through replacement
 cleanup. Both special-stage return prefixes pass; broader complete-route parity
 remains separate from these scoped native-owner checks.
+S3K item monitors retain contents only when a later object slot admits them.
+A full tail leaves a remembered broken shell without an icon or reward, and
+rewind can capture that state immediately after the break.
 
 The AIZ2 bombing ship's two propellers are now native objects. They take
 the slots after the ship, turn at the original three-frame rate, and

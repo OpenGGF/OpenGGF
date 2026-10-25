@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
@@ -16,7 +17,12 @@ import com.openggf.physics.Direction;
 import java.util.List;
 
 /** Obj_KnuxFinalBossCrane / loc_7CA3A..loc_7CC26, the placed SSZ2 $B2 ship. */
-public final class SszCraneShip extends AbstractObjectInstance implements SpawnRewindRecreatable, SszCranePose {
+public final class SszCraneShip extends AbstractObjectInstance implements SpawnRewindRecreatable, SszCranePose, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // The native approach moves left with clear flipX; departure sets it and moves right.
+        return flipX ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.LEFT;
+    }
+
     private int code;
     private int xFixed;
     private int yFixed;

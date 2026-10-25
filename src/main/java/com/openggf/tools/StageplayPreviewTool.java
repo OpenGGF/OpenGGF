@@ -58,13 +58,19 @@ public final class StageplayPreviewTool {
                     var audioWorld=com.openggf.game.session.SessionManager.getCurrentGameplayMode();
                     String line;
                     try {
-                    while ((line=input.readLine(1024))!=null) {
+                    while ((line=input.readLine(com.openggf.stageplay.StageplayGround.MAX_BATCH_CHARS + 1024))!=null) {
                         try {
-                            if (line.length()>1024) throw new IllegalArgumentException("Invalid preview request");
+                            if (line.length()>com.openggf.stageplay.StageplayGround.MAX_BATCH_CHARS + 1024) throw new IllegalArgumentException("Invalid preview request");
                             var request=json.readTree(line);
                             int frame=request.path("frame").intValue();
                             if (!request.path("frame").isInt()) throw new IllegalArgumentException("Preview frame must be an integer");
                             if (frame<0 || frame>=document.durationFrames()) throw new IllegalArgumentException("Frame outside scene");
+                            if (request.has("ground")) {
+                                var batch = com.openggf.stageplay.StageplayGround.Json.decodeBatch(request.get("ground").toString(),document);
+                                var report = resources.ground(document,frame,batch,() -> Thread.currentThread().isInterrupted());
+                                output.println(json.writeValueAsString(Map.of("ground",json.readTree(com.openggf.stageplay.StageplayGround.Json.encode(report)))));
+                                output.flush(); continue;
+                            }
                             var authored=StageplayTimeline.sample(document,frame);
                             var sample=resources.resolveFrame(document,authored);
                             var current=com.openggf.game.session.SessionManager.getCurrentGameplayMode();

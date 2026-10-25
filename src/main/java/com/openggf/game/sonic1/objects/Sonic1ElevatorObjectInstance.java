@@ -10,6 +10,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
@@ -57,7 +58,9 @@ import java.util.List;
  * <b>Disassembly reference:</b> docs/s1disasm/_incObj/59 SLZ Elevators.asm
  */
 public class Sonic1ElevatorObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+// Elev movement and spawned platforms change travel paths; their platform bodies have no facing.
 
     // From disassembly Elev_Var1: dc.b $28, 0
     private static final int HALF_WIDTH_DEFAULT = 0x28;

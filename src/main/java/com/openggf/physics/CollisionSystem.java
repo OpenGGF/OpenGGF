@@ -1474,9 +1474,7 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
     private SensorResult selectSensorWithAngle(AbstractPlayableSprite sprite,
                                                SensorResult rightSensor,
                                                SensorResult leftSensor) {
-        if (rightSensor == null && leftSensor == null) {
-            return null;
-        }
+        if (rightSensor == null && leftSensor == null) return null;
         if (rightSensor == null) {
             applyAngleFromSensor(sprite, leftSensor.angle());
             return leftSensor;
@@ -1485,13 +1483,8 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
             applyAngleFromSensor(sprite, rightSensor.angle());
             return rightSensor;
         }
-
-        GroundMode mode = sprite.getGroundMode();
-        boolean leftIsPrimary = (mode == GroundMode.RIGHTWALL || mode == GroundMode.LEFTWALL);
-        SensorResult primary = leftIsPrimary ? leftSensor : rightSensor;
-        SensorResult secondary = leftIsPrimary ? rightSensor : leftSensor;
-        SensorResult selected = primary.distance() < secondary.distance() ? primary : secondary;
-        applyAngleFromSensor(sprite, selected.angle());
+        SensorResult selected = NativeGroundSelection.select(sprite.getGroundMode(), rightSensor, leftSensor);
+        if (selected != null) applyAngleFromSensor(sprite, selected.angle());
         return selected;
     }
 

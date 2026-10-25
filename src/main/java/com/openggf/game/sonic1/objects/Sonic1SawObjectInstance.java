@@ -11,6 +11,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchResponseProvider;
@@ -41,7 +42,20 @@ import java.util.List;
  * ROM reference: docs/s1disasm/_incObj/6A Saws and Pizza Cutters.asm
  */
 public class Sonic1SawObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, SpawnRewindRecreatable {
+        implements TouchResponseProvider, SpawnRewindRecreatable, ObjectVisualFacing.Source {
+
+    @Override
+    public ObjectVisualFacing.Basis nativeFacing() {
+        // Saw types 3/4 deliberately launch at +$600/-$600, including from their
+        // hidden waiting states. The oscillating pole-mounted types do not face
+        // horizontally; xFlipped there changes only the oscillation phase.
+        return switch (sawType) {
+            case 0, 1, 2 -> ObjectVisualFacing.Basis.NON_DIRECTIONAL;
+            case 3 -> ObjectVisualFacing.Basis.RIGHT;
+            case 4 -> ObjectVisualFacing.Basis.LEFT;
+            default -> throw new IllegalStateException("Ground saw facing is undeclared for type " + sawType);
+        };
+    }
 
     // ---- Collision ----
     // obColType for active saws: $A2 = HURT($80) | size index $22

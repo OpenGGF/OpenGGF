@@ -1,7 +1,6 @@
 package com.openggf.sprites.managers;
 
-import com.openggf.game.session.EngineServices;
-import com.openggf.game.session.EngineContext;
+import com.openggf.tests.TestEnvironment;
 import com.openggf.control.InputHandler;
 import com.openggf.control.LogicalInputSnapshot;
 import com.openggf.control.PlayerInputState;
@@ -19,7 +18,7 @@ public class TestSpriteManagerUpdateOrder {
 
     @BeforeEach
     void configureRuntime() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.resetEngineOnly();
     }
 
     @Test

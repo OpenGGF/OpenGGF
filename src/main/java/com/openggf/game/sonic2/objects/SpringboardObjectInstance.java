@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.audio.GameSound;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.solid.ContactKind;
@@ -43,7 +45,13 @@ import java.util.List;
  * standing bit) rather than relying on onSolidContact() receiving STANDING every frame.
  */
 public class SpringboardObjectInstance extends BoxObjectInstance
-        implements SolidObjectProvider, SlopedSolidProvider, RewindRecreatable {
+        implements SolidObjectProvider, SlopedSolidProvider, RewindRecreatable, ObjectVisualFacing.Source {
+    @Override
+    public ObjectVisualFacing.Basis nativeFacing() {
+        // loc_2641E/loc_26436 select the board's high side; applyLaunch uses
+        // that same x_flip owner for the player's horizontal facing/boost.
+        return isFlippedHorizontal() ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
 
     // Animation IDs (from Ani_obj40)
     private static final int ANIM_IDLE = 0;       // byte_265EC: delay=0xF, frames=[0], LOOP

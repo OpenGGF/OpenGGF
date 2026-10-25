@@ -54,7 +54,16 @@ You want to add objects, bosses, zones, or engine improvements.
 ### I want to create levels
 
 - [Level Editor](creating/level-editor.md) -- Create, edit, save, reopen, playtest, and export levels for all three games
-- [Stageplay](creating/stageplay.md) -- Direct sprite films, animatics and reusable mod cutscenes in either editor
+
+### I want to make films and cutscenes
+
+- [Stageplay](creating/stageplay.md) -- What Stageplay is and where to start
+- [Your First Film](creating/stageplay-first-film.md) -- A ten-second film, step by step, in the editor and as a screenplay
+- [Directing Guide](creating/stageplay-directing.md) -- Cast, routes, objects, camera, dialogue, voices, music, scene changes, export and mods
+- [How Day Off Was Made](creating/stageplay-day-off.md) -- A finished film's techniques, shot by shot
+- [Troubleshooting and Glossary](creating/stageplay-troubleshooting.md) -- Route failures, floors, "needs Run" and other surprises
+- [Reference](creating/stageplay-reference.md) -- Screenplay fields, editor commands and keys, limits
+- [Stageplay from the Terminal](creating/stageplay-authoring.md) -- Command-line tools for scripted films and agents
 
 ### I want to create mods
 

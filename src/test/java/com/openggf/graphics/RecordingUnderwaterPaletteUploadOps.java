@@ -8,7 +8,7 @@ public final class RecordingUnderwaterPaletteUploadOps implements UnderwaterPale
 
     public static RecordingUnderwaterPaletteUploadOps install(GraphicsManager graphics) {
         RecordingUnderwaterPaletteUploadOps recorder = new RecordingUnderwaterPaletteUploadOps();
-        graphics.setUnderwaterPaletteUploadOps(recorder);
+        graphics.paletteTextures().setUnderwaterPaletteUploadOps(recorder);
         return recorder;
     }
 

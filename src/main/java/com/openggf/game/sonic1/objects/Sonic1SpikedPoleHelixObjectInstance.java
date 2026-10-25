@@ -10,6 +10,7 @@ import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
@@ -40,7 +41,9 @@ import java.util.List;
  * <b>Disassembly reference:</b> docs/s1disasm/_incObj/17 Spiked Pole Helix.asm
  */
 public class Sonic1SpikedPoleHelixObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, SpawnRewindRecreatable {
+        implements TouchResponseProvider, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+// Helix phase rotates spikes around a pole; the pole and spike children have no horizontal facing.
 
     // ---- Constants from disassembly ----
 

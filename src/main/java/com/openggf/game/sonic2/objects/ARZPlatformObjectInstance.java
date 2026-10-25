@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.OscillationManager;
 import com.openggf.game.sonic2.S2SpriteDataLoader;
@@ -35,7 +37,9 @@ import java.util.logging.Logger;
  * Implements movement behaviors and rendering from the disassembly.
  */
 public class ARZPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, RewindRecreatable {
+        implements SolidObjectProvider, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj18 moves a geometric platform; bobbing/falling and placement flips do not face a body.
+
     private static final Logger LOGGER = Logger.getLogger(ARZPlatformObjectInstance.class.getName());
 
     private static final int[] WIDTH_PIXELS = {

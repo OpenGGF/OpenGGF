@@ -1,15 +1,12 @@
 package com.openggf.game.sonic3k.events;
 
 import com.openggf.game.session.SessionManager;
-import com.openggf.game.session.EngineServices;
 import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.rules.SonicGame;
 
 import com.openggf.audio.AudioManager;
 import com.openggf.camera.Camera;
-import com.openggf.game.session.EngineContext;
-import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
-import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.objects.MgzDrillingRobotnikInstance;
 import com.openggf.level.objects.ObjectSpawn;
@@ -40,9 +37,7 @@ class TestSonic3kMgz2QuakeEvents {
 
     @BeforeEach
     void setUp() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        GameModuleRegistry.setCurrent(new Sonic3kGameModule());
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_3K);
     }
 
     @AfterEach

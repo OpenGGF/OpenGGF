@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
@@ -43,7 +44,10 @@ import java.util.List;
  * segments join one by one as their own delays expire.
  */
 public final class FirewormHeadInstance extends AbstractS3kBadnikInstance
-        implements SpawnRewindRecreatable {
+        implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
 
     /** {@code ObjSlot_Fireworm}: {@code dc.b $C,$C,0,$1A} (sonic3k.asm:196546). */
     private static final int COLLISION_FLAGS = 0x1A;

@@ -80,7 +80,7 @@ class TestSmpsSessionArchitectureGuard {
                 .filter(call -> call.getTargetOwner()
                         .isEquivalentTo(SmpsDriverSession.class))
                 .filter(call -> !Set.of(
-                                "com.openggf.audio.AudioManager",
+                                "com.openggf.audio.AudioManager$PresentationBinding",
                                 OwnedSmpsAudioStream.class.getName())
                         .contains(call.getOriginOwner().getFullName()))
                 .map(Object::toString)

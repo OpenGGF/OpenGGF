@@ -58,9 +58,12 @@ class TestEndingReturnFadeOwnership {
         EndingProvider ending = mock(EndingProvider.class);
         when(ending.getCurrentPhase()).thenReturn(phase);
         when(ending.isComplete()).thenReturn(true);
-        Field provider = GameLoop.class.getDeclaredField("endingProvider");
+        Field session = GameLoop.class.getDeclaredField("endingSession");
+        session.setAccessible(true);
+        Object owner = session.get(loop);
+        Field provider = owner.getClass().getDeclaredField("endingProvider");
         provider.setAccessible(true);
-        provider.set(loop, ending);
+        provider.set(owner, ending);
         FadeManager fade = mode.getFadeManager();
         assertFalse(fade.isActive());
 
@@ -92,7 +95,7 @@ class TestEndingReturnFadeOwnership {
 
     @ParameterizedTest
     @EnumSource(value = FadeManager.FadeState.class, names = {"FADING_TO_BLACK", "FADING_FROM_BLACK"})
-    void anExistingCallbackOwnsCompletionBeforeAnyRepeatedCleanup(FadeManager.FadeState state) {
+    void anExistingCallbackOwnsCompletionBeforeAnyRepeatedCleanup(FadeManager.FadeState state) throws Exception {
         var sprites = mock(SpriteManager.class);
         var level = mock(LevelManager.class);
         var audio = mock(AudioManager.class);
@@ -103,7 +106,7 @@ class TestEndingReturnFadeOwnership {
         else fade.startFadeFromBlack(owner::incrementAndGet);
         int frame = fade.getFrameCount();
 
-        GameLoopGameOverExit.startEndingReturn(sprites, level, "sonic", audio, fade, null,
+        invokeEndingReturn(sprites, level, "sonic", audio, fade, null,
                 replacement::incrementAndGet);
 
         verifyNoInteractions(sprites, level, audio);
@@ -117,7 +120,7 @@ class TestEndingReturnFadeOwnership {
     }
 
     @Test
-    void aCompletedBlackHoldWithoutAPendingCallbackRetainsItsImmediateHandoff() {
+    void aCompletedBlackHoldWithoutAPendingCallbackRetainsItsImmediateHandoff() throws Exception {
         var sprites = mock(SpriteManager.class);
         var level = mock(LevelManager.class);
         var audio = mock(AudioManager.class);
@@ -130,7 +133,7 @@ class TestEndingReturnFadeOwnership {
         assertEquals(FadeManager.FadeState.HOLD_BLACK, fade.getState());
         assertFalse(fade.hasPendingCompletion());
 
-        GameLoopGameOverExit.startEndingReturn(sprites, level, "sonic", audio, fade, null,
+        invokeEndingReturn(sprites, level, "sonic", audio, fade, null,
                 handoff::incrementAndGet);
 
         assertEquals(1, handoff.get());
@@ -138,5 +141,15 @@ class TestEndingReturnFadeOwnership {
         verify(level).setForceHudSuppressed(false);
         verify(audio).fadeOutMusic();
         assertEquals(FadeManager.FadeState.HOLD_BLACK, fade.getState());
+    }
+
+    private static void invokeEndingReturn(SpriteManager sprites, LevelManager level, String mainCode,
+            AudioManager audio, FadeManager fade, com.openggf.game.session.GameplayModeContext context,
+            Runnable onBlack) throws Exception {
+        var method = GameLoopEndingSession.class.getDeclaredMethod("startEndingReturn",
+                SpriteManager.class, LevelManager.class, String.class, AudioManager.class,
+                FadeManager.class, com.openggf.game.session.GameplayModeContext.class, Runnable.class);
+        method.setAccessible(true);
+        method.invoke(null, sprites, level, mainCode, audio, fade, context, onBlack);
     }
 }

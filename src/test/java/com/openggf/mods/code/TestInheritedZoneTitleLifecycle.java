@@ -70,9 +70,7 @@ class TestInheritedZoneTitleLifecycle {
         player.setControlLocked(true);
         loop.setGameMode(GameMode.TITLE_CARD);
 
-        var exit = GameLoop.class.getDeclaredMethod("exitTitleCard");
-        exit.setAccessible(true);
-        exit.invoke(loop);
+        com.openggf.TitleCardLifecycleTestAccess.release(loop);
 
         assertTrue(player.getAir(), "post-title HCZ state must reach the inherited native event provider");
         assertFalse(player.isControlLocked(), "the same release also clears the title's input lock");

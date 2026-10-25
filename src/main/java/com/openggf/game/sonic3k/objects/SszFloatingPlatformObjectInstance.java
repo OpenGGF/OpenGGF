@@ -6,6 +6,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SpawnRewindRecreatable;
@@ -32,7 +33,9 @@ import java.util.List;
  * <p>The subtype is never read: all five act-1 placements are {@code $7F:$00}.
  */
 public final class SszFloatingPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+    // Native vertical swing/dip moves bar/platform geometry without a horizontal-facing owner.
     /** {@code move.w #$180,priority(a0)}. */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x180);
     /** {@code move.b #1,mapping_frame(a0)}. */

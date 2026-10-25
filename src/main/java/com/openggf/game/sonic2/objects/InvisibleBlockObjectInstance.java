@@ -1,4 +1,6 @@
 package com.openggf.game.sonic2.objects;
+
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.BoxObjectInstance;
 
 import com.openggf.configuration.SonicConfiguration;
@@ -23,7 +25,8 @@ import java.util.List;
  *   Lower 4 bits: height = ((n & 0xF) + 1) * 16 pixels
  */
 public class InvisibleBlockObjectInstance extends BoxObjectInstance
-        implements SolidObjectProvider, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj74 is only collision geometry and has no facing body or child.
 
     private static final boolean DEBUG_VIEW_ENABLED = staticDebugViewEnabled();
     private static final DebugOverlayManager OVERLAY_MANAGER = staticDebugOverlay();

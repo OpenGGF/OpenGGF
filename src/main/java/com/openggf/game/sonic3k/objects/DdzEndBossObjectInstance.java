@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
@@ -45,7 +46,12 @@ import java.util.Objects;
  * {@code loc_81CA4} saves and starts {@code $D01}.
  */
 public final class DdzEndBossObjectInstance extends AbstractDdzObjectInstance
-        implements DdzCreateBossExplosionObjectInstance.ExplosionStopFlag {
+        implements DdzCreateBossExplosionObjectInstance.ExplosionStopFlag, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // The native frontal robot and fixed rear/ship/turret roles have no horizontal-facing state; flight/push velocity does not rotate the performer.
+        return ObjectVisualFacing.Basis.NON_DIRECTIONAL;
+    }
+
     // Player-only native control tail; directing must not advance this controller's
     // routine, timers, world flags, camera or level transition.
     private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();

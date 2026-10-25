@@ -12,7 +12,9 @@ import java.util.List;
 /** SKL $47, Obj_SOZSandCork ($41CC2): touch latch, released sand columns and six debris pieces. */
 public final class SozSandCorkObjectInstance extends AbstractObjectInstance
         implements TouchResponseProvider, TouchResponseListener, SpawnRewindRecreatable,
-        RomObjectCodePointerProvider {
+        RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
+
+    // Native cork/block, debris and vertical sand-column children are geometry without logical horizontal facing.
     private final FbzParticipantStateTable participants = new FbzParticipantStateTable(1);
     private int phase, xFixed, yFixed, xVelocity, yVelocity, travel, piece;
     private boolean initialized;

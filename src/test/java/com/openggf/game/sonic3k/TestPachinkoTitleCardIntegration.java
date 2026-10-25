@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k;
 
 import com.openggf.GameLoop;
+import com.openggf.BonusStageSessionTestAccess;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
@@ -24,7 +25,6 @@ import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import java.lang.reflect.Method;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -51,10 +51,7 @@ public class TestPachinkoTitleCardIntegration {
         BonusStageProvider provider = GameModuleRegistry.getCurrent().getBonusStageProvider();
         BonusStageState savedState = captureSavedState(fixture.sprite(), fixture.camera());
 
-        Method doEnterBonusStage = GameLoop.class.getDeclaredMethod(
-                "doEnterBonusStage", BonusStageProvider.class, BonusStageType.class, BonusStageState.class);
-        doEnterBonusStage.setAccessible(true);
-        doEnterBonusStage.invoke(loop, provider, BonusStageType.GLOWING_SPHERE, savedState);
+        BonusStageSessionTestAccess.entered(loop, provider, BonusStageType.GLOWING_SPHERE, savedState);
 
         PachinkoEnergyTrapObjectInstance trap = null;
         int titleCardExitFrame = -1;
@@ -109,10 +106,7 @@ public class TestPachinkoTitleCardIntegration {
         BonusStageProvider provider = GameModuleRegistry.getCurrent().getBonusStageProvider();
         BonusStageState savedState = captureSavedState(player, fixture.camera());
 
-        Method doEnterBonusStage = GameLoop.class.getDeclaredMethod(
-                "doEnterBonusStage", BonusStageProvider.class, BonusStageType.class, BonusStageState.class);
-        doEnterBonusStage.setAccessible(true);
-        doEnterBonusStage.invoke(loop, provider, BonusStageType.GLOWING_SPHERE, savedState);
+        BonusStageSessionTestAccess.entered(loop, provider, BonusStageType.GLOWING_SPHERE, savedState);
 
         PachinkoEnergyTrapObjectInstance trap = null;
         for (int i = 0; i < 240; i++) {

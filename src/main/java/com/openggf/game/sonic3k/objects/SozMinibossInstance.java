@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.*;
 import com.openggf.game.sonic3k.audio.*;
@@ -15,7 +16,12 @@ import java.io.IOException;
  * No HP counter exists: sub_772F6 defeats the golem only at y_pos >= $A10.
  * Child pose and animation bytes are read from the locked-on ROM.
  */
-public final class SozMinibossInstance extends SozMinibossSprite implements SpawnRewindRecreatable {
+public final class SozMinibossInstance extends SozMinibossSprite implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // The observe routine sets flip when the target is to the right; its native chase uses the same side.
+        return flip ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.LEFT;
+    }
+
     private int phase;
     private int routine;
     private int timer;

@@ -5,7 +5,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.lang.reflect.Field;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -33,9 +32,7 @@ class TestPaletteUploadLatch {
 
     @SuppressWarnings("unchecked")
     private boolean uploaded(int line) throws Exception {
-        Field f = GraphicsManager.class.getDeclaredField("paletteTextureMap");
-        f.setAccessible(true);
-        return ((Map<String, Integer>) f.get(graphics)).containsKey("palette_" + line);
+        return ((Map<String, Integer>) PaletteTextureTestAccess.get(graphics, "paletteTextureMap")).containsKey("palette_" + line);
     }
 
     @Test
@@ -78,7 +75,7 @@ class TestPaletteUploadLatch {
             PaletteUploadPresentation.restoreDisplayedFade(graphics, displayed);
             graphics.setPaletteFadePresentation(PaletteFadePresentation.Mode.FROM_WHITE, 3,
                     PaletteFadePresentation.ALL_LINES);
-            assertFalse(graphics.isPaletteUploadLatched(), "a special scene has no level upload latch");
+            assertFalse(graphics.paletteTextures().isPaletteUploadLatched(), "a special scene has no level upload latch");
             assertEquals(1, PaletteUploadPresentation.captureDisplayedFade(graphics).steps(),
                     "the immediate restore redraw still uses its captured CRAM generation");
             assertTrue(PaletteUploadPresentation.captureDisplayedFade(graphics).pending());
@@ -145,7 +142,7 @@ class TestPaletteUploadLatch {
             throw new IllegalStateException("aborted draw");
         }));
         assertEquals(nativeFade, PaletteUploadPresentation.captureDisplayedFade(graphics));
-        assertTrue(graphics.isPaletteUploadLatched());
+        assertTrue(graphics.paletteTextures().isPaletteUploadLatched());
         PaletteUploadPresentation.publishAndLatch(graphics);
         assertEquals(1, PaletteUploadPresentation.captureDisplayedFade(graphics).steps());
         PaletteUploadPresentation.release(graphics);

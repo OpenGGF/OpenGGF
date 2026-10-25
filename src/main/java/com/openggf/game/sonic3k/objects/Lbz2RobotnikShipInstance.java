@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
@@ -46,7 +47,12 @@ import java.util.List;
  * player into the arena before spawning {@code Obj_LBZFinalBoss1}.
  */
 public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable, TouchResponseProvider, TouchResponseListener {
+        implements SpawnRewindRecreatable, TouchResponseProvider, TouchResponseListener, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // This native ship always draws with its horizontal flip set and flies right.
+        return ObjectVisualFacing.Basis.RIGHT;
+    }
+
     // Player-only native control tail; directing must not advance this controller's
     // routine, timers, world flags, camera or level transition.
     private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();

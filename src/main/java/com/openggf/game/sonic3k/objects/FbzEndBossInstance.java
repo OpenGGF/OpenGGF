@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.difficulty.FlyingBatteryBossRecipe;
 import com.openggf.game.PlayerCharacter;
@@ -30,7 +31,12 @@ import java.util.logging.Logger;
 
 /** Locked-on {@code Obj_FBZEndBoss} ($AC, sonic3k.asm:148698-149618). */
 public final class FbzEndBossInstance extends AbstractBossInstance
-        implements SpawnConstructionContextRewindRecreatable, FbzEndBossGraphMember {
+        implements SpawnConstructionContextRewindRecreatable, FbzEndBossGraphMember, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // The native target/turn routine owns facingRight independently of the selected mapping frame.
+        return facingRight ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.LEFT;
+    }
+
     // Player-only native control tail; directing must not advance this controller's
     // routine, timers, world flags, camera or level transition.
     private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();

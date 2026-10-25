@@ -53,7 +53,7 @@ class TestGameLoopTitleCardPause {
         set(loop, "gameplayMode", new GameplayModeContext(new WorldSession(new Sonic2GameModule())));
         set(loop, "levelManager", mock(LevelManager.class));
         set(loop, "camera", mock(com.openggf.camera.Camera.class));
-        set(loop, "titleCardProvider", mock(TitleCardProvider.class));
+        com.openggf.TitleCardLifecycleTestAccess.provider(loop, mock(TitleCardProvider.class));
         set(loop, "activePlcLifecycleFrame", mock(PlcLifecycleFrame.class));
         int pauseKey = SonicConfigurationService.getInstance().getInt(SonicConfiguration.PAUSE_KEY);
         input.handleKeyEvent(pauseKey, GLFW_PRESS);

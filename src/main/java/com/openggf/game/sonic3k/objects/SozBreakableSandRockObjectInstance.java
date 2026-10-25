@@ -12,7 +12,9 @@ import java.util.List;
 
 /** SKL $44, Obj_SOZBreakableSandRock ($41702), shipped FixBugs=0 behavior. */
 public final class SozBreakableSandRockObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SpawnRewindRecreatable, RomObjectCodePointerProvider {
+        implements SolidObjectProvider, SpawnRewindRecreatable, RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
+
+    // Native rock/terrain frames and break pieces have no horizontal-facing body; placement flips retain geometry.
     private boolean breaking;
     private int mappingFrame;
     private int animationTimer;

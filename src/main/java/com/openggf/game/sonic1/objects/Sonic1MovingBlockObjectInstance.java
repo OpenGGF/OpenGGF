@@ -11,6 +11,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
@@ -64,7 +65,9 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/52 Moving Blocks.asm
  */
 public class Sonic1MovingBlockObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+// MBlock travel/oscillation state moves platform geometry, without a horizontal-facing body.
 
     // ---- MBlock_Var table: {obActWid, obFrame} indexed by (subtype >> 4) ----
     // From disassembly: dc.b $10, 0 / dc.b $20, 1 / dc.b $20, 2 / dc.b $40, 3 / dc.b $30, 4

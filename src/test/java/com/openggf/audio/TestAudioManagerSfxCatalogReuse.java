@@ -12,6 +12,8 @@ import com.openggf.data.Rom;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.util.Collections;
 import java.util.IdentityHashMap;
@@ -393,6 +395,64 @@ class TestAudioManagerSfxCatalogReuse {
     }
 
     @Test
+    void fallbackRingNormalReturnInvertsTheValueResetByTheLoaderCallback() {
+        CountingLoader loader = new CountingLoader(EMPTY_DAC);
+        installBase(loader);
+        audio.setSoundMap(Map.of(GameSound.RING_RIGHT, BASE_ID));
+        audio.playSfx(GameSound.RING, 0.75f);
+        assertEquals(GameSound.RING_LEFT.name(), lastCommand().sfxName());
+        assertFalse(audio.captureLogicalSnapshot().ringLeft());
+        loader.afterIdLoad = () -> {
+            audio.resetRingSound();
+            assertTrue(audio.captureLogicalSnapshot().ringLeft());
+        };
+
+        // A null loader result is a normal return: fallback dispatch still toggles.
+        audio.playSfx(GameSound.RING, 1.25f);
+
+        assertEquals(1, loader.idLoads.get());
+        assertEquals(GameSound.RING_RIGHT.name(), lastCommand().sfxName());
+        assertEquals(AudioCommand.SfxRoute.RING_RESOLVED, lastCommand().route());
+        assertEquals(BASE_ID, lastCommand().sfxId());
+        assertEquals(1.25f, lastCommand().pitch());
+        assertFalse(audio.captureLogicalSnapshot().ringLeft(),
+                "outer return negates callback's true, not the original false");
+        audio.playSfx(GameSound.RING);
+        assertEquals(GameSound.RING_RIGHT.name(), lastCommand().sfxName(),
+                "a fresh request independently observes the resulting false");
+        assertTrue(audio.captureLogicalSnapshot().ringLeft());
+    }
+
+    @Test
+    void fallbackRingEscapingLoaderErrorRetainsTheCallbackResetWithoutOuterToggle() {
+        CountingLoader loader = new CountingLoader(EMPTY_DAC);
+        installBase(loader);
+        audio.setSoundMap(Map.of(GameSound.RING_RIGHT, BASE_ID));
+        audio.playSfx(GameSound.RING);
+        assertEquals(GameSound.RING_LEFT.name(), lastCommand().sfxName());
+        assertFalse(audio.captureLogicalSnapshot().ringLeft());
+        AssertionError failure = new AssertionError("escaping ring loader identity");
+        loader.afterIdLoad = () -> {
+            audio.resetRingSound();
+            assertTrue(audio.captureLogicalSnapshot().ringLeft());
+            throw failure;
+        };
+        int entries = audio.commandTimeline().entryCount();
+
+        assertSame(failure, assertThrows(AssertionError.class,
+                () -> audio.playSfx(GameSound.RING, 1.25f)));
+
+        assertEquals(1, loader.idLoads.get());
+        assertEquals(entries + 1, audio.commandTimeline().entryCount(),
+                "only the inner reset publishes before the Error escapes");
+        assertTrue(audio.captureLogicalSnapshot().ringLeft());
+        audio.playSfx(GameSound.RING);
+        assertEquals(GameSound.RING_LEFT.name(), lastCommand().sfxName());
+        assertFalse(audio.captureLogicalSnapshot().ringLeft());
+        assertEquals(1, loader.idLoads.get(), "next request selected unmapped LEFT");
+    }
+
+    @Test
     void registrationConflictOccursBeforeTimelinePublication() {
         AtomicInteger materializations = new AtomicInteger();
         CountingLoader loader = new CountingLoader(EMPTY_DAC);
@@ -500,7 +560,7 @@ class TestAudioManagerSfxCatalogReuse {
     @Test
     void legacyCachedHitMakesRealBackendUseRetainedCompletePolicy() {
         NoDeviceBackend backend = new NoDeviceBackend(
-                SonicConfigurationService.createStandalone());
+                SonicConfigurationService.createStandalone(), audio);
         backend.init();
         audio.setBackend(backend);
         CountingLoader firstLoader = new CountingLoader(EMPTY_DAC);
@@ -542,6 +602,117 @@ class TestAudioManagerSfxCatalogReuse {
         assertEquals(BASE_ID,
                 state.standaloneSfxDriverSnapshot().continuousSfxId());
         assertTrue(state.standaloneSfxDriverSnapshot().continuousSfxFlag());
+    }
+
+    @ParameterizedTest
+    @CsvSource({"false,false", "false,true", "true,false", "true,true"})
+    void registeredQueuedAndPlayingDonorProvenanceSurvivesRouteRemovalOrReplacement(
+            boolean replace, boolean alreadyPlaying) {
+        installBase(new CountingLoader(EMPTY_DAC));
+        CountingLoader old = new CountingLoader(dac(331));
+        old.idResults.put(DONOR_ID, () -> new CountingSfxData(
+                DONOR_ID, (byte) 0x74, new AtomicInteger()));
+        registerDonor("s2", old);
+        audio.playDonorSfx("s2", DONOR_ID); // registration and command publication, not presentation
+        var factory = audio.shadowFactoryForTesting();
+        var key = new SmpsAssetKey("s2", SmpsAssetKey.Route.DONOR_ID, DONOR_ID, null);
+        var registered = factory.requireRegisteredSmpsSfxPlayback(key, 1);
+        var command = lastCommand();
+        if (alreadyPlaying) audio.presentFrame(PresentationMode.SILENT);
+        CountingLoader next = new CountingLoader(dac(332));
+        next.idResults.put(DONOR_ID, () -> new CountingSfxData(
+                DONOR_ID, (byte) 0x75, new AtomicInteger()));
+        if (replace) registerDonor("s2", next);
+        else audio.clearDonorAudio();
+
+        audio.presentFrame(PresentationMode.SILENT);
+
+        var playing = currentSfx();
+        assertEquals(1, playing.source().dependencyGeneration());
+        assertTrue(playing.snapshot().tracks().stream().anyMatch(
+                com.openggf.audio.rewind.SmpsTrackSnapshot::active), "positive control: the retained source is still playing");
+        assertSame(old.dac, playing.dacData());
+        assertSame(registered.program(), playing.smpsData());
+        assertSame(factory, audio.shadowFactoryForTesting());
+        assertSame(registered.program(), factory.requireRegisteredSmpsSfxPlayback(key, 1).program());
+        int commands = audio.commandTimeline().entryCount();
+        audio.playDonorSfx("s2", DONOR_ID);
+        if (replace) {
+            assertEquals(commands + 1, audio.commandTimeline().entryCount());
+            audio.presentFrame(PresentationMode.SILENT);
+            assertEquals(2, currentSfx().source().dependencyGeneration());
+            assertSame(next.dac, currentSfx().dacData());
+            assertNotEquals(playing.source().dataHash(), currentSfx().source().dataHash());
+        } else {
+            assertEquals(commands, audio.commandTimeline().entryCount(), "a fresh manager request sees no route");
+            // The ordinary resolver reads the current absent-route tombstone;
+            // it must not recover generation one's still-resident registered program.
+            var voices = AudioManagerTestDiagnostics.producerFingerprint(audio).voiceIdentities();
+            resolver().submit(command);
+            audio.presentFrame(PresentationMode.SILENT);
+            assertEquals(1, old.idLoads.get());
+            assertEquals(0, next.idLoads.get());
+            assertEquals(voices, AudioManagerTestDiagnostics.producerFingerprint(audio).voiceIdentities(),
+                    "a fresh resolver request must not rematerialize the old cached voice");
+            assertEquals(playing.source(), currentSfx().source());
+            assertSame(registered.program(), factory.requireRegisteredSmpsSfxPlayback(key, 1).program());
+        }
+    }
+
+    @Test
+    void ordinaryResolverCapturesOneCurrentHandleWhileLegacyReplayReadsTheInstalledRoute() {
+        installBase(new CountingLoader(EMPTY_DAC));
+        CountingLoader old = new CountingLoader(dac(333));
+        CountingLoader next = new CountingLoader(dac(334));
+        old.idResults.put(DONOR_ID, () -> new CountingSfxData(
+                DONOR_ID, (byte) 0x76, new AtomicInteger()));
+        next.idResults.put(DONOR_ID, () -> new CountingSfxData(
+                DONOR_ID, (byte) 0x77, new AtomicInteger()));
+        registerDonor("s2", old);
+        audio.captureLogicalSnapshot();
+        AudioCommand.PlaySfx command = new AudioCommand.PlaySfx(
+                DONOR_ID, null, AudioCommand.SfxRoute.DONOR_SMPS, 1.0f, "s2");
+        old.afterIdLoad = () -> registerDonor("s2", next);
+
+        resolver().submit(command);
+        audio.presentFrame(PresentationMode.SILENT);
+
+        assertEquals(1, currentSfx().source().dependencyGeneration());
+        assertSame(old.dac, currentSfx().dacData());
+        assertEquals(1, old.idLoads.get());
+        assertEquals(0, next.idLoads.get());
+        resolver().submit(command);
+        audio.presentFrame(PresentationMode.SILENT);
+        assertEquals(2, currentSfx().source().dependencyGeneration());
+        assertSame(next.dac, currentSfx().dacData());
+        assertEquals(1, next.idLoads.get());
+        // The production legacy replay branch intentionally loads the currently
+        // installed route directly, rather than using either retained registry entry.
+        int[] legacyDispatches = {0};
+        audio.setBackend(new NullAudioBackend() {
+            @Override public void playSfxSmps(AbstractSmpsData data, DacData dac, float pitch,
+                                             SmpsSequencerConfig config) {
+                legacyDispatches[0]++;
+                assertSame(next.dac, dac);
+                assertSame(TestProfile.CONFIG, config);
+                assertEquals(1.0f, pitch);
+            }
+        });
+        try {
+            var replay = AudioManager.class.getDeclaredMethod("replaySfx", AudioCommand.PlaySfx.class);
+            replay.setAccessible(true);
+            replay.invoke(audio, command);
+        } catch (ReflectiveOperationException failure) {
+            throw new AssertionError(failure);
+        }
+        assertEquals(2, next.idLoads.get());
+        assertEquals(1, old.idLoads.get());
+        assertEquals(1, legacyDispatches[0]);
+    }
+
+    private com.openggf.audio.presentation.AudioPresentationCommandResolver resolver() {
+        return AudioManagerTestDiagnostics.presentationField(audio, "shadowResolver",
+                com.openggf.audio.presentation.AudioPresentationCommandResolver.class);
     }
 
     private void installBase(CountingLoader loader) {
@@ -781,8 +952,8 @@ class TestAudioManagerSfxCatalogReuse {
 
     private static final class NoDeviceBackend
             extends AbstractSmpsAudioBackend {
-        private NoDeviceBackend(SonicConfigurationService configuration) {
-            super(configuration, null);
+        private NoDeviceBackend(SonicConfigurationService configuration, MusicRestoreSink musicRestoreSink) {
+            super(configuration, null, musicRestoreSink);
         }
 
         @Override protected int getDeviceSampleRate() { return 48_000; }

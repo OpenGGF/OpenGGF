@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
@@ -32,7 +34,8 @@ import java.util.logging.Logger;
  * After firing, anim continues with frame 4, then changes to anim 1 (frame 5 looping).
  * On cooldown expiry, resets to anim 0.
  */
-public class HtzFireShooterObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class HtzFireShooterObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.Container {
+    // Obj20 source eruption has no shared horizontal front; each mirrored projectile owns its own facing and anchor.
 
     private static final Logger LOG = Logger.getLogger(HtzFireShooterObjectInstance.class.getName());
 

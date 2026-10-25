@@ -1,5 +1,6 @@
 package com.openggf.game.sonic1.objects.bosses;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
@@ -22,7 +23,11 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/74 MZ Boss Fire.asm
  */
 public class Sonic1BossFireInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, RewindRecreatable {
+        implements TouchResponseProvider, RewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // Horizontal flame travel owns direction; vertical flame animation flips are not logical horizontal facing.
+        return animId == 2 ? (xVel < 0 ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT) : ObjectVisualFacing.Basis.NON_DIRECTIONAL;
+    }
 
     // Main routine (obRoutine)
     private static final int ROUTINE_INIT = 0;

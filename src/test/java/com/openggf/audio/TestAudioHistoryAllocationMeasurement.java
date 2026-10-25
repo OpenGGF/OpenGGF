@@ -105,7 +105,7 @@ class TestAudioHistoryAllocationMeasurement {
             AudioBenchmarkMemoryProbe probe) throws Exception {
         try {
             audio.setBackend(new HeadlessSmpsAudioBackend(
-                    config, PerformanceProfiler.getInstance()));
+                    config, PerformanceProfiler.getInstance(), audio));
 
             AudioBenchmarkMemoryProbe.RunResult measurement =
                     probe.measureTimedRun(() -> audio.setRewindHistoryArmed(true));
@@ -125,7 +125,7 @@ class TestAudioHistoryAllocationMeasurement {
             AudioBenchmarkMemoryProbe probe) throws Exception {
         try {
             audio.setBackend(new HeadlessSmpsAudioBackend(
-                    config, PerformanceProfiler.getInstance()));
+                    config, PerformanceProfiler.getInstance(), audio));
             audio.setRewindHistoryArmed(true);
             assertTrue(audio.releaseStateForTesting().producer().historyArmed());
             PcmHistoryRing before = producerHistory(audio);
@@ -175,9 +175,7 @@ class TestAudioHistoryAllocationMeasurement {
      * Measure that ring.
      */
     private static PcmHistoryRing producerHistory(AudioManager audio) throws Exception {
-        Field producerField = AudioManager.class.getDeclaredField("shadowProducer");
-        producerField.setAccessible(true);
-        Object producer = producerField.get(audio);
+        Object producer = AudioManagerTestDiagnostics.presentationField(audio, "shadowProducer", Object.class);
         assertNotNull(producer, "the presentation producer must own capture history");
 
         Field historyField = producer.getClass().getDeclaredField("history");

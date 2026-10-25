@@ -1,4 +1,6 @@
 package com.openggf.game.sonic1.objects.badniks;
+
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.GameServices;
 import com.openggf.game.PlayableEntity;
 
@@ -51,7 +53,16 @@ import java.util.List;
  * multiplier (subtype * 60 frames).
  */
 public class Sonic1BallHogBadnikInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseAttackable, SpawnRewindRecreatable {
+        implements TouchResponseProvider, TouchResponseAttackable, SpawnRewindRecreatable, ObjectVisualFacing.PlacementSource {
+
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
+
+    @Override public int initialPlacementFlags(com.openggf.level.objects.ObjectVisualFacing.Basis facing, int sourceFlags) {
+        // The constructor owns this mapping; it differs from other native badniks.
+        return (sourceFlags & ~1) | (facing == com.openggf.level.objects.ObjectVisualFacing.Basis.LEFT ? 1 : 0);
+    }
 
     // --- Collision ---
     // From disassembly: move.b #5,obColType(a0)

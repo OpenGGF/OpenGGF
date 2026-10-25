@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.Sonic2Rng;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
@@ -41,7 +43,7 @@ import java.util.List;
  *   <li>After burst completes, add 128-255 frame delay before next burst</li>
  * </ol>
  */
-public class BubbleGeneratorObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class BubbleGeneratorObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
     private static final int ANIMATION_TABLE_ADDRESS = 0x1FBCC;
     private static final int BUBBLE_SEQUENCE_ADDRESS = 0x1FAF0;
     private int animFrameIndex;

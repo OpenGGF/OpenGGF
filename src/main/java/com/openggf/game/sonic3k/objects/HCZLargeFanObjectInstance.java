@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
 
 import com.openggf.game.PlayableEntity;
@@ -32,7 +34,7 @@ import static com.openggf.game.sonic3k.objects.HCZWaterRushObjectInstance.HCZBre
  * the shared HCZ tunnel/bar block state and keeps cycling its 5-frame animation
  * while playing the big fan SFX every 16 frames.
  */
-public class HCZLargeFanObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class HCZLargeFanObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
 
     private static final int PRIORITY = 4; // ROM: priority = $200
     private static final int FAN_FRAME_COUNT = 5;

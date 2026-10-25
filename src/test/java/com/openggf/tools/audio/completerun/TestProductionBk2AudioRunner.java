@@ -79,7 +79,7 @@ class TestProductionBk2AudioRunner {
                 crossGameFeatures);
         EngineServices.configure(context);
         input = new InputHandler();
-        backend = new HeadlessSmpsAudioBackend(config, profiler);
+        backend = new HeadlessSmpsAudioBackend(config, profiler, audio);
         audio.setBackend(backend);
     }
 

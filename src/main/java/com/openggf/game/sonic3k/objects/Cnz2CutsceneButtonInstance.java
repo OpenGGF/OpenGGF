@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.mutation.LayoutMutationContext;
 import com.openggf.game.mutation.LevelMutationSurface;
@@ -27,7 +29,7 @@ import java.util.List;
  * 6 runs {@code loc_65CAC}: shakes the screen and spawns the vacuum-tube
  * controllers used by the second encounter.
  */
-public final class Cnz2CutsceneButtonInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
+public final class Cnz2CutsceneButtonInstance extends AbstractObjectInstance implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
     private static final int INIT_Y_OFFSET = 4;
     private static final int PRIORITY = 4;
     private static final int RANGE_LEFT = -0x18;

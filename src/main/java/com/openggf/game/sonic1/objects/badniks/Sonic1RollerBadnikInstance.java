@@ -1,5 +1,6 @@
 package com.openggf.game.sonic1.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.level.objects.AbstractBadnikInstance;
 import com.openggf.graphics.GLCommand;
@@ -49,7 +50,10 @@ import java.util.List;
  *   <li>Anim 2 (Roll): speed 3, frames {3,4,2}, afEnd -> loops</li>
  * </ul>
  */
-public class Sonic1RollerBadnikInstance extends AbstractBadnikInstance implements SpawnRewindRecreatable {
+public class Sonic1RollerBadnikInstance extends AbstractBadnikInstance implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
 
     // From disassembly: obColType = $0E (normal) or $8E (invincible while rolling)
     // Size index is lower 6 bits = $0E

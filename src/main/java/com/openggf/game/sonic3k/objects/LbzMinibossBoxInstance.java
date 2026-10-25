@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
@@ -32,7 +34,7 @@ import java.util.List;
  * miniboss music, and spawns {@code Obj_LBZMiniboss} once the player walks in.
  */
 public final class LbzMinibossBoxInstance extends AbstractObjectInstance implements SpawnRewindRecreatable,
-        MultiBucketRenderable {
+        MultiBucketRenderable, ObjectVisualFacing.Container {
     private static final int CAMERA_MIN_X = 0x3C00;
     private static final int CAMERA_MAX_X = 0x3EA0;
     private static final int CAMERA_LOCKED_MIN_X = 0x3DA0;

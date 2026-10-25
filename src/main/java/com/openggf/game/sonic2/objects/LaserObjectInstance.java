@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.camera.Camera;
 import com.openggf.debug.DebugRenderContext;
@@ -42,7 +44,12 @@ import java.util.List;
  * SubObjData: mappings=ObjB9_MapUnc_3BB18, art_tile=make_art_tile(ArtTile_ArtNem_WfzHrzntlLazer,2,1),
  * render_flags=level_fg, priority=1, width=$60, collision=0.
  */
-public class LaserObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class LaserObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.Source {
+    @Override
+    public ObjectVisualFacing.Basis nativeFacing() {
+        // ObjB9's native beam always fires at x_vel=-$1000, independent of placement flips.
+        return ObjectVisualFacing.Basis.LEFT;
+    }
 
     /**
      * Horizontal velocity when firing.

@@ -8,6 +8,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
@@ -52,7 +53,9 @@ import java.util.List;
  */
 public final class LrzFallingSpikeObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider, TouchResponseProvider, RewindRecreatable,
-        RomObjectCodePointerProvider {
+        RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
+
+    // Obj_LRZFallingSpike hangs and falls vertically, then becomes a block; it has no horizontal facing.
 
     /** {@code move.w #$280,priority(a0)} (sonic3k.asm:87999). */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x0280);

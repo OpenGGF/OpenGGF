@@ -2,7 +2,7 @@
 """Launch the Stageplay agent CLI with owned headless rendering and JSON results.
 
 Inputs: shot-local screenplay, .stageplay scene, user-supplied ROMs, optional engine jar.
-Screenplay v6 supports lossless canonical decompilation and editor round trips.
+Screenplay v7 supports lossless canonical decompilation and editor round trips.
 Object casts use per-shot objects/objectActions and worldCommands
 (CLEAR_BADNIKS, CLEAR_OBJECTS, REMOVE_OBJECT). Compile uses the engine's strict schema. Route plans emit existing native input
 intents or explicitly labelled visual object movement; supplied ROMs are required.
@@ -90,7 +90,10 @@ def main(argv=None):
     command += ['-cp', str(jar), 'com.openggf.tools.StageplayTool', args.command, *args.arguments]
     # CLI paths are interpreted relative to the caller, not the checkout used for leases.
     for index, item in enumerate(command[:-1]):
-        if item in {'--scene', '--script', '--out', '--rom', '--s1-rom', '--s2-rom', '--s3k-rom', '--staging-dir', '--observations', '--request', '--rom-descriptor', '--asset-descriptor'}:
+        if item in {'--scene', '--script', '--out', '--rom', '--s1-rom', '--s2-rom', '--s3k-rom', '--staging-dir', '--observations', '--request', '--queries', '--rom-descriptor', '--asset-descriptor'}:
+            command[index + 1] = str(Path(command[index + 1]).resolve())
+        elif item == '--ffmpeg' and os.path.dirname(command[index + 1]):
+            # Bare executable names retain PATH lookup in the child.
             command[index + 1] = str(Path(command[index + 1]).resolve())
     with redirect_stdout(sys.stderr), worktree_build_slot(ROOT) as tree_fd, build_activity_slot(ROOT) as activity:
         return run_owned(command, env=env, leases=inherited_slot(tree_fd, activity))

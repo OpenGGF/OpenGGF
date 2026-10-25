@@ -1,5 +1,7 @@
 package com.openggf.stageplay;
 
+import com.openggf.stageplay.StageplayDocument.Facing;
+
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -145,7 +147,7 @@ class TestStageplayTimeline {
     void holdsDiscretePropertiesAndRestartsAnimationAfterPoseHold() {
         var document = scene().withActors(List.of(actor(List.of(
                 key(0, 10, 1, -1, Interpolation.HOLD),
-                new ActorKey(10, 100, 200, 1, 8, true, false, 2, Interpolation.LINEAR),
+                new ActorKey(10, 100, 200, 1, 8, Facing.LEFT, false, 2, Interpolation.LINEAR),
                 key(20, 200, 1, -1, Interpolation.HOLD)))));
         var before = StageplayTimeline.sample(document, 9).actors().getFirst();
         assertEquals(10, before.x());

@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.OscillationManager;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -38,7 +40,7 @@ import java.util.List;
  * The visible sheet is drawn directly at the spawn center, and the lift window is
  * calculated from the same center-position deltas used by the original routine.
  */
-public final class CnzHoverFanInstance extends AbstractObjectInstance implements RewindRecreatable {
+public final class CnzHoverFanInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
 
     /** ROM {@code move.w #$280,priority(a0)} at Obj_CNZHoverFan init: bucket 5. */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x280);

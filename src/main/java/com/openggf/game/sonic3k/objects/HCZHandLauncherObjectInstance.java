@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.debug.DebugColor;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.PlayableEntity;
@@ -41,7 +43,15 @@ import java.util.logging.Logger;
  * Object 0x3A - HCZ Hand Launcher (Hydrocity Zone).
  */
 public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SpawnRewindRecreatable, RomObjectCodePointerProvider {
+        implements SolidObjectProvider, SpawnRewindRecreatable, RomObjectCodePointerProvider, ObjectVisualFacing.PlacementSource {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // The same direction that the native rider/launch routine installs on the player.
+        return (facingLeft) ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
+    @Override public int initialPlacementFlags(com.openggf.level.objects.ObjectVisualFacing.Basis facing, int sourceFlags) {
+        return (sourceFlags & ~1) | (facing == com.openggf.level.objects.ObjectVisualFacing.Basis.LEFT ? 1 : 0);
+    }
+
 
     /**
      * Word 0 of this object's S3K SST holds its live ROM code pointer.

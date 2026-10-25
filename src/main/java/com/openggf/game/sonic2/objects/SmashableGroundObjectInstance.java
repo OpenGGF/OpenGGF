@@ -1,4 +1,6 @@
 package com.openggf.game.sonic2.objects;
+
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.BoxObjectInstance;
 
 import com.openggf.game.PlayableEntity;
@@ -33,7 +35,8 @@ import java.util.logging.Logger;
  * - Uses level patterns (ArtTile_ArtKos_LevelArt), not dedicated object art
  */
 public class SmashableGroundObjectInstance extends BoxObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj2F owns ground fragments and score popups; breakup velocities do not face a body.
 
     private static final Logger LOGGER = Logger.getLogger(SmashableGroundObjectInstance.class.getName());
 

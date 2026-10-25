@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.graphics.GLCommand;
@@ -27,7 +29,7 @@ import java.util.Map;
  * player into object control and carries them around the cage rim using
  * {@code GetSineCosine}.
  */
-public final class CnzWireCageObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
+public final class CnzWireCageObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
 
     private static final int COOLDOWN_AFTER_RELEASE = 0x10;
     private static final int MIN_SPEED_TO_CONTINUE = 0x300;

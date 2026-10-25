@@ -17,6 +17,7 @@ import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -58,7 +59,9 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/66 Rotating Junction.asm
  */
 public class Sonic1JunctionObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+// Jun rotates a mechanical gap and its backing disc; angular position is not horizontal facing.
 
     // ========================================================================
     // ROM Constants

@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.DynamicWaterHandler;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Lbz2KnucklesDynamicWaterHandler;
@@ -34,7 +36,7 @@ import java.util.List;
  * ({@code sonic3k.asm:53555-53819}).
  */
 public final class LbzPipePlugObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable, RomObjectCodePointerProvider {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable, RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
 
     /**
      * Word 0 of this object's S3K SST holds its live ROM code pointer.

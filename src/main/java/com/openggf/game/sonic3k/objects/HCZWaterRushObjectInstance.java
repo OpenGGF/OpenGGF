@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kLevelTriggerManager;
@@ -39,7 +41,7 @@ import java.util.List;
         reason = "Constructor writes global zone state (HCZBreakableBarState.setState(3)) "
                 + "in addition to spawning a child; only the child spawn is observable by "
                 + "the restore-time construction side-effect latch.")
-public class HCZWaterRushObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class HCZWaterRushObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
 
     // ===== Phase constants =====
     private static final int PHASE_WAITING = 0;

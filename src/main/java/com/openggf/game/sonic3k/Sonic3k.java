@@ -2,11 +2,11 @@ package com.openggf.game.sonic3k;
 
 import com.openggf.audio.GameSound;
 import com.openggf.configuration.SonicConfiguration;
-import com.openggf.data.Game;
-import com.openggf.data.PlayerSpriteArtProvider;
+import com.openggf.game.Game;
+import com.openggf.sprites.art.PlayerSpriteArtProvider;
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
-import com.openggf.data.SpindashDustArtProvider;
+import com.openggf.sprites.art.SpindashDustArtProvider;
 import com.openggf.data.compression.KosinskiInspectionCache;
 import com.openggf.game.DynamicStartPositionProvider;
 import com.openggf.game.GameServices;

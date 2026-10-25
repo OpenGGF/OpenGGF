@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.graphics.GLCommand;
@@ -19,7 +20,11 @@ import java.util.List;
  * {@code LoadSubObject}; main runs {@code AnimateSprite} with
  * {@code Ani_objBF = dc.b 1,0,1,2,$FF}, then {@code MarkObjGone}.
  */
-public class WFZStickBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable {
+public class WFZStickBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // ObjBF only rotates a stationary stick; its animation has no native logical left/right direction.
+        return ObjectVisualFacing.Basis.NON_DIRECTIONAL;
+    }
 
     private static final int COLLISION_SIZE_INDEX = 0x04;
     private static final int WIDTH_PIXELS = 4;

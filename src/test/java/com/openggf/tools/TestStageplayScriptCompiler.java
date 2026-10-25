@@ -18,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestStageplayScriptCompiler {
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final String SCREENPLAY = """
-            {"version":6,"name":"Three locations","width":320,"height":224,
+            {"version":7,"name":"Three locations","width":320,"height":224,
              "cast":[{"id":"hero","name":"Hero","gameId":"s2","character":"sonic","puppet":false},
                      {"id":"friend","name":"Friend","gameId":"s2","character":"tails","puppet":false}],
              "shots":[
@@ -52,7 +52,7 @@ class TestStageplayScriptCompiler {
 
     private static ObjectNode puppetRecipe() throws IOException {
         return (ObjectNode) JSON.readTree("""
-                {"version":6,"name":"Real movement","cast":[
+                {"version":7,"name":"Real movement","cast":[
                   {"id":"hero","name":"Hero","gameId":"s2","character":"sonic"},
                   {"id":"prop","name":"Prop","gameId":"s2","character":"tails","puppet":false}],
                  "shots":[
@@ -69,6 +69,20 @@ class TestStageplayScriptCompiler {
                                         {"frame":30,"kind":"STOP"}]}}
                  ]}
                 """);
+    }
+
+    @Test void namedMusicAndNativeNumbersCompileToTheSameCue() throws Exception {
+        var named = recipe();
+        var cue = shot(named,0).putArray("audio").addObject().put("frame",0).put("kind","ROM_MUSIC")
+                .put("music","EMERALD_HILL");
+        var numeric = named.deepCopy();
+        ((ObjectNode)shot(numeric,0).path("audio").get(0)).remove("music");
+        ((ObjectNode)shot(numeric,0).path("audio").get(0)).put("soundId",130);
+        assertEquals(compile(numeric),assertDoesNotThrow(() -> compile(named)));
+        cue.put("soundId",131);
+        assertTrue(assertThrows(IOException.class,() -> compile(named)).getMessage().contains("either"));
+        cue.remove("soundId"); cue.put("music","NOT_A_SONG");
+        assertTrue(assertThrows(IOException.class,() -> compile(named)).getMessage().contains("Unknown"));
     }
 
     @Test void rejectsRomCueGainDuringCompilation() throws Exception {

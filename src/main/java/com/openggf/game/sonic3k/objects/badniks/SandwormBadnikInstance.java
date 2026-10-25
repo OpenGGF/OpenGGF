@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -8,7 +9,11 @@ import com.openggf.graphics.GLCommand;
 import java.util.List;
 
 /** SKL $95: Obj_Sandworm ($8EA6A), body chain, sand warning and splash slots. */
-public final class SandwormBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable {
+public final class SandwormBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
+
     private int routine;
     private int timer;
     private int homeY;

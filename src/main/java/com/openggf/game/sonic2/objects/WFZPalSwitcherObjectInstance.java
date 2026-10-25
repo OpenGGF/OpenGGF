@@ -1,4 +1,6 @@
 package com.openggf.game.sonic2.objects;
+
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.BoxObjectInstance;
 
 import com.openggf.configuration.SonicConfiguration;
@@ -50,7 +52,8 @@ import java.util.List;
  *   <li>Player crosses X from right to left AND Y is within range: apply reverse action</li>
  * </ul>
  */
-public class WFZPalSwitcherObjectInstance extends BoxObjectInstance implements RewindRecreatable {
+public class WFZPalSwitcherObjectInstance extends BoxObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj8B is an invisible palette crossing trigger; xFlipped selects the toggle, not facing.
 
     // Width lookup table from disassembly word_213AA (s2.asm:46534-46538)
     private static final int[] WIDTH_TABLE = {0x20, 0x40, 0x80, 0x100};

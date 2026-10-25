@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.bosses;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
 
 import com.openggf.camera.Camera;
@@ -49,7 +50,12 @@ import java.util.List;
  * 153341-154205. This owns only the local object graph; registry/profile wiring
  * is intentionally left to the integration task.
  */
-public final class LbzEndBossInstance extends AbstractBossInstance implements SpawnRewindRecreatable {
+public final class LbzEndBossInstance extends AbstractBossInstance implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // The fixed frontal machine has no native horizontal direction; its subparts do not turn it.
+        return ObjectVisualFacing.Basis.NON_DIRECTIONAL;
+    }
+
     private static final int HIT_COUNT = 8;
     private static final int COLLISION_INIT = 0x18;
     private static final int COLLISION_RISEN = 0x0F;
@@ -138,7 +144,6 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
     // constructor, before subclass field initializers) reassigns them.
     private transient List<AbstractBossChild> ownedChildren;
     private transient List<LbzEndBossPlatformChild> platformChildren;
-    private List<Integer> launchedSpikeBallRomSubtypes;
     // The Java transient keyword (not merely the rewind-transient annotation) is required:
     // the compact default-object schema only honours the transient keyword / policy table
     // for object-ref fields, so an annotated-but-non-transient ref would still be captured
@@ -204,7 +209,6 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
         bossArtLoaded = false;
         ownedChildren = new ArrayList<>();
         platformChildren = new ArrayList<>();
-        launchedSpikeBallRomSubtypes = new ArrayList<>();
         platformLeader = null;
         runnerChild = null;
         deferredExplosionControllerChild = null;
@@ -409,10 +413,6 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
 
     public boolean spawnsCapsuleForTests() {
         return false;
-    }
-
-    public List<Integer> getLaunchedSpikeBallRomSubtypesForTests() {
-        return List.copyOf(launchedSpikeBallRomSubtypes);
     }
 
     public int getRequestedPlcIdForTests() {
@@ -825,7 +825,6 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
     private void launchSpikeBall() {
         playSfxIfReady(Sonic3kSfx.TUBE_LAUNCHER.id);
         int romSubtype = LAUNCH_SUBTYPE_TABLE[launchCount++ & 7];
-        launchedSpikeBallRomSubtypes.add(romSubtype);
         recordChild(spawnChild(() -> new LbzEndBossSpikeBallChild(this, romSubtype)));
     }
 

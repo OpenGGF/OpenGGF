@@ -1,5 +1,7 @@
 package com.openggf.tools;
 
+import com.openggf.stageplay.StageplayDocument.Facing;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -51,6 +53,33 @@ class TestStageplayTool {
         }
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"s1,sonic1.rom.path,129", "s2,sonic2.rom.path,130", "s3k,s3k.rom.path,1"})
+    void catalogReportsNativeMusicNumbers(String game, String property, int expected) throws Exception {
+        String rom = System.getProperty(property);
+        org.junit.jupiter.api.Assumptions.assumeTrue(rom != null,"Explicit catalog ROM path required");
+        var result = execute("catalog","--game",game,"--rom",rom);
+        assertEquals(0,result.status(),result.json().toString());
+        assertEquals(expected,result.json().path("result").path("sets").get(0).path("musicId").asInt());
+        assertTrue(java.util.stream.StreamSupport.stream(result.json().path("result").path("music").spliterator(),false)
+                .anyMatch(entry -> entry.path("soundId").asInt()==expected && !entry.path("name").asText().isBlank()));
+    }
+
+    @Test void groundIsQueryOnlyAndUsesTypedContextFailures() throws Exception {
+        Path queries = directory.resolve("ground.json");
+        java.nio.file.Files.writeString(queries,"""
+                {"queries":[{"id":"prop","x":100,"top":100,"bottom":300,
+                "object":{"halfWidth":8,"height":28,"footOffset":14,"path":1}}]}
+                """);
+        var result = execute("ground","--set","s1/0/0","--queries",queries.toString());
+        assertEquals(0,result.status());
+        assertEquals("ENTRY_LAYOUT",result.json().path("result").path("basis").path("kind").asText());
+        assertEquals("CONTEXT_UNAVAILABLE",result.json().path("result").path("answers").get(0).path("outcome").asText());
+        assertEquals(2,execute("ground","--set","s1/0/0","--queries",queries.toString(),"--out",directory.resolve("changed.stageplay").toString()).status());
+        assertFalse(java.nio.file.Files.exists(directory.resolve("changed.stageplay")));
+        assertEquals(2,execute("ground","--set","s1/0/0","--scene","unread.stageplay","--queries",queries.toString()).status());
+    }
+
     private static ObjectNode recipe() throws IOException { return (ObjectNode) JSON.readTree(StageplayTool.scaffold()); }
     private static ObjectNode shot(ObjectNode script) { return (ObjectNode) script.path("shots").get(0); }
     private Path script(String name, ObjectNode recipe) throws IOException {
@@ -70,9 +99,9 @@ class TestStageplayTool {
                         new StageplayDocument.CameraKey(3, 500, 0, 1, linear),
                         new StageplayDocument.CameraKey(6, 530, 0, 2, linear)))
                 .withActors(List.of(new StageplayDocument.Actor("hero", "Hero", "s2", "sonic", List.of(
-                        new StageplayDocument.ActorKey(0, 0, 100, 1, -1, false, true, 1, linear),
-                        new StageplayDocument.ActorKey(3, 900, 100, 1, -1, false, true, 1, linear),
-                        new StageplayDocument.ActorKey(6, 930, 100, 1, -1, false, true, 1, linear)))))
+                        new StageplayDocument.ActorKey(0, 0, 100, 1, -1, Facing.RIGHT, true, 1, linear),
+                        new StageplayDocument.ActorKey(3, 900, 100, 1, -1, Facing.RIGHT, true, 1, linear),
+                        new StageplayDocument.ActorKey(6, 930, 100, 1, -1, Facing.RIGHT, true, 1, linear)))))
                 .withCaptions(List.of(new StageplayDocument.Caption("line", 2, 4, "At the boundary", 0, 0, -1)))
                 .withAudio(List.of(
                         new StageplayDocument.AudioCue("first", 0, StageplayDocument.AudioKind.ROM_SFX, "s2", 10, "", 1),
@@ -215,7 +244,7 @@ class TestStageplayTool {
         byte[] original = Files.readAllBytes(scene);
         var result = execute("decompile", "--scene", scene.toString(), "--out", screenplay.toString());
         assertEquals(0, result.status());
-        assertEquals(6, result.json().path("result").path("screenplayVersion").intValue());
+        assertEquals(StageplayScriptCompiler.VERSION, result.json().path("result").path("screenplayVersion").intValue());
         assertEquals(document, StageplayScriptCompiler.compile(Files.readAllBytes(screenplay)));
         byte[] exported = Files.readAllBytes(screenplay);
         assertEquals(2, execute("decompile", "--scene", scene.toString(), "--out", screenplay.toString()).status());
@@ -361,7 +390,7 @@ class TestStageplayTool {
     @Test void helpDocumentsMachineReadableExitCodesAndCurrentSchemaWithoutRomAccess() throws Exception {
         var result = execute();
         assertEquals(0, result.status());
-        assertEquals(6, result.json().path("result").path("screenplayVersion").intValue());
+        assertEquals(StageplayScriptCompiler.VERSION, result.json().path("result").path("screenplayVersion").intValue());
         assertEquals(StageplayDocument.VERSION, result.json().path("result").path("stageplayVersion").intValue());
         assertEquals(60, result.json().path("result").path("fps").intValue());
         assertTrue(result.json().path("result").path("commands").toString().contains("route --scene"));

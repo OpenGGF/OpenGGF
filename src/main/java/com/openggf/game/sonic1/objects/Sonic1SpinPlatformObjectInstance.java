@@ -12,6 +12,7 @@ import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SpawnRewindRecreatable;
@@ -44,7 +45,9 @@ import java.util.List;
  * ROM reference: docs/s1disasm/_incObj/69 SBZ Spinning Platforms.asm
  */
 public class Sonic1SpinPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+// Spin trapdoors/discs rotate geometric platforms; animation flips are not logical facing.
 
     // ---- Trapdoor solid params (Spin_Trapdoor) ----
     // move.w #$4B,d1 / move.w #$C,d2 / move.w d2,d3 / addq.w #1,d3

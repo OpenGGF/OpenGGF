@@ -8,6 +8,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -32,7 +33,9 @@ import java.util.List;
  */
 public class Sonic1EggPrisonButtonObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider, SolidObjectListener,
-        RewindRecreatable {
+        RewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+// Pri_Switched only depresses/flashes this button; the capsule owns the released animals.
 
     // From disassembly: move.w #$17,d1 / moveq #8,d2 / moveq #8,d3
     private static final int HALF_WIDTH = 0x17;

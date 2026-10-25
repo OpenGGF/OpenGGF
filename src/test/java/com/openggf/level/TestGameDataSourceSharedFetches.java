@@ -2,9 +2,13 @@ package com.openggf.level;
 
 import com.openggf.camera.Camera;
 import com.openggf.audio.AudioManager;
+import com.openggf.audio.AudioManagerTestDiagnostics;
+import com.openggf.audio.AudioTestFixtures;
+import com.openggf.audio.GameAudioProfile;
+import com.openggf.audio.smps.SmpsLoader;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
-import com.openggf.data.Game;
+import com.openggf.game.Game;
 import com.openggf.debug.DebugOverlayManager;
 import com.openggf.debug.PerformanceProfiler;
 import com.openggf.data.Rom;
@@ -119,7 +123,12 @@ class TestGameDataSourceSharedFetches {
         when(module.getLevelMusicReference(anyInt(), anyInt())).thenReturn(new MusicReference.Stock(1));
         when(game.getSoundMap()).thenReturn(Map.of());
         ParallaxManager parallax = mock(ParallaxManager.class);
-        AudioManager audio = mock(AudioManager.class);
+        AudioManager audio = spy(AudioManager.class);
+        doNothing().when(audio).setRom(nullable(Rom.class));
+        doNothing().when(audio).setAudioProfile(any(com.openggf.audio.GameAudioProfile.class));
+        doNothing().when(audio).setSoundMap(anyMap());
+        doNothing().when(audio).resetRingSound();
+        doNothing().when(audio).playMusic(anyInt());
         LevelManager levelManager = manager(source, module, parallax, audio, mock(WaterSystem.class));
 
         levelManager.initGameModule(0);
@@ -209,7 +218,12 @@ class TestGameDataSourceSharedFetches {
         when(module.getLevelMusicReference(anyInt(), anyInt())).thenReturn(new MusicReference.Stock(1));
         when(game.getSoundMap()).thenReturn(Map.of());
         ParallaxManager parallax = mock(ParallaxManager.class);
-        AudioManager audio = mock(AudioManager.class);
+        AudioManager audio = spy(AudioManager.class);
+        doNothing().when(audio).setRom(nullable(Rom.class));
+        doNothing().when(audio).setAudioProfile(any(com.openggf.audio.GameAudioProfile.class));
+        doNothing().when(audio).setSoundMap(anyMap());
+        doNothing().when(audio).resetRingSound();
+        doNothing().when(audio).playMusic(anyInt());
         WaterSystem water = mock(WaterSystem.class);
         LevelManager levelManager = manager(source, module, parallax, audio, water);
 
@@ -226,6 +240,116 @@ class TestGameDataSourceSharedFetches {
         verify(zone).initZoneFeatures(same(rom), anyInt(), anyInt(), anyInt());
         verify(water).loadForLevelFromProvider(eq(waterProvider), same(rom), anyInt(), anyInt(),
                 any(), eq(false));
+    }
+
+    @Test
+    void configureAudioReplacesDistinctProfileWithoutLoadingEitherWrongRom() throws Exception {
+        Rom previousRom = mock(Rom.class, "previousRom");
+        Rom destinationRom = mock(Rom.class, "destinationRom");
+        ExactRomAudioProfile previousProfile = new ExactRomAudioProfile(previousRom);
+        ExactRomAudioProfile destinationProfile = new ExactRomAudioProfile(destinationRom);
+        AudioManager audio = initializedAudioManager();
+        try {
+            audioManager(previousRom, previousProfile, audio).configureAudio();
+            audio.presentationFrameRate();
+
+            // Both factories assert before returning a loader: a transient wrong-ROM
+            // preparation must fail even if the destination profile later repairs it.
+            audioManager(destinationRom, destinationProfile, audio).configureAudio();
+
+            assertSame(destinationProfile, audio.getAudioProfile());
+            assertSame(destinationRom, readField(baseAudioSource(audio), "rom"));
+            assertSame(destinationProfile.loader, readField(baseAudioSource(audio), "loader"));
+            assertEquals(1, previousProfile.loaderCreations);
+            assertEquals(1, destinationProfile.loaderCreations);
+        } finally {
+            audio.destroy();
+        }
+    }
+
+    @Test
+    void configureAudioWithNoInstalledProfileBindsDestinationRomBeforePreparingLoader() throws Exception {
+        Rom previousRom = mock(Rom.class, "previousRom");
+        Rom destinationRom = mock(Rom.class, "destinationRom");
+        ExactRomAudioProfile destinationProfile = new ExactRomAudioProfile(destinationRom);
+        AudioManager audio = initializedAudioManager();
+        try {
+            // A ROM may already be bound while the profile is still cold.
+            audio.setRom(previousRom);
+            assertNull(audio.getAudioProfile());
+
+            audioManager(destinationRom, destinationProfile, audio).configureAudio();
+
+            assertSame(destinationProfile, audio.getAudioProfile());
+            assertSame(destinationRom, readField(baseAudioSource(audio), "rom"));
+            assertSame(destinationProfile.loader, readField(baseAudioSource(audio), "loader"));
+            assertEquals(1, destinationProfile.loaderCreations);
+        } finally {
+            audio.destroy();
+        }
+    }
+
+    @Test
+    void configureAudioWithSameProfileAndRomPreservesLoaderAndPresentationIdentity() throws Exception {
+        Rom rom = mock(Rom.class);
+        ExactRomAudioProfile profile = new ExactRomAudioProfile(rom);
+        AudioManager audio = initializedAudioManager();
+        try {
+            LevelManager levelManager = audioManager(rom, profile, audio);
+            levelManager.configureAudio();
+            audio.presentationFrameRate();
+            Object source = baseAudioSource(audio);
+            Object producer = AudioManagerTestDiagnostics.presentationField(audio, "shadowProducer", Object.class);
+            Object session = AudioManagerTestDiagnostics.presentationField(audio, "shadowSmpsSession", Object.class);
+            assertSame(profile.loader, readField(source, "loader"));
+            assertNotNull(producer);
+            assertNotNull(session);
+
+            levelManager.configureAudio();
+
+            assertSame(profile, audio.getAudioProfile());
+            assertSame(source, baseAudioSource(audio));
+            assertSame(profile.loader, readField(baseAudioSource(audio), "loader"));
+            assertSame(producer, AudioManagerTestDiagnostics.presentationField(audio, "shadowProducer", Object.class));
+            assertSame(session, AudioManagerTestDiagnostics.presentationField(audio, "shadowSmpsSession", Object.class));
+            assertEquals(1, profile.loaderCreations);
+        } finally {
+            audio.destroy();
+        }
+    }
+
+    @Test
+    void configureAudioWithSameProfileAndNewRomPreparesOnlyTheDestinationLoader() throws Exception {
+        Rom previousRom = mock(Rom.class, "previousRom");
+        Rom destinationRom = mock(Rom.class, "destinationRom");
+        SmpsLoader previousLoader = new AudioTestFixtures.StubSmpsLoader();
+        SmpsLoader destinationLoader = new AudioTestFixtures.StubSmpsLoader();
+        int[] loaderCreations = {0};
+        GameAudioProfile profile = new AudioTestFixtures.StubAudioProfile(previousLoader) {
+            @Override public SmpsLoader createSmpsLoader(Rom rom) {
+                if (rom == previousRom) {
+                    loaderCreations[0]++;
+                    return previousLoader;
+                }
+                assertSame(destinationRom, rom, "same-profile replacement must use an exact source ROM");
+                loaderCreations[0]++;
+                return destinationLoader;
+            }
+        };
+        AudioManager audio = initializedAudioManager();
+        try {
+            audioManager(previousRom, profile, audio).configureAudio();
+            assertSame(previousLoader, readField(baseAudioSource(audio), "loader"));
+
+            audioManager(destinationRom, profile, audio).configureAudio();
+
+            assertSame(profile, audio.getAudioProfile());
+            assertSame(destinationRom, readField(baseAudioSource(audio), "rom"));
+            assertSame(destinationLoader, readField(baseAudioSource(audio), "loader"));
+            assertEquals(2, loaderCreations[0]);
+        } finally {
+            audio.destroy();
+        }
     }
 
     @Test
@@ -263,6 +387,58 @@ class TestGameDataSourceSharedFetches {
         assertFalse(engine.contains(
                 "SessionManager.openGameplaySession(rootModule, module, null)"));
         assertTrue(engine.contains("StockGameDataSources.pinned(rom, rootModule)"));
+    }
+
+    private static AudioManager initializedAudioManager() {
+        AudioManager audio = AudioManager.createSilent();
+        audio.setBackendForLaunch(new AudioTestFixtures.RecordingAudioBackend());
+        return audio;
+    }
+
+    private static LevelManager audioManager(Rom rom, GameAudioProfile profile, AudioManager audio) {
+        GameModule module = mock(GameModule.class);
+        when(module.getPlayableCharacterRegistry()).thenReturn(PlayableCharacterRegistry.empty());
+        when(module.getAudioProfile()).thenReturn(profile);
+        LevelManager levelManager = manager(new RomDataSource(rom, "rom:audio-test"), module,
+                mock(ParallaxManager.class), audio, mock(WaterSystem.class));
+        levelManager.gameModule = module;
+        levelManager.game = mock(Game.class);
+        when(levelManager.game.getSoundMap()).thenReturn(Map.of());
+        return levelManager;
+    }
+
+    private static Object baseAudioSource(AudioManager audio) throws ReflectiveOperationException {
+        var field = AudioManager.class.getDeclaredField("sourcePublication");
+        field.setAccessible(true);
+        return readField(field.get(audio), "baseAudioSource");
+    }
+
+    private static Object readField(Object owner, String name) throws ReflectiveOperationException {
+        var field = owner.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        return field.get(owner);
+    }
+
+    private static final class ExactRomAudioProfile extends AudioTestFixtures.StubAudioProfile {
+        private final Rom expectedRom;
+        private final SmpsLoader loader;
+        private int loaderCreations;
+
+        private ExactRomAudioProfile(Rom expectedRom) {
+            this(expectedRom, new AudioTestFixtures.StubSmpsLoader());
+        }
+
+        private ExactRomAudioProfile(Rom expectedRom, SmpsLoader loader) {
+            super(loader);
+            this.expectedRom = expectedRom;
+            this.loader = loader;
+        }
+
+        @Override public SmpsLoader createSmpsLoader(Rom rom) {
+            assertSame(expectedRom, rom, "profile must only prepare its exact source ROM");
+            loaderCreations++;
+            return super.createSmpsLoader(rom);
+        }
     }
 
     private static GameDataSource missingSource() {

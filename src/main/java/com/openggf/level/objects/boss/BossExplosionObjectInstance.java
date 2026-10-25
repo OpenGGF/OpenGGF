@@ -1,5 +1,7 @@
 package com.openggf.level.objects.boss;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -15,7 +17,7 @@ import java.util.List;
  * Uses ArtNem_FieryExplosion with mappings from Obj58_MapUnc_2D50A.
  */
 public class BossExplosionObjectInstance extends AbstractObjectInstance
-        implements SpawnCoordinateZeroScalarArgsRewindRecreatable {
+        implements SpawnCoordinateZeroScalarArgsRewindRecreatable, ObjectVisualFacing.NonDirectional {
     private static final int FRAME_DELAY = 7;
     private static final int LAST_FRAME = 6;
 

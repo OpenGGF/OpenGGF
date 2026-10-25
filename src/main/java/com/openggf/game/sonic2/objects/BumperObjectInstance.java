@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 
 import com.openggf.audio.GameSound;
@@ -80,7 +82,8 @@ import java.util.List;
  * @see BonusBlockObjectInstance Drop target with hit tracking
  */
 public class BumperObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseListener, RewindRecreatable {
+        implements TouchResponseProvider, TouchResponseListener, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj44 is a radial bumper; bounce direction belongs to the contact, not the bumper.
 
     // ========================================================================
     // ROM Constants

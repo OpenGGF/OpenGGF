@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
@@ -20,7 +22,7 @@ import java.util.List;
  * <p>The ROM uses frame 0 normally, then latches frame 1 once water exists and
  * {@code Water_level} is above the bulb's {@code y_pos}.
  */
-public final class CnzLightBulbInstance extends AbstractObjectInstance implements RewindRecreatable {
+public final class CnzLightBulbInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
     private static final int FRAME_NORMAL = 0;
     private static final int PRIORITY_BUCKET = 5; // Obj_CNZLightBulb: priority $280.
     private static final int FRAME_SUBMERGED = 1;

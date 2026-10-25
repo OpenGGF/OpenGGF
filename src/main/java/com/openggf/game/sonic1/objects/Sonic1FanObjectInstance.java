@@ -6,8 +6,10 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.level.objects.ObjectVisualFacing.Basis;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.PlayableEntity;
 
@@ -41,7 +43,20 @@ import java.util.List;
  * <p>
  * Reference: docs/s1disasm/_incObj/5D Fan.asm
  */
-public class Sonic1FanObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
+public class Sonic1FanObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable, ObjectVisualFacing.PlacementSource {
+
+    @Override
+    public ObjectVisualFacing.Basis nativeFacing() {
+        // Fan_Action uses this side for its target range; reverse wind/animation
+        // is a deliberate subtype action and does not turn the fan around.
+        return facingRight ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.LEFT;
+    }
+
+    @Override
+    public int initialPlacementFlags(Basis facing, int sourceFlags) {
+        // Fan_Action: obStatus bit 0 set selects the right-hand target side.
+        return facing == Basis.RIGHT ? sourceFlags | 1 : sourceFlags & ~1;
+    }
 
     // From disassembly: move.b #4,obPriority(a0)
     private static final int PRIORITY = 4;

@@ -5,6 +5,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.PlayableEntity;
@@ -41,7 +42,20 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/13 Lava Ball Maker.asm
  */
 public class Sonic1LavaBallMakerObjectInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable {
+        implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
+
+    @Override
+    public ObjectVisualFacing.Basis nativeFacing() {
+        // LavaM passes ballSubtype unchanged. LBall_Left/Right own the left/right
+        // launch and status polarity; their shimmer animation never turns it.
+        // LBall_Main also starts idle horizontal type 8 in the type-7 art basis.
+        return switch (ballSubtype) {
+            case 0, 1, 2, 3, 4, 5 -> ObjectVisualFacing.Basis.NON_DIRECTIONAL;
+            case 6 -> ObjectVisualFacing.Basis.LEFT;
+            case 7, 8 -> ObjectVisualFacing.Basis.RIGHT;
+            default -> throw new IllegalStateException("Lava ball facing is undeclared for subtype " + ballSubtype);
+        };
+    }
 
     // ========================================================================
     // ROM Constants

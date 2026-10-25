@@ -1,6 +1,6 @@
 package com.openggf.game.sonic2.competition;
 
-import com.openggf.data.Game;
+import com.openggf.game.Game;
 import com.openggf.data.Rom;
 import com.openggf.game.GameDataSource;
 import com.openggf.game.GameId;

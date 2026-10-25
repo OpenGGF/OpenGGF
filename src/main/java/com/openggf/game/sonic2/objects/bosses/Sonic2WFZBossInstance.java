@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects.bosses;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
@@ -63,7 +64,12 @@ import java.util.List;
  * 8. RobotnikPlatform - follows Robotnik Y+$26
  */
 public class Sonic2WFZBossInstance extends AbstractBossInstance
-        implements SpawnConstructionContextRewindRecreatable {
+        implements SpawnConstructionContextRewindRecreatable, ObjectVisualFacing.Source {
+
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // Native facingLeft owns this boss; BossStateContext.renderFlags does not.
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
 
     // State machine routine constants (16 sub-routines, $00-$1E)
     private static final int ROUTINE_INIT = 0x00;

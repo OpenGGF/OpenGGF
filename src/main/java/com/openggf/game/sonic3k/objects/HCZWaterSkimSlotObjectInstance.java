@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -20,7 +22,7 @@ import java.util.List;
  * the same SST window as the ROM.
  */
 public final class HCZWaterSkimSlotObjectInstance extends AbstractObjectInstance
-        implements RewindRecreatable {
+        implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
 
     private static final ObjectSpawn SLOT_SPAWN =
             new ObjectSpawn(0, 0, 0, 0, 0, false, 0);

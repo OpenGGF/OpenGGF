@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 
 /**
  * Object {@code $6E} under the SK Set 2 pointer table - {@code Obj_InvisibleLavaBlock}
@@ -15,7 +16,9 @@ import com.openggf.level.objects.ObjectSpawn;
  * <p>44 of these are placed across Lava Reef (34 in act 1, 4 in act 2, 6 in the boss act); all the
  * lava-floor damage in the zone hangs on them.
  */
-public class Sonic3kInvisibleLavaBlockObjectInstance extends Sonic3kInvisibleHurtBlockHObjectInstance {
+public class Sonic3kInvisibleLavaBlockObjectInstance extends Sonic3kInvisibleHurtBlockHObjectInstance implements ObjectVisualFacing.NonDirectional {
+
+    // The native hurt/solid face selector belongs to invisible collision geometry, not a facing performer.
 
     public Sonic3kInvisibleLavaBlockObjectInstance(ObjectSpawn spawn) {
         super(spawn, "InvisibleLavaBlock", REACTION_FIRE_SHIELD);

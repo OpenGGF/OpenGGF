@@ -1,5 +1,7 @@
 package com.openggf.level.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing.Basis;
+
 import com.openggf.graphics.*;
 import com.openggf.level.PatternDesc;
 import com.openggf.level.render.*;
@@ -204,6 +206,10 @@ final class StageplayObjectDraw {
         graphics.setCurrentSpriteHighPriority(high);
         graphics.setCurrentSpriteTileOcclusionPaletteMask(
                 MultiBucketRenderable.tileOcclusionPaletteMask(high));
+        // Own a batch while the sprite-priority shader and this part's mask are active.
+        // Direct tile commands resolve their shader later, after the enclosing sprite pass
+        // has disabled priority; flushing without reopening would draw through foreground.
+        graphics.beginPatternBatch();
         try {
             for (var part : state.template.parts()) {
                 if (part.bucket() != bucket
@@ -218,12 +224,16 @@ final class StageplayObjectDraw {
                         index += graphics.isSpriteSatCollectionActive() ? -1 : 1) {
                     VisualTile tile = tiles.get(index);
                     graphics.setCurrentSpriteTileOcclusionPaletteMask(tile.occlusionMask());
-                    boolean flip = state.direction.flipX();
+                    boolean flip = switch (part.facing()) {
+                        case LEFT -> state.direction.facing() == Basis.RIGHT;
+                        case RIGHT -> state.direction.facing() == Basis.LEFT;
+                        case NON_DIRECTIONAL -> false;
+                    };
                     int x =
                             (int)
                                     Math.round(
                                             state.direction.x()
-                                                    + (flip ? -tile.x() - tile.width() : tile.x()));
+                                                    + (flip ? 2 * part.facingPivotX() - tile.x() - tile.width() : tile.x()));
                     int y = (int) Math.round(state.direction.y() + tile.y());
                     int pattern = patternBase + tile.pattern(),
                             palette = paletteBase + tile.palette();
@@ -283,6 +293,7 @@ final class StageplayObjectDraw {
             graphics.flushPatternBatch();
             graphics.setCurrentSpriteHighPriority(previousHigh);
             graphics.setCurrentSpriteTileOcclusionPaletteMask(previousMask);
+            graphics.beginPatternBatch();
         }
     }
 

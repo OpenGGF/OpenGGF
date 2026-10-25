@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.sonic2.ButtonVineTriggerManager;
 import com.openggf.game.PlayableEntity;
@@ -44,7 +46,8 @@ import java.util.List;
  * </ul>
  */
 public class ButtonObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, RewindRecreatable {
+        implements SolidObjectProvider, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj47 depresses a floor switch vertically with no facing body or children.
 
     // ROM: move.w #$1B,d1 - solid object half-width
     private static final int HALF_WIDTH = 0x1B;

@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestStageplayObjectScriptCompiler {
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final String SCRIPT = """
-            {"version":6,"name":"Complete cast","cast":[],
+            {"version":7,"name":"Complete cast","cast":[],
              "objectCast":[
               {"id":"crab","name":"Crab","gameId":"s2","objectId":146},
               {"id":"loaded","name":"Loaded","gameId":"s2","objectId":146,"subtype":3,"layoutIndex":5}],
@@ -109,7 +109,7 @@ class TestStageplayObjectScriptCompiler {
 
     @Test void unsupportedScreenplayVersionsRejectAllShapesAndCurrentDefaultsToNative() throws Exception {
         var nativeRecipe = (ObjectNode) JSON.readTree("""
-                {"version":6,"name":"Existing native","cast":[],"shots":[
+                {"version":7,"name":"Existing native","cast":[],"shots":[
                  {"id":"old","durationFrames":60,"set":{"gameId":"s2","zone":0,"act":0},
                   "camera":[{"frame":0,"x":0,"y":500}]}]}
                 """);

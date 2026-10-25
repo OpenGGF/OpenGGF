@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -30,7 +32,7 @@ import java.util.List;
  * scatters 5 or 7 {@code loc_823EE} debris, clears its respawn bit and deletes itself. An
  * {@code AllocateObject} failure abandons the remaining children.
  */
-public final class DdzAsteroidObjectInstance extends AbstractDdzObjectInstance {
+public final class DdzAsteroidObjectInstance extends AbstractDdzObjectInstance implements ObjectVisualFacing.NonDirectional {
     /** {@code word_8317E}. */
     private static final int[] X_VELOCITIES = {-0x80, -0x40, 0, 0x40, 0x80, -0x200};
     /** {@code byte_8318A}: width, height, mapping frame per size. */

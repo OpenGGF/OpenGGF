@@ -214,7 +214,7 @@ class TestSonic2IntroInputPhases {
         input = new InputHandler();
         input.setLogicalOverride(LogicalInputSnapshot.neutral());
         AudioBackend backend = synthesisEnabled
-                ? new HeadlessSmpsAudioBackend(config, services.profiler()) : new NullAudioBackend();
+                ? new HeadlessSmpsAudioBackend(config, services.profiler(), services.audio(), services.audio()) : new NullAudioBackend();
         engine = new Engine(services);
         try (var devices = mockConstruction(LWJGLAudioBackend.class,
                 (device, context) -> fail("headless title startup constructed a device backend"))) {

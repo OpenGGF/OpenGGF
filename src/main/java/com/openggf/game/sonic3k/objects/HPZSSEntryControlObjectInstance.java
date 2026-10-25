@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.PlayerControlOwners;
@@ -30,7 +32,7 @@ import java.util.List;
  * progression is delegated to {@link S3kEmeraldProgression}.
  */
 public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstance
-        implements RewindRecreatable {
+        implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
 
     private final PlayerControlOwners directedControlPlayers =
             new PlayerControlOwners();

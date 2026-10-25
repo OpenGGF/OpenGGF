@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kLevelTriggerManager;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -38,7 +40,7 @@ import java.util.Set;
  * same slot to {@code Obj_Explosion}.
  */
 public final class LbzExplodingTriggerInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseListener, SpawnRewindRecreatable {
+        implements TouchResponseProvider, TouchResponseListener, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
 
     // ROM: collision_flags(a0) = $C6. In S3K, $C0 + size $06 is a Touch_Special
     // property latch, not boss collision.

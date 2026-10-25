@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -48,7 +50,8 @@ import static org.lwjgl.opengl.GL11.GL_TRIANGLE_FAN;
  * @see BlueBallsObjectInstance Another HURT-category TouchResponseProvider
  */
 public class LavaMarkerObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, RewindRecreatable {
+        implements TouchResponseProvider, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj31 is an invisible hazard region with no horizontal-facing body or children.
 
     // ========================================================================
     // ROM Constants - Collision Flags by Subtype

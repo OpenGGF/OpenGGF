@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.AbstractBadnikInstance;
 
 import com.openggf.debug.DebugRenderContext;
@@ -37,7 +38,11 @@ import java.util.List;
  *     Sub 2: Wait for claw to signal completion (objoff_2C flag)
  *     Sub 4: Wait 0x20 frames, then reset to walking
  */
-public class ShellcrackerBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable {
+public class ShellcrackerBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
+
     // From Obj9F_SubObjData: collision_flags = $A (enemy, size index 10)
     private static final int COLLISION_SIZE_INDEX = 0x0A;
 

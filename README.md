@@ -30,12 +30,30 @@ and `next` branches share the 0.7 development line and its unpublished Mod API c
 > The disclaimer is also shown in-engine on startup; it can be disabled by setting
 > `startup.legalDisclaimer: false` in `config.yaml`.
 
+## Stageplay: make your own Sonic films
+
+![Day Off, a short film made with Stageplay: Sonic 1's Motobug says "Thirty-five years" on a Green Hill ledge.](docs/guide/creating/images/stageplay/day-off-motobug.png)
+
+Stageplay is OpenGGF's film and cutscene director, new in 0.7. Cast Sonic, Tails,
+Knuckles and the games' own badniks, animals and bosses from all three games, put
+them in any of their levels, and direct them: where they go, when they jump, what
+they say, where the camera looks and what music plays. Characters move with the
+games' real physics, routes are planned and checked under that physics, and every
+speaker gets a voice from the Genesis sound chip. Direct in the engine's built-in
+editor, in [OpenGGF Editor](https://github.com/OpenGGF/OpenGGF-Editor), or as a
+text screenplay, then export a lossless film or play the scene as a mod cutscene.
+
+Start with [the Stageplay guide](docs/guide/creating/stageplay.md) and
+[your first film](docs/guide/creating/stageplay-first-film.md), or see
+[how Day Off was made](docs/guide/creating/stageplay-day-off.md). Stageplay is part
+of the 0.7 development line; it is not in the published 0.6 release.
+
 ## User Guide
 
 A comprehensive user guide is available in [`docs/guide/`](docs/guide/index.md), covering:
 
 - **Players:** [Getting started](docs/guide/playing/getting-started.md), [controls](docs/guide/playing/controls.md), [configuration](docs/guide/playing/configuration.md), [game status](docs/guide/playing/game-status.md), and [troubleshooting](docs/guide/playing/troubleshooting.md).
-- **Creators:** [Level editor](docs/guide/creating/level-editor.md), [Stageplay](docs/guide/creating/stageplay.md), and the [mod creator handbook](docs/modding/index.md).
+- **Creators:** [Level editor](docs/guide/creating/level-editor.md), [Stageplay](docs/guide/creating/stageplay.md) (start with [your first film](docs/guide/creating/stageplay-first-film.md)), and the [mod creator handbook](docs/modding/index.md).
 - **Contributors:** [Dev setup](docs/guide/contributing/dev-setup.md), [architecture overview](docs/guide/contributing/architecture.md), [adding zones](docs/guide/contributing/adding-zones.md), [adding bosses](docs/guide/contributing/adding-bosses.md), [audio system](docs/guide/contributing/audio-system.md), [testing](docs/guide/contributing/testing.md), and [trace replay testing](docs/guide/contributing/trace-replay.md).
 - **Cross-referencers:** [68000 primer](docs/guide/cross-referencing/68000-primer.md), [mapping exercises](docs/guide/cross-referencing/mapping-exercises.md), [per-game notes](docs/guide/cross-referencing/per-game-notes.md), and [tooling](docs/guide/cross-referencing/tooling.md).
 

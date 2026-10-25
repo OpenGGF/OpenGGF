@@ -73,65 +73,59 @@ public class AudioManager implements MusicRestoreSink {
     private static final int REVERSE_RELEASE_CROSSFADE_MS = 45;
     private static AudioManager instance;
     private AudioBackend backend;
-    /** Volatile publication of the complete immutable base dependency tuple. */
-    private volatile BaseAudioSource baseAudioSource =
-            new BaseAudioSource(null, null, null, null, null, 0);
+    private final SourcePublication sourcePublication = new SourcePublication();
     private Map<GameSound, Integer> soundMap;
-    private boolean ringLeft = true;
     // Director-owned playlist admission survives producer/shot replacement until its scope closes.
-    int levelMusicControls;
-    private AudioRequestObserver requestObserver = AudioRequestObserver.NONE;
+    private final LevelMusicAccess levelMusicAccess = new LevelMusicAccess(this);
+    private final DiagnosticInstallation diagnosticInstallation = new DiagnosticInstallation();
     // Internal world ownership never replaces the single external diagnostic observer.
-    AudioMutatorAccess.Binding mutatorBinding;
-    int mutatorSubmissionDepth;
+    private final AudioMutatorAccess mutatorAccess = new AudioMutatorAccess();
+
+    static final AudioMutatorAccess mutatorAccess(AudioManager audio) {
+        return audio.mutatorAccess;
+    }
+
+    final LevelMusicAccess levelMusicAccess() {
+        return levelMusicAccess;
+    }
 
     private void mutatorMusicIntent(AudioMutatorAccess.Kind kind, int value) {
-        if (mutatorBinding != null && mutatorSubmissionDepth == 0) mutatorBinding.musicIntent(kind, value);
+        mutatorAccess.musicIntent(kind, value);
     }
 
     private void mutatorSfxIntent(int id) {
-        if (mutatorBinding == null || mutatorSubmissionDepth != 0) return;
-        if (id >= 0xE0) mutatorBinding.musicIntent(AudioMutatorAccess.Kind.COMMAND, id);
-        else mutatorBinding.sfxIntent(id);
+        mutatorAccess.sfxIntent(id);
     }
 
     void prepareMutatorCue(int id, boolean music) {
-        var source = baseAudioSource;
+        var source = sourcePublication.base();
         if (!(source.profile() instanceof NativeAudioEffectCues cues)
                 || !(music ? cues.permitsTemporaryMusic(id) : cues.permitsLandingCue(id)))
             throw new IllegalArgumentException("Disallowed native " + (music ? "music" : "landing") + " cue: " + id);
         if (source.rom() == null || source.loader() == null || !hasCatalogDependencies(source.dac(), source.config()))
             throw new IllegalStateException("Native ROM audio is not prepared");
-        ensureShadowPresentation();
+        presentationBinding.ensureShadowPresentation();
         if (music) {
             var key = new SmpsAssetKey(baseGameId(source), SmpsAssetKey.Route.BASE_MUSIC, id, null);
-            if (shadowFactory.findRegisteredSmpsMusicAsset(key, source.generation()) == null) {
+            if (presentationBinding.shadowFactory.findRegisteredSmpsMusicAsset(key, source.generation()) == null) {
                 var data = source.loader().loadMusic(id);
                 if (data == null) throw new IllegalStateException("Native ROM music cue is unavailable: " + id);
-                shadowFactory.registerSmpsMusicAsset(key, source.generation(), data, source.dac(), source.config());
+                presentationBinding.shadowFactory.registerSmpsMusicAsset(key, source.generation(), data, source.dac(), source.config());
             }
         } else if (!ensureRegisteredSmpsSfx(new SmpsAssetKey(baseGameId(source), SmpsAssetKey.Route.BASE_ID, id, null),
-                baseSfxSource(source))) {
+                sourcePublication.baseSfxSource(source))) {
             throw new IllegalStateException("Native ROM landing cue is unavailable: " + id);
         }
     }
 
     boolean mutatorWarningActive() {
-        if (!(baseAudioSource.profile() instanceof NativeAudioEffectCues cues) || shadowProducer == null) return false;
-        var logical = shadowProducer.snapshot().smpsLogical();
+        if (!(sourcePublication.base().profile() instanceof NativeAudioEffectCues cues) || presentationBinding.shadowProducer == null) return false;
+        var logical = presentationBinding.shadowProducer.snapshot().smpsLogical();
         if (logical == null) return false;
         return logical.sequencers().stream().anyMatch(entry -> entry.sfx()
                 && cues.isWarningCue(entry.smpsData().getId())
                 && entry.snapshot().tracks().stream().anyMatch(com.openggf.audio.rewind.SmpsTrackSnapshot::active));
     }
-    private AudioAdmissionObserver admissionObserver =
-            AudioAdmissionObserver.NONE;
-    private SmpsDriverServiceObserver driverServiceObserver =
-            SmpsDriverServiceObserver.NONE;
-    private ChipWriteObserver chipWriteObserver = ChipWriteObserver.NONE;
-    private SfxContentionObserver sfxContentionObserver =
-            SfxContentionObserver.NONE;
-    private DiagnosticObserverLease activeDiagnosticObserverLease;
 
     /**
      * One immutable, complete diagnostic observer installation. The tuple is
@@ -179,48 +173,21 @@ public class AudioManager implements MusicRestoreSink {
     }
     private int rewindReplaySuppressionDepth;
     private final AudioCommandTimeline commandTimeline = new AudioCommandTimeline();
-    /**
-     * Single offline-capture compatibility lease over the authoritative
-     * producer. It is an ordinary non-consuming capture handle: it never
-     * replaces the producer, registry, or sink.
-     */
-    private LiveCaptureAudioHandle offlineCaptureHandle;
-    private ManagerLiveCaptureAudioHandle activeLiveCaptureAudioHandle;
-    private boolean liveCaptureAwaitingRebind;
+    /** Capture lifetime spans presentation producer generations for this manager. */
+    /** Physical assembly and its publication slots have one manager-lifetime owner. */
+    private final PresentationBinding presentationBinding = new PresentationBinding();
+    private final CaptureLeases captureLeases = new CaptureLeases();
+    /** Logical ring and publication protocol span physical producer generations. */
+    private final LogicalPublication logicalPublication = new LogicalPublication();
+    /** Held logical target policy survives presentation producer generations. */
+    private final HeldReverseRestore heldReverseRestore = new HeldReverseRestore();
     private boolean audioFrameOwnedExternally;
     private boolean audioFrameAdvanced;
-    private boolean reverseAudioPresentationActive;
     private Runnable streamedMusicSessionInvalidator = () -> { };
-    /** Single selected restore, committed only at reverse release. */
-    private AudioLogicalSnapshot deferredReverseLogicalSnapshot;
-    private boolean deferredReverseLogicalPrepared;
-    /** True once a boundary has replaced the stale rewind target with fresh live state. */
-    private boolean postBoundaryReverseTarget;
-    /**
-     * Count of logical audio restores actually published to the presentation
-     * producer. Held rewind defers per-frame restores and publishes exactly one
-     * at release; this counter is the observable for that contract now that the
-     * legacy backend restore (which tests counted) is gone.
-     */
-    private int logicalRestorePublications;
-    /**
-     * Single-shot release-failure injection for tests. The producer is now the
-     * only restore owner, so there is no second (backend) publication step a
-     * test double could fail; this hook keeps the "a failed release is retained
-     * and retried" contract testable from production hosts.
-     *
-     * <p>Null means "inject nothing". The point selects which side of the one
-     * irreversible step in {@link #endReverseAudioPresentation()} the failure
-     * lands on — the two sides carry different contracts, so a single boolean
-     * could only ever exercise one of them.
-     */
-    private ReverseReleaseFailurePoint failNextReverseRelease;
-
     /**
      * Where an injected reverse-release failure is raised, relative to
-     * {@code shadowProducer.endReverse(...)} — the single irreversible step of
-     * the release (it consumes the reverse PCM cursor and commits the prepared
-     * registry restore).
+     * successful return from {@code presentationBinding.shadowProducer.endReverse(...)}. Exceptions
+     * inside that call can follow partial restoration or cursor consumption.
      */
     enum ReverseReleaseFailurePoint {
         /**
@@ -236,59 +203,11 @@ public class AudioManager implements MusicRestoreSink {
          */
         AFTER_PRODUCER_COMMIT
     }
-    private AudioPresentationCommandQueue shadowCommands;
-    private AudioPresentationSourceFactory shadowFactory;
-    private AudioPresentationCommandResolver shadowResolver;
-    private AudioVoiceRegistry shadowRegistry;
-    private AudioPresentationProducer shadowProducer;
-    private SmpsDriverSession shadowSmpsSession;
-    /** Opt-in capture/diagnostic native-compatible PCM stage for new presentation sessions; null by default. */
-    private com.openggf.audio.synth.NativeCompatiblePcmOutput.Config nativeCompatiblePcmCapture;
-    /** Presentation sessions built with the stage; a rebuild restarts the stage's clock origin. */
-    private int nativeCompatiblePcmSessions;
-    private AudioRequestService shadowRequestService;
-    /**
-     * Frame rate the live {@link #shadowProducer} was constructed with. The
-     * producer owns the presentation clock, so this is the only rate at which
-     * a packet is presented; capture leases must be clocked to match it or
-     * every packet is truncated (lease slower) or zero-padded (lease faster).
-     */
-    private int shadowFrameRate;
-    private AudioPresentationParityProbe shadowParity;
     private boolean shadowRestoreRequested;
-    private AudioPresentationTuning shadowTuning;
-    private AudioPresentationTuning standaloneTuning;
-    private int standaloneFrameRate;
     private String standaloneGameId;
     private long standaloneVoiceId = 1;
-    /**
-     * Launch-scoped creator presentation port. The authoritative presentation
-     * factory owns voice creation after the presentation cutover; backend port
-     * methods remain available to direct compatibility clients.
-     */
+    /** Transferred launch-port lifetime remains with the manager. */
     private StreamedMusicPort streamedMusicPort = StreamedMusicPort.EMPTY;
-    private SmpsCoordFlagHandlerOwner presentationCoordFlagHandlers;
-    private AudioPresentationSink presentationSink;
-    private boolean presentationSpeakerFailed;
-    private final Set<String> presentationCoordHandlerGameIds =
-            new LinkedHashSet<>();
-
-    // Donor audio overlay: secondary SFX path for cross-game feature donation
-    /**
-     * Volatile immutable snapshots keep readers lock-free while donor
-     * mutators publish a whole route table at one visibility boundary.
-     */
-    private volatile Map<String, DonorAudioSource> donorAudioSources =
-            Map.of();
-    private volatile Map<String, Long> donorGenerationCounters = Map.of();
-    /**
-     * Guarded by this manager's monitor. Java monitors are reentrant, so the
-     * synchronized source mutators also need an explicit same-thread guard to
-     * keep dependency callbacks from starting a nested publication.
-     */
-    private boolean sourceMutationInProgress;
-    private final Map<GameSound, DonorSfxBinding> donorSoundBindings = new EnumMap<>(GameSound.class);
-    private final Map<String, Map<GameMusic, Integer>> donorMusicBindings = new HashMap<>();
 
     private record DonorSfxBinding(String gameId, int sfxId) {}
 
@@ -308,14 +227,6 @@ public class AudioManager implements MusicRestoreSink {
             GameAudioProfile profile,
             GameAudioProfile sfxPolicyProfile,
             long generation) {
-    }
-
-    private record PresentationCoordHandlerPreparation(
-            SmpsCoordFlagHandlerOwner owner,
-            Set<String> gameIds,
-            boolean publishOwner,
-            boolean configureCandidate,
-            String candidateGameId) {
     }
 
     private boolean silentSimulation;
@@ -360,29 +271,11 @@ public class AudioManager implements MusicRestoreSink {
         AudioManager manager = new AudioManager();
         manager.backend = new NullAudioBackend();
         manager.backend.init();
-        GameAudioProfile resolvedProfile = java.util.Objects.requireNonNull(
-                profile, "profile");
-        manager.baseAudioSource = new BaseAudioSource(
-                null, resolvedProfile, null, null,
-                resolvedProfile.getSequencerConfig(), 1);
-        manager.presentationSink = java.util.Objects.requireNonNull(
-                sink, "sink");
-        manager.presentationCoordFlagHandlers =
-                java.util.Objects.requireNonNull(
-                        coordFlagHandlers, "coordFlagHandlers");
+        manager.sourcePublication.initializeStandalone(profile);
+        manager.presentationBinding.installStandalone(sink, coordFlagHandlers);
         manager.standaloneGameId = gameId;
-        manager.standaloneFrameRate = FrameRateResolver.effective(
-                java.util.Objects.requireNonNull(config, "config"));
-        manager.standaloneTuning = new AudioPresentationTuning(
-                "PAL".equalsIgnoreCase(config.getString(
-                        SonicConfiguration.REGION))
-                        ? SmpsSequencer.Region.PAL
-                        : SmpsSequencer.Region.NTSC,
-                config.getBoolean(SonicConfiguration.DAC_INTERPOLATE),
-                config.getBoolean(SonicConfiguration.FM6_DAC_OFF));
-        profile.configurePresentationCoordFlagHandlers(coordFlagHandlers);
-        manager.presentationCoordHandlerGameIds.add(gameId);
-        manager.ensureShadowPresentation();
+        manager.presentationBinding.initializeStandalone(
+                gameId, profile, config, coordFlagHandlers);
         return manager;
     }
 
@@ -406,8 +299,7 @@ public class AudioManager implements MusicRestoreSink {
         }
         releaseStreamedMusicPort();
         try {
-            ensureShadowPresentation();
-            shadowFactory.installStreamedMusicPort(replacement);
+            presentationBinding.installStreamedPort(replacement);
             streamedMusicPort = replacement;
         } catch (RuntimeException failure) {
             try {
@@ -433,18 +325,10 @@ public class AudioManager implements MusicRestoreSink {
         StreamedMusicPort previous = streamedMusicPort;
         streamedMusicPort = StreamedMusicPort.EMPTY;
         RuntimeException failure = null;
-        if (shadowFactory != null) {
-            try {
-                shadowFactory.retireStreamedMusicPort();
-            } catch (RuntimeException retireFailure) {
-                failure = retireFailure;
-            }
-        } else if (previous != StreamedMusicPort.EMPTY) {
-            try {
-                previous.stop();
-            } catch (RuntimeException stopFailure) {
-                failure = stopFailure;
-            }
+        try {
+            presentationBinding.retireStreamedCursors(previous);
+        } catch (RuntimeException retireFailure) {
+            failure = retireFailure;
         }
         if (backend != null) {
             try {
@@ -502,16 +386,12 @@ public class AudioManager implements MusicRestoreSink {
      * TestAudioBackendBypassGuard).
      */
     public int outputSampleRate() {
-        return presentationSink != null
-                ? presentationSink.sampleRate()
-                : backend.outputSampleRate();
+        return presentationBinding.outputSampleRate();
     }
 
     /** Host-owned finite scene music routed through the existing capture/speaker producer. */
     public void setScenePcmSource(com.openggf.audio.presentation.ScenePcmSource source) {
-        ensureShadowPresentation();
-        shadowProducer.setScenePcmSource(source);
-        if (source != null && presentationSpeakerFailed) source.onSpeakerFailure();
+        presentationBinding.setScenePcmSource(source);
     }
 
     /**
@@ -521,13 +401,13 @@ public class AudioManager implements MusicRestoreSink {
      * The handle belongs to the current audio producer and expires when that producer changes.
      */
     public SceneAudioSamples prepareSceneSamples(java.util.Map<String, StreamedMusicPort.SfxPcm> samples) {
-        ensureShadowPresentation();
+        presentationBinding.ensureShadowPresentation();
         return new SceneAudioSamples(java.util.Objects.requireNonNull(samples));
     }
 
     @com.openggf.game.ModApi
     public final class SceneAudioSamples implements AutoCloseable {
-        private final com.openggf.audio.presentation.AudioPresentationProducer producer = shadowProducer;
+        private final com.openggf.audio.presentation.AudioPresentationProducer producer = presentationBinding.shadowProducer;
         private final java.util.Map<String, com.openggf.audio.presentation.DecodedPcm> samples = new java.util.HashMap<>();
         private final java.util.List<com.openggf.audio.presentation.SampleBackedVoice> voices = new java.util.ArrayList<>();
         private final java.util.Map<String, Float> gains = new java.util.HashMap<>();
@@ -559,24 +439,49 @@ public class AudioManager implements MusicRestoreSink {
             if (!Float.isFinite(gain) || gain < 0 || gain > 1) throw new IllegalArgumentException("Scene gain must be 0..1");
             var pcm = samples.get(key);
             if (pcm == null) throw new IllegalArgumentException("Scene sample was not prepared: " + key);
-            if (suppressingRewindReplay() || reverseAudioPresentationActive) return;
+            if (suppressingRewindReplay() || heldReverseRestore.blocksSfxAdmission()) return;
             voices.removeIf(com.openggf.audio.presentation.SampleBackedVoice::isComplete);
             if (voices.size() >= 32) throw new IllegalStateException("Scene voice overlap exceeds 32 voices");
             voices.add(com.openggf.audio.presentation.SampleBackedVoice.oneShot(++nextVoice, 0, pcm,
                     outputSampleRate(), 1, gain * gains.get(key)));
         }
 
+        /** Admits generated scene speech without growing an asset cache. Each copied packet is at most half a second. */
+        public void playTransient(StreamedMusicPort.SfxPcm pcm) {
+            requireCurrent(); java.util.Objects.requireNonNull(pcm);
+            if (pcm.sampleRate() < 8000 || pcm.sampleRate() > 192000 || pcm.channels() < 1 || pcm.channels() > 2
+                    || pcm.samples().length == 0 || pcm.samples().length % pcm.channels() != 0
+                    || pcm.samples().length / pcm.channels() > pcm.sampleRate() / 2
+                    || !Float.isFinite(pcm.gain()) || pcm.gain() < 0 || pcm.gain() > 1)
+                throw new IllegalArgumentException("Transient scene PCM needs at most 0.5 seconds of mono/stereo audio and gain 0..1");
+            if (suppressingRewindReplay() || heldReverseRestore.blocksSfxAdmission()) return;
+            voices.removeIf(com.openggf.audio.presentation.SampleBackedVoice::isComplete);
+            if (voices.size() >= 32) throw new IllegalStateException("Scene voice overlap exceeds 32 voices");
+            var decoded = new com.openggf.audio.presentation.DecodedPcm("transient", pcm.channels(), pcm.sampleRate(), pcm.samples());
+            voices.add(com.openggf.audio.presentation.SampleBackedVoice.oneShot(++nextVoice, 0, decoded,
+                    outputSampleRate(), 1, pcm.gain()));
+        }
+
         /** Seeking and cancellation silence owned voices without changing the ROM soundtrack. */
         public void stop() { voices.clear(); }
         private void requireCurrent() {
-            if (closed || producer != shadowProducer) throw new IllegalStateException("Scene audio scope has expired");
+            if (closed || producer != presentationBinding.shadowProducer) throw new IllegalStateException("Scene audio scope has expired");
         }
         private void mix(short[] target, int frames) {
+            if (voices.isEmpty()) return;
             int count = frames * 2;
             if (accumulation.length < count) accumulation = new long[count];
             java.util.Arrays.fill(accumulation, 0, count, 0);
             for (var voice : voices) voice.mixInto(accumulation, frames);
-            for (int i = 0; i < count; i++) target[i] = (short) Math.clamp(target[i] + accumulation[i], Short.MIN_VALUE, Short.MAX_VALUE);
+            // Reserve headroom by scaling an overloaded block, never flattening its peaks against the PCM rails.
+            long peak = 0;
+            boolean audibleOverlay = false;
+            for (int i = 0; i < count; i++) {
+                audibleOverlay |= accumulation[i] != 0;
+                peak = Math.max(peak, Math.abs(target[i] + accumulation[i]));
+            }
+            double gain = audibleOverlay && peak > 30000 ? 30000.0 / peak : 1;
+            for (int i = 0; i < count; i++) target[i] = (short) Math.round((target[i] + accumulation[i]) * gain);
             voices.removeIf(com.openggf.audio.presentation.SampleBackedVoice::isComplete);
         }
         @Override public void close() {
@@ -589,13 +494,12 @@ public class AudioManager implements MusicRestoreSink {
 
     /** Audible device coordinate, or -1 for a device-free presentation. */
     public long consumedPresentationStereoFrames() {
-        return presentationSink instanceof OpenAlPcmSink sink
-                ? sink.consumedStereoFrames() : -1;
+        return presentationBinding.consumedPresentationStereoFrames();
     }
 
     /** Speaker starvation transitions in the current flushed source coordinate. */
     public long presentationUnderrunCount() {
-        return presentationSink instanceof OpenAlPcmSink sink ? sink.underrunCount() : 0;
+        return presentationBinding.presentationUnderrunCount();
     }
 
     /**
@@ -610,62 +514,21 @@ public class AudioManager implements MusicRestoreSink {
      */
     synchronized void setNativeCompatiblePcmCapture(
             com.openggf.audio.synth.NativeCompatiblePcmOutput.Config config) {
-        if (config != null && shadowSmpsSession != null) {
-            throw new IllegalStateException("native-compatible PCM capture must be set before the presentation exists");
-        }
-        nativeCompatiblePcmCapture = config;
-        if (config != null) {
-            nativeCompatiblePcmSessions = 0; // count this capture's sessions only
-        }
+        presentationBinding.setNativeCompatiblePcmCapture(config);
     }
 
     /** Moves completed native-compatible stereo frames; zero without the stage or a session. */
     synchronized int drainNativeCompatiblePcm(short[] target, int offsetSamples, int maxFrames) {
-        return shadowSmpsSession == null ? 0
-                : shadowSmpsSession.drainNativeCompatiblePcm(target, offsetSamples, maxFrames);
+        return presentationBinding.drainNativeCompatiblePcm(target, offsetSamples, maxFrames);
     }
 
     /** Presentation sessions built with the stage so far; more than one means its clock origin restarted. */
     synchronized int nativeCompatiblePcmSessions() {
-        return nativeCompatiblePcmSessions;
+        return presentationBinding.nativeCompatiblePcmSessions();
     }
 
     public synchronized LiveCaptureAudioHandle beginLiveCaptureAudio(int frameRate) {
-        // Scene music uses the same final packets and therefore requires no second capture lease.
-        if (activeLiveCaptureAudioHandle != null) {
-            throw new IllegalStateException("A live capture audio handle is already attached");
-        }
-        ensureShadowPresentation();
-        LiveCaptureAudioHandle capture = shadowProducer.attachCapture(frameRate);
-        ManagerLiveCaptureAudioHandle handle =
-                new ManagerLiveCaptureAudioHandle(capture, frameRate);
-        activeLiveCaptureAudioHandle = handle;
-        return handle;
-    }
-
-    /**
-     * Idempotently closes the live-recording lease. Identical rule to
-     * {@link #endCaptureMode()}: the manager's view of the lease is retired
-     * only after the producer has accepted the detach.
-     *
-     * <p>A capture lease can only be released on the producer's owner thread,
-     * so an off-thread close throws with the lease still attached. Marking the
-     * handle closed or clearing {@code activeLiveCaptureAudioHandle} first
-     * would leave this manager believing it holds no lease while the producer
-     * keeps copying every presented packet into the orphan, would let the next
-     * {@code beginLiveCaptureAudio} attach a second lease instead of rejecting
-     * it, and would make a retry from the owner thread a no-op so the orphan
-     * could never be detached at all.
-     */
-    private synchronized void closeLiveCaptureAudio(ManagerLiveCaptureAudioHandle handle) {
-        if (handle.closed) {
-            return;
-        }
-        handle.capture.close();
-        handle.closed = true;
-        if (activeLiveCaptureAudioHandle == handle) {
-            activeLiveCaptureAudioHandle = null;
-        }
+        return captureLeases.beginLiveCaptureAudio(frameRate);
     }
 
     /**
@@ -694,34 +557,7 @@ public class AudioManager implements MusicRestoreSink {
      * outer frame, then {@link #drainCaptureFrame} that packet once.
      */
     public synchronized void beginCaptureMode(int sampleRate, int frameRate) {
-        if (offlineCaptureHandle != null) {
-            throw new IllegalStateException(
-                    "An offline capture lease is already attached");
-        }
-        if (frameRate <= 0) {
-            throw new IllegalArgumentException("frameRate must be positive");
-        }
-        ensureShadowPresentation();
-        // ensureShadowPresentation guarantees the presentation sink and the
-        // producer share one sample rate (a mismatched sink is replaced before
-        // the producer is built, and replaceSink rejects an incompatible one),
-        // so the sink rate is the producer rate.
-        int producerSampleRate = outputSampleRate();
-        if (sampleRate != producerSampleRate) {
-            throw new IllegalArgumentException(
-                    "offline capture sample rate " + sampleRate
-                            + " does not match the presentation producer rate "
-                            + producerSampleRate);
-        }
-        if (frameRate != shadowFrameRate) {
-            throw new IllegalArgumentException(
-                    "offline capture frame rate " + frameRate
-                            + " does not match the presentation producer frame"
-                            + " rate " + shadowFrameRate
-                            + "; a mismatched lease would truncate or zero-pad"
-                            + " every presented packet");
-        }
-        offlineCaptureHandle = shadowProducer.attachCapture(frameRate);
+        captureLeases.beginCaptureMode(sampleRate, frameRate);
     }
 
     /**
@@ -732,8 +568,7 @@ public class AudioManager implements MusicRestoreSink {
      * rate (for example a PAL region pins the engine to 50 fps).
      */
     public synchronized int presentationFrameRate() {
-        ensureShadowPresentation();
-        return shadowFrameRate;
+        return captureLeases.presentationFrameRate();
     }
 
     /**
@@ -744,10 +579,7 @@ public class AudioManager implements MusicRestoreSink {
      * stale PCM.
      */
     public synchronized int drainCaptureFrame(short[] target) {
-        if (offlineCaptureHandle == null) {
-            throw new IllegalStateException("beginCaptureMode() not called");
-        }
-        return offlineCaptureHandle.drainPresentationFrame(target);
+        return captureLeases.drainCaptureFrame(target);
     }
 
     /**
@@ -764,23 +596,7 @@ public class AudioManager implements MusicRestoreSink {
      * rejecting it.
      */
     public synchronized void endCaptureMode() {
-        LiveCaptureAudioHandle handle = offlineCaptureHandle;
-        if (handle == null) {
-            return;
-        }
-        handle.close();
-        offlineCaptureHandle = null;
-    }
-
-    private int configuredFrameRate() {
-        if (standaloneFrameRate > 0) {
-            return standaloneFrameRate;
-        }
-        var config = configuredServicesOrNull();
-        if (config == null) {
-            return 60;
-        }
-        return FrameRateResolver.effective(config);
+        captureLeases.endCaptureMode();
     }
 
     private static int configuredPcmHistoryFrames(int sampleRate) {
@@ -804,18 +620,18 @@ public class AudioManager implements MusicRestoreSink {
 
     public synchronized void setBackend(AudioBackend backend) {
         invalidateAndReleaseStreamedMusicSession();
-        clearPreparedReverseRestore();
+        heldReverseRestore.invalidatePreparation();
         // A backend swap replaces the output device; it is not a reason to end
         // a recording of what the engine is playing.
-        detachLiveCaptureAudioHandleForRebuild();
-        closeShadowPresentation();
+        captureLeases.detachLiveCaptureAudioHandleForRebuild();
+        presentationBinding.closeShadowPresentation();
         destroyBackendQuietly(this.backend, "previous AudioBackend");
         this.backend = backend;
         try {
             this.backend.init();
-            this.backend.setAudioProfile(baseAudioSource.profile());
-            installBackendDiagnosticObservers();
-            installBackendPresentationSink();
+            this.backend.setAudioProfile(sourcePublication.base().profile());
+            diagnosticInstallation.installBackendDiagnosticObservers();
+            presentationBinding.installBackendPresentationSink();
             LOGGER.info("AudioBackend initialized: " + backend.getClass().getSimpleName());
         } catch (Exception e) {
             AudioDiagnosticObserverException.rethrowIfPresent(e);
@@ -823,55 +639,36 @@ public class AudioManager implements MusicRestoreSink {
             destroyBackendQuietly(this.backend, "failed AudioBackend");
             this.backend = new NullAudioBackend();
             this.backend.init();
-            this.backend.setAudioProfile(baseAudioSource.profile());
-            installBackendDiagnosticObservers();
-            presentationSink =
-                    new NoDeviceAudioSink(this.backend.outputSampleRate());
-            presentationSpeakerFailed = true;
+            this.backend.setAudioProfile(sourcePublication.base().profile());
+            diagnosticInstallation.installBackendDiagnosticObservers();
+            presentationBinding.installFailedBackendSink();
         }
     }
 
     /** Launch path variant that reports initialization failure instead of silently continuing. */
     public void setBackendForLaunch(AudioBackend backend) {
         invalidateAndReleaseStreamedMusicSession();
-        clearPreparedReverseRestore();
-        detachLiveCaptureAudioHandleForRebuild();
-        closeShadowPresentation();
+        heldReverseRestore.invalidatePreparation();
+        captureLeases.detachLiveCaptureAudioHandleForRebuild();
+        presentationBinding.closeShadowPresentation();
         destroyBackendQuietly(this.backend, "previous AudioBackend");
         this.backend = java.util.Objects.requireNonNull(backend, "backend");
         try {
             this.backend.init();
-            this.backend.setAudioProfile(baseAudioSource.profile());
-            installBackendDiagnosticObservers();
-            installBackendPresentationSink();
+            this.backend.setAudioProfile(sourcePublication.base().profile());
+            diagnosticInstallation.installBackendDiagnosticObservers();
+            presentationBinding.installBackendPresentationSink();
             LOGGER.info("AudioBackend initialized: " + backend.getClass().getSimpleName());
         } catch (Exception error) {
             LOGGER.log(Level.SEVERE, "Failed to initialize AudioBackend", error);
             destroyBackendQuietly(this.backend, "failed AudioBackend");
             this.backend = new NullAudioBackend();
             this.backend.init();
-            this.backend.setAudioProfile(baseAudioSource.profile());
-            installBackendDiagnosticObservers();
-            installBackendPresentationSink();
-            presentationSpeakerFailed = true;
+            this.backend.setAudioProfile(sourcePublication.base().profile());
+            diagnosticInstallation.installBackendDiagnosticObservers();
+            presentationBinding.installBackendPresentationSink();
+            presentationBinding.markSpeakerFailed();
             throw new IllegalStateException("Audio backend initialization failed", error);
-        }
-    }
-
-    private void installBackendPresentationSink() {
-        try {
-            presentationSink = backend.createPresentationSink(
-                    this::handlePresentationSinkFailure,
-                    warning -> LOGGER.warning("Speaker output: " + warning));
-            presentationSpeakerFailed = false;
-        } catch (Throwable failure) {
-            AudioDiagnosticObserverException.rethrowIfPresent(failure);
-            LOGGER.log(Level.WARNING,
-                    "Speaker device unavailable; continuing without audio output",
-                    failure);
-            presentationSink =
-                    new NoDeviceAudioSink(backend.outputSampleRate());
-            presentationSpeakerFailed = true;
         }
     }
 
@@ -882,26 +679,11 @@ public class AudioManager implements MusicRestoreSink {
      * backend for a fresh sink before the producer is rebuilt.
      */
     public void ensurePresentationSink() {
-        if (backend != null && presentationSink == null) {
-            installBackendPresentationSink();
-        }
-    }
-
-    private void handlePresentationSinkFailure(Throwable failure) {
-        presentationSpeakerFailed = true;
-        LOGGER.log(Level.WARNING,
-                "Speaker output failed; continuing without audio output",
-                failure);
-        AudioPresentationSink replacement =
-                new NoDeviceAudioSink(outputSampleRate());
-        presentationSink = replacement;
-        if (shadowProducer != null) {
-            shadowProducer.replaceSink(replacement);
-        }
+        presentationBinding.ensurePresentationSink();
     }
 
     public void replaceFailedPresentationSink(Throwable failure) {
-        handlePresentationSinkFailure(failure);
+        presentationBinding.handlePresentationSinkFailure(failure);
     }
 
     private static void destroyBackendQuietly(AudioBackend backend, String description) {
@@ -917,128 +699,15 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     public synchronized void setAudioProfile(GameAudioProfile audioProfile) {
-        if (reinstallsInstalledSource(audioProfile, baseAudioSource.rom())) {
-            return;
-        }
-        beginSourceMutation();
-        try {
-            BaseAudioSource previous = baseAudioSource;
-            long candidateGeneration = nextGeneration(previous.generation());
-            Rom sourceRom = previous.rom();
-            SmpsLoader candidateLoader = audioProfile != null
-                    && sourceRom != null
-                    ? audioProfile.createSmpsLoader(sourceRom) : null;
-            DacData candidateDac = loadDac(candidateLoader);
-            SmpsSequencerConfig candidateConfig = audioProfile != null
-                    ? audioProfile.getSequencerConfig() : null;
-            PresentationCoordHandlerPreparation presentationPreparation =
-                    preparePresentationCoordHandlers(audioProfile, true);
-            boolean[] backendConfigurationAttempted = {false};
-            Runnable backendConfiguration = () -> {
-                if (backend != null) {
-                    backendConfigurationAttempted[0] = true;
-                    backend.setAudioProfile(audioProfile);
-                }
-            };
-            try {
-                if (presentationPreparation.configureCandidate()) {
-                    presentationPreparation.owner().configureTransactionally(
-                            owner -> audioProfile
-                                    .configurePresentationCoordFlagHandlers(owner),
-                            backendConfiguration);
-                } else {
-                    backendConfiguration.run();
-                }
-            } catch (RuntimeException | Error failure) {
-                if (backendConfigurationAttempted[0]) {
-                    try {
-                        backend.setAudioProfile(previous.profile());
-                    } catch (RuntimeException | Error restoreFailure) {
-                        failure.addSuppressed(restoreFailure);
-                    }
-                }
-                throw failure;
-            }
-            publishPresentationCoordHandlers(presentationPreparation);
-            baseAudioSource = new BaseAudioSource(
-                    previous.rom(), audioProfile,
-                    candidateLoader, candidateDac,
-                    candidateConfig, candidateGeneration);
-            mutatorMusicIntent(AudioMutatorAccess.Kind.SOURCE, 0);
-            if (shadowProducer != null) {
-                replaceShadowPresentationForBaseMutation();
-            } else if (shadowFactory != null) {
-                shadowFactory.setSfxAdmissionPolicy(sfxAdmissionPolicy());
-            }
-        } finally {
-            endSourceMutation();
-        }
+        sourcePublication.setAudioProfile(audioProfile);
     }
 
     public GameAudioProfile getAudioProfile() {
-        return baseAudioSource.profile();
+        return sourcePublication.base().profile();
     }
 
     public synchronized void setRom(Rom rom) {
-        if (reinstallsInstalledSource(baseAudioSource.profile(), rom)) {
-            return;
-        }
-        beginSourceMutation();
-        try {
-            BaseAudioSource previous = baseAudioSource;
-            long candidateGeneration = nextGeneration(previous.generation());
-            SmpsLoader candidateLoader = previous.profile() != null
-                    && rom != null
-                    ? previous.profile().createSmpsLoader(rom) : null;
-            DacData candidateDac = loadDac(candidateLoader);
-            baseAudioSource = new BaseAudioSource(
-                    rom, previous.profile(), candidateLoader, candidateDac,
-                    previous.config(),
-                    candidateGeneration);
-            mutatorMusicIntent(AudioMutatorAccess.Kind.SOURCE, 0);
-            if (shadowProducer != null) {
-                replaceShadowPresentationForBaseMutation();
-            }
-        } finally {
-            endSourceMutation();
-        }
-    }
-
-    /**
-     * Whether installing {@code profile} with {@code rom} would reinstall the
-     * very source already installed: the same profile and ROM instances, with
-     * its loader built. That is a same-game level entry
-     * ({@code LevelManager.configureAudio} on every load), not a source change.
-     * The ROM's Z80 driver keeps running into the level, so the presentation
-     * device (chip, filter, PSG and buffer state, the running session) is kept.
-     * A new ROM or profile instance, a reset, or a donor or mod source still
-     * goes through the full replacement.
-     */
-    private boolean reinstallsInstalledSource(GameAudioProfile profile, Rom rom) {
-        BaseAudioSource installed = baseAudioSource;
-        return profile != null && rom != null
-                && profile == installed.profile() && rom == installed.rom()
-                && installed.loader() != null;
-    }
-
-    private static DacData loadDac(SmpsLoader loader) {
-        return loader != null ? loader.loadDacData() : null;
-    }
-
-    private static long nextGeneration(long generation) {
-        return Math.incrementExact(generation);
-    }
-
-    private void beginSourceMutation() {
-        if (sourceMutationInProgress) {
-            throw new IllegalStateException(
-                    "Audio source mutation must not be re-entered");
-        }
-        sourceMutationInProgress = true;
-    }
-
-    private void endSourceMutation() {
-        sourceMutationInProgress = false;
+        sourcePublication.setRom(rom);
     }
 
     public void setSoundMap(Map<GameSound, Integer> soundMap) {
@@ -1046,7 +715,7 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     public void resetRingSound() {
-        ringLeft = true;
+        logicalPublication.setRingLeft(true);
         recordTimelineCommand(new AudioCommand.ResetRingAlternation(true));
     }
 
@@ -1056,7 +725,7 @@ public class AudioManager implements MusicRestoreSink {
 
     public void beginCommandTimelineFrame(long frame) {
         commandTimeline.beginFrame(frame);
-        refreshDeferredReverseLogicalSnapshot();
+        heldReverseRestore.refreshDeferredReverseLogicalSnapshot();
         audioFrameOwnedExternally = true;
         audioFrameAdvanced = false;
     }
@@ -1098,117 +767,17 @@ public class AudioManager implements MusicRestoreSink {
         commandTimeline.pruneBefore(entryIndex);
     }
 
-    /**
-     * The ring left/right alternation callers should observe. A game whose
-     * request service owns dispatch-time alternation (Sonic 2's
-     * {@code zPlaySound_CheckRing}) reports its own value; {@code ringLeft}
-     * never advances for such a game, since {@link #playSfx} hands ring
-     * requests straight to the mailbox and returns before its own
-     * caller-side toggle. Other games have no request service, so {@code
-     * ringLeft} stays the sole source of truth for them.
-     */
-    private boolean currentRingLeft() {
-        if (shadowRequestService != null) {
-            Boolean serviceRingLeft = shadowRequestService.ringLeft();
-            if (serviceRingLeft != null) {
-                return serviceRingLeft;
-            }
-        }
-        return ringLeft;
-    }
-
     public AudioLogicalSnapshot captureLogicalSnapshot() {
-        ensureShadowPresentation();
-        Set<String> donorGameIds = new LinkedHashSet<>();
-        donorGameIds.addAll(donorAudioSources.keySet());
-
-        Set<AudioLogicalSnapshot.DonorSfxBindingSnapshot> donorBindings = new LinkedHashSet<>();
-        for (Map.Entry<GameSound, DonorSfxBinding> entry : donorSoundBindings.entrySet()) {
-            DonorSfxBinding binding = entry.getValue();
-            donorBindings.add(new AudioLogicalSnapshot.DonorSfxBindingSnapshot(
-                    entry.getKey(), binding.gameId(), binding.sfxId()));
-        }
-
-        return new AudioLogicalSnapshot(
-                currentRingLeft(),
-                commandTimeline.currentFrame(),
-                commandTimeline.nextOrder(),
-                commandTimeline.entryCount(),
-                shadowProducer.snapshot(),
-                donorGameIds,
-                donorBindings,
-                shadowRequestService == null
-                        ? null : shadowRequestService.snapshot());
+        return logicalPublication.captureLogicalSnapshot();
     }
 
     public void restoreLogicalSnapshot(AudioLogicalSnapshot snapshot) {
-        if (snapshot == null) {
-            return;
-        }
-        ensureShadowPresentation();
-        if (reverseAudioPresentationActive) {
-            deferredReverseLogicalSnapshot = snapshot;
-            return;
-        }
-        restoreLogicalSnapshotNow(snapshot, false);
+        heldReverseRestore.restoreLogicalSnapshot(snapshot);
     }
 
     private boolean restoreLogicalSnapshotNow(
             AudioLogicalSnapshot snapshot, boolean preservePresentation) {
-        AudioPresentationSnapshot previousPresentation =
-                shadowProducer.snapshot();
-        AudioPresentationForwardService.Snapshot previousForwardService =
-                shadowRequestService == null
-                        ? null : shadowRequestService.snapshot();
-        boolean previousRingLeft = ringLeft;
-        long previousTimelineFrame = commandTimeline.currentFrame();
-        int previousTimelineOrder = commandTimeline.nextOrder();
-        Map<GameSound, DonorSfxBinding> previousBindings =
-                new EnumMap<>(donorSoundBindings);
-        try {
-            if ((shadowRequestService == null)
-                    != (snapshot.forwardServiceSnapshot() == null)) {
-                throw new IllegalArgumentException(
-                        "audio snapshot forward-service ownership differs from the live profile");
-            }
-            shadowProducer.restore(snapshot.presentation(), shadowFactory,
-                    preservePresentation);
-            if (shadowRequestService != null) {
-                shadowRequestService.restore(snapshot.forwardServiceSnapshot());
-            }
-            ringLeft = snapshot.ringLeft();
-            commandTimeline.restoreCursor(snapshot.commandTimelineFrame(),
-                    snapshot.commandTimelineNextOrder());
-            donorSoundBindings.clear();
-            for (AudioLogicalSnapshot.DonorSfxBindingSnapshot binding
-                    : snapshot.donorBindings()) {
-                donorSoundBindings.put(binding.sound(),
-                        new DonorSfxBinding(binding.donorGameId(),
-                                binding.sfxId()));
-            }
-            logicalRestorePublications++;
-            return true;
-        } catch (RuntimeException failure) {
-            ringLeft = previousRingLeft;
-            commandTimeline.restoreCursor(previousTimelineFrame,
-                    previousTimelineOrder);
-            donorSoundBindings.clear();
-            donorSoundBindings.putAll(previousBindings);
-            try {
-                shadowProducer.restore(previousPresentation, shadowFactory,
-                        preservePresentation);
-                if (shadowRequestService != null) {
-                    shadowRequestService.restore(previousForwardService);
-                }
-            } catch (RuntimeException rollbackFailure) {
-                failure.addSuppressed(rollbackFailure);
-            }
-            AudioDiagnosticObserverException.rethrowIfPresent(failure);
-            LOGGER.log(Level.WARNING,
-                    "Audio snapshot restore failed; retained prior state",
-                    failure);
-            return false;
-        }
+        return logicalPublication.restoreLogicalSnapshotNow(snapshot, preservePresentation);
     }
 
     public void playSegaPcm() {
@@ -1217,7 +786,7 @@ public class AudioManager implements MusicRestoreSink {
 
     public void playSegaPcmCommand(int sourceCommandId) {
         mutatorMusicIntent(AudioMutatorAccess.Kind.COMMAND, sourceCommandId);
-        BaseAudioSource source = baseAudioSource;
+        BaseAudioSource source = sourcePublication.base();
         if (suppressingRewindReplay()
                 || source.profile() == null || source.rom() == null) {
             return;
@@ -1254,7 +823,7 @@ public class AudioManager implements MusicRestoreSink {
         if (suppressingRewindReplay()) {
             return;
         }
-        ringLeft = true;
+        logicalPublication.setRingLeft(true);
         recordTimelineCommand(
                 new AudioCommand.StopSegaPcmAndRetainGlobalStop(
                         sourceCommandId));
@@ -1265,7 +834,7 @@ public class AudioManager implements MusicRestoreSink {
         if (suppressingRewindReplay()) {
             return;
         }
-        ringLeft = true;
+        logicalPublication.setRingLeft(true);
         recordTimelineCommand(
                 new AudioCommand.RetainGlobalStop(sourceCommandId));
     }
@@ -1298,35 +867,35 @@ public class AudioManager implements MusicRestoreSink {
     public void playStandaloneMusic(
             AbstractSmpsData data, DacData dac) {
         ensureStandalonePresentation();
-        BaseAudioSource base = baseAudioSource;
+        BaseAudioSource base = sourcePublication.base();
         int musicId = data.getId();
-        int maxFrames = (outputSampleRate() + configuredFrameRate() - 1)
-                / configuredFrameRate();
-        var music = shadowFactory.musicSmps(
+        int maxFrames = (outputSampleRate() + presentationBinding.configuredFrameRate() - 1)
+                / presentationBinding.configuredFrameRate();
+        var music = presentationBinding.shadowFactory.musicSmps(
                 standaloneGameId, musicId, standaloneVoiceId++,
                 data, dac, base.config(),
                 AudioSourceDescriptor.baseMusic(musicId), maxFrames);
-        shadowCommands.submit(
+        presentationBinding.shadowCommands.submit(
                 new AudioPresentationCommand.ReplaceMusic(music),
                 () -> true, this::drainShadowCommandsAtOwnerBoundary);
     }
 
     boolean standaloneMusicComplete() {
         ensureStandalonePresentation();
-        return shadowSmpsSession != null && shadowSmpsSession.musicComplete();
+        return presentationBinding.shadowSmpsSession != null && presentationBinding.shadowSmpsSession.musicComplete();
     }
 
     public void playStandaloneSfx(
             AbstractSmpsData data, DacData dac, float pitch) {
         ensureStandalonePresentation();
-        BaseAudioSource base = baseAudioSource;
+        BaseAudioSource base = sourcePublication.base();
         GameAudioProfile profile = base.profile();
         int sfxId = data.getId();
         var key = new com.openggf.audio.presentation.SmpsAssetKey(
                 standaloneGameId,
                 com.openggf.audio.presentation.SmpsAssetKey.Route.BASE_ID,
                 sfxId, null);
-        shadowFactory.registerSmpsSfxAsset(
+        presentationBinding.shadowFactory.registerSmpsSfxAsset(
                 key, base.generation(), data, dac, base.config(),
                 new SmpsSfxPlaybackPolicy(
                         profile.getSfxPriority(sfxId),
@@ -1334,36 +903,36 @@ public class AudioManager implements MusicRestoreSink {
                         profile.isContinuousSfx(sfxId)));
         int continuous = profile.isContinuousSfx(sfxId)
                 ? sfxId : 0;
-        int maxFrames = (outputSampleRate() + configuredFrameRate() - 1)
-                / configuredFrameRate();
-        var source = shadowFactory.resolveSmpsSfx(
+        int maxFrames = (outputSampleRate() + presentationBinding.configuredFrameRate() - 1)
+                / presentationBinding.configuredFrameRate();
+        var source = presentationBinding.shadowFactory.resolveSmpsSfx(
                 standaloneVoiceId++, key, base.generation(),
                 Math.max(1, Math.round(pitch * 65_536.0f)),
                 profile.getSfxPriority(sfxId), continuous,
                 data.getChannels() + data.getPsgChannels(), maxFrames);
-        shadowCommands.submit(
+        presentationBinding.shadowCommands.submit(
                 new AudioPresentationCommand.AddSmpsSfx(source),
                 () -> true, this::drainShadowCommandsAtOwnerBoundary);
     }
 
     public void stopStandalonePlayback() {
         ensureStandalonePresentation();
-        shadowCommands.submit(new AudioPresentationCommand.StopMusic(),
+        presentationBinding.shadowCommands.submit(new AudioPresentationCommand.StopMusic(),
                 () -> true, this::drainShadowCommandsAtOwnerBoundary);
-        shadowCommands.submit(new AudioPresentationCommand.StopAllSfx(),
+        presentationBinding.shadowCommands.submit(new AudioPresentationCommand.StopAllSfx(),
                 () -> true, this::drainShadowCommandsAtOwnerBoundary);
-        shadowCommands.submit(new AudioPresentationCommand.StopRawPcm(),
+        presentationBinding.shadowCommands.submit(new AudioPresentationCommand.StopRawPcm(),
                 () -> true, this::drainShadowCommandsAtOwnerBoundary);
     }
 
     SmpsSequencerConfig bindLegacyConfigToPresentationOwner(
             SmpsSequencerConfig config) {
-        ensureShadowPresentation();
+        presentationBinding.ensureShadowPresentation();
         String gameId = config.getCoordFlagHandler() == null
-                ? (baseAudioSource.profile() != null
-                ? baseAudioSource.profile().presentationGameId() : "base")
+                ? (sourcePublication.base().profile() != null
+                ? sourcePublication.base().profile().presentationGameId() : "base")
                 : "s3k";
-        return shadowFactory.legacySequencerConfig(gameId, config);
+        return presentationBinding.shadowFactory.legacySequencerConfig(gameId, config);
     }
 
     private void ensureStandalonePresentation() {
@@ -1371,7 +940,7 @@ public class AudioManager implements MusicRestoreSink {
             throw new IllegalStateException(
                     "not a standalone presentation manager");
         }
-        ensureShadowPresentation();
+        presentationBinding.ensureShadowPresentation();
     }
 
     public AudioReplayScope beginRewindReplay(int fromFrame, int targetFrame, AudioReplayReason reason) {
@@ -1421,7 +990,7 @@ public class AudioManager implements MusicRestoreSink {
             }
             case AudioCommand.RetainGlobalStop ignored ->
                     {
-                        ringLeft = true;
+                        logicalPublication.setRingLeft(true);
                         backend.stopPlayback();
                     }
             case AudioCommand.PlaySegaPcm ignored -> {
@@ -1431,7 +1000,7 @@ public class AudioManager implements MusicRestoreSink {
                 // The authoritative presentation owns raw SEGA PCM.
             }
             case AudioCommand.StopSegaPcmAndRetainGlobalStop ignored -> {
-                ringLeft = true;
+                logicalPublication.setRingLeft(true);
                 backend.stopPlayback();
             }
             case AudioCommand.ReferenceLimitation ignored -> {
@@ -1443,230 +1012,18 @@ public class AudioManager implements MusicRestoreSink {
             case AudioCommand.SetSpeedMultiplier speed -> backend.setSpeedMultiplier(speed.multiplier());
             case AudioCommand.SetMusicTempoPercent tempo -> backend.setMusicTempoPercent(tempo.percent());
             case AudioCommand.ChangeMusicTempo tempo -> backend.changeMusicTempo(tempo.dividingTiming());
-            case AudioCommand.ResetRingAlternation reset -> ringLeft = reset.ringLeft();
+            case AudioCommand.ResetRingAlternation reset -> logicalPublication.setRingLeft(reset.ringLeft());
         }
     }
 
     public void replayTimelineCommandLogically(AudioCommand command) {
-        if (command == null) {
-            return;
-        }
-        stageDeferredPresentationCommand(command);
-        refreshDeferredReverseLogicalSnapshot();
-    }
-
-    /**
-     * Replays one logical command into detached presentation metadata and a
-     * transactionally borrowed view of the one persistent SMPS session. The
-     * session is rolled back byte-for-byte after the staged snapshot is
-     * captured, so the live shadow and its rewind/history cursor remain
-     * untouched until the manager-owned dual restore commits at release.
-     */
-    private void stageDeferredPresentationCommand(AudioCommand command) {
-        stageDeferredPresentationCommand(command, null, null);
-    }
-
-    private void stageDeferredPresentationCommand(AudioCommand command, Boolean nativePause,
-            AudioPresentationForwardService.Snapshot nativeForward) {
-        if (command == null && nativePause == null) {
-            return;
-        }
-        ensureShadowPresentation();
-        if (deferredReverseLogicalSnapshot == null) {
-            if (nativePause != null) {
-                var previousForward = shadowRequestService.snapshot();
-                SmpsDriverSession.LiveMutationToken token = shadowSmpsSession.captureLiveMutation();
-                try {
-                    shadowSmpsSession.replayNativePause(nativePause);
-                    shadowRequestService.restore(nativeForward);
-                    shadowSmpsSession.commitLiveMutation(token);
-                } catch (RuntimeException failure) {
-                    try { shadowRequestService.restore(previousForward); }
-                    catch (RuntimeException rollback) { failure.addSuppressed(rollback); }
-                    try { shadowSmpsSession.rollbackLiveMutation(token); }
-                    catch (RuntimeException rollback) { failure.addSuppressed(rollback); }
-                    throw failure;
-                }
-            } else {
-                shadowResolver.submit(command);
-                shadowProducer.applyPendingCommandsAtOwnerBoundary();
-                ringLeft = managerRingAfter(ringLeft, command);
-            }
-            return;
-        }
-        AudioLogicalSnapshot selected = deferredReverseLogicalSnapshot;
-        SmpsCoordFlagRuntimeState.Snapshot liveCoord =
-                presentationCoordFlagHandlers.state().snapshot();
-        AudioPresentationCommandQueue stagedCommands =
-                new AudioPresentationCommandQueue();
-        AudioVoiceRegistry stagedRegistry = new AudioVoiceRegistry(
-                shadowFactory, shadowFactory, presentationCoordFlagHandlers,
-                warning -> LOGGER.warning(
-                        "Presentation rewind staging: " + warning),
-                shadowSmpsSession);
-        AudioPresentationDependencyResolver.DiagnosticTransaction
-                stagingDiagnostics =
-                shadowFactory.beginDiagnosticTransaction();
-        SmpsDriverSession.LiveMutationToken sessionMutation = null;
-        RuntimeException primaryFailure = null;
-        AudioLogicalSnapshot stagedSelection;
-        try {
-            stagedRegistry.restore(selected.presentation(), shadowFactory);
-            String[] resolutionFailure = new String[1];
-            AudioPresentationCommandResolver stagedResolver =
-                    new AudioPresentationCommandResolver(
-                            stagedCommands, shadowFactory,
-                            new ShadowSources(
-                                    (Math.max(1, backend != null
-                                            ? backend.outputSampleRate()
-                                            : 48_000)
-                                            + configuredFrameRate() - 1)
-                                            / configuredFrameRate()),
-                            warning -> resolutionFailure[0] = warning,
-                            () -> true,
-                            () -> {
-                                throw new IllegalStateException(
-                                        "detached staging queue exceeded capacity");
-                            });
-            long nextVoice = selected.presentation().voices().stream()
-                    .mapToLong(voice -> switch (voice) {
-                        case PresentationVoiceSnapshot.Sample sample ->
-                                sample.voiceId();
-                        case PresentationVoiceSnapshot.Streamed streamed ->
-                                streamed.voiceId();
-                    })
-                    .max().orElse(0L) + 1L;
-            nextVoice = Math.max(
-                    nextVoice, selected.presentation().nextVoiceId());
-            stagedResolver.reserveVoiceIdsThrough(nextVoice);
-            if (command != null) stagedResolver.submit(command);
-            boolean optionalFallbackSfx =
-                    command instanceof AudioCommand.PlaySfx sfx
-                            && (sfx.route()
-                            == AudioCommand.SfxRoute.RING_RESOLVED
-                            || sfx.route()
-                            == AudioCommand.SfxRoute.FALLBACK_NAME);
-            if (resolutionFailure[0] != null && !optionalFallbackSfx) {
-                throw new IllegalStateException(
-                        "Presentation rewind command resolution failed: "
-                                + resolutionFailure[0]);
-            }
-            if (selected.presentation().smpsSession() == null
-                    || selected.presentation().smpsLogical() == null) {
-                throw new IllegalArgumentException(
-                        "held-rewind staging requires one SMPS session/logical "
-                                + "snapshot pair");
-            }
-            SmpsDriverSession.PreparedRestore preparedSession =
-                    shadowSmpsSession.prepareRestore(
-                            selected.presentation().smpsSession(),
-                            selected.presentation().smpsLogical(),
-                            shadowFactory::resolveDac);
-            sessionMutation = shadowSmpsSession.captureLiveMutation();
-            shadowSmpsSession.commitRestore(preparedSession);
-            if (nativePause != null) shadowSmpsSession.replayNativePause(nativePause);
-            stagedCommands.applyPendingAtomically(commandToApply ->
-                    AudioPresentationSessionCommandApplier.apply(
-                            shadowSmpsSession, stagedRegistry,
-                            commandToApply));
-            AudioPresentationSnapshot staged = stagedRegistry.snapshot();
-            boolean stagedManagerRingLeft =
-                    managerRingAfter(selected.ringLeft(), command);
-            stagedSelection = new AudioLogicalSnapshot(
-                    stagedManagerRingLeft,
-                    selected.commandTimelineFrame(),
-                    selected.commandTimelineNextOrder(),
-                    selected.commandEntryCount(),
-                    staged,
-                    selected.donorGameIds(),
-                    selected.donorBindings(),
-                    nativePause == null ? selected.forwardServiceSnapshot() : nativeForward);
-        } catch (RuntimeException failure) {
-            primaryFailure = failure;
-            throw failure;
-        } finally {
-            try {
-                if (sessionMutation != null) {
-                    shadowSmpsSession.rollbackLiveMutation(
-                            sessionMutation);
-                }
-            } catch (RuntimeException rollbackFailure) {
-                if (primaryFailure != null) {
-                    primaryFailure.addSuppressed(rollbackFailure);
-                } else {
-                    throw rollbackFailure;
-                }
-            } finally {
-                try {
-                    stagedRegistry.clear();
-                } finally {
-                    try {
-                        stagingDiagnostics.endPreparation();
-                    } finally {
-                        try {
-                            stagingDiagnostics.discard();
-                        } finally {
-                            presentationCoordFlagHandlers.state()
-                                    .restore(liveCoord);
-                        }
-                    }
-                }
-            }
-        }
-        publishDeferredNativeSelection(stagedSelection);
-    }
-
-    /** Invalidate an older prepared target before publishing a replacement. */
-    private void publishDeferredNativeSelection(AudioLogicalSnapshot selected) {
-        if (deferredReverseLogicalPrepared) {
-            shadowProducer.discardPreparedRestoreSelection();
-            deferredReverseLogicalPrepared = false;
-        }
-        deferredReverseLogicalSnapshot = selected;
-    }
-
-    private boolean managerRingAfter(
-            boolean current, AudioCommand command) {
-        if (command instanceof AudioCommand.ResetRingAlternation reset) {
-            return reset.ringLeft();
-        }
-        if (command instanceof AudioCommand.RetainGlobalStop
-                || command instanceof AudioCommand
-                .StopSegaPcmAndRetainGlobalStop) {
-            return true;
-        }
-        if (command instanceof AudioCommand.PlaySfx sfx
-                && sfx.route() == AudioCommand.SfxRoute.RING_RESOLVED) {
-            if (GameSound.RING_LEFT.name().equals(sfx.sfxName())) {
-                return false;
-            }
-            if (GameSound.RING_RIGHT.name().equals(sfx.sfxName())) {
-                return true;
-            }
-        }
-        return current;
-    }
-
-    private void refreshDeferredReverseLogicalSnapshot() {
-        if (deferredReverseLogicalSnapshot == null) {
-            return;
-        }
-        AudioLogicalSnapshot selected = deferredReverseLogicalSnapshot;
-        deferredReverseLogicalSnapshot = new AudioLogicalSnapshot(
-                selected.ringLeft(),
-                commandTimeline.currentFrame(),
-                commandTimeline.nextOrder(),
-                selected.commandEntryCount(),
-                selected.presentation(),
-                selected.donorGameIds(),
-                selected.donorBindings(),
-                selected.forwardServiceSnapshot());
+        heldReverseRestore.replayTimelineCommandLogically(command);
     }
 
     private void replayMusic(AudioCommand.PlayMusic command) {
         switch (command.route()) {
             case BASE_SMPS -> {
-                BaseAudioSource source = baseAudioSource;
+                BaseAudioSource source = sourcePublication.base();
                 if (source.loader() != null) {
                     AbstractSmpsData data = source.loader().loadMusic(
                             command.musicId());
@@ -1677,7 +1034,7 @@ public class AudioManager implements MusicRestoreSink {
                 }
             }
             case DONOR_SMPS -> {
-                DonorAudioSource source = donorAudioSources.get(
+                DonorAudioSource source = sourcePublication.donor(
                         command.donorGameId());
                 if (source != null) {
                     AbstractSmpsData data = source.loader().loadMusic(
@@ -1702,7 +1059,7 @@ public class AudioManager implements MusicRestoreSink {
     private void replaySfx(AudioCommand.PlaySfx command) {
         switch (command.route()) {
             case BASE_SMPS_ID -> {
-                BaseAudioSource source = baseAudioSource;
+                BaseAudioSource source = sourcePublication.base();
                 if (source.loader() != null) {
                     AbstractSmpsData sfx = source.loader().loadSfx(
                             command.sfxId());
@@ -1713,7 +1070,7 @@ public class AudioManager implements MusicRestoreSink {
                 }
             }
             case BASE_SMPS_NAME -> {
-                BaseAudioSource source = baseAudioSource;
+                BaseAudioSource source = sourcePublication.base();
                 if (source.loader() != null) {
                     AbstractSmpsData sfx = source.loader().loadSfx(
                             command.sfxName());
@@ -1724,7 +1081,7 @@ public class AudioManager implements MusicRestoreSink {
                 }
             }
             case DONOR_SMPS -> {
-                DonorAudioSource source = donorAudioSources.get(
+                DonorAudioSource source = sourcePublication.donor(
                         command.donorGameId());
                 if (source != null) {
                     AbstractSmpsData sfx = source.loader().loadSfx(
@@ -1750,199 +1107,54 @@ public class AudioManager implements MusicRestoreSink {
 
     public boolean afterRewindRestore(
             int frame, AudioPresentationPolicy policy) {
-        if (policy == null) {
-            return true;
-        }
-        ensureShadowPresentation();
-        boolean preservePostBoundarySources =
-                postBoundaryReverseTarget;
-        if (policy != AudioPresentationPolicy.SUPPRESSED_INTERNAL_RESTORE) {
-            if (!endReverseAudioPresentation()) {
-                return false;
-            }
-            shadowProducer.applyPendingCommandsAtOwnerBoundary();
-        }
-        if (preservePostBoundarySources) {
-            return true;
-        }
-        switch (policy) {
-            case SUPPRESSED_INTERNAL_RESTORE -> {
-            }
-            case STOP_TRANSIENT_SFX_RESYNC_MUSIC -> {
-                shadowCommands.submit(
-                        new AudioPresentationCommand.RestoreMusicOverride(),
-                        () -> true,
-                        this::drainShadowCommandsAtOwnerBoundary);
-                shadowProducer
-                        .stopTransientVoicesThenApplyPendingCommandsAtOwnerBoundary();
-            }
-            case STOP_TRANSIENT_SFX ->
-                    shadowProducer.stopTransientVoicesAtOwnerBoundary();
-            case STOP_ALL_PRESENTATION -> {
-                shadowCommands.submit(
-                        new AudioPresentationCommand.HardReset(),
-                        () -> true,
-                        this::drainShadowCommandsAtOwnerBoundary);
-                shadowProducer.applyPendingCommandsAtOwnerBoundary();
-                shadowProducer.clearHistory();
-                shadowParity.historyBoundary();
-            }
-        }
-        return true;
+        return heldReverseRestore.afterRewindRestore(frame, policy);
     }
 
     public void beginReverseAudioPresentation() {
-        ensureShadowPresentation();
-        // Check presentation ownership before replacing the logical rewind
-        // ledger: a scoped recorded replay may already own audible reverse.
-        shadowProducer.beginReverse(1.0);
-        deferredReverseLogicalSnapshot = null;
-        deferredReverseLogicalPrepared = false;
-        postBoundaryReverseTarget = false;
-        reverseAudioPresentationActive = true;
+        heldReverseRestore.beginReverseAudioPresentation();
     }
 
     public boolean isReverseAudioPresentationActive() {
-        return reverseAudioPresentationActive;
+        return heldReverseRestore.isReverseAudioPresentationActive();
     }
 
     /** Audible reverse ownership, including a scoped captured presentation.
      * Logical rewind restore decisions must keep using {@link #isReverseAudioPresentationActive()}. */
     public boolean isReverseAudioOutputActive() {
-        return reverseAudioPresentationActive
-                || shadowProducer != null && shadowProducer.isReplayReverseActive();
+        return heldReverseRestore.isReverseAudioOutputActive();
     }
 
     /** Records actual final forward PCM without changing developer rewind history.
      * Session-owned public replay capabilities retain and close this exact producer handle. */
     public AudioReplay recordPresentationAudio(int maxSeconds) {
-        ensureShadowPresentation();
-        return new AudioReplay(shadowProducer.recordReplay(maxSeconds));
+        presentationBinding.ensureShadowPresentation();
+        return new AudioReplay(presentationBinding.shadowProducer.recordReplay(maxSeconds));
     }
 
     /**
      * Ends the held reverse presentation and publishes the selected logical
      * target.
      *
-     * <p>The release is split around exactly one irreversible step,
-     * {@code shadowProducer.endReverse(...)}: it consumes the reverse PCM
-     * cursor and commits the prepared registry restore, and no retry can
-     * recreate the session it destroyed. Every fallible step — preparing the
-     * restore selection and materializing the donor-binding replacement —
-     * therefore runs strictly <em>before</em> it, so a failure up to that point
-     * leaves the release exactly retryable. Everything after it is
-     * unconditional local publication that must not be skipped: if it somehow
-     * throws, the release still completes from the values prepared before the
-     * commit, because reporting a retryable failure there would make the retry
-     * re-prepare a restore selection that {@code endReverse} can no longer
-     * commit (the reverse session is already gone), leaking every voice that
-     * preparation recreated.
+     * <p>Successful producer return separates attempt-owned preparation cleanup
+     * from manager publication. Exceptions inside the producer may follow partial
+     * restoration or cursor consumption; ledger publication can also fail after
+     * its counter/ring writes. These existing partial effects are preserved.
      */
     public boolean endReverseAudioPresentation() {
-        AudioLogicalSnapshot selected = deferredReverseLogicalSnapshot;
-        boolean preparedDuringAttempt = false;
-        boolean producerCommitted = false;
-        AudioPresentationForwardService.Snapshot previousForward = null;
-        boolean forwardRestoreAttempted = false;
-        // Consumed once per entry, whichever exit this attempt takes, so an
-        // armed injection can never leak into a later unrelated release.
-        ReverseReleaseFailurePoint injectFailure = failNextReverseRelease;
-        failNextReverseRelease = null;
-        Map<GameSound, DonorSfxBinding> publishedBindings = null;
-        try {
-            if (selected != null && !deferredReverseLogicalPrepared) {
-                if (!commitDeferredReverseLogicalRestore()) {
-                    return false;
-                }
-                preparedDuringAttempt = true;
-            }
-            if (selected != null) {
-                // Built before the irreversible commit so a malformed or
-                // unmappable binding fails while the release is still exactly
-                // retryable, rather than half-published afterwards.
-                publishedBindings = new EnumMap<>(GameSound.class);
-                for (AudioLogicalSnapshot.DonorSfxBindingSnapshot binding
-                        : selected.donorBindings()) {
-                    publishedBindings.put(binding.sound(),
-                            new DonorSfxBinding(binding.donorGameId(),
-                                    binding.sfxId()));
-                }
-                if ((shadowRequestService == null) != (selected.forwardServiceSnapshot() == null)) {
-                    throw new IllegalArgumentException("reverse target forward-service ownership differs");
-                }
-                if (shadowRequestService != null) {
-                    previousForward = shadowRequestService.snapshot();
-                    forwardRestoreAttempted = true;
-                    shadowRequestService.restore(selected.forwardServiceSnapshot());
-                }
-            }
-            if (injectFailure
-                    == ReverseReleaseFailurePoint.BEFORE_PRODUCER_COMMIT) {
-                throw new IllegalStateException(
-                        "injected reverse release publication failure");
-            }
-            if (shadowProducer != null) {
-                shadowProducer.endReverse(
-                        !postBoundaryReverseTarget);
-            }
-            producerCommitted = true;
-            if (injectFailure
-                    == ReverseReleaseFailurePoint.AFTER_PRODUCER_COMMIT) {
-                throw new IllegalStateException(
-                        "injected reverse release publication failure");
-            }
-        } catch (RuntimeException failure) {
-            if (producerCommitted) {
-                publishReverseReleaseLedger(selected, publishedBindings);
-                AudioDiagnosticObserverException.rethrowIfPresent(failure);
-                LOGGER.log(Level.WARNING,
-                        "Audio reverse release publication failed after the "
-                                + "producer commit; completed the release from "
-                                + "the pre-commit ledger", failure);
-                return true;
-            }
-            if (forwardRestoreAttempted) {
-                try { shadowRequestService.restore(previousForward); }
-                catch (RuntimeException rollback) { failure.addSuppressed(rollback); }
-            }
-            if (preparedDuringAttempt) {
-                try {
-                    shadowProducer.discardPreparedRestoreSelection();
-                } catch (RuntimeException discardFailure) {
-                    failure.addSuppressed(discardFailure);
-                }
-                deferredReverseLogicalPrepared = false;
-            }
-            AudioDiagnosticObserverException.rethrowIfPresent(failure);
-            LOGGER.log(Level.WARNING,
-                    "Audio reverse release failed; retained prior live state",
-                    failure);
-            return false;
-        }
-        publishReverseReleaseLedger(selected, publishedBindings);
-        return true;
+        return heldReverseRestore.endReverseAudioPresentation();
+    }
+
+    private void resetLogicalRestorePublicationCount() {
+        logicalPublication.resetLogicalRestorePublicationCount();
     }
 
     /**
-     * Unconditional post-commit publication. Every value it writes was
-     * computed before the producer commit, so it cannot fail.
+     * Delegates the fixed ledger effect without moving held selection or release policy.
      */
-    private void publishReverseReleaseLedger(
+    private void publishHeldRestoreLedger(
             AudioLogicalSnapshot selected,
             Map<GameSound, DonorSfxBinding> publishedBindings) {
-        if (selected != null) {
-            logicalRestorePublications++;
-            ringLeft = selected.ringLeft();
-            commandTimeline.restoreCursor(
-                    selected.commandTimelineFrame(),
-                    selected.commandTimelineNextOrder());
-            donorSoundBindings.clear();
-            donorSoundBindings.putAll(publishedBindings);
-        }
-        deferredReverseLogicalSnapshot = null;
-        deferredReverseLogicalPrepared = false;
-        reverseAudioPresentationActive = false;
-        postBoundaryReverseTarget = false;
+        logicalPublication.publishHeldRestoreLedger(selected, publishedBindings);
     }
 
     /**
@@ -1954,38 +1166,7 @@ public class AudioManager implements MusicRestoreSink {
      * publication instead of recapturing or rebuilding it.
      */
     public boolean preparePostBoundaryReverseRelease() {
-        if (!reverseAudioPresentationActive) {
-            return true;
-        }
-        ensureShadowPresentation();
-        if (!postBoundaryReverseTarget) {
-            AudioLogicalSnapshot fresh;
-            try {
-                // A level/seamless transition may initialize presentation
-                // sources after the final frame packet. Publish that ledger at
-                // this owner boundary without advancing PCM cadence/history,
-                // then capture the complete fresh producer state.
-                shadowProducer.applyPendingCommandsAtOwnerBoundary();
-                fresh = captureLogicalSnapshot();
-            } catch (RuntimeException failure) {
-                // Successfully applied predecessors have already left the
-                // ledger; the failing command and successors remain queued.
-                // The stale selected/prepared target is retained until a
-                // complete drain and fresh capture can replace it.
-                AudioDiagnosticObserverException.rethrowIfPresent(failure);
-                LOGGER.log(Level.WARNING,
-                        "Audio post-boundary command publication failed; "
-                                + "retained coherent live state for retry",
-                        failure);
-                return false;
-            }
-            clearPreparedReverseRestore();
-            shadowProducer.discardPreparedRestoreSelection();
-            deferredReverseLogicalSnapshot = fresh;
-            deferredReverseLogicalPrepared = false;
-            postBoundaryReverseTarget = true;
-        }
-        return commitDeferredReverseLogicalRestore();
+        return heldReverseRestore.preparePostBoundaryReverseRelease();
     }
 
     /**
@@ -1993,40 +1174,12 @@ public class AudioManager implements MusicRestoreSink {
      * boundary without consuming the reverse PCM cursor.
      */
     public boolean commitDeferredReverseLogicalRestore() {
-        if (!reverseAudioPresentationActive
-                || deferredReverseLogicalSnapshot == null
-                || deferredReverseLogicalPrepared) {
-            return deferredReverseLogicalPrepared;
-        }
-        AudioLogicalSnapshot selected = deferredReverseLogicalSnapshot;
-        try {
-            shadowProducer.prepareRestoreSelection(
-                    selected.presentation(), shadowFactory);
-            deferredReverseLogicalPrepared = true;
-            return true;
-        } catch (RuntimeException failure) {
-            deferredReverseLogicalPrepared = false;
-            AudioDiagnosticObserverException.rethrowIfPresent(failure);
-            LOGGER.log(Level.WARNING,
-                    "Audio reverse target preparation failed; retained live "
-                            + "state for retry",
-                    failure);
-            return false;
-        }
-    }
-
-    /**
-     * Marks any manager-side prepared reverse target as unpublished. The
-     * producer owns the prepared registry restore itself and releases it
-     * through {@code discardPreparedRestoreSelection()} or {@code close()}.
-     */
-    private void clearPreparedReverseRestore() {
-        deferredReverseLogicalPrepared = false;
+        return heldReverseRestore.commitDeferredReverseLogicalRestore();
     }
 
     public void setReversePlaybackRate(double rate) {
-        ensureShadowPresentation();
-        shadowProducer.setReverseRate(rate);
+        presentationBinding.ensureShadowPresentation();
+        presentationBinding.shadowProducer.setReverseRate(rate);
     }
 
     /**
@@ -2037,8 +1190,8 @@ public class AudioManager implements MusicRestoreSink {
      * rate outlives the consumer that set it.
      */
     public void setForwardPlaybackRate(double rate) {
-        ensureShadowPresentation();
-        shadowProducer.setForwardRate(rate);
+        presentationBinding.ensureShadowPresentation();
+        presentationBinding.shadowProducer.setForwardRate(rate);
     }
 
     /**
@@ -2050,9 +1203,9 @@ public class AudioManager implements MusicRestoreSink {
      * explicitly.
      */
     public void clearPcmHistory() {
-        ensureShadowPresentation();
-        shadowProducer.clearHistory();
-        shadowParity.historyBoundary();
+        presentationBinding.ensureShadowPresentation();
+        presentationBinding.shadowProducer.clearHistory();
+        presentationBinding.shadowParity.historyBoundary();
     }
 
     /**
@@ -2066,23 +1219,23 @@ public class AudioManager implements MusicRestoreSink {
      * a later boundary.
      */
     public void setRewindHistoryArmed(boolean armed) {
-        ensureShadowPresentation();
-        shadowProducer.setHistoryArmed(armed);
+        presentationBinding.ensureShadowPresentation();
+        presentationBinding.shadowProducer.setHistoryArmed(armed);
     }
 
     public void presentFrame(PresentationMode mode) {
-        ensureShadowPresentation();
+        presentationBinding.ensureShadowPresentation();
         AudioPresentationProducer.PresentationResult result =
-                shadowProducer.present(commandTimeline.currentFrame(), mode);
+                presentationBinding.shadowProducer.present(commandTimeline.currentFrame(), mode);
         if (result == AudioPresentationProducer.PresentationResult
                 .REQUEST_REJECTED) {
             return;
         }
         audioFrameAdvanced = true;
-        shadowParity.presented(mode);
+        presentationBinding.shadowParity.presented(mode);
         if (shadowRestoreRequested) {
             shadowRestoreRequested = false;
-            mirrorShadowCommand(() -> shadowCommands.submit(
+            mirrorShadowCommand(() -> presentationBinding.shadowCommands.submit(
                     new AudioPresentationCommand.RestoreMusicOverride(),
                     () -> true,
                     this::drainShadowCommandsAtOwnerBoundary));
@@ -2093,61 +1246,60 @@ public class AudioManager implements MusicRestoreSink {
      * Immutable diagnostic counters for the temporary shadow-parity gate.
      */
     AudioPresentationParityProbe.Snapshot shadowParitySnapshot() {
-        ensureShadowPresentation();
-        return shadowParity.snapshot();
+        presentationBinding.ensureShadowPresentation();
+        return presentationBinding.shadowParity.snapshot();
     }
 
     LiveCaptureAudioHandle attachShadowCaptureForTesting(int frameRate) {
-        ensureShadowPresentation();
-        return shadowProducer.attachCapture(frameRate);
+        presentationBinding.ensureShadowPresentation();
+        return presentationBinding.shadowProducer.attachCapture(frameRate);
     }
 
     AudioLogicalSnapshot deferredReverseLogicalSnapshotForTesting() {
-        return deferredReverseLogicalSnapshot;
+        return heldReverseRestore.selectedSnapshot();
     }
 
     int logicalRestorePublicationsForTesting() {
-        return logicalRestorePublications;
+        return logicalPublication.logicalRestorePublications();
     }
 
     void resetLogicalRestorePublicationsForTesting() {
-        logicalRestorePublications = 0;
+        logicalPublication.resetLogicalRestorePublicationCount();
     }
 
     void failNextReverseReleaseForTesting(ReverseReleaseFailurePoint point) {
-        failNextReverseRelease =
-                java.util.Objects.requireNonNull(point, "point");
+        heldReverseRestore.armReleaseFailure(point);
     }
 
     AudioPresentationTuning shadowTuningForTesting() {
-        ensureShadowPresentation();
-        return shadowTuning;
+        presentationBinding.ensureShadowPresentation();
+        return presentationBinding.shadowTuning;
     }
 
     SmpsCoordFlagHandlerOwner presentationCoordFlagHandlersForTesting() {
-        ensureShadowPresentation();
-        return presentationCoordFlagHandlers;
+        presentationBinding.ensureShadowPresentation();
+        return presentationBinding.presentationCoordFlagHandlers;
     }
 
     SmpsDriverSnapshot shadowSmpsDriverSnapshotForTesting() {
-        ensureShadowPresentation();
-        return shadowSmpsSession.captureLogicalSnapshot();
+        presentationBinding.ensureShadowPresentation();
+        return presentationBinding.shadowSmpsSession.captureLogicalSnapshot();
     }
 
     AudioPresentationSourceFactory shadowFactoryForTesting() {
-        ensureShadowPresentation();
-        return shadowFactory;
+        presentationBinding.ensureShadowPresentation();
+        return presentationBinding.shadowFactory;
     }
 
     ReleaseStateForTesting releaseStateForTesting() {
-        ensureShadowPresentation();
+        presentationBinding.ensureShadowPresentation();
         AbstractSmpsAudioBackend.StateForTesting backendState =
                 backend instanceof AbstractSmpsAudioBackend smpsBackend
                         ? smpsBackend.stateForTesting() : null;
         return new ReleaseStateForTesting(
                 captureLogicalSnapshot(),
                 backendState,
-                shadowProducer.transactionFingerprint());
+                presentationBinding.shadowProducer.transactionFingerprint());
     }
 
     record ReleaseStateForTesting(
@@ -2158,8 +1310,8 @@ public class AudioManager implements MusicRestoreSink {
 
     void submitShadowRawPcmForTesting(
             byte[] pcm, int sourceSampleRate) {
-        ensureShadowPresentation();
-        shadowResolver.submitRawPcm(pcm, sourceSampleRate);
+        presentationBinding.ensureShadowPresentation();
+        presentationBinding.shadowResolver.submitRawPcm(pcm, sourceSampleRate);
     }
 
     public void restoreMusic() {
@@ -2222,13 +1374,13 @@ public class AudioManager implements MusicRestoreSink {
         if (suppressingRewindReplay()) {
             return;
         }
-        BaseAudioSource source = baseAudioSource;
+        BaseAudioSource source = sourcePublication.base();
         if (source.profile() != null) {
-            ensureShadowPresentation();
-            if (shadowRequestService != null) {
-                requestObserver.onRequested(sfxRequestClass(nativeRequestId),
+            presentationBinding.ensureShadowPresentation();
+            if (presentationBinding.shadowRequestService != null) {
+                diagnosticInstallation.requestObserver().onRequested(sfxRequestClass(nativeRequestId),
                         nativeRequestId);
-                shadowRequestService.submitMusic(nativeRequestId,
+                presentationBinding.shadowRequestService.submitMusic(nativeRequestId,
                         commandForNativeRequest(source, nativeRequestId));
                 return;
             }
@@ -2240,7 +1392,7 @@ public class AudioManager implements MusicRestoreSink {
         if (source.profile() instanceof NativeMailboxMusicRoutes routes) {
             int musicId = routes.musicForNativeRequest(nativeRequestId);
             if (musicId >= 0) {
-                requestObserver.onRequested(sfxRequestClass(nativeRequestId),
+                diagnosticInstallation.requestObserver().onRequested(sfxRequestClass(nativeRequestId),
                         nativeRequestId);
                 admitMusicWithoutRequestService(source, musicId);
                 return;
@@ -2251,105 +1403,32 @@ public class AudioManager implements MusicRestoreSink {
 
     /** Internal native PauseGame operation; preserves chip time and mailbox ownership. */
     void requestNativePause(boolean paused) {
-        if (rewindReplaySuppressionDepth > 0) return;
-        ensureShadowPresentation();
-        shadowSmpsSession.requireNativePauseSupported();
-        if (!(shadowRequestService instanceof AudioNativePauseAccess.Mailbox mailbox)) {
-            throw new UnsupportedOperationException("native pause mailbox is unavailable");
-        }
-        if (deferredReverseLogicalSnapshot == null) {
-            var previous = shadowRequestService.snapshot();
-            try { mailbox.submitNativePause(paused); }
-            catch (RuntimeException failure) {
-                try { shadowRequestService.restore(previous); }
-                catch (RuntimeException rollback) { failure.addSuppressed(rollback); }
-                throw failure;
-            }
-            return;
-        }
-        AudioLogicalSnapshot selected = deferredReverseLogicalSnapshot;
-        AudioPresentationForwardService.Snapshot previous = shadowRequestService.snapshot();
-        AudioPresentationForwardService.Snapshot staged;
-        RuntimeException primary = null;
-        try {
-            shadowRequestService.restore(selected.forwardServiceSnapshot());
-            mailbox.submitNativePause(paused);
-            staged = shadowRequestService.snapshot();
-        } catch (RuntimeException failure) {
-            primary = failure;
-            throw failure;
-        } finally {
-            try { shadowRequestService.restore(previous); }
-            catch (RuntimeException rollback) {
-                if (primary != null) primary.addSuppressed(rollback);
-                else throw rollback;
-            }
-        }
-        publishDeferredNativeSelection(new AudioLogicalSnapshot(selected.ringLeft(),
-                selected.commandTimelineFrame(), selected.commandTimelineNextOrder(),
-                selected.commandEntryCount(), selected.presentation(), selected.donorGameIds(),
-                selected.donorBindings(), staged));
+        heldReverseRestore.requestNativePause(paused);
     }
 
     void replayNativePause(boolean paused, AudioPresentationForwardService.Snapshot forward) {
-        Objects.requireNonNull(forward, "forward");
-        ensureShadowPresentation();
-        // Validate the source-owned snapshot before publishing any detached
-        // session selection; a failed validation restores the live source.
-        var previous = shadowRequestService.snapshot();
-        RuntimeException primary = null;
-        try { shadowRequestService.restore(forward); }
-        catch (RuntimeException failure) { primary = failure; throw failure; }
-        finally {
-            try { shadowRequestService.restore(previous); }
-            catch (RuntimeException rollback) {
-                if (primary != null) primary.addSuppressed(rollback);
-                else throw rollback;
-            }
-        }
-        stageDeferredPresentationCommand(null, paused, forward);
-        refreshDeferredReverseLogicalSnapshot();
+        heldReverseRestore.replayNativePause(paused, forward);
     }
 
     void advanceNativeHistoryCursor(int cursor) {
-        ensureShadowPresentation();
-        if (deferredReverseLogicalSnapshot == null) {
-            shadowSmpsSession.setNativeHistoryCursor(cursor);
-            return;
-        }
-        AudioLogicalSnapshot selected = deferredReverseLogicalSnapshot;
-        AudioPresentationSnapshot p = selected.presentation();
-        var s = p.smpsSession();
-        if (s == null) return;
-        var session = new com.openggf.audio.session.SmpsDriverSessionSnapshot(s.initialized(),
-                s.pendingGlobalCommand(), s.profile(), s.selectedDacSource(), s.speedShoesEnabled(),
-                s.speedMultiplier(), s.musicTempoPercent(), s.ringLeft(), s.musicFmDacTrackCount(),
-                s.segaPcmTransport(), s.physical(), s.nativePause(), cursor);
-        var presentation = new AudioPresentationSnapshot(p.nextVoiceId(), p.voices(), p.activeMusic(),
-                p.overrideStack(), p.rawPcmVoiceId(), p.fmMuteMask(), p.fmSoloMask(), p.psgMuteMask(),
-                p.psgSoloMask(), p.sfxBlocked(), p.sfxBlockHeldThroughFadeIn(), p.pendingRestore(),
-                p.speedShoesEnabled(), p.speedMultiplier(), p.ringLeft(), p.coordFlagRuntimeState(),
-                session, p.smpsLogical(), p.forwardTiming());
-        publishDeferredNativeSelection(new AudioLogicalSnapshot(selected.ringLeft(),
-                selected.commandTimelineFrame(), selected.commandTimelineNextOrder(),
-                selected.commandEntryCount(), presentation, selected.donorGameIds(),
-                selected.donorBindings(), selected.forwardServiceSnapshot()));
+        heldReverseRestore.advanceNativeHistoryCursor(cursor);
     }
 
     public void playMusic(int musicId) {
+        if (!LevelMusicAccess.allowsEntryMusic(this)) return;
         mutatorMusicIntent(musicId >= 0xE0 ? AudioMutatorAccess.Kind.COMMAND : AudioMutatorAccess.Kind.MUSIC, musicId);
         if (suppressingRewindReplay()) {
             return;
         }
-        requestObserver.onRequested(musicId >= 0xE0
+        diagnosticInstallation.requestObserver().onRequested(musicId >= 0xE0
                 ? AudioRequestObserver.RequestClass.COMMAND
                 : AudioRequestObserver.RequestClass.MUSIC, musicId);
-        BaseAudioSource source = baseAudioSource;
+        BaseAudioSource source = sourcePublication.base();
         GameAudioProfile profile = source.profile();
         if (profile != null) {
-            ensureShadowPresentation();
-            if (shadowRequestService != null) {
-                shadowRequestService.submitMusic(
+            presentationBinding.ensureShadowPresentation();
+            if (presentationBinding.shadowRequestService != null) {
+                presentationBinding.shadowRequestService.submitMusic(
                         musicId, commandForNativeMusicRequest(source, musicId));
                 return;
             }
@@ -2398,17 +1477,17 @@ public class AudioManager implements MusicRestoreSink {
                         : GameAudioProfile.MusicOverrideRetriggerPolicy.IGNORE;
 
         if (source.loader() != null) {
-            ensureShadowPresentation();
+            presentationBinding.ensureShadowPresentation();
             SmpsAssetKey key = new SmpsAssetKey(
                     baseGameId(source), SmpsAssetKey.Route.BASE_MUSIC,
                     musicId, null);
-            boolean registered = shadowFactory.findRegisteredSmpsMusicAsset(
+            boolean registered = presentationBinding.shadowFactory.findRegisteredSmpsMusicAsset(
                     key, source.generation()) != null;
             AbstractSmpsData data = null;
             if (!registered) {
                 data = source.loader().loadMusic(musicId);
                 if (data != null) {
-                    shadowFactory.registerSmpsMusicAsset(
+                    presentationBinding.shadowFactory.registerSmpsMusicAsset(
                             key, source.generation(), data,
                             source.dac(), source.config());
                     registered = true;
@@ -2419,7 +1498,7 @@ public class AudioManager implements MusicRestoreSink {
                         musicId, AudioCommand.MusicRoute.BASE_SMPS, override, null,
                         musicDuringOverridePolicy, retriggerPolicy));
                 if (sendLiveBackendCommands()) {
-                    var playback = shadowFactory
+                    var playback = presentationBinding.shadowFactory
                             .requireRegisteredSmpsMusicPlayback(
                                     key, source.generation());
                     backend.playStreamedMusicOrElse(musicId, () -> {
@@ -2484,7 +1563,7 @@ public class AudioManager implements MusicRestoreSink {
      */
     public boolean playNamespacedSfx(StreamedMusicPort.SfxRef sfx) {
         java.util.Objects.requireNonNull(sfx, "sfx");
-        if (suppressingRewindReplay() || reverseAudioPresentationActive) return false;
+        if (suppressingRewindReplay() || heldReverseRestore.blocksSfxAdmission()) return false;
         // Preflight only: the presentation layer materializes the one-shot
         // from the recorded command as an ordinary sample voice.
         if (!streamedMusicPort.hasSfx(sfx)) {
@@ -2495,7 +1574,7 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     public boolean playMusic(GameMusic music) {
-        Integer musicId = resolveMusic(baseAudioSource.profile(), music);
+        Integer musicId = resolveMusic(sourcePublication.base().profile(), music);
         if (musicId == null) {
             return false;
         }
@@ -2527,7 +1606,7 @@ public class AudioManager implements MusicRestoreSink {
             }
             return;
         }
-        BaseAudioSource source = baseAudioSource;
+        BaseAudioSource source = sourcePublication.base();
         if (source.loader() != null) {
             if (sfxName.isBlank()) {
                 AbstractSmpsData loaded = source.loader().loadSfx(sfxName);
@@ -2563,8 +1642,8 @@ public class AudioManager implements MusicRestoreSink {
                 }
                 return;
             }
-            ensureShadowPresentation();
-            var captured = baseSfxSource(source);
+            presentationBinding.ensureShadowPresentation();
+            var captured = sourcePublication.baseSfxSource(source);
             SmpsAssetKey key = new SmpsAssetKey(
                     captured.gameId(), SmpsAssetKey.Route.BASE_NAME,
                     -1, sfxName);
@@ -2574,7 +1653,7 @@ public class AudioManager implements MusicRestoreSink {
                         pitch, null);
                 recordRegisteredSmpsSfxCommand(command, captured);
                 if (sendLiveBackendCommands()) {
-                    var playback = shadowFactory
+                    var playback = presentationBinding.shadowFactory
                             .requireRegisteredSmpsSfxPlayback(
                                     key, captured.dependencyGeneration());
                     dispatchLiveRegisteredSfx(playback, pitch);
@@ -2607,40 +1686,38 @@ public class AudioManager implements MusicRestoreSink {
         if (suppressingRewindReplay()) {
             return;
         }
-        BaseAudioSource source = baseAudioSource;
+        BaseAudioSource source = sourcePublication.base();
         GameAudioProfile profile = source.profile();
         AudioCommand command = null;
         if (profile != null) {
-            ensureShadowPresentation();
+            presentationBinding.ensureShadowPresentation();
             command = commandForNativeRequest(source, nativeId);
-            if (shadowRequestService != null) {
-                requestObserver.onRequested(sfxRequestClass(nativeId), nativeId);
-                shadowRequestService.submitSecondarySound(nativeId, command);
+            if (presentationBinding.shadowRequestService != null) {
+                diagnosticInstallation.requestObserver().onRequested(sfxRequestClass(nativeId), nativeId);
+                presentationBinding.shadowRequestService.submitSecondarySound(nativeId, command);
                 return;
             }
         }
         // Fallback consequences may call public controls; the raw intent already belongs
         // to this submission and must not be observed again through those controls.
-        mutatorSubmissionDepth++;
-        try {
-            if (command instanceof AudioCommand.PlayMusic music) {
-                requestObserver.onRequested(sfxRequestClass(nativeId), nativeId);
+        AudioCommand fallbackCommand = command;
+        mutatorAccess.submit(() -> {
+            if (fallbackCommand instanceof AudioCommand.PlayMusic music) {
+                diagnosticInstallation.requestObserver().onRequested(sfxRequestClass(nativeId), nativeId);
                 admitMusicWithoutRequestService(source, music.musicId());
                 return;
             }
             if (profile != null && profile.handleSystemCommand(nativeId, this)) {
-                requestObserver.onRequested(AudioRequestObserver.RequestClass.COMMAND, nativeId);
+                diagnosticInstallation.requestObserver().onRequested(AudioRequestObserver.RequestClass.COMMAND, nativeId);
                 return;
             }
-            requestObserver.onRequested(sfxRequestClass(nativeId), nativeId);
+            diagnosticInstallation.requestObserver().onRequested(sfxRequestClass(nativeId), nativeId);
             if (isRingSpeakerToggleRequest(nativeId)) {
                 playRingWithoutRequestService(nativeId, 1.0f);
                 return;
             }
             playBaseSfx(source, nativeId, 1.0f);
-        } finally {
-            mutatorSubmissionDepth--;
-        }
+        });
     }
 
     private void playSfx(GameSound sound, float pitch, boolean secondaryRequest) {
@@ -2655,15 +1732,15 @@ public class AudioManager implements MusicRestoreSink {
                 ? soundMap == null ? null : soundMap.get(GameSound.RING_RIGHT)
                 : soundMap == null ? null : soundMap.get(sound);
         if (rawSoundId != null) {
-            requestObserver.onRequested(sfxRequestClass(rawSoundId), rawSoundId);
-            ensureShadowPresentation();
-            if (shadowRequestService != null) {
+            diagnosticInstallation.requestObserver().onRequested(sfxRequestClass(rawSoundId), rawSoundId);
+            presentationBinding.ensureShadowPresentation();
+            if (presentationBinding.shadowRequestService != null) {
                 AudioCommand command = commandForNativeRequest(
-                        baseAudioSource, rawSoundId);
+                        sourcePublication.base(), rawSoundId);
                 if (secondaryRequest) {
-                    shadowRequestService.submitSecondarySound(rawSoundId, command);
+                    presentationBinding.shadowRequestService.submitSecondarySound(rawSoundId, command);
                 } else {
-                    shadowRequestService.submitSound(rawSoundId, command);
+                    presentationBinding.shadowRequestService.submitSound(rawSoundId, command);
                 }
                 return;
             }
@@ -2679,22 +1756,19 @@ public class AudioManager implements MusicRestoreSink {
     private void playRingWithoutRequestService(Integer rawSoundId, float pitch) {
         // Suppression precedes the driver's ring-speaker selection.
         // The registry still rejects all other SFX at admission.
-        if (deferredReverseLogicalSnapshot != null
-                ? deferredReverseLogicalSnapshot.presentation().sfxBlocked()
-                : shadowProducer != null && shadowProducer.areSfxRequestsBlocked()) {
+        if (heldReverseRestore.blocksRingAdmission()) {
             observeBlockedRingAdmission(rawSoundId);
             return;
         }
-        playGameSfxResolved(ringLeft ? GameSound.RING_LEFT : GameSound.RING_RIGHT, pitch);
-        ringLeft = !ringLeft;
+        logicalPublication.playFallbackRing(pitch);
     }
 
     /** Reports the caller-owned discard before ring-speaker selection mutates. */
     private void observeBlockedRingAdmission(Integer rawSoundId) {
-        if (rawSoundId == null || admissionObserver == AudioAdmissionObserver.NONE) {
+        if (rawSoundId == null || diagnosticInstallation.admissionObserver() == AudioAdmissionObserver.NONE) {
             return;
         }
-        GameAudioProfile profile = baseAudioSource.profile();
+        GameAudioProfile profile = sourcePublication.base().profile();
         int priority = profile == null
                 ? SmpsRequestAdmissionPolicy.NO_PRIORITY
                 : profile.getSfxPriority(rawSoundId);
@@ -2707,13 +1781,13 @@ public class AudioManager implements MusicRestoreSink {
                 context.priorityBefore(), context.priorityBefore(),
                 context.resolvedSoundId());
         AudioDiagnosticObserverException.invoke(() ->
-                admissionObserver.onDecision(
+                diagnosticInstallation.admissionObserver().onDecision(
                         new AudioAdmissionObserver.AudioAdmissionDecision(
                                 context, result)));
     }
 
     private void playGameSfxResolved(GameSound sound, float pitch) {
-        BaseAudioSource base = baseAudioSource;
+        BaseAudioSource base = sourcePublication.base();
         GameAudioProfile profile = base.profile();
         float effectivePitch = profile != null
                 ? profile.adjustSfxPitch(sound, pitch) : pitch;
@@ -2723,9 +1797,9 @@ public class AudioManager implements MusicRestoreSink {
                     base, soundMap.get(sound), effectivePitch);
         }
         if (!played) {
-            DonorSfxBinding binding = donorSoundBindings.get(sound);
+            DonorSfxBinding binding = sourcePublication.soundBinding(sound);
             if (binding != null) {
-                DonorAudioSource donor = donorAudioSources.get(
+                DonorAudioSource donor = sourcePublication.donor(
                         binding.gameId());
                 if (donor != null) {
                     donor = completeLegacyDonorSource(
@@ -2757,8 +1831,8 @@ public class AudioManager implements MusicRestoreSink {
                             return;
                         }
                     } else {
-                        ensureShadowPresentation();
-                        var captured = donorSfxSource(
+                        presentationBinding.ensureShadowPresentation();
+                        var captured = sourcePublication.donorSfxSource(
                                 binding.gameId(), donor);
                         SmpsAssetKey key = new SmpsAssetKey(
                                 captured.gameId(),
@@ -2808,19 +1882,20 @@ public class AudioManager implements MusicRestoreSink {
         if (suppressingRewindReplay()) {
             return false;
         }
-        BaseAudioSource source = baseAudioSource;
+        BaseAudioSource source = sourcePublication.base();
         GameAudioProfile profile = source.profile();
         if (profile != null) {
-            ensureShadowPresentation();
-            if (shadowRequestService != null) {
-                requestObserver.onRequested(sfxRequestClass(sfxId), sfxId);
-                shadowRequestService.submitSound(
-                        sfxId, commandForNativeRequest(source, sfxId, pitch));
+            presentationBinding.ensureShadowPresentation();
+            if (presentationBinding.shadowRequestService != null) {
+                diagnosticInstallation.requestObserver().onRequested(sfxRequestClass(sfxId), sfxId);
+                var command = commandForNativeRequest(source, sfxId, pitch);
+                if (LevelMusicAccess.allowsEntryRequest(this, command))
+                    presentationBinding.shadowRequestService.submitSound(sfxId, command);
                 return true;
             }
         }
         if (profile != null && profile.handleSystemCommand(sfxId, this)) {
-            requestObserver.onRequested(
+            diagnosticInstallation.requestObserver().onRequested(
                     AudioRequestObserver.RequestClass.COMMAND, sfxId);
             return true;
         }
@@ -2839,8 +1914,8 @@ public class AudioManager implements MusicRestoreSink {
             playSfx(GameSound.RING, pitch);
             return true;
         }
-        requestObserver.onRequested(sfxRequestClass(sfxId), sfxId);
-        return playBaseSfx(baseAudioSource, sfxId, pitch);
+        diagnosticInstallation.requestObserver().onRequested(sfxRequestClass(sfxId), sfxId);
+        return playBaseSfx(sourcePublication.base(), sfxId, pitch);
     }
 
     private AudioCommand commandForNativeRequest(
@@ -2969,8 +2044,8 @@ public class AudioManager implements MusicRestoreSink {
                 }
                 return false;
             }
-            ensureShadowPresentation();
-            var captured = baseSfxSource(source);
+            presentationBinding.ensureShadowPresentation();
+            var captured = sourcePublication.baseSfxSource(source);
             SmpsAssetKey key = new SmpsAssetKey(
                     captured.gameId(), SmpsAssetKey.Route.BASE_ID,
                     sfxId, null);
@@ -2980,7 +2055,7 @@ public class AudioManager implements MusicRestoreSink {
                         pitch, null);
                 recordRegisteredSmpsSfxCommand(command, captured);
                 if (sendLiveBackendCommands()) {
-                    var playback = shadowFactory
+                    var playback = presentationBinding.shadowFactory
                             .requireRegisteredSmpsSfxPlayback(
                                     key, captured.dependencyGeneration());
                     dispatchLiveRegisteredSfx(playback, pitch);
@@ -2993,113 +2068,213 @@ public class AudioManager implements MusicRestoreSink {
 
     public synchronized DiagnosticObserverHandle acquireDiagnosticObservers(
             DiagnosticObserverSet observers) {
-        Objects.requireNonNull(observers, "observers");
-        if (activeDiagnosticObserverLease != null
-                || !currentDiagnosticObservers().isNone()) {
-            throw new IllegalStateException(
-                    "diagnostic observers are already installed");
-        }
-        applyDiagnosticObservers(observers);
-        DiagnosticObserverLease lease = new DiagnosticObserverLease(
-                Thread.currentThread());
-        activeDiagnosticObserverLease = lease;
-        return lease;
+        return diagnosticInstallation.acquireDiagnosticObservers(observers);
     }
 
     public synchronized void setRequestObserver(AudioRequestObserver observer) {
-        rejectObserverReplacementWhileLeased();
-        DiagnosticObserverSet current = currentDiagnosticObservers();
-        applyDiagnosticObservers(new DiagnosticObserverSet(
-                observer == null ? AudioRequestObserver.NONE : observer,
-                current.admission(), current.driverService(),
-                current.chipWrite(), current.sfxContention()));
+        diagnosticInstallation.setRequestObserver(observer);
     }
 
     public synchronized void setAdmissionObserver(AudioAdmissionObserver observer) {
-        rejectObserverReplacementWhileLeased();
-        DiagnosticObserverSet current = currentDiagnosticObservers();
-        applyDiagnosticObservers(new DiagnosticObserverSet(
-                current.request(),
-                observer == null ? AudioAdmissionObserver.NONE : observer,
-                current.driverService(), current.chipWrite(),
-                current.sfxContention()));
+        diagnosticInstallation.setAdmissionObserver(observer);
     }
 
     public synchronized void setDriverServiceObserver(
             SmpsDriverServiceObserver observer) {
-        rejectObserverReplacementWhileLeased();
-        DiagnosticObserverSet current = currentDiagnosticObservers();
-        applyDiagnosticObservers(new DiagnosticObserverSet(
-                current.request(), current.admission(),
-                observer == null
-                        ? SmpsDriverServiceObserver.NONE : observer,
-                current.chipWrite(), current.sfxContention()));
+        diagnosticInstallation.setDriverServiceObserver(observer);
     }
 
     public synchronized void setChipWriteObserver(ChipWriteObserver observer) {
-        rejectObserverReplacementWhileLeased();
-        DiagnosticObserverSet current = currentDiagnosticObservers();
-        applyDiagnosticObservers(new DiagnosticObserverSet(
-                current.request(), current.admission(),
-                current.driverService(),
-                observer == null ? ChipWriteObserver.NONE : observer,
-                current.sfxContention()));
+        diagnosticInstallation.setChipWriteObserver(observer);
     }
 
     public synchronized void setSfxContentionObserver(
             SfxContentionObserver observer) {
-        rejectObserverReplacementWhileLeased();
-        DiagnosticObserverSet current = currentDiagnosticObservers();
-        applyDiagnosticObservers(new DiagnosticObserverSet(
-                current.request(), current.admission(),
-                current.driverService(), current.chipWrite(),
-                observer == null ? SfxContentionObserver.NONE : observer));
+        diagnosticInstallation.setSfxContentionObserver(observer);
     }
 
-    private void rejectObserverReplacementWhileLeased() {
-        if (activeDiagnosticObserverLease != null) {
-            throw new IllegalStateException(
-                    "diagnostic observers are owned by an active lease");
-        }
-    }
+    /** Complete manager-lifetime diagnostic installation and lease authority. */
+    private final class DiagnosticInstallation {
+        private AudioRequestObserver requestObserver = AudioRequestObserver.NONE;
+        private AudioAdmissionObserver admissionObserver =
+                AudioAdmissionObserver.NONE;
+        private SmpsDriverServiceObserver driverServiceObserver =
+                SmpsDriverServiceObserver.NONE;
+        private ChipWriteObserver chipWriteObserver = ChipWriteObserver.NONE;
+        private SfxContentionObserver sfxContentionObserver =
+                SfxContentionObserver.NONE;
+        private DiagnosticObserverLease activeDiagnosticObserverLease;
 
-    private DiagnosticObserverSet currentDiagnosticObservers() {
-        return new DiagnosticObserverSet(
-                requestObserver, admissionObserver, driverServiceObserver,
-                chipWriteObserver, sfxContentionObserver);
-    }
-
-    private void applyDiagnosticObservers(DiagnosticObserverSet desired) {
-        DiagnosticObserverSet previous = currentDiagnosticObservers();
-        try {
-            propagateDiagnosticObservers(desired);
-        } catch (RuntimeException | Error failure) {
-            try {
-                propagateDiagnosticObservers(previous);
-            } catch (RuntimeException | Error rollbackFailure) {
-                failure.addSuppressed(rollbackFailure);
+        private DiagnosticObserverHandle acquireDiagnosticObservers(
+                DiagnosticObserverSet observers) {
+            Objects.requireNonNull(observers, "observers");
+            if (activeDiagnosticObserverLease != null
+                    || !currentDiagnosticObservers().isNone()) {
+                throw new IllegalStateException(
+                        "diagnostic observers are already installed");
             }
-            throw failure;
+            applyDiagnosticObservers(observers);
+            DiagnosticObserverLease lease = new DiagnosticObserverLease(
+                    Thread.currentThread());
+            activeDiagnosticObserverLease = lease;
+            return lease;
         }
-        requestObserver = desired.request();
-        admissionObserver = desired.admission();
-        driverServiceObserver = desired.driverService();
-        chipWriteObserver = desired.chipWrite();
-        sfxContentionObserver = desired.sfxContention();
-    }
 
-    private void propagateDiagnosticObservers(DiagnosticObserverSet observers) {
-        if (backend != null) {
-            backend.setAdmissionObserver(observers.admission());
-            backend.setDriverServiceObserver(observers.driverService());
-            backend.setChipWriteObserver(observers.chipWrite());
-            backend.setSfxContentionObserver(observers.sfxContention());
+        private void setRequestObserver(AudioRequestObserver observer) {
+            rejectObserverReplacementWhileLeased();
+            DiagnosticObserverSet current = currentDiagnosticObservers();
+            applyDiagnosticObservers(new DiagnosticObserverSet(
+                    observer == null ? AudioRequestObserver.NONE : observer,
+                    current.admission(), current.driverService(),
+                    current.chipWrite(), current.sfxContention()));
         }
-        if (shadowFactory != null) {
-            shadowFactory.setAdmissionObserver(observers.admission());
-            shadowFactory.setDriverServiceObserver(observers.driverService());
-            shadowFactory.setChipWriteObserver(observers.chipWrite());
-            shadowFactory.setSfxContentionObserver(observers.sfxContention());
+
+        private void setAdmissionObserver(AudioAdmissionObserver observer) {
+            rejectObserverReplacementWhileLeased();
+            DiagnosticObserverSet current = currentDiagnosticObservers();
+            applyDiagnosticObservers(new DiagnosticObserverSet(
+                    current.request(),
+                    observer == null ? AudioAdmissionObserver.NONE : observer,
+                    current.driverService(), current.chipWrite(),
+                    current.sfxContention()));
+        }
+
+        private void setDriverServiceObserver(
+                SmpsDriverServiceObserver observer) {
+            rejectObserverReplacementWhileLeased();
+            DiagnosticObserverSet current = currentDiagnosticObservers();
+            applyDiagnosticObservers(new DiagnosticObserverSet(
+                    current.request(), current.admission(),
+                    observer == null
+                            ? SmpsDriverServiceObserver.NONE : observer,
+                    current.chipWrite(), current.sfxContention()));
+        }
+
+        private void setChipWriteObserver(ChipWriteObserver observer) {
+            rejectObserverReplacementWhileLeased();
+            DiagnosticObserverSet current = currentDiagnosticObservers();
+            applyDiagnosticObservers(new DiagnosticObserverSet(
+                    current.request(), current.admission(),
+                    current.driverService(),
+                    observer == null ? ChipWriteObserver.NONE : observer,
+                    current.sfxContention()));
+        }
+
+        private void setSfxContentionObserver(
+                SfxContentionObserver observer) {
+            rejectObserverReplacementWhileLeased();
+            DiagnosticObserverSet current = currentDiagnosticObservers();
+            applyDiagnosticObservers(new DiagnosticObserverSet(
+                    current.request(), current.admission(),
+                    current.driverService(), current.chipWrite(),
+                    observer == null ? SfxContentionObserver.NONE : observer));
+        }
+
+        private void rejectObserverReplacementWhileLeased() {
+            if (activeDiagnosticObserverLease != null) {
+                throw new IllegalStateException(
+                        "diagnostic observers are owned by an active lease");
+            }
+        }
+
+        private DiagnosticObserverSet currentDiagnosticObservers() {
+            return new DiagnosticObserverSet(
+                    requestObserver, admissionObserver, driverServiceObserver,
+                    chipWriteObserver, sfxContentionObserver);
+        }
+
+        private void applyDiagnosticObservers(DiagnosticObserverSet desired) {
+            DiagnosticObserverSet previous = currentDiagnosticObservers();
+            try {
+                propagateDiagnosticObservers(desired);
+            } catch (RuntimeException | Error failure) {
+                try {
+                    propagateDiagnosticObservers(previous);
+                } catch (RuntimeException | Error rollbackFailure) {
+                    failure.addSuppressed(rollbackFailure);
+                }
+                throw failure;
+            }
+            requestObserver = desired.request();
+            admissionObserver = desired.admission();
+            driverServiceObserver = desired.driverService();
+            chipWriteObserver = desired.chipWrite();
+            sfxContentionObserver = desired.sfxContention();
+        }
+
+        private void propagateDiagnosticObservers(DiagnosticObserverSet observers) {
+            if (backend != null) {
+                backend.setAdmissionObserver(observers.admission());
+                backend.setDriverServiceObserver(observers.driverService());
+                backend.setChipWriteObserver(observers.chipWrite());
+                backend.setSfxContentionObserver(observers.sfxContention());
+            }
+            presentationBinding.propagateDiagnosticObservers(observers);
+        }
+
+        private boolean active(DiagnosticObserverLease lease) {
+            synchronized (AudioManager.this) {
+                return lease.active;
+            }
+        }
+
+        private void close(DiagnosticObserverLease lease) {
+            synchronized (AudioManager.this) {
+                if (!lease.active) {
+                    return;
+                }
+                if (Thread.currentThread() != lease.ownerThread) {
+                    throw new IllegalStateException(
+                            "diagnostic observer lease must close on its owner thread");
+                }
+                if (activeDiagnosticObserverLease != lease) {
+                    throw new IllegalStateException(
+                            "diagnostic observer lease ownership was lost");
+                }
+                applyDiagnosticObservers(DiagnosticObserverSet.none());
+                lease.active = false;
+                activeDiagnosticObserverLease = null;
+            }
+        }
+
+        private void installBackendDiagnosticObservers() {
+            backend.setAdmissionObserver(admissionObserver);
+            backend.setDriverServiceObserver(driverServiceObserver);
+            backend.setChipWriteObserver(chipWriteObserver);
+            backend.setSfxContentionObserver(sfxContentionObserver);
+        }
+
+        private void reset() {
+            if (activeDiagnosticObserverLease == null) {
+                this.requestObserver = AudioRequestObserver.NONE;
+                this.admissionObserver = AudioAdmissionObserver.NONE;
+                this.driverServiceObserver = SmpsDriverServiceObserver.NONE;
+                this.chipWriteObserver = ChipWriteObserver.NONE;
+                this.sfxContentionObserver = SfxContentionObserver.NONE;
+            }
+            if (backend != null) {
+                installBackendDiagnosticObservers();
+            }
+        }
+
+        private AudioRequestObserver requestObserver() {
+            return requestObserver;
+        }
+
+        private AudioAdmissionObserver admissionObserver() {
+            return admissionObserver;
+        }
+
+        private SmpsDriverServiceObserver driverServiceObserver() {
+            return driverServiceObserver;
+        }
+
+        private ChipWriteObserver chipWriteObserver() {
+            return chipWriteObserver;
+        }
+
+        private SfxContentionObserver sfxContentionObserver() {
+            return sfxContentionObserver;
         }
     }
 
@@ -3114,41 +2289,17 @@ public class AudioManager implements MusicRestoreSink {
 
         @Override
         public boolean active() {
-            synchronized (AudioManager.this) {
-                return active;
-            }
+            return diagnosticInstallation.active(this);
         }
 
         @Override
         public void close() {
-            synchronized (AudioManager.this) {
-                if (!active) {
-                    return;
-                }
-                if (Thread.currentThread() != ownerThread) {
-                    throw new IllegalStateException(
-                            "diagnostic observer lease must close on its owner thread");
-                }
-                if (activeDiagnosticObserverLease != this) {
-                    throw new IllegalStateException(
-                            "diagnostic observer lease ownership was lost");
-                }
-                applyDiagnosticObservers(DiagnosticObserverSet.none());
-                active = false;
-                activeDiagnosticObserverLease = null;
-            }
+            diagnosticInstallation.close(this);
         }
     }
 
-    private void installBackendDiagnosticObservers() {
-        backend.setAdmissionObserver(admissionObserver);
-        backend.setDriverServiceObserver(driverServiceObserver);
-        backend.setChipWriteObserver(chipWriteObserver);
-        backend.setSfxContentionObserver(sfxContentionObserver);
-    }
-
     private SmpsRequestAdmissionPolicy sfxAdmissionPolicy() {
-        GameAudioProfile profile = baseAudioSource.profile();
+        GameAudioProfile profile = sourcePublication.base().profile();
         return profile != null
                 ? profile.getSfxAdmissionPolicy()
                 : SmpsRequestAdmissionPolicy.PERMISSIVE;
@@ -3168,8 +2319,8 @@ public class AudioManager implements MusicRestoreSink {
         if (!hasCatalogDependencies(source.dac(), source.config())) {
             return false;
         }
-        ensureShadowPresentation();
-        var captured = baseSfxSource(source);
+        presentationBinding.ensureShadowPresentation();
+        var captured = sourcePublication.baseSfxSource(source);
         int resolvedId = loaded.getId();
         SmpsAssetKey key = new SmpsAssetKey(
                 captured.gameId(), SmpsAssetKey.Route.BASE_ID,
@@ -3181,7 +2332,7 @@ public class AudioManager implements MusicRestoreSink {
         recordRegisteredSmpsSfxCommand(command, captured);
         if (sendLiveBackendCommands()) {
             dispatchLiveRegisteredSfx(
-                    shadowFactory.requireRegisteredSmpsSfxPlayback(
+                    presentationBinding.shadowFactory.requireRegisteredSmpsSfxPlayback(
                             key, captured.dependencyGeneration()),
                     pitch);
         }
@@ -3197,8 +2348,8 @@ public class AudioManager implements MusicRestoreSink {
         if (!hasCatalogDependencies(source.dac(), source.config())) {
             return false;
         }
-        ensureShadowPresentation();
-        var captured = donorSfxSource(gameId, source);
+        presentationBinding.ensureShadowPresentation();
+        var captured = sourcePublication.donorSfxSource(gameId, source);
         int resolvedId = loaded.getId();
         SmpsAssetKey key = new SmpsAssetKey(
                 captured.gameId(), SmpsAssetKey.Route.DONOR_ID,
@@ -3227,7 +2378,7 @@ public class AudioManager implements MusicRestoreSink {
         if (suppressingRewindReplay()) {
             return;
         }
-        DonorAudioSource source = donorAudioSources.get(donorGameId);
+        DonorAudioSource source = sourcePublication.donor(donorGameId);
         if (source != null) {
             source = completeLegacyDonorSource(donorGameId, source);
             if (sfxId < 0) {
@@ -3250,8 +2401,8 @@ public class AudioManager implements MusicRestoreSink {
                 }
                 return;
             }
-            ensureShadowPresentation();
-            var captured = donorSfxSource(donorGameId, source);
+            presentationBinding.ensureShadowPresentation();
+            var captured = sourcePublication.donorSfxSource(donorGameId, source);
             SmpsAssetKey key = new SmpsAssetKey(
                     captured.gameId(), SmpsAssetKey.Route.DONOR_ID,
                     sfxId, null);
@@ -3270,7 +2421,7 @@ public class AudioManager implements MusicRestoreSink {
     private boolean ensureRegisteredSmpsSfx(
             SmpsAssetKey key,
             AudioPresentationCommandResolver.SourceAccess source) {
-        if (shadowFactory.findRegisteredSmpsSfxAsset(
+        if (presentationBinding.shadowFactory.findRegisteredSmpsSfxAsset(
                 key, source.dependencyGeneration()) != null) {
             return true;
         }
@@ -3291,7 +2442,7 @@ public class AudioManager implements MusicRestoreSink {
             AudioPresentationCommandResolver.SourceAccess source,
             AbstractSmpsData data,
             int resolvedId) {
-        shadowFactory.registerSmpsSfxAsset(
+        presentationBinding.shadowFactory.registerSmpsSfxAsset(
                 key, source.dependencyGeneration(), data,
                 source.dac(), source.config(),
                 new SmpsSfxPlaybackPolicy(
@@ -3305,40 +2456,9 @@ public class AudioManager implements MusicRestoreSink {
         return dac != null && config != null;
     }
 
-    private AudioPresentationCommandResolver.SourceAccess baseSfxSource(
-            BaseAudioSource source) {
-        return new AudioPresentationCommandResolver.SourceAccess(
-                baseGameId(source), source.generation(), source.loader(),
-                source.dac(), source.config(), sfxPolicyFor(source.profile()),
-                ordinaryMusicSfxPolicyFor(source.profile()));
-    }
-
-    private AudioPresentationCommandResolver.SourceAccess donorSfxSource(
-            String gameId, DonorAudioSource source) {
-        return new AudioPresentationCommandResolver.SourceAccess(
-                gameId, source.generation(), source.loader(), source.dac(),
-                source.config(), sfxPolicyFor(source.sfxPolicyProfile()),
-                ordinaryMusicSfxPolicyFor(source.profile()));
-    }
-
     private synchronized DonorAudioSource completeLegacyDonorSource(
             String gameId, DonorAudioSource observed) {
-        if (observed.config() != null || observed.profile() != null) {
-            return observed;
-        }
-        DonorAudioSource current = donorAudioSources.get(gameId);
-        if (current == null || current != observed) {
-            return current != null ? current : observed;
-        }
-        BaseAudioSource legacyOwner = baseAudioSource;
-        if (legacyOwner.config() == null || legacyOwner.profile() == null) {
-            return observed;
-        }
-        DonorAudioSource completed = new DonorAudioSource(
-                observed.loader(), observed.dac(), legacyOwner.config(),
-                null, legacyOwner.profile(), observed.generation());
-        publishDonorSource(gameId, completed);
-        return completed;
+        return sourcePublication.completeLegacyDonorSource(gameId, observed);
     }
 
     private AudioTimelineEntry recordRegisteredSmpsSfxCommand(
@@ -3349,7 +2469,7 @@ public class AudioManager implements MusicRestoreSink {
         }
         AudioTimelineEntry entry = commandTimeline.record(command);
         mirrorShadowCommand(() ->
-                shadowResolver.submitRegisteredSmpsSfx(command, source));
+                presentationBinding.shadowResolver.submitRegisteredSmpsSfx(command, source));
         return entry;
     }
 
@@ -3357,7 +2477,7 @@ public class AudioManager implements MusicRestoreSink {
             SmpsAssetKey key,
             AudioPresentationCommandResolver.SourceAccess source,
             float pitch) {
-        var playback = shadowFactory.requireRegisteredSmpsSfxPlayback(
+        var playback = presentationBinding.shadowFactory.requireRegisteredSmpsSfxPlayback(
                 key, source.dependencyGeneration());
         dispatchLiveRegisteredSfx(playback, pitch);
     }
@@ -3371,9 +2491,7 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     public void update() {
-        if (presentationSink instanceof OpenAlPcmSink openAlSink) {
-            openAlSink.updateDevice();
-        }
+        presentationBinding.updateDevice();
         finishOuterAudioFrame();
     }
 
@@ -3402,23 +2520,23 @@ public class AudioManager implements MusicRestoreSink {
         if (suppressingRewindReplay()) {
             return;
         }
-        DonorAudioSource source = donorAudioSources.get(donorGameId);
+        DonorAudioSource source = sourcePublication.donor(donorGameId);
         if (source != null) {
             source = completeLegacyDonorSource(donorGameId, source);
             if (!hasCatalogDependencies(source.dac(), source.config())) {
                 return;
             }
-            ensureShadowPresentation();
+            presentationBinding.ensureShadowPresentation();
             SmpsAssetKey key = new SmpsAssetKey(
                     donorGameId, SmpsAssetKey.Route.DONOR_MUSIC,
                     musicId, null);
-            boolean registered = shadowFactory.findRegisteredSmpsMusicAsset(
+            boolean registered = presentationBinding.shadowFactory.findRegisteredSmpsMusicAsset(
                     key, source.generation()) != null;
             AbstractSmpsData data = null;
             if (!registered) {
                 data = source.loader().loadMusic(musicId);
                 if (data != null) {
-                    shadowFactory.registerSmpsMusicAsset(
+                    presentationBinding.shadowFactory.registerSmpsMusicAsset(
                             key, source.generation(), data,
                             source.dac(), source.config());
                     registered = true;
@@ -3432,13 +2550,13 @@ public class AudioManager implements MusicRestoreSink {
                 recordTimelineCommand(new AudioCommand.PlayMusic(
                         musicId, AudioCommand.MusicRoute.DONOR_SMPS, false,
                         donorGameId,
-                        baseAudioSource.profile() != null
-                                ? baseAudioSource.profile()
+                        sourcePublication.base().profile() != null
+                                ? sourcePublication.base().profile()
                                         .getMusicDuringOverridePolicy()
                                 : GameAudioProfile.MusicDuringOverridePolicy
                                         .REPLACE_IMMEDIATELY));
                 if (sendLiveBackendCommands()) {
-                    var playback = shadowFactory
+                    var playback = presentationBinding.shadowFactory
                             .requireRegisteredSmpsMusicPlayback(
                                     key, source.generation());
                     backend.prepareLogicalMusicSource(AudioSourceDescriptor.donorMusic(donorGameId, musicId));
@@ -3471,7 +2589,7 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     public boolean endMusicOverride(GameMusic music) {
-        GameAudioProfile profile = baseAudioSource.profile();
+        GameAudioProfile profile = sourcePublication.base().profile();
         if (music == null || profile == null) {
             return false;
         }
@@ -3496,7 +2614,7 @@ public class AudioManager implements MusicRestoreSink {
         if (donorGameId == null || music == null) {
             return null;
         }
-        Map<GameMusic, Integer> musicMap = donorMusicBindings.get(donorGameId);
+        Map<GameMusic, Integer> musicMap = sourcePublication.musicBinding(donorGameId);
         if (musicMap == null) {
             return null;
         }
@@ -3511,7 +2629,7 @@ public class AudioManager implements MusicRestoreSink {
         recordTimelineCommand(new AudioCommand.SetMusicTempoPercent(percent));
         // Publish this opt-in scene control before an immediate native-act source
         // rebuild. Applying pending commands here does not advance the sound clock.
-        if (shadowProducer != null) shadowProducer.applyPendingCommandsAtOwnerBoundary();
+        if (presentationBinding.shadowProducer != null) presentationBinding.shadowProducer.applyPendingCommandsAtOwnerBoundary();
         if (sendLiveBackendCommands()) backend.setMusicTempoPercent(percent);
     }
 
@@ -3550,11 +2668,12 @@ public class AudioManager implements MusicRestoreSink {
      * Used when exiting special stages or changing game modes.
      */
     public void stopMusic() {
+        if (!LevelMusicAccess.allowsEntryMusic(this)) return;
         mutatorMusicIntent(AudioMutatorAccess.Kind.STOP, 0);
         if (suppressingRewindReplay()) {
             return;
         }
-        GameAudioProfile profile = baseAudioSource.profile();
+        GameAudioProfile profile = sourcePublication.base().profile();
         recordTimelineCommand(new AudioCommand.StopMusic(
                 profile != null
                         ? profile.getSystemCommandDuringOverridePolicy()
@@ -3621,12 +2740,13 @@ public class AudioManager implements MusicRestoreSink {
      * @param delay frames between each volume step (ROM default: 3)
      */
     public void fadeOutMusic(int steps, int delay) {
+        if (!LevelMusicAccess.allowsEntryMusic(this)) return;
         mutatorMusicIntent(AudioMutatorAccess.Kind.FADE, 0);
         if (suppressingRewindReplay()) {
             return;
         }
         fadeOutMusicCount++;
-        GameAudioProfile profile = baseAudioSource.profile();
+        GameAudioProfile profile = sourcePublication.base().profile();
         recordTimelineCommand(new AudioCommand.FadeOutMusic(steps, delay,
                 profile != null
                         ? profile.getSystemCommandDuringOverridePolicy()
@@ -3659,101 +2779,7 @@ public class AudioManager implements MusicRestoreSink {
             DacData dacData,
             SmpsSequencerConfig config,
             GameAudioProfile donorProfile) {
-        beginSourceMutation();
-        try {
-            String resolvedGameId = requireDonorGameId(gameId);
-            SmpsLoader resolvedLoader = Objects.requireNonNull(loader, "loader");
-            DacData resolvedDac = Objects.requireNonNull(dacData, "dacData");
-            BaseAudioSource legacyOwner = baseAudioSource;
-            SmpsSequencerConfig resolvedConfig = config != null
-                    ? config
-                    : donorProfile != null
-                    ? donorProfile.getSequencerConfig()
-                    : legacyOwner.config();
-            GameAudioProfile resolvedSfxPolicyProfile = donorProfile != null
-                    ? donorProfile
-                    : config == null ? legacyOwner.profile() : null;
-            DonorAudioSource previous = donorAudioSources.get(resolvedGameId);
-            long retainedGeneration = donorGenerationCounters.getOrDefault(
-                    resolvedGameId,
-                    previous != null ? previous.generation() : 0L);
-            long candidateGeneration = nextGeneration(retainedGeneration);
-            PresentationCoordHandlerPreparation presentationPreparation =
-                    preparePresentationCoordHandlers(donorProfile);
-            boolean[] backendConfigurationAttempted = {false};
-            Runnable backendConfiguration = () -> {
-                boolean clearsPreviousProfile = donorProfile == null
-                        && previous != null && previous.profile() != null;
-                if (backend != null
-                        && (donorProfile != null || clearsPreviousProfile)) {
-                    backendConfigurationAttempted[0] = true;
-                    backend.registerAudioProfileCoordHandlers(donorProfile);
-                }
-            };
-            try {
-                if (presentationPreparation.configureCandidate()) {
-                    presentationPreparation.owner().configureTransactionally(
-                            owner -> donorProfile
-                                    .configurePresentationCoordFlagHandlers(owner),
-                            backendConfiguration);
-                } else {
-                    backendConfiguration.run();
-                }
-            } catch (RuntimeException | Error failure) {
-                Throwable restoreFailure =
-                        backendConfigurationAttempted[0]
-                                ? restoreDonorBackendConfiguration(previous)
-                                : null;
-                if (restoreFailure != null) {
-                    removeDonorSource(
-                            resolvedGameId, candidateGeneration);
-                    failure.addSuppressed(restoreFailure);
-                }
-                throw failure;
-            }
-            publishPresentationCoordHandlers(presentationPreparation);
-            publishDonorSource(resolvedGameId, new DonorAudioSource(
-                    resolvedLoader, resolvedDac, resolvedConfig, donorProfile,
-                    resolvedSfxPolicyProfile, candidateGeneration));
-        } finally {
-            endSourceMutation();
-        }
-    }
-
-    private Throwable restoreDonorBackendConfiguration(
-            DonorAudioSource previous) {
-        try {
-            if (backend != null) {
-                backend.registerAudioProfileCoordHandlers(
-                        previous != null ? previous.profile() : null);
-            }
-        } catch (RuntimeException | Error failure) {
-            return failure;
-        }
-        return null;
-    }
-
-    private void publishDonorSource(
-            String gameId, DonorAudioSource source) {
-        Map<String, Long> generations =
-                new HashMap<>(donorGenerationCounters);
-        generations.put(gameId, source.generation());
-        donorGenerationCounters = Map.copyOf(generations);
-        Map<String, DonorAudioSource> sources =
-                new HashMap<>(donorAudioSources);
-        sources.put(gameId, source);
-        donorAudioSources = Map.copyOf(sources);
-    }
-
-    private void removeDonorSource(String gameId, long generation) {
-        Map<String, Long> generations =
-                new HashMap<>(donorGenerationCounters);
-        generations.put(gameId, generation);
-        donorGenerationCounters = Map.copyOf(generations);
-        Map<String, DonorAudioSource> sources =
-                new HashMap<>(donorAudioSources);
-        sources.remove(gameId);
-        donorAudioSources = Map.copyOf(sources);
+        sourcePublication.registerDonorLoader(gameId, loader, dacData, config, donorProfile);
     }
 
     private static String requireDonorGameId(String gameId) {
@@ -3765,10 +2791,7 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     public void registerDonorMusicMap(String gameId, Map<GameMusic, Integer> musicMap) {
-        if (gameId == null || musicMap == null || musicMap.isEmpty()) {
-            return;
-        }
-        donorMusicBindings.put(gameId, Map.copyOf(musicMap));
+        sourcePublication.registerDonorMusicMap(gameId, musicMap);
     }
 
     /**
@@ -3776,33 +2799,14 @@ public class AudioManager implements MusicRestoreSink {
      * base game's sound map will be routed through the specified donor loader.
      */
     public void registerDonorSound(GameSound sound, String gameId, int sfxId) {
-        donorSoundBindings.put(sound, new DonorSfxBinding(gameId, sfxId));
+        sourcePublication.registerDonorSound(sound, gameId, sfxId);
     }
 
     /**
      * Clears all donor audio state (loaders, DAC data, and sound bindings).
      */
     public synchronized void clearDonorAudio() {
-        beginSourceMutation();
-        try {
-            clearDonorAudioState();
-        } finally {
-            endSourceMutation();
-        }
-    }
-
-    private void clearDonorAudioState() {
-        Map<String, Long> advancedGenerations = new HashMap<>();
-        donorAudioSources.forEach((gameId, source) ->
-                advancedGenerations.put(
-                        gameId, nextGeneration(source.generation())));
-        Map<String, Long> generations =
-                new HashMap<>(donorGenerationCounters);
-        generations.putAll(advancedGenerations);
-        donorGenerationCounters = Map.copyOf(generations);
-        donorAudioSources = Map.of();
-        donorSoundBindings.clear();
-        donorMusicBindings.clear();
+        sourcePublication.clearDonorAudio();
     }
 
     /**
@@ -3826,15 +2830,7 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     synchronized DonorKeyState captureDonorKeyState(String gameId) {
-        String key = requireDonorGameId(gameId);
-        Map<GameSound, DonorSfxBinding> sounds = new EnumMap<>(GameSound.class);
-        donorSoundBindings.forEach((sound, binding) -> {
-            if (key.equals(binding.gameId())) {
-                sounds.put(sound, binding);
-            }
-        });
-        return new DonorKeyState(key, donorAudioSources.get(key),
-                donorMusicBindings.get(key), sounds);
+        return sourcePublication.captureDonorKeyState(gameId);
     }
 
     /**
@@ -3843,38 +2839,7 @@ public class AudioManager implements MusicRestoreSink {
      * no asset cached for the scoped registration can answer for it.
      */
     synchronized void restoreDonorKeyState(DonorKeyState state) {
-        beginSourceMutation();
-        try {
-            String key = state.gameId;
-            long generation = nextGeneration(
-                    donorGenerationCounters.getOrDefault(key, 0L));
-            if (state.source == null) {
-                removeDonorSource(key, generation);
-            } else {
-                DonorAudioSource previous = state.source;
-                publishDonorSource(key, new DonorAudioSource(
-                        previous.loader(), previous.dac(), previous.config(),
-                        previous.profile(), previous.sfxPolicyProfile(),
-                        generation));
-            }
-            if (state.music == null) {
-                donorMusicBindings.remove(key);
-            } else {
-                donorMusicBindings.put(key, state.music);
-            }
-            donorSoundBindings.values().removeIf(
-                    binding -> key.equals(binding.gameId()));
-            donorSoundBindings.putAll(state.sounds);
-            Throwable failure = restoreDonorBackendConfiguration(state.source);
-            if (failure instanceof RuntimeException runtime) {
-                throw runtime;
-            }
-            if (failure instanceof Error error) {
-                throw error;
-            }
-        } finally {
-            endSourceMutation();
-        }
+        sourcePublication.restoreDonorKeyState(state);
     }
 
     /**
@@ -3883,64 +2848,40 @@ public class AudioManager implements MusicRestoreSink {
      * (e.g. Sonic 1 SMPS loader contaminating Sonic 2 tests).
      */
     public synchronized void resetState() {
-        if (mutatorBinding != null) {
-            var previous = mutatorBinding;
-            mutatorBinding = null;
-            previous.musicIntent(AudioMutatorAccess.Kind.STOP, 0);
-        }
+        mutatorAccess.reset();
         invalidateAndReleaseStreamedMusicSession();
-        beginSourceMutation();
-        try {
-            clearPreparedReverseRestore();
-            if (backend != null) {
-                backend.stopPlayback();
-            }
-             this.baseAudioSource =
-                     new BaseAudioSource(null, null, null, null, null, 0);
-             this.soundMap = null;
-             if (activeDiagnosticObserverLease == null) {
-                 this.requestObserver = AudioRequestObserver.NONE;
-                 this.admissionObserver = AudioAdmissionObserver.NONE;
-                 this.driverServiceObserver = SmpsDriverServiceObserver.NONE;
-                 this.chipWriteObserver = ChipWriteObserver.NONE;
-                 this.sfxContentionObserver = SfxContentionObserver.NONE;
-             }
-             if (backend != null) {
-                 installBackendDiagnosticObservers();
-             }
-            this.ringLeft = true;
-            this.rewindReplaySuppressionDepth = 0;
-            this.audioFrameOwnedExternally = false;
-            this.audioFrameAdvanced = false;
-            this.reverseAudioPresentationActive = false;
-            this.deferredReverseLogicalSnapshot = null;
-            this.deferredReverseLogicalPrepared = false;
-            this.postBoundaryReverseTarget = false;
-            this.logicalRestorePublications = 0;
-            this.failNextReverseRelease = null;
-            this.commandTimeline.clear();
-            // A mode transition rebuilds the presentation; it does not end a
-            // recording of the window. Entering a game from the master title screen
-            // runs Engine.resetForGameplayFromMasterTitle -> resetState() before
-            // initializeGlobalGameplayServices -> ensurePresentationSink, so
-            // retiring the lease here killed the recording's audio before the
-            // retained backend could rebuild its sink. Only destroy() is a genuine
-            // teardown.
-            detachLiveCaptureAudioHandleForRebuild();
-            closeShadowPresentation();
-            clearDonorAudioState();
-            donorGenerationCounters = Map.of();
-        } finally {
-            endSourceMutation();
-        }
+        sourcePublication.reset();
+    }
+
+    /** Fixed non-source reset effects, between empty base and donor clearing. */
+    private void resetNonSourceState() {
+        this.soundMap = null;
+        diagnosticInstallation.reset();
+        logicalPublication.setRingLeft(true);
+        this.rewindReplaySuppressionDepth = 0;
+        this.audioFrameOwnedExternally = false;
+        this.audioFrameAdvanced = false;
+        heldReverseRestore.reset();
+        this.commandTimeline.clear();
+        // A mode transition rebuilds the presentation; it does not end a
+        // recording of the window. Entering a game from the master title screen
+        // runs Engine.resetForGameplayFromMasterTitle -> resetState() before
+        // initializeGlobalGameplayServices -> ensurePresentationSink, so
+        // retiring the lease here killed the recording's audio before the
+        // retained backend could rebuild its sink. Only destroy() is a genuine
+        // teardown.
+        captureLeases.detachLiveCaptureAudioHandleForRebuild();
+        presentationBinding.closeShadowPresentation();
     }
 
     private AudioTimelineEntry recordTimelineCommand(AudioCommand command) {
         if (!suppressingRewindReplay()) {
             AudioTimelineEntry entry = commandTimeline.record(command);
-            mirrorShadowCommand(() -> shadowResolver.submit(command));
-            if (shadowSmpsSession != null) shadowSmpsSession.setNativeHistoryCursor(
-                    com.openggf.audio.rewind.AudioTimelineInternalAccess.cursor(commandTimeline));
+            mirrorShadowCommand(() -> presentationBinding.shadowResolver.submit(command));
+            if (presentationBinding.shadowSmpsSession != null) {
+                presentationBinding.shadowSmpsSession.setNativeHistoryCursor(
+                        com.openggf.audio.rewind.AudioTimelineInternalAccess.cursor(commandTimeline));
+            }
             return entry;
         }
         return null;
@@ -3948,16 +2889,16 @@ public class AudioManager implements MusicRestoreSink {
 
     /** Publishes one command selected by the optional game-owned request service. */
     private void submitForwardRequestCommand(AudioCommand command) {
-        shadowResolver.submit(command);
+        presentationBinding.shadowResolver.submit(command);
         commandTimeline.record(command);
-        shadowParity.commandSubmitted();
+        presentationBinding.shadowParity.commandSubmitted();
     }
 
     private void mirrorShadowCommand(Runnable submission) {
         try {
-            ensureShadowPresentation();
+            presentationBinding.ensureShadowPresentation();
             submission.run();
-            shadowParity.commandSubmitted();
+            presentationBinding.shadowParity.commandSubmitted();
         } catch (RuntimeException failure) {
             AudioDiagnosticObserverException.rethrowIfPresent(failure);
             LOGGER.log(Level.WARNING,
@@ -3966,11 +2907,11 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     private void drainShadowCommandsAtOwnerBoundary() {
-        if (shadowProducer == null) {
+        if (presentationBinding.shadowProducer == null) {
             throw new IllegalStateException(
                     "presentation producer is not installed");
         }
-        shadowProducer.applyPendingCommandsAtOwnerBoundary();
+        presentationBinding.shadowProducer.applyPendingCommandsAtOwnerBoundary();
     }
 
     private boolean sendLiveBackendCommands() {
@@ -3978,363 +2919,36 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     public void toggleMute(ChannelType type, int channel) {
-        mirrorShadowCommand(() -> shadowCommands.submit(
+        mirrorShadowCommand(() -> presentationBinding.shadowCommands.submit(
                 new AudioPresentationCommand.ToggleMute(type, channel),
                 () -> true, this::drainShadowCommandsAtOwnerBoundary));
     }
 
     public void toggleSolo(ChannelType type, int channel) {
-        mirrorShadowCommand(() -> shadowCommands.submit(
+        mirrorShadowCommand(() -> presentationBinding.shadowCommands.submit(
                 new AudioPresentationCommand.ToggleSolo(type, channel),
                 () -> true, this::drainShadowCommandsAtOwnerBoundary));
     }
 
     public boolean isMuted(ChannelType type, int channel) {
-        ensureShadowPresentation();
-        return shadowRegistry.isMuted(type, channel);
+        presentationBinding.ensureShadowPresentation();
+        return presentationBinding.shadowRegistry.isMuted(type, channel);
     }
 
     public boolean isSoloed(ChannelType type, int channel) {
-        ensureShadowPresentation();
-        return shadowRegistry.isSoloed(type, channel);
+        presentationBinding.ensureShadowPresentation();
+        return presentationBinding.shadowRegistry.isSoloed(type, channel);
     }
 
-    private void ensureShadowPresentation() {
-        if (shadowProducer != null) {
-            return;
-        }
-        int sampleRate = Math.max(1, presentationSink != null
-                ? presentationSink.sampleRate()
-                : backend != null ? backend.outputSampleRate() : 48_000);
-        int frameRate = configuredFrameRate();
-        int maxFrames = (sampleRate + frameRate - 1) / frameRate;
-        AudioPresentationTuning tuning = standaloneTuning != null
-                ? standaloneTuning : backend != null
-                ? backend.presentationTuning()
-                : AudioPresentationTuning.DEFAULT;
-        shadowTuning = tuning;
-        if (presentationCoordFlagHandlers == null) {
-            publishPresentationCoordHandlers(
-                    preparePresentationCoordHandlers(null));
-        }
-        AudioPresentationSourceFactory.Settings settings =
-                new AudioPresentationSourceFactory.Settings(sampleRate,
-                        tuning.region(), tuning.dacInterpolate(),
-                        tuning.fm6DacOff(),
-                        false, 1, this::restoreShadowMusic,
-                        new DecodedPcmCache(),
-                        AudioManager.class.getClassLoader()::getResourceAsStream);
-        BaseAudioSource base = baseAudioSource;
-        SmpsPhysicalPolicy physicalPolicy = base.profile() != null
-                ? Objects.requireNonNull(
-                        base.profile().smpsPhysicalPolicy(),
-                        "smpsPhysicalPolicy")
-                : LegacyCompatibilitySmpsPhysicalPolicy.INSTANCE;
-        com.openggf.configuration.SonicConfigurationService fmCoreConfig = configuredServicesOrNull();
-        // One presentation is one ROM hardware frame of sound-chip time, not 1/frameRate s of wall time.
-        boolean palRegion = fmCoreConfig != null && "PAL".equalsIgnoreCase(
-                fmCoreConfig.getString(SonicConfiguration.REGION));
-        SmpsPhysicalDevice.Settings physicalSettings =
-                new SmpsPhysicalDevice.Settings(
-                        com.openggf.audio.session.SmpsHardwareFrameBudget.exactSynthesisRate(
-                                sampleRate, frameRate, palRegion),
-                        tuning.dacInterpolate(),
-                        fmCoreConfig != null
-                                ? com.openggf.audio.synth.FmCoreSelection.fromConfig(
-                                        fmCoreConfig.getString(SonicConfiguration.AUDIO_FM_CORE))
-                                : com.openggf.audio.synth.FmCoreSelection.ACCURATE,
-                        nativeCompatiblePcmCapture);
-        if (nativeCompatiblePcmCapture != null) {
-            nativeCompatiblePcmSessions++;
-        }
-        SmpsDriverSessionConfiguration sessionConfiguration =
-                new SmpsDriverSessionConfiguration(base.profile() != null
-                        ? base.profile().smpsStatefulCommandPolicy()
-                        : com.openggf.audio.session.SmpsStatefulCommandPolicy.NONE);
-        SmpsDriverSession smpsSession = new SmpsDriverSession(
-                physicalSettings, physicalPolicy, chipWriteObserver,
-                new SmpsSessionProfileFingerprint(
-                        baseGameId(base), base.generation(),
-                        physicalPolicy.identity(), physicalSettings,
-                        sessionConfiguration.statefulCommandPolicy()
-                                .identity()),
-                sessionConfiguration);
-        shadowFactory = new AudioPresentationSourceFactory(
-                () -> true, presentationCoordFlagHandlers, settings,
-                smpsSession);
-        shadowFactory.installStreamedMusicPort(streamedMusicPort);
-        shadowFactory.setStreamedRestoreConfig(base.config(),
-                base.profile() == null || base.profile().blocksSfxDuringMusicRestoreFadeIn());
-        shadowFactory.setAdmissionObserver(admissionObserver);
-        shadowFactory.setDriverServiceObserver(driverServiceObserver);
-        shadowFactory.setChipWriteObserver(chipWriteObserver);
-        shadowFactory.setSfxContentionObserver(sfxContentionObserver);
-        shadowFactory.setSfxAdmissionPolicy(sfxAdmissionPolicy());
-        shadowCommands = new AudioPresentationCommandQueue();
-        shadowRegistry = new AudioVoiceRegistry(shadowFactory, shadowFactory,
-                presentationCoordFlagHandlers,
-                warning -> LOGGER.warning("Presentation shadow: " + warning),
-                smpsSession);
-        shadowResolver = new AudioPresentationCommandResolver(shadowCommands,
-                shadowFactory, new ShadowSources(maxFrames),
-                warning -> LOGGER.warning("Presentation shadow: " + warning),
-                () -> true, this::drainShadowCommandsAtOwnerBoundary);
-        shadowRequestService = base.profile() != null
-                ? base.profile().createAudioRequestService() : null;
-        AudioPresentationMixer mixer = new AudioPresentationMixer(maxFrames);
-        AudioPresentationSink sink = presentationSink != null
-                ? presentationSink : new NoDeviceAudioSink(sampleRate);
-        if (sink.sampleRate() != sampleRate) {
-            sink.close();
-            sink = new NoDeviceAudioSink(sampleRate);
-            presentationSink = sink;
-        }
-        shadowParity = new AudioPresentationParityProbe(sampleRate, frameRate);
-        shadowProducer = shadowRequestService == null
-                ? new AudioPresentationProducer(sampleRate, frameRate,
-                Math.max(maxFrames, configuredPcmHistoryFrames(sampleRate)),
-                Math.max(1, sampleRate * REVERSE_RELEASE_CROSSFADE_MS / 1000),
-                shadowRegistry, shadowCommands, mixer, sink, smpsSession)
-                : new AudioPresentationProducer(sampleRate, frameRate,
-                Math.max(maxFrames, configuredPcmHistoryFrames(sampleRate)),
-                Math.max(1, sampleRate * REVERSE_RELEASE_CROSSFADE_MS / 1000),
-                shadowRegistry, shadowCommands, mixer,
-                sink, smpsSession, shadowRequestService,
-                shadowResolver, commandTimeline, shadowParity);
-        shadowSmpsSession = smpsSession;
-        shadowFrameRate = frameRate;
-        rebindLiveCaptureAudioHandle(sampleRate);
-    }
-
-    private void replaceShadowPresentationForBaseMutation() {
-        int musicTempoPercent = shadowSmpsSession == null ? 100
-                : shadowSmpsSession.captureSnapshot().musicTempoPercent();
-        clearPreparedReverseRestore();
-        detachLiveCaptureAudioHandleForRebuild();
-        closeShadowPresentation();
-        ensurePresentationSink();
-        ensureShadowPresentation();
-        if (musicTempoPercent != 100) {
-            shadowSmpsSession.applyCommand(
-                    new com.openggf.audio.session.SmpsSessionCommand.SetMusicTempoPercent(musicTempoPercent));
-        }
+    private void resetShadowRestoreIntent() {
+        shadowRestoreRequested = false;
     }
 
     private void restoreShadowMusic() {
         // Native E4 completion is intent authority too, independent of the external observer.
         mutatorMusicIntent(AudioMutatorAccess.Kind.NATURAL_RESTORE, 0);
-        shadowRegistry.requestMusicOverrideRestore();
+        presentationBinding.shadowRegistry.requestMusicOverrideRestore();
         shadowRestoreRequested = true;
-    }
-
-    private void closeShadowPresentation() {
-        // Closing the producer closes every lease attached to it, so neither
-        // the offline compatibility lease nor the live-recording lease may
-        // outlive its producer. Both manager-side references are retired here
-        // rather than through closeLiveCaptureAudio/endCaptureMode: the
-        // producer releases the underlying leases itself on close, and a
-        // detach can only be issued on its owner thread.
-        //
-        // Both follow one rule — the reference is dropped exactly when the
-        // producer accepted the detach — because the producer has two distinct
-        // close failure modes:
-        //   * an off-owner-thread close is rejected before anything is
-        //     released, so the manager must keep believing it still holds both
-        //     leases and the caller can retry from the owner thread;
-        //   * a close on the owner thread marks every lease closed and detaches
-        //     it before any teardown step that can throw, so once the producer
-        //     reports itself closed the manager must drop both references even
-        //     if teardown then failed. Keeping a dead handle would refuse every
-        //     later beginCaptureMode/beginLiveCaptureAudio for the rest of the
-        //     process; dropping a live one would let the next lease attach
-        //     twice.
-        if (shadowProducer != null) {
-            try {
-                shadowProducer.close();
-            } finally {
-                if (shadowProducer.isClosed()) {
-                    offlineCaptureHandle = null;
-                    retireLiveCaptureAudioHandle();
-                }
-            }
-        } else {
-            offlineCaptureHandle = null;
-            retireLiveCaptureAudioHandle();
-            if (presentationSink != null) {
-                presentationSink.close();
-            }
-        }
-        presentationSink = null;
-        shadowProducer = null;
-        shadowFrameRate = 0;
-        shadowResolver = null;
-        shadowRegistry = null;
-        shadowSmpsSession = null;
-        shadowRequestService = null;
-        shadowCommands = null;
-        shadowFactory = null;
-        shadowParity = null;
-        shadowTuning = null;
-        standaloneTuning = null;
-        shadowRestoreRequested = false;
-        presentationCoordFlagHandlers = null;
-        presentationCoordHandlerGameIds.clear();
-    }
-
-    /**
-     * A rebuild of the presentation must not end a recording that is already
-     * running. Both rebuild entry points mark the lease here: {@link
-     * #setBackend} (entering gameplay installs the real audio backend) and
-     * {@link #resetState} (a mode transition such as leaving the master title
-     * screen, or a level teardown). Retiring the lease at either of them meant a
-     * recording started on the master title screen lost its audio the moment the
-     * player started a game, and the Task 11 degradation turned that into
-     * permanent silence rather than a visible failure.
-     *
-     * <p>{@link #destroy()} does not mark, so a genuine teardown still retires.
-     */
-    private synchronized void detachLiveCaptureAudioHandleForRebuild() {
-        ManagerLiveCaptureAudioHandle live = activeLiveCaptureAudioHandle;
-        liveCaptureAwaitingRebind = live != null && !live.closed;
-    }
-
-    /**
-     * Re-attaches a carried lease to the freshly built producer.
-     *
-     * <p>Nothing here may escape: {@link #ensureShadowPresentation()} is reached
-     * from most of this class, so a throw would surface as an unrelated failure
-     * far from the recording. A lease that cannot be carried is retired instead,
-     * which the recorder already degrades to phase-correct clocked silence with
-     * one logged warning.
-     *
-     * @param producerSampleRate the rebuilt producer's rate. A recording is
-     *        muxed at the rate captured when it started (ffmpeg {@code -ar}),
-     *        so carrying a lease onto a producer running at a different rate
-     *        would write pitch-shifted audio — which looks like it worked.
-     *        Refusing the carry is the honest answer.
-     */
-    private synchronized void rebindLiveCaptureAudioHandle(int producerSampleRate) {
-        if (!liveCaptureAwaitingRebind) {
-            return;
-        }
-        liveCaptureAwaitingRebind = false;
-        ManagerLiveCaptureAudioHandle live = activeLiveCaptureAudioHandle;
-        if (live == null || live.closed || shadowProducer == null) {
-            return;
-        }
-        if (live.capture.sampleRate() != producerSampleRate) {
-            LOGGER.warning("Live recording lease cannot follow the presentation"
-                    + " from " + live.capture.sampleRate() + " Hz to "
-                    + producerSampleRate + " Hz; the recording continues"
-                    + " without audio rather than pitch-shifted");
-            retireLiveCaptureAudioHandle();
-            return;
-        }
-        try {
-            // Carry the phase so the recorded audio does not jump at the swap.
-            long carried = live.capture.totalStereoFrames();
-            live.capture = shadowProducer.attachCapture(
-                    live.requestedFrameRate, live.capture.clockSnapshot());
-            live.carriedStereoFrames += carried;
-        } catch (RuntimeException rebindFailure) {
-            AudioDiagnosticObserverException.rethrowIfPresent(rebindFailure);
-            LOGGER.log(Level.WARNING,
-                    "Live recording lease could not be carried across a"
-                            + " presentation rebuild", rebindFailure);
-            retireLiveCaptureAudioHandle();
-        }
-    }
-
-    private synchronized void retireLiveCaptureAudioHandle() {
-        if (liveCaptureAwaitingRebind) {
-            // A rebuild is in flight and will rebind this lease to the new
-            // producer. Only a genuine teardown retires it.
-            return;
-        }
-        ManagerLiveCaptureAudioHandle live = activeLiveCaptureAudioHandle;
-        if (live != null) {
-            live.closed = true;
-            activeLiveCaptureAudioHandle = null;
-        }
-    }
-
-    private PresentationCoordHandlerPreparation
-            preparePresentationCoordHandlers(GameAudioProfile candidate) {
-        return preparePresentationCoordHandlers(candidate, false);
-    }
-
-    private PresentationCoordHandlerPreparation
-            preparePresentationCoordHandlers(
-                    GameAudioProfile candidate,
-                    boolean replacesBaseProfile) {
-        if (candidate == null && presentationCoordFlagHandlers != null) {
-            return new PresentationCoordHandlerPreparation(
-                    presentationCoordFlagHandlers,
-                    Set.copyOf(presentationCoordHandlerGameIds),
-                    false, false, null);
-        }
-        if (presentationCoordFlagHandlers != null) {
-            String candidateGameId = requireDonorGameId(
-                    candidate.presentationGameId());
-            return new PresentationCoordHandlerPreparation(
-                    presentationCoordFlagHandlers,
-                    Set.copyOf(presentationCoordHandlerGameIds),
-                    false,
-                    !presentationCoordHandlerGameIds.contains(
-                            candidateGameId),
-                    candidateGameId);
-        }
-        SmpsCoordFlagHandlerOwner preparedOwner =
-                new SmpsCoordFlagHandlerOwner(
-                        new SmpsCoordFlagRuntimeState());
-        Set<String> preparedGameIds = new LinkedHashSet<>();
-        if (replacesBaseProfile) {
-            configurePreparedPresentationCoordHandlers(
-                    candidate, preparedOwner, preparedGameIds);
-        } else {
-            configurePreparedPresentationCoordHandlers(
-                    baseAudioSource.profile(), preparedOwner,
-                    preparedGameIds);
-        }
-        donorAudioSources.values().stream()
-                .map(DonorAudioSource::profile)
-                .filter(Objects::nonNull)
-                .forEach(profile -> configurePreparedPresentationCoordHandlers(
-                        profile, preparedOwner, preparedGameIds));
-        if (!replacesBaseProfile) {
-            configurePreparedPresentationCoordHandlers(
-                    candidate, preparedOwner, preparedGameIds);
-        }
-        return new PresentationCoordHandlerPreparation(
-                preparedOwner, Set.copyOf(preparedGameIds), true, false,
-                null);
-    }
-
-    private static void configurePreparedPresentationCoordHandlers(
-            GameAudioProfile profile,
-            SmpsCoordFlagHandlerOwner owner,
-            Set<String> configuredGameIds) {
-        if (profile == null) {
-            return;
-        }
-        String gameId = requireDonorGameId(profile.presentationGameId());
-        if (!configuredGameIds.contains(gameId)) {
-            profile.configurePresentationCoordFlagHandlers(owner);
-            configuredGameIds.add(gameId);
-        }
-    }
-
-    private void publishPresentationCoordHandlers(
-            PresentationCoordHandlerPreparation preparation) {
-        if (preparation.publishOwner()) {
-            presentationCoordFlagHandlers = preparation.owner();
-            presentationCoordHandlerGameIds.clear();
-            presentationCoordHandlerGameIds.addAll(
-                    preparation.gameIds());
-        } else if (preparation.configureCandidate()) {
-            presentationCoordHandlerGameIds.add(
-                    preparation.candidateGameId());
-        }
     }
 
     private String baseGameId(BaseAudioSource source) {
@@ -4382,13 +2996,925 @@ public class AudioManager implements MusicRestoreSink {
         public AudioPresentationCommandResolver.SourceAccess sourceFor(
                 com.openggf.audio.presentation.SmpsAssetKey.Route route,
                 String donorGameId) {
+            return sourcePublication.sourceFor(route, donorGameId);
+        }
+
+        @Override public int maxStereoFrames() {
+            return maxFrames;
+        }
+    }
+
+    /**
+     * Owns the manager's current physical assembly, including partial publication
+     * and retirement. Logical source, held target and capture continuity policy
+     * remain with their existing owners; collaborator reads stay live.
+     */
+    private final class PresentationBinding {
+        private AudioPresentationCommandQueue shadowCommands;
+        private AudioPresentationSourceFactory shadowFactory;
+        private AudioPresentationCommandResolver shadowResolver;
+        private AudioVoiceRegistry shadowRegistry;
+        private AudioPresentationProducer shadowProducer;
+        private SmpsDriverSession shadowSmpsSession;
+        private AudioRequestService shadowRequestService;
+        private int shadowFrameRate;
+        private AudioPresentationParityProbe shadowParity;
+        private AudioPresentationTuning shadowTuning;
+        private com.openggf.audio.synth.NativeCompatiblePcmOutput.Config nativeCompatiblePcmCapture;
+        private int nativeCompatiblePcmSessions;
+        private AudioPresentationTuning standaloneTuning;
+        private int standaloneFrameRate;
+        private SmpsCoordFlagHandlerOwner presentationCoordFlagHandlers;
+        private final Set<String> presentationCoordHandlerGameIds = new LinkedHashSet<>();
+        private AudioPresentationSink presentationSink;
+        private boolean presentationSpeakerFailed;
+
+        private record PresentationCoordHandlerPreparation(
+                SmpsCoordFlagHandlerOwner owner,
+                Set<String> gameIds,
+                boolean publishOwner,
+                boolean configureCandidate,
+                String candidateGameId) {
+        }
+
+        private void installStandalone(AudioPresentationSink sink, SmpsCoordFlagHandlerOwner coordFlagHandlers) {
+            presentationSink = java.util.Objects.requireNonNull(sink, "sink");
+            presentationCoordFlagHandlers = java.util.Objects.requireNonNull(coordFlagHandlers, "coordFlagHandlers");
+        }
+
+        private void initializeStandalone(String gameId, GameAudioProfile profile,
+                                         SonicConfigurationService config,
+                                         SmpsCoordFlagHandlerOwner coordFlagHandlers) {
+            standaloneFrameRate = FrameRateResolver.effective(java.util.Objects.requireNonNull(config, "config"));
+            standaloneTuning = new AudioPresentationTuning(
+                    "PAL".equalsIgnoreCase(config.getString(SonicConfiguration.REGION))
+                            ? SmpsSequencer.Region.PAL : SmpsSequencer.Region.NTSC,
+                    config.getBoolean(SonicConfiguration.DAC_INTERPOLATE),
+                    config.getBoolean(SonicConfiguration.FM6_DAC_OFF));
+            profile.configurePresentationCoordFlagHandlers(coordFlagHandlers);
+            presentationCoordHandlerGameIds.add(gameId);
+            ensureShadowPresentation();
+        }
+
+        private PresentationCoordHandlerPreparation prepareBaseCoordination(GameAudioProfile candidate) {
+            return preparePresentationCoordHandlers(candidate, true);
+        }
+
+        private PresentationCoordHandlerPreparation prepareDonorCoordination(GameAudioProfile candidate) {
+            return preparePresentationCoordHandlers(candidate);
+        }
+
+        private void applyBaseCoordination(PresentationCoordHandlerPreparation preparation,
+                                           SourcePublication.BaseBackendAttempt attempt) {
+            if (preparation.configureCandidate()) {
+                preparation.owner().configureTransactionally(
+                        owner -> attempt.candidate.configurePresentationCoordFlagHandlers(owner), attempt::run);
+            } else {
+                attempt.run();
+            }
+        }
+
+        private void applyDonorCoordination(PresentationCoordHandlerPreparation preparation,
+                                            SourcePublication.DonorBackendAttempt attempt) {
+            if (preparation.configureCandidate()) {
+                preparation.owner().configureTransactionally(
+                        owner -> attempt.candidate.configurePresentationCoordFlagHandlers(owner), attempt::run);
+            } else {
+                attempt.run();
+            }
+        }
+
+        private void profilePublished() {
+            if (shadowProducer != null) {
+                replaceShadowPresentationForBaseMutation();
+            } else if (shadowFactory != null) {
+                shadowFactory.setSfxAdmissionPolicy(sfxAdmissionPolicy());
+            }
+        }
+
+        private void romPublished() {
+            if (shadowProducer != null) {
+                replaceShadowPresentationForBaseMutation();
+            }
+        }
+
+        private void installStreamedPort(StreamedMusicPort replacement) {
+            ensureShadowPresentation();
+            shadowFactory.installStreamedMusicPort(replacement);
+        }
+
+        private void retireStreamedCursors(StreamedMusicPort previous) {
+            if (shadowFactory != null) {
+                shadowFactory.retireStreamedMusicPort();
+            } else if (previous != StreamedMusicPort.EMPTY) {
+                previous.stop();
+            }
+        }
+
+        private void propagateDiagnosticObservers(DiagnosticObserverSet observers) {
+            if (shadowFactory != null) {
+                shadowFactory.setAdmissionObserver(observers.admission());
+                shadowFactory.setDriverServiceObserver(observers.driverService());
+                shadowFactory.setChipWriteObserver(observers.chipWrite());
+                shadowFactory.setSfxContentionObserver(observers.sfxContention());
+            }
+        }
+
+        private void installFailedBackendSink() {
+            presentationSink = new NoDeviceAudioSink(backend.outputSampleRate());
+            presentationSpeakerFailed = true;
+        }
+
+        private void markSpeakerFailed() {
+            presentationSpeakerFailed = true;
+        }
+
+        private void ensurePresentationSink() {
+            if (backend != null && presentationSink == null) {
+                installBackendPresentationSink();
+            }
+        }
+
+        private void updateDevice() {
+            if (presentationSink instanceof OpenAlPcmSink openAlSink) {
+                openAlSink.updateDevice();
+            }
+        }
+
+        private void pause() {
+            if (presentationSink instanceof OpenAlPcmSink openAlSink) {
+                openAlSink.pause();
+            }
+            if (shadowProducer != null) shadowProducer.pauseScenePcmSource();
+        }
+
+        private void resume() {
+            boolean resumeSpeaker = shadowProducer == null || shadowProducer.resumeScenePcmSource();
+            if (resumeSpeaker && presentationSink instanceof OpenAlPcmSink openAlSink) {
+                openAlSink.resume();
+            }
+        }
+
+        private int configuredFrameRate() {
+            if (standaloneFrameRate > 0) {
+                return standaloneFrameRate;
+            }
+            var config = configuredServicesOrNull();
+            if (config == null) {
+                return 60;
+            }
+            return FrameRateResolver.effective(config);
+        }
+
+        private void installBackendPresentationSink() {
+            try {
+                presentationSink = backend.createPresentationSink(
+                        this::handlePresentationSinkFailure,
+                        warning -> LOGGER.warning("Speaker output: " + warning));
+                presentationSpeakerFailed = false;
+            } catch (Throwable failure) {
+                AudioDiagnosticObserverException.rethrowIfPresent(failure);
+                LOGGER.log(Level.WARNING,
+                        "Speaker device unavailable; continuing without audio output",
+                        failure);
+                presentationSink =
+                        new NoDeviceAudioSink(backend.outputSampleRate());
+                presentationSpeakerFailed = true;
+            }
+        }
+
+        private void handlePresentationSinkFailure(Throwable failure) {
+            presentationSpeakerFailed = true;
+            LOGGER.log(Level.WARNING,
+                    "Speaker output failed; continuing without audio output",
+                    failure);
+            AudioPresentationSink replacement =
+                    new NoDeviceAudioSink(AudioManager.this.outputSampleRate());
+            presentationSink = replacement;
+            if (shadowProducer != null) {
+                shadowProducer.replaceSink(replacement);
+            }
+        }
+
+        private void ensureShadowPresentation() {
+            if (shadowProducer != null) {
+                return;
+            }
+            int sampleRate = Math.max(1, presentationSink != null
+                    ? presentationSink.sampleRate()
+                    : backend != null ? backend.outputSampleRate() : 48_000);
+            int frameRate = configuredFrameRate();
+            int maxFrames = (sampleRate + frameRate - 1) / frameRate;
+            AudioPresentationTuning tuning = standaloneTuning != null
+                    ? standaloneTuning : backend != null
+                    ? backend.presentationTuning()
+                    : AudioPresentationTuning.DEFAULT;
+            shadowTuning = tuning;
+            if (presentationCoordFlagHandlers == null) {
+                publishPresentationCoordHandlers(
+                        preparePresentationCoordHandlers(null));
+            }
+            AudioPresentationSourceFactory.Settings settings =
+                    new AudioPresentationSourceFactory.Settings(sampleRate,
+                            tuning.region(), tuning.dacInterpolate(),
+                            tuning.fm6DacOff(),
+                            false, 1, AudioManager.this::restoreShadowMusic,
+                            new DecodedPcmCache(),
+                            AudioManager.class.getClassLoader()::getResourceAsStream);
+            BaseAudioSource base = sourcePublication.base();
+            SmpsPhysicalPolicy physicalPolicy = base.profile() != null
+                    ? Objects.requireNonNull(
+                            base.profile().smpsPhysicalPolicy(),
+                            "smpsPhysicalPolicy")
+                    : LegacyCompatibilitySmpsPhysicalPolicy.INSTANCE;
+            com.openggf.configuration.SonicConfigurationService fmCoreConfig = configuredServicesOrNull();
+            // One presentation is one ROM hardware frame of sound-chip time, not 1/frameRate s of wall time.
+            boolean palRegion = fmCoreConfig != null && "PAL".equalsIgnoreCase(
+                    fmCoreConfig.getString(SonicConfiguration.REGION));
+            SmpsPhysicalDevice.Settings physicalSettings =
+                    new SmpsPhysicalDevice.Settings(
+                            com.openggf.audio.session.SmpsHardwareFrameBudget.exactSynthesisRate(
+                                    sampleRate, frameRate, palRegion),
+                            tuning.dacInterpolate(),
+                            fmCoreConfig != null
+                                    ? com.openggf.audio.synth.FmCoreSelection.fromConfig(
+                                            fmCoreConfig.getString(SonicConfiguration.AUDIO_FM_CORE))
+                                    : com.openggf.audio.synth.FmCoreSelection.ACCURATE,
+                            nativeCompatiblePcmCapture);
+            if (nativeCompatiblePcmCapture != null) {
+                nativeCompatiblePcmSessions++;
+            }
+            SmpsDriverSessionConfiguration sessionConfiguration =
+                    new SmpsDriverSessionConfiguration(base.profile() != null
+                            ? base.profile().smpsStatefulCommandPolicy()
+                            : com.openggf.audio.session.SmpsStatefulCommandPolicy.NONE);
+            SmpsDriverSession smpsSession = new SmpsDriverSession(
+                    physicalSettings, physicalPolicy, diagnosticInstallation.chipWriteObserver(),
+                    new SmpsSessionProfileFingerprint(
+                            baseGameId(base), base.generation(),
+                            physicalPolicy.identity(), physicalSettings,
+                            sessionConfiguration.statefulCommandPolicy()
+                                    .identity()),
+                    sessionConfiguration);
+            shadowFactory = new AudioPresentationSourceFactory(
+                    () -> true, presentationCoordFlagHandlers, settings,
+                    smpsSession);
+            shadowFactory.installStreamedMusicPort(streamedMusicPort);
+            shadowFactory.setStreamedRestoreConfig(base.config(),
+                    base.profile() == null || base.profile().blocksSfxDuringMusicRestoreFadeIn());
+            shadowFactory.setAdmissionObserver(diagnosticInstallation.admissionObserver());
+            shadowFactory.setDriverServiceObserver(diagnosticInstallation.driverServiceObserver());
+            shadowFactory.setChipWriteObserver(diagnosticInstallation.chipWriteObserver());
+            shadowFactory.setSfxContentionObserver(diagnosticInstallation.sfxContentionObserver());
+            shadowFactory.setSfxAdmissionPolicy(sfxAdmissionPolicy());
+            shadowCommands = new AudioPresentationCommandQueue();
+            shadowRegistry = new AudioVoiceRegistry(shadowFactory, shadowFactory,
+                    presentationCoordFlagHandlers,
+                    warning -> LOGGER.warning("Presentation shadow: " + warning),
+                    smpsSession);
+            shadowResolver = new AudioPresentationCommandResolver(shadowCommands,
+                    shadowFactory, new ShadowSources(maxFrames),
+                    warning -> LOGGER.warning("Presentation shadow: " + warning),
+                    () -> true, AudioManager.this::drainShadowCommandsAtOwnerBoundary);
+            shadowRequestService = base.profile() != null
+                    ? base.profile().createAudioRequestService() : null;
+            AudioPresentationMixer mixer = new AudioPresentationMixer(maxFrames);
+            AudioPresentationSink sink = presentationSink != null
+                    ? presentationSink : new NoDeviceAudioSink(sampleRate);
+            if (sink.sampleRate() != sampleRate) {
+                sink.close();
+                sink = new NoDeviceAudioSink(sampleRate);
+                presentationSink = sink;
+            }
+            shadowParity = new AudioPresentationParityProbe(sampleRate, frameRate);
+            shadowProducer = shadowRequestService == null
+                    ? new AudioPresentationProducer(sampleRate, frameRate,
+                    Math.max(maxFrames, configuredPcmHistoryFrames(sampleRate)),
+                    Math.max(1, sampleRate * REVERSE_RELEASE_CROSSFADE_MS / 1000),
+                    shadowRegistry, shadowCommands, mixer, sink, smpsSession)
+                    : new AudioPresentationProducer(sampleRate, frameRate,
+                    Math.max(maxFrames, configuredPcmHistoryFrames(sampleRate)),
+                    Math.max(1, sampleRate * REVERSE_RELEASE_CROSSFADE_MS / 1000),
+                    shadowRegistry, shadowCommands, mixer,
+                    sink, smpsSession, shadowRequestService,
+                    shadowResolver, commandTimeline, shadowParity);
+            shadowSmpsSession = smpsSession;
+            shadowFrameRate = frameRate;
+            captureLeases.rebindLiveCaptureAudioHandle(sampleRate);
+        }
+
+        private void replaceShadowPresentationForBaseMutation() {
+            int musicTempoPercent = shadowSmpsSession == null ? 100
+                    : shadowSmpsSession.captureSnapshot().musicTempoPercent();
+            heldReverseRestore.invalidatePreparation();
+            captureLeases.detachLiveCaptureAudioHandleForRebuild();
+            closeShadowPresentation();
+            AudioManager.this.ensurePresentationSink();
+            ensureShadowPresentation();
+            if (musicTempoPercent != 100) {
+                shadowSmpsSession.applyCommand(
+                        new com.openggf.audio.session.SmpsSessionCommand.SetMusicTempoPercent(musicTempoPercent));
+            }
+        }
+
+        private void closeShadowPresentation() {
+            // Producer teardown stays here. The capture owner reconciles accepted
+            // release against the current producer, including callback replacements.
+            if (shadowProducer != null) {
+                try {
+                    shadowProducer.close();
+                } finally {
+                    captureLeases.reconcileProducerClose();
+                }
+            } else {
+                captureLeases.retireWithoutProducer();
+                if (presentationSink != null) {
+                    presentationSink.close();
+                }
+            }
+            presentationSink = null;
+            shadowProducer = null;
+            shadowFrameRate = 0;
+            shadowResolver = null;
+            shadowRegistry = null;
+            shadowSmpsSession = null;
+            shadowRequestService = null;
+            shadowCommands = null;
+            shadowFactory = null;
+            shadowParity = null;
+            shadowTuning = null;
+            standaloneTuning = null;
+            resetShadowRestoreIntent();
+            presentationCoordFlagHandlers = null;
+            presentationCoordHandlerGameIds.clear();
+        }
+
+        private PresentationCoordHandlerPreparation
+                preparePresentationCoordHandlers(GameAudioProfile candidate) {
+            return preparePresentationCoordHandlers(candidate, false);
+        }
+
+        private PresentationCoordHandlerPreparation
+                preparePresentationCoordHandlers(
+                        GameAudioProfile candidate,
+                        boolean replacesBaseProfile) {
+            if (candidate == null && presentationCoordFlagHandlers != null) {
+                return new PresentationCoordHandlerPreparation(
+                        presentationCoordFlagHandlers,
+                        Set.copyOf(presentationCoordHandlerGameIds),
+                        false, false, null);
+            }
+            if (presentationCoordFlagHandlers != null) {
+                String candidateGameId = requireDonorGameId(
+                        candidate.presentationGameId());
+                return new PresentationCoordHandlerPreparation(
+                        presentationCoordFlagHandlers,
+                        Set.copyOf(presentationCoordHandlerGameIds),
+                        false,
+                        !presentationCoordHandlerGameIds.contains(
+                                candidateGameId),
+                        candidateGameId);
+            }
+            SmpsCoordFlagHandlerOwner preparedOwner =
+                    new SmpsCoordFlagHandlerOwner(
+                            new SmpsCoordFlagRuntimeState());
+            Set<String> preparedGameIds = new LinkedHashSet<>();
+            if (replacesBaseProfile) {
+                configurePreparedPresentationCoordHandlers(
+                        candidate, preparedOwner, preparedGameIds);
+            } else {
+                configurePreparedPresentationCoordHandlers(
+                        sourcePublication.base().profile(), preparedOwner,
+                        preparedGameIds);
+            }
+            sourcePublication.donors().values().stream()
+                    .map(DonorAudioSource::profile)
+                    .filter(Objects::nonNull)
+                    .forEach(profile -> configurePreparedPresentationCoordHandlers(
+                            profile, preparedOwner, preparedGameIds));
+            if (!replacesBaseProfile) {
+                configurePreparedPresentationCoordHandlers(
+                        candidate, preparedOwner, preparedGameIds);
+            }
+            return new PresentationCoordHandlerPreparation(
+                    preparedOwner, Set.copyOf(preparedGameIds), true, false,
+                    null);
+        }
+
+        private static void configurePreparedPresentationCoordHandlers(
+                GameAudioProfile profile,
+                SmpsCoordFlagHandlerOwner owner,
+                Set<String> configuredGameIds) {
+            if (profile == null) {
+                return;
+            }
+            String gameId = requireDonorGameId(profile.presentationGameId());
+            if (!configuredGameIds.contains(gameId)) {
+                profile.configurePresentationCoordFlagHandlers(owner);
+                configuredGameIds.add(gameId);
+            }
+        }
+
+        private void publishPresentationCoordHandlers(
+                PresentationCoordHandlerPreparation preparation) {
+            if (preparation.publishOwner()) {
+                presentationCoordFlagHandlers = preparation.owner();
+                presentationCoordHandlerGameIds.clear();
+                presentationCoordHandlerGameIds.addAll(
+                        preparation.gameIds());
+            } else if (preparation.configureCandidate()) {
+                presentationCoordHandlerGameIds.add(
+                        preparation.candidateGameId());
+            }
+        }
+
+        private int outputSampleRate() {
+            return presentationSink != null
+                    ? presentationSink.sampleRate()
+                    : backend.outputSampleRate();
+        }
+
+        private void setScenePcmSource(com.openggf.audio.presentation.ScenePcmSource source) {
+            ensureShadowPresentation();
+            shadowProducer.setScenePcmSource(source);
+            if (source != null && presentationSpeakerFailed) source.onSpeakerFailure();
+        }
+
+        private long consumedPresentationStereoFrames() {
+            return presentationSink instanceof OpenAlPcmSink sink
+                    ? sink.consumedStereoFrames() : -1;
+        }
+
+        private long presentationUnderrunCount() {
+            return presentationSink instanceof OpenAlPcmSink sink ? sink.underrunCount() : 0;
+        }
+
+        private void setNativeCompatiblePcmCapture(
+                com.openggf.audio.synth.NativeCompatiblePcmOutput.Config config) {
+            if (config != null && shadowSmpsSession != null) {
+                throw new IllegalStateException("native-compatible PCM capture must be set before the presentation exists");
+            }
+            nativeCompatiblePcmCapture = config;
+            if (config != null) {
+                nativeCompatiblePcmSessions = 0; // count this capture's sessions only
+            }
+        }
+
+        private int drainNativeCompatiblePcm(short[] target, int offsetSamples, int maxFrames) {
+            return shadowSmpsSession == null ? 0
+                    : shadowSmpsSession.drainNativeCompatiblePcm(target, offsetSamples, maxFrames);
+        }
+
+        private int nativeCompatiblePcmSessions() {
+            return nativeCompatiblePcmSessions;
+        }
+    }
+
+    /**
+     * Complete manager-lifetime logical source namespace. Construction is cold;
+     * presentation/backend collaborators are read from the manager only at their
+     * original operation points, and physical residency remains session-owned.
+     * Mutation admission uses AudioManager.this's existing wrapper monitor.
+     */
+    private final class SourcePublication {
+        /** Volatile publication of the complete immutable base dependency tuple. */
+        private volatile BaseAudioSource baseAudioSource =
+                new BaseAudioSource(null, null, null, null, null, 0);
+        // Donor audio overlay: secondary SFX path for cross-game feature donation
+        /**
+         * Volatile immutable snapshots keep readers lock-free while donor
+         * mutators publish a whole route table at one visibility boundary.
+         */
+        private volatile Map<String, DonorAudioSource> donorAudioSources =
+                Map.of();
+        private volatile Map<String, Long> donorGenerationCounters = Map.of();
+        /**
+         * Guarded by this manager's monitor. Java monitors are reentrant, so the
+         * synchronized source mutators also need an explicit same-thread guard to
+         * keep dependency callbacks from starting a nested publication.
+         */
+        private boolean sourceMutationInProgress;
+        private final Map<GameSound, DonorSfxBinding> donorSoundBindings = new EnumMap<>(GameSound.class);
+        private final Map<String, Map<GameMusic, Integer>> donorMusicBindings = new HashMap<>();
+
+
+        private BaseAudioSource base() { return baseAudioSource; }
+        private DonorAudioSource donor(String gameId) { return donorAudioSources.get(gameId); }
+        private Map<String, DonorAudioSource> donors() { return donorAudioSources; }
+        private Set<String> donorGameIds() { return donorAudioSources.keySet(); }
+        private DonorSfxBinding soundBinding(GameSound sound) { return donorSoundBindings.get(sound); }
+        private Map<GameMusic, Integer> musicBinding(String gameId) { return donorMusicBindings.get(gameId); }
+
+        private Set<AudioLogicalSnapshot.DonorSfxBindingSnapshot> captureSoundBindings() {
+            Set<AudioLogicalSnapshot.DonorSfxBindingSnapshot> bindings = new LinkedHashSet<>();
+            for (Map.Entry<GameSound, DonorSfxBinding> entry : donorSoundBindings.entrySet()) {
+                DonorSfxBinding binding = entry.getValue();
+                bindings.add(new AudioLogicalSnapshot.DonorSfxBindingSnapshot(
+                        entry.getKey(), binding.gameId(), binding.sfxId()));
+            }
+            return bindings;
+        }
+
+        private Map<GameSound, DonorSfxBinding> copySoundBindings() {
+            return new EnumMap<>(donorSoundBindings);
+        }
+
+        private Map<GameSound, DonorSfxBinding> materializeSoundBindings(
+                Set<AudioLogicalSnapshot.DonorSfxBindingSnapshot> bindings) {
+            Map<GameSound, DonorSfxBinding> materialized = new EnumMap<>(GameSound.class);
+            for (AudioLogicalSnapshot.DonorSfxBindingSnapshot binding : bindings) {
+                materialized.put(binding.sound(), new DonorSfxBinding(binding.donorGameId(), binding.sfxId()));
+            }
+            return materialized;
+        }
+
+        private void restoreSoundBindings(Set<AudioLogicalSnapshot.DonorSfxBindingSnapshot> bindings) {
+            donorSoundBindings.clear();
+            for (AudioLogicalSnapshot.DonorSfxBindingSnapshot binding : bindings) {
+                donorSoundBindings.put(binding.sound(), new DonorSfxBinding(binding.donorGameId(), binding.sfxId()));
+            }
+        }
+
+        private void restoreSoundBindings(Map<GameSound, DonorSfxBinding> bindings) {
+            donorSoundBindings.clear();
+            donorSoundBindings.putAll(bindings);
+        }
+
+        private final class BaseBackendAttempt {
+            private final GameAudioProfile candidate;
+            private boolean attempted;
+
+            private BaseBackendAttempt(GameAudioProfile candidate) {
+                this.candidate = candidate;
+            }
+
+            private void run() {
+                if (backend != null) {
+                    attempted = true;
+                    backend.setAudioProfile(candidate);
+                }
+            }
+        }
+
+        private final class DonorBackendAttempt {
+            private final GameAudioProfile candidate;
+            private final DonorAudioSource previous;
+            private boolean attempted;
+
+            private DonorBackendAttempt(GameAudioProfile candidate, DonorAudioSource previous) {
+                this.candidate = candidate;
+                this.previous = previous;
+            }
+
+            private void run() {
+                boolean clearsPreviousProfile = candidate == null
+                        && previous != null && previous.profile() != null;
+                if (backend != null && (candidate != null || clearsPreviousProfile)) {
+                    attempted = true;
+                    backend.registerAudioProfileCoordHandlers(candidate);
+                }
+            }
+        }
+
+        private void initializeStandalone(GameAudioProfile profile) {
+            GameAudioProfile resolvedProfile = java.util.Objects.requireNonNull(profile, "profile");
+            baseAudioSource = new BaseAudioSource(null, resolvedProfile, null, null,
+                    resolvedProfile.getSequencerConfig(), 1);
+        }
+
+        private void setAudioProfile(GameAudioProfile audioProfile) {
+            if (reinstallsInstalledSource(audioProfile, baseAudioSource.rom())) {
+                return;
+            }
+            beginSourceMutation();
+            try {
+                BaseAudioSource previous = baseAudioSource;
+                long candidateGeneration = nextGeneration(previous.generation());
+                Rom sourceRom = previous.rom();
+                SmpsLoader candidateLoader = audioProfile != null
+                        && sourceRom != null
+                        ? audioProfile.createSmpsLoader(sourceRom) : null;
+                DacData candidateDac = loadDac(candidateLoader);
+                SmpsSequencerConfig candidateConfig = audioProfile != null
+                        ? audioProfile.getSequencerConfig() : null;
+                PresentationBinding.PresentationCoordHandlerPreparation presentationPreparation =
+                        presentationBinding.prepareBaseCoordination(audioProfile);
+                BaseBackendAttempt backendConfiguration = new BaseBackendAttempt(audioProfile);
+                try {
+                    presentationBinding.applyBaseCoordination(presentationPreparation, backendConfiguration);
+                } catch (RuntimeException | Error failure) {
+                    if (backendConfiguration.attempted) {
+                        try {
+                            backend.setAudioProfile(previous.profile());
+                        } catch (RuntimeException | Error restoreFailure) {
+                            failure.addSuppressed(restoreFailure);
+                        }
+                    }
+                    throw failure;
+                }
+                presentationBinding.publishPresentationCoordHandlers(presentationPreparation);
+                baseAudioSource = new BaseAudioSource(
+                        previous.rom(), audioProfile,
+                        candidateLoader, candidateDac,
+                        candidateConfig, candidateGeneration);
+                mutatorMusicIntent(AudioMutatorAccess.Kind.SOURCE, 0);
+                presentationBinding.profilePublished();
+            } finally {
+                endSourceMutation();
+            }
+        }
+
+        private void setRom(Rom rom) {
+            if (reinstallsInstalledSource(baseAudioSource.profile(), rom)) {
+                return;
+            }
+            beginSourceMutation();
+            try {
+                BaseAudioSource previous = baseAudioSource;
+                long candidateGeneration = nextGeneration(previous.generation());
+                SmpsLoader candidateLoader = previous.profile() != null
+                        && rom != null
+                        ? previous.profile().createSmpsLoader(rom) : null;
+                DacData candidateDac = loadDac(candidateLoader);
+                baseAudioSource = new BaseAudioSource(
+                        rom, previous.profile(), candidateLoader, candidateDac,
+                        previous.config(),
+                        candidateGeneration);
+                mutatorMusicIntent(AudioMutatorAccess.Kind.SOURCE, 0);
+                presentationBinding.romPublished();
+            } finally {
+                endSourceMutation();
+            }
+        }
+
+        /**
+         * Whether installing {@code profile} with {@code rom} would reinstall the
+         * very source already installed: the same profile and ROM instances, with
+         * its loader built. That is a same-game level entry
+         * ({@code LevelManager.configureAudio} on every load), not a source change.
+         * The ROM's Z80 driver keeps running into the level, so the presentation
+         * device (chip, filter, PSG and buffer state, the running session) is kept.
+         * A new ROM or profile instance, a reset, or a donor or mod source still
+         * goes through the full replacement.
+         */
+        private boolean reinstallsInstalledSource(GameAudioProfile profile, Rom rom) {
+            BaseAudioSource installed = baseAudioSource;
+            return profile != null && rom != null
+                    && profile == installed.profile() && rom == installed.rom()
+                    && installed.loader() != null;
+        }
+
+        private static DacData loadDac(SmpsLoader loader) {
+            return loader != null ? loader.loadDacData() : null;
+        }
+
+        private static long nextGeneration(long generation) {
+            return Math.incrementExact(generation);
+        }
+
+        private void beginSourceMutation() {
+            if (sourceMutationInProgress) {
+                throw new IllegalStateException(
+                        "Audio source mutation must not be re-entered");
+            }
+            sourceMutationInProgress = true;
+        }
+
+        private void endSourceMutation() {
+            sourceMutationInProgress = false;
+        }
+
+        private AudioPresentationCommandResolver.SourceAccess baseSfxSource(
+                BaseAudioSource source) {
+            return new AudioPresentationCommandResolver.SourceAccess(
+                    baseGameId(source), source.generation(), source.loader(),
+                    source.dac(), source.config(), sfxPolicyFor(source.profile()),
+                    ordinaryMusicSfxPolicyFor(source.profile()));
+        }
+
+        private AudioPresentationCommandResolver.SourceAccess donorSfxSource(
+                String gameId, DonorAudioSource source) {
+            return new AudioPresentationCommandResolver.SourceAccess(
+                    gameId, source.generation(), source.loader(), source.dac(),
+                    source.config(), sfxPolicyFor(source.sfxPolicyProfile()),
+                    ordinaryMusicSfxPolicyFor(source.profile()));
+        }
+
+        private DonorAudioSource completeLegacyDonorSource(
+                String gameId, DonorAudioSource observed) {
+            if (observed.config() != null || observed.profile() != null) {
+                return observed;
+            }
+            DonorAudioSource current = donorAudioSources.get(gameId);
+            if (current == null || current != observed) {
+                return current != null ? current : observed;
+            }
+            BaseAudioSource legacyOwner = baseAudioSource;
+            if (legacyOwner.config() == null || legacyOwner.profile() == null) {
+                return observed;
+            }
+            DonorAudioSource completed = new DonorAudioSource(
+                    observed.loader(), observed.dac(), legacyOwner.config(),
+                    null, legacyOwner.profile(), observed.generation());
+            publishDonorSource(gameId, completed);
+            return completed;
+        }
+
+        private void registerDonorLoader(
+                String gameId,
+                SmpsLoader loader,
+                DacData dacData,
+                SmpsSequencerConfig config,
+                GameAudioProfile donorProfile) {
+            beginSourceMutation();
+            try {
+                String resolvedGameId = requireDonorGameId(gameId);
+                SmpsLoader resolvedLoader = Objects.requireNonNull(loader, "loader");
+                DacData resolvedDac = Objects.requireNonNull(dacData, "dacData");
+                BaseAudioSource legacyOwner = baseAudioSource;
+                SmpsSequencerConfig resolvedConfig = config != null
+                        ? config
+                        : donorProfile != null
+                        ? donorProfile.getSequencerConfig()
+                        : legacyOwner.config();
+                GameAudioProfile resolvedSfxPolicyProfile = donorProfile != null
+                        ? donorProfile
+                        : config == null ? legacyOwner.profile() : null;
+                DonorAudioSource previous = donorAudioSources.get(resolvedGameId);
+                long retainedGeneration = donorGenerationCounters.getOrDefault(
+                        resolvedGameId,
+                        previous != null ? previous.generation() : 0L);
+                long candidateGeneration = nextGeneration(retainedGeneration);
+                PresentationBinding.PresentationCoordHandlerPreparation presentationPreparation =
+                        presentationBinding.prepareDonorCoordination(donorProfile);
+                DonorBackendAttempt backendConfiguration = new DonorBackendAttempt(donorProfile, previous);
+                try {
+                    presentationBinding.applyDonorCoordination(presentationPreparation, backendConfiguration);
+                } catch (RuntimeException | Error failure) {
+                    Throwable restoreFailure =
+                            backendConfiguration.attempted
+                                    ? restoreDonorBackendConfiguration(previous)
+                                    : null;
+                    if (restoreFailure != null) {
+                        removeDonorSource(
+                                resolvedGameId, candidateGeneration);
+                        failure.addSuppressed(restoreFailure);
+                    }
+                    throw failure;
+                }
+                presentationBinding.publishPresentationCoordHandlers(presentationPreparation);
+                publishDonorSource(resolvedGameId, new DonorAudioSource(
+                        resolvedLoader, resolvedDac, resolvedConfig, donorProfile,
+                        resolvedSfxPolicyProfile, candidateGeneration));
+            } finally {
+                endSourceMutation();
+            }
+        }
+
+        private Throwable restoreDonorBackendConfiguration(
+                DonorAudioSource previous) {
+            try {
+                if (backend != null) {
+                    backend.registerAudioProfileCoordHandlers(
+                            previous != null ? previous.profile() : null);
+                }
+            } catch (RuntimeException | Error failure) {
+                return failure;
+            }
+            return null;
+        }
+
+        private void publishDonorSource(
+                String gameId, DonorAudioSource source) {
+            Map<String, Long> generations =
+                    new HashMap<>(donorGenerationCounters);
+            generations.put(gameId, source.generation());
+            donorGenerationCounters = Map.copyOf(generations);
+            Map<String, DonorAudioSource> sources =
+                    new HashMap<>(donorAudioSources);
+            sources.put(gameId, source);
+            donorAudioSources = Map.copyOf(sources);
+        }
+
+        private void removeDonorSource(String gameId, long generation) {
+            Map<String, Long> generations =
+                    new HashMap<>(donorGenerationCounters);
+            generations.put(gameId, generation);
+            donorGenerationCounters = Map.copyOf(generations);
+            Map<String, DonorAudioSource> sources =
+                    new HashMap<>(donorAudioSources);
+            sources.remove(gameId);
+            donorAudioSources = Map.copyOf(sources);
+        }
+
+        private void registerDonorMusicMap(String gameId, Map<GameMusic, Integer> musicMap) {
+            if (gameId == null || musicMap == null || musicMap.isEmpty()) {
+                return;
+            }
+            donorMusicBindings.put(gameId, Map.copyOf(musicMap));
+        }
+
+        private void registerDonorSound(GameSound sound, String gameId, int sfxId) {
+            donorSoundBindings.put(sound, new DonorSfxBinding(gameId, sfxId));
+        }
+
+        private void clearDonorAudio() {
+            beginSourceMutation();
+            try {
+                clearDonorAudioState();
+            } finally {
+                endSourceMutation();
+            }
+        }
+
+        private void clearDonorAudioState() {
+            Map<String, Long> advancedGenerations = new HashMap<>();
+            donorAudioSources.forEach((gameId, source) ->
+                    advancedGenerations.put(
+                            gameId, nextGeneration(source.generation())));
+            Map<String, Long> generations =
+                    new HashMap<>(donorGenerationCounters);
+            generations.putAll(advancedGenerations);
+            donorGenerationCounters = Map.copyOf(generations);
+            donorAudioSources = Map.of();
+            donorSoundBindings.clear();
+            donorMusicBindings.clear();
+        }
+
+        private DonorKeyState captureDonorKeyState(String gameId) {
+            String key = requireDonorGameId(gameId);
+            Map<GameSound, DonorSfxBinding> sounds = new EnumMap<>(GameSound.class);
+            donorSoundBindings.forEach((sound, binding) -> {
+                if (key.equals(binding.gameId())) {
+                    sounds.put(sound, binding);
+                }
+            });
+            return new DonorKeyState(key, donorAudioSources.get(key),
+                    donorMusicBindings.get(key), sounds);
+        }
+
+        private void restoreDonorKeyState(DonorKeyState state) {
+            beginSourceMutation();
+            try {
+                String key = state.gameId;
+                long generation = nextGeneration(
+                        donorGenerationCounters.getOrDefault(key, 0L));
+                if (state.source == null) {
+                    removeDonorSource(key, generation);
+                } else {
+                    DonorAudioSource previous = state.source;
+                    publishDonorSource(key, new DonorAudioSource(
+                            previous.loader(), previous.dac(), previous.config(),
+                            previous.profile(), previous.sfxPolicyProfile(),
+                            generation));
+                }
+                if (state.music == null) {
+                    donorMusicBindings.remove(key);
+                } else {
+                    donorMusicBindings.put(key, state.music);
+                }
+                donorSoundBindings.values().removeIf(
+                        binding -> key.equals(binding.gameId()));
+                donorSoundBindings.putAll(state.sounds);
+                Throwable failure = restoreDonorBackendConfiguration(state.source);
+                if (failure instanceof RuntimeException runtime) {
+                    throw runtime;
+                }
+                if (failure instanceof Error error) {
+                    throw error;
+                }
+            } finally {
+                endSourceMutation();
+            }
+        }
+
+        private void reset() {
+            beginSourceMutation();
+            try {
+                heldReverseRestore.invalidatePreparation();
+                if (backend != null) {
+                    backend.stopPlayback();
+                }
+                this.baseAudioSource =
+                        new BaseAudioSource(null, null, null, null, null, 0);
+                resetNonSourceState();
+                clearDonorAudioState();
+                donorGenerationCounters = Map.of();
+            } finally {
+                endSourceMutation();
+            }
+        }
+
+        private AudioPresentationCommandResolver.SourceAccess sourceFor(
+                com.openggf.audio.presentation.SmpsAssetKey.Route route,
+                String donorGameId) {
             return switch (route) {
                 case BASE_MUSIC, BASE_ID, BASE_NAME -> {
                     BaseAudioSource source = baseAudioSource;
                     yield new AudioPresentationCommandResolver.SourceAccess(
                             baseGameId(source), source.generation(),
                             source.loader(), source.dac(), source.config(),
-                            policyFor(source.profile()),
+                            sfxPolicyFor(source.profile()),
                             ordinaryMusicSfxPolicyFor(source.profile()));
                 }
                 case DONOR_MUSIC, DONOR_ID -> {
@@ -4404,7 +3930,7 @@ public class AudioManager implements MusicRestoreSink {
                             source != null ? source.loader() : null,
                             source != null ? source.dac() : null,
                             source != null ? source.config() : null,
-                            policyFor(source != null
+                            sfxPolicyFor(source != null
                                     ? source.sfxPolicyProfile() : null),
                             source != null && source.profile() != null
                                     ? source.profile().getOrdinaryMusicSfxPolicy()
@@ -4414,88 +3940,999 @@ public class AudioManager implements MusicRestoreSink {
                         "fallback assets have no SMPS source");
             };
         }
+    }
 
-        private String baseGameId(BaseAudioSource source) {
-            return AudioManager.this.baseGameId(source);
+    /**
+     * Manager-lifetime logical publication only. Collaborators are read from
+     * AudioManager at the original operation boundaries, never retained here.
+     * Timeline history, held selection and physical resources keep their owners.
+     */
+    private final class LogicalPublication {
+        private boolean ringLeft = true;
+        /**
+         * Count of logical audio restores actually published to the presentation
+         * producer. Held rewind defers per-frame restores and publishes exactly one
+         * at release; this counter is the observable for that contract now that the
+         * legacy backend restore (which tests counted) is gone.
+         */
+        private int logicalRestorePublications;
+
+        private boolean rawRingLeft() {
+            return ringLeft;
         }
 
-        private AudioPresentationCommandResolver.SfxPolicy policyFor(
-                GameAudioProfile profile) {
-            return sfxPolicyFor(profile);
+        private void setRingLeft(boolean value) {
+            ringLeft = value;
         }
 
-        @Override public int maxStereoFrames() {
-            return maxFrames;
+        private void playFallbackRing(float pitch) {
+            AudioManager.this.playGameSfxResolved(
+                    ringLeft ? GameSound.RING_LEFT : GameSound.RING_RIGHT, pitch);
+            ringLeft = !ringLeft;
+        }
+
+        /**
+         * The ring left/right alternation callers should observe. A game whose
+         * request service owns dispatch-time alternation (Sonic 2's
+         * {@code zPlaySound_CheckRing}) reports its own value; {@code ringLeft}
+         * never advances for such a game, since {@link #playSfx} hands ring
+         * requests straight to the mailbox and returns before its own
+         * caller-side toggle. Other games have no request service, so {@code
+         * ringLeft} stays the sole source of truth for them.
+         */
+        private boolean currentRingLeft() {
+            if (presentationBinding.shadowRequestService != null) {
+                Boolean serviceRingLeft = presentationBinding.shadowRequestService.ringLeft();
+                if (serviceRingLeft != null) {
+                    return serviceRingLeft;
+                }
+            }
+            return ringLeft;
+        }
+
+        private AudioLogicalSnapshot captureLogicalSnapshot() {
+            presentationBinding.ensureShadowPresentation();
+            Set<String> donorGameIds = new LinkedHashSet<>();
+            donorGameIds.addAll(sourcePublication.donorGameIds());
+
+            Set<AudioLogicalSnapshot.DonorSfxBindingSnapshot> donorBindings =
+                    sourcePublication.captureSoundBindings();
+
+            return new AudioLogicalSnapshot(
+                    currentRingLeft(),
+                    commandTimeline.currentFrame(),
+                    commandTimeline.nextOrder(),
+                    commandTimeline.entryCount(),
+                    presentationBinding.shadowProducer.snapshot(),
+                    donorGameIds,
+                    donorBindings,
+                    presentationBinding.shadowRequestService == null
+                            ? null : presentationBinding.shadowRequestService.snapshot());
+        }
+
+        private boolean restoreLogicalSnapshotNow(
+                AudioLogicalSnapshot snapshot, boolean preservePresentation) {
+            AudioPresentationSnapshot previousPresentation =
+                    presentationBinding.shadowProducer.snapshot();
+            AudioPresentationForwardService.Snapshot previousForwardService =
+                    presentationBinding.shadowRequestService == null
+                            ? null : presentationBinding.shadowRequestService.snapshot();
+            boolean previousRingLeft = ringLeft;
+            long previousTimelineFrame = commandTimeline.currentFrame();
+            int previousTimelineOrder = commandTimeline.nextOrder();
+            Map<GameSound, DonorSfxBinding> previousBindings =
+                    sourcePublication.copySoundBindings();
+            try {
+                if ((presentationBinding.shadowRequestService == null)
+                        != (snapshot.forwardServiceSnapshot() == null)) {
+                    throw new IllegalArgumentException(
+                            "audio snapshot forward-service ownership differs from the live profile");
+                }
+                presentationBinding.shadowProducer.restore(snapshot.presentation(), presentationBinding.shadowFactory,
+                        preservePresentation);
+                if (presentationBinding.shadowRequestService != null) {
+                    presentationBinding.shadowRequestService.restore(snapshot.forwardServiceSnapshot());
+                }
+                ringLeft = snapshot.ringLeft();
+                commandTimeline.restoreCursor(snapshot.commandTimelineFrame(),
+                        snapshot.commandTimelineNextOrder());
+                sourcePublication.restoreSoundBindings(snapshot.donorBindings());
+                logicalRestorePublications++;
+                return true;
+            } catch (RuntimeException failure) {
+                ringLeft = previousRingLeft;
+                commandTimeline.restoreCursor(previousTimelineFrame,
+                        previousTimelineOrder);
+                sourcePublication.restoreSoundBindings(previousBindings);
+                try {
+                    presentationBinding.shadowProducer.restore(previousPresentation, presentationBinding.shadowFactory,
+                            preservePresentation);
+                    if (presentationBinding.shadowRequestService != null) {
+                        presentationBinding.shadowRequestService.restore(previousForwardService);
+                    }
+                } catch (RuntimeException rollbackFailure) {
+                    failure.addSuppressed(rollbackFailure);
+                }
+                AudioDiagnosticObserverException.rethrowIfPresent(failure);
+                LOGGER.log(Level.WARNING,
+                        "Audio snapshot restore failed; retained prior state",
+                        failure);
+                return false;
+            }
+        }
+
+        private void publishHeldRestoreLedger(
+                AudioLogicalSnapshot selected,
+                Map<GameSound, DonorSfxBinding> publishedBindings) {
+            logicalRestorePublications++;
+            ringLeft = selected.ringLeft();
+            commandTimeline.restoreCursor(
+                    selected.commandTimelineFrame(),
+                    selected.commandTimelineNextOrder());
+            sourcePublication.restoreSoundBindings(publishedBindings);
+        }
+
+        private int logicalRestorePublications() {
+            return logicalRestorePublications;
+        }
+
+        private void resetLogicalRestorePublicationCount() {
+            logicalRestorePublications = 0;
         }
     }
 
-    private final class ManagerLiveCaptureAudioHandle implements LiveCaptureAudioHandle {
-        private LiveCaptureAudioHandle capture;
-        private final int requestedFrameRate;
+    /**
+     * Manager-lifetime ownership of the held logical target and its release protocol.
+     * Collaborators are read from AudioManager at their original execution points;
+     * construction stores no producer, session, factory or presentation resources.
+     */
+    private final class HeldReverseRestore {
+        private boolean reverseAudioPresentationActive;
+        /** The selected metadata can differ from the producer's acknowledged preparation. */
+        private AudioLogicalSnapshot deferredReverseLogicalSnapshot;
+        private boolean deferredReverseLogicalPrepared;
+        /** Fresh boundary targets survive retries and bypass later transient cleanup. */
+        private boolean postBoundaryReverseTarget;
+        /** One-shot test control, consumed at release entry even if that attempt fails. */
+        private ReverseReleaseFailurePoint failNextReverseRelease;
+
+        private void restoreLogicalSnapshot(AudioLogicalSnapshot snapshot) {
+            if (snapshot == null) {
+                return;
+            }
+            presentationBinding.ensureShadowPresentation();
+            if (reverseAudioPresentationActive) {
+                deferredReverseLogicalSnapshot = snapshot;
+                return;
+            }
+            restoreLogicalSnapshotNow(snapshot, false);
+        }
+
+        private void replayTimelineCommandLogically(AudioCommand command) {
+            if (command == null) {
+                return;
+            }
+            stageDeferredPresentationCommand(command);
+            refreshDeferredReverseLogicalSnapshot();
+        }
+
         /**
-         * Frames drained through leases this handle has already outlived. A
-         * fresh lease deliberately starts its own total at zero, but a rebind
-         * continues one recording, so the totals are summed rather than reset.
+         * Replays one logical command into detached presentation metadata and a
+         * transactionally borrowed view of the one persistent SMPS session. The
+         * session is rolled back byte-for-byte after the staged snapshot is
+         * captured, so the live shadow and its rewind/history cursor remain
+         * untouched until held release invokes the producer restore.
          */
-        private long carriedStereoFrames;
-        private boolean closed;
-
-        private ManagerLiveCaptureAudioHandle(LiveCaptureAudioHandle capture,
-                                              int requestedFrameRate) {
-            this.capture = capture;
-            this.requestedFrameRate = requestedFrameRate;
+        private void stageDeferredPresentationCommand(AudioCommand command) {
+            stageDeferredPresentationCommand(command, null, null);
         }
 
-
-        @Override
-        public int sampleRate() {
-            return capture.sampleRate();
-        }
-
-        @Override
-        public int frameRate() {
-            return capture.frameRate();
-        }
-
-        @Override
-        public int maxStereoFramesPerPacket() {
-            return capture.maxStereoFramesPerPacket();
-        }
-
-        @Override
-        public int drainPresentationFrame(short[] target) {
-            synchronized (AudioManager.this) {
-                if (closed) {
-                    throw new IllegalStateException("Live capture audio handle is no longer attached");
+        private void stageDeferredPresentationCommand(AudioCommand command, Boolean nativePause,
+                AudioPresentationForwardService.Snapshot nativeForward) {
+            if (command == null && nativePause == null) {
+                return;
+            }
+            presentationBinding.ensureShadowPresentation();
+            if (deferredReverseLogicalSnapshot == null) {
+                if (nativePause != null) {
+                    var previousForward = presentationBinding.shadowRequestService.snapshot();
+                    SmpsDriverSession.LiveMutationToken token = presentationBinding.shadowSmpsSession.captureLiveMutation();
+                    try {
+                        presentationBinding.shadowSmpsSession.replayNativePause(nativePause);
+                        presentationBinding.shadowRequestService.restore(nativeForward);
+                        presentationBinding.shadowSmpsSession.commitLiveMutation(token);
+                    } catch (RuntimeException failure) {
+                        try { presentationBinding.shadowRequestService.restore(previousForward); }
+                        catch (RuntimeException rollback) { failure.addSuppressed(rollback); }
+                        try { presentationBinding.shadowSmpsSession.rollbackLiveMutation(token); }
+                        catch (RuntimeException rollback) { failure.addSuppressed(rollback); }
+                        throw failure;
+                    }
+                } else {
+                    presentationBinding.shadowResolver.submit(command);
+                    presentationBinding.shadowProducer.applyPendingCommandsAtOwnerBoundary();
+                    logicalPublication.setRingLeft(managerRingAfter(logicalPublication.rawRingLeft(), command));
                 }
-                return capture.drainPresentationFrame(target);
+                return;
+            }
+            AudioLogicalSnapshot selected = deferredReverseLogicalSnapshot;
+            SmpsCoordFlagRuntimeState.Snapshot liveCoord =
+                    presentationBinding.presentationCoordFlagHandlers.state().snapshot();
+            AudioPresentationCommandQueue stagedCommands =
+                    new AudioPresentationCommandQueue();
+            AudioVoiceRegistry stagedRegistry = new AudioVoiceRegistry(
+                    presentationBinding.shadowFactory, presentationBinding.shadowFactory, presentationBinding.presentationCoordFlagHandlers,
+                    warning -> LOGGER.warning(
+                            "Presentation rewind staging: " + warning),
+                    presentationBinding.shadowSmpsSession);
+            AudioPresentationDependencyResolver.DiagnosticTransaction
+                    stagingDiagnostics =
+                    presentationBinding.shadowFactory.beginDiagnosticTransaction();
+            SmpsDriverSession.LiveMutationToken sessionMutation = null;
+            RuntimeException primaryFailure = null;
+            AudioLogicalSnapshot stagedSelection;
+            try {
+                stagedRegistry.restore(selected.presentation(), presentationBinding.shadowFactory);
+                String[] resolutionFailure = new String[1];
+                AudioPresentationCommandResolver stagedResolver =
+                        new AudioPresentationCommandResolver(
+                                stagedCommands, presentationBinding.shadowFactory,
+                                new ShadowSources(
+                                        (Math.max(1, backend != null
+                                                ? backend.outputSampleRate()
+                                                : 48_000)
+                                                + presentationBinding.configuredFrameRate() - 1)
+                                                / presentationBinding.configuredFrameRate()),
+                                warning -> resolutionFailure[0] = warning,
+                                () -> true,
+                                () -> {
+                                    throw new IllegalStateException(
+                                            "detached staging queue exceeded capacity");
+                                });
+                long nextVoice = selected.presentation().voices().stream()
+                        .mapToLong(voice -> switch (voice) {
+                            case PresentationVoiceSnapshot.Sample sample ->
+                                    sample.voiceId();
+                            case PresentationVoiceSnapshot.Streamed streamed ->
+                                    streamed.voiceId();
+                        })
+                        .max().orElse(0L) + 1L;
+                nextVoice = Math.max(
+                        nextVoice, selected.presentation().nextVoiceId());
+                stagedResolver.reserveVoiceIdsThrough(nextVoice);
+                if (command != null) stagedResolver.submit(command);
+                boolean optionalFallbackSfx =
+                        command instanceof AudioCommand.PlaySfx sfx
+                                && (sfx.route()
+                                == AudioCommand.SfxRoute.RING_RESOLVED
+                                || sfx.route()
+                                == AudioCommand.SfxRoute.FALLBACK_NAME);
+                if (resolutionFailure[0] != null && !optionalFallbackSfx) {
+                    throw new IllegalStateException(
+                            "Presentation rewind command resolution failed: "
+                                    + resolutionFailure[0]);
+                }
+                if (selected.presentation().smpsSession() == null
+                        || selected.presentation().smpsLogical() == null) {
+                    throw new IllegalArgumentException(
+                            "held-rewind staging requires one SMPS session/logical "
+                                    + "snapshot pair");
+                }
+                SmpsDriverSession.PreparedRestore preparedSession =
+                        presentationBinding.shadowSmpsSession.prepareRestore(
+                                selected.presentation().smpsSession(),
+                                selected.presentation().smpsLogical(),
+                                presentationBinding.shadowFactory::resolveDac);
+                sessionMutation = presentationBinding.shadowSmpsSession.captureLiveMutation();
+                presentationBinding.shadowSmpsSession.commitRestore(preparedSession);
+                if (nativePause != null) presentationBinding.shadowSmpsSession.replayNativePause(nativePause);
+                stagedCommands.applyPendingAtomically(commandToApply ->
+                        AudioPresentationSessionCommandApplier.apply(
+                                presentationBinding.shadowSmpsSession, stagedRegistry,
+                                commandToApply));
+                AudioPresentationSnapshot staged = stagedRegistry.snapshot();
+                boolean stagedManagerRingLeft =
+                        managerRingAfter(selected.ringLeft(), command);
+                stagedSelection = new AudioLogicalSnapshot(
+                        stagedManagerRingLeft,
+                        selected.commandTimelineFrame(),
+                        selected.commandTimelineNextOrder(),
+                        selected.commandEntryCount(),
+                        staged,
+                        selected.donorGameIds(),
+                        selected.donorBindings(),
+                        nativePause == null ? selected.forwardServiceSnapshot() : nativeForward);
+            } catch (RuntimeException failure) {
+                primaryFailure = failure;
+                throw failure;
+            } finally {
+                try {
+                    if (sessionMutation != null) {
+                        presentationBinding.shadowSmpsSession.rollbackLiveMutation(
+                                sessionMutation);
+                    }
+                } catch (RuntimeException rollbackFailure) {
+                    if (primaryFailure != null) {
+                        primaryFailure.addSuppressed(rollbackFailure);
+                    } else {
+                        throw rollbackFailure;
+                    }
+                } finally {
+                    try {
+                        stagedRegistry.clear();
+                    } finally {
+                        try {
+                            stagingDiagnostics.endPreparation();
+                        } finally {
+                            try {
+                                stagingDiagnostics.discard();
+                            } finally {
+                                presentationBinding.presentationCoordFlagHandlers.state()
+                                        .restore(liveCoord);
+                            }
+                        }
+                    }
+                }
+            }
+            publishDeferredNativeSelection(stagedSelection);
+        }
+
+        /** Invalidate an older prepared target before publishing a replacement. */
+        private void publishDeferredNativeSelection(AudioLogicalSnapshot selected) {
+            if (deferredReverseLogicalPrepared) {
+                presentationBinding.shadowProducer.discardPreparedRestoreSelection();
+                deferredReverseLogicalPrepared = false;
+            }
+            deferredReverseLogicalSnapshot = selected;
+        }
+
+        /** Internal native PauseGame operation; preserves chip time and mailbox ownership. */
+        private void requestNativePause(boolean paused) {
+            if (rewindReplaySuppressionDepth > 0) return;
+            presentationBinding.ensureShadowPresentation();
+            presentationBinding.shadowSmpsSession.requireNativePauseSupported();
+            if (!(presentationBinding.shadowRequestService instanceof AudioNativePauseAccess.Mailbox mailbox)) {
+                throw new UnsupportedOperationException("native pause mailbox is unavailable");
+            }
+            if (deferredReverseLogicalSnapshot == null) {
+                var previous = presentationBinding.shadowRequestService.snapshot();
+                try { mailbox.submitNativePause(paused); }
+                catch (RuntimeException failure) {
+                    try { presentationBinding.shadowRequestService.restore(previous); }
+                    catch (RuntimeException rollback) { failure.addSuppressed(rollback); }
+                    throw failure;
+                }
+                return;
+            }
+            AudioLogicalSnapshot selected = deferredReverseLogicalSnapshot;
+            AudioPresentationForwardService.Snapshot previous = presentationBinding.shadowRequestService.snapshot();
+            AudioPresentationForwardService.Snapshot staged;
+            RuntimeException primary = null;
+            try {
+                presentationBinding.shadowRequestService.restore(selected.forwardServiceSnapshot());
+                mailbox.submitNativePause(paused);
+                staged = presentationBinding.shadowRequestService.snapshot();
+            } catch (RuntimeException failure) {
+                primary = failure;
+                throw failure;
+            } finally {
+                try { presentationBinding.shadowRequestService.restore(previous); }
+                catch (RuntimeException rollback) {
+                    if (primary != null) primary.addSuppressed(rollback);
+                    else throw rollback;
+                }
+            }
+            publishDeferredNativeSelection(new AudioLogicalSnapshot(selected.ringLeft(),
+                    selected.commandTimelineFrame(), selected.commandTimelineNextOrder(),
+                    selected.commandEntryCount(), selected.presentation(), selected.donorGameIds(),
+                    selected.donorBindings(), staged));
+        }
+
+        private void replayNativePause(boolean paused, AudioPresentationForwardService.Snapshot forward) {
+            Objects.requireNonNull(forward, "forward");
+            presentationBinding.ensureShadowPresentation();
+            // Validate the source-owned snapshot before publishing any detached
+            // session selection; a failed validation restores the live source.
+            var previous = presentationBinding.shadowRequestService.snapshot();
+            RuntimeException primary = null;
+            try { presentationBinding.shadowRequestService.restore(forward); }
+            catch (RuntimeException failure) { primary = failure; throw failure; }
+            finally {
+                try { presentationBinding.shadowRequestService.restore(previous); }
+                catch (RuntimeException rollback) {
+                    if (primary != null) primary.addSuppressed(rollback);
+                    else throw rollback;
+                }
+            }
+            stageDeferredPresentationCommand(null, paused, forward);
+            refreshDeferredReverseLogicalSnapshot();
+        }
+
+        private void advanceNativeHistoryCursor(int cursor) {
+            presentationBinding.ensureShadowPresentation();
+            if (deferredReverseLogicalSnapshot == null) {
+                presentationBinding.shadowSmpsSession.setNativeHistoryCursor(cursor);
+                return;
+            }
+            AudioLogicalSnapshot selected = deferredReverseLogicalSnapshot;
+            AudioPresentationSnapshot p = selected.presentation();
+            var s = p.smpsSession();
+            if (s == null) return;
+            var session = new com.openggf.audio.session.SmpsDriverSessionSnapshot(s.initialized(),
+                    s.pendingGlobalCommand(), s.profile(), s.selectedDacSource(), s.speedShoesEnabled(),
+                    s.speedMultiplier(), s.musicTempoPercent(), s.ringLeft(), s.musicFmDacTrackCount(),
+                    s.segaPcmTransport(), s.physical(), s.nativePause(), cursor);
+            var presentation = new AudioPresentationSnapshot(p.nextVoiceId(), p.voices(), p.activeMusic(),
+                    p.overrideStack(), p.rawPcmVoiceId(), p.fmMuteMask(), p.fmSoloMask(), p.psgMuteMask(),
+                    p.psgSoloMask(), p.sfxBlocked(), p.sfxBlockHeldThroughFadeIn(), p.pendingRestore(),
+                    p.speedShoesEnabled(), p.speedMultiplier(), p.ringLeft(), p.coordFlagRuntimeState(),
+                    session, p.smpsLogical(), p.forwardTiming());
+            publishDeferredNativeSelection(new AudioLogicalSnapshot(selected.ringLeft(),
+                    selected.commandTimelineFrame(), selected.commandTimelineNextOrder(),
+                    selected.commandEntryCount(), presentation, selected.donorGameIds(),
+                    selected.donorBindings(), selected.forwardServiceSnapshot()));
+        }
+
+        private boolean managerRingAfter(
+                boolean current, AudioCommand command) {
+            if (command instanceof AudioCommand.ResetRingAlternation reset) {
+                return reset.ringLeft();
+            }
+            if (command instanceof AudioCommand.RetainGlobalStop
+                    || command instanceof AudioCommand
+                    .StopSegaPcmAndRetainGlobalStop) {
+                return true;
+            }
+            if (command instanceof AudioCommand.PlaySfx sfx
+                    && sfx.route() == AudioCommand.SfxRoute.RING_RESOLVED) {
+                if (GameSound.RING_LEFT.name().equals(sfx.sfxName())) {
+                    return false;
+                }
+                if (GameSound.RING_RIGHT.name().equals(sfx.sfxName())) {
+                    return true;
+                }
+            }
+            return current;
+        }
+
+        private void refreshDeferredReverseLogicalSnapshot() {
+            if (deferredReverseLogicalSnapshot == null) {
+                return;
+            }
+            AudioLogicalSnapshot selected = deferredReverseLogicalSnapshot;
+            deferredReverseLogicalSnapshot = new AudioLogicalSnapshot(
+                    selected.ringLeft(),
+                    commandTimeline.currentFrame(),
+                    commandTimeline.nextOrder(),
+                    selected.commandEntryCount(),
+                    selected.presentation(),
+                    selected.donorGameIds(),
+                    selected.donorBindings(),
+                    selected.forwardServiceSnapshot());
+        }
+
+        private boolean afterRewindRestore(
+                int frame, AudioPresentationPolicy policy) {
+            if (policy == null) {
+                return true;
+            }
+            presentationBinding.ensureShadowPresentation();
+            boolean preservePostBoundarySources =
+                    postBoundaryReverseTarget;
+            if (policy != AudioPresentationPolicy.SUPPRESSED_INTERNAL_RESTORE) {
+                if (!AudioManager.this.endReverseAudioPresentation()) {
+                    return false;
+                }
+                presentationBinding.shadowProducer.applyPendingCommandsAtOwnerBoundary();
+            }
+            if (preservePostBoundarySources) {
+                return true;
+            }
+            switch (policy) {
+                case SUPPRESSED_INTERNAL_RESTORE -> {
+                }
+                case STOP_TRANSIENT_SFX_RESYNC_MUSIC -> {
+                    presentationBinding.shadowCommands.submit(
+                            new AudioPresentationCommand.RestoreMusicOverride(),
+                            () -> true,
+                            AudioManager.this::drainShadowCommandsAtOwnerBoundary);
+                    presentationBinding.shadowProducer
+                            .stopTransientVoicesThenApplyPendingCommandsAtOwnerBoundary();
+                }
+                case STOP_TRANSIENT_SFX ->
+                        presentationBinding.shadowProducer.stopTransientVoicesAtOwnerBoundary();
+                case STOP_ALL_PRESENTATION -> {
+                    presentationBinding.shadowCommands.submit(
+                            new AudioPresentationCommand.HardReset(),
+                            () -> true,
+                            AudioManager.this::drainShadowCommandsAtOwnerBoundary);
+                    presentationBinding.shadowProducer.applyPendingCommandsAtOwnerBoundary();
+                    presentationBinding.shadowProducer.clearHistory();
+                    presentationBinding.shadowParity.historyBoundary();
+                }
+            }
+            return true;
+        }
+
+        private void beginReverseAudioPresentation() {
+            presentationBinding.ensureShadowPresentation();
+            // Check presentation ownership before replacing the logical rewind
+            // ledger: a scoped recorded replay may already own audible reverse.
+            presentationBinding.shadowProducer.beginReverse(1.0);
+            deferredReverseLogicalSnapshot = null;
+            deferredReverseLogicalPrepared = false;
+            postBoundaryReverseTarget = false;
+            reverseAudioPresentationActive = true;
+        }
+
+        private boolean isReverseAudioPresentationActive() {
+            return reverseAudioPresentationActive;
+        }
+
+        private boolean isReverseAudioOutputActive() {
+            return reverseAudioPresentationActive
+                    || presentationBinding.shadowProducer != null && presentationBinding.shadowProducer.isReplayReverseActive();
+        }
+
+        /** Successful producer return is the publication boundary, not universal atomicity. */
+        private boolean endReverseAudioPresentation() {
+            AudioLogicalSnapshot selected = deferredReverseLogicalSnapshot;
+            boolean preparedDuringAttempt = false;
+            boolean producerReturned = false;
+            AudioPresentationForwardService.Snapshot previousForward = null;
+            boolean forwardRestoreAttempted = false;
+            // Consumed once per entry, whichever exit this attempt takes, so an
+            // armed injection can never leak into a later unrelated release.
+            ReverseReleaseFailurePoint injectFailure = failNextReverseRelease;
+            failNextReverseRelease = null;
+            Map<GameSound, DonorSfxBinding> publishedBindings = null;
+            try {
+                if (selected != null && !deferredReverseLogicalPrepared) {
+                    if (!AudioManager.this.commitDeferredReverseLogicalRestore()) {
+                        return false;
+                    }
+                    preparedDuringAttempt = true;
+                }
+                if (selected != null) {
+                    // Materialize bindings before calling the producer; later
+                    // failures may still leave the characterized partial effects.
+                    publishedBindings = sourcePublication.materializeSoundBindings(
+                            selected.donorBindings());
+                    if ((presentationBinding.shadowRequestService == null)
+                            != (selected.forwardServiceSnapshot() == null)) {
+                        throw new IllegalArgumentException("reverse target forward-service ownership differs");
+                    }
+                    if (presentationBinding.shadowRequestService != null) {
+                        previousForward = presentationBinding.shadowRequestService.snapshot();
+                        forwardRestoreAttempted = true;
+                        presentationBinding.shadowRequestService.restore(selected.forwardServiceSnapshot());
+                    }
+                }
+                if (injectFailure
+                        == ReverseReleaseFailurePoint.BEFORE_PRODUCER_COMMIT) {
+                    throw new IllegalStateException(
+                            "injected reverse release publication failure");
+                }
+                if (presentationBinding.shadowProducer != null) {
+                    presentationBinding.shadowProducer.endReverse(
+                            !postBoundaryReverseTarget);
+                }
+                producerReturned = true;
+                if (injectFailure
+                        == ReverseReleaseFailurePoint.AFTER_PRODUCER_COMMIT) {
+                    throw new IllegalStateException(
+                            "injected reverse release publication failure");
+                }
+            } catch (RuntimeException failure) {
+                if (producerReturned) {
+                    publishReverseReleaseLedger(selected, publishedBindings);
+                    AudioDiagnosticObserverException.rethrowIfPresent(failure);
+                    LOGGER.log(Level.WARNING,
+                            "Audio reverse release publication failed after the "
+                                    + "producer commit; completed the release from "
+                                    + "the pre-commit ledger", failure);
+                    return true;
+                }
+                if (forwardRestoreAttempted) {
+                    try { presentationBinding.shadowRequestService.restore(previousForward); }
+                    catch (RuntimeException rollback) { failure.addSuppressed(rollback); }
+                }
+                if (preparedDuringAttempt) {
+                    try {
+                        presentationBinding.shadowProducer.discardPreparedRestoreSelection();
+                    } catch (RuntimeException discardFailure) {
+                        failure.addSuppressed(discardFailure);
+                    }
+                    deferredReverseLogicalPrepared = false;
+                }
+                AudioDiagnosticObserverException.rethrowIfPresent(failure);
+                LOGGER.log(Level.WARNING,
+                        "Audio reverse release failed; retained prior live state",
+                        failure);
+                return false;
+            }
+            publishReverseReleaseLedger(selected, publishedBindings);
+            return true;
+        }
+
+        private boolean preparePostBoundaryReverseRelease() {
+            if (!reverseAudioPresentationActive) {
+                return true;
+            }
+            presentationBinding.ensureShadowPresentation();
+            if (!postBoundaryReverseTarget) {
+                AudioLogicalSnapshot fresh;
+                try {
+                    // A level/seamless transition may initialize presentation
+                    // sources after the final frame packet. Publish that ledger at
+                    // this owner boundary without advancing PCM cadence/history,
+                    // then capture the complete fresh producer state.
+                    presentationBinding.shadowProducer.applyPendingCommandsAtOwnerBoundary();
+                    fresh = AudioManager.this.captureLogicalSnapshot();
+                } catch (RuntimeException failure) {
+                    // Successfully applied predecessors have already left the
+                    // ledger; the failing command and successors remain queued.
+                    // The stale selected/prepared target is retained until a
+                    // complete drain and fresh capture can replace it.
+                    AudioDiagnosticObserverException.rethrowIfPresent(failure);
+                    LOGGER.log(Level.WARNING,
+                            "Audio post-boundary command publication failed; "
+                                    + "retained coherent live state for retry",
+                            failure);
+                    return false;
+                }
+                invalidatePreparation();
+                presentationBinding.shadowProducer.discardPreparedRestoreSelection();
+                deferredReverseLogicalSnapshot = fresh;
+                deferredReverseLogicalPrepared = false;
+                postBoundaryReverseTarget = true;
+            }
+            return AudioManager.this.commitDeferredReverseLogicalRestore();
+        }
+
+        private boolean commitDeferredReverseLogicalRestore() {
+            if (!reverseAudioPresentationActive
+                    || deferredReverseLogicalSnapshot == null
+                    || deferredReverseLogicalPrepared) {
+                return deferredReverseLogicalPrepared;
+            }
+            AudioLogicalSnapshot selected = deferredReverseLogicalSnapshot;
+            try {
+                presentationBinding.shadowProducer.prepareRestoreSelection(
+                        selected.presentation(), presentationBinding.shadowFactory);
+                deferredReverseLogicalPrepared = true;
+                return true;
+            } catch (RuntimeException failure) {
+                deferredReverseLogicalPrepared = false;
+                AudioDiagnosticObserverException.rethrowIfPresent(failure);
+                LOGGER.log(Level.WARNING,
+                        "Audio reverse target preparation failed; retained live "
+                                + "state for retry",
+                        failure);
+                return false;
             }
         }
 
-        @Override
-        public long totalStereoFrames() {
+        private void publishReverseReleaseLedger(
+                AudioLogicalSnapshot selected,
+                Map<GameSound, DonorSfxBinding> publishedBindings) {
+            if (selected != null) {
+                publishHeldRestoreLedger(selected, publishedBindings);
+            }
+            // Only retire after every root ledger write returns successfully.
+            deferredReverseLogicalSnapshot = null;
+            deferredReverseLogicalPrepared = false;
+            reverseAudioPresentationActive = false;
+            postBoundaryReverseTarget = false;
+        }
+
+        private boolean blocksSfxAdmission() {
+            return reverseAudioPresentationActive;
+        }
+
+        private boolean blocksRingAdmission() {
+            return deferredReverseLogicalSnapshot != null
+                    ? deferredReverseLogicalSnapshot.presentation().sfxBlocked()
+                    : presentationBinding.shadowProducer != null && presentationBinding.shadowProducer.areSfxRequestsBlocked();
+        }
+
+        private AudioLogicalSnapshot selectedSnapshot() {
+            return deferredReverseLogicalSnapshot;
+        }
+
+        private void armReleaseFailure(ReverseReleaseFailurePoint point) {
+            failNextReverseRelease = java.util.Objects.requireNonNull(point, "point");
+        }
+
+        /** Producer close/discard owns its resources; this invalidates only our acknowledgment. */
+        private void invalidatePreparation() {
+            deferredReverseLogicalPrepared = false;
+        }
+
+        private void reset() {
+            reverseAudioPresentationActive = false;
+            deferredReverseLogicalSnapshot = null;
+            deferredReverseLogicalPrepared = false;
+            postBoundaryReverseTarget = false;
+            resetLogicalRestorePublicationCount();
+            failNextReverseRelease = null;
+        }
+    }
+
+    /**
+     * Owns capture admission, accepted release and continuity across producer
+     * generations. Packet storage and clocks remain with the producer. Monitor
+     * coverage follows the compatibility caller or the explicit manager regions;
+     * this owner never substitutes its own monitor.
+     */
+    private final class CaptureLeases {
+        /** Single non-consuming offline compatibility lease. */
+        private LiveCaptureAudioHandle offlineCaptureHandle;
+        private ManagerLiveCaptureAudioHandle activeLiveCaptureAudioHandle;
+        private boolean liveCaptureAwaitingRebind;
+
+        private LiveCaptureAudioHandle beginLiveCaptureAudio(int frameRate) {
+            // Scene music uses the same final packets and therefore requires no second capture lease.
+            if (activeLiveCaptureAudioHandle != null) {
+                throw new IllegalStateException("A live capture audio handle is already attached");
+            }
+            presentationBinding.ensureShadowPresentation();
+            LiveCaptureAudioHandle capture = presentationBinding.shadowProducer.attachCapture(frameRate);
+            ManagerLiveCaptureAudioHandle handle =
+                    new ManagerLiveCaptureAudioHandle(capture, frameRate);
+            activeLiveCaptureAudioHandle = handle;
+            return handle;
+        }
+
+        private void beginCaptureMode(int sampleRate, int frameRate) {
+            if (offlineCaptureHandle != null) {
+                throw new IllegalStateException(
+                        "An offline capture lease is already attached");
+            }
+            if (frameRate <= 0) {
+                throw new IllegalArgumentException("frameRate must be positive");
+            }
+            presentationBinding.ensureShadowPresentation();
+            // ensureShadowPresentation guarantees the presentation sink and the
+            // producer share one sample rate (a mismatched sink is replaced before
+            // the producer is built, and replaceSink rejects an incompatible one),
+            // so the sink rate is the producer rate.
+            int producerSampleRate = AudioManager.this.outputSampleRate();
+            if (sampleRate != producerSampleRate) {
+                throw new IllegalArgumentException(
+                        "offline capture sample rate " + sampleRate
+                                + " does not match the presentation producer rate "
+                                + producerSampleRate);
+            }
+            if (frameRate != presentationBinding.shadowFrameRate) {
+                throw new IllegalArgumentException(
+                        "offline capture frame rate " + frameRate
+                                + " does not match the presentation producer frame"
+                                + " rate " + presentationBinding.shadowFrameRate
+                                + "; a mismatched lease would truncate or zero-pad"
+                                + " every presented packet");
+            }
+            offlineCaptureHandle = presentationBinding.shadowProducer.attachCapture(frameRate);
+        }
+
+        private int presentationFrameRate() {
+            presentationBinding.ensureShadowPresentation();
+            return presentationBinding.shadowFrameRate;
+        }
+
+        private int drainCaptureFrame(short[] target) {
+            if (offlineCaptureHandle == null) {
+                throw new IllegalStateException("beginCaptureMode() not called");
+            }
+            return offlineCaptureHandle.drainPresentationFrame(target);
+        }
+
+        private void endCaptureMode() {
+            LiveCaptureAudioHandle handle = offlineCaptureHandle;
+            if (handle == null) {
+                return;
+            }
+            handle.close();
+            offlineCaptureHandle = null;
+        }
+
+        /**
+         * Idempotently closes the live-recording lease. Identical rule to
+         * {@link #endCaptureMode()}: the manager's view of the lease is retired
+         * only after the producer has accepted the detach.
+         *
+         * <p>A capture lease can only be released on the producer's owner thread,
+         * so an off-thread close throws with the lease still attached. Marking the
+         * handle closed or clearing {@code activeLiveCaptureAudioHandle} first
+         * would leave this manager believing it holds no lease while the producer
+         * keeps copying every presented packet into the orphan, would let the next
+         * {@code beginLiveCaptureAudio} attach a second lease instead of rejecting
+         * it, and would make a retry from the owner thread a no-op so the orphan
+         * could never be detached at all.
+         */
+        private void closeLiveCaptureAudio(ManagerLiveCaptureAudioHandle handle) {
             synchronized (AudioManager.this) {
-                return carriedStereoFrames + capture.totalStereoFrames();
+                if (handle.closed) {
+                    return;
+                }
+                handle.capture.close();
+                handle.closed = true;
+                if (activeLiveCaptureAudioHandle == handle) {
+                    activeLiveCaptureAudioHandle = null;
+                }
             }
         }
 
-        @Override
-        public AudioFrameClock.Snapshot clockSnapshot() {
+        /**
+         * Reconcile against the producer currently published after close callbacks.
+         * A foreign-thread close rejects before release. An accepted close marks
+         * leases closed before fallible teardown, so offline admission retires even
+         * if later manager-wide cleanup is skipped. Live retirement separately takes
+         * the manager monitor and preserves any pending rebuild carry.
+         */
+        private void reconcileProducerClose() {
+            // Preserve the live read and its failure precedence if a callback
+            // cleared the producer; an earlier snapshot or null guard changes it.
+            if (presentationBinding.shadowProducer.isClosed()) {
+                offlineCaptureHandle = null;
+                retireLiveCaptureAudioHandle();
+            }
+        }
+
+        private void retireWithoutProducer() {
+            offlineCaptureHandle = null;
+            retireLiveCaptureAudioHandle();
+        }
+
+        /**
+         * A rebuild of the presentation must not end a recording that is already
+         * running. Backend replacement, launch replacement, reset and base-source
+         * replacement mark the lease here. Retiring it at a mode transition meant a
+         * recording started on the master title screen lost its audio the moment the
+         * player started a game, and the Task 11 degradation turned that into
+         * permanent silence rather than a visible failure.
+         *
+         * <p>{@link AudioManager#destroy()} does not mark. It normally retires,
+         * but an already-pending carry survives that teardown too.
+         */
+        private void detachLiveCaptureAudioHandleForRebuild() {
             synchronized (AudioManager.this) {
-                return capture.clockSnapshot();
+                ManagerLiveCaptureAudioHandle live = activeLiveCaptureAudioHandle;
+                liveCaptureAwaitingRebind = live != null && !live.closed;
             }
         }
 
-        @Override
-        public void close() {
-            closeLiveCaptureAudio(this);
+        /**
+         * Re-attaches a carried lease to the freshly built producer.
+         *
+         * <p>Ordinary attachment failures retire the recording, which the recorder
+         * degrades to phase-correct clocked silence with one warning. Diagnostic
+         * observer failures escape before retirement. Sample-rate validation stays
+         * outside that attachment catch.
+         *
+         * @param producerSampleRate the rebuilt producer's rate. A recording is
+         *        muxed at the rate captured when it started (ffmpeg {@code -ar}),
+         *        so carrying a lease onto a producer running at a different rate
+         *        would write pitch-shifted audio — which looks like it worked.
+         *        Refusing the carry is the honest answer.
+         */
+        private void rebindLiveCaptureAudioHandle(int producerSampleRate) {
+            synchronized (AudioManager.this) {
+                if (!liveCaptureAwaitingRebind) {
+                    return;
+                }
+                liveCaptureAwaitingRebind = false;
+                ManagerLiveCaptureAudioHandle live = activeLiveCaptureAudioHandle;
+                if (live == null || live.closed || presentationBinding.shadowProducer == null) {
+                    return;
+                }
+                if (live.capture.sampleRate() != producerSampleRate) {
+                    LOGGER.warning("Live recording lease cannot follow the presentation"
+                            + " from " + live.capture.sampleRate() + " Hz to "
+                            + producerSampleRate + " Hz; the recording continues"
+                            + " without audio rather than pitch-shifted");
+                    retireLiveCaptureAudioHandle();
+                    return;
+                }
+                try {
+                    // Carry the phase so the recorded audio does not jump at the swap.
+                    long carried = live.capture.totalStereoFrames();
+                    live.capture = presentationBinding.shadowProducer.attachCapture(
+                            live.requestedFrameRate, live.capture.clockSnapshot());
+                    live.carriedStereoFrames += carried;
+                } catch (RuntimeException rebindFailure) {
+                    AudioDiagnosticObserverException.rethrowIfPresent(rebindFailure);
+                    LOGGER.log(Level.WARNING,
+                            "Live recording lease could not be carried across a"
+                                    + " presentation rebuild", rebindFailure);
+                    retireLiveCaptureAudioHandle();
+                }
+            }
+        }
+
+        private void retireLiveCaptureAudioHandle() {
+            synchronized (AudioManager.this) {
+                if (liveCaptureAwaitingRebind) {
+                    // Preserve the pending carry even through a later destroy;
+                    // successful realization can still bind it to a new producer.
+                    return;
+                }
+                ManagerLiveCaptureAudioHandle live = activeLiveCaptureAudioHandle;
+                if (live != null) {
+                    live.closed = true;
+                    activeLiveCaptureAudioHandle = null;
+                }
+            }
+        }
+
+        private final class ManagerLiveCaptureAudioHandle implements LiveCaptureAudioHandle {
+            private LiveCaptureAudioHandle capture;
+            private final int requestedFrameRate;
+            /**
+             * Frames drained through leases this handle has already outlived. A
+             * fresh lease deliberately starts its own total at zero, but a rebind
+             * continues one recording, so the totals are summed rather than reset.
+             */
+            private long carriedStereoFrames;
+            private boolean closed;
+
+            private ManagerLiveCaptureAudioHandle(LiveCaptureAudioHandle capture,
+                                                  int requestedFrameRate) {
+                this.capture = capture;
+                this.requestedFrameRate = requestedFrameRate;
+            }
+
+
+            @Override
+            public int sampleRate() {
+                return capture.sampleRate();
+            }
+
+            @Override
+            public int frameRate() {
+                return capture.frameRate();
+            }
+
+            @Override
+            public int maxStereoFramesPerPacket() {
+                return capture.maxStereoFramesPerPacket();
+            }
+
+            @Override
+            public int drainPresentationFrame(short[] target) {
+                synchronized (AudioManager.this) {
+                    if (closed) {
+                        throw new IllegalStateException("Live capture audio handle is no longer attached");
+                    }
+                    return capture.drainPresentationFrame(target);
+                }
+            }
+
+            @Override
+            public long totalStereoFrames() {
+                synchronized (AudioManager.this) {
+                    return carriedStereoFrames + capture.totalStereoFrames();
+                }
+            }
+
+            @Override
+            public AudioFrameClock.Snapshot clockSnapshot() {
+                synchronized (AudioManager.this) {
+                    return capture.clockSnapshot();
+                }
+            }
+
+            @Override
+            public void close() {
+                closeLiveCaptureAudio(this);
+            }
         }
     }
 
     public void destroy() {
         invalidateAndReleaseStreamedMusicSession();
-        clearPreparedReverseRestore();
-        closeShadowPresentation();
+        heldReverseRestore.invalidatePreparation();
+        presentationBinding.closeShadowPresentation();
         if (backend != null) {
             backend.destroy();
         }
@@ -4505,12 +4942,9 @@ public class AudioManager implements MusicRestoreSink {
      * Pauses audio playback. Called when the game window is minimized or loses focus.
      */
     public void pause() {
-        if (presentationSink instanceof OpenAlPcmSink openAlSink) {
-            openAlSink.pause();
-        }
-        if (shadowProducer != null) shadowProducer.pauseScenePcmSource();
+        presentationBinding.pause();
         AudioDiagnosticObserverException.invoke(() ->
-                driverServiceObserver.onLifecycle(
+                diagnosticInstallation.driverServiceObserver().onLifecycle(
                         SmpsDriverServiceObserver.LifecycleEvent.session(
                                 SmpsDriverServiceObserver.LifecycleKind.PAUSE)));
     }
@@ -4519,12 +4953,9 @@ public class AudioManager implements MusicRestoreSink {
      * Resumes audio playback after being paused.
      */
     public void resume() {
-        boolean resumeSpeaker = shadowProducer == null || shadowProducer.resumeScenePcmSource();
-        if (resumeSpeaker && presentationSink instanceof OpenAlPcmSink openAlSink) {
-            openAlSink.resume();
-        }
+        presentationBinding.resume();
         AudioDiagnosticObserverException.invoke(() ->
-                driverServiceObserver.onLifecycle(
+                diagnosticInstallation.driverServiceObserver().onLifecycle(
                         SmpsDriverServiceObserver.LifecycleEvent.session(
                                 SmpsDriverServiceObserver.LifecycleKind.RESUME)));
     }

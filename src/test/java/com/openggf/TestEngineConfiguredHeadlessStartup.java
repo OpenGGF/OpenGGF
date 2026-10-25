@@ -164,7 +164,7 @@ class TestEngineConfiguredHeadlessStartup {
     void productionOfflineBackendRemainsInstalledWhenALaunchRebuildsPresentation() throws Exception {
         EngineContext services = context();
         StartupProbeEngine engine = new StartupProbeEngine(services);
-        var backend = new HeadlessSmpsAudioBackend(config, services.profiler());
+        var backend = new HeadlessSmpsAudioBackend(config, services.profiler(), services.audio());
         engine.initializeConfiguredHeadlessSession(new InputHandler(), backend);
         var prepare = Engine.class.getDeclaredMethod("preparePresentationForLaunch", GameModule.class);
         prepare.setAccessible(true);

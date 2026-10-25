@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.RewindStateful;
@@ -59,7 +61,8 @@ import java.util.Map;
  * <b>Disassembly Reference:</b> s2.asm Obj69, lines 53465-53663
  */
 public class NutObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj69 rotates/translates a nut on its screw; rotational phase is not horizontal facing.
 
     // Solid object collision dimensions (from disassembly lines 53532-53534)
     // d1 = $2B (half-width = 43), d2 = $C (y_radius = 12), d3 = $D (ground height = 13)

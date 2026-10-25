@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.mutators.PlayerFluidContextAccess;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -23,7 +24,10 @@ import com.openggf.sprites.playable.Tails;
  * two-frame raw loop, and otherwise uses the shared badnik destruction path.
  */
 public final class JawzBadnikInstance extends AbstractS3kBadnikInstance
-        implements SpawnRewindRecreatable, TouchResponseListener {
+        implements SpawnRewindRecreatable, TouchResponseListener, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
 
     // ObjDat_Jawz: collision_flags = $D7 -> size index $17, standard badnik body.
     private static final int COLLISION_SIZE_INDEX = 0x17;

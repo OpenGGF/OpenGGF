@@ -10,7 +10,6 @@ import com.openggf.game.session.GameplayModeContext;
 import com.openggf.graphics.FadeManager;
 import com.openggf.level.LevelManager;
 import com.openggf.sprites.managers.SpriteManager;
-import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.logging.Logger;
 
@@ -49,29 +48,6 @@ final class GameLoopGameOverExit {
         levelManager.getLevelGamestate().setTimerFrames(0);
         if (provider.savesOnContinue()) saveLivesContinues.run();
         return true;
-    }
-
-    /** The ending's own return: clean up demo state, fade the music, then black. */
-    static void startEndingReturn(SpriteManager spriteManager, LevelManager levelManager, String mainCode,
-            AudioManager audioManager, FadeManager fadeManager, GameplayModeContext context, Runnable onBlack) {
-        // The native caller departs once (S1 TryAg_Exit, docs/s1disasm/sonic.asm:4034-4036).
-        // Keep an already-requested departure's callback in charge until its
-        // wrapper closes the outgoing fade lease before entering the title.
-        if (fadeManager.hasPendingCompletion()) {
-            return;
-        }
-        spriteManager.setInputSuppressed(false);
-        levelManager.setForceHudSuppressed(false);
-        if (spriteManager.getSprite(mainCode) instanceof AbstractPlayableSprite player) {
-            player.setControlLocked(false);
-            player.clearForcedInputMask();
-        }
-        audioManager.fadeOutMusic();
-        if (!fadeManager.isActive()) {
-            GameLoopPlcLifecycle.startToBlack(context, fadeManager, onBlack);
-        } else {
-            onBlack.run();
-        }
     }
 
     static void exitToTitleScreen(SpriteManager spriteManager, LevelManager levelManager, Camera camera,

@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.camera.Camera;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -34,7 +36,7 @@ import java.util.List;
  * and spawns two pieces, {@code $10} launches Sonic, spawns four pieces, and
  * optionally starts LBZ when bit 7 is set, {@code $18} is the snowdust emitter.
  */
-public class IczSnowPileObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class IczSnowPileObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
     private static final int OBJECT_ID = Sonic3kObjectIds.ICZ_SNOW_PILE;
     private static final int DRAW_PALETTE = 2;
     private static final int PRIORITY_BUCKET = 1; // ObjDat3 priority $80.

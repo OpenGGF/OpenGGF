@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.events.S3kCnzEventWriteSupport;
@@ -23,7 +25,7 @@ import java.util.List;
  * elsewhere in the engine.
  */
 public final class CnzWaterLevelCorkFloorInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable {
+        implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
     /**
      * ROM: {@code move.w #$958,(Target_water_level).w}.
      */

@@ -7,6 +7,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
@@ -28,7 +29,9 @@ import java.util.List;
  * sets an in-air flip state, and runs the two-frame hit animation.
  */
 public class PachinkoTriangleBumperObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable, RomObjectCodePointerProvider {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable, RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
+
+    // Native bounce chooses the contacted player side, not a bumper-facing bit; hit frames keep geometric mounting.
 
     /**
      * Word 0 of this object's S3K SST holds its live ROM code pointer.

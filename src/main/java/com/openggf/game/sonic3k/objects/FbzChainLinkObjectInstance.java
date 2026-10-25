@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
@@ -12,7 +14,7 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import java.util.List;
 
 /** Locked-on {@code Obj_FBZChainLink} ($72), sonic3k.asm $3A7D4-$3AD88. */
-public final class FbzChainLinkObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
+public final class FbzChainLinkObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
     private static final int[][] HAND_FRAMES={{0x85,0x80,0x81,0x91},{0x82,0x83,0x84,0x91}};
     private static final int[][] HAND_DELTAS={{6,10,12,4},{4,12,12,4}};
     private static final com.openggf.level.objects.ObjectPlayerQuery.PlayerVisitor<FbzChainLinkObjectInstance> UPDATE_PLAYER=(chain,entity)->{if(entity instanceof AbstractPlayableSprite player){int i=chain.participants.slot(player);if(chain.participants.get(i,1)!=0)chain.participants.set(i,1,chain.participants.get(i,1)-1);chain.updateParticipant(player,i);}};

@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -18,7 +20,7 @@ import java.util.List;
 
 /** Locked-on {@code Obj_FBZMagneticSpikeBall} ($73), $3B0F0-$3B256. */
 public final class FbzMagneticSpikeBallObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, SpawnRewindRecreatable {
+        implements TouchResponseProvider, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
 
     public enum Kind { BALL, STATIC_BALL, FIELD_WIDE, FIELD_NARROW }
 

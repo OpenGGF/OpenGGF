@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -43,7 +44,11 @@ import java.util.List;
  * only randomness in the object, which is why every flame in a chain flickers out of step.
  */
 public final class FirewormFlameInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, RewindRecreatable {
+        implements TouchResponseProvider, RewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // The attached flame receives the segment native direction; its current animation frame does not redefine it.
+        return flipX ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.LEFT;
+    }
 
     /** {@code word_8FA08}: {@code dc.w $180} (sonic3k.asm:196555). */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x0180);

@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
@@ -28,7 +30,8 @@ import java.util.List;
  * Collision flags: 0x8B (inherited from projectile).
  */
 public class HtzGroundFireObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, SpawnRewindRecreatable {
+        implements TouchResponseProvider, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // loc_231D2 spreads upright ArtNem_HtzFireball1 flames; spreadDirection selects clone positions, not a render-facing state.
 
     private static final int PRIORITY = 3;
     private static final int COLLISION_FLAGS = 0x8B;

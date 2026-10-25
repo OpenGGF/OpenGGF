@@ -44,7 +44,6 @@ class TestGameLoopSuspension {
     private GameLoop loop;
     private final AtomicInteger suspends = new AtomicInteger();
     private final AtomicInteger fullReturns = new AtomicInteger();
-    private GameMode parkedFrom;
 
     @BeforeEach
     void setUp() {
@@ -59,11 +58,13 @@ class TestGameLoopSuspension {
         loop = new GameLoop(input);
         loop.changeGameModeWithoutRewindBoundary(GameMode.LEVEL);
         loop.setReturnToMasterTitleHandler(fullReturns::incrementAndGet);
-        loop.suspension.setHost(new GameLoopSuspension.Host() {
-            @Override public boolean prepareSuspend(GameMode mode) { return true; }
-            @Override public void suspend() { suspends.incrementAndGet(); parkedFrom = loop.suspension.park(); }
-            @Override public void resume() { loop.suspension.unpark(parkedFrom); }
-        });
+        var effects = SuspensionTestAccess.effects();
+        when(effects.capture().publishedWorld()).thenAnswer(ignored -> SessionManager.getCurrentWorldSession());
+        org.mockito.Mockito.doAnswer(ignored -> {
+            suspends.incrementAndGet();
+            return org.mockito.Mockito.mock(com.openggf.game.launch.SuspendedSettings.class);
+        }).when(effects.capture()).suspendSettings();
+        loop.suspension.setEffects(effects.binding());
     }
 
     @AfterEach
@@ -91,7 +92,8 @@ class TestGameLoopSuspension {
         assertEquals(GameMode.MASTER_TITLE_SCREEN, loop.getCurrentGameMode(), "the hold reached the hub");
         assertEquals(1, suspends.get());
         assertEquals(0, fullReturns.get(), "a stock level suspends rather than tearing down");
-        assertEquals(GameMode.LEVEL, parkedFrom, "park reports the mode it left, for resume");
+        SuspendedGame saved = SuspensionTestAccess.get(loop.suspension, "suspendedGame");
+        assertEquals(GameMode.LEVEL, saved.mode(), "park reports the mode it left, for resume");
         assertSame(gameplay, SessionManager.getCurrentGameplayMode(), "the session stays loaded");
         assertNull(loop.resolveGameplayModeContext(), "GameLoop runs the hub as if no game were bound");
         assertFalse(loop.ownsGameplayFadeLifecycle(), "the hub's fades run on the bootstrap manager");

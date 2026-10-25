@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.GroundMode;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.RewindStateful;
@@ -36,7 +38,7 @@ import java.util.logging.Logger;
  * <p>Two instances at the HCZ1 boss arena (X=$3418/$3440, Y=$07F4, subtype $38)
  * carry Sonic downward into the Act 2 starting area after the miniboss.
  */
-public class HCZTwistingLoopObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class HCZTwistingLoopObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
     private static final Logger LOG = Logger.getLogger(HCZTwistingLoopObjectInstance.class.getName());
 
     // =========================================================================

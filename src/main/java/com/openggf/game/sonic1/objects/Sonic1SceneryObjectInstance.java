@@ -5,6 +5,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
@@ -26,7 +27,9 @@ import java.util.List;
  * <p>
  * Reference: docs/s1disasm/_incObj/1C Scenery.asm
  */
-public class Sonic1SceneryObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
+public class Sonic1SceneryObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+// Scen stump/launcher-base mappings are static props; placement flips retain native mounting.
 
     // From Scen_Values: subtype 3 uses Map_Bri frame 1 (bridge stump)
     private static final int SUBTYPE_BRIDGE_STUMP = 3;

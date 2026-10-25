@@ -11,6 +11,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreateObjectLinks;
 import com.openggf.level.objects.RewindRecreatable;
@@ -34,7 +35,9 @@ import java.util.Map;
  * with the ROM's fixed launch speeds.
  */
 public class MGZPulleyObjectInstance extends AbstractObjectInstance
-        implements RewindRecreatable {
+        implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+    // Obj_MGZPulley flips wheel/chain mounting geometry; player release direction is not pulley facing.
 
     private static final String ART_KEY = Sonic3kObjectArtKeys.MGZ_PULLEY;
 

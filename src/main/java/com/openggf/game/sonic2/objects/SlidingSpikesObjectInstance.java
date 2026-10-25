@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.debug.DebugOverlayManager;
@@ -43,7 +45,13 @@ import java.util.List;
  * - Y distance: |player_y - object_y + 0x10| < 0x20
  */
 public class SlidingSpikesObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable, ObjectVisualFacing.Source {
+    @Override
+    public ObjectVisualFacing.Basis nativeFacing() {
+        // Obj76 slides the spike block LEFT with x_flip clear and RIGHT when set;
+        // this native slide/front owner remains fixed while the obstacle waits.
+        return hFlip ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.LEFT;
+    }
 
     private static final boolean DEBUG_VIEW_ENABLED = staticDebugViewEnabled();
     private static final DebugOverlayManager OVERLAY_MANAGER = staticDebugOverlay();

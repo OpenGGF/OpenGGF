@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.GroundMode;
 import com.openggf.graphics.GLCommand;
@@ -17,7 +19,7 @@ import com.openggf.physics.TrigLookupTable;
 import java.util.List;
 
 /** Locked-on {@code Obj_FBZWireCageStationary} ($70), sonic3k.asm $3A238-$3A568. */
-public final class FbzWireCageStationaryObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable, RomObjectCodePointerProvider {
+public final class FbzWireCageStationaryObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable, RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
     private static final com.openggf.level.objects.ObjectPlayerQuery.PlayerVisitor<FbzWireCageStationaryObjectInstance> UPDATE_PLAYER=(cage,entity)->{if(entity instanceof AbstractPlayableSprite player)cage.updateVisitedPlayer(player);};
     private static final com.openggf.level.objects.ObjectPlayerQuery.PlayerVisitor<FbzWireCageStationaryObjectInstance> BIND_PLAYER=(cage,entity)->{if(entity instanceof AbstractPlayableSprite player)cage.participants.slot(player);};
     private static final int[] TRACK_HEIGHT = {4,0,0,0,0,0,0,0,0,0,0,4};

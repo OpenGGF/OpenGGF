@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
@@ -32,7 +33,12 @@ import java.util.List;
  * {@code loc_627C6}, {@code loc_6282A}, {@code loc_6285A}.
  */
 public final class CutsceneKnucklesLbz1Instance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable {
+        implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // This native cutscene actor keeps the unmirrored Knuckles direction; motion and reaction poses do not turn its logical facing.
+        return ObjectVisualFacing.Basis.RIGHT;
+    }
+
     private static final int INITIAL_MAPPING_FRAME = 0x16;
     private static final int STAND_MAPPING_FRAME = 0x1C;
     private static final int CAMERA_MIN_Y = 0x00A0;

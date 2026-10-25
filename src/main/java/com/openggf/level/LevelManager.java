@@ -11,7 +11,7 @@ import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.editor.persistence.EditorSaveManager;
-import com.openggf.data.Game;
+import com.openggf.game.Game;
 import com.openggf.data.Rom;
 import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.resources.DynamicArtDecisionOwner;
@@ -697,9 +697,18 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
     /** Establishes the current game's production audio/request service. */
     public void configureAudio() throws IOException {
-        // Installing the profile builds its loader immediately; bind the current data source first.
-        audioManager.setRom(worldSession.getDataSource().rom().orElse(null));
-        audioManager.setAudioProfile(gameModule.getAudioProfile());
+        var nextProfile = gameModule.getAudioProfile();
+        var installedProfile = audioManager.getAudioProfile();
+        if (installedProfile != null && installedProfile != nextProfile) {
+            // Neither eager loader may observe the other game's ROM during replacement.
+            audioManager.setRom(null);
+            audioManager.setAudioProfile(nextProfile);
+            audioManager.setRom(worldSession.getDataSource().rom().orElse(null));
+        } else {
+            // Cold and same-profile entries retain the existing source/loader bypass.
+            audioManager.setRom(worldSession.getDataSource().rom().orElse(null));
+            audioManager.setAudioProfile(nextProfile);
+        }
         audioManager.setSoundMap(game.getSoundMap());
         audioManager.resetRingSound();
     }

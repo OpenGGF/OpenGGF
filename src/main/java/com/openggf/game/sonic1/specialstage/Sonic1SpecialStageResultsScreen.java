@@ -37,7 +37,7 @@ import java.util.logging.Logger;
  *
  * <p>Art loading is self-contained (loaded directly from ROM) so the results
  * screen works regardless of whether a level is loaded. This follows the same
- * pattern as the S2 {@code SpecialStageResultsScreenObjectInstance}.
+ * pattern as the S2 {@code Sonic2SpecialStageResultsScreen}.
  */
 public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
     private int viewportXOffset;
@@ -414,7 +414,7 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
 
     /**
      * Loads all art from ROM and builds renderers. Follows the same pattern as
-     * {@code SpecialStageResultsScreenObjectInstance.loadArt()} in S2.
+     * {@code Sonic2SpecialStageResultsScreen.loadArt()} in S2.
      */
     private void loadArt() {
         try {

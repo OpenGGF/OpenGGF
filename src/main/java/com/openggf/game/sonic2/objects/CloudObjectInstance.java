@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.camera.Camera;
 import com.openggf.debug.DebugRenderContext;
@@ -37,7 +39,8 @@ import java.util.List;
  * SubObjData: mappings=ObjB3_MapUnc_3B32C, art_tile=ArtTile_ArtNem_Clouds (palette 2),
  * render_flags=level_fg, priority=6, width=$30, collision=0.
  */
-public class CloudObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class CloudObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // ObjB3 drifts cloud scenery; horizontal velocity does not face a body.
 
     // Velocity lookup table indexed by (subtype - 0x5E) / 2
     // From disassembly: word_3B30C

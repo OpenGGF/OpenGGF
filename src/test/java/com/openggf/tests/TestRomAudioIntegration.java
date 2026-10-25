@@ -2,6 +2,7 @@ package com.openggf.tests;
 import com.openggf.game.sonic2.Sonic2;
 import com.openggf.game.sonic2.audio.Sonic2SmpsSequencerConfig;
 
+import com.openggf.game.GameServices;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.openggf.audio.smps.AbstractSmpsData;
@@ -75,7 +76,7 @@ public class TestRomAudioIntegration {
         assertNotNull(dac, "DAC data should load");
 
         LoggingSynth synth = new LoggingSynth();
-        SmpsSequencer seq = new SmpsSequencer(data, dac, synth, Sonic2SmpsSequencerConfig.CONFIG);
+        SmpsSequencer seq = new SmpsSequencer(data, dac, synth, GameServices.audio(), Sonic2SmpsSequencerConfig.CONFIG);
 
         // Run enough frames to cover early percussion passages
         short[] buffer = new short[4096];
@@ -129,7 +130,7 @@ public class TestRomAudioIntegration {
                     "Sequencer PCM output must be deterministic; diverged on iteration " + i);
         }
 
-        SmpsSequencer seq = new SmpsSequencer(loader.loadMusic(0x82), loader.loadDacData(),
+        SmpsSequencer seq = new SmpsSequencer(loader.loadMusic(0x82), loader.loadDacData(), GameServices.audio(),
                 Sonic2SmpsSequencerConfig.CONFIG);
         short[] buffer = new short[4096];
         for (int i = 0; i < 50; i++) {
@@ -143,7 +144,7 @@ public class TestRomAudioIntegration {
     private short[][] renderSequencer(int iterations) {
         AbstractSmpsData data = loader.loadMusic(0x82); // Metropolis
         DacData dac = loader.loadDacData();
-        SmpsSequencer seq = new SmpsSequencer(data, dac, Sonic2SmpsSequencerConfig.CONFIG);
+        SmpsSequencer seq = new SmpsSequencer(data, dac, GameServices.audio(), Sonic2SmpsSequencerConfig.CONFIG);
         short[][] frames = new short[iterations][];
         short[] buffer = new short[4096];
         for (int i = 0; i < iterations; i++) {
@@ -159,7 +160,7 @@ public class TestRomAudioIntegration {
         DacData dac = loader.loadDacData();
 
         LoggingSynth synth = new LoggingSynth();
-        SmpsSequencer seq = new SmpsSequencer(data, dac, synth, Sonic2SmpsSequencerConfig.CONFIG);
+        SmpsSequencer seq = new SmpsSequencer(data, dac, synth, GameServices.audio(), Sonic2SmpsSequencerConfig.CONFIG);
 
         // Standalone construction prepares logical state only; the driver-owned
         // admission path performs the DAC-enable write.
@@ -184,7 +185,7 @@ public class TestRomAudioIntegration {
         AbstractSmpsData smps = loader.loadMusic(0x82); // Metropolis contains DAC drums
         DacData dacData = loader.loadDacData();
         LoggingSynth synth = new LoggingSynth();
-        SmpsSequencer seq = new SmpsSequencer(smps, dacData, synth, Sonic2SmpsSequencerConfig.CONFIG);
+        SmpsSequencer seq = new SmpsSequencer(smps, dacData, synth, GameServices.audio(), Sonic2SmpsSequencerConfig.CONFIG);
 
         assertNull(synth.configuredDacData,
                 "Standalone sequencer construction must not select a DAC bank");
@@ -209,8 +210,8 @@ public class TestRomAudioIntegration {
                 com.openggf.audio.driver.SmpsDriverTestAccess.create(44_100);
         com.openggf.audio.driver.SmpsDriver singleFrameDriver =
                 com.openggf.audio.driver.SmpsDriverTestAccess.create(44_100);
-        bulkDriver.addSequencer(new SmpsSequencer(data, dac, bulkDriver, Sonic2SmpsSequencerConfig.CONFIG), false);
-        singleFrameDriver.addSequencer(new SmpsSequencer(data, dac, singleFrameDriver, Sonic2SmpsSequencerConfig.CONFIG), false);
+        bulkDriver.addSequencer(new SmpsSequencer(data, dac, bulkDriver, GameServices.audio(), Sonic2SmpsSequencerConfig.CONFIG), false);
+        singleFrameDriver.addSequencer(new SmpsSequencer(data, dac, singleFrameDriver, GameServices.audio(), Sonic2SmpsSequencerConfig.CONFIG), false);
 
         short[] actual = new short[1024];
         short[] expected = new short[1024];

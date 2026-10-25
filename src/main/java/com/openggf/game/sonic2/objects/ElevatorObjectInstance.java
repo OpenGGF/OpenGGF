@@ -1,4 +1,6 @@
 package com.openggf.game.sonic2.objects;
+
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.level.objects.BoxObjectInstance;
 
@@ -43,7 +45,8 @@ import java.util.List;
  * <b>Disassembly Reference:</b> s2.asm ObjD5 (CNZ Elevator), lines 58376-58498
  */
 public class ElevatorObjectInstance extends BoxObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // ObjD5 moves a platform vertically; its inversion bit is not horizontal facing.
 
     // State constants (from disassembly routine offsets)
     private static final int STATE_WAIT_FOR_CONTACT = 0;

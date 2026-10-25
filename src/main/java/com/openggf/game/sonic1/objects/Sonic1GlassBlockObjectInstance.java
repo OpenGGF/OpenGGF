@@ -11,6 +11,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
@@ -50,7 +51,9 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/30 MZ Large Green Glass Blocks.asm
  */
 public class Sonic1GlassBlockObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+// Glass movement is vertical; both the pillar and its reflection child have no horizontal facing.
 
     // --- Collision parameters ---
 

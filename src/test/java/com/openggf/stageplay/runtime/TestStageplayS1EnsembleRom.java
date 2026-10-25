@@ -1,5 +1,7 @@
 package com.openggf.stageplay.runtime;
 
+import com.openggf.stageplay.StageplayDocument.Facing;
+
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
@@ -108,8 +110,8 @@ class TestStageplayS1EnsembleRom {
                     && p.respawnTracked() && p.x() > 900 && p.x() < 2000).findFirst().orElseThrow();
             var actor = new ObjectActor("monitor", "monitor", "s1", 0, 0, monitor.objectId(), monitor.subtype(),
                     monitor.layoutIndex(), List.of(
-                    new ObjectKey(0, monitor.x(), monitor.y(), 0, -1, false, true, Interpolation.HOLD, ObjectMode.POSE),
-                    new ObjectKey(10, monitor.x(), monitor.y(), 0, -1, false, true, Interpolation.HOLD, ObjectMode.FREE)), List.of());
+                    new ObjectKey(0, monitor.x(), monitor.y(), 0, -1, Facing.LEFT, true, Interpolation.HOLD, ObjectMode.POSE),
+                    new ObjectKey(10, monitor.x(), monitor.y(), 0, -1, Facing.LEFT, true, Interpolation.HOLD, ObjectMode.FREE)), List.of());
             var scene = StageplayDocument.empty("s1", 0, 0, 0, 0, 320, 224).withDurationFrames(30)
                     .withSet(new SetSource("s1", 0, 0, "", ""))
                     .withObjectActors(List.of(actor));
@@ -143,6 +145,6 @@ class TestStageplayS1EnsembleRom {
     }
     private static Actor actor(String id, int x, int y) {
         return new Actor(id, id, "s1", "sonic", List.of(
-                new ActorKey(0, x, y, 0, -1, false, true, 1, Interpolation.HOLD)));
+                new ActorKey(0, x, y, 0, -1, Facing.RIGHT, true, 1, Interpolation.HOLD)));
     }
 }

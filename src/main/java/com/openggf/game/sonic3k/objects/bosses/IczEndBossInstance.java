@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.bosses;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
@@ -54,7 +55,12 @@ import java.util.Map;
  */
 public final class IczEndBossInstance extends AbstractBossInstance
         implements MultiPieceSolidProvider, SolidObjectListener, SpawnRewindRecreatable,
-        MultiBucketRenderable {
+        MultiBucketRenderable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // The native pilot/escape-ship owner includes robotnikShipFlyingRight as well as the parent render bit.
+        return robotnikShipFlipX() ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.LEFT;
+    }
+
     // Player-only native control tail; directing must not advance this controller's
     // routine, timers, world flags, camera or level transition.
     private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();
