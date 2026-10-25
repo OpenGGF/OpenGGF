@@ -7,6 +7,7 @@ import com.openggf.game.soniccd.media.CdMmdImage;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.lang.reflect.Modifier;
 import java.nio.ByteBuffer;
 import java.nio.ReadOnlyBufferException;
 import java.util.ArrayList;
@@ -164,7 +165,7 @@ class TestCdR11aObjectAssets {
 
     @Test
     void metadataNamesOriginalUsaFileRangesWithoutChangingTheExistingAssetEnumeration() {
-        assertEquals(31, CdR11aObjectAssets.Table.values().length);
+        assertEquals(32, CdR11aObjectAssets.Table.values().length);
         for (var table : CdR11aObjectAssets.Table.values()) {
             assertEquals(CdNativeFile.R11A, table.range().file());
             assertEquals(CdMmdImage.Domain.ORIGINAL_WORD_RAM, table.range().domain());
@@ -352,7 +353,7 @@ class TestCdR11aObjectAssets {
         assertEquals(0x23A0, CdR11aObjectAssets.decodeTileWord(raw, 0, 0));
         assertEquals(0x4334, CdR11aObjectAssets.decodeTileWord(raw, 5, 0));
         for (int selector = 1; selector < 18; selector++) {
-            if (selector == 5) { continue; }
+            if (selector == 5 || selector == 0xC) { continue; }
             int unreviewed = selector;
             assertThrows(UnsupportedOperationException.class, () -> CdR11aObjectAssets.decodeTileWord(raw, unreviewed, 0));
         }
@@ -767,5 +768,208 @@ class TestCdR11aObjectAssets {
         byte[] out = new byte[values.length];
         for (int i = 0; i < values.length; i++) { out[i] = (byte) values[i]; }
         return out;
+    }
+
+    @Test
+    void verticalTunnelDoorAppendsOneUsaMappingBesideTheExistingStandardArtSource() {
+        var table = CdR11aObjectAssets.Table.TUNNEL_DOOR_VERTICAL_MAPPINGS;
+        assertEquals(31, table.ordinal(), "append after all 31 existing tables");
+        assertEquals(table, CdR11aObjectAssets.Table.values()[31]);
+        assertEquals(32, CdR11aObjectAssets.Table.values().length);
+        assertEquals("MapSpr_FlapDoorV", table.nativeLabel());
+        assertEquals(new CdR11aProfile.FileRange(CdNativeFile.R11A,
+                CdMmdImage.Domain.ORIGINAL_WORD_RAM, 0xCE9A, 28), table.range());
+        assertEquals(0x20CE9A, table.range().nativeAddress());
+        assertEquals(0xCEB6, table.range().endExclusive());
+        for (var old : CdR11aObjectAssets.Table.values()) {
+            if (old == table) { continue; }
+            assertTrue(old.range().endExclusive() <= table.range().fileOffset()
+                    || table.range().endExclusive() <= old.range().fileOffset(), old.name());
+        }
+        var art = CdR11aAsset.ART_TUNNEL_DOOR;
+        assertEquals("Art_TunnelDoor", art.nativeLabel());
+        assertEquals(CdR11aAsset.Kind.SOURCE_BLOB, art.kind());
+        assertEquals(CdR11aAsset.Encoding.NEMESIS, art.encodingForReviewedConsumer());
+        assertEquals(154, art.length());
+        for (var region : CdReleaseVariant.values()) { assertEquals(0x36AFE, art.fileOffset(region)); }
+        assertEquals(0x36B98, art.fileOffset(CdReleaseVariant.USA) + art.length());
+        assertEquals(0x36B98, CdR11aAsset.ART_TUNNEL_DOOR_SPLASH.fileOffset(CdReleaseVariant.USA));
+    }
+
+    @Test
+    void constructedVerticalTunnelDoorRangeNeverAuthenticatesAnOwner() throws Exception {
+        byte[] fake = new byte[CdR11aProfile.FILE_BYTES];
+        ByteBuffer.wrap(fake).putInt(8, 0x200100).putInt(12, 0x20010C).putInt(16, 0x200112);
+        byte[] maps = verticalTunnelDoorMappings();
+        System.arraycopy(maps, 0, fake, 0xCE9A, maps.length);
+        fake[0xCE99] = 0x4E; fake[0xCEB6] = 0x4E;
+        var image = CdMmdImage.parse(fake);
+        var bytes = CdR11aObjectAssets.Table.TUNNEL_DOOR_VERTICAL_MAPPINGS.range().read(image);
+        assertArrayEquals(maps, bytes.copy());
+        assertEquals("954bf4fd9df8e85b782482c17f65e68d32101f1e43e21fd4a7fe4058a91b5275",
+                CdR11aProfile.sha256(bytes.copy()));
+        fake[0xCE9B] = 0;
+        byte[] changed = bytes.copy(); changed[1] = 0;
+        assertEquals(4, bytes.unsignedWord(0));
+        assertThrows(ReadOnlyBufferException.class, () -> bytes.buffer().put((byte) 0));
+        assertThrows(IndexOutOfBoundsException.class, () -> bytes.unsignedByte(28));
+        assertThrows(IllegalArgumentException.class, () -> new CdR11aProfile.FileRange(CdNativeFile.R11A,
+                CdMmdImage.Domain.RELOCATED_COPY, 0xCE9A, 28));
+        var profile = CdR11aProfile.forStage(CdReleaseVariant.USA, CdStageKey.parse("R11A"));
+        var asserted = new CdR11aAssets.Identity(CdReleaseVariant.USA, profile.stage(), profile.file(),
+                profile.domain(), profile.expectedMmdSha256(), "constructed mappings do not authenticate media");
+        var error = assertThrows(IOException.class, () -> CdR11aObjectAssets.load(profile, asserted, image, null));
+        assertTrue(error.getMessage().contains("MMD content"));
+    }
+
+    @Test
+    void constructedVerticalTunnelDoorKeepsTwoStaticFramesNativeFlipsAndRealPads() {
+        byte[] maps = verticalTunnelDoorMappings();
+        var visual = CdObjectVisualAssets.decodeStatic(maps, 2, 12);
+        assertEquals(0, visual.mappingTableOffset());
+        assertArrayEquals(maps, visual.mappings().copy());
+        assertEquals(List.of(4, 16), visual.mappingFrames().stream()
+                .map(CdObjectVisualAssets.MappingFrame::relativeOffset).toList());
+        assertEquals(List.of(11, 11), visual.mappingFrames().stream().map(f -> f.bytes().length()).toList());
+        assertEquals(List.of(new CdObjectVisualAssets.Piece(-24, 1, 0x1804, -4),
+                new CdObjectVisualAssets.Piece(-8, 3, 0x1800, -4)), visual.mappingFrames().get(0).pieces());
+        assertEquals(List.of(new CdObjectVisualAssets.Piece(-24, 0xC, 6, -4),
+                new CdObjectVisualAssets.Piece(-24, 4, 0xA, 28)), visual.mappingFrames().get(1).pieces());
+        assertEquals(11, visual.mappingFrames().stream().flatMap(f -> f.pieces().stream())
+                .mapToInt(p -> p.tileOffset() + p.tileCount() - 1).max().orElseThrow());
+        assertTrue(visual.animations().isEmpty(), "the vertical native body never calls its included animation");
+        assertEquals(0, visual.animationTable().length());
+        assertEquals(0, visual.mappings().unsignedByte(15));
+        assertEquals(0, visual.mappings().unsignedByte(27));
+        Arrays.fill(maps, (byte) 0);
+        assertEquals(4, visual.mappings().unsignedWord(0));
+        assertEquals(0x1804, visual.mappingFrames().getFirst().pieces().getFirst().rawTileWord());
+        assertThrows(ReadOnlyBufferException.class, () -> visual.mappings().buffer().put((byte) 0));
+        assertThrows(ReadOnlyBufferException.class, () -> visual.mappingFrames().getFirst().bytes().buffer().put((byte) 0));
+        assertThrows(UnsupportedOperationException.class, visual.mappingFrames()::clear);
+        assertThrows(UnsupportedOperationException.class, visual.mappingFrames().getFirst().pieces()::clear);
+        assertThrows(UnsupportedOperationException.class, visual.animations()::clear);
+    }
+
+    @Test
+    void verticalTunnelDoorUsesTheExistingStrictDecoderWithoutTailOrArtFallback() {
+        byte[] maps = verticalTunnelDoorMappings();
+        for (int pad : new int[]{15, 27}) {
+            byte[] malformed = maps.clone(); malformed[pad] = 1;
+            assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decodeStatic(malformed, 2, 12));
+        }
+        for (int target : new int[]{0, 2, 5, 28, 0x8000, 0xFFFF}) {
+            byte[] malformed = maps.clone(); ByteBuffer.wrap(malformed).putShort(0, (short) target);
+            assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decodeStatic(malformed, 2, 12));
+        }
+        byte[] crossing = maps.clone(); crossing[4] = 3;
+        assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decodeStatic(crossing, 2, 12));
+        byte[] badSize = maps.clone(); badSize[6] = 0x10;
+        assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decodeStatic(badSize, 2, 12));
+        assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decodeStatic(maps, 2, 11));
+        assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decodeStatic(maps, 3, 12));
+        assertThrows(IllegalArgumentException.class,
+                () -> CdObjectVisualAssets.decodeStatic(Arrays.copyOf(maps, 26), 2, 12));
+        assertThrows(IllegalArgumentException.class,
+                () -> CdObjectVisualAssets.decodeStatic(Arrays.copyOf(maps, 29), 2, 12));
+    }
+
+    @Test
+    void selectorCAdmitsOnlySubtypeZeroAlongsideTheTwoExistingConsumers() {
+        byte[] raw = verticalTunnelDoorTileIds();
+        assertEquals(0x23A0, CdR11aObjectAssets.decodeTileWord(raw, 0, 0));
+        assertEquals(0x4334, CdR11aObjectAssets.decodeTileWord(raw, 5, 0));
+        assertEquals(0x8328, CdR11aObjectAssets.decodeTileWord(raw, 0xC, 0));
+        for (int selector = 0; selector <= 0x7FFF; selector++) {
+            if (selector == 0 || selector == 5 || selector == 0xC) { continue; }
+            int unsupported = selector;
+            assertThrows(UnsupportedOperationException.class,
+                    () -> CdR11aObjectAssets.decodeTileWord(raw, unsupported, 0));
+        }
+        for (int selector : new int[]{0, 5, 0xC}) {
+            for (int subtype = 1; subtype <= 0xFF; subtype++) {
+                int unsupported = subtype;
+                assertThrows(UnsupportedOperationException.class,
+                        () -> CdR11aObjectAssets.decodeTileWord(raw, selector, unsupported));
+            }
+            for (int bad : new int[]{-1, 256, Integer.MAX_VALUE}) {
+                assertThrows(IllegalArgumentException.class, () -> CdR11aObjectAssets.decodeTileWord(raw, selector, bad));
+            }
+        }
+        for (int bad : new int[]{-1, 0x8000, Integer.MAX_VALUE}) {
+            assertThrows(IllegalArgumentException.class, () -> CdR11aObjectAssets.decodeTileWord(raw, bad, 0));
+        }
+        for (int target : new int[]{0, 34, 37, 74, 0x8000, 0xFFFF}) {
+            byte[] malformed = raw.clone(); ByteBuffer.wrap(malformed).putShort(24, (short) target);
+            assertThrows(IllegalArgumentException.class, () -> CdR11aObjectAssets.decodeTileWord(malformed, 0xC, 0));
+        }
+        // Preserve validation of every index word, even an unselected body.
+        byte[] unrelatedBadPointer = raw.clone(); ByteBuffer.wrap(unrelatedBadPointer).putShort(2, (short) -2);
+        assertThrows(IllegalArgumentException.class,
+                () -> CdR11aObjectAssets.decodeTileWord(unrelatedBadPointer, 0xC, 0));
+        for (int length : new int[]{0, 73, 75}) {
+            assertThrows(IllegalArgumentException.class,
+                    () -> CdR11aObjectAssets.decodeTileWord(Arrays.copyOf(raw, length), 0xC, 0));
+        }
+        // The accessor must read the selected retained word, rather than return a fitted literal.
+        ByteBuffer.wrap(raw).putShort(62, (short) 0x8123);
+        assertEquals(0x8123, CdR11aObjectAssets.decodeTileWord(raw, 0xC, 0));
+    }
+
+    @Test
+    void privateTunnelDoorValueBankCopiesBindingsAndNeverInventsAbsentTiles() throws Exception {
+        var type = CdR11aObjectAssets.TunnelDoorArtBank.class;
+        assertTrue(Modifier.isPublic(type.getModifiers()));
+        assertTrue(Modifier.isStatic(type.getModifiers()));
+        assertTrue(Modifier.isFinal(type.getModifiers()));
+        assertEquals(0, type.getConstructors().length, "no public media/authentication seam");
+        var constructor = type.getDeclaredConstructor(List.class);
+        assertTrue(Modifier.isPrivate(constructor.getModifiers()));
+        constructor.setAccessible(true);
+        // Empty decoded data is intentional: no constructed glyph, asserted media owner or decoder seam.
+        // Actual positive tiles and their pixels are checked only through the supplied-media owner below.
+        var source = new CdR11aProfile.FileRange(CdNativeFile.R11A,
+                CdMmdImage.Domain.ORIGINAL_WORD_RAM, 0x36AFE, 154);
+        var reader = new CdR11aProfile.FileRange(CdNativeFile.R11A,
+                CdMmdImage.Domain.ORIGINAL_WORD_RAM, 0x36AFE, 153);
+        var entry = new CdR11aLoadPlan.PlcEntry(CdR11aAsset.ART_TUNNEL_DOOR, source, 0x6500);
+        var read = new CdR11aAssets.NemesisRead(CdR11aAsset.ART_TUNNEL_DOOR, source, reader, 0,
+                CdAssetBytes.copyOf(new byte[0]));
+        var binding = new CdR11aObjectAssets.ArtBinding(CdR11aAsset.ART_TUNNEL_DOOR, 1, entry, 0x8328, read);
+        var input = new ArrayList<>(List.of(binding));
+        var bank = constructor.newInstance(input);
+        input.clear();
+        assertEquals(List.of(binding), bank.bindings());
+        assertSame(binding, bank.binding(CdR11aAsset.ART_TUNNEL_DOOR));
+        assertEquals(0, binding.tileCount());
+        assertEquals(0x328, binding.firstTileId());
+        assertThrows(UnsupportedOperationException.class, bank.bindings()::clear);
+        assertThrows(UnsupportedOperationException.class, () -> bank.binding(CdR11aAsset.ART_FLOAT_BLOCK));
+        for (int absent : new int[]{0, 0x327, 0x328, 0x333, 0x334, 0x7FF}) {
+            assertThrows(UnsupportedOperationException.class, () -> bank.tile(absent));
+        }
+        for (int invalid : new int[]{-1, 0x800, Integer.MAX_VALUE}) {
+            assertThrows(IllegalArgumentException.class, () -> bank.tile(invalid));
+        }
+    }
+
+    /** Tunnel Door/Data/Mappings.asm:1-27 at 1ecc5f3a; complete hand-literal include, not media extraction. */
+    private static byte[] verticalTunnelDoorMappings() {
+        return new byte[]{0, 4, 0, 16, 2, (byte) 0xE8, 1, 0x18, 4, (byte) 0xFC,
+                (byte) 0xF8, 3, 0x18, 0, (byte) 0xFC, 0,
+                2, (byte) 0xE8, 0xC, 0, 6, (byte) 0xFC, (byte) 0xE8, 4, 0, 0xA, 0x1C, 0};
+    }
+
+    /** Object Tile IDs (Act 1 Present).asm:7-45; source declarations, not a new runtime table. */
+    private static byte[] verticalTunnelDoorTileIds() {
+        var raw = ByteBuffer.allocate(74);
+        for (int target : new int[]{36, 38, 40, 44, 46, 48, 58, 52, 56, 54, 50, 60, 62, 64, 66, 68, 70, 72}) {
+            raw.putShort((short) target);
+        }
+        for (int word : new int[]{0x23A0, 0x23B0, 0x2409, 0x2370, 0x2000, 0x2428, 0x4334, 0x320,
+                0, 0x4000, 0x4000, 0x409, 0x374, 0x8328, 0, 0, 0x490, 0x3E4, 0}) {
+            raw.putShort((short) word);
+        }
+        return raw.array();
     }
 }

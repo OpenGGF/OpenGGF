@@ -4383,3 +4383,57 @@ replay, selected PlaneB and visible-background counterfactual passed. A
 method-scoped outcome explicitly records the red combined run. Visual review
 and display remain queued for daylight, with no contact-event or native pixel
 claim from those images. All work and exports remain private/local.
+
+
+## Vertical Tunnel Door authenticated assets and body — 25 October 2026
+
+Upcoming ID35 now has retained-source asset access and a source-ordered body;
+it is not yet dispatched by Runtime or registered in the picture policy.
+Table ordinal31 appends MapSpr_FlapDoorV atCE9A/28/native20CE9A; two static
+frames preserve all four native pieces/flip attributes and two real pads.
+SelectorC is admitted only atsubtype2=0, retaining0/5 and all other rejections.
+The standard row1 binds actual ART_TUNNEL_DOOR at36AFE/154, nativebase8328,
+VRAM6500,12tiles328..333. Existing startup9views/2art, all previous table
+ordinals/banks/defaults and USA-only object admission remain unchanged/lazy.
+Actual Java reader153 succeeds and152 fails; no adjacent/invented padding is
+added. Independent author/reviewer byte joins bind actual USA ID/function,
+Init mapping/selector operands, PLC and XOR pixel hashes. Source authenticity
+is separate from decoding/semantic-guard coverage and from native residency.
+
+The body ports Init0 fallthroughMain2, unsigned borrow/range gates, word3A
+clear, incoming bit7 FM_A4 before frame1 before unconditional shared Solid,
+and Reset4 high-byte3A add8 with byte carry/low3B retention. Reset never calls
+Solid, including carry. Actual DrawObject is followed by a live reload and
+source saved-bank loaded-bit clear before full deletion. One ephemeral real
+Solid cut and synchronous publication thread current actor/global results;
+there is no second gameplay store, animation, bank or effect replay. Only two
+storage aliases are added to the existing object image. Root's prose-only
+citation correction narrows the spawner owner to385-446; gameplay is unchanged.
+
+Tests were frozen first. Static reviews confirmed a new retail helper's missing
+throwsIOException, a retained31-table expectation incompatible with append32,
+and one horizontal-contact expected X F3.8000 instead of native F2.8000
+(width4+9+1, overlap8). Root corrected tests only and preserved frozen originals.
+The raw production bank/body have no identified additional P1/P2 within review.
+Root37799 tests-only test-compile failed on expected absent Door APIs/type/aliases;
+that is compilationRED/no JUnit, not a witnessed behavioral negative.
+
+After exact production imports, Root34255 queued --lean -Dmse=off test with
+TestCdR11aObjectAssets,TestCdR11aObjectRetailAssets,TestCdTunnelDoorVertical,
+TestCdSolidObject,TestCdObjectState,TestCdObjectPool,TestCdSpring,TestCdFloatBlock,
+TestModApiSignatureSurface and suppliedmedia/explicitEGL/displayunset.
+Observed329/0failures/0errors/0skips, immediateadmission/1m36sMaven,
+exit01:58:15BST. Exact eight XML identities/Java25/media/backend inspected:
+assets29,retail3,Door79,Solid88,pool12,Spring65,Float42,API11. The requested
+TestCdObjectState selector matches no standalone class and contributes no cases;
+alias correctness is directly checked in Door and these actual consumers.
+All regional retail and selected media-gated Solid/Float cases executed.
+
+Coverage is bounded: constructed Door Solid and actual CPU DrawObject/cull,
+not final DrawObjects/SAT/GPU or live Door contact; fake-auth mutations reject
+at the full-MMD digest before semantic guards; direct decoder/slice tests
+supply separate format evidence. CAS stand-ins do not prove Runtime phase/full
+pool preflight. Native320 cold geometry and pending audio/PLC remain limited.
+Actual400-Right World currently stops at unowned35, not a completed act. Next:
+12-span412-picture join, real Runtime callbacks/dispatch, graphics cleanup range,
+actual route observation and rendered/replay checks. No full-suite/game claim.

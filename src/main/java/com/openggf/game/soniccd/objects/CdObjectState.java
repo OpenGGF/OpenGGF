@@ -35,7 +35,9 @@ public final class CdObjectState {
         // ObjPoints (HUD and Points/Main.asm:11,40,47): oPntsTimer EQU oVar2A, a byte lifetime. Storage only.
         POINTS_TIMER(0x2A),
         // ObjSpring .DisplayOnly (Spring/Main.asm:156-159): signed parent-relative bytes. Storage only.
-        SPRING_PARENT_X_OFFSET(0x38), SPRING_PARENT_Y_OFFSET(0x39);
+        SPRING_PARENT_X_OFFSET(0x38), SPRING_PARENT_Y_OFFSET(0x39),
+        // ObjTunnelDoorV_Reset (Tunnel Door/Main.asm:77): ADDQ.B at HIGH oVar3A, never low $3B. Storage only.
+        TUNNEL_DOOR_TIMER_HIGH(0x3A);
         private final int offset;
         ByteField(int offset) { this.offset = offset; }
         public int byteOffset() { return offset; }
@@ -57,7 +59,9 @@ public final class CdObjectState {
         // oGmOverDestX EQU oVar2A (Game Over/Main.asm:7,34,83,94): the text's destination X word. Overlapping storage only.
         GAME_OVER_DEST_X(0x2A),
         // ObjSpring (Spring/Main.asm:151,162,238): signed launch speed, parent low address, original X. Storage only.
-        SPRING_SPEED(0x30), SPRING_PARENT(0x34), SPRING_ANCHOR_X(0x36);
+        SPRING_SPEED(0x30), SPRING_PARENT(0x34), SPRING_ANCHOR_X(0x36),
+        // ObjTunnelDoorV_Main (Tunnel Door/Main.asm:62): CLR.W oVar3A clears $3A and $3B. Storage only.
+        TUNNEL_DOOR_TIMER(0x3A);
         private final int offset;
         WordField(int offset) { this.offset = offset; }
         public int byteOffset() { return offset; }

@@ -60,7 +60,10 @@ public final class CdR11aObjectAssets {
         SPRING_SPEEDS("ObjSpring_Speeds", 0x98E8, 4),
         // ObjSpinTunnel_Init (Spin Tunnel/Main (Tag).asm:30): actual USA immediate $23EE9C.
         // Keep the full raw include: frame 0 is an empty target inside frame 1's counted body.
-        POWERUP_MAPPINGS("MapSpr_Powerup", 0x3EE9C, 274);
+        POWERUP_MAPPINGS("MapSpr_Powerup", 0x3EE9C, 274),
+        // ObjTunnelDoorV_Init (Tunnel Door/Main.asm:36): actual USA immediate $20CE9A.
+        // Two counted frames with their real trailing zeros; the vertical body never calls Ani_FlapDoorV.
+        TUNNEL_DOOR_VERTICAL_MAPPINGS("MapSpr_FlapDoorV", 0xCE9A, 28);
 
         private final String nativeLabel;
         private final int offset;
@@ -209,6 +212,29 @@ public final class CdR11aObjectAssets {
         }
     }
 
+    /**
+     * Separate optional standard Tunnel Door source for PLC_Std row 1. No native PLC service, transfer
+     * or live residency is implied; every existing art bank remains separate.
+     */
+    public static final class TunnelDoorArtBank {
+        private final List<ArtBinding> bindings;
+        private TunnelDoorArtBank(List<ArtBinding> bindings) { this.bindings = List.copyOf(bindings); }
+        public List<ArtBinding> bindings() { return bindings; }
+        public ArtBinding binding(CdR11aAsset source) {
+            return bindings.stream().filter(b -> b.source() == source).findFirst()
+                    .orElseThrow(() -> new UnsupportedOperationException("No Tunnel Door art binding for " + source));
+        }
+        /** Native 11-bit tile ID after mapping/base-word addition; adjacent FloatBlock art remains absent. */
+        public CdAssetBytes tile(int nativeTileId) {
+            if ((nativeTileId & ~0x7FF) != 0) { throw new IllegalArgumentException("Not an 11-bit tile ID"); }
+            for (var binding : bindings) {
+                int index = nativeTileId - binding.firstTileId();
+                if (index >= 0 && index < binding.tileCount()) { return binding.bytes().slice(index * 32, 32); }
+            }
+            throw new UnsupportedOperationException("Tile has no decoded Tunnel Door source: " + nativeTileId);
+        }
+    }
+
     // Preserve the opening load's exact nine table reads and two art decodes. New data is opt-in below.
     private static final List<Table> OPENING_TABLES = List.of(Table.RING_DELTAS, Table.RING_ANIMATIONS,
             Table.RING_MAPPINGS, Table.MOSQUI_NORMAL_ANIMATIONS, Table.MOSQUI_DAMAGED_ANIMATIONS,
@@ -242,6 +268,8 @@ public final class CdR11aObjectAssets {
     private SpringArtBank springArtBank;
     private CdObjectVisualAssets springVertical;
     private CdObjectVisualAssets springHorizontal;
+    private CdObjectVisualAssets tunnelDoorVertical;
+    private TunnelDoorArtBank tunnelDoorArtBank;
 
     private CdR11aObjectAssets(CdR11aAssets.Identity identity, Map<Table, View> views, List<Delta> deltas,
                                 List<TouchSize> dimensions, CdObjectVisualAssets rings,
@@ -500,6 +528,43 @@ public final class CdR11aObjectAssets {
         return springArtBank;
     }
 
+    /** ObjTunnelDoorV_Init/Main/Reset (Tunnel Door/Main.asm:34-83) selects two frames directly, without AnimateObject. */
+    public synchronized CdObjectVisualAssets tunnelDoorVertical() {
+        if (tunnelDoorVertical == null) {
+            tunnelDoorVertical = CdObjectVisualAssets.decodeStatic(read(Table.TUNNEL_DOOR_VERTICAL_MAPPINGS), 2, 12);
+        }
+        return tunnelDoorVertical;
+    }
+
+    /** Explicit standard-art opt-in from the retained authenticated USA MMD; does not extend any existing bank. */
+    public synchronized TunnelDoorArtBank tunnelDoorArtBank() throws IOException {
+        if (tunnelDoorArtBank == null) {
+            // PLC_Std row 1 (Data (Act 1 Present).asm:58-59), Init selector $C (Tunnel Door/Main.asm:41-42)
+            // and ObjectTileIDs selector $C at subtype2 0 (Object Tile IDs (Act 1 Present).asm:20,40).
+            var source = CdR11aAsset.ART_TUNNEL_DOOR;
+            var entries = loadPlan.plcs().get(1).entries();
+            var entry = entries.get(1);
+            var blob = profile.range(source);
+            int baseWord = tileWord(0xC, 0);
+            if (entry.source() != source || entry.vramAddress() != 0x6500 || !entry.sourceRange().equals(blob)
+                    || entries.stream().filter(p -> p.source() == source).count() != 1
+                    || (baseWord & 0x7FF) * 32 != entry.vramAddress()
+                    || source.encodingForReviewedConsumer() != CdR11aAsset.Encoding.NEMESIS) {
+                throw new IllegalArgumentException("Unverified native Tunnel Door PLC row/base-word/source association");
+            }
+            // The prefix walk consumes 152 bytes; the finite 8-bit reader needs 153, all inside the 154-byte
+            // source. Its real lookahead byte is $00 at $36B96; neither adjacent splash art nor EOF padding is read.
+            var reader = new CdR11aProfile.FileRange(blob.file(), blob.domain(), blob.fileOffset(), 153);
+            var decoded = CdNemesisAsset.decode(reader.read(image).copy(), 12 * 32, 12 * 32);
+            if (decoded.consumedInputBytes() != reader.length()) {
+                throw new IOException("Tunnel Door Nemesis reader consumption differs from its reviewed finite extent");
+            }
+            var read = new CdR11aAssets.NemesisRead(source, blob, reader, decoded.consumedInputBytes(), decoded.bytes());
+            tunnelDoorArtBank = new TunnelDoorArtBank(List.of(new ArtBinding(source, 1, entry, baseWord, read)));
+        }
+        return tunnelDoorArtBank;
+    }
+
     /** Obj3DPlant_Init (3D Ramp/Main.asm:57-90): ADD.W consumes signed offsets in two distinct bodies. */
     public static PlantOffsets decodePlantOffsets(byte[] input) {
         var bytes = exact(input, 14, "Obj3DPlant_Offsets1/Obj3DPlant_Offsets2");
@@ -534,16 +599,16 @@ public final class CdR11aObjectAssets {
     /**
      * SetObjectTileID (Object Tile ID Set.asm:7-17) has a signed relative word index, then subtype2 words.
      * The source declares 18 index words (36 bytes), followed by 19 data words, not 37 index entries.
-     * Only Mosqui's selector 0 and FloatBlock's selector 5 (Floating Block/Main.asm:43-44), each at subtype2 0,
-     * are admitted; Ring writes its own literal $A7AE.
+     * Only Mosqui's selector 0, FloatBlock's selector 5 (Floating Block/Main.asm:43-44), and vertical Tunnel Door's
+     * selector $C (Tunnel Door/Main.asm:41-42), each at subtype2 0, are admitted; Ring writes its own literal $A7AE.
      */
     public static int decodeTileWord(byte[] input, int selector, int subtype2) {
         if (selector < 0 || selector > 0x7FFF || (subtype2 & ~0xFF) != 0) {
             throw new IllegalArgumentException("Object tile selector/subtype width");
         }
         var bytes = exact(input, 74, "ObjectTileIDs");
-        if ((selector != 0 && selector != 5) || subtype2 != 0) {
-            throw new UnsupportedOperationException("Only Mosqui selector 0 / FloatBlock selector 5 at subtype2 0 are reviewed");
+        if ((selector != 0 && selector != 5 && selector != 0xC) || subtype2 != 0) {
+            throw new UnsupportedOperationException("Only Mosqui selector 0 / FloatBlock selector 5 / Tunnel Door selector $C at subtype2 0 are reviewed");
         }
         int target = (short) bytes.unsignedWord(selector * 2);
         int end = bytes.length();
@@ -555,7 +620,8 @@ public final class CdR11aObjectAssets {
             if (offset > target && offset < end) { end = offset; }
         }
         if (end - target < 2) {
-            throw new IllegalArgumentException((selector == 0 ? "Mosqui" : "FloatBlock") + " tile word crosses its selected body");
+            throw new IllegalArgumentException((selector == 0 ? "Mosqui" : selector == 5 ? "FloatBlock" : "Tunnel Door")
+                    + " tile word crosses its selected body");
         }
         return bytes.unsignedWord(target);
     }
