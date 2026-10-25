@@ -1206,3 +1206,37 @@ selection, all 27 section courses, all four retained rails and API signature
 check passed 102 cases, zero skips. Both packages named `TestSonic3kLevelLoading`
 again executed (36 and seven cases). Evidence is in the external task's
 `rendering-final/`; broad smoke and integration remain outstanding.
+
+
+## Updated-base registration follow-up (2026-10-25)
+
+The isolated follow-up starts at develop `94c75d8a8` and merges frozen Typing tip
+`ef8d0714f`. The additive GameLoop merge retains navigation, keyboard capture and
+frame dispositions alongside the new title-card PLC tail admission. Upstream
+fresh-load PLC, S2 tail poses and placement-profile audio preservation stay intact.
+The only textual merge conflict is the changelog: keep both Typing/multi-game notes
+and the upstream local-ROM release qualification entry.
+
+Any-game registration separates a code role (startup scene, title entry or at least
+one stock-game patch) from a catalogue-only role. A catalogue alone cannot publish
+objects, object art, previews or service bundles. Adding mutators to a code package
+retains those capabilities, including patch-only packages with no scene. Single-game
+restrictions on zones, characters, ROM-art intake, launch teams, input/HUD policies
+and decoded patches remain unconditional. Freeze still poisons the whole transaction
+and defers factories; stock-plan patch filtering and shared copying are unchanged.
+The earlier patch-only and mixed patch/object negatives are obsolete; retain their
+supported positives and the foreign-target/decoded-patch rejections instead.
+
+Development capture must mirror production's split between content and explicit
+patches: install `ModBackedGamePatch` only when the selected plan has content, then
+run its admitted explicit patches. A real packaged any-game entrypoint checks all
+three games, declined and foreign-game filtering, ordering, fresh registrations,
+resolver admission and loader retirement. Service tests extend native coverage to
+expanded mixed plans and fresh owner-bound bundles on each application.
+
+The parent's broad smoke evidence belongs to its frozen `ef8d0714f` run and will be
+recorded by the parent. This follow-up runs only focused composition checks and
+fresh guards; it does not repair the inherited source-order assertion in
+`TestModEngineWiringSeams#audioResetAndBackendReplacementReleaseStreamedSessionState`
+or the legacy GLFW prerequisite in
+`TestHczMinibossNativeRendering#allOrbitPhasesMatchRomSpriteCompositionInNativePixels`.

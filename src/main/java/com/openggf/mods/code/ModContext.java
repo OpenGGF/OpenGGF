@@ -24,10 +24,10 @@ public final class ModContext {
     private final String owner;
     private final String baseGame;
     private static final java.util.Set<String> STOCK_GAMES = java.util.Set.of("s1", "s2", "s3k");
-    static final String ANY_GAME_RULE = "baseGame any registers a shared startup scene, title entry, typed mutator catalogue "
-            + "or per-game patches, plus objects, "
-            + "object art and service bundles; zones, characters, ROM art intake, zone policies and decoded level "
-            + "patches need a single base game";
+    static final String ANY_GAME_RULE = "baseGame any needs a startup scene, title entry, per-game patch or typed mutator catalogue; "
+            + "objects, object art, previews and service bundles require a scene, title entry or patch; "
+            + "zones, characters, ROM art intake, launch teams, input/HUD policies and decoded level patches "
+            + "need a single base game";
     private final boolean standalone;
     private final ModAssetRoot assets;
     private final java.nio.file.Path storageRoot;
@@ -432,8 +432,11 @@ public final class ModContext {
             if (standalone && gameModule == null) {
                 throw failure("Standalone manifest must register exactly one game module");
             }
-            if ("any".equals(baseGame) && ((startupScene == null && titleEntry == null
-                    && mutators.isEmpty() && patches.isEmpty()) || !zones.isEmpty()
+            boolean codeRole = startupScene != null || titleEntry != null || !patches.isEmpty();
+            boolean sharedRuntimeContent = !objects.isEmpty() || !art.isEmpty()
+                    || !objectPreviewArtKeys.isEmpty() || !serviceBundles.isEmpty();
+            if ("any".equals(baseGame) && ((!codeRole && mutators.isEmpty())
+                    || (sharedRuntimeContent && !codeRole) || !zones.isEmpty()
                     || !characters.isEmpty() || !romArt.isEmpty() || !launchTeams.isEmpty()
                     || !inputFilters.isEmpty() || !hudProfiles.isEmpty() || !decodedLevelPatches.isEmpty())) {
                 throw failure(ANY_GAME_RULE);

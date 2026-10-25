@@ -75,9 +75,13 @@ plays in several stock games. It registers the same scene on each installed stoc
 game; `ggfmod run` chooses an available configured game. An `any` mod may also
 register objects, object art, service bundles and game patches: each patch names
 its own game (`s1`, `s2` or `s3k`) and applies only when that game launches, so one
-jar can carry a patch per game while sharing its code and its save folder. It needs
-a startup scene, title entry, mutator or at least one patch. Characters, mod zones, ROM art intake, zone
-policies, decoded level patches, stock override tables and insertion declarations
+jar can carry a patch per game while sharing its code and its save folder. A startup
+scene, title entry or at least one per-game patch gives the package a code role
+that may publish those shared objects, art and services. A typed mutator catalogue
+can stand alone, but needs a code role to add shared runtime content. Mixed code
+and mutator packages keep both capabilities; patches alone need no scene.
+Characters, mod zones, ROM art intake, zone policies, decoded level patches,
+stock override tables and insertion declarations
 need a single base game and are rejected. It does not create a no-ROM standalone
 game or imply that a missing ROM is available.
 

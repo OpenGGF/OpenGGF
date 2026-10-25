@@ -836,7 +836,9 @@ its original drawing priority.
   supported modes.
   The example uses the shared Java 25 builder and accepts explicit ROM/artifact paths.
 - **Multi-game controlled mods:** one code mod can provide per-game patches with shared
-  objects and services. Startup scenes can launch stock acts and switch supplied games
+  objects and services, alongside an optional mutator catalogue. Patches need no scene,
+  including in development captures; catalogue-only packages retain their bounded role.
+  Startup scenes can launch stock acts and switch supplied games
   or teams; frame controllers supply reproducible pad input and capture layout-aware
   typed text. Course restores preserve engine ownership, and supplied testkit scene
   capabilities survive storage isolation. Custom SFX can declare a load-time DAC

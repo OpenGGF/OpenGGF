@@ -8,6 +8,8 @@ import com.openggf.mods.scene.SceneCanvas;
 import com.openggf.mods.scene.SceneContext;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestAnyGameSceneRegistration {
@@ -45,23 +47,32 @@ class TestAnyGameSceneRegistration {
         assertSame(failure, assertThrows(ModRegistrationException.class, hostile::freeze));
     }
 
-    @Test
-    void perGamePatchesExpandOnlyIntoTheirOwnGameWhileObjectsAndServicesAreShared() {
+    @ParameterizedTest @CsvSource({"scene,false", "scene,true", "title,false", "title,true", "patch,false", "patch,true"})
+    void codeRolesShareContentWithOrWithoutMutators(String role, boolean catalogue) {
         ModContext context = new ModContext("typing", "any", ModAssetRoot.forTests("typing"));
-        context.registerStartupScene(SCENE);
-        GamePatch s1 = patch("s1");
-        GamePatch s3k = patch("s3k");
-        context.registerGamePatch(s1);
-        context.registerGamePatch(s3k);
+        if ("scene".equals(role)) context.registerStartupScene(SCENE);
+        if ("title".equals(role)) context.registerTitleEntry("Shared", SCENE);
+        if (catalogue) context.registerMutator(new com.openggf.mods.mutators.MutatorDefinition(
+                "gravity", "Gravity", "", com.openggf.mods.mutators.MutatorScope.LIVE,
+                com.openggf.mods.mutators.MutatorScope.LIVE, List.of(),
+                java.util.Set.of(com.openggf.mods.mutators.MutatorCapability.DRY_SONIC_GRAVITY),
+                options -> List.of(new com.openggf.mods.mutators.MutatorPolicy.DrySonicGravity(100))));
+        if ("patch".equals(role)) {
+            context.registerGamePatch(patch("s1"));
+            context.registerGamePatch(patch("s3k"));
+        }
         context.registerObject("target", (spawn, registry) -> null);
         context.registerServiceBundle("run", () -> com.openggf.game.GameServiceBundle.builder().build());
         List<ModRegistrationPlan> expanded = context.freeze().stockScenePlans();
         assertEquals(List.of("s1", "s2", "s3k"),
                 expanded.stream().map(ModRegistrationPlan::baseGameId).toList());
-        assertEquals(List.of(List.of("s1"), List.of(), List.of("s3k")), expanded.stream()
+        assertEquals("patch".equals(role) ? List.of(List.of("s1"), List.of(), List.of("s3k"))
+                : List.of(List.of(), List.of(), List.of()), expanded.stream()
                 .map(stock -> stock.explicitPatches().stream().map(GamePatch::baseGameId).toList()).toList());
         assertTrue(expanded.stream().allMatch(stock -> stock.objectFactories().keySet().stream().anyMatch(key -> key.endsWith("target"))
                 && stock.serviceBundles().containsKey("run")));
+        assertTrue(expanded.stream().allMatch(stock -> stock.mutators().size() == (catalogue ? 1 : 0)));
+        assertEquals("title".equals(role), context.titleEntry() != null);
     }
 
     @Test
