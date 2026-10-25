@@ -4642,3 +4642,71 @@ External frozen handoffs/reviews remain under the private task directory:
 `object-motion-port-codex.md`, `object-motion-port-review.md`,
 `monitor-touch-response-codex.md`, `monitor-touch-response-review.md`.
 The review's P2 is reconciled above; original mirrors remain unchanged.
+
+### Monitor picture bindings and closed shoes reward port — 25 October 2026 GMT
+
+Private/local continuation from `37ec5b96faa195cbad3387fc712b39da95866e7a`.
+The mapping factory joins all twenty authenticated Monitor/time-post frames and
+eight odd header-free item roots. A separate thirteen-span policy adds the82
+native Monitor patterns to the prior412, for494 total; previous policies and
+logical ranges are unchanged. This is declared development preload, not native
+PLC service. The Runtime and World client still select the previous412 policy;
+Monitor bodies, item dispatch and natural reward remain unadmitted here.
+
+A shared pure shoes primitive returns the native five stores and ordered typed
+SubCPU commands. The Frame validate/apply port compares the actual five input
+values and adopts flag, timer and three physics words once at the existing
+closed cut, preserving all other state. It changes no capture schema and plays
+no audio. Region selects only the1320-USA/1200-non-USA source rule.
+
+Two source-supported corrections preserve the original external freezes. The
+R1 author counted only labelled command declarations and omitted the anonymous
+`rs.b 1` at System.inc:183. Root R2 changes SHOESMUS6B→6C and FADEPCM81→82 in
+production and numeric assertions, with the counter lesson recorded in the
+pitfall catalogue. Root R2 tests froze before its corrected production copy.
+Independent source review confirms the corrected values and exact five stores.
+
+Root89550 tests-only `test-compile` failed at missing reward/picture APIs; no
+JUnit ran. Root90505 selected exactly:
+
+```text
+TestCdPlayerSpeedShoesReward,TestCdPlayerFrameRuntime,TestCdObjectMappings,TestCdObjectPresentation,TestCdOpeningObjectRuntime,TestSonicCdOpeningWorldLoad,TestSonicCdOpeningWorldEgl,TestModApiSignatureSurface
+```
+
+It ran through the main-workspace Maven queue with `--normal -Dmse=off`, actual
+`soniccd.media.root`, `soniccd.opening.egl=true`, surfaceless EGL and verified S2
+REV01. Immediate admission, Maven1m52s, terminal `2026-10-25T02:41:47Z`:
+**512 tests, five assertion failures, zero errors/skips**. All42 pure reward,
+21 mapping,30 presentation,97 Runtime,46 WorldLoad,12 EGL and11 API tests passed;
+Frame had248 passes and five new-test failures. All eight XML reports, actual
+media, Java25 and EGL properties were inspected. All seven new media-gated
+picture methods executed. The original235 Frame cases remain unchanged.
+
+All five failures omitted standing MODE's independent FM_CHARGESTOP call
+(Sonic/Main.asm:1029-1037), before Display services the shoes timer. Root R3
+changes only three exact sound-list assertions inside the same two new methods:
+ChargeStop alone, or ChargeStop then the optional expiry level music. This also
+corrects the later nonexpiry assertion that the first failure had hidden.
+No production or fixture change was needed. Root34057 reran precisely those two
+methods/five invocations with `--lean -Dmse=off`: **5/0/0/0**, immediate admission,
+Maven25.962s, terminal `2026-10-25T02:45:16Z`; exact XML identities/Java25 checked.
+Restore/replay, actual next Display1320→1319, DMA byte content and expiry-order
+checks all completed. The512 red batch and repaired-five result are separate
+observations, not a fabricated green512 run.
+
+Independent picture and shoes reviews have no remaining P1/P2 objection to
+these final sources. Optional gaps remain: explicit static rejection vectors
+for every post/HUD first piece; an inherited wrapper-identity inequality; and
+requiring both expiry-effect indices to be present before comparing order.
+Original R1, Root R2 and R3 mirrors remain preserved externally. Full hashes and
+source citations are in the four matching private handoff/review reports.
+
+A separate read-only route probe, Root44900, observed the unchanged Right input
+route stop on attempted call324: ID19, whole59, X2128/Y728, subtype4, layer0,
+savedFlagsID45, routine0. Its one actual-media case passed with no skips; terminal
+`02:35:56Z`, Maven25.439s. The first probe failed to compile because my diagnostic
+used a nonexistent unsignedWord accessor; I corrected it to centreX/centreY.
+The temporary diagnostic was then removed byte-for-byte. This identifies a live
+shoes Monitor, not a natural contact, break or reward. It adds no runtime route
+predicate. Broad-smoke/full-game/native-playback/regional-parity claims remain
+excluded; the prior broad baseline-attributed failures remain unchanged history.

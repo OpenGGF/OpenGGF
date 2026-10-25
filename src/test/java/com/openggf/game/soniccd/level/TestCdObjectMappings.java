@@ -1034,4 +1034,238 @@ class TestCdObjectMappings {
             assertThrows(UnsupportedOperationException.class, () -> resolver.resolve(pointer, false, 0));
         }
     }
+
+    /** Complete source-text directives from Monitor and Time Post/Data/Mappings.asm:1-176, N 1ecc5f3af.
+     * Constructed format bytes, not an authenticated media owner. Native roots are separately literalized. */
+    private static final byte[] MONITOR_TIME_SOURCE = HexFormat.of().parseHex("0028003E0054006A0080009600AC00C200D800EE0104011E01380152016C018601A001B001B601BC04F6050012"
+            + "F8F0060000F0F006080000080C0006F00004F6050016F8F0060000F0F006080000080C0006F00004F605001AF8"
+            + "F0060000F0F006080000080C0006F00004F605001EF8F0060000F0F006080000080C0006F00004F6050022F8F0"
+            + "060000F0F006080000080C0006F00004F6050026F8F0060000F0F006080000080C0006F00004F605002AF8F006"
+            + "0000F0F006080000080C0006F00004F605002EF8F0060000F0F006080000080C0006F00004F6050048F8F00600"
+            + "00F0F006080000080C0006F00004F6050848F8F0060000F0F006080000080C0006F00005D80D0032F0E803004C"
+            + "F8E803084C0008010050F8080108500005D80D0832F0E803004CF8E803084C0008010050F8080108500005D80D"
+            + "003AF0E803004CF8E803084C0008010050F8080108500005D80D083AF0E803004CF8E803084C0008010050F808"
+            + "0108500005D8050042F8E803004CF8E803084C0008010050F8080108500005D8010046FCE803004CF8E803084C"
+            + "0008010050F8080108500003F0060000F0F006080000080C0006F001000D000AF001F80D0032F001F80D003AF0");
+    private static final int MONITOR_TIME_MAP = 0x20AA4E;
+    private static final int[] MONITOR_ITEM_POINTERS = {
+            0x20AA77, 0x20AA8D, 0x20AAA3, 0x20AAB9, 0x20AACF, 0x20AAE5, 0x20AAFB, 0x20AB11};
+    private static final int[] MONITOR_FRAME_OFFSETS = {
+            0x28, 0x3E, 0x54, 0x6A, 0x80, 0x96, 0xAC, 0xC2, 0xD8, 0xEE,
+            0x104, 0x11E, 0x138, 0x152, 0x16C, 0x186, 0x1A0, 0x1B0, 0x1B6, 0x1BC};
+    /** Independent piece expectations: {signed Y, size, full raw tile word, signed X}. */
+    private static final int[][][] MONITOR_TIME_FRAMES = {
+            {{-10,5,0x0012,-8},{-16,6,0,-16},{-16,6,0x0800,0},{8,12,6,-16}},
+            {{-10,5,0x0016,-8},{-16,6,0,-16},{-16,6,0x0800,0},{8,12,6,-16}},
+            {{-10,5,0x001A,-8},{-16,6,0,-16},{-16,6,0x0800,0},{8,12,6,-16}},
+            {{-10,5,0x001E,-8},{-16,6,0,-16},{-16,6,0x0800,0},{8,12,6,-16}},
+            {{-10,5,0x0022,-8},{-16,6,0,-16},{-16,6,0x0800,0},{8,12,6,-16}},
+            {{-10,5,0x0026,-8},{-16,6,0,-16},{-16,6,0x0800,0},{8,12,6,-16}},
+            {{-10,5,0x002A,-8},{-16,6,0,-16},{-16,6,0x0800,0},{8,12,6,-16}},
+            {{-10,5,0x002E,-8},{-16,6,0,-16},{-16,6,0x0800,0},{8,12,6,-16}},
+            {{-10,5,0x0048,-8},{-16,6,0,-16},{-16,6,0x0800,0},{8,12,6,-16}},
+            {{-10,5,0x0848,-8},{-16,6,0,-16},{-16,6,0x0800,0},{8,12,6,-16}},
+            {{-40,13,0x0032,-16},{-24,3,0x004C,-8},{-24,3,0x084C,0},{8,1,0x0050,-8},{8,1,0x0850,0}},
+            {{-40,13,0x0832,-16},{-24,3,0x004C,-8},{-24,3,0x084C,0},{8,1,0x0050,-8},{8,1,0x0850,0}},
+            {{-40,13,0x003A,-16},{-24,3,0x004C,-8},{-24,3,0x084C,0},{8,1,0x0050,-8},{8,1,0x0850,0}},
+            {{-40,13,0x083A,-16},{-24,3,0x004C,-8},{-24,3,0x084C,0},{8,1,0x0050,-8},{8,1,0x0850,0}},
+            {{-40,5,0x0042,-8},{-24,3,0x004C,-8},{-24,3,0x084C,0},{8,1,0x0050,-8},{8,1,0x0850,0}},
+            {{-40,1,0x0046,-4},{-24,3,0x004C,-8},{-24,3,0x084C,0},{8,1,0x0050,-8},{8,1,0x0850,0}},
+            {{-16,6,0,-16},{-16,6,0x0800,0},{8,12,6,-16}},
+            {{0,13,0x000A,-16}}, {{-8,13,0x0032,-16}}, {{-8,13,0x003A,-16}}};
+
+    @Test void declaredMonitorTimeKeepsAllTwentyLiteralCountedBodiesAndSignedPointerDomains() throws Exception {
+        assertEquals(450, MONITOR_TIME_SOURCE.length);
+        assertEquals("00a6aaefb0d6dc3051a20c1d484d45dde3fb893e404f4c17b826fff8b1d74bca", sha256(MONITOR_TIME_SOURCE));
+        var resolver = declaredMonitorTime();
+        assertMonitorTimeFrames(resolver);
+        for (int frame = 0; frame < 20; frame++) {
+            assertEquals(MONITOR_FRAME_OFFSETS[frame], (short) word(MONITOR_TIME_SOURCE, frame * 2));
+            if (frame < 10) assertEquals(0, MONITOR_TIME_SOURCE[MONITOR_FRAME_OFFSETS[frame] + 21]);
+        }
+        for (int frame = 20; frame <= 255; frame++) {
+            int absent = frame;
+            assertThrows(UnsupportedOperationException.class, () -> resolver.resolve(MONITOR_TIME_MAP, false, absent));
+        }
+        for (int frame : new int[]{-1, 256}) {
+            assertThrows(IllegalArgumentException.class, () -> resolver.resolve(MONITOR_TIME_MAP, false, frame));
+        }
+        for (int pointer : new int[]{0x20AA4D, 0x20AA4F, 0x20AA76, 0x20AA8C, 0xFF20AA4E, 0x8020AA4E}) {
+            assertThrows(UnsupportedOperationException.class, () -> resolver.resolve(pointer, false, 0));
+        }
+        assertThrows(UnsupportedOperationException.class, () -> resolver.resolve(MONITOR_TIME_MAP, true, 0));
+        var shortView = declared(MONITOR_TIME_MAP, Arrays.copyOf(MONITOR_TIME_SOURCE, 449), 0, 20);
+        assertEquals(resolver.resolve(MONITOR_TIME_MAP, false, 0), shortView.resolve(MONITOR_TIME_MAP, false, 0));
+        assertThrows(IllegalArgumentException.class, () -> shortView.resolve(MONITOR_TIME_MAP, false, 19));
+        byte[] beforeRoot = MONITOR_TIME_SOURCE.clone(); putWord(beforeRoot, 0, -1);
+        var escaped = declared(MONITOR_TIME_MAP, beforeRoot, 0, 20);
+        assertThrows(IllegalArgumentException.class, () -> escaped.resolve(MONITOR_TIME_MAP, false, 0));
+    }
+
+    @Test void declaredMonitorItemsKeepEightOddHeaderFreeFirstPiecesWithoutAdmittingOtherPointers() {
+        var resolver = declaredMonitorTime();
+        int[] offsets = {0x29, 0x3F, 0x55, 0x6B, 0x81, 0x97, 0xAD, 0xC3};
+        int[] words = {0x12, 0x16, 0x1A, 0x1E, 0x22, 0x26, 0x2A, 0x2E};
+        for (int item = 0; item < 8; item++) {
+            int pointer = MONITOR_ITEM_POINTERS[item];
+            assertEquals(1, pointer & 1);
+            assertEquals(pointer, MONITOR_TIME_MAP + (short) word(MONITOR_TIME_SOURCE, item * 2) + 1);
+            assertArrayEquals(bytes(0xF6, 5, 0, words[item], 0xF8),
+                    Arrays.copyOfRange(MONITOR_TIME_SOURCE, offsets[item], offsets[item] + 5));
+            for (int ignoredFrame : new int[]{0, item, 255}) {
+                assertEquals(new CdObjectDrawQueue.StaticMapping(new CdObjectDrawQueue.RawPiece(-10, 5, words[item], -8)),
+                        resolver.resolve(pointer, true, ignoredFrame));
+            }
+            assertThrows(UnsupportedOperationException.class, () -> resolver.resolve(pointer, false, 0));
+            for (int absent : new int[]{pointer - 1, pointer + 1, pointer | 0xFF000000, pointer | 0x80000000}) {
+                assertThrows(UnsupportedOperationException.class, () -> resolver.resolve(absent, true, 0));
+            }
+            assertThrows(UnsupportedOperationException.class, () -> resolver.resolve(pointer, true, 0).pieces().clear());
+        }
+        for (int absent : new int[]{0x20AB27, 0x20AB3D, 0x20AC10}) {
+            assertThrows(UnsupportedOperationException.class, () -> resolver.resolve(absent, true, 0));
+        }
+        assertThrows(IllegalArgumentException.class, () -> new CdObjectMappings.DeclaredStaticPiece(
+                MONITOR_ITEM_POINTERS[0], CdAssetBytes.copyOf(new byte[4])));
+    }
+
+    @Test void monitorCountedAndStaticPiecesKeepExactQueueSatMirrorsAndFullWordAttributes() {
+        var resolver = declaredMonitorTime();
+        for (int base : new int[]{0x05A8, 0x85A8, 0xFFA8}) {
+            for (int flips = 0; flips < 4; flips++) {
+                for (int frame = 0; frame < 20; frame++) {
+                    assertMonitorSat(resolver, MONITOR_TIME_MAP, frame, base, 4 | flips, monitorPieces(frame));
+                }
+                for (int item = 0; item < 8; item++) {
+                    assertMonitorSat(resolver, MONITOR_ITEM_POINTERS[item], 255, base, 0x24 | flips,
+                            List.of(monitorPieces(item).getFirst()));
+                }
+            }
+        }
+        var shoes = drawMonitorMapping(resolver, 0x20AACF, 4, 0x85A8, 0x24);
+        assertEquals(1, shoes.spriteCount());
+        assertArrayEquals(bytes(0,0xF6,5,1,0x85,0xCA,1,0x78), Arrays.copyOf(shoes.bytes(), 8));
+        var mirrored = drawMonitorMapping(resolver, 0x20AACF, 255, 0x85A8, 0x27);
+        assertArrayEquals(bytes(0,0xFA,5,1,0x9D,0xCA,1,0x78), Arrays.copyOf(mirrored.bytes(), 8));
+        var future = drawMonitorMapping(resolver, MONITOR_TIME_MAP, 9, 0xFFA8, 4);
+        assertEquals(0x07F0, word(future.bytes(), 4), "full ADD.W carries before any object flip XOR");
+    }
+
+    @Test void actualUsaMonitorTimeJoinsTwentyCountedAndEightStaticRootsAndPreservesAllEarlierRoots() throws Exception {
+        var usa = usaMedia(); // Closed media, retained authenticated bytes; no constructed owner bypass.
+        var objects = usa.objects();
+        var view = objects.view(CdR11aObjectAssets.Table.MONITOR_TIME_MAPPINGS);
+        assertEquals(0xAA4E, view.range().fileOffset()); assertEquals(450, view.range().length());
+        assertEquals(MONITOR_TIME_MAP, view.range().nativeAddress());
+        assertArrayEquals(MONITOR_TIME_SOURCE, view.bytes().copy());
+        var visual = objects.monitorTime(); assertEquals(20, visual.mappingFrames().size());
+        assertArrayEquals(MONITOR_TIME_SOURCE, visual.mappings().copy());
+        var resolver = CdObjectMappings.fromOpeningAssets(usa.assets(), objects);
+        assertMonitorTimeFrames(resolver);
+        for (int item = 0; item < 8; item++) {
+            var expected = new CdObjectDrawQueue.StaticMapping(monitorPieces(item).getFirst());
+            assertEquals(expected, resolver.resolve(MONITOR_ITEM_POINTERS[item], true, 255));
+            assertMonitorSat(resolver, MONITOR_ITEM_POINTERS[item], item, 0x85A8, 0x24, expected.pieces());
+            assertThrows(UnsupportedOperationException.class,
+                    () -> resolver.resolve(MONITOR_ITEM_POINTERS[0] | 0xFF000000, true, 0));
+        }
+        for (int frame = 0; frame < 20; frame++) {
+            assertMonitorSat(resolver, MONITOR_TIME_MAP, frame, 0x05A8, 4, monitorPieces(frame));
+        }
+        assertMonitorPriorRoots(usa, resolver);
+        byte[] detached = view.bytes().copy(); Arrays.fill(detached, (byte) 0xA5);
+        assertMonitorTimeFrames(resolver); assertSame(visual, objects.monitorTime());
+        for (int absent : new int[]{0x20AB27, 0x20AB3D, 0xFF20AA77, 0x8020AA77}) {
+            assertThrows(UnsupportedOperationException.class, () -> resolver.resolve(absent, true, 0));
+        }
+        assertThrows(UnsupportedOperationException.class, () -> resolver.resolve(MONITOR_TIME_MAP, false, 20));
+    }
+
+    private static List<CdObjectDrawQueue.RawPiece> monitorPieces(int frame) {
+        return Arrays.stream(MONITOR_TIME_FRAMES[frame]).map(p ->
+                new CdObjectDrawQueue.RawPiece(p[0], p[1], p[2], p[3])).toList();
+    }
+    private static CdObjectMappings declaredMonitorTime() {
+        var staticPieces = new java.util.ArrayList<CdObjectMappings.DeclaredStaticPiece>();
+        int[] offsets = {0x29, 0x3F, 0x55, 0x6B, 0x81, 0x97, 0xAD, 0xC3};
+        for (int item = 0; item < 8; item++) {
+            staticPieces.add(new CdObjectMappings.DeclaredStaticPiece(MONITOR_ITEM_POINTERS[item],
+                    CdAssetBytes.copyOf(Arrays.copyOfRange(MONITOR_TIME_SOURCE, offsets[item], offsets[item] + 5))));
+        }
+        return CdObjectMappings.declaredSourceViews(List.of(new CdObjectMappings.DeclaredTable(
+                MONITOR_TIME_MAP, CdAssetBytes.copyOf(MONITOR_TIME_SOURCE), 0, 20)), staticPieces);
+    }
+    private static void assertMonitorTimeFrames(CdObjectMappings resolver) {
+        for (int frame = 0; frame < 20; frame++) {
+            var expected = monitorPieces(frame);
+            assertEquals(new CdObjectDrawQueue.FrameMapping(expected.size(), expected),
+                    resolver.resolve(MONITOR_TIME_MAP, false, frame), "literal Monitor/post/HUD frame " + frame);
+        }
+    }
+    private static void assertMonitorPriorRoots(UsaR11a usa, CdObjectMappings resolver) {
+        var o = usa.objects();
+        var visuals = List.of(o.rings(), o.normalMosqui(), o.damagedMosqui(), o.plant(), o.rampBooster(),
+                o.explosion(), o.points(), o.flower(), o.floatBlock(), o.springVertical(), o.springHorizontal(),
+                o.tunnelDoorVertical());
+        int[] roots = {0x20A0FA,0x20B6E6,0x20B722,0x20E020,0x21FDBC,0x23F088,0x20AC64,0x235EF4,
+                0x20A3FA,0x209BA0,0x209BA6,0x20CE9A};
+        for (int index = 0; index < roots.length; index++) {
+            var visual = visuals.get(index); int root = roots[index];
+            for (int frame = 0; frame < visual.mappingFrames().size(); frame++) {
+                var expected = visual.mappingFrames().get(frame).pieces().stream().map(p ->
+                        new CdObjectDrawQueue.RawPiece(p.y(), p.sizeByte(), p.rawTileWord(), p.x())).toList();
+                assertEquals(expected, resolver.resolve(root, false, frame).pieces());
+            }
+            assertThrows(UnsupportedOperationException.class, () -> resolver.resolve(root, true, 0));
+        }
+        var sonic = usa.assets().sonic();
+        int sonicRoot = usa.assets().profile().range(CdR11aAsset.MAP_SPR_SONIC).nativeAddress();
+        for (int frame = 0; frame < sonic.mappingFrames().size(); frame++) {
+            var source = sonic.mappingFrames().get(frame); var expected = new java.util.ArrayList<CdObjectDrawQueue.RawPiece>();
+            for (int piece = 0; piece < source.pieceCount(); piece++) {
+                int at = 1 + piece * 5;
+                expected.add(new CdObjectDrawQueue.RawPiece(source.bytes().signedByte(at), source.bytes().unsignedByte(at + 1),
+                        source.bytes().unsignedWord(at + 2), source.bytes().signedByte(at + 4)));
+            }
+            assertEquals(expected, resolver.resolve(sonicRoot, false, frame).pieces());
+        }
+        assertGameOverRoots(resolver); assertPowerupFrames(resolver); assertVerticalTunnelDoorFrames(resolver);
+    }
+    private static void assertMonitorSat(CdObjectDrawQueue.CdDrawMappings mappings, int pointer, int frame,
+                                         int base, int flags, List<CdObjectDrawQueue.RawPiece> expected) {
+        var sat = drawMonitorMapping(mappings, pointer, frame, base, flags);
+        assertEquals(expected.size(), sat.spriteCount()); byte[] raw = sat.bytes();
+        for (int index = 0; index < expected.size(); index++) {
+            var p = expected.get(index); int width = (p.sizeByte() >>> 2) + 1, height = (p.sizeByte() & 3) + 1;
+            int x = (flags & 1) == 0 ? p.x() : -p.x() - width * 8;
+            int y = (flags & 2) == 0 ? p.y() : -p.y() - height * 8;
+            assertEquals(256 + y, word(raw, index * 8)); assertEquals(p.sizeByte(), raw[index * 8 + 2] & 255);
+            assertEquals(index + 1, raw[index * 8 + 3] & 255);
+            assertEquals(((base + p.rawTileWord()) & 0xFFFF) ^ ((flags & 3) << 11), word(raw, index * 8 + 4));
+            assertEquals(384 + x, word(raw, index * 8 + 6));
+            assertEquals(new CdObjectDrawQueue.Provenance(3, 0, new CdObjectDrawQueue.CdSlotRef(32), index),
+                    sat.provenance().get(index));
+        }
+        assertArrayEquals(new byte[4], Arrays.copyOfRange(raw, expected.size() * 8, expected.size() * 8 + 4));
+    }
+    private static CdObjectDrawQueue.CpuSat drawMonitorMapping(CdObjectDrawQueue.CdDrawMappings mappings,
+                                                               int pointer, int frame, int base, int flags) {
+        var slots = new CdObjectDrawQueue.CdDrawSlots() {
+            private CdObjectDrawQueue.LiveDrawSlot current = new CdObjectDrawQueue.LiveDrawSlot(
+                    (flags & 0x20) == 0 ? 0x19 : 0x1A, flags, 0x100, 0x80, 0x9999, pointer, frame, base);
+            @Override public CdObjectDrawQueue.LiveDrawSlot read(CdObjectDrawQueue.CdSlotRef ref) {
+                assertEquals(32, ref.wholeIndex()); return current;
+            }
+            @Override public void writeOnScreenBit(CdObjectDrawQueue.CdSlotRef ref, boolean on) {
+                assertEquals(32, ref.wholeIndex()); var s = current;
+                current = new CdObjectDrawQueue.LiveDrawSlot(s.idByte(), (s.spriteFlagsByte() & 127) | (on ? 128 : 0),
+                        s.xWord(), s.yWord(), s.screenYWord(), s.mappingAddressBits(), s.mapFrameByte(), s.baseTileWord());
+            }
+        };
+        var queue = new CdObjectDrawQueue(slots, mappings, new byte[CdObjectDrawQueue.SAT_BYTE_SIZE]);
+        var camera = new CdObjectDrawQueue.CameraWords(0, 0); queue.beginPass();
+        assertEquals(CdObjectDrawQueue.EnqueueResult.QUEUED, queue.drawObject(new CdObjectDrawQueue.DrawCallCut(
+                new CdObjectDrawQueue.CdSlotRef(32), flags, 0x100, 0x80, 0x28, 0x10, 3), camera));
+        return queue.finishAfterCamera(new CdObjectDrawQueue.DrawCameras(camera, camera, camera));
+    }
 }

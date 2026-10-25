@@ -17,6 +17,7 @@ import com.openggf.game.soniccd.player.CdPlayerCharge;
 import com.openggf.game.soniccd.player.CdPlayerFrameRuntime;
 import com.openggf.game.soniccd.player.CdPlayerMotionState;
 import com.openggf.game.soniccd.player.CdPlayerMovement;
+import com.openggf.game.soniccd.player.CdPlayerSpeedShoesReward;
 import com.openggf.game.soniccd.player.CdPlayerTouchResponse;
 import com.openggf.game.soniccd.resources.CdPlayerArtRuntime;
 import org.junit.jupiter.api.Test;
@@ -47,6 +48,263 @@ import static org.junit.jupiter.api.Assertions.*;
  * Constructed bytes are not an authenticated retail MMD/native execution.
  */
 class TestCdPlayerFrameRuntime {
+    // BEGIN shared native GiveSpeedShoes value port: values never certify source phase or identity.
+    @ParameterizedTest @EnumSource(CdReleaseVariant.class)
+    void speedShoesRewardChangesExactlyFiveStoresAndPreservesEveryOtherFrameValue(CdReleaseVariant sourceVariant)
+            throws IOException {
+        var fixture = new Fixture();
+        try (var f = speedShoesDirtyFrame(fixture)) {
+            var actor = f.captureActor(); var shared = f.captureShared(); var observation = observe(f);
+            var expected = speedShoesProjection(f);
+            var result = CdPlayerSpeedShoesReward.give(expected, sourceVariant, 0);
+            int uploads = fixture.dmas.size();
+            f.bindArtPublication((dma, state) -> fail("A shoes value commit must not publish art"));
+            f.validateObjectSpeedShoesReward(expected, result);
+            assertEquals(observation, observe(f)); assertEquals(actor, f.captureActor());
+            assertSharedValues(shared, f.captureShared());
+            f.applyObjectSpeedShoesReward(expected, result);
+            var s = actor.state(); var t = s.timers(); var value = result.state();
+            assertEquals(new CdPlayerBody.State(s.motion(), s.animation(), s.header(),
+                    new CdPlayerBody.Timers(t.hurt(), t.invincibility(), value.speedShoesTimer(), t.reset()),
+                    s.history(), s.rotationDistance(), s.objectLinks()), f.state());
+            var e = shared.environment(); var m = e.movement(); var g = m.gates();
+            var next = new CdPlayerBody.Environment(new CdPlayerMovement.Environment(value.physics(), m.bounds(),
+                    new CdPlayerMovement.Gates(g.zoneAct(), g.timeZone(), g.miniSonic(), g.waterSlide(),
+                            g.windTunnel(), value.speedShoes(), g.timeWarpDirection()), m.globals()),
+                    e.controls(), e.globals(), e.dynamicSlots());
+            assertEquals(next, f.environment());
+            assertSharedValues(new CdPlayerFrameRuntime.SharedState(shared.owner(), next, shared.artState(),
+                    shared.paused(), shared.vIntClock()), f.captureShared());
+            assertEquals(Set.of("timers", "gates", "physics"), differences(observation, observe(f)));
+            assertEquals(0x1234, f.state().motion().centreX16_16() & 0xFFFF);
+            assertEquals(0xBEEF, f.state().motion().centreY16_16() & 0xFFFF);
+            assertEquals(new CdPlayerBody.ObjectLinks(0x7B, 0x9D), f.state().objectLinks());
+            assertEquals(actor.display(), f.display()); assertEquals(uploads, fixture.dmas.size());
+            assertEquals(List.of(CdPlayerSpeedShoesReward.SubCpuCommand.SCMD_FADEPCM,
+                    CdPlayerSpeedShoesReward.SubCpuCommand.SCMD_SHOESMUS), result.commands(),
+                    "Only root maps these ordered requests; Frame has no playback or ledger side effect");
+            f.restoreActor(actor); f.restoreShared(shared);
+            assertEquals(observation, observe(f));
+            f.applyObjectSpeedShoesReward(expected, result);
+            assertEquals(next, f.environment()); assertEquals(value, speedShoesProjection(f));
+            assertEquals(uploads, fixture.dmas.size());
+        }
+    }
+
+    @Test void speedShoesSameValueStoresAreLegalAndCarryNoConsumptionOrOwnerToken() throws IOException {
+        var fixture = new Fixture();
+        try (var f = speedShoesDirtyFrame(fixture)) {
+            var state = new CdPlayerSpeedShoesReward.State(1, 1320, new CdPlayerMovement.Physics(0xC00, 0x18, 0x80));
+            speedShoesSeed(f, state);
+            var actor = f.captureActor(); var shared = f.captureShared(); var observation = observe(f);
+            var result = CdPlayerSpeedShoesReward.give(state, CdReleaseVariant.USA, 1);
+            int uploads = fixture.dmas.size();
+            for (int i = 0; i < 2; i++) {
+                f.validateObjectSpeedShoesReward(state, result); f.applyObjectSpeedShoesReward(state, result);
+                assertEquals(observation, observe(f)); assertEquals(actor, f.captureActor());
+                assertSharedValues(shared, f.captureShared());
+            }
+            assertEquals(uploads, fixture.dmas.size());
+        }
+    }
+
+    @ParameterizedTest @ValueSource(strings = {"flag", "timer", "topSpeed", "acceleration", "deceleration"})
+    void speedShoesRejectsEveryIndependentlyStaleNativeValueBeforeAnyEffect(String field) throws IOException {
+        try (var f = speedShoesDirtyFrame(new Fixture())) {
+            var expected = speedShoesProjection(f);
+            var result = CdPlayerSpeedShoesReward.give(expected, CdReleaseVariant.USA, 1);
+            var p = expected.physics();
+            var changed = new CdPlayerSpeedShoesReward.State(expected.speedShoes() ^ (field.equals("flag") ? 1 : 0),
+                    expected.speedShoesTimer() ^ (field.equals("timer") ? 1 : 0),
+                    new CdPlayerMovement.Physics(p.topSpeed() ^ (field.equals("topSpeed") ? 1 : 0),
+                            p.acceleration() ^ (field.equals("acceleration") ? 1 : 0),
+                            p.deceleration() ^ (field.equals("deceleration") ? 1 : 0)));
+            speedShoesSeed(f, changed);
+            speedShoesAssertRejected(f, expected, result, IllegalArgumentException.class);
+            assertEquals(changed, speedShoesProjection(f));
+        }
+    }
+
+    @Test void speedShoesNullPreflightsAndAppliesLeaveAllValuesUntouched() throws IOException {
+        try (var f = speedShoesDirtyFrame(new Fixture())) {
+            var expected = speedShoesProjection(f);
+            var result = CdPlayerSpeedShoesReward.give(expected, CdReleaseVariant.USA, 1);
+            speedShoesAssertRejected(f, null, result, NullPointerException.class);
+            speedShoesAssertRejected(f, expected, null, NullPointerException.class);
+        }
+    }
+
+    @Test void speedShoesRequiresTheExistingOpenIdleClosedFrameCutAndNeverConsumesItsInputOrEntitlement()
+            throws IOException {
+        var fixture = new Fixture();
+        try (var f = fixture.runtime()) {
+            var expected = speedShoesProjection(f);
+            var result = CdPlayerSpeedShoesReward.give(expected, CdReleaseVariant.USA, 1);
+            var selection = f.prepareInput(8);
+            speedShoesAssertRejected(f, expected, result, IllegalStateException.class);
+            f.serviceVBlank(selection.phase());
+            speedShoesAssertRejected(f, expected, result, IllegalStateException.class);
+            assertEquals(CdPlayerBody.Boundary.INIT_RETURN, f.runBody(1).result().boundary());
+            expected = speedShoesProjection(f);
+            result = CdPlayerSpeedShoesReward.give(expected, CdReleaseVariant.USA, 1);
+            f.close();
+            speedShoesAssertRejected(f, expected, result, IllegalStateException.class);
+        }
+    }
+
+    @Test void speedShoesReentryDuringServiceRejectsWithoutChangingTheServiceOrBodyTurn() throws IOException {
+        try (var f = new Fixture().runtime()) {
+            var expected = speedShoesProjection(f);
+            var result = CdPlayerSpeedShoesReward.give(expected, CdReleaseVariant.USA, 0);
+            int[] callbacks = {0}; var selection = f.prepareInput(8);
+            f.serviceVBlank(selection.phase(), () -> {
+                callbacks[0]++;
+                speedShoesAssertRejected(f, expected, result, IllegalStateException.class);
+            });
+            assertEquals(1, callbacks[0]); assertEquals(8, f.environment().controls().rawHeld());
+            assertEquals(1, f.vIntClock().deltaSinceAdmittedCut());
+            assertEquals(CdPlayerBody.Boundary.INIT_RETURN, f.runBody(1).result().boundary());
+        }
+    }
+
+    @Test void speedShoesWrongFrameValuesRejectButEqualValuesDoNotPretendToProveIdentity() throws IOException {
+        try (var a = speedShoesDirtyFrame(new Fixture()); var b = speedShoesDirtyFrame(new Fixture())) {
+            var expected = speedShoesProjection(a);
+            var result = CdPlayerSpeedShoesReward.give(expected, CdReleaseVariant.USA, 1);
+            speedShoesSeed(b, new CdPlayerSpeedShoesReward.State(0, 17, new CdPlayerMovement.Physics(1, 2, 3)));
+            speedShoesAssertRejected(b, expected, result, IllegalArgumentException.class);
+            speedShoesSeed(b, expected);
+            b.validateObjectSpeedShoesReward(expected, result); b.applyObjectSpeedShoesReward(expected, result);
+            assertEquals(result.state(), speedShoesProjection(b)); assertEquals(expected, speedShoesProjection(a));
+            var actor = a.captureActor(); var shared = a.captureShared(); var observation = observe(b);
+            assertThrows(IllegalArgumentException.class, () -> b.restoreActor(actor));
+            assertThrows(IllegalArgumentException.class, () -> b.restoreShared(shared));
+            assertEquals(observation, observe(b), "Existing capture identity remains separate from plain reward values");
+        }
+    }
+
+    @Test void speedShoesAwardIsCapturedNonzeroThenTheNextActualDisplayDecrementsAndReplaysWithDmaContent()
+            throws IOException {
+        var fixture = new Fixture();
+        try (var f = fixture.runtime()) {
+            service(f, 0); f.runBody(1); service(f, 0); f.runBody(2);
+            var expected = speedShoesProjection(f);
+            var result = CdPlayerSpeedShoesReward.give(expected, CdReleaseVariant.USA, 1);
+            int awardUploads = fixture.dmas.size();
+            f.applyObjectSpeedShoesReward(expected, result);
+            assertEquals(1320, f.state().timers().speedShoes(), "Award follows the already-completed Display");
+            assertEquals(awardUploads, fixture.dmas.size());
+            var actor = f.captureActor(); var shared = f.captureShared(); var awarded = observe(f);
+            speedShoesSeed(f, new CdPlayerSpeedShoesReward.State(0x80, 7, new CdPlayerMovement.Physics(-3, 4, -5)));
+            f.restoreActor(actor); f.restoreShared(shared);
+            assertEquals(awarded, observe(f)); assertEquals(result.state(), speedShoesProjection(f));
+            int start = fixture.dmas.size(); service(f, 0); var publication = f.runBody(3);
+            assertEquals(CdPlayerBody.Boundary.MAIN_RETURN, publication.result().boundary());
+            assertTrue(calls(publication).contains(CdPlayerBody.NativeCall.DISPLAY));
+            assertEquals(1319, f.state().timers().speedShoes(), "Sonic/Main.asm:413-419, not an award-time decrement");
+            assertEquals(1, f.environment().movement().gates().speedShoes());
+            assertEquals(new CdPlayerMovement.Physics(0xC00, 0x18, 0x80), f.environment().movement().physics());
+            assertEquals(List.of(new CdPlayerFrameRuntime.ChargeSound(CdPlayerCharge.Sound.FM_CHARGESTOP)),
+                    publication.sounds(), "Standing MODE requests the charge stop before Display (Sonic/Main.asm:1033-1036)");
+            var after = f.captureActor(); var afterShared = f.captureShared(); var afterValues = observe(f);
+            var requests = List.copyOf(fixture.dmas.subList(start, fixture.dmas.size()));
+            assertEquals(1, requests.size(), "The previous Main's changed frame actually services a DMA");
+            f.restoreActor(actor); f.restoreShared(shared);
+            int replayStart = fixture.dmas.size(); service(f, 0); var replay = f.runBody(3);
+            assertEquals(publication, replay); assertEquals(after, f.captureActor());
+            assertSharedValues(afterShared, f.captureShared()); assertEquals(afterValues, observe(f));
+            var replayRequests = fixture.dmas.subList(replayStart, fixture.dmas.size());
+            assertEquals(requests.size(), replayRequests.size());
+            for (int i = 0; i < requests.size(); i++) {
+                assertEquals(requests.get(i).vramByteAddress(), replayRequests.get(i).vramByteAddress());
+                assertArrayEquals(requests.get(i).bytes().copy(), replayRequests.get(i).bytes().copy());
+            }
+        }
+    }
+
+    @ParameterizedTest @CsvSource({"0,0,0,1", "1,1,0,1", "2,1,0,0", "0,0,1,0"})
+    void speedShoesExistingDisplayExpiryRestoresNormalPhysicsAndRequestsMusicAtMostOnce(int invincibility,
+            int invincible, int bossMusic, int musicCount) throws IOException {
+        // Sonic/Main.asm:391-438: invincibility expires first, shoes follows, both music gates use live flags.
+        try (var f = new Fixture().runtime()) {
+            service(f, 0); f.runBody(1); service(f, 0); f.runBody(2);
+            var expected = speedShoesProjection(f);
+            f.applyObjectSpeedShoesReward(expected, CdPlayerSpeedShoesReward.give(expected, CdReleaseVariant.USA, 1));
+            speedShoesSeed(f, new CdPlayerSpeedShoesReward.State(1, 1, new CdPlayerMovement.Physics(0xC00, 0x18, 0x80)));
+            var actor = f.captureActor(); var s = actor.state(); var t = s.timers();
+            f.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(), new CdPlayerBody.State(s.motion(),
+                    s.animation(), s.header(), new CdPlayerBody.Timers(t.hurt(), invincibility, t.speedShoes(), t.reset()),
+                    s.history(), s.rotationDistance(), s.objectLinks()), actor.display()));
+            var shared = f.captureShared(); var e = shared.environment(); var g = e.globals();
+            f.restoreShared(new CdPlayerFrameRuntime.SharedState(shared.owner(), new CdPlayerBody.Environment(e.movement(),
+                    e.controls(), new CdPlayerBody.Globals(g.levelFrames(), g.cameraXCentre(), g.timeAttackMode(),
+                            g.debugMode(), g.debugCheat(), g.timeWarpTimer(), invincible, bossMusic), e.dynamicSlots()),
+                    shared.artState(), shared.paused(), shared.vIntClock()));
+            service(f, 0); var expiry = f.runBody(3);
+            assertEquals(CdPlayerBody.Boundary.MAIN_RETURN, expiry.result().boundary());
+            assertEquals(new CdPlayerSpeedShoesReward.State(0, 0, new CdPlayerMovement.Physics(0x600, 0xC, 0x80)),
+                    speedShoesProjection(f));
+            var chargeStop = new CdPlayerFrameRuntime.ChargeSound(CdPlayerCharge.Sound.FM_CHARGESTOP);
+            assertEquals(musicCount == 0 ? List.of(chargeStop)
+                            : List.of(chargeStop, new CdPlayerFrameRuntime.BodySound(CdPlayerBody.Sound.SCMD_R1AMUS)),
+                    expiry.sounds(), "The MODE stop precedes Display's optional expiry music");
+            if (invincibility == 1) {
+                var effects = expiry.result().effects();
+                assertTrue(effects.indexOf(new CdPlayerBody.ActorWrite(CdPlayerBody.ActorField.INVINCIBILITY_TIMER, 0))
+                        < effects.indexOf(new CdPlayerBody.ActorWrite(CdPlayerBody.ActorField.SHOES_TIMER, 0)));
+                assertEquals(0, f.environment().globals().invincible());
+            }
+            // A still-live invincibility path is outside the repeat-shoes observation: it expires on this next call.
+            if (invincibility != 2) {
+                service(f, 0); var next = f.runBody(4);
+                assertEquals(List.of(chargeStop), next.sounds()); assertEquals(0, f.state().timers().speedShoes());
+                assertEquals(new CdPlayerMovement.Physics(0x600, 0xC, 0x80), f.environment().movement().physics());
+                assertFalse(next.result().effects().stream().anyMatch(effect -> effect instanceof CdPlayerBody.ActorWrite write
+                        && write.field() == CdPlayerBody.ActorField.SHOES_TIMER));
+            }
+        }
+    }
+
+    private static CdPlayerSpeedShoesReward.State speedShoesProjection(CdPlayerFrameRuntime f) {
+        return new CdPlayerSpeedShoesReward.State(f.environment().movement().gates().speedShoes(),
+                f.state().timers().speedShoes(), f.environment().movement().physics());
+    }
+
+    /** Same-owner constructed capture only; never an additional production setter or gameplay ingress. */
+    private static void speedShoesSeed(CdPlayerFrameRuntime f, CdPlayerSpeedShoesReward.State value) {
+        var actor = f.captureActor(); var s = actor.state(); var t = s.timers();
+        f.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(), new CdPlayerBody.State(s.motion(), s.animation(),
+                s.header(), new CdPlayerBody.Timers(t.hurt(), t.invincibility(), value.speedShoesTimer(), t.reset()),
+                s.history(), s.rotationDistance(), s.objectLinks()), actor.display()));
+        var shared = f.captureShared(); var e = shared.environment(); var m = e.movement(); var g = m.gates();
+        f.restoreShared(new CdPlayerFrameRuntime.SharedState(shared.owner(), new CdPlayerBody.Environment(
+                new CdPlayerMovement.Environment(value.physics(), m.bounds(), new CdPlayerMovement.Gates(g.zoneAct(),
+                        g.timeZone(), g.miniSonic(), g.waterSlide(), g.windTunnel(), value.speedShoes(), g.timeWarpDirection()),
+                        m.globals()), e.controls(), e.globals(), e.dynamicSlots()), shared.artState(), shared.paused(), shared.vIntClock()));
+    }
+
+    private static CdPlayerFrameRuntime speedShoesDirtyFrame(Fixture fixture) throws IOException {
+        var f = spinTunnelDirtyFrame(fixture);
+        speedShoesSeed(f, new CdPlayerSpeedShoesReward.State(0xA5, 0xFEDC, new CdPlayerMovement.Physics(-1, 2, -3)));
+        var shared = f.captureShared(); var e = shared.environment(); var m = e.movement();
+        var environment = new CdPlayerBody.Environment(new CdPlayerMovement.Environment(m.physics(),
+                new CdPlayerMovement.Bounds(1, 0x4567, 0x789A, 0xFE),
+                new CdPlayerMovement.Gates(0xBEEF, 0x81, 0x91, 0x82, 0x73, 0xA5, 0xFF), m.globals()),
+                e.controls(), e.globals(), e.dynamicSlots());
+        f.restoreShared(new CdPlayerFrameRuntime.SharedState(shared.owner(), environment, shared.artState(), true, shared.vIntClock()));
+        return f;
+    }
+
+    private static void speedShoesAssertRejected(CdPlayerFrameRuntime f, CdPlayerSpeedShoesReward.State expected,
+            CdPlayerSpeedShoesReward.Result result, Class<? extends Throwable> type) {
+        var before = observe(f); var state = f.state(); var environment = f.environment();
+        assertThrows(type, () -> f.validateObjectSpeedShoesReward(expected, result));
+        assertEquals(before, observe(f)); assertSame(state, f.state()); assertSame(environment, f.environment());
+        assertThrows(type, () -> f.applyObjectSpeedShoesReward(expected, result));
+        assertEquals(before, observe(f)); assertSame(state, f.state()); assertSame(environment, f.environment());
+    }
+    // END shared native GiveSpeedShoes value port additions.
+
     // BEGIN Spin tunnel tag Frame port: constructed cuts, never execution/physical-visit authority.
     @Test void spinTunnelActualFirstRollPreservesDirtyActorDisplayAndSharedStateAndReplays() throws IOException {
         var fixture = new Fixture(); var f = spinTunnelDirtyFrame(fixture);

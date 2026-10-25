@@ -1140,4 +1140,335 @@ class TestCdObjectPresentation {
                 0x100, 0x80, 0x18, 4, 1), camera));
         return queue.finishAfterCamera(new DrawCameras(camera, camera, camera));
     }
+
+    @Test void actualUsaMonitorTimePolicyBindsAll494SourcePatternsAndPreservesTheEarlier412() throws Exception {
+        var a = springMedia(); var door = a.objects().tunnelDoorArtBank(); var monitor = a.objects().monitorTimeArtBank();
+        var binding = monitor.binding(CdR11aAsset.ART_MONITOR_TIME_POSTS);
+        assertEquals(List.of(CdR11aAsset.ART_MONITOR_TIME_POSTS),
+                monitor.bindings().stream().map(CdR11aObjectAssets.ArtBinding::source).toList());
+        assertEquals(1, binding.plcId());
+        assertEquals(a.assets().loadPlan().plcs().get(1).entries().get(9), binding.plc());
+        assertEquals(CdR11aAsset.ART_MONITOR_TIME_POSTS, binding.plc().source());
+        assertEquals(0xB500, binding.plc().vramAddress()); assertEquals(0x05A8, binding.baseWord());
+        assertEquals(0x5A8, binding.firstTileId()); assertEquals(82, binding.tileCount());
+        assertEquals(0x34B3A, binding.decode().sourceBlobRange().fileOffset());
+        assertEquals(1540, binding.decode().sourceBlobRange().length());
+        assertEquals(binding.decode().sourceBlobRange(), binding.plc().sourceRange());
+        assertEquals(1541, binding.decode().readerInputRange().length());
+        assertEquals(1541, binding.decode().consumedInputBytes());
+        assertEquals("7575dcf197dbc2f246838cfedcb95af40100d449f0a0c5a48b7294c27c9a924f",
+                HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(binding.bytes().copy())));
+        var old = tunnelDoorBank(a, door, a.player(), a.powerup(), tunnelDoorBases());
+        var bank = monitorTimeBank(a, door, monitor, a.player(), a.powerup(), monitorTimeBases());
+        var pixels = monitorTimePixels(a, door, monitor, a.player(), a.powerup());
+        int[] first = monitorTimeFirstTiles(), sizes = monitorTimeSizes(), bases = monitorTimeBases();
+        var ids = new TreeSet<Integer>(); var logical = new HashSet<Integer>();
+        for (int span = 0; span < 13; span++) {
+            assertEquals(sizes[span] * 32, pixels.get(span).length());
+            for (int tile = 0; tile < sizes[span]; tile++) {
+                int id = first[span] + tile; assertTrue(ids.add(id));
+                var actual = bank.resolve(id); assertTrue(logical.add(actual.logicalPatternId()));
+                assertEquals(bases[span] + tile, actual.logicalPatternId());
+                assertEquals(engineVersion(pixels.get(span), tile), actual.version());
+                if (span < 12) assertEquals(old.resolve(id), actual);
+                else {
+                    assertThrows(UnsupportedOperationException.class, () -> old.resolve(id));
+                    assertArrayEquals(pixels.get(span).slice(tile * 32, 32).copy(), monitor.tile(id).copy());
+                }
+            }
+        }
+        assertEquals(494, ids.size()); assertEquals(494, logical.size());
+        assertEquals(412, Arrays.stream(sizes).limit(12).sum());
+        for (int tile = 0; tile <= 0x7FF; tile++) {
+            int id = tile;
+            if (!ids.contains(id)) assertThrows(UnsupportedOperationException.class, () -> bank.resolve(id));
+        }
+        assertEquals(12374, bank.resolve(0x5A8).logicalPatternId());
+        assertEquals(12455, bank.resolve(0x5F9).logicalPatternId());
+        for (int absent : new int[]{0x5A7, 0x5FA}) {
+            assertThrows(UnsupportedOperationException.class, () -> bank.resolve(absent));
+        }
+        for (int invalid : new int[]{-1, 0x800}) {
+            assertThrows(IllegalArgumentException.class, () -> bank.resolve(invalid));
+        }
+        assertSame(monitor, a.objects().monitorTimeArtBank()); assertSame(door, a.objects().tunnelDoorArtBank());
+        assertThrows(UnsupportedOperationException.class, () -> monitor.bindings().clear());
+    }
+
+    @Test void actualUsaMonitorTimePolicyValidatesAllThirteenSpansAndNineInputsBeforeAnEmptySat() throws Exception {
+        var a = springMedia(); var door = a.objects().tunnelDoorArtBank(); var monitor = a.objects().monitorTimeArtBank();
+        var empty = new Fixture().build(); assertEquals(0, empty.spriteCount());
+        int[] sizes = monitorTimeSizes(), firstTiles = monitorTimeFirstTiles();
+        for (int span = 0; span < 13; span++) {
+            var negative = monitorTimeBases(); negative[span] = -1;
+            assertThrows(IllegalArgumentException.class, () -> CdObjectPresentation.convert(empty,
+                    monitorTimeBank(a, door, monitor, a.player(), a.powerup(), negative)));
+            var overflow = monitorTimeBases(); overflow[span] = Integer.MAX_VALUE - sizes[span] + 2;
+            assertThrows(IllegalArgumentException.class, () -> CdObjectPresentation.convert(empty,
+                    monitorTimeBank(a, door, monitor, a.player(), a.powerup(), overflow)));
+            for (int base : new int[]{0, Integer.MAX_VALUE - sizes[span] + 1}) {
+                var bounds = monitorTimeBases(); bounds[span] = base;
+                var bank = monitorTimeBank(a, door, monitor, a.player(), a.powerup(), bounds);
+                assertEquals(base, bank.resolve(firstTiles[span]).logicalPatternId());
+                assertEquals(base + sizes[span] - 1, bank.resolve(firstTiles[span] + sizes[span] - 1).logicalPatternId());
+                assertEquals(SpritePresentation.Frame.empty(), CdObjectPresentation.convert(empty, bank));
+            }
+        }
+        for (int first = 0; first < 13; first++) {
+            for (int second = first + 1; second < 13; second++) {
+                var overlapEnd = monitorTimeBases(); overlapEnd[second] = overlapEnd[first] + sizes[first] - 1;
+                assertThrows(IllegalArgumentException.class, () -> CdObjectPresentation.convert(empty,
+                        monitorTimeBank(a, door, monitor, a.player(), a.powerup(), overlapEnd)));
+                var overlapStart = monitorTimeBases(); overlapStart[first] = overlapStart[second] + sizes[second] - 1;
+                assertThrows(IllegalArgumentException.class, () -> CdObjectPresentation.convert(empty,
+                        monitorTimeBank(a, door, monitor, a.player(), a.powerup(), overlapStart)));
+            }
+        }
+        for (int missing = 0; missing < 9; missing++) {
+            int absent = missing; int[] b = monitorTimeBases();
+            assertThrows(NullPointerException.class, () -> CdObjectPresentation.convert(empty,
+                    CdObjectPresentation.usaR11aMonitorTimeDevPreloadedArt(
+                            absent == 0 ? null : a.player(), absent == 1 ? null : a.powerup(),
+                            absent == 2 ? null : a.objects(), absent == 3 ? null : a.frontier(),
+                            absent == 4 ? null : a.contact(), absent == 5 ? null : a.floatBlock(),
+                            absent == 6 ? null : a.spring(), absent == 7 ? null : door, absent == 8 ? null : monitor,
+                            b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7], b[8], b[9], b[10], b[11], b[12])));
+        }
+    }
+
+    @Test void allThirteenActualSourceSpansRejectPhysicalAndLogicalOverlapInBothOrdersWithoutPadding() throws Exception {
+        var a = springMedia(); var door = a.objects().tunnelDoorArtBank(); var monitor = a.objects().monitorTimeArtBank();
+        var pixels = monitorTimePixels(a, door, monitor, a.player(), a.powerup());
+        int[] first = monitorTimeFirstTiles(), sizes = monitorTimeSizes(), bases = monitorTimeBases();
+        var spans = new ArrayList<CdObjectPresentation.PixelSpan>();
+        for (int span = 0; span < 13; span++) {
+            spans.add(new CdObjectPresentation.PixelSpan(first[span], bases[span], pixels.get(span)));
+            int current = span;
+            assertThrows(IllegalArgumentException.class,
+                    () -> new CdObjectPresentation.PixelSpan(-1, bases[current], pixels.get(current)));
+            assertThrows(IllegalArgumentException.class,
+                    () -> new CdObjectPresentation.PixelSpan(2049 - sizes[current], bases[current], pixels.get(current)));
+            assertThrows(IllegalArgumentException.class, () -> new CdObjectPresentation.PixelSpan(first[current],
+                    bases[current], pixels.get(current).slice(0, sizes[current] * 32 - 1)));
+            var edge = CdObjectPresentation.declaredPixelBank(List.of(new CdObjectPresentation.PixelSpan(
+                    2048 - sizes[span], Integer.MAX_VALUE - sizes[span] + 1, pixels.get(span))));
+            assertEquals(Integer.MAX_VALUE, edge.resolve(0x7FF).logicalPatternId());
+        }
+        var bank = CdObjectPresentation.declaredPixelBank(spans);
+        for (int span = 0; span < 13; span++) {
+            assertEquals(engineVersion(pixels.get(span), sizes[span] - 1), bank.resolve(first[span] + sizes[span] - 1).version());
+        }
+        for (int left = 0; left < 13; left++) {
+            for (int right = 0; right < 13; right++) {
+                if (left == right) continue;
+                var physical = new CdObjectPresentation.PixelSpan(first[left], bases[right], pixels.get(right));
+                var logical = new CdObjectPresentation.PixelSpan(first[right], bases[left], pixels.get(right));
+                var original = spans.get(left);
+                for (var conflict : List.of(physical, logical)) {
+                    assertThrows(IllegalArgumentException.class,
+                            () -> CdObjectPresentation.declaredPixelBank(List.of(original, conflict)));
+                    assertThrows(IllegalArgumentException.class,
+                            () -> CdObjectPresentation.declaredPixelBank(List.of(conflict, original)));
+                }
+            }
+        }
+        var monitorSpan = spans.get(12);
+        var after = new CdObjectPresentation.PixelSpan(0x5FA, 15000, pixels.get(12).slice(0, 32));
+        var adjacent = CdObjectPresentation.declaredPixelBank(List.of(monitorSpan, after));
+        assertEquals(12455, adjacent.resolve(0x5F9).logicalPatternId());
+        assertEquals(15000, adjacent.resolve(0x5FA).logicalPatternId());
+        assertThrows(UnsupportedOperationException.class, () -> bank.resolve(0x5FA));
+    }
+
+    @Test void actualMonitorTimeTwentyFramesAndEightStaticItemsKeepSatAndPixelsForEveryObjectMirror() throws Exception {
+        var a = springMedia(); var door = a.objects().tunnelDoorArtBank(); var monitor = a.objects().monitorTimeArtBank();
+        var mappings = CdObjectMappings.fromOpeningAssets(a.assets(), a.objects());
+        var bank = monitorTimeBank(a, door, monitor, a.player(), a.powerup(), monitorTimeBases());
+        int[] pointers = {0x20AA77,0x20AA8D,0x20AAA3,0x20AAB9,0x20AACF,0x20AAE5,0x20AAFB,0x20AB11};
+        int[] counts = {4,4,4,4,4,4,4,4,4,4,5,5,5,5,5,5,3,1,1,1};
+        var art = monitor.binding(CdR11aAsset.ART_MONITOR_TIME_POSTS).bytes();
+        for (int base : new int[]{0x05A8, 0x85A8}) {
+            for (int flips = 0; flips < 4; flips++) {
+                for (int frame = 0; frame < 20; frame++) {
+                    var pieces = a.objects().monitorTime().mappingFrames().get(frame).pieces().stream()
+                            .map(p -> new RawPiece(p.y(), p.sizeByte(), p.rawTileWord(), p.x())).toList();
+                    assertEquals(counts[frame], pieces.size());
+                    assertMonitorPicture(mappings, bank, art, 0x20AA4E, frame, base, 4 | flips, pieces);
+                }
+                for (int item = 0; item < 8; item++) {
+                    assertMonitorPicture(mappings, bank, art, pointers[item], 255, base, 0x24 | flips,
+                            List.of(new RawPiece(-10, 5, 0x12 + item * 4, -8)));
+                }
+            }
+        }
+    }
+
+    @Test void actualShoesIconAndFutureHudKeepLiteralSatWordsCoordinatesPaletteAndPriority() throws Exception {
+        var a = springMedia(); var door = a.objects().tunnelDoorArtBank(); var monitor = a.objects().monitorTimeArtBank();
+        var mappings = CdObjectMappings.fromOpeningAssets(a.assets(), a.objects());
+        var bank = monitorTimeBank(a, door, monitor, a.player(), a.powerup(), monitorTimeBases());
+        int[][] cases = {{0x05A8,0x24,0x05CA,246}, {0x85A8,0x24,0x85CA,246}, {0x85A8,0x27,0x9DCA,250}};
+        int[][] normal = {{0x22,248,118},{0x24,256,118},{0x23,248,126},{0x25,256,126}};
+        int[][] mirrored = {{0x22,256,130},{0x24,248,130},{0x23,256,122},{0x25,248,122}};
+        for (int[] row : cases) {
+            var sat = drawMonitorPicture(mappings, 0x20AACF, 4, row[0], row[1]);
+            assertEquals(1, sat.spriteCount()); byte[] raw = sat.bytes();
+            assertEquals(row[3], word(raw, 0)); assertEquals(5, raw[2] & 255); assertEquals(1, raw[3] & 255);
+            assertEquals(row[2], word(raw, 4)); assertEquals(376, word(raw, 6));
+            var picture = CdObjectPresentation.convert(sat, bank); assertEquals(4, picture.tiles().size());
+            int[][] expected = row[1] == 0x27 ? mirrored : normal;
+            for (int index = 0; index < 4; index++) {
+                int[] want = expected[index]; var tile = picture.tiles().get(index);
+                assertTile(tile, 12374 + want[0], want[1], want[2]);
+                assertEquals(row[1] == 0x27, tile.hFlip()); assertEquals(row[1] == 0x27, tile.vFlip());
+                assertEquals(0, tile.palette()); assertEquals(row[0] == 0x85A8, tile.priority());
+            }
+        }
+        var hudSat = drawMonitorPicture(mappings, 0x20AA4E, 19, 0x85A8, 7);
+        assertArrayEquals(bytes(0,0xF8,13,1,0x9D,0xE2,1,0x70), Arrays.copyOf(hudSat.bytes(), 8));
+        var hud = CdObjectPresentation.convert(hudSat, bank);
+        int[][] hudTiles = {{0x3A,264,128},{0x3C,256,128},{0x3E,248,128},{0x40,240,128},
+                {0x3B,264,120},{0x3D,256,120},{0x3F,248,120},{0x41,240,120}};
+        assertEquals(8, hud.tiles().size());
+        for (int index = 0; index < 8; index++) {
+            int[] want = hudTiles[index]; var tile = hud.tiles().get(index);
+            assertTile(tile, 12374 + want[0], want[1], want[2]);
+            assertTrue(tile.hFlip()); assertTrue(tile.vFlip()); assertTrue(tile.priority()); assertEquals(0, tile.palette());
+        }
+        var future = drawMonitorPicture(mappings, 0x20AA4E, 9, 0x85A8, 5);
+        assertEquals(0x85F0, word(future.bytes(), 4), "raw $0848 plus $85A8, then object H XOR");
+    }
+
+    @Test void monitorTimePolicyRetainsImmutableNowServicedPlayerAndPowerupSnapshotsAndEarlierPictures() throws Exception {
+        var a = springMedia(); var door = a.objects().tunnelDoorArtBank(); var monitor = a.objects().monitorTimeArtBank();
+        var before = monitorTimeBank(a, door, monitor, a.player(), a.powerup(), monitorTimeBases());
+        var mappings = CdObjectMappings.fromOpeningAssets(a.assets(), a.objects());
+        var itemSat = drawMonitorPicture(mappings, 0x20AACF, 4, 0x85A8, 0x24);
+        var itemPicture = CdObjectPresentation.convert(itemSat, before);
+        var playerSlots = new Fixture();
+        playerSlots.add(32, 0, 0, 128, 128, 0x780,
+                List.of(new RawPiece(0, 14, 0, 0), new RawPiece(0, 14, 12, 32)));
+        var playerSat = playerSlots.build(32); var gameSat = new GameOverSlots(GAME_MAP, 0, 1).draw();
+        var playerPicture = CdObjectPresentation.convert(playerSat, before);
+        var gamePicture = CdObjectPresentation.convert(gameSat, before);
+        var playerService = new CdPlayerArtRuntime(a.assets().sonic(), a.player());
+        CdPlayerArtRuntime.State nextPlayer = null;
+        for (int frame = 1; frame < a.assets().sonic().dplcFrames().size(); frame++) {
+            if (a.assets().sonic().dplcFrames().get(frame).pieces().isEmpty()) continue;
+            playerService.serviceVInt(frame);
+            if (!Arrays.equals(a.player().residentBank().copy(), playerService.capture().residentBank().copy())) {
+                nextPlayer = playerService.capture(); break;
+            }
+        }
+        assertNotNull(nextPlayer);
+        var powerup = new CdPowerupArtRuntime(a.assets().shield()).service(a.powerup(), 0x88).state();
+        var after = monitorTimeBank(a, door, monitor, nextPlayer, powerup, monitorTimeBases());
+        assertArrayEquals(a.powerup().residentBank().slice(0x400, 0x80).copy(), powerup.residentBank().slice(0x400, 0x80).copy());
+        for (int tile = 0; tile < 24; tile++) {
+            assertEquals(engineVersion(nextPlayer.residentBank(), tile), after.resolve(0x780 + tile).version());
+            assertEquals(engineVersion(a.player().residentBank(), tile), before.resolve(0x780 + tile).version());
+        }
+        for (int tile = 0; tile < 36; tile++) {
+            assertEquals(engineVersion(powerup.residentBank(), tile), after.resolve(0x544 + tile).version());
+            assertEquals(engineVersion(a.powerup().residentBank(), tile), before.resolve(0x544 + tile).version());
+        }
+        assertNotEquals(playerPicture.patternVersions(), CdObjectPresentation.convert(playerSat, after).patternVersions());
+        assertNotEquals(gamePicture.patternVersions(), CdObjectPresentation.convert(gameSat, after).patternVersions());
+        assertEquals(playerPicture, CdObjectPresentation.convert(playerSat, before));
+        assertEquals(gamePicture, CdObjectPresentation.convert(gameSat, before));
+        assertEquals(itemPicture, CdObjectPresentation.convert(itemSat, before));
+        assertEquals(itemPicture, CdObjectPresentation.convert(itemSat, after));
+        for (int tile = 0x5A8; tile <= 0x5F9; tile++) assertEquals(before.resolve(tile), after.resolve(tile));
+        for (var bytes : List.of(a.player().residentBank(), a.powerup().residentBank(),
+                monitor.binding(CdR11aAsset.ART_MONITOR_TIME_POSTS).bytes())) {
+            byte[] detached = bytes.copy(); Arrays.fill(detached, (byte) 0xEE);
+        }
+        assertEquals(itemPicture, CdObjectPresentation.convert(itemSat, before));
+        assertThrows(UnsupportedOperationException.class, () -> itemPicture.patternVersions().clear());
+        assertThrows(UnsupportedOperationException.class, () -> itemPicture.tiles().clear());
+    }
+
+    private static int[] monitorTimeBases() {
+        return new int[]{10000,11000,12000,12070,12098,12161,12231,12236,12275,12311,12326,12362,12374};
+    }
+    private static int[] monitorTimeFirstTiles() {
+        return new int[]{0x780,0x7AE,0x3A0,0x424,0x441,0x680,0x6C6,0x6D7,0x544,0x334,0x520,0x328,0x5A8};
+    }
+    private static int[] monitorTimeSizes() { return new int[]{24,14,70,28,63,70,5,39,36,15,36,12,82}; }
+    private static List<CdAssetBytes> monitorTimePixels(UsaSpring a, CdR11aObjectAssets.TunnelDoorArtBank door,
+                                                       CdR11aObjectAssets.MonitorTimeArtBank monitor,
+                                                       CdPlayerArtRuntime.State player, CdPowerupArtRuntime.State powerup) {
+        return List.of(player.residentBank(), a.objects().initialArtBank().binding(CdR11aAsset.ART_RINGS).bytes(),
+                a.objects().initialArtBank().binding(CdR11aAsset.ART_MOSQUI).bytes(),
+                a.frontier().binding(CdR11aAsset.ART_3D_PLANT).bytes(), a.frontier().binding(CdR11aAsset.ART_3D_RAMP_BOOST).bytes(),
+                a.contact().binding(CdR11aAsset.ART_EXPLOSIONS).bytes(), a.contact().binding(CdR11aAsset.ART_POINTS).bytes(),
+                a.contact().binding(CdR11aAsset.ART_FLOWER).bytes(), powerup.residentBank(),
+                a.floatBlock().binding(CdR11aAsset.ART_FLOAT_BLOCK).bytes(), a.spring().binding(CdR11aAsset.ART_SPRINGS).bytes(),
+                door.binding(CdR11aAsset.ART_TUNNEL_DOOR).bytes(), monitor.binding(CdR11aAsset.ART_MONITOR_TIME_POSTS).bytes());
+    }
+    private static CdObjectPresentation.PatternSource monitorTimeBank(UsaSpring a, CdR11aObjectAssets.TunnelDoorArtBank door,
+                                                                      CdR11aObjectAssets.MonitorTimeArtBank monitor,
+                                                                      CdPlayerArtRuntime.State player,
+                                                                      CdPowerupArtRuntime.State powerup, int[] b) {
+        return CdObjectPresentation.usaR11aMonitorTimeDevPreloadedArt(player, powerup, a.objects(), a.frontier(),
+                a.contact(), a.floatBlock(), a.spring(), door, monitor,
+                b[0],b[1],b[2],b[3],b[4],b[5],b[6],b[7],b[8],b[9],b[10],b[11],b[12]);
+    }
+    /** Independent CPU piece/column-major pixel arithmetic over the native source; no graphics/native observation. */
+    private static void assertMonitorPicture(CdDrawMappings mappings, CdObjectPresentation.PatternSource bank,
+                                              CdAssetBytes art, int pointer, int frame, int base, int flags,
+                                              List<RawPiece> pieces) {
+        var sat = drawMonitorPicture(mappings, pointer, frame, base, flags);
+        assertEquals(pieces.size(), sat.spriteCount()); byte[] raw = sat.bytes();
+        for (int index = 0; index < pieces.size(); index++) {
+            var p = pieces.get(index); int width = (p.sizeByte() >>> 2) + 1, height = (p.sizeByte() & 3) + 1;
+            int x = (flags & 1) == 0 ? p.x() : -p.x() - width * 8;
+            int y = (flags & 2) == 0 ? p.y() : -p.y() - height * 8;
+            assertEquals(256 + y, word(raw, index * 8)); assertEquals(p.sizeByte(), raw[index * 8 + 2] & 255);
+            assertEquals(index + 1, raw[index * 8 + 3] & 255);
+            assertEquals(((base + p.rawTileWord()) & 0xFFFF) ^ ((flags & 3) << 11), word(raw, index * 8 + 4));
+            assertEquals(384 + x, word(raw, index * 8 + 6));
+            assertEquals(new Provenance(3, 0, new CdSlotRef(32), index), sat.provenance().get(index));
+        }
+        var picture = CdObjectPresentation.convert(sat, bank); int index = 0;
+        for (int piece = pieces.size() - 1; piece >= 0; piece--) {
+            var p = pieces.get(piece); int width = (p.sizeByte() >>> 2) + 1, height = (p.sizeByte() & 3) + 1;
+            int x = (flags & 1) == 0 ? p.x() : -p.x() - width * 8;
+            int y = (flags & 2) == 0 ? p.y() : -p.y() - height * 8;
+            int tileWord = ((base + p.rawTileWord()) & 0xFFFF) ^ ((flags & 3) << 11);
+            boolean hFlip = (tileWord & 0x800) != 0, vFlip = (tileWord & 0x1000) != 0;
+            for (int row = 0; row < height; row++) {
+                for (int col = 0; col < width; col++) {
+                    int nativeId = ((tileWord & 0x7FF) + col * height + row) & 0x7FF;
+                    assertTrue(nativeId >= 0x5A8 && nativeId <= 0x5F9);
+                    var tile = picture.tiles().get(index++);
+                    assertTile(tile, 12374 + nativeId - 0x5A8,
+                            256 + x + (hFlip ? width - 1 - col : col) * 8,
+                            128 + y + (vFlip ? height - 1 - row : row) * 8);
+                    assertEquals(hFlip, tile.hFlip()); assertEquals(vFlip, tile.vFlip());
+                    assertEquals((tileWord >>> 13) & 3, tile.palette()); assertEquals((tileWord & 0x8000) != 0, tile.priority());
+                    assertEquals(engineVersion(art, nativeId - 0x5A8), picture.patternVersions().get(tile.patternId()));
+                }
+            }
+        }
+        assertEquals(index, picture.tiles().size()); assertEquals(List.of(), picture.primitives());
+    }
+    /** Constructed live $19/$1A slot, not a Monitor body, reward, World route or timing claim. */
+    private static CpuSat drawMonitorPicture(CdDrawMappings mappings, int pointer, int frame, int base, int flags) {
+        var slots = new CdDrawSlots() {
+            private LiveDrawSlot current = new LiveDrawSlot((flags & 0x20) == 0 ? 0x19 : 0x1A,
+                    flags, 0x100, 0x80, 0x9999, pointer, frame, base);
+            @Override public LiveDrawSlot read(CdSlotRef ref) { assertEquals(32, ref.wholeIndex()); return current; }
+            @Override public void writeOnScreenBit(CdSlotRef ref, boolean on) {
+                assertEquals(32, ref.wholeIndex()); var s = current;
+                current = new LiveDrawSlot(s.idByte(), (s.spriteFlagsByte() & 127) | (on ? 128 : 0),
+                        s.xWord(), s.yWord(), s.screenYWord(), s.mappingAddressBits(), s.mapFrameByte(), s.baseTileWord());
+            }
+        };
+        var queue = new CdObjectDrawQueue(slots, mappings, new byte[SAT_BYTE_SIZE]);
+        var camera = new CameraWords(0, 0); queue.beginPass();
+        assertEquals(EnqueueResult.QUEUED, queue.drawObject(new DrawCallCut(new CdSlotRef(32), flags,
+                0x100, 0x80, 0x28, 0x10, 3), camera));
+        return queue.finishAfterCamera(new DrawCameras(camera, camera, camera));
+    }
 }

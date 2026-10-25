@@ -664,6 +664,50 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
         };
     }
 
+    // BEGIN shared native GiveSpeedShoes value port.
+    /**
+     * Pure value-CAS at the existing closed post-Body object cut. Native .GiveSpeedShoes
+     * (Monitor and Time Post/Main.asm:570-589, pin 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff)
+     * writes only speedShoes.b, oPlayerShoes.w and three shared physics words. Root owns
+     * phase/identity and ordered command publication; these plain values prove neither.
+     */
+    public void validateObjectSpeedShoesReward(CdPlayerSpeedShoesReward.State expectedState,
+                                               CdPlayerSpeedShoesReward.Result result) {
+        requireOpenIdle(); requireClosedFrame();
+        Objects.requireNonNull(expectedState, "speed shoes call state");
+        Objects.requireNonNull(result, "speed shoes result");
+        var movement = environment.movement();
+        var current = new CdPlayerSpeedShoesReward.State(movement.gates().speedShoes(),
+                state.timers().speedShoes(), movement.physics());
+        if (!expectedState.equals(current)) {
+            throw new IllegalArgumentException("Stale speed shoes player/global call cut");
+        }
+    }
+
+    /**
+     * Build all replacement immutable values before assignment, then adopt exactly the five native stores.
+     * Same-value stores are legal. Both position fractions, every other actor/global field, earlier Display,
+     * history, object links, controls, art, clocks and service state survive. No callback, command playback,
+     * ledger, pool, Body, capture/restore, retained input or additional owner token is involved.
+     */
+    public void applyObjectSpeedShoesReward(CdPlayerSpeedShoesReward.State expectedState,
+                                            CdPlayerSpeedShoesReward.Result result) {
+        validateObjectSpeedShoesReward(expectedState, result);
+        var value = result.state(); var timers = state.timers();
+        var nextState = new CdPlayerBody.State(state.motion(), state.animation(), state.header(),
+                new CdPlayerBody.Timers(timers.hurt(), timers.invincibility(), value.speedShoesTimer(), timers.reset()),
+                state.history(), state.rotationDistance(), state.objectLinks());
+        var movement = environment.movement(); var gates = movement.gates();
+        var nextGates = new CdPlayerMovement.Gates(gates.zoneAct(), gates.timeZone(), gates.miniSonic(),
+                gates.waterSlide(), gates.windTunnel(), value.speedShoes(), gates.timeWarpDirection());
+        var nextMovement = new CdPlayerMovement.Environment(value.physics(), movement.bounds(), nextGates, movement.globals());
+        var nextEnvironment = new CdPlayerBody.Environment(nextMovement, environment.controls(),
+                environment.globals(), environment.dynamicSlots());
+        state = nextState;
+        environment = nextEnvironment;
+    }
+    // END shared native GiveSpeedShoes value port.
+
     /**
      * Pure value-CAS preflight for one completed native Object Solid call. Root owns the physical pass,
      * the same call-cut pool capture, synchronous commit order and sounds. Values are not an identity token

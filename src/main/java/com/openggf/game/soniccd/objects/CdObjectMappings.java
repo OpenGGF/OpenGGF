@@ -88,7 +88,8 @@ public final class CdObjectMappings implements CdDrawMappings {
      * CdR11aAssets.openingObjects(), which rehashes the retained MMD before decoding. Both owners must
      * identify the same USA R11A source, including observed disc identity; decoded tables must equal
      * their actual source views. A declared view/identity record alone cannot create either owner.
-     * No static opening source has been admitted: production bit-5 requests explicitly reject.
+     * Monitor items admit only the eight authenticated first-icon pieces at their exact raw pointers;
+     * other production bit-5 requests explicitly reject.
      * The Game/Time Over include registers two counted roots from its validated CdGameOver.Assets record.
      */
     public static CdObjectMappings fromOpeningAssets(CdR11aAssets assets, CdR11aObjectAssets objects) {
@@ -146,7 +147,20 @@ public final class CdObjectMappings implements CdDrawMappings {
         // ObjTunnelDoorV_Init stores actual USA $20CE9A (Tunnel Door/Main.asm:36,90-91).
         // Reuse the exact-byte join: two counted static frames, four pieces and both real zero pads.
         addObject(tables, objects, CdR11aObjectAssets.Table.TUNNEL_DOOR_VERTICAL_MAPPINGS, objects.tunnelDoorVertical());
-        return new CdObjectMappings(tables, List.of());
+        // ObjMonitor_Init stores MapSpr_MonitorTime (Monitor and Time Post/Main.asm:304,648-650).
+        // The unchanged exact-byte join validates the complete counted directory and every decoded body.
+        addObject(tables, objects, CdR11aObjectAssets.Table.MONITOR_TIME_MAPPINGS, objects.monitorTime());
+        var monitorView = objects.view(CdR11aObjectAssets.Table.MONITOR_TIME_MAPPINGS);
+        var staticPieces = new ArrayList<DeclaredStaticPiece>();
+        // ObjMonitorItem_Init (:451-459) adds the signed frame word and then one byte, skipping the count.
+        // Only the eight Monitor icons (subtypes 0..7, :278-280) are admitted; post/HUD first pieces are not.
+        // Keep the odd native pointers and exactly five actual source bytes, never a copied counted header.
+        for (int frame = 0; frame < 8; frame++) {
+            int firstPiece = (short) monitorView.bytes().unsignedWord(frame * 2) + 1;
+            staticPieces.add(new DeclaredStaticPiece(monitorView.range().nativeAddress() + firstPiece,
+                    monitorView.bytes().slice(firstPiece, 5)));
+        }
+        return new CdObjectMappings(tables, staticPieces);
     }
 
     @Override public MappingBody resolve(int addressBits, boolean staticPiece, int mapFrameByte) {

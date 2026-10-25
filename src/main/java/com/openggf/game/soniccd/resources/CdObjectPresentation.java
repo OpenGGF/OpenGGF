@@ -394,6 +394,72 @@ public final class CdObjectPresentation {
                 new PixelSpan(door.firstTileId(), tunnelDoorVerticalLogicalBase, door.bytes())));
     }
 
+    /**
+     * Explicit USA_R11A_MONITOR_TIME_DEV_PRELOADED_ART policy: the unchanged twelve Door spans plus the owner's
+     * separate 82-tile Art_MonitorTimePosts decode, giving thirteen spans / 494 patterns. PLC_Std row 9 places it
+     * at VRAM $B500 (Palmtree Panic/Data (Act 1 Present).asm:74-75); ObjMonitor_Init writes $05A8 and item Init
+     * writes $85A8 (Monitor and Time Post/Main.asm:305,440). Native tiles $5A8..$5F9 come from binding metadata
+     * and authenticated decoded bytes; palette, priority and flips remain in each final SAT word.
+     * Both complete NOW-serviced player and powerup windows are immutable snapshots. Every physical/logical
+     * span is validated before returning, including for an empty SAT. This services no art or clock and creates
+     * no RAM or executed PLC residency; the caller owns service order, world/source identity and logical bases.
+     */
+    public static PatternSource usaR11aMonitorTimeDevPreloadedArt(CdPlayerArtRuntime.State nowServicedPlayer,
+                                                                         CdPowerupArtRuntime.State nowServicedPowerup,
+                                                                         CdR11aObjectAssets objects,
+                                                                         CdR11aObjectAssets.FrontierArtBank frontier,
+                                                                         CdR11aObjectAssets.ContactArtBank contact,
+                                                                         CdR11aObjectAssets.FloatBlockArtBank floatBlock,
+                                                                         CdR11aObjectAssets.SpringArtBank spring,
+                                                                         CdR11aObjectAssets.TunnelDoorArtBank tunnelDoor,
+                                                                         CdR11aObjectAssets.MonitorTimeArtBank monitorTime,
+                                                                         int playerLogicalBase, int ringLogicalBase,
+                                                                         int mosquiLogicalBase, int plantLogicalBase,
+                                                                         int rampLogicalBase, int explosionLogicalBase,
+                                                                         int pointsLogicalBase, int flowerLogicalBase,
+                                                                         int powerupLogicalBase, int floatBlockLogicalBase,
+                                                                         int springLogicalBase,
+                                                                         int tunnelDoorVerticalLogicalBase,
+                                                                         int monitorTimeLogicalBase) {
+        Objects.requireNonNull(nowServicedPlayer, "now-serviced player art");
+        Objects.requireNonNull(nowServicedPowerup, "now-serviced powerup art");
+        Objects.requireNonNull(objects, "authenticated opening object assets");
+        Objects.requireNonNull(frontier, "the owner's decoded frontier art bank");
+        Objects.requireNonNull(contact, "the owner's decoded contact art bank");
+        Objects.requireNonNull(floatBlock, "the owner's decoded FloatBlock art bank");
+        Objects.requireNonNull(spring, "the owner's decoded normal Spring art bank");
+        Objects.requireNonNull(tunnelDoor, "the owner's decoded Tunnel Door art bank");
+        Objects.requireNonNull(monitorTime, "the owner's decoded Monitor/time-post art bank");
+        if (objects.identity().variant() != CdReleaseVariant.USA) {
+            throw new UnsupportedOperationException("DEV preloaded object art is reviewed only for USA R11A");
+        }
+        var ring = objects.initialArtBank().binding(CdR11aAsset.ART_RINGS);
+        var mosqui = objects.initialArtBank().binding(CdR11aAsset.ART_MOSQUI);
+        var plant = frontier.binding(CdR11aAsset.ART_3D_PLANT);
+        var ramp = frontier.binding(CdR11aAsset.ART_3D_RAMP_BOOST);
+        var explosion = contact.binding(CdR11aAsset.ART_EXPLOSIONS);
+        var points = contact.binding(CdR11aAsset.ART_POINTS);
+        var flower = contact.binding(CdR11aAsset.ART_FLOWER);
+        var block = floatBlock.binding(CdR11aAsset.ART_FLOAT_BLOCK);
+        var normalSpring = spring.binding(CdR11aAsset.ART_SPRINGS);
+        var door = tunnelDoor.binding(CdR11aAsset.ART_TUNNEL_DOOR);
+        var monitor = monitorTime.binding(CdR11aAsset.ART_MONITOR_TIME_POSTS);
+        return declaredPixelBank(List.of(
+                new PixelSpan(CdPlayerArtRuntime.VRAM_BYTE_ADDRESS / 32, playerLogicalBase, nowServicedPlayer.residentBank()),
+                new PixelSpan(ring.firstTileId(), ringLogicalBase, ring.bytes()),
+                new PixelSpan(mosqui.firstTileId(), mosquiLogicalBase, mosqui.bytes()),
+                new PixelSpan(plant.firstTileId(), plantLogicalBase, plant.bytes()),
+                new PixelSpan(ramp.firstTileId(), rampLogicalBase, ramp.bytes()),
+                new PixelSpan(explosion.firstTileId(), explosionLogicalBase, explosion.bytes()),
+                new PixelSpan(points.firstTileId(), pointsLogicalBase, points.bytes()),
+                new PixelSpan(flower.firstTileId(), flowerLogicalBase, flower.bytes()),
+                powerupResidentSpan(nowServicedPowerup, powerupLogicalBase),
+                new PixelSpan(block.firstTileId(), floatBlockLogicalBase, block.bytes()),
+                new PixelSpan(normalSpring.firstTileId(), springLogicalBase, normalSpring.bytes()),
+                new PixelSpan(door.firstTileId(), tunnelDoorVerticalLogicalBase, door.bytes()),
+                new PixelSpan(monitor.firstTileId(), monitorTimeLogicalBase, monitor.bytes())));
+    }
+
     /** The complete $480-byte resident window as 36 tiles from $544; package-private for the pure test. */
     static PixelSpan powerupResidentSpan(CdPowerupArtRuntime.State nowServicedPowerup, int logicalBase) {
         Objects.requireNonNull(nowServicedPowerup, "now-serviced powerup art");

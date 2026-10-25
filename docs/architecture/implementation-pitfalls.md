@@ -1411,6 +1411,14 @@ fixture pass. Preserve the shipped writes' lack of player effect, assert that
 screen setup retains the incoming position, and declare the real checkpoint
 coordinates in route probes. The September 22 campaign audit records the correction.
 
+Native storage counters include unnamed reservations. Sonic CD's
+`src/_Include/System.inc:183` reserves an unnamed byte between command labels.
+A labelled-only `rs.b` walk omitted it, making both new production command IDs
+and their tests agree on values one too small. Count every `rs.b`/`rs.w`/`rs.l`
+declaration at its actual width; verify representative operands independently.
+The correct shoes/fade commands are `$6C/$82`. The October 23 CD implementation
+plan records the rejected `$6B/$81` derivation and its source-supported repair.
+
 ### Seamless target initialization must precede resource handoff
 
 The post-target resource handoff may install persistent palette targets, rotation
