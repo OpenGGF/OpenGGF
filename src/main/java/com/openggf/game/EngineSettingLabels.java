@@ -36,6 +36,8 @@ final class EngineSettingLabels {
             case AUDIO_ENABLED -> "Music and sound effects";
             case AUDIO_HUB_MUSIC_ENABLED -> "Hub music";
             case AUDIO_HUB_MUSIC_VOLUME -> "Hub music volume";
+            case MULTIPLAYER_CENSOR_PROFANITY -> "Censor Profanity";
+            case MULTIPLAYER_CHAT_DISABLED -> "Disable Multiplayer Chat";
             case AUDIO_FM_CORE -> "FM sound chip";
             case REGION -> "Audio region";
             case DAC_INTERPOLATE -> "Smooth sample playback";
@@ -86,6 +88,8 @@ final class EngineSettingLabels {
             case DISPLAY_COLOR_PROFILE -> "Choose how the game's colours appear.";
             case WIDESCREEN_DEADZONE_MODE -> "Choose how closely the camera follows you on wide screens.";
             case AUDIO_ENABLED -> "Turn game music and sound effects on or off.";
+            case MULTIPLAYER_CENSOR_PROFANITY -> "Mask listed profanity in multiplayer chat and sender names. Applies when saved.";
+            case MULTIPLAYER_CHAT_DISABLED -> "Hide player chat and discard new messages. Connection and race notices stay visible.";
             case CONTROLLER_DEADZONE -> "Ignore small stick movements to prevent unwanted movement.";
             case ROMS_DIRECTORY -> "Choose the folder containing your game ROM files.";
             default -> ConfigCatalog.meta(key).description();

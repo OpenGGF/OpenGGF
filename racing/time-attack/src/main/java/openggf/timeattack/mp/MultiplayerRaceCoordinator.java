@@ -14,6 +14,8 @@ import com.openggf.net.identity.DisplayNames;
 import com.openggf.net.identity.PlayerAppearance;
 import com.openggf.net.protocol.ControlMessage;
 import com.openggf.net.protocol.ReadyRules;
+import com.openggf.net.protocol.ChatMode;
+import com.openggf.net.protocol.QuickChatPhrase;
 import com.openggf.mods.run.PlayerPose;
 import com.openggf.mods.run.GhostPose;
 import com.openggf.mods.run.RunLevelStart;
@@ -78,6 +80,10 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
     private boolean latestRoundClosed;
     private boolean leaveRequested;
     private boolean showMinimap = true;
+    private final QuickChatChooser quickChat = new QuickChatChooser();
+    private boolean chatKeyConsumed;
+    private java.util.function.BooleanSupplier censorChat = () -> true;
+    private java.util.function.BooleanSupplier disableChat = () -> false;
     private Consumer<RunLevelStart> levelReadyHook;
     /** Spectator pan speed in pixels per held frame after the local attempt has finished. */
     static final int SPECTATE_PAN_SPEED_PX = 8;
@@ -98,6 +104,7 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
                                       boolean trustInsecure, GhostStore ghostStore) {
         this.transport = Objects.requireNonNull(transport, "transport");
         this.session = Objects.requireNonNull(session, "session");
+        session.setQuickChatFormatter(TimeAttackQuickChat::format);
         this.clockMillis = Objects.requireNonNull(clockMillis, "clockMillis");
         this.recordingVault = new AttemptRecordingVault(clockMillis);
         this.configuredMasterUrl = configuredMasterUrl == null ? "" : configuredMasterUrl;
@@ -120,6 +127,8 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
     }
 
     public void detachRuntime() {
+        quickChat.close();
+        chatKeyConsumed = false;
         if (runtime != null) {
             runtime.spectate(false, 0, 0);
         }
@@ -145,6 +154,7 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
 
     /** Single network drain, used by both lobby and gameplay contexts. */
     public void pump() {
+        session.setChatPreferences(censorChat.getAsBoolean(), disableChat.getAsBoolean());
         for (RaceClient.InboundEvent event : transport.drainInbound()) {
             switch (event) {
                 case RaceClient.Control control -> {
@@ -159,6 +169,7 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
                         registry.onPlayerLeft(left.slot());
                         lobbyRegistry.onPlayerLeft(left.slot());
                     } else if (control.message() instanceof ControlMessage.RoundStart) {
+                        quickChat.close();
                         roundsStarted++;
                         latestRoundClosed = false;
                         registry.reset();
@@ -279,6 +290,7 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
 
     @Override
     public void levelReady(RunLevelStart start) {
+        quickChat.close();
         if (levelReadyHook != null) {
             levelReadyHook.accept(start);
         }
@@ -289,6 +301,14 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
     public void drawOverlay(LevelOverlayCanvas canvas, int levelWidth, int localCentreX) {
         MultiplayerHudRenderer.render(canvas, hudState(), levelWidth, localCentreX, showMinimap,
                 runtime != null && runtime.isAttemptFinished());
+        if (quickChat.isOpen() && session.chatMode().allowsQuickChat()) {
+            ControlMessage.RoundConfig round = session.roundConfig();
+            quickChat.draw(canvas, round == null ? "the zone"
+                    : TimeAttackQuickChat.zoneName(round.gameId(), round.zone(), round.act()), quickChatKeyLabel());
+        } else if (session.chatMode().allowsQuickChat()) {
+            com.openggf.mods.ui.CompactFont.shadowed(canvas, quickChatKeyLabel() + " QUICK CHAT", 6,
+                    Math.max(4, canvas.height() - 56), 1, HudTextLayout.MUTED, 0xC0000000);
+        }
     }
 
     /** Called on the engine thread when an attached run's level is ready (launch and retry). */
@@ -363,7 +383,8 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
         return new MultiplayerHudState(transport.isOpen() || connectionLost,
                 session.phase().name(), session.remainingWindowMillis(),
                 session.remainingCountdownMillis(), combinedStandings(),
-                session.chatLines(), connectionLost, session.kickReason(),
+                session.chatDisabled() || session.chatMode() == ChatMode.OFF ? List.of() : session.chatLines(),
+                connectionLost, session.kickReason(),
                 session.players().size(), minimapPlayers,
                 config == null ? null : config.characterPolicy(),
                 session.voteOptions(), session.voteCounts(), session.voteRemainingMillis(),
@@ -387,8 +408,30 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
     }
 
     public void sendChat(String text) {
-        transport.sendControl(new ControlMessage.Chat(text));
+        if (session.chatMode().allowsText()) transport.sendControl(new ControlMessage.Chat(text));
     }
+
+    public void sendQuickChat(QuickChatPhrase phrase) {
+        if (session.chatMode().allowsQuickChat()) transport.sendControl(new ControlMessage.QuickChat(phrase.name()));
+    }
+
+    public void setChatMode(ChatMode mode) {
+        transport.sendControl(new ControlMessage.SetChatMode(mode.name()));
+    }
+
+    public void setChatPreferenceSource(java.util.function.BooleanSupplier censor,
+                                        java.util.function.BooleanSupplier disabled) {
+        censorChat = Objects.requireNonNull(censor, "censor");
+        disableChat = Objects.requireNonNull(disabled, "disabled");
+        session.setChatPreferences(censorChat.getAsBoolean(), disableChat.getAsBoolean());
+    }
+
+    /** Q opens/closes; P is advertised instead when Q is the configured retry key. */
+    int quickChatKey() { return runtime != null && runtime.retryKeyCode() == SceneKeys.Q ? SceneKeys.P : SceneKeys.Q; }
+    String quickChatKeyLabel() { return quickChatKey() == SceneKeys.Q ? "Q" : "P"; }
+    boolean isQuickChatOpen() { return quickChat.isOpen(); }
+
+    @Override public boolean consumesRetryKey() { return chatKeyConsumed; }
 
     /**
      * Asks the host to rename this player and change its look without a new identity. The
@@ -459,8 +502,22 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
     }
 
     public void pollLocalInput(com.openggf.mods.run.RunInput input) {
+        chatKeyConsumed = false;
+        boolean raceInput = runtime != null && !leaveRequested && roundsStarted == attachedRound
+                && (session.phase() == ClientRaceSession.Phase.COUNTDOWN
+                    || session.phase() == ClientRaceSession.Phase.RUNNING);
+        if (!raceInput || !session.chatMode().allowsQuickChat()) quickChat.close();
+        if (raceInput && session.chatMode().allowsQuickChat()) {
+            if (input.keyPressed(quickChatKey())) {
+                if (quickChat.isOpen()) quickChat.close(); else quickChat.open();
+                chatKeyConsumed = true;
+            }
+            if (quickChat.isOpen() && quickChat.number(input::keyPressed, this::sendQuickChat)) {
+                chatKeyConsumed = true;
+            }
+        }
         for (int option = 0; option < 3; option++) {
-            if (input.keyPressed(SceneKeys.DIGIT_1 + option)) {
+            if (!quickChat.isOpen() && !chatKeyConsumed && input.keyPressed(SceneKeys.DIGIT_1 + option)) {
                 castVote(option);
             }
         }

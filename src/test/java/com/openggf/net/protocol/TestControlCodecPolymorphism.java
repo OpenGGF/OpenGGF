@@ -66,7 +66,11 @@ class TestControlCodecPolymorphism {
             Object[] arguments = new Object[components.length];
             for (int index = 0; index < components.length; index++) {
                 parameterTypes[index] = components[index].getType();
-                arguments[index] = instantiate(parameterTypes[index]);
+                arguments[index] = switch (components[index].getName()) {
+                    case "chatMode", "mode" -> ChatMode.FULL_CHAT.name();
+                    case "phraseId" -> QuickChatPhrase.BRUTAL.name();
+                    default -> instantiate(parameterTypes[index]);
+                };
             }
             Constructor<?> constructor = type.getDeclaredConstructor(parameterTypes);
             return constructor.newInstance(arguments);
