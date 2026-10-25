@@ -12573,7 +12573,7 @@ No state-field relocation, submission-depth introspection or trace hydration is
 used. Existing native programs, PCM, world lifetime and replay remain real-ROM
 controls rather than being replaced by these bounded ordering seams.
 
-**Finite new inventory: 222 unique cases.** All rows below have XML classname
+**Original f386 inventory: 222 unique cases.** All rows below have XML classname
 `com.openggf.audio.TestAudioMutatorBindingContract`; append `#` and the exact
 member suffix. A bracket range denotes every integer invocation suffix in that
 range. Unparameterized XML names omit `()`.
@@ -12749,3 +12749,96 @@ and launches nothing more. Parent independent source/test review remains a
 separate required gate before any later production authorization. No integration,
 push, main write, worktree/branch cleanup, subdelegation or new candidate work
 is authorized by this baseline.
+
+### Binding characterization P2 follow-up — 2026-10-25
+
+Parent independently verified two P2 gaps against committed baseline
+`f3869f9088c592b8d31810d31139ae7e37c24e20` (tree
+`2196683165c4116657a479492d178f8cae6fded2`), with no P1 finding. This bounded
+TEST-ONLY follow-up addresses only those gaps. Design qualification remains
+separate from any production authorization. No production transfer is implemented.
+The retained checkout/branch and exact original production base remain as above.
+
+The only Java delta is one added test member plus one listener replacement:
+
+- `replacementTokensRetainTheirOwnAcquiringThreads` constructs its manager and
+  acquires token A on thread A, then uses the unchanged bounded `onThread` helper
+  to acquire token B through actual public `AudioMutatorAccess.bind` on thread B.
+  B positively queries `permitsMusic(3)` through the virtual profile seam and is
+  closed by try-with-resources on B. The query needs no producer execution.
+  The case observes A inactive/B active, rejects A.close from B, and observes B
+  inactive after its own close. After thread completion/error propagation, A's
+  inactive close succeeds on A. B is deliberately excluded from the thread-A
+  cleanup list: inactive tokens still reject a foreign acquiring thread.
+- `secondManagerRemainsIndependentDuringSubmissionAndDestroyDoesNotUnbind`
+  retains every existing assertion and music-event effect. Its first listener
+  now explicitly fails `onDisplaced()`, distinguishing successful active exact
+  close from publish-and-displace. No existing helper or Probe changes.
+
+**Updated Java freeze.** The sole Java path remains
+`src/test/java/com/openggf/audio/TestAudioMutatorBindingContract.java`:
+
+```text
+Git blob: 46ac1eab79e01a7a7d12c3e2e1b7f39c8fafbe6f
+Content SHA-256: 3e6f68211617b2629087465184b03b82c9013087917e247fc8a7f4dd58b0a4a1
+Sorted path/NUL/bytes/NUL SHA-256: af03da03374ae8035b7434d571f14e2ec5a89dd876a2e4c9875e5db6a7185221
+```
+
+The updated source inventory is **223 unique cases**, adding exactly
+`com.openggf.audio.TestAudioMutatorBindingContract#replacementTokensRetainTheirOwnAcquiringThreads`
+to the original 222 IDs above; the strengthened member keeps its existing ID.
+Sorted source-inventory IDs with LF separators/trailing LF have SHA-256
+`edd496484748f60e6abfe21cf59d32227248c6ec97e0c7fb8c577b8846d5f59b`.
+This 223-ID inventory was reconstructed from the original table, whose 222-ID
+hash was checked against the original physical XML hash, plus the one new ID;
+it is not a claim that all 223 cases were freshly executed together.
+
+**Evidence reuse.** Reversing only the added member and explicit first-listener
+replacement restores every byte of f386's test blob `6b3c7000`. Parent also
+independently reconstructed initial draft blob `7510f4ba` by reversing only the
+two rate-local stubbing fixes in `6b3c7000`; this follow-up corroborated that
+exact source reconstruction. These are source-only checks, not historical
+runtime authentication. All earlier shared helpers, Probe/ForeignListener source,
+fixture source and existing assertions remain exact outside the two specified
+members. The unchanged **221** cases retain their prior passing observations:
+218 from the original 219 pass set, plus the three corrected reset cases. The
+strengthened case, formerly in that 219 set, and the one new case were freshly
+run below. The unchanged 37 maintained controls retain their separate prior
+results and limits; neither the 222/223-class selection nor those 37 were rerun.
+
+The two-case forecast and exact selector were published before submission.
+The only follow-up Maven command, from the retained own worktree, was:
+
+```text
+python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestAudioMutatorBindingContract#replacementTokensRetainTheirOwnAcquiringThreads+secondManagerRemainsIndependentDuringSubmissionAndDestroyDoesNotUnbind' -Darchunit.freeze.store.default.allowStoreCreation=false -Darchunit.freeze.store.default.allowStoreUpdate=false -Darchunit.freeze.refreeze=false test -B
+```
+
+JAVA_HOME selected JDK 25; DISPLAY, WAYLAND_DISPLAY, XAUTHORITY,
+JAVA_TOOL_OPTIONS, JDK_JAVA_OPTIONS, _JAVA_OPTIONS, MAVEN_OPTS and MAVEN_ARGS were
+unset. There were no ROM or EGL properties. Queue admission reported 0 s wait,
+normal 7 GiB/8-core reservation. Handle **4391** completed with exit 0 and
+**2/0/0/0** cases/failures/errors/skips; Maven elapsed **23.623 s**, JUnit suite
+elapsed **0.456 s**. The exact XML case IDs and individual times were:
+
+| Exact `com.openggf.audio.TestAudioMutatorBindingContract#` suffix | Seconds |
+| --- | ---: |
+| `replacementTokensRetainTheirOwnAcquiringThreads` | 0.005 |
+| `secondManagerRemainsIndependentDuringSubmissionAndDestroyDoesNotUnbind` | 0.393 |
+
+Sorted full two-case XML IDs with LF separators/trailing LF have SHA-256
+`b9f032118c90ff96bc0b506f33ee864ae83050579307a4b15c77c6c1974c3d80`.
+XML confirmed both exact IDs, zero F/E/S, Java **25.0.5.0.2**, all three strict
+freeze flags false, and absent ROM/EGL properties. Timing is ordinary unisolated
+validation, not a performance measurement; queue, Maven and JUnit intervals are
+distinct. No fixture failure or further source correction was needed.
+
+Both owned XML/text reports were inspected and consumed. Own diagnostics,
+trace reports and invocation output were empty; there is no pending category
+acknowledgment, raw archive or validation receipt. No further Maven was launched.
+Production, all other tests/resources/guards, pins/stores and policy remain exact
+to the original base. The follow-up is committed directly after f386 with hooks
+and the required policy/co-author trailers; no amendment, main write, fetch,
+integration, push, cleanup or subdelegation occurs. After final commit/source and
+own-target checks, target/job ownership is explicitly returned to the parent,
+and this worker stops. Parent review of this concrete two-member patch remains
+separate; this evidence provides no production-transfer authorization.

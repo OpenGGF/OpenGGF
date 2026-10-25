@@ -290,6 +290,36 @@ public class TestAudioMutatorBindingContract {
         assertTrue(replacement.active());
     }
 
+    @Test void replacementTokensRetainTheirOwnAcquiringThreads() throws Throwable {
+        var audio = manager();
+        doReturn(new CueProfile(true)).when(audio).getAudioProfile();
+        var acquiringThread = Thread.currentThread();
+        var first = bind(audio, intent -> fail("profile queries must not submit audio"));
+        var replacement = new AtomicReference<AudioMutatorAccess.Binding>();
+        assertTrue(first.active());
+
+        onThread(() -> {
+            assertNotSame(acquiringThread, Thread.currentThread());
+            // Do not register this token for thread-A teardown: even an inactive
+            // token must be closed only by its own acquiring thread.
+            try (var second = AudioMutatorAccess.bind(audio,
+                    intent -> fail("profile queries must not submit audio"))) {
+                replacement.set(second);
+                assertFalse(first.active());
+                assertTrue(second.active());
+                assertTrue(second.permitsMusic(3));
+                assertThrows(IllegalStateException.class, first::close);
+            }
+            assertFalse(replacement.get().active());
+        });
+
+        assertNotNull(replacement.get());
+        assertFalse(replacement.get().active());
+        assertFalse(first.active());
+        assertDoesNotThrow(first::close);
+        verify(audio).getAudioProfile();
+    }
+
     @Test void publicationPrecedesDisplacementAndNestedBindReturnsAnInactiveOuterToken() {
         var audio = manager();
         var events = new ArrayList<String>();
@@ -419,7 +449,10 @@ public class TestAudioMutatorBindingContract {
         var a = preparedSeam();
         var b = manager();
         var events = new ArrayList<String>();
-        var first = bind(a, intent -> events.add("a"));
+        var first = bind(a, new AudioMutatorAccess.Listener() {
+            public void onMusicIntent(AudioMutatorAccess.MusicIntent intent) { events.add("a"); }
+            public void onDisplaced() { fail("exact close must not notify displacement"); }
+        });
         var second = bind(b, intent -> events.add("b"));
         doAnswer(invocation -> { a.setSpeedMultiplier(2); b.setSpeedMultiplier(3); return null; }).when(a).playMusic(3);
         first.playTemporaryMusic(3);
