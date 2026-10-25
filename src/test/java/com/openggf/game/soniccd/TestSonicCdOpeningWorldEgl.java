@@ -154,14 +154,14 @@ class TestSonicCdOpeningWorldEgl {
                         pictureBase + 108, pictureBase + 136, pictureBase + 199, pictureBase + 269,
                         pictureBase + 274, pictureBase + 313, pictureBase + 349, pictureBase + 364);
                 var expectedPicture = com.openggf.game.soniccd.resources.CdObjectPresentation.convert(pickupCpu,
-                        com.openggf.game.soniccd.resources.CdObjectPresentation.usaR11aMonitorTimeDevPreloadedArt(
+                        com.openggf.game.soniccd.resources.CdObjectPresentation.usaR11aCurrentCameraDevPreloadedArt(
                                 module.requirePlayerFrame().artState(), runtime.powerupArtState(), source.assets().openingObjects(),
                                 source.assets().openingObjects().frontierArtBank(),
                                 source.assets().openingObjects().contactArtBank(),
                                 source.assets().openingObjects().floatBlockArtBank(),
                                 source.assets().openingObjects().springArtBank(),
                                 source.assets().openingObjects().tunnelDoorArtBank(),
-                                source.assets().openingObjects().monitorTimeArtBank(),
+                                source.assets().openingObjects().monitorTimeArtBank(), runtime.sectionArtState().residency(),
                                 banks.player(), banks.ring(), banks.mosqui(), banks.plant(), banks.ramp(),
                                 banks.explosion(), banks.points(), banks.flower(), banks.powerup(), banks.floatBlock(), banks.spring(),
                                 banks.tunnelDoorVertical(), banks.monitorTime()));
@@ -1407,6 +1407,7 @@ class TestSonicCdOpeningWorldEgl {
         assertEquals(expected.objects().scoreGlobals(), actual.objects().scoreGlobals());
         assertEquals(expected.objects().levelGlobals(), actual.objects().levelGlobals());
         assertEquals(expected.objects().powerupArtState(), actual.objects().powerupArtState());
+        assertEquals(expected.objects().sectionArtState(), actual.objects().sectionArtState());
         assertEquals(expected.objects().lastSoundRequests(), actual.objects().lastSoundRequests());
         assertArrayEquals(expected.cpu().bytes(), actual.cpu().bytes());
         assertEquals(expected.cpu().provenance(), actual.cpu().provenance());
@@ -2085,9 +2086,9 @@ class TestSonicCdOpeningWorldEgl {
             SonicCdGameModule module, com.openggf.game.soniccd.level.CdR11aObjectAssets objects,
             CdOpeningObjectRuntime.LogicalBanks banks) throws Exception {
         var runtime = (CdOpeningObjectRuntime) module.getGameService(NativeDynamicObjectPass.class);
-        return com.openggf.game.soniccd.resources.CdObjectPresentation.usaR11aMonitorTimeDevPreloadedArt(
+        return com.openggf.game.soniccd.resources.CdObjectPresentation.usaR11aCurrentCameraDevPreloadedArt(
                 module.requirePlayerFrame().artState(), runtime.powerupArtState(), objects, objects.frontierArtBank(), objects.contactArtBank(),
-                objects.floatBlockArtBank(), objects.springArtBank(), objects.tunnelDoorArtBank(), objects.monitorTimeArtBank(),
+                objects.floatBlockArtBank(), objects.springArtBank(), objects.tunnelDoorArtBank(), objects.monitorTimeArtBank(), runtime.sectionArtState().residency(),
                 banks.player(), banks.ring(), banks.mosqui(), banks.plant(), banks.ramp(), banks.explosion(), banks.points(), banks.flower(),
                 banks.powerup(), banks.floatBlock(), banks.spring(), banks.tunnelDoorVertical(), banks.monitorTime());
     }

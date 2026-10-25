@@ -103,11 +103,12 @@ public final class SonicCdGameModule implements GameModule {
     record RestartCarry(CdRingGlobals ring, CdPlayerBody.ContactGlobals contact,
                         CdOpeningObjectRuntime.ScoreGlobals score, CdLevelGlobals level, CdAssetBytes savedObjectFlags,
                         CdPlayerFrameRuntime.RestartIngress player, CdPowerupArtRuntime.State powerupArt,
-                        BackgroundBuffers background) {
+                        BackgroundBuffers background, CdOpeningObjectRuntime.CameraArtRestartIngress cameraArt) {
         RestartCarry {
             Objects.requireNonNull(ring); Objects.requireNonNull(contact); Objects.requireNonNull(score);
             Objects.requireNonNull(level); Objects.requireNonNull(savedObjectFlags);
             Objects.requireNonNull(player); Objects.requireNonNull(powerupArt); Objects.requireNonNull(background);
+            Objects.requireNonNull(cameraArt, "explicit current camera art carry");
             if (savedObjectFlags.length() != CdObjectPlacementRuntime.SAVED_BANK_BYTES) {
                 throw new IllegalArgumentException("Complete native saved-object bank required");
             }
@@ -124,11 +125,13 @@ public final class SonicCdGameModule implements GameModule {
                                      CdOpeningObjectRuntime.ScoreGlobals score, CdAssetBytes savedFlags,
                                      CdPlayerBody.Environment environment, CdPlayerBody.State actor,
                                      CdPlayerArtRuntime.State art, CdPowerupArtRuntime.State powerupArt,
-                                     BackgroundBuffers background) {
+                                     BackgroundBuffers background,
+                                     CdOpeningObjectRuntime.CameraArtRestartIngress cameraArt) {
         Objects.requireNonNull(ring); Objects.requireNonNull(level); Objects.requireNonNull(contact);
         Objects.requireNonNull(score); Objects.requireNonNull(savedFlags); Objects.requireNonNull(environment);
         Objects.requireNonNull(actor); Objects.requireNonNull(art); Objects.requireNonNull(powerupArt);
         Objects.requireNonNull(background, "explicit carried background buffers");
+        Objects.requireNonNull(cameraArt, "explicit carried current camera art and Nemesis table");
         if (savedFlags.length() != CdObjectPlacementRuntime.SAVED_BANK_BYTES) {
             throw new IllegalArgumentException("Complete native saved-object bank required");
         }
@@ -153,7 +156,13 @@ public final class SonicCdGameModule implements GameModule {
                 // the player header. The collapsed cold builder keeps cleared flags/tile, then represents
                 // LoadPlayer (Main:438-443) with slotId1; neither load-scroll owner reads that ID.
                 new BackgroundBuffers(background.deformationRam(),
-                        CdAssetBytes.copyOf(new byte[CdR11aBackgroundScroll.HSCROLL_RAM_BYTES])));
+                        CdAssetBytes.copyOf(new byte[CdR11aBackgroundScroll.HSCROLL_RAM_BYTES])),
+                // Present/checkpoint0 death clears title-loaded bit (Sonic/Main.asm:2468-2472).
+                // The represented title-omitted DEV rebuild applies Main:275's addressed HIGH clear.
+                // Native immediate PLC3/Std1/title prehistory remains omitted: this table is the
+                // LAST REPRESENTED table, not a fabricated post-load Ring code table. VRAM carries.
+                new CdOpeningObjectRuntime.CameraArtRestartIngress(cameraArt.residency(),
+                        cameraArt.codeTable512(), cameraArt.sectionWord() & 0xFF));
     }
 
     boolean restartStaged() { return stagedRestart != null; }
@@ -180,7 +189,9 @@ public final class SonicCdGameModule implements GameModule {
             }
             var carry = restartCarry(objects.ringGlobals(), objects.levelGlobals(), objects.contactGlobals(),
                     objects.scoreGlobals(), objects.placement().savedFlags(), shared.environment(), actor.state(),
-                    shared.artState(), objects.powerupArtState(), playerPresentation.captureBackgroundBuffers());
+                    shared.artState(), objects.powerupArtState(), playerPresentation.captureBackgroundBuffers(),
+                    new CdOpeningObjectRuntime.CameraArtRestartIngress(objects.sectionArtState().residency(),
+                            objects.sectionArtState().codeTable(), objects.sectionArtState().sectionWord()));
             var manager = playerMode.getLevelManager();
             stagedRestart = carry;
             stagedRestartContext = SonicCdPlayerInitProfile.openingObjectsRestartContext();
@@ -410,7 +421,7 @@ public final class SonicCdGameModule implements GameModule {
                             foreground, playerFrame::applyObjectPrimaryAngle)
                             : CdOpeningObjectRuntime.usaR11aRestartDevEmptySatPreloadedArt(candidate.assets(), playerFrame,
                                     initialRing, initialContact, initialScore, initialLevel, carry.savedObjectFlags(),
-                                    carry.powerupArt(), new byte[CdObjectDrawQueue.SAT_BYTE_SIZE], banks, foreground,
+                                    carry.powerupArt(), carry.cameraArt(), new byte[CdObjectDrawQueue.SAT_BYTE_SIZE], banks, foreground,
                                     playerFrame::applyObjectPrimaryAngle);
                     openingPlc = composeOpeningPlc(openingObjects, playerFrame);
                 } catch (IOException failure) {
@@ -461,7 +472,8 @@ public final class SonicCdGameModule implements GameModule {
                     requireTerrainPlayerReady();
                     playerPresentation.validatePlaneVBlank(phase); // Pure complete-tuple preflight before Frame consumption.
                     // Root-owned overload runs this exact callback after level art/before Finish, never on PP lag.
-                    owner.serviceVBlank(phase, playerPresentation::servicePlaneAtVInt);
+                    owner.serviceVBlank(phase, playerPresentation::servicePlaneAtVInt,
+                            playerPresentation.currentScrollLockWord());
                     playerPresentation.publishOpeningScroll(phase);
                 } catch (RuntimeException | Error failure) {
                     closePlayerCycleAfterFailure(failure);

@@ -10,6 +10,7 @@ import com.openggf.game.soniccd.player.CdPlayerBody;
 import com.openggf.game.soniccd.player.CdPlayerMotionState;
 import com.openggf.game.soniccd.player.CdPlayerMovement;
 import com.openggf.game.soniccd.resources.CdPlayerArtRuntime;
+import com.openggf.game.soniccd.resources.CdR11aCameraArtResidency;
 import com.openggf.game.soniccd.resources.CdPowerupArtRuntime;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -50,7 +51,7 @@ class TestSonicCdRestartCarry {
         var ring = new CdRingGlobals(0, 0, 0, 0, 1, 0, 0, 0);
         var failure = assertThrows(SonicCdGameModule.UnsupportedRestart.class, () ->
                 SonicCdGameModule.restartCarry(ring, f.level(), f.contact(), f.score(), f.saved(),
-                        f.environment(), f.actor(), f.art(), f.powerup(), f.background()));
+                        f.environment(), f.actor(), f.art(), f.powerup(), f.background(), cameraArt()));
         assertEquals(SonicCdGameModule.RestartBoundary.GAME_OVER_EXIT, failure.boundary());
     }
 
@@ -74,7 +75,7 @@ class TestSonicCdRestartCarry {
                 gates, m.globals()), e.controls(), globals, e.dynamicSlots());
         var failure = assertThrows(SonicCdGameModule.UnsupportedRestart.class, () ->
                 SonicCdGameModule.restartCarry(f.ring(), level, f.contact(), f.score(), f.saved(),
-                        environment, f.actor(), f.art(), f.powerup(), f.background()));
+                        environment, f.actor(), f.art(), f.powerup(), f.background(), cameraArt()));
         assertEquals(SonicCdGameModule.RestartBoundary.RESTART_PATH, failure.boundary());
     }
 
@@ -84,7 +85,7 @@ class TestSonicCdRestartCarry {
                 CdObjectPlacementRuntime.SAVED_BANK_BYTES + 1}) {
             assertThrows(IllegalArgumentException.class, () -> SonicCdGameModule.restartCarry(f.ring(), f.level(),
                     f.contact(), f.score(), CdAssetBytes.copyOf(new byte[size]), f.environment(),
-                    f.actor(), f.art(), f.powerup(), f.background()));
+                    f.actor(), f.art(), f.powerup(), f.background(), cameraArt()));
         }
     }
 
@@ -118,7 +119,7 @@ class TestSonicCdRestartCarry {
                     f.background().deformationRam(), bytes(length, 1)));
         }
         assertThrows(NullPointerException.class, () -> SonicCdGameModule.restartCarry(f.ring(), f.level(),
-                f.contact(), f.score(), f.saved(), f.environment(), f.actor(), f.art(), f.powerup(), null));
+                f.contact(), f.score(), f.saved(), f.environment(), f.actor(), f.art(), f.powerup(), null, cameraArt()));
         assertThrows(NullPointerException.class, () -> new SonicCdGameModule.BackgroundBuffers(
                 null, f.background().hscrollRam()));
         assertThrows(NullPointerException.class, () -> new SonicCdGameModule.BackgroundBuffers(
@@ -132,7 +133,7 @@ class TestSonicCdRestartCarry {
                            SonicCdGameModule.BackgroundBuffers background) { }
     private static SonicCdGameModule.RestartCarry carry(Fixture f) {
         return SonicCdGameModule.restartCarry(f.ring(), f.level(), f.contact(), f.score(), f.saved(),
-                f.environment(), f.actor(), f.art(), f.powerup(), f.background());
+                f.environment(), f.actor(), f.art(), f.powerup(), f.background(), cameraArt());
     }
     private static Fixture fixture() {
         var motion = new CdPlayerMotionState(0x12345678, 0x76543210, 11, 22, 33, 8, 4, 2, 4,
@@ -159,4 +160,34 @@ class TestSonicCdRestartCarry {
         byte[] data = new byte[size]; for (int i = 0; i < size; i++) data[i] = (byte) (seed + i * 7);
         return CdAssetBytes.copyOf(data);
     }
+    @Test void restartCarriesCurrentCameraBytesAndNemesisTableButClearsOnlySectionHighByte() {
+        var f = fixture(); var input = cameraArt();
+        var next = SonicCdGameModule.restartCarry(f.ring(),f.level(),f.contact(),f.score(),f.saved(),
+                f.environment(),f.actor(),f.art(),f.powerup(),f.background(),input);
+        assertSame(input.residency(),next.cameraArt().residency());
+        assertArrayEquals(input.codeTable512().copy(),next.cameraArt().codeTable512().copy());
+        assertEquals(0x12,next.cameraArt().sectionWord());
+        assertEquals(0xAB12,input.sectionWord(),"old ingress unchanged; Main275 addresses only HIGH byte");
+        for(int id:new int[]{0x3A0,0x3E5,0x409,0x41E,0x424,0x440,0x47F})
+            assertArrayEquals(CdR11aCameraArtResidency.readTile(input.residency(),id).copy(),
+                    CdR11aCameraArtResidency.readTile(next.cameraArt().residency(),id).copy());
+        var copy=next.cameraArt().codeTable512().copy();copy[511]^=1;
+        assertArrayEquals(input.codeTable512().copy(),next.cameraArt().codeTable512().copy());
+    }
+    @Test void currentCameraRestartRequiresExplicitCompleteIngressWithoutColdFallback() {
+        var f=fixture();var input=cameraArt();
+        assertThrows(NullPointerException.class,()->SonicCdGameModule.restartCarry(f.ring(),f.level(),f.contact(),f.score(),f.saved(),
+                f.environment(),f.actor(),f.art(),f.powerup(),f.background(),null));
+        for(int length:new int[]{0,511,513}) assertThrows(IllegalArgumentException.class,()->
+                new CdOpeningObjectRuntime.CameraArtRestartIngress(input.residency(),bytes(length,0),0));
+        for(int word:new int[]{-1,0x10000}) assertThrows(IllegalArgumentException.class,()->
+                new CdOpeningObjectRuntime.CameraArtRestartIngress(input.residency(),input.codeTable512(),word));
+        assertThrows(NullPointerException.class,()->new CdOpeningObjectRuntime.CameraArtRestartIngress(null,input.codeTable512(),0));
+        assertThrows(NullPointerException.class,()->new CdOpeningObjectRuntime.CameraArtRestartIngress(input.residency(),null,0));
+    }
+    private static CdOpeningObjectRuntime.CameraArtRestartIngress cameraArt() {
+        return new CdOpeningObjectRuntime.CameraArtRestartIngress(CdR11aCameraArtResidency.knownSeed(
+                bytes(0x8C0,0x73),bytes(0x2C0,0x81),bytes(0xB80,0x84)),bytes(512,0xC7),0xAB12);
+    }
+
 }

@@ -2442,7 +2442,7 @@ class TestCdOpeningObjectRuntime {
                                                   CdPowerupArtRuntime.State powerup, byte[] sat,
                                                   CdOpeningObjectRuntime.LogicalBanks banks) throws Exception {
         return CdOpeningObjectRuntime.usaR11aRestartDevEmptySatPreloadedArt(assets, frame, INITIAL, CONTACT, SCORE, LEVEL,
-                bank, powerup, sat, banks, PRE, value -> { });
+                bank, powerup, cameraArtDevIngress(assets), sat, banks, PRE, value -> { });
     }
 
     private static void seedLevelPlayer(Fixture f, int routine, int reset) {
@@ -2505,7 +2505,7 @@ class TestCdOpeningObjectRuntime {
             frame = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, 0, player);
             frame.bindArtPublication((request, state) -> artPublications.add(state));
             runtime = CdOpeningObjectRuntime.usaR11aRestartDevEmptySatPreloadedArt(assets, frame, INITIAL, CONTACT, SCORE,
-                    level, savedFlags, powerup, new byte[640], BANKS, PRE,
+                    level, savedFlags, powerup, cameraArtDevIngress(assets), new byte[640], BANKS, PRE,
                     value -> { angleWrites.add(value); onAngle.accept(value); });
         }
         void service(int held) { service(held, PRE); }
@@ -4937,4 +4937,510 @@ class TestCdOpeningObjectRuntime {
         constructor.setAccessible(true); return constructor.newInstance(values);
     }
     // END horizontal Door Runtime R1 additions.
+
+    // BEGIN current-camera/Pata Runtime source-only tests-first additions.
+    // N=1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff: Main.asm:407-430,821-847;
+    // Pata-Bata/Main.asm:7-80; Section Art Load.asm:7-46; Functions (General).asm:588-785.
+    // Constructed actual-owner cuts isolate the Runtime joins. No natural route, native restart,
+    // full title/LoadPLCImm history, execution, compile or render claim is made. ALL JAVA UNRUN.
+
+    // Catches a fourteenth bank, an assumed known Anton/gap, or a cold section request/decode.
+    @Test void cameraArtColdDevSeedKeepsThirteen494SpansAndLeavesOnlyUnadmittedIngressUnknown() throws Exception {
+        try (var f = new Fixture()) {
+            var state = f.runtime.sectionArtState();
+            assertEquals(0, state.sectionWord()); assertEquals(0, state.remainingTilesWord());
+            assertEquals(0, state.queue().headSource()); assertTrue(state.decoder().isEmpty());
+            assertArrayEquals(new byte[512], state.codeTable().copy());
+            var objects = f.assets.openingObjects();
+            cameraArtBytes(state.residency(), 0x7400, objects.initialArtBank().binding(
+                    com.openggf.game.soniccd.level.CdR11aAsset.ART_MOSQUI).bytes());
+            cameraArtBytes(state.residency(), 0x8480, objects.frontierArtBank().binding(
+                    com.openggf.game.soniccd.level.CdR11aAsset.ART_3D_PLANT).bytes());
+            cameraArtBytes(state.residency(), 0x8820, objects.frontierArtBank().binding(
+                    com.openggf.game.soniccd.level.CdR11aAsset.ART_3D_RAMP_BOOST).bytes());
+            assertThrows(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.OwnershipBoundary.class,
+                    () -> com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(state.residency(), 0x409));
+            assertThrows(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.OwnershipBoundary.class,
+                    () -> com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(state.residency(), 0x440));
+            assertEquals(13, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+            var compact = new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138);
+            assertEquals(494, compact.monitorTime() + 82 - compact.player());
+            assertEquals(state, f.runtime.captureClosedCut().sectionArtState());
+        }
+    }
+
+    // Catches the pre-scroll camera being used for the CPU request, or tiles written during prepare.
+    @Test void cameraArtPostScroll680RequestsWholePlc9OnlyAfterSuccessfulBuildAndPreparesWithoutWriting() throws Exception {
+        try (var f = new Fixture()) {
+            cameraArtIdle(f); var before = f.runtime.sectionArtState();
+            cameraArtBegin(f, 0);
+            f.runtime.spawnBeforeReservedSlots(); f.body(2); f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(before, f.runtime.sectionArtState());
+            var c = new CameraWords(0x680, PRE.yWord()); f.runtime.finishAfterCamera(new DrawCameras(c, PRE, PRE));
+            assertEquals(before, f.runtime.sectionArtState(), "SAT build must not request or prepare");
+            f.runtime.finishOrdinaryTail(); var after = f.runtime.sectionArtState();
+            assertEquals(0x0200, after.sectionWord()); assertEquals(50, after.remainingTilesWord());
+            assertEquals(before.residency(), after.residency());
+            var rows = f.assets.loadPlan().plcs().get(9).entries(); assertEquals(3, rows.size());
+            assertEquals(0x7600, after.queue().headDestination());
+            assertEquals(rows.get(1).sourceRange().nativeAddress(), after.queue().bytes().unsignedLong(6));
+            assertEquals(0x8120, after.queue().bytes().unsignedWord(10));
+            assertEquals(rows.get(2).sourceRange().nativeAddress(), after.queue().bytes().unsignedLong(12));
+            assertEquals(0x8500, after.queue().bytes().unsignedWord(16));
+            assertTrue(after.decoder().isPresent());
+        }
+    }
+
+    // Catches incorrectly selecting the faster budget from the low byte of raw scrollLock WORD.
+    @Test void cameraArtRawScrollLock0001WritesThreeWhere0100WritesEighteen() throws Exception {
+        for (int lock : List.of(0x0001, 0x0100)) try (var f = new Fixture()) {
+            cameraArtIdle(f); cameraArtCycle(f, 0x680, 0); var before = f.runtime.sectionArtState();
+            cameraArtBegin(f, lock); var after = f.runtime.sectionArtState(); int count = lock == 1 ? 3 : 18;
+            assertEquals(50 - count, after.remainingTilesWord());
+            assertEquals(0x7600 + count * 32, after.queue().headDestination());
+            var expected = cameraArtSource(f, com.openggf.game.soniccd.level.CdR11aAsset.ART_PATA_BATA);
+            cameraArtBytes(after.residency(), 0x7600, expected.slice(0, count * 32));
+            assertArrayEquals(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(before.residency(),
+                    0x3B0 + count).copy(), com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(
+                    after.residency(), 0x3B0 + count).copy(), "next tile must retain its prior native value");
+        }
+    }
+
+    // Catches consuming input/closing the owner before validating an unsigned source WORD.
+    @Test void cameraArtInvalidRawScrollLockRejectsBeforePreparedInputIsConsumed() throws Exception {
+        try (var f = new Fixture()) {
+            f.runtime.setPreScrollForeground(PRE); var selected = f.frame.prepareInput(1);
+            var state = f.runtime.sectionArtState(); var clock = f.frame.vIntClock();
+            for (int invalid : List.of(-1, 0x10000, Integer.MAX_VALUE)) {
+                assertThrows(IllegalArgumentException.class, () -> f.runtime.serviceVBlank(selected.phase(), () -> { }, invalid));
+                assertFalse(f.runtime.closed()); assertFalse(f.frame.closed());
+                assertEquals(clock, f.frame.vIntClock()); assertEquals(state, f.runtime.sectionArtState());
+            }
+            f.runtime.serviceVBlank(selected.phase(), () -> { }, 0);
+            assertEquals(1, f.frame.vIntClock().deltaSinceAdmittedCut());
+        }
+    }
+
+    // Catches moving the camera commit before plane publication or after Finish/count.
+    @Test void cameraArtPlaneCallbackSeesPowerupCommittedButOldCameraBeforeItsWriteAndFinish() throws Exception {
+        try (var f = new Fixture()) {
+            cameraArtIdle(f); cameraArtCycle(f, 0x680, 0); var before = f.runtime.sectionArtState();
+            f.runtime.setPreScrollForeground(PRE); var selected = f.frame.prepareInput(0);
+            long tick = f.frame.vIntClock().deltaSinceAdmittedCut(); var calls = new ArrayList<Integer>();
+            f.runtime.serviceVBlank(selected.phase(), () -> {
+                assertEquals(before, f.runtime.sectionArtState());
+                assertEquals(tick, f.frame.vIntClock().deltaSinceAdmittedCut());
+                assertEquals(CdOpeningObjectRuntime.Phase.SERVICING, f.runtime.phase()); calls.add(1);
+            }, 0x0100);
+            assertEquals(List.of(1), calls); assertEquals(32, f.runtime.sectionArtState().remainingTilesWord());
+            assertEquals(tick + 1, f.frame.vIntClock().deltaSinceAdmittedCut());
+        }
+    }
+
+    // Catches a retained service arm/callback, or incorrectly servicing/preparing at PP lag.
+    @Test void cameraArtNormalPauseServicesAlreadyPreparedHeadWhileLagKeepsEveryCameraFieldAndPicture() throws Exception {
+        try (var f = new Fixture()) {
+            cameraArtIdle(f); cameraArtCycle(f, 0x680, 0);
+            f.frame.prepareInput(0x80); f.runtime.serviceVBlank(PlcLifecyclePhase.NORMAL_PAUSE, () -> { }, 0);
+            assertTrue(f.frame.paused()); assertEquals(47, f.runtime.sectionArtState().remainingTilesWord());
+            var held = f.runtime.captureClosedCut(); var picture = f.runtime.displayedFrame();
+            f.frame.prepareInput(0); f.runtime.serviceVBlank(PlcLifecyclePhase.LAG, () -> fail("lag callback"), 0x0100);
+            assertEquals(held.sectionArtState(), f.runtime.sectionArtState()); assertEquals(picture, f.runtime.displayedFrame());
+            f.frame.prepareInput(0); f.runtime.serviceVBlank(PlcLifecyclePhase.NORMAL_PAUSE, () -> { }, 0);
+            assertEquals(44, f.runtime.sectionArtState().remainingTilesWord());
+            assertEquals(0x0200, f.runtime.sectionArtState().sectionWord(), "pause must not request section0 from old PRE");
+        }
+    }
+
+    // Catches a next-head decode during the final tile's unused selected budget.
+    @Test void cameraArtPataSeventeenthSlowServicePopsWithoutTouchingOrPreparingAnton() throws Exception {
+        try (var f = new Fixture()) {
+            cameraArtIdle(f); cameraArtCycle(f, 0x680, 0);
+            for (int i = 0; i < 16; i++) cameraArtCycle(f, 0x680, 0);
+            assertEquals(2, f.runtime.sectionArtState().remainingTilesWord()); cameraArtBegin(f, 0);
+            var popped = f.runtime.sectionArtState(); assertEquals(0, popped.remainingTilesWord());
+            assertEquals(2, popped.processBudgetWord());
+            assertEquals(0x236E46L, popped.queue().headSource()); assertEquals(0x8120, popped.queue().headDestination());
+            assertThrows(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.OwnershipBoundary.class,
+                    () -> com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(popped.residency(), 0x409));
+            cameraArtFinish(f, 0x680); assertEquals(22, f.runtime.sectionArtState().remainingTilesWord());
+            cameraArtBytes(f.runtime.sectionArtState().residency(), 0x7600,
+                    cameraArtSource(f, com.openggf.game.soniccd.level.CdR11aAsset.ART_PATA_BATA));
+        }
+    }
+
+    // Catches dropping PLC9's Anton/Tam rows or using an atomic whole-source picture instead of native writes.
+    @Test void cameraArtWholeActualPlc9CompletesIn45SelectedSlowServicesAndChangesPlantAndRamp() throws Exception {
+        try (var f = new Fixture()) {
+            cameraArtIdle(f); cameraArtCycle(f, 0x680, 0); var seed = f.runtime.sectionArtState();
+            for (int i = 0; i < 45; i++) cameraArtCycle(f, 0x680, 0);
+            var done = f.runtime.sectionArtState(); assertEquals(0, done.remainingTilesWord()); assertEquals(0, done.queue().headSource());
+            cameraArtBytes(done.residency(), 0x7600, cameraArtSource(f, com.openggf.game.soniccd.level.CdR11aAsset.ART_PATA_BATA));
+            cameraArtBytes(done.residency(), 0x8120, cameraArtSource(f, com.openggf.game.soniccd.level.CdR11aAsset.ART_ANTON));
+            cameraArtBytes(done.residency(), 0x8500, cameraArtSource(f, com.openggf.game.soniccd.level.CdR11aAsset.ART_TAMABBOH));
+            assertFalse(java.util.Arrays.equals(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(seed.residency(), 0x428).copy(),
+                    com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(done.residency(), 0x428).copy()));
+            assertFalse(java.util.Arrays.equals(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(seed.residency(), 0x441).copy(),
+                    com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(done.residency(), 0x441).copy()));
+            assertArrayEquals(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(seed.residency(), 0x3A0).copy(),
+                    com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(done.residency(), 0x3A0).copy(), "outside Pata overwrite stays intact");
+        }
+    }
+
+    // Catches stale object-specific Mosqui pixels at native$3B0 after a Pata write and picture mutation on tail.
+    @Test void cameraArtPreviousMosquiSatUsesFirstThreeNowCurrentPataTilesAtNextVIntAndOldPictureStaysFrozen() throws Exception {
+        try (var f = new Fixture()) {
+            cameraArtIdle(f); cameraArtBegin(f, 0); f.runtime.spawnBeforeReservedSlots(); f.body(2);
+            var objects = f.assets.openingObjects(); var pool = f.runtime.placement().pool(); pool.clearDynamicSlots();
+            pool.write(pool.state(40).moveByte(ID, CdMosqui.OBJECT_ID).moveByte(ROUTINE, 8).moveByte(SPRITE_FLAGS, 0x84)
+                    .moveLong(MAPPINGS, objects.view(com.openggf.game.soniccd.level.CdR11aObjectAssets.Table.MOSQUI_NORMAL_MAPPINGS).range().nativeAddress())
+                    .moveWord(TILE, 0x23B0).moveWord(X, 0x100).moveWord(Y, 0x780).moveWord(MOSQUI_ANCHOR_X, 0x100)
+                    .moveByte(WIDTH, 0x10).moveByte(Y_RADIUS, 0x10).moveByte(PRIORITY, 3));
+            f.runtime.runDynamicSlotsAfterReservedSlots(); var c = new CameraWords(0x680, PRE.yWord());
+            // World X is offset to stay visible in the POST camera; queue eligibility used PRE as native DrawObject did.
+            pool.write(pool.state(40).moveWord(X, 0x780));
+            var sat = f.runtime.finishAfterCamera(new DrawCameras(c, c, c));
+            assertTrue(sat.provenance().stream().anyMatch(p -> p.slotRef().wholeIndex() == 40));
+            f.runtime.finishOrdinaryTail(); var oldPicture = f.runtime.displayedFrame();
+            var frozen = oldPicture.patternVersions(); var oldCpu = sat.bytes();
+            cameraArtBegin(f, 0); assertArrayEquals(oldCpu, f.runtime.cpuSat().bytes());
+            var shown = f.runtime.displayedFrame(); var pata = cameraArtSource(f, com.openggf.game.soniccd.level.CdR11aAsset.ART_PATA_BATA);
+            for (int i = 0; i < 3; i++) assertEquals(CdObjectPresentation.patternVersion(pata.slice(i * 32, 32)),
+                    shown.patternVersions().get(BANKS.mosqui() + 16 + i));
+            assertEquals(frozen, oldPicture.patternVersions());
+            assertEquals(CdObjectPresentation.convert(sat, cameraArtPixels(f)), shown);
+        }
+    }
+
+    // Catches suppressing unowned later PLCs, rollback of the current generation, or continued CPU tail after a stop.
+    @Test void cameraArtActiveReversalReachesUnknownBoulderPrepareAndRetainsAlreadyWrittenPrefix() throws Exception {
+        try (var f = new Fixture()) {
+            cameraArtIdle(f); cameraArtCycle(f, 0x680, 0); cameraArtBegin(f, 0);
+            var prefix = f.runtime.sectionArtState().residency(); var rings = f.runtime.ringGlobals();
+            f.runtime.spawnBeforeReservedSlots(); f.body(2); f.runtime.runDynamicSlotsAfterReservedSlots(); f.runtime.finishAfterCamera(POST);
+            var fault = assertThrows(com.openggf.game.soniccd.resources.CdR11aSectionArt.SectionArtException.class, f.runtime::finishOrdinaryTail);
+            assertEquals(com.openggf.game.soniccd.resources.CdR11aSectionArt.Reason.UNKNOWN_SOURCE, fault.reason());
+            assertEquals(prefix, f.runtime.sectionArtState().residency()); assertEquals(fault.state(), f.runtime.sectionArtState());
+            assertEquals(0, f.runtime.sectionArtState().sectionWord()); assertEquals(0, f.runtime.sectionArtState().remainingTilesWord());
+            assertEquals(0x6E80, f.runtime.sectionArtState().queue().headDestination());
+            assertTrue(f.runtime.sectionArtState().stopped()); assertTrue(f.runtime.closed()); assertTrue(f.frame.closed());
+            assertEquals(rings, f.runtime.ringGlobals(), "ring tail follows the failed native ProcessPLCs cut");
+            assertThrows(IllegalStateException.class, () -> f.runtime.serviceVBlank(PlcLifecyclePhase.NORMAL_PAUSE));
+        }
+    }
+
+    // Catches flattening state capture into residency only, implicit restore decode, or loss of saved flags/display.
+    @Test void cameraArtAggregateReplayAtQueuedPartialAndCompleteTamCutsRetainsAllExistingPartitions() throws Exception {
+        try (var f = new Fixture()) {
+            cameraArtIdle(f); f.runtime.placement().bsetSavedFlag(7, 1, CdObjectPlacementRuntime.SavedBit.MEMBER_1);
+            cameraArtCycle(f, 0x680, 0);
+            for (int advance : List.of(0, 26, 19)) {
+                for (int i = 0; i < advance; i++) cameraArtCycle(f, 0x680, 0);
+                var cut = f.runtime.captureClosedCut(); var actor = f.frame.captureActor(); var shared = f.frame.captureShared();
+                assertEquals(advance == 0 ? 50 : advance == 26 ? 56 : 0, cut.sectionArtState().remainingTilesWord());
+                var cpu = f.runtime.cpuSat().bytes(); var picture = f.runtime.displayedFrame();
+                cameraArtCycle(f, 0x680, 0); var future = f.runtime.captureClosedCut();
+                var futureActor = f.frame.captureActor(); var futureShared = f.frame.captureShared(); var futureCpu = f.runtime.cpuSat().bytes();
+                f.frame.restoreActor(actor); f.frame.restoreShared(shared); f.runtime.restore(cut);
+                assertEquals(cut.sectionArtState(), f.runtime.sectionArtState()); assertEquals(picture, f.runtime.displayedFrame());
+                assertArrayEquals(cpu, f.runtime.cpuSat().bytes()); assertEquals(1, f.runtime.placement().savedFlag(7, 1));
+                cameraArtCycle(f, 0x680, 0); var replay = f.runtime.captureClosedCut();
+                assertEquals(future.sectionArtState(), replay.sectionArtState()); assertMonitorSnapshot(future, replay);
+                assertEquals(future.reserved().slots(), replay.reserved().slots());
+                assertEquals(futureActor, f.frame.captureActor()); assertEquals(futureShared, f.frame.captureShared());
+                assertArrayEquals(futureCpu, f.runtime.cpuSat().bytes());
+                // Continue from the original cut, so advances name exact service counts rather than replay calls.
+                f.frame.restoreActor(actor); f.frame.restoreShared(shared); f.runtime.restore(cut);
+            }
+        }
+    }
+
+    // Catches accepting a foreign private aggregate token or serving an unprepared phase to hide missed CPU work.
+    @Test void cameraArtForeignCaptureAndMisphaseRejectBeforeAnyArtStateReplacement() throws Exception {
+        try (var a = new Fixture(); var b = new Fixture()) {
+            var before = a.runtime.sectionArtState(); var foreign = b.runtime.captureClosedCut();
+            assertThrows(IllegalArgumentException.class, () -> a.runtime.validateRestore(foreign));
+            assertEquals(before, a.runtime.sectionArtState()); assertFalse(a.runtime.closed());
+            assertThrows(IllegalArgumentException.class, () -> a.runtime.restore(foreign));
+            assertEquals(before, a.runtime.sectionArtState()); assertTrue(a.runtime.closed());
+        }
+        try (var f = new Fixture()) {
+            var before = f.runtime.sectionArtState();
+            assertThrows(IllegalStateException.class, f.runtime::finishOrdinaryTail);
+            assertEquals(before, f.runtime.sectionArtState()); assertTrue(f.runtime.closed());
+        }
+    }
+
+    // Catches recreating cold/zero pixels/table on restart or carrying CPU decoder/queue as a native restart claim.
+    @Test void cameraArtRestartRequiresExplicitNonzeroResidentTableAndPreservesRawSectionLowByteVerbatim() throws Exception {
+        var assets = load(); var seed = cameraArtDevIngress(assets);
+        byte[] tile = new byte[32]; java.util.Arrays.fill(tile, (byte) 0xA7);
+        var resident = com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.writeTile(seed.residency(), 0x7600, CdAssetBytes.copyOf(tile));
+        byte[] table = new byte[512]; for (int i = 0; i < table.length; i++) table[i] = (byte) (i ^ 0xC3);
+        var ingress = new CdOpeningObjectRuntime.CameraArtRestartIngress(resident, CdAssetBytes.copyOf(table), 0x005A);
+        try (var frame = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, 0)) {
+            var publications = new ArrayList<CdPlayerArtRuntime.State>(); frame.bindArtPublication((request, state) -> publications.add(state));
+            try (var runtime = CdOpeningObjectRuntime.usaR11aRestartDevEmptySatPreloadedArt(assets, frame, INITIAL, CONTACT, SCORE, LEVEL,
+                    CdAssetBytes.copyOf(new byte[CdObjectPlacementRuntime.SAVED_BANK_BYTES]),
+                    new CdPowerupArtRuntime.State(new byte[0x480], new byte[0x480]), ingress, new byte[640], BANKS, PRE, value -> { })) {
+                var state = runtime.sectionArtState(); assertEquals(resident, state.residency()); assertArrayEquals(table, state.codeTable().copy());
+                assertEquals(0x005A, state.sectionWord()); assertEquals(0, state.queue().headSource()); assertTrue(state.decoder().isEmpty());
+                assertEquals(0, state.remainingTilesWord()); assertEquals(0, state.processBudgetWord()); assertEquals(0, state.hintWord()); assertEquals(0, state.padWord());
+                assertEquals(com.openggf.game.soniccd.resources.CdR11aSectionArt.Writer.CLEARED, state.savedDecoder().writer());
+                var cut = runtime.captureClosedCut(); runtime.restore(cut); assertEquals(state, runtime.sectionArtState());
+                assertTrue(publications.isEmpty()); assertEquals(0, frame.vIntClock().deltaSinceAdmittedCut());
+                assertTrue(runtime.displayedFrame().tiles().isEmpty());
+            }
+        }
+    }
+
+    // Catches a restart factory silently taking a cold default, and a lossy table/section declaration.
+    @Test void cameraArtRestartIngressRejectsAbsentAndMalformedExplicitValuesBeforeFactoryAdmission() throws Exception {
+        var seed = cameraArtDevIngress(load());
+        assertThrows(NullPointerException.class, () -> new CdOpeningObjectRuntime.CameraArtRestartIngress(null, seed.codeTable512(), 0));
+        assertThrows(NullPointerException.class, () -> new CdOpeningObjectRuntime.CameraArtRestartIngress(seed.residency(), null, 0));
+        assertThrows(IllegalArgumentException.class, () -> new CdOpeningObjectRuntime.CameraArtRestartIngress(seed.residency(), CdAssetBytes.copyOf(new byte[511]), 0));
+        assertThrows(IllegalArgumentException.class, () -> new CdOpeningObjectRuntime.CameraArtRestartIngress(seed.residency(), seed.codeTable512(), 0x10000));
+        assertThrows(IllegalArgumentException.class, () -> new CdOpeningObjectRuntime.CameraArtRestartIngress(seed.residency(), seed.codeTable512(), -1));
+        var assets = load(); try (var frame = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, 0)) {
+            frame.bindArtPublication((request, state) -> { });
+            assertThrows(NullPointerException.class, () -> CdOpeningObjectRuntime.usaR11aRestartDevEmptySatPreloadedArt(assets, frame,
+                    INITIAL, CONTACT, SCORE, LEVEL, CdAssetBytes.copyOf(new byte[CdObjectPlacementRuntime.SAVED_BANK_BYTES]),
+                    new CdPowerupArtRuntime.State(new byte[0x480], new byte[0x480]), null, new byte[640], BANKS, PRE, value -> { }));
+            assertFalse(frame.closed()); assertEquals(0, frame.vIntClock().deltaSinceAdmittedCut());
+        }
+    }
+
+    // Catches snapshotting a second mutable resident authority or adding another logical Pata span.
+    @Test void cameraArtOneAggregateCaptureAndOneRealPataBodyUseTheExistingNativePool() {
+        assertEquals(1, java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredFields()).filter(f ->
+                f.getType() == com.openggf.game.soniccd.resources.CdR11aSectionArt.State.class).count());
+        assertEquals(1, java.util.Arrays.stream(CdOpeningObjectRuntime.Snapshot.class.getDeclaredFields()).filter(f ->
+                f.getType() == com.openggf.game.soniccd.resources.CdR11aSectionArt.State.class).count());
+        assertEquals(1, java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredFields()).filter(f -> f.getType() == CdPataBata.class).count());
+        for (Class<?> type : List.of(CdOpeningObjectRuntime.class, CdOpeningObjectRuntime.Snapshot.class))
+            assertTrue(java.util.Arrays.stream(type.getDeclaredFields()).noneMatch(f ->
+                    f.getType() == com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.State.class
+                    || f.getType() == com.openggf.game.soniccd.level.CdR11aObjectAssets.PataBataArtBank.class));
+    }
+
+    // Catches dropping Init fallthrough, inventing a player/time-stop/debug gate, or replaying completed motion.
+    @Test void pataLiveInitMainUsesActualAssetsAndNativeAnchorsAnimationAndFractionalBobOnce() throws Exception {
+        for (int subtype : List.of(0, 1)) try (var f = new Fixture()) {
+            cameraArtIdle(f); cameraArtBegin(f, 0); f.runtime.spawnBeforeReservedSlots(); f.body(2);
+            var pool = f.runtime.placement().pool(); pool.clearDynamicSlots();
+            pool.write(pool.state(40).moveByte(ID, CdPataBata.OBJECT_ID).moveByte(SUBTYPE, subtype)
+                    .moveWord(X, 0x100).moveWord(Y, 0x780));
+            var sounds = f.runtime.lastSoundRequests(); f.runtime.runDynamicSlotsAfterReservedSlots(); var s = f.slot(40);
+            assertEquals(2, s.routine()); assertEquals(0x100, s.word(PATA_BATA_ANCHOR_X));
+            assertEquals(0x07808000, s.longBits(CdObjectState.LongField.PATA_BATA_ANCHOR_Y));
+            assertEquals(subtype == 0 ? 0x00FF8000 : 0x00FFC000, s.longBits(CdObjectState.LongField.X_POSITION));
+            assertEquals(subtype == 0 ? 0x077F1FFF : 0x07802FFF, s.longBits(CdObjectState.LongField.Y_POSITION));
+            assertEquals(subtype == 0 ? 0xFE00 : 0xFF00, s.word(PATA_BATA_PHASE));
+            assertEquals(subtype == 0 ? 7 : 3, s.unsignedByte(ANIMATION_TIME)); assertEquals(1, s.unsignedByte(ANIMATION_FRAME));
+            assertEquals(0x23B0, s.word(TILE)); assertEquals(0x2A, s.unsignedByte(COLLISION_TYPE));
+            assertEquals(sounds, f.runtime.lastSoundRequests()); var sat = f.runtime.finishAfterCamera(POST);
+            assertTrue(sat.provenance().stream().anyMatch(p -> p.slotRef().wholeIndex() == 40)); f.runtime.finishOrdinaryTail();
+        }
+    }
+
+    // Catches dispatching Pata through Mosqui's routine table or applying completed motion twice.
+    @Test void pataEveryRepresentativeNonzeroRoutineEntersMainWithoutInitAndPreservesItsNativeWordFields() throws Exception {
+        for (int routine : List.of(1, 3, 0x80, 0xFF)) try (var f = new Fixture()) {
+            cameraArtIdle(f); cameraArtBegin(f, 0); f.runtime.spawnBeforeReservedSlots(); f.body(2);
+            var pool = f.runtime.placement().pool(); pool.clearDynamicSlots();
+            pool.write(cameraPataMain(f, pool.state(40)).moveByte(ROUTINE, routine)
+                    .moveLong(CdObjectState.LongField.PATA_BATA_X_DELTA, -0x8000));
+            f.runtime.runDynamicSlotsAfterReservedSlots(); var s = f.slot(40);
+            assertEquals(routine, s.routine()); assertEquals(0x00FF8000, s.longBits(CdObjectState.LongField.X_POSITION));
+            assertEquals(0x100, s.word(PATA_BATA_ANCHOR_X)); assertEquals(0, s.word(PATA_BATA_PHASE_SPEED));
+            assertEquals(0x23B0, s.word(TILE)); f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+        }
+    }
+
+    // Catches an active-list snapshot/reordered dispatch and exposing pre-body state to a later real consumer.
+    @Test void pataEarlierPhysicalSourceCompletesBeforeLaterMosquiTerrainConsumerWithoutMetadataReplay() throws Exception {
+        try (var f = new Fixture()) {
+            cameraArtIdle(f); cameraArtBegin(f, 0); f.runtime.spawnBeforeReservedSlots(); f.body(2);
+            var pool = f.runtime.placement().pool(); pool.clearDynamicSlots();
+            pool.write(cameraPataMain(f, pool.state(39)).moveLong(CdObjectState.LongField.PATA_BATA_X_DELTA, -0x8000));
+            var oldMosqui = f.assets.openingObjects();
+            pool.write(pool.state(40).moveByte(ID, CdMosqui.OBJECT_ID).moveByte(ROUTINE, 6)
+                    .moveLong(MAPPINGS, oldMosqui.view(com.openggf.game.soniccd.level.CdR11aObjectAssets.Table.MOSQUI_NORMAL_MAPPINGS).range().nativeAddress())
+                    .moveWord(X, 0x100).moveWord(Y, 0x780).moveWord(MOSQUI_ANCHOR_X, 0x100).moveByte(SPRITE_FLAGS, 4));
+            var observed = new ArrayList<Integer>(); f.onAngle = value -> observed.add(f.slot(39).longBits(CdObjectState.LongField.X_POSITION));
+            f.runtime.runDynamicSlotsAfterReservedSlots(); assertEquals(List.of(0x00FF8000), observed);
+            assertEquals(0x00FF8000, f.slot(39).longBits(CdObjectState.LongField.X_POSITION));
+        }
+    }
+
+    // Catches using current X instead of the native anchor for despawn, or clearing member rather than loaded.
+    @Test void pataLiveAnchorDespawnUsesPreScrollCameraAndClearsOnlyActualSavedLoadedBit() throws Exception {
+        try (var f = new Fixture()) {
+            cameraArtIdle(f); cameraArtBegin(f, 0); f.runtime.spawnBeforeReservedSlots(); f.body(2);
+            var placement = f.runtime.placement(); var pool = placement.pool(); pool.clearDynamicSlots();
+            pool.write(cameraPataMain(f, pool.state(40)).moveWord(X, 0x600).moveWord(PATA_BATA_ANCHOR_X, 0x600).moveByte(SAVED_FLAGS_ID, 7));
+            seedSpinTunnelLoaded(placement, 7, 1); f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertArrayEquals(new byte[64], f.slot(40).copyBytes()); assertEquals(0x55, placement.savedFlag(7, 1), "dirty D5 loses only LOADED bit7");
+            var sat = f.runtime.finishAfterCamera(POST); assertTrue(sat.provenance().stream().noneMatch(p -> p.slotRef().wholeIndex() == 40));
+            f.runtime.finishOrdinaryTail();
+        }
+    }
+
+    // Raw warp periods are still outside Frame service admission; object-side raw reads are component-owned.
+    @Test void pataRawWarpPeriodStopsAtExistingFrameFamilyBeforeAnyTimePostOrPataVisit() throws Exception {
+        try (var f = new Fixture()) {
+            cameraArtIdle(f);
+            var placement = f.runtime.placement(); var pool = placement.pool();
+            pool.write(timePostImage(f, pool.state(39), 2, 8, 0, 1));
+            pool.write(cameraPataMain(f, pool.state(40)).moveByte(SAVED_FLAGS_ID, 7));
+            for (int period = 0; period < 3; period++) seedSpinTunnelLoaded(placement, 7, period);
+            var post = pool.state(39); var pata = pool.state(40); var bank = placement.capture().savedFlags().copy();
+            var section = f.runtime.sectionArtState(); var clock = f.frame.vIntClock();
+            monitorEnvironment(f, 0x81, 0, 0, 0);
+            var failure = assertThrows(CdPlayerFrameRuntime.UnsupportedFrame.class, () -> cameraArtBegin(f, 0));
+            assertEquals(CdPlayerFrameRuntime.UnsupportedBoundary.SOURCE_FAMILY, failure.boundary());
+            assertEquals(post, pool.state(39)); assertEquals(pata, pool.state(40));
+            assertArrayEquals(bank, placement.capture().savedFlags().copy());
+            assertEquals(section, f.runtime.sectionArtState()); assertEquals(clock, f.frame.vIntClock());
+            assertTrue(f.runtime.closed()); assertTrue(f.frame.closed());
+        }
+    }
+
+    // Catches effect replay, native sound invention, clearing saved flags, or executing the converted same slot twice.
+    @Test void pataGoodFutureConvertsActualSlotSilentlyAndLaterUnknownFailureRetainsItsCompletedPrefix() throws Exception {
+        try (var f = new Fixture()) {
+            cameraArtIdle(f);
+            var declared = (CdOpeningObjectRuntime.Snapshot) horizontalReplacePartition(f.runtime.captureClosedCut(),
+                    CdOpeningObjectRuntime.DevGlobals.class, new CdOpeningObjectRuntime.DevGlobals(1, 0));
+            f.runtime.restore(declared); cameraArtBegin(f, 0); f.runtime.spawnBeforeReservedSlots(); f.body(2);
+            var pool = f.runtime.placement().pool(); pool.clearDynamicSlots();
+            pool.write(cameraPataMain(f, pool.state(39)).moveByte(SUBTYPE, 1).moveByte(SPRITE_FLAGS, 0x84).moveByte(SAVED_FLAGS_ID, 7));
+            pool.write(pool.state(40).moveByte(ID, 0x7F)); seedSpinTunnelLoaded(f.runtime.placement(), 7, 1);
+            var sounds = f.runtime.lastSoundRequests(); assertThrows(UnsupportedOperationException.class, f.runtime::runDynamicSlotsAfterReservedSlots);
+            var s = f.slot(39); assertEquals(CdExplosion.OBJECT_ID, s.id()); assertEquals(0, s.routine());
+            assertEquals(0x100, s.centreX()); assertEquals(0x780, s.centreY()); assertEquals(0, s.spriteFlags());
+            assertEquals(0xD5, f.runtime.placement().savedFlag(7, 1), "good-future conversion does not change dirty saved members"); assertEquals(sounds, f.runtime.lastSoundRequests());
+            assertEquals(0x7F, f.slot(40).id()); assertTrue(f.runtime.closed()); assertTrue(f.frame.closed());
+        }
+    }
+
+    // Catches restarting/tailing a source cycle that branched before camera/SAT/CPU PLC work.
+    @Test void cameraArtLevelRestartCutOmitsTheSectionRequestAndPreparationDespiteLiveDynamicWork() throws Exception {
+        try (var f = new Fixture(RESTART_LEVEL)) {
+            seedLevelPlayer(f, 8, 1); var before = f.runtime.sectionArtState(); runRestartRow(f);
+            assertTrue(f.runtime.endCycleAtLevelRestart()); assertEquals(before, f.runtime.sectionArtState());
+            assertEquals(before, f.runtime.captureClosedCut().sectionArtState());
+        }
+    }
+
+    // Catches a failed plane callback nevertheless decoding tiles or finishing its V-int.
+    @Test void cameraArtPlaneFailureLeavesCameraPrefixUnservicedAndPreventsFinishOrRetry() throws Exception {
+        try (var f = new Fixture()) {
+            cameraArtIdle(f); cameraArtCycle(f, 0x680, 0); var before = f.runtime.sectionArtState();
+            f.runtime.setPreScrollForeground(PRE); var selected = f.frame.prepareInput(1); var clock = f.frame.vIntClock();
+            var failure = new IllegalStateException("constructed plane boundary before camera service");
+            assertSame(failure, assertThrows(IllegalStateException.class,
+                    () -> f.runtime.serviceVBlank(selected.phase(), () -> { throw failure; }, 0x0100)));
+            assertEquals(before, f.runtime.sectionArtState()); assertEquals(clock, f.frame.vIntClock());
+            assertTrue(f.runtime.closed()); assertTrue(f.frame.closed());
+        }
+    }
+
+    // Catches preparing the next head during a held selector8 instead of the omitted CPU ProcessPLCs call.
+    @Test void cameraArtPausedCompletionLeavesAntonUnpreparedAcrossFurtherSelectedServices() throws Exception {
+        try (var f = new Fixture()) {
+            cameraArtIdle(f); cameraArtCycle(f, 0x680, 0);
+            for (int held : List.of(0x80, 0, 0)) {
+                f.frame.prepareInput(held); f.runtime.serviceVBlank(PlcLifecyclePhase.NORMAL_PAUSE, () -> { }, 0x0100);
+            }
+            var done = f.runtime.sectionArtState(); assertEquals(0, done.remainingTilesWord());
+            assertEquals(0x236E46L, done.queue().headSource()); assertEquals(0x8120, done.queue().headDestination());
+            assertEquals(5, done.processBudgetWord(), "18-budget final14 ends before final decrement");
+            f.frame.prepareInput(0); f.runtime.serviceVBlank(PlcLifecyclePhase.NORMAL_PAUSE, () -> { }, 0x0100);
+            assertEquals(done, f.runtime.sectionArtState());
+            assertThrows(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.OwnershipBoundary.class,
+                    () -> com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(done.residency(), 0x409));
+        }
+    }
+
+    // Catches arming a post-scroll section request before the CPU SAT actually finishes successfully.
+    @Test void cameraArtSatBuildFailureNeverArmsOrRunsTheSectionTail() throws Exception {
+        try (var f = new Fixture()) {
+            cameraArtIdle(f); cameraArtBegin(f, 0); f.runtime.spawnBeforeReservedSlots(); f.body(2);
+            var pool = f.runtime.placement().pool(); pool.clearDynamicSlots(); pool.write(cameraPataMain(f, pool.state(40)));
+            f.runtime.runDynamicSlotsAfterReservedSlots(); var before = f.runtime.sectionArtState();
+            pool.write(pool.state(40).moveLong(MAPPINGS, 0x12345678).moveWord(X, 0x780));
+            var c = new CameraWords(0x680, PRE.yWord());
+            assertThrows(UnsupportedOperationException.class, () -> f.runtime.finishAfterCamera(new DrawCameras(c, c, c)));
+            assertEquals(before, f.runtime.sectionArtState()); assertTrue(f.runtime.closed());
+            assertThrows(IllegalStateException.class, f.runtime::finishOrdinaryTail); assertEquals(before, f.runtime.sectionArtState());
+        }
+    }
+
+    // Catches a swallowed plane reentry proceeding to camera writes/Finish after admission has already failed.
+    @Test void cameraArtSwallowedPlaneReentryFailsBeforeCameraServiceAndFrameFinish() throws Exception {
+        try (var f = new Fixture()) {
+            cameraArtIdle(f); cameraArtCycle(f, 0x680, 0); var before = f.runtime.sectionArtState();
+            f.runtime.setPreScrollForeground(PRE); var selected = f.frame.prepareInput(0); var clock = f.frame.vIntClock();
+            assertThrows(IllegalStateException.class, () -> f.runtime.serviceVBlank(selected.phase(), () -> {
+                assertThrows(IllegalStateException.class, () -> f.runtime.setPreScrollForeground(PRE));
+            }, 0x0100));
+            assertEquals(before, f.runtime.sectionArtState()); assertEquals(clock, f.frame.vIntClock());
+            assertTrue(f.runtime.closed()); assertTrue(f.frame.closed());
+        }
+    }
+
+    /** Explicit DEV preload for the two inherited restart helpers, not a native carry/history assertion. */
+    private static CdOpeningObjectRuntime.CameraArtRestartIngress cameraArtDevIngress(CdR11aAssets assets) throws java.io.IOException {
+        var objects = assets.openingObjects(); var frontier = objects.frontierArtBank();
+        return new CdOpeningObjectRuntime.CameraArtRestartIngress(
+                com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.devSeed(objects.initialArtBank().binding(
+                        com.openggf.game.soniccd.level.CdR11aAsset.ART_MOSQUI).bytes(), frontier.binding(
+                        com.openggf.game.soniccd.level.CdR11aAsset.ART_3D_PLANT).bytes(), frontier.binding(
+                        com.openggf.game.soniccd.level.CdR11aAsset.ART_3D_RAMP_BOOST).bytes()), CdAssetBytes.copyOf(new byte[512]), 0);
+    }
+
+    private static void cameraArtIdle(Fixture f) {
+        f.firstCycle(); f.makePlayerAbsent(); f.runtime.placement().pool().clearDynamicSlots();
+    }
+    private static void cameraArtBegin(Fixture f, int lockWord) {
+        f.runtime.setPreScrollForeground(PRE); var selected = f.frame.prepareInput(0);
+        assertEquals(PlcLifecyclePhase.ORDINARY_LEVEL, selected.phase());
+        f.runtime.serviceVBlank(selected.phase(), () -> { }, lockWord);
+    }
+    private static void cameraArtFinish(Fixture f, int postX) {
+        f.runtime.spawnBeforeReservedSlots(); f.body(2); f.runtime.runDynamicSlotsAfterReservedSlots();
+        var c = new CameraWords(postX, PRE.yWord()); f.runtime.finishAfterCamera(new DrawCameras(c, c, c)); f.runtime.finishOrdinaryTail();
+    }
+    private static void cameraArtCycle(Fixture f, int postX, int lockWord) {
+        cameraArtBegin(f, lockWord); cameraArtFinish(f, postX);
+    }
+    private static CdAssetBytes cameraArtSource(Fixture f, com.openggf.game.soniccd.level.CdR11aAsset source) throws java.io.IOException {
+        return f.assets.openingObjects().sectionArtSources().source(source).decode().bytes();
+    }
+    private static void cameraArtBytes(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.State state,
+                                       int destination, CdAssetBytes expected) {
+        assertEquals(0, expected.length() % 32);
+        for (int offset = 0; offset < expected.length(); offset += 32) assertArrayEquals(expected.slice(offset, 32).copy(),
+                com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(state, (destination + offset) >>> 5).copy(),
+                "current physical tile $" + Integer.toHexString((destination + offset) >>> 5));
+    }
+    private static CdObjectPresentation.PatternSource cameraArtPixels(Fixture f) throws java.io.IOException {
+        var objects = f.assets.openingObjects();
+        return CdObjectPresentation.usaR11aCurrentCameraDevPreloadedArt(f.frame.artState(), f.runtime.powerupArtState(), objects,
+                objects.frontierArtBank(), objects.contactArtBank(), objects.floatBlockArtBank(), objects.springArtBank(),
+                objects.tunnelDoorArtBank(), objects.monitorTimeArtBank(), f.runtime.sectionArtState().residency(),
+                BANKS.player(), BANKS.ring(), BANKS.mosqui(), BANKS.plant(), BANKS.ramp(), BANKS.explosion(), BANKS.points(), BANKS.flower(),
+                BANKS.powerup(), BANKS.floatBlock(), BANKS.spring(), BANKS.tunnelDoorVertical(), BANKS.monitorTime());
+    }
+    private static CdObjectState cameraPataMain(Fixture f, CdObjectState s) throws java.io.IOException {
+        return s.moveByte(ID, CdPataBata.OBJECT_ID).moveByte(ROUTINE, 2).moveByte(SPRITE_FLAGS, 4)
+                .moveWord(X, 0x100).moveWord(Y, 0x780).moveWord(PATA_BATA_ANCHOR_X, 0x100)
+                .moveLong(CdObjectState.LongField.PATA_BATA_ANCHOR_Y, 0x07808000).moveWord(PATA_BATA_SHIFT, 3)
+                .moveWord(TILE, 0x23B0).moveByte(WIDTH, 0x10).moveByte(Y_RADIUS, 0x10).moveByte(PRIORITY, 3)
+                .moveLong(MAPPINGS, f.assets.openingObjects().view(
+                        com.openggf.game.soniccd.level.CdR11aObjectAssets.Table.PATA_BATA_NORMAL_MAPPINGS).range().nativeAddress());
+    }
+    // END current-camera/Pata Runtime tests-first additions.
 }

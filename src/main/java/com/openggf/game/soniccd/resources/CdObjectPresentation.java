@@ -536,4 +536,78 @@ public final class CdObjectPresentation {
         return packed;
     }
     private static int word(byte[] bytes, int at) { return ((bytes[at] & 255) << 8) | (bytes[at + 1] & 255); }
+
+
+    /**
+     * Explicit USA_R11A_CURRENT_CAMERA_DEV_PRELOADED_ART policy: retain the historical thirteen spans / 494
+     * logical IDs, replacing only their 70 Mosqui, 28 Plant and 63 Ramp pixels with the supplied immutable
+     * current-camera generation. The other 333 versions remain the old DEV preload, including BOTH complete
+     * NOW-serviced player/powerup windows. This is one physical value per final native ID, never an actor or
+     * producer choice: Pata's $7600 writes replace Mosqui's middle, and Tamabboh's $8500 writes replace parts
+     * of Plant and Ramp. Anton and the $8800 gap stay unadmitted even when this State knows their bytes.
+     *
+     * <p>Destinations: PLC_Cam1_Full (scddisasm 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff,
+     * src/Level/Palmtree Panic/Data (Act 1 Present).asm:85-100); alias writers PLC_Cam2_Incr (:183-190).
+     * VInt_Level (src/Level/Main.asm:821-847) transfers the prior SAT before servicing camera art. The caller
+     * selects the correct pre/post-service State; this factory services no PLC, time, upload or lifecycle.
+     * All old physical/logical validation runs first, then every admitted current tile is eagerly read,
+     * including for an empty SAT. Sources and converted pictures retain immutable versions across later
+     * writes. Neither the supplied generation nor this hybrid DEV policy certifies actual seed provenance,
+     * native cold/title history, service chronology, or renderer residency.</p>
+     */
+    public static PatternSource usaR11aCurrentCameraDevPreloadedArt(CdPlayerArtRuntime.State nowServicedPlayer,
+                                                                   CdPowerupArtRuntime.State nowServicedPowerup,
+                                                                   CdR11aObjectAssets objects,
+                                                                   CdR11aObjectAssets.FrontierArtBank frontier,
+                                                                   CdR11aObjectAssets.ContactArtBank contact,
+                                                                   CdR11aObjectAssets.FloatBlockArtBank floatBlock,
+                                                                   CdR11aObjectAssets.SpringArtBank spring,
+                                                                   CdR11aObjectAssets.TunnelDoorArtBank tunnelDoor,
+                                                                   CdR11aObjectAssets.MonitorTimeArtBank monitorTime,
+                                                                   CdR11aCameraArtResidency.State cameraResidency,
+                                                                   int playerLogicalBase, int ringLogicalBase,
+                                                                   int mosquiLogicalBase, int plantLogicalBase,
+                                                                   int rampLogicalBase, int explosionLogicalBase,
+                                                                   int pointsLogicalBase, int flowerLogicalBase,
+                                                                   int powerupLogicalBase, int floatBlockLogicalBase,
+                                                                   int springLogicalBase,
+                                                                   int tunnelDoorVerticalLogicalBase,
+                                                                   int monitorTimeLogicalBase) {
+        PatternSource preloaded = usaR11aMonitorTimeDevPreloadedArt(nowServicedPlayer, nowServicedPowerup,
+                objects, frontier, contact, floatBlock, spring, tunnelDoor, monitorTime,
+                playerLogicalBase, ringLogicalBase, mosquiLogicalBase, plantLogicalBase, rampLogicalBase,
+                explosionLogicalBase, pointsLogicalBase, flowerLogicalBase, powerupLogicalBase,
+                floatBlockLogicalBase, springLogicalBase, tunnelDoorVerticalLogicalBase, monitorTimeLogicalBase);
+        Objects.requireNonNull(cameraResidency, "immutable current-camera art generation");
+        var mosqui = objects.initialArtBank().binding(CdR11aAsset.ART_MOSQUI);
+        var plant = frontier.binding(CdR11aAsset.ART_3D_PLANT);
+        var ramp = frontier.binding(CdR11aAsset.ART_3D_RAMP_BOOST);
+        var mosquiRegion = CdR11aCameraArtResidency.Region.AT_7400;
+        var combinedRegion = CdR11aCameraArtResidency.Region.AT_8480;
+        // Plant/Ramp are drawable subsets of the combined region, separated by one owned unadmitted tile.
+        // Counts follow their authenticated source extents; the ownership class alone admits no new span.
+        if (mosqui.plc().vramAddress() != mosquiRegion.destinationWord()
+                || mosqui.bytes().length() != mosquiRegion.byteLength()
+                || plant.plc().vramAddress() != combinedRegion.destinationWord() || plant.tileCount() != 28
+                || ramp.plc().vramAddress() != plant.plc().vramAddress() + plant.bytes().length() + 32
+                || ramp.tileCount() != 63
+                || ramp.plc().vramAddress() + ramp.bytes().length()
+                        != combinedRegion.destinationWord() + combinedRegion.byteLength()) {
+            throw new IllegalArgumentException("Drawable camera bindings disagree with physical residency ownership");
+        }
+        var replacements = new HashMap<Integer, TilePattern>();
+        for (var binding : List.of(mosqui, plant, ramp)) {
+            for (int tile = 0; tile < binding.tileCount(); tile++) {
+                int nativeId = binding.firstTileId() + tile;
+                var admitted = preloaded.resolve(nativeId);
+                replacements.put(nativeId, new TilePattern(admitted.logicalPatternId(),
+                        patternVersion(CdR11aCameraArtResidency.readTile(cameraResidency, nativeId))));
+            }
+        }
+        Map<Integer, TilePattern> frozen = Map.copyOf(replacements);
+        return nativeId -> {
+            var current = frozen.get(nativeId);
+            return current == null ? preloaded.resolve(nativeId) : current;
+        };
+    }
 }

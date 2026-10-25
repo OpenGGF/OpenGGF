@@ -4,6 +4,7 @@ import com.openggf.game.internal.NativeDynamicObjectPass;
 import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.game.resources.PlcLifecycleService;
 import com.openggf.game.soniccd.level.CdAssetBytes;
+import com.openggf.game.soniccd.level.CdR11aAsset;
 import com.openggf.game.soniccd.level.CdR11aAssets;
 import com.openggf.game.soniccd.level.CdR11aObjectAssets;
 import com.openggf.game.soniccd.player.CdPlayerBody;
@@ -16,6 +17,8 @@ import com.openggf.game.soniccd.player.CdPlayerTerrain;
 import com.openggf.game.soniccd.player.CdPlayerSpeedShoesReward;
 import com.openggf.game.soniccd.resources.CdObjectPresentation;
 import com.openggf.game.soniccd.resources.CdPowerupArtRuntime;
+import com.openggf.game.soniccd.resources.CdR11aCameraArtResidency;
+import com.openggf.game.soniccd.resources.CdR11aSectionArt;
 import com.openggf.graphics.SpritePresentation;
 
 import java.io.IOException;
@@ -45,7 +48,7 @@ import static com.openggf.game.soniccd.objects.CdObjectState.WordField.*;
  * Ring/Mosqui/3D-plant/3D-ramp-booster/explosion/points/flower/Floating-Block/normal-Spring/shared-horizontal-and-vertical-Tunnel-Door/Monitor-time art (the inert Animal path draws nothing).
  * The 36-tile powerup window starts cold zero and changes only at the selector-8 LoadShieldArt cut.
  * The initial Ring, contact, score and level globals are caller-declared DEV ingress, never an entry proof.
- * Live dynamic IDs $10 Ring, $11 LostRing, $3D Mosqui, $24 Animal, $2C 3D plant and $2A 3D ramp,
+ * Live dynamic IDs $10 Ring, $11 LostRing, $3D Mosqui, $3E Pata-Bata, $24 Animal, $2C 3D plant and $2A 3D ramp,
  * aftermath IDs $18/$1C/$1F, $12 Floating Block, normal $0A Spring, $34 Spin tunnel tag, $0D horizontal Door,
  * $35 vertical Tunnel Door, $19 Monitor/Time Post and $1A shoes item and the death row's $3B Game/Time Over are owned.
  * The zero reserved bank is NOT post-native HUD/title initialization: later native owners of slots 2..31
@@ -53,7 +56,9 @@ import static com.openggf.game.soniccd.objects.CdObjectState.WordField.*;
  * dynamic slots 32..127 stay exclusively in placement's existing pool. ID $0B splash execution stays unowned.
  * Every other ID fails at its live dispatch; standing-object MODE remains a typed player boundary.
  * Time Post activation submits only typed voice metadata; the next actual Main retains Movement's
- * TIME_WARP_ACTIVE boundary. This does not execute native title/HUD/PLC/section-art/audio/plane publication.
+ * TIME_WARP_ACTIVE boundary. Bounded current-camera PLC requests/preparation/service use the actual plan and
+ * six finite sources, with one immutable resident generation; later unowned producers stop when reached.
+ * This does not execute native title/HUD/immediate-PLC prehistory, palette cycling or audio playback.
  * The loader, not declarations or this composition, authenticates asset bytes.</p>
  *
  * <p>Root prepares input on the exact bound Frame before service, owns the
@@ -113,6 +118,24 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                             int flower, int powerup, int floatBlock, int spring, int tunnelDoorVertical) {
             this(player, ring, mosqui, plant, ramp, explosion, points, flower, powerup, floatBlock, spring,
                     tunnelDoorVertical, tunnelDoorVertical + 12);
+        }
+    }
+
+    /**
+     * Plain explicit DEV restart carry, not a native full-restart/history certificate.
+     * Root supplies CURRENT native bytes and last represented code table, and owns any
+     * source-backed section HIGH-byte reset policy. No queue, decoder or service is carried.
+     * Main.asm:275 clears sectionID.b only in the title branch; omitted immediate Std/Ring
+     * loads may have changed the native table, so this does not claim that unrepresented table.
+     */
+    public record CameraArtRestartIngress(CdR11aCameraArtResidency.State residency,
+                                           CdAssetBytes codeTable512, int sectionWord) {
+        public CameraArtRestartIngress {
+            Objects.requireNonNull(residency, "explicit carried current-camera residency");
+            Objects.requireNonNull(codeTable512, "explicit last represented code table");
+            if (codeTable512.length() != 512 || (sectionWord & ~0xFFFF) != 0) {
+                throw new IllegalArgumentException("Camera restart requires a 512-byte table and unsigned section WORD");
+            }
         }
     }
 
@@ -227,7 +250,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
      * Placement already contains the ONLY dynamic-pool/saved-bank snapshot. reserved contains the
      * ONLY immutable capture of the one real 1..31 storage bank, with no primary/dynamic shadow. Queue contains
      * the CPU SAT; displayedFrame freezes its own pixels, possibly an older picture.
-     * powerupArtState is the one immutable LoadShieldArt CPU/resident window.
+     * powerupArtState is the one immutable LoadShieldArt CPU/resident window. sectionArtState contains
+     * the ONLY camera PLC queue/table/decoder/count/residency capture; displayed pixels freeze independently.
      * No actor/shared Frame, pending input, TouchContext, scan snapshot, camera or
      * scroll capture is stored. Root captures/prevalidates those owners separately.
      */
@@ -245,6 +269,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         private final ScoreGlobals scoreGlobals;
         private final CdLevelGlobals levelGlobals;
         private final CdPowerupArtRuntime.State powerupArtState;
+        private final CdR11aSectionArt.State sectionArtState;
 
         private Snapshot(Object owner, CdObjectPlacementRuntime.Snapshot placement, CdReservedObjectBank.Snapshot reserved,
                          CdRingGlobals ringGlobals,
@@ -252,7 +277,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                          CdObjectDrawQueue.Snapshot queue, SpritePresentation.Frame displayedFrame,
                          List<SoundRequest> sounds, DevGlobals devGlobals,
                          CdPlayerBody.ContactGlobals contactGlobals, ScoreGlobals scoreGlobals,
-                         CdLevelGlobals levelGlobals, CdPowerupArtRuntime.State powerupArtState) {
+                         CdLevelGlobals levelGlobals, CdPowerupArtRuntime.State powerupArtState,
+                         CdR11aSectionArt.State sectionArtState) {
             this.owner = owner;
             this.placement = placement;
             this.reserved = reserved;
@@ -266,6 +292,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
             this.scoreGlobals = scoreGlobals;
             this.levelGlobals = levelGlobals;
             this.powerupArtState = powerupArtState;
+            this.sectionArtState = sectionArtState;
         }
         public CdObjectPlacementRuntime.Snapshot placement() { return placement; }
         /** Immutable reserved partition for Root's full closed-cut comparator; no live bank or helper cut. */
@@ -277,6 +304,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         public ScoreGlobals scoreGlobals() { return scoreGlobals; }
         public CdLevelGlobals levelGlobals() { return levelGlobals; }
         public CdPowerupArtRuntime.State powerupArtState() { return powerupArtState; }
+        public CdR11aSectionArt.State sectionArtState() { return sectionArtState; }
         public SpritePresentation.Frame displayedFrame() { return displayedFrame; }
         public List<SoundRequest> lastSoundRequests() { return sounds; }
     }
@@ -291,6 +319,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     private final CdPlayerTouchResponse touchResponse;
     private final CdRing ring;
     private final CdMosqui mosqui;
+    private final CdPataBata pataBata;
     private final CdAnimal animal;
     private final Cd3dPlant plant;
     private final Cd3dRamp ramp;
@@ -308,6 +337,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     private final CdTimePost timePost;
     private final CdMonitorItem monitorItem;
     private final CdPowerupArtRuntime powerupArt;
+    private final CdR11aSectionArt sectionArt;
     private final CdObjectDrawQueue queue;
     private final LogicalBanks banks;
     private final PrimaryAngleWrite primaryAngleWrite;
@@ -327,9 +357,13 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     private CdLevelGlobals levelGlobals;
     // The one owned LoadShieldArt window; only the selector-8 V-int cut and restore replace this immutable value.
     private CdPowerupArtRuntime.State powerupArtState;
+    // ONE camera-art aggregate; service/tail/restore replace it, never a separate resident or PLC store.
+    private CdR11aSectionArt.State sectionArtState;
     private List<SoundRequest> sounds = List.of();
     private SpritePresentation.Frame displayed = SpritePresentation.Frame.empty();
     private CameraWords preScrollForeground;
+    // Ephemeral successful CPU-build cut for Main.asm:428. Never captured or a scroll authority.
+    private CameraWords postScrollForeground;
     // Only the ephemeral eligible call cut awaits the actor's explicit enqueue.
     // Never a raw player slot, Body publication, pool snapshot or capture partition.
     private CdPlayerBody.DisplayEligibility expectedPlayerCut;
@@ -379,7 +413,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         // The cold DEV window above: .ClearFlowers zeroes the complete CPU buffer, InitVDP's fill its resident copy.
         return create(assets, frame, initialGlobals, initialContact, initialScore, initialLevel,
                 CdObjectPlacementRuntime::fromAssets, new CdPowerupArtRuntime.State(new byte[0x480], new byte[0x480]),
-                initialCpuSatBytes, banks, preScrollForeground, primaryAngleWrite);
+                null, initialCpuSatBytes, banks, preScrollForeground, primaryAngleWrite);
     }
 
     /**
@@ -389,20 +423,24 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
      * ingress. initialPowerup is the complete LoadShieldArt window: .ClearFlowers zeroes its CPU buffer (:178-184),
      * ClearScreen leaves VRAM $A880 (Level/Functions (General).asm:182-228) and :312's LoadShieldArt returns at once
      * after :167 clears powerup (Powerup/Main.asm:157-159). Root supplies both; their content is not policed here.
-     * All thirteen bank spans are validated against the supplied window before construction. Installs the supplied
-     * windows only: no service, reset, upload or capture/restore.
+     * Required cameraArt carries current camera bytes, last represented table and raw section WORD verbatim.
+     * Its new owner clears only CPU queue/decoder/count/budget/hint/pad; no cold fallback, implicit HIGH reset,
+     * load/fade/title or immediate PLC3/Std1 history is invented. Its table is not asserted to be the native Ring
+     * table after unrepresented LoadPLCImm. All thirteen spans/current drawable tiles validate before construction,
+     * even for an empty SAT. Installs supplied windows only: no service/upload/replay.
      */
     public static CdOpeningObjectRuntime usaR11aRestartDevEmptySatPreloadedArt(
             CdR11aAssets assets, CdPlayerFrameRuntime frame, CdRingGlobals initialGlobals,
             CdPlayerBody.ContactGlobals initialContact, ScoreGlobals initialScore, CdLevelGlobals initialLevel,
             CdAssetBytes initialSavedObjectFlags, CdPowerupArtRuntime.State initialPowerup,
-            byte[] initialCpuSatBytes, LogicalBanks banks, CameraWords preScrollForeground,
+            CameraArtRestartIngress cameraArt, byte[] initialCpuSatBytes, LogicalBanks banks, CameraWords preScrollForeground,
             PrimaryAngleWrite primaryAngleWrite) throws IOException {
         Objects.requireNonNull(initialSavedObjectFlags, "explicit carried saved-object bank");
         Objects.requireNonNull(initialPowerup, "explicit restart powerup CPU/resident windows");
+        Objects.requireNonNull(cameraArt, "required explicit restart current-camera carry");
         return create(assets, frame, initialGlobals, initialContact, initialScore, initialLevel,
                 source -> CdObjectPlacementRuntime.fromAssets(source, initialSavedObjectFlags), initialPowerup,
-                initialCpuSatBytes, banks, preScrollForeground, primaryAngleWrite);
+                cameraArt, initialCpuSatBytes, banks, preScrollForeground, primaryAngleWrite);
     }
 
     /**
@@ -416,7 +454,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
             CdR11aAssets assets, CdPlayerFrameRuntime frame, CdRingGlobals initialGlobals,
             CdPlayerBody.ContactGlobals initialContact, ScoreGlobals initialScore, CdLevelGlobals initialLevel,
             Function<CdR11aAssets, CdObjectPlacementRuntime> placementIngress, CdPowerupArtRuntime.State initialPowerup,
-            byte[] initialCpuSatBytes, LogicalBanks banks, CameraWords preScrollForeground,
+            CameraArtRestartIngress cameraArt, byte[] initialCpuSatBytes, LogicalBanks banks, CameraWords preScrollForeground,
             PrimaryAngleWrite primaryAngleWrite) throws IOException {
         Objects.requireNonNull(assets, "actual R11A assets");
         Objects.requireNonNull(frame, "external-touch player Frame");
@@ -444,16 +482,45 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         var springArt = objects.springArtBank(); // One actual normal36 decode; no diagonal/section-PLC claim.
         var tunnelDoorArt = objects.tunnelDoorArtBank(); // One actual twelve-tile bank; no native PLC/residency claim.
         var monitorTimeArt = objects.monitorTimeArtBank(); // Exactly one immutable actual82 decode for both conversion sites.
+        // SAME authenticated object owner/source bank: reuse its actual seed decodes; never reopen via fromAssets.
+        var sourceBank = objects.sectionArtSources();
+        var plan = assets.loadPlan();
+        if (sourceBank.sources().size() != 6) throw new IllegalArgumentException("Six reviewed camera source views required");
+        var programs = new ArrayList<CdR11aSectionArt.SourceProgram>();
+        for (var source : sourceBank.sources()) {
+            var entry = source.canonicalPlc(); var reader = source.readerInputRange(); var blob = entry.sourceRange();
+            if (source.canonicalPlcId() < 0 || source.canonicalPlcId() >= plan.plcs().size()
+                    || source.canonicalRowIndex() < 0
+                    || source.canonicalRowIndex() >= plan.plcs().get(source.canonicalPlcId()).entries().size()
+                    || !entry.equals(plan.plcs().get(source.canonicalPlcId()).entries().get(source.canonicalRowIndex()))
+                    || source.source() != entry.source() || !source.decode().sourceBlobRange().equals(blob)
+                    || reader.file() != blob.file() || reader.domain() != blob.domain()
+                    || reader.fileOffset() != blob.fileOffset() || reader.length() != source.readerBytes().length()
+                    || source.readerBytes().length() < 2
+                    || (source.readerBytes().unsignedWord(0) & 0x7FFF) != source.tileCount()) {
+                throw new IllegalArgumentException("Current-camera source bank differs from actual R11A load plan");
+            }
+            programs.add(new CdR11aSectionArt.SourceProgram(entry, source.readerBytes()));
+        }
+        var sectionArt = new CdR11aSectionArt(plan.plcs(), plan.sections(), programs);
+        // Cold ONLY: explicit DEV preload/table0/section0, not title/native cold history or known zero VRAM.
+        // Anton and the $8800 gap stay unknown. Restart must take its separately required supplied value.
+        var initialSectionArt = cameraArt == null
+                ? sectionArt.devState(CdR11aCameraArtResidency.devSeed(
+                        objects.initialArtBank().binding(CdR11aAsset.ART_MOSQUI).bytes(),
+                        frontier.binding(CdR11aAsset.ART_3D_PLANT).bytes(),
+                        frontier.binding(CdR11aAsset.ART_3D_RAMP_BOOST).bytes()), CdAssetBytes.copyOf(new byte[512]), 0)
+                : sectionArt.devState(cameraArt.residency(), cameraArt.codeTable512(), cameraArt.sectionWord());
         var placement = placementIngress.apply(assets);
         // Actual declared DEV ClearObjects-equivalent ingress for cold AND restart, never a restore default.
         var reserved = CdReservedObjectBank.clearedAfterLevelStart();
         var mappings = CdObjectMappings.fromOpeningAssets(assets, objects);
         // Validate all thirteen physical/logical spans (494 patterns), including overlaps and empty SAT admission.
-        CdObjectPresentation.usaR11aMonitorTimeDevPreloadedArt(frame.artState(), initialPowerup, objects, frontier, contact,
-                floatBlockArt, springArt, tunnelDoorArt, monitorTimeArt, banks.player(), banks.ring(), banks.mosqui(), banks.plant(), banks.ramp(),
+        CdObjectPresentation.usaR11aCurrentCameraDevPreloadedArt(frame.artState(), initialPowerup, objects, frontier, contact,
+                floatBlockArt, springArt, tunnelDoorArt, monitorTimeArt, initialSectionArt.residency(), banks.player(), banks.ring(), banks.mosqui(), banks.plant(), banks.ramp(),
                 banks.explosion(), banks.points(), banks.flower(), banks.powerup(), banks.floatBlock(), banks.spring(), banks.tunnelDoorVertical(), banks.monitorTime());
         return new CdOpeningObjectRuntime(assets, frame, initialGlobals, initialContact, initialScore, initialLevel, initial,
-                banks, preScrollForeground, primaryAngleWrite, objects, frontier, contact, floatBlockArt, springArt, tunnelDoorArt, monitorTimeArt, placement, reserved, mappings, initialPowerup);
+                banks, preScrollForeground, primaryAngleWrite, objects, frontier, contact, floatBlockArt, springArt, tunnelDoorArt, monitorTimeArt, placement, reserved, mappings, initialPowerup, sectionArt, initialSectionArt);
     }
 
     private CdOpeningObjectRuntime(CdR11aAssets assets, CdPlayerFrameRuntime frame, CdRingGlobals initialGlobals,
@@ -467,7 +534,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                                    CdR11aObjectAssets.TunnelDoorArtBank tunnelDoorArt,
                                     CdR11aObjectAssets.MonitorTimeArtBank monitorTimeArt,
                                    CdObjectPlacementRuntime placement, CdReservedObjectBank reserved, CdObjectMappings mappings,
-                                   CdPowerupArtRuntime.State initialPowerup) {
+                                   CdPowerupArtRuntime.State initialPowerup, CdR11aSectionArt sectionArt,
+                                   CdR11aSectionArt.State initialSectionArt) {
         this.assets = assets;
         this.frame = frame;
         this.objects = objects;
@@ -486,6 +554,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         scoreGlobals = initialScore;
         levelGlobals = initialLevel;
         powerupArtState = initialPowerup;
+        this.sectionArt = sectionArt;
+        sectionArtState = initialSectionArt;
         // One pure LoadShieldArt over the aggregate's actual five raw copies (Powerup/Main.asm:157-186).
         powerupArt = new CdPowerupArtRuntime(assets.shield());
         preScrollForeground = camera;
@@ -499,6 +569,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         }, mappings, initial);
         mosqui = new CdMosqui(placement, CdMosqui.Assets.fromObjectAssets(objects),
                 new CdPlayerTerrain(assets.terrain()), (pool, slot) -> drawDynamic(pool, slot.wholeIndex()));
+        pataBata = new CdPataBata(placement, CdPataBata.Assets.fromObjectAssets(objects, assets.player()),
+                (pool, slot) -> drawDynamic(pool, slot.wholeIndex()));
         // Frontier bodies bind the same live placement/pool, the actual asset owner and the one shared
         // DrawObject adapter. The Animal's admitted path reads no assets and never draws.
         animal = new CdAnimal(placement);
@@ -577,6 +649,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     public CdLevelGlobals levelGlobals() { return levelGlobals; }
     /** The owned immutable LoadShieldArt CPU/resident window (Powerup/Main.asm:157-176). */
     public CdPowerupArtRuntime.State powerupArtState() { return powerupArtState; }
+    /** Exact immutable camera queue/table/decoder/residency aggregate; diagnostic access survives a typed stop. */
+    public CdR11aSectionArt.State sectionArtState() { return sectionArtState; }
     public List<SoundRequest> lastSoundRequests() { return sounds; }
 
     /** Supply the NEXT ordinary cycle's actual pre-scroll camera before preparing Frame input. */
@@ -594,7 +668,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
      * dispositions run LoadShieldArt at the Frame's level-art cut; lag retains the powerup byte and window.
      */
     @Override public void serviceVBlank(PlcLifecyclePhase servicePhase) {
-        serviceVBlank(servicePhase, () -> { });
+        serviceVBlank(servicePhase, () -> { }, 0); // Explicit legacy DEV raw scrollLock WORD0 compatibility.
     }
 
     /**
@@ -605,7 +679,18 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
      * completed input/art writes are retained and neither retried nor rolled back.
      */
     public void serviceVBlank(PlcLifecyclePhase servicePhase, Runnable afterLevelArt) {
+        serviceVBlank(servicePhase, afterLevelArt, 0); // Explicit legacy DEV WORD0; Module supplies its actual live WORD.
+    }
+
+    /**
+     * VInt_Level:837-847: powerup -> copied/drawn planes -> DecompPLCSlow, before Frame Finish/count.
+     * rawScrollLockWord is the actual single big-endian WORD owner; the native byte read addresses HIGH.
+     * Validate widths before consuming prepared input. Selector8 ordinary/pause service, lag never does.
+     * No retained callback, preparation arm, second count or new timing owner exists.
+     */
+    public void serviceVBlank(PlcLifecyclePhase servicePhase, Runnable afterLevelArt, int rawScrollLockWord) {
         Objects.requireNonNull(afterLevelArt, "level-plane service after UpdateAnimTiles");
+        if ((rawScrollLockWord & ~0xFFFF) != 0) throw new IllegalArgumentException("scrollLock must be an unsigned native WORD");
         boolean ordinary = servicePhase == PlcLifecyclePhase.ORDINARY_LEVEL;
         perform(Phase.CLOSED_CUT, Phase.SERVICING, ordinary ? Phase.SERVICED : Phase.CLOSED_CUT, () -> {
             requireSupportedService(servicePhase);
@@ -616,13 +701,15 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
             frame.serviceVBlank(servicePhase, () -> {
                 servicePowerupArtAtVInt();
                 afterLevelArt.run();
+                checkActive(Phase.SERVICING); // Swallowed plane reentry cannot write camera art or reach Finish.
+                serviceSectionArtAtVInt(rawScrollLockWord);
             });
             checkActive(Phase.SERVICING); // Also detects a swallowed callback's reentrant failure.
             if (servicePhase != PlcLifecyclePhase.LAG) {
                 // VInt_Level:827 SAT DMA, then :829-837 Sonic art and LoadShieldArt. At the completed boundary,
                 // convert PREVIOUS CPU SAT using NOW-serviced immutable player and powerup resident pixels.
-                var pixels = CdObjectPresentation.usaR11aMonitorTimeDevPreloadedArt(frame.artState(), powerupArtState,
-                        objects, frontierArt, contactArt, floatBlockArt, springArt, tunnelDoorArt, monitorTimeArt,
+                var pixels = CdObjectPresentation.usaR11aCurrentCameraDevPreloadedArt(frame.artState(), powerupArtState,
+                        objects, frontierArt, contactArt, floatBlockArt, springArt, tunnelDoorArt, monitorTimeArt, sectionArtState.residency(),
                         banks.player(), banks.ring(), banks.mosqui(), banks.plant(), banks.ramp(), banks.explosion(), banks.points(),
                         banks.flower(), banks.powerup(), banks.floatBlock(), banks.spring(), banks.tunnelDoorVertical(), banks.monitorTime());
                 var nextDisplay = CdObjectPresentation.convert(queue.cpuSat(), pixels);
@@ -632,6 +719,16 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
             if (ordinary) { sounds = List.of(); }
             return null;
         });
+    }
+
+    /** Retain every completed owned prefix before fail-close; no rollback/retry or implicit preparation. */
+    private void serviceSectionArtAtVInt(int rawScrollLockWord) {
+        checkActive(Phase.SERVICING);
+        try { sectionArtState = sectionArt.serviceSlow(sectionArtState, rawScrollLockWord); }
+        catch (CdR11aSectionArt.SectionArtException boundary) {
+            sectionArtState = boundary.state();
+            throw boundary;
+        }
     }
 
     /**
@@ -934,6 +1031,12 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                         }
                         // CallReturned/Despawn describe already applied work; never replay them.
                     }
+                } else if (id == CdPataBata.OBJECT_ID) {
+                    // Live physical ID$3E, native first good-future check and actual raw globals at THIS visit.
+                    // No nativeObjectSupport/time-stop/debug gate. Completed conversion/draw/despawn metadata
+                    // is already applied by the same pool body; replay would run the same slot twice.
+                    pataBata.run(whole, new CdPataBata.Globals(devGlobals.goodFuture(), gates.timeZone(),
+                            gates.timeWarpDirection(), preScrollForeground.xWord()));
                 } else if (id == CdExplosion.OBJECT_ID) {
                     explosion.run(whole); // Writes and first-free Points allocation already committed in source order.
                 } else if (id == CdPoints.OBJECT_ID) {
@@ -1045,6 +1148,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
             if (levelGlobals.levelRestart() == 0) { return false; }
             queue.abandonPassAtLevelStart();
             preScrollForeground = null;
+            postScrollForeground = null;
             cameraPrepared = false;
             return true;
         });
@@ -1054,17 +1158,33 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
 
     /** Root supplies actual post-scroll FG/BG/BG3 words; no global camera or position fence. */
     public CpuSat finishAfterCamera(DrawCameras cameras) {
-        return perform(Phase.DYNAMIC_DONE, Phase.BUILDING, Phase.BUILT,
-                () -> queue.finishAfterCamera(Objects.requireNonNull(cameras, "actual post-scroll cameras")));
+        return perform(Phase.DYNAMIC_DONE, Phase.BUILDING, Phase.BUILT, () -> {
+            var actual = Objects.requireNonNull(cameras, "actual post-scroll cameras");
+            var sat = queue.finishAfterCamera(actual);
+            postScrollForeground = actual.foreground(); // Retain ONLY after the complete CPU SAT build succeeds.
+            return sat;
+        });
     }
 
-    /** UpdateGlobalAnims.Rings then RingSpill (Main.asm:520-549), once after an unpaused build. */
+    /** Main.asm:428-430: UpdateSectionArt -> ProcessPLCs -> existing Ring/spill tail, only after an ordinary build. */
     public void finishOrdinaryTail() {
         perform(Phase.BUILT, Phase.TAIL, Phase.CLOSED_CUT, () -> {
-            ringGlobals = ringGlobals.advanceGlobalRingAnimation();
-            spillGlobals = spillGlobals.advanceTail();
-            preScrollForeground = null; // Camera/scroll is root-owned, and is never restored here.
-            return null;
+            try {
+                var post = Objects.requireNonNull(postScrollForeground, "successful post-scroll CPU build cut");
+                try {
+                    sectionArtState = sectionArt.updateSection(sectionArtState, post.xWord());
+                    sectionArtState = sectionArt.prepare(sectionArtState);
+                } catch (CdR11aSectionArt.SectionArtException boundary) {
+                    sectionArtState = boundary.state(); // Native section/queue stores and completed resident bytes.
+                    throw boundary;
+                }
+                ringGlobals = ringGlobals.advanceGlobalRingAnimation();
+                spillGlobals = spillGlobals.advanceTail();
+                return null;
+            } finally {
+                preScrollForeground = null;
+                postScrollForeground = null; // Both camera cuts are ephemeral; Root owns scroll/capture.
+            }
         });
     }
 
@@ -1082,7 +1202,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     public Snapshot captureClosedCut() {
         requireCut();
         return new Snapshot(captureOwner, placement.capture(), reserved.capture(), ringGlobals, spillGlobals, queue.captureClosedCut(), displayed, sounds,
-                devGlobals, contactGlobals, scoreGlobals, levelGlobals, powerupArtState);
+                devGlobals, contactGlobals, scoreGlobals, levelGlobals, powerupArtState, sectionArtState);
     }
 
     /** Pure partition preflight. A foreign snapshot rejects before any owned partition is changed. */
@@ -1108,6 +1228,10 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         Objects.requireNonNull(snapshot.scoreGlobals, "captured score globals");
         Objects.requireNonNull(snapshot.levelGlobals, "captured level globals");
         Objects.requireNonNull(snapshot.powerupArtState, "captured powerup art window");
+        // Snapshot is privately minted with the same captureOwner; its immutable section State cannot
+        // be supplied independently through this API. Authenticate the whole partition before any write.
+        // Never call prepare/service/update/decode/queue here merely to validate a restore.
+        Objects.requireNonNull(snapshot.sectionArtState, "captured current-camera aggregate");
     }
 
     /** Prevalidates ALL owned partitions; no service/body/queue draw/pixels/sound/initialization is replayed. */
@@ -1127,16 +1251,18 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
             scoreGlobals = snapshot.scoreGlobals;
             levelGlobals = snapshot.levelGlobals;
             powerupArtState = snapshot.powerupArtState; // Exactly the captured window: no cold reset or load replay.
+            sectionArtState = snapshot.sectionArtState; // ONE exact immutable aggregate, no prepare/decode/queue replay.
             displayed = snapshot.displayedFrame;
             sounds = snapshot.sounds;
             expectedPlayerCut = null;
             preScrollForeground = null;
+            postScrollForeground = null;
             cameraPrepared = false; // Root must supply its separately restored scroll cut for the next cycle.
             return null;
         });
     }
 
-    /** No native PLC preparation is supplied by this bounded composition. Ring tail has its own explicit call. */
+    /** CPU ProcessPLCs belongs ONLY to finishOrdinaryTail; this generic hook never arms or repeats it. */
     @Override public boolean hasPreparationBoundary(PlcLifecyclePhase servicePhase) {
         requireReadable();
         try { requireSupportedService(servicePhase); return frame.hasPreparationBoundary(servicePhase); }

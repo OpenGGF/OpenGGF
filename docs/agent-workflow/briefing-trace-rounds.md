@@ -71,6 +71,13 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+An actual pattern write need not produce a different pixel version (2026-10-25,
+CD camera PLC). Pata-Bata tile0 and Mosqui tile16 are both blank. The native write
+still advances the transfer budget, cursor and destination; equal immutable pixels
+cannot identify which source wrote them. Pin exact written bytes and transfer
+state, and use independently checked differing tiles as visual witnesses. Never
+require every touched tile to differ or use source identity to choose pixels.
+
 A sufficient finite input for a Java decompressor may be too short for the native
 consumer (2026-10-25, CD camera PLC). Native Nemesis preloads16 bits and refills
 below9 bits before emitting a run, including its final run. The existing Java

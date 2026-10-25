@@ -226,6 +226,9 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         }
     }
 
+    /** Borrow the ONE live foreground scroll-lock WORD for the selected native PLC service. */
+    int currentScrollLockWord() { requireBound(); return scrollState.scrollLock(); }
+
     /**
      * Exact selector8 source cut, after Sonic/powerup art and before VInt_Finish. Main:840-844
      * replaces every camera/flag copy bit-for-bit on EVERY call, including pause/death/lock.

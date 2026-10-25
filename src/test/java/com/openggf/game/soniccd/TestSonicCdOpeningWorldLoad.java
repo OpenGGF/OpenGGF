@@ -913,15 +913,44 @@ class TestSonicCdOpeningWorldLoad {
         registry.restoreCourse(course); assertState(before, h); step(h, input(8, 0, false)); assertState(after, h);
     }
 
-    @Test void ordinaryRightRouteStopsAtThePataBataDispatcherAt540() throws Exception {
-        var h = opening(); var runtime = objects(h); var frame = h.module().requirePlayerFrame();
-        var pool = runtime.placement().pool();
-        var failure = assertThrows(UnsupportedOperationException.class, () -> {
-            for (int call = 0; call < 540; call++) step(h, input(8, 0, false));
-        });
-        assertEquals("Unowned CD object ID $3e at live physical slot 52", failure.getMessage());
-        assertEquals(0x3E, pool.state(52).id());
-        assertTrue(runtime.closed()); assertTrue(frame.closed());
+    @Test void ordinaryRightRouteRunsPataInitAndFinalPlc9ServiceAcross540And541WithFullCourseReplay() throws Exception {
+        var h=opening();var runtime=objects(h);var pool=runtime.placement().pool();
+        for(int call=0;call<539;call++) step(h,input(8,0,false));
+        var registry=h.mode().getRewindRegistry();var full=registry.capture();var course=registry.captureCourse();
+        var before=state(h);
+        step(h,input(8,0,false));
+        var pata=pool.state(52);assertEquals(0x3E,pata.id());assertEquals(2,pata.routine());
+        assertEquals(2471,pata.centreX());assertEquals(636,pata.centreY());
+        assertEquals(2472,pata.word(CdObjectState.WordField.PATA_BATA_ANCHOR_X));
+        // Pinned Objects (Act1).bin record88:09A8 027C BE FF 40 00; subtypeFF chooses damaged mappings.
+        assertEquals(0xFF,pata.subtype());
+        assertEquals(0x20B550,pata.longBits(CdObjectState.LongField.MAPPINGS));
+        assertEquals(0x0200,runtime.sectionArtState().sectionWord());
+        assertEquals(2,runtime.sectionArtState().remainingTilesWord());
+        assertEquals(0x237D9DL,runtime.sectionArtState().queue().headSource());
+        assertFalse(runtime.closed());var at540=state(h);
+        step(h,input(8,0,false));assertEquals(635,pool.state(52).centreY());
+        assertEquals(0,runtime.sectionArtState().remainingTilesWord());assertEquals(0,runtime.sectionArtState().queue().headSource());
+        var tam=h.module().requirePlayerFrame().assets().openingObjects().sectionArtSources()
+                .source(com.openggf.game.soniccd.level.CdR11aAsset.ART_TAMABBOH).decode().bytes();
+        for(int tile=0;tile<59;tile++) assertArrayEquals(tam.slice(tile*32,32).copy(),
+                com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(runtime.sectionArtState().residency(),0x428+tile).copy());
+        var at541=state(h);
+        registry.restore(full);assertState(before,h);step(h,input(8,0,false));assertState(at540,h);step(h,input(8,0,false));assertState(at541,h);
+        registry.restoreCourse(course);assertState(before,h);step(h,input(8,0,false));assertState(at540,h);step(h,input(8,0,false));assertState(at541,h);
+    }
+    @Test void ordinaryRightRouteReachesUnownedBoulderAt561AfterLivePataAndCompletedPlc9() throws Exception {
+        var h=opening();var runtime=objects(h);var frame=h.module().requirePlayerFrame();var pool=runtime.placement().pool();
+        for(int call=0;call<560;call++)step(h,input(8,0,false));
+        assertEquals(0x3E,pool.state(52).id());assertEquals(2,pool.state(52).routine());
+        assertEquals(2466,pool.state(52).centreX());assertEquals(628,pool.state(52).centreY());
+        assertEquals(0,runtime.sectionArtState().remainingTilesWord());assertEquals(0,runtime.sectionArtState().queue().headSource());
+        var failure=assertThrows(UnsupportedOperationException.class,()->step(h,input(8,0,false)));
+        assertEquals("Unowned CD object ID $1b at live physical slot 46",failure.getMessage());
+        assertEquals(0x1B,pool.state(46).id());assertEquals(0,pool.state(46).routine());
+        assertEquals(2573,pool.state(46).centreX());assertEquals(1184,pool.state(46).centreY());
+        assertEquals(628,pool.state(52).centreY(),"later Pata slot52 was not visited after the slot46 stop");
+        assertTrue(runtime.closed());assertTrue(frame.closed());
     }
 
     // ClearScreen/InitLevelDrawBG: this is post-initial-draw, before any represented V-int.
@@ -1234,6 +1263,7 @@ class TestSonicCdOpeningWorldLoad {
         assertEquals(expected.objects().scoreGlobals(), actual.objects().scoreGlobals());
         assertEquals(expected.objects().levelGlobals(), actual.objects().levelGlobals());
         assertEquals(expected.objects().powerupArtState(), actual.objects().powerupArtState());
+        assertEquals(expected.objects().sectionArtState(), actual.objects().sectionArtState());
         assertEquals(expected.objects().lastSoundRequests(), actual.objects().lastSoundRequests());
         assertArrayEquals(expected.cpu().bytes(), actual.cpu().bytes());
         assertEquals(expected.cpu().spriteCount(), actual.cpu().spriteCount());
@@ -1372,4 +1402,5 @@ class TestSonicCdOpeningWorldLoad {
             var loaded = CdStockLaunch.prepare(cues.getFirst(), CdStockLaunch.Request.r11a()); SOURCES.put(variant, loaded); return loaded;
         }
     }
+
 }

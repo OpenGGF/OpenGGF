@@ -5360,3 +5360,128 @@ externally. Runtime494/current-generation conversion, previous-SAT visibility,
 one captured section state, DEV restart carry and the ordinary540 Pata-Bata
 frontier remain to integrate. No544 policy, full native cold/title history,
 cycle timing, complete-USA gameplay or JP/EU parity is claimed.
+
+
+### 2026-10-25 08:27 UTC — native camera PLC service and live Pata-Bata
+
+From local base `beb519543922cfa5e59dcc4fa445ea04287110f6`, compose the previously
+separate native tile decoder, section request/service state, current picture
+policy and physical Pata-Bata dispatch. The game uses one current residency value,
+not an additional Pata art span: all thirteen admitted spans/494 logical IDs stay
+unchanged. Immutable source banks remain producers, never alternate live pixels.
+
+`CdNemesisPlcDecoder` prepares the actual header, supplied512-byte code table and
+16-bit prefetch without output. A successful call emits one complete tile and
+retains pending DBF, run, full XOR history, native read-ahead and the sole remaining
+count. Its relevant-low-field representation does not invent incoming CPU high
+halves or claim device/midrow captures. Preparation and tile faults retain typed
+read evidence; malformed row prefixes are not resumable native continuations.
+
+`CdR11aSectionArt` owns raw section storage, descriptors, relevant saved decoder
+fields, budget/count/hint state and the single current residency. Actual tables
+select complete lists, preserving high-byte section stores and low-byte carry.
+InitPLC cancels prepared work and clears its128 owned CPU bytes without clearing
+NemBuffer or written art; LoadPLC appends. The selected slow service transfers3
+or18 tiles according to the addressed scroll-lock high byte, fast transfers18.
+Destination WORD preadvance happens before decoding, final POP retains the shipped
+88-byte copy/tail bug and does not save final decoder RAM, and no leftover budget
+crosses into a new head. Unknown producers/writes stop with the completed prefix.
+
+Runtime stores this aggregate once and snapshots it once. Actual post-scroll FG
+X is borrowed after successful CPU SAT build; section update and preparation run
+before the existing ring/spill tail. The next selector8 services player, powerup,
+DrawLevel and camera art before Finish/count, then converts the previous CPU SAT
+with NOW-serviced immutable generations. Pause services; lag and omitted CPU tails
+retain the corresponding state. Root's Module passes the one live scroll-lock WORD;
+terrain-only service remains on its prior path. Old1/2-argument Runtime adapters
+are explicitly DEV lock0 compatibility. No second clock/preparation owner exists.
+
+The new picture policy first validates the existing494 bindings, then freezes161
+current native versions (Mosqui70, Plant28, Ramp63) while preserving their logical
+IDs;333 other versions remain from the frozen prior policy. Anton/gap storage does
+not silently add drawable IDs. Pata uses real current physical bytes shared with
+Mosqui. Earlier sources/frames remain immutable. All captured fields and pictures
+restore by value/assignment without decode, requeue, upload or effect replay.
+
+Restart requires explicit residency/table/section ingress. Represented current art
+and code-table bytes carry; queue/decoder/count/budget/hint clear in the new owner.
+For the admitted Present/checkpoint0 path, the collapsed title policy clears only
+the section high byte and preserves its low byte. The table is the last represented
+one: native immediate PLC3/Std1/title history and its Ring table remain omitted DEV
+prehistory, not fabricated completed work. Native cold/title/fade/loading parity is
+still open. There is no cold-seed fallback on restart.
+
+Tests and source feedback remained separate evidence. Decoder RED58879 compiled
+without its absent owner; positive63417 passed26, including actual retained USA
+inputs for all six producers. Section RED6653 found the absent owner; positive70246
+passed36 ROM-free cases. RootR2 added one actual-USA factory/full three-row PLC9
+check after source close:20347 passed1, including the conditional45 selected slow
+services, exact current bytes and queued/partial replay. These are service calls,
+not a45-game-frame timing assertion. Independent reviews found no P1/P2.
+
+Picture RED21007 found the absent23-argument policy. Positive99539 ran39 with one
+new fixture failure: it assumed every write changed pixels. Pinned-source Python
+output digests match actual decoded Mosqui/Pata; native3B0 is32 zero bytes in both,
+while3B1/3B2 differ. RootR2 pins that equality and both differing witnesses, retaining
+all pixel/source/SAT checks. Narrow79818 passed the repaired case; production was
+unchanged. This write-versus-pixel distinction is preserved in the hazard catalogue.
+
+Runtime/Carry RED13208 found absent APIs. An ambiguous Root replacement guard then
+caught the separate opening/terrain callback matches before writing Root production.
+An accidentally started incomplete join56389 was cancelled during compilation
+(exit130, no JUnit); the correction scopes only the opening path. Complete62452 ran
+213 cases: Carry23 passed; Runtime190 had3 failures/1 error, all in new fixtures,
+with all164 inherited cases passing. The four test-only repairs were source-backed:
+loaded dirtyD5 clears to55, good-future conversion keepsD5, routine8 reset1 reaches
+the zero cut whereas reset0 returns, and raw period81 stops at the existing Frame
+SOURCE_FAMILY boundary before either object runs. No period gate was bypassed.
+Root32466 passed all four repaired cases. Independent review accepted these repairs.
+
+**Actual ordinary route.** Old540-stop expectation was killed by16623: World49 had
+only that stale assertion failure; EGL13/API11 passed. The owned temporary normal
+Right probe plus updated EGL checks14472 passed14; the probe was removed afterward.
+Pata physical52 initializes at call540, routine2, X2471/Y636, anchorX2472. Source
+`Objects (Act 1).bin` row88/offset704 is `09A8027CBEFF4000`: subtypeFF selects the
+damaged root20B550, not normal20B52E. Root's first permanent replay test incorrectly
+expected normal;38430 passed the new Boulder boundary but failed that one literal.
+The source-backed subtypeFF/damaged correction51480 passed both permanent checks.
+
+At540 section0200 has Tamabboh remaining2 and compressed head237D9D;541 completes
+all PLC9 work and Pata moves to Y635. Full and course replay from539 compare all
+state, CPU SAT and immutable picture across540/541, including all59 current Tamabboh
+tiles. Pata remains live at560, X2466/Y628. The next measured stop is **561, ID1B,
+physical46, routine0, X2573/Y1184**; later Pata52 is unvisited after that failure.
+Native ObjectIndex identifies1B as Boulder (Checkpoint is13). Layout row94 is
+`0A0D04A01B004000`. This is engine/disassembly evidence, not a native capture or
+full-game claim. Pata remains offscreen on this route segment; new natural Pata GPU
+proof is not inferred from the CPU replay or the older constructed EGL scenes.
+
+Final affected-consumer run28479: **582/0/0/0**, Maven1m09s, terminal08:16:47Z.
+Classes: Frame264, object pass4, Runtime190, restart carry23, World50, EGL13,
+terrain-only27 and API11. All eight XML reports confirm Java25.0.5.0.2, supplied
+CD media, EGL opt-in/surfaceless backend, supplied S2 donor and no skips. This final
+combined run supersedes the earlier red-and-narrow results for these eight classes;
+it does not turn the separate39 picture run or37 section cases into an invented
+combined run. Fresh-JVM guards76228: **728/0/0/0**, Maven4m50s,08:22:37Z. Ninety
+fresh report identities/mtimes and Java25 were checked, excluding older reports.
+
+The change planner selected3738 smoke classes solely because this CD namespace is
+unclassified. The proportionate focused selection covers the bounded CD consumers,
+actual media, new callback/rewind/restart and rendering paths plus structural guards;
+no shared engine/renderer/physics algorithm, public API or build-selection policy
+changed. No release-only full suite or repeated historical broad smoke was launched.
+
+```text
+env -u DISPLAY -u WAYLAND_DISPLAY python3 <main-workspace>/tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestCdNemesisPlcDecoder' -Dsoniccd.media.root=<supplied-media-root> test -B
+env -u DISPLAY -u WAYLAND_DISPLAY python3 <main-workspace>/tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestCdR11aSectionArt' -Dsoniccd.media.root=<supplied-media-root> test -B
+env -u DISPLAY -u WAYLAND_DISPLAY python3 <main-workspace>/tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestCdR11aSectionArt#optionalActualUsaFactoryCompletesAllThreePlc9SourcesAfterMediaCloseAndReplays' -Dsoniccd.media.root=<supplied-media-root> test -B
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 python3 <main-workspace>/tools/testing/maven_queue.py -Dmse=off '-Dtest=TestCdPlayerFrameRuntime,TestCdPlayableSonicObjectPass,TestCdOpeningObjectRuntime,TestSonicCdRestartCarry,TestSonicCdOpeningWorldLoad,TestSonicCdOpeningWorldEgl,TestSonicCdTerrainPlayerLoad,TestModApiSignatureSurface' -Dsoniccd.media.root=<supplied-media-root> -Dsoniccd.opening.egl=true -Dopenggf.headless.gl=surfaceless-egl -Dsonic2.rom.path=<supplied-S2-ROM> test -B
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 python3 <main-workspace>/tools/testing/maven_queue.py -Dmse=off -Pguards test -B
+```
+
+Next prerequisite is authenticated Boulder data/body and compatible current-residency
+extension. Its19 tiles6E80..70E0 later overlap18 relocated Anton tiles; independent
+immutable actor art would conceal that overwrite. The next audit proposes disjoint
+unknown complements toward6E00..A400 while retaining existing resident authority.
+No Boulder implementation, checkpoint save, complete native load/title/audio/warp,
+full-USA route or JP/EU parity is claimed here. All changes remain private/local.

@@ -1471,4 +1471,412 @@ class TestCdObjectPresentation {
                 0x100, 0x80, 0x28, 0x10, 3), camera));
         return queue.finishAfterCamera(new DrawCameras(camera, camera, camera));
     }
+
+
+    /**
+     * Current-camera specifications over actual retained USA decodes. JAVA UNRUN in this source-only packet.
+     * PLC_Cam1_Full (scddisasm 1ecc5f3af, Palmtree Panic/Data (Act 1 Present).asm:85-100)
+     * and PLC_Cam2_Incr (:183-190) supply the literal destinations. Writes below are explicit complete-tile
+     * residency commits, never a substitute for native PLC decoding, clocks, queue service or GPU uploads.
+     */
+    @Test void currentCameraSeedKeepsExactlyAll494NativeLogicalAndDecodedPixelBindings() throws Exception {
+        // Catches an extra Pata span/base, changed logical IDs, lost old spans, or stale seed pixels.
+        var c = currentCameraMedia(); var a = c.opening();
+        var camera = currentCameraSeed(c);
+        var old = monitorTimeBank(a, c.door(), c.monitor(), a.player(), a.powerup(), monitorTimeBases());
+        var current = currentCameraBank(c, a.player(), a.powerup(), camera, monitorTimeBases());
+        var pixels = monitorTimePixels(a, c.door(), c.monitor(), a.player(), a.powerup());
+        int[] first = monitorTimeFirstTiles(), sizes = monitorTimeSizes(), bases = monitorTimeBases();
+        var nativeIds = new TreeSet<Integer>(); var logicalIds = new HashSet<Integer>();
+        for (int span = 0; span < 13; span++) {
+            assertEquals(sizes[span] * 32, pixels.get(span).length());
+            for (int tile = 0; tile < sizes[span]; tile++) {
+                int id = first[span] + tile;
+                assertTrue(nativeIds.add(id));
+                var sample = current.resolve(id);
+                assertTrue(logicalIds.add(sample.logicalPatternId()));
+                assertEquals(bases[span] + tile, sample.logicalPatternId());
+                assertEquals(engineVersion(pixels.get(span), tile), sample.version(), "native $" + Integer.toHexString(id));
+                assertEquals(old.resolve(id), sample);
+            }
+        }
+        assertEquals(494, nativeIds.size()); assertEquals(494, logicalIds.size());
+        assertCurrentCameraAdmission(current);
+        assertEquals(SpritePresentation.Frame.empty(), CdObjectPresentation.convert(new Fixture().build(), current));
+        assertEquals(0x7400, a.objects().initialArtBank().binding(CdR11aAsset.ART_MOSQUI).plc().vramAddress());
+        assertEquals(70, a.objects().initialArtBank().binding(CdR11aAsset.ART_MOSQUI).tileCount());
+        assertEquals(0x8480, a.frontier().binding(CdR11aAsset.ART_3D_PLANT).plc().vramAddress());
+        assertEquals(28, a.frontier().binding(CdR11aAsset.ART_3D_PLANT).tileCount());
+        assertEquals(0x8820, a.frontier().binding(CdR11aAsset.ART_3D_RAMP_BOOST).plc().vramAddress());
+        assertEquals(63, a.frontier().binding(CdR11aAsset.ART_3D_RAMP_BOOST).tileCount());
+    }
+
+    @Test void firstThreePataWritesReplaceOnly3B0Through3B2AndOldMosquiSatReadsThoseCurrentPixels() throws Exception {
+        // Catches producer/object-ID selection and caching the old art with the already-built CPU SAT.
+        var c = currentCameraMedia(); var a = c.opening();
+        var seed = currentCameraSeed(c);
+        var before = currentCameraBank(c, a.player(), a.powerup(), seed, monitorTimeBases());
+        var sat = currentCameraMosquiSat(c);
+        byte[] satBytes = sat.bytes();
+        var earlier = CdObjectPresentation.convert(sat, before);
+        var pata = c.sources().source(CdR11aAsset.ART_PATA_BATA).decode().bytes();
+        assertEquals(1600, pata.length());
+        var partial = currentCameraWrite(seed, 0x7600, pata, 0, 3);
+        var after = currentCameraBank(c, a.player(), a.powerup(), partial, monitorTimeBases());
+        int written = 0;
+        for (int id : currentCameraNativeIds()) {
+            assertEquals(before.resolve(id).logicalPatternId(), after.resolve(id).logicalPatternId());
+            if (id >= 0x3B0 && id <= 0x3B2) {
+                assertEquals(engineVersion(pata, id - 0x3B0), after.resolve(id).version());
+                // Native3B0 is blank in BOTH producers; the write is real even with equal pixels.
+                if (id == 0x3B0) {
+                    assertArrayEquals(new byte[32], pata.slice(0, 32).copy());
+                    assertArrayEquals(new byte[32], a.objects().initialArtBank().binding(CdR11aAsset.ART_MOSQUI).bytes().slice(16 * 32, 32).copy());
+                    assertEquals(before.resolve(id).version(), after.resolve(id).version());
+                } else {
+                    assertNotEquals(before.resolve(id).version(), after.resolve(id).version());
+                }
+                written++;
+            } else {
+                assertEquals(before.resolve(id), after.resolve(id));
+            }
+        }
+        assertEquals(3, written);
+        var now = CdObjectPresentation.convert(sat, after);
+        assertArrayEquals(satBytes, sat.bytes());
+        assertEquals(earlier.tiles(), now.tiles()); assertNotEquals(earlier.patternVersions(), now.patternVersions());
+        assertEquals(nativeRange(12015, 12026), new TreeSet<>(now.patternVersions().keySet()));
+        assertEquals(11, now.tiles().size());
+        for (var tile : now.tiles()) {
+            int nativeId = 0x3A0 + tile.patternId() - 12000;
+            var expected = nativeId >= 0x3B0 && nativeId <= 0x3B2
+                    ? engineVersion(pata, nativeId - 0x3B0)
+                    : engineVersion(a.objects().initialArtBank().binding(CdR11aAsset.ART_MOSQUI).bytes(), nativeId - 0x3A0);
+            assertEquals(expected, now.patternVersions().get(tile.patternId()));
+        }
+        assertEquals(earlier, CdObjectPresentation.convert(sat, before));
+        assertCurrentCameraAdmission(after);
+    }
+
+    @Test void completedPataKeepsSixteenAndFourMosquiEdgesAndReloadRestoresTheSameSeventyLogicalIds() throws Exception {
+        // Catches replacing all Mosqui at once, growing a span, or restoring pixels at request time.
+        var c = currentCameraMedia(); var a = c.opening();
+        var mosqui = a.objects().initialArtBank().binding(CdR11aAsset.ART_MOSQUI).bytes();
+        var pata = c.sources().source(CdR11aAsset.ART_PATA_BATA).decode().bytes();
+        var seed = currentCameraSeed(c);
+        var base = currentCameraBank(c, a.player(), a.powerup(), seed, monitorTimeBases());
+        var complete = currentCameraWrite(seed, 0x7600, pata, 0, 50);
+        var current = currentCameraBank(c, a.player(), a.powerup(), complete, monitorTimeBases());
+        var sat = currentCameraMosquiSat(c); var frozen = CdObjectPresentation.convert(sat, current);
+        for (int tile = 0; tile < 70; tile++) {
+            assertEquals(12000 + tile, current.resolve(0x3A0 + tile).logicalPatternId());
+            assertEquals(tile >= 16 && tile < 66 ? engineVersion(pata, tile - 16) : engineVersion(mosqui, tile),
+                    current.resolve(0x3A0 + tile).version());
+        }
+        for (int id : currentCameraNativeIds()) {
+            if (id < 0x3A0 || id >= 0x3E6) assertEquals(base.resolve(id), current.resolve(id));
+        }
+        // Reload from inside the replaced range first: only these three actual writes revert.
+        var reloading = currentCameraWrite(complete, 0x7600, mosqui, 16, 3);
+        var partial = currentCameraBank(c, a.player(), a.powerup(), reloading, monitorTimeBases());
+        for (int tile = 0; tile < 70; tile++) {
+            assertEquals(tile >= 16 && tile < 19 ? base.resolve(0x3A0 + tile) : current.resolve(0x3A0 + tile),
+                    partial.resolve(0x3A0 + tile));
+        }
+        var restored = currentCameraWrite(reloading, 0x7400, mosqui, 0, 70);
+        var reloaded = currentCameraBank(c, a.player(), a.powerup(), restored, monitorTimeBases());
+        for (int id : currentCameraNativeIds()) assertEquals(base.resolve(id), reloaded.resolve(id));
+        assertEquals(frozen, CdObjectPresentation.convert(sat, current));
+        assertCurrentCameraAdmission(reloaded);
+    }
+
+    @Test void tamabbohReplacesLast24PlantAndFirst34RampTilesWithoutAdmittingItsGap() throws Exception {
+        // Catches stale Plant/Ramp source banks and treating the combined 92-tile region as one drawable span.
+        var c = currentCameraMedia(); var a = c.opening();
+        var seed = currentCameraSeed(c);
+        var before = currentCameraBank(c, a.player(), a.powerup(), seed, monitorTimeBases());
+        var tamabboh = c.sources().source(CdR11aAsset.ART_TAMABBOH).decode().bytes();
+        assertEquals(1888, tamabboh.length());
+        var first24 = currentCameraWrite(seed, 0x8500, tamabboh, 0, 24);
+        var beforeGap = currentCameraBank(c, a.player(), a.powerup(), first24, monitorTimeBases());
+        var unknown = assertThrows(CdR11aCameraArtResidency.OwnershipBoundary.class,
+                () -> CdR11aCameraArtResidency.readTile(first24, 0x440));
+        assertEquals(CdR11aCameraArtResidency.Boundary.UNKNOWN_PATTERN, unknown.boundary());
+        assertEquals(0x440, unknown.nativePatternId());
+        assertThrows(UnsupportedOperationException.class, () -> beforeGap.resolve(0x440));
+        var first25 = currentCameraWrite(first24, 0x8800, tamabboh, 24, 1);
+        assertArrayEquals(tamabboh.slice(24 * 32, 32).copy(), CdR11aCameraArtResidency.readTile(first25, 0x440).copy());
+        var gapWritten = currentCameraBank(c, a.player(), a.powerup(), first25, monitorTimeBases());
+        for (int id : currentCameraNativeIds()) assertEquals(beforeGap.resolve(id), gapWritten.resolve(id));
+        assertThrows(UnsupportedOperationException.class, () -> gapWritten.resolve(0x440));
+        var complete = currentCameraWrite(first25, 0x8820, tamabboh, 25, 34);
+        var after = currentCameraBank(c, a.player(), a.powerup(), complete, monitorTimeBases());
+        var plant = a.frontier().binding(CdR11aAsset.ART_3D_PLANT).bytes();
+        var ramp = a.frontier().binding(CdR11aAsset.ART_3D_RAMP_BOOST).bytes();
+        for (int tile = 0; tile < 28; tile++) {
+            var sample = after.resolve(0x424 + tile);
+            assertEquals(12070 + tile, sample.logicalPatternId());
+            assertEquals(tile < 4 ? engineVersion(plant, tile) : engineVersion(tamabboh, tile - 4), sample.version());
+        }
+        for (int tile = 0; tile < 63; tile++) {
+            var sample = after.resolve(0x441 + tile);
+            assertEquals(12098 + tile, sample.logicalPatternId());
+            assertEquals(tile < 34 ? engineVersion(tamabboh, tile + 25) : engineVersion(ramp, tile), sample.version());
+        }
+        for (int id : currentCameraNativeIds()) {
+            if ((id < 0x424 || id >= 0x440) && (id < 0x441 || id >= 0x480)) {
+                assertEquals(before.resolve(id), after.resolve(id));
+            }
+        }
+        assertCurrentCameraAdmission(after);
+        assertEquals(SpritePresentation.Frame.empty(), CdObjectPresentation.convert(new Fixture().build(), after));
+    }
+
+    @Test void unknownAndThenKnownAntonAndGapRemainOutsideThe494PatternPicturePolicy() throws Exception {
+        // Catches broad admission of owned physical bytes instead of the historical drawable address set.
+        var c = currentCameraMedia(); var a = c.opening();
+        var seed = currentCameraSeed(c);
+        var before = currentCameraBank(c, a.player(), a.powerup(), seed, monitorTimeBases());
+        var empty = new Fixture().build();
+        assertEquals(SpritePresentation.Frame.empty(), CdObjectPresentation.convert(empty, before));
+        for (int id : new int[]{0x409, 0x41E, 0x440}) {
+            var fault = assertThrows(CdR11aCameraArtResidency.OwnershipBoundary.class,
+                    () -> CdR11aCameraArtResidency.readTile(seed, id));
+            assertEquals(CdR11aCameraArtResidency.Boundary.UNKNOWN_PATTERN, fault.boundary());
+            assertEquals(id, fault.nativePatternId());
+            assertThrows(UnsupportedOperationException.class, () -> before.resolve(id));
+        }
+        var anton = c.sources().source(CdR11aAsset.ART_ANTON).decode().bytes();
+        assertEquals(704, anton.length());
+        var written = currentCameraWrite(seed, 0x8120, anton, 0, 22);
+        var tamabboh = c.sources().source(CdR11aAsset.ART_TAMABBOH).decode().bytes();
+        written = currentCameraWrite(written, 0x8800, tamabboh, 24, 1);
+        var after = currentCameraBank(c, a.player(), a.powerup(), written, monitorTimeBases());
+        for (int tile = 0; tile < 22; tile++) {
+            assertEquals(engineVersion(anton, tile), engineVersion(CdR11aCameraArtResidency.readTile(written, 0x409 + tile), 0));
+            int id = 0x409 + tile;
+            assertThrows(UnsupportedOperationException.class, () -> after.resolve(id));
+        }
+        assertThrows(UnsupportedOperationException.class, () -> after.resolve(0x440));
+        for (int id : currentCameraNativeIds()) assertEquals(before.resolve(id), after.resolve(id));
+        assertCurrentCameraAdmission(after);
+    }
+
+    @Test void currentCameraPolicyKeepsBothCompleteNowWindowsAndEarlierSourcesAndPicturesImmutable() throws Exception {
+        // Catches later live-runtime lookups and losing the unsynthesized player/powerup resident tails.
+        var c = currentCameraMedia(); var a = c.opening();
+        var seed = currentCameraSeed(c);
+        byte[] playerCpu = a.player().cpuBuffer().copy(), playerResident = a.player().residentBank().copy();
+        byte[] powerupCpu = a.powerup().cpuBuffer().copy(), powerupResident = a.powerup().residentBank().copy();
+        var before = currentCameraBank(c, a.player(), a.powerup(), seed, monitorTimeBases());
+        var playerSlots = new Fixture();
+        playerSlots.add(32, 0, 0, 128, 128, 0x780,
+                List.of(new RawPiece(0, 14, 0, 0), new RawPiece(0, 14, 12, 32)));
+        var playerSat = playerSlots.build(32); var gameSat = new GameOverSlots(GAME_MAP, 0, 1).draw();
+        var mosquiSat = currentCameraMosquiSat(c);
+        var playerPicture = CdObjectPresentation.convert(playerSat, before);
+        var gamePicture = CdObjectPresentation.convert(gameSat, before);
+        var mosquiPicture = CdObjectPresentation.convert(mosquiSat, before);
+        var playerService = new CdPlayerArtRuntime(a.assets().sonic(), a.player());
+        CdPlayerArtRuntime.State nextPlayer = null;
+        for (int frame = 1; frame < a.assets().sonic().dplcFrames().size(); frame++) {
+            if (a.assets().sonic().dplcFrames().get(frame).pieces().isEmpty()) continue;
+            playerService.serviceVInt(frame);
+            if (!Arrays.equals(playerResident, playerService.capture().residentBank().copy())) {
+                nextPlayer = playerService.capture(); break;
+            }
+        }
+        assertNotNull(nextPlayer);
+        var powerup = new CdPowerupArtRuntime(a.assets().shield()).service(a.powerup(), 0x88).state();
+        var pata = c.sources().source(CdR11aAsset.ART_PATA_BATA).decode().bytes();
+        var camera = currentCameraWrite(seed, 0x7600, pata, 0, 3);
+        var after = currentCameraBank(c, nextPlayer, powerup, camera, monitorTimeBases());
+        for (int tile = 0; tile < 24; tile++) {
+            assertEquals(engineVersion(nextPlayer.residentBank(), tile), after.resolve(0x780 + tile).version());
+            assertEquals(engineVersion(CdAssetBytes.copyOf(playerResident), tile), before.resolve(0x780 + tile).version());
+        }
+        for (int tile = 0; tile < 36; tile++) {
+            assertEquals(engineVersion(powerup.residentBank(), tile), after.resolve(0x544 + tile).version());
+            assertEquals(engineVersion(CdAssetBytes.copyOf(powerupResident), tile), before.resolve(0x544 + tile).version());
+        }
+        assertArrayEquals(Arrays.copyOfRange(playerResident, 0x2E0, 0x300), nextPlayer.residentBank().slice(0x2E0, 32).copy());
+        assertArrayEquals(Arrays.copyOfRange(powerupResident, 0x400, 0x480), powerup.residentBank().slice(0x400, 0x80).copy());
+        assertNotEquals(playerPicture.patternVersions(), CdObjectPresentation.convert(playerSat, after).patternVersions());
+        assertNotEquals(gamePicture.patternVersions(), CdObjectPresentation.convert(gameSat, after).patternVersions());
+        assertNotEquals(mosquiPicture.patternVersions(), CdObjectPresentation.convert(mosquiSat, after).patternVersions());
+        assertEquals(playerPicture, CdObjectPresentation.convert(playerSat, before));
+        assertEquals(gamePicture, CdObjectPresentation.convert(gameSat, before));
+        assertEquals(mosquiPicture, CdObjectPresentation.convert(mosquiSat, before));
+        assertArrayEquals(playerCpu, a.player().cpuBuffer().copy());
+        assertArrayEquals(playerResident, a.player().residentBank().copy());
+        assertArrayEquals(powerupCpu, a.powerup().cpuBuffer().copy());
+        assertArrayEquals(powerupResident, a.powerup().residentBank().copy());
+        for (var value : List.of(a.player().residentBank(), a.powerup().residentBank(),
+                CdR11aCameraArtResidency.readTile(camera, 0x3B0))) {
+            byte[] detached = value.copy(); Arrays.fill(detached, (byte) 0xEE);
+        }
+        assertEquals(mosquiPicture, CdObjectPresentation.convert(mosquiSat, before));
+        assertEquals(engineVersion(pata, 0), after.resolve(0x3B0).version());
+        assertThrows(UnsupportedOperationException.class, () -> mosquiPicture.patternVersions().clear());
+    }
+
+    @Test void currentCameraFactoryEagerlyValidatesAllThirteenLogicalSpansAndTenInputsBeforeAnEmptySat() throws Exception {
+        // Catches lazy validation, lost validation in overrides, same-base aliases and integer wrap.
+        var c = currentCameraMedia(); var a = c.opening(); var camera = currentCameraSeed(c);
+        var empty = new Fixture().build(); assertEquals(0, empty.spriteCount());
+        int[] sizes = monitorTimeSizes(), firstTiles = monitorTimeFirstTiles();
+        for (int span = 0; span < 13; span++) {
+            var negative = monitorTimeBases(); negative[span] = -1;
+            assertThrows(IllegalArgumentException.class, () -> CdObjectPresentation.convert(empty,
+                    currentCameraBank(c, a.player(), a.powerup(), camera, negative)));
+            var overflow = monitorTimeBases(); overflow[span] = Integer.MAX_VALUE - sizes[span] + 2;
+            assertThrows(IllegalArgumentException.class, () -> CdObjectPresentation.convert(empty,
+                    currentCameraBank(c, a.player(), a.powerup(), camera, overflow)));
+            for (int base : new int[]{0, Integer.MAX_VALUE - sizes[span] + 1}) {
+                var bounds = monitorTimeBases(); bounds[span] = base;
+                var bank = currentCameraBank(c, a.player(), a.powerup(), camera, bounds);
+                assertEquals(base, bank.resolve(firstTiles[span]).logicalPatternId());
+                assertEquals(base + sizes[span] - 1, bank.resolve(firstTiles[span] + sizes[span] - 1).logicalPatternId());
+                assertEquals(SpritePresentation.Frame.empty(), CdObjectPresentation.convert(empty, bank));
+            }
+        }
+        for (int first = 0; first < 13; first++) {
+            for (int second = first + 1; second < 13; second++) {
+                var sameBase = monitorTimeBases(); sameBase[second] = sameBase[first];
+                assertThrows(IllegalArgumentException.class, () -> CdObjectPresentation.convert(empty,
+                        currentCameraBank(c, a.player(), a.powerup(), camera, sameBase)));
+                var overlapEnd = monitorTimeBases(); overlapEnd[second] = overlapEnd[first] + sizes[first] - 1;
+                assertThrows(IllegalArgumentException.class, () -> CdObjectPresentation.convert(empty,
+                        currentCameraBank(c, a.player(), a.powerup(), camera, overlapEnd)));
+                var overlapStart = monitorTimeBases(); overlapStart[first] = overlapStart[second] + sizes[second] - 1;
+                assertThrows(IllegalArgumentException.class, () -> CdObjectPresentation.convert(empty,
+                        currentCameraBank(c, a.player(), a.powerup(), camera, overlapStart)));
+            }
+        }
+        for (int missing = 0; missing < 10; missing++) {
+            int absent = missing; int[] b = monitorTimeBases();
+            assertThrows(NullPointerException.class, () -> CdObjectPresentation.convert(empty,
+                    CdObjectPresentation.usaR11aCurrentCameraDevPreloadedArt(
+                            absent == 0 ? null : a.player(), absent == 1 ? null : a.powerup(),
+                            absent == 2 ? null : a.objects(), absent == 3 ? null : a.frontier(),
+                            absent == 4 ? null : a.contact(), absent == 5 ? null : a.floatBlock(),
+                            absent == 6 ? null : a.spring(), absent == 7 ? null : c.door(),
+                            absent == 8 ? null : c.monitor(), absent == 9 ? null : camera,
+                            b[0],b[1],b[2],b[3],b[4],b[5],b[6],b[7],b[8],b[9],b[10],b[11],b[12])));
+        }
+    }
+
+    @Test void actualPataAliasStillRejectsAnOverlappingDeclaredSpanInEitherOrder() throws Exception {
+        // Catches weakening declaredPixelBank to make a fourteenth Pata span appear to fit.
+        var c = currentCameraMedia(); var a = c.opening();
+        var mosqui = new CdObjectPresentation.PixelSpan(0x3A0, 12000,
+                a.objects().initialArtBank().binding(CdR11aAsset.ART_MOSQUI).bytes());
+        var pata = new CdObjectPresentation.PixelSpan(0x3B0, 20000,
+                c.sources().source(CdR11aAsset.ART_PATA_BATA).decode().bytes());
+        var equalBytes = new CdObjectPresentation.PixelSpan(0x3B0, 21000, mosqui.bytes().slice(16 * 32, 50 * 32));
+        for (var overlap : List.of(pata, equalBytes)) {
+            assertThrows(IllegalArgumentException.class, () -> CdObjectPresentation.declaredPixelBank(List.of(mosqui, overlap)));
+            assertThrows(IllegalArgumentException.class, () -> CdObjectPresentation.declaredPixelBank(List.of(overlap, mosqui)));
+        }
+    }
+
+    @Test void currentCameraPolicyUsesTheActualUsaOwnerAndItsRetainedDecodedBytesAfterSourceClosure() throws Exception {
+        // Catches fabricated ownership and reopening a closed source rather than retaining immutable loaded bytes.
+        var c = currentCameraMedia(); var a = c.opening();
+        // springMedia closes CdProgramAssets before even calling openingObjects; all optional camera decodes follow.
+        assertEquals(CdReleaseVariant.USA, a.objects().identity().variant());
+        assertEquals(a.assets().identity(), a.objects().identity());
+        assertEquals(CdStageKey.parse("R11A"), a.objects().identity().stage());
+        assertEquals(a.assets().profile().expectedMmdSha256(), a.objects().identity().mmdSha256());
+        int[] destinations = {0x7600, 0x8120, 0x8500, 0x7400, 0x8480, 0x8820};
+        int[] counts = {50, 22, 59, 70, 28, 63};
+        CdR11aAsset[] sources = {CdR11aAsset.ART_PATA_BATA, CdR11aAsset.ART_ANTON, CdR11aAsset.ART_TAMABBOH,
+                CdR11aAsset.ART_MOSQUI, CdR11aAsset.ART_3D_PLANT, CdR11aAsset.ART_3D_RAMP_BOOST};
+        for (int i = 0; i < sources.length; i++) {
+            var source = c.sources().source(sources[i]);
+            assertEquals(destinations[i], source.canonicalPlc().vramAddress());
+            assertEquals(counts[i], source.tileCount()); assertEquals(counts[i] * 32, source.decode().bytes().length());
+            assertEquals(sources[i], source.canonicalPlc().source());
+        }
+        var source = currentCameraBank(c, a.player(), a.powerup(), currentCameraSeed(c), monitorTimeBases());
+        assertEquals(engineVersion(a.objects().initialArtBank().binding(CdR11aAsset.ART_MOSQUI).bytes(), 69),
+                source.resolve(0x3E5).version());
+        assertCurrentCameraAdmission(source);
+        // Non-USA object owners cannot be constructed through this fixture/API; no forged identity is used.
+    }
+
+    private record CurrentCameraMedia(UsaSpring opening, CdR11aObjectAssets.TunnelDoorArtBank door,
+                                      CdR11aObjectAssets.MonitorTimeArtBank monitor,
+                                      CdR11aObjectAssets.SectionArtSourceBank sources) { }
+
+    private static CurrentCameraMedia currentCameraMedia() throws Exception {
+        var a = springMedia();
+        return new CurrentCameraMedia(a, a.objects().tunnelDoorArtBank(), a.objects().monitorTimeArtBank(),
+                a.objects().sectionArtSources());
+    }
+
+    private static CdR11aCameraArtResidency.State currentCameraSeed(CurrentCameraMedia c) {
+        var a = c.opening();
+        return CdR11aCameraArtResidency.devSeed(a.objects().initialArtBank().binding(CdR11aAsset.ART_MOSQUI).bytes(),
+                a.frontier().binding(CdR11aAsset.ART_3D_PLANT).bytes(),
+                a.frontier().binding(CdR11aAsset.ART_3D_RAMP_BOOST).bytes());
+    }
+
+    private static CdR11aCameraArtResidency.State currentCameraWrite(CdR11aCameraArtResidency.State state,
+                                                                    int destination, CdAssetBytes decoded,
+                                                                    int sourceFirstTile, int count) {
+        for (int tile = 0; tile < count; tile++) {
+            state = CdR11aCameraArtResidency.writeTile(state, destination + tile * 32,
+                    decoded.slice((sourceFirstTile + tile) * 32, 32));
+        }
+        return state;
+    }
+
+    private static CdObjectPresentation.PatternSource currentCameraBank(CurrentCameraMedia c,
+                                                                       CdPlayerArtRuntime.State player,
+                                                                       CdPowerupArtRuntime.State powerup,
+                                                                       CdR11aCameraArtResidency.State camera, int[] b) {
+        var a = c.opening();
+        return CdObjectPresentation.usaR11aCurrentCameraDevPreloadedArt(player, powerup, a.objects(), a.frontier(),
+                a.contact(), a.floatBlock(), a.spring(), c.door(), c.monitor(), camera,
+                b[0],b[1],b[2],b[3],b[4],b[5],b[6],b[7],b[8],b[9],b[10],b[11],b[12]);
+    }
+
+    private static TreeSet<Integer> currentCameraNativeIds() {
+        var ids = new TreeSet<Integer>(); int[] first = monitorTimeFirstTiles(), counts = monitorTimeSizes();
+        for (int span = 0; span < 13; span++) ids.addAll(nativeRange(first[span], first[span] + counts[span]));
+        assertEquals(494, ids.size()); return ids;
+    }
+
+    private static void assertCurrentCameraAdmission(CdObjectPresentation.PatternSource source) {
+        var admitted = currentCameraNativeIds();
+        for (int nativeId = 0; nativeId <= 0x7FF; nativeId++) {
+            int id = nativeId;
+            if (!admitted.contains(id)) assertThrows(UnsupportedOperationException.class, () -> source.resolve(id));
+        }
+        assertThrows(IllegalArgumentException.class, () -> source.resolve(-1));
+        assertThrows(IllegalArgumentException.class, () -> source.resolve(0x800));
+        assertThrows(IllegalArgumentException.class, () -> source.resolve(0x83B0));
+    }
+
+    private static CpuSat currentCameraMosquiSat(CurrentCameraMedia c) {
+        // Actual Mosqui $3D, MapSpr_Mosqui1 frame 2: offsets $F..$19 include the aliased $3B0..$3B2.
+        // N Mosqui/Data/Mappings (Normal).asm:34-44; actual USA root retained by the existing mapper.
+        var mappings = CdObjectMappings.fromOpeningAssets(c.opening().assets(), c.opening().objects());
+        int base = c.opening().objects().initialArtBank().binding(CdR11aAsset.ART_MOSQUI).baseWord();
+        var slots = new CdDrawSlots() {
+            private LiveDrawSlot current = new LiveDrawSlot(0x3D, 4, 0x100, 0x80, 0x9999, 0x20B6E6, 2, base);
+            @Override public LiveDrawSlot read(CdSlotRef ref) { assertEquals(32, ref.wholeIndex()); return current; }
+            @Override public void writeOnScreenBit(CdSlotRef ref, boolean on) {
+                assertEquals(32, ref.wholeIndex()); var s = current;
+                current = new LiveDrawSlot(s.idByte(), (s.spriteFlagsByte() & 127) | (on ? 128 : 0),
+                        s.xWord(), s.yWord(), s.screenYWord(), s.mappingAddressBits(), s.mapFrameByte(), s.baseTileWord());
+            }
+        };
+        var queue = new CdObjectDrawQueue(slots, mappings, new byte[SAT_BYTE_SIZE]);
+        var camera = new CameraWords(0, 0); queue.beginPass();
+        assertEquals(EnqueueResult.QUEUED, queue.drawObject(new DrawCallCut(new CdSlotRef(32), 4,
+                0x100, 0x80, 0x28, 0x10, 3), camera));
+        return queue.finishAfterCamera(new DrawCameras(camera, camera, camera));
+    }
 }
