@@ -8560,3 +8560,67 @@ env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
 The same command with `--preflight` in place of `--run` checks the actual launch
 environment before submission. No combined result or delivery is claimed at
 this checkpoint.
+
+### Suspended visit: completed parent smoke and delivery gate
+
+The single parent request at frozen `11db9f2945920804f308e9fa7d449b858c5e088f`
+completed after the checkpoint above. Its base remained
+`a9d88d2c980c6562008e21c916d2b4d28362fd6f`; no source, test, tooling or prose
+input changed during validation. Initial and final working-input fingerprints
+both equal
+`ada59236048f8a4841fff60163bc7414db04e32ad1a625e65f401454d2cf5aaf`.
+Java 25 and the actual display-free EGL launch environment were preflighted.
+All 76 ordinary command records select `-Psmoke`, and the separate fresh
+structural invocation selects `-Pguards`; none selects release-only full-suite.
+Every command carries the four verified absolute supplied-ROM properties.
+
+Run `20261024T213855Z-008b7f70`, owned session **61664**, is terminal:
+
+| Selection | Completion | Cases | Failures | Errors | Skips | Measured execution |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| Ordinary smoke, 3,772 candidate classes | 76/76 batches; 3,749 reports | 39,436 | 1 | 0 | 97 | 6,522.05 s |
+| Fresh complete guards | 1/1 batch; 95 reports | 793 | 0 | 0 | 0 | 299.67 s |
+
+Preparation passed in **29.61 s**. The final guard admission waited **180 s**.
+Per-batch waits were reported independently; aggregate queue time and delivery
+wall time were not measured. Runner execution clocks start after admission,
+and preparation subtracts build-wait time, so those execution figures exclude
+test-queue waiting. Overlapping worker intervals must not be added to them.
+
+The ordinary lane's one failure is exactly the previously attributed
+`TestHczMinibossNativeRendering#allOrbitPhasesMatchRomSpriteCompositionInNativePixels`:
+`AssertionFailedError`, `GLFW must initialize for pixel verification ==> expected:
+<true> but was: <false>`, line 53. Fixture blob
+`a50b3625683284ded48f5cbbda96fa9c6845c66d` is identical at baseline
+`97eb86f186b432722024ca419a00b901b38f5ec2`, the integration base and tested head.
+The recorded exact isolated baseline session **80669** reproduced that assertion
+with the same Java 25/EGL/four-ROM environment (1/1/0/0, queue 396 s, Maven 1:26).
+No unchanged attribution rerun was needed. This remains unavailable HCZ pixel
+verification, not a successful native-pixel result.
+
+All **97** skip identities and reasons were inspected; neither failure nor skip
+details were omitted. They comprise opt-in measurements/soaks/captures and
+optional tool/reference prerequisites, 32 absent act-geometry cases, the known
+CPZ spin-tube assumption, and legacy GLFW/EGL prerequisites. No missing-ROM-path
+skip was present. The last added skip was the unrequested local S1 audio timeline
+capture. No unexpected affected suspension control was skipped. The earlier
+two TraceCaptureBootDimensions errors are not carried forward as current
+failures: the updated property-isolation controls and both boot cases passed in
+the parent 32-case selection, and the completed ordinary run has zero errors.
+
+All 13 frozen-store files remain byte-identical to the integration base, including
+119 low-level records. Checked-in creation/update defaults stay false; fresh
+guards enforce the no-auto-update contract. API pins/descriptors, ambient 6/5
+and package permissions 151 remain unchanged. The complete category result,
+final fingerprint, sole failure, skips and all 77 command scopes were inspected,
+then `run_categories.py --acknowledge 20261024T213855Z-008b7f70` deleted the entire
+run directory. No pass cache, receipt or raw-log archive remains.
+
+The exit status is **1** because of that matched inherited prerequisite failure.
+This is a completed bounded smoke selection with a known failure, not a green
+smoke or full-suite claim. No new or worsened failure remains unattributed.
+The user's delivery policy permits integration with that attributed baseline
+failure. This gate covers the suspension/upstream composition at `11db`;
+separate SMPS and SourcePublication candidates retain their own content-matched
+review and validation obligations. Latest-main reconciliation, policy validation,
+push and exact owned-worktree cleanup follow this gate.
