@@ -260,3 +260,29 @@ Inspect skips, acknowledge consumed diagnostics, and retain no validation caches
   all 42 singleton-closure cases passed without skips. Full final guards and
   combined recovery/session/pixel checks remain the next checks; do not replay
   the unchanged owner-category suite after these bounded repairs.
+- Final composed code `b7f0ecf91f6941753072a1e54d861327a0790a5f`
+  passed 57 recovery/session/pixel cases without failures, errors or skips:
+  `TestRacingScaleTool,TestRacingSocketStress,TestRaceSession,TestPrivateLobbyScreenRendering,TestEngineSceneFocusPresentation`.
+  The 35 real-session cases include private direct, relay and registered-LAN
+  joins, wrong-password/rotated-code rejection, sharing, cancellation and a
+  31-second human prompt. The subsequent fresh `-Pguards test -B` invocation
+  passed all 800 cases across 95 reports without failures, errors or skips.
+  XML confirmed Java 25 and explicit surfaceless EGL. Consumed reports and logs
+  were removed. Source changes are bounded to the recorded repairs; the red
+  earlier owner result is not retroactively labelled green.
+- On that same code, `maven_queue.py -Dmse=off -DskipTests package -B` passed.
+  The actual bundled Time Attack package validated with zero findings, contains
+  the creation/invite views and controller, and contains no duplicate shared
+  networking classes. `JAVA_HOME=<JDK-25> LUA_BIN=<Lua-5.4> python3
+  racing/server/build.py --skip-engine` then passed against the coherent engine
+  package, producing the standalone launcher. These are packaging checks,
+  without another test-suite invocation.
+- No new or worsened failure remains unresolved. The two matched inherited
+  audio-source-order and raw-GLFW failures remain untouched. The broader
+  all-category attempts remain incomplete; the completed owner selection,
+  affected repairs and final guards are bounded validation, not a release
+  full-suite pass or exhaustive trace qualification. Pixel evidence uses actual
+  EGL rendering and injected presentation callbacks; native compositor focus
+  behavior remains untested. Delivery follows the current `develop` branch and
+  preserves unrelated workspace state; task-owned worktrees are removed only
+  after integration and push.

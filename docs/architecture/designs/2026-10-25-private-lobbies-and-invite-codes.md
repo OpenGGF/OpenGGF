@@ -1,8 +1,8 @@
 # Private lobbies and invite codes: common multiplayer framework
 
-Date: 2026-10-25. Status: implementation under combined verification. The
+Date: 2026-10-25. Status: implemented. The
 [implementation record](../plans/2026-10-25-private-lobbies-and-invites.md)
-tracks delivery and evidence. Original source inspected:
+records verification, baseline failures and coverage limits. Original source inspected:
 `159655c8460dac15912dc4326491386a75368666`
 (`develop`, engine `0.7.prerelease`, networking protocol 5).
 
