@@ -1,5 +1,26 @@
 package com.openggf;
 
+import com.openggf.audio.AudioManager;
+import com.openggf.audio.AudioManagerTestDiagnostics;
+import com.openggf.audio.AudioTestFixtures;
+import com.openggf.audio.GameAudioProfile;
+import com.openggf.audio.NullAudioBackend;
+import com.openggf.audio.smps.AbstractSmpsData;
+import com.openggf.audio.smps.AbstractSmpsLoader;
+import com.openggf.audio.smps.DacData;
+import com.openggf.audio.smps.SmpsLoader;
+import com.openggf.audio.smps.SmpsSequencerConfig;
+import com.openggf.game.Game;
+import com.openggf.data.Rom;
+import com.openggf.data.RomManager;
+import com.openggf.game.GameDataSource;
+import com.openggf.physics.CollisionSystem;
+import com.openggf.level.WaterSystem;
+import com.openggf.level.ParallaxManager;
+import com.openggf.sprites.managers.SpriteManager;
+import com.openggf.level.LevelManager;
+import com.openggf.trace.replay.runs.TraceRunSegmentDescriptor;
+
 import com.openggf.camera.Camera;
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.Bk2Movie;
@@ -27,16 +48,24 @@ import com.openggf.trace.replay.TraceReplaySessionBootstrap;
 import com.openggf.trace.timing.HardwareTimingReplayPort;
 import com.openggf.trace.timing.HardwareTimingSchedule;
 import com.openggf.trace.timing.TraceHardwareTimingBoundaryObserver;
+import com.openggf.tests.rules.RequiresRom;
+import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import com.openggf.tests.RomTestUtils;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.lang.reflect.Field;
+import java.util.Optional;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.ArrayList;
+import java.util.logging.Handler;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -51,12 +80,44 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class TestSpecialStageHardwareTimingLifecycle {
 
     @AfterEach
     void tearDown() {
         SessionManager.clear();
+    }
+
+    @Test
+    void standaloneAudioInstallsOnlyItsMatchedProfileRomPair() throws Exception {
+        try (var setup = matchedSourceSetup()) {
+            long before = AudioManagerTestDiagnostics.baseSmpsSourceBinding(setup.audio())
+                    .generation();
+            var session = new TraceSessionLauncher(null, null,
+                    List.<TraceRunSegmentDescriptor>of(), null, null);
+
+            session.configureStandaloneSpecialStageAudio();
+
+            assertSelectedSource(setup, before);
+            session.configureStandaloneSpecialStageAudio();
+            assertSelectedSource(setup, before);
+        }
+    }
+
+    @Test
+    void levelInitAudioInstallsOnlyItsMatchedProfileRomPair() throws Exception {
+        try (var setup = matchedSourceSetup()) {
+            long before = AudioManagerTestDiagnostics.baseSmpsSourceBinding(setup.audio())
+                    .generation();
+
+            setup.level().initAudio(0);
+
+            assertSelectedSource(setup, before);
+            verify(setup.game()).getMusicId(0);
+            setup.level().configureAudio();
+            assertSelectedSource(setup, before);
+        }
     }
 
     @Test
@@ -120,6 +181,7 @@ class TestSpecialStageHardwareTimingLifecycle {
     }
 
     @Test
+    @RequiresRom(SonicGame.SONIC_2)
     void initializationFailureSuppressesStrictCloseAndLeavesNextContextLive(
             @TempDir Path dir) throws Exception {
         writeTrace(dir, true, true);
@@ -146,7 +208,38 @@ class TestSpecialStageHardwareTimingLifecycle {
                 anyBoolean(),
                 any(SpecialStageStartupPolicy.class));
 
-        session.finishSpecialStageLaunch(loop);
+        List<Throwable> launchFailures = new ArrayList<>();
+        Logger launchLogger = Logger.getLogger(TraceSessionLauncher.class.getName());
+        Handler handler = new Handler() {
+            @Override
+            public void publish(LogRecord record) {
+                if (record.getThrown() != null) {
+                    launchFailures.add(record.getThrown());
+                }
+            }
+
+            @Override
+            public void flush() { }
+
+            @Override
+            public void close() { }
+        };
+        launchLogger.addHandler(handler);
+        try {
+            session.finishSpecialStageLaunch(loop);
+        } finally {
+            launchLogger.removeHandler(handler);
+            handler.close();
+        }
+
+        verify(loop).doEnterSpecialStage(
+                any(SpecialStageProvider.class),
+                anyInt(),
+                anyBoolean(),
+                any(SpecialStageStartupPolicy.class));
+        assertEquals(1, launchFailures.size());
+        assertSame(primary, launchFailures.getFirst(),
+                "the handled failure must be the intended special-stage entry failure");
 
         assertEquals(0, primary.getSuppressed().length,
                 "incomplete launch abort must not perform strict edge verification");
@@ -273,6 +366,131 @@ class TestSpecialStageHardwareTimingLifecycle {
                 new Camera(), new TimerManager(), new GameStateManager(),
                 new FadeManager(), new GameRng(GameRng.Flavour.S1_S2),
                 new DefaultSolidExecutionRegistry());
+    }
+
+    private static MatchedSourceSetup matchedSourceSetup() throws Exception {
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        AudioManager audio = GameServices.audio();
+        // Construct every mock/module before starting any when(...).thenReturn(...).
+        Rom previousRom = mock(Rom.class);
+        Rom selectedRom = mock(Rom.class);
+        PairProfile previousProfile = new PairProfile(previousRom);
+        PairProfile selectedProfile = new PairProfile(selectedRom);
+        GameDataSource dataSource = mock(GameDataSource.class);
+        Game game = mock(Game.class);
+        SpriteManager sprites = mock(SpriteManager.class);
+        ParallaxManager parallax = mock(ParallaxManager.class);
+        CollisionSystem collision = mock(CollisionSystem.class);
+        WaterSystem water = mock(WaterSystem.class);
+        Sonic2GameModule module = new Sonic2GameModule() {
+            @Override public GameAudioProfile getAudioProfile() { return selectedProfile; }
+        };
+        Optional<Rom> selected = Optional.of(selectedRom);
+        when(previousRom.isOpen()).thenReturn(true);
+        when(selectedRom.isOpen()).thenReturn(true);
+        when(dataSource.rom()).thenReturn(selected);
+        when(game.getSoundMap()).thenReturn(Map.of());
+        when(game.getMusicId(0)).thenReturn(-1);
+        RomManager.getInstance().setRom(selectedRom);
+        GameplayModeContext context = SessionManager.openGameplaySession(
+                module, module, dataSource, null);
+        attachCoreManagers(context);
+        LevelManager level = new LevelManager(new Camera(), sprites, parallax, collision,
+                water, new GameStateManager(), EngineServices.current(), context.getWorldSession());
+        Field moduleField = LevelManager.class.getDeclaredField("gameModule");
+        moduleField.setAccessible(true);
+        moduleField.set(level, module);
+        Field gameField = LevelManager.class.getDeclaredField("game");
+        gameField.setAccessible(true);
+        gameField.set(level, game);
+        // The old tuple is installed AFTER context construction/attachment.
+        var setup = new MatchedSourceSetup(audio, selectedRom, previousProfile,
+                selectedProfile, level, game);
+        try {
+            audio.resetState();
+            audio.setBackend(new NullAudioBackend());
+            audio.setAudioProfile(previousProfile);
+            audio.setRom(previousRom);
+            previousProfile.attempts.clear();
+            return setup;
+        } catch (RuntimeException | Error failure) {
+            try { setup.close(); }
+            catch (RuntimeException | Error cleanupFailure) { failure.addSuppressed(cleanupFailure); }
+            throw failure;
+        }
+    }
+
+    private static void assertSelectedSource(MatchedSourceSetup setup, long before)
+            throws Exception {
+        var binding = AudioManagerTestDiagnostics.baseSmpsSourceBinding(setup.audio());
+        assertSame(setup.selectedRom(), binding.rom());
+        assertSame(setup.selectedRom(), binding.loaderRom());
+        assertSame(setup.selectedProfile(), binding.profile());
+        assertSame(setup.selectedProfile().loader, binding.loader());
+        assertSame(AudioTestFixtures.EMPTY_DAC, baseSourcePart(setup.audio(), "dac"));
+        assertSame(setup.selectedProfile().config, baseSourcePart(setup.audio(), "config"));
+        assertEquals(before + 1, binding.generation());
+        assertEquals(List.of(), setup.previousProfile().attempts);
+        assertEquals(List.of(setup.selectedRom()), setup.selectedProfile().attempts);
+    }
+
+    private static Object baseSourcePart(AudioManager audio, String name)
+            throws ReflectiveOperationException {
+        Field publicationField = AudioManager.class.getDeclaredField("sourcePublication");
+        publicationField.setAccessible(true);
+        Object publication = publicationField.get(audio);
+        Field field = publication.getClass().getDeclaredField("baseAudioSource");
+        field.setAccessible(true);
+        Object source = field.get(publication);
+        var accessor = source.getClass().getDeclaredMethod(name);
+        accessor.setAccessible(true);
+        return accessor.invoke(source);
+    }
+
+    private record MatchedSourceSetup(AudioManager audio, Rom selectedRom,
+            PairProfile previousProfile, PairProfile selectedProfile,
+            LevelManager level, Game game) implements AutoCloseable {
+        @Override public void close() {
+            try {
+                audio.resetState();
+            } finally {
+                try { SessionManager.clear(); }
+                finally { RomManager.getInstance().setRom(null); }
+            }
+        }
+    }
+
+    private static final class PairProfile extends AudioTestFixtures.StubAudioProfile {
+        private final Rom expected;
+        private final PairLoader loader;
+        private final SmpsSequencerConfig config = new SmpsSequencerConfig.Builder().build();
+        private final List<Rom> attempts = new ArrayList<>();
+
+        private PairProfile(Rom expected) {
+            this(expected, new PairLoader(expected));
+        }
+        private PairProfile(Rom expected, PairLoader loader) {
+            super(loader);
+            this.expected = expected;
+            this.loader = loader;
+        }
+        @Override public SmpsLoader createSmpsLoader(Rom rom) {
+            attempts.add(rom);
+            if (rom != expected) {
+                throw new IllegalStateException("factory received an unmatched ROM/profile pair");
+            }
+            return loader;
+        }
+        @Override public SmpsSequencerConfig getSequencerConfig() { return config; }
+    }
+
+    private static final class PairLoader extends AbstractSmpsLoader {
+        private final Rom rom;
+        private PairLoader(Rom rom) { this.rom = rom; }
+        @Override public AbstractSmpsData loadMusic(int id) { return null; }
+        @Override public AbstractSmpsData loadSfx(int id) { return null; }
+        @Override public DacData loadDacData() { return AudioTestFixtures.EMPTY_DAC; }
+        @Override protected boolean isValidSfxId(int id) { return false; }
     }
 
     private static final class TimingFixture

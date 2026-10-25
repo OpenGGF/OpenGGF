@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -600,6 +601,7 @@ public class TestAudioManagerResetState {
         CallbackProfile candidateProfile = new CallbackProfile(
                 "candidate", candidateLoader);
         candidateProfile.loaders.put(currentRom, candidateLoader);
+        candidateProfile.loaders.put(outerRom, candidateLoader);
         CallbackProfile nestedProfile = new CallbackProfile(
                 "nested", loader(dac(383), 0x9B, (byte) 0x7E));
         am.setAudioProfile(oldProfile);
@@ -609,6 +611,8 @@ public class TestAudioManagerResetState {
             case SET_ROM -> () -> am.setRom(nestedRom);
             case SET_AUDIO_PROFILE ->
                     () -> am.setAudioProfile(nestedProfile);
+            case MATCHED_SOURCE -> () -> AudioManagerInternalAccess.installMatchedSource(
+                    am, nestedRom, nestedProfile);
         };
         armBaseMutationCallback(
                 outerMutation, callbackStage, oldProfile,
@@ -617,6 +621,8 @@ public class TestAudioManagerResetState {
             case SET_ROM -> () -> am.setRom(outerRom);
             case SET_AUDIO_PROFILE ->
                     () -> am.setAudioProfile(candidateProfile);
+            case MATCHED_SOURCE -> () -> AudioManagerInternalAccess.installMatchedSource(
+                    am, outerRom, candidateProfile);
         };
 
         assertThrows(IllegalStateException.class, outerAttempt::run);
@@ -829,6 +835,141 @@ public class TestAudioManagerResetState {
         assertEquals(0, rejectedRom.readCount());
     }
 
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void matchedInstalledPairCannotBypassReentrancyGuard(boolean installedRomPresent)
+            throws Exception {
+        Rom installedRom = installedRomPresent ? new Rom() : null;
+        Rom selectedRom = new Rom();
+        var installed = new CallbackProfile("installed-pair", loader(dac(411), 0xA2, (byte) 1));
+        var selected = new CallbackProfile("replacement-pair", loader(dac(412), 0xA2, (byte) 2));
+        am.setRom(installedRom);
+        am.setAudioProfile(installed);
+        Object tuple = baseSourcePublication();
+        long generation = (long) baseSourceComponent("generation");
+        var owner = am.presentationCoordFlagHandlersForTesting();
+        var installedHandler = owner.handlerFor("installed-pair");
+        var producer = AudioManagerTestDiagnostics.producerFingerprint(am);
+        selected.onCreateLoader = () -> AudioManagerInternalAccess.installMatchedSource(
+                am, installedRom, installed);
+
+        assertThrows(IllegalStateException.class, () ->
+                AudioManagerInternalAccess.installMatchedSource(am, selectedRom, selected));
+
+        assertSame(tuple, baseSourcePublication());
+        assertEquals(generation, baseSourceComponent("generation"));
+        assertSame(installed, backend.activeProfile);
+        assertSame(installedHandler, owner.handlerFor("installed-pair"));
+        assertThrows(IllegalArgumentException.class, () -> owner.handlerFor("replacement-pair"));
+        assertEquals(producer, AudioManagerTestDiagnostics.producerFingerprint(am));
+        // The callback is one-shot; a rejected attempt must not burn a generation.
+        AudioManagerInternalAccess.installMatchedSource(am, selectedRom, selected);
+        assertSame(selectedRom, baseSourceComponent("rom"));
+        assertSame(selected, baseSourceComponent("profile"));
+        assertSame(selected.loader, baseSourceComponent("loader"));
+        assertEquals(generation + 1, baseSourceComponent("generation"));
+    }
+
+    @Test
+    void matchedSourcePreparationFailureKeepsBothOwnersAndRetriesOneGeneration()
+            throws Exception {
+        Rom previousRom = new Rom();
+        Rom selectedRom = new Rom();
+        var previous = new CoordinatedProfile("previous-pair", loader(dac(401), 0xA1, (byte) 1));
+        var selected = new CoordinatedProfile("selected-pair", loader(dac(402), 0xA1, (byte) 2));
+        am.setRom(previousRom);
+        am.setAudioProfile(previous);
+        var owner = am.presentationCoordFlagHandlersForTesting();
+        var previousHandler = owner.handlerFor("previous-pair");
+        Object tuple = baseSourcePublication();
+        long generation = (long) baseSourceComponent("generation");
+        var producer = AudioManagerTestDiagnostics.producerFingerprint(am);
+        var primary = new IllegalStateException("selected handler preparation failed");
+        selected.configureFailure = primary;
+
+        assertSame(primary, assertThrows(IllegalStateException.class, () ->
+                AudioManagerInternalAccess.installMatchedSource(am, selectedRom, selected)));
+
+        assertSame(tuple, baseSourcePublication());
+        assertSame(previous, backend.activeProfile);
+        assertSame(previousHandler, owner.handlerFor("previous-pair"));
+        assertThrows(IllegalArgumentException.class, () -> owner.handlerFor("selected-pair"));
+        assertEquals(producer, AudioManagerTestDiagnostics.producerFingerprint(am));
+        selected.configureFailure = null;
+        backend.failProfile = selected;
+        assertThrows(IllegalStateException.class, () ->
+                AudioManagerInternalAccess.installMatchedSource(am, selectedRom, selected));
+        assertSame(tuple, baseSourcePublication());
+        assertSame(previous, backend.activeProfile);
+        assertSame(previousHandler, owner.handlerFor("previous-pair"));
+        assertThrows(IllegalArgumentException.class, () -> owner.handlerFor("selected-pair"));
+        assertEquals(producer, AudioManagerTestDiagnostics.producerFingerprint(am));
+
+        backend.failProfile = null;
+        AudioManagerInternalAccess.installMatchedSource(am, selectedRom, selected);
+        assertSame(selectedRom, baseSourceComponent("rom"));
+        assertSame(selected, baseSourceComponent("profile"));
+        assertSame(selected.loader, baseSourceComponent("loader"));
+        assertSame(selected.loader.loadDacData(), baseSourceComponent("dac"));
+        assertSame(selected.getSequencerConfig(), baseSourceComponent("config"));
+        assertEquals(generation + 1, baseSourceComponent("generation"));
+    }
+
+    @Test
+    void matchedSourceAbsenceDoesNotBorrowReaderAndReinstallIsInert() throws Exception {
+        Rom rom = new Rom();
+        var profile = new StubAudioProfile();
+        am.setAudioProfile(profile);
+        am.setRom(rom);
+        long generation = (long) baseSourceComponent("generation");
+
+        AudioManagerInternalAccess.installMatchedSource(am, null, profile);
+        assertNull(baseSourceComponent("rom"));
+        assertSame(profile, baseSourceComponent("profile"));
+        assertNull(baseSourceComponent("loader"));
+        assertNull(baseSourceComponent("dac"));
+        assertSame(profile.getSequencerConfig(), baseSourceComponent("config"));
+        assertEquals(generation + 1, baseSourceComponent("generation"));
+        Object absentRom = baseSourcePublication();
+        AudioManagerInternalAccess.installMatchedSource(am, null, profile);
+        assertSame(absentRom, baseSourcePublication());
+
+        AudioManagerInternalAccess.installMatchedSource(am, null, null);
+        assertNull(baseSourceComponent("rom"));
+        assertNull(baseSourceComponent("profile"));
+        assertNull(baseSourceComponent("loader"));
+        assertNull(baseSourceComponent("dac"));
+        assertNull(baseSourceComponent("config"));
+        assertEquals(generation + 2, baseSourceComponent("generation"));
+        Object absentPair = baseSourcePublication();
+        AudioManagerInternalAccess.installMatchedSource(am, null, null);
+        assertSame(absentPair, baseSourcePublication());
+
+        Rom selectedRom = new Rom();
+        AudioManagerInternalAccess.installMatchedSource(am, selectedRom, null);
+        assertSame(selectedRom, baseSourceComponent("rom"));
+        assertNull(baseSourceComponent("profile"));
+        assertNull(baseSourceComponent("loader"));
+        assertNull(baseSourceComponent("dac"));
+        assertNull(baseSourceComponent("config"));
+        assertEquals(generation + 3, baseSourceComponent("generation"));
+        Object absentProfile = baseSourcePublication();
+        AudioManagerInternalAccess.installMatchedSource(am, selectedRom, null);
+        assertSame(absentProfile, baseSourcePublication());
+
+        var authoredOnly = new StubAudioProfile(null);
+        AudioManagerInternalAccess.installMatchedSource(am, selectedRom, authoredOnly);
+        assertSame(selectedRom, baseSourceComponent("rom"));
+        assertSame(authoredOnly, baseSourceComponent("profile"));
+        assertNull(baseSourceComponent("loader"));
+        assertNull(baseSourceComponent("dac"));
+        assertSame(authoredOnly.getSequencerConfig(), baseSourceComponent("config"));
+        assertEquals(generation + 4, baseSourceComponent("generation"));
+        Object noNativeLoader = baseSourcePublication();
+        AudioManagerInternalAccess.installMatchedSource(am, selectedRom, authoredOnly);
+        assertSame(noNativeLoader, baseSourcePublication());
+    }
+
     private Object sourcePublication() {
         return AudioManagerTestDiagnostics.sourcePublication(am);
     }
@@ -879,7 +1020,7 @@ public class TestAudioManagerResetState {
         return Arrays.stream(OuterBaseMutation.values())
                 .flatMap(outer -> Arrays.stream(BaseCallbackStage.values())
                         .filter(stage -> outer
-                                == OuterBaseMutation.SET_AUDIO_PROFILE
+                                != OuterBaseMutation.SET_ROM
                                 || stage == BaseCallbackStage.CREATE_LOADER
                                 || stage == BaseCallbackStage.LOAD_DAC)
                         .flatMap(stage -> Arrays.stream(
@@ -947,12 +1088,14 @@ public class TestAudioManagerResetState {
 
     private enum OuterBaseMutation {
         SET_ROM,
-        SET_AUDIO_PROFILE
+        SET_AUDIO_PROFILE,
+        MATCHED_SOURCE
     }
 
     private enum NestedBaseMutation {
         SET_ROM,
-        SET_AUDIO_PROFILE
+        SET_AUDIO_PROFILE,
+        MATCHED_SOURCE
     }
 
     private enum BaseCallbackStage {

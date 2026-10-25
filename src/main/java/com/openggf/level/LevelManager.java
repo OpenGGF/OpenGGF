@@ -697,18 +697,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
     /** Establishes the current game's production audio/request service. */
     public void configureAudio() throws IOException {
-        var nextProfile = gameModule.getAudioProfile();
-        var installedProfile = audioManager.getAudioProfile();
-        if (installedProfile != null && installedProfile != nextProfile) {
-            // Neither eager loader may observe the other game's ROM during replacement.
-            audioManager.setRom(null);
-            audioManager.setAudioProfile(nextProfile);
-            audioManager.setRom(worldSession.getDataSource().rom().orElse(null));
-        } else {
-            // Cold and same-profile entries retain the existing source/loader bypass.
-            audioManager.setRom(worldSession.getDataSource().rom().orElse(null));
-            audioManager.setAudioProfile(nextProfile);
-        }
+        var rom = worldSession.getDataSource().rom().orElse(null);
+        com.openggf.audio.AudioManagerInternalAccess.installMatchedSource(
+                audioManager, rom, gameModule.getAudioProfile());
         audioManager.setSoundMap(game.getSoundMap());
         audioManager.resetRingSound();
     }

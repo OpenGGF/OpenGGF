@@ -610,11 +610,8 @@ public final class TraceSessionLauncher {
     void configureStandaloneSpecialStageAudio() throws IOException {
         var audio = GameServices.audio();
         var profile = GameServices.module().getAudioProfile();
-        audio.setAudioProfile(profile);
         var rom = GameServices.rom().getRom();
-        if (rom != null) {
-            audio.setRom(rom);
-        }
+        com.openggf.audio.AudioManagerInternalAccess.installMatchedSource(audio, rom, profile);
         audio.setSoundMap(profile.getSoundMap());
         audio.resetRingSound();
     }

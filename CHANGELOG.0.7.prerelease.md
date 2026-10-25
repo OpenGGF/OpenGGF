@@ -955,6 +955,8 @@ Unreleased. The earlier development themes remain in
   native-mutator binding owner keeps publication, displacement, exact release and
   manager-wide feedback exclusion together, preserving per-token caller/thread
   admission and callback/reset ordering.
+  Level and special-stage setup prepare the selected ROM and sound profile in one
+  transaction; identical selections retain the running presentation and live capture.
   Terminal streamed-music cleanup releases presentation slots without recapturing
   retired cursors, while ordinary reset commands retain transactional rollback.
   Sonic 1 and Sonic 2 selected-slot images use the shared data-select

@@ -702,6 +702,11 @@ public class AudioManager implements MusicRestoreSink {
         sourcePublication.setAudioProfile(audioProfile);
     }
 
+    /** Host-owned complete source selection, including an absent ROM or profile. */
+    synchronized void installMatchedSource(Rom rom, GameAudioProfile audioProfile) {
+        sourcePublication.installMatchedSource(rom, audioProfile);
+    }
+
     public GameAudioProfile getAudioProfile() {
         return sourcePublication.base().profile();
     }
@@ -3616,6 +3621,45 @@ public class AudioManager implements MusicRestoreSink {
                 baseAudioSource = new BaseAudioSource(
                         previous.rom(), audioProfile,
                         candidateLoader, candidateDac,
+                        candidateConfig, candidateGeneration);
+                mutatorMusicIntent(AudioMutatorAccess.Kind.SOURCE, 0);
+                presentationBinding.profilePublished();
+            } finally {
+                endSourceMutation();
+            }
+        }
+
+        private void installMatchedSource(Rom rom, GameAudioProfile audioProfile) {
+            beginSourceMutation();
+            try {
+                BaseAudioSource previous = baseAudioSource;
+                if (previous.profile() == audioProfile && previous.rom() == rom) {
+                    return;
+                }
+                long candidateGeneration = nextGeneration(previous.generation());
+                SmpsLoader candidateLoader = audioProfile != null && rom != null
+                        ? audioProfile.createSmpsLoader(rom) : null;
+                DacData candidateDac = loadDac(candidateLoader);
+                SmpsSequencerConfig candidateConfig = audioProfile != null
+                        ? audioProfile.getSequencerConfig() : null;
+                PresentationBinding.PresentationCoordHandlerPreparation presentationPreparation =
+                        presentationBinding.prepareBaseCoordination(audioProfile);
+                BaseBackendAttempt backendConfiguration = new BaseBackendAttempt(audioProfile);
+                try {
+                    presentationBinding.applyBaseCoordination(presentationPreparation, backendConfiguration);
+                } catch (RuntimeException | Error failure) {
+                    if (backendConfiguration.attempted) {
+                        try {
+                            backend.setAudioProfile(previous.profile());
+                        } catch (RuntimeException | Error restoreFailure) {
+                            failure.addSuppressed(restoreFailure);
+                        }
+                    }
+                    throw failure;
+                }
+                presentationBinding.publishPresentationCoordHandlers(presentationPreparation);
+                baseAudioSource = new BaseAudioSource(
+                        rom, audioProfile, candidateLoader, candidateDac,
                         candidateConfig, candidateGeneration);
                 mutatorMusicIntent(AudioMutatorAccess.Kind.SOURCE, 0);
                 presentationBinding.profilePublished();

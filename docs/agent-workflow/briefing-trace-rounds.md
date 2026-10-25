@@ -80,6 +80,15 @@ callbacks and masks must be sampled at the actual admission point. The
 [receiving checkpoint](../architecture/plans/2026-10-22-native-gap-swarm.md#pr223-develop-159-receiving-checkpoint-2026-10-25)
 records the failed characterizations and corrected controls.
 
+Identity tokens and sample counters have owning scopes (2026-10-24, matched
+world audio). A producer assigns its own diagnostic identity tokens, so token
+one from two producers cannot establish shared identity. Compare actual owner
+references across replacement and use fingerprints within one owner. A carried
+recording's manager total spans leases; each replacement lease restarts its own
+clock count while retaining fractional phase. A 3 Hz / 2 fps check requires
+`1, 2, 1` drains across replacement and catches a discarded remainder. See the
+[rejected assertions and final owner checks](../architecture/plans/2026-10-22-native-gap-swarm.md#matched-world-audio-source-installation--2026-10-24).
+
 A passing restart can hide eager-loader faults (2026-10-24, recording audio).
 The catalogue fixture repair let a restart complete, but S2 caught 82 SFX/DAC
 failures while its new profile still received the retired reader. The owning

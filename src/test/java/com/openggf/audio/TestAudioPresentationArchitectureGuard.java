@@ -778,6 +778,31 @@ class TestAudioPresentationArchitectureGuard {
                     .map(Object::toString).forEach(foreignAccesses::add);
         }
         assertTrue(foreignAccesses.isEmpty(), () -> "source state accessed outside its owner: " + foreignAccesses);
+        var matchedIngress = AudioManager.class.getDeclaredMethod("installMatchedSource",
+                com.openggf.data.Rom.class, GameAudioProfile.class);
+        assertEquals(java.lang.reflect.Modifier.SYNCHRONIZED, matchedIngress.getModifiers(),
+                "the matched-source ingress uses the existing manager monitor without extending the creator API");
+        assertEquals(void.class, matchedIngress.getReturnType());
+        var matchedOperation = owner.getDeclaredMethod("installMatchedSource",
+                com.openggf.data.Rom.class, GameAudioProfile.class);
+        assertEquals(java.lang.reflect.Modifier.PRIVATE, matchedOperation.getModifiers());
+        String manager = Files.readString(AUDIO_ROOT.resolve("AudioManager.java"));
+        java.util.function.UnaryOperator<String> compact = text -> text.replaceAll("\\s+", "");
+        assertEquals("sourcePublication.installMatchedSource(rom,audioProfile);",
+                compact.apply(methodBody(manager, "synchronized void installMatchedSource(")));
+        String operation = compact.apply(methodBody(
+                methodBody(manager, "private final class SourcePublication"),
+                "private void installMatchedSource("));
+        assertTrue(operation.startsWith("beginSourceMutation();try{BaseAudioSourceprevious=baseAudioSource;"
+                        + "if(previous.profile()==audioProfile&&previous.rom()==rom){return;}"),
+                "mutation admission precedes even the identical or absent pair no-op");
+        for (String boundary : List.of("nextGeneration(", "createSmpsLoader(", "loadDac(",
+                "getSequencerConfig(", "prepareBaseCoordination(", "applyBaseCoordination(",
+                "publishPresentationCoordHandlers(", "baseAudioSource=newBaseAudioSource(",
+                "mutatorMusicIntent(AudioMutatorAccess.Kind.SOURCE,0)", "profilePublished(")) {
+            assertEquals(1, operation.split(Pattern.quote(boundary), -1).length - 1, boundary);
+        }
+        assertTrue(operation.endsWith("}finally{endSourceMutation();}"));
     }
 
     @Test
@@ -804,14 +829,24 @@ class TestAudioPresentationArchitectureGuard {
         added.removeAll(stored);
         System.out.println("SourcePublication live low-level records: " + live.size()
                 + "\nRemoved: " + removed + "\nAdded: " + added);
-        List<String> expected = new ArrayList<>(stored);
-        if (expected.remove("Method <com.openggf.audio.AudioManager.reinstallsInstalledSource(com.openggf.audio.GameAudioProfile, com.openggf.data.Rom)> has parameter of type <com.openggf.data.Rom> in (AudioManager.java:0)")) {
-            expected.add("Method <com.openggf.audio.AudioManager$SourcePublication.reinstallsInstalledSource(com.openggf.audio.GameAudioProfile, com.openggf.data.Rom)> has parameter of type <com.openggf.data.Rom> in (AudioManager.java:0)");
-            expected.add("Method <com.openggf.audio.AudioManager$SourcePublication.setRom(com.openggf.data.Rom)> has parameter of type <com.openggf.data.Rom> in (AudioManager.java:0)");
-        }
-        expected.sort(String::compareTo);
-        assertEquals(expected, live, "only the reviewed source-publication ROM records may differ, including multiplicity");
-        assertEquals(120, live.size());
+        // Exactly three intentional asset-reader boundaries were reviewed after
+        // the strict rule rejected them. The inherited debt remains byte-pinned
+        // after line-number normalization; this grants no general layer permission.
+        List<String> reviewedDelta = List.of(
+                "Method <com.openggf.audio.AudioManager.installMatchedSource(com.openggf.data.Rom, com.openggf.audio.GameAudioProfile)> has parameter of type <com.openggf.data.Rom> in (AudioManager.java:0)",
+                "Method <com.openggf.audio.AudioManager$SourcePublication.installMatchedSource(com.openggf.data.Rom, com.openggf.audio.GameAudioProfile)> has parameter of type <com.openggf.data.Rom> in (AudioManager.java:0)",
+                "Method <com.openggf.audio.AudioManagerInternalAccess.installMatchedSource(com.openggf.audio.AudioManager, com.openggf.data.Rom, com.openggf.audio.GameAudioProfile)> has parameter of type <com.openggf.data.Rom> in (AudioManagerInternalAccess.java:0)");
+        assertEquals(123, stored.size());
+        assertTrue(stored.containsAll(reviewedDelta));
+        List<String> inherited = stored.stream().filter(value -> !reviewedDelta.contains(value)).toList();
+        assertEquals(120, inherited.size());
+        byte[] inheritedBytes = (String.join("\n", inherited) + "\n")
+                .getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        assertEquals("ad9012cf9b961a727824f0a8cff98a9a789f89017a31cd0830206d6713b9f7ca", java.util.HexFormat.of().formatHex(
+                java.security.MessageDigest.getInstance("SHA-256").digest(inheritedBytes)),
+                "all 120 inherited records remain exact; only the three reviewed records were added");
+        assertEquals(stored, live, "live dependencies must match the exact reviewed inventory, including multiplicity");
+        assertEquals(123, live.size());
     }
 
     @Test

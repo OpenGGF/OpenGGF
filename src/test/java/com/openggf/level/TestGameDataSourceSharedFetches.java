@@ -2,6 +2,7 @@ package com.openggf.level;
 
 import com.openggf.camera.Camera;
 import com.openggf.audio.AudioManager;
+import com.openggf.audio.AudioManagerInternalAccess;
 import com.openggf.audio.AudioManagerTestDiagnostics;
 import com.openggf.audio.AudioTestFixtures;
 import com.openggf.audio.GameAudioProfile;
@@ -119,25 +120,29 @@ class TestGameDataSourceSharedFetches {
         Game game = mock(Game.class);
         when(module.getPlayableCharacterRegistry()).thenReturn(PlayableCharacterRegistry.empty());
         when(module.createGame(source)).thenReturn(game);
-        when(module.getAudioProfile()).thenReturn(mock(com.openggf.audio.GameAudioProfile.class));
+        GameAudioProfile profile = mock(GameAudioProfile.class);
+        when(module.getAudioProfile()).thenReturn(profile);
         when(module.getLevelMusicReference(anyInt(), anyInt())).thenReturn(new MusicReference.Stock(1));
         when(game.getSoundMap()).thenReturn(Map.of());
         ParallaxManager parallax = mock(ParallaxManager.class);
         AudioManager audio = spy(AudioManager.class);
-        doNothing().when(audio).setRom(nullable(Rom.class));
-        doNothing().when(audio).setAudioProfile(any(com.openggf.audio.GameAudioProfile.class));
         doNothing().when(audio).setSoundMap(anyMap());
         doNothing().when(audio).resetRingSound();
         doNothing().when(audio).playMusic(anyInt());
         LevelManager levelManager = manager(source, module, parallax, audio, mock(WaterSystem.class));
 
-        levelManager.initGameModule(0);
-        levelManager.initAudio(0);
+        // This fixture observes the production ingress without realizing a native
+        // loader. The four source-identity controls below use the real manager.
+        try (var audioIngress = mockStatic(AudioManagerInternalAccess.class)) {
+            levelManager.initGameModule(0);
+            levelManager.initAudio(0);
 
-        verify(parallax).load(null);
-        verify(module).createGame(source);
-        verify(audio).setRom(null);
-        verify(source, atLeastOnce()).rom();
+            verify(parallax).load(null);
+            verify(module).createGame(source);
+            audioIngress.verify(() -> AudioManagerInternalAccess.installMatchedSource(
+                    same(audio), isNull(), same(profile)));
+            verify(source, atLeastOnce()).rom();
+        }
     }
 
     @Test
@@ -214,32 +219,34 @@ class TestGameDataSourceSharedFetches {
         when(module.getPlayableCharacterRegistry()).thenReturn(PlayableCharacterRegistry.empty());
         Game game = mock(Game.class);
         when(module.createGame(source)).thenReturn(game);
-        when(module.getAudioProfile()).thenReturn(mock(com.openggf.audio.GameAudioProfile.class));
+        GameAudioProfile profile = mock(GameAudioProfile.class);
+        when(module.getAudioProfile()).thenReturn(profile);
         when(module.getLevelMusicReference(anyInt(), anyInt())).thenReturn(new MusicReference.Stock(1));
         when(game.getSoundMap()).thenReturn(Map.of());
         ParallaxManager parallax = mock(ParallaxManager.class);
         AudioManager audio = spy(AudioManager.class);
-        doNothing().when(audio).setRom(nullable(Rom.class));
-        doNothing().when(audio).setAudioProfile(any(com.openggf.audio.GameAudioProfile.class));
         doNothing().when(audio).setSoundMap(anyMap());
         doNothing().when(audio).resetRingSound();
         doNothing().when(audio).playMusic(anyInt());
         WaterSystem water = mock(WaterSystem.class);
         LevelManager levelManager = manager(source, module, parallax, audio, water);
 
-        levelManager.initGameModule(0);
-        levelManager.initAudio(0);
-        ZoneFeatureProvider zone = mock(ZoneFeatureProvider.class);
-        levelManager.initializeZoneFeatureProvider(zone);
-        WaterDataProvider waterProvider = mock(WaterDataProvider.class);
-        when(module.getWaterDataProvider()).thenReturn(waterProvider);
-        levelManager.waterCoordinator.initialize();
+        try (var audioIngress = mockStatic(AudioManagerInternalAccess.class)) {
+            levelManager.initGameModule(0);
+            levelManager.initAudio(0);
+            ZoneFeatureProvider zone = mock(ZoneFeatureProvider.class);
+            levelManager.initializeZoneFeatureProvider(zone);
+            WaterDataProvider waterProvider = mock(WaterDataProvider.class);
+            when(module.getWaterDataProvider()).thenReturn(waterProvider);
+            levelManager.waterCoordinator.initialize();
 
-        verify(parallax).load(same(rom));
-        verify(audio).setRom(same(rom));
-        verify(zone).initZoneFeatures(same(rom), anyInt(), anyInt(), anyInt());
-        verify(water).loadForLevelFromProvider(eq(waterProvider), same(rom), anyInt(), anyInt(),
-                any(), eq(false));
+            verify(parallax).load(same(rom));
+            audioIngress.verify(() -> AudioManagerInternalAccess.installMatchedSource(
+                    same(audio), same(rom), same(profile)));
+            verify(zone).initZoneFeatures(same(rom), anyInt(), anyInt(), anyInt());
+            verify(water).loadForLevelFromProvider(eq(waterProvider), same(rom), anyInt(), anyInt(),
+                    any(), eq(false));
+        }
     }
 
     @Test
@@ -366,8 +373,15 @@ class TestGameDataSourceSharedFetches {
         assertFalse(water.contains("GameServices.rom().getRom()"));
         assertFalse(parallax.contains("GameServices.rom().getRom()"));
         assertTrue(levelManager.contains("gameModule.createGame(source)"));
-        assertTrue(levelManager.contains(
-                "audioManager.setRom(worldSession.getDataSource().rom().orElse(null))"));
+        String configureAudio = levelManager.substring(
+                levelManager.indexOf("public void configureAudio()"),
+                levelManager.indexOf("public void beginLevelEntry()"));
+        assertTrue(configureAudio.contains(
+                "var rom = worldSession.getDataSource().rom().orElse(null);"));
+        assertTrue(configureAudio.contains(
+                "AudioManagerInternalAccess.installMatchedSource("));
+        assertTrue(configureAudio.contains(
+                "audioManager, rom, gameModule.getAudioProfile()"));
         assertTrue(levelManager.contains(
                 "gameModule.createTouchResponseTable(worldSession.getDataSource())"));
         assertTrue(levelManager.indexOf("if (zoneFeatureProvider != null)")
