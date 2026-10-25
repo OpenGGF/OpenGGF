@@ -85,6 +85,15 @@ Inspect skips, acknowledge consumed diagnostics, and retain no validation caches
   editing passed 14 text-entry tests after correcting a misplaced rendering
   block caught by compilation.
 - Scene clipboard/focus commit `1ffb9e0f0` passed 70 focused cases without skips.
-  Its source still awaits integration. Opus is authenticated and has one task
-  restricted to the two screen components. Sol retains all other work.
+  It is integrated as `08517fb3e`. Opus completed only the two screen components
+  in `f6a313485`, integrated as `52e9e0c81`. Sol owns their wiring and verification.
+- A real `SceneRenderer` EGL fixture passed one case without skips at widths
+  320, 400 and 800. Different codes produce equal masked pixels, explicit reveal
+  produces different glyphs, hiding restores the initial picture, and private
+  creation does not reveal password content or length. The optional
+  `OPENGGF_PRIVATE_LOBBY_SCREENS` test export supplies inspection pictures outside
+  the repository. This is component rendering evidence, not completed networking.
+- Time Attack ownership moved to one Sol worker after the independent privacy
+  increment. Shared networking, server and Time Attack have separate branches;
+  the lead owns final integration and the new engine-side pixel fixture.
 - Combined private-room behavior, smoke/guards and final delivery remain pending.
