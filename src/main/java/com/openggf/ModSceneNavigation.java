@@ -80,7 +80,8 @@ final class ModSceneNavigation {
      * Runs on every master-title frame: a pending relaunch selects its game programmatically,
      * carrying its team as session-only overrides through the master-title exit.
      */
-    void onMasterTitleFrame() {
+    void onMasterTitleFrame(MasterTitleScreen masterScreen) {
+        if (masterScreen != null) masterScreen.finishPendingModApply();
         SceneLaunch launch = pendingRelaunch;
         if (launch == null || !loop.canLaunchGameNow()) return;
         pendingRelaunch = null;

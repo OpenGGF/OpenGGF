@@ -133,7 +133,7 @@ final class TypingHedgehogArtTables {
                 default -> { }
             }
         }
-        Path temp = Files.createTempDirectory("typinghog-art");
+        Path temp = com.openggf.tests.TestTempFiles.createTempDirectory("typinghog-art");
         int checked = 0;
         try (ExampleModHarness harness = ForwardRails.buildHarness(temp, "art", Map.of());
              ForwardRails.World w = new ForwardRails.World(

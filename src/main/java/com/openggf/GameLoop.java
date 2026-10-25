@@ -1210,8 +1210,7 @@ public class GameLoop {
                 com.openggf.game.TitleInputOwnership.routeQuit(masterScreen, () -> fadeOutTo(applicationExitHandler));
             }
             finishMasterTitleFrame();
-            if (masterScreen != null) masterScreen.finishPendingModApply();
-            modSceneNavigation.onMasterTitleFrame();
+            modSceneNavigation.onMasterTitleFrame(masterScreen);
             return;
         }
 
@@ -2396,24 +2395,8 @@ public class GameLoop {
     /** As above, applying session-only settings after the master-title exit clears overrides. */
     void launchGameByEntry(MasterTitleScreen.GameEntry entry, Runnable afterGameLoaded,
             Map<SonicConfiguration, Object> sessionOverrides) {
-        MasterTitleScreen masterScreen = currentMasterTitleScreen();
-        if (masterScreen == null) {
-            throw new IllegalStateException("No master title screen available");
-        }
-        if (resolveFadeManager().isActive()) {
-            throw new IllegalStateException(
-                    "Cannot launch game: a master-title fade is already in flight");
-        }
-        masterTitleLaunchCoordinator.setPendingLaunchCallback(afterGameLoaded);
-        masterTitleLaunchCoordinator.setPendingSessionOverrides(sessionOverrides);
-        try {
-            masterScreen.selectEntry(entry);
-            exitMasterTitleScreen(masterScreen);
-        } catch (RuntimeException e) {
-            // The fade callback will never fire, so drop the staged launch callback.
-            masterTitleLaunchCoordinator.clearPendingLaunchCallback();
-            throw e;
-        }
+        GameLoopMenuTransitions.launchGameByEntry(currentMasterTitleScreen(), this::resolveFadeManager,
+                masterTitleLaunchCoordinator, entry, afterGameLoaded, sessionOverrides, this::exitMasterTitleScreen);
     }
 
     private void runAfterStepMasterTitleLaunchCallbackIfPresent() {
