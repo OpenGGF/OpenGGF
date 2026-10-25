@@ -334,3 +334,15 @@ tests and fixtures must remain byte-identical to `53b4d0363`. Do not rerun
 unchanged executable checks for that prose. The parent reviews the final local
 commits and owns main integration, push and eventual registry/worktree cleanup;
 those delivery steps remain pending. No task-owned test job remains live.
+
+## Parent integration
+
+After reviewing the final commits and refreshing `origin/develop`, the parent
+fast-forwarded the unchanged main-workspace `develop` branch from `c502c600` to
+`b8d12399ea75b29dc5b75fdd964cb5ff5cb082fe`. No branch switch or conflict resolution
+was needed. The only committed differences from tested `53b4d0363` are this plan
+and the frontier evidence prose; executable inputs remain identical. The four
+pre-existing dirty reference submodules and five untracked user files retain
+their original status. Required execution evidence is reused rather than rerun
+for integration alone. Push and task-checkout retirement are recorded in the
+parent's delivery result and temporary-agent lifecycle record.
