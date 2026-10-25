@@ -71,6 +71,33 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+A source-opaque pixel need not differ from its background (2026-10-25, CD
+diagonal Spring). Requiring every nonempty tile to change native-terrain RGB
+rejected a correctly rendered tile. Preserve the actual ordered World and
+native-background comparison; use a separate, explicitly test-only contrast
+background outside the current palette to establish missing-tile sensitivity.
+Likewise, a legitimate earlier player sprite can overlap an object. Compare the
+actual painter order and use a render-only isolated object control to inspect
+covered geometry, rather than moving actors or excluding valid overlap.
+
+A native slot number is not necessarily a pool capability (2026-10-25, CD
+Spring launch). The launch record's Identity contains only wholeIndex; two
+pools can supply equal identities and equal expected values. A foreign-pool
+rejection assertion therefore tested authority the API never carried. Keep the
+actual value/phase checks and test a mismatching current native index. The Solid
+call separately carries a real owner-bound pool cut and must still reject a
+foreign cut. Test observers inside a guarded callback must also avoid calling a
+getter that deliberately rejects owner reentry; do not relax that production
+guard to make an observation possible.
+
+A physical pass can progress without completing another frame (2026-10-25, CD
+diagonal Spring). Implementing slot47 advanced call561 to unowned slot61 in the
+same call. Requiring a later frame would reject real progress and conceal the
+new partial prefix. Pata52 also retained integerY628 while its fractional words
+changed; integer coordinates alone did not prove it was unvisited. Record the
+exact next slot, complete prefix and failure boundary, without resuming a failed
+pass or calling it a completed frame. See the [CD component record](../architecture/plans/2026-10-23-sonic-cd-implementation.md).
+
 Registered renderer ranges are not a resident-entry inventory (2026-10-25,
 CD Boulder teardown). Native pattern IDs0..7FF are implicitly governed, while
 `registeredRangesForTesting()` enumerates explicit virtual ranges. An empty

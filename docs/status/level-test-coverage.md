@@ -1,8 +1,9 @@
 # Level test coverage backlog
 
 Sonic CD opening-object update (2026-10-25): the same partial act matrix now
-records the explicit USA object entry, current camera-art service, Boulder
-construction/render/replay and the normal-input stop at diagonal Spring. These
+records the explicit USA object entry, current camera-art service, Boulder and
+diagonal Spring construction/render/replay,559-pattern cleanup and the later
+same-call normal-input stop at Spikes. These
 extend the historical terrain-only checks below; they do not certify the act,
 native cold/title/PLC timing, full-USA gameplay or JP/EU object parity.
 

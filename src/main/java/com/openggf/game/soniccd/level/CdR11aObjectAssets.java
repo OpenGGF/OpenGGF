@@ -327,6 +327,7 @@ public final class CdR11aObjectAssets {
     private SpringArtBank springArtBank;
     private CdObjectVisualAssets springVertical;
     private CdObjectVisualAssets springHorizontal;
+    private CdObjectVisualAssets springDiagonal;
     private CdObjectVisualAssets tunnelDoorVertical;
     private TunnelDoorArtBank tunnelDoorArtBank;
     private CdObjectVisualAssets monitorTime;
@@ -555,6 +556,19 @@ public final class CdR11aObjectAssets {
         return springHorizontal;
     }
 
+    /**
+     * USA Spring3 operand $209BF0 (Spring/Main.asm:216); its root is +80 in the existing full200 include.
+     * Data/Mappings.asm:46-82 declares three counted bodies at86/122/158 with a real final EVEN byte199.
+     * ObjSpring_Anim_Diag (:470-473) uses the same complete Ani_Spring script. No art or live residency here.
+     */
+    public synchronized CdObjectVisualAssets springDiagonal() {
+        if (springDiagonal == null) {
+            springDiagonal = CdObjectVisualAssets.decodeIndexed(read(Table.SPRING_MAPPINGS), 80, 3, 86, 200,
+                    read(Table.SPRING_ANIMATIONS), 1, 46);
+        }
+        return springDiagonal;
+    }
+
     /** ObjSpring_Init reads one signed native word through ANDI.W #2; unrelated subtype bits stay irrelevant. */
     public synchronized int springSpeedWord(int subtypeByte) {
         if ((subtypeByte & ~0xFF) != 0) throw new IllegalArgumentException("Spring subtype exceeds its native byte");
@@ -778,15 +792,16 @@ public final class CdR11aObjectAssets {
      * The source declares 18 index words (36 bytes), followed by 19 data words, not 37 index entries.
      * Only Mosqui's selector 0, Pata-Bata's selector 1 (Pata-Bata/Main.asm:21-22), FloatBlock's selector 5
      * (Floating Block/Main.asm:43-44), Boulder's selector $B (Boulder/Main.asm:34-35), and Tunnel Door's
-     * selector $C (Tunnel Door/Main.asm:41-42), each at subtype2 0, are admitted; Ring writes literal $A7AE.
+     * selector $C (Tunnel Door/Main.asm:41-42), and primary diagonal Spring's selector $F
+     * (Spring/Main.asm:217-220), each at subtype2 0, are admitted; Ring writes literal $A7AE.
      */
     public static int decodeTileWord(byte[] input, int selector, int subtype2) {
         if (selector < 0 || selector > 0x7FFF || (subtype2 & ~0xFF) != 0) {
             throw new IllegalArgumentException("Object tile selector/subtype width");
         }
         var bytes = exact(input, 74, "ObjectTileIDs");
-        if ((selector != 0 && selector != 1 && selector != 5 && selector != 0xB && selector != 0xC) || subtype2 != 0) {
-            throw new UnsupportedOperationException("Only Mosqui selector 0 / Pata-Bata selector 1 / FloatBlock selector 5 / Boulder selector $B / Tunnel Door selector $C at subtype2 0 are reviewed");
+        if ((selector != 0 && selector != 1 && selector != 5 && selector != 0xB && selector != 0xC && selector != 0xF) || subtype2 != 0) {
+            throw new UnsupportedOperationException("Only Mosqui selector 0 / Pata-Bata selector 1 / FloatBlock selector 5 / Boulder selector $B / Tunnel Door selector $C / primary diagonal Spring selector $F at subtype2 0 are reviewed");
         }
         int target = (short) bytes.unsignedWord(selector * 2);
         int end = bytes.length();
@@ -799,7 +814,7 @@ public final class CdR11aObjectAssets {
         }
         if (end - target < 2) {
             throw new IllegalArgumentException((selector == 0 ? "Mosqui" : selector == 1 ? "Pata-Bata" : selector == 5 ? "FloatBlock"
-                    : selector == 0xB ? "Boulder" : "Tunnel Door")
+                    : selector == 0xB ? "Boulder" : selector == 0xC ? "Tunnel Door" : "Primary diagonal Spring")
                     + " tile word crosses its selected body");
         }
         return bytes.unsignedWord(target);
@@ -943,7 +958,8 @@ public final class CdR11aObjectAssets {
     /**
      * Explicit USA-only source opt-in. The complete first incremental camera PLC is ID 9, rows 0/1/2
      * (PLC_Cam2_Incr, Data (Act 1 Present).asm:183-190); PLC2 rows 2/4/5 describe the reload/seed producers.
-     * Boulder appends canonical PLC2 row 0 (:85-88) as source provenance, without a separate live art bank.
+     * Boulder appends canonical PLC2 row 0 (:85-88); diagonal Spring appends PLC_Std ID1 row5 (:66-67).
+     * Both are immutable source provenance without a separate live art bank or a new current residency owner.
      * Existing banks and eager startup remain separate. This neither executes a PLC nor publishes residency.
      */
     public synchronized SectionArtSourceBank sectionArtSources() throws IOException {
@@ -957,6 +973,12 @@ public final class CdR11aObjectAssets {
             // bytes; native refill before the final run additionally reads FloatBlock's real $80 at $365D0.
             // One immutable decode is shared by every Boulder lookup in this cached source bank.
             var boulder = decodeSectionArt(CdR11aAsset.ART_BOULDER, 19, 270);
+            // Diagonal header $002E declares normal/46 tiles. Independent actual-USA finite walks establish
+            // source780, Java779 and native780: native's final post-symbol refill reads the real source $00
+            // at $34917. The adjacent normal-Spring header $8024 at $34918 is observed but never consumed.
+            // One immutable NemesisRead is cached here; physical $9200..$97C0 remains the existing current
+            // residency's responsibility, including later BigRing overwrites. No producer-specific tile bank.
+            var diagonal = decodeSectionArt(CdR11aAsset.ART_DIAGONAL_SPRING, 46, 779);
             // NemDecMain preloads two bytes (Functions (General).asm:415-418); the native decoder refills
             // below nine bits BEFORE emitting a run, including the final run (:436-441,471-490).
             // Native finite lengths therefore differ from Java's final pre-symbol peek lengths. These are
@@ -972,7 +994,8 @@ public final class CdR11aObjectAssets {
                             frontier.binding(CdR11aAsset.ART_3D_PLANT).decode()),
                     sectionArtSource(CdR11aAsset.ART_3D_RAMP_BOOST, 2, 5, 0x8820, 63, 678,
                             frontier.binding(CdR11aAsset.ART_3D_RAMP_BOOST).decode()),
-                    sectionArtSource(CdR11aAsset.ART_BOULDER, 2, 0, 0x6E80, 19, 271, boulder)));
+                    sectionArtSource(CdR11aAsset.ART_BOULDER, 2, 0, 0x6E80, 19, 271, boulder),
+                    sectionArtSource(CdR11aAsset.ART_DIAGONAL_SPRING, 1, 5, 0x9200, 46, 780, diagonal)));
         }
         return sectionArtSources;
     }

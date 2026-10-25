@@ -45,11 +45,11 @@ import static com.openggf.game.soniccd.objects.CdObjectState.WordField.*;
  * <p>Explicit DEV policy: USA R11A Present, goodFuture=0, projDestroyed=0, and
  * an actual reserved bank 1..31 at the declared DEV ClearObjects-equivalent cut,
  * initially zero CPU SAT/empty picture, and preloaded actual
- * Ring/Mosqui/3D-plant/3D-ramp-booster/explosion/points/flower/Floating-Block/normal-Spring/shared-horizontal-and-vertical-Tunnel-Door/Monitor-time/Boulder art (the inert Animal path draws nothing).
+ * Ring/Mosqui/3D-plant/3D-ramp-booster/explosion/points/flower/Floating-Block/normal-Spring/shared-horizontal-and-vertical-Tunnel-Door/Monitor-time/Boulder/diagonal-Spring art (the inert Animal path draws nothing).
  * The 36-tile powerup window starts cold zero and changes only at the selector-8 LoadShieldArt cut.
  * The initial Ring, contact, score and level globals are caller-declared DEV ingress, never an entry proof.
  * Live dynamic IDs $10 Ring, $11 LostRing, $3D Mosqui, $3E Pata-Bata, $24 Animal, $2C 3D plant and $2A 3D ramp,
- * aftermath IDs $18/$1C/$1F, $12 Floating Block, normal $0A Spring, $34 Spin tunnel tag, $0D horizontal Door,
+ * aftermath IDs $18/$1C/$1F, $12 Floating Block, normal and diagonal $0A Spring, $34 Spin tunnel tag, $0D horizontal Door,
  * $35 vertical Tunnel Door, $1B Boulder, $19 Monitor/Time Post and $1A shoes item and the death row's $3B Game/Time Over are owned.
  * The zero reserved bank is NOT post-native HUD/title initialization: later native owners of slots 2..31
  * (Level/Main.asm:261-274) remain omitted by this DEV policy. Primary slot 0 stays exclusively in Frame;
@@ -57,7 +57,7 @@ import static com.openggf.game.soniccd.objects.CdObjectState.WordField.*;
  * Every other ID fails at its live dispatch; standing-object MODE remains a typed player boundary.
  * Time Post activation submits only typed voice metadata; the next actual Main retains Movement's
  * TIME_WARP_ACTIVE boundary. Bounded current-camera PLC requests/preparation/service use the actual plan and
- * seven finite sources, with one immutable resident generation; later unowned producers stop when reached.
+ * eight finite sources, with one immutable resident generation; later unowned producers stop when reached.
  * This does not execute native title/HUD/immediate-PLC prehistory, palette cycling or audio playback.
  * The loader, not declarations or this composition, authenticates asset bytes.</p>
  *
@@ -78,7 +78,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
 
     /**
      * Stable bases in ONE root-governed atlas range exclusive to this picture.
-     * Root reserves/binds its fourteen disjoint subdivisions; this value neither
+     * Root reserves/binds its fifteen disjoint subdivisions; this value neither
      * claims graphics ownership nor recommends the arbitrary IDs used by tests.
      * The three-argument form derives the sequential frontier spans the production
      * module uses: plant = mosqui + 70 and ramp = plant + 28.
@@ -89,10 +89,11 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
      * then the 12-tile vertical Tunnel Door span follows Spring (native $328..$333),
      * then the 82-tile Monitor/time span follows Door (native $5A8..$5F9),
      * then the 19-tile Boulder span follows Monitor/time (native $374..$386),
-     * for 513 patterns in all. The canonical form takes all fourteen bases explicitly.
+     * then the 46-tile diagonal Spring span follows Boulder (native $490..$4BD),
+     * for 559 patterns in all. The canonical form takes all fifteen bases explicitly.
      */
     public record LogicalBanks(int player, int ring, int mosqui, int plant, int ramp,
-                               int explosion, int points, int flower, int powerup, int floatBlock, int spring, int tunnelDoorVertical, int monitorTime, int boulder) {
+                               int explosion, int points, int flower, int powerup, int floatBlock, int spring, int tunnelDoorVertical, int monitorTime, int boulder, int diagonalSpring) {
         public LogicalBanks(int player, int ring, int mosqui) {
             this(player, ring, mosqui, mosqui + 70, mosqui + 70 + 28);
         }
@@ -115,6 +116,12 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         public LogicalBanks(int player, int ring, int mosqui, int plant, int ramp, int explosion, int points,
                             int flower, int powerup, int floatBlock, int spring) {
             this(player, ring, mosqui, plant, ramp, explosion, points, flower, powerup, floatBlock, spring, spring + 36);
+        }
+        /** Compatibility with the previous fourteen-span canonical constructor, preserving every explicit prior base. */
+        public LogicalBanks(int player, int ring, int mosqui, int plant, int ramp, int explosion, int points,
+                            int flower, int powerup, int floatBlock, int spring, int tunnelDoorVertical, int monitorTime, int boulder) {
+            this(player, ring, mosqui, plant, ramp, explosion, points, flower, powerup, floatBlock, spring,
+                    tunnelDoorVertical, monitorTime, boulder, boulder + 19);
         }
         /** Compatibility with the previous thirteen-span canonical constructor. */
         public LogicalBanks(int player, int ring, int mosqui, int plant, int ramp, int explosion, int points,
@@ -436,7 +443,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
      * Required cameraArt carries current camera bytes, last represented table and raw section WORD verbatim.
      * Its new owner clears only CPU queue/decoder/count/budget/hint/pad; no cold fallback, implicit HIGH reset,
      * load/fade/title or immediate PLC3/Std1 history is invented. Its table is not asserted to be the native Ring
-     * table after unrepresented LoadPLCImm. All fourteen spans/current drawable tiles validate before construction,
+     * table after unrepresented LoadPLCImm. All fifteen spans/current drawable tiles validate before construction,
      * even for an empty SAT. Installs supplied windows only: no service/upload/replay.
      */
     public static CdOpeningObjectRuntime usaR11aRestartDevEmptySatPreloadedArt(
@@ -495,7 +502,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         // SAME authenticated object owner/source bank: reuse its actual seed decodes; never reopen via fromAssets.
         var sourceBank = objects.sectionArtSources();
         var plan = assets.loadPlan();
-        if (sourceBank.sources().size() != 7) throw new IllegalArgumentException("Seven reviewed camera source views required");
+        if (sourceBank.sources().size() != 8) throw new IllegalArgumentException("Eight reviewed camera source views required");
         var programs = new ArrayList<CdR11aSectionArt.SourceProgram>();
         for (var source : sourceBank.sources()) {
             var entry = source.canonicalPlc(); var reader = source.readerInputRange(); var blob = entry.sourceRange();
@@ -528,12 +535,26 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                 throw new IllegalArgumentException("Boulder DEV preload requires the actual canonical PLC2 row0 nineteen tiles");
             }
             // PLC_Cam1_Full row0 (Palmtree Panic/Data (Act 1 Present).asm:85-88): explicit DEV preload,
-            // exactly nineteen complete tile writes from the SAME authenticated seven-source bank. No PLC
+            // exactly nineteen complete tile writes from the SAME authenticated eight-source bank. No PLC
             // execution/decoder/table/count/history is fabricated; Animals and all adjacent gaps stay UNKNOWN.
             var decoded = source.decode().bytes();
             for (int offset = 0; offset < decoded.length(); offset += 32) {
                 resident = CdR11aCameraArtResidency.writeTile(resident,
                         source.canonicalPlc().vramAddress() + offset, decoded.slice(offset, 32));
+            }
+            // PLC_Std row5 (Palmtree Panic/Data (Act 1 Present).asm:66-67): cold DEV preload ONLY,
+            // after the existing legacy/Boulder writes. The eighth immutable source supplies all46 tiles;
+            // AT_9000 remains the sole physical owner. No actor bank, decoder/table/history or restart repair.
+            var diagonalSource = sourceBank.source(CdR11aAsset.ART_DIAGONAL_SPRING);
+            var diagonalDecoded = diagonalSource.decode().bytes();
+            if (diagonalSource.canonicalPlcId() != 1 || diagonalSource.canonicalRowIndex() != 5
+                    || diagonalSource.canonicalPlc().vramAddress() != 0x9200 || diagonalSource.tileCount() != 46
+                    || diagonalDecoded.length() != 46 * 32) {
+                throw new IllegalArgumentException("Diagonal Spring DEV preload requires actual canonical PLC1 row5 forty-six tiles");
+            }
+            for (int offset = 0; offset < diagonalDecoded.length(); offset += 32) {
+                resident = CdR11aCameraArtResidency.writeTile(resident,
+                        diagonalSource.canonicalPlc().vramAddress() + offset, diagonalDecoded.slice(offset, 32));
             }
             initialSectionArt = sectionArt.devState(resident, CdAssetBytes.copyOf(new byte[512]), 0);
         } else {
@@ -543,10 +564,10 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         // Actual declared DEV ClearObjects-equivalent ingress for cold AND restart, never a restore default.
         var reserved = CdReservedObjectBank.clearedAfterLevelStart();
         var mappings = CdObjectMappings.fromOpeningAssets(assets, objects);
-        // Validate all fourteen physical/logical spans (513 patterns), including overlaps and empty SAT admission.
+        // Validate all fifteen physical/logical spans (559 patterns), including overlaps and empty SAT admission.
         CdObjectPresentation.usaR11aCurrentCameraDevPreloadedArt(frame.artState(), initialPowerup, objects, frontier, contact,
                 floatBlockArt, springArt, tunnelDoorArt, monitorTimeArt, initialSectionArt.residency(), banks.player(), banks.ring(), banks.mosqui(), banks.plant(), banks.ramp(),
-                banks.explosion(), banks.points(), banks.flower(), banks.powerup(), banks.floatBlock(), banks.spring(), banks.tunnelDoorVertical(), banks.monitorTime(), banks.boulder());
+                banks.explosion(), banks.points(), banks.flower(), banks.powerup(), banks.floatBlock(), banks.spring(), banks.tunnelDoorVertical(), banks.monitorTime(), banks.boulder(), banks.diagonalSpring());
         return new CdOpeningObjectRuntime(assets, frame, initialGlobals, initialContact, initialScore, initialLevel, initial,
                 banks, preScrollForeground, primaryAngleWrite, objects, frontier, contact, floatBlockArt, springArt, tunnelDoorArt, monitorTimeArt, placement, reserved, mappings, initialPowerup, sectionArt, initialSectionArt);
     }
@@ -624,7 +645,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         floatBlock = new CdFloatBlock(placement, CdFloatBlock.Assets.fromObjectAssets(objects),
                 solid, this::commitTopSolid,
                 (pool, slot) -> drawDynamic(pool, slot.wholeIndex()));
-        spring = new CdSpring(placement, CdSpring.Assets.fromObjectAssets(objects), solid,
+        spring = new CdSpring(placement, CdSpring.Assets.fromObjectAssets(objects), new CdPlayerMath(assets.player()), solid,
                 this::commitSpringSolid, this::commitSpringLaunch,
                 (pool, slot) -> drawDynamic(pool, slot.wholeIndex()), this::playSpringFm);
         tunnelDoorVertical = new CdTunnelDoorVertical(placement, CdTunnelDoorVertical.Assets.fromObjectAssets(objects), solid,
@@ -742,7 +763,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                 var pixels = CdObjectPresentation.usaR11aCurrentCameraDevPreloadedArt(frame.artState(), powerupArtState,
                         objects, frontierArt, contactArt, floatBlockArt, springArt, tunnelDoorArt, monitorTimeArt, sectionArtState.residency(),
                         banks.player(), banks.ring(), banks.mosqui(), banks.plant(), banks.ramp(), banks.explosion(), banks.points(),
-                        banks.flower(), banks.powerup(), banks.floatBlock(), banks.spring(), banks.tunnelDoorVertical(), banks.monitorTime(), banks.boulder());
+                        banks.flower(), banks.powerup(), banks.floatBlock(), banks.spring(), banks.tunnelDoorVertical(), banks.monitorTime(), banks.boulder(), banks.diagonalSpring());
                 var nextDisplay = CdObjectPresentation.convert(queue.cpuSat(), pixels);
                 checkActive(Phase.SERVICING);
                 displayed = nextDisplay;
@@ -1892,7 +1913,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     }
 
     /**
-     * One completed real Solid return (Spring/Main.asm:248-252,296-300,362-368). Validate the whole actual
+     * One completed real Solid return (Spring/Main.asm:248-252,296-300,362-368,416-423). Validate the whole actual
      * same-owner call cut and every image, then Frame's exact value sets, before publishing a0/a2 and S3.
      * Full-pool CAS also protects unrelated slots; no capture is restored as a patch. The existing shared
      * Solid owner supplies both collision buffers and completed FM_CHARGESTOP calls, forwarded only here.
@@ -1913,9 +1934,9 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
             requireSpringDispatch(result.object().identity());
             var before = cut.slots().get(result.object().identity().dynamicIndex());
             var expectedEntry = switch (before.routine()) {
-                case 2, 8 -> CdSolidObject.Entry.SOLID_OBJECT;
+                case 2, 8, 20 -> CdSolidObject.Entry.SOLID_OBJECT;
                 case 14 -> CdSolidObject.Entry.BTM_SOLID_OBJECT;
-                default -> throw new IllegalStateException("Spring Solid return lacks a normal Main call cut");
+                default -> throw new IllegalStateException("Spring Solid return lacks its native Main call cut");
             };
             if (before.id() != CdSpring.OBJECT_ID || result.object().id() != CdSpring.OBJECT_ID
                     || result.entry() != expectedEntry) {
@@ -1948,7 +1969,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         try {
             Objects.requireNonNull(call, "completed Spring launch");
             var live = requireSpringDispatch(call.identity());
-            if (live.routine() != 4 && live.routine() != 10 && live.routine() != 16) {
+            if (live.routine() != 4 && live.routine() != 10 && live.routine() != 16 && live.routine() != 22) {
                 throw new IllegalStateException("Spring launch requires its already committed native action prefix");
             }
             frame.validateObjectSpringLaunch(call);
@@ -1957,7 +1978,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         } finally { inSpringLaunch = false; }
     }
 
-    /** Dedicated PlayFMSound cut after successful launch, before Down's animation and wrapper DrawObject. */
+    /** Dedicated PlayFMSound cut after successful launch, before Down/diagonal animation and wrapper DrawObject. */
     private void playSpringFm(CdSpring.FmSound sound) {
         checkActive(Phase.DYNAMIC_SLOTS);
         if (inDrawCallback || inSolidCommit || inSpringLaunch || inSpinTunnelCommit || inTunnelDoorFm

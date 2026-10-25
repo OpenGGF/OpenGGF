@@ -135,6 +135,8 @@ public final class CdObjectMappings implements CdDrawMappings {
         // Spring/Main.asm:188/201: two real oMap roots in the SAME complete source include, not rebased tables.
         addObject(tables, objects, CdR11aObjectAssets.Table.SPRING_MAPPINGS, objects.springVertical());
         addObject(tables, objects, CdR11aObjectAssets.Table.SPRING_MAPPINGS, objects.springHorizontal());
+        // ObjSpring_Init diagonal root80, actual USA209BF0; three bounded counted frames.
+        addObject(tables, objects, CdR11aObjectAssets.Table.SPRING_MAPPINGS, objects.springDiagonal());
         // ObjSpinTunnel_Init's actual USA oMap long; Powerup/Data/Mappings.asm has 13 counted frames.
         // Frame 0 is empty at +37 inside frame 1's +26..46 body, so retain this complete raw source.
         // The uniform visual decoder deliberately rejects it; each selected frame is bounded by resolve().

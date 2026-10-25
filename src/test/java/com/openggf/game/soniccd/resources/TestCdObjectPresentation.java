@@ -538,10 +538,11 @@ class TestCdObjectPresentation {
             }
         }
         assertEquals(nativeRange(0x520, 0x544), allRequested);
-        for (int pointer : new int[]{0x209BF0, 0x209BA2, 0xFF209BA6}) {
+        assertEquals(7, resolver.resolve(0x209BF0, false, 0).pieces().size());
+        for (int pointer : new int[]{0x209BA2, 0xFF209BA6}) {
             assertThrows(UnsupportedOperationException.class, () -> drawNormalSpring(resolver, pointer, 0, 0x0520, 4));
         }
-        for (int id = 0x490; id < 0x4BE; id++) { // PLC_Std's separate diagonal art is never bound.
+        for (int id = 0x490; id < 0x4BE; id++) { // This old normal-Spring policy still leaves diagonal pixels unbound.
             int diagonalTile = id;
             assertThrows(UnsupportedOperationException.class, () -> bank.resolve(diagonalTile));
         }

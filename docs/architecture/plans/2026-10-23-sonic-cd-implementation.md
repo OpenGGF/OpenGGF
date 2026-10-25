@@ -5626,3 +5626,153 @@ multiply/orientation/animation ordering. Actual-USA operands and Java/native
 finite reader lengths must be authenticated before admission;780 blob bytes
 alone prove neither consumer extent. Full USA, JP/EU parity, checkpoint/warp,
 complete native cold/title/PLC timing and audio playback remain future work.
+
+## Primary diagonal Spring and the later Spikes boundary — 25 October 2026
+
+Private objects branch, parent `a18ca432d4605ba8fb19ec10a8da2a17ae3350c3`;
+reference remains `1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff`. This slice
+supersedes the preceding same-call Spring stop. Main and the retained primary
+worktree remain untouched; no fetch, integration, push, PR or public release.
+USA completion precedes Japan/Europe gameplay parity. The static default and
+explicit opening-object DEV entry remain separate.
+
+**Authenticated data and current art.** Native layout record96 is
+`0A10040E0A0A4000`: Spring0A/subtype0A at2576/1038, Present, no flips. USA's
+actual Spring3 MOVE.L operand at file98A6 is209BF0; animation LEA at9B0C is209B92.
+The existing200-byte mapping exposes diagonal directory80/body86..200, three
+frames with7/7/8 pieces; the existing14-byte script remains the sole animation
+input. SelectorF/subtype2zero reads0490. Std PLC1 row5 names diagonal art at9200,
+header002E/46 tiles. Source extent780 is not used as a guessed consumer length:
+independent supplied-media source models establish Java779/native780, both
+one-short failures, decoded1472 bytes SHA256
+`1ae40f48422bc8b884ae4c85288d3f363737cd3e6979c458b93aac15ed581c8b`.
+Native consumes the real trailing00 at34917; neither reader consumes the normal
+Spring's following8024 header. Java execution is separately covered below; these
+source models are not native CPU/register execution.
+
+`springDiagonal()` is lazy, uses the existing mapping/script, and admits only
+selectorF/subtype2zero. The source bank appends eighth ART_DIAGONAL_SPRING,
+canonical PLC1 row5, retaining all prior source identities/order. Its46 tiles
+9200..97C0 already belong to current AT_9000; no region, actor-selected fallback
+or immutable live art bank is added. Later BigRing106 at9100..9E40 aliases all46.
+The explicit cold DEV factory writes those46 actual decoded tiles once; restart
+takes the supplied current bytes/masks/table/section verbatim. This represents
+neither full native Std/title/cold PLC history nor BigRing gameplay execution.
+
+**Execution and publication.** Spring now requires the same source-backed
+CdPlayerMath dependency used elsewhere; constructor8 places it before the shared
+Solid owner, Assets6 includes diagonal/tile IDs, with no silent legacy default.
+Init returns without same-dispatch Solid. Main20 calls one actual SOLID_OBJECT,
+accepts its returned d0 or object flag5, then launches. CalcSine(E0) gives
+FF4B/00B5; unsigned MULU.W, LSR.L8 and low-word stores produce strong2896/-2896
+or weak1810/-1810 before native H/V negations. The exact launch writes only
+integerX/Y, XV/YV and flags, preserving fractions and the already-completed Solid
+result, including stand links. It adds no angle, animation, move-lock or ground
+speed store. Returning FM98 is followed by AnimateObject in that same dispatch.
+Ten eligible delay0 tokens precede FC; FC leaves timer0/frame1 and selects24,
+then a separate Reset dispatch selects20/frame0/previous1.
+
+Runtime appends bank15 with the old14-argument and all shorter constructors
+retained. Guard20 joins the existing SOLID routines,22 joins launch;14 remains
+BTM. It reuses the same pure Solid, whole-pool cut/CAS, Frame preflight/apply and
+ordered FM ports. No new Frame fields, sound type, phase, capture partition,
+clock, physical pass or restore operation is added. Both conversion cuts use a
+separate25-argument559 policy. Old513 and earlier policies remain unchanged;
+new conversion eagerly rejects unknown current490..4BD and invalid/overlapping
+logical spans. The World change is only comment/count513→559 for cleanup of an
+already-allocated OBJECTS range, not a larger global allocator reservation.
+
+**Tests, rejected fixtures and review.** Tests preceded their corresponding
+production passes; frozen external originals remain unchanged. Author and Root
+repairs are separate revisions. Assets50782, picture79857, body5193 and
+Runtime89008 were missing-API compilation negatives, not behavioral passes.
+Assets40511 ran74/1/0/0: an old fifth F-negative selector assertion was missed;
+RootR2 fixed only that contract and narrow65745 passed all3 regional cases.
+Picture12153 ran119/1/0/0: the prepared head already includes77 consumed bytes,
+so RootR2 pins234659 rather than the original23460C; narrow92597 passed1/0/0/0.
+Spring+Solid37765 then passed221/0/0/0 with no production repair.
+
+Runtime R1's bank literal, PlcEntry versus buffer Entry type and five old native
+span-start literals were corrected in RootR2. Run92450 reached515/1failure/1error/
+0skips: a new observer called a guarded displayed getter during V-int reentry,
+and another expected foreign-pool authority from a native Identity that contains
+only wholeIndex. RootR3 observes the already-private publication field in the
+test and rejects an actual dispatch-index mismatch; production guards are not
+relaxed and real Solid foreign-cut rejection remains. Exact two tests16933
+passed2/0/0/0. These separate repairs did not make the earlier515 run green.
+
+World89877 did not compile because the new fixture called nonexistent `jump()`;
+RootR3 uses `playerJump()`. Run88740 found legitimate earlier player/Spring
+overlap and a temporary route assertion that wrongly required a later call.
+RootR4 preserves actual painter order and adds renderer-only Spring isolation.
+Run53910's permanent route passed, while one initial H scene landed on real
+terrain by-3 integer pixels; RootR5 uses one initial air cut at cameraY+56 for
+all orientations, asserts both real feet clear, and adds no repeated staging.
+Run12468 then found a source-opaque tile with the same RGB as native terrain.
+RootR6 keeps actual ordered World and Spring-only native-plane comparisons, and
+separately uses a TEST-only clear colour outside the current palette for
+observable missing-tile/piece controls. This changes no source glyph, palette,
+authoritative Frame, actor, art or production renderer. All revisions/limits are
+recorded; neither compilation nor oracle failures are called cleanup negatives.
+
+Final R6 test SHA256 is
+`231f911e8fb92852fba1f821e29b9d0d4ad03c8da8f1a341653fd90bce66706a`.
+Against old513 cleanup,4807 completed every earlier assertion and failed only at
+retained owned ID131585 = OBJECTS base131072 +513, terminal12:03:09Z,
+1test/1failure/0errors/0skips. Importing only the two-line559 cleanup gives the
+positive result below. Independent static reviews cover assets, body, policy,
+Runtime and final World R6; no remaining concrete P1/P2 was identified. Reviewer
+execution claims are explicitly attributed to Root rather than duplicated runs.
+
+**Rendered component and ordinary route.** Actual USA320x224 EGL scenes cover
+two strengths × four H/V combinations. Each begins from one disclosed closed
+cut, clears96 dynamic slots, inserts Spring40 and stages/rebinds Sonic once.
+Real Body/DrawObjects/next Main Solid and launch run through GameLoop. The prior
+CPU SAT is displayed with NOW-serviced art; source-literal7/7/8 geometry, all46
+versions/current-palette pixels, actual native Plane B transparency and the
+separate contrast controls are checked. Six cuts per scene yield96 full/course
+restores plus state/pixel forward replay through row13, with no reconstruction
+or effect replay. At teardown only, all559 actual current-policy versions must
+be installed then absent, while existing shared entries retain identity. That
+upload is cleanup coverage, not a claim that all559 tiles rendered. Forty-eight
+unchanged ENGINE-labelled PNGs, construction/input and PASS-after-cleanup remain
+outside the repository. They are not emulator or natural-route captures.
+
+Ordinary, unstaged Right now completes diagonal Spring47 Init in the **same
+call561**: routine20, map209BF0,tile2490,speedF600,24x12/frame0. Pata52 Main
+retains integerY628 but changes Xfraction8000/Yfraction5FFF; Ring54 initializes.
+The next failure is exactly `Unowned CD object ID $26 at live physical slot 61`.
+Spikes61 remains routine0 at2643/1038/map0; Runtime and Frame close after that
+partial pass. Boulder/player/section prefix assertions remain. Call561 is NOT
+complete; no natural diagonal launch or GPU result is claimed. The temporary
+probe is removed. This uses ordinary controller GameLoop input, not a trace or
+readiness stream, so no trace frontier/sweep was changed.
+
+**Final observed verification.** Selection54167 passed **1036/0/0/0**,
+Maven2m54s, terminal12:07:04Z. All17 fresh XML identities confirm Java25,
+supplied CD media, EGL opt-in/surfaceless backend and S2REV01 donor, no skips:
+assets56+retail18, mappings29, old presentation39, new picture7, Section37,
+Boulder picture7, Spring133, Solid88, Runtime228, Frame264, object pass4,
+carry23, World50, EGL15, terrain27 and public-surface11. This combined run
+supersedes the earlier red-and-narrow component attribution for this final
+candidate. Fresh guards64613 passed **728/0/0/0**, Maven5m11s,
+terminal12:12:53Z; all90 fresh XML identities and Java25 checked.
+
+The change-based planner selected3741 all-smoke classes because the private CD
+namespace is unclassified. The17 known affected consumers and fresh structural
+guards are proportionate here: no shared renderer/physics algorithm, public
+Mod API, build or selection-policy change. No complete smoke/full-suite or
+native-parity certification is claimed; routine full-suite remains release-only.
+
+```text
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 python3 <main-workspace>/tools/testing/maven_queue.py --normal -Dmse=off '-Dtest=TestCdR11aObjectAssets,TestCdR11aObjectRetailAssets,TestCdObjectMappings,TestCdObjectPresentation,TestCdDiagonalSpringPicture,TestCdR11aSectionArt,TestCdBoulderPicture,TestCdSpring,TestCdSolidObject,TestCdOpeningObjectRuntime,TestCdPlayerFrameRuntime,TestCdPlayableSonicObjectPass,TestSonicCdRestartCarry,TestSonicCdOpeningWorldLoad,TestSonicCdOpeningWorldEgl,TestSonicCdTerrainPlayerLoad,TestModApiSignatureSurface' -Dsoniccd.media.root=<supplied-media-root> -Dsoniccd.opening.egl=true -Dopenggf.headless.gl=surfaceless-egl -Dsonic2.rom.path=<supplied-S2-ROM> -Dsoniccd.diagonal.spring.output=<new-external-capture-dir> test -B
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 python3 <main-workspace>/tools/testing/maven_queue.py --normal -Dmse=off -Pguards test -B
+```
+
+Next is Spikes26: the bounded source audit identifies actual shared Solid,
+player-Y LONG adjustment and direct HurtPlayer, not a fabricated touch scanner
+selection. Actual USA assets/readers and narrow returning Hurt publication
+still require implementation/authentication. The independent FM PlaySoundID
+planner remains frozen externally, unimported/unrun in this checkpoint; there
+is no audio-playback milestone. Full USA, JP/EU gameplay parity, native cold/
+title/PLC timing, warp/checkpoint/completion and broader route products remain open.

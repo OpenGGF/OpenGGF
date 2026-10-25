@@ -164,7 +164,7 @@ class TestSonicCdOpeningWorldEgl {
                                 source.assets().openingObjects().monitorTimeArtBank(), runtime.sectionArtState().residency(),
                                 banks.player(), banks.ring(), banks.mosqui(), banks.plant(), banks.ramp(),
                                 banks.explosion(), banks.points(), banks.flower(), banks.powerup(), banks.floatBlock(), banks.spring(),
-                                banks.tunnelDoorVertical(), banks.monitorTime(), banks.boulder()));
+                                banks.tunnelDoorVertical(), banks.monitorTime(), banks.boulder(), banks.diagonalSpring()));
                 assertEquals(expectedPicture, runtime.displayedFrame(), "Next V-int uses the pickup CPU table and now-serviced art");
                 int playerBase = com.openggf.graphics.PatternAtlasRange.OBJECTS.base();
                 assertTrue(runtime.displayedFrame().patternVersions().keySet().stream()
@@ -2090,7 +2090,7 @@ class TestSonicCdOpeningWorldEgl {
                 module.requirePlayerFrame().artState(), runtime.powerupArtState(), objects, objects.frontierArtBank(), objects.contactArtBank(),
                 objects.floatBlockArtBank(), objects.springArtBank(), objects.tunnelDoorArtBank(), objects.monitorTimeArtBank(), runtime.sectionArtState().residency(),
                 banks.player(), banks.ring(), banks.mosqui(), banks.plant(), banks.ramp(), banks.explosion(), banks.points(), banks.flower(),
-                banks.powerup(), banks.floatBlock(), banks.spring(), banks.tunnelDoorVertical(), banks.monitorTime(), banks.boulder());
+                banks.powerup(), banks.floatBlock(), banks.spring(), banks.tunnelDoorVertical(), banks.monitorTime(), banks.boulder(), banks.diagonalSpring());
     }
 
     /** Literal N MM:157-167 and MM:55-60. Static item has ONE piece despite counted frame4 having four. */
@@ -2244,7 +2244,7 @@ class TestSonicCdOpeningWorldEgl {
                 var banks = new CdOpeningObjectRuntime.LogicalBanks(base, base + 24, base + 38);
                 assertEquals(base + 494, banks.boulder()); assertEquals(banks.monitorTime() + 82, banks.boulder());
                 var objects = source.assets().openingObjects();
-                var sources = objects.sectionArtSources(); assertEquals(7, sources.sources().size());
+                var sources = objects.sectionArtSources(); assertEquals(8, sources.sources().size());
                 var boulder = sources.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_BOULDER);
                 assertEquals(2, boulder.canonicalPlcId()); assertEquals(0, boulder.canonicalRowIndex());
                 assertEquals(0x6E80, boulder.canonicalPlc().vramAddress()); assertEquals(19, boulder.tileCount());
@@ -2553,5 +2553,476 @@ class TestSonicCdOpeningWorldEgl {
         assertTrue(visibleTiles > 1); assertTrue(visiblePieces > 0);
     }
     // END constructed Boulder World proof.
+
+    // BEGIN constructed diagonal Spring World proof. Native pin1ecc5f3af; source-only authoring, execution is Root-owned.
+    @Test void actualEglConstructedDiagonalSpringWorldLaunchesAnimatesReplaysAndRetires559Patterns() throws Exception {
+        Assumptions.assumeTrue(Boolean.getBoolean("soniccd.opening.egl"), "Explicit actual EGL/media opt-in");
+        assertEquals("surfaceless-egl", System.getProperty("openggf.headless.gl"));
+        assertNull(System.getenv("DISPLAY")); assertNull(System.getenv("WAYLAND_DISPLAY"));
+        String media = System.getProperty("soniccd.media.root"); assertNotNull(media); assertFalse(media.isBlank());
+        CdGameDataSource source;
+        try (var files = Files.list(Path.of(media).resolve("USA"))) {
+            var cues = files.filter(f -> f.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".cue")).toList();
+            assertEquals(1, cues.size()); source = CdStockLaunch.prepare(cues.getFirst(), CdStockLaunch.Request.r11a());
+        }
+        String log = InputScriptCompiler.compileToInputLog("14 -");
+        var movie = new Bk2MovieLoader().parseInputLogText(Path.of("ENGINE-constructed-diagonal-spring-world-input"), log.lines().toList());
+        Path output = openCaptureOutput(log, "soniccd.diagonal.spring.output");
+        String construction = "ENGINE constructed actual-USA R11A primary diagonal Spring component; no emulator, natural-route or full-game claim.\n"
+                + "Row0 runs actual Sonic Init. Restore that same valid World cut before each of eight independent scenes (subtypes08/0A x native H/V0..3).\n"
+                + "At each initial CLOSED_CUT ONLY clear ALL96 dynamics, seed cleared slot40 ONLY with ID0A/X/Y/subtype08 or0A/subtype2zero, and set BOTH native placement sprite/status low flip bits. No saved/helper/routine/frame/tile/map/timer/bit7 ingress.\n"
+                + "Spring X=initial cameraX+160; Y=initial cameraY+56 for every orientation, with actual two-foot floor-clearance checks before the first Body. Same primary Sonic is restored/rebound ONCE at SpringX+(H?-32:32), SpringY-32, fractionsABCD/1234; XV/YV/GVel0, routine2, angle0, flags2, sprite4, radii9/19, animation0, jump/charge/moveLock/stick/control0. PreviousAnimation/previous angles, animation state, header, timers, history, rotation, links and owner retained; only actor display publication cleared. No repeated ingress.\n"
+                + "Row1 Body integrates zero speed then adds38 gravity; real Spring Init returns without Solid/launch/animation, and real DrawObjects supplies bit7. Row2 Body integrates oldYV38, fraction1234->4A34; real top Solid at vertical penetration1 < horizontal2 aligns Y to SpringY-31, sets stand40/angle0/jump0/GVel0. Launch THEN moves post-Solid X by H?+8:-8 and Y by V?-8:+8, preserves fractions, writes strong2896 or weak1810 signed H/V velocities, retains the post-Solid stand link/GVel/angle/radii. Whole-frame position is not a delta from pre-Body.\n"
+                + "Rows2..11 consume actual delay0 tokens0,1,1,2,2,2,2,2,2,1; row12 FC leaves frame1/index10 and selects24; row13 separate Reset selects20/frame0/previous1. No animator/helper/Body/Draw rerun, no fake Solid return, no sound effect replay.\n"
+                + "Every row checks current CPU SAT separately from PRIOR CPU SAT now displayed with NOW-serviced player/powerup/current residency and prior camera. Player Body/Draw runs before Spring; no retroactive player presentation is invented. Early rows2..6 compare full native7/7/8-piece opaque+transparent current-palette geometry against real native Plane B controls. A separate clearly TEST-only contrast clear background outside the current palette makes source-opaque tile/piece omissions observable even when a tile matches native terrain RGB; no authoritative glyph/art/palette changes. Reach all46 current decoded tile versions.\n"
+                + "Selected preInit/postInit/postLaunch/frame2/FC/Reset full AND course cuts restore complete state/pixels and forward through row13 WITHOUT construction, reseed, rebind or injected effects.\n"
+                + "Only final retirement installs all559 actual CURRENT policy versions in already-owned IDs; require all present, close, then all absent. Inventory existing native0..7FF plus explicit virtual ranges outside owned559 and preserve actual other-producer entry identities; never register a synthetic producer. PASS is written only after retirement and session/graphics/boot finally cleanup.\n"
+                + "Physical9200..97C0 uses ONE current AT_9000 authority, DEV46 cold writes only; later BigRing9100..9E40 replaces all46 rather than selecting art by actor. No native cold-PLC history, mixed-priority/palette/timing/pixel parity or restart-flow certification.\n";
+        if (output != null) Files.writeString(output.resolve("construction.txt"), construction, StandardOpenOption.CREATE_NEW);
+        var observations = new StringBuilder();
+        int[] cpuFrames = {0, 0, 0, 1, 1, 2, 2, 2, 2, 2, 2, 1, 1, 0};
+        int[] nativeFirst = {0x780, 0x7AE, 0x3A0, 0x424, 0x441, 0x680, 0x6C6, 0x6D7, 0x544, 0x334, 0x520, 0x328, 0x5A8, 0x374, 0x490};
+        int[] counts = {24, 14, 70, 28, 63, 70, 5, 39, 36, 15, 36, 12, 82, 19, 46};
+        try (var boot = new HeadlessGameBoot(320, 224)) {
+            try {
+                var loop = boot.bootSonicCdOpeningObjects(source);
+                assertEquals(NullAudioBackend.class, GameServices.audio().getBackend().getClass());
+                var mode = SessionManager.getCurrentGameplayMode();
+                var module = assertInstanceOf(SonicCdGameModule.class, mode.getWorldSession().getGameModule());
+                var runtime = assertInstanceOf(CdOpeningObjectRuntime.class, module.getGameService(NativeDynamicObjectPass.class));
+                var frame = module.requirePlayerFrame();
+                assertSame(source, mode.getWorldSession().getDataSource()); assertEquals(GameMode.LEVEL, loop.getCurrentGameMode());
+                step(loop, movie.getFrame(0));
+                int baseId = com.openggf.graphics.PatternAtlasRange.OBJECTS.base();
+                var banks = new CdOpeningObjectRuntime.LogicalBanks(baseId, baseId + 24, baseId + 38);
+                assertEquals(baseId + 513, banks.diagonalSpring()); assertEquals(banks.boulder() + 19, banks.diagonalSpring());
+                var objects = source.assets().openingObjects(); var sources = objects.sectionArtSources();
+                assertEquals(8, sources.sources().size());
+                var diagonal = sources.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_DIAGONAL_SPRING);
+                assertEquals(1, diagonal.canonicalPlcId()); assertEquals(5, diagonal.canonicalRowIndex());
+                assertEquals(0x9200, diagonal.canonicalPlc().vramAddress()); assertEquals(46, diagonal.tileCount());
+                assertEquals(0x002E, diagonal.readerBytes().unsignedWord(0)); assertEquals(1472, diagonal.decode().bytes().length());
+                assertEquals(0x490, objects.tileWord(0xF, 0));
+                assertEquals(80, objects.springDiagonal().mappingTableOffset()); assertEquals(3, objects.springDiagonal().mappingFrames().size());
+                for (int tile = 0; tile < 46; tile++) assertArrayEquals(diagonal.decode().bytes().slice(tile * 32, 32).copy(),
+                        com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(runtime.sectionArtState().residency(), 0x490 + tile).copy(),
+                        "Actual decoded source equals explicit DEV cold current tile " + tile);
+                var atlas = GameServices.graphics().getPatternAtlas(); var initialPolicy = monitorWorldPolicy(module, objects, banks);
+                int logical = baseId;
+                for (int span = 0; span < counts.length; span++) for (int tile = 0; tile < counts[span]; tile++) {
+                    int id = logical++; assertEquals(id, initialPolicy.resolve(nativeFirst[span] + tile).logicalPatternId());
+                    assertEquals(1, atlas.registeredRangesForTesting().stream()
+                            .filter(range -> id >= range.base() && id < range.base() + range.size()).count());
+                }
+                assertEquals(baseId + 559, logical, "Fifteen final logical spans; one physical current reader per native tile");
+                var registry = mode.getRewindRegistry(); var pristine = registry.capture(); var pool = runtime.placement().pool();
+                for (boolean weak : List.of(false, true)) for (int flip = 0; flip < 4; flip++) {
+                    registry.restore(pristine);
+                    assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT, runtime.phase());
+                    pool.clearDynamicSlots(); assertEquals(96, pool.capture().slots().size());
+                    assertTrue(pool.capture().slots().stream().allMatch(s -> Arrays.equals(new byte[64], s.copyBytes())));
+                    int springX = GameServices.camera().getX() + 160;
+                    int springY = GameServices.camera().getY() + 56; // Airborne component cut; old H scene at+128 penetrated real terrain.
+                    int playerX = springX + ((flip & 1) != 0 ? -32 : 32);
+                    pool.write(pool.state(40).moveByte(ID, 0x0A).moveWord(X, springX).moveWord(Y, springY)
+                            .moveByte(SUBTYPE, weak ? 0x0A : 0x08).moveByte(SUBTYPE2, 0)
+                            .moveByte(SPRITE_FLAGS, flip).moveByte(FLAGS, flip)); // Actual placement supplies BOTH flip bytes.
+                    stageDiagonalWorldPlayer(module, (playerX << 16) | 0xABCD, ((springY - 32) << 16) | 0x1234);
+                    var terrainProbe = new com.openggf.game.soniccd.player.CdPlayerTerrain(frame.assets().terrain());
+                    for (int foot : new int[]{playerX + 9, playerX - 9})
+                        assertTrue(terrainProbe.floor(foot & 0xFFFF, (springY - 32 + 19) & 0xFFFF,
+                                13, 0, 16, 4).distance() >= 0, "Initial air cut must not land before Spring Init; weak/flip=" + weak + "/" + flip);
+                    assertEquals(0, pool.state(40).routine()); assertEquals(flip, pool.state(40).spriteFlags());
+                    assertEquals(flip, pool.state(40).flags()); assertEquals(0, pool.state(40).unsignedByte(ANIMATION_TIME));
+                    var fullCuts = new ArrayList<>(List.of(registry.capture()));
+                    var courseCuts = new ArrayList<>(List.of(registry.captureCourse()));
+                    var states = new ArrayList<>(List.of(capture(module)));
+                    var pictures = new ArrayList<>(List.of(render(module, true))); assertCapture(states.getFirst(), module);
+                    var reached = new java.util.TreeSet<Integer>();
+                    var phasePictures = new RgbaImage[3];
+                    var previousCpu = runtime.cpuSat();
+                    int previousCameraX = GameServices.camera().getX(), previousCameraY = GameServices.camera().getY();
+                    for (int row = 1; row <= 13; row++) {
+                        long clock = frame.vIntClock().absoluteValue().orElseThrow(); int levelFrames = GameServices.level().getFrameCounter();
+                        diagonalWorldStep(loop, movie.getFrame(row), module, row == 2);
+                        assertEquals(clock + 1, frame.vIntClock().absoluteValue().orElseThrow(), "Actual World V-int, not an animator clock");
+                        assertEquals(levelFrames + 1, GameServices.level().getFrameCounter());
+                        var live = pool.state(40); var m = frame.state().motion();
+                        assertEquals(0x0A, live.id()); assertEquals(row == 1 || row == 13 ? 20 : row == 12 ? 24 : 22, live.routine());
+                        assertEquals(0x209BF0, live.longBits(MAPPINGS)); assertEquals(weak ? 0x2490 : 0x0490, live.word(TILE));
+                        assertEquals(24, live.unsignedByte(WIDTH)); assertEquals(12, live.unsignedByte(Y_RADIUS));
+                        assertEquals(4, live.unsignedByte(PRIORITY)); assertEquals(springX, live.word(SPRING_ANCHOR_X));
+                        assertEquals(weak ? 0xF600 : 0xF000, live.word(SPRING_SPEED));
+                        assertEquals(0, live.word(SPRING_PARENT)); assertEquals(springX, live.centreX()); assertEquals(springY, live.centreY());
+                        assertEquals(0x84 | flip, live.spriteFlags(), "Bit7 is from actual DrawObjects; no ingress setter");
+                        assertEquals(flip, live.flags()); assertEquals(0, live.unsignedByte(ROUTINE_2));
+                        assertEquals(cpuFrames[row], live.unsignedByte(MAP_FRAME));
+                        assertEquals(row == 1 ? 0 : Math.min(row - 1, 10), live.unsignedByte(ANIMATION_FRAME));
+                        assertEquals(0, live.unsignedByte(ANIMATION_TIME), "Delay0 reloads BEFORE the token, including FC");
+                        assertEquals(row == 13 ? 1 : 0, live.unsignedByte(PREVIOUS_ANIMATION));
+                        if (row == 1) {
+                            assertEquals((playerX << 16) | 0xABCD, m.centreX16_16());
+                            assertEquals(((springY - 32) << 16) | 0x1234, m.centreY16_16(), "Airborne Init row, weak/flip=" + weak + "/" + flip);
+                            assertEquals(0x38, m.yVelocity()); assertEquals(0, frame.state().objectLinks().standObject());
+                        }
+                        if (row == 2) {
+                            int magnitude = weak ? 1810 : 2896;
+                            // N Spring/Main.asm:430-465 AFTER Object Solid.asm:335-429, not a pre-Body position delta.
+                            assertEquals(((playerX + ((flip & 1) != 0 ? 8 : -8)) << 16) | 0xABCD, m.centreX16_16());
+                            assertEquals(((springY - 31 + ((flip & 2) != 0 ? -8 : 8)) << 16) | 0x4A34, m.centreY16_16());
+                            assertEquals((flip & 1) != 0 ? -magnitude : magnitude, m.xVelocity());
+                            assertEquals((flip & 2) != 0 ? magnitude : -magnitude, m.yVelocity());
+                            assertEquals(2 | (flip & 1), m.flags()); assertEquals(40, frame.state().objectLinks().standObject());
+                            assertEquals(0, frame.state().objectLinks().pushObject());
+                            assertEquals(0, m.groundVelocity()); assertEquals(0, m.angle()); assertEquals(0, m.playerJump());
+                            assertEquals(9, m.xRadius()); assertEquals(19, m.yRadius());
+                            assertEquals(0, m.moveLock()); assertEquals(0, m.charge()); assertEquals(0, m.playerControl());
+                        }
+                        assertEquals(2, m.routine()); assertEquals(0, frame.environment().globals().debugMode());
+                        assertTrue(pool.capture().slots().stream().allMatch(s -> s.id() == 0 || s.identity().wholeIndex() == 40),
+                                "Bounded scene retains only the constructed Spring; spawner breadth is not silently ignored");
+                        assertDiagonalWorldSat(runtime.cpuSat(), GameServices.camera().getX(), GameServices.camera().getY(),
+                                springX, springY, flip, weak, cpuFrames[row]);
+                        var completed = capture(module); var published = completed.publication().published();
+                        assertEquals(previousCameraX, published.cameraX()); assertEquals(previousCameraY, published.cameraY());
+                        assertEquals(com.openggf.game.soniccd.resources.CdObjectPresentation.convert(previousCpu,
+                                monitorWorldPolicy(module, objects, banks)), runtime.displayedFrame(),
+                                "Prior CPU SAT and NOW-serviced current art; no conversion rewrites the completed player Body");
+                        if (row >= 2) assertDiagonalWorldSat(previousCpu, previousCameraX, previousCameraY,
+                                springX, springY, flip, weak, cpuFrames[row - 1]);
+                        var image = render(module, true); var terrain = renderTerrain(module, published);
+                        assertNativeGpuBackground(module); assertTerrainOutsideSprites(image, terrain, runtime.displayedFrame());
+                        if (row >= 2 && row <= 6) {
+                            int sourceFrame = cpuFrames[row - 1];
+                            var literal = diagonalWorldLiteralTiles(springX - published.cameraX(), springY - published.cameraY(), flip, sourceFrame);
+                            observations.append("weak=").append(weak).append(" flip=").append(flip).append(" row=").append(row)
+                                    .append(" clock=").append(frame.vIntClock().absoluteValue().orElseThrow()).append(' ')
+                                    .append(assertDiagonalWorldPixels(runtime.displayedFrame(), image, terrain,
+                                            runtime.sectionArtState().residency(), banks.diagonalSpring(), literal, weak ? 1 : 0)).append('\n');
+                            // A real renderer-only isolation control proves the entire glyph even where Sonic covers it.
+                            // No actor/art/clock/SAT/publication mutation or extra player ingress occurs here.
+                            var springOnly=diagonalWorldSpringOnly(runtime.displayedFrame(),banks.diagonalSpring());
+                            var isolated=renderDiagonalWorldPicture(module,springOnly,null);
+                            assertDiagonalWorldPixels(springOnly,isolated,terrain,runtime.sectionArtState().residency(),
+                                    banks.diagonalSpring(),literal,weak ? 1 : 0);
+                            // A source-opaque tile may equal real terrain RGB. Make every opaque omission observable
+                            // on a clearly TEST-only contrast backdrop; keep BOTH actual native-plane checks above.
+                            int contrastRgb=diagonalWorldContrastRgb(weak ? 1 : 0);
+                            var contrast=renderDiagonalWorldPicture(module,com.openggf.graphics.SpritePresentation.Frame.empty(),contrastRgb);
+                            var contrastSpring=renderDiagonalWorldPicture(module,springOnly,contrastRgb);
+                            assertDiagonalWorldPixels(springOnly,contrastSpring,contrast,runtime.sectionArtState().residency(),
+                                    banks.diagonalSpring(),literal,weak ? 1 : 0);
+                            assertDiagonalWorldOmissions(springOnly, contrastSpring, contrast, runtime.sectionArtState().residency(),
+                                    banks.diagonalSpring(), literal, weak ? 1 : 0);
+                            assertArrayEquals(image.pixels(),render(module,true).pixels(),"Render control leaves the actual World picture unchanged");
+                            for (var tile : literal) {
+                                reached.add(tile.offset()); var entry = atlas.getEntry(banks.diagonalSpring() + tile.offset());
+                                assertNotNull(entry); assertTrue(glIsTexture(atlas.getTextureId(entry.atlasIndex())));
+                                assertEquals(runtime.displayedFrame().patternVersions().get(banks.diagonalSpring() + tile.offset()),
+                                        com.openggf.graphics.SpritePresentation.patternSample(GameServices.graphics(), banks.diagonalSpring() + tile.offset()));
+                            }
+                            var withoutPlane = renderWithoutBackground(module);
+                            assertFalse(Arrays.equals(terrain.pixels(), withoutPlane.pixels()), "Native Plane B contributes to the transparent control");
+                            assertArrayEquals(image.pixels(), render(module, true).pixels());
+                            if (phasePictures[sourceFrame] == null) {
+                                phasePictures[sourceFrame] = image;
+                                if (output != null) {
+                                    ScreenshotCapture.savePNG(image, output.resolve("ENGINE-constructed-diagonal-weak" + weak + "-flip" + flip + "-frame" + sourceFrame + ".png"));
+                                    ScreenshotCapture.savePNG(terrain, output.resolve("ENGINE-native-plane-diagonal-weak" + weak + "-flip" + flip + "-frame" + sourceFrame + ".png"));
+                                }
+                            }
+                        }
+                        assertCapture(completed, module); states.add(completed); pictures.add(image);
+                        fullCuts.add(registry.capture()); courseCuts.add(registry.captureCourse());
+                        previousCpu = runtime.cpuSat(); previousCameraX = GameServices.camera().getX(); previousCameraY = GameServices.camera().getY();
+                    }
+                    assertEquals(java.util.stream.IntStream.range(0, 46).boxed().collect(java.util.stream.Collectors.toSet()), reached);
+                    assertFalse(Arrays.equals(phasePictures[0].pixels(), phasePictures[1].pixels()));
+                    assertFalse(Arrays.equals(phasePictures[1].pixels(), phasePictures[2].pixels()));
+                    for (int cut : new int[]{0, 1, 2, 5, 12, 13}) for (boolean courseOnly : List.of(false, true)) {
+                        if (courseOnly) registry.restoreCourse(courseCuts.get(cut)); else registry.restore(fullCuts.get(cut));
+                        assertCapture(states.get(cut), module); assertArrayEquals(pictures.get(cut).pixels(), render(module, true).pixels());
+                        assertCapture(states.get(cut), module);
+                        for (int row = cut + 1; row <= 13; row++) {
+                            diagonalWorldStep(loop, movie.getFrame(row), module, row == 2); // No seed, reconstruction, staging or effect replay.
+                            assertCapture(states.get(row), module);
+                            assertArrayEquals(pictures.get(row).pixels(), render(module, true).pixels(), "weak/flip/cut/row " + weak + "/" + flip + "/" + cut + "/" + row);
+                            assertCapture(states.get(row), module);
+                        }
+                    }
+                }
+                // Teardown-only materialization: actual NOW policy, never a claim that all559 tiles rendered.
+                var beforeRetirement = capture(module); var retirementPolicy = monitorWorldPolicy(module, objects, banks); logical = baseId;
+                for (int span = 0; span < counts.length; span++) for (int tile = 0; tile < counts[span]; tile++) {
+                    var sample = retirementPolicy.resolve(nativeFirst[span] + tile); assertEquals(logical++, sample.logicalPatternId());
+                    var v = sample.version(); long[] words = {v.a(), v.b(), v.c(), v.d()}; var pattern = new com.openggf.level.Pattern();
+                    for (int at = 0; at < 64; at++) pattern.setPixel(at % 8, at / 8, (byte) ((words[at / 16] >>> ((at % 16) * 4)) & 15));
+                    GameServices.graphics().cachePatternTexture(pattern, sample.logicalPatternId());
+                }
+                assertEquals(baseId + 559, logical); assertCapture(beforeRetirement, module);
+                for (int tile = 0; tile < 559; tile++) {
+                    var entry = atlas.getEntry(baseId + tile); assertNotNull(entry, "Installed actual retirement witness " + tile);
+                    assertTrue(glIsTexture(atlas.getTextureId(entry.atlasIndex())));
+                }
+                var sharedEntries = new java.util.HashMap<Integer, Object>();
+                for (int id = 0; id <= 0x7FF; id++) {
+                    var entry = atlas.getEntry(id); if (entry != null) sharedEntries.put(id, entry);
+                }
+                for (var range : atlas.registeredRangesForTesting()) for (int id = range.base(); id < range.base() + range.size(); id++) {
+                    if (id >= baseId && id < baseId + 559) continue;
+                    var entry = atlas.getEntry(id); if (entry != null) sharedEntries.put(id, entry);
+                }
+                assertFalse(sharedEntries.isEmpty()); assertTrue(sharedEntries.keySet().stream().anyMatch(id -> id <= 0x7FF));
+                observations.append("shared-installed=").append(sharedEntries.size()).append('\n');
+                module.closeTerrainPlayer(); assertTrue(runtime.closed()); assertTrue(frame.closed());
+                assertSame(atlas, GameServices.graphics().getPatternAtlas());
+                for (int tile = 0; tile < 559; tile++) assertNull(atlas.getEntry(baseId + tile), "Retired owned current ID " + (baseId + tile));
+                sharedEntries.forEach((id, entry) -> assertSame(entry, atlas.getEntry(id), "Actual other-producer identity " + id));
+                assertEquals(NullAudioBackend.class, GameServices.audio().getBackend().getClass());
+            } finally {
+                try { SessionManager.closeGameplaySession(); }
+                finally { GraphicsManager.destroyForReinit(); }
+            }
+        }
+        if (output != null) Files.writeString(output.resolve("outcome.txt"),
+                "PASS: ENGINE constructed actual-USA primary diagonal Spring component, both strengths/all4 native H/V; real Init RTS/next-Main shared top Solid/diagonal launch and same-call FM/animation; source tokens/FC/separate Reset, prior-SAT+NOW current-art display, all3 source frames/literal7,7,8 pieces/all46 current decoded versions, ordered player/Spring World pixels plus renderer-only full Spring isolation/native Plane B transparency plus explicitly TEST-only contrast omission controls; selected full/course complete-state+pixel restore and forward without reseed/rebind; all559 actual current-policy retirement witnesses installed then absent, existing other-producer identities preserved; session/graphics/boot cleanup completed. No native emulator, natural route, native startup/pixel/timing parity or full-game claim.\n"
+                        + construction + observations, StandardOpenOption.CREATE_NEW);
+    }
+
+    /** Initial CLOSED_CUT ingress only, once per independently restored scene; no new Frame API. */
+    private static void stageDiagonalWorldPlayer(SonicCdGameModule module, int x16_16, int y16_16) {
+        var runtime = (CdOpeningObjectRuntime) module.getGameService(NativeDynamicObjectPass.class);
+        assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT, runtime.phase()); module.requirePlayerActor().requireCompletedNativeFrame();
+        var frame = module.requirePlayerFrame(); var actor = frame.captureActor(); var old = actor.state(); var m = old.motion();
+        assertEquals(2, m.routine()); assertEquals(0, old.objectLinks().standObject()); assertEquals(0, old.objectLinks().pushObject());
+        var motion = new com.openggf.game.soniccd.player.CdPlayerMotionState(x16_16, y16_16, 0, 0, 0,
+                2, 0, 2, 4, 9, 19, 0, m.previousAnimation(), 0, 0, 0, 0, 0, m.previousPrimaryAngle(), m.previousSecondaryAngle());
+        var state = new com.openggf.game.soniccd.player.CdPlayerBody.State(motion, old.animation(), old.header(), old.timers(),
+                old.history(), old.rotationDistance(), old.objectLinks());
+        frame.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(), state, java.util.Optional.empty()));
+        module.requirePlayerActor().rebindAfterRestore();
+        assertSame(old.animation(), frame.state().animation()); assertSame(old.header(), frame.state().header());
+        assertSame(old.timers(), frame.state().timers()); assertSame(old.history(), frame.state().history());
+        assertEquals(old.rotationDistance(), frame.state().rotationDistance()); assertEquals(old.objectLinks(), frame.state().objectLinks());
+    }
+
+    /** Entire reached neutral Body prefix, including BOTH stops, followed only by the one real Spring FM port. */
+    private static void diagonalWorldStep(GameLoop loop, Bk2FrameInput input, SonicCdGameModule module, boolean springFm) {
+        var frame = module.requirePlayerFrame(); var state = frame.state(); var m = state.motion();
+        assertEquals(0, frame.environment().movement().globals().lookMode());
+        assertEquals(0, frame.environment().movement().gates().speedShoes());
+        var expectedPlayer = new ArrayList<>(monitorWorldPlayerSounds(frame));
+        // Same complete neutral branch as boulderWorldStep; MovementStop does not suppress the later ChargeStop.
+        if ((m.flags() & 6) == 0 && ((m.angle() + 0x20) & 0xC0) == 0 && m.groundVelocity() == 0) {
+            var floor = new com.openggf.game.soniccd.player.CdPlayerTerrain(frame.assets().terrain())
+                    .floor(m.centreX16_16() >>> 16, (m.centreY16_16() >>> 16) + m.yRadius(), 13, 0, 16, m.spriteFlags());
+            if (floor.distance() >= 12 && m.previousPrimaryAngle() != 3 && m.previousSecondaryAngle() != 3)
+                expectedPlayer.add(new CdPlayerFrameRuntime.ChargeSound(
+                        com.openggf.game.soniccd.player.CdPlayerCharge.Sound.FM_CHARGESTOP));
+        }
+        step(loop, input);
+        var runtime = (CdOpeningObjectRuntime) module.getGameService(NativeDynamicObjectPass.class);
+        assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT, runtime.phase());
+        assertEquals(expectedPlayer, module.requirePlayerActor().lastSoundRequests());
+        var actual = runtime.lastSoundRequests(); assertEquals(expectedPlayer.size() + (springFm ? 1 : 0), actual.size());
+        for (int i = 0; i < expectedPlayer.size(); i++)
+            assertEquals(new CdOpeningObjectRuntime.PlayerSound(expectedPlayer.get(i)), actual.get(i), "Ordered complete Body prefix " + i);
+        if (springFm) {
+            // Existing semantic record is inspected; no new sound type, reflection, audio execution or effect replay.
+            var sound = actual.getLast(); assertEquals("SpringFm", sound.getClass().getSimpleName());
+            assertTrue(sound.toString().contains("FM_SPRING"), "Exactly the existing semantic FM98 request follows Body");
+        }
+    }
+
+    /** Hand literals, N Spring/Data/Mappings.asm:46-82. No decoder-derived geometry. */
+    private static int[][] diagonalWorldLiteralPieces(int sourceFrame) {
+        return switch (sourceFrame) {
+            case 0 -> new int[][]{{8,0,0,-16},{0,0,1,-16},{8,0,2,-8},{-16,8,3,-16},{-8,0,6,-16},{-8,9,7,-8},{8,4,13,0}};
+            case 1 -> new int[][]{{8,0,0,-16},{0,0,15,-16},{8,0,16,-8},{-16,5,17,-16},{-8,0,5,0},{0,0,21,-8},{0,5,22,0}};
+            case 2 -> new int[][]{{8,0,0,-16},{0,0,26,-16},{8,0,27,-8},{-32,8,3,0},{-24,14,28,0},{-8,0,40,-16},{-16,2,41,-8},{0,1,44,0}};
+            default -> throw new AssertionError("Not a diagonal source frame: " + sourceFrame);
+        };
+    }
+
+    private static void assertDiagonalWorldSat(CdObjectDrawQueue.CpuSat sat, int cameraX, int cameraY,
+            int x, int y, int flip, boolean weak, int sourceFrame) {
+        int[][] pieces = diagonalWorldLiteralPieces(sourceFrame); assertEquals(sourceFrame == 2 ? 8 : 7, pieces.length);
+        byte[] raw = sat.bytes(); int seen = 0;
+        assertTrue(sat.provenance().stream().anyMatch(p -> p.slotRef().wholeIndex() == 0), "Real primary player shares this SAT");
+        for (int entry = 0; entry < sat.spriteCount(); entry++) {
+            var origin = sat.provenance().get(entry); if (origin.slotRef().wholeIndex() != 40) continue;
+            assertTrue(seen < pieces.length); var p = pieces[seen];
+            assertEquals(4, origin.queueBucket()); assertEquals(0, origin.queueOrdinal()); assertEquals(seen++, origin.mappingPieceOrdinal());
+            int width = (p[1] >>> 2) + 1, height = (p[1] & 3) + 1;
+            int relativeX = (flip & 1) != 0 ? -p[3] - width * 8 : p[3];
+            int relativeY = (flip & 2) != 0 ? -p[0] - height * 8 : p[0]; int at = entry * 8;
+            assertEquals((y - cameraY + 128 + relativeY) & 0xFFFF, ((raw[at] & 255) << 8) | (raw[at + 1] & 255));
+            assertEquals(p[1], raw[at + 2] & 255); assertEquals(entry + 1, raw[at + 3] & 255);
+            int word = ((raw[at + 4] & 255) << 8) | (raw[at + 5] & 255);
+            assertEquals(((weak ? 0x2490 : 0x0490) + p[2]) ^ (flip << 11), word);
+            assertEquals(weak ? 0x2000 : 0, word & 0xE000, "Palette strength and hardware priority0; software bucket4 is separate");
+            assertEquals((x - cameraX + 128 + relativeX) & 511, ((raw[at + 6] & 255) << 8) | (raw[at + 7] & 255));
+        }
+        assertEquals(pieces.length, seen);
+    }
+
+    private record DiagonalWorldTile(int offset, int x, int y, boolean hFlip, boolean vFlip, int piece) { }
+    private static List<DiagonalWorldTile> diagonalWorldLiteralTiles(int x, int y, int flip, int sourceFrame) {
+        int[][] pieces = diagonalWorldLiteralPieces(sourceFrame); boolean h = (flip & 1) != 0, v = (flip & 2) != 0;
+        var result = new ArrayList<DiagonalWorldTile>();
+        for (int piece = pieces.length - 1; piece >= 0; piece--) {
+            var p = pieces[piece]; int width = (p[1] >>> 2) + 1, height = (p[1] & 3) + 1;
+            int left = h ? -p[3] - width * 8 : p[3], top = v ? -p[0] - height * 8 : p[0];
+            for (int row = 0; row < height; row++) for (int col = 0; col < width; col++)
+                result.add(new DiagonalWorldTile(p[2] + col * height + row,
+                        x + left + (h ? width - 1 - col : col) * 8, y + top + (v ? height - 1 - row : row) * 8, h, v, piece));
+        }
+        return List.copyOf(result);
+    }
+
+    private static String assertDiagonalWorldPixels(com.openggf.graphics.SpritePresentation.Frame picture, RgbaImage image,
+            RgbaImage terrain, com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.State residency,
+            int baseId, List<DiagonalWorldTile> literal, int paletteIndex) {
+        var tiles = picture.tiles().stream().filter(t -> t.patternId() >= baseId && t.patternId() < baseId + 46).toList();
+        assertEquals(literal.size(), tiles.size()); assertFalse(literal.isEmpty());
+        var graphics = GameServices.graphics(); assertFalse(graphics.isWaterEnabled());
+        assertFalse(graphics.getPaletteFadePresentation().affects(paletteIndex));
+        var palette = GameServices.level().getCurrentLevel().getPalette(paletteIndex); int[] argb = new int[16];
+        for (int i = 1; i < 16; i++) {
+            var c = palette.getColor(i); argb[i] = 0xFF000000 | com.openggf.graphics.color.DisplayColorConverter.toPackedRgb(
+                    c.r & 255, c.g & 255, c.b & 255, graphics.getDisplayColorProfile(), graphics.getDisplayColorExpansion());
+        }
+        int left = literal.stream().mapToInt(DiagonalWorldTile::x).min().orElseThrow();
+        int top = literal.stream().mapToInt(DiagonalWorldTile::y).min().orElseThrow();
+        int right = literal.stream().mapToInt(p -> p.x() + 8).max().orElseThrow();
+        int bottom = literal.stream().mapToInt(p -> p.y() + 8).max().orElseThrow();
+        assertTrue(left >= 0 && top >= 0 && right <= 320 && bottom <= 224, "Full literal early-frame geometry is inside viewport");
+        var expected = terrain.pixels().clone(); int opaque = 0, transparent = 0, changed = 0;
+        var zeroOpacity = new ArrayList<Integer>(); int index = 0;
+        assertTrue(picture.primitives().isEmpty());
+        // Preserve actual painter order. The earlier player Draw can overlap a launching Spring.
+        for (var t : picture.tiles()) {
+            if (t.patternId() < baseId || t.patternId() >= baseId + 46) {
+                paintDiagonalWorldOtherSprite(picture,t,expected,left,top,right,bottom);
+                continue;
+            }
+            var p = literal.get(index++);
+            assertEquals(baseId + p.offset(), t.patternId()); assertEquals((float) p.x(), t.x()); assertEquals((float) p.y(), t.y());
+            assertEquals(8f, t.width()); assertEquals(8f, t.height()); assertEquals(paletteIndex, t.palette());
+            assertEquals(p.hFlip(), t.hFlip()); assertEquals(p.vFlip(), t.vFlip()); assertFalse(t.priority());
+            assertEquals(com.openggf.graphics.SpritePresentation.Layer.OBJECT, t.layer()); assertTrue(t.priorityShader());
+            assertEquals(0, t.occlusionMask()); assertFalse(t.ghost()); assertFalse(t.ghostColour()); assertEquals(1f, t.ghostAlpha());
+            assertEquals(0, t.rowStart()); assertEquals(8, t.rowEnd()); assertFalse(t.rowClipped());
+            assertEquals(com.openggf.graphics.SpritePresentation.Subject.WORLD, t.subject());
+            var decoded = new com.openggf.level.Pattern(); decoded.fromSegaFormat(
+                    com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(residency, 0x490 + p.offset()).copy());
+            var version = picture.patternVersions().get(baseId + p.offset()); assertNotNull(version);
+            long[] words = {version.a(), version.b(), version.c(), version.d()}; int tileOpaque = 0;
+            for (int at = 0; at < 64; at++) assertEquals(decoded.getPixel(at % 8, at / 8) & 15,
+                    (int) ((words[at / 16] >>> ((at % 16) * 4)) & 15), "Current physical tile nibble " + p.offset() + ":" + at);
+            for (int dy = 0; dy < 8; dy++) for (int dx = 0; dx < 8; dx++) {
+                int value = decoded.getPixel(p.hFlip() ? 7 - dx : dx, p.vFlip() ? 7 - dy : dy) & 15;
+                int at = (p.y() + dy) * 320 + p.x() + dx;
+                if (value == 0) transparent++; else {
+                    opaque++; tileOpaque++; expected[at] = argb[value];
+                    if ((argb[value] & 0xFFFFFF) != (terrain.pixels()[at] & 0xFFFFFF)) changed++;
+                }
+            }
+            if (tileOpaque == 0) zeroOpacity.add(p.offset());
+        }
+        assertEquals(literal.size(),index);
+        // Includes holes: transparent Spring pixels preserve the actual ordered player/terrain composition.
+        for (int y = top; y < bottom; y++) for (int x = left; x < right; x++)
+            assertEquals(expected[y * 320 + x], image.pixels()[y * 320 + x], "Complete current-palette native-plane geometry " + x + ":" + y);
+        assertTrue(opaque > 0); assertTrue(transparent > 0); assertTrue(changed > 0);
+        assertEquals(literal.size() * 64, opaque + transparent);
+        return "opaque=" + opaque + " transparent=" + transparent + " changed=" + changed + " source-zero-offsets=" + zeroOpacity;
+    }
+
+    private static void assertDiagonalWorldOmissions(com.openggf.graphics.SpritePresentation.Frame picture, RgbaImage image,
+            RgbaImage terrain, com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.State residency,
+            int baseId, List<DiagonalWorldTile> literal, int paletteIndex) {
+        int pieceCount = literal.stream().mapToInt(DiagonalWorldTile::piece).max().orElseThrow() + 1;
+        int visibleTiles = 0, visiblePieces = 0;
+        for (int index = 0; index < literal.size() + pieceCount; index++) {
+            boolean wholePiece = index >= literal.size(); int selector = wholePiece ? index - literal.size() : index;
+            var partial = image.copy(); int removed = 0, retained = 0, sourceOpaque = 0;
+            for (int tile = 0; tile < literal.size(); tile++) {
+                var p = literal.get(tile); boolean omit = wholePiece ? p.piece() == selector : tile == selector;
+                var decoded = new com.openggf.level.Pattern(); decoded.fromSegaFormat(
+                        com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(residency, 0x490 + p.offset()).copy());
+                for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x++) {
+                    int at = (p.y() + y) * 320 + p.x() + x;
+                    boolean changed = (image.pixels()[at] & 0xFFFFFF) != (terrain.pixels()[at] & 0xFFFFFF);
+                    if (omit) {
+                        if ((decoded.getPixel(p.hFlip() ? 7 - x : x, p.vFlip() ? 7 - y : y) & 15) != 0) sourceOpaque++;
+                        if (changed) removed++; partial.pixels()[at] = terrain.pixels()[at];
+                    } else if (changed) retained++;
+                }
+            }
+            if (sourceOpaque == 0) { assertEquals(0, removed); continue; } // Real transparent tiles do not invent witnesses.
+            assertTrue(removed > 0, "Source-nonempty tile/piece must have a real visible omission witness " + index);
+            if (wholePiece) visiblePieces++; else { visibleTiles++; assertTrue(retained > 0); }
+            assertThrows(AssertionError.class, () -> assertDiagonalWorldPixels(picture, partial, terrain, residency, baseId, literal, paletteIndex));
+        }
+        assertTrue(visibleTiles > 1); assertTrue(visiblePieces > 0);
+    }
+    /** Test-only same-renderer counterfactual; the authoritative World Frame stays immutable and untouched. */
+    private static com.openggf.graphics.SpritePresentation.Frame diagonalWorldSpringOnly(
+            com.openggf.graphics.SpritePresentation.Frame full,int base) {
+        assertTrue(full.primitives().isEmpty());
+        var tiles=full.tiles().stream().filter(t->t.patternId()>=base&&t.patternId()<base+46).toList();
+        var versions=new java.util.HashMap<Integer,com.openggf.graphics.SpritePresentation.PatternVersion>();
+        for(var tile:tiles)versions.put(tile.patternId(),full.patternVersions().get(tile.patternId()));
+        return new com.openggf.graphics.SpritePresentation.Frame(tiles,List.of(),versions);
+    }
+
+    private static RgbaImage renderDiagonalWorldPicture(SonicCdGameModule module,
+            com.openggf.graphics.SpritePresentation.Frame picture,Integer contrastRgb) {
+        var graphics=GameServices.graphics();var level=GameServices.level();
+        graphics.runPendingRenderThreadTasks();
+        if(contrastRgb==null)level.setClearColor();else glClearColor(((contrastRgb>>>16)&255)/255f,
+                ((contrastRgb>>>8)&255)/255f,(contrastRgb&255)/255f,1f);
+        glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);graphics.resetForFixedFunction();
+        if(contrastRgb==null) {
+            var selected=((SonicCdPlayerPresentation)module.getScrollHandlerProvider()).captureScrollPublication();
+            LevelSpritePresentation.withScrollAndBackground(level,selected.published(),oracleNativeDescriptors(selected.plane()),()->
+                    level.drawWithRenderOptions(GameServices.sprites(),LevelManager.LevelRenderOptions.tilesOnly()));
+        }
+        com.openggf.level.render.SpritePresentationRenderer.draw(graphics,picture,
+                GameServices.camera().getX(),GameServices.camera().getY(),layer->true);
+        graphics.flush();graphics.flushScreenSpace();glFinish();return ScreenshotCapture.captureFramebuffer(320,224);
+    }
+
+    /** Test-only clear colour outside the actual current Spring palette; never a native background claim. */
+    private static int diagonalWorldContrastRgb(int paletteIndex) {
+        var colours=new java.util.HashSet<Integer>();var graphics=GameServices.graphics();
+        var palette=GameServices.level().getCurrentLevel().getPalette(paletteIndex);
+        for(int index=1;index<16;index++) {
+            var c=palette.getColor(index);colours.add(com.openggf.graphics.color.DisplayColorConverter.toPackedRgb(
+                    c.r&255,c.g&255,c.b&255,graphics.getDisplayColorProfile(),graphics.getDisplayColorExpansion())&0xFFFFFF);
+        }
+        int rgb=0x010203;while(colours.contains(rgb))rgb++;assertFalse(colours.contains(rgb));return rgb;
+    }
+
+    /** Other sprites are a measured occlusion input; Spring geometry/bytes remain independent source literals. */
+    private static void paintDiagonalWorldOtherSprite(com.openggf.graphics.SpritePresentation.Frame picture,
+            com.openggf.graphics.SpritePresentation.Tile tile,int[] expected,int left,int top,int right,int bottom) {
+        assertEquals(8f,tile.width());assertEquals(8f,tile.height());assertFalse(tile.rowClipped());
+        assertFalse(tile.ghost());assertFalse(tile.ghostColour());assertEquals(1f,tile.ghostAlpha());
+        var version=picture.patternVersions().get(tile.patternId());assertNotNull(version);
+        long[] words={version.a(),version.b(),version.c(),version.d()};
+        var graphics=GameServices.graphics();assertFalse(graphics.getPaletteFadePresentation().affects(tile.palette()));
+        var palette=GameServices.level().getCurrentLevel().getPalette(tile.palette());
+        for(int dy=0;dy<8;dy++)for(int dx=0;dx<8;dx++) {
+            int x=(int)tile.x()+dx,y=(int)tile.y()+dy;if(x<left||x>=right||y<top||y>=bottom)continue;
+            int sample=(tile.vFlip()?7-dy:dy)*8+(tile.hFlip()?7-dx:dx);
+            int value=(int)((words[sample/16]>>>((sample%16)*4))&15);if(value==0)continue;
+            var c=palette.getColor(value);expected[y*320+x]=0xFF000000|com.openggf.graphics.color.DisplayColorConverter.toPackedRgb(
+                    c.r&255,c.g&255,c.b&255,graphics.getDisplayColorProfile(),graphics.getDisplayColorExpansion());
+        }
+    }
+
+    // END constructed diagonal Spring World proof.
 
 }

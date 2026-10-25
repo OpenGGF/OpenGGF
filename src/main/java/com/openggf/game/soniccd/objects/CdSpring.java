@@ -3,6 +3,7 @@ package com.openggf.game.soniccd.objects;
 import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdObjectVisualAssets;
 import com.openggf.game.soniccd.level.CdR11aObjectAssets;
+import com.openggf.game.soniccd.player.CdPlayerMath;
 import com.openggf.game.soniccd.player.CdPlayerMotionState;
 import com.openggf.game.soniccd.player.CdPlayerTouchResponse;
 
@@ -19,10 +20,10 @@ import static com.openggf.game.soniccd.objects.CdObjectState.WordField.*;
 import static com.openggf.game.soniccd.objects.CdObjectState.LongField.MAPPINGS;
 
 /**
- * ObjSpring $0A, normal up/side/down and ObjSpring2 player mirror. Native source:
- * Level/_Objects/Spring/Main.asm:98-409, scddisasm 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff.
+ * ObjSpring $0A, ordinary primary up/side/down/diagonal and ObjSpring2 player mirror. Native source:
+ * Level/_Objects/Spring/Main.asm:98-481, scddisasm 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff.
  * Shipped FixBugs=0 ordering; these routines have no FixBugs alternative. The diagonal init dimensions
- * follow the USA/non-demo retail branch (:209-214); diagonal selector/art and execution stop explicitly.
+ * follow the USA/non-demo retail branch (:209-214); diagonal art/residency remains an external owner.
  * MovingSpring $08 itself is outside this owner.
  *
  * <p>One run is one RunObjects dispatch. Routine0 runs even before any onscreen flag exists and returns
@@ -34,7 +35,7 @@ import static com.openggf.game.soniccd.objects.CdObjectState.LongField.MAPPINGS;
  * <p>Each source Solid wrapper publishes working a0, captures ONE live pool cut, calls the shared pure
  * Solid owner and synchronously commits its result through Root's S4/S3 port. No Solid result or effect
  * is replayed. Spring's following action has a separate typed LaunchCommit after its object prefix is
- * live, then the dedicated FM_SPRING port. Down alone falls through from the returning sound call into
+ * live, then the dedicated FM_SPRING port. Down and diagonal fall through from the returning sound call into
  * AnimateObject in the same dispatch. Root owns phase/CAS validation and sound forwarding.</p>
  *
  * <p>No Player, Globals or Snapshot is retained between invocations. Source/port failures propagate
@@ -46,7 +47,7 @@ public final class CdSpring {
 
     public enum NativeRoutine {
         INIT, MAIN_UP, ANIM_UP, RESET_UP, MAIN_SIDE, ANIM_SIDE, RESET_SIDE,
-        MAIN_DOWN, ANIM_DOWN, RESET_DOWN, MIRROR_INIT, MIRROR_MAIN
+        MAIN_DOWN, ANIM_DOWN, RESET_DOWN, MAIN_DIAG, ANIM_DIAG, RESET_DIAG, MIRROR_INIT, MIRROR_MAIN
     }
     public enum NativeCall { ANIMATE_OBJECT, DRAW_OBJECT }
     /** Semantic sound request; Root's sound owner supplies the release-specific native ID. */
@@ -93,23 +94,32 @@ public final class CdSpring {
     }
 
     /**
-     * Both authentic normal visual families retain the complete 200-byte include and real 14-byte script.
-     * Roots0/6 and three-frame indices remain distinct. The four speed bytes are native source bytes,
-     * not fitted launch constants. This constructed declaration does not authenticate media.
+     * Three authentic visual families retain the complete 200-byte include and real 14-byte script.
+     * Roots0/6/80 and three-frame indices remain distinct. Speed4 and ObjectTileIDs74 are native source
+     * bytes, not fitted launch constants or an invented selector result. Declaration alone authenticates no media.
      */
     public record Assets(CdObjectVisualAssets vertical, CdObjectVisualAssets horizontal,
-                         int mappingsAddress, CdAssetBytes speedWords) {
+                         CdObjectVisualAssets diagonal, int mappingsAddress, CdAssetBytes speedWords,
+                         CdAssetBytes objectTileIds) {
         public Assets {
-            Objects.requireNonNull(vertical); Objects.requireNonNull(horizontal); Objects.requireNonNull(speedWords);
+            Objects.requireNonNull(vertical); Objects.requireNonNull(horizontal); Objects.requireNonNull(diagonal);
+            Objects.requireNonNull(speedWords); Objects.requireNonNull(objectTileIds);
             if (vertical.mappingTableOffset() != 0 || horizontal.mappingTableOffset() != 6
+                    || diagonal.mappingTableOffset() != 80
                     || vertical.mappingFrames().size() != 3 || horizontal.mappingFrames().size() != 3
+                    || diagonal.mappingFrames().size() != 3
                     || vertical.animations().size() != 1 || horizontal.animations().size() != 1
+                    || diagonal.animations().size() != 1
                     || vertical.mappings().length() != 200 || horizontal.mappings().length() != 200
+                    || diagonal.mappings().length() != 200
                     || vertical.animationTable().length() != 14 || horizontal.animationTable().length() != 14
+                    || diagonal.animationTable().length() != 14
                     || !Arrays.equals(vertical.mappings().copy(), horizontal.mappings().copy())
+                    || !Arrays.equals(vertical.mappings().copy(), diagonal.mappings().copy())
                     || !Arrays.equals(vertical.animationTable().copy(), horizontal.animationTable().copy())
-                    || speedWords.length() != 4) {
-                throw new IllegalArgumentException("Spring needs both independent normal roots, full includes and speed words");
+                    || !Arrays.equals(vertical.animationTable().copy(), diagonal.animationTable().copy())
+                    || speedWords.length() != 4 || objectTileIds.length() != 74) {
+                throw new IllegalArgumentException("Spring needs three independent roots, full includes, speed4 and ObjectTileIDs74");
             }
             if (mappingsAddress < 0 || mappingsAddress > 0xFFFFFF - 199) {
                 throw new IllegalArgumentException("Spring mapping source exceeds its native 24-bit address extent");
@@ -119,9 +129,10 @@ public final class CdSpring {
         /** Authenticated USA owner ingress. No raw media, source file, script synthesis or decoded-art dependency. */
         public static Assets fromObjectAssets(CdR11aObjectAssets owner) {
             Objects.requireNonNull(owner);
-            return new Assets(owner.springVertical(), owner.springHorizontal(),
+            return new Assets(owner.springVertical(), owner.springHorizontal(), owner.springDiagonal(),
                     owner.view(CdR11aObjectAssets.Table.SPRING_MAPPINGS).range().nativeAddress(),
-                    owner.view(CdR11aObjectAssets.Table.SPRING_SPEEDS).bytes());
+                    owner.view(CdR11aObjectAssets.Table.SPRING_SPEEDS).bytes(),
+                    owner.view(CdR11aObjectAssets.Table.OBJECT_TILE_IDS).bytes());
         }
 
         /** ANDI.W #2 / MOVE.W ObjSpring_Speeds(pc,d0.w), Spring Main:237-244. */
@@ -151,7 +162,7 @@ public final class CdSpring {
      * Native action patch after Solid: exact native stores INCLUDING same-value stores. The object prefix
      * is already live at identity. This is deliberately separate from Solid metadata; no invented Result.
      * Preserve both position fractions and every field outside the declared sets. Globals are unchanged
-     * by all three actions, with an empty global write set. Sets are immutable detached values.
+     * by all four actions, with an empty global write set. Sets are immutable detached values.
      */
     public record LaunchCall(CdObjectState.Identity identity, CdSolidObject.Player expectedPlayer,
                              CdSolidObject.Globals expectedGlobals, CdSolidObject.Player finalPlayer,
@@ -188,10 +199,8 @@ public final class CdSpring {
 
     public enum UnsupportedBoundary {
         ROUTINE_DISPATCH, MIRROR_ROUTINE_DISPATCH,
-        /** Init has published its prefix, including diagonal oMap; selector15/art46 is not owned. */
+        /** Init prefix is already live; reached selector $F/subtype2 is outside the owned tile-table contract. */
         DIAGONAL_TILE_SELECTOR,
-        /** A reached diagonal control routine needs its separately owned visual/art/selector admission. */
-        DIAGONAL_ROUTINE,
         /** First actual parent oX WORD read addresses an unowned reserved/out-of-pool/unaligned image. */
         PARENT_READ
     }
@@ -212,15 +221,17 @@ public final class CdSpring {
 
     private final CdObjectPlacementRuntime runtime;
     private final Assets assets;
+    private final CdPlayerMath math;
     private final CdSolidObject solid;
     private final SolidCommit solidCommit;
     private final LaunchCommit launchCommit;
     private final DrawObjectCall drawObject;
     private final PlayFmCall playFm;
 
-    public CdSpring(CdObjectPlacementRuntime runtime, Assets assets, CdSolidObject solid, SolidCommit solidCommit,
-                    LaunchCommit launchCommit, DrawObjectCall drawObject, PlayFmCall playFm) {
+    public CdSpring(CdObjectPlacementRuntime runtime, Assets assets, CdPlayerMath math, CdSolidObject solid,
+                    SolidCommit solidCommit, LaunchCommit launchCommit, DrawObjectCall drawObject, PlayFmCall playFm) {
         this.runtime = Objects.requireNonNull(runtime); this.assets = Objects.requireNonNull(assets);
+        this.math = Objects.requireNonNull(math);
         this.solid = Objects.requireNonNull(solid); this.solidCommit = Objects.requireNonNull(solidCommit);
         this.launchCommit = Objects.requireNonNull(launchCommit); this.drawObject = Objects.requireNonNull(drawObject);
         this.playFm = Objects.requireNonNull(playFm);
@@ -260,7 +271,9 @@ public final class CdSpring {
             case 14 -> mainDown(c);
             case 16 -> animate(c, NativeRoutine.ANIM_DOWN);
             case 18 -> reset(c, NativeRoutine.RESET_DOWN, false);
-            case 20, 22, 24 -> throw c.unsupported(UnsupportedBoundary.DIAGONAL_ROUTINE, c.state.routine());
+            case 20 -> mainDiag(c);
+            case 22 -> animate(c, NativeRoutine.ANIM_DIAG);
+            case 24 -> reset(c, NativeRoutine.RESET_DIAG, false);
             default -> throw c.unsupported(UnsupportedBoundary.ROUTINE_DISPATCH, c.state.routine());
         }
     }
@@ -279,7 +292,14 @@ public final class CdSpring {
             c.state = c.state.moveByte(ROUTINE, 0x14).moveByte(WIDTH, 0x18).moveByte(Y_RADIUS, 0x0C)
                     .moveLong(MAPPINGS, assets.mappingsAddress() + 80);
             c.publish();                                                 // MOVEQ #$F / JSR SetObjectTileID is reached NOW.
-            throw c.unsupported(UnsupportedBoundary.DIAGONAL_TILE_SELECTOR, 15);
+            int tile;
+            try {
+                tile = CdR11aObjectAssets.decodeTileWord(assets.objectTileIds().copy(), 0xF,
+                        c.state.unsignedByte(SUBTYPE2));
+            } catch (UnsupportedOperationException unsupported) {
+                throw c.unsupported(UnsupportedBoundary.DIAGONAL_TILE_SELECTOR, 0xF);
+            }
+            c.state = c.state.moveWord(TILE, tile);                       // Selector return precedes palette/speed.
         } else if ((c.state.spriteFlags() & 2) != 0) {
             c.state = c.state.moveByte(ROUTINE, 0x0E).moveByte(FLAGS, c.state.flags() | 2);
         }
@@ -359,6 +379,38 @@ public final class CdSpring {
         animate(c, NativeRoutine.ANIM_DOWN);
     }
 
+    /**
+     * ObjSpring_Main_Diag/.Action (:416-465): ONE shared SOLID, then d0 OR returned object flag5.
+     * CalcSine comes from the injected declared player assets (Functions (Misc).asm:69-76).
+     * MULU.W zero-extends both words; LSR.L #8 precedes each low-word store. No normalized trig.
+     */
+    private void mainDiag(Cursor c) {
+        c.enter(NativeRoutine.MAIN_DIAG);
+        if ((c.state.spriteFlags() & 0x80) == 0) return;
+        var result = solid(c, CdSolidObject.Entry.SOLID_OBJECT);
+        if (result.d0().orElseThrow() == 0 && (c.state.flags() & 0x20) == 0) return;
+        c.state = c.state.moveByte(ROUTINE, 0x16);
+        var sine = math.calcSine(0xE0);
+        int magnitude = (-c.state.word(SPRING_SPEED)) & 0xFFFF;             // NEG.W d2.
+        var p = new PlayerPatch(c.player);
+        p.yVelocity((int) (((long) (sine.sine() & 0xFFFF) * magnitude) >>> 8));
+        p.xVelocity((int) (((long) (sine.cosine() & 0xFFFF) * magnitude) >>> 8));
+        p.yWord(p.yWord() + 8);
+        if ((c.state.spriteFlags() & 2) != 0) {
+            p.yWord(p.yWord() - 0x10); p.yVelocity(-p.yv);
+        }
+        p.flags(p.flags & ~1); p.xWord(p.xWord() - 8);
+        if ((c.state.flags() & 1) != 0) {
+            p.xWord(p.xWord() + 0x10); p.flags(p.flags | 1); p.xVelocity(-p.xv);
+        }
+        p.flags(p.flags | 2); p.flags(p.flags & ~8); p.flags(p.flags & ~0x20);
+        c.state = c.state.moveByte(FLAGS, c.state.flags() & ~8);
+        c.state = c.state.moveByte(FLAGS, c.state.flags() & ~0x20);
+        launch(c, p);                                                     // Exactly X/Y integer words, XV/YV, FLAGS.
+        sound(c);                                                        // JSR, so same-dispatch Ani_Spring follows.
+        animate(c, NativeRoutine.ANIM_DIAG);
+    }
+
     /** No snapshot recapture or fabricated Solid metadata: a distinct synchronous patch at its source cut. */
     private void launch(Cursor c, PlayerPatch p) {
         c.publish();
@@ -373,10 +425,14 @@ public final class CdSpring {
         c.effects.add(new PlayedFm(FmSound.FM_SPRING));
     }
 
-    /** All normal orientations use the SAME real Ani_Spring; shared AnimateObject owns FC and flip semantics. */
+    /** All ordinary orientations use the SAME real Ani_Spring; shared AnimateObject owns FC and flip semantics. */
     private void animate(Cursor c, NativeRoutine routine) {
         c.enter(routine);
-        var visual = routine == NativeRoutine.ANIM_SIDE ? assets.horizontal() : assets.vertical();
+        var visual = switch (routine) {
+            case ANIM_SIDE -> assets.horizontal();
+            case ANIM_DIAG -> assets.diagonal();
+            default -> assets.vertical();
+        };
         var table = new CdObjectAnimation.AnimationTable(visual.animationTable(), 0, visual.animations().size());
         var s = c.state;
         var out = CdObjectAnimation.step(new CdObjectAnimation.State(s.unsignedByte(ANIMATION),
@@ -390,7 +446,7 @@ public final class CdSpring {
         c.effects.add(new CallReturned(NativeCall.ANIMATE_OBJECT));
     }
 
-    /** ObjSpring_Reset_Up/Side/Down (:287-292,353-357,406-409); only Up clears object flag3. */
+    /** ObjSpring_Reset_Up/Side/Down/Diag (:287-292,353-357,406-409,477-481); only Up clears object flag3. */
     private static void reset(Cursor c, NativeRoutine routine, boolean clearStanding) {
         c.enter(routine);
         if (clearStanding) c.state = c.state.moveByte(FLAGS, c.state.flags() & ~8);

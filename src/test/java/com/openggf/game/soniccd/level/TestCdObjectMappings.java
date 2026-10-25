@@ -415,7 +415,8 @@ class TestCdObjectMappings {
             assertThrows(UnsupportedOperationException.class, () -> resolver.resolve(root, true, 0));
             family++;
         }
-        for (int pointer : new int[]{0x209BF0, 0x209BA2, 0x209BAC, 0xFF209BA6}) {
+        assertEquals(7, resolver.resolve(0x209BF0, false, 0).pieces().size());
+        for (int pointer : new int[]{0x209BA2, 0x209BAC, 0xFF209BA6}) {
             assertThrows(UnsupportedOperationException.class, () -> resolver.resolve(pointer, false, 0));
         }
         assertGameOverRoots(resolver);

@@ -6,6 +6,7 @@ import com.openggf.game.soniccd.level.CdObjectVisualAssets;
 import com.openggf.game.soniccd.level.CdR11aPlayerAssets;
 import com.openggf.game.soniccd.level.CdR11aTerrain;
 import com.openggf.game.soniccd.level.CdSonicVisualAssets;
+import com.openggf.game.soniccd.player.CdPlayerMath;
 import com.openggf.game.soniccd.player.CdPlayerMotionState;
 import com.openggf.game.soniccd.player.CdPlayerMovement;
 import com.openggf.game.soniccd.player.CdPlayerTouchResponse;
@@ -28,8 +29,8 @@ import static com.openggf.game.soniccd.objects.CdObjectState.LongField.MAPPINGS;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Tests authored/frozen before CdSpring and its five state aliases. ALL JAVA UNRUN by this external author.
- * Native pin 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff, Level/_Objects/Spring/Main.asm:130-409;
+ * Diagonal extension tests frozen before its production mirror. ALL JAVA DECLARED UNRUN.
+ * Native pin 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff, Level/_Objects/Spring/Main.asm:130-481;
  * Object Solid.asm:159-479 and Object Animate.asm:14-95. Exact literal includes, not a Spring model oracle.
  * Solid is the real shared pure owner over the existing format-decoder fixture; no injected contact answer.
  * The synchronous stand-ins publish values once and assert expected cuts. No media, World, renderer or Frame.
@@ -52,6 +53,11 @@ class TestCdSpring {
                 0x00, 0x00, 0x00, 0xF0, 0x00, 0x00, 0x00, 0x1A, 0xF0, 0x08, 0x00, 0x00, 0x1B, 0xF8, 0xE0, 0x08,
                 0x00, 0x03, 0x00, 0xE8, 0x0E, 0x00, 0x1C, 0x00, 0xF8, 0x00, 0x00, 0x28, 0xF0, 0xF0, 0x02, 0x00,
                 0x29, 0xF8, 0x00, 0x01, 0x00, 0x2C, 0x00, 0x00);
+    /** Literal N ObjectTileIDs:7-45; all 18 relative words and all 19 body words, no invented table. */
+    private static final byte[] TILES = bytes(0x00, 0x24, 0x00, 0x26, 0x00, 0x28, 0x00, 0x2C, 0x00, 0x2E, 0x00, 0x30, 0x00, 0x3A, 0x00, 0x34, 0x00, 0x38, 0x00, 0x36, 0x00, 0x32, 0x00, 0x3C, 0x00, 0x3E, 0x00, 0x40, 0x00, 0x42, 0x00, 0x44, 0x00, 0x46, 0x00, 0x48, 0x23, 0xA0, 0x23, 0xB0, 0x24, 0x09, 0x23, 0x70, 0x20, 0x00, 0x24, 0x28, 0x43, 0x34, 0x03, 0x20, 0x00, 0x00, 0x40, 0x00, 0x40, 0x00, 0x04, 0x09, 0x03, 0x74, 0x83, 0x28, 0x00, 0x00, 0x00, 0x00, 0x04, 0x90, 0x03, 0xE4, 0x00, 0x00);
+    private static final Set<CdSpring.LaunchPlayerField> DIAGONAL = Set.of(
+            CdSpring.LaunchPlayerField.CENTRE_X, CdSpring.LaunchPlayerField.CENTRE_Y,
+            CdSpring.LaunchPlayerField.X_VELOCITY, CdSpring.LaunchPlayerField.Y_VELOCITY, CdSpring.LaunchPlayerField.FLAGS);
     private static final Set<CdSpring.LaunchPlayerField> VERTICAL = Set.of(
             CdSpring.LaunchPlayerField.CENTRE_Y, CdSpring.LaunchPlayerField.Y_VELOCITY,
             CdSpring.LaunchPlayerField.FLAGS);
@@ -105,9 +111,9 @@ class TestCdSpring {
         assertEquals(flags, h.slot().flags());
     }
 
-    @Test void diagonalInitStopsAtSelectorFWithTheExactAlreadyWrittenPrefix() {
+    @Test void diagonalInitUnsupportedSubtypeTwoStopsAtSelectorFWithTheExactAlreadyWrittenPrefix() {
         var h = new Harness(); h.edit(o -> o.moveByte(ID, 0x0A).moveWord(X, 0x100).moveWord(Y, 0x80)
-                .moveByte(SUBTYPE, 0x0A).moveWord(SPRING_SPEED, 0x1234));
+                .moveByte(SUBTYPE, 0x0A).moveByte(SUBTYPE2, 1).moveWord(SPRING_SPEED, 0x1234));
         var before = h.slot();
         var e = assertThrows(CdSpring.UnsupportedSpring.class, h::run);
         assertEquals(CdSpring.UnsupportedBoundary.DIAGONAL_TILE_SELECTOR, e.boundary());
@@ -266,12 +272,19 @@ class TestCdSpring {
     }
 
     @ParameterizedTest @ValueSource(ints = {1, 3, 20, 22, 24, 26, 255})
-    void invalidOrDiagonalIndicesStopOnlyWhenTheControlTableIsActuallyReached(int routine) {
+    void reachedControlAdmitsTheThreeDiagonalIndicesAndRejectsOtherInvalidIndices(int routine) {
         var h = prepared(routine); var before = h.slot();
-        var e = assertThrows(CdSpring.UnsupportedSpring.class, h::run);
-        assertEquals(routine == 20 || routine == 22 || routine == 24
-                ? CdSpring.UnsupportedBoundary.DIAGONAL_ROUTINE : CdSpring.UnsupportedBoundary.ROUTINE_DISPATCH, e.boundary());
-        assertEquals(before, h.slot()); assertTrue(h.draws.isEmpty());
+        if (routine == 20 || routine == 22 || routine == 24) {
+            var r = h.run();
+            assertEquals(routine == 24 ? 20 : 22, r.state().routine());
+            assertEquals(routine == 20 ? 1 : 0, h.solids.size());
+            assertEquals(routine == 20 ? 1 : 0, h.launches.size());
+            assertEquals(1, h.draws.size());
+        } else {
+            var e = assertThrows(CdSpring.UnsupportedSpring.class, h::run);
+            assertEquals(CdSpring.UnsupportedBoundary.ROUTINE_DISPATCH, e.boundary());
+            assertEquals(before, h.slot()); assertTrue(h.draws.isEmpty());
+        }
     }
 
     @Test void drawCullUsesOldPositionButParentReadsUseTheLaterLivePositionAndSignedOffsets() {
@@ -394,8 +407,8 @@ class TestCdSpring {
         assertThrows(IllegalArgumentException.class, () -> a.speedWord(-1));
         assertThrows(IllegalArgumentException.class, () -> a.speedWord(256));
         assertThrows(IllegalArgumentException.class, () -> assets(bytes(0, 0)));
-        assertThrows(IllegalArgumentException.class, () -> new CdSpring.Assets(a.horizontal(), a.vertical(), MAP, a.speedWords()));
-        assertThrows(IllegalArgumentException.class, () -> new CdSpring.Assets(a.vertical(), a.horizontal(), 0xFFFFFFFF, a.speedWords()));
+        assertThrows(IllegalArgumentException.class, () -> new CdSpring.Assets(a.horizontal(), a.vertical(), a.diagonal(), MAP, a.speedWords(), a.objectTileIds()));
+        assertThrows(IllegalArgumentException.class, () -> new CdSpring.Assets(a.vertical(), a.horizontal(), a.diagonal(), 0xFFFFFFFF, a.speedWords(), a.objectTileIds()));
     }
 
     @Test void explicitInputWidthsWrongIdsAndNullPortsRejectWithoutInventedDefaults() {
@@ -406,7 +419,7 @@ class TestCdSpring {
         assertThrows(NullPointerException.class, () -> h.spring.run(WHOLE, null, h.inputs()));
         assertThrows(NullPointerException.class, () -> h.spring.run(WHOLE, new CdSpring.Globals(128), null));
         assertThrows(NullPointerException.class, () -> new CdSpring(h.runtime, assets(bytes(0xF0, 0, 0xF6, 0)),
-                h.solid, h::solidCommit, null, h::draw, h::sound));
+                h.math, h.solid, h::solidCommit, null, h::draw, h::sound));
     }
 
     @Test void launchMetadataIsImmutableCompletedAndDoesNotPermitFractionStores() {
@@ -420,6 +433,349 @@ class TestCdSpring {
         assertEquals(call.expectedPlayer().actor().motion().centreY16_16() & 0xFFFF,
                 call.finalPlayer().actor().motion().centreY16_16() & 0xFFFF);
         assertEquals(List.of("SOLID", "LAUNCH", "SOUND", "DRAW"), h.order);
+    }
+
+
+    @ParameterizedTest @CsvSource({"8,0", "8,1", "8,2", "8,3", "10,0", "10,1", "10,2", "10,3"})
+    void diagonalInitReturnsAfterActualSelectorPaletteAndSpeedStores(int subtype, int spriteFlips) {
+        var h = new Harness(); h.edit(o -> normal(o, 0).moveByte(SUBTYPE, subtype)
+                .moveByte(SPRITE_FLAGS, spriteFlips).moveByte(FLAGS, 0xC1).moveWord(SPRING_SPEED, 0x1234));
+        var before = h.slot(); var r = h.run();
+        var expected = before.moveByte(ROUTINE, 20).moveLong(MAPPINGS, MAP + 80)
+                .moveWord(TILE, subtype == 8 ? 0x0490 : 0x2490).moveByte(SPRITE_FLAGS, spriteFlips | 4)
+                .moveByte(WIDTH, 24).moveByte(Y_RADIUS, 12).moveWord(SPRING_ANCHOR_X, 0x100)
+                .moveByte(PRIORITY, 4).moveWord(SPRING_SPEED, subtype == 8 ? 0xF000 : 0xF600);
+        assertEquals(expected, r.state()); assertEquals(expected, h.draws.getFirst());
+        assertEquals(List.of("INIT", "DRAW_OBJECT"), trace(r));
+        assertTrue(h.solids.isEmpty()); assertTrue(h.launches.isEmpty()); assertTrue(h.sounds.isEmpty());
+    }
+
+    @Test void diagonalSelectorConsumesBoundTableAndMalformedDirectoryStopsAtThePublishedPrefix() {
+        var changed = TILES.clone(); word(changed, 68, 0x1274);
+        var h = new Harness(assets(bytes(0xF0, 0, 0xF6, 0), changed));
+        h.edit(o -> normal(o, 0).moveByte(SUBTYPE, 8)); h.run();
+        assertEquals(0x1274, h.slot().word(TILE), "no embedded $0490 selector result");
+        var malformed = TILES.clone(); word(malformed, 0, 0);
+        var bad = new Harness(assets(bytes(0xF0, 0, 0xF6, 0), malformed));
+        bad.edit(o -> normal(o, 0).moveByte(SUBTYPE, 10).moveWord(SPRING_SPEED, 0x1234));
+        var before = bad.slot();
+        assertThrows(IllegalArgumentException.class, bad::run);
+        assertEquals(before.moveByte(ROUTINE, 20).moveLong(MAPPINGS, MAP + 80).moveWord(TILE, 0x520)
+                .moveByte(SPRITE_FLAGS, 0x84).moveByte(WIDTH, 24).moveByte(Y_RADIUS, 12)
+                .moveByte(PRIORITY, 4).moveWord(SPRING_ANCHOR_X, 0x100), bad.slot());
+        assertTrue(bad.order.isEmpty());
+    }
+
+    @ParameterizedTest @CsvSource({
+            "0,0,61440,2896,-2896", "1,0,61440,-2896,-2896",
+            "0,1,61440,2896,2896", "1,1,61440,-2896,2896",
+            "0,0,62976,1810,-1810", "1,0,62976,-1810,-1810",
+            "0,1,62976,1810,1810", "1,1,62976,-1810,1810"})
+    void diagonalTopUsesRealSolidAndDistinctStatusHAndSpriteV(int hFlip, int vFlip, int speed, int xv, int yv) {
+        var h = diagonal(); int objectFlags = 0x60 | hFlip | ((1 - vFlip) << 1);
+        int spriteFlips = (1 - hFlip) | (vFlip << 1);
+        h.edit(o -> o.moveWord(SPRING_SPEED, speed).moveByte(FLAGS, objectFlags)
+                .moveByte(SPRITE_FLAGS, 0x84 | spriteFlips));
+        var expected = diagonalPlayer(); h.player = expected.player(); var r = h.run(1000);
+        var s = h.solids.getFirst().result(); var launch = h.launches.getFirst();
+        assertEquals(CdSolidObject.Entry.SOLID_OBJECT, s.entry());
+        assertEquals(CdSolidObject.Path.STAND_ON, s.path()); assertEquals(1, s.d0().orElseThrow());
+        assertEquals(List.of(new CdSolidObject.RoutineCall(CdSolidObject.Routine.STAND_ON_OBJECT)), s.calls());
+        assertEquals(0x03C9DCBA, launch.expectedPlayer().actor().motion().centreY16_16());
+        assertEquals(s.player(), launch.expectedPlayer()); assertEquals(s.globals(), launch.expectedGlobals());
+        expected.x = ((hFlip == 0 ? 992 : 1008) << 16) | 0xABCD;
+        expected.y = ((vFlip == 0 ? 977 : 961) << 16) | 0xDCBA;
+        expected.xv = xv; expected.yv = yv; expected.gv = 0x123;
+        expected.flags = 0xC2 | hFlip; expected.angle = 0; expected.jump = 0; expected.stand = WHOLE;
+        assertEquals(expected.player(), h.player, "every preserved actor/link/timer value is post-Solid");
+        assertEquals(DIAGONAL, launch.playerWrites()); assertTrue(launch.globalWrites().isEmpty());
+        assertEquals(22, r.state().routine()); assertEquals(objectFlags & ~0x28, r.state().flags());
+        assertEquals((objectFlags & 3), r.state().spriteFlags() & 3,
+                "same-call animation changes sprite flips only AFTER launch reads V");
+        assertEquals(List.of("MAIN_DIAG", "SOLID_OBJECT:STAND_ON", "LAUNCH", "FM_SPRING",
+                "ANIM_DIAG", "ANIMATE_OBJECT", "DRAW_OBJECT"), trace(r));
+        assertEquals(List.of("SOLID", "LAUNCH", "SOUND", "DRAW"), h.order);
+        assertEquals(1, h.solids.size()); assertEquals(1, h.launches.size()); assertEquals(1, h.sounds.size());
+    }
+
+    @ParameterizedTest @CsvSource({
+            "0,0,61440,2896,-2896", "1,0,61440,-2896,-2896",
+            "0,1,61440,2896,2896", "1,1,61440,-2896,2896",
+            "0,0,62976,1810,-1810", "1,0,62976,-1810,-1810",
+            "0,1,62976,1810,1810", "1,1,62976,-1810,1810"})
+    void diagonalSideUsesActualPushResultEvenWhenD0IsZero(int hFlip, int vFlip, int speed, int xv, int yv) {
+        var h = diagonal();
+        h.edit(o -> o.moveWord(SPRING_SPEED, speed).moveByte(FLAGS, hFlip | ((1 - vFlip) << 1))
+                .moveByte(SPRITE_FLAGS, 0x84 | (1 - hFlip) | (vFlip << 1)));
+        var p = diagonalPlayer(); p.x = (970 << 16) | 0xABCD; p.y = (1000 << 16) | 0xDCBA;
+        p.flags = 0x40; h.player = p.player(); h.run(1000);
+        var s = h.solids.getFirst().result(); var launch = h.launches.getFirst();
+        assertEquals(CdSolidObject.Path.HALT_ON_X, s.path()); assertEquals(0, s.d0().orElseThrow());
+        assertEquals(0x20, s.object().flags() & 0x20);
+        assertEquals(966, s.player().actor().motion().centreX16_16() >>> 16);
+        p.x = ((hFlip == 0 ? 958 : 974) << 16) | 0xABCD;
+        p.y = ((vFlip == 0 ? 1008 : 992) << 16) | 0xDCBA;
+        p.xv = xv; p.yv = yv; p.gv = 0; p.flags = 0x42 | hFlip; p.push = 0;
+        assertEquals(p.player(), h.player); assertEquals(DIAGONAL, launch.playerWrites());
+        assertEquals(s.player(), launch.expectedPlayer()); assertTrue(launch.globalWrites().isEmpty());
+        assertEquals(0, h.slot().flags() & 0x28); assertEquals(1, h.solids.size());
+    }
+
+    @ParameterizedTest @CsvSource({"0,false", "32,true", "160,true"})
+    void diagonalNoContactUsesOnlyActualD0OrReturnedObjectFlagFive(int objectFlags, boolean launched) {
+        var h = diagonal(); h.edit(o -> o.moveByte(FLAGS, objectFlags));
+        var p = diagonalPlayer(); p.x = (1200 << 16) | 0xABCD; h.player = p.player();
+        var before = h.player; h.run(1000); var s = h.solids.getFirst().result();
+        assertEquals(CdSolidObject.Path.GET_OFF, s.path()); assertEquals(0, s.d0().orElseThrow());
+        assertEquals(launched ? 1 : 0, h.launches.size()); assertEquals(launched ? 1 : 0, h.sounds.size());
+        if (!launched) { assertEquals(before, h.player); assertEquals(20, h.slot().routine()); }
+        assertEquals(1, h.solids.size()); assertEquals(1, h.draws.size());
+    }
+
+    @ParameterizedTest @CsvSource({
+            "-35,0,0,0,GET_OFF,X_RANGE_LEFT", "34,0,0,0,GET_OFF,X_RANGE_RIGHT",
+            "-34,0,0,0,HALT_ON_X,NONE", "0,-34,0,0,GET_OFF,Y_RANGE_ABOVE",
+            "0,33,0,0,GET_OFF,Y_RANGE_BELOW", "0,-33,0,0,STAND_ON,NONE",
+            "1,0,0,0,HALT_ON_X,NONE", "-30,0,2,0,GET_OFF,SPRING_SIDE_AIRBORNE",
+            "0,30,2,0,GET_OFF,SPRING_BELOW", "0,30,2,2,HIT_BOTTOM,NONE"})
+    void diagonalKeepsSharedHalfOpenGeometryTieAndBelowGates(int dx, int dy, int flags, int spriteV,
+            String path, String reason) {
+        var h = diagonal(); h.edit(o -> o.moveByte(FLAGS, 0).moveByte(SPRITE_FLAGS, 0x84 | spriteV));
+        var p = new P(); p.x = (1000 + dx) << 16; p.y = (1000 + dy) << 16;
+        p.flags = flags; p.xv = dx > 0 ? -0x123 : 0x123; h.player = p.player();
+        h.run(1000); var s = h.solids.getFirst().result();
+        assertEquals(path, s.path().name());
+        assertEquals(reason, s.getOffReason().map(Enum::name).orElse("NONE"));
+        assertEquals(CdSolidObject.Entry.SOLID_OBJECT, s.entry()); assertEquals(1, h.solids.size());
+    }
+
+    @ParameterizedTest @CsvSource({"-129,255,32768,-16512,32640", "-256,-256,1,-255,-255",
+            "-256,-256,65535,255,255"})
+    void diagonalUsesInjectedPlayerAssetWordsWithUnsignedMuluShiftAndLowWord(
+            int sine, int cosine, int speed, int yv, int xv) {
+        var h = diagonal(new Harness(assets(bytes(0xF0, 0, 0xF6, 0)), sine, cosine));
+        h.edit(o -> o.moveWord(SPRING_SPEED, speed)); h.run(1000);
+        assertEquals(yv, h.player.actor().motion().yVelocity()); assertEquals(xv, h.player.actor().motion().xVelocity());
+        assertEquals(DIAGONAL, h.launches.getFirst().playerWrites());
+    }
+
+    @Test void diagonalSameValueVelocityAndFlagsStoresRemainInExactlyFiveFieldSet() {
+        var h = diagonal(new Harness(assets(bytes(0xF0, 0, 0xF6, 0)), 0, 0));
+        h.edit(o -> o.moveByte(FLAGS, 0x20).moveWord(SPRING_SPEED, 0));
+        var p = diagonalPlayer(); p.x = (1200 << 16) | 0xABCD; p.flags = 2; p.xv = 0; p.yv = 0;
+        h.player = p.player(); h.run(1000); var c = h.launches.getFirst();
+        assertEquals(0, c.expectedPlayer().actor().motion().xVelocity());
+        assertEquals(0, c.finalPlayer().actor().motion().xVelocity());
+        assertEquals(0, c.expectedPlayer().actor().motion().yVelocity());
+        assertEquals(0, c.finalPlayer().actor().motion().yVelocity());
+        assertEquals(2, c.expectedPlayer().actor().motion().flags()); assertEquals(2, c.finalPlayer().actor().motion().flags());
+        assertEquals(DIAGONAL, c.playerWrites()); assertTrue(c.globalWrites().isEmpty()); assertOutsideLaunchWrites(c);
+    }
+
+    @Test void diagonalIntegerStoresWrapWordsAndPreserveBothNonzeroFractions() {
+        var h = diagonal(); h.edit(o -> o.moveByte(FLAGS, 0x20));
+        var p = diagonalPlayer(); p.x = 0x0004ABCD; p.y = 0xFFFC1234; p.flags = 2;
+        h.player = p.player(); h.run(1000);
+        assertEquals(0xFFFCABCD, h.player.actor().motion().centreX16_16());
+        assertEquals(0x00041234, h.player.actor().motion().centreY16_16());
+        assertOutsideLaunchWrites(h.launches.getFirst());
+    }
+
+    @Test void diagonalLaunchConsumesFirstRealTokenThenFcOnEleventhEligibleCallThenSeparateReset() {
+        var h = diagonal(); h.edit(o -> o.moveByte(PREVIOUS_ANIMATION, 1).moveByte(ANIMATION_FRAME, 9)
+                .moveByte(ANIMATION_TIME, 7).moveByte(MAP_FRAME, 2).moveByte(ROUTINE_2, 0xA7));
+        h.run(1000);
+        assertEquals(1, h.slot().unsignedByte(ANIMATION_FRAME)); assertEquals(0, h.slot().unsignedByte(MAP_FRAME));
+        assertEquals(0, h.slot().unsignedByte(PREVIOUS_ANIMATION)); assertEquals(0, h.slot().unsignedByte(ROUTINE_2));
+        int[] frames = {1, 1, 2, 2, 2, 2, 2, 2, 1};
+        for (int i = 0; i < frames.length; i++) {
+            var offscreen = h.slot(); assertEquals(List.of("DRAW_OBJECT"), trace(h.run(1000)));
+            assertEquals(offscreen.unsignedByte(ANIMATION_FRAME), h.slot().unsignedByte(ANIMATION_FRAME));
+            h.onScreen(); h.run(1000);
+            assertEquals(frames[i], h.slot().unsignedByte(MAP_FRAME));
+            assertEquals(i + 2, h.slot().unsignedByte(ANIMATION_FRAME)); assertEquals(22, h.slot().routine());
+        }
+        h.edit(o -> o.moveByte(ROUTINE_2, 0xA7)); h.onScreen(); var fc = h.run(1000);
+        assertEquals(24, h.slot().routine()); assertEquals(10, h.slot().unsignedByte(ANIMATION_FRAME));
+        assertEquals(1, h.slot().unsignedByte(MAP_FRAME)); assertEquals(0xA7, h.slot().unsignedByte(ROUTINE_2));
+        assertEquals(List.of("ANIM_DIAG", "ANIMATE_OBJECT", "DRAW_OBJECT"), trace(fc));
+        h.onScreen(); var reset = h.run(1000);
+        assertEquals(List.of("RESET_DIAG", "DRAW_OBJECT"), trace(reset));
+        assertEquals(20, h.slot().routine()); assertEquals(0, h.slot().unsignedByte(MAP_FRAME));
+        assertEquals(1, h.slot().unsignedByte(PREVIOUS_ANIMATION));
+        assertEquals(10, h.slot().unsignedByte(ANIMATION_FRAME)); assertEquals(0xA7, h.slot().unsignedByte(ROUTINE_2));
+        assertEquals(1, h.solids.size()); assertEquals(1, h.launches.size()); assertEquals(1, h.sounds.size());
+    }
+
+    @Test void diagonalHeldTimerSkipsInvalidScriptUntilActualEligibleRead() {
+        var h = prepared(22); h.edit(o -> o.moveByte(ANIMATION, 250).moveByte(PREVIOUS_ANIMATION, 250)
+                .moveByte(ANIMATION_TIME, 1).moveByte(MAP_FRAME, 255));
+        h.run(); assertEquals(0, h.slot().unsignedByte(ANIMATION_TIME)); assertEquals(255, h.slot().unsignedByte(MAP_FRAME));
+        h.onScreen(); var before = h.slot(); assertThrows(UnsupportedOperationException.class, h::run);
+        assertEquals(before, h.slot()); assertEquals(1, h.draws.size()); assertTrue(h.solids.isEmpty());
+    }
+
+    @ParameterizedTest @ValueSource(ints = {20, 22, 24, 255})
+    void diagonalOffscreenControlNeverReadsDirtySubtypeSelectorOrAnimation(int routine) {
+        var badTable = TILES.clone(); word(badTable, 30, 0xFFFF);
+        var h = new Harness(assets(bytes(0xF0, 0, 0xF6, 0), badTable));
+        h.edit(o -> normal(o, routine).moveByte(SPRITE_FLAGS, 4).moveByte(SUBTYPE2, 255)
+                .moveByte(ANIMATION, 250).moveByte(PREVIOUS_ANIMATION, 250).moveByte(ANIMATION_FRAME, 255));
+        var before = h.slot(); var r = h.run();
+        assertEquals(before, r.state()); assertEquals(List.of("DRAW_OBJECT"), trace(r)); assertTrue(h.solids.isEmpty());
+    }
+
+    @Test void diagonalSharedSolidFmIsCommittedOnceBeforeLaunchAndFmFailureStopsThere() {
+        var h = diagonal(); h.edit(o -> o.moveByte(FLAGS, 0x28));
+        var p = diagonalPlayer(); p.x = (1200 << 16) | 0xABCD; p.flags = 0x0A;
+        p.stand = WHOLE; p.ctrl = 1; p.stick = 1; p.charge = 17; h.player = p.player();
+        h.run(1000);
+        assertEquals(List.of(CdPlayerTouchResponse.FmSound.FM_CHARGESTOP), h.solidFms);
+        assertEquals(0, h.launches.getFirst().expectedPlayer().standObject());
+        assertEquals(0, h.launches.getFirst().expectedPlayer().actor().motion().playerControl());
+        assertEquals(17, h.player.actor().motion().charge()); assertEquals(1, h.solids.size());
+        var bad = diagonal(); bad.edit(o -> o.moveByte(FLAGS, 0x28)); bad.player = p.player(); bad.failSolidFm = true;
+        assertThrows(IllegalStateException.class, () -> bad.run(1000));
+        assertEquals(20, bad.slot().routine()); assertEquals(0x20, bad.slot().flags());
+        assertEquals(bad.solids.getFirst().result().player(), bad.player);
+        assertEquals(List.of(CdPlayerTouchResponse.FmSound.FM_CHARGESTOP), bad.solidFms);
+        assertTrue(bad.launches.isEmpty()); assertTrue(bad.sounds.isEmpty()); assertTrue(bad.draws.isEmpty());
+    }
+
+    @Test void diagonalPureSolidAndSolidCommitFailuresNeverInventLaunchOrReplayEffects() {
+        var pure = diagonal(); var p = diagonalPlayer(); p.flags = 8; p.stand = 7; pure.player = p.player();
+        var before = pure.slot(); assertThrows(CdSolidObject.UnsupportedSolidObject.class, () -> pure.run(1000));
+        assertEquals(before, pure.slot()); assertTrue(pure.solids.isEmpty()); assertTrue(pure.order.isEmpty());
+        var commit = diagonal(); commit.failSolid = true; var original = commit.player;
+        assertThrows(IllegalStateException.class, () -> commit.run(1000));
+        assertEquals(original, commit.player); assertEquals(20, commit.slot().routine());
+        assertEquals(List.of("SOLID"), commit.order); assertTrue(commit.launches.isEmpty());
+    }
+
+    @Test void diagonalMissingSolidA0OrA2PublicationStopsBeforeAction() {
+        var missing = diagonal(); missing.publishSolid = false;
+        assertThrows(IllegalStateException.class, () -> missing.run(1000));
+        assertEquals(20, missing.slot().routine()); assertTrue(missing.launches.isEmpty()); assertTrue(missing.draws.isEmpty());
+        var other = diagonal(); var p = diagonalPlayer(); p.flags = 8; p.stand = 41; other.player = p.player();
+        other.pool().write(other.pool().state(41).moveByte(ID, 0x12).moveByte(FLAGS, 0xA8)); other.publishOthers = false;
+        assertThrows(IllegalStateException.class, () -> other.run(1000));
+        assertEquals(1, other.solids.getFirst().result().otherSlots().size());
+        assertEquals(0xA8, other.pool().state(41).flags()); assertTrue(other.launches.isEmpty());
+    }
+
+    @Test void diagonalLaunchFailureRetainsActualSolidAndPublishedActionPrefixBeforeSoundAndAnimation() {
+        var h = diagonal(); h.edit(o -> o.moveByte(FLAGS, 0x60)); h.failLaunch = true;
+        assertThrows(IllegalStateException.class, () -> h.run(1000));
+        assertEquals(22, h.slot().routine()); assertEquals(0x40, h.slot().flags());
+        assertEquals(h.solids.getFirst().result().player(), h.player);
+        assertEquals(0, h.slot().unsignedByte(ANIMATION_FRAME)); assertEquals(List.of("SOLID", "LAUNCH"), h.order);
+        assertTrue(h.sounds.isEmpty()); assertTrue(h.draws.isEmpty());
+    }
+
+    @Test void diagonalSoundFailureRetainsLaunchAndPreventsReturningJsrAnimationAndTails() {
+        var h = diagonal(); h.failSound = true;
+        assertThrows(IllegalStateException.class, () -> h.run(1000));
+        assertEquals(h.launches.getFirst().finalPlayer(), h.player); assertEquals(22, h.slot().routine());
+        assertEquals(0, h.slot().unsignedByte(ANIMATION_FRAME)); assertEquals(List.of("SOLID", "LAUNCH", "SOUND"), h.order);
+        assertTrue(h.draws.isEmpty());
+    }
+
+    @Test void diagonalAnimationFailureRetainsLaunchSoundAndObjectPrefixWithoutDrawOrParentReads() {
+        var h = diagonal(); h.edit(o -> o.moveByte(ANIMATION, 250).moveByte(PREVIOUS_ANIMATION, 250)
+                .moveByte(ANIMATION_TIME, 0).moveWord(SPRING_PARENT, 0xD040));
+        assertThrows(UnsupportedOperationException.class, () -> h.run(1000));
+        assertEquals(22, h.slot().routine()); assertEquals(0, h.slot().unsignedByte(ANIMATION_FRAME));
+        assertEquals(h.launches.getFirst().finalPlayer(), h.player);
+        assertEquals(List.of("SOLID", "LAUNCH", "SOUND"), h.order); assertTrue(h.draws.isEmpty());
+    }
+
+    @Test void diagonalDrawFailureKeepsAnimationPrefixButPreventsParentAndDespawnTail() {
+        var h = diagonal(); h.edit(o -> o.moveWord(SPRING_PARENT, 0xD040).moveWord(SPRING_ANCHOR_X, 0x8000));
+        h.failDraw = true; assertThrows(IllegalStateException.class, () -> h.run(1000));
+        assertEquals(22, h.slot().routine()); assertEquals(1, h.slot().unsignedByte(ANIMATION_FRAME));
+        assertEquals(4, h.slot().spriteFlags()); assertEquals(1000, h.slot().centreX());
+        assertEquals(List.of("SOLID", "LAUNCH", "SOUND", "DRAW"), h.order);
+    }
+
+    @ParameterizedTest @ValueSource(ints = {0xD000, 0xDA40})
+    void diagonalResetUsesLivePrimaryOrClearedDynamicParentAfterDraw(int parent) {
+        var h = prepared(24); h.edit(o -> o.moveWord(SPRING_PARENT, parent)
+                .moveByte(SPRING_PARENT_X_OFFSET, 0x80).moveByte(SPRING_PARENT_Y_OFFSET, 0x7F));
+        h.afterDraw = () -> h.pool().write(h.pool().state(41).moveWord(X, 0x0040).moveWord(Y, 0xFFFF));
+        var r = h.run(); assertEquals(0x100, h.draws.getFirst().centreX());
+        assertEquals(parent == 0xD000 ? 0x80 : 0xFFC0, r.state().centreX());
+        assertEquals(parent == 0xD000 ? 0xE6 : 0x7E, r.state().centreY());
+        assertEquals(0x4321, r.state().word(X_FRACTION)); assertEquals(0x8765, r.state().word(Y_FRACTION));
+        assertEquals(0x100, r.state().word(SPRING_ANCHOR_X)); assertEquals(20, r.state().routine());
+        assertEquals(List.of("RESET_DIAG", "DRAW_OBJECT", "FOLLOW_PARENT"), trace(r));
+        assertTrue(h.solids.isEmpty()); assertEquals(0, h.pool().state(41).id());
+    }
+
+    @ParameterizedTest @CsvSource({"53312,16765000", "55873,16767561", "61440,16773128"})
+    void diagonalReservedParentKeepsTypedFirstReadAfterCompletedResetAndDraw(int parent, int readAddress) {
+        var h = prepared(24); h.edit(o -> o.moveWord(SPRING_PARENT, parent));
+        var e = assertThrows(CdSpring.UnsupportedSpring.class, h::run);
+        assertEquals(CdSpring.UnsupportedBoundary.PARENT_READ, e.boundary()); assertEquals(readAddress, e.readAddress24().orElseThrow());
+        assertEquals(20, h.slot().routine()); assertEquals(1, h.slot().unsignedByte(PREVIOUS_ANIMATION));
+        assertEquals(1, h.draws.size()); assertTrue(h.solids.isEmpty());
+    }
+
+    @ParameterizedTest @CsvSource({"2560,false", "2688,true", "1792,true"})
+    void diagonalDespawnKeepsOriginalAnchorUnsignedWindowAndPlainDelete(int anchor, boolean deleted) {
+        var h = prepared(24); h.edit(o -> o.moveWord(SPRING_ANCHOR_X, anchor)
+                .moveWord(SPRING_PARENT, 0xD000).moveByte(SAVED_FLAGS_ID, 7));
+        var saved = h.runtime.capture().savedFlags(); var r = h.run(0x800);
+        assertEquals(deleted, r.deleted()); assertArrayEquals(saved.copy(), h.runtime.capture().savedFlags().copy());
+        if (deleted) assertArrayEquals(new byte[64], h.slot().copyBytes());
+        else { assertEquals(0x100, h.slot().centreX()); assertEquals(anchor, h.slot().word(SPRING_ANCHOR_X)); }
+    }
+
+    @ParameterizedTest @ValueSource(ints = {20, 22, 24})
+    void mirrorSelectorNeverAdmitsDiagonalRoutinesEvenOffscreen(int routine) {
+        var h = prepared(routine); h.edit(o -> o.moveByte(ROUTINE_2, 5).moveByte(SPRITE_FLAGS, 4));
+        var before = h.slot(); var e = assertThrows(CdSpring.UnsupportedSpring.class, h::run);
+        assertEquals(CdSpring.UnsupportedBoundary.MIRROR_ROUTINE_DISPATCH, e.boundary());
+        assertEquals(before, h.slot()); assertTrue(h.order.isEmpty());
+    }
+
+    @Test void diagonalRequiredAssetAndMathAritiesHaveNoNullOrLegacyFallback() {
+        var a = assets(bytes(0xF0, 0, 0xF6, 0)); var h = new Harness();
+        assertEquals(80, a.diagonal().mappingTableOffset()); assertArrayEquals(MAPS, a.diagonal().mappings().copy());
+        assertEquals(List.of(7, 7, 8), a.diagonal().mappingFrames().stream().map(f -> f.pieces().size()).toList());
+        assertArrayEquals(TILES, a.objectTileIds().copy());
+        assertThrows(NullPointerException.class, () -> new CdSpring(h.runtime, a, null, h.solid,
+                h::solidCommit, h::launchCommit, h::draw, h::sound));
+        assertThrows(NullPointerException.class, () -> new CdSpring.Assets(a.vertical(), a.horizontal(), null,
+                MAP, a.speedWords(), a.objectTileIds()));
+        assertThrows(IllegalArgumentException.class, () -> new CdSpring.Assets(a.vertical(), a.horizontal(), a.vertical(),
+                MAP, a.speedWords(), a.objectTileIds()));
+        assertThrows(IllegalArgumentException.class, () -> new CdSpring.Assets(a.vertical(), a.horizontal(), a.diagonal(),
+                MAP, a.speedWords(), CdAssetBytes.copyOf(new byte[72])));
+        var otherMaps = MAPS.clone(); otherMaps[0] = 1;
+        var changedMaps = CdObjectVisualAssets.decodeIndexed(otherMaps, 80, 3, 86, 200, ANI, 1, 46);
+        assertThrows(IllegalArgumentException.class, () -> new CdSpring.Assets(a.vertical(), a.horizontal(), changedMaps,
+                MAP, a.speedWords(), a.objectTileIds()));
+        var otherScript = ANI.clone(); otherScript[3] = 2;
+        var changedScript = CdObjectVisualAssets.decodeIndexed(MAPS, 80, 3, 86, 200, otherScript, 1, 46);
+        assertThrows(IllegalArgumentException.class, () -> new CdSpring.Assets(a.vertical(), a.horizontal(), changedScript,
+                MAP, a.speedWords(), a.objectTileIds()));
+        assertEquals(1, CdSpring.class.getConstructors().length); assertEquals(8, CdSpring.class.getConstructors()[0].getParameterCount());
+        assertEquals(6, CdSpring.Assets.class.getRecordComponents().length);
+    }
+
+    private static Harness diagonal() { return diagonal(new Harness()); }
+    private static Harness diagonal(Harness h) {
+        h.edit(o -> normal(o, 20).moveWord(X, 1000).moveWord(Y, 1000).moveWord(SPRING_ANCHOR_X, 1000)
+                .moveByte(WIDTH, 24).moveByte(Y_RADIUS, 12).moveLong(MAPPINGS, MAP + 80)
+                .moveByte(PREVIOUS_ANIMATION, 1));
+        h.player = diagonalPlayer().player(); return h;
+    }
+
+    private static P diagonalPlayer() {
+        var p = new P(); p.x = 0x03E8ABCD; p.y = 0x03CADCBA; p.flags = 0xE3;
+        p.gv = 0x333; p.anim = 0x10; p.prev = 7; p.angle = 0x37; p.charge = 17;
+        p.lock = 0x4321; p.stick = 1; p.hurt = 345; p.rot = 165; p.push = 41;
+        return p;
     }
 
     private static Harness prepared(int routine) {
@@ -445,9 +801,12 @@ class TestCdSpring {
         }).toList();
     }
 
-    private static CdSpring.Assets assets(byte[] speeds) {
+    private static CdSpring.Assets assets(byte[] speeds) { return assets(speeds, TILES); }
+    private static CdSpring.Assets assets(byte[] speeds, byte[] tileIds) {
         return new CdSpring.Assets(CdObjectVisualAssets.decodeIndexed(MAPS, 0, 3, 12, 46, ANI, 1, 36),
-                CdObjectVisualAssets.decodeIndexed(MAPS, 6, 3, 46, 80, ANI, 1, 36), MAP, CdAssetBytes.copyOf(speeds));
+                CdObjectVisualAssets.decodeIndexed(MAPS, 6, 3, 46, 80, ANI, 1, 36),
+                CdObjectVisualAssets.decodeIndexed(MAPS, 80, 3, 86, 200, ANI, 1, 46),
+                MAP, CdAssetBytes.copyOf(speeds), CdAssetBytes.copyOf(tileIds));
     }
     private static String sha(byte[] bytes) throws Exception {
         return java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(bytes));
@@ -467,21 +826,26 @@ class TestCdSpring {
     /** Live external publication stand-in. DrawObject itself clears bit7; tests explicitly mark later SAT visibility. */
     private static final class Harness {
         final CdObjectPlacementRuntime runtime = new CdObjectPlacementRuntime(layout());
-        final CdSolidObject solid = new Terrain().owner();
+        final CdSolidObject solid;
+        final CdPlayerMath math;
         final CdSpring spring;
         final List<CdSpring.SolidCall> solids = new ArrayList<>();
         final List<CdSpring.LaunchCall> launches = new ArrayList<>();
         final List<CdObjectState> draws = new ArrayList<>();
         final List<CdSpring.FmSound> sounds = new ArrayList<>();
+        final List<CdPlayerTouchResponse.FmSound> solidFms = new ArrayList<>();
         final List<String> order = new ArrayList<>();
         CdSolidObject.Player player = new P().player();
         CdSolidObject.Globals globals = new CdSolidObject.Globals(0, 4, 0x12, 0x34);
         final CdSolidObject.Gates gates = new CdSolidObject.Gates(0, 0);
-        boolean publishSolid = true, publishOthers = true, failLaunch, failSound, failDraw;
+        boolean publishSolid = true, publishOthers = true, failSolid, failSolidFm, failLaunch, failSound, failDraw;
         Runnable afterDraw = () -> { };
         Harness() { this(assets(bytes(0xF0, 0, 0xF6, 0))); }
-        Harness(CdSpring.Assets assets) {
-            spring = new CdSpring(runtime, assets, solid, this::solidCommit, this::launchCommit, this::draw, this::sound);
+        Harness(CdSpring.Assets assets) { this(assets, -181, 181); }
+        Harness(CdSpring.Assets assets, int sine, int cosine) {
+            var terrain = new Terrain(sine, cosine);
+            solid = terrain.owner(); math = new CdPlayerMath(terrain.playerAssets);
+            spring = new CdSpring(runtime, assets, math, solid, this::solidCommit, this::launchCommit, this::draw, this::sound);
         }
         CdObjectPool pool() { return runtime.pool(); }
         CdObjectState slot() { return pool().state(WHOLE); }
@@ -495,9 +859,14 @@ class TestCdSpring {
             var images = new ArrayList<CdObjectState>(); images.add(c.result().object()); images.addAll(c.result().otherSlots());
             for (var image : images) assertEquals(c.callCut().slots().get(image.identity().dynamicIndex()),
                     pool().state(image.identity().wholeIndex()));
+            if (failSolid) throw new IllegalStateException("constructed SolidCommit failure");
             if (!publishSolid) return;
             pool().write(c.result().object()); if (publishOthers) c.result().otherSlots().forEach(pool()::write);
             player = c.result().player(); globals = c.result().globals();
+            solidFms.addAll(c.result().fmRequests());
+            if (failSolidFm && !c.result().fmRequests().isEmpty()) {
+                throw new IllegalStateException("constructed shared Solid FM failure");
+            }
         }
         void launchCommit(CdSpring.LaunchCall c) {
             order.add("LAUNCH"); launches.add(c); assertEquals(player, c.expectedPlayer()); assertEquals(globals, c.expectedGlobals());
@@ -577,7 +946,11 @@ class TestCdSpring {
         final byte[] chunks = new byte[61952], fg = new byte[338], bg = new byte[50];
         final byte[] ids = new byte[900], angles = new byte[256], heights = new byte[4096], widths = new byte[4096];
 
-        Terrain() {
+        final int sine, cosine;
+        CdR11aPlayerAssets playerAssets;
+
+        Terrain(int sine, int cosine) {
+            this.sine = sine; this.cosine = cosine;
             fg[0] = 41; fg[1] = 7; bg[0] = 5; bg[1] = 7;
             Arrays.fill(fg, 2, fg.length, (byte) 2);
             ids[1] = 1; ids[2] = 2;
@@ -596,9 +969,14 @@ class TestCdSpring {
             var visual = CdSonicVisualAssets.decode(mappings, dplcs, new byte[69472]);
             byte[] atan = new byte[257];
             for (int i = 0; i <= 256; i++) atan[i] = (byte) (i / 8);
-            var assets = CdR11aPlayerAssets.decode(animations, new byte[60], new byte[]{6, 7, 8, 0x49, 0x4C, (byte) 0xFF},
-                    new byte[4], new byte[640], atan, visual);
-            return new CdSolidObject(new CdPlayerMovement(terrain, assets));
+            byte[] sineBytes = new byte[640];
+            // Constructed declared player assets, not a production trig table: only reached words differ from zero.
+            // The decoder requires the cosine extension to equal its corresponding base word.
+            word(sineBytes, 0xE0 * 2, sine);
+            word(sineBytes, 0x20 * 2, cosine); word(sineBytes, 0x120 * 2, cosine);
+            playerAssets = CdR11aPlayerAssets.decode(animations, new byte[60], new byte[]{6, 7, 8, 0x49, 0x4C, (byte) 0xFF},
+                    new byte[4], sineBytes, atan, visual);
+            return new CdSolidObject(new CdPlayerMovement(terrain, playerAssets));
         }
     }
 

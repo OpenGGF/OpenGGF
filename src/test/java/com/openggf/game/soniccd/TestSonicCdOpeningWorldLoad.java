@@ -939,17 +939,15 @@ class TestSonicCdOpeningWorldLoad {
         registry.restore(full);assertState(before,h);step(h,input(8,0,false));assertState(at540,h);step(h,input(8,0,false));assertState(at541,h);
         registry.restoreCourse(course);assertState(before,h);step(h,input(8,0,false));assertState(at540,h);step(h,input(8,0,false));assertState(at541,h);
     }
-    @Test void ordinaryRightRouteCompletesBoulderInitThenStopsAtTheLaterDiagonalSpringInCall561() throws Exception {
+    @Test void ordinaryRightRouteCompletesDiagonalSpringInitThenStopsAtLaterSpikesInTheSameCall561() throws Exception {
         var h=opening();var runtime=objects(h);var frame=h.module().requirePlayerFrame();var pool=runtime.placement().pool();
         for(int call=0;call<560;call++)step(h,input(8,0,false));
         assertEquals(0,pool.state(46).id());
         assertEquals(0x3E,pool.state(52).id());assertEquals(2,pool.state(52).routine());
         assertEquals(2466,pool.state(52).centreX());assertEquals(628,pool.state(52).centreY());
         assertEquals(0,runtime.sectionArtState().remainingTilesWord());assertEquals(0,runtime.sectionArtState().queue().headSource());
-        var failure=assertThrows(com.openggf.game.soniccd.objects.CdSpring.UnsupportedSpring.class,()->step(h,input(8,0,false)));
-        assertEquals(com.openggf.game.soniccd.objects.CdSpring.UnsupportedBoundary.DIAGONAL_TILE_SELECTOR,failure.boundary());
-        assertEquals(47,failure.wholeIndex());assertEquals(0x0F,failure.value());
-        assertEquals("DIAGONAL_TILE_SELECTOR at Spring whole slot 47, reached value $f",failure.getMessage());
+        var failure=assertThrows(UnsupportedOperationException.class,()->step(h,input(8,0,false)));
+        assertEquals("Unowned CD object ID $26 at live physical slot 61",failure.getMessage());
         // Native record94 0A0D04A01B004000 has completed its real Init before the later physical stop.
         var rock=pool.state(46);assertEquals(0x1B,rock.id());assertEquals(2,rock.routine());
         assertEquals(2573,rock.centreX());assertEquals(1184,rock.centreY());assertEquals(4,rock.spriteFlags());
@@ -959,8 +957,18 @@ class TestSonicCdOpeningWorldLoad {
         assertEquals(0,rock.unsignedByte(CdObjectState.ByteField.COLLISION_TYPE));assertEquals(0,rock.flags());
         var spring=pool.state(47);assertEquals(0x0A,spring.id());assertEquals(0x14,spring.routine());
         assertEquals(2576,spring.centreX());assertEquals(1038,spring.centreY());assertEquals(4,spring.spriteFlags());
+        assertEquals(0x209BF0,spring.longBits(CdObjectState.LongField.MAPPINGS));assertEquals(0x2490,spring.word(CdObjectState.WordField.TILE));
+        assertEquals(0xF600,spring.word(CdObjectState.WordField.SPRING_SPEED));
+        assertEquals(24,spring.unsignedByte(CdObjectState.ByteField.WIDTH));assertEquals(12,spring.unsignedByte(CdObjectState.ByteField.Y_RADIUS));
+        assertEquals(0,spring.unsignedByte(CdObjectState.ByteField.MAP_FRAME));
         assertEquals(145239552,frame.state().motion().centreX16_16());assertEquals(-337408,frame.state().motion().centreY16_16());
-        assertEquals(628,pool.state(52).centreY(),"later Pata slot52 remains unvisited after Spring47; call561 is NOT complete");
+        // Physical52 and54 now complete before Spikes61; equal integer Y alone would miss Pata motion.
+        assertEquals(628,pool.state(52).centreY());assertEquals(0x8000,pool.state(52).word(CdObjectState.WordField.X_FRACTION));
+        assertEquals(0x5FFF,pool.state(52).word(CdObjectState.WordField.Y_FRACTION));
+        assertEquals(0x10,pool.state(54).id());assertEquals(2,pool.state(54).routine());
+        var spikes=pool.state(61);assertEquals(0x26,spikes.id());assertEquals(0,spikes.routine());
+        assertEquals(2643,spikes.centreX());assertEquals(1038,spikes.centreY());assertEquals(0,spikes.longBits(CdObjectState.LongField.MAPPINGS));
+        // Later Ring members may be initialized by an earlier parent. This failed physical pass is NOT a completed call561.
         assertEquals(0x0200,runtime.sectionArtState().sectionWord());
         assertTrue(runtime.closed());assertTrue(frame.closed());
     }
@@ -1414,5 +1422,4 @@ class TestSonicCdOpeningWorldLoad {
             var loaded = CdStockLaunch.prepare(cues.getFirst(), CdStockLaunch.Request.r11a()); SOURCES.put(variant, loaded); return loaded;
         }
     }
-
 }
