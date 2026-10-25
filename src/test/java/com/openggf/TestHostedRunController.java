@@ -1,30 +1,303 @@
 package com.openggf;
 
+import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.control.GamepadStateSource;
+import com.openggf.control.InputActionMasks;
+import com.openggf.control.InputHandler;
+import com.openggf.control.LogicalInputSnapshot;
+import com.openggf.control.PhysicalGamepad;
+import com.openggf.control.PhysicalInput;
+import com.openggf.control.PhysicalInputEvent;
+import com.openggf.control.PlayerInputState;
 import com.openggf.game.ghost.GhostRenderRegistry;
 import com.openggf.mods.run.GhostPose;
 import com.openggf.mods.run.PlayerPose;
 import com.openggf.mods.run.RunEndReason;
 import com.openggf.mods.run.RunHandle;
 import com.openggf.mods.run.RunHost;
+import com.openggf.mods.run.RunInput;
 import com.openggf.mods.run.RunSpec;
 import com.openggf.game.session.GameplayRunPolicy;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_A;
+import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
+import static org.lwjgl.glfw.GLFW.GLFW_RELEASE;
 import static org.mockito.Mockito.mock;
 
 class TestHostedRunController {
     private static final RunSpec SPEC = new RunSpec("s3k", 0, 0, "sonic", GameplayRunPolicy.isolatedAct());
 
     private final HostedRunController controller = new HostedRunController(mock(SonicConfigurationService.class));
+
+    @Test
+    void pausedInputIsReportedOnceOnResumeAndDoesNotLeakIntoTheNextRun() {
+        List<Boolean> resumed = new ArrayList<>();
+        RunHost host = new RunHost() {
+            @Override public boolean admitStep(RunInput input) {
+                resumed.add(input.resumedAfterPause());
+                return true;
+            }
+        };
+        InputHandler input = new InputHandler();
+        controller.begin(SPEC, host);
+        controller.admitStep(input);
+        controller.suspendInput();
+        controller.suspendInput();
+        controller.admitStep(input);
+        controller.admitStep(input);
+        assertEquals(List.of(false, true, false), resumed);
+        controller.suspendInput();
+        controller.end(RunEndReason.LEFT);
+        controller.begin(SPEC, host);
+        controller.admitStep(input);
+        assertFalse(resumed.getLast());
+    }
+
+    @Test
+    void runKeyboardQueriesDoNotAliasControllerDebugAndFrameStepButtons() {
+        var configuration = SonicConfigurationService.createStandalone();
+        configuration.setConfigValue(SonicConfiguration.CONTROLLER_ENABLED, true);
+        var hostController = new HostedRunController(configuration);
+        MutablePads pads = new MutablePads();
+        InputHandler input = new InputHandler(InputBindingFactory.supplier(configuration), pads);
+        List<RunInput> frames = new ArrayList<>();
+        hostController.begin(SPEC, new RunHost() {
+            @Override public boolean admitStep(RunInput frame) { frames.add(frame); return true; }
+        });
+        boolean[] buttons = new boolean[15];
+        pads.devices = List.of(GamepadStateSource.DeviceState.connected(3, "Xbox", buttons, new float[] {0, 0, 0, 0, -1, -1}));
+        input.refreshLogicalSnapshot();
+        input.update();
+        buttons[PhysicalGamepad.BUTTON_Y] = true;
+        buttons[PhysicalGamepad.BUTTON_RIGHT_BUMPER] = true;
+        pads.devices = List.of(GamepadStateSource.DeviceState.connected(3, "Xbox", buttons, new float[] {0, 0, 0, 0, -1, -1}));
+        input.refreshLogicalSnapshot();
+        int stepKey = configuration.getInt(SonicConfiguration.FRAME_STEP_KEY);
+        int debugKey = configuration.getInt(SonicConfiguration.DEBUG_MODE_KEY);
+        assertTrue(input.isKeyPressed(stepKey), "engine shortcut substitutions remain intact");
+        assertTrue(input.isKeyPressed(debugKey));
+        assertTrue(hostController.admitStep(input));
+        assertFalse(frames.getLast().keyPressed(stepKey), "RB must not masquerade as the Q chat key");
+        assertFalse(frames.getLast().keyPressed(debugKey));
+        input.handleKeyEvent(stepKey, GLFW_PRESS);
+        assertTrue(hostController.admitStep(input));
+        assertTrue(frames.getLast().keyPressed(stepKey), "a real keyboard press still reaches the run");
+        assertTrue(frames.getLast().keyDown(stepKey));
+        input.update();
+        input.refreshLogicalSnapshot();
+        assertTrue(hostController.admitStep(input));
+        assertFalse(frames.getLast().keyPressed(stepKey));
+        assertTrue(frames.getLast().keyDown(stepKey));
+    }
+
+    @Test
+    void oldRunInputImplementorsDefaultToNeutralPhysicalInput() {
+        RunInput input = new RunInput() {
+            @Override public LogicalInputSnapshot input() { return LogicalInputSnapshot.neutral(); }
+            @Override public boolean keyDown(int key) { return false; }
+            @Override public boolean keyPressed(int key) { return false; }
+        };
+
+        assertEquals(PhysicalInput.neutral(), input.physicalInput());
+    }
+
+    @Test
+    void hostCapturesPhysicalDevicesOnceEvenWhenTheGameplayStepIsHeld() {
+        var configuration = SonicConfigurationService.createStandalone();
+        configuration.setConfigValue(SonicConfiguration.CONTROLLER_ENABLED, true);
+        var pads = new MutablePads();
+        var clock = new AtomicLong(100);
+        var input = new InputHandler(InputBindingFactory.supplier(configuration), pads, clock::get);
+        var hostController = new HostedRunController(configuration);
+        List<RunInput> frames = new ArrayList<>();
+        hostController.begin(SPEC, new RunHost() {
+            @Override public boolean admitStep(RunInput frame) {
+                frames.add(frame);
+                return false;
+            }
+        });
+        pads.devices = List.of(physicalPad(3, PhysicalGamepad.BUTTON_Y, false, 0),
+                physicalPad(7, PhysicalGamepad.BUTTON_RIGHT_BUMPER, false, 0));
+        input.pollPhysicalGamepads();
+        clock.set(200);
+        input.handleKeyEvent(GLFW_KEY_A, GLFW_PRESS);
+        pads.devices = List.of(physicalPad(3, PhysicalGamepad.BUTTON_Y, true, 0.75f),
+                physicalPad(7, PhysicalGamepad.BUTTON_RIGHT_BUMPER, true, 0));
+        input.pollPhysicalGamepads();
+        clock.set(300);
+        assertFalse(hostController.admitStep(input));
+
+        // Change the provider before the first getter: capture belongs to the frame boundary.
+        clock.set(400);
+        input.handleKeyEvent(GLFW_KEY_A, GLFW_RELEASE);
+        pads.devices = List.of(physicalPad(3, PhysicalGamepad.BUTTON_Y, false, 0),
+                physicalPad(7, PhysicalGamepad.BUTTON_RIGHT_BUMPER, true, 0));
+        input.pollPhysicalGamepads();
+        PhysicalInput captured = frames.getFirst().physicalInput();
+        assertSame(captured, frames.getFirst().physicalInput(), "getters must not drain again");
+        assertEquals(300, captured.timestampNanos());
+        assertTrue(captured.keyDown(GLFW_KEY_A));
+        assertEquals(2, captured.gamepads().size());
+        assertTrue(captured.buttonDown(3, PhysicalGamepad.BUTTON_Y));
+        assertTrue(captured.buttonDown(7, PhysicalGamepad.BUTTON_RIGHT_BUMPER));
+        assertEquals(0.75f, captured.axis(3, PhysicalGamepad.AXIS_RIGHT_Y));
+        assertEquals(4, captured.events().size());
+        assertTrue(captured.events().stream().allMatch(event -> event.timestampNanos() == 200));
+        assertThrows(UnsupportedOperationException.class, () -> captured.events().clear());
+
+        assertFalse(hostController.admitStep(input));
+        PhysicalInput next = frames.getLast().physicalInput();
+        assertNotSame(captured, next);
+        assertEquals(400, next.timestampNanos());
+        assertFalse(next.keyDown(GLFW_KEY_A));
+        assertFalse(next.buttonDown(3, PhysicalGamepad.BUTTON_Y));
+        assertEquals(3, next.events().size());
+        assertTrue(captured.keyDown(GLFW_KEY_A), "later frames cannot mutate an earlier capture");
+    }
+
+    @Test
+    void liveControllerPreferenceFiltersPadStateAndEventsButKeepsPhysicalKeyboard() {
+        var configuration = SonicConfigurationService.createStandalone();
+        configuration.setConfigValue(SonicConfiguration.CONTROLLER_ENABLED, false);
+        var pads = new MutablePads();
+        var input = new InputHandler(InputBindingFactory.supplier(configuration), pads);
+        var hostController = new HostedRunController(configuration);
+        List<PhysicalInput> frames = new ArrayList<>();
+        hostController.begin(SPEC, new RunHost() {
+            @Override public boolean admitStep(RunInput frame) {
+                frames.add(frame.physicalInput());
+                assertSame(frames.getLast(), frame.physicalInput());
+                return true;
+            }
+        });
+        pads.devices = List.of(physicalPad(3, PhysicalGamepad.BUTTON_Y, false, 0));
+        input.pollPhysicalGamepads();
+        pads.devices = List.of(physicalPad(3, PhysicalGamepad.BUTTON_Y, true, 0.5f));
+        input.pollPhysicalGamepads();
+        input.handleKeyEvent(GLFW_KEY_A, GLFW_PRESS);
+
+        assertTrue(hostController.admitStep(input));
+        PhysicalInput disabled = frames.getLast();
+        assertTrue(disabled.gamepads().isEmpty());
+        assertTrue(disabled.keyDown(GLFW_KEY_A));
+        assertEquals(1, disabled.events().size(), "button and axis transitions must be filtered");
+        assertEquals(PhysicalInputEvent.Kind.KEY, disabled.events().getFirst().kind());
+        assertEquals(GLFW_KEY_A, disabled.events().getFirst().code());
+
+        configuration.setConfigValue(SonicConfiguration.CONTROLLER_ENABLED, true);
+        assertTrue(hostController.admitStep(input));
+        PhysicalInput enabled = frames.getLast();
+        assertTrue(enabled.buttonDown(3, PhysicalGamepad.BUTTON_Y));
+        assertEquals(0.5f, enabled.axis(3, PhysicalGamepad.AXIS_RIGHT_Y));
+        assertTrue(enabled.events().isEmpty(), "events filtered while disabled must not leak on enable");
+
+        configuration.setConfigValue(SonicConfiguration.CONTROLLER_ENABLED, false);
+        pads.devices = List.of(physicalPad(3, PhysicalGamepad.BUTTON_Y, false, 0));
+        input.pollPhysicalGamepads();
+        input.handleKeyEvent(GLFW_KEY_A, GLFW_RELEASE);
+        assertTrue(hostController.admitStep(input));
+        PhysicalInput disabledAgain = frames.getLast();
+        assertTrue(disabledAgain.gamepads().isEmpty());
+        assertFalse(disabledAgain.keyDown(GLFW_KEY_A));
+        assertEquals(1, disabledAgain.events().size());
+        assertEquals(PhysicalInputEvent.Kind.KEY, disabledAgain.events().getFirst().kind());
+        assertTrue(disabledAgain.events().getFirst().released());
+    }
+
+    @Test
+    void aSceneOverlayMayDrainEventsWithoutHidingHeldPhysicalControlsFromTheHost() {
+        var configuration = SonicConfigurationService.createStandalone();
+        configuration.setConfigValue(SonicConfiguration.CONTROLLER_ENABLED, true);
+        var pads = new MutablePads();
+        var input = new InputHandler(InputBindingFactory.supplier(configuration), pads);
+        var hostController = new HostedRunController(configuration);
+        List<PhysicalInput> overlayFrames = new ArrayList<>();
+        List<PhysicalInput> hostFrames = new ArrayList<>();
+        hostController.begin(SPEC, new RunHost() {
+            @Override public boolean admitStep(RunInput frame) {
+                hostFrames.add(frame.physicalInput());
+                return true;
+            }
+        });
+        hostController.setSceneOverlay(new HostedRunController.SceneOverlay() {
+            @Override public void update(InputHandler handler) {
+                overlayFrames.add(handler.capturePhysicalInput());
+            }
+            @Override public void draw(int width, int height) { }
+        });
+        pads.devices = List.of(physicalPad(3, PhysicalGamepad.BUTTON_Y, false, 0));
+        input.pollPhysicalGamepads();
+        pads.devices = List.of(physicalPad(3, PhysicalGamepad.BUTTON_Y, true, 0));
+        input.pollPhysicalGamepads();
+        input.handleKeyEvent(GLFW_KEY_A, GLFW_PRESS);
+
+        assertTrue(hostController.admitStep(input));
+        assertEquals(2, overlayFrames.getFirst().events().size());
+        PhysicalInput hosted = hostFrames.getFirst();
+        assertTrue(hosted.events().isEmpty());
+        assertTrue(hosted.keyDown(GLFW_KEY_A));
+        assertTrue(hosted.buttonDown(3, PhysicalGamepad.BUTTON_Y));
+    }
+
+    @Test
+    void hostedPhysicalControlsStayLiveWithoutChangingLogicalReplayInput() {
+        var configuration = SonicConfigurationService.createStandalone();
+        configuration.setConfigValue(SonicConfiguration.CONTROLLER_ENABLED, true);
+        var pads = new MutablePads();
+        var input = new InputHandler(InputBindingFactory.supplier(configuration), pads);
+        var hostController = new HostedRunController(configuration);
+        List<RunInput> frames = new ArrayList<>();
+        hostController.begin(SPEC, new RunHost() {
+            @Override public boolean admitStep(RunInput frame) {
+                frames.add(frame);
+                return true;
+            }
+        });
+        var replay = LogicalInputSnapshot.ofPlayers(PlayerInputState.of(
+                com.openggf.sprites.playable.AbstractPlayableSprite.INPUT_RIGHT, 0,
+                InputActionMasks.ACTION_A, 0, true, false), PlayerInputState.neutral());
+        input.setLogicalOverride(replay);
+        pads.devices = List.of(physicalPad(3, PhysicalGamepad.BUTTON_Y, true, -0.5f));
+        input.pollPhysicalGamepads();
+        input.handleKeyEvent(GLFW_KEY_A, GLFW_PRESS);
+        input.refreshLogicalSnapshot();
+
+        assertTrue(hostController.admitStep(input));
+        RunInput frame = frames.getFirst();
+        assertSame(replay, frame.input(), "movement, jump and Start still come from replay");
+        assertTrue(frame.physicalInput().keyDown(GLFW_KEY_A));
+        assertTrue(frame.physicalInput().buttonDown(3, PhysicalGamepad.BUTTON_Y));
+        assertEquals(-0.5f, frame.physicalInput().axis(3, PhysicalGamepad.AXIS_RIGHT_Y));
+        hostController.beforeStep(input);
+        assertSame(replay, input.logical(), "physical capture cannot replace gameplay input");
+        assertTrue(input.hasLogicalOverride());
+    }
+
+    private static GamepadStateSource.DeviceState physicalPad(int id, int button, boolean held, float rightY) {
+        boolean[] buttons = new boolean[15];
+        buttons[button] = held;
+        return GamepadStateSource.DeviceState.connected(id, "pad " + id, buttons,
+                new float[]{0, 0, 0, rightY, -1, -1});
+    }
+
+    private static final class MutablePads implements GamepadStateSource {
+        List<DeviceState> devices = List.of();
+
+        @Override public List<DeviceState> pollDevices() { return devices; }
+    }
 
     @Test
     void runHudProfileSurvivesReloadsAndCannotEscapeItsHandleLifetime() throws Exception {

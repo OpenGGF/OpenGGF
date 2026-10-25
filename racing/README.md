@@ -101,6 +101,15 @@ pause the race or use the same key press to retry. Typed entry remains available
 in Full Chat lobbies. Both message kinds share the two-second sender cooldown and
 the public relay's existing new-player trust mute.
 
+In the lobby, controller users open **QUICK CHAT** with the normal menu controls,
+select with up/down, confirm to send, and use Back to close. During a race, **click
+the right stick** to open or close the chooser, move that stick **up/down** to
+select, and press the **right trigger** to send. The left stick, D-pad, face
+buttons and Start keep their gameplay duties; the race continues with the chooser
+open. The first connected pad owns the race chooser. Connecting with controls
+held does not act, and disconnecting that pad closes its chooser. Disabling
+controllers in Engine Settings also disables these race controls.
+
 Personal settings are in **Engine Settings > Gameplay**: **Censor Profanity**
 defaults on, and **Disable Multiplayer Chat** defaults off. Censorship runs only
 on the receiving client and masks matching words in message bodies and sender
