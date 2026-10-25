@@ -349,3 +349,29 @@ actual `$0871`. The strict alternate AIZ recording's trailing ring boundary and
 remaining viewport, donor, character/team, outgoing-HCZ, lifecycle and presentation
 products remain separate. Exact commands, source fingerprints and continuation
 scope are in the [current frontier entry](../../../status/trace-frontier-log.md#2026-10-25--fresh-load-plc-order-qualifies-the-continuous-aiz-to-hcz-load-boundary).
+
+
+## Launcher and Chopper continuity repairs — 2026-10-25
+
+Local candidate on pinned base`61be1910` repairs the hand's after-motion solid
+phase and per-player retained standing/rewind bits, then the independently proven
+Mega Chopper P1 lock and live logical input. The [exact causal and validation
+record](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#hcz-object-phase-repairs-and-remaining-continuity-gate--2026-10-25)
+contains commands, physical case identities, fingerprints, diagnostic negatives
+and queue/execution times.
+
+| Obligation | Executed evidence and limit |
+| --- | --- |
+|OBJECT / ORACLE|Launcher15 controls, including four red-first phase controls; Chopper8, including P1/P2/simultaneous capture, mask/live-word/history and release. Continuous native rows1767–1770 and1863/1891–1893 match after repair.|
+|REWIND|Registered launcher graph3 recreates/relinks parent/arm, restores clear/landed/held state and replays escape/automatic release. Registered Chopper object/player restore runs twice; fresh Chopper recreation is not newly covered.|
+|ENTRY / LOAD|All four required S3K anchors (60 physical cases across five classes) and all three original-movie prefixes pass without skips; AIZ/HCZ standalone20,463/3,519 compared samples pass, subject to their advertised auxiliary-schema gaps.|
+|ROUTE / LIFE|Returned segment11 remains incomplete:36366 differences, first3475 sidekick_routine`0C/02`,53lag. First actual P2 gravity difference3476 is the shared controlled-drowning dispatch blocker. The chain reaches70718/HCZ2 gen9, following P1 death7477; this is not HCZ completion.|
+
+Combined focused validation is87/0F/0E/0S; companion replays5/0F/0E/0S and
+final affected chain1/1F/0E/0S. The shared routine/CPU/death owner is outside this
+object patch; no local release, comparator tolerance or fitted boss offset was
+added to conceal it. Width/donor/character/team breadth, native pictures/audio,
+whole-route rewind, physical input shake ingress and remaining encounter/lifecycle
+obligations are inherited gaps, not certified products. The manual solid phase
+itself has no viewport dependency; physical timing/route qualification here uses
+only the recorded native Sonic+Tails product. Parent owns combined smoke and delivery.

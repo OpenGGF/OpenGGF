@@ -40,6 +40,102 @@ class TestHCZHandLauncherObjectInstance {
     }
 
     @Test
+    void risingHandResolvesTopSolidAfterWritingItsNewY() {
+        TestablePlayableSprite player = new TestablePlayableSprite(
+                "sonic", (short) 0x0200, (short) 0x0100);
+        ProbeHandLauncher launcher = buildLauncher(player);
+        launcher.setCheckpointBatch(new SolidCheckpointBatch(launcher, Map.of()));
+
+        for (int frame = 0; frame < 5; frame++) {
+            int calls = launcher.checkpointYs().size();
+            launcher.update(frame, player);
+            // HCZHandLauncher_WaitForGrab (sonic3k.asm:65844-65851) subtracts 8.
+            // HCZHandLauncher_UpdateSolid (sonic3k.asm:65864-65872) then writes
+            // y_pos before calling the top-solid helper.
+            assertEquals(calls + 1, launcher.checkpointYs().size(),
+                    "every Main pass ends in SolidObjectTop, including a rising pass");
+            assertEquals(launcher.getY(), launcher.checkpointYs().getLast(),
+                    "SolidObjectTop sees the y_pos written by this pass");
+        }
+        assertEquals(0x50 - 5 * 8, launcher.getYOffset());
+    }
+
+    @Test
+    void returningHandResolvesTopSolidWhileNoPlayerIsInRange() {
+        TestablePlayableSprite player = new TestablePlayableSprite(
+                "sonic", (short) 0x0200, (short) 0x0100);
+        ProbeHandLauncher launcher = buildLauncher(player);
+        launcher.setCheckpointBatch(new SolidCheckpointBatch(launcher, Map.of()));
+        while (launcher.getYOffset() > 0x18) {
+            launcher.update(0, player);
+        }
+
+        player.setCentreX((short) 0x0100);
+        int calls = launcher.checkpointYs().size();
+        launcher.update(1, player);
+
+        // HCZHandLauncher_RestoreOffset adds 8 and falls into
+        // HCZHandLauncher_UpdateSolid (sonic3k.asm:65859-65872).
+        assertEquals(0x20, launcher.getYOffset());
+        assertEquals(calls + 1, launcher.checkpointYs().size());
+        assertEquals(launcher.getY(), launcher.checkpointYs().getLast());
+    }
+
+    @Test
+    void grabConsumesStandingBitRetainedFromPreviousSolidPass() {
+        TestablePlayableSprite player = new TestablePlayableSprite(
+                "sonic", (short) 0x0200, (short) 0x0100);
+        ProbeHandLauncher launcher = buildLauncher(player);
+        SolidCheckpointBatch empty = new SolidCheckpointBatch(launcher, Map.of());
+        launcher.setCheckpointBatch(empty);
+        while (launcher.getYOffset() > 0x20) {
+            launcher.update(0, player);
+        }
+
+        // The pass that reaches $18 lands the player in its SolidObjectTop.
+        launcher.setCheckpointBatch(standingBatch(launcher, player));
+        launcher.update(1, player);
+        assertEquals(0x18, launcher.getYOffset());
+        assertFalse(player.isObjectControlled());
+
+        // HCZHandLauncher_TryGrabPlayer tests status(a0) before this pass's
+        // SolidObjectTop runs, so the retained bit grabs even though the
+        // later solid pass of the same dispatch reports no contact
+        // (sonic3k.asm:65854-65856, 66006-66008).
+        launcher.setCheckpointBatch(empty);
+        launcher.update(2, player);
+        assertTrue(player.isObjectControlled());
+    }
+
+    @Test
+    void launchReturnSkipsTopSolidAboveGrabOffset() {
+        TestablePlayableSprite player = new TestablePlayableSprite(
+                "sonic", (short) 0x0200, (short) 0x0100);
+        ProbeHandLauncher launcher = buildLauncher(player);
+        updateUntilGrabbed(launcher, player);
+
+        int frame = 20;
+        int callsBeforePass = 0;
+        while (player.isObjectControlled() && frame < 200) {
+            callsBeforePass = launcher.checkpointYs().size();
+            launcher.update(frame++, player);
+        }
+        assertFalse(player.isObjectControlled(), "the launch must release the held player");
+        assertEquals(0x20, launcher.getYOffset());
+
+        // HCZHandLauncher_UpdateAfterLaunch calls SolidObjectTop only while
+        // $30 <= $18 (sonic3k.asm:65903-65914); the release pass already
+        // moved to $20, so neither it nor the rest of the return resolves.
+        assertEquals(callsBeforePass, launcher.checkpointYs().size(),
+                "HCZHandLauncher_ReleaseHeldPlayers uses the retained standing bits, not a new solid pass");
+        int calls = launcher.checkpointYs().size();
+        for (int i = 0; i < 4; i++) {
+            launcher.update(frame++, player);
+        }
+        assertEquals(calls, launcher.checkpointYs().size());
+    }
+
+    @Test
     void topSolidUsesLiteralRomD3Height() {
         TestablePlayableSprite player = new TestablePlayableSprite(
                 "sonic", (short) 0x0200, (short) 0x0100);
@@ -246,6 +342,7 @@ class TestHCZHandLauncherObjectInstance {
 
     private static final class ProbeHandLauncher extends HCZHandLauncherObjectInstance {
         private SolidCheckpointBatch checkpointBatch = new SolidCheckpointBatch(this, Map.of());
+        private final List<Integer> checkpointYs = new java.util.ArrayList<>();
 
         private ProbeHandLauncher(ObjectSpawn spawn) {
             super(spawn);
@@ -255,8 +352,13 @@ class TestHCZHandLauncherObjectInstance {
             this.checkpointBatch = checkpointBatch;
         }
 
+        private List<Integer> checkpointYs() {
+            return checkpointYs;
+        }
+
         @Override
         protected SolidCheckpointBatch checkpointAll() {
+            checkpointYs.add(getY());
             return checkpointBatch;
         }
     }

@@ -113150,3 +113150,50 @@ compile failure executed no tests. Runtime, fixtures, comparisons and timing
 authority remain unchanged. Temporary test sources/reports are consumed; only
 evidence prose remains. Parent owns any candidate adaptation, qualification,
 integration, delivery and cleanup.
+
+
+### 2026-10-25 — HCZ launcher and Chopper repair, shared drowning frontier
+
+Pinned base`61be1910ac29d5606410be315ec881a5745a75d3`, worker
+`bugfix/ai-hcz-continuity-repair-20261025`/`t3-191b48d4`. The
+[causal record](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#hcz-object-phase-repairs-and-remaining-continuity-gate--2026-10-25)
+records exact environment, source fingerprints, physical negatives, corrections,
+commands and queue/execution times. No trace/timing/comparison input changed.
+
+Using its `q` environment (Java25, Lua5.4, surfaceless EGL, original verified
+absolute ROMs, display/inherited JVM options unset):
+
+```bash
+q -Ptrace-replay -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical '-Dtest=TestS3kAizTraceReplay#replayMatchesTrace,TestS3kSonicTailsHczSegmentTraceReplay#replayMatchesTrace,TestS3kSonicTailsCompleteEmeraldRunPrefix,TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds' test -B
+q -Ptrace-replay -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical '-Dtest=TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds' test -B
+```
+
+Hand-only correction matches native1767–1770 and moves first error1768Y to
+1891X`24B3/24AE`; chain22571 (21083physics/1488animation),49lag, incomplete
+at4001 with KosM FIFO abort. The newly observed Chopper P1 lock defect is then
+repaired: native capture1863 and roll/release1893 match. Final87 focused cases
+pass, including all four required S3K anchors and registered retained-state rewind.
+
+Five final companions pass without skips (three prefixes and standalone AIZ/HCZ).
+The first final diagnostic formatter failed on a spawnless helper after identifying
+5065; its corrected single-chain retry completed21:49:54 UTC,1T/1F/0E/0S
+(53.585s Maven,0s queue). An intervening temporary-accessor compile failure ran
+no tests. Companion results are reused, not duplicated.
+
+Final returned segment11 remains incomplete36366 (32863physics/3503animation),
+53lag, zero bootstrap errors/warnings, first3475 sidekick_routine`0C/02`, last
+mismatching7642. All earlier chain level segments0/2/4/6/8/9 remain clean;
+segments8/9 retain7175/3574rows and62/55lag. Counts differ in depth from the old
+81981 ending5725 and are not an equal-depth error-rate comparison.
+
+First actual P2 motion defect3476 is native Y speed`0010`/engine`0000`:
+shared object-control return precedes drowning primary-routine dispatch. Native
+routine`0C` moves before adding`$10`; the shared engine pre-death arm is later
+and adds before moving. Correct that routine/CPU/fixed-countdown boundary before
+editing another HCZ object or masking routine2. First actual P1 velocity defect
+is5065: the miniboss hit is missed until5066; it is not independently attributed.
+P1 later dies7477 without drowning, then load generation9/HCZ2 replaces source
+ownership at7643/input70718. The old input68801 drowning stop is passed, while
+segment closure and the campaign remain red. No shared player/physics owner was
+edited; parent owns the required rescope, combined smoke and delivery. Passive
+sources and consumed task-owned diagnostics are removed; task checkout retained.

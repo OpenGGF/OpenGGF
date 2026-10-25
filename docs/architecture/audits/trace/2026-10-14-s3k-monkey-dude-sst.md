@@ -1776,3 +1776,205 @@ broad smoke, full suite, pixel/audio, other viewport/donor/team or whole-campaig
 claim follows. Temporary diagnostics are consumed and test sources removed at
 handoff; this investigation retains evidence prose only. Parent owns review,
 integration, delivery and cleanup.
+
+
+## HCZ object phase repairs and remaining continuity gate — 2026-10-25
+
+Implementation checkout `t3-191b48d4`, branch
+`bugfix/ai-hcz-continuity-repair-20261025`, starts exactly at clean
+`61be1910ac29d5606410be315ec881a5745a75d3`. Only its task branch was renamed;
+hooks were installed. The parent owns review, combined smoke, integration, push
+and checkout retirement. No shared load, timing, physics or comparison owner,
+fixture, tolerance or input movie was changed. Sideways and the parallel AIZ
+ring-reset owner remain outside this patch.
+
+The narrow foreign `5096be6cc` launcher and `1eaa2cc4` Chopper diffs were read
+against current owners and native source, never cherry-picked wholesale. Current
+native-facing helpers remain intact. One read-only Sol helper checked the
+Chopper input publication and native controller source; it ran no tests or builds.
+Its live-logical-word finding was reproduced and repaired; its separate inherited
+raw-controller shake issue remains a qualification limit below.
+
+### Corrected native owners
+
+The hand's manual checkpoint runs once after its final Y write on every Main
+pass. LaunchReturn retains the native `$30 <= $18` gate. Grab, jump escape and
+launch release consume the standing bits left by the preceding solid pass;
+those per-player bits travel with player bindings and rewind state. Native
+`HCZHandLauncher_UpdateSolid` (sonic3k.asm:65864-65872),
+`HCZHandLauncher_UpdateAfterLaunch` (sonic3k.asm:65903-65914) and
+`HCZHandLauncher_TryGrabPlayer` (sonic3k.asm:66006-66008) own these boundaries.
+A current continuous replay verifies all of rows 1767–1770: rising handY`0898`
+then`0890`; SonicY`0871` → `0870` → `0871`, preserving fraction`8300`; OnObj
+sets at1768 and clears at1770 on leaving the right edge. The old late landing
+and retained rider are removed without changing solid dimensions.
+
+The next current defect was independent: a Chopper owns P1 in CARRY at row1863,
+but engine control lock was false while native `ctrl1_locked` became`FF`.
+Down at1891 rolled/released Sonic early, shifting X`24B3` → `24AE`; native
+remains unrolled through1892 and releases on the forced roll at1893.
+`MegaChopper_CheckCapture` (sonic3k.asm:184524-184530) clears logical input
+and acquires the lock only for selector1, not P2 or simultaneous P1+P2.
+`MegaChopper_CarryFollowPlayer` (sonic3k.asm:184439-184453) republishes the
+masked pad after release checks; `MegaChopper_ReleasePlayer`
+(sonic3k.asm:184486-184489) releases only its acquired lock. The engine now
+models that ownership, publishes both the forced movement mask and live logical
+word, and captures the latch/player state for rewind. It leaves the current
+follower-history entry untouched: Sonic_RecordPos preceded this object's write.
+A new negative control caught a first adaptation that updated only the forced
+mask and left live logical Left at0 instead of4. The completed replay before that
+last publication correction already matched capture1863, unrolled1891–1892,
+and released1893 at the native positions/fractions/velocities; final evidence is
+recorded below rather than inferred from the historical foreign counts.
+
+### Focused commands and physical results
+
+Use the `q` environment and the exact six-case canonical command in
+[the preceding investigation](#current-baseline-and-commands). `ROM_ROOT` is
+the original main checkout resolved by that command; all three original files independently
+match the root guidance's size/CRC32/SHA-1. Physical XML reports Java25.0.5.0.2,
+explicit surfaceless EGL, this checkout and those original absolute ROM paths.
+Display/Wayland and inherited JVM-option variables are unset; Lua is 5.4.9 and
+no-device audio is selected. No ROM copies or links were made.
+
+```bash
+q '-Dtest=TestHCZHandLauncherObjectInstance' test -B
+q '-Dtest=TestMegaChopperBadnikInstance,TestS3kHczHandLauncherGraphRewind' test -B
+q '-Dtest=TestMegaChopperBadnikInstance#mainOnlyCaptureLocksControlsAndRepublishesOnlyLeftRight' test -B
+q '-Dtest=TestMegaChopperBadnikInstance,TestHCZHandLauncherObjectInstance,TestS3kHczHandLauncherGraphRewind,TestS3kHcz2TwistingLoopRegression,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' test -B
+```
+
+| Completed invocation (UTC) | Physical result and qualification | Queue / Maven execution |
+| --- | --- | --- |
+|21:28:25, unchanged runtime plus four launcher controls|15/4F/0E/0S; all four new phase controls fail, including expected checkpoint1/actual0|0s /79s|
+|21:30:46, launcher candidate and anchors|79/0F/1E/0S; launcher15 and anchors pass; new rewind fixture lacked active player timer services|0s /83s|
+|21:33:22, hand-only exact canonical six|6/0F/1E/0S; five companions pass; chain first1891 X`24B3/24AE`, incomplete22571 differences (21083physics/1488animation),49lag; KosM FIFO abort at4001|0s /120s|
+|21:34:31, Chopper red controls plus rewind|11/5F/0E/0S; four Chopper lock controls fail; new launcher restore test also exposes missing P1 identity in its camera fixture|0s /27.454s|
+|21:37:20, two-object candidate plus anchors|87/0F/1E/0S; Chopper8, launcher15, new retained-state rewind and anchors pass; existing no-player graph case hit a null-focus fixture error|0s /87s|
+|21:38:05, corrected graph fixture|3/0F/0E/0S|0s /27.317s|
+|21:40:20, two-object candidate exact canonical six|6/1F/0E/0S; five companions pass; chain remains incomplete36366 (32863physics/3503animation),53lag, first3475 sidekick_routine`0C/02`, ownership loss70718 in HCZ2|0s /123s|
+|21:41:41, live logical-word negative control|1/1F/0E/0S; expected logical Left4, actual0|0s /30.325s|
+|21:43:48, final two-object runtime focused selection|87/0F/0E/0S|0s /90s|
+
+The87 physical cases include launcher15, Chopper8, registered launcher graph3,
+HCZ2 twisting-loop1 and60 anchor cases. The short selector
+`TestSonic3kLevelLoading` physically selects two distinct classes:36 cases in
+`com.openggf.game.sonic3k` and7 in `com.openggf.tests`; the other anchors are
+BootstrapResolver6, DecodingUtils3 and AIZ1Skip8. Counts are physical identities,
+not the number of selector tokens. Registered launcher restore recreates the
+parent/arm and restores clear/landed/held states, then replays escape and automatic
+release without duplicate arms. Chopper's registered object/player snapshots
+restore twice and replay masked input/release; fresh-instance Chopper graph
+recreation is not newly certified.
+
+The first fixture errors above were test setup failures, corrected locally;
+they did not motivate shared runtime changes. These are bounded focused/replay
+checks. No broad smoke, full suite, native recapture, pixel/audio certification,
+other donor, viewport or full-route breadth was run by this worker.
+
+
+### Final replay and structural handoff
+
+The final runtime fingerprint is
+`7d268324fd09c46830af318adeed963c95ec8abe43942b1f596e8c7141d1372a`:
+SHA-256 of the two sorted changed `src/main` paths, each followed by NUL and its
+complete bytes. Focused source fingerprint at 21:43:48 is
+`b4256b4a2691fe562256e7f87d119a16d1b581a61e12aabe5bc38012adcfab1a`.
+The successful final passive chain diagnostic has source fingerprint
+`f27260f5f504480f4112e7c68b7dc0092831db5cdf69f6c6452b1e836c0f80d1`;
+source fingerprints use all changed `src` paths against `61be1910`, sorted with
+the same NUL/full-byte convention. The retained five-file `src` fingerprint after removing the passive observer and
+adjusting only caller-label comments is `b7e13000ad35e585332ee70951aee972c88958d9e397b3a9f4b8cba1804d3b21`.
+The registered runtime/test edits are retained; the passive `afterProductionStep`
+chain edits are removed byte-for-byte to HEAD.
+
+The final six-case command completed21:46:38: five companions pass without
+skips, but the optional first-primary nearby-object formatter threw on a spawnless
+helper at5065 (six cases, zero assertion failures, one diagnostic error;122s Maven,
+0s queue). Its correction was restricted to the chain selector:
+
+```bash
+q -Ptrace-replay -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical '-Dtest=TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds' test -B
+```
+
+The first retry compiled no tests: the temporary observer named a nonexistent
+boss-debug accessor (24.932s Maven,0s queue). After using the existing public
+`traceDebugDetails`, the chain completed21:49:54: **one case / one ownership
+assertion failure / zero errors/skips**,53.585s Maven,0s queue. The five companion
+results on the same final runtime/fixtures/environment are reused, not rerun.
+Their standalone AIZ/HCZ comparisons remain20,463/3,519 samples with zero
+physics/animation/bootstrap/warnings; missing advertised auxiliary schemas remain
+explicit coverage limits. Every reported result belongs to a completed invocation;
+the failed diagnostic attempts are not gameplay regression evidence.
+
+Final segment11 is incomplete at **36,366 differences:32,863physics and
+3,503animation;53lag rows; zero bootstrap errors/warnings**. Its first report
+remains3475 `sidekick_routine` native`0C`/engine`02`. Chain segments0/2/4/6/8/9
+still complete cleanly; segments8/9 retain7,175/3,574 rows and62/55lag. These
+counts cannot be compared as equal-depth totals with the old81,981 ending5725
+or the hand-only22,571 ending4001. The final comparison reaches7642; source
+ownership is replaced at7643/movie70718 by load generation9, zone1 act1 (HCZ2).
+
+The next causal disagreement is **shared player primary-routine dispatch**, not
+another proved HCZ object correction:
+
+| Row | Native Tails | Final engine |
+| --- | --- | --- |
+|3474|`2F49,06BA`, air0, controlled by the column|same position; air0; no drowning pre-death|
+|3475|AirCountdown writes routine`0C`, control`81`, zero velocity, resets air30|same position`2F49,06B2`; drowning/pre-death true and air30; trace projection reports routine2|
+|3476|Y velocity`0010`|Y velocity`0000`; pre-death remains held|
+|3477|Y`06A3`, fraction`0E00`|Y`06A2`, fraction`FE00`|
+|3620|X`7F00` after native disappearance|X`2F49`; retained controlled player|
+
+`AirCountdown_ReduceAir` (sonic3k.asm:33579-33606) installs routine`0C`.
+`Tails_Index` (sonic3k.asm:26131-26138) dispatches it directly to
+`loc_15810`/`loc_15828` (sonic3k.asm:29354-29367): move using the incoming
+velocity, then add`$10`, record follower history and process the routine's tail.
+Sonic's `loc_125C6` (sonic3k.asm:24742-24747) has the same move-before-add shape.
+These are primary routines, so the normal control routine's object-control gate
+does not intercept them.
+
+Current `PlayableSpriteMovement.handleMovementDispatch` returns for
+`isObjectControlSuppressesMovement && !isHurt && !getDead` at558–560, before its
+pre-death branch at678–687. A drowning-but-not-yet-dead player with control`81`
+therefore never runs that movement/timer branch. Even moving the condition alone
+would leave its add-before-move ordering opposite native. Fixed countdown/death
+ownership and CPU dispatch must be checked together. Separately,
+`TraceCharacterState.routineFromSprite` has no pre-death arm and returns2, while
+`NativePlayableRoutine` labels DROWN as`0A`; native writes`0C` here. Merely
+changing the comparator's byte would hide the reported field while leaving the
+measured gravity, fractional movement and lifetime wrong.
+
+This is the finite next representation/verification boundary for the parent:
+resolve native primary routine before ordinary object control and CPU steering,
+retain move-before-gravity/history order, reconcile the fixed countdown/death
+owner, and restore/replay retained controlled players before/after the routine
+change. Required negatives include normal controlled waiting (which must still
+hold), native P1/P2 drowning with control`81`, and S1/S2 consumers of the shared
+dispatch. No shared dispatcher, routine projection, fixed-air manager or physics
+source was changed here. A local column release or injected Y velocity would
+compensate for the wrong owner and is rejected.
+
+The first actual **primary** motion difference is later,5065 during the miniboss:
+expected velocities`059E,F812,F7F6`, actual`FA62,07EE,080A`; engine has no hit
+and HP6 there, then hits on5066 (HP5), one row after native. Position/fractions
+first separate5066. This is a measured next primary frontier, not proof of a
+separate boss defect or of causation from the earlier Tails error. Do not fit a
+boss offset/delay before qualifying the shared player frontier. Engine P1 later
+becomes dead at7477/movie70552 at`06FD,07B4`, with drowning/pre-death false;
+native P1 remains alive at`07F1,0668`. The subsequent ownership replacement is
+therefore not the old drowning stop. This observer did not collect the final
+production receipt kind; it observed dead state and generation replacement.
+
+The helper's additional shake finding is retained as source evidence only:
+`Check_LRControllerShake` (sonic3k.asm:179972-179989) masks the low byte of the
+selected raw controller word (`Ctrl_1` held/pressed layout at
+sonic3k.constants.asm:549-554); the old Java path reads held sprite getters, which
+for CPU P2 are AI steering. Direction-release edges can therefore count as changes
+without native new presses. This patch does not claim to qualify that inherited
+raw-controller ingress or attribute the present route stop to it.
+
+All temporary source probes and inspected task-owned XML/trace diagnostics are
+consumed. There is no live Maven job or helper. The task checkout and local
+commit remain for parent review; combined smoke, integration, push, whole-route
+completion, remaining product matrices and checkout cleanup are parent-owned.
