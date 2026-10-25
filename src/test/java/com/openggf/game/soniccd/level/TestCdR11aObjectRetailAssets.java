@@ -225,6 +225,11 @@ class TestCdR11aObjectRetailAssets {
         hashes.put(MONITOR_TIME_MAPPINGS, MONITOR_TIME_MAPPINGS_SHA256);
         hashes.put(TUNNEL_DOOR_ANIMATIONS, SPIN_TUNNEL_DOOR_ANIMATION_SHA256);
         hashes.put(TUNNEL_DOOR_MAPPINGS, SPIN_TUNNEL_DOOR_MAPPING_SHA256);
+        // New lazy views still participate in this complete, independently pinned all-table manifest.
+        hashes.put(PATA_BATA_ANIMATIONS, "a68b2c9721811294f0f2ae43e0f78acc91ed8211a5d0da2d08d2ba230b6a25f3");
+        hashes.put(PATA_BATA_NORMAL_MAPPINGS, "9165ad8d9f95bda2639172fe900f16dad44924af5f896a0223e6b9cb8bb7087b");
+        hashes.put(PATA_BATA_DAMAGED_MAPPINGS, "96d4c533000d636452afa838266996b9c4853824e7b3377868f7876492858889");
+        assertEquals(CdR11aObjectAssets.Table.values().length, hashes.size(), "every admitted table has a pinned digest");
         for (var table : CdR11aObjectAssets.Table.values()) {
             var view = objects.view(table);
             assertEquals(table, view.table());
@@ -603,7 +608,9 @@ class TestCdR11aObjectRetailAssets {
         assertEquals(0x4334, objects.tileWord(5, 0));
         assertEquals(0x23A0, objects.tileWord(0, 0));
         assertThrows(UnsupportedOperationException.class, () -> objects.tileWord(5, 1));
-        for (int selector : new int[]{1, 4, 6, 10, 17}) {
+        // Selector 1 is now the authenticated Pata-Bata consumer; the other unowned selectors still reject.
+        assertEquals(0x23B0, objects.tileWord(1, 0));
+        for (int selector : new int[]{4, 6, 10, 17}) {
             assertThrows(UnsupportedOperationException.class, () -> objects.tileWord(selector, 0));
         }
 
@@ -1917,5 +1924,271 @@ class TestCdR11aObjectRetailAssets {
         assertSame(reverseBank, bankFirst.tunnelDoorArtBank());
         assertArrayEquals(visual.mappings().copy(), reverseVisual.mappings().copy());
         assertArrayEquals(binding.bytes().copy(), reverseBank.binding(ART_TUNNEL_DOOR).bytes().copy());
+    }
+
+    /** Complete source-text includes at N=1ecc5f3a. Actual art stays in the authenticated source owner. */
+    private static final byte[] PATA_BATA_SCRIPT_BYTES = hexBytes("0004000B070000010201FF030000010201FF");
+    private static final byte[] PATA_BATA_NORMAL_BYTES = hexBytes(
+            "00060011001C02F0070000F0F00700080002F80D0010F0080000180001F00F0019F0");
+    private static final byte[] PATA_BATA_DAMAGED_BYTES = hexBytes(
+            "00060011001C02F0070000F0F00700290002F80D0010F00800001800020000003100F00F0019F000");
+
+    @ParameterizedTest(name = "{0} authenticated optional Pata-Bata assets and regional rejection")
+    @EnumSource(CdReleaseVariant.class)
+    void pataBataAuthenticatesActualUsaOwnerAndRetainsBothSharedScriptsAfterMediaClose(CdReleaseVariant variant)
+            throws Exception {
+        String configured = System.getProperty("soniccd.media.root");
+        Assumptions.assumeTrue(configured != null && !configured.isBlank(), "Set soniccd.media.root for supplied-media checks");
+        String directory = switch (variant) { case USA -> "USA"; case JAPAN -> "Japan"; case EUROPE -> "Europe"; };
+        Path cue;
+        try (var files = Files.list(Path.of(configured).resolve(directory))) {
+            var cues = files.filter(p -> p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".cue")).toList();
+            assertEquals(1, cues.size(), "Configured regional media must contain exactly one CUE");
+            cue = cues.getFirst();
+        }
+        CdR11aAssets owner;
+        CdR11aObjectAssets visualFirst = null, bankFirst = null;
+        try (var source = CdProgramAssets.open(cue, Optional.of(variant), Optional.empty())) {
+            owner = CdR11aAssetLoader.load(source, variant, CdStageKey.parse("R11A"));
+            var image = source.mmd(CdNativeFile.R11A);
+            assertEquals(variant == CdReleaseVariant.USA
+                            ? "7aa54c36ab94dbe14068a18613c574b883ce446337bfaa9c571ec3523aff14e2"
+                            : "241be9620fbad1229792fedd1604066ae3e7d943cb7cc27bc94a4a837452d9b6",
+                    CdR11aProfile.sha256(image.readFile(0, image.fileBytes())));
+            // Independently observed shared art does not authorize a regional opening-object owner.
+            assertEquals("e492d968000f8097ed65ddaaf3734c11dce4d389ea74488610defa87f923f34f",
+                    CdR11aProfile.sha256(owner.view(CdR11aAsset.ART_PATA_BATA).bytes().copy()));
+            if (variant != CdReleaseVariant.USA) {
+                assertEquals("dfaa4722422a49aa4bf0d49eb11119b10ffb308a8fd7ad851074935491a5603e",
+                        CdR11aProfile.sha256(image.readFile(0xB51C, 18)));
+                assertEquals("1ba7f34eb4d74d7d8e10ec113bc09e1a364dc960c39b5acf44fb4e55c6c28f50",
+                        CdR11aProfile.sha256(image.readFile(0xB52E, 34)));
+                assertEquals("d35ba3b81691221b683c70a7f0c8febd85a81f9b0e4a1ffa28e85483bbb462ce",
+                        CdR11aProfile.sha256(image.readFile(0xB550, 40)));
+                assertFalse(Arrays.equals(PATA_BATA_SCRIPT_BYTES, image.readFile(0xB51C, 18)));
+                assertFalse(Arrays.equals(PATA_BATA_NORMAL_BYTES, image.readFile(0xB52E, 34)));
+                assertFalse(Arrays.equals(PATA_BATA_DAMAGED_BYTES, image.readFile(0xB550, 40)));
+                assertThrows(UnsupportedOperationException.class, owner::openingObjects);
+                assertThrows(UnsupportedOperationException.class, () -> CdR11aObjectAssets.load(
+                        owner.profile(), owner.identity(), image, owner.loadPlan()));
+                var usa = CdR11aProfile.forStage(CdReleaseVariant.USA, CdStageKey.parse("R11A"));
+                var asserted = new CdR11aAssets.Identity(CdReleaseVariant.USA, usa.stage(), usa.file(), usa.domain(),
+                        usa.expectedMmdSha256(), owner.identity().observedWholeDiscSha256());
+                assertThrows(IOException.class, () -> CdR11aObjectAssets.load(usa, asserted, image, owner.loadPlan()));
+            } else {
+                visualFirst = owner.openingObjects();
+                bankFirst = CdR11aObjectAssets.load(owner.profile(), owner.identity(), image, owner.loadPlan());
+                verifyPataBataCold(visualFirst);
+                verifyPataBataCold(bankFirst);
+                verifyPataBataNativeReferences(image, owner);
+                for (int offset : new int[]{0x3F28, 0xB41A, 0xB462, 0xB47E, 0xB480, 0xB492, 0xB494,
+                        0xB502, 0xB504, 0xB51C, 0xB526, 0xB52D, 0xB52E, 0xB54F, 0xB550, 0xB576, 0xB577,
+                        0xCF4A, 0xCF6E, 0xFC8A, 0x37378, 0x37640, 0x37641}) {
+                    byte[] changed = image.readFile(0, image.fileBytes()); changed[offset] ^= 1;
+                    assertThrows(IOException.class, () -> CdR11aObjectAssets.load(owner.profile(), owner.identity(),
+                            CdMmdImage.parse(changed), owner.loadPlan()), "changed file offset " + offset);
+                }
+            }
+        }
+        assertEquals(variant, owner.identity().variant());
+        assertThrows(UnsupportedOperationException.class, () -> owner.decoded(CdR11aAsset.ART_PATA_BATA));
+        if (variant != CdReleaseVariant.USA) { return; }
+        assertNotNull(visualFirst); assertNotNull(bankFirst);
+        verifyPataBataRetained(owner, visualFirst, bankFirst);
+    }
+
+    private static void verifyPataBataCold(CdR11aObjectAssets objects) throws Exception {
+        var views = CdR11aObjectAssets.class.getDeclaredField("views"); views.setAccessible(true);
+        assertEquals(9, ((Map<?, ?>) views.get(objects)).size());
+        var optional = CdR11aObjectAssets.class.getDeclaredField("frontierViews"); optional.setAccessible(true);
+        assertTrue(((Map<?, ?>) optional.get(objects)).isEmpty());
+        for (String name : List.of("pataBataNormal", "pataBataDamaged", "pataBataArtBank")) {
+            var field = CdR11aObjectAssets.class.getDeclaredField(name); field.setAccessible(true);
+            assertNull(field.get(objects), "Pata-Bata assets must remain opt-in");
+        }
+        assertEquals(List.of(ART_RINGS, ART_MOSQUI), objects.initialArtBank().bindings().stream()
+                .map(CdR11aObjectAssets.ArtBinding::source).toList());
+        assertEquals(84, objects.initialArtBank().bindings().stream().mapToInt(CdR11aObjectAssets.ArtBinding::tileCount).sum());
+    }
+
+    private static void verifyPataBataNativeReferences(CdMmdImage image, CdR11aAssets owner) throws Exception {
+        // ObjectIndex $3E, actual selector/test/branches and native PC-relative LEA operands, not source label numbers.
+        assertEquals(0x20B41A, ByteBuffer.wrap(image.readFile(0x3F28, 4)).getInt());
+        assertArrayEquals(hexBytes("70014EB90020CF264A2800286614"), image.readFile(0xB462, 14));
+        assertArrayEquals(hexBytes("203CFFFF8000323CFE007403760043FA00AE6012"), image.readFile(0xB470, 20));
+        assertArrayEquals(hexBytes("203CFFFFC000323CFF007404760143FA00BC"), image.readFile(0xB484, 18));
+        assertArrayEquals(hexBytes("2140003031410036314200381143001C21490004"), image.readFile(0xB496, 20));
+        for (int[] operand : new int[][]{{0xB47E, 0xB52E}, {0xB492, 0xB550}, {0xB502, 0xB51C}}) {
+            var instruction = ByteBuffer.wrap(image.readFile(operand[0], 4));
+            assertEquals((short) 0x43FA, instruction.getShort());
+            assertEquals(operand[1], operand[0] + 2 + instruction.getShort());
+        }
+        assertArrayEquals(hexBytes("43FA00184EB900205CFA"), image.readFile(0xB502, 10));
+        assertArrayEquals(hexBytes("43F90020CF48D040383B001845FB4014720012280029D2413A321000314500024E75"),
+                image.readFile(0xCF26, 34));
+        assertEquals(38, ByteBuffer.wrap(image.readFile(0xCF4A, 2)).getShort());
+        assertEquals(0x23B0, Short.toUnsignedInt(ByteBuffer.wrap(image.readFile(0xCF6E, 2)).getShort()));
+        byte[] actual = image.readFile(0, image.fileBytes());
+        for (int i = 0; i < 3; i++) {
+            var table = List.of(PATA_BATA_ANIMATIONS, PATA_BATA_NORMAL_MAPPINGS, PATA_BATA_DAMAGED_MAPPINGS).get(i);
+            byte[] source = List.of(PATA_BATA_SCRIPT_BYTES, PATA_BATA_NORMAL_BYTES, PATA_BATA_DAMAGED_BYTES).get(i);
+            assertArrayEquals(source, image.readFile(table.range().fileOffset(), table.range().length()));
+            assertEquals(1, pataBataOccurrences(actual, source));
+        }
+        var art = owner.profile().range(CdR11aAsset.ART_PATA_BATA);
+        assertEquals(0x37378, art.fileOffset()); assertEquals(714, art.length());
+        assertEquals(1, pataBataOccurrences(actual, art.read(image).copy()));
+        assertEquals(0x8032, art.read(image).unsignedWord(0));
+        assertEquals(0, art.read(image).unsignedByte(713));
+        assertThrows(IOException.class, () -> CdNemesisAsset.decode(image.readFile(0x37378, 713), 1600, 1600));
+        var finite = CdNemesisAsset.decode(image.readFile(0x37378, 714), 1600, 1600);
+        var extended = CdNemesisAsset.decode(image.readFile(0x37378, 715), 1600, 1600);
+        assertEquals(714, finite.consumedInputBytes()); assertEquals(714, extended.consumedInputBytes());
+        assertArrayEquals(finite.bytes().copy(), extended.bytes().copy());
+        assertEquals("8e7cc0d2af986240146ffd214038f1b2715c71227226261be477cb689eac8943",
+                CdR11aProfile.sha256(finite.bytes().copy()));
+        assertThrows(IOException.class, () -> CdNemesisAsset.decode(image.readFile(0x37378, 714), 49 * 32, 1600));
+        assertThrows(IllegalArgumentException.class,
+                () -> CdNemesisAsset.decode(image.readFile(0x37378, 714), 1600, 1599));
+        // All native full/incremental Pata-Bata rows agree; the optional binding describes only ID 4 / row 2.
+        for (int[] row : new int[][]{{4, 0xFC7C, 2, 0xFC8A}, {5, 0xFCA2, 3, 0xFCB6},
+                {9, 0xFD4C, 0, 0xFD4E}, {10, 0xFD60, 2, 0xFD6E}}) {
+            assertEquals(row[1], 0xFBC6 + ByteBuffer.wrap(image.readFile(0xFBC6 + row[0] * 2, 2)).getShort());
+            assertArrayEquals(hexBytes("002373787600"), image.readFile(row[3], 6));
+            var entry = owner.loadPlan().plcs().get(row[0]).entries().get(row[2]);
+            assertEquals(CdR11aAsset.ART_PATA_BATA, entry.source());
+            assertEquals(0x7600, entry.vramAddress()); assertEquals(art, entry.sourceRange());
+        }
+        var placements = owner.placements().records().stream().filter(p -> p.objectId() == 0x3E).toList();
+        assertEquals(List.of(16,45,48,75,78,88,116,141,142,143,160,161,200,205,211,213,214,215,
+                268,269,302,304,307,308,310,311,315,361,381,383,406,426,447,473,476),
+                placements.stream().map(CdObjectPlacements.Placement::index).toList());
+        assertEquals(17, placements.stream().filter(p -> p.subtype() == 0).count());
+        assertEquals(18, placements.stream().filter(p -> p.subtype() == 255).count());
+        for (var placement : placements) {
+            assertEquals(0, placement.subtype2()); assertEquals(0xBE, placement.encodedId());
+            assertEquals(0, image.readFile(0x7906 + placement.index() * 8 + 7, 1)[0]);
+        }
+        assertEquals("c5441a5a61b8c17cbac91d85a830f1560ca1c4e101df72e10326f0c7d9d71791",
+                CdR11aProfile.sha256(image.readFile(0x7906, 3984)));
+    }
+
+    /** All first new visual/art requests occur after source closure; no reflection constructs an authenticated owner. */
+    private static void verifyPataBataRetained(CdR11aAssets owner, CdR11aObjectAssets objects,
+                                              CdR11aObjectAssets bankFirst) throws Exception {
+        var initial = objects.initialArtBank();
+        var oldTables = Arrays.stream(CdR11aObjectAssets.Table.values()).limit(36).toList();
+        var oldViews = oldTables.stream().map(objects::view).toList();
+        var oldHashes = oldViews.stream().map(v -> CdR11aProfile.sha256(v.bytes().copy())).toList();
+        var frontier = objects.frontierArtBank(); var contact = objects.contactArtBank();
+        var floating = objects.floatBlockArtBank(); var spring = objects.springArtBank();
+        var monitor = objects.monitorTimeArtBank(); var door = objects.tunnelDoorArtBank();
+        var cache = CdR11aObjectAssets.class.getDeclaredField("pataBataArtBank"); cache.setAccessible(true);
+        assertNull(cache.get(objects));
+        var normal = objects.pataBataNormal(); var damaged = objects.pataBataDamaged();
+        assertNull(cache.get(objects), "visual requests must not decode optional art");
+        assertSame(normal, objects.pataBataNormal()); assertSame(damaged, objects.pataBataDamaged());
+        assertArrayEquals(PATA_BATA_NORMAL_BYTES, normal.mappings().copy());
+        assertArrayEquals(PATA_BATA_DAMAGED_BYTES, damaged.mappings().copy());
+        var scriptView = objects.view(PATA_BATA_ANIMATIONS);
+        assertSame(scriptView, objects.view(PATA_BATA_ANIMATIONS));
+        assertArrayEquals(PATA_BATA_SCRIPT_BYTES, scriptView.bytes().copy());
+        for (var visual : List.of(normal, damaged)) {
+            assertArrayEquals(PATA_BATA_SCRIPT_BYTES, visual.animationTable().copy());
+            assertEquals(List.of(6,17,28), visual.mappingFrames().stream()
+                    .map(CdObjectVisualAssets.MappingFrame::relativeOffset).toList());
+            assertEquals(List.of(7,3), visual.animations().stream().map(CdObjectVisualAssets.AnimationScript::delay).toList());
+            for (var script : visual.animations()) {
+                assertEquals(List.of(0,0,1,2,1), script.frameBytes());
+                assertEquals(CdObjectVisualAssets.Terminal.LOOP_FF, script.terminal());
+                assertEquals(7, script.bytes().length());
+            }
+            assertThrows(ReadOnlyBufferException.class, () -> visual.mappings().buffer().put((byte) 0));
+        }
+        assertEquals(List.of(2,2,1), normal.mappingFrames().stream().map(f -> f.pieces().size()).toList());
+        assertEquals(List.of(2,2,2), damaged.mappingFrames().stream().map(f -> f.pieces().size()).toList());
+        assertEquals(0x29, damaged.mappingFrames().getFirst().pieces().getLast().rawTileWord());
+        assertEquals(0x31, damaged.mappingFrames().getLast().pieces().getFirst().rawTileWord());
+        assertEquals(0, damaged.mappings().unsignedByte(39));
+        var bank = objects.pataBataArtBank(); var binding = bank.binding(CdR11aAsset.ART_PATA_BATA);
+        assertSame(bank, objects.pataBataArtBank()); assertEquals(List.of(binding), bank.bindings());
+        assertEquals(4, binding.plcId()); assertEquals(owner.loadPlan().plcs().get(4).entries().get(2), binding.plc());
+        assertEquals(0x7600, binding.plc().vramAddress()); assertEquals(0x23B0, binding.baseWord());
+        assertEquals(0x3B0, binding.firstTileId()); assertEquals(50, binding.tileCount());
+        assertEquals(1600, binding.bytes().length()); assertEquals(714, binding.decode().consumedInputBytes());
+        assertEquals(owner.profile().range(CdR11aAsset.ART_PATA_BATA), binding.decode().sourceBlobRange());
+        assertEquals(binding.decode().sourceBlobRange(), binding.decode().readerInputRange());
+        assertEquals("8e7cc0d2af986240146ffd214038f1b2715c71227226261be477cb689eac8943",
+                CdR11aProfile.sha256(binding.bytes().copy()));
+        assertEquals("66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925",
+                CdR11aProfile.sha256(bank.tile(0x3B0).copy()));
+        assertEquals("182b9b7a4ff870e8c37df619f42d6def601ccfee20cd53a284cbaf30aff62f6e",
+                CdR11aProfile.sha256(bank.tile(0x3E1).copy()));
+        for (int tile = 0x3B0; tile < 0x3E2; tile++) {
+            assertArrayEquals(binding.bytes().slice((tile - 0x3B0) * 32, 32).copy(), bank.tile(tile).copy());
+        }
+        var allUsed = new java.util.TreeSet<Integer>();
+        for (var visual : List.of(normal, damaged)) {
+            for (var frame : visual.mappingFrames()) {
+                for (var piece : frame.pieces()) {
+                    int word = binding.baseWord() + piece.rawTileWord(), first = word & 0x7FF;
+                    assertEquals(0x2000, word & 0xF800);
+                    assertTrue(first >= 0x3B0 && first + piece.tileCount() <= 0x3E2);
+                    for (int i = 0; i < piece.tileCount(); i++) {
+                        allUsed.add(first + i); assertEquals(32, bank.tile(first + i).length());
+                    }
+                }
+            }
+        }
+        assertEquals(java.util.stream.IntStream.range(0x3B0, 0x3E2).boxed().toList(), List.copyOf(allUsed));
+        assertEquals(0x23B0, objects.tileWord(1, 0));
+        assertEquals(0x23A0, objects.tileWord(0, 0)); assertEquals(0x4334, objects.tileWord(5, 0));
+        assertEquals(0x8328, objects.tileWord(0xC, 0));
+        for (int subtype = 1; subtype <= 255; subtype++) {
+            int unsupported = subtype;
+            assertThrows(UnsupportedOperationException.class, () -> objects.tileWord(1, unsupported));
+        }
+        for (var other : CdR11aAsset.values()) {
+            if (other != CdR11aAsset.ART_PATA_BATA) { assertThrows(UnsupportedOperationException.class, () -> bank.binding(other)); }
+        }
+        for (int tile : new int[]{0,0x3AF,0x3E2,0x7FF}) {
+            assertThrows(UnsupportedOperationException.class, () -> bank.tile(tile));
+        }
+        for (int tile : new int[]{-1,0x800,Integer.MAX_VALUE}) {
+            assertThrows(IllegalArgumentException.class, () -> bank.tile(tile));
+        }
+        assertThrows(UnsupportedOperationException.class, bank.bindings()::clear);
+        assertThrows(ReadOnlyBufferException.class, () -> bank.tile(0x3B0).buffer().put((byte) 0));
+        assertThrows(ReadOnlyBufferException.class, () -> scriptView.bytes().buffer().put((byte) 0));
+        byte[] changed = bank.tile(0x3B0).copy(); changed[0] ^= 1;
+        assertNotEquals(changed[0], bank.tile(0x3B0).copy()[0]);
+        for (int i = 0; i < oldTables.size(); i++) {
+            assertSame(oldViews.get(i), objects.view(oldTables.get(i)));
+            assertEquals(oldHashes.get(i), CdR11aProfile.sha256(objects.view(oldTables.get(i)).bytes().copy()));
+        }
+        assertSame(initial, objects.initialArtBank()); assertSame(frontier, objects.frontierArtBank());
+        assertSame(contact, objects.contactArtBank()); assertSame(floating, objects.floatBlockArtBank());
+        assertSame(spring, objects.springArtBank()); assertSame(monitor, objects.monitorTimeArtBank());
+        assertSame(door, objects.tunnelDoorArtBank());
+        assertEquals(List.of(ART_RINGS, ART_MOSQUI), initial.bindings().stream().map(CdR11aObjectAssets.ArtBinding::source).toList());
+        var reverseBank = bankFirst.pataBataArtBank();
+        var optional = CdR11aObjectAssets.class.getDeclaredField("frontierViews"); optional.setAccessible(true);
+        assertTrue(((Map<?, ?>) optional.get(bankFirst)).isEmpty(), "art-first access must not read optional visual tables");
+        assertArrayEquals(PATA_BATA_DAMAGED_BYTES, bankFirst.pataBataDamaged().mappings().copy());
+        assertArrayEquals(PATA_BATA_NORMAL_BYTES, bankFirst.pataBataNormal().mappings().copy());
+        assertSame(reverseBank, bankFirst.pataBataArtBank());
+        assertArrayEquals(binding.bytes().copy(), reverseBank.binding(CdR11aAsset.ART_PATA_BATA).bytes().copy());
+    }
+
+    private static int pataBataOccurrences(byte[] haystack, byte[] needle) {
+        int count = 0;
+        for (int at = 0; at <= haystack.length - needle.length; at++) {
+            boolean same = true;
+            for (int i = 0; i < needle.length; i++) {
+                if (haystack[at + i] != needle[i]) { same = false; break; }
+            }
+            if (same) { count++; }
+        }
+        return count;
     }
 }

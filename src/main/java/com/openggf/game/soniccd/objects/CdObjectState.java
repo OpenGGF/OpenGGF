@@ -49,6 +49,9 @@ public final class CdObjectState {
 
     public enum WordField {
         TILE(2), X(8), X_FRACTION(0x0A), Y(0x0C), Y_FRACTION(0x0E),
+        // ObjPataBata (Pata-Bata/Main.asm:18,64,67-73): overlapping storage aliases only.
+        PATA_BATA_ANCHOR_X(0x2A), PATA_BATA_PHASE(0x34),
+        PATA_BATA_PHASE_SPEED(0x36), PATA_BATA_SHIFT(0x38),
         X_VELOCITY(0x10), Y_VELOCITY(0x12),
         // oMonItemDel EQU oAnimTime; Monitor and Time Post/Main.asm:415,482,625 accesses a WORD at $1E.
         MONITOR_ITEM_DELETE(0x1E),
@@ -75,6 +78,8 @@ public final class CdObjectState {
 
     public enum LongField {
         MAPPINGS(4), X_POSITION(8), Y_POSITION(0x0C),
+        // ObjPataBata (Pata-Bata/Main.asm:19-20,42,49,74): overlapping storage aliases only.
+        PATA_BATA_ANCHOR_Y(0x2C), PATA_BATA_X_DELTA(0x30),
         // ObjMosqui_Init:.SetInfo (Mosqui/Main.asm:51-54). Storage only; no body execution here.
         MOSQUI_X_DELTA(0x2C), MOSQUI_ANIMATION_SCRIPT(0x30);
         private final int offset;

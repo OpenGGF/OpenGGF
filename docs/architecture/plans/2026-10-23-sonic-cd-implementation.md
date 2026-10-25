@@ -5167,3 +5167,91 @@ release-only full suite is claimed. This is a private checkpoint, not whole-game
 or regional parity. Active/dirty secondary, splash, actual warp stars/HUD/save,
 period loading, native PLC/timing and audio execution remain separate owners.
 Pata-Bata data/art/body work follows the observed540 frontier.
+
+### 25 October, 06:16 GMT — Pata-Bata components and rejected simultaneous art plan
+
+Local continuation from2fc88c650. The observed ordinary540 blocker is native
+ObjPataBata/ID3E. New authenticated lazy views bind shared18-byte animation at
+B51C, normal34-byte mappings atB52E and damaged40-byte mappings atB550. Real
+native pointers are20B52E/20B550; both have three frames and both complete shared
+scripts. Normal's odd body offset17 and damaged's real final pad remain exact.
+The private art bank is50 native tiles3B0..3E2, base23B0, VRAM7600, sourced from
+camera PLC4/PLC_Cam2_Full row2. It is not a PLC_Std row or a resident-art proof.
+Selector1/subtype2-zero admission is added; old table ordinals/eager startup,
+other consumers/banks and USA-only authentication remain. Regional negative
+checks do not supply JP/EU gameplay admission.
+
+The body calls DestroyOnGoodFuture first, initializes only routine0 and enters
+Main for every other raw routine. Init falls through. X uses long delta, signed
+wrapped word range and one reversed add; phase reads the high byte of its word.
+CalcSine replaces D0's low word without clearing its old upper word. SWAP then
+uses that old delta lane in the Y fraction before register ASR count&63; counts
+32..63 sign-fill. The actual player-math owner supplies sine bytes. Anchor Y is
+the complete2C/2E long including native initial fraction8000. Native good-future
+conversion deletes the whole image, restores only X/Y words, sets ID18 and
+skips the body; its sound test observes already cleared flags and emits no FM.
+Shared animation, actual draw reload and anchor-based despawn/saved-bank tail
+remain ordered. Six new field aliases add no state/store/schema. There is no
+Runtime dispatch or Pata-Bata residency in this checkpoint.
+
+Tests-first26384 failed compilation at absent body/asset/alias APIs; no JUnit.
+Exact frozen production was imported. Root98778 focused actual-media run:
+**140 tests/three failures/zero errors/skips**, immediate, Maven1m30s,
+terminal06:01:06Z. Class results: visual26, assets44, pool12 and math14 passed;
+retail9 had one failure, body35 had two. The new Pata-Bata retail method's three
+regions and body's optional actual-USA factory case executed without skips.
+
+All failures were fixtures, with production unchanged:
+
+- The inherited FloatBlock helper still rejected selector1, now deliberately
+  owned by Pata-Bata. RootR2 retains the other unsupported selectors and asserts
+  exact23B0 for1/0.
+- Two new register/shift methods use large dirty anchors but camera0. Native
+  post-draw CheckObjDespawn2 correctly clears those far objects. RootR2 supplies
+  the corresponding actual anchor camera and asserts not-deleted; every motion,
+  sine, shift and expected position literal remains. Narrow69868 passed both
+  body methods; no despawn behavior was suppressed.
+- Once the inherited USA path passed the selector assertion, its all-table
+  digest manifest omitted the three new enum keys. RootR3 adds their independent
+  full-include hashes and checks manifest cardinality, retaining every old hash
+  and the complete per-table loop. The source-derived18/34/40-byte digests were
+  independently re-derived by static review.
+
+Root69868: narrow five cases, **5/one failure/zero errors/skips**, immediate,
+Maven31.274s,06:04:37Z: body2 passed; retail3 reached the missing-manifest defect.
+Root96888: exact repaired retail method/all3 regions, **3/0/0/0**, immediate,
+Maven29.433s,06:09:21Z. Current XML/Java25.0.5.0.2/media were checked. The140-red,
+body2 pass and final retail3 pass remain separate; no140-green claim. One bounded
+independent review found no production or remaining P1/P2 after RootR2/R3.
+Frozen originals are preserved.
+
+```text
+env -u DISPLAY -u WAYLAND_DISPLAY python3 <main-workspace>/tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestCdPataBata,TestCdR11aObjectAssets,TestCdR11aObjectRetailAssets,TestCdObjectVisualAssets,TestCdObjectPool,TestCdPlayerMath' -Dsoniccd.media.root=<supplied-media-root> test -B
+env -u DISPLAY -u WAYLAND_DISPLAY python3 <main-workspace>/tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestCdPataBata#calcSineReplacesOnlyD0LowWordAndSwapExposesThePriorFullDeltaHighWord+positiveSineSignFillsWithZeroInsteadOfJavaModulo32Shifts,TestCdR11aObjectRetailAssets#actualOpenedMediaAuthenticatesBeforeDecodeAndKeepsThreeRegionalTerrainLoads' -Dsoniccd.media.root=<supplied-media-root> test -B
+env -u DISPLAY -u WAYLAND_DISPLAY python3 <main-workspace>/tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestCdR11aObjectRetailAssets#actualOpenedMediaAuthenticatesBeforeDecodeAndKeepsThreeRegionalTerrainLoads' -Dsoniccd.media.root=<supplied-media-root> test -B
+```
+
+**Rejected approach and its kill evidence.** Root initially proposed retaining
+all thirteen opening art spans and adding Pata-Bata as a fourteenth source,
+544 declarations. Source inspection killed that design before integration:
+Mosqui's70 native tiles occupy3A0..3E6 and contain Pata-Bata's entire50-tile
+3B0..3E2 span. Their physical union is still494. Different logical bases cannot
+make a native-tile-only resolver distinguish the two sources. Correct strict
+physical-overlap rejection must remain. A per-object art selector, renamed
+physical IDs or draw-time upload would model different hardware behavior.
+
+The external picture worker completed only two independent exact mapper joins;
+its presentation mirror is unchanged, and no544 policy exists. The external
+Runtime candidate was already authored against that withdrawn factory, frozen,
+reported blocked and explicitly NOT imported. It must not be treated as a
+usable implementation. No544 cleanup constant or extra50 logical bank is in this
+tree. This records the abandoned design and its source proof to prevent reuse.
+
+Next prerequisite is the actual camera-PLC request/service ordering and one
+captured resident native window, preserving untouched bytes and old-SAT/new-art
+visibility. Reusing the70-tile window with a50-tile write at offset16 is a
+hypothesis to check against native producers, full PLC batch writes and timing,
+not authority to insert an art-at-draw shortcut. That bounded source audit is
+separate. Native camera PLC/residency, Pata-Bata draw/World contact, GPU proof,
+ordinary route beyond540, native audio and JP/EU remain unowned. These validated
+components do not certify a route, complete bank loading or whole-game parity.

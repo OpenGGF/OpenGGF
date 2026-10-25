@@ -70,7 +70,11 @@ public final class CdR11aObjectAssets {
         // Spin Tunnel/Main (Door).asm:57,83 and Data (Act 1 Present).asm:536-540; actual USA operands.
         // Separate normal Door views; both orientations use the existing standard 12-tile TunnelDoorArtBank.
         TUNNEL_DOOR_ANIMATIONS("Ani_TunnelDoor", 0x3F02A, 14),
-        TUNNEL_DOOR_MAPPINGS("MapSpr_TunnelDoor", 0x3F038, 28);
+        TUNNEL_DOOR_MAPPINGS("MapSpr_TunnelDoor", 0x3F038, 28),
+        // Pata-Bata/Main.asm:29,39,76,84-92; actual USA PC-relative operands join the three complete includes.
+        PATA_BATA_ANIMATIONS("Ani_PataBata", 0xB51C, 18),
+        PATA_BATA_NORMAL_MAPPINGS("MapSpr_PataBata1", 0xB52E, 34),
+        PATA_BATA_DAMAGED_MAPPINGS("MapSpr_PataBata2", 0xB550, 40);
 
         private final String nativeLabel;
         private final int offset;
@@ -265,6 +269,29 @@ public final class CdR11aObjectAssets {
         }
     }
 
+    /**
+     * Separate optional source for PLC_Cam2_Full row 2. This describes the native source/base association;
+     * it executes no camera PLC, transfer or residency update and never extends an existing bank.
+     */
+    public static final class PataBataArtBank {
+        private final List<ArtBinding> bindings;
+        private PataBataArtBank(List<ArtBinding> bindings) { this.bindings = List.copyOf(bindings); }
+        public List<ArtBinding> bindings() { return bindings; }
+        public ArtBinding binding(CdR11aAsset source) {
+            return bindings.stream().filter(b -> b.source() == source).findFirst()
+                    .orElseThrow(() -> new UnsupportedOperationException("No Pata-Bata art binding for " + source));
+        }
+        /** Native 11-bit tile ID; adjacent Mosqui and Taga-Taga art remain absent. */
+        public CdAssetBytes tile(int nativeTileId) {
+            if ((nativeTileId & ~0x7FF) != 0) { throw new IllegalArgumentException("Not an 11-bit tile ID"); }
+            for (var binding : bindings) {
+                int index = nativeTileId - binding.firstTileId();
+                if (index >= 0 && index < binding.tileCount()) { return binding.bytes().slice(index * 32, 32); }
+            }
+            throw new UnsupportedOperationException("Tile has no decoded Pata-Bata source: " + nativeTileId);
+        }
+    }
+
     // Preserve the opening load's exact nine table reads and two art decodes. New data is opt-in below.
     private static final List<Table> OPENING_TABLES = List.of(Table.RING_DELTAS, Table.RING_ANIMATIONS,
             Table.RING_MAPPINGS, Table.MOSQUI_NORMAL_ANIMATIONS, Table.MOSQUI_DAMAGED_ANIMATIONS,
@@ -303,6 +330,9 @@ public final class CdR11aObjectAssets {
     private CdObjectVisualAssets monitorTime;
     private MonitorTimeArtBank monitorTimeArtBank;
     private CdObjectVisualAssets tunnelDoor;
+    private CdObjectVisualAssets pataBataNormal;
+    private CdObjectVisualAssets pataBataDamaged;
+    private PataBataArtBank pataBataArtBank;
 
     private CdR11aObjectAssets(CdR11aAssets.Identity identity, Map<Table, View> views, List<Delta> deltas,
                                 List<TouchSize> dimensions, CdObjectVisualAssets rings,
@@ -651,6 +681,58 @@ public final class CdR11aObjectAssets {
         return tunnelDoor;
     }
 
+    /**
+     * ObjPataBata's subtype-zero mapping root; both real shared scripts remain visible and bounded to frames 0..2.
+     * Pata-Bata/Main.asm:23-30,76-92. The native body selects script 0; no animation or movement executes here.
+     */
+    public synchronized CdObjectVisualAssets pataBataNormal() {
+        if (pataBataNormal == null) {
+            pataBataNormal = CdObjectVisualAssets.decode(read(Table.PATA_BATA_NORMAL_MAPPINGS), 3,
+                    read(Table.PATA_BATA_ANIMATIONS), 2, 50);
+        }
+        return pataBataNormal;
+    }
+
+    /** Nonzero native subtype selects this mapping root and script 1 from the same complete shared script view. */
+    public synchronized CdObjectVisualAssets pataBataDamaged() {
+        if (pataBataDamaged == null) {
+            pataBataDamaged = CdObjectVisualAssets.decode(read(Table.PATA_BATA_DAMAGED_MAPPINGS), 3,
+                    read(Table.PATA_BATA_ANIMATIONS), 2, 50);
+        }
+        return pataBataDamaged;
+    }
+
+    /** Explicit opt-in from the retained authenticated USA MMD; no object, camera PLC or live residency admission. */
+    public synchronized PataBataArtBank pataBataArtBank() throws IOException {
+        if (pataBataArtBank == null) {
+            // PLC_Cam2_Full row 2 (Data (Act 1 Present).asm:102-115) owns $7600; Pata-Bata/Main.asm:21-22
+            // selects ObjectTileIDs index 1, subtype2 0 ($23B0). All 35 actual R11A placements use subtype2 0.
+            // Cam3_Full/Cam2_Incr/Cam3_Incr repeat this source/destination; none is executed by this accessor.
+            var source = CdR11aAsset.ART_PATA_BATA;
+            var entries = loadPlan.plcs().get(4).entries();
+            var entry = entries.get(2);
+            var blob = profile.range(source);
+            int baseWord = tileWord(1, 0);
+            if (entry.source() != source || entry.vramAddress() != 0x7600 || !entry.sourceRange().equals(blob)
+                    || entries.stream().filter(p -> p.source() == source).count() != 1
+                    || (baseWord & 0x7FF) * 32 != entry.vramAddress()
+                    || source.encodingForReviewedConsumer() != CdR11aAsset.Encoding.NEMESIS) {
+                throw new IllegalArgumentException("Unverified native Pata-Bata PLC row/base-word/source association");
+            }
+            // Actual header $8032 declares XOR/50 tiles. The prefix walk needs 713 bytes, while the existing
+            // 8-bit reader consumes all 714 real source bytes, including the $00 at MMD $37641. No adjacent
+            // source or invented padding is read; the source blob and finite reader have the same reviewed range.
+            var reader = new CdR11aProfile.FileRange(blob.file(), blob.domain(), blob.fileOffset(), 714);
+            var decoded = CdNemesisAsset.decode(reader.read(image).copy(), 50 * 32, 50 * 32);
+            if (decoded.consumedInputBytes() != reader.length()) {
+                throw new IOException("Pata-Bata Nemesis reader consumption differs from its reviewed finite extent");
+            }
+            var read = new CdR11aAssets.NemesisRead(source, blob, reader, decoded.consumedInputBytes(), decoded.bytes());
+            pataBataArtBank = new PataBataArtBank(List.of(new ArtBinding(source, 4, entry, baseWord, read)));
+        }
+        return pataBataArtBank;
+    }
+
     /** Obj3DPlant_Init (3D Ramp/Main.asm:57-90): ADD.W consumes signed offsets in two distinct bodies. */
     public static PlantOffsets decodePlantOffsets(byte[] input) {
         var bytes = exact(input, 14, "Obj3DPlant_Offsets1/Obj3DPlant_Offsets2");
@@ -685,16 +767,17 @@ public final class CdR11aObjectAssets {
     /**
      * SetObjectTileID (Object Tile ID Set.asm:7-17) has a signed relative word index, then subtype2 words.
      * The source declares 18 index words (36 bytes), followed by 19 data words, not 37 index entries.
-     * Only Mosqui's selector 0, FloatBlock's selector 5 (Floating Block/Main.asm:43-44), and vertical Tunnel Door's
-     * selector $C (Tunnel Door/Main.asm:41-42), each at subtype2 0, are admitted; Ring writes its own literal $A7AE.
+     * Only Mosqui's selector 0, Pata-Bata's selector 1 (Pata-Bata/Main.asm:21-22), FloatBlock's selector 5
+     * (Floating Block/Main.asm:43-44), and Tunnel Door's selector $C (Tunnel Door/Main.asm:41-42), each at
+     * subtype2 0, are admitted; Ring writes its own literal $A7AE.
      */
     public static int decodeTileWord(byte[] input, int selector, int subtype2) {
         if (selector < 0 || selector > 0x7FFF || (subtype2 & ~0xFF) != 0) {
             throw new IllegalArgumentException("Object tile selector/subtype width");
         }
         var bytes = exact(input, 74, "ObjectTileIDs");
-        if ((selector != 0 && selector != 5 && selector != 0xC) || subtype2 != 0) {
-            throw new UnsupportedOperationException("Only Mosqui selector 0 / FloatBlock selector 5 / Tunnel Door selector $C at subtype2 0 are reviewed");
+        if ((selector != 0 && selector != 1 && selector != 5 && selector != 0xC) || subtype2 != 0) {
+            throw new UnsupportedOperationException("Only Mosqui selector 0 / Pata-Bata selector 1 / FloatBlock selector 5 / Tunnel Door selector $C at subtype2 0 are reviewed");
         }
         int target = (short) bytes.unsignedWord(selector * 2);
         int end = bytes.length();
@@ -706,7 +789,7 @@ public final class CdR11aObjectAssets {
             if (offset > target && offset < end) { end = offset; }
         }
         if (end - target < 2) {
-            throw new IllegalArgumentException((selector == 0 ? "Mosqui" : selector == 5 ? "FloatBlock" : "Tunnel Door")
+            throw new IllegalArgumentException((selector == 0 ? "Mosqui" : selector == 1 ? "Pata-Bata" : selector == 5 ? "FloatBlock" : "Tunnel Door")
                     + " tile word crosses its selected body");
         }
         return bytes.unsignedWord(target);
