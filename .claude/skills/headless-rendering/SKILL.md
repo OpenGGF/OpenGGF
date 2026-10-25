@@ -23,7 +23,7 @@ full-suite or ROM-parity result.
 | Stageplay animatics, directed dialogue or staged promos | [stageplay-authoring](../stageplay-authoring/SKILL.md): `tools/stageplay/stageplay.py` and `StageplayCaptureTool`, using one explicitly owned native world, with offline audio |
 | Render an existing trace replay | [trace-capture](../trace-capture/SKILL.md): `TraceCaptureTool`; video completion does not prove parity |
 | Rendered gameplay tests or custom route probes | `GameplayCaptureSession`: production boot, stepping, mode-aware drawing, and optional image readback |
-| Component, shader, framebuffer, or presentation pixel tests | `PresentationOffscreenTestContext.open(width, height)` in test scope; it owns a core-profile EGL context, not a loaded game or initialized graphics manager |
+| Component, shader, framebuffer, or presentation pixel tests | `PresentationOffscreenTestContext.openConfigured(width, height, LegacyProfile.DEFAULT or CORE_41)` in test scope; it honors explicit EGL and owns default hidden-window prerequisites. `open(width, height)` remains unconditional core-profile EGL. Neither loads a game or initializes the graphics manager. |
 | A custom production boot host | `HeadlessGameBoot`: GL/services/session foundation; the caller still owns stepping and drawing |
 | Physics or state assertions with no rendering requirement | [headless testing](../../../docs/guide/contributing/headless-testing.md) |
 
@@ -101,9 +101,13 @@ repository; `target/` is disposable.
 Pass the graphics property on Maven's command line so it reaches Surefire tests.
 `MAVEN_OPTS` alone does not establish propagation to the fork.
 `JAVA_TOOL_OPTIONS`/`JDK_JAVA_OPTIONS` can propagate it, but add launcher notices
-that affect child-stderr assertions. A reused test JVM can also lose the property:
-`TestSurfacelessEglContext` clears it during teardown. Inspect the actual failing
-owner and run order; preserve required graphics settings. See the
+that affect child-stderr assertions. The globally registered
+`HeadlessStateTeardownExtension` restores the incoming graphics-backend property
+after each top-level test class, even when teardown fails. Tests that mutate the
+property within a class still own their local scope. The ROM-free
+`TestHeadlessBackendPropertyIsolation` replays the historical clearing fixture
+through JUnit and checks absent, empty and selected incoming values. Inspect the
+actual failing owner and run order when diagnosing backend selection. See the
 [measurement hazards](../../../docs/agent-workflow/briefing-trace-rounds.md#measurement-hazards--all-produce-plausible-output).
 
 ## Draw, read back, and release
@@ -132,7 +136,11 @@ Do not separately advance fades already owned by the runtime `GameLoop`.
 For component tests, `PresentationOffscreenTestContext` creates the context and
 GL capabilities only. Initialize the renderer, viewport, projection, and render
 target needed by the test. Dispose owned GL resources while the context is still
-current, then close the context. For production sessions, let `close()` perform
+current, then close the context. Use its configured factory rather than copying
+GLFW initialization or window creation: `TestRawGlfwTestSetupGuard` rejects new
+direct calls and method references. Existing caller/count debt is frozen; remove
+entries when migrating it. An explicit EGL request executes or fails, while an
+unconfigured host can skip unavailable legacy prerequisites. For production sessions, let `close()` perform
 its teardown; retaining shader/atlas handles after context destruction can make
 the next session render black. Keep test reset/property restoration scoped to
 the test, including failure paths.

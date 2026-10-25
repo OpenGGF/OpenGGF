@@ -39,7 +39,7 @@ class TestNativeStageSpeedScopeRegression {
         }
         assertTrue(provider.getManager().getPlayer().isStarted());
         var loop = loop(25); loop.body = () -> { provider.handleInput(0, 0); provider.update(); };
-        set(loop, "activeSpecialStageProvider", provider); set(loop, "camera", null);
+        SpecialStageLifecycleTestAccess.write(loop, "activeSpecialStageProvider", provider); set(loop, "camera", null);
         loop.setGameMode(GameMode.SPECIAL_STAGE);
         int before = provider.getManager().getFrameCounter();
         loop.stepPresentationFrame(); loop.stepPresentationFrame(); loop.stepPresentationFrame();
@@ -61,7 +61,7 @@ class TestNativeStageSpeedScopeRegression {
         var loop = loop(400); loop.body = () -> fixture.stepIdleFrames(1);
         var pumpContext = (GameplayModeContext) get(loop, "gameplayMode");
         when(pumpContext.getActiveBonusStageProvider()).thenReturn(provider);
-        set(loop, "activeBonusStageProvider", provider); set(loop, "camera", GameServices.camera());
+        BonusStageSessionTestAccess.provider(loop, provider); set(loop, "camera", GameServices.camera());
         loop.setGameMode(GameMode.BONUS_STAGE);
         int before = GameServices.level().getFrameCounter(); clearInvocations(provider);
         loop.stepPresentationFrame();
@@ -75,7 +75,7 @@ class TestNativeStageSpeedScopeRegression {
         when(context.isGameplayRuntimeReady()).thenReturn(true);
         var loop = new PumpLoop(new InputHandler()); set(loop, "gameplayMode", context);
         set(loop, "audioManager", mock(AudioManager.class)); set(loop, "fadeManager", mock(FadeManager.class));
-        set(loop, "titleCardProvider", null); return loop;
+        com.openggf.TitleCardLifecycleTestAccess.provider(loop, null); return loop;
     }
     private static Object get(GameLoop loop, String name) throws Exception { Field f = GameLoop.class.getDeclaredField(name); f.setAccessible(true); return f.get(loop); }
     private static void set(GameLoop loop, String name, Object value) throws Exception { Field f = GameLoop.class.getDeclaredField(name); f.setAccessible(true); f.set(loop, value); }

@@ -11,6 +11,7 @@ import com.openggf.audio.runtime.PcmHistoryRing;
 import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
 import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
 import com.openggf.audio.synth.ChipWriteObserver;
+import com.openggf.audio.session.SmpsSessionTestSupport;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -24,10 +25,87 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestAudioPresentationProducerRewind {
+    @Test
+    void transientCleanupFailureRollsBackToAlreadyCommittedRestore() {
+        DecodedPcm pcm = rampStereo(32, 48_000);
+        List<String> diagnostics = new ArrayList<>();
+        AtomicInteger transactions = new AtomicInteger();
+        var cleanupFailure = new IllegalStateException("baseline cleanup preparation");
+        AudioPresentationDependencyResolver resolver = new AudioPresentationDependencyResolver() {
+            @Override public DecodedPcm resolvePcm(String assetId) {
+                assertEquals(pcm.assetId(), assetId);
+                return pcm;
+            }
+
+            @Override public DiagnosticTransaction beginDiagnosticTransaction() {
+                int ordinal = transactions.incrementAndGet();
+                diagnostics.add("begin" + ordinal);
+                return new DiagnosticTransaction() {
+                    @Override public void endPreparation() {
+                        diagnostics.add("end" + ordinal);
+                        // 1 prepares the restore, 2 commits restoration, 3 cleans transients.
+                        if (ordinal == 3) throw cleanupFailure;
+                    }
+                    @Override public void commit() { diagnostics.add("commit" + ordinal); }
+                    @Override public void discard() { diagnostics.add("discard" + ordinal); }
+                };
+            }
+        };
+        try (var session = SmpsSessionTestSupport.installed(48_000)) {
+            AudioVoiceRegistry registry = new AudioVoiceRegistry(noSmps(), resolver,
+                    new SmpsCoordFlagHandlerOwner(new SmpsCoordFlagRuntimeState()),
+                    warning -> { throw new AssertionError(warning); }, session);
+            AudioPresentationCommandQueue commands = new AudioPresentationCommandQueue();
+            EventSink sink = new EventSink(48_000, 800);
+            AudioPresentationProducer producer = new AudioPresentationProducer(
+                    48_000, 60, 1_600, 2, registry, commands,
+                    new AudioPresentationMixer(800), sink, session);
+            try {
+                registry.apply(new AudioPresentationCommand.SetSpeedMultiplier(2));
+                registry.apply(AudioPresentationCommand.StartSampleSfx.fromVoice(
+                        SampleBackedVoice.oneShot(1, 1, pcm, 48_000, 1, 1)));
+                AudioPresentationSnapshot target = producer.snapshot();
+                registry.apply(new AudioPresentationCommand.SetSpeedMultiplier(5));
+                registry.apply(new AudioPresentationCommand.StopAllSfx());
+                assertTrue(producer.snapshot().voices().isEmpty());
+                producer.beginReverse(1);
+                producer.prepareRestoreSelection(target, resolver);
+                var before = producer.transactionFingerprint();
+
+                assertSame(cleanupFailure, assertThrows(IllegalStateException.class, producer::endReverse));
+
+                AudioPresentationSnapshot partial = producer.snapshot();
+                assertEquals(2, partial.speedMultiplier());
+                assertEquals(target.voices(), partial.voices());
+                assertEquals(target.nextVoiceId(), partial.nextVoiceId());
+                assertEquals(target.smpsLogical().sequencers(), partial.smpsLogical().sequencers());
+                assertArrayEquals(target.smpsLogical().fmLockSequencerIds(),
+                        partial.smpsLogical().fmLockSequencerIds());
+                assertArrayEquals(target.smpsLogical().psgLockSequencerIds(),
+                        partial.smpsLogical().psgLockSequencerIds());
+                var after = producer.transactionFingerprint();
+                assertTrue(after.reverseActive());
+                assertEquals(before.reverseCursor(), after.reverseCursor());
+                assertEquals(before.preparedSelectedRestoreIdentity(), after.preparedSelectedRestoreIdentity());
+                assertEquals(before.selectedRestoreIdentity(), after.selectedRestoreIdentity());
+                assertEquals(before.clock(), after.clock());
+                assertEquals(before.history(), after.history());
+                assertNotEquals(before.voiceIdentities(), after.voiceIdentities());
+                assertEquals(List.of("begin1", "end1", "begin2", "end2", "commit1", "commit2",
+                        "begin3", "end3", "discard3"), diagnostics);
+                assertEquals(List.of("reverse-boundary"), sink.events,
+                        "cleanup failed before the release sink boundary");
+            } finally {
+                producer.close();
+            }
+        }
+    }
+
     @Test
     void recordedReplayReversesTheFinalStereoPacketAndChangesOnlyItsOwnRate() {
         Fixture fixture = fixture();

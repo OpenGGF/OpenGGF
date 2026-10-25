@@ -118,9 +118,15 @@ public class TestGameLoop {
         doThrow(failure).when(levels).loadZoneAndAct(anyInt(), anyInt());
         setPrivateField(gameLoop, "levelManager", levels);
 
-        var escaped = assertThrows(java.lang.reflect.InvocationTargetException.class,
-                () -> invokeFailingLoadRoute(route));
-        assertSame(failure.getCause(), escaped.getCause(), "The IO fallback must preserve the original callback abort");
+        if (route.equals("bonus")) {
+            var escaped = assertThrows(com.openggf.level.objects.ObjectCallbackAbortException.class,
+                    () -> invokeFailingLoadRoute(route));
+            assertSame(failure.getCause(), escaped, "The typed visit access preserves the original callback abort");
+        } else {
+            var escaped = assertThrows(java.lang.reflect.InvocationTargetException.class,
+                    () -> invokeFailingLoadRoute(route));
+            assertSame(failure.getCause(), escaped.getCause(), "The IO fallback must preserve the original callback abort");
+        }
     }
 
     @org.junit.jupiter.params.ParameterizedTest
@@ -133,17 +139,15 @@ public class TestGameLoop {
 
         assertDoesNotThrow(() -> invokeFailingLoadRoute(route));
         assertEquals(route.equals("bonus") ? GameMode.LEVEL : before, gameLoop.getCurrentGameMode());
-        if (route.equals("bonus")) assertNull(getPrivateField(gameLoop, "activeBonusStageProvider"));
+        if (route.equals("bonus")) assertNull(BonusStageSessionTestAccess.provider(gameLoop));
     }
 
     private void invokeFailingLoadRoute(String route) throws Exception {
         if (route.equals("bonus")) {
-            invokePrivateMethod(gameLoop, "doEnterBonusStage",
-                    new Class<?>[]{BonusStageProvider.class, BonusStageType.class, BonusStageState.class},
-                    mock(BonusStageProvider.class), BonusStageType.GUMBALL, null);
+            BonusStageSessionTestAccess.entered(gameLoop, mock(BonusStageProvider.class), BonusStageType.GUMBALL, null);
         } else {
-            setPrivateField(gameLoop, "endingProvider", mock(EndingProvider.class));
-            invokePrivateMethod(gameLoop, "loadEndingDemoZone");
+            setPrivateField(getPrivateField(gameLoop, "endingSession"), "endingProvider", mock(EndingProvider.class));
+            invokePrivateMethod(getPrivateField(gameLoop, "endingSession"), "loadEndingDemoZone");
         }
     }
 
@@ -466,7 +470,7 @@ public class TestGameLoop {
             completion.set(invocation.getArgument(0));
             return null;
         }).when(fade).startFadeToWhite(any());
-        setPrivateField(loop, "activeSpecialStageProvider", provider);
+        SpecialStageLifecycleTestAccess.write(loop, "activeSpecialStageProvider", provider);
         setPrivateField(loop, "currentGameMode", GameMode.SPECIAL_STAGE);
         setPrivateField(loop, "fadeManager", fade);
         var shortcuts = (GameLoopDebugShortcuts) getPrivateField(loop, "debugShortcuts");
@@ -475,8 +479,8 @@ public class TestGameLoop {
 
         verify(provider).setEmeraldCollected(true);
         verify(provider, never()).publishEmeraldReward(any(), anyInt(), any());
-        assertEquals(120, getPrivateField(loop, "ssRingsCollected"));
-        assertEquals(true, getPrivateField(loop, "ssEmeraldCollected"));
+        assertEquals(120, SpecialStageLifecycleTestAccess.read(loop, "ssRingsCollected"));
+        assertEquals(true, SpecialStageLifecycleTestAccess.read(loop, "ssEmeraldCollected"));
         assertFalse(enteredResults.get());
         verify(fade).deferFirstStepToNextVint();
         assertNotNull(completion.get());
@@ -486,7 +490,7 @@ public class TestGameLoop {
         when(fade.isActive()).thenReturn(true);
         shortcuts.debugFailSpecialStage();
         verify(fade, times(1)).startFadeToWhite(any());
-        assertEquals(120, getPrivateField(loop, "ssRingsCollected"),
+        assertEquals(120, SpecialStageLifecycleTestAccess.read(loop, "ssRingsCollected"),
                 "an active fade must not be overwritten by another debug result request");
     }
 
@@ -785,45 +789,33 @@ public class TestGameLoop {
 
     @Test
     public void endingFadeFreezesGameplayUntilEndingModeEnters() throws Exception {
-        String source = Files.readString(Path.of("src/main/java/com/openggf/GameLoop.java"));
-
-        assertTrue(source.contains("private boolean endingTransitionPending"),
-                "Ending fade must have a pending flag so LEVEL mode does not keep simulating under the white fade");
-
-        int nonRewindablePredicate = source.indexOf("private boolean isNonRewindableTransitionPending()");
-        int nonRewindablePredicateEnd = source.indexOf("private void stepInternal(", nonRewindablePredicate);
-        assertTrue(nonRewindablePredicate >= 0 && nonRewindablePredicateEnd > nonRewindablePredicate,
-                "isNonRewindableTransitionPending() shared predicate must exist");
-        String nonRewindablePredicateBody =
-                source.substring(nonRewindablePredicate, nonRewindablePredicateEnd);
-        assertTrue(nonRewindablePredicateBody.contains("|| endingTransitionPending"),
-                "the shared transition-freeze predicate (also consulted by LiveRewindManager) must "
-                        + "fold in the ending fade's pending flag");
-
-        int updateLevel = source.indexOf("private boolean updateLevelMode(");
-        int updateLevelEnd = source.indexOf("private void updateBonusStageMode(", updateLevel);
-        assertTrue(updateLevel >= 0 && updateLevelEnd > updateLevel, "updateLevelMode method must exist");
-        String levelBody = source.substring(updateLevel, updateLevelEnd);
-        assertTrue(levelBody.contains(
-                        "boolean freezeForNonRewindableTransition = isNonRewindableTransitionPending();"),
-                "LEVEL mode should include ending fade (via the shared transition-freeze predicate) "
-                        + "in its gameplay-freeze flags");
-        assertTrue(levelBody.contains("&& !freezeForNonRewindableTransition"),
-                "LEVEL mode must skip LevelFrameStep while the ending fade callback is pending");
-
-        int startEnding = source.indexOf("private void startEndingFade()");
-        int startEndingEnd = source.indexOf("private void doEnterEnding()", startEnding);
-        assertTrue(startEnding >= 0 && startEndingEnd > startEnding, "startEndingFade method must exist");
-        String startEndingBody = source.substring(startEnding, startEndingEnd);
-        assertTrue(startEndingBody.contains("endingTransitionPending = true;"),
-                "Starting the ending fade should freeze gameplay until doEnterEnding runs");
-
-        int doEnterEnding = startEndingEnd;
-        int doEnterEndingEnd = source.indexOf("private void updateEnding()", doEnterEnding);
-        assertTrue(doEnterEndingEnd > doEnterEnding, "doEnterEnding method must precede updateEnding");
-        String doEnterEndingBody = source.substring(doEnterEnding, doEnterEndingEnd);
-        assertTrue(doEnterEndingBody.contains("endingTransitionPending = false;"),
-                "Entering ending mode should clear the pending freeze");
+        SessionManager.clear();
+        gameLoop.setGameplayMode(null);
+        GameModule module = neutralGameModule();
+        when(module.rngFlavour()).thenReturn(GameRng.Flavour.S1_S2);
+        var ending = mock(EndingProvider.class);
+        when(ending.getCurrentPhase()).thenReturn(EndingPhase.CUTSCENE);
+        when(module.getEndingProvider()).thenReturn(ending);
+        SessionManager.openGameplaySession(module);
+        gameLoop.setGameplayMode(TestEnvironment.activeGameplayMode());
+        var levels = mock(com.openggf.level.LevelManager.class);
+        var sprites = mock(com.openggf.sprites.managers.SpriteManager.class,
+                org.mockito.Mockito.withSettings().useConstructor());
+        var fade = mock(FadeManager.class);
+        bindMockGameplay(levels, sprites, fade);
+        setPrivateField(gameLoop, "currentGameMode", GameMode.LEVEL);
+        var completion = new AtomicReference<Runnable>();
+        doAnswer(call -> { completion.set(call.getArgument(0)); return null; })
+                .when(fade).startFadeToWhite(any());
+        invokePrivateMethod(getPrivateField(gameLoop, "endingSession"), "startEndingFade");
+        assertTrue((Boolean) invokePrivateResult(gameLoop, "isNonRewindableTransitionPending"));
+        assertTrue((Boolean) invokePrivateResult(gameLoop, "isRewindBlocked"));
+        gameLoop.step();
+        verify(sprites, never()).update(any());
+        verify(levels, never()).updateZoneFeaturesPrePhysics();
+        completion.get().run();
+        assertFalse((Boolean) invokePrivateResult(gameLoop, "isNonRewindableTransitionPending"));
+        assertFalse((Boolean) invokePrivateResult(gameLoop, "isRewindBlocked"));
     }
 
     @Test
@@ -862,7 +854,7 @@ public class TestGameLoop {
         int admission = source.indexOf("private boolean prepareAdmittedIteration(", stepInternal);
         assertTrue(stepInternal >= 0 && admission > stepInternal, "stepInternal method must exist");
         String outerFrameBody = source.substring(stepInternal, admission);
-        int admissionEnd = source.indexOf("private void updateSpecialStageMode()", admission);
+        int admissionEnd = source.indexOf("public boolean commitDeferredTraceRunModeBoundaryIfReady()", admission);
         String admissionBody = source.substring(admission, admissionEnd);
 
         assertTrue(admissionBody.contains("playbackDebugManager.isCurrentForcedStartPress()"),
@@ -875,7 +867,7 @@ public class TestGameLoop {
         // Admission, boundary completion and trace-camera input now sit in
         // prepareAdmittedIteration, which stepInternal calls.
         int step = source.indexOf("private boolean prepareAdmittedIteration(");
-        int end = source.indexOf("private void updateSpecialStageMode()", step);
+        int end = source.indexOf("public boolean commitDeferredTraceRunModeBoundaryIfReady()", step);
         String body = source.substring(step, end);
 
         int admission = body.indexOf("levelIterationAdmission.admit(");
@@ -908,7 +900,7 @@ public class TestGameLoop {
 
         // The screen-update body must no longer be inlined in the dispatcher.
         int stepStart = source.indexOf("private void stepInternal()");
-        int firstHandler = source.indexOf("private void updateSpecialStageMode()");
+        int firstHandler = source.indexOf("public boolean commitDeferredTraceRunModeBoundaryIfReady()");
         assertTrue(stepStart >= 0 && firstHandler > stepStart,
                 "stepInternal and the extracted handlers must both exist");
         String stepBody = source.substring(stepStart, firstHandler);
@@ -925,8 +917,8 @@ public class TestGameLoop {
         // Each large mode group is owned by a dedicated extracted handler rather
         // than the monolithic dispatcher.
         for (String handler : new String[] {
-                "private void updateSpecialStageMode()",
-                "private void updateSpecialStageResultsMode()",
+                "specialStageLifecycle.updateSpecialStageMode()",
+                "specialStageLifecycle.updateSpecialStageResultsMode()",
                 "private boolean updateTitleCardMode(",
                 "private void updateTitleScreenMode()",
                 "private void updateLevelSelectMode()",
@@ -940,7 +932,7 @@ public class TestGameLoop {
         // The canonical gameplay frame step and bonus-stage glowing-sphere
         // bootstrap must no longer be inlined inside stepInternal itself.
         int stepStart = source.indexOf("private void stepInternal()");
-        int firstHandler = source.indexOf("private void updateSpecialStageMode()");
+        int firstHandler = source.indexOf("public boolean commitDeferredTraceRunModeBoundaryIfReady()");
         String stepBody = source.substring(stepStart, firstHandler);
         assertFalse(stepBody.contains("LevelFrameStep.execute("),
                 "stepInternal must route the gameplay frame step through extracted mode handlers");
@@ -1524,9 +1516,7 @@ public class TestGameLoop {
     @Test
     void resultsReturnInstallsFreshLevelTitleOwner() throws Exception {
         TitleCardProvider titleCard = installBonusStageReturnMocks(mock(FadeManager.class));
-        Method method = GameLoop.class.getDeclaredMethod("enterTitleCardFromResults", int.class, int.class);
-        method.setAccessible(true);
-        method.invoke(gameLoop, 0, 0);
+        SpecialStageLifecycleTestAccess.invoke(gameLoop, "enterTitleCardFromResults", new Class<?>[]{int.class, int.class}, 0, 0);
         verify(titleCard).initializeFreshLevelTransition(0, 0);
         verify(titleCard, never()).initialize(anyInt(), anyInt());
     }
@@ -1540,11 +1530,9 @@ public class TestGameLoop {
         when(((com.openggf.game.internal.SpecialStageResultsEntry) provider)
                 .hasCompletedResultsEntryFade()).thenReturn(true);
         when(provider.getResultsMusicId()).thenReturn(-1);
-        setPrivateField(gameLoop, "activeSpecialStageProvider", provider);
+        SpecialStageLifecycleTestAccess.write(gameLoop, "activeSpecialStageProvider", provider);
         setPrivateField(gameLoop, "currentGameMode", GameMode.SPECIAL_STAGE);
-        Method method = GameLoop.class.getDeclaredMethod("enterResultsScreen", boolean.class);
-        method.setAccessible(true);
-        method.invoke(gameLoop, false);
+        SpecialStageLifecycleTestAccess.invoke(gameLoop, "enterResultsScreen", new Class<?>[]{boolean.class}, false);
         assertEquals(GameMode.SPECIAL_STAGE_RESULTS, gameLoop.getCurrentGameMode());
         verify(fade, never()).startFadeToWhite(any());
     }
@@ -1557,7 +1545,7 @@ public class TestGameLoop {
                 com.openggf.game.internal.FreshLevelTitleBoundaryPublication.class));
         when(((com.openggf.game.internal.FreshLevelTitleBoundaryPublication) title)
                 .hasImmediateFreshLevelPalette()).thenReturn(true);
-        setPrivateField(gameLoop, "titleCardProvider", title);
+        com.openggf.TitleCardLifecycleTestAccess.provider(gameLoop, title);
         invokePrivateMethod(gameLoop, "startResultsReturnFadeIn");
         verify(fade).clearOverlayForImmediatePaletteLoad();
         verify(fade, never()).startFadeFromBlack(any());
@@ -1573,11 +1561,18 @@ public class TestGameLoop {
         var sprites = mock(com.openggf.sprites.managers.SpriteManager.class);
         var frame = mock(com.openggf.game.resources.PlcFrameLifecycleCoordinator.PlcLifecycleFrame.class);
         Runnable exit = mock(Runnable.class);
-        boolean released = GameLoopTitleCardLifecycle.update(
+        var host = mock(GameLoopTitleCardLifecycle.Host.class);
+        when(host.currentMode()).thenReturn(GameMode.TITLE_CARD);
+        when(host.level()).thenReturn(level);
+        when(host.module()).thenReturn(mock(GameModule.class));
+        doAnswer(c -> { exit.run(); return null; }).when(host).notifyModeChanged(any());
+        var lifecycle = new GameLoopTitleCardLifecycle(host);
+        boolean released = lifecycle.update(
                 true, titleCard, frame, TestEnvironment.activeGameplayMode(), level, sprites,
-                mock(com.openggf.camera.Camera.class), mockInputHandler, () -> {},
-                PostTitleCardDestination.LEVEL, exit, result -> assertEquals(LevelFrameResult.SETUP_ONLY, result),
+                mock(com.openggf.camera.Camera.class), mockInputHandler,
+                PostTitleCardDestination.LEVEL,
                 () -> {}, () -> {}, phase -> {}, (name, step) -> step.run());
+        assertEquals(LevelFrameResult.SETUP_ONLY, lifecycle.releaseResult());
         assertTrue(released, "loc_64DC enters LevelLoop while the title pieces remain visible");
         InOrder order = inOrder(titleCard, exit);
         order.verify(titleCard).completeFreshLevelRuntimeArtHandoff();
@@ -1589,17 +1584,15 @@ public class TestGameLoop {
         BonusStageProvider provider = mock(BonusStageProvider.class);
 
         setPrivateField(gameLoop, "currentGameMode", GameMode.TITLE_CARD);
-        setPrivateField(gameLoop, "postTitleCardDestination",
-                Enum.valueOf(PostTitleCardDestination.class, "BONUS_STAGE"));
-        setPrivateField(gameLoop, "deferredBonusProvider", provider);
-        setPrivateField(gameLoop, "deferredBonusType", BonusStageType.SLOT_MACHINE);
-        setPrivateField(gameLoop, "deferredBonusState", null);
+        TitleCardLifecycleTestAccess.destination(gameLoop, PostTitleCardDestination.BONUS_STAGE);
+        BonusStageSessionTestAccess.deferred(gameLoop, provider);
 
-        invokePrivateMethod(gameLoop, "exitTitleCard");
+        TitleCardLifecycleTestAccess.release(gameLoop);
 
         verify(provider).onDeferredSetupComplete();
-        assertNull(getPrivateField(gameLoop, "deferredBonusProvider"), "Deferred provider should be cleared after setup");
-        assertNull(getPrivateField(gameLoop, "deferredBonusState"), "Deferred saved state should stay cleared after setup");
+        assertNull(BonusStageSessionTestAccess.deferred(gameLoop), "Deferred provider should be cleared after setup");
+        BonusStageSessionTestAccess.completeDeferred(gameLoop);
+        verify(provider, times(1)).onDeferredSetupComplete();
         assertEquals(GameMode.BONUS_STAGE, gameLoop.getCurrentGameMode(), "GameLoop should switch to bonus stage mode");
     }
 
@@ -1875,10 +1868,7 @@ public class TestGameLoop {
                 0, 0, 0, 0, -1, 0, 0, 0,
                 0, 0, 0, 0, (byte) 0, (byte) 0, 0, 0L, 0);
 
-        Method method = GameLoop.class.getDeclaredMethod(
-                "doExitBonusStage", BonusStageProvider.class, BonusStageState.class);
-        method.setAccessible(true);
-        method.invoke(gameLoop, provider, savedState);
+        BonusStageSessionTestAccess.exited(gameLoop, provider, savedState);
 
         assertTrue(Files.notExists(saveDir.resolve("slot1.json")));
         deleteRecursively(saveDir);
@@ -1909,7 +1899,7 @@ public class TestGameLoop {
         setPrivateField(gameLoop, "spriteManager", spriteManager);
         setPrivateField(gameLoop, "camera", mock(com.openggf.camera.Camera.class));
         setPrivateField(gameLoop, "fadeManager", fade);
-        setPrivateField(gameLoop, "titleCardProvider", titleCard);
+        com.openggf.TitleCardLifecycleTestAccess.provider(gameLoop, titleCard);
         return titleCard;
     }
 
@@ -1926,10 +1916,10 @@ public class TestGameLoop {
         BonusStageProvider provider = mock(BonusStageProvider.class);
         when(provider.getRewards()).thenReturn(BonusStageProvider.BonusStageRewards.none());
         when(provider.getSavedState()).thenReturn(bonusReturnState(0x0000, 0x0000));
-        setPrivateField(gameLoop, "activeBonusStageProvider", provider);
+        BonusStageSessionTestAccess.provider(gameLoop, provider);
         setPrivateField(gameLoop, "currentGameMode", GameMode.BONUS_STAGE);
 
-        invokePrivateMethod(gameLoop, "exitBonusStage");
+        BonusStageSessionTestAccess.exit(gameLoop);
 
         // loc_61076 raises Restart_level_flag; LevelLoop branches to Level:
         // (sonic3k.asm:7927-7928), whose Pal_FadeToBlack loops $15 + dbf = 22
@@ -1939,7 +1929,7 @@ public class TestGameLoop {
             fade.update();
             assertEquals(GameMode.BONUS_STAGE, gameLoop.getCurrentGameMode(),
                     "the stage stays held through V-int " + vint);
-            assertTrue((Boolean) getPrivateField(gameLoop, "bonusStageTransitionPending"));
+            assertTrue((Boolean) BonusStageSessionTestAccess.pending(gameLoop));
         }
         fade.update();
         assertEquals(GameMode.TITLE_CARD, gameLoop.getCurrentGameMode(),
@@ -1954,9 +1944,7 @@ public class TestGameLoop {
         when(provider.getRewards()).thenReturn(BonusStageProvider.BonusStageRewards.none());
         setPrivateField(gameLoop, "currentGameMode", GameMode.BONUS_STAGE);
 
-        invokePrivateMethod(gameLoop, "doExitBonusStage",
-                new Class<?>[] {BonusStageProvider.class, BonusStageState.class},
-                provider, bonusReturnState(0x0001, 0x0000));
+        BonusStageSessionTestAccess.exited(gameLoop, provider, bonusReturnState(0x0001, 0x0000));
 
         // Level/loc_62B6 installs Obj_TitleCard unless the zone is $1701 or
         // Act3_flag is set (sonic3k.asm:7762-7767); Obj_TitleCardInit draws the
@@ -2000,7 +1988,7 @@ public class TestGameLoop {
         setPrivateField(gameLoop, "spriteManager", spriteManager);
         setPrivateField(gameLoop, "camera", mock(com.openggf.camera.Camera.class));
         setPrivateField(gameLoop, "fadeManager", mock(FadeManager.class));
-        setPrivateField(gameLoop, "resultsScreen", mock(com.openggf.game.ResultsScreen.class));
+        SpecialStageLifecycleTestAccess.write(gameLoop, "resultsScreen", mock(com.openggf.game.ResultsScreen.class));
         setPrivateField(gameLoop, "currentGameMode", GameMode.SPECIAL_STAGE_RESULTS);
 
         invokePrivateMethod(gameLoop, "doExitResultsScreen");
@@ -2086,10 +2074,15 @@ public class TestGameLoop {
         when(levelManager.consumeCreditsRequest()).thenReturn(true);
         when(fadeManager.isActive()).thenReturn(false);
 
+        EngineContext existing = EngineServices.current();
+        EngineContext injected = new EngineContext(existing.configuration(), existing.graphics(),
+                mock(com.openggf.audio.AudioManager.class), existing.roms(), existing.profiler(),
+                existing.debugOverlay(), existing.playbackDebug(), existing.romDetection(),
+                existing.crossGameFeatures(), existing.moduleResolutionService());
+        gameLoop = new GameLoop(injected, mockInputHandler);
         bindMockGameplay(levelManager, spriteManager, fadeManager);
 
         setPrivateField(gameLoop, "currentGameMode", GameMode.LEVEL);
-        setPrivateField(gameLoop, "audioManager", mock(com.openggf.audio.AudioManager.class));
 
         gameLoop.step();
 
@@ -2120,7 +2113,7 @@ public class TestGameLoop {
         SessionManager.openGameplaySession(module, saveContext);
         gameLoop.setGameplayMode(TestEnvironment.activeGameplayMode());
 
-        invokePrivateMethod(gameLoop, "doEnterEnding");
+        invokePrivateMethod(getPrivateField(gameLoop, "endingSession"), "doEnterEnding");
 
         Path slotFile = saveDir.resolve("slot1.json");
         assertTrue(Files.notExists(slotFile));
@@ -2150,7 +2143,7 @@ public class TestGameLoop {
         when(fadeManager.getState()).thenReturn(FadeManager.FadeState.HOLD_WHITE);
         setPrivateField(gameLoop, "fadeManager", fadeManager);
 
-        invokePrivateMethod(gameLoop, "doEnterEnding");
+        invokePrivateMethod(getPrivateField(gameLoop, "endingSession"), "doEnterEnding");
 
         verify(endingProvider).initialize();
         verify(fadeManager).startFadeFromWhite(any());
@@ -2930,7 +2923,16 @@ public class TestGameLoop {
         return coordinator;
     }
 
+    private static Object invokePrivateResult(Object target, String methodName) throws Exception {
+        Method method = target.getClass().getDeclaredMethod(methodName);
+        method.setAccessible(true);
+        return method.invoke(target);
+    }
+
     private static void invokePrivateMethod(Object target, String methodName) throws Exception {
+        if (target instanceof GameLoop loop && SpecialStageLifecycleTestAccess.isOwnerMethod(methodName)) {
+            SpecialStageLifecycleTestAccess.invoke(loop, methodName, new Class<?>[0]); return;
+        }
         Method method = target.getClass().getDeclaredMethod(methodName);
         method.setAccessible(true);
         method.invoke(target);
@@ -2938,6 +2940,9 @@ public class TestGameLoop {
 
     private static void invokePrivateMethod(Object target, String methodName, Class<?>[] parameterTypes, Object... args)
             throws Exception {
+        if (target instanceof GameLoop loop && SpecialStageLifecycleTestAccess.isOwnerMethod(methodName)) {
+            SpecialStageLifecycleTestAccess.invoke(loop, methodName, parameterTypes, args); return;
+        }
         Method method = target.getClass().getDeclaredMethod(methodName, parameterTypes);
         method.setAccessible(true);
         method.invoke(target, args);

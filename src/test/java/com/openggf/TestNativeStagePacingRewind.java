@@ -75,7 +75,7 @@ class TestNativeStagePacingRewind {
         adapter.restore(beforeLag);
         var input = new InputHandler(InputBindingFactory.supplier(config)); var loop = new GameLoop(input);
         var context = SessionManager.getCurrentGameplayMode();
-        set(loop, "activeSpecialStageProvider", provider);
+        SpecialStageLifecycleTestAccess.write(loop, "activeSpecialStageProvider", provider);
         context.registerSpecialStageAdapter(provider);
         loop.setGameMode(GameMode.SPECIAL_STAGE);
         var controller = context.getRewindController();
@@ -230,7 +230,7 @@ class TestNativeStagePacingRewind {
         var provider = (Sonic2SpecialStageProvider) GameServices.module().getSpecialStageProvider();
         provider.initializeStage(0); var port = (NativeSpecialStagePacing) provider; warm(provider, port);
         var input = new InputHandler(InputBindingFactory.supplier(config)); var loop = new GameLoop(input);
-        set(loop, "activeSpecialStageProvider", provider);
+        SpecialStageLifecycleTestAccess.write(loop, "activeSpecialStageProvider", provider);
         SessionManager.getCurrentGameplayMode().registerSpecialStageAdapter(provider);
         loop.setGameMode(GameMode.SPECIAL_STAGE);
         return new NativeFixture(loop, input, provider, policy);

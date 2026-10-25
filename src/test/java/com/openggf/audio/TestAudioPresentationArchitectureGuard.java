@@ -156,6 +156,78 @@ class TestAudioPresentationArchitectureGuard {
             "AL_PITCH");
 
     @Test
+    void sourcePublicationOwnsOneCompleteColdManagerLifetimeNamespace() throws Exception {
+        var publication = AudioManager.class.getDeclaredField("sourcePublication");
+        int modifiers = publication.getModifiers();
+        assertTrue(java.lang.reflect.Modifier.isPrivate(modifiers));
+        assertTrue(java.lang.reflect.Modifier.isFinal(modifiers));
+        assertFalse(java.lang.reflect.Modifier.isStatic(modifiers));
+        Class<?> owner = publication.getType();
+        assertEquals(AudioManager.class, owner.getEnclosingClass());
+        assertTrue(java.lang.reflect.Modifier.isPrivate(owner.getModifiers()));
+        assertTrue(java.lang.reflect.Modifier.isFinal(owner.getModifiers()));
+        Set<String> fields = Set.of("baseAudioSource", "donorAudioSources",
+                "donorGenerationCounters", "sourceMutationInProgress",
+                "donorSoundBindings", "donorMusicBindings");
+        assertEquals(fields, Arrays.stream(owner.getDeclaredFields())
+                .filter(field -> !field.isSynthetic())
+                .map(java.lang.reflect.Field::getName)
+                .collect(java.util.stream.Collectors.toSet()),
+                "the source owner stores no presentation/backend/session dependencies");
+        for (String name : fields) {
+            assertThrows(NoSuchFieldException.class, () -> AudioManager.class.getDeclaredField(name));
+        }
+        Set<String> volatileFields = Arrays.stream(owner.getDeclaredFields())
+                .filter(field -> java.lang.reflect.Modifier.isVolatile(field.getModifiers()))
+                .map(java.lang.reflect.Field::getName)
+                .collect(java.util.stream.Collectors.toSet());
+        assertEquals(Set.of("baseAudioSource", "donorAudioSources", "donorGenerationCounters"), volatileFields);
+        List<String> foreignAccesses = new ArrayList<>();
+        for (JavaClass caller : productionClasses()) {
+            caller.getFieldAccessesFromSelf().stream()
+                    .filter(access -> access.getTargetOwner().getName().equals(owner.getName()))
+                    .filter(access -> fields.contains(access.getTarget().getName()))
+                    .filter(access -> !access.getOriginOwner().getName().equals(owner.getName()))
+                    .map(Object::toString).forEach(foreignAccesses::add);
+        }
+        assertTrue(foreignAccesses.isEmpty(), () -> "source state accessed outside its owner: " + foreignAccesses);
+    }
+
+    @Test
+    void sourcePublicationKeepsTheExactReviewedRomDependencyDelta() throws Exception {
+        // Read the unchanged underlying rule, never enable frozen-store writes.
+        // The strict frozen check remains separate: solved records otherwise
+        // request a save before ArchUnit can report the replacement identities.
+        Class<?> rules = Class.forName("com.openggf.tests.TestArchUnitRules");
+        var ruleField = rules.getDeclaredField("low_level_layers_do_not_depend_on_runtime_layers");
+        ruleField.setAccessible(true);
+        Object frozen = ruleField.get(null);
+        var delegateField = frozen.getClass().getDeclaredField("delegate");
+        delegateField.setAccessible(true);
+        var rule = (com.tngtech.archunit.lang.ArchRule) delegateField.get(frozen);
+        java.util.function.UnaryOperator<String> normalize = value ->
+                value.replaceAll("\\(([^():]+\\.java):[0-9]+\\)", "($1:0)");
+        List<String> stored = Files.readAllLines(Path.of("src/test/resources/archunit/frozen/40afa018-d450-4b84-8cb9-d539d75d8062"))
+                .stream().map(normalize).sorted().toList();
+        List<String> live = rule.evaluate(productionClasses()).getFailureReport().getDetails()
+                .stream().map(normalize).sorted().toList();
+        Set<String> removed = new java.util.TreeSet<>(stored);
+        removed.removeAll(live);
+        Set<String> added = new java.util.TreeSet<>(live);
+        added.removeAll(stored);
+        System.out.println("SourcePublication live low-level records: " + live.size()
+                + "\nRemoved: " + removed + "\nAdded: " + added);
+        List<String> expected = new ArrayList<>(stored);
+        if (expected.remove("Method <com.openggf.audio.AudioManager.reinstallsInstalledSource(com.openggf.audio.GameAudioProfile, com.openggf.data.Rom)> has parameter of type <com.openggf.data.Rom> in (AudioManager.java:0)")) {
+            expected.add("Method <com.openggf.audio.AudioManager$SourcePublication.reinstallsInstalledSource(com.openggf.audio.GameAudioProfile, com.openggf.data.Rom)> has parameter of type <com.openggf.data.Rom> in (AudioManager.java:0)");
+            expected.add("Method <com.openggf.audio.AudioManager$SourcePublication.setRom(com.openggf.data.Rom)> has parameter of type <com.openggf.data.Rom> in (AudioManager.java:0)");
+        }
+        expected.sort(String::compareTo);
+        assertEquals(expected, live, "only the reviewed source-publication ROM records may differ, including multiplicity");
+        assertEquals(120, live.size());
+    }
+
+    @Test
     void smpsDriverRemainsTheLogicalSynthesizerWithoutPhysicalInheritance() {
         assertTrue(Synthesizer.class.isAssignableFrom(SmpsDriver.class));
         assertFalse(VirtualSynthesizer.class.isAssignableFrom(SmpsDriver.class));

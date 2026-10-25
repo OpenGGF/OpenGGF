@@ -54,6 +54,12 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
     protected final Object streamLock = new Object();
     protected final SonicConfigurationService configService;
     /**
+     * Restore-request destination for this backend's usable lifetime. Root
+     * reconfiguration does not transfer it; another manager needs a replacement
+     * backend. Existing owner-thread and retirement rules still apply.
+     */
+    protected final MusicRestoreSink musicRestoreSink;
+    /**
      * Currently unread: the {@code audio.music_stream} / {@code audio.sfx_stream}
      * / {@code audio.upload} profile sections this fed disappeared with the
      * backend's stream fill, and audio timing is now profiled on the
@@ -157,8 +163,36 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
     private long nextServiceOrdinal;
     private long nextDriverInstanceOrdinal;
     private long nextDriverAdmissionOrdinal;
-    protected AbstractSmpsAudioBackend(SonicConfigurationService configService, PerformanceProfiler profiler) {
+    /** Null selects the historical, lazy singleton authority separately for each binding. */
+    private final AudioManager legacyConfigAuthority;
+
+    /**
+     * Compatibility construction: resolves the current presentation singleton only
+     * when explicit-config music or SFX requests a legacy configuration binding.
+     */
+    protected AbstractSmpsAudioBackend(SonicConfigurationService configService, PerformanceProfiler profiler,
+            MusicRestoreSink musicRestoreSink) {
+        this(configService, profiler, musicRestoreSink, null, false);
+    }
+
+    /**
+     * Retains the manager supplying subsequent legacy configuration bindings.
+     * Each binding uses that manager's current factory, including after reset or
+     * backend replacement. Existing sources keep their recorded configuration;
+     * {@code musicRestoreSink} independently owns their restore destination.
+     * Ordinary two-argument music continues to use its profile configuration.
+     */
+    protected AbstractSmpsAudioBackend(SonicConfigurationService configService, PerformanceProfiler profiler,
+            MusicRestoreSink musicRestoreSink, AudioManager legacyConfigAuthority) {
+        this(configService, profiler, musicRestoreSink, legacyConfigAuthority, true);
+    }
+
+    private AbstractSmpsAudioBackend(SonicConfigurationService configService, PerformanceProfiler profiler,
+            MusicRestoreSink musicRestoreSink, AudioManager legacyConfigAuthority, boolean explicitAuthority) {
         this.configService = Objects.requireNonNull(configService, "configService");
+        this.musicRestoreSink = Objects.requireNonNull(musicRestoreSink, "musicRestoreSink");
+        this.legacyConfigAuthority = explicitAuthority
+                ? Objects.requireNonNull(legacyConfigAuthority, "legacyConfigAuthority") : null;
         this.profiler = profiler;
         // Initialize fallback mappings
         // SFX
@@ -774,7 +808,7 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
             if (isContinuous) {
                 smpsDriver.startContinuousSfx(data.getId(), contTrackCount);
             }
-            SmpsSequencer seq = new SmpsSequencer(data, dacData, smpsDriver, effectiveConfig);
+            SmpsSequencer seq = new SmpsSequencer(data, dacData, smpsDriver, musicRestoreSink, effectiveConfig);
             seq.setSourceDescriptor(describeSmpsSource(null, data, true));
             seq.setSampleRate(smpsStream.outputSampleRate());
             seq.setFm6DacOff(fm6DacOff);
@@ -806,7 +840,7 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
                 if (isContinuous) {
                     sfxDriver.startContinuousSfx(data.getId(), contTrackCount);
                 }
-                SmpsSequencer seq = new SmpsSequencer(data, dacData, sfxDriver, effectiveConfig);
+                SmpsSequencer seq = new SmpsSequencer(data, dacData, sfxDriver, musicRestoreSink, effectiveConfig);
                 seq.setSourceDescriptor(describeSmpsSource(null, data, true));
                 seq.setSampleRate(ownedSfx.outputSampleRate());
                 seq.setFm6DacOff(fm6DacOff);
@@ -1204,7 +1238,7 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
                 ? SmpsSequencer.Region.PAL
                 : SmpsSequencer.Region.NTSC);
         SmpsSequencer sequencer = new SmpsSequencer(
-                data, dacData, driver, sequencerConfig);
+                data, dacData, driver, musicRestoreSink, sequencerConfig);
         sequencer.setSourceDescriptor(
                 describeSmpsSource(descriptor, data, false));
         sequencer.setSampleRate(stream.outputSampleRate());
@@ -1222,8 +1256,9 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
 
     private SmpsSequencerConfig legacySequencerConfig(
             SmpsSequencerConfig config) {
-        return AudioManager.presentationOwner()
-                .bindLegacyConfigToPresentationOwner(config);
+        AudioManager authority = legacyConfigAuthority != null
+                ? legacyConfigAuthority : AudioManager.presentationOwner();
+        return authority.bindLegacyConfigToPresentationOwner(config);
     }
 
     @Override

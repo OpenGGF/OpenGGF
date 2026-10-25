@@ -82,6 +82,14 @@ diff or fitting test teardown. The exact original batch remains the integration
 check; the deterministic regression prevents accidental green heap layouts from
 being mistaken for a repair.
 
+ArchUnit field rules can ignore Surefire's method filter (2026-10-24, held
+reverse-target extraction). A selector naming two `TestArchUnitRules` members
+executed all 27 field rules and the selected cycle method: the intended 48-case
+guard selection actually executed 74 cases. Inspect physical XML identities and
+counts before reporting coverage or adding totals; a `Class#method` argument
+alone does not establish the executed set. The [ownership evidence](../architecture/plans/2026-10-24-architecture-continuation.md#held-reverse-target-owner-reviewed-extraction)
+records the unchanged selection and its actual expansion.
+
 A Stageplay pixel oracle can compare two black S3K pictures while object art is
 still dormant or the native initial palette reveal is black (2026-10-24, facing
 correction, base `ac46111bc`). Require nonempty native sprite pixels and their
@@ -100,6 +108,15 @@ Decoding from the beginning and cutting exact sample indices retained all 384,00
 frames and the correct reveal onset. Decode the master PCM once, slice by
 `frame * sampleRate / 60`, and pair that WAV with the video cut; measure the encoded
 AAC true peak separately. Do not change the engine's timing to fit a seeked clip.
+
+S2 manager-only camera/retirement fixtures must publish the separate
+`postCameraPlacementUpdate()` phase before the following object pass
+(2026-10-24, Sideways admission qualification at `8f34cad77`).
+`ObjectManager.update(cameraX, ...)` alone does not advance the S2 unload-camera
+latch; a moved camera can leave a pair apparently alive against the reset-time
+coarse camera. Check live graph removal and SST reuse as well as flags on stale
+Java references. The [qualification evidence](../architecture/audits/2026-10-24-rewind-disposition-review.md#s2-sideways-platform-allocation-failure-qualification)
+separates these fixture faults from the actual strict-capture gap.
 
 Stageplay native music requests may not appear in the logical command timeline
 until outer audio presentation drains the native mailbox (2026-10-24, promo
@@ -190,6 +207,14 @@ errors on the pinned baseline, while the isolated dimension check with explicit
 launcher notice to child stderr and breaks exact CLI-output assertions. Attribute
 these cases with bounded matched tests and preserve their coverage limits; a
 launch setting alone does not prove which backend a later test used.
+The 2026-10-24 architecture composition reproduced the same two errors with the
+ordered five-case baseline/current pair; both isolated two-case checks passed.
+The subsequent correction gives global class teardown ownership of restoring
+the incoming backend property, including absent and empty values. Its regression
+runs the actual clearing fixture through JUnit before inspecting the property;
+the fixture itself remains a negative control for removing that restoration.
+See the [historical attribution](../architecture/plans/2026-10-24-architecture-continuation.md#completed-composed-smoke-and-baseline-attribution)
+and [correction evidence](../architecture/audits/2026-10-24-recurring-agent-mistakes.md).
 
 A mock-only OpenGL test can terminate the JVM when a helper adds an unmocked
 GL owner (2026-10-22, Stageplay smoke). `FboHelper` began preserving unpack-PBO

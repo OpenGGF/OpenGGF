@@ -39,8 +39,36 @@ Companion references:
 `com.openggf.Engine` — GLFW window with a manual timing loop (`display()` → `update()` → `draw()`).
 `GameLoopDebugShortcuts` owns debug modifier resolution, checkpoint teleport,
 preview-position logging and special-stage completion requests. It receives the
-current mode/provider and a results callback; `GameLoop` retains provider-aware
-reward publication and the fade/results transition.
+current mode/provider and a results callback. `GameLoopSpecialStageLifecycle`
+owns special entry, retained provider identity, captured results, exit latches
+and special-return completion for the loop lifetime. Its private root Host reads
+typed cached slots and preserves virtual provider/results-entry dispatch;
+boundary admission and scoped pacing input stay in GameLoop.
+`GameLoopTitleCardLifecycle` owns the lazy title binding, destination, persistent
+release result and complete presentation/release sequence. Its typed live Host
+preserves virtual entry/control/player/mode seams and narrow shared release effects;
+Root captures update arguments only after lazy acquisition. Binding refresh,
+parking and teardown retain title state; module reset clears only its cache
+after Continue reset. Engine keeps its public virtual title-provider getter calls.
+Binding refresh, parking and provider reset retain this owner and its state.
+`GameLoopEndingSession` owns the ending provider, shared ending/standalone
+transition gate, phase execution, credits-demo loading and ending-only cleanup.
+Its private host adapter reads the loop's current managers as the original
+choreography requires; GameLoop keeps frame admission and shared frame work.
+Engine presentation continues through the virtual `GameLoop.getEndingProvider()`
+boundary. Runtime rebinding and suspension retain the ending session.
+
+`GameLoopSuspension` owns the complete suspended-game visit: admission, pending
+capture readiness, saved payload, parked gameplay identity/pause, resume and
+retirement. Engine retains a final alias to that same loop owner, not visit state.
+Its three narrow effect groups read the current application fields at each
+operation boundary. A selected effect bundle stays fixed for that operation;
+loop completion/resume selects the current binding at its original handoff.
+Engine keeps screen construction, framebuffer access, dimensions, common teardown
+and general frame execution. MasterTitleScreen retains card/image textures, zoom
+publication and input/confirmation state; SuspendedSettings retains settings policy.
+The reset hook clears a saved visit before parked-state retirement, then Engine
+finishes shared teardown. Application exit adds no separate suspension discard.
 
 Running the engine needs LWJGL (OpenGL/OpenAL/GLFW bindings) and JOML, both already in `pom.xml`.
 
@@ -435,6 +463,14 @@ The range table and capacity limits are in
 The engine works in Mega Drive coordinates (Y increases downward);
 `BatchedPatternRenderer` flips to the OpenGL convention automatically.
 
+Each `GraphicsManager` owns one package-private `PaletteTextureOwner`. It owns
+normal and underwater textures, upload staging and source aliases, requested and
+displayed fade generations, publication gates, scoped leases and appearance
+residency. GraphicsManager retains the supported typed APIs, virtual dispatch and
+render orchestration. Shared `RenderContext` row allocation and mutable CPU bank
+colors retain their existing lifetimes; texture disposal does not retire ordinary
+CPU banks. Palette rewind remains with its gameplay owner.
+
 ## Data select and save system
 
 Full data select (save/load) with cross-game donation. `DataSelectProvider`
@@ -469,6 +505,65 @@ Emulates Mega Drive sound hardware: **YM2612** (FM synthesis, 6 channels), **PSG
 `OVERFLOW` / `OVERFLOW2` / `TIMEOUT` tempo modes). Per-game audio data lives under
 `game.sonicX.audio`. `audio.runtime` holds the deterministic FIFO/PCM ring buffers used by
 gameplay rewind.
+
+SMPS backends receive a non-null `MusicRestoreSink` at construction. Production
+passes the manager receiving that backend; the restore-request destination stays
+fixed for the backend's usable lifetime, including new sequencers after engine
+root replacement. A replacement backend is required when changing that pairing.
+Interactive SoundTest windows similarly capture their configured destination for
+later WAV exports. Normal snapshot reconstruction preserves the captured sink;
+explicit dependency resolvers retain their existing override authority. Explicit
+manager restoration records `RESTORE` intent and an accepted timeline command;
+presentation-owned natural restoration retains its separate deferred publication
+path.
+
+The appended `AudioManager` constructor argument separately fixes the authority
+for subsequent legacy explicit-config music and SFX bindings. Each request asks
+that manager's current factory, so reset/backend replacement can retire its
+handler owner without transferring the backend to a different manager. The old
+constructors retain lazy per-binding singleton selection. Ordinary two-argument
+music bypasses this binding, and existing source/snapshot config and sink references
+remain recorded. This is a composition lifetime contract; it does not isolate all
+engine roots or make the restore sink a configuration provider.
+
+Each `AudioManager` retains one private `SourcePublication` for its complete
+logical source namespace: the separate volatile base/donor tuples and donor
+generation counters, mutation admission, sound/music bindings, installation and
+rollback, scoped key restoration and deferred compatibility completion. Its cold
+construction captures no backend, factory, producer or session; operations read
+the manager's current collaborators at the original callback boundaries. The
+owner survives reset, backend replacement and destroy. Existing manager wrappers
+retain their monitor and virtual dispatch, and source consumers retain distinct
+captured/current/tombstone lookup moments. Reset keeps creator and streamed-session
+notifications before admission; the owner clears base, invokes fixed non-source
+root effects, clears donors and only then discards counters. Partial failures
+remain observable. Physical residency and voice retirement stay session-owned;
+logical rewind restores sound bindings through owner effects, without rewinding
+music bindings, installed source tuples or generations.
+
+Each `AudioManager` also retains a private `HeldReverseRestore` owner for the
+held logical target across selection, detached replay, preparation, producer
+replacement, boundary supersession and release retries. It owns held admission
+reads and after-restore cleanup ordering through the existing virtual manager
+entry points, without adding a lock or capturing producer dependencies. Prepared
+acknowledgment can outlive or differ from producer selection; release preserves
+partial effects from producer and ledger failures. Live snapshot capture, eager
+rollback/forward-service restore, the shared publication counter and ring/timeline
+state remain with the manager; sound-binding effects
+use SourcePublication without transferring ledger decisions. Producer tokens,
+restoration algorithms, cursors, history, clocks and output remain below.
+
+Each `AudioManager` retains one private `CaptureLeases` owner across producer
+generations. It owns offline/live admission, accepted release, rebuild carry,
+retirement and the stable live-recording handle. Compatibility methods retain
+their manager monitor; lifecycle and handle operations retain their existing
+explicit manager lock regions and unlocked metadata access. Producer-close
+reconciliation reads the currently published producer after callbacks. Offline
+leases retire with accepted producer close, while a marked live recording carries
+its fractional phase and cumulative total into a replacement. A failed rebuild's
+pending carry can survive later teardown; extraction preserves that partial state.
+The presentation producer still owns attachment mechanics, capture clocks, pending
+PCM and delivery. This lifetime bookkeeping is outside gameplay rewind state.
 
 **Accuracy expectation:** implement features identically to hardware. The FM core is the
 Nuked-OPN2 port (`audio.synth.nuked`, pinned by `tools/audio/nuked-opn2/PIN.md`); its only

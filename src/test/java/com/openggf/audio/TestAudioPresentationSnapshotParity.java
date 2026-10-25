@@ -13,6 +13,9 @@ import com.openggf.audio.presentation.SampleBackedVoice;
 import com.openggf.audio.rewind.AudioLogicalSnapshot;
 import com.openggf.audio.rewind.AudioKeyframeStore;
 import com.openggf.audio.rewind.AudioSourceDescriptor;
+import com.openggf.audio.rewind.AudioCommand;
+import com.openggf.audio.presentation.AudioRequestService;
+import com.openggf.audio.presentation.AudioPresentationForwardService;
 import com.openggf.audio.runtime.AudioFrameClock;
 import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
 import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
@@ -35,6 +38,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.Mockito.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -42,6 +48,8 @@ import java.lang.reflect.Array;
 import java.lang.reflect.RecordComponent;
 import java.util.IdentityHashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 
 class TestAudioPresentationSnapshotParity {
     private AudioManager audio;
@@ -106,6 +114,181 @@ class TestAudioPresentationSnapshotParity {
         audio.endReverseAudioPresentation();
         assertEquals(selected.presentation(),
                 audio.captureLogicalSnapshot().presentation());
+    }
+
+    @Test
+    void preparedAThenSelectedBPublishesBLedgerWithAPresentation() {
+        AudioLogicalSnapshot a = prepareHeldFlagTarget();
+        var prepared = audio.releaseStateForTesting().producer();
+        AudioLogicalSnapshot live = audio.captureLogicalSnapshot();
+        AudioLogicalSnapshot b = new AudioLogicalSnapshot(false, 41, 3, 17,
+                live.presentation(), Set.of("selected-b"), Set.of(
+                new AudioLogicalSnapshot.DonorSfxBindingSnapshot(
+                        GameSound.JUMP, "selected-b", 0xA7)));
+        audio.restoreLogicalSnapshot(b);
+
+        assertSame(b, audio.deferredReverseLogicalSnapshotForTesting());
+        assertTrue(AudioManagerTestDiagnostics.reversePreparationAcknowledged(audio));
+        assertProducerStateExactly(prepared, audio.releaseStateForTesting().producer(),
+                "selection replaces manager metadata without preparing B");
+        assertDeepSnapshotEquals(live, audio.captureLogicalSnapshot());
+        int before = audio.logicalRestorePublicationsForTesting();
+        assertTrue(audio.endReverseAudioPresentation());
+
+        AudioLogicalSnapshot published = audio.captureLogicalSnapshot();
+        assertDeepSnapshotEquals(a.presentation(), published.presentation());
+        assertFalse(published.ringLeft());
+        assertEquals(41, published.commandTimelineFrame());
+        assertEquals(3, published.commandTimelineNextOrder());
+        assertEquals(b.donorBindings(), published.donorBindings());
+        assertEquals(before + 1, audio.logicalRestorePublicationsForTesting());
+        assertNull(audio.deferredReverseLogicalSnapshotForTesting());
+    }
+
+    @Test
+    void replayAfterPreparationReplacesMetadataButRetainsAPreparation() {
+        AudioLogicalSnapshot a = prepareHeldFlagTarget();
+        AudioLogicalSnapshot live = audio.captureLogicalSnapshot();
+        var before = audio.releaseStateForTesting().producer();
+        audio.replayTimelineCommandLogically(new AudioCommand.SetSpeedMultiplier(5));
+        AudioLogicalSnapshot replayed = audio.deferredReverseLogicalSnapshotForTesting();
+
+        assertNotEquals(a, replayed);
+        assertEquals(5, replayed.presentation().speedMultiplier());
+        assertEquals(a.commandEntryCount(), replayed.commandEntryCount());
+        assertTrue(AudioManagerTestDiagnostics.reversePreparationAcknowledged(audio));
+        assertProducerStateExactly(before, audio.releaseStateForTesting().producer(),
+                "detached replay borrows and restores the live session");
+        assertDeepSnapshotEquals(live, audio.captureLogicalSnapshot());
+        assertTrue(audio.endReverseAudioPresentation());
+        assertDeepSnapshotEquals(a.presentation(), audio.captureLogicalSnapshot().presentation());
+        assertEquals(replayed.commandTimelineFrame(), audio.commandTimeline().currentFrame());
+    }
+
+    @Test
+    void cursorRefreshRetainsPresentationEntryCountAndAcknowledgment() {
+        AudioLogicalSnapshot a = prepareHeldFlagTarget();
+        var before = audio.releaseStateForTesting().producer();
+        audio.beginCommandTimelineFrame(73);
+        audio.commandTimeline().record(new AudioCommand.ResetRingAlternation(false));
+        audio.beginCommandTimelineFrame(73);
+        AudioLogicalSnapshot refreshed = audio.deferredReverseLogicalSnapshotForTesting();
+
+        assertNotEquals(a, refreshed);
+        assertSame(a.presentation(), refreshed.presentation());
+        assertEquals(a.commandEntryCount(), refreshed.commandEntryCount());
+        assertEquals(73, refreshed.commandTimelineFrame());
+        assertEquals(1, refreshed.commandTimelineNextOrder());
+        assertTrue(AudioManagerTestDiagnostics.reversePreparationAcknowledged(audio));
+        assertProducerStateExactly(before, audio.releaseStateForTesting().producer(),
+                "cursor refresh must not invalidate or replace preparation");
+        assertTrue(audio.endReverseAudioPresentation());
+        assertEquals(73, audio.commandTimeline().currentFrame());
+        assertEquals(1, audio.commandTimeline().nextOrder());
+        assertDeepSnapshotEquals(a.presentation(), audio.captureLogicalSnapshot().presentation());
+    }
+
+    @Test
+    void clearHistoryClearsProducerTokenButRetainsManagerTargetAndAcknowledgment() {
+        AudioLogicalSnapshot a = prepareHeldFlagTarget();
+        AudioLogicalSnapshot live = audio.captureLogicalSnapshot();
+        var before = audio.releaseStateForTesting().producer();
+        assertNotEquals(0L, before.preparedSelectedRestoreIdentity().token());
+        audio.clearPcmHistory();
+        var cleared = audio.releaseStateForTesting().producer();
+
+        assertSame(a, audio.deferredReverseLogicalSnapshotForTesting());
+        assertTrue(AudioManagerTestDiagnostics.reversePreparationAcknowledged(audio));
+        assertEquals(0L, cleared.selectedRestoreIdentity().token());
+        assertEquals(0L, cleared.preparedSelectedRestoreIdentity().token());
+        assertTrue(cleared.reverseActive());
+        assertEquals(before.reverseCursor(), cleared.reverseCursor());
+        assertDeepSnapshotEquals(live, audio.captureLogicalSnapshot());
+        int publications = audio.logicalRestorePublicationsForTesting();
+        assertTrue(audio.commitDeferredReverseLogicalRestore());
+        assertEquals(0L, audio.releaseStateForTesting().producer()
+                .preparedSelectedRestoreIdentity().token());
+        assertTrue(audio.endReverseAudioPresentation());
+        assertDeepSnapshotEquals(live.presentation(), audio.captureLogicalSnapshot().presentation());
+        assertEquals(publications + 1, audio.logicalRestorePublicationsForTesting());
+        assertEquals(a.commandTimelineFrame(), audio.commandTimeline().currentFrame());
+        assertNull(audio.deferredReverseLogicalSnapshotForTesting());
+    }
+
+    @Test
+    void negativeTimelineOrderPartiallyPublishesAfterSuccessfulProducerReturn() {
+        AudioLogicalSnapshot a = prepareHeldFlagTarget();
+        // The producer holds A; the manager will publish this otherwise valid ledger.
+        AudioLogicalSnapshot invalid = new AudioLogicalSnapshot(false, 999, -1,
+                a.commandEntryCount(), a.presentation(), Set.of("unpublished"),
+                Set.of(new AudioLogicalSnapshot.DonorSfxBindingSnapshot(
+                        GameSound.JUMP, "unpublished", 0xAA)));
+        AudioLogicalSnapshot live = audio.captureLogicalSnapshot();
+        audio.restoreLogicalSnapshot(invalid);
+        int before = audio.logicalRestorePublicationsForTesting();
+
+        IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                audio::endReverseAudioPresentation);
+        assertEquals("nextOrder must be non-negative", failure.getMessage());
+        var producer = audio.releaseStateForTesting().producer();
+        assertFalse(producer.reverseActive());
+        assertNull(producer.reverseCursor());
+        assertEquals(0L, producer.preparedSelectedRestoreIdentity().token());
+        assertEquals(before + 1, audio.logicalRestorePublicationsForTesting());
+        AudioLogicalSnapshot partial = audio.captureLogicalSnapshot();
+        assertDeepSnapshotEquals(a.presentation(), partial.presentation());
+        assertFalse(partial.ringLeft());
+        assertEquals(live.commandTimelineFrame(), partial.commandTimelineFrame());
+        assertEquals(live.commandTimelineNextOrder(), partial.commandTimelineNextOrder());
+        assertEquals(live.donorBindings(), partial.donorBindings());
+        assertSame(invalid, audio.deferredReverseLogicalSnapshotForTesting());
+        assertTrue(audio.isReverseAudioPresentationActive());
+        assertTrue(AudioManagerTestDiagnostics.reversePreparationAcknowledged(audio));
+    }
+
+    @Test
+    void eagerAndHeldShareCounterButOnlyEagerRestoresOptionalForwardService() {
+        AudioRequestService service = mock(AudioRequestService.class);
+        var selectedService = mock(AudioPresentationForwardService.Snapshot.class);
+        var liveService = mock(AudioPresentationForwardService.Snapshot.class);
+        AtomicReference<AudioPresentationForwardService.Snapshot> current =
+                new AtomicReference<>(selectedService);
+        when(service.snapshot()).thenAnswer(ignored -> current.get());
+        doAnswer(call -> { current.set(call.getArgument(0)); return null; })
+                .when(service).restore(any());
+        audio.setAudioProfile(new AudioTestFixtures.StubAudioProfile(
+                new AudioTestFixtures.StubSmpsLoader()) {
+            @Override public AudioRequestService createAudioRequestService() { return service; }
+        });
+        AudioLogicalSnapshot selected = audio.captureLogicalSnapshot();
+        int before = audio.logicalRestorePublicationsForTesting();
+        current.set(liveService);
+        audio.restoreLogicalSnapshot(selected);
+        verify(service).restore(selectedService);
+        assertSame(selectedService, current.get());
+        assertEquals(before + 1, audio.logicalRestorePublicationsForTesting());
+        current.set(liveService);
+        audio.beginReverseAudioPresentation();
+        audio.restoreLogicalSnapshot(selected);
+        assertTrue(audio.endReverseAudioPresentation());
+        verify(service, times(1)).restore(any());
+        assertSame(liveService, audio.captureLogicalSnapshot().forwardServiceSnapshot());
+        assertEquals(before + 2, audio.logicalRestorePublicationsForTesting());
+        assertDeepSnapshotEquals(selected.presentation(), audio.captureLogicalSnapshot().presentation());
+    }
+
+    private AudioLogicalSnapshot prepareHeldFlagTarget() {
+        audio.beginCommandTimelineFrame(10);
+        audio.toggleMute(ChannelType.FM, 0);
+        audio.presentFrame(PresentationMode.SILENT);
+        AudioLogicalSnapshot a = audio.captureLogicalSnapshot();
+        audio.beginCommandTimelineFrame(20);
+        audio.toggleMute(ChannelType.FM, 1);
+        audio.presentFrame(PresentationMode.SILENT);
+        audio.beginReverseAudioPresentation();
+        audio.restoreLogicalSnapshot(a);
+        assertTrue(audio.commitDeferredReverseLogicalRestore());
+        return a;
     }
 
     @Test
@@ -444,7 +627,7 @@ class TestAudioPresentationSnapshotParity {
         // still prove the source-construction backend is untouched.
         audio.setBackend(new HeadlessSmpsAudioBackend(
                 SonicConfigurationService.createStandalone(),
-                PerformanceProfiler.getInstance()));
+                PerformanceProfiler.getInstance(), audio));
 
         audio.playMusic(0x80);
         audio.setRewindHistoryArmed(true);
@@ -580,7 +763,7 @@ class TestAudioPresentationSnapshotParity {
                 new HeadlessSmpsAudioBackend(
                         SonicConfigurationService.createStandalone(),
                         PerformanceProfiler.getInstance(),
-                        44_101);
+                        44_101, audio);
         audio.setBackend(realBackend);
         assertTrue(audio.getBackend() instanceof HeadlessSmpsAudioBackend);
         audio.presentationCoordFlagHandlersForTesting().state()

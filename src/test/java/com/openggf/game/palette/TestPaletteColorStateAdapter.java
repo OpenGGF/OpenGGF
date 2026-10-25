@@ -241,6 +241,35 @@ public class TestPaletteColorStateAdapter {
     }
 
     @Test
+    void twoAdaptersObservingTheSameLiveBankCannotAdoptEachOthersCapture() {
+        RenderContext.reset();
+        try {
+            var context = RenderContext.getOrCreateDonor(GameId.S2);
+            Palette row = makePalettes(1, (byte) 0x20)[0];
+            Palette.Color alias = row.colors[2];
+            context.setPalette(0, row);
+            byte[] capturedRgb = rgbOf(new Palette[]{row});
+            var first = new PaletteColorStateAdapter(() -> null, () -> null, () -> null,
+                    RenderContext::getDonorContexts);
+            var second = new PaletteColorStateAdapter(() -> null, () -> null, () -> null,
+                    RenderContext::getDonorContexts);
+            var capture = first.capture();
+            second.capture(); // Same live bank, already observed by both independent adapters.
+            alias.r = 1;
+            byte[] liveRgb = rgbOf(new Palette[]{row});
+
+            second.restore(capture);
+            assertArrayEquals(liveRgb, rgbOf(new Palette[]{row}), "adapter identity remains independent of bank identity");
+            first.restore(capture);
+            assertArrayEquals(capturedRgb, rgbOf(new Palette[]{row}));
+            assertSame(context, RenderContext.getOrCreateDonor(GameId.S2));
+            assertSame(alias, row.colors[2]);
+        } finally {
+            RenderContext.reset();
+        }
+    }
+
+    @Test
     void donorResetAndReplacementCannotAdoptAnOldCaptureByGameOrGpuRow() {
         RenderContext.reset();
         try {

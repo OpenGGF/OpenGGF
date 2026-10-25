@@ -42,11 +42,13 @@ public class AudioReferenceGenerator {
     private static final int SFX_SPINDASH_CHARGE = 0xAB;
     private static final int SFX_SPINDASH_RELEASE = 0xAC;
 
+    private final MusicRestoreSink musicRestoreSink;
     private final Rom rom;
     private final Sonic2SmpsLoader loader;
     private final DacData dacData;
 
-    public AudioReferenceGenerator(Rom rom) {
+    public AudioReferenceGenerator(Rom rom, MusicRestoreSink musicRestoreSink) {
+        this.musicRestoreSink = java.util.Objects.requireNonNull(musicRestoreSink, "musicRestoreSink");
         this.rom = rom;
         this.loader = new Sonic2SmpsLoader(rom);
         this.dacData = loader.loadDacData();
@@ -112,7 +114,7 @@ public class AudioReferenceGenerator {
         SmpsDriver driver = SmpsDriverTestAccess.create(SAMPLE_RATE);
         driver.setRegion(SmpsSequencer.Region.NTSC);
 
-        SmpsSequencer seq = new SmpsSequencer(musicData, dacData, driver, Sonic2SmpsSequencerConfig.CONFIG);
+        SmpsSequencer seq = new SmpsSequencer(musicData, dacData, driver, musicRestoreSink, Sonic2SmpsSequencerConfig.CONFIG);
         seq.setSampleRate(SAMPLE_RATE);
         driver.addSequencer(seq, false);
 
@@ -138,7 +140,7 @@ public class AudioReferenceGenerator {
         SmpsDriver driver = SmpsDriverTestAccess.create(SAMPLE_RATE);
         driver.setRegion(SmpsSequencer.Region.NTSC);
 
-        SmpsSequencer seq = new SmpsSequencer(sfxData, dacData, driver, Sonic2SmpsSequencerConfig.CONFIG);
+        SmpsSequencer seq = new SmpsSequencer(sfxData, dacData, driver, musicRestoreSink, Sonic2SmpsSequencerConfig.CONFIG);
         seq.setSampleRate(SAMPLE_RATE);
         seq.setSfxMode(true);
         driver.addSequencer(seq, true);
@@ -169,7 +171,7 @@ public class AudioReferenceGenerator {
         SmpsDriver driver = SmpsDriverTestAccess.create(SAMPLE_RATE);
         driver.setRegion(SmpsSequencer.Region.NTSC);
 
-        SmpsSequencer musicSeq = new SmpsSequencer(musicData, dacData, driver, Sonic2SmpsSequencerConfig.CONFIG);
+        SmpsSequencer musicSeq = new SmpsSequencer(musicData, dacData, driver, musicRestoreSink, Sonic2SmpsSequencerConfig.CONFIG);
         musicSeq.setSampleRate(SAMPLE_RATE);
         driver.addSequencer(musicSeq, false);
 
@@ -189,7 +191,7 @@ public class AudioReferenceGenerator {
 
             // Trigger SFX at specific times
             if (!sfx1Triggered && currentFrame >= sfx1TriggerFrame && sfx1Data != null) {
-                SmpsSequencer sfxSeq = new SmpsSequencer(sfx1Data, dacData, driver, Sonic2SmpsSequencerConfig.CONFIG);
+                SmpsSequencer sfxSeq = new SmpsSequencer(sfx1Data, dacData, driver, musicRestoreSink, Sonic2SmpsSequencerConfig.CONFIG);
                 sfxSeq.setSampleRate(SAMPLE_RATE);
                 sfxSeq.setSfxMode(true);
                 driver.addSequencer(sfxSeq, true);
@@ -197,7 +199,7 @@ public class AudioReferenceGenerator {
             }
 
             if (!sfx2Triggered && currentFrame >= sfx2TriggerFrame && sfx2Data != null) {
-                SmpsSequencer sfxSeq = new SmpsSequencer(sfx2Data, dacData, driver, Sonic2SmpsSequencerConfig.CONFIG);
+                SmpsSequencer sfxSeq = new SmpsSequencer(sfx2Data, dacData, driver, musicRestoreSink, Sonic2SmpsSequencerConfig.CONFIG);
                 sfxSeq.setSampleRate(SAMPLE_RATE);
                 sfxSeq.setSfxMode(true);
                 driver.addSequencer(sfxSeq, true);
@@ -315,7 +317,8 @@ public class AudioReferenceGenerator {
         }
 
         try {
-            AudioReferenceGenerator generator = new AudioReferenceGenerator(rom);
+            MusicRestoreSink musicRestoreSink = com.openggf.game.GameServices.audio();
+            AudioReferenceGenerator generator = new AudioReferenceGenerator(rom, musicRestoreSink);
             generator.generateAll();
         } catch (IOException e) {
             System.err.println("Error generating reference files: " + e.getMessage());

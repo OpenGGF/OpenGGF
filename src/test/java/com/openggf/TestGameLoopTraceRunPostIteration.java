@@ -87,14 +87,15 @@ class TestGameLoopTraceRunPostIteration {
     @Test
     void titleCardReleaseAdmitsRunBeforeLevelFallThroughInput() throws Exception {
         String source = Files.readString(
-                Path.of("src/main/java/com/openggf/GameLoop.java"));
+                Path.of("src/main/java/com/openggf/GameLoopTitleCardLifecycle.java"));
         int release = source.indexOf(
-                "if (currentGameMode == GameMode.LEVEL) {",
-                source.indexOf("private void exitTitleCard()"));
-        int admission = source.indexOf(
-                "TraceSessionLauncher.admitRunDestinationBeforeProductionIfActive(",
-                release);
-        int sync = source.indexOf("syncPlaybackInputBridge();", admission);
+                "if (host.currentMode() == GameMode.LEVEL) {",
+                source.indexOf("void exitTitleCard()"));
+        int admission = source.indexOf("host.admitDestination();", release);
+        int sync = source.indexOf("host.syncPlaybackInput();", admission);
+        String root = Files.readString(Path.of("src/main/java/com/openggf/GameLoop.java"));
+        assertTrue(root.contains("admitDestination() { TraceSessionLauncher.admitRunDestinationBeforeProductionIfActive(currentGameMode); }"));
+        assertTrue(root.contains("syncPlaybackInput() { syncPlaybackInputBridge(); }"));
         assertTrue(release >= 0 && admission > release && sync > admission,
                 "title-card release must admit the destination before its "
                         + "same-step playback/input fall-through");

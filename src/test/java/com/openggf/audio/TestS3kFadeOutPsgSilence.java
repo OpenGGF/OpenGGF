@@ -65,7 +65,7 @@ class TestS3kFadeOutPsgSilence {
         var profile = new Sonic3kAudioProfile();
         var loader = profile.createSmpsLoader(rom);
         var backend = new HeadlessSmpsAudioBackend(
-                com.openggf.configuration.SonicConfigurationService.getInstance(), null);
+                com.openggf.configuration.SonicConfigurationService.getInstance(), null, com.openggf.game.GameServices.audio());
         List<Integer> writes = new ArrayList<>();
         backend.setAudioProfile(profile);
         backend.setChipWriteObserver(new ChipWriteObserver() {

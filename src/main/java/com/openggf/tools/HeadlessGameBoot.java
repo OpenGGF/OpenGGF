@@ -187,7 +187,8 @@ public final class HeadlessGameBoot implements AutoCloseable {
             // capture lease is a non-consuming view of that producer, not a
             // replacement for it.
             installedHeadlessAudioBackend =
-                    new HeadlessSmpsAudioBackend(audioConfig, engineServices.profiler());
+                    new HeadlessSmpsAudioBackend(audioConfig, engineServices.profiler(),
+                            engineServices.audio(), engineServices.audio());
             engineServices.audio().setBackend(installedHeadlessAudioBackend);
         } else {
             // AUDIO_ENABLED gates synthesis, not an inherited device's lifetime.

@@ -333,6 +333,11 @@ class TestGraphicsManagerPatternAtlasPageOrdering {
     }
 
     private static void setField(Object target, String name, Object value) throws Exception {
+        if (target instanceof GraphicsManager host && (name.equals("combinedPaletteTextureId")
+                || name.equals("underwaterPaletteTextureId"))) {
+            PaletteTextureTestAccess.set(host, name, value);
+            return;
+        }
         Field field = (target instanceof GraphicsManager ? GraphicsManager.class : target.getClass()).getDeclaredField(name);
         field.setAccessible(true);
         if (value instanceof Boolean b) {

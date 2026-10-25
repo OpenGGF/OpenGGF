@@ -414,6 +414,12 @@ class TestS2EhzHalfpipeRoundTripChain extends AbstractRunChainTest {
     private static final Path RUN_DIR = Path.of(
             "src", "test", "resources", "traces", "s2", "runs", "s2-ehz-halfpipe-roundtrip");
 
+    /** One real entry/results/return, stopping after returned segment 2 row 2. */
+    @Test
+    void ehzHalfpipeFirstReturnLifecyclePrefix() throws Exception {
+        assertChainReplayThroughSegmentRow(RUN_DIR, 2, 2);
+    }
+
     @Test
     void ehzHalfpipeRoundTrip() throws Exception {
         auditHeadlessPayloadReleaseAtBoundaries();

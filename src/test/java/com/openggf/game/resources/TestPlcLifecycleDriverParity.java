@@ -100,17 +100,14 @@ class TestPlcLifecycleDriverParity {
 
         GameLoop loop = new GameLoop(new InputHandler());
         set(loop, "gameplayMode", gameplay);
-        set(loop, "titleCardProvider", titleCard);
+        com.openggf.TitleCardLifecycleTestAccess.provider(loop, titleCard);
         set(loop, "levelManager", mock(com.openggf.level.LevelManager.class));
         set(loop, "camera", mock(com.openggf.camera.Camera.class));
         set(loop, "audioManager", mock(com.openggf.audio.AudioManager.class));
         var frame = coordinator.latchBeforeFadeUpdate();
         set(loop, "activePlcLifecycleFrame", frame);
-        Method update = GameLoop.class.getDeclaredMethod(
-                "updateTitleCardMode", boolean.class);
-        update.setAccessible(true);
 
-        update.invoke(loop, true);
+        com.openggf.TitleCardLifecycleTestAccess.update(loop, true);
         frame.finish();
 
         assertEquals(List.of(
@@ -140,17 +137,15 @@ class TestPlcLifecycleDriverParity {
 
         GameLoop loop = new GameLoop(new InputHandler());
         set(loop, "gameplayMode", gameplay);
-        set(loop, "titleCardProvider", titleCard);
+        com.openggf.TitleCardLifecycleTestAccess.provider(loop, titleCard);
         set(loop, "levelManager", mock(com.openggf.level.LevelManager.class));
         set(loop, "camera", mock(com.openggf.camera.Camera.class));
         set(loop, "audioManager", mock(com.openggf.audio.AudioManager.class));
         var coordinator = new PlcFrameLifecycleCoordinator(recording(new ArrayList<>()));
         var frame = coordinator.latchBeforeFadeUpdate();
         set(loop, "activePlcLifecycleFrame", frame);
-        Method update = GameLoop.class.getDeclaredMethod("updateTitleCardMode", boolean.class);
-        update.setAccessible(true);
 
-        update.invoke(loop, true);
+        com.openggf.TitleCardLifecycleTestAccess.update(loop, true);
         frame.finish();
 
         verify(profile).serviceLevelLoadVBlank();

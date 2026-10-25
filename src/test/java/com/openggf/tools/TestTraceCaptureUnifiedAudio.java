@@ -611,15 +611,17 @@ class TestTraceCaptureUnifiedAudio {
     private HeadlessSmpsAudioBackend headlessBackend() {
         return new HeadlessSmpsAudioBackend(
                 SonicConfigurationService.getInstance(),
-                PerformanceProfiler.getInstance());
+                PerformanceProfiler.getInstance(), audio);
     }
 
     private LiveCaptureAudioHandle attachedLease() throws AssertionError {
         try {
-            Field field = AudioManager.class.getDeclaredField(
-                    "offlineCaptureHandle");
+            Field ownerField = AudioManager.class.getDeclaredField("captureLeases");
+            ownerField.setAccessible(true);
+            Object owner = ownerField.get(audio);
+            Field field = owner.getClass().getDeclaredField("offlineCaptureHandle");
             field.setAccessible(true);
-            return (LiveCaptureAudioHandle) field.get(audio);
+            return (LiveCaptureAudioHandle) field.get(owner);
         } catch (ReflectiveOperationException failure) {
             throw new AssertionError(failure);
         }

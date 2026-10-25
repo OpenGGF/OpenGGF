@@ -37,17 +37,14 @@ class TestSonic2VisibleTitleReleasePlcOrdering {
         when(titleCard.shouldCompleteFreshLevelTransitionBoundary()).thenCallRealMethod();
 
         GameLoop loop = new GameLoop(new InputHandler());
-        set(loop, "titleCardProvider", titleCard);
+        com.openggf.TitleCardLifecycleTestAccess.provider(loop, titleCard);
         set(loop, "levelManager", levelManager);
         PlcFrameLifecycleCoordinator coordinator =
                 new PlcFrameLifecycleCoordinator(service);
         var frame = coordinator.latchBeforeFadeUpdate();
         set(loop, "activePlcLifecycleFrame", frame);
 
-        Method update = GameLoop.class.getDeclaredMethod(
-                "updateTitleCardMode", boolean.class);
-        update.setAccessible(true);
-        update.invoke(loop, true);
+        com.openggf.TitleCardLifecycleTestAccess.update(loop, true);
         frame.finish();
 
         assertNull(service.capture().activeEntry(),

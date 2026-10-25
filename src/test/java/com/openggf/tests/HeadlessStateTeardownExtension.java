@@ -13,6 +13,10 @@ import java.util.concurrent.ConcurrentHashMap;
  * Resets the shared engine baseline after every top-level test class so a
  * headless session, loaded level, or configuration write left behind by one
  * class never reaches the next class in a reused Surefire fork.
+ * The incoming graphics-backend selection is also restored, including an
+ * absent or empty property, even if engine or audio teardown fails. Backend
+ * selection tests may deliberately clear it; later boots still need the
+ * caller's offscreen setting rather than an unintended GLFW launch.
  * <p>
  * Every existing reset mechanism runs <em>before</em> a test:
  * {@link SingletonResetExtension}, {@code @FullReset} and {@code @RequiresRom}
@@ -43,12 +47,20 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class HeadlessStateTeardownExtension
         implements BeforeAllCallback, AfterAllCallback {
 
+    private static final String GRAPHICS_BACKEND_PROPERTY = "openggf.headless.gl";
+    private static final ExtensionContext.Namespace NAMESPACE =
+            ExtensionContext.Namespace.create(HeadlessStateTeardownExtension.class);
+
     private static final Set<Class<?>> OBSERVED_CLASSES =
             Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     @Override
     public void beforeAll(ExtensionContext context) {
         context.getTestClass().ifPresent(OBSERVED_CLASSES::add);
+        if (isTopLevel(context)) {
+            context.getStore(NAMESPACE).put(BackendProperty.class,
+                    new BackendProperty(System.getProperty(GRAPHICS_BACKEND_PROPERTY)));
+        }
     }
 
     @Override
@@ -60,7 +72,31 @@ public final class HeadlessStateTeardownExtension
         try {
             TestEnvironment.resetAll();
         } finally {
-            SmpsDriverTestAccess.closeAll();
+            try {
+                SmpsDriverTestAccess.closeAll();
+            } finally {
+                var incoming = context.getStore(NAMESPACE)
+                        .remove(BackendProperty.class, BackendProperty.class);
+                if (incoming != null) {
+                    incoming.restore();
+                }
+            }
+        }
+    }
+
+    private static boolean isTopLevel(ExtensionContext context) {
+        Class<?> testClass = context.getTestClass().orElse(null);
+        return testClass != null && testClass.getEnclosingClass() == null;
+    }
+
+    /** A record distinguishes an absent property from a missing lifecycle snapshot. */
+    private record BackendProperty(String value) {
+        void restore() {
+            if (value == null) {
+                System.clearProperty(GRAPHICS_BACKEND_PROPERTY);
+            } else {
+                System.setProperty(GRAPHICS_BACKEND_PROPERTY, value);
+            }
         }
     }
 

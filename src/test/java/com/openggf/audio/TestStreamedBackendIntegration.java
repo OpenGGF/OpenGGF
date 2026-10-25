@@ -25,7 +25,7 @@ class TestStreamedBackendIntegration {
 
     @Test
     void portInstallAndReplacementAreConsumedInFifoOrderAtUpdateBoundary() {
-        InstrumentedBackend backend = new InstrumentedBackend();
+        InstrumentedBackend backend = new InstrumentedBackend(com.openggf.game.GameServices.audio());
         RecordingPort first = new RecordingPort(8_000, true);
         RecordingPort second = new RecordingPort(8_000, true);
 
@@ -42,7 +42,7 @@ class TestStreamedBackendIntegration {
 
     @Test
     void fadeTargetsStreamedForegroundEvenWhenInactiveSmpsStreamIsRetained() throws Exception {
-        InstrumentedBackend backend = new InstrumentedBackend();
+        InstrumentedBackend backend = new InstrumentedBackend(com.openggf.game.GameServices.audio());
         RecordingPort port = new RecordingPort(8_000, true);
         backend.installStreamedMusicPort(port);
         backend.playStreamedMusicOrElse(0x81, () -> fail("stock fallback is unexpected"));
@@ -72,7 +72,7 @@ class TestStreamedBackendIntegration {
 
     @Test
     void mismatchedOutputRateIsRejectedAndClosedAtBoundary() {
-        InstrumentedBackend backend = new InstrumentedBackend();
+        InstrumentedBackend backend = new InstrumentedBackend(com.openggf.game.GameServices.audio());
         RecordingPort mismatched = new RecordingPort(44_100, true);
 
         assertThrows(IllegalArgumentException.class,
@@ -85,7 +85,7 @@ class TestStreamedBackendIntegration {
 
     @Test
     void namespacedPreflightSeesPendingInstallAndExactKeyBeforeTimelineAcceptance() {
-        InstrumentedBackend backend = new InstrumentedBackend();
+        InstrumentedBackend backend = new InstrumentedBackend(com.openggf.game.GameServices.audio());
         RecordingPort port = new RecordingPort(8_000, true);
         backend.installStreamedMusicPort(port);
 
@@ -102,7 +102,7 @@ class TestStreamedBackendIntegration {
 
     @Test
     void unresolvedOverrideRunsPreparedStockFallbackOnUpdateAfterInstall() {
-        InstrumentedBackend backend = new InstrumentedBackend();
+        InstrumentedBackend backend = new InstrumentedBackend(com.openggf.game.GameServices.audio());
         RecordingPort port = new RecordingPort(8_000, false);
         backend.installStreamedMusicPort(port);
         boolean[] fallbackRan = {false};
@@ -119,7 +119,7 @@ class TestStreamedBackendIntegration {
 
     @Test
     void resolvedOverrideTakesTheForegroundInsteadOfTheStockFallback() {
-        InstrumentedBackend backend = new InstrumentedBackend();
+        InstrumentedBackend backend = new InstrumentedBackend(com.openggf.game.GameServices.audio());
         RecordingPort port = new RecordingPort(8_000, true);
         backend.installStreamedMusicPort(port);
         boolean[] fallbackRan = {false};
@@ -135,7 +135,7 @@ class TestStreamedBackendIntegration {
 
     @Test
     void resetClosesActiveAndPendingPortsAndDropsStalePlayTransitions() {
-        InstrumentedBackend backend = new InstrumentedBackend();
+        InstrumentedBackend backend = new InstrumentedBackend(com.openggf.game.GameServices.audio());
         RecordingPort active = new RecordingPort(8_000, true);
         RecordingPort pending = new RecordingPort(8_000, true);
         backend.installStreamedMusicPort(active);
@@ -158,7 +158,7 @@ class TestStreamedBackendIntegration {
 
     @Test
     void replayBypassSuppressesCreatorOverrideResolutionWhileArmed() {
-        InstrumentedBackend backend = new InstrumentedBackend();
+        InstrumentedBackend backend = new InstrumentedBackend(com.openggf.game.GameServices.audio());
         RecordingPort port = new RecordingPort(8_000, true);
         backend.installStreamedMusicPort(port);
         backend.update();
@@ -181,7 +181,7 @@ class TestStreamedBackendIntegration {
 
     @Test
     void appAndRewindPauseReasonsApplyInFifoOrderAndReachThePort() {
-        InstrumentedBackend backend = new InstrumentedBackend();
+        InstrumentedBackend backend = new InstrumentedBackend(com.openggf.game.GameServices.audio());
         RecordingPort port = new RecordingPort(8_000, true);
         backend.installStreamedMusicPort(port);
         backend.update();
@@ -200,7 +200,7 @@ class TestStreamedBackendIntegration {
 
     @Test
     void destroyReleasesTheInstalledPortExactlyOnce() {
-        InstrumentedBackend backend = new InstrumentedBackend();
+        InstrumentedBackend backend = new InstrumentedBackend(com.openggf.game.GameServices.audio());
         RecordingPort port = new RecordingPort(8_000, true);
         backend.installStreamedMusicPort(port);
         backend.update();
@@ -335,8 +335,8 @@ class TestStreamedBackendIntegration {
     }
 
     private static class InstrumentedBackend extends AbstractSmpsAudioBackend {
-        protected InstrumentedBackend() {
-            super(config(), null);
+        protected InstrumentedBackend(com.openggf.audio.MusicRestoreSink musicRestoreSink) {
+            super(config(), null, musicRestoreSink);
         }
 
         private static SonicConfigurationService config() {

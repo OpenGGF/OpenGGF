@@ -106,7 +106,7 @@ class TestGameLoopSpecialStageRewindGate {
      * Companion case for the S3K/S2-shared bonus-stage twin of the same bug
      * ({@code GameLoop.enterBonusStage}, same pending-flag/fade shape). Cheap to
      * cover here because {@code bonusStageTransitionPending} is a plain
-     * {@code GameLoop} field usable under the same Sonic2 fixture -- no actual
+     * visit-owner flag usable under the same Sonic2 fixture -- no actual
      * S3K module/bonus-stage content is required to exercise the gate.
      */
     @Test
@@ -223,7 +223,7 @@ class TestGameLoopSpecialStageRewindGate {
     void heldRewindEngagesWhileSupportedSpecialStageIsActive() throws Exception {
         var provider = new RewindableSpecialStageProvider();
         SessionManager.getCurrentGameplayMode().registerSpecialStageAdapter(provider);
-        setField(loop, "activeSpecialStageProvider", provider);
+        SpecialStageLifecycleTestAccess.write(loop, "activeSpecialStageProvider", provider);
         loop.changeGameModeWithoutRewindBoundary(GameMode.SPECIAL_STAGE);
 
         LiveRewindManager liveRewindManager = (LiveRewindManager) getField(loop, "liveRewindManager");
@@ -322,6 +322,9 @@ class TestGameLoopSpecialStageRewindGate {
     }
 
     private static void setField(Object target, String fieldName, Object value) throws Exception {
+        if (target instanceof GameLoop loop && fieldName.equals("bonusStageTransitionPending")) {
+            BonusStageSessionTestAccess.pending(loop, (boolean) value); return;
+        }
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         field.set(target, value);

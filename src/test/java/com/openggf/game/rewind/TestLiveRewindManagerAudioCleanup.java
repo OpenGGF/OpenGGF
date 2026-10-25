@@ -246,7 +246,7 @@ class TestLiveRewindManagerAudioCleanup {
         // restore the class's shared fake backend afterward so this AudioManager
         // singleton doesn't leak a heavier real backend into other test classes
         // sharing the same JVM/fork.
-        HeadlessSmpsAudioBackend realBackend = new HeadlessSmpsAudioBackend(config, null);
+        HeadlessSmpsAudioBackend realBackend = new HeadlessSmpsAudioBackend(config, null, audio);
         realBackend.init();
         audio.setBackend(realBackend);
         try {
@@ -472,7 +472,7 @@ class TestLiveRewindManagerAudioCleanup {
                 };
         audio.setAudioProfile(profile);
         audio.setRom(new Rom());
-        audio.setBackend(new HeadlessSmpsAudioBackend(config, null));
+        audio.setBackend(new HeadlessSmpsAudioBackend(config, null, audio));
         applyAndPresentSourcePair(oldMusic, oldSfx);
 
         TestEnvironment.activeGameplayMode();
@@ -524,8 +524,7 @@ class TestLiveRewindManagerAudioCleanup {
                 audio.captureLogicalSnapshot(), freshMusic, freshSfx);
         assertRawPcmSource(audio.captureLogicalSnapshot());
         AudioLogicalSnapshot selectedFresh =
-                (AudioLogicalSnapshot) getField(
-                        audio, "deferredReverseLogicalSnapshot");
+                AudioManagerTestDiagnostics.selectedReverseSnapshot(audio);
         assertSourcePair(selectedFresh, freshMusic, freshSfx);
         assertRawPcmSource(selectedFresh);
         AudioPresentationProducer.TransactionFingerprint
@@ -584,8 +583,7 @@ class TestLiveRewindManagerAudioCleanup {
         assertTrue(controller.stepBackward());
         controller.commitDeferredAudioRestore();
         AudioLogicalSnapshot selectedRoot =
-                (AudioLogicalSnapshot) getField(
-                        audio, "deferredReverseLogicalSnapshot");
+                AudioManagerTestDiagnostics.selectedReverseSnapshot(audio);
         assertSourcePair(selectedRoot, freshMusic, freshSfx);
         assertRawPcmSource(selectedRoot);
         audio.endReverseAudioPresentation();

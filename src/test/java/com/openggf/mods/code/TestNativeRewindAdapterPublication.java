@@ -92,6 +92,8 @@ public class TestNativeRewindAdapterPublication {
             NativeRewindAdapterPublication.register(registry,root,adapter);
         }
         public static Publication hidden() { return NativeRewindAdapterPublication::register; }
+        public static java.util.function.BiFunction<GameModule,GameModule,GameModule> hiddenOwner() { return NativeRewindAdapterPublication::publicationOwner; }
+        public static GameModule directOwner(GameModule root, GameModule selected) { return NativeRewindAdapterPublication.publicationOwner(root, selected); }
         public static Function<GameModule,GameModule> hiddenRoot() { return NativeRewindAdapterPublication::nativeRoot; }
         public static Function<GameModule,GameModule> hiddenInherited() { return OwnerBoundGamePatch::inheritedModule; }
         public static java.util.function.Consumer<GameModule> hiddenReserve() { return NativeRewindAdapterPublication::reserve; }
@@ -169,6 +171,10 @@ public class TestNativeRewindAdapterPublication {
             var direct=assertThrows(InvocationTargetException.class,()->probe.getMethod("direct",RewindRegistry.class,GameModule.class,RewindSnapshottable.class)
                     .invoke(null,registry,root,adapter));
             assertInstanceOf(SecurityException.class,direct.getCause());
+            var directOwner = assertThrows(InvocationTargetException.class, () -> probe.getMethod("directOwner", GameModule.class, GameModule.class).invoke(null, root, root));
+            assertInstanceOf(SecurityException.class, directOwner.getCause());
+            @SuppressWarnings("unchecked") var hiddenOwner = (java.util.function.BiFunction<GameModule,GameModule,GameModule>) probe.getMethod("hiddenOwner").invoke(null);
+            assertThrows(SecurityException.class, () -> hiddenOwner.apply(root, root));
             var hidden=(Publication)probe.getMethod("hidden").invoke(null);
             assertThrows(SecurityException.class,()->hidden.register(registry,root,adapter));
             @SuppressWarnings("unchecked") var hiddenReserve=(java.util.function.Consumer<GameModule>)probe.getMethod("hiddenReserve").invoke(null);

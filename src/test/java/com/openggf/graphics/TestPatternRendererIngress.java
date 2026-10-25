@@ -346,7 +346,11 @@ class TestPatternRendererIngress {
         catch (ReflectiveOperationException failure) { throw new AssertionError(failure); }
     }
     private static void set(Object target, String name, Object value) {
-        try { find(target, name).set(target, value); }
+        try {
+            if (target instanceof GraphicsManager host && name.equals("combinedPaletteTextureId")) {
+                PaletteTextureTestAccess.set(host, name, value);
+            } else find(target, name).set(target, value);
+        }
         catch (ReflectiveOperationException failure) { throw new AssertionError(failure); }
     }
     private static Field find(Object target, String name) throws NoSuchFieldException {

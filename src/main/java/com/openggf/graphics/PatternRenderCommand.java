@@ -318,7 +318,7 @@ public class PatternRenderCommand implements GLCommandable {
         GraphicsManager graphicsManager = this.graphicsManager;
         int effectivePalette=paletteReplay==null?paletteIndex:paletteReplay.palette(graphicsManager,paletteIndex);
         if(effectivePalette<0)return;
-        graphicsManager.refreshScopedUnderwaterResidency();
+        graphicsManager.paletteTextures().refreshScopedUnderwaterResidency();
         if(paletteReplay!=null) {
             Integer current=graphicsManager.scopedReplayPaletteTexture(paletteReplayUnderwater);
             if(current==null)return;
