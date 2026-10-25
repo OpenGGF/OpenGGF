@@ -601,6 +601,22 @@ profile, backend and producer replacement, destruction and reuse leave admission
 and old tokens intact. Direct and raw request gates keep their distinct original
 positions; this ownership does not add a universal music lock or dispatch filter.
 
+Each manager retains one cold private final `DiagnosticInstallation`, including
+silent and standalone managers. It owns the five plain observer slots and active
+lease, occupancy/replacement decisions, complete propagation/rollback and ordered
+publication, backend reinstallation, leased/unleased reset policy, and token
+activity/release decisions. Public compatibility delegates retain their manager
+monitor; token operations use that same monitor. Request/admission/lifecycle
+emissions and Binding construction read narrow private accessors at their original
+evaluation points, without new locks, snapshots or wrappers. Backend setters and
+Binding's narrow factory propagation still follow then-current targets, including
+reentrant replacement/clearing and partial rollback effects. The owner makes no
+in-flight reservation: displaced active tokens and unconditional outer-close
+clearing remain observable. Destroy retains diagnostic ownership; ordinary reset
+preserves leased observers and directly clears unleased slots before reinstall.
+Physical assembly, event classification, quarantine, frame/routing policy and
+source publication stay with their existing owners.
+
 Each `AudioManager` retains one private `CaptureLeases` owner across producer
 generations. It owns offline/live admission, accepted release, rebuild carry,
 retirement and the stable live-recording handle. Compatibility methods retain

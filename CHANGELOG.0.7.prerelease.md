@@ -644,6 +644,9 @@ Unreleased. The earlier development themes remain in
   A permanent per-manager level-music admission owner keeps both scope counts,
   request-category decisions and token release together, preserving manager
   locking, callback order and scope lifetimes across resets and replacement.
+  A private diagnostic installation owner keeps complete observer installation,
+  rollback, lease ownership and reset policy together, preserving live target
+  sampling, manager locking and existing reentrant partial effects.
   Sonic 1 and Sonic 2 selected-slot images use the shared data-select
   converter and payload validators; Sonic 3 & Knuckles keeps explicit host ROM
   donation while consuming the same patterns, palette and mapping contract.

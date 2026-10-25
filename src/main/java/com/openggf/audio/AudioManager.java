@@ -77,7 +77,7 @@ public class AudioManager implements MusicRestoreSink {
     private Map<GameSound, Integer> soundMap;
     // Director-owned playlist admission survives producer/shot replacement until its scope closes.
     private final LevelMusicAccess levelMusicAccess = new LevelMusicAccess(this);
-    private AudioRequestObserver requestObserver = AudioRequestObserver.NONE;
+    private final DiagnosticInstallation diagnosticInstallation = new DiagnosticInstallation();
     // Internal world ownership never replaces the single external diagnostic observer.
     AudioMutatorAccess.Binding mutatorBinding;
     int mutatorSubmissionDepth;
@@ -125,14 +125,6 @@ public class AudioManager implements MusicRestoreSink {
                 && cues.isWarningCue(entry.smpsData().getId())
                 && entry.snapshot().tracks().stream().anyMatch(com.openggf.audio.rewind.SmpsTrackSnapshot::active));
     }
-    private AudioAdmissionObserver admissionObserver =
-            AudioAdmissionObserver.NONE;
-    private SmpsDriverServiceObserver driverServiceObserver =
-            SmpsDriverServiceObserver.NONE;
-    private ChipWriteObserver chipWriteObserver = ChipWriteObserver.NONE;
-    private SfxContentionObserver sfxContentionObserver =
-            SfxContentionObserver.NONE;
-    private DiagnosticObserverLease activeDiagnosticObserverLease;
 
     /**
      * One immutable, complete diagnostic observer installation. The tuple is
@@ -637,7 +629,7 @@ public class AudioManager implements MusicRestoreSink {
         try {
             this.backend.init();
             this.backend.setAudioProfile(sourcePublication.base().profile());
-            installBackendDiagnosticObservers();
+            diagnosticInstallation.installBackendDiagnosticObservers();
             presentationBinding.installBackendPresentationSink();
             LOGGER.info("AudioBackend initialized: " + backend.getClass().getSimpleName());
         } catch (Exception e) {
@@ -647,7 +639,7 @@ public class AudioManager implements MusicRestoreSink {
             this.backend = new NullAudioBackend();
             this.backend.init();
             this.backend.setAudioProfile(sourcePublication.base().profile());
-            installBackendDiagnosticObservers();
+            diagnosticInstallation.installBackendDiagnosticObservers();
             presentationBinding.installFailedBackendSink();
         }
     }
@@ -663,7 +655,7 @@ public class AudioManager implements MusicRestoreSink {
         try {
             this.backend.init();
             this.backend.setAudioProfile(sourcePublication.base().profile());
-            installBackendDiagnosticObservers();
+            diagnosticInstallation.installBackendDiagnosticObservers();
             presentationBinding.installBackendPresentationSink();
             LOGGER.info("AudioBackend initialized: " + backend.getClass().getSimpleName());
         } catch (Exception error) {
@@ -672,7 +664,7 @@ public class AudioManager implements MusicRestoreSink {
             this.backend = new NullAudioBackend();
             this.backend.init();
             this.backend.setAudioProfile(sourcePublication.base().profile());
-            installBackendDiagnosticObservers();
+            diagnosticInstallation.installBackendDiagnosticObservers();
             presentationBinding.installBackendPresentationSink();
             presentationBinding.markSpeakerFailed();
             throw new IllegalStateException("Audio backend initialization failed", error);
@@ -1385,7 +1377,7 @@ public class AudioManager implements MusicRestoreSink {
         if (source.profile() != null) {
             presentationBinding.ensureShadowPresentation();
             if (presentationBinding.shadowRequestService != null) {
-                requestObserver.onRequested(sfxRequestClass(nativeRequestId),
+                diagnosticInstallation.requestObserver().onRequested(sfxRequestClass(nativeRequestId),
                         nativeRequestId);
                 presentationBinding.shadowRequestService.submitMusic(nativeRequestId,
                         commandForNativeRequest(source, nativeRequestId));
@@ -1399,7 +1391,7 @@ public class AudioManager implements MusicRestoreSink {
         if (source.profile() instanceof NativeMailboxMusicRoutes routes) {
             int musicId = routes.musicForNativeRequest(nativeRequestId);
             if (musicId >= 0) {
-                requestObserver.onRequested(sfxRequestClass(nativeRequestId),
+                diagnosticInstallation.requestObserver().onRequested(sfxRequestClass(nativeRequestId),
                         nativeRequestId);
                 admitMusicWithoutRequestService(source, musicId);
                 return;
@@ -1414,7 +1406,7 @@ public class AudioManager implements MusicRestoreSink {
         if (suppressingRewindReplay()) {
             return;
         }
-        requestObserver.onRequested(musicId >= 0xE0
+        diagnosticInstallation.requestObserver().onRequested(musicId >= 0xE0
                 ? AudioRequestObserver.RequestClass.COMMAND
                 : AudioRequestObserver.RequestClass.MUSIC, musicId);
         BaseAudioSource source = sourcePublication.base();
@@ -1686,7 +1678,7 @@ public class AudioManager implements MusicRestoreSink {
                 ? soundMap == null ? null : soundMap.get(GameSound.RING_RIGHT)
                 : soundMap == null ? null : soundMap.get(sound);
         if (rawSoundId != null) {
-            requestObserver.onRequested(sfxRequestClass(rawSoundId), rawSoundId);
+            diagnosticInstallation.requestObserver().onRequested(sfxRequestClass(rawSoundId), rawSoundId);
             presentationBinding.ensureShadowPresentation();
             if (presentationBinding.shadowRequestService != null) {
                 AudioCommand command = commandForNativeRequest(
@@ -1715,7 +1707,7 @@ public class AudioManager implements MusicRestoreSink {
 
     /** Reports the caller-owned discard before ring-speaker selection mutates. */
     private void observeBlockedRingAdmission(Integer rawSoundId) {
-        if (rawSoundId == null || admissionObserver == AudioAdmissionObserver.NONE) {
+        if (rawSoundId == null || diagnosticInstallation.admissionObserver() == AudioAdmissionObserver.NONE) {
             return;
         }
         GameAudioProfile profile = sourcePublication.base().profile();
@@ -1731,7 +1723,7 @@ public class AudioManager implements MusicRestoreSink {
                 context.priorityBefore(), context.priorityBefore(),
                 context.resolvedSoundId());
         AudioDiagnosticObserverException.invoke(() ->
-                admissionObserver.onDecision(
+                diagnosticInstallation.admissionObserver().onDecision(
                         new AudioAdmissionObserver.AudioAdmissionDecision(
                                 context, result)));
     }
@@ -1837,7 +1829,7 @@ public class AudioManager implements MusicRestoreSink {
         if (profile != null) {
             presentationBinding.ensureShadowPresentation();
             if (presentationBinding.shadowRequestService != null) {
-                requestObserver.onRequested(sfxRequestClass(sfxId), sfxId);
+                diagnosticInstallation.requestObserver().onRequested(sfxRequestClass(sfxId), sfxId);
                 var command = commandForNativeRequest(source, sfxId, pitch);
                 if (LevelMusicAccess.allowsEntryRequest(this, command))
                     presentationBinding.shadowRequestService.submitSound(sfxId, command);
@@ -1845,7 +1837,7 @@ public class AudioManager implements MusicRestoreSink {
             }
         }
         if (profile != null && profile.handleSystemCommand(sfxId, this)) {
-            requestObserver.onRequested(
+            diagnosticInstallation.requestObserver().onRequested(
                     AudioRequestObserver.RequestClass.COMMAND, sfxId);
             return true;
         }
@@ -1864,7 +1856,7 @@ public class AudioManager implements MusicRestoreSink {
             playSfx(GameSound.RING, pitch);
             return true;
         }
-        requestObserver.onRequested(sfxRequestClass(sfxId), sfxId);
+        diagnosticInstallation.requestObserver().onRequested(sfxRequestClass(sfxId), sfxId);
         return playBaseSfx(sourcePublication.base(), sfxId, pitch);
     }
 
@@ -2010,109 +2002,214 @@ public class AudioManager implements MusicRestoreSink {
 
     public synchronized DiagnosticObserverHandle acquireDiagnosticObservers(
             DiagnosticObserverSet observers) {
-        Objects.requireNonNull(observers, "observers");
-        if (activeDiagnosticObserverLease != null
-                || !currentDiagnosticObservers().isNone()) {
-            throw new IllegalStateException(
-                    "diagnostic observers are already installed");
-        }
-        applyDiagnosticObservers(observers);
-        DiagnosticObserverLease lease = new DiagnosticObserverLease(
-                Thread.currentThread());
-        activeDiagnosticObserverLease = lease;
-        return lease;
+        return diagnosticInstallation.acquireDiagnosticObservers(observers);
     }
 
     public synchronized void setRequestObserver(AudioRequestObserver observer) {
-        rejectObserverReplacementWhileLeased();
-        DiagnosticObserverSet current = currentDiagnosticObservers();
-        applyDiagnosticObservers(new DiagnosticObserverSet(
-                observer == null ? AudioRequestObserver.NONE : observer,
-                current.admission(), current.driverService(),
-                current.chipWrite(), current.sfxContention()));
+        diagnosticInstallation.setRequestObserver(observer);
     }
 
     public synchronized void setAdmissionObserver(AudioAdmissionObserver observer) {
-        rejectObserverReplacementWhileLeased();
-        DiagnosticObserverSet current = currentDiagnosticObservers();
-        applyDiagnosticObservers(new DiagnosticObserverSet(
-                current.request(),
-                observer == null ? AudioAdmissionObserver.NONE : observer,
-                current.driverService(), current.chipWrite(),
-                current.sfxContention()));
+        diagnosticInstallation.setAdmissionObserver(observer);
     }
 
     public synchronized void setDriverServiceObserver(
             SmpsDriverServiceObserver observer) {
-        rejectObserverReplacementWhileLeased();
-        DiagnosticObserverSet current = currentDiagnosticObservers();
-        applyDiagnosticObservers(new DiagnosticObserverSet(
-                current.request(), current.admission(),
-                observer == null
-                        ? SmpsDriverServiceObserver.NONE : observer,
-                current.chipWrite(), current.sfxContention()));
+        diagnosticInstallation.setDriverServiceObserver(observer);
     }
 
     public synchronized void setChipWriteObserver(ChipWriteObserver observer) {
-        rejectObserverReplacementWhileLeased();
-        DiagnosticObserverSet current = currentDiagnosticObservers();
-        applyDiagnosticObservers(new DiagnosticObserverSet(
-                current.request(), current.admission(),
-                current.driverService(),
-                observer == null ? ChipWriteObserver.NONE : observer,
-                current.sfxContention()));
+        diagnosticInstallation.setChipWriteObserver(observer);
     }
 
     public synchronized void setSfxContentionObserver(
             SfxContentionObserver observer) {
-        rejectObserverReplacementWhileLeased();
-        DiagnosticObserverSet current = currentDiagnosticObservers();
-        applyDiagnosticObservers(new DiagnosticObserverSet(
-                current.request(), current.admission(),
-                current.driverService(), current.chipWrite(),
-                observer == null ? SfxContentionObserver.NONE : observer));
+        diagnosticInstallation.setSfxContentionObserver(observer);
     }
 
-    private void rejectObserverReplacementWhileLeased() {
-        if (activeDiagnosticObserverLease != null) {
-            throw new IllegalStateException(
-                    "diagnostic observers are owned by an active lease");
-        }
-    }
+    /** Complete manager-lifetime diagnostic installation and lease authority. */
+    private final class DiagnosticInstallation {
+        private AudioRequestObserver requestObserver = AudioRequestObserver.NONE;
+        private AudioAdmissionObserver admissionObserver =
+                AudioAdmissionObserver.NONE;
+        private SmpsDriverServiceObserver driverServiceObserver =
+                SmpsDriverServiceObserver.NONE;
+        private ChipWriteObserver chipWriteObserver = ChipWriteObserver.NONE;
+        private SfxContentionObserver sfxContentionObserver =
+                SfxContentionObserver.NONE;
+        private DiagnosticObserverLease activeDiagnosticObserverLease;
 
-    private DiagnosticObserverSet currentDiagnosticObservers() {
-        return new DiagnosticObserverSet(
-                requestObserver, admissionObserver, driverServiceObserver,
-                chipWriteObserver, sfxContentionObserver);
-    }
-
-    private void applyDiagnosticObservers(DiagnosticObserverSet desired) {
-        DiagnosticObserverSet previous = currentDiagnosticObservers();
-        try {
-            propagateDiagnosticObservers(desired);
-        } catch (RuntimeException | Error failure) {
-            try {
-                propagateDiagnosticObservers(previous);
-            } catch (RuntimeException | Error rollbackFailure) {
-                failure.addSuppressed(rollbackFailure);
+        private DiagnosticObserverHandle acquireDiagnosticObservers(
+                DiagnosticObserverSet observers) {
+            Objects.requireNonNull(observers, "observers");
+            if (activeDiagnosticObserverLease != null
+                    || !currentDiagnosticObservers().isNone()) {
+                throw new IllegalStateException(
+                        "diagnostic observers are already installed");
             }
-            throw failure;
+            applyDiagnosticObservers(observers);
+            DiagnosticObserverLease lease = new DiagnosticObserverLease(
+                    Thread.currentThread());
+            activeDiagnosticObserverLease = lease;
+            return lease;
         }
-        requestObserver = desired.request();
-        admissionObserver = desired.admission();
-        driverServiceObserver = desired.driverService();
-        chipWriteObserver = desired.chipWrite();
-        sfxContentionObserver = desired.sfxContention();
-    }
 
-    private void propagateDiagnosticObservers(DiagnosticObserverSet observers) {
-        if (backend != null) {
-            backend.setAdmissionObserver(observers.admission());
-            backend.setDriverServiceObserver(observers.driverService());
-            backend.setChipWriteObserver(observers.chipWrite());
-            backend.setSfxContentionObserver(observers.sfxContention());
+        private void setRequestObserver(AudioRequestObserver observer) {
+            rejectObserverReplacementWhileLeased();
+            DiagnosticObserverSet current = currentDiagnosticObservers();
+            applyDiagnosticObservers(new DiagnosticObserverSet(
+                    observer == null ? AudioRequestObserver.NONE : observer,
+                    current.admission(), current.driverService(),
+                    current.chipWrite(), current.sfxContention()));
         }
-        presentationBinding.propagateDiagnosticObservers(observers);
+
+        private void setAdmissionObserver(AudioAdmissionObserver observer) {
+            rejectObserverReplacementWhileLeased();
+            DiagnosticObserverSet current = currentDiagnosticObservers();
+            applyDiagnosticObservers(new DiagnosticObserverSet(
+                    current.request(),
+                    observer == null ? AudioAdmissionObserver.NONE : observer,
+                    current.driverService(), current.chipWrite(),
+                    current.sfxContention()));
+        }
+
+        private void setDriverServiceObserver(
+                SmpsDriverServiceObserver observer) {
+            rejectObserverReplacementWhileLeased();
+            DiagnosticObserverSet current = currentDiagnosticObservers();
+            applyDiagnosticObservers(new DiagnosticObserverSet(
+                    current.request(), current.admission(),
+                    observer == null
+                            ? SmpsDriverServiceObserver.NONE : observer,
+                    current.chipWrite(), current.sfxContention()));
+        }
+
+        private void setChipWriteObserver(ChipWriteObserver observer) {
+            rejectObserverReplacementWhileLeased();
+            DiagnosticObserverSet current = currentDiagnosticObservers();
+            applyDiagnosticObservers(new DiagnosticObserverSet(
+                    current.request(), current.admission(),
+                    current.driverService(),
+                    observer == null ? ChipWriteObserver.NONE : observer,
+                    current.sfxContention()));
+        }
+
+        private void setSfxContentionObserver(
+                SfxContentionObserver observer) {
+            rejectObserverReplacementWhileLeased();
+            DiagnosticObserverSet current = currentDiagnosticObservers();
+            applyDiagnosticObservers(new DiagnosticObserverSet(
+                    current.request(), current.admission(),
+                    current.driverService(), current.chipWrite(),
+                    observer == null ? SfxContentionObserver.NONE : observer));
+        }
+
+        private void rejectObserverReplacementWhileLeased() {
+            if (activeDiagnosticObserverLease != null) {
+                throw new IllegalStateException(
+                        "diagnostic observers are owned by an active lease");
+            }
+        }
+
+        private DiagnosticObserverSet currentDiagnosticObservers() {
+            return new DiagnosticObserverSet(
+                    requestObserver, admissionObserver, driverServiceObserver,
+                    chipWriteObserver, sfxContentionObserver);
+        }
+
+        private void applyDiagnosticObservers(DiagnosticObserverSet desired) {
+            DiagnosticObserverSet previous = currentDiagnosticObservers();
+            try {
+                propagateDiagnosticObservers(desired);
+            } catch (RuntimeException | Error failure) {
+                try {
+                    propagateDiagnosticObservers(previous);
+                } catch (RuntimeException | Error rollbackFailure) {
+                    failure.addSuppressed(rollbackFailure);
+                }
+                throw failure;
+            }
+            requestObserver = desired.request();
+            admissionObserver = desired.admission();
+            driverServiceObserver = desired.driverService();
+            chipWriteObserver = desired.chipWrite();
+            sfxContentionObserver = desired.sfxContention();
+        }
+
+        private void propagateDiagnosticObservers(DiagnosticObserverSet observers) {
+            if (backend != null) {
+                backend.setAdmissionObserver(observers.admission());
+                backend.setDriverServiceObserver(observers.driverService());
+                backend.setChipWriteObserver(observers.chipWrite());
+                backend.setSfxContentionObserver(observers.sfxContention());
+            }
+            presentationBinding.propagateDiagnosticObservers(observers);
+        }
+
+        private boolean active(DiagnosticObserverLease lease) {
+            synchronized (AudioManager.this) {
+                return lease.active;
+            }
+        }
+
+        private void close(DiagnosticObserverLease lease) {
+            synchronized (AudioManager.this) {
+                if (!lease.active) {
+                    return;
+                }
+                if (Thread.currentThread() != lease.ownerThread) {
+                    throw new IllegalStateException(
+                            "diagnostic observer lease must close on its owner thread");
+                }
+                if (activeDiagnosticObserverLease != lease) {
+                    throw new IllegalStateException(
+                            "diagnostic observer lease ownership was lost");
+                }
+                applyDiagnosticObservers(DiagnosticObserverSet.none());
+                lease.active = false;
+                activeDiagnosticObserverLease = null;
+            }
+        }
+
+        private void installBackendDiagnosticObservers() {
+            backend.setAdmissionObserver(admissionObserver);
+            backend.setDriverServiceObserver(driverServiceObserver);
+            backend.setChipWriteObserver(chipWriteObserver);
+            backend.setSfxContentionObserver(sfxContentionObserver);
+        }
+
+        private void reset() {
+            if (activeDiagnosticObserverLease == null) {
+                this.requestObserver = AudioRequestObserver.NONE;
+                this.admissionObserver = AudioAdmissionObserver.NONE;
+                this.driverServiceObserver = SmpsDriverServiceObserver.NONE;
+                this.chipWriteObserver = ChipWriteObserver.NONE;
+                this.sfxContentionObserver = SfxContentionObserver.NONE;
+            }
+            if (backend != null) {
+                installBackendDiagnosticObservers();
+            }
+        }
+
+        private AudioRequestObserver requestObserver() {
+            return requestObserver;
+        }
+
+        private AudioAdmissionObserver admissionObserver() {
+            return admissionObserver;
+        }
+
+        private SmpsDriverServiceObserver driverServiceObserver() {
+            return driverServiceObserver;
+        }
+
+        private ChipWriteObserver chipWriteObserver() {
+            return chipWriteObserver;
+        }
+
+        private SfxContentionObserver sfxContentionObserver() {
+            return sfxContentionObserver;
+        }
     }
 
     private final class DiagnosticObserverLease
@@ -2126,37 +2223,13 @@ public class AudioManager implements MusicRestoreSink {
 
         @Override
         public boolean active() {
-            synchronized (AudioManager.this) {
-                return active;
-            }
+            return diagnosticInstallation.active(this);
         }
 
         @Override
         public void close() {
-            synchronized (AudioManager.this) {
-                if (!active) {
-                    return;
-                }
-                if (Thread.currentThread() != ownerThread) {
-                    throw new IllegalStateException(
-                            "diagnostic observer lease must close on its owner thread");
-                }
-                if (activeDiagnosticObserverLease != this) {
-                    throw new IllegalStateException(
-                            "diagnostic observer lease ownership was lost");
-                }
-                applyDiagnosticObservers(DiagnosticObserverSet.none());
-                active = false;
-                activeDiagnosticObserverLease = null;
-            }
+            diagnosticInstallation.close(this);
         }
-    }
-
-    private void installBackendDiagnosticObservers() {
-        backend.setAdmissionObserver(admissionObserver);
-        backend.setDriverServiceObserver(driverServiceObserver);
-        backend.setChipWriteObserver(chipWriteObserver);
-        backend.setSfxContentionObserver(sfxContentionObserver);
     }
 
     private SmpsRequestAdmissionPolicy sfxAdmissionPolicy() {
@@ -2721,16 +2794,7 @@ public class AudioManager implements MusicRestoreSink {
     /** Fixed non-source reset effects, between empty base and donor clearing. */
     private void resetNonSourceState() {
         this.soundMap = null;
-        if (activeDiagnosticObserverLease == null) {
-            this.requestObserver = AudioRequestObserver.NONE;
-            this.admissionObserver = AudioAdmissionObserver.NONE;
-            this.driverServiceObserver = SmpsDriverServiceObserver.NONE;
-            this.chipWriteObserver = ChipWriteObserver.NONE;
-            this.sfxContentionObserver = SfxContentionObserver.NONE;
-        }
-        if (backend != null) {
-            installBackendDiagnosticObservers();
-        }
+        diagnosticInstallation.reset();
         logicalPublication.setRingLeft(true);
         this.rewindReplaySuppressionDepth = 0;
         this.audioFrameOwnedExternally = false;
@@ -3119,7 +3183,7 @@ public class AudioManager implements MusicRestoreSink {
                             ? base.profile().smpsStatefulCommandPolicy()
                             : com.openggf.audio.session.SmpsStatefulCommandPolicy.NONE);
             SmpsDriverSession smpsSession = new SmpsDriverSession(
-                    physicalSettings, physicalPolicy, chipWriteObserver,
+                    physicalSettings, physicalPolicy, diagnosticInstallation.chipWriteObserver(),
                     new SmpsSessionProfileFingerprint(
                             baseGameId(base), base.generation(),
                             physicalPolicy.identity(), physicalSettings,
@@ -3132,10 +3196,10 @@ public class AudioManager implements MusicRestoreSink {
             shadowFactory.installStreamedMusicPort(streamedMusicPort);
             shadowFactory.setStreamedRestoreConfig(base.config(),
                     base.profile() == null || base.profile().blocksSfxDuringMusicRestoreFadeIn());
-            shadowFactory.setAdmissionObserver(admissionObserver);
-            shadowFactory.setDriverServiceObserver(driverServiceObserver);
-            shadowFactory.setChipWriteObserver(chipWriteObserver);
-            shadowFactory.setSfxContentionObserver(sfxContentionObserver);
+            shadowFactory.setAdmissionObserver(diagnosticInstallation.admissionObserver());
+            shadowFactory.setDriverServiceObserver(diagnosticInstallation.driverServiceObserver());
+            shadowFactory.setChipWriteObserver(diagnosticInstallation.chipWriteObserver());
+            shadowFactory.setSfxContentionObserver(diagnosticInstallation.sfxContentionObserver());
             shadowFactory.setSfxAdmissionPolicy(sfxAdmissionPolicy());
             shadowCommands = new AudioPresentationCommandQueue();
             shadowRegistry = new AudioVoiceRegistry(shadowFactory, shadowFactory,
@@ -4679,7 +4743,7 @@ public class AudioManager implements MusicRestoreSink {
     public void pause() {
         presentationBinding.pause();
         AudioDiagnosticObserverException.invoke(() ->
-                driverServiceObserver.onLifecycle(
+                diagnosticInstallation.driverServiceObserver().onLifecycle(
                         SmpsDriverServiceObserver.LifecycleEvent.session(
                                 SmpsDriverServiceObserver.LifecycleKind.PAUSE)));
     }
@@ -4690,7 +4754,7 @@ public class AudioManager implements MusicRestoreSink {
     public void resume() {
         presentationBinding.resume();
         AudioDiagnosticObserverException.invoke(() ->
-                driverServiceObserver.onLifecycle(
+                diagnosticInstallation.driverServiceObserver().onLifecycle(
                         SmpsDriverServiceObserver.LifecycleEvent.session(
                                 SmpsDriverServiceObserver.LifecycleKind.RESUME)));
     }

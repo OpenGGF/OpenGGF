@@ -12114,3 +12114,326 @@ checkout and branch are retained for independent parent evidence review;
 parent owns integration, push, eventual cleanup and any subsequent authorized
 implementation. At handback target/job ownership returns to the parent and
 this worker stops without another build, test or candidate family.
+
+
+### Complete diagnostic installation/lease owner transfer — 2026-10-25
+
+**Authorization and accepted base.** Parent authorized the complete ownership
+transfer after terminal source/design qualification and independent original-
+production characterization review
+`arch-broad-diagnostic-installation-characterization-review-20261025-r1`
+(no P1/P2/P3). This implementation starts from characterization commit
+`fbed407da843ee3b3fbac9025972cf955fa73832`, tree
+`ed9eeebdd54c46e017ce1bf24f2a1b78b740cca1`, directly above delivered develop
+`0db2c6e168d83449d5b2481e379954a016d3bb59`. Parent reported a fresh fetch with
+main develop/origin still at 0db and unrelated main changes preserved. This
+worker performs no independent fetch, rebase, source absorption, main-workspace
+write, integration, push, subdelegation or cleanup. The existing retained T3
+checkout/branch is reused.
+
+The accepted two characterization files remain byte-exact: lease blob
+`41e23ab06cd46bdfd523fece7625e47de63332e5`, diagnostic blob
+`ce3f05ec7d0085fc9037502844ffc24526575e3e`. Their sorted
+`path + NUL + bytes + NUL` SHA-256 is
+`8787aabf2058a10422a880ce6b566e845d7993c78e3bbe8e93edb1d6a6ff8fe5`.
+The historical invocation-A reconstruction described above is supplied evidence;
+no historical blob object or fresh combined baseline run is required or claimed
+by the independent review. No baseline test/helper migration is needed.
+
+**Complete body and ownership mapping.** AudioManager retains one new cold
+private final concrete nested `DiagnosticInstallation` for every manager,
+including silent/standalone instances. It has only the five private plain
+observer fields and private active lease. There is no aggregate/volatile mirror,
+Host/context interface, target capture, extra monitor, global/weak registry,
+lifecycle epoch or constructor callback. Root retains its six public synchronized
+headers as one-call compatibility delegates. The private lease keeps its original
+binary owner, final Thread and plain active flag; both methods delegate to the
+installation owner, which locks AudioManager.this.
+
+| Original authority/body | New authority and preserved boundary |
+| --- | --- |
+| Root acquire | Owner acquire: null set before identity occupancy, propagate before token construction/currentThread capture/publication; NONE still leases; no in-flight reservation. |
+| Root five replacement setters | Owner setters: reject leased replacement before null normalization, capture the current tuple at the original boundary, then apply. |
+| Root current/apply/propagate | Owner complete transaction: previous tuple capture, then-current backend on each setter, existing Binding factory effect afterward, exact RuntimeException/Error rollback and literal addSuppressed, then five plain stores in original order. |
+| Token active/close policy | Owner active/close under the original Root monitor: inactive return, thread check, lease identity, apply NONE, receiver flag false, unconditional current lease clear. Token construction only initializes its subordinate stores. |
+| Root reset diagnostic portion | Owner raw leased/unleased policy and reinstall, invoked after soundMap clearing at the same non-source reset point; later logical/Held/Capture/physical teardown remains Root orchestration. |
+| Root backend/launch reinstall helper | Owner helper still rereads each observer slot and current Root backend independently at each setter. Public virtual backend/Root traversal remains. |
+| Seven Root request reads, blocked-ring and pause/resume reads | Narrow private noninitializing owner accessors substituted at those exact expressions; direct request failure and existing lower wrapping/quarantine remain outside the owner. |
+| Binding session-constructor/factory observer reads | Corresponding live owner accessors at each original evaluation point; Binding retains actual assembly, retirement and current-factory propagation. |
+
+Inverse application of only these field/body/delegate/read changes reconstructs
+the entire original AudioManager blob
+`39fbbc9823d7a5fff913565c1c0bd7fd704e8db1` byte-exact. In particular,
+SourcePublication, Binding's algorithms and propagation body, Held, Capture,
+Logical, LevelMusicAccess, frame/routing/replay, source/reset orchestration and
+public nested value/interface declarations are otherwise unchanged. No other
+production file changes. The seven request-emission occurrences are retained;
+two external production acquisitions keep their public compatibility boundary.
+The corrected pre-characterization 104-call/31-file research census is not
+expanded into fixture migrations or a duplicate state requirement. Every old
+architecture rule remains byte-exact; only the new positive complete-owner
+method is added to the existing guard class.
+
+**Temporal and failure preservation.** Owner propagation's initial backend-null
+check is still followed by separate current-backend reads, then current Binding
+propagation. Binding still rereads current factory after every setter. Desired
+and previous tuples are transaction-local; collaborators and later live observer
+slots are not eagerly bundled. Session construction samples chip observation at
+its existing argument boundary; the real factory is already installed during
+boot, so a reentrant first-write callback can retarget the remaining writes.
+No frame/classification/recorder responsibility moves to the owner.
+
+Unleased reset directly clears five fields before backend reinstall, without
+transaction/rollback. A failure can preserve partial physical effects and old
+presentation because later teardown was not reached; leased reset preserves
+slots. Source reset calls this at its old fixed point, and destroy does not
+revoke the lease or automatically restore its backend sink. Ordinary close
+failure remains active/retryable, while nested acquisition/close can independently
+publish, displace and clobber tokens. Active reports its flag, not current-slot
+authority. Self-suppression still produces IllegalArgumentException when forward
+and rollback reuse the same Throwable. There is no incidental algorithm repair.
+
+**Structural enforcement.** The new method
+`diagnosticInstallationOwnsColdManagerLifetimeStateAndTheCompleteLeaseProtocol`
+checks a single private final nested owner and exact six plain fields, no Root
+mirrors, exact subordinate token state, one manager-constructor allocation,
+owner-only token allocation, cold emitted constructor calls/field access,
+owner-only raw state access and exact mutation entry points, closed method
+entry/caller boundaries, synchronized compatibility delegates, direct accessor
+bodies, and complete acquire/apply/propagate/reset/reinstall/active/close protocol.
+It preserves the literal monitor, publication, live-read, suppression and
+unconditional-clear ordering rather than permitting a fan-out/state-bag owner.
+
+A test-first separate guards-profile invocation, session 55731, ran this exact
+new method before the owner existed. It compiled with Java 25.0.5.0.2 and strict
+dotted false freeze properties, then reported the expected missing-field
+NoSuchFieldException for diagnosticInstallation: one case, zero assertion
+failures, one setup error, zero skips, queue wait 0 s, Maven elapsed 24.006 s.
+This expected pre-transfer absence is not a runtime regression. Its sole XML,
+text and invocation log were inspected and consumed before production editing.
+
+
+The first post-transfer matched invocation (session 42317) stopped during test
+compilation, before Surefire or any testcase/report: JavaConstructor in the
+pinned ArchUnit API has no getFieldAccessesFromSelf method. The guard was
+corrected to use JavaClass field accesses filtered by constructor origin; no
+production or accepted fixture changed. This was an API-shape mistake, not a
+weakened cold-construction assertion. Queue wait was 0 s and Maven elapsed 1:19;
+production compilation completed with Java 25, but this invocation supplies no
+runtime evidence. Its empty reports directory and exact compilation diagnostics
+were inspected and the invocation log consumed before retrying the still-unrun
+matched selection.
+
+
+**Matched implementation verification.** Session 5608 reran the still-unexecuted
+seven exact selectors from the accepted baseline after the narrow guard
+compilation correction. It completed exit 0 with 110 cases / zero failures /
+zero errors / zero skips in seven physical reports: lease 19, diagnostic 39,
+Binding 9, backend lifetime 2, reset 35, complete-run lease 5 and the single
+request-failure timeline method 1. All 110 physical identities were inspected;
+sorted newline-terminated case-ID SHA-256 is
+`957e255713f578df05882e52ed95f936927e89ddf6ac8fc9b94fa460b29cbab4`. XML reports Java
+25.0.5.0.2 and the exact selector plus all three dotted freeze
+properties false. Queue wait was 0 s; Maven elapsed 25.242 s. This is the complete
+final matched 22-addition/88-control selection, with no unexpected skip.
+Expected fixture fallback-WAV/FAST-manifest warnings remain warnings, not
+synthetic prerequisites or a native-parity claim. Reports/text and the invocation
+log were consumed before the separate fresh-JVM positive guard invocation.
+
+
+The first post-transfer guard invocation (session 51912) completed one case /
+one assertion failure / zero errors / zero skips. Its constructor/state checks
+passed before the protocol-origin assertion. ArchUnit resolves the lifecycle
+lambda call origins to the enclosing AudioManager.pause/resume methods, rather
+than exposing synthetic lambda$ names. The new guard now admits exactly those
+two actual origins; this changes neither production expression/evaluation order
+nor any old rule/permission. Queue wait was 0 s; Maven elapsed 27.061 s, Java
+25.0.5.0.2 and strict dotted false freeze flags. The exact failure and XML
+properties were inspected and reports/text/log consumed. Only this new guard
+is rerun; the unchanged matched 110-case pass remains applicable.
+
+
+**Java freeze for independent parent source review.** The corrected new guard
+passed in separate fresh guards-profile session 33577: one case / zero failures /
+zero errors / zero skips, physical identity `com.openggf.audio.TestAudioPresentationArchitectureGuard#diagnosticInstallationOwnsColdManagerLifetimeStateAndTheCompleteLeaseProtocol`,
+case-ID SHA-256 `7351c33d17b7a6b386a5ebea66f9c8ef5fb145d8722afe1c7b55d67559adaf56`. Queue
+wait was 0 s, Maven elapsed 27.421 s and testcase time 4.215 s; XML confirms
+Java 25.0.5.0.2 and the exact method selector with all three dotted
+freeze flags false and no additional field filter. The actual Java 25 owner
+constructor calls only Object construction plus the compiler's
+Objects.requireNonNull enclosing-reference check, reading only the five NONE
+constants and storing owner state. No Host/backend/factory/profile/service or
+observer callback is invoked. Its inspected XML/text/log were consumed.
+
+The matched 110 and this new guard are green before freeze. HEAD is still fbed;
+all Java is now frozen while parent performs independent source review and this
+worker finishes the explicit API/ROM selection and prose. Any necessary Java
+edit would invalidate this freeze before editing and require a new manifest
+after affected checks. No post-freeze Java edit is planned.
+
+| Frozen Java path | Git blob |
+| --- | --- |
+| `src/main/java/com/openggf/audio/AudioManager.java` | `fffaa4eae488fa9711ccac6f86397a96b1835375` |
+| `src/test/java/com/openggf/audio/TestAudioDiagnosticObservers.java` | `ce3f05ec7d0085fc9037502844ffc24526575e3e` |
+| `src/test/java/com/openggf/audio/TestAudioManagerDiagnosticObserverLease.java` | `41e23ab06cd46bdfd523fece7625e47de63332e5` |
+| `src/test/java/com/openggf/audio/TestAudioPresentationArchitectureGuard.java` | `33d86e1824867979730ea492dc463c8c97775eef` |
+
+For sorted paths concatenated as path + NUL + file bytes + NUL, the two changed
+Java files hash to `dccf70cdf30d4417c9b88e6451ac5aee34f8075f04b97559dc1d7c89d7bab532`;
+all four frozen Java files hash to
+`bc20d4b5a864e60eee989e31bdd5a61aa00273c8990ce084d2555564a25d891e`. The two
+accepted characterization files retain their separate accepted fingerprint
+8787aabf2058a10422a880ce6b566e845d7993c78e3bbe8e93edb1d6a6ff8fe5.
+Source acceptance is parent-owned and remains required before committing.
+
+
+**Exact implementation verification commands.** The implementation runs use the
+same clean desktop/JVM-injection environment as the characterization commands,
+Java 25 and Lua 5.4. The common launch is:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS -u MAVEN_ARGS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py -Dmse=off \
+  -Darchunit.freeze.store.default.allowStoreCreation=false \
+  -Darchunit.freeze.store.default.allowStoreUpdate=false \
+  -Darchunit.freeze.refreeze=false <selection> test -B
+```
+
+The matched sessions 42317 (test-compilation failure only) and 5608 (110 passed)
+substituted:
+
+```text
+-Dtest=TestAudioManagerDiagnosticObserverLease,TestAudioDiagnosticObservers,TestAudioPresentationBindingContract,TestAudioBackendLifetime,TestAudioManagerResetState,TestCompleteRunAudioObserverLease,TestAudioCommandTimeline#requestObserverFailureCreatesNoCommandAndDoesNotAdvanceRing
+```
+
+The separate fresh guard sessions 55731 (expected pre-transfer absence), 51912
+(new guard lambda-origin correction) and 33577 (one passed) substituted:
+
+```text
+-Pguards -Dtest=TestAudioPresentationArchitectureGuard#diagnosticInstallationOwnsColdManagerLifetimeStateAndTheCompleteLeaseProtocol
+```
+
+The combined explicit API/ROM invocation substitutes the following ordinary
+selection, with no guard profile or field filter:
+
+```text
+-Dtest=TestModApiSignatureSurface,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestSonic1UnifiedAudioPresentationRomIntegration#sonic1TitleGameplayRingAndSpecialStageProduceFinalPcm,TestSonic2UnifiedAudioPresentationRomIntegration#sonic2TitleGameplayRingAndSpecialStageProduceFinalPcm,TestSonic3kUnifiedAudioPresentationRomIntegration#sonic3kTitleGameplayRingAndSpecialStageProduceFinalPcm
+```
+
+It additionally passes these exact prerequisite arguments, using OPENGGF_ROM_ROOT
+for the existing root ROM directory rather than committing its machine-local
+location:
+
+```bash
+-Dopenggf.headless.gl=surfaceless-egl \
+"-Dsonic1.rom.path=$OPENGGF_ROM_ROOT/s1.gen" \
+"-Dsonic2.rom.path=$OPENGGF_ROM_ROOT/s2.gen" \
+"-Ds3k.rom.path=$OPENGGF_ROM_ROOT/s3k.gen" \
+"-Dkis2.rom.path=$OPENGGF_ROM_ROOT/kis2.gen"
+```
+
+All four existing absolute ROM paths were rehashed immediately before this
+invocation; no copy, rename, deletion or new link was used. SHA-1 identities are
+S1 World REV01 69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b, S2 World REV01
+8bca5dcef1af3e00098666fd892dc1c2a76333f9, S3&K
+cfbf98c36c776677290a872547ac47c53d2761d6, and KiS2
+6cd0537a3aee0e012bb86d5837ddff9342595004. TestSonic3kLevelLoading intentionally
+matches both maintained classes, not a single guessed package. The source
+selection predicts 60 mandatory S3K controls, three exact unified PCM cases and
+11 explicit compiled API cases; final claims use inspected XML identities and
+skips instead of this prediction. No repeated matched controls, broader native
+campaign, global guard run, full suite or change-based broad smoke is launched
+by this worker. Parent owns the delivery-wide plan against 0db and later fresh
+complete global guards plus eleven composed controllers after source acceptance,
+stable commit and explicit target/job handback.
+
+
+**API/ROM implementation verification.** Frozen-Java session 1160 completed
+exit 0: 74 cases / zero failures / zero errors / zero skips in nine physical
+reports. Actual distribution is the three exact unified PCM methods (one each),
+S3K bootstrap 6, decoding 3, game-package loading 36, tests-package loading 7,
+AIZ skip 8, and explicit API surface 11. Thus both same-named loading classes
+ran, all 60 mandatory S3K cases ran, all three real title/gameplay/ring/special-
+stage PCM methods ran and all eleven current compiled API surface/classfile/
+marker/terminal/reconstruction checks ran. No native emulator or audio-device
+campaign is implied. Queue wait was 0 s; Maven elapsed 30.440 s. Those are not
+elapsed authoring/review time; unmeasured time is unknown.
+
+Every physical XML identity, failure/error/skip and effective property was
+inspected. All nine report Java 25.0.5.0.2, surfaceless EGL, the four existing
+absolute ROM paths with the rechecked identities above, and the three exact
+strict dotted false freeze flags. There were no SEVERE or null-FileChannel
+preload messages in these report streams. This does not repair or close the
+previously disclosed unrelated loader issue. Sorted newline-terminated
+case-ID SHA-256 values are:
+
+- all: `8e0751f2dc49d198a2b624ac49d36b8f04e2b77e085e88236071ebcaf73f65a9`.
+- S3K: `a82bf4933c973cebf1c91f56cd3c56a750be62c91e3ef2b5f831b76b1ab1fc59`.
+- API: `25bb6f3b2be058a2120824d7db23d18b6b1e2e86bbfd6e0b750a5e0b0a9f399b`.
+- PCM: `de6112c40d93a5b34c303322a771ba8bdf2f9284ba7f1608d2de383349eb5b61`.
+
+**Unchanged ratchets and coverage limits.** All 13 frozen store files compare
+exactly to fbed/0db, including the 120 raw low-level records. The sorted
+newline-terminated path:SHA256 store map remains
+292100b7284abcd07373d33efce8194308ca6c0fc999aef71de5c5eadcb7e834.
+The unchanged API pin is 22,541 rows / 1,250 TYPE rows, SHA-256
+fe27be6e9c4153dd477939165b4a457fa942f47f0dad446b5eb76908357f0148;
+the eleven explicit compiled checks pass without a repin. Source package-pair
+permissions remain 151 executable entries (comment example strings excluded),
+and the six-method/five-file ambient baseline and its guard are exact. These
+source/store accounting checks do not claim a fresh complete global structural
+pass; only the new exact ownership method was selected here. No POM, annotation,
+terminal, API descriptor/version, permission, budget, store or pin changes.
+
+The engine map now describes the complete diagnostic authority next to the
+existing manager-lifetime owners. The current 0.7 Runtime ownership changelog
+entry folds in this refinement. No new guide/discrepancy/README theme, document
+category, runtime hook, fixture migration or other candidate family is added.
+All Java remains byte-exact to the announced freeze. The accepted two test blobs
+are unchanged, and inverse mapping still reproduces the entire original
+AudioManager outside the authorized ownership/read/delegate changes. Reports,
+text and invocation diagnostics/logs were inspected and consumed. Source review
+acceptance remains required before the local implementation commit; parent
+retains the subsequent delivery-wide guards/controllers, integration, push and
+cleanup responsibilities.
+
+
+**Independent source acceptance and local handback.** Parent supplied terminal
+independent code review
+`arch-broad-diagnostic-installation-owner-code-review-20261025-r1`, with no
+P1/P2/P3. Source acceptance covers AudioManager blob
+`fffaa4eae488fa9711ccac6f86397a96b1835375`, guard blob
+`33d86e1824867979730ea492dc463c8c97775eef`, changed-Java fingerprint
+`dccf70cdf30d4417c9b88e6451ac5aee34f8075f04b97559dc1d7c89d7bab532`,
+and four-file frozen-Java fingerprint
+`bc20d4b5a864e60eee989e31bdd5a61aa00273c8990ce084d2555564a25d891e`.
+Reviewer independently reconstructed the complete baseline AudioManager,
+verified every old guard byte unchanged, and accepted complete policy,
+live-read moments, monitors, reentrancy, reset, public headers and value-owner
+preservation. Review started/ended at fbed with the exact frozen pair and no
+input movement. Prose was not independently reviewed. Java remained frozen
+through worker validation and this acceptance; only this existing evidence
+appendix changed afterward.
+
+The local implementation/evidence commit maps those accepted Java blobs
+unchanged and keeps exact parent fbed without amend. Mandatory hooks and all
+seven whole-line policy keys apply; the exact prepared message is parsed to
+verify the final contiguous GPT-6.1-Sol co-author block. The accepted baseline
+tests retain blobs 41e23ab06cd46bdfd523fece7625e47de63332e5 and
+ce3f05ec7d0085fc9037502844ffc24526575e3e. Worker bounded results remain matched
+110/0/0/0, separate new ownership guard 1/0/0/0, and API/ROM 74/0/0/0; the earlier
+compilation and new-guard corrections remain disclosed above. No further tests
+are required or run on this unchanged accepted Java.
+
+All six implementation command handles are terminal: 55731, 42317, 5608,
+51912, 33577 and 1160. Every own XML/text report, diagnostic and invocation log
+was inspected and consumed; no receipt, pass cache or raw archive is retained.
+Target/report/diagnostic inspection and the queue snapshot show no owned live
+job or remaining report. After verifying the local commit and clean retained
+checkout, this worker explicitly hands target/job ownership back to the parent
+and launches no further Maven. Parent owns fresh complete global guards and
+eleven composed controllers, then integration, push and exact checkout/branch
+cleanup. No worker main write, push, integration, cleanup or next candidate
+work occurs.
