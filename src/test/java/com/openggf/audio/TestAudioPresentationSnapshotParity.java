@@ -453,14 +453,35 @@ class TestAudioPresentationSnapshotParity {
         audio.setAudioProfile(new AudioTestFixtures.StubAudioProfile(new AudioTestFixtures.StubSmpsLoader()) {
             @Override public AudioRequestService createAudioRequestService() { return currentService.get(); }
         });
+        // Each real snapshot owns a different active PCM dependency. All factory
+        // caches keep its shape, but sentinel sample content is local to that cache.
+        java.util.function.IntFunction<byte[]> constantPcm = value -> {
+            byte[] bytes = new byte[64];
+            java.util.Arrays.fill(bytes, (byte) value);
+            return bytes;
+        };
+        audio.submitShadowRawPcmForTesting(constantPcm.apply(0x90), 8_000);
+        audio.presentFrame(PresentationMode.SILENT);
         AudioLogicalSnapshot selected = audio.captureLogicalSnapshot();
+        var selectedSample = (PresentationVoiceSnapshot.Sample) selected.presentation().voices().getFirst();
+        assertEquals(List.of(selectedSample), selected.presentation().voices());
+        assertEquals(Long.valueOf(selectedSample.voiceId()), selected.presentation().rawPcmVoiceId());
+        assertEquals(0, selectedSample.sourcePositionQ32());
+        assertEquals(1 << 14, selectedSample.gainQ16());
         audio.beginCommandTimelineFrame(51);
         audio.playSfx(GameSound.RING);
         audio.registerDonorSound(GameSound.JUMP, "before", 0xA3);
         audio.toggleMute(ChannelType.FM, 2);
+        audio.submitShadowRawPcmForTesting(constantPcm.apply(0xA0), 8_000);
         audio.presentFrame(PresentationMode.SILENT);
         when(original.snapshot()).thenReturn(liveService);
         AudioLogicalSnapshot before = audio.captureLogicalSnapshot();
+        var rollbackSample = (PresentationVoiceSnapshot.Sample) before.presentation().voices().getFirst();
+        assertEquals(List.of(rollbackSample), before.presentation().voices());
+        assertEquals(Long.valueOf(rollbackSample.voiceId()), before.presentation().rawPcmVoiceId());
+        assertNotEquals(selectedSample.assetId(), rollbackSample.assetId());
+        assertEquals(0, rollbackSample.sourcePositionQ32());
+        assertEquals(1 << 14, rollbackSample.gainQ16());
         // Rollback restores the cursor, not the append-only command history.
         AudioLogicalSnapshot expectedRollback = new AudioLogicalSnapshot(
                 before.ringLeft(), before.commandTimelineFrame(), before.commandTimelineNextOrder(),
@@ -468,6 +489,34 @@ class TestAudioPresentationSnapshotParity {
                 before.donorBindings(), before.forwardServiceSnapshot());
         var oldProducer = AudioManagerTestDiagnostics.presentationField(audio, "shadowProducer", Object.class);
         var oldFactory = audio.shadowFactoryForTesting();
+        AtomicReference<AudioPresentationSourceFactory> forwardFactory = new AtomicReference<>();
+        AtomicReference<AudioPresentationSourceFactory> rollbackFactory = new AtomicReference<>();
+        AtomicReference<DecodedPcm> forwardSentinel = new AtomicReference<>();
+        AtomicReference<DecodedPcm> rollbackSentinel = new AtomicReference<>();
+        // Read the genuinely reconstructed voice without advancing the existing
+        // logical assertions. Expected PCM never comes from the current factory.
+        java.util.function.Function<SampleBackedVoice, long[]> firstStereoSample = voice -> {
+            var snapshot = (PresentationVoiceSnapshot.Sample) voice.snapshot();
+            long[] mixed = new long[2];
+            try {
+                voice.mixInto(mixed, 1);
+            } finally {
+                voice.restore(snapshot);
+            }
+            assertEquals(snapshot, voice.snapshot());
+            return mixed;
+        };
+        java.util.function.Supplier<SampleBackedVoice> restoredRawVoice = () -> {
+            var registry = AudioManagerTestDiagnostics.presentationField(
+                    audio, "shadowRegistry", AudioVoiceRegistry.class);
+            assertEquals(1, registry.orderedVoiceCount());
+            return (SampleBackedVoice) registry.orderedVoiceAt(0);
+        };
+        // Disconnected stale-F0 control: real recreation succeeds, but its PCM
+        // is 1024 rather than the forward F1 sentinel's independently fixed 4096.
+        assertArrayEquals(new long[] {1024, 1024}, firstStereoSample.apply(
+                (SampleBackedVoice) oldFactory.recreateVoice(
+                        new AudioPresentationCommand.SampleVoiceDescriptor(selectedSample))));
         RuntimeException primary = new IllegalStateException("replacement restore primary");
         List<String> events = new ArrayList<>();
         when(original.snapshot()).thenAnswer(call -> {
@@ -477,12 +526,25 @@ class TestAudioPresentationSnapshotParity {
             audio.presentFrame(PresentationMode.SILENT);
             assertNotEquals(oldProducer, AudioManagerTestDiagnostics.presentationField(audio, "shadowProducer", Object.class));
             assertNotEquals(oldFactory, audio.shadowFactoryForTesting());
+            var actualF1 = audio.shadowFactoryForTesting();
+            forwardFactory.set(actualF1);
+            forwardSentinel.set(actualF1.registerUnsigned8Mono(
+                    selectedSample.assetId(), constantPcm.apply(0xC0), 8_000));
+            // If rollback reuses F1, it can resolve the dependency successfully
+            // but must expose this different, factory-local negative sentinel.
+            actualF1.registerUnsigned8Mono(
+                    rollbackSample.assetId(), constantPcm.apply(0x60), 8_000);
+            assertSame(forwardSentinel.get(), actualF1.resolvePcm(selectedSample.assetId()));
+            assertEquals(16384, forwardSentinel.get().sample(0, 0));
             return liveService;
         });
         doAnswer(call -> {
             events.add("middle-restore");
             assertSame(selectedService, call.getArgument(0));
             assertDeepSnapshotEquals(selected.presentation(), audio.captureLogicalSnapshot().presentation());
+            assertSame(forwardFactory.get(), audio.shadowFactoryForTesting());
+            assertArrayEquals(new long[] {4096, 4096}, firstStereoSample.apply(restoredRawVoice.get()),
+                    "forward recreation must resolve F1 PCM, not original F0's 1024");
             currentService.set(replacement);
             audio.setBackend(new AudioTestFixtures.RecordingAudioBackend());
             audio.beginCommandTimelineFrame(99);
@@ -490,12 +552,31 @@ class TestAudioPresentationSnapshotParity {
             audio.resetRingSound();
             audio.toggleMute(ChannelType.PSG, 0);
             audio.presentFrame(PresentationMode.SILENT);
+            var actualF2 = audio.shadowFactoryForTesting();
+            rollbackFactory.set(actualF2);
+            assertNotEquals(oldFactory, actualF2);
+            assertNotEquals(forwardFactory.get(), actualF2);
+            rollbackSentinel.set(actualF2.registerUnsigned8Mono(
+                    rollbackSample.assetId(), constantPcm.apply(0x50), 8_000));
+            assertSame(rollbackSentinel.get(), actualF2.resolvePcm(rollbackSample.assetId()));
+            assertEquals(-12288, rollbackSentinel.get().sample(0, 0));
+            // These genuine stale-receiver recreations have distinct outputs;
+            // neither can satisfy the rollback F2 oracle (-3072 per channel).
+            assertArrayEquals(new long[] {2048, 2048}, firstStereoSample.apply(
+                    (SampleBackedVoice) oldFactory.recreateVoice(
+                            new AudioPresentationCommand.SampleVoiceDescriptor(rollbackSample))));
+            assertArrayEquals(new long[] {-2048, -2048}, firstStereoSample.apply(
+                    (SampleBackedVoice) forwardFactory.get().recreateVoice(
+                            new AudioPresentationCommand.SampleVoiceDescriptor(rollbackSample))));
             throw primary;
         }).when(middle).restore(any());
         doAnswer(call -> {
             events.add("replacement-rollback");
             assertSame(liveService, call.getArgument(0), "snapshot was captured before try on original service");
             assertDeepSnapshotEquals(expectedRollback, audio.captureLogicalSnapshot());
+            assertSame(rollbackFactory.get(), audio.shadowFactoryForTesting());
+            assertArrayEquals(new long[] {-3072, -3072}, firstStereoSample.apply(restoredRawVoice.get()),
+                    "rollback recreation must resolve F2 PCM, not F0's 2048 or F1's -2048");
             return null;
         }).when(replacement).restore(any());
         int publications = audio.logicalRestorePublicationsForTesting();

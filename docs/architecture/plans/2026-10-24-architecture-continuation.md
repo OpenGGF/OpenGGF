@@ -10739,3 +10739,151 @@ writes from `d195` to accepted Binding source after only receiver qualification;
 the exact private three-argument ring path was checked separately from its
 public wrapper. A separate isolated worker may characterize the four uncovered
 original-production groups on immutable `1a6f9`; it has no extraction authority.
+
+### Logical publication characterization P2 follow-up: factory-local restore evidence (2026-10-25)
+
+**Independent review and composition.** Parent review of pinned test baseline
+`c006c68c76c4602fd3c6b0bcbf643213561c79d0` found one P2 and no other P1/P2/P3:
+the replacement case's snapshots had no factory-specific dependency, so its
+factory identity checks could not distinguish cached F0 on forward restore or
+reused F1 during rollback. The prior worker execution evidence remains attributed
+to its original runs; the review did not independently certify that execution.
+
+Before editing, the worker merged local delivered develop
+`350178138ea28bdd0f57d71f0eaf87b0e9609a73` into its own isolated branch using
+separate composition commit `ac7f2cc0158f8946d45208179c44da1c9dd184d6`, tree
+`23b7832f6cd26cf586b6ce33c5f31b1d2cfb104c`. Its two parents are c006c68c7
+and 350178138. The incoming delta from accepted 1a6f9 contains only the
+continuation and measurement-hazard prose. The continuation append conflict
+was resolved as common 1a6f9 bytes + complete c006 appendix + complete delivered
+350178 appendix, verified byte-for-byte; neither appendix was discarded or
+rewritten. All source/test/guard/build/policy inputs at composition remained
+exact c006 identities. No baseline test was rerun for this prose composition.
+Parent reports Binding delivered/pushed at 350178, 796 fresh guards and eleven
+actual controller cases passing without failures/errors/skips, separate API
+worker evidence, and preserved main user files/dirty submodules. That delivery
+update is supplied parent evidence, not a worker inspection of main or its jobs.
+
+**Scoped P2 correction.** Only
+`TestAudioPresentationSnapshotParity#eagerRollbackReadsReplacementProducerFactoryAndServiceAfterRestoringLogicalLedger`
+is extended, by 81 additive lines. Every prior ordering, logical state, primary/
+suppressed throwable, producer/factory replacement, original/middle/replacement
+service, publication count and append-only-history assertion remains. The rest
+of this class, the other thirteen new baseline cases, twelve controls and shared
+setup/helpers are byte-exact. No production, guard, pin, resource, store, API,
+POM, permission, policy or build input changed. No spy, constructor-bypassed
+copy, new production hook or injection framework is involved.
+
+The selected and rollback snapshots now each contain one genuinely admitted
+raw PCM voice, produced by the existing resolver's `submitRawPcm` path from
+distinct 64-byte mono inputs at 8 kHz (unsigned values 0x90 and 0xA0). Their
+raw voice IDs, distinct asset IDs, zero source cursors and native quarter-gain
+are asserted. Their real sample snapshots drive normal producer preparation,
+registry dependency resolution and `SampleBackedVoice` reconstruction.
+
+F0 is the actual original factory retained before replacement. F1 is captured
+from the actual distinct object created during original-service pre-try
+snapshot; F2 is captured after the middle-service callback replaces it again.
+Their own existing caches receive same-shape PCM under the selected/rollback
+asset IDs. The existing cache rejects mismatched re-registration within one
+factory; these are deliberately distinct factories with independently seeded
+sample content. Returned cache objects are retained as F1/F2 sentinels and
+identity/content checked against those exact captured factory objects. Expected
+sample values are fixed literals, never obtained by looking up whichever factory
+is current inside the observation callback.
+
+| Real dependency/recreation | Cache-local source sample | Expected quarter-gain stereo sample |
+| --- | ---: | ---: |
+| Selected asset through original F0, disconnected stale-forward control | 4096 | (1024, 1024) |
+| Selected asset through F1, actual forward restore | 16384 | (4096, 4096) |
+| Rollback asset through original F0, disconnected stale-original control | 8192 | (2048, 2048) |
+| Rollback asset through retained F1, disconnected stale-forward-factory control | -8192 | (-2048, -2048) |
+| Rollback asset through F2, actual guarded rollback | -12288 | (-3072, -3072) |
+
+The forward and rollback service callbacks observe the single real voice in
+the actual current registry and render one stereo sample through its genuine
+`mixInto`. Its captured cursor/state is restored in `finally` and checked equal,
+so the existing logical assertions retain their original boundary. Separate
+disconnected controls recreate real voices through the retained F0/F1 resolver
+objects and assert their different outputs. Manager forward restore using F0
+therefore fails the independent 4096 oracle; rollback using F0 or retained F1
+fails the independent -3072 oracle even though either stale factory can resolve
+the requested asset successfully. F0 is used only by those deliberate controls,
+not by either manager restore. F1's rollback sentinel makes accidental reuse
+observable rather than relying on a missing-dependency exception. No production
+mutation was used to demonstrate these controls.
+
+**Focused execution.** From the retained own worktree
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-99b93e0f`, only the affected case ran:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS -u MAVEN_ARGS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  PATH=/usr/lib/jvm/java-25-openjdk/bin:$PATH \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  -Darchunit.freeze.store.default.allowStoreCreation=false \
+  -Darchunit.freeze.store.default.allowStoreUpdate=false \
+  -Darchunit.freeze.refreeze=false \
+  '-Dtest=TestAudioPresentationSnapshotParity#eagerRollbackReadsReplacementProducerFactoryAndServiceAfterRestoringLogicalLedger' test -B
+```
+
+Owned session **78858** is terminal, exit 0. Admission wait **0 s**, Maven
+elapsed **28.551 s** including normal changed-test compilation; physical class
+time **0.556 s**. First attempt **1 pass / 0 failure / 0 error / 0 skip**, with
+no fixture correction or rerun. The ordinary handled primary warning
+`replacement restore primary` is expected and retained. Exact physical XML ID:
+
+```text
+com.openggf.audio.TestAudioPresentationSnapshotParity#eagerRollbackReadsReplacementProducerFactoryAndServiceAfterRestoringLogicalLedger
+```
+
+Sorted literal ID + LF SHA-256:
+`5a17b756973cc189f103a3e660786364e5c148fe9290d0ea2028ff0f7af590fc`.
+XML verified selector, Java `25.0.5.0.2`, explicit `surfaceless-egl` and all three
+false freeze properties. This case has no ROM annotation/prerequisite, no ROM
+property in XML, and uses the existing recording/null backend with no-device
+presentation. Display variables were explicitly removed. No speaker/desktop
+or broad/smoke/full/trace/performance campaign was run. Compilation, authoring
+and other unmeasured intervals are not added to a claimed elapsed delivery time.
+
+**Exact tested inputs and limits.** Tested state is composition ac7f2cc01 plus
+only this case extension. No executable edits occurred after the passing run.
+AudioManager remains Git blob `ac2021ad82307d40f3f4cb4c0db21b79c3e09934`,
+SHA-256 `800e9b511eb40f74dcccf5671f30b24770e2b2f8d865c586469dc51956330ced`,
+with `src/main` tree `044389b865011c416bea48fd308b644deaf09191`.
+
+- Test file blob: `fc5642d5c11aa1f903d6757f1d02d433a96e2f71`;
+  SHA-256 `c842f2c4e9fdef1df80ffc537af2e4679209e0561ba077f44d3a026b98984925`.
+- Affected method-region SHA-256 changes from
+  `55d67d19b443b199b44dfc4e26e32bfbee22f21078ee2c52a4457adc82b61259`
+  to `c873c9e1414bbfdbf2c79f47ee7652ef6788554d0eadc0bf5e82a13fd3165bf1`.
+  Region is the four-space `void eagerRollback...` declaration through the
+  bytes immediately before the next four-space `@Test`, including trailing blanks.
+- Class prefix + suffix after removing that region are byte-exact c006, SHA-256
+  `6dfd831a0a658d909ac11578a469c456364571a95282148b1d3ff8d685b3628f`.
+- Unchanged diagnostics helper blob `9733c98b41dde8fcd350ac7a51c29e0e658b8988`,
+  SHA-256 `75f9e26760ee70fdd7f8619e0430d25e7fe0485e702c224beeaddcb8e25c5505`.
+- Unchanged SFX characterization blob `d816108150840ab1c26067ec569795c4a055d888`,
+  SHA-256 `89ca6da3c8ad659fc8d45cf8673157b81bc69769aa20c05cc948bfaba89d7694`.
+- Three original changed-Java paths sorted, each path + NUL + bytes + NUL:
+  `8eed1d5e87d4a0ede0bd269d4fc1f2a87588e874794e7dd36421e19529799cf3`.
+
+All thirteen frozen files were byte-compared with c006 and retain mapping
+SHA-256 `292100b7284abcd07373d33efce8194308ca6c0fc999aef71de5c5eadcb7e834`.
+Production/guards/pins/POM/policy/resources have no source delta; accepted
+120 low-level, API 22,541/1,250, ambient 6/5 and 151 permissions accounting
+is unchanged source identity, not newly executed compiled enforcement.
+
+Only this one changed case has fresh runtime evidence in this follow-up.
+The other thirteen baseline new cases and twelve controls remain unchanged
+worker-observed earlier evidence, not a new combined 26-case certification.
+No shared-helper/input change required additional controls. Physical XML and
+companion reports were inspected and consumed; own reports/diagnostics are empty.
+No category run, pass cache, receipt or raw-log archive was created.
+Composition and follow-up are local commits preserving c006 intact; the clean
+isolated branch/worktree are retained for a fresh independent parent inspection.
+No fetch/pull, main write, integration, push, worktree removal, subdelegation
+or production extraction was performed. The test-only P2 follow-up needs no
+changelog/guide expansion and confers no implementation authority.
