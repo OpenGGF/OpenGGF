@@ -7,7 +7,7 @@ import java.util.Objects;
 import java.util.OptionalInt;
 
 /**
- * Pure immutable current pattern bytes for the bounded first R11A camera batch.
+ * Pure immutable sparse-known current pattern bytes in the R11A $6E00..$A400 envelope.
  * There is one value at each owned physical address, regardless of which actor
  * or producer previously used it. The sole tile-read input is a final native
  * 11-bit pattern ID; SAT attributes must already have been removed by its owner.
@@ -20,12 +20,19 @@ import java.util.OptionalInt;
  * Tamabboh59 at $8500 overwrites portions of both and that intervening tile.
  * NemPCD_WriteRowToVDP (src/Level/Functions (General).asm:495-510) writes
  * four bytes per row; DecompPLC_Main (:752-758) completes eight rows per tile.
- * This owner exposes complete-tile commits, not mid-instruction device state.</p>
+ * This owner exposes complete-tile commits, not mid-instruction device state.
+ * PLC_Cam1_Full (:85-100) places Boulder19 at $6E80; PLC_Cam4_Full
+ * (:138-153) and PLC_Cam4_Incr (:209-222) relocate Anton22 to $6E00,
+ * overwriting eighteen Boulder tiles while retaining its final $70C0 tile.
+ * These are physical aliases in one value, never separate producer banks.</p>
  *
  * <p>Supplied bytes carry no asset authentication or cold/title history claim.
  * No decoder, PLC queue, section selection, clock, graphics, object bank, or
- * lifecycle is performed here. Player $F000 and powerup $A880 remain outside
- * these windows. Later camera writes outside ownership stop at a typed boundary.
+ * lifecycle is performed here. The seven disjoint regions own 432 physical
+ * tiles, without certifying that their bytes are known. Both legacy factories
+ * leave all four added complements UNKNOWN until explicit complete-tile writes.
+ * Player $F000, powerup $A880 and Spring $A400 remain outside this half-open
+ * envelope. Camera writes outside ownership stop at a typed boundary.
  * The caller retains each returned tile commit before attempting the next one;
  * this class neither batches away a reached boundary nor rolls back a prefix.</p>
  */
@@ -34,11 +41,19 @@ public final class CdR11aCameraArtResidency {
 
     private CdR11aCameraArtResidency() { }
 
-    /** Physical windows, not producer banks. All ends are exclusive. */
+    /**
+     * Disjoint physical regions, not producer banks. All ends are exclusive.
+     * The three historical names, ordinals and extents stay fixed; complements
+     * are appended rather than ordered by address.
+     */
     public enum Region {
         AT_7400(0x7400, 0x8C0),
         AT_8120(0x8120, 0x2C0),
-        AT_8480(0x8480, 0xB80);
+        AT_8480(0x8480, 0xB80),
+        AT_6E00(0x6E00, 0x600),
+        AT_7CC0(0x7CC0, 0x460),
+        AT_83E0(0x83E0, 0xA0),
+        AT_9000(0x9000, 0x1400);
 
         private final int destinationWord;
         private final int byteLength;
@@ -156,7 +171,8 @@ public final class CdR11aCameraArtResidency {
     /**
      * Explicit DEV source preload, not native cold entry or restart history.
      * Mosqui2240, Plant896 and Ramp2016 must be the caller's current exact bytes.
-     * Anton's entire $2C0 window and the $8800 gap remain UNKNOWN.
+     * Anton's entire $2C0 window, the $8800 gap and all four complementary
+     * regions remain UNKNOWN. No Boulder or other added art is implicitly seeded.
      */
     public static State devSeed(CdAssetBytes mosqui2240, CdAssetBytes plant896, CdAssetBytes ramp2016) {
         byte[] mosqui = exactBytes(mosqui2240, 2240, "mosqui2240");
@@ -171,14 +187,19 @@ public final class CdR11aCameraArtResidency {
         return new State(new RegionSnapshot[]{
                 new RegionSnapshot(Region.AT_7400, mosqui, allKnown(0x8C0)),
                 new RegionSnapshot(Region.AT_8120, new byte[0x2C0], new byte[0x2C0]),
-                new RegionSnapshot(Region.AT_8480, combined, combinedKnown)
+                new RegionSnapshot(Region.AT_8480, combined, combinedKnown),
+                new RegionSnapshot(Region.AT_6E00, new byte[0x600], new byte[0x600]),
+                new RegionSnapshot(Region.AT_7CC0, new byte[0x460], new byte[0x460]),
+                new RegionSnapshot(Region.AT_83E0, new byte[0xA0], new byte[0xA0]),
+                new RegionSnapshot(Region.AT_9000, new byte[0x1400], new byte[0x1400])
         });
     }
 
     /**
-     * Explicit full known ingress, useful when an external owner supplies all
-     * three windows. Its existence establishes no authenticity or native entry
-     * provenance; no default zero/cold/restart factory is supplied.
+     * Explicit known ingress for the three historical windows only. All four
+     * complementary regions remain UNKNOWN; this is not a certificate for all
+     * 432 physical tiles. Its existence establishes no authenticity or native
+     * entry provenance; no default zero/cold/restart factory is supplied.
      */
     public static State knownSeed(CdAssetBytes at7400, CdAssetBytes at8120, CdAssetBytes at8480) {
         byte[] first = exactBytes(at7400, 0x8C0, "at7400");
@@ -187,7 +208,11 @@ public final class CdR11aCameraArtResidency {
         return new State(new RegionSnapshot[]{
                 new RegionSnapshot(Region.AT_7400, first, allKnown(0x8C0)),
                 new RegionSnapshot(Region.AT_8120, second, allKnown(0x2C0)),
-                new RegionSnapshot(Region.AT_8480, third, allKnown(0xB80))
+                new RegionSnapshot(Region.AT_8480, third, allKnown(0xB80)),
+                new RegionSnapshot(Region.AT_6E00, new byte[0x600], new byte[0x600]),
+                new RegionSnapshot(Region.AT_7CC0, new byte[0x460], new byte[0x460]),
+                new RegionSnapshot(Region.AT_83E0, new byte[0xA0], new byte[0xA0]),
+                new RegionSnapshot(Region.AT_9000, new byte[0x1400], new byte[0x1400])
         });
     }
 
@@ -262,3 +287,4 @@ public final class CdR11aCameraArtResidency {
         return known;
     }
 }
+// Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>

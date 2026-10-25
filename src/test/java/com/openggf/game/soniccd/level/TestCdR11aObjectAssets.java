@@ -165,7 +165,7 @@ class TestCdR11aObjectAssets {
 
     @Test
     void metadataNamesOriginalUsaFileRangesWithoutChangingTheExistingAssetEnumeration() {
-        assertEquals(39, CdR11aObjectAssets.Table.values().length);
+        assertEquals(40, CdR11aObjectAssets.Table.values().length);
         for (var table : CdR11aObjectAssets.Table.values()) {
             assertEquals(CdNativeFile.R11A, table.range().file());
             assertEquals(CdMmdImage.Domain.ORIGINAL_WORD_RAM, table.range().domain());
@@ -353,7 +353,7 @@ class TestCdR11aObjectAssets {
         assertEquals(0x23A0, CdR11aObjectAssets.decodeTileWord(raw, 0, 0));
         assertEquals(0x4334, CdR11aObjectAssets.decodeTileWord(raw, 5, 0));
         for (int selector = 1; selector < 18; selector++) {
-            if (selector == 1 || selector == 5 || selector == 0xC) { continue; }
+            if (selector == 1 || selector == 5 || selector == 0xB || selector == 0xC) { continue; }
             int unreviewed = selector;
             assertThrows(UnsupportedOperationException.class, () -> CdR11aObjectAssets.decodeTileWord(raw, unreviewed, 0));
         }
@@ -775,7 +775,7 @@ class TestCdR11aObjectAssets {
         var table = CdR11aObjectAssets.Table.TUNNEL_DOOR_VERTICAL_MAPPINGS;
         assertEquals(31, table.ordinal(), "append after all 31 existing tables");
         assertEquals(table, CdR11aObjectAssets.Table.values()[31]);
-        assertEquals(39, CdR11aObjectAssets.Table.values().length);
+        assertEquals(40, CdR11aObjectAssets.Table.values().length);
         assertEquals("MapSpr_FlapDoorV", table.nativeLabel());
         assertEquals(new CdR11aProfile.FileRange(CdNativeFile.R11A,
                 CdMmdImage.Domain.ORIGINAL_WORD_RAM, 0xCE9A, 28), table.range());
@@ -881,7 +881,7 @@ class TestCdR11aObjectAssets {
         assertEquals(0x4334, CdR11aObjectAssets.decodeTileWord(raw, 5, 0));
         assertEquals(0x8328, CdR11aObjectAssets.decodeTileWord(raw, 0xC, 0));
         for (int selector = 0; selector <= 0x7FFF; selector++) {
-            if (selector == 0 || selector == 1 || selector == 5 || selector == 0xC) { continue; }
+            if (selector == 0 || selector == 1 || selector == 5 || selector == 0xB || selector == 0xC) { continue; }
             int unsupported = selector;
             assertThrows(UnsupportedOperationException.class,
                     () -> CdR11aObjectAssets.decodeTileWord(raw, unsupported, 0));
@@ -977,7 +977,7 @@ class TestCdR11aObjectAssets {
     void monitorTimeAppendsTwoUsaTablesAndPreservesEveryPriorOrdinal() throws Exception {
         var scripts = CdR11aObjectAssets.Table.MONITOR_TIME_ANIMATIONS;
         var maps = CdR11aObjectAssets.Table.MONITOR_TIME_MAPPINGS;
-        assertEquals(39, CdR11aObjectAssets.Table.values().length);
+        assertEquals(40, CdR11aObjectAssets.Table.values().length);
         assertEquals(32, scripts.ordinal());
         assertEquals(33, maps.ordinal());
         assertEquals(List.of("Ani_Monitor", "MapSpr_MonitorTime"), List.of(scripts.nativeLabel(), maps.nativeLabel()));
@@ -1183,7 +1183,7 @@ class TestCdR11aObjectAssets {
     void horizontalTunnelDoorAppendsTwoUsaTablesWithoutAnotherArtSourceOrBank() throws Exception {
         var scripts = CdR11aObjectAssets.Table.TUNNEL_DOOR_ANIMATIONS;
         var maps = CdR11aObjectAssets.Table.TUNNEL_DOOR_MAPPINGS;
-        assertEquals(39, CdR11aObjectAssets.Table.values().length);
+        assertEquals(40, CdR11aObjectAssets.Table.values().length);
         assertEquals(34, scripts.ordinal());
         assertEquals(35, maps.ordinal());
         assertEquals(List.of("Ani_TunnelDoor", "MapSpr_TunnelDoor"), List.of(scripts.nativeLabel(), maps.nativeLabel()));
@@ -1362,8 +1362,8 @@ class TestCdR11aObjectAssets {
         var tables = List.of(CdR11aObjectAssets.Table.PATA_BATA_ANIMATIONS,
                 CdR11aObjectAssets.Table.PATA_BATA_NORMAL_MAPPINGS,
                 CdR11aObjectAssets.Table.PATA_BATA_DAMAGED_MAPPINGS);
-        assertEquals(39, CdR11aObjectAssets.Table.values().length);
-        assertEquals(tables, Arrays.stream(CdR11aObjectAssets.Table.values()).skip(36).toList());
+        assertEquals(40, CdR11aObjectAssets.Table.values().length);
+        assertEquals(tables, Arrays.stream(CdR11aObjectAssets.Table.values()).skip(36).limit(3).toList());
         assertEquals(List.of(36, 37, 38), tables.stream().map(Enum::ordinal).toList());
         assertEquals(List.of("Ani_PataBata", "MapSpr_PataBata1", "MapSpr_PataBata2"),
                 tables.stream().map(CdR11aObjectAssets.Table::nativeLabel).toList());
@@ -1581,16 +1581,16 @@ class TestCdR11aObjectAssets {
         assertEquals(CdAssetBytes.class, source.getMethod("readerBytes").getReturnType());
         assertEquals(int.class, source.getMethod("tileCount").getReturnType());
         // Structure only: no reflective construction of an asserted authenticated owner or source bank.
-        assertEquals(39, CdR11aObjectAssets.Table.values().length);
+        assertEquals(40, CdR11aObjectAssets.Table.values().length);
     }
 
     @Test
     void sectionArtMetadataUsesExistingSourceInventoryAndTheCompleteOrderedPlc9() {
         var profile = CdR11aProfile.forStage(CdReleaseVariant.USA, CdStageKey.parse("R11A"));
         var sources = List.of(CdR11aAsset.ART_PATA_BATA, CdR11aAsset.ART_ANTON, CdR11aAsset.ART_TAMABBOH,
-                CdR11aAsset.ART_MOSQUI, CdR11aAsset.ART_3D_PLANT, CdR11aAsset.ART_3D_RAMP_BOOST);
-        int[] offsets = {0x37378, 0x36E46, 0x37950, 0x3702A, 0x3AC7A, 0x3AE02};
-        int[] lengths = {714, 484, 1142, 846, 392, 678};
+                CdR11aAsset.ART_MOSQUI, CdR11aAsset.ART_3D_PLANT, CdR11aAsset.ART_3D_RAMP_BOOST, CdR11aAsset.ART_BOULDER);
+        int[] offsets = {0x37378, 0x36E46, 0x37950, 0x3702A, 0x3AC7A, 0x3AE02, 0x364C2};
+        int[] lengths = {714, 484, 1142, 846, 392, 678, 270};
         for (int i = 0; i < sources.size(); i++) {
             var range = profile.range(sources.get(i));
             assertEquals(CdNativeFile.R11A, range.file());
@@ -1622,4 +1622,138 @@ class TestCdR11aObjectAssets {
             assertThrows(IllegalArgumentException.class, () -> CdNemesisAsset.decode(input, tiles * 32, tiles * 32 - 1));
         }
     }
+
+    /** Boulder/Main.asm:30,57-59; Data/Mappings.asm:1-7, N=1ecc5f3a. */
+    @Test
+    void boulderAppendsOneExactUsaMappingAndOnlyOnePublicVisualAccessor() throws Exception {
+        var table = CdR11aObjectAssets.Table.BOULDER_MAPPINGS;
+        assertEquals(39, table.ordinal());
+        assertEquals(40, CdR11aObjectAssets.Table.values().length);
+        assertEquals("MapSpr_Boulder", table.nativeLabel());
+        assertEquals(new CdR11aProfile.FileRange(CdNativeFile.R11A,
+                CdMmdImage.Domain.ORIGINAL_WORD_RAM, 0x9654, 14), table.range());
+        assertEquals(0x209654, table.range().nativeAddress());
+        assertEquals(0x9662, table.range().endExclusive());
+        for (var prior : Arrays.stream(CdR11aObjectAssets.Table.values()).limit(39).toList()) {
+            assertTrue(table.range().endExclusive() <= prior.range().fileOffset()
+                    || prior.range().endExclusive() <= table.range().fileOffset(), prior.name());
+        }
+        var method = CdR11aObjectAssets.class.getMethod("boulder");
+        assertEquals(0, method.getParameterCount());
+        assertEquals(CdObjectVisualAssets.class, method.getReturnType());
+        assertTrue(Modifier.isSynchronized(method.getModifiers()));
+        assertEquals(0, method.getExceptionTypes().length);
+        assertTrue(Arrays.stream(CdR11aObjectAssets.class.getDeclaredClasses())
+                .noneMatch(type -> type.getSimpleName().equals("BoulderArtBank")));
+        assertEquals(0x364C2, CdR11aAsset.ART_BOULDER.fileOffset(CdReleaseVariant.USA));
+        assertEquals(270, CdR11aAsset.ART_BOULDER.length());
+        assertEquals(CdR11aAsset.Encoding.NEMESIS, CdR11aAsset.ART_BOULDER.encodingForReviewedConsumer());
+    }
+
+    @Test
+    void boulderCountedStaticMappingKeepsBothPiecesNineteenTilesAndRealEvenByte() {
+        byte[] input = boulderMappings();
+        var visual = CdObjectVisualAssets.decodeStatic(input, 1, 19);
+        input[3] = 0;
+        assertEquals("f1613b80dc72cd1d153d190f3a660e3990f92648d54e65c989aed93bc9189652",
+                CdR11aProfile.sha256(visual.mappings().copy()));
+        assertEquals(14, visual.mappings().length()); assertEquals(0, visual.mappingTableOffset());
+        assertEquals(0, visual.mappings().unsignedByte(13)); assertTrue(visual.animations().isEmpty());
+        assertEquals(0, visual.animationTable().length()); assertEquals(1, visual.mappingFrames().size());
+        var frame = visual.mappingFrames().getFirst();
+        assertEquals(2, frame.relativeOffset());
+        assertArrayEquals(java.util.HexFormat.of().parseHex("02f8020000ecf00f0003f4"), frame.bytes().copy());
+        assertEquals(List.of(new CdObjectVisualAssets.Piece(-8, 2, 0, -20),
+                new CdObjectVisualAssets.Piece(-16, 15, 3, -12)), frame.pieces());
+        assertEquals(List.of(3, 16), frame.pieces().stream().map(CdObjectVisualAssets.Piece::tileCount).toList());
+        assertEquals(19, frame.pieces().stream().mapToInt(v -> v.tileOffset() + v.tileCount()).max().orElseThrow());
+        assertThrows(UnsupportedOperationException.class, visual.mappingFrames()::clear);
+        assertThrows(UnsupportedOperationException.class, frame.pieces()::clear);
+        assertThrows(ReadOnlyBufferException.class, () -> visual.mappings().buffer().put((byte) 1));
+        byte[] detached = visual.mappings().copy(); detached[13] = 1;
+        assertEquals(0, visual.mappings().unsignedByte(13));
+    }
+
+    @Test
+    void boulderUsesStrictCountPointerPaddingAndArtBoundsWithoutDecoderExceptions() {
+        for (int length : new int[]{0, 2, 12, 15}) {
+            assertThrows(IllegalArgumentException.class,
+                    () -> CdObjectVisualAssets.decodeStatic(Arrays.copyOf(boulderMappings(), length), 1, 19));
+        }
+        for (int target : new int[]{0, 1, 4, 14, 0x8000, 0xFFFF}) {
+            byte[] invalid = boulderMappings(); ByteBuffer.wrap(invalid).putShort(0, (short) target);
+            assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decodeStatic(invalid, 1, 19));
+        }
+        byte[] badPad = boulderMappings(); badPad[13] = 1;
+        assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decodeStatic(badPad, 1, 19));
+        byte[] badCount = boulderMappings(); badCount[2] = 3;
+        assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decodeStatic(badCount, 1, 19));
+        byte[] badSize = boulderMappings(); badSize[4] = 16;
+        assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decodeStatic(badSize, 1, 19));
+        assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decodeStatic(boulderMappings(), 1, 18));
+        assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decodeStatic(boulderMappings(), 2, 19));
+    }
+
+    @Test
+    void constructedBoulderRangeIsDetachedButCannotAuthenticateAnObjectOwner() throws Exception {
+        byte[] file = new byte[CdR11aProfile.FILE_BYTES];
+        ByteBuffer.wrap(file).putInt(8, 0x200100).putInt(12, 0x20010C).putInt(16, 0x200112);
+        System.arraycopy(boulderMappings(), 0, file, 0x9654, 14);
+        var image = CdMmdImage.parse(file); file[0x9654] = 1;
+        var view = CdR11aObjectAssets.Table.BOULDER_MAPPINGS.range().read(image);
+        assertArrayEquals(boulderMappings(), view.copy());
+        assertThrows(ReadOnlyBufferException.class, () -> view.buffer().put((byte) 1));
+        var profile = CdR11aProfile.forStage(CdReleaseVariant.USA, CdStageKey.parse("R11A"));
+        var asserted = new CdR11aAssets.Identity(CdReleaseVariant.USA, profile.stage(), profile.file(),
+                profile.domain(), profile.expectedMmdSha256(), "constructed bytes are not authenticated media");
+        assertThrows(IOException.class, () -> CdR11aObjectAssets.load(profile, asserted, image, null));
+    }
+
+    @Test
+    void selectorBReadsOnlyItsOwnWordAndPreservesEveryOtherSelectorAndWidthGate() {
+        byte[] ids = verticalTunnelDoorTileIds();
+        assertEquals(60, ByteBuffer.wrap(ids).getShort(0xB * 2));
+        assertEquals(62, ByteBuffer.wrap(ids).getShort(0xC * 2));
+        assertEquals(0x0374, CdR11aObjectAssets.decodeTileWord(ids, 0xB, 0));
+        for (int[] old : new int[][]{{0,0x23A0},{1,0x23B0},{5,0x4334},{0xC,0x8328}}) {
+            assertEquals(old[1], CdR11aObjectAssets.decodeTileWord(ids, old[0], 0));
+        }
+        for (int subtype = 1; subtype <= 255; subtype++) {
+            int unsupported = subtype;
+            assertThrows(UnsupportedOperationException.class,
+                    () -> CdR11aObjectAssets.decodeTileWord(ids, 0xB, unsupported));
+        }
+        for (int selector = 0; selector <= 0x7FFF; selector++) {
+            if (selector == 0 || selector == 1 || selector == 5 || selector == 0xB || selector == 0xC) { continue; }
+            int unsupported = selector;
+            assertThrows(UnsupportedOperationException.class,
+                    () -> CdR11aObjectAssets.decodeTileWord(ids, unsupported, 0));
+        }
+        for (int bad : new int[]{-1, 256, Integer.MAX_VALUE}) {
+            assertThrows(IllegalArgumentException.class, () -> CdR11aObjectAssets.decodeTileWord(ids, 0xB, bad));
+        }
+        for (int bad : new int[]{-1, 0x8000, Integer.MAX_VALUE}) {
+            assertThrows(IllegalArgumentException.class, () -> CdR11aObjectAssets.decodeTileWord(ids, bad, 0));
+        }
+        for (int target : new int[]{0, 34, 37, 74, 0x8000, 0xFFFF}) {
+            byte[] invalid = ids.clone(); ByteBuffer.wrap(invalid).putShort(0xB * 2, (short) target);
+            assertThrows(IllegalArgumentException.class, () -> CdR11aObjectAssets.decodeTileWord(invalid, 0xB, 0));
+        }
+        byte[] unrelatedBadPointer = ids.clone(); ByteBuffer.wrap(unrelatedBadPointer).putShort(2, (short) -2);
+        assertThrows(IllegalArgumentException.class,
+                () -> CdR11aObjectAssets.decodeTileWord(unrelatedBadPointer, 0xB, 0));
+        for (int length : new int[]{0, 73, 75}) {
+            assertThrows(IllegalArgumentException.class,
+                    () -> CdR11aObjectAssets.decodeTileWord(Arrays.copyOf(ids, length), 0xB, 0));
+        }
+        ByteBuffer.wrap(ids).putShort(60, (short) 0x8123);
+        assertEquals(0x8123, CdR11aObjectAssets.decodeTileWord(ids, 0xB, 0));
+    }
+
+    /** Hand-literal N mapping include plus Boulder/Main.asm:59 EVEN; never a production source. */
+    private static byte[] boulderMappings() {
+        return java.util.HexFormat.of().parseHex("000202f8020000ecf00f0003f400");
+    }
+
+    // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>
 }

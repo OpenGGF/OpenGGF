@@ -464,16 +464,21 @@ class TestCdR11aSectionArt {
 
     // Catches consuming/decrementing a tile whose destination is outside the owned windows.
     @Test void unownedDestinationStopsBeforeNextTileAdmissionRetainingEarlierCommit() {
-        var owner = single(false, 3, 0x7CA0);
-        var ready = owner.prepare(owner.initList(dev(owner, 0), PATA_ONLY));
+        var owner = single(false, 3, 0xA3E0);
+        var ingress = dev(owner, 0);
+        // The expanded envelope owns through A3FF. Explicitly seed its last tile, not an unknown default.
+        var resident = CdR11aCameraArtResidency.writeTile(ingress.residency(), 0xA3E0,
+                CdAssetBytes.copyOf(repeated(32, 0x11)));
+        var before = owner.devState(resident, ingress.codeTable(), ingress.sectionWord());
+        var ready = owner.prepare(owner.initList(before, PATA_ONLY));
         var fault = assertThrows(CdR11aSectionArt.SectionArtException.class, () -> owner.serviceSlow(ready, 0));
         assertEquals(RESIDENCY, fault.reason());
-        assertEquals(0x7CC0, fault.destinationWord());
+        assertEquals(0xA400, fault.destinationWord());
         assertEquals(2, fault.state().remainingTilesWord());
         assertEquals(2, fault.state().processBudgetWord());
-        assertEquals(0x7D00, fault.state().queue().headDestination());
-        assertTile(fault.state(), 0x3E5, repeated(32, 0xAA));
-        assertTile(ready, 0x3E5, repeated(32, 0x11));
+        assertEquals(0xA440, fault.state().queue().headDestination());
+        assertTile(fault.state(), 0x51F, repeated(32, 0xAA));
+        assertTile(ready, 0x51F, repeated(32, 0x11));
     }
 
     // Catches unbounded destination addition or delaying its native preadvance until after decode.

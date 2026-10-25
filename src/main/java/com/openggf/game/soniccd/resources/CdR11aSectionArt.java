@@ -212,14 +212,14 @@ public final class CdR11aSectionArt {
 
     /**
      * Explicit authenticated-assets opt-in. Reuses the actual USA plan and all
-     * six finite bank views; never decodes or preloads their output here.
+     * seven finite bank views; never decodes or preloads their output here.
      * Asset/region authentication remains owned by the existing asset pipeline.
      */
     public static CdR11aSectionArt fromAssets(CdR11aAssets assets) throws IOException {
         Objects.requireNonNull(assets, "assets");
         var plan = assets.loadPlan();
         var bank = assets.openingObjects().sectionArtSources();
-        if (bank.sources().size() != 6) throw new IllegalArgumentException("Six reviewed source views required");
+        if (bank.sources().size() != 7) throw new IllegalArgumentException("Seven reviewed source views required");
         var sources = new ArrayList<SourceProgram>();
         for (var source : bank.sources()) {
             var entry = source.canonicalPlc();

@@ -5485,3 +5485,144 @@ immutable actor art would conceal that overwrite. The next audit proposes disjoi
 unknown complements toward6E00..A400 while retaining existing resident authority.
 No Boulder implementation, checkpoint save, complete native load/title/audio/warp,
 full-USA route or JP/EU parity is claimed here. All changes remain private/local.
+
+## Source-ordered Boulder and one current art image — 25 October 2026
+
+Local candidate over `0f13fc9c0232f303ad52bc20249c6c3eb745896c`; private
+objects worktree/branch only. Main and the retained primary worktree remain
+untouched. No merge, push, PR, publication or whole-USA completion is claimed.
+The preceding Pata record's Boulder stop is superseded by the exact same-pass
+frontier below. Native reference remains `1ecc5f3a` / FixBugs0.
+
+**Authenticated input.** USA MOVE.L at MMD file9618 has operand209654;
+BOULDER_MAPPINGS at9654 is14 bytes including the real EVEN zero. One static frame
+has pieces(-20,-8),1×3,tile0 and(-12,-16),4×4,tile3:19 tiles total. SelectorB,
+subtype2 zero gives0374. The append-only table becomes ordinal39 of40; JP/EU
+retain their actual209662 operand and remain unadmitted by this USA object owner.
+The retained ART_BOULDER source begins364C2, header8013,270 blob bytes. Java's
+shortest finite view is270; native Nemesis needs271, including the real next
+FloatBlock byte80 at365D0. Both produce608 bytes with digest
+`abdbe20715a2c4784fae851622bb276dc1630abc339efb1e13b99a5ddc4d0c7d`.
+Independent media/source-model evidence and Java actual-media tests are distinct;
+there was no native decoder execution. The existing source bank appends Boulder
+as seventh entry, canonical PLC2 row0 at6E80, preserving earlier cache identities.
+
+**Physical ownership.** Keep the three original region ordinals/contents/masks.
+Append disjoint complements6E00..7400,7CC0..8120,83E0..8480,9000..A400. The union
+owns432 physical tiles6E00..A400; ownership is not known residency. Both historical
+three-input seeds leave the complements unknown. Complete writeTile is the only
+new-known operation. Boulder374..386 is a current physical view, not an immutable
+actor bank: relocated Anton22@6E00 overwrites18 Boulder tiles and leaves386.
+Partial transfer prefixes, unknown masks, old-picture immutability and carried
+non-default bytes are asserted. Restart never reconstructs/reseeds the producer.
+
+**Execution and commit.** New CdBoulder Init publishes its native prefix and falls
+into Main. Main calls the existing shared SOLID_OBJECT only for incoming negative
+sprite flags, once, against one real pool capture. The runtime checks current
+physical dispatch/ID/identity, complete same-owner96-slot CAS, all returned images
+and exact Frame projection before S4/S3. It writes each once and appends ordered
+shared FM requests once. Effects are completed metadata, never replay commands.
+Draw returns through the actual pool image before the private native despawn
+helper. Placement has no public CheckObjDespawn helper; existing saved-bit/delete
+primitives support the source tail without another owner. Init preserves dirty
+fractions/velocities/collision type and fields it does not write. No new Frame
+field, child, timer, animation or capture partition is introduced.
+
+LogicalBanks appends the fourteenth base, retaining the old13 compatibility form
+and shorter constructors. Cold DEV ingress explicitly writes the19 decoded tiles
+into the existing current image; restart carries its actual image and masks
+verbatim. Two conversion cuts use the separate24-argument513-pattern policy.
+Old494 policies stay unchanged. Pixel conversion reads current physical bytes,
+never reopens the compressed source or picks a producer by object ID. Static
+mapping registration uses the authenticated native root. The renderer's OBJECTS
+range was already allocated:494→513 changes its module cleanup count, not the
+range reservation or allocator.
+
+**Tests and rejected oracles.** Tests-only68517/16785/42721/45511 fail compilation
+on the intentionally missing enum/data/body/bank APIs, not JUnit assertions.
+Residency35784 passes31; assets68090 passes67 (52 ordinary plus15 regional), no
+skips. Body/picture selection53823 exposes the new C24 checked-I/O mistake before
+JUnit; RootR2 removes the unnecessary source-bank accessor from conversion.
+Selection90633 runs175 with one old SectionArt boundary fixture failure; Body63,
+new picture7, mappings29 and inherited picture39 pass. Expanding residency made
+7CC0 owned, so only the obsolete outside fixture moves toA3E0→A400, preserving
+native destination preadvance, completed tile and budget/count prefix. Narrow
+22342 passes that case. Strengthened picture6633 passes7, including typed unknown
+last386 and Animals7100 reached-source/terminal-state checks. Do not call the
+175-red plus narrow repair an executed175-green selection.
+
+Runtime64318 runs493 with one new test failure: knownMask() creates a fresh
+CdAssetBytes wrapper, so the equality assertion compared identity. RootR2 changes
+only that assertion to byte content;9321 passes it. The body author found the
+same wrapper-oracle mistake in a saved-bank failure assertion; RootR2 preserves
+its frozen original and compares copies. Independent static reviews find no
+remaining production P1/P2. Frozen author files are provenance, not Java passes.
+
+World R1 fails test compilation51528: PatternVersion has no version(), and three
+additional invented test accessors also require real API projection. Root repairs
+only the oracle. Executed70192 exposes a missing ordered ChargeStop after the
+ordinary MovementStop; source caller continuation, not a new sound behavior,
+explains it.84495/97699 then kill invented shared-entry count/range assumptions.
+Native0..7FF entries are implicit governance and need not appear in registered
+virtual ranges. Final RootR6 observes both inventories read-only; it registers no
+producer to make the assertion pass. These observer/sound lessons are recorded
+in the existing measurement-hazard catalogue.
+
+After those fixture repairs, actual old494 cleanup selection17331 fails exactly
+at owned ID131566 (OBJECTS131072+494), after geometry/replay checks. This is the
+behavioral negative, distinct from earlier compile/oracle failures. Importing
+only the two-line513 cleanup change gives99313 two passes: the constructed EGL
+method plus an owned ordinary-input diagnostic. Twenty-four actual ENGINE PNGs
+and construction/input/outcome remain external. RootR6 removes the test-time
+range registration only;98783 passes the same EGL method without recapture.
+The final599 run below validates all14 EGL cases on that final source.
+
+**Constructed visual product.** Four independent320×224 USA scenes clear96
+slots, seed only Boulder40 and stage Sonic far left. Initial dirty SOLID_TYPE1
+survives actual Init, real DrawObjects marks bit7, and next Main/shared Solid
+clears it. Literal two-piece SAT, all19 current versions, complete40×32 picture
+opaque/transparent geometry, current palette/terrain/Plane B controls and visible
+omission negatives are checked. Sixteen cuts each receive full and course restore
+and forward state/pixel replay without repeating construction or reloading art.
+At teardown only, all513 actual current-policy versions are uploaded/required
+present, then absent after module close; existing shared entry identities survive.
+That upload is cleanup coverage, not proof all513 tiles were drawn. Captures are
+OpenGGF component output, not emulator references, native timing/palette/priority
+parity or natural-route contact. PASS follows session/graphics/boot cleanup.
+
+**Natural route.** Call560 leaves Pata52 live at2466/628. At call561 Boulder46
+Init actually completes: routine2, X2573/Y1184, map209654,tile0374,sprite4,
+priority4,width16,Yradius16,frame0. The later physical47 Spring stops at
+DIAGONAL_TILE_SELECTOR/F after publishing its native Init prefix: ID0A,
+routine20decimal,X2576/Y1038. Pata52 and later Ring54 are unvisited. The completed
+player prefix is X145239552/Y-337408 in16.16, XV1536/YV1520,routine2. The permanent
+World assertion retains this exact prefix and later-slot nonexecution. The owned
+diagnostic is removed. There is no completed call561 or natural Boulder GPU claim.
+This was normal controller input through GameLoop, not a trace/readiness stream;
+no trace fixture or physics/aux value drove the engine.
+
+Final affected consumers81471: **599/0/0/0**, Maven1m11s, terminal10:26:02Z.
+Frame264, object pass4, Runtime206, carry23, World50, EGL14, terrain27, API11.
+All eight XML identities confirm Java25, actual CD media, EGL opt-in/surfaceless
+backend and the verified S2REV01 donor; no skips. Fresh guards: **728/0/0/0**,
+Maven4m58s, terminal10:34:21Z;90 fresh report identities/mtimes and Java25 checked.
+This final combined selection supersedes earlier Runtime/World/Frame/EGL/carry
+red-and-narrow results, not separate component runs. No repeated broad smoke or
+release-only full suite was launched for this bounded CD-only change. The prior
+unclassified-namespace planner breadth remains disproportionate; shared engine,
+renderer algorithm, physics, public API and build-selection contracts are unchanged.
+
+```text
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 python3 <main-workspace>/tools/testing/maven_queue.py -Dmse=off '-Dtest=TestCdPlayerFrameRuntime,TestCdPlayableSonicObjectPass,TestCdOpeningObjectRuntime,TestSonicCdRestartCarry,TestSonicCdOpeningWorldLoad,TestSonicCdOpeningWorldEgl,TestSonicCdTerrainPlayerLoad,TestModApiSignatureSurface' -Dsoniccd.media.root=<supplied-media-root> -Dsoniccd.opening.egl=true -Dopenggf.headless.gl=surfaceless-egl -Dsonic2.rom.path=<supplied-S2-ROM> test -B
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 python3 <main-workspace>/tools/testing/maven_queue.py -Dmse=off -Pguards test -B
+```
+
+Next is ordinary primary diagonal Spring, the same ID0A family. Source layout
+record96 is0A10040E0A0A4000; selectorF gives0490. Its46 tiles9200..97C0 already lie
+inside the one current image; a later BigRing write aliases all46, so no separate
+immutable diagonal live bank is acceptable. Existing Frame launch fields suffice;
+Runtime needs source routine20/22 guards and the body needs native unsigned
+multiply/orientation/animation ordering. Actual-USA operands and Java/native
+finite reader lengths must be authenticated before admission;780 blob bytes
+alone prove neither consumer extent. Full USA, JP/EU parity, checkpoint/warp,
+complete native cold/title/PLC timing and audio playback remain future work.

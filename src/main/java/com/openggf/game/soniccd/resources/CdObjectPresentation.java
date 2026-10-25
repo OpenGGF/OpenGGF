@@ -610,4 +610,72 @@ public final class CdObjectPresentation {
             return current == null ? preloaded.resolve(nativeId) : current;
         };
     }
+
+    /**
+     * Boulder admission adds exactly nineteen physical/logical bindings to the old 494-pattern policy.
+     * ObjBoulder_Init stores tile $0374 (Boulder/Main.asm:30-35); PLC_Cam1_Full row0 places ART_BOULDER
+     * at $6E80 (Palmtree Panic/Data (Act 1 Present).asm:85-100), header $8013. Its later eighteen-tile
+     * Anton overlap is resolved ONLY from the supplied immutable current residency, never producer pixels.
+     * The old overload remains unchanged. It validates its complete policy first; this overload then
+     * validates the extra physical/logical range and eagerly freezes all nineteen current tiles, even
+     * for empty SATs. Expanded storage admits no other complementary-region picture or preload history.
+     */
+    public static PatternSource usaR11aCurrentCameraDevPreloadedArt(CdPlayerArtRuntime.State nowServicedPlayer,
+                                                                   CdPowerupArtRuntime.State nowServicedPowerup,
+                                                                   CdR11aObjectAssets objects,
+                                                                   CdR11aObjectAssets.FrontierArtBank frontier,
+                                                                   CdR11aObjectAssets.ContactArtBank contact,
+                                                                   CdR11aObjectAssets.FloatBlockArtBank floatBlock,
+                                                                   CdR11aObjectAssets.SpringArtBank spring,
+                                                                   CdR11aObjectAssets.TunnelDoorArtBank tunnelDoor,
+                                                                   CdR11aObjectAssets.MonitorTimeArtBank monitorTime,
+                                                                   CdR11aCameraArtResidency.State cameraResidency,
+                                                                   int playerLogicalBase, int ringLogicalBase,
+                                                                   int mosquiLogicalBase, int plantLogicalBase,
+                                                                   int rampLogicalBase, int explosionLogicalBase,
+                                                                   int pointsLogicalBase, int flowerLogicalBase,
+                                                                   int powerupLogicalBase, int floatBlockLogicalBase,
+                                                                   int springLogicalBase, int tunnelDoorVerticalLogicalBase,
+                                                                   int monitorTimeLogicalBase, int boulderLogicalBase) {
+        var previous = usaR11aCurrentCameraDevPreloadedArt(nowServicedPlayer, nowServicedPowerup, objects,
+                frontier, contact, floatBlock, spring, tunnelDoor, monitorTime, cameraResidency,
+                playerLogicalBase, ringLogicalBase, mosquiLogicalBase, plantLogicalBase, rampLogicalBase,
+                explosionLogicalBase, pointsLogicalBase, flowerLogicalBase, powerupLogicalBase,
+                floatBlockLogicalBase, springLogicalBase, tunnelDoorVerticalLogicalBase, monitorTimeLogicalBase);
+        // The source owner authenticates this static frame and native selector. Conversion reads NO
+        // compressed producer bank: header $8013 and the mapping's 3+16 tiles establish the admitted19.
+        int first = objects.tileWord(0x0B, 0), count = 19;
+        if (first != 0x374 || objects.boulder().mappingFrames().size() != 1) {
+            throw new IllegalArgumentException("Boulder pixels disagree with the authenticated native binding");
+        }
+        byte[] current = new byte[count * 32];
+        for (int tile = 0; tile < count; tile++) {
+            byte[] bytes = CdR11aCameraArtResidency.readTile(cameraResidency, first + tile).copy();
+            System.arraycopy(bytes, 0, current, tile * 32, 32);
+        }
+        var extraSpan = new PixelSpan(first, boulderLogicalBase, CdAssetBytes.copyOf(current));
+        var extra = declaredPixelBank(List.of(extraSpan)); // Includes nonnegative/overflow validation.
+        var oldRanges = new ArrayList<int[]>();
+        oldRanges.add(new int[]{CdPlayerArtRuntime.VRAM_BYTE_ADDRESS / 32, nowServicedPlayer.residentBank().length() / 32});
+        oldRanges.add(new int[]{CdPowerupArtRuntime.VRAM_BYTE_ADDRESS / 32, nowServicedPowerup.residentBank().length() / 32});
+        for (var binding : List.of(objects.initialArtBank().binding(CdR11aAsset.ART_RINGS),
+                objects.initialArtBank().binding(CdR11aAsset.ART_MOSQUI),
+                frontier.binding(CdR11aAsset.ART_3D_PLANT), frontier.binding(CdR11aAsset.ART_3D_RAMP_BOOST),
+                contact.binding(CdR11aAsset.ART_EXPLOSIONS), contact.binding(CdR11aAsset.ART_POINTS),
+                contact.binding(CdR11aAsset.ART_FLOWER), floatBlock.binding(CdR11aAsset.ART_FLOAT_BLOCK),
+                spring.binding(CdR11aAsset.ART_SPRINGS), tunnelDoor.binding(CdR11aAsset.ART_TUNNEL_DOOR),
+                monitorTime.binding(CdR11aAsset.ART_MONITOR_TIME_POSTS))) {
+            oldRanges.add(new int[]{binding.firstTileId(), binding.tileCount()});
+        }
+        long extraEnd = (long) boulderLogicalBase + count;
+        for (int[] range : oldRanges) {
+            int oldLogicalFirst = previous.resolve(range[0]).logicalPatternId();
+            if (first < range[0] + range[1] && range[0] < first + count
+                    || boulderLogicalBase < (long) oldLogicalFirst + range[1] && oldLogicalFirst < extraEnd) {
+                throw new IllegalArgumentException("Overlapping Boulder native or logical picture binding");
+            }
+        }
+        return nativeId -> nativeId >= first && nativeId < first + count
+                ? extra.resolve(nativeId) : previous.resolve(nativeId);
+    }
 }

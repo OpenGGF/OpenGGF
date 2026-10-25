@@ -164,7 +164,7 @@ class TestSonicCdOpeningWorldEgl {
                                 source.assets().openingObjects().monitorTimeArtBank(), runtime.sectionArtState().residency(),
                                 banks.player(), banks.ring(), banks.mosqui(), banks.plant(), banks.ramp(),
                                 banks.explosion(), banks.points(), banks.flower(), banks.powerup(), banks.floatBlock(), banks.spring(),
-                                banks.tunnelDoorVertical(), banks.monitorTime()));
+                                banks.tunnelDoorVertical(), banks.monitorTime(), banks.boulder()));
                 assertEquals(expectedPicture, runtime.displayedFrame(), "Next V-int uses the pickup CPU table and now-serviced art");
                 int playerBase = com.openggf.graphics.PatternAtlasRange.OBJECTS.base();
                 assertTrue(runtime.displayedFrame().patternVersions().keySet().stream()
@@ -2090,7 +2090,7 @@ class TestSonicCdOpeningWorldEgl {
                 module.requirePlayerFrame().artState(), runtime.powerupArtState(), objects, objects.frontierArtBank(), objects.contactArtBank(),
                 objects.floatBlockArtBank(), objects.springArtBank(), objects.tunnelDoorArtBank(), objects.monitorTimeArtBank(), runtime.sectionArtState().residency(),
                 banks.player(), banks.ring(), banks.mosqui(), banks.plant(), banks.ramp(), banks.explosion(), banks.points(), banks.flower(),
-                banks.powerup(), banks.floatBlock(), banks.spring(), banks.tunnelDoorVertical(), banks.monitorTime());
+                banks.powerup(), banks.floatBlock(), banks.spring(), banks.tunnelDoorVertical(), banks.monitorTime(), banks.boulder());
     }
 
     /** Literal N MM:157-167 and MM:55-60. Static item has ONE piece despite counted frame4 having four. */
@@ -2203,5 +2203,355 @@ class TestSonicCdOpeningWorldEgl {
                 "An omitted visible Monitor tile MUST fail even while the other geometry remains visible");
     }
     // END constructed Monitor World proof.
+
+    // BEGIN constructed Boulder World proof. Source-only authoring; execution belongs to Root.
+    // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>
+    @Test void actualEglConstructedBoulderWorldUsesCurrentNativePixelsAndRetires513Patterns() throws Exception {
+        Assumptions.assumeTrue(Boolean.getBoolean("soniccd.opening.egl"), "Explicit actual EGL/media opt-in");
+        assertEquals("surfaceless-egl", System.getProperty("openggf.headless.gl"));
+        assertNull(System.getenv("DISPLAY")); assertNull(System.getenv("WAYLAND_DISPLAY"));
+        String media = System.getProperty("soniccd.media.root"); assertNotNull(media); assertFalse(media.isBlank());
+        CdGameDataSource source;
+        try (var files = Files.list(Path.of(media).resolve("USA"))) {
+            var cues = files.filter(f -> f.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".cue")).toList();
+            assertEquals(1, cues.size()); source = CdStockLaunch.prepare(cues.getFirst(), CdStockLaunch.Request.r11a());
+        }
+        String log = InputScriptCompiler.compileToInputLog("4 -");
+        var movie = new Bk2MovieLoader().parseInputLogText(Path.of("constructed-boulder-world-input"), log.lines().toList());
+        Path output = openCaptureOutput(log, "soniccd.boulder.output");
+        String construction = "ENGINE constructed USA R11A Boulder component; no natural-route/contact claim.\n"
+                + "Row0: actual Sonic Init. Four independent CLOSED_CUT scenes use native flip bits0,1,2,3.\n"
+                + "Each scene clears ALL96 dynamics and seeds cleared slot40 ONLY: ID1B, X=cameraX+200, Y=cameraY+72, subtype2=0, spriteFlags=flip, SOLID_TYPE/routine2=1 (explicit dirty helper witness).\n"
+                + "Once before each scene's preInit capture, restore/rebind the same live Sonic at BoulderX-144/BoulderY; velocities/angle/jump/charge/moveLock/stick/control=0, routine2, flags0, spriteFlags4, radii9/19, animation0. Retain previousAnimation/angle copies, animation state, header, timers, history, rotation, object links, owner and shared state; clear actor display publication.\n"
+                + "No object routine/frame/map/tile/timer/flag writes after construction. Clean bit7 Init falls into Main but skips Solid, retains SOLID_TYPE1; real DrawObjects marks bit7; next Main runs shared Solid GetOff and clears SOLID_TYPE0. Sonic remains left of the complete40-pixel picture, not merely the16-pixel collision/cull radius.\n"
+                + "Rows1..3 use existing GameLoop normalFrame and complete Body sound oracle (including reached ChargeStop), real body/DrawObject/DrawObjects/SAT/V-int/tail. Every preInit/postInit/postMain/nextDisplay cut captures full AND course state/pixels; each is restored and forward-replayed without repeating construction or reloading art.\n"
+                + "At the final retirement cut ONLY, upload all513 actual NOW-policy tile versions into their already-owned IDs and require every entry present before close. Teardown coverage only; not proof every tile drew.\n"
+                + "At that same teardown cut, collect actual resident native11-bit entries plus registered virtual ranges outside the513 owned IDs; native IDs are implicitly governed and absent from registeredRangesForTesting. Preserve each actual shared entry by identity after CD close; no synthetic shared entry or registration.\n"
+                + "DEV cold19 Boulder tiles in the ONE current residency; current palette and native Plane B controls, no native palette/hardware mixed-priority/timing/pixel parity, native cold PLC history or full-game certification.\n";
+        if (output != null) Files.writeString(output.resolve("construction.txt"), construction, StandardOpenOption.CREATE_NEW);
+        var observations = new StringBuilder();
+        try (var boot = new HeadlessGameBoot(320, 224)) {
+            try {
+                var loop = boot.bootSonicCdOpeningObjects(source);
+                assertEquals(NullAudioBackend.class, GameServices.audio().getBackend().getClass());
+                var mode = SessionManager.getCurrentGameplayMode();
+                var module = assertInstanceOf(SonicCdGameModule.class, mode.getWorldSession().getGameModule());
+                var runtime = assertInstanceOf(CdOpeningObjectRuntime.class, module.getGameService(NativeDynamicObjectPass.class));
+                var frame = module.requirePlayerFrame();
+                assertSame(source, mode.getWorldSession().getDataSource()); assertEquals(GameMode.LEVEL, loop.getCurrentGameMode());
+                step(loop, movie.getFrame(0)); // Only actual Sonic Init before any constructed scene.
+                int base = com.openggf.graphics.PatternAtlasRange.OBJECTS.base();
+                var banks = new CdOpeningObjectRuntime.LogicalBanks(base, base + 24, base + 38);
+                assertEquals(base + 494, banks.boulder()); assertEquals(banks.monitorTime() + 82, banks.boulder());
+                var objects = source.assets().openingObjects();
+                var sources = objects.sectionArtSources(); assertEquals(7, sources.sources().size());
+                var boulder = sources.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_BOULDER);
+                assertEquals(2, boulder.canonicalPlcId()); assertEquals(0, boulder.canonicalRowIndex());
+                assertEquals(0x6E80, boulder.canonicalPlc().vramAddress()); assertEquals(19, boulder.tileCount());
+                assertEquals(0x8013, boulder.readerBytes().unsignedWord(0)); assertEquals(608, boulder.decode().bytes().length());
+                var mapping = objects.view(com.openggf.game.soniccd.level.CdR11aObjectAssets.Table.BOULDER_MAPPINGS);
+                assertEquals(0x209654, mapping.range().nativeAddress());
+                assertArrayEquals(java.util.HexFormat.of().parseHex("000202F8020000ECF00F0003F400"), mapping.bytes().copy());
+                assertEquals(1, objects.boulder().mappingFrames().size()); assertEquals(0x374, objects.tileWord(0xB, 0));
+                for (int tile = 0; tile < 19; tile++) assertArrayEquals(boulder.decode().bytes().slice(tile * 32, 32).copy(),
+                        com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(runtime.sectionArtState().residency(), 0x374 + tile).copy(),
+                        "Explicit DEV seed, not per-object art: " + tile);
+                int[] nativeFirst = {0x780, 0x7AE, 0x3A0, 0x424, 0x441, 0x680, 0x6C6, 0x6D7, 0x544, 0x334, 0x520, 0x328, 0x5A8, 0x374};
+                int[] counts = {24, 14, 70, 28, 63, 70, 5, 39, 36, 15, 36, 12, 82, 19};
+                var atlas = GameServices.graphics().getPatternAtlas();
+                var policy = monitorWorldPolicy(module, objects, banks); int logical = base;
+                for (int span = 0; span < counts.length; span++) for (int tile = 0; tile < counts[span]; tile++) {
+                    int id = logical++;
+                    assertEquals(id, policy.resolve(nativeFirst[span] + tile).logicalPatternId());
+                    assertEquals(1, atlas.registeredRangesForTesting().stream()
+                            .filter(range -> id >= range.base() && id < range.base() + range.size()).count());
+                }
+                assertEquals(base + 513, logical, "Exactly14 spans/513 IDs; old13-span C23 stays494");
+                var registry = mode.getRewindRegistry(); var pool = runtime.placement().pool();
+                for (int flip = 0; flip < 4; flip++) {
+                    assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT, runtime.phase());
+                    pool.clearDynamicSlots();
+                    assertEquals(96, pool.capture().slots().size());
+                    assertTrue(pool.capture().slots().stream().allMatch(s -> Arrays.equals(new byte[64], s.copyBytes())));
+                    int boulderX = GameServices.camera().getX() + 200, boulderY = GameServices.camera().getY() + 72;
+                    pool.write(pool.state(40).moveByte(ID, 0x1B).moveWord(X, boulderX).moveWord(Y, boulderY)
+                            .moveByte(SUBTYPE2, 0).moveByte(SPRITE_FLAGS, flip).moveByte(SOLID_TYPE, 1));
+                    stageBoulderWorldPlayer(module, boulderX - 144, boulderY);
+                    assertEquals(0, pool.state(40).routine()); assertEquals(flip, pool.state(40).spriteFlags());
+                    var fullCuts = new ArrayList<>(List.of(registry.capture()));
+                    var courseCuts = new ArrayList<>(List.of(registry.captureCourse()));
+                    var states = new ArrayList<>(List.of(capture(module)));
+                    var pictures = new ArrayList<>(List.of(render(module, true)));
+                    assertCapture(states.getFirst(), module);
+                    var previousCpu = runtime.cpuSat();
+                    int previousCameraX = GameServices.camera().getX(), previousCameraY = GameServices.camera().getY();
+                    for (int row = 1; row <= 3; row++) {
+                        boulderWorldStep(loop, movie.getFrame(row), module); // Actual complete Body prefix, no direct Boulder FM.
+                        var live = pool.state(40); var motion = frame.state().motion();
+                        assertEquals(0x1B, live.id()); assertEquals(2, live.routine());
+                        assertEquals(row == 1 ? 1 : 0, live.unsignedByte(SOLID_TYPE),
+                                "Init must retain dirty1; only next Main's actual shared Solid GetOff clears it");
+                        assertEquals(0x84 | flip, live.spriteFlags(), "Only real DrawObjects sets bit7");
+                        assertEquals(4, live.unsignedByte(PRIORITY)); assertEquals(16, live.unsignedByte(WIDTH));
+                        assertEquals(16, live.unsignedByte(Y_RADIUS)); assertEquals(0, live.unsignedByte(MAP_FRAME));
+                        assertEquals(0x209654, live.longBits(MAPPINGS)); assertEquals(0x374, live.word(TILE));
+                        assertEquals(boulderX, live.centreX()); assertEquals(boulderY, live.centreY()); assertEquals(0, live.flags());
+                        assertEquals(2, motion.routine()); assertNotEquals(0x17, motion.animation());
+                        assertEquals(0, motion.playerControl() & 0x40); assertEquals(0, frame.environment().globals().debugMode());
+                        assertTrue((motion.centreX16_16() >>> 16) + 32 < boulderX - 20, "Actor stays outside full native picture");
+                        assertTrue(pool.capture().slots().stream().allMatch(s -> s.id() == 0 || s.identity().wholeIndex() == 40));
+                        assertBoulderWorldSat(runtime.cpuSat(), GameServices.camera().getX(), GameServices.camera().getY(), boulderX, boulderY, flip);
+                        var completed = capture(module); var published = completed.publication().published();
+                        assertEquals(previousCameraX, published.cameraX()); assertEquals(previousCameraY, published.cameraY());
+                        assertEquals(com.openggf.game.soniccd.resources.CdObjectPresentation.convert(previousCpu,
+                                        monitorWorldPolicy(module, objects, banks)), runtime.displayedFrame(),
+                                "Previous actual CPU SAT + NOW player/powerup/section current art, never a per-object source resolver");
+                        var image = render(module, true); var terrain = renderTerrain(module, published);
+                        assertNativeGpuBackground(module); assertTerrainOutsideSprites(image, terrain, runtime.displayedFrame());
+                        if (row >= 2) {
+                            assertBoulderWorldSat(previousCpu, previousCameraX, previousCameraY, boulderX, boulderY, flip);
+                            var literal = boulderWorldLiteralTiles(boulderX - published.cameraX(), boulderY - published.cameraY(), flip);
+                            observations.append("flip=").append(flip).append(" row=").append(row).append(' ')
+                                    .append(assertBoulderWorldPixels(runtime.displayedFrame(), image, terrain,
+                                            runtime.sectionArtState().residency(), banks.boulder(), literal,
+                                            boulderX - published.cameraX(), boulderY - published.cameraY())).append('\n');
+                            assertBoulderWorldOmissions(runtime.displayedFrame(), image, terrain, runtime.sectionArtState().residency(),
+                                    banks.boulder(), literal, boulderX - published.cameraX(), boulderY - published.cameraY());
+                            var withoutPlane = renderWithoutBackground(module);
+                            assertFalse(Arrays.equals(terrain.pixels(), withoutPlane.pixels()), "Actual native Plane B contributes to terrain control");
+                            assertArrayEquals(image.pixels(), render(module, true).pixels(), "Ordinary draw reinstalls selected native Plane B");
+                            for (int tile = 0; tile < 19; tile++) {
+                                var entry = atlas.getEntry(banks.boulder() + tile); assertNotNull(entry, "Real picture installed tile " + tile);
+                                assertTrue(glIsTexture(atlas.getTextureId(entry.atlasIndex())));
+                                assertEquals(runtime.displayedFrame().patternVersions().get(banks.boulder() + tile),
+                                        com.openggf.graphics.SpritePresentation.patternSample(GameServices.graphics(), banks.boulder() + tile));
+                            }
+                        }
+                        assertCapture(completed, module); states.add(completed); pictures.add(image);
+                        fullCuts.add(registry.capture()); courseCuts.add(registry.captureCourse());
+                        if (output != null) {
+                            ScreenshotCapture.savePNG(image, output.resolve("ENGINE-constructed-boulder-flip" + flip + "-row" + row + ".png"));
+                            ScreenshotCapture.savePNG(terrain, output.resolve("ENGINE-native-plane-terrain-flip" + flip + "-row" + row + ".png"));
+                        }
+                        previousCpu = runtime.cpuSat(); previousCameraX = GameServices.camera().getX(); previousCameraY = GameServices.camera().getY();
+                    }
+                    // Restore EVERY selected cut, including both sides of actual Init/Main, then ordinary forward replay.
+                    for (int cut = 0; cut <= 3; cut++) for (boolean courseOnly : List.of(false, true)) {
+                        if (courseOnly) registry.restoreCourse(courseCuts.get(cut)); else registry.restore(fullCuts.get(cut));
+                        assertCapture(states.get(cut), module); assertArrayEquals(pictures.get(cut).pixels(), render(module, true).pixels());
+                        assertCapture(states.get(cut), module);
+                        for (int row = cut + 1; row <= 3; row++) {
+                            boulderWorldStep(loop, movie.getFrame(row), module); // NO construction/seed/callback/effect replay.
+                            assertCapture(states.get(row), module);
+                            assertArrayEquals(pictures.get(row).pixels(), render(module, true).pixels(), "flip/cut/row " + flip + "/" + cut + "/" + row);
+                            assertCapture(states.get(row), module);
+                        }
+                    }
+                }
+                // Exhaustive retirement witness, using only actual current policy versions in the owned range.
+                var beforeRetirement = capture(module);
+                var retirementPolicy = monitorWorldPolicy(module, objects, banks); logical = base;
+                for (int span = 0; span < counts.length; span++) for (int tile = 0; tile < counts[span]; tile++) {
+                    var sample = retirementPolicy.resolve(nativeFirst[span] + tile); assertEquals(logical++, sample.logicalPatternId());
+                    var v = sample.version(); long[] words = {v.a(), v.b(), v.c(), v.d()}; var pattern = new com.openggf.level.Pattern();
+                    for (int at = 0; at < 64; at++) pattern.setPixel(at % 8, at / 8, (byte) ((words[at / 16] >>> ((at % 16) * 4)) & 15));
+                    GameServices.graphics().cachePatternTexture(pattern, sample.logicalPatternId());
+                }
+                assertEquals(base + 513, logical); assertCapture(beforeRetirement, module);
+                for (int tile = 0; tile < 513; tile++) {
+                    var entry = atlas.getEntry(base + tile); assertNotNull(entry, "Installed retirement witness " + tile);
+                    assertTrue(glIsTexture(atlas.getTextureId(entry.atlasIndex())));
+                }
+                var sharedEntries = new java.util.HashMap<Integer, Object>();
+                // PatternAtlas.validatePatternIdGovernance admits native 11-bit IDs implicitly;
+                // registeredRangesForTesting lists explicit virtual ranges, not all resident entries.
+                for (int id = 0; id <= 0x7FF; id++) {
+                    var entry = atlas.getEntry(id); if (entry != null) sharedEntries.put(id, entry);
+                }
+                for (var range : atlas.registeredRangesForTesting()) for (int id = range.base(); id < range.base() + range.size(); id++) {
+                    if (id >= base && id < base + 513) continue;
+                    var entry = atlas.getEntry(id); if (entry != null) sharedEntries.put(id, entry);
+                }
+                // CPU preloaded art is not an eager GPU-entry count: retain EVERY actual shared entry.
+                assertFalse(sharedEntries.isEmpty(), "Actual shared producer entries must exist");
+                assertTrue(sharedEntries.keySet().stream().anyMatch(id -> id <= 0x7FF),
+                        "Actual native level entries are preserved without adding a synthetic producer");
+                observations.append("shared-installed=").append(sharedEntries.size()).append('\n');
+                module.closeTerrainPlayer();
+                assertTrue(runtime.closed()); assertTrue(frame.closed()); assertSame(atlas, GameServices.graphics().getPatternAtlas());
+                for (int tile = 0; tile < 513; tile++) assertNull(atlas.getEntry(base + tile), "Retired owned ID " + (base + tile));
+                sharedEntries.forEach((id, entry) -> assertSame(entry, atlas.getEntry(id), "Shared other-producer entry " + id));
+                assertEquals(NullAudioBackend.class, GameServices.audio().getBackend().getClass());
+            } finally {
+                try { SessionManager.closeGameplaySession(); }
+                finally { GraphicsManager.destroyForReinit(); }
+            }
+        }
+        if (output != null) Files.writeString(output.resolve("outcome.txt"),
+                "PASS: constructed ID1B Init/DrawObjects/next-Main actual shared-Solid1-to0 witness, all four native flips/two exact SAT pieces,19 current decoded tile versions/full geometry current-palette opaque + transparent terrain pixels, visible-tile/piece omission negatives, every selected full/course state+pixel restore and forward replay, all513 actual current-policy retirement witnesses installed then absent and shared producers retained; session/graphics/boot cleanup completed.\n"
+                        + construction + observations, StandardOpenOption.CREATE_NEW); // PASS only AFTER retirement and finally/boot cleanup.
+    }
+
+    /**
+     * Neutral, unsupported-by-an-object fixture only. MoveGround.BalanceGround (Sonic/Main.asm:905-938)
+     * emits a movement stop for floor distance >=12; unless either previous angle equals3 it THEN reaches
+     * CheckCharge/CheckUnleashPeelout (:1029-1036), which emits a separate charge stop even at charge0.
+     * The older Monitor fixture's either/or oracle never exercised this two-request branch.
+     */
+    private static void boulderWorldStep(GameLoop loop, Bk2FrameInput input, SonicCdGameModule module) {
+        var frame = module.requirePlayerFrame(); var state = frame.state(); var m = state.motion();
+        var e = frame.environment();
+        assertEquals(0, e.movement().globals().lookMode()); assertEquals(0, e.movement().gates().speedShoes());
+        assertEquals(0, state.objectLinks().standObject()); assertEquals(0, state.objectLinks().pushObject());
+        var expectedPlayer = new ArrayList<>(monitorWorldPlayerSounds(frame));
+        if ((m.flags() & 6) == 0 && ((m.angle() + 0x20) & 0xC0) == 0 && m.groundVelocity() == 0) {
+            var floor = new com.openggf.game.soniccd.player.CdPlayerTerrain(frame.assets().terrain())
+                    .floor(m.centreX16_16() >>> 16, (m.centreY16_16() >>> 16) + m.yRadius(), 13, 0, 16, m.spriteFlags());
+            if (floor.distance() >= 12 && m.previousPrimaryAngle() != 3 && m.previousSecondaryAngle() != 3)
+                expectedPlayer.add(new CdPlayerFrameRuntime.ChargeSound(
+                        com.openggf.game.soniccd.player.CdPlayerCharge.Sound.FM_CHARGESTOP));
+        }
+        var expected = new ArrayList<CdOpeningObjectRuntime.SoundRequest>();
+        expectedPlayer.forEach(sound -> expected.add(new CdOpeningObjectRuntime.PlayerSound(sound)));
+        step(loop, input);
+        var runtime = (CdOpeningObjectRuntime) module.getGameService(NativeDynamicObjectPass.class);
+        assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT, runtime.phase());
+        assertEquals(expectedPlayer, module.requirePlayerActor().lastSoundRequests(), "Complete neutral Body prefix including both reached stop calls");
+        assertEquals(expected, runtime.lastSoundRequests(), "Boulder GetOff with no stand/push link adds no direct sound");
+    }
+
+    /** Explicit initial-only actor ingress; no global, buffer, art, clock, source or helper ingress. */
+    private static void stageBoulderWorldPlayer(SonicCdGameModule module, int x, int y) {
+        var runtime = (CdOpeningObjectRuntime) module.getGameService(NativeDynamicObjectPass.class);
+        assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT, runtime.phase());
+        module.requirePlayerActor().requireCompletedNativeFrame();
+        var frame = module.requirePlayerFrame(); var actor = frame.captureActor(); var old = actor.state(); var m = old.motion();
+        assertEquals(2, m.routine());
+        var motion = new com.openggf.game.soniccd.player.CdPlayerMotionState(x << 16, y << 16, 0, 0, 0,
+                2, 0, 0, 4, 9, 19, 0, m.previousAnimation(), 0, 0, 0, 0, 0, m.previousPrimaryAngle(), m.previousSecondaryAngle());
+        var state = new com.openggf.game.soniccd.player.CdPlayerBody.State(motion, old.animation(), old.header(), old.timers(),
+                old.history(), old.rotationDistance(), old.objectLinks());
+        frame.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(), state, java.util.Optional.empty()));
+        module.requirePlayerActor().rebindAfterRestore();
+        assertSame(old.animation(), frame.state().animation()); assertSame(old.header(), frame.state().header());
+        assertSame(old.timers(), frame.state().timers()); assertSame(old.history(), frame.state().history());
+        assertEquals(old.rotationDistance(), frame.state().rotationDistance()); assertEquals(old.objectLinks(), frame.state().objectLinks());
+    }
+
+    private static void assertBoulderWorldSat(CdObjectDrawQueue.CpuSat sat, int cameraX, int cameraY, int x, int y, int flip) {
+        // N1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff Boulder/Data/Mappings.asm:1-7;
+        // DrawObjects/Object Functions.asm performs ADD.W then flip XOR, not art flips or priority promotion.
+        int[][] pieces = {{(flip & 2) != 0 ? -16 : -8, 2, 0x374 ^ (flip << 11), (flip & 1) != 0 ? 12 : -20},
+                {-16, 15, 0x377 ^ (flip << 11), (flip & 1) != 0 ? -20 : -12}};
+        int seen = 0; byte[] raw = sat.bytes();
+        assertTrue(sat.provenance().stream().anyMatch(p -> p.slotRef().wholeIndex() == 0));
+        for (int entry = 0; entry < sat.spriteCount(); entry++) {
+            var p = sat.provenance().get(entry); if (p.slotRef().wholeIndex() != 40) continue;
+            assertTrue(seen < 2); assertEquals(4, p.queueBucket()); assertEquals(0, p.queueOrdinal());
+            assertEquals(seen, p.mappingPieceOrdinal()); var literal = pieces[seen++]; int at = entry * 8;
+            assertEquals((y - cameraY + 128 + literal[0]) & 0xFFFF, ((raw[at] & 255) << 8) | (raw[at + 1] & 255));
+            assertEquals(literal[1], raw[at + 2] & 255); assertEquals(entry + 1, raw[at + 3] & 255);
+            int word = ((raw[at + 4] & 255) << 8) | (raw[at + 5] & 255);
+            assertEquals(literal[2], word); assertEquals(0, word & 0xE000, "Palette0/hardware priority0 despite software bucket4");
+            assertEquals((x - cameraX + 128 + literal[3]) & 511, ((raw[at + 6] & 255) << 8) | (raw[at + 7] & 255));
+        }
+        assertEquals(2, seen);
+    }
+
+    private record BoulderWorldTile(int offset, int x, int y, boolean hFlip, boolean vFlip, int piece) { }
+    private static List<BoulderWorldTile> boulderWorldLiteralTiles(int x, int y, int flip) {
+        boolean h = (flip & 1) != 0, v = (flip & 2) != 0; var result = new ArrayList<BoulderWorldTile>();
+        // Converter visits native SAT in reverse: piece1 (32x32, offsets3..18) then piece0 (8x24, offsets0..2).
+        for (int row = 0; row < 4; row++) for (int col = 0; col < 4; col++) result.add(new BoulderWorldTile(
+                3 + col * 4 + row, x + (h ? -20 : -12) + (h ? 3 - col : col) * 8,
+                y - 16 + (v ? 3 - row : row) * 8, h, v, 1));
+        for (int row = 0; row < 3; row++) result.add(new BoulderWorldTile(row, x + (h ? 12 : -20),
+                y + (v ? -16 : -8) + (v ? 2 - row : row) * 8, h, v, 0));
+        return List.copyOf(result);
+    }
+
+    private static String assertBoulderWorldPixels(com.openggf.graphics.SpritePresentation.Frame picture, RgbaImage image,
+            RgbaImage terrain, com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.State residency,
+            int base, List<BoulderWorldTile> literal, int centreX, int centreY) {
+        var tiles = picture.tiles().stream().filter(t -> t.patternId() >= base && t.patternId() < base + 19).toList();
+        assertEquals(19, tiles.size()); assertEquals(19, literal.size());
+        var graphics = GameServices.graphics(); var level = GameServices.level();
+        assertFalse(graphics.isWaterEnabled());
+        assertFalse(graphics.getPaletteFadePresentation().affects(0));
+        var palette = level.getCurrentLevel().getPalette(0); int[] argb = new int[16];
+        for (int i = 1; i < 16; i++) {
+            var colour = palette.getColor(i);
+            argb[i] = 0xFF000000 | com.openggf.graphics.color.DisplayColorConverter.toPackedRgb(colour.r & 255, colour.g & 255,
+                    colour.b & 255, graphics.getDisplayColorProfile(), graphics.getDisplayColorExpansion());
+        }
+        var expected = terrain.pixels().clone(); int opaque = 0, transparent = 0, changed = 0;
+        var zeroOpacity = new ArrayList<Integer>(); var reached = new java.util.TreeSet<Integer>();
+        for (int index = 0; index < 19; index++) {
+            var p = literal.get(index); var t = tiles.get(index); reached.add(p.offset());
+            assertEquals(base + p.offset(), t.patternId()); assertEquals((float) p.x(), t.x()); assertEquals((float) p.y(), t.y());
+            assertEquals(8f, t.width()); assertEquals(8f, t.height()); assertEquals(0, t.palette());
+            assertEquals(p.hFlip(), t.hFlip()); assertEquals(p.vFlip(), t.vFlip()); assertFalse(t.priority());
+            assertEquals(com.openggf.graphics.SpritePresentation.Layer.OBJECT, t.layer()); assertTrue(t.priorityShader());
+            assertEquals(0, t.occlusionMask()); assertFalse(t.ghost()); assertFalse(t.ghostColour()); assertEquals(1f, t.ghostAlpha());
+            assertEquals(0, t.rowStart()); assertEquals(8, t.rowEnd()); assertFalse(t.rowClipped());
+            assertEquals(com.openggf.graphics.SpritePresentation.Subject.WORLD, t.subject());
+            var bytes = com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(residency, 0x374 + p.offset());
+            var decoded = new com.openggf.level.Pattern(); decoded.fromSegaFormat(bytes.copy());
+            var version = picture.patternVersions().get(base + p.offset()); assertNotNull(version);
+            long[] words = {version.a(), version.b(), version.c(), version.d()}; int tileOpaque = 0;
+            for (int pixel = 0; pixel < 64; pixel++) assertEquals(decoded.getPixel(pixel % 8, pixel / 8) & 15,
+                    (int) ((words[pixel / 16] >>> ((pixel % 16) * 4)) & 15), "Actual current tile nibble " + p.offset() + ":" + pixel);
+            for (int dy = 0; dy < 8; dy++) for (int dx = 0; dx < 8; dx++) {
+                int px = p.x() + dx, py = p.y() + dy; assertTrue(px >= 0 && px < 320 && py >= 0 && py < 224);
+                int value = decoded.getPixel(p.hFlip() ? 7 - dx : dx, p.vFlip() ? 7 - dy : dy) & 15, at = py * 320 + px;
+                if (value == 0) transparent++; else {
+                    opaque++; tileOpaque++; expected[at] = argb[value];
+                    if ((argb[value] & 0xFFFFFF) != (terrain.pixels()[at] & 0xFFFFFF)) changed++;
+                }
+            }
+            if (tileOpaque == 0) zeroOpacity.add(p.offset()); // Real all-zero source tiles remain transparent, never invented witnesses.
+        }
+        assertEquals(java.util.stream.IntStream.range(0, 19).boxed().collect(java.util.stream.Collectors.toSet()), reached);
+        for (var other : picture.tiles()) {
+            if (other.patternId() >= base && other.patternId() < base + 19) continue;
+            assertTrue(other.x() + other.width() <= centreX - 20 || other.x() >= centreX + 20
+                    || other.y() + other.height() <= centreY - 16 || other.y() >= centreY + 16, "No other producer overlaps COMPLETE40x32 geometry");
+        }
+        // Include holes beside the narrow piece; collision width16 is NEVER a picture-clearance approximation.
+        for (int y = centreY - 16; y < centreY + 16; y++) for (int x = centreX - 20; x < centreX + 20; x++)
+            assertEquals(expected[y * 320 + x], image.pixels()[y * 320 + x], "Current-palette/transparent native-plane geometry " + x + ":" + y);
+        assertTrue(opaque > 0); assertTrue(transparent > 0); assertEquals(19 * 64, opaque + transparent); assertTrue(changed > 0);
+        return "opaque=" + opaque + " transparent=" + transparent + " changed=" + changed + " zero-opacity-offsets=" + zeroOpacity;
+    }
+
+    private static void assertBoulderWorldOmissions(com.openggf.graphics.SpritePresentation.Frame picture, RgbaImage image,
+            RgbaImage terrain, com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.State residency,
+            int base, List<BoulderWorldTile> literal, int centreX, int centreY) {
+        int visibleTiles = 0, visiblePieces = 0;
+        for (int index = 0; index < literal.size() + 2; index++) {
+            boolean wholePiece = index >= literal.size(); int selector = wholePiece ? index - literal.size() : index;
+            var partial = image.copy(); int removed = 0, retained = 0, sourceOpaque = 0;
+            for (int tile = 0; tile < literal.size(); tile++) {
+                var p = literal.get(tile); boolean omit = wholePiece ? p.piece() == selector : tile == selector;
+                var decoded = new com.openggf.level.Pattern();
+                decoded.fromSegaFormat(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(residency, 0x374 + p.offset()).copy());
+                for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x++) {
+                    int at = (p.y() + y) * 320 + p.x() + x;
+                    boolean changed = (image.pixels()[at] & 0xFFFFFF) != (terrain.pixels()[at] & 0xFFFFFF);
+                    if (omit) {
+                        if ((decoded.getPixel(p.hFlip() ? 7 - x : x, p.vFlip() ? 7 - y : y) & 15) != 0) sourceOpaque++;
+                        if (changed) removed++; partial.pixels()[at] = terrain.pixels()[at];
+                    } else if (changed) retained++;
+                }
+            }
+            if (sourceOpaque == 0) { assertEquals(0, removed); continue; } // No fabricated opacity for empty source bytes.
+            assertTrue(removed > 0, "A nonempty source tile/piece needs an actual visible omission witness: " + index);
+            if (wholePiece) visiblePieces++; else { visibleTiles++; assertTrue(retained > 0, "Partial geometry must remain visible"); }
+            assertThrows(AssertionError.class, () -> assertBoulderWorldPixels(picture, partial, terrain, residency, base, literal, centreX, centreY),
+                    "Every omitted visible native tile/piece must fail while source-transparent tiles remain terrain");
+        }
+        assertTrue(visibleTiles > 1); assertTrue(visiblePieces > 0);
+    }
+    // END constructed Boulder World proof.
 
 }

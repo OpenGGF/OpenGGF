@@ -1,5 +1,32 @@
 # Sonic CD Palmtree Panic Act 1 Present — partial coverage
 
+## Opening-object checkpoint, 25 October 2026
+
+This current entry extends the historical terrain-only inventory below. The
+explicit USA opening-object DEV entry now owns source-ordered player/object
+passes, native SAT, current camera-art bytes, Plane B, life/restart and same-world
+full/course restore. It is still separate from the static default. Native title,
+immediate cold PLC history, audio playback, time travel, checkpoint/completion and
+whole-act/region/viewport/donor/roster breadth remain open.
+
+| Route / rewind spot | Actual bounded evidence | Remaining limit |
+| --- | --- | --- |
+| Ring/contact/hurt/death/restart and constructed object products | Existing USA World/EGL checks remain in the final consumer selection; restart carries actual current art/table/section rather than reseeding | See the dated implementation record for individual constructed versus controller-only products; no whole-act claim |
+| Pata-Bata539 →540 →541 | Controller-only Right route, real physical52 Init and complete camera PLC9; full/course replay across queued and completed Tamabboh state | Pata remains offscreen here; CPU replay is not a new Pata GPU proof |
+| Boulder at call561, physical46 | Real layout Init completes before a later same-pass exception; exact routine/map/tile/geometry and unvisited later slots asserted | Call561 does not complete; slot47 stops at diagonal Spring selectorF |
+| Constructed Boulder preInit →Init/DrawObjects →next Main →display | USA320×224 Sonic alone, four native flips, dirty initial SOLID_TYPE1 witness through real shared Solid; literal two-piece SAT, all19 current tile versions, complete opaque/transparent geometry and omission controls | All96 dynamics clear and Sonic is placed far left at each scene's initial closed cut; no natural-route render/contact or native palette/priority/timing comparison |
+| Every selected Boulder full/course cut →forward replay | Sixteen selected cuts,32 full/course restores plus forward state/pixel comparisons, no reconstruction or producer reseed | Only the declared scene/entry/viewport/roster; broader event and lifecycle products remain missing |
+| Current art alias and module retirement | Relocated Anton overwrites18 of19 Boulder tiles in the same physical owner; partial transfer/carry replay; all513 actual current-policy entries installed at teardown then absent after close, existing shared entries identical | Teardown upload is an installation/cleanup witness, not proof all513 tiles were drawn |
+
+Source context is parent `0f13fc9c0` plus the Boulder candidate described in the
+[implementation record](../../plans/2026-10-23-sonic-cd-implementation.md).
+Final affected consumers:599/0/0/0, including all50 World and14 EGL cases,
+actual media/Java25/surfaceless EGL/S2 donor. Separate fresh guards:728/0/0/0.
+Component failures and narrow source-backed repairs are recorded separately;
+these are bounded checks, not complete smoke, native parity or USA MVP.
+
+## Historical terrain-only inventory
+
 Game/stage: `scd`, Palmtree Panic Act 1 Present, native `R11A`.
 The development stock registry admits zone 0 / act 0 / level index 0 only.
 The native catalogue retains all seventy stage payloads per release; registration

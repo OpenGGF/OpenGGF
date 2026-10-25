@@ -156,6 +156,8 @@ public final class CdObjectMappings implements CdDrawMappings {
         // visuals join the complete raw source through the unchanged exact-byte helper.
         addObject(tables, objects, CdR11aObjectAssets.Table.PATA_BATA_NORMAL_MAPPINGS, objects.pataBataNormal());
         addObject(tables, objects, CdR11aObjectAssets.Table.PATA_BATA_DAMAGED_MAPPINGS, objects.pataBataDamaged());
+        // ObjBoulder_Init stores actual USA MapSpr_Boulder $209654 (Boulder/Main.asm:30,57-59).
+        addObject(tables, objects, CdR11aObjectAssets.Table.BOULDER_MAPPINGS, objects.boulder());
         var monitorView = objects.view(CdR11aObjectAssets.Table.MONITOR_TIME_MAPPINGS);
         var staticPieces = new ArrayList<DeclaredStaticPiece>();
         // ObjMonitorItem_Init (:451-459) adds the signed frame word and then one byte, skipping the count.

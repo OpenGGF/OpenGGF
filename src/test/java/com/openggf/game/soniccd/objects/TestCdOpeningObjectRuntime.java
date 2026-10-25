@@ -4372,7 +4372,7 @@ class TestCdOpeningObjectRuntime {
         assertThrows(NullPointerException.class, () -> new CdOpeningObjectRuntime.TunnelDoorFm(null));
         assertEquals(CdTunnelDoor.FmSound.FM_A4,
                 new CdOpeningObjectRuntime.TunnelDoorFm(CdTunnelDoor.FmSound.FM_A4).sound());
-        assertEquals(13, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+        assertEquals(14, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
         var compact = new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138);
         assertEquals(494, compact.monitorTime() + 82 - compact.player());
         assertEquals(12, compact.monitorTime() - compact.tunnelDoorVertical());
@@ -4962,7 +4962,7 @@ class TestCdOpeningObjectRuntime {
                     () -> com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(state.residency(), 0x409));
             assertThrows(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.OwnershipBoundary.class,
                     () -> com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(state.residency(), 0x440));
-            assertEquals(13, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+            assertEquals(14, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
             var compact = new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138);
             assertEquals(494, compact.monitorTime() + 82 - compact.player());
             assertEquals(state, f.runtime.captureClosedCut().sectionArtState());
@@ -5116,13 +5116,21 @@ class TestCdOpeningObjectRuntime {
     @Test void cameraArtActiveReversalReachesUnknownBoulderPrepareAndRetainsAlreadyWrittenPrefix() throws Exception {
         try (var f = new Fixture()) {
             cameraArtIdle(f); cameraArtCycle(f, 0x680, 0); cameraArtBegin(f, 0);
+            f.runtime.spawnBeforeReservedSlots(); f.body(2); f.runtime.runDynamicSlotsAfterReservedSlots(); f.runtime.finishAfterCamera(POST);
+            f.runtime.finishOrdinaryTail(); // The real reversal list now prepares its owned first Boulder row.
+            assertEquals(19, f.runtime.sectionArtState().remainingTilesWord());
+            assertEquals(0x6E80, f.runtime.sectionArtState().queue().headDestination());
+            for (int i = 0; i < 6; i++) cameraArtCycle(f, 0, 0); // Eighteen real complete-tile writes, no filtering.
+            assertEquals(1, f.runtime.sectionArtState().remainingTilesWord());
+            cameraArtBegin(f, 0); // Nineteenth tile completes and pops Boulder; Animals waits for ProcessPLCs.
             var prefix = f.runtime.sectionArtState().residency(); var rings = f.runtime.ringGlobals();
+            cameraArtBytes(prefix, 0x6E80, cameraArtSource(f, com.openggf.game.soniccd.level.CdR11aAsset.ART_BOULDER));
             f.runtime.spawnBeforeReservedSlots(); f.body(2); f.runtime.runDynamicSlotsAfterReservedSlots(); f.runtime.finishAfterCamera(POST);
             var fault = assertThrows(com.openggf.game.soniccd.resources.CdR11aSectionArt.SectionArtException.class, f.runtime::finishOrdinaryTail);
             assertEquals(com.openggf.game.soniccd.resources.CdR11aSectionArt.Reason.UNKNOWN_SOURCE, fault.reason());
             assertEquals(prefix, f.runtime.sectionArtState().residency()); assertEquals(fault.state(), f.runtime.sectionArtState());
             assertEquals(0, f.runtime.sectionArtState().sectionWord()); assertEquals(0, f.runtime.sectionArtState().remainingTilesWord());
-            assertEquals(0x6E80, f.runtime.sectionArtState().queue().headDestination());
+            assertEquals(0x7100, f.runtime.sectionArtState().queue().headDestination());
             assertTrue(f.runtime.sectionArtState().stopped()); assertTrue(f.runtime.closed()); assertTrue(f.frame.closed());
             assertEquals(rings, f.runtime.ringGlobals(), "ring tail follows the failed native ProcessPLCs cut");
             assertThrows(IllegalStateException.class, () -> f.runtime.serviceVBlank(PlcLifecyclePhase.NORMAL_PAUSE));
@@ -5394,11 +5402,16 @@ class TestCdOpeningObjectRuntime {
     /** Explicit DEV preload for the two inherited restart helpers, not a native carry/history assertion. */
     private static CdOpeningObjectRuntime.CameraArtRestartIngress cameraArtDevIngress(CdR11aAssets assets) throws java.io.IOException {
         var objects = assets.openingObjects(); var frontier = objects.frontierArtBank();
-        return new CdOpeningObjectRuntime.CameraArtRestartIngress(
-                com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.devSeed(objects.initialArtBank().binding(
-                        com.openggf.game.soniccd.level.CdR11aAsset.ART_MOSQUI).bytes(), frontier.binding(
-                        com.openggf.game.soniccd.level.CdR11aAsset.ART_3D_PLANT).bytes(), frontier.binding(
-                        com.openggf.game.soniccd.level.CdR11aAsset.ART_3D_RAMP_BOOST).bytes()), CdAssetBytes.copyOf(new byte[512]), 0);
+        var resident = com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.devSeed(objects.initialArtBank().binding(
+                com.openggf.game.soniccd.level.CdR11aAsset.ART_MOSQUI).bytes(), frontier.binding(
+                com.openggf.game.soniccd.level.CdR11aAsset.ART_3D_PLANT).bytes(), frontier.binding(
+                com.openggf.game.soniccd.level.CdR11aAsset.ART_3D_RAMP_BOOST).bytes());
+        // Explicit TEST ingress for the new eagerly validated nineteen-tile policy; never a restart default.
+        var source = objects.sectionArtSources().source(com.openggf.game.soniccd.level.CdR11aAsset.ART_BOULDER);
+        for (int offset = 0; offset < source.decode().bytes().length(); offset += 32)
+            resident = com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.writeTile(resident,
+                    source.canonicalPlc().vramAddress() + offset, source.decode().bytes().slice(offset, 32));
+        return new CdOpeningObjectRuntime.CameraArtRestartIngress(resident, CdAssetBytes.copyOf(new byte[512]), 0);
     }
 
     private static void cameraArtIdle(Fixture f) {
@@ -5443,4 +5456,479 @@ class TestCdOpeningObjectRuntime {
                         com.openggf.game.soniccd.level.CdR11aObjectAssets.Table.PATA_BATA_NORMAL_MAPPINGS).range().nativeAddress());
     }
     // END current-camera/Pata Runtime tests-first additions.
+
+    // BEGIN Boulder Runtime R1 tests-first additions. All Java UNRUN by this source-only author.
+    // N=1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff: Boulder/Main.asm:7-51;
+    // Object Solid.asm:15-146,188-479; Palmtree Panic/Data (Act 1 Present).asm:85-100,138-143,209-214.
+    // Every ingress is constructed over actual media/owners, not a World, route or native-entry certificate.
+    // Private-commit adversarial cases reflect ONLY the runtime phase/dispatch/guard seam, use a real pure
+    // Solid result, and inspect all pool/Frame stores before/after. They do not fabricate Result values.
+    // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>
+
+    @Test void boulderFourteenthBankPreservesEveryOldConstructorAndTheOneAggregate() {
+        var expected = new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138, 208, 236, 299, 369, 374,
+                413, 449, 464, 500, 512, 594);
+        assertEquals(14, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+        assertEquals(513, expected.boulder() + 19 - expected.player());
+        assertEquals(expected, new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138));
+        assertEquals(expected, new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138, 208, 236));
+        assertEquals(expected, new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138, 208, 236, 299, 369, 374));
+        assertEquals(expected, new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138, 208, 236, 299, 369, 374, 413));
+        assertEquals(expected, new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138, 208, 236, 299, 369, 374, 413, 449));
+        assertEquals(expected, new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138, 208, 236, 299, 369, 374, 413, 449, 464));
+        assertEquals(expected, new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138, 208, 236, 299, 369, 374, 413, 449, 464, 500));
+        assertEquals(expected, new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138, 208, 236, 299, 369, 374, 413, 449, 464, 500, 512));
+        assertEquals(982, new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138, 208, 236, 299, 369, 374,
+                413, 449, 464, 500, 900).boulder());
+        assertEquals(1, java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredFields())
+                .filter(field -> field.getType() == CdBoulder.class).count());
+        assertEquals(1, java.util.Arrays.stream(CdOpeningObjectRuntime.Snapshot.class.getDeclaredFields())
+                .filter(field -> field.getType() == com.openggf.game.soniccd.resources.CdR11aSectionArt.State.class).count());
+        assertTrue(java.util.Arrays.stream(CdOpeningObjectRuntime.Snapshot.class.getDeclaredFields()).noneMatch(field ->
+                field.getType() == CdBoulder.class || field.getType() == CdBoulder.Result.class
+                || field.getType() == CdBoulder.SolidCall.class
+                || field.getType() == com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.State.class));
+        assertTrue(java.util.Arrays.stream(CdOpeningObjectRuntime.SoundRequest.class.getPermittedSubclasses())
+                .noneMatch(type -> type.getSimpleName().contains("Boulder")));
+    }
+
+    @Test void boulderColdDevSeedsExactlyNineteenCompleteTilesFromTheSameSevenSourceBank() throws Exception {
+        try (var f = new Fixture()) {
+            var objects = f.assets.openingObjects(); var bank = objects.sectionArtSources();
+            assertSame(bank, objects.sectionArtSources()); assertEquals(7, bank.sources().size());
+            var source = bank.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_BOULDER);
+            assertEquals(2, source.canonicalPlcId()); assertEquals(0, source.canonicalRowIndex());
+            assertEquals(f.assets.loadPlan().plcs().get(2).entries().getFirst(), source.canonicalPlc());
+            assertEquals(0x6E80, source.canonicalPlc().vramAddress()); assertEquals(19, source.tileCount());
+            var state = f.runtime.sectionArtState(); var resident = state.residency();
+            cameraArtBytes(resident, 0x6E80, source.decode().bytes());
+            int known = 0;
+            for (var region : com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.Region.values())
+                for (byte value : resident.region(region).knownMask().copy()) known += value;
+            assertEquals((70 + 28 + 63 + 19) * 32, known, "only legacy three preloads plus Boulder are known");
+            var lower = resident.region(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.Region.AT_6E00);
+            for (int offset = 0; offset < 0x600; offset++) {
+                boolean expected = offset >= 0x80 && offset < 0x2E0;
+                assertEquals(expected, lower.knownByte(offset).isPresent(), "lower known byte " + offset);
+            }
+            for (int nativeId : List.of(0x370, 0x373, 0x387, 0x388, 0x39B)) boulderUnknown(resident, nativeId);
+            assertEquals(0, state.sectionWord()); assertEquals(0, state.remainingTilesWord());
+            assertEquals(0, state.queue().headSource()); assertTrue(state.decoder().isEmpty());
+            assertArrayEquals(new byte[512], state.codeTable().copy());
+            var pixels = boulderPixels(f, resident);
+            for (int i = 0; i < 19; i++) {
+                var tile = pixels.resolve(0x374 + i); assertEquals(BANKS.boulder() + i, tile.logicalPatternId());
+                assertEquals(CdObjectPresentation.patternVersion(source.decode().bytes().slice(i * 32, 32)), tile.version());
+            }
+        }
+    }
+
+    @Test void boulderAllFourteenSpansRejectEveryPairAndBothBoundsBeforeEmptySatAdmission() throws Exception {
+        var assets = load(); var carry = cameraArtDevIngress(assets);
+        int[] bases = {100,124,138,208,236,299,369,374,413,449,464,500,512,594};
+        int[] counts = {24,14,70,28,63,70,5,39,36,15,36,12,82,19};
+        var bad = new ArrayList<CdOpeningObjectRuntime.LogicalBanks>();
+        for (int left = 0; left < 14; left++) for (int right = left + 1; right < 14; right++) {
+            int[] overlap = bases.clone(); overlap[right] = bases[left]; bad.add(boulderBanks(overlap));
+        }
+        for (int index = 0; index < 14; index++) for (int value : new int[] {-1, Integer.MAX_VALUE - counts[index] + 2}) {
+            int[] invalid = bases.clone(); invalid[index] = value; bad.add(boulderBanks(invalid));
+        }
+        assertEquals(119, bad.size());
+        try (var frame = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, 0)) {
+            for (var banks : bad) {
+                assertThrows(IllegalArgumentException.class, () -> CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(
+                        assets, frame, INITIAL, CONTACT, SCORE, LEVEL, new byte[640], banks, PRE, value -> { }));
+                assertThrows(IllegalArgumentException.class, () -> CdOpeningObjectRuntime.usaR11aRestartDevEmptySatPreloadedArt(
+                        assets, frame, INITIAL, CONTACT, SCORE, LEVEL, CdAssetBytes.copyOf(new byte[CdObjectPlacementRuntime.SAVED_BANK_BYTES]),
+                        new CdPowerupArtRuntime.State(new byte[0x480], new byte[0x480]), carry, new byte[640], banks, PRE, value -> { }));
+                assertFalse(frame.closed()); assertEquals(0, frame.vIntClock().deltaSinceAdmittedCut());
+            }
+        }
+    }
+
+    @Test void boulderFreshInitDrawBuildThenNextMainUsesActualVisibilityAndSharedSolid() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var pool = f.runtime.placement().pool();
+            seedSolidPlayer(f, 2, 0, 0, 0x123, 0x100, 0x01001234, 0x075D5678);
+            var image = boulderImage(f, pool.state(40), 0, 0).moveWord(X_FRACTION, 0xA55A).moveWord(Y_FRACTION, 0x5AA5);
+            pool.write(image); var actor = f.frame.state(); var env = f.frame.environment(); var sounds = f.runtime.lastSoundRequests();
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(boulderInit(f, image), f.slot(40)); assertEquals(actor, f.frame.state());
+            assertEquals(env, f.frame.environment()); assertEquals(sounds, f.runtime.lastSoundRequests());
+            var sat = f.runtime.finishAfterCamera(POST); assertEquals(2, sat.provenance().stream().filter(p -> p.slotRef().wholeIndex() == 40).count());
+            int offset = satEntry(sat, 40); assertEquals(0x374, word(sat.bytes(), offset + 4));
+            assertEquals(0x377, word(sat.bytes(), offset + 12)); assertEquals(0x84, f.slot(40).spriteFlags());
+            f.runtime.finishOrdinaryTail();
+            f.service(0); assertEquals(CdObjectPresentation.convert(sat, boulderPixels(f, f.runtime.sectionArtState().residency())), f.runtime.displayedFrame());
+            assertEquals(19, f.runtime.displayedFrame().patternVersions().keySet().stream()
+                    .filter(id -> id >= BANKS.boulder() && id < BANKS.boulder() + 19).count());
+            f.runtime.spawnBeforeReservedSlots(); f.body(3); pool.clearDynamicSlots();
+            seedSolidPlayer(f, 2, 0, 0, 0x123, 0x100, 0x01001234, 0x075D5678);
+            pool.write(boulderInit(f, image).moveByte(SPRITE_FLAGS, 0x84));
+            actor = f.frame.state(); env = f.frame.environment(); var expected = boulderSolid(f, f.slot(40));
+            assertEquals(CdSolidObject.Path.STAND_ON, expected.path()); f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertTunnelDoorSolidApplied(f, actor, env, expected); assertEquals(40, f.frame.state().objectLinks().standObject());
+            assertEquals(0x5678, f.frame.state().motion().centreY16_16() & 0xFFFF); monitorFinish(f);
+        }
+    }
+
+    @Test void boulderDirtyInitPublishesSharedFractionsGlobalsAndOtherSlotBeforeLaterConsumers() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var pool = f.runtime.placement().pool();
+            seedSolidPlayer(f, 8, 41, 0, 0x234, 0x100, 0x01008000, 0x075E1234);
+            seedTunnelDoorGlobals(f, 1, 0x3456, 0x55, 0x66);
+            var dirty = boulderImage(f, pool.state(40), 0, 0x80).moveByte(WIDTH, 1).moveByte(Y_RADIUS, 2)
+                    .moveByte(PRIORITY, 7).moveWord(TILE, 0xDEAD).moveByte(ROUTINE_2, 0xA5)
+                    .moveWord(X_VELOCITY, 0x123).moveWord(Y_FRACTION, 0xBEEF);
+            var olderStand = boulderImage(f, pool.state(41), 2, 4).moveByte(FLAGS, 0xA8);
+            pool.write(dirty); pool.write(olderStand);
+            pool.write(spring(f, pool.state(42), 2, 4, 0, 0).moveByte(ROUTINE_2, 5)
+                    .moveWord(X_FRACTION, 0x4567).moveWord(Y_FRACTION, 0x89AB));
+            var untouched = pool.state(127).moveWord(TUNNEL_DOOR_TIMER, 0xDEAD); pool.write(untouched);
+            var actor = f.frame.state(); var env = f.frame.environment(); var display = f.frame.display();
+            var bank = horizontalReserved(f.runtime); var sounds = f.runtime.lastSoundRequests();
+            var expected = boulderSolid(f, boulderInit(f, dirty));
+            assertEquals(CdSolidObject.Path.STAND_ON, expected.path());
+            assertEquals(List.of(41), expected.otherSlots().stream().map(s -> s.identity().wholeIndex()).toList());
+            assertTrue(expected.globalWrites().contains(CdSolidObject.GlobalField.PRIMARY_ANGLE));
+            assertTrue(expected.globalWrites().contains(CdSolidObject.GlobalField.SECONDARY_ANGLE));
+            f.runtime.runDynamicSlotsAfterReservedSlots(); assertTunnelDoorSolidApplied(f, actor, env, expected);
+            assertEquals(0xA300, f.frame.state().motion().centreX16_16() & 0xFFFF);
+            assertEquals(0x1234, f.frame.state().motion().centreY16_16() & 0xFFFF);
+            assertEquals(expected.object().moveByte(SPRITE_FLAGS, 4), f.slot(40));
+            assertEquals(olderStand.moveByte(FLAGS, 0xA0), f.slot(41));
+            assertEquals(expected.player().actor().motion().centreX16_16() >>> 16, f.slot(42).centreX());
+            assertEquals(expected.player().actor().motion().centreY16_16() >>> 16, f.slot(42).centreY());
+            assertEquals(0x4567, f.slot(42).word(X_FRACTION)); assertEquals(0x89AB, f.slot(42).word(Y_FRACTION));
+            assertEquals(untouched, f.slot(127)); assertEquals(display, f.frame.display());
+            assertEquals(bank, horizontalReserved(f.runtime)); assertEquals(sounds, f.runtime.lastSoundRequests()); monitorFinish(f);
+        }
+    }
+
+    @Test void boulderSidePushAndDetachUseSharedPhysicalLinksFractionsAndOneChargeStop() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var pool = f.runtime.placement().pool();
+            seedSolidPlayer(f, 0, 0, 0, 0x600, 0, 0x00E71234, 0x07805678);
+            pool.write(boulderImage(f, pool.state(46), 2, 0x84));
+            var actor = f.frame.state(); var env = f.frame.environment(); var expected = boulderSolid(f, f.slot(46));
+            assertEquals(CdSolidObject.Path.HALT_ON_X, expected.path()); assertEquals(46, expected.player().pushObject());
+            f.runtime.runDynamicSlotsAfterReservedSlots(); assertTunnelDoorSolidApplied(f, actor, env, expected);
+            assertEquals(0x00E61234, f.frame.state().motion().centreX16_16());
+            assertEquals(0, f.frame.state().motion().xVelocity()); assertEquals(0x20, f.slot(46).flags() & 0x20); monitorFinish(f);
+        }
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var pool = f.runtime.placement().pool();
+            seedSolidPlayer(f, 8, 40, 1, 0x123, 0, 0x02001234, 0x07805678);
+            pool.write(boulderImage(f, pool.state(40), 2, 0x84).moveByte(FLAGS, 8));
+            pool.write(boulderImage(f, pool.state(41), 2, 0x84));
+            var actor = f.frame.state(); var env = f.frame.environment(); var expected = boulderSolid(f, f.slot(40));
+            assertEquals(List.of(CdPlayerTouchResponse.FmSound.FM_CHARGESTOP), expected.fmRequests());
+            var sounds = new ArrayList<>(f.runtime.lastSoundRequests()); horizontalSharedSounds(sounds, expected);
+            f.runtime.runDynamicSlotsAfterReservedSlots(); assertTunnelDoorSolidApplied(f, actor, env, expected);
+            assertEquals(0, f.frame.state().objectLinks().standObject()); assertEquals(0, f.slot(40).flags() & 8);
+            assertEquals(sounds, f.runtime.lastSoundRequests(), "one helper sound, no Boulder sound type or metadata replay"); monitorFinish(f);
+        }
+    }
+
+    @Test void boulderSharedKillFmAndCompletedPrefixSurviveTheLaterPhysicalUnknown() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var pool = f.runtime.placement().pool();
+            seedSolidPlayer(f, 0, 0, 0, 0x123, 0, 0x01008000, 0x07991234);
+            seedTunnelDoorGlobals(f, 1, 0x3456, 0x55, 0x66);
+            pool.write(boulderImage(f, pool.state(40), 2, 0x84).moveWord(Y_VELOCITY, 0x100));
+            pool.write(pool.state(41).moveByte(ID, 0x7E));
+            var actor = f.frame.state(); var env = f.frame.environment(); var expected = boulderSolid(f, f.slot(40));
+            assertEquals(CdSolidObject.Path.HIT_BOTTOM, expected.path()); assertEquals(6, expected.player().actor().motion().routine());
+            assertEquals(List.of(CdPlayerTouchResponse.FmSound.FM_HURT), expected.fmRequests());
+            var sounds = new ArrayList<>(f.runtime.lastSoundRequests()); horizontalSharedSounds(sounds, expected);
+            var failure = assertThrows(UnsupportedOperationException.class, f.runtime::runDynamicSlotsAfterReservedSlots);
+            assertTrue(failure.getMessage().contains("41")); assertTrue(failure.getMessage().contains("7e"));
+            assertTunnelDoorSolidApplied(f, actor, env, expected); assertEquals(expected.object().moveByte(SPRITE_FLAGS, 4), f.slot(40));
+            assertEquals(sounds, f.runtime.lastSoundRequests()); assertTrue(f.runtime.closed()); assertTrue(f.frame.closed());
+            assertThrows(IllegalStateException.class, f.runtime::runDynamicSlotsAfterReservedSlots);
+        }
+    }
+
+    @Test void boulderOuterVisibilityGatesOnlyItsOwnSolidAndGoodFutureNeverConvertsIt() throws Exception {
+        try (var f = new Fixture()) {
+            cameraArtIdle(f);
+            f.runtime.restore((CdOpeningObjectRuntime.Snapshot) horizontalReplacePartition(f.runtime.captureClosedCut(),
+                    CdOpeningObjectRuntime.DevGlobals.class, new CdOpeningObjectRuntime.DevGlobals(1, 1)));
+            cameraArtBegin(f, 0); f.runtime.spawnBeforeReservedSlots(); f.body(2); var pool = f.runtime.placement().pool(); pool.clearDynamicSlots();
+            seedSolidPlayer(f, 8, 5, 0, 0, 0, 0x01001234, 0x075D5678);
+            pool.write(boulderImage(f, pool.state(40), 0, 0));
+            var actor = f.frame.state(); var env = f.frame.environment();
+            f.runtime.runDynamicSlotsAfterReservedSlots(); assertEquals(CdBoulder.OBJECT_ID, f.slot(40).id());
+            assertEquals(actor, f.frame.state()); assertEquals(env, f.frame.environment()); monitorFinish(f);
+        }
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var pool = f.runtime.placement().pool();
+            seedSolidPlayer(f, 8, 5, 0, 0, 0, 0x01001234, 0x075D5678);
+            var dirty = boulderImage(f, pool.state(40), 0, 0x80); pool.write(dirty);
+            var actor = f.frame.state(); var env = f.frame.environment();
+            var failure = assertThrows(CdSolidObject.UnsupportedSolidObject.class, f.runtime::runDynamicSlotsAfterReservedSlots);
+            assertEquals(CdSolidObject.UnsupportedBoundary.RESERVED_SLOT_ADDRESS, failure.boundary());
+            assertEquals(boulderInit(f, dirty), f.slot(40)); assertEquals(actor, f.frame.state()); assertEquals(env, f.frame.environment());
+            assertTrue(f.runtime.closed()); assertTrue(f.frame.closed());
+        }
+    }
+
+    @Test void boulderRestartCarriesChangedNineteenValuesAndEveryMaskWithoutReseedingOrService() throws Exception {
+        try (var f = new Fixture()) {
+            var resident = f.runtime.sectionArtState().residency();
+            for (int tile = 0; tile < 19; tile++) {
+                byte[] bytes = new byte[32]; java.util.Arrays.fill(bytes, (byte) (0x81 + tile));
+                resident = com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.writeTile(resident,
+                        0x6E80 + tile * 32, CdAssetBytes.copyOf(bytes));
+            }
+            byte[] table = new byte[512]; for (int i = 0; i < table.length; i++) table[i] = (byte) (i ^ 0xAC);
+            var ingress = new CdOpeningObjectRuntime.CameraArtRestartIngress(resident, CdAssetBytes.copyOf(table), 0x005A);
+            var carried = resident;
+            try (var frame = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(f.assets, 0)) {
+                var publications = new ArrayList<CdPlayerArtRuntime.State>(); frame.bindArtPublication((request, state) -> publications.add(state));
+                try (var runtime = CdOpeningObjectRuntime.usaR11aRestartDevEmptySatPreloadedArt(f.assets, frame, INITIAL, CONTACT, SCORE, LEVEL,
+                        CdAssetBytes.copyOf(new byte[CdObjectPlacementRuntime.SAVED_BANK_BYTES]), new CdPowerupArtRuntime.State(new byte[0x480], new byte[0x480]),
+                        ingress, new byte[640], BANKS, PRE, value -> fail("restart has no angle callback"))) {
+                    assertSame(carried, runtime.sectionArtState().residency()); assertArrayEquals(table, runtime.sectionArtState().codeTable().copy());
+                    assertEquals(0x005A, runtime.sectionArtState().sectionWord()); assertEquals(0, runtime.sectionArtState().remainingTilesWord());
+                    assertEquals(0, runtime.sectionArtState().queue().headSource()); assertTrue(runtime.sectionArtState().decoder().isEmpty());
+                    for (var region : com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.Region.values())
+                        assertEquals(carried.region(region), runtime.sectionArtState().residency().region(region));
+                    boulderUnknown(carried, 0x373); boulderUnknown(carried, 0x387); boulderUnknown(carried, 0x388);
+                    var pixels = boulderPixels(f, carried);
+                    for (int tile = 0; tile < 19; tile++) assertEquals(CdObjectPresentation.patternVersion(
+                            com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(carried, 0x374 + tile)), pixels.resolve(0x374 + tile).version());
+                    assertTrue(publications.isEmpty()); assertEquals(0, frame.vIntClock().deltaSinceAdmittedCut());
+                    assertTrue(runtime.displayedFrame().tiles().isEmpty());
+                }
+            }
+        }
+    }
+
+    @Test void boulderRestartWithUnknownBoulderMaskStopsWithoutManufacturingKnownSourceBytes() throws Exception {
+        var assets = load(); var objects = assets.openingObjects(); var frontier = objects.frontierArtBank();
+        var sparse = com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.devSeed(objects.initialArtBank().binding(
+                com.openggf.game.soniccd.level.CdR11aAsset.ART_MOSQUI).bytes(), frontier.binding(
+                com.openggf.game.soniccd.level.CdR11aAsset.ART_3D_PLANT).bytes(), frontier.binding(
+                com.openggf.game.soniccd.level.CdR11aAsset.ART_3D_RAMP_BOOST).bytes());
+        for (int tile = 0; tile < 18; tile++) {
+            byte[] changed = new byte[32]; java.util.Arrays.fill(changed, (byte) (0xA1 + tile));
+            sparse = com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.writeTile(sparse,
+                    0x6E80 + tile * 32, CdAssetBytes.copyOf(changed));
+        }
+        var partial = sparse;
+        var mask = partial.region(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.Region.AT_6E00).knownMask();
+        var carry = new CdOpeningObjectRuntime.CameraArtRestartIngress(partial, CdAssetBytes.copyOf(new byte[512]), 0);
+        try (var frame = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, 0)) {
+            var failure = assertThrows(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.OwnershipBoundary.class,
+                    () -> CdOpeningObjectRuntime.usaR11aRestartDevEmptySatPreloadedArt(assets, frame, INITIAL, CONTACT, SCORE, LEVEL,
+                            CdAssetBytes.copyOf(new byte[CdObjectPlacementRuntime.SAVED_BANK_BYTES]), new CdPowerupArtRuntime.State(new byte[0x480], new byte[0x480]),
+                            carry, new byte[640], BANKS, PRE, value -> { }));
+            assertEquals(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.Boundary.UNKNOWN_PATTERN, failure.boundary());
+            assertEquals(0x386, failure.nativePatternId()); assertFalse(frame.closed()); assertEquals(0, frame.vIntClock().deltaSinceAdmittedCut());
+            assertArrayEquals(mask.copy(), partial.region(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.Region.AT_6E00).knownMask().copy()); boulderUnknown(partial, 0x386);
+        }
+    }
+
+    @Test void boulderRelocatedAntonWritesEighteenOverlapsAtSelectedServiceAndReplaysPartialGeneration() throws Exception {
+        try (var f = new Fixture()) {
+            cameraArtIdle(f); cameraArtBegin(f, 0); f.runtime.spawnBeforeReservedSlots(); f.body(2);
+            var pool = f.runtime.placement().pool(); pool.clearDynamicSlots(); pool.write(boulderImage(f, pool.state(40), 0, 0));
+            f.runtime.runDynamicSlotsAfterReservedSlots(); pool.write(f.slot(40).moveWord(X, 0x2080));
+            var c = new CameraWords(0x1980, PRE.yWord()); var sat = f.runtime.finishAfterCamera(new DrawCameras(c, c, c));
+            f.runtime.finishOrdinaryTail(); assertEquals(22, f.runtime.sectionArtState().remainingTilesWord());
+            assertEquals(0x6E00, f.runtime.sectionArtState().queue().headDestination());
+            var boulder = cameraArtSource(f, com.openggf.game.soniccd.level.CdR11aAsset.ART_BOULDER);
+            var anton = cameraArtSource(f, com.openggf.game.soniccd.level.CdR11aAsset.ART_ANTON);
+            f.service(0x80); assertTrue(f.frame.paused()); var first = f.runtime.displayedFrame(); var oldVersions = first.patternVersions();
+            for (int tile = 0; tile < 19; tile++) assertEquals(CdObjectPresentation.patternVersion(boulder.slice(tile * 32, 32)), oldVersions.get(BANKS.boulder() + tile));
+            f.service(0); var partial = f.runtime.displayedFrame();
+            assertArrayEquals(sat.bytes(), f.runtime.cpuSat().bytes()); assertEquals(16, f.runtime.sectionArtState().remainingTilesWord());
+            for (int tile = 0; tile < 19; tile++) assertEquals(CdObjectPresentation.patternVersion(
+                    tile < 2 ? anton.slice((tile + 4) * 32, 32) : boulder.slice(tile * 32, 32)), partial.patternVersions().get(BANKS.boulder() + tile));
+            assertEquals(CdObjectPresentation.convert(sat, boulderPixels(f, f.runtime.sectionArtState().residency())), partial);
+            var actor = f.frame.captureActor(); var shared = f.frame.captureShared(); var objects = f.runtime.captureClosedCut();
+            for (int i = 0; i < 6; i++) f.service(0);
+            var complete = f.runtime.captureClosedCut(); var picture = f.runtime.displayedFrame();
+            assertEquals(0, f.runtime.sectionArtState().remainingTilesWord()); assertEquals(0x7100, f.runtime.sectionArtState().queue().headDestination());
+            for (int tile = 0; tile < 19; tile++) assertEquals(CdObjectPresentation.patternVersion(
+                    tile < 18 ? anton.slice((tile + 4) * 32, 32) : boulder.slice(tile * 32, 32)), picture.patternVersions().get(BANKS.boulder() + tile));
+            assertEquals(oldVersions, first.patternVersions()); boulderUnknown(f.runtime.sectionArtState().residency(), 0x388);
+            f.frame.validateActorRestore(actor); f.frame.validateSharedRestore(shared); f.runtime.validateRestore(objects);
+            f.frame.restoreActor(actor); f.frame.restoreShared(shared); f.runtime.restore(objects);
+            assertEquals(objects.sectionArtState(), f.runtime.sectionArtState()); assertEquals(objects.reserved().slots(), horizontalReserved(f.runtime));
+            assertSame(partial, f.runtime.displayedFrame());
+            for (int i = 0; i < 6; i++) f.service(0);
+            assertMonitorSnapshot(complete, f.runtime.captureClosedCut()); assertEquals(complete.sectionArtState(), f.runtime.sectionArtState());
+            assertEquals(complete.reserved().slots(), horizontalReserved(f.runtime)); assertArrayEquals(sat.bytes(), f.runtime.cpuSat().bytes());
+            assertEquals(picture, f.runtime.displayedFrame());
+            var stable = f.runtime.displayedFrame(); f.frame.prepareInput(0); f.runtime.serviceVBlank(PlcLifecyclePhase.LAG);
+            assertSame(stable, f.runtime.displayedFrame()); assertEquals(complete.sectionArtState(), f.runtime.sectionArtState());
+        }
+    }
+
+    @Test void boulderClosedStandingCutRestoresAndReplaysTheNextRealBodyAndWholePool() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var pool = f.runtime.placement().pool();
+            seedSolidPlayer(f, 2, 0, 0, 0, 0x100, 0x01001234, 0x075D5678);
+            pool.write(boulderImage(f, pool.state(40), 2, 0x84)); f.runtime.runDynamicSlotsAfterReservedSlots(); monitorFinish(f);
+            assertEquals(40, f.frame.state().objectLinks().standObject());
+            var actor = f.frame.captureActor(); var shared = f.frame.captureShared(); var cut = f.runtime.captureClosedCut();
+            f.service(0); f.runtime.spawnBeforeReservedSlots(); assertEquals(CdPlayerBody.Boundary.MAIN_RETURN, f.body(3).result().boundary());
+            f.runtime.runDynamicSlotsAfterReservedSlots(); monitorFinish(f);
+            var next = f.runtime.captureClosedCut(); var nextActor = f.frame.captureActor(); var nextShared = f.frame.captureShared(); var cpu = f.runtime.cpuSat().bytes();
+            f.frame.validateActorRestore(actor); f.frame.validateSharedRestore(shared); f.runtime.validateRestore(cut);
+            f.frame.restoreActor(actor); f.frame.restoreShared(shared); f.runtime.restore(cut);
+            f.service(0); f.runtime.spawnBeforeReservedSlots(); f.body(3); f.runtime.runDynamicSlotsAfterReservedSlots(); monitorFinish(f);
+            assertMonitorSnapshot(next, f.runtime.captureClosedCut()); assertEquals(next.sectionArtState(), f.runtime.sectionArtState());
+            assertEquals(next.reserved().slots(), horizontalReserved(f.runtime)); assertEquals(nextActor, f.frame.captureActor());
+            assertEquals(nextShared.environment(), f.frame.environment()); assertSpinTunnelArt(nextShared.artState(), f.frame.artState());
+            assertArrayEquals(cpu, f.runtime.cpuSat().bytes());
+        }
+    }
+
+    @Test void boulderPrivateCommitRejectsWrongPhaseEveryMutualGuardAndWrongPhysicalVisitBeforeStores() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var pool = f.runtime.placement().pool();
+            seedSolidPlayer(f, 2, 0, 0, 0, 0x100, 0x01001234, 0x075D5678);
+            pool.write(boulderImage(f, pool.state(40), 2, 0x84)); var call = boulderCall(f, pool.state(40));
+            boulderRejectCommit(f, call); // Actual PLAYER_DONE, not the admitted callback phase.
+            boulderSet(f.runtime, "phase", CdOpeningObjectRuntime.Phase.DYNAMIC_SLOTS); boulderSet(f.runtime, "operating", true);
+            try {
+                boulderSet(f.runtime, "dispatchWholeIndex", 41); boulderRejectCommit(f, call); boulderSet(f.runtime, "dispatchWholeIndex", 40);
+                for (String guard : List.of("inDrawCallback", "inSolidCommit", "inSpringLaunch", "inSpinTunnelCommit", "inTunnelDoorFm",
+                        "inHorizontalTunnelDoorSolid", "inHorizontalTunnelDoorFm", "inMonitorAngle", "inMonitorFm", "inMonitorAward",
+                        "inTimePostDirection", "inTimePostSubCpu")) {
+                    boulderSet(f.runtime, guard, true); boulderRejectCommit(f, call); boulderSet(f.runtime, guard, false);
+                }
+            } finally { boulderUnstage(f); }
+        }
+    }
+
+    @Test void boulderPrivateCommitPreflightsFullNinetySixImagesForeignOwnershipAndExactFrameCas() throws Exception {
+        for (int scenario = 0; scenario < 7; scenario++) try (var f = new Fixture(); var foreign = new Fixture()) {
+            springDeviceCut(f); var pool = f.runtime.placement().pool();
+            seedSolidPlayer(f, 8, 41, 0, 0x234, 0x100, 0x01008000, 0x075E1234);
+            pool.write(boulderImage(f, pool.state(40), 2, 0x84));
+            pool.write(boulderImage(f, pool.state(41), 2, 4).moveByte(FLAGS, 8));
+            var call = boulderCall(f, pool.state(40));
+            if (scenario == 0) pool.write(pool.state(127).moveWord(TUNNEL_DOOR_TIMER, 0xA55A)); // Unchanged-result slot still CAS-protected.
+            if (scenario == 1) pool.write(pool.state(40).moveByte(ID, 0x7E));
+            if (scenario == 2) { // Real foreign pure result/cut, never a copied or fabricated Result.
+                var otherPool = foreign.runtime.placement().pool(); otherPool.write(boulderImage(foreign, otherPool.state(40), 2, 0x84));
+                call = boulderCall(foreign, otherPool.state(40));
+            }
+            if (scenario == 3) seedSolidPlayer(f, 8, 41, 0, 0x234, 0x100, 0x01008001, 0x075E1234);
+            if (scenario == 4) seedTunnelDoorGlobals(f, 0, 0xA55A, 0x12, 0x34);
+            if (scenario == 5 || scenario == 6) {
+                var images = new ArrayList<>(call.callCut().slots());
+                if (scenario == 5) images.removeLast();
+                else images.set(95, foreign.runtime.placement().pool().state(127));
+                var malformed = (CdObjectPool.Snapshot) horizontalReplacePartition(call.callCut(), List.class, images);
+                call = new CdBoulder.SolidCall(malformed, call.expectedPlayer(), call.expectedGlobals(), call.result());
+            }
+            boulderSet(f.runtime, "phase", CdOpeningObjectRuntime.Phase.DYNAMIC_SLOTS); boulderSet(f.runtime, "operating", true);
+            boulderSet(f.runtime, "dispatchWholeIndex", 40);
+            try { boulderRejectCommit(f, call); } finally { boulderUnstage(f); }
+        }
+    }
+
+    @Test void boulderSharedCommitFlagRejectsEveryExistingDrawOrCallbackBeforeAnyStores() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var pool = f.runtime.placement().pool(); pool.write(boulderImage(f, pool.state(40), 2, 0x84));
+            boulderSet(f.runtime, "phase", CdOpeningObjectRuntime.Phase.DYNAMIC_SLOTS); boulderSet(f.runtime, "operating", true);
+            boulderSet(f.runtime, "dispatchWholeIndex", 40); boulderSet(f.runtime, "inSolidCommit", true);
+            var before = pool.capture().slots(); var actor = f.frame.state(); var env = f.frame.environment(); var sounds = f.runtime.lastSoundRequests();
+            try {
+                for (String name : List.of("commitTopSolid", "commitSpringSolid", "commitSpringLaunch", "playSpringFm",
+                        "commitTunnelDoorVerticalSolid", "playTunnelDoorVerticalFm", "preflightTunnelDoorSolid", "commitTunnelDoorSolid",
+                        "playTunnelDoorFm", "commitMonitorSolid", "playMonitorFm", "awardMonitorItem", "commitTimePostDirection", "requestTimePostSubCpu")) {
+                    var method = java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods()).filter(m -> m.getName().equals(name)).findFirst().orElseThrow();
+                    method.setAccessible(true);
+                    var fault = assertThrows(java.lang.reflect.InvocationTargetException.class, () -> method.invoke(f.runtime, new Object[] {null}));
+                    assertInstanceOf(IllegalStateException.class, fault.getCause(), name);
+                }
+                var draw = CdOpeningObjectRuntime.class.getDeclaredMethod("drawDynamic", CdObjectPool.class, int.class); draw.setAccessible(true);
+                var fault = assertThrows(java.lang.reflect.InvocationTargetException.class, () -> draw.invoke(f.runtime, pool, 40));
+                assertInstanceOf(IllegalStateException.class, fault.getCause());
+                assertEquals(before, pool.capture().slots()); assertEquals(actor, f.frame.state()); assertEquals(env, f.frame.environment());
+                assertEquals(sounds, f.runtime.lastSoundRequests());
+            } finally { boulderSet(f.runtime, "inSolidCommit", false); boulderUnstage(f); }
+        }
+    }
+
+    @Test void boulderFullPhysicalPoolRunsEveryOwnedInitWithoutAllocatingOrInventingSound() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var pool = f.runtime.placement().pool(); var actor = f.frame.state(); var env = f.frame.environment();
+            for (int whole = 32; whole < 128; whole++) pool.write(boulderImage(f, pool.state(whole), 0, 0));
+            var sounds = f.runtime.lastSoundRequests(); assertTrue(pool.findObjSlot().isEmpty());
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            for (int whole = 32; whole < 128; whole++) {
+                assertEquals(CdBoulder.OBJECT_ID, pool.state(whole).id()); assertEquals(2, pool.state(whole).routine());
+                assertEquals(4, pool.state(whole).spriteFlags()); assertEquals(0x374, pool.state(whole).word(TILE));
+            }
+            assertTrue(pool.findObjSlot().isEmpty()); assertEquals(actor, f.frame.state()); assertEquals(env, f.frame.environment());
+            assertEquals(sounds, f.runtime.lastSoundRequests()); monitorFinish(f);
+        }
+    }
+
+    private static CdOpeningObjectRuntime.LogicalBanks boulderBanks(int[] b) {
+        return new CdOpeningObjectRuntime.LogicalBanks(b[0],b[1],b[2],b[3],b[4],b[5],b[6],b[7],b[8],b[9],b[10],b[11],b[12],b[13]);
+    }
+    private static CdObjectState boulderImage(Fixture f, CdObjectState image, int routine, int sprite) throws java.io.IOException {
+        var assets = CdBoulder.Assets.fromObjectAssets(f.assets.openingObjects());
+        return image.moveByte(ID, CdBoulder.OBJECT_ID).moveByte(ROUTINE, routine).moveByte(SPRITE_FLAGS, sprite)
+                .moveLong(MAPPINGS, assets.mappingsAddress()).moveWord(TILE, 0x374).moveByte(WIDTH, 16).moveByte(Y_RADIUS, 16)
+                .moveByte(PRIORITY, 4).moveWord(X, 0x100).moveWord(Y, 0x780);
+    }
+    private static CdObjectState boulderInit(Fixture f, CdObjectState image) throws java.io.IOException {
+        var assets = CdBoulder.Assets.fromObjectAssets(f.assets.openingObjects());
+        return image.addByte(ROUTINE, 2).moveByte(SPRITE_FLAGS, image.spriteFlags() | 4).moveByte(PRIORITY, 4)
+                .moveLong(MAPPINGS, assets.mappingsAddress()).moveByte(WIDTH, 16).moveByte(Y_RADIUS, 16).moveByte(MAP_FRAME, 0)
+                .moveWord(TILE, com.openggf.game.soniccd.level.CdR11aObjectAssets.decodeTileWord(assets.objectTileIds().copy(), 0xB, image.subtype2()));
+    }
+    private static CdSolidObject.Result boulderSolid(Fixture f, CdObjectState image) {
+        var env = f.frame.environment();
+        return CdSolidObject.fromAssets(f.assets).run(CdSolidObject.Entry.SOLID_OBJECT, image, tunnelDoorPlayer(f),
+                new CdSolidObject.Gates(env.globals().debugMode(), env.movement().gates().miniSonic()), tunnelDoorGlobals(f), f.runtime.placement().pool().capture());
+    }
+    private static CdBoulder.SolidCall boulderCall(Fixture f, CdObjectState image) {
+        var pool = f.runtime.placement().pool(); var cut = pool.capture(); var env = f.frame.environment();
+        var player = tunnelDoorPlayer(f); var globals = tunnelDoorGlobals(f);
+        var result = CdSolidObject.fromAssets(f.assets).run(CdSolidObject.Entry.SOLID_OBJECT, image, player,
+                new CdSolidObject.Gates(env.globals().debugMode(), env.movement().gates().miniSonic()), globals, cut);
+        return new CdBoulder.SolidCall(cut, player, globals, result);
+    }
+    private static void boulderUnknown(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.State state, int tile) {
+        var fault = assertThrows(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.OwnershipBoundary.class,
+                () -> com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(state, tile));
+        assertEquals(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.Boundary.UNKNOWN_PATTERN, fault.boundary());
+    }
+    private static CdObjectPresentation.PatternSource boulderPixels(Fixture f,
+            com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.State resident) throws java.io.IOException {
+        var objects = f.assets.openingObjects();
+        return CdObjectPresentation.usaR11aCurrentCameraDevPreloadedArt(f.frame.artState(), f.runtime.powerupArtState(), objects,
+                objects.frontierArtBank(), objects.contactArtBank(), objects.floatBlockArtBank(), objects.springArtBank(),
+                objects.tunnelDoorArtBank(), objects.monitorTimeArtBank(), resident, BANKS.player(), BANKS.ring(), BANKS.mosqui(),
+                BANKS.plant(), BANKS.ramp(), BANKS.explosion(), BANKS.points(), BANKS.flower(), BANKS.powerup(), BANKS.floatBlock(),
+                BANKS.spring(), BANKS.tunnelDoorVertical(), BANKS.monitorTime(), BANKS.boulder());
+    }
+    private static void boulderSet(CdOpeningObjectRuntime runtime, String name, Object value) throws Exception {
+        var field = CdOpeningObjectRuntime.class.getDeclaredField(name); field.setAccessible(true); field.set(runtime, value);
+    }
+    private static void boulderUnstage(Fixture f) throws Exception {
+        boulderSet(f.runtime, "operating", false); boulderSet(f.runtime, "phase", CdOpeningObjectRuntime.Phase.PLAYER_DONE);
+        boulderSet(f.runtime, "dispatchWholeIndex", -1);
+    }
+    private static void boulderRejectCommit(Fixture f, CdBoulder.SolidCall call) throws Exception {
+        var pool = f.runtime.placement().pool(); var before = pool.capture().slots(); var actor = f.frame.state();
+        var env = f.frame.environment(); var sounds = f.runtime.lastSoundRequests(); var resident = f.runtime.sectionArtState();
+        var method = CdOpeningObjectRuntime.class.getDeclaredMethod("commitBoulderSolid", CdBoulder.SolidCall.class); method.setAccessible(true);
+        var fault = assertThrows(java.lang.reflect.InvocationTargetException.class, () -> method.invoke(f.runtime, call));
+        assertTrue(fault.getCause() instanceof IllegalArgumentException || fault.getCause() instanceof IllegalStateException);
+        assertEquals(before, pool.capture().slots()); assertEquals(actor, f.frame.state()); assertEquals(env, f.frame.environment());
+        assertEquals(sounds, f.runtime.lastSoundRequests()); assertSame(resident, f.runtime.sectionArtState());
+    }
+    // END Boulder Runtime R1 tests-first additions.
 }

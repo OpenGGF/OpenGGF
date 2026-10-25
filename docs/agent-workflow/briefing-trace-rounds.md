@@ -71,6 +71,22 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Registered renderer ranges are not a resident-entry inventory (2026-10-25,
+CD Boulder teardown). Native pattern IDs0..7FF are implicitly governed, while
+`registeredRangesForTesting()` enumerates explicit virtual ranges. An empty
+filtered range list did not mean the atlas lacked shared terrain entries. Inspect
+actual native entries and the explicit virtual ranges without registering a new
+producer to make the observation nonempty. Verify the identity of surviving
+entries; an invented minimum count tests the observer rather than cleanup.
+
+Two equal sound IDs can be two ordered native requests (2026-10-25, CD Boulder
+EGL oracle). A ground movement-stop request does not necessarily return from
+MODE. The reached path can continue through CheckCharge and emit ChargeStop,
+including when charge is zero. Read the caller's continuation and previous-angle
+gate; keep both ordered owners in the expected ledger instead of treating them
+as mutually exclusive or deduplicating by sound ID. The fixture was corrected;
+no runtime sound or physics behavior changed to fit it.
+
 An actual pattern write need not produce a different pixel version (2026-10-25,
 CD camera PLC). Pata-Bata tile0 and Mosqui tile16 are both blank. The native write
 still advances the transfer budget, cursor and destination; equal immutable pixels

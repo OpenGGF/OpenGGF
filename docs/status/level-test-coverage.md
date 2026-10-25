@@ -1,5 +1,11 @@
 # Level test coverage backlog
 
+Sonic CD opening-object update (2026-10-25): the same partial act matrix now
+records the explicit USA object entry, current camera-art service, Boulder
+construction/render/replay and the normal-input stop at diagonal Spring. These
+extend the historical terrain-only checks below; they do not certify the act,
+native cold/title/PLC timing, full-USA gameplay or JP/EU object parity.
+
 Sonic CD local development entry (2026-10-24): the
 [Palmtree Panic Act 1 Present matrix](../architecture/validation/levels/scd-palmtree-panic-act1-present.md)
 records authenticated regional data, existing-engine terrain presentation and

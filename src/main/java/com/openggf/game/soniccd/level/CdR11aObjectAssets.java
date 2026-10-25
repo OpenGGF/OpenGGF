@@ -74,7 +74,9 @@ public final class CdR11aObjectAssets {
         // Pata-Bata/Main.asm:29,39,76,84-92; actual USA PC-relative operands join the three complete includes.
         PATA_BATA_ANIMATIONS("Ani_PataBata", 0xB51C, 18),
         PATA_BATA_NORMAL_MAPPINGS("MapSpr_PataBata1", 0xB52E, 34),
-        PATA_BATA_DAMAGED_MAPPINGS("MapSpr_PataBata2", 0xB550, 40);
+        PATA_BATA_DAMAGED_MAPPINGS("MapSpr_PataBata2", 0xB550, 40),
+        // Boulder/Main.asm:30,57-59; actual USA MOVE.L at $9618 stores $209654. Includes the real EVEN byte.
+        BOULDER_MAPPINGS("MapSpr_Boulder", 0x9654, 14);
 
         private final String nativeLabel;
         private final int offset;
@@ -333,6 +335,7 @@ public final class CdR11aObjectAssets {
     private CdObjectVisualAssets pataBataNormal;
     private CdObjectVisualAssets pataBataDamaged;
     private PataBataArtBank pataBataArtBank;
+    private CdObjectVisualAssets boulder;
 
     private CdR11aObjectAssets(CdR11aAssets.Identity identity, Map<Table, View> views, List<Delta> deltas,
                                 List<TouchSize> dimensions, CdObjectVisualAssets rings,
@@ -733,6 +736,12 @@ public final class CdR11aObjectAssets {
         return pataBataArtBank;
     }
 
+    /** Boulder/Main.asm:30,57-59: one counted static frame, nineteen source tiles, no animation script. */
+    public synchronized CdObjectVisualAssets boulder() {
+        if (boulder == null) { boulder = CdObjectVisualAssets.decodeStatic(read(Table.BOULDER_MAPPINGS), 1, 19); }
+        return boulder;
+    }
+
     /** Obj3DPlant_Init (3D Ramp/Main.asm:57-90): ADD.W consumes signed offsets in two distinct bodies. */
     public static PlantOffsets decodePlantOffsets(byte[] input) {
         var bytes = exact(input, 14, "Obj3DPlant_Offsets1/Obj3DPlant_Offsets2");
@@ -768,16 +777,16 @@ public final class CdR11aObjectAssets {
      * SetObjectTileID (Object Tile ID Set.asm:7-17) has a signed relative word index, then subtype2 words.
      * The source declares 18 index words (36 bytes), followed by 19 data words, not 37 index entries.
      * Only Mosqui's selector 0, Pata-Bata's selector 1 (Pata-Bata/Main.asm:21-22), FloatBlock's selector 5
-     * (Floating Block/Main.asm:43-44), and Tunnel Door's selector $C (Tunnel Door/Main.asm:41-42), each at
-     * subtype2 0, are admitted; Ring writes its own literal $A7AE.
+     * (Floating Block/Main.asm:43-44), Boulder's selector $B (Boulder/Main.asm:34-35), and Tunnel Door's
+     * selector $C (Tunnel Door/Main.asm:41-42), each at subtype2 0, are admitted; Ring writes literal $A7AE.
      */
     public static int decodeTileWord(byte[] input, int selector, int subtype2) {
         if (selector < 0 || selector > 0x7FFF || (subtype2 & ~0xFF) != 0) {
             throw new IllegalArgumentException("Object tile selector/subtype width");
         }
         var bytes = exact(input, 74, "ObjectTileIDs");
-        if ((selector != 0 && selector != 1 && selector != 5 && selector != 0xC) || subtype2 != 0) {
-            throw new UnsupportedOperationException("Only Mosqui selector 0 / Pata-Bata selector 1 / FloatBlock selector 5 / Tunnel Door selector $C at subtype2 0 are reviewed");
+        if ((selector != 0 && selector != 1 && selector != 5 && selector != 0xB && selector != 0xC) || subtype2 != 0) {
+            throw new UnsupportedOperationException("Only Mosqui selector 0 / Pata-Bata selector 1 / FloatBlock selector 5 / Boulder selector $B / Tunnel Door selector $C at subtype2 0 are reviewed");
         }
         int target = (short) bytes.unsignedWord(selector * 2);
         int end = bytes.length();
@@ -789,7 +798,8 @@ public final class CdR11aObjectAssets {
             if (offset > target && offset < end) { end = offset; }
         }
         if (end - target < 2) {
-            throw new IllegalArgumentException((selector == 0 ? "Mosqui" : selector == 1 ? "Pata-Bata" : selector == 5 ? "FloatBlock" : "Tunnel Door")
+            throw new IllegalArgumentException((selector == 0 ? "Mosqui" : selector == 1 ? "Pata-Bata" : selector == 5 ? "FloatBlock"
+                    : selector == 0xB ? "Boulder" : "Tunnel Door")
                     + " tile word crosses its selected body");
         }
         return bytes.unsignedWord(target);
@@ -933,6 +943,7 @@ public final class CdR11aObjectAssets {
     /**
      * Explicit USA-only source opt-in. The complete first incremental camera PLC is ID 9, rows 0/1/2
      * (PLC_Cam2_Incr, Data (Act 1 Present).asm:183-190); PLC2 rows 2/4/5 describe the reload/seed producers.
+     * Boulder appends canonical PLC2 row 0 (:85-88) as source provenance, without a separate live art bank.
      * Existing banks and eager startup remain separate. This neither executes a PLC nor publishes residency.
      */
     public synchronized SectionArtSourceBank sectionArtSources() throws IOException {
@@ -942,6 +953,10 @@ public final class CdR11aObjectAssets {
             var tamabboh = decodeSectionArt(CdR11aAsset.ART_TAMABBOH, 59, 1142);
             var mosqui = initialArtBank.binding(CdR11aAsset.ART_MOSQUI).decode();
             var frontier = frontierArtBank();
+            // Boulder header $8013 declares XOR/19 tiles. Java's final 8-bit peek consumes all 270 source
+            // bytes; native refill before the final run additionally reads FloatBlock's real $80 at $365D0.
+            // One immutable decode is shared by every Boulder lookup in this cached source bank.
+            var boulder = decodeSectionArt(CdR11aAsset.ART_BOULDER, 19, 270);
             // NemDecMain preloads two bytes (Functions (General).asm:415-418); the native decoder refills
             // below nine bits BEFORE emitting a run, including the final run (:436-441,471-490).
             // Native finite lengths therefore differ from Java's final pre-symbol peek lengths. These are
@@ -956,7 +971,8 @@ public final class CdR11aObjectAssets {
                     sectionArtSource(CdR11aAsset.ART_3D_PLANT, 2, 4, 0x8480, 28, 393,
                             frontier.binding(CdR11aAsset.ART_3D_PLANT).decode()),
                     sectionArtSource(CdR11aAsset.ART_3D_RAMP_BOOST, 2, 5, 0x8820, 63, 678,
-                            frontier.binding(CdR11aAsset.ART_3D_RAMP_BOOST).decode())));
+                            frontier.binding(CdR11aAsset.ART_3D_RAMP_BOOST).decode()),
+                    sectionArtSource(CdR11aAsset.ART_BOULDER, 2, 0, 0x6E80, 19, 271, boulder)));
         }
         return sectionArtSources;
     }
@@ -990,4 +1006,5 @@ public final class CdR11aObjectAssets {
         }
         return new SectionArtSource(source, plcId, row, entry, decoded, reader, bytes);
     }
+    // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>
 }
