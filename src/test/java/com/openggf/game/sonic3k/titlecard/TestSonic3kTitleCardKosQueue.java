@@ -222,6 +222,8 @@ class TestSonic3kTitleCardKosQueue {
                 com.openggf.game.sonic3k.Sonic3kLevelTitlePlcService.class);
         var plc = new com.openggf.game.sonic3k.Sonic3kLevelTitlePlcService(rom);
         setField(GameServices.module(), "levelTitlePlcService", plc);
+        // Level submits the FIFO before this isolated Obj_TitleCard fixture.
+        plc.beginFreshZoneTitle(0, 0, "sonic");
         try {
             setPendingFreshLevelTransitionBoundary(true);
             installCachedTitleArt();

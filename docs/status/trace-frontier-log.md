@@ -112927,3 +112927,100 @@ absolute ROM properties:
 
 The later title-card archive WIP remains outside this composition. Its pending failures, ring/timer reset at
 `loc_63B4`, HCZ and downstream frontiers remain separate obligations. No full-suite run or new trace payload.
+
+
+## 2026-10-25 — fresh-load PLC order qualifies the continuous AIZ-to-HCZ load boundary
+
+Local worker `t3-0ce1d510`, branch `bugfix/ai-s3k-aiz-hcz-frontier-audit-20261025`,
+starts at the requested `f7620e579c1a8cf7b0371f9c5a438f6a4eff5ea7`. The unrelated
+initial T3 successor `824a16f21` changes only lobby-design prose and is excluded.
+The parent reviewed `760b2005d37f8375bed438011a2a502c65588fda` before this finite
+adaptation; the foreign HCZ branch and its later fixes were not integrated.
+The current instance/Host lifecycle, retained provider and public virtual
+entry/provider boundaries are preserved.
+
+The fresh load now submits Nemesis after `InitGameModule`, using the existing
+real-fresh-assembly gate. `Level/loc_6068` and `loc_60DA`
+(sonic3k.asm:7603-7647) fill that FIFO before `loc_62CC`
+(sonic3k.asm:7769-7780). `Obj_TitleCardInit` still owns the four KosM archives.
+The initial hardware-timed scan closes the native preparation tail without a
+second card dispatch. Decode, preview, restore and seamless gates, queue budgets,
+readiness admission, comparison-only trace authority and all existing parity/input
+assertions are unchanged. Moving only the queue owner would not account for that
+first tail; no elapsed-time fit or new timing subsystem is used.
+
+Every Maven invocation below used this exact launch prefix and verified existing
+ROMs (CRC32 S1 `AFE05EEE`, S2 `7B905383`, S3K `63522553`; SHA-1 values match
+`AGENTS.md`). Java is 25.0.5.0.2; Lua is 5.4.9. No shared desktop was used.
+
+```bash
+ROM_ROOT="$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")"
+q() {
+  env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+    PATH=/usr/lib/jvm/java-25-openjdk/bin:$PATH LUA_BIN=/usr/bin/lua5.4 ALSOFT_DRIVERS=null \
+    python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+    "-Dsonic1.rom.path=$ROM_ROOT/s1.gen" \
+    "-Dsonic2.rom.path=$ROM_ROOT/s2.gen" \
+    "-Ds3k.rom.path=$ROM_ROOT/s3k.gen" "$@"
+}
+# Clean baseline; one invocation, completed 11:12:16 UTC.
+q -Ptrace-replay -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical '-Dtest=TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds' test -B
+# Distinct input, baseline 11:13:29 and corrected 11:20:15 UTC; one each.
+q -Ptrace-segments '-Dtest=TestS3kAizZoneSliceTraceReplay#replayMatchesTrace' test -B
+# New test only on unchanged runtime: old-red, completed 11:15:07 UTC.
+q '-Dtest=TestS3kFreshTitlePlcLoadBoundary' test -B
+# Corrected native owner/consumers, completed 11:17:12 UTC.
+q '-Dtest=TestS3kFreshTitlePlcLoadBoundary,TestGameLoopTitleCardLifecycle,TestGameLoopTitleCardOwnership,TestGameLoopTitleCardPause,TestSonic3kLevelInitProfile,TestSonic3kLevelTitlePlcService,TestSonic3kTitleCardKosQueue,TestSonic3kTitleCardManagerRewind,TestLevelLoadContext,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' test -B
+# Corrected chain, all prefixes and known-green prerequisites, 11:19:24 UTC.
+q -Ptrace-replay -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical '-Dtest=TestS3kAizTraceReplay#replayMatchesTrace,TestS3kSonicTailsHczSegmentTraceReplay#replayMatchesTrace,TestS3kSonicTailsCompleteEmeraldRunPrefix,TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds' test -B
+# Separate targeted authority/trace guards.
+q -Pguards '-Dtest=TestHardwareTimingAuthorityGuard,TestS1S2PlcComparisonOnlyGuard,TestTraceReplayInvariantGuard,TestTraceHydrateSwitchDefault' test -B
+```
+
+| Observation | Clean runtime baseline | Corrected runtime |
+| --- | --- | --- |
+| Canonical segment 8, all 7,175 represented rows (62 lag) | Four physics errors, all row 7126: `x` `$0280/$0000`, `y` `$0020/$0000`, `camera_x` `$01E0/$4A38`, `camera_y` `$0000/$02B6` (ROM/engine) | Zero physics/animation/bootstrap errors or warnings |
+| Canonical segments 0/2/4/6/9 | Complete, zero reported errors | Same; segment 9 covers 3,574 represented rows (55 lag) |
+| Canonical segment 11 | Incomplete, 81,981 errors (69,334 physics / 12,647 animation); first row 1768 `y` `$0870/$0871`; last mismatching row 5725 | Identical counts, first field/values and incomplete status |
+| Actual canonical stop | Input 68801, segment 11, HCZ1/load generation 9, lost production ownership | Same; chain remains strict-red, now solely on the walk axis |
+| Alternate `aiz_completerun` | 26,041 compared frames, one physics span at trailing row 26179 `rings` 72/0 | Same exact one-row span; animation/bootstrap/warnings zero |
+
+The full-chain method fails once on both runtimes; each alternate invocation
+runs one test with one assertion failure, zero errors and zero skips. Live chain reports include structural/lag
+rows; standalone `total_frames` counts compared frames and must not be substituted
+for declared row counts. The aborted HCZ segment is not a completed 14,208-row
+comparison. The new strict `aiz1ThroughHczLoadBoundary` prefix consumes the first
+segment-9 row after all earlier source comparisons; all three prefix cases pass.
+The original AIZ replay passes at 20,463 compared frames and the HCZ segment passes
+at 3,519 compared frames, both with zero reported errors/warnings/bootstrap errors.
+The combined corrected replay invocation is six tests / one failure / zero errors
+or skips. No fixture, comparison, input or tolerance was weakened.
+
+The independent load regression is old-red 4 tests / 3 assertion failures / no
+errors or skips: both drivers saw zero queued descriptors instead of ten; live
+first-tail preparation was absent. Corrected, all four pass, including the
+56-to-50-pattern boundary and two registry restores with forward replay and job
+ordinal equality. The owner/consumer run passes 149 tests in 14 classes, no
+failures/errors/skips, including both packages' `TestSonic3kLevelLoading` and all
+four required S3K startup anchors. The separate four-class authority selection
+passes 43 tests without failures, errors or skips (completed 11:21:01 UTC).
+The added S3K disassembly references resolve; the two-file citation scan also
+reports the existing, unchanged S1 `Level_MainLoop` citation as stale (cited
+2895–2966, label at 2998). That unrelated comment is not repaired here.
+Runtime/test content fingerprint before the
+new prefix is `e77e103bc69a76c83ebad66a8ad4f17c59f702d8009f144d752689ed05271dd1`;
+with that sole additional test it is
+`9310b2b3c46960f6e45007557dc53ed82f54383c496ed874bb8a44c51afee6cf`.
+Each fingerprint is SHA-256 of sorted changed/new `src/main` and `src/test` paths,
+each followed by NUL and its complete file bytes, relative to the pinned base.
+
+The [HCZ1 matrix](../architecture/validation/levels/s3k-hcz1-sonic.md#continuous-aiz-to-hcz-load-qualification--2026-10-25)
+records the qualified native 320px Sonic + CPU Tails load boundary. Finite next
+work starts at returned-HCZ segment 11 row 1768: inspect its native control/solid
+owner and predecessor rows before attributing the later missing exit. Keep input
+68801/load generation 9 and the 81,981-error incomplete report as the current
+stop until a matched rerun changes them. The alternate's trailing ring publication
+is separate. No HCZ outgoing boundary, whole campaign, other viewport/donor/team,
+render/audio, complete auxiliary coverage, exhaustive trace sweep, smoke or
+full-suite qualification is claimed.
+Parent owns combined review, validation, integration and push.

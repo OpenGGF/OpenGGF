@@ -461,6 +461,8 @@ Unreleased. The earlier development themes remain in
   teardown from consuming an absent art lease. Fresh native loads clear the
   retained random seed before sprite dispatch,
   while previews and seamless continuations preserve their sequence.
+  Fresh level loads submit their Nemesis art before the title wait, and the
+  first title iteration prepares that queue without dispatching the card twice.
   Sky Sanctuary opening bridges use the native top-contact surface and exact
   overlap band, retaining the relative landing write before floor reset; a
   companion standing on the moving cutscene bridge waits without the edge-balance
