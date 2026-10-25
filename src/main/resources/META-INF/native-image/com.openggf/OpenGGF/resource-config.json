@@ -10,6 +10,7 @@
       { "pattern": "icon/.*\\.png" },
       { "pattern": "load-time-profiles/.*\\.json" },
       { "pattern": "net/.*\\.json" },
+      { "pattern": "net/chat/.*\\.txt" },
       { "pattern": "presentation/heads/.*\\.txt" },
       { "pattern": "presentation/heads/profiles\\.list" },
       { "pattern": "\\QMETA-INF/services/com.openggf.level.resources.AuthoredLevelDecoder\\E" },

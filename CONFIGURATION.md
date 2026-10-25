@@ -51,6 +51,7 @@ The `config.yaml` is organized into the following top-level sections:
 | `config` | Configuration-file persistence behavior |
 | `input` | `player1` / `player2` key bindings, `pause` key and controller settings |
 | `audio` | Enabled flag, hub music, region, FM core, DAC and FM6 settings |
+| `multiplayer` | Personal profanity filter and player-chat visibility for every multiplayer scene |
 | `characters` | Main character, sidekick, data select combos |
 | `roms` | ROM filenames for S1, S2, S3K; default game selection |
 | `capture` | Trace and live video output, codecs, encoder settings and recording shortcut |
@@ -544,6 +545,30 @@ libvgm rule), matching the shipped console. If it is still present in an
 existing `config.yaml`, it is ignored with a logged warning rather than
 rejected.
 
+## Multiplayer Chat
+
+These global personal preferences appear in **Engine Settings → Gameplay** and
+apply immediately after saving, including to an already open multiplayer scene.
+They are separate from a room's Full Chat, Quick Chat or Off policy.
+
+| Key | YAML path | Type | Default | Description |
+|-----|-----------|------|---------|-------------|
+| `MULTIPLAYER_CENSOR_PROFANITY` | `multiplayer.censorProfanity` | bool | `true` | **Censor Profanity:** mask listed words in player chat and sender names locally. |
+| `MULTIPLAYER_CHAT_DISABLED` | `multiplayer.disableChat` | bool | `false` | **Disable Multiplayer Chat:** hide typed and quick player messages, clear visible chat history and discard incoming player chat. Re-enabling does not reveal a hidden backlog. Connection, race, vote, roster and LAN-invite notices remain visible. Sending remains subject to the room's policy. |
+
+The filter ships a small, original, manually curated starter dictionary for
+English, French, German, Spanish, Italian, Portuguese, Polish, Russian, Turkish,
+Japanese, Korean and Chinese. All packs apply regardless of UI language. Coverage
+is initial, conservative, incomplete and not human-linguist-reviewed.
+It compares complete Unicode tokens using NFKC, locale-independent lowercase and
+NFKC again; accents, combining marks and internal apostrophes remain significant.
+Matched original spans become `***`; all other text keeps its original spelling.
+It avoids substring matching and ambiguous short words or names. Whole-run matching
+can miss insults embedded in unspaced CJK text, and split words, inflections,
+leetspeak, homographs and other evasions can pass through. There is no network,
+machine-learning or intent classification. The dictionary loads once and is
+limited to 1024 normalized keys and 64 KiB of UTF-8 resource data.
+
 ## Capture
 
 OpenGGF has two separate recording systems:
@@ -795,6 +820,7 @@ folder. Edit them from the **Settings** row of the Time Attack menu; changes sav
 | `masterUrl` | `""` | Master-server `wss://` URL for browsing rooms; blank disables browsing. Plaintext `ws://` is allowed only with a literal loopback IPv4/IPv6 address, not `localhost` or other hostnames. |
 | `masterTrustInsecure` | `false` | Local development only: trust master-server and recording-upload TLS certificates at literal loopback addresses. Insecure upload mode rejects remote endpoints before taking custody of a recording; remote masters/uploads require normal certificate validation. |
 | `minimap` | `true` | Show the multiplayer minimap progress strip. |
+| `chatMode` | `FULL_CHAT` | Requested communication for rooms this player creates: `FULL_CHAT` (typed and quick), `QUICK_CHAT` (quick only), or `OFF`. Public relay hosts may impose a stricter maximum. Personal censorship and chat hiding use the global `multiplayer.*` keys above. |
 
 ### Racing server: master verifier settings
 
@@ -804,6 +830,7 @@ These keys belong in the racing server's master YAML (`MasterServerMain
 | YAML key | Default | Description |
 |----------|---------|-------------|
 | `port` | `27900` | Public TLS WebSocket and HTTPS listener for the browser, relay rooms, recordings and verifier API. |
+| `chatModeLimit` | `QUICK_CHAT` | Maximum communication in master-hosted relay rooms. `FULL_CHAT` permits typed and quick messages, `QUICK_CHAT` permits quick only, and `"OFF"` disables both. Quote `"OFF"` in YAML. Initial and later owner choices may restrict further. Direct player hosts retain their own policy. |
 | `tlsCertPath` / `tlsKeyPath` | required | PEM certificate chain and private key paths. Remote deployments require normal TLS validation. |
 | `dbPath` | `master-identities.db` | Identity database path; a relative path is beneath the master's `--data` directory. |
 | `adminPort` | `27901` | HTTP administration/readiness listener, bound to loopback. Do not publish it from a container. |

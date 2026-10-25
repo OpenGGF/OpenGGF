@@ -27,6 +27,19 @@ class TestRaceLobbyView {
     private final List<MenuCue> cues = new ArrayList<>();
     private final FakeViewInput input = new FakeViewInput();
 
+    /** Admit before any roster/messages are injected: applyJoin clears the previous room's history. */
+    private static ClientRaceSession joinedSession() {
+        return joinedSession(0);
+    }
+
+    private static ClientRaceSession joinedSession(int slot) {
+        ClientRaceSession session = new ClientRaceSession(() -> 0);
+        session.applyJoin(new ControlMessage.JoinAccepted("t", slot,
+                new ControlMessage.RoomDescriptor("Room", "s2", 0, 0, "OPEN", null, 8, false, "FULL_CHAT"),
+                new ControlMessage.RoundSnapshot("LOBBY", null, 0, 0, List.of())));
+        return session;
+    }
+
     private RaceLobbyView view(ClientRaceSession session, boolean host, String shareCode) {
         RaceTransport transport = new RaceTransport() {
             @Override public List<RaceClient.InboundEvent> drainInbound() { return List.of(); }
@@ -41,6 +54,11 @@ class TestRaceLobbyView {
     }
 
     private RaceLobbyView viewWithProfile(ClientRaceSession session, openggf.timeattack.TimeAttackSettings settings) {
+        return viewWithProfile(session, settings, false);
+    }
+
+    private RaceLobbyView viewWithProfile(ClientRaceSession session, openggf.timeattack.TimeAttackSettings settings,
+                                          boolean host) {
         RaceTransport transport = new RaceTransport() {
             @Override public List<RaceClient.InboundEvent> drainInbound() { return List.of(); }
             @Override public void sendControl(ControlMessage message) { sent.add(message); }
@@ -49,7 +67,7 @@ class TestRaceLobbyView {
             @Override public boolean isOpen() { return true; }
             @Override public void close() { }
         };
-        return new RaceLobbyView(new MultiplayerRaceCoordinator(transport, session), false, ROUND, null,
+        return new RaceLobbyView(new MultiplayerRaceCoordinator(transport, session), host, ROUND, null,
                 leaves::incrementAndGet, cues::add,
                 () -> new openggf.timeattack.ProfileView(settings, "s2", "tails", () -> { }, cues::add));
     }
@@ -58,10 +76,11 @@ class TestRaceLobbyView {
     void profileRenamesAndRecoloursThroughTheRoomWhileInTheLobby() {
         openggf.timeattack.TimeAttackSettings settings = new openggf.timeattack.TimeAttackSettings();
         settings.setDisplayName("Ray");
-        ClientRaceSession session = new ClientRaceSession(() -> 0);
+        ClientRaceSession session = joinedSession();
         RaceLobbyView lobby = viewWithProfile(session, settings);
         input.tapDown(lobby::update); // guest: ready -> chat
-        input.tapDown(lobby::update); // chat -> profile
+        input.tapDown(lobby::update); // chat -> Quick Chat
+        input.tapDown(lobby::update); // Quick Chat -> profile
         input.tapEnter(lobby::update);
         assertTrue(lobby.isShowingProfile());
         input.tapRight(lobby::update); // Classic -> Crimson
@@ -75,11 +94,12 @@ class TestRaceLobbyView {
 
     @Test
     void profileWaitsForTheLobbyPhase() {
-        ClientRaceSession session = new ClientRaceSession(() -> 0);
+        ClientRaceSession session = joinedSession();
         RaceLobbyView lobby = viewWithProfile(session, new openggf.timeattack.TimeAttackSettings());
         session.onControl(new ControlMessage.RoundStart(ROUND, 1000, 10_000));
         input.tapDown(lobby::update);
-        input.tapDown(lobby::update); // ready -> chat -> profile
+        input.tapDown(lobby::update); // ready -> chat -> Quick Chat
+        input.tapDown(lobby::update); // profile
         cues.clear();
         input.tapEnter(lobby::update);
         assertFalse(lobby.isShowingProfile());
@@ -89,7 +109,7 @@ class TestRaceLobbyView {
 
     @Test
     void internationalNamesAreDrawnInEachPlayersColour() {
-        ClientRaceSession session = new ClientRaceSession(() -> 0);
+        ClientRaceSession session = joinedSession();
         session.onControl(new ControlMessage.RoomState(List.of(
                 new ControlMessage.PlayerInfo(0, "abcdef", "ブラック・ノヴァ", "sonic"),
                 new ControlMessage.PlayerInfo(1, "123456", "Nguyễn Thị Hoa", "tails", true))));
@@ -113,7 +133,7 @@ class TestRaceLobbyView {
 
     @Test
     void theDetailsPageListsEachPlayersIdentityTag() {
-        ClientRaceSession session = new ClientRaceSession(() -> 0);
+        ClientRaceSession session = joinedSession();
         session.onControl(new ControlMessage.RoomState(List.of(
                 new ControlMessage.PlayerInfo(0, "abcdef", "Sid", "sonic"),
                 new ControlMessage.PlayerInfo(1, "123456", "Sid", "tails", true))));
@@ -130,7 +150,7 @@ class TestRaceLobbyView {
 
     @Test
     void chatTakesAnyScript() {
-        RaceLobbyView lobby = view(new ClientRaceSession(() -> 0), false, null);
+        RaceLobbyView lobby = view(joinedSession(), false, null);
         input.tapDown(lobby::update); // ready -> chat
         input.tapEnter(lobby::update);
         input.commit(lobby::update, "Привет, 你好!");
@@ -140,12 +160,14 @@ class TestRaceLobbyView {
 
     @Test
     void explicitHostStartAndLeaveActionsRemainReachable() {
-        RaceLobbyView lobby = view(new ClientRaceSession(() -> 0), true, null);
+        RaceLobbyView lobby = view(joinedSession(), true, null);
         input.tapDown(lobby::update); // Ready -> Start
         input.tapEnter(lobby::update);
         assertTrue(sent.contains(new ControlMessage.RoundConfigure(ROUND)));
         input.tapDown(lobby::update); // Ready rule
         input.tapDown(lobby::update); // Chat
+        input.tapDown(lobby::update); // Quick Chat
+        input.tapDown(lobby::update); // Room mode
         input.tapDown(lobby::update); // Leave
         input.tapEnter(lobby::update);
         assertEquals(1, leaves.get());
@@ -153,7 +175,7 @@ class TestRaceLobbyView {
 
     @Test
     void cancellingChatReturnsToLobbyWithoutLeavingOrStarting() {
-        RaceLobbyView lobby = view(new ClientRaceSession(() -> 0), true, null);
+        RaceLobbyView lobby = view(joinedSession(), true, null);
         for (int i = 0; i < 3; i++) input.tapDown(lobby::update); // ready -> start -> rule -> chat
         input.tapEnter(lobby::update);
         assertTrue(lobby.isEditingChat());
@@ -166,7 +188,7 @@ class TestRaceLobbyView {
 
     @Test
     void chatIsTypedAndSentOnEnter() {
-        RaceLobbyView lobby = view(new ClientRaceSession(() -> 0), false, null);
+        RaceLobbyView lobby = view(joinedSession(), false, null);
         input.tapDown(lobby::update); // guest: Ready -> Chat
         input.tapEnter(lobby::update);
         input.type(lobby::update, "Hi all!");
@@ -177,7 +199,7 @@ class TestRaceLobbyView {
 
     @Test
     void historyDetailsReturnWithoutLeaving() {
-        RaceLobbyView lobby = view(new ClientRaceSession(() -> 0), true, null);
+        RaceLobbyView lobby = view(joinedSession(), true, null);
         input.tapUp(lobby::update); // History
         input.tapEnter(lobby::update);
         assertTrue(lobby.isShowingDetails());
@@ -191,7 +213,7 @@ class TestRaceLobbyView {
     @Test
     void hostInvitePageShowsTheCompleteTemplate() {
         String invite = "HOST_IP:27888#" + "Ab-_".repeat(21) + "AB";
-        RaceLobbyView lobby = view(new ClientRaceSession(() -> 0), true, invite);
+        RaceLobbyView lobby = view(joinedSession(), true, invite);
         input.tapUp(lobby::update); // Invite/history
         input.tapEnter(lobby::update);
         RecordingSceneCanvas canvas = new RecordingSceneCanvas(320);
@@ -202,7 +224,7 @@ class TestRaceLobbyView {
 
     @Test
     void lobbyNoOpPagesStaySilentWhileStartChatAndNestedBackReportActions() {
-        RaceLobbyView lobby = view(new ClientRaceSession(() -> 0), true, null);
+        RaceLobbyView lobby = view(joinedSession(), true, null);
         input.tapUp(lobby::update);
         input.tapUp(lobby::update); // Players
         cues.clear();
@@ -226,7 +248,7 @@ class TestRaceLobbyView {
 
     @Test
     void hostStartOutsideTheLobbyIsAnError() {
-        ClientRaceSession session = new ClientRaceSession(() -> 0);
+        ClientRaceSession session = joinedSession();
         RaceLobbyView lobby = view(session, true, null);
         session.onControl(new ControlMessage.RoundStart(ROUND, 1000, 10_000));
         input.tapDown(lobby::update); // Ready -> Start
@@ -237,7 +259,7 @@ class TestRaceLobbyView {
 
     @Test
     void voteKeysCastTheOfferedTrackOnlyDuringAVote() {
-        ClientRaceSession session = new ClientRaceSession(() -> 0);
+        ClientRaceSession session = joinedSession();
         RaceLobbyView lobby = view(session, false, null);
         input.tapKey(lobby::update, SceneKeys.DIGIT_2);
         assertTrue(sent.isEmpty());
@@ -253,7 +275,7 @@ class TestRaceLobbyView {
 
     @Test
     void everyOfferedTrackIsShownWithItsVotes() {
-        ClientRaceSession session = new ClientRaceSession(() -> 0);
+        ClientRaceSession session = joinedSession();
         session.onControl(new ControlMessage.TrackVoteOffer(List.of("s2:0:0", "s2:1:0", "s2:2:0"), 60_000));
         session.onControl(new ControlMessage.TrackVoteTally(List.of(new ControlMessage.VoteCount("s2:1:0", 3))));
         String page = view(session, false, null).screen(320, 224).plain();
@@ -264,7 +286,7 @@ class TestRaceLobbyView {
 
     @Test
     void playersAndLongNamesStayOnScreenAtEveryWidth() {
-        ClientRaceSession session = new ClientRaceSession(() -> 0);
+        ClientRaceSession session = joinedSession();
         session.onControl(new ControlMessage.RoomState(List.of(
                 new ControlMessage.PlayerInfo(0, "abcdef", "Host" + "x".repeat(40), "sonic"),
                 new ControlMessage.PlayerInfo(1, "123456", "Guest", "tails", true))));
@@ -281,8 +303,7 @@ class TestRaceLobbyView {
 
     @Test
     void readyUpIsTheFirstActionAndTogglesThroughTheRoom() {
-        ClientRaceSession session = new ClientRaceSession(() -> 0);
-        session.applyJoin(new ControlMessage.JoinAccepted("t", 1, null, null));
+        ClientRaceSession session = joinedSession(1);
         RaceLobbyView lobby = view(session, false, null);
         input.tapEnter(lobby::update);
         assertEquals(List.of(new ControlMessage.SetReady(true)), sent);
@@ -294,8 +315,7 @@ class TestRaceLobbyView {
 
     @Test
     void theOwnerStepsTheReadyRuleAndItsStartWaitsForEveryone() {
-        ClientRaceSession session = new ClientRaceSession(() -> 0);
-        session.applyJoin(new ControlMessage.JoinAccepted("t", 0, null, null));
+        ClientRaceSession session = joinedSession();
         session.onControl(new ControlMessage.RoomState(List.of(
                 new ControlMessage.PlayerInfo(0, "abcdef", "Owner", "sonic"),
                 new ControlMessage.PlayerInfo(1, "123456", "Sid", "tails"))));
@@ -328,7 +348,7 @@ class TestRaceLobbyView {
 
     @Test
     void guestsSeeTheRuleButCannotChangeIt() {
-        ClientRaceSession session = new ClientRaceSession(() -> 0);
+        ClientRaceSession session = joinedSession();
         session.onControl(new ControlMessage.ReadyRule("AUTO", false));
         RaceLobbyView lobby = view(session, false, null);
         RecordingSceneCanvas canvas = new RecordingSceneCanvas(320);
@@ -342,7 +362,7 @@ class TestRaceLobbyView {
 
     @Test
     void overTheLobbyLevelOnlyTheCardsAreDrawnSoTheLevelStaysInView() {
-        ClientRaceSession session = new ClientRaceSession(() -> 0);
+        ClientRaceSession session = joinedSession();
         session.onControl(new ControlMessage.RoomState(List.of(
                 new ControlMessage.PlayerInfo(0, "abcdef", "Owner", "sonic"))));
         RaceLobbyView lobby = view(session, true, null);
@@ -365,4 +385,147 @@ class TestRaceLobbyView {
         assertFalse(menu.fills.stream().anyMatch(fill -> fill[4] == 0xFFFFFFFF && fill[2] == 1),
                 "without a level behind, the page clears the screen first");
     }
+    @Test
+    void fullOffersTypedAndQuickWhileQuickHasOnlyTheCannedChooser() {
+        ClientRaceSession session = joinedSession();
+        RaceLobbyView lobby = view(session, false, null);
+        String full = lobby.screen(320, 224).plain();
+        assertTrue(full.contains("  CHAT"), full);
+        assertTrue(full.contains("QUICK CHAT"), full);
+        session.onControl(new ControlMessage.ChatModeState("QUICK_CHAT"));
+        String quick = lobby.screen(320, 224).plain();
+        assertFalse(lobby.screen(320, 224).cards().stream().flatMap(card -> card.rows().stream())
+                .anyMatch(row -> row instanceof RaceLobbyScreen.Action action && action.label().equals("CHAT")), quick);
+        assertTrue(quick.contains("QUICK CHAT"), quick);
+        input.tapDown(lobby::update); // Ready -> Quick Chat
+        input.tapEnter(lobby::update);
+        assertTrue(lobby.isShowingQuickChat());
+        assertFalse(lobby.isEditingText());
+        input.tapKey(lobby::update, SceneKeys.DIGIT_6);
+        assertFalse(lobby.isShowingQuickChat());
+        assertEquals(List.of(new ControlMessage.QuickChat("THIS_IS_ZONE")), sent);
+    }
+
+    @Test
+    void modeChangesCloseOpenComposersAndOffKeepsRoomDetailsAndInvites() {
+        ClientRaceSession session = joinedSession();
+        RaceLobbyView lobby = view(session, false, "HOST_IP:27888#invite");
+        input.tapDown(lobby::update);
+        input.tapEnter(lobby::update);
+        assertTrue(lobby.isEditingChat());
+        input.type(lobby::update, "unfinished");
+        session.onControl(new ControlMessage.ChatModeState("QUICK_CHAT"));
+        input.idle(lobby::update);
+        assertFalse(lobby.isEditingChat());
+        input.tapDown(lobby::update); // Ready -> Quick Chat after reconcile
+        input.tapEnter(lobby::update);
+        assertTrue(lobby.isShowingQuickChat());
+        session.onControl(new ControlMessage.ChatModeState("OFF"));
+        input.idle(lobby::update);
+        assertFalse(lobby.isShowingQuickChat());
+        assertFalse(lobby.screen(320, 224).plain().contains("QUICK CHAT"));
+        input.tapUp(lobby::update);
+        input.tapEnter(lobby::update);
+        RecordingSceneCanvas canvas = new RecordingSceneCanvas(320);
+        lobby.draw(canvas);
+        assertTrue(String.join("", canvas.lines).contains("HOST_IP:27888#invite"));
+        assertTrue(sent.isEmpty());
+    }
+
+    @Test
+    void personalDisableHidesBothKindsFromCardAndDetailsButStillAllowsSending() {
+        ClientRaceSession session = joinedSession();
+        RaceLobbyView lobby = view(session, false, "HOST_IP:27888#invite");
+        session.onControl(new ControlMessage.ChatBroadcast(1, "Player", "typed secret"));
+        session.onControl(new ControlMessage.QuickChatBroadcast(1, "Player", "BRUTAL", "s2", 0, 0));
+        String shown = lobby.screen(320, 224).plain();
+        assertTrue(shown.contains("Player: typed secret"), shown);
+        assertTrue(shown.contains("Player: Brutal!"), shown);
+        input.tapUp(lobby::update);
+        input.tapEnter(lobby::update);
+        RecordingSceneCanvas canvas = new RecordingSceneCanvas(320);
+        lobby.draw(canvas);
+        assertTrue(canvas.drewName("Player: typed secret", 12, 0xFFFFFFFF), "typed chat is drawn in details");
+        assertTrue(canvas.drewName("Player: Brutal!", 12, 0xFFFFFFFF), "quick chat is drawn in details");
+
+        session.setChatPreferences(true, true);
+        String hidden = lobby.screen(320, 224).plain();
+        assertFalse(hidden.contains("typed secret"), hidden);
+        assertFalse(hidden.contains("Brutal"), hidden);
+        assertTrue(hidden.contains("QUICK CHAT"), hidden);
+        lobby.draw(canvas);
+        assertFalse(canvas.drewName("Player: typed secret", 12, 0xFFFFFFFF));
+        assertFalse(canvas.drewName("Player: Brutal!", 12, 0xFFFFFFFF));
+        assertTrue(String.join("", canvas.lines).contains("HOST_IP:27888#invite"));
+        input.tapEscape(lobby::update);
+        input.tapDown(lobby::update); // History -> Ready
+        input.tapDown(lobby::update); // typed chat remains available
+        input.tapEnter(lobby::update);
+        input.commit(lobby::update, "hello");
+        input.tapEnter(lobby::update);
+        assertTrue(sent.contains(new ControlMessage.Chat("hello")));
+    }
+
+    @Test
+    void ownerRequestsPersistButAuthoritativeModeRemainsVisibleUntilReply() {
+        ClientRaceSession session = joinedSession();
+        session.onControl(new ControlMessage.ChatModeState("QUICK_CHAT"));
+        RaceLobbyView lobby = view(session, true, null);
+        List<com.openggf.net.protocol.ChatMode> saved = new ArrayList<>();
+        lobby.setChatModeListener(saved::add);
+        // Ready -> Start -> Rule -> Quick Chat -> room mode.
+        for (int i = 0; i < 4; i++) input.tapDown(lobby::update);
+        input.tapLeft(lobby::update); // request Full under a public Quick cap
+        assertEquals(List.of(new ControlMessage.SetChatMode("FULL_CHAT")), sent);
+        assertEquals(List.of(com.openggf.net.protocol.ChatMode.FULL_CHAT), saved);
+        assertEquals(com.openggf.net.protocol.ChatMode.QUICK_CHAT, session.chatMode());
+        assertTrue(lobby.screen(320, 224).plain().contains(session.chatMode().label()));
+        session.onControl(new ControlMessage.RoundStart(ROUND, 1000, 10_000));
+        input.tapRight(lobby::update);
+        assertEquals(1, sent.size(), "mode actions cannot change an active round");
+    }
+
+    @Test
+    void quickChooserPreviewFollowsTheLatestRoundContext() {
+        ClientRaceSession session = joinedSession();
+        RaceLobbyView lobby = view(session, false, null);
+        input.tapDown(lobby::update); // Ready -> typed chat
+        input.tapDown(lobby::update); // Quick Chat
+        input.tapEnter(lobby::update);
+        assertTrue(lobby.isShowingQuickChat());
+        RecordingSceneCanvas canvas = new RecordingSceneCanvas(320);
+        int phraseX = 4 + HudTextLayout.TEXT_INSET + com.openggf.mods.ui.CompactFont.width("6 ", 1) + 1;
+        lobby.draw(canvas);
+        assertTrue(canvas.drewName("This is Emerald Hill!", phraseX, HudTextLayout.WHITE));
+
+        ControlMessage.RoundConfig votedRound = new ControlMessage.RoundConfig("s2", 1, 0, 300, "OPEN", null);
+        session.onControl(new ControlMessage.RoundStart(votedRound, 1000, 10_000));
+        session.onControl(new ControlMessage.RoundEnd(List.of()));
+        lobby.draw(canvas);
+        String received = TimeAttackQuickChat.format(new com.openggf.net.chat.QuickChatContent(
+                com.openggf.net.protocol.QuickChatPhrase.THIS_IS_ZONE, "s2", 1, 0));
+        assertEquals("This is Chemical Plant!", received);
+        assertTrue(canvas.drewName(received, phraseX, HudTextLayout.WHITE), "preview matches received context");
+        assertFalse(canvas.drewName("This is Emerald Hill!", phraseX, HudTextLayout.WHITE));
+        canvas.assertFillsOnScreen();
+    }
+
+    @Test
+    void allOwnerActionsWithWaitingNamesAndNoticeStayOnScreen() {
+        ClientRaceSession session = joinedSession();
+        session.onControl(new ControlMessage.RoomState(List.of(
+                new ControlMessage.PlayerInfo(0, "abcdef", "Owner", "sonic"),
+                new ControlMessage.PlayerInfo(1, "123456", "A waiting racer with a long name", "tails"))));
+        RaceLobbyView lobby = viewWithProfile(session, new openggf.timeattack.TimeAttackSettings(), true);
+        lobby.showStatus("Waiting for the next round");
+        for (int width : new int[] {320, 400}) {
+            RaceLobbyScreen.Screen screen = lobby.screen(width, 224);
+            assertEquals(8, screen.cards().stream().flatMap(card -> card.rows().stream())
+                    .filter(RaceLobbyScreen.Action.class::isInstance).count());
+            RecordingSceneCanvas canvas = new RecordingSceneCanvas(width);
+            lobby.draw(canvas);
+            canvas.assertFillsOnScreen();
+        }
+    }
+
 }

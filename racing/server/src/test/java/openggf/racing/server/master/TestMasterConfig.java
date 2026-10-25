@@ -13,6 +13,27 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class TestMasterConfig {
     @Test
+    void publicRelayCommunicationDefaultsToQuickAndOwnersCanRestrictFurther(@TempDir Path dir)
+            throws Exception {
+        MasterConfig defaults = MasterConfig.defaults();
+        assertEquals("QUICK_CHAT", defaults.chatModeLimit());
+        assertEquals("QUICK_CHAT", defaults.relayChatMode("FULL_CHAT"));
+        assertEquals("QUICK_CHAT", defaults.relayChatMode("QUICK_CHAT"));
+        assertEquals("OFF", defaults.relayChatMode("OFF"));
+
+        Path yaml = dir.resolve("master.yaml");
+        Files.writeString(yaml, "chatModeLimit: FULL_CHAT\n");
+        MasterConfig full = MasterConfig.load(yaml);
+        assertEquals("FULL_CHAT", full.relayChatMode("FULL_CHAT"));
+        assertEquals("QUICK_CHAT", full.relayChatMode("QUICK_CHAT"));
+        Files.writeString(yaml, "chatModeLimit: \"OFF\"\n");
+        assertEquals("OFF", MasterConfig.load(yaml).relayChatMode("FULL_CHAT"));
+        Files.writeString(yaml, "chatModeLimit: anything\n");
+        assertThrows(IOException.class, () -> MasterConfig.load(yaml));
+        assertThrows(IllegalArgumentException.class, () -> defaults.relayChatMode("anything"));
+    }
+
+    @Test
     void fileAndLiteralTokensRejectHeaderUnsafeCharactersWithoutRevealingThem(@TempDir Path dir)
             throws Exception {
         for (String suffix : new String[] {"\uFEFF", "\u00A0", "\u0001", " ", "\u007F"}) {

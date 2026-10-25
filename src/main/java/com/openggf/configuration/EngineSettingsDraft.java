@@ -78,7 +78,7 @@ public final class EngineSettingsDraft {
         if (section.startsWith("capture")) return Category.RECORDING;
         // Global characters and cross-game donation only apply to direct launches: the
         // hub's Game Setup owns them per game.
-        if (section.startsWith("gameplay") || section.startsWith("startup")
+        if (section.startsWith("multiplayer") || section.startsWith("gameplay") || section.startsWith("startup")
                 || section.startsWith("rewind")) return Category.GAMEPLAY;
         return Category.ADVANCED;
     }
