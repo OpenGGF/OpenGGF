@@ -840,6 +840,35 @@ class TestSonicCdOpeningWorldLoad {
         assertThrows(IllegalStateException.class, () -> step(h, LogicalInputSnapshot.neutral()));
     }
 
+    // Explicit raw-storage component ingress: no HUD, title or secondary-player behavior is asserted.
+    @Test void reservedImagesArePartOfFullAndCourseWorldRestoreAndForwardReplay() throws Exception {
+        var h = opening();
+        for (int i = 0; i < 3; i++) step(h, LogicalInputSnapshot.neutral());
+        var runtime = objects(h);
+        for (int whole = 1; whole < 32; whole++)
+            assertArrayEquals(new byte[64], runtime.reservedState(whole).copyBytes(), "declared DEV ClearObjects bank");
+        // Keep actual secondary whole1 clear. Populate every byte of otherwise inactive reserved images2..31.
+        for (int whole = 2; whole < 32; whole++) {
+            byte[] bytes = new byte[64];
+            for (int offset = 1; offset < 64; offset++) bytes[offset] = (byte) (whole * 7 + offset * 3);
+            runtime.writeReservedImage(runtime.reservedState(whole).withBytes(bytes));
+        }
+        var registry = h.mode().getRewindRegistry();
+        var full = registry.capture(); var course = registry.captureCourse(); var before = state(h);
+        runtime.writeReservedImage(runtime.reservedState(31).moveByteAt(63,
+                runtime.reservedState(31).byteAt(63) ^ 0xFF));
+        assertThrows(AssertionError.class, () -> assertState(before, h), "reserved bytes must participate in the complete-state oracle");
+        registry.restore(full); assertState(before, h);
+        var rows = new java.util.ArrayList<State>();
+        for (int i = 0; i < 7; i++) { step(h, LogicalInputSnapshot.neutral()); rows.add(state(h)); }
+        for (int whole = 2; whole < 32; whole++)
+            runtime.writeReservedImage(runtime.reservedState(whole).moveByteAt(63, 0));
+        registry.restore(full); assertState(before, h);
+        for (var row : rows) { step(h, LogicalInputSnapshot.neutral()); assertState(row, h); }
+        registry.restoreCourse(course); assertState(before, h);
+        for (var row : rows) { step(h, LogicalInputSnapshot.neutral()); assertState(row, h); }
+    }
+
     @Test void ordinaryRampApproachPassesOwnedSpringsTagsVerticalDoorAndMonitorAndReplays() throws Exception {
         var h = opening();
         for (int call = 0; call < 323; call++) step(h, input(8, 0, false));
@@ -866,17 +895,32 @@ class TestSonicCdOpeningWorldLoad {
         for (var row : expected) { step(h, input(8, 0, false)); assertState(row, h); }
     }
 
-    @Test void ordinaryRightRouteStopsAtTheSpinTunnelDoorDispatcher() throws Exception {
+    @Test void ordinaryRightRouteRunsTheOwnedHorizontalDoorAt518AndReplaysItsCompletedPass() throws Exception {
+        var h = opening(); var runtime = objects(h);
+        for (int call = 0; call < 517; call++) step(h, input(8, 0, false));
+        var registry = h.mode().getRewindRegistry(); var full = registry.capture(); var course = registry.captureCourse();
+        var before = state(h);
+        step(h, input(8, 0, false));
+        var door = runtime.placement().pool().state(37);
+        assertEquals(0x0D, door.id()); assertEquals(2, door.routine());
+        assertEquals(1, door.unsignedByte(CdObjectState.ByteField.SUBTYPE));
+        assertEquals(0x96F, door.centreX()); assertEquals(0x318, door.centreY());
+        assertEquals(0x23F038, door.longBits(CdObjectState.LongField.MAPPINGS));
+        assertArrayEquals(new byte[64], runtime.reservedState(1).copyBytes());
+        assertFalse(runtime.closed()); assertFalse(h.module().requirePlayerFrame().closed());
+        var after = state(h);
+        registry.restore(full); assertState(before, h); step(h, input(8, 0, false)); assertState(after, h);
+        registry.restoreCourse(course); assertState(before, h); step(h, input(8, 0, false)); assertState(after, h);
+    }
+
+    @Test void ordinaryRightRouteStopsAtThePataBataDispatcherAt540() throws Exception {
         var h = opening(); var runtime = objects(h); var frame = h.module().requirePlayerFrame();
         var pool = runtime.placement().pool();
         var failure = assertThrows(UnsupportedOperationException.class, () -> {
-            for (int call = 0; call < 518; call++) step(h, input(8, 0, false));
+            for (int call = 0; call < 540; call++) step(h, input(8, 0, false));
         });
-        assertEquals("Unowned CD object ID $d at live physical slot 37", failure.getMessage());
-        var door = pool.state(37);
-        assertEquals(0x0D, door.id()); assertEquals(0, door.routine());
-        assertEquals(1, door.unsignedByte(CdObjectState.ByteField.SUBTYPE));
-        assertEquals(0x96F, door.centreX()); assertEquals(0x318, door.centreY());
+        assertEquals("Unowned CD object ID $3e at live physical slot 52", failure.getMessage());
+        assertEquals(0x3E, pool.state(52).id());
         assertTrue(runtime.closed()); assertTrue(frame.closed());
     }
 
@@ -1180,6 +1224,7 @@ class TestSonicCdOpeningWorldLoad {
         assertArrayEquals(expected.shared().artState().cpuBuffer().copy(), actual.shared().artState().cpuBuffer().copy());
         assertArrayEquals(expected.shared().artState().residentBank().copy(), actual.shared().artState().residentBank().copy());
         assertEquals(expected.objects().placement().pool().slots(), actual.objects().placement().pool().slots());
+        assertReservedImages(expected.objects().reserved(), actual.objects().reserved());
         assertEquals(expected.objects().placement().status(), actual.objects().placement().status());
         assertArrayEquals(expected.objects().placement().savedFlags().copy(), actual.objects().placement().savedFlags().copy());
         assertEquals(expected.objects().ringGlobals(), actual.objects().ringGlobals());
@@ -1216,6 +1261,18 @@ class TestSonicCdOpeningWorldLoad {
         assertSame(a.owner(), b.owner()); assertEquals(a.state(), b.state()); assertBackground(a.background(), b.background());
         assertPlane(a.plane(), b.plane()); assertCopies(a.copies(), b.copies());
     }
+    private static void assertReservedImages(
+            com.openggf.game.soniccd.objects.CdReservedObjectBank.Snapshot expected,
+            com.openggf.game.soniccd.objects.CdReservedObjectBank.Snapshot actual) {
+        assertEquals(31, expected.slots().size()); assertEquals(31, actual.slots().size());
+        for (int i = 0; i < 31; i++) {
+            assertEquals(i + 1, expected.slots().get(i).identity().wholeIndex());
+            assertEquals(expected.slots().get(i).identity(), actual.slots().get(i).identity());
+            assertArrayEquals(expected.slots().get(i).copyBytes(), actual.slots().get(i).copyBytes(),
+                    "complete reserved whole " + (i + 1));
+        }
+    }
+
     private static void assertPlane(com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.State expected,
                                     com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.State actual) {
         assertEquals(4096, expected.nameTable().length()); assertEquals(4096, actual.nameTable().length());

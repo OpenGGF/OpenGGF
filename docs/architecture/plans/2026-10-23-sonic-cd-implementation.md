@@ -5077,3 +5077,93 @@ publication. Actual Runtime commit, reserved bank capture/restart, live route,
 real Frame phase/CAS, pixels, splash, native audio/PLC and active secondary
 remain separate work. No runtime admission,95-case native parity, whole-game,
 full-suite or public delivery claim follows this focused component pass.
+
+### 25 October, 05:47 GMT — live horizontal Door, reserved replay and FM arbitration
+
+Local continuation from05c5c47c6. Runtime now constructs one actual reserved bank
+at the explicitly declared DEV ClearObjects-equivalent cold/restart cut. Later
+native HUD/title initialization is still omitted. The actual bank, including all
+31 complete images, is captured once and fully validated before any composite
+restore write. Immutable reservedState reads and guarded CLOSED_CUT
+writeReservedImage ingress expose no second store or mutable bank getter.
+
+Live ID0D uses the real horizontal Door body, placement, authenticated views,
+shared Solid owner and existing494 policy. Every helper preflight compares the
+same single96-image dynamic cut and actual primary/gates/globals. Commit
+validates all images and PRIMARY's Frame patch before S4, applies S3 once only
+for PRIMARY, forwards shared FM once and returns actual live values. SECONDARY
+checks the real whole1/all64bytes and strict no-write shared return; it never
+feeds its projection through the primary Frame port. All old callback guards
+include the new Solid/FM cuts. A completed splash/FM prefix remains if a later
+real0B or dirty-secondary visit stops. Splash behavior itself remains unowned.
+
+Original Runtime tests are140 byte-preserved cases plus24. Tests-only63332
+failed compilation before reservedState/reserved/TunnelDoorFm existed; no JUnit.
+Exact production import followed. Root83402 ran164 tests/one failure/zero
+errors/skips, immediate, Maven1m24s, terminal05:27:22Z. One new assertion compared
+file offset3F038 with actual native pointer23F038. RootR2 fixes only that literal;
+production has only the disclosed header-wording correction. Independent review
+confirmed the source address and no remaining production P1/P2. The original
+164-red result and repaired-one result remain separate.
+
+Both World complete-state comparators now check every reserved identity and all
+64 bytes. A new raw-storage-only test keeps actual secondary1 clear, stages
+otherwise inactive reserved2..31, mutates bytes, proves the complete-state oracle
+rejects the mismatch, then restores and replays seven rows through full/course
+captures. It certifies storage/lifetime, not HUD or secondary execution.
+
+Root29195 ran four narrow cases: repaired Runtime SAT/pixel1, World bank1,
+ordinary Door518/full-course replay1 and a temporary next-frontier probe1:
+**4/0/0/0**, immediate, Maven1m17s, terminal05:33:55Z. The real controller-only
+route now completes518 with Door whole37/routine2/mapping23F038/subtype1 at
+X96F/Y318. Probe observed first new stop at **attempted540, ID3E, whole52**;
+actorX2090/Yword65456/routine2. Native ObjectIndex names ObjPataBata. The probe
+was removed; permanent owned518 replay and540 unowned-dispatch boundary cases
+replace the stale518 missing-owner expectation. No gameplay tuning or native
+parity conclusion follows those engine rows.
+
+The separate pure CdFmSoundArbitration planner models ProcSoundQueue/.ProcSlot
+at pin1ecc5f3a. Its six explicit bytes distinguish direct sndPlay1C09,
+arbitration cells1C0A/B/C, rValue1C17 and curPriority1C18. A caller supplies the
+actual raw R byte; this owner supplies no R-register clock or phase. One R store
+precedes three slot calls. Empty/invalid cells return without advancing the
+cursor, valid losers still clear/advance, full unsigned priority compares before
+the winning7F mask, equal candidates replace, and same-value stores stay ordered.
+No FM_END clamp hides raw90..FF priority reads. From the actual authenticated
+bank, GetList's LE operand derives DriverInfo and its priority pointer; the
+112-byte window includes neighboring header data after79 declared priorities.
+DF reads real header byte4. Generic format construction authenticates no source.
+All results are UNCOMMITTED plans; no driver RAM, service, bus, track, YM/SMPS,
+synthesis or playback is installed.
+
+The26 external tests preceded one production pass. Root appended one actual-USA
+fromAssets success case before importing production: programs close before the
+new factory runs, base78B proves a nonzero-high-byte LE pointer, all112 bytes
+match the actual bank and DF remains4. This closes both optional static-review
+factory-coverage gaps without forging an owner. Tests-only45144 failed at the
+absent planner API (no JUnit); exact frozen production was then imported.
+
+Combined affected validation, with actual media and isolated surfaceless EGL:
+
+```text
+env -u DISPLAY -u WAYLAND_DISPLAY python3 <main-workspace>/tools/testing/maven_queue.py -Dmse=off '-Dtest=TestCdOpeningObjectRuntime#horizontalDoorRealClosedAndOpenSatShareTheExistingTwelveTilesAnd494PatternPresentation,TestSonicCdOpeningWorldLoad#reservedImagesArePartOfFullAndCourseWorldRestoreAndForwardReplay+ordinaryRightRouteRunsTheOwnedHorizontalDoorAt518AndReplaysItsCompletedPass+diagnosticRightAfterHorizontalDoorFrontier' -Dsoniccd.media.root=<supplied-media-root> -Dopenggf.headless.gl=surfaceless-egl -Dsonic2.rom.path=<verified-S2-REV01> test -B
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 python3 <main-workspace>/tools/testing/maven_queue.py -Dmse=off '-Dtest=TestCdFmSoundArbitration,TestCdFmSoundAssets,TestCdFmRequestQueue,TestSonicCdOpeningWorldLoad,TestSonicCdOpeningWorldEgl,TestModApiSignatureSurface' -Dsoniccd.media.root=<supplied-media-root> -Dsoniccd.opening.egl=true -Dopenggf.headless.gl=surfaceless-egl -Dsonic2.rom.path=<verified-S2-REV01> test -B
+```
+
+Root15322: **125/0/0/0**, immediate admission, Maven1m46s,
+terminal05:45:08Z. All six current XML identities and Java25.0.5.0.2/media/EGL
+opt-in/backend/S2 path were checked: World49, EGL13, FM arbitration27, FM
+assets7, main queue18 and API11. New bank/518/540 and actual FM-owner methods
+were confirmed present with no skips. The temporary diagnostic is absent from
+the final tree. Frozen author originals remain unchanged. Independent Runtime
+and FM planner reviews found no remaining P1/P2 after the disclosed Root test
+correction; no repeated review loop or broad-suite substitute was used.
+
+Impact remains confined to CD owners and their existing load/render/rewind
+consumers; no shared engine, public Mod API or build contract changed. Focused
+component, full affected World/EGL and signature checks address those joins.
+Historical broad-smoke attribution/coverage limits remain, and no new broad or
+release-only full suite is claimed. This is a private checkpoint, not whole-game
+or regional parity. Active/dirty secondary, splash, actual warp stars/HUD/save,
+period loading, native PLC/timing and audio execution remain separate owners.
+Pata-Bata data/art/body work follows the observed540 frontier.

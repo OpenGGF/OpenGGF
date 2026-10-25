@@ -1397,6 +1397,7 @@ class TestSonicCdOpeningWorldEgl {
         assertArrayEquals(expected.shared().artState().cpuBuffer().copy(), actual.shared().artState().cpuBuffer().copy());
         assertArrayEquals(expected.shared().artState().residentBank().copy(), actual.shared().artState().residentBank().copy());
         assertEquals(expected.objects().placement().pool().slots(), actual.objects().placement().pool().slots());
+        assertReservedImages(expected.objects().reserved(), actual.objects().reserved());
         assertEquals(expected.objects().placement().status(), actual.objects().placement().status());
         assertArrayEquals(expected.objects().placement().savedFlags().copy(), actual.objects().placement().savedFlags().copy());
         assertEquals(expected.objects().ringGlobals(), actual.objects().ringGlobals());
@@ -1418,6 +1419,18 @@ class TestSonicCdOpeningWorldEgl {
         for (int i = 0; i < 24; i++) for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x++)
             assertEquals(a[i].getPixel(x, y), b[i].getPixel(x, y));
     }
+    private static void assertReservedImages(
+            com.openggf.game.soniccd.objects.CdReservedObjectBank.Snapshot expected,
+            com.openggf.game.soniccd.objects.CdReservedObjectBank.Snapshot actual) {
+        assertEquals(31, expected.slots().size()); assertEquals(31, actual.slots().size());
+        for (int i = 0; i < 31; i++) {
+            assertEquals(i + 1, expected.slots().get(i).identity().wholeIndex());
+            assertEquals(expected.slots().get(i).identity(), actual.slots().get(i).identity());
+            assertArrayEquals(expected.slots().get(i).copyBytes(), actual.slots().get(i).copyBytes(),
+                    "complete reserved whole " + (i + 1));
+        }
+    }
+
     private static void assertPlane(com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.State expected,
                                     com.openggf.game.soniccd.scroll.CdR11aBackgroundPlane.State actual) {
         assertEquals(4096, expected.nameTable().length()); assertEquals(4096, actual.nameTable().length());
