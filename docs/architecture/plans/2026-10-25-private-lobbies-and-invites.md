@@ -13,8 +13,9 @@ slot, session token, roster or gameplay data before identity and password
 admission. Codes resolve local or remote rooms through the existing master,
 expire and rotate, and respect server-enforced member-sharing permission.
 The UI masks secrets, supports reveal/copy and keeps credentials out of files
-and logs. Focused behavioral checks, integration checks and one combined smoke
-selection plus guards have no new or worsened failure. Push the integrated
+and logs. Focused behavioral checks, integration checks, proportionate owner
+smoke categories and guards have no new or worsened failure. The broader
+change-based attempts and their incomplete coverage stay explicit. Push the integrated
 destination branch and account for task-owned worktrees.
 
 ## Throughput checkpoint
@@ -181,3 +182,54 @@ Inspect skips, acknowledge consumed diagnostics, and retain no validation caches
   Selectors: `TestControlCodecPolymorphism,TestPrivateRoomContract,TestChatProtocol,TestModApiSignatureSurface,TestEngineSceneFocusPresentation,TestEngineLiveCapturePresentation,TestSceneClipboardAndFocus,TestPrivateLobbyScreenRendering`.
   Admission waited 690 seconds; Maven execution took 91 seconds. This repairs
   the exact codec fixture error and verifies the new presentation behavior.
+- The second all-category attempt at `dfea98cec` was interrupted during batch
+  71 after 70 of 77 batches completed. It recorded 37,988 cases including partial
+  batch-71 reports, two unchanged baseline failures, zero errors and 93 skips.
+  Its 5,708 seconds of reported execution was below the 180-minute bound; the
+  log was active and source clean. The runner followed its interrupt/termination
+  cleanup path (exit 130), not the configured timeout or a test failure. The
+  signal's origin was not recorded. The broader invocation remains incomplete;
+  unrun classes and guards are not counted as passes. All failure/skip details
+  were inspected and the diagnostics acknowledged. Skips were opt-in captures,
+  measurements, optional external mod jars, graphics prerequisites and route
+  assumptions, with no missing-ROM skip reason.
+- Controller quick chat advanced destination to `c9028e88c`. Isolated merge
+  `5bf53a93c` has parents `dfea98cec` and `c9028e88c`, with no reconciliation
+  code beyond the automatic merge. The actual 23,074-line API snapshot matches
+  its pin. Sixteen affected input, pause, coordinator, run-host, scene-privacy
+  and API classes passed 222 unique cases without failures, errors or skips.
+  This includes all known `RunInput` consumers, production overlay rendering and
+  clipboard activation; it does not claim native compositor verification.
+- Apply the repository's proportionate-validation option after the interrupted
+  broad attempts. Complete the whole `network`, `mods`, `rendering` and `tooling`
+  categories, plus automatically included `common`, on the final combined tree;
+  do not construct a manual suffix of the broad plan. This selects 1,148 smoke
+  candidate classes at `5bf53a93c`; recalculate after the latest destination
+  merge. It includes all shared networking, master,
+  Time Attack, scene/API, rendering and SDK/tooling owners. Retain completed
+  broader coverage for unrelated audio, content, gameplay, physics and rewind
+  rather than restarting their ROM matrices a third time. These owners and the
+  focused real-socket/pixel regressions cover the changed behavior; the broader
+  all-category invocation is still reported as incomplete.
+- The next fetch found destination `d3fa3d519`, adding the Typing campaign and
+  radial quick chat. Reuse the existing integration worker to reconcile its
+  scene navigation/key capture, Engine/GameLoop, API pins and lobby-view overlaps
+  before freezing the final owner-category run. Preserve all upstream content
+  and all private admission, clipboard, focus and invite behavior. The Typing
+  execution record separately attributes its completed 77-batch frozen run and
+  subsequent composition repairs; do not relabel that run as this composed
+  candidate's verification.
+- Merge `403d02444` now includes that destination. Only the signature pin
+  conflicted; actual compiled-source generation resolved it to 23,103 signatures
+  without losing any private or upstream entry. Twenty scene/input/lobby/API
+  classes passed 336 unique cases without failures, errors or skips. Source
+  merges preserve both navigation/key capture and clipboard/focus ownership;
+  no extra runtime reconciliation code was needed. The final whole-owner plan
+  selects 1,180 smoke candidate classes in 24 ordinary batches, plus guards.
+  Run it with `run_categories.py --category network --category mods --category
+  rendering --category tooling --guards --rom-directory
+  <original-ROM-directory> --max-minutes 120 --run`, Java 25,
+  Lua 5.4, `JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl` and both
+  display environment variables unset. Expected execution is 30–60 minutes
+  plus unknown queue waiting; source drift, infrastructure failure, execution
+  budget or output-silence limits leave coverage explicitly incomplete.
