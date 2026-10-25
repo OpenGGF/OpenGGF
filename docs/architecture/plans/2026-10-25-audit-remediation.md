@@ -564,3 +564,54 @@ Temporary native probe/build and consumed XML/trace diagnostics are removed afte
 inspection. Only this evidence prose is retained; parent owns review, integration
 and worktree retirement. The causal defect is established; the source-backed
 post-CPU progression representation remains the explicit implementation gap.
+
+## Native-frontier investigations and Sideways council disposition
+
+The follow-up began at `d3fa3d519f6acb7285d538b5f972807036f1019e` and
+requested two Sol investigations plus an Astra/Fable/Sol/Opus architecture
+council. HCZ's Sol lead used two read-only Sol helpers; the alternate AIZ
+investigator worked alone. The four architecture candidates were independent,
+followed by a fresh Opus cross-review and parent synthesis. Architecture work
+ran no builds, tests or native probes. This delivery contains documentation only.
+
+The two investigative commits are `4576d1df1904623d1cfee50a9bed516cbef75a99`
+(HCZ) and `dc839afe1e4fd5c692af755894824535000db597` (alternate rings).
+Their measured inputs remain the pinned runtime, not this later documentation
+composition. Source and test diagnostics were consumed; the recorded commands,
+identities, failures and causal limits are preserved in their existing artifacts.
+
+| Work | Finding and next boundary | Priority and complexity |
+| --- | --- | --- |
+| Returned HCZ continuity | The hand launcher omits its post-motion solid check; the eventual ownership stop is a real drowning/death restart. Repair and qualify the narrow launcher phase before attributing downstream divergences. | Highest campaign urgency. The first repair is bounded; whole-HCZ closure remains an uncertain larger investigation. |
+| Alternate AIZ rings | Position publication clears the actual bank too early. Native reset follows additional CPU setup for which no equivalent production edge was found. | Required for strict transition fidelity. Shared timing/lifecycle work makes it more substantial than moving one assignment. No playable damage loss was demonstrated. |
+| S2 Sideways | Both failed-allocation aliases and surviving admitted links need physical coordinate semantics across clear/reuse. | Medium overall, high conditional impact; natural occurrence is unmeasured. High architecture/verification complexity. Establish the complete representation contract before implementation. |
+
+The [HCZ evidence](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#returned-hcz-landing-and-death-reload-attribution--2026-10-25)
+separates the first landing cause from later drowning. Historical foreign repair
+`5096be6cc1b7b8bbc9bcc9bf0646803ab7e9f5b5` was inspected, not integrated.
+No result proves the launcher alone explains the death or certifies the outgoing
+HCZ campaign boundary. The alternate reset remains independently attributed.
+
+The [Sideways synthesis](../designs/2026-10-25-s2-sideways-storage.md)
+selects physical coordinates and one manager-mounted fixed-cell authority with
+complete occupant contracts. It retains explicit world lineage/capabilities,
+named clear/carry operations, independent fixed dispatch/DPLC, and a single
+composed restore authority. It rejects the initial candidates' unknown-occupant
+throws, opaque creator state, animation caps, nullable ignored restores and
+blanket clear-on-manager-reset rules. A wholesale canonical-field migration is
+not the default; it remains a reconsideration if exact single-owner live fields
+cannot express the demonstrated native domain.
+
+No candidate was implementation-ready. The finite prerequisite is an inventory
+of actual native writers/aliases and supported admissions, ROM consumer bounds,
+clear/install/carry callers, snapshot writers, creator/API migration and admitted
+single-member retirement. The thirteen-byte tail read is not the entire scope:
+the child's `$36` cross-write and physical endpoint deletion also matter.
+Two-player behavior and unusual mapping/DMA presentation remain unqualified;
+they cannot be silently excluded to declare the supported repair complete.
+
+The recommended implementation order is the narrow HCZ launcher correction,
+the independently scoped load/reset representation, and Sideways after its
+representation gate. This order does not authorize importing broader historical
+compositions or weakening trace comparisons. This investigation/design round
+lands no gameplay fix and changes no fixture, comparison, API or release gate.
