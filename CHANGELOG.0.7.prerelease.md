@@ -113,8 +113,9 @@ Unreleased. The earlier development themes remain in
 
 - **Time Attack communication:** Full Chat includes typed and Quick Chat, with
   canned messages available by keyboard and controller in lobbies and during
-  races. The race chooser uses right-stick click, right-stick selection and the
-  right trigger, leaving movement and jump available. Room owners can choose
+  races. Controller activation opens an eight-way radial chooser with direct
+  right-stick aiming and right-trigger sending; keyboard activation keeps the
+  numbered list. Movement and jump stay available. Room owners can choose
   Quick Chat or Off, while public relay servers default to a Quick Chat maximum.
   Personal settings offer default-on local profanity censorship using a small
   multilingual whole-word dictionary and an option to hide all player messages.

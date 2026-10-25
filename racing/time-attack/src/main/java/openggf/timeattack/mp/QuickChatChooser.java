@@ -14,15 +14,28 @@ import java.util.function.Consumer;
 
 /** Canned messages only. Race input stays independent of gameplay movement, jump and pause. */
 public final class QuickChatChooser {
+    private enum Activation { LIST, RADIAL }
+
+    private final QuickChatRadialMenu radialMenu = new QuickChatRadialMenu();
     private boolean open;
+    private Activation activation = Activation.LIST;
     private int selected;
     private int controllerId = -1;
-    private boolean clickHeld, triggerHeld, controllerHelp;
-    private int stickDirection, stickTicks;
+    private boolean clickHeld, triggerHeld;
 
     public boolean isOpen() { return open; }
-    public void open() { open = true; selected = 0; controllerHelp = false; }
-    public void close() { open = false; controllerHelp = false; }
+    public boolean isRadial() { return open && activation == Activation.RADIAL; }
+    public void open() { open = true; selected = 0; activation = Activation.LIST; }
+    public void close() { open = false; }
+
+    /** The opening tick establishes the primary pad's edges, including an already-held trigger. */
+    public void openController(PhysicalInput input) {
+        PhysicalGamepad pad = primaryPad(input);
+        baseline(pad);
+        open = true;
+        activation = Activation.RADIAL;
+        selected = pad == null ? -1 : radialSelection(pad, -1);
+    }
 
     /** Loading or leaving a run invalidates the old pad baseline. */
     public void resetRaceInput() { close(); controllerId = -1; }
@@ -34,58 +47,65 @@ public final class QuickChatChooser {
     public void updateController(PhysicalInput input, boolean allowed, Consumer<QuickChatPhrase> send) {
         PhysicalGamepad pad = input.gamepad(controllerId);
         if (pad == null) {
-            if (controllerId != -1 && controllerHelp) close();
-            pad = input.gamepads().isEmpty() ? null : input.gamepads().getFirst();
-            controllerId = pad == null ? -1 : pad.deviceId();
-            clickHeld = pad != null && pad.buttonDown(PhysicalGamepad.BUTTON_RIGHT_THUMB);
-            triggerHeld = pad != null && pad.axis(PhysicalGamepad.AXIS_RIGHT_TRIGGER) > 0.55f;
-            stickDirection = pad == null ? 0 : stickDirection(pad.axis(PhysicalGamepad.AXIS_RIGHT_Y), 0);
-            stickTicks = 0;
+            if (controllerId != -1 && isRadial()) close();
+            baseline(primaryPad(input));
             if (!allowed) close();
             return; // Connecting or replacing a pad establishes its baseline.
         }
         boolean click = pad.buttonDown(PhysicalGamepad.BUTTON_RIGHT_THUMB);
         boolean trigger = pad.axis(PhysicalGamepad.AXIS_RIGHT_TRIGGER) > (triggerHeld ? 0.30f : 0.55f);
-        int direction = stickDirection(pad.axis(PhysicalGamepad.AXIS_RIGHT_Y), stickDirection);
         boolean clicked = click && !clickHeld;
         boolean sent = trigger && !triggerHeld;
-        boolean moved = direction != 0 && direction != stickDirection;
-        stickTicks = direction != 0 && direction == stickDirection ? stickTicks + 1 : 0;
-        moved |= direction != 0 && stickTicks >= 24 && (stickTicks - 24) % 4 == 0;
         clickHeld = click;
         triggerHeld = trigger;
-        stickDirection = direction;
         if (!allowed) { close(); return; }
         if (clicked) {
             if (open) close();
-            else { open(); controllerHelp = true; }
+            else openController(input);
             return; // An opening click never also sends from a simultaneous trigger.
         }
-        if (!open) return;
-        if (moved) {
-            selected = Math.floorMod(selected + direction, QuickChatPhrase.values().length);
-            controllerHelp = true;
-        }
-        if (sent) choose(selected, send);
+        if (!isRadial()) return;
+        selected = radialSelection(pad, selected);
+        if (sent && selected >= 0) choose(selected, send);
     }
 
-    private static int stickDirection(float axis, int previous) {
-        if (axis > (previous == 1 ? 0.30f : 0.55f)) return 1;
-        if (axis < (previous == -1 ? -0.30f : -0.55f)) return -1;
-        return 0;
+    private PhysicalGamepad primaryPad(PhysicalInput input) {
+        PhysicalGamepad pad = input.gamepad(controllerId);
+        return pad != null ? pad : input.gamepads().isEmpty() ? null : input.gamepads().getFirst();
+    }
+
+    private void baseline(PhysicalGamepad pad) {
+        boolean samePad = pad != null && pad.deviceId() == controllerId;
+        clickHeld = pad != null && pad.buttonDown(PhysicalGamepad.BUTTON_RIGHT_THUMB);
+        triggerHeld = pad != null && pad.axis(PhysicalGamepad.AXIS_RIGHT_TRIGGER)
+                > (samePad && triggerHeld ? 0.30f : 0.55f);
+        controllerId = pad == null ? -1 : pad.deviceId();
+    }
+
+    private static int radialSelection(PhysicalGamepad pad, int previous) {
+        float x = pad.axis(PhysicalGamepad.AXIS_RIGHT_X);
+        float y = pad.axis(PhysicalGamepad.AXIS_RIGHT_Y);
+        if (Math.hypot(x, y) <= (previous >= 0 ? 0.30f : 0.55f)) return -1;
+        double angle = Math.atan2(x, -y);
+        double sector = Math.PI / 4;
+        if (previous >= 0 && Math.abs(Math.IEEEremainder(angle - previous * sector, Math.PI * 2))
+                <= sector / 2 + Math.toRadians(6)) return previous;
+        return Math.floorMod((int) Math.floor(angle / sector + 0.5), QuickChatPhrase.values().length);
     }
 
     public String raceHint(String keyboardToggle) {
         return keyboardToggle + (controllerId == -1 ? "" : " / RS CLICK") + " QUICK CHAT";
     }
 
-    /** The lobby also accepts ordinary menu directions/confirm and B to close. */
+    /** The lobby list accepts menu directions/confirm; either presentation accepts digits and Back. */
     public void update(ViewInput input, Consumer<QuickChatPhrase> send) {
         if (!open) return;
-        if (input.back()) { close(); return; }
+        if (input.back()) { updateController(input.physicalInput(), false, send); return; }
+        if (number(input::keyPressed, send)) return;
+        updateController(input.physicalInput(), true, send);
+        if (!open || isRadial()) return;
         if (input.up()) selected = Math.floorMod(selected - 1, QuickChatPhrase.values().length);
         if (input.down()) selected = (selected + 1) % QuickChatPhrase.values().length;
-        if (number(input::keyPressed, send)) return;
         if (input.accept()) choose(selected, send);
     }
 
@@ -115,10 +135,7 @@ public final class QuickChatChooser {
     }
 
     HudTextLayout.Panel raceLayout(int width, int height, String zoneName, String keyboardToggle) {
-        return controllerHelp
-                ? layoutWithHelp(width, height, zoneName, "QUICK CHAT  RS CLICK CLOSE",
-                    "RS UP/DN  RIGHT TRIGGER SEND")
-                : layout(width, height, zoneName, keyboardToggle);
+        return layout(width, height, zoneName, keyboardToggle);
     }
 
     private HudTextLayout.Panel layoutWithHelp(int width, int height, String zoneName, String title, String help) {
@@ -138,10 +155,18 @@ public final class QuickChatChooser {
 
     /** The focused row swaps the cyan edge for gold beside its key number, clear of the wording. */
     public void draw(PixelCanvas canvas, String zoneName, String closeLabel) {
+        if (isRadial()) {
+            radialMenu.draw(canvas, selected < 0 ? null : QuickChatPhrase.values()[selected], zoneName, true);
+            return;
+        }
         draw(canvas, layout(canvas.width(), canvas.height(), zoneName, closeLabel));
     }
 
     public void drawRace(PixelCanvas canvas, String zoneName, String keyboardToggle) {
+        if (isRadial()) {
+            radialMenu.draw(canvas, selected < 0 ? null : QuickChatPhrase.values()[selected], zoneName, false);
+            return;
+        }
         draw(canvas, raceLayout(canvas.width(), canvas.height(), zoneName, keyboardToggle));
     }
 

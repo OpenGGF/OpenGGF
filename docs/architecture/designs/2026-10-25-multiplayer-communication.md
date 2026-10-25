@@ -92,10 +92,10 @@ Typed composition remains the existing lobby composer; the newly requested race
 input is Quick Chat. Full to Quick blocks future typed messages while retaining
 messages previously accepted under Full. Off clears history.
 
-### Controller race access follow-up
+### Initial controller race access
 
 The initial implementation at `c502c600b` exposed the race chooser only through
-Q/P and 1–8; its controller menu worked only in the lobby. The follow-up starts
+Q/P and 1–8; its controller menu worked only in the lobby. The first follow-up starts
 from `94c75d8a8` and reuses the same chooser: right-stick click toggles it,
 right-stick up/down selects a phrase, and the right trigger sends and closes.
 The HUD and chooser explain these controls. Lobby controls stay the normal menu
@@ -147,6 +147,51 @@ The production chooser was rendered without a display at 256/320/400/640 × 224;
 the narrowest output was visually inspected. Controller tests use simulated
 physical devices through the real input bridge; no hardware-pad playtest is
 claimed.
+
+### Controller radial chooser
+
+The radial follow-up starts from `c9028e88c`. Controller activation now opens an
+eight-wedge wheel in both the lobby and races. Keyboard activation keeps the
+numbered list. A private LIST/RADIAL activation value owns that choice for the
+modal visit; moving the other device does not silently change its presentation.
+Opus 5.5 owns one bounded visual pass; Sol owns input, integration and validation.
+
+The stick selects directly by angle, clockwise from north in phrase catalogue
+order. The center is an explicit no-selection state. Magnitude hysteresis
+(0.55 to acquire, 0.30 to release) and a six-degree angular margin avoid drift
+and boundary flicker. Vertical scrolling/repeat has been removed from controller
+selection. The right trigger still requires a fresh edge, and sends only when a
+phrase is aimed. Clicking the right stick toggles the wheel; lobby Back cancels.
+Existing primary-pad, reconnect, pause, retry and room-mode baselines remain.
+
+The lobby infers activation from the first pad's physical confirmation event
+alongside logical menu acceptance. Merely connecting a pad is insufficient;
+keyboard events take precedence when both devices act together. No engine,
+protocol or Mod API surface changes are needed.
+
+Each chooser owns cached annular row runs, eight short captions, a gold selected
+wedge and hub marker, and a canonical full-phrase preview beneath the wheel.
+Centering the stick removes the highlight and previews an aiming instruction.
+The fixed wheel and measured preview fit the 256-pixel minimum width at 224
+pixels tall. Full sentences around the ring were rejected because they crowd
+diagonal wedges; the preview preserves wording and zone context instead. The
+initial static geometry caches were rejected by the creator package validator
+(`STATIC_STATE_UNSUPPORTED`); the final cache belongs to each chooser instance,
+with no change to the rendered pixels or validator rules.
+
+Radial validation covered all 35 Time Attack test classes (321 cases, no skips).
+The first focused group (`TestTimeAttackQuickChat`, `TestRaceLobbyView`,
+`TestMultiplayerRaceCoordinator`, `TestViewInput`) passed 87 cases. The remaining
+31-class consumer run executed 234 cases and found only the new static-cache
+packaging regression. After instance ownership replaced it, those four focused
+classes plus `TestTimeAttackModPackage` passed 89 cases with zero failures or
+errors. Commands used `python3 tools/testing/maven_queue.py`, `-Dmse=off`, explicit
+`-Dopenggf.headless.gl=surfaceless-egl`, exact `-Dtest` selectors and `test`; original
+ROM paths were supplied for the consumer group. The bounded fix check replaces
+repeating unaffected cases; this does not claim a release-only full-suite pass.
+An independent Sol source review found no actionable issues. The actual widget
+was rendered at 256/320/400/640 × 224, with neutral and all eight selected states
+inspected. All 17 preview images remained pixel-identical after the cache fix.
 
 ## Delivery and evidence
 
