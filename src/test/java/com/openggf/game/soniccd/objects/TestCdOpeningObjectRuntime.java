@@ -2567,4 +2567,374 @@ class TestCdOpeningObjectRuntime {
             return CdR11aAssetLoader.load(source, CdReleaseVariant.USA, CdStageKey.parse("R11A"));
         }
     }
+
+    // Spin tunnel Runtime composition: constructed actual-owner post-Body cuts, not ordinary-route evidence.
+    // Native authority: ObjSpinTunnel (Spin Tunnel/Main (Tag).asm:7-188) and CheckObjDespawn
+    // (Object Spawner.asm:385-446), scddisasm 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff.
+    @Test void spinTunnelDirtyInitFallsThroughAndPreservesEveryUnownedActorAndObjectByte() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var pool = f.runtime.placement().pool();
+            var motion = spinTunnelMotion(f, 0x01001234, 0x0780BEEF, -1, 0x234, -0x345, 0xE9, 0x1A);
+            seedSpinTunnelMotion(f, motion);
+            var tag = pool.state(40);
+            for (var field : CdObjectState.ByteField.values()) tag = tag.moveByte(field, 0xA7);
+            for (var field : CdObjectState.WordField.values()) tag = tag.moveWord(field, 0xB6C5);
+            for (var field : CdObjectState.LongField.values()) tag = tag.moveLong(field, 0xD4E3F201);
+            tag = tag.moveByte(ID, 0x34).moveByte(ROUTINE, 0).moveByte(SPRITE_FLAGS, 0x81)
+                    .moveByte(SUBTYPE, 0).moveByte(SAVED_FLAGS_ID, 0).moveWord(X, 0x100).moveWord(Y, 0x780);
+            pool.write(tag);
+            var before = f.frame.state(); var shared = f.frame.captureShared(); var display = f.frame.display();
+            var sounds = f.runtime.lastSoundRequests(); var flags = f.runtime.placement().capture().savedFlags();
+            var untouched = pool.capture().slots();
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            var expected = new CdPlayerMotionState(0x01001234, 0x0785BEEF, -0xA00, 0x234, 0xA00,
+                    2, 0x60, 0xED, motion.spriteFlags(), 7, 14, 2, 0x12, 1, 0, 0x4567, 0, 0, 0x31, 0x42);
+            assertEquals(new CdPlayerBody.State(expected, before.animation(), before.header(), before.timers(),
+                    before.history(), before.rotationDistance(), before.objectLinks()), f.frame.state());
+            var expectedTag = tag.moveByte(ROUTINE, 2).moveByte(SPRITE_FLAGS, 0x85).moveWord(TILE, 0x544)
+                    .moveLong(MAPPINGS, 0x23EE9C).moveByte(MAP_FRAME, 1);
+            assertArrayEquals(expectedTag.copyBytes(), f.slot(40).copyBytes());
+            for (int i = 0; i < untouched.size(); i++) if (i != 8) assertEquals(untouched.get(i), pool.capture().slots().get(i));
+            assertEquals(display, f.frame.display()); assertEquals(shared.environment(), f.frame.environment());
+            assertSpinTunnelArt(shared.artState(), f.frame.artState());
+            assertEquals(shared.vIntClock(), f.frame.vIntClock()); assertEquals(shared.paused(), f.frame.paused());
+            assertEquals(sounds, f.runtime.lastSoundRequests());
+            assertArrayEquals(flags.copy(), f.runtime.placement().capture().savedFlags().copy());
+            f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+        }
+    }
+
+    @Test void spinTunnelNativeSubtypeBranchesUseActualRawHeldWithRightWinningOverLeft() throws Exception {
+        // subtype, old X/Y, raw held, final X/Y/GVel, final flags. Angle $60 inverts only subtype0 GVel.
+        int[][] rows = {
+                {0, -1, 0x234, 0, -0xA00, 0x234, 0xA00, 0xED},
+                {1, 0x234, -1, 0, 0x234, -0xD00, -0xD00, 0xEF},
+                {2, 0x234, -1, 0x0C, 0xD00, -1, 0xD00, 0xED},
+                {2, 0x234, 0, 0x0C, 0x234, 0, -0x345, 0xED},
+                {3, 0x234, 0, 4, -0xD00, 0, -0xD00, 0xEF},
+                {4, 0, -0x123, 1, 0, -0xA00, -0xA00, 0xEF},
+                {0xFF, 0x234, 0, 8, 0xD00, 0, 0xD00, 0xEF}
+        };
+        for (int[] row : rows) try (var f = new Fixture()) {
+            springDeviceCut(f); var pool = f.runtime.placement().pool();
+            var motion = spinTunnelMotion(f, 0x01001234, 0x0780BEEF, row[1], row[2], -0x345, 0xE9, 0x1A);
+            seedSpinTunnelMotion(f, motion);
+            // Existing shared owner stores actual raw Right+Left separately from retained logical Left.
+            seedSpinTunnelEnvironment(f, 0, 0, row[3], 4, 1, 0);
+            pool.write(spinTunnelTag(f, pool.state(40), 0, 0x81, row[0], 0x100, 0x780, 0));
+            var sounds = f.runtime.lastSoundRequests();
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(new CdPlayerMotionState(0x01001234, 0x0785BEEF, row[4], row[5], row[6],
+                    2, 0x60, row[7], motion.spriteFlags(), 7, 14, 2, 0x12, 1, 0, 0x4567, 0, 0, 0x31, 0x42),
+                    f.frame.state().motion(), "native subtype " + row[0]);
+            assertEquals(row[3], f.frame.environment().controls().rawHeld());
+            assertEquals(4, f.frame.environment().controls().logicalHeld());
+            assertEquals((row[0] + 1) & 255, f.slot(40).unsignedByte(MAP_FRAME));
+            assertEquals(sounds, f.runtime.lastSoundRequests());
+            f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+        }
+    }
+
+    @Test void spinTunnelIndependentHighDebugBytesGateContactAndRealDrawObject() throws Exception {
+        for (int mode : List.of(1, 0x100)) for (int cheat : List.of(1, 0x100)) try (var f = new Fixture()) {
+            springDeviceCut(f); var pool = f.runtime.placement().pool();
+            var motion = spinTunnelMotion(f, 0x01001234, 0x0780BEEF, 0x234, -1, -0x345, 0xE9, 0x1A);
+            seedSpinTunnelMotion(f, motion); seedSpinTunnelEnvironment(f, mode, cheat, 0, 0, 1, 0);
+            pool.write(spinTunnelTag(f, pool.state(40), 0, 0x81, 1, 0x100, 0x780, 0));
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            if (mode == 1) {
+                assertEquals(-0xD00, f.frame.state().motion().yVelocity());
+                assertEquals(0x0785BEEF, f.frame.state().motion().centreY16_16());
+                assertEquals(0xEF, f.frame.state().motion().flags());
+            } else assertEquals(motion, f.frame.state().motion(), "HIGH debugMode rejects range, after the real Body cut");
+            assertEquals(cheat == 1 ? 0x85 : 5, f.slot(40).spriteFlags(), "only HIGH debugCheat calls real BCLR7");
+            var sat = f.runtime.finishAfterCamera(POST);
+            assertEquals(cheat == 1 ? 0 : 4, sat.provenance().stream().filter(p -> p.slotRef().wholeIndex() == 40).count());
+            assertEquals(0x85, f.slot(40).spriteFlags(), "DrawDone restores bit7 only on the queued path");
+            assertEquals(0x23EE9C, f.slot(40).longBits(MAPPINGS));
+            f.runtime.finishOrdinaryTail();
+        }
+    }
+
+    @Test void spinTunnelAlreadyRollingKeepsYRadiiAnimationAndBothFractions() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var pool = f.runtime.placement().pool();
+            var motion = spinTunnelMotion(f, 0x01001234, 0x0780BEEF, -0x8000, -7, -0x345, 0xED, 0x1A);
+            seedSpinTunnelMotion(f, motion);
+            var tag = spinTunnelTag(f, pool.state(40), 2, 0x84, 0, 0x100, 0x780, 0); pool.write(tag);
+            var before = f.frame.state(); f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(new CdPlayerMotionState(0x01001234, 0x0780BEEF, -0x8000, -7, -0x8000,
+                    2, 0x60, 0xED, motion.spriteFlags(), 9, 19, 0x1A, 0x12, 1, 0, 0x4567, 0, 0, 0x31, 0x42),
+                    f.frame.state().motion());
+            assertEquals(before.animation(), f.frame.state().animation()); assertEquals(tag, f.slot(40));
+            f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+        }
+    }
+
+    @Test void spinTunnelLaterPhysicalRampReadsTheAlreadyPublishedNegativeYVelocity() throws Exception {
+        for (boolean tagFirst : List.of(true, false)) try (var f = new Fixture()) {
+            springDeviceCut(f); var pool = f.runtime.placement().pool();
+            seedSpinTunnelMotion(f, spinTunnelMotion(f, 0x01001234, 0x0780BEEF, 0, 0x100, -0x345, 0, 0x1A));
+            seedSpinTunnelEnvironment(f, 0, 0, 1, 0, 1, 0);
+            int tagSlot = tagFirst ? 40 : 41, rampSlot = tagFirst ? 41 : 40;
+            pool.write(spinTunnelTag(f, pool.state(tagSlot), 0, 0x81, 4, 0x100, 0x780, 0));
+            // Actual ramp Init/Main, with its represented nonzero timer admitting the airborne contact.
+            pool.write(pool.state(rampSlot).moveByte(ID, 0x2A).moveWord(X, 0x100).moveWord(Y, 0x780).moveByte(RAMP_TIMER, 1));
+            var priorSounds = f.runtime.lastSoundRequests();
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(tagFirst ? -0xC00 : -0xA00, f.frame.state().motion().yVelocity());
+            assertEquals(-0xA00, f.frame.state().motion().groundVelocity()); assertEquals(6, f.frame.state().motion().flags());
+            assertEquals(60, f.slot(rampSlot).unsignedByte(RAMP_TIMER)); assertEquals(2, f.slot(rampSlot).routine());
+            assertEquals(priorSounds, f.runtime.lastSoundRequests(), "Tag/ramp preserve the earlier Body sound ledger");
+            f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+        }
+    }
+
+    @Test void spinTunnelDebugDrawReloadChangesFarDespawnAndClearsOnlyLoadedBit() throws Exception {
+        for (int cheat : List.of(1, 0x100)) try (var f = new Fixture()) {
+            springDeviceCut(f); var pool = f.runtime.placement().pool(); var placement = f.runtime.placement();
+            seedSpinTunnelEnvironment(f, 0, cheat, 0, 0, 1, 0);
+            seedSpinTunnelLoaded(placement, 7, 1);
+            var tag = spinTunnelTag(f, pool.state(40), 0, 0x81, 0, 0x380, 0x780, 7); pool.write(tag);
+            var before = f.frame.state(); f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(before, f.frame.state(), "far from the actual player: no contact");
+            if (cheat == 1) {
+                assertEquals(0x85, f.slot(40).spriteFlags()); assertEquals(0xD5, placement.savedFlag(7, 1));
+                assertEquals(2, f.slot(40).routine(), "live bit7 bypasses distance when debug is off");
+            } else {
+                assertArrayEquals(new byte[64], f.slot(40).copyBytes());
+                assertEquals(0x55, placement.savedFlag(7, 1), "actual loaded BCLR retains all seven lower bits");
+            }
+            var sat = f.runtime.finishAfterCamera(POST);
+            assertTrue(sat.provenance().stream().noneMatch(p -> p.slotRef().wholeIndex() == 40));
+            f.runtime.finishOrdinaryTail();
+        }
+    }
+
+    @Test void spinTunnelActualSavedBankEndsAt765AndEscaping766KeepsCompletedInitPlayerAndDrawPrefix() throws Exception {
+        for (int period : List.of(1, 2)) try (var f = new Fixture()) {
+            springDeviceCut(f); var pool = f.runtime.placement().pool(); var placement = f.runtime.placement();
+            // Public same-owner post-Body ingress exercises the reached raw tail; no service at timezone2 is admitted.
+            seedSpinTunnelEnvironment(f, 0, 0x100, 0, 0, period, 0);
+            seedSpinTunnelMotion(f, spinTunnelMotion(f, 0x03801234, 0x0780BEEF, 0, 7, -0x345, 0, 0x1A));
+            seedSpinTunnelLoaded(placement, 254, 1);
+            var tag = spinTunnelTag(f, pool.state(40), 0, 0x81, 0, 0x380, 0x780, 254); pool.write(tag);
+            var bank = placement.capture().savedFlags().copy(); var sounds = f.runtime.lastSoundRequests();
+            assertEquals(766, bank.length);
+            if (period == 1) {
+                f.runtime.runDynamicSlotsAfterReservedSlots();
+                assertArrayEquals(new byte[64], f.slot(40).copyBytes()); assertEquals(0x55, placement.savedFlag(254, 1));
+                byte[] expected = bank.clone(); expected[765] = 0x55; assertArrayEquals(expected, placement.capture().savedFlags().copy());
+                f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+            } else {
+                assertThrows(IndexOutOfBoundsException.class, f.runtime::runDynamicSlotsAfterReservedSlots);
+                assertArrayEquals(bank, placement.capture().savedFlags().copy(), "index766 preflight precedes any bank clear/delete");
+                assertEquals(tag.moveByte(ROUTINE, 2).moveByte(SPRITE_FLAGS, 5).moveWord(TILE, 0x544)
+                        .moveLong(MAPPINGS, 0x23EE9C).moveByte(MAP_FRAME, 1), f.slot(40), "Init and real culled DrawObject survived");
+                assertTrue(f.runtime.closed()); assertTrue(f.frame.closed());
+                assertThrows(IllegalStateException.class, f.runtime::runDynamicSlotsAfterReservedSlots);
+            }
+            assertEquals(0x0785BEEF, f.frame.state().motion().centreY16_16());
+            assertEquals(0xA00, f.frame.state().motion().xVelocity()); assertEquals(-0xA00, f.frame.state().motion().groundVelocity());
+            assertEquals(sounds, f.runtime.lastSoundRequests(), "tag has no sound even on a tail failure");
+        }
+    }
+
+    @Test void spinTunnelRawWarpDirectionClearsTheActualSelectedPeriodAndSavedZeroNeverAccessesBank() throws Exception {
+        int[][] rows = {{0x81, 1, 0}, {0x80, 1, 0}, {0x82, 0xFF, 2}, {0xFF, 0x80, 2}};
+        for (int[] row : rows) for (int saved : List.of(0, 7)) try (var f = new Fixture()) {
+            springDeviceCut(f); var placement = f.runtime.placement(); var pool = placement.pool();
+            seedSpinTunnelEnvironment(f, 0, 0, 0, 0, row[0], row[1]);
+            seedSpinTunnelMotion(f, spinTunnelMotion(f, 0x01001234, 0x0780BEEF, 0, 7, -0x345, 0, 0x1A));
+            for (int p = 0; p < 3; p++) seedSpinTunnelLoaded(placement, 7, p);
+            var before = placement.capture().savedFlags().copy();
+            pool.write(spinTunnelTag(f, pool.state(40), 0, 0x81, 0, 0x100, 0x780, saved));
+            var priorSounds = f.runtime.lastSoundRequests();
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertArrayEquals(new byte[64], f.slot(40).copyBytes());
+            byte[] expected = before.clone(); if (saved != 0) expected[2 + 3 * saved + row[2]] &= 0x7F;
+            assertArrayEquals(expected, placement.capture().savedFlags().copy());
+            assertEquals(0x0785BEEF, f.frame.state().motion().centreY16_16(), "player prefix precedes forced warp deletion");
+            assertEquals(priorSounds, f.runtime.lastSoundRequests(), "Tag/ramp preserve the earlier Body sound ledger");
+            f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+        }
+    }
+
+    @Test void spinTunnelQueuedThenDeletedPhysicalSlotIsSkippedAndEmptyFrameZeroStillGetsDrawDone() throws Exception {
+        for (boolean delete : List.of(true, false)) try (var f = new Fixture()) {
+            springDeviceCut(f); var pool = f.runtime.placement().pool();
+            seedSpinTunnelEnvironment(f, 0, 0x100, 0, 0, 1, 0);
+            // Main2 may inherit screen-relative flags0. Real DrawObject queues this far slot before tail deletion.
+            var tag = spinTunnelTag(f, pool.state(40), delete ? 2 : 0, delete ? 0x80 : 0x81,
+                    delete ? 0 : 0xFF, delete ? 0x380 : 0x100, 0x780, 0); pool.write(tag);
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            if (delete) assertArrayEquals(new byte[64], f.slot(40).copyBytes());
+            else {
+                assertEquals(0, f.slot(40).unsignedByte(MAP_FRAME)); assertEquals(5, f.slot(40).spriteFlags());
+            }
+            var sat = f.runtime.finishAfterCamera(POST);
+            assertTrue(sat.provenance().stream().noneMatch(p -> p.slotRef().wholeIndex() == 40));
+            if (delete) assertArrayEquals(new byte[64], f.slot(40).copyBytes(), "queue drain does not resurrect ID0");
+            else assertEquals(0x85, f.slot(40).spriteFlags(), "real empty mapping frame0 reaches DrawDone");
+            f.runtime.finishOrdinaryTail();
+        }
+    }
+
+    @Test void spinTunnelFinalSatUsesCurrentXYButTheEarlierBodyEligibilityBucketAndMapFrame() throws Exception {
+        try (var f = new Fixture()) {
+            var publication = springDeviceCut(f); var pool = f.runtime.placement().pool();
+            var cut = publication.result().effects().stream().filter(CdPlayerBody.DisplayEligibility.class::isInstance)
+                    .map(CdPlayerBody.DisplayEligibility.class::cast).filter(CdPlayerBody.DisplayEligibility::eligible).findFirst().orElseThrow();
+            var motion = spinTunnelMotion(f, 0x01001234, 0x0780BEEF, 0, 7, -0x345, 0, 0x1A);
+            seedSpinTunnelMotion(f, motion); var before = f.frame.state(); var display = f.frame.display();
+            pool.write(spinTunnelTag(f, pool.state(40), 0, 0x81, 0, 0x100, 0x780, 0));
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(before.animation(), f.frame.state().animation()); assertEquals(before.history(), f.frame.state().history());
+            assertEquals(before.header(), f.frame.state().header()); assertEquals(display, f.frame.display());
+            assertEquals(2, f.frame.state().motion().animation()); assertEquals(7, f.frame.state().motion().xRadius());
+            assertEquals(14, f.frame.state().motion().yRadius());
+            var sat = f.runtime.finishAfterCamera(POST); int at = satEntry(sat, 0);
+            var map = f.assets.sonic().mappingFrames().get(before.animation().mapFrame()); assertTrue(map.pieceCount() > 0);
+            assertEquals(cut.priority() & 7, sat.provenance().get(at / 8).queueBucket());
+            assertEquals((128 + 0x100 + map.bytes().signedByte(5)) & 0x1FF, word(sat.bytes(), at + 6));
+            assertEquals((128 + 0x785 - PRE.yWord() + map.bytes().signedByte(1)) & 0x1FF, word(sat.bytes(), at));
+            assertNotEquals((128 + cut.centreYWord() - PRE.yWord() + map.bytes().signedByte(1)) & 0x1FF, word(sat.bytes(), at));
+            assertEquals(before.animation().mapFrame(), f.frame.state().animation().mapFrame());
+            f.runtime.finishOrdinaryTail();
+        }
+    }
+
+    @Test void spinTunnelCompositeRestoreReplaysTheNextActualBodyArtSatAndUnchangedSoundLedger() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var pool = f.runtime.placement().pool();
+            seedSpinTunnelMotion(f, spinTunnelMotion(f, 0x01001234, 0x0767BEEF, 0, -0x100, 0, 2, 0x1A));
+            pool.write(spinTunnelTag(f, pool.state(40), 0, 0x81, 1, 0x100, 0x767, 0));
+            var sounds = f.runtime.lastSoundRequests();
+            f.runtime.runDynamicSlotsAfterReservedSlots(); assertEquals(sounds, f.runtime.lastSoundRequests());
+            assertEquals(-0xD00, f.frame.state().motion().yVelocity()); assertEquals(6, f.frame.state().motion().flags());
+            assertEquals(0, f.frame.state().motion().playerControl(), "next real Body remains its actual owner");
+            f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+            var objects = f.runtime.captureClosedCut(); var actor = f.frame.captureActor(); var shared = f.frame.captureShared();
+            var cpu = f.runtime.cpuSat(); var picture = f.runtime.displayedFrame();
+            f.service(0); f.runtime.spawnBeforeReservedSlots();
+            assertEquals(CdPlayerBody.Boundary.MAIN_RETURN, f.body(3).result().boundary());
+            f.runtime.runDynamicSlotsAfterReservedSlots(); var nextCpu = f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+            var next = f.runtime.captureClosedCut(); var nextActor = f.frame.captureActor(); var nextShared = f.frame.captureShared();
+            assertNotEquals(actor.state().motion().centreY16_16(), nextActor.state().motion().centreY16_16());
+            assertNotEquals(actor.state().animation(), nextActor.state().animation(), "the next Body owns roll animation");
+            f.service(0); var shown = f.runtime.displayedFrame(); int publications = f.artPublications.size();
+            // An ordinary service opens the next loop. Complete it before invoking closed-cut restore.
+            f.runtime.spawnBeforeReservedSlots();
+            assertEquals(CdPlayerBody.Boundary.MAIN_RETURN, f.body(4).result().boundary());
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+            assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT, f.runtime.phase());
+            f.frame.validateActorRestore(actor); f.frame.validateSharedRestore(shared); f.runtime.validateRestore(objects);
+            f.frame.restoreActor(actor); f.frame.restoreShared(shared); f.runtime.restore(objects);
+            assertEquals(actor, f.frame.captureActor()); assertEquals(shared.environment(), f.frame.environment());
+            assertSpinTunnelArt(shared.artState(), f.frame.artState()); assertEquals(shared.vIntClock(), f.frame.vIntClock());
+            assertSame(cpu, f.runtime.cpuSat()); assertSame(picture, f.runtime.displayedFrame());
+            assertEquals(publications, f.artPublications.size(), "restore has no service/upload callback");
+            f.service(0); f.runtime.spawnBeforeReservedSlots();
+            assertEquals(CdPlayerBody.Boundary.MAIN_RETURN, f.body(3).result().boundary());
+            f.runtime.runDynamicSlotsAfterReservedSlots(); var replay = f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+            var current = f.runtime.captureClosedCut();
+            assertEquals(nextActor, f.frame.captureActor()); assertEquals(nextShared.environment(), f.frame.environment());
+            assertSpinTunnelArt(nextShared.artState(), f.frame.artState()); assertEquals(nextShared.vIntClock(), f.frame.vIntClock());
+            assertEquals(nextShared.paused(), f.frame.paused());
+            assertArrayEquals(nextCpu.bytes(), replay.bytes()); assertEquals(nextCpu.provenance(), replay.provenance());
+            assertEquals(next.placement().pool().slots(), current.placement().pool().slots());
+            assertArrayEquals(next.placement().savedFlags().copy(), current.placement().savedFlags().copy());
+            assertEquals(next.placement().status(), current.placement().status());
+            assertEquals(next.displayedFrame(), current.displayedFrame()); assertEquals(next.lastSoundRequests(), current.lastSoundRequests());
+            assertEquals(next.ringGlobals(), current.ringGlobals()); assertEquals(next.spillGlobals(), current.spillGlobals());
+            assertEquals(next.contactGlobals(), current.contactGlobals()); assertEquals(next.scoreGlobals(), current.scoreGlobals());
+            assertEquals(next.devGlobals(), current.devGlobals()); assertEquals(next.levelGlobals(), current.levelGlobals());
+            assertEquals(next.powerupArtState(), current.powerupArtState());
+            f.service(0); assertEquals(shown, f.runtime.displayedFrame(), "ordinary selector8 publishes; Start/pause is not used");
+        }
+    }
+
+    @Test void spinTunnelUnknownLaterIdRetainsTheEarlierSpringSoundAndCompletedTagPrefix() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var pool = f.runtime.placement().pool();
+            seedSpringPlayer(f, 0x01008000, 0x07671234, 0, 0x100, 2, 0, 0, 0);
+            pool.write(spring(f, pool.state(39), 2, 0x84, 0, 0));
+            pool.write(spinTunnelTag(f, pool.state(40), 0, 0x81, 0, 0x100, 0x780, 0));
+            pool.write(pool.state(41).moveByte(ID, 0x7E));
+            var failure = assertThrows(UnsupportedOperationException.class, f.runtime::runDynamicSlotsAfterReservedSlots);
+            assertTrue(failure.getMessage().contains("41")); assertTrue(failure.getMessage().contains("7e"));
+            assertEquals(2, f.slot(40).routine()); assertEquals(0x23EE9C, f.slot(40).longBits(MAPPINGS));
+            assertEquals(0x07721234, f.frame.state().motion().centreY16_16());
+            assertEquals(0xA00, f.frame.state().motion().xVelocity()); assertEquals(-0x1000, f.frame.state().motion().yVelocity());
+            assertEquals(0xA00, f.frame.state().motion().groundVelocity()); assertEquals(6, f.frame.state().motion().flags());
+            assertEquals(List.of(new CdOpeningObjectRuntime.PlayerSound(new CdPlayerFrameRuntime.ChargeSound(
+                    com.openggf.game.soniccd.player.CdPlayerCharge.Sound.FM_CHARGESTOP)),
+                    new CdOpeningObjectRuntime.SpringFm(CdSpring.FmSound.FM_SPRING)), f.runtime.lastSoundRequests());
+            assertTrue(f.runtime.closed()); assertTrue(f.frame.closed());
+            assertThrows(IllegalStateException.class, f.runtime::runDynamicSlotsAfterReservedSlots);
+        }
+    }
+
+    @Test void spinTunnelUnownedRoutineStopsBeforeInitOrPlayerWritesAtItsRealVisit() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var pool = f.runtime.placement().pool();
+            var tag = spinTunnelTag(f, pool.state(40), 4, 0x81, 0, 0x100, 0x780, 0); pool.write(tag);
+            var actor = f.frame.state(); var slots = pool.capture().slots(); var bank = f.runtime.placement().capture().savedFlags();
+            var failure = assertThrows(CdSpinTunnelTag.UnsupportedSpinTunnelTag.class, f.runtime::runDynamicSlotsAfterReservedSlots);
+            assertEquals(CdSpinTunnelTag.UnsupportedBoundary.ROUTINE_DISPATCH, failure.boundary());
+            assertEquals(40, failure.wholeIndex()); assertEquals(4, failure.value());
+            assertEquals(actor, f.frame.state()); assertEquals(slots, pool.capture().slots());
+            assertArrayEquals(bank.copy(), f.runtime.placement().capture().savedFlags().copy());
+            assertTrue(f.runtime.closed()); assertTrue(f.frame.closed());
+        }
+    }
+
+    private static CdObjectState spinTunnelTag(Fixture f, CdObjectState image, int routine, int spriteFlags,
+                                               int subtype, int x, int y, int saved) throws java.io.IOException {
+        return image.moveByte(ID, 0x34).moveByte(ROUTINE, routine).moveByte(SPRITE_FLAGS, spriteFlags)
+                .moveByte(SUBTYPE, subtype).moveByte(SAVED_FLAGS_ID, saved).moveWord(X, x).moveWord(Y, y)
+                .moveLong(MAPPINGS, f.assets.openingObjects().view(
+                        com.openggf.game.soniccd.level.CdR11aObjectAssets.Table.POWERUP_MAPPINGS).range().nativeAddress())
+                .moveWord(TILE, 0x544).moveByte(MAP_FRAME, (subtype + 1) & 255)
+                .moveByte(WIDTH, 16).moveByte(Y_RADIUS, 16).moveByte(PRIORITY, 3);
+    }
+
+    private static CdPlayerMotionState spinTunnelMotion(Fixture f, int x, int y, int xv, int yv, int gv,
+                                                        int flags, int animation) {
+        return new CdPlayerMotionState(x, y, xv, yv, gv, 2, 0x60, flags, f.frame.state().motion().spriteFlags(),
+                9, 19, animation, 0x12, 1, 0, 0x4567, 0, 0, 0x31, 0x42);
+    }
+
+    private static void seedSpinTunnelMotion(Fixture f, CdPlayerMotionState motion) {
+        var actor = f.frame.captureActor(); var s = actor.state();
+        f.frame.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(), new CdPlayerBody.State(motion,
+                s.animation(), s.header(), s.timers(), s.history(), s.rotationDistance(), s.objectLinks()), actor.display()));
+    }
+
+    /** Explicit public same-owner closed Frame ingress, never a claim of service/route reachability. */
+    private static void seedSpinTunnelEnvironment(Fixture f, int mode, int cheat, int raw, int logical, int zone, int direction) {
+        var shared = f.frame.captureShared(); var e = shared.environment(); var m = e.movement(); var g = m.gates(); var b = e.globals();
+        var gates = new CdPlayerMovement.Gates(g.zoneAct(), zone, g.miniSonic(), g.waterSlide(),
+                g.windTunnel(), g.speedShoes(), direction);
+        var movement = new CdPlayerMovement.Environment(m.physics(), m.bounds(), gates, m.globals());
+        var controls = new CdPlayerBody.Controls(raw, e.controls().rawTap(), logical, e.controls().logicalTap(), e.controls().controlLocked());
+        var globals = new CdPlayerBody.Globals(b.levelFrames(), b.cameraXCentre(), b.timeAttackMode(), mode, cheat,
+                b.timeWarpTimer(), b.invincible(), b.bossMusic());
+        f.frame.restoreShared(new CdPlayerFrameRuntime.SharedState(shared.owner(),
+                new CdPlayerBody.Environment(movement, controls, globals, e.dynamicSlots()), shared.artState(), shared.paused(), shared.vIntClock()));
+    }
+
+    private static void seedSpinTunnelLoaded(CdObjectPlacementRuntime placement, int saved, int period) {
+        for (var bit : List.of(CdObjectPlacementRuntime.SavedBit.MEMBER_1, CdObjectPlacementRuntime.SavedBit.MEMBER_3,
+                CdObjectPlacementRuntime.SavedBit.MEMBER_5, CdObjectPlacementRuntime.SavedBit.MEMBER_7, CdObjectPlacementRuntime.SavedBit.LOADED)) {
+            placement.bsetSavedFlag(saved, period, bit);
+        }
+    }
+
+    private static void assertSpinTunnelArt(CdPlayerArtRuntime.State expected, CdPlayerArtRuntime.State actual) {
+        assertEquals(expected.lastFrame(), actual.lastFrame()); assertEquals(expected.dirty(), actual.dirty());
+        assertArrayEquals(expected.cpuBuffer().copy(), actual.cpuBuffer().copy());
+        assertArrayEquals(expected.residentBank().copy(), actual.residentBank().copy());
+    }
 }

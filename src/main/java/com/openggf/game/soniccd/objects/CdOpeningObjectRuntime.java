@@ -44,7 +44,7 @@ import static com.openggf.game.soniccd.objects.CdObjectState.WordField.*;
  * The 36-tile powerup window starts cold zero and changes only at the selector-8 LoadShieldArt cut.
  * The initial Ring, contact, score and level globals are caller-declared DEV ingress, never an entry proof.
  * Live dynamic IDs $10 Ring, $11 LostRing, $3D Mosqui, $24 Animal, $2C 3D plant and $2A 3D ramp,
- * aftermath IDs $18/$1C/$1F, $12 Floating Block, normal $0A Spring and the death row's $3B Game/Time Over are owned.
+ * aftermath IDs $18/$1C/$1F, $12 Floating Block, normal $0A Spring, $34 Spin tunnel tag and the death row's $3B Game/Time Over are owned.
  * Every other ID fails at its live dispatch; standing-object MODE remains a typed player boundary.
  * This does not execute native title/HUD/PLC/section-art/audio/plane publication.
  * The loader, not declarations or this composition, authenticates asset bytes.</p>
@@ -234,6 +234,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     private final CdGameOver gameOver;
     private final CdFloatBlock floatBlock;
     private final CdSpring spring;
+    private final CdSpinTunnelTag spinTunnelTag;
     private final CdPowerupArtRuntime powerupArt;
     private final CdObjectDrawQueue queue;
     private final LogicalBanks banks;
@@ -264,6 +265,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     private boolean inDrawCallback;
     private boolean inSolidCommit;
     private boolean inSpringLaunch;
+    private boolean inSpinTunnelCommit;
     private int dispatchWholeIndex = -1;
 
     /**
@@ -424,6 +426,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         spring = new CdSpring(placement, CdSpring.Assets.fromObjectAssets(objects), solid,
                 this::commitSpringSolid, this::commitSpringLaunch,
                 (pool, slot) -> drawDynamic(pool, slot.wholeIndex()), this::playSpringFm);
+        // Immutable pure tag bound to the actual raw Powerup mapping owner, not a declared pointer or new art bank.
+        spinTunnelTag = new CdSpinTunnelTag(CdSpinTunnelTag.Assets.fromObjectAssets(objects));
     }
 
     public Phase phase() { return phase; }
@@ -841,6 +845,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                         }
                         // CallReturned/Despawn describe already applied work; never replay them.
                     }
+                } else if (id == CdSpinTunnelTag.OBJECT_ID) {
+                    runSpinTunnelTag(whole); // Fresh actual pool/motion/gates at this physical visit; no sound or Body rerun.
                 } else if (id == CdSpring.OBJECT_ID) {
                     // This physical visit reads the actual current S3 and pre-scroll FG camera. Solid and launch
                     // publish synchronously inside the bound body; its returned completed metadata is not replayed.
@@ -990,6 +996,89 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         return new CdSolidObject.Globals(env.globals().invincible(), g.scoreChain(), g.primaryAngle(), g.secondaryAngle());
     }
 
+    /**
+     * ObjSpinTunnel (Spin Tunnel/Main (Tag).asm:7-188), shipped FixBugs=0 with no fixed alternative.
+     * Take a fresh actual call cut at this physical visit. Init/Main is a pure prefix; no source owner or callback
+     * runs between its complete preflight and object/player publication. The optional DrawObject and mandatory
+     * reloaded CheckObjDespawn tail are later cuts: a failure there retains the already completed prefix.
+     */
+    private void runSpinTunnelTag(int whole) {
+        checkActive(Phase.DYNAMIC_SLOTS);
+        if (inDrawCallback || inSolidCommit || inSpringLaunch || inSpinTunnelCommit || whole != dispatchWholeIndex) {
+            throw new IllegalStateException("Spin tunnel tag requires the current synchronous physical dispatch");
+        }
+        var pool = placement.pool();
+        var cut = pool.capture();
+        var before = cut.slots().get(whole - CdObjectPool.FIRST_WHOLE_INDEX);
+        var environment = frame.environment(); var gates = environment.movement().gates();
+        var result = spinTunnelTag.step(before, frame.state().motion(), new CdSpinTunnelTag.Gates(
+                gates.zoneAct() >>> 8, environment.globals().debugMode(), environment.globals().debugCheat(),
+                environment.controls().rawHeld()));
+        commitSpinTunnelTag(cut, result);
+        if (result.drawObject()) drawDynamic(pool, whole);
+
+        // DrawObject begins with BCLR7 (Object Functions.asm:137-138). NEVER reuse the staged Init image here.
+        var afterDraw = pool.state(whole);
+        pool.validateWrite(afterDraw);
+        var tailGates = frame.environment().movement().gates();
+        var tail = spinTunnelTag.despawn(afterDraw, new CdSpinTunnelTag.DespawnGlobals(
+                tailGates.timeZone(), tailGates.timeWarpDirection(), preScrollForeground.xWord()));
+        if (tail.deleteObject()) {
+            if (tail.loadedClear().isPresent()) {
+                var clear = tail.loadedClear().orElseThrow();
+                // Actual 2+$2FC bank and placement's own index/period checks, BEFORE either BCLR or DeleteObject.
+                // No bank snapshot/restore, shadow bytes, rounded-up table or guessed raw-RAM write.
+                Objects.checkIndex(clear.index(), CdObjectPlacementRuntime.SAVED_BANK_BYTES);
+                placement.savedFlag(clear.savedId(), clear.period());
+                placement.bclrSavedFlag(clear.savedId(), clear.period(), CdObjectPlacementRuntime.SavedBit.LOADED);
+            }
+            pool.deleteObject(whole); // Full native 64-byte clear; savedID0 makes no bank access above.
+        }
+    }
+
+    /** Entire same-owner 96-slot value CAS plus exact Init-only a0 and Frame expected-motion preflight. */
+    private void commitSpinTunnelTag(CdObjectPool.Snapshot cut, CdSpinTunnelTag.Result result) {
+        checkActive(Phase.DYNAMIC_SLOTS);
+        if (inDrawCallback || inSolidCommit || inSpringLaunch || inSpinTunnelCommit) {
+            throw new IllegalStateException("Spin tunnel tag commit must be synchronous and non-reentrant");
+        }
+        inSpinTunnelCommit = true;
+        try {
+            Objects.requireNonNull(result, "completed pure Spin tunnel tag prefix");
+            var pool = placement.pool();
+            pool.validateRestore(cut);
+            var live = pool.state(dispatchWholeIndex);
+            pool.validateWrite(live);
+            pool.validateWrite(result.expectedObject());
+            pool.validateWrite(result.object());
+            var before = cut.slots().get(dispatchWholeIndex - CdObjectPool.FIRST_WHOLE_INDEX);
+            if (live.id() != CdSpinTunnelTag.OBJECT_ID || before.id() != CdSpinTunnelTag.OBJECT_ID
+                    || !live.identity().equals(result.object().identity())
+                    || !before.equals(result.expectedObject()) || (before.routine() != 0 && before.routine() != 2)) {
+                throw new IllegalStateException("Spin tunnel tag prefix differs from its actual live ID $34 routine0/2 call cut");
+            }
+            if (!pool.capture().slots().equals(cut.slots())) {
+                throw new IllegalStateException("CD pool changed after the Spin tunnel tag call cut");
+            }
+            var expected = before;
+            if (before.routine() == 0) {
+                // Only ObjSpinTunnel_Init's executed stores (Tag:26-32); Main writes no a0 bytes.
+                expected = before.addByte(ROUTINE, 2).moveByte(SPRITE_FLAGS, before.spriteFlags() | 4)
+                        .moveWord(TILE, 0x0544)
+                        .moveLong(MAPPINGS, objects.view(CdR11aObjectAssets.Table.POWERUP_MAPPINGS).range().nativeAddress())
+                        .moveByte(MAP_FRAME, before.subtype()).addByte(MAP_FRAME, 1);
+            }
+            if (!expected.equals(result.object())) {
+                throw new IllegalStateException("Spin tunnel tag result changes bytes outside its exact native Init prefix");
+            }
+            frame.validateObjectSpinTunnelResult(result.player());
+            // Every owner/value/preservation check is complete. No callback between these two synchronous commits.
+            commitTouchImages(cut, List.of(result.object()));
+            frame.applyObjectSpinTunnelResult(result.player());
+            checkActive(Phase.DYNAMIC_SLOTS);
+        } finally { inSpinTunnelCommit = false; }
+    }
+
     /** Actual current physical Spring identity, never an ID-selected captured active list or another pool. */
     private CdObjectState requireSpringDispatch(CdObjectState.Identity identity) {
         checkActive(Phase.DYNAMIC_SLOTS);
@@ -1013,7 +1102,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
      */
     private void commitSpringSolid(CdSpring.SolidCall call) {
         checkActive(Phase.DYNAMIC_SLOTS);
-        if (inDrawCallback || inSolidCommit || inSpringLaunch) {
+        if (inDrawCallback || inSolidCommit || inSpringLaunch || inSpinTunnelCommit) {
             throw new IllegalStateException("Spring Solid commit must be synchronous and non-reentrant");
         }
         inSolidCommit = true;
@@ -1049,7 +1138,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     /** Spring's native object-action prefix is already live; this distinct Frame value-CAS adopts S3 once. */
     private void commitSpringLaunch(CdSpring.LaunchCall call) {
         checkActive(Phase.DYNAMIC_SLOTS);
-        if (inDrawCallback || inSolidCommit || inSpringLaunch) {
+        if (inDrawCallback || inSolidCommit || inSpringLaunch || inSpinTunnelCommit) {
             throw new IllegalStateException("Spring launch must be synchronous and non-reentrant");
         }
         inSpringLaunch = true;
@@ -1068,7 +1157,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     /** Dedicated PlayFMSound cut after successful launch, before Down's animation and wrapper DrawObject. */
     private void playSpringFm(CdSpring.FmSound sound) {
         checkActive(Phase.DYNAMIC_SLOTS);
-        if (inDrawCallback || inSolidCommit || inSpringLaunch) {
+        if (inDrawCallback || inSolidCommit || inSpringLaunch || inSpinTunnelCommit) {
             throw new IllegalStateException("Spring FM call must follow its completed launch synchronously");
         }
         requireSpringDispatch(placement.pool().state(dispatchWholeIndex).identity());
@@ -1083,7 +1172,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
      */
     private void commitTopSolid(CdFloatBlock.TopSolidCall call) {
         checkActive(Phase.DYNAMIC_SLOTS);
-        if (inDrawCallback || inSolidCommit) {
+        if (inDrawCallback || inSolidCommit || inSpringLaunch || inSpinTunnelCommit) {
             throw new IllegalStateException("TopSolid commit must be synchronous and non-reentrant");
         }
         inSolidCommit = true;
@@ -1113,7 +1202,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
 
     private void drawDynamic(CdObjectPool pool, int whole) {
         checkActive(Phase.DYNAMIC_SLOTS);
-        if (inDrawCallback || pool != placement.pool() || whole != dispatchWholeIndex) {
+        if (inDrawCallback || inSolidCommit || inSpringLaunch || inSpinTunnelCommit
+                || pool != placement.pool() || whole != dispatchWholeIndex) {
             throw new IllegalStateException("DrawObject must synchronously use the current bound physical dispatch");
         }
         inDrawCallback = true;

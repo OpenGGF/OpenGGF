@@ -4339,3 +4339,47 @@ identities reproduce on both retained trees. This does not make broad smoke
 green, cover later changes or establish a release/full-suite pass. Its diagnostics
 were consumed and deleted; the clean validation tree/merged local branch were
 removed after preserving11 unknown ignored regular files outside the repository.
+
+
+## Live Spin Tunnel tag dispatch and next real Door frontier — 25 October 2026
+
+ID34 now runs from the actual physical object walk with current post-Body motion,
+full debug words/raw held, authenticated Powerup pointer, exact Init preflight,
+one same-owner96-slot CAS and the eight-field Frame patch. Optional real debug
+DrawObject is followed by a mandatory live reload before native despawn. The
+real766-byte saved bank is preflighted, loaded bit7 alone clears before full
+delete, and failed tails preserve completed prefixes. No Body, sound, clock,
+input or publication is replayed. Existing Spring/Solid/Float/V-int/capture and
+400-pattern policy remain unchanged except mutual nonreentry guards.
+
+Tests were authored first; independent review confirmed the authored ramp-timer
+expectation must be60. Root49039 new dirty-Init test against old production
+failed exactly1 expected unowned34 error atphysical40,0skips (197squeue,
+28.238sMaven). After exact production import, Root82832 ran fullRuntime89,
+World46 and NativePlaneEGL1:136/4failures/1error/0skips after883squeue/1m30sMaven,
+exit01:46:50BST. All76 inherited Runtime cases passed. Three new assertions
+omitted the prior Body ChargeSound(FM_CHARGESTOP), whose unconditional stopped
+charge branch is native Sonic/Main.asm:1033-1036. The composite replay called
+closed-cut restore after an ordinary service had opened the next loop. The
+remaining World assertion still expected34; its actual exception was unowned
+vertical Door35 atphysical32. These are distinct from a new gameplay defect.
+
+RootR3 changes tests only: compare the preserved prior ledger for no-sound
+Tag/ramp/warp paths; pin ChargeStop then Spring sound order before an unknown
+later dispatch; complete the additional real ordinary loop before composite
+restore; migrate the unchanged400-Right World route to the actually observed
+Door35 dispatcher. Timer60 remains. No production behavior or input route is
+changed. Root10457 fullRuntime89 plus that World method passed90/0/0/0,
+immediate admission/30.293sMaven,exit01:50:55BST. Exact XML identities/Java25,
+media/backend andzero skips inspected. The first136 run remains red; other45
+World cases and theEGL method retain their prior result, not a new rerun claim.
+The observed frontier establishes live Tag dispatch, not natural Tag contact,
+velocity launch/native parity, section PLC service, or a completed act.
+
+Root82832's exact NativePlane EGL method passed after its own teardown and
+saved three320x224 actual ENGINE PNGs at cold,2-row checkpoint and93-row end.
+Each image's dimensions/hash/pixel diversity were checked; its full/course
+replay, selected PlaneB and visible-background counterfactual passed. A
+method-scoped outcome explicitly records the red combined run. Visual review
+and display remain queued for daylight, with no contact-event or native pixel
+claim from those images. All work and exports remain private/local.
