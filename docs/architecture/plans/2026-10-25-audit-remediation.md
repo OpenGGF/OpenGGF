@@ -280,16 +280,57 @@ at `.worktrees/ai-audit-remediation-20261025` remains frozen at `4e5938d`. Main
 reference submodules and unrelated user files are preserved. The parent owns
 registry updates, main integration, push and eventual checkout cleanup.
 
-After committing the accepted owner correction and this evidence, freeze source
-for exactly four final checks: the strict 26-case pilot with its full committed
-expected SHA, the six-case canonical/prefix selection above, the one-case
-alternate, then a fresh complete `-Pguards` JVM. Use Java 25, Lua 5.4, verified
-absolute S1/S2/S3K ROM paths and explicit CLI EGL; unset DISPLAY, WAYLAND_DISPLAY,
-JDK_JAVA_OPTIONS, JAVA_TOOL_OPTIONS and _JAVA_OPTIONS, with ALSOFT_DRIVERS=null.
-Keep each queued request alive and target ownership sequential. Inspect physical
-cases, skips and complete frontier reports before consuming diagnostics. Do not
-repeat ordinary smoke or the 306/135-case focused selections. The protocol-owner
-change justifies these affected route/trace/guard checks; it does not authorize
-other runtime repairs. Update this checkpoint after those checks, recording the
-tested commit and remaining HCZ/Sideways gaps. A later prose-only commit does not
-require repeating unchanged executable checks. Integration and push stay pending.
+The accepted owner correction is committed and tested at full SHA
+`53b4d0363a39324a14e9fc00c9f59055e1b3f909`. Exactly four final invocations completed
+sequentially on that clean frozen source; no ordinary smoke or 306/135-case
+selection was repeated. Java 25.0.5.0.2, Lua 5.4, original verified absolute
+S1/S2/S3K ROM paths and CLI EGL were used. DISPLAY, WAYLAND_DISPLAY,
+JDK_JAVA_OPTIONS, JAVA_TOOL_OPTIONS and _JAVA_OPTIONS were unset;
+ALSOFT_DRIVERS=null. The portable exact command block is in the same
+[frontier entry](../../status/trace-frontier-log.md#protocol-owner-reconciliation-and-qualification-october-25).
+
+- Strict `check_route_obligations.py --run --expected-candidate
+  53b4d0363a39324a14e9fc00c9f59055e1b3f909 --rom s3k=<original absolute path>`:
+  **26 exact physical cases, zero failures/errors/skips**, tool exit 0. The tool
+  owned the clean queued rebuild, full candidate/ROM/source checks and fresh XML
+  accounting. Queue 4 seconds, Maven 2:33, command wall 164.593 seconds; tool
+  finished 15:00:32 UTC (Maven finished 15:00:28 UTC).
+- Canonical `-Ptrace-replay -Dsurefire.forkCount=1
+  -Dsurefire.runOrder=alphabetical` with the exact four-selector/six-case command
+  in that entry: **6 cases, 1 known chain failure, zero errors/skips**, Maven
+  exit 1. All three prefixes and standalone AIZ/HCZ pass, at 20,463/3,519
+  compared frames. Physical fixture rows are 7,175 for segment 8 and 3,574 for
+  segment 9, including 62/55 lag rows; both complete with zero physics,
+  animation, bootstrap errors or warnings. Segment 11 remains incomplete:
+  81,981 errors (69,334 physics, 12,647 animation), first row 1768 `y`
+  `$0870/$0871`, last mismatching row 5725; actual stop is input 68801,
+  HCZ1/load generation 9. The full failure stack also retains the incomplete
+  run's suppressed unmatched-hardware-completion diagnostics; it is not a
+  completed run or a clean hardware ledger. Queue 1 second, Maven 2:01,
+  command wall 123.368 seconds; finished 15:03:26 UTC.
+- Alternate `-Ptrace-segments
+  -Dtest=TestS3kAizZoneSliceTraceReplay#replayMatchesTrace test -B`: **1 case,
+  1 known failure, zero errors/skips**, Maven exit 1. All 26,041 compared frames
+  retain exactly one non-cascading physics span: row 26179 `rings` 72/0.
+  Animation/bootstrap/warnings are zero. Queue 2 seconds, Maven 40.211 seconds,
+  command wall 42.971 seconds; finished 15:05:10 UTC.
+- Fresh complete `-Pguards test -B`: **800 physical cases across 95 report
+  suites, zero failures/errors/skips**, Maven exit 0. Both formerly failing
+  title ownership/size methods physically executed and passed. Queue 49 seconds,
+  Maven 5:29, command wall 378.912 seconds; finished 15:11:47 UTC.
+
+The pilot consumed its own temporary XML; all other physical XML, full trace
+frontiers and skips were inspected before deleting consumed reports/logs. Fork
+properties confirm Java 25 and EGL. Standalone trace reports still advertise
+missing auxiliary schemas; no full auxiliary, native rendering, audio, other
+viewport/donor/team or whole-campaign qualification follows. No trace payload,
+guard, exclusion or API pin changed. HCZ's returned-segment control/solid frontier,
+the alternate trailing rings publication and S2 Sideways linked raw parent-slot
+storage/allocation-pressure defect remain open. Ordinary smoke retains its three
+matched inherited failures and 97 skip limits above.
+
+Only this plan/frontier result prose changes after the tested commit; runtime,
+tests and fixtures must remain byte-identical to `53b4d0363`. Do not rerun
+unchanged executable checks for that prose. The parent reviews the final local
+commits and owns main integration, push and eventual registry/worktree cleanup;
+those delivery steps remain pending. No task-owned test job remains live.

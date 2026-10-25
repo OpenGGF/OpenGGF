@@ -113060,11 +113060,59 @@ five-class owner/pause/fresh-title/source-guard selection at 14:51:57 UTC:
 135 physical cases, zero failures/errors/skips, Java 25/EGL; queue 386 seconds,
 Maven 91 seconds. No input, fixture, comparison or timing-authority changes.
 
-The next committed candidate will run the strict 26-case pilot, the exact
-canonical/prefix and alternate commands above, and fresh complete guards, once
-each with source frozen. CLI EGL replaces inherited JDK launcher options; display
-and launcher-option variables are unset. Record the tested SHA and actual
-frontiers here after completion. HCZ segment 11, the alternate trailing rings
-publication and S2 Sideways native parent-slot storage remain open; no outgoing
-HCZ, full-campaign or public-release claim follows. Parent retains integration,
-push and cleanup ownership.
+Final source is committed and tested at
+`53b4d0363a39324a14e9fc00c9f59055e1b3f909` in that same checkout. The four required
+invocations ran once, sequentially and without source drift. Portable exact
+commands (ROM_ROOT resolves the original main checkout; no ROM copy/link):
+
+```bash
+TESTED_SHA=53b4d0363a39324a14e9fc00c9f59055e1b3f909
+ROM_ROOT="$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")"
+final_env() {
+  env -u DISPLAY -u WAYLAND_DISPLAY -u JDK_JAVA_OPTIONS -u JAVA_TOOL_OPTIONS -u _JAVA_OPTIONS \
+    JAVA_HOME=/usr/lib/jvm/java-25-openjdk PATH=/usr/lib/jvm/java-25-openjdk/bin:$PATH \
+    LUA_BIN=/usr/bin/lua5.4 ALSOFT_DRIVERS=null "$@"
+}
+final_q() {
+  final_env python3 tools/testing/maven_queue.py -Dmse=off \
+    -Dopenggf.headless.gl=surfaceless-egl \
+    "-Dsonic1.rom.path=$ROM_ROOT/s1.gen" \
+    "-Dsonic2.rom.path=$ROM_ROOT/s2.gen" \
+    "-Ds3k.rom.path=$ROM_ROOT/s3k.gen" "$@"
+}
+final_env python3 tools/testing/check_route_obligations.py --run --expected-candidate "$TESTED_SHA" --rom "s3k=$ROM_ROOT/s3k.gen"
+final_q -Ptrace-replay -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical '-Dtest=TestS3kAizTraceReplay#replayMatchesTrace,TestS3kSonicTailsHczSegmentTraceReplay#replayMatchesTrace,TestS3kSonicTailsCompleteEmeraldRunPrefix,TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds' test -B
+final_q -Ptrace-segments '-Dtest=TestS3kAizZoneSliceTraceReplay#replayMatchesTrace' test -B
+final_q -Pguards test -B
+```
+
+The strict pilot's clean queued rebuild passed **26 exact cases, no failures,
+errors or skips**, with full candidate/ROM/source checks (tool exit 0; finished
+15:00:32 UTC, queue 4 seconds, Maven 2:33, command wall 164.593 seconds).
+Canonical/prefix replay finished **6 cases / 1 known failure / 0 errors / 0 skips**
+at 15:03:26 UTC (queue 1 second, Maven 2:01, command wall 123.368 seconds).
+All three prefixes and standalone AIZ/HCZ pass. Segments 8 and 9 are complete
+and clean across 7,175/3,574 physically represented rows, including 62/55 lag
+rows. Segment 11 retains exactly 81,981 errors (69,334 physics / 12,647
+animation), first row 1768 `y` `$0870/$0871`, last mismatching row 5725, and
+incomplete status. The assertion remains lost production ownership at input
+68801, HCZ1/load generation 9; its suppressed unmatched hardware completions
+remain diagnostics of the incomplete run, not a clean timing ledger.
+
+Alternate replay finished **1 case / 1 known failure / 0 errors / 0 skips** at
+15:05:10 UTC (queue 2 seconds, Maven 40.211 seconds, command wall 42.971 seconds).
+Its 26,041 compared frames have exactly one non-cascading row-26179 `rings` 72/0
+span; animation/bootstrap/warnings remain zero. Fresh guards finished at
+15:11:47 UTC: **800 physical cases / 0 failures / 0 errors / 0 skips** across 95
+report suites (queue 49 seconds, Maven 5:29, command wall 378.912 seconds).
+Both title-owner guard methods now physically pass. Full XML/frontier reports
+were inspected, then consumed; Java 25.0.5.0.2/EGL fork properties matched.
+
+HCZ segment 11, the alternate trailing rings publication and S2 Sideways native
+parent-slot storage remain open. Missing advertised auxiliary schemas still
+limit standalone replay claims. No outgoing HCZ, complete campaign, other
+viewport/donor/team, pixel/audio or public-release certification follows.
+Ordinary smoke remains red with the three matched inherited failures and 97
+skips recorded in the audit plan; it was not repeated. Later changes are result
+prose only, with executable inputs identical to this tested commit. Parent
+retains main integration, push and registry/worktree cleanup ownership.
