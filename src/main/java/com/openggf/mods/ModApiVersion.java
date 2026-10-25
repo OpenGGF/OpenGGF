@@ -19,6 +19,7 @@ public final class ModApiVersion {
      * The 0.7 candidate also includes
      * live window mode and display scaling preferences, configurable widescreen HUD anchoring,
      * widescreen presentation, KiS2 movement/touch/checkpoint/menu handoff contracts,
+     * semantic primary-versus-fixed drowning motion ownership,
      * deferred SMPS header construction, explicit dynamic solid-contact rewind binding,
      * opt-in whole-game presentation pacing, modal level input ownership, controlled level admission and opaque
      * course checkpoints, semantic native impulses, logical menu pointers, and read-only

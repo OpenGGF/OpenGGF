@@ -13,8 +13,9 @@ Each entry describes what the ROM does, what we do, and why — focusing on *why
 and Mega Chopper's P1 capture input now follow the native owners, including
 external support transfer and simultaneous logical Left/Right consumption. This corrects
 implementation defects, adding no accepted deviation. The [causal record](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#hcz-object-phase-repairs-and-remaining-continuity-gate--2026-10-25)
-retains the shared controlled-drowning dispatch blocker and the still-incomplete
-continuous route; focused passes do not certify HCZ completion.
+records the corrected shared drowning dispatcher and fixed lifetime, with the
+still-incomplete continuous route and remaining ring/miniboss frontiers;
+focused passes do not certify HCZ completion.
 
 **TraceChaser extraction note (2026-08-29):** the optional pinned trace-tool
 submodule changes recorder ownership, not Sonic 3 & Knuckles runtime behaviour.

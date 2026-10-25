@@ -2,7 +2,7 @@ package com.openggf.sprites.playable;
 
 /** Native S3K player primary-routine contract used by object/event gates. */
 public enum NativePlayableRoutine {
-    INIT(0x00), CONTROL(0x02), HURT(0x04), DEAD(0x06), RESTART(0x08), DROWN(0x0A), EXIT(0x0C),
+    INIT(0x00), CONTROL(0x02), HURT(0x04), DEAD(0x06), RESTART(0x08), CAMERA_WAIT(0x0A), DROWN(0x0C),
     /** DebugMode bypasses the native primary-routine dispatcher entirely. */
     BYPASSED_BY_DEBUG_MODE(-1);
 

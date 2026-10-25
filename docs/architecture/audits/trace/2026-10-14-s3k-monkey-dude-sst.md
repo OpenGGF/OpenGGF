@@ -2039,3 +2039,179 @@ Lua 5.4, and the three original verified absolute ROM paths. Display/Wayland and
 inherited JVM-option variables were unset. The remaining canonical replay is
 reserved for the completed drowning correction, so the last measured campaign
 frontier remains input 70718 / segment 11 row 3475 sidekick routine.
+
+
+## HCZ continuation: primary drowning dispatch and fixed lifetime — 2026-10-25
+
+The parent authorized the shared drowning primary dispatcher, its necessary
+fixed countdown, CPU, history and faithful routine projections after reviewing
+`e27a600`. `05bf23289` separately resolves the reviewed logical-word consumption
+and authoritative hand-standing defects above. This continuation changes no
+ring, fresh-load, setup timing, hardware readiness, fixture, input movie or
+comparison authority. The exact base remains `61be1910`; the parent's later
+upstream documentation changes are left for parent reconciliation.
+
+The native distinction is structural, not a game-name exception in shared
+movement. S1 `Drown_Countdown .sonicIsDrowning/.sinking`
+(`0A LZ Drowning Countdown.asm:278-295`) and S2 `Obj0A_PlayerHasDrowned`
+(`s2.asm:42179-42192`) decrement their own `$78` lifetime, write primary routine
+6 at zero, and otherwise move with the old velocity before adding `$10`.
+Their shipped `FixBugs=0` branch does not force the player's normal routine;
+the fixed branch would also force routine 2 and stop the HUD timer. S3K
+`AirCountdown_ReduceAir` writes primary routine `$0C` and `$81` object control
+(`sonic3k.asm:33579-33606`); `loc_1857C` retains the same fixed lifetime owner
+(`sonic3k.asm:33611-33620`), but `loc_125C6` and `loc_15828` own old-velocity
+motion, `$10` acceleration, history, animation/PLC and draw in the player slot
+(`sonic3k.asm:24742-24747,29362-29367`). Tails `loc_15810` clears the carried
+player's control and sets it airborne before that move (`sonic3k.asm:29354-29360`).
+
+The engine had returned at the object-control movement gate before its generic
+pre-death branch. Where that branch ran, it added gravity before moving and
+spent a generic player timer. Fixed countdown timers were captured but never
+armed; the fixed controller returned throughout pre-death. S3K normal input,
+CPU, display timers, water and touch owners could still run around that misplaced
+branch. `NativePlayableRoutine` called `$0A` drowning and `$0C` exit, and trace
+projection omitted drowning. Native `$0A` is the camera-scroll wait
+(`loc_12590`, `sonic3k.asm:24719-24730`), not drowning. The sole runtime enum
+consumer is MGZ's CONTROL gate; its CONTROL value remains `$02`.
+
+The correction selects S3K's primary drowning routine before input publication
+or CPU steering, and before movement's normal-control resets or fluid-mutator
+entry. That branch performs only native drowning motion, the existing history
+write and animation/PLC tail. S1/S2 retain their controlled player pass and fixed
+motion owner. A semantic `PlayerMovementRules.drowningUsesPrimaryRoutine` field
+expresses the difference; the old candidate constructor retains the S1/S2
+fixed-sidecar default. The unpublished 0.7 descriptor remains at the candidate version. Version
+documentation and the normalized candidate signature pin are updated; ordinary
+candidate signature regeneration must leave the release descriptor unchanged,
+as the repository hook enforces.
+No gameplay value is read from trace data. Only after those owners are corrected
+do the enum and trace state project the actual S3K `$0C` state.
+
+The fixed `$78` field is the sole native-slot lifetime counter. The existing
+player pre-death field remains a captured phase marker until the fixed owner
+writes death; the player timer is only a fallback for engine roster members
+without a native fixed slot. Fixed continuation precedes water/shield gates,
+resumes the native pending ten-bubble burst, and preserves the successful
+allocation boundary before the angle RNG and shortened interval. The S3K burst
+uses the native mouth offset, random angle and `Level_frame_counter & 3` subtype
+selection (`AirCountdown_MakeItem/loc_185D8`, `sonic3k.asm:33631-33670`). The S3K player-slot branch preserves the native secondary routine by bypassing
+CPU steering; S1/S2 retain their normal primary-routine CPU call. Carrier release and Tails respawn retire the corresponding captured
+engine carry/drowning states; no second timer is introduced.
+
+Independent old-runtime controls used production `SpriteManager.update` and
+real Sonic/Tails movement. The final P2 lifetime fixture pins its leader in an
+ordinary controlled wait and uses the native manual B-button respawn bypass. The final initial selection executed 12 physical cases, 10 expected
+drowning assertion failures, zero errors/skips; ordinary controlled wait and
+the corrected review input control passed. This proved missing `$81` control,
+CPU movement before primary dispatch, generic timer ownership, normal-control
+side effects, and new-velocity rather than old-velocity integration. A separate
+P2 lifetime/carry selection had 3 cases, 3 expected assertion failures, zero
+errors/skips: S2 and S3K each spent lifetime pass 120 in the player slot, and
+S3K's carried P1 remained controlled. Maven times were 28.893 and 83 seconds,
+with zero queue wait. Earlier fixture-only failures are retained in the review
+record and task registry, rather than counted as engine evidence.
+
+The first corrected dispatch check had 25 cases, 2 failures, zero errors/skips
+(86 seconds Maven, zero queue wait). Thirteen of fourteen drowning cases passed,
+including the S3K full death-marker/respawn path and registered restore/forward
+before and after fixed-lifetime transition. The remaining S2 fixture expected
+S3K's `$7F00` marker instead of S2's `$4000`; the other failure was a candidate
+pin line for a bubble type outside the exported API. Both were corrected without
+weakening native comparisons. The P2 check now also verifies the completed
+engine drowning state is cleared at respawn, and independent successful/failed
+allocation controls verify burst RNG ownership. Finished-source affected
+regressions and the four mandatory S3K anchors are recorded below when complete.
+
+
+The first complete affected selection ran 178 cases with 3 failures and no
+errors/skips (92 seconds Maven; 93.073 seconds including wrapper overhead;
+zero queue wait). The new universal CPU pre-death guard blocked an existing
+Sonic sidekick stale-state respawn test. It was rejected and removed: S3K
+bypasses CPU in its primary dispatcher, while S2 `Obj02_Control_Joypad2` still
+calls `TailsCPU_Control` (`s2.asm:38963-38969`). The two new P2 lifecycle tests
+incorrectly expected automatic respawn while their leader remained controlled.
+Native manual A/B/C/Start bypasses that gate (`Tails_Catch_Up_Flying`,
+`sonic3k.asm:26514-26526`; `TailsCPU_Spawning`, `s2.asm:39108-39124`), so the
+physical case now requests B after observing the marker. The P2 fixture also
+starts the CPU in native NORMAL, rather than its constructor's INIT state.
+The earlier INIT warp is a fixture artefact, not evidence of native CPU steering
+during drowning. A matched initialized-P2 old-runtime run on `05bf23289` then
+proved both actual motion owners independently: 2 cases, 2 assertion failures,
+zero errors/skips, 26.942 seconds Maven, zero queue wait. S2's fixed pass and
+S3K's player pass each left Y velocity zero where native requires `$0010`.
+Its first attempted compile failed because the test initializer is package
+private (76 seconds, no tests); the fixture now accesses it reflectively.
+
+The finished affected selection is **178 cases, zero failures/errors/skips**
+(92 seconds Maven; 93.602 seconds wrapper elapsed; zero queue wait). It includes
+16 drowning controls, 28 HCZ review regressions, all four S3K anchors (60 physical
+cases), 11 candidate-API checks, and 63 selected movement, projection, music,
+carry, death and respawn consumers. The exact queued selector is retained in
+the task registry; its class/method groups are `TestNativeDrowningDispatch`,
+`TestModApiSignatureSurface`, the launcher/Chopper/graph classes above,
+`TestTraceCharacterState`, `TestDrowningControllerMusicSelection`,
+`TestTailsCarryController`, and the affected methods of
+`TestSidekickCpuDespawnParity`, `TestRespawnStrategies`,
+`TestPlayableSpriteMovement` and `TestSonic3kMgz2EndBossEvents`. The four anchor
+classes are unchanged from the earlier exact selector. Tested source fingerprint
+is `df66817524b4d350adea01d57406e7bc42dc99c252c035d3e7d3481eb6c9f0c5`
+over `05bf23289` plus the owned source diff and new drowning test. Java 25,
+Lua 5.4, surfaceless EGL, the original verified ROM paths and unset display/JVM
+variables match the previous launch environment. The three ROM CRC/SHA-1 pairs
+were reverified against `AGENTS.md`; no ROM links or copies were made.
+
+Source-segment clarification: manifest segment 11 is `hcz_2`, metadata HCZ act 1,
+BK2 offset 63075. It is the second **HCZ1** stint, after the intervening segment,
+not a native HCZ2 recording. Historical handoff prose that called its stop HCZ2
+must distinguish the source from any replacement destination. The canonical
+continuation below records the actual production boundary rather than inferring
+it from the label.
+
+
+The committed canonical six selector was then executed once on the finished
+drowning source, with a temporary comparison-only `afterProductionStep`
+observer (no gameplay writes). Result: **6 tests, 1 assertion failure, no errors
+or skips**, 122 seconds Maven / 123.578 seconds wrapper elapsed / zero queue wait.
+All three prefixes and standalone AIZ/HCZ passed. Chain segments 0/2/4/6/8/9
+remain clean; segments 8/9 retain 62/55 lag rows. Standalone AIZ/HCZ compare
+20,463/3,519 physics rows without errors. Segment 11 remains incomplete at
+31,207 differences (28,396 physics / 2,811 animation), 53 lag rows and zero
+bootstrap errors. Its first comparison is now row 3832 `rings`, native 104 versus
+engine 94. Rings are an explicitly excluded edit owner in this continuation;
+this result is reported, not masked or attributed to drowning.
+
+The native P2 state now matches at entry 3475, the old-velocity sinking path,
+fixed death transition 3619 and native `$7F00` marker 3620. At rows 3617–3622,
+position, fractions, velocities, primary routine, status and animation match;
+the inactive `stand_on_obj` reference is still unprojected (`9/-1`) under the
+existing comparator policy. No comparison rule was changed. The fixed lifetime
+is 120 executed fixed-slot passes, not 120 stored trace rows: animation-only
+rows explain why entry and death are farther apart in the recorded row domain.
+P1 position/fractions and all three velocities remain equal through row 5064.
+Its first motion difference remains 5065: expected `059E/F812/F7F6`, actual
+`FA62/07EE/080A`. The boss is one movement pass ahead (`$0690` versus native
+`$068C`) and has six hits left; it receives its first hit on 5066. P1 later dies
+at 7477 without drowning. At BK2 cursor 70718 production owns generation 9,
+progression/ROM zone 1, **act index 1 (HCZ2)**, while the represented source is
+still HCZ1. This is the destination/source distinction missing from the earlier
+wording. The receipt kind was not sampled; the coordinator is unchanged.
+
+Canonical command is the existing six-case `-Ptrace-replay` selector with
+`-Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical`, queued `test -B`, the
+same explicit graphics/JDK/Lua/ROM environment and `-Dmse=off` described above.
+Its diagnostic source fingerprint was
+`ef595de7a06cb2dcaff6b59a072497dc51cc9d4fce76f5f69301b0dc9bdd0633`.
+The temporary chain source was restored byte-for-byte and diagnostics inspected
+and consumed. This qualifies the drowning correction; it does not claim HCZ
+continuity completion or attribute the remaining ring difference.
+
+The next bounded HCZ object question is no longer an offset guess:
+`HCZMiniboss_StartFight` only installs `Obj_HCZ_MinibossLoop`
+(`sonic3k.asm:139350-139358`); the following pass's `HCZMinibossLoop_Init`
+initializes velocity/timer and returns through child creation without moving
+(`sonic3k.asm:139384-139397`). Java `startFight` inlines that initialization on
+the callback pass. This source mismatch explains the observed one-pass lead.
+The parent was notified before a boss runtime edit. Independent old-red owner
+entry and registered recreation/forward controls are being established; any
+boss correction remains a separate commit from the shared drowning repair.

@@ -637,3 +637,18 @@ with S1/S2 negatives. First later P1 velocity difference5065 is a missed minibos
 hit; causation is not established before the earlier player frontier is repaired.
 Sideways and the independent alternate-AIZ representation work remain unchanged.
 Parent retains review, combined smoke, integration/push and checkout cleanup.
+
+
+## Authorized primary-drowning continuation — 2026-10-25
+
+The parent extended the HCZ scope to primary drowning dispatch and its necessary
+fixed timer/CPU/history/projection owners. Those corrections now pass 178 focused
+cases with no skips and qualify native P2 entry, sinking, death and despawn in the
+continuous source. Canonical six remains 6/1F/0E/0S; segment 11 first comparison
+is rings 3832 (104/94), with the first P1 motion still the miniboss contact at
+5065. The source is HCZ1's second stint; the premature replacement destination
+at 70718 is HCZ2. Rings and setup timing remain excluded. The native boss
+`StartFight` code-pointer handoff versus next-pass loop initialization is the
+bounded next owner, with a separate old-red control/commit. See the appended
+existing audit; no general player architecture or hardware-timing campaign is
+implied. Parent retains combined smoke and delivery ownership.

@@ -1630,6 +1630,7 @@ CONSTRUCTOR com.openggf.game.rules.PlayerGroundPoseRules public  <init>(short,bo
 CONSTRUCTOR com.openggf.game.rules.PlayerLandingRules public  <init>(boolean,boolean,boolean,boolean)
 CONSTRUCTOR com.openggf.game.rules.PlayerLandingRules public  <init>(boolean,boolean,boolean,boolean,boolean)
 CONSTRUCTOR com.openggf.game.rules.PlayerMovementRules public  <init>(boolean,boolean,boolean,com.openggf.game.rules.PlayerGroundPoseRules,com.openggf.game.rules.PlayerAirMovementRules,boolean,boolean,boolean,com.openggf.game.rules.PlayerLandingRules,com.openggf.game.rules.PlayerLevelBoundaryRules,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean)
+CONSTRUCTOR com.openggf.game.rules.PlayerMovementRules public  <init>(boolean,boolean,boolean,com.openggf.game.rules.PlayerGroundPoseRules,com.openggf.game.rules.PlayerAirMovementRules,boolean,boolean,boolean,com.openggf.game.rules.PlayerLandingRules,com.openggf.game.rules.PlayerLevelBoundaryRules,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean)
 CONSTRUCTOR com.openggf.game.rules.PowerUpRules public  <init>(int,int,int,int,int,boolean,boolean,int,int,boolean)
 CONSTRUCTOR com.openggf.game.rules.RingRules public  <init>(int,int,boolean,boolean,int,int,int,boolean,boolean,boolean)
 CONSTRUCTOR com.openggf.game.rules.SidekickCpuRules public  <init>(int,int,int,boolean,boolean,boolean,boolean,int,boolean,int,int,int,int,int,int,boolean,boolean,boolean,boolean,boolean)
@@ -8369,6 +8370,7 @@ METHOD com.openggf.game.rules.PlayerLandingRules public,final  int hashCode()
 METHOD com.openggf.game.rules.PlayerLandingRules public,final  java.lang.String toString()
 METHOD com.openggf.game.rules.PlayerMovementRules public  boolean angleDiffCardinalSnap()
 METHOD com.openggf.game.rules.PlayerMovementRules public  boolean controlLockLatchesLogicalInput()
+METHOD com.openggf.game.rules.PlayerMovementRules public  boolean drowningUsesPrimaryRoutine()
 METHOD com.openggf.game.rules.PlayerMovementRules public  boolean fixedAnglePosThreshold()
 METHOD com.openggf.game.rules.PlayerMovementRules public  boolean hurtRoutineLatchesLogicalInput()
 METHOD com.openggf.game.rules.PlayerMovementRules public  boolean hurtStopBottomKillUnsigned()
@@ -18194,6 +18196,7 @@ RECORD-COMPONENT com.openggf.game.rules.PlayerLandingRules pinballLandingPreserv
 RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules air com.openggf.game.rules.PlayerAirMovementRules
 RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules angleDiffCardinalSnap boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules controlLockLatchesLogicalInput boolean
+RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules drowningUsesPrimaryRoutine boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules fixedAnglePosThreshold boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules groundPose com.openggf.game.rules.PlayerGroundPoseRules
 RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules hurtRoutineLatchesLogicalInput boolean

@@ -5064,8 +5064,11 @@ dispatch, because seeding the standing state hides a missing collision call.
 HCZ hand launcher ordering is the opposite of a fresh-contact grab check:
 `HCZHandLauncher_UpdateSolid` (sonic3k.asm:65864-65872) writes the final Y before
 its solid call; `HCZHandLauncher_TryGrabPlayer` (sonic3k.asm:66006-66008)
-reads the prior pass's retained standing bit. Capture that bit for rewind and
-preserve it when native/extension player bindings move. A pre-motion checkpoint
+reads the prior pass's retained standing bit. Query the authoritative solid
+manager latch: a later support's RideObject_SetRide clears the old object's
+status bit. A private boolean copied after a checkpoint misses that external
+clear. The manager already captures the latch and object/player identity for
+rewind; preserve grab ownership when native/extension bindings move. A pre-motion checkpoint
 both misses rising landings and changes grab/release timing.
 
 Drowning changes the primary player routine, not just control flags.
@@ -5074,6 +5077,19 @@ Drowning changes the primary player routine, not just control flags.
 when object control remains `$81`. A shared normal-control early return must
 not intercept that primary routine. Releasing a local controlling object or
 changing only the reported routine byte conceals the wrong dispatch owner.
+Select the primary routine before input publication, CPU steering and normal
+control side effects. Its fixed AirCountdown still owns the $78 lifetime and
+pending bubble/RNG burst. S1/S2 differ: their fixed countdown also owns the
+old-velocity move and $10 gravity, while the shipped FixBugs=0 player routine
+remains unchanged. Use a semantic profile, not a shared unconditional pre-death
+CPU return; that return blocks stale-state respawn and changes S2's native call.
+Test the actual next input consumer too: legacy forced-right priority is not a
+native logical word when both Left/Right must execute independently.
+A drowning CPU control needs an already-initialized native secondary state:
+constructor INIT legitimately writes a spawn position and is not proof of
+normal-routine steering during drowning. A controlled leader also blocks
+ordinary respawn. Use the native manual A/B/C/Start bypass for that physical
+case, or provide an eligible leader, and name which path was measured.
 
 ## Object deletion is not rider release
 

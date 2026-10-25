@@ -496,6 +496,20 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	@Override
 	public void handleMovement(boolean up, boolean down, boolean left, boolean right, boolean jump, boolean testKey,
 			boolean speedUp, boolean slowDown) {
+        // S3K loc_125C6 / loc_15828 dispatch before all normal-control work.
+        // Extra engine roster members without a native fixed slot retain a
+        // fallback lifetime owner; native slots are timed only by their sidecar.
+        if (sprite.isDrowningPreDeath() && !sprite.isDebugMode()
+                && (com.openggf.sprites.playable.PlayableSpriteInternalAccess.hasPrimaryDrowningRoutine(sprite)
+                    || !com.openggf.sprites.playable.PlayableSpriteInternalAccess.fixedCountdownOwnsDrowning(sprite))) {
+            short oldX = sprite.getX(), oldY = sprite.getY();
+            moveSpriteTestGravity(sprite.getXSpeed(), sprite.getYSpeed());
+            sprite.setYSpeed((short) (sprite.getYSpeed() + 0x10));
+            if (!com.openggf.sprites.playable.PlayableSpriteInternalAccess.fixedCountdownOwnsDrowning(sprite)
+                    && sprite.tickDrownPreDeath()) sprite.setDead(true);
+            sprite.updateSensors(oldX, oldY);
+            return;
+        }
 		if (motionMutators != null) motionMutators.beginFluidMovement(sprite);
 		try {
 			handleMovementDispatch(up, down, left, right, jump, testKey, speedUp, slowDown);
@@ -673,19 +687,6 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		short originalX = sprite.getX();
 		short originalY = sprite.getY();
 
-		// ROM-accurate drowning pre-death: 120 frames of slow sinking before death
-		// ROM ref: s2.asm:41729-41768 - addi.w #$10,y_vel; no terrain, no input
-		if (sprite.isDrowningPreDeath()) {
-			sprite.setYSpeed((short) (sprite.getYSpeed() + 0x10));
-			if (sprite.tickDrownPreDeath()) {
-				// Timer expired - transition to dead state (no upward bounce)
-				sprite.setDead(true);
-			}
-			moveSpriteTestGravity(sprite.getXSpeed(), sprite.getYSpeed());
-			sprite.updateSensors(originalX, originalY);
-			applyScreenYWrapValueAfterControl();
-			return;
-		}
 
 		if (sprite.getDead()) {
 			SidekickCpuController cpu = sprite.getCpuController();

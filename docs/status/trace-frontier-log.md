@@ -113214,3 +113214,27 @@ the last measured campaign remains incomplete at input 70718, segment 11 first
 row 3475 `sidekick_routine` `$0C/$02`. The authorized primary drowning owner is
 being corrected separately; these two review findings alone do not attribute
 the later death.
+
+
+## 2026-10-25 — HCZ primary drowning owner qualified; ring and miniboss frontiers remain
+
+On exact `61be1910` base retaining `e27a600` and review commit `05bf23289`,
+`t3-191b48d4` corrects native primary dispatch/motion, fixed lifetime and faithful
+routine projection. Focused selection: 178 cases, zero failures/errors/skips,
+including the four S3K anchors. Canonical exact six selector: 6 tests, 1 assertion
+failure, zero errors/skips; all three prefixes and standalone AIZ/HCZ pass.
+Segment 11 remains incomplete at 31,207 differences (28,396 physics / 2,811
+animation), 53 lag rows, zero bootstrap errors; first row 3832 `rings` is
+104/94. P2 drowning entry 3475, death 3619 and despawn 3620 now match native.
+First P1 motion remains 5065, three reflected velocities missing; the boss is
+one movement pass ahead. Source inspection proves Java inlines the native
+next-pass loop initialization in `startFight`; a separate bounded boss control
+and correction follow. Ring edits remain excluded by the parent.
+
+Segment 11 is HCZ1 (`hcz_2`, offset 63075). The replacement at BK2 cursor 70718
+is generation 9, zone 1, act index 1 (HCZ2); previous prose blurred source and
+destination. The [appended causal record](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#hcz-continuation-primary-drowning-dispatch-and-fixed-lifetime--2026-10-25)
+has exact selectors, source fingerprints, old-red controls, corrected fixture
+errors, 92-second focused and 122-second canonical Maven times (zero queue wait),
+and the unchanged original ROM/EGL/Java25/Lua5.4 environment. Parent owns combined
+smoke, upstream docs reconciliation, integration/push and cleanup.

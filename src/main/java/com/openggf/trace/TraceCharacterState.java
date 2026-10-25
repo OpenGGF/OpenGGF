@@ -109,6 +109,9 @@ public record TraceCharacterState(
             // that raw value verbatim rather than deriving one from hurt/dead/CPU state.
             return override;
         }
+        if (com.openggf.sprites.playable.PlayableSpriteInternalAccess.hasPrimaryDrowningRoutine(sprite)) {
+            return com.openggf.sprites.playable.NativePlayableRoutine.DROWN.byteValue();
+        }
         if (sprite.getDead()) {
             return 0x06;
         }

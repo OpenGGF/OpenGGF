@@ -853,6 +853,12 @@ public class SpriteManager implements PlayableSstDispatcher {
 						continue;
 					}
 
+                    if (com.openggf.sprites.playable.PlayableSpriteInternalAccess.hasPrimaryDrowningRoutine(playable)) {
+                        tickPlayablePhysics(playable, false, false, false, false, false, false,
+                                false, false, levelManager, cadence);
+                        continue;
+                    }
+
 					boolean effectiveUp, effectiveDown, effectiveLeft, effectiveRight, effectiveJump, effectiveTest;
 					boolean skipCpuPhysicsThisFrame = false;
 					SidekickCpuController cpuControllerForDiagnostics = null;
@@ -1388,8 +1394,13 @@ public class SpriteManager implements PlayableSstDispatcher {
 						}
 						activePlayableUpdate = playable;
 						try {
-							playable.applyQueuedControlStateForFrameStart();
-							var cpuController = playable.getCpuController();
+                            playable.applyQueuedControlStateForFrameStart();
+                            if (com.openggf.sprites.playable.PlayableSpriteInternalAccess.hasPrimaryDrowningRoutine(playable)) {
+                                tickPlayablePhysics(playable, false, false, false, false, false, false,
+                                        false, false, levelManager, frameCounter);
+                                continue;
+                            }
+                            var cpuController = playable.getCpuController();
 							cpuController.update(frameCounter);
 							boolean skipCpuPhysicsThisFrame = cpuController.consumeSkipPhysicsThisFrame();
 
@@ -2076,6 +2087,15 @@ public class SpriteManager implements PlayableSstDispatcher {
 										   boolean up, boolean down, boolean left, boolean right,
 										   boolean jump, boolean test, boolean speedUp, boolean slowDown,
 										   LevelManager levelManager, int frameCounter) {
+        if (com.openggf.sprites.playable.PlayableSpriteInternalAccess.hasPrimaryDrowningRoutine(playable)) {
+            // loc_15810 clears the carrier latch before the drowning move.
+            playable.getTailsCarryController().releaseAfterCarrierHurt();
+            playable.getMovementManager().handleMovement(false, false, false, false, false, false, false, false);
+            playable.recordFollowerHistoryForTick();
+            playable.getAnimationManager().update(frameCounter);
+            playable.endOfTick();
+            return;
+        }
 		boolean isUnified = requiresPostMovementSolidPass(playable);
 		boolean usesInlineSolidResolution = levelManager != null && levelManager.objectsExecuteAfterPlayerPhysics();
 		// Capture the hurt-routine membership BEFORE movement runs, because the

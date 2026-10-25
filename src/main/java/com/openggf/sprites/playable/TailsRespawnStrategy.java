@@ -78,6 +78,9 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
             sidekick.setGSpeed((short) 0);
         }
         sidekick.setDead(false);
+        // Returning to the player routine retires the engine's completed drown
+        // phase, as SonicRespawnStrategy already does. It is not a fresh timer.
+        sidekick.clearDrowningDeathState();
         sidekick.setHurt(false);
         sidekick.setSpindash(false);
         sidekick.setSpindashCounter((short) 0);

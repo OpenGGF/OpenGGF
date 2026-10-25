@@ -19,6 +19,34 @@ public final class PlayableSpriteInternalAccess {
         sprite.logicalInputStateForScript(heldMask, jumpPress);
     }
 
+    /** Native primary-routine selection precedes input publication and CPU control. */
+    public static boolean hasPrimaryDrowningRoutine(AbstractPlayableSprite sprite) {
+        var rules = sprite.getGameRules();
+        return sprite.isDrowningPreDeath() && !sprite.isDebugMode()
+                && rules != null && rules.playerMovement().drowningUsesPrimaryRoutine();
+    }
+
+    public static boolean fixedCountdownOwnsDrowning(AbstractPlayableSprite sprite) {
+        return sprite.fixedLevelObjectOwnsDrowningBubbleCadence();
+    }
+
+    /** The fixed countdown is the sole lifetime owner for the native player slots. */
+    public static void finishFixedDrowning(AbstractPlayableSprite sprite) {
+        sprite.drownPreDeathTimer = 0;
+        sprite.setDead(true);
+    }
+
+    /** S1/S2 fixed drowning slots move with the old velocity, then add $10. */
+    public static void moveFixedDrowning(AbstractPlayableSprite sprite) {
+        sprite.move(sprite.getXSpeed(), sprite.getYSpeed());
+        sprite.setYSpeed((short) (sprite.getYSpeed() + 0x10));
+    }
+
+    public static void spawnFixedDrowningBubble(AbstractPlayableSprite sprite, int angle, boolean skipFirstUpdate) {
+        if (sprite.getDrowningController() != null)
+            sprite.getDrowningController().spawnFixedDrowningBubble(angle, skipFirstUpdate);
+    }
+
     public static void bindMutatorPolicies(AbstractPlayableSprite sprite, PlayableMutatorPolicySource source) {
         sprite.mutatorPolicySource = source;
     }

@@ -383,3 +383,22 @@ with restore/forward and a manager-level support transfer before the next grab,
 also repeated after restore. The 28 affected review cases pass across the final
 control and reused unchanged cases. These controls do not certify the still
 incomplete continuous route; see the appended HCZ audit for measured limits.
+
+
+## Primary drowning continuation — 2026-10-25
+
+The shared drowning correction adds 16 independent native-owner controls:
+P1 across S1/S2/S3K, P2 in S2/S3K, move-before-gravity, exactly 120 fixed-slot
+passes, registered before/after transition restore and forward replay, controlled
+wait preservation, carry release, full P2 death marker/manual respawn, and
+successful/failed allocation RNG. The affected selection passes 178 physical
+cases with zero failures/errors/skips, including all four S3K anchors.
+
+Canonical coverage remains bounded: all three prefixes and standalone AIZ/HCZ
+pass, but segment 11 has 31,207 differences, first row 3832 rings 104/94. P2
+entry/death/despawn now match native; first P1 motion still differs at miniboss
+row 5065. The source segment is the second HCZ1 stint (`hcz_2`); the unexpected
+replacement destination at cursor 70718 is HCZ2, generation 9. This adds no HCZ2
+route/viewport/donor/team or native-picture qualification. Exact source, commands,
+fixture corrections, timing and limits are in the appended HCZ audit. The ring
+owner is excluded and the source-proven miniboss loop-entry question is separate.

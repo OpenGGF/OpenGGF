@@ -390,9 +390,9 @@ public record GameRules(
                     // tailsRollSpeedUsesEffectiveDecelQuarter: S3K Tails_RollSpeed is flat $20
                     false,
                     // waterVelocityChangeGatedByObjectControl: sonic3k.asm:22271, :27488
-                    true
-            ,
-                    true
+                    true,
+                    true,
+                    true // drowningUsesPrimaryRoutine: loc_125C6 / loc_15828
             ),
             new PlayerCapabilityRules(
                     true,

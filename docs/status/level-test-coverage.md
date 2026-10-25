@@ -1359,3 +1359,12 @@ record87 focused passes, retained-state restore/replay, five clean replay
 companions and the still-red continuous chain. The next real P2 difference is
 shared controlled-drowning dispatch at3476; source closure still fails at70718
 in HCZ2. This does not certify either act, broader products or whole-route rewind.
+
+
+HCZ primary-drowning continuation (2026-10-25): 178 focused cases pass without
+skips, including source-backed S1/S2/S3K motion/lifetime differences, P2 death and
+manual respawn, carry release, registered rewind and all four S3K anchors. The
+canonical six still has one chain assertion failure; native P2 now matches,
+while source HCZ1 segment 11 first differs at rings 3832 and P1 motion at miniboss
+5065. The replacement destination at input 70718 is HCZ2; this does not qualify
+an HCZ2 route. See the appended HCZ1/HCZ2 matrices and existing causal audit.

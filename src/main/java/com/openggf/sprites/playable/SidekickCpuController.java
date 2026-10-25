@@ -3553,7 +3553,7 @@ public class SidekickCpuController {
         // Tails's hurt/death/drown object routines bypass Tails_CPU_Control and
         // immediately clear Player_1 object_control plus Flying_carrying_Sonic_flag
         // before running hurt/death motion (sonic3k.asm:29220, 29312, 29356).
-        if (sidekick.isHurt() || sidekick.getDead()) {
+        if (sidekick.isHurt() || sidekick.getDead() || PlayableSpriteInternalAccess.hasPrimaryDrowningRoutine(sidekick)) {
             releaseCarryForCarrierDisabled();
             return;
         }
@@ -3583,7 +3583,7 @@ public class SidekickCpuController {
         }
 
         // 1. Hurt/dead (Sonic routine >= 4)
-        if (leader.isHurt() || leader.getDead()) {
+        if (leader.isHurt() || leader.getDead() || PlayableSpriteInternalAccess.hasPrimaryDrowningRoutine(leader)) {
             carryController().setParentagePending(false);
             releaseCarry(carryTrigger.carryLatchReleaseCooldownFrames());
             return;
@@ -5880,7 +5880,7 @@ public class SidekickCpuController {
     }
 
     public boolean usesFlyingCarryMovement() {
-        if (sidekick.isHurt() || sidekick.getDead()) {
+        if (sidekick.isHurt() || sidekick.getDead() || PlayableSpriteInternalAccess.hasPrimaryDrowningRoutine(sidekick)) {
             return false;
         }
         return carryController().isCarryingMainCharacter()
