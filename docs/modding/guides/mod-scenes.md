@@ -164,6 +164,26 @@ These canonical values are `com.openggf.control.PhysicalInput`,
 `PhysicalInputEvent` and `PhysicalGamepad`, shared by input capture and the scene
 host.
 
+Use `ctx.clipboard().writeText(text)` for an explicit Copy action during your
+scene's update. It returns a `SceneClipboard.Write`; poll `result()` on later
+updates for `PENDING`, `SUCCESS`, `UNAVAILABLE` or `DENIED`. This is write-only
+access, bounded to 4096 UTF-16 units. Empty, NUL or malformed Unicode text is
+denied. Headless contexts report unavailable.
+
+A physical keyboard, gamepad or mouse press grants one copy for less than five
+monotonic seconds. This allows an asynchronous invite lookup after the Copy
+press. New presses replace the allowance; they do not accumulate copies.
+Focus changes, suspension and close retire the allowance and pending work.
+The engine checks foreground ownership again before writing. Keep copied
+credentials out of notices, logs and storage.
+
+Implement `ModScene.focusLost(SceneContext)` to hide revealed credentials and
+cancel pending copy/reveal intent. The callback runs through the scene owner's
+fault boundary even while ordinary updates pause. `focusLossGeneration()` is
+the context's monotonically increasing loss counter. Focus handling discards
+retained scene drawings, so a suspended scene cannot redisplay an old revealed
+value without drawing again.
+
 Gamepad timestamps describe polling observation, not hardware delivery. The live
 window polls during its frame wait, but rendering/OS scheduling can still delay
 observations. Choose one menu convention: ordinary raw pad A/B must not also be

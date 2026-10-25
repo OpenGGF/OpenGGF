@@ -25,7 +25,11 @@ non-saving session with no mod content, so ghost times stay comparable across pl
 
 ## Playing and existing data
 
-Open **Extras > Time Attack**. The same mod provides Solo, Host LAN, Join LAN and Browse.
+Open **Extras > Time Attack**. The same mod provides Solo, Host LAN, Join LAN and Browse,
+with short-code joining through the configured master. Room creation offers Public or
+password-protected Private access. Private rooms are unlisted, and an invite never
+bypasses their password. The [configuration guide](../CONFIGURATION.md#time-attack-bundled-mod)
+describes creation, invite sharing and offline manual joining.
 **R** retries an act by default; **Settings > Retry key** captures another keyboard key.
 There are no lives: after a death the animation plays (press jump after half a second to skip
 the rest), the act reloads straight from its start without a title card, and once the level is
@@ -146,10 +150,12 @@ lobby frames only in the lobby, results and vote phases, keep streams forward-on
 rate and per-frame movement, skip congested recipients and close a member after repeated
 violations. Ghosts also draw in sprite-masking zones such as Hidden Palace.
 
-Settings edits and successful LAN joins keep their accepted values when storage refuses or throws
-on publication. The settings page reports a pending save, retries every 60 scene ticks, and flushes
-pending settings and LAN invite text on resume or exit. Imported legacy values follow the same
-retry path. A failed exit flush remains unconfirmed; reverting to confirmed values cancels an
+Settings edits keep their accepted values when storage refuses or throws on publication.
+The settings page reports a pending save, retries every 60 scene ticks, and flushes
+pending settings on resume or exit. Imported legacy preferences follow the same retry
+path, with complete join addresses discarded. Invites and passwords are never saved
+or automatically logged; existing user-authored invite files remain untouched. A
+failed exit flush remains unconfirmed; reverting to confirmed values cancels an
 obsolete retry.
 
 Finished attempts retain at most 128 input recordings and 2 MiB of encoded bodies in memory.

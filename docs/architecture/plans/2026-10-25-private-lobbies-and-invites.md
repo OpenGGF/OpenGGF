@@ -3,7 +3,7 @@
 Implement the [approved design](../designs/2026-10-25-private-lobbies-and-invite-codes.md)
 from destination base `824a16f21cb2c2e4c98c10a20c1117c50bcf525e`.
 The user chose six random alphanumeric characters and five attempts per minute.
-The proposed absolute invitation lifetime is ten minutes. Private admission
+The absolute invitation lifetime is ten minutes. Private admission
 always requires the password, including direct and relayed connections.
 
 ## Delivery predicate
@@ -25,8 +25,9 @@ destination branch and account for task-owned worktrees.
   public. Use request correlation in the coordinated protocol increment.
 - Independent workstreams. One Sol worker owns shared networking and admission,
   one owns the master/dedicated server, and one owns scene clipboard/focus APIs.
-  Each has an isolated checkout and focused verification. The lead owns Time
-  Attack integration, documentation, API inventory/pins and combined validation.
+  Each has an isolated checkout and focused verification. A Sol consumer worker
+  owns Time Attack wiring after the limited screen pass. The lead owns final
+  integration, documentation, API inventory/pins and combined validation.
 - Shared mutable state. Networking owns the protocol schema. Server and UI
   consumers use its published contract. Only the lead merges the complete tree,
   updates signature pins and schedules combined smoke coverage.
@@ -97,3 +98,28 @@ Inspect skips, acknowledge consumed diagnostics, and retain no validation caches
   increment. Shared networking, server and Time Attack have separate branches;
   the lead owns final integration and the new engine-side pixel fixture.
 - Combined private-room behavior, smoke/guards and final delivery remain pending.
+- Common runtime and recovery commits `d6a8c4fdf` and `913260c28` are integrated
+  as `7003240f3` and `964be0a5b`. The final focused selection passed 51 cases
+  without skips. Earlier affected checks passed 42. These overlap and are not
+  an aggregate test count.
+- Server commit `8146a4fb7` is integrated as `b677b5c64`. Its final affected
+  selection passed 113 cases without skips, including real relay/tunnel joins
+  and raw private hosts. Another 76 unchanged checks passed against the preceding
+  SDK. The standalone server build passed. Earlier fixture and shutdown errors
+  were repaired and covered by the affected rerun.
+- Time Attack commits `63f9d1ff7`, `b6fdd620d` and `250ae55a5` are integrated
+  as `498c75eb5`, `a0adc04c9` and `54c837795`. UI checks passed 84 cases;
+  subsequent affected password, invalidation and glyph checks passed without
+  skips. The real socket class passed 33 of 34 initially, then its sole legacy
+  notice assertion passed in an exact rerun. New direct, relay and registered-LAN
+  joins passed, including password entry after a 31-second human prompt.
+- Exact password editing rejects oversize input without accepting a truncated
+  prefix. Display-name filtering was rejected for passwords after two focused
+  failures demonstrated loss of joiners and private-use characters.
+- Review found JDK host shutdown did not retire its shared room. A bounded
+  lifecycle fix and regression are underway. The capture tool now confirms the
+  default Public creation modal instead of waiting indefinitely for a lobby.
+- Destination `develop` advanced to `c502c600b` with multiplayer communication
+  controls during implementation. Reconcile its overlapping chat/protocol/scene
+  changes before combined verification. Preserve both features and regenerate
+  the actual candidate API snapshot. No combined pass is claimed yet.
