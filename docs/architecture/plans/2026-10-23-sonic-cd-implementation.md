@@ -4542,3 +4542,54 @@ No broad unchanged selection was repeated after these assertion-only repairs.
 Earlier all12 EGL/235Frame/11API/45otherWorld outcomes retain their exact sources;
 304 is a red batch, not a claimed304-green rerun. Whole-game/region/nativePLC/
 audio/nativepalette/priority parity remain open. The actual next owner is19.
+
+
+### Monitor data and detached USA FM source — 25 October 2026 GMT
+
+On576656be9, native Monitor views append atA9C6/136 andAA4E/450, preserving all
+32 old table ordinals, nine startup views/two art decodes and priorbanks/defaults.
+Strict existing decoding admits20frames/10scripts/82tiles. The actual8052 XOR
+art source is1540bytes, but Java's finite8bitpeek needs1541, including the real
+next Explosion header byte00 at3513E. The standardPLC1/row9/B500/base05A8 join,
+all decoded2624 bytes and eight odd five-byte static item pointers are separately
+authenticated from USA media. New monitorTime()/MonitorTimeArtBank reads stay
+lazy and detached afterdisc close. This unit adds no mapper/static/picture/body/
+reward/residency admission; native item85A8 attributes remain execution-owned.
+
+Root52866 tests-only test-compile RED showed absent Monitor APIs/tables; no
+JUnit ran. Exact frozen production then passed Root13888 --lean -Dmse=off
+-Dtest=TestCdR11aObjectAssets,TestCdR11aObjectRetailAssets,TestCdObjectVisualAssets,TestCdObjectMappings,TestCdFmSoundAssets,TestModApiSignatureSurface
+-Dsoniccd.media.root=<supplied-media-root>
+-Dopenggf.headless.gl=surfaceless-egl test, noDISPLAY/WAYLAND, Lua5.4.
+Observed98/0failures/0errors/0skips, immediateadmission/1m41sMaven,
+exit02:03:45Z. Exact6XML identities/Java25/media inspected:34/3/26/17/7/11.
+Retail3 reachedactual new source/byte/decode/lazy/after-close assertions; no
+aborted media gate was counted as a pass. Frozen originals remain external.
+
+Root's new CdFmSoundAssets uses only the existing actual CdProgramAssets/MMD
+pipeline. It requires observed knownUSA whole-content plusheaderUSA and exact
+MDINIT file/hash/header/copy operands/bank. Native file1DA/length1AD6 detaches
+6870 origin-zero Z80 bytes; no934 unresolved relocation bytes or1C00 RAM is
+padded. LE pointer rows90..DF,79 declared priorities/80 native reads and AB's
+backward AA voice addressE6A stay distinct. DF's native priority read is real
+byte4 at7DA. Raw header addresses do not admit a universal80-ID parser (D5 is
+nonordinary). Assets remain uninstalled: no stock preparation/source stream,
+clock/driver/synthesis/CDDA/PCM/rewind change or sound-playback claim.
+
+Root FM tests136lines/hash2e2647ce froze01:52:41.643680Z before production;
+56213 test-compile RED missingnewclass/noJUnit;125line production9574f076 first
+write01:54:58.064377Z. Root3191 leanactualmedia selected newFM assets/MMD image/
+ProgramAssets/RetailReleases/ModAPI:39/0/0/0 (7/5/4/12/11), immediateadmission/
+1m33sMaven, exit01:56:32Z. ExactXML/Java25/media/backend/zeroabortsskip inspected;
+newregional cases admitUSA and explicitlyrejectJP/EU withoutclosingmediaowner.
+Unit bounds test all coordinate domains, RAM/overflow/ID errors, immutability,
+closed-owner readability, fullbank/index/priority/header/voice byte identities.
+Whole-file hash gates are authentication precedence, not semanticmutationproof.
+
+One independent bounded review of both units found noP1/P2; it separately read
+actualUSA/JP/EU data tracks and corroborated all relevant source/operand/hash
+joins and Monitor's1541 reader extent. Neither that review nor the data audits
+ranJava/nativecode. Parentexecuted outcomes above are bounded component evidence.
+Existing silent audio and actualMonitor19 frontier remain; no route/game/parity
+advance follows from these assets. Rawmovement and pureMONITOR touch candidates
+are separate next units. All5 source/test files here remain exactfrozen copies.

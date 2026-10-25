@@ -36,6 +36,7 @@ import static com.openggf.game.soniccd.level.CdR11aAsset.ART_FLOWER;
 import static com.openggf.game.soniccd.level.CdR11aAsset.ART_FLOAT_BLOCK;
 import static com.openggf.game.soniccd.level.CdR11aAsset.ART_SPRINGS;
 import static com.openggf.game.soniccd.level.CdR11aAsset.ART_TUNNEL_DOOR;
+import static com.openggf.game.soniccd.level.CdR11aAsset.ART_MONITOR_TIME_POSTS;
 import static com.openggf.game.soniccd.level.CdR11aObjectAssets.Table.*;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -86,6 +87,8 @@ class TestCdR11aObjectRetailAssets {
                 // A separate owner is never asked for frontier or contact data before media closure.
                 untouchedFrontier = CdR11aObjectAssets.load(terrainOwner.profile(), terrainOwner.identity(),
                         original, terrainOwner.loadPlan());
+                verifyMonitorTimeInitiallyLazy(untouchedFrontier);
+                verifyMonitorTimeNativeReferences(original, terrainOwner);
                 verifyFrontierNativeReferences(original, terrainOwner, objects);
                 verifyContactNativeReferences(original, terrainOwner);
                 verifyGameOverNativeReferences(original, objects);
@@ -105,7 +108,9 @@ class TestCdR11aObjectRetailAssets {
                         0x34918, 0x34B39, 0x34B3A,
                         0x3F00, 0x65D2, 0x65E2, 0x660A, 0x673C, 0x3EE9C, 0x3EEC1, 0x3EFAD,
                         0x3F04, 0xCDD0, 0xCDEA, 0xCE06, 0xCE9A, 0xCEA9, 0xCEB5,
-                        0xCF60, 0xCF86, 0xFC02, 0x36AFE, 0x36B96, 0x36B97)) {
+                        0xCF60, 0xCF86, 0xFC02, 0x36AFE, 0x36B96, 0x36B97,
+                        0x3E94, 0x3E98, 0xA47E, 0xA4F6, 0xA6AA, 0xA5D6, 0xA756, 0xA830,
+                        0xA9C6, 0xAA4D, 0xAA4E, 0xAC0F, 0xFC32, 0x34B3A, 0x3513D, 0x3513E)) {
                     byte[] altered = original.readFile(0, original.fileBytes());
                     altered[offset] ^= 1;
                     // A plausible/correct caller record cannot authenticate even an unrelated changed byte.
@@ -134,6 +139,11 @@ class TestCdR11aObjectRetailAssets {
                 // Vertical Door also remains USA-only; these supplied regions hold other bytes at its USA range.
                 assertFalse(Arrays.equals(TUNNEL_DOOR_VERTICAL_SOURCE_BYTES, regional.readFile(
                         TUNNEL_DOOR_VERTICAL_MAPPINGS.range().fileOffset(), TUNNEL_DOOR_VERTICAL_MAPPINGS.range().length())));
+                // USA monitor offsets are not a Japan/Europe fallback, even though some art is shared.
+                assertNotEquals(MONITOR_TIME_ANIMATIONS_SHA256, CdR11aProfile.sha256(regional.readFile(
+                        MONITOR_TIME_ANIMATIONS.range().fileOffset(), MONITOR_TIME_ANIMATIONS.range().length())));
+                assertNotEquals(MONITOR_TIME_MAPPINGS_SHA256, CdR11aProfile.sha256(regional.readFile(
+                        MONITOR_TIME_MAPPINGS.range().fileOffset(), MONITOR_TIME_MAPPINGS.range().length())));
                 var usa = CdR11aProfile.forStage(CdReleaseVariant.USA, CdStageKey.parse("R11A"));
                 var assertedUsa = new CdR11aAssets.Identity(CdReleaseVariant.USA, usa.stage(), usa.file(), usa.domain(),
                         usa.expectedMmdSha256(), terrainOwner.identity().observedWholeDiscSha256());
@@ -169,6 +179,7 @@ class TestCdR11aObjectRetailAssets {
         verifySpring(terrainOwner, untouchedFrontier);
         // This owner has requested neither the vertical mapping/visual nor its bank until after media close.
         verifyTunnelDoor(terrainOwner, untouchedFrontier);
+        verifyMonitorTime(terrainOwner, untouchedFrontier);
         verifyUsa(terrainOwner, objects);
     }
 
@@ -210,6 +221,8 @@ class TestCdR11aObjectRetailAssets {
         hashes.put(POWERUP_MAPPINGS, "d79b2da45d7a63478f2f38d9288704bea375982e1d35d8aa97863cfdffb5f3fc");
         hashes.put(TUNNEL_DOOR_VERTICAL_MAPPINGS,
                 "954bf4fd9df8e85b782482c17f65e68d32101f1e43e21fd4a7fe4058a91b5275");
+        hashes.put(MONITOR_TIME_ANIMATIONS, MONITOR_TIME_ANIMATIONS_SHA256);
+        hashes.put(MONITOR_TIME_MAPPINGS, MONITOR_TIME_MAPPINGS_SHA256);
         for (var table : CdR11aObjectAssets.Table.values()) {
             var view = objects.view(table);
             assertEquals(table, view.table());
@@ -1173,7 +1186,7 @@ class TestCdR11aObjectRetailAssets {
                 0x04, 0xF0, 0x05, 0x00, 0x11, 0xF0, 0xF0, 0x05, 0x00, 0x15, 0x00, 0x00, 0x05, 0x18, 0x15, 0xF0, 0x00, 0x05, 0x18, 0x11, 0x00, 0x00,
                 0x02, 0xF4, 0x06, 0x00, 0x19, 0xF0, 0xF4, 0x06, 0x08, 0x19, 0x00, 0x00);
 
-    private static void verifyPowerupNativeReferences(CdMmdImage image, CdR11aAssets owner) {
+    private static void verifyPowerupNativeReferences(CdMmdImage image, CdR11aAssets owner) throws IOException {
         assertEquals("7aa54c36ab94dbe14068a18613c574b883ce446337bfaa9c571ec3523aff14e2",
                 CdR11aProfile.sha256(image.readFile(0, image.fileBytes())));
         // ObjectIndex ID $34 -> actual ObjSpinTunnel; the two PC-indexed instructions share index $2065F4.
@@ -1425,5 +1438,242 @@ class TestCdR11aObjectRetailAssets {
         assertEquals(List.of(ART_RINGS, ART_MOSQUI), initial.bindings().stream()
                 .map(CdR11aObjectAssets.ArtBinding::source).toList());
         for (int i = 0; i < 9; i++) { assertSame(opening.get(i), objects.view(openingTables.get(i))); }
+    }
+
+    /** Complete independent N source-text includes; the retained USA file is checked against them. */
+    private static final byte[] MONITOR_TIME_ANIMATIONS_SOURCE_BYTES = hexBytes("00140020002C003800440050005C00680074007E01100000080000090000FF0001100101080101090101FF00"
+                + "01100202080202090202FF0001100303080303090303FF0001100404080404090404FF000110050508050509"
+                + "0505FF0001100606080606090606FF0001100707080707090707FF00010A0E0F0E0B0E0F0EFF010C0E0F0E0D"
+                + "0E0F0EFF");
+    private static final byte[] MONITOR_TIME_MAPPINGS_SOURCE_BYTES = hexBytes("0028003E0054006A0080009600AC00C200D800EE0104011E01380152016C018601A001B001B601BC04F60500"
+                + "12F8F0060000F0F006080000080C0006F00004F6050016F8F0060000F0F006080000080C0006F00004F60500"
+                + "1AF8F0060000F0F006080000080C0006F00004F605001EF8F0060000F0F006080000080C0006F00004F60500"
+                + "22F8F0060000F0F006080000080C0006F00004F6050026F8F0060000F0F006080000080C0006F00004F60500"
+                + "2AF8F0060000F0F006080000080C0006F00004F605002EF8F0060000F0F006080000080C0006F00004F60500"
+                + "48F8F0060000F0F006080000080C0006F00004F6050848F8F0060000F0F006080000080C0006F00005D80D00"
+                + "32F0E803004CF8E803084C0008010050F8080108500005D80D0832F0E803004CF8E803084C0008010050F808"
+                + "0108500005D80D003AF0E803004CF8E803084C0008010050F8080108500005D80D083AF0E803004CF8E80308"
+                + "4C0008010050F8080108500005D8050042F8E803004CF8E803084C0008010050F8080108500005D8010046FC"
+                + "E803004CF8E803084C0008010050F8080108500003F0060000F0F006080000080C0006F001000D000AF001F8"
+                + "0D0032F001F80D003AF0");
+    private static final String MONITOR_TIME_ANIMATIONS_SHA256 =
+            "c3c1fb2135835d0fd96bff9202c7c0be8cddd2bf97caf0209582e5cf03d37d36";
+    private static final String MONITOR_TIME_MAPPINGS_SHA256 =
+            "00a6aaefb0d6dc3051a20c1d484d45dde3fb893e404f4c17b826fff8b1d74bca";
+
+    private static void verifyMonitorTimeInitiallyLazy(CdR11aObjectAssets objects) throws Exception {
+        var views = CdR11aObjectAssets.class.getDeclaredField("views"); views.setAccessible(true);
+        assertEquals(9, ((Map<?, ?>) views.get(objects)).size());
+        var optional = CdR11aObjectAssets.class.getDeclaredField("frontierViews"); optional.setAccessible(true);
+        assertTrue(((Map<?, ?>) optional.get(objects)).isEmpty());
+        for (String name : List.of("monitorTime", "monitorTimeArtBank")) {
+            var field = CdR11aObjectAssets.class.getDeclaredField(name); field.setAccessible(true);
+            assertNull(field.get(objects), "openingObjects must not request Monitor views or art");
+        }
+        assertEquals(List.of(ART_RINGS, ART_MOSQUI), objects.initialArtBank().bindings().stream()
+                .map(CdR11aObjectAssets.ArtBinding::source).toList());
+    }
+
+    private static void verifyMonitorTimeNativeReferences(CdMmdImage image, CdR11aAssets owner) {
+        assertEquals("7aa54c36ab94dbe14068a18613c574b883ce446337bfaa9c571ec3523aff14e2",
+                CdR11aProfile.sha256(image.readFile(0, image.fileBytes())));
+        var index = ByteBuffer.wrap(owner.view(CdR11aAsset.OBJECT_INDEX).bytes().copy());
+        assertEquals(0x20A662, index.getInt((0x19 - 1) * 4));
+        assertEquals(0x20A7DE, index.getInt((0x1A - 1) * 4));
+        assertArrayEquals(hexBytes("0020A6620020A7DE"), image.readFile(0x3E94, 8));
+        // ObjMonitor (Main.asm:278-305): actual dispatch table $20A68E and Init $20A698.
+        assertArrayEquals(hexBytes("0C28000800286400FE2C700010280024323B00064EFB1002"), image.readFile(0xA676, 24));
+        var routines = ByteBuffer.wrap(image.readFile(0xA68E, 10));
+        assertEquals(0xA698, 0xA68E + routines.getShort());
+        assertArrayEquals(hexBytes("54280024117C000E0016117C000E0017217C0020AA4E0004317C05A80002"),
+                image.readFile(0xA698, 30));
+        // HUD Init, post Init and Monitor Init all use the same complete counted mapping directory.
+        for (int at : new int[]{0xA47C, 0xA4F4, 0xA6A8}) {
+            var operand = ByteBuffer.wrap(image.readFile(at, 8));
+            assertEquals((short) 0x217C, operand.getShort());
+            assertEquals(MONITOR_TIME_MAPPINGS.range().nativeAddress(), operand.getInt());
+            assertEquals(4, operand.getShort());
+        }
+        // ObjTimePost_Spin (:182) and ObjMonitor_Animate (:366) use the actual absolute LEA operands.
+        for (int at : new int[]{0xA5D4, 0xA754}) {
+            var operand = ByteBuffer.wrap(image.readFile(at, 6));
+            assertEquals((short) 0x43F9, operand.getShort());
+            assertEquals(MONITOR_TIME_ANIMATIONS.range().nativeAddress(), operand.getInt());
+        }
+        // ObjMonitorItem_Init (:438-459): bit5 static piece, priority base, real root + signed word + 1.
+        assertArrayEquals(hexBytes("54280024317C85A800024A28002967060228007F0002"
+                + "117C00240001117C00030018117C00080019317CFD00001270001028001C1140001A"
+                + "227C0020AA4ED000D2F10000524921490004"), image.readFile(0xA7F6, 74));
+        byte[] actual = image.readFile(0, image.fileBytes());
+        for (var include : List.of(MONITOR_TIME_ANIMATIONS_SOURCE_BYTES, MONITOR_TIME_MAPPINGS_SOURCE_BYTES)) {
+            int expected = include == MONITOR_TIME_ANIMATIONS_SOURCE_BYTES ? 0xA9C6 : 0xAA4E;
+            int matches = 0;
+            for (int at = 0; at <= actual.length - include.length; at++) {
+                if (Arrays.equals(actual, at, at + include.length, include, 0, include.length)) {
+                    matches++; assertEquals(expected, at);
+                }
+            }
+            assertEquals(1, matches, "complete independent pinned source include has one actual USA match");
+        }
+        // PLCLists index 1 -> PLC_Std; DBF word $D admits fourteen entries, row 9 is this source.
+        assertEquals(0xFBFA, 0xFBC6 + (short) owner.view(CdR11aAsset.PLC_LISTS).bytes().unsignedWord(2));
+        assertEquals(13, ByteBuffer.wrap(image.readFile(0xFBFA, 2)).getShort());
+        assertArrayEquals(hexBytes("00234B3AB500"), image.readFile(0xFC32, 6));
+        var row = owner.loadPlan().plcs().get(1).entries().get(9);
+        assertEquals(ART_MONITOR_TIME_POSTS, row.source());
+        assertEquals(owner.profile().range(ART_MONITOR_TIME_POSTS), row.sourceRange());
+        assertEquals(0xB500, row.vramAddress());
+        assertEquals("ee98713d147c62128c7af02e250a6bf733c49c2c86a90332ecc4d77be29ed05a",
+                CdR11aProfile.sha256(image.readFile(0x34B3A, 1540)));
+        assertEquals("a11f69add660dbe82c86dd3227efe6154dc2de2f3ac3f82f7806fb3698a0b902",
+                CdR11aProfile.sha256(image.readFile(0x34B3A, 1541)));
+        assertEquals(0x8052, Short.toUnsignedInt(ByteBuffer.wrap(image.readFile(0x34B3A, 2)).getShort()));
+        assertEquals(0, image.readFile(0x3513E, 1)[0], "real first Explosion header byte is the reader's lookahead");
+    }
+
+    /** First Monitor table, visual and art requests are after CdProgramAssets.close(), on a retained owner. */
+    private static void verifyMonitorTime(CdR11aAssets owner, CdR11aObjectAssets objects) throws Exception {
+        var optional = CdR11aObjectAssets.class.getDeclaredField("frontierViews"); optional.setAccessible(true);
+        assertFalse(((Map<?, ?>) optional.get(objects)).containsKey(MONITOR_TIME_ANIMATIONS));
+        assertFalse(((Map<?, ?>) optional.get(objects)).containsKey(MONITOR_TIME_MAPPINGS));
+        for (String name : List.of("monitorTime", "monitorTimeArtBank")) {
+            var field = CdR11aObjectAssets.class.getDeclaredField(name); field.setAccessible(true);
+            assertNull(field.get(objects));
+        }
+        var initial = objects.initialArtBank();
+        var frontier = objects.frontierArtBank();
+        var contact = objects.contactArtBank();
+        var floatBlock = objects.floatBlockArtBank();
+        var spring = objects.springArtBank();
+        var door = objects.tunnelDoorArtBank();
+        var openingTables = List.of(RING_DELTAS, RING_ANIMATIONS, RING_MAPPINGS, MOSQUI_NORMAL_ANIMATIONS,
+                MOSQUI_DAMAGED_ANIMATIONS, MOSQUI_NORMAL_MAPPINGS, MOSQUI_DAMAGED_MAPPINGS, OBJECT_TILE_IDS, TOUCH_DIMENSIONS);
+        var opening = openingTables.stream().map(objects::view).toList();
+        var scripts = objects.view(MONITOR_TIME_ANIMATIONS);
+        var maps = objects.view(MONITOR_TIME_MAPPINGS);
+        assertSame(scripts, objects.view(MONITOR_TIME_ANIMATIONS));
+        assertSame(maps, objects.view(MONITOR_TIME_MAPPINGS));
+        assertArrayEquals(MONITOR_TIME_ANIMATIONS_SOURCE_BYTES, scripts.bytes().copy());
+        assertArrayEquals(MONITOR_TIME_MAPPINGS_SOURCE_BYTES, maps.bytes().copy());
+        assertEquals(MONITOR_TIME_ANIMATIONS_SHA256, CdR11aProfile.sha256(scripts.bytes().copy()));
+        assertEquals(MONITOR_TIME_MAPPINGS_SHA256, CdR11aProfile.sha256(maps.bytes().copy()));
+        var bankField = CdR11aObjectAssets.class.getDeclaredField("monitorTimeArtBank"); bankField.setAccessible(true);
+        assertNull(bankField.get(objects), "raw views must not decode art");
+        var visual = objects.monitorTime();
+        assertSame(visual, objects.monitorTime());
+        assertNull(bankField.get(objects), "visual-table decode must not decode art");
+        var strict = CdObjectVisualAssets.decode(MONITOR_TIME_MAPPINGS_SOURCE_BYTES, 20,
+                MONITOR_TIME_ANIMATIONS_SOURCE_BYTES, 10, 82);
+        assertArrayEquals(strict.mappings().copy(), visual.mappings().copy());
+        assertArrayEquals(strict.animationTable().copy(), visual.animationTable().copy());
+        assertEquals(20, visual.mappingFrames().size());
+        assertEquals(10, visual.animations().size());
+        for (int i = 0; i < 20; i++) {
+            assertEquals(strict.mappingFrames().get(i).relativeOffset(), visual.mappingFrames().get(i).relativeOffset());
+            assertEquals(strict.mappingFrames().get(i).pieces(), visual.mappingFrames().get(i).pieces());
+            assertArrayEquals(strict.mappingFrames().get(i).bytes().copy(), visual.mappingFrames().get(i).bytes().copy());
+        }
+        for (int i = 0; i < 10; i++) {
+            assertEquals(strict.animations().get(i).frameBytes(), visual.animations().get(i).frameBytes());
+            assertEquals(strict.animations().get(i).delay(), visual.animations().get(i).delay());
+            assertEquals(CdObjectVisualAssets.Terminal.LOOP_FF, visual.animations().get(i).terminal());
+        }
+        int[] pointers = {0x29, 0x3F, 0x55, 0x6B, 0x81, 0x97, 0xAD, 0xC3};
+        for (int i = 0; i < 8; i++) {
+            assertArrayEquals(new byte[]{(byte) 0xF6, 5, 0, (byte) (0x12 + i * 4), (byte) 0xF8},
+                    maps.bytes().slice(pointers[i], 5).copy());
+        }
+        var bank = objects.monitorTimeArtBank();
+        assertSame(bank, objects.monitorTimeArtBank());
+        assertEquals(List.of(ART_MONITOR_TIME_POSTS), bank.bindings().stream()
+                .map(CdR11aObjectAssets.ArtBinding::source).toList());
+        var binding = bank.binding(ART_MONITOR_TIME_POSTS);
+        assertEquals(1, binding.plcId());
+        assertEquals(owner.loadPlan().plcs().get(1).entries().get(9), binding.plc());
+        assertEquals(0xB500, binding.plc().vramAddress());
+        assertEquals(0x05A8, binding.baseWord(), "$85A8 item priority belongs to execution, never mutable bank state");
+        assertEquals(0x5A8, binding.firstTileId());
+        assertEquals(82, binding.tileCount());
+        assertEquals(2624, binding.bytes().length());
+        assertEquals(ART_MONITOR_TIME_POSTS, binding.decode().asset());
+        var source = new CdR11aProfile.FileRange(CdNativeFile.R11A,
+                CdMmdImage.Domain.ORIGINAL_WORD_RAM, 0x34B3A, 1540);
+        var reader = new CdR11aProfile.FileRange(CdNativeFile.R11A,
+                CdMmdImage.Domain.ORIGINAL_WORD_RAM, 0x34B3A, 1541);
+        assertEquals(source, owner.profile().range(ART_MONITOR_TIME_POSTS));
+        assertEquals(source, binding.decode().sourceBlobRange());
+        assertEquals(source, binding.plc().sourceRange());
+        assertEquals(reader, binding.decode().readerInputRange());
+        assertEquals(1541, binding.decode().consumedInputBytes());
+        assertEquals("7575dcf197dbc2f246838cfedcb95af40100d449f0a0c5a48b7294c27c9a924f",
+                CdR11aProfile.sha256(binding.bytes().copy()));
+        var compressed = owner.view(ART_MONITOR_TIME_POSTS).bytes();
+        assertEquals(0x8052, compressed.unsignedWord(0));
+        assertThrows(IOException.class, () -> CdNemesisAsset.decode(compressed.copy(), 2624, 2624));
+        byte[] finite = new byte[1541]; System.arraycopy(compressed.copy(), 0, finite, 0, 1540);
+        finite[1540] = owner.view(ART_EXPLOSIONS).bytes().signedByte(0);
+        assertEquals("a11f69add660dbe82c86dd3227efe6154dc2de2f3ac3f82f7806fb3698a0b902", CdR11aProfile.sha256(finite));
+        var decoded = CdNemesisAsset.decode(finite, 2624, 2624);
+        assertEquals(1541, decoded.consumedInputBytes());
+        assertArrayEquals(binding.bytes().copy(), decoded.bytes().copy());
+        assertThrows(IOException.class, () -> CdNemesisAsset.decode(finite, 81 * 32, 2624));
+        assertThrows(IllegalArgumentException.class, () -> CdNemesisAsset.decode(finite, 2624, 2623));
+        for (int tile = 0x5A8; tile <= 0x5F9; tile++) {
+            assertArrayEquals(binding.bytes().slice((tile - 0x5A8) * 32, 32).copy(), bank.tile(tile).copy());
+        }
+        // Every raw counted piece resolves into this finite source after native base addition.
+        for (var frame : visual.mappingFrames()) {
+            for (var piece : frame.pieces()) {
+                int first = (binding.baseWord() + piece.rawTileWord()) & 0x7FF;
+                for (int i = 0; i < piece.tileCount(); i++) { assertEquals(32, bank.tile(first + i).length()); }
+            }
+        }
+        assertEquals("5fe4b89a35cda62d7cd45d72c752b8700649dc68e327809f9df85ad2a28b1198",
+                CdR11aProfile.sha256(bank.tile(0x5A8).copy()));
+        assertEquals("0f688166a2c739a962f99073d50bccb56440676ee3753836866f121ec20465a9",
+                CdR11aProfile.sha256(bank.tile(0x5F9).copy()));
+        for (int absent : new int[]{0, 0x5A7, 0x5FA, 0x680, 0x7FF}) {
+            assertThrows(UnsupportedOperationException.class, () -> bank.tile(absent));
+        }
+        for (int invalid : new int[]{-1, 0x800, 0x85A8, Integer.MAX_VALUE}) {
+            assertThrows(IllegalArgumentException.class, () -> bank.tile(invalid));
+        }
+        for (var other : CdR11aAsset.values()) {
+            if (other != ART_MONITOR_TIME_POSTS) { assertThrows(UnsupportedOperationException.class, () -> bank.binding(other)); }
+        }
+        assertThrows(UnsupportedOperationException.class, bank.bindings()::clear);
+        assertThrows(ReadOnlyBufferException.class, () -> bank.tile(0x5A8).buffer().put((byte) 0));
+        assertThrows(ReadOnlyBufferException.class, () -> binding.bytes().buffer().put((byte) 0));
+        assertThrows(ReadOnlyBufferException.class, () -> visual.mappings().buffer().put((byte) 0));
+        byte[] changed = bank.tile(0x5A8).copy(); changed[0] ^= 1;
+        assertNotEquals(changed[0], bank.tile(0x5A8).copy()[0]);
+        for (var old : List.of(initial.bindings(), frontier.bindings(), contact.bindings(), floatBlock.bindings(),
+                spring.bindings(), door.bindings()).stream().flatMap(List::stream).toList()) {
+            assertThrows(UnsupportedOperationException.class, () -> bank.binding(old.source()));
+            assertThrows(UnsupportedOperationException.class, () -> bank.tile(old.firstTileId()));
+        }
+        assertThrows(UnsupportedOperationException.class, () -> initial.binding(ART_MONITOR_TIME_POSTS));
+        assertThrows(UnsupportedOperationException.class, () -> frontier.binding(ART_MONITOR_TIME_POSTS));
+        assertThrows(UnsupportedOperationException.class, () -> contact.binding(ART_MONITOR_TIME_POSTS));
+        assertThrows(UnsupportedOperationException.class, () -> floatBlock.binding(ART_MONITOR_TIME_POSTS));
+        assertThrows(UnsupportedOperationException.class, () -> spring.binding(ART_MONITOR_TIME_POSTS));
+        assertThrows(UnsupportedOperationException.class, () -> door.binding(ART_MONITOR_TIME_POSTS));
+        assertThrows(UnsupportedOperationException.class, () -> initial.tile(0x5A8));
+        assertThrows(UnsupportedOperationException.class, () -> frontier.tile(0x5A8));
+        assertThrows(UnsupportedOperationException.class, () -> contact.tile(0x5A8));
+        assertThrows(UnsupportedOperationException.class, () -> floatBlock.tile(0x5A8));
+        assertThrows(UnsupportedOperationException.class, () -> spring.tile(0x5A8));
+        assertThrows(UnsupportedOperationException.class, () -> door.tile(0x5A8));
+        assertThrows(UnsupportedOperationException.class, () -> owner.decoded(ART_MONITOR_TIME_POSTS));
+        assertSame(initial, objects.initialArtBank()); assertSame(frontier, objects.frontierArtBank());
+        assertSame(contact, objects.contactArtBank()); assertSame(floatBlock, objects.floatBlockArtBank());
+        assertSame(spring, objects.springArtBank()); assertSame(door, objects.tunnelDoorArtBank());
+        for (int i = 0; i < 9; i++) { assertSame(opening.get(i), objects.view(openingTables.get(i))); }
+        assertEquals(0x23A0, objects.tileWord(0, 0));
+        assertEquals(0x4334, objects.tileWord(5, 0));
+        assertEquals(0x8328, objects.tileWord(0xC, 0));
+        assertThrows(UnsupportedOperationException.class, () -> objects.tileWord(9, 0));
+        assertThrows(UnsupportedOperationException.class, () -> objects.tileWord(0, 1));
+        assertEquals(0x05A8, binding.baseWord());
     }
 }

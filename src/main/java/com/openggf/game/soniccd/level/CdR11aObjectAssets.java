@@ -63,7 +63,10 @@ public final class CdR11aObjectAssets {
         POWERUP_MAPPINGS("MapSpr_Powerup", 0x3EE9C, 274),
         // ObjTunnelDoorV_Init (Tunnel Door/Main.asm:36): actual USA immediate $20CE9A.
         // Two counted frames with their real trailing zeros; the vertical body never calls Ani_FlapDoorV.
-        TUNNEL_DOOR_VERTICAL_MAPPINGS("MapSpr_FlapDoorV", 0xCE9A, 28);
+        TUNNEL_DOOR_VERTICAL_MAPPINGS("MapSpr_FlapDoorV", 0xCE9A, 28),
+        // Monitor and Time Post/Main.asm:304,366,455,644-650; actual USA operands join both full includes.
+        MONITOR_TIME_ANIMATIONS("Ani_Monitor", 0xA9C6, 136),
+        MONITOR_TIME_MAPPINGS("MapSpr_MonitorTime", 0xAA4E, 450);
 
         private final String nativeLabel;
         private final int offset;
@@ -235,6 +238,29 @@ public final class CdR11aObjectAssets {
         }
     }
 
+    /**
+     * Separate optional standard source for PLC_Std row 9. No PLC service, transfer or live residency
+     * is implied; item/HUD priority attributes belong to execution and every existing bank stays separate.
+     */
+    public static final class MonitorTimeArtBank {
+        private final List<ArtBinding> bindings;
+        private MonitorTimeArtBank(List<ArtBinding> bindings) { this.bindings = List.copyOf(bindings); }
+        public List<ArtBinding> bindings() { return bindings; }
+        public ArtBinding binding(CdR11aAsset source) {
+            return bindings.stream().filter(b -> b.source() == source).findFirst()
+                    .orElseThrow(() -> new UnsupportedOperationException("No Monitor/time-post art binding for " + source));
+        }
+        /** Native 11-bit tile ID after mapping/base-word addition; absent art is never zero-filled. */
+        public CdAssetBytes tile(int nativeTileId) {
+            if ((nativeTileId & ~0x7FF) != 0) { throw new IllegalArgumentException("Not an 11-bit tile ID"); }
+            for (var binding : bindings) {
+                int index = nativeTileId - binding.firstTileId();
+                if (index >= 0 && index < binding.tileCount()) { return binding.bytes().slice(index * 32, 32); }
+            }
+            throw new UnsupportedOperationException("Tile has no decoded Monitor/time-post source: " + nativeTileId);
+        }
+    }
+
     // Preserve the opening load's exact nine table reads and two art decodes. New data is opt-in below.
     private static final List<Table> OPENING_TABLES = List.of(Table.RING_DELTAS, Table.RING_ANIMATIONS,
             Table.RING_MAPPINGS, Table.MOSQUI_NORMAL_ANIMATIONS, Table.MOSQUI_DAMAGED_ANIMATIONS,
@@ -270,6 +296,8 @@ public final class CdR11aObjectAssets {
     private CdObjectVisualAssets springHorizontal;
     private CdObjectVisualAssets tunnelDoorVertical;
     private TunnelDoorArtBank tunnelDoorArtBank;
+    private CdObjectVisualAssets monitorTime;
+    private MonitorTimeArtBank monitorTimeArtBank;
 
     private CdR11aObjectAssets(CdR11aAssets.Identity identity, Map<Table, View> views, List<Delta> deltas,
                                 List<TouchSize> dimensions, CdObjectVisualAssets rings,
@@ -563,6 +591,50 @@ public final class CdR11aObjectAssets {
             tunnelDoorArtBank = new TunnelDoorArtBank(List.of(new ArtBinding(source, 1, entry, baseWord, read)));
         }
         return tunnelDoorArtBank;
+    }
+
+    /**
+     * Full counted Monitor/post/HUD directory and ten real scripts, using the unchanged strict decoder.
+     * Monitor and Time Post/Main.asm:38,100,304,366,644-650. Item first-piece pointers remain raw bytes
+     * in view(MONITOR_TIME_MAPPINGS); this accessor registers no header-free static mapping consumer.
+     */
+    public synchronized CdObjectVisualAssets monitorTime() {
+        if (monitorTime == null) {
+            monitorTime = CdObjectVisualAssets.decode(read(Table.MONITOR_TIME_MAPPINGS), 20,
+                    read(Table.MONITOR_TIME_ANIMATIONS), 10, 82);
+        }
+        return monitorTime;
+    }
+
+    /** Explicit standard-art opt-in from the retained authenticated USA MMD; no existing bank is extended. */
+    public synchronized MonitorTimeArtBank monitorTimeArtBank() throws IOException {
+        if (monitorTimeArtBank == null) {
+            // PLC_Std row 9 (Data (Act 1 Present).asm:74-75) and ObjMonitor_Init's literal $05A8
+            // (Monitor and Time Post/Main.asm:305). Item/HUD $85A8 and MMZ attributes belong to execution.
+            // Shipped FixBugs=0 source is the authority; this descriptive binding executes no object or PLC.
+            var source = CdR11aAsset.ART_MONITOR_TIME_POSTS;
+            var entries = loadPlan.plcs().get(1).entries();
+            var entry = entries.get(9);
+            var blob = profile.range(source);
+            int baseWord = 0x05A8;
+            if (entry.source() != source || entry.vramAddress() != 0xB500 || !entry.sourceRange().equals(blob)
+                    || entries.stream().filter(p -> p.source() == source).count() != 1
+                    || (baseWord & 0x7FF) * 32 != entry.vramAddress()
+                    || source.encodingForReviewedConsumer() != CdR11aAsset.Encoding.NEMESIS) {
+                throw new IllegalArgumentException("Unverified native Monitor/time-post PLC row/base-word/source association");
+            }
+            // Actual header $8052 declares XOR/82 tiles. Independent prefix walk needs all 1540 source bytes;
+            // the existing 8-bit reader needs 1541, including the real first Explosion header byte $00 at
+            // MMD $3513E. Preserve the source/reader distinction; never invent EOF padding.
+            var reader = new CdR11aProfile.FileRange(blob.file(), blob.domain(), blob.fileOffset(), 1541);
+            var decoded = CdNemesisAsset.decode(reader.read(image).copy(), 82 * 32, 82 * 32);
+            if (decoded.consumedInputBytes() != reader.length()) {
+                throw new IOException("Monitor/time-post Nemesis reader consumption differs from its reviewed finite extent");
+            }
+            var read = new CdR11aAssets.NemesisRead(source, blob, reader, decoded.consumedInputBytes(), decoded.bytes());
+            monitorTimeArtBank = new MonitorTimeArtBank(List.of(new ArtBinding(source, 1, entry, baseWord, read)));
+        }
+        return monitorTimeArtBank;
     }
 
     /** Obj3DPlant_Init (3D Ramp/Main.asm:57-90): ADD.W consumes signed offsets in two distinct bodies. */

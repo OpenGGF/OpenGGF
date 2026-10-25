@@ -47,7 +47,7 @@ class TestCdR11aObjectAssets {
 
     @Test
     void reusedNemesisDecoderHasRealFiniteReadAheadAndFixedObjectOutputContracts() throws Exception {
-        for (int tiles : new int[]{14, 70, 20, 28, 63, 5, 39, 15, 36}) {
+        for (int tiles : new int[]{14, 70, 20, 28, 63, 5, 39, 15, 36, 82}) {
             // Constructed one-bit repeat-eight A code: one payload byte per tile, plus real reader lookahead.
             byte[] input = new byte[6 + tiles + 1];
             input[1] = (byte) tiles;
@@ -165,7 +165,7 @@ class TestCdR11aObjectAssets {
 
     @Test
     void metadataNamesOriginalUsaFileRangesWithoutChangingTheExistingAssetEnumeration() {
-        assertEquals(32, CdR11aObjectAssets.Table.values().length);
+        assertEquals(34, CdR11aObjectAssets.Table.values().length);
         for (var table : CdR11aObjectAssets.Table.values()) {
             assertEquals(CdNativeFile.R11A, table.range().file());
             assertEquals(CdMmdImage.Domain.ORIGINAL_WORD_RAM, table.range().domain());
@@ -775,7 +775,7 @@ class TestCdR11aObjectAssets {
         var table = CdR11aObjectAssets.Table.TUNNEL_DOOR_VERTICAL_MAPPINGS;
         assertEquals(31, table.ordinal(), "append after all 31 existing tables");
         assertEquals(table, CdR11aObjectAssets.Table.values()[31]);
-        assertEquals(32, CdR11aObjectAssets.Table.values().length);
+        assertEquals(34, CdR11aObjectAssets.Table.values().length);
         assertEquals("MapSpr_FlapDoorV", table.nativeLabel());
         assertEquals(new CdR11aProfile.FileRange(CdNativeFile.R11A,
                 CdMmdImage.Domain.ORIGINAL_WORD_RAM, 0xCE9A, 28), table.range());
@@ -971,5 +971,211 @@ class TestCdR11aObjectAssets {
             raw.putShort((short) word);
         }
         return raw.array();
+    }
+
+    @Test
+    void monitorTimeAppendsTwoUsaTablesAndPreservesEveryPriorOrdinal() throws Exception {
+        var scripts = CdR11aObjectAssets.Table.MONITOR_TIME_ANIMATIONS;
+        var maps = CdR11aObjectAssets.Table.MONITOR_TIME_MAPPINGS;
+        assertEquals(34, CdR11aObjectAssets.Table.values().length);
+        assertEquals(32, scripts.ordinal());
+        assertEquals(33, maps.ordinal());
+        assertEquals(List.of("Ani_Monitor", "MapSpr_MonitorTime"), List.of(scripts.nativeLabel(), maps.nativeLabel()));
+        assertEquals(new CdR11aProfile.FileRange(CdNativeFile.R11A,
+                CdMmdImage.Domain.ORIGINAL_WORD_RAM, 0xA9C6, 136), scripts.range());
+        assertEquals(new CdR11aProfile.FileRange(CdNativeFile.R11A,
+                CdMmdImage.Domain.ORIGINAL_WORD_RAM, 0xAA4E, 450), maps.range());
+        assertEquals(0x20A9C6, scripts.range().nativeAddress());
+        assertEquals(0x20AA4E, maps.range().nativeAddress());
+        assertEquals(scripts.range().endExclusive(), maps.range().fileOffset());
+        assertEquals(0xAC10, maps.range().endExclusive());
+        assertEquals(List.of("RING_DELTAS", "RING_ANIMATIONS", "RING_MAPPINGS", "MOSQUI_NORMAL_ANIMATIONS",
+                "MOSQUI_DAMAGED_ANIMATIONS", "MOSQUI_NORMAL_MAPPINGS", "MOSQUI_DAMAGED_MAPPINGS", "OBJECT_TILE_IDS",
+                "TOUCH_DIMENSIONS", "FLYING_ANIMAL_ANIMATIONS", "GROUND_ANIMAL_ANIMATIONS", "FLYING_ANIMAL_MAPPINGS",
+                "GROUND_ANIMAL_MAPPINGS", "ANIMAL_BASE_TILES", "PLANT_MAPPINGS", "PLANT_OFFSETS", "RAMP_BOOSTER_MAPPINGS",
+                "RAMP_BOOSTER_ANIMATIONS", "ENEMY_POINTS", "EXPLOSION_ANIMATIONS", "EXPLOSION_MAPPINGS", "POINTS_MAPPINGS",
+                "FLOWER_ANIMATIONS", "FLOWER_MAPPINGS", "GAME_OVER_MAPPINGS", "FLOAT_BLOCK_ANIMATIONS", "FLOAT_BLOCK_MAPPINGS",
+                "SPRING_ANIMATIONS", "SPRING_MAPPINGS", "SPRING_SPEEDS", "POWERUP_MAPPINGS", "TUNNEL_DOOR_VERTICAL_MAPPINGS"),
+                Arrays.stream(CdR11aObjectAssets.Table.values()).limit(32).map(Enum::name).toList());
+        for (var added : List.of(scripts, maps)) {
+            for (var old : Arrays.stream(CdR11aObjectAssets.Table.values()).limit(32).toList()) {
+                assertTrue(old.range().endExclusive() <= added.range().fileOffset()
+                        || added.range().endExclusive() <= old.range().fileOffset(), old.name());
+            }
+        }
+        var art = CdR11aAsset.ART_MONITOR_TIME_POSTS;
+        assertEquals("Art_MonitorTimePosts", art.nativeLabel());
+        assertEquals(1540, art.length());
+        assertEquals(CdR11aAsset.Encoding.NEMESIS, art.encodingForReviewedConsumer());
+        for (var region : CdReleaseVariant.values()) { assertEquals(0x34B3A, art.fileOffset(region)); }
+        assertEquals(0x3513E, CdR11aAsset.ART_EXPLOSIONS.fileOffset(CdReleaseVariant.USA));
+        assertTrue(Modifier.isSynchronized(CdR11aObjectAssets.class.getMethod("monitorTime").getModifiers()));
+        var method = CdR11aObjectAssets.class.getMethod("monitorTimeArtBank");
+        assertTrue(Modifier.isSynchronized(method.getModifiers()));
+        assertEquals(List.of(IOException.class), Arrays.asList(method.getExceptionTypes()));
+    }
+
+    @Test
+    void monitorTimeDefaultDecoderKeepsTwentyFramesTenScriptsAndRawItemPointers() {
+        byte[] maps = monitorTimeMappings(), scripts = monitorTimeAnimations();
+        assertEquals(450, maps.length);
+        assertEquals(136, scripts.length);
+        assertEquals("00a6aaefb0d6dc3051a20c1d484d45dde3fb893e404f4c17b826fff8b1d74bca", CdR11aProfile.sha256(maps));
+        assertEquals("c3c1fb2135835d0fd96bff9202c7c0be8cddd2bf97caf0209582e5cf03d37d36", CdR11aProfile.sha256(scripts));
+        // Default strict decoder: no tail declarations, rebasing, count inference or static mapper registration.
+        var visual = CdObjectVisualAssets.decode(maps, 20, scripts, 10, 82);
+        assertEquals(0, visual.mappingTableOffset());
+        assertEquals(List.of(40, 62, 84, 106, 128, 150, 172, 194, 216, 238,
+                260, 286, 312, 338, 364, 390, 416, 432, 438, 444), visual.mappingFrames().stream()
+                .map(CdObjectVisualAssets.MappingFrame::relativeOffset).toList());
+        assertEquals(List.of(4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 3, 1, 1, 1),
+                visual.mappingFrames().stream().map(f -> f.pieces().size()).toList());
+        assertEquals(81, visual.mappingFrames().stream().flatMap(f -> f.pieces().stream())
+                .mapToInt(p -> p.tileOffset() + p.tileCount() - 1).max().orElseThrow());
+        assertEquals(List.of(20, 32, 44, 56, 68, 80, 92, 104, 116, 126), visual.animations().stream()
+                .map(CdObjectVisualAssets.AnimationScript::relativeOffset).toList());
+        for (int i = 0; i < 10; i++) {
+            var script = visual.animations().get(i);
+            assertEquals(1, script.delay());
+            assertEquals(CdObjectVisualAssets.Terminal.LOOP_FF, script.terminal());
+            assertEquals(i < 8 ? 12 : 10, script.bytes().length());
+            if (i < 8) { assertEquals(List.of(16, i, i, 8, i, i, 9, i, i), script.frameBytes()); }
+        }
+        assertEquals(List.of(10, 14, 15, 14, 11, 14, 15, 14), visual.animations().get(8).frameBytes());
+        assertEquals(List.of(12, 14, 15, 14, 13, 14, 15, 14), visual.animations().get(9).frameBytes());
+        int[] itemOffsets = {0x29, 0x3F, 0x55, 0x6B, 0x81, 0x97, 0xAD, 0xC3};
+        for (int i = 0; i < 8; i++) {
+            assertEquals(itemOffsets[i], visual.mappingFrames().get(i).relativeOffset() + 1);
+            assertArrayEquals(new byte[]{(byte) 0xF6, 5, 0, (byte) (0x12 + i * 4), (byte) 0xF8},
+                    visual.mappings().slice(itemOffsets[i], 5).copy());
+            assertEquals(new CdObjectVisualAssets.Piece(-10, 5, 0x12 + i * 4, -8),
+                    visual.mappingFrames().get(i).pieces().getFirst());
+        }
+        assertEquals(0x0848, visual.mappingFrames().get(9).pieces().getFirst().rawTileWord());
+        assertEquals(0x0832, visual.mappingFrames().get(11).pieces().getFirst().rawTileWord());
+        assertEquals(0x083A, visual.mappingFrames().get(13).pieces().getFirst().rawTileWord());
+        Arrays.fill(maps, (byte) 0); Arrays.fill(scripts, (byte) 0);
+        assertEquals(40, visual.mappings().unsignedWord(0));
+        assertEquals(20, visual.animationTable().unsignedWord(0));
+        assertThrows(ReadOnlyBufferException.class, () -> visual.mappings().buffer().put((byte) 1));
+        assertThrows(ReadOnlyBufferException.class, () -> visual.animationTable().buffer().put((byte) 1));
+        assertThrows(UnsupportedOperationException.class, visual.mappingFrames()::clear);
+        assertThrows(UnsupportedOperationException.class, visual.mappingFrames().getFirst().pieces()::clear);
+        assertThrows(UnsupportedOperationException.class, visual.animations()::clear);
+        assertThrows(UnsupportedOperationException.class, visual.animations().getFirst().frameBytes()::clear);
+    }
+
+    @Test
+    void monitorTimeStrictDecoderRejectsBadPointersPadsCommandsFramesAndArtExtents() {
+        byte[] maps = monitorTimeMappings(), scripts = monitorTimeAnimations();
+        for (int i = 0; i < 10; i++) {
+            byte[] bad = maps.clone(); bad[61 + 22 * i] = 1;
+            assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decode(bad, 20, scripts, 10, 82));
+        }
+        for (int i = 0; i < 8; i++) {
+            byte[] bad = scripts.clone(); bad[31 + 12 * i] = 1;
+            assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decode(maps, 20, bad, 10, 82));
+        }
+        for (int target : new int[]{0, 38, 450, 0x8000, 0xFFFF}) {
+            byte[] bad = maps.clone(); ByteBuffer.wrap(bad).putShort(0, (short) target);
+            assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decode(bad, 20, scripts, 10, 82));
+        }
+        for (int target : new int[]{0, 18, 136, 0x8000, 0xFFFF}) {
+            byte[] bad = scripts.clone(); ByteBuffer.wrap(bad).putShort(0, (short) target);
+            assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decode(maps, 20, bad, 10, 82));
+        }
+        byte[] badCommand = scripts.clone(); badCommand[30] = (byte) 0xFE;
+        assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decode(maps, 20, badCommand, 10, 82));
+        byte[] badFrame = scripts.clone(); badFrame[21] = 20;
+        assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decode(maps, 20, badFrame, 10, 82));
+        assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decode(maps, 20, scripts, 10, 81));
+        assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decode(Arrays.copyOf(maps, 449), 20, scripts, 10, 82));
+        assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decode(maps, 20, Arrays.copyOf(scripts, 135), 10, 82));
+        assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decode(
+                Arrays.copyOfRange(maps, 0x81, 0x86), 1, scripts, 10, 82));
+    }
+
+    @Test
+    void constructedMonitorTimeViewsAreDetachedRangesButNeverAuthenticateAnOwner() throws Exception {
+        byte[] fake = new byte[CdR11aProfile.FILE_BYTES];
+        ByteBuffer.wrap(fake).putInt(8, 0x200100).putInt(12, 0x20010C).putInt(16, 0x200112);
+        byte[] scripts = monitorTimeAnimations(), maps = monitorTimeMappings();
+        System.arraycopy(scripts, 0, fake, 0xA9C6, scripts.length);
+        System.arraycopy(maps, 0, fake, 0xAA4E, maps.length);
+        fake[0xA9C5] = 0x4E; fake[0xAC10] = 0x4E;
+        var image = CdMmdImage.parse(fake);
+        for (var table : List.of(CdR11aObjectAssets.Table.MONITOR_TIME_ANIMATIONS,
+                CdR11aObjectAssets.Table.MONITOR_TIME_MAPPINGS)) {
+            var bytes = table.range().read(image);
+            assertArrayEquals(table == CdR11aObjectAssets.Table.MONITOR_TIME_ANIMATIONS ? scripts : maps, bytes.copy());
+            assertThrows(ReadOnlyBufferException.class, () -> bytes.buffer().put((byte) 0));
+            assertThrows(IndexOutOfBoundsException.class, () -> bytes.unsignedByte(bytes.length()));
+            byte[] copy = bytes.copy(); copy[1] ^= 1;
+            assertNotEquals(copy[1], bytes.copy()[1]);
+        }
+        Arrays.fill(fake, (byte) 0);
+        assertEquals(20, CdR11aObjectAssets.Table.MONITOR_TIME_ANIMATIONS.range().read(image).unsignedWord(0));
+        var profile = CdR11aProfile.forStage(CdReleaseVariant.USA, CdStageKey.parse("R11A"));
+        var asserted = new CdR11aAssets.Identity(CdReleaseVariant.USA, profile.stage(), profile.file(),
+                profile.domain(), profile.expectedMmdSha256(), "constructed tables are not actual media");
+        var error = assertThrows(IOException.class, () -> CdR11aObjectAssets.load(profile, asserted, image, null));
+        assertTrue(error.getMessage().contains("MMD content"));
+        // This fixture covers the identity gate only; positive semantics require the retained retail owner.
+    }
+
+    @Test
+    void privateMonitorTimeValueBankCopiesBindingsAndRejectsAbsentSourcesAndTiles() throws Exception {
+        var type = CdR11aObjectAssets.MonitorTimeArtBank.class;
+        assertTrue(Modifier.isPublic(type.getModifiers()));
+        assertTrue(Modifier.isStatic(type.getModifiers()));
+        assertTrue(Modifier.isFinal(type.getModifiers()));
+        assertEquals(0, type.getConstructors().length);
+        var constructor = type.getDeclaredConstructor(List.class);
+        assertTrue(Modifier.isPrivate(constructor.getModifiers())); constructor.setAccessible(true);
+        var source = new CdR11aProfile.FileRange(CdNativeFile.R11A, CdMmdImage.Domain.ORIGINAL_WORD_RAM, 0x34B3A, 1540);
+        var reader = new CdR11aProfile.FileRange(CdNativeFile.R11A, CdMmdImage.Domain.ORIGINAL_WORD_RAM, 0x34B3A, 1541);
+        var entry = new CdR11aLoadPlan.PlcEntry(CdR11aAsset.ART_MONITOR_TIME_POSTS, source, 0xB500);
+        var read = new CdR11aAssets.NemesisRead(CdR11aAsset.ART_MONITOR_TIME_POSTS, source, reader, 0,
+                CdAssetBytes.copyOf(new byte[0]));
+        var binding = new CdR11aObjectAssets.ArtBinding(CdR11aAsset.ART_MONITOR_TIME_POSTS, 1, entry, 0x05A8, read);
+        var input = new ArrayList<>(List.of(binding));
+        var bank = constructor.newInstance(input); input.clear();
+        assertEquals(List.of(binding), bank.bindings());
+        assertSame(binding, bank.binding(CdR11aAsset.ART_MONITOR_TIME_POSTS));
+        assertEquals(0, binding.tileCount(), "empty value fixture is not semantic retail coverage");
+        assertEquals(0x5A8, binding.firstTileId());
+        assertThrows(UnsupportedOperationException.class, bank.bindings()::clear);
+        for (var other : CdR11aAsset.values()) {
+            if (other != CdR11aAsset.ART_MONITOR_TIME_POSTS) {
+                assertThrows(UnsupportedOperationException.class, () -> bank.binding(other));
+            }
+        }
+        for (int absent : new int[]{0, 0x5A7, 0x5A8, 0x5F9, 0x5FA, 0x7FF}) {
+            assertThrows(UnsupportedOperationException.class, () -> bank.tile(absent));
+        }
+        for (int invalid : new int[]{-1, 0x800, Integer.MAX_VALUE}) {
+            assertThrows(IllegalArgumentException.class, () -> bank.tile(invalid));
+        }
+    }
+
+    /** Monitor and Time Post/Data/Animations.asm:1-50 and Data/Mappings.asm:1-176 at 1ecc5f3a: complete source-text directives, never media extraction. */
+    private static byte[] monitorTimeAnimations() {
+        return java.util.HexFormat.of().parseHex("00140020002C003800440050005C00680074007E01100000080000090000FF0001100101080101090101FF00"
+                + "01100202080202090202FF0001100303080303090303FF0001100404080404090404FF000110050508050509"
+                + "0505FF0001100606080606090606FF0001100707080707090707FF00010A0E0F0E0B0E0F0EFF010C0E0F0E0D"
+                + "0E0F0EFF");
+    }
+    private static byte[] monitorTimeMappings() {
+        return java.util.HexFormat.of().parseHex("0028003E0054006A0080009600AC00C200D800EE0104011E01380152016C018601A001B001B601BC04F60500"
+                + "12F8F0060000F0F006080000080C0006F00004F6050016F8F0060000F0F006080000080C0006F00004F60500"
+                + "1AF8F0060000F0F006080000080C0006F00004F605001EF8F0060000F0F006080000080C0006F00004F60500"
+                + "22F8F0060000F0F006080000080C0006F00004F6050026F8F0060000F0F006080000080C0006F00004F60500"
+                + "2AF8F0060000F0F006080000080C0006F00004F605002EF8F0060000F0F006080000080C0006F00004F60500"
+                + "48F8F0060000F0F006080000080C0006F00004F6050848F8F0060000F0F006080000080C0006F00005D80D00"
+                + "32F0E803004CF8E803084C0008010050F8080108500005D80D0832F0E803004CF8E803084C0008010050F808"
+                + "0108500005D80D003AF0E803004CF8E803084C0008010050F8080108500005D80D083AF0E803004CF8E80308"
+                + "4C0008010050F8080108500005D8050042F8E803004CF8E803084C0008010050F8080108500005D8010046FC"
+                + "E803004CF8E803084C0008010050F8080108500003F0060000F0F006080000080C0006F001000D000AF001F8"
+                + "0D0032F001F80D003AF0");
     }
 }
