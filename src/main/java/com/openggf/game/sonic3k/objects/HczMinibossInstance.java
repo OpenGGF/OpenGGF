@@ -280,6 +280,8 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
      * ends at {@code $3F}.
      */
     private boolean pendingDefeatDispatch;
+    /** HCZMiniboss_StartFight installs the loop pointer; its init belongs to the next pass. */
+    private boolean fightLoopInitPending;
     private int lastVIntRunCount;
     private int lastHitFrame = -1;
     private int lastHitRoutine = -1;
@@ -458,6 +460,7 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
         defeatHandoffTimer = -1;
         defeatHandoffStarted = false;
         pendingDefeatDispatch = false;
+        fightLoopInitPending = false;
         lastHitFrame = -1;
         lastHitRoutine = -1;
         lastHitWaitTimer = -1;
@@ -602,27 +605,32 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
         updateWaterLevel();
         ensureWaterEffectPalette();
 
-        switch (state.routine) {
-            case ROUTINE_INIT -> updateInit();
-            case ROUTINE_WAIT_TRIGGER -> updateWaitTrigger();
-            case ROUTINE_WAIT_FADE, ROUTINE_WAIT -> updateWaitOnly();
-            case ROUTINE_COOLDOWN -> updateCooldown(player);
-            case ROUTINE_DESCEND, ROUTINE_RISE -> updateMoveAndWait();
-            case ROUTINE_DIVE -> updateDive();
-            case ROUTINE_STRAFE -> updateStrafe();
-            case ROUTINE_ASCEND -> updateAscend();
-            case ROUTINE_PRE_VORTEX_DRIFT -> updatePreVortexDrift();
-            case ROUTINE_VORTEX -> updateVortex(player);
-            case ROUTINE_SLOW_RISE -> updateSlowRise();
-            case ROUTINE_DEFEATED -> {
-                if (pendingDefeatDispatch) {
-                    // Wait_FadeToLevelMusic was installed after this frame's arm already ran.
-                    pendingDefeatDispatch = false;
-                } else {
-                    updateDefeated();
+        if (fightLoopInitPending) {
+            fightLoopInitPending = false;
+            initializeFightLoop();
+        } else {
+            switch (state.routine) {
+                case ROUTINE_INIT -> updateInit();
+                case ROUTINE_WAIT_TRIGGER -> updateWaitTrigger();
+                case ROUTINE_WAIT_FADE, ROUTINE_WAIT -> updateWaitOnly();
+                case ROUTINE_COOLDOWN -> updateCooldown(player);
+                case ROUTINE_DESCEND, ROUTINE_RISE -> updateMoveAndWait();
+                case ROUTINE_DIVE -> updateDive();
+                case ROUTINE_STRAFE -> updateStrafe();
+                case ROUTINE_ASCEND -> updateAscend();
+                case ROUTINE_PRE_VORTEX_DRIFT -> updatePreVortexDrift();
+                case ROUTINE_VORTEX -> updateVortex(player);
+                case ROUTINE_SLOW_RISE -> updateSlowRise();
+                case ROUTINE_DEFEATED -> {
+                    if (pendingDefeatDispatch) {
+                        // Wait_FadeToLevelMusic was installed after this frame's arm already ran.
+                        pendingDefeatDispatch = false;
+                    } else {
+                        updateDefeated();
+                    }
                 }
-            }
-            default -> {
+                default -> {
+                }
             }
         }
 
@@ -674,6 +682,13 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
     private void startFight() {
         services().gameState().setCurrentBossId(0x99);
         services().playMusic(Sonic3kMusic.MINIBOSS.id);
+        // HCZMiniboss_StartFight only installs Obj_HCZ_MinibossLoop. The
+        // following object pass selects HCZMinibossLoop_Init, which has no
+        // MoveSprite2 call (sonic3k.asm:139350-139397). Do not inline that pass.
+        fightLoopInitPending = true;
+    }
+
+    private void initializeFightLoop() {
         resetRocketPhases();
         beginRocketWindUp();
         state.routine = ROUTINE_DESCEND;

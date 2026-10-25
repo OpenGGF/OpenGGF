@@ -2215,3 +2215,58 @@ the callback pass. This source mismatch explains the observed one-pass lead.
 The parent was notified before a boss runtime edit. Independent old-red owner
 entry and registered recreation/forward controls are being established; any
 boss correction remains a separate commit from the shared drowning repair.
+
+
+## HCZ miniboss loop-entry correction — 2026-10-25
+
+The narrow boss owner now retains a captured pending loop initialization across
+`HCZMiniboss_StartFight`'s code-pointer replacement. The following object pass
+runs `HCZMinibossLoop_Init` without motion; the first `MoveSprite2/Obj_Wait` pass
+is later. No timer constant, position, collision extent or fixture boundary was
+adjusted. Independent old-red controls executed 2 cases, 2 assertion failures,
+zero errors/skips (27.509 seconds Maven, zero queue wait): callback velocity was
+`$0100` rather than zero, and restoring pending entry moved Y+1 before native
+initialization. The registered test recreates the boss and child graph, restores
+before/pending/initialized states, and repeats forward execution.
+
+Finished boss selection passes 91 cases without failures/errors/skips (31 local
+boss/rocket/water/roster cases and 60 mandatory S3K anchors), 81 seconds Maven /
+82.688 seconds wrapper elapsed / zero queue wait. Exact selector is
+`TestHczMinibossRomParity,TestHczMinibossRocketTouchRewind,TestHczMinibossMultiSidekick,TestHczMinibossVortexBubbleMotion,TestHczMinibossWaterEffectCleanup,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`.
+Source fingerprint over `7e37a4b50` and the two owned source edits is
+`ebf52e055cce9368a1c1c2dd033eeac71fd5f0730c0461c7f0ba29f70f695e1a`.
+
+Only the affected chain was replayed; the five canonical companions ending
+before this entry retain the previous measured evidence. Chain result is
+1 test, 1 assertion failure, zero errors/skips (53.466 seconds Maven /
+54.113 seconds wrapper elapsed / zero queue wait), using the existing exact
+chain selector under `trace-replay`, one fork, alphabetical order and the same
+explicit original-ROM/Java25/Lua5.4/surfaceless EGL environment. Diagnostic source
+fingerprint is `fc8954581a09a40d39be9bb572feab6301e9b676515ebe1bd5598a96e8986261`;
+the temporary read-only observer was restored byte-for-byte afterwards. At
+5065 the boss now has native Y `$068C`, HP5 and all three reflected velocities.
+P1 motion remains equal through 6803. First P1 motion is now 6804 `x`, native
+`$00C7` / engine `$00C4`, while native player velocities are zero under the
+retained HCZ carrier. The first Y difference is 7139 (`$0830/$0831`), and all
+three velocities first separate at 7140. Source ownership is later replaced at
+BK2 cursor 71601, generation 9 / zone 1 / act index 1. Segment 11 remains
+incomplete: 31,979 differences (28,278 physics / 3,701 animation), 59 lag rows,
+zero bootstrap errors, first comparison still rings 3832 (104/94).
+
+The ring deficit persists through 3838. Read-only source evidence identifies a
+separate shared monitor storage/lifetime boundary: native icon `$1D7BA` is
+allocated at row 3800, the shell disappears at 3829, and its independent icon
+awards ten rings at 3832. Java `Sonic3kMonitorObjectInstance.onUnload` destroys
+`MonitorContentsSlot`, whose update/render/reward state remains embedded in the
+shell. `Obj_MonitorSpawnIcon` copies the player's target into the independent
+child (`sonic3k.asm:40685-40696`), whose `sub_1D820` continues on its own
+(`sonic3k.asm:40758-40773`). Correcting that would require an independently
+owned contents state/lifetime/rewind path in a shared monitor owner. Rings are
+excluded here; no monitor, ring or reset source was changed or comparison hidden.
+
+The next scripted-motion question is also bounded and testable: native carrier
+capture stores camera X+$A0 in `$3A` (`loc_6A80C`, `sonic3k.asm:140102-140112`),
+then `sub_6A916` reads that retained target; Java `updateCarrier` recomputes it
+from live camera X. The HCZ event owner was announced before any edit. A bounded
+read-only production discriminator is being used to establish the executed
+values, rather than fitting a target or extending shared setup/timing authority.

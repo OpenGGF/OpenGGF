@@ -402,3 +402,12 @@ replacement destination at cursor 70718 is HCZ2, generation 9. This adds no HCZ2
 route/viewport/donor/team or native-picture qualification. Exact source, commands,
 fixture corrections, timing and limits are in the appended HCZ audit. The ring
 owner is excluded and the source-proven miniboss loop-entry question is separate.
+
+
+HCZ miniboss continuation (2026-10-25): next-pass loop entry now has two
+independent old-red controls, registered before/pending/initialized recreation
+and forward replay, and 91 passing local/anchor cases with no skips. The actual
+chain contact at 5065 now matches; first P1 motion moves to the retained Act2
+carrier at 6804, with source ownership replacement 71601. The chain remains
+1/1F/0E/0S and the first comparison is excluded monitor/rings3832. This qualifies
+the local boss entry, not HCZ2 or whole-route breadth; see the appended audit.

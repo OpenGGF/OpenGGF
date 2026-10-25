@@ -113238,3 +113238,24 @@ has exact selectors, source fingerprints, old-red controls, corrected fixture
 errors, 92-second focused and 122-second canonical Maven times (zero queue wait),
 and the unchanged original ROM/EGL/Java25/Lua5.4 environment. Parent owns combined
 smoke, upstream docs reconciliation, integration/push and cleanup.
+
+
+## 2026-10-25 — HCZ miniboss entry qualified; retained carrier is next motion owner
+
+Local `t3-191b48d4` over `7e37a4b50` retains the native StartFight code-pointer
+handoff and following no-motion loop-init pass. Two independent old-red entry /
+registered recreation controls fail; corrected boss/roster/rewind plus all four
+S3K anchors pass 91/0F/0E/0S. The affected chain-only replay is 1/1F/0E/0S,
+now reaching input 71601. Native boss Y `$068C`, HP5 and reflected P1 velocities
+match at 5065. First P1 motion advances to carrier row 6804 `x` `$00C7/$00C4`;
+first Y is 7139 `$0830/$0831`. Segment 11 remains incomplete at 31,979 differences
+(28,278 physics / 3,701 animation), 59 lag rows, zero bootstrap errors. First
+comparison remains rings 3832 (104/94); the shared shell-owned monitor contents
+lifetime is an excluded structural owner. No ring/monitor edit was made.
+
+The [appended existing audit](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#hcz-miniboss-loop-entry-correction--2026-10-25)
+records exact selectors, source fingerprints, 81-second focused and 53.466-second
+chain Maven times (zero queue wait), source evidence and coverage limits. Next
+is a read-only discriminator of native retained carrier target versus Java's
+live-camera target, with owner notice before an event edit. No broad suite,
+setup-timing change or trace-fed gameplay value is authorized by this result.

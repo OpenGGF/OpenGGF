@@ -438,6 +438,7 @@ Unreleased. The earlier development themes remain in
   Hydrocity fan timing. Hydrocity's rising hand now lands and carries players
   after moving and respects transfers to another support; Mega Chopper retains
   the original capture control lock and both logical left/right bits until release.
+  The Hydrocity miniboss initializes its fight loop on the native next object pass.
   Drowned players sink in their native player or fixed-object routine, retain
   the fixed countdown lifetime, and release carried players before motion. Ending reunion loads use measured native decompression
   costs, and the credits start on the original frame. Timing diagnostics distinguish
