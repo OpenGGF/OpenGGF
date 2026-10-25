@@ -40,7 +40,7 @@ public record PlayablePlacementProfile(Offset leftFoot, Offset rightFoot, Offset
             return new PlayablePlacementProfile(offset(feet[0]),offset(feet[1]),offset(head[0]),offset(head[1]),
                     actor.getXRadius(),actor.getYRadius(),actor.getTopSolidBit(),actor.getLrbSolidBit(),
                     donor.getRules().collision().defaultCollisionLayoutYMask());
-        } finally { audio.getBackend().destroy(); }
+        } finally { audio.destroy(); }
     }
     private static Offset offset(Sensor sensor) { return new Offset(sensor.getX(),sensor.getY()); }
 }

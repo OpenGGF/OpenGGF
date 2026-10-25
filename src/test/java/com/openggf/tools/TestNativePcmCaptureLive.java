@@ -14,7 +14,6 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * {@code GameplayCaptureTool --audio --native-pcm} on the production presentation path:
@@ -38,12 +37,7 @@ class TestNativePcmCaptureLive {
                 "--sidekick", "tails", "--input", EMERALDS.toString(), "--input-start", "577",
                 "--frames", Integer.toString(FRAMES), "--audio", "--native-pcm", "--no-video",
                 "--stop-on-death", "false", "--out-dir", outDir.toString()});
-        try {
-            GameplayCaptureTool.run(arguments);
-        } catch (IllegalStateException | UnsatisfiedLinkError glUnavailable) {
-            assumeTrue(false, "offscreen GL unavailable: " + glUnavailable.getMessage());
-            return;
-        }
+        runCapture(arguments);
         List<String> rows = Files.readAllLines(outDir.resolve("native-pcm-frames.tsv"), StandardCharsets.UTF_8);
         assertEquals(FRAMES + 1, rows.size());
         long cumulative = Long.parseLong(rows.get(FRAMES).split("\t")[2]);
@@ -85,12 +79,7 @@ class TestNativePcmCaptureLive {
                 "--sidekick", "tails", "--input", EMERALDS.toString(), "--input-start", "577",
                 "--frames", Integer.toString(presentations), "--audio", "--native-pcm", "--no-video",
                 "--stop-on-death", "false", "--out-dir", outDir.toString()});
-        try {
-            GameplayCaptureTool.run(arguments);
-        } catch (IllegalStateException | UnsatisfiedLinkError glUnavailable) {
-            assumeTrue(false, "offscreen GL unavailable: " + glUnavailable.getMessage());
-            return;
-        }
+        runCapture(arguments);
         List<String> rows = Files.readAllLines(outDir.resolve("native-pcm-frames.tsv"), StandardCharsets.UTF_8);
         assertEquals(presentations + 1, rows.size());
         long cumulative = Long.parseLong(rows.get(presentations).split("\t")[2]);
@@ -124,12 +113,7 @@ class TestNativePcmCaptureLive {
                 "--sidekick", "tails", "--input", EMERALDS.toString(), "--input-start", "0",
                 "--frames", Integer.toString(presentations), "--audio", "--native-pcm", "--no-video",
                 "--stop-on-death", "false", "--out-dir", outDir.toString()});
-        try {
-            GameplayCaptureTool.run(arguments);
-        } catch (IllegalStateException | UnsatisfiedLinkError glUnavailable) {
-            assumeTrue(false, "offscreen GL unavailable: " + glUnavailable.getMessage());
-            return;
-        }
+        runCapture(arguments);
         List<String> rows = Files.readAllLines(outDir.resolve("native-pcm-frames.tsv"), StandardCharsets.UTF_8);
         assertEquals(presentations + 1, rows.size());
         for (String row : rows.subList(1, rows.size())) {
@@ -163,12 +147,7 @@ class TestNativePcmCaptureLive {
                 "--sidekick", "tails", "--input", EMERALDS.toString(), "--input-start", "0",
                 "--frames", "2", "--audio", "--native-pcm", "--no-video",
                 "--stop-on-death", "false", "--out-dir", outDir.toString()});
-        try {
-            GameplayCaptureTool.run(arguments);
-        } catch (IllegalStateException | UnsatisfiedLinkError glUnavailable) {
-            assumeTrue(false, "offscreen GL unavailable: " + glUnavailable.getMessage());
-            return;
-        }
+        runCapture(arguments);
         StringBuilder writes = new StringBuilder();
         for (String line : Files.readAllLines(outDir.resolve("chip-writes.jsonl"), StandardCharsets.UTF_8)) {
             if (line.startsWith("{\"frame\":-1,") || line.startsWith("{\"frame\":0,")) {
@@ -192,6 +171,18 @@ class TestNativePcmCaptureLive {
                 "--input", "src/test/resources/traces/s3k/_movies/s3k-complete-sonic-tails.bk2",
                 "--frames", "2", "--audio", "--native-pcm", "--no-video", "--out-dir", outDir.toString()});
         assertThrows(IllegalArgumentException.class, () -> GameplayCaptureTool.run(arguments));
+    }
+
+    // Kept at the test boundary so ROM-free controls can exercise the same admission path.
+    static void runCapture(GameplayCaptureTool.Arguments arguments) throws java.io.IOException {
+        // Only context admission may abort on an unconfigured host. Retire the
+        // probe before the tool creates its own production context; all boot,
+        // gameplay, audio and teardown failures must propagate from that run.
+        try (var prerequisite = PresentationOffscreenTestContext.openConfigured(
+                320, GameplayCaptureSession.HEIGHT, PresentationOffscreenTestContext.LegacyProfile.DEFAULT)) {
+            // No game or renderer resources are initialized by this prerequisite probe.
+        }
+        GameplayCaptureTool.run(arguments);
     }
 
     /** blip_buf samples for whole NTSC frames from a cleared buffer at 53,693,175 Hz to 44.1 kHz. */
