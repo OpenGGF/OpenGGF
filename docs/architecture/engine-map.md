@@ -200,7 +200,7 @@ lifecycle/transition composition root. Extracted collaborators own bounded work,
 but the manager still composes load modes and contexts, progression/checkpoint
 handoffs, prepared resource adoption, seamless mutation versus reload dispatch,
 synchronous ScreenEvents reload context, and frame/rewind boundary publication.
-It is not yet a thin facade. Preserve those ordering and partial-failure contracts
+These responsibilities are retained composition authority. Preserve their ordering and partial-failure contracts
 when moving behavior; put new bounded work in the collaborator that owns it:
 
 | Class | Responsibility |

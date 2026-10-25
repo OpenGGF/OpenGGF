@@ -623,6 +623,10 @@ Unreleased. The earlier development themes remain in
   so a subsequent title and saved-slot launch can read a fresh ROM in the same process.
   Silent headless boots also retire inherited audio backends before playback, keeping
   reused capture processes off desktop audio devices.
+  Native PCM live checks admit graphics prerequisites before running capture, so
+  boot, gameplay and audio failures fail instead of being skipped as unavailable GL.
+  Standing-geometry probes retire their private audio manager through its complete
+  lifecycle while preserving caller-owned audio.
 
 - **Runtime ownership:** A loop-lifetime suspended visit keeps admission, picture
   readiness, parking, saved state, resume and retirement under one authority;
