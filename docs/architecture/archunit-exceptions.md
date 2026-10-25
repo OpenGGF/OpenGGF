@@ -33,7 +33,7 @@ baseline-update commit and pick the next target rather than weakening the rule.
 
 | Rule | Committed allowance and unit | Target in that unit | Trigger |
 |------|------------------------------|---------------------|---------|
-| `low_level_layers_do_not_depend_on_runtime_layers` | 120 records | Hold at 120 at qualified contract boundaries | GPU commands/backends consume scalars; decoded art providers own their complete contracts; retain typed GM ingress and the four SAT callback-adapter records |
+| `low_level_layers_do_not_depend_on_runtime_layers` | 123 records | Hold at 123 at qualified contract boundaries | GPU commands/backends consume scalars; decoded art providers own their complete contracts; retain typed GM ingress and the four SAT callback-adapter records |
 | `shared_layers_do_not_depend_on_game_specific_packages` | 0 records | Hold at 0 records | Master-title ROM preview decoding/composition now belongs to game-owned providers (`DefaultPowerUpSpawner` visual object creation moved behind `GameModule` factories, 2026-08-28) |
 | `per_game_packages_do_not_cross_depend` | 10 member dependencies in 2 grouped slice records | Hold at 10 explicit host-donation members | Menu animation now has a shared owner; remove donation members only through a separate host/donor contract migration |
 
@@ -313,7 +313,7 @@ keys; they are not the accounting source. These counts do not evaluate the live
 production dependency graph. Update the matching documentation when committed
 records intentionally change.
 
-- `low_level_layers_do_not_depend_on_runtime_layers`: 120
+- `low_level_layers_do_not_depend_on_runtime_layers`: 123
 - `shared_layers_do_not_depend_on_game_specific_packages`: 0
 - `per_game_packages_do_not_cross_depend`: 2
 - `runtime_owned_framework_packages_do_not_access_global_service_roots`: 0
@@ -823,3 +823,17 @@ explicit constructor forms and rebuild against matching engine artifacts. These
 constructors are outside the supported recursive API; no repinning is warranted.
 Focused evidence and limits are appended to the existing
 [continuation artifact](plans/2026-10-24-architecture-continuation.md).
+
+### Matched audio source installation (2026-10-25)
+
+The reviewed matched-source receiving boundary adds exactly three ROM-parameter
+records to the prior 120: `AudioManager.installMatchedSource`, its private
+`SourcePublication.installMatchedSource`, and the existing
+`AudioManagerInternalAccess.installMatchedSource` bridge. These parameters keep
+the ROM and audio profile together through the manager-owned transaction; they
+are not a general permission for audio code to read runtime assets. The rule is
+unchanged. `TestAudioPresentationArchitectureGuard` pins the original 120-record
+set and these three exact signatures, as well as the resulting 123-record live
+and stored sets. The current published counts above now match that accepted
+store; this documentation correction adds no allowance. Source and qualification
+limits are recorded in the [PR223 plan](plans/2026-10-22-native-gap-swarm.md).

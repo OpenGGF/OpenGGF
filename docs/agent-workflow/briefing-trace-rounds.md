@@ -71,6 +71,16 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+A golden digest characterizes its input owner as well as its kernel (2026-10-25,
+PR223 terrain receiving). A decoded-map corpus cannot silently become an encoded
+native-layout oracle after an owner change. Preserve the original hash,
+coordinates and serialization, keep that characterized input view explicit, and
+separately verify ordinary native-owner dispatch. Never resnapshot a digest to
+fit a different owner. Callback tests need distinct collision arrays so a
+bit-derived lookup cannot accidentally satisfy an explicit-array oracle. See the
+[red/green and matched-route evidence](../architecture/plans/2026-10-22-native-gap-swarm.md#pr223-final-smoke-receiving-repairs-and-matched-routes-2026-10-25).
+
+
 A renderer command list is not a draw-payload count (2026-10-25, PR223 receiving).
 Native SAT replay also queues ownership entry/exit commands. Preserve the original
 payload count and verify its exact surrounding owner scope; treating every command

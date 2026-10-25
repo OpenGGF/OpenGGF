@@ -146,15 +146,30 @@ class TestS3kCompetitionPaletteAnimator {
     @Test void publicationUsesOnlyTheInjectedExistingPaletteUploadQueue() throws Exception {
         var level=mock(Level.class);var palettes=palettes();when(level.getZoneIndex()).thenReturn(0xE);when(level.getPaletteCount()).thenReturn(4);
         for(int line=0;line<4;line++)when(level.getPalette(line)).thenReturn(palettes[line]);
-        var graphics=mock(GraphicsManager.class);when(graphics.isGlInitialized()).thenReturn(true);var registry=new PaletteOwnershipRegistry();
+        var uploadQueue=new Object[1];
+        var graphics=mock(GraphicsManager.class,withSettings().useConstructor().defaultAnswer(invocation->{
+            if(invocation.getMethod().getName().equals("paletteTextures")) {
+                if(uploadQueue[0]==null) {
+                    var existing=invocation.callRealMethod();
+                    uploadQueue[0]=mock(existing.getClass(),org.mockito.AdditionalAnswers.delegatesTo(existing));
+                }
+                return uploadQueue[0];
+            }
+            return CALLS_REAL_METHODS.answer(invocation);
+        }));
+        graphics.setHeadlessMode(true);
+        when(graphics.isGlInitialized()).thenReturn(true);var registry=new PaletteOwnershipRegistry();
         var owner=new S3kCompetitionPaletteAnimator(rom,level,registry,graphics);owner.prepareInitialPalette(target(AZURE_LAKE));
+        var uploads=uploadQueue[0];
         assertNotEquals("s3k.global-animation",owner.key());assertEquals("sonic3k.competition.animated-palette",owner.key());
-        var before=owner.capture();registry.beginFrame();clearInvocations(graphics);owner.armLevelFade();
-        assertEquals(4L,mockingDetails(graphics).getInvocations().stream().filter(call->call.getMethod().getName().equals("cacheLatchablePaletteTexture")).count());
-        assertFalse(mockingDetails(graphics).getInvocations().stream().anyMatch(call->call.getMethod().getName().equals("setPaletteUploadLatched")
-                ||call.getMethod().getName().equals("cachePaletteTexture")),"the CPU owner cannot advance V-int or force an immediate upload");
-        registry.beginFrame();clearInvocations(graphics);owner.restore(before);
-        assertEquals(4L,mockingDetails(graphics).getInvocations().stream().filter(call->call.getMethod().getName().equals("cacheLatchablePaletteTexture")).count());
+        var before=owner.capture();registry.beginFrame();clearInvocations(graphics,uploads);owner.armLevelFade();
+        assertEquals(4L,mockingDetails(uploads).getInvocations().stream().filter(call->call.getMethod().getName().equals("cacheLatchablePaletteTexture")).count());
+        assertFalse(mockingDetails(uploads).getInvocations().stream().anyMatch(call->call.getMethod().getName().equals("setPaletteUploadLatched")
+                ||call.getMethod().getName().equals("cacheImmediatePaletteTexture"))
+                ||mockingDetails(graphics).getInvocations().stream().anyMatch(call->call.getMethod().getName().equals("cachePaletteTexture")),
+                "the CPU owner cannot advance V-int or force an immediate upload");
+        registry.beginFrame();clearInvocations(graphics,uploads);owner.restore(before);
+        assertEquals(4L,mockingDetails(uploads).getInvocations().stream().filter(call->call.getMethod().getName().equals("cacheLatchablePaletteTexture")).count());
         for(int line=0;line<4;line++)assertEquals(target(AZURE_LAKE)[line*16],owner.targetColor(line,0));
     }
 

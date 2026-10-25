@@ -7416,3 +7416,228 @@ The exact command uses the preceding portable focused shape with `SELECTOR=com.o
 An immutable-source proposal identified46 unique owning/consumer classes (451 declaration-derived invocations, **not actual results**), including configuration persistence/settings, scene preferences, protocol/host/client/master admission, relay policy, quick-chat/racing UI and API closure. Rather than run that network cohort and repeat it unchanged, its coverage is reserved within the complete final change-based smoke selection. The final ordinary+guard run is still unsubmitted at this documentation boundary; no network behavior, aggregate PR green or current-source route qualification follows from the API15 pass.
 
 The source dry-run against pinned pre-task `94c40570a15a11b70caf7456e9b0d0a8eec8a9b4` currently selects **4,105 smoke source candidates**, all10 categories,83 ordinary batches of at most50,workers1,then fresh guards. Ordered `plan.tests` newline+final-newline SHA-256 is `61639cfe47a4ca2280a1e58d668da0aa04cc9d60f4afdc98473fff8a89d2814d`. This is planning only, not4105 JUnit identities or release full-suite coverage. The actual committed launch head, source/input frame, locked replan, prerequisite ROM discovery, cost and stopping rule will be recorded before submission. All original red/incomplete epochs and open art/route/native/timing/cleanup limits above remain separate. No remote publication/readiness or Main/develop write occurred during this local composition.
+
+
+## PR223 final smoke, receiving repairs and matched routes (2026-10-25)
+
+### Original complete smoke epoch
+
+The develop communication composition a53a0248b1bd1ae8c745ac6953e08300ac3b1024
+contains c502c600bb4df3a411438b1cd3814466aed9a83d once by ancestry.
+Root's unfinished native camera/CPU/programme sources were excluded.
+From <PR_WORKTREE>, the actual command was:
+
+```bash
+python3 tools/testing/run_categories.py \
+  --base 94c40570a15a11b70caf7456e9b0d0a8eec8a9b4 \
+  --headless-gl surfaceless-egl --rom-directory "$OPENGGF_ROM_DIR" \
+  --workers 1 --max-minutes 240 --run
+```
+
+The actual locked plan selected **4,105 source candidates, all10 smoke categories,
+83 ordinary batches** of at most50, then fresh guards. This is routine smoke,
+not the public-release full suite. Ordered plan.tests newline-plus-final-newline
+SHA-256 was 61639cfe47a4ca2280a1e58d668da0aa04cc9d60f4afdc98473fff8a89d2814d.
+Locked fingerprint was
+30acde69c7a11369badf341f50e6634bb42e819b29565b1e7cdb7b72eb8eca7d.
+The complete own-worktree launch/post frame stayed
+1a457cd46d5a01b5dd5d720581cbd05d3a6130906aca5627f875b92a3b698aed;
+mtime frames are not portable between worktrees.
+
+Original request79444/run20261025T133335Z-684084cc completed normally with exit1:
+**43,039 ordinary reported cases /43F/8E/96S**, all83 batches complete;
+fresh guards reported **805 /804P/1F/0E/0S** across96 suite summaries.
+Runner-accounted ordinary duration was7,242.97s; preparation27.94s and
+guards492.13s were separate. The84 printed admission-wait samples total3,387s
+at rounded console precision. Queue observations are not execution or summed
+parallel delivery intervals. Launch13:33:34Z and terminal16:39:34Z were observed.
+All46 proposed communication-contract classes were selected, without a duplicate
+network-only run.
+
+Ordinary reds comprise41 cold-route assertions, one terrain golden input-owner
+assertion, one obsolete source-owner wiring assertion and eight errors in stale
+freeze/title/credits/palette observation fixtures. The sole guard failure compared
+the current123 architectural records with stale published120 wording. These
+results remain attributed to a53; later focused checks do not turn that original
+invocation green.
+
+All available results, bounded logs, failure/skip identities and commands were
+read before acknowledgment. Successful ordinary XML had normally been removed;
+readback observed57 live guard XML/419 distinct identities plus all96 suite
+summaries. This is not complete retained success-identity proof for805 guards
+or43,039 ordinary cases. Failure/skip omission counts were zero. The96 skips
+include optional/native/performance and creator-kit controls, legacy raw-GLFW
+admission, InfiniteSonic supplied-data assumptions and an uncaptured CPZ spin-tube
+case. These gaps remain open. Exact runner diagnostics and owned outer output
+were consumed; source and useful classes were retained.
+
+### Receiving corrections and rejected shortcuts
+
+Five fixture owners now observe their actual extracted owners. Freeze-contract
+tests intercept the retained TitleCardLifecycle owner instead of an obsolete
+GameLoop forwarding spy; all original requests, physical steps, SHARED_GAP rows
+and call-count assertions remain. Adding real native title iterations/leases was
+rejected because it changed this unit fixture's abstraction and iteration contract.
+Wiring checks streamed-session invalidation before SourcePublication.reset and
+guard admission at the start of that owner. Credits invoke the retained ending
+owner; bonus-title reflection remains passive through the retained title owner.
+The palette fixture constructs the real queue owner and observes its four latch
+requests. No production fallback, synthetic asset, lazy title-producing getter
+or weakened publication assertion was introduced.
+
+Separately, the vertical scan extraction bypassed GroundSensor's existing
+explicit collision-array selector. A per-instance callback now carries that
+selector into both kernel lookup sites, including recursion and foot-angle
+fallback. GroundSensor retains null/false/true selection policy; default
+placement retains LevelManager's two-argument bit-derived lookup. Scan arithmetic,
+support classification, charge points, geometry and manager resolution remain.
+There is no per-scan allocation. The callback captures the sensor at construction
+but executes only later, after its final override is assigned.
+
+Four additive methods cover128 rows: explicit primary/secondary, bits12–15,
+DOWN/UP, both layers, across current/extension/previous/foot fallback. Distinct
+IDs/angles and a prohibition on two-argument lookup expose the wrong owner even
+when distances coincide. The default-kernel control checks bit-derived lookup,
+geometric support and one charge. The initial32 current-tile rows ran RED on
+unchanged production: all32 failed, while all39 cases in the five fixture owners
+passed.
+
+The golden hashes,332,800-sample traversal, coordinates and serialization remain
+unchanged. Their documented provenance is the decoded-map input owner at
+0ffa7f3c727d802573f3fc954b5ce60e3c89169e. The characterized corpus now uses a
+Level-only delegate retaining the real map/terrain methods. Stub-only Mockito
+construction avoids retaining millions of invocations. A separate real S3K spy
+checks that ordinary scanning still dispatches to the encoded owner. This does
+not establish encoded/decoded geometry equivalence or a new native-layout oracle.
+The S3K expected hash stays
+5ade97e5f1d420067331c1cf7abfffcc34d0100c8a9d5b527a8e0dced0ca4e97.
+No hash, coordinate or expected value was fitted. Independent actual-source
+review found no material defect in these five terrain files; runtime checks were
+a separate gate.
+
+Architecture prose now reports the already accepted123 records and same three
+matched-audio ROM parameter edges. No rule, frozen store, allowlist, cap,
+signature pin or baseline changed. The inherited120-record hash and exact
+three-record debt extension above remain authoritative.
+
+### Actual focused epochs
+
+| Original request | Frozen source and actual outcome | Maven lifecycle; rounded queue |
+| --- | --- | --- |
+| ArrayRedAndFixturePorts22493 | tree9000e634/frameaeb15e2e: **71 distinct/39P32F/0E/S**; unchanged production, all32 intended current-array reds and39 fixture passes |35.223s;637s |
+| PhysicsGreen65279 | treee184e0b4/frame222fc77b: **359 distinct pass/0F/E/S**,18 families, all128 array rows, default kernel, three unchanged goldens, encoded dispatch, API/pin and mandatory loading keepers |02:17;838s |
+| AffectedGuards13752 | samee184/222f: **172 distinct pass/0F/E/S**: source87, ArchUnit34, physics32, compact9, review9, field1 |48.518s;85s |
+| BaselineRoutes43926 | Pinned f340, tree76a73297/framef0b8a20a: **45 distinct/4P41F/0E/0S**,10 families |07:28 min;0s |
+| CurrentRoutes91947 | Final candidate, treee184e0b4/frame222fc77b: **45 distinct/4P41F/0E/0S**,10 families |07:01 min;36s |
+
+
+Final executable staged tree:
+e184e0b4f0de1f7e3b50637820ade837f8c199d9; full own input frame:
+222fc77bfabefa885e702d75e16de01a0aa88b02a93c2dcf80a05382894c2141.
+Production SHA-256 pins are GroundSensor
+8379ffde1d12dfac9ea4004c15b7efb94a71976db56f4f2c5762d4193d7750a3 and
+NativePlayerTerrainScan
+1ad2768c875f1cd1d82e5acaecfc94c637029ef19e03f265212115d39d994810.
+All other qualified production/API/resource/tool inputs stayed frozen.
+Subsequent factual prose is outside this tested executable tree.
+
+The exact41 route failure identities, failure kinds and assertion messages match
+the pinned f340 focused baseline and earlier a53 smoke. All ten route fixture
+blobs are unchanged. Both focused selections expand to45 cases, including the
+passing rows of the selected Soz parameterized method. No new errors or skips
+occurred. This establishes inherited signatures in the supplied environment,
+not runtime cause, newness before f340, native parity or route/frontier closure.
+No route input, timing, cutoff, gameplay implementation or oracle was fitted.
+
+The fresh FieldDisposition diagnostic is empty; its current baseline has zero
+keys. Compact acquired-player audit257 is a field count, not JUnit cases.
+The current lifecycle diagnostic has510 rows with exact per-key counts equal to
+the existing baseline; it was read and consumed. The old two-LBZ-key diagnostic
+belongs to a prior epoch, not a new waiver.
+Strict caps, zero-reference rules and API surface/pin checks retain their actual
+owning passes; no aggregate full-suite or all-art claim follows.
+
+All focused identities, properties, recursive streams, texts, bounded full console,
+diagnostics and sourcepost were inspected before exact owned output cleanup.
+PhysicsGreen read18 XML/1,278 properties and309 streams/79,975 bytes; guards read
+6 XML/426 properties and one48-byte stream. PhysicsGreen's510 FAST/NONE warnings
+remain timing limits. One invalid collision-index warning is the explicit
+synthetic boundary control; one missing fallback BUBBLE_ATTACK WAV is a ROM-free
+positive landing fixture and does not qualify native sound/art. The fixture RED
+epoch's106 FAST/NONE and11 deterministic KOS warnings remain separate.
+Baseline routes emitted55 FAST/NONE,112 deterministic KOS estimates,2,614
+presentation-shadow SFX refusals and one unbound EggPrisonAnimal renderer warning.
+Current route warning groups follow; none establishes fault-free audio/assets:
+
+- 1 occurrences: WARNING: EggPrisonAnimalInstance: getRenderManager() called with no services and no construction context — returns null. If this is a constructor caching the renderer, spawn via spawnChild/spawnFreeChild/createDynamicObject (not raw addDynamicObject), or fetch the renderer lazily in appendRenderCommands().
+- 55 occurrences: WARNING: FAST load-time simulation has no manifest for this game; using NONE
+- 112 occurrences: WARNING: No measured s3k-kos-v1 load-time profile for KOS_DECOMPRESSION_QUEUE sha256:<hash>; using deterministic estimate
+- 2614 occurrences: WARNING: Presentation shadow: SMPS SFX blocked at presentation boundary
+
+
+### Reproduction and limits
+
+Each focused request used the current absolute Main queue wrapper, own cwd/target,
+normal admission, Java25/Lua54/null audio/surfaceless EGL and unset ambient
+launcher/display variables. Original stock CRC/SHA-1 identities and existing kis2
+property were retained; metadata was checked before every request with rehashing
+required on change. No ROM copying/link/alias, cache clearing, borrowed-ROM close,
+extra preflight/build/version probe, custom resource/heap/fork/timeout, narrowing,
+release suite or unchanged broad repeat was used. In <PR_WORKTREE>, or
+<BASELINE_WORKTREE> for pinned f340:
+
+```bash
+python3 "$OPENGGF_QUEUE_WRAPPER" --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl -DmodApi.destinationBranch=develop \
+  "-Dsonic1.rom.path=$OPENGGF_ROM_DIR/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$OPENGGF_ROM_DIR/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$OPENGGF_ROM_DIR/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dkis2.rom.path=$OPENGGF_ROM_DIR/kis2.gen" \
+  "-Dtest=$SELECTOR" $GUARD_PROFILE test -B
+```
+
+GUARD_PROFILE is -Pguards only for AffectedGuards. Exact selectors and SHA-256
+of their UTF-8 comma strings follow; method selection retains all generated rows.
+
+```text
+ArrayRedAndFixturePorts: com.openggf.TestGameLoopFreezeContractWiring,com.openggf.TestModEngineWiringSeams,com.openggf.game.sonic1.credits.TestSonic1CreditsScrollBoundary,com.openggf.game.sonic3k.competition.TestS3kCompetitionPaletteAnimator,com.openggf.tools.TestS3kBonusReturnTitleOwner,com.openggf.physics.TestGroundSensor#explicitVerticalCurrentTileKeepsArrayOwner
+selector SHA-256: e1e86be93cc23c7026349e55ac0a0f2a9cc2b29262d4691a2d6e1d13480ea3f9
+```
+
+```text
+PhysicsGreen: com.openggf.physics.TestGroundSensor,com.openggf.physics.TestNativePlayerTerrainPlacement,com.openggf.physics.TestGroundSensorServiceResolution,com.openggf.physics.TestGlideWallGrabTerrain,com.openggf.physics.TestPlayerTerrainScanEquivalence,com.openggf.physics.TestObjectTerrainUtils,com.openggf.physics.TestNativeRouteTerrainProbe,com.openggf.sprites.managers.TestS3kGlidePlayerSolidityQuery,com.openggf.tests.physics.CollisionSystemTest,com.openggf.physics.TestCollisionSystemAirLanding,com.openggf.physics.TestTerrainCollisionManager,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils,com.openggf.mods.TestModApiSignatureSurface,com.openggf.mods.TestModApiPinPolicy
+selector SHA-256: d66d12317cad525f1c45dcb45a2d0def8585995d04d777147f34af950a21d4f6
+```
+
+```text
+AffectedGuards: com.openggf.tests.TestArchitecturalReviewGuard,com.openggf.tests.TestArchitecturalSourceGuard,com.openggf.tests.TestArchUnitRules,com.openggf.level.objects.TestObjectPhysicsStandardizationGuard,com.openggf.game.rewind.schema.TestCapturedPolicyCompactReachabilityGuard,com.openggf.game.rewind.schema.TestRewindFieldDispositionGuard
+selector SHA-256: 4d97580a3a3a300455cf438f1d0006d67ea0e2597066d8045e782936f3c44fbf
+```
+
+```text
+BaselineRoutes: com.openggf.tools.TestDezColdRouteCapture#coldCompleteRouteDefeatsBothMinibossPhasesAndLoadsActTwo+coldIncomingActTwoClimbsEnergyBridgesAndTogglesGravityWithRewind+coldIncomingActTwoCompletesUpperGravityRouteCarrierAndCountdownLaunchWithRewind+coldIncomingActTwoCrossesTiltingBridgeWithoutAShieldWithRewind+coldIncomingActTwoDefeatsGravityBossAndLoadsFinalStageWithoutTransformation+coldIncomingActTwoDescendsInvertedSpringShaftWithRewind+coldIncomingActTwoTraversesBothTransportersWithRewind+coldIncomingActTwoTraversesGravityTubesConveyorAndStaircaseWithRewind+coldIncomingActTwoTraversesUpperTransportChainsAndEastHubWithRewind+coldRouteClearsAllTurbinePanelsAndOpensDoorWhileObjectControlled+coldUpperRouteTraversesLiftsConveyorsAndTimedBridgesWithRewind,com.openggf.tools.TestDezIncomingFinalRouteCapture#coldEmeraldTeamClearsBothActsFinalFightAndDoomsday+coldOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding+coldOrdinarySoloTailsClearsAllFinalPhasesAndLoadsEnding+coldOrdinaryTeamClearsHandsCoreAndEscapeShipAndLoadsEnding+coldWideOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding,com.openggf.tools.TestDezSoloActTwoColdRouteCapture#coldSonicAloneClearsActTwoAndLoadsFinalStage+coldTailsAloneClearsActTwoAndLoadsFinalStage+coldTailsLowerGravityPadPreservesPendingContactAcrossRewind+coldWideSonicAloneClearsActTwoAndLoadsFinalStage,com.openggf.tools.TestDezSoloColdRouteCapture#coldSonicAloneClearsMinibossAndReachesPlayableActTwo+coldTailsAloneClearsMinibossAndReachesPlayableActTwo+coldWideSonicClearsBothBossPhasesAndReachesPlayableActTwo,com.openggf.tools.TestLrzKnucklesColdRouteCapture#coldKnucklesClearsMinibossAndRestoresFightAndActTwoHandoff+coldKnucklesCompletesActTwoAndReachesPlayableHiddenPalace+coldKnucklesReachesMinibossAndRestoresTraversalAndCloudEscape+coldKnucklesReplaysIncomingRouteAndFirstActTwoDoor+coldKnucklesRestoresActTwoTraversalToTheMiddleCorridor+coldKnucklesRestoresActTwoUpperClimbsAndDoorRelease,com.openggf.tools.TestMhzKnucklesColdRouteCapture#coldKnucklesCompletesActOneAndRestoresNativeInteractions+coldKnucklesCompletesActTwoAndIsolatesTheFbzTimeline,com.openggf.tools.TestS3kHpzJoinedColdRouteCapture#coldKnucklesReplaysUpperPadAndTheJoinedSszCraneControlRelease,com.openggf.tools.TestS3kLrzHpzSszColdCampaign#knucklesColdCampaignClearsSkySanctuaryTwoThroughTheEndingAndTitle+pairColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory+sonicColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory+tailsColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory,com.openggf.tools.TestSozColdRouteCapture#knucklesColdActTwoCompletesWithPuzzleReplayAndPlayableLavaReef+knucklesWideColdActTwoCompletesWithPuzzleReplayAndPlayableLavaReef+soloColdActCompletesWithTraversalReplayAndPlayableDestination,com.openggf.tools.TestSszWidePairedColdRouteCapture#coldCompleteWideRouteDefeatsAllBossesAndIsolatesTheDezTimeline+coldFirstReplicaAndTransportReplayWithRetiredColumnDebris
+selector SHA-256: ff36eb33a4d1504acd955f287ca899f78e491e95d0d504900efcafad87b2103c
+```
+
+CurrentRoutes uses BaselineRoutes' exact selector/hash once on the final candidate.
+Whole-file inverse checks reconstruct a53 for the fixture additions, kernel
+adapter and stable-input golden characterization. Useful source, compiled outputs
+and the PR worktree are retained; consumed raw reports/logs are not archived as
+receipts or pass caches. Queue and execution are reported separately, not added
+across overlapping work.
+
+The historical f340189-failure/108-skip epoch, interrupted3da smoke, separate audio
+and fixture qualifications,41 route causes, inherited E8DF art limitation,
+warm-secondary-cache identity, multi-plane publication atomicity, dynamic cleanup
+iterator reentry and optional/GL/creator-kit gaps remain as recorded above.
+Native/passive/DEZ plans are not execution. This checkpoint neither receives
+Root's unfinished native source nor claims native waveform/timing/layout
+equivalence, a waiver or green PR checks. Normal-hook commit, committed-range
+resource policy, fresh remote conflict verification and ready-for-review
+publication follow separately; hosted checks still determine green.
+
+A subsequent read-only remote check observed develop at
+c9028e88c75f8fcabec551453e05d93aee6b782b while the PR head remained f340.
+This correction checkpoint does not include that newly observed delta. Its
+source footprint and any necessary receiving work remain separate from the
+qualified a53-based executable epoch above.

@@ -121,7 +121,8 @@ Unreleased. The earlier development themes remain in
   collision and jump physics; floor snapping defaults on. Shared Place on floor
   direction and a batched ground CLI enumerate exact visual support and native player
   terrain proposals from decoded entry layouts or prepared scene frames, with bounded
-  work, typed refusals and one-step undo for safe editor placement. Poser mode retains manual
+  work, typed refusals and one-step undo for safe editor placement. Shared native terrain
+  scans preserve the caller's collision-array selection. Poser mode retains manual
   positioning, animation and frame selection. Every scene uses one native world
   with supplied-game performers, authored terrain and common framing, binding and
   activation-window rules. Timed object clears preserve separately owned rings;

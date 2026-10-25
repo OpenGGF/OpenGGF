@@ -295,9 +295,11 @@ class TestS3kBonusReturnTitleOwner {
     }
 
     private static Sonic3kTitleCardManager title(GameplayCaptureSession session) throws Exception {
-        Object before = raw(GameLoop.class, session.loop(), "titleCardProvider");
+        Object owner = raw(GameLoop.class, session.loop(), "titleCardLifecycle");
+        Object before = raw(owner.getClass(), owner, "titleCardProvider");
         var title = assertInstanceOf(Sonic3kTitleCardManager.class, before);
-        assertTrue(before == raw(GameLoop.class, session.loop(), "titleCardProvider"));
+        assertTrue(owner == raw(GameLoop.class, session.loop(), "titleCardLifecycle"));
+        assertTrue(before == raw(owner.getClass(), owner, "titleCardProvider"));
         return title; // Never GameLoop.getTitleCardProvider(): it delegates to a lazy getter.
     }
 

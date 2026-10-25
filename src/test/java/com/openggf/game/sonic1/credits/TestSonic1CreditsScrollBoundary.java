@@ -23,18 +23,21 @@ class TestSonic1CreditsScrollBoundary {
             Sonic1CreditsManager credits = new Sonic1CreditsManager();
             Sonic1EndingProvider ending = new Sonic1EndingProvider();
             ending.bindCreditsManagerForLifecycleTest(credits);
-            set(session.loop(), GameLoop.class, "endingProvider", ending);
-            Method load = GameLoop.class.getDeclaredMethod("loadEndingDemoZone");
+            Field sessionOwner = GameLoop.class.getDeclaredField("endingSession");
+            sessionOwner.setAccessible(true);
+            Object endingOwner = sessionOwner.get(session.loop());
+            set(endingOwner, endingOwner.getClass(), "endingProvider", ending);
+            Method load = endingOwner.getClass().getDeclaredMethod("loadEndingDemoZone");
             load.setAccessible(true);
 
             set(credits, Sonic1CreditsManager.class, "creditsNum", 0);
-            load.invoke(session.loop());
+            load.invoke(endingOwner);
             assertEquals(0, GameServices.camera().getX());
             GameServices.camera().setX((short) 0x900);
             GameServices.parallax().update(0, 0, GameServices.camera(), 400);
 
             set(credits, Sonic1CreditsManager.class, "creditsNum", 7);
-            load.invoke(session.loop());
+            load.invoke(endingOwner);
             assertEquals(0x1360, GameServices.camera().getX());
             assertEquals(0x1360, com.openggf.level.ParallaxCheckpointAccess.capture(GameServices.parallax(), 0).bg2X());
             assertEquals(0x1360, com.openggf.level.ParallaxCheckpointAccess.capture(GameServices.parallax(), 0).bg3X());
@@ -42,7 +45,7 @@ class TestSonic1CreditsScrollBoundary {
             session.renderFrame();
 
             set(credits, Sonic1CreditsManager.class, "creditsNum", 3);
-            load.invoke(session.loop());
+            load.invoke(endingOwner);
             assertEquals(0x957, GameServices.camera().getX(), "credits lamppost camera remains caller-owned");
             assertEquals(0x4AB, com.openggf.level.ParallaxCheckpointAccess.capture(GameServices.parallax(), 3).bgX(), "EndDemo_LampVar saved BG X");
             assertEquals(0x5CC >> 1, GameServices.parallax().getVscrollFactorBG(),

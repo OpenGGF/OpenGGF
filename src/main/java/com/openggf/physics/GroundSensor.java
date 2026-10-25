@@ -34,7 +34,7 @@ public class GroundSensor extends Sensor {
     private static final byte FLAGGED_ANGLE = 0x03;
 
     private static final Runnable UNBOUNDED_SCAN = () -> {} ;
-    private final NativePlayerTerrainScan verticalScan = new NativePlayerTerrainScan();
+    private final NativePlayerTerrainScan verticalScan = new NativePlayerTerrainScan(this::getSolidTile);
 
     private final SensorResult reusableResult = new SensorResult();
     private final SensorResult bgScanResult = new SensorResult();
