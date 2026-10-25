@@ -840,12 +840,12 @@ class TestSonicCdOpeningWorldLoad {
         assertThrows(IllegalStateException.class, () -> step(h, LogicalInputSnapshot.neutral()));
     }
 
-    @Test void ordinaryRampApproachPassesOwnedSpringsAndTagsAndStopsAtTheVerticalTunnelDoorDispatcher() throws Exception {
+    @Test void ordinaryRampApproachPassesOwnedSpringsTagsAndVerticalDoorAndStopsAtTheMonitorDispatcher() throws Exception {
         var h = opening();
         var failure = assertThrows(UnsupportedOperationException.class, () -> {
             for (int call = 0; call < 400; call++) step(h, input(8, 0, false));
         });
-        assertTrue(failure.getMessage().startsWith("Unowned CD object ID $35 at live physical slot "), failure.getMessage());
+        assertTrue(failure.getMessage().startsWith("Unowned CD object ID $19 at live physical slot "), failure.getMessage());
     }
 
     // ClearScreen/InitLevelDrawBG: this is post-initial-draw, before any represented V-int.

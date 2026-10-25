@@ -2937,4 +2937,345 @@ class TestCdOpeningObjectRuntime {
         assertArrayEquals(expected.cpuBuffer().copy(), actual.cpuBuffer().copy());
         assertArrayEquals(expected.residentBank().copy(), actual.residentBank().copy());
     }
+
+
+    // DoorV Runtime composition. Constructed post-Body ingress over actual USA assets, not World/route evidence.
+    // ObjTunnelDoorV (Tunnel Door/Main.asm:7-83) and .Map (Tunnel Door/Data/Mappings.asm:1-27),
+    // scddisasm 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff. All new Java is UNRUN by this external author.
+    @Test void tunnelDoorTwelfthBankPreservesEveryLegacyPrefixAndRejectsEmptySatOverlapAndOverflow() throws Exception {
+        assertThrows(NullPointerException.class, () -> new CdOpeningObjectRuntime.TunnelDoorVerticalFm(null));
+        assertEquals(12362, BANKS.tunnelDoorVertical());
+        var explicit = new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138, 208, 236, 299, 369, 374, 413, 449, 464, 500);
+        assertEquals(412, explicit.tunnelDoorVertical() + 12 - explicit.player());
+        assertEquals(explicit, new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138));
+        assertEquals(explicit, new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138, 208, 236));
+        assertEquals(explicit, new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138, 208, 236, 299, 369, 374));
+        assertEquals(explicit, new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138, 208, 236, 299, 369, 374, 413));
+        assertEquals(explicit, new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138, 208, 236, 299, 369, 374, 413, 449));
+        assertEquals(explicit, new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138, 208, 236, 299, 369, 374, 413, 449, 464));
+        assertEquals(600, new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138, 208, 236, 299, 369, 374, 413, 449, 464, 600)
+                .tunnelDoorVertical(), "canonical twelfth base is explicit");
+        var assets = load(); var saved = CdAssetBytes.copyOf(new byte[CdObjectPlacementRuntime.SAVED_BANK_BYTES]);
+        var window = new CdPowerupArtRuntime.State(new byte[0x480], new byte[0x480]);
+        for (int door : List.of(12361, 12275, -1, Integer.MAX_VALUE - 10)) {
+            var banks = new CdOpeningObjectRuntime.LogicalBanks(10000, 11000, 12000, 12070, 12098,
+                    12161, 12231, 12236, 12275, 12311, 12326, door);
+            try (var frame = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, 0)) {
+                assertThrows(IllegalArgumentException.class, () -> CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(
+                        assets, frame, INITIAL, CONTACT, SCORE, LEVEL, new byte[640], banks, PRE, value -> { }));
+                assertThrows(IllegalArgumentException.class, () -> restart(assets, frame, saved, window, new byte[640], banks));
+                assertFalse(frame.closed()); assertEquals(0, frame.vIntClock().deltaSinceAdmittedCut());
+            }
+        }
+    }
+
+    @Test void tunnelDoorLiveInitFallsIntoClosedAndOpenedMainBeforeTheIndependentSolidDebugGate() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var pool = f.runtime.placement().pool();
+            seedSolidPlayer(f, 2, 0, 0, 0, 0, 0x01001234, 0x07805678);
+            seedSpinTunnelEnvironment(f, 0x100, 0, 0, 0, 1, 0);
+            var closed = tunnelDoor(f, pool.state(40), 0, 0x80, 0x140, 0x780, 0, 0x12AB)
+                    .moveWord(TILE, 0xCAFE).moveByte(PRIORITY, 7).moveByte(WIDTH, 25).moveByte(Y_RADIUS, 3)
+                    .moveByte(ROUTINE_2, 0xA7).moveByte(ANIMATION, 0xA6)
+                    .moveWord(X_FRACTION, 0x4321).moveWord(Y_FRACTION, 0x8765);
+            var opened = tunnelDoor(f, pool.state(41), 0, 0x80, 0x100, 0x780, 0, 0xFEDC);
+            pool.write(closed); pool.write(opened);
+            var actor = f.frame.state(); var environment = f.frame.environment();
+            var sounds = new ArrayList<>(f.runtime.lastSoundRequests());
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(closed.moveByte(ROUTINE, 2).moveLong(MAPPINGS, 0x20CE9A).moveByte(PRIORITY, 1)
+                    .moveByte(SPRITE_FLAGS, 4).moveByte(WIDTH, 4).moveByte(Y_RADIUS, 24)
+                    .moveWord(TILE, 0x8328).moveByte(ROUTINE_2, 0), f.slot(40));
+            assertEquals(opened.moveByte(ROUTINE, 4).moveByte(SPRITE_FLAGS, 4).moveWord(TUNNEL_DOOR_TIMER, 0)
+                    .moveByte(MAP_FRAME, 1), f.slot(41));
+            assertEquals(actor, f.frame.state()); assertEquals(environment, f.frame.environment());
+            sounds.add(new CdOpeningObjectRuntime.TunnelDoorVerticalFm(CdTunnelDoorVertical.FmSound.FM_A4));
+            assertEquals(sounds, f.runtime.lastSoundRequests(), "Door range runs before the independent Solid debug gate");
+            var sat = f.runtime.finishAfterCamera(POST);
+            assertEquals(2, sat.provenance().stream().filter(p -> p.slotRef().wholeIndex() == 40).count());
+            assertEquals(2, sat.provenance().stream().filter(p -> p.slotRef().wholeIndex() == 41).count());
+            f.runtime.finishOrdinaryTail();
+        }
+    }
+
+    // Thirty-two real Runtime cycles are required: Reset increments byte $3A, retaining low byte $3B.
+    @Test void tunnelDoorThirtyTwoResetDispatchesOmitSolidEvenOnCarryAndOnlyTheFollowingMainReopens() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var pool = f.runtime.placement().pool();
+            pool.write(tunnelDoor(f, pool.state(40), 4, 0x84, 0x100, 0x780, 1, 0x00A5));
+            for (int reset = 1; reset <= 32; reset++) {
+                if (reset != 1) {
+                    f.service(0); f.runtime.spawnBeforeReservedSlots();
+                    assertEquals(CdPlayerBody.Boundary.MAIN_RETURN, f.body(reset + 1).result().boundary());
+                }
+                seedSolidPlayer(f, 0, 0, 0, 0x123, 0, 0x00FA8000, 0x07801234);
+                var actor = f.frame.state(); var environment = f.frame.environment(); var sounds = f.runtime.lastSoundRequests();
+                f.runtime.runDynamicSlotsAfterReservedSlots();
+                assertEquals(actor, f.frame.state(), "Reset must not resolve the deliberately overlapping player");
+                assertEquals(environment, f.frame.environment()); assertEquals(sounds, f.runtime.lastSoundRequests());
+                assertEquals(((reset * 8 & 255) << 8) | 0xA5, f.slot(40).word(TUNNEL_DOOR_TIMER));
+                assertEquals(reset == 32 ? 2 : 4, f.slot(40).routine());
+                assertEquals(reset == 32 ? 0 : 1, f.slot(40).unsignedByte(MAP_FRAME));
+                f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+            }
+            f.service(0); f.runtime.spawnBeforeReservedSlots(); f.body(34);
+            seedSolidPlayer(f, 0, 0, 0, 0x123, 0, 0x00FA8000, 0x07801234);
+            var sounds = new ArrayList<>(f.runtime.lastSoundRequests());
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(0x00F28000, f.frame.state().motion().centreX16_16(), "width4 + native 9+1 resolves to X $F2");
+            assertEquals(0x07801234, f.frame.state().motion().centreY16_16());
+            assertEquals(0, f.frame.state().motion().xVelocity()); assertEquals(0x20, f.frame.state().motion().flags());
+            assertEquals(4, f.slot(40).routine()); assertEquals(1, f.slot(40).unsignedByte(MAP_FRAME));
+            assertEquals(0, f.slot(40).word(TUNNEL_DOOR_TIMER), "Main clears the entire word after the carry dispatch returned");
+            sounds.add(new CdOpeningObjectRuntime.TunnelDoorVerticalFm(CdTunnelDoorVertical.FmSound.FM_A4));
+            assertEquals(sounds, f.runtime.lastSoundRequests());
+            f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+        }
+    }
+
+    // Actual shared Solid is a composition oracle, not a fabricated result or an independent native-physics proof.
+    @Test void tunnelDoorSolidPublishesFractionsGlobalsAndOtherSlotBeforeLaterPhysicalConsumers() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var pool = f.runtime.placement().pool();
+            seedSolidPlayer(f, 8, 41, 0, 0x234, 0x100, 0x01008000, 0x07561234);
+            seedTunnelDoorGlobals(f, 1, 0x3456, 0x55, 0x66);
+            var door = tunnelDoor(f, pool.state(40), 2, 0x84, 0x100, 0x780, 0, 0x12AB)
+                    .moveWord(X_VELOCITY, 0x123);
+            var oldStand = tunnelDoor(f, pool.state(41), 4, 4, 0x100, 0x780, 1, 0x12AB).moveByte(FLAGS, 0xA8);
+            pool.write(door); pool.write(oldStand);
+            pool.write(spring(f, pool.state(42), 2, 4, 0, 0).moveByte(ROUTINE_2, 5)
+                    .moveWord(X_FRACTION, 0x4567).moveWord(Y_FRACTION, 0x89AB));
+            var untouched = pool.state(127).moveWord(TUNNEL_DOOR_TIMER, 0xDEAD); pool.write(untouched);
+            var actor = f.frame.state(); var env = f.frame.environment(); var display = f.frame.display();
+            var expected = CdSolidObject.fromAssets(f.assets).run(CdSolidObject.Entry.SOLID_OBJECT, door,
+                    tunnelDoorPlayer(f), new CdSolidObject.Gates(env.globals().debugMode(), env.movement().gates().miniSonic()),
+                    tunnelDoorGlobals(f), pool.capture());
+            assertEquals(CdSolidObject.Path.STAND_ON, expected.path());
+            assertEquals(List.of(41), expected.otherSlots().stream().map(v -> v.identity().wholeIndex()).toList());
+            assertTrue(expected.globalWrites().contains(CdSolidObject.GlobalField.PRIMARY_ANGLE));
+            assertTrue(expected.globalWrites().contains(CdSolidObject.GlobalField.SECONDARY_ANGLE));
+            int angleWrites = f.angleWrites.size(); var sounds = f.runtime.lastSoundRequests();
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertTunnelDoorSolidApplied(f, actor, env, expected);
+            assertEquals(display, f.frame.display()); assertEquals(angleWrites, f.angleWrites.size());
+            assertEquals(0xA300, f.frame.state().motion().centreX16_16() & 0xFFFF);
+            assertEquals(0x07551234, f.frame.state().motion().centreY16_16(), "word alignment retains the Y fraction");
+            assertEquals(expected.object().moveByte(SPRITE_FLAGS, 4), f.slot(40));
+            assertEquals(oldStand.moveByte(FLAGS, 0xA0).moveWord(TUNNEL_DOOR_TIMER, 0x1AAB), f.slot(41),
+                    "the later Reset consumes its already released live image and calls no Solid");
+            assertEquals(expected.player().actor().motion().centreX16_16() >>> 16, f.slot(42).centreX());
+            assertEquals(0x755, f.slot(42).centreY());
+            assertEquals(0x4567, f.slot(42).word(X_FRACTION)); assertEquals(0x89AB, f.slot(42).word(Y_FRACTION));
+            assertEquals(untouched, f.slot(127)); assertEquals(sounds, f.runtime.lastSoundRequests());
+            f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+        }
+    }
+
+    // A dirty Main radius8 admits both Door range (dy25) and Solid's bottom edge; Init would set radius24.
+    @Test void tunnelDoorFmPrecedesSharedKillFmAndUnknownLaterIdRetainsTheCompletedSourcePrefix() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var pool = f.runtime.placement().pool();
+            seedSolidPlayer(f, 0, 0, 0, 0x123, 0, 0x01008000, 0x07991234);
+            seedTunnelDoorGlobals(f, 1, 0x3456, 0x55, 0x66);
+            var door = tunnelDoor(f, pool.state(40), 2, 0x84, 0x100, 0x780, 0, 0xFEDC)
+                    .moveByte(Y_RADIUS, 8).moveWord(Y_VELOCITY, 0x100);
+            pool.write(door); pool.write(pool.state(41).moveByte(ID, 0x7E));
+            var actor = f.frame.state(); var env = f.frame.environment();
+            var prefix = door.moveByte(ROUTINE, 4).moveWord(TUNNEL_DOOR_TIMER, 0).moveByte(MAP_FRAME, 1);
+            var expected = CdSolidObject.fromAssets(f.assets).run(CdSolidObject.Entry.SOLID_OBJECT, prefix,
+                    tunnelDoorPlayer(f), new CdSolidObject.Gates(0, env.movement().gates().miniSonic()),
+                    tunnelDoorGlobals(f), pool.capture());
+            assertEquals(CdSolidObject.Path.HIT_BOTTOM, expected.path());
+            assertEquals(List.of(CdPlayerTouchResponse.FmSound.FM_HURT), expected.fmRequests());
+            var sounds = new ArrayList<>(f.runtime.lastSoundRequests());
+            sounds.add(new CdOpeningObjectRuntime.TunnelDoorVerticalFm(CdTunnelDoorVertical.FmSound.FM_A4));
+            sounds.add(new CdOpeningObjectRuntime.PlayerSound(new CdPlayerFrameRuntime.ContactFmSound(CdPlayerTouchResponse.FmSound.FM_HURT)));
+            var failure = assertThrows(UnsupportedOperationException.class, f.runtime::runDynamicSlotsAfterReservedSlots);
+            assertTrue(failure.getMessage().contains("41")); assertTrue(failure.getMessage().contains("7e"));
+            assertTunnelDoorSolidApplied(f, actor, env, expected);
+            assertEquals(0x079D1234, f.frame.state().motion().centreY16_16());
+            assertEquals(6, f.frame.state().motion().routine()); assertEquals(0, f.frame.state().motion().yVelocity());
+            assertEquals(expected.object().moveByte(SPRITE_FLAGS, 4), f.slot(40));
+            assertEquals(sounds, f.runtime.lastSoundRequests(), "metadata replay would duplicate Door or shared Kill FM");
+            assertTrue(f.runtime.closed()); assertTrue(f.frame.closed());
+            assertThrows(IllegalStateException.class, f.runtime::runDynamicSlotsAfterReservedSlots);
+        }
+    }
+
+    @Test void tunnelDoorReadsAnEarlierSpringPatchAndALaterMirrorReadsTheDoorSolidPatchInTheSameWalk() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var pool = f.runtime.placement().pool();
+            seedSpringPlayer(f, 0x01008000, 0x07671234, 0x100, 0x100, 2, 0, 0, 0);
+            pool.write(spring(f, pool.state(39), 2, 0x84, 0, 0));
+            pool.write(tunnelDoor(f, pool.state(40), 2, 0x84, 0x108, 0x78C, 0, 0xABCD));
+            pool.write(spring(f, pool.state(42), 2, 4, 0, 0).moveByte(ROUTINE_2, 5));
+            var sounds = new ArrayList<>(f.runtime.lastSoundRequests());
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(4, f.slot(39).routine()); assertEquals(4, f.slot(40).routine());
+            assertEquals(1, f.slot(40).unsignedByte(MAP_FRAME)); assertEquals(0, f.slot(40).word(TUNNEL_DOOR_TIMER));
+            assertEquals(0x076D1234, f.frame.state().motion().centreY16_16(), "earlier Spring moved Y from $767 to $76D");
+            assertEquals(0x00FA8000, f.frame.state().motion().centreX16_16(), "Door sees dy31 and resolves its native half-width14");
+            assertEquals(0, f.frame.state().motion().xVelocity()); assertEquals(-0x1000, f.frame.state().motion().yVelocity());
+            assertEquals(0xFA, f.slot(42).centreX()); assertEquals(0x76D, f.slot(42).centreY());
+            sounds.add(new CdOpeningObjectRuntime.SpringFm(CdSpring.FmSound.FM_SPRING));
+            sounds.add(new CdOpeningObjectRuntime.TunnelDoorVerticalFm(CdTunnelDoorVertical.FmSound.FM_A4));
+            assertEquals(sounds, f.runtime.lastSoundRequests());
+            f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+        }
+    }
+
+    @Test void tunnelDoorRealMapperBuildsExactClosedOpenSatAndServicedTwelveTilePictureAfterLiveDrawAndDespawn() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var placement = f.runtime.placement(); var pool = placement.pool();
+            seedSolidPlayer(f, 2, 0, 0, 0, 0, 0x01001234, 0x07805678);
+            seedSpinTunnelEnvironment(f, 0x100, 0, 0, 0, 1, 0);
+            pool.write(tunnelDoor(f, pool.state(40), 0, 0x80, 0x80, 0x780, 0, 0));
+            pool.write(tunnelDoor(f, pool.state(41), 0, 0x80, 0x100, 0x780, 0, 0));
+            pool.write(tunnelDoor(f, pool.state(42), 4, 0x84, 0x200, 0x780, 1, 0xF87B));
+            pool.write(tunnelDoor(f, pool.state(43), 4, 0x84, 0x280, 0x780, 1, 0).moveByte(SAVED_FLAGS_ID, 7));
+            seedSpinTunnelLoaded(placement, 7, 1); var bank = placement.capture().savedFlags().copy();
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(4, f.slot(40).spriteFlags()); assertEquals(4, f.slot(41).spriteFlags());
+            assertEquals(4, f.slot(42).spriteFlags(), "real Draw clears bit7 even for the culled retained window edge");
+            assertEquals(2, f.slot(42).routine()); assertEquals(0x007B, f.slot(42).word(TUNNEL_DOOR_TIMER));
+            assertArrayEquals(new byte[64], f.slot(43).copyBytes());
+            byte[] expectedBank = bank.clone(); expectedBank[2 + 3 * 7 + 1] &= 0x7F;
+            assertArrayEquals(expectedBank, placement.capture().savedFlags().copy());
+            var sat = f.runtime.finishAfterCamera(POST);
+            assertEquals(0, satEntry(sat, 40)); assertEquals(16, satEntry(sat, 41));
+            assertTrue(sat.provenance().stream().noneMatch(p -> p.slotRef().wholeIndex() == 42 || p.slotRef().wholeIndex() == 43));
+            assertEquals(List.of(40, 40, 41, 41), sat.provenance().stream().limit(4).map(p -> p.slotRef().wholeIndex()).toList());
+            assertTrue(sat.provenance().stream().limit(4).allMatch(p -> p.queueBucket() == 1));
+            assertArrayEquals(new byte[] {
+                    0, (byte) 0xDD, 1, 1, (byte) 0x9B, 0x2C, 0, (byte) 0xFC,
+                    0, (byte) 0xED, 3, 2, (byte) 0x9B, 0x28, 0, (byte) 0xFC,
+                    0, (byte) 0xDD, 12, 3, (byte) 0x83, 0x2E, 1, 0x7C,
+                    0, (byte) 0xDD, 4, 4, (byte) 0x83, 0x32, 1, (byte) 0x9C
+            }, java.util.Arrays.copyOf(sat.bytes(), 32));
+            assertEquals(0x84, f.slot(40).spriteFlags()); assertEquals(0x84, f.slot(41).spriteFlags());
+            assertEquals(4, f.slot(42).spriteFlags(), "DrawObjects never visits a culled pointer");
+            f.runtime.finishOrdinaryTail(); f.service(0x80);
+            var shown = f.runtime.displayedFrame(); var objects = f.assets.openingObjects();
+            var pixels = CdObjectPresentation.usaR11aTunnelDoorVerticalDevPreloadedArt(f.frame.artState(), f.runtime.powerupArtState(),
+                    objects, objects.frontierArtBank(), objects.contactArtBank(), objects.floatBlockArtBank(), objects.springArtBank(),
+                    objects.tunnelDoorArtBank(), BANKS.player(), BANKS.ring(), BANKS.mosqui(), BANKS.plant(), BANKS.ramp(),
+                    BANKS.explosion(), BANKS.points(), BANKS.flower(), BANKS.powerup(), BANKS.floatBlock(), BANKS.spring(), BANKS.tunnelDoorVertical());
+            assertEquals(CdObjectPresentation.convert(sat, pixels), shown, "conversion uses the NOW-serviced windows and the 412-pattern policy");
+            var tiles = shown.tiles().stream().filter(t -> t.patternId() >= BANKS.tunnelDoorVertical()
+                    && t.patternId() < BANKS.tunnelDoorVertical() + 12).toList();
+            assertEquals(12, tiles.size());
+            assertTrue(tiles.stream().allMatch(t -> t.palette() == 0 && t.priority()));
+            assertTrue(tiles.stream().filter(t -> t.patternId() < BANKS.tunnelDoorVertical() + 6).allMatch(t -> t.hFlip() && t.vFlip()));
+            assertTrue(tiles.stream().filter(t -> t.patternId() >= BANKS.tunnelDoorVertical() + 6).allMatch(t -> !t.hFlip() && !t.vFlip()));
+            for (int tile = 0; tile < 12; tile++) assertEquals(CdObjectPresentation.patternVersion(objects.tunnelDoorArtBank().tile(0x328 + tile)),
+                    shown.patternVersions().get(BANKS.tunnelDoorVertical() + tile));
+            assertNotNull(shown.patternVersions().get(BANKS.tunnelDoorVertical() + 11), "last native tile is $333, offset11");
+        }
+    }
+
+    @Test void tunnelDoorCompositeClosedCutRestoreReplaysTheNextActualBodyArtTableSoundPowerupAndLevel() throws Exception {
+        try (var f = new Fixture(new CdLevelGlobals(0, 0, 0, 0, 3, 0, 2, 0x88, 0))) {
+            springDeviceCut(f); var pool = f.runtime.placement().pool();
+            seedSpringPlayer(f, 0x01008000, 0x0767BEEF, 0x123, 0x100, 2, 0, 0, 0);
+            pool.write(tunnelDoor(f, pool.state(40), 0, 0x80, 0x100, 0x780, 0, 0xA55A));
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(0, f.frame.state().motion().playerControl());
+            assertEquals(4, f.slot(40).routine()); assertEquals(0, f.slot(40).word(TUNNEL_DOOR_TIMER));
+            f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+            var objects = f.runtime.captureClosedCut(); var actor = f.frame.captureActor(); var shared = f.frame.captureShared();
+            var cpu = f.runtime.cpuSat(); var picture = f.runtime.displayedFrame();
+            assertEquals(8, objects.levelGlobals().powerup());
+            int uploads = f.artPublications.size();
+            f.service(0); f.runtime.spawnBeforeReservedSlots();
+            assertEquals(CdPlayerBody.Boundary.MAIN_RETURN, f.body(3).result().boundary());
+            f.runtime.runDynamicSlotsAfterReservedSlots(); var nextCpu = f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+            var next = f.runtime.captureClosedCut(); var nextActor = f.frame.captureActor(); var nextShared = f.frame.captureShared();
+            var nextUploads = List.copyOf(f.artPublications.subList(uploads, f.artPublications.size()));
+            assertEquals(0x0800, f.slot(40).word(TUNNEL_DOOR_TIMER));
+            f.service(0); var shown = f.runtime.displayedFrame();
+            // Ordinary service opened the next real cycle. Finish it before any restore preflight.
+            f.runtime.spawnBeforeReservedSlots();
+            assertEquals(CdPlayerBody.Boundary.MAIN_RETURN, f.body(4).result().boundary());
+            f.runtime.runDynamicSlotsAfterReservedSlots(); f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+            assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT, f.runtime.phase());
+            int publications = f.artPublications.size();
+            f.frame.validateActorRestore(actor); f.frame.validateSharedRestore(shared); f.runtime.validateRestore(objects);
+            f.frame.restoreActor(actor); f.frame.restoreShared(shared); f.runtime.restore(objects);
+            assertEquals(actor, f.frame.captureActor()); assertEquals(shared.environment(), f.frame.environment());
+            assertSpinTunnelArt(shared.artState(), f.frame.artState()); assertEquals(shared.vIntClock(), f.frame.vIntClock());
+            assertEquals(publications, f.artPublications.size(), "restore performs no service or DMA callback");
+            assertSame(cpu, f.runtime.cpuSat()); assertSame(picture, f.runtime.displayedFrame());
+            assertEquals(objects.lastSoundRequests(), f.runtime.lastSoundRequests());
+            assertEquals(objects.powerupArtState(), f.runtime.powerupArtState());
+            f.service(0); f.runtime.spawnBeforeReservedSlots();
+            assertEquals(CdPlayerBody.Boundary.MAIN_RETURN, f.body(3).result().boundary());
+            f.runtime.runDynamicSlotsAfterReservedSlots(); var replay = f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+            var current = f.runtime.captureClosedCut();
+            assertEquals(nextActor, f.frame.captureActor()); assertEquals(nextShared.environment(), f.frame.environment());
+            assertSpinTunnelArt(nextShared.artState(), f.frame.artState()); assertEquals(nextShared.vIntClock(), f.frame.vIntClock());
+            assertEquals(nextShared.paused(), f.frame.paused());
+            var replayUploads = f.artPublications.subList(publications, f.artPublications.size());
+            assertEquals(nextUploads.size(), replayUploads.size());
+            for (int i = 0; i < nextUploads.size(); i++) assertSpinTunnelArt(nextUploads.get(i), replayUploads.get(i));
+            assertArrayEquals(nextCpu.bytes(), replay.bytes()); assertEquals(nextCpu.provenance(), replay.provenance());
+            assertEquals(next.placement().pool().slots(), current.placement().pool().slots());
+            assertArrayEquals(next.placement().savedFlags().copy(), current.placement().savedFlags().copy());
+            assertEquals(next.placement().status(), current.placement().status());
+            assertEquals(next.displayedFrame(), current.displayedFrame()); assertEquals(next.lastSoundRequests(), current.lastSoundRequests());
+            assertEquals(next.ringGlobals(), current.ringGlobals()); assertEquals(next.spillGlobals(), current.spillGlobals());
+            assertEquals(next.contactGlobals(), current.contactGlobals()); assertEquals(next.scoreGlobals(), current.scoreGlobals());
+            assertEquals(next.devGlobals(), current.devGlobals()); assertEquals(next.levelGlobals(), current.levelGlobals());
+            assertArrayEquals(next.powerupArtState().cpuBuffer().copy(), current.powerupArtState().cpuBuffer().copy());
+            assertArrayEquals(next.powerupArtState().residentBank().copy(), current.powerupArtState().residentBank().copy());
+            f.service(0); assertEquals(shown, f.runtime.displayedFrame(), "ordinary selector8 republishes the replayed CPU table");
+            f.runtime.spawnBeforeReservedSlots(); f.body(4); f.runtime.runDynamicSlotsAfterReservedSlots();
+            f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+        }
+    }
+
+    private static CdObjectState tunnelDoor(Fixture f, CdObjectState image, int routine, int spriteFlags,
+                                            int x, int y, int frame, int timer) throws java.io.IOException {
+        return image.moveByte(ID, CdTunnelDoorVertical.OBJECT_ID).moveByte(ROUTINE, routine).moveByte(SPRITE_FLAGS, spriteFlags)
+                .moveLong(MAPPINGS, f.assets.openingObjects().view(
+                        com.openggf.game.soniccd.level.CdR11aObjectAssets.Table.TUNNEL_DOOR_VERTICAL_MAPPINGS).range().nativeAddress())
+                .moveWord(TILE, 0x8328).moveByte(WIDTH, 4).moveByte(Y_RADIUS, 24).moveByte(PRIORITY, 1)
+                .moveWord(X, x).moveWord(Y, y).moveByte(MAP_FRAME, frame).moveWord(TUNNEL_DOOR_TIMER, timer);
+    }
+
+    private static CdSolidObject.Player tunnelDoorPlayer(Fixture f) {
+        var s = f.frame.state(); var h = s.header();
+        return new CdSolidObject.Player(new CdPlayerTouchResponse.Actor(s.motion(), h.tile(), h.priority(),
+                s.timers().hurt(), s.rotationDistance()), h.slotId(), s.objectLinks().pushObject(), s.objectLinks().standObject());
+    }
+
+    private static CdSolidObject.Globals tunnelDoorGlobals(Fixture f) {
+        var e = f.frame.environment(); var g = e.movement().globals();
+        return new CdSolidObject.Globals(e.globals().invincible(), g.scoreChain(), g.primaryAngle(), g.secondaryAngle());
+    }
+
+    private static void seedTunnelDoorGlobals(Fixture f, int invincible, int score, int primary, int secondary) {
+        var shared = f.frame.captureShared(); var e = shared.environment(); var m = e.movement(); var g = m.globals(); var b = e.globals();
+        var movement = new CdPlayerMovement.Globals(g.lookMode(), g.cameraYCentre(), primary, secondary, g.boredTimer(), score,
+                g.debugAngle(), g.debugAngleShift(), g.debugQuadrant(), g.debugFloorDistance());
+        var globals = new CdPlayerBody.Globals(b.levelFrames(), b.cameraXCentre(), b.timeAttackMode(), b.debugMode(),
+                b.debugCheat(), b.timeWarpTimer(), invincible, b.bossMusic());
+        f.frame.restoreShared(new CdPlayerFrameRuntime.SharedState(shared.owner(), new CdPlayerBody.Environment(
+                new CdPlayerMovement.Environment(m.physics(), m.bounds(), m.gates(), movement), e.controls(), globals, e.dynamicSlots()),
+                shared.artState(), shared.paused(), shared.vIntClock()));
+    }
+
+    private static void assertTunnelDoorSolidApplied(Fixture f, CdPlayerBody.State before, CdPlayerBody.Environment env,
+                                                     CdSolidObject.Result result) {
+        var p = result.player(); var a = p.actor(); var g = result.globals(); var h = before.header(); var t = before.timers();
+        assertEquals(new CdPlayerBody.State(a.motion(), before.animation(),
+                new CdPlayerBody.Header(h.slotId(), h.mappingAddress(), a.tile(), a.priority(), h.width()),
+                new CdPlayerBody.Timers(a.hurt(), t.invincibility(), t.speedShoes(), t.reset()), before.history(), a.rotationDistance(),
+                new CdPlayerBody.ObjectLinks(p.pushObject(), p.standObject())), f.frame.state());
+        var m = env.movement(); var old = m.globals(); var b = env.globals();
+        assertEquals(new CdPlayerBody.Environment(new CdPlayerMovement.Environment(m.physics(), m.bounds(), m.gates(),
+                new CdPlayerMovement.Globals(old.lookMode(), old.cameraYCentre(), g.primaryAngle(), g.secondaryAngle(), old.boredTimer(),
+                        g.scoreChain(), old.debugAngle(), old.debugAngleShift(), old.debugQuadrant(), old.debugFloorDistance())), env.controls(),
+                new CdPlayerBody.Globals(b.levelFrames(), b.cameraXCentre(), b.timeAttackMode(), b.debugMode(), b.debugCheat(),
+                        b.timeWarpTimer(), g.invincible(), b.bossMusic()), env.dynamicSlots()), f.frame.environment());
+    }
 }

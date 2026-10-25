@@ -4475,3 +4475,70 @@ parity is admitted by this checkpoint. Runtime tests-only build91483 separately
 failed compilation on expected absent12-bank/accessor/typedFM APIs; no JUnit
 ran and no behavioral Runtime negative is claimed. Its exact external tests
 remain preserved for the following Runtime import. Full-game goal stays active.
+
+
+### Vertical Door live Runtime, World cleanup and complete GPU oracle — 25 October 2026 GMT
+
+Base547318cd9 plus exact frozen Runtime440e07b0/Test4d1e021a adds real ID35
+physical dispatch, a twelfth LogicalBanks field with old arity compatibility,
+one cached actual Door bank and one dedicated FM_A4 ledger wrapper. Real Door
+prefix/call-cut/result go through the existing shared Solid. Every96-slot value,
+all returned images and Frame expected player/globals preflight before S4 writes;
+S3 applies once, shared FM follows, and later slots observe the completed image.
+Dedicated A4 runs after routine4/word-timer0 prefix, before frame1/Solid. Effects
+are not replayed. Snapshot is unchanged; phase/mutual guards cover callbacks.
+Independent Runtime source review found noP1/P2. Root24309 actualmedia lean
+TestCdOpeningObjectRuntime passed97/0/0/0 (89 retained+8 new), immediateadmission,
+1m28sMaven, exit01:24:44Z; Java25/media/backend and all8new XML names inspected.
+
+Presentation changes only comment/cleanup count400->412; all prior client/native
+PlaneB scope logic stays unchanged. New EGL component proof explicitly clears
+all96 dynamic slots and seeds ID35 physical40 at camera+(192,72). It stages the
+same live Sonic24px left before Init and each row2..35, keeping the declared
+actor/header/timer/history/animation owners; it repeats that ingress on full and
+course replay. This is constructed component evidence, not a normal-input Door
+contact. Source Init is silent/frame0, Reset carries after32 calls without Main,
+next Main emits A4/frame1, following V-int selects the open prior SAT. Actual
+DrawObjects/SAT, decoded12 art tiles, real textures, complete captures/replay,
+terrain controls and all412 retirement checks use the engine owners.
+
+Root87329 actualEGL tests-only with new Runtime/picture but old400cleanup gave
+1/1failure/0errors/0skips at surviving real logicalID131472 (OBJECTSbase+400)
+after close. Queue7s/Maven27.188s, exit01:29:05Z; exact media/Java25/optin/S2ROM
+properties inspected. After exact412client import, Root77883 normal queued
+-Dmse=off test selected TestSonicCdOpeningWorldLoad,TestSonicCdOpeningWorldEgl,
+TestCdPlayerFrameRuntime,TestModApiSignatureSurface with actualmedia/EGLoptin,
+explicit surfaceless-EGL, suppliedS2ROM and noDISPLAY/WAYLAND. Observed304/
+1failure/0errors/0skips, immediateadmission/1m45sMaven, exit01:31:54Z. EGL12,
+Frame235,API11 and45of46 World tests passed. Sole failure: same400Right route's
+stale expected35 now observes Unowned CD object ID19 at physical59. No input or
+runtime fence changed. Root changed only expectedID/methodname;51832 one exact
+World frontier method passed1/0/0/0, immediate/27.867sMaven, exit01:33:25Z.
+All class identities, failures, properties and zero aborts/skips were inspected.
+
+Independent World review found P2: one changed pixel across a pose could certify
+partially missing geometry despite correct CPU versions/uploads. Root preserved
+the frozen original and wrote a negative first: erase one complete visible Door
+tile from framebuffer copy while preserving visible RGB from the other five.
+Root68639 observed1/1failure/0errors/0skips because the weak oracle accepted the
+partial image (25.343sMaven, exit01:38:23Z). Root's test-only revision now checks
+every native nibble at literal flipped/positioned screen pixels against the
+current engine palette/display-colour policy, or exact current terrain for zero,
+including alpha. It pins full rows, layer, subject, ghost/opacity, priority shader
+and occlusion metadata. No sprite converter/renderer constructs this geometry
+oracle, and the omitted-tile negative remains for both poses. Production did not
+change for this repair. This tests engine display colours, not native palette
+or mixed VDP plane/sprite priority parity.
+
+Root51554 reran only the affected constructedDoor EGL method:1/0/0/0, immediate
+normaladmission/27.506sMaven, exit01:40:03Z, actualmedia/optin/EGL/S2ROM/Java25
+inspected. Every real Door pixel and both omitted-tile negatives passed, followed
+by full/course replay,412 retirement and cleanup. R2 closed/open ENGINE captures
+and terrain controls under external native/engine-tunnel-door-r2 are byte-identical
+to earlier R1 images; R1 outcome records the superseded weak-oracle limit. R2 PASS
+is written only after all assertions and session/graphics/boot cleanup. Images
+are320x224 and remain queued/unviewed/unpublished during00-07 Europe/London quiet.
+No broad unchanged selection was repeated after these assertion-only repairs.
+Earlier all12 EGL/235Frame/11API/45otherWorld outcomes retain their exact sources;
+304 is a red batch, not a claimed304-green rerun. Whole-game/region/nativePLC/
+audio/nativepalette/priority parity remain open. The actual next owner is19.

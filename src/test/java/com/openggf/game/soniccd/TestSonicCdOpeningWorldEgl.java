@@ -154,14 +154,16 @@ class TestSonicCdOpeningWorldEgl {
                         pictureBase + 108, pictureBase + 136, pictureBase + 199, pictureBase + 269,
                         pictureBase + 274, pictureBase + 313, pictureBase + 349, pictureBase + 364);
                 var expectedPicture = com.openggf.game.soniccd.resources.CdObjectPresentation.convert(pickupCpu,
-                        com.openggf.game.soniccd.resources.CdObjectPresentation.usaR11aSpringDevPreloadedArt(
+                        com.openggf.game.soniccd.resources.CdObjectPresentation.usaR11aTunnelDoorVerticalDevPreloadedArt(
                                 module.requirePlayerFrame().artState(), runtime.powerupArtState(), source.assets().openingObjects(),
                                 source.assets().openingObjects().frontierArtBank(),
                                 source.assets().openingObjects().contactArtBank(),
                                 source.assets().openingObjects().floatBlockArtBank(),
                                 source.assets().openingObjects().springArtBank(),
+                                source.assets().openingObjects().tunnelDoorArtBank(),
                                 banks.player(), banks.ring(), banks.mosqui(), banks.plant(), banks.ramp(),
-                                banks.explosion(), banks.points(), banks.flower(), banks.powerup(), banks.floatBlock(), banks.spring()));
+                                banks.explosion(), banks.points(), banks.flower(), banks.powerup(), banks.floatBlock(), banks.spring(),
+                                banks.tunnelDoorVertical()));
                 assertEquals(expectedPicture, runtime.displayedFrame(), "Next V-int uses the pickup CPU table and now-serviced art");
                 int playerBase = com.openggf.graphics.PatternAtlasRange.OBJECTS.base();
                 assertTrue(runtime.displayedFrame().patternVersions().keySet().stream()
@@ -1450,6 +1452,283 @@ class TestSonicCdOpeningWorldEgl {
         assertArrayEquals(x.cloudRam().copy(), y.cloudRam().copy());
         assertArrayEquals(x.deformationRam().copy(), y.deformationRam().copy());
         assertArrayEquals(x.hscrollRam().copy(), y.hscrollRam().copy());
+    }
+
+
+    @Test void actualEglConstructedVerticalTunnelDoorWorldClosesOpensReplaysAndRetires412Patterns() throws Exception {
+        Assumptions.assumeTrue(Boolean.getBoolean("soniccd.opening.egl"), "Explicit actual EGL/media opt-in");
+        assertEquals("surfaceless-egl", System.getProperty("openggf.headless.gl"));
+        assertNull(System.getenv("DISPLAY")); assertNull(System.getenv("WAYLAND_DISPLAY"));
+        String media = System.getProperty("soniccd.media.root"); assertNotNull(media); assertFalse(media.isBlank());
+        CdGameDataSource source;
+        try (var files = Files.list(Path.of(media).resolve("USA"))) {
+            var cues = files.filter(f -> f.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".cue")).toList();
+            assertEquals(1, cues.size()); source = CdStockLaunch.prepare(cues.getFirst(), CdStockLaunch.Request.r11a());
+        }
+        // Main.asm:34-83 at native pin1ecc5f3af: Init falls into Main with incoming bit7 clear,
+        // then32 ADDQ.B #8 Reset calls carry. Only the FOLLOWING Main opens, and the NEXT V-int displays it.
+        String log = InputScriptCompiler.compileToInputLog("36 -");
+        var movie = new Bk2MovieLoader().parseInputLogText(Path.of("constructed-vertical-door-world-input"), log.lines().toList());
+        Path output = openCaptureOutput(log, "soniccd.tunneldoor.output");
+        String construction = "ENGINE constructed USA R11A vertical Tunnel Door component; not a natural route/contact.\n"
+                + "Input row0: actual Sonic Init. Then clear ALL dynamic slots; seed slot40 ID$35, X=cameraX+192, Y=cameraY+72, subtype2=0, spriteFlags=0.\n"
+                + "Before row1 and EACH row2..35: restore/rebind the same live Sonic actor at DoorX-24, DoorY; zero velocities/angle/jump/charge/moveLock/stick/control, routine2, flags2, spriteFlags4, radii9/19, animation0; retain previousAnimation, angle copies, animation cursor, header, timers, history, rotation and object links; clear display publication.\n"
+                + "Actual player Body, native Door body/Solid/DrawObject, DrawObjects/SAT and completed ordinary tail execute on every step. No Door routine/map-frame/timer/mapping/tile write after construction.\n"
+                + "Silent Init row1; Reset rows2..33; bit7-triggered Main/FM_A4 row34; next-V-int open display row35. Full/course replay repeats only row2..35 actor ingress and inputs.\n"
+                + "USA DEV object-art preload, current native Plane B scope and bounded overlay priority; no native palette/VDP-priority/pixel/timing parity, PLC service/residency, natural contact, route or full-game claim.\n";
+        if (output != null) Files.writeString(output.resolve("construction.txt"), construction, StandardOpenOption.CREATE_NEW);
+        try (var boot = new HeadlessGameBoot(320, 224)) {
+            try {
+                var loop = boot.bootSonicCdOpeningObjects(source);
+                assertEquals(NullAudioBackend.class, GameServices.audio().getBackend().getClass());
+                var mode = SessionManager.getCurrentGameplayMode();
+                var module = assertInstanceOf(SonicCdGameModule.class, mode.getWorldSession().getGameModule());
+                var runtime = assertInstanceOf(CdOpeningObjectRuntime.class, module.getGameService(NativeDynamicObjectPass.class));
+                var frame = module.requirePlayerFrame();
+                step(loop, movie.getFrame(0));
+                var pool = runtime.placement().pool();
+                pool.clearDynamicSlots(); // EXPLICIT ingress: clear all96 dynamic slots, preserve reserved live Sonic.
+                int doorX = GameServices.camera().getX() + 192, doorY = GameServices.camera().getY() + 72;
+                pool.write(pool.state(40).moveByte(ID, 0x35).moveWord(X, doorX).moveWord(Y, doorY)
+                        .moveByte(SUBTYPE2, 0).moveByte(SPRITE_FLAGS, 0));
+                stageTunnelDoorPlayer(module, doorX, doorY);
+                step(loop, movie.getFrame(1)); // Actual dispatcher Init -> Main -> Solid -> Draw -> complete SAT/tail.
+                assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT, runtime.phase());
+                assertEquals(4, pool.state(40).routine()); assertEquals(0, pool.state(40).unsignedByte(MAP_FRAME));
+                assertEquals(0, pool.state(40).word(TUNNEL_DOOR_TIMER));
+                assertEquals(0x20CE9A, pool.state(40).longBits(MAPPINGS)); assertEquals(0x8328, pool.state(40).word(TILE));
+                assertEquals(1, pool.state(40).unsignedByte(PRIORITY)); assertEquals(4, pool.state(40).unsignedByte(WIDTH));
+                assertEquals(24, pool.state(40).unsignedByte(Y_RADIUS)); assertEquals(0x84, pool.state(40).spriteFlags());
+                assertTrue(runtime.lastSoundRequests().isEmpty(), "Init sees incoming bit7 clear, so Main must be silent/frame0");
+                assertTunnelDoorSat(runtime.cpuSat(), GameServices.camera().getX(), GameServices.camera().getY(), doorX, doorY, 0);
+                int base = com.openggf.graphics.PatternAtlasRange.OBJECTS.base();
+                var banks = new CdOpeningObjectRuntime.LogicalBanks(base, base + 24, base + 38, base + 108, base + 136,
+                        base + 199, base + 269, base + 274, base + 313, base + 349, base + 364, base + 400);
+                assertEquals(banks.spring() + 36, banks.tunnelDoorVertical());
+                var objects = source.assets().openingObjects(); var doorArt = objects.tunnelDoorArtBank();
+                var binding = doorArt.binding(com.openggf.game.soniccd.level.CdR11aAsset.ART_TUNNEL_DOOR);
+                assertEquals(0x328, binding.firstTileId()); assertEquals(12, binding.tileCount());
+                assertEquals(0x8328, binding.baseWord()); assertEquals(0x6500, binding.plc().vramAddress());
+                var mapping = objects.view(com.openggf.game.soniccd.level.CdR11aObjectAssets.Table.TUNNEL_DOOR_VERTICAL_MAPPINGS);
+                assertEquals(0x20CE9A, mapping.range().nativeAddress());
+                assertArrayEquals(java.util.HexFormat.of().parseHex("0004001002E8011804FCF8031800FC0002E80C0006FCE804000A1C00"),
+                        mapping.bytes().copy(), "Real declared28-byte map: roots4/16, two pieces per frame, real zero pads15/27");
+                var policy = com.openggf.game.soniccd.resources.CdObjectPresentation.usaR11aTunnelDoorVerticalDevPreloadedArt(
+                        frame.artState(), runtime.powerupArtState(), objects, objects.frontierArtBank(), objects.contactArtBank(),
+                        objects.floatBlockArtBank(), objects.springArtBank(), doorArt, banks.player(), banks.ring(), banks.mosqui(),
+                        banks.plant(), banks.ramp(), banks.explosion(), banks.points(), banks.flower(), banks.powerup(),
+                        banks.floatBlock(), banks.spring(), banks.tunnelDoorVertical());
+                int[] nativeFirst = {0x780, 0x7AE, 0x3A0, 0x424, 0x441, 0x680, 0x6C6, 0x6D7, 0x544, 0x334, 0x520, 0x328};
+                int[] counts = {24, 14, 70, 28, 63, 70, 5, 39, 36, 15, 36, 12};
+                var atlas = GameServices.graphics().getPatternAtlas(); int logical = base;
+                for (int span = 0; span < counts.length; span++) for (int tile = 0; tile < counts[span]; tile++) {
+                    int id = logical++;
+                    assertEquals(id, policy.resolve(nativeFirst[span] + tile).logicalPatternId());
+                    assertEquals(1, atlas.registeredRangesForTesting().stream()
+                            .filter(range -> id >= range.base() && id < range.base() + range.size()).count(), "reservation " + id);
+                }
+                assertEquals(base + 412, logical, "The exact12-span current-art policy covers412 logical IDs");
+                var registry = mode.getRewindRegistry(); var full = registry.capture(); var course = registry.captureCourse();
+                var before = capture(module); var beforePixels = render(module, true); assertCapture(before, module);
+                var expected = new ArrayList<Capture>(); var expectedPixels = new ArrayList<int[]>();
+                var reached = new java.util.TreeSet<Integer>(); var phasePictures = new RgbaImage[2];
+                var phaseControls = new RgbaImage[2];
+                var previousCpu = runtime.cpuSat();
+                int previousCameraX = GameServices.camera().getX(), previousCameraY = GameServices.camera().getY();
+                for (int row = 2; row < 36; row++) {
+                    stageTunnelDoorPlayer(module, doorX, doorY); // Explicit actor-only construction at a CLOSED_CUT.
+                    step(loop, movie.getFrame(row)); // NEVER publish/draw/restore at the intermediate SERVICED boundary.
+                    assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT, runtime.phase());
+                    int cpuFrame = row >= 34 ? 1 : 0, displayFrame = row == 35 ? 1 : 0;
+                    assertEquals(row == 33 ? 2 : 4, pool.state(40).routine());
+                    assertEquals(cpuFrame, pool.state(40).unsignedByte(MAP_FRAME));
+                    int timerHigh = row <= 33 ? ((row - 1) * 8) & 255 : row == 34 ? 0 : 8;
+                    assertEquals(timerHigh << 8, pool.state(40).word(TUNNEL_DOOR_TIMER));
+                    assertEquals(0x84, pool.state(40).spriteFlags()); assertEquals(0, pool.state(40).flags());
+                    assertEquals(2, frame.state().motion().routine(), "Sonic stays live through the actual player Body");
+                    assertEquals(24, doorX - (frame.state().motion().centreX16_16() >>> 16), "Inside Main's48, outside Solid's14");
+                    assertTrue(Math.abs(doorY - (frame.state().motion().centreY16_16() >>> 16)) < 32);
+                    assertEquals(row == 34 ? List.of(new CdOpeningObjectRuntime.TunnelDoorVerticalFm(
+                                    com.openggf.game.soniccd.objects.CdTunnelDoorVertical.FmSound.FM_A4)) : List.of(),
+                            runtime.lastSoundRequests(), "Only the Main AFTER the32nd Reset may request A4");
+                    var completed = capture(module); expected.add(completed);
+                    var published = completed.publication().published();
+                    assertEquals(previousCameraX, published.cameraX()); assertEquals(previousCameraY, published.cameraY());
+                    assertTunnelDoorSat(previousCpu, previousCameraX, previousCameraY, doorX, doorY, displayFrame);
+                    assertTunnelDoorSat(runtime.cpuSat(), GameServices.camera().getX(), GameServices.camera().getY(), doorX, doorY, cpuFrame);
+                    var nowPixels = com.openggf.game.soniccd.resources.CdObjectPresentation.usaR11aTunnelDoorVerticalDevPreloadedArt(
+                            frame.artState(), runtime.powerupArtState(), objects, objects.frontierArtBank(), objects.contactArtBank(),
+                            objects.floatBlockArtBank(), objects.springArtBank(), doorArt, banks.player(), banks.ring(), banks.mosqui(),
+                            banks.plant(), banks.ramp(), banks.explosion(), banks.points(), banks.flower(), banks.powerup(),
+                            banks.floatBlock(), banks.spring(), banks.tunnelDoorVertical());
+                    assertEquals(com.openggf.game.soniccd.resources.CdObjectPresentation.convert(previousCpu, nowPixels), runtime.displayedFrame(),
+                            "Display is the PREVIOUS actual SAT using NOW-serviced player/powerup windows and real Door pixels");
+                    var picture = runtime.displayedFrame(); var image = render(module, true);
+                    expectedPixels.add(image.pixels().clone()); var terrain = renderTerrain(module, published);
+                    assertNativeGpuBackground(module); assertTerrainOutsideSprites(image, terrain, picture);
+                    assertTunnelDoorPixels(picture, image, terrain, doorArt, banks.tunnelDoorVertical(),
+                            doorX - previousCameraX, doorY - previousCameraY, displayFrame, reached);
+                    if (row == 2 || row == 35) {
+                        // Regression for review P2: upload/capture is insufficient if the GPU omits one tile.
+                        // Remove a complete visible tile but retain a visible contribution from the other five.
+                        var doorTiles = picture.tiles().stream().filter(t -> t.patternId() >= banks.tunnelDoorVertical()
+                                && t.patternId() < banks.tunnelDoorVertical() + 12).toList();
+                        var omitted = doorTiles.getFirst(); var partial = image.copy();
+                        int removedRgb = 0, retainedRgb = 0;
+                        for (var tile : doorTiles) for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x++) {
+                            int at = ((int) tile.y() + y) * 320 + (int) tile.x() + x;
+                            boolean visible = (image.pixels()[at] & 0xFFFFFF) != (terrain.pixels()[at] & 0xFFFFFF);
+                            if (tile == omitted) {
+                                if (visible) removedRgb++;
+                                partial.pixels()[at] = terrain.pixels()[at];
+                            } else if (visible) retainedRgb++;
+                        }
+                        assertTrue(removedRgb > 0); assertTrue(retainedRgb > 0);
+                        assertThrows(AssertionError.class, () -> assertTunnelDoorPixels(picture, partial, terrain, doorArt,
+                                banks.tunnelDoorVertical(), doorX - published.cameraX(), doorY - published.cameraY(),
+                                displayFrame, new java.util.TreeSet<>()), "A partially missing Door must fail the GPU oracle");
+                    }
+                    assertArrayEquals(image.pixels(), render(module, true).pixels(), "Repeated draw must reconstruct the same closed picture");
+                    assertCapture(completed, module); // Draw/control must preserve complete Plane/copies/publication, state and sound ledger.
+                    if (phasePictures[displayFrame] == null) { phasePictures[displayFrame] = image; phaseControls[displayFrame] = terrain; }
+                    previousCpu = runtime.cpuSat(); previousCameraX = GameServices.camera().getX(); previousCameraY = GameServices.camera().getY();
+                }
+                assertEquals(java.util.stream.IntStream.range(0, 12).boxed().collect(java.util.stream.Collectors.toSet()), reached);
+                assertFalse(Arrays.equals(phasePictures[0].pixels(), phasePictures[1].pixels()));
+                var after = capture(module); var afterPixels = render(module, true); assertCapture(after, module);
+                for (boolean courseOnly : List.of(false, true)) {
+                    if (courseOnly) registry.restoreCourse(course); else registry.restore(full);
+                    assertCapture(before, module); assertArrayEquals(beforePixels.pixels(), render(module, true).pixels());
+                    assertCapture(before, module);
+                    for (int row = 2; row < 36; row++) {
+                        stageTunnelDoorPlayer(module, doorX, doorY); step(loop, movie.getFrame(row));
+                        assertCapture(expected.get(row - 2), module);
+                        assertArrayEquals(expectedPixels.get(row - 2), render(module, true).pixels(), "Door full/course rendered replay row " + row);
+                        assertCapture(expected.get(row - 2), module);
+                    }
+                    assertCapture(after, module); assertArrayEquals(afterPixels.pixels(), render(module, true).pixels());
+                    assertCapture(after, module);
+                }
+                for (int offset = 0; offset < 12; offset++) {
+                    var entry = atlas.getEntry(banks.tunnelDoorVertical() + offset); assertNotNull(entry, "Every actual Door tile reached the GPU atlas");
+                    assertTrue(glIsTexture(atlas.getTextureId(entry.atlasIndex())), "Real EGL texture, never an injected/headless glyph");
+                }
+                assertEquals(NullAudioBackend.class, GameServices.audio().getBackend().getClass());
+                if (output != null) for (int pose = 0; pose < 2; pose++) {
+                    String label = pose == 0 ? "closed-frame0" : "open-frame1";
+                    ScreenshotCapture.savePNG(phasePictures[pose], output.resolve("ENGINE-constructed-door-" + label + ".png"));
+                    ScreenshotCapture.savePNG(phaseControls[pose], output.resolve("ENGINE-terrain-control-" + label + ".png"));
+                }
+                module.closeTerrainPlayer(); // Retire private/World pictures while the same graphics/context still exist.
+                assertTrue(runtime.closed()); assertTrue(frame.closed());
+                assertSame(atlas, GameServices.graphics().getPatternAtlas());
+                for (int offset = 0; offset < 412; offset++) assertNull(atlas.getEntry(base + offset),
+                        "retired picture ID " + (base + offset) + "; includes ALL12 new suffix IDs+400..411");
+            } finally {
+                try { SessionManager.closeGameplaySession(); }
+                finally { GraphicsManager.destroyForReinit(); }
+            }
+        }
+        if (output != null) Files.writeString(output.resolve("outcome.txt"),
+                "PASS: constructed native ID$35 World Init/32Reset/Main-A4 cycle, closed0/open1 exact current-palette opaque and terrain-transparent EGL pixels, omitted-tile GPU-oracle negatives, all12 decoded source tiles, full/course complete-state and framebuffer replay, all412 logical IDs absent after module close.\n"
+                + construction, StandardOpenOption.CREATE_NEW); // Only after ALL assertions, retirement AND session/graphics/boot cleanup.
+    }
+
+    /** Explicit test construction only; preserves source owners, shared globals and all buffers/services. */
+    private static void stageTunnelDoorPlayer(SonicCdGameModule module, int doorX, int doorY) {
+        var runtime = (CdOpeningObjectRuntime) module.getGameService(NativeDynamicObjectPass.class);
+        assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT, runtime.phase());
+        module.requirePlayerActor().requireCompletedNativeFrame();
+        var frame = module.requirePlayerFrame(); var actor = frame.captureActor(); var old = actor.state(); var m = old.motion();
+        assertEquals(2, m.routine(), "Only the existing live Sonic actor may enter this constructed cut");
+        var motion = new com.openggf.game.soniccd.player.CdPlayerMotionState((doorX - 24) << 16, doorY << 16,
+                0, 0, 0, 2, 0, 2, 4, 9, 19, 0, m.previousAnimation(), 0, 0, 0, 0, 0,
+                m.previousPrimaryAngle(), m.previousSecondaryAngle());
+        var state = new com.openggf.game.soniccd.player.CdPlayerBody.State(motion, old.animation(), old.header(), old.timers(),
+                old.history(), old.rotationDistance(), old.objectLinks());
+        frame.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(), state, java.util.Optional.empty()));
+        module.requirePlayerActor().rebindAfterRestore();
+    }
+
+    private static void assertTunnelDoorSat(CdObjectDrawQueue.CpuSat sat, int cameraX, int cameraY,
+                                            int doorX, int doorY, int frame) {
+        // Literal N MapSpr_FlapDoorV roots4/16, Mappings.asm:1-27. Full ADD.W with base$8328 precedes object flips.
+        int[][] literal = frame == 0 ? new int[][] {{-24, 1, 0x9B2C, -4}, {-8, 3, 0x9B28, -4}}
+                : new int[][] {{-24, 12, 0x832E, -4}, {-24, 4, 0x8332, 28}};
+        byte[] raw = sat.bytes(); int seen = 0;
+        assertTrue(sat.provenance().stream().anyMatch(p -> p.slotRef().wholeIndex() == 0), "Live Sonic must use the shared native SAT");
+        for (int entry = 0; entry < sat.spriteCount(); entry++) {
+            var origin = sat.provenance().get(entry); if (origin.slotRef().wholeIndex() != 40) continue;
+            assertTrue(seen < 2); int[] p = literal[seen];
+            assertEquals(1, origin.queueBucket()); assertEquals(seen++, origin.mappingPieceOrdinal());
+            int at = entry * 8;
+            assertEquals(doorY - cameraY + 128 + p[0], ((raw[at] & 255) << 8) | (raw[at + 1] & 255));
+            assertEquals(p[1], raw[at + 2] & 255); assertEquals(entry + 1, raw[at + 3] & 255);
+            assertEquals(p[2], ((raw[at + 4] & 255) << 8) | (raw[at + 5] & 255));
+            assertEquals((doorX - cameraX + 128 + p[3]) & 511, ((raw[at + 6] & 255) << 8) | (raw[at + 7] & 255));
+        }
+        assertEquals(2, seen, "Both actual counted pieces must traverse native DrawObjects");
+    }
+
+    private static void assertTunnelDoorPixels(com.openggf.graphics.SpritePresentation.Frame picture, RgbaImage image,
+                                               RgbaImage terrain, com.openggf.game.soniccd.level.CdR11aObjectAssets.TunnelDoorArtBank art,
+                                               int logicalBase, int centreX, int centreY, int frame, java.util.Set<Integer> reached) {
+        var tiles = picture.tiles().stream().filter(t -> t.patternId() >= logicalBase && t.patternId() < logicalBase + 12).toList();
+        // Reverse native piece order, column-major source offsets, final mapping flips. No call to production convert/geometry for this oracle.
+        int[][] literal = frame == 0 ? new int[][] {
+                {0, -4, 16}, {1, -4, 8}, {2, -4, 0}, {3, -4, -8}, {4, -4, -16}, {5, -4, -24}}
+                : new int[][] {{10, 28, -24}, {11, 36, -24}, {6, -4, -24}, {7, 4, -24}, {8, 12, -24}, {9, 20, -24}};
+        assertEquals(6, tiles.size()); int changed = 0, opaque = 0, transparent = 0;
+        // Independent expected image: native nibbles + literal screen geometry/flips + current engine palette.
+        // The existing display-colour policy is shared; no production sprite converter/renderer builds this oracle.
+        var graphics = GameServices.graphics(); var palette = GameServices.level().getCurrentLevel().getPalette(0);
+        assertFalse(graphics.getPaletteFadePresentation().affects(0), "This ordinary constructed cut has no palette fade");
+        int[] paletteArgb = new int[16];
+        for (int index = 1; index < 16; index++) {
+            var colour = palette.getColor(index);
+            int rgb = com.openggf.graphics.color.DisplayColorConverter.toPackedRgb(colour.r & 255, colour.g & 255,
+                    colour.b & 255, graphics.getDisplayColorProfile(), graphics.getDisplayColorExpansion());
+            paletteArgb[index] = 0xFF000000 | rgb;
+        }
+        for (int index = 0; index < literal.length; index++) {
+            int[] p = literal[index]; var tile = tiles.get(index); reached.add(p[0]);
+            assertEquals(logicalBase + p[0], tile.patternId());
+            assertEquals((float) (centreX + p[1]), tile.x()); assertEquals((float) (centreY + p[2]), tile.y());
+            assertEquals(8f, tile.width()); assertEquals(8f, tile.height()); assertEquals(0, tile.palette());
+            assertEquals(frame == 0, tile.hFlip()); assertEquals(frame == 0, tile.vFlip()); assertTrue(tile.priority());
+            assertEquals(com.openggf.graphics.SpritePresentation.Layer.OBJECT, tile.layer());
+            assertTrue(tile.priorityShader()); assertEquals(0, tile.occlusionMask());
+            assertFalse(tile.ghost()); assertFalse(tile.ghostColour()); assertEquals(1f, tile.ghostAlpha());
+            assertEquals(0, tile.rowStart()); assertEquals(8, tile.rowEnd()); assertFalse(tile.rowClipped());
+            assertEquals(com.openggf.graphics.SpritePresentation.Subject.WORLD, tile.subject());
+            var decoded = new com.openggf.level.Pattern(); decoded.fromSegaFormat(art.tile(0x328 + p[0]).copy());
+            var version = picture.patternVersions().get(tile.patternId()); assertNotNull(version);
+            long[] words = {version.a(), version.b(), version.c(), version.d()};
+            for (int pixel = 0; pixel < 64; pixel++) assertEquals(decoded.getPixel(pixel % 8, pixel / 8) & 15,
+                    (int) ((words[pixel / 16] >>> ((pixel % 16) * 4)) & 15), "decoded native Door pixel " + p[0] + ":" + pixel);
+            for (var other : picture.tiles()) {
+                if (other.patternId() >= logicalBase && other.patternId() < logicalBase + 12) continue;
+                assertTrue(other.x() + other.width() <= tile.x() || other.x() >= tile.x() + tile.width()
+                                || other.y() + other.height() <= tile.y() || other.y() >= tile.y() + tile.height(),
+                        "Sonic and every other glyph must be outside this Door-only GPU footprint");
+            }
+            for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x++) {
+                int px = (int) tile.x() + x, py = (int) tile.y() + y;
+                assertTrue(px >= 0 && px < 320 && py >= 0 && py < 224);
+                int nativePixel = decoded.getPixel(frame == 0 ? 7 - x : x, frame == 0 ? 7 - y : y) & 15;
+                int at = py * 320 + px;
+                int expected = nativePixel == 0 ? terrain.pixels()[at] : paletteArgb[nativePixel];
+                assertEquals(expected, image.pixels()[at], "Door " + frame + " tile " + p[0] + " pixel " + x + ":" + y
+                        + " must match the independent current-palette/terrain image, including alpha");
+                if (nativePixel == 0) transparent++;
+                else {
+                    opaque++;
+                    if ((image.pixels()[at] & 0xFFFFFF) != (terrain.pixels()[at] & 0xFFFFFF)) changed++;
+                }
+            }
+        }
+        assertTrue(opaque > 0); assertEquals(6 * 64, opaque + transparent);
+        assertTrue(changed > 0, "Actual GPU must draw inside this pose's isolated native opaque Door pixels, independently of Sonic");
     }
 
 }

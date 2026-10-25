@@ -42,6 +42,15 @@ do not resample live bounds during delayed drawing or suppress the player.
 Keep native sprite-table capture semantics unchanged and test the real cold
 player path as well as immutable capture purity.
 
+**Texture upload and one changed pixel do not prove complete sprite geometry.**
+Frozen presentation replays can upload every pattern before deciding which tiles
+actually draw. An aggregate framebuffer difference can still pass when an entire
+tile is missing. Pin full tile metadata and compare every source nibble at literal
+flipped screen coordinates against the current engine palette, using terrain for
+transparent pixels. A partial-image negative must fail that oracle. Keep engine
+palette/display-policy validation separate from native hardware colour parity.
+See the [CD Door GPU-oracle correction](plans/2026-10-23-sonic-cd-implementation.md#vertical-door-live-runtime-world-cleanup-and-complete-gpu-oracle--25-october-2026-gmt).
+
 **A byte memory operand at a native word reads its high byte.** The 68000 is
 big-endian: CD `Player_LvlColAir_Down` reads `move.b oYVel(a0),d2`, with no
 `+1`, then ADDQ.B/NEG.B and signed byte distance comparisons

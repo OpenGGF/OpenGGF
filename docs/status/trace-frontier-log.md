@@ -112927,3 +112927,28 @@ absolute ROM properties:
 
 The later title-card archive WIP remains outside this composition. Its pending failures, ring/timer reset at
 `loc_63B4`, HCZ and downstream frontiers remain separate obligations. No full-suite run or new trace payload.
+
+
+## 2026-10-25 — private CD R11A live-object frontier (not a canonical trace)
+
+Private objects worktree on547318cd9 plus native Door Runtime/412client imports:
+normal400Right input now reaches unowned ID19 at physical59, after the formerly
+unowned35 dispatch is admitted. Root77883 selected WorldLoad/EGL/Frame/API304
+actual-media cases; sole failure was stale expected35 vs observed19 (01:31:54Z).
+Root51832 reran only the renamed Monitor-frontier method after updating that
+assertion,1/0/0/0 at01:33:25Z. Input schedule, source-native logic and placement
+are unchanged; first failing input-call number was not recorded. No native/V5
+physics trace parity or Monitor interaction is established.
+
+Commands used the main-workspace maven_queue.py from the private cwd, Java25,
+-Dmse=off, -Dsoniccd.media.root=<supplied-media-root>,
+-Dopenggf.headless.gl=surfaceless-egl and the supplied absolute S2ROM path.
+The normal combined selector was TestSonicCdOpeningWorldLoad,
+TestSonicCdOpeningWorldEgl,TestCdPlayerFrameRuntime,TestModApiSignatureSurface
+with -Dsoniccd.opening.egl=true. The lean affected rerun selected
+TestSonicCdOpeningWorldLoad#ordinaryRampApproachPassesOwnedSpringsTagsAndVerticalDoorAndStopsAtTheMonitorDispatcher.
+Root24309 Runtime97 passed separately. ConstructedDoor EGL geometry/retirement
+proof passed after the test-only per-pixel oracle correction in51554; source,
+negative controls and bounded evidence are in the dated CD implementation plan.
+No full-suite/full-game or broad-smoke-green claim; prior baseline-attributed
+smoke failures remain separately recorded. Next finite native owner: Monitor19.
