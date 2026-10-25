@@ -156,6 +156,138 @@ class TestAudioPresentationArchitectureGuard {
             "AL_PITCH");
 
     @Test
+    void levelMusicAccessOwnsColdManagerLifetimeAdmissionAndTheCompleteControlProtocol() throws Exception {
+        var field = AudioManager.class.getDeclaredField("levelMusicAccess");
+        assertEquals(java.lang.reflect.Modifier.PRIVATE | java.lang.reflect.Modifier.FINAL, field.getModifiers());
+        assertEquals(LevelMusicAccess.class, field.getType());
+        assertEquals(1, Arrays.stream(AudioManager.class.getDeclaredFields())
+                .filter(candidate -> candidate.getType() == LevelMusicAccess.class).count());
+        var accessor = AudioManager.class.getDeclaredMethod("levelMusicAccess");
+        assertEquals(java.lang.reflect.Modifier.FINAL, accessor.getModifiers(), "package-private final forwarding only");
+        assertEquals(LevelMusicAccess.class, accessor.getReturnType());
+        Map<String, Class<?>> state = Map.of("audio", AudioManager.class,
+                "levelMusicControls", int.class, "levelEntryMusicControls", int.class);
+        assertEquals(state, Arrays.stream(LevelMusicAccess.class.getDeclaredFields())
+                .collect(java.util.stream.Collectors.toMap(java.lang.reflect.Field::getName, java.lang.reflect.Field::getType)));
+        for (String name : state.keySet()) {
+            assertEquals(java.lang.reflect.Modifier.PRIVATE | (name.equals("audio") ? java.lang.reflect.Modifier.FINAL : 0),
+                    LevelMusicAccess.class.getDeclaredField(name).getModifiers());
+            if (!name.equals("audio")) assertThrows(NoSuchFieldException.class,
+                    () -> AudioManager.class.getDeclaredField(name));
+        }
+        assertEquals(1, LevelMusicAccess.class.getDeclaredConstructors().length);
+        assertEquals(0, LevelMusicAccess.class.getDeclaredConstructor(AudioManager.class).getModifiers());
+        assertEquals(Map.of("owner", LevelMusicAccess.class, "entry", boolean.class, "closed", boolean.class),
+                Arrays.stream(LevelMusicAccess.Control.class.getDeclaredFields())
+                        .collect(java.util.stream.Collectors.toMap(java.lang.reflect.Field::getName, java.lang.reflect.Field::getType)));
+        for (var tokenField : LevelMusicAccess.Control.class.getDeclaredFields()) {
+            assertEquals(java.lang.reflect.Modifier.PRIVATE | (tokenField.getName().equals("closed") ? 0
+                    : java.lang.reflect.Modifier.FINAL), tokenField.getModifiers());
+        }
+        assertEquals(java.lang.reflect.Modifier.PUBLIC | java.lang.reflect.Modifier.STATIC | java.lang.reflect.Modifier.FINAL,
+                LevelMusicAccess.Control.class.getModifiers());
+        assertEquals(Set.of("acquire", "allowsAutomatic", "allowsEntryMusic", "allowsEntryRequest", "release"),
+                Arrays.stream(LevelMusicAccess.class.getDeclaredMethods())
+                        .filter(method -> !java.lang.reflect.Modifier.isStatic(method.getModifiers()))
+                        .peek(method -> assertEquals(java.lang.reflect.Modifier.PRIVATE, method.getModifiers()))
+                        .map(java.lang.reflect.Method::getName).collect(java.util.stream.Collectors.toSet()));
+
+        List<String> escapedState = new ArrayList<>();
+        List<String> escapedProtocol = new ArrayList<>();
+        for (JavaClass caller : productionClasses()) {
+            for (var access : caller.getFieldAccessesFromSelf()) {
+                String target = access.getTargetOwner().getName();
+                if (target.equals(LevelMusicAccess.class.getName()) && !caller.isEquivalentTo(LevelMusicAccess.class))
+                    escapedState.add(access.toString());
+                if (target.equals(LevelMusicAccess.Control.class.getName()) && !caller.isEquivalentTo(LevelMusicAccess.Control.class)
+                        && !(caller.isEquivalentTo(LevelMusicAccess.class) && access.getOrigin().getName().equals("release")))
+                    escapedState.add(access.toString());
+                if (target.equals(AudioManager.class.getName()) && access.getName().equals("levelMusicAccess")
+                        && !(caller.isEquivalentTo(AudioManager.class)
+                        && Set.of("<init>", "levelMusicAccess").contains(access.getOrigin().getName())))
+                    escapedState.add(access.toString());
+            }
+            caller.getMethodCallsFromSelf().stream()
+                    .filter(call -> call.getTargetOwner().isEquivalentTo(LevelMusicAccess.class))
+                    .filter(call -> Set.of("acquire", "release", "queryOwner").contains(call.getName())
+                            || !call.getTarget().getRawParameterTypes().contains(productionClasses().get(AudioManager.class)))
+                    .filter(call -> !caller.isEquivalentTo(LevelMusicAccess.class)
+                            && !(caller.isEquivalentTo(LevelMusicAccess.Control.class) && call.getName().equals("release")))
+                    .map(Object::toString).forEach(escapedProtocol::add);
+        }
+        assertEquals(List.of(), escapedState, "all state stays private to its owner and subordinate release protocol");
+        assertEquals(List.of(), escapedProtocol, "no external caller can bypass the compatibility boundaries");
+        var ownerConstructions = productionClasses().stream()
+                .flatMap(caller -> caller.getConstructorCallsFromSelf().stream())
+                .filter(call -> call.getTargetOwner().isEquivalentTo(LevelMusicAccess.class)).toList();
+        assertEquals(1, ownerConstructions.size());
+        assertEquals(AudioManager.class.getName(), ownerConstructions.getFirst().getOriginOwner().getName());
+        assertEquals("<init>", ownerConstructions.getFirst().getOrigin().getName());
+        var tokenConstructions = productionClasses().stream()
+                .flatMap(caller -> caller.getConstructorCallsFromSelf().stream())
+                .filter(call -> call.getTargetOwner().isEquivalentTo(LevelMusicAccess.Control.class)).toList();
+        assertEquals(1, tokenConstructions.size());
+        assertEquals(LevelMusicAccess.class.getName(), tokenConstructions.getFirst().getOriginOwner().getName());
+        assertEquals("acquire", tokenConstructions.getFirst().getOrigin().getName());
+
+        // Check the emitted constructor operations as well as source: only Object construction
+        // and exact parameter stores are cold. Debug/stack-map metadata is deliberately ignored.
+        for (Class<?> type : List.of(LevelMusicAccess.class, LevelMusicAccess.Control.class)) {
+            List<String> instructions = new ArrayList<>();
+            String internal = type.getName().replace('.', '/');
+            try (var bytes = type.getResourceAsStream("/" + internal + ".class")) {
+                assertTrue(bytes != null);
+                new org.objectweb.asm.ClassReader(bytes).accept(new org.objectweb.asm.ClassVisitor(org.objectweb.asm.Opcodes.ASM9) {
+                    @Override public org.objectweb.asm.MethodVisitor visitMethod(int access, String name, String descriptor,
+                            String signature, String[] exceptions) {
+                        if (!name.equals("<init>")) return null;
+                        return new org.objectweb.asm.MethodVisitor(org.objectweb.asm.Opcodes.ASM9) {
+                            @Override public void visitVarInsn(int opcode, int slot) { instructions.add(opcode + ":" + slot); }
+                            @Override public void visitInsn(int opcode) { instructions.add(Integer.toString(opcode)); }
+                            @Override public void visitFieldInsn(int opcode, String owner, String name, String descriptor) {
+                                instructions.add(opcode + ":" + owner + "." + name + ":" + descriptor);
+                            }
+                            @Override public void visitMethodInsn(int opcode, String owner, String name, String descriptor, boolean itf) {
+                                instructions.add(opcode + ":" + owner + "." + name + descriptor);
+                            }
+                        };
+                    }
+                }, org.objectweb.asm.ClassReader.SKIP_DEBUG | org.objectweb.asm.ClassReader.SKIP_FRAMES);
+            }
+            List<String> expected = new ArrayList<>(List.of("25:0", "183:java/lang/Object.<init>()V", "25:0", "25:1",
+                    "181:" + internal + (type == LevelMusicAccess.class ? ".audio:Lcom/openggf/audio/AudioManager;"
+                            : ".owner:Lcom/openggf/audio/LevelMusicAccess;")));
+            if (type == LevelMusicAccess.Control.class) expected.addAll(List.of("25:0", "21:2", "181:" + internal + ".entry:Z"));
+            expected.add("177");
+            assertEquals(expected, instructions, "cold Java 25 constructor for " + type.getName());
+        }
+        String manager = Files.readString(AUDIO_ROOT.resolve("AudioManager.java"));
+        String owner = Files.readString(AUDIO_ROOT.resolve("LevelMusicAccess.java"));
+        java.util.function.UnaryOperator<String> compact = text -> text.replaceAll("\\s+", "");
+        assertTrue(manager.contains("private final LevelMusicAccess levelMusicAccess = new LevelMusicAccess(this);"));
+        assertEquals("returnlevelMusicAccess;", compact.apply(methodBody(manager, "final LevelMusicAccess levelMusicAccess()")));
+        assertEquals("this.audio=audio;", compact.apply(methodBody(owner, "LevelMusicAccess(AudioManager audio)")));
+        assertEquals("returnObjects.requireNonNull(audio).levelMusicAccess().acquire(false);",
+                compact.apply(methodBody(owner, "public static Control suppressAutomatic(")));
+        assertEquals("returnObjects.requireNonNull(audio).levelMusicAccess().acquire(true);",
+                compact.apply(methodBody(owner, "public static Control suppressAutomaticEntry(")));
+        assertEquals("returnqueryOwner(audio).allowsAutomatic();", compact.apply(methodBody(owner, "public static boolean allowsAutomatic(")));
+        assertEquals("returnqueryOwner(audio).allowsEntryMusic();", compact.apply(methodBody(owner, "static boolean allowsEntryMusic(")));
+        assertEquals("returnqueryOwner(audio).allowsEntryRequest(command);", compact.apply(methodBody(owner, "static boolean allowsEntryRequest(")));
+        assertEquals("if(audio==null){synchronized(audio){}}returnaudio.levelMusicAccess();",
+                compact.apply(methodBody(owner, "private static LevelMusicAccess queryOwner(")));
+        assertEquals("Controlcontrol=newControl(this,entry);synchronized(audio){levelMusicControls++;if(entry)levelEntryMusicControls++;}returncontrol;",
+                compact.apply(methodBody(owner, "private Control acquire(")));
+        assertEquals("synchronized(audio){returnlevelMusicControls==0;}", compact.apply(methodBody(owner, "private boolean allowsAutomatic()")));
+        assertEquals("synchronized(audio){returnlevelEntryMusicControls==0;}", compact.apply(methodBody(owner, "private boolean allowsEntryMusic()")));
+        assertEquals("returnallowsEntryMusic()||!(commandinstanceofcom.openggf.audio.rewind.AudioCommand.PlayMusic||commandinstanceofcom.openggf.audio.rewind.AudioCommand.FadeOutMusic||commandinstanceofcom.openggf.audio.rewind.AudioCommand.StopMusic);",
+                compact.apply(methodBody(owner, "private boolean allowsEntryRequest(")));
+        assertEquals("synchronized(audio){if(!control.closed){control.closed=true;levelMusicControls--;if(control.entry)levelEntryMusicControls--;}}",
+                compact.apply(methodBody(owner, "private void release(")));
+        assertEquals("owner.release(this);", compact.apply(methodBody(owner, "@Override public void close()")));
+    }
+
+    @Test
     void logicalPublicationOwnsExactlyTwoColdFieldsAndTheCompletePublicationProtocol() throws Exception {
         var publication = AudioManager.class.getDeclaredField("logicalPublication");
         assertTrue(java.lang.reflect.Modifier.isPrivate(publication.getModifiers()));

@@ -76,12 +76,15 @@ public class AudioManager implements MusicRestoreSink {
     private final SourcePublication sourcePublication = new SourcePublication();
     private Map<GameSound, Integer> soundMap;
     // Director-owned playlist admission survives producer/shot replacement until its scope closes.
-    int levelMusicControls;
-    int levelEntryMusicControls;
+    private final LevelMusicAccess levelMusicAccess = new LevelMusicAccess(this);
     private AudioRequestObserver requestObserver = AudioRequestObserver.NONE;
     // Internal world ownership never replaces the single external diagnostic observer.
     AudioMutatorAccess.Binding mutatorBinding;
     int mutatorSubmissionDepth;
+
+    final LevelMusicAccess levelMusicAccess() {
+        return levelMusicAccess;
+    }
 
     private void mutatorMusicIntent(AudioMutatorAccess.Kind kind, int value) {
         if (mutatorBinding != null && mutatorSubmissionDepth == 0) mutatorBinding.musicIntent(kind, value);

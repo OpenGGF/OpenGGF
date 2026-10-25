@@ -119,7 +119,12 @@ class TestGameDataSourceSharedFetches {
         when(module.getLevelMusicReference(anyInt(), anyInt())).thenReturn(new MusicReference.Stock(1));
         when(game.getSoundMap()).thenReturn(Map.of());
         ParallaxManager parallax = mock(ParallaxManager.class);
-        AudioManager audio = mock(AudioManager.class);
+        AudioManager audio = spy(AudioManager.class);
+        doNothing().when(audio).setRom(nullable(Rom.class));
+        doNothing().when(audio).setAudioProfile(any(com.openggf.audio.GameAudioProfile.class));
+        doNothing().when(audio).setSoundMap(anyMap());
+        doNothing().when(audio).resetRingSound();
+        doNothing().when(audio).playMusic(anyInt());
         LevelManager levelManager = manager(source, module, parallax, audio, mock(WaterSystem.class));
 
         levelManager.initGameModule(0);
@@ -209,7 +214,12 @@ class TestGameDataSourceSharedFetches {
         when(module.getLevelMusicReference(anyInt(), anyInt())).thenReturn(new MusicReference.Stock(1));
         when(game.getSoundMap()).thenReturn(Map.of());
         ParallaxManager parallax = mock(ParallaxManager.class);
-        AudioManager audio = mock(AudioManager.class);
+        AudioManager audio = spy(AudioManager.class);
+        doNothing().when(audio).setRom(nullable(Rom.class));
+        doNothing().when(audio).setAudioProfile(any(com.openggf.audio.GameAudioProfile.class));
+        doNothing().when(audio).setSoundMap(anyMap());
+        doNothing().when(audio).resetRingSound();
+        doNothing().when(audio).playMusic(anyInt());
         WaterSystem water = mock(WaterSystem.class);
         LevelManager levelManager = manager(source, module, parallax, audio, water);
 

@@ -589,6 +589,18 @@ Source owns binding storage, Binding owns physical slots, and Held owns targets.
 Frame arbitration, replay/silent scopes, routing, entry-music/playlist policy,
 natural restore intent and launch authority remain outside this owner.
 
+Each manager retains one cold private final `LevelMusicAccess`, including
+standalone managers. This owner stores the exact manager and both automatic and
+entry-music admission counts; it owns acquisition, queries, request-category
+admission and the complete token release protocol. Static compatibility methods
+forward through a final package-private manager accessor. Every acquisition,
+query and close attempt uses that manager's monitor, including duplicate closes;
+the category predicate and downstream publication run after the query releases
+the monitor. Tokens retain their owner and manager after close. Reset, source,
+profile, backend and producer replacement, destruction and reuse leave admission
+and old tokens intact. Direct and raw request gates keep their distinct original
+positions; this ownership does not add a universal music lock or dispatch filter.
+
 Each `AudioManager` retains one private `CaptureLeases` owner across producer
 generations. It owns offline/live admission, accepted release, rebuild carry,
 retirement and the stable live-recording handle. Compatibility methods retain

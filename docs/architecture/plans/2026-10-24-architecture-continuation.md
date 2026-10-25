@@ -11514,3 +11514,211 @@ performance, desktop/speaker nor extraction acceptance. Thread checks use
 latches, observed BLOCKED state and finite joins, without timing sleeps as their
 sole assertion. Production allocation/closed-before-decrement ordering and the
 Stageplay load-failure lexical boundary remain explicitly source evidence.
+
+### Complete LevelMusicAccess ownership transfer — 2026-10-25
+
+**Accepted baseline and finite scope.** Parent independently accepted the
+original-production characterization at
+`62b891a05660ca0fa3e916b48d2c4b875a1ae750`, direct child of delivered f056,
+tree `374d4fd65b9b034fe89235abf7d4e359729e2fda`. Review task
+`arch-broad-level-music-admission-characterization-review-20261025-r1`
+reported no P1/P2/P3 and accepted that finite preservation baseline. The two
+accepted Java inputs retain fingerprint
+`23c66ae9d6d55e0a7ce6ae8aff8e0dac581a9bb9d95c0f421b1135bf4773b4ef`:
+contract blob `8aa8b1ea71f0f6b279c8873e94db8ba1bf7ea175` and Stageplay blob
+`64cf8ac9ffc5865a9cc0730849bf8bc713d9b3d6` are byte-identical throughout this
+implementation. Their earlier 37+39 runtime observations remain the worker's
+split-run evidence; the new matched candidate invocation below is a separate
+76-case green result, not a reinterpretation of the earlier runs.
+
+Production changes are exactly AudioManager and the existing LevelMusicAccess.
+Test changes are exactly the prequalified two-file/three-case fixture migration
+and one additive method in TestAudioPresentationArchitectureGuard. No other
+production type, ingress, owner algorithm, POM, hook, policy, API marker, pin,
+frozen store, permission or method budget changes. Documentation is confined to
+this continuation, the engine map and the existing 0.7 Runtime ownership entry.
+There is no new theme, README change or engineering artifact category.
+
+**Body/header and state mapping.** AudioManager is an exact whole-file transform
+of 62b891a: replace the two package counters with
+`private final LevelMusicAccess levelMusicAccess = new LevelMusicAccess(this)`
+and add the package-private final forwarding accessor
+`final LevelMusicAccess levelMusicAccess()`. Every other AudioManager byte is
+unchanged, including direct int music, stop, explicit fade, raw int/pitch SFX,
+enum/no-argument evaluation, all other ingress and callback/service timing.
+SourcePublication, PresentationBinding, CaptureLeases, LogicalPublication,
+HeldReverseRestore, eager/natural restore, frame/replay policy and ledgers are
+unchanged. All other production files are exact baseline bytes.
+
+LevelMusicAccess's new package-private constructor merely stores the exact
+manager. Its private final manager reference and two private counters replace
+the Root counters without mirrors or reset hooks. Both counters begin at Java's
+zero default. The complete operations move as follows:
+
+| Original operation | Stateful owner operation and preserved boundary |
+| --- | --- |
+| Control constructor's allocation/increment sequence | `acquire(boolean)` allocates Control first, then increments total and optional entry count under the exact manager monitor |
+| Static automatic/entry reads | Private `allowsAutomatic()` / `allowsEntryMusic()` query exactly total==0 / entry==0 under the same manager monitor |
+| Static entry category expression | Private `allowsEntryRequest(command)` queries first, then evaluates the same three excluded categories after leaving the query monitor |
+| Control.close lock/check/set/decrement | Private `release(Control)` takes the exact manager monitor on every attempt, checks closed, sets closed before decrementing, then balances total and optional entry count |
+| Token manager field | Private final owner reference; owner retains the exact manager even after close |
+
+Static factories retain Objects.requireNonNull before owner acquisition. Static
+queries use the private `queryOwner` compatibility boundary: its null-only
+synchronized expression preserves the original null-monitor failure; valid
+forwarding adds no lock or policy. Public static factories/query, package-static
+entry helpers, and public final Control/close stay compatible. Control's private
+constructor now stores owner/category only; close only forwards to release.
+No admission arithmetic, category expression, closed decision or counter write
+remains in Root or token methods. No extra monitor, thread gate, epoch, stale
+policy, callback, global lookup, registry or mock fallback was added. The owner
+captures no backend, profile, source, producer, factory or session. This is one
+extra cold object per genuine manager, including standalone construction, and
+two net additional reference-field declarations. Existing production types and
+public/protected headers are unchanged; the package constructor/accessor are
+new internal headers, and the private token constructor's parameter changed.
+
+Reset/profile/ROM/source/backend/producer replacement, destroy and reuse never
+replace or reset this owner. Existing tokens continue balancing their original
+manager. Query completion is still separate from later observation,
+classification and publication; no atomic check-and-submit was introduced.
+The earlier raw captured-source/current-service and partial-failure contracts
+remain literal. S2 cancellation/prior-water bookkeeping and Stageplay lexical
+load/refresh/stop behavior are untouched. Stageplay load-failure unwinding
+remains source evidence, without a new injected failure hook.
+
+**Caller/fixture and guard closure.** Production consumers remain the exact
+existing sites: LevelManager's automatic query; StageplayAudio's ordinary lease;
+StageplayLiveWorld's lexical entry lease; and AudioManager's direct/filtered raw
+entry gates. Only AudioManager constructs the owner; only owner.acquire
+constructs tokens. The accepted fixture closure is exactly:
+
+- TestLevelManager.preparedLevelMusicPublishesOnlyAfterPendingTransitionReleases:
+  construct `spy(AudioManager.class)` and stub unrelated playMusic execution.
+- TestGameDataSourceSharedFetches.levelModuleAndAudioNullPathsUseExactSourceWithoutRomManager
+  and .romSessionPropagatesTheExactSameRomAcrossSharedConsumers: construct that
+  same real spy receiver and stub profile/ROM/map/ring-reset/playback effects.
+
+No spy(existing) copy is used. Static admission traverses the constructed final
+owner. Reversing just these fixture substitutions reproduces each complete
+baseline test file byte-for-byte, preserving all original assertions,
+verifications, arguments and other methods. No broader census was needed.
+
+The additive exact architecture method is
+`levelMusicAccessOwnsColdManagerLifetimeAdmissionAndTheCompleteControlProtocol`.
+It checks retained private/final ownership, exact private state/category/closed
+fields, private operation closure, production state/protocol access, sole owner
+and token construction sites, forwarding boundaries, allocation-before-increment,
+closed-before-decrement, manager synchronization and unlocked category evaluation.
+It also checks emitted constructor instructions with ASM: Java 25 emits only
+Object.<init>, the exact parameter field stores and return for these top-level /
+static nested constructors. `javap -p -c` independently confirmed those bodies.
+Unlike the earlier nonstatic nested owner, this top-level owner needs no
+compiler-inserted enclosing-instance null check. All existing architecture guard
+methods/helpers and rules remain byte-identical; nothing was relaxed.
+
+**Announced Java freeze.** After the affected seven cases and matched 76 cases
+passed, the worker announced HEAD 62b891a plus this overlay for parent-owned
+independent source review. No Java input changed after this freeze:
+
+| Changed Java input | Git blob |
+| --- | --- |
+| `src/main/java/com/openggf/audio/AudioManager.java` | `39fbbc9823d7a5fff913565c1c0bd7fd704e8db1` |
+| `src/main/java/com/openggf/audio/LevelMusicAccess.java` | `15e1d54796be23098916e649475f5ab7c833876d` |
+| `src/test/java/com/openggf/audio/TestAudioPresentationArchitectureGuard.java` | `2125a50d1e41fde6dd39ac3becdc2ed218c2f90d` |
+| `src/test/java/com/openggf/level/TestGameDataSourceSharedFetches.java` | `c2a1621de4a9338f31b79a4dfa2121c9545fd50a` |
+| `src/test/java/com/openggf/tests/TestLevelManager.java` | `cfaff26d5c9466022eaaac2a8d90140ae49df181` |
+
+The SHA-256 algorithm is sorted repository-relative path + NUL + exact bytes +
+NUL for each input. Changed-five fingerprint:
+`eefe5bb540d50c568a3ef94960e3e4d41d2081ca9123610ae2f35f45569b7287`;
+production-two fingerprint:
+`e7047a92cbc4c3c1e57cf846af61b4cacd6aab50846cae9a798b72186708369a`;
+including both unchanged characterization files, all-seven fingerprint:
+`5869f5adad08e776d7c5899c9293fcf2f815f106a10aecfae9d597bf98e1a2c6`.
+The parent independently verified this announced freeze and started separate
+code review while the remaining bounded validation/prose continued. That review
+is parent-owned; its disposition is recorded separately when supplied.
+
+**Frozen-candidate validation.** Existing queued/running jobs were inspected
+before submission; no matching task job was active. Each invocation retained
+one handle/observer. All commands used the original-characterization environment
+and complete argument block above: queued --normal -Dmse=off, Java 25.0.5.0.2,
+LUA_BIN=/usr/bin/lua5.4, owned surfaceless EGL, all three dotted freeze flags false,
+all four verified existing absolute ROM properties, with DISPLAY/WAYLAND_DISPLAY/
+XAUTHORITY/JAVA_TOOL_OPTIONS/JDK_JAVA_OPTIONS/MAVEN_ARGS unset. The same four
+SHA-1 ROM identities were freshly verified; no ROM/link was copied or changed.
+Surefire physical IDs, effective JDK/flags/ROM properties and skips were inspected.
+
+| Terminal session | Selection below | Observed cases/failures/errors/skips | Queue wait | Maven elapsed |
+| --- | --- | --- | ---: | ---: |
+| 84837 | A: ownership/fixtures/coordinator | 7/0/0/0 | 0 s | 1:17 (display precision) |
+| 2756 | B: complete matched contract/lifecycles | 76/0/0/0 | 0 s | 28.727 s |
+| 86105 | C: mandatory S3K plus explicit API | 71/0/0/0 | 0 s | 29.346 s |
+
+```text
+A: -Dtest=TestAudioPresentationArchitectureGuard#levelMusicAccessOwnsColdManagerLifetimeAdmissionAndTheCompleteControlProtocol,TestLevelManager#preparedLevelMusicPublishesOnlyAfterPendingTransitionReleases,TestGameDataSourceSharedFetches#levelModuleAndAudioNullPathsUseExactSourceWithoutRomManager+romSessionPropagatesTheExactSameRomAcrossSharedConsumers,TestLevelMusicCoordinator
+B: -Dtest=TestLevelMusicAccessContract,TestStageplayAudioLifecycle,TestSonic2LevelInitProfile,TestHeadlessAudioOwnership,TestHeadlessGameBootAudioIdentity
+C: -Dtest=TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestModApiSignatureSurface
+```
+
+Each exact selector replaces `<selection>` in the full environment/common Maven
+command above, ending `test -B`. A compiled 4,354 production and 4,492 test/consumer
+sources with Java 25; later commands compiled the same frozen Java inputs. A's
+seven identities are the one new guard, three migrated fixtures and three
+coordinator cases. B is contract37 + Stageplay25 + S2init9 + headless ownership2
++ ROM boot identity3, all green in one invocation. C's S3K coverage is bootstrap6,
+decoding3, game-package loading36, tests-package loading7 and AIZ skip8 =60;
+the simple loading selector expands to both physical classes. The explicit API
+class adds11. All eight Stageplay offline PCM routes ran with S1/S2/S3K supplied,
+although those routes' annotation checks only S2. The S2 F9/SFX0 unsuppressed
+initialization control remains in B. No implementation test/compile failures,
+source corrections or repeated passing groups occurred. The known unrelated
+null-FileChannel preload issue remains disclosed and unrepaired; these commands
+did not reproduce its prior logged errors. Queue wait is separate from the
+Maven build/test elapsed values; authoring and other unmeasured time are unknown.
+
+Sorted newline-terminated physical testcase identity SHA-256 values are A
+`91dd971dd73f93e66a4f81b33ef3cc9f525d073b36222447bd28d09fd52426c4`, B
+`6ea0fb3fa7dec47543a7ac8467f6bef440678cd2e0a013a32083c706ec5b72f1`, C
+`04d272393044d387f67eec232380e7b35a79310f905eca805a723e1fc62310c8`.
+C's mandatory S3K subset is
+`a82bf4933c973cebf1c91f56cd3c56a750be62c91e3ef2b5f831b76b1ab1fc59`;
+its API subset is
+`25bb6f3b2be058a2120824d7db23d18b6b1e2e86bbfd6e0b750a5e0b0a9f399b`.
+These are evidence in the existing continuation, not pass caches or receipts.
+
+**Unchanged enforcement maps and limits.** All 13 frozen blobs compare exactly
+with 62b891a, including 120 raw low-level records. The sorted newline-terminated
+`path:SHA256` store map remains
+`292100b7284abcd07373d33efce8194308ca6c0fc999aef71de5c5eadcb7e834`.
+The API pin remains 22,541 rows / 1,250 TYPE rows, SHA-256
+`fe27be6e9c4153dd477939165b4a457fa942f47f0dad446b5eb76908357f0148`.
+The eleven compiled API tests confirm matching current surface/classfile/marker,
+platform/terminal and reconstruction contracts. No annotations or pins changed.
+Ambient source baseline remains six methods / five files; source package-pair
+permissions remain151. Their owning source files, strict properties, descriptor
+and POM are byte-identical. Those unchanged source/store observations are not a
+new compiled global structural pass. Parent owns fresh full global guards and
+composed11 controller checks, plus integration, push and eventual cleanup. No
+worker broad smoke, release-only full suite, trace/performance/emulator or
+speaker/desktop campaign was run. No child task or native agent was created.
+
+All three owned sessions are terminal. XML/text reports were consumed after
+inspection; temporary invocation logs are consumed before local handback, with
+no archived diagnostics. The existing branch/worktree is retained, main is
+untouched, and no fetch/rebase/push/integration or cleanup is performed here.
+
+Parent subsequently supplied terminal independent code-review acceptance:
+`arch-broad-level-music-admission-owner-code-review-20261025-r1` reported no
+actionable P1/P2/P3 and accepted all five frozen Java blobs and fingerprint
+`eefe5bb540d50c568a3ef94960e3e4d41d2081ca9123610ae2f35f45569b7287`.
+It independently verified complete owner policy, exact manager monitors, null /
+allocation / close / lifetime / strong-identity preservation, otherwise byte-exact
+AudioManager, and preserved fixtures/guards. Only continuation prose changed
+while review ran; Java remained frozen. This is source acceptance; the worker's
+three inspected queued runs above remain the bounded runtime evidence. The
+local implementation commit retains 62b891a as its exact parent without amend.
+At local handback the worker explicitly returns target/job ownership to the
+parent and runs no further builds/tests; fresh complete global guards and the
+composed11 controller gates remain parent-owned delivery checks.

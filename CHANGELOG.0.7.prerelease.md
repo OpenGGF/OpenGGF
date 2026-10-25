@@ -641,6 +641,9 @@ Unreleased. The earlier development themes remain in
   A narrow logical publication owner keeps fallback ring state, snapshot sampling,
   eager rollback and fixed held ledger publication together, preserving current
   collaborator reads and existing partial effects across producer replacement.
+  A permanent per-manager level-music admission owner keeps both scope counts,
+  request-category decisions and token release together, preserving manager
+  locking, callback order and scope lifetimes across resets and replacement.
   Sonic 1 and Sonic 2 selected-slot images use the shared data-select
   converter and payload validators; Sonic 3 & Knuckles keeps explicit host ROM
   donation while consuming the same patterns, palette and mapping contract.
