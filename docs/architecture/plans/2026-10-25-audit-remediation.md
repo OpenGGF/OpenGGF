@@ -114,9 +114,16 @@ October 25 [frontier entry](../../status/trace-frontier-log.md#2026-10-25--fresh
 The fixed-tail worker's 12-case native animation prerequisite passes without skips,
 but the conservative hook treats a nested engine-internal snapshot component as
 a public API change. The established normalized terminal remains unchanged.
-An isolated Sol policy worker now owns the narrow correction and both-shell
-negative controls; hooks and signature pins must not be bypassed or artificially
-changed. The normal candidate signature check remains separate.
+Policy correction `0eff72951` uses only nested terminals established in both
+compared Git snapshots. It retains identity, visibility, nesting and outer/sibling
+declarations, rejects malformed registry inputs and prevents a new classification
+from exempting its own edit. No registry or signature pin changed. Bash and
+PowerShell old-red/new-green controls cover staged and committed comparisons.
+The worker's Python safety run executes 453 cases with no failures and the same
+one absent historical-archive skip; 49 queued Java hook/build checks pass without
+failures/errors/skips. Both shells pass the committed-range policy check.
+PowerShell was exercised on Linux, not Windows. The normalized candidate
+signature check remains a separate requirement on the final animation source.
 
 The independently executed normalized candidate check passed one physical case
 before storage edits. The later fixed-tail-only candidate exposes the already
@@ -129,6 +136,16 @@ and stopped expansion into generic SST storage. The worker retains the finite
 disconfirming evidence in the existing rewind audit and restores the candidate
 edits; the independent animation prerequisite can land after the hook correction.
 The original Sideways allocation-pressure defect remains open.
+
+An independent Sol static review of `dfc7d9784`, `a2cf1b322` and `aa5fb2d34`
+found no actionable issues. It ran no builds/tests and excluded the later
+animation and hook changes; this review is not substitute execution evidence.
+The change-based plan at `40293d3aa` selects 3,787 smoke candidate classes and
+guards. Actual Java 25/Lua 5.4/PowerShell preflight passes with display variables
+unset and `JDK_JAVA_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl`. The final plan
+will be inspected after composition. Allow roughly an hour of execution plus
+queue time, with a 90-minute execution limit and the runner's ten-minute
+no-output bound. Failure attribution remains by exact test and assertion.
 
 The parent integration checkout is
 `.worktrees/ai-audit-remediation-20261025` on

@@ -630,6 +630,11 @@ Unreleased. The earlier development themes remain in
   Standing-geometry probes retire their private audio manager through its complete
   lifecycle while preserving caller-owned audio.
 
+- **Mod API source checks:** Commit hooks allow implementation changes inside
+  established engine-internal nested terminals without a false signature-pin
+  update. Nested identity and visibility, outer and sibling API declarations,
+  and candidate/published pin enforcement remain checked against Git snapshots.
+
 - **Runtime ownership:** A loop-lifetime suspended visit keeps admission, picture
   readiness, parking, saved state, resume and retirement under one authority;
   the title keeps its card, textures and zoom presentation. Live rewind retains
