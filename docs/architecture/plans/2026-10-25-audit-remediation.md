@@ -37,9 +37,10 @@ focused evidence. They do not push or modify the main workspace.
 | --- | --- | --- |
 | Capture assurance and disposal | Narrow prerequisite admission, non-graphics failure control, complete isolated audio disposal | `dfc7d9784`: 32 focused tests passed, zero failures/errors/skips |
 | Roadmap reconciliation | Source-backed implementation/qualification status, Stageplay scope, finite configuration tiers, timing dispositions and corrected architecture prose | `e4fb59d17`: 99 links/anchors and factual/structural checks passed |
-| Native fixed-slot qualification | Preserve the native animation prerequisite; qualify storage/removal boundaries without inventing parent bytes | Fixed-tail-only candidate rejected at supported raw deletion/reuse; original storage gap remains open |
+| Native fixed-slot qualification | Preserve the native animation prerequisite; qualify storage/removal boundaries without inventing parent bytes | `6fe1b50fa` composed as `1bd1dadea`: 39 focused cases and one exact normalized-signature check pass; storage gap remains open |
 | Continuous campaign boundary | Current named AIZ-to-HCZ frontier and smallest ROM-owned correction, retaining strict comparisons | `aa5fb2d34`: load correction passes 149 focused and 43 authority checks; strict prefix reaches HCZ's first row |
 | Release preparation | Explicit exact-candidate qualification and required case accounting, consistent with publication policy | `a2cf1b322`: Python safety and actual tool/strict-ROM prerequisite preflight passed; real route run remains parent validation |
+| Internal-terminal hook admission | Match established normalized terminal boundaries without exempting public changes | `0eff72951`: both-shell negative controls, 453 Python cases (one historical skip) and 49 Java passes |
 
 The user confirmed that ROMs must not be placed on GitHub and accepted stronger
 local preparation. Preserve hosted publication and manual ROM opt-in. The local
@@ -83,8 +84,8 @@ unless an affected behavior supplies that evidence.
 
 ## Checkpoint
 
-The reviewed documentation and assurance slices are composed locally; main
-integration, combined validation and push remain pending. Assurance command:
+All accepted slices are composed locally; main integration, combined validation
+and push remain pending. Assurance command:
 `maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl` with original three
 absolute ROM properties, followed by
 `-Dtest=TestNativePcmCapturePrerequisites,TestNativePcmCaptureLive,TestPlayablePlacementAudioOwnership,TestNativePlayerTerrainPlacement,TestStageplayGroundSurvey,TestAudioManagerStreamedPortOwnership,TestRawGlfwTestSetupGuard test -B`.
@@ -135,23 +136,36 @@ that contract. The parent rejected shipping the candidate's unknown-parent throw
 and stopped expansion into generic SST storage. The worker retains the finite
 disconfirming evidence in the existing rewind audit and restores the candidate
 edits; the independent animation prerequisite can land after the hook correction.
-The original Sideways allocation-pressure defect remains open.
+The original Sideways allocation-pressure defect remains open. The final
+prerequisite-only nine-class run passes 39 cases without failures/errors/skips;
+the normalized candidate check passes one physical case on that compiled source.
+Pure pose sampling follows the same native script-change boundary. The committed
+controller/pose/test bytes match that tested source. Original Sideways production,
+qualification and known-bug text are unchanged; no rejected storage code remains.
 
 An independent Sol static review of `dfc7d9784`, `a2cf1b322` and `aa5fb2d34`
 found no actionable issues. It ran no builds/tests and excluded the later
 animation and hook changes; this review is not substitute execution evidence.
-The change-based plan at `40293d3aa` selects 3,787 smoke candidate classes and
-guards. Actual Java 25/Lua 5.4/PowerShell preflight passes with display variables
+The final change-based plan at `1bd1dadea` selects 3,788 smoke candidate classes
+and guards. Actual Java 25/Lua 5.4/PowerShell preflight passes with display variables
 unset and `JDK_JAVA_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl`. The final plan
 will be inspected after composition. Allow roughly an hour of execution plus
 queue time, with a 90-minute execution limit and the runner's ten-minute
-no-output bound. Failure attribution remains by exact test and assertion.
+no-output bound. Failure attribution remains by exact test and assertion. A Sol
+validation worker executes the parent's frozen plan in this checkout: strict
+26-case pilot, affected canonical/prefix and alternate replays, then the complete
+change-based smoke selection. The added shared tail animation state justifies
+rechecking those affected replays after composition. The inherited canonical and
+alternate failures must retain their exact recorded boundaries; they are not
+silently waived by total count. No source edits occur while validation owns the
+checkout. The parent remains responsible for disposition and delivery.
 
 The parent integration checkout is
 `.worktrees/ai-audit-remediation-20261025` on
 `feature/ai-audit-remediation-20261025`. The main workspace's four dirty reference
 submodules and five untracked user files are preserved. Another task advanced main
 to `824a16f21` with an unrelated lobby-document revision; preserve it at integration.
-There are no parent-owned Maven jobs yet. Workers own their live jobs. Update this
-checkpoint with accepted commits, actual validation, remaining boundaries and
-cleanup state as the slices complete.
+All implementation-worker jobs are terminal. Main was fetched and fast-forward
+checked again before candidate freeze; `develop` remains `824a16f21`. Update this
+checkpoint with combined results, remaining boundaries and cleanup state after
+validation completes.
