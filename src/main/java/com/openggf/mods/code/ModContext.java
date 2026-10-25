@@ -23,6 +23,11 @@ import java.util.Objects;
 public final class ModContext {
     private final String owner;
     private final String baseGame;
+    private static final java.util.Set<String> STOCK_GAMES = java.util.Set.of("s1", "s2", "s3k");
+    static final String ANY_GAME_RULE = "baseGame any registers a shared startup scene, title entry, typed mutator catalogue "
+            + "or per-game patches, plus objects, "
+            + "object art and service bundles; zones, characters, ROM art intake, zone policies and decoded level "
+            + "patches need a single base game";
     private final boolean standalone;
     private final ModAssetRoot assets;
     private final java.nio.file.Path storageRoot;
@@ -87,7 +92,7 @@ public final class ModContext {
 
     /** Returns the manifest id that namespaces every local registration. */
     public String ownerModId() { return owner; }
-    /** Returns the stock game id (or {@code any} for a shared scene/mutator catalogue), or null for standalone. */
+    /** Returns the stock game id (or {@code any} for shared scenes, title entries, mutators or per-game patches), or null for standalone. */
     public String baseGameId() { return baseGame; }
     /** Returns the immutable bounded asset snapshot while registration is open. */
     public ModAssetRoot modAssets() { requireOpen(); return assets; }
@@ -153,11 +158,18 @@ public final class ModContext {
         });
     }
 
+    /**
+     * Stages a game patch. A single-game mod's patches must name its {@code baseGame}; a
+     * {@code baseGame: any} mod may register one or more patches per stock game ({@code s1},
+     * {@code s2}, {@code s3k}), and each applies only when its game launches and the player's
+     * ROM for it is present. Objects, object art and service bundles of an {@code any} mod are
+     * available in every game.
+     */
     public void registerGamePatch(GamePatch patch) {
         mutate(() -> {
             if (standalone) throw failure("Standalone manifests cannot register game patches");
             Objects.requireNonNull(patch, "patch");
-            if ("any".equals(baseGame) ? !List.of("s1", "s2", "s3k").contains(patch.baseGameId())
+            if ("any".equals(baseGame) ? !STOCK_GAMES.contains(patch.baseGameId())
                     : !baseGame.equals(patch.baseGameId())) {
                 throw failure("Patch targets " + patch.baseGameId() + " instead of " + baseGame);
             }
@@ -420,12 +432,11 @@ public final class ModContext {
             if (standalone && gameModule == null) {
                 throw failure("Standalone manifest must register exactly one game module");
             }
-            if ("any".equals(baseGame) && ((startupScene == null && titleEntry == null && mutators.isEmpty())
-                    || !objects.isEmpty() || !art.isEmpty() || (!patches.isEmpty() && mutators.isEmpty())
-                    || !zones.isEmpty() || !objectPreviewArtKeys.isEmpty()
+            if ("any".equals(baseGame) && ((startupScene == null && titleEntry == null
+                    && mutators.isEmpty() && patches.isEmpty()) || !zones.isEmpty()
                     || !characters.isEmpty() || !romArt.isEmpty() || !launchTeams.isEmpty()
-                    || !inputFilters.isEmpty() || !hudProfiles.isEmpty() || !serviceBundles.isEmpty() || !decodedLevelPatches.isEmpty())) {
-                throw failure("baseGame any permits a shared startup scene, title entry or typed mutator catalogue with stock-game decorators; game-specific content is forbidden");
+                    || !inputFilters.isEmpty() || !hudProfiles.isEmpty() || !decodedLevelPatches.isEmpty())) {
+                throw failure(ANY_GAME_RULE);
             }
             objectPreviewArtKeys.forEach((objectKey,artKey)-> {
                 if(!objects.containsKey(objectKey))throw failure("Preview maps unknown object key: "+objectKey);

@@ -192,7 +192,34 @@ public final class ModAudioPreparer {
                                 track.gain(), track.tempoEffects(), sourceSha));
                     } else {
                         ModAudioSfx sfx = declaration.sfx();
-                        ownerPreparedSfx.add(new PreparedSfx(sfx.key(), cached.pcm(), sfx.gain(), sourceSha));
+                        CachedPcm played = cached;
+                        if (sfx.dac() != null) {
+                            // A derived rendering shares the clean decode and is cached beside it.
+                            CacheKey variantKey = new CacheKey(sourceSha, outputRate, codec + "|" + sfx.dac().fingerprint());
+                            CachedPcm variant = cache.get(variantKey);
+                            if (variant == null) variant = nextCache.get(variantKey);
+                            if (variant == null) variant = ownerCache.get(variantKey);
+                            if (variant == null) variant = activePcm.get(variantKey);
+                            long admittedProvisionalBytes = provisionalBytes;
+                            if (!ownerCache.containsKey(variantKey) && !nextCache.containsKey(variantKey)
+                                    && !activePcm.containsKey(variantKey)) {
+                                // DAC preserves the clean PCM's sample count/channels. Admit its entire
+                                // output before rendering; cache hits still need charging once per ledger.
+                                long variantBytes = variant == null ? cached.pcm().byteSize() : variant.pcm().byteSize();
+                                admittedProvisionalBytes = Math.addExact(provisionalBytes, variantBytes);
+                                if (Math.addExact(retainedBytes, admittedProvisionalBytes) > limits.maxAudioCacheBytes()) {
+                                    throw new IOException("Prepared audio cache budget exceeded");
+                                }
+                            }
+                            if (variant == null) {
+                                evictUnselectedCache(nextCache.keySet(), ownerCache.keySet());
+                                variant = new CachedPcm(sfx.dac().apply(cached.pcm()), cached.sourceRate(), cached.sourceFrames());
+                            }
+                            provisionalBytes = admittedProvisionalBytes;
+                            ownerCache.putIfAbsent(variantKey, variant);
+                            played = variant;
+                        }
+                        ownerPreparedSfx.add(new PreparedSfx(sfx.key(), played.pcm(), sfx.gain(), sourceSha));
                     }
                 }
                 long ownerNewBytes = provisionalBytes;

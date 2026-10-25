@@ -328,6 +328,22 @@ Its lifetime follows scene audio stop/fade/close. This is an additive change to 
 pin regenerated. The release descriptor's version/status remain unchanged, as required
 for ordinary candidate regeneration.
 
+Typing of the Hedgehog (2026-10-09) adds four candidate capabilities. Multi-game
+code mods: `baseGame: any` may register objects, object art, service bundles and
+per-game patches (each patch names `s1`, `s2` or `s3k` and expands only into that
+game's plan); single-game content (characters, mod zones, ROM art intake, zone
+policies, decoded level patches) stays rejected. Scene navigation:
+`SceneContext.startStockAct`, `currentLaunch` and `relaunch` with the `SceneLaunch`
+record, backed by the engine-internal `SceneNavigator`; a controlled course's title
+request reopens the startup scene, and a relaunch carries its team as session-only
+overrides through the programmatic master-title exit. Controlled input:
+`GameplayFrameController.nativeInput` (neutral by default) supplies the advanced
+row's pad. Text capture: `InputHandler.captureKeyboardText`/`consumeTypedText` and
+the claim-owner reads, `GameplayFrameController.capturesKeyboardText`,
+`CourseControl.typedText/keyDown/keyPressed` and `SceneContext.typedText/
+captureKeyboardText`. All are additive defaults; the descriptor/runtime version
+remains unpublished 0.7.0 and the normalized signature pin is regenerated in place.
+
 Before changing the candidate surface:
 
 1. Run `TestModApiSignatureSurface` and inspect every added or changed line.
@@ -574,9 +590,11 @@ the session requires; interactive launches apply it as a session override after 
 resolution, so the master title restores the player's aspect and trace test mode still
 resolves native 4:3. `GameModule.suppressesLevelSelect()` (default `false`) makes the
 host ignore `LEVEL_SELECT_ON_STARTUP`, route a title level-select exit to one-player
-play, and ignore the in-level level-select key. Both are delegated by
-`DelegatingGameModule` and additive to the unpublished 0.7 candidate; the pin is
-updated in place.
+play, and ignore the in-level level-select key. `GameModule.requiresSkippedActIntros()`
+(default `false`) makes interactive launches pin the skip of scripted act intros (the S3K
+skip-intros setting) as a session override, cleared at the master title like the aspect.
+All three are delegated by `DelegatingGameModule` and additive to the unpublished 0.7
+candidate; the pin is updated in place.
 
 Putt Putt Paradise's course controller and bounded scene values extend this same
 unpublished candidate. Atlas residency lookup and packed `PatternVersion` data

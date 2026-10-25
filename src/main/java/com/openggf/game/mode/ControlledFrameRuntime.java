@@ -40,12 +40,15 @@ public final class ControlledFrameRuntime {
                 var audio = GameServices.audio();
                 audio.beginGameplayAudioFrame(audio.commandTimeline().currentFrame() + 1);
             }
+            if (input != null && controller.capturesKeyboardText()) input.captureKeyboardText();
             var disposition = java.util.Objects.requireNonNull(controller.beforeFrame(course, snapshot), "gameplay frame disposition");
             boolean advance = disposition != GameplayFrameDisposition.HOLD;
             serviceTitleCardOverlay(context);
             boolean transition = serviceLevelTransition(context);
             if (transition) advance = false;
             if (advance) {
+                LogicalInputSnapshot nativeInput = disposition == GameplayFrameDisposition.ADVANCE_NATIVE_INPUT
+                        ? snapshot : java.util.Objects.requireNonNull(controller.nativeInput(course), "native input");
                 beforeGameplay.run();
                 EngineTiming.vIntRunCounter(EngineServices.current()).serviceRepresentedVBlank();
                 context.plcFrameLifecycle().runLogicalIteration(frame -> { }, context.getFadeManager()::update,
@@ -54,8 +57,7 @@ public final class ControlledFrameRuntime {
                             LevelFrameStep.updateTimers(frameContext);
                             boolean overrideOwned = input.hasLogicalOverride();
                             var previousOverride = input.logical();
-                            input.setLogicalOverride(disposition == GameplayFrameDisposition.ADVANCE_NATIVE_INPUT
-                                    ? snapshot : LogicalInputSnapshot.neutral());
+                            input.setLogicalOverride(nativeInput);
                             try {
                                 context.getSpriteManager().publishHeldInputForLevelEvents(input);
                                 return LevelFrameStep.execute(frameContext, frame, PlcLifecyclePhase.ORDINARY_LEVEL,

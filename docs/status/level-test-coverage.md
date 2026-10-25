@@ -77,6 +77,13 @@ order and graph restoration, and SSZ owned-slot dereferences. Existing
 inherited route, viewport/donor/roster, native presentation and lifecycle gaps;
 these local semantics-preserving checks certify no new act product.
 
+Typing selected-section presentation (2026-10-25): the
+[HCZ2 matrix](../architecture/validation/levels/s3k-hcz2.md#directed-typing-section--2026-10-25)
+records native solo Sonic at 400 pixels, legitimate spatial-entry completion,
+underwater Boss Rush pixels and held-world restoration. The native event owner
+only exposes a read-only readiness query. Existing stock-route, viewport/donor/
+team, physical lifecycle and native audiovisual parity obligations remain open.
+
 S3K horizontal spring terrain gate (2026-10-16): focused object fixtures sample
 real collision tiles for positive/zero/negative foot distances and a slope with
 only one penetrating foot; absent services, empty terrain and underwater descent

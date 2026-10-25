@@ -1,0 +1,1541 @@
+formatVersion: 1
+tracks: []
+sfx:
+  # BEGIN generated voice lines: tools/audio/typing_hedgehog_voice.py --publish-only
+  - id: voice-announcer-title
+    assetPath: audio/voice/announcer_title.ogg
+    gain: 1.0
+  - id: voice-announcer-title-md
+    assetPath: audio/voice/announcer_title.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-announcer-press-any-key
+    assetPath: audio/voice/announcer_press_any_key.ogg
+    gain: 1.0
+  - id: voice-announcer-press-any-key-md
+    assetPath: audio/voice/announcer_press_any_key.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-announcer-mode-story
+    assetPath: audio/voice/announcer_mode_story.ogg
+    gain: 1.0
+  - id: voice-announcer-mode-story-md
+    assetPath: audio/voice/announcer_mode_story.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-announcer-mode-arcade
+    assetPath: audio/voice/announcer_mode_arcade.ogg
+    gain: 1.0
+  - id: voice-announcer-mode-arcade-md
+    assetPath: audio/voice/announcer_mode_arcade.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-announcer-mode-boss-rush
+    assetPath: audio/voice/announcer_mode_boss_rush.ogg
+    gain: 1.0
+  - id: voice-announcer-mode-boss-rush-md
+    assetPath: audio/voice/announcer_mode_boss_rush.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-announcer-mode-endless
+    assetPath: audio/voice/announcer_mode_endless.ogg
+    gain: 1.0
+  - id: voice-announcer-mode-endless-md
+    assetPath: audio/voice/announcer_mode_endless.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-announcer-mode-school
+    assetPath: audio/voice/announcer_mode_school.ogg
+    gain: 1.0
+  - id: voice-announcer-mode-school-md
+    assetPath: audio/voice/announcer_mode_school.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-announcer-mode-records
+    assetPath: audio/voice/announcer_mode_records.ogg
+    gain: 1.0
+  - id: voice-announcer-mode-records-md
+    assetPath: audio/voice/announcer_mode_records.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-announcer-mode-options
+    assetPath: audio/voice/announcer_mode_options.ogg
+    gain: 1.0
+  - id: voice-announcer-mode-options-md
+    assetPath: audio/voice/announcer_mode_options.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-announcer-get-ready
+    assetPath: audio/voice/announcer_get_ready.ogg
+    gain: 1.0
+  - id: voice-announcer-get-ready-md
+    assetPath: audio/voice/announcer_get_ready.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-announcer-type-to-survive
+    assetPath: audio/voice/announcer_type_to_survive.ogg
+    gain: 1.0
+  - id: voice-announcer-type-to-survive-md
+    assetPath: audio/voice/announcer_type_to_survive.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-announcer-here-they-come
+    assetPath: audio/voice/announcer_here_they_come.ogg
+    gain: 1.0
+  - id: voice-announcer-here-they-come-md
+    assetPath: audio/voice/announcer_here_they_come.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-announcer-stand-ground
+    assetPath: audio/voice/announcer_stand_ground.ogg
+    gain: 1.0
+  - id: voice-announcer-stand-ground-md
+    assetPath: audio/voice/announcer_stand_ground.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-announcer-incoming
+    assetPath: audio/voice/announcer_incoming.ogg
+    gain: 1.0
+  - id: voice-announcer-incoming-md
+    assetPath: audio/voice/announcer_incoming.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-announcer-wave-clear
+    assetPath: audio/voice/announcer_wave_clear.ogg
+    gain: 1.0
+  - id: voice-announcer-wave-clear-md
+    assetPath: audio/voice/announcer_wave_clear.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-announcer-go-go-go
+    assetPath: audio/voice/announcer_go_go_go.ogg
+    gain: 1.0
+  - id: voice-announcer-go-go-go-md
+    assetPath: audio/voice/announcer_go_go_go.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-announcer-watch-out
+    assetPath: audio/voice/announcer_watch_out.ogg
+    gain: 1.0
+  - id: voice-announcer-watch-out-md
+    assetPath: audio/voice/announcer_watch_out.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-announcer-elite
+    assetPath: audio/voice/announcer_elite.ogg
+    gain: 1.0
+  - id: voice-announcer-elite-md
+    assetPath: audio/voice/announcer_elite.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-announcer-trap
+    assetPath: audio/voice/announcer_trap.ogg
+    gain: 1.0
+  - id: voice-announcer-trap-md
+    assetPath: audio/voice/announcer_trap.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-announcer-chain-ten
+    assetPath: audio/voice/announcer_chain_ten.ogg
+    gain: 1.0
+  - id: voice-announcer-chain-ten-md
+    assetPath: audio/voice/announcer_chain_ten.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-announcer-chain-twenty
+    assetPath: audio/voice/announcer_chain_twenty.ogg
+    gain: 1.0
+  - id: voice-announcer-chain-twenty-md
+    assetPath: audio/voice/announcer_chain_twenty.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-announcer-chain-thirty
+    assetPath: audio/voice/announcer_chain_thirty.ogg
+    gain: 1.0
+  - id: voice-announcer-chain-thirty-md
+    assetPath: audio/voice/announcer_chain_thirty.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-announcer-chain-fifty
+    assetPath: audio/voice/announcer_chain_fifty.ogg
+    gain: 1.0
+  - id: voice-announcer-chain-fifty-md
+    assetPath: audio/voice/announcer_chain_fifty.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-announcer-ouch
+    assetPath: audio/voice/announcer_ouch.ogg
+    gain: 1.0
+  - id: voice-announcer-ouch-md
+    assetPath: audio/voice/announcer_ouch.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-announcer-rings-lost
+    assetPath: audio/voice/announcer_rings_lost.ogg
+    gain: 1.0
+  - id: voice-announcer-rings-lost-md
+    assetPath: audio/voice/announcer_rings_lost.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-announcer-no-rings
+    assetPath: audio/voice/announcer_no_rings.ogg
+    gain: 1.0
+  - id: voice-announcer-no-rings-md
+    assetPath: audio/voice/announcer_no_rings.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-announcer-last-life
+    assetPath: audio/voice/announcer_last_life.ogg
+    gain: 1.0
+  - id: voice-announcer-last-life-md
+    assetPath: audio/voice/announcer_last_life.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-announcer-game-over
+    assetPath: audio/voice/announcer_game_over.ogg
+    gain: 1.0
+  - id: voice-announcer-game-over-md
+    assetPath: audio/voice/announcer_game_over.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-announcer-continue
+    assetPath: audio/voice/announcer_continue.ogg
+    gain: 1.0
+  - id: voice-announcer-continue-md
+    assetPath: audio/voice/announcer_continue.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-announcer-shield
+    assetPath: audio/voice/announcer_shield.ogg
+    gain: 1.0
+  - id: voice-announcer-shield-md
+    assetPath: audio/voice/announcer_shield.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-announcer-speed-shoes
+    assetPath: audio/voice/announcer_speed_shoes.ogg
+    gain: 1.0
+  - id: voice-announcer-speed-shoes-md
+    assetPath: audio/voice/announcer_speed_shoes.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-announcer-invincible
+    assetPath: audio/voice/announcer_invincible.ogg
+    gain: 1.0
+  - id: voice-announcer-invincible-md
+    assetPath: audio/voice/announcer_invincible.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-announcer-super-ring
+    assetPath: audio/voice/announcer_super_ring.ogg
+    gain: 1.0
+  - id: voice-announcer-super-ring-md
+    assetPath: audio/voice/announcer_super_ring.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-announcer-extra-life
+    assetPath: audio/voice/announcer_extra_life.ogg
+    gain: 1.0
+  - id: voice-announcer-extra-life-md
+    assetPath: audio/voice/announcer_extra_life.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-announcer-animal-rescued
+    assetPath: audio/voice/announcer_animal_rescued.ogg
+    gain: 1.0
+  - id: voice-announcer-animal-rescued-md
+    assetPath: audio/voice/announcer_animal_rescued.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-announcer-boss-warning
+    assetPath: audio/voice/announcer_boss_warning.ogg
+    gain: 1.0
+  - id: voice-announcer-boss-warning-md
+    assetPath: audio/voice/announcer_boss_warning.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-announcer-boss-defeated
+    assetPath: audio/voice/announcer_boss_defeated.ogg
+    gain: 1.0
+  - id: voice-announcer-boss-defeated-md
+    assetPath: audio/voice/announcer_boss_defeated.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-announcer-emerald
+    assetPath: audio/voice/announcer_emerald.ogg
+    gain: 1.0
+  - id: voice-announcer-emerald-md
+    assetPath: audio/voice/announcer_emerald.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-announcer-all-emeralds
+    assetPath: audio/voice/announcer_all_emeralds.ogg
+    gain: 1.0
+  - id: voice-announcer-all-emeralds-md
+    assetPath: audio/voice/announcer_all_emeralds.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-announcer-act-clear
+    assetPath: audio/voice/announcer_act_clear.ogg
+    gain: 1.0
+  - id: voice-announcer-act-clear-md
+    assetPath: audio/voice/announcer_act_clear.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-announcer-chapter-clear
+    assetPath: audio/voice/announcer_chapter_clear.ogg
+    gain: 1.0
+  - id: voice-announcer-chapter-clear-md
+    assetPath: audio/voice/announcer_chapter_clear.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-announcer-new-record
+    assetPath: audio/voice/announcer_new_record.ogg
+    gain: 1.0
+  - id: voice-announcer-new-record-md
+    assetPath: audio/voice/announcer_new_record.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-announcer-rank-s
+    assetPath: audio/voice/announcer_rank_s.ogg
+    gain: 1.0
+  - id: voice-announcer-rank-s-md
+    assetPath: audio/voice/announcer_rank_s.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-announcer-rank-a
+    assetPath: audio/voice/announcer_rank_a.ogg
+    gain: 1.0
+  - id: voice-announcer-rank-a-md
+    assetPath: audio/voice/announcer_rank_a.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-announcer-rank-b
+    assetPath: audio/voice/announcer_rank_b.ogg
+    gain: 1.0
+  - id: voice-announcer-rank-b-md
+    assetPath: audio/voice/announcer_rank_b.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-announcer-rank-c
+    assetPath: audio/voice/announcer_rank_c.ogg
+    gain: 1.0
+  - id: voice-announcer-rank-c-md
+    assetPath: audio/voice/announcer_rank_c.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-announcer-rank-d
+    assetPath: audio/voice/announcer_rank_d.ogg
+    gain: 1.0
+  - id: voice-announcer-rank-d-md
+    assetPath: audio/voice/announcer_rank_d.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-announcer-rank-e
+    assetPath: audio/voice/announcer_rank_e.ogg
+    gain: 1.0
+  - id: voice-announcer-rank-e-md
+    assetPath: audio/voice/announcer_rank_e.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-announcer-blazing
+    assetPath: audio/voice/announcer_blazing.ogg
+    gain: 1.0
+  - id: voice-announcer-blazing-md
+    assetPath: audio/voice/announcer_blazing.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-announcer-perfect
+    assetPath: audio/voice/announcer_perfect.ogg
+    gain: 1.0
+  - id: voice-announcer-perfect-md
+    assetPath: audio/voice/announcer_perfect.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-announcer-super-sonic
+    assetPath: audio/voice/announcer_super_sonic.ogg
+    gain: 1.0
+  - id: voice-announcer-super-sonic-md
+    assetPath: audio/voice/announcer_super_sonic.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-announcer-final-boss
+    assetPath: audio/voice/announcer_final_boss.ogg
+    gain: 1.0
+  - id: voice-announcer-final-boss-md
+    assetPath: audio/voice/announcer_final_boss.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-announcer-thanks
+    assetPath: audio/voice/announcer_thanks.ogg
+    gain: 1.0
+  - id: voice-announcer-thanks-md
+    assetPath: audio/voice/announcer_thanks.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-robotnik-intro-a
+    assetPath: audio/voice/robotnik_intro_a.ogg
+    gain: 1.0
+  - id: voice-robotnik-intro-a-md
+    assetPath: audio/voice/robotnik_intro_a.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-robotnik-intro-b
+    assetPath: audio/voice/robotnik_intro_b.ogg
+    gain: 1.0
+  - id: voice-robotnik-intro-b-md
+    assetPath: audio/voice/robotnik_intro_b.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-robotnik-intro-c
+    assetPath: audio/voice/robotnik_intro_c.ogg
+    gain: 1.0
+  - id: voice-robotnik-intro-c-md
+    assetPath: audio/voice/robotnik_intro_c.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-robotnik-intro-quiz
+    assetPath: audio/voice/robotnik_intro_quiz.ogg
+    gain: 1.0
+  - id: voice-robotnik-intro-quiz-md
+    assetPath: audio/voice/robotnik_intro_quiz.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-robotnik-quiz-right
+    assetPath: audio/voice/robotnik_quiz_right.ogg
+    gain: 1.0
+  - id: voice-robotnik-quiz-right-md
+    assetPath: audio/voice/robotnik_quiz_right.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-robotnik-quiz-wrong
+    assetPath: audio/voice/robotnik_quiz_wrong.ogg
+    gain: 1.0
+  - id: voice-robotnik-quiz-wrong-md
+    assetPath: audio/voice/robotnik_quiz_wrong.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-robotnik-duel
+    assetPath: audio/voice/robotnik_duel.ogg
+    gain: 1.0
+  - id: voice-robotnik-duel-md
+    assetPath: audio/voice/robotnik_duel.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-robotnik-talk-back
+    assetPath: audio/voice/robotnik_talk_back.ogg
+    gain: 1.0
+  - id: voice-robotnik-talk-back-md
+    assetPath: audio/voice/robotnik_talk_back.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-robotnik-hurt-a
+    assetPath: audio/voice/robotnik_hurt_a.ogg
+    gain: 1.0
+  - id: voice-robotnik-hurt-a-md
+    assetPath: audio/voice/robotnik_hurt_a.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-robotnik-hurt-b
+    assetPath: audio/voice/robotnik_hurt_b.ogg
+    gain: 1.0
+  - id: voice-robotnik-hurt-b-md
+    assetPath: audio/voice/robotnik_hurt_b.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-robotnik-hurt-c
+    assetPath: audio/voice/robotnik_hurt_c.ogg
+    gain: 1.0
+  - id: voice-robotnik-hurt-c-md
+    assetPath: audio/voice/robotnik_hurt_c.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-robotnik-hurt-d
+    assetPath: audio/voice/robotnik_hurt_d.ogg
+    gain: 1.0
+  - id: voice-robotnik-hurt-d-md
+    assetPath: audio/voice/robotnik_hurt_d.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-robotnik-defeat-a
+    assetPath: audio/voice/robotnik_defeat_a.ogg
+    gain: 1.0
+  - id: voice-robotnik-defeat-a-md
+    assetPath: audio/voice/robotnik_defeat_a.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-robotnik-defeat-b
+    assetPath: audio/voice/robotnik_defeat_b.ogg
+    gain: 1.0
+  - id: voice-robotnik-defeat-b-md
+    assetPath: audio/voice/robotnik_defeat_b.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-robotnik-defeat-c
+    assetPath: audio/voice/robotnik_defeat_c.ogg
+    gain: 1.0
+  - id: voice-robotnik-defeat-c-md
+    assetPath: audio/voice/robotnik_defeat_c.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-robotnik-laugh
+    assetPath: audio/voice/robotnik_laugh.ogg
+    gain: 1.0
+  - id: voice-robotnik-laugh-md
+    assetPath: audio/voice/robotnik_laugh.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-robotnik-final
+    assetPath: audio/voice/robotnik_final.ogg
+    gain: 1.0
+  - id: voice-robotnik-final-md
+    assetPath: audio/voice/robotnik_final.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-robotnik-trap-typed
+    assetPath: audio/voice/robotnik_trap_typed.ogg
+    gain: 1.0
+  - id: voice-robotnik-trap-typed-md
+    assetPath: audio/voice/robotnik_trap_typed.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-tails-welcome
+    assetPath: audio/voice/tails_welcome.ogg
+    gain: 1.0
+  - id: voice-tails-welcome-md
+    assetPath: audio/voice/tails_welcome.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-tails-home-row
+    assetPath: audio/voice/tails_home_row.ogg
+    gain: 1.0
+  - id: voice-tails-home-row-md
+    assetPath: audio/voice/tails_home_row.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-tails-top-row
+    assetPath: audio/voice/tails_top_row.ogg
+    gain: 1.0
+  - id: voice-tails-top-row-md
+    assetPath: audio/voice/tails_top_row.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-tails-bottom-row
+    assetPath: audio/voice/tails_bottom_row.ogg
+    gain: 1.0
+  - id: voice-tails-bottom-row-md
+    assetPath: audio/voice/tails_bottom_row.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-tails-numbers
+    assetPath: audio/voice/tails_numbers.ogg
+    gain: 1.0
+  - id: voice-tails-numbers-md
+    assetPath: audio/voice/tails_numbers.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-tails-capitals
+    assetPath: audio/voice/tails_capitals.ogg
+    gain: 1.0
+  - id: voice-tails-capitals-md
+    assetPath: audio/voice/tails_capitals.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-tails-punctuation
+    assetPath: audio/voice/tails_punctuation.ogg
+    gain: 1.0
+  - id: voice-tails-punctuation-md
+    assetPath: audio/voice/tails_punctuation.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-tails-ring-rush
+    assetPath: audio/voice/tails_ring_rush.ogg
+    gain: 1.0
+  - id: voice-tails-ring-rush-md
+    assetPath: audio/voice/tails_ring_rush.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-tails-sudden-death
+    assetPath: audio/voice/tails_sudden_death.ogg
+    gain: 1.0
+  - id: voice-tails-sudden-death-md
+    assetPath: audio/voice/tails_sudden_death.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-tails-reflex
+    assetPath: audio/voice/tails_reflex.ogg
+    gain: 1.0
+  - id: voice-tails-reflex-md
+    assetPath: audio/voice/tails_reflex.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-tails-long-words
+    assetPath: audio/voice/tails_long_words.ogg
+    gain: 1.0
+  - id: voice-tails-long-words-md
+    assetPath: audio/voice/tails_long_words.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-tails-phrases
+    assetPath: audio/voice/tails_phrases.ogg
+    gain: 1.0
+  - id: voice-tails-phrases-md
+    assetPath: audio/voice/tails_phrases.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-tails-boss-training
+    assetPath: audio/voice/tails_boss_training.ogg
+    gain: 1.0
+  - id: voice-tails-boss-training-md
+    assetPath: audio/voice/tails_boss_training.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-tails-weak-keys
+    assetPath: audio/voice/tails_weak_keys.ogg
+    gain: 1.0
+  - id: voice-tails-weak-keys-md
+    assetPath: audio/voice/tails_weak_keys.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-tails-final-exam
+    assetPath: audio/voice/tails_final_exam.ogg
+    gain: 1.0
+  - id: voice-tails-final-exam-md
+    assetPath: audio/voice/tails_final_exam.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-tails-exam-passed
+    assetPath: audio/voice/tails_exam_passed.ogg
+    gain: 1.0
+  - id: voice-tails-exam-passed-md
+    assetPath: audio/voice/tails_exam_passed.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-tails-great
+    assetPath: audio/voice/tails_great.ogg
+    gain: 1.0
+  - id: voice-tails-great-md
+    assetPath: audio/voice/tails_great.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-tails-awesome
+    assetPath: audio/voice/tails_awesome.ogg
+    gain: 1.0
+  - id: voice-tails-awesome-md
+    assetPath: audio/voice/tails_awesome.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-tails-try-again
+    assetPath: audio/voice/tails_try_again.ogg
+    gain: 1.0
+  - id: voice-tails-try-again-md
+    assetPath: audio/voice/tails_try_again.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-tails-keep-going
+    assetPath: audio/voice/tails_keep_going.ogg
+    gain: 1.0
+  - id: voice-tails-keep-going-md
+    assetPath: audio/voice/tails_keep_going.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-tails-slow-down
+    assetPath: audio/voice/tails_slow_down.ogg
+    gain: 1.0
+  - id: voice-tails-slow-down-md
+    assetPath: audio/voice/tails_slow_down.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-tails-grade-a
+    assetPath: audio/voice/tails_grade_a.ogg
+    gain: 1.0
+  - id: voice-tails-grade-a-md
+    assetPath: audio/voice/tails_grade_a.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-tails-grade-b
+    assetPath: audio/voice/tails_grade_b.ogg
+    gain: 1.0
+  - id: voice-tails-grade-b-md
+    assetPath: audio/voice/tails_grade_b.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-tails-grade-c
+    assetPath: audio/voice/tails_grade_c.ogg
+    gain: 1.0
+  - id: voice-tails-grade-c-md
+    assetPath: audio/voice/tails_grade_c.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-tails-grade-d
+    assetPath: audio/voice/tails_grade_d.ogg
+    gain: 1.0
+  - id: voice-tails-grade-d-md
+    assetPath: audio/voice/tails_grade_d.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-tails-grade-e
+    assetPath: audio/voice/tails_grade_e.ogg
+    gain: 1.0
+  - id: voice-tails-grade-e-md
+    assetPath: audio/voice/tails_grade_e.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-tails-unlocked
+    assetPath: audio/voice/tails_unlocked.ogg
+    gain: 1.0
+  - id: voice-tails-unlocked-md
+    assetPath: audio/voice/tails_unlocked.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-robotnik-taunt-toaster
+    assetPath: audio/voice/robotnik_taunt_toaster.ogg
+    gain: 1.0
+  - id: voice-robotnik-taunt-toaster-md
+    assetPath: audio/voice/robotnik_taunt_toaster.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-robotnik-taunt-outrun
+    assetPath: audio/voice/robotnik_taunt_outrun.ogg
+    gain: 1.0
+  - id: voice-robotnik-taunt-outrun-md
+    assetPath: audio/voice/robotnik_taunt_outrun.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-robotnik-taunt-never-tire
+    assetPath: audio/voice/robotnik_taunt_never_tire.ogg
+    gain: 1.0
+  - id: voice-robotnik-taunt-never-tire-md
+    assetPath: audio/voice/robotnik_taunt_never_tire.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-robotnik-taunt-little-fingers
+    assetPath: audio/voice/robotnik_taunt_little_fingers.ogg
+    gain: 1.0
+  - id: voice-robotnik-taunt-little-fingers-md
+    assetPath: audio/voice/robotnik_taunt_little_fingers.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-robotnik-taunt-thousand-badniks
+    assetPath: audio/voice/robotnik_taunt_thousand_badniks.ogg
+    gain: 1.0
+  - id: voice-robotnik-taunt-thousand-badniks-md
+    assetPath: audio/voice/robotnik_taunt_thousand_badniks.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-robotnik-taunt-every-keystroke
+    assetPath: audio/voice/robotnik_taunt_every_keystroke.ogg
+    gain: 1.0
+  - id: voice-robotnik-taunt-every-keystroke-md
+    assetPath: audio/voice/robotnik_taunt_every_keystroke.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-robotnik-taunt-spell-my-name
+    assetPath: audio/voice/robotnik_taunt_spell_my_name.ogg
+    gain: 1.0
+  - id: voice-robotnik-taunt-spell-my-name-md
+    assetPath: audio/voice/robotnik_taunt_spell_my_name.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-robotnik-taunt-surrender
+    assetPath: audio/voice/robotnik_taunt_surrender.ogg
+    gain: 1.0
+  - id: voice-robotnik-taunt-surrender-md
+    assetPath: audio/voice/robotnik_taunt_surrender.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-robotnik-taunt-bow-before
+    assetPath: audio/voice/robotnik_taunt_bow_before.ogg
+    gain: 1.0
+  - id: voice-robotnik-taunt-bow-before-md
+    assetPath: audio/voice/robotnik_taunt_bow_before.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-robotnik-taunt-mustache
+    assetPath: audio/voice/robotnik_taunt_mustache.ogg
+    gain: 1.0
+  - id: voice-robotnik-taunt-mustache-md
+    assetPath: audio/voice/robotnik_taunt_mustache.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-robotnik-taunt-another-typo
+    assetPath: audio/voice/robotnik_taunt_another_typo.ogg
+    gain: 1.0
+  - id: voice-robotnik-taunt-another-typo-md
+    assetPath: audio/voice/robotnik_taunt_another_typo.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-robotnik-taunt-sleepy-snail
+    assetPath: audio/voice/robotnik_taunt_sleepy_snail.ogg
+    gain: 1.0
+  - id: voice-robotnik-taunt-sleepy-snail-md
+    assetPath: audio/voice/robotnik_taunt_sleepy_snail.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-robotnik-taunt-nobody-defies
+    assetPath: audio/voice/robotnik_taunt_nobody_defies.ogg
+    gain: 1.0
+  - id: voice-robotnik-taunt-nobody-defies-md
+    assetPath: audio/voice/robotnik_taunt_nobody_defies.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-robotnik-taunt-out-typed
+    assetPath: audio/voice/robotnik_taunt_out_typed.ogg
+    gain: 1.0
+  - id: voice-robotnik-taunt-out-typed-md
+    assetPath: audio/voice/robotnik_taunt_out_typed.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-robotnik-taunt-tick-tock
+    assetPath: audio/voice/robotnik_taunt_tick_tock.ogg
+    gain: 1.0
+  - id: voice-robotnik-taunt-tick-tock-md
+    assetPath: audio/voice/robotnik_taunt_tick_tock.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-robotnik-taunt-delightful
+    assetPath: audio/voice/robotnik_taunt_delightful.ogg
+    gain: 1.0
+  - id: voice-robotnik-taunt-delightful-md
+    assetPath: audio/voice/robotnik_taunt_delightful.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-robotnik-taunt-ingenuity
+    assetPath: audio/voice/robotnik_taunt_ingenuity.ogg
+    gain: 1.0
+  - id: voice-robotnik-taunt-ingenuity-md
+    assetPath: audio/voice/robotnik_taunt_ingenuity.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-robotnik-taunt-ridiculous
+    assetPath: audio/voice/robotnik_taunt_ridiculous.ogg
+    gain: 1.0
+  - id: voice-robotnik-taunt-ridiculous-md
+    assetPath: audio/voice/robotnik_taunt_ridiculous.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-robotnik-taunt-wobbly-vowels
+    assetPath: audio/voice/robotnik_taunt_wobbly_vowels.ogg
+    gain: 1.0
+  - id: voice-robotnik-taunt-wobbly-vowels-md
+    assetPath: audio/voice/robotnik_taunt_wobbly_vowels.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-robotnik-taunt-space-bar
+    assetPath: audio/voice/robotnik_taunt_space_bar.ogg
+    gain: 1.0
+  - id: voice-robotnik-taunt-space-bar-md
+    assetPath: audio/voice/robotnik_taunt_space_bar.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-robotnik-taunt-s1-south-island
+    assetPath: audio/voice/robotnik_taunt_s1_south_island.ogg
+    gain: 1.0
+  - id: voice-robotnik-taunt-s1-south-island-md
+    assetPath: audio/voice/robotnik_taunt_s1_south_island.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-robotnik-taunt-s1-six-emeralds
+    assetPath: audio/voice/robotnik_taunt_s1_six_emeralds.ogg
+    gain: 1.0
+  - id: voice-robotnik-taunt-s1-six-emeralds-md
+    assetPath: audio/voice/robotnik_taunt_s1_six_emeralds.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-robotnik-taunt-s1-juggle
+    assetPath: audio/voice/robotnik_taunt_s1_juggle.ogg
+    gain: 1.0
+  - id: voice-robotnik-taunt-s1-juggle-md
+    assetPath: audio/voice/robotnik_taunt_s1_juggle.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-robotnik-taunt-s1-first-adventure
+    assetPath: audio/voice/robotnik_taunt_s1_first_adventure.ogg
+    gain: 1.0
+  - id: voice-robotnik-taunt-s1-first-adventure-md
+    assetPath: audio/voice/robotnik_taunt_s1_first_adventure.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-robotnik-taunt-s2-death-egg
+    assetPath: audio/voice/robotnik_taunt_s2_death_egg.ogg
+    gain: 1.0
+  - id: voice-robotnik-taunt-s2-death-egg-md
+    assetPath: audio/voice/robotnik_taunt_s2_death_egg.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-robotnik-taunt-s2-two-of-you
+    assetPath: audio/voice/robotnik_taunt_s2_two_of_you.ogg
+    gain: 1.0
+  - id: voice-robotnik-taunt-s2-two-of-you-md
+    assetPath: audio/voice/robotnik_taunt_s2_two_of_you.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-robotnik-taunt-s2-silver-sonic
+    assetPath: audio/voice/robotnik_taunt_s2_silver_sonic.ogg
+    gain: 1.0
+  - id: voice-robotnik-taunt-s2-silver-sonic-md
+    assetPath: audio/voice/robotnik_taunt_s2_silver_sonic.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-robotnik-taunt-s3k-echidna
+    assetPath: audio/voice/robotnik_taunt_s3k_echidna.ogg
+    gain: 1.0
+  - id: voice-robotnik-taunt-s3k-echidna-md
+    assetPath: audio/voice/robotnik_taunt_s3k_echidna.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-robotnik-taunt-s3k-hyper
+    assetPath: audio/voice/robotnik_taunt_s3k_hyper.ogg
+    gain: 1.0
+  - id: voice-robotnik-taunt-s3k-hyper-md
+    assetPath: audio/voice/robotnik_taunt_s3k_hyper.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-robotnik-taunt-s3k-mecha-sonic
+    assetPath: audio/voice/robotnik_taunt_s3k_mecha_sonic.ogg
+    gain: 1.0
+  - id: voice-robotnik-taunt-s3k-mecha-sonic-md
+    assetPath: audio/voice/robotnik_taunt_s3k_mecha_sonic.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  # END generated voice lines

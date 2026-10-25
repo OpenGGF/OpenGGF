@@ -460,10 +460,12 @@ same controller through `rewindAdapters()` if its mode state is rewindable.
 The host invokes `beforeFrame(CourseControl, LogicalInputSnapshot)` once per mode
 row. Return `ADVANCE_NATIVE_INPUT` for the ordinary native step with supplied P1/P2
 logical input and the existing gameplay policy filters, `ADVANCE_CONTROLLED` for a
-native step with neutral input, or `HOLD` to freeze world physics, objects, clocks,
+native step with controller-supplied input, or `HOLD` to freeze world physics, objects, clocks,
 animation and ordinary PLC work. The result must be non-null. The default maps the
 existing `beforeTick` result (`true`/`false`) to controlled advance/hold, so existing
-controllers, including Golf, keep their neutral-input behavior. `afterTick` receives
+controllers, including Golf, keep their neutral-input behavior. Controlled input comes from
+`GameplayFrameController.nativeInput(CourseControl)`, neutral by default; derive its pad and
+press edges from controller state so the course advances reproducibly. `afterTick` receives
 whether a world step ran. Keep aim, menus and feedback in the controller; keep physics in
 native gameplay. Stock modules return no controller and retain their normal path.
 Initial setup rows are excluded from movie/history input; subsequent HOLD rows
@@ -489,6 +491,14 @@ It is false while a logical movie override is active. Supply an A-operated menu
 command for Genesis movie replay, whose controller rows cannot encode that key
 or bumper. This accessor is part of the unpublished 0.7 candidate surface; its
 normalized pin is regenerated without changing the policy/version descriptor.
+
+A controller whose player types returns true from `capturesKeyboardText()`. While it
+does, host shortcuts and keyboard bindings read printable and editing keys as up (so
+`R` cannot also start live rewind, and Enter cannot toggle host pause), and
+`CourseControl.typedText()` returns the row's characters from the operating system's
+text input. `CourseControl.keyDown(key)`/`keyPressed(key)` read any GLFW key for the
+controller, claimed or not. Escape, function keys, modifiers and gamepads stay with
+the host. A controller with its own pause should offer it on a key it reads itself.
 
 `GameplayFrameController.rewindPresentation()` optionally returns a finite,
 bounded `RewindPresentation` value for creator-owned reverse playback. The host
@@ -786,4 +796,7 @@ rewindable clock that compounds speed every 30 seconds of active play.
 A module can also pin a display aspect for its session with
 `GameModule.requiredDisplayAspect()` (a `display.aspect` preset name; the master title
 restores the player's setting) and hide the level select with
-`GameModule.suppressesLevelSelect()`. Infinite Sonic uses both.
+`GameModule.suppressesLevelSelect()`. Infinite Sonic uses both. A module whose content
+drives its acts from their first controllable row can require that they start without
+scripted intros (Sonic 3 & Knuckles' act-start cutscenes) with
+`GameModule.requiresSkippedActIntros()`; Typing of the Hedgehog's rails need it.

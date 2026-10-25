@@ -443,7 +443,6 @@ final class PaletteTextureOwner {
 	 * picture keeps the captured CRAM generation until the next V-int publication.
 	 */
 	void restoreDisplayedPaletteFade(PaletteUploadPresentation.DisplayedFade state) {
-        var previousMode = publishedPaletteFade.mode();
 		int previousMask = publishedPaletteFade.lineMask();
 		boolean changed = state.mode() == PaletteFadePresentation.Mode.NONE
 				? publishedPaletteFade.clear()
@@ -451,8 +450,7 @@ final class PaletteTextureOwner {
 		paletteFadePublicationPending = state.pending();
 		displayedPaletteFadeHeld = true;
 		if (changed) {
-            if (scopedUnderwaterBasis != null && (isWhitePaletteFade(previousMode)
-                    || isWhitePaletteFade(publishedPaletteFade.mode()))) {
+            if (scopedUnderwaterBasis != null) {
                 // Keep captured raw water inputs detached from later palette writers.
                 scopedUnderwaterBasis = scopedUnderwaterBasis.withFade(publishedPaletteFade);
                 scopedUnderwaterDirty = true;
@@ -468,10 +466,17 @@ final class PaletteTextureOwner {
         try {
             restoreDisplayedPaletteFade(new PaletteUploadPresentation.DisplayedFade(
                     PaletteFadePresentation.Mode.NONE, 0, 0, saved.pending()));
+            // A latched water cache keeps the native publication's raw RGB inputs.
+            // Recompose those inputs for this draw without admitting pending writes.
+            refreshScopedUnderwaterResidency();
             draw.run();
         } finally {
-            restoreDisplayedPaletteFade(saved);
-            displayedPaletteFadeHeld = held;
+            try {
+                restoreDisplayedPaletteFade(saved);
+                refreshScopedUnderwaterResidency();
+            } finally {
+                displayedPaletteFadeHeld = held;
+            }
         }
     }
 
