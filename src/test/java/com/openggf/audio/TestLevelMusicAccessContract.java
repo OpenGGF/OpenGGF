@@ -46,7 +46,8 @@ class TestLevelMusicAccessContract {
     @AfterEach void tearDown() throws Exception {
         for (var control : controls) control.close();
         for (var manager : managers) {
-            if (manager.mutatorBinding != null) manager.mutatorBinding.close();
+            var binding = AudioManagerTestDiagnostics.currentMutatorBinding(manager);
+            if (binding != null) binding.close();
             manager.setRequestObserver(AudioRequestObserver.NONE);
             manager.destroy();
         }

@@ -79,21 +79,22 @@ public class AudioManager implements MusicRestoreSink {
     private final LevelMusicAccess levelMusicAccess = new LevelMusicAccess(this);
     private final DiagnosticInstallation diagnosticInstallation = new DiagnosticInstallation();
     // Internal world ownership never replaces the single external diagnostic observer.
-    AudioMutatorAccess.Binding mutatorBinding;
-    int mutatorSubmissionDepth;
+    private final AudioMutatorAccess mutatorAccess = new AudioMutatorAccess();
+
+    static final AudioMutatorAccess mutatorAccess(AudioManager audio) {
+        return audio.mutatorAccess;
+    }
 
     final LevelMusicAccess levelMusicAccess() {
         return levelMusicAccess;
     }
 
     private void mutatorMusicIntent(AudioMutatorAccess.Kind kind, int value) {
-        if (mutatorBinding != null && mutatorSubmissionDepth == 0) mutatorBinding.musicIntent(kind, value);
+        mutatorAccess.musicIntent(kind, value);
     }
 
     private void mutatorSfxIntent(int id) {
-        if (mutatorBinding == null || mutatorSubmissionDepth != 0) return;
-        if (id >= 0xE0) mutatorBinding.musicIntent(AudioMutatorAccess.Kind.COMMAND, id);
-        else mutatorBinding.sfxIntent(id);
+        mutatorAccess.sfxIntent(id);
     }
 
     void prepareMutatorCue(int id, boolean music) {
@@ -2782,11 +2783,7 @@ public class AudioManager implements MusicRestoreSink {
      * (e.g. Sonic 1 SMPS loader contaminating Sonic 2 tests).
      */
     public synchronized void resetState() {
-        if (mutatorBinding != null) {
-            var previous = mutatorBinding;
-            mutatorBinding = null;
-            previous.musicIntent(AudioMutatorAccess.Kind.STOP, 0);
-        }
+        mutatorAccess.reset();
         invalidateAndReleaseStreamedMusicSession();
         sourcePublication.reset();
     }

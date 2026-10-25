@@ -617,6 +617,24 @@ preserves leased observers and directly clears unleased slots before reinstall.
 Physical assembly, event classification, quarantine, frame/routing policy and
 source publication stay with their existing owners.
 
+Each manager retains one cold private final `AudioMutatorAccess` for the native
+mutator binding protocol. Its current-binding slot and plain submission depth
+own publication-before-displacement, current identity, exact release, reset
+consumption, current-listener dispatch, native SFX/COMMAND classification and
+manager-wide feedback exclusion. `Binding` remains the subordinate capability,
+strongly retaining its exact manager, listener and acquiring thread. Actual caller
+inspection stays at static `bind` and Binding admission/close boundaries before
+owner delegation; `active()` remains an unrestricted identity observation.
+Native preparation, live virtual profile/warning reads and playback remain with
+the manager. Submission brackets only the prepared action and unconditionally
+unwinds its shared depth; it adds no ownership recheck after preparation.
+Root keeps each notification position and its existing monitor context. Reset
+consumes identity before direct STOP even during submission, leaves depth alone,
+then continues streamed invalidation/source reset only if that callback returns.
+Reentrant replacement and callback failure retain their existing partial effects;
+destroy does not unbind. Ordinary callbacks acquire no new monitor. This live
+installation state is not part of world rewind snapshots.
+
 Each `AudioManager` retains one private `CaptureLeases` owner across producer
 generations. It owns offline/live admission, accepted release, rebuild carry,
 retirement and the stable live-recording handle. Compatibility methods retain

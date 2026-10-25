@@ -69,7 +69,8 @@ class TestAudioSourcePublicationContract {
             current.onStop = () -> { };
         }
         audio.setStreamedMusicSessionInvalidator(() -> { });
-        if (audio.mutatorBinding != null) audio.mutatorBinding.close();
+        var binding = AudioManagerTestDiagnostics.currentMutatorBinding(audio);
+        if (binding != null) binding.close();
         audio.destroy();
     }
 
@@ -439,7 +440,7 @@ class TestAudioSourcePublicationContract {
         audio.installStreamedMusicPort(port);
         audio.setStreamedMusicSessionInvalidator(() -> {
             assertTrue(guard());
-            assertNull(audio.mutatorBinding, "creator binding is consumed before invalidation");
+            assertNull(AudioManagerTestDiagnostics.currentMutatorBinding(audio), "creator binding is consumed before invalidation");
             effects.add("invalidate");
         });
         backend.onStreamReset = () -> { assertTrue(guard()); effects.add("stream-reset"); };

@@ -238,6 +238,18 @@ public final class AudioManagerTestDiagnostics {
         }
     }
 
+    /** Observes the actual binding owner without a production testing accessor. */
+    static AudioMutatorAccess.Binding currentMutatorBinding(AudioManager audio) {
+        AudioMutatorAccess owner = AudioManager.mutatorAccess(audio);
+        try {
+            Field field = AudioMutatorAccess.class.getDeclaredField("currentBinding");
+            field.setAccessible(true);
+            return AudioMutatorAccess.Binding.class.cast(field.get(owner));
+        } catch (ReflectiveOperationException failure) {
+            throw new IllegalStateException("cannot read AudioMutatorAccess.currentBinding", failure);
+        }
+    }
+
     /** Original publication diagnostics follow the one manager-lifetime source owner. */
     static Object sourcePublication(AudioManager audio) {
         return field(audio, "sourcePublication", Object.class);

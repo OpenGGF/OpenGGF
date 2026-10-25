@@ -12842,3 +12842,255 @@ integration, push, cleanup or subdelegation occurs. After final commit/source an
 own-target checks, target/job ownership is explicitly returned to the parent,
 and this worker stops. Parent review of this concrete two-member patch remains
 separate; this evidence provides no production-transfer authorization.
+
+### Complete native audio-mutator binding ownership transfer — 2026-10-25
+
+**Scope and authority.** Parent authorized the complete two-file production cut
+only after independent source review accepted the original-production baseline
+and its P2 follow-up `8922d4d0a4360842ac8f5c2d96573ea244d8a2a4`, tree
+`67b35159b59712584f986f9a3ef0013bf4965de1`. The prior `f3869f908` and `8922d4d0a`
+commits remain unaltered. Source qualification and the tightened design identified
+an ownership opportunity, not a demonstrated native-audio defect. Retaining the
+original Root/world composition remained coherent; a state bag, routing-decision
+forwarder, new Host abstraction, caller exemption or world-policy move would not
+meet the qualified alternative.
+
+The permanent concrete `AudioMutatorAccess` now owns the two plain policy slots
+and the complete publish/displace, current identity, exact release, reset
+consume/STOP, current-listener dispatch, native SFX/COMMAND classification and
+submission/finally protocol. Its package constructor is cold: compiled ArchUnit
+metadata reports only Object construction, no method/collaborator calls and no
+constructor field accesses; Root is its sole production construction site.
+`Binding` retains its exact manager/listener/acquiring-thread final references.
+The owner has no thread slot, captured profile, producer, session, lookup or new
+interface. Root retains native preparation/profile/warning/driver/source/frame/
+replay algorithms and all 18 music, three SFX and reset notification positions.
+
+Static bind's caller/listener/null admission and Binding's caller/thread checks
+remain at their original public boundary, before delegation. `active()` remains
+unguarded. Preparation/warning still precede submission with no second ownership
+check. Shared depth spans replacement, close, reset and nested failure, and
+unwinds RuntimeException/Error. Reset clears before direct STOP without changing
+depth; a throwing callback still interrupts later invalidation/source reset and a
+callback-created replacement can survive. Destroy remains unmodified. Ordinary
+callbacks acquire no owner monitor; reset/SOURCE inherit the existing Root
+monitor. No rewind state or native cue algorithm was moved.
+
+**Concrete preservation correction.** The first candidate used an instance
+package-final concrete ingress. Consumer run 82778 found ten
+`NoInteractionsWanted` failures in
+`engineStaleAndWrongThreadAdmissionPrecedesNativeWork(Entry)[1..10]`: replacement
+bind and identity observation introduced spied-manager method interactions. No
+accepted assertion was weakened. The six-file Java freeze
+`505f6940d6ea0ced402ca8aa32f5ee41f897ce2503e06746e6e0c36f2072d57d`, overlay
+`c79f93c55363eed1a6a405f5ebb7a92fab01c972`, was explicitly withdrawn. Parent
+stopped r1 source review before functional review and issued no acceptance.
+
+The replacement is a package-private `static final AudioMutatorAccess
+mutatorAccess(AudioManager audio)` with only `return audio.mutatorAccess`.
+It keeps explicit concrete composition without adding a spied instance
+interaction, public/protected API, admission decision, policy write or lookup.
+All capability admission remains before it. Since this ingress is shared by
+bind/token operations, the complete affected consumer selection was rerun on
+revised bytes; none of the earlier 348 passes certifies this candidate.
+The first selector also omitted the existing nested S1 WAV case (358 physical
+IDs versus the 359 forecast). `TestSoundTestWavExport*` selects parent and nested
+cases once and closes that selection gap without editing either test.
+
+The new positive closure guard initially rejected the existing sole production
+public bind call, `AudioMutatorRuntime.bindAudio -> AudioMutatorAccess.bind`.
+Draft guard blob `383c1b378c0bd3bd7a3755e1b4f63f0877656ffd` was corrected only to
+admit that exact existing intake. Prior guards remain byte-exact after removing
+the one additive method. The final guard checks actual compiled construction,
+private/final/plain state shape, per-token thread storage, mutation ownership,
+exact operation callers, unconditional Root delegates, boundary admission and
+ordered reset/submission bodies. No existing allowance, pin, exemption or policy
+was expanded.
+
+**Revised Java freeze for independent r2 review.** Base remains 8922d4d0a.
+Overlay tree `b9c0c43fca934bee36bd183dc3b6ae4ee2349410` has main-Java tree
+`189c651269b4f17b047725ac4a8fb886f793ca9b`; sorted relative Java path, NUL,
+exact bytes, NUL SHA-256 is
+`85e819e65877fcfb13338bdb04ad9825753e6006a04d8a244d045fa17fe52b16`.
+The six changed Java paths, under their existing audio source/test directories,
+are:
+
+| Java file | Git blob | Content SHA-256 |
+| --- | --- | --- |
+| main `AudioManager.java` | `af9b8d1bdfb3667183c6ef29eeb1e78b8b816c13` | `3aeb2d5e6a9f41cbef9c16c86e9c95cd15f5978b860b8612d86cbd4d413bc37a` |
+| main `AudioMutatorAccess.java` | `2fe8124ecd17437be8377a3217b25fa6f7a55027` | `066bd222286113c0366a07d0e9aaf29f052d5e3fc736d609cc0f0a079583d790` |
+| test `AudioManagerTestDiagnostics.java` | `bc969e307f640c07530ac89e3bac8c8d1b0e5c41` | `7dd58f3fad3e46e29e1e7f44ea7e2ff4a025c94f52049c30b4c8e4b6658f12c4` |
+| test `TestAudioPresentationArchitectureGuard.java` | `7cf314203c7fb0842c8bd43a9d1fe9c3a46127ca` | `db9739fc9844fb4a30ea5e06a8bf8dea795284e15a5f3836ec9a0cec18ae2449` |
+| test `TestAudioSourcePublicationContract.java` | `04bd30a3566a6831a471e9527e28f5a09485fa82` | `e684ebd975da699277ccb977b6810d67ccf28315e76b479fe1948d38e2e0a9e7` |
+| test `TestLevelMusicAccessContract.java` | `d5aaa25002dd064f6381177488964576dd443271` | `19571eb67d35a60c333a83648b6b52557c34bf73bd964d714bc591fc14b4e037` |
+
+The test bridge is narrowly typed to the actual concrete owner/current token.
+Only the three known Root-field layout sites changed mechanically. The accepted
+223-case characterization is still byte-exact `46ac1eab79e01a7a7d12c3e2e1b7f39c8fafbe6f`,
+path/NUL/bytes/NUL fingerprint
+`af03da03374ae8035b7434d571f14e2ec5a89dd876a2e4c9875e5db6a7185221`.
+The P2 thread and silent-active-close discriminators remain intact. Root inverse
+normalization reconstructs every other baseline byte, including the seven prior
+owners, source orchestration/rollback and native algorithms. Public header and
+synchronization text, bind's security prefix and Binding.requireOwner body match
+exactly; close retains its exact caller/thread prefix before delegated identity
+release. No world/runtime/provider/caller-helper source changed.
+
+Parent independently mapped all six revised files/tree, the unchanged 223 cases
+and 13 stores before starting complete CodeReview r2
+`arch-broad-native-audio-mutator-binding-owner-code-review-20261025-r2`.
+Java remained frozen while prose and validation continued. Source review reads
+no target/job artifacts and provides no runtime certification; worker execution
+below is separate evidence. Production commit is gated on concrete r2 acceptance
+and completed required checks, not the earlier design qualification.
+
+**Finite candidate validation.** Exact case inventories were prepared before
+submission and reconciled against physical XML. The final disjoint selections
+are 359 consumers, one ownership guard, 24 API/boundary/accounting and 63
+engine-ROM/PCM cases. The consumer group includes all 223 unchanged cases, all
+six bind-containing classes, runtime, the isolated history method and all 12
+rewind-suppression methods. Its class counts are 223/8/28/37/14/13/5/18/1/12 in
+selector order below. The WAV five comprise four parent and one nested case.
+The engine 60 covers both existing classes named TestSonic3kLevelLoading
+(36 game-package cases including 25 zone variants, seven tests-package cases),
+eight AIZ skip cases, six bootstrap cases and three decoding cases. Three exact
+S1/S2/S3K title/gameplay/ring/special-stage final-PCM methods bring that group to
+63. The API group contains all 11 compiled surface tests, two classloader tests,
+one audio boundary, eight engine-context controls and two exact accounting
+methods; it does not select either accounting guard class in full.
+
+All commands ran from the retained task checkout through its current
+`tools/testing/maven_queue.py`, Java 25, `-Dmse=off` and `-B`. The leased version
+probe reported 25.0.5.0.2. DISPLAY, WAYLAND_DISPLAY, XAUTHORITY,
+JAVA_TOOL_OPTIONS, JDK_JAVA_OPTIONS, _JAVA_OPTIONS, MAVEN_OPTS and MAVEN_ARGS were
+unset. Every test invocation supplied the same three strict dotted false freeze
+properties and the four verified absolute ROM properties described above, using
+the existing OPENGGF_ROM_ROOT files without copying/linking/renaming. The engine
+group alone added `-Dopenggf.headless.gl=surfaceless-egl`; audio-only groups had
+no rendering property. Headless rendering guidance was read; supplied engine
+fixtures retain their no-device audio ownership.
+
+Each following selector is one argument to
+`python3 tools/testing/maven_queue.py -Dmse=off <selector> <common-properties> test -B`:
+
+```text
+-Dtest=TestAudioMutatorBindingContract,TestAudioMutatorAccess,TestAudioSourcePublicationContract,TestLevelMusicAccessContract,TestSmpsExplicitConfigAuthorityContract,TestSmpsRestoreOwnerContract,TestSoundTestWavExport*,TestAudioMutatorRuntime,TestAudioMutatorHistory#naturalOneUpBetweenTicksAndAcceptedAudioReplayAcrossKeyframes,TestAudioManagerRewindSuppression
+-Dtest=TestAudioPresentationArchitectureGuard#mutatorAccessOwnsColdManagerLifetimeBindingAndCompleteFeedbackProtocol
+-Dtest=TestModApiSignatureSurface,TestModClassLoaders,TestAudioPresentationBoundary,TestEngineContext,TestSingletonLifecycleGuard#ambientGameplayModeSetupsDoNotGrowWithoutLifecycleTriage,TestArchitecturalReviewGuard#archUnitDocumentedPackagePairPermissionsMatchExecutableAllowances
+-Dtest=com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils,TestSonic1UnifiedAudioPresentationRomIntegration#sonic1TitleGameplayRingAndSpecialStageProduceFinalPcm,TestSonic2UnifiedAudioPresentationRomIntegration#sonic2TitleGameplayRingAndSpecialStageProduceFinalPcm,TestSonic3kUnifiedAudioPresentationRomIntegration#sonic3kTitleGameplayRingAndSpecialStageProduceFinalPcm
+```
+
+Only the ownership guard command added `-Pguards`. Fresh preparation was
+`python3 tools/testing/maven_queue.py -Dmse=off test-compile -B`; later required
+source corrections caused the affected Maven lifecycle compilation checks.
+No raw Maven, broad category/full suite, native emulator, trace or performance
+campaign was used. Queue waiting was not treated as execution or failure, and
+no request was duplicated or restarted for admission delay.
+
+**Completed runs and review gate.** The tested working source was base 8922d4d0a
+plus the stated Java overlays, not an already committed implementation. Parent
+subsequently accepted the complete revised six-file `85e819...` manifest under
+independent CodeReview **r2**, with no P1/P2/P3 findings. That review independently
+inverse-reconstructed both production files, verified complete cold two-slot
+ownership, preservation of prior owners/native algorithms/public headers/security
+checks, and exact accepted characterization/prior guard bytes. Only r2 accepted
+this candidate; r1 was stopped after withdrawal and made no acceptance claim.
+Commit maps the accepted/tested Java bytes without changing them.
+
+| Terminal handle | Input/selection | Cases/F/E/S | Reported admission wait | Maven elapsed | JUnit suite seconds |
+| --- | --- | --- | --- | --- | ---: |
+| 59938 | Initial fresh own main/test compile | no tests | build-only | 1:17 | n/a |
+| 21360 | Draft new guard, omitted existing bind intake | 1/1/0/0 | 0 s | 26.439 s | 3.519 |
+| 72590 | Corrected guard, withdrawn instance-ingress source | 1/0/0/0 | 0 s | 26.602 s | 3.495 |
+| 82778 | Withdrawn instance ingress, first consumer selector | 358/10/0/0 | 0 s | 26.083 s | separate obsolete-input evidence |
+| 64216 | Accepted static ingress, complete consumer selector | 359/0/0/0 | 0 s | 1:27 | 3.277 sum |
+| 70794 | Accepted static ingress, separate new ownership guard | 1/0/0/0 | 0 s | 26.668 s | 3.368 |
+| 75439 | Accepted static ingress, API/boundary/accounting | 24/0/0/0 | 0 s | 29.607 s | 6.417 sum |
+| 56705 | Accepted static ingress, engine-ROM/PCM with EGL | 63/0/0/0 | 0 s | 26.911 s | 3.239 sum |
+
+The accepted input has **447 distinct passing cases** across the four final
+selections, zero failures/errors/skips. Prior failed/obsolete-input counts are
+not added or reused for this candidate. The separate ROM-free characterization
+remains free of ROM/EGL annotations even though the combined consumer command
+supplies paths needed by its maintained neighbors. All expected nested,
+parameterized, history and physical XML class identities matched their prepared
+inventories. Sorted full `classname#name` IDs with LF separators/trailing LF have
+SHA-256:
+
+| Accepted-input selection | ID SHA-256 |
+| --- | --- |
+| 359 consumers | `8372e5f4e7f2c8e5e2048ec051a6a102ecbe6ebcb85889d9f53a016921680665` |
+| 1 ownership guard | `26c7e12adf2191f52c7a49112e7fc007aeda4596284b2e79bedb10911c0dab48` |
+| 24 API/boundary/accounting | `d584dbccbbc4c83611b0bef49304c9e220b39ca71f0749a76ec55569b4fd2ab4` |
+| 63 engine-ROM/PCM | `33e1b64a4aa1b6cd40cb5ac22d5c2b303d248af0cee43d3034ff74d51b831e49` |
+
+The new guard's exact ID is
+`com.openggf.audio.TestAudioPresentationArchitectureGuard#mutatorAccessOwnsColdManagerLifetimeBindingAndCompleteFeedbackProtocol`.
+The predeclared complete class/method selectors and parameter inventories above
+reconcile all IDs; no discovery-only count is reported as executed coverage.
+XML confirmed Java 25.0.5.0.2, all strict flags and absolute ROM arguments, no
+rendering property in audio-only runs, and explicit surfaceless EGL in every
+engine-group report. Root ROM SHA-1 identities were rehashed at completion and
+still matched all four documented identities. No final consumer or engine report
+contained a FileChannel mention. The unrelated S2 null-FileChannel issue remains
+unrepaired; these passing selections make no claim about that separate path.
+Measurement hazards were consulted. JUnit suite sums, Maven elapsed and queue
+wait are different units; unmeasured preparation/reasoning/tool gaps are unknown,
+and none is an isolated performance measurement.
+
+**Accounting after compiled discovery.** All eleven API tests passed against
+compiled candidate classes, including exact canonical snapshot equality and
+annotated-classfile/recursive inventory equality. The unchanged API pin has
+22,541 unique rows and 1,250 TYPE rows, with matching 1,250 annotated type markers.
+Internal terminals and platform pins remain byte-identical, as do release
+descriptor and ModApiVersion. The two exact compiled accounting checks passed:
+ambient setup remains six methods/five files, and executable top-level package
+permissions remain 151 unique pairs. No audio-to-mods edge, new public manager
+accessor, API repin or permission was introduced.
+
+| Preserved authority | Git blob |
+| --- | --- |
+| API 0.7 signatures | `3d04b2c9edd4e54c2625ab4672a52bbac23c798d` |
+| 147 engine internal terminal rows | `fc19b5b767f5e056cc945fccd8338452d3d49230` |
+| 56 platform rows | `95b087c15985ad1ec53bb5c107773fa679f403a6` |
+| Release policy descriptor | `42a251cced64bc9ab15e47dd879f113600702c44` |
+| ModApiVersion | `2f63339d2750d0dbf30dbd0d4c486e77b0f9fda5` |
+
+All thirteen frozen-store files compare byte-for-byte to the base. Their sorted
+`path:SHA256` map (LF-separated, trailing LF) still hashes to
+`292100b7284abcd07373d33efce8194308ca6c0fc999aef71de5c5eadcb7e834`.
+The nonempty store blobs are `stored.rules`
+`2897f3beae1553be21e9f809592e737812192df5`, low-level store
+`40afa018-d450-4b84-8cb9-d539d75d8062`
+`05b1f5b9de735aca0f6d28c2481f95afa9d432b3`,
+`8ad38e23-983b-4e07-aeca-6d2cf8c9f844`
+`2936667f7b504f54e8a7e853120dda18564a48d6` and
+`bbe3ef08-58e6-487c-ad6c-359ab66a9d52`
+`18d07d572a6d816d7a5e89ae1217fc8733fc209f`. The remaining nine rule files retain
+empty blob `e69de29bb2d1d6434b8b29ae775ad8c2e48c5391`. The low-level store retains
+120 raw records (120 literal distinct lines, 116 after normalizing line-number
+locations); none contains an AudioMutator identity. These are preservation
+checks, not claims that frozen debt has been removed.
+
+**Delivery boundary.** Parent's read-only change-based plan against pre-task
+integration SHA 03e20f57 selects **3,784 all-smoke candidates**, because the shared
+AudioManagerTestDiagnostics helper triggers an unclassified/shared-helper
+fallback; ordinary production maps to audio/rewind/tooling. This is not a simple
+1,364-class expansion. No broad category/full-suite run was launched. Parent owns
+the proportionate combined-validation decision after this actual commit and
+worker handback, plus fresh complete global guards and eleven composed
+controllers. The worker's 447 bounded passes do not claim those pending results,
+a full-suite pass or native-emulator parity.
+
+All owned XML/text reports were inspected and consumed: two for each guard
+attempt, twenty for the initial consumer selection, twenty-two for the final
+consumer selection, twelve for API/boundary/accounting, and sixteen for the
+engine group. Own diagnostics, trace reports and invocation output are empty.
+There is no category acknowledgment, raw archive, validation receipt or pass
+cache. All eight listed command handles are terminal. No further Maven is needed
+or launched after the required checks. Source acceptance is mapped to the exact
+final Java freeze before the local direct-child commit. The same clean separate
+checkout/branch is retained; target/job ownership returns explicitly to the
+parent after final commit/source/report checks. No fetch/rebase, main write,
+integration, push, worktree/branch cleanup, subdelegation or new candidate work
+occurs in this worker delivery.

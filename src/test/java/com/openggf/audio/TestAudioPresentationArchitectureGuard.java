@@ -156,6 +156,141 @@ class TestAudioPresentationArchitectureGuard {
             "AL_PITCH");
 
     @Test
+    void mutatorAccessOwnsColdManagerLifetimeBindingAndCompleteFeedbackProtocol() throws Exception {
+        int privateFinal = java.lang.reflect.Modifier.PRIVATE | java.lang.reflect.Modifier.FINAL;
+        var installation = AudioManager.class.getDeclaredField("mutatorAccess");
+        assertEquals(privateFinal, installation.getModifiers());
+        assertEquals(AudioMutatorAccess.class, installation.getType());
+        assertEquals(1, Arrays.stream(AudioManager.class.getDeclaredFields())
+                .filter(field -> field.getType() == AudioMutatorAccess.class).count());
+        var ingress = AudioManager.class.getDeclaredMethod("mutatorAccess", AudioManager.class);
+        assertEquals(java.lang.reflect.Modifier.STATIC | java.lang.reflect.Modifier.FINAL, ingress.getModifiers());
+        assertEquals(AudioMutatorAccess.class, ingress.getReturnType());
+        Map<String, Class<?>> state = Map.of("currentBinding", AudioMutatorAccess.Binding.class,
+                "submissionDepth", int.class);
+        assertEquals(state, Arrays.stream(AudioMutatorAccess.class.getDeclaredFields())
+                .filter(field -> !field.isSynthetic()).collect(java.util.stream.Collectors.toMap(
+                        java.lang.reflect.Field::getName, java.lang.reflect.Field::getType)));
+        for (String name : state.keySet()) {
+            assertEquals(java.lang.reflect.Modifier.PRIVATE,
+                    AudioMutatorAccess.class.getDeclaredField(name).getModifiers());
+        }
+        assertThrows(NoSuchFieldException.class, () -> AudioManager.class.getDeclaredField("mutatorBinding"));
+        assertThrows(NoSuchFieldException.class, () -> AudioManager.class.getDeclaredField("mutatorSubmissionDepth"));
+        assertEquals(Map.of("audio", AudioManager.class, "listener", AudioMutatorAccess.Listener.class,
+                        "owner", Thread.class),
+                Arrays.stream(AudioMutatorAccess.Binding.class.getDeclaredFields()).filter(field -> !field.isSynthetic())
+                        .peek(field -> assertEquals(privateFinal, field.getModifiers()))
+                        .collect(java.util.stream.Collectors.toMap(java.lang.reflect.Field::getName, java.lang.reflect.Field::getType)),
+                "manager/listener/thread remain strong per-token references");
+        assertEquals(0, AudioMutatorAccess.class.getInterfaces().length);
+        assertEquals(1, AudioMutatorAccess.class.getDeclaredConstructors().length);
+        assertEquals(0, AudioMutatorAccess.class.getDeclaredConstructors()[0].getModifiers());
+        var compiled = productionClasses().get(AudioMutatorAccess.class);
+        assertEquals(Set.of("bind", "install", "isCurrent", "release", "reset", "musicIntent", "sfxIntent", "submit"),
+                Arrays.stream(AudioMutatorAccess.class.getDeclaredMethods()).filter(method -> !method.isSynthetic())
+                        .peek(method -> assertEquals(method.getName().equals("bind")
+                                        ? java.lang.reflect.Modifier.PUBLIC | java.lang.reflect.Modifier.STATIC
+                                        : Set.of("reset", "musicIntent", "sfxIntent").contains(method.getName())
+                                        ? 0 : java.lang.reflect.Modifier.PRIVATE, method.getModifiers()))
+                        .map(java.lang.reflect.Method::getName).collect(java.util.stream.Collectors.toSet()));
+        assertEquals(Set.of(Object.class.getName()), compiled.getConstructors().stream()
+                .flatMap(ctor -> ctor.getConstructorCallsFromSelf().stream())
+                .map(call -> call.getTargetOwner().getName()).collect(java.util.stream.Collectors.toSet()));
+        assertEquals(List.of(), compiled.getConstructors().stream()
+                .flatMap(ctor -> ctor.getMethodCallsFromSelf().stream()).toList(), "cold construction calls no collaborator");
+        assertEquals(List.of(), compiled.getFieldAccessesFromSelf().stream()
+                .filter(access -> access.getOrigin().getName().equals("<init>")).toList(),
+                "both plain slots begin at JVM defaults, without presentation realization");
+        var constructions = productionClasses().stream().flatMap(caller -> caller.getConstructorCallsFromSelf().stream())
+                .filter(call -> call.getTargetOwner().isEquivalentTo(AudioMutatorAccess.class)).toList();
+        assertEquals(1, constructions.size());
+        assertEquals(AudioManager.class.getName(), constructions.getFirst().getOriginOwner().getName());
+        assertEquals("<init>", constructions.getFirst().getOrigin().getName());
+        var tokens = productionClasses().stream().flatMap(caller -> caller.getConstructorCallsFromSelf().stream())
+                .filter(call -> call.getTargetOwner().isEquivalentTo(AudioMutatorAccess.Binding.class)).toList();
+        assertEquals(1, tokens.size());
+        assertEquals(AudioMutatorAccess.class.getName(), tokens.getFirst().getOriginOwner().getName());
+        assertEquals("bind", tokens.getFirst().getOrigin().getName());
+        List<String> escaped = new ArrayList<>();
+        Set<String> submissions = Set.of("playTemporaryMusic", "resumeNativeMusic", "playLandingCue");
+        for (JavaClass caller : productionClasses()) {
+            for (var access : caller.getFieldAccessesFromSelf()) {
+                if (access.getTargetOwner().isEquivalentTo(AudioMutatorAccess.class) && state.containsKey(access.getName())) {
+                    if (!caller.isEquivalentTo(AudioMutatorAccess.class)) escaped.add(access.toString());
+                    if (access.getAccessType() == com.tngtech.archunit.core.domain.JavaFieldAccess.AccessType.SET
+                            && !(access.getName().equals("currentBinding")
+                            ? Set.of("install", "release", "reset") : Set.of("submit")).contains(access.getOrigin().getName()))
+                        escaped.add(access.toString());
+                }
+                if (access.getTargetOwner().isEquivalentTo(AudioManager.class) && access.getName().equals("mutatorAccess")
+                        && !(caller.isEquivalentTo(AudioManager.class)
+                        && Set.of("<init>", "mutatorAccess", "mutatorMusicIntent", "mutatorSfxIntent", "resetState")
+                        .contains(access.getOrigin().getName())
+                        && (access.getAccessType() == com.tngtech.archunit.core.domain.JavaFieldAccess.AccessType.GET
+                        || access.getOrigin().getName().equals("<init>")))) escaped.add(access.toString());
+            }
+            for (var call : caller.getMethodCallsFromSelf()) {
+                String name = call.getName(), origin = call.getOrigin().getName();
+                if (call.getTargetOwner().isEquivalentTo(AudioMutatorAccess.class)
+                        && !caller.isEquivalentTo(AudioMutatorAccess.class)) {
+                    boolean allowed = caller.getName().equals("com.openggf.game.mutators.AudioMutatorRuntime")
+                            && name.equals("bind") && origin.equals("bindAudio")
+                            || caller.isEquivalentTo(AudioManager.class) && (
+                            name.equals("musicIntent") && origin.equals("mutatorMusicIntent")
+                            || name.equals("sfxIntent") && origin.equals("mutatorSfxIntent")
+                            || name.equals("reset") && origin.equals("resetState"))
+                            || caller.isEquivalentTo(AudioMutatorAccess.Binding.class) && (
+                            name.equals("isCurrent") && origin.equals("active")
+                            || name.equals("release") && origin.equals("close")
+                            || name.equals("submit") && submissions.contains(origin));
+                    if (!allowed) escaped.add(call.toString());
+                }
+                if (call.getTargetOwner().isEquivalentTo(AudioManager.class) && name.equals("mutatorAccess")
+                        && !(caller.isEquivalentTo(AudioMutatorAccess.class) && origin.equals("bind")
+                        || caller.isEquivalentTo(AudioMutatorAccess.Binding.class)
+                        && (Set.of("active", "close").contains(origin) || submissions.contains(origin)))) escaped.add(call.toString());
+            }
+        }
+        assertEquals(List.of(), escaped, "owner alone mutates policy; Root and subordinate capabilities use exact operation boundaries");
+        String manager = Files.readString(AUDIO_ROOT.resolve("AudioManager.java"));
+        String owner = Files.readString(AUDIO_ROOT.resolve("AudioMutatorAccess.java"));
+        java.util.function.UnaryOperator<String> compact = text -> text.replaceAll("\\s+", "");
+        assertTrue(manager.contains("private final AudioMutatorAccess mutatorAccess = new AudioMutatorAccess();"));
+        assertEquals("returnaudio.mutatorAccess;", compact.apply(methodBody(manager, "static final AudioMutatorAccess mutatorAccess(AudioManager audio)")));
+        assertEquals("mutatorAccess.musicIntent(kind,value);", compact.apply(methodBody(manager, "private void mutatorMusicIntent")));
+        assertEquals("mutatorAccess.sfxIntent(id);", compact.apply(methodBody(manager, "private void mutatorSfxIntent")));
+        assertEquals("mutatorAccess.reset();invalidateAndReleaseStreamedMusicSession();sourcePublication.reset();",
+                compact.apply(methodBody(manager, "public synchronized void resetState()")));
+        assertEquals("varprevious=currentBinding;currentBinding=binding;if(previous!=null)previous.listener.onDisplaced();returnbinding;",
+                compact.apply(methodBody(owner, "private Binding install")));
+        assertEquals("returncurrentBinding==binding;", compact.apply(methodBody(owner, "private boolean isCurrent")));
+        assertEquals("if(isCurrent(binding))currentBinding=null;", compact.apply(methodBody(owner, "private void release")));
+        assertEquals("if(currentBinding!=null){varprevious=currentBinding;currentBinding=null;previous.musicIntent(Kind.STOP,0);}",
+                compact.apply(methodBody(owner, "void reset()")));
+        assertEquals("if(currentBinding!=null&&submissionDepth==0)currentBinding.musicIntent(kind,value);",
+                compact.apply(methodBody(owner, "void musicIntent(Kind kind, int value)")));
+        assertEquals("if(currentBinding==null||submissionDepth!=0)return;if(id>=0xE0)currentBinding.musicIntent(Kind.COMMAND,id);elsecurrentBinding.sfxIntent(id);",
+                compact.apply(methodBody(owner, "void sfxIntent(int id)")));
+        assertEquals("submissionDepth++;try{action.run();}finally{submissionDepth--;}",
+                compact.apply(methodBody(owner, "private void submit(Runnable action)")));
+        assertEquals("if(EngineCallerAccess.callerOutside(AudioMutatorAccess.class).getClassLoader()!=AudioMutatorAccess.class.getClassLoader()"
+                        + "||listener.getClass().getClassLoader()!=AudioMutatorAccess.class.getClassLoader())"
+                        + "thrownewSecurityException(\"Nativeaudiobindingsbelongtotheengine\");"
+                        + "varbinding=newBinding(Objects.requireNonNull(audio),Objects.requireNonNull(listener));returnAudioManager.mutatorAccess(audio).install(binding);",
+                compact.apply(methodBody(owner, "public static Binding bind")));
+        assertEquals("returnAudioManager.mutatorAccess(audio).isCurrent(this);", compact.apply(methodBody(owner, "public boolean active()")));
+        assertEquals("if(EngineCallerAccess.callerOutside(Binding.class).getClassLoader()!=Binding.class.getClassLoader())"
+                        + "thrownewSecurityException(\"Nativeaudiobindingsbelongtotheengine\");"
+                        + "if(Thread.currentThread()!=owner||!active())thrownewIllegalStateException(\"Nativeaudiobindingisnolongerownedbythisworld/thread\");",
+                compact.apply(methodBody(owner, "private void requireOwner()")));
+        assertEquals("if(EngineCallerAccess.callerOutside(Binding.class).getClassLoader()!=Binding.class.getClassLoader())"
+                        + "thrownewSecurityException(\"Nativeaudiobindingsbelongtotheengine\");"
+                        + "if(Thread.currentThread()!=owner)thrownewIllegalStateException(\"Nativeaudiobindingbelongstoanotherthread\");"
+                        + "AudioManager.mutatorAccess(audio).release(this);", compact.apply(methodBody(owner, "public void close()")));
+    }
+
+    @Test
     void diagnosticInstallationOwnsColdManagerLifetimeStateAndTheCompleteLeaseProtocol() throws Exception {
         var installation = AudioManager.class.getDeclaredField("diagnosticInstallation");
         int privateFinal = java.lang.reflect.Modifier.PRIVATE | java.lang.reflect.Modifier.FINAL;
