@@ -151,6 +151,12 @@ public final class ConfigCatalog {
         put(FM6_DAC_OFF, of("audio", "fm6DacOff", BOOL,
                 "Mute FM6 when a note plays on it while DAC is enabled (SMPSPlay parity hack)"));
 
+        // multiplayer (personal preferences, shared by every multiplayer scene)
+        put(MULTIPLAYER_CENSOR_PROFANITY, of("multiplayer", "censorProfanity", BOOL,
+                "Mask exact words from a small multilingual profanity dictionary in player chat and sender names"));
+        put(MULTIPLAYER_CHAT_DISABLED, of("multiplayer", "disableChat", BOOL,
+                "Hide typed and quick player chat and discard incoming chat; connection and race notices remain visible"));
+
         // hub history (owned by the hub, hidden from Settings)
         put(HUB_LAST_GAME, of("hub", "lastGame", STRING, "Last selected game or standalone content ID"));
         put(HUB_CONTINUE_S1_CHARACTER, of("hub", "continueS1Character", STRING, "Legacy hub progress (ignored)"));
@@ -468,6 +474,7 @@ public final class ConfigCatalog {
         SECTION_TITLES.put("config", "Configuration");
         SECTION_TITLES.put("input", "Input");
         SECTION_TITLES.put("audio", "Audio");
+        SECTION_TITLES.put("multiplayer", "Multiplayer Chat");
         SECTION_TITLES.put("hub", "Hub Navigation History");
         SECTION_TITLES.put("characters", "Characters");
         SECTION_TITLES.put("roms", "ROMs");

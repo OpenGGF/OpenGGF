@@ -176,6 +176,10 @@ public enum SonicConfiguration {
 	AUDIO_ENABLED,
     AUDIO_HUB_MUSIC_ENABLED,
     AUDIO_HUB_MUSIC_VOLUME,
+    /** Personal display filter for multiplayer player names and chat messages. */
+    MULTIPLAYER_CENSOR_PROFANITY,
+    /** Personal receive/display opt-out for typed and quick multiplayer chat. */
+    MULTIPLAYER_CHAT_DISABLED,
     HUB_LAST_GAME,
     // Legacy hub progress keys retained for configuration/API compatibility; ignored.
     HUB_CONTINUE_S1_CHARACTER,

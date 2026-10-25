@@ -3,6 +3,9 @@ port: 27900
 tlsCertPath: /config/fullchain.pem
 tlsKeyPath: /run/secrets/tls_key
 plaintextForTest: false
+# Maximum player communication in master-hosted relay rooms; owners may restrict further.
+# FULL_CHAT permits typed and quick messages; QUICK_CHAT permits quick messages only.
+chatModeLimit: QUICK_CHAT
 dbPath: master-identities.db
 adminPort: 27901
 adminTokenFile: /run/secrets/admin_token

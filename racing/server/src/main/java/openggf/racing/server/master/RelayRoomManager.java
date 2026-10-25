@@ -37,6 +37,11 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory {
         void accept(String roomId, String ownerFingerprint, int zone, int act);
     }
 
+    @FunctionalInterface
+    public interface ChatModeUpdateSink {
+        void accept(String roomId, String ownerFingerprint, String mode);
+    }
+
     public static final int PLAYER_COUNT_INTERVAL_TICKS = 20;
     public static final long MAX_STALLED_JOB_MILLIS = 3_600_000L;
     private static final long TIER_HINT_MILLIS = 24L * 3_600_000L;
@@ -50,6 +55,7 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory {
     private final LongSupplier clock;
     private final PlayerCountSink playerCounts;
     private final TrackUpdateSink trackUpdates;
+    private final ChatModeUpdateSink chatModeUpdates;
     private final MasterConfig verificationConfig;
     private final VerificationJobQueue verificationJobs;
     private final VerdictConsequences verdictConsequences;
@@ -58,6 +64,7 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory {
     private final Map<String, TierHint> newTierByFingerprint = new ConcurrentHashMap<>();
     private final Map<String, String> roomOwners = new ConcurrentHashMap<>();
     private final Map<String, String> lastTrackKeys = new ConcurrentHashMap<>();
+    private final Map<String, String> lastChatModes = new ConcurrentHashMap<>();
     private final Map<String, RoomRef> verificationRoutes = new ConcurrentHashMap<>();
     private final Map<String, Long> lastSpotCheckByFingerprint = new ConcurrentHashMap<>();
     private final AtomicInteger nextLoop = new AtomicInteger();
@@ -99,6 +106,19 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory {
                             VerificationJobQueue verificationJobs,
                             VerdictConsequences verdictConsequences,
                             VerifierRegistry verifiers) {
+        this(masterIdentity, ladder, profiles, roomLoops, brokerLoop, clock, playerCounts,
+                trackUpdates, verificationConfig, verificationJobs, verdictConsequences,
+                verifiers, (roomId, owner, mode) -> { });
+    }
+
+    public RelayRoomManager(PlayerIdentity masterIdentity, TrustLadder ladder,
+                            TrackValidationProfileSource profiles, List<Executor> roomLoops,
+                            Executor brokerLoop, LongSupplier clock,
+                            PlayerCountSink playerCounts, TrackUpdateSink trackUpdates,
+                            MasterConfig verificationConfig,
+                            VerificationJobQueue verificationJobs,
+                            VerdictConsequences verdictConsequences,
+                            VerifierRegistry verifiers, ChatModeUpdateSink chatModeUpdates) {
         if (roomLoops == null || roomLoops.isEmpty()) {
             throw new IllegalArgumentException("at least one relay room loop is required");
         }
@@ -110,6 +130,7 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory {
         this.clock = clock;
         this.playerCounts = playerCounts;
         this.trackUpdates = trackUpdates;
+        this.chatModeUpdates = Objects.requireNonNull(chatModeUpdates, "chatModeUpdates");
         this.verificationConfig = verificationConfig;
         this.verificationJobs = verificationJobs;
         this.verdictConsequences = verdictConsequences;
@@ -140,11 +161,12 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory {
     @Override
     public String createRelayRoom(SessionRegistry.RoomEntry entry) {
         ControlMessage.RoomDescriptor descriptor = entry.descriptor();
+        MasterConfig policy = verificationConfig == null ? MasterConfig.defaults() : verificationConfig;
         RoomHostConfig config = new RoomHostConfig(descriptor.name(), descriptor.gameId(),
                 descriptor.zone(), descriptor.act(), descriptor.characterPolicy(),
                 descriptor.lockedCharacter(), descriptor.maxPlayers(),
                 entry.determinismFingerprint(), entry.voteTrackKeys(),
-                descriptor.verified());
+                descriptor.verified(), policy.relayChatMode(descriptor.chatMode()));
         RoomHostHooks hooks = new RoomHostHooks(descriptor.maxPlayers() > 8,
                 (fingerprint, memberSince) ->
                         !isNewPlayer(fingerprint)
@@ -167,7 +189,8 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory {
                     }
 
                 }, (fingerprint, displayName) -> brokerLoop.execute(() ->
-                        ladder.onDisplayNameClaim(fingerprint, displayName)));
+                        ladder.onDisplayNameClaim(fingerprint, displayName)),
+                com.openggf.net.protocol.ChatMode.parse(policy.chatModeLimit()));
         RoomHost room = new RoomHost(config, masterIdentity, clock, profiles, hooks);
         RoomRoundAccess.onPendingResultExpiry(room, result -> brokerLoop.execute(() ->
                 voidPendingRoute(entry.roomId(), result.participantId(),
@@ -186,6 +209,7 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory {
         }
         roomOwners.put(entry.roomId(), entry.hostFingerprint());
         lastTrackKeys.put(entry.roomId(), trackKey(descriptor));
+        lastChatModes.put(entry.roomId(), room.descriptor().chatMode());
         return entry.roomId();
     }
 
@@ -208,6 +232,7 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory {
         RoomAccess access = rooms.remove(roomId);
         roomOwners.remove(roomId);
         lastTrackKeys.remove(roomId);
+        lastChatModes.remove(roomId);
         if (access != null) {
             access.loop().execute(() -> access.room().close("relay host left"));
         }
@@ -241,6 +266,13 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory {
                     selectSpotChecks(roomId, access.room());
                 }
                 ControlMessage.RoomDescriptor descriptor = access.room().descriptor();
+                String previousMode = lastChatModes.put(roomId, descriptor.chatMode());
+                if (!descriptor.chatMode().equals(previousMode)) {
+                    String owner = roomOwners.get(roomId);
+                    if (owner != null) {
+                        brokerLoop.execute(() -> chatModeUpdates.accept(roomId, owner, descriptor.chatMode()));
+                    }
+                }
                 String currentTrack = trackKey(descriptor);
                 String previousTrack = lastTrackKeys.put(roomId, currentTrack);
                 if (previousTrack != null && !previousTrack.equals(currentTrack)) {

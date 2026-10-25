@@ -36,6 +36,8 @@ public final class MultiplayerHudRenderer {
                               int levelWidth, int localCentreX, boolean showMinimap, boolean localFinished) {
         HudTextLayout.Panel panel = layout(canvas.width(), canvas.height(), state, localCentreX, localFinished);
         if (panel == null) return;
+        HudTextLayout.Panel chat = chatLayout(canvas.width(), canvas.height(), state, panel);
+        if (chat != null) HudTextLayout.drawPanel(canvas, chat);
         HudTextLayout.drawPanel(canvas, panel);
         if (state.remainingCountdownMillis() > 0) {
             drawCountdown(canvas, Math.max(1, (state.remainingCountdownMillis() + 999) / 1000));
@@ -43,6 +45,33 @@ public final class MultiplayerHudRenderer {
         if (showMinimap && !localFinished && "RUNNING".equals(state.phase()) && levelWidth > 0) {
             drawProgress(canvas, state, levelWidth, localCentreX);
         }
+    }
+
+    /** Latest player messages, already rendered/filtered by the session, above the progress strip. */
+    public static HudTextLayout.Panel chatLayout(int width, int height, MultiplayerHudState state) {
+        return chatLayout(width, height, state, layout(width, height, state, -1, false));
+    }
+
+    private static HudTextLayout.Panel chatLayout(int width, int height, MultiplayerHudState state,
+                                                  HudTextLayout.Panel room) {
+        if (state == null || !state.active() || state.chatLines().isEmpty()) return null;
+        List<String> history = state.chatLines();
+        List<HudTextLayout.Line> lines = new ArrayList<>();
+        for (String text : history.subList(Math.max(0, history.size() - 2), history.size())) {
+            // The name font supports Unicode player labels and message bodies alike.
+            lines.add(HudTextLayout.Line.named("", text, HudTextLayout.WHITE, "", HudTextLayout.WHITE));
+        }
+        int top = Math.max(4, height - 62 - lines.stream().mapToInt(HudTextLayout.Line::height).sum());
+        HudTextLayout.Panel chat = HudTextLayout.panelAt(4, top, Math.min(260, width - 8),
+                lines, HudTextLayout.ACCENT);
+        if (room != null && chat.x() < room.x() + room.width() && room.x() < chat.x() + chat.width()
+                && chat.y() < room.y() + room.height() && room.y() < chat.y() + chat.height()) {
+            // Result/vote notices take precedence; move chat above them rather than cover a podium.
+            top = room.y() - chat.height() - 4;
+            if (top < 4) return null;
+            chat = new HudTextLayout.Panel(chat.x(), top, chat.width(), chat.height(), chat.lines(), chat.accent());
+        }
+        return chat;
     }
 
     /** The room's countdown digit, centred above the action; also drawn after a fast restart. */

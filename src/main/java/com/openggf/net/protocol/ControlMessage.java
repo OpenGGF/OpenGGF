@@ -7,7 +7,16 @@ import java.util.List;
 public sealed interface ControlMessage {
     @com.openggf.game.ModApi
     record RoomDescriptor(String name, String gameId, int zone, int act, String characterPolicy,
-                          String lockedCharacter, int maxPlayers, boolean verified) {
+                          String lockedCharacter, int maxPlayers, boolean verified, String chatMode) {
+        public RoomDescriptor {
+            validatedChatMode(chatMode);
+        }
+
+        public RoomDescriptor(String name, String gameId, int zone, int act, String characterPolicy,
+                              String lockedCharacter, int maxPlayers, boolean verified) {
+            this(name, gameId, zone, act, characterPolicy, lockedCharacter, maxPlayers, verified,
+                    ChatMode.FULL_CHAT.name());
+        }
     }
 
     @com.openggf.game.ModApi
@@ -36,7 +45,17 @@ public sealed interface ControlMessage {
     @com.openggf.game.ModApi
     record RoomSummary(String roomId, String name, String gameId, int zone, int act,
                        String characterPolicy, int playerCount, int maxPlayers,
-                       String routing, boolean verified) {
+                       String routing, boolean verified, String chatMode) {
+        public RoomSummary {
+            validatedChatMode(chatMode);
+        }
+
+        public RoomSummary(String roomId, String name, String gameId, int zone, int act,
+                           String characterPolicy, int playerCount, int maxPlayers,
+                           String routing, boolean verified) {
+            this(roomId, name, gameId, zone, act, characterPolicy, playerCount, maxPlayers,
+                    routing, verified, ChatMode.FULL_CHAT.name());
+        }
     }
 
     /**
@@ -140,6 +159,30 @@ public sealed interface ControlMessage {
      */
     @com.openggf.game.ModApi
     record ReadyRule(String rule, boolean required) implements ControlMessage {
+    }
+
+    /** Owner to host between rounds: requested capabilities, subject to the host's ceiling. */
+    @com.openggf.game.ModApi
+    record SetChatMode(String mode) implements ControlMessage {
+    }
+
+    /** Host to clients on admission and whenever the effective room mode changes. */
+    @com.openggf.game.ModApi
+    record ChatModeState(String mode) implements ControlMessage {
+        public ChatModeState {
+            validatedChatMode(mode);
+        }
+    }
+
+    /** Client to host: a catalogue ID without sender or template context. */
+    @com.openggf.game.ModApi
+    record QuickChat(String phraseId) implements ControlMessage {
+    }
+
+    /** Host to clients: authoritative sender identity and current track context. */
+    @com.openggf.game.ModApi
+    record QuickChatBroadcast(int slot, String displayName, String phraseId,
+                              String gameId, int zone, int act) implements ControlMessage {
     }
 
     @com.openggf.game.ModApi
@@ -350,6 +393,23 @@ public sealed interface ControlMessage {
                     || act < 0 || act > 999) {
                 throw new IllegalArgumentException("invalid room track update");
             }
+        }
+    }
+
+    /** Direct host to master: the room's current effective communication capabilities. */
+    @com.openggf.game.ModApi
+    record RoomChatModeUpdate(String roomId, String mode) implements ControlMessage {
+        public RoomChatModeUpdate {
+            if (roomId == null || roomId.isBlank()) {
+                throw new IllegalArgumentException("invalid room ID");
+            }
+            validatedChatMode(mode);
+        }
+    }
+
+    private static void validatedChatMode(String mode) {
+        if (ChatMode.parse(mode) == null) {
+            throw new IllegalArgumentException("invalid chat mode");
         }
     }
 

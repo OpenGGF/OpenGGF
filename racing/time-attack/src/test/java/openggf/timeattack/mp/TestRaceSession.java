@@ -245,6 +245,7 @@ class TestRaceSession {
         assertEquals(RaceSession.State.CONNECTING, host.state());
         pollUntil("the host lobby", () -> host.state() == RaceSession.State.LOBBY, host);
         assertTrue(host.isHosting());
+        assertEquals(com.openggf.net.protocol.ChatMode.FULL_CHAT, host.coordinator().session().chatMode());
         String invite = host.lanInvite();
         assertTrue(invite.startsWith("HOST_IP:" + port + "#"), invite);
         assertEquals(invite + "\n", hostStorage.read(RaceSession.INVITE_FILE).orElseThrow());
@@ -434,6 +435,7 @@ class TestRaceSession {
 
         TimeAttackSettings hostSettings = settings(freePort());
         hostSettings.setMasterUrl(url);
+        hostSettings.setChatMode(com.openggf.net.protocol.ChatMode.QUICK_CHAT);
         RaceSession host = session("host", hostSettings, new MemoryModStorage(), new Launches());
         host.browse(SETUP, FP);
         pollUntil("the host browser", () -> host.state() == RaceSession.State.BROWSING, host);
@@ -455,9 +457,32 @@ class TestRaceSession {
                 .get(10, TimeUnit.SECONDS).rooms();
         assertEquals(1, rooms.size());
         assertEquals(routing, rooms.get(0).routing());
+        assertEquals("QUICK_CHAT", rooms.get(0).chatMode());
+        assertEquals(com.openggf.net.protocol.ChatMode.QUICK_CHAT, host.coordinator().session().chatMode());
+        if ("DIRECT".equals(routing)) {
+            host.coordinator().setChatMode(com.openggf.net.protocol.ChatMode.OFF);
+            pollUntil("the owner's mode update", () -> host.coordinator().session().chatMode()
+                    == com.openggf.net.protocol.ChatMode.OFF, host);
+            long modeDeadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(20);
+            while (true) {
+                // Browser enumeration is limited to one request every two seconds.
+                Thread.sleep(2100);
+                ControlMessage.RoomSummary current = guest.roomDirectory().listRooms("s2", 0)
+                        .get(10, TimeUnit.SECONDS).rooms().getFirst();
+                if ("OFF".equals(current.chatMode())) {
+                    assertEquals(SETUP.zone(), current.zone(), "mode publication does not require a track change");
+                    assertEquals(SETUP.act(), current.act());
+                    break;
+                }
+                assertTrue(System.nanoTime() < modeDeadline, "the master still lists the previous direct-room mode");
+            }
+        }
         guest.joinMasterRoom(rooms.get(0));
         pollUntil("both players in the lobby", () -> guest.state() == RaceSession.State.LOBBY
                 && host.coordinator().session().players().size() == 2, host, guest);
+        assertEquals("DIRECT".equals(routing) ? com.openggf.net.protocol.ChatMode.OFF
+                : com.openggf.net.protocol.ChatMode.QUICK_CHAT, guest.coordinator().session().chatMode(),
+                "join uses the live host mode, even when the selected browser row was older");
         assertTrue(guest.masterLinkRunning());
 
         guest.leave();
@@ -682,4 +707,32 @@ class TestRaceSession {
                 room.getBytes(java.nio.charset.StandardCharsets.UTF_8), java.nio.charset.StandardCharsets.UTF_8));
         org.junit.jupiter.api.Assertions.assertEquals("Ana's room", RaceSession.roomName("Ana"));
     }
+    @Test
+    void engineChatPreferencesApplyOnJoinLiveAndAfterRoundResume() {
+        AtomicBoolean disabled = new AtomicBoolean(true);
+        RaceSession session = session("preferences", settings(27888), new MemoryModStorage(), new Launches(), () -> 0);
+        session.setChatPreferenceSource(() -> false, disabled::get);
+        FakeConnection connection = new FakeConnection();
+        session.enterLobbyForTest(connection, false, ROUND, "tails");
+        assertTrue(session.coordinator().session().chatDisabled());
+        connection.control(new ControlMessage.ChatBroadcast(0, "Player", "hidden"));
+        session.poll();
+        assertTrue(session.coordinator().session().chatLines().isEmpty());
+        disabled.set(false);
+        connection.control(new ControlMessage.QuickChatBroadcast(0, "Player", "THIS_IS_ZONE", "s2", 0, 0));
+        session.poll();
+        assertTrue(session.coordinator().session().chatLines().getFirst().contains("Emerald Hill"));
+        connection.control(new ControlMessage.RoundStart(ROUND, 1000, 100_000));
+        session.poll();
+        assertEquals(RaceSession.State.RACING, session.state());
+        disabled.set(true);
+        session.coordinator().pump(); // the race owns this pump while the scene is suspended
+        assertTrue(session.coordinator().session().chatDisabled());
+        assertTrue(session.coordinator().hudState().chatLines().isEmpty());
+        session.runEnded();
+        session.poll();
+        assertTrue(session.coordinator().session().chatDisabled());
+        assertTrue(session.coordinator().session().chatLines().isEmpty());
+    }
+
 }

@@ -68,6 +68,11 @@ audio:
   internalRateOutput: false   # Output audio at the internal YM2612 rate (~53kHz)
   fm6DacOff: true   # Mute FM6 when a note plays on it while DAC is enabled (SMPSPlay parity hack)
 
+# ── Multiplayer Chat ──
+multiplayer:
+  censorProfanity: true   # Personal exact-word filter for player chat and sender names
+  disableChat: false   # Hide typed and quick player chat; connection and race notices remain visible
+
 # Hub navigation history (managed by OpenGGF)
 hub:
   lastGame: "s2"

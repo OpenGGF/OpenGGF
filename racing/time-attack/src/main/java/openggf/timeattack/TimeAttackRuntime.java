@@ -68,6 +68,9 @@ public final class TimeAttackRuntime implements RunHost {
             return true;
         }
 
+        /** A chat shortcut handled this tick; the same edge must not restart the act. */
+        default boolean consumesRetryKey() { return false; }
+
         /** The companion's own countdown digit now on screen (a round's start), or 0 for none. */
         default int countdownDigit() {
             return 0;
@@ -535,6 +538,9 @@ public final class TimeAttackRuntime implements RunHost {
         countdownCues.setPlayer(player);
     }
 
+    /** Current binding, so race communication shortcuts can avoid it. */
+    public int retryKeyCode() { return retryKey == null ? com.openggf.mods.scene.SceneKeys.R : retryKey.getAsInt(); }
+
     @Override
     public boolean admitStep(RunInput input) {
         boolean admitted = admitStepHeld(input);
@@ -555,7 +561,8 @@ public final class TimeAttackRuntime implements RunHost {
         // the retry key.
         FrameCompanion partner = companion;
         boolean admitted = partner == null || partner.admit(input);
-        if (retryKey != null && input.keyPressed(retryKey.getAsInt())
+        if (retryKey != null && (partner == null || !partner.consumesRetryKey())
+                && input.keyPressed(retryKey.getAsInt())
                 && (partner == null || partner.mayRetry())) {
             requestRetry();
         }

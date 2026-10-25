@@ -24,6 +24,43 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestRelayRoomManager {
+    @Test
+    void publicRelayCapsOwnerChangesAndPublishesAuthoritativeMode(@TempDir Path dir)
+            throws Exception {
+        long[] now = {1_000_000};
+        MasterConfig config = MasterConfig.defaults();
+        SessionRegistry registry = new SessionRegistry(() -> now[0], config);
+        try (var store = new SqliteIdentityStore(dir.resolve("chat-ids.db"))) {
+            var ladder = new TrustLadder(store, new NewIdentityCache(100, 3_600_000, () -> now[0]),
+                    config.thresholds(), () -> now[0]);
+            var manager = new RelayRoomManager(PlayerIdentity.loadOrCreate(dir.resolve("master")),
+                    ladder, TrackValidationProfileSource.none(), List.of(Runnable::run), Runnable::run,
+                    () -> now[0], registry::heartbeat,
+                    (roomId, owner, zone, act) -> registry.updateTrack(roomId, owner, zone, act),
+                    config, null, null, null, registry::updateChatMode);
+            PlayerIdentity owner = PlayerIdentity.loadOrCreate(dir.resolve("chat-owner"));
+            var entry = registry.create(new ControlMessage.RoomDescriptor("Chat", "s3k", 0, 0,
+                    "OPEN", null, 8, false, "FULL_CHAT"), "RELAY", owner.fingerprint(), "local", 0,
+                    "0.6:cafe");
+            manager.createRelayRoom(entry);
+            var access = manager.find(entry.roomId()).orElseThrow();
+            FakeConnection connection = new FakeConnection();
+            String token = admit(manager, access, entry.roomId(), connection, owner, "OWNER");
+            assertEquals("QUICK_CHAT", lastOfType(connection, ControlMessage.JoinAccepted.class)
+                    .room().chatMode());
+            access.room().onText(connection, ControlCodec.encode(token,
+                    new ControlMessage.SetChatMode("OFF")));
+            manager.tickAll();
+            assertEquals("OFF", registry.find(entry.roomId()).orElseThrow().descriptor().chatMode());
+            access.room().onText(connection, ControlCodec.encode(token,
+                    new ControlMessage.SetChatMode("FULL_CHAT")));
+            manager.tickAll();
+            assertEquals("QUICK_CHAT", access.room().descriptor().chatMode());
+            assertEquals("QUICK_CHAT", registry.find(entry.roomId()).orElseThrow().descriptor().chatMode());
+            manager.hostLeft(entry.roomId());
+        }
+    }
+
     static final class FakeConnection implements HubConnection, com.openggf.net.hub.HandshakeTransport {
         @Override public String authenticationBinding() { return com.openggf.net.protocol.AuthenticationTranscript.LOCAL_PLAINTEXT; }
         final List<String> text = new ArrayList<>();

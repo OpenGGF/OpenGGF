@@ -57,6 +57,12 @@ public final class SessionRegistry {
                             String hostFingerprint, String hostAddress, int directPort,
                             String determinismFingerprint, List<String> voteTrackKeys,
                             String certificateSha256) throws RoomCreateException {
+        if (descriptor == null || com.openggf.net.protocol.ChatMode.parse(descriptor.chatMode()) == null) {
+            throw new RoomCreateException("invalid room chat mode");
+        }
+        if ("RELAY".equals(routing)) {
+            descriptor = withChatMode(descriptor, config.relayChatMode(descriptor.chatMode()));
+        }
         long byIdentity = rooms.values().stream().filter(room ->
                 room.hostFingerprint().equals(hostFingerprint)).count();
         if (byIdentity >= config.maxRoomsPerIdentity()) {
@@ -93,13 +99,34 @@ public final class SessionRegistry {
         ControlMessage.RoomDescriptor old = entry.descriptor();
         ControlMessage.RoomDescriptor updated = new ControlMessage.RoomDescriptor(
                 old.name(), old.gameId(), zone, act, old.characterPolicy(),
-                old.lockedCharacter(), old.maxPlayers(), old.verified());
+                old.lockedCharacter(), old.maxPlayers(), old.verified(), old.chatMode());
         rooms.put(roomId, new RoomEntry(entry.roomId(), updated, entry.routing(),
                 entry.hostFingerprint(), entry.hostAddress(), entry.directPort(),
                 entry.determinismFingerprint(), entry.playerCount(),
                 entry.lastHeartbeatMillis(), entry.voteTrackKeys(),
                 entry.certificateSha256()));
         return true;
+    }
+
+    /** Updates discovery metadata from the room's authoritative host, never from a guest. */
+    public boolean updateChatMode(String roomId, String hostFingerprint, String mode) {
+        RoomEntry entry = rooms.get(roomId);
+        if (entry == null || !entry.hostFingerprint().equals(hostFingerprint)
+                || com.openggf.net.protocol.ChatMode.parse(mode) == null) {
+            return false;
+        }
+        String effective = "RELAY".equals(entry.routing()) ? config.relayChatMode(mode) : mode;
+        rooms.put(roomId, new RoomEntry(entry.roomId(), withChatMode(entry.descriptor(), effective),
+                entry.routing(), entry.hostFingerprint(), entry.hostAddress(), entry.directPort(),
+                entry.determinismFingerprint(), entry.playerCount(), entry.lastHeartbeatMillis(),
+                entry.voteTrackKeys(), entry.certificateSha256()));
+        return true;
+    }
+
+    private static ControlMessage.RoomDescriptor withChatMode(ControlMessage.RoomDescriptor room,
+                                                               String mode) {
+        return new ControlMessage.RoomDescriptor(room.name(), room.gameId(), room.zone(), room.act(),
+                room.characterPolicy(), room.lockedCharacter(), room.maxPlayers(), room.verified(), mode);
     }
 
     public int expireStale() {

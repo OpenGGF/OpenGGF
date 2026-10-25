@@ -214,6 +214,15 @@ Unreleased. The earlier development themes remain in
   progress strip with a finish flag beside the lives counter. `CompactFont` gains
   `@`, `$` and `#`, which are common in player names.
 
+- **Time Attack communication:** Full Chat includes typed and Quick Chat, with
+  canned messages available in lobbies and during races. Room owners can choose
+  Quick Chat or Off, while public relay servers default to a Quick Chat maximum.
+  Personal settings offer default-on local profanity censorship using a small
+  multilingual whole-word dictionary and an option to hide all player messages.
+  Connection and race notices remain visible. Quick Chat uses semantic phrase IDs
+  and host-supplied track context; its wording is English initially. Protocol 6
+  requires clients, hosts and the master to be upgraded together.
+
 - **Time Attack player names and looks:** names can be written in any left-to-right
   script (accented Latin, Vietnamese, Greek, Cyrillic, Japanese, Chinese, Korean and
   more) and are drawn with bundled Fusion Pixel 10px and GNU Unifont glyphs in the
