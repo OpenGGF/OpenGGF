@@ -4380,7 +4380,7 @@ class TestCdOpeningObjectRuntime {
         assertThrows(NullPointerException.class, () -> new CdOpeningObjectRuntime.TunnelDoorFm(null));
         assertEquals(CdTunnelDoor.FmSound.FM_A4,
                 new CdOpeningObjectRuntime.TunnelDoorFm(CdTunnelDoor.FmSound.FM_A4).sound());
-        assertEquals(18, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+        assertEquals(19, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
         var compact = new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138);
         assertEquals(494, compact.monitorTime() + 82 - compact.player());
         assertEquals(12, compact.monitorTime() - compact.tunnelDoorVertical());
@@ -4970,7 +4970,7 @@ class TestCdOpeningObjectRuntime {
                     () -> com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(state.residency(), 0x409));
             assertThrows(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.OwnershipBoundary.class,
                     () -> com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(state.residency(), 0x440));
-            assertEquals(18, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+            assertEquals(19, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
             var compact = new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138);
             assertEquals(494, compact.monitorTime() + 82 - compact.player());
             assertEquals(state, f.runtime.captureClosedCut().sectionArtState());
@@ -5491,7 +5491,7 @@ class TestCdOpeningObjectRuntime {
     @Test void boulderFourteenthBankPreservesEveryOldConstructorAndTheOneAggregate() {
         var expected = new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138, 208, 236, 299, 369, 374,
                 413, 449, 464, 500, 512, 594);
-        assertEquals(18, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+        assertEquals(19, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
         assertEquals(513, expected.boulder() + 19 - expected.player());
         assertEquals(expected, new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138));
         assertEquals(expected, new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138, 208, 236));
@@ -5518,7 +5518,7 @@ class TestCdOpeningObjectRuntime {
     @Test void boulderColdDevSeedsExactlyNineteenCompleteTilesFromTheSameSevenSourceBank() throws Exception {
         try (var f = new Fixture()) {
             var objects = f.assets.openingObjects(); var bank = objects.sectionArtSources();
-            assertSame(bank, objects.sectionArtSources()); assertEquals(10, bank.sources().size());
+            assertSame(bank, objects.sectionArtSources()); assertEquals(11, bank.sources().size());
             var source = bank.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_BOULDER);
             assertEquals(2, source.canonicalPlcId()); assertEquals(0, source.canonicalRowIndex());
             assertEquals(f.assets.loadPlan().plcs().get(2).entries().getFirst(), source.canonicalPlc());
@@ -5528,7 +5528,7 @@ class TestCdOpeningObjectRuntime {
             int known = 0;
             for (var region : com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.Region.values())
                 for (byte value : resident.region(region).knownMask().copy()) known += value;
-            assertEquals((70 + 28 + 63 + 19 + 46 + 8 + 12) * 32, known, "legacy three preloads plus explicit Boulder, diagonal, Spikes and Checkpoint DEV writes");
+            assertEquals((70 + 28 + 63 + 19 + 46 + 8 + 12 + 57) * 32, known, "legacy three preloads plus explicit Boulder, diagonal, Spikes and Checkpoint DEV writes");
             var lower = resident.region(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.Region.AT_6E00);
             for (int offset = 0; offset < 0x600; offset++) {
                 boolean expected = offset >= 0x80 && offset < 0x2E0;
@@ -5966,7 +5966,7 @@ class TestCdOpeningObjectRuntime {
         var full = new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594,613);
         var old14 = new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594);
         assertEquals(full, old14); assertEquals(full, new CdOpeningObjectRuntime.LogicalBanks(100,124,138));
-        assertEquals(18, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+        assertEquals(19, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
         assertEquals("diagonalSpring", CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents()[14].getName());
         assertEquals(559, full.diagonalSpring() + 46 - full.player()); assertEquals(12475, BANKS.diagonalSpring());
         assertEquals(919, new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,900).diagonalSpring());
@@ -6010,7 +6010,7 @@ class TestCdOpeningObjectRuntime {
     @Test void diagonalColdSeedUsesExactlyTheEighthCanonicalSourceAndFortySixCompleteCurrentTiles() throws Exception {
         try (var f = new Fixture()) {
             var objects = f.assets.openingObjects(); var bank = objects.sectionArtSources(); assertSame(bank, objects.sectionArtSources());
-            assertEquals(10, bank.sources().size()); var source = bank.sources().get(7);
+            assertEquals(11, bank.sources().size()); var source = bank.sources().get(7);
             assertEquals(com.openggf.game.soniccd.level.CdR11aAsset.ART_DIAGONAL_SPRING, source.source());
             assertSame(source, bank.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_DIAGONAL_SPRING));
             assertEquals(1, source.canonicalPlcId()); assertEquals(5, source.canonicalRowIndex());
@@ -6020,13 +6020,13 @@ class TestCdOpeningObjectRuntime {
             assertEquals(779, source.decode().consumedInputBytes());
             var state = f.runtime.sectionArtState(); var resident = state.residency(); cameraArtBytes(resident, 0x9200, source.decode().bytes());
             var upper = resident.region(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.Region.AT_9000);
-            for (int offset = 0; offset < 0x1400; offset++) assertEquals(offset >= 0x200 && offset < 0x7C0,
+            for (int offset = 0; offset < 0x1400; offset++) assertEquals(offset >= 0x200 && offset < 0xEE0,
                     upper.knownByte(offset).isPresent(), "actual AT_9000 mask byte " + offset);
             int known = 0;
             for (var region : com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.Region.values())
                 for (byte value : resident.region(region).knownMask().copy()) known += value;
-            assertEquals((70+28+63+19+46+8+12)*32, known);
-            for (int tile : List.of(0x480,0x48F,0x4BE,0x4BF,0x51F)) boulderUnknown(resident, tile);
+            assertEquals((70+28+63+19+46+8+12+57)*32, known);
+            for (int tile : List.of(0x480,0x48F,0x4F7,0x4F8,0x51F)) boulderUnknown(resident, tile);
             assertEquals(0, state.sectionWord()); assertEquals(0, state.remainingTilesWord()); assertEquals(0, state.queue().headSource());
             assertTrue(state.decoder().isEmpty()); assertArrayEquals(new byte[512], state.codeTable().copy());
             var pixels = diagonalPixels(f, resident);
@@ -6547,7 +6547,7 @@ class TestCdOpeningObjectRuntime {
 
     @Test void spikesSixteenthBankPreservesEveryOlderConstructorAndOneCachedActualBody() {
         var full = new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594,613,659);
-        assertEquals(18, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+        assertEquals(19, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
         assertEquals("spikes", CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents()[15].getName());
         assertEquals(full, new CdOpeningObjectRuntime.LogicalBanks(100,124,138));
         assertEquals(full, new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236));
@@ -6560,7 +6560,7 @@ class TestCdOpeningObjectRuntime {
         assertEquals(full, new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594));
         assertEquals(full, new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594,613));
         assertEquals(567, full.spikes()+8-full.player()); assertEquals(BANKS.diagonalSpring()+46,BANKS.spikes());
-        assertEquals(List.of(3,5,8,9,10,11,12,13,14,15,16,17,18), java.util.Arrays.stream(CdOpeningObjectRuntime.LogicalBanks.class.getDeclaredConstructors())
+        assertEquals(List.of(3,5,8,9,10,11,12,13,14,15,16,17,18,19), java.util.Arrays.stream(CdOpeningObjectRuntime.LogicalBanks.class.getDeclaredConstructors())
                 .map(java.lang.reflect.Constructor::getParameterCount).sorted().toList());
         assertEquals(1, java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredFields()).filter(v->v.getType()==CdSpikes.class).count());
         assertFalse(java.util.Arrays.stream(CdOpeningObjectRuntime.Snapshot.class.getDeclaredFields()).anyMatch(v->
@@ -6571,7 +6571,7 @@ class TestCdOpeningObjectRuntime {
     @Test void spikesColdSeedsOnlyEightCompleteNinthCanonicalTilesAndKeepsTheSourceBankCached() throws Exception {
         try(var f=new Fixture()) {
             var objects=f.assets.openingObjects();var bank=objects.sectionArtSources();assertSame(bank,objects.sectionArtSources());
-            assertEquals(10,bank.sources().size());var source=bank.sources().get(8);
+            assertEquals(11,bank.sources().size());var source=bank.sources().get(8);
             assertSame(source,bank.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_SPIKES));
             assertEquals(1,source.canonicalPlcId());assertEquals(0,source.canonicalRowIndex());assertEquals(8,source.tileCount());
             assertEquals(0x8008,source.readerBytes().unsignedWord(0));assertEquals(256,source.decode().bytes().length());
@@ -6581,7 +6581,7 @@ class TestCdOpeningObjectRuntime {
             for(byte mask:region.knownMask().copy())assertEquals(1,mask);
             int known=0;for(var r:com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.Region.values())
                 for(byte mask:state.residency().region(r).knownMask().copy())known+=mask;
-            assertEquals((70+28+63+19+46+8+12)*32,known);
+            assertEquals((70+28+63+19+46+8+12+57)*32,known);
             assertEquals(0,state.remainingTilesWord());assertEquals(0,state.queue().headSource());assertTrue(state.decoder().isEmpty());
             assertArrayEquals(new byte[512],state.codeTable().copy());assertEquals(0,state.sectionWord());
         }
@@ -7075,10 +7075,10 @@ class TestCdOpeningObjectRuntime {
         var full = new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594,613,659,667);
         assertEquals(full, new CdOpeningObjectRuntime.LogicalBanks(100,124,138));
         assertEquals(full, new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594,613,659));
-        assertEquals(18, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+        assertEquals(19, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
         assertEquals("checkpoint", CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents()[16].getName());
         assertEquals(579, full.checkpoint()+12-full.player());
-        assertEquals(List.of(3,5,8,9,10,11,12,13,14,15,16,17,18),
+        assertEquals(List.of(3,5,8,9,10,11,12,13,14,15,16,17,18,19),
                 java.util.Arrays.stream(CdOpeningObjectRuntime.LogicalBanks.class.getDeclaredConstructors())
                         .map(java.lang.reflect.Constructor::getParameterCount).sorted().toList());
         assertEquals(1, java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredFields()).filter(v->v.getType()==CdCheckpoint.class).count());
@@ -7119,7 +7119,7 @@ class TestCdOpeningObjectRuntime {
     @Test void checkpointColdSeedsTwelveCompleteTilesFromTheSameTenthActualSourceOnly() throws Exception {
         try (var f = new Fixture()) {
             var o=f.assets.openingObjects();var bank=o.sectionArtSources();assertSame(bank,o.sectionArtSources());
-            assertEquals(10,bank.sources().size());var s=bank.sources().get(9);
+            assertEquals(11,bank.sources().size());var s=bank.sources().get(9);
             assertEquals(com.openggf.game.soniccd.level.CdR11aAsset.ART_CHECKPOINT,s.source());
             assertSame(s,bank.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_CHECKPOINT));
             assertEquals(0,s.canonicalPlcId());assertEquals(1,s.canonicalRowIndex());
@@ -7129,7 +7129,7 @@ class TestCdOpeningObjectRuntime {
             var state=f.runtime.sectionArtState();cameraArtBytes(state.residency(),0xD960,s.decode().bytes());
             int known=0;for(var r:com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.Region.values())
                 for(byte b:state.residency().region(r).knownMask().copy())known+=b;
-            assertEquals((70+28+63+19+46+8+12)*32,known);
+            assertEquals((70+28+63+19+46+8+12+57)*32,known);
             assertEquals(0,state.remainingTilesWord());assertEquals(0,state.queue().headSource());assertTrue(state.decoder().isEmpty());
             assertEquals(0,state.sectionWord());assertArrayEquals(new byte[512],state.codeTable().copy());
             assertThrows(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.OwnershipBoundary.class,
@@ -7646,10 +7646,10 @@ class TestCdOpeningObjectRuntime {
         var old = new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594,613,659,667);
         var full = new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594,613,659,667,679);
         assertEquals(full, old); assertEquals(full, new CdOpeningObjectRuntime.LogicalBanks(100,124,138));
-        assertEquals(18, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+        assertEquals(19, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
         assertEquals("anton", CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents()[17].getName());
         assertEquals(579, old.checkpoint()+12-old.player()); assertEquals(601, full.anton()+22-full.player());
-        assertEquals(List.of(3,5,8,9,10,11,12,13,14,15,16,17,18),
+        assertEquals(List.of(3,5,8,9,10,11,12,13,14,15,16,17,18,19),
                 java.util.Arrays.stream(CdOpeningObjectRuntime.LogicalBanks.class.getDeclaredConstructors())
                         .map(java.lang.reflect.Constructor::getParameterCount).sorted().toList());
         assertEquals(1, java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredFields()).filter(v->v.getType()==CdAnton.class).count());
@@ -7690,7 +7690,7 @@ class TestCdOpeningObjectRuntime {
     @Test void antonColdUnknownCanonicalPixelsAdmitEmptySatAndKeepAll579PreviousBindings() throws Exception {
         try(var f=new Fixture()) {
             var objects=f.assets.openingObjects();var bank=objects.sectionArtSources();assertSame(bank,objects.sectionArtSources());
-            assertEquals(10,bank.sources().size());assertSame(bank.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_ANTON),bank.sources().get(1));
+            assertEquals(11,bank.sources().size());assertSame(bank.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_ANTON),bank.sources().get(1));
             var state=f.runtime.sectionArtState();var pixels=antonPixels(f,state.residency());var old=checkpointPixels(f,state.residency());
             int[][] ranges={{0x780,24},{0x7AE,14},{0x3A0,70},{0x424,28},{0x441,63},{0x680,70},{0x6C6,5},{0x6D7,39},
                     {0x544,36},{0x334,15},{0x520,36},{0x328,12},{0x5A8,82},{0x374,19},{0x490,46},{0x320,8},{0x6CB,12}};
@@ -8043,4 +8043,453 @@ class TestCdOpeningObjectRuntime {
                 BANKS.floatBlock(),BANKS.spring(),BANKS.tunnelDoorVertical(),BANKS.monitorTime(),BANKS.boulder(),BANKS.diagonalSpring(),BANKS.spikes(),BANKS.checkpoint(),BANKS.anton());
     }
     // END Anton Runtime R1.
+
+    // BEGIN Collapse Platform Runtime R1. Tests first; authored source only, ALL JAVA UNRUN.
+    // N 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff, Collapsing Platform/Main.asm:7-308.
+    // Public-format terrain is constructed component ingress. Media-backed cases use the actual loader.
+    // Reflection below observes private guards or attempts rejected calls; it grants no native entitlement.
+
+    @Test void collapseNineteenthBankAndPrivatePortsPreserveTheExistingLifecycleInventory() throws Exception {
+        var old = new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594,613,659,667,679);
+        var full = new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594,613,659,667,679,701);
+        assertEquals(full,old);assertEquals(full,new CdOpeningObjectRuntime.LogicalBanks(100,124,138));
+        assertEquals(701,old.collapsePlatform());assertEquals(658,full.collapsePlatform()+57-full.player());
+        assertEquals("collapsePlatform",CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents()[18].getName());
+        assertEquals(List.of(3,5,8,9,10,11,12,13,14,15,16,17,18,19),java.util.Arrays.stream(
+                CdOpeningObjectRuntime.LogicalBanks.class.getDeclaredConstructors()).map(java.lang.reflect.Constructor::getParameterCount).sorted().toList());
+        assertEquals(1,java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredFields()).filter(v->v.getType()==CdCollapsePlatform.class).count());
+        var body=java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredFields()).filter(v->v.getType()==CdCollapsePlatform.class).findFirst().orElseThrow();
+        assertTrue(java.lang.reflect.Modifier.isFinal(body.getModifiers()));
+        for(var method:List.of(CdOpeningObjectRuntime.class.getDeclaredMethod("commitCollapseSolid",CdCollapsePlatform.SolidCall.class),
+                CdOpeningObjectRuntime.class.getDeclaredMethod("playCollapseFm",int.class))) {
+            assertTrue(java.lang.reflect.Modifier.isPrivate(method.getModifiers()));assertEquals(void.class,method.getReturnType());
+        }
+        assertFalse(java.util.Arrays.stream(CdOpeningObjectRuntime.Snapshot.class.getDeclaredFields()).anyMatch(v->
+                v.getType()==CdCollapsePlatform.class||v.getType()==CdCollapsePlatform.SolidCall.class||v.getType()==CdSolidObject.Outcome.class
+                        ||v.getType().getSimpleName().equals("CollapseInvocation")));
+        var scope=CdOpeningObjectRuntime.class.getDeclaredField("activeCollapseInvocation");
+        assertTrue(java.lang.reflect.Modifier.isPrivate(scope.getModifiers()));assertTrue(java.lang.reflect.Modifier.isTransient(scope.getModifiers()));
+        assertEquals(List.of(11),java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods()).filter(v->v.getName().equals(
+                "usaR11aOpeningDevEmptySatPreloadedArt")).map(java.lang.reflect.Method::getParameterCount).toList());
+        assertEquals(List.of(14),java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods()).filter(v->v.getName().equals(
+                "usaR11aRestartDevEmptySatPreloadedArt")).map(java.lang.reflect.Method::getParameterCount).toList());
+        assertEquals(3,CdOpeningObjectRuntime.CheckpointBindings.class.getRecordComponents().length);
+    }
+
+    @Test void collapseTypedFmAcceptsOnlyNativeA3AndPreservesDuplicateValueRequests() {
+        var a=new CdOpeningObjectRuntime.CollapsePlatformFm(0xA3);assertEquals(0xA3,a.nativeId());
+        assertEquals(List.of(a,a),List.of(a,new CdOpeningObjectRuntime.CollapsePlatformFm(0xA3)));
+        for(int bad:List.of(-1,0,0x93,0xA2,0xA4,0x1A3,Integer.MAX_VALUE))
+            assertThrows(IllegalArgumentException.class,()->new CdOpeningObjectRuntime.CollapsePlatformFm(bad));
+        assertTrue(List.of(CdOpeningObjectRuntime.SoundRequest.class.getPermittedSubclasses()).contains(CdOpeningObjectRuntime.CollapsePlatformFm.class));
+    }
+
+    @Test void collapseEveryOldLogicalSpanAndBothIntegerBoundsRejectAtBothIngressesWithoutFrameWrites() throws Exception {
+        var a=load();var carry=cameraArtDevIngress(a);
+        int[] starts={100,124,138,208,236,299,369,374,413,449,464,500,512,594,613,659,667,679};
+        int[] counts={24,14,70,28,63,70,5,39,36,15,36,12,82,19,46,8,12,22};
+        var invalid=new ArrayList<Integer>();for(int i=0;i<starts.length;i++){invalid.add(starts[i]);invalid.add(starts[i]+counts[i]-1);}
+        invalid.add(-1);invalid.add(Integer.MAX_VALUE-55);
+        try(var frame=CdPlayerFrameRuntime.externalTouchRequiredDevelopment(a,0)) {
+            var actor=frame.captureActor();var shared=frame.captureShared();
+            for(int base:invalid){var banks=collapseBanks(base);
+                assertThrows(IllegalArgumentException.class,()->CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(
+                        a,frame,INITIAL,CONTACT,SCORE,LEVEL,declaredCheckpointBindings(),new byte[640],banks,PRE,v->fail("no callback")));
+                assertThrows(IllegalArgumentException.class,()->CdOpeningObjectRuntime.usaR11aRestartDevEmptySatPreloadedArt(
+                        a,frame,INITIAL,CONTACT,SCORE,LEVEL,declaredCheckpointBindings(),CdAssetBytes.copyOf(new byte[CdObjectPlacementRuntime.SAVED_BANK_BYTES]),
+                        new CdPowerupArtRuntime.State(new byte[0x480],new byte[0x480]),carry,new byte[640],banks,PRE,v->fail("no callback")));
+                assertEquals(actor,frame.captureActor());assertEquals(shared,frame.captureShared());assertFalse(frame.closed());
+            }
+        }
+    }
+
+    @Test void collapseColdDevWritesExactlyFiftySevenCompleteTilesFromTheSameCachedEleventhSource() throws Exception {
+        try(var f=new Fixture()) {
+            var o=(com.openggf.game.soniccd.level.CdR11aObjectAssets)checkpointGet(f.runtime,"objects");
+            var bank=o.sectionArtSources();assertSame(bank,o.sectionArtSources());assertEquals(11,bank.sources().size());
+            var source=bank.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_PLATFORM);assertSame(source,bank.sources().get(10));
+            assertSame(source.decode(),bank.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_PLATFORM).decode());
+            assertEquals(1,source.canonicalPlcId());assertEquals(6,source.canonicalRowIndex());
+            assertEquals(f.assets.loadPlan().plcs().get(1).entries().get(6),source.canonicalPlc());
+            assertEquals(0x97C0,source.canonicalPlc().vramAddress());assertEquals(57,source.tileCount());assertEquals(1824,source.decode().bytes().length());
+            var expected=cameraArtDevIngress(f.assets).residency();
+            for(int tile=0;tile<57;tile++)expected=com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.writeTile(
+                    expected,0x97C0+tile*32,source.decode().bytes().slice(tile*32,32));
+            var state=f.runtime.sectionArtState();assertEquals(expected,state.residency());
+            cameraArtBytes(state.residency(),0x97C0,source.decode().bytes());
+            int known=0;for(var r:com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.Region.values())
+                for(byte b:state.residency().region(r).knownMask().copy())known+=b;
+            assertEquals((70+28+63+19+46+8+12+57)*32,known);assertEquals(9,com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.Region.values().length);
+            assertEquals(0,state.queue().headSource());assertEquals(0,state.remainingTilesWord());assertEquals(0,state.sectionWord());assertTrue(state.decoder().isEmpty());
+            assertArrayEquals(new byte[512],state.codeTable().copy());assertEquals(0,f.frame.vIntClock().deltaSinceAdmittedCut());
+            assertNull(checkpointGet(f.runtime,"activeCollapseInvocation"));
+        }
+    }
+
+    @Test void collapseRestartPreservesChangedOrUnknownFiftySevenBytesMasksTableAndRawSectionWithoutSeed() throws Exception {
+        var a=load();var base=cameraArtDevIngress(a);byte[] table=new byte[512];for(int i=0;i<table.length;i++)table[i]=(byte)(i*7+3);
+        for(boolean known:List.of(false,true)) {
+            var resident=known?collapseChanged(base.residency()):base.residency();var ingress=new CdOpeningObjectRuntime.CameraArtRestartIngress(resident,CdAssetBytes.copyOf(table),0xA503);
+            try(var frame=CdPlayerFrameRuntime.externalTouchRequiredDevelopment(a,0);var runtime=collapseRestart(a,frame,ingress)) {
+                var state=runtime.sectionArtState();assertEquals(resident,state.residency());assertEquals(0xA503,state.sectionWord());assertArrayEquals(table,state.codeTable().copy());
+                assertTrue(state.decoder().isEmpty());assertEquals(0,state.queue().headSource());assertEquals(0,state.remainingTilesWord());
+                var pixels=collapsePixels(frame,runtime,(com.openggf.game.soniccd.level.CdR11aObjectAssets)checkpointGet(runtime,"objects"),resident);
+                assertTrue(CdObjectPresentation.convert(runtime.cpuSat(),pixels).tiles().isEmpty());
+                for(int tile=0;tile<57;tile++){int id=0x4BE+tile;if(known)assertEquals(BANKS.collapsePlatform()+tile,pixels.resolve(id).logicalPatternId());
+                    else {var fault=assertThrows(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.OwnershipBoundary.class,()->pixels.resolve(id));
+                        assertEquals(id,fault.nativePatternId());}}
+                assertEquals(resident,runtime.sectionArtState().residency());assertEquals(0,frame.vIntClock().deltaSinceAdmittedCut());
+            }
+        }
+    }
+
+    @Test void collapseActualInitMainHasNoOuterSpriteTimeStopDebugOrSecondarySubtypePrefilter() throws Exception {
+        for(int subtype:List.of(0,0x10,0x80,0xC0,0xE0))try(var f=new Fixture(new CdRingGlobals(0,3,0,0,0,9,0,0))) {
+            springDeviceCut(f);f.makePlayerAbsent();horizontalGates(f,0x100,0);var p=f.runtime.placement().pool();
+            var before=collapseImage(f,p.state(40),0,subtype).moveByte(SPRITE_FLAGS,0).moveByte(SOLID_TYPE,0x55).moveByte(SUBTYPE2,0xFF)
+                    .moveByte(ANIMATION,0x72).moveByte(PREVIOUS_ANIMATION,0x73).moveWord(X_FRACTION,0x1234).moveWord(Y_FRACTION,0x5678);
+            p.write(before);var sounds=f.runtime.lastSoundRequests();f.runtime.runDynamicSlotsAfterReservedSlots();var after=p.state(40);var a=CdCollapsePlatform.Assets.fromObjectAssets(f.assets.openingObjects());
+            assertEquals(2,after.routine());assertEquals(0x44BE,after.word(TILE));assertEquals(3,after.unsignedByte(PRIORITY));
+            assertEquals((subtype&0x80)==0?a.mappings1():a.mappings2(),after.longBits(MAPPINGS));assertEquals(subtype&15,after.unsignedByte(MAP_FRAME));
+            assertEquals((subtype&0x80)==0?40:48,after.unsignedByte(WIDTH));assertEquals((subtype&0x80)==0?34:18,after.unsignedByte(Y_RADIUS));
+            assertEquals(0,after.unsignedByte(SOLID_TYPE));assertEquals(0xFF,after.unsignedByte(SUBTYPE2));
+            assertEquals(0x72,after.unsignedByte(ANIMATION));assertEquals(0x73,after.unsignedByte(PREVIOUS_ANIMATION));
+            assertEquals(0x1234,after.word(X_FRACTION));assertEquals(0x5678,after.word(Y_FRACTION));assertEquals(sounds,f.runtime.lastSoundRequests());
+            assertNull(checkpointGet(f.runtime,"activeCollapseInvocation"));monitorFinish(f);
+        }
+    }
+
+    @Test void collapseActualC0ForwardAndReverseRetainSixDirtyEarlierChildrenAndSharedFmBeforeA3() throws Exception {
+        for(int speed:List.of(0x123,-0x123,(int)Short.MIN_VALUE))try(var f=new Fixture()) {
+            springDeviceCut(f);var p=f.runtime.placement().pool();var parent=collapseContact(f,0xC0,speed,0,1);
+            var dirty=new ArrayList<CdObjectState>();for(int i=0;i<6;i++){var child=p.state(32+i).moveByte(FLAGS,0xA1)
+                    .moveByte(SUBTYPE2,0xD0+i).moveByte(SAVED_FLAGS_ID,0x80+i).moveByte(COLLISION_TYPE,0x31)
+                    .moveWord(X_FRACTION,0x4100+i).moveWord(Y_FRACTION,0x5100+i).moveWord(X_VELOCITY,0x1234).moveWord(Y_VELOCITY,0x5678);
+                p.write(child);dirty.add(child);}
+            var before=f.runtime.lastSoundRequests();f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(0,p.state(40).id());var maps=CdCollapsePlatform.Assets.fromObjectAssets(f.assets.openingObjects());
+            for(int i=0;i<6;i++){int dx=(speed<0?40-i*16:-40+i*16);var expected=dirty.get(i).moveByte(PRIORITY,3).moveWord(TILE,0x44BE)
+                    .moveByte(SPRITE_FLAGS,4).moveLong(MAPPINGS,maps.mappings4()).moveLong(CdObjectState.LongField.COLLAPSE_FALL_DELTA,0x20000)
+                    .moveByte(ID,0x20).moveByte(ROUTINE,4).moveWord(Y,parent.centreY()).moveByte(COLLAPSE_SOLID_MARKER,0xFF)
+                    .moveByte(X_RADIUS,8).moveByte(WIDTH,8).moveByte(Y_RADIUS,18).moveByte(MAP_FRAME,0).moveWord(X,parent.centreX()+dx).moveWord(COLLAPSE_DELAY,9+i*12);
+                assertEquals(expected,p.state(32+i));}
+            var sounds=new ArrayList<>(before);sounds.add(new CdOpeningObjectRuntime.PlayerSound(new CdPlayerFrameRuntime.ContactFmSound(CdPlayerTouchResponse.FmSound.FM_CHARGESTOP)));
+            sounds.add(new CdOpeningObjectRuntime.CollapsePlatformFm(0xA3));assertEquals(sounds,f.runtime.lastSoundRequests());
+            assertEquals(1,f.frame.state().motion().charge());assertEquals(0,f.frame.state().objectLinks().standObject());assertNull(checkpointGet(f.runtime,"activeCollapseInvocation"));monitorFinish(f);
+        }
+    }
+
+    @Test void collapseLaterPhysicalChildrenReceiveExactlyOneDelayVisitInTheSameLivePass() throws Exception {
+        try(var f=new Fixture()) {
+            springDeviceCut(f);var p=f.runtime.placement().pool();collapseContact(f,0xC0,0x123,0,0);
+            for(int i=32;i<40;i++)p.write(collapseImage(f,p.state(i),4,0x80).moveWord(COLLAPSE_DELAY,100).moveByte(COLLAPSE_SOLID_MARKER,0));
+            f.runtime.runDynamicSlotsAfterReservedSlots();for(int i=0;i<6;i++){assertEquals(4,p.state(41+i).routine());assertEquals(8+i*12,p.state(41+i).word(COLLAPSE_DELAY));}
+            assertEquals(0,p.state(40).id());assertEquals(1,f.runtime.lastSoundRequests().stream().filter(CdOpeningObjectRuntime.CollapsePlatformFm.class::isInstance).count());monitorFinish(f);
+        }
+    }
+
+    @Test void collapseActualMultiRowAllocatesEighteenAfterTwoNegativeCellsAndFlipsOnlyNativeFields() throws Exception {
+        for(int subtype:List.of(0,0x10))try(var f=new Fixture()) {
+            springDeviceCut(f);var p=f.runtime.placement().pool();var parent=collapseContact(f,subtype,0x123,0,0);
+            f.runtime.runDynamicSlotsAfterReservedSlots();assertEquals(0,p.state(40).id());
+            int[][] frames={{-1,-1,0,0,0},{1,2,3,3,4},{0,5,5,5,5},{6,6,6,6,6}};int child=32;
+            for(int r=0;r<4;r++)for(int c=0;c<5;c++)if(frames[r][c]>=0){if(child==40)child++;
+                var image=p.state(child);assertEquals(0x20,image.id());assertEquals(frames[r][c],image.unsignedByte(MAP_FRAME));
+                assertEquals(parent.centreX()+((subtype&0x10)==0?-32+16*c:32-16*c),image.centreX());
+                assertEquals(parent.centreY()+24-16*r,image.centreY());assertEquals(9+5*r+12*c-(child>40?1:0),image.word(COLLAPSE_DELAY));
+                assertEquals(r==3?0xFF:0,image.unsignedByte(COLLAPSE_SOLID_MARKER));assertEquals((subtype&0x10)==0?0:1,image.flags()&1);child++;}
+            assertEquals(18,p.capture().slots().stream().filter(v->v.id()==0x20).count());monitorFinish(f);
+        }
+    }
+
+    @Test void collapseFullCapacityIsANormalSecondTopAndGetOffAfterTheExistingA3Edge() throws Exception {
+        for(int subtype:List.of(0,0xC0))try(var f=new Fixture()) {
+            springDeviceCut(f);var p=f.runtime.placement().pool();collapseContact(f,subtype,0x123,0,1);
+            for(int i=32;i<128;i++)if(i!=40)p.write(collapseImage(f,p.state(i),4,0x80).moveWord(COLLAPSE_DELAY,100).moveByte(COLLAPSE_SOLID_MARKER,0));
+            assertTrue(p.findObjSlot().isEmpty());var prefix=f.runtime.lastSoundRequests();f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(0,p.state(40).id());assertEquals(95,p.capture().slots().stream().filter(v->v.id()!=0).count());
+            var expected=new ArrayList<>(prefix);expected.add(new CdOpeningObjectRuntime.PlayerSound(new CdPlayerFrameRuntime.ContactFmSound(CdPlayerTouchResponse.FmSound.FM_CHARGESTOP)));
+            expected.add(new CdOpeningObjectRuntime.CollapsePlatformFm(0xA3));expected.add(new CdOpeningObjectRuntime.PlayerSound(new CdPlayerFrameRuntime.ContactFmSound(CdPlayerTouchResponse.FmSound.FM_CHARGESTOP)));
+            assertEquals(expected,f.runtime.lastSoundRequests());assertNull(checkpointGet(f.runtime,"activeCollapseInvocation"));monitorFinish(f);
+        }
+    }
+
+    @Test void collapseDelayTransitionCommitsTimerAndRoutineBeforeTopAndDoesNotRunFall() throws Exception {
+        for(int marker:List.of(0,1,0xFF))try(var f=new Fixture()) {
+            springDeviceCut(f);f.makePlayerAbsent();var p=f.runtime.placement().pool();var before=collapseImage(f,p.state(40),4,0x80)
+                    .moveWord(COLLAPSE_DELAY,1).moveByte(COLLAPSE_SOLID_MARKER,marker).moveByte(SOLID_TYPE,0x55).moveLong(CdObjectState.LongField.COLLAPSE_FALL_DELTA,0x20000);
+            p.write(before);var sounds=f.runtime.lastSoundRequests();f.runtime.runDynamicSlotsAfterReservedSlots();assertEquals(6,p.state(40).routine());assertEquals(0,p.state(40).word(COLLAPSE_DELAY));
+            assertEquals(before.longBits(CdObjectState.LongField.Y_POSITION),p.state(40).longBits(CdObjectState.LongField.Y_POSITION));
+            assertEquals(0x20000,p.state(40).longBits(CdObjectState.LongField.COLLAPSE_FALL_DELTA));assertEquals(marker==0?0x55:0,p.state(40).unsignedByte(SOLID_TYPE));
+            assertEquals(sounds,f.runtime.lastSoundRequests());monitorFinish(f);
+        }
+    }
+
+    @Test void collapseFallUsesFullLongDeltaAndSignedPrimaryDistanceAtTheExactDeletionBoundary() throws Exception {
+        for(int distance:List.of(-1,0x200,0x201))try(var f=new Fixture()) {
+            springDeviceCut(f);var p=f.runtime.placement().pool();int py=f.frame.state().motion().centreY16_16()>>>16;
+            var before=collapseImage(f,p.state(40),6,0x80).moveWord(Y,py+distance-2).moveWord(Y_FRACTION,0xE000)
+                    .moveLong(CdObjectState.LongField.COLLAPSE_FALL_DELTA,0x21000);p.write(before);f.runtime.runDynamicSlotsAfterReservedSlots();
+            if(distance>0x200)assertEquals(0,p.state(40).id());else {
+                assertEquals(before.addLong(CdObjectState.LongField.Y_POSITION,0x21000).longBits(CdObjectState.LongField.Y_POSITION),p.state(40).longBits(CdObjectState.LongField.Y_POSITION));
+                assertEquals(0x25000,p.state(40).longBits(CdObjectState.LongField.COLLAPSE_FALL_DELTA));}
+            assertNull(checkpointGet(f.runtime,"activeCollapseInvocation"));monitorFinish(f);
+        }
+    }
+
+    @Test void collapseMainReachedDespawnUsesActualRawPreScrollAndDoesNotAcquireAVisibilityGate() throws Exception {
+        try(var f=new Fixture()) {
+            springDeviceCut(f);f.makePlayerAbsent();var p=f.runtime.placement().pool();var image=collapseImage(f,p.state(40),2,0xC0)
+                    .moveByte(SPRITE_FLAGS,4).moveWord(X,0x7000);p.write(image);var sounds=f.runtime.lastSoundRequests();var saved=f.runtime.placement().capture().savedFlags();
+            f.runtime.runDynamicSlotsAfterReservedSlots();assertEquals(0,p.state(40).id());assertArrayEquals(saved.copy(),f.runtime.placement().capture().savedFlags().copy());
+            assertEquals(sounds,f.runtime.lastSoundRequests());assertNull(checkpointGet(f.runtime,"activeCollapseInvocation"));monitorFinish(f);
+        }
+    }
+
+    @Test void collapseNativeStandAddressStopPublishesItsRealPrefixThenClosesAndClearsScope() throws Exception {
+        try(var f=new Fixture()) {
+            springDeviceCut(f);var p=f.runtime.placement().pool();var image=collapseContact(f,0xC0,0,0,0).moveByte(FLAGS,8);p.write(image);
+            var m=f.frame.state().motion();seedSolidPlayer(f,8,5,0,0,0,m.centreX16_16(),m.centreY16_16());
+            var player=tunnelDoorPlayer(f);var globals=tunnelDoorGlobals(f);var cut=p.capture();
+            var outcome=CdSolidObject.fromAssets(f.assets).runWithPrefix(CdSolidObject.Entry.TOP_SOLID_OBJECT,image,player,new CdSolidObject.Gates(0,0),globals,cut);
+            var stop=assertInstanceOf(CdSolidObject.NativeStopped.class,outcome);assertEquals(CdSolidObject.StopSite.STAND_RELEASE,stop.stop().site());
+            var expected=stop.prefix();var sounds=f.runtime.lastSoundRequests();var failure=assertThrows(CdSolidObject.UnsupportedSolidObject.class,f.runtime::runDynamicSlotsAfterReservedSlots);
+            assertEquals(stop.stop().originalException().getMessage(),failure.getMessage());assertEquals(expected.object(),p.state(40));
+            assertEquals(expected.player().actor().motion(),f.frame.state().motion());assertEquals(expected.player().standObject(),f.frame.state().objectLinks().standObject());
+            assertEquals(sounds,checkpointGet(f.runtime,"sounds"));assertNull(checkpointGet(f.runtime,"activeCollapseInvocation"));
+            assertEquals(CdOpeningObjectRuntime.Phase.FAILED,f.runtime.phase());assertTrue(f.frame.closed());
+            assertThrows(IllegalStateException.class,f.runtime::captureClosedCut);assertThrows(IllegalStateException.class,f.runtime::runDynamicSlotsAfterReservedSlots);
+        }
+    }
+
+    @Test void collapseRoutineHostFailureKeepsEarlierVisitsAndClearsScopeWithoutTailOrRetry() throws Exception {
+        try(var f=new Fixture()) {
+            springDeviceCut(f);var p=f.runtime.placement().pool();p.write(collapseImage(f,p.state(32),4,0x80).moveWord(COLLAPSE_DELAY,3));
+            var bad=collapseImage(f,p.state(40),3,0xC0);p.write(bad);p.write(collapseImage(f,p.state(41),4,0x80).moveWord(COLLAPSE_DELAY,3));var later=p.state(41);
+            var failure=assertThrows(CdCollapsePlatform.UnsupportedCollapsePlatform.class,f.runtime::runDynamicSlotsAfterReservedSlots);
+            assertEquals(CdCollapsePlatform.UnsupportedBoundary.ROUTINE_DISPATCH,failure.boundary());assertEquals(2,p.state(32).word(COLLAPSE_DELAY));
+            assertEquals(bad,p.state(40));assertEquals(later,p.state(41));assertNull(checkpointGet(f.runtime,"activeCollapseInvocation"));
+            assertTrue(f.runtime.closed());assertThrows(IllegalStateException.class,f.runtime::captureClosedCut);
+        }
+    }
+
+    @Test void collapsePrimaryAliasZeroAndActualDirtyFreedOtherPreserveAllUnownedSlotBytes() throws Exception {
+        for(int stand:List.of(0,41))try(var f=new Fixture()) {
+            springDeviceCut(f);var p=f.runtime.placement().pool();var source=collapseContact(f,0xC0,0,0,0).moveByte(FLAGS,8);p.write(source);
+            var dirty=p.state(41).moveByte(ID,0x18).moveByte(FLAGS,0xAD).moveWord(X_FRACTION,0x1234).moveWord(Y_FRACTION,0x5678).moveByte(SUBTYPE2,0xDD);
+            p.write(dirty);p.objNull(41);dirty=p.state(41);var m=f.frame.state().motion();seedSolidPlayer(f,8,stand,0,0,0,m.centreX16_16(),m.centreY16_16());
+            var sounds=new ArrayList<>(f.runtime.lastSoundRequests());sounds.add(new CdOpeningObjectRuntime.CollapsePlatformFm(0xA3));
+            f.runtime.runDynamicSlotsAfterReservedSlots();assertEquals(stand==41?dirty.moveByte(FLAGS,0xA5):dirty,p.state(41));
+            assertEquals(0,p.state(40).id());assertEquals(stand==0?40:0,f.frame.state().objectLinks().standObject());
+            assertEquals(sounds,f.runtime.lastSoundRequests());monitorFinish(f);
+        }
+    }
+
+    @Test void collapsePureOutcomeOutsideActualBodyScopeCannotPublishEvenAtStagedDynamicPhase() throws Exception {
+        try(var f=new Fixture()) {
+            springDeviceCut(f);var p=f.runtime.placement().pool();var source=collapseImage(f,p.state(40),2,0xC0).moveByte(SPRITE_FLAGS,4);p.write(source);
+            var call=collapsePureCall(f,source);var cut=p.capture().slots();var actor=f.frame.state();var env=f.frame.environment();var sounds=f.runtime.lastSoundRequests();
+            assertNull(checkpointGet(f.runtime,"activeCollapseInvocation"));
+            assertThrows(IllegalStateException.class,()->spikesInvoke(f,"commitCollapseSolid",CdCollapsePlatform.SolidCall.class,call));
+            spikesStage(f,40);try {
+                assertThrows(IllegalStateException.class,()->spikesInvoke(f,"commitCollapseSolid",CdCollapsePlatform.SolidCall.class,call));
+                assertThrows(IllegalStateException.class,()->spikesInvoke(f,"playCollapseFm",int.class,0xA3));
+                assertEquals(cut,p.capture().slots());assertEquals(actor,f.frame.state());assertEquals(env,f.frame.environment());assertEquals(sounds,f.runtime.lastSoundRequests());
+            } finally {boulderUnstage(f);}
+        }
+    }
+
+    @Test void collapseInvalidHostImagesMasksAndForeignCutsHaveNoPartialPublicationOutsideNativeScope() throws Exception {
+        try(var f=new Fixture()) {
+            springDeviceCut(f);var p=f.runtime.placement().pool();var source=collapseImage(f,p.state(40),2,0xC0).moveByte(SPRITE_FLAGS,4);p.write(source);
+            var call=collapsePureCall(f,source);var result=((CdSolidObject.Completed)call.outcome()).completedResult();
+            var invalid=new ArrayList<CdCollapsePlatform.SolidCall>();
+            invalid.add(new CdCollapsePlatform.SolidCall(call.site(),call.entry(),call.actualCut(),call.expectedPlayer(),call.expectedGlobals(),new CdSolidObject.Completed(
+                    new CdSolidObject.Result(result.entry(),result.object().moveWord(X,source.centreX()+1),result.player(),result.globals(),result.otherSlots(),
+                            result.objectWrites(),result.playerWrites(),result.globalWrites(),result.calls(),result.path(),result.getOffReason(),result.d0()))));
+            invalid.add(new CdCollapsePlatform.SolidCall(call.site(),call.entry(),call.actualCut(),call.expectedPlayer(),call.expectedGlobals(),new CdSolidObject.Completed(
+                    new CdSolidObject.Result(result.entry(),result.object(),result.player(),result.globals(),result.otherSlots(),java.util.Set.of(ROUTINE_2),
+                            result.playerWrites(),result.globalWrites(),result.calls(),result.path(),result.getOffReason(),result.d0()))));
+            var foreign=new CdObjectPool();invalid.add(new CdCollapsePlatform.SolidCall(call.site(),call.entry(),foreign.capture(),call.expectedPlayer(),call.expectedGlobals(),call.outcome()));
+            invalid.add(new CdCollapsePlatform.SolidCall(call.site(),call.entry(),CdObjectPool.overlay(call.actualCut(),List.of(source.moveByte(FLAGS,0xA5))),
+                    call.expectedPlayer(),call.expectedGlobals(),call.outcome()));
+            var slots=p.capture().slots();var actor=f.frame.state();var env=f.frame.environment();var sounds=f.runtime.lastSoundRequests();spikesStage(f,40);
+            try {for(var bad:invalid){assertThrows(IllegalStateException.class,()->spikesInvoke(f,"commitCollapseSolid",CdCollapsePlatform.SolidCall.class,bad));
+                    assertEquals(slots,p.capture().slots());assertEquals(actor,f.frame.state());assertEquals(env,f.frame.environment());assertEquals(sounds,f.runtime.lastSoundRequests());}}
+            finally {boulderUnstage(f);}
+        }
+    }
+
+    @Test void collapseAllExistingMutualGuardsDenyOutsideScopeBeforePoolFrameOrLedgerWrites() throws Exception {
+        try(var f=new Fixture()) {
+            springDeviceCut(f);var p=f.runtime.placement().pool();p.write(collapseImage(f,p.state(40),2,0xC0).moveByte(SPRITE_FLAGS,4));var call=collapsePureCall(f,p.state(40));
+            var slots=p.capture().slots();var actor=f.frame.state();spikesStage(f,40);
+            try {for(String guard:diagonalGuards()){boulderSet(f.runtime,guard,true);try {
+                        assertThrows(IllegalStateException.class,()->spikesInvoke(f,"commitCollapseSolid",CdCollapsePlatform.SolidCall.class,call));
+                        assertThrows(IllegalStateException.class,()->spikesInvoke(f,"playCollapseFm",int.class,0xA3));
+                        assertEquals(slots,p.capture().slots());assertEquals(actor,f.frame.state());}
+                    finally {boulderSet(f.runtime,guard,false);}}}
+            finally {boulderUnstage(f);}
+        }
+    }
+
+    @Test void collapseRealTerrainUnavailablePrefixPreflightsFrameWithoutACompletedResultAdapter() throws Exception {
+        try(var f=new Fixture()) {
+            springDeviceCut(f);var p=f.runtime.placement().pool();var source=collapseImage(f,p.state(40),2,0xC0).moveWord(X,0x100).moveWord(Y,0x80)
+                    .moveByte(WIDTH,0x10).moveByte(Y_RADIUS,0x0C);p.write(source);
+            seedSolidPlayer(f,2,0,0,0x123,0x400,0x01008000,0x00631234);collapseAlternateCollisionLayer(f);seedTunnelDoorGlobals(f,0,4,0x12,0x34);
+            var owner=collapseUnavailableTerrain(f);var before=tunnelDoorPlayer(f);var globals=tunnelDoorGlobals(f);var slots=p.capture().slots();
+            var outcome=owner.runWithPrefix(CdSolidObject.Entry.TOP_SOLID_OBJECT,source,before,new CdSolidObject.Gates(0,0),globals,p.capture());
+            var stopped=assertInstanceOf(CdSolidObject.NativeStopped.class,outcome);var prefix=stopped.prefix();
+            assertEquals(CdSolidObject.StopSite.FLOOR_PRIMARY,stopped.stop().site());assertEquals(1,prefix.object().unsignedByte(SOLID_TYPE));
+            assertEquals(0x00611234,prefix.player().actor().motion().centreY16_16());assertTrue(prefix.fmRequests().isEmpty());
+            assertEquals(java.util.Set.of(CdSolidObject.PlayerField.CENTRE_X,CdSolidObject.PlayerField.CENTRE_X_FRACTION,
+                    CdSolidObject.PlayerField.CENTRE_Y,CdSolidObject.PlayerField.CENTRE_Y_FRACTION),prefix.playerWrites());
+            assertEquals(slots,p.capture().slots());assertEquals(before,tunnelDoorPlayer(f));
+            f.frame.validateObjectSolidPrefix(before,globals,prefix);assertEquals(before,tunnelDoorPlayer(f));
+            f.frame.applyObjectSolidPrefix(before,globals,prefix);assertEquals(prefix.player(),tunnelDoorPlayer(f));assertEquals(prefix.globals(),tunnelDoorGlobals(f));
+            var published=f.frame.state();assertThrows(IllegalArgumentException.class,()->f.frame.validateObjectSolidPrefix(before,globals,prefix));assertEquals(published,f.frame.state());
+        }
+    }
+
+    @Test void collapseFrameCasRejectsBothAnglesFractionsLinksAndNonwritesBeforeAnyApplication() throws Exception {
+        try(var f=new Fixture()) {
+            springDeviceCut(f);var p=f.runtime.placement().pool();var source=collapseImage(f,p.state(40),2,0xC0).moveByte(SPRITE_FLAGS,4);p.write(source);
+            var call=collapsePureCall(f,source);var result=((CdSolidObject.Completed)call.outcome()).completedResult();var player=call.expectedPlayer();var g=call.expectedGlobals();
+            var before=f.frame.state();var env=f.frame.environment();
+            for(var bad:List.of(new CdSolidObject.Globals(g.invincible(),g.scoreChain(),g.primaryAngle()^1,g.secondaryAngle()),
+                    new CdSolidObject.Globals(g.invincible(),g.scoreChain(),g.primaryAngle(),g.secondaryAngle()^1)))
+                assertThrows(IllegalArgumentException.class,()->f.frame.validateObjectSolidResult(player,bad,result));
+            var m=player.actor().motion();var changed=new CdPlayerMotionState(m.centreX16_16()^1,m.centreY16_16(),m.xVelocity(),m.yVelocity(),m.groundVelocity(),m.routine(),m.angle(),
+                    m.flags(),m.spriteFlags(),m.xRadius(),m.yRadius(),m.animation(),m.previousAnimation(),m.playerJump(),m.charge(),m.moveLock(),m.stick(),m.playerControl(),m.previousPrimaryAngle(),m.previousSecondaryAngle());
+            var wrong=new CdSolidObject.Player(new CdPlayerTouchResponse.Actor(changed,player.actor().tile(),player.actor().priority(),player.actor().hurt(),player.actor().rotationDistance()),
+                    player.slotId(),player.pushObject(),player.standObject());
+            assertThrows(IllegalArgumentException.class,()->f.frame.validateObjectSolidResult(wrong,g,result));
+            assertThrows(IllegalArgumentException.class,()->f.frame.validateObjectSolidResult(new CdSolidObject.Player(player.actor(),player.slotId(),player.pushObject(),player.standObject()^1),g,result));
+            assertEquals(before,f.frame.state());assertEquals(env,f.frame.environment());
+        }
+    }
+
+    @Test void collapseTwoActualNativeMappingsUseFirstSelected4CBAndCurrentPixelsForPriorCpuSat() throws Exception {
+        for(int subtype:List.of(0,0xC0))try(var f=new Fixture()) {
+            springDeviceCut(f);f.makePlayerAbsent();var p=f.runtime.placement().pool();p.write(collapseImage(f,p.state(40),0,subtype));
+            f.runtime.runDynamicSlotsAfterReservedSlots();var source=p.state(40);var maps=CdCollapsePlatform.Assets.fromObjectAssets(f.assets.openingObjects());
+            assertEquals(subtype==0?maps.mappings1():maps.mappings2(),source.longBits(MAPPINGS));var sat=f.runtime.finishAfterCamera(POST);f.runtime.finishOrdinaryTail();
+            assertTrue(sat.provenance().stream().anyMatch(v->v.slotRef().wholeIndex()==40));int at=satEntry(sat,40);assertEquals(0x4CB,word(sat.bytes(),at+4)&0x7FF);
+            var o=(com.openggf.game.soniccd.level.CdR11aObjectAssets)checkpointGet(f.runtime,"objects");var resident=f.runtime.sectionArtState().residency();
+            var original=CdObjectPresentation.convert(sat,collapsePixels(f.frame,f.runtime,o,resident));var changed=collapseChanged(resident);
+            var now=CdObjectPresentation.convert(sat,collapsePixels(f.frame,f.runtime,o,changed));assertEquals(original.tiles().size(),now.tiles().size());
+            assertEquals(original.tiles(),now.tiles());
+            int logical=BANKS.collapsePlatform()+(0x4CB-0x4BE);
+            assertEquals(CdObjectPresentation.patternVersion(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(resident,0x4CB)),original.patternVersions().get(logical));
+            assertEquals(CdObjectPresentation.patternVersion(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(changed,0x4CB)),now.patternVersions().get(logical));
+            assertNotEquals(original.patternVersions().get(logical),now.patternVersions().get(logical));assertArrayEquals(sat.bytes(),f.runtime.cpuSat().bytes());
+            var old601=antonPixels(f,changed);var pixels=collapsePixels(f.frame,f.runtime,o,changed);
+            for(int id=0;id<57;id++)assertEquals(BANKS.collapsePlatform()+id,pixels.resolve(0x4BE+id).logicalPatternId());
+            assertEquals(old601.resolve(0x4BD),pixels.resolve(0x4BD));assertThrows(UnsupportedOperationException.class,()->pixels.resolve(0x4F7));
+            f.service(0x80);assertEquals(original,f.runtime.displayedFrame());assertNull(checkpointGet(f.runtime,"activeCollapseInvocation"));
+        }
+    }
+
+    @Test void collapseRestartUnknownSelectedTileStopsOnlyAtNextActualVIntWithoutReseeding() throws Exception {
+        var a=load();var carry=cameraArtDevIngress(a);
+        try(var frame=CdPlayerFrameRuntime.externalTouchRequiredDevelopment(a,0);var runtime=collapseRestart(a,frame,carry)) {
+            var publications=new ArrayList<CdPlayerArtRuntime.State>();frame.bindArtPublication((request,state)->publications.add(state));
+            runtime.setPreScrollForeground(PRE);var selected=frame.prepareInput(0);runtime.serviceVBlank(selected.phase());runtime.spawnBeforeReservedSlots();runtime.runPlayerBody(1);
+            var p=runtime.placement().pool();p.clearDynamicSlots();var maps=CdCollapsePlatform.Assets.fromObjectAssets(a.openingObjects());
+            p.write(p.state(40).moveByte(ID,0x20).moveByte(ROUTINE,0).moveByte(SUBTYPE,0xC0).moveWord(X,64).moveWord(Y,0x740));
+            runtime.runDynamicSlotsAfterReservedSlots();assertEquals(maps.mappings2(),p.state(40).longBits(MAPPINGS));var sat=runtime.finishAfterCamera(POST);runtime.finishOrdinaryTail();
+            // Conversion paints reverse SAT: frame0's last piece is base+$15, not its first base+$0D.
+            int lastParent=-1;for(int i=0;i<sat.provenance().size();i++)if(sat.provenance().get(i).slotRef().wholeIndex()==40)lastParent=i*8;
+            assertTrue(lastParent>=0);assertEquals(0x4D3,word(sat.bytes(),lastParent+4)&0x7FF);
+            var resident=runtime.sectionArtState().residency();runtime.setPreScrollForeground(PRE);selected=frame.prepareInput(0x80);var phase=selected.phase();
+            var failure=assertThrows(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.OwnershipBoundary.class,()->runtime.serviceVBlank(phase));
+            assertEquals(0x4D3,failure.nativePatternId());assertEquals(resident,runtime.sectionArtState().residency());assertTrue(runtime.closed());
+            assertArrayEquals(sat.bytes(),((CpuSat)checkpointGet(checkpointGet(runtime,"queue"),"cpuSat")).bytes());assertNull(checkpointGet(runtime,"activeCollapseInvocation"));
+        }
+    }
+
+    private static CdOpeningObjectRuntime.LogicalBanks collapseBanks(int platform) {
+        return new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594,613,659,667,679,platform);
+    }
+    private static CdObjectState collapseImage(Fixture f,CdObjectState image,int routine,int subtype) throws java.io.IOException {
+        var a=CdCollapsePlatform.Assets.fromObjectAssets(f.assets.openingObjects());return image.moveByte(ID,0x20).moveByte(ROUTINE,routine).moveByte(SUBTYPE,subtype)
+                .moveByte(SPRITE_FLAGS,0x84).moveByte(PRIORITY,3).moveWord(TILE,0x44BE).moveLong(MAPPINGS,(subtype&0x80)==0?a.mappings1():a.mappings2())
+                .moveByte(WIDTH,(subtype&0x80)==0?40:48).moveByte(X_RADIUS,(subtype&0x80)==0?40:48).moveByte(Y_RADIUS,(subtype&0x80)==0?34:18)
+                .moveWord(X,0x100).moveWord(Y,0x740);
+    }
+    /** Finite search of actual format terrain through the real pure helper, never a fitted gameplay constant. */
+    private static CdObjectState collapseContact(Fixture f,int subtype,int speed,int stand,int charge) throws java.io.IOException {
+        var p=f.runtime.placement().pool();var owner=CdSolidObject.fromAssets(f.assets);
+        for(int y=0x710;y<0x7F0;y++) {
+            var source=collapseImage(f,p.state(40),2,subtype).moveWord(Y,y);p.write(source);int radius=source.unsignedByte(Y_RADIUS);
+            seedSolidPlayer(f,2,stand,charge,speed,0x400,0x01008000,((y-radius-19+2)<<16)|0x1234);
+            var outcome=owner.runWithPrefix(CdSolidObject.Entry.TOP_SOLID_OBJECT,source,tunnelDoorPlayer(f),new CdSolidObject.Gates(0,0),tunnelDoorGlobals(f),p.capture());
+            if(outcome instanceof CdSolidObject.Completed done&&done.completedResult().path()==CdSolidObject.Path.STAND_ON)return source;
+        }
+        throw new AssertionError("Actual bounded R11A terrain supplied no Collapse Top contact in the declared search");
+    }
+    private static CdCollapsePlatform.SolidCall collapsePureCall(Fixture f,CdObjectState source) {
+        var cut=f.runtime.placement().pool().capture();var player=tunnelDoorPlayer(f);var globals=tunnelDoorGlobals(f);var e=f.frame.environment();
+        var outcome=CdSolidObject.fromAssets(f.assets).runWithPrefix(CdSolidObject.Entry.TOP_SOLID_OBJECT,source,player,
+                new CdSolidObject.Gates(e.globals().debugMode(),e.movement().gates().miniSonic()),globals,cut);
+        return new CdCollapsePlatform.SolidCall(CdCollapsePlatform.Site.MAIN_TOP,CdSolidObject.Entry.TOP_SOLID_OBJECT,cut,player,globals,outcome);
+    }
+    private static CdOpeningObjectRuntime collapseRestart(CdR11aAssets a,CdPlayerFrameRuntime frame,CdOpeningObjectRuntime.CameraArtRestartIngress ingress) throws java.io.IOException {
+        return CdOpeningObjectRuntime.usaR11aRestartDevEmptySatPreloadedArt(a,frame,INITIAL,CONTACT,SCORE,LEVEL,declaredCheckpointBindings(),
+                CdAssetBytes.copyOf(new byte[CdObjectPlacementRuntime.SAVED_BANK_BYTES]),new CdPowerupArtRuntime.State(new byte[0x480],new byte[0x480]),ingress,new byte[640],BANKS,PRE,v->{ });
+    }
+    private static com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.State collapseChanged(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.State state) {
+        for(int tile=0;tile<57;tile++){byte[] bytes=new byte[32];java.util.Arrays.fill(bytes,(byte)(0xA1+tile));state=com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.writeTile(
+                state,0x97C0+tile*32,CdAssetBytes.copyOf(bytes));}return state;
+    }
+    private static CdObjectPresentation.PatternSource collapsePixels(CdPlayerFrameRuntime frame,CdOpeningObjectRuntime runtime,
+            com.openggf.game.soniccd.level.CdR11aObjectAssets o,com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.State resident) throws java.io.IOException {
+        return CdObjectPresentation.usaR11aCurrentCameraDevPreloadedArt(frame.artState(),runtime.powerupArtState(),o,o.frontierArtBank(),o.contactArtBank(),o.floatBlockArtBank(),o.springArtBank(),
+                o.tunnelDoorArtBank(),o.monitorTimeArtBank(),resident,BANKS.player(),BANKS.ring(),BANKS.mosqui(),BANKS.plant(),BANKS.ramp(),BANKS.explosion(),BANKS.points(),BANKS.flower(),
+                BANKS.powerup(),BANKS.floatBlock(),BANKS.spring(),BANKS.tunnelDoorVertical(),BANKS.monitorTime(),BANKS.boulder(),BANKS.diagonalSpring(),BANKS.spikes(),BANKS.checkpoint(),BANKS.anton(),BANKS.collapsePlatform());
+    }
+    private static CdSolidObject collapseUnavailableTerrain(Fixture f) {
+        byte[] chunks=new byte[61952],fg=new byte[338],bg=new byte[50],ids=new byte[900],angles=new byte[256],heights=new byte[4096],widths=new byte[4096];
+        fg[0]=41;fg[1]=7;bg[0]=5;bg[1]=7;java.util.Arrays.fill(fg,2,fg.length,(byte)2);fg[3]=(byte)0xF9;
+        var terrain=com.openggf.game.soniccd.level.CdR11aTerrain.decode(new byte[6432],new byte[25600],chunks,fg,bg,ids,angles,heights,widths);
+        return new CdSolidObject(new CdPlayerMovement(terrain,f.assets.player()));
+    }
+
+    @Test void collapseActualBodyHostGuardFailureClearsInvocationAndPublishesNoHelperOutput() throws Exception {
+        try(var f=new Fixture()) {
+            springDeviceCut(f);var p=f.runtime.placement().pool();p.write(collapseImage(f,p.state(40),2,0xC0).moveByte(SPRITE_FLAGS,4));
+            var slots=p.capture().slots();var actor=f.frame.state();var env=f.frame.environment();var sounds=f.runtime.lastSoundRequests();
+            boulderSet(f.runtime,"inDrawCallback",true);
+            assertThrows(IllegalStateException.class,f.runtime::runDynamicSlotsAfterReservedSlots);
+            assertNull(checkpointGet(f.runtime,"activeCollapseInvocation"));assertEquals(slots,p.capture().slots());assertEquals(actor,f.frame.state());
+            assertEquals(env,f.frame.environment());assertEquals(sounds,f.runtime.lastSoundRequests());assertTrue(f.runtime.closed());
+        }
+    }
+
+    @Test void collapseNativeBodyRethrowsTheIdenticalActualTerrainExceptionAfterCheckedPrefixPublication() throws Exception {
+        try(var f=new Fixture()) {
+            springDeviceCut(f);var p=f.runtime.placement().pool();var source=collapseImage(f,p.state(40),2,0xC0).moveWord(X,0x100).moveWord(Y,0x80)
+                    .moveByte(WIDTH,16).moveByte(Y_RADIUS,12);p.write(source);
+            seedSolidPlayer(f,2,0,0,0x123,0x400,0x01008000,0x00631234);collapseAlternateCollisionLayer(f);seedTunnelDoorGlobals(f,0,4,0x12,0x34);
+            var original=new RuntimeException[1];var reached=new CdSolidObject.Prefix[1];var before=tunnelDoorPlayer(f);var globals=tunnelDoorGlobals(f);
+            var body=new CdCollapsePlatform(f.runtime.placement(),CdCollapsePlatform.Assets.fromObjectAssets(f.assets.openingObjects()),collapseUnavailableTerrain(f),call->{
+                var stop=assertInstanceOf(CdSolidObject.NativeStopped.class,call.outcome());original[0]=stop.stop().originalException();reached[0]=stop.prefix();
+                assertEquals(CdCollapsePlatform.Site.MAIN_TOP,call.site());assertEquals(p.capture().slots(),call.actualCut().slots());
+                f.frame.validateObjectSolidPrefix(call.expectedPlayer(),call.expectedGlobals(),stop.prefix());
+                p.write(stop.prefix().object());f.frame.applyObjectSolidPrefix(call.expectedPlayer(),call.expectedGlobals(),stop.prefix());
+            },(pool,id)->fail("incomplete Top must never Draw"),id->fail("incomplete Top must never request A3"));
+            var thrown=assertThrows(RuntimeException.class,()->body.run(40,new CdCollapsePlatform.DespawnGlobals(0,0,0),new CdCollapsePlatform.Inputs(before,new CdSolidObject.Gates(0,0),globals)));
+            assertNotNull(original[0]);assertSame(original[0],thrown);assertEquals(reached[0].object(),p.state(40));assertEquals(reached[0].player(),tunnelDoorPlayer(f));
+            assertEquals(2,p.state(40).routine());assertEquals(0,p.state(40).unsignedByte(COLLAPSE_SAVED_SOURCE_ID));
+        }
+    }
+    /** Explicit same-owner actor ingress selects the real alternate terrain path, not a fake fault. */
+    private static void collapseAlternateCollisionLayer(Fixture f) {
+        var m=f.frame.state().motion();
+        seedSpinTunnelMotion(f,new CdPlayerMotionState(m.centreX16_16(),m.centreY16_16(),m.xVelocity(),m.yVelocity(),m.groundVelocity(),
+                m.routine(),m.angle(),m.flags(),m.spriteFlags()|0x40,m.xRadius(),m.yRadius(),m.animation(),m.previousAnimation(),
+                m.playerJump(),m.charge(),m.moveLock(),m.stick(),m.playerControl(),m.previousPrimaryAngle(),m.previousSecondaryAngle()));
+    }
+    // END Collapse Platform Runtime R1.
 }

@@ -84,7 +84,14 @@ public final class CdR11aObjectAssets {
         CHECKPOINT_MAPPINGS("MapSpr_Checkpoint", 0x3F120, 66),
         // Anton/Main.asm:27,85,98-103; actual USA MOVE.L $B2EA / PC-relative LEA $B382.
         ANTON_ANIMATIONS("Ani_Anton", 0xB39E, 12),
-        ANTON_MAPPINGS("MapSpr_Anton", 0xB3AA, 112);
+        ANTON_MAPPINGS("MapSpr_Anton", 0xB3AA, 112),
+        // Collapse Main.asm:36-41,142,183,229,281: actual USA LEAs and both child LONG operands.
+        COLLAPSE_PLATFORM_MAPPINGS_1("MapSpr_CollapsePlatform1", 0xC520, 118),
+        COLLAPSE_PLATFORM_SIZES_1("ObjCollapsePlatform_Sizes1", 0xC596, 24),
+        COLLAPSE_PLATFORM_MAPPINGS_3("MapSpr_CollapsePlatform3", 0xC5AE, 62),
+        COLLAPSE_PLATFORM_MAPPINGS_2("MapSpr_CollapsePlatform2", 0xC5EC, 408),
+        COLLAPSE_PLATFORM_SIZES_2("ObjCollapsePlatform_Sizes2", 0xC784, 40),
+        COLLAPSE_PLATFORM_MAPPINGS_4("MapSpr_CollapsePlatform4", 0xC7AC, 158);
 
         private final String nativeLabel;
         private final int offset;
@@ -348,6 +355,10 @@ public final class CdR11aObjectAssets {
     private CdObjectVisualAssets spikes;
     private CdObjectVisualAssets checkpoint;
     private CdObjectVisualAssets anton;
+    private CdObjectVisualAssets collapsePlatform1;
+    private CdObjectVisualAssets collapsePlatform2;
+    private CdObjectVisualAssets collapsePlatform3;
+    private CdObjectVisualAssets collapsePlatform4;
 
     private CdR11aObjectAssets(CdR11aAssets.Identity identity, Map<Table, View> views, List<Delta> deltas,
                                 List<TouchSize> dimensions, CdObjectVisualAssets rings,
@@ -800,6 +811,42 @@ public final class CdR11aObjectAssets {
         return anton;
     }
 
+    /** Native counted map 1; breakup scripts stay in raw size views, never AnimateObject data. */
+    public synchronized CdObjectVisualAssets collapsePlatform1() {
+        if (collapsePlatform1 == null) {
+            collapsePlatform1 = CdObjectVisualAssets.decodeStatic(
+                    read(Table.COLLAPSE_PLATFORM_MAPPINGS_1), 1, 57);
+        }
+        return collapsePlatform1;
+    }
+
+    /** Native counted map 2; breakup scripts stay in raw size views, never AnimateObject data. */
+    public synchronized CdObjectVisualAssets collapsePlatform2() {
+        if (collapsePlatform2 == null) {
+            collapsePlatform2 = CdObjectVisualAssets.decodeStatic(
+                    read(Table.COLLAPSE_PLATFORM_MAPPINGS_2), 6, 57);
+        }
+        return collapsePlatform2;
+    }
+
+    /** Native counted map 3; breakup scripts stay in raw size views, never AnimateObject data. */
+    public synchronized CdObjectVisualAssets collapsePlatform3() {
+        if (collapsePlatform3 == null) {
+            collapsePlatform3 = CdObjectVisualAssets.decodeStatic(
+                    read(Table.COLLAPSE_PLATFORM_MAPPINGS_3), 7, 57);
+        }
+        return collapsePlatform3;
+    }
+
+    /** Native counted map 4; breakup scripts stay in raw size views, never AnimateObject data. */
+    public synchronized CdObjectVisualAssets collapsePlatform4() {
+        if (collapsePlatform4 == null) {
+            collapsePlatform4 = CdObjectVisualAssets.decodeStatic(
+                    read(Table.COLLAPSE_PLATFORM_MAPPINGS_4), 6, 57);
+        }
+        return collapsePlatform4;
+    }
+
     /** Obj3DPlant_Init (3D Ramp/Main.asm:57-90): ADD.W consumes signed offsets in two distinct bodies. */
     public static PlantOffsets decodePlantOffsets(byte[] input) {
         var bytes = exact(input, 14, "Obj3DPlant_Offsets1/Obj3DPlant_Offsets2");
@@ -1043,6 +1090,12 @@ public final class CdR11aObjectAssets {
             // Cache this one immutable decode here; physical $6CB..$6D6 remains the existing current
             // owner's responsibility. This adds no CheckpointArtBank, preload or tile resolver.
             var checkpointRead = decodeSectionArt(CdR11aAsset.ART_CHECKPOINT, 12, 211);
+            // Platform's actual USA header $8039 at $362FE declares XOR/57 tiles. Separate finite source
+            // models establish Java452/native453: native's final post-symbol refill consumes Boulder's
+            // genuine $80 header byte at $364C2. The inventory stays 452 bytes, not padded or extended.
+            // One immutable NemesisRead is cached in this bank; $97C0..$9EE0 aliases existing AT_9000.
+            // Collapse uses literal tile $44BE, without SetObjectTileID or a secondary-subtype selector.
+            var platform = decodeSectionArt(CdR11aAsset.ART_PLATFORM, 57, 452);
             // NemDecMain preloads two bytes (Functions (General).asm:415-418); the native decoder refills
             // below nine bits BEFORE emitting a run, including the final run (:436-441,471-490).
             // Native finite lengths therefore differ from Java's final pre-symbol peek lengths. These are
@@ -1061,7 +1114,8 @@ public final class CdR11aObjectAssets {
                     sectionArtSource(CdR11aAsset.ART_BOULDER, 2, 0, 0x6E80, 19, 271, boulder),
                     sectionArtSource(CdR11aAsset.ART_DIAGONAL_SPRING, 1, 5, 0x9200, 46, 780, diagonal),
                     sectionArtSource(CdR11aAsset.ART_SPIKES, 1, 0, 0x6400, 8, 87, spikes),
-                    sectionArtSource(CdR11aAsset.ART_CHECKPOINT, 0, 1, 0xD960, 12, 212, checkpointRead)));
+                    sectionArtSource(CdR11aAsset.ART_CHECKPOINT, 0, 1, 0xD960, 12, 212, checkpointRead),
+                    sectionArtSource(CdR11aAsset.ART_PLATFORM, 1, 6, 0x97C0, 57, 453, platform)));
         }
         return sectionArtSources;
     }

@@ -967,4 +967,331 @@ class TestCdSolidObject {
         bytes[at] = (byte) (value >>> 8);
         bytes[at + 1] = (byte) value;
     }
+
+    // Bounded opt-in prefix seam. Native format inputs only; all additions SOURCE-ONLY / JAVA UNRUN.
+    private static final Set<PlayerField> PREFIX_POSITION = EnumSet.of(CENTRE_X, CENTRE_X_FRACTION,
+            CENTRE_Y, CENTRE_Y_FRACTION);
+
+    @Test void prefixFirstUnavailableFloorWordPreservesBothAngleBuffersWithoutInventingAProbeReturn() {
+        var s = prefixScene(); s.p.spr = 0x44; prefixCell(s, 1, 0, 0xF9);
+        var stop = prefixStopped(s, CdSolidObject.StopSite.FLOOR_PRIMARY);
+        var e = s.p.copy(); e.y = 0x00611234;
+        prefixValues(s, stop, e, s.globals(), Set.of(ByteField.SOLID_TYPE), PREFIX_POSITION, Set.of(), List.of());
+        prefixWordStop(stop, 0x21F2E0, 1, 0xF9, 122,
+                com.openggf.game.soniccd.level.CdTerrainCollision.UnavailableReason.OUTSIDE_SUPPLIED_CHUNKS);
+    }
+
+    @Test void prefixSecondFootFailureIsIdentifiedEvenWhenTheCompletedFirstFootNeverStoredAnAngle() {
+        var s = prefixScene(); s.object(o -> o.moveWord(WordField.X, 0xF8)); s.p.x = 0x00F88000;
+        s.p.spr = 0x44; prefixCell(s, 0, 0, 0xF9);
+        var stop = prefixStopped(s, CdSolidObject.StopSite.FLOOR_SECONDARY);
+        var e = s.p.copy(); e.y = 0x00611234;
+        prefixValues(s, stop, e, s.globals(), Set.of(ByteField.SOLID_TYPE), PREFIX_POSITION, Set.of(), List.of());
+        prefixWordStop(stop, 0x21F2FC, 0, 0xF9, 122,
+                com.openggf.game.soniccd.level.CdTerrainCollision.UnavailableReason.OUTSIDE_SUPPLIED_CHUNKS);
+    }
+
+    @Test void prefixCompletedFirstFootRawZeroSurvivesASecondFootFailureWithoutAnAggregateFloorDistance() {
+        var s = prefixScene(); s.object(o -> o.moveWord(WordField.X, 0xF8)); s.p.x = 0x00F88000;
+        s.p.spr = 0x44; prefixCell(s, 0, 0, 0xF9); prefixBlock(s, 2, 0, 7, 0x2001);
+        Arrays.fill(s.terrain.heights, 16, 32, (byte) 1);
+        var stop = prefixStopped(s, CdSolidObject.StopSite.FLOOR_SECONDARY);
+        var e = s.p.copy(); e.y = 0x00611234;
+        prefixValues(s, stop, e, new Globals(0, 4, 0, 0x34), Set.of(ByteField.SOLID_TYPE), PREFIX_POSITION,
+                Set.of(GlobalField.PRIMARY_ANGLE), List.of());
+        prefixWordStop(stop, 0x21F2FC, 0, 0xF9, 122,
+                com.openggf.game.soniccd.level.CdTerrainCollision.UnavailableReason.OUTSIDE_SUPPLIED_CHUNKS);
+    }
+
+    @Test void prefixRawOddPrimaryAngleSurvivesAnAdjacentReadFailureInsideTheFirstFoot() {
+        var s = prefixScene(); s.object(o -> o.moveWord(WordField.Y, 0x10B)); s.p.y = 0x00EE1234;
+        s.p.spr = 0x44; prefixCell(s, 1, 1, 0xF9); prefixBlock(s, 2, 0, 15, 0x2001);
+        s.terrain.angles[1] = 3; Arrays.fill(s.terrain.heights, 16, 32, (byte) 0);
+        var stop = prefixStopped(s, CdSolidObject.StopSite.FLOOR_PRIMARY);
+        var e = s.p.copy(); e.y = 0x00EC1234;
+        prefixValues(s, stop, e, new Globals(0, 4, 3, 0x34), Set.of(ByteField.SOLID_TYPE), PREFIX_POSITION,
+                Set.of(GlobalField.PRIMARY_ANGLE), List.of());
+        prefixWordStop(stop, 0x21F200, 129, 0xF9, 122,
+                com.openggf.game.soniccd.level.CdTerrainCollision.UnavailableReason.OUTSIDE_SUPPLIED_CHUNKS);
+    }
+
+    @Test void prefixRawSecondaryAngleSurvivesAnAdjacentFailureAfterAnAngleFreePrimaryFoot() {
+        var s = prefixScene(); s.object(o -> o.moveWord(WordField.X, 0xF8).moveWord(WordField.Y, 0x10B));
+        s.p.x = 0x00F88000; s.p.y = 0x00EE1234; s.p.spr = 0x44;
+        prefixCell(s, 0, 1, 0xF9); prefixBlock(s, 2, 14, 15, 0x2001);
+        s.terrain.angles[1] = 3; Arrays.fill(s.terrain.heights, 16, 32, (byte) 0);
+        var stop = prefixStopped(s, CdSolidObject.StopSite.FLOOR_SECONDARY);
+        var e = s.p.copy(); e.y = 0x00EC1234;
+        prefixValues(s, stop, e, new Globals(0, 4, 0x12, 3), Set.of(ByteField.SOLID_TYPE), PREFIX_POSITION,
+                Set.of(GlobalField.SECONDARY_ANGLE), List.of());
+        prefixWordStop(stop, 0x21F21C, 128, 0xF9, 122,
+                com.openggf.game.soniccd.level.CdTerrainCollision.UnavailableReason.OUTSIDE_SUPPLIED_CHUNKS);
+    }
+
+    @Test void prefixRoomSeedsBothBuffersThenRetainsTheRawWallAngleBeforeItsAdjacentReadFails() {
+        var s = prefixScene(); s.object(o -> o.moveWord(WordField.X, 0xF4).moveWord(WordField.X_VELOCITY, 0x100));
+        s.p.x = 0x00F40000; s.p.xv = 0; s.p.yv = 0; s.p.spr = 0x44;
+        prefixCell(s, 1, 0, 0xF9); prefixBlock(s, 2, 15, 6, 0x4001); s.terrain.angles[1] = 3;
+        var stop = prefixStopped(s, CdSolidObject.StopSite.ROOM_PRIMARY);
+        var e = s.p.copy(); e.x = 0x00F50000; e.y = 0x00611234;
+        prefixValues(s, stop, e, new Globals(0, 4, 3, 0xC0), Set.of(ByteField.SOLID_TYPE),
+                Set.of(CENTRE_X, CENTRE_X_FRACTION, CENTRE_Y),
+                Set.of(GlobalField.PRIMARY_ANGLE, GlobalField.SECONDARY_ANGLE), List.of());
+        prefixWordStop(stop, 0x21F2C0, 1, 0xF9, 122,
+                com.openggf.game.soniccd.level.CdTerrainCollision.UnavailableReason.OUTSIDE_SUPPLIED_CHUNKS);
+    }
+
+    @Test void prefixLeftRoomFailureRetainsItsSameValueSeedsButNotTheLaterYLongMask() {
+        var s = prefixScene(); s.object(o -> o.moveWord(WordField.X, 0x10B).moveWord(WordField.X_VELOCITY, -0x100));
+        s.p.x = 0x010B0000; s.p.xv = 0; s.p.yv = 0; s.p.spr = 0x44; s.primary = s.secondary = 0x40;
+        prefixCell(s, 1, 0, 0xF9);
+        var stop = prefixStopped(s, CdSolidObject.StopSite.ROOM_PRIMARY);
+        var e = s.p.copy(); e.x = 0x010A0000; e.y = 0x00611234;
+        prefixValues(s, stop, e, s.globals(), Set.of(ByteField.SOLID_TYPE),
+                Set.of(CENTRE_X, CENTRE_X_FRACTION, CENTRE_Y),
+                Set.of(GlobalField.PRIMARY_ANGLE, GlobalField.SECONDARY_ANGLE), List.of());
+        prefixWordStop(stop, 0x21F2C0, 1, 0xF9, 122,
+                com.openggf.game.soniccd.level.CdTerrainCollision.UnavailableReason.OUTSIDE_SUPPLIED_CHUNKS);
+    }
+
+    @Test void prefixCeilingRetainsItsRawOddAngleBeforeItsOwnAdjacentFailureWithoutKillOrGetOff() {
+        var s = prefixScene(); s.object(o -> o.moveWord(WordField.Y, 0x12A).moveWord(WordField.Y_VELOCITY, -0x100));
+        s.p.y = 0x010D1234; s.p.yv = 0; s.p.spr = 0x44;
+        prefixCell(s, 1, 0, 0xF9); prefixBlock(s, 2, 0, 0, 0x4001);
+        s.terrain.angles[1] = 3; Arrays.fill(s.terrain.heights, 16, 32, (byte) 0);
+        var stop = prefixStopped(s, CdSolidObject.StopSite.CEILING_PRIMARY);
+        var e = s.p.copy(); e.y = 0x010A1234;
+        prefixValues(s, stop, e, new Globals(0, 4, 3, 0x34), Set.of(ByteField.SOLID_TYPE), PREFIX_POSITION,
+                Set.of(GlobalField.PRIMARY_ANGLE), List.of());
+        prefixWordStop(stop, 0x21F3E0, 1, 0xF9, 122,
+                com.openggf.game.soniccd.level.CdTerrainCollision.UnavailableReason.OUTSIDE_SUPPLIED_CHUNKS);
+    }
+
+    @Test void prefixUnavailableAlternateCollisionIdIsTypedAndStopsBeforeAnyAngleWrite() {
+        var s = prefixScene(); s.p.spr = 0x44; prefixCell(s, 1, 0, 0x82); prefixBlock(s, 3, 0, 7, 0x2384);
+        var stop = prefixStopped(s, CdSolidObject.StopSite.FLOOR_PRIMARY);
+        var e = s.p.copy(); e.y = 0x00611234;
+        prefixValues(s, stop, e, s.globals(), Set.of(ByteField.SOLID_TYPE), PREFIX_POSITION, Set.of(), List.of());
+        assertEquals(new CdSolidObject.CollisionId(900), stop.stop().detail());
+        assertEquals("Collision ID requires unavailable resident bytes: 900", stop.stop().originalException().getMessage());
+    }
+
+    @Test void prefixFlaggedZeroChunkHasTheActualOddUnderflowAddressAdmittedByThePublicDecoder() {
+        var s = prefixScene(); prefixCell(s, 1, 0, 0x80);
+        var stop = prefixStopped(s, CdSolidObject.StopSite.FLOOR_PRIMARY);
+        var e = s.p.copy(); e.y = 0x00611234;
+        prefixValues(s, stop, e, s.globals(), Set.of(ByteField.SOLID_TYPE), PREFIX_POSITION, Set.of(), List.of());
+        prefixWordStop(stop, 0x21FEE1, 1, 0x80, 0,
+                com.openggf.game.soniccd.level.CdTerrainCollision.UnavailableReason.ODD_NATIVE_WORD_ADDRESS);
+    }
+
+    @ParameterizedTest @CsvSource({"1,RESERVED_SLOT_ADDRESS", "5,RESERVED_SLOT_ADDRESS", "31,RESERVED_SLOT_ADDRESS",
+            "128,OUT_OF_POOL_ADDRESS", "255,OUT_OF_POOL_ADDRESS"})
+    void prefixStandReleaseStopsAtTheActualAddressAfterJumpAndFlagsButBeforeSetInteract(int stand,
+                                                                                       UnsupportedBoundary boundary) {
+        var s = prefixScene(); s.p.flags = 8; s.p.stand = stand; s.p.yv = 0;
+        var stop = prefixStopped(s, CdSolidObject.StopSite.STAND_RELEASE);
+        var e = s.p.copy(); e.y = 0x00611234; e.jump = 0;
+        prefixValues(s, stop, e, s.globals(), Set.of(ByteField.SOLID_TYPE, ByteField.FLAGS), CARRY, Set.of(),
+                List.of(new FloorDistance(27, NONE, NONE), call(Routine.STAND_ON_OBJECT)));
+        assertEquals(new CdSolidObject.SlotAddress(boundary, stand, Routine.STAND_ON_OBJECT), stop.stop().detail());
+        var original = assertInstanceOf(UnsupportedSolidObject.class, stop.stop().originalException());
+        assertEquals(boundary, original.boundary()); assertEquals(stand, original.slotByte());
+        assertEquals(Routine.STAND_ON_OBJECT, original.routine());
+        assertEquals(boundary + " in STAND_ON_OBJECT: slot byte $" + Integer.toHexString(stand) + " addresses $"
+                + Integer.toHexString((0xFFD000 + stand * 0x40) & 0xFFFFFF), original.getMessage());
+    }
+
+    @ParameterizedTest @CsvSource({"0,9,19,92", "1,5,10,95"})
+    void prefixHurtRolledStandFailureKeepsTheReachedResizeHurtAndAnimationWrites(int mini, int xr, int yr, int y) {
+        var s = prefixScene(); s.mini = mini; s.p.flags = 0x0C; s.p.routine = 4; s.p.hurt = 7;
+        s.p.stand = 5; s.p.yv = 0; s.p.anim = 2;
+        var stop = prefixStopped(s, CdSolidObject.StopSite.STAND_RELEASE);
+        var e = s.p.copy(); e.y = (y << 16) | 0x1234; e.routine = 2; e.hurt = 120; e.flags = 8; e.jump = 0;
+        e.xr = xr; e.yr = yr; e.anim = 0;
+        prefixValues(s, stop, e, s.globals(), Set.of(ByteField.SOLID_TYPE, ByteField.FLAGS),
+                with(CARRY, ROUTINE, HURT, X_RADIUS, Y_RADIUS, ANIMATION), Set.of(),
+                List.of(new FloorDistance(27, NONE, NONE), call(Routine.STAND_ON_OBJECT)));
+    }
+
+    @Test void prefixStandFailureKeepsEarlierCompletedRoomAndFloorObservationsInOrder() {
+        var s = prefixScene(); s.p.flags = 8; s.p.stand = 128; s.p.yv = 0; s.p.xv = 0;
+        s.object(o -> o.moveWord(WordField.X_VELOCITY, 0x100));
+        var stop = prefixStopped(s, CdSolidObject.StopSite.STAND_RELEASE);
+        var e = s.p.copy(); e.x = 0x01018000; e.y = 0x00611234; e.jump = 0;
+        prefixValues(s, stop, e, new Globals(0, 4, 0xC0, 0xC0), Set.of(ByteField.SOLID_TYPE, ByteField.FLAGS), CARRY,
+                Set.of(GlobalField.PRIMARY_ANGLE, GlobalField.SECONDARY_ANGLE),
+                List.of(new RoomInFront(0xC0, 20, OptionalInt.of(0xC0), OptionalInt.of(0xC0)),
+                        new FloorDistance(27, NONE, NONE), call(Routine.STAND_ON_OBJECT)));
+    }
+
+    @ParameterizedTest @ValueSource(strings = {"landing", "carry", "right", "left", "floor", "ceiling", "kill",
+            "rolledKill", "miniKill", "alias0", "free32", "reused127", "full", "getOff", "wrongGetOff",
+            "offscreen", "debug", "dead", "rising", "below", "side"})
+    void prefixCompletedContainsTheGenuineLegacyResultIncludingMasksCallsAndOrderedFm(String vector) {
+        var s = prefixScene(); Entry entry = Entry.TOP_SOLID_OBJECT;
+        switch (vector) {
+            case "carry" -> s.standing();
+            case "right", "left" -> {
+                s.standing(); s.p.xv = 0;
+                s.object(o -> o.moveWord(WordField.X_VELOCITY, vector.equals("right") ? 0x100 : -0x100));
+            }
+            case "floor" -> { s.terrain.row(6, 0x6001); s.object(o -> o.moveWord(WordField.Y, 0x66)); s.p.y = 0x00471234; }
+            case "ceiling", "kill", "rolledKill", "miniKill" -> {
+                s.standing(); s.object(o -> o.moveWord(WordField.Y, 0x180).moveWord(WordField.Y_VELOCITY, -0x100));
+                s.p.y = 0x01611234;
+                if (!vector.equals("ceiling")) { s.terrain.row(5, 0x5001); s.p.ctrl = 1; s.p.charge = 0x1E; s.invincible = 1; }
+                if (vector.endsWith("Kill")) s.p.flags = 0x0C;
+                if (vector.equals("miniKill")) s.mini = 1;
+            }
+            case "alias0" -> { s.p.flags = 8; s.p.stand = 0; s.p.yv = 0; }
+            case "free32", "reused127" -> {
+                int index = vector.equals("free32") ? 32 : 127; s.p.flags = 8; s.p.stand = index; s.p.yv = 0;
+                s.other(index, o -> o.moveByte(ByteField.ID, 0x20).moveByte(ByteField.FLAGS, 0xAD)
+                        .moveWord(WordField.X_FRACTION, 0xABCD).moveWord(WordField.Y_FRACTION, 0x7654)
+                        .moveLong(CdObjectState.LongField.CHECKPOINT_PARENT, 0x13579BDF)
+                        .moveWord(WordField.EXPLOSION_POINTS_FRAME, 0xCAFE));
+                if (index == 32) s.pool.objNull(index); // ID zero does not erase physical RAM or release ownership.
+            }
+            case "full" -> { for (int i = 32; i < 128; i++) s.other(i, o -> o.moveByte(ByteField.ID, 0x20)); }
+            case "getOff", "wrongGetOff" -> {
+                s.standing(); s.p.charge = 1; s.p.stick = 0x55; s.p.ctrl = 1; entry = Entry.GET_OFF_OBJECT;
+                if (vector.equals("wrongGetOff")) s.p.stand = 255;
+            }
+            case "offscreen" -> s.object(o -> o.moveByte(ByteField.SPRITE_FLAGS, 4));
+            case "debug" -> s.debugMode = 0x100;
+            case "dead" -> s.p.routine = 6;
+            case "rising" -> s.p.yv = -1;
+            case "below" -> { s.p.y = 0x009F1234; s.p.yv = 0; }
+            case "side" -> { s.p.x = 0x00E88000; s.p.y = 0x00801234; s.p.yv = 0; }
+            case "landing" -> { }
+            default -> fail(vector);
+        }
+        var cut = s.pool.capture(); var owner = s.terrain.owner();
+        var legacy = owner.run(entry, s.object(), s.p.player(), s.gates(), s.globals(), cut);
+        var completed = assertInstanceOf(CdSolidObject.Completed.class,
+                owner.runWithPrefix(entry, s.object(), s.p.player(), s.gates(), s.globals(), cut));
+        assertEquals(legacy, completed.completedResult()); assertEquals(cut.slots(), s.pool.capture().slots());
+        if (vector.equals("alias0")) { assertEquals(0, legacy.player().actor().motion().flags()); assertEquals(List.of(), legacy.otherSlots()); }
+        if (vector.equals("free32") || vector.equals("reused127")) {
+            int index = vector.equals("free32") ? 32 : 127;
+            assertEquals(List.of(s.pool.state(index).moveByte(ByteField.FLAGS, 0xA5)), legacy.otherSlots());
+            assertArrayEquals(s.pool.state(index).moveByte(ByteField.FLAGS, 0xA5).copyBytes(), legacy.otherSlots().getFirst().copyBytes());
+        }
+        if (vector.equals("full")) assertTrue(s.pool.findObjSlot().isEmpty(), "Capacity exhaustion is normal, never a stop");
+        if (vector.endsWith("Kill")) assertEquals(List.of(FmSound.FM_CHARGESTOP, FmSound.FM_HURT, FmSound.FM_CHARGESTOP), legacy.fmRequests());
+    }
+
+    @Test void prefixDiscardLeavesTheOwnerStatelessAndTheNextCallStartsAtTheEntryAgain() {
+        var s = prefixScene(); s.p.spr = 0x44; prefixCell(s, 1, 0, 0xF9);
+        var owner = s.terrain.owner(); var cut = s.pool.capture();
+        var first = assertInstanceOf(CdSolidObject.NativeStopped.class,
+                owner.runWithPrefix(Entry.TOP_SOLID_OBJECT, s.object(), s.p.player(), s.gates(), s.globals(), cut));
+        var second = assertInstanceOf(CdSolidObject.NativeStopped.class,
+                owner.runWithPrefix(Entry.TOP_SOLID_OBJECT, s.object(), s.p.player(), s.gates(), s.globals(), cut));
+        assertEquals(first.prefix(), second.prefix()); assertEquals(first.stop().site(), second.stop().site());
+        assertNotSame(first.stop().originalException(), second.stop().originalException());
+        var fresh = s.p.copy(); fresh.spr = 4;
+        var expected = owner.run(Entry.TOP_SOLID_OBJECT, s.object(), fresh.player(), s.gates(), s.globals(), cut);
+        assertEquals(expected, assertInstanceOf(CdSolidObject.Completed.class,
+                owner.runWithPrefix(Entry.TOP_SOLID_OBJECT, s.object(), fresh.player(), s.gates(), s.globals(), cut)).completedResult());
+        assertEquals(cut.slots(), s.pool.capture().slots());
+    }
+
+    @ParameterizedTest @ValueSource(strings = {"SOLID_OBJECT", "BTM_SOLID_OBJECT", "STAND_ON_OBJECT"})
+    void prefixUnsupportedEntriesRejectBeforeTouchingAnyOtherInput(String entry) {
+        var owner = new Scene().terrain.owner();
+        assertThrows(IllegalArgumentException.class,
+                () -> owner.runWithPrefix(Entry.valueOf(entry), null, null, null, null, null));
+    }
+
+    @Test void prefixHostInputMisuseRemainsAHostExceptionAndNeverBecomesANativeOutcome() {
+        var s = prefixScene(); var owner = s.terrain.owner(); var cut = s.pool.capture();
+        assertThrows(NullPointerException.class, () -> owner.runWithPrefix(null, s.object(), s.p.player(), s.gates(), s.globals(), cut));
+        assertThrows(NullPointerException.class, () -> owner.runWithPrefix(Entry.TOP_SOLID_OBJECT, null, s.p.player(), s.gates(), s.globals(), cut));
+        assertThrows(NullPointerException.class, () -> owner.runWithPrefix(Entry.TOP_SOLID_OBJECT, s.object(), null, s.gates(), s.globals(), cut));
+        assertThrows(NullPointerException.class, () -> owner.runWithPrefix(Entry.TOP_SOLID_OBJECT, s.object(), s.p.player(), null, s.globals(), cut));
+        assertThrows(NullPointerException.class, () -> owner.runWithPrefix(Entry.TOP_SOLID_OBJECT, s.object(), s.p.player(), s.gates(), null, cut));
+        assertThrows(NullPointerException.class, () -> owner.runWithPrefix(Entry.TOP_SOLID_OBJECT, s.object(), s.p.player(), s.gates(), s.globals(), null));
+        assertEquals(cut.slots(), s.pool.capture().slots());
+    }
+
+    @Test void prefixRecordsDefensivelyCopyMetadataAndKeepTheExactOriginalExceptionReference() {
+        var s = prefixScene(); var other = s.pool.state(41);
+        var others = new java.util.ArrayList<>(List.of(other));
+        var objects = EnumSet.of(ByteField.SOLID_TYPE); var players = EnumSet.of(CENTRE_Y);
+        var globals = EnumSet.of(GlobalField.PRIMARY_ANGLE); var calls = new java.util.ArrayList<Call>();
+        calls.add(call(Routine.STAND_ON_OBJECT));
+        var prefix = new CdSolidObject.Prefix(Entry.TOP_SOLID_OBJECT, s.object(), s.p.player(), s.globals(),
+                others, objects, players, globals, calls);
+        others.clear(); objects.clear(); players.clear(); globals.clear(); calls.clear();
+        assertEquals(List.of(other), prefix.otherSlots()); assertEquals(Set.of(ByteField.SOLID_TYPE), prefix.objectWrites());
+        assertEquals(Set.of(CENTRE_Y), prefix.playerWrites()); assertEquals(Set.of(GlobalField.PRIMARY_ANGLE), prefix.globalWrites());
+        assertEquals(List.of(call(Routine.STAND_ON_OBJECT)), prefix.calls());
+        assertThrows(UnsupportedOperationException.class, () -> prefix.otherSlots().clear());
+        assertThrows(UnsupportedOperationException.class, () -> prefix.objectWrites().clear());
+        assertThrows(UnsupportedOperationException.class, () -> prefix.playerWrites().clear());
+        assertThrows(UnsupportedOperationException.class, () -> prefix.globalWrites().clear());
+        assertThrows(UnsupportedOperationException.class, () -> prefix.calls().clear());
+        assertThrows(IllegalArgumentException.class, () -> new CdSolidObject.Prefix(prefix.entry(), prefix.object(), prefix.player(),
+                prefix.globals(), List.of(prefix.object()), Set.of(), Set.of(), Set.of(), List.of()));
+        assertThrows(IllegalArgumentException.class, () -> new CdSolidObject.Prefix(prefix.entry(), prefix.object(), prefix.player(),
+                prefix.globals(), List.of(other, other), Set.of(), Set.of(), Set.of(), List.of()));
+        var original = new IllegalStateException("actual owner instance");
+        var stop = new CdSolidObject.NativeStop(CdSolidObject.StopSite.FLOOR_PRIMARY, new CdSolidObject.CollisionId(900), original);
+        var outcome = new CdSolidObject.NativeStopped(prefix, stop);
+        assertSame(original, outcome.stop().originalException()); assertSame(prefix, outcome.prefix()); assertSame(stop, outcome.stop());
+    }
+
+    @Test void prefixFmRequestsFlattenOnlyCompletedCallMetadataInItsExistingOrder() {
+        var s = risingPlatform(); s.p.flags = 0x0C; s.p.charge = 1; s.terrain.row(5, 0x5001);
+        var cut = s.pool.capture(); var completed = s.run(Entry.TOP_SOLID_OBJECT);
+        var prefix = new CdSolidObject.Prefix(completed.entry(), completed.object(), completed.player(), completed.globals(),
+                completed.otherSlots(), completed.objectWrites(), completed.playerWrites(), completed.globalWrites(), completed.calls());
+        assertEquals(List.of(FmSound.FM_CHARGESTOP, FmSound.FM_HURT, FmSound.FM_CHARGESTOP), prefix.fmRequests());
+        assertEquals(completed.fmRequests(), prefix.fmRequests());
+        assertThrows(UnsupportedOperationException.class, () -> prefix.fmRequests().clear());
+        assertEquals(cut.slots(), s.pool.capture().slots());
+    }
+
+    private static Scene prefixScene() {
+        var s = new Scene(); s.object(o -> o.moveByte(ByteField.ID, 0x20).moveByte(ByteField.SUBTYPE, 0xC0)); return s;
+    }
+    private static void prefixCell(Scene s, int x, int y, int value) { s.terrain.fg[2 + 42 * y + x] = (byte) value; }
+    private static void prefixBlock(Scene s, int chunk, int x, int y, int value) {
+        word(s.terrain.chunks, (chunk - 1) * 512 + y * 32 + x * 2, value);
+    }
+    private static CdSolidObject.NativeStopped prefixStopped(Scene s, CdSolidObject.StopSite site) {
+        var owner = s.terrain.owner(); var cut = s.pool.capture(); var object = s.object(); var player = s.p.player();
+        var stopped = assertInstanceOf(CdSolidObject.NativeStopped.class,
+                owner.runWithPrefix(Entry.TOP_SOLID_OBJECT, object, player, s.gates(), s.globals(), cut));
+        assertEquals(site, stopped.stop().site()); assertEquals(Entry.TOP_SOLID_OBJECT, stopped.prefix().entry());
+        assertEquals(List.of(), stopped.prefix().otherSlots()); assertEquals(List.of(), stopped.prefix().fmRequests());
+        assertEquals(CdObjectPool.DYNAMIC_COUNT, cut.slots().size()); assertEquals(cut.slots(), s.pool.capture().slots());
+        for (int i = 0; i < 96; i++) assertArrayEquals(cut.slots().get(i).copyBytes(), s.pool.state(32 + i).copyBytes());
+        var legacy = assertThrows(stopped.stop().originalException().getClass(),
+                () -> owner.run(Entry.TOP_SOLID_OBJECT, object, player, s.gates(), s.globals(), cut));
+        assertEquals(stopped.stop().originalException().getMessage(), legacy.getMessage());
+        assertEquals(cut.slots(), s.pool.capture().slots()); return stopped;
+    }
+    private static void prefixValues(Scene s, CdSolidObject.NativeStopped stopped, P expectedPlayer, Globals expectedGlobals,
+                                     Set<ByteField> objects, Set<PlayerField> players, Set<GlobalField> globals, List<Call> calls) {
+        var p = stopped.prefix(); var expectedObject = s.object().moveByte(ByteField.SOLID_TYPE,
+                stopped.stop().site() == CdSolidObject.StopSite.STAND_RELEASE ? 0 : 1);
+        if (stopped.stop().site() == CdSolidObject.StopSite.STAND_RELEASE) expectedObject = expectedObject.moveByte(ByteField.FLAGS, expectedObject.flags() | 8);
+        assertEquals(expectedObject, p.object()); assertArrayEquals(expectedObject.copyBytes(), p.object().copyBytes());
+        assertEquals(expectedPlayer.player(), p.player()); assertEquals(expectedGlobals, p.globals());
+        assertEquals(objects, p.objectWrites()); assertEquals(players, p.playerWrites());
+        assertEquals(globals, p.globalWrites()); assertEquals(calls, p.calls());
+    }
+    private static void prefixWordStop(CdSolidObject.NativeStopped stop, int address, int layoutOffset, int layoutByte,
+                                       int effectiveChunk, com.openggf.game.soniccd.level.CdTerrainCollision.UnavailableReason reason) {
+        var detail = assertInstanceOf(CdSolidObject.TerrainWord.class, stop.stop().detail());
+        assertEquals(new com.openggf.game.soniccd.level.CdTerrainCollision.Address(layoutOffset, layoutByte, effectiveChunk,
+                address & 0xFFFF), detail.address());
+        assertEquals(address, detail.address().nativeAddress()); assertEquals(reason, detail.reason());
+        assertEquals(IllegalStateException.class, stop.stop().originalException().getClass());
+        assertEquals("Unavailable native collision word at $" + Integer.toHexString(address) + ": " + reason,
+                stop.stop().originalException().getMessage());
+    }
 }

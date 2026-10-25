@@ -1270,4 +1270,70 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
             else if (call instanceof CdPlayerTouchResponse.SubCpu command) sounds.add(new ContactSubCpuCommand(command.command()));
         }
     }
+
+    /**
+     * Pure value-CAS for a stopped native Solid prefix at the same existing post-Body cut.
+     * Identical actor/environment current-value and nonwrite rules as the completed port; Root alone owns
+     * actual call-cut/source/full-pool/phase and FM publication authority. Public metadata supplies none.
+     */
+    public void validateObjectSolidPrefix(CdSolidObject.Player expectedPlayer, CdSolidObject.Globals expectedGlobals,
+                                          CdSolidObject.Prefix prefix) {
+        requireOpenIdle(); requireClosedFrame();
+        Objects.requireNonNull(expectedPlayer, "solid call player");
+        Objects.requireNonNull(expectedGlobals, "solid call globals");
+        Objects.requireNonNull(prefix, "solid prefix");
+        var s = state; var h = s.header(); var g = environment.movement().globals();
+        var currentPlayer = new CdSolidObject.Player(new CdPlayerTouchResponse.Actor(s.motion(), h.tile(), h.priority(),
+                s.timers().hurt(), s.rotationDistance()), h.slotId(), s.objectLinks().pushObject(), s.objectLinks().standObject());
+        var currentGlobals = new CdSolidObject.Globals(environment.globals().invincible(), g.scoreChain(),
+                g.primaryAngle(), g.secondaryAngle());
+        if (!expectedPlayer.equals(currentPlayer) || !expectedGlobals.equals(currentGlobals)) {
+            throw new IllegalArgumentException("Stale SolidObject player/global call cut");
+        }
+        var next = prefix.player(); var before = expectedPlayer.actor().motion(); var after = next.actor().motion();
+        if (next.slotId() != expectedPlayer.slotId() || after.spriteFlags() != before.spriteFlags()
+                || after.previousAnimation() != before.previousAnimation() || after.charge() != before.charge()
+                || after.moveLock() != before.moveLock() || after.previousPrimaryAngle() != before.previousPrimaryAngle()
+                || after.previousSecondaryAngle() != before.previousSecondaryAngle()) {
+            throw new IllegalArgumentException("SolidObject prefix changes an unowned player field");
+        }
+        for (var field : CdSolidObject.PlayerField.values()) {
+            if (!prefix.playerWrites().contains(field) && solidPlayerValue(expectedPlayer, field) != solidPlayerValue(next, field)) {
+                throw new IllegalArgumentException("Undeclared SolidObject player write: " + field);
+            }
+        }
+        for (var field : CdSolidObject.GlobalField.values()) {
+            if (!prefix.globalWrites().contains(field)
+                    && solidGlobalValue(expectedGlobals, field) != solidGlobalValue(prefix.globals(), field)) {
+                throw new IllegalArgumentException("Undeclared SolidObject global write: " + field);
+            }
+        }
+    }
+
+    /**
+     * Adopt the checked final values once, preserving every field outside the declared native write sets.
+     * Root preflights this before pool CAS, then calls it synchronously after that CAS, with no callback between.
+     * All new immutable values are built before the first assignment. No ordered call/write metadata is replayed.
+     */
+    public void applyObjectSolidPrefix(CdSolidObject.Player expectedPlayer, CdSolidObject.Globals expectedGlobals,
+                                       CdSolidObject.Prefix prefix) {
+        validateObjectSolidPrefix(expectedPlayer, expectedGlobals, prefix);
+        var player = prefix.player(); var actor = player.actor(); var globals = prefix.globals();
+        var h = state.header(); var timers = state.timers();
+        var nextState = new CdPlayerBody.State(actor.motion(), state.animation(),
+                new CdPlayerBody.Header(h.slotId(), h.mappingAddress(), actor.tile(), actor.priority(), h.width()),
+                new CdPlayerBody.Timers(actor.hurt(), timers.invincibility(), timers.speedShoes(), timers.reset()),
+                state.history(), actor.rotationDistance(), new CdPlayerBody.ObjectLinks(player.pushObject(), player.standObject()));
+        var m = environment.movement(); var g = m.globals(); var body = environment.globals();
+        var movementGlobals = new CdPlayerMovement.Globals(g.lookMode(), g.cameraYCentre(), globals.primaryAngle(),
+                globals.secondaryAngle(), g.boredTimer(), globals.scoreChain(), g.debugAngle(), g.debugAngleShift(),
+                g.debugQuadrant(), g.debugFloorDistance());
+        var nextEnvironment = new CdPlayerBody.Environment(
+                new CdPlayerMovement.Environment(m.physics(), m.bounds(), m.gates(), movementGlobals), environment.controls(),
+                new CdPlayerBody.Globals(body.levelFrames(), body.cameraXCentre(), body.timeAttackMode(), body.debugMode(),
+                        body.debugCheat(), body.timeWarpTimer(), globals.invincible(), body.bossMusic()), environment.dynamicSlots());
+        state = nextState;
+        environment = nextEnvironment;
+    }
+
 }

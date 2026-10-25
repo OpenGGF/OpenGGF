@@ -13,7 +13,8 @@ whole-act/region/viewport/donor/roster breadth remain open.
 | --- | --- | --- |
 | Ring/contact/hurt/death/restart and constructed object products | Existing USA World/EGL checks remain in the final consumer selection; restart carries actual current art/table/section rather than reseeding | See the dated implementation record for individual constructed versus controller-only products; no whole-act claim |
 | Pata-Bata539 →540 →541 | Controller-only Right route, real physical52 Init and complete camera PLC9; full/course replay across queued and completed Tamabboh state | Pata remains offscreen here; CPU replay is not a new Pata GPU proof |
-| Spikes561 →Checkpoint Init582 →Anton604/609/610 →platform20 inside657 | Controller-only Right completes through656, with full/course selected replay; natural Checkpoint contact/save649 has31 known bytes/AE and pre-contact owner restore checks |657 is incomplete at physical40 ID20; later55 is not visited. No natural enemy contact, collapse or native timing/pixel parity |
+| Spikes561 →Checkpoint582/save649 →Anton604/609/610 →Collapse657/723/732 →ID21 inside742 | Controller-only Right completes741;657 Init,723 native breakup/A3 and732 Delay→Fall have full/course replay; natural save31/AE checked BEFORE replay |742 is partial at newly placed physical75 ID21, after earlier35 Fall. No native timing/pixel parity |
+| Constructed collapsing platform →658 retirement | Eight initial-only scenes ×96 ordinary rows, four mapping roots/sparse40 rendered/current57, physical child ordering, Delay/Fall/delete, complete sound prefix, ordered GPU/PlaneB/omission controls and full/course forward state+pixels |41 ENGINE PNGs;17 unmapped patterns have current installation-only witnesses;658 installed is not658 scene-rendered. No natural collapse capture or native comparison |
 | Constructed Anton Init/Place/Main/animation →601 retirement | Actual Right649 first services current22; eight initial-only scenes, four frames/current22/SAT, real sloped terrain and ordered GPU/PlaneB/omission controls;112 full/course restores and4000 forward rows;113 ENGINE PNGs |601 is installed cleanup extent, not all rendered; terrain Y/raw-angle vector is integration evidence, not a separate native collision oracle; no producer fallback/cold Anton preload |
 | Constructed Checkpoint contact →orbit →animation →579 retirement | One initial pole/actor cut,44 ordinary neutral rows, final31 saved bytes/knowledge and AE,32 spin visits, real2/3 animation, current12/SAT/ordered GPU/PlaneB/omission checks, six full/course cut pairs | Twelve actual ENGINE PNGs; full saved18-store order is enforced by private component cursor, not inferred from equal World water bytes; no native image/timing parity |
 | Constructed Checkpoint save →actual Spikes Kill/reset →fresh load | One initial pole/Spikes/actor cut then GameLoop only; saved31 survives, fresh XY fractions/cameras/clouds/raw0000FF3B/Ring7,1/one initial section append, old epoch rejects;28 fresh replay rows/pixels | Fresh continuation stops at new row7/remaining1 before Animals; HUD remains explicit DEV0; no natural-route Checkpoint contact or complete native startup/title/PLC timing |
@@ -24,6 +25,17 @@ whole-act/region/viewport/donor/roster breadth remain open.
 | Constructed Spikes Init →Hurt →LostRing continuation | Actual Ring earned in92 controller rows, four initial-only flip scenes; upright direct Hurt after Solid versus vertical scanner Hurt before the object pass; different earlier32 LostRing ordering, all16 cells/eight current tiles and ordered World/PlaneB/omission controls | Explicit actor/slot ingress; same-value fullY rewind here, nonzero wrap only in component tests; no natural contact/emulator comparison |
 | Every selected Spikes cut and567 retirement | Five cuts per scene,40 full/course restores with forward state/pixel replay; all567 entries installed for cleanup and retired while800 actual other-producer entries retain identity | Twelve actual row2 PNGs; later-frame pixels asserted; retirement upload is not all567 rendered in gameplay |
 | Current art alias and module retirement | Relocated Anton overwrites18 of19 Boulder tiles; declared106-tile9100 write replaces all46 diagonal tiles in the same owner; partial transfer/carry replay; all559 actual current-policy entries installed at teardown then absent, shared entries identical | Declared BigRing-range transfer is not BigRing gameplay execution; cleanup upload is not proof all559 tiles were drawn; cold seed is explicit DEV history |
+
+Platform candidate over `74b4aa0ce54a` ran2147 cases across25 affected classes:
+2146 passed; the sole stale Anton source-count assertion10→11 was corrected and
+all10 affected picture cases then passed narrowly. All20 EGL,50 World-load and
+327 Runtime passed in the combined run; exact fresh XML/J25/media/EGL/S2/skips
+were checked. This is repaired bounded coverage, not a fresh all-green2147 run.
+Fresh platform guards68138 pass728/0/0/0 across90 fresh XML/J25/Lua5.4,
+5m16/22:39:19Z/no queue. Two further old count assertions migrate10->11;
+old picture consumers run29 with one stale C27 inventory, then corrected Spikes
+inventory passes8 narrowly. Original red invocations stay red in this record.
+Earlier evidence below is historical.
 
 Anton candidate over `b9816d16a656` passes634/0/0/0 across10 affected classes,
 including Runtime302,19 EGL,50 World/load, actual media/Java25/EGL/S2/no skips;

@@ -343,4 +343,204 @@ class TestCdPlayerTerrain {
             return new CdPlayerTerrain(terrain);
         }
     }
+
+    // Collapse probe prefix contract. CONSTRUCTED public-format inputs; ALL JAVA UNRUN.
+    @Test void prefixFloorCompleteResultAndEveryRawStoreMatchTheActualLegacyFloorSeven() {
+        int[] words = {0x2001, 0x2801, 0x3001, 0x3801};
+        int[] mirrors = {0, 0, 0x1000, 0x1000};
+        var expected = java.util.List.of(java.util.List.of(0x22), java.util.List.of(0x22, 0xDE),
+                java.util.List.of(0x22, 0x62, 0x9E, 0x5E), java.util.List.of(0x22, 0xDE, 0x1E, 0xE2, 0xA2));
+        for (int i = 0; i < words.length; i++) {
+            var f = new Fixture(); f.block(2, 2, words[i]); f.shape(1, 7, 0x22, 8, 0);
+            var before = prefixImage(f); var owner = f.probes();
+            var legacyWrites = new java.util.ArrayList<Integer>(); var raw = new java.util.ArrayList<Integer>();
+            var legacy = owner.floor(35, 35, 13, mirrors[i], 16, 0, legacyWrites::add);
+            assertEquals(legacy, owner.floorWithPrefix(35, 35, 13, mirrors[i], 16, 0, raw::add));
+            assertEquals(owner.floor(35, 35, 13, mirrors[i], 16, 0), legacy);
+            assertEquals(expected.get(i), raw); assertEquals(legacyWrites, raw); assertEquals(4, legacy.distance());
+            assertPrefixImage(before, f);
+        }
+    }
+
+    @Test void prefixWallCompleteResultAndFlipStoresRetainTheirNativeAxisOrder() {
+        var f = new Fixture(); f.block(2, 2, 0x5801); f.shape(1, 7, 0x23, 0, 0);
+        f.widths[7 * 16 + 12] = -8; var owner = f.probes(); var raw = new java.util.ArrayList<Integer>();
+        var result = owner.wallWithPrefix(35, 35, 14, 0, 16, 0, raw::add);
+        assertEquals(owner.wall(35, 35, 14, 0, 16, 0), result); assertEquals(4, result.distance());
+        assertEquals(java.util.List.of(0x23, 0x63, 0x9D, 0x5D, 0xA3), raw);
+        assertEquals(java.util.OptionalInt.of(0xA3), result.angleWrite());
+    }
+
+    @Test void prefixForcedZeroAndSameValueStoresAreNotCoalesced() {
+        var f = new Fixture(); f.block(2, 2, 0x3001); f.shape(1, 7, 0x22, 8, 0);
+        var raw = new java.util.ArrayList<Integer>(); var owner = f.probes();
+        assertEquals(owner.floor(35, 35, 13, 0, 16, 0),
+                owner.floorWithPrefix(35, 35, 13, 0, 16, 0, raw::add));
+        assertEquals(java.util.List.of(0x22, 0x62, 0x9E, 0x5E, 0), raw);
+        f.block(2, 2, 0x2801); f.shape(1, 7, 0, 8, 0); raw.clear();
+        assertEquals(java.util.OptionalInt.of(0), f.probes().floorWithPrefix(35, 35, 13, 0, 16, 0, raw::add).angleWrite());
+        assertEquals(java.util.List.of(0, 0), raw);
+    }
+
+    @Test void prefixBlankAndNonSolidReadsNeverInventAnAngleStoreOrRetainAWriter() {
+        var f = new Fixture(); var owner = f.probes(); var raw = new java.util.ArrayList<Integer>();
+        assertEquals(owner.floor(35, 35, 13, 0, 16, 0), owner.floorWithPrefix(35, 35, 13, 0, 16, 0, raw::add));
+        assertEquals(owner.wall(35, 35, 14, 0, 16, 0), owner.wallWithPrefix(35, 35, 14, 0, 16, 0, raw::add));
+        assertTrue(raw.isEmpty());
+        f.block(2, 2, 0x2001); f.shape(1, 7, 3, 8, 0); owner = f.probes();
+        var second = new java.util.ArrayList<Integer>();
+        assertEquals(owner.floor(35, 35, 13, 0, 16, 0), owner.floorWithPrefix(35, 35, 13, 0, 16, 0, second::add));
+        assertEquals(java.util.List.of(3), second); assertTrue(raw.isEmpty());
+        assertTrue(owner.wallWithPrefix(35, 35, 14, 0, 16, 0, raw::add).angleWrite().isEmpty());
+        assertTrue(raw.isEmpty());
+    }
+
+    @Test void prefixFirstUnavailableWordHasTypedNativeAddressAndTheUntouchedOriginalException() {
+        var f = new Fixture(); f.fg[2] = (byte) 0xF9; var before = prefixImage(f); var owner = f.probes();
+        var raw = new java.util.ArrayList<Integer>();
+        var failure = assertThrows(CdPlayerTerrain.UnownedTerrainRead.class,
+                () -> owner.floorWithPrefix(35, 35, 13, 0, 16, 0x40, raw::add));
+        assertEquals(new CdPlayerTerrain.TerrainWord(
+                new com.openggf.game.soniccd.level.CdTerrainCollision.Address(0, 0xF9, 122, 0xF244),
+                com.openggf.game.soniccd.level.CdTerrainCollision.UnavailableReason.OUTSIDE_SUPPLIED_CHUNKS), failure.detail());
+        assertPrefixOriginal(failure, "Unavailable native collision word at $21f244: OUTSIDE_SUPPLIED_CHUNKS");
+        assertTrue(raw.isEmpty()); assertPrefixImage(before, f);
+    }
+
+    @Test void prefixOddWordRemainsAnUnavailableNativeReadRatherThanAHostArrayFailure() {
+        var f = new Fixture(); f.fg[2] = (byte) 0x80; var owner = f.probes(); var raw = new java.util.ArrayList<Integer>();
+        var failure = assertThrows(CdPlayerTerrain.UnownedTerrainRead.class,
+                () -> owner.wallWithPrefix(35, 35, 14, 0, 16, 0, raw::add));
+        assertEquals(new CdPlayerTerrain.TerrainWord(
+                new com.openggf.game.soniccd.level.CdTerrainCollision.Address(0, 0x80, 0, 0xFE45),
+                com.openggf.game.soniccd.level.CdTerrainCollision.UnavailableReason.ODD_NATIVE_WORD_ADDRESS), failure.detail());
+        assertPrefixOriginal(failure, "Unavailable native collision word at $21fe45: ODD_NATIVE_WORD_ADDRESS");
+        assertTrue(raw.isEmpty());
+    }
+
+    @Test void prefixFloorRawOddByteSurvivesItsOwnAdjacentWordFailure() {
+        var f = new Fixture(); f.block(2, 15, 0x2001); f.shape(1, 7, 3, 0, 0); f.fg[2 + 42] = (byte) 0xF9;
+        var owner = f.probes(); var raw = new java.util.ArrayList<Integer>(); var before = prefixImage(f);
+        var failure = assertThrows(CdPlayerTerrain.UnownedTerrainRead.class,
+                () -> owner.floorWithPrefix(35, 255, 13, 0, 16, 0x40, raw::add));
+        assertEquals(java.util.List.of(3), raw);
+        assertEquals(new CdPlayerTerrain.TerrainWord(
+                new com.openggf.game.soniccd.level.CdTerrainCollision.Address(0x80, 0xF9, 122, 0xF204),
+                com.openggf.game.soniccd.level.CdTerrainCollision.UnavailableReason.OUTSIDE_SUPPLIED_CHUNKS), failure.detail());
+        assertPrefixOriginal(failure, "Unavailable native collision word at $21f204: OUTSIDE_SUPPLIED_CHUNKS");
+        assertPrefixImage(before, f);
+    }
+
+    @Test void prefixWallRawOddByteSurvivesItsOwnAdjacentWordFailure() {
+        var f = new Fixture(); f.block(15, 6, 0x4001); f.shape(1, 7, 3, 0, 0); f.fg[3] = (byte) 0xF9;
+        var owner = f.probes(); var raw = new java.util.ArrayList<Integer>();
+        var failure = assertThrows(CdPlayerTerrain.UnownedTerrainRead.class,
+                () -> owner.wallWithPrefix(255, 105, 14, 0, 16, 0x40, raw::add));
+        assertEquals(java.util.List.of(3), raw);
+        assertEquals(new CdPlayerTerrain.TerrainWord(
+                new com.openggf.game.soniccd.level.CdTerrainCollision.Address(1, 0xF9, 122, 0xF2C0),
+                com.openggf.game.soniccd.level.CdTerrainCollision.UnavailableReason.OUTSIDE_SUPPLIED_CHUNKS), failure.detail());
+        assertPrefixOriginal(failure, "Unavailable native collision word at $21f2c0: OUTSIDE_SUPPLIED_CHUNKS");
+    }
+
+    @Test void prefixCollisionIdFailureUsesOnlyThePubliclyAdmittedAlternateChunk() {
+        var f = new Fixture(); f.fg[2] = (byte) 0x82;
+        int at = 1024 + (2 * 16 + 2) * 2; f.chunks[at] = 0x63; f.chunks[at + 1] = (byte) 0x84;
+        var before = prefixImage(f); var owner = f.probes(); var raw = new java.util.ArrayList<Integer>();
+        for (boolean floor : java.util.List.of(true, false)) {
+            var failure = assertThrows(CdPlayerTerrain.UnownedTerrainRead.class, () -> {
+                if (floor) owner.floorWithPrefix(35, 35, 13, 0, 16, 0x40, raw::add);
+                else owner.wallWithPrefix(35, 35, 14, 0, 16, 0x40, raw::add);
+            });
+            assertEquals(new CdPlayerTerrain.CollisionId(900), failure.detail());
+            assertPrefixOriginal(failure, "Collision ID requires unavailable resident bytes: 900");
+        }
+        assertTrue(raw.isEmpty()); assertPrefixImage(before, f);
+    }
+
+    @Test void everyLegacyTerrainEntryStillThrowsThePlainOriginalClassAndExactMessage() {
+        var f = new Fixture(); f.fg[2] = (byte) 0xF9; var owner = f.probes();
+        var entries = java.util.List.<org.junit.jupiter.api.function.Executable>of(
+                () -> owner.floor(35, 35, 13, 0, 16, 0x40),
+                () -> owner.floor(35, 35, 13, 0, 16, 0x40, value -> fail("no reached angle")),
+                () -> owner.floorExtension(35, 35, 13, 0, 16, 0x40),
+                () -> owner.wall(35, 35, 14, 0, 16, 0x40),
+                () -> owner.wallExtension(35, 35, 14, 0, 16, 0x40));
+        for (var entry : entries) {
+            var failure = assertThrows(IllegalStateException.class, entry);
+            assertEquals(IllegalStateException.class, failure.getClass());
+            assertEquals("Unavailable native collision word at $21f244: OUTSIDE_SUPPLIED_CHUNKS", failure.getMessage());
+            assertNull(failure.getCause());
+        }
+        f.fg[2] = (byte) 0x82; int at = 1024 + (2 * 16 + 2) * 2;
+        f.chunks[at] = 0x63; f.chunks[at + 1] = (byte) 0x84; var alternate = f.probes();
+        assertEquals("Collision ID requires unavailable resident bytes: 900", assertThrows(IllegalStateException.class,
+                () -> alternate.floor(35, 35, 13, 0, 16, 0x40)).getMessage());
+        assertEquals(IllegalStateException.class, assertThrows(IllegalStateException.class,
+                () -> alternate.wall(35, 35, 14, 0, 16, 0x40)).getClass());
+    }
+
+    @Test void prefixCallbacksRemainArbitraryHostExceptionsWithTheirExactIdentity() {
+        var f = new Fixture(); f.block(2, 2, 0x3801); f.shape(1, 7, 0x22, 8, 8); var owner = f.probes();
+        for (var sentinel : new RuntimeException[]{new RuntimeException("host"), new IllegalStateException("host state"),
+                new IllegalArgumentException("host argument")}) {
+            var raw = new java.util.ArrayList<Integer>();
+            assertSame(sentinel, assertThrows(RuntimeException.class,
+                    () -> owner.floorWithPrefix(35, 35, 13, 0x1000, 16, 0, value -> {
+                        raw.add(value); if (raw.size() == 3) throw sentinel;
+                    })));
+            assertEquals(java.util.List.of(0x22, 0xDE, 0x1E), raw);
+        }
+        f.block(2, 2, 0x5801); var wall = f.probes(); var sentinel = new IllegalStateException("wall callback");
+        assertSame(sentinel, assertThrows(IllegalStateException.class,
+                () -> wall.wallWithPrefix(35, 35, 14, 0, 16, 0, value -> { throw sentinel; })));
+    }
+
+    @Test void prefixValidationAndResultInvariantsNeverBecomeNativeOwnershipMarkers() {
+        var owner = new Fixture().probes(); var raw = new java.util.ArrayList<Integer>();
+        assertEquals(NullPointerException.class, assertThrows(NullPointerException.class,
+                () -> owner.floorWithPrefix(35, 35, 13, 0, 16, 0, null)).getClass());
+        assertEquals(NullPointerException.class, assertThrows(NullPointerException.class,
+                () -> owner.wallWithPrefix(35, 35, 14, 0, 16, 0, null)).getClass());
+        for (int bit : new int[]{-1, 16}) {
+            assertEquals("Solidity bit must select the original native word", assertThrows(IllegalArgumentException.class,
+                    () -> owner.floorWithPrefix(35, 35, bit, 0, 16, 0, raw::add)).getMessage());
+            assertEquals(IllegalArgumentException.class, assertThrows(IllegalArgumentException.class,
+                    () -> owner.wallWithPrefix(35, 35, bit, 0, 16, 0, raw::add)).getClass());
+        }
+        assertTrue(raw.isEmpty());
+        assertEquals(IllegalArgumentException.class, assertThrows(IllegalArgumentException.class,
+                () -> new CdPlayerTerrain.Result(32768, java.util.OptionalInt.empty())).getClass());
+        assertThrows(IllegalArgumentException.class, () -> new CdPlayerTerrain.Result(0, java.util.OptionalInt.of(256)));
+        assertThrows(NullPointerException.class, () -> new CdPlayerTerrain.Result(0, null));
+        assertTrue(Arrays.stream(CdPlayerTerrain.UnownedTerrainRead.class.getDeclaredConstructors())
+                .allMatch(c -> java.lang.reflect.Modifier.isPrivate(c.getModifiers())));
+    }
+
+    @Test void prefixCoordinatesMirrorsFlagsAndStepsKeepExactlyTheirLegacyNativeWidths() {
+        var f = new Fixture(); f.block(2, 2, 0x2801); f.shape(1, 7, 0x23, 8, 8); var owner = f.probes();
+        var raw = new java.util.ArrayList<Integer>();
+        assertEquals(owner.floor(35, 35, 13, 0, 16, 0),
+                owner.floorWithPrefix(0x10023, 0x10023, 13, 0x10000, 0x10010, 0x100, raw::add));
+        assertEquals(java.util.List.of(0x23, 0xDD), raw); raw.clear();
+        assertEquals(owner.wall(35, 35, 14, 0x800, -16, 0),
+                owner.wallWithPrefix(0x10023, 0x10023, 14, 0x10800, 0xFFF0, 0x100, raw::add));
+        assertTrue(raw.isEmpty());
+    }
+
+    private static void assertPrefixOriginal(CdPlayerTerrain.UnownedTerrainRead failure, String message) {
+        var original = failure.originalException();
+        assertEquals(IllegalStateException.class, original.getClass()); assertEquals(message, original.getMessage());
+        assertNull(original.getCause()); assertSame(original, failure.originalException());
+        assertSame(original, failure.getCause()); assertEquals(message, failure.getMessage());
+        assertSame(original, assertThrows(IllegalStateException.class, () -> { throw failure.originalException(); }));
+    }
+    private static java.util.List<byte[]> prefixImage(Fixture f) {
+        return java.util.List.of(f.chunks.clone(), f.fg.clone(), f.bg.clone(), f.ids.clone(), f.angles.clone(),
+                f.heights.clone(), f.widths.clone());
+    }
+    private static void assertPrefixImage(java.util.List<byte[]> before, Fixture f) {
+        var after = java.util.List.of(f.chunks, f.fg, f.bg, f.ids, f.angles, f.heights, f.widths);
+        for (int i = 0; i < before.size(); i++) assertArrayEquals(before.get(i), after.get(i), "terrain array " + i);
+    }
 }

@@ -137,13 +137,15 @@ public final class CdPlayerTerrain {
     }
 
     private Integer metric(Cursor cursor, int x, int y) {
-        int word = nativeBlockWord(x, y, cursor.spriteFlags);
+        int word = nativeBlockWord(x, y, cursor.spriteFlags, cursor.prefixReads);
         if (word < 0 || (word & 0x7FF) == 0 || (word & (1 << cursor.solidityBit)) == 0) {
             return null;
         }
         int block = word & 0x7FF;
         if (block >= shapes.ids().length()) {
-            throw new IllegalStateException("Collision ID requires unavailable resident bytes: " + block);
+            var original = new IllegalStateException("Collision ID requires unavailable resident bytes: " + block);
+            if (cursor.prefixReads) throw new UnownedTerrainRead(new CollisionId(block), original);
+            throw original;
         }
         int id = shapes.idForBlock(block);
         if (id == 0) {
@@ -208,6 +210,7 @@ public final class CdPlayerTerrain {
         final int spriteFlags;
         final IntConsumer angleWrite;
         int angle = -1;
+        boolean prefixReads; // Invocation-local opt-in; all legacy constructors leave it false.
 
         Cursor(Axis axis, int solidityBit, int mirrorMask, int step, int spriteFlags) {
             this(axis, solidityBit, mirrorMask, step, spriteFlags, null);
@@ -222,5 +225,73 @@ public final class CdPlayerTerrain {
             angle = value & 0xFF;
             if (angleWrite != null) angleWrite.accept(angle);
         }
+    }
+
+    /** Reached native read detail only; a public value is never proof that a read occurred. */
+    public sealed interface UnownedReadDetail permits TerrainWord, CollisionId { }
+
+    public record TerrainWord(CdTerrainCollision.Address address,
+                              CdTerrainCollision.UnavailableReason reason) implements UnownedReadDetail {
+        public TerrainWord { Objects.requireNonNull(address); Objects.requireNonNull(reason); }
+    }
+
+    public record CollisionId(int blockIndex) implements UnownedReadDetail { }
+
+    /**
+     * Origin marker emitted only by the opt-in terrain calls at their two bounded read owners.
+     * The actual legacy exception remains intact for the caller's eventual terminal propagation.
+     */
+    public static final class UnownedTerrainRead extends RuntimeException {
+        private final UnownedReadDetail detail;
+        private final IllegalStateException originalException;
+
+        private UnownedTerrainRead(UnownedReadDetail detail, IllegalStateException originalException) {
+            super(originalException.getMessage(), originalException);
+            this.detail = detail;
+            this.originalException = originalException;
+        }
+
+        public UnownedReadDetail detail() { return detail; }
+        public IllegalStateException originalException() { return originalException; }
+    }
+
+    /** Same FindLevelFloor algorithm and raw stores, with typed unavailable native reads. No preclear. */
+    public Result floorWithPrefix(int x, int y, int solidityBit, int mirrorMask, int step, int spriteFlags,
+                                  IntConsumer rawAngleWrite) {
+        Objects.requireNonNull(rawAngleWrite, "reached angle writer");
+        return queryWithPrefix(Axis.FLOOR, x, y, solidityBit, mirrorMask, step, spriteFlags, rawAngleWrite);
+    }
+
+    /** Same FindLevelWall algorithm and raw stores, including writes before an adjacent read fails. */
+    public Result wallWithPrefix(int x, int y, int solidityBit, int mirrorMask, int step, int spriteFlags,
+                                 IntConsumer rawAngleWrite) {
+        Objects.requireNonNull(rawAngleWrite, "reached angle writer");
+        return queryWithPrefix(Axis.WALL, x, y, solidityBit, mirrorMask, step, spriteFlags, rawAngleWrite);
+    }
+
+    private Result queryWithPrefix(Axis axis, int x, int y, int solidityBit, int mirrorMask, int step,
+                                    int spriteFlags, IntConsumer rawAngleWrite) {
+        if (solidityBit < 0 || solidityBit > 15) {
+            throw new IllegalArgumentException("Solidity bit must select the original native word");
+        }
+        var cursor = new Cursor(axis, solidityBit, mirrorMask & 0xFFFF, (short) step, spriteFlags & 0xFF, rawAngleWrite);
+        cursor.prefixReads = true;
+        int distance = first(cursor, x & 0xFFFF, y & 0xFFFF);
+        return new Result((short) distance,
+                cursor.angle < 0 ? OptionalInt.empty() : OptionalInt.of(cursor.angle));
+    }
+
+    private int nativeBlockWord(int x, int y, int spriteFlags, boolean prefixReads) {
+        if (!prefixReads) return nativeBlockWord(x, y, spriteFlags);
+        return switch (placements.lookup(x, y, spriteFlags)) {
+            case CdTerrainCollision.Blank blank -> -1;
+            case CdTerrainCollision.Available available -> available.word().rawWord();
+            case CdTerrainCollision.Unavailable unavailable -> {
+                var original = new IllegalStateException("Unavailable native collision word at $"
+                        + Integer.toHexString(unavailable.address().nativeAddress())
+                        + ": " + unavailable.reason());
+                throw new UnownedTerrainRead(new TerrainWord(unavailable.address(), unavailable.reason()), original);
+            }
+        };
     }
 }

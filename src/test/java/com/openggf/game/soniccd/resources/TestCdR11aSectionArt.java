@@ -704,9 +704,9 @@ class TestCdR11aSectionArt {
         }
         var objects = assets.openingObjects();
         var sources = objects.sectionArtSources();
-        assertEquals(10, sources.sources().size());
+        assertEquals(11, sources.sources().size());
         assertEquals(List.of(ART_PATA_BATA, ART_ANTON, ART_TAMABBOH, ART_MOSQUI, ART_3D_PLANT,
-                ART_3D_RAMP_BOOST, ART_BOULDER, ART_DIAGONAL_SPRING, ART_SPIKES, ART_CHECKPOINT),
+                ART_3D_RAMP_BOOST, ART_BOULDER, ART_DIAGONAL_SPRING, ART_SPIKES, ART_CHECKPOINT, ART_PLATFORM),
                 sources.sources().stream().map(source -> source.source()).toList());
         var mosqui = sources.source(ART_MOSQUI).decode().bytes();
         var plant = sources.source(ART_3D_PLANT).decode().bytes();
@@ -756,5 +756,90 @@ class TestCdR11aSectionArt {
         byte[] bytes = new byte[20]; bytes[1]=2; System.arraycopy(state.queue().bytes().copy(),0,bytes,2,18); return bytes;
     }
 
+
+    // BEGIN COLLAPSE PLATFORM PICTURE R1
+    @Test void actualEleventhPlatformSourceKeepsCanonicalRowAndDistinctFiniteConsumers() throws Exception {
+        var assets=collapseActualAssets();var bank=assets.openingObjects().sectionArtSources();assertEquals(11,bank.sources().size());
+        var source=bank.sources().get(10);assertSame(source,bank.source(ART_PLATFORM));assertEquals(ART_PLATFORM,source.source());
+        assertEquals(1,source.canonicalPlcId());assertEquals(6,source.canonicalRowIndex());assertEquals(0x97C0,source.canonicalPlc().vramAddress());
+        assertEquals(57,source.tileCount());assertEquals(0x8039,source.readerBytes().unsignedWord(0));
+        assertEquals(452,source.canonicalPlc().sourceRange().length());assertEquals(452,source.decode().readerInputRange().length());
+        assertEquals(452,source.decode().consumedInputBytes());assertEquals(453,source.readerInputRange().length());assertEquals(453,source.readerBytes().length());
+        assertEquals(0x80,source.readerBytes().unsignedByte(452));assertEquals(0x2362FE,source.canonicalPlc().sourceRange().nativeAddress());
+        assertEquals(source.canonicalPlc(),assets.loadPlan().plcs().get(1).entries().get(6));assertSame(source,bank.source(source.canonicalPlc()));
+        var decoded=com.openggf.game.soniccd.level.CdNemesisAsset.decode(source.readerBytes().slice(0,452).copy(),1824,1824);
+        assertEquals(452,decoded.consumedInputBytes());assertArrayEquals(source.decode().bytes().copy(),decoded.bytes().copy());
+        assertThrows(java.io.IOException.class,()->com.openggf.game.soniccd.level.CdNemesisAsset.decode(source.readerBytes().slice(0,451).copy(),1824,1824));
+        var prepared=CdNemesisPlcDecoder.prepare(source.readerBytes(),0x2362FE,CdAssetBytes.copyOf(new byte[512]));
+        assertEquals(64,prepared.inputOffset());assertEquals(57,prepared.remainingTiles());assertTrue(prepared.xorMode());
+        var current=prepared;
+        for(int tile=0;tile<57;tile++) {var result=CdNemesisPlcDecoder.decodeTile(current);assertArrayEquals(source.decode().bytes().slice(tile*32,32).copy(),result.bytes().copy());current=result.state();}
+        assertEquals(453,current.inputOffset());assertEquals(13,current.shiftWord());assertEquals(0,current.remainingTiles());
+        assertEquals(57,prepared.remainingTiles());assertEquals(64,prepared.inputOffset());
+        var shortState=CdNemesisPlcDecoder.prepare(source.readerBytes().slice(0,452),0x2362FE,CdAssetBytes.copyOf(new byte[512]));
+        for(int tile=0;tile<56;tile++)shortState=CdNemesisPlcDecoder.decodeTile(shortState).state();
+        var lastBoundary=shortState;var fault=assertThrows(CdNemesisPlcDecoder.DecodeException.class,()->CdNemesisPlcDecoder.decodeTile(lastBoundary));
+        assertEquals(CdNemesisPlcDecoder.Reason.SOURCE_EXHAUSTED,fault.reason());assertEquals(452,fault.diagnostic().inputOffset());
+        assertEquals(1,lastBoundary.remainingTiles());assertEquals(57,prepared.remainingTiles());
+    }
+
+    @Test void actualPlatformStandaloneCanonicalRowServicesThreeAndEighteenWithImmutableReplayAndFinalSavedRam() throws Exception {
+        var assets=collapseActualAssets();var source=assets.openingObjects().sectionArtSources().source(ART_PLATFORM);var std=assets.loadPlan().plcs().get(1);
+        // Constructed one-row queue from REAL canonical metadata: component ingress, NOT full native Std history.
+        var owner=new CdR11aSectionArt(List.of(new CdR11aLoadPlan.PlcList(1,std.bodyRange(),List.of(source.canonicalPlc()))),
+                assets.loadPlan().sections(),List.of(new CdR11aSectionArt.SourceProgram(source.canonicalPlc(),source.readerBytes())));
+        var resident=collapseResident(assets);var initial=owner.devState(resident,CdAssetBytes.copyOf(new byte[512]),0);
+        var queued=owner.initList(initial,1);assertEquals(0x2362FEL,queued.queue().headSource());assertEquals(0x97C0,queued.queue().headDestination());
+        var ready=owner.prepare(queued);assertEquals(57,ready.remainingTilesWord());assertEquals(resident,ready.residency());
+        for(boolean fast:new boolean[]{false,true}) {
+            var state=ready;var cuts=new ArrayList<CdR11aSectionArt.State>();cuts.add(ready);int calls=fast?4:19;
+            for(int call=1;call<=calls;call++) {
+                var before=state;state=fast?owner.serviceFast(state):owner.serviceSlow(state,0);cuts.add(state);
+                int count=Math.min(57,call*(fast?18:3));assertEquals(57-count,state.remainingTilesWord());
+                for(int tile=0;tile<count;tile++)assertArrayEquals(source.decode().bytes().slice(tile*32,32).copy(),CdR11aCameraArtResidency.readTile(state.residency(),0x4BE+tile).copy());
+                if(count<57) {
+                    int next=0x4BE+count;var prefix=state;
+                    var unknown=assertThrows(CdR11aCameraArtResidency.OwnershipBoundary.class,()->CdR11aCameraArtResidency.readTile(prefix.residency(),next));
+                    assertEquals(CdR11aCameraArtResidency.Boundary.UNKNOWN_PATTERN,unknown.boundary());
+                    assertEquals(0x97C0+count*32,state.queue().headDestination());assertEquals(0,state.processBudgetWord());
+                } else {assertEquals(before.savedDecoder(),state.savedDecoder());assertEquals(fast?16:1,state.processBudgetWord());}
+            }
+            assertEquals(0,state.queue().headSource());assertEquals(453,state.decoder().orElseThrow().inputOffset());
+            for(int cut=0;cut<cuts.size();cut++) {var replay=cuts.get(cut);for(int remaining=cut;remaining<calls;remaining++)replay=fast?owner.serviceFast(replay):owner.serviceSlow(replay,0);assertEquals(state,replay);}
+            assertEquals(57,ready.remainingTilesWord());assertEquals(resident,ready.residency());assertEquals(resident,initial.residency());
+        }
+        var shortOwner=new CdR11aSectionArt(List.of(new CdR11aLoadPlan.PlcList(1,std.bodyRange(),List.of(source.canonicalPlc()))),assets.loadPlan().sections(),
+                List.of(new CdR11aSectionArt.SourceProgram(source.canonicalPlc(),source.readerBytes().slice(0,452))));
+        var partial=shortOwner.prepare(shortOwner.initList(shortOwner.devState(resident,CdAssetBytes.copyOf(new byte[512]),0),1));
+        for(int call=0;call<3;call++)partial=shortOwner.serviceFast(partial);
+        var prefix54=partial;var fault=assertThrows(CdR11aSectionArt.SectionArtException.class,()->shortOwner.serviceFast(prefix54));
+        assertEquals(DECODE_TILE,fault.reason());assertEquals(1,fault.state().remainingTilesWord());assertEquals(3,prefix54.remainingTilesWord());
+        for(int tile=0;tile<56;tile++)assertArrayEquals(source.decode().bytes().slice(tile*32,32).copy(),CdR11aCameraArtResidency.readTile(fault.state().residency(),0x4BE+tile).copy());
+        assertThrows(CdR11aCameraArtResidency.OwnershipBoundary.class,()->CdR11aCameraArtResidency.readTile(fault.state().residency(),0x4F6));
+    }
+
+    @Test void actualFullStdRetainsEarlierUnsupportedProducerStopBeforePlatform() throws Exception {
+        var assets=collapseActualAssets();var owner=CdR11aSectionArt.fromAssets(assets);var std=assets.loadPlan().plcs().get(1);
+        assertEquals(14,std.entries().size());assertEquals(ART_TUNNEL_DOOR,std.entries().get(1).source());
+        var initial=owner.devState(collapseResident(assets),CdAssetBytes.copyOf(new byte[512]),0);
+        var ready=owner.prepare(owner.initList(initial,1));assertEquals(8,ready.remainingTilesWord());
+        var after=owner.serviceSlow(owner.serviceSlow(owner.serviceSlow(ready,0),0),0);assertEquals(0,after.remainingTilesWord());
+        assertEquals(Integer.toUnsignedLong(std.entries().get(1).sourceRange().nativeAddress()),after.queue().headSource());
+        var fault=assertThrows(CdR11aSectionArt.SectionArtException.class,()->owner.prepare(after));assertEquals(UNKNOWN_SOURCE,fault.reason());
+        assertEquals(after.residency(),fault.state().residency());
+        for(int tile=0;tile<57;tile++){int selected=0x4BE+tile;assertThrows(CdR11aCameraArtResidency.OwnershipBoundary.class,()->CdR11aCameraArtResidency.readTile(after.residency(),selected));}
+    }
+
+    private static CdR11aCameraArtResidency.State collapseResident(CdR11aAssets assets) throws Exception {
+        var o=assets.openingObjects();return CdR11aCameraArtResidency.devSeed(o.initialArtBank().binding(ART_MOSQUI).bytes(),
+                o.frontierArtBank().binding(ART_3D_PLANT).bytes(),o.frontierArtBank().binding(ART_3D_RAMP_BOOST).bytes());
+    }
+
+    private static CdR11aAssets collapseActualAssets() throws Exception {
+        String root=System.getProperty("soniccd.media.root");Assumptions.assumeTrue(root!=null&&!root.isBlank(),"Set soniccd.media.root for retained actual USA assets");
+        Path cue;try(var files=Files.list(Path.of(root).resolve("USA"))) {var cues=files.filter(p->p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".cue")).toList();assertEquals(1,cues.size());cue=cues.getFirst();}
+        try(var programs=CdProgramAssets.open(cue,Optional.of(CdReleaseVariant.USA),Optional.empty())) {return CdR11aAssetLoader.load(programs,CdReleaseVariant.USA,CdStageKey.parse("R11A"));}
+    }
+    // END COLLAPSE PLATFORM PICTURE R1
 }
 // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>

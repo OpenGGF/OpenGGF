@@ -1928,5 +1928,89 @@ class TestCdObjectMappings {
             assertThrows(UnsupportedOperationException.class,()->mappings.resolve(pointer,false,0));
         assertThrows(UnsupportedOperationException.class,()->mappings.resolve(ANTON_MAP,true,0));
     }
+
+    // BEGIN COLLAPSE PLATFORM PICTURE R1
+    private static final int[] CP_ROOT={0x20C520,0x20C5EC,0x20C5AE,0x20C7AC};
+    private static final int[] CP_FRAMES={1,6,7,6};
+    private static final int[][] CP_DIRECTORY={{2},{12,12,103,204,305,356},{14,20,26,32,38,44,50},{12,28,54,80,106,132}};
+    private static final int[][] CP_COUNTS={{23},{18,18,20,20,10,10},{1,1,1,1,1,1,2},{3,5,5,5,5,5}};
+    private static final byte[][] CP_RAW={
+            HexFormat.of().parseHex("000217d005080dd8d005080de8d005080df8d005080d08d005080d18e0050811d8e0050811e8e0050811f8e005081108e005081118f0050019d8f0050815e8f0050815f8f005081508f00508151800050825d80005001de800050021f800050021080005081d1810050019f810050019081005001918"),
+            HexFormat.of().parseHex("000c000c006700cc0131016412e005000dd0e005000de0e005000df0e005000d00e005000d10e005000d20f0050011d0f0050011e0f0050011f0f005001100f005001110f00500112000050015d000050015e000050015f000050015000005001510000500152014d005000de0d005000df0d005000d00d005000d10e0050011e0e0050011f0e005001100e005001110f0050015e0f0050015f0f005001500f00500151000050029e000050033f00005003300000500331010050031e01005002bf01005002b001005002b1014d005000de0d005000df0d005000d00d005000d10e0050011e0e0050011f0e005001100e005001110f0050015e0f0050015f0f005001500f00500151000050033e000050033f0000500330000050033101005002be01005002bf01005002b001005002b100ad005000df0d005000d00e0050011f0e005001100f0050015f0f0050015000005001df0000500210010050019f010050019000ad005000df0d005000d00e0050011f0e005001100f0050015f0f00500150000050021f00005081d0010050019f0100500190000"),
+            HexFormat.of().parseHex("000e0014001a00200026002c003201f8050019f801f8050825f801f805001df801f8050021f801f805081df801f8050815f802e805080df8f8050811f800"),
+            HexFormat.of().parseHex("000c001c00360050006a008403e005000df8f0050011f800050015f805d005000df8e0050011f8f0050015f800050029f810050031f805d005000df8e0050011f8f0050015f800050033f81005002bf805d005000df8e0050011f8f0050015f80005001df810050019f805d005000df8e0050011f8f0050015f80005081df810050019f805d005000df8e0050011f8f0050015f800050021f810050019f8")
+    };
+
+    @Test void declaredCollapseRetainsFourFullRootsRawPiecesAliasesPadsAndSparseFortyTileUnion() throws Exception {
+        String[] hashes={"e11e6733195a4700631f68f369278f7335279b756d615bd64b1ead95e6dcca12","b045e60da3748ed69830e29883ed37a49b6a1285fdb4815d62b48ad871e36489","77e4add5588163b238981a19f8715f1033c2c07ea2e639c223486ecc1c8e7f2c","a39fbf7aa6cb97caa61a6ddcf52e0936979ecf3458c16f8e3aced9d75a005f5b"};
+        int[] lengths={118,408,62,158};var union=new TreeSet<Integer>();
+        for(int root=0;root<4;root++) {
+            byte[] raw=CP_RAW[root];assertEquals(lengths[root],raw.length);assertEquals(hashes[root],sha256(raw));
+            var visual=CdObjectVisualAssets.decodeStatic(raw,CP_FRAMES[root],57);
+            var resolver=declared(CP_ROOT[root],raw,0,CP_FRAMES[root]);
+            assertEquals(0,visual.mappingTableOffset());assertEquals(CP_FRAMES[root],visual.mappingFrames().size());
+            assertTrue(visual.animations().isEmpty());assertEquals(0,visual.animationTable().length());
+            for(int frame=0;frame<CP_FRAMES[root];frame++) {
+                int offset=CP_DIRECTORY[root][frame];assertEquals(offset,word(raw,frame*2));
+                var body=visual.mappingFrames().get(frame);assertEquals(offset,body.relativeOffset());
+                assertEquals(CP_COUNTS[root][frame],body.pieces().size());
+                assertArrayEquals(Arrays.copyOfRange(raw,offset,offset+1+5*CP_COUNTS[root][frame]),body.bytes().copy());
+                var expected=new java.util.ArrayList<CdObjectDrawQueue.RawPiece>();
+                for(int piece=0;piece<CP_COUNTS[root][frame];piece++) {
+                    int at=offset+1+piece*5;assertEquals(5,raw[at+1]);
+                    var p=new CdObjectDrawQueue.RawPiece(raw[at],5,word(raw,at+2),raw[at+4]);expected.add(p);
+                    var v=body.pieces().get(piece);assertEquals(p,new CdObjectDrawQueue.RawPiece(v.y(),v.sizeByte(),v.rawTileWord(),v.x()));
+                    for(int tile=0;tile<4;tile++){int id=(p.rawTileWord()&0x7FF)+tile;assertTrue(id<57);union.add(id);}
+                }
+                assertEquals(expected,resolver.resolve(CP_ROOT[root],false,frame).pieces());
+            }
+            byte[] detached=visual.mappings().copy();Arrays.fill(detached,(byte)0x7F);assertArrayEquals(raw,visual.mappings().copy());
+            assertThrows(UnsupportedOperationException.class,()->visual.mappingFrames().clear());
+        }
+        var sparse=new TreeSet<Integer>();for(int tile=13;tile<=46;tile++)sparse.add(tile);for(int tile=49;tile<=54;tile++)sparse.add(tile);
+        assertEquals(sparse,union);assertEquals(40,union.size());assertEquals(0,CP_RAW[1][407]);assertEquals(0,CP_RAW[2][61]);
+        assertEquals(word(CP_RAW[1],0),word(CP_RAW[1],2));assertEquals(0x080D,word(CP_RAW[0],5));
+        assertEquals(-48,CP_RAW[0][3]);assertEquals(-40,CP_RAW[0][7]);
+    }
+
+    @Test void collapseRetainsExactPointerFullFrameAndFinite57PieceAdmission() {
+        for(int root=0;root<4;root++) {
+            int pointer=CP_ROOT[root],frames=CP_FRAMES[root];byte[] raw=CP_RAW[root];var resolver=declared(pointer,raw,0,frames);
+            for(int frame=frames;frame<256;frame++){int absent=frame;assertThrows(UnsupportedOperationException.class,()->resolver.resolve(pointer,false,absent));}
+            for(int absent:new int[]{pointer+1,pointer+CP_DIRECTORY[root][0],pointer+raw.length,pointer|0x80000000})
+                assertThrows(UnsupportedOperationException.class,()->resolver.resolve(absent,false,0));
+            assertThrows(UnsupportedOperationException.class,()->resolver.resolve(pointer,true,0));
+            for(int frame:new int[]{-1,256})assertThrows(IllegalArgumentException.class,()->resolver.resolve(pointer,false,frame));
+            assertThrows(IllegalArgumentException.class,()->CdObjectVisualAssets.decodeStatic(Arrays.copyOf(raw,raw.length-2),frames,57));
+            byte[] escaped=raw.clone();int at=CP_DIRECTORY[root][0]+3;escaped[at]=0;escaped[at+1]=54;
+            assertThrows(IllegalArgumentException.class,()->CdObjectVisualAssets.decodeStatic(escaped,frames,57));
+            escaped[at+1]=53;assertNotNull(CdObjectVisualAssets.decodeStatic(escaped,frames,57));
+        }
+    }
+
+    @Test void actualUsaCollapseRegistersFourOrdinaryRootsAndPreservesEveryInheritedRegistration() throws Exception {
+        var usa=usaMedia();var o=usa.objects();var resolver=CdObjectMappings.fromOpeningAssets(usa.assets(),o);
+        var tables=List.of(CdR11aObjectAssets.Table.COLLAPSE_PLATFORM_MAPPINGS_1,CdR11aObjectAssets.Table.COLLAPSE_PLATFORM_MAPPINGS_2,
+                CdR11aObjectAssets.Table.COLLAPSE_PLATFORM_MAPPINGS_3,CdR11aObjectAssets.Table.COLLAPSE_PLATFORM_MAPPINGS_4);
+        var visuals=List.of(o.collapsePlatform1(),o.collapsePlatform2(),o.collapsePlatform3(),o.collapsePlatform4());
+        for(int root=0;root<4;root++) {
+            var view=o.view(tables.get(root));var visual=visuals.get(root);
+            assertEquals(CP_ROOT[root],view.range().nativeAddress());assertArrayEquals(CP_RAW[root],view.bytes().copy());
+            assertArrayEquals(CP_RAW[root],visual.mappings().copy());assertEquals(CP_FRAMES[root],visual.mappingFrames().size());
+            assertTrue(visual.animations().isEmpty());assertEquals(0,visual.animationTable().length());
+            var literal=declared(CP_ROOT[root],CP_RAW[root],0,CP_FRAMES[root]);
+            for(int frame=0;frame<CP_FRAMES[root];frame++)assertEquals(literal.resolve(CP_ROOT[root],false,frame),resolver.resolve(CP_ROOT[root],false,frame));
+        }
+        assertMonitorPriorRoots(usa,resolver);assertMonitorTimeFrames(resolver);assertHorizontalTunnelDoorFrames(resolver);
+        assertPataBataFrames(resolver);assertAntonFrames(resolver);
+        var old=List.of(o.springDiagonal(),o.boulder(),o.spikes(),o.checkpoint());int[] pointers={0x209BF0,0x209654,0x20C1F0,0x23F120};
+        for(int i=0;i<old.size();i++)for(int frame=0;frame<old.get(i).mappingFrames().size();frame++)
+            assertEquals(old.get(i).mappingFrames().get(frame).pieces().stream().map(p->new CdObjectDrawQueue.RawPiece(p.y(),p.sizeByte(),p.rawTileWord(),p.x())).toList(),resolver.resolve(pointers[i],false,frame).pieces());
+        for(int item=0;item<8;item++)assertEquals(new CdObjectDrawQueue.StaticMapping(monitorPieces(item).getFirst()),resolver.resolve(MONITOR_ITEM_POINTERS[item],true,255));
+        for(var table:List.of(CdR11aObjectAssets.Table.COLLAPSE_PLATFORM_SIZES_1,CdR11aObjectAssets.Table.COLLAPSE_PLATFORM_SIZES_2)) {
+            int pointer=o.view(table).range().nativeAddress();assertThrows(UnsupportedOperationException.class,()->resolver.resolve(pointer,false,0));
+        }
+    }
+    // END COLLAPSE PLATFORM PICTURE R1
 }
 // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>

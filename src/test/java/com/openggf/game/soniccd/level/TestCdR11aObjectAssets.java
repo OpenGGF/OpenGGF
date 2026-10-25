@@ -165,7 +165,7 @@ class TestCdR11aObjectAssets {
 
     @Test
     void metadataNamesOriginalUsaFileRangesWithoutChangingTheExistingAssetEnumeration() {
-        assertEquals(45, CdR11aObjectAssets.Table.values().length);
+        assertEquals(51, CdR11aObjectAssets.Table.values().length);
         for (var table : CdR11aObjectAssets.Table.values()) {
             assertEquals(CdNativeFile.R11A, table.range().file());
             assertEquals(CdMmdImage.Domain.ORIGINAL_WORD_RAM, table.range().domain());
@@ -775,7 +775,7 @@ class TestCdR11aObjectAssets {
         var table = CdR11aObjectAssets.Table.TUNNEL_DOOR_VERTICAL_MAPPINGS;
         assertEquals(31, table.ordinal(), "append after all 31 existing tables");
         assertEquals(table, CdR11aObjectAssets.Table.values()[31]);
-        assertEquals(45, CdR11aObjectAssets.Table.values().length);
+        assertEquals(51, CdR11aObjectAssets.Table.values().length);
         assertEquals("MapSpr_FlapDoorV", table.nativeLabel());
         assertEquals(new CdR11aProfile.FileRange(CdNativeFile.R11A,
                 CdMmdImage.Domain.ORIGINAL_WORD_RAM, 0xCE9A, 28), table.range());
@@ -977,7 +977,7 @@ class TestCdR11aObjectAssets {
     void monitorTimeAppendsTwoUsaTablesAndPreservesEveryPriorOrdinal() throws Exception {
         var scripts = CdR11aObjectAssets.Table.MONITOR_TIME_ANIMATIONS;
         var maps = CdR11aObjectAssets.Table.MONITOR_TIME_MAPPINGS;
-        assertEquals(45, CdR11aObjectAssets.Table.values().length);
+        assertEquals(51, CdR11aObjectAssets.Table.values().length);
         assertEquals(32, scripts.ordinal());
         assertEquals(33, maps.ordinal());
         assertEquals(List.of("Ani_Monitor", "MapSpr_MonitorTime"), List.of(scripts.nativeLabel(), maps.nativeLabel()));
@@ -1183,7 +1183,7 @@ class TestCdR11aObjectAssets {
     void horizontalTunnelDoorAppendsTwoUsaTablesWithoutAnotherArtSourceOrBank() throws Exception {
         var scripts = CdR11aObjectAssets.Table.TUNNEL_DOOR_ANIMATIONS;
         var maps = CdR11aObjectAssets.Table.TUNNEL_DOOR_MAPPINGS;
-        assertEquals(45, CdR11aObjectAssets.Table.values().length);
+        assertEquals(51, CdR11aObjectAssets.Table.values().length);
         assertEquals(34, scripts.ordinal());
         assertEquals(35, maps.ordinal());
         assertEquals(List.of("Ani_TunnelDoor", "MapSpr_TunnelDoor"), List.of(scripts.nativeLabel(), maps.nativeLabel()));
@@ -1362,7 +1362,7 @@ class TestCdR11aObjectAssets {
         var tables = List.of(CdR11aObjectAssets.Table.PATA_BATA_ANIMATIONS,
                 CdR11aObjectAssets.Table.PATA_BATA_NORMAL_MAPPINGS,
                 CdR11aObjectAssets.Table.PATA_BATA_DAMAGED_MAPPINGS);
-        assertEquals(45, CdR11aObjectAssets.Table.values().length);
+        assertEquals(51, CdR11aObjectAssets.Table.values().length);
         assertEquals(tables, Arrays.stream(CdR11aObjectAssets.Table.values()).skip(36).limit(3).toList());
         assertEquals(List.of(36, 37, 38), tables.stream().map(Enum::ordinal).toList());
         assertEquals(List.of("Ani_PataBata", "MapSpr_PataBata1", "MapSpr_PataBata2"),
@@ -1581,7 +1581,7 @@ class TestCdR11aObjectAssets {
         assertEquals(CdAssetBytes.class, source.getMethod("readerBytes").getReturnType());
         assertEquals(int.class, source.getMethod("tileCount").getReturnType());
         // Structure only: no reflective construction of an asserted authenticated owner or source bank.
-        assertEquals(45, CdR11aObjectAssets.Table.values().length);
+        assertEquals(51, CdR11aObjectAssets.Table.values().length);
     }
 
     @Test
@@ -1628,7 +1628,7 @@ class TestCdR11aObjectAssets {
     void boulderAppendsOneExactUsaMappingAndOnlyOnePublicVisualAccessor() throws Exception {
         var table = CdR11aObjectAssets.Table.BOULDER_MAPPINGS;
         assertEquals(39, table.ordinal());
-        assertEquals(45, CdR11aObjectAssets.Table.values().length);
+        assertEquals(51, CdR11aObjectAssets.Table.values().length);
         assertEquals("MapSpr_Boulder", table.nativeLabel());
         assertEquals(new CdR11aProfile.FileRange(CdNativeFile.R11A,
                 CdMmdImage.Domain.ORIGINAL_WORD_RAM, 0x9654, 14), table.range());
@@ -1763,7 +1763,7 @@ class TestCdR11aObjectAssets {
         assertEquals(CdObjectVisualAssets.class, getter.getReturnType());
         assertTrue(Modifier.isSynchronized(getter.getModifiers()));
         assertEquals(0, getter.getExceptionTypes().length);
-        assertEquals(45, CdR11aObjectAssets.Table.values().length);
+        assertEquals(51, CdR11aObjectAssets.Table.values().length);
         assertEquals(200, CdR11aObjectAssets.Table.SPRING_MAPPINGS.range().length());
         assertEquals(14, CdR11aObjectAssets.Table.SPRING_ANIMATIONS.range().length());
         assertTrue(Arrays.stream(CdR11aObjectAssets.class.getDeclaredClasses())
@@ -1884,7 +1884,7 @@ class TestCdR11aObjectAssets {
     @Test
     void spikesAppendsOneUsaTableAndOnlyALazyStaticVisualAccessor() throws Exception {
         var table = CdR11aObjectAssets.Table.SPIKES_MAPPINGS;
-        assertEquals(40, table.ordinal()); assertEquals(45, CdR11aObjectAssets.Table.values().length);
+        assertEquals(40, table.ordinal()); assertEquals(51, CdR11aObjectAssets.Table.values().length);
         assertEquals("MapSpr_Spikes", table.nativeLabel());
         assertEquals(new CdR11aProfile.FileRange(CdNativeFile.R11A,
                 CdMmdImage.Domain.ORIGINAL_WORD_RAM, 0xC1F0, 24), table.range());
@@ -2043,7 +2043,7 @@ class TestCdR11aObjectAssets {
     /** Checkpoint tables use the actual USA $23F120 root, not historical $20 labels. */
     @Test
     void checkpointAppendsTwoExactTablesAndOneLazyAccessorWithoutANewOwner() throws Exception {
-        assertEquals(45, CdR11aObjectAssets.Table.values().length);
+        assertEquals(51, CdR11aObjectAssets.Table.values().length);
         var animations = CdR11aObjectAssets.Table.CHECKPOINT_ANIMATIONS;
         var mappings = CdR11aObjectAssets.Table.CHECKPOINT_MAPPINGS;
         assertEquals(41, animations.ordinal()); assertEquals(42, mappings.ordinal());
@@ -2225,10 +2225,10 @@ class TestCdR11aObjectAssets {
     void antonAppendsTwoExactUsaTablesAndOneLazyArityZeroVisualOnly() throws Exception {
         var animations = CdR11aObjectAssets.Table.ANTON_ANIMATIONS;
         var mappings = CdR11aObjectAssets.Table.ANTON_MAPPINGS;
-        assertEquals(45, CdR11aObjectAssets.Table.values().length);
+        assertEquals(51, CdR11aObjectAssets.Table.values().length);
         assertEquals(43, animations.ordinal()); assertEquals(44, mappings.ordinal());
         assertEquals(List.of(animations,mappings),
-                Arrays.stream(CdR11aObjectAssets.Table.values()).skip(43).toList());
+                Arrays.stream(CdR11aObjectAssets.Table.values()).skip(43).limit(2).toList());
         var prior = new ArrayList<>(SPIKES_PRIOR_TABLE_NAMES);
         prior.addAll(List.of("SPIKES_MAPPINGS","CHECKPOINT_ANIMATIONS","CHECKPOINT_MAPPINGS"));
         assertEquals(prior,Arrays.stream(CdR11aObjectAssets.Table.values()).limit(43).map(Enum::name).toList());
@@ -2476,6 +2476,262 @@ class TestCdR11aObjectAssets {
     private static byte[] antonAnimations() {
         return java.util.HexFormat.of().parseHex("00040008030001ff070203ff");
     }
+
+    // Collapse platform asset handoff R1: source-only additions below.
+
+    @Test
+    void collapsePlatformAppendsSixLiteralRangesAfterTheUnchangedFortyFiveRowManifest() {
+        assertEquals(51,CdR11aObjectAssets.Table.values().length);
+        assertEquals(COLLAPSE_MANIFEST,Arrays.stream(CdR11aObjectAssets.Table.values())
+                .map(t -> t.name()+"|"+t.nativeLabel()+"|"+Integer.toHexString(t.range().fileOffset())
+                        +"|"+t.range().length()).toList());
+        assertEquals(COLLAPSE_TABLES,Arrays.stream(CdR11aObjectAssets.Table.values()).skip(45).toList());
+        for (int i = 0; i < 6; i++) {
+            var table = COLLAPSE_TABLES.get(i);
+            assertEquals(45+i,table.ordinal());
+            assertEquals(CdNativeFile.R11A,table.range().file());
+            assertEquals(CdMmdImage.Domain.ORIGINAL_WORD_RAM,table.range().domain());
+            assertEquals(COLLAPSE_LENGTHS[i],table.range().length());
+            assertEquals(0x200000+table.range().fileOffset(),table.range().nativeAddress());
+            if (i < 5) { assertEquals(COLLAPSE_TABLES.get(i+1).range().fileOffset(),table.range().endExclusive()); }
+            for (var old : Arrays.stream(CdR11aObjectAssets.Table.values()).limit(45).toList()) {
+                assertTrue(table.range().endExclusive() <= old.range().fileOffset()
+                        || old.range().endExclusive() <= table.range().fileOffset(),old.name());
+            }
+        }
+        var art = CdR11aAsset.ART_PLATFORM;
+        assertEquals(452,art.length());
+        assertEquals(CdR11aAsset.Kind.SOURCE_BLOB,art.kind());
+        assertEquals(CdR11aAsset.Encoding.NEMESIS,art.encodingForReviewedConsumer());
+        for (var region : CdReleaseVariant.values()) { assertEquals(0x362FE,art.fileOffset(region)); }
+        assertEquals(0x364C2,0x362FE+art.length());
+        assertEquals(0x364C2,CdR11aAsset.ART_BOULDER.fileOffset(CdReleaseVariant.USA));
+        assertEquals(0x97C0,(0x44BE & 0x7FF)*32);
+        assertEquals(0x9EE0,0x97C0+57*32);
+    }
+
+    @Test
+    void collapsePlatformAddsOnlyFourPrivateCachesAndPublicSynchronizedArityZeroVisualGetters() throws Exception {
+        for (int i = 1; i <= 4; i++) {
+            String name = "collapsePlatform"+i;
+            var method = CdR11aObjectAssets.class.getMethod(name);
+            assertEquals(0,method.getParameterCount()); assertEquals(0,method.getExceptionTypes().length);
+            assertEquals(CdObjectVisualAssets.class,method.getReturnType());
+            assertTrue(Modifier.isPublic(method.getModifiers()));
+            assertTrue(Modifier.isSynchronized(method.getModifiers()));
+            var field = CdR11aObjectAssets.class.getDeclaredField(name);
+            assertEquals(CdObjectVisualAssets.class,field.getType());
+            assertTrue(Modifier.isPrivate(field.getModifiers()));
+            assertFalse(Modifier.isStatic(field.getModifiers()));
+        }
+        assertEquals(0,CdR11aObjectAssets.class.getConstructors().length);
+        assertTrue(Arrays.stream(CdR11aObjectAssets.class.getDeclaredClasses())
+                .noneMatch(type -> type.getSimpleName().contains("Collapse")));
+        assertTrue(Arrays.stream(CdR11aObjectAssets.class.getDeclaredMethods())
+                .filter(method -> method.getName().startsWith("collapse"))
+                .allMatch(method -> List.of("collapsePlatform1","collapsePlatform2","collapsePlatform3","collapsePlatform4")
+                        .contains(method.getName())));
+    }
+
+    @Test
+    void collapsePlatformConstructedIncludesRetainEveryCountedPieceAliasAndActualEvenByte() {
+        int[][] offsets = {{2},{14,20,26,32,38,44,50},{12,12,103,204,305,356},{12,28,54,80,106,132}};
+        int[][] counts = {{23},{1,1,1,1,1,1,2},{18,18,20,20,10,10},{3,5,5,5,5,5}};
+        for (int map = 0; map < 4; map++) {
+            byte[] input = collapseBytes(COLLAPSE_MAP_ROWS[map]);
+            var visual = CdObjectVisualAssets.decodeStatic(input,COLLAPSE_FRAMES[map],57);
+            assertEquals(COLLAPSE_SHA256[COLLAPSE_MAP_ROWS[map]],CdR11aProfile.sha256(visual.mappings().copy()));
+            assertArrayEquals(input,visual.mappings().copy());
+            assertEquals(0,visual.mappingTableOffset());
+            assertEquals(0,visual.animationTable().length()); assertTrue(visual.animations().isEmpty());
+            for (int frame = 0; frame < COLLAPSE_FRAMES[map]; frame++) {
+                var value = visual.mappingFrames().get(frame);
+                assertEquals(offsets[map][frame],value.relativeOffset());
+                assertEquals(counts[map][frame],value.pieces().size());
+                assertEquals(1+counts[map][frame]*5,value.bytes().length());
+                assertArrayEquals(Arrays.copyOfRange(input,offsets[map][frame],
+                        offsets[map][frame]+value.bytes().length()),value.bytes().copy());
+                for (int piece = 0; piece < counts[map][frame]; piece++) {
+                    int at = offsets[map][frame]+1+piece*5;
+                    assertEquals(new CdObjectVisualAssets.Piece(input[at],Byte.toUnsignedInt(input[at+1]),
+                            (Byte.toUnsignedInt(input[at+2])<<8)|Byte.toUnsignedInt(input[at+3]),input[at+4]),
+                            value.pieces().get(piece));
+                    assertTrue(value.pieces().get(piece).tileOffset()+value.pieces().get(piece).tileCount() <= 57);
+                }
+                assertThrows(UnsupportedOperationException.class,value.pieces()::clear);
+                assertThrows(ReadOnlyBufferException.class,() -> value.bytes().buffer().put((byte) 0));
+            }
+            Arrays.fill(input,(byte) 0);
+            assertArrayEquals(collapseBytes(COLLAPSE_MAP_ROWS[map]),visual.mappings().copy());
+            assertThrows(ReadOnlyBufferException.class,() -> visual.mappings().buffer().put((byte) 0));
+            assertThrows(UnsupportedOperationException.class,visual.mappingFrames()::clear);
+            assertThrows(UnsupportedOperationException.class,visual.animations()::clear);
+        }
+        var multi = CdObjectVisualAssets.decodeStatic(collapseBytes(2),7,57);
+        assertEquals(0,multi.mappings().unsignedByte(61));
+        assertEquals(List.of(new CdObjectVisualAssets.Piece(-24,5,0x080D,-8),
+                new CdObjectVisualAssets.Piece(-8,5,0x0811,-8)),multi.mappingFrames().get(6).pieces());
+        var single = CdObjectVisualAssets.decodeStatic(collapseBytes(3),6,57);
+        assertEquals(0,single.mappings().unsignedByte(407));
+        assertEquals(single.mappingFrames().get(0).relativeOffset(),single.mappingFrames().get(1).relativeOffset());
+        assertEquals(single.mappingFrames().get(0).pieces(),single.mappingFrames().get(1).pieces());
+        assertArrayEquals(single.mappingFrames().get(0).bytes().copy(),single.mappingFrames().get(1).bytes().copy());
+        assertEquals(55,single.mappingFrames().stream().flatMap(f -> f.pieces().stream())
+                .mapToInt(p -> p.tileOffset()+p.tileCount()).max().orElseThrow());
+    }
+
+    @Test
+    void collapsePlatformSizesAreRawFrameBreakupBytesAndRetainTheSharedDirectoryTarget() {
+        byte[] multi = collapseBytes(1), single = collapseBytes(4);
+        assertEquals(COLLAPSE_SHA256[1],CdR11aProfile.sha256(multi));
+        assertEquals(COLLAPSE_SHA256[4],CdR11aProfile.sha256(single));
+        assertArrayEquals(java.util.HexFormat.of().parseHex("00020403ffff000000010203030400050505050606060606"),multi);
+        int[] directory = {12,12,20,26,32,36}, columns = {5,5,3,3,1,1}, rows = {1,1,3,3,3,3};
+        byte[][] scripts = {{0,0,0,0,0,0},{0,0,0,0,0,0},{1,2,2,2},{2,2,2,2},{3,5},{5,4}};
+        for (int entry = 0; entry < 6; entry++) {
+            assertEquals(directory[entry],Short.toUnsignedInt(ByteBuffer.wrap(single).getShort(entry*2)));
+            assertEquals(columns[entry],single[directory[entry]]);
+            assertEquals(rows[entry],single[directory[entry]+1]);
+            assertArrayEquals(scripts[entry],Arrays.copyOfRange(single,directory[entry]+2,
+                    directory[entry]+3+columns[entry]));
+        }
+        // FF is a signed skip-frame byte in a 20-cell grid, not an AnimateObject command.
+        assertEquals(20,(Byte.toUnsignedInt(multi[2])+1)*(Byte.toUnsignedInt(multi[3])+1));
+        assertEquals(2,Arrays.stream(new int[]{multi[4],multi[5]}).filter(v -> v == -1).count());
+    }
+
+    @Test
+    void collapsePlatformStrictStaticDecoderRejectsChangedPadsPointersCountsAndArtOverrun() {
+        for (int map = 0; map < 4; map++) {
+            final int frames = COLLAPSE_FRAMES[map];
+            byte[] original = collapseBytes(COLLAPSE_MAP_ROWS[map]);
+            for (int pointer : new int[]{0,frames*2-1,original.length,0x8000,0xFFFF}) {
+                byte[] bad = original.clone(); ByteBuffer.wrap(bad).putShort(0,(short) pointer);
+                assertThrows(IllegalArgumentException.class,() -> CdObjectVisualAssets.decodeStatic(bad,frames,57));
+            }
+            byte[] badCount = original.clone();
+            int body = Short.toUnsignedInt(ByteBuffer.wrap(original).getShort(0)); badCount[body]++;
+            assertThrows(IllegalArgumentException.class,() -> CdObjectVisualAssets.decodeStatic(badCount,frames,57));
+        }
+        for (int row : new int[]{2,3}) {
+            byte[] bad = collapseBytes(row); bad[bad.length-1] = 1;
+            int frames = row == 2 ? 7 : 6;
+            assertThrows(IllegalArgumentException.class,() -> CdObjectVisualAssets.decodeStatic(bad,frames,57));
+        }
+        byte[] atLimit = collapseBytes(0); ByteBuffer.wrap(atLimit).putShort(5,(short) 0xE835);
+        assertEquals(0xE835,CdObjectVisualAssets.decodeStatic(atLimit,1,57)
+                .mappingFrames().getFirst().pieces().getFirst().rawTileWord());
+        byte[] beyond = atLimit.clone(); ByteBuffer.wrap(beyond).putShort(5,(short) 0xE836);
+        assertThrows(IllegalArgumentException.class,() -> CdObjectVisualAssets.decodeStatic(beyond,1,57));
+        assertThrows(IllegalArgumentException.class,() -> CdObjectVisualAssets.decodeStatic(atLimit,1,56));
+    }
+
+    @Test
+    void collapsePlatformRawRangesDoNotCreateAnAuthenticatedOwnerOrATileSelector() throws Exception {
+        byte[] file = new byte[CdR11aProfile.FILE_BYTES];
+        ByteBuffer.wrap(file).putInt(8,0x200100).putInt(12,0x20010C).putInt(16,0x200112);
+        for (int i = 0; i < 6; i++) {
+            System.arraycopy(collapseBytes(i),0,file,COLLAPSE_TABLES.get(i).range().fileOffset(),COLLAPSE_LENGTHS[i]);
+        }
+        var image = CdMmdImage.parse(file);
+        for (int i = 0; i < 6; i++) {
+            var bytes = COLLAPSE_TABLES.get(i).range().read(image);
+            assertArrayEquals(collapseBytes(i),bytes.copy());
+            assertThrows(ReadOnlyBufferException.class,() -> bytes.buffer().put((byte) 0));
+            int length = COLLAPSE_LENGTHS[i];
+            assertThrows(IndexOutOfBoundsException.class,() -> bytes.unsignedByte(length));
+        }
+        var profile = CdR11aProfile.forStage(CdReleaseVariant.USA,CdStageKey.parse("R11A"));
+        var identity = new CdR11aAssets.Identity(CdReleaseVariant.USA,profile.stage(),profile.file(),profile.domain(),
+                profile.expectedMmdSha256(),"constructed source-only ranges are not authentication");
+        assertThrows(IOException.class,() -> CdR11aObjectAssets.load(profile,identity,image,null));
+        for (int subtype = 0; subtype <= 255; subtype++) {
+            int value = subtype;
+            assertThrows(UnsupportedOperationException.class,() -> CdR11aObjectAssets.decodeTileWord(tileIds(),0x20,value));
+        }
+    }
+
+    private static byte[] collapseBytes(int row) {
+        return java.util.HexFormat.of().parseHex(COLLAPSE_HEX[row]);
+    }
+
+    private static final List<String> COLLAPSE_MANIFEST = List.of(
+            "RING_DELTAS|ObjRing_Deltas|9c96|32",
+            "RING_ANIMATIONS|Ani_Ring|a0f2|8",
+            "RING_MAPPINGS|MapSpr_Ring|a0fa|67",
+            "MOSQUI_NORMAL_ANIMATIONS|Ani_Mosqui1|b6ca|14",
+            "MOSQUI_DAMAGED_ANIMATIONS|Ani_Mosqui2|b6d8|13",
+            "MOSQUI_NORMAL_MAPPINGS|MapSpr_Mosqui1|b6e6|60",
+            "MOSQUI_DAMAGED_MAPPINGS|MapSpr_Mosqui2|b722|66",
+            "OBJECT_TILE_IDS|ObjectTileIDs|cf48|74",
+            "TOUCH_DIMENSIONS|ObjColSizes|70c6|126",
+            "FLYING_ANIMAL_ANIMATIONS|Ani_FlyingAnimal|d1ae|66",
+            "GROUND_ANIMAL_ANIMATIONS|Ani_GroundAnimal|d1f0|60",
+            "FLYING_ANIMAL_MAPPINGS|MapSpr_FlyingAnimal|d22c|20",
+            "GROUND_ANIMAL_MAPPINGS|MapSpr_GroundAnimal|d240|36",
+            "ANIMAL_BASE_TILES|ObjAnimal_BaseTileList|d264|22",
+            "PLANT_MAPPINGS|MapSpr_3DPlant|e020|38",
+            "PLANT_OFFSETS|Obj3DPlant_Offsets1/Obj3DPlant_Offsets2|ddc8|14",
+            "RAMP_BOOSTER_MAPPINGS|MapSpr_3DRamp|1fdbc|580",
+            "RAMP_BOOSTER_ANIMATIONS|Ani_3DRamp|e046|30",
+            "ENEMY_POINTS|EnemyPoints|6edc|8",
+            "EXPLOSION_ANIMATIONS|Ani_Explosion|3f074|20",
+            "EXPLOSION_MAPPINGS|MapSpr_Explosion|3f088|146",
+            "POINTS_MAPPINGS|MapSpr_Points|ac64|82",
+            "FLOWER_ANIMATIONS|Ani_Flower|35ed8|28",
+            "FLOWER_MAPPINGS|MapSpr_Flower|35ef4|90",
+            "GAME_OVER_MAPPINGS|MapSpr_GameOver/MapSpr_TimeOver|f03e|56",
+            "FLOAT_BLOCK_ANIMATIONS|Ani_FloatBlock|a3dc|30",
+            "FLOAT_BLOCK_MAPPINGS|MapSpr_FloatBlock|a3fa|76",
+            "SPRING_ANIMATIONS|Ani_Spring|9b92|14",
+            "SPRING_MAPPINGS|MapSpr_Spring1/MapSpr_Spring2/MapSpr_Spring3|9ba0|200",
+            "SPRING_SPEEDS|ObjSpring_Speeds|98e8|4",
+            "POWERUP_MAPPINGS|MapSpr_Powerup|3ee9c|274",
+            "TUNNEL_DOOR_VERTICAL_MAPPINGS|MapSpr_FlapDoorV|ce9a|28",
+            "MONITOR_TIME_ANIMATIONS|Ani_Monitor|a9c6|136",
+            "MONITOR_TIME_MAPPINGS|MapSpr_MonitorTime|aa4e|450",
+            "TUNNEL_DOOR_ANIMATIONS|Ani_TunnelDoor|3f02a|14",
+            "TUNNEL_DOOR_MAPPINGS|MapSpr_TunnelDoor|3f038|28",
+            "PATA_BATA_ANIMATIONS|Ani_PataBata|b51c|18",
+            "PATA_BATA_NORMAL_MAPPINGS|MapSpr_PataBata1|b52e|34",
+            "PATA_BATA_DAMAGED_MAPPINGS|MapSpr_PataBata2|b550|40",
+            "BOULDER_MAPPINGS|MapSpr_Boulder|9654|14",
+            "SPIKES_MAPPINGS|MapSpr_Spikes|c1f0|24",
+            "CHECKPOINT_ANIMATIONS|Ani_Checkpoint|3f11a|6",
+            "CHECKPOINT_MAPPINGS|MapSpr_Checkpoint|3f120|66",
+            "ANTON_ANIMATIONS|Ani_Anton|b39e|12",
+            "ANTON_MAPPINGS|MapSpr_Anton|b3aa|112",
+            "COLLAPSE_PLATFORM_MAPPINGS_1|MapSpr_CollapsePlatform1|c520|118",
+            "COLLAPSE_PLATFORM_SIZES_1|ObjCollapsePlatform_Sizes1|c596|24",
+            "COLLAPSE_PLATFORM_MAPPINGS_3|MapSpr_CollapsePlatform3|c5ae|62",
+            "COLLAPSE_PLATFORM_MAPPINGS_2|MapSpr_CollapsePlatform2|c5ec|408",
+            "COLLAPSE_PLATFORM_SIZES_2|ObjCollapsePlatform_Sizes2|c784|40",
+            "COLLAPSE_PLATFORM_MAPPINGS_4|MapSpr_CollapsePlatform4|c7ac|158");
+    // Plain pinned-N dc/include/EVEN expansion, independently compared with original media.
+    private static final List<CdR11aObjectAssets.Table> COLLAPSE_TABLES = List.of(
+            CdR11aObjectAssets.Table.COLLAPSE_PLATFORM_MAPPINGS_1,
+            CdR11aObjectAssets.Table.COLLAPSE_PLATFORM_SIZES_1,
+            CdR11aObjectAssets.Table.COLLAPSE_PLATFORM_MAPPINGS_3,
+            CdR11aObjectAssets.Table.COLLAPSE_PLATFORM_MAPPINGS_2,
+            CdR11aObjectAssets.Table.COLLAPSE_PLATFORM_SIZES_2,
+            CdR11aObjectAssets.Table.COLLAPSE_PLATFORM_MAPPINGS_4);
+    private static final int[] COLLAPSE_LENGTHS = {118,24,62,408,40,158};
+    private static final int[] COLLAPSE_FRAMES = {1,7,6,6};
+    private static final int[] COLLAPSE_MAP_ROWS = {0,2,3,5};
+    private static final String[] COLLAPSE_SHA256 = {
+            "e11e6733195a4700631f68f369278f7335279b756d615bd64b1ead95e6dcca12",
+            "9f05c5080c46f62408a9b56946844ef02d6f5b41cf9e1acb5f6b561cd83aafb1",
+            "77e4add5588163b238981a19f8715f1033c2c07ea2e639c223486ecc1c8e7f2c",
+            "b045e60da3748ed69830e29883ed37a49b6a1285fdb4815d62b48ad871e36489",
+            "70fc78ba6bf60ae0e46cf337463d71806897446379981e01a435ec331597a9c1",
+            "a39fbf7aa6cb97caa61a6ddcf52e0936979ecf3458c16f8e3aced9d75a005f5b"};
+    private static final String[] COLLAPSE_HEX = {
+            "000217d005080dd8d005080de8d005080df8d005080d08d005080d18e0050811d8e0050811e8e0050811f8e005081108e005081118f0050019d8f0050815e8f0050815f8f005081508f00508151800050825d80005001de800050021f800050021080005081d1810050019f810050019081005001918",
+            "00020403ffff000000010203030400050505050606060606",
+            "000e0014001a00200026002c003201f8050019f801f8050825f801f805001df801f8050021f801f805081df801f8050815f802e805080df8f8050811f800",
+            "000c000c006700cc0131016412e005000dd0e005000de0e005000df0e005000d00e005000d10e005000d20f0050011d0f0050011e0f0050011f0f005001100f005001110f00500112000050015d000050015e000050015f000050015000005001510000500152014d005000de0d005000df0d005000d00d005000d10e0050011e0e0050011f0e005001100e005001110f0050015e0f0050015f0f005001500f00500151000050029e000050033f00005003300000500331010050031e01005002bf01005002b001005002b1014d005000de0d005000df0d005000d00d005000d10e0050011e0e0050011f0e005001100e005001110f0050015e0f0050015f0f005001500f00500151000050033e000050033f0000500330000050033101005002be01005002bf01005002b001005002b100ad005000df0d005000d00e0050011f0e005001100f0050015f0f0050015000005001df0000500210010050019f010050019000ad005000df0d005000d00e0050011f0e005001100f0050015f0f00500150000050021f00005081d0010050019f0100500190000",
+            "000c000c0014001a0020002405010000000000000303010202020303020202020103030501030504",
+            "000c001c00360050006a008403e005000df8f0050011f800050015f805d005000df8e0050011f8f0050015f800050029f810050031f805d005000df8e0050011f8f0050015f800050033f81005002bf805d005000df8e0050011f8f0050015f80005001df810050019f805d005000df8e0050011f8f0050015f80005081df810050019f805d005000df8e0050011f8f0050015f800050021f810050019f8"};
 
     // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>
 }

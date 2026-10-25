@@ -1,10 +1,12 @@
 package com.openggf.game.soniccd.objects;
 
 import com.openggf.game.soniccd.level.CdR11aAssets;
+import com.openggf.game.soniccd.level.CdTerrainCollision;
 import com.openggf.game.soniccd.objects.CdObjectState.ByteField;
 import com.openggf.game.soniccd.objects.CdObjectState.WordField;
 import com.openggf.game.soniccd.player.CdPlayerMotionState;
 import com.openggf.game.soniccd.player.CdPlayerMovement;
+import com.openggf.game.soniccd.player.CdPlayerTerrain;
 import com.openggf.game.soniccd.player.CdPlayerTouchResponse;
 
 import java.util.ArrayList;
@@ -512,7 +514,7 @@ public final class CdSolidObject {
         c.setFlags(c.flags | 8);                                            // BSET #3 / BEQ (:104-105)
         if (playerWasStanding) {
             if (c.stand == c.wholeIndex) return;                            // Already us: no .SetInteract (:107-116)
-            c.releaseStoodOn(c.stand);                                      // MOVEA.L d0,a2 / BCLR #3 (:117-118)
+            releaseStoodOn(c);                                             // MOVEA.L d0,a2 / BCLR #3 (:117-118)
         }
         c.setStandObject(c.wholeIndex & 0x7F);                              // .SetInteract (:121-129)
         c.setAngle(0);
@@ -538,6 +540,7 @@ public final class CdSolidObject {
 
     /** Player_CalcRoomInFront: both buffers := d0 (:27-28) before its single probe. */
     private int roomInFront(Cursor c, int angle) {
+        if (c.prefixReads) return roomInFrontWithPrefix(c, angle);
         var probe = probes.calcRoomInFront(c.motion(), angle);
         if (probe.primaryAngleWrite().isEmpty() || probe.secondaryAngleWrite().isEmpty()) {
             throw new IllegalStateException("Player_CalcRoomInFront stores d0 to both angle buffers");
@@ -548,6 +551,7 @@ public final class CdSolidObject {
     }
 
     private int checkFloor(Cursor c) {
+        if (c.prefixReads) return checkFloorWithPrefix(c);
         var probe = probes.checkFloor(c.motion());
         c.angleWrites(probe.primaryAngleWrite(), probe.secondaryAngleWrite());
         c.calls.add(new FloorDistance(probe.distance(), probe.primaryAngleWrite(), probe.secondaryAngleWrite()));
@@ -555,6 +559,7 @@ public final class CdSolidObject {
     }
 
     private int ceilingDistance(Cursor c) {
+        if (c.prefixReads) return ceilingDistanceWithPrefix(c);
         var probe = probes.getCeilDist(c.motion());
         if (probe.secondaryAngleWrite().isPresent()) {
             throw new IllegalStateException("Player_GetCeilDist never stores secondaryAngle");
@@ -582,6 +587,7 @@ public final class CdSolidObject {
         int invincible, scoreChain, primaryAngle, secondaryAngle;
         Path path;
         GetOffReason reason;
+        boolean prefixReads; // Invocation-local opt-in only; legacy run leaves it false.
 
         Cursor(Entry entry, CdObjectState object, Player player, Gates gates, Globals globals, CdObjectPool.Snapshot callCut) {
             this.entry = entry; this.object = object; this.gates = gates;
@@ -671,6 +677,21 @@ public final class CdSolidObject {
         void getOff(GetOffReason value) { path = Path.GET_OFF; reason = value; }
         void routineReturn() { path = Path.ROUTINE_RETURN; }
 
+        Prefix prefix() {
+            return new Prefix(entry, object, new Player(actor(), slotId, push, stand),
+                    new Globals(invincible, scoreChain, primaryAngle, secondaryAngle), List.copyOf(changed.values()),
+                    objectWrites, playerWrites, globalWrites, calls);
+        }
+
+        /** The probe writer updates these same two globals at the reached native store, never on replay. */
+        void probeAngleWrite(CdPlayerMovement.AngleBuffer buffer, int rawByte) {
+            byteValue(rawByte);
+            switch (Objects.requireNonNull(buffer)) {
+                case PRIMARY -> { primaryAngle = rawByte; globalWrites.add(GlobalField.PRIMARY_ANGLE); }
+                case SECONDARY -> { secondaryAngle = rawByte; globalWrites.add(GlobalField.SECONDARY_ANGLE); }
+            }
+        }
+
         Result finish() {
             OptionalInt d0 = entry.solidity() ? OptionalInt.of(path.d0()) : OptionalInt.empty();
             return new Result(entry, object, new Player(actor(), slotId, push, stand),
@@ -691,5 +712,182 @@ public final class CdSolidObject {
     }
     private static void wordValue(int value) {
         if ((value & ~0xFFFF) != 0) throw new IllegalArgumentException("Expected an unsigned native word");
+    }
+
+    /** One complete native return, or an exact reached unavailable native read without a return value. */
+    public sealed interface Outcome permits Completed, NativeStopped { }
+
+    public record Completed(Result completedResult) implements Outcome {
+        public Completed { Objects.requireNonNull(completedResult, "completed result"); }
+    }
+
+    public record NativeStopped(Prefix prefix, NativeStop stop) implements Outcome {
+        public NativeStopped { Objects.requireNonNull(prefix, "native prefix"); Objects.requireNonNull(stop, "native stop"); }
+    }
+
+    /**
+     * Current cursor values and reached native store masks, with only completed probe/kill observations.
+     * RoutineCall still records entry, not return. These immutable values grant no pool/Frame/phase authority,
+     * contain no d0 or native return site, and are never a resumable call or instructions for replay.
+     */
+    public record Prefix(Entry entry, CdObjectState object, Player player, Globals globals, List<CdObjectState> otherSlots,
+                         Set<ByteField> objectWrites, Set<PlayerField> playerWrites, Set<GlobalField> globalWrites,
+                         List<Call> calls) {
+        public Prefix {
+            Objects.requireNonNull(entry); Objects.requireNonNull(object); Objects.requireNonNull(player);
+            Objects.requireNonNull(globals);
+            otherSlots = List.copyOf(otherSlots); objectWrites = Set.copyOf(objectWrites);
+            playerWrites = Set.copyOf(playerWrites); globalWrites = Set.copyOf(globalWrites); calls = List.copyOf(calls);
+            var identities = new HashSet<Integer>();
+            identities.add(object.identity().wholeIndex());
+            for (var slot : otherSlots) {
+                if (!identities.add(slot.identity().wholeIndex())) {
+                    throw new IllegalArgumentException("Each slot is published once, as its final image, apart from a0");
+                }
+            }
+        }
+
+        /** Extract completed ordered requests only; this method performs no execution or publication. */
+        public List<CdPlayerTouchResponse.FmSound> fmRequests() {
+            var sounds = new ArrayList<CdPlayerTouchResponse.FmSound>();
+            for (var call : calls) {
+                if (call instanceof PlayFm request) {
+                    sounds.add(request.sound());
+                } else if (call instanceof KillPlayerCall killed) {
+                    for (var inner : killed.result().calls()) {
+                        if (inner instanceof CdPlayerTouchResponse.PlayFm nested) sounds.add(nested.sound());
+                    }
+                }
+            }
+            return List.copyOf(sounds);
+        }
+    }
+
+    public enum StopSite { ROOM_PRIMARY, FLOOR_PRIMARY, FLOOR_SECONDARY, CEILING_PRIMARY, STAND_RELEASE }
+
+    public sealed interface StopDetail permits TerrainWord, CollisionId, SlotAddress { }
+
+    public record TerrainWord(CdTerrainCollision.Address address,
+                              CdTerrainCollision.UnavailableReason reason) implements StopDetail {
+        public TerrainWord { Objects.requireNonNull(address); Objects.requireNonNull(reason); }
+    }
+
+    public record CollisionId(int blockIndex) implements StopDetail { }
+
+    public record SlotAddress(UnsupportedBoundary boundary, int slotByte, Routine routine) implements StopDetail {
+        public SlotAddress { Objects.requireNonNull(boundary); byteValue(slotByte); Objects.requireNonNull(routine); }
+    }
+
+    /** The actual legacy exception instance, retained unchanged for the caller's terminal rethrow. */
+    public record NativeStop(StopSite site, StopDetail detail, RuntimeException originalException) {
+        public NativeStop {
+            Objects.requireNonNull(site); Objects.requireNonNull(detail); Objects.requireNonNull(originalException);
+        }
+    }
+
+    /**
+     * Opt-in TopSolidObject/GetOffObject call. Uses the same native algorithms and one detached Cursor as run.
+     * Collision Check.asm:27-28,92-108,305-314 raw stores reach that cursor synchronously, including stores inside
+     * an unfinished terrain leaf. Only origin-tagged terrain reads and StandOnObject:117-118's unowned a2 address
+     * can stop natively. Host exceptions and Errors propagate; this entry has no caller callback or publication.
+     */
+    public Outcome runWithPrefix(Entry entry, CdObjectState object, Player player, Gates gates, Globals globals,
+                                 CdObjectPool.Snapshot callCut) {
+        Objects.requireNonNull(entry, "entry");
+        if (entry != Entry.TOP_SOLID_OBJECT && entry != Entry.GET_OFF_OBJECT) {
+            throw new IllegalArgumentException("Native prefixes support only TopSolidObject and GetOffObject");
+        }
+        Objects.requireNonNull(object, "object"); Objects.requireNonNull(player, "player");
+        Objects.requireNonNull(gates, "gates"); Objects.requireNonNull(globals, "globals");
+        Objects.requireNonNull(callCut, "call-cut capture");
+        var c = new Cursor(entry, object, player, gates, globals, callCut);
+        c.prefixReads = true;
+        try {
+            if (entry == Entry.TOP_SOLID_OBJECT) {
+                c.objectByte(ByteField.SOLID_TYPE, 1); solidObject(c);
+            } else {
+                getOffObject(c); c.routineReturn();
+            }
+            return new Completed(c.finish());
+        } catch (NativeStopReached stopped) {
+            return new NativeStopped(c.prefix(), stopped.stop);
+        }
+    }
+
+    private int roomInFrontWithPrefix(Cursor c, int angle) {
+        CdPlayerMovement.ProbeResult probe;
+        try {
+            probe = probes.calcRoomInFrontWithPrefix(c.motion(), angle, c::probeAngleWrite);
+        } catch (CdPlayerMovement.UnownedProbeRead missing) {
+            if (missing.buffer() != CdPlayerMovement.AngleBuffer.PRIMARY) {
+                throw new IllegalStateException("Player_CalcRoomInFront probes only primaryAngle");
+            }
+            throw terrainStop(StopSite.ROOM_PRIMARY, missing);
+        }
+        if (probe.primaryAngleWrite().isEmpty() || probe.secondaryAngleWrite().isEmpty()) {
+            throw new IllegalStateException("Player_CalcRoomInFront stores d0 to both angle buffers");
+        }
+        // Already adopted at each raw write; do not replay ProbeResult's final angle writes.
+        c.calls.add(new RoomInFront(angle, probe.distance(), probe.primaryAngleWrite(), probe.secondaryAngleWrite()));
+        return probe.distance();
+    }
+
+    private int checkFloorWithPrefix(Cursor c) {
+        CdPlayerMovement.ProbeResult probe;
+        try {
+            probe = probes.checkFloorWithPrefix(c.motion(), c::probeAngleWrite);
+        } catch (CdPlayerMovement.UnownedProbeRead missing) {
+            var site = switch (missing.buffer()) {
+                case PRIMARY -> StopSite.FLOOR_PRIMARY;
+                case SECONDARY -> StopSite.FLOOR_SECONDARY;
+            };
+            throw terrainStop(site, missing);
+        }
+        // Both leaves completed; only now is the aggregate Player_CheckFloor return known.
+        c.calls.add(new FloorDistance(probe.distance(), probe.primaryAngleWrite(), probe.secondaryAngleWrite()));
+        return probe.distance();
+    }
+
+    private int ceilingDistanceWithPrefix(Cursor c) {
+        CdPlayerMovement.ProbeResult probe;
+        try {
+            probe = probes.getCeilDistWithPrefix(c.motion(), c::probeAngleWrite);
+        } catch (CdPlayerMovement.UnownedProbeRead missing) {
+            if (missing.buffer() != CdPlayerMovement.AngleBuffer.PRIMARY) {
+                throw new IllegalStateException("Player_GetCeilDist probes only primaryAngle");
+            }
+            throw terrainStop(StopSite.CEILING_PRIMARY, missing);
+        }
+        if (probe.secondaryAngleWrite().isPresent()) {
+            throw new IllegalStateException("Player_GetCeilDist never stores secondaryAngle");
+        }
+        c.calls.add(new CeilingDistance(probe.distance(), probe.primaryAngleWrite(), probe.secondaryAngleWrite()));
+        return probe.distance();
+    }
+
+    /** Scope the existing exception to the reached StandOnObject dereference, never PushObject or host code. */
+    private static void releaseStoodOn(Cursor c) {
+        if (!c.prefixReads) { c.releaseStoodOn(c.stand); return; }
+        try {
+            c.releaseStoodOn(c.stand); // Stand0 is the real player alias; physical dynamic IDs need not be live.
+        } catch (UnsupportedSolidObject missing) {
+            throw new NativeStopReached(new NativeStop(StopSite.STAND_RELEASE,
+                    new SlotAddress(missing.boundary(), missing.slotByte(), missing.routine()), missing));
+        }
+    }
+
+    private static NativeStopReached terrainStop(StopSite site, CdPlayerMovement.UnownedProbeRead missing) {
+        var read = missing.terrainRead();
+        StopDetail detail = switch (read.detail()) {
+            case CdPlayerTerrain.TerrainWord word -> new TerrainWord(word.address(), word.reason());
+            case CdPlayerTerrain.CollisionId id -> new CollisionId(id.blockIndex());
+        };
+        return new NativeStopReached(new NativeStop(site, detail, read.originalException()));
+    }
+
+    /** Invocation-local unwind only. Neither the cursor nor this private signal is retained or returned. */
+    private static final class NativeStopReached extends RuntimeException {
+        final NativeStop stop;
+        NativeStopReached(NativeStop stop) { this.stop = stop; }
     }
 }

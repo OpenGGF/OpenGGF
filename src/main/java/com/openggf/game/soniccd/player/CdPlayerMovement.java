@@ -1058,4 +1058,137 @@ public final class CdPlayerMovement {
     private static void byteValue(int value) { if ((value & ~0xFF) != 0) throw new IllegalArgumentException("Expected a native byte"); }
     private static void wordValue(int value) { if ((value & ~0xFFFF) != 0) throw new IllegalArgumentException("Expected an unsigned native word"); }
     private static void signedWord(int value) { if (value != (short) value) throw new IllegalArgumentException("Expected a signed native word"); }
+
+    /** The two existing global angle bytes; these are distinct from the actor's previous copies. */
+    public enum AngleBuffer { PRIMARY, SECONDARY }
+
+    /** Synchronous reached MOVE.B/RMW store, including repeated stores of the same raw byte. */
+    @FunctionalInterface
+    public interface ProbeAngleWrite {
+        void store(AngleBuffer buffer, int rawByte);
+    }
+
+    /**
+     * A reached opt-in terrain leaf, identified at its actual call site rather than inferred from
+     * whether earlier leaves happened to write angles. It retains the terrain marker itself.
+     */
+    public static final class UnownedProbeRead extends RuntimeException {
+        private final AngleBuffer buffer;
+        private final CdPlayerTerrain.UnownedTerrainRead terrainRead;
+
+        private UnownedProbeRead(AngleBuffer buffer, CdPlayerTerrain.UnownedTerrainRead terrainRead) {
+            super(terrainRead.getMessage(), terrainRead);
+            this.buffer = buffer;
+            this.terrainRead = terrainRead;
+        }
+
+        public AngleBuffer buffer() { return buffer; }
+        public CdPlayerTerrain.UnownedTerrainRead terrainRead() { return terrainRead; }
+    }
+
+    /** Player_CalcRoomInFront with its two seed stores and reached primary raw stores in source order. */
+    public ProbeResult calcRoomInFrontWithPrefix(CdPlayerMotionState state, int angle, ProbeAngleWrite angleWrite) {
+        byteValue(angle); var c = new Cursor(Objects.requireNonNull(state));
+        Objects.requireNonNull(angleWrite, "reached angle writer");
+        // Collision Check.asm:15-28: full LONG prediction precedes both addressed BYTE stores.
+        int x = (c.xpos + (c.xv << 8)) >>> 16;
+        int y = (c.ypos + (c.yv << 8)) >>> 16;
+        storeProbeAngle(c, AngleBuffer.PRIMARY, angle, angleWrite);
+        storeProbeAngle(c, AngleBuffer.SECONDARY, angle, angleWrite);
+        int rounded;
+        if ((byte) (angle + 0x20) < 0) {
+            rounded = (angle + ((byte) angle < 0 ? -1 : 0) + 0x20) & 0xC0;
+        } else {
+            rounded = (angle + ((byte) angle < 0 ? 1 : 0) + 0x1F) & 0xC0;
+        }
+        if (rounded != 0 && rounded != 0x80 && (angle & 0x38) == 0) y = uw(y + 8);
+        return probeResult(c, singleWithPrefix(c, x, y, rounded, angleWrite));
+    }
+
+    /** Player_CheckFloor has no object-helper preclear; right/primary completes before left/secondary. */
+    public ProbeResult checkFloorWithPrefix(CdPlayerMotionState state, ProbeAngleWrite angleWrite) {
+        var c = new Cursor(Objects.requireNonNull(state));
+        Objects.requireNonNull(angleWrite, "reached angle writer");
+        return probeResult(c, floorPairWithPrefix(c, angleWrite).distance());
+    }
+
+    /** Player_GetCeilDist uses the original ten-pixel primary sensor without seeding either buffer. */
+    public ProbeResult getCeilDistWithPrefix(CdPlayerMotionState state, ProbeAngleWrite angleWrite) {
+        var c = new Cursor(Objects.requireNonNull(state));
+        Objects.requireNonNull(angleWrite, "reached angle writer");
+        return probeResult(c, singleWithPrefix(c, c.x(), c.y(), 0x80, angleWrite));
+    }
+
+    private int singleWithPrefix(Cursor c, int x, int y, int direction, ProbeAngleWrite angleWrite) {
+        CdPlayerTerrain.Result result = switch (direction) {
+            case 0 -> floorWithPrefix(c, AngleBuffer.PRIMARY, x, uw(y + 10), 14, 0, 16, angleWrite);
+            case 0x40 -> wallWithPrefix(c, AngleBuffer.PRIMARY, uw(x - 10) ^ 15, y, 14, 0x800, -16, angleWrite);
+            case 0x80 -> floorWithPrefix(c, AngleBuffer.PRIMARY, x, uw(y - 10) ^ 15, 14, 0x1000, -16, angleWrite);
+            default -> wallWithPrefix(c, AngleBuffer.PRIMARY, uw(x + 10), y, 14, 0, 16, angleWrite);
+        };
+        // Raw writes were already adopted synchronously, even if the leaf never returned.
+        return result.distance();
+    }
+
+    private Pair floorPairWithPrefix(Cursor c, ProbeAngleWrite angleWrite) {
+        int x = c.x(), y = c.y(), rx = (byte) c.xr, ry = (byte) c.yr;
+        var first = floorWithPrefix(c, AngleBuffer.PRIMARY, uw(x + rx), uw(y + ry), 13, 0, 16, angleWrite);
+        var second = floorWithPrefix(c, AngleBuffer.SECONDARY, uw(x - rx), uw(y + ry), 13, 0, 16, angleWrite);
+        boolean secondary = second.distance() <= first.distance();
+        int angle = secondary ? c.sec : c.pri;
+        return new Pair(secondary ? second.distance() : first.distance(),
+                secondary ? first.distance() : second.distance(), (angle & 1) == 0 ? angle : 0);
+    }
+
+    private CdPlayerTerrain.Result floorWithPrefix(Cursor c, AngleBuffer buffer, int x, int y,
+                                                   int solidityBit, int mirrorMask, int step,
+                                                   ProbeAngleWrite angleWrite) {
+        try {
+            return terrain.floorWithPrefix(x, y, solidityBit, mirrorMask, step, c.spr,
+                    raw -> storeProbeAngleAtLeaf(c, buffer, raw, angleWrite));
+        } catch (ProbeCallbackMarker host) {
+            throw host.original;
+        } catch (CdPlayerTerrain.UnownedTerrainRead missing) {
+            throw new UnownedProbeRead(buffer, missing);
+        }
+    }
+
+    private CdPlayerTerrain.Result wallWithPrefix(Cursor c, AngleBuffer buffer, int x, int y,
+                                                  int solidityBit, int mirrorMask, int step,
+                                                  ProbeAngleWrite angleWrite) {
+        try {
+            return terrain.wallWithPrefix(x, y, solidityBit, mirrorMask, step, c.spr,
+                    raw -> storeProbeAngleAtLeaf(c, buffer, raw, angleWrite));
+        } catch (ProbeCallbackMarker host) {
+            throw host.original;
+        } catch (CdPlayerTerrain.UnownedTerrainRead missing) {
+            throw new UnownedProbeRead(buffer, missing);
+        }
+    }
+
+    /** Carries a callback-thrown marker through the terrain leaf without changing its origin. */
+    private static final class ProbeCallbackMarker extends RuntimeException {
+        private final CdPlayerTerrain.UnownedTerrainRead original;
+        private ProbeCallbackMarker(CdPlayerTerrain.UnownedTerrainRead original) {
+            super(null, original, false, false);
+            this.original = original;
+        }
+    }
+
+    private static void storeProbeAngleAtLeaf(Cursor c, AngleBuffer buffer, int rawByte,
+                                              ProbeAngleWrite angleWrite) {
+        if (buffer == AngleBuffer.PRIMARY) c.writePrimary(OptionalInt.of(rawByte));
+        else c.writeSecondary(OptionalInt.of(rawByte));
+        try {
+            angleWrite.store(buffer, rawByte);
+        } catch (CdPlayerTerrain.UnownedTerrainRead callbackFailure) {
+            throw new ProbeCallbackMarker(callbackFailure);
+        }
+    }
+
+    private static void storeProbeAngle(Cursor c, AngleBuffer buffer, int rawByte, ProbeAngleWrite angleWrite) {
+        if (buffer == AngleBuffer.PRIMARY) c.writePrimary(OptionalInt.of(rawByte));
+        else c.writeSecondary(OptionalInt.of(rawByte));
+        angleWrite.store(buffer, rawByte);
+    }
 }

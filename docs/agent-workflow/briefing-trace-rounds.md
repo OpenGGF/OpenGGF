@@ -71,6 +71,21 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+A closed cut can precede a legitimate native placement write (2026-10-25, CD
+platform742). The unowned physical75 was free at741, then SpawnObjects created
+ID21 before Body/the failing walk742. Comparing all later images to the prior
+closed cut falsely blamed dispatch. Pin the reached source phase and permit the
+actual placement prefix; still check zero Init fields and earlier committed
+Solid/Fall effects. A failed pass is not a completed frame and must not resume.
+
+A private exception constructor does not prove invocation origin (2026-10-25,
+CD prefix probes). Public callers can retain a genuine unavailable-read marker
+and throw it during a later callback over available terrain. Catching it around
+the whole leaf mislabels that host interruption as a current native read. Keep
+callback exceptions separate until the actual leaf identifies its own read,
+and test exact exception identity for both feet/ceiling/wall; never parse messages.
+
+
 A successful replay can hide a failed saved-state restore (2026-10-25, CD
 Checkpoint contact). If restore reinstates collision/checkpoint globals but
 retains post-contact saved bytes/knowledge, replayed contact rewrites those same

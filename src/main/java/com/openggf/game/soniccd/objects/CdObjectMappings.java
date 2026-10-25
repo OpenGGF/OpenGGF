@@ -167,6 +167,12 @@ public final class CdObjectMappings implements CdDrawMappings {
         // ObjAnton_Init stores the actual USA $20B3AA oMap long (Anton/Main.asm:27).
         // Join the complete112-byte, four-frame source through the existing exact-byte helper.
         addObject(tables, objects, CdR11aObjectAssets.Table.ANTON_MAPPINGS, objects.anton());
+        // Literal Collapse oMap roots (Main.asm:36,40,183,281); retain all raw directories,
+        // aliases and pads through the unchanged exact-byte helper, including both fragment roots.
+        addObject(tables, objects, CdR11aObjectAssets.Table.COLLAPSE_PLATFORM_MAPPINGS_1, objects.collapsePlatform1());
+        addObject(tables, objects, CdR11aObjectAssets.Table.COLLAPSE_PLATFORM_MAPPINGS_2, objects.collapsePlatform2());
+        addObject(tables, objects, CdR11aObjectAssets.Table.COLLAPSE_PLATFORM_MAPPINGS_3, objects.collapsePlatform3());
+        addObject(tables, objects, CdR11aObjectAssets.Table.COLLAPSE_PLATFORM_MAPPINGS_4, objects.collapsePlatform4());
         var monitorView = objects.view(CdR11aObjectAssets.Table.MONITOR_TIME_MAPPINGS);
         var staticPieces = new ArrayList<DeclaredStaticPiece>();
         // ObjMonitorItem_Init (:451-459) adds the signed frame word and then one byte, skipping the count.

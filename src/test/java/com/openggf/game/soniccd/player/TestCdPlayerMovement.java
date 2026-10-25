@@ -1729,4 +1729,335 @@ class TestCdPlayerMovement {
     }
 
     private static int rawObjectBits(String literal) { return Integer.parseUnsignedInt(literal, 16); }
+
+    // Collapse player-probe prefixes. Constructed decoder input only; ALL JAVA UNRUN.
+    @Test void prefixCompleteFloorMatchesLegacyAndReportsSameValuePrimaryThenSecondaryStores() {
+        var f = new Fixture(); var owner = f.owner(); var a = prefixMotion(0x00401234, 0x004CABCD, 0, 0, 4);
+        var before = f.environment(); var writes = new PrefixAngles(0, 0);
+        var result = owner.checkFloorWithPrefix(a, writes);
+        assertEquals(owner.checkFloor(a), result); assertEquals(0, result.distance());
+        assertEquals(List.of(new PrefixStore(CdPlayerMovement.AngleBuffer.PRIMARY, 0),
+                new PrefixStore(CdPlayerMovement.AngleBuffer.SECONDARY, 0)), writes.events);
+        assertEquals(java.util.OptionalInt.of(0), result.primaryAngleWrite());
+        assertEquals(java.util.OptionalInt.of(0), result.secondaryAngleWrite());
+        assertEquals(prefixMotion(0x00401234, 0x004CABCD, 0, 0, 4), a); assertEquals(before, f.environment());
+    }
+
+    @Test void prefixBlankFloorAndCeilingDoNotPreclearEitherExistingByte() {
+        var f = new Fixture(false); var owner = f.owner(); var a = prefixMotion(0x00401234, 0x004CABCD, 0, 0, 4);
+        var writes = new PrefixAngles(0x12, 0x34);
+        assertEquals(owner.checkFloor(a), owner.checkFloorWithPrefix(a, writes));
+        assertEquals(owner.getCeilDist(a), owner.getCeilDistWithPrefix(a, writes));
+        assertTrue(writes.events.isEmpty()); assertEquals(0x12, writes.primary); assertEquals(0x34, writes.secondary);
+        assertEquals(prefixMotion(0x00401234, 0x004CABCD, 0, 0, 4), a);
+    }
+
+    @Test void prefixFirstFloorFaultWritesNeitherBufferAndKeepsItsPrimaryCallIdentity() {
+        var f = new Fixture(false); f.fg[3] = (byte) 0xF9; var owner = f.owner();
+        var a = prefixMotion(0x01008000, 0x00611234, 0x123, 0x400, 0x44); var writes = new PrefixAngles(0x12, 0x34);
+        var failure = assertThrows(CdPlayerMovement.UnownedProbeRead.class, () -> owner.checkFloorWithPrefix(a, writes));
+        assertPrefixWord(failure, CdPlayerMovement.AngleBuffer.PRIMARY, 1, 0xF2E0);
+        assertTrue(writes.events.isEmpty()); assertEquals(0x12, writes.primary); assertEquals(0x34, writes.secondary);
+        var legacy = assertThrows(IllegalStateException.class, () -> owner.checkFloor(a));
+        assertEquals(IllegalStateException.class, legacy.getClass());
+        assertEquals(failure.terrainRead().originalException().getMessage(), legacy.getMessage());
+        assertEquals(prefixMotion(0x01008000, 0x00611234, 0x123, 0x400, 0x44), a);
+    }
+
+    @Test void prefixPrimaryRawWriteThenItsOwnAdjacentFaultIsStillPrimaryNotSecondary() {
+        var f = new Fixture(false); f.fg[2 + 42 + 1] = (byte) 0xF9;
+        f.block(0, 15, 0x2001); f.angles[1] = 3; Arrays.fill(f.heights, 16, 32, (byte) 0);
+        var owner = f.owner(); var a = prefixMotion(0x01008000, 0x00EC1234, 0, 0, 0x44);
+        var writes = new PrefixAngles(0x12, 0x34);
+        var failure = assertThrows(CdPlayerMovement.UnownedProbeRead.class, () -> owner.checkFloorWithPrefix(a, writes));
+        assertPrefixWord(failure, CdPlayerMovement.AngleBuffer.PRIMARY, 0x81, 0xF200);
+        assertEquals(List.of(new PrefixStore(CdPlayerMovement.AngleBuffer.PRIMARY, 3)), writes.events);
+        assertEquals(3, writes.primary); assertEquals(0x34, writes.secondary);
+        assertEquals(prefixMotion(0x01008000, 0x00EC1234, 0, 0, 0x44), a);
+    }
+
+    @Test void prefixCompletedPrimaryWithoutAnyWriteThenSecondaryFaultUsesTheActualSecondCall() {
+        var f = new Fixture(false); f.fg[2] = (byte) 0xF9;
+        var owner = f.owner(); var a = prefixMotion(0x00F88000, 0x00611234, 0, 0, 0x44);
+        var writes = new PrefixAngles(0x12, 0x34);
+        var failure = assertThrows(CdPlayerMovement.UnownedProbeRead.class, () -> owner.checkFloorWithPrefix(a, writes));
+        assertPrefixWord(failure, CdPlayerMovement.AngleBuffer.SECONDARY, 0, 0xF2FC);
+        assertTrue(writes.events.isEmpty()); assertEquals(0x12, writes.primary); assertEquals(0x34, writes.secondary);
+        assertEquals(prefixMotion(0x00F88000, 0x00611234, 0, 0, 0x44), a);
+    }
+
+    @Test void prefixCompletedFirstFootRawZeroSurvivesTheSecondFootFirstReadFailure() {
+        var f = new Fixture(false); f.fg[2] = (byte) 0xF9; f.block(0, 7, 0x2001);
+        Arrays.fill(f.heights, 16, 32, (byte) 1); var owner = f.owner();
+        var a = prefixMotion(0x00F88000, 0x00611234, 0, 0, 0x44); var writes = new PrefixAngles(0x12, 0x34);
+        var failure = assertThrows(CdPlayerMovement.UnownedProbeRead.class, () -> owner.checkFloorWithPrefix(a, writes));
+        assertPrefixWord(failure, CdPlayerMovement.AngleBuffer.SECONDARY, 0, 0xF2FC);
+        assertEquals(List.of(new PrefixStore(CdPlayerMovement.AngleBuffer.PRIMARY, 0)), writes.events);
+        assertEquals(0, writes.primary); assertEquals(0x34, writes.secondary);
+    }
+
+    @Test void prefixSecondaryRawStoreBeforeItsAdjacentFailureKeepsBothReachedFootWrites() {
+        var f = new Fixture(false); f.fg[2 + 42] = (byte) 0xF9;
+        f.block(0, 15, 0x2001); Arrays.fill(f.heights, 16, 32, (byte) 1);
+        f.block(15, 15, 0x2004); f.ids[4] = 4; f.angles[4] = 3;
+        var owner = f.owner(); var a = prefixMotion(0x01008000, 0x00EC1234, 0, 0, 0x44);
+        var writes = new PrefixAngles(0x12, 0x34);
+        var failure = assertThrows(CdPlayerMovement.UnownedProbeRead.class, () -> owner.checkFloorWithPrefix(a, writes));
+        assertPrefixWord(failure, CdPlayerMovement.AngleBuffer.SECONDARY, 0x80, 0xF21E);
+        assertEquals(List.of(new PrefixStore(CdPlayerMovement.AngleBuffer.PRIMARY, 0),
+                new PrefixStore(CdPlayerMovement.AngleBuffer.SECONDARY, 3)), writes.events);
+        assertEquals(0, writes.primary); assertEquals(3, writes.secondary);
+    }
+
+    @Test void prefixRoomRightWallEmitsBothSeedsThenRawOddByteBeforeAdjacentFailure() {
+        var f = new Fixture(false); f.fg[3] = (byte) 0xF9; f.block(15, 6, 0x4001); f.angles[1] = 3;
+        var owner = f.owner(); var a = prefixMotion(0x00F50000, 0x00611234, 0, 0, 0x44);
+        var writes = new PrefixAngles(0x12, 0x34);
+        var failure = assertThrows(CdPlayerMovement.UnownedProbeRead.class,
+                () -> owner.calcRoomInFrontWithPrefix(a, 0xC0, writes));
+        assertPrefixWord(failure, CdPlayerMovement.AngleBuffer.PRIMARY, 1, 0xF2C0);
+        assertEquals(List.of(new PrefixStore(CdPlayerMovement.AngleBuffer.PRIMARY, 0xC0),
+                new PrefixStore(CdPlayerMovement.AngleBuffer.SECONDARY, 0xC0),
+                new PrefixStore(CdPlayerMovement.AngleBuffer.PRIMARY, 3)), writes.events);
+        assertEquals(3, writes.primary); assertEquals(0xC0, writes.secondary);
+        assertEquals(prefixMotion(0x00F50000, 0x00611234, 0, 0, 0x44), a);
+        assertEquals(IllegalStateException.class, assertThrows(IllegalStateException.class,
+                () -> owner.calcRoomInFront(a, 0xC0)).getClass());
+    }
+
+    @Test void prefixRoomLeftWallUsesTheNativeLowWordMirrorAndNegativeStep() {
+        var f = new Fixture(false); f.fg[2] = (byte) 0xF9; f.block(0, 6, 0x4001); f.angles[1] = 3;
+        var owner = f.owner(); var a = prefixMotion(0x010A0000, 0x00611234, 0, 0, 0x44);
+        var writes = new PrefixAngles(0x12, 0x34);
+        var failure = assertThrows(CdPlayerMovement.UnownedProbeRead.class,
+                () -> owner.calcRoomInFrontWithPrefix(a, 0x40, writes));
+        assertPrefixWord(failure, CdPlayerMovement.AngleBuffer.PRIMARY, 0, 0xF2DE);
+        assertEquals(List.of(new PrefixStore(CdPlayerMovement.AngleBuffer.PRIMARY, 0x40),
+                new PrefixStore(CdPlayerMovement.AngleBuffer.SECONDARY, 0x40),
+                new PrefixStore(CdPlayerMovement.AngleBuffer.PRIMARY, 3)), writes.events);
+    }
+
+    @Test void prefixRoomSeedsSameValueBytesInSourceOrderBeforeItsFirstUnavailableRead() {
+        var f = new Fixture(false); f.fg[3] = (byte) 0xF9; var owner = f.owner();
+        var a = prefixMotion(0x01000000, 0x00611234, 0, 0, 0x44); var writes = new PrefixAngles(0xC0, 0xC0);
+        var failure = assertThrows(CdPlayerMovement.UnownedProbeRead.class,
+                () -> owner.calcRoomInFrontWithPrefix(a, 0xC0, writes));
+        assertPrefixWord(failure, CdPlayerMovement.AngleBuffer.PRIMARY, 1, 0xF2C0);
+        assertEquals(List.of(new PrefixStore(CdPlayerMovement.AngleBuffer.PRIMARY, 0xC0),
+                new PrefixStore(CdPlayerMovement.AngleBuffer.SECONDARY, 0xC0)), writes.events);
+    }
+
+    @Test void prefixCeilingNeverSeedsAndCarriesItsRawByteAcrossItsOwnAdjacentFailure() {
+        var f = new Fixture(false); f.fg[3] = (byte) 0xF9; f.block(0, 0, 0x4001);
+        f.angles[1] = 3; Arrays.fill(f.heights, 16, 32, (byte) 0);
+        var owner = f.owner(); var a = prefixMotion(0x01008000, 0x010A1234, 0, -0x100, 0x44);
+        var writes = new PrefixAngles(0x12, 0x34);
+        var failure = assertThrows(CdPlayerMovement.UnownedProbeRead.class, () -> owner.getCeilDistWithPrefix(a, writes));
+        assertPrefixWord(failure, CdPlayerMovement.AngleBuffer.PRIMARY, 1, 0xF3E0);
+        assertEquals(List.of(new PrefixStore(CdPlayerMovement.AngleBuffer.PRIMARY, 3)), writes.events);
+        assertEquals(3, writes.primary); assertEquals(0x34, writes.secondary);
+        assertEquals(IllegalStateException.class, assertThrows(IllegalStateException.class,
+                () -> owner.getCeilDist(a)).getClass());
+        assertEquals(prefixMotion(0x01008000, 0x010A1234, 0, -0x100, 0x44), a);
+    }
+
+    @Test void prefixCeilingFirstUnavailableReadKeepsBothIncomingBytesUnwritten() {
+        var f = new Fixture(false); f.fg[2 + 42 + 1] = (byte) 0xF9; var owner = f.owner();
+        var a = prefixMotion(0x01008000, 0x010A1234, 0, 0, 0x44); var writes = new PrefixAngles(0x12, 0x34);
+        var failure = assertThrows(CdPlayerMovement.UnownedProbeRead.class, () -> owner.getCeilDistWithPrefix(a, writes));
+        assertPrefixWord(failure, CdPlayerMovement.AngleBuffer.PRIMARY, 0x81, 0xF200);
+        assertTrue(writes.events.isEmpty()); assertEquals(0x12, writes.primary); assertEquals(0x34, writes.secondary);
+    }
+
+    @Test void prefixCompleteCeilingRetainsRawOddFlipWritesInsteadOfNormalizingTheBuffer() {
+        var f = new Fixture(false); f.row(3, 0x5001); f.angles[1] = 3; var owner = f.owner();
+        var a = prefixMotion(0x00401234, 0x0050ABCD, 0x123, -0x456, 4); var writes = new PrefixAngles(0x12, 0x34);
+        var result = owner.getCeilDistWithPrefix(a, writes);
+        assertEquals(owner.getCeilDist(a), result); assertEquals(6, result.distance());
+        assertEquals(List.of(new PrefixStore(CdPlayerMovement.AngleBuffer.PRIMARY, 3),
+                new PrefixStore(CdPlayerMovement.AngleBuffer.PRIMARY, 0x43),
+                new PrefixStore(CdPlayerMovement.AngleBuffer.PRIMARY, 0xBD),
+                new PrefixStore(CdPlayerMovement.AngleBuffer.PRIMARY, 0x7D)), writes.events);
+        assertEquals(java.util.OptionalInt.of(0x7D), result.primaryAngleWrite());
+        assertTrue(result.secondaryAngleWrite().isEmpty()); assertEquals(0x34, writes.secondary);
+    }
+
+    @Test void prefixCollisionIdStopCarriesTheSameActualTerrainMarkerThroughTheKnownFoot() {
+        var f = new Fixture(false); f.fg[3] = (byte) 0x82;
+        word(f.chunks, 1024 + (7 * 16) * 2, 0x2384); var owner = f.owner();
+        var a = prefixMotion(0x01008000, 0x00611234, 0, 0, 0x44); var writes = new PrefixAngles(0x12, 0x34);
+        var failure = assertThrows(CdPlayerMovement.UnownedProbeRead.class, () -> owner.checkFloorWithPrefix(a, writes));
+        assertEquals(CdPlayerMovement.AngleBuffer.PRIMARY, failure.buffer());
+        assertSame(failure.terrainRead(), failure.getCause());
+        assertEquals(new CdPlayerTerrain.CollisionId(900), failure.terrainRead().detail());
+        assertEquals("Collision ID requires unavailable resident bytes: 900", failure.terrainRead().originalException().getMessage());
+        assertEquals(IllegalStateException.class, failure.terrainRead().originalException().getClass());
+        assertSame(failure.terrainRead().originalException(), failure.terrainRead().getCause()); assertTrue(writes.events.isEmpty());
+    }
+
+    @Test void prefixRoomSignedRoundingAndAllQuadrantsStillProduceExactlyTheLegacyResult() {
+        var owner = new Fixture(false).owner(); var a = prefixMotion(0x0040FFFF, 0x004CFFFF, -1, 1, 4);
+        for (int angle : new int[]{0, 0x1F, 0x20, 0x3F, 0x40, 0x5F, 0x60, 0x7F,
+                0x80, 0x9F, 0xA0, 0xBF, 0xC0, 0xDF, 0xE0, 0xFF}) {
+            var writes = new PrefixAngles(angle, angle);
+            assertEquals(owner.calcRoomInFront(a, angle), owner.calcRoomInFrontWithPrefix(a, angle, writes));
+            assertEquals(List.of(new PrefixStore(CdPlayerMovement.AngleBuffer.PRIMARY, angle),
+                    new PrefixStore(CdPlayerMovement.AngleBuffer.SECONDARY, angle)), writes.events);
+        }
+        assertEquals(prefixMotion(0x0040FFFF, 0x004CFFFF, -1, 1, 4), a);
+    }
+
+    @Test void prefixRoomPredictsFullLongWrapCarryBorrowAndUsesTheAdjustedYSample() {
+        var f = new Fixture(false); f.block(0, 0, 0x4001); f.angles[1] = 3;
+        f.widths[16 + 8] = 1; f.widths[16 + 7] = 1; var owner = f.owner();
+        var cases = List.of(prefixMotion(0xFFFFFEFF, 0xFFFFFEFF, 2, 2, 4),
+                prefixMotion(0x00000001, 0x00000001, -1, -1, 4));
+        int[] expectedDistances = {4, 5};
+        for (int i = 0; i < cases.size(); i++) {
+            var writes = new PrefixAngles(0x12, 0x34); var a = cases.get(i);
+            var result = owner.calcRoomInFrontWithPrefix(a, 0xC0, writes);
+            assertEquals(expectedDistances[i], result.distance()); assertEquals(owner.calcRoomInFront(a, 0xC0), result);
+            assertEquals(List.of(new PrefixStore(CdPlayerMovement.AngleBuffer.PRIMARY, 0xC0),
+                    new PrefixStore(CdPlayerMovement.AngleBuffer.SECONDARY, 0xC0),
+                    new PrefixStore(CdPlayerMovement.AngleBuffer.PRIMARY, 3)), writes.events);
+        }
+    }
+
+    @Test void prefixFloorUsesSignedByteRadiiAndNativeWordSensorsWithoutChangingAnyMotionField() {
+        var f = new Fixture(false); f.block(15, 5, 0x2001); Arrays.fill(f.heights, 16, 32, (byte) 1);
+        f.block(0, 5, 0x2004); f.ids[4] = 4; f.angles[4] = 4; Arrays.fill(f.heights, 64, 80, (byte) 2);
+        var owner = f.owner(); var a = with(with(prefixMotion(0x01001234, 0x0061ABCD, -32768, 32767, 4), 9, 0xFF), 10, 0xFE);
+        var writes = new PrefixAngles(0x12, 0x34); var result = owner.checkFloorWithPrefix(a, writes);
+        assertEquals(-2, result.distance()); assertEquals(owner.checkFloor(a), result);
+        assertEquals(List.of(new PrefixStore(CdPlayerMovement.AngleBuffer.PRIMARY, 0),
+                new PrefixStore(CdPlayerMovement.AngleBuffer.SECONDARY, 4)), writes.events);
+        assertEquals(with(with(prefixMotion(0x01001234, 0x0061ABCD, -32768, 32767, 4), 9, 0xFF), 10, 0xFE), a);
+    }
+
+    @Test void prefixCallbacksThrowTheirActualHostExceptionAtSeedsAndWithinRawFootStores() {
+        var blank = new Fixture(false).owner(); var a = prefixMotion(0x00401234, 0x004CABCD, 0, 0, 4);
+        for (int cut : new int[]{1, 2}) {
+            var raw = new ArrayList<PrefixStore>(); var sentinel = new IllegalStateException("seed " + cut);
+            assertSame(sentinel, assertThrows(IllegalStateException.class,
+                    () -> blank.calcRoomInFrontWithPrefix(a, 0xC0, (buffer, value) -> {
+                        raw.add(new PrefixStore(buffer, value)); if (raw.size() == cut) throw sentinel;
+                    })));
+            assertEquals(cut, raw.size());
+        }
+        var f = new Fixture(); var owner = f.owner();
+        for (var sentinel : new RuntimeException[]{new RuntimeException("host"), new IllegalStateException("state"),
+                new IllegalArgumentException("argument")}) {
+            var raw = new ArrayList<PrefixStore>();
+            assertSame(sentinel, assertThrows(RuntimeException.class, () -> owner.checkFloorWithPrefix(a, (buffer, value) -> {
+                raw.add(new PrefixStore(buffer, value)); if (buffer == CdPlayerMovement.AngleBuffer.SECONDARY) throw sentinel;
+            })));
+            assertEquals(List.of(new PrefixStore(CdPlayerMovement.AngleBuffer.PRIMARY, 0),
+                    new PrefixStore(CdPlayerMovement.AngleBuffer.SECONDARY, 0)), raw);
+        }
+    }
+
+    @Test void prefixValidationInvariantsAndPrivateMarkersStaySeparateFromNativeReadFailures() {
+        var owner = new Fixture(false).owner(); var a = prefixMotion(0x00401234, 0x004CABCD, 0, 0, 4);
+        var writes = new PrefixAngles(0x12, 0x34);
+        assertThrows(NullPointerException.class, () -> owner.calcRoomInFrontWithPrefix(null, 0, writes));
+        assertThrows(NullPointerException.class, () -> owner.checkFloorWithPrefix(null, writes));
+        assertThrows(NullPointerException.class, () -> owner.getCeilDistWithPrefix(null, writes));
+        assertThrows(NullPointerException.class, () -> owner.calcRoomInFrontWithPrefix(a, 0, null));
+        assertThrows(NullPointerException.class, () -> owner.checkFloorWithPrefix(a, null));
+        assertThrows(NullPointerException.class, () -> owner.getCeilDistWithPrefix(a, null));
+        for (int angle : new int[]{-1, 256}) {
+            assertEquals(IllegalArgumentException.class, assertThrows(IllegalArgumentException.class,
+                    () -> owner.calcRoomInFrontWithPrefix(a, angle, writes)).getClass());
+        }
+        assertTrue(writes.events.isEmpty());
+        assertEquals(IllegalArgumentException.class, assertThrows(IllegalArgumentException.class,
+                () -> new CdPlayerMovement.ProbeResult(32768, java.util.OptionalInt.empty(), java.util.OptionalInt.empty())).getClass());
+        assertThrows(IllegalArgumentException.class,
+                () -> new CdPlayerMovement.ProbeResult(0, java.util.OptionalInt.of(256), java.util.OptionalInt.empty()));
+        assertThrows(NullPointerException.class,
+                () -> new CdPlayerMovement.ProbeResult(0, null, java.util.OptionalInt.empty()));
+        assertTrue(Arrays.stream(CdPlayerMovement.UnownedProbeRead.class.getDeclaredConstructors())
+                .allMatch(c -> java.lang.reflect.Modifier.isPrivate(c.getModifiers())));
+        for (var field : CdPlayerMovement.class.getDeclaredFields()) assertNotEquals(CdPlayerMovement.ProbeAngleWrite.class, field.getType());
+    }
+
+    @Test void prefixWritePortsAreNotRetainedOrReplayedByLaterPureOrPrefixCalls() {
+        var f = new Fixture(); var owner = f.owner(); var a = prefixMotion(0x00401234, 0x004CABCD, 0, 0, 4);
+        var first = new PrefixAngles(0x12, 0x34); var result = owner.checkFloorWithPrefix(a, first);
+        var events = List.copyOf(first.events); assertEquals(result, owner.checkFloor(a));
+        assertEquals(events, first.events); var second = new PrefixAngles(0x56, 0x78);
+        assertEquals(result, owner.checkFloorWithPrefix(a, second)); assertEquals(events, second.events);
+        assertEquals(events, first.events); assertEquals(result, f.owner().checkFloor(a));
+    }
+
+    private record PrefixStore(CdPlayerMovement.AngleBuffer buffer, int rawByte) { }
+    private static final class PrefixAngles implements CdPlayerMovement.ProbeAngleWrite {
+        final List<PrefixStore> events = new ArrayList<>(); int primary, secondary;
+        PrefixAngles(int primary, int secondary) { this.primary = primary; this.secondary = secondary; }
+        @Override public void store(CdPlayerMovement.AngleBuffer buffer, int rawByte) {
+            assertTrue((rawByte & ~0xFF) == 0); events.add(new PrefixStore(buffer, rawByte));
+            if (buffer == CdPlayerMovement.AngleBuffer.PRIMARY) primary = rawByte; else secondary = rawByte;
+        }
+    }
+    private static CdPlayerMotionState prefixMotion(int x, int y, int xv, int yv, int spriteFlags) {
+        return new CdPlayerMotionState(x, y, xv, yv, -7, 6, 0x9A, 0xFF, spriteFlags, 9, 0x13,
+                0x1A, 0x1D, 1, 0x2E, -2, 0x80, 0xFF, 0x41, 0x52);
+    }
+    private static void assertPrefixWord(CdPlayerMovement.UnownedProbeRead failure,
+                                         CdPlayerMovement.AngleBuffer buffer, int layoutOffset, int chunkOffset) {
+        assertEquals(buffer, failure.buffer()); var terrainRead = failure.terrainRead();
+        assertSame(terrainRead, failure.terrainRead()); assertSame(terrainRead, failure.getCause());
+        assertEquals(new CdPlayerTerrain.TerrainWord(
+                new com.openggf.game.soniccd.level.CdTerrainCollision.Address(layoutOffset, 0xF9, 122, chunkOffset),
+                com.openggf.game.soniccd.level.CdTerrainCollision.UnavailableReason.OUTSIDE_SUPPLIED_CHUNKS), terrainRead.detail());
+        var original = terrainRead.originalException(); assertEquals(IllegalStateException.class, original.getClass());
+        assertSame(original, terrainRead.originalException()); assertSame(original, terrainRead.getCause()); assertNull(original.getCause());
+        assertEquals("Unavailable native collision word at $" + Integer.toHexString(0x210000 | chunkOffset)
+                + ": OUTSIDE_SUPPLIED_CHUNKS", original.getMessage());
+        assertEquals(original.getMessage(), terrainRead.getMessage()); assertEquals(terrainRead.getMessage(), failure.getMessage());
+    }
+
+    // Root R2: an old genuine marker thrown by the public callback is a host interruption.
+    @ParameterizedTest @CsvSource({"FLOOR,PRIMARY", "FLOOR,SECONDARY", "CEILING,PRIMARY", "WALL,PRIMARY"})
+    void prefixRetainedTerrainMarkerThrownByCallbackKeepsItsExactIdentity(String family, String foot) {
+        var unavailable = new Fixture(false); unavailable.fg[3] = (byte) 0xF9;
+        var prior = assertThrows(CdPlayerMovement.UnownedProbeRead.class,
+                () -> unavailable.owner().checkFloorWithPrefix(
+                        prefixMotion(0x01008000, 0x00611234, 0, 0, 0x44), (buffer, raw) -> { }));
+        var retained = prior.terrainRead();
+        var f = new Fixture();
+        if (family.equals("CEILING")) { f.row(3, 0x5001); f.angles[1] = 3; }
+        if (family.equals("WALL")) f.column(5, 0x4002);
+        var owner = f.owner();
+        var a = family.equals("CEILING")
+                ? prefixMotion(0x00401234, 0x0050ABCD, 0, 0, 4)
+                : prefixMotion(0x00401234, 0x004CABCD, 0, 0, 4);
+        var target = CdPlayerMovement.AngleBuffer.valueOf(foot);
+        var events = new ArrayList<PrefixStore>();
+        CdPlayerMovement.ProbeAngleWrite callback = (buffer, raw) -> {
+            events.add(new PrefixStore(buffer, raw));
+            if (buffer == target && (!family.equals("WALL") || events.size() > 2)) throw retained;
+        };
+        var actual = assertThrows(RuntimeException.class, () -> {
+            switch (family) {
+                case "FLOOR" -> owner.checkFloorWithPrefix(a, callback);
+                case "CEILING" -> owner.getCeilDistWithPrefix(a, callback);
+                case "WALL" -> owner.calcRoomInFrontWithPrefix(a, 0xC0, callback);
+                default -> throw new AssertionError(family);
+            }
+        });
+        assertSame(retained, actual, "a callback cannot become this leaf's native-read stop");
+        var primary = CdPlayerMovement.AngleBuffer.PRIMARY;
+        var secondary = CdPlayerMovement.AngleBuffer.SECONDARY;
+        List<PrefixStore> expected = switch (family) {
+            case "FLOOR" -> target == primary ? List.of(new PrefixStore(primary, 0))
+                    : List.of(new PrefixStore(primary, 0), new PrefixStore(secondary, 0));
+            case "CEILING" -> List.of(new PrefixStore(primary, 3));
+            case "WALL" -> List.of(new PrefixStore(primary, 0xC0), new PrefixStore(secondary, 0xC0),
+                    new PrefixStore(primary, 0xC0));
+            default -> throw new AssertionError(family);
+        };
+        assertEquals(expected, events, "only reached callback stores survive the interruption");
+        assertSame(retained, prior.terrainRead());
+    }
 }

@@ -1047,5 +1047,144 @@ public final class CdObjectPresentation {
             return previous.resolve(nativeId);
         };
     }
+
+    /**
+     * C29 appends one Platform57 logical span to unchanged C28: nineteen spans and658
+     * potential patterns. ObjCollapsePlatform_Init and both fragment producers store literal
+     * $44BE (scddisasm 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff,
+     * src/Level/Palmtree Panic/Objects/Collapsing Platform/Main.asm:35,182,279).
+     * PLC_Std row6 (Data (Act 1 Present).asm:68-69) describes $97C0..$9EE0;
+     * its57 tiles lie wholly inside existing AT_9000. No selector or region is added.
+     *
+     * <p>C28 executes FIRST, retaining its eager579 and selected-current Anton22 policies.
+     * Metadata and all eighteen explicit old logical/native extents validate without resolving
+     * Anton or Platform pixels, even for an empty SAT. Four unscripted counted visuals retain
+     * their complete sources and sparse40-tile union; all57 canonical tiles are conditionally
+     * admitted. Only a selected final native $4BE..$4F6 strictly reads this immutable supplied
+     * residency. UNKNOWN has no producer fallback. A later BigRing-address overwrite is the
+     * current owner; old sources and converted pictures retain their previous values.</p>
+     *
+     * <p>No source-bank lookup, art decode, preload, queue service, live callback or pixel
+     * cache occurs here. Explicit DEV ingress, verbatim restart and publication belong to
+     * the caller.</p>
+     */
+    public static PatternSource usaR11aCurrentCameraDevPreloadedArt(CdPlayerArtRuntime.State nowServicedPlayer,
+                                                                   CdPowerupArtRuntime.State nowServicedPowerup,
+                                                                   CdR11aObjectAssets objects,
+                                                                   CdR11aObjectAssets.FrontierArtBank frontier,
+                                                                   CdR11aObjectAssets.ContactArtBank contact,
+                                                                   CdR11aObjectAssets.FloatBlockArtBank floatBlock,
+                                                                   CdR11aObjectAssets.SpringArtBank spring,
+                                                                   CdR11aObjectAssets.TunnelDoorArtBank tunnelDoor,
+                                                                   CdR11aObjectAssets.MonitorTimeArtBank monitorTime,
+                                                                   CdR11aCameraArtResidency.State cameraResidency,
+                                                                   int playerLogicalBase, int ringLogicalBase,
+                                                                   int mosquiLogicalBase, int plantLogicalBase,
+                                                                   int rampLogicalBase, int explosionLogicalBase,
+                                                                   int pointsLogicalBase, int flowerLogicalBase,
+                                                                   int powerupLogicalBase, int floatBlockLogicalBase,
+                                                                   int springLogicalBase, int tunnelDoorVerticalLogicalBase,
+                                                                   int monitorTimeLogicalBase, int boulderLogicalBase,
+                                                                   int diagonalSpringLogicalBase, int spikesLogicalBase,
+                                                                   int checkpointLogicalBase, final int antonLogicalBase,
+                                                                   final int collapsePlatformLogicalBase) {
+        var previous = usaR11aCurrentCameraDevPreloadedArt(nowServicedPlayer, nowServicedPowerup, objects,
+                frontier, contact, floatBlock, spring, tunnelDoor, monitorTime, cameraResidency,
+                playerLogicalBase, ringLogicalBase, mosquiLogicalBase, plantLogicalBase, rampLogicalBase,
+                explosionLogicalBase, pointsLogicalBase, flowerLogicalBase, powerupLogicalBase,
+                floatBlockLogicalBase, springLogicalBase, tunnelDoorVerticalLogicalBase,
+                monitorTimeLogicalBase, boulderLogicalBase, diagonalSpringLogicalBase, spikesLogicalBase,
+                checkpointLogicalBase, antonLogicalBase);
+        // Literal oTile word; Collapse never calls SetObjectTileID.
+        final int tileWord = 0x44BE, first = tileWord & 0x7FF, count = 57;
+        var region = CdR11aCameraArtResidency.Region.AT_9000;
+        if (first != 0x4BE || first > 2048 - count || first * 32 != 0x97C0
+                || (first + count) * 32 != 0x9EE0
+                || first * 32 < region.destinationWord()
+                || (long) (first + count) * 32 > (long) region.destinationWord() + region.byteLength()) {
+            throw new IllegalArgumentException("Collapse Platform exceeds its existing physical owner");
+        }
+        if (collapsePlatformLogicalBase < 0
+                || (long) collapsePlatformLogicalBase + count - 1 > Integer.MAX_VALUE) {
+            throw new IllegalArgumentException("Collapse Platform logical pattern extent must be nonnegative and bounded");
+        }
+        var tables = List.of(CdR11aObjectAssets.Table.COLLAPSE_PLATFORM_MAPPINGS_1,
+                CdR11aObjectAssets.Table.COLLAPSE_PLATFORM_MAPPINGS_2,
+                CdR11aObjectAssets.Table.COLLAPSE_PLATFORM_MAPPINGS_3,
+                CdR11aObjectAssets.Table.COLLAPSE_PLATFORM_MAPPINGS_4);
+        var visuals = List.of(objects.collapsePlatform1(), objects.collapsePlatform2(),
+                objects.collapsePlatform3(), objects.collapsePlatform4());
+        int[] lengths = {118, 408, 62, 158}, frames = {1, 6, 7, 6};
+        var referenced = new HashSet<Integer>();
+        for (int index = 0; index < visuals.size(); index++) {
+            var visual = visuals.get(index);
+            var table = tables.get(index);
+            var view = objects.view(table);
+            if (view.table() != table || !view.range().equals(table.range())
+                    || view.bytes().length() != lengths[index]
+                    || visual.mappings().length() != lengths[index] || visual.mappingTableOffset() != 0
+                    || visual.mappingFrames().size() != frames[index]
+                    || !visual.animations().isEmpty() || visual.animationTable().length() != 0
+                    || !java.util.Arrays.equals(view.bytes().copy(), visual.mappings().copy())) {
+                throw new IllegalArgumentException("Collapse Platform disagrees with its authenticated static mapping sources");
+            }
+            for (var frame : visual.mappingFrames()) for (var piece : frame.pieces()) {
+                for (int tile = 0; tile < piece.tileCount(); tile++) {
+                    int offset = piece.tileOffset() + tile;
+                    if (offset < 0 || offset >= count) {
+                        throw new IllegalArgumentException("Collapse mapping exceeds its fifty-seven current patterns");
+                    }
+                    referenced.add(offset);
+                }
+            }
+        }
+        // Sparse native union is intentional; unreferenced canonical tiles remain conditionally admitted.
+        for (int offset = 0; offset < count; offset++) {
+            boolean expected = offset >= 0x0D && offset <= 0x2E || offset >= 0x31 && offset <= 0x36;
+            if (referenced.contains(offset) != expected) {
+                throw new IllegalArgumentException("Collapse static roots disagree with their forty-pattern union");
+            }
+        }
+        // Explicit bases avoid reading lazy Anton pixels merely to discover their logical ID.
+        var oldRanges = new ArrayList<int[]>();
+        oldRanges.add(new int[]{CdPlayerArtRuntime.VRAM_BYTE_ADDRESS / 32,
+                nowServicedPlayer.residentBank().length() / 32, playerLogicalBase});
+        oldRanges.add(new int[]{CdPowerupArtRuntime.VRAM_BYTE_ADDRESS / 32,
+                nowServicedPowerup.residentBank().length() / 32, powerupLogicalBase});
+        var bindings = List.of(objects.initialArtBank().binding(CdR11aAsset.ART_RINGS),
+                objects.initialArtBank().binding(CdR11aAsset.ART_MOSQUI),
+                frontier.binding(CdR11aAsset.ART_3D_PLANT), frontier.binding(CdR11aAsset.ART_3D_RAMP_BOOST),
+                contact.binding(CdR11aAsset.ART_EXPLOSIONS), contact.binding(CdR11aAsset.ART_POINTS),
+                contact.binding(CdR11aAsset.ART_FLOWER), floatBlock.binding(CdR11aAsset.ART_FLOAT_BLOCK),
+                spring.binding(CdR11aAsset.ART_SPRINGS), tunnelDoor.binding(CdR11aAsset.ART_TUNNEL_DOOR),
+                monitorTime.binding(CdR11aAsset.ART_MONITOR_TIME_POSTS));
+        int[] logicalBases = {ringLogicalBase, mosquiLogicalBase, plantLogicalBase, rampLogicalBase,
+                explosionLogicalBase, pointsLogicalBase, flowerLogicalBase, floatBlockLogicalBase,
+                springLogicalBase, tunnelDoorVerticalLogicalBase, monitorTimeLogicalBase};
+        for (int index = 0; index < bindings.size(); index++) {
+            var binding = bindings.get(index);
+            oldRanges.add(new int[]{binding.firstTileId(), binding.tileCount(), logicalBases[index]});
+        }
+        oldRanges.add(new int[]{objects.tileWord(0x0B, 0), 19, boulderLogicalBase});
+        oldRanges.add(new int[]{objects.tileWord(0x0F, 0), 46, diagonalSpringLogicalBase});
+        oldRanges.add(new int[]{objects.tileWord(0x0A, 0), 8, spikesLogicalBase});
+        oldRanges.add(new int[]{0x6CB, 12, checkpointLogicalBase});
+        oldRanges.add(new int[]{objects.tileWord(2, 0) & 0x7FF, 22, antonLogicalBase});
+        long nativeEnd = (long) first + count, logicalEnd = (long) collapsePlatformLogicalBase + count;
+        for (int[] range : oldRanges) {
+            if (first < (long) range[0] + range[1] && range[0] < nativeEnd
+                    || collapsePlatformLogicalBase < (long) range[2] + range[1] && range[2] < logicalEnd) {
+                throw new IllegalArgumentException("Overlapping Collapse Platform native or logical picture binding");
+            }
+        }
+        CdR11aCameraArtResidency.State snapshot = cameraResidency;
+        return nativeId -> {
+            if (nativeId >= first && nativeId < nativeEnd) {
+                return new TilePattern(collapsePlatformLogicalBase + (nativeId - first),
+                        patternVersion(CdR11aCameraArtResidency.readTile(snapshot, nativeId)));
+            }
+            return previous.resolve(nativeId);
+        };
+    }
 }
 // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>

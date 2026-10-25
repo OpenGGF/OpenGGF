@@ -2942,4 +2942,212 @@ class TestCdPlayerFrameRuntime {
     }
     private static void word(byte[] bytes, int at, int value) { bytes[at] = (byte) (value >>> 8); bytes[at + 1] = (byte) value; }
     private static void longword(byte[] bytes, int at, int value) { word(bytes, at, value >>> 16); word(bytes, at + 2, value); }
+
+    // Shared Solid's native-stop values have no dispatch authority. Added source-only, JAVA UNRUN.
+    @Test void objectSolidPrefixAdoptsAnActualHurtRolledStandFailureAndRetainsEveryOtherPartition() throws IOException {
+        var fixture = new Fixture(); var f = spinTunnelDirtyFrame(fixture); var captured = f.captureActor();
+        var s = captured.state(); var m = s.motion();
+        var motion = new CdPlayerMotionState(0x01008000, 0x00731234, 0x123, 0, 0x345,
+                4, 0x60, 0x0C, 4, 9, 19, 2, m.previousAnimation(), m.playerJump(), m.charge(), m.moveLock(),
+                m.stick(), m.playerControl(), m.previousPrimaryAngle(), m.previousSecondaryAngle());
+        var seeded = new CdPlayerBody.State(motion, s.animation(), s.header(), s.timers(), s.history(), s.rotationDistance(),
+                new CdPlayerBody.ObjectLinks(0x7B, 5));
+        f.restoreActor(new CdPlayerFrameRuntime.ActorState(captured.owner(), seeded, captured.display()));
+        var pool = new CdObjectPool(); var object = pool.state(40).moveByte(CdObjectState.ByteField.ID, 0x20)
+                .moveByte(CdObjectState.ByteField.SPRITE_FLAGS, 0x84).moveByte(CdObjectState.ByteField.WIDTH, 0x10)
+                .moveByte(CdObjectState.ByteField.Y_RADIUS, 0x0C).moveWord(CdObjectState.WordField.X, 0x100)
+                .moveWord(CdObjectState.WordField.Y, 0x90); pool.write(object);
+        var player = solidPlayer(f); var globals = solidGlobals(f); var poolBefore = pool.capture();
+        var stopped = assertInstanceOf(CdSolidObject.NativeStopped.class, CdSolidObject.fromAssets(f.assets())
+                .runWithPrefix(CdSolidObject.Entry.TOP_SOLID_OBJECT, object, player, new CdSolidObject.Gates(0, 0), globals, poolBefore));
+        assertEquals(CdSolidObject.StopSite.STAND_RELEASE, stopped.stop().site());
+        assertEquals(new CdSolidObject.SlotAddress(CdSolidObject.UnsupportedBoundary.RESERVED_SLOT_ADDRESS, 5,
+                CdSolidObject.Routine.STAND_ON_OBJECT), stopped.stop().detail());
+        var p = stopped.prefix(); var actor = f.captureActor(); var shared = f.captureShared(); int dmas = fixture.dmas.size();
+        assertEquals(0x006C1234, p.player().actor().motion().centreY16_16());
+        assertEquals(2, p.player().actor().motion().routine()); assertEquals(120, p.player().actor().hurt());
+        assertEquals(8, p.player().actor().motion().flags()); assertEquals(5, p.player().standObject());
+        assertEquals(0x60, p.player().actor().motion().angle()); assertEquals(0x345, p.player().actor().motion().groundVelocity());
+        assertEquals(Set.of(CdSolidObject.PlayerField.CENTRE_X, CdSolidObject.PlayerField.CENTRE_X_FRACTION,
+                CdSolidObject.PlayerField.CENTRE_Y, CdSolidObject.PlayerField.CENTRE_Y_FRACTION, CdSolidObject.PlayerField.ROUTINE,
+                CdSolidObject.PlayerField.HURT, CdSolidObject.PlayerField.PLAYER_JUMP, CdSolidObject.PlayerField.FLAGS,
+                CdSolidObject.PlayerField.Y_RADIUS, CdSolidObject.PlayerField.X_RADIUS, CdSolidObject.PlayerField.ANIMATION), p.playerWrites());
+        f.validateObjectSolidPrefix(player, globals, p);
+        assertEquals(actor, f.captureActor()); assertEquals(shared, f.captureShared());
+        assertSame(actor.state(), f.state()); assertSame(shared.environment(), f.environment());
+        f.applyObjectSolidPrefix(player, globals, p);
+        prefixAssertAdopted(f, actor, shared, p); assertEquals(poolBefore.slots(), pool.capture().slots());
+        assertEquals(dmas, fixture.dmas.size()); assertEquals(List.of(), p.fmRequests());
+        var after = f.captureActor(); var afterShared = f.captureShared();
+        prefixAssertRejected(f, player, globals, p, IllegalArgumentException.class);
+        f.restoreActor(actor); f.restoreShared(shared); f.applyObjectSolidPrefix(player, globals, p);
+        assertEquals(after, f.captureActor()); assertEquals(afterShared, f.captureShared());
+        assertInstanceOf(CdSolidObject.UnsupportedSolidObject.class, stopped.stop().originalException());
+    }
+
+    @ParameterizedTest @ValueSource(strings = {"CENTRE_X", "X_FRACTION", "CENTRE_Y", "Y_FRACTION", "X_VELOCITY",
+            "Y_VELOCITY", "GROUND_VELOCITY", "ROUTINE", "ANGLE", "FLAGS", "SPRITE_FLAGS", "X_RADIUS", "Y_RADIUS",
+            "ANIMATION", "PREVIOUS_ANIMATION", "PLAYER_JUMP", "CHARGE", "MOVE_LOCK", "STICK", "PLAYER_CONTROL",
+            "PREVIOUS_PRIMARY", "PREVIOUS_SECONDARY", "TILE", "PRIORITY", "HURT", "ROTATION_DISTANCE", "SLOT_ID",
+            "PUSH_OBJECT", "STAND_OBJECT"})
+    void objectSolidPrefixCasChecksEveryExpectedPlayerFieldBeforeApplyingAnything(String field) throws IOException {
+        var f = spinTunnelDirtyFrame(new Fixture()); var player = solidPlayer(f); var globals = solidGlobals(f);
+        var p = prefixFrameValues(player, globals, Set.of(), Set.of());
+        prefixAssertRejected(f, springChanged(player, field), globals, p, IllegalArgumentException.class);
+    }
+
+    @ParameterizedTest @ValueSource(ints = {0, 1, 2, 3})
+    void objectSolidPrefixCasChecksBothRawAnglesInvincibilityAndScoreChain(int field) throws IOException {
+        var f = spinTunnelDirtyFrame(new Fixture()); var player = solidPlayer(f); var globals = solidGlobals(f);
+        var p = prefixFrameValues(player, globals, Set.of(), Set.of());
+        prefixAssertRejected(f, player, prefixChangedGlobals(globals, field), p, IllegalArgumentException.class);
+    }
+
+    @ParameterizedTest @EnumSource(CdSolidObject.PlayerField.class)
+    void objectSolidPrefixRejectsEveryUndeclaredRepresentedPlayerWrite(CdSolidObject.PlayerField field) throws IOException {
+        var f = spinTunnelDirtyFrame(new Fixture()); var player = solidPlayer(f); var globals = solidGlobals(f);
+        String key = switch (field) {
+            case CENTRE_X_FRACTION -> "X_FRACTION";
+            case CENTRE_Y_FRACTION -> "Y_FRACTION";
+            default -> field.name();
+        };
+        var p = prefixFrameValues(springChanged(player, key), globals, Set.of(), Set.of());
+        prefixAssertRejected(f, player, globals, p, IllegalArgumentException.class);
+    }
+
+    @ParameterizedTest @ValueSource(ints = {0, 1, 2, 3})
+    void objectSolidPrefixRejectsEveryUndeclaredGlobalWrite(int field) throws IOException {
+        var f = spinTunnelDirtyFrame(new Fixture()); var player = solidPlayer(f); var globals = solidGlobals(f);
+        var p = prefixFrameValues(player, prefixChangedGlobals(globals, field), Set.of(), Set.of());
+        prefixAssertRejected(f, player, globals, p, IllegalArgumentException.class);
+    }
+
+    @ParameterizedTest @ValueSource(strings = {"SLOT_ID", "SPRITE_FLAGS", "PREVIOUS_ANIMATION", "CHARGE", "MOVE_LOCK",
+            "PREVIOUS_PRIMARY", "PREVIOUS_SECONDARY"})
+    void objectSolidPrefixKnownMasksCannotAuthorizeAnUnownedPlayerField(String field) throws IOException {
+        var f = spinTunnelDirtyFrame(new Fixture()); var player = solidPlayer(f); var globals = solidGlobals(f);
+        var p = prefixFrameValues(springChanged(player, field), globals,
+                java.util.EnumSet.allOf(CdSolidObject.PlayerField.class), java.util.EnumSet.allOf(CdSolidObject.GlobalField.class));
+        prefixAssertRejected(f, player, globals, p, IllegalArgumentException.class);
+    }
+
+    @ParameterizedTest @EnumSource(CdSolidObject.PlayerField.class)
+    void objectSolidPrefixDeclaredSameValueStoresAreLegalAndPreserveAllValues(CdSolidObject.PlayerField field) throws IOException {
+        var f = spinTunnelDirtyFrame(new Fixture()); var player = solidPlayer(f); var globals = solidGlobals(f);
+        var p = prefixFrameValues(player, globals, Set.of(field), java.util.EnumSet.allOf(CdSolidObject.GlobalField.class));
+        var actor = f.captureActor(); var shared = f.captureShared();
+        f.validateObjectSolidPrefix(player, globals, p); assertEquals(actor, f.captureActor()); assertEquals(shared, f.captureShared());
+        f.applyObjectSolidPrefix(player, globals, p); assertEquals(actor, f.captureActor()); assertEquals(shared, f.captureShared());
+        assertSame(actor.state().history(), f.state().history()); assertSame(actor.display(), f.display());
+        assertSame(shared.artState(), f.artState()); assertSame(shared.vIntClock(), f.vIntClock());
+    }
+
+    @Test void objectSolidPrefixGlobalWritesUpdateTheSingleEnvironmentWithoutCopyingRawAnglesToActorHistory() throws IOException {
+        var f = spinTunnelDirtyFrame(new Fixture()); var player = solidPlayer(f); var globals = solidGlobals(f);
+        var p = prefixFrameValues(player, new CdSolidObject.Globals(0, 0x1234, 3, 0), Set.of(),
+                java.util.EnumSet.allOf(CdSolidObject.GlobalField.class));
+        var actor = f.captureActor(); var shared = f.captureShared();
+        f.validateObjectSolidPrefix(player, globals, p); assertEquals(actor, f.captureActor()); assertEquals(shared, f.captureShared());
+        f.applyObjectSolidPrefix(player, globals, p); prefixAssertAdopted(f, actor, shared, p);
+        assertEquals(player, solidPlayer(f)); assertEquals(0x44, f.state().motion().previousPrimaryAngle());
+        assertEquals(0x88, f.state().motion().previousSecondaryAngle());
+    }
+
+    @Test void objectSolidPrefixMetadataConveysNoPoolOwnerOrCallExecutionAuthority() throws IOException {
+        var fixture = new Fixture(); var f = spinTunnelDirtyFrame(fixture); var player = solidPlayer(f); var globals = solidGlobals(f);
+        var pool = new CdObjectPool(); var cut = pool.capture();
+        var p = new CdSolidObject.Prefix(CdSolidObject.Entry.TOP_SOLID_OBJECT, pool.state(40), player, globals,
+                List.of(pool.state(41)), Set.of(CdObjectState.ByteField.SOLID_TYPE), Set.of(), Set.of(),
+                List.of(new CdSolidObject.RoutineCall(CdSolidObject.Routine.STAND_ON_OBJECT),
+                        new CdSolidObject.PlayFm(CdPlayerTouchResponse.FmSound.FM_CHARGESTOP)));
+        var actor = f.captureActor(); var shared = f.captureShared(); int dmas = fixture.dmas.size();
+        f.validateObjectSolidPrefix(player, globals, p); f.applyObjectSolidPrefix(player, globals, p);
+        assertEquals(actor, f.captureActor()); assertEquals(shared, f.captureShared());
+        assertEquals(cut.slots(), pool.capture().slots()); assertEquals(dmas, fixture.dmas.size());
+        assertEquals(List.of(CdPlayerTouchResponse.FmSound.FM_CHARGESTOP), p.fmRequests());
+    }
+
+    @Test void objectSolidPrefixPrimaryAliasFlagsStayInTheActorAndNeverCreateAnotherPlayerSlot() throws IOException {
+        var f = spinTunnelDirtyFrame(new Fixture()); var player = solidPlayer(f); var globals = solidGlobals(f);
+        var a = player.actor(); var m = a.motion();
+        var nextMotion = new CdPlayerMotionState(m.centreX16_16(), m.centreY16_16(), m.xVelocity(), m.yVelocity(),
+                m.groundVelocity(), m.routine(), m.angle(), m.flags() & ~8, m.spriteFlags(), m.xRadius(), m.yRadius(),
+                m.animation(), m.previousAnimation(), m.playerJump(), m.charge(), m.moveLock(), m.stick(), m.playerControl(),
+                m.previousPrimaryAngle(), m.previousSecondaryAngle());
+        var next = new CdSolidObject.Player(new CdPlayerTouchResponse.Actor(nextMotion, a.tile(), a.priority(), a.hurt(),
+                a.rotationDistance()), player.slotId(), player.pushObject(), player.standObject());
+        var p = prefixFrameValues(next, globals, Set.of(CdSolidObject.PlayerField.FLAGS), Set.of());
+        var actor = f.captureActor(); var shared = f.captureShared();
+        f.applyObjectSolidPrefix(player, globals, p); prefixAssertAdopted(f, actor, shared, p);
+        assertEquals(List.of(), p.otherSlots()); assertEquals(player.slotId(), f.state().header().slotId());
+        assertEquals(player.pushObject(), f.state().objectLinks().pushObject());
+    }
+
+    @Test void objectSolidPrefixNullPendingEntitlementReentryAndClosedGuardsRetainTheActualCut() throws IOException {
+        var f = new Fixture().runtime(); var player = solidPlayer(f); var globals = solidGlobals(f);
+        var p = prefixFrameValues(player, globals, Set.of(), Set.of());
+        prefixAssertRejected(f, null, globals, p, NullPointerException.class);
+        prefixAssertRejected(f, player, null, p, NullPointerException.class);
+        prefixAssertRejected(f, player, globals, null, NullPointerException.class);
+        var selection = f.prepareInput(8);
+        prefixAssertRejected(f, player, globals, p, IllegalStateException.class);
+        int[] callbacks = {0};
+        f.serviceVBlank(selection.phase(), () -> {
+            callbacks[0]++;
+            var state = f.state(); var env = f.environment(); var art = f.artState(); var clock = f.vIntClock(); var display = f.display();
+            assertThrows(IllegalStateException.class, () -> f.validateObjectSolidPrefix(player, globals, p));
+            assertThrows(IllegalStateException.class, () -> f.applyObjectSolidPrefix(player, globals, p));
+            assertSame(state, f.state()); assertSame(env, f.environment()); assertSame(art, f.artState());
+            assertSame(clock, f.vIntClock()); assertSame(display, f.display());
+        });
+        assertEquals(1, callbacks[0]);
+        prefixAssertRejected(f, player, globals, p, IllegalStateException.class);
+        assertEquals(CdPlayerBody.Boundary.INIT_RETURN, f.runBody(1).result().boundary());
+        var closedPlayer = solidPlayer(f); var closedGlobals = solidGlobals(f);
+        var closedPrefix = prefixFrameValues(closedPlayer, closedGlobals, Set.of(), Set.of());
+        f.close();
+        var state = f.state(); var env = f.environment(); var art = f.artState(); var clock = f.vIntClock(); var display = f.display();
+        assertThrows(IllegalStateException.class, () -> f.validateObjectSolidPrefix(closedPlayer, closedGlobals, closedPrefix));
+        assertThrows(IllegalStateException.class, () -> f.applyObjectSolidPrefix(closedPlayer, closedGlobals, closedPrefix));
+        assertSame(state, f.state()); assertSame(env, f.environment()); assertSame(art, f.artState());
+        assertSame(clock, f.vIntClock()); assertSame(display, f.display());
+    }
+
+    private static CdSolidObject.Prefix prefixFrameValues(CdSolidObject.Player player, CdSolidObject.Globals globals,
+            Set<CdSolidObject.PlayerField> players, Set<CdSolidObject.GlobalField> globalWrites) {
+        return new CdSolidObject.Prefix(CdSolidObject.Entry.TOP_SOLID_OBJECT, new CdObjectPool().state(40), player, globals,
+                List.of(), Set.of(), players, globalWrites, List.of());
+    }
+    private static CdSolidObject.Globals prefixChangedGlobals(CdSolidObject.Globals g, int field) {
+        int[] values = {g.invincible(), g.scoreChain(), g.primaryAngle(), g.secondaryAngle()}; values[field] ^= 1;
+        return new CdSolidObject.Globals(values[0], values[1], values[2], values[3]);
+    }
+    private static void prefixAssertRejected(CdPlayerFrameRuntime f, CdSolidObject.Player player, CdSolidObject.Globals globals,
+            CdSolidObject.Prefix prefix, Class<? extends RuntimeException> type) {
+        // Pending/reentrant cuts cannot be captured; read only already exposed immutable values in all cases.
+        var state = f.state(); var env = f.environment(); var display = f.display(); var art = f.artState(); var clock = f.vIntClock();
+        assertThrows(type, () -> f.validateObjectSolidPrefix(player, globals, prefix));
+        assertThrows(type, () -> f.applyObjectSolidPrefix(player, globals, prefix));
+        assertSame(state, f.state()); assertSame(env, f.environment()); assertSame(display, f.display());
+        assertSame(art, f.artState()); assertSame(clock, f.vIntClock());
+    }
+    private static void prefixAssertAdopted(CdPlayerFrameRuntime f, CdPlayerFrameRuntime.ActorState before,
+            CdPlayerFrameRuntime.SharedState shared, CdSolidObject.Prefix prefix) {
+        var s = before.state(); var h = s.header(); var a = prefix.player().actor(); var links = prefix.player(); var g = prefix.globals();
+        assertEquals(new CdPlayerBody.State(a.motion(), s.animation(), new CdPlayerBody.Header(h.slotId(), h.mappingAddress(),
+                a.tile(), a.priority(), h.width()), new CdPlayerBody.Timers(a.hurt(), s.timers().invincibility(),
+                s.timers().speedShoes(), s.timers().reset()), s.history(), a.rotationDistance(),
+                new CdPlayerBody.ObjectLinks(links.pushObject(), links.standObject())), f.state());
+        var e = shared.environment(); var movement = e.movement(); var old = movement.globals(); var body = e.globals();
+        assertEquals(new CdPlayerBody.Environment(new CdPlayerMovement.Environment(movement.physics(), movement.bounds(), movement.gates(),
+                new CdPlayerMovement.Globals(old.lookMode(), old.cameraYCentre(), g.primaryAngle(), g.secondaryAngle(), old.boredTimer(),
+                        g.scoreChain(), old.debugAngle(), old.debugAngleShift(), old.debugQuadrant(), old.debugFloorDistance())), e.controls(),
+                new CdPlayerBody.Globals(body.levelFrames(), body.cameraXCentre(), body.timeAttackMode(), body.debugMode(), body.debugCheat(),
+                        body.timeWarpTimer(), g.invincible(), body.bossMusic()), e.dynamicSlots()), f.environment());
+        assertSame(s.animation(), f.state().animation()); assertSame(s.history(), f.state().history());
+        assertSame(before.display(), f.display()); assertSame(shared.artState(), f.artState()); assertSame(shared.vIntClock(), f.vIntClock());
+        assertEquals(shared.paused(), f.captureShared().paused()); assertSame(e.controls(), f.environment().controls());
+        assertSame(e.dynamicSlots(), f.environment().dynamicSlots()); assertSame(movement.physics(), f.environment().movement().physics());
+        assertSame(movement.bounds(), f.environment().movement().bounds()); assertSame(movement.gates(), f.environment().movement().gates());
+    }
 }

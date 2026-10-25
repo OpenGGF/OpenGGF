@@ -6318,3 +6318,139 @@ algorithm or build/selection policy changed. Fresh guards20606 pass **728/0/0/0*
 Maven5m04, finished20:55:38Z, no queue wait. Command:
 `env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 python3 ${OPENGGF_MAIN}/tools/testing/maven_queue.py --normal -Dmse=off -Pguards test -B`.
 No broad smoke/full-suite or audio-output claim follows.
+
+
+## 25 October 2026 — collapsing platform and native controller frontier742
+
+Private local candidate over `74b4aa0ce54a36bd3125f3411a2f45063fced0d2` on
+`feature/ai-sonic-cd-objects-local`. Main and retained primary remain unchanged;
+no merge, push, PR or public release. USA DEV opening is partial. Source is N
+`1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff`; actual runtime bytes still come only
+from the authenticated USA disc, never disassembly fallback.
+
+Actual USA retained operands authenticate six complete native-order views:
+map1 C520/118, sizes1 C596/24, map3 C5AE/62, map2 C5EC/408, sizes2 C784/40 and
+map4 C7AC/158. Tables45..50 append without changing earlier ordinals. Four static
+visual getters use frames1/6/7/6 and57 patterns. ART_PLATFORM is the eleventh
+cached source, canonical PLC1/row6 at97C0, header8039. Java452 and native453 are
+distinct finite consumers; native's extra80 is the real next Boulder header,
+not invented padding. Both decode1824 bytes with SHA256
+`b33a50d46c89a5115a18548e6a3b083428c8a5bd2bcafc3c4c45e2718c5c768a`.
+The destination97C0..9EE0 aliases existing AT_9000; no Region/art-bank growth.
+Platform is Std-only: exactly57 cold complete-tile DEV writes are explicit,
+not an assertion that title/Std PLC executed. Restart preserves bytes/masks,
+code table and raw section verbatim, including UNKNOWN.
+
+Opt-in Terrain7 and Movement prefix entries preserve actual reached angle stores
+and precise PRIMARY/SECONDARY read sites. Only the two source-owner unavailable
+branches create private markers. A caller can retain a genuine marker and throw
+it during a later callback; private construction alone does not identify the
+current invocation. Root's narrow private callback transport preserves that
+original host exception instead of misclassifying it as a current native read.
+Old pure entries/bodies remain. Solid.runWithPrefix6 returns genuine Completed
+Result or NativeStopped(Prefix,stop), without invented d0/Path/resume tokens.
+Frame validates/adopts that prefix with its existing field owners, before any
+assignment. The same original exception escapes after native-prefix publication.
+
+CdCollapsePlatform preserves Init/Main fallthrough, unconditional Top, actual
+GetOff then A3 then breakup, dirty ID0 allocation and negative-cell reuse,
+physical earlier/later child visits, WORD Delay wrap, transition-without-Fall,
+full LONG gravity and signed0200 deletion. MultiRow cell14 is native5, not6
+(ObjCollapsePlatform_Sizes1 / byte_20C598, Collapsing Platform/Data (Present).asm:11-25).
+All four aliases share existing64-byte storage. Native wrapper Draw and reached
+saved/despawn tails retain source order. Runtime19 caches one Body sharing the
+actual placement/Solid. A private invocation-local record authenticates the
+cached Body/whole dispatch; existing inSolidCommit excludes callback reentry.
+Full96/current-source/site/routine/masks/nonwrites, Frame expected values and
+the entire typed sound ledger preflight before one pool publication, matching
+Frame apply and ledger assignment. NativeStopped commits only its prefix then
+Body rethrows the identical stop. Snapshot/phase/factory11/14/tail/clocks retain
+existing ownership. Completed descriptive effects are never executed again.
+
+C29 preserves the exact C28 parameter prefix and old601 bindings, adding an
+explicit57-pattern logical interval. Metadata validates all18 old bases without
+resolving Anton pixels. Only selected final4BE..4F6 reads immutable current
+physical art. Four normal mapper registrations cover sparse40 patterns. Empty
+SAT/UNKNOWN remains admitted. Both Runtime conversions use C29; two presentation
+lines reserve/retire658. Installed658 is not658 scene-rendered.
+
+Controller-only heldRight now completes657 (physical40 and45 Init), real C0
+breakup723/A3once, Delay->Fall732 and through741. Full/course restore and forward
+checks cover657/723/732/741 while preserving all earlier561/582/Anton/save649
+proofs and checking checkpoint owner BEFORE replay. First failure742 is unowned
+ID21 at physical75, X3824/Y348/subtype40, stillroutine0/zero Init fields.
+SpawnObjects in742 creates75 from the preceding741 free slot BEFORE Body and
+dynamic walk: comparing that source with the earlier closed free image was an
+invalid oracle. Earlier child35 Fall is already committed at partial742:
+Y032F4000/delta00048000; actor XY216737536/48973568, XV1536/YV0. Runtime/Frame
+fail closed;742 is not complete and is never resumed. Permanent method:
+`ordinaryRightRouteCompletesAntonCheckpointAndCollapseThenStopsAtPlatform21At742WithReplay`.
+
+Separate actual EGL evidence warms controller649, then eight initial-only scenes
+use native placement fields and one actor restore/rebind, followed by96 ordinary
+neutral rows each. Fixed real two-foot floor766/parentY718/48-pixel elevation
+keeps the warmed camera window; no spawner mute, terrain repair or later ingress.
+Literal full64 images/physical allocation, delays/fall/delete, complete Body+FM,
+prior CPU/NOW and current CPU/NOW art, native palette/PlaneB/ordered GPU pixels,
+isolated/contrast omission controls and selected full/course state+pixel replay
+all execute. Observed60 Delay transitions,2970 Fall visits,28 deletions. Sparse40
+patterns are scene-rendered; all57 current patterns get installation witnesses,
+including17 unmapped. All658 are installed for retirement (540 missing old601
+use explicit TEST transparent witnesses), then absent;800 actual unrelated entry
+identities survive. All cleanup returns before output. External
+`Downloads/Sonic-CD/native/engine-collapse-platform-r1` holds41 original320x224
+ENGINE PNGs, input, construction and PASS. The17-image private progress page
+keeps bytes unchanged. No emulator/native pixel/timing parity is claimed.
+
+Execution and source corrections are distinct. Tests-first missing-API REDs
+preceded each imported owner. Assets109, combined probe/Solid/Frame893, Body38
+and picture84 passed after narrow manifest/callback/fixture corrections. Runtime
+R1 test failed Java int/Short inference; later test revisions corrected actual
+Top/GetOff/primary alias, Body sound prefixes, alternate terrain fixture,
+value-Frame API and reverse-SAT first UNKNOWN4D3. Runtime327 passes unchanged
+production. World R1 repeated wrong Sizes1 cell14 twice; Root R2 fixes only those
+literals. Old601 cleanup then fails EXACT new owned131673 after full proof;
+658 two-line production passes1/0/0/0 at22:23:22Z. No gameplay was tuned to fit.
+
+Final affected-consumer27102 selected25 exact classes and ran2147/1/0/0 at
+22:31:01Z, Maven1m57/no queue: only old Anton picture count10 vs new11 failed;
+all other2146 passed, including20 EGL/50 World-load/327 Runtime/413 Frame.
+Root changes that one inherited count only; focused56421 then passes all10
+Anton picture cases at22:32:21Z,33.576s/no queue. Exact fresh XML class sets,
+Java25.0.5.0.2, configured actual media, EGL/S2 and zero skips were checked.
+This is a repaired bounded selection with narrow verification, not a fresh
+all-green2147 invocation or full-suite/smoke claim. The change planner selected
+3754 unclassified smoke classes; direct private CD owners and consumers are a
+proportionate bounded selection. Fresh structural guards68138 pass728/0/0/0 across90 exact fresh XML,
+Java25/private cwd/Lua5.4,5m16/22:39:19Z/no queue. A follow-up inventory sweep
+found the same source-count10->11 assertion in older Spikes/Checkpoint pictures;
+only those two counts migrate. Four old picture consumers53068 ran29/1/0/0:
+Boulder7,Checkpoint7,diagonal7 passed; Spikes' old arity inventory still stopped
+atC27. Immutable J already has C28 (source-proven pre-existing stale test, no
+baseline execution claim); current C29 is additive. Append28/29 to that inventory,
+retain all lower contracts, and15100 passes all8 Spikes cases narrowly at22:44:08Z
+(34.763s/no queue/J25/media/zero skips). No unchanged broad/guard ceremony repeat
+is needed for these literal test-only migrations. This does not turn either
+red invocation into a claimed fresh combined green run.
+
+Command shape from the private cwd:
+`env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 python3 ${OPENGGF_MAIN}/tools/testing/maven_queue.py --normal -Dmse=off '-Dtest=TestCdR11aObjectAssets,TestCdR11aObjectRetailAssets,TestCdPlayerTerrain,TestCdPlayerMovement,TestCdObjectCollisionCheck,TestCdSolidObject,TestCdPlayerFrameRuntime,TestCdCollapsePlatform,TestCdObjectMappings,TestCdR11aSectionArt,TestCdCollapsePlatformPicture,TestCdOpeningObjectRuntime,TestSonicCdOpeningWorldLoad,TestSonicCdOpeningWorldEgl,TestSonicCdRestartCarry,TestModApiSignatureSurface,TestCdBoulder,TestCdFloatBlock,TestCdSpring,TestCdSpikes,TestCdAnton,TestCdMonitor,TestCdMosqui,TestCdPataBata,TestCdAntonPicture' "-Dsoniccd.media.root=${SCD_MEDIA_ROOT}" -Dsoniccd.opening.egl=true -Dopenggf.headless.gl=surfaceless-egl "-Dsonic2.rom.path=${SONIC2_ROM}" test`.
+Narrow correction uses `-Dtest=TestCdAntonPicture` with actual media. Prior
+frozen packets/reports retain original hashes and failures; Root revisions are
+separate. Independent Runtime/World fixed-input review
+`484f0103f0050161ba6d934dd8b26622c1088ebfabf6b9c58439049c32a52dda`
+finds no additional unresolved P1/P2 after World RootR2; prefix and Body/picture
+reviews retain their original findings and exact resolutions. Controller-route
+review is separate. All reviewer execution is explicitly unclaimed.
+
+Native startup/title/instant PLC history, live HUD time, FM lifecycle/executor/
+synthesis/playback, next ID21, whole act/game and regional gameplay parity remain
+open. Installed/rendered/source knowledge and actual controller/constructed
+coverage stay separate.
+
+Final independent controller-route source review
+`716a5c8c73b3ff7cc1c46f61009b409bf8cdbb9a6c98fbc86367db279f38cd4c`
+finds no concrete P1/P2 in Root routeR4; all fixed inputs preserved. A separate
+source-only ID21 audit corrects the quick subtype transcription to40 and pins
+native row167, map/width/range authentication targets, same source11/57/current
+span and the separate ObjGetCeilDist7X prerequisite. It establishes no completed742.

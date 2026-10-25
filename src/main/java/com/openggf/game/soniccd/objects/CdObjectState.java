@@ -43,7 +43,9 @@ public final class CdObjectState {
         // ObjTunnelDoorV_Reset (Tunnel Door/Main.asm:77): ADDQ.B at HIGH oVar3A, never low $3B. Storage only.
         TUNNEL_DOOR_TIMER_HIGH(0x3A),
         // Checkpoint/Main.asm:7-11: overlapping native storage aliases only.
-        CHECKPOINT_ACTIVE(0x2E), CHECKPOINT_BALL_ANGLE(0x34);
+        CHECKPOINT_ACTIVE(0x2E), CHECKPOINT_BALL_ANGLE(0x34),
+        // Collapsing Platform/Main.asm:102,168,193,271,286: overlapping native bytes only.
+        COLLAPSE_SOLID_MARKER(0x3E), COLLAPSE_SAVED_SOURCE_ID(0x3F);
         private final int offset;
         ByteField(int offset) { this.offset = offset; }
         public int byteOffset() { return offset; }
@@ -76,7 +78,9 @@ public final class CdObjectState {
         // Checkpoint/Main.asm:7-8: ball orbit anchors, not retained parent objects.
         CHECKPOINT_BALL_X(0x2A), CHECKPOINT_BALL_Y(0x2C),
         // Anton/Main.asm:32,72 and wrapper:14: overlapping original-X word only.
-        ANTON_ANCHOR_X(0x2E);
+        ANTON_ANCHOR_X(0x2E),
+        // Collapsing Platform/Main.asm:94,105,202,295: overlapping WORD countdown only.
+        COLLAPSE_DELAY(0x2A);
         private final int offset;
         WordField(int offset) { this.offset = offset; }
         public int byteOffset() { return offset; }
@@ -91,7 +95,9 @@ public final class CdObjectState {
         // Checkpoint/Main.asm:10,108,154: raw FULL MOVE.L a0 parent bits. Storage only.
         CHECKPOINT_PARENT(0x30),
         // Anton/Main.asm:48,69,91: overlapping signed 16.16 motion long only.
-        ANTON_X_DELTA(0x2A);
+        ANTON_X_DELTA(0x2A),
+        // Collapsing Platform/Main.asm:115-117,184,282: overlapping signed 16.16 fall delta only.
+        COLLAPSE_FALL_DELTA(0x2C);
         private final int offset;
         LongField(int offset) { this.offset = offset; }
         public int byteOffset() { return offset; }

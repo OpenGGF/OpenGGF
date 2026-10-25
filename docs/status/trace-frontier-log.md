@@ -113006,3 +113006,35 @@ smoke failures remain separately recorded. Next finite native owner: Monitor19.
   Maven 5m04/20:27:44Z/no queue wait. No full-suite/full-smoke claim. Next finite
   owner is platform 20; live HUD/audio/native startup and broad act/region
   obligations remain open.
+
+
+## 2026-10-25 — private CD collapsing platform, controller frontier742
+
+- Candidate over74b4aa0ce54a36bd3125f3411a2f45063fced0d2, private
+  feature/ai-sonic-cd-objects-local only. Controller-only heldRight now completes
+ 657 (two platform Init),723 native C0 breakup/A3once,732 Delay→Fall and741;
+  selected full/course replay preserves earlier Anton/Checkpoint649 saved owner.
+- First partial742: UnsupportedOperationException, Unowned CD object ID $21 at
+  live physical slot75. Raw source X3824/Y348/subtype40/routine0; SpawnObjects
+  creates it inside742 BEFORE Body/dynamic dispatch. Earlier35 Fall is retained,
+  Y032F4000/delta00048000; actor XY216737536/48973568,XV1536,YV0. Runtime/Frame
+  close; no failed-call resume/completed742 or native emulator parity claim.
+- Permanent selector: TestSonicCdOpeningWorldLoad#ordinaryRightRouteCompletesAntonCheckpointAndCollapseThenStopsAtPlatform21At742WithReplay.
+  Narrow13854 passes1/0/0/0 (31.399s/22:27:02Z/no queue). Exact new art is one
+  current physical57-tile producer inside AT_9000; cold preload is explicitDEV,
+  not native title/Std service. C29 preserves selected-current reads/UNKNOWN.
+- Actual EGL World positive79137 passes1/0/0/0 after exact old601 cleanup RED
+  at new owned131673. Eight96-row scenes execute child order/Delay/Fall/delete,
+  sparse40 current pixels, full/course replay and658 installed retirement;
+ 41 ENGINE PNGs after allcleanup. Source fixture cell14=5 correction only;
+  no gameplay/terrain change fitted to the oracle.
+- Final25-class27102 runs2147/1/0/0: only inherited Anton source-count10 vs11;
+  narrow count-only correction56421 passes all10 picture cases. Other2146 passed,
+  including20 EGL/50 World-load/327 Runtime, exactfreshXML/J25/media/EGL/S2/zero
+  skips. No fresh all-green2147 invocation/full-suite claim. Exact commands and
+  earlier RED/corrections are in the dated CD implementation record. Fresh guards
+ 68138 pass728/0/0/0 across90 exactfreshXML/J25/Lua5.4,5m16/22:39:19Z/noqueue.
+  Legacy picture count/inventory migrations are narrowly rechecked (29/1 then
+  corrected Spikes8/0); the old C28 inventory omission is source-attributed,
+  not claimed baseline-executed. Native startup/HUD/audio, next21 and whole
+  act/region breadth remain open.

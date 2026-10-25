@@ -939,7 +939,7 @@ class TestSonicCdOpeningWorldLoad {
         registry.restore(full);assertState(before,h);step(h,input(8,0,false));assertState(at540,h);step(h,input(8,0,false));assertState(at541,h);
         registry.restoreCourse(course);assertState(before,h);step(h,input(8,0,false));assertState(at540,h);step(h,input(8,0,false));assertState(at541,h);
     }
-    @Test void ordinaryRightRouteCompletesAntonAndNaturalCheckpointSaveReplaysThenStopsAtCollapsePlatform657() throws Exception {
+    @Test void ordinaryRightRouteCompletesAntonCheckpointAndCollapseThenStopsAtPlatform21At742WithReplay() throws Exception {
         var h=opening();var runtime=objects(h);var frame=h.module().requirePlayerFrame();var pool=runtime.placement().pool();
         for(int call=0;call<560;call++)step(h,input(8,0,false));
         assertEquals(0,pool.state(46).id());
@@ -1045,14 +1045,65 @@ class TestSonicCdOpeningWorldLoad {
         }
         assertEquals(649,contactCall,"Actual controller-only contact/save; no staged pole/player");
         assertNotNull(naturalSaved);assertEquals(naturalSaved,runtime.checkpointState());
-        var antonBefore657=pool.state(55);assertEquals(4,antonBefore657.routine());
+        // Controller only, no object/player/art ingress. Native Init completes the former657 frontier.
+        for(int call=657;call<=741;call++) {
+            var beforeCall=state(h);var fullCall=registry.capture();var courseCall=registry.captureCourse();
+            step(h,input(8,0,false));assertFalse(runtime.closed());assertFalse(frame.closed());
+            assertEquals(naturalSaved,runtime.checkpointState(),"Earlier natural save must survive later native platform work");
+            if(call==657) {
+                assertArrayEquals(java.util.HexFormat.of().parseHex("200444be0020c5ec0cb0000003100000000000000000123003300000000000000000004402000000c00000000000000000000000000000000000000000000000"),pool.state(40).copyBytes());
+                assertArrayEquals(java.util.HexFormat.of().parseHex("200444be0020c5200cf8000002200000000000000000222803280000000000000000004502000000000000000000000000000000000000000000000000000000"),pool.state(45).copyBytes());
+                assertEquals(183030784,frame.state().motion().centreX16_16());assertEquals(48438784,frame.state().motion().centreY16_16());
+                assertEquals(1534,frame.state().motion().xVelocity());assertEquals(-300,frame.state().motion().yVelocity());
+            }
+            long a3=runtime.lastSoundRequests().stream().filter(CdOpeningObjectRuntime.CollapsePlatformFm.class::isInstance).count();
+            assertEquals(call==723?1L:0L,a3,"Actual one native breakup request at its observed controller cut");
+            if(call==723) {
+                assertEquals(0,pool.state(40).id());
+                int[] slots={35,55,56,57,58,62},xs={3208,3224,3240,3256,3272,3288},delays={9,20,32,44,56,68};
+                for(int i=0;i<slots.length;i++) {
+                    var child=pool.state(slots[i]);assertEquals(0x20,child.id());assertEquals(4,child.routine());
+                    assertEquals(xs[i],child.centreX());assertEquals(784,child.centreY());
+                    assertEquals(0x20C7AC,child.longBits(CdObjectState.LongField.MAPPINGS));
+                    assertEquals(0x44BE,child.word(CdObjectState.WordField.TILE));
+                    assertEquals(delays[i],child.word(CdObjectState.WordField.COLLAPSE_DELAY));
+                    assertEquals(0x20000,child.longBits(CdObjectState.LongField.COLLAPSE_FALL_DELTA));
+                    assertEquals(0xFF,child.unsignedByte(CdObjectState.ByteField.COLLAPSE_SOLID_MARKER));
+                    assertEquals(8,child.unsignedByte(CdObjectState.ByteField.WIDTH));assertEquals(18,child.unsignedByte(CdObjectState.ByteField.Y_RADIUS));
+                }
+                assertEquals(209266432,frame.state().motion().centreX16_16());assertEquals(48959232,frame.state().motion().centreY16_16());
+            }
+            if(call==732) {
+                var child=pool.state(35);assertEquals(6,child.routine());assertEquals(0,child.word(CdObjectState.WordField.COLLAPSE_DELAY));
+                assertEquals(784<<16,child.longBits(CdObjectState.LongField.Y_POSITION),"Delay transition does not run Fall in that visit");
+                assertEquals(0x20000,child.longBits(CdObjectState.LongField.COLLAPSE_FALL_DELTA));
+            }
+            if(call==741) {
+                assertEquals(811<<16,pool.state(35).longBits(CdObjectState.LongField.Y_POSITION));
+                assertEquals(0x44000,pool.state(35).longBits(CdObjectState.LongField.COLLAPSE_FALL_DELTA));
+            }
+            var afterCall=state(h);
+            if(call==657||call==723||call==732||call==741) {
+                registry.restore(fullCall);assertState(beforeCall,h);step(h,input(8,0,false));assertState(afterCall,h);
+                registry.restoreCourse(courseCall);assertState(beforeCall,h);step(h,input(8,0,false));assertState(afterCall,h);
+            }
+        }
+        assertEquals(0,pool.state(75).id(),"This closed cut precedes the next native SpawnObjects");
         var failure=assertThrows(UnsupportedOperationException.class,()->step(h,input(8,0,false)));
-        assertEquals("Unowned CD object ID $20 at live physical slot 40",failure.getMessage());
-        assertArrayEquals(java.util.HexFormat.of().parseHex("20000000000000000cb0000003100000000000000000000000000000000000000000004400000000c00000000000000000000000000000000000000000000000"),pool.state(40).copyBytes());
-        assertEquals(antonBefore657,pool.state(55),"Later physical55 is not dispatched after the new40 boundary");
+        assertEquals("Unowned CD object ID $21 at live physical slot 75",failure.getMessage());
+        assertEquals(0x21,pool.state(75).id());assertEquals(0,pool.state(75).routine());
+        // SpawnObjects already ran in742 before Body and this physical walk. Compare no Init fields,
+        // not the preceding741 free image: placement legitimately wrote ID/native coordinates/subtypes.
+        assertEquals(0,pool.state(75).word(CdObjectState.WordField.TILE));
+        assertEquals(0,pool.state(75).longBits(CdObjectState.LongField.MAPPINGS));
+        assertEquals(0,pool.state(75).unsignedByte(CdObjectState.ByteField.PRIORITY));
+        assertEquals(0,pool.state(75).unsignedByte(CdObjectState.ByteField.WIDTH));
+        System.out.println("NATURAL_PLATFORM21_FRONTIER call=742 slot75="+java.util.HexFormat.of().formatHex(pool.state(75).copyBytes()));
+        assertEquals(0x032F4000,pool.state(35).longBits(CdObjectState.LongField.Y_POSITION));
+        assertEquals(0x48000,pool.state(35).longBits(CdObjectState.LongField.COLLAPSE_FALL_DELTA));
         assertEquals(naturalSaved,runtime.checkpointState());
-        assertEquals(183030784,frame.state().motion().centreX16_16());assertEquals(48438784,frame.state().motion().centreY16_16());
-        assertEquals(1534,frame.state().motion().xVelocity());assertEquals(-300,frame.state().motion().yVelocity());
+        assertEquals(216737536,frame.state().motion().centreX16_16());assertEquals(48973568,frame.state().motion().centreY16_16());
+        assertEquals(1536,frame.state().motion().xVelocity());assertEquals(0,frame.state().motion().yVelocity());
         assertEquals(0x0200,runtime.sectionArtState().sectionWord());assertEquals(0,runtime.sectionArtState().remainingTilesWord());
         assertEquals(0,runtime.sectionArtState().queue().headSource());assertTrue(runtime.closed());assertTrue(frame.closed());
     }
