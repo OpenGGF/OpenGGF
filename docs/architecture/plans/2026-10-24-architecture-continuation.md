@@ -10406,3 +10406,106 @@ Its planned fresh global guards and eleven composed controller cases are parent
 work, not executed or claimed here. After the local implementation commit,
 explicit target/job ownership returns to the parent for those remaining delivery
 gates. Baseline 040b54, P2 6e070 and composition c1d19 all remain in history.
+
+### PresentationBinding: parent review, composed gates and delivery preparation
+
+Independent source review accepted the refrozen 18-Java overlay with no
+P1/P2/P3 findings. Parent mapped every reviewed blob to local implementation
+`1a6f9dd4f1237c8258c896d608c52fa3ee8caafc`, tree
+`50cf074bd6214977517c2deac89282961262e3c8`, direct parent `c1d19d982`.
+The committed `src/main` tree is `044389b865011c416bea48fd308b644deaf09191`;
+AM remains `ac2021ad82307d40f3f4cb4c0db21b79c3e09934`. All 18 committed
+Java files reproduce the accepted `fb6c15f5…` fingerprint above. The only other
+implementation changes are the existing continuation, engine map and folded
+0.7 prerelease entry. All 13 frozen blobs, POM, descriptor and API pin are exact
+to delivered `d195`.
+
+The sole review-time Java movement was the new cold-constructor assertion's
+exact compiler-generated `Objects.requireNonNull(Object)` allowance. The
+constructor set and every ownership/preparation check stayed intact. The source
+review did not independently execute or certify worker tests. Parent's first
+attempt to read the old hash-only guard blob found no stored Git object; parent
+instead verified the current refrozen bytes directly. Old-fingerprint
+reconstruction remains worker evidence, independently corroborated by the
+reviewer's start/end manifest. No production or test edit followed acceptance.
+
+**Proportionate combined selection.** The actual dry run was
+`python3 tools/testing/run_categories.py --base d195f54723cb6d15f3d3365b766d67832e9ce122`.
+It selected all **3,778 smoke candidates**, because two test-only helpers are
+unclassified: AudioManagerTestDiagnostics and S1Ghz1OpenGgfAudioTimelineCapture.
+Parent inspected their changes: actual-Binding field observation replaces Root
+reflection, while the generic Root accessor and timeline-capture algorithm
+remain intact. Production is confined to the reviewed private AM transfer;
+complete moved bodies, declarations, monitors, receiver reads and failure
+ordering are preserved. There is no producer/driver, physics/timing, public
+contract, build or selection-policy algorithm change. Therefore the unchanged
+worker 9 matched, 341 consumer, 73 engine (including S3K 60), API/accounting and
+affected-guard results were reused, with fresh global guards and eleven genuine
+composed controller cases as the parent gates. No all-ordinary-smoke or release
+full-suite result is claimed for this slice. Selections overlap; do not sum them
+into a distinct grand total.
+
+Both parent commands used the worker's verified absolute original ROMs through
+the `roms` array and the three false dotted freeze properties through `freeze`,
+as defined above. Their exact launch shape was:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS -u MAVEN_ARGS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "${freeze[@]}" "${roms[@]}" \
+  -Pguards test -B
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS -u MAVEN_ARGS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "${freeze[@]}" "${roms[@]}" \
+  '-Dtest=TestGameLoopSuspension,TestGameLoopZoneActHandoffS1#rootRequestRunsFadeLoadTitleAndFirstInputWithoutExtraPass,TestGameLoopZoneActHandoffS2#rootRequestRunsFadeLoadTitleAndFirstInputWithoutExtraPass,TestKis2SpecialStageControllerLifecycle#entryResultsReturnKeepsChipProvider' test -B
+```
+
+Session **62678** completed fresh complete guards: **796 / 0 / 0 / 0**, 95
+reports and 796 unique IDs. Admission wait was **0 s**; Maven reported
+**5:26** execution. No field filter was set. All 34 ArchUnit cases ran: its
+engine reports 27 under unqualified `TestArchUnitRules` and seven under the
+qualified Jupiter classname. Parent corrected that report-aggregation assumption
+without rerunning Maven. All 41 audio-architecture and four session-authority
+cases ran, including the corrected cold/opaque-owner guard. The API signature,
+marker and terminal cases belong to the worker's separate focused selection;
+they are not selected by this full guards profile. The measurement-hazard
+catalogue now records both distinctions. Sorted case IDs, LF-joined with final
+LF, hash to
+`2566c9b209c1741748fdf000abfd02d67e878f0957e759d6c4bd5a6ce5301ad5`.
+
+After those reports were inspected and consumed, session **54603** completed
+**11 / 0 / 0 / 0**, four reports and eleven unique IDs: S2 suspension seven,
+native S1 root request one, S2 root request two including the wide/team case,
+and actual KiS2 entry/results/full return one. Admission wait was **0 s**;
+Maven reported **30.570 s**. Sorted case IDs hash to
+`1595be6a3d9f7d364fdef4ea64a8527ff1c8437bae3a776a532a12107cce5870`.
+The S2 report retained **82** occurrences of the known null
+`FileChannel.position(long)` preload message; the other three reports had none.
+Its exact leaf still says `this.fileChannel` is null. The earlier 71-case Source
+gate logged 38 under a different shared-JVM selection, while earlier suspension
+and SMPS evidence already recorded 82. These are bounded passing assertions,
+not a repair or native-parity qualification of that open preload path.
+
+Every parent XML checked Java **25.0.5.0.2**, explicit EGL, all four absolute ROM
+properties and the three false freeze flags. Parent read and verified all four
+original SHA-1 identities. All 13 frozen files remain byte-exact with `1a6f9`;
+raw low-level accounting remains 120, with API pin 22,541 rows / 1,250 types,
+ambient 6/5 and permissions 151 unchanged. Each report set and companion text
+was consumed before the next run; both handles are terminal. No target was
+shared with the next characterization worker. Parent fetched origin and found
+main/origin `develop` at `d195`, preserving its four dirty submodules and five
+untracked user files. Final reconciliation, policy, integration, push and exact
+owned-worktree cleanup are the remaining delivery operations at this checkpoint.
+
+The next finite design review qualified only logical publication: live ring
+state, eager restore and the fixed held ledger effect, with two persistent
+values. It rejected a combined frame/timeline/replay owner. Parent mapped the
+relevant logical operations, all nineteen Held methods and fixed reset/ring
+writes from `d195` to accepted Binding source after only receiver qualification;
+the exact private three-argument ring path was checked separately from its
+public wrapper. A separate isolated worker may characterize the four uncovered
+original-production groups on immutable `1a6f9`; it has no extraction authority.
