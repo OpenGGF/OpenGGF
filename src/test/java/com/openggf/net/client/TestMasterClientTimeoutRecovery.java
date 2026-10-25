@@ -91,6 +91,158 @@ class TestMasterClientTimeoutRecovery {
         }
     }
 
+    @ParameterizedTest
+    @EnumSource(Operation.class)
+    void outstandingMasterRequestRejectsRelayAttachmentWithoutRetiringSocket(Operation operation) throws Exception {
+        SilentSocket socket = new SilentSocket();
+        try (MasterClient client = admittedClient(socket)) {
+            var pending = request(client, operation);
+            assertThrows(IllegalStateException.class, () -> client.attachRelay("prepared"));
+            assertEquals(1, socket.sent.size());
+            assertTrue(client.isOpen());
+            assertFalse(pending.isDone());
+            pending.cancel(false);
+            RaceConnection relay = client.attachRelay("prepared");
+            assertTrue(relay.isOpen());
+        }
+    }
+
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void delayedCreationIsCanceledBeforePreparedRelayHandoffAndLateReplyIsConsumed(boolean timeout) throws Exception {
+        SilentSocket socket = new SilentSocket();
+        try (MasterClient client = admittedClient(socket)) {
+            var preparation = client.requestJoin("prepared");
+            long preparationId = CODEC.decode(socket.sent.getLast()).requestId();
+            receive(client, socket, result("prepared"), preparationId);
+            var prepared = preparation.get(1, TimeUnit.SECONDS);
+            var creation = client.createRoom(descriptor(), "RELAY", 0, "test");
+            long creationId = CODEC.decode(socket.sent.getLast()).requestId();
+            assertThrows(IllegalStateException.class, () -> client.attachRelay(prepared.roomId()));
+
+            if (timeout) creation.completeExceptionally(new TimeoutException());
+            else assertTrue(creation.cancel(false));
+            RaceConnection relay = client.attachRelay(prepared.roomId());
+            var cancel = assertInstanceOf(ControlMessage.MasterRequestCancel.class,
+                    CODEC.decode(socket.sent.get(2)).message());
+            assertEquals(creationId, cancel.requestId());
+            assertInstanceOf(ControlMessage.RelayAttach.class, CODEC.decode(socket.sent.get(3)).message());
+            receive(client, socket, new ControlMessage.RoomCreated("late"), creationId);
+            assertTrue(relay.drainInbound().isEmpty());
+            assertEquals(4, socket.sent.size(), "late cleanup must not enter the attached room protocol");
+            assertTrue(creation.isCompletedExceptionally());
+            assertTrue(client.isOpen());
+            assertFalse(socket.aborted);
+        }
+    }
+
+    @Test
+    void canceledCreationReplyReservesAllCleanupBeforeReentrantRelayHandoff() throws Exception {
+        SilentSocket socket = new SilentSocket();
+        try (MasterClient client = admittedClient(socket)) {
+            var creation = client.createRoom(descriptor(), "RELAY", 0, "test");
+            long id = CODEC.decode(socket.sent.getLast()).requestId();
+            CompletableFuture<RaceConnection> attaching = new CompletableFuture<>();
+            socket.onSend = text -> {
+                if (CODEC.decode(text).message() instanceof ControlMessage.MasterRequestCancel) {
+                    try { attaching.complete(client.attachRelay("prepared")); }
+                    catch (Throwable failure) { attaching.completeExceptionally(failure); }
+                }
+            };
+            Field field = MasterClient.class.getDeclaredField("sendLock");
+            field.setAccessible(true);
+            CompletableFuture<Boolean> canceled = new CompletableFuture<>();
+            synchronized (field.get(client)) {
+                Thread thread = Thread.ofPlatform().start(() -> canceled.complete(creation.cancel(false)));
+                long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
+                while (thread.getState() != Thread.State.BLOCKED && !canceled.isDone()
+                        && System.nanoTime() < deadline) Thread.sleep(1);
+                assertEquals(Thread.State.BLOCKED, thread.getState());
+                receive(client, socket, new ControlMessage.RoomCreated("late"), id);
+            }
+            assertTrue(canceled.get(1, TimeUnit.SECONDS));
+            RaceConnection relay = attaching.get(1, TimeUnit.SECONDS);
+            assertEquals(List.of(ControlMessage.RoomCreate.class, ControlMessage.MasterRequestCancel.class,
+                            ControlMessage.RoomLeave.class, ControlMessage.RelayAttach.class),
+                    socket.sent.stream().map(text -> CODEC.decode(text).message().getClass()).toList());
+            receive(client, socket, new ControlMessage.RoomCreated("late"), id);
+            assertTrue(relay.drainInbound().isEmpty());
+            assertEquals(4, socket.sent.size());
+            assertTrue(relay.isOpen());
+            assertFalse(socket.aborted);
+        }
+    }
+
+    @Test
+    void creationRemainsOutstandingDuringCompletionAndSuccessfulDuplicateNeverLeavesRoom() throws Exception {
+        SilentSocket socket = new SilentSocket();
+        try (MasterClient client = admittedClient(socket)) {
+            var creation = client.createRoom(descriptor(), "RELAY", 0, "test");
+            long id = CODEC.decode(socket.sent.getLast()).requestId();
+            var continuation = creation.thenRun(() -> {
+                assertThrows(IllegalStateException.class, () -> client.attachRelay("prepared"));
+                assertDoesNotThrow(() -> receive(client, socket, new ControlMessage.RoomCreated("created"), id));
+                assertEquals(1, socket.sent.size());
+            });
+            receive(client, socket, new ControlMessage.RoomCreated("created"), id);
+            continuation.get(1, TimeUnit.SECONDS);
+            RaceConnection relay = client.attachRelay("prepared");
+            receive(client, socket, new ControlMessage.RoomCreated("created"), id);
+            assertTrue(relay.drainInbound().isEmpty());
+            assertEquals(2, socket.sent.size());
+            assertTrue(relay.isOpen());
+        }
+    }
+
+    @Test
+    void preparedJoinCompletionCanAttachAndUncorrelatedRoomRejectionReachesRelay() throws Exception {
+        SilentSocket socket = new SilentSocket();
+        try (MasterClient client = admittedClient(socket)) {
+            var joining = client.requestJoin("prepared")
+                    .thenApply(prepared -> client.attachRelay(prepared.roomId()));
+            long id = CODEC.decode(socket.sent.getLast()).requestId();
+            receive(client, socket, result("prepared"), id);
+            RaceConnection relay = joining.get(1, TimeUnit.SECONDS);
+            var rejection = new ControlMessage.RoomJoinRejected("join not granted");
+            receive(client, socket, rejection, 0);
+            assertEquals(List.of(new RaceClient.Control(rejection)), relay.drainInbound());
+            assertTrue(client.listRooms(null, 0).isCompletedExceptionally());
+            assertEquals(2, socket.sent.size());
+            assertTrue(relay.isOpen());
+        }
+    }
+
+    @Test
+    void requestRacingRelayAttachmentIsAdmittedBeforeHandoffOrRejectedAfterIt() throws Exception {
+        SilentSocket socket = new SilentSocket();
+        try (MasterClient client = admittedClient(socket)) {
+            Field field = MasterClient.class.getDeclaredField("sendLock");
+            field.setAccessible(true);
+            CompletableFuture<RaceConnection> attaching = new CompletableFuture<>();
+            CompletableFuture<ControlMessage.RoomListResult> pending;
+            synchronized (field.get(client)) {
+                Thread thread = Thread.ofPlatform().start(() -> {
+                    try { attaching.complete(client.attachRelay("prepared")); }
+                    catch (Throwable failure) { attaching.completeExceptionally(failure); }
+                });
+                long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
+                while (thread.getState() != Thread.State.BLOCKED && !attaching.isDone()
+                        && System.nanoTime() < deadline) Thread.sleep(1);
+                assertEquals(Thread.State.BLOCKED, thread.getState());
+                pending = client.listRooms(null, 0);
+            }
+            assertInstanceOf(IllegalStateException.class, assertThrows(ExecutionException.class,
+                    () -> attaching.get(1, TimeUnit.SECONDS)).getCause());
+            assertFalse(pending.isDone());
+            assertEquals(1, socket.sent.size());
+            pending.cancel(false);
+            RaceConnection relay = client.attachRelay("prepared");
+            assertTrue(client.listRooms(null, 0).isCompletedExceptionally());
+            assertTrue(relay.isOpen());
+            assertEquals(2, socket.sent.size());
+        }
+    }
+
     @Test
     void canceledListDoesNotRetireSocketAndLateReplyDoesNotCompleteNewList() throws Exception {
         SilentSocket socket = new SilentSocket();

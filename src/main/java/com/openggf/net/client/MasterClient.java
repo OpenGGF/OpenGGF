@@ -208,19 +208,19 @@ public final class MasterClient implements AutoCloseable {
         }
         future.orTimeout(MASTER_REPLY_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)
                 .whenComplete((value, failure) -> {
-                    boolean cancelCreation = false;
+                    if (!future.isCancelled() && !(failure instanceof TimeoutException)) return;
+                    PendingSend cancel = null;
                     synchronized (sendLock) {
-                        if (pendingRequests.remove(requestId, pending)
-                                && (future.isCancelled() || failure instanceof TimeoutException)) {
+                        if (pendingRequests.remove(requestId, pending)) {
                             pending.canceled = true;
                             if (pending.creation) {
                                 canceledCreates.put(requestId,
                                         System.currentTimeMillis() + CANCELED_CREATE_RETENTION_MILLIS);
-                                cancelCreation = true;
+                                cancel = reserveMasterControl(new ControlMessage.MasterRequestCancel(requestId));
                             }
                         }
                     }
-                    if (cancelCreation) sendControl(new ControlMessage.MasterRequestCancel(requestId));
+                    if (cancel != null) cancel.dispatch();
                 });
         send.dispatch();
         return future;
@@ -231,6 +231,7 @@ public final class MasterClient implements AutoCloseable {
         final Class<T> replyType;
         final boolean creation;
         volatile boolean canceled;
+        boolean replyClaimed;
         PendingRequest(CompletableFuture<T> future, Class<T> replyType, boolean creation) {
             this.future = future;
             this.replyType = replyType;
@@ -440,14 +441,21 @@ public final class MasterClient implements AutoCloseable {
     }
 
     public RaceConnection attachRelay(String roomId) {
-        if (!open || retired.get()) {
-            throw new RaceClient.JoinRejectedException("master connection is closed; reconnect before retrying");
-        }
         RelayRaceConnection connection = new RelayRaceConnection(this);
-        if (!attached.compareAndSet(null, connection)) {
-            throw new IllegalStateException("master socket is already attached to a room");
+        PendingSend send;
+        synchronized (sendLock) {
+            if (!open || retired.get()) {
+                throw new RaceClient.JoinRejectedException("master connection is closed; reconnect before retrying");
+            }
+            if (!pendingRequests.isEmpty()) {
+                throw new IllegalStateException("master requests are still outstanding; retry after they complete or cancel");
+            }
+            if (!attached.compareAndSet(null, connection)) {
+                throw new IllegalStateException("master socket is already attached to a room");
+            }
+            send = reserveMasterControl(new ControlMessage.RelayAttach(roomId));
         }
-        sendControl(new ControlMessage.RelayAttach(roomId));
+        send.dispatch();
         return connection;
     }
 
@@ -657,11 +665,6 @@ public final class MasterClient implements AutoCloseable {
     private void receiveText(WebSocket socket, String text,
                              CompletableFuture<MasterClient> admitted) {
         if (retired.get()) return;
-        RelayRaceConnection relay = attached.get();
-        if (relay != null) {
-            relay.acceptText(text);
-            return;
-        }
         final ControlJsonCodec.Decoded decoded;
         final ControlMessage message;
         try {
@@ -676,9 +679,14 @@ public final class MasterClient implements AutoCloseable {
             return;
         }
         try {
-            if (completeReply(decoded)) return;
+            if ((decoded.requestId() != 0 || attached.get() == null) && completeReply(decoded)) return;
         } catch (ProtocolViolationException invalid) {
             fail(socket, admitted, invalid);
+            return;
+        }
+        RelayRaceConnection relay = attached.get();
+        if (relay != null) {
+            relay.acceptText(text);
             return;
         }
         HostMasterLink link = hostLink;
@@ -823,6 +831,7 @@ public final class MasterClient implements AutoCloseable {
             abandonedCreation = pending == null && message instanceof ControlMessage.RoomCreated
                     && canceledCreates.remove(requestId) != null;
             if (pending != null) {
+                if (pending.replyClaimed) return true;
                 if (message instanceof ControlMessage.RoomCreateRejected rejected && pending.creation) {
                     failure = new RaceClient.JoinRejectedException(rejected.reason());
                 } else if (message instanceof ControlMessage.RoomJoinRejected rejected
@@ -838,15 +847,26 @@ public final class MasterClient implements AutoCloseable {
                         && result.totalPages() == Protocol.ROOM_LIST_RATE_LIMITED) {
                     failure = new IllegalStateException("room list rate limited");
                 }
-                pendingRequests.remove(requestId);
+                if (pending.creation) pending.replyClaimed = true;
+                else pendingRequests.remove(requestId);
             }
         }
         boolean completed = pending != null && pending.complete(message, failure);
-        if ((abandonedCreation || pending != null && pending.creation && !completed)
-                && message instanceof ControlMessage.RoomCreated created) {
-            sendControl(new ControlMessage.MasterRequestCancel(requestId));
-            sendControl(new ControlMessage.RoomLeave(created.roomId()));
+        PendingSend cancel = null;
+        PendingSend leave = null;
+        synchronized (sendLock) {
+            if (pending != null && pending.creation) pendingRequests.remove(requestId, pending);
+            if ((abandonedCreation || pending != null && pending.creation && !completed)
+                    && message instanceof ControlMessage.RoomCreated created && !retired.get()) {
+                // After handoff, the cancellation reserved before RelayAttach owns removal.
+                if (attached.get() == null) {
+                    cancel = reserveMasterControl(new ControlMessage.MasterRequestCancel(requestId));
+                    leave = reserveMasterControl(new ControlMessage.RoomLeave(created.roomId()));
+                }
+            }
         }
+        if (cancel != null) cancel.dispatch();
+        if (leave != null) leave.dispatch();
         return true;
     }
 
@@ -861,6 +881,14 @@ public final class MasterClient implements AutoCloseable {
         if (link != null) {
             link.onMasterBinary(data);
         }
+    }
+
+    /** Reserves admitted master traffic under sendLock, before any relay handoff. */
+    private PendingSend reserveMasterControl(ControlMessage message) {
+        WebSocket socket = webSocket;
+        String text = codec.encode(joinAccepted.sessionToken(), message);
+        return reserveSend(() -> discardQueuedSends ? CompletableFuture.completedFuture(socket)
+                : socket.sendText(text, true));
     }
 
     private void sendRawText(String text) {
