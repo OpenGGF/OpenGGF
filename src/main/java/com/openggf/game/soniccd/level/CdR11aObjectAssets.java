@@ -867,4 +867,127 @@ public final class CdR11aObjectAssets {
         if (input.length != length) { throw new IllegalArgumentException(label + " extent"); }
         return CdAssetBytes.copyOf(input);
     }
+
+
+    /**
+     * Immutable source provenance for one reviewed section-art producer. Canonical PLC metadata is descriptive:
+     * it never selects a runtime list, destination, transfer, native tile binding or current residency.
+     * The native reader range includes genuine prefill/refill bytes; decode() retains its existing Java range.
+     */
+    public static final class SectionArtSource {
+        private final CdR11aAsset source;
+        private final int canonicalPlcId;
+        private final int canonicalRowIndex;
+        private final CdR11aLoadPlan.PlcEntry canonicalPlc;
+        private final CdR11aAssets.NemesisRead decode;
+        private final CdR11aProfile.FileRange readerInputRange;
+        private final CdAssetBytes readerBytes;
+
+        private SectionArtSource(CdR11aAsset source, int canonicalPlcId, int canonicalRowIndex,
+                                 CdR11aLoadPlan.PlcEntry canonicalPlc, CdR11aAssets.NemesisRead decode,
+                                 CdR11aProfile.FileRange readerInputRange, CdAssetBytes readerBytes) {
+            this.source = source;
+            this.canonicalPlcId = canonicalPlcId;
+            this.canonicalRowIndex = canonicalRowIndex;
+            this.canonicalPlc = canonicalPlc;
+            this.decode = decode;
+            this.readerInputRange = readerInputRange;
+            this.readerBytes = readerBytes;
+        }
+        public CdR11aAsset source() { return source; }
+        public int canonicalPlcId() { return canonicalPlcId; }
+        public int canonicalRowIndex() { return canonicalRowIndex; }
+        public CdR11aLoadPlan.PlcEntry canonicalPlc() { return canonicalPlc; }
+        public CdR11aAssets.NemesisRead decode() { return decode; }
+        public CdR11aProfile.FileRange readerInputRange() { return readerInputRange; }
+        public CdAssetBytes readerBytes() { return readerBytes; }
+        public int tileCount() { return decode.bytes().length() / 32; }
+    }
+
+    /** Finite authenticated inputs and immutable decode products, with no native-address/tile resolver. */
+    public static final class SectionArtSourceBank {
+        private final List<SectionArtSource> sources;
+        private SectionArtSourceBank(List<SectionArtSource> sources) { this.sources = List.copyOf(sources); }
+        public List<SectionArtSource> sources() { return sources; }
+        public SectionArtSource source(CdR11aAsset source) {
+            Objects.requireNonNull(source, "source");
+            return sources.stream().filter(value -> value.source() == source).findFirst()
+                    .orElseThrow(() -> new UnsupportedOperationException("No reviewed section-art source for " + source));
+        }
+        /**
+         * Match only the producer and authenticated source extent. In particular, native Anton relocation
+         * remains valid: the caller owns the actual selected list, its order and this entry's destination.
+         */
+        public SectionArtSource source(CdR11aLoadPlan.PlcEntry entry) {
+            Objects.requireNonNull(entry, "entry");
+            var value = source(entry.source());
+            if (!value.decode().sourceBlobRange().equals(entry.sourceRange())) {
+                throw new IllegalArgumentException("Section-art PLC source differs from the authenticated extent");
+            }
+            return value;
+        }
+    }
+
+    private SectionArtSourceBank sectionArtSources;
+
+    /**
+     * Explicit USA-only source opt-in. The complete first incremental camera PLC is ID 9, rows 0/1/2
+     * (PLC_Cam2_Incr, Data (Act 1 Present).asm:183-190); PLC2 rows 2/4/5 describe the reload/seed producers.
+     * Existing banks and eager startup remain separate. This neither executes a PLC nor publishes residency.
+     */
+    public synchronized SectionArtSourceBank sectionArtSources() throws IOException {
+        if (sectionArtSources == null) {
+            var pata = pataBataArtBank().binding(CdR11aAsset.ART_PATA_BATA).decode();
+            var anton = decodeSectionArt(CdR11aAsset.ART_ANTON, 22, 484);
+            var tamabboh = decodeSectionArt(CdR11aAsset.ART_TAMABBOH, 59, 1142);
+            var mosqui = initialArtBank.binding(CdR11aAsset.ART_MOSQUI).decode();
+            var frontier = frontierArtBank();
+            // NemDecMain preloads two bytes (Functions (General).asm:415-418); the native decoder refills
+            // below nine bits BEFORE emitting a run, including the final run (:436-441,471-490).
+            // Native finite lengths therefore differ from Java's final pre-symbol peek lengths. These are
+            // real retained bytes, never padding: Pata reads TagaTaga's $80 at $37642; Anton reads Mosqui's
+            // $00 at $3702A; Tamabboh reads Springboard's $00 at $37DC6; Mosqui reads Pata's $80 at $37378;
+            // Plant reads Booster's $80 at $3AE02; Ramp's final $00 at $3B0A7 remains inside its own blob.
+            sectionArtSources = new SectionArtSourceBank(List.of(
+                    sectionArtSource(CdR11aAsset.ART_PATA_BATA, 9, 0, 0x7600, 50, 715, pata),
+                    sectionArtSource(CdR11aAsset.ART_ANTON, 9, 1, 0x8120, 22, 485, anton),
+                    sectionArtSource(CdR11aAsset.ART_TAMABBOH, 9, 2, 0x8500, 59, 1143, tamabboh),
+                    sectionArtSource(CdR11aAsset.ART_MOSQUI, 2, 2, 0x7400, 70, 847, mosqui),
+                    sectionArtSource(CdR11aAsset.ART_3D_PLANT, 2, 4, 0x8480, 28, 393,
+                            frontier.binding(CdR11aAsset.ART_3D_PLANT).decode()),
+                    sectionArtSource(CdR11aAsset.ART_3D_RAMP_BOOST, 2, 5, 0x8820, 63, 678,
+                            frontier.binding(CdR11aAsset.ART_3D_RAMP_BOOST).decode())));
+        }
+        return sectionArtSources;
+    }
+
+    private CdR11aAssets.NemesisRead decodeSectionArt(CdR11aAsset source, int tiles, int javaReaderBytes)
+            throws IOException {
+        var blob = profile.range(source);
+        var reader = new CdR11aProfile.FileRange(blob.file(), blob.domain(), blob.fileOffset(), javaReaderBytes);
+        var decoded = CdNemesisAsset.decode(reader.read(image).copy(), tiles * 32, tiles * 32);
+        if (decoded.consumedInputBytes() != javaReaderBytes) {
+            throw new IOException("Section-art Java reader consumption differs from its reviewed finite extent");
+        }
+        return new CdR11aAssets.NemesisRead(source, blob, reader, decoded.consumedInputBytes(), decoded.bytes());
+    }
+
+    private SectionArtSource sectionArtSource(CdR11aAsset source, int plcId, int row, int vram, int tiles,
+                                               int nativeReaderBytes, CdR11aAssets.NemesisRead decoded) {
+        var blob = profile.range(source);
+        var entry = loadPlan.plcs().get(plcId).entries().get(row);
+        if (entry.source() != source || !entry.sourceRange().equals(blob) || entry.vramAddress() != vram
+                || source.encodingForReviewedConsumer() != CdR11aAsset.Encoding.NEMESIS
+                || decoded.asset() != source || !decoded.sourceBlobRange().equals(blob)
+                || decoded.bytes().length() != tiles * 32
+                || decoded.consumedInputBytes() != decoded.readerInputRange().length()) {
+            throw new IllegalArgumentException("Unverified native section-art source/PLC/decode association");
+        }
+        var reader = new CdR11aProfile.FileRange(blob.file(), blob.domain(), blob.fileOffset(), nativeReaderBytes);
+        var bytes = reader.read(image);
+        if ((bytes.unsignedWord(0) & 0x7FFF) != tiles) {
+            throw new IllegalArgumentException("Section-art header differs from its reviewed tile count");
+        }
+        return new SectionArtSource(source, plcId, row, entry, decoded, reader, bytes);
+    }
 }

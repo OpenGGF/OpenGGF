@@ -5301,3 +5301,62 @@ art-at-DrawObject upload, overlapping static spans or544 reservation is valid.
 The ordinary route still honestly stops at attempted540/ID3E. Later camera
 sources, native cold/title/load prehistory, full-USA gameplay, warp/audio and
 JP/EU parity remain open. No public integration or disclosure is authorized.
+
+
+### 2026-10-25 07:00 UTC — native camera-art sources and bounded storage
+
+On mapping base `3da416ae4d3c4272bd69076ee739818317b8857d`, add a lazy six-source
+producer bank, current camera-byte residency and the descriptor-buffer primitive.
+The complete actual first PLC9 is Pata50,Anton22,Tamabboh59. Source lookup checks
+producer plus authenticated source extent while preserving the caller's actual
+ordered list and destination, including relocated Anton. Canonical row metadata
+is descriptive. Existing Pata/Mosqui/Plant/Ramp immutable decode objects are reused;
+Anton/Tamabboh are explicit opt-in decodes. Eager startup, old banks and regional
+gates are preserved. No Runtime dispatch, section service or art upload is added.
+
+Native prefill/refill needs separate finite inputs from existing Java Nemesis:
+Pata715/714, Anton485/484, Tamabboh1143/1142, Mosqui847/846, Plant393/393,
+Ramp678/677 (native/Java bytes). Extra bytes come from actual adjacent retained
+MMD data, never padding. The bank exposes native readerInputRange/readerBytes;
+existing NemesisRead remains the Java contract. Full supplied-media digests,
+endpoint pixels and native full-versus-one-short read tests accompany it. Two
+independent Python formulations were author research, not native execution;
+Root's retail tests executed the retained production media pipeline afterward.
+
+Residency owns only7400..7CC0,8120..83E0,8480..9000. Explicit DEV seeding supplies
+Mosqui/Plant/Ramp and leaves Anton plus the8800 gap unknown. Known masks remain
+part of value equality; unknown backing storage never becomes a certified pixel.
+Each exact32-byte write changes one current native tile. Pata preserves16 old
+prefix and4 suffix tiles; Tamabboh overwrites24 plant tiles, the gap and34 ramp
+tiles, preserving4 plant and29 ramp tiles. No source/object identity chooses an
+alternate bank. Player/powerup windows remain independently owned.
+
+The PLC buffer owns only96 descriptor bytes: free-source-long scan before the
+empty-list branch, source-long then destination-word stores, prefix-preserving
+bounded overflow and the shipped Pop bug copying88 bytes while keeping8 tail
+bytes. It does not clear the native decoder/count/hint portion; the enclosing
+ClearPLCs owner must clear those additional32 bytes and cancel active decode.
+Neither component is a complete native allocator or full VRAM owner.
+
+Root12409 tests-only PLC-buffer compileRED found absent CdR11aPlcBuffer; no JUnit.
+Root74727 exact positive: **15/0/0/0**, Maven1m18s, terminal06:48:14Z. Root62797
+source/residency tests-only compileRED found absent APIs/classes; no JUnit.
+Root89669 exact positive actual-media selection: **82/0/0/0**, Maven1m27s,
+terminal06:53:37Z: assets47, retail12, residency23. All current reports confirm
+Java25.0.5.0.2, supplied media and zero skips. The source-bank actual-USA/JP/EU
+method ran all3 regions. Two bounded independent reviews found no P1/P2; the
+buffer review notes only an optional stronger nonzero replay-tail fixture.
+These are distinct focused runs, not a full-suite, native or World pass.
+
+```text
+env -u DISPLAY -u WAYLAND_DISPLAY python3 <main-workspace>/tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestCdR11aPlcBuffer' test -B
+env -u DISPLAY -u WAYLAND_DISPLAY python3 <main-workspace>/tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestCdR11aObjectAssets,TestCdR11aObjectRetailAssets,TestCdR11aCameraArtResidency' -Dsoniccd.media.root=<supplied-media-root> test -B
+```
+
+The separately authored native tile decoder has26 passing Root tests at63417
+but is not part of this checkpoint's code commit pending its own source review.
+The enclosing section/request/preparation/service unit is still being authored
+externally. Runtime494/current-generation conversion, previous-SAT visibility,
+one captured section state, DEV restart carry and the ordinary540 Pata-Bata
+frontier remain to integrate. No544 policy, full native cold/title history,
+cycle timing, complete-USA gameplay or JP/EU parity is claimed.

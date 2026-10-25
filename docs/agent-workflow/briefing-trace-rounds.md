@@ -71,6 +71,16 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+A sufficient finite input for a Java decompressor may be too short for the native
+consumer (2026-10-25, CD camera PLC). Native Nemesis preloads16 bits and refills
+below9 bits before emitting a run, including its final run. The existing Java
+reader's final pre-symbol peek has a different cursor: five of the six reviewed
+camera producers need one more native byte than that Java extent. Equal decoded
+hashes do not prove equal reads. Retain distinct exact consumer ranges, require
+real adjacent source bytes when reached and test both full and one-byte-short
+views. Never append invented padding or change the existing consumer's extent
+to hide the distinction. See the [CD component record](../architecture/plans/2026-10-23-sonic-cd-implementation.md).
+
 Preserved import timestamps can leave old bytecode under new source (2026-10-24,
 CD PLC cleanup). Copying a frozen source with its older mtime let Maven skip
 production compilation while compiling newer tests. Source hashes matched the

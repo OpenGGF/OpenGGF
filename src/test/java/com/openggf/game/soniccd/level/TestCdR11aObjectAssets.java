@@ -1545,4 +1545,81 @@ class TestCdR11aObjectAssets {
                 ? "00060011001C02F0070000F0F00700290002F80D0010F00800001800020000003100F00F0019F000"
                 : "00060011001C02F0070000F0F00700080002F80D0010F0080000180001F00F0019F0");
     }
+
+
+    @Test
+    void sectionArtSourcesArePrivateImmutableSourceOwnersWithExplicitNativeReaderRange() throws Exception {
+        for (var type : List.of(CdR11aObjectAssets.SectionArtSource.class,
+                CdR11aObjectAssets.SectionArtSourceBank.class)) {
+            assertTrue(Modifier.isPublic(type.getModifiers()));
+            assertTrue(Modifier.isStatic(type.getModifiers()));
+            assertTrue(Modifier.isFinal(type.getModifiers()));
+            assertEquals(0, type.getConstructors().length);
+            for (var constructor : type.getDeclaredConstructors()) {
+                assertTrue(Modifier.isPrivate(constructor.getModifiers()));
+            }
+            for (var field : type.getDeclaredFields()) {
+                if (!Modifier.isStatic(field.getModifiers())) { assertTrue(Modifier.isFinal(field.getModifiers())); }
+            }
+        }
+        var getter = CdR11aObjectAssets.class.getMethod("sectionArtSources");
+        assertEquals(CdR11aObjectAssets.SectionArtSourceBank.class, getter.getReturnType());
+        assertTrue(Modifier.isSynchronized(getter.getModifiers()));
+        assertArrayEquals(new Class<?>[]{IOException.class}, getter.getExceptionTypes());
+        var bank = CdR11aObjectAssets.SectionArtSourceBank.class;
+        assertEquals(List.class, bank.getMethod("sources").getReturnType());
+        assertEquals(CdR11aObjectAssets.SectionArtSource.class, bank.getMethod("source", CdR11aAsset.class).getReturnType());
+        assertEquals(CdR11aObjectAssets.SectionArtSource.class,
+                bank.getMethod("source", CdR11aLoadPlan.PlcEntry.class).getReturnType());
+        var source = CdR11aObjectAssets.SectionArtSource.class;
+        assertEquals(CdR11aAsset.class, source.getMethod("source").getReturnType());
+        assertEquals(int.class, source.getMethod("canonicalPlcId").getReturnType());
+        assertEquals(int.class, source.getMethod("canonicalRowIndex").getReturnType());
+        assertEquals(CdR11aLoadPlan.PlcEntry.class, source.getMethod("canonicalPlc").getReturnType());
+        assertEquals(CdR11aAssets.NemesisRead.class, source.getMethod("decode").getReturnType());
+        assertEquals(CdR11aProfile.FileRange.class, source.getMethod("readerInputRange").getReturnType());
+        assertEquals(CdAssetBytes.class, source.getMethod("readerBytes").getReturnType());
+        assertEquals(int.class, source.getMethod("tileCount").getReturnType());
+        // Structure only: no reflective construction of an asserted authenticated owner or source bank.
+        assertEquals(39, CdR11aObjectAssets.Table.values().length);
+    }
+
+    @Test
+    void sectionArtMetadataUsesExistingSourceInventoryAndTheCompleteOrderedPlc9() {
+        var profile = CdR11aProfile.forStage(CdReleaseVariant.USA, CdStageKey.parse("R11A"));
+        var sources = List.of(CdR11aAsset.ART_PATA_BATA, CdR11aAsset.ART_ANTON, CdR11aAsset.ART_TAMABBOH,
+                CdR11aAsset.ART_MOSQUI, CdR11aAsset.ART_3D_PLANT, CdR11aAsset.ART_3D_RAMP_BOOST);
+        int[] offsets = {0x37378, 0x36E46, 0x37950, 0x3702A, 0x3AC7A, 0x3AE02};
+        int[] lengths = {714, 484, 1142, 846, 392, 678};
+        for (int i = 0; i < sources.size(); i++) {
+            var range = profile.range(sources.get(i));
+            assertEquals(CdNativeFile.R11A, range.file());
+            assertEquals(CdMmdImage.Domain.ORIGINAL_WORD_RAM, range.domain());
+            assertEquals(offsets[i], range.fileOffset()); assertEquals(lengths[i], range.length());
+            assertEquals(CdR11aAsset.Encoding.NEMESIS, sources.get(i).encodingForReviewedConsumer());
+        }
+        // Exact actual USA PLC9 body, independently observed from supplied disc before production authoring.
+        var body = java.util.HexFormat.of().parseHex("000200237378760000236e468120002379508500");
+        var entries = CdR11aLoadPlan.decodePlcBody(profile, body);
+        assertEquals(sources.subList(0, 3), entries.stream().map(CdR11aLoadPlan.PlcEntry::source).toList());
+        assertEquals(List.of(0x7600, 0x8120, 0x8500), entries.stream().map(CdR11aLoadPlan.PlcEntry::vramAddress).toList());
+        assertEquals(sources.subList(0, 3).stream().map(profile::range).toList(),
+                entries.stream().map(CdR11aLoadPlan.PlcEntry::sourceRange).toList());
+    }
+
+    @Test
+    void existingFiniteDecoderAlsoBoundsAntonAndTamabbohOutputCounts() throws Exception {
+        for (int tiles : new int[]{22, 59}) {
+            byte[] input = new byte[7 + tiles];
+            input[1] = (byte) tiles; input[2] = (byte) 0x8A; input[3] = 0x71; input[5] = (byte) 0xFF;
+            var decoded = CdNemesisAsset.decode(input, tiles * 32, tiles * 32);
+            assertEquals(input.length, decoded.consumedInputBytes());
+            byte[] expected = new byte[tiles * 32]; Arrays.fill(expected, (byte) 0xAA);
+            assertArrayEquals(expected, decoded.bytes().copy());
+            assertThrows(IOException.class, () -> CdNemesisAsset.decode(
+                    Arrays.copyOf(input, input.length - 1), tiles * 32, tiles * 32));
+            assertThrows(IOException.class, () -> CdNemesisAsset.decode(input, (tiles - 1) * 32, tiles * 32));
+            assertThrows(IllegalArgumentException.class, () -> CdNemesisAsset.decode(input, tiles * 32, tiles * 32 - 1));
+        }
+    }
 }
