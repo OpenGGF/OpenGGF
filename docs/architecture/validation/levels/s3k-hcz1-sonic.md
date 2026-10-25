@@ -349,3 +349,18 @@ actual `$0871`. The strict alternate AIZ recording's trailing ring boundary and
 remaining viewport, donor, character/team, outgoing-HCZ, lifecycle and presentation
 products remain separate. Exact commands, source fingerprints and continuation
 scope are in the [current frontier entry](../../../status/trace-frontier-log.md#2026-10-25--fresh-load-plc-order-qualifies-the-continuous-aiz-to-hcz-load-boundary).
+
+## Alternate fresh-load counter boundary — 2026-10-25
+
+The alternate AIZ recording does not yet qualify HCZ1's counter reset. Position
+publication must retain the source bank, while a later post-terrain CPU-setup
+edge publishes the selected destination bank before initial sprite dispatch. Native reset
+occurs on physical row 26227, which the ordinary gameplay comparator omits;
+its existing row-26179 failure cannot certify that tail. The
+[bounded feasibility audit](../../plans/2026-10-25-audit-remediation.md#fresh-load-cpu-boundary-feasibility--2026-10-25)
+records why current production owners and timing authority do not authenticate
+that later edge, and the finite fresh-load continuation prerequisite. Rings
+remain unresolved; runtime and tests are unchanged. Independent position/counter
+rewind phases, selected nonzero/checkpoint destinations, eventual tail reset,
+idempotence and initial dispatch once remain unqualified. No new engine run,
+route/configuration breadth or full-level certification is claimed.

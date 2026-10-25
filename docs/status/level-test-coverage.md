@@ -141,6 +141,14 @@ with the native load/title PLC boundary and twice-restored queue/job regression.
 The full chain still stops in returned HCZ1 at input 68801; the independent
 pilot above and this load boundary do not certify HCZ completion or other products.
 
+Alternate AIZ-to-HCZ counter boundary (2026-10-25, unresolved): the
+[HCZ1 matrix](../architecture/validation/levels/s3k-hcz1-sonic.md#alternate-fresh-load-counter-boundary--2026-10-25)
+separates early position publication from the native post-CPU reset, including
+the physical tail omitted by ordinary comparison. The bounded source audit
+identifies a missing fresh-load continuation model under current timing authority;
+it lands no runtime change or new engine validation. Independent rewind phases,
+nonzero/checkpoint destination selection and eventual tail reset remain open.
+
 S3K playable completion (2026-10-13, delivery in progress): the [native ending matrix](../architecture/validation/levels/s3k-ending.md)
 records Sonic/Tails `$0D01`, Knuckles SSZ2 and all native emerald-progress branches.
 Bounded native lifecycle, roster, donor and whole-world replay checks pass; seven
