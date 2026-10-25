@@ -290,9 +290,10 @@ public final class HCZWaterSkimHandler {
 
         // === Sustain / exit logic (sonic3k.asm:75465-75532) ===
 
-        // Check jump exit (A/B/C pressed)
-        // ROM: andi.w #button_A_mask|button_B_mask|button_C_mask,d0
-        if (player.isJumpPressed()) {
+        // HCZWaterSplash_CheckSkimPlayers passes Ctrl_1/2_logical in d5;
+        // UpdateSkimmingPlayer masks its low-byte A/B/C press bits, not held
+        // input (sonic3k.asm:75408-75424,75471-75474).
+        if (player.isLogicalJumpPressActive()) {
             return exitWithJump(player, playerIndex, extensionState);
         }
 

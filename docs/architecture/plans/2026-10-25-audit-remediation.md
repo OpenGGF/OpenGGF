@@ -665,3 +665,19 @@ moves to 8329: a measured held-versus-logical-press error in the HCZ water-skim
 handler. This is local progress, not route certification. The existing HCZ audit
 records exact source, selectors, queue/execution times and excluded shared
 monitor-content lifetime boundary; rings/setup timing remain outside this task.
+
+
+HCZ receiving-tree checkpoint (2026-10-25): local head `0dff5b225` plus the
+logical skim-press correction passes 118 focused physical cases with no skips.
+Eight independent P1/P2 old-red controls fail; exact source/command/timing is in
+the existing HCZ audit. The live job finished normally after parent notification
+of PR 223's production advance to `08f0a5e78`. No further old-base replay or
+runtime extension followed. Current upstream already has the skim guard,
+captured carrier targets, next-pass boss initialization and independent monitor
+contents; the old monitor/ring structural finding is not a current-upstream
+blocker assertion. Launcher authoritative-latch and Chopper logical-word review
+fixes remain absent; drowning has partial overlap but retains generic lifetime
+and late movement dispatch. Preserve upstream owners and adapt only missing
+semantics/tests in the parent-coordinated receiving tree. No merge/rebase/reset
+or new ObjectManager API was made here. Current-upstream continuity remains
+unmeasured; parent retains its independent review and combined smoke.

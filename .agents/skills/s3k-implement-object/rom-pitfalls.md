@@ -6022,3 +6022,12 @@ HCZ Act 2 carrier targets are captured words, not live camera expressions.
 Retain it per native participant and include it in registered event rewind.
 A direction test against the live camera can reverse at equality and change
 acceleration even when player velocities are suppressed by object control.
+
+
+HCZ water skim receives the current logical controller word.
+`HCZWaterSplash_CheckSkimPlayers` (sonic3k.asm:75408-75424) loads d5 separately
+for P1/P2; `HCZWaterSplash_UpdateSkimmingPlayer` (sonic3k.asm:75471-75474)
+masks its low A/B/C press bits. Use the logical press API: held input exits
+one pass late after activation, while raw controller press loses CPU/scripted
+logical edges. Rewind both the existing skim adapter and player logical state;
+do not rewrite the earlier follower-history slot to publish this late object read.

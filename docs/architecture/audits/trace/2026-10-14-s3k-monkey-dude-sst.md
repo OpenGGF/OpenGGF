@@ -2325,3 +2325,64 @@ native `HCZWaterSplash_CheckSkimPlayers` loads each logical controller word
 low press byte (`sonic3k.asm:75471-75474`). Shared input dispatch is ruled out by
 this measurement; the bounded HCZ feature guard is the next correction. Both
 passive observers were restored byte-for-byte and their diagnostics consumed.
+
+
+## HCZ water-skim logical jump press — 2026-10-25
+
+The input-owner discriminator above proves the new route error is local to
+`HCZWaterSkimHandler`: held jump launches from skim although the logical press
+word is clear. Native `HCZWaterSplash_CheckSkimPlayers` passes `Ctrl_1_logical`
+and `Ctrl_2_logical` to the same helper; only their low A/B/C press bits select
+`HCZWaterSplash_JumpOffSkim`. The correction reads the existing published
+logical press API, preserving raw controller state, live logical state and
+already-recorded follower history. It does not change shared input or movement.
+
+Eight independent P1/P2 old-red controls all fail by assertion with no errors or
+skips (29.405 seconds Maven, zero queue wait; source fingerprint
+`5daa9d613f1cce9a9f3e7140b98d95219b2675cc8e2f08affc0c103ee96db9d5`).
+They distinguish held jump across activation, raw-only press filtered from the
+logical word, logical-only press with idle raw input, and registered player/skim
+restoration before activation, at held and pressed boundaries, and after exit,
+with forward replay. P2 uses the CPU-controlled sprite role. The first fixture
+attempt did not run tests because a nonexistent radius setter was used; it was
+corrected to derive water-pin Y from the actual standing radius (23.172 seconds
+Maven, zero queue wait). That compile failure is not an old-red behavior result.
+
+
+Finished local skim validation is **118 tests, zero failures/errors/skips**:
+16 skim cases (8 existing and 8 new), 4 static adapters, 38 event rewind cases
+and 60 mandatory S3K anchors. Selector is
+`TestHCZWaterSkimHandler,TestHczWaterRewindStaticAdapters,TestSonic3kLevelEventRewindSnapshot,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`,
+queued `test -B` with the same explicit ROM/Java25/Lua5.4/EGL environment.
+Source fingerprint over `0dff5b225` and owned source edits is
+`71fa7b6a5ee9acb6efde069f54122ff808ec23cb0ef6e38f28f009b614acad8d`.
+Queue wait is zero, Maven time 89 seconds; wrapper elapsed was not measured.
+All physical XML cases and skips were inspected before consuming diagnostics.
+
+### Upstream receiving-tree reconciliation boundary
+
+While that job was live, the parent reported develop advancing to
+`08f0a5e78b4c7aaa11604e6e9eb9f2cb4151daa4` through PR 223. The job completed
+without cancellation. This is a production advance, not the earlier docs-only
+update. No further old-base replay was launched; old-base runtime work stopped
+at the already-tested guard. All local commits and uncommitted inputs were
+checkpointed before a bounded read-only comparison of their current equivalents.
+The parent owns the receiving checkout and its independent reconciliation review;
+this branch was not merged, rebased, reset, pushed or removed.
+
+| Owner | Current upstream source compared with this isolated branch |
+| --- | --- |
+| Launcher | Upstream includes post-motion checkpoint and retained private standing copy. This branch's authoritative contact-manager latch review correction remains absent upstream. |
+| Chopper | Upstream acquires lock/forced-mask ownership, but clears live logical state and keeps forced-right priority in player consumption. This branch's live logical-word/both-direction review correction remains absent. Preserve upstream `PlayerControlOwners` ownership work when adapting. |
+| Drowning | Upstream adds move-before-gravity, a pre-death CPU guard and dedicated-routine projection via `DrowningBubbleRules`. It still uses generic `tickDrownPreDeath` in the late movement path, after normal-control side effects; its S3K fixed countdown only refreshes animation. The fixed-slot lifetime, primary dispatch ordering, controlled full lifecycle and carry release controls remain relevant. Adapt to its existing semantic rule rather than adding this branch's duplicate profile flag. |
+| Miniboss | Upstream already has next-pass `ROUTINE_LOOP_INIT` and additional vortex changes. Retain upstream implementation; this branch's old-red/rewind evidence is useful but its production patch is duplicate in intent. |
+| Carrier | Upstream already captures separate P1/P2 target words and includes further transition/rewind work. Retain that owner rather than replacing it wholesale with this branch. |
+| Skim | Upstream already reads exactly `isLogicalJumpPressActive()`. This branch's eight independent controls and local 118-case result remain evidence; its production guard is duplicate. |
+| Monitor contents | Upstream now has independent contents allocation, motion/reward/lifetime and recreation rather than the old shell mirror. The earlier excluded structural finding describes the old base and is not a current-upstream blocker claim. |
+
+These are source-overlap observations, not current-upstream test or continuity
+results. The last actual old-base chain is still the pre-skim failure recorded
+above. The new shared `ObjectManager` work for safe Sideways ownership belongs
+to a separate Sol; this branch has no new ObjectManager/contact API and makes no
+claim about that repair. Parent schedules adaptation, affected replay and one
+combined change-based smoke on the receiving candidate.

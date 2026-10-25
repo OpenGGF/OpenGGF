@@ -424,3 +424,15 @@ moves to 8329: a measured held-versus-logical-press error in the HCZ water-skim
 handler. This is local progress, not route certification. The existing HCZ audit
 records exact source, selectors, queue/execution times and excluded shared
 monitor-content lifetime boundary; rings/setup timing remain outside this task.
+
+
+HCZ skim follow-up and upstream hold (2026-10-25): eight independent P1/P2
+held/logical/raw press and registered rewind controls fail on the old guard;
+the corrected local selection passes 118/0F/0E/0S, including all four S3K anchors.
+Develop then advanced to `08f0a5e78`, which already contains that guard, retained
+carrier targets, boss next-pass initialization and independent monitor contents.
+No post-skim chain or current-upstream route qualification is claimed. Launcher
+and Chopper review corrections and complete drowning ownership still require
+receiving-tree reconciliation. See the existing audit's upstream boundary;
+parent owns that review, affected replays and combined smoke. This extends no
+act/viewport/donor/team or whole-route rewind certification.
