@@ -9263,3 +9263,358 @@ and was not rerun or relabeled. This small follow-up is a separate local commit,
 without amendment, directly after 85bfd; the worktree remains clean and retained
 for parent inspection. No subdelegation, foreign target/job access, integration,
 push, lifecycle cleanup or production mutation is authorized or performed.
+
+### Logical source publication: qualified owner implementation (2026-10-25)
+
+**Authority and tested inputs.** Parent accepted the original-production baseline
+and its absent-loader P2 correction, then authorized this implementation directly
+after `a7770fd69b744265e78b3c9454136ed9bf36a10f` (tree
+`80afe1cd665d9a69238e54e75cdfd2d661a6d8f3`). Both `85bfd70` and `a7770fd`
+remain in history. The initial/fast-forward/source identities recorded above
+remain the provenance of this cut: original AudioManager blob
+`4f47a72678dcfcdb961624949e882060cfe48f85`, including pinned `11db` and reviewed
+SMPS `ade6`. The SMPS nine-file production delta stays byte-identical; no
+`1df6f362` docs-only parent follow-up was absorbed. No unchanged baseline rerun
+preceded production editing.
+
+**Complete authority and retained seams.** AudioManager now creates exactly one
+cold, private, final concrete `SourcePublication` per manager. It owns all six
+fields and executes installation, same-identity admission bypass, standalone
+generation-one initialization, generation/tombstone advancement, registration and
+rollback disposition, clear, scoped key capture/restore, compatibility completion,
+binding effects and captured/current source projections. A source operation does
+not return staged writes for root publication decisions. Construction stores no
+factory, producer, session, backend or general host dependency.
+
+The measured source census finds only owner-local occurrences of
+`baseAudioSource` (14), `donorAudioSources` (14),
+`donorGenerationCounters` (11), `sourceMutationInProgress` (4),
+`donorSoundBindings` (13) and `donorMusicBindings` (7): zero occurrences
+outside that owner. The three publication references remain independently
+volatile and immutable; the two binding maps retain their existing unsynchronized
+behavior. The 66 root owner calls supply current/captured reads or narrow effects.
+Generation/admission/publication/removal helpers and source/binding record
+construction close within the owner. Compiled field-access inspection also
+rejects direct production access from outside it.
+
+All public/protected method headers and both package key-state entry headers
+compare exactly with `a7770fd`; synchronized wrappers keep the manager monitor.
+Three-/four-argument donor overloads retain virtual dispatch into the existing
+five-argument wrapper. `BaseAudioSource`, `DonorAudioSource`,
+`DonorSfxBinding` and `DonorKeyState` keep their binary owners. Collaborators
+are read at their original expression points after callbacks. Standalone setup
+passes only a profile into the owner after the original no-device backend init.
+
+Reset retains creator notification and streamed-session invalidation/release
+before source admission. Owner reset admits, invalidates held preparation, stops
+the then-current backend, publishes empty base, calls exactly one fixed
+`resetNonSourceState()` root helper, clears donors, and discards counters only
+if reached; finally releases admission. The root helper contains the original
+observer/ring/timeline/capture/presentation-close sequence and chooses no source
+publication. Base-empty/donors-retained close failure and overflow-before-counter-
+disposal remain observable. Unified physical retirement and all-or-nothing reset
+remain rejected.
+
+Presentation coordination preparation/publication, construction and physical
+close stay root-owned. Eager/held success, retry and producer rollback choices
+remain unchanged: cursor precedes sound-binding publication, prior bindings
+precede producer rollback, and held bindings materialize before producer work
+with counter → ring → cursor → binding publication. Music bindings, tuples and
+generation maps are not logically rewound. Captured registered-SFX access,
+ordinary one-current-handle resolution, installed-route legacy replay and
+ShadowSources tombstones without compatibility completion retain their distinct
+lookup moments. Completion remains monitor-protected outside admission and
+retains generation plus observed/current fallback. Destroy/backend replacement
+retain the namespace; successful reset alone reaches counter disposal.
+
+**Test/layout scope.** Production scope is exactly `AudioManager.java`.
+Existing assertions and behavior case IDs remain. The bounded package-private
+test diagnostic returns the actual owner; ResetState's tuple introspection,
+ScopedDonorAudio's field helper and SourcePublicationContract's six-field read/
+write helper follow it. No root mirrors or production injection hooks were added.
+SfxCatalogReuse and SceneRomAudioSourcesPublication retain their exact `a7770fd`
+blobs; the other two approved baseline test bodies retain their assertions and
+change only those layout helpers. The only additional test change is two
+AudioPresentationArchitectureGuard controls for complete cold ownership and the
+exact compiled ROM dependency inventory. Its existing controls remain intact.
+No producer, session, backend, factory, handler, snapshot algorithm, permissions,
+API/build policy or general source guard implementation changes occur.
+
+Parent's conditional Mockito note was observed: existing constructor-backed
+`spy(AudioManager.class)` fixtures preserve enclosing identity. No alias failure
+appeared and no spy-construction correction was needed. Future PresentationBinding
+research, its 18 physical fields and future seams remain outside this cut.
+
+**Strict frozen observation before manual accounting.** Store creation/update/
+refreeze were never enabled. Session 68796 first used the historical underscore
+property spellings; ArchUnit 1.4.2 ignores that prefix, so its intended field filter
+actually executed 34 IDs (33 pass, one low-level `StoreUpdateFailedException`,
+zero skips). Checked-in store creation/update defaults were false; all 13 frozen
+files remained exact. The exception rejects saving the solved obsolete outer
+helper before replacement identities can be reported. The corrected invocation
+uses `archunit.` dotted properties, verified in XML; it executes exactly
+`TestArchUnitRules#low_level_layers_do_not_depend_on_runtime_layers`.
+
+The first added read-only diagnostic incorrectly normalized into sets: stored
+119 records became 115 unique identities and live 120 became 116. Existing
+GraphicsManager renderPatternWithId and renderStrip getPaletteIndex call sites
+have multiplicity two each; RenderContext deriveUnderwaterPalette getColor has
+multiplicity three. Session 3740 therefore had a diagnostic assertion failure
+(expected 120, observed unique 116), a passing ownership control, and the expected
+strict store-update error. The new diagnostic alone was corrected to compare
+sorted normalized **lists**, preserving multiplicity; production and positive
+behavior assertions were unchanged. Session 14353 then passed with raw live 120
+and exactly the following pre-update delta:
+
+```text
+REMOVE Method <com.openggf.audio.AudioManager.reinstallsInstalledSource(com.openggf.audio.GameAudioProfile, com.openggf.data.Rom)> has parameter of type <com.openggf.data.Rom> in (AudioManager.java:0)
+ADD Method <com.openggf.audio.AudioManager$SourcePublication.reinstallsInstalledSource(com.openggf.audio.GameAudioProfile, com.openggf.data.Rom)> has parameter of type <com.openggf.data.Rom> in (AudioManager.java:0)
+ADD Method <com.openggf.audio.AudioManager$SourcePublication.setRom(com.openggf.data.Rom)> has parameter of type <com.openggf.data.Rom> in (AudioManager.java:0)
+```
+
+Only those three lines were then edited manually in
+`40afa018-d450-4b84-8cb9-d539d75d8062`: old blob
+`147edd565a161cadc818045665e8444f2a4b1135` → new blob
+`05b1f5b9de735aca0f6d28c2481f95afa9d432b3`. BaseAudioSource's three ROM
+identities, public setRom ingress and configuredServicesOrNull → configuration
+remain. No extra ROM-typed standalone helper was required. The other 12 frozen
+blobs, including stored.rules, remain byte-identical. Current exception accounting
+is 120; historical 119 evidence remains. Final strict evaluation passes and the
+live-vs-manual inventory reports 120, removed [], added [].
+
+**Launch environment and exact selections.** All invocations used this owned
+checkout/target, current queue wrapper, Java 25, `-Dmse=off`, no ambient display,
+and preserved surfaceless EGL. Tests used the normal lane. XML for every executed
+test checked Java `25.0.5.0.2`, home `/usr/lib/jvm/java-25-openjdk`, selector,
+freeze flags and applicable absolute ROM properties; every selection below had
+zero skips. Existing ROM identities were verified without copying, renaming or
+creating links:
+
+| Existing ROM path under this WT | Bytes | CRC32 | SHA-1 |
+| --- | ---: | --- | --- |
+| Sonic The Hedgehog (W) (REV01) [!].gen | 524288 | AFE05EEE | 69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B |
+| Sonic The Hedgehog 2 (W) (REV01) [!].gen | 1048576 | 7B905383 | 8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9 |
+| Sonic and Knuckles & Sonic 3 (W) [!].gen | 4194304 | 63522553 | CFBF98C36C776677290A872547AC47C53D2761D6 |
+
+Commands are recorded with WT resolved by `pwd`; each SELECTION is the
+comma-joined literal selector list directly below. The initial strict attempt's
+underscore spelling is a recorded failed invocation, not a recommended command.
+
+```bash
+WT=$(pwd)
+# Fresh main/test compilation; also repeated for each new guard-fixture edit.
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl test-compile -B
+
+# Matched preservation (82940) and bounded consumers (28358), separately:
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  -Darchunit.freeze.store.default.allowStoreCreation=false \
+  -Darchunit.freeze.store.default.allowStoreUpdate=false \
+  -Darchunit.freeze.refreeze=false \
+  "-Dsonic1.rom.path=$WT/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$WT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$WT/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dtest=$SELECTION" test -B
+
+# Strict rule plus compiled API/affected guards (9615), separate fresh fork:
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl -Pguards \
+  -Darchunit.freeze.store.default.allowStoreCreation=false \
+  -Darchunit.freeze.store.default.allowStoreUpdate=false \
+  -Darchunit.freeze.refreeze=false \
+  -Darchunit.junit.testFilter=low_level_layers_do_not_depend_on_runtime_layers \
+  "-Dtest=$SELECTION" test -B
+```
+
+Matched preservation selectors, session **82940**:
+
+```text
+TestAudioSourcePublicationContract
+TestScopedDonorAudio
+TestAudioManagerSfxCatalogReuse
+TestSceneRomAudioSourcesPublication
+TestAudioManagerResetState
+TestAudioManagerRuntimeInstallation
+TestDonorAudioRouting
+TestAudioLogicalSnapshot
+TestAudioPresentationSnapshotParity#preparedAThenSelectedBPublishesBLedgerWithAPresentation+negativeTimelineOrderPartiallyPublishesAfterSuccessfulProducerReturn+eagerAndHeldShareCounterButOnlyEagerRestoresOptionalForwardService+reverseReleasePublicationFailureLeavesReleaseExactlyRetryable+reverseReleaseFailureAfterPreparingDuringTheAttemptRollsBackExactly+reverseReleaseFailureAfterTheProducerCommitCompletesTheRelease
+TestAudioManagerPresentationModes#failedPreResetStopRetainsHeldLedgerUntilFullResetReachesItsClear+lifecycleInvalidatesAcknowledgmentBeforeFallibleProducerClose+sinkReleaseFailureConsumesProducerCursorBeforeManagerPublication
+TestSceneDonorMusic#sceneRoutesEachGameAndExitRestoresTheBorrowedDonorKey
+```
+
+The original 41-case first cohort + absent-loader pair = **43**; the exact union
+with **106** anchors yields **149** expected IDs. Physical XML compared by full
+class#method/signature/invocation identity has 149 actual IDs, no missing/extra/
+duplicate IDs. The two new null-loader IDs and existing nonnull-loader ID are
+included, not rerun separately or counted twice. The source-only initial forecast
+correction remains historical above; no forecast substitutes for executed XML.
+
+| Executed class | Cases | Class seconds |
+| --- | ---: | ---: |
+| `com.openggf.audio.TestAudioLogicalSnapshot` | 7 | 0.327 |
+| `com.openggf.audio.TestAudioManagerPresentationModes` | 10 | 0.361 |
+| `com.openggf.audio.TestAudioManagerResetState` | 35 | 0.153 |
+| `com.openggf.audio.TestAudioManagerRuntimeInstallation` | 7 | 0.044 |
+| `com.openggf.audio.TestAudioManagerSfxCatalogReuse` | 20 | 0.067 |
+| `com.openggf.audio.TestAudioPresentationSnapshotParity` | 6 | 0.083 |
+| `com.openggf.audio.TestAudioSourcePublicationContract` | 28 | 0.177 |
+| `com.openggf.audio.TestDonorAudioRouting` | 25 | 0.069 |
+| `com.openggf.audio.TestScopedDonorAudio` | 6 | 0.032 |
+| `com.openggf.mods.scene.host.TestSceneDonorMusic` | 1 | 0.467 |
+| `com.openggf.mods.scene.host.TestSceneRomAudioSourcesPublication` | 4 | 0.035 |
+
+Bounded additional consumer selectors, session **28358**:
+
+```text
+TestAudioPresentationSnapshotParity#logicalSnapshotCapturesAndRestoresPresentationFlagsAtSameBoundary+heldReverseDefersPresentationRestoreUntilRelease+replayAfterPreparationReplacesMetadataButRetainsAPreparation+cursorRefreshRetainsPresentationEntryCountAndAcknowledgment+clearHistoryClearsProducerTokenButRetainsManagerTargetAndAcknowledgment+rewindReleaseRestoresAudibleFmAndPsgMasksAndNextToggleState+deferredTargetReplayAdvancesPresentationLogicalState+heldReplayUsesPresentationStateWhileTheSourceBackendStaysIdle+snapshotRestoresTheSolePresentationCoordFlagCounter+controlledReferenceRendererMatchesExactClockCursorsForOneHundredTwentyFrames+managerProductionProducerKeepsFractionalBoundaryForOneHundredTwentyFrames
+TestAudioManagerPresentationModes#rebuildRetainsHeldTargetProvenanceAndInjectionButInvalidatesAcknowledgment+virtualBoundaryCaptureIsSingleAndRetryProtectsFreshSourcesAfterQueuedCommand+virtualReleasePreparationRereadsCallbackReplacedProducer+offThreadNoOpPathsPrecedeProducerChecksAndActiveBeginRejectsBeforeLedgerMutation+recordedReverseOwnsOuterPresentationWithoutTakingLogicalRewindOwnership+updatePumpsSinkButNeverPresentsAnotherPacket+everyExplicitModePresentsExactlyOneProducerPacket+forwardAppliesCommandsBeforeRendering+silentAppliesStructuralCommandsWithoutMovingVoiceCursors+reverseConsumesHistoryWithoutRenderingVoices+rewindPresentationControlsNeverReachTheBackend+ordinaryExceptionStillClosesTapRegistryHistoryThenSink+resyncCleanupPopsARealOverrideAndPreservesBaseMusic+resyncCleanupWithoutOverridePreservesDurableMusic+authoritativeResyncPopsThePersistentSessionOverride+stopAllPresentationClearsPersistentSessionAndRegistry+nullSelectionLogicalStagingUsesThePersistentSessionTransaction+synchronousQueuePressureDrainUsesTheSessionCompositeBoundary+suppressedAndStopAllPoliciesMutateRealProducerStateExactly+reverseReleaseReportsPrepareFailureWithoutMutatingFullStateAndRetries+producerPrepareFailurePreservesPriorSelectionForRetry+mutatingPoliciesWaitForSuccessfulTransactionalReleaseAndRetry+afterRewindRestoreReportsReleaseSuccessToProductionHosts+managerLifecycleDiscardsPreparedProducerRestoreWriteFreeExactlyOnce+queuedReverseCommandsAreAppliedInOrderBeforePolicyCleanupAndCannotResurrect
+TestSceneDonorMusic#sceneMusicPacingFollowsRetainedActsAndEndsWithTheOwner+sonic1GreenHillPlaysInAnS3kSessionWithS3kEffectsOnTopAndLoops
+TestSmpsConfigAuthorityContract
+TestSmpsExplicitConfigAuthorityContract
+TestSmpsConfigAuthorityRomContract
+TestSmpsRestoreOwnerContract
+TestHeadlessAudioOwnership
+TestHeadlessGameBootAudioIdentity
+TestS1OneUpRestoreRom
+TestS2OneUpRestoreRom
+TestS3kOneUpRestoreRom
+TestS3kLevelEntryAudioDeviceRestore
+TestSonic3kBootstrapResolver
+TestSonic3kDecodingUtils
+TestS3kAiz1SkipHeadless#aiz1IntroSkipSpawnHasCollisionAndNoImmediatePitDeath
+com.openggf.tests.TestSonic3kLevelLoading
+com.openggf.game.sonic3k.TestSonic3kLevelLoading#returnTerrainKeepsResolvedSourcesAfterSavedReturnIsConsumed+headlessFreshRuntimeLoadArmsHandoffWithoutRetainingRenderedTitleCard+headlessTitleCardLoadArmsTheSameFreshRuntimeHandoffExactlyOnce
+```
+
+This selection was announced before submission: finish the remaining complete
+snapshot-parity (11) and presentation-lifecycle (35) cases, creator controls and
+maintained SMPS/headless/genuine-ROM restoration controls, plus bounded S3K load
+invariants. It has **143** actual IDs, none overlapping the 149. Together these
+runs complete the affected reset/runtime-installation/donor/catalog/logical-
+snapshot/scoped/source-creator classes, all 17 SnapshotParity cases, all 45
+PresentationModes cases and all 3 SceneDonorMusic cases. Restorer controls cover
+S1/S2/S3K natural one-up and explicit restoration boundaries with genuine ROM
+sources; compatibility/explicit authority reaches the unchanged current factory.
+Headless audio identity uses maintained no-device/injected no-GL boot controls;
+the bounded headless S3K engine controls use the supplied EGL launch environment.
+
+| Executed class | Cases | Class seconds |
+| --- | ---: | ---: |
+| `com.openggf.audio.TestAudioManagerPresentationModes` | 35 | 0.816 |
+| `com.openggf.audio.TestAudioPresentationSnapshotParity` | 11 | 0.107 |
+| `com.openggf.audio.TestS1OneUpRestoreRom` | 6 | 0.552 |
+| `com.openggf.audio.TestS2OneUpRestoreRom` | 6 | 0.505 |
+| `com.openggf.audio.TestS3kLevelEntryAudioDeviceRestore` | 1 | 0.478 |
+| `com.openggf.audio.TestS3kOneUpRestoreRom` | 12 | 0.808 |
+| `com.openggf.audio.TestSmpsConfigAuthorityContract` | 15 | 0.203 |
+| `com.openggf.audio.TestSmpsConfigAuthorityRomContract` | 3 | 0.327 |
+| `com.openggf.audio.TestSmpsExplicitConfigAuthorityContract` | 14 | 0.462 |
+| `com.openggf.audio.TestSmpsRestoreOwnerContract` | 13 | 0.737 |
+| `com.openggf.game.sonic3k.TestSonic3kBootstrapResolver` | 6 | 0.017 |
+| `com.openggf.game.sonic3k.TestSonic3kDecodingUtils` | 3 | 0.004 |
+| `com.openggf.game.sonic3k.TestSonic3kLevelLoading` | 3 | 0.287 |
+| `com.openggf.mods.scene.host.TestSceneDonorMusic` | 2 | 8.497 |
+| `com.openggf.tests.TestS3kAiz1SkipHeadless` | 1 | 0.144 |
+| `com.openggf.tests.TestSonic3kLevelLoading` | 7 | 0.143 |
+| `com.openggf.tools.TestHeadlessAudioOwnership` | 2 | 0.019 |
+| `com.openggf.tools.TestHeadlessGameBootAudioIdentity` | 3 | 0.159 |
+
+Final compiled API/guard selectors, session **9615**:
+
+```text
+TestModApiSignatureSurface
+TestModApiPinPolicy
+TestModApiReleasePolicy
+TestAudioPresentationArchitectureGuard
+TestAudioPresentationBoundary
+TestSmpsSessionArchitectureGuard
+TestSmpsSequencerConfigCopyCoverageGuard
+TestArchitecturalReviewGuard
+TestArchUnitRules
+TestArchitecturalSourceGuard#lowLevelGraphicsAndAudioDoNotGainGameplayServiceLookups+rootDispatchMethodsDoNotGrowBeyondCurrentBudgets+releaseCriticalLargeClassesDoNotGrowWithoutExtraction+engineDoesNotGainNewLargeMethods
+TestSingletonLifecycleGuard#ambientGameplayModeSetupsDoNotGrowWithoutLifecycleTriage
+```
+
+| Executed class | Cases | Class seconds |
+| --- | ---: | ---: |
+| `com.openggf.audio.TestAudioPresentationArchitectureGuard` | 40 | 8.945 |
+| `com.openggf.audio.TestAudioPresentationBoundary` | 1 | 2.79 |
+| `com.openggf.audio.presentation.TestSmpsSequencerConfigCopyCoverageGuard` | 1 | 0.009 |
+| `com.openggf.audio.session.TestSmpsSessionArchitectureGuard` | 4 | 2.745 |
+| `com.openggf.mods.TestModApiPinPolicy` | 4 | 0.296 |
+| `com.openggf.mods.TestModApiReleasePolicy` | 15 | 0.01 |
+| `com.openggf.mods.TestModApiSignatureSurface` | 11 | 2.917 |
+| `com.openggf.tests.TestArchUnitRules` | 1 | 2.531 |
+| `com.openggf.tests.TestArchitecturalReviewGuard` | 9 | 0.042 |
+| `com.openggf.tests.TestArchitecturalSourceGuard` | 4 | 0.458 |
+| `com.openggf.tests.TestSingletonLifecycleGuard` | 1 | 0.364 |
+
+This is **91 pass / 0 failures / 0 errors / 0 skips**, including exactly one
+strict ArchUnit field rule. Fresh compiled signature/terminal/marker checks match
+the unchanged pins: **22,541 unique rows / 1,250 TYPE rows / 1,250 ModApi type
+markers**. Descriptor/version/pins stay exact. Existing review/lifecycle guards
+confirm the unchanged accounting and ratchets: ambient **6 methods / 5 files**
+and **151 executable package-pair permissions**. The API helper owner remains
+private and contributes no new public/protected reachability.
+
+**Session outcomes and timing.** Queue delay and Maven execution are distinct;
+authoring, source inspection and activity-lane wait are otherwise unmeasured.
+All handles are owned by this WT and terminal. No other target/job was inspected.
+
+| Session | Selection/result | Queue seconds | Maven seconds |
+| --- | --- | ---: | ---: |
+| 95487 | fresh 4353-main / 4486-test compilation, exit 0 | build/activity wait unknown | 88 |
+| 68796 | initial strict/filter attempt: 34 IDs, 33 pass + 1 expected store error, 0 skips; class 7.118 s | 288 | 34.158 |
+| 9754 | compile first added guard fixture, exit 0 | build/activity wait unknown | 29.111 |
+| 3740 | corrected strict + two guard IDs: ownership pass, count-fixture failure, expected store error; 0 skips | 46 | 34.855 |
+| 56588 | compile list/multiplicity diagnostic correction, exit 0 | build/activity wait unknown | 26.400 |
+| 14353 | corrected read-only raw inventory: 1 pass, 0 skips; class 4.574 s | 66 | 31.221 |
+| 82940 | matched 149 pass / 0 failures / 0 errors / 0 skips | 20 | 29.427 |
+| 28358 | bounded consumers 143 pass / 0 failures / 0 errors / 0 skips | 27 | 42.094 |
+| 9615 | final compiled API/guards 91 pass / 0 failures / 0 errors / 0 skips | at least 632; final admission total unavailable | 49.504 |
+
+Production bytes stayed fixed from the first extraction through every invocation.
+No behavioral fixture expectation or positive observer was weakened. The only
+red checks were the intentional strict pre-accounting refusal and the new
+inventory fixture's corrected multiplicity error; no unresolved selected failure
+remains. Inspected XML/text diagnostics were consumed, with no pass cache, receipt
+or raw archive retained. The final case-ID fingerprints are SHA-256 of sorted
+literal IDs, joined by LF with a final LF:
+
+- Matched 149: `161c545646b56b7dde6440bcef6f2d5e70aec6df70ec842a195596fa449579a9`.
+- Additional 143: `631b20df8fe3d92372a81dd6032615cebc4e7b786e939e5d9205591bf73f96dc`.
+- Final guards 91: `9f28803ddaa3e927808e127cc6f637074509985db2eb8062cd68f3eaef02daf3`.
+
+**Content fingerprints and handoff limits.** The production AM blob is
+`5990cb9ee8fa7368d3a4ed99ee327afc4fdd92b2`, SHA-256
+`b18d6243ed2e4bf87e147e30249368bd4e1edc24dcafdb7996232ad862122912`.
+Owner-body SHA-256, from its declaration up to the following HeldReverseRestore
+Javadoc, is `ec9b98c955a596c2acf00661547d19c885d9615668df4e82c423e3789703ba16`.
+The five changed test-Java files, sorted path + NUL + exact bytes + NUL, fingerprint
+`f3760b0b825d7415f250fb220d8ff35f06b9327923a7f1e957eeb165148ca3af`; the same fingerprint over those five files plus AM is
+`e85cfd0852c3ec1757205606194b6dca79330e2f23aa4b994a4a6a4dd2656e72`.
+
+| Changed Java input | Git blob |
+| --- | --- |
+| `src/main/java/com/openggf/audio/AudioManager.java` | `5990cb9ee8fa7368d3a4ed99ee327afc4fdd92b2` |
+| `src/test/java/com/openggf/audio/AudioManagerTestDiagnostics.java` | `7a54913734d14b8112338601079f01835c4c23ca` |
+| `src/test/java/com/openggf/audio/TestAudioManagerResetState.java` | `4b30ecf72a4f0e5ad8b301186a98f23d568521aa` |
+| `src/test/java/com/openggf/audio/TestAudioPresentationArchitectureGuard.java` | `26280a6903022e4ec0891c664ddb7c3558386a87` |
+| `src/test/java/com/openggf/audio/TestAudioSourcePublicationContract.java` | `33a68c1472a51226010c92308d9b1312226d8350` |
+| `src/test/java/com/openggf/audio/TestScopedDonorAudio.java` | `28c9474a8cb1d6b2ef2ba3c541baa9d78699d7df` |
+
+This is **292 distinct passing behavior IDs plus 91 distinct compiled API/
+architecture IDs** across bounded selections, not a broad smoke/full-suite,
+native-emulator, speaker-output or independent runtime certification. Parent's
+frozen 61664 and completed SMPS 140+793 evidence were not accessed or relabeled.
+No trace campaign, performance/soak measurement or new physical-retirement/ledger
+policy was introduced. The implementation, narrow layout/guard changes, exact
+manual low-level delta and existing map/changelog/exception/continuation prose
+form one local commit directly after a777. No subdelegation, main editing,
+fetch, integration, push or WT lifecycle cleanup occurs. All owned command handles
+are terminal; retain the clean branch/WT for independent parent code review and
+stop here.

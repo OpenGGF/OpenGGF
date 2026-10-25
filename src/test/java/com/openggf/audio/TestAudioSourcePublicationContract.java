@@ -817,7 +817,12 @@ class TestAudioSourcePublicationContract {
     @SuppressWarnings("unchecked")
     private static <T> T read(Object receiver, String name) {
         try {
-            Field field = (receiver instanceof AudioManager ? AudioManager.class : receiver.getClass()).getDeclaredField(name);
+            if (receiver instanceof AudioManager manager && Set.of(
+                    "baseAudioSource", "donorAudioSources", "donorGenerationCounters",
+                    "sourceMutationInProgress", "donorSoundBindings", "donorMusicBindings").contains(name)) {
+                receiver = AudioManagerTestDiagnostics.sourcePublication(manager);
+            }
+            Field field = receiver.getClass().getDeclaredField(name);
             field.setAccessible(true);
             return (T) field.get(receiver);
         } catch (ReflectiveOperationException failure) {
@@ -827,9 +832,10 @@ class TestAudioSourcePublicationContract {
 
     private static void write(AudioManager receiver, String name, Object value) {
         try {
-            Field field = AudioManager.class.getDeclaredField(name);
+            Object publication = AudioManagerTestDiagnostics.sourcePublication(receiver);
+            Field field = publication.getClass().getDeclaredField(name);
             field.setAccessible(true);
-            field.set(receiver, value);
+            field.set(publication, value);
         } catch (ReflectiveOperationException failure) {
             throw new AssertionError(failure);
         }

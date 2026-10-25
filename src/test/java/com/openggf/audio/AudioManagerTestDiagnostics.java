@@ -197,6 +197,11 @@ public final class AudioManagerTestDiagnostics {
         }
     }
 
+    /** Original publication diagnostics follow the one manager-lifetime source owner. */
+    static Object sourcePublication(AudioManager audio) {
+        return field(audio, "sourcePublication", Object.class);
+    }
+
     private static <T> T heldReverseField(AudioManager audio, String name, Class<T> type) {
         Object owner = field(audio, "heldReverseRestore", Object.class);
         try {

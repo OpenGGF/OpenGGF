@@ -33,7 +33,7 @@ baseline-update commit and pick the next target rather than weakening the rule.
 
 | Rule | Committed allowance and unit | Target in that unit | Trigger |
 |------|------------------------------|---------------------|---------|
-| `low_level_layers_do_not_depend_on_runtime_layers` | 119 records | Hold at 119 at qualified contract boundaries | GPU commands/backends consume scalars; decoded art providers own their complete contracts; retain typed GM ingress and the four SAT callback-adapter records |
+| `low_level_layers_do_not_depend_on_runtime_layers` | 120 records | Hold at 120 at qualified contract boundaries | GPU commands/backends consume scalars; decoded art providers own their complete contracts; retain typed GM ingress and the four SAT callback-adapter records |
 | `shared_layers_do_not_depend_on_game_specific_packages` | 0 records | Hold at 0 records | Master-title ROM preview decoding/composition now belongs to game-owned providers (`DefaultPowerUpSpawner` visual object creation moved behind `GameModule` factories, 2026-08-28) |
 | `per_game_packages_do_not_cross_depend` | 10 member dependencies in 2 grouped slice records | Hold at 10 explicit host-donation members | Menu animation now has a shared owner; remove donation members only through a separate host/donor contract migration |
 
@@ -52,6 +52,22 @@ parameter. This reviewed identity migration changes 184 committed records to
 tuple remains the single volatile publication, and the public
 `GameAudioProfile.loadSegaPcm(Object)` interface and game-owned ROM reads are
 unchanged.
+
+2026-10-25: the private, manager-lifetime `AudioManager.SourcePublication`
+executes the complete logical source namespace, keeping physical catalog/voice
+retirement and root rewind choreography at their existing owners. The strict
+pre-update rule rejected the obsolete root same-identity helper. Read-only
+compiled evaluation then verified exactly 120 records: remove outer
+`reinstallsInstalledSource(GameAudioProfile,Rom)`, add that method on the private
+owner and add its private `setRom(Rom)`. The three BaseAudioSource ROM identities,
+public setRom ingress and configuration lookup remain. Standalone generation-one
+initialization accepts only a profile and adds no ROM-typed helper. This earned
+119 → 120 relocation is manually recorded; no store creation/update/refreeze was
+enabled, and the other frozen files and keys are unchanged. Compare normalized
+identity **lists**, retaining multiplicity: line-number normalization collapses
+four existing GraphicsManager/RenderContext call-site records if put in a set.
+The [continuation evidence](plans/2026-10-24-architecture-continuation.md) records
+strict failures, exact emitted identities and subsequent verification separately.
 
 The historical cross-game count of 37 counted physical lines: 3 slice headers
 plus 34 member dependencies. The initial target used <=20 **member dependencies**.
@@ -297,7 +313,7 @@ keys; they are not the accounting source. These counts do not evaluate the live
 production dependency graph. Update the matching documentation when committed
 records intentionally change.
 
-- `low_level_layers_do_not_depend_on_runtime_layers`: 119
+- `low_level_layers_do_not_depend_on_runtime_layers`: 120
 - `shared_layers_do_not_depend_on_game_specific_packages`: 0
 - `per_game_packages_do_not_cross_depend`: 2
 - `runtime_owned_framework_packages_do_not_access_global_service_roots`: 0

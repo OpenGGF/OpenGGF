@@ -217,6 +217,9 @@ class TestScopedDonorAudio {
     }
 
     private static Object field(Object owner, String name) throws ReflectiveOperationException {
+        if (owner instanceof AudioManager audio) {
+            owner = AudioManagerTestDiagnostics.sourcePublication(audio);
+        }
         Field field = owner.getClass().getDeclaredField(name);
         field.setAccessible(true);
         return field.get(owner);

@@ -725,16 +725,16 @@ public class TestAudioManagerResetState {
     @Test
     void sourceTuplePublicationsUseVolatileImmutableReferences()
             throws Exception {
-        assertTrue(Modifier.isVolatile(AudioManager.class
+        assertTrue(Modifier.isVolatile(sourcePublication().getClass()
                 .getDeclaredField("baseAudioSource").getModifiers()));
-        assertTrue(Modifier.isVolatile(AudioManager.class
+        assertTrue(Modifier.isVolatile(sourcePublication().getClass()
                 .getDeclaredField("donorAudioSources").getModifiers()));
     }
 
     @Test
     void baseSourcePublishesRomInsideTheOnlyEffectiveImmutableTuple()
             throws Exception {
-        Field publication = AudioManager.class.getDeclaredField(
+        Field publication = sourcePublication().getClass().getDeclaredField(
                 "baseAudioSource");
         publication.setAccessible(true);
         Class<?> sourceType = publication.getType();
@@ -829,10 +829,14 @@ public class TestAudioManagerResetState {
         assertEquals(0, rejectedRom.readCount());
     }
 
+    private Object sourcePublication() {
+        return AudioManagerTestDiagnostics.sourcePublication(am);
+    }
+
     private Object baseSourcePublication() throws ReflectiveOperationException {
-        Field field = AudioManager.class.getDeclaredField("baseAudioSource");
+        Field field = sourcePublication().getClass().getDeclaredField("baseAudioSource");
         field.setAccessible(true);
-        return field.get(am);
+        return field.get(sourcePublication());
     }
 
     private Object baseSourceComponent(String name)
@@ -850,9 +854,9 @@ public class TestAudioManagerResetState {
 
     private void replaceBaseGeneration(long generation)
             throws ReflectiveOperationException {
-        Field field = AudioManager.class.getDeclaredField("baseAudioSource");
+        Field field = sourcePublication().getClass().getDeclaredField("baseAudioSource");
         field.setAccessible(true);
-        Object previous = field.get(am);
+        Object previous = field.get(sourcePublication());
         RecordComponent[] components = previous.getClass()
                 .getRecordComponents();
         Class<?>[] parameterTypes = Arrays.stream(components)
@@ -868,7 +872,7 @@ public class TestAudioManagerResetState {
         Constructor<?> constructor = previous.getClass()
                 .getDeclaredConstructor(parameterTypes);
         constructor.setAccessible(true);
-        field.set(am, constructor.newInstance(arguments));
+        field.set(sourcePublication(), constructor.newInstance(arguments));
     }
 
     private static Stream<Arguments> baseMutationCallbackCases() {

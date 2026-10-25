@@ -526,15 +526,31 @@ music bypasses this binding, and existing source/snapshot config and sink refere
 remain recorded. This is a composition lifetime contract; it does not isolate all
 engine roots or make the restore sink a configuration provider.
 
+Each `AudioManager` retains one private `SourcePublication` for its complete
+logical source namespace: the separate volatile base/donor tuples and donor
+generation counters, mutation admission, sound/music bindings, installation and
+rollback, scoped key restoration and deferred compatibility completion. Its cold
+construction captures no backend, factory, producer or session; operations read
+the manager's current collaborators at the original callback boundaries. The
+owner survives reset, backend replacement and destroy. Existing manager wrappers
+retain their monitor and virtual dispatch, and source consumers retain distinct
+captured/current/tombstone lookup moments. Reset keeps creator and streamed-session
+notifications before admission; the owner clears base, invokes fixed non-source
+root effects, clears donors and only then discards counters. Partial failures
+remain observable. Physical residency and voice retirement stay session-owned;
+logical rewind restores sound bindings through owner effects, without rewinding
+music bindings, installed source tuples or generations.
+
 Each `AudioManager` also retains a private `HeldReverseRestore` owner for the
 held logical target across selection, detached replay, preparation, producer
 replacement, boundary supersession and release retries. It owns held admission
 reads and after-restore cleanup ordering through the existing virtual manager
 entry points, without adding a lock or capturing producer dependencies. Prepared
 acknowledgment can outlive or differ from producer selection; release preserves
-partial effects from producer and ledger failures. Source composition, live
-snapshot capture, eager rollback/forward-service restore, the shared publication
-counter and ring/timeline/donor storage remain with the manager. Producer tokens,
+partial effects from producer and ledger failures. Live snapshot capture, eager
+rollback/forward-service restore, the shared publication counter and ring/timeline
+state remain with the manager; sound-binding effects
+use SourcePublication without transferring ledger decisions. Producer tokens,
 restoration algorithms, cursors, history, clocks and output remain below.
 
 Each `AudioManager` retains one private `CaptureLeases` owner across producer

@@ -627,8 +627,11 @@ Unreleased. The earlier development themes remain in
   from creator capture. Destination
   history starts after deferred title-card assembly, and replay cannot mutate a
   replacement owner's history. Floors and checkpoints include completed frame
-  publication; inactive outgoing worlds cannot seed new history. Audio's installed
-  source stays in one immutable, typed tuple. Sonic 1 and Sonic 2 selected-slot images use the shared data-select
+  publication; inactive outgoing worlds cannot seed new history. Audio's private
+  manager-lifetime source owner keeps base/donor publication, generations, binding restoration and
+  rollback together, preserving immutable tuples, callback ordering and partial
+  reset effects while session-owned audio resources retain their own lifetime.
+  Sonic 1 and Sonic 2 selected-slot images use the shared data-select
   converter and payload validators; Sonic 3 & Knuckles keeps explicit host ROM
   donation while consuming the same patterns, palette and mapping contract.
   One loop-lifetime special-stage lifecycle now owns entry presentation, retained
