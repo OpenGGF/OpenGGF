@@ -79,6 +79,10 @@ run. Inspect synchronized state before choosing frames. Correct coordinates and
 clock assertions also cannot certify a held world's pixels: native published
 scroll/SAT can remain stale after a directed camera or pose changes. Require
 terrain/player pixel checks through the actual presentation owner.
+Sample presentation ownership axes as well as game names: the first three
+ground-course pixel cases passed, while later HCZ Boss Rush and flight captures
+still exposed black ROM colours and an uncovered viewport edge. Logic completion
+and an art-selection gate do not certify those additional presentation paths.
 
 A test-batch-only snapshot mismatch need not be a leaked gameplay flag
 (2026-10-24, Day Off follow-up, `a04ae4b20`). MHZ2's catapult failed in the

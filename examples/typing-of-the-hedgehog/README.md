@@ -129,7 +129,8 @@ continuous stock-start route or reproduce the stock boss's AI.
   the boss destination through native physics, using Stageplay's shared steering and
   braking policy. A route checkpoint travels with the combat checkpoint. ROM art is
   decoded into private sprite sheets and uses owned atlas space; native sheets and VRAM
-  remain with the stock world. The section gate completes every enabled stage through
+  remain with the stock world. Stageplay's scoped scroll and palette presentation draws
+  the held world at the current camera. The section gate completes every enabled stage through
   the real course, including pause, slow motion and retry; the art gate checks all 31 stops
   and rejects blank or incorrectly mapped frames.
 - **Forward routes.** Each act's route (`rails/*.rail`) is a validated controller program

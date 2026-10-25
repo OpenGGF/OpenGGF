@@ -813,6 +813,7 @@ its original drawing priority.
   fights, Tornado escort waves in Sky Chase and a Super Sonic flying finale in Doomsday.
   Route authoring shares Stageplay's native steering and braking for destinations and
   fight stops; selected sections rehearse native terrain while holding the stock world.
+  Their widescreen views reuse Stageplay's scoped native scroll and palette presentation.
   Independent ROM sheets supply late boss art, including Doomsday's plane-built ship.
   Checkpoints preserve pause, slow motion and retries, and menus offer each stage's
   supported modes.

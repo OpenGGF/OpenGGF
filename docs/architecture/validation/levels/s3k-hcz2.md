@@ -22,6 +22,20 @@ The initial native/default binding covers all three solo mains at 320; the finit
 | ROUTE: representative completion and compatibility axes | Authentic entry→mandatory mechanics→boss/results→released next state | Complete character-route composition, every preset/donor axis and applicable team-shape traversals remain open; short entry is not route certification. |
 | ORACLE: timing-sensitive native behavior | `TestS3kSonicTailsHcz2SegmentTraceReplay`, `TestS3kTailsFullChainHcz2SegmentTraceReplay` | Preserve each owning strict-ledger result/source. Comparison rows do not supply gameplay; no strict trace or conformance sweep was run here. |
 
+## Directed typing section — 2026-10-25
+
+The [Typing integration record](../../designs/2026-10-09-typing-of-the-hedgehog.md#develop-integration-and-route-authoring-2026-10-25)
+qualifies a separate 400-pixel, native solo Sonic mod presentation. Its spatial
+entry beyond the wall chase now waits on a read-only query of the existing
+background transition/refresh owner before holding the world. No native event
+state, dispatch, timer or ordinary entry behavior is replaced. The affected
+course completes and retries, and `TestTypingHedgehogSectionRendering` checks
+Boss Rush terrain/body pixels, native low priority, underwater palette reveal,
+held clocks, published SAT and snapshot preservation. The final focused case
+passes without skips; the combined required S3K/course/API gate passes 102 cases
+without skips. This adds no stock-route, other-character/donor/team, other-width,
+physical-post, native audiovisual timing or full-act parity qualification.
+
 ## Qualification — 2026-10-14
 
 Base/runtime lineage: `5b2ff8e78`; branch tip before this slice `390ebd765`, plus this commit’s explicit native-scripted art owner and test. Worktree `.worktrees/ai-s3k-parity-hpz`, Java 25.0.4.1, all three original ROMs by absolute path, `env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null`.

@@ -43,6 +43,15 @@ public final class LevelSpritePresentation {
         level.spritePresentationRenderer().withCinematicCamera(x, y, draw);
     }
 
+    /**
+     * Internal full-view director scope. Only cinematic passes omit native 320px boundary wings;
+     * ordinary draws, camera constraints and captured native mask state retain their owners.
+     * Flush the directed drawing before returning. Nested and failed scopes restore prior policy.
+     */
+    public static void withoutCinematicBoundsMask(LevelManager level, Runnable draw) {
+        level.spritePresentationRenderer().withoutCinematicBoundsMask(draw);
+    }
+
     /** One immutable full-raster projection; native-size tiles consume slices inside this scope. */
     public static void withCinematicView(LevelManager level, com.openggf.level.scroll.ScrollView view,
                                          Runnable draw) {

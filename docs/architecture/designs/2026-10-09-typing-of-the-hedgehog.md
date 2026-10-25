@@ -1167,3 +1167,42 @@ override passed 76 cases, zero skips. This reran all selected courses after the
 entry/projection service change, the original rail qualification and the
 reconciled scene/API contracts. Combined smoke and final capture inspection
 remain outstanding at this checkpoint.
+
+The rebuilt `2c96b67cc` jar passed packaging (60 internal-engine compatibility
+warnings, no errors). Seven full-draw captures then checked MZ3, HTZ2, CNZ2,
+Sky Chase, HCZ2 Boss Rush, Doomsday Boss Rush and LRZ2 Boss Rush, with separate
+processes and isolated saves. The three terrain courses and Tornado render;
+the DDZ ship/Super Sonic and LRZ boss assembly are visible. This broader visual
+selection exposed two remaining issues outside the first three pixel cases:
+HCZ Boss Rush still has black ROM world/body colours, and the flight views expose
+a noisy right-edge strip. All captured rows remain in LEVEL without death.
+These are unresolved presentation issues, so broad smoke remains deferred.
+The additional bounded rendering/lifecycle review found no concrete P1/P2 in
+the inspected helper/scoping paths; that does not override the capture failures.
+
+The flight strip matched the native bounds-mask shader exactly: 24 sampled pixels
+had zero RGB error at the captured native noise phase. It was not missing sky art.
+Typing now opts into a draw-only full-view scope; normal gameplay and default
+Stageplay bounds masks remain enabled. The underwater reveal updates and restores
+the captured raw water basis for black fades as well as white fades, without
+admitting pending native palette writes.
+
+HCZ also needed its native background entry dispatches after the directed spatial
+entry. `loc_1C908 (sonic3k.asm:39362-39367)` signals `Events_fg_5` at camera `$C00`;
+`HCZ2BGE_WallMove (sonic3k.asm:106099-106124)` and the transition/refresh stages
+leading to `HCZ2BGE_Normal (sonic3k.asm:106163-106175)` own the Plane B replacement.
+These references use the pinned disassembly `8b2cf3c4178f2382f844da67798de4befc50c5e0`,
+not the unrelated local submodule checkout. A read-only internal runtime query
+lets those existing dispatches finish before HOLD. It adds no native event state
+or logic, and Sonic retains low priority rather than hiding the problem with a
+priority override.
+
+Final focused rendering qualification passed seven cases, zero skips (six pixel
+cases plus the affected HCZ course). HCZ Boss Rush matched 140/140 terrain pixels
+and 552/619 visible-body mask pixels; the remaining body pixels preserve native
+occlusion. SCZ and DDZ each matched 4,800/4,800 native-colour edge pixels. Scoped
+palette checks passed 33 cases, zero skips. The parent's subsequent required S3K
+selection, all 27 section courses, all four retained rails and API signature
+check passed 102 cases, zero skips. Both packages named `TestSonic3kLevelLoading`
+again executed (36 and seven cases). Evidence is in the external task's
+`rendering-final/`; broad smoke and integration remain outstanding.

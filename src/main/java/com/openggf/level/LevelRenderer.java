@@ -940,6 +940,18 @@ public final class LevelRenderer {
 
     /** Select the VDP scroll generation paired with the displayed sprite table. */
     private boolean cinematicDraw;
+    private boolean cinematicBoundsMaskSuppressed;
+
+    /** A directed full-view presentation may omit native-window wings without changing bounds. */
+    void withoutCinematicBoundsMask(Runnable draw) {
+        boolean previous = cinematicBoundsMaskSuppressed;
+        try {
+            cinematicBoundsMaskSuppressed = true;
+            draw.run();
+        } finally {
+            cinematicBoundsMaskSuppressed = previous;
+        }
+    }
     private LevelScrollPresentation cinematicScroll;
     private LevelScrollPresentation cinematicFullScroll;
     private LevelTilemapManager cinematicBackground;
@@ -1516,7 +1528,8 @@ public final class LevelRenderer {
 
         // Derive visible wings from the native bounds paired with this displayed frame.
         // Camera freezes alone do not define an arena; ordinary finite level edges also apply.
-        if (options.hasGameplayPass()) {
+        // The opt-in director scope changes only its cinematic pass, never ordinary gameplay.
+        if (options.hasGameplayPass() && !(cinematicDraw && cinematicBoundsMaskSuppressed)) {
             var mask = currentScrollPresentation == null
                     ? (boundsMask.sample() == null ? LevelScrollPresentation.captureArenaMask(lm) : boundsMask.sample())
                     : currentScrollPresentation.registers().arenaMask();

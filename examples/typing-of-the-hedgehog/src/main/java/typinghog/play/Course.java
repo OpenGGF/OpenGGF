@@ -539,15 +539,26 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
         if (section.mode() != SectionPlan.Mode.ESCORT && cast.boss(intent.zone(), intent.act()) == null)
             return fault("selected section has no boss rig");
         try {
-            stagehand.sectionArt(SectionArt.prepare(course.objectServices(), intent.game(), intent.zone(), intent.act(),
-                    cast, assets.props(intent.game())));
-            if (section.mode() == SectionPlan.Mode.GROUND) {
-                sectionTravel = SectionTravel.prepare(section, sonic);
+            if (sectionTravel == null && sectionFlight == null) {
+                stagehand.sectionArt(SectionArt.prepare(course.objectServices(), intent.game(), intent.zone(), intent.act(),
+                        cast, assets.props(intent.game())));
+                if (section.mode() == SectionPlan.Mode.GROUND) {
+                    sectionTravel = SectionTravel.prepare(section, sonic);
+                } else {
+                    sectionFlight = new SectionFlight(sonic);
+                    holdPlayer();
+                    GameServices.camera().setFrozen(true);
+                }
+            }
+            if (sectionTravel != null) {
                 sectionTravel.present(sonic);
-            } else {
-                sectionFlight = new SectionFlight(sonic);
-                holdPlayer();
-                GameServices.camera().setFrozen(true);
+                // Spatial entry can cross a native event boundary. Let its owner
+                // complete legitimate entry initialization before HOLD; the private
+                // route remains at its qualified initial pose throughout these rows.
+                if (!com.openggf.game.internal.DirectedEntryPresentation.readyForHold()) {
+                    if (phaseRows > FLIGHT_ENTRY_LIMIT) return fault("native spatial entry did not settle");
+                    return true;
+                }
             }
             sectionPresentation = new SectionPresentation();
         } catch (RuntimeException failure) {

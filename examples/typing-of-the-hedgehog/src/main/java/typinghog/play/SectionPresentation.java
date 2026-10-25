@@ -17,7 +17,10 @@ final class SectionPresentation implements AutoCloseable {
         var graphics = GameServices.graphics();
         var level = GameServices.level();
         var camera = GameServices.camera();
-        world.draw(graphics, level, camera.getX(), camera.getY(), 1, camera.getWidth(), camera.getHeight(), () -> {
+        // The typing stage owns all 400 pixels, including off-screen enemy approaches.
+        // Native autoscrollers keep their real bounds; only this directed draw omits their wings.
+        com.openggf.level.LevelSpritePresentation.withoutCinematicBoundsMask(level, () ->
+                world.draw(graphics, level, camera.getX(), camera.getY(), 1, camera.getWidth(), camera.getHeight(), () -> {
             Runnable draw = () -> {
                 level.drawCinematicWorld(GameServices.sprites());
                 // Tile/sprite commands execute inside the private scroll/camera/fade scope.
@@ -29,7 +32,7 @@ final class SectionPresentation implements AutoCloseable {
                     && fade.presentsLevelFadeFromBlack())
                 com.openggf.graphics.PaletteUploadPresentation.withoutDisplayedFade(graphics, draw);
             else draw.run();
-        });
+        }));
     }
 
     @Override public void close() {
