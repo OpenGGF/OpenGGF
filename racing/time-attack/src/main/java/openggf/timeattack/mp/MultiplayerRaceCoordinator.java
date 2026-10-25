@@ -127,7 +127,7 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
     }
 
     public void detachRuntime() {
-        quickChat.close();
+        quickChat.resetRaceInput();
         chatKeyConsumed = false;
         if (runtime != null) {
             runtime.spectate(false, 0, 0);
@@ -290,7 +290,7 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
 
     @Override
     public void levelReady(RunLevelStart start) {
-        quickChat.close();
+        quickChat.resetRaceInput();
         if (levelReadyHook != null) {
             levelReadyHook.accept(start);
         }
@@ -303,10 +303,10 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
                 runtime != null && runtime.isAttemptFinished());
         if (quickChat.isOpen() && session.chatMode().allowsQuickChat()) {
             ControlMessage.RoundConfig round = session.roundConfig();
-            quickChat.draw(canvas, round == null ? "the zone"
+            quickChat.drawRace(canvas, round == null ? "the zone"
                     : TimeAttackQuickChat.zoneName(round.gameId(), round.zone(), round.act()), quickChatKeyLabel());
         } else if (session.chatMode().allowsQuickChat()) {
-            com.openggf.mods.ui.CompactFont.shadowed(canvas, quickChatKeyLabel() + " QUICK CHAT", 6,
+            com.openggf.mods.ui.CompactFont.shadowed(canvas, quickChat.raceHint(quickChatKeyLabel()), 6,
                     Math.max(4, canvas.height() - 56), 1, HudTextLayout.MUTED, 0xC0000000);
         }
     }
@@ -503,10 +503,12 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
 
     public void pollLocalInput(com.openggf.mods.run.RunInput input) {
         chatKeyConsumed = false;
+        if (input.resumedAfterPause()) quickChat.resetRaceInput();
         boolean raceInput = runtime != null && !leaveRequested && roundsStarted == attachedRound
                 && (session.phase() == ClientRaceSession.Phase.COUNTDOWN
                     || session.phase() == ClientRaceSession.Phase.RUNNING);
-        if (!raceInput || !session.chatMode().allowsQuickChat()) quickChat.close();
+        quickChat.updateController(input.physicalInput(), raceInput && session.chatMode().allowsQuickChat(),
+                this::sendQuickChat);
         if (raceInput && session.chatMode().allowsQuickChat()) {
             if (input.keyPressed(quickChatKey())) {
                 if (quickChat.isOpen()) quickChat.close(); else quickChat.open();
