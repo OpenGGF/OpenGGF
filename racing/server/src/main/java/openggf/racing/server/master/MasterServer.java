@@ -135,7 +135,8 @@ public final class MasterServer implements AutoCloseable {
                     registry::heartbeat,
                     (roomId, owner, zone, act) ->
                             registry.updateTrack(roomId, owner, zone, act),
-                    config, verificationJobs, verdictConsequences, verifiers);
+                    config, verificationJobs, verdictConsequences, verifiers,
+                    registry::updateChatMode);
             RoomBroker broker = new RoomBroker(masterIdentity, config, registry, store,
                     ladder, cache, clock, relays, tunnels,
                     key -> TimeAttackTrackCatalog.isEligibleKey(key) && profileExists(profiles, key),

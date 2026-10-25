@@ -1,6 +1,11 @@
 package com.openggf.net.client;
 
+import com.openggf.net.chat.EnglishQuickChat;
+import com.openggf.net.chat.ProfanityFilter;
+import com.openggf.net.chat.QuickChatContent;
 import com.openggf.net.identity.PlayerAppearance;
+import com.openggf.net.protocol.ChatMode;
+import com.openggf.net.protocol.QuickChatPhrase;
 import com.openggf.net.protocol.ControlMessage;
 
 import java.util.ArrayDeque;
@@ -10,6 +15,7 @@ import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.function.LongSupplier;
 
 /** Client-side room/round mirror with an NTP-lite hub-clock estimate. */
@@ -21,9 +27,24 @@ public final class ClientRaceSession {
     public static final int CLOCK_SAMPLES_TARGET = 5;
     public static final int CHAT_LINES_KEPT = 8;
 
+    private sealed interface ChatEntry permits TextEntry, QuickEntry {
+        int slot();
+        String displayName();
+    }
+
+    private record TextEntry(int slot, String displayName, String text) implements ChatEntry { }
+
+    private record QuickEntry(int slot, String displayName, QuickChatContent content) implements ChatEntry { }
+
     private final LongSupplier clientClockMillis;
     private final Deque<Long> offsetSamples = new ArrayDeque<>();
-    private final Deque<String> chat = new ArrayDeque<>();
+    // Quick entries retain their sent track context so later rounds cannot rewrite history.
+    private final Deque<ChatEntry> chat = new ArrayDeque<>();
+    private List<String> renderedChat = List.of();
+    private boolean censorProfanity = true;
+    private boolean disableChat;
+    private Function<QuickChatContent, String> quickChatFormatter =
+            line -> EnglishQuickChat.text(line.phrase(), null);
 
     private ControlMessage.RoomDescriptor room;
     private String instanceId;
@@ -63,6 +84,7 @@ public final class ClientRaceSession {
         inviteEpoch = 0;
         room = accepted.room();
         accessPolicy = room == null ? com.openggf.net.protocol.RoomAccessPolicy.PUBLIC : room.accessPolicy();
+        clearChat();
         localSlot = accepted.playerSlot();
         players = List.of();
         looks.clear();
@@ -192,10 +214,25 @@ public final class ClientRaceSession {
                 standings = List.copyOf(delta.rows());
                 if (basePhase == Phase.ROUND_END) finalStandings = standings;
             }
+            case ControlMessage.ChatModeState state -> applyChatMode(state.mode());
             case ControlMessage.ChatBroadcast line -> {
-                chat.addLast(line.displayName() + ": " + line.text());
-                while (chat.size() > CHAT_LINES_KEPT) {
-                    chat.removeFirst();
+                if (!disableChat && chatMode().allowsText()
+                        && line.displayName() != null && line.text() != null) {
+                    appendChat(new TextEntry(line.slot(), line.displayName(), line.text()));
+                }
+            }
+            case ControlMessage.QuickChatBroadcast line -> {
+                if (!disableChat && chatMode().allowsQuickChat() && line.displayName() != null) {
+                    QuickChatPhrase phrase = QuickChatPhrase.parse(line.phraseId());
+                    if (phrase == null) break;
+                    QuickChatContent content;
+                    try {
+                        content = new QuickChatContent(phrase, line.gameId(), line.zone(), line.act());
+                    } catch (IllegalArgumentException malformed) {
+                        // Normally rejected by the codec; direct callers obey the same boundary.
+                        break;
+                    }
+                    appendChat(new QuickEntry(line.slot(), line.displayName(), content));
                 }
             }
             case ControlMessage.Pong pong -> {
@@ -311,8 +348,79 @@ public final class ClientRaceSession {
         return players;
     }
 
+    /** Immutable rendered snapshot; reads do no formatting or lexicon work. */
     public List<String> chatLines() {
-        return new ArrayList<>(chat);
+        return renderedChat;
+    }
+
+    /** Effective capabilities announced by the room host. */
+    public ChatMode chatMode() {
+        return room == null ? ChatMode.OFF : ChatMode.parse(room.chatMode());
+    }
+
+    /** Personal receive/display preference; room restrictions are exposed by {@link #chatMode()}. */
+    public boolean chatDisabled() {
+        return disableChat;
+    }
+
+    /** Applies a settings snapshot without consulting engine configuration from networking code. */
+    public void setChatPreferences(boolean censorProfanity, boolean disableChat) {
+        if (this.censorProfanity == censorProfanity && this.disableChat == disableChat) {
+            return;
+        }
+        this.censorProfanity = censorProfanity;
+        this.disableChat = disableChat;
+        if (disableChat) {
+            clearChat();
+        } else {
+            renderChat();
+        }
+    }
+
+    /** Supplies local catalogue/zone rendering; retained quick messages keep their sent context. */
+    public void setQuickChatFormatter(Function<QuickChatContent, String> formatter) {
+        java.util.Objects.requireNonNull(formatter, "formatter");
+        if (quickChatFormatter != formatter) {
+            quickChatFormatter = formatter;
+            renderChat();
+        }
+    }
+
+    private void applyChatMode(String mode) {
+        ChatMode parsed = ChatMode.parse(mode);
+        if (room == null || parsed == null || mode.equals(room.chatMode())) return;
+        room = new ControlMessage.RoomDescriptor(room.name(), room.gameId(), room.zone(), room.act(),
+                room.characterPolicy(), room.lockedCharacter(), room.maxPlayers(), room.verified(), accessPolicy, mode);
+        if (parsed == ChatMode.OFF) clearChat();
+    }
+
+    private void appendChat(ChatEntry entry) {
+        chat.addLast(entry);
+        while (chat.size() > CHAT_LINES_KEPT) chat.removeFirst();
+        renderChat();
+    }
+
+    private void clearChat() {
+        chat.clear();
+        renderedChat = List.of();
+    }
+
+    private void renderChat() {
+        List<String> rendered = new ArrayList<>(chat.size());
+        for (ChatEntry entry : chat) {
+            String label = entry.displayName();
+            String body = switch (entry) {
+                case TextEntry text -> text.text();
+                case QuickEntry quick -> quickChatFormatter.apply(quick.content());
+            };
+            if (body == null) continue;
+            if (censorProfanity) {
+                label = ProfanityFilter.censor(label);
+                body = ProfanityFilter.censor(body);
+            }
+            rendered.add(label + ": " + body);
+        }
+        renderedChat = List.copyOf(rendered);
     }
 
     public ControlMessage.RoundConfig roundConfig() {

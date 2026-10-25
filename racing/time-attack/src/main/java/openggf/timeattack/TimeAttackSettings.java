@@ -5,6 +5,7 @@ import com.openggf.mods.run.CharacterLooks;
 import com.openggf.net.identity.DisplayNames;
 import com.openggf.net.identity.PlayerAppearance;
 import com.openggf.net.protocol.ReadyRules;
+import com.openggf.net.protocol.ChatMode;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -52,6 +53,7 @@ public final class TimeAttackSettings {
     private boolean masterTrustInsecure;
     private boolean minimap = true;
     private ReadyRules readyRule = ReadyRules.DEFAULT_BY_SIZE;
+    private ChatMode chatMode = ChatMode.FULL_CHAT;
     private int lookBase = PlayerAppearance.NO_BASE_COLOUR;
     private final Map<String, List<PlayerAppearance.Entry>> customPalettes = new TreeMap<>();
     private final Map<String, List<VotePool>> votePools = new TreeMap<>();
@@ -152,6 +154,10 @@ public final class TimeAttackSettings {
                     ReadyRules rule = ReadyRules.parse(value);
                     if (rule != null) settings.readyRule = rule;
                 }
+                case "chatMode" -> {
+                    ChatMode mode = ChatMode.parse(value);
+                    if (mode != null) settings.chatMode = mode;
+                }
                 case "lookBase" -> {
                     try { settings.setLookBase(value.isEmpty() ? PlayerAppearance.NO_BASE_COLOUR
                             : PlayerAppearance.decode(value).baseColour()); }
@@ -223,6 +229,7 @@ public final class TimeAttackSettings {
                 .append("masterTrustInsecure=").append(masterTrustInsecure).append('\n')
                 .append("minimap=").append(minimap).append('\n')
                 .append("readyRule=").append(readyRule.name()).append('\n')
+                .append("chatMode=").append(chatMode.name()).append('\n')
                 .append("lookBase=").append(lookBase == PlayerAppearance.NO_BASE_COLOUR ? ""
                         : new PlayerAppearance(lookBase, List.of()).encode()).append('\n');
         votePools.forEach((game, pools) -> {
@@ -241,6 +248,11 @@ public final class TimeAttackSettings {
         });
         return out.toString();
     }
+
+    /** Preferred communication mode for newly hosted rooms; personal filters belong to the engine. */
+    public ChatMode chatMode() { return chatMode; }
+
+    public void setChatMode(ChatMode mode) { chatMode = Objects.requireNonNull(mode, "mode"); }
 
     public int retryKey() { return retryKey; }
 

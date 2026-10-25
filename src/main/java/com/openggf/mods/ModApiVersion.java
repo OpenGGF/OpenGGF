@@ -7,7 +7,6 @@ import java.util.Objects;
 
 public final class ModApiVersion {
     /**
-     * Protocol v6 adds common private-room admission and invitation controls.
      * Current unpublished compiled-mod API candidate, including detached CPU-only title-preview
      * providers and their RGBA image/animation sequence contract, run-scoped native HUD profiles,
      * overlay HUD-origin measurement, and native decoded
@@ -71,7 +70,11 @@ public final class ModApiVersion {
      * Hub preferences include optional title music, its volume, last focused game,
      * and per-game last-act/leader history for zone-start Continue.
      * Shared network contracts include direct/relay room clients, JDK room hosting,
-     * identity, bounded ghost transport and protocol messages/codecs. Protocol v3 uses
+     * identity, bounded ghost transport and protocol messages/codecs. Protocol 6 adds
+     * Full/Quick/Off communication with semantic quick content, a local English
+     * catalogue and read-only global personal chat display preferences. Protocol 7 combines
+     * these controls with private admission, invite authority and correlated master requests.
+     * Protocol v3 uses
      * explicit player upsert/leave deltas after the joining client's initial room snapshot;
      * remote ghost registries expose the same incremental membership operations. Operator
      * servers and verifier tools remain separate and outside the creator API.

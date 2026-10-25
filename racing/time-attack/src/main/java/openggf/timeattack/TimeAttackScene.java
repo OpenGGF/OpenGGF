@@ -106,6 +106,7 @@ public final class TimeAttackScene implements ModScene {
                 (spec, host) -> ctx.gameplay().launch(spec, host), this::newRuntime, System::currentTimeMillis);
         // Every join (Hello) and lobby entry announces the look the settings hold for that game/character.
         session.setLookSource(settings::appearanceFor);
+        session.setChatPreferenceSource(ctx::censorMultiplayerProfanity, ctx::multiplayerChatDisabled);
         // Each room's lobby is a short level of its game, playing behind the lobby menu.
         session.setLobbyLauncher((spec, host) -> ctx.gameplay().launchBehind(spec, host));
         List<String> games = ctx.gameplay().availableGames();
@@ -452,7 +453,7 @@ public final class TimeAttackScene implements ModScene {
                                     .withPrompt("Six characters. Uses your selected master.");
                         }
                         @Override public void back() { session.leave(); }
-                    }, this::cue, System::currentTimeMillis);
+                    }, this::cue, System::currentTimeMillis, settings.chatMode());
         } else if (!browsing && browser != null) {
             browser.deactivate();
             browser = null;
@@ -474,6 +475,10 @@ public final class TimeAttackScene implements ModScene {
             lobby.setInviteAction(invites::open);
             lobby.setReadyRuleListener(rule -> {
                 settings.setReadyRule(rule);
+                settingsChanged();
+            });
+            lobby.setChatModeListener(mode -> {
+                settings.setChatMode(mode);
                 settingsChanged();
             });
             lobbyCoordinator = session.coordinator();
@@ -546,6 +551,8 @@ public final class TimeAttackScene implements ModScene {
 
     @Override
     public void resumed(SceneContext ctx, RunEndReason reason) {
+        context = ctx;
+        session.setChatPreferenceSource(ctx::censorMultiplayerProfanity, ctx::multiplayerChatDisabled);
         session.flushPendingPublications();
         // Polling here launches the next run (the round after the lobby level, the lobby level
         // after a round) before the screen fades back in, so the hand-over stays black.

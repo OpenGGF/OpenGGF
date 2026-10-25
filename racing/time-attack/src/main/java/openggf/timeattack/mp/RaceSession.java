@@ -176,6 +176,8 @@ public final class RaceSession implements AutoCloseable {
     private RoundSetup browseSetup;
     private String browseFingerprint;
     private MultiplayerRaceCoordinator coordinator;
+    private java.util.function.BooleanSupplier censorChat = () -> true;
+    private java.util.function.BooleanSupplier disableChat = () -> false;
     private boolean hosting;
     private ControlMessage.RoundConfig roundConfig;
     private String character;
@@ -226,11 +228,12 @@ public final class RaceSession implements AutoCloseable {
         String look = lookSource.apply(setup.gameId(), setup.character()).encode();
         String configuredMaster = settings.masterUrl();
         boolean localTrust = settings.masterTrustInsecure();
+        String chatMode = settings.chatMode().name();
         start("Starting LAN room...", State.IDLE, password, op -> {
             PlayerIdentity me = identity();
             String name = displayName(me, configuredName);
             JdkRaceHostServer server = op.own(JdkRaceHostServer.startTls(port,
-                    roomConfig(name, setup, fingerprint, policy, op.password), me,
+                    roomConfig(name, setup, fingerprint, policy, op.password, chatMode), me,
                     TrackValidationProfileSource.none()), JdkRaceHostServer::close);
             op.await(server.room().ready(), RaceClient.JOIN_TIMEOUT_MILLIS, ignored -> { });
             String pin = server.tlsCertificateSha256();
@@ -488,18 +491,20 @@ public final class RaceSession implements AutoCloseable {
         int port = settings.hostPort();
         String configuredName = settings.displayName();
         String look = lookSource.apply(setup.gameId(), setup.character()).encode();
+        String chatMode = settings.chatMode().name();
         start("Creating room...", State.BROWSING, password, op -> {
             PlayerIdentity me = identity();
             String name = displayName(me, configuredName);
             JdkRaceHostServer server = !direct ? null : op.own(JdkRaceHostServer.startTls(port,
-                    roomConfig(name, setup, fingerprint, policy, op.password), me, TrackValidationProfileSource.none()),
+                    roomConfig(name, setup, fingerprint, policy, op.password, chatMode), me,
+                    TrackValidationProfileSource.none()),
                     JdkRaceHostServer::close);
             ControlMessage.RoomCreated created;
             if (direct) {
                 op.await(server.room().ready(), RaceClient.JOIN_TIMEOUT_MILLIS, ignored -> { });
                 created = registerDirect(op, client, server, setup, fingerprint);
             } else {
-                created = op.await(client.createRoom(descriptor(name, setup, policy), "RELAY", 0, fingerprint,
+                created = op.await(client.createRoom(descriptor(name, setup, policy, chatMode), "RELAY", 0, fingerprint,
                         setup.voteTrackKeys(), null, null, 0, op.password),
                         MasterClient.MASTER_REPLY_TIMEOUT_MILLIS + 1000, late -> client.leaveRoom(late.roomId()));
                 op.own(created.roomId(), client::leaveRoom);
@@ -771,6 +776,14 @@ public final class RaceSession implements AutoCloseable {
         }
     }
 
+    /** Live engine preferences, also read while a race rather than the scene owns updates. */
+    public void setChatPreferenceSource(java.util.function.BooleanSupplier censor,
+                                        java.util.function.BooleanSupplier disabled) {
+        censorChat = Objects.requireNonNull(censor, "censor");
+        disableChat = Objects.requireNonNull(disabled, "disabled");
+        if (coordinator != null) coordinator.setChatPreferenceSource(censorChat, disableChat);
+    }
+
     /** Applies a settings change that affects the live room (the minimap). */
     public void settingsChanged() {
         if (coordinator != null) {
@@ -839,6 +852,7 @@ public final class RaceSession implements AutoCloseable {
         coordinator = new MultiplayerRaceCoordinator(RaceTransport.from(connection), clientSession, clockMillis,
                 settings.masterUrl(), settings.masterTrustInsecure(), ghostStore);
         coordinator.setShowMinimap(settings.minimap());
+        coordinator.setChatPreferenceSource(censorChat, disableChat);
         if (hostingRoom && host != null) {
             coordinator.setLevelReadyHook(this::applyTrackProfile);
         }
@@ -1155,15 +1169,16 @@ public final class RaceSession implements AutoCloseable {
     }
 
     private static RoomHostConfig roomConfig(String name, RoundSetup setup, String fingerprint,
-                                             RoomAccessPolicy policy, RoomPassword password) {
+                                             RoomAccessPolicy policy, RoomPassword password, String chatMode) {
         return new RoomHostConfig(roomName(name), setup.gameId(), setup.zone(), setup.act(),
                 setup.characterPolicy(), setup.lockedCharacter(), Protocol.MAX_PLAYERS_DIRECT, fingerprint,
-                setup.voteTrackKeys(), false, policy, password, null);
+                setup.voteTrackKeys(), false, policy, password, null, chatMode);
     }
 
-    private static ControlMessage.RoomDescriptor descriptor(String name, RoundSetup setup, RoomAccessPolicy policy) {
+    private static ControlMessage.RoomDescriptor descriptor(String name, RoundSetup setup, RoomAccessPolicy policy,
+                                                             String chatMode) {
         return new ControlMessage.RoomDescriptor(roomName(name), setup.gameId(), setup.zone(), setup.act(),
-                setup.characterPolicy(), setup.lockedCharacter(), MAX_ROOM_PLAYERS, false, policy);
+                setup.characterPolicy(), setup.lockedCharacter(), MAX_ROOM_PLAYERS, false, policy, chatMode);
     }
 
     private static void requireCredentials(RoomAccessPolicy policy, RoomPassword password) {
@@ -1239,6 +1254,7 @@ public final class RaceSession implements AutoCloseable {
         private volatile boolean stopped;
         private int advertisedZone;
         private int advertisedAct;
+        private String advertisedChatMode;
 
         MasterLink(MasterClient client, String roomId, JdkRaceHostServer server, RoundSetup setup) {
             this.client = client;
@@ -1279,6 +1295,10 @@ public final class RaceSession implements AutoCloseable {
                 client.sendControl(new ControlMessage.RoomTrackUpdate(roomId, current.zone(), current.act()));
                 advertisedZone = current.zone();
                 advertisedAct = current.act();
+            }
+            if (!Objects.equals(current.chatMode(), advertisedChatMode)) {
+                client.sendControl(new ControlMessage.RoomChatModeUpdate(roomId, current.chatMode()));
+                advertisedChatMode = current.chatMode();
             }
             client.heartbeat(roomId, server.room().playerCount());
         }

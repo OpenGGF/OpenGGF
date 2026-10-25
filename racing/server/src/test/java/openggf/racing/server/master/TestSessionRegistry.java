@@ -9,6 +9,25 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestSessionRegistry {
+    @Test
+    void relayLimitPreservesDirectChoiceAndSurvivesTrackUpdates() throws Exception {
+        var full = new ControlMessage.RoomDescriptor("Chat", "s3k", 0, 0,
+                "OPEN", null, 8, false, "FULL_CHAT");
+        var relay = registry.create(full, "RELAY", "relay-owner", "relay-address", 0, "f");
+        var direct = registry.create(full, "DIRECT", "direct-owner", "direct-address", 1, "f");
+        assertEquals("QUICK_CHAT", relay.descriptor().chatMode());
+        assertEquals("FULL_CHAT", direct.descriptor().chatMode());
+        assertTrue(registry.updateTrack(relay.roomId(), "relay-owner", 1, 0));
+        assertEquals("QUICK_CHAT", registry.find(relay.roomId()).orElseThrow().descriptor().chatMode());
+        assertTrue(registry.updateChatMode(direct.roomId(), "direct-owner", "OFF"));
+        assertTrue(!registry.updateChatMode(direct.roomId(), "intruder", "FULL_CHAT"));
+        assertTrue(!registry.updateChatMode(direct.roomId(), "direct-owner", "unknown"));
+        registry.heartbeat(direct.roomId(), 3);
+        assertEquals("OFF", registry.find(direct.roomId()).orElseThrow().descriptor().chatMode());
+        assertTrue(registry.updateChatMode(relay.roomId(), "relay-owner", "FULL_CHAT"));
+        assertEquals("QUICK_CHAT", registry.find(relay.roomId()).orElseThrow().descriptor().chatMode());
+    }
+
     private long now = 1_000_000;
     private SessionRegistry registry;
 
@@ -136,14 +155,19 @@ class TestSessionRegistry {
         com.openggf.net.protocol.RoomAccessPolicy privatePolicy = new com.openggf.net.protocol.RoomAccessPolicy(
                 com.openggf.net.protocol.RoomAccessPolicy.Mode.PRIVATE, false);
         assertTrue(registry.updateAccess(room.roomId(), lease, privatePolicy, 4, 7));
+        assertTrue(registry.updateChatMode(room.roomId(), "fp", "OFF"));
         assertTrue(registry.updateTrack(room.roomId(), "fp", 1, 1));
         SessionRegistry.RoomEntry updated = registry.find(room.roomId()).orElseThrow();
         assertEquals(privatePolicy, updated.descriptor().accessPolicy());
+        assertEquals("OFF", updated.descriptor().chatMode());
+        assertEquals(lease, updated.lease());
         assertEquals(room.instanceId(), updated.instanceId());
         assertEquals(4, updated.accessEpoch());
         assertEquals(7, updated.inviteEpoch());
         assertTrue(registry.listed(null).isEmpty());
         assertEquals(1, registry.list(null).size());
+        assertTrue(registry.updateAccess(room.roomId(), lease, privatePolicy, 5, 8));
+        assertEquals("OFF", registry.find(room.roomId()).orElseThrow().descriptor().chatMode());
     }
 
     @Test

@@ -4,7 +4,9 @@ import com.openggf.net.identity.PlayerIdentity;
 import com.openggf.net.protocol.ControlJsonCodec;
 import com.openggf.net.identity.DisplayNames;
 import com.openggf.net.identity.PlayerAppearance;
+import com.openggf.net.protocol.ChatMode;
 import com.openggf.net.protocol.ControlMessage;
+import com.openggf.net.protocol.QuickChatPhrase;
 import com.openggf.net.protocol.GhostPackets;
 import com.openggf.net.protocol.Protocol;
 import com.openggf.net.protocol.ProtocolViolationException;
@@ -86,6 +88,7 @@ public final class RoomHost {
     private final GhostHub hub;
     private final LobbyPresenceRelay lobby;
     private ReadyRules readyRule = ReadyRules.DEFAULT_BY_SIZE;
+    private ChatMode chatMode;
     // Whether the owner's round start currently waits for everyone, as last told to the room.
     private boolean readyRequiredAnnounced = true;
     private final HostRoundEngine round;
@@ -159,6 +162,7 @@ public final class RoomHost {
         this.hostIdentity = hostIdentity;
         this.wallClockMillis = wallClockMillis;
         this.hooks = hooks == null ? RoomHostHooks.none() : hooks;
+        chatMode = ChatMode.parse(config.chatMode()).intersect(this.hooks.chatModeLimit());
         roomGameId = config.gameId();
         roomZone = config.zone();
         roomAct = config.act();
@@ -429,7 +433,7 @@ public final class RoomHost {
     public ControlMessage.RoomDescriptor descriptor() {
         return new ControlMessage.RoomDescriptor(config.roomName(), roomGameId,
                 roomZone, roomAct, config.characterPolicy(),
-                config.lockedCharacter(), config.maxPlayers(), config.verified(), accessPolicy);
+                config.lockedCharacter(), config.maxPlayers(), config.verified(), accessPolicy, chatMode.name());
     }
 
     public void sendToSlot(int slot, ControlMessage message) {
@@ -790,6 +794,7 @@ public final class RoomHost {
                 new ControlMessage.JoinAccepted(member.token, slot, descriptor(),
                         round.snapshot())));
         send(member, accessState());
+        send(member, new ControlMessage.ChatModeState(chatMode.name()));
         round.sendVoteState(message -> send(member, message));
         send(member, new ControlMessage.RoomState(players()));
         publishPlayerChanges(member);
@@ -892,6 +897,18 @@ public final class RoomHost {
         }
     }
 
+    private void handleSetChatMode(Member member, ControlMessage.SetChatMode update) {
+        ChatMode requested = ChatMode.parse(update.mode());
+        if (!isOwner(member) || !betweenRounds() || requested == null) {
+            return;
+        }
+        ChatMode effective = requested.intersect(hooks.chatModeLimit());
+        if (effective != chatMode) {
+            chatMode = effective;
+            broadcast(new ControlMessage.ChatModeState(chatMode.name()));
+        }
+    }
+
     private boolean isOwner(Member member) {
         String owner = hooks.roundOwnerFingerprint() != null
                 ? hooks.roundOwnerFingerprint() : hostIdentity.fingerprint();
@@ -964,6 +981,8 @@ public final class RoomHost {
                     ControlMessage.InviteOperation.SET_SHARING, sharing.membersCanInvite(), 0);
             case ControlMessage.RoomPasswordChange change -> changePassword(member, change.password());
             case ControlMessage.Chat chat -> handleChat(member, chat, now);
+            case ControlMessage.QuickChat quick -> handleQuickChat(member, quick, now);
+            case ControlMessage.SetChatMode mode -> handleSetChatMode(member, mode);
             case ControlMessage.UpdateProfile update -> handleProfileUpdate(member, update, now);
             case ControlMessage.SetReady ready -> handleSetReady(member, ready, now);
             case ControlMessage.SetReadyRule rule -> handleSetReadyRule(member, rule);
@@ -1039,23 +1058,40 @@ public final class RoomHost {
     }
 
     private void handleChat(Member member, ControlMessage.Chat chat, long now) {
-        if (hooks.chatGate() != null
-                && !hooks.chatGate().mayChat(member.fingerprint, member.memberSinceMillis)) {
+        if (!chatMode.allowsText()) {
             return;
         }
-        if (member.lastChatMillis != Long.MIN_VALUE
-                && now - member.lastChatMillis < Protocol.CHAT_MIN_INTERVAL_MILLIS) {
-            return;
-        }
-        member.lastChatMillis = now;
         String text = chat.text() == null ? "" : chat.text();
-        if (text.isBlank()) {
+        if (text.isBlank() || !admitChat(member, now)) {
             return;
         }
         if (text.length() > Protocol.MAX_CHAT_CHARS) {
             text = text.substring(0, Protocol.MAX_CHAT_CHARS);
         }
         broadcast(new ControlMessage.ChatBroadcast(member.slot, member.displayName, text));
+    }
+
+    private void handleQuickChat(Member member, ControlMessage.QuickChat quick, long now) {
+        QuickChatPhrase phrase = QuickChatPhrase.parse(quick.phraseId());
+        if (!chatMode.allowsQuickChat() || phrase == null || !admitChat(member, now)) {
+            return;
+        }
+        broadcast(new ControlMessage.QuickChatBroadcast(member.slot, member.displayName,
+                phrase.name(), roomGameId, roomZone, roomAct));
+    }
+
+    /** Both player message kinds spend the same per-member cooldown and trust allowance. */
+    private boolean admitChat(Member member, long now) {
+        if (hooks.chatGate() != null
+                && !hooks.chatGate().mayChat(member.fingerprint, member.memberSinceMillis)) {
+            return false;
+        }
+        if (member.lastChatMillis != Long.MIN_VALUE
+                && now - member.lastChatMillis < Protocol.CHAT_MIN_INTERVAL_MILLIS) {
+            return false;
+        }
+        member.lastChatMillis = now;
+        return true;
     }
 
     private void startAttempt(Member member, int attemptId) {

@@ -22,6 +22,41 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestRoomBroker {
+    @Test
+    void browserShowsEffectiveRelayLimitAndOnlyDirectHostCanAdvertiseChanges(
+            @TempDir Path hostDir, @TempDir Path guestDir) throws Exception {
+        FakeConnection host = new FakeConnection();
+        String token = admit(host, hostDir, "HOST");
+        String fingerprint = PlayerIdentity.loadOrCreate(hostDir).fingerprint();
+        establish(fingerprint);
+        var descriptor = new ControlMessage.RoomDescriptor("Communication", "s3k", 0, 0,
+                "OPEN", null, 8, false, "FULL_CHAT");
+        broker.onText(host, ControlCodec.encode(token, new ControlMessage.RoomCreate(
+                descriptor, "RELAY", 0, "0.6:cafe")));
+        String relayId = ((ControlMessage.RoomCreated) lastMessage(host)).roomId();
+        assertEquals("QUICK_CHAT", registry.find(relayId).orElseThrow().descriptor().chatMode());
+        broker.onText(host, ControlCodec.encode(token,
+                new ControlMessage.RoomChatModeUpdate(relayId, "FULL_CHAT")));
+        assertEquals("QUICK_CHAT", registry.find(relayId).orElseThrow().descriptor().chatMode());
+
+        broker.onText(host, ControlCodec.encode(token, new ControlMessage.RoomCreate(
+                descriptor, "DIRECT", 27888, "0.6:cafe", List.of(), DIRECT_CERT_PIN)));
+        String directId = ((ControlMessage.RoomCreated) lastMessage(host)).roomId();
+        FakeConnection guest = new FakeConnection();
+        String guestToken = admit(guest, guestDir, "GUEST");
+        broker.onText(guest, ControlCodec.encode(guestToken,
+                new ControlMessage.RoomChatModeUpdate(directId, "OFF")));
+        assertEquals("FULL_CHAT", registry.find(directId).orElseThrow().descriptor().chatMode());
+        broker.onText(host, ControlCodec.encode(token,
+                new ControlMessage.RoomChatModeUpdate(directId, "OFF")));
+        broker.onText(host, ControlCodec.encode(token, new ControlMessage.RoomListRequest(null, 0)));
+        var listed = ((ControlMessage.RoomListResult) lastMessage(host)).rooms();
+        assertEquals("OFF", listed.stream().filter(room -> room.roomId().equals(directId))
+                .findFirst().orElseThrow().chatMode());
+        assertEquals("QUICK_CHAT", listed.stream().filter(room -> room.roomId().equals(relayId))
+                .findFirst().orElseThrow().chatMode());
+    }
+
     private static final String DIRECT_CERT_PIN = "ab".repeat(32);
     static final class FakeConnection implements HubConnection, com.openggf.net.hub.HandshakeTransport {
         @Override public String authenticationBinding() { return com.openggf.net.protocol.AuthenticationTranscript.LOCAL_PLAINTEXT; }
@@ -342,7 +377,7 @@ class TestRoomBroker {
     }
 
     @Test
-    void unrelatedSameIdentityCannotHeartbeatOrChangeTrack(@TempDir Path hostDir) throws Exception {
+    void unrelatedSameIdentityCannotHeartbeatOrChangeTrackOrChat(@TempDir Path hostDir) throws Exception {
         FakeConnection owner = new FakeConnection();
         String ownerToken = admit(owner, hostDir, "HOST");
         establish(PlayerIdentity.loadOrCreate(hostDir).fingerprint());
@@ -355,6 +390,7 @@ class TestRoomBroker {
         String unrelatedToken = admit(unrelated, hostDir, "HOST");
         now += 1_000;
         broker.onText(unrelated, ControlCodec.encode(unrelatedToken, new ControlMessage.Heartbeat(roomId, 8)));
+        broker.onText(unrelated, ControlCodec.encode(unrelatedToken, new ControlMessage.RoomChatModeUpdate(roomId, "OFF")));
         broker.onText(unrelated, ControlCodec.encode(unrelatedToken, new ControlMessage.RoomTrackUpdate(roomId, 0, 1)));
         assertEquals(original, registry.find(roomId).orElseThrow());
     }

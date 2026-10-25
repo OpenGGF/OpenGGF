@@ -535,6 +535,7 @@ public final class RoomBroker {
             case ControlMessage.Heartbeat heartbeat -> heartbeat(member, heartbeat);
             case ControlMessage.RoomLeave leave -> leaveRoom(member, leave.roomId());
             case ControlMessage.RoomTrackUpdate update -> updateTrack(member, update);
+            case ControlMessage.RoomChatModeUpdate update -> updateChatMode(member, update);
             default -> strike(member, "illegal broker message");
         }
     }
@@ -763,7 +764,7 @@ public final class RoomBroker {
             summaries.add(new ControlMessage.RoomSummary(room.roomId(), descriptor.name(),
                     descriptor.gameId(), descriptor.zone(), descriptor.act(),
                     descriptor.characterPolicy(), room.playerCount(), descriptor.maxPlayers(),
-                    room.routing(), descriptor.verified()));
+                    room.routing(), descriptor.verified(), descriptor.chatMode()));
         }
         send(member, new ControlMessage.RoomListResult(summaries, page,
                 registry.totalPagesForCount(all.size())), requestId);
@@ -1026,12 +1027,22 @@ public final class RoomBroker {
     private static boolean validDescriptorFields(ControlMessage.RoomDescriptor descriptor,
                                                  String determinismFingerprint) {
         return boundedField(descriptor.name(), 64)
+                && com.openggf.net.protocol.ChatMode.parse(descriptor.chatMode()) != null
                 && boundedField(descriptor.gameId(), 32)
                 && ("OPEN".equals(descriptor.characterPolicy())
                 || "LOCKED".equals(descriptor.characterPolicy()))
                 && (!"LOCKED".equals(descriptor.characterPolicy())
                 || boundedField(descriptor.lockedCharacter(), 32))
                 && boundedField(determinismFingerprint, 128);
+    }
+
+    private void updateChatMode(Member member, ControlMessage.RoomChatModeUpdate update) {
+        SessionRegistry.RoomEntry room = registry.find(update.roomId()).orElse(null);
+        // Relay descriptors come from RelayRoomManager; a creator cannot advertise a mode
+        // that differs from the public host's enforced policy.
+        if (room != null && member.lease.equals(room.lease()) && "DIRECT".equals(room.routing())) {
+            registry.updateChatMode(update.roomId(), member.fingerprint, update.mode());
+        }
     }
 
     private static boolean boundedField(String value, int maxBytes) {

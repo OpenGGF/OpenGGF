@@ -1,6 +1,9 @@
 package com.openggf.mods.scene.host;
 
 import com.openggf.control.InputActionMasks;
+import com.openggf.configuration.SonicConfiguration;
+import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.game.GameServices;
 import com.openggf.audio.StreamedMusicPort;
 import com.openggf.control.InputHandler;
 import com.openggf.control.LogicalInputSnapshot;
@@ -40,6 +43,19 @@ import org.lwjgl.glfw.GLFW;
  */
 public final class ModSceneHost {
     private static final Logger LOG = Logger.getLogger(ModSceneHost.class.getName());
+
+    private final java.util.function.Supplier<SonicConfigurationService> configuration;
+
+    public ModSceneHost() {
+        // Lazy: opening a headless scene need not initialise global preferences.
+        configuration = GameServices::configuration;
+    }
+
+    /** Isolated hosts can use the same preference bridge without mutating the global singleton. */
+    ModSceneHost(SonicConfigurationService configuration) {
+        var preferences = java.util.Objects.requireNonNull(configuration, "configuration");
+        this.configuration = () -> preferences;
+    }
 
     private final SceneRenderer renderer = new SceneRenderer();
     private SceneFontAtlas font;
@@ -578,6 +594,14 @@ public final class ModSceneHost {
         @Override public long focusLossGeneration() { return focusLossGeneration; }
 
         @Override public PhysicalInput physicalInput() { return physical; }
+
+        @Override public boolean censorMultiplayerProfanity() {
+            return configuration.get().getBoolean(SonicConfiguration.MULTIPLAYER_CENSOR_PROFANITY);
+        }
+
+        @Override public boolean multiplayerChatDisabled() {
+            return configuration.get().getBoolean(SonicConfiguration.MULTIPLAYER_CHAT_DISABLED);
+        }
 
         @Override public SceneNetwork network() { return network; }
 

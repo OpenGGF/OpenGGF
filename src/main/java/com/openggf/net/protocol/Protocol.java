@@ -6,8 +6,9 @@ public final class Protocol {
     // 4: Hello carries the player's appearance; UpdateProfile and PlayerLook added.
     // 5: ready (SetReady/PlayerReady/ReadyReset, SetReadyRule/ReadyRule) and lobby presence
     //    (binary lobby frames and aggregates between rounds).
-    // 6: private admission, invitation controls and correlated master requests.
-    public static final int VERSION = 6;
+    // 6: room chat modes, quick chat and explicit directory chat-mode metadata.
+    // 7: private admission, invitation controls and correlated master requests.
+    public static final int VERSION = 7;
     // A full 256-player roster with bounded labels must fit in one control frame.
     public static final int MAX_CONTROL_BYTES = 64 * 1024;
     public static final int MAX_BINARY_BYTES = 4096;

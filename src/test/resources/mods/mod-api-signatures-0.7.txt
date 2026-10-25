@@ -1008,6 +1008,8 @@ CF-ANNOTATION TYPE com.openggf.mods.ui.TextLayout$Alignment visible @com.openggf
 CF-ANNOTATION TYPE com.openggf.mods.ui.TextLayout$Metrics visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.ui.TextLayout$Metrics visible @java.lang.FunctionalInterface
 CF-ANNOTATION TYPE com.openggf.mods.ui.UiPrimitives visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.net.chat.EnglishQuickChat visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.net.chat.QuickChatContent visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.client.ClientRaceSession visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.client.ClientRaceSession$Phase visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.client.DirectJoinAddress visible @com.openggf.game.ModApi
@@ -1068,6 +1070,7 @@ CF-ANNOTATION TYPE com.openggf.net.identity.DisplayNames visible @com.openggf.ga
 CF-ANNOTATION TYPE com.openggf.net.identity.PlayerAppearance visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.identity.PlayerAppearance$Entry visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.identity.PlayerIdentity visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.net.protocol.ChatMode visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlJsonCodec visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlJsonCodec$Decoded visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage visible @com.openggf.game.ModApi
@@ -1077,6 +1080,7 @@ CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$AttemptStart visible 
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$AuthProof visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$Chat visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$ChatBroadcast visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$ChatModeState visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$Heartbeat visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$Hello visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$InviteOperation visible @com.openggf.game.ModApi
@@ -1093,6 +1097,8 @@ CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$PlayerUpsert visible 
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$Pong visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$PowChallenge visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$PowSolution visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$QuickChat visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$QuickChatBroadcast visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RankUpdate visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$ReadyReset visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$ReadyRule visible @com.openggf.game.ModApi
@@ -1104,6 +1110,7 @@ CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RelayGuestText visibl
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RoomAccessChallenge visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RoomAccessState visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RoomAccessSubmit visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RoomChatModeUpdate visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RoomCreate visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RoomCreateRejected visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RoomCreated visible @com.openggf.game.ModApi
@@ -1134,6 +1141,7 @@ CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RoundEnd visible @com
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RoundSnapshot visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$RoundStart visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$SelectCharacter visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$SetChatMode visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$SetReady visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$SetReadyRule visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ControlMessage$StandingsDelta visible @com.openggf.game.ModApi
@@ -1155,6 +1163,7 @@ CF-ANNOTATION TYPE com.openggf.net.protocol.GhostPackets$RelayGuestBinary visibl
 CF-ANNOTATION TYPE com.openggf.net.protocol.GhostPackets$RosterEntry visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.Protocol visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ProtocolViolationException visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.net.protocol.QuickChatPhrase visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.ReadyRules visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.RoomAccessPolicy visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.net.protocol.RoomAccessPolicy$Mode visible @com.openggf.game.ModApi
@@ -1944,6 +1953,7 @@ CONSTRUCTOR com.openggf.mods.ui.FocusRegions public  <init>()
 CONSTRUCTOR com.openggf.mods.ui.FocusRegions$Region public  <init>(java.lang.String,int,int,int,int,boolean)
 CONSTRUCTOR com.openggf.mods.ui.LevelOverlayCanvas public  <init>(com.openggf.graphics.GraphicsManager,int,int)
 CONSTRUCTOR com.openggf.mods.ui.SceneCanvasTransform public  <init>(com.openggf.mods.scene.SceneCanvas,int,int,float)
+CONSTRUCTOR com.openggf.net.chat.QuickChatContent public  <init>(com.openggf.net.protocol.QuickChatPhrase,java.lang.String,int,int)
 CONSTRUCTOR com.openggf.net.client.ClientRaceSession public  <init>(java.util.function.LongSupplier)
 CONSTRUCTOR com.openggf.net.client.DirectJoinAddress public  <init>(java.net.URI,java.lang.String,java.lang.String)
 CONSTRUCTOR com.openggf.net.client.GhostStreamPublisher public  <init>(com.openggf.net.client.GhostStreamPublisher$BinarySender)
@@ -1977,10 +1987,13 @@ CONSTRUCTOR com.openggf.net.hub.RoomHostConfig public  <init>(java.lang.String,j
 CONSTRUCTOR com.openggf.net.hub.RoomHostConfig public  <init>(java.lang.String,java.lang.String,int,int,java.lang.String,java.lang.String,int,java.lang.String,java.util.List<java.lang.String>)
 CONSTRUCTOR com.openggf.net.hub.RoomHostConfig public  <init>(java.lang.String,java.lang.String,int,int,java.lang.String,java.lang.String,int,java.lang.String,java.util.List<java.lang.String>,boolean)
 CONSTRUCTOR com.openggf.net.hub.RoomHostConfig public  <init>(java.lang.String,java.lang.String,int,int,java.lang.String,java.lang.String,int,java.lang.String,java.util.List<java.lang.String>,boolean,com.openggf.net.protocol.RoomAccessPolicy,com.openggf.net.protocol.RoomPassword,java.lang.String)
+CONSTRUCTOR com.openggf.net.hub.RoomHostConfig public  <init>(java.lang.String,java.lang.String,int,int,java.lang.String,java.lang.String,int,java.lang.String,java.util.List<java.lang.String>,boolean,com.openggf.net.protocol.RoomAccessPolicy,com.openggf.net.protocol.RoomPassword,java.lang.String,java.lang.String)
+CONSTRUCTOR com.openggf.net.hub.RoomHostConfig public  <init>(java.lang.String,java.lang.String,int,int,java.lang.String,java.lang.String,int,java.lang.String,java.util.List<java.lang.String>,boolean,java.lang.String)
 CONSTRUCTOR com.openggf.net.hub.RoomHostHooks public  <init>(boolean,com.openggf.net.hub.RoomHostHooks$ChatGate,com.openggf.net.hub.RoomHostHooks$RoundOutcomeListener,java.lang.String,java.util.function.Predicate<java.lang.String>)
 CONSTRUCTOR com.openggf.net.hub.RoomHostHooks public  <init>(boolean,com.openggf.net.hub.RoomHostHooks$ChatGate,com.openggf.net.hub.RoomHostHooks$RoundOutcomeListener,java.lang.String,java.util.function.Predicate<java.lang.String>,java.util.function.Predicate<java.lang.String>)
 CONSTRUCTOR com.openggf.net.hub.RoomHostHooks public  <init>(boolean,com.openggf.net.hub.RoomHostHooks$ChatGate,com.openggf.net.hub.RoomHostHooks$RoundOutcomeListener,java.lang.String,java.util.function.Predicate<java.lang.String>,java.util.function.Predicate<java.lang.String>,java.lang.String,com.openggf.net.hub.RoomHostHooks$VerificationHooks)
 CONSTRUCTOR com.openggf.net.hub.RoomHostHooks public  <init>(boolean,com.openggf.net.hub.RoomHostHooks$ChatGate,com.openggf.net.hub.RoomHostHooks$RoundOutcomeListener,java.lang.String,java.util.function.Predicate<java.lang.String>,java.util.function.Predicate<java.lang.String>,java.lang.String,com.openggf.net.hub.RoomHostHooks$VerificationHooks,com.openggf.net.hub.RoomHostHooks$ProfileListener)
+CONSTRUCTOR com.openggf.net.hub.RoomHostHooks public  <init>(boolean,com.openggf.net.hub.RoomHostHooks$ChatGate,com.openggf.net.hub.RoomHostHooks$RoundOutcomeListener,java.lang.String,java.util.function.Predicate<java.lang.String>,java.util.function.Predicate<java.lang.String>,java.lang.String,com.openggf.net.hub.RoomHostHooks$VerificationHooks,com.openggf.net.hub.RoomHostHooks$ProfileListener,com.openggf.net.protocol.ChatMode)
 CONSTRUCTOR com.openggf.net.hub.TrackValidationProfile public  <init>(int,int,int,int)
 CONSTRUCTOR com.openggf.net.identity.PlayerAppearance public  <init>(int,java.util.List<com.openggf.net.identity.PlayerAppearance$Entry>)
 CONSTRUCTOR com.openggf.net.identity.PlayerAppearance$Entry public  <init>(int,int)
@@ -1993,6 +2006,7 @@ CONSTRUCTOR com.openggf.net.protocol.ControlMessage$AttemptStart public  <init>(
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$AuthProof public  <init>(java.lang.String)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$Chat public  <init>(java.lang.String)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$ChatBroadcast public  <init>(int,java.lang.String,java.lang.String)
+CONSTRUCTOR com.openggf.net.protocol.ControlMessage$ChatModeState public  <init>(java.lang.String)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$Heartbeat public  <init>(java.lang.String,int)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$Hello public  <init>(int,java.lang.String,java.lang.String,java.lang.String,java.lang.String)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$JoinAccepted public  <init>(java.lang.String,int,com.openggf.net.protocol.ControlMessage$RoomDescriptor,com.openggf.net.protocol.ControlMessage$RoundSnapshot)
@@ -2009,6 +2023,8 @@ CONSTRUCTOR com.openggf.net.protocol.ControlMessage$PlayerUpsert public  <init>(
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$Pong public  <init>(long,long)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$PowChallenge public  <init>(java.lang.String,java.lang.String,int)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$PowSolution public  <init>(java.lang.String,long)
+CONSTRUCTOR com.openggf.net.protocol.ControlMessage$QuickChat public  <init>(java.lang.String)
+CONSTRUCTOR com.openggf.net.protocol.ControlMessage$QuickChatBroadcast public  <init>(int,java.lang.String,java.lang.String,java.lang.String,int,int)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RankUpdate public  <init>(int,int)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$ReadyReset public  <init>(boolean)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$ReadyRule public  <init>(java.lang.String,boolean)
@@ -2020,6 +2036,7 @@ CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RelayGuestText public  <init
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomAccessChallenge public  <init>(java.lang.String,java.lang.String,long,com.openggf.net.protocol.RoomAccessPolicy)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomAccessState public  <init>(java.lang.String,com.openggf.net.protocol.RoomAccessPolicy,long,long)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomAccessSubmit public  <init>(java.lang.String,com.openggf.net.protocol.RoomPassword)
+CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomChatModeUpdate public  <init>(java.lang.String,java.lang.String)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomCreate public  <init>(com.openggf.net.protocol.ControlMessage$RoomDescriptor,java.lang.String,int,java.lang.String)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomCreate public  <init>(com.openggf.net.protocol.ControlMessage$RoomDescriptor,java.lang.String,int,java.lang.String,java.util.List<java.lang.String>)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomCreate public  <init>(com.openggf.net.protocol.ControlMessage$RoomDescriptor,java.lang.String,int,java.lang.String,java.util.List<java.lang.String>,java.lang.String)
@@ -2029,6 +2046,8 @@ CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomCreated public  <init>(j
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomCreated public  <init>(java.lang.String,java.lang.String,long,long)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomDescriptor public  <init>(java.lang.String,java.lang.String,int,int,java.lang.String,java.lang.String,int,boolean)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomDescriptor public  <init>(java.lang.String,java.lang.String,int,int,java.lang.String,java.lang.String,int,boolean,com.openggf.net.protocol.RoomAccessPolicy)
+CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomDescriptor public  <init>(java.lang.String,java.lang.String,int,int,java.lang.String,java.lang.String,int,boolean,com.openggf.net.protocol.RoomAccessPolicy,java.lang.String)
+CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomDescriptor public  <init>(java.lang.String,java.lang.String,int,int,java.lang.String,java.lang.String,int,boolean,java.lang.String)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomInvite public  <init>(java.lang.String,java.lang.String,long,long,long)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomInvite public  <init>(java.lang.String,java.lang.String,long,long,long,long)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomInviteControl public  <init>(java.lang.String,java.lang.String,long,long,com.openggf.net.protocol.ControlMessage$InviteOperation,boolean)
@@ -2052,6 +2071,7 @@ CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomPasswordChange public  <
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomPasswordChanged public  <init>(long)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomState public  <init>(java.util.List<com.openggf.net.protocol.ControlMessage$PlayerInfo>)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomSummary public  <init>(java.lang.String,java.lang.String,java.lang.String,int,int,java.lang.String,int,int,java.lang.String,boolean)
+CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomSummary public  <init>(java.lang.String,java.lang.String,java.lang.String,int,int,java.lang.String,int,int,java.lang.String,boolean,java.lang.String)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoomTrackUpdate public  <init>(java.lang.String,int,int)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoundConfig public  <init>(java.lang.String,int,int,int,java.lang.String,java.lang.String)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoundConfigure public  <init>(com.openggf.net.protocol.ControlMessage$RoundConfig)
@@ -2059,6 +2079,7 @@ CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoundEnd public  <init>(java
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoundSnapshot public  <init>(java.lang.String,com.openggf.net.protocol.ControlMessage$RoundConfig,long,long,java.util.List<com.openggf.net.protocol.ControlMessage$StandingsRow>)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$RoundStart public  <init>(com.openggf.net.protocol.ControlMessage$RoundConfig,long,long)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$SelectCharacter public  <init>(java.lang.String)
+CONSTRUCTOR com.openggf.net.protocol.ControlMessage$SetChatMode public  <init>(java.lang.String)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$SetReady public  <init>(boolean)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$SetReadyRule public  <init>(java.lang.String)
 CONSTRUCTOR com.openggf.net.protocol.ControlMessage$StandingsDelta public  <init>(java.util.List<com.openggf.net.protocol.ControlMessage$StandingsRow>)
@@ -2526,6 +2547,8 @@ FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openg
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration LOAD_TIME_SIMULATION
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration MAIN_CHARACTER_CODE
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration MASTER_TITLE_SCREEN_ON_STARTUP
+FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration MULTIPLAYER_CENSOR_PROFANITY
+FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration MULTIPLAYER_CHAT_DISABLED
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration NEXT_ACT
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration NEXT_ZONE
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration P1_A
@@ -3693,6 +3716,9 @@ FIELD com.openggf.net.identity.DisplayNames public,static,final int MAX_UTF8_BYT
 FIELD com.openggf.net.identity.PlayerAppearance public,static,final com.openggf.net.identity.PlayerAppearance STOCK
 FIELD com.openggf.net.identity.PlayerAppearance public,static,final int MAX_ENCODED_LENGTH
 FIELD com.openggf.net.identity.PlayerAppearance public,static,final int NO_BASE_COLOUR
+FIELD com.openggf.net.protocol.ChatMode public,static,final com.openggf.net.protocol.ChatMode FULL_CHAT
+FIELD com.openggf.net.protocol.ChatMode public,static,final com.openggf.net.protocol.ChatMode OFF
+FIELD com.openggf.net.protocol.ChatMode public,static,final com.openggf.net.protocol.ChatMode QUICK_CHAT
 FIELD com.openggf.net.protocol.ControlMessage$InviteOperation public,static,final com.openggf.net.protocol.ControlMessage$InviteOperation ACCESS_CHANGED
 FIELD com.openggf.net.protocol.ControlMessage$InviteOperation public,static,final com.openggf.net.protocol.ControlMessage$InviteOperation FETCH
 FIELD com.openggf.net.protocol.ControlMessage$InviteOperation public,static,final com.openggf.net.protocol.ControlMessage$InviteOperation ROTATE
@@ -3719,6 +3745,14 @@ FIELD com.openggf.net.protocol.Protocol public,static,final int VERSION
 FIELD com.openggf.net.protocol.Protocol public,static,final long CHAT_MIN_INTERVAL_MILLIS
 FIELD com.openggf.net.protocol.Protocol public,static,final long PROFILE_MIN_INTERVAL_MILLIS
 FIELD com.openggf.net.protocol.Protocol public,static,final long READY_MIN_INTERVAL_MILLIS
+FIELD com.openggf.net.protocol.QuickChatPhrase public,static,final com.openggf.net.protocol.QuickChatPhrase BRUTAL
+FIELD com.openggf.net.protocol.QuickChatPhrase public,static,final com.openggf.net.protocol.QuickChatPhrase GOOD_LUCK
+FIELD com.openggf.net.protocol.QuickChatPhrase public,static,final com.openggf.net.protocol.QuickChatPhrase KNOW_THE_WAY
+FIELD com.openggf.net.protocol.QuickChatPhrase public,static,final com.openggf.net.protocol.QuickChatPhrase THATS_NO_GOOD
+FIELD com.openggf.net.protocol.QuickChatPhrase public,static,final com.openggf.net.protocol.QuickChatPhrase THIS_IS_THE_WAY
+FIELD com.openggf.net.protocol.QuickChatPhrase public,static,final com.openggf.net.protocol.QuickChatPhrase THIS_IS_ZONE
+FIELD com.openggf.net.protocol.QuickChatPhrase public,static,final com.openggf.net.protocol.QuickChatPhrase TOO_SLOW
+FIELD com.openggf.net.protocol.QuickChatPhrase public,static,final com.openggf.net.protocol.QuickChatPhrase WELL_PLAYED
 FIELD com.openggf.net.protocol.ReadyRules public,static,final com.openggf.net.protocol.ReadyRules AUTO
 FIELD com.openggf.net.protocol.ReadyRules public,static,final com.openggf.net.protocol.ReadyRules DEFAULT_BY_SIZE
 FIELD com.openggf.net.protocol.ReadyRules public,static,final com.openggf.net.protocol.ReadyRules REQUIRED
@@ -4234,6 +4268,7 @@ INTERFACE com.openggf.net.protocol.ControlMessage$AttemptStart com.openggf.net.p
 INTERFACE com.openggf.net.protocol.ControlMessage$AuthProof com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$Chat com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$ChatBroadcast com.openggf.net.protocol.ControlMessage
+INTERFACE com.openggf.net.protocol.ControlMessage$ChatModeState com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$Heartbeat com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$Hello com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$JoinAccepted com.openggf.net.protocol.ControlMessage
@@ -4248,6 +4283,8 @@ INTERFACE com.openggf.net.protocol.ControlMessage$PlayerUpsert com.openggf.net.p
 INTERFACE com.openggf.net.protocol.ControlMessage$Pong com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$PowChallenge com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$PowSolution com.openggf.net.protocol.ControlMessage
+INTERFACE com.openggf.net.protocol.ControlMessage$QuickChat com.openggf.net.protocol.ControlMessage
+INTERFACE com.openggf.net.protocol.ControlMessage$QuickChatBroadcast com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$RankUpdate com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$ReadyReset com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$ReadyRule com.openggf.net.protocol.ControlMessage
@@ -4259,6 +4296,7 @@ INTERFACE com.openggf.net.protocol.ControlMessage$RelayGuestText com.openggf.net
 INTERFACE com.openggf.net.protocol.ControlMessage$RoomAccessChallenge com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$RoomAccessState com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$RoomAccessSubmit com.openggf.net.protocol.ControlMessage
+INTERFACE com.openggf.net.protocol.ControlMessage$RoomChatModeUpdate com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$RoomCreate com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$RoomCreateRejected com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$RoomCreated com.openggf.net.protocol.ControlMessage
@@ -4285,6 +4323,7 @@ INTERFACE com.openggf.net.protocol.ControlMessage$RoundConfigure com.openggf.net
 INTERFACE com.openggf.net.protocol.ControlMessage$RoundEnd com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$RoundStart com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$SelectCharacter com.openggf.net.protocol.ControlMessage
+INTERFACE com.openggf.net.protocol.ControlMessage$SetChatMode com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$SetReady com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$SetReadyRule com.openggf.net.protocol.ControlMessage
 INTERFACE com.openggf.net.protocol.ControlMessage$StandingsDelta com.openggf.net.protocol.ControlMessage
@@ -12890,6 +12929,8 @@ METHOD com.openggf.mods.scene.SceneClipboard public,static  com.openggf.mods.sce
 METHOD com.openggf.mods.scene.SceneClipboard$Result public,static  com.openggf.mods.scene.SceneClipboard$Result valueOf(java.lang.String)
 METHOD com.openggf.mods.scene.SceneClipboard$Result public,static  com.openggf.mods.scene.SceneClipboard$Result[] values()
 METHOD com.openggf.mods.scene.SceneClipboard$Write public,abstract  com.openggf.mods.scene.SceneClipboard$Result result()
+METHOD com.openggf.mods.scene.SceneContext public  boolean censorMultiplayerProfanity()
+METHOD com.openggf.mods.scene.SceneContext public  boolean multiplayerChatDisabled()
 METHOD com.openggf.mods.scene.SceneContext public  com.openggf.control.PhysicalInput physicalInput()
 METHOD com.openggf.mods.scene.SceneContext public  com.openggf.mods.scene.SceneClipboard clipboard()
 METHOD com.openggf.mods.scene.SceneContext public  com.openggf.mods.scene.SceneGameplay gameplay()
@@ -13275,6 +13316,15 @@ METHOD com.openggf.mods.ui.TextLayout$Metrics public,abstract  int width(java.la
 METHOD com.openggf.mods.ui.UiPrimitives public,static  void frame(com.openggf.mods.ui.PixelCanvas,int,int,int,int,int)
 METHOD com.openggf.mods.ui.UiPrimitives public,static  void gradient(com.openggf.mods.ui.PixelCanvas,int,int,int,int,int,int)
 METHOD com.openggf.mods.ui.UiPrimitives public,static  void meter(com.openggf.mods.ui.PixelCanvas,int,int,int,int,int,int,int,int)
+METHOD com.openggf.net.chat.EnglishQuickChat public,static  java.lang.String text(com.openggf.net.protocol.QuickChatPhrase,java.lang.String)
+METHOD com.openggf.net.chat.QuickChatContent public  com.openggf.net.protocol.QuickChatPhrase phrase()
+METHOD com.openggf.net.chat.QuickChatContent public  int act()
+METHOD com.openggf.net.chat.QuickChatContent public  int zone()
+METHOD com.openggf.net.chat.QuickChatContent public  java.lang.String gameId()
+METHOD com.openggf.net.chat.QuickChatContent public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.net.chat.QuickChatContent public,final  int hashCode()
+METHOD com.openggf.net.chat.QuickChatContent public,final  java.lang.String toString()
+METHOD com.openggf.net.client.ClientRaceSession public  boolean chatDisabled()
 METHOD com.openggf.net.client.ClientRaceSession public  boolean isLocalReady()
 METHOD com.openggf.net.client.ClientRaceSession public  boolean isReady(int)
 METHOD com.openggf.net.client.ClientRaceSession public  boolean isWindowOpen()
@@ -13282,6 +13332,7 @@ METHOD com.openggf.net.client.ClientRaceSession public  boolean needsMoreClockSa
 METHOD com.openggf.net.client.ClientRaceSession public  boolean readyRequired()
 METHOD com.openggf.net.client.ClientRaceSession public  com.openggf.net.client.ClientRaceSession$Phase phase()
 METHOD com.openggf.net.client.ClientRaceSession public  com.openggf.net.identity.PlayerAppearance appearance(int)
+METHOD com.openggf.net.client.ClientRaceSession public  com.openggf.net.protocol.ChatMode chatMode()
 METHOD com.openggf.net.client.ClientRaceSession public  com.openggf.net.protocol.ControlMessage$RoomDescriptor room()
 METHOD com.openggf.net.client.ClientRaceSession public  com.openggf.net.protocol.ControlMessage$RoomInvite invite()
 METHOD com.openggf.net.client.ClientRaceSession public  com.openggf.net.protocol.ControlMessage$RoomInviteRequest beginInviteRequest()
@@ -13310,6 +13361,8 @@ METHOD com.openggf.net.client.ClientRaceSession public  long voteRemainingMillis
 METHOD com.openggf.net.client.ClientRaceSession public  void applyJoin(com.openggf.net.protocol.ControlMessage$JoinAccepted)
 METHOD com.openggf.net.client.ClientRaceSession public  void invalidateInvite()
 METHOD com.openggf.net.client.ClientRaceSession public  void onControl(com.openggf.net.protocol.ControlMessage)
+METHOD com.openggf.net.client.ClientRaceSession public  void setChatPreferences(boolean,boolean)
+METHOD com.openggf.net.client.ClientRaceSession public  void setQuickChatFormatter(java.util.function.Function<com.openggf.net.chat.QuickChatContent,java.lang.String>)
 METHOD com.openggf.net.client.ClientRaceSession$Phase public,static  com.openggf.net.client.ClientRaceSession$Phase valueOf(java.lang.String)
 METHOD com.openggf.net.client.ClientRaceSession$Phase public,static  com.openggf.net.client.ClientRaceSession$Phase[] values()
 METHOD com.openggf.net.client.DirectJoinAddress public  java.lang.String certificateSha256()
@@ -13580,6 +13633,7 @@ METHOD com.openggf.net.hub.RoomHostConfig public  int act()
 METHOD com.openggf.net.hub.RoomHostConfig public  int maxPlayers()
 METHOD com.openggf.net.hub.RoomHostConfig public  int zone()
 METHOD com.openggf.net.hub.RoomHostConfig public  java.lang.String characterPolicy()
+METHOD com.openggf.net.hub.RoomHostConfig public  java.lang.String chatMode()
 METHOD com.openggf.net.hub.RoomHostConfig public  java.lang.String gameId()
 METHOD com.openggf.net.hub.RoomHostConfig public  java.lang.String instanceId()
 METHOD com.openggf.net.hub.RoomHostConfig public  java.lang.String lockedCharacter()
@@ -13594,6 +13648,7 @@ METHOD com.openggf.net.hub.RoomHostHooks public  com.openggf.net.hub.RoomHostHoo
 METHOD com.openggf.net.hub.RoomHostHooks public  com.openggf.net.hub.RoomHostHooks$ProfileListener profileListener()
 METHOD com.openggf.net.hub.RoomHostHooks public  com.openggf.net.hub.RoomHostHooks$RoundOutcomeListener roundOutcomeListener()
 METHOD com.openggf.net.hub.RoomHostHooks public  com.openggf.net.hub.RoomHostHooks$VerificationHooks verificationHooks()
+METHOD com.openggf.net.hub.RoomHostHooks public  com.openggf.net.protocol.ChatMode chatModeLimit()
 METHOD com.openggf.net.hub.RoomHostHooks public  java.lang.String roomId()
 METHOD com.openggf.net.hub.RoomHostHooks public  java.lang.String roundOwnerFingerprint()
 METHOD com.openggf.net.hub.RoomHostHooks public  java.util.function.Predicate<java.lang.String> isNewPlayer()
@@ -13644,6 +13699,13 @@ METHOD com.openggf.net.identity.PlayerIdentity public,static  boolean verify(byt
 METHOD com.openggf.net.identity.PlayerIdentity public,static  java.lang.String fingerprintOf(byte[])
 METHOD com.openggf.net.identity.PlayerIdentity public,static,synchronized  com.openggf.net.identity.PlayerIdentity loadOrCreate(java.nio.file.Path) THROWS java.io.IOException,java.security.GeneralSecurityException
 METHOD com.openggf.net.identity.PlayerIdentity public,synchronized  long creationPowNonce(int) THROWS java.io.IOException
+METHOD com.openggf.net.protocol.ChatMode public  boolean allowsQuickChat()
+METHOD com.openggf.net.protocol.ChatMode public  boolean allowsText()
+METHOD com.openggf.net.protocol.ChatMode public  com.openggf.net.protocol.ChatMode intersect(com.openggf.net.protocol.ChatMode)
+METHOD com.openggf.net.protocol.ChatMode public  java.lang.String label()
+METHOD com.openggf.net.protocol.ChatMode public,static  com.openggf.net.protocol.ChatMode parse(java.lang.String)
+METHOD com.openggf.net.protocol.ChatMode public,static  com.openggf.net.protocol.ChatMode valueOf(java.lang.String)
+METHOD com.openggf.net.protocol.ChatMode public,static  com.openggf.net.protocol.ChatMode[] values()
 METHOD com.openggf.net.protocol.ControlJsonCodec public  com.openggf.net.protocol.ControlJsonCodec$Decoded decode(java.lang.String)
 METHOD com.openggf.net.protocol.ControlJsonCodec public  com.openggf.net.protocol.ControlJsonCodec$Decoded decode(java.lang.String,int)
 METHOD com.openggf.net.protocol.ControlJsonCodec public  com.openggf.net.protocol.ControlJsonCodec$Decoded decodeRoom(java.lang.String)
@@ -13687,6 +13749,10 @@ METHOD com.openggf.net.protocol.ControlMessage$ChatBroadcast public  java.lang.S
 METHOD com.openggf.net.protocol.ControlMessage$ChatBroadcast public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.net.protocol.ControlMessage$ChatBroadcast public,final  int hashCode()
 METHOD com.openggf.net.protocol.ControlMessage$ChatBroadcast public,final  java.lang.String toString()
+METHOD com.openggf.net.protocol.ControlMessage$ChatModeState public  java.lang.String mode()
+METHOD com.openggf.net.protocol.ControlMessage$ChatModeState public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.net.protocol.ControlMessage$ChatModeState public,final  int hashCode()
+METHOD com.openggf.net.protocol.ControlMessage$ChatModeState public,final  java.lang.String toString()
 METHOD com.openggf.net.protocol.ControlMessage$Heartbeat public  int playerCount()
 METHOD com.openggf.net.protocol.ControlMessage$Heartbeat public  java.lang.String roomId()
 METHOD com.openggf.net.protocol.ControlMessage$Heartbeat public,final  boolean equals(java.lang.Object)
@@ -13767,6 +13833,19 @@ METHOD com.openggf.net.protocol.ControlMessage$PowSolution public  long nonce()
 METHOD com.openggf.net.protocol.ControlMessage$PowSolution public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.net.protocol.ControlMessage$PowSolution public,final  int hashCode()
 METHOD com.openggf.net.protocol.ControlMessage$PowSolution public,final  java.lang.String toString()
+METHOD com.openggf.net.protocol.ControlMessage$QuickChat public  java.lang.String phraseId()
+METHOD com.openggf.net.protocol.ControlMessage$QuickChat public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.net.protocol.ControlMessage$QuickChat public,final  int hashCode()
+METHOD com.openggf.net.protocol.ControlMessage$QuickChat public,final  java.lang.String toString()
+METHOD com.openggf.net.protocol.ControlMessage$QuickChatBroadcast public  int act()
+METHOD com.openggf.net.protocol.ControlMessage$QuickChatBroadcast public  int slot()
+METHOD com.openggf.net.protocol.ControlMessage$QuickChatBroadcast public  int zone()
+METHOD com.openggf.net.protocol.ControlMessage$QuickChatBroadcast public  java.lang.String displayName()
+METHOD com.openggf.net.protocol.ControlMessage$QuickChatBroadcast public  java.lang.String gameId()
+METHOD com.openggf.net.protocol.ControlMessage$QuickChatBroadcast public  java.lang.String phraseId()
+METHOD com.openggf.net.protocol.ControlMessage$QuickChatBroadcast public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.net.protocol.ControlMessage$QuickChatBroadcast public,final  int hashCode()
+METHOD com.openggf.net.protocol.ControlMessage$QuickChatBroadcast public,final  java.lang.String toString()
 METHOD com.openggf.net.protocol.ControlMessage$RankUpdate public  int bestTimeFrames()
 METHOD com.openggf.net.protocol.ControlMessage$RankUpdate public  int rank()
 METHOD com.openggf.net.protocol.ControlMessage$RankUpdate public,final  boolean equals(java.lang.Object)
@@ -13824,6 +13903,11 @@ METHOD com.openggf.net.protocol.ControlMessage$RoomAccessSubmit public  java.lan
 METHOD com.openggf.net.protocol.ControlMessage$RoomAccessSubmit public  java.lang.String toString()
 METHOD com.openggf.net.protocol.ControlMessage$RoomAccessSubmit public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.net.protocol.ControlMessage$RoomAccessSubmit public,final  int hashCode()
+METHOD com.openggf.net.protocol.ControlMessage$RoomChatModeUpdate public  java.lang.String mode()
+METHOD com.openggf.net.protocol.ControlMessage$RoomChatModeUpdate public  java.lang.String roomId()
+METHOD com.openggf.net.protocol.ControlMessage$RoomChatModeUpdate public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.net.protocol.ControlMessage$RoomChatModeUpdate public,final  int hashCode()
+METHOD com.openggf.net.protocol.ControlMessage$RoomChatModeUpdate public,final  java.lang.String toString()
 METHOD com.openggf.net.protocol.ControlMessage$RoomCreate public  com.openggf.net.protocol.ControlMessage$RoomDescriptor room()
 METHOD com.openggf.net.protocol.ControlMessage$RoomCreate public  com.openggf.net.protocol.RoomPassword password()
 METHOD com.openggf.net.protocol.ControlMessage$RoomCreate public  int directPort()
@@ -13853,6 +13937,7 @@ METHOD com.openggf.net.protocol.ControlMessage$RoomDescriptor public  int act()
 METHOD com.openggf.net.protocol.ControlMessage$RoomDescriptor public  int maxPlayers()
 METHOD com.openggf.net.protocol.ControlMessage$RoomDescriptor public  int zone()
 METHOD com.openggf.net.protocol.ControlMessage$RoomDescriptor public  java.lang.String characterPolicy()
+METHOD com.openggf.net.protocol.ControlMessage$RoomDescriptor public  java.lang.String chatMode()
 METHOD com.openggf.net.protocol.ControlMessage$RoomDescriptor public  java.lang.String gameId()
 METHOD com.openggf.net.protocol.ControlMessage$RoomDescriptor public  java.lang.String lockedCharacter()
 METHOD com.openggf.net.protocol.ControlMessage$RoomDescriptor public  java.lang.String name()
@@ -13962,6 +14047,7 @@ METHOD com.openggf.net.protocol.ControlMessage$RoomSummary public  int maxPlayer
 METHOD com.openggf.net.protocol.ControlMessage$RoomSummary public  int playerCount()
 METHOD com.openggf.net.protocol.ControlMessage$RoomSummary public  int zone()
 METHOD com.openggf.net.protocol.ControlMessage$RoomSummary public  java.lang.String characterPolicy()
+METHOD com.openggf.net.protocol.ControlMessage$RoomSummary public  java.lang.String chatMode()
 METHOD com.openggf.net.protocol.ControlMessage$RoomSummary public  java.lang.String gameId()
 METHOD com.openggf.net.protocol.ControlMessage$RoomSummary public  java.lang.String name()
 METHOD com.openggf.net.protocol.ControlMessage$RoomSummary public  java.lang.String roomId()
@@ -14010,6 +14096,10 @@ METHOD com.openggf.net.protocol.ControlMessage$SelectCharacter public  java.lang
 METHOD com.openggf.net.protocol.ControlMessage$SelectCharacter public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.net.protocol.ControlMessage$SelectCharacter public,final  int hashCode()
 METHOD com.openggf.net.protocol.ControlMessage$SelectCharacter public,final  java.lang.String toString()
+METHOD com.openggf.net.protocol.ControlMessage$SetChatMode public  java.lang.String mode()
+METHOD com.openggf.net.protocol.ControlMessage$SetChatMode public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.net.protocol.ControlMessage$SetChatMode public,final  int hashCode()
+METHOD com.openggf.net.protocol.ControlMessage$SetChatMode public,final  java.lang.String toString()
 METHOD com.openggf.net.protocol.ControlMessage$SetReady public  boolean ready()
 METHOD com.openggf.net.protocol.ControlMessage$SetReady public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.net.protocol.ControlMessage$SetReady public,final  int hashCode()
@@ -14118,6 +14208,9 @@ METHOD com.openggf.net.protocol.GhostPackets$RosterEntry public  int status()
 METHOD com.openggf.net.protocol.GhostPackets$RosterEntry public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.net.protocol.GhostPackets$RosterEntry public,final  int hashCode()
 METHOD com.openggf.net.protocol.GhostPackets$RosterEntry public,final  java.lang.String toString()
+METHOD com.openggf.net.protocol.QuickChatPhrase public,static  com.openggf.net.protocol.QuickChatPhrase parse(java.lang.String)
+METHOD com.openggf.net.protocol.QuickChatPhrase public,static  com.openggf.net.protocol.QuickChatPhrase valueOf(java.lang.String)
+METHOD com.openggf.net.protocol.QuickChatPhrase public,static  com.openggf.net.protocol.QuickChatPhrase[] values()
 METHOD com.openggf.net.protocol.ReadyRules public  boolean required(int)
 METHOD com.openggf.net.protocol.ReadyRules public,static  com.openggf.net.protocol.ReadyRules parse(java.lang.String)
 METHOD com.openggf.net.protocol.ReadyRules public,static  com.openggf.net.protocol.ReadyRules valueOf(java.lang.String)
@@ -16839,6 +16932,7 @@ NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlM
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$AuthProof
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$Chat
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$ChatBroadcast
+NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$ChatModeState
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$Heartbeat
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$Hello
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$InviteOperation
@@ -16855,6 +16949,8 @@ NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlM
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$Pong
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$PowChallenge
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$PowSolution
+NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$QuickChat
+NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$QuickChatBroadcast
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RankUpdate
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$ReadyReset
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$ReadyRule
@@ -16866,6 +16962,7 @@ NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlM
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomAccessChallenge
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomAccessState
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomAccessSubmit
+NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomChatModeUpdate
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomCreate
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomCreateRejected
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomCreated
@@ -16896,6 +16993,7 @@ NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlM
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoundSnapshot
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoundStart
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$SelectCharacter
+NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$SetChatMode
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$SetReady
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$SetReadyRule
 NESTED com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$StandingsDelta
@@ -17134,6 +17232,7 @@ PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.Control
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$AuthProof
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$Chat
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$ChatBroadcast
+PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$ChatModeState
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$Heartbeat
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$Hello
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$JoinAccepted
@@ -17148,6 +17247,8 @@ PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.Control
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$Pong
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$PowChallenge
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$PowSolution
+PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$QuickChat
+PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$QuickChatBroadcast
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RankUpdate
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$ReadyReset
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$ReadyRule
@@ -17159,6 +17260,7 @@ PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.Control
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomAccessChallenge
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomAccessState
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomAccessSubmit
+PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomChatModeUpdate
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomCreate
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomCreateRejected
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoomCreated
@@ -17185,6 +17287,7 @@ PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.Control
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoundEnd
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$RoundStart
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$SelectCharacter
+PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$SetChatMode
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$SetReady
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$SetReadyRule
 PERMITS com.openggf.net.protocol.ControlMessage com.openggf.net.protocol.ControlMessage$StandingsDelta
@@ -19128,6 +19231,10 @@ RECORD-COMPONENT com.openggf.mods.ui.FocusRegions$Region id java.lang.String
 RECORD-COMPONENT com.openggf.mods.ui.FocusRegions$Region width int
 RECORD-COMPONENT com.openggf.mods.ui.FocusRegions$Region x int
 RECORD-COMPONENT com.openggf.mods.ui.FocusRegions$Region y int
+RECORD-COMPONENT com.openggf.net.chat.QuickChatContent act int
+RECORD-COMPONENT com.openggf.net.chat.QuickChatContent gameId java.lang.String
+RECORD-COMPONENT com.openggf.net.chat.QuickChatContent phrase com.openggf.net.protocol.QuickChatPhrase
+RECORD-COMPONENT com.openggf.net.chat.QuickChatContent zone int
 RECORD-COMPONENT com.openggf.net.client.DirectJoinAddress certificateSha256 java.lang.String
 RECORD-COMPONENT com.openggf.net.client.DirectJoinAddress hostFingerprint java.lang.String
 RECORD-COMPONENT com.openggf.net.client.DirectJoinAddress uri java.net.URI
@@ -19178,6 +19285,7 @@ RECORD-COMPONENT com.openggf.net.hub.HostRoundEngine$FinishOutcome slot int
 RECORD-COMPONENT com.openggf.net.hub.RoomHostConfig accessPolicy com.openggf.net.protocol.RoomAccessPolicy
 RECORD-COMPONENT com.openggf.net.hub.RoomHostConfig act int
 RECORD-COMPONENT com.openggf.net.hub.RoomHostConfig characterPolicy java.lang.String
+RECORD-COMPONENT com.openggf.net.hub.RoomHostConfig chatMode java.lang.String
 RECORD-COMPONENT com.openggf.net.hub.RoomHostConfig gameId java.lang.String
 RECORD-COMPONENT com.openggf.net.hub.RoomHostConfig instanceId java.lang.String
 RECORD-COMPONENT com.openggf.net.hub.RoomHostConfig lockedCharacter java.lang.String
@@ -19189,6 +19297,7 @@ RECORD-COMPONENT com.openggf.net.hub.RoomHostConfig verified boolean
 RECORD-COMPONENT com.openggf.net.hub.RoomHostConfig voteTrackKeys java.util.List<java.lang.String>
 RECORD-COMPONENT com.openggf.net.hub.RoomHostConfig zone int
 RECORD-COMPONENT com.openggf.net.hub.RoomHostHooks chatGate com.openggf.net.hub.RoomHostHooks$ChatGate
+RECORD-COMPONENT com.openggf.net.hub.RoomHostHooks chatModeLimit com.openggf.net.protocol.ChatMode
 RECORD-COMPONENT com.openggf.net.hub.RoomHostHooks isNewPlayer java.util.function.Predicate<java.lang.String>
 RECORD-COMPONENT com.openggf.net.hub.RoomHostHooks knownVoteTrack java.util.function.Predicate<java.lang.String>
 RECORD-COMPONENT com.openggf.net.hub.RoomHostHooks profileListener com.openggf.net.hub.RoomHostHooks$ProfileListener
@@ -19222,6 +19331,7 @@ RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$Chat text java.lang.Str
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$ChatBroadcast displayName java.lang.String
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$ChatBroadcast slot int
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$ChatBroadcast text java.lang.String
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$ChatModeState mode java.lang.String
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$Heartbeat playerCount int
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$Heartbeat roomId java.lang.String
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$Hello appearance java.lang.String
@@ -19255,6 +19365,13 @@ RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$PowChallenge kind java.
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$PowChallenge prefixBase64 java.lang.String
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$PowSolution kind java.lang.String
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$PowSolution nonce long
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$QuickChat phraseId java.lang.String
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$QuickChatBroadcast act int
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$QuickChatBroadcast displayName java.lang.String
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$QuickChatBroadcast gameId java.lang.String
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$QuickChatBroadcast phraseId java.lang.String
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$QuickChatBroadcast slot int
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$QuickChatBroadcast zone int
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RankUpdate bestTimeFrames int
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RankUpdate rank int
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$ReadyReset ready boolean
@@ -19279,6 +19396,8 @@ RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomAccessState instanc
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomAccessState inviteEpoch long
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomAccessSubmit challengeId java.lang.String
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomAccessSubmit password com.openggf.net.protocol.RoomPassword
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomChatModeUpdate mode java.lang.String
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomChatModeUpdate roomId java.lang.String
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomCreate accessEpoch long
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomCreate certificateSha256 java.lang.String
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomCreate determinismFingerprint java.lang.String
@@ -19296,6 +19415,7 @@ RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomCreated roomId java
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomDescriptor accessPolicy com.openggf.net.protocol.RoomAccessPolicy
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomDescriptor act int
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomDescriptor characterPolicy java.lang.String
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomDescriptor chatMode java.lang.String
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomDescriptor gameId java.lang.String
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomDescriptor lockedCharacter java.lang.String
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomDescriptor maxPlayers int
@@ -19347,6 +19467,7 @@ RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomPasswordChanged acc
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomState players java.util.List<com.openggf.net.protocol.ControlMessage$PlayerInfo>
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomSummary act int
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomSummary characterPolicy java.lang.String
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomSummary chatMode java.lang.String
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomSummary gameId java.lang.String
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomSummary maxPlayers int
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoomSummary name java.lang.String
@@ -19375,6 +19496,7 @@ RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoundStart config com.o
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoundStart countdownEndsAtHubMillis long
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$RoundStart deadlineHubMillis long
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$SelectCharacter character java.lang.String
+RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$SetChatMode mode java.lang.String
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$SetReady ready boolean
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$SetReadyRule rule java.lang.String
 RECORD-COMPONENT com.openggf.net.protocol.ControlMessage$StandingsDelta rows java.util.List<com.openggf.net.protocol.ControlMessage$StandingsRow>
@@ -20546,6 +20668,7 @@ TYPE class public,final com.openggf.mods.ui.NameFont SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.ui.SceneCanvasTransform SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.ui.TextLayout SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.ui.UiPrimitives SUPER java.lang.Object
+TYPE class public,final com.openggf.net.chat.EnglishQuickChat SUPER java.lang.Object
 TYPE class public,final com.openggf.net.client.ClientRaceSession SUPER java.lang.Object
 TYPE class public,final com.openggf.net.client.DirectRoomRegistration SUPER java.lang.Object
 TYPE class public,final com.openggf.net.client.GhostStreamPublisher SUPER java.lang.Object
@@ -20697,6 +20820,8 @@ TYPE enum public,final com.openggf.mods.mutators.MutatorScope SUPER java.lang.En
 TYPE enum public,final com.openggf.mods.run.RunEndReason SUPER java.lang.Enum<com.openggf.mods.run.RunEndReason>
 TYPE enum public,final com.openggf.mods.scene.art.StockSceneArt SUPER java.lang.Enum<com.openggf.mods.scene.art.StockSceneArt>
 TYPE enum public,final com.openggf.mods.state.ModSaveWriteResult SUPER java.lang.Enum<com.openggf.mods.state.ModSaveWriteResult>
+TYPE enum public,final com.openggf.net.protocol.ChatMode SUPER java.lang.Enum<com.openggf.net.protocol.ChatMode>
+TYPE enum public,final com.openggf.net.protocol.QuickChatPhrase SUPER java.lang.Enum<com.openggf.net.protocol.QuickChatPhrase>
 TYPE enum public,final com.openggf.net.protocol.ReadyRules SUPER java.lang.Enum<com.openggf.net.protocol.ReadyRules>
 TYPE enum public,final com.openggf.physics.Direction SUPER java.lang.Enum<com.openggf.physics.Direction>
 TYPE enum public,final com.openggf.sprites.animation.SpriteAnimationEndAction SUPER java.lang.Enum<com.openggf.sprites.animation.SpriteAnimationEndAction>
@@ -21237,6 +21362,7 @@ TYPE record public,final com.openggf.mods.scene.SceneMusicPart SUPER java.lang.R
 TYPE record public,final com.openggf.mods.scene.SceneNoteEvent SUPER java.lang.Record
 TYPE record public,final com.openggf.mods.scene.SceneSprite SUPER java.lang.Record
 TYPE record public,final com.openggf.mods.state.ModSaveLoadResult<T> SUPER java.lang.Record
+TYPE record public,final com.openggf.net.chat.QuickChatContent SUPER java.lang.Record
 TYPE record public,final com.openggf.net.client.DirectJoinAddress SUPER java.lang.Record
 TYPE record public,final com.openggf.net.ghost.GhostFrame SUPER java.lang.Record
 TYPE record public,final com.openggf.net.host.jdk.JdkHostLimits SUPER java.lang.Record
@@ -21426,6 +21552,7 @@ TYPE record public,static,final com.openggf.net.protocol.ControlMessage$AttemptS
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$AuthProof SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$Chat SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$ChatBroadcast SUPER java.lang.Record
+TYPE record public,static,final com.openggf.net.protocol.ControlMessage$ChatModeState SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$Heartbeat SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$Hello SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$JoinAccepted SUPER java.lang.Record
@@ -21441,6 +21568,8 @@ TYPE record public,static,final com.openggf.net.protocol.ControlMessage$PlayerUp
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$Pong SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$PowChallenge SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$PowSolution SUPER java.lang.Record
+TYPE record public,static,final com.openggf.net.protocol.ControlMessage$QuickChat SUPER java.lang.Record
+TYPE record public,static,final com.openggf.net.protocol.ControlMessage$QuickChatBroadcast SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RankUpdate SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$ReadyReset SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$ReadyRule SUPER java.lang.Record
@@ -21452,6 +21581,7 @@ TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RelayGue
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RoomAccessChallenge SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RoomAccessState SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RoomAccessSubmit SUPER java.lang.Record
+TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RoomChatModeUpdate SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RoomCreate SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RoomCreateRejected SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RoomCreated SUPER java.lang.Record
@@ -21482,6 +21612,7 @@ TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RoundEnd
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RoundSnapshot SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$RoundStart SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$SelectCharacter SUPER java.lang.Record
+TYPE record public,static,final com.openggf.net.protocol.ControlMessage$SetChatMode SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$SetReady SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$SetReadyRule SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.protocol.ControlMessage$StandingsDelta SUPER java.lang.Record
@@ -22596,6 +22727,8 @@ TYPE-ANNOTATION com.openggf.mods.ui.TextLayout$Alignment @com.openggf.game.ModAp
 TYPE-ANNOTATION com.openggf.mods.ui.TextLayout$Metrics @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.ui.TextLayout$Metrics @java.lang.FunctionalInterface
 TYPE-ANNOTATION com.openggf.mods.ui.UiPrimitives @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.net.chat.EnglishQuickChat @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.net.chat.QuickChatContent @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.client.ClientRaceSession @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.client.ClientRaceSession$Phase @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.client.DirectJoinAddress @com.openggf.game.ModApi
@@ -22656,6 +22789,7 @@ TYPE-ANNOTATION com.openggf.net.identity.DisplayNames @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.identity.PlayerAppearance @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.identity.PlayerAppearance$Entry @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.identity.PlayerIdentity @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.net.protocol.ChatMode @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlJsonCodec @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlJsonCodec$Decoded @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage @com.openggf.game.ModApi
@@ -22665,6 +22799,7 @@ TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$AttemptStart @com.opengg
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$AuthProof @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$Chat @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$ChatBroadcast @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$ChatModeState @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$Heartbeat @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$Hello @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$InviteOperation @com.openggf.game.ModApi
@@ -22681,6 +22816,8 @@ TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$PlayerUpsert @com.opengg
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$Pong @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$PowChallenge @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$PowSolution @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$QuickChat @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$QuickChatBroadcast @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RankUpdate @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$ReadyReset @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$ReadyRule @com.openggf.game.ModApi
@@ -22692,6 +22829,7 @@ TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RelayGuestText @com.open
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RoomAccessChallenge @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RoomAccessState @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RoomAccessSubmit @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RoomChatModeUpdate @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RoomCreate @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RoomCreateRejected @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RoomCreated @com.openggf.game.ModApi
@@ -22722,6 +22860,7 @@ TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RoundEnd @com.openggf.ga
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RoundSnapshot @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$RoundStart @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$SelectCharacter @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$SetChatMode @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$SetReady @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$SetReadyRule @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ControlMessage$StandingsDelta @com.openggf.game.ModApi
@@ -22743,6 +22882,7 @@ TYPE-ANNOTATION com.openggf.net.protocol.GhostPackets$RelayGuestBinary @com.open
 TYPE-ANNOTATION com.openggf.net.protocol.GhostPackets$RosterEntry @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.Protocol @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ProtocolViolationException @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.net.protocol.QuickChatPhrase @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.ReadyRules @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.RoomAccessPolicy @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.net.protocol.RoomAccessPolicy$Mode @com.openggf.game.ModApi

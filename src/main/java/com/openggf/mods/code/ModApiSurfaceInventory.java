@@ -138,6 +138,7 @@ public final class ModApiSurfaceInventory {
             "com.openggf.control.ActionMap",
             "com.openggf.control.PhysicalBinding",
             // Shared peer/room transport and protocol contracts, also used by external gameplay mods.
+            "com.openggf.net.chat.EnglishQuickChat",
             "com.openggf.net.client.ClientRaceSession",
             "com.openggf.net.client.DirectJoinAddress",
             "com.openggf.net.client.DirectRoomRegistration",

@@ -1,5 +1,7 @@
 package com.openggf.net.hub;
 
+import com.openggf.net.protocol.ChatMode;
+
 import java.util.function.Predicate;
 
 /** Optional relay/master behavior layered onto the Phase 2 room host. */
@@ -12,7 +14,20 @@ public record RoomHostHooks(boolean relevanceFiltering,
                             Predicate<String> knownVoteTrack,
                             String roomId,
                             VerificationHooks verificationHooks,
-                            ProfileListener profileListener) {
+                            ProfileListener profileListener,
+                            ChatMode chatModeLimit) {
+    public RoomHostHooks {
+        chatModeLimit = chatModeLimit == null ? ChatMode.FULL_CHAT : chatModeLimit;
+    }
+
+    public RoomHostHooks(boolean relevanceFiltering, ChatGate chatGate,
+                         RoundOutcomeListener roundOutcomeListener, String roundOwnerFingerprint,
+                         Predicate<String> isNewPlayer, Predicate<String> knownVoteTrack,
+                         String roomId, VerificationHooks verificationHooks,
+                         ProfileListener profileListener) {
+        this(relevanceFiltering, chatGate, roundOutcomeListener, roundOwnerFingerprint, isNewPlayer,
+                knownVoteTrack, roomId, verificationHooks, profileListener, ChatMode.FULL_CHAT);
+    }
     /** Told when an admitted member renames itself in the lobby, after the host accepted it. */
     @FunctionalInterface
     @com.openggf.game.ModApi

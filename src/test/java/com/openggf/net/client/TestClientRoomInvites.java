@@ -6,6 +6,23 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestClientRoomInvites {
+    @Test
+    void communicationUpdatesPreservePrivateAdmissionAndDisclosure() {
+        var session = session();
+        var policy = new RoomAccessPolicy(RoomAccessPolicy.Mode.PRIVATE, false);
+        session.onControl(new ControlMessage.RoomAccessState("instance", policy, 3, 5));
+        var request = session.beginInviteRequest();
+        session.onControl(new ControlMessage.RoomInvite("7K3M9X", "instance", 3, 5,
+                10_000, request.disclosureId()));
+        session.onControl(new ControlMessage.ChatModeState("OFF"));
+        assertEquals(policy, session.room().accessPolicy());
+        assertEquals(policy, session.accessPolicy());
+        assertEquals(ChatMode.OFF, session.chatMode());
+        assertEquals(3, session.accessEpoch());
+        assertEquals(5, session.inviteEpoch());
+        assertNotNull(session.invite());
+    }
+
     long now = 1000;
     ClientRaceSession session() {
         var session = new ClientRaceSession(() -> now);

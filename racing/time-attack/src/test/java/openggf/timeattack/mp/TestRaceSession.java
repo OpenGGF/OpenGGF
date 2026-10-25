@@ -231,6 +231,7 @@ class TestRaceSession {
         assertEquals(RaceSession.State.CONNECTING, host.state());
         pollUntil("the host lobby", () -> host.state() == RaceSession.State.LOBBY, host);
         assertTrue(host.isHosting());
+        assertEquals(com.openggf.net.protocol.ChatMode.FULL_CHAT, host.coordinator().session().chatMode());
         String invite = host.lanInvite();
         assertTrue(invite.startsWith("HOST_IP:" + port + "#"), invite);
         assertTrue(hostStorage.read(RaceSession.INVITE_FILE).isEmpty());
@@ -419,6 +420,7 @@ class TestRaceSession {
 
         TimeAttackSettings hostSettings = settings(freePort());
         hostSettings.setMasterUrl(url);
+        hostSettings.setChatMode(com.openggf.net.protocol.ChatMode.QUICK_CHAT);
         RaceSession host = session("host", hostSettings, new MemoryModStorage(), new Launches());
         host.browse(SETUP, FP);
         pollUntil("the host browser", () -> host.state() == RaceSession.State.BROWSING, host);
@@ -440,9 +442,32 @@ class TestRaceSession {
                 .get(10, TimeUnit.SECONDS).rooms();
         assertEquals(1, rooms.size());
         assertEquals(routing, rooms.get(0).routing());
+        assertEquals("QUICK_CHAT", rooms.get(0).chatMode());
+        assertEquals(com.openggf.net.protocol.ChatMode.QUICK_CHAT, host.coordinator().session().chatMode());
+        if ("DIRECT".equals(routing)) {
+            host.coordinator().setChatMode(com.openggf.net.protocol.ChatMode.OFF);
+            pollUntil("the owner's mode update", () -> host.coordinator().session().chatMode()
+                    == com.openggf.net.protocol.ChatMode.OFF, host);
+            long modeDeadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(20);
+            while (true) {
+                // Browser enumeration is limited to one request every two seconds.
+                Thread.sleep(2100);
+                ControlMessage.RoomSummary current = guest.roomDirectory().listRooms("s2", 0)
+                        .get(10, TimeUnit.SECONDS).rooms().getFirst();
+                if ("OFF".equals(current.chatMode())) {
+                    assertEquals(SETUP.zone(), current.zone(), "mode publication does not require a track change");
+                    assertEquals(SETUP.act(), current.act());
+                    break;
+                }
+                assertTrue(System.nanoTime() < modeDeadline, "the master still lists the previous direct-room mode");
+            }
+        }
         guest.joinMasterRoom(rooms.get(0));
         pollUntil("both players in the lobby", () -> guest.state() == RaceSession.State.LOBBY
                 && host.coordinator().session().players().size() == 2, host, guest);
+        assertEquals("DIRECT".equals(routing) ? com.openggf.net.protocol.ChatMode.OFF
+                : com.openggf.net.protocol.ChatMode.QUICK_CHAT, guest.coordinator().session().chatMode(),
+                "join uses the live host mode, even when the selected browser row was older");
         assertTrue(guest.masterLinkRunning());
 
         guest.leave();
@@ -680,9 +705,12 @@ class TestRaceSession {
     @Test
     void privateLanSelfJoinAndClosedProbeRequireTheExactPasswordWithoutPersistence() throws Exception {
         int port = freePort();
-        RaceSession owner = session("private-owner", settings(port), new MemoryModStorage(), new Launches());
+        TimeAttackSettings ownerSettings = settings(port);
+        ownerSettings.setChatMode(com.openggf.net.protocol.ChatMode.OFF);
+        RaceSession owner = session("private-owner", ownerSettings, new MemoryModStorage(), new Launches());
         hostPrivate(owner);
         assertTrue(owner.coordinator().session().accessPolicy().passwordRequired());
+        assertEquals(com.openggf.net.protocol.ChatMode.OFF, owner.coordinator().session().chatMode());
         assertEquals(1, owner.coordinator().session().players().size());
         MemoryModStorage storage = new MemoryModStorage();
         RaceSession guest = session("private-guest", settings(port), storage, new Launches());
@@ -696,6 +724,8 @@ class TestRaceSession {
         try (RoomPassword password = RoomPassword.of(PRIVATE_PASSWORD)) { guest.submitPassword(password); }
         pollUntil("private guest admission", () -> guest.state() == RaceSession.State.LOBBY
                 && owner.coordinator().session().players().size() == 2, owner, guest);
+        assertTrue(guest.coordinator().session().accessPolicy().passwordRequired());
+        assertEquals(com.openggf.net.protocol.ChatMode.OFF, guest.coordinator().session().chatMode());
         guest.close();
         assertEquals(0, storage.writes);
         assertFalse(storage.read(TimeAttackSettings.FILE_NAME).orElse("").contains(invite));
@@ -767,6 +797,7 @@ class TestRaceSession {
         String url = startPrivateMaster("code-owner");
         TimeAttackSettings ownerSettings = settings(freePort());
         ownerSettings.setMasterUrl(url);
+        ownerSettings.setChatMode(com.openggf.net.protocol.ChatMode.QUICK_CHAT);
         RaceSession owner = session("code-owner", ownerSettings, new MemoryModStorage(), new Launches());
         if (routing.equals("LAN")) hostPrivate(owner);
         else {
@@ -775,6 +806,8 @@ class TestRaceSession {
             try (RoomPassword password = RoomPassword.of(PRIVATE_PASSWORD)) { owner.createMasterRoom(routing, PRIVATE, password); }
             pollUntil("owner admission", () -> owner.state() == RaceSession.State.LOBBY, owner);
         }
+        assertTrue(owner.coordinator().session().accessPolicy().passwordRequired());
+        assertEquals(com.openggf.net.protocol.ChatMode.QUICK_CHAT, owner.coordinator().session().chatMode());
         assertTrue(owner.masterLinkRunning());
         assertNull(owner.manualInviteFallback(), "a registered LAN host has short codes");
         owner.coordinator().requestInvite();
@@ -800,6 +833,8 @@ class TestRaceSession {
         try (RoomPassword password = RoomPassword.of(PRIVATE_PASSWORD)) { guest.submitPassword(password); }
         pollUntil("code admission", () -> guest.state() == RaceSession.State.LOBBY
                 && owner.coordinator().session().players().size() == 2, owner, guest);
+        assertTrue(guest.coordinator().session().accessPolicy().passwordRequired());
+        assertEquals(com.openggf.net.protocol.ChatMode.QUICK_CHAT, guest.coordinator().session().chatMode());
         guest.coordinator().requestInvite();
         pollUntil("admitted member sharing", () -> guest.coordinator().session().invite() != null, owner, guest);
         assertEquals(code, guest.coordinator().session().invite().code());
@@ -850,6 +885,34 @@ class TestRaceSession {
         String notice = guest.consumeNotice();
         assertFalse(notice.contains(code));
         assertFalse(notice.contains(PRIVATE_PASSWORD));
+    }
+
+    @Test
+    void engineChatPreferencesApplyOnJoinLiveAndAfterRoundResume() {
+        AtomicBoolean disabled = new AtomicBoolean(true);
+        RaceSession session = session("preferences", settings(27888), new MemoryModStorage(), new Launches(), () -> 0);
+        session.setChatPreferenceSource(() -> false, disabled::get);
+        FakeConnection connection = new FakeConnection();
+        session.enterLobbyForTest(connection, false, ROUND, "tails");
+        assertTrue(session.coordinator().session().chatDisabled());
+        connection.control(new ControlMessage.ChatBroadcast(0, "Player", "hidden"));
+        session.poll();
+        assertTrue(session.coordinator().session().chatLines().isEmpty());
+        disabled.set(false);
+        connection.control(new ControlMessage.QuickChatBroadcast(0, "Player", "THIS_IS_ZONE", "s2", 0, 0));
+        session.poll();
+        assertTrue(session.coordinator().session().chatLines().getFirst().contains("Emerald Hill"));
+        connection.control(new ControlMessage.RoundStart(ROUND, 1000, 100_000));
+        session.poll();
+        assertEquals(RaceSession.State.RACING, session.state());
+        disabled.set(true);
+        session.coordinator().pump(); // the race owns this pump while the scene is suspended
+        assertTrue(session.coordinator().session().chatDisabled());
+        assertTrue(session.coordinator().hudState().chatLines().isEmpty());
+        session.runEnded();
+        session.poll();
+        assertTrue(session.coordinator().session().chatDisabled());
+        assertTrue(session.coordinator().session().chatLines().isEmpty());
     }
 
 }

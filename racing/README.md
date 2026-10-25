@@ -84,6 +84,44 @@ settings page and the lobby's PROFILE action rename the player and edit their lo
 new identity; the lobby announces the change with `UpdateProfile` while the room is in its
 lobby phase. Addresses, ports and URLs stay ASCII; chat accepts visible text in any script.
 
+### Communication
+
+Rooms have three communication modes. **Full Chat** allows typed messages and
+**Quick Chat**. **Quick Chat** allows only the canned-message chooser. **Off**
+disables both. A player's new rooms request Full Chat by default; change **Settings >
+Room chat** before creating one, or use the owner's **CHAT** rule in the lobby.
+The browser and lobby show the effective mode. Public master-hosted relay rooms
+default to a Quick Chat maximum; their owners can restrict further. Player-hosted
+direct rooms follow their owner's choice.
+
+Choose **QUICK CHAT** in the lobby, or press **Q** during a race and then **1–8**
+to send a phrase. Press Q again to close the race chooser. If Q is the retry key,
+the shortcut is **P**; the HUD shows the active key. Choosing a phrase does not
+pause the race or use the same key press to retry. Typed entry remains available
+in Full Chat lobbies. Both message kinds share the two-second sender cooldown and
+the public relay's existing new-player trust mute.
+
+Personal settings are in **Engine Settings > Gameplay**: **Censor Profanity**
+defaults on, and **Disable Multiplayer Chat** defaults off. Censorship runs only
+on the receiving client and masks matching words in message bodies and sender
+labels. Disabling chat clears local history and discards subsequent typed and
+quick player messages; connection and race notices, rosters, votes and LAN invites
+remain visible. Sending remains governed by the room's mode.
+
+The small dictionary contains conservative starter entries for English, French,
+German, Spanish, Italian, Portuguese, Polish, Russian, Turkish, Japanese, Korean
+and Chinese. Matching normalizes whole Unicode tokens, so Scunthorpe and other
+benign containing words remain unchanged. It does not provide comprehensive
+language coverage, segmentation of unspaced sentences, or detection of disguised
+spellings. The dictionary is an original project selection, loaded once, with 39
+keys in 1,446 UTF-8 bytes; history rendering is cached instead of filtering every
+frame. Quick Chat wording is English for this MVP. Messages carry stable phrase
+IDs and host-supplied track context so a future community translation can render
+the recipient's language without changing the wire meaning.
+
+The racing wire protocol is version **6**. Upgrade clients, room hosts and the
+master together; older or incomplete message schemas are rejected.
+
 `settings.txt` keys for the look: `lookBase` is the base colour (three hex digits `BGR`, the
 Mega Drive colour word; empty for the stock "Classic" look) used for the player's name and
 ghost. `lookPalette.<game>:<character>` (for example `lookPalette.s3k:tails=2EEE.900E`) holds a

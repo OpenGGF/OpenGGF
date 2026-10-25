@@ -705,4 +705,128 @@ class TestMultiplayerRaceCoordinator {
                             new GhostPackets.AggregateEntry(3, attemptId, i, 3, data)))));
         }
     }
+    @Test
+    void quickChatPreservesHeldMovementAndJumpWhileGameplayContinues(@TempDir Path root) {
+        Rig rig = rig(root);
+        handle(rig);
+        levelReady(rig.runtime());
+        var player = com.openggf.control.PlayerInputState.of(0x08, 0,
+                com.openggf.control.InputActionMasks.ACTION_A, 0, false, false);
+        var logical = LogicalInputSnapshot.ofPlayers(player, com.openggf.control.PlayerInputState.neutral());
+        var pressed = new java.util.concurrent.atomic.AtomicInteger(SceneKeys.Q);
+        RunInput input = new RunInput() {
+            @Override public LogicalInputSnapshot input() { return logical; }
+            @Override public boolean keyDown(int key) { return key == pressed.get(); }
+            @Override public boolean keyPressed(int key) { return key == pressed.get(); }
+        };
+        int before = rig.runtime().hudState().elapsedDisplayFrames();
+        assertTrue(step(rig, input, player.heldMask(), false, 100));
+        assertTrue(rig.coordinator().isQuickChatOpen());
+        assertFalse(rig.runtime().holdsPlayerInput());
+        pressed.set(SceneKeys.DIGIT_1);
+        assertTrue(step(rig, input, player.heldMask(), false, 101));
+        assertFalse(rig.coordinator().isQuickChatOpen());
+        assertSame(logical, input.input());
+        assertEquals(player, input.input().player1());
+        assertFalse(rig.runtime().holdsPlayerInput());
+        assertTrue(rig.runtime().hudState().elapsedDisplayFrames() > before);
+        assertTrue(rig.transport().sentControl.contains(new ControlMessage.QuickChat("BRUTAL")));
+    }
+
+    @Test
+    void quickChatNumberEdgesDoNotPauseOrTriggerTheSameRetryBinding(@TempDir Path root) {
+        Rig rig = rig(root);
+        CountingHandle handle = handle(rig);
+        rig.runtime().setRetryKey(() -> SceneKeys.DIGIT_1);
+        levelReady(rig.runtime());
+        assertTrue(rig.runtime().admitStep(keys(SceneKeys.Q)));
+        assertTrue(rig.coordinator().isQuickChatOpen());
+        assertFalse(rig.coordinator().holdGameplay());
+        rig.runtime().admitStep(keys(SceneKeys.DIGIT_1));
+        assertEquals(0, handle.retries);
+        assertFalse(rig.coordinator().isQuickChatOpen());
+        assertTrue(rig.transport().sentControl.contains(new ControlMessage.QuickChat("BRUTAL")));
+        rig.runtime().admitStep(keys(SceneKeys.DIGIT_1));
+        assertEquals(1, handle.retries, "the ordinary retry edge still works once the chooser closes");
+    }
+
+    @Test
+    void retryOnQAdvertisesAndUsesPAndHeldToggleDoesNotRepeat(@TempDir Path root) {
+        Rig rig = rig(root);
+        CountingHandle handle = handle(rig);
+        rig.runtime().setRetryKey(() -> SceneKeys.Q);
+        assertEquals("P", rig.coordinator().quickChatKeyLabel());
+        assertTrue(rig.runtime().admitStep(keys(SceneKeys.P)));
+        assertTrue(rig.coordinator().isQuickChatOpen());
+        RunInput held = new RunInput() {
+            @Override public LogicalInputSnapshot input() { return LogicalInputSnapshot.neutral(); }
+            @Override public boolean keyDown(int key) { return key == SceneKeys.P; }
+            @Override public boolean keyPressed(int key) { return false; }
+        };
+        for (int i = 0; i < 5; i++) rig.runtime().admitStep(held);
+        assertTrue(rig.coordinator().isQuickChatOpen());
+        assertEquals(0, handle.retries);
+        rig.runtime().admitStep(keys(SceneKeys.P));
+        assertFalse(rig.coordinator().isQuickChatOpen());
+    }
+
+    @Test
+    void chooserDoesNotReleaseCountdownAndClosesOnModeRetryAndDetach(@TempDir Path root) {
+        Rig rig = rig(root, false);
+        rig.transport().inbound.add(new RaceClient.Control(new ControlMessage.RoundStart(
+                new ControlMessage.RoundConfig("s3k", 0, 0, 60, "OPEN", null), now + 3000, now + 63_000)));
+        rig.coordinator().pump();
+        rig.coordinator().attachRuntime(rig.runtime());
+        assertFalse(rig.coordinator().admit(keys(SceneKeys.Q)));
+        assertTrue(rig.coordinator().isQuickChatOpen());
+        assertTrue(rig.coordinator().holdGameplay());
+        assertFalse(rig.coordinator().admit(keys(SceneKeys.DIGIT_7)));
+        assertTrue(rig.coordinator().holdGameplay());
+        assertTrue(rig.transport().sentControl.contains(new ControlMessage.QuickChat("GOOD_LUCK")));
+        rig.coordinator().admit(keys(SceneKeys.Q));
+        rig.session().onControl(new ControlMessage.ChatModeState("OFF"));
+        rig.coordinator().admit(keys());
+        assertFalse(rig.coordinator().isQuickChatOpen());
+        rig.session().onControl(new ControlMessage.ChatModeState("FULL_CHAT"));
+        rig.coordinator().admit(keys(SceneKeys.Q));
+        levelReady(rig.runtime());
+        assertFalse(rig.coordinator().isQuickChatOpen());
+        rig.coordinator().admit(keys(SceneKeys.Q));
+        rig.coordinator().detachRuntime();
+        assertFalse(rig.coordinator().isQuickChatOpen());
+    }
+
+    @Test
+    void liveEnginePreferencesHideTypedAndQuickFromRaceHudWithoutBlockingSend(@TempDir Path root) {
+        Rig rig = rig(root);
+        java.util.concurrent.atomic.AtomicBoolean disabled = new java.util.concurrent.atomic.AtomicBoolean();
+        rig.coordinator().setChatPreferenceSource(() -> true, disabled::get);
+        rig.transport().inbound.add(new RaceClient.Control(new ControlMessage.ChatBroadcast(1, "Racer", "hello")));
+        rig.transport().inbound.add(new RaceClient.Control(new ControlMessage.QuickChatBroadcast(
+                1, "Racer", "THIS_IS_ZONE", "s2", 1, 0)));
+        rig.coordinator().pump();
+        List<String> shown = rig.coordinator().hudState().chatLines();
+        assertEquals(2, shown.size());
+        assertTrue(shown.getLast().contains("Chemical Plant"), shown.toString());
+        HudTextLayout.Panel panel = MultiplayerHudRenderer.chatLayout(320, 224, rig.coordinator().hudState());
+        assertNotNull(panel);
+        assertTrue(panel.lines().stream().anyMatch(line -> line.plain().contains("hello")));
+        disabled.set(true);
+        rig.coordinator().pump();
+        assertTrue(rig.coordinator().hudState().chatLines().isEmpty());
+        assertNull(MultiplayerHudRenderer.chatLayout(320, 224, rig.coordinator().hudState()));
+        rig.coordinator().sendChat("outgoing");
+        rig.coordinator().sendQuickChat(com.openggf.net.protocol.QuickChatPhrase.WELL_PLAYED);
+        assertTrue(rig.transport().sentControl.contains(new ControlMessage.Chat("outgoing")));
+        assertTrue(rig.transport().sentControl.contains(new ControlMessage.QuickChat("WELL_PLAYED")));
+        disabled.set(false);
+        rig.coordinator().pump();
+        assertTrue(rig.coordinator().hudState().chatLines().isEmpty(), "no hidden backlog after re-enabling");
+        rig.session().onControl(new ControlMessage.ChatModeState("OFF"));
+        int before = rig.transport().sentControl.size();
+        rig.coordinator().sendChat("blocked");
+        rig.coordinator().sendQuickChat(com.openggf.net.protocol.QuickChatPhrase.BRUTAL);
+        assertEquals(before, rig.transport().sentControl.size());
+    }
+
 }

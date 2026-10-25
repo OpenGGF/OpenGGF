@@ -155,6 +155,7 @@ public final class ControlJsonCodec {
             }
             ObjectNode messageBody = ((ObjectNode) msg).deepCopy();
             messageBody.remove("type");
+            validateChatWireTypes(messageType, messageBody);
             ControlMessage message = mapper.treeToValue(messageBody, messageType);
             validateClientState(message);
             if (message instanceof ControlMessage.RelayGuestText relay
@@ -175,8 +176,46 @@ public final class ControlJsonCodec {
         }
     }
 
+    /** Do not let Jackson coerce numbers/booleans into semantic IDs or sender labels. */
+    private static void validateChatWireTypes(Class<? extends ControlMessage> type, JsonNode body) {
+        if (type == ControlMessage.SetChatMode.class || type == ControlMessage.ChatModeState.class) {
+            requireStringNode(body, "mode");
+        } else if (type == ControlMessage.QuickChat.class) {
+            requireStringNode(body, "phraseId");
+        } else if (type == ControlMessage.QuickChatBroadcast.class) {
+            requireStringNode(body, "displayName");
+            requireStringNode(body, "phraseId");
+            requireStringNode(body, "gameId");
+            for (String field : new String[]{"slot", "zone", "act"}) {
+                JsonNode value = body.get(field);
+                if (value == null || !value.isIntegralNumber() || !value.canConvertToInt()) {
+                    throw new ProtocolViolationException("invalid " + field);
+                }
+            }
+        } else if (type == ControlMessage.RoomChatModeUpdate.class) {
+            requireStringNode(body, "roomId");
+            requireStringNode(body, "mode");
+        }
+    }
+
+    private static void requireStringNode(JsonNode body, String field) {
+        JsonNode value = body.get(field);
+        if (value == null || !value.isTextual()) {
+            throw new ProtocolViolationException("invalid " + field);
+        }
+    }
+
     private static void validateClientState(ControlMessage message) {
         switch (message) {
+            case ControlMessage.QuickChatBroadcast quick -> {
+                validateSlot(quick.slot());
+                requireText(quick.displayName(), "chat sender");
+                requireText(quick.gameId(), "chat game");
+                if (QuickChatPhrase.parse(quick.phraseId()) == null
+                        || quick.zone() < 0 || quick.act() < 0) {
+                    throw new ProtocolViolationException("invalid quick chat context");
+                }
+            }
             case ControlMessage.RoomState state -> validatePlayers(state.players());
             case ControlMessage.PlayerUpsert upsert -> validatePlayer(upsert.player());
             case ControlMessage.PlayerLeft left -> validateSlot(left.slot());

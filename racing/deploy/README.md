@@ -32,6 +32,16 @@ Verification does not carry live race traffic. Relay rooms currently live inside
 the master process; a separate relay image would need a new relay-service contract.
 Player-hosted direct rooms remain on the player's host.
 
+The master limits communication in its relay rooms with `chatModeLimit`, default
+`QUICK_CHAT`. `FULL_CHAT` permits typed and quick messages; `QUICK_CHAT` permits
+only canned messages; `"OFF"` disables both. Quote `"OFF"` in YAML so it remains a
+string. A room owner's requested mode is intersected with the maximum at creation
+and on later changes. Owners may restrict further, and cannot enable typed chat
+above a Quick Chat maximum. This policy applies to master-hosted relay rooms;
+the browser reports the actual mode of player-hosted direct rooms. Profanity
+censorship and personal chat hiding remain client preferences. Deploy protocol
+version 6 clients, hosts and master together.
+
 ## Build the images
 
 Use a Linux x86-64 build host with a Java 25 JDK, Python 3.11+, Maven, Docker with
