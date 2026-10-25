@@ -164,6 +164,9 @@ public final class CdObjectMappings implements CdDrawMappings {
         // include and its real EVEN byte; one counted frame, four pieces/eight distinct tiles, no script.
         addObject(tables, objects, CdR11aObjectAssets.Table.SPIKES_MAPPINGS, objects.spikes());
         addObject(tables, objects, CdR11aObjectAssets.Table.CHECKPOINT_MAPPINGS, objects.checkpoint());
+        // ObjAnton_Init stores the actual USA $20B3AA oMap long (Anton/Main.asm:27).
+        // Join the complete112-byte, four-frame source through the existing exact-byte helper.
+        addObject(tables, objects, CdR11aObjectAssets.Table.ANTON_MAPPINGS, objects.anton());
         var monitorView = objects.view(CdR11aObjectAssets.Table.MONITOR_TIME_MAPPINGS);
         var staticPieces = new ArrayList<DeclaredStaticPiece>();
         // ObjMonitorItem_Init (:451-459) adds the signed frame word and then one byte, skipping the count.

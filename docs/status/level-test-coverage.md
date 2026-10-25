@@ -1,12 +1,13 @@
 # Level test coverage backlog
 
 Sonic CD opening-object update (2026-10-25): the same partial act matrix now
-records the explicit USA object entry, current camera-art service, Boulder,
-diagonal Spring, Spikes and Checkpoint construction/render/replay,579-pattern
-cleanup, actual Checkpoint saved-data death/restart within a separately constructed
-scene, and the controller-only advance through603 to Anton inside604. These
-extend the historical terrain-only checks below; they do not certify the act,
-native cold/title/PLC timing, full-USA gameplay or JP/EU object parity.
+records current Anton pixels/body/real-terrain stores, eight constructed
+normal/damaged/flip render/replay scenes and601-entry retirement. The controller-only
+route naturally contacts/saves Checkpoint649, completes656 and stops inside657
+at collapsing platform20; pre-contact saved-owner restore is checked. Earlier
+Checkpoint death/restart remains a separate initial-only scene. These extend the
+historical terrain-only checks; they do not certify native cold/title/PLC timing,
+HUD time/audio, complete act/USA or JP/EU object parity.
 
 Sonic CD local development entry (2026-10-24): the
 [Palmtree Panic Act 1 Present matrix](../architecture/validation/levels/scd-palmtree-panic-act1-present.md)

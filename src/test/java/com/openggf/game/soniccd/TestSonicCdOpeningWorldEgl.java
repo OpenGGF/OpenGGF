@@ -164,7 +164,7 @@ class TestSonicCdOpeningWorldEgl {
                                 source.assets().openingObjects().monitorTimeArtBank(), runtime.sectionArtState().residency(),
                                 banks.player(), banks.ring(), banks.mosqui(), banks.plant(), banks.ramp(),
                                 banks.explosion(), banks.points(), banks.flower(), banks.powerup(), banks.floatBlock(), banks.spring(),
-                                banks.tunnelDoorVertical(), banks.monitorTime(), banks.boulder(), banks.diagonalSpring(), banks.spikes(), banks.checkpoint()));
+                                banks.tunnelDoorVertical(), banks.monitorTime(), banks.boulder(), banks.diagonalSpring(), banks.spikes(), banks.checkpoint(), banks.anton()));
                 assertEquals(expectedPicture, runtime.displayedFrame(), "Next V-int uses the pickup CPU table and now-serviced art");
                 int playerBase = com.openggf.graphics.PatternAtlasRange.OBJECTS.base();
                 assertTrue(runtime.displayedFrame().patternVersions().keySet().stream()
@@ -2090,7 +2090,7 @@ class TestSonicCdOpeningWorldEgl {
                 module.requirePlayerFrame().artState(), runtime.powerupArtState(), objects, objects.frontierArtBank(), objects.contactArtBank(),
                 objects.floatBlockArtBank(), objects.springArtBank(), objects.tunnelDoorArtBank(), objects.monitorTimeArtBank(), runtime.sectionArtState().residency(),
                 banks.player(), banks.ring(), banks.mosqui(), banks.plant(), banks.ramp(), banks.explosion(), banks.points(), banks.flower(),
-                banks.powerup(), banks.floatBlock(), banks.spring(), banks.tunnelDoorVertical(), banks.monitorTime(), banks.boulder(), banks.diagonalSpring(), banks.spikes(), banks.checkpoint());
+                banks.powerup(), banks.floatBlock(), banks.spring(), banks.tunnelDoorVertical(), banks.monitorTime(), banks.boulder(), banks.diagonalSpring(), banks.spikes(), banks.checkpoint(), banks.anton());
     }
 
     /** Literal N MM:157-167 and MM:55-60. Static item has ONE piece despite counted frame4 having four. */
@@ -4237,4 +4237,481 @@ class TestSonicCdOpeningWorldEgl {
     }
     // END constructed Checkpoint restart proof; original17 tests and all inherited bytes remain untouched.
 
+
+    // BEGIN constructed Anton World proof. All literal oracles and fixture prerequisites are UNRUN.
+    /**
+     * Immutable native authority 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff:
+     * ObjAnton_Init/Place/Main (Anton/Main.asm:24-94), Ani_Anton (Data/Animations.asm:1-5),
+     * MapSpr_Anton (Data/Mappings.asm:1-109), DrawObjects (Object Functions.asm:243-361).
+     * Root owns compile/RED/positive/review/R2/import and the independent natural controller604 route.
+     */
+    @Test void actualEglConstructedAntonWorldUsesServicedCurrentPixelsReplaysAndRetires601Patterns() throws Exception {
+        Assumptions.assumeTrue(Boolean.getBoolean("soniccd.opening.egl"), "Explicit actual EGL/media opt-in");
+        assertEquals("surfaceless-egl", System.getProperty("openggf.headless.gl"));
+        assertNull(System.getenv("DISPLAY")); assertNull(System.getenv("WAYLAND_DISPLAY"));
+        String media = System.getProperty("soniccd.media.root"); assertNotNull(media); assertFalse(media.isBlank());
+        CdGameDataSource source;
+        try (var files = Files.list(Path.of(media).resolve("USA"))) {
+            var cues = files.filter(p -> p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".cue")).toList();
+            assertEquals(1, cues.size()); source = CdStockLaunch.prepare(cues.getFirst(), CdStockLaunch.Request.r11a());
+        }
+        String prefixLog = InputScriptCompiler.compileToInputLog("649 R");
+        var prefix = new Bk2MovieLoader().parseInputLogText(Path.of("ENGINE-Anton-ordinary-controller-649-prerequisite"), prefixLog.lines().toList());
+        String sceneLog = InputScriptCompiler.compileToInputLog("40 -");
+        var movie = new Bk2MovieLoader().parseInputLogText(Path.of("ENGINE-constructed-Anton-neutral-rows"), sceneLog.lines().toList());
+        assertEquals(649, prefix.getFrameCount()); assertEquals(40, movie.getFrameCount());
+        String construction = "ENGINE constructed actual-USA R11A Anton World, ALL author oracles UNRUN. Constructed scene is separate from the ordinary controller prefix; no emulator/native parity or natural enemy-contact claim.\n"
+                + "Real USA HeadlessGameBoot/GameLoop/NullAudioBackend; ordinary heldRight649 prefix, no state/section/queue/readiness/service changes. Cold canonical409..41E remain UNKNOWN. After649 require all22 actual current tiles byte-equal to SAME cached TEN-source ART_ANTON, canonicalPLC9,row1/8120. Java484 and native-reader485 remain different finite extents; no new decode/upload/preload/fallback producer.\n"
+                + "Eight independent scenes subtype00/FF x raw placement flips0..3 restore the SAME warmed full cut. Exactly ONE initial CLOSED_CUT per scene: clear96 dynamics, preserve actual placement cursors/saved/reserved storage, stage whole40 ID3F, primary subtype, secondary0,savedID0, raw placement flip flags and TEST-only fractional XY ingress ABCD/1234 (not a native placement observation) only. No routine/map/frame/tile/angle/delta setter. One initial restore/rebind of SAME completed Sonic at its warmed X2743, independently queried two-foot surface-19, neutral supported pose (no camera-forward/future-object admission); retain actual animation cursor/header/timers/history/links/owner. Actual owned terrain must support actor feet and every prescribed Anton probe; no fake ground/gates, retry position or terrain mutation.\n"
+                + "Root R2 actual terrain fixture: after649 x=currentCameraX+240=2875, probeY=currentCameraY+112=763; real floor distance-2/raw angle08. Fixed shaped support, no search/retry or terrain edits. Surface=probeY+distance; Anton starts surface-21. Real floor at surface-1/0/+1/+2 must return +1/0/-1/-2. Rows1/2 Init+Place stay routine0; row3 negative Place0->2; row4 negative Place2->4; full Y+10000 each, fractions retained, NO Place snap. Row5 first full Xdelta Main/floor Y-WORD correction/shared animation. Literal flat support at ALL reached X probes and Sonic feet is a required fixture predicate, never fitted production.\n"
+                + "40 ordinary neutral GameLoop rows only after ingress. Same existing complete neutral/no-touch Body sound oracle (including reached ChargeStop), no Anton sound/scanner imitation. All4 genuine mapping frames/two scripts/all22 selected current tiles across scenes; native bit7, five-piece SAT coordinates/attributes/order, both priorCPU/NOW displayed conversion and currentCPU/NOW conversion checked against captured actual residency. Actual primaryAngle is last reached Anton floor probe, not Sonic angle; component RuntimeCAS/cursor proof owns store ordering/count. World angle0 cannot prove each same-value synchronous store or its count.\n"
+                + "Ordered current-palette World pixels over terrain+actual nativePlaneB, actual isolated renderer, explicitly TEST contrast same-renderer cell/piece/all-Anton omission controls; no hand-pixel-only negative. Full/course cuts0,1,3,4,5,6,first frame change restore state+pixels and forward through40 with NO ingress/rebind/reload/effect replay. Physical alias/dirty opaque limits stay component proof; no artificial World producer write or fabricated handler boundary.\n"
+                + "ALL601 actual atlas entries installed before module close; transparent TEST uploads allowed ONLY for missing old579, never Anton pixels. All601 absent after module close, actual shared-producer entry identities retained. 601 is installed retirement extent, not all601 scene-rendered. Optional unchanged ENGINE PNG/input/construction/outcome output ONLY after retirement AND finally session/graphics/boot cleanup. Fixed predicate failures are RootR2 fixture prerequisites, never a fallback route or a production fit.\n";
+        var observations = new StringBuilder(); var artifacts = new java.util.LinkedHashMap<String,RgbaImage>();
+        int[] nativeFirst = {0x780,0x7AE,0x3A0,0x424,0x441,0x680,0x6C6,0x6D7,0x544,0x334,0x520,0x328,0x5A8,0x374,0x490,0x320,0x6CB,0x409};
+        int[] counts = {24,14,70,28,63,70,5,39,36,15,36,12,82,19,46,8,12,22};
+        assertEquals(18,nativeFirst.length); assertEquals(18,counts.length); assertEquals(601,Arrays.stream(counts).sum());
+        try (var boot = new HeadlessGameBoot(320,224)) {
+            try {
+                var loop = boot.bootSonicCdOpeningObjects(source); var mode = SessionManager.getCurrentGameplayMode();
+                var module = assertInstanceOf(SonicCdGameModule.class,mode.getWorldSession().getGameModule());
+                var runtime = assertInstanceOf(CdOpeningObjectRuntime.class,module.getGameService(NativeDynamicObjectPass.class));
+                var frame = module.requirePlayerFrame(); var objects = source.assets().openingObjects();
+                assertSame(source,mode.getWorldSession().getDataSource()); assertEquals(GameMode.LEVEL,loop.getCurrentGameMode());
+                assertEquals(NullAudioBackend.class,GameServices.audio().getBackend().getClass());
+                assertNull(GameServices.audio().captureLogicalSnapshot().presentation().activeMusic());
+                var sources = objects.sectionArtSources(); var producerIdentities = sources.sources(); assertEquals(10,producerIdentities.size());
+                var antonSource = sources.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_ANTON);
+                assertEquals(9,antonSource.canonicalPlcId()); assertEquals(1,antonSource.canonicalRowIndex());
+                assertEquals(0x8120,antonSource.canonicalPlc().vramAddress()); assertEquals(22,antonSource.tileCount());
+                assertEquals(484,antonSource.decode().sourceBlobRange().length()); assertEquals(485,antonSource.readerInputRange().length());
+                assertEquals(704,antonSource.decode().bytes().length()); assertEquals(485,antonSource.readerBytes().length());
+                var cold = runtime.sectionArtState().residency();
+                assertArrayEquals(new byte[704],cold.region(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.Region.AT_8120).knownMask().copy());
+                for(int tile=0;tile<22;tile++) {
+                    final int pattern = 0x409+tile;
+                    var boundary = assertThrows(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.OwnershipBoundary.class,
+                            () -> com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(cold,pattern));
+                    assertEquals(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.Boundary.UNKNOWN_PATTERN,boundary.boundary());
+                    assertEquals(pattern,boundary.nativePatternId());
+                }
+                for(int row=0;row<649;row++) {
+                    step(loop,prefix.getFrame(row));
+                    assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT,runtime.phase(),"Ordinary completed controller prerequisite row "+(row+1));
+                }
+                // Runtime-observed old frontier649 is a TEST construction bound, never production authority.
+                assertAntonWorldCurrentSource(runtime,objects,sources,producerIdentities,antonSource);
+                assertEquals(2,frame.state().motion().routine()); assertEquals(0,frame.state().timers().hurt());
+                assertEquals(0,frame.state().objectLinks().standObject()); assertEquals(0,frame.state().objectLinks().pushObject());
+                int base = com.openggf.graphics.PatternAtlasRange.OBJECTS.base();
+                var banks = new CdOpeningObjectRuntime.LogicalBanks(base,base+24,base+38,base+108,base+136,base+199,
+                        base+269,base+274,base+313,base+349,base+364,base+400,base+412,base+494,base+513,base+559,base+567,base+579);
+                assertEquals(banks,new CdOpeningObjectRuntime.LogicalBanks(base,base+24,base+38,base+108,base+136,base+199,
+                        base+269,base+274,base+313,base+349,base+364,base+400,base+412,base+494,base+513,base+559,base+567));
+                assertEquals(banks,new CdOpeningObjectRuntime.LogicalBanks(base,base+24,base+38));
+                assertEquals(banks.checkpoint()+12,banks.anton()); assertEquals(base+579,banks.anton());
+                var policy = monitorWorldPolicy(module,objects,banks); var atlas = GameServices.graphics().getPatternAtlas(); int logical = base;
+                for(int span=0;span<18;span++) for(int tile=0;tile<counts[span];tile++) {
+                    int id = logical++; assertEquals(id,policy.resolve(nativeFirst[span]+tile).logicalPatternId());
+                    assertEquals(1,atlas.registeredRangesForTesting().stream().filter(r->id>=r.base() && id<r.base()+r.size()).count());
+                }
+                assertEquals(base+601,logical);
+                assertEquals(4,objects.anton().mappingFrames().size()); assertEquals(2,objects.anton().animations().size());
+                assertArrayEquals(java.util.HexFormat.of().parseHex("00040008030001ff070203ff"),
+                        objects.view(com.openggf.game.soniccd.level.CdR11aObjectAssets.Table.ANTON_ANIMATIONS).bytes().copy());
+                assertEquals(0x20B3AA,objects.view(com.openggf.game.soniccd.level.CdR11aObjectAssets.Table.ANTON_MAPPINGS).range().nativeAddress());
+                assertArrayEquals(java.util.HexFormat.of().parseHex(
+                        "00080022003c005605ed050000f4fd080004f405040007fc04050009f8fc0000110e"
+                        +"05ec050000f4fc080004f404040007fc0405000df8fb00001112"
+                        +"05ed050012f4fd080004f405040007fc04050009f8fc0000110e"
+                        +"05ec050012f4fc080004f404040007fc0405000df8fb00001112"),
+                        objects.view(com.openggf.game.soniccd.level.CdR11aObjectAssets.Table.ANTON_MAPPINGS).bytes().copy());
+                var registry = mode.getRewindRegistry(); var warmFull = registry.capture(); var warm = capture(module);
+                assertEquals(2,runtime.levelGlobals().checkpoint());assertEquals(1,runtime.levelGlobals().spawnMode());
+                byte[] savedKnown=new byte[31];Arrays.fill(savedKnown,(byte)1);assertArrayEquals(savedKnown,runtime.checkpointState().saved().knownMask().copy());
+                artifacts.put("ENGINE-controller-Right-call649-natural-checkpoint-save.png",render(module,true));
+                assertAntonWorldCapture(warm,module); // Capture before any constructed scene; drawing changes no gameplay owner.
+                var reachedTiles = new java.util.TreeSet<Integer>(); var reachedFrames = new java.util.TreeSet<Integer>();
+                for(int subtype : new int[]{0,0xFF}) for(int flip=0;flip<4;flip++) {
+                    registry.restore(warmFull); assertAntonWorldCapture(warm,module);
+                    assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT,runtime.phase());
+                    assertEquals(0,runtime.devGlobals().goodFuture()); assertEquals(0,runtime.contactGlobals().timeWarp());
+                    assertEquals(0,frame.environment().globals().invincible()); assertEquals(0,frame.environment().globals().debugMode());
+                    assertEquals(0,frame.environment().globals().debugCheat()); assertEquals(0,frame.environment().movement().gates().miniSonic());
+                    assertEquals(0,frame.environment().movement().gates().speedShoes());
+                    // Root R2 fixed real controller649 terrain: x2875/probe763, source slope angle08.
+                    // This fixture uses the existing pure terrain owner for a detached support vector, never Anton output.
+                    int x = GameServices.camera().getX()+240, probeY = GameServices.camera().getY()+112;
+                    var terrain = new com.openggf.game.soniccd.player.CdPlayerTerrain(frame.assets().terrain());
+                    var origin = terrain.floor(x,probeY,13,0,16,4|flip);
+                    assertEquals(2875,x);assertEquals(763,probeY);assertEquals(-2,origin.distance());
+                    assertEquals(java.util.OptionalInt.of(8),origin.angleWrite());
+                    int surface = probeY+origin.distance();
+                    assertTrue(surface-GameServices.camera().getY()>=96 && surface-GameServices.camera().getY()<=176);
+                    assertAntonWorldFloor(frame.assets().terrain(),terrain,x,surface,0,4|flip);
+                    int delta = subtype==0 ? -0x10000 : -0x8000;
+                    int[] expectedY=new int[41], expectedAngle=new int[41];expectedY[0]=surface-21;
+                    for(int row=1;row<=4;row++) {
+                        expectedY[row]=expectedY[row-1]+1;
+                        assertAntonWorldFloor(frame.assets().terrain(),terrain,x,expectedY[row]+19,2-row,4|flip);
+                        expectedAngle[row]=terrain.floor(x,expectedY[row]+19,13,0,16,4|flip).angleWrite().orElseThrow();
+                    }
+                    for(int row=5;row<=40;row++) {
+                        int probeX=(((x<<16)|0xABCD)+(row-4)*delta)>>>16;
+                        var support=terrain.floor(probeX,expectedY[row-1]+19,13,0,16,4|flip);
+                        assertTrue(support.distance()>=-7&&support.distance()<=7,"Fixed real slope support; no reversal/fake floor");
+                        assertAntonWorldFloor(frame.assets().terrain(),terrain,probeX,expectedY[row-1]+19,support.distance(),4|flip);
+                        expectedY[row]=(expectedY[row-1]+support.distance())&0xFFFF;
+                        expectedAngle[row]=support.angleWrite().orElseThrow();
+                    }
+                    int actorX=frame.state().motion().centreX16_16()>>>16;
+                    assertEquals(2743,actorX); // Preserve the warmed horizontal route/camera window; no future-object admission workaround.
+                    var left=terrain.floor(actorX-9,probeY,13,0,16,4);var right=terrain.floor(actorX+9,probeY,13,0,16,4);
+                    assertTrue(left.angleWrite().isPresent()&&right.angleWrite().isPresent());
+                    int actorSurface=probeY+Math.min(left.distance(),right.distance());
+                    assertAntonWorldFloor(frame.assets().terrain(),terrain,actorX-9,actorSurface,probeY+left.distance()-actorSurface,4);
+                    assertAntonWorldFloor(frame.assets().terrain(),terrain,actorX+9,actorSurface,probeY+right.distance()-actorSurface,4);
+                    var saved = runtime.placement().capture().savedFlags(); var status = runtime.placement().capture().status();
+                    var reserved = runtime.captureClosedCut().reserved(); var pool = runtime.placement().pool();
+                    pool.clearDynamicSlots(); assertEquals(96,pool.capture().slots().size());
+                    assertTrue(pool.capture().slots().stream().allMatch(s->Arrays.equals(new byte[64],s.copyBytes())));
+                    // TEST-only fractional XY ingress, not an observed native placement or a route repair.
+                    pool.write(pool.state(40).moveByte(ID,0x3F).moveByte(SUBTYPE,subtype).moveByte(SUBTYPE2,0)
+                            .moveByte(FLAGS,flip).moveByte(SPRITE_FLAGS,flip)
+                            .moveLong(X_POSITION,(x<<16)|0xABCD).moveLong(Y_POSITION,((surface-21)<<16)|0x1234));
+                    stageAntonWorldPlayer(module,actorX<<16,(actorSurface-19)<<16); // ONCE per independent scene only.
+                    assertArrayEquals(saved.copy(),runtime.placement().capture().savedFlags().copy()); assertEquals(status,runtime.placement().capture().status());
+                    assertReservedImages(reserved,runtime.captureClosedCut().reserved());
+                    assertAntonWorldObject(pool.state(40),x,surface,subtype,flip,expectedY,0);
+                    var fullCuts = new ArrayList<>(List.of(registry.capture())); var courseCuts = new ArrayList<>(List.of(registry.captureCourse()));
+                    var states = new ArrayList<>(List.of(capture(module))); var pictures = new ArrayList<>(List.of(render(module,true)));
+                    String scene = "subtype"+Integer.toHexString(subtype)+"-flip"+flip;
+                    observations.append("scene=").append(scene).append(" x=").append(x).append(" probeY=").append(probeY)
+                            .append(" realFloorDistance=").append(origin.distance()).append(" surface=").append(surface).append('\n');
+                    artifacts.put("ENGINE-Anton-"+scene+"-preInit.png",pictures.getFirst());
+                    for(int row=1;row<=40;row++) {
+                        var previous = capture(module); long clock = frame.vIntClock().absoluteValue().orElseThrow();
+                        int levelFrames = GameServices.level().getFrameCounter();
+                        checkpointWorldStep(loop,movie.getFrame(row-1),module,false); // Existing actual complete neutral Body sound oracle.
+                        assertEquals(clock+1,frame.vIntClock().absoluteValue().orElseThrow()); assertEquals(levelFrames+1,GameServices.level().getFrameCounter());
+                        assertAntonWorldObject(pool.state(40),x,surface,subtype,flip,expectedY,row);
+                        assertEquals(1,pool.capture().slots().stream().filter(s->s.id()!=0).count(),"No extra live floor owner may follow Anton");
+                        assertEquals(states.getFirst().objects().contactGlobals(),runtime.contactGlobals());
+                        assertEquals(states.getFirst().objects().scoreGlobals(),runtime.scoreGlobals());
+                        assertEquals(states.getFirst().objects().checkpointState(),runtime.checkpointState());
+                        assertArrayEquals(saved.copy(),runtime.placement().capture().savedFlags().copy());
+                        assertEquals(2,frame.state().motion().routine()); assertEquals(0,frame.state().timers().hurt());
+                        assertTrue(pool.state(40).centreX()-(frame.state().motion().centreX16_16()>>>16)>=96,"No actual shared scanner contact");
+                        int probeBottom = (row<=4?expectedY[row]:expectedY[row-1])+19;
+                        var lastProbe = terrain.floor(pool.state(40).centreX(),probeBottom,13,0,16,pool.state(40).spriteFlags());
+                        assertEquals(java.util.OptionalInt.of(expectedAngle[row]),lastProbe.angleWrite());
+                        assertEquals(lastProbe.angleWrite().orElse(0),frame.environment().movement().globals().primaryAngle(),
+                                "Existing Frame scratch is LAST actual Anton probe, never substituted player oAngle; component CAS owns store order");
+                        var completed = capture(module); var selected = completed.publication().published();
+                        assertEquals(previous.publication().prepared(),selected);
+                        assertAntonWorldCurrentSource(runtime,objects,sources,producerIdentities,antonSource);
+                        var nowResidency = runtime.sectionArtState().residency(); var nowPolicy = monitorWorldPolicy(module,objects,banks);
+                        assertEquals(com.openggf.game.soniccd.resources.CdObjectPresentation.convert(previous.cpu(),nowPolicy),
+                                runtime.displayedFrame(),"Prior completed CPU SAT converted using captured NOW-serviced current art");
+                        var cpuPicture = com.openggf.game.soniccd.resources.CdObjectPresentation.convert(runtime.cpuSat(),nowPolicy);
+                        assertAntonWorldVersions(cpuPicture,nowResidency,banks.anton());
+                        assertAntonWorldSat(runtime.cpuSat(),GameServices.camera().getX(),GameServices.camera().getY(),pool.state(40));
+                        var image = render(module,true); var backdrop = renderTerrain(module,selected);
+                        assertNativeGpuBackground(module); assertTerrainOutsideSprites(image,backdrop,runtime.displayedFrame());
+                        if(row>=2) {
+                            var prior = previous.objects().placement().pool().slots().get(40-32);
+                            var literal = antonWorldTiles(prior,selected.cameraX(),selected.cameraY());
+                            assertAntonWorldSat(previous.cpu(),selected.cameraX(),selected.cameraY(),prior);
+                            assertAntonWorldVersions(runtime.displayedFrame(),nowResidency,banks.anton());
+                            String pixels = assertAntonWorldPixels(runtime.displayedFrame(),image,backdrop,nowResidency,banks.anton(),literal);
+                            reachedFrames.add(prior.unsignedByte(MAP_FRAME));
+                            for(var cell:literal) {
+                                reachedTiles.add(cell.offset()); int id = banks.anton()+cell.offset(); var entry = atlas.getEntry(id); assertNotNull(entry);
+                                assertTrue(glIsTexture(atlas.getTextureId(entry.atlasIndex())));
+                                assertEquals(runtime.displayedFrame().patternVersions().get(id),
+                                        com.openggf.graphics.SpritePresentation.patternSample(GameServices.graphics(),id));
+                            }
+                            observations.append(scene).append(" row=").append(row).append(" routine=").append(pool.state(40).routine())
+                                    .append(" frame=").append(pool.state(40).unsignedByte(MAP_FRAME)).append(" timer=").append(pool.state(40).unsignedByte(ANIMATION_TIME))
+                                    .append(" primaryAngle=").append(frame.environment().movement().globals().primaryAngle()).append(' ').append(pixels).append('\n');
+                            if(row==2 || row==5 || row==6 || row==(subtype==0?10:14)) {
+                                var only = antonWorldOnly(runtime.displayedFrame(),banks.anton());
+                                var isolated = renderDiagonalWorldPicture(module,only,null);
+                                assertAntonWorldPixels(only,isolated,backdrop,nowResidency,banks.anton(),literal);
+                                int contrastRgb = diagonalWorldContrastRgb(1);
+                                var contrast = renderDiagonalWorldPicture(module,com.openggf.graphics.SpritePresentation.Frame.empty(),contrastRgb);
+                                var glyph = renderDiagonalWorldPicture(module,only,contrastRgb);
+                                assertAntonWorldPixels(only,glyph,contrast,nowResidency,banks.anton(),literal);
+                                observations.append(scene).append(" row=").append(row).append(' ')
+                                        .append(assertAntonWorldOmissions(module,only,glyph,contrast,nowResidency,banks.anton(),literal,contrastRgb)).append('\n');
+                                assertFalse(Arrays.equals(backdrop.pixels(),renderWithoutBackground(module).pixels()),"Actual selected native Plane B contributes");
+                                artifacts.put("ENGINE-Anton-"+scene+"-row"+row+".png",image);
+                                artifacts.put("ENGINE-Anton-"+scene+"-nativePlane-row"+row+".png",backdrop);
+                                artifacts.put("ENGINE-render-only-Anton-"+scene+"-row"+row+".png",isolated);
+                            }
+                        }
+                        if(row==1) {
+                            // Actual current CPU SAT renderer control for postInit, distinct from the production previous-SAT display.
+                            var only = antonWorldOnly(cpuPicture,banks.anton()); var cpuImage = renderDiagonalWorldPicture(module,only,null);
+                            assertAntonWorldPixels(only,cpuImage,backdrop,nowResidency,banks.anton(),
+                                    antonWorldTiles(pool.state(40),GameServices.camera().getX(),GameServices.camera().getY()));
+                            artifacts.put("ENGINE-render-only-currentCPU-Anton-"+scene+"-postInit.png",cpuImage);
+                        }
+                        assertArrayEquals(image.pixels(),render(module,true).pixels()); assertAntonWorldCapture(completed,module);
+                        states.add(completed); pictures.add(image); fullCuts.add(registry.capture()); courseCuts.add(registry.captureCourse());
+                    }
+                    for(int cut : new int[]{0,1,3,4,5,6,subtype==0?9:13}) for(boolean courseOnly:List.of(false,true)) {
+                        if(courseOnly) registry.restoreCourse(courseCuts.get(cut)); else registry.restore(fullCuts.get(cut));
+                        assertAntonWorldCapture(states.get(cut),module); assertArrayEquals(pictures.get(cut).pixels(),render(module,true).pixels());
+                        assertAntonWorldCapture(states.get(cut),module);
+                        for(int row=cut+1;row<=40;row++) {
+                            checkpointWorldStep(loop,movie.getFrame(row-1),module,false); // No ingress, rebind, source reload or effect replay.
+                            assertAntonWorldObject(pool.state(40),x,surface,subtype,flip,expectedY,row);
+                            assertAntonWorldCapture(states.get(row),module);
+                            assertArrayEquals(pictures.get(row).pixels(),render(module,true).pixels(),"Anton full/course "+scene+" cut/row="+cut+"/"+row);
+                            assertAntonWorldCapture(states.get(row),module);
+                        }
+                    }
+                }
+                assertEquals(java.util.Set.of(0,1,2,3),reachedFrames);
+                assertEquals(java.util.stream.IntStream.range(0,22).boxed().collect(java.util.stream.Collectors.toSet()),reachedTiles);
+                assertAntonWorldCurrentSource(runtime,objects,sources,producerIdentities,antonSource);
+                var beforeRetirement = capture(module); int transparentWitnesses = 0;
+                for(int offset=0;offset<601;offset++) {
+                    int id = base+offset;
+                    if(atlas.getEntry(id)==null) {
+                        assertTrue(offset<579,"All22 Anton entries must come from genuine selected current pixels, never TEST uploads");
+                        GameServices.graphics().cachePatternTexture(new com.openggf.level.Pattern(),id); transparentWitnesses++;
+                    }
+                    var entry = atlas.getEntry(id); assertNotNull(entry,"ALL601 installed retirement witness "+id);
+                    assertTrue(glIsTexture(atlas.getTextureId(entry.atlasIndex())));
+                }
+                assertAntonWorldCapture(beforeRetirement,module);
+                var shared = new java.util.HashMap<Integer,Object>();
+                for(int id=0;id<=0x7FF;id++) { var entry=atlas.getEntry(id); if(entry!=null) shared.put(id,entry); }
+                for(var range:atlas.registeredRangesForTesting()) for(int id=range.base();id<range.base()+range.size();id++) {
+                    if(id>=base && id<base+601) continue; var entry=atlas.getEntry(id); if(entry!=null) shared.put(id,entry);
+                }
+                assertFalse(shared.isEmpty()); assertTrue(shared.keySet().stream().anyMatch(id->id<=0x7FF));
+                observations.append("ALL601 installed, selected Anton22 actual; TEST-only missing-old579 transparent witnesses=")
+                        .append(transparentWitnesses).append("; actual shared entry identities=").append(shared.size()).append('\n');
+                module.closeTerrainPlayer(); assertTrue(runtime.closed()); assertTrue(frame.closed());
+                assertSame(atlas,GameServices.graphics().getPatternAtlas());
+                // Intended old579 behavioral RED: first remaining owned entry is base+579, AFTER the complete proof prefix.
+                for(int offset=0;offset<601;offset++) assertNull(atlas.getEntry(base+offset),"ALL601 owned IDs retired "+(base+offset));
+                shared.forEach((id,entry)->assertSame(entry,atlas.getEntry(id),"Actual shared producer identity survives "+id));
+                assertEquals(NullAudioBackend.class,GameServices.audio().getBackend().getClass());
+            } finally {
+                try { SessionManager.closeGameplaySession(); }
+                finally { GraphicsManager.destroyForReinit(); }
+            }
+        }
+        // Reached only after module retirement AND finally session/graphics/owned boot-context cleanup.
+        Path output = openCaptureOutput(prefixLog+"\n; Independent initial-only constructed scenes, each followed by\n"+sceneLog,"soniccd.anton.output");
+        if(output!=null) {
+            Files.writeString(output.resolve("construction.txt"),construction,StandardOpenOption.CREATE_NEW);
+            for(var artifact:artifacts.entrySet()) ScreenshotCapture.savePNG(artifact.getValue(),output.resolve(artifact.getKey()));
+            Files.writeString(output.resolve("outcome.txt"),
+                    "PASS: ENGINE constructed actual-USA Anton World; actual ordinary649 serviced source prerequisite; native Init/positive Place/0->2->4/Main/shared two-script animation, all4 mapping frames/raw flips/current22 patterns, actual SAT and ordered current-palette terrain/nativePlaneB pixels, actual isolated/TEST contrast omission renderer controls, full/course state+pixel forward replay without ingress, ALL601 installed retirement witnesses removed and actual shared identities retained; module/session/graphics/boot cleanup returned. 601 is installed extent, not all rendered. No natural enemy-contact, kill/scanner attack, emulator/native parity, alias/dirty-opaque completion, JP/EU or full-game claim.\n"
+                            +construction+observations,StandardOpenOption.CREATE_NEW);
+        }
+    }
+
+    /** Read-only fixture predicate over real owned terrain; failure never tries another point. */
+    private static void assertAntonWorldFloor(com.openggf.game.soniccd.level.CdR11aTerrain owner,
+            com.openggf.game.soniccd.player.CdPlayerTerrain terrain,int x,int y,int distance,int flags) {
+        var result = terrain.floor(x,y,13,0,16,flags);
+        assertEquals(distance,result.distance(),"Fixed actual terrain prerequisite at "+x+":"+y);
+        assertTrue(result.angleWrite().isPresent(),"Real shaped floor must publish an angle");
+        // The returned surface must resolve a real, nonzero solid collision shape in that same owner.
+        var placement = assertInstanceOf(com.openggf.game.soniccd.level.CdTerrainCollision.Available.class,
+                new com.openggf.game.soniccd.level.CdTerrainCollision(owner).lookup(x,y+distance+1,flags));
+        int raw = placement.word().rawWord();
+        assertTrue((raw&0x7FF)!=0); assertTrue((raw&(1<<13))!=0);
+        assertTrue(owner.collision().idForBlock(raw&0x7FF)!=0,"No blank/no-shape floor witness");
+    }
+
+    /** ONE initial actor ingress per independent scene; never called from row/forward-replay loops. */
+    private static void stageAntonWorldPlayer(SonicCdGameModule module,int x16_16,int y16_16) {
+        var runtime=(CdOpeningObjectRuntime)module.getGameService(NativeDynamicObjectPass.class);
+        assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT,runtime.phase()); module.requirePlayerActor().requireCompletedNativeFrame();
+        var frame=module.requirePlayerFrame();var actor=frame.captureActor();var old=actor.state();var m=old.motion();
+        assertEquals(2,m.routine());assertEquals(0,old.objectLinks().standObject());assertEquals(0,old.objectLinks().pushObject());
+        var motion=new com.openggf.game.soniccd.player.CdPlayerMotionState(x16_16,y16_16,0,0,0,2,0,0,4,9,19,0,
+                m.previousAnimation(),0,0,0,0,0,m.previousPrimaryAngle(),m.previousSecondaryAngle());
+        var state=new com.openggf.game.soniccd.player.CdPlayerBody.State(motion,old.animation(),old.header(),old.timers(),
+                old.history(),old.rotationDistance(),old.objectLinks());
+        frame.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(),state,java.util.Optional.empty()));
+        module.requirePlayerActor().rebindAfterRestore();
+        assertSame(old.animation(),frame.state().animation());assertSame(old.header(),frame.state().header());assertSame(old.timers(),frame.state().timers());
+        assertSame(old.history(),frame.state().history());assertEquals(old.rotationDistance(),frame.state().rotationDistance());assertEquals(old.objectLinks(),frame.state().objectLinks());
+    }
+
+    /** Literal addressed-byte oracle, never calls Anton/shared animator to calculate its expected image. */
+    private static void assertAntonWorldObject(com.openggf.game.soniccd.objects.CdObjectState actual,
+            int x,int surface,int subtype,int flip,int[] expectedY,int row) {
+        byte[] expected=new byte[64];
+        checkpointWorldPut(expected,0,1,0x3F);checkpointWorldPut(expected,1,1,flip);checkpointWorldPut(expected,0x22,1,flip);
+        checkpointWorldPut(expected,0x28,1,subtype);checkpointWorldPut(expected,8,4,(x<<16)|0xABCD);
+        checkpointWorldPut(expected,12,4,((surface-21)<<16)|0x1234);
+        if(row>0) {
+            int animation=subtype==0?0:1,delta=subtype==0?-0x10000:-0x8000,main=Math.max(0,row-4);
+            int y=expectedY[row];
+            checkpointWorldPut(expected,1,1,0x84|flip);checkpointWorldPut(expected,2,2,0x2409);checkpointWorldPut(expected,4,4,0x20B3AA);
+            checkpointWorldPut(expected,8,4,((x<<16)|0xABCD)+main*delta);checkpointWorldPut(expected,12,4,(y<<16)|0x1234);
+            checkpointWorldPut(expected,0x16,1,0x13);checkpointWorldPut(expected,0x17,1,0x18);
+            checkpointWorldPut(expected,0x18,1,4);checkpointWorldPut(expected,0x19,1,0x18);checkpointWorldPut(expected,0x1C,1,animation);
+            checkpointWorldPut(expected,0x20,1,0x29);checkpointWorldPut(expected,0x24,1,row<3?0:row==3?2:4);
+            checkpointWorldPut(expected,0x2A,4,delta);checkpointWorldPut(expected,0x2E,2,x);
+            if(main>0) {
+                int period=animation==0?4:8,phase=((main-1)/period)&1;
+                checkpointWorldPut(expected,0x1A,1,animation*2+phase);checkpointWorldPut(expected,0x1B,1,phase+1);
+                checkpointWorldPut(expected,0x1D,1,animation);checkpointWorldPut(expected,0x1E,1,period-1-(main-1)%period);
+            }
+        }
+        assertArrayEquals(expected,actual.copyBytes(),"ALL64 addressed Anton bytes with independent terrain-vector Y row="+row+" subtype="+subtype+" flip="+flip);
+    }
+
+    private static void assertAntonWorldCapture(Capture expected,SonicCdGameModule module) {
+        assertCapture(expected,module);
+        var runtime=(CdOpeningObjectRuntime)module.getGameService(NativeDynamicObjectPass.class);
+        assertEquals(expected.objects().checkpointState(),runtime.checkpointState());
+        assertEquals(expected.objects().checkpointState(),runtime.captureClosedCut().checkpointState());
+    }
+
+    /** SAME existing cached bank/source identities, actual read-only current bytes after ordinary real service. */
+    private static void assertAntonWorldCurrentSource(CdOpeningObjectRuntime runtime,
+            com.openggf.game.soniccd.level.CdR11aObjectAssets objects,
+            com.openggf.game.soniccd.level.CdR11aObjectAssets.SectionArtSourceBank bank,
+            List<com.openggf.game.soniccd.level.CdR11aObjectAssets.SectionArtSource> identities,
+            com.openggf.game.soniccd.level.CdR11aObjectAssets.SectionArtSource anton) throws Exception {
+        assertSame(bank,objects.sectionArtSources());assertSame(identities,bank.sources());assertEquals(10,identities.size());
+        for(int i=0;i<10;i++)assertSame(identities.get(i),objects.sectionArtSources().sources().get(i));
+        assertSame(anton,bank.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_ANTON));
+        var current=runtime.sectionArtState().residency();
+        for(int tile=0;tile<22;tile++)assertArrayEquals(anton.decode().bytes().slice(tile*32,32).copy(),
+                com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(current,0x409+tile).copy(),
+                "Actual serviced current canonical tile, not source fallback "+tile);
+    }
+
+    private static int[][] antonWorldPieces(int frame) {
+        return switch(frame) {
+            case 0 -> new int[][]{{-19,5,0,-12},{-3,8,4,-12},{5,4,7,-4},{4,5,9,-8},{-4,0,17,14}};
+            case 1 -> new int[][]{{-20,5,0,-12},{-4,8,4,-12},{4,4,7,-4},{4,5,13,-8},{-5,0,17,18}};
+            case 2 -> new int[][]{{-19,5,18,-12},{-3,8,4,-12},{5,4,7,-4},{4,5,9,-8},{-4,0,17,14}};
+            case 3 -> new int[][]{{-20,5,18,-12},{-4,8,4,-12},{4,4,7,-4},{4,5,13,-8},{-5,0,17,18}};
+            default -> throw new AssertionError("Unowned literal Anton mapping frame "+frame);
+        };
+    }
+
+    /** Actual native DrawObjects SAT, not a synthetic CPU table or direct draw callback. */
+    private static void assertAntonWorldSat(CdObjectDrawQueue.CpuSat sat,int cameraX,int cameraY,
+            com.openggf.game.soniccd.objects.CdObjectState object) {
+        assertEquals(0x80,object.spriteFlags()&0x80,"Actual SAT drain owns bit7");assertTrue(sat.spriteCount()<80);
+        byte[] raw=sat.bytes();int seen=0,lastSonic=-1,firstAnton=-1;var pieces=antonWorldPieces(object.unsignedByte(MAP_FRAME));
+        for(int entry=0;entry<sat.spriteCount();entry++) {
+            var p=sat.provenance().get(entry);if(p.slotRef().wholeIndex()==0)lastSonic=entry;
+            if(p.slotRef().wholeIndex()!=40)continue;if(firstAnton<0)firstAnton=entry;
+            assertTrue(seen<5);int[] piece=pieces[seen];
+            assertEquals(4,p.queueBucket());assertEquals(0,p.queueOrdinal());assertEquals(seen,p.mappingPieceOrdinal());
+            int cols=(piece[1]>>>2)+1,rows=(piece[1]&3)+1,flags=object.spriteFlags();
+            int sx=(flags&1)==0?piece[3]:-piece[3]-cols*8,sy=(flags&2)==0?piece[0]:-piece[0]-rows*8;
+            int at=entry*8;
+            assertEquals((object.centreY()-cameraY+128+sy)&0xFFFF,((raw[at]&255)<<8)|(raw[at+1]&255));
+            assertEquals(piece[1],raw[at+2]&255);assertEquals(entry+1,raw[at+3]&255);
+            int word=((raw[at+4]&255)<<8)|(raw[at+5]&255);assertEquals((0x2409+piece[2])^((flags&3)<<11),word);
+            assertEquals(0x2000,word&0xE000,"Native palette1/hardware-priority0, independent of queue4");
+            int hardwareX=(object.centreX()-cameraX+128+sx)&511;assertNotEquals(0,hardwareX);
+            assertEquals(hardwareX,((raw[at+6]&255)<<8)|(raw[at+7]&255));seen++;
+        }
+        assertEquals(5,seen);assertTrue(lastSonic>=0 && lastSonic<firstAnton,"Actual player SAT precedes queue4; renderer paints reverse SAT");
+    }
+
+    private record AntonWorldCell(int offset,int x,int y,boolean hFlip,boolean vFlip,int piece) { }
+
+    /** Independent literal native piece -> column-major tile oracle in actual reverse-SAT painter order. */
+    private static List<AntonWorldCell> antonWorldTiles(com.openggf.game.soniccd.objects.CdObjectState object,int cameraX,int cameraY) {
+        var out=new ArrayList<AntonWorldCell>();var pieces=antonWorldPieces(object.unsignedByte(MAP_FRAME));int flip=object.spriteFlags()&3;
+        for(int p=4;p>=0;p--) {
+            int[] piece=pieces[p];int cols=(piece[1]>>>2)+1,rows=(piece[1]&3)+1;
+            int word=(0x2409+piece[2])^(flip<<11);boolean h=(word&0x800)!=0,v=(word&0x1000)!=0;
+            int ox=object.centreX()-cameraX+((flip&1)==0?piece[3]:-piece[3]-cols*8);
+            int oy=object.centreY()-cameraY+((flip&2)==0?piece[0]:-piece[0]-rows*8);
+            for(int row=0;row<rows;row++)for(int col=0;col<cols;col++)out.add(new AntonWorldCell(
+                    (word&0x7FF)-0x409+col*rows+row,ox+(h?cols-1-col:col)*8,oy+(v?rows-1-row:row)*8,h,v,p));
+        }
+        assertEquals(14,out.size());return List.copyOf(out);
+    }
+
+    private static void assertAntonWorldVersions(com.openggf.graphics.SpritePresentation.Frame picture,
+            com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.State residency,int base) {
+        int selected=0;
+        for(var tile:picture.tiles())if(tile.patternId()>=base && tile.patternId()<base+22) {
+            selected++;var current=com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(residency,0x409+tile.patternId()-base);
+            assertEquals(com.openggf.game.soniccd.resources.CdObjectPresentation.patternVersion(current),picture.patternVersions().get(tile.patternId()));
+        }
+        assertEquals(14,selected,"Actual selected mapping uses14 cells, not all22 every frame");
+    }
+
+    /** Current palette/nibbles, all holes/overlaps, and actual other sprites over current terrain/nativePlaneB. */
+    private static String assertAntonWorldPixels(com.openggf.graphics.SpritePresentation.Frame picture,RgbaImage image,RgbaImage terrain,
+            com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.State residency,int base,List<AntonWorldCell> literal) {
+        assertTrue(picture.primitives().isEmpty());assertEquals(14,literal.size());
+        int left=literal.stream().mapToInt(AntonWorldCell::x).min().orElseThrow(),top=literal.stream().mapToInt(AntonWorldCell::y).min().orElseThrow();
+        int right=literal.stream().mapToInt(t->t.x()+8).max().orElseThrow(),bottom=literal.stream().mapToInt(t->t.y()+8).max().orElseThrow();
+        assertTrue(left>=0 && top>=0 && right<=320 && bottom<=224,"Fixed fixture must keep all native Anton geometry visible; no camera/pose retry");
+        var graphics=GameServices.graphics();assertFalse(graphics.isWaterEnabled());assertFalse(graphics.getPaletteFadePresentation().affects(1));
+        var palette=GameServices.level().getCurrentLevel().getPalette(1);int[] argb=new int[16];
+        for(int n=1;n<16;n++){var c=palette.getColor(n);argb[n]=0xFF000000|com.openggf.graphics.color.DisplayColorConverter.toPackedRgb(
+                c.r&255,c.g&255,c.b&255,graphics.getDisplayColorProfile(),graphics.getDisplayColorExpansion());}
+        int[] expected=terrain.pixels().clone();int at=0,opaque=0,transparent=0,changed=0;
+        for(var tile:picture.tiles()) {
+            if(tile.patternId()<base || tile.patternId()>=base+22){paintDiagonalWorldOtherSprite(picture,tile,expected,left,top,right,bottom);continue;}
+            assertTrue(at<literal.size());var cell=literal.get(at++);
+            assertEquals(base+cell.offset(),tile.patternId());assertEquals((float)cell.x(),tile.x());assertEquals((float)cell.y(),tile.y());
+            assertEquals(8f,tile.width());assertEquals(8f,tile.height());assertEquals(1,tile.palette());assertEquals(cell.hFlip(),tile.hFlip());assertEquals(cell.vFlip(),tile.vFlip());
+            assertFalse(tile.priority());assertTrue(tile.priorityShader());assertEquals(0,tile.occlusionMask());assertFalse(tile.ghost());assertFalse(tile.ghostColour());
+            assertEquals(1f,tile.ghostAlpha());assertEquals(0,tile.rowStart());assertEquals(8,tile.rowEnd());assertFalse(tile.rowClipped());
+            assertEquals(com.openggf.graphics.SpritePresentation.Layer.OBJECT,tile.layer());assertEquals(com.openggf.graphics.SpritePresentation.Subject.WORLD,tile.subject());
+            var decoded=new com.openggf.level.Pattern();decoded.fromSegaFormat(
+                    com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(residency,0x409+cell.offset()).copy());
+            var version=picture.patternVersions().get(base+cell.offset());assertNotNull(version);long[] words={version.a(),version.b(),version.c(),version.d()};
+            for(int n=0;n<64;n++)assertEquals(decoded.getPixel(n%8,n/8)&15,(int)((words[n/16]>>>((n%16)*4))&15));
+            for(int dy=0;dy<8;dy++)for(int dx=0;dx<8;dx++) {
+                int value=decoded.getPixel(cell.hFlip()?7-dx:dx,cell.vFlip()?7-dy:dy)&15,index=(cell.y()+dy)*320+cell.x()+dx;
+                if(value==0)transparent++;else{opaque++;expected[index]=argb[value];if(argb[value]!=terrain.pixels()[index])changed++;}
+            }
+        }
+        assertEquals(14,at);
+        for(int y=top;y<bottom;y++)for(int x=left;x<right;x++)assertEquals(expected[y*320+x],image.pixels()[y*320+x],"Ordered current Anton/native plane pixel "+x+":"+y);
+        assertEquals(14*64,opaque+transparent);assertTrue(opaque>0);assertTrue(transparent>0);assertTrue(changed>0);
+        return "cells=14 opaque="+opaque+" transparent="+transparent+" changed="+changed;
+    }
+
+    /** Actual renderer counterfactuals; partial pictures are TEST controls, never source/gameplay/art mutation. */
+    private static String assertAntonWorldOmissions(SonicCdGameModule module,com.openggf.graphics.SpritePresentation.Frame picture,
+            RgbaImage full,RgbaImage terrain,com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.State residency,
+            int base,List<AntonWorldCell> literal,int contrastRgb) {
+        var omittedAll=renderDiagonalWorldPicture(module,com.openggf.graphics.SpritePresentation.Frame.empty(),contrastRgb);
+        assertArrayEquals(terrain.pixels(),omittedAll.pixels());assertFalse(Arrays.equals(full.pixels(),omittedAll.pixels()));
+        assertThrows(AssertionError.class,()->assertAntonWorldPixels(picture,omittedAll,terrain,residency,base,literal));
+        int cellWitnesses=0,pieceWitnesses=0,unchanged=0;
+        for(int selector=0;selector<14+5;selector++) {
+            boolean piece=selector>=14;int selected=piece?selector-14:selector;var retained=new ArrayList<com.openggf.graphics.SpritePresentation.Tile>();
+            for(int i=0;i<14;i++)if(!(piece?literal.get(i).piece()==selected:i==selected))retained.add(picture.tiles().get(i));
+            var partial=renderDiagonalWorldPicture(module,checkpointWorldFrame(retained,picture),contrastRgb);
+            if(Arrays.equals(full.pixels(),partial.pixels())){unchanged++;continue;} // Empty/occluded/same-colour cells invent no witness.
+            assertThrows(AssertionError.class,()->assertAntonWorldPixels(picture,partial,terrain,residency,base,literal));
+            if(piece)pieceWitnesses++;else cellWitnesses++;
+        }
+        assertTrue(cellWitnesses>1);assertTrue(pieceWitnesses>0);
+        return "TEST actual-renderer omission cellWitnesses="+cellWitnesses+" pieceWitnesses="+pieceWitnesses+" unchangedControls="+unchanged;
+    }
+
+    private static com.openggf.graphics.SpritePresentation.Frame antonWorldOnly(com.openggf.graphics.SpritePresentation.Frame picture,int base) {
+        assertTrue(picture.primitives().isEmpty());
+        return checkpointWorldFrame(picture.tiles().stream().filter(t->t.patternId()>=base && t.patternId()<base+22).toList(),picture);
+    }
+    // END constructed Anton World proof.
+    // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>
 }

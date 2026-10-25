@@ -6166,3 +6166,110 @@ donor/build/timing behavior changes. Remaining whole-act/native clock/reference
 obligations stay open. The permanent route test now also passes603 replay. The
 one-off diagnostic observer is removed. Fixed-input review96d5b374 found no
 P1/P2 in the new restart proof/Root corrections; all execution is Root-attributed.
+
+
+## 2026-10-25 — Anton current art and natural Checkpoint649
+
+This private local milestone is the candidate over `b9816d16a656358840d547d47ec34887dc791d12`,
+on `feature/ai-sonic-cd-objects-local`; it changes neither main nor the retained
+primary tree and has no merge, push, PR or public release. USA DEV Palmtree
+Panic is still partial, not USA MVP or JP/EU gameplay parity.
+
+Actual USA retained operands authenticate Anton mappings (112 bytes) at `$20B3AA` and
+scripts (12 bytes) at `$20B39E`; selector 2 admits secondary 0/1 with words2409/2370.
+The existing TEN-source bank and Anton Java 484 / native 485 extents/cache identity
+remain unchanged. No actor-specific art bank or cold Anton preload was added.
+C28 preserves the old 579 bindings, validates the new 22-pattern metadata/overlap
+without reading those pixels, and resolves selected final409..41E through the
+one immutable current physical State. Empty SAT/unselected UNKNOWN remain
+valid. Relocated374..385 reuse Boulder current pixels/logical aliases;
+lower 370..373 remain unadmitted and 386 survives. Potential 601 is a logical
+extent, not proof every tile is known or rendered.
+
+The actual-pool body preserves Init's missing routine increment, full LONG
+Y+1 Place/no snap, negative-only0->2->4, full fractional Main delta, repeated
+same-call reversal, accepted[-7,7] floor and shared animation. Additive terrain
+entries with arities 7/3 publish every reached primary-angle clear/raw/flip/forced store
+synchronously, including prefixes before a later read failure; old pure arities 6/2
+contracts remain. Runtime's private adapter preflights actual same-owner 96-slot
+images, current source/dispatch/phase and expected Frame byte before its one
+existing Frame write, including same-value stores. It calls no legacy angle
+port and replays no completed metadata. Exact-cycle detection is an explicit
+host non-return support boundary, not a native budget/return. Snapshot/phase,
+factory arities 11/14, clocks, sounds and the cold ten-source construction stay intact.
+
+Controller-only Right completes Anton Init 604 (r0/Y1062), Place 609 (r2),
+610 (r4), and through 656. It naturally contacts/saves Checkpoint at call 649:
+checkpoint 2 / spawn 1, final 31 saved bytes known, raw DEV time 0, actual playerXY
+and one AE. Full/course restores compare the complete checkpoint owner BEFORE
+replayed contact as well as afterward. Inside 657, physical 40 rejects ID20
+(collapsing platform), X3248/Y784/subtypeC0/saved44, before later Anton 55;
+Runtime/Frame fail closed. Partial actor XY are183030784/48438784, XV1534,
+YV-300. This is not a completed 657 or native trace/frame-parity observation.
+The permanent test is
+`ordinaryRightRouteCompletesAntonAndNaturalCheckpointSaveReplaysThenStopsAtCollapsePlatform657`.
+
+The separate actual EGL product earns canonical Anton art through ordinary
+Right 649/real PLC9, captures that natural save image before any ingress, then
+runs eight initial-only normal/damaged × four-flip scenes. Real terrain is
+sloped, not an assumed flat strip: fixed scene X2875/probe763 has D-2/raw08.
+A detached pure-terrain support vector supplies expected Y/raw angles; all
+other addressed bytes stay literal. Sonic retains warmed X2743 with separately
+queried two-foot support; no production floor, spawner gate, post-ingress clear
+or source reload is invented. Forty ordinary rows per scene reach four mapping
+frames/all 22 current tiles, both prior-CPU/NOW and current-CPU/NOW conversion,
+ordered World/current-palette/native PlaneB, actual-renderer isolation/contrast
+omission controls,112 selected full/course restores and4000 forward replay
+rows / pixels. All 601 entries are installed for retirement (522 missing old 579
+are explicitly TEST transparent witnesses), removed at close, and 800 actual
+other-producer entry identities survive. This is not all601 scene-rendered.
+All module/session/graphics/boot cleanup returns before optional PNG/PASS writes.
+`Downloads/Sonic-CD/native/engine-anton-r1` contains 113 unchanged 320×224 ENGINE
+PNGs plus input/construction/outcome: one natural649 capture and112 constructed
+scene/render-only controls, with no emulator/native image comparison.
+
+Observed tests-first and corrections remain distinct:
+
+- Assets70499 missing-API compile RED; positive36226:100/0/0/0.
+- Floor2431 missing-overload compile RED.94337:44/0/2/0: two fixtures put an
+  unavailable material in a constructor-validated chunk. Root R2 uses the actual
+  alternate-path resident chunk without relaxing loading;85367 corrected2 pass.
+  Final affected terrain/legacy consumers47868 pass263/0/0/0 across 7 classes.
+- Body91853 missing-owner compile RED.73218:77/1/0/0: wrong expected index
+  exception only. Root R2 preserves production; focused96257 passes1.
+- Picture40563 missing-C28 compile RED; exact R1positive57304:44/0/0/0.
+- Runtime39663 missing18-component API compile RED.1972:380/2/0/0 includes
+  Body77 and a temporary ordinary observer; Runtime300/302 pass. Root assertions
+  fix byte-wrapper identity, first painter-selected UNKNOWN41A, unchanged prior
+  Body sound prefix and terminal getter observation; production stays frozen.
+  Focused6200 passes2. Temporary observers are removed.
+- World64511 fails unproved terrain603 prerequisite, not cleanup. Read-only
+ 649 diagnostics establish actual slope.83391 reaches row1 but reveals swapped
+  Y/X radius literals; Root R3 pins13/18.60813's actor-forward fixture crosses
+  into real unowned platform 20; Root R4 retains the warmed camera window.
+ 73125 then completes the whole proof prefix and fails EXACT old 579 cleanup at
+ 131651=base+579. Exact two-line601 cleanup passes18640:1/0/0/0 with all teardown.
+  No production movement/collision/terrain change was made to fit a fixture.
+
+Final combined37663: **634/0/0/0 across 10 exact fresh XML**, Java25.0.5.0.2,
+actual CD media, explicit surfaceless EGL/S2 donor, no skips; Maven1m40,
+finished20:19:24Z, no queue wait. It includes all 302 Runtime,77 Anton, 19 EGL,
+50 World/load, 31 carry,100 assets, 34 mapping, 10 picture and 11 public API cases.
+The change planner proposed 3751 smoke classes because private CD source paths
+are unclassified. Bounded direct affected-owner integration plus the7 terrain
+consumers is proportionate here: all code changes remain in private CD owners,
+with no shared renderer/build/selection/donor algorithm change. No full-suite
+or full-smoke claim. **Fresh structural guards 45840:728/0/0/0**, 90 exact fresh XML, Java25/private cwd/Lua5.4, fresh JVM; Maven 5m04, finished 20:27:44Z, no queue wait.
+
+Exact final command shape (from the private cwd):
+`env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 python3 ${OPENGGF_MAIN}/tools/testing/maven_queue.py --normal -Dmse=off '-Dtest=TestCdR11aObjectAssets,TestCdR11aObjectRetailAssets,TestCdObjectMappings,TestCdAntonPicture,TestCdAnton,TestCdOpeningObjectRuntime,TestSonicCdOpeningWorldLoad,TestSonicCdOpeningWorldEgl,TestSonicCdRestartCarry,TestModApiSignatureSurface' "-Dsoniccd.media.root=${SCD_MEDIA_ROOT}" -Dsoniccd.opening.egl=true -Dopenggf.headless.gl=surfaceless-egl "-Dsonic2.rom.path=${SONIC2_ROM}" test`.
+Independent fixed-input reviews found no unresolved production P1/P2;
+Root corrected the two later test findings and preserves all frozen R1 packets.
+Next finite native owner is platform 20; its source-only authentication/TopSolid
+prefix research and pure FM track-update packet remain external/unimported.
+Native cold/title/immediate PLC history, live HUD timer, audio service/playback,
+complete act/game and regional breadth remain open.
+
+Final repaired World/route fixed-input review `535adfcaafc3aed3fb1e605948dc85b7fc65a7706d3a06713bce08c46a2760ba` found no new P1/P2; it records the two prior test findings and Root corrections. All reviewed inputs remained unchanged; executable outcomes are Root observations.
+
+Command paths use the portable placeholders `OPENGGF_MAIN` (project root), `SCD_MEDIA_ROOT` (supplied disc media) and `SONIC2_ROM` (verified World REV01 donor). The observed absolute paths remain in the private external task record.

@@ -939,7 +939,7 @@ class TestSonicCdOpeningWorldLoad {
         registry.restore(full);assertState(before,h);step(h,input(8,0,false));assertState(at540,h);step(h,input(8,0,false));assertState(at541,h);
         registry.restoreCourse(course);assertState(before,h);step(h,input(8,0,false));assertState(at540,h);step(h,input(8,0,false));assertState(at541,h);
     }
-    @Test void ordinaryRightRouteCompletesCheckpointAt582ReplaysThenStopsAtAnton604() throws Exception {
+    @Test void ordinaryRightRouteCompletesAntonAndNaturalCheckpointSaveReplaysThenStopsAtCollapsePlatform657() throws Exception {
         var h=opening();var runtime=objects(h);var frame=h.module().requirePlayerFrame();var pool=runtime.placement().pool();
         for(int call=0;call<560;call++)step(h,input(8,0,false));
         assertEquals(0,pool.state(46).id());
@@ -1005,18 +1005,54 @@ class TestSonicCdOpeningWorldLoad {
         step(h,input(8,0,false));assertFalse(runtime.closed());assertFalse(frame.closed());var at603=state(h);
         registry.restore(full602);assertState(at602,h);step(h,input(8,0,false));assertState(at603,h);assertEquals(savedBeforeInit,runtime.checkpointState());
         registry.restoreCourse(course602);assertState(at602,h);step(h,input(8,0,false));assertState(at603,h);assertEquals(savedBeforeInit,runtime.checkpointState());
-        var pataBefore604=pool.state(52);
+        var full603=registry.capture();
+        var actualCourse603=registry.captureCourse();
+        step(h,input(8,0,false));
+        assertArrayEquals(java.util.HexFormat.of().parseHex("3f0424090020b3aa0b10000004260000000000000000131804180000010000002900003a00000000ff00ffff80000b1000000000000000000000000000000000"),pool.state(55).copyBytes());
+        assertEquals(2,pool.state(56).routine());assertEquals(8,pool.state(57).routine());assertEquals(2,pool.state(58).routine());
+        assertFalse(runtime.closed());assertFalse(frame.closed());var at604=state(h);
+        registry.restore(full603);assertState(at603,h);step(h,input(8,0,false));assertState(at604,h);
+        registry.restoreCourse(actualCourse603);assertState(at603,h);step(h,input(8,0,false));assertState(at604,h);
+        int contactCall=-1;CdOpeningObjectRuntime.CheckpointOwnerState naturalSaved=null;
+        for(int call=605;call<=656;call++) {
+            var beforeCall=state(h);var actualFull=registry.capture();var actualCourse=registry.captureCourse();
+            int oldCheckpoint=runtime.levelGlobals().checkpoint();
+            step(h,input(8,0,false));assertFalse(runtime.closed());assertFalse(frame.closed());
+            var afterCall=state(h);
+            if(call==609)assertArrayEquals(java.util.HexFormat.of().parseHex("3f0424090020b3aa0b100000042b0000000000000000131804180000010000002900003a02000000ff00ffff80000b1000000000000000000000000000000000"),pool.state(55).copyBytes());
+            if(call==610)assertArrayEquals(java.util.HexFormat.of().parseHex("3f0424090020b3aa0b100000042c0000000000000000131804180000010000002900003a04000000ff00ffff80000b1000000000000000000000000000000000"),pool.state(55).copyBytes());
+            boolean contact=oldCheckpoint!=runtime.levelGlobals().checkpoint();
+            if(contact) {
+                assertEquals(-1,contactCall);contactCall=call;naturalSaved=runtime.checkpointState();
+                assertEquals(2,runtime.levelGlobals().checkpoint());assertEquals(1,runtime.levelGlobals().spawnMode());
+                assertEquals(0,pool.state(34).unsignedByte(CdObjectState.ByteField.COLLISION_TYPE));
+                assertEquals(1,pool.state(34).unsignedByte(CdObjectState.ByteField.CHECKPOINT_ACTIVE));
+                byte[] known=new byte[31];Arrays.fill(known,(byte)1);assertArrayEquals(known,naturalSaved.saved().knownMask().copy());
+                assertEquals(1,naturalSaved.saved().read(com.openggf.game.soniccd.objects.CdCheckpointSaveData.SavedField.SPAWN_MODE));
+                assertEquals(frame.state().motion().centreX16_16()>>>16,naturalSaved.saved().read(com.openggf.game.soniccd.objects.CdCheckpointSaveData.SavedField.PRIMARY_X));
+                assertEquals(frame.state().motion().centreY16_16()>>>16,naturalSaved.saved().read(com.openggf.game.soniccd.objects.CdCheckpointSaveData.SavedField.PRIMARY_Y));
+                assertEquals(0,naturalSaved.saved().read(com.openggf.game.soniccd.objects.CdCheckpointSaveData.SavedField.TIME_LONG));
+                assertEquals(1,runtime.lastSoundRequests().stream().filter(v->v instanceof CdOpeningObjectRuntime.CheckpointFm fm
+                        && fm.sound()==com.openggf.game.soniccd.objects.CdCheckpoint.FmSound.FM_CHECKPOINT_AE).count());
+                System.out.println("NATURAL_CHECKPOINT_CONTACT call="+call+" saved="+naturalSaved.saved()+" actor="+frame.state().motion());
+            }
+            if(contact||call==609||call==610||call==611||call==656) {
+                registry.restore(actualFull);assertState(beforeCall,h);step(h,input(8,0,false));assertState(afterCall,h);
+                if(naturalSaved!=null)assertEquals(naturalSaved,runtime.checkpointState());
+                registry.restoreCourse(actualCourse);assertState(beforeCall,h);step(h,input(8,0,false));assertState(afterCall,h);
+                if(naturalSaved!=null)assertEquals(naturalSaved,runtime.checkpointState());
+            }
+        }
+        assertEquals(649,contactCall,"Actual controller-only contact/save; no staged pole/player");
+        assertNotNull(naturalSaved);assertEquals(naturalSaved,runtime.checkpointState());
+        var antonBefore657=pool.state(55);assertEquals(4,antonBefore657.routine());
         var failure=assertThrows(UnsupportedOperationException.class,()->step(h,input(8,0,false)));
-        assertEquals("Unowned CD object ID $3f at live physical slot 55",failure.getMessage());
-        // Object Index (Act1 Present).asm owns3F=Anton. Earlier physical bodies complete;604 itself does not.
-        var anton=pool.state(55);assertEquals(0x3F,anton.id());assertEquals(0,anton.routine());
-        assertEquals(2832,anton.centreX());assertEquals(1061,anton.centreY());assertEquals(0xFF,anton.subtype());assertEquals(0x3A,anton.savedFlagsId());
-        assertArrayEquals(java.util.HexFormat.of().parseHex("3f000000000000000b10000004250000000000000000000000000000000000000000003a00000000ff0000000000000000000000000000000000000000000000"),anton.copyBytes());
-        assertEquals(0x1B,pool.state(56).id());assertEquals(0,pool.state(56).routine());assertEquals(0,pool.state(56).longBits(CdObjectState.LongField.MAPPINGS));
-        assertEquals(0x0A,pool.state(57).id());assertEquals(0,pool.state(57).routine());assertEquals(0x26,pool.state(58).id());assertEquals(0,pool.state(58).routine());
-        assertFalse(Arrays.equals(pataBefore604.copyBytes(),pool.state(52).copyBytes()),"Earlier52 executes before the actual Anton55 boundary");
-        assertEquals(2,pool.state(34).routine());assertEquals(4,pool.state(35).routine());assertEquals(savedBeforeInit,runtime.checkpointState());
-        assertEquals(162147840,frame.state().motion().centreX16_16());assertEquals(29340160,frame.state().motion().centreY16_16());
+        assertEquals("Unowned CD object ID $20 at live physical slot 40",failure.getMessage());
+        assertArrayEquals(java.util.HexFormat.of().parseHex("20000000000000000cb0000003100000000000000000000000000000000000000000004400000000c00000000000000000000000000000000000000000000000"),pool.state(40).copyBytes());
+        assertEquals(antonBefore657,pool.state(55),"Later physical55 is not dispatched after the new40 boundary");
+        assertEquals(naturalSaved,runtime.checkpointState());
+        assertEquals(183030784,frame.state().motion().centreX16_16());assertEquals(48438784,frame.state().motion().centreY16_16());
+        assertEquals(1534,frame.state().motion().xVelocity());assertEquals(-300,frame.state().motion().yVelocity());
         assertEquals(0x0200,runtime.sectionArtState().sectionWord());assertEquals(0,runtime.sectionArtState().remainingTilesWord());
         assertEquals(0,runtime.sectionArtState().queue().headSource());assertTrue(runtime.closed());assertTrue(frame.closed());
     }
@@ -1330,6 +1366,7 @@ class TestSonicCdOpeningWorldLoad {
         assertEquals(expected.objects().contactGlobals(), actual.objects().contactGlobals());
         assertEquals(expected.objects().scoreGlobals(), actual.objects().scoreGlobals());
         assertEquals(expected.objects().levelGlobals(), actual.objects().levelGlobals());
+        assertEquals(expected.objects().checkpointState(), actual.objects().checkpointState(), "Live/saved/knowledge must restore BEFORE contact replay too");
         assertEquals(expected.objects().powerupArtState(), actual.objects().powerupArtState());
         assertEquals(expected.objects().sectionArtState(), actual.objects().sectionArtState());
         assertEquals(expected.objects().lastSoundRequests(), actual.objects().lastSoundRequests());

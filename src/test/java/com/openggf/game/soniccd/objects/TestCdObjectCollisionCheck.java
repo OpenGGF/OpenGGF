@@ -95,6 +95,72 @@ class TestCdObjectCollisionCheck {
     }
 
     /** World X $200..$2FF, Y $700..$7FF is layout cell (2,7); X $270 is block column 7 of that chunk. */
+    @Test void observerPreclearOccursForBlankAndSameValueNativeZero() {
+        var blank=new Fixture();var writes=new java.util.ArrayList<Integer>();
+        var noFloor=CdObjectCollisionCheck.objGetFloorDist(blank.probes(),object(0x270,0x735,0x10,0),writes::add);
+        assertEquals(26,noFloor.distance());assertEquals(0,noFloor.primaryAngle());assertEquals(java.util.List.of(0),writes);
+        var f=new Fixture().floor(2,0);writes.clear();
+        var solid=CdObjectCollisionCheck.objGetFloorDist(f.probes(),object(0x270,0x778,0x10,0),writes::add);
+        assertEquals(-9,solid.distance());assertEquals(java.util.List.of(0,0),writes);
+    }
+
+    @Test void observerPreservesOddGlobalWhileOnlyD3ReturnsZero() {
+        var f=new Fixture().floor(2,0x23);var writes=new java.util.ArrayList<Integer>();
+        var result=CdObjectCollisionCheck.objGetFloorDist(f.probes(),object(0x270,0x778,0x10,0),writes::add);
+        assertEquals(-9,result.distance());assertEquals(0x23,result.primaryAngle());assertEquals(0,result.angleResult());
+        assertEquals(java.util.List.of(0,0x23),writes);
+    }
+
+    @Test void observerPreclearSurvivesFirstUnavailableReadWithoutObjectWrites() {
+        var f=new Fixture();f.fg[2+7*42+2]=(byte)0xF9;var probes=f.probes();var state=object(0x270,0x778,0x10,0x40);
+        var before=state.copyBytes();var writes=new java.util.ArrayList<Integer>();
+        var failure=assertThrows(IllegalStateException.class,()->CdObjectCollisionCheck.objGetFloorDist(probes,state,writes::add));
+        assertTrue(failure.getMessage().contains("OUTSIDE_SUPPLIED_CHUNKS"));assertEquals(java.util.List.of(0),writes);assertArrayEquals(before,state.copyBytes());
+    }
+
+    @Test void observerPreservesFirstNativeAngleBeforeUnavailableFallback() {
+        var f=new Fixture().floor(81,0x22);f.fg[2+7*42+2]=(byte)0xA8;
+        // Actor path bit6 selects81, while the declared foreground40 remains loader-valid.
+        int at=80*512+(7*16+7)*2;f.chunks[at]=0x24;f.chunks[at+1]=0;
+        var probes=f.probes();var state=object(0x270,0x778,0x10,0x40);var before=state.copyBytes();var writes=new java.util.ArrayList<Integer>();
+        var failure=assertThrows(IllegalStateException.class,()->CdObjectCollisionCheck.objGetFloorDist(probes,state,writes::add));
+        assertTrue(failure.getMessage().contains("unavailable resident bytes: 1024"));assertEquals(java.util.List.of(0,0x22),writes);assertArrayEquals(before,state.copyBytes());
+    }
+
+    @Test void observerFailureAtPreclearPreventsAllTerrainReads() {
+        var f=new Fixture();f.fg[2+7*42+2]=(byte)0xF9;var probes=f.probes();var state=object(0x270,0x778,0x10,0x40);
+        var sentinel=new IllegalArgumentException("actual prezero writer failure");var writes=new java.util.ArrayList<Integer>();
+        assertSame(sentinel,assertThrows(IllegalArgumentException.class,()->CdObjectCollisionCheck.objGetFloorDist(probes,state,value->{writes.add(value);throw sentinel;})));
+        assertEquals(java.util.List.of(0),writes);
+    }
+
+    @Test void observerReceivesEveryFlipStoreIncludingForcedZero() {
+        int[] flips={0,0x800,0x1000,0x1800};int[] finalAngles={0x22,0xDE,0,0};
+        var expected=java.util.List.of(java.util.List.of(0,0x22),java.util.List.of(0,0x22,0xDE),
+                java.util.List.of(0,0x22,0x62,0x9E,0x5E,0),java.util.List.of(0,0x22,0xDE,0x1E,0xE2,0xA2,0));
+        for(int i=0;i<4;i++) {
+            var f=new Fixture().floor(2,0x22);int at=512+(8*16+7)*2;int word=0x2001|flips[i];f.chunks[at]=(byte)(word>>>8);f.chunks[at+1]=(byte)word;
+            var writes=new java.util.ArrayList<Integer>();var result=CdObjectCollisionCheck.objGetFloorDist(f.probes(),object(0x270,0x778,0x10,0),writes::add);
+            assertEquals(-9,result.distance());assertEquals(finalAngles[i],result.primaryAngle());assertEquals(finalAngles[i],result.angleResult());assertEquals(expected.get(i),writes);
+        }
+    }
+
+    @Test void observerSequenceKeepsSuccessfulProbeThenCurrentPrezeroOnFailure() {
+        var f=new Fixture().floor(2,0x22);var writes=new java.util.ArrayList<Integer>();var actual=new java.util.concurrent.atomic.AtomicInteger(0x66);
+        java.util.function.IntConsumer writer=value->{actual.set(value);writes.add(value);};var state=object(0x270,0x778,0x10,0x40);
+        CdObjectCollisionCheck.objGetFloorDist(f.probes(),state,writer);assertEquals(0x22,actual.get());
+        f.fg[2+7*42+2]=(byte)0xF9;var unavailable=f.probes();
+        assertThrows(IllegalStateException.class,()->CdObjectCollisionCheck.objGetFloorDist(unavailable,state,writer));
+        assertEquals(0,actual.get());assertEquals(java.util.List.of(0,0x22,0),writes);
+    }
+
+    @Test void observerNullAdmissionDoesNotPublish() {
+        var f=new Fixture();var probes=f.probes();var state=object(0x270,0x735,0x10,0);var writes=new java.util.ArrayList<Integer>();
+        assertThrows(NullPointerException.class,()->CdObjectCollisionCheck.objGetFloorDist(null,state,writes::add));
+        assertThrows(NullPointerException.class,()->CdObjectCollisionCheck.objGetFloorDist(probes,null,writes::add));
+        assertThrows(NullPointerException.class,()->CdObjectCollisionCheck.objGetFloorDist(probes,state,null));assertTrue(writes.isEmpty());
+    }
+
     private static final class Fixture {
         final byte[] chunks = new byte[61952];
         final byte[] fg = new byte[338];

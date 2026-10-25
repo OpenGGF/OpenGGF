@@ -112975,3 +112975,34 @@ smoke failures remain separately recorded. Next finite native owner: Monitor19.
   constructed World cases prove contact/save/ball animation/current pixels,
   real death/reset/fresh load and same-new-epoch replay. USA whole-game,
   JP/EU gameplay, HUD clock and broader act breadth remain uncertified.
+
+## 2026-10-25 — private CD Anton and natural Checkpoint, controller frontier
+
+- Candidate over b9816d16a656358840d547d47ec34887dc791d12 on private
+  feature/ai-sonic-cd-objects-local; no main merge/push. No V5 fixture or timing
+  row was changed or used as gameplay input. Actual USA held Right completes
+  Anton 55 Init 604, Place 609/610 and through 656. Natural Checkpoint contact/save
+  occurs649 (31 known saved bytes / raw DEV0/AE), with full/course pre-contact
+  owner comparison plus forward replay. This is a host-loop observation, not
+  native trace/frame/pixel parity or a complete act/game.
+- First stop657: UnsupportedOperationException, Unowned CD object ID $20 at
+  live physical slot40 (collapsing platform), X3248/Y784/subtypeC0/saved44/r0.
+  Earlier physical bodies commit; later Anton 55 is unvisited in657. Partial
+  primary XY16.16=183030784/48438784, XV1534/YV-300; Runtime/Frame fail closed.
+  Never resume it or label657 complete. Permanent test:
+  TestSonicCdOpeningWorldLoad#ordinaryRightRouteCompletesAntonAndNaturalCheckpointSaveReplaysThenStopsAtCollapsePlatform657.
+- Focused actual route and new EGL selection64511: route passes; EGL fails an
+  unproved terrain prerequisite, not a cleanup negative. Root fixture corrections
+  use actual slope/current-window support, preserve native physics/spawning,
+  and strengthen saved-owner restore before replay.73125 then reaches EXACT
+  old 579 teardown failure at new owned 131651;601 two-line cleanup18640 passes
+  full8-scene current22/SAT/pixel/replay/retirement/cleanup proof.113 actual ENGINE
+  captures include the controller649 save before construction; no emulator
+  image or native palette/timing comparison was made.
+- Final queue37663 exact10 affected classes:634/0/0/0, actual media/J25/EGL/S2,
+  no skips/fresh reports; command is recorded in the dated CD implementation
+  plan. Seven current terrain consumers47868 separately pass263/0/0/0.
+  Fresh structural guards 45840:728/0/0/0,90 fresh reports/J25/Lua5.4,
+  Maven 5m04/20:27:44Z/no queue wait. No full-suite/full-smoke claim. Next finite
+  owner is platform 20; live HUD/audio/native startup and broad act/region
+  obligations remain open.

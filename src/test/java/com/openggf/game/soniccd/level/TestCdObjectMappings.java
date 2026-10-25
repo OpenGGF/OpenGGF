@@ -1825,5 +1825,108 @@ class TestCdObjectMappings {
         byte[] detached=view.bytes().copy();Arrays.fill(detached,(byte)0xA5);
         assertEquals(SPIKES_PIECES,mappings.resolve(SPIKES_MAP,false,0).pieces());assertArrayEquals(SPIKES_SOURCE,visual.mappings().copy());
     }
+
+    /** N Anton/Data/Mappings.asm:1-109; literal full include, never a production asset fallback. */
+    private static final int ANTON_MAP = 0x20B3AA;
+    private static final byte[] ANTON_SOURCE = HexFormat.of().parseHex(
+            "00080022003c005605ed050000f4fd080004f405040007fc04050009f8fc0000110e"
+            + "05ec050000f4fc080004f404040007fc0405000df8fb00001112"
+            + "05ed050012f4fd080004f405040007fc04050009f8fc0000110e"
+            + "05ec050012f4fc080004f404040007fc0405000df8fb00001112");
+    private static final byte[] ANTON_SCRIPTS = HexFormat.of().parseHex("00040008030001ff070203ff");
+    private static final int[][][] ANTON_PIECES = {
+            {{-19,5,0,-12},{-3,8,4,-12},{5,4,7,-4},{4,5,9,-8},{-4,0,17,14}},
+            {{-20,5,0,-12},{-4,8,4,-12},{4,4,7,-4},{4,5,13,-8},{-5,0,17,18}},
+            {{-19,5,18,-12},{-3,8,4,-12},{5,4,7,-4},{4,5,9,-8},{-4,0,17,14}},
+            {{-20,5,18,-12},{-4,8,4,-12},{4,4,7,-4},{4,5,13,-8},{-5,0,17,18}}
+    };
+
+    @Test void declaredAntonRetainsAll112LiteralBytesFourFivePieceBodiesAndBothRealScripts() throws Exception {
+        assertEquals(112,ANTON_SOURCE.length);
+        assertEquals("898f3a56606b9c82c0c0a4c2197b0860353cbce320baf1026bd7f717b300e808",sha256(ANTON_SOURCE));
+        assertEquals("623c70ccd1429002e1d4e85929b53064bf0a1d7e0e56537d8d86c0bc94a7785d",sha256(ANTON_SCRIPTS));
+        var mappings=declared(ANTON_MAP,ANTON_SOURCE,0,4);
+        var visual=CdObjectVisualAssets.decode(ANTON_SOURCE,4,ANTON_SCRIPTS,2,22);
+        assertAntonFrames(mappings);
+        assertArrayEquals(ANTON_SOURCE,visual.mappings().copy());
+        assertArrayEquals(ANTON_SCRIPTS,visual.animationTable().copy());
+        assertEquals(0,visual.mappingTableOffset());assertEquals(4,visual.mappingFrames().size());
+        var referenced=new TreeSet<Integer>();
+        for(int frame=0;frame<4;frame++) {
+            int offset=8+frame*26;assertEquals(offset,word(ANTON_SOURCE,frame*2));
+            var body=visual.mappingFrames().get(frame);
+            assertEquals(offset,body.relativeOffset());assertEquals(26,body.bytes().length());assertEquals(5,body.pieces().size());
+            assertArrayEquals(Arrays.copyOfRange(ANTON_SOURCE,offset,offset+26),body.bytes().copy());
+            for(var piece:body.pieces())for(int t=0;t<piece.tileCount();t++)referenced.add(piece.tileOffset()+t);
+            assertEquals(frame<2?0:18,body.pieces().getFirst().tileOffset());
+            assertEquals(4,body.pieces().getFirst().tileCount());
+        }
+        assertEquals(new TreeSet<>(java.util.stream.IntStream.range(0,22).boxed().toList()),referenced);
+        assertEquals(2,visual.animations().size());
+        for(int i=0;i<2;i++) {
+            var script=visual.animations().get(i);
+            assertEquals(4+i*4,script.relativeOffset());assertEquals(i==0?3:7,script.delay());
+            assertEquals(i==0?List.of(0,1):List.of(2,3),script.frameBytes());
+            assertEquals(CdObjectVisualAssets.Terminal.LOOP_FF,script.terminal());
+            assertArrayEquals(Arrays.copyOfRange(ANTON_SCRIPTS,4+i*4,8+i*4),script.bytes().copy());
+        }
+        assertThrows(IllegalArgumentException.class,()->CdObjectVisualAssets.decode(ANTON_SOURCE,4,ANTON_SCRIPTS,2,21));
+        assertThrows(IllegalArgumentException.class,()->CdObjectVisualAssets.decode(Arrays.copyOf(ANTON_SOURCE,111),4,ANTON_SCRIPTS,2,22));
+        byte[] detached=visual.mappings().copy();Arrays.fill(detached,(byte)0xA5);
+        assertArrayEquals(ANTON_SOURCE,visual.mappings().copy());assertAntonFrames(mappings);
+        assertThrows(UnsupportedOperationException.class,()->visual.mappingFrames().clear());
+        assertThrows(UnsupportedOperationException.class,()->visual.animations().clear());
+    }
+
+    @Test void actualUsaAntonRegistersOnlyItsAuthenticatedPointerAndPreservesEveryOldRegistration() throws Exception {
+        var usa=usaMedia();var o=usa.objects();
+        var view=o.view(CdR11aObjectAssets.Table.ANTON_MAPPINGS);
+        var scripts=o.view(CdR11aObjectAssets.Table.ANTON_ANIMATIONS);
+        assertEquals(0xB3AA,view.range().fileOffset());assertEquals(112,view.range().length());assertEquals(ANTON_MAP,view.range().nativeAddress());
+        assertEquals(0xB39E,scripts.range().fileOffset());assertEquals(12,scripts.range().length());assertEquals(0x20B39E,scripts.range().nativeAddress());
+        assertArrayEquals(ANTON_SOURCE,view.bytes().copy());assertArrayEquals(ANTON_SCRIPTS,scripts.bytes().copy());
+        assertSame(o.anton(),o.anton());assertArrayEquals(ANTON_SOURCE,o.anton().mappings().copy());
+        assertArrayEquals(ANTON_SCRIPTS,o.anton().animationTable().copy());
+        assertEquals(0x2409,o.tileWord(2,0));assertEquals(0x2370,o.tileWord(2,1));
+        var mappings=CdObjectMappings.fromOpeningAssets(usa.assets(),o);assertAntonFrames(mappings);
+        // These unchanged helpers cover Sonic, opening/frontier/contact, Game/Time Over,
+        // FloatBlock, both old Spring roots, Powerup and both Door roots, Monitor and both Pata roots.
+        assertMonitorPriorRoots(usa,mappings);assertMonitorTimeFrames(mappings);
+        assertHorizontalTunnelDoorFrames(mappings);assertPataBataFrames(mappings);
+        var oldVisuals=List.of(o.springDiagonal(),o.boulder(),o.spikes(),o.checkpoint());
+        int[] oldRoots={0x209BF0,0x209654,0x20C1F0,0x23F120};
+        for(int i=0;i<oldRoots.length;i++)for(int frame=0;frame<oldVisuals.get(i).mappingFrames().size();frame++) {
+            var expected=oldVisuals.get(i).mappingFrames().get(frame).pieces().stream()
+                    .map(p->new CdObjectDrawQueue.RawPiece(p.y(),p.sizeByte(),p.rawTileWord(),p.x())).toList();
+            assertEquals(expected,mappings.resolve(oldRoots[i],false,frame).pieces());
+        }
+        for(int item=0;item<8;item++)assertEquals(new CdObjectDrawQueue.StaticMapping(monitorPieces(item).getFirst()),
+                mappings.resolve(MONITOR_ITEM_POINTERS[item],true,255));
+        for(int frame=0;frame<4;frame++)for(int flips=0;flips<4;flips++)for(int base:new int[]{0x2409,0x2370,0xA409,0xFFF0}) {
+            // Generic queue fixture: no actor-ID dispatch or body execution.
+            var sat=drawPataBataMapping(mappings,ANTON_MAP,frame,base,4|flips);byte[] raw=sat.bytes();
+            assertEquals(5,sat.spriteCount());
+            for(int p=0;p<5;p++) {
+                int[] piece=ANTON_PIECES[frame][p];int width=((piece[1]>>>2)+1)*8,height=((piece[1]&3)+1)*8;
+                assertEquals(256+((flips&2)==0?piece[0]:-piece[0]-height),word(raw,p*8));
+                assertEquals(384+((flips&1)==0?piece[3]:-piece[3]-width),word(raw,p*8+6));
+                assertEquals(((base+piece[2])&0xFFFF)^((flips&3)<<11),word(raw,p*8+4));
+                assertEquals(piece[1],raw[p*8+2]&255);assertEquals(p+1,raw[p*8+3]&255);
+            }
+        }
+    }
+
+    private static void assertAntonFrames(CdObjectMappings mappings) {
+        for(int frame=0;frame<4;frame++) {
+            var expected=new java.util.ArrayList<CdObjectDrawQueue.RawPiece>();
+            for(int[] p:ANTON_PIECES[frame])expected.add(new CdObjectDrawQueue.RawPiece(p[0],p[1],p[2],p[3]));
+            assertEquals(new CdObjectDrawQueue.FrameMapping(5,expected),mappings.resolve(ANTON_MAP,false,frame));
+        }
+        for(int frame=4;frame<=255;frame++) {int outside=frame;assertThrows(UnsupportedOperationException.class,()->mappings.resolve(ANTON_MAP,false,outside));}
+        for(int bad:new int[]{-1,256})assertThrows(IllegalArgumentException.class,()->mappings.resolve(ANTON_MAP,false,bad));
+        for(int pointer:new int[]{ANTON_MAP+1,ANTON_MAP+8,ANTON_MAP+0x56,ANTON_MAP+112,0x20B39E,ANTON_MAP|0xFF000000,ANTON_MAP|0x80000000})
+            assertThrows(UnsupportedOperationException.class,()->mappings.resolve(pointer,false,0));
+        assertThrows(UnsupportedOperationException.class,()->mappings.resolve(ANTON_MAP,true,0));
+    }
 }
 // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>

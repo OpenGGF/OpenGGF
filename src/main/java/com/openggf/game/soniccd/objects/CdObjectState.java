@@ -74,7 +74,9 @@ public final class CdObjectState {
         // ObjTunnelDoorV_Main (Tunnel Door/Main.asm:62): CLR.W oVar3A clears $3A and $3B. Storage only.
         TUNNEL_DOOR_TIMER(0x3A),
         // Checkpoint/Main.asm:7-8: ball orbit anchors, not retained parent objects.
-        CHECKPOINT_BALL_X(0x2A), CHECKPOINT_BALL_Y(0x2C);
+        CHECKPOINT_BALL_X(0x2A), CHECKPOINT_BALL_Y(0x2C),
+        // Anton/Main.asm:32,72 and wrapper:14: overlapping original-X word only.
+        ANTON_ANCHOR_X(0x2E);
         private final int offset;
         WordField(int offset) { this.offset = offset; }
         public int byteOffset() { return offset; }
@@ -87,7 +89,9 @@ public final class CdObjectState {
         // ObjMosqui_Init:.SetInfo (Mosqui/Main.asm:51-54). Storage only; no body execution here.
         MOSQUI_X_DELTA(0x2C), MOSQUI_ANIMATION_SCRIPT(0x30),
         // Checkpoint/Main.asm:10,108,154: raw FULL MOVE.L a0 parent bits. Storage only.
-        CHECKPOINT_PARENT(0x30);
+        CHECKPOINT_PARENT(0x30),
+        // Anton/Main.asm:48,69,91: overlapping signed 16.16 motion long only.
+        ANTON_X_DELTA(0x2A);
         private final int offset;
         LongField(int offset) { this.offset = offset; }
         public int byteOffset() { return offset; }

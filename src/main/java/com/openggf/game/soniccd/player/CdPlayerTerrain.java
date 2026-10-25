@@ -5,6 +5,7 @@ import com.openggf.game.soniccd.level.CdTerrainCollision;
 
 import java.util.Objects;
 import java.util.OptionalInt;
+import java.util.function.IntConsumer;
 
 /**
  * R11A's FindLevelFloor[/2] and FindLevelWall[/2] over bounded native terrain.
@@ -43,6 +44,18 @@ public final class CdPlayerTerrain {
         return query(Axis.FLOOR, false, x, y, solidityBit, mirrorMask, step, spriteFlags);
     }
 
+    /**
+     * FindLevelFloor with synchronous reached native angle-byte stores. This entry does not
+     * pre-clear the caller's angle: ObjGetFloorDist owns that earlier MOVE.B. The observer sees
+     * each shape load, flip RMW and forced zero, including a prefix before a later terrain fault.
+     * It is a write port to the caller's existing global, never another retained angle owner.
+     */
+    public Result floor(int x, int y, int solidityBit, int mirrorMask, int step, int spriteFlags,
+                        IntConsumer angleWrite) {
+        Objects.requireNonNull(angleWrite, "reached angle writer");
+        return query(Axis.FLOOR, false, x, y, solidityBit, mirrorMask, step, spriteFlags, angleWrite);
+    }
+
     public Result floorExtension(int x, int y, int solidityBit, int mirrorMask, int step, int spriteFlags) {
         return query(Axis.FLOOR, true, x, y, solidityBit, mirrorMask, step, spriteFlags);
     }
@@ -67,6 +80,18 @@ public final class CdPlayerTerrain {
                 cursor.angle < 0 ? OptionalInt.empty() : OptionalInt.of(cursor.angle));
     }
 
+    private Result query(Axis axis, boolean extension, int x, int y, int solidityBit,
+                         int mirrorMask, int step, int spriteFlags, IntConsumer angleWrite) {
+        if (solidityBit < 0 || solidityBit > 15) {
+            throw new IllegalArgumentException("Solidity bit must select the original native word");
+        }
+        Cursor cursor = new Cursor(axis, solidityBit, mirrorMask & 0xFFFF, (short) step, spriteFlags & 0xFF, angleWrite);
+        int distance = extension ? extension(cursor, x & 0xFFFF, y & 0xFFFF)
+                : first(cursor, x & 0xFFFF, y & 0xFFFF);
+        return new Result((short) distance,
+                cursor.angle < 0 ? OptionalInt.empty() : OptionalInt.of(cursor.angle));
+    }
+
     private int first(Cursor cursor, int x, int y) {
         Integer metric = metric(cursor, x, y);
         int offset = (cursor.axis == Axis.FLOOR ? y : x) & 15;
@@ -75,7 +100,7 @@ public final class CdPlayerTerrain {
         }
         if (metric < 0) {
             if (cursor.axis == Axis.FLOOR && cursor.step == 16) {
-                cursor.angle = 0;
+                cursor.storeAngle(0);
                 return 15 - (16 + offset);
             }
             if ((short) (metric + offset) >= 0) {
@@ -97,7 +122,7 @@ public final class CdPlayerTerrain {
         }
         if (metric < 0) {
             if (cursor.axis == Axis.FLOOR && cursor.step == 16) {
-                cursor.angle = 0;
+                cursor.storeAngle(0);
                 return 15 - (16 + offset);
             }
             // The native negative extension returns NOT d1, not a metric formula.
@@ -125,25 +150,38 @@ public final class CdPlayerTerrain {
             return null;
         }
         int angle = shapes.angle(id);
+        cursor.storeAngle(angle); // MOVE.B angle-map byte,(a4), before any flip or height read.
         int sample = cursor.axis == Axis.FLOOR ? x : y;
         if (cursor.axis == Axis.FLOOR) {
             if ((word & 0x800) != 0) {
                 sample = ~sample;
                 angle = -angle & 0xFF;
+                cursor.storeAngle(angle); // NEG.B (a4).
             }
             if ((word & 0x1000) != 0) {
-                angle = -(angle + 0x40) - 0x40 & 0xFF;
+                angle = (angle + 0x40) & 0xFF;
+                cursor.storeAngle(angle); // ADDI.B #$40,(a4).
+                angle = -angle & 0xFF;
+                cursor.storeAngle(angle); // NEG.B (a4).
+                angle = (angle - 0x40) & 0xFF;
+                cursor.storeAngle(angle); // SUBI.B #$40,(a4).
             }
         } else {
             if ((word & 0x1000) != 0) {
                 sample = ~sample;
-                angle = -(angle + 0x40) - 0x40 & 0xFF;
+                angle = (angle + 0x40) & 0xFF;
+                cursor.storeAngle(angle); // ADDI.B #$40,(a4).
+                angle = -angle & 0xFF;
+                cursor.storeAngle(angle); // NEG.B (a4).
+                angle = (angle - 0x40) & 0xFF;
+                cursor.storeAngle(angle); // SUBI.B #$40,(a4).
             }
             if ((word & 0x800) != 0) {
                 angle = -angle & 0xFF;
+                cursor.storeAngle(angle); // NEG.B (a4).
             }
         }
-        cursor.angle = angle; // A zero metric still writes this angle before falling back.
+        // All reached angle stores already occurred; a zero metric may now fall back.
         int value = cursor.axis == Axis.FLOOR ? shapes.height(id, sample & 15)
                 : shapes.width(id, sample & 15);
         int metricFlip = cursor.axis == Axis.FLOOR ? 0x1000 : 0x800;
@@ -168,11 +206,21 @@ public final class CdPlayerTerrain {
         final int mirrorMask;
         final int step;
         final int spriteFlags;
+        final IntConsumer angleWrite;
         int angle = -1;
 
         Cursor(Axis axis, int solidityBit, int mirrorMask, int step, int spriteFlags) {
+            this(axis, solidityBit, mirrorMask, step, spriteFlags, null);
+        }
+
+        Cursor(Axis axis, int solidityBit, int mirrorMask, int step, int spriteFlags, IntConsumer angleWrite) {
             this.axis = axis; this.solidityBit = solidityBit; this.mirrorMask = mirrorMask;
-            this.step = step; this.spriteFlags = spriteFlags;
+            this.step = step; this.spriteFlags = spriteFlags; this.angleWrite = angleWrite;
+        }
+
+        void storeAngle(int value) {
+            angle = value & 0xFF;
+            if (angleWrite != null) angleWrite.accept(angle);
         }
     }
 }

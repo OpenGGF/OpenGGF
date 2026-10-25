@@ -933,5 +933,119 @@ public final class CdObjectPresentation {
         return nativeId -> nativeId >= first && nativeId < first + count
                 ? extra.resolve(nativeId) : previous.resolve(nativeId);
     }
+
+    /**
+     * C28 adds the canonical Anton logical extent to C27: eighteen spans / 601 potential
+     * logical patterns. Despite the compatibility factory name, the new22 have conditional
+     * native-current admission: cold DEV legitimately leaves $8120..$83E0 UNKNOWN.
+     * C27 executes FIRST with its unchanged eager579 policy and argument precedence.
+     *
+     * <p>ObjAnton_Init selects ObjectTileIDs selector2/subtype2 zero, word $2409
+     * (Anton/Main.asm:32-33; Object Tile IDs (Act 1 Present).asm:7-30 at scddisasm
+     * 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff). The complete four-frame/two-script
+     * visual reaches offsets0..21. Validate its canonical metadata and all seventeen
+     * legacy native/logical spans even for an empty SAT, without reading new pixels,
+     * consulting sectionArtSources, decoding art or manufacturing a validation span.</p>
+     *
+     * <p>Capture this immutable physical State value. Only resolve of a selected final
+     * native $409..$41E reads that tile through the strict current owner; UNKNOWN stops
+     * there. No queue service, live callback, pixel cache, padding or producer fallback.
+     * A source and every converted Frame keep their old knownness/bytes after new commits.
+     * The $2370 relocation word is metadata, not service or admission authority:
+     * $374..$385 retain the existing eighteen Boulder logical aliases/current versions,
+     * $386 survives relocation, and lower $370..$373 remain unadmitted here.
+     * Canonical pixels always come from current $8120 bytes, regardless of producer.</p>
+     */
+    public static PatternSource usaR11aCurrentCameraDevPreloadedArt(CdPlayerArtRuntime.State nowServicedPlayer,
+                                                                   CdPowerupArtRuntime.State nowServicedPowerup,
+                                                                   CdR11aObjectAssets objects,
+                                                                   CdR11aObjectAssets.FrontierArtBank frontier,
+                                                                   CdR11aObjectAssets.ContactArtBank contact,
+                                                                   CdR11aObjectAssets.FloatBlockArtBank floatBlock,
+                                                                   CdR11aObjectAssets.SpringArtBank spring,
+                                                                   CdR11aObjectAssets.TunnelDoorArtBank tunnelDoor,
+                                                                   CdR11aObjectAssets.MonitorTimeArtBank monitorTime,
+                                                                   CdR11aCameraArtResidency.State cameraResidency,
+                                                                   int playerLogicalBase, int ringLogicalBase,
+                                                                   int mosquiLogicalBase, int plantLogicalBase,
+                                                                   int rampLogicalBase, int explosionLogicalBase,
+                                                                   int pointsLogicalBase, int flowerLogicalBase,
+                                                                   int powerupLogicalBase, int floatBlockLogicalBase,
+                                                                   int springLogicalBase, int tunnelDoorVerticalLogicalBase,
+                                                                   int monitorTimeLogicalBase, int boulderLogicalBase,
+                                                                   int diagonalSpringLogicalBase, int spikesLogicalBase,
+                                                                   int checkpointLogicalBase, final int antonLogicalBase) {
+        var previous = usaR11aCurrentCameraDevPreloadedArt(nowServicedPlayer, nowServicedPowerup, objects,
+                frontier, contact, floatBlock, spring, tunnelDoor, monitorTime, cameraResidency,
+                playerLogicalBase, ringLogicalBase, mosquiLogicalBase, plantLogicalBase, rampLogicalBase,
+                explosionLogicalBase, pointsLogicalBase, flowerLogicalBase, powerupLogicalBase,
+                floatBlockLogicalBase, springLogicalBase, tunnelDoorVerticalLogicalBase,
+                monitorTimeLogicalBase, boulderLogicalBase, diagonalSpringLogicalBase, spikesLogicalBase,
+                checkpointLogicalBase);
+        int tileWord = objects.tileWord(2, 0), first = tileWord & 0x7FF, count = 22;
+        var visual = objects.anton();
+        var region = CdR11aCameraArtResidency.Region.AT_8120;
+        if (tileWord != 0x2409 || first != 0x409 || first < 0 || first > 2048 - count
+                || region.destinationWord() != 0x8120 || region.destinationWord() != first * 32
+                || region.byteLength() != 0x2C0 || region.byteLength() != count * 32 || region.tileCount() != count
+                || visual.mappingTableOffset() != 0 || visual.mappings().length() != 112
+                || visual.mappingFrames().size() != 4 || visual.animations().size() != 2
+                || visual.animationTable().length() != 12) {
+            throw new IllegalArgumentException("Anton disagrees with its authenticated canonical metadata");
+        }
+        if (antonLogicalBase < 0 || (long) antonLogicalBase + count - 1 > Integer.MAX_VALUE) {
+            throw new IllegalArgumentException("Anton logical pattern extent must be nonnegative and bounded");
+        }
+        var referenced = new HashSet<Integer>();
+        for (var frame : visual.mappingFrames()) {
+            if (frame.pieces().size() != 5) {
+                throw new IllegalArgumentException("Anton requires five pieces in each of its four frames");
+            }
+            for (var piece : frame.pieces()) for (int tile = 0; tile < piece.tileCount(); tile++) {
+                int offset = piece.tileOffset() + tile;
+                if (offset < 0 || offset >= count) {
+                    throw new IllegalArgumentException("Anton mapping exceeds its twenty-two current patterns");
+                }
+                referenced.add(offset);
+            }
+        }
+        if (referenced.size() != count) {
+            throw new IllegalArgumentException("Anton frames must address all twenty-two current patterns");
+        }
+        // Reuse actual old binding extents and C27's already-frozen logical lookup, for metadata only.
+        var oldRanges = new ArrayList<int[]>();
+        oldRanges.add(new int[]{CdPlayerArtRuntime.VRAM_BYTE_ADDRESS / 32, nowServicedPlayer.residentBank().length() / 32});
+        oldRanges.add(new int[]{CdPowerupArtRuntime.VRAM_BYTE_ADDRESS / 32, nowServicedPowerup.residentBank().length() / 32});
+        for (var binding : List.of(objects.initialArtBank().binding(CdR11aAsset.ART_RINGS),
+                objects.initialArtBank().binding(CdR11aAsset.ART_MOSQUI),
+                frontier.binding(CdR11aAsset.ART_3D_PLANT), frontier.binding(CdR11aAsset.ART_3D_RAMP_BOOST),
+                contact.binding(CdR11aAsset.ART_EXPLOSIONS), contact.binding(CdR11aAsset.ART_POINTS),
+                contact.binding(CdR11aAsset.ART_FLOWER), floatBlock.binding(CdR11aAsset.ART_FLOAT_BLOCK),
+                spring.binding(CdR11aAsset.ART_SPRINGS), tunnelDoor.binding(CdR11aAsset.ART_TUNNEL_DOOR),
+                monitorTime.binding(CdR11aAsset.ART_MONITOR_TIME_POSTS))) {
+            oldRanges.add(new int[]{binding.firstTileId(), binding.tileCount()});
+        }
+        oldRanges.add(new int[]{objects.tileWord(0x0B, 0), 19});
+        oldRanges.add(new int[]{objects.tileWord(0x0F, 0), 46});
+        oldRanges.add(new int[]{objects.tileWord(0x0A, 0), 8});
+        oldRanges.add(new int[]{0x6CB, 12});
+        long nativeEnd = (long) first + count, logicalEnd = (long) antonLogicalBase + count;
+        for (int[] range : oldRanges) {
+            int oldLogicalFirst = previous.resolve(range[0]).logicalPatternId();
+            if (first < (long) range[0] + range[1] && range[0] < nativeEnd
+                    || antonLogicalBase < (long) oldLogicalFirst + range[1] && oldLogicalFirst < logicalEnd) {
+                throw new IllegalArgumentException("Overlapping Anton native or logical picture binding");
+            }
+        }
+        CdR11aCameraArtResidency.State snapshot = cameraResidency;
+        return nativeId -> {
+            // No mask: out-of-range inputs delegate to the unchanged strict C27 boundary.
+            if (nativeId >= first && nativeId < nativeEnd) {
+                return new TilePattern(antonLogicalBase + (nativeId - first),
+                        patternVersion(CdR11aCameraArtResidency.readTile(snapshot, nativeId)));
+            }
+            return previous.resolve(nativeId);
+        };
+    }
 }
 // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>

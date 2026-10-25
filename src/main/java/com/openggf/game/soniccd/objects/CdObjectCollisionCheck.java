@@ -3,6 +3,7 @@ package com.openggf.game.soniccd.objects;
 import com.openggf.game.soniccd.player.CdPlayerTerrain;
 
 import java.util.Objects;
+import java.util.function.IntConsumer;
 
 /**
  * Object-side level collision probes from Level/Collision Check.asm at scddisasm
@@ -41,6 +42,26 @@ public final class CdObjectCollisionCheck {
         int y = (object.centreY() + object.signedByte(CdObjectState.ByteField.Y_RADIUS)) & 0xFFFF;
         var floor = terrain.floor(object.centreX(), y, 13, 0, 16, object.spriteFlags());
         // MOVE.B #0,(a4) precedes FindLevelFloor; an absent angle write leaves that zero.
+        int primaryAngle = floor.angleWrite().orElse(0);
+        return new FloorDistance(floor.distance(), primaryAngle, (primaryAngle & 1) == 0 ? primaryAngle : 0);
+    }
+
+    /**
+     * ObjGetFloorDist with the caller's existing primaryAngle write port. The pre-zero is a real
+     * addressed byte store before FindLevelFloor; reached shape/flip/adjacent stores are forwarded
+     * synchronously, so a later failure retains the completed native prefix. Odd d3 normalization
+     * changes only the return register and never emits a second angle clear.
+     */
+    public static FloorDistance objGetFloorDist(CdPlayerTerrain terrain, CdObjectState object,
+                                                IntConsumer angleWrite) {
+        Objects.requireNonNull(terrain, "terrain");
+        Objects.requireNonNull(object, "object");
+        Objects.requireNonNull(angleWrite, "existing primaryAngle writer");
+        int x = object.centreX();
+        int y = (object.centreY() + object.signedByte(CdObjectState.ByteField.Y_RADIUS)) & 0xFFFF;
+        int flags = object.spriteFlags();
+        angleWrite.accept(0); // Collision Check.asm:166-167, BEFORE the first terrain read.
+        var floor = terrain.floor(x, y, 13, 0, 16, flags, angleWrite);
         int primaryAngle = floor.angleWrite().orElse(0);
         return new FloorDistance(floor.distance(), primaryAngle, (primaryAngle & 1) == 0 ? primaryAngle : 0);
     }

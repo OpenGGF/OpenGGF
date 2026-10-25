@@ -71,6 +71,30 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+A successful replay can hide a failed saved-state restore (2026-10-25, CD
+Checkpoint contact). If restore reinstates collision/checkpoint globals but
+retains post-contact saved bytes/knowledge, replayed contact rewrites those same
+values. Comparing only afterward passes. Compare the complete saved/live/known
+aggregate immediately after full/course restore and BEFORE the next gameplay
+step, then compare the completed replay. No duplicate capture owner is needed.
+
+A constructed actor pose can advance real object prefetch (2026-10-25, CD Anton).
+Moving Sonic96px forward crossed a camera window and loaded the next unowned
+platform. Do not disable spawning or clear it during execution. Establish the
+scene on actual terrain within its warmed camera window, preserve placement
+cursors, and label initial-only ingress separately from the controller route.
+A flat-floor assumption also failed: query the real shaped content for fixture
+support and keep native collision behavior unchanged. Distinguish this fixture
+failure from an intended teardown negative reached only after the full proof.
+
+Metadata validation must not imply current pixel knowledge (2026-10-25, CD
+Anton). Canonical22 are legitimately UNKNOWN before PLC9, so resolving a tile to
+discover its logical base can break even an empty SAT. Validate intervals from
+metadata/explicit bases and perform the strict current physical read only for
+an actually selected final native ID. Physical ownership, known bytes, logical
+extent, selected tiles and rendered pixels are different quantities.
+
+
 A device-time sound ledger may already contain the completed Body prefix
 (2026-10-25, CD Checkpoint). A no-FM or failed-save assertion must preserve that
 prefix and reject additional device requests, not require an empty ledger or

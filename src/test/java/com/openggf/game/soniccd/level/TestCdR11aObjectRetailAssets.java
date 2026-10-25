@@ -233,6 +233,8 @@ class TestCdR11aObjectRetailAssets {
         hashes.put(SPIKES_MAPPINGS, SPIKES_MAPPING_SHA256);
         hashes.put(CHECKPOINT_ANIMATIONS, CHECKPOINT_ANIMATION_SHA256);
         hashes.put(CHECKPOINT_MAPPINGS, CHECKPOINT_MAPPING_SHA256);
+        hashes.put(ANTON_ANIMATIONS, ANTON_ANIMATION_SHA256);
+        hashes.put(ANTON_MAPPINGS, ANTON_MAPPING_SHA256);
         assertEquals(CdR11aObjectAssets.Table.values().length, hashes.size(), "every admitted table has a pinned digest");
         for (var table : CdR11aObjectAssets.Table.values()) {
             var view = objects.view(table);
@@ -3278,6 +3280,270 @@ class TestCdR11aObjectRetailAssets {
             "0008001e002a003604e8030000f8e80308000008010004f808010804000002f8010006f8f80108060000"
             + "02f8010008f8f8010808000002f801000af8f801080a0000");
     private static final byte[] CHECKPOINT_ANIMATION_BYTES = hexBytes("0002030203ff");
+
+
+    /** Actual media authentication and operand proof; this admits no Anton behavior or physical residency. */
+    @ParameterizedTest(name = "{0} Anton actual operands, four full frames, two scripts and existing source reuse")
+    @EnumSource(CdReleaseVariant.class)
+    void antonAuthenticatesActualOperandsAndRetainsLazyVisualsWithoutANewSource(CdReleaseVariant variant)
+            throws Exception {
+        String configured = System.getProperty("soniccd.media.root");
+        Assumptions.assumeTrue(configured != null && !configured.isBlank(),
+                "Set soniccd.media.root for supplied-media checks");
+        String directory = switch (variant) { case USA -> "USA"; case JAPAN -> "Japan"; case EUROPE -> "Europe"; };
+        Path cue;
+        try (var files = Files.list(Path.of(configured).resolve(directory))) {
+            var cues = files.filter(v -> v.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".cue")).toList();
+            assertEquals(1,cues.size()); cue = cues.getFirst();
+        }
+        CdR11aAssets owner;
+        CdMmdImage retained;
+        CdR11aObjectAssets visualFirst = null, sourceFirst = null;
+        try (var program = CdProgramAssets.open(cue,Optional.of(variant),Optional.empty())) {
+            owner = CdR11aAssetLoader.load(program,variant,CdStageKey.parse("R11A"));
+            retained = program.mmd(CdNativeFile.R11A);
+            assertEquals(262144,retained.fileBytes());
+            assertEquals(variant == CdReleaseVariant.USA
+                    ? "7aa54c36ab94dbe14068a18613c574b883ce446337bfaa9c571ec3523aff14e2"
+                    : "241be9620fbad1229792fedd1604066ae3e7d943cb7cc27bc94a4a837452d9b6",
+                    CdR11aProfile.sha256(retained.readFile(0,retained.fileBytes())));
+            // Equality of the existing shared producer is independent of regional object-owner admission.
+            assertEquals(SECTION_BLOB_SHA256[1],
+                    CdR11aProfile.sha256(retained.readFile(0x36E46,484)));
+            assertEquals(SECTION_NATIVE_SHA256[1],
+                    CdR11aProfile.sha256(retained.readFile(0x36E46,485)));
+            assertArrayEquals(hexBytes("00468004"),retained.readFile(0x3702A,4));
+            if (variant != CdReleaseVariant.USA) {
+                // These regional positions were independently located on each original disc, never inferred.
+                assertEquals(0x20B2C2,ByteBuffer.wrap(retained.readFile(0x3F28,4)).getInt());
+                assertArrayEquals(hexBytes("217c0020b3b80004"),retained.readFile(0xB2F8,8));
+                assertArrayEquals(hexBytes("43fa001a4ef900205d08"),retained.readFile(0xB390,10));
+                assertEquals(0xB3AC,0xB392+ByteBuffer.wrap(retained.readFile(0xB392,2)).getShort());
+                assertArrayEquals(ANTON_ANIMATION_BYTES,retained.readFile(0xB3AC,12));
+                assertArrayEquals(ANTON_MAPPING_BYTES,retained.readFile(0xB3B8,112));
+                assertEquals("82086dba64cbd992cd73628e56bbfba4102783b6a6c63c9f10ada9844687525c",
+                        CdR11aProfile.sha256(retained.readFile(0xCF56,74)));
+                assertArrayEquals(hexBytes("0b100425bfffc000"),retained.readFile(0x7C74,8));
+                assertFalse(Arrays.equals(hexBytes("217c0020b3aa0004"),retained.readFile(0xB2EA,8)));
+                assertFalse(Arrays.equals(hexBytes("43fa001a4ef900205cfa"),retained.readFile(0xB382,10)));
+                assertFalse(Arrays.equals(ANTON_ANIMATION_BYTES,retained.readFile(0xB39E,12)));
+                assertFalse(Arrays.equals(ANTON_MAPPING_BYTES,retained.readFile(0xB3AA,112)));
+                assertThrows(UnsupportedOperationException.class,owner::openingObjects);
+                assertThrows(UnsupportedOperationException.class, () -> CdR11aObjectAssets.load(
+                        owner.profile(),owner.identity(),retained,owner.loadPlan()));
+                var usa = CdR11aProfile.forStage(CdReleaseVariant.USA,CdStageKey.parse("R11A"));
+                var asserted = new CdR11aAssets.Identity(CdReleaseVariant.USA,usa.stage(),usa.file(),usa.domain(),
+                        usa.expectedMmdSha256(),owner.identity().observedWholeDiscSha256());
+                assertThrows(IOException.class,
+                        () -> CdR11aObjectAssets.load(usa,asserted,retained,owner.loadPlan()));
+            } else {
+                visualFirst = owner.openingObjects(); sourceFirst = owner.openingObjects();
+                assertNotSame(visualFirst,sourceFirst);
+                verifyAntonCold(visualFirst); verifyAntonCold(sourceFirst);
+                verifyAntonNativeReferences(retained,owner);
+                for (int offset : new int[]{0x3F2C,0xB2EC,0xB2F1,0xB310,0xB314,0xB384,0xB388,
+                        0xB39E,0xB3A1,0xB3A2,0xB3A9,0xB3AA,0xB3B1,0xB3EA,0xB419,0xB41A,
+                        0xCF4C,0xCF70,0xCF72,0xFD54,0x36E46,0x37029,0x3702A,0x7C66,0x7C6D}) {
+                    byte[] changed = retained.readFile(0,retained.fileBytes()); changed[offset] ^= 1;
+                    assertThrows(IOException.class, () -> CdR11aObjectAssets.load(owner.profile(),owner.identity(),
+                            CdMmdImage.parse(changed),owner.loadPlan()),"changed Anton authentication byte " + offset);
+                }
+            }
+        }
+        assertEquals(variant,owner.identity().variant());
+        assertThrows(UnsupportedOperationException.class, () -> owner.decoded(CdR11aAsset.ART_ANTON));
+        if (variant != CdReleaseVariant.USA) { return; }
+        assertNotNull(visualFirst); assertNotNull(sourceFirst);
+        var objects = visualFirst; var reverseObjects = sourceFirst;
+        // Both first-request orders start after the actual disc owner has closed.
+        var beforeVisual = antonOtherFields(objects);
+        var visual = objects.anton(); assertSame(visual,objects.anton());
+        assertEquals(beforeVisual.keySet(),antonOtherFields(objects).keySet());
+        var afterVisual = antonOtherFields(objects);
+        for (var entry : beforeVisual.entrySet()) {
+            assertSame(entry.getValue(),afterVisual.get(entry.getKey()),"visual-only preserved field " + entry.getKey());
+        }
+        var optional = CdR11aObjectAssets.class.getDeclaredField("frontierViews"); optional.setAccessible(true);
+        assertEquals(List.of(ANTON_ANIMATIONS,ANTON_MAPPINGS),
+                ((Map<?, ?>) optional.get(objects)).keySet().stream()
+                        .map(value -> (CdR11aObjectAssets.Table) value).sorted().toList());
+        var bank = objects.sectionArtSources(); var reverse = reverseObjects.sectionArtSources();
+        assertSame(bank,objects.sectionArtSources()); assertSame(reverse,reverseObjects.sectionArtSources());
+        assertEquals(SECTION_SOURCES,bank.sources().stream().map(CdR11aObjectAssets.SectionArtSource::source).toList());
+        assertEquals(SECTION_SOURCES,reverse.sources().stream().map(CdR11aObjectAssets.SectionArtSource::source).toList());
+        assertEquals(10,bank.sources().size()); assertEquals(10,reverse.sources().size());
+        var visualCache = CdR11aObjectAssets.class.getDeclaredField("anton"); visualCache.setAccessible(true);
+        assertNull(visualCache.get(reverseObjects),"existing source bank must not decode Anton visuals");
+        assertFalse(((Map<?, ?>) optional.get(reverseObjects)).containsKey(ANTON_MAPPINGS));
+        assertFalse(((Map<?, ?>) optional.get(reverseObjects)).containsKey(ANTON_ANIMATIONS));
+        var reverseViews = new HashMap<>((Map<?, ?>) optional.get(reverseObjects));
+        var sources = reverse.sources().toArray(CdR11aObjectAssets.SectionArtSource[]::new);
+        var reads = reverse.sources().stream().map(CdR11aObjectAssets.SectionArtSource::decode).toList();
+        var nativeBytes = reverse.sources().stream().map(CdR11aObjectAssets.SectionArtSource::readerBytes).toList();
+        var beforeReverseVisual = antonOtherFields(reverseObjects);
+        var reverseVisual = reverseObjects.anton(); assertSame(reverseVisual,reverseObjects.anton());
+        var afterReverseVisual = antonOtherFields(reverseObjects);
+        for (var entry : beforeReverseVisual.entrySet()) {
+            assertSame(entry.getValue(),afterReverseVisual.get(entry.getKey()),"source-first preserved field " + entry.getKey());
+        }
+        var afterViews = (Map<?, ?>) optional.get(reverseObjects);
+        assertEquals(reverseViews.size()+2,afterViews.size());
+        for (var entry : reverseViews.entrySet()) { assertSame(entry.getValue(),afterViews.get(entry.getKey())); }
+        assertSame(visual,objects.anton()); assertSame(bank,objects.sectionArtSources());
+        for (int i = 0; i < 10; i++) {
+            var source = reverse.sources().get(i);
+            assertSame(sources[i],source); assertSame(reads.get(i),source.decode());
+            assertSame(nativeBytes.get(i),source.readerBytes());
+            assertEquals(SECTION_TILES[i],source.tileCount());
+            assertEquals(SECTION_JAVA_BYTES[i],source.decode().consumedInputBytes());
+            assertEquals(SECTION_JAVA_BYTES[i],source.decode().readerInputRange().length());
+            assertEquals(SECTION_NATIVE_BYTES[i],source.readerInputRange().length());
+            assertEquals(SECTION_BLOB_SHA256[i],
+                    CdR11aProfile.sha256(owner.profile().range(SECTION_SOURCES.get(i)).read(retained).copy()));
+            assertEquals(SECTION_NATIVE_SHA256[i],CdR11aProfile.sha256(source.readerBytes().copy()));
+            assertEquals(SECTION_DECODED_SHA256[i],CdR11aProfile.sha256(source.decode().bytes().copy()));
+        }
+        verifyAntonVisual(visual); verifyAntonVisual(reverseVisual);
+        assertArrayEquals(visual.mappings().copy(),reverseVisual.mappings().copy());
+        assertArrayEquals(visual.animationTable().copy(),reverseVisual.animationTable().copy());
+        var source = bank.source(CdR11aAsset.ART_ANTON);
+        assertSame(source,bank.sources().get(1)); assertSame(source,bank.source(CdR11aAsset.ART_ANTON));
+        assertSame(source.decode(),bank.source(CdR11aAsset.ART_ANTON).decode());
+        assertEquals(9,source.canonicalPlcId()); assertEquals(1,source.canonicalRowIndex());
+        assertEquals(owner.loadPlan().plcs().get(9).entries().get(1),source.canonicalPlc());
+        assertEquals(0x8120,source.canonicalPlc().vramAddress()); assertEquals(22,source.tileCount());
+        var blob = owner.profile().range(CdR11aAsset.ART_ANTON);
+        assertEquals(new CdR11aProfile.FileRange(CdNativeFile.R11A,
+                CdMmdImage.Domain.ORIGINAL_WORD_RAM,0x36E46,484),blob);
+        assertEquals(blob,source.decode().sourceBlobRange()); assertEquals(blob,source.decode().readerInputRange());
+        assertEquals(484,source.decode().consumedInputBytes()); assertEquals(704,source.decode().bytes().length());
+        assertEquals(new CdR11aProfile.FileRange(blob.file(),blob.domain(),0x36E46,485),source.readerInputRange());
+        assertEquals(0x0016,source.readerBytes().unsignedWord(0));
+        assertEquals(0,source.readerBytes().unsignedByte(484)); // Genuine first Mosqui header byte.
+        assertArrayEquals(retained.readFile(0x36E46,485),source.readerBytes().copy());
+        assertEquals(SECTION_BLOB_SHA256[1],CdR11aProfile.sha256(source.decode().readerInputRange().read(retained).copy()));
+        assertEquals(SECTION_NATIVE_SHA256[1],CdR11aProfile.sha256(source.readerBytes().copy()));
+        assertEquals(SECTION_DECODED_SHA256[1],CdR11aProfile.sha256(source.decode().bytes().copy()));
+        for (int plc : new int[]{6,11}) {
+            var relocated = owner.loadPlan().plcs().get(plc).entries().getFirst();
+            assertSame(source,bank.source(relocated)); assertEquals(0x6E00,relocated.vramAddress());
+        }
+        assertEquals(0x2409,objects.tileWord(2,0)); assertEquals(0x2370,objects.tileWord(2,1));
+        for (int subtype : new int[]{2,0x7F,0x80,0xFF}) {
+            assertThrows(UnsupportedOperationException.class, () -> objects.tileWord(2,subtype));
+        }
+        var oldTileView = objects.view(OBJECT_TILE_IDS);
+        assertEquals(74,oldTileView.bytes().length());
+        assertEquals("82086dba64cbd992cd73628e56bbfba4102783b6a6c63c9f10ada9844687525c",
+                CdR11aProfile.sha256(oldTileView.bytes().copy()));
+        assertSame(oldTileView,objects.view(OBJECT_TILE_IDS));
+        assertSame(objects.view(ANTON_MAPPINGS),objects.view(ANTON_MAPPINGS));
+        assertSame(objects.view(ANTON_ANIMATIONS),objects.view(ANTON_ANIMATIONS));
+        assertThrows(UnsupportedOperationException.class,bank.sources()::clear);
+        assertThrows(ReadOnlyBufferException.class, () -> source.readerBytes().buffer().put((byte) 1));
+        assertThrows(ReadOnlyBufferException.class, () -> source.decode().bytes().buffer().put((byte) 1));
+        byte[] detached = source.readerBytes().copy(); detached[484] = 1;
+        assertEquals(0,source.readerBytes().unsignedByte(484));
+    }
+
+    private static void verifyAntonCold(CdR11aObjectAssets objects) throws Exception {
+        verifySectionSourcesCold(objects);
+        for (String name : List.of("anton","checkpoint","boulder","spikes","plant","rampBooster",
+                "groundAnimal","flyingAnimal","plantOffsets","explosion","points","flower","floatBlock",
+                "springVertical","springHorizontal","springDiagonal","tunnelDoorVertical","monitorTime",
+                "tunnelDoor","pataBataNormal","pataBataDamaged")) {
+            var field = CdR11aObjectAssets.class.getDeclaredField(name); field.setAccessible(true);
+            assertNull(field.get(objects),"cold Anton request preserves optional cache " + name);
+        }
+    }
+
+    /** Snapshot identities only; never construct an authenticated owner or invoke a private constructor. */
+    private static Map<String,Object> antonOtherFields(CdR11aObjectAssets objects) throws Exception {
+        Map<String,Object> fields = new HashMap<>();
+        for (var field : CdR11aObjectAssets.class.getDeclaredFields()) {
+            if (java.lang.reflect.Modifier.isStatic(field.getModifiers())
+                    || field.getName().equals("anton") || field.getName().equals("frontierViews")) { continue; }
+            field.setAccessible(true); fields.put(field.getName(),field.get(objects));
+        }
+        return fields;
+    }
+
+    private static void verifyAntonNativeReferences(CdMmdImage image,CdR11aAssets owner) {
+        assertEquals(0x20B2B4,ByteBuffer.wrap(image.readFile(0x3F2C,4)).getInt()); // ObjectIndex $3F.
+        assertArrayEquals(hexBytes("217c0020b3aa0004"),image.readFile(0xB2EA,8)); // ObjAnton_Init MOVE.L.
+        assertEquals(ANTON_MAPPINGS.range().nativeAddress(),ByteBuffer.wrap(image.readFile(0xB2EC,4)).getInt());
+        assertArrayEquals(hexBytes("70024eb90020cf264a280028660a203cffff000072006008"
+                + "203cffff800072012140002a1141001c"),image.readFile(0xB310,40));
+        assertArrayEquals(hexBytes("43fa001a4ef900205cfa"),image.readFile(0xB382,10)); // Main's PC-relative LEA.
+        assertEquals(ANTON_ANIMATIONS.range().nativeAddress(),
+                0x200000+0xB384+ByteBuffer.wrap(image.readFile(0xB384,2)).getShort());
+        assertArrayEquals(hexBytes("60b4"),image.readFile(0xB39C,2));
+        assertArrayEquals(ANTON_ANIMATION_BYTES,image.readFile(0xB39E,12));
+        assertArrayEquals(ANTON_MAPPING_BYTES,image.readFile(0xB3AA,112));
+        assertArrayEquals(hexBytes("4eb9"),image.readFile(0xB41A,2)); // Next object, no invented table pad.
+        assertArrayEquals(hexBytes("43f90020cf48d040383b001845fb4014720012280029d2413a321000314500024e75"),
+                image.readFile(0xCF26,34));
+        assertEquals(40,ByteBuffer.wrap(image.readFile(0xCF4C,2)).getShort());
+        assertArrayEquals(hexBytes("24092370"),image.readFile(0xCF70,4));
+        assertArrayEquals(hexBytes("00236e468120"),image.readFile(0xFD54,6));
+        assertArrayEquals(hexBytes("0b100425bfffc000"),image.readFile(0x7C66,8));
+        assertEquals(0x236E46,owner.loadPlan().plcs().get(9).entries().get(1).sourceRange().nativeAddress());
+        assertEquals(CdR11aAsset.ART_ANTON,owner.loadPlan().plcs().get(9).entries().get(1).source());
+    }
+
+    private static void verifyAntonVisual(CdObjectVisualAssets visual) {
+        assertEquals(0,visual.mappingTableOffset()); assertEquals(4,visual.mappingFrames().size());
+        assertArrayEquals(ANTON_MAPPING_BYTES,visual.mappings().copy());
+        assertArrayEquals(ANTON_ANIMATION_BYTES,visual.animationTable().copy());
+        assertEquals(ANTON_MAPPING_SHA256,CdR11aProfile.sha256(visual.mappings().copy()));
+        assertEquals(ANTON_ANIMATION_SHA256,CdR11aProfile.sha256(visual.animationTable().copy()));
+        assertEquals(List.of(8,34,60,86),visual.mappingFrames().stream()
+                .map(CdObjectVisualAssets.MappingFrame::relativeOffset).toList());
+        for (int frame = 0; frame < 4; frame++) {
+            var mapping = visual.mappingFrames().get(frame); boolean second = (frame & 1) != 0;
+            assertEquals(26,mapping.bytes().length());
+            assertArrayEquals(Arrays.copyOfRange(ANTON_MAPPING_BYTES,mapping.relativeOffset(),
+                    mapping.relativeOffset()+26),mapping.bytes().copy());
+            assertEquals(List.of(new CdObjectVisualAssets.Piece(second ? -20 : -19,5,frame >= 2 ? 18 : 0,-12),
+                    new CdObjectVisualAssets.Piece(second ? -4 : -3,8,4,-12),
+                    new CdObjectVisualAssets.Piece(second ? 4 : 5,4,7,-4),
+                    new CdObjectVisualAssets.Piece(4,5,second ? 13 : 9,-8),
+                    new CdObjectVisualAssets.Piece(second ? -5 : -4,0,17,second ? 18 : 14)),mapping.pieces());
+            assertThrows(UnsupportedOperationException.class,mapping.pieces()::clear);
+            assertThrows(ReadOnlyBufferException.class, () -> mapping.bytes().buffer().put((byte) 1));
+        }
+        assertEquals(21,lastUsedTile(visual)); assertEquals(2,visual.animations().size());
+        for (int i = 0; i < 2; i++) {
+            var script = visual.animations().get(i);
+            assertEquals(i == 0 ? 4 : 8,script.relativeOffset()); assertEquals(i == 0 ? 3 : 7,script.delay());
+            assertEquals(i == 0 ? List.of(0,1) : List.of(2,3),script.frameBytes());
+            assertEquals(CdObjectVisualAssets.Terminal.LOOP_FF,script.terminal());
+            assertArrayEquals(i == 0 ? hexBytes("030001ff") : hexBytes("070203ff"),script.bytes().copy());
+            assertThrows(UnsupportedOperationException.class,script.frameBytes()::clear);
+            assertThrows(ReadOnlyBufferException.class, () -> script.bytes().buffer().put((byte) 1));
+        }
+        assertThrows(UnsupportedOperationException.class,visual.mappingFrames()::clear);
+        assertThrows(UnsupportedOperationException.class,visual.animations()::clear);
+        assertThrows(ReadOnlyBufferException.class, () -> visual.mappings().buffer().put((byte) 1));
+        assertThrows(ReadOnlyBufferException.class, () -> visual.animationTable().buffer().put((byte) 1));
+        assertThrows(IndexOutOfBoundsException.class, () -> visual.mappings().unsignedByte(112));
+        assertThrows(IndexOutOfBoundsException.class, () -> visual.animationTable().unsignedByte(12));
+        byte[] mapCopy = visual.mappings().copy(); mapCopy[64] = 0;
+        byte[] scriptCopy = visual.animationTable().copy(); scriptCopy[9] = 0;
+        assertEquals(18,visual.mappings().unsignedByte(64)); assertEquals(2,visual.animationTable().unsignedByte(9));
+    }
+
+    private static final String ANTON_MAPPING_SHA256 =
+            "898f3a56606b9c82c0c0a4c2197b0860353cbce320baf1026bd7f717b300e808";
+    private static final String ANTON_ANIMATION_SHA256 =
+            "623c70ccd1429002e1d4e85929b53064bf0a1d7e0e56537d8d86c0bc94a7785d";
+    /** Full hand-literal N Anton/Data includes, independently compared to actual media; no extracted fixture. */
+    private static final byte[] ANTON_MAPPING_BYTES = hexBytes(
+            "00080022003c005605ed050000f4fd080004f405040007fc04050009f8fc0000110e"
+            + "05ec050000f4fc080004f404040007fc0405000df8fb00001112"
+            + "05ed050012f4fd080004f405040007fc04050009f8fc0000110e"
+            + "05ec050012f4fc080004f404040007fc0405000df8fb00001112");
+    private static final byte[] ANTON_ANIMATION_BYTES = hexBytes("00040008030001ff070203ff");
 
     // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>
 }

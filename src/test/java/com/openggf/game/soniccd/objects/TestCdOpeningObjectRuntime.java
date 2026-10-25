@@ -4380,7 +4380,7 @@ class TestCdOpeningObjectRuntime {
         assertThrows(NullPointerException.class, () -> new CdOpeningObjectRuntime.TunnelDoorFm(null));
         assertEquals(CdTunnelDoor.FmSound.FM_A4,
                 new CdOpeningObjectRuntime.TunnelDoorFm(CdTunnelDoor.FmSound.FM_A4).sound());
-        assertEquals(17, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+        assertEquals(18, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
         var compact = new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138);
         assertEquals(494, compact.monitorTime() + 82 - compact.player());
         assertEquals(12, compact.monitorTime() - compact.tunnelDoorVertical());
@@ -4970,7 +4970,7 @@ class TestCdOpeningObjectRuntime {
                     () -> com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(state.residency(), 0x409));
             assertThrows(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.OwnershipBoundary.class,
                     () -> com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(state.residency(), 0x440));
-            assertEquals(17, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+            assertEquals(18, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
             var compact = new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138);
             assertEquals(494, compact.monitorTime() + 82 - compact.player());
             assertEquals(state, f.runtime.captureClosedCut().sectionArtState());
@@ -5491,7 +5491,7 @@ class TestCdOpeningObjectRuntime {
     @Test void boulderFourteenthBankPreservesEveryOldConstructorAndTheOneAggregate() {
         var expected = new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138, 208, 236, 299, 369, 374,
                 413, 449, 464, 500, 512, 594);
-        assertEquals(17, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+        assertEquals(18, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
         assertEquals(513, expected.boulder() + 19 - expected.player());
         assertEquals(expected, new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138));
         assertEquals(expected, new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138, 208, 236));
@@ -5966,7 +5966,7 @@ class TestCdOpeningObjectRuntime {
         var full = new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594,613);
         var old14 = new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594);
         assertEquals(full, old14); assertEquals(full, new CdOpeningObjectRuntime.LogicalBanks(100,124,138));
-        assertEquals(17, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+        assertEquals(18, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
         assertEquals("diagonalSpring", CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents()[14].getName());
         assertEquals(559, full.diagonalSpring() + 46 - full.player()); assertEquals(12475, BANKS.diagonalSpring());
         assertEquals(919, new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,900).diagonalSpring());
@@ -6547,7 +6547,7 @@ class TestCdOpeningObjectRuntime {
 
     @Test void spikesSixteenthBankPreservesEveryOlderConstructorAndOneCachedActualBody() {
         var full = new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594,613,659);
-        assertEquals(17, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+        assertEquals(18, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
         assertEquals("spikes", CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents()[15].getName());
         assertEquals(full, new CdOpeningObjectRuntime.LogicalBanks(100,124,138));
         assertEquals(full, new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236));
@@ -6560,7 +6560,7 @@ class TestCdOpeningObjectRuntime {
         assertEquals(full, new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594));
         assertEquals(full, new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594,613));
         assertEquals(567, full.spikes()+8-full.player()); assertEquals(BANKS.diagonalSpring()+46,BANKS.spikes());
-        assertEquals(List.of(3,5,8,9,10,11,12,13,14,15,16,17), java.util.Arrays.stream(CdOpeningObjectRuntime.LogicalBanks.class.getDeclaredConstructors())
+        assertEquals(List.of(3,5,8,9,10,11,12,13,14,15,16,17,18), java.util.Arrays.stream(CdOpeningObjectRuntime.LogicalBanks.class.getDeclaredConstructors())
                 .map(java.lang.reflect.Constructor::getParameterCount).sorted().toList());
         assertEquals(1, java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredFields()).filter(v->v.getType()==CdSpikes.class).count());
         assertFalse(java.util.Arrays.stream(CdOpeningObjectRuntime.Snapshot.class.getDeclaredFields()).anyMatch(v->
@@ -7075,10 +7075,10 @@ class TestCdOpeningObjectRuntime {
         var full = new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594,613,659,667);
         assertEquals(full, new CdOpeningObjectRuntime.LogicalBanks(100,124,138));
         assertEquals(full, new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594,613,659));
-        assertEquals(17, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+        assertEquals(18, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
         assertEquals("checkpoint", CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents()[16].getName());
         assertEquals(579, full.checkpoint()+12-full.player());
-        assertEquals(List.of(3,5,8,9,10,11,12,13,14,15,16,17),
+        assertEquals(List.of(3,5,8,9,10,11,12,13,14,15,16,17,18),
                 java.util.Arrays.stream(CdOpeningObjectRuntime.LogicalBanks.class.getDeclaredConstructors())
                         .map(java.lang.reflect.Constructor::getParameterCount).sorted().toList());
         assertEquals(1, java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredFields()).filter(v->v.getType()==CdCheckpoint.class).count());
@@ -7634,4 +7634,413 @@ class TestCdOpeningObjectRuntime {
         }return state;
     }
     // END Checkpoint Runtime R1.
+
+    // BEGIN Anton Runtime R1. Authored before the single production materialization; ALL JAVA UNRUN.
+    // J=b9816d16a656358840d547d47ec34887dc791d12; N=1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff.
+    // ObjAnton/Init/Place/Main (Anton/Main.asm:7-94), ObjGetFloorDist (Collision Check.asm:157-179).
+    // Component Globals cases below are distinguished from the admitted Runtime default-goodFuture0 dispatch.
+    // No new case constructs a private Snapshot or owner token; adversaries borrow real public captures/overlays.
+    // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>
+
+    @Test void antonEighteenthBankPreservesAllSeventeenBasesAndExistingFactoryCaptureContracts() throws Exception {
+        var old = new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594,613,659,667);
+        var full = new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594,613,659,667,679);
+        assertEquals(full, old); assertEquals(full, new CdOpeningObjectRuntime.LogicalBanks(100,124,138));
+        assertEquals(18, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+        assertEquals("anton", CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents()[17].getName());
+        assertEquals(579, old.checkpoint()+12-old.player()); assertEquals(601, full.anton()+22-full.player());
+        assertEquals(List.of(3,5,8,9,10,11,12,13,14,15,16,17,18),
+                java.util.Arrays.stream(CdOpeningObjectRuntime.LogicalBanks.class.getDeclaredConstructors())
+                        .map(java.lang.reflect.Constructor::getParameterCount).sorted().toList());
+        assertEquals(1, java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredFields()).filter(v->v.getType()==CdAnton.class).count());
+        assertFalse(java.util.Arrays.stream(CdOpeningObjectRuntime.Snapshot.class.getDeclaredFields()).anyMatch(v->
+                v.getType()==CdAnton.class || v.getType()==CdAnton.Result.class || v.getType()==CdAnton.PrimaryAngleCall.class
+                        || v.getType()==CdAnton.Globals.class));
+        var port = CdOpeningObjectRuntime.class.getDeclaredMethod("commitAntonPrimaryAngle", CdAnton.PrimaryAngleCall.class);
+        assertTrue(java.lang.reflect.Modifier.isPrivate(port.getModifiers())); assertEquals(void.class, port.getReturnType());
+        assertEquals(List.of(11), java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
+                .filter(m->m.getName().equals("usaR11aOpeningDevEmptySatPreloadedArt")).map(java.lang.reflect.Method::getParameterCount).toList());
+        assertEquals(List.of(14), java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
+                .filter(m->m.getName().equals("usaR11aRestartDevEmptySatPreloadedArt")).map(java.lang.reflect.Method::getParameterCount).toList());
+    }
+
+    @Test void antonNewBankRejectsEveryOldSpanAndBothBoundsWithoutPublishingFrameState() throws Exception {
+        var a=load(); var carry=cameraArtDevIngress(a);
+        int[] starts={100,124,138,208,236,299,369,374,413,449,464,500,512,594,613,659,667};
+        int[] sizes={24,14,70,28,63,70,5,39,36,15,36,12,82,19,46,8,12};
+        var invalid=new ArrayList<Integer>();
+        for(int i=0;i<starts.length;i++){invalid.add(starts[i]);invalid.add(starts[i]+sizes[i]-1);}
+        invalid.add(-1); invalid.add(Integer.MAX_VALUE-20);
+        try(var frame=CdPlayerFrameRuntime.externalTouchRequiredDevelopment(a,0)) {
+            var actor=frame.captureActor(); var shared=frame.captureShared();
+            for(int base:invalid) {
+                var banks=antonBanks(base);
+                assertThrows(IllegalArgumentException.class,()->CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(
+                        a,frame,INITIAL,CONTACT,SCORE,LEVEL,declaredCheckpointBindings(),new byte[640],banks,PRE,v->fail("no angle callback")));
+                assertThrows(IllegalArgumentException.class,()->CdOpeningObjectRuntime.usaR11aRestartDevEmptySatPreloadedArt(
+                        a,frame,INITIAL,CONTACT,SCORE,LEVEL,declaredCheckpointBindings(),
+                        CdAssetBytes.copyOf(new byte[CdObjectPlacementRuntime.SAVED_BANK_BYTES]),new CdPowerupArtRuntime.State(new byte[0x480],new byte[0x480]),
+                        carry,new byte[640],banks,PRE,v->fail("no angle callback")));
+                assertEquals(actor,frame.captureActor());assertEquals(shared.environment(),frame.environment());
+                assertEquals(shared.vIntClock(),frame.vIntClock());assertFalse(frame.closed());
+            }
+        }
+    }
+
+    @Test void antonColdUnknownCanonicalPixelsAdmitEmptySatAndKeepAll579PreviousBindings() throws Exception {
+        try(var f=new Fixture()) {
+            var objects=f.assets.openingObjects();var bank=objects.sectionArtSources();assertSame(bank,objects.sectionArtSources());
+            assertEquals(10,bank.sources().size());assertSame(bank.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_ANTON),bank.sources().get(1));
+            var state=f.runtime.sectionArtState();var pixels=antonPixels(f,state.residency());var old=checkpointPixels(f,state.residency());
+            int[][] ranges={{0x780,24},{0x7AE,14},{0x3A0,70},{0x424,28},{0x441,63},{0x680,70},{0x6C6,5},{0x6D7,39},
+                    {0x544,36},{0x334,15},{0x520,36},{0x328,12},{0x5A8,82},{0x374,19},{0x490,46},{0x320,8},{0x6CB,12}};
+            int count=0;for(var range:ranges)for(int tile=range[0];tile<range[0]+range[1];tile++){assertEquals(old.resolve(tile),pixels.resolve(tile));count++;}
+            assertEquals(579,count);
+            for(byte mask:state.residency().region(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.Region.AT_8120).knownMask().copy())assertEquals(0,mask);
+            for(int tile:List.of(0x409,0x41E)) {
+                var fault=assertThrows(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.OwnershipBoundary.class,()->pixels.resolve(tile));
+                assertEquals(tile,fault.nativePatternId());
+            }
+            assertTrue(CdObjectPresentation.convert(f.runtime.cpuSat(),pixels).tiles().isEmpty());
+            assertSame(state,f.runtime.sectionArtState());assertTrue(state.decoder().isEmpty());assertEquals(0,state.queue().headSource());
+            assertEquals(0,f.frame.vIntClock().deltaSinceAdmittedCut());assertTrue(f.angleWrites.isEmpty());
+        }
+    }
+
+    @Test void antonActualInitFallsIntoPlaceForNormalAndEveryRepresentativeDamagedSubtypeWithoutAnimationReset() throws Exception {
+        for(int subtype:List.of(0,1,0x80,0xFF))try(var f=new Fixture(new CdRingGlobals(0,3,0,0,0,1,0,0))) {
+            springDeviceCut(f);horizontalGates(f,0xFFFF,1);seedTunnelDoorGlobals(f,1,0x3456,0x55,0x66);
+            var p=f.runtime.placement().pool();var source=antonPlace(f,0,subtype).moveByte(SPRITE_FLAGS,0x83)
+                    .moveByte(MAP_FRAME,3).moveByte(PREVIOUS_ANIMATION,9).moveByte(ANIMATION_FRAME,7).moveByte(ANIMATION_TIME,0xAA)
+                    .moveByte(ROUTINE_2,0x5A).moveByte(COLLISION_STATUS,2).moveWord(X_FRACTION,0x1234).moveWord(Y_FRACTION,0x5678)
+                    .moveWord(X_VELOCITY,0x2345).moveWord(Y_VELOCITY,0xFEDC);p.write(source);
+            var expected=source.moveByte(SPRITE_FLAGS,7).moveByte(PRIORITY,4).moveLong(MAPPINGS,CdAnton.Assets.fromObjectAssets(f.assets.openingObjects()).mappingsAddress())
+                    .moveByte(X_RADIUS,0x18).moveByte(WIDTH,0x18).moveByte(Y_RADIUS,0x13).moveByte(COLLISION_TYPE,0x29)
+                    .moveWord(ANTON_ANCHOR_X,source.centreX()).moveWord(TILE,0x2409)
+                    .moveLong(CdObjectState.LongField.ANTON_X_DELTA,subtype==0?0xFFFF0000:0xFFFF8000)
+                    .moveByte(ANIMATION,subtype==0?0:1).addLong(CdObjectState.LongField.Y_POSITION,0x10000);
+            var floor=antonFloor(f,expected);assertTrue(floor.distance()<0);expected=expected.moveByte(ROUTINE,2);
+            var untouched=p.capture().slots();var actor=f.frame.state();var sounds=f.runtime.lastSoundRequests();int external=f.angleWrites.size();
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(expected,p.state(40));assertEquals(actor,f.frame.state());assertEquals(sounds,f.runtime.lastSoundRequests());
+            assertEquals(floor.primaryAngle(),f.frame.environment().movement().globals().primaryAngle());
+            assertEquals(0x66,f.frame.environment().movement().globals().secondaryAngle());assertEquals(external,f.angleWrites.size());
+            for(int i=0;i<96;i++)if(i!=8)assertEquals(untouched.get(i),p.capture().slots().get(i));
+            monitorFinish(f);
+        }
+    }
+
+    @Test void antonActualPlaceTwoOnlyAdvancesYAndRoutineBeforeTheSeparateMainVisit() throws Exception {
+        try(var f=new Fixture()) {
+            springDeviceCut(f);var p=f.runtime.placement().pool();var source=antonPlace(f,2,0xFF)
+                    .moveLong(CdObjectState.LongField.ANTON_X_DELTA,0x12345678).moveByte(ANIMATION,1)
+                    .moveByte(PREVIOUS_ANIMATION,0).moveByte(ANIMATION_FRAME,9).moveByte(ANIMATION_TIME,0x80).moveByte(MAP_FRAME,3);
+            p.write(source);var expected=source.addLong(CdObjectState.LongField.Y_POSITION,0x10000).moveByte(ROUTINE,4);
+            var floor=antonFloor(f,expected);assertTrue(floor.distance()<0);
+            f.runtime.runDynamicSlotsAfterReservedSlots();assertEquals(expected,p.state(40));
+            assertEquals(floor.primaryAngle(),f.frame.environment().movement().globals().primaryAngle());monitorFinish(f);
+        }
+    }
+
+    @Test void antonActualMainUsesRealFloorFractionalDeltaAndSharedNormalOrDamagedAnimationExactlyOnce() throws Exception {
+        for(int subtype:List.of(0,0xFF))try(var f=new Fixture()) {
+            springDeviceCut(f);seedTunnelDoorGlobals(f,0,0x3456,0x55,0x66);
+            var p=f.runtime.placement().pool();int delta=subtype==0?-0x10000:-0x8000;
+            var source=antonMain(f,subtype,delta,true);p.write(source);
+            var moved=source.addLong(CdObjectState.LongField.X_POSITION,delta);var floor=antonFloor(f,moved);
+            var expected=moved.addWord(Y,floor.distance()).moveByte(PREVIOUS_ANIMATION,subtype==0?0:1)
+                    .moveByte(ANIMATION_FRAME,1).moveByte(ANIMATION_TIME,subtype==0?3:7).moveByte(MAP_FRAME,subtype==0?0:2);
+            var actor=f.frame.state();var clock=f.frame.vIntClock();int external=f.angleWrites.size();
+            f.runtime.runDynamicSlotsAfterReservedSlots();assertEquals(expected,p.state(40));assertEquals(0x005A,p.state(40).word(Y_FRACTION));
+            assertEquals(floor.primaryAngle(),f.frame.environment().movement().globals().primaryAngle());assertEquals(external,f.angleWrites.size());
+            assertEquals(actor,f.frame.state());assertEquals(clock,f.frame.vIntClock());monitorFinish(f);
+        }
+    }
+
+    @Test void antonComponentGlobalsGoodFutureAndRawWarpPredicatesUseActualBodyAndPlacementWithoutInventedRuntimeIngress() throws Exception {
+        int[][] rows={{1,1,0,0},{1,1,0xFF,1},{1,0x81,0,1},{0,0x81,0,0}};
+        for(var row:rows)try(var f=new Fixture()) {
+            springDeviceCut(f);var p=f.runtime.placement().pool();int[] draws={0};
+            var source=antonPlace(f,0,row[2]).moveByte(SPRITE_FLAGS,0x84).moveWord(X_FRACTION,0x1234).moveWord(Y_FRACTION,0x5678);
+            if(row[3]!=0)source=source.moveByte(ROUTINE,0xFE).moveByte(SAVED_FLAGS_ID,7);
+            p.write(source);seedSpinTunnelLoaded(f.runtime.placement(),7,1);var original=source;var bank=f.runtime.placement().capture().savedFlags();var sounds=f.runtime.lastSoundRequests();
+            var body=new CdAnton(f.runtime.placement(),CdAnton.Assets.fromObjectAssets(f.assets.openingObjects()),
+                    new com.openggf.game.soniccd.player.CdPlayerTerrain(f.assets.terrain()),c->f.frame.applyObjectPrimaryAngle(c.value()),
+                    (pool,id)->{draws[0]++;pool.write(pool.state(id.wholeIndex()).moveByte(SPRITE_FLAGS,pool.state(id.wholeIndex()).spriteFlags()&0x7F));});
+            var result=body.run(40,new CdAnton.Globals(row[0],row[1],1,PRE.xWord(),f.frame.environment().movement().globals().primaryAngle()));
+            if(row[3]!=0) {
+                assertEquals(0,draws[0]);assertEquals(CdExplosion.OBJECT_ID,result.state().id());assertEquals(0,result.state().routine());
+                byte[] expected=new byte[64];expected[0]=0x18;expected[8]=(byte)(original.centreX()>>>8);expected[9]=(byte)original.centreX();
+                expected[12]=(byte)(original.centreY()>>>8);expected[13]=(byte)original.centreY();assertArrayEquals(expected,result.state().copyBytes());
+                assertTrue(result.effects().stream().anyMatch(CdAnton.ConvertedToExplosion.class::isInstance));
+            } else {assertEquals(1,draws[0]);assertFalse(result.effects().stream().anyMatch(CdAnton.ConvertedToExplosion.class::isInstance));}
+            assertArrayEquals(bank.copy(),f.runtime.placement().capture().savedFlags().copy());assertEquals(sounds,f.runtime.lastSoundRequests());
+        }
+    }
+
+    @Test void antonReachedSynchronousPortAcceptsCurrentCompleteFullPoolAndNativeSameValuePrezeroCalls() throws Exception {
+        for(int routine:List.of(0,2,4))try(var f=new Fixture()) {
+            springDeviceCut(f);seedTunnelDoorGlobals(f,0,0x3456,0x55,0x66);var p=f.runtime.placement().pool();
+            for(int whole=32;whole<128;whole++)p.write(antonImage(f,p.state(whole),2,0));
+            p.write(antonImage(f,p.state(40),routine,0));assertTrue(p.findObjSlot().isEmpty());
+            spikesStage(f,40);
+            try {
+                for(int repeat=0;repeat<2;repeat++) {
+                    var call=antonReachedPrezero(f);var images=p.capture().slots();var actor=f.frame.state();var clock=f.frame.vIntClock();
+                    assertEquals(repeat==0?0x55:0,call.expectedPrimaryAngle());assertEquals(0,call.value());
+                    assertEquals(96,call.callCut().slots().size());assertEquals(p.state(40),call.expectedSource());
+                    spikesInvoke(f,"commitAntonPrimaryAngle",CdAnton.PrimaryAngleCall.class,call);
+                    assertEquals(0,f.frame.environment().movement().globals().primaryAngle());assertEquals(0x66,f.frame.environment().movement().globals().secondaryAngle());
+                    assertEquals(images,p.capture().slots());assertEquals(actor,f.frame.state());assertEquals(clock,f.frame.vIntClock());
+                    assertEquals(false,checkpointGet(f.runtime,"inSolidCommit"));
+                }
+                assertTrue(f.angleWrites.isEmpty());
+            } finally {boulderUnstage(f);}
+        }
+    }
+
+    @Test void antonAnglePortRejectsEveryExistingMutualGuardAndNonDispatchPhaseBeforeAnyPublication() throws Exception {
+        try(var f=new Fixture()) {
+            springDeviceCut(f);f.runtime.placement().pool().write(antonImage(f,f.slot(40),2,0));var call=antonReachedPrezero(f);
+            diagonalReject(f,"commitAntonPrimaryAngle",CdAnton.PrimaryAngleCall.class,call);
+            spikesStage(f,40);
+            try {
+                for(String guard:diagonalGuards()) {
+                    boulderSet(f.runtime,guard,true);diagonalReject(f,"commitAntonPrimaryAngle",CdAnton.PrimaryAngleCall.class,call);boulderSet(f.runtime,guard,false);
+                }
+                for(var phase:CdOpeningObjectRuntime.Phase.values())if(phase!=CdOpeningObjectRuntime.Phase.DYNAMIC_SLOTS) {
+                    boulderSet(f.runtime,"phase",phase);diagonalReject(f,"commitAntonPrimaryAngle",CdAnton.PrimaryAngleCall.class,call);
+                }
+                boulderSet(f.runtime,"phase",CdOpeningObjectRuntime.Phase.DYNAMIC_SLOTS);boulderSet(f.runtime,"operating",false);
+                diagonalReject(f,"commitAntonPrimaryAngle",CdAnton.PrimaryAngleCall.class,call);boulderSet(f.runtime,"operating",true);
+                assertThrows(NullPointerException.class,()->spikesInvoke(f,"commitAntonPrimaryAngle",CdAnton.PrimaryAngleCall.class,null));
+                assertEquals(false,checkpointGet(f.runtime,"inSolidCommit"));
+            } finally {boulderUnstage(f);}
+        }
+    }
+
+    @Test void antonAnglePortRejectsForeignStaleDerivedNonSourceAndExpectedFrameCutsWithoutPublishing() throws Exception {
+        try(var f=new Fixture()) {
+            springDeviceCut(f);seedTunnelDoorGlobals(f,0,0,0x55,0x66);var p=f.runtime.placement().pool();
+            p.write(antonImage(f,p.state(40),2,0));var call=antonReachedPrezero(f);spikesStage(f,40);
+            try {
+                boulderSet(f.runtime,"dispatchWholeIndex",41);diagonalReject(f,"commitAntonPrimaryAngle",CdAnton.PrimaryAngleCall.class,call);
+                for(int invalid:List.of(-1,0,31,128,255)) {
+                    boulderSet(f.runtime,"dispatchWholeIndex",invalid);diagonalReject(f,"commitAntonPrimaryAngle",CdAnton.PrimaryAngleCall.class,call);
+                }
+                boulderSet(f.runtime,"dispatchWholeIndex",40);
+                var other=p.state(127);p.write(other.moveByte(FLAGS,0xA5));diagonalReject(f,"commitAntonPrimaryAngle",CdAnton.PrimaryAngleCall.class,call);p.write(other);
+                var source=p.state(40);p.write(source.moveByte(FLAGS,0xA5));diagonalReject(f,"commitAntonPrimaryAngle",CdAnton.PrimaryAngleCall.class,call);p.write(source);
+                var derived=CdObjectPool.overlay(call.callCut(),List.of(other.moveByte(FLAGS,0xA5)));
+                diagonalReject(f,"commitAntonPrimaryAngle",CdAnton.PrimaryAngleCall.class,new CdAnton.PrimaryAngleCall(derived,source,0x55,7));
+                var foreign=new CdObjectPool();foreign.write(foreign.state(40).moveByte(ID,CdAnton.OBJECT_ID).moveByte(ROUTINE,2));
+                diagonalReject(f,"commitAntonPrimaryAngle",CdAnton.PrimaryAngleCall.class,new CdAnton.PrimaryAngleCall(foreign.capture(),foreign.state(40),0x55,7));
+                f.frame.applyObjectPrimaryAngle(0x99);diagonalReject(f,"commitAntonPrimaryAngle",CdAnton.PrimaryAngleCall.class,call);
+                f.frame.applyObjectPrimaryAngle(0x55);
+                for(int id:List.of(0,CdExplosion.OBJECT_ID,CdPataBata.OBJECT_ID)) {
+                    p.write(source.moveByte(ID,id));var current=p.state(40);
+                    diagonalReject(f,"commitAntonPrimaryAngle",CdAnton.PrimaryAngleCall.class,new CdAnton.PrimaryAngleCall(p.capture(),current,0x55,7));
+                }
+                for(int routine:List.of(1,3,6,0x80,0xFF)) {
+                    p.write(source.moveByte(ROUTINE,routine));var current=p.state(40);
+                    diagonalReject(f,"commitAntonPrimaryAngle",CdAnton.PrimaryAngleCall.class,new CdAnton.PrimaryAngleCall(p.capture(),current,0x55,7));
+                }
+                p.write(source);assertEquals(false,checkpointGet(f.runtime,"inSolidCommit"));
+            } finally {boulderUnstage(f);}
+        }
+    }
+
+    @Test void antonMalformedCallAndOverlayInputsRejectThroughPublicFormatOwnersWithoutPrivateSnapshotForgery() throws Exception {
+        try(var f=new Fixture()) {
+            var p=f.runtime.placement().pool();p.write(antonImage(f,p.state(40),2,0));var source=p.state(40);var cut=p.capture();var before=cut.slots();
+            assertThrows(IllegalArgumentException.class,()->new CdAnton.PrimaryAngleCall(cut,source.moveByte(FLAGS,1),0,0));
+            assertThrows(IllegalArgumentException.class,()->new CdAnton.PrimaryAngleCall(cut,source,-1,0));
+            assertThrows(IllegalArgumentException.class,()->new CdAnton.PrimaryAngleCall(cut,source,0,256));
+            assertThrows(IllegalArgumentException.class,()->CdObjectPool.overlay(cut,List.of(source,source)));
+            var foreign=new CdObjectPool();assertThrows(IllegalArgumentException.class,()->CdObjectPool.overlay(cut,List.of(foreign.state(40))));
+            assertEquals(before,p.capture().slots());assertFalse(f.runtime.closed());
+        }
+    }
+
+    @Test void antonInSolidCommitMakesEveryExistingCallbackAndDrawRejectReentryBeforePublication() throws Exception {
+        try(var f=new Fixture()) {
+            springDeviceCut(f);f.runtime.placement().pool().write(antonImage(f,f.slot(40),2,0));spikesStage(f,40);boulderSet(f.runtime,"inSolidCommit",true);
+            try {
+                String[] names={"commitBoulderSolid","commitTopSolid","commitSpringSolid","commitSpringLaunch","commitSpikesSolid","commitSpikesYRewind","commitSpikesHurt",
+                        "commitTunnelDoorVerticalSolid","commitTunnelDoorSolid","commitMonitorSolid","commitTimePostDirection","requestTimePostSubCpu","commitCheckpointGlobal","saveCheckpoint"};
+                Class<?>[] types={CdBoulder.SolidCall.class,CdFloatBlock.TopSolidCall.class,CdSpring.SolidCall.class,CdSpring.LaunchCall.class,CdSpikes.SolidCall.class,
+                        CdSpikes.YRewindCall.class,CdSpikes.HurtCall.class,CdTunnelDoorVertical.SolidCall.class,CdTunnelDoor.SolidCall.class,CdMonitor.SolidCall.class,
+                        CdTimePost.DirectionCall.class,CdTimePost.SubCpuCommand.class,CdCheckpoint.GlobalCall.class,CdCheckpoint.SaveCall.class};
+                for(int i=0;i<names.length;i++)diagonalReject(f,names[i],types[i],null);
+                var draw=CdOpeningObjectRuntime.class.getDeclaredMethod("drawDynamic",CdObjectPool.class,int.class);draw.setAccessible(true);
+                var before=f.runtime.placement().pool().capture().slots();var env=f.frame.environment();
+                var fault=assertThrows(java.lang.reflect.InvocationTargetException.class,()->draw.invoke(f.runtime,f.runtime.placement().pool(),40));
+                assertInstanceOf(IllegalStateException.class,fault.getCause());assertEquals(before,f.runtime.placement().pool().capture().slots());assertEquals(env,f.frame.environment());
+            } finally {boulderSet(f.runtime,"inSolidCommit",false);boulderUnstage(f);}
+        }
+    }
+
+    @Test void antonReachedTileBoundaryKeepsEarlierPhysicalWorkAndOnlyItsActualInitPrefix() throws Exception {
+        try(var f=new Fixture()) {
+            springDeviceCut(f);seedTunnelDoorGlobals(f,0,0,0x55,0x66);var p=f.runtime.placement().pool();
+            p.write(cameraPataMain(f,p.state(39)));var earlier=p.state(39);
+            var source=antonImage(f,p.state(40),0,0xFF).moveByte(SUBTYPE2,2).moveWord(TILE,0xBEEF)
+                    .moveLong(CdObjectState.LongField.ANTON_X_DELTA,0x12345678);p.write(source);
+            p.write(p.state(41).moveByte(ID,0x7F));var later=p.state(41);
+            var fault=assertThrows(CdAnton.UnsupportedAnton.class,f.runtime::runDynamicSlotsAfterReservedSlots);
+            assertEquals(CdAnton.UnsupportedBoundary.TILE_ENTRY,fault.boundary());assertEquals(40,fault.wholeIndex());assertEquals(2,fault.value());
+            var expected=source.moveByte(SPRITE_FLAGS,4).moveByte(PRIORITY,4).moveLong(MAPPINGS,CdAnton.Assets.fromObjectAssets(f.assets.openingObjects()).mappingsAddress())
+                    .moveByte(X_RADIUS,0x18).moveByte(WIDTH,0x18).moveByte(Y_RADIUS,0x13).moveByte(COLLISION_TYPE,0x29).moveWord(ANTON_ANCHOR_X,source.centreX());
+            assertEquals(expected,p.state(40));assertNotEquals(earlier,p.state(39));assertEquals(later,p.state(41));
+            assertEquals(0x55,f.frame.environment().movement().globals().primaryAngle());assertTrue(f.runtime.closed());assertTrue(f.frame.closed());
+            assertThrows(IllegalStateException.class,f.runtime::runDynamicSlotsAfterReservedSlots);assertEquals(expected,p.state(40));
+        }
+    }
+
+    @Test void antonReachedAnimationBoundaryRetainsAcceptedMotionYAndSynchronousAngleBeforeClosingWithoutLaterSlots() throws Exception {
+        try(var f=new Fixture()) {
+            springDeviceCut(f);seedTunnelDoorGlobals(f,0,0,0x55,0x66);var p=f.runtime.placement().pool();
+            var source=antonMain(f,0xFF,-0x8000,true).moveByte(SPRITE_FLAGS,0x84).moveByte(ANIMATION,2).moveByte(PREVIOUS_ANIMATION,2)
+                    .moveByte(ANIMATION_FRAME,9).moveByte(ANIMATION_TIME,0);p.write(source);
+            p.write(p.state(41).moveByte(ID,0x7F));var later=p.state(41);var moved=source.addLong(CdObjectState.LongField.X_POSITION,-0x8000);
+            var floor=antonFloor(f,moved);var expected=moved.addWord(Y,floor.distance()).moveByte(ANIMATION_TIME,0xFF);var sounds=f.runtime.lastSoundRequests();
+            var fault=assertThrows(CdAnton.UnsupportedAnton.class,f.runtime::runDynamicSlotsAfterReservedSlots);
+            assertEquals(CdAnton.UnsupportedBoundary.ANIMATION_DIRECTORY_ENTRY,fault.boundary());assertEquals(4,fault.value());
+            assertEquals(expected,p.state(40));assertEquals(later,p.state(41));assertEquals(floor.primaryAngle(),f.frame.environment().movement().globals().primaryAngle());
+            assertEquals(sounds,f.runtime.lastSoundRequests());assertTrue(f.runtime.closed());assertTrue(f.frame.closed());
+            assertThrows(IllegalStateException.class,()->f.runtime.finishAfterCamera(POST));assertEquals(expected,p.state(40));
+        }
+    }
+
+    @Test void antonNativeRepeatedFailureCycleKeepsCompletedProbePrefixAndNeverDrawsTailsOrRetries() throws Exception {
+        try(var f=new Fixture()) {
+            springDeviceCut(f);seedTunnelDoorGlobals(f,0,0,0x55,0x66);var p=f.runtime.placement().pool();
+            var source=antonMain(f,0,0,false).moveByte(SPRITE_FLAGS,0x84);p.write(source);
+            var floor=antonFloor(f,source);assertTrue(floor.distance()>7);p.write(p.state(41).moveByte(ID,0x7F));var later=p.state(41);
+            var fault=assertThrows(CdAnton.UnsupportedAnton.class,f.runtime::runDynamicSlotsAfterReservedSlots);
+            assertEquals(CdAnton.UnsupportedBoundary.NATIVE_NON_RETURNING_CYCLE,fault.boundary());
+            assertEquals(source.longBits(CdObjectState.LongField.X_POSITION),p.state(40).longBits(CdObjectState.LongField.X_POSITION));
+            assertEquals(source.longBits(CdObjectState.LongField.Y_POSITION),p.state(40).longBits(CdObjectState.LongField.Y_POSITION));
+            assertEquals(0,p.state(40).longBits(CdObjectState.LongField.ANTON_X_DELTA));assertEquals(0x80,p.state(40).spriteFlags()&0x80);
+            assertEquals((p.state(40).spriteFlags()^source.spriteFlags())&1,(p.state(40).flags()^source.flags())&1);
+            assertEquals(floor.primaryAngle(),f.frame.environment().movement().globals().primaryAngle());assertEquals(later,p.state(41));
+            var prefix=p.capture().slots();assertTrue(f.runtime.closed());assertTrue(f.frame.closed());
+            assertThrows(IllegalStateException.class,f.runtime::runDynamicSlotsAfterReservedSlots);assertEquals(prefix,p.capture().slots());
+        }
+    }
+
+    @Test void antonSelectedUnknownCanonicalTileFailsAtNextActualVIntAfterCpuSatAndTailAlreadyCompleted() throws Exception {
+        try(var f=new Fixture()) {
+            cameraArtIdle(f);timePostAbsentBegin(f,2);var p=f.runtime.placement().pool();p.clearDynamicSlots();p.write(antonImage(f,p.state(40),2,0));
+            f.runtime.runDynamicSlotsAfterReservedSlots();var sat=f.runtime.finishAfterCamera(POST);f.runtime.finishOrdinaryTail();
+            assertEquals(5,sat.provenance().stream().filter(v->v.slotRef().wholeIndex()==40).count());var source=p.state(40);var resident=f.runtime.sectionArtState().residency();
+            var fault=assertThrows(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.OwnershipBoundary.class,()->f.service(0x80));
+            assertEquals(0x41A,fault.nativePatternId());assertThrows(IllegalStateException.class,f.runtime::cpuSat);
+            // Read-only diagnostic of the retained immutable prefix; no private owner is manufactured.
+            var retained=(CdObjectDrawQueue.CpuSat)checkpointGet(checkpointGet(f.runtime,"queue"),"cpuSat");
+            assertArrayEquals(sat.bytes(),retained.bytes());assertEquals(source,p.state(40));
+            assertEquals(resident,f.runtime.sectionArtState().residency());assertTrue(f.runtime.closed());assertTrue(f.frame.closed());
+        }
+    }
+
+    @Test void antonActualPlc9CanonicalDamagedPictureUsesCurrentTwentyTwoAndReplaysARealHeldServiceCut() throws Exception {
+        try(var f=new Fixture()) {
+            cameraArtIdle(f);cameraArtCycle(f,0x680,0);for(int i=0;i<45;i++)cameraArtCycle(f,0x680,0);
+            var resident=f.runtime.sectionArtState().residency();var actual=cameraArtSource(f,com.openggf.game.soniccd.level.CdR11aAsset.ART_ANTON);
+            cameraArtBytes(resident,0x8120,actual);var pixels=antonPixels(f,resident);
+            for(int tile=0;tile<22;tile++){assertEquals(BANKS.anton()+tile,pixels.resolve(0x409+tile).logicalPatternId());
+                assertEquals(CdObjectPresentation.patternVersion(actual.slice(tile*32,32)),pixels.resolve(0x409+tile).version());}
+            timePostAbsentBegin(f,48);var p=f.runtime.placement().pool();p.clearDynamicSlots();p.write(antonMain(f,0xFF,-0x8000,true));
+            f.runtime.runDynamicSlotsAfterReservedSlots();assertEquals(2,p.state(40).unsignedByte(MAP_FRAME));monitorFinish(f);
+            f.service(0x80);assertTrue(f.frame.paused());var first=f.runtime.displayedFrame();var old=first.patternVersions();
+            assertTrue(old.keySet().stream().anyMatch(v->v>=BANKS.anton()+18&&v<BANKS.anton()+22));
+            for(var entry:old.entrySet())if(entry.getKey()>=BANKS.anton()&&entry.getKey()<BANKS.anton()+22)
+                assertEquals(CdObjectPresentation.patternVersion(actual.slice((entry.getKey()-BANKS.anton())*32,32)),entry.getValue());
+            var actor=f.frame.captureActor();var shared=f.frame.captureShared();var cut=f.runtime.captureClosedCut();
+            f.service(0);var expected=f.runtime.captureClosedCut();var expectedShared=f.frame.captureShared();var picture=f.runtime.displayedFrame();
+            f.frame.restoreActor(actor);f.frame.restoreShared(shared);f.runtime.restore(cut);f.service(0);
+            assertMonitorSnapshot(expected,f.runtime.captureClosedCut());assertEquals(expected.sectionArtState(),f.runtime.sectionArtState());
+            assertEquals(expectedShared,f.frame.captureShared());assertEquals(picture,f.runtime.displayedFrame());assertEquals(old,first.patternVersions());
+            for(int tile=0x374;tile<=0x385;tile++)assertEquals(boulderPixels(f,resident).resolve(tile),pixels.resolve(tile));
+            for(int tile=0x370;tile<=0x373;tile++){int selected=tile;assertThrows(UnsupportedOperationException.class,()->pixels.resolve(selected));}
+        }
+    }
+
+    @Test void antonCompletedInitCutRestoresAndReplaysAllExistingOwnersWithoutANewCapturePartition() throws Exception {
+        try(var f=new Fixture()) {
+            cameraArtIdle(f);var p=f.runtime.placement().pool();p.write(antonPlace(f,0,0xFF));
+            var before=f.runtime.captureClosedCut();var actor=f.frame.captureActor();var shared=f.frame.captureShared();
+            timePostAbsentBegin(f,2);f.runtime.runDynamicSlotsAfterReservedSlots();monitorFinish(f);
+            var expected=f.runtime.captureClosedCut();var nextActor=f.frame.captureActor();var nextShared=f.frame.captureShared();var sat=f.runtime.cpuSat();
+            f.frame.validateActorRestore(actor);f.frame.validateSharedRestore(shared);f.runtime.validateRestore(before);
+            f.frame.restoreActor(actor);f.frame.restoreShared(shared);f.runtime.restore(before);
+            timePostAbsentBegin(f,2);f.runtime.runDynamicSlotsAfterReservedSlots();monitorFinish(f);
+            assertMonitorSnapshot(expected,f.runtime.captureClosedCut());assertEquals(expected.sectionArtState(),f.runtime.sectionArtState());
+            assertEquals(expected.reserved().slots(),horizontalReserved(f.runtime));assertEquals(nextActor,f.frame.captureActor());assertEquals(nextShared,f.frame.captureShared());
+            assertArrayEquals(sat.bytes(),f.runtime.cpuSat().bytes());assertEquals(sat.provenance(),f.runtime.cpuSat().provenance());
+        }
+    }
+
+    @Test void antonSharedEnemyScannerKillPublishesBeforeItsLiveExplosionDispatchAndUsesExistingPointsAndSoundOwners() throws Exception {
+        try(var f=new Fixture()) {
+            f.firstCycle();seedContactPlayer(f);var p=f.runtime.placement().pool();p.clearDynamicSlots();
+            p.write(antonImage(f,p.state(40),4,0).moveByte(SPRITE_FLAGS,0x84).moveByte(COLLISION_TYPE,0x29).moveWord(X,64).moveWord(Y,0x759));
+            f.service(0);f.runtime.spawnBeforeReservedSlots();var publication=f.body(2);
+            var response=publication.result().effects().stream().filter(CdPlayerBody.ObjectTouchResponse.class::isInstance)
+                    .map(CdPlayerBody.ObjectTouchResponse.class::cast).findFirst().orElseThrow().result();
+            assertEquals(CdPlayerTouchResponse.Exit.KILL_ENEMY,response.exit());assertEquals(response.changedSlots().getFirst(),p.state(40));
+            assertEquals(CdExplosion.OBJECT_ID,p.state(40).id());assertEquals(0,p.state(40).routine());assertEquals(2,f.frame.environment().movement().globals().scoreChain());
+            assertEquals(10,f.runtime.scoreGlobals().score());var sounds=f.runtime.lastSoundRequests();int external=f.angleWrites.size();
+            f.runtime.runDynamicSlotsAfterReservedSlots();assertEquals(0,p.state(40).unsignedByte(COLLISION_TYPE));assertEquals(CdPoints.OBJECT_ID,p.state(32).id());
+            assertEquals(sounds,f.runtime.lastSoundRequests());assertEquals(external,f.angleWrites.size());monitorFinish(f);
+        }
+    }
+
+    private static CdOpeningObjectRuntime.LogicalBanks antonBanks(int anton) {
+        return new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594,613,659,667,anton);
+    }
+    private static CdObjectState antonImage(Fixture f,CdObjectState image,int routine,int subtype) throws java.io.IOException {
+        return image.moveByte(ID,CdAnton.OBJECT_ID).moveByte(ROUTINE,routine).moveByte(SUBTYPE,subtype).moveByte(SUBTYPE2,0)
+                .moveByte(SPRITE_FLAGS,4).moveByte(PRIORITY,4).moveByte(WIDTH,0x18).moveByte(X_RADIUS,0x18).moveByte(Y_RADIUS,0x13)
+                .moveByte(SAVED_FLAGS_ID,0).moveWord(X,0x100).moveWord(Y,0x780).moveWord(TILE,0x2409).moveWord(ANTON_ANCHOR_X,0x100)
+                .moveLong(MAPPINGS,CdAnton.Assets.fromObjectAssets(f.assets.openingObjects()).mappingsAddress())
+                .moveLong(CdObjectState.LongField.ANTON_X_DELTA,subtype==0?-0x10000:-0x8000).moveByte(ANIMATION,subtype==0?0:1);
+    }
+    private static CdObjectCollisionCheck.FloorDistance antonFloor(Fixture f,CdObjectState image) {
+        return CdObjectCollisionCheck.objGetFloorDist(new com.openggf.game.soniccd.player.CdPlayerTerrain(f.assets.terrain()),image);
+    }
+    private static CdObjectState antonPlace(Fixture f,int routine,int subtype) throws java.io.IOException {
+        var base=antonImage(f,f.slot(40),routine,subtype);
+        for(int y=0x600;y<0x800;y++) {
+            var image=base.moveWord(Y,y);var first=antonFloor(f,image.addLong(CdObjectState.LongField.Y_POSITION,0x10000));
+            if(first.distance()<0&&first.distance()>=-7&&antonFloor(f,image.addLong(CdObjectState.LongField.Y_POSITION,0x20000)).distance()<0)return image;
+        }
+        throw new AssertionError("Actual bounded R11A terrain supplied no two negative placement probes at X100");
+    }
+    private static CdObjectState antonMain(Fixture f,int subtype,int delta,boolean accepted) throws java.io.IOException {
+        var base=antonImage(f,f.slot(40),4,subtype).moveWord(Y_FRACTION,0x005A)
+                .moveLong(CdObjectState.LongField.ANTON_X_DELTA,delta);
+        for(int y=0x600;y<0x800;y++) {
+            var image=base.moveWord(Y,y);var floor=antonFloor(f,image.addLong(CdObjectState.LongField.X_POSITION,delta));
+            if(accepted?floor.distance()>=-7&&floor.distance()<=7:floor.distance()>7)return image;
+        }
+        throw new AssertionError("Actual bounded R11A terrain supplied no requested finite Main probe at X100");
+    }
+    private static CdAnton.PrimaryAngleCall antonReachedPrezero(Fixture f) throws java.io.IOException {
+        var captured=new CdAnton.PrimaryAngleCall[1];var stop=new IllegalStateException("actual native prezero reached before Runtime publication");
+        var body=new CdAnton(f.runtime.placement(),CdAnton.Assets.fromObjectAssets(f.assets.openingObjects()),
+                new com.openggf.game.soniccd.player.CdPlayerTerrain(f.assets.terrain()),call->{captured[0]=call;throw stop;},
+                (pool,id)->fail("native prezero stop must precede DrawObject"));
+        var gates=f.frame.environment().movement().gates();
+        assertSame(stop,assertThrows(IllegalStateException.class,()->body.run(40,new CdAnton.Globals(0,gates.timeZone(),gates.timeWarpDirection(),
+                PRE.xWord(),f.frame.environment().movement().globals().primaryAngle()))));
+        assertNotNull(captured[0]);return captured[0];
+    }
+    private static CdObjectPresentation.PatternSource antonPixels(Fixture f,com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.State resident) throws java.io.IOException {
+        var o=f.assets.openingObjects();return CdObjectPresentation.usaR11aCurrentCameraDevPreloadedArt(f.frame.artState(),f.runtime.powerupArtState(),o,
+                o.frontierArtBank(),o.contactArtBank(),o.floatBlockArtBank(),o.springArtBank(),o.tunnelDoorArtBank(),o.monitorTimeArtBank(),resident,
+                BANKS.player(),BANKS.ring(),BANKS.mosqui(),BANKS.plant(),BANKS.ramp(),BANKS.explosion(),BANKS.points(),BANKS.flower(),BANKS.powerup(),
+                BANKS.floatBlock(),BANKS.spring(),BANKS.tunnelDoorVertical(),BANKS.monitorTime(),BANKS.boulder(),BANKS.diagonalSpring(),BANKS.spikes(),BANKS.checkpoint(),BANKS.anton());
+    }
+    // END Anton Runtime R1.
 }

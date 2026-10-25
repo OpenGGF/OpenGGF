@@ -92,10 +92,18 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
      * then the 46-tile diagonal Spring span follows Boulder (native $490..$4BD),
      * then the 8-tile common Spikes span follows diagonal Spring (native $320..$327),
      * then the 12-tile Checkpoint span follows Spikes (native $6CB..$6D6),
-     * for 579 patterns in all. The canonical form takes all seventeen bases explicitly.
+     * for 579 existing patterns. Anton appends 22 lazily selected current patterns (601 potential total).
+     * The canonical form takes all eighteen bases explicitly; no Anton preload is implied.
      */
     public record LogicalBanks(int player, int ring, int mosqui, int plant, int ramp,
-                               int explosion, int points, int flower, int powerup, int floatBlock, int spring, int tunnelDoorVertical, int monitorTime, int boulder, int diagonalSpring, int spikes, int checkpoint) {
+                               int explosion, int points, int flower, int powerup, int floatBlock, int spring, int tunnelDoorVertical, int monitorTime, int boulder, int diagonalSpring, int spikes, int checkpoint, int anton) {
+        /** Compatibility17 preserves every old base; Anton appends twenty-two lazily selected current patterns. */
+        public LogicalBanks(int player, int ring, int mosqui, int plant, int ramp, int explosion, int points,
+                            int flower, int powerup, int floatBlock, int spring, int tunnelDoorVertical, int monitorTime,
+                            int boulder, int diagonalSpring, int spikes, int checkpoint) {
+            this(player, ring, mosqui, plant, ramp, explosion, points, flower, powerup, floatBlock, spring,
+                    tunnelDoorVertical, monitorTime, boulder, diagonalSpring, spikes, checkpoint, checkpoint + 12);
+        }
         /** Compatibility16 preserves every explicit old base; native Checkpoint adds twelve output patterns. */
         public LogicalBanks(int player, int ring, int mosqui, int plant, int ramp, int explosion, int points,
                             int flower, int powerup, int floatBlock, int spring, int tunnelDoorVertical, int monitorTime,
@@ -396,6 +404,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     private final CdRing ring;
     private final CdMosqui mosqui;
     private final CdPataBata pataBata;
+    private final CdAnton anton;
     private final CdAnimal animal;
     private final Cd3dPlant plant;
     private final Cd3dRamp ramp;
@@ -674,10 +683,11 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         // Actual declared DEV ClearObjects-equivalent ingress for cold AND restart, never a restore default.
         var reserved = CdReservedObjectBank.clearedAfterLevelStart();
         var mappings = CdObjectMappings.fromOpeningAssets(assets, objects);
-        // Validate all seventeen physical/logical spans (579 patterns), including overlaps and empty SAT admission.
+        // Validate the existing seventeen spans (579 patterns) and lazy Anton extent (22 more).
+        // Empty SAT admission reads no canonical Anton pixels; cold $8120 remains intentionally UNKNOWN.
         CdObjectPresentation.usaR11aCurrentCameraDevPreloadedArt(frame.artState(), initialPowerup, objects, frontier, contact,
                 floatBlockArt, springArt, tunnelDoorArt, monitorTimeArt, initialSectionArt.residency(), banks.player(), banks.ring(), banks.mosqui(), banks.plant(), banks.ramp(),
-                banks.explosion(), banks.points(), banks.flower(), banks.powerup(), banks.floatBlock(), banks.spring(), banks.tunnelDoorVertical(), banks.monitorTime(), banks.boulder(), banks.diagonalSpring(), banks.spikes(), banks.checkpoint());
+                banks.explosion(), banks.points(), banks.flower(), banks.powerup(), banks.floatBlock(), banks.spring(), banks.tunnelDoorVertical(), banks.monitorTime(), banks.boulder(), banks.diagonalSpring(), banks.spikes(), banks.checkpoint(), banks.anton());
         return new CdOpeningObjectRuntime(assets, frame, initialGlobals, initialContact, initialScore, initialLevel, checkpointBindings, initial,
                 banks, preScrollForeground, primaryAngleWrite, objects, frontier, contact, floatBlockArt, springArt, tunnelDoorArt, monitorTimeArt, placement, reserved, mappings, initialPowerup, sectionArt, initialSectionArt);
     }
@@ -731,6 +741,9 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         mosqui = new CdMosqui(placement, CdMosqui.Assets.fromObjectAssets(objects),
                 new CdPlayerTerrain(assets.terrain()), (pool, slot) -> drawDynamic(pool, slot.wholeIndex()));
         pataBata = new CdPataBata(placement, CdPataBata.Assets.fromObjectAssets(objects, assets.player()),
+                (pool, slot) -> drawDynamic(pool, slot.wholeIndex()));
+        anton = new CdAnton(placement, CdAnton.Assets.fromObjectAssets(objects),
+                new CdPlayerTerrain(assets.terrain()), this::commitAntonPrimaryAngle,
                 (pool, slot) -> drawDynamic(pool, slot.wholeIndex()));
         // Frontier bodies bind the same live placement/pool, the actual asset owner and the one shared
         // DrawObject adapter. The Animal's admitted path reads no assets and never draws.
@@ -889,7 +902,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                 var pixels = CdObjectPresentation.usaR11aCurrentCameraDevPreloadedArt(frame.artState(), powerupArtState,
                         objects, frontierArt, contactArt, floatBlockArt, springArt, tunnelDoorArt, monitorTimeArt, sectionArtState.residency(),
                         banks.player(), banks.ring(), banks.mosqui(), banks.plant(), banks.ramp(), banks.explosion(), banks.points(),
-                        banks.flower(), banks.powerup(), banks.floatBlock(), banks.spring(), banks.tunnelDoorVertical(), banks.monitorTime(), banks.boulder(), banks.diagonalSpring(), banks.spikes(), banks.checkpoint());
+                        banks.flower(), banks.powerup(), banks.floatBlock(), banks.spring(), banks.tunnelDoorVertical(), banks.monitorTime(), banks.boulder(), banks.diagonalSpring(), banks.spikes(), banks.checkpoint(), banks.anton());
                 var nextDisplay = CdObjectPresentation.convert(queue.cpuSat(), pixels);
                 checkActive(Phase.SERVICING);
                 displayed = nextDisplay;
@@ -1215,6 +1228,13 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                     // is already applied by the same pool body; replay would run the same slot twice.
                     pataBata.run(whole, new CdPataBata.Globals(devGlobals.goodFuture(), gates.timeZone(),
                             gates.timeWarpDirection(), preScrollForeground.xWord()));
+                } else if (id == CdAnton.OBJECT_ID) {
+                    // Live physical ID$3F; use actual raw globals and Frame angle at this visit.
+                    // Native Init/Place/Main, angle stores and guarded Draw already execute synchronously.
+                    // No activation/debug/time-stop gate or replay of completed Result effects.
+                    anton.run(whole, new CdAnton.Globals(devGlobals.goodFuture(), gates.timeZone(),
+                            gates.timeWarpDirection(), preScrollForeground.xWord(),
+                            frame.environment().movement().globals().primaryAngle()));
                 } else if (id == CdExplosion.OBJECT_ID) {
                     explosion.run(whole); // Writes and first-free Points allocation already committed in source order.
                 } else if (id == CdPoints.OBJECT_ID) {
@@ -2053,6 +2073,50 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
             for (var fm : result.fmRequests()) appendSound(new PlayerSound(new CdPlayerFrameRuntime.ContactFmSound(fm)));
             checkActive(Phase.DYNAMIC_SLOTS);
         } finally { inSolidCommit = false; }
+    }
+
+    /**
+     * ObjGetFloorDist (Collision Check.asm:157-179), reached by ObjAnton_Place/Main
+     * (Anton/Main.asm:54-94), N 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff.
+     * Validate the complete actual same-owner 96-slot/source cut and expected Frame byte
+     * before each synchronous store, including same-value stores. The body has already
+     * published its source prefix; completed Result effects never request another store.
+     * The existing mutual callback guard covers this port too. Root owns native call
+     * authenticity; plain constructed call values are not a publication capability.
+     */
+    private void commitAntonPrimaryAngle(CdAnton.PrimaryAngleCall call) {
+        checkActive(Phase.DYNAMIC_SLOTS);
+        if (inDrawCallback || inSolidCommit || inSpringLaunch || inSpinTunnelCommit || inTunnelDoorFm
+                || inHorizontalTunnelDoorSolid || inHorizontalTunnelDoorFm
+                || inMonitorAngle || inMonitorFm || inMonitorAward
+                || inTimePostDirection || inTimePostSubCpu) {
+            throw new IllegalStateException("Anton primary-angle commit must be synchronous and non-reentrant");
+        }
+        inSolidCommit = true;
+        try {
+            Objects.requireNonNull(call, "reached Anton primary-angle call");
+            var pool = placement.pool(); var cut = call.callCut(); var source = call.expectedSource();
+            validateDynamicCapture(cut);
+            pool.validateWrite(source);
+            var identity = source.identity();
+            if (dispatchWholeIndex < CdObjectPool.FIRST_WHOLE_INDEX || dispatchWholeIndex >= CdObjectPool.END_WHOLE_INDEX
+                    || identity.wholeIndex() != dispatchWholeIndex) {
+                throw new IllegalStateException("Anton angle call must belong to the current physical dispatch");
+            }
+            var live = pool.state(dispatchWholeIndex);
+            if (!live.identity().equals(identity) || live.id() != CdAnton.OBJECT_ID
+                    || (live.routine() != 0 && live.routine() != 2 && live.routine() != 4)
+                    || !live.equals(source) || !cut.slots().get(identity.dynamicIndex()).equals(source)
+                    || !pool.capture().slots().equals(cut.slots())
+                    || frame.environment().movement().globals().primaryAngle() != call.expectedPrimaryAngle()) {
+                throw new IllegalStateException("Anton angle call differs from its actual current full-pool/source/Frame cut");
+            }
+            // Full preflight precedes the only publication; no pool image or duplicate angle owner is adopted.
+            frame.applyObjectPrimaryAngle(call.value());
+            checkActive(Phase.DYNAMIC_SLOTS);
+        } finally {
+            inSolidCommit = false;
+        }
     }
 
     /** ObjGetFloorDist:157-179 returns after the raw motion publication and before landing correction. */

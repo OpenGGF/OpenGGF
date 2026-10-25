@@ -234,6 +234,86 @@ class TestCdPlayerTerrain {
         assertTrue(result.angleWrite().isEmpty());
     }
 
+    @Test void observerSeesNoFabricatedAngleOnBlankFloor() {
+        var probes=new Fixture().probes();var writes=new java.util.ArrayList<Integer>();
+        var result=probes.floor(35,35,13,0,16,0,writes::add);
+        assertEquals(28,result.distance());assertTrue(result.angleWrite().isEmpty());assertTrue(writes.isEmpty());
+    }
+
+    @Test void observerPinsEveryNativeFlipStoreInOrder() {
+        int[] words={0x2001,0x2801,0x3001,0x3801};int[] mirror={0,0,0x1000,0x1000};
+        var expected=java.util.List.of(java.util.List.of(0x22),java.util.List.of(0x22,0xDE),
+                java.util.List.of(0x22,0x62,0x9E,0x5E),java.util.List.of(0x22,0xDE,0x1E,0xE2,0xA2));
+        int[] finalAngles={0x22,0xDE,0x5E,0xA2};
+        for(int i=0;i<4;i++) {
+            var f=new Fixture();f.block(2,2,words[i]);f.shape(1,7,0x22,8,0);var writes=new java.util.ArrayList<Integer>();
+            var result=f.probes().floor(35,35,13,mirror[i],16,0,writes::add);
+            assertEquals(4,result.distance());assertEquals(finalAngles[i],result.angleWrite().orElseThrow());assertEquals(expected.get(i),writes);
+        }
+    }
+
+    @Test void observerIncludesForcedZeroInBothFloorEntries() {
+        for(boolean adjacent:java.util.List.of(false,true)) {
+            var f=new Fixture();f.block(2,adjacent?3:2,0x3001);f.shape(1,7,0x22,8,0);
+            var writes=new java.util.ArrayList<Integer>();var result=f.probes().floor(35,35,13,0,16,0,writes::add);
+            assertEquals(adjacent?12:-4,result.distance());assertEquals(0,result.angleWrite().orElseThrow());
+            assertEquals(java.util.List.of(0x22,0x62,0x9E,0x5E,0),writes);
+        }
+    }
+
+    @Test void observerPublishesEachAdjacentShapeAngleBeforeItsReturn() {
+        for(boolean above:java.util.List.of(false,true)) {
+            var f=new Fixture();f.block(2,2,0x2001);f.shape(1,7,0x22,above?16:0,0);
+            f.block(2,above?1:3,0x2002);f.shape(2,8,0x44,8,0);var writes=new java.util.ArrayList<Integer>();
+            var result=f.probes().floor(35,35,13,0,16,0,writes::add);
+            assertEquals(above?-12:20,result.distance());assertEquals(0x44,result.angleWrite().orElseThrow());
+            assertEquals(java.util.List.of(0x22,0x44),writes);
+        }
+    }
+
+    @Test void observerKeepsFirstAngleWhenAdjacentMaterialIsUnavailable() {
+        var f=new Fixture();f.fg[2]=(byte)0xA8;f.shape(1,7,0x22,0,0);
+        // Declared foreground references blank40; the real object path bit6 reaches resident81.
+        int first=80*512+(2*16+2)*2;f.chunks[first]=0x20;f.chunks[first+1]=1;
+        int next=80*512+(3*16+2)*2;f.chunks[next]=0x24;f.chunks[next+1]=0;
+        var writes=new java.util.ArrayList<Integer>();var probes=f.probes();
+        var failure=assertThrows(IllegalStateException.class,()->probes.floor(35,35,13,0,16,0x40,writes::add));
+        assertTrue(failure.getMessage().contains("unavailable resident bytes: 1024"));assertEquals(java.util.List.of(0x22),writes);
+    }
+
+    @Test void observerKeepsFirstAngleWhenAdjacentChunkIsUnavailable() {
+        var f=new Fixture();f.block(2,15,0x2001);f.shape(1,7,0x22,0,0);f.fg[2+42]=(byte)0xF9;
+        var writes=new java.util.ArrayList<Integer>();var probes=f.probes();
+        var failure=assertThrows(IllegalStateException.class,()->probes.floor(35,255,13,0,16,0x40,writes::add));
+        assertTrue(failure.getMessage().contains("OUTSIDE_SUPPLIED_CHUNKS"));assertEquals(java.util.List.of(0x22),writes);
+    }
+
+    @Test void observerExceptionStopsAtTheReachedRmwStoreAndPropagatesUnchanged() {
+        var f=new Fixture();f.block(2,2,0x3801);f.shape(1,7,0x22,8,0);var probes=f.probes();
+        var writes=new java.util.ArrayList<Integer>();var sentinel=new IllegalStateException("reached Y-flip ADD40 publication");
+        var failure=assertThrows(IllegalStateException.class,()->probes.floor(35,35,13,0x1000,16,0,value->{
+            writes.add(value);if(writes.size()==3)throw sentinel;
+        }));
+        assertSame(sentinel,failure);assertEquals(java.util.List.of(0x22,0xDE,0x1E),writes);
+        var pure=probes.floor(35,35,13,0x1000,16,0);assertEquals(4,pure.distance());assertEquals(0xA2,pure.angleWrite().orElseThrow());
+    }
+
+    @Test void observerIsNotRetainedAndThePureEntryRemainsCompatible() {
+        var f=new Fixture();f.block(2,2,0x2801);f.shape(1,7,0,8,0);var probes=f.probes();
+        var first=new java.util.ArrayList<Integer>();var observed=probes.floor(35,35,13,0,16,0,first::add);
+        assertEquals(java.util.List.of(0,0),first);assertEquals(4,observed.distance());
+        assertEquals(observed,probes.floor(35,35,13,0,16,0));assertEquals(java.util.List.of(0,0),first);
+        var second=new java.util.ArrayList<Integer>();assertEquals(observed,probes.floor(35,35,13,0,16,0,second::add));
+        assertEquals(java.util.List.of(0,0),first);assertEquals(java.util.List.of(0,0),second);
+    }
+
+    @Test void observerNullAndInvalidBitRejectBeforeAnyWriter() {
+        var probes=new Fixture().probes();var writes=new java.util.ArrayList<Integer>();
+        assertThrows(NullPointerException.class,()->probes.floor(35,35,13,0,16,0,null));
+        assertThrows(IllegalArgumentException.class,()->probes.floor(35,35,-1,0,16,0,writes::add));
+        assertThrows(IllegalArgumentException.class,()->probes.floor(35,35,16,0,16,0,writes::add));assertTrue(writes.isEmpty());
+    }
+
     private static final class Fixture {
         final byte[] chunks = new byte[61952];
         final byte[] fg = new byte[338];
