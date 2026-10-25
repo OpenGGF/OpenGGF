@@ -261,9 +261,11 @@ public final class StageplayTool {
                     var item = zones.addObject();
                     item.put("zone", zone).put("act", act).put("name", registry.getZoneName(zone));
                     item.set("start", JSON.valueToTree(registry.getStartPosition(zone, act)));
-                    item.put("musicId", registry.getMusicId(zone, act));
+                    item.put("musicId", com.openggf.game.audio.RomSoundCatalog.nativeMusicId(code, registry.getMusicId(zone, act)));
                 }
             }
+            report.set("music", JSON.valueToTree(com.openggf.game.audio.RomSoundCatalog.music(code).stream()
+                    .map(entry -> Map.of("name",entry.name(),"title",entry.title(),"soundId",entry.soundId())).toList()));
             report.put("setAvailability", "Registry lists native acts; a detached set must also decode. Use --zone/--act to check one.");
             if (flags.containsKey("zone") || flags.containsKey("act")) {
                 int zone = Integer.parseInt(required(flags, "zone")), act = Integer.parseInt(required(flags, "act"));

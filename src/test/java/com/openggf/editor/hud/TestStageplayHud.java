@@ -47,6 +47,21 @@ class TestStageplayHud {
         assertTrue(large.game().right()<=large.width());assertTrue(large.game().bottom()<=large.promptBar().y());
     }
 
+    @Test void routeResultSentenceFitsTheActualSidePanelWithoutEllipsis() {
+        var request = new com.openggf.stageplay.route.StageplayRouteRequest("hero", 0, 400, 300, 300);
+        var result = com.openggf.stageplay.route.StageplayRouteResult.failure(
+                com.openggf.stageplay.route.StageplayRouteResult.Status.BUDGET_EXCEEDED,
+                "Try Run. Reachability is still unknown.", "0".repeat(64), request, 1024, 26686);
+        var route = new com.openggf.stageplay.editor.StageplayRouteOverlay(result, false);
+        for (int[] size : new int[][] {{1280, 720}, {1920, 1080}, {1024, 576}}) {
+            var panel = StageplayHud.layout(size[0], size[1], 480, 270).workbench();
+            assertEquals(route.summary(), EditorHudCanvas.fit(route.summary(), panel.w() - 36,
+                    EditorHudCanvas.Size.SMALL), "Route result must be a complete sentence at " + size[0]);
+        }
+        assertTrue(route.reason().contains("Reachability is still unknown"));
+        assertTrue(route.reason().contains("Try Run"));
+    }
+
     @Test void routeExplanationWrapsAtWordsWithoutLosingText() {
         String explanation = "Search limit reached. Try a closer goal or increase the search budget. Reachability is still unknown.";
         for (int width : new int[] {260, 280, 420}) {

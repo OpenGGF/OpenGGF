@@ -70,7 +70,7 @@ final class StageplayMenuPresentation {
         }
         String hint="Choose the values, then apply the change.";
         List<String> advanced=new ArrayList<>();
-        boolean worldPosition=false, floor=false, snap=false;
+        boolean worldPosition=false, floor=false, snap=true;
         if(keys.contains("nodes")) {
             menu.setTitle(keys.contains("startingAction")?"Plan route":"Plan object route");hint="Find a playable path to a destination.";
             menu.setGroup("Destination","x","y");worldPosition=true;floor=true;snap=true;
@@ -97,7 +97,7 @@ final class StageplayMenuPresentation {
             add(advanced,keys,"game","snap","collision");
         } else if(keys.contains("follow")) {
             menu.setTitle("Camera key");hint="Frame the shot, then choose its easing.";
-            menu.setGroup("Framing","x","y","zoom","interpolation");worldPosition=true;
+            menu.setGroup("Framing","x","y","zoom","interpolation");worldPosition=true;snap=false;
             add(advanced,keys,"follow","deadX","deadY","ahead","smooth","offsetX","offsetY");
         } else if(keys.contains("seed")) {
             menu.setTitle("Camera shake");hint="Layer a shake over the camera movement.";

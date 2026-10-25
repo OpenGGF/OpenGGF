@@ -660,6 +660,18 @@ Capture before consumption and replay both the armed and occupied-rearm cases;
 a mid-count snapshot does not cover them. The cold Tails DEZ2 pad at input46581
 exposed an 8px change on the first replayed frame where ordinary play stayed put.
 
+**Unordered player sets must encode membership, not identity-hash iteration.**
+Recreating sprites changes identity-map bucket order even when the same team
+occupies the same mechanism. Earlier tests and unrelated metadata allocations
+can expose this without leaving an engine singleton dirty. The Day Off review
+on `a04ae4b20` found MHZ2 catapult snapshots swapping main/sidekick IDs at bytes
+39 and 44 of `childRiders`. `RewindCodecs.CollectionCodec` now canonicalizes
+unordered player sets by participant ID, as identity-keyed player maps already
+do. Sort a capture-only copy; preserve live gameplay iteration and the encounter
+order of lists and sequenced sets. The deterministic player-reference regression
+assigns participant slots opposite to measured hash order rather than fitting
+allocations or clearing more state in tests.
+
 **Slot-encoded identity sets must not hold dead objects.** Touch-overlap sets and
 instance-keyed solid latches are captured as slot numbers because Java identity
 does not survive a restore. A member that has since been deleted keeps its old

@@ -5,6 +5,8 @@ import com.openggf.audio.GameMusic;
 import com.openggf.audio.GameSound;
 import com.openggf.audio.SegaPcmSpec;
 import com.openggf.game.audio.SegaPcmRomReader;
+import com.openggf.game.audio.RomSoundCatalog;
+import com.openggf.game.audio.RomSoundCatalog.Entry;
 import com.openggf.audio.smps.SmpsLoader;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.audio.session.SmpsPhysicalPolicy;
@@ -12,6 +14,7 @@ import com.openggf.audio.session.SmpsStatefulCommandPolicy;
 import com.openggf.data.Rom;
 import com.openggf.game.sonic1.audio.smps.Sonic1SmpsLoader;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.Map;
@@ -21,6 +24,15 @@ import java.util.Map;
  * game-specific sound ID mappings for the Sonic 1 68000 sound driver.
  */
 public class Sonic1AudioProfile extends AbstractAudioProfile {
+    private static final RomSoundCatalog.Catalog NATIVE_SOUNDS = new RomSoundCatalog.Catalog(
+            Arrays.stream(Sonic1Music.values()).map(music ->
+                    new Entry(music.name(), music.displayName, music.id, music.id)).toList(),
+            Arrays.stream(Sonic1Sfx.values()).map(sfx ->
+                    new Entry(sfx.name(), sfx.displayName, sfx.id, sfx.id)).toList());
+
+    /** Native request IDs and names, independent of ROM loading and live playback. */
+    public static RomSoundCatalog.Catalog nativeSounds() { return NATIVE_SOUNDS; }
+
 
     /**
      * GameSound to Sonic 1 SFX ID mappings.

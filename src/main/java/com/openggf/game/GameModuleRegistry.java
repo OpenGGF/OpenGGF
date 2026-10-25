@@ -87,6 +87,16 @@ public final class GameModuleRegistry {
         };
     }
 
+    /** Detached ROM-audio metadata; no live module, ROM or playback session is constructed. */
+    public static com.openggf.game.audio.RomSoundCatalog.Catalog stockRomSoundCatalog(GameId gameId) {
+        return switch (java.util.Objects.requireNonNull(gameId, "gameId")) {
+            case S1 -> com.openggf.game.sonic1.audio.Sonic1AudioProfile.nativeSounds();
+            case S2 -> com.openggf.game.sonic2.audio.Sonic2AudioProfile.nativeSounds();
+            case S3K -> com.openggf.game.sonic3k.audio.Sonic3kAudioProfile.nativeSounds();
+            case STANDALONE -> throw new IllegalArgumentException("Standalone has no ROM sound catalog");
+        };
+    }
+
     record StockMenuAudio(com.openggf.audio.GameAudioProfile profile, int titleMusicId) { }
 
     /**

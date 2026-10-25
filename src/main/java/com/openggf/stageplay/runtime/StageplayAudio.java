@@ -4,6 +4,7 @@ import com.openggf.audio.*;
 import com.openggf.audio.smps.SmpsLoader;
 import com.openggf.game.BuiltInRomDetectors;
 import com.openggf.game.GameId;
+import com.openggf.game.audio.RomSoundCatalog;
 import com.openggf.io.ModInputLimits;
 import com.openggf.mods.PcmDecoder;
 import com.openggf.mods.scene.host.SceneRomLibrary;
@@ -76,7 +77,8 @@ public final class StageplayAudio implements AutoCloseable {
                 case ROM_MUSIC, ROM_SFX -> {
                     SmpsLoader loader = loader(cue.gameId());
                     var data = cue.kind() == StageplayDocument.AudioKind.ROM_MUSIC
-                            ? loader.loadMusic(cue.soundId()) : loader.loadSfx(cue.soundId());
+                            ? loader.loadMusic(RomSoundCatalog.music(cue.gameId(), cue.soundId()).engineId())
+                            : loader.loadSfx(RomSoundCatalog.sfx(cue.gameId(), cue.soundId()).engineId());
                     if (data == null) throw new IOException("Missing " + cue.kind() + " " + cue.soundId() + " in " + cue.gameId());
                 }
                 case MUSIC_STOP -> { }
@@ -147,8 +149,12 @@ public final class StageplayAudio implements AutoCloseable {
                     scopes.put(cue.gameId(),roms.acquireAudioSource(audio,cue.gameId()));
                 }
                 if (cue.kind() == StageplayDocument.AudioKind.ROM_MUSIC) {
-                    if (base) audio.playMusic(cue.soundId()); else audio.playDonorMusic(cue.gameId(), cue.soundId());
-                } else if (base) audio.playSfx(cue.soundId()); else audio.playDonorSfx(cue.gameId(), cue.soundId());
+                    int sound = RomSoundCatalog.music(cue.gameId(), cue.soundId()).engineId();
+                    if (base) audio.playMusic(sound); else audio.playDonorMusic(cue.gameId(), sound);
+                } else {
+                    int sound = RomSoundCatalog.sfx(cue.gameId(), cue.soundId()).engineId();
+                    if (base) audio.playSfx(sound); else audio.playDonorSfx(cue.gameId(), sound);
+                }
             }
         }
     }

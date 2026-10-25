@@ -6,6 +6,8 @@ import com.openggf.audio.GameMusic;
 import com.openggf.audio.GameSound;
 import com.openggf.audio.SegaPcmSpec;
 import com.openggf.game.audio.SegaPcmRomReader;
+import com.openggf.game.audio.RomSoundCatalog;
+import com.openggf.game.audio.RomSoundCatalog.Entry;
 import com.openggf.audio.smps.SmpsLoader;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.audio.session.SmpsPhysicalPolicy;
@@ -15,6 +17,7 @@ import com.openggf.game.sonic3k.audio.smps.Sonic3kCoordFlagHandler;
 import com.openggf.data.Rom;
 import com.openggf.game.sonic3k.audio.smps.Sonic3kSmpsLoader;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.Map;
@@ -32,14 +35,32 @@ import java.util.Map;
  */
 public class Sonic3kAudioProfile extends AbstractAudioProfile implements com.openggf.audio.NativeAudioEffectCues,
         com.openggf.audio.NativeMailboxMusicRoutes {
-    /** {@code mus_CreditsK}, placed after the SFX ids (skdisasm 044fa46 sonic3k.constants.asm:1716). */
+    // mus_AIZ1 through mus_Ending are native $01-$32
+    // (sonic3k.constants.asm:1463-1512). Engine-only S3 driver variants are excluded.
+    // mus_CreditsK (sonic3k.constants.asm:1691) is native $DC; $33 belongs to
+    // sfx_RingRight (sonic3k.constants.asm:1521), even though the engine uses $33 for credits.
+    // zPlaySoundByIndex (Sound/Z80 Sound Driver.asm:1641-1651) dispatches credits before SFX.
+    private static final RomSoundCatalog.Catalog NATIVE_SOUNDS = new RomSoundCatalog.Catalog(
+            Arrays.stream(Sonic3kMusic.values())
+                    .filter(music -> music.id < Sonic3kMusic.S3_MUSIC_ID_BASE)
+                    .map(music -> new Entry(music.name(),
+                            music == Sonic3kMusic.MINIBOSS_S3 ? "Mini-Boss (S&K)" : music.displayName,
+                            music == Sonic3kMusic.CREDITS_SK ? 0xDC : music.id, music.id)).toList(),
+            Arrays.stream(Sonic3kSfx.values()).map(sfx ->
+                    new Entry(sfx.name(), sfx.displayName, sfx.id, sfx.id)).toList());
+
+    /** Native request IDs and names, independent of ROM loading and live playback. */
+    public static RomSoundCatalog.Catalog nativeSounds() { return NATIVE_SOUNDS; }
+
+    /** {@code mus_CreditsK}, placed after the SFX ids (sonic3k.constants.asm:1691). */
     private static final int MUS_CREDITS_K = 0xDC;
 
     /**
-     * {@code zPlaySoundByIndex} tests {@code mus_CreditsK} before every other range and jumps to
-     * {@code zPlayMusicCredits}, which loads the last music-table entry, {@code $32}, and continues
-     * as ordinary music through {@code zPlayMusic_DoFade} (skdisasm 044fa46 Sound/Z80 Sound Driver.asm:1641-1644,
-     * 1709-1712). Engine music ids are one-based, so that entry is {@link Sonic3kMusic#CREDITS_SK}.
+     * {@code zPlaySoundByIndex} (Sound/Z80 Sound Driver.asm:1641-1644) tests the native
+     * credits request before every other range and jumps to the credits routine.
+     * {@code zPlayMusicCredits} (Sound/Z80 Sound Driver.asm:1709-1712) loads the last
+     * music-table entry, {@code $32}, and continues as ordinary music. Engine music
+     * ids are one-based, so that entry is {@link Sonic3kMusic#CREDITS_SK}.
      */
     @Override public int musicForNativeRequest(int nativeRequestId) {
         return nativeRequestId == MUS_CREDITS_K ? Sonic3kMusic.CREDITS_SK.id : -1;

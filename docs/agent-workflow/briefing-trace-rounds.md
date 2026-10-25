@@ -71,6 +71,17 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+A test-batch-only snapshot mismatch need not be a leaked gameplay flag
+(2026-10-24, Day Off follow-up, `a04ae4b20`). MHZ2's catapult failed in the
+exact 50-class batch but passed alone and after its 27-class prefix. Its two
+differing scalar bytes encoded the same rider IDs in opposite identity-hash
+iteration orders. Engine resets cannot reset JVM allocation history. Decode the
+fields first and reproduce equivalent state under deliberately opposite hash
+orders; fix canonical encoding in the production codec instead of masking the
+diff or fitting test teardown. The exact original batch remains the integration
+check; the deterministic regression prevents accidental green heap layouts from
+being mistaken for a repair.
+
 ArchUnit field rules can ignore Surefire's method filter (2026-10-24, held
 reverse-target extraction). A selector naming two `TestArchUnitRules` members
 executed all 27 field rules and the selected cycle method: the intended 48-case
@@ -123,6 +134,14 @@ control appear silent. Present every frame when testing late playlist admission;
 assert an uncontrolled scene starts native music before trusting a stopped scene's
 absence. `TestStageplayAudioLifecycle.authoredMusicOwnsTheLateNativeLevelEntry`
 uses both the no-control case and actual presented requests.
+
+Final PCM capture belongs to the current presentation producer. A Stageplay native
+shot replacement retires that producer and its capture lease even when the audio
+manager survives (2026-10-24, Day Off corrections, base `81f25c89f`). Follow the
+exporter's close/reopen capture sequence at the boundary. Pair final-window PCM
+energy with the active source identity and both driver/sequencer fade state;
+nonzero samples alone can belong to the previous song. The audio lifecycle matrix
+checks the last second after entry cues at 0/8/40, rather than only request lists.
 
 A synthetic route probe using `SpriteArtSet.EMPTY` cannot certify posture-gated
 native abilities (2026-10-23, Stageplay route motion). It has no animation profile,

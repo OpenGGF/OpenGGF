@@ -3318,3 +3318,15 @@ checks. The change-based selector selected all 3,566 smoke classes because examp
 are unclassified; that broad fallback is disproportionate; no engine smoke/full-suite result is implied.
 Final production identities, outcomes and review limits belong to the revision-eight
 README and source manifest in the existing Stageplay media archive.
+
+
+## Day Off follow-up, 2026-10-24
+
+The [correction audit](../audits/2026-10-24-stageplay-dayoff-bugs.md) records the
+entry-control gap left by the original playlist-publication lease, native request
+numbering and named authoring, bounded route advice, and the related editor defaults.
+The native load boundary now establishes automatic-entry ownership before fade/stop
+requests can enter the mailbox, retaining housekeeping and ordinary effects. The
+existing playback lease continues across producers and releases on Stop/close.
+The audit owns this follow-up's red/green evidence and local-only handoff; earlier
+validation entries above remain historical results for their stated commits.

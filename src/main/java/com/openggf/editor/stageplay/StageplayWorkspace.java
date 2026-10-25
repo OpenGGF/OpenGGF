@@ -3,6 +3,7 @@ package com.openggf.editor.stageplay;
 import com.openggf.stageplay.StageplayDocument.Facing;
 
 import com.openggf.control.InputHandler;
+import com.openggf.game.MenuDetailsScreen;
 import com.openggf.editor.project.EditorProjectMenu;
 import com.openggf.game.MenuTextEditor;
 import com.openggf.stageplay.StageplayController;
@@ -147,7 +148,13 @@ public final class StageplayWorkspace {
             try {
                 String actor=menu.values().getOrDefault("actor",controller.selectedActorId());
                 StageplayGround.Visual visual=menu.values().containsKey("halfWidth")?new StageplayGround.Visual(integer(menu.values(),"halfWidth"),integer(menu.values(),"height"),integer(menu.values(),"footOffset"),StageplayGround.ObjectPath.of(integer(menu.values(),"collisionPath"))):null;
-                var performer=StageplayGround.performerOf(pickerDocument,actor,visual);
+                StageplayGround.Performer performer;
+                if (menu.values().containsKey("character") && menu.values().containsKey("game")) {
+                    // Add actor has no saved identity yet; query the role being authored.
+                    actor = "";
+                    performer = new StageplayGround.Player(menu.values().get("game"),menu.values().get("character"),
+                            integer(menu.values(),"collision"));
+                } else performer = StageplayGround.performerOf(pickerDocument,actor,visual);
                 int top=Math.max(Short.MIN_VALUE,cy-32),bottom=Math.min(Short.MAX_VALUE,cy+256);
                 var q=new StageplayGround.Query("picker",cx,top,bottom,performer,actor);
                 var report=host.ground(pickerDocument,pickerRoot,controller.frame(),new StageplayGround.Batch(List.of(q),100,100000,0));
@@ -217,7 +224,7 @@ public final class StageplayWorkspace {
     }
     public void directionDetails(){
         var overlay=routeOverlay();
-        String route=overlay==null?"":"\n"+overlay.reason()+"\n"+overlay.motionSummary()+"\n"+overlay.result().message()
+        String route=overlay==null?"":"\n"+overlay.reason()+"\n"+overlay.motionSummary()
                 +"\n"+overlay.path().size()+" samples, "+overlay.result().expandedNodes()+" nodes, "+overlay.result().simulatedTicks()+" ticks.";
         menu.showActions("Direction details",List.of(action("Back",()->{})));
         menu.setHelp("Current status and directing controls.",status+"\n"+selectedActorStatus()+route+"\nCamera: WASD / arrows pan, Q / E zoom, K captures framing, R records. Position fields open the level picker; F2 edits numbers. Goals remain native input attempts.");
@@ -1320,7 +1327,7 @@ public final class StageplayWorkspace {
         int margin = Math.min(12,Math.max(0,(d.width()-80)/2));
         int height = Math.min(72,d.height());
         return new DialogueCue(nextId("dialogue",d),controller.frame(),Math.min(controller.frame()+180,d.durationFrames()),
-                actor,name,"Hello.","","",margin,Math.max(0,d.height()-height-margin),d.width()-margin*2,height,"",List.of());
+                actor,name,"Hello.","","",margin,com.openggf.tools.StageplayScriptCompiler.DEFAULT_DIALOGUE_Y,d.width()-margin*2,height,"",List.of());
     }
 
     private void dialogueForm(DialogueCue cue) {
@@ -1485,17 +1492,47 @@ public final class StageplayWorkspace {
     }
 
     private void audioForm(AudioCue cue) {
+        String game = cue == null ? controller.document().set().gameId() : cue.gameId();
+        int initialSound = cue == null ? com.openggf.game.audio.RomSoundCatalog.sfx(game).getFirst().soundId() : cue.soundId();
         menu.showForm("Audio cue",List.of(number("frame","Frame",cue==null?controller.frame():cue.frame()),
                 text("kind","ROM_MUSIC / ROM_SFX / VOICE / MUSIC_STOP",cue==null?"ROM_SFX":cue.kind().name()),
                 text("game","ROM: s1 / s2 / s3k",cue==null?controller.document().set().gameId():cue.gameId()),
-                number("sound","ROM sound ID (decimal)",cue==null?0:cue.soundId()),
+                number("sound","ROM sound ID (decimal)",initialSound),
                 text("asset","Relative WAV / Ogg file",cue==null?"":cue.asset()),number("gain","Gain (0..1)",cue==null?1:cue.gain())),"Apply audio",v -> edit(d -> {
             String id=cue==null?nextId("audio",d):cue.id();
             var values=new ArrayList<>(d.audio()); values.removeIf(c->c.id().equals(id));
-            values.add(new AudioCue(id,integer(v,"frame"),AudioKind.valueOf(v.get("kind").toUpperCase(java.util.Locale.ROOT)),v.get("game"),integer(v,"sound"),v.get("asset"),decimal(v,"gain")));
+            AudioKind kind = AudioKind.valueOf(v.get("kind").toUpperCase(java.util.Locale.ROOT));
+            int sound = integer(v,"sound");
+            if (kind == AudioKind.ROM_MUSIC) com.openggf.game.audio.RomSoundCatalog.music(v.get("game"),sound);
+            if (kind == AudioKind.ROM_SFX) com.openggf.game.audio.RomSoundCatalog.sfx(v.get("game"),sound);
+            values.add(new AudioCue(id,integer(v,"frame"),kind,v.get("game"),sound,v.get("asset"),decimal(v,"gain")));
             return d.withAudio(values);
         }));
-        menu.setSubtitle("Voice paths are relative to the saved scene. Sound seeking is not simulated; play starts cues at the playhead.");
+        configureAudioChoices(initialSound, false);
+        menu.onValueChanged((key,value) -> {
+            if (key.equals("game") || key.equals("kind")) configureAudioChoices(initialSound, true);
+        });
+        menu.setHelp("Choose a sound and when it plays.",
+                "Music and sound effects use each ROM's native IDs. Pick a name, or use F2 for the exact decimal ID. "
+                        + "The Sonic 3 & Knuckles catalog uses the combined game soundtrack. "
+                        + "Voice paths are relative to the saved scene. Seeking is silent; playback starts cues at the playhead.");
+    }
+
+    private void configureAudioChoices(int initialSound, boolean changedSource) {
+        var values = menu.values();
+        String kind = values.get("kind"), game = values.get("game");
+        var entries = kind.equals("ROM_MUSIC") ? com.openggf.game.audio.RomSoundCatalog.music(game)
+                : kind.equals("ROM_SFX") ? com.openggf.game.audio.RomSoundCatalog.sfx(game) : List.<com.openggf.game.audio.RomSoundCatalog.Entry>of();
+        if (entries.isEmpty()) { menu.configureField("sound","Sound ID",List.of(),Map.of()); return; }
+        var labels = new java.util.LinkedHashMap<String,String>();
+        entries.forEach(entry -> labels.put(Integer.toString(entry.soundId()),
+                entry.title().replace(" Zone", "") + " ($" + String.format(java.util.Locale.ROOT,"%02X",entry.soundId()) + ")"));
+        if (changedSource && !labels.containsKey(values.get("sound")))
+            menu.setValue("sound",Integer.toString(entries.getFirst().soundId()));
+        // Keep an existing/custom number editable when it is outside the chosen catalog.
+        // The shared Field retains its opening value; Apply still validates the selected kind.
+        labels.putIfAbsent(Integer.toString(initialSound),"Custom ID " + initialSound);
+        menu.configureField("sound",kind.equals("ROM_MUSIC")?"Music":"Sound",List.copyOf(labels.keySet()),labels);
     }
 
     private record GroundContext(StageplayDocument document, Path root, String actor, int frame,
@@ -1658,8 +1695,79 @@ public final class StageplayWorkspace {
         var result = routeUpdate.result();
         var overlay=result==null?null:new com.openggf.stageplay.editor.StageplayRouteOverlay(result,false);
         String summary=result==null?routeUpdate.phase()==StageplayRouteJob.Phase.CHECKING?"Checking route inputs.":"Finding a route.":overlay.summary();
-        menu.setHelp("Review the path before applying it.",routeUpdate.message()+(result==null?"":"\n"+result.message()+"\n"+overlay.reason()+"\n"+result.path().size()+" samples, "+result.expandedNodes()+" nodes, "+result.simulatedTicks()+" ticks. Apply replaces commands in the requested window."));
+        menu.setHelp("Review the path before applying it.",result==null?routeUpdate.message():result.message()+"\n"+overlay.motionSummary()+"\n"+result.path().size()+" samples, "+result.expandedNodes()+" nodes, "+result.simulatedTicks()+" ticks.");
         menu.setStatusLine(summary,result==null?EditorProjectMenu.Tone.INFO:result.success()?EditorProjectMenu.Tone.SUCCESS:EditorProjectMenu.Tone.WARNING);
+        if(result!=null) configureRouteDetails(result,overlay);
+    }
+
+    private void configureRouteDetails(com.openggf.stageplay.route.StageplayRouteResult result,
+                                       com.openggf.stageplay.editor.StageplayRouteOverlay overlay) {
+        String who=controller.document().actors().stream().filter(a->a.id().equals(result.request().actorId()))
+                .map(Actor::name).findFirst().orElseGet(()->controller.document().objectActors().stream()
+                        .filter(a->a.id().equals(result.request().actorId())).map(ObjectActor::name).findFirst().orElse("This actor"));
+        String meaning=switch(result.status()) {
+            case BUDGET_EXCEEDED -> who+" might reach the goal, but the search ran out of budget before confirming it.";
+            case SEARCH_EXHAUSTED -> "The search did not find a route with these settings.";
+            case VERIFIED -> who+" reached the goal in a fresh playback check.";
+            case VISUAL_TERRAIN -> "This object can follow the terrain; its native behavior stays paused.";
+            case UNSUPPORTED -> "The planner cannot check this actor or starting point.";
+            case CANCELLED -> "Route planning was cancelled.";
+            case VERIFICATION_FAILED -> "Playback did not confirm the proposed route.";
+            case STALE_INPUT -> "The scene or its assets changed. Plan the route again.";
+        };
+        String status=switch(result.status()) {
+            case BUDGET_EXCEEDED -> "Search limit reached";
+            case SEARCH_EXHAUSTED -> "No route found";
+            case VERIFIED -> "Route found";
+            case VISUAL_TERRAIN -> "Object route found";
+            case UNSUPPORTED -> "Route unsupported";
+            case CANCELLED -> "Route cancelled";
+            case VERIFICATION_FAILED -> "Playback check failed";
+            case STALE_INPUT -> "Route needs replanning";
+        };
+        if(result.success()) {
+            long jumps=result.commands().stream().filter(c->c.kind()==PuppetCommandKind.JUMP).count();
+            status+=" · "+String.format(java.util.Locale.ROOT,"%.1f",overlay.performanceFrames()/60.0)
+                    +" s"+(jumps==0?"":" · "+jumps+(jumps==1?" jump":" jumps"));
+        }
+        var sections=new ArrayList<MenuDetailsScreen.Section>();
+        var advice=new ArrayList<MenuDetailsScreen.Row>();
+        String diagnosis=result.message().toLowerCase(java.util.Locale.ROOT);
+        if(java.util.regex.Pattern.compile("(needs|try|use|switch to) run\\b").matcher(diagnosis).find())
+            advice.add(new MenuDetailsScreen.Row("","• Use Run"));
+        if(java.util.regex.Pattern.compile("more (attempt )?frames").matcher(diagnosis).find())
+            advice.add(new MenuDetailsScreen.Row("","• Allow more frames"));
+        if(java.util.regex.Pattern.compile("(needs|try|use) spindash\\b").matcher(diagnosis).find())
+            advice.add(new MenuDetailsScreen.Row("","• Use Spindash"));
+        if(!advice.isEmpty())sections.add(new MenuDetailsScreen.Section("Try",advice,false));
+        var motion=result.request().motion();
+        String settings=result.request().footprint()==null?"Start "+routeSetting(motion.startingAction())
+                +" · Speed "+routeSetting(motion.travelSpeed())+" · Stop "+routeSetting(motion.endingAction())
+                +" · Face "+routeSetting(motion.endingFacing()):"Walk · Speed "+result.request().objectSpeed()+" px/frame";
+        sections.add(new MenuDetailsScreen.Section("Settings",List.of(new MenuDetailsScreen.Row("",settings)),false));
+        sections.add(new MenuDetailsScreen.Section("Search",List.of(new MenuDetailsScreen.Row("",
+                result.path().size()+" samples · "+result.expandedNodes()+" nodes · "+result.simulatedTicks()+" ticks")),true));
+        var buttons=new ArrayList<MenuDetailsScreen.Action>();
+        var actions=menu.actionEntries();
+        boolean apply=routeUpdate.phase()==StageplayRouteJob.Phase.READY;
+        // A ready route's next step is Apply; otherwise the next step is another plan.
+        String primary=apply?"Check inputs and apply route":"Plan another route";
+        for(String label:List.of(primary,"Plan another route","Check inputs and apply route","Cancel route"))
+            for(int i=0;i<actions.size();i++) if(actions.get(i).label().equals(label)) {
+                int index=i;String shown=label.startsWith("Check inputs")?"Apply":label;
+                if(buttons.stream().anyMatch(b->b.label().equals(shown))) continue;
+                buttons.add(new MenuDetailsScreen.Action(shown,()->menu.runAction(index),label.equals(primary)));
+            }
+        menu.setDetailsContent(new MenuDetailsScreen.Content("Route details",status,meaning,
+                result.success()?MenuDetailsScreen.Tone.SUCCESS:MenuDetailsScreen.Tone.WARNING,sections,
+                menu.helpText(),buttons,apply?"Apply replaces commands in the requested window":""));
+    }
+
+    private static String routeSetting(Enum<?> value) {
+        return switch(value.name()) {
+            case "INHERIT" -> "Keep"; case "GENTLE_STOP" -> "Gentle"; case "HARD_STOP" -> "Hard";
+            default -> value.name().charAt(0)+value.name().substring(1).toLowerCase(java.util.Locale.ROOT);
+        };
     }
 
     private void routeForm() {
@@ -1721,7 +1829,7 @@ public final class StageplayWorkspace {
             host.startRoute(document,assetRoot,request);
             controller.selectActor(id); proposedOverlay=null;
             routeSource=document; routeRoot=assetRoot; routeSelection=controller.selectedActorId(); routeRequest=request;
-            routeUpdate=null; status="Route planning started in a separate logic worker. Reopen Plan collision route to cancel or review.";
+            routeUpdate=null; status="Route planning started in a separate logic worker. Reopen Plan route to cancel or review.";
         }));
         menu.onValueChanged((key, value) -> {
             if (key.equals("startingAction") && value.equals("Spindash")) menu.setValue("travelSpeed", "Run");

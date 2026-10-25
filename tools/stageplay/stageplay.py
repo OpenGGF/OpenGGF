@@ -92,6 +92,9 @@ def main(argv=None):
     for index, item in enumerate(command[:-1]):
         if item in {'--scene', '--script', '--out', '--rom', '--s1-rom', '--s2-rom', '--s3k-rom', '--staging-dir', '--observations', '--request', '--queries', '--rom-descriptor', '--asset-descriptor'}:
             command[index + 1] = str(Path(command[index + 1]).resolve())
+        elif item == '--ffmpeg' and os.path.dirname(command[index + 1]):
+            # Bare executable names retain PATH lookup in the child.
+            command[index + 1] = str(Path(command[index + 1]).resolve())
     with redirect_stdout(sys.stderr), worktree_build_slot(ROOT) as tree_fd, build_activity_slot(ROOT) as activity:
         return run_owned(command, env=env, leases=inherited_slot(tree_fd, activity))
 

@@ -64,7 +64,7 @@ explains every field.
    crosshair appears over the level.
 4. Move the crosshair with the arrow keys to the left edge of the picture,
    above the grass. The tag beside it reads `Snap` and a number: that is the
-   floor Sonic will stand on. If it reads `Snap off`, press **S**.
+   floor Sonic will stand on. Floor snap starts on; **S** turns it off and on.
 5. Press **Enter** to use the point, then choose **Apply actor**.
 
 ![The Add actor form with Name Sonic, Character Sonic, Mode Puppet and a Position.](images/stageplay/add-actor.png)
@@ -137,9 +137,10 @@ Add three lines. For each one:
 1. Go to the start frame in the table.
 2. Press **F1**, choose **Dialogue lines**, then **Add dialogue line**, then
    the speaker.
-3. Type the **Text**, set **End**, and in **Advanced** set **Y** to `12` so the
-   panel sits at the top of the picture, clear of the characters.
-4. Choose **Apply line**.
+3. Type the **Text**, set **End** and choose **Apply line**.
+
+New lines sit at the top of the picture, clear of the characters. **Advanced**
+moves or resizes a panel if you need to.
 
 | Start | End | Speaker | Text |
 | --- | --- | --- | --- |
@@ -160,9 +161,14 @@ before Tails answers, so his own panel never hides him.
 1. Go to frame 10. Press **F1**, choose **Captions**, then **Add caption**.
    Type `GREEN HILL ZONE`, set **End** to 130 and choose **Apply caption**.
 2. Go to frame 0. Press **F1**, choose **Audio cues**, then **Add audio cue**.
-   Set **Action** to **Music** and choose Green Hill's music, then choose
-   **Apply audio**.
-   <!-- Reconcile with the music naming fix on bugfix/ai-stageplay-dayoff-bugs. -->
+   Set **Action** to **Music**, choose **Green Hill ($81)** in the **Music**
+   list, then choose **Apply audio**.
+
+![The Audio cue form with Frame 0, Action Music and Music set to Emerald Hill ($82).](images/stageplay/audio-cue.png)
+
+The list names every song in the cue's game, with the number the game itself
+uses for it. To pick a song from another game, change **Game** under
+**Advanced**.
 
 Music and sounds play only when playback passes their cue, never while you
 scrub. To hear the whole soundtrack, play from frame 0.
@@ -245,9 +251,11 @@ Reading it from the top:
 - **`actions`** are the button presses: Sonic's `MOVE_TO` at frame 120 and
   Tails' 12-frame `JUMP` at frame 432. `urgency` is the editor's **Effort**.
 - **`dialogue`** lines name their speaker by cast ID. Panels default to the top
-  of the picture in a screenplay.
-- **`audio`** starts Green Hill's music at frame 0. The `catalog` command
-  (below) lists each zone's music number as `musicId`.
+  of the picture, as in the editor.
+- **`audio`** starts Green Hill's music at frame 0. `129` is the number Sonic
+  1 itself uses for that song (`$81`); you can write `"music": "GHZ"` instead of
+  the `soundId`. The `catalog` command (below) lists every song's name and
+  number, and each zone's own song as `musicId`.
 
 Every field and its default is in the [reference](stageplay-reference.md#screenplay-format).
 
@@ -293,8 +301,8 @@ python3 tools/stageplay/stageplay.py catalog --game s1 --rom /path/to/sonic1.gen
 python3 tools/stageplay/stageplay.py ground --set s1/0/0 --queries floors.json --s1-rom /path/to/sonic1.gen
 ```
 
-`catalog` lists the zones, their start positions and music, and the size of the
-chosen act. `ground` finds floors for many columns at once; see
+`catalog` lists the zones, their start positions and music, every song's name and
+number, and the size of the chosen act. `ground` finds floors for many columns at once; see
 [Find floors](stageplay-authoring.md#find-floors).
 
 ## Where to go next

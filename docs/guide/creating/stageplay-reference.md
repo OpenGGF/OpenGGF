@@ -425,13 +425,24 @@ default. Punctuation and spaces are silent.
 | `frame` | (required) | Local frame. |
 | `kind` | (required) | `ROM_MUSIC`, `ROM_SFX`, `VOICE` or `MUSIC_STOP`. |
 | `gameId` | the shot's game | Game whose music or sound to play. |
-| `soundId` | `0` | Music or sound number for `ROM_MUSIC` and `ROM_SFX`. |
+| `soundId` | `0` | `ROM_MUSIC` and `ROM_SFX`: the game's own request number, in decimal. |
+| `music` | | `ROM_MUSIC` only, instead of `soundId`: a song name such as `"EMERALD_HILL"` or its title, `"Emerald Hill Zone"` (any letter case). |
 | `asset` | `""` | `VOICE` only: relative path to a WAV or Ogg file. |
 | `gain` | `1` | `VOICE` only: 0–1. Music and sound effects must use 1. |
 | `id` | generated | Optional literal ID. |
 
-The `catalog` command lists every zone with the number of its own music
-(`musicId`). A scene that contains any music or music-stop cue switches off the
+Sound numbers are the shipped game's own request numbers, as in its
+disassembly: Sonic 2's Emerald Hill is `$82`, written `130`. Sonic 1's music runs
+from `$81` (Green Hill, `129`). Sonic 3 & Knuckles uses the combined game's
+soundtrack, from `$01` (Angel Island Act 1); its S&K credits are `$DC` (`220`).
+A `music` name compiles to the same number, and saved scenes and exported
+screenplays always store the number. A cue cannot have both `music` and
+`soundId`.
+
+The `catalog` command lists every song's name, title and number for its game,
+and every zone with the number of its own music (`musicId`). In the editors, the
+**Music** and **Sound** lists show each name with its number in hexadecimal,
+such as **Emerald Hill ($82)**; **F2** accepts an exact decimal number. A scene that contains any music or music-stop cue switches off the
 level's automatic music while it plays. Cues play only when playback passes
 them, never when you seek. Voice recordings are limited per clip, and a scene's
 decoded recordings may total at most 64 MiB.
@@ -517,7 +528,8 @@ which undoes as one step.
 | Enter | Start or A | Use this point. |
 | Esc | Back | Cancel. |
 
-The tag shows the position and `Snap Y` (the floor it will snap to), `Snap
+Placement pickers start with floor snap on; the camera framing picker starts
+with it off. The tag shows the position and `Snap Y` (the floor it will snap to), `Snap
 off` or `No floor`. Picking only fills in the form; the change happens when you
 apply the form.
 

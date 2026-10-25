@@ -93,7 +93,25 @@ public final class EditorProjectMenu {
         else for (Action action:actions) text += "\n" + action.label();
         return text;
     }
-    public void openDetails() { details = new MenuDetailsScreen(title,detailsText()); }
+    public void setDetailsContent(MenuDetailsScreen.Content content) { detailsContent=Objects.requireNonNull(content); }
+    public void openDetails() { details = new MenuDetailsScreen(detailsContent==null||error!=null?defaultDetails():detailsContent); }
+    private MenuDetailsScreen.Content defaultDetails() {
+        var sections=new java.util.ArrayList<MenuDetailsScreen.Section>();
+        var form=formView();
+        if(form!=null) for(var group:form.groups()) sections.add(new MenuDetailsScreen.Section(
+                group.title().isBlank()?"Values":group.title(),group.fields().stream().map(f->new MenuDetailsScreen.Row(
+                        f.field().label(),f.display())).toList(),false));
+        else if(submit!=null) sections.add(new MenuDetailsScreen.Section("Values",fields.stream().map(f->
+                new MenuDetailsScreen.Row(f.label(),displayValue(f,values.get(f.key())))).toList(),false));
+        var buttons=new java.util.ArrayList<MenuDetailsScreen.Action>();
+        if(submit==null && primaryAction>=0) {
+            int index=primaryAction;
+            buttons.add(new MenuDetailsScreen.Action(actionLabels.getOrDefault(index,actions.get(index).label()),
+                    ()->runAction(index),true));
+        }
+        return new MenuDetailsScreen.Content(title,statusLine,error==null?subtitle:error,
+                MenuDetailsScreen.Tone.valueOf(tone.name()),sections,detailsText(),buttons,"");
+    }
     public boolean showingDetails() { return details != null; }
     public String helpText() { return help; }
 
@@ -204,6 +222,7 @@ public final class EditorProjectMenu {
     private MenuTextEditor textEditor;
     private String editingKey;
     private MenuDetailsScreen details;
+    private MenuDetailsScreen.Content detailsContent;
     private String error;
     private int selected;
     private int width = 320;
@@ -245,7 +264,7 @@ public final class EditorProjectMenu {
         groups.clear(); sectionSummaries.clear(); units.clear(); pairs.clear(); multiline.clear(); generation++;
         actions = List.of(); fields = List.of(); values.clear();
         submit = null; valueChanged = null; submitLabel = null; textEditor = null; editingKey = null;
-        details = null; error = null; selected = 0; open = true;
+        details = null; detailsContent=null; error = null; selected = 0; open = true;
     }
 
     public void setSubtitle(String subtitle) {

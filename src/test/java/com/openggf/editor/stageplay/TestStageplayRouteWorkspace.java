@@ -237,6 +237,69 @@ class TestStageplayRouteWorkspace {
         assertEquals("Walk",workspace.menu().values().get("startingAction"));
     }
 
+    @Test void planningStatusUsesTheCurrentPlanRouteCommandName() {
+        assertTrue(start(new Host()).status().contains("Reopen Plan route"));
+    }
+
+    @Test void routeDetailsShowsTheDiagnosisOnceAndRetainsWorkCounts() {
+        var host = new Host();
+        var workspace = start(host);
+        String diagnosis = "Walk cannot reach this goal; try Run.";
+        var result = StageplayRouteResult.failure(StageplayRouteResult.Status.BUDGET_EXCEEDED,
+                diagnosis, "0".repeat(64), host.request, 1024, 26686,
+                List.of(new StageplayRoutePoint(0, 100, 200, true)));
+        host.update = new StageplayRouteJob.Update(1, StageplayRouteJob.Phase.FAILED, diagnosis, result);
+        workspace.tick(new InputHandler());
+        workspace.invoke(ROUTE_HELPER);
+        assertEquals(1, workspace.menu().detailsText().split(java.util.regex.Pattern.quote(diagnosis), -1).length - 1);
+        assertTrue(workspace.menu().detailsText().contains("1 samples, 1024 nodes, 26686 ticks"));
+        workspace.menu().close();
+        workspace.directionDetails();
+        assertEquals(1, workspace.menu().detailsText().split(java.util.regex.Pattern.quote(diagnosis), -1).length - 1);
+    }
+
+    @Test void routeF1UsesAPlainResultSectionsAndButtonsWithEngineeringBehindMore() {
+        var host=new Host();var workspace=start(host);
+        String diagnostic="Native terrain search exhausted its bounded work budget: reachability is not disproved; needs Run and more Attempt frames";
+        var result=StageplayRouteResult.failure(StageplayRouteResult.Status.BUDGET_EXCEEDED,
+                diagnostic,"0".repeat(64),host.request,8,432,List.of(new StageplayRoutePoint(0,100,200,true)));
+        host.update=new StageplayRouteJob.Update(1,StageplayRouteJob.Phase.FAILED,diagnostic,result);
+        workspace.tick(new InputHandler());workspace.invoke(ROUTE_HELPER);workspace.menu().openDetails();
+        var text=new java.util.ArrayList<String>();
+        var font=new com.openggf.graphics.PixelFont(){@Override public void drawText(String t,int x,int y,float scale,float r,float g,float b,float a){text.add(t);}};
+        workspace.menu().render(font,398);
+        assertTrue(text.contains("Route details"),text.toString());
+        assertTrue(text.contains("Search limit reached"));
+        assertTrue(text.contains("Try"));assertTrue(text.contains("• Use Run"));assertTrue(text.contains("• Allow more frames"));
+        assertTrue(text.contains("Settings"));assertTrue(text.contains("Search"));
+        assertTrue(text.contains("1 samples · 8 nodes · 432 ticks"));
+        assertTrue(text.contains("Plan another route"));assertTrue(text.contains("Cancel route"));assertTrue(text.contains("Back"));
+        assertFalse(String.join(" ",text).contains("Native terrain"));
+        assertFalse(String.join(" ",text).contains("Apply replaces"));
+        press(workspace,new InputHandler(),GLFW_KEY_UP);press(workspace,new InputHandler(),GLFW_KEY_ENTER);
+        text.clear();workspace.menu().render(font,398);
+        assertTrue(String.join(" ",text).contains("Native terrain"),"More retains the exact engineering diagnosis");
+    }
+
+    @Test void successfulRouteDetailsKeepApplyFreshAndBackAndReplanKeepTheirActions() {
+        for(String action:List.of("back","apply","replan")) {
+            var host=new Host();var workspace=start(host);var before=workspace.controller().document();
+            host.update=new StageplayRouteJob.Update(1,StageplayRouteJob.Phase.READY,"ready",host.result());
+            workspace.tick(new InputHandler());workspace.invoke(ROUTE_HELPER);workspace.menu().openDetails();
+            var text=new java.util.ArrayList<String>();
+            workspace.menu().render(new com.openggf.graphics.PixelFont(){@Override public void drawText(String t,int x,int y,float scale,float r,float g,float b,float a){text.add(t);}},398);
+            assertTrue(text.contains("Route found · 0.5 s"),text.toString());
+            assertTrue(text.indexOf("Apply")<text.indexOf("Plan another route"),"A ready route leads with Apply: "+text);
+            assertFalse(text.contains("Try"));assertTrue(text.contains("Apply replaces commands in the requested window"));
+            switch(action) {
+                case "back" -> {press(workspace,new InputHandler(),GLFW_KEY_ESCAPE);assertTrue(workspace.menu().isOpen());assertFalse(workspace.menu().showingDetails());}
+                case "apply" -> {press(workspace,new InputHandler(),GLFW_KEY_ENTER);assertEquals(1,host.applyRequests);}
+                case "replan" -> {press(workspace,new InputHandler(),GLFW_KEY_DOWN);press(workspace,new InputHandler(),GLFW_KEY_ENTER);assertEquals("Plan route",workspace.menu().title());assertFalse(workspace.menu().showingDetails());}
+            }
+            assertEquals(before,workspace.controller().document(),"Buttons retain the existing fresh-check and undo boundaries");
+        }
+    }
+
     private static void choose(StageplayWorkspace workspace,int index){
         var input=new InputHandler();for(int i=0;i<index;i++)press(workspace,input,GLFW_KEY_DOWN);press(workspace,input,GLFW_KEY_ENTER);
     }

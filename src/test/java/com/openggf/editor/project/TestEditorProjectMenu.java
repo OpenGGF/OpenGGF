@@ -125,9 +125,21 @@ class TestEditorProjectMenu {
         assertTrue(font.text.contains("Line one."));assertFalse(font.text.contains("Line two."));
         assertFalse(font.text.contains("Detailed explanation."));
         press(menu,new InputHandler(),GLFW_KEY_F1);font.text.clear();menu.render(font,320);
-        assertTrue(font.text.contains("Detailed explanation."));
+        assertFalse(font.text.contains("Detailed explanation."));
         assertTrue(font.text.contains("Line two."));
         assertTrue(font.text.stream().anyMatch(t->t.contains("A long editable line")));
+        press(menu,new InputHandler(),GLFW_KEY_UP);press(menu,new InputHandler(),GLFW_KEY_ENTER);
+        font.text.clear();menu.render(font,320);
+        assertTrue(font.text.contains("Detailed explanation."));
+    }
+
+    @Test void helpForLongActionListsKeepsTheBackButtonAndFullInventoryReachable() {
+        var menu=new EditorProjectMenu();
+        menu.showActions("Cast",java.util.stream.IntStream.range(0,40)
+                .mapToObj(i->new EditorProjectMenu.Action("Actor "+i,()->{})).toList());
+        menu.openDetails();var font=new RecordingFont();menu.render(font,320);
+        assertTrue(font.text.contains("Back"));assertTrue(font.text.contains("+ More"));
+        assertTrue(font.y.get("Back")>=180);assertTrue(menu.detailsText().contains("Actor 39"));
     }
 
     private static final class RecordingFont extends com.openggf.graphics.PixelFont {

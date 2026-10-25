@@ -143,13 +143,18 @@ white cross follows the character so you can compare.
 When planning fails, the line stops at a red cross where the attempt ended,
 and the panel says why.
 
-![A failed route: a short line ending in a red cross, with "Search limit reached; reachability is unknown." in the side panel.](images/stageplay/route-failed.png)
+![A failed route: a short line ending in a red cross at a red goal, with "Search limit reached." in the side panel.](images/stageplay/route-failed.png)
+
+The side panel gives a one-line result. **F1** (or **Direction details**) gives
+the full diagnosis: what happened, what to try, the settings used and how much
+searching was done.
 
 | Message | What to do |
 | --- | --- |
-| Search limit reached; reachability is unknown. | The search ran out of time before it found a way. Try a nearer destination, choose Run, or give it more time under **Advanced** (**Frames**, **Search nodes**). It does not mean the place cannot be reached. |
+| Search limit reached. | The search ran out of time before it found a way. It does not mean the place cannot be reached. Read the advice in **F1**; otherwise try a nearer destination, choose Run, or give it more time under **Advanced** (**Frames**, **Search nodes**). |
 | No route found in this search. | Try a different start or speed, or a destination on the other side of the obstacle. |
-| *terrain near x=…: needs Run* (in **Direction details**) | A walk failed, so the planner tried the same terrain at a run, and running got there. Change **Speed** to Run. |
+| *terrain near x=…: needs Run* (in **F1**) | A walk failed, so the planner rehearsed the same terrain at a run, and running got there. Change **Speed** to Run. |
+| *…needs more Attempt frames* or *needs Run and more Attempt frames* (in **F1**) | The rehearsal got there, but took longer than the route was allowed. Raise **Frames** under **Advanced**, and choose Run if it says so. |
 | This route is unsupported; open Details. | The request can't be planned this way, for example a Spindash start for a character that cannot spin dash. **Direction details** explains. |
 | Playback could not confirm the route. | The check failed (a fall, a hit or a missed stop). Try another stop style or destination. |
 | Scene or assets changed; plan again. | You edited the scene while it planned. Plan again. |
@@ -317,13 +322,13 @@ that speaker's tone to **Off**.
 
 ## Music and sound
 
-<!-- Reconcile with the music naming fix on bugfix/ai-stageplay-dayoff-bugs. -->
-
 **Audio cues** → **Add audio cue** adds a cue at the playhead. Set **Action**:
 
-- **Music** plays a song. Choose the game under **Advanced** and pick the
-  song; each zone's own music is a good start.
-- **Sound effect** plays one of the game's sound effects.
+- **Music** plays a song. Pick it by name in the **Music** list, for example
+  **Emerald Hill ($82)**. The list holds every song in the cue's game; change
+  **Game** under **Advanced** to use another game's music.
+- **Sound effect** plays one of the game's sound effects, picked by name in the
+  **Sound** list.
 - **Audio file** plays your own WAV or Ogg recording. Put the file in the
   scene's folder (or a folder below it) and enter its path. **Volume** applies
   to recordings only.
@@ -339,8 +344,13 @@ How playback treats sound:
   music its own music cue.
 - Sound effects made by the game itself, such as jumps, rings and springs, play
   as they happen.
-- If a music cue on the very first frame of a Sonic 2 shot fades away, move it
-  a few frames later.
+- A music cue on a shot's first frame plays as written, in every game; the
+  level's own start-up does not fade it out.
+
+The number after each name (such as `$82`) is the one the game itself uses for
+that sound, as listed in the game's disassembly. Screenplays use the same
+numbers, written in decimal (`$82` is 130), or a music name; **F2** in the form
+also accepts the exact number. See [audio cues](stageplay-reference.md#audio-cues).
 
 ## Scene changes and multiple sets
 

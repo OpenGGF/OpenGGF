@@ -7,15 +7,17 @@ Unreleased. The earlier development themes remain in
 
 - **OpenGGF Stageplay:** shared directing documents power the in-engine HUD and
   OpenGGF Editor's Stageplay workspace. Both editors share compact grouped forms,
-  named choices, collapsed Advanced settings and full F1 diagnostics. In-level
+  named choices, collapsed Advanced settings and structured F1 details with buttons,
+  plain route advice and a dim More toggle for full diagnostics. In-level
   position picking pans through the level with coordinate tags and optional queried
-  floor snapping, marked by a yellow floor line and dashed guide; numeric entry stays
-  available. Uniform HUD rows keep primary actions visible at the standard size;
+  floor snapping, marked by a yellow floor line and dashed guide; placement pickers
+  start snapped and numeric entry stays available. Uniform HUD rows keep primary actions visible at the standard size;
   expanded settings can scroll. Author actor movement, logical Left/Right facing, animation/poses,
   camera movement, smooth animated zoom, earthquake effects, captions, ROM audio and WAV/Ogg voices;
   direct scene changes across locations, acts and games with cuts, fades and wipes.
-  Authored music control holds off automatic level playlists through deferred entry
-  and shot changes in playback/export; ROM cue gain is checked during authoring.
+  Authored music control holds off automatic level playlists and entry fades through
+  deferred entry and shot changes in playback/export; named music choices and exact
+  ROM sound IDs agree across the screenplay, catalog and both editors; ROM cue gain is checked during authoring.
   Free objects, including released animals outside the main view, retain native
   appearances when switched to Puppet/Pose within their cast activation windows,
   including native sprite priority and foreground-wall occlusion in directed films.
@@ -42,16 +44,19 @@ Unreleased. The earlier development themes remain in
   Record directed takes, undo edits, save/reopen and export synchronized
   lossless films. Shot-local screenplay tools and a mirrored agent skill support
   resource discovery, validation, lossless canonical-to-screenplay round trips and
-  offline filmmaking; both editors import/export the same screenplay. A bounded
+  offline filmmaking; encoder paths resolve from the caller's directory. Both editors
+  import/export the same screenplay and start new dialogue at the same top margin.
+  Simulation reports abilities from each performer's own game capabilities. A bounded
   route helper preserves per-route starting action, a slow stroll or live native Run speed,
   gentle/hard/overshoot endings and final facing (Spindash requires Run),
   and emits native movement/jump intents over actual collision terrain, including
   Sonic 1 loop plane switching, with observed native charge/release and cold LIVE verification, penalised back-up
   run-ups only after direct steering fails, and location-specific speed advice
-  supported by a matched Run probe, plus visual walking-object routes over slopes and
+  supported by a matched Run probe with its own bounded diagnostic horizon and
+  explicit advice when more attempt frames are needed, plus visual walking-object routes over slopes and
   steps up to eight pixels. Both editors show the simulated route before Apply,
   with grounded/airborne segments and endpoints over the picture, plus route state,
-  legends and readable failure explanations in editor chrome; applied
+  matching goal legends and complete short result sentences in editor chrome; applied
   plans remain visible during authoring playback without entering saved scenes or films.
   Centred camera pushes preserve their framing centre,
   fractional origins survive composition, and the world framebuffer is reused.
@@ -494,7 +499,9 @@ Unreleased. The earlier development themes remain in
   player instead of vanishing while the status remained. Rewinding in Mushroom
   Hill restores mushroom-cap bounces, curled vines, catapults, dropping platforms,
   launched Mushmeanie shells and the act 2 Knuckles cutscene's player lift
-  exactly. Launch Base falling platforms keep their riders and Marble Garden
+  exactly. Unordered rider sets encode stable team membership independently of
+  allocation history, while ordered collections retain their encounter order.
+  Launch Base falling platforms keep their riders and Marble Garden
   sinking mud keeps each player's sink depth through rewind. Rewinding to the first
   frame of a Lava Reef load replays its background setup: act 2 no longer refills
   its background or adds a second Death Egg, and Knuckles keeps act 1's background

@@ -39,6 +39,17 @@ class TestStageplayDialogueWorkspace {
         return workspace.controller().document().dialogue().getFirst();
     }
 
+    @Test void editorAndScreenplayStartDialogueAtTheSameTopMargin() throws Exception {
+        var cue = addLine(workspace());
+        var screenplay = com.openggf.tools.StageplayScriptCompiler.compile("""
+                {"version":7,"name":"Defaults","cast":[],"shots":[{"id":"shot","durationFrames":300,
+                "set":{"gameId":"s2","zone":0,"act":0},"camera":[{"frame":0,"x":0,"y":0}],
+                "dialogue":[{"startFrame":0,"endFrame":180,"speakerName":"Sonic","text":"Hello"}]}]}
+                """.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        assertEquals(12,cue.y(),"New editor lines belong above the characters");
+        assertEquals(screenplay.dialogue().getFirst().y(),cue.y());
+    }
+
     @Test void namedSpeakerDefaultsEditAndRemoveUseSharedUndo() {
         var workspace=workspace(); var cue=addLine(workspace);
         assertEquals("Sonic",StageplayDialogue.speakerName(workspace.controller().document(),cue));

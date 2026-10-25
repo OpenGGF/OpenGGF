@@ -157,7 +157,7 @@
           "frame": 0,
           "kind": "ROM_MUSIC",
           "gameId": "s2",
-          "soundId": 129
+          "soundId": 130
         },
         {
           "frame": 282,
@@ -429,7 +429,7 @@
           "frame": 0,
           "kind": "ROM_MUSIC",
           "gameId": "s2",
-          "soundId": 129
+          "soundId": 130
         },
         {
           "frame": 20,
@@ -888,7 +888,7 @@
           "frame": 0,
           "kind": "ROM_MUSIC",
           "gameId": "s2",
-          "soundId": 129
+          "soundId": 130
         },
         {
           "frame": 398,

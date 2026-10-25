@@ -55,7 +55,7 @@ class TestStageplayAudioLifecycle {
                         .map(AudioTimelineEntry::command).filter(command -> command instanceof AudioCommand.PlayMusic)
                         .map(command -> ((AudioCommand.PlayMusic) command).musicId()).toList();
                 assertEquals(control.equals("NONE") || control.equals("PREPARED") ? List.of(129, 129)
-                                : control.equals("ROM_MUSIC") ? List.of(130, 130) : List.of(), music,
+                                : control.equals("ROM_MUSIC") ? List.of(129, 129) : List.of(), music,
                         "Automatic level music must respect authored control through seek and shot replacement");
                 audio.stop();
                 SessionManager.getCurrentGameplayMode().getLevelManager().playCurrentLevelMusic();
@@ -68,6 +68,139 @@ class TestStageplayAudioLifecycle {
                 HeadlessGameBoot.presentHeadlessOuterAudioFrame();
                 assertEquals(129, manager.captureLogicalSnapshot().presentation().activeMusic().musicId(),
                         "Restoring the pre-playback state must also release playlist admission");
+            }
+        }
+    }
+
+    @RequiresRom(SonicGame.SONIC_2)
+    @Test void entryFrameMusicIsNotFollowedByTheNativeEntryFade() throws Exception {
+        EngineServices.current().graphics().initHeadless();
+        try (var library = SceneRomLibrary.open(Map.of("s2", Path.of(System.getProperty("sonic2.rom.path"))));
+             var world = SessionManager.getCurrentGameplayMode() == null ? StageplayLiveWorld.openOffline(library)
+                     : StageplayLiveWorld.adoptOffline(library, SessionManager.getCurrentGameplayMode())) {
+            var scene = StageplayDocument.empty("s2",0,0,0,500,320,224).withDurationFrames(360)
+                    .withAudio(List.of(new AudioCue("entry",0,AudioKind.ROM_MUSIC,"s2",130,"",1)));
+            var manager = EngineServices.current().audio();
+            world.resolve(scene, StageplayTimeline.sample(scene,0));
+            try (var cues = new StageplayAudio(manager,library,path -> { throw new AssertionError(); })) {
+                cues.prepare(scene);
+                for (int frame=0;frame<360;frame++) {
+                    world.resolve(scene,StageplayTimeline.sample(scene,frame));
+                    cues.playFrame(scene,frame);
+                    HeadlessGameBoot.presentHeadlessOuterAudioFrame();
+                }
+                var commands = manager.commandTimeline().entries().stream().map(AudioTimelineEntry::command).toList();
+                assertTrue(commands.stream().anyMatch(c -> c instanceof AudioCommand.PlayMusic));
+                assertFalse(commands.stream().anyMatch(c -> c instanceof AudioCommand.FadeOutMusic),
+                        "An authored entry song must survive deferred native entry controls: " + commands);
+            }
+        }
+    }
+
+    @RequiresRom(SonicGame.SONIC_2)
+    @Test void nativeEmeraldHillNumberSelectsEmeraldHillRatherThanMetropolis() throws Exception {
+        EngineServices.current().graphics().initHeadless();
+        try (var library = SceneRomLibrary.open(Map.of("s2", Path.of(System.getProperty("sonic2.rom.path"))));
+             var world = SessionManager.getCurrentGameplayMode() == null ? StageplayLiveWorld.openOffline(library)
+                     : StageplayLiveWorld.adoptOffline(library, SessionManager.getCurrentGameplayMode())) {
+            var scene = StageplayDocument.empty("s2",0,0,0,500,320,224).withAudio(List.of(
+                    new AudioCue("native-EHZ",8,AudioKind.ROM_MUSIC,"s2",0x82,"",1)));
+            world.resolve(scene,StageplayTimeline.sample(scene,0));
+            var manager = EngineServices.current().audio();
+            try (var cues = new StageplayAudio(manager,library,path -> { throw new AssertionError(); })) {
+                cues.prepare(scene);
+                for (int frame=0;frame<40;frame++) {
+                    world.resolve(scene,StageplayTimeline.sample(scene,frame)); cues.playFrame(scene,frame);
+                    HeadlessGameBoot.presentHeadlessOuterAudioFrame();
+                }
+                assertEquals(0x81,manager.captureLogicalSnapshot().presentation().activeMusic().musicId(),
+                        "ROM EHZ $82 must resolve to the engine's EHZ asset $81");
+            }
+        }
+    }
+
+    @RequiresRom(SonicGame.SONIC_2)
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({
+            "s1,s1,s1,0", "s1,s2,s2,0", "s1,s2,s2,8", "s1,s2,s2,40",
+            "s2,s2,s2,0", "s2,s3k,s3k,0", "s3k,s1,s1,0", "s1,s1,s2,0"})
+    void authoredSongsSurviveNativeEntriesInOfflinePcm(String opening, String destination,
+            String soundtrack, int localCue) throws Exception {
+        var services = EngineServices.current(); services.graphics().initHeadless();
+        var paths = Map.of("s1",Path.of(System.getProperty("sonic1.rom.path")),
+                "s2",Path.of(System.getProperty("sonic2.rom.path")),
+                "s3k",Path.of(System.getProperty("s3k.rom.path")));
+        var nativeIds = Map.of("s1",129,"s2",130,"s3k",1);
+        var engineIds = Map.of("s1",129,"s2",129,"s3k",1);
+        try (var library = SceneRomLibrary.open(paths);
+             var world = SessionManager.getCurrentGameplayMode() == null ? StageplayLiveWorld.openOffline(library)
+                     : StageplayLiveWorld.adoptOffline(library,SessionManager.getCurrentGameplayMode())) {
+            var manager = services.audio();
+            services.configuration().setSessionOverride(com.openggf.configuration.SonicConfiguration.AUDIO_ENABLED,true);
+            manager.setBackend(new com.openggf.audio.HeadlessSmpsAudioBackend(services.configuration(),services.profiler(),manager,manager));
+            var scene = StageplayDocument.empty(opening,0,0,0,500,320,224).withDurationFrames(450)
+                    .withCamera(List.of(new CameraKey(0,0,500,1,Interpolation.HOLD),new CameraKey(90,0,500,1,Interpolation.HOLD)))
+                    .withSceneChanges(List.of(new SceneChange("next",90,new SetSource(destination,0,0,"",""),Transition.CUT,0)))
+                    .withAudio(List.of(new AudioCue("opening",0,AudioKind.ROM_MUSIC,opening,nativeIds.get(opening),"",1),
+                            new AudioCue("next-song",90+localCue,AudioKind.ROM_MUSIC,soundtrack,nativeIds.get(soundtrack),"",1)));
+            world.resolve(scene,StageplayTimeline.sample(scene,0));
+            try (var cues = new StageplayAudio(manager,library,path -> {throw new AssertionError();})) {
+                cues.prepare(scene); manager.beginCaptureMode(48000,60);
+                long tailEnergy = 0;
+                for (int frame=0;frame<450;frame++) {
+                    if (frame==90) manager.endCaptureMode();
+                    world.resolve(scene,StageplayTimeline.sample(scene,frame));
+                    if (frame==90) {
+                        cues.refreshAfterNativeBoundary(frame); manager.beginCaptureMode(48000,60);
+                    }
+                    cues.playFrame(scene,frame);
+                    if (frame==180) try (var entry = com.openggf.audio.LevelMusicAccess.suppressAutomaticEntry(manager)) {
+                        manager.playSfx(com.openggf.audio.GameSound.JUMP);
+                    }
+                    HeadlessGameBoot.presentHeadlessOuterAudioFrame();
+                    var pcm = new short[1600]; assertEquals(800,manager.drainCaptureFrame(pcm));
+                    if (frame>=390) for (short value : pcm) tailEnergy += (long)value*value;
+                    if (frame>=120+localCue && frame%30==0) {
+                        var snapshot = manager.captureLogicalSnapshot().presentation();
+                        assertNotNull(snapshot.activeMusic(), "Authored song disappeared at " + frame);
+                        assertEquals(engineIds.get(soundtrack),snapshot.activeMusic().musicId());
+                        assertEquals(0,snapshot.smpsLogical().fadeOutTimeout(),"Native driver fade at " + frame);
+                        assertTrue(snapshot.smpsLogical().sequencers().stream().filter(e -> !e.sfx())
+                                .noneMatch(e -> e.snapshot().fade().active() && e.snapshot().fade().fadeOut()),
+                                "Native sequencer fade at " + frame);
+                    }
+                }
+                assertTrue(tailEnergy>0,"The final second must contain actual offline music samples");
+                assertInstanceOf(com.openggf.audio.HeadlessSmpsAudioBackend.class,manager.getBackend());
+                int jump = library.module(destination).getAudioProfile().getSoundMap().get(com.openggf.audio.GameSound.JUMP);
+                assertTrue(manager.commandTimeline().entries().stream().map(AudioTimelineEntry::command)
+                        .anyMatch(c -> c instanceof AudioCommand.PlaySfx effect && effect.sfxId()==jump),
+                        "Music entry ownership must preserve the requested native Jump effect");
+            } finally {
+                manager.endCaptureMode(); manager.setBackend(new com.openggf.audio.NullAudioBackend());
+            }
+        }
+    }
+
+    @RequiresRom(SonicGame.SONIC_2)
+    @ParameterizedTest @ValueSource(strings = {"s2","s3k"})
+    void nativeS3kCreditsRequestUsesTheCreditsAssetInBaseAndDonorProducers(String setGame) throws Exception {
+        EngineServices.current().graphics().initHeadless();
+        try (var library = SceneRomLibrary.open(Map.of("s2",Path.of(System.getProperty("sonic2.rom.path")),
+                "s3k",Path.of(System.getProperty("s3k.rom.path"))));
+             var world = SessionManager.getCurrentGameplayMode() == null ? StageplayLiveWorld.openOffline(library)
+                     : StageplayLiveWorld.adoptOffline(library,SessionManager.getCurrentGameplayMode())) {
+            var scene = StageplayDocument.empty(setGame,0,0,0,500,320,224).withAudio(List.of(
+                    new AudioCue("credits",8,AudioKind.ROM_MUSIC,"s3k",0xDC,"",1)));
+            world.resolve(scene,StageplayTimeline.sample(scene,0));
+            var manager = EngineServices.current().audio();
+            try (var cues = new StageplayAudio(manager,library,path -> {throw new AssertionError();})) {
+                assertDoesNotThrow(() -> cues.prepare(scene));
+                for (int frame=0;frame<40;frame++) {
+                    world.resolve(scene,StageplayTimeline.sample(scene,frame)); cues.playFrame(scene,frame);
+                    HeadlessGameBoot.presentHeadlessOuterAudioFrame();
+                }
+                assertEquals(0x33,manager.captureLogicalSnapshot().presentation().activeMusic().musicId());
             }
         }
     }

@@ -81,8 +81,9 @@ A 24-frame `WIPE_RIGHT` carries the Motobug into Sonic 2.
   on landing however long the jump takes.
 - The Motobug's Pose keys follow Emerald Hill's gentle slope: their heights
   come from the `ground` command.
-- Emerald Hill's music is cued at frame 8, not frame 0, so the level's
-  entry does not fade it.
+- Emerald Hill's music (Sonic 2's own song `$82`, 130) is cued 8 frames into the
+  shot. That offset was a workaround for an early build in which the level's
+  start-up faded out a first-frame cue; a cue on frame 0 now plays as written.
 - "Wait... aren't you from Sonic 1?" uses Tails' typer and **Workshop** voice;
   the Motobug answers "Long drive."
 
