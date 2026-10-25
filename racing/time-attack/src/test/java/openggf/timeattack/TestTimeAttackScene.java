@@ -566,4 +566,35 @@ class TestTimeAttackScene {
         }
     }
 
+    @Test
+    void browserCodeAndCreationModalsCaptureTextAndDrawBeforeTheBrowser() throws Exception {
+        try (var master = openggf.racing.server.master.MasterServer.start(
+                openggf.racing.server.master.TestMasterServer.testConfig(), temp.resolve("browser-master"))) {
+            fingerprint = Optional.of(FP);
+            open(List.of("s2"));
+            scene.settings().setMasterUrl("ws://127.0.0.1:" + master.port() + "/master");
+            chooseMode(3);
+            for (int i = 0; i < 4; i++) tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN);
+            tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
+            idleUntil("browser", () -> scene.raceSession().state() == openggf.timeattack.mp.RaceSession.State.BROWSING);
+            tap(org.lwjgl.glfw.GLFW.GLFW_KEY_J);
+            assertTrue(host.capturesTextInput());
+            type("7K3 M9X");
+            var canvas = new openggf.timeattack.ui.RecordingSceneCanvas(320);
+            scene.draw(null, canvas);
+            assertTrue(canvas.joined().contains("JOIN BY CODE"));
+            assertFalse(canvas.joined().contains("7K3 M9X"));
+            scene.focusLost(null);
+            assertFalse(host.capturesTextInput());
+            tap(org.lwjgl.glfw.GLFW.GLFW_KEY_C);
+            assertTrue(host.capturesTextInput());
+            scene.draw(null, canvas);
+            assertTrue(canvas.joined().contains("CREATE ROOM"));
+            assertFalse(canvas.joined().contains("TIME ATTACK ROOMS"));
+            tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE);
+            assertFalse(host.capturesTextInput());
+            assertEquals(openggf.timeattack.mp.RaceSession.State.BROWSING, scene.raceSession().state());
+        }
+    }
+
 }

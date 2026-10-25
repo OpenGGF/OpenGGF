@@ -213,7 +213,11 @@ public final class LobbyInviteController implements AutoCloseable {
     }
 
     private void onControl(ControlMessage message) {
-        if (message instanceof ControlMessage.RoomInviteRejected rejected && !(pending instanceof Idle)) {
+        if (message instanceof ControlMessage.RoomInviteInvalidated invalidated
+                && Objects.equals(invalidated.instanceId(), session.instanceId())) {
+            hideDisclosure();
+            clearPassword();
+        } else if (message instanceof ControlMessage.RoomInviteRejected rejected && !(pending instanceof Idle)) {
             hideDisclosure();
             pending = new Idle();
             status = rejected.retryAfterMillis() > 0 ? "Invite unavailable. Try again later." : "Invite unavailable";

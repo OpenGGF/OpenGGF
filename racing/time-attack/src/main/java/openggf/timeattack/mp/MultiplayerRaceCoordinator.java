@@ -168,6 +168,7 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
                     session.onControl(control.message());
                     if (control.message() instanceof ControlMessage.RoomAccessState
                             || control.message() instanceof ControlMessage.RoomInvite
+                            || control.message() instanceof ControlMessage.RoomInviteInvalidated
                             || control.message() instanceof ControlMessage.RoomInviteRejected
                             || control.message() instanceof ControlMessage.RoomPasswordChanged) {
                         accessListener.accept(control.message());

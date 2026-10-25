@@ -339,28 +339,34 @@ public final class RaceSession implements AutoCloseable {
             return;
         }
         MasterClient client = master;
+        RoundSetup setup = browseSetup;
+        String fingerprint = browseFingerprint;
+        String configuredName = settings.displayName();
+        String look = lookSource.apply(setup.gameId(), setup.character()).encode();
         start("Finding room...", State.BROWSING, op -> {
             ControlMessage.RoomJoinResult result = op.await(client.resolveInvite(code),
                     MasterClient.MASTER_REPLY_TIMEOUT_MILLIS + 1000, ignored -> { });
             if (result.accessPolicy().passwordRequired()) {
                 return () -> promptForPassword(new CodeJoin(code, result));
             }
-            return connectResolved(op, client, result, null);
+            return connectResolved(op, client, result, setup, fingerprint, configuredName, look);
         });
     }
 
     private void connectCode(CodeJoin code, RoomPassword password) {
         MasterClient client = master;
+        RoundSetup setup = browseSetup;
+        String fingerprint = browseFingerprint;
+        String configuredName = settings.displayName();
+        String look = lookSource.apply(setup.gameId(), setup.character()).encode();
         start("Joining room...", State.BROWSING, password, op -> {
             PlayerIdentity me = identity();
-            String name = displayName(me, settings.displayName());
-            String look = lookSource.apply(browseSetup.gameId(), browseSetup.character()).encode();
+            String name = displayName(me, configuredName);
             RaceConnection connection = op.own(op.await(client.joinInvite(code.code(), code.resolved(), me,
-                    name, look, browseFingerprint, op.password),
+                    name, look, fingerprint, op.password),
                     MasterClient.MASTER_REPLY_TIMEOUT_MILLIS + RaceClient.JOIN_TIMEOUT_MILLIS + 2000,
                     RaceConnection::close), RaceConnection::close);
-            Runnable lobby = joined(connection, false, browseSetup.character(), browseSetup.windowSeconds(),
-                    null, name, look);
+            Runnable lobby = joined(connection, false, setup.character(), setup.windowSeconds(), null, name, look);
             return () -> {
                 masterRoomId = code.resolved().roomId();
                 startMasterLink(null);
@@ -370,17 +376,17 @@ public final class RaceSession implements AutoCloseable {
     }
 
     private Runnable connectResolved(Attempt op, MasterClient client, ControlMessage.RoomJoinResult result,
-                                     RoomPassword password) throws Exception {
+                                     RoundSetup setup, String fingerprint, String configuredName, String look) throws Exception {
         PlayerIdentity me = identity();
-        String name = displayName(me, settings.displayName());
-        String look = lookSource.apply(browseSetup.gameId(), browseSetup.character()).encode();
+        String name = displayName(me, configuredName);
         RaceConnection connection;
-        try (RoomJoinOptions options = new RoomJoinOptions(password, result.instanceId(), result.accessEpoch())) {
-            connection = op.own(op.await(client.joinResolved(result, me, name, look, browseFingerprint, options),
+        try (RoomJoinOptions options = new RoomJoinOptions(null, result.instanceId(),
+                result.instanceId() == null ? -1 : result.accessEpoch())) {
+            connection = op.own(op.await(client.joinResolved(result, me, name, look, fingerprint, options),
                     MasterClient.MASTER_REPLY_TIMEOUT_MILLIS + RaceClient.JOIN_TIMEOUT_MILLIS + 2000,
                     RaceConnection::close), RaceConnection::close);
         }
-        Runnable lobby = joined(connection, false, browseSetup.character(), browseSetup.windowSeconds(), null, name, look);
+        Runnable lobby = joined(connection, false, setup.character(), setup.windowSeconds(), null, name, look);
         return () -> {
             masterRoomId = result.roomId();
             startMasterLink(null);
@@ -1069,6 +1075,7 @@ public final class RaceSession implements AutoCloseable {
             while (true) {
                 if (cancelled) {
                     future.thenAccept(discardLate);
+                    future.cancel(true);
                     throw new CancellationException("left while connecting");
                 }
                 try {
@@ -1076,6 +1083,7 @@ public final class RaceSession implements AutoCloseable {
                 } catch (TimeoutException slice) {
                     if (System.nanoTime() >= deadline) {
                         future.thenAccept(discardLate);
+                        future.cancel(true);
                         throw new TimeoutException("timed out");
                     }
                 } catch (ExecutionException e) {

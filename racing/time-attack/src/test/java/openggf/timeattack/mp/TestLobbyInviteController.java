@@ -68,10 +68,18 @@ class TestLobbyInviteController {
         return canvas.joined();
     }
 
+    private List<String> codePixels() {
+        RecordingSceneCanvas canvas = new RecordingSceneCanvas(400);
+        panel.draw(canvas);
+        return canvas.fills.stream().filter(fill -> fill[0] >= 24 && fill[0] < 300
+                && fill[1] >= 38 && fill[1] < 70).map(java.util.Arrays::toString).toList();
+    }
+
     @Test
     void membersExplicitlyFetchBeforeCopyWithoutRevealing() {
         open(false, true, null);
         assertTrue(sent.isEmpty());
+        List<String> masked = codePixels();
         input.tapDown(this::update);
         input.tapEnter(this::update);
         assertTrue(request().disclosureId() > 0);
@@ -81,7 +89,7 @@ class TestLobbyInviteController {
         assertEquals(List.of("7K3 M9X"), copied);
         input.idle(this::update);
         assertTrue(drawn().contains("Copied"));
-        assertFalse(drawn().contains("7K3 M9X"));
+        assertEquals(masked, codePixels());
     }
 
     @Test
@@ -192,4 +200,47 @@ class TestLobbyInviteController {
         panel.focusLost();
         assertFalse(panel.isEditingText());
     }
+    @Test
+    void acceptedMutationInvalidationWithdrawsPendingCopyBeforeAnEpochAck() {
+        open(false, true, null);
+        input.tapDown(this::update);
+        input.tapEnter(this::update);
+        long disclosure = request().disclosureId();
+        pump(new ControlMessage.RoomInviteInvalidated("instance"));
+        disclose(disclosure, 1);
+        assertNull(session.invite());
+        assertTrue(copied.isEmpty());
+        input.idle(this::update);
+        assertFalse(drawn().contains("7K3 M9X"));
+    }
+
+    @Test
+    void inviteExpiryUsesTheHubClockWhenItDiffersFromLocalWallTime() {
+        open(false, true, null);
+        pump(new ControlMessage.Pong(now.get(), now.get() + 100_000));
+        assertEquals(101_000, session.hubNowEstimateMillis());
+        List<String> masked = codePixels();
+        input.tapEnter(this::update);
+        pump(new ControlMessage.RoomInvite("7K3M9X", "instance", 1, 1, 102_000, request().disclosureId()));
+        input.idle(this::update);
+        assertNotNull(session.invite());
+        assertNotEquals(masked, codePixels());
+        now.addAndGet(1_001);
+        input.idle(this::update);
+        assertNull(session.invite());
+        assertEquals(masked, codePixels());
+    }
+
+    @Test
+    void acceptedMutationMasksAnAlreadyRevealedCodeBeforeAnotherUpdate() {
+        open(true, true, null);
+        List<String> masked = codePixels();
+        input.tapEnter(this::update);
+        disclose(request().disclosureId(), 1);
+        input.idle(this::update);
+        assertNotEquals(masked, codePixels());
+        pump(new ControlMessage.RoomInviteInvalidated("instance"));
+        assertEquals(masked, codePixels());
+    }
+
 }
