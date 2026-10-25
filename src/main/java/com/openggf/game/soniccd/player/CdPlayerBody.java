@@ -132,7 +132,7 @@ public final class CdPlayerBody {
     public enum DynamicSlots { EMPTY_DEVELOPMENT_96, UNIMPLEMENTED }
 
     /**
-     * Runtime-owned native bytes read or written by the selected enemy/hazard handler:
+     * Runtime-owned native bytes read or written by the selected enemy/hazard/monitor handler:
      * timeWarp ($FF1521), shield ($FF151E) and combineRing ($FF156F). Ephemeral call-cut
      * input only: never part of State, Environment or a Frame capture.
      */
@@ -156,7 +156,7 @@ public final class CdPlayerBody {
      * The external world binding/preflight owns the actual scanner table and
      * pool identity. Body neither retains this input nor owns a pool capture;
      * Environment/State and frame/actor captures must never contain it.
-     * An empty response means no ENEMY/HAZARD owner: those selections still stop
+     * An empty response means no ENEMY/HAZARD/MONITOR owner: those selections still stop
      * at UnsupportedTouchHandler. It is never a zero-filled global fallback.
      */
     public record TouchContext(CdPlayerObjectTouch scanner, CdObjectPool.Snapshot snapshot,
@@ -290,7 +290,7 @@ public final class CdPlayerBody {
         public ObjectTouchResult { Objects.requireNonNull(result); }
     }
     /**
-     * The complete pure selected ENEMY/HAZARD response. Its final actor, invincible and scoreChain
+     * The complete pure selected ENEMY/HAZARD/MONITOR response. Its final actor, invincible and scoreChain
      * values are already adopted ONCE into this Body result. The Runtime commits only changedSlots
      * (compare-and-set against the same call-cut snapshot), world and contact, and only after the
      * WHOLE Body succeeds. Calls are ordered observations, never write-replay instructions.
@@ -441,7 +441,7 @@ public final class CdPlayerBody {
     }
 
     /**
-     * Selected native handler without an owner here (MONITOR/SPECIAL, or ENEMY/HAZARD without a
+     * Selected native handler without an owner here (SPECIAL, or ENEMY/HAZARD/MONITOR without a
      * ResponseContext); no staged Body result escapes.
      */
     public static final class UnsupportedTouchHandler extends UnsupportedOperationException {
@@ -637,7 +637,8 @@ public final class CdPlayerBody {
         if (selected instanceof CdPlayerObjectTouch.HandlerBoundary handler) {
             var kind = handler.kind();
             if (input.response().isEmpty()
-                    || (kind != CdPlayerObjectTouch.Kind.ENEMY && kind != CdPlayerObjectTouch.Kind.HAZARD)) {
+                    || (kind != CdPlayerObjectTouch.Kind.ENEMY && kind != CdPlayerObjectTouch.Kind.HAZARD
+                    && kind != CdPlayerObjectTouch.Kind.MONITOR)) {
                 throw new UnsupportedTouchHandler(handler);
             }
             respond(c, handler, input.response().orElseThrow(), input.snapshot());
@@ -652,7 +653,7 @@ public final class CdPlayerBody {
     }
 
     /**
-     * Player_TouchEnemy/Player_TouchHazard (PP Player Object Collision.asm:130-298) through the pure
+     * Player_TouchMonitor/Player_TouchEnemy/Player_TouchHazard (PP Player Object Collision.asm:102-298) through the pure
      * owner at this exact cut: post-Animate motion, post-Display hurt word and byte39, with the same
      * selection and snapshot. Final actor, invincible and scoreChain values are adopted once here,
      * before SpecialChunks reads them (Main:347-350). Slot/world/contact results stay in the effect.

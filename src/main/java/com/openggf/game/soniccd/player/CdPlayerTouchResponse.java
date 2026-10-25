@@ -14,9 +14,9 @@ import java.util.Objects;
 import java.util.OptionalInt;
 
 /**
- * Pure R11A response for one selected ENEMY or HAZARD touch handler.
+ * Pure R11A response for one selected MONITOR, ENEMY or HAZARD touch handler.
  * Source: scddisasm 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff,
- * Level/Palmtree Panic/Player Object Collision.asm:130-298 (Player_TouchEnemy, .DamageEnemy,
+ * Level/Palmtree Panic/Player Object Collision.asm:102-298 (Player_TouchMonitor, Player_TouchEnemy, .DamageEnemy,
  * .KillEnemy, Player_TouchHazard, HurtPlayer, KillPlayer), Level/_Objects/HUD and Points/Main.asm:157-180
  * (AddPoints), Level/Object Spawner.asm:329-340 (FindObjSlot) and Player_ResetOnFloor through
  * {@link CdPlayerMovement#resetOnFloor(CdPlayerMotionState, int)}. Shipped FixBugs=0 behavior.
@@ -112,7 +112,15 @@ public final class CdPlayerTouchResponse {
         /** KillPlayer after its writes (:282-298). */
         KILL_PLAYER(true),
         /** KillPlayer with a nonzero debugMode word (:280-281, 296-298): no writes. */
-        KILL_PLAYER_DEBUG_NO_WRITE(true);
+        KILL_PLAYER_DEBUG_NO_WRITE(true),
+        /** Player_TouchMonitor .End2 (:103-108): upward, but unsigned (oY-$10).w is below object Y. */
+        MONITOR_UPWARD_NO_WRITE(false),
+        /** Player_TouchMonitor (:109-114): upward hit; NEG.W, object YVel and optional fall-byte write. */
+        MONITOR_UPWARD_BOUNCE(false),
+        /** .GoingDown/.End2 (:118-125): nonnegative YVel, animation is not 2. */
+        MONITOR_DOWNWARD_NO_WRITE(false),
+        /** .GoingDown (:121-122): NEG.W then ADDQ.B #2 to object routine. */
+        MONITOR_DOWNWARD_BOUNCE(false);
 
         private final boolean explicitMinusOne;
         Exit(boolean explicitMinusOne) { this.explicitMinusOne = explicitMinusOne; }
@@ -182,9 +190,38 @@ public final class CdPlayerTouchResponse {
         switch (selected.kind()) {
             case ENEMY -> { requireGroup(group, 0); touchEnemy(c, a1); }
             case HAZARD -> { requireGroup(group, 0x80); touchHazard(c, a1); }
-            default -> throw new IllegalArgumentException("Only ENEMY/HAZARD handlers are owned here: " + selected.kind());
+            case MONITOR -> { requireGroup(group, 0x40); touchMonitor(c, a1); }
+            default -> throw new IllegalArgumentException("Only ENEMY/HAZARD/MONITOR handlers are owned here: " + selected.kind());
         }
         return c.finish();
+    }
+
+    /**
+     * Player_TouchMonitor/.GoingDown/.End2 (:102-125). Shipped FixBugs=0: no hurt, shield,
+     * invincibility or time-warp gate; the selected handler ends the scan even without writes.
+     * oMonitorFall aliases oRoutine2 ($25, Monitor and Time Post/Main.asm:265).
+     */
+    private static void touchMonitor(Cursor c, int a1) {
+        if (c.yv < 0) { // TST.W/BPL: $8000 is upward; NEG.W below retains its overflow bits.
+            if (uw(c.y() - 0x10) < c.slot(a1).centreY()) { // SUBI.W then CMP.W/BCS: unsigned words.
+                c.exit = Exit.MONITOR_UPWARD_NO_WRITE;
+                return;
+            }
+            c.yv = sw(-c.yv);
+            c.write(c.slot(a1).moveWord(CdObjectState.WordField.Y_VELOCITY, 0xFE80));
+            if (c.slot(a1).unsignedByte(CdObjectState.ByteField.ROUTINE_2) == 0) {
+                c.write(c.slot(a1).addByte(CdObjectState.ByteField.ROUTINE_2, 4));
+            }
+            c.exit = Exit.MONITOR_UPWARD_BOUNCE;
+            return;
+        }
+        if (c.anim != 2) {
+            c.exit = Exit.MONITOR_DOWNWARD_NO_WRITE;
+            return;
+        }
+        c.yv = sw(-c.yv);
+        c.write(c.slot(a1).addByte(CdObjectState.ByteField.ROUTINE, 2));
+        c.exit = Exit.MONITOR_DOWNWARD_BOUNCE;
     }
 
     /** Player_TouchEnemy (:130-136). */

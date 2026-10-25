@@ -39,8 +39,8 @@ import java.util.OptionalInt;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Constructed Player_TouchEnemy/TouchHazard/HurtPlayer/KillPlayer/AddPoints cases, recomputed from
- * scddisasm 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff (Level/Palmtree Panic/Player Object Collision.asm:130-298,
+ * Constructed Player_TouchMonitor/TouchEnemy/TouchHazard/HurtPlayer/KillPlayer/AddPoints cases, recomputed from
+ * scddisasm 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff (Level/Palmtree Panic/Player Object Collision.asm:102-298,
  * Level/_Objects/HUD and Points/Main.asm:157-180, Level/Object Spawner.asm:329-340, Sonic/Main.asm:2295-2330).
  * Written before the implementation. All tests UNRUN by the external author. The single retail case
  * reads actual supplied media only when soniccd.media.root is configured.
@@ -384,8 +384,8 @@ class TestCdPlayerTouchResponse {
         assertEquals(cut.slots(), w.pool.capture().slots());
     }
 
-    @Test void onlyEnemyAndHazardEntriesAreAcceptedAndTheSelectionMustBeTheCallCutImage() {
-        for (int type : new int[]{0x46, 0xEB}) { // MONITOR and SPECIAL remain Body UnsupportedTouchHandler boundaries.
+    @Test void specialRemainsUnownedAndTheSelectionMustBeTheCallCutImage() {
+        for (int type : new int[]{0xEB}) { // MONITOR is now owned; SPECIAL still has no response owner.
             var w = World.mosqui(type); var p = new Player();
             var cut = w.pool.capture(); var selected = select(p, cut);
             assertThrows(IllegalArgumentException.class,
@@ -547,6 +547,193 @@ class TestCdPlayerTouchResponse {
         assertThrows(IllegalArgumentException.class, () -> CdPlayerTouchResponse.killPlayer(p.actor(), 0, 0, 0, -1));
         assertThrows(UnsupportedOperationException.class,
                 () -> CdPlayerTouchResponse.killPlayer(p.actor(), 0, 0, 0, 0).calls().clear());
+    }
+
+
+    // Monitor slice: hand literals from Player_TouchMonitor (:102-125), FixBugs=0.
+    // Test mirrors frozen before either production mirror; ALL JAVA UNRUN.
+    @ParameterizedTest @CsvSource({
+            "784,768,-1,0,1,4,true",       // equality: $0310-$10 == $0300
+            "783,768,-256,0,-256,0,false", // one below equality: no writes
+            "785,768,-256,0,256,4,true",
+            "784,768,-32768,165,-32768,165,true", // NEG.W $8000 stays $8000; fall $A5 stays
+            "784,768,-1,1,1,1,true",
+            "784,768,-256,255,256,255,true",
+            "16,0,-1,0,1,4,true",
+            "15,65535,-256,0,256,4,true", // SUB.W underflow wraps to $FFFF
+            "0,65520,-256,0,256,4,true",  // $0000-$10 == $FFF0
+            "0,65521,-256,0,-256,0,false",
+            "32783,32768,-1,0,-1,0,false", // $7FFF <u $8000, despite the signed order
+            "32784,32767,-1,0,1,4,true",
+            "65535,65519,-32768,128,-32768,128,true"})
+    void monitorUpwardUsesUnsignedWrappedYAndOnlyWritesVelocityAndTheZeroFallByte(
+            int playerY, int objectY, int velocity, int fall, int expectedVelocity, int expectedFall, boolean writes) {
+        var w = monitorWorld(objectY, fall, 0xFE); var p = new Player();
+        p.y = playerY; p.yv = velocity; p.hurt = 0xFFFF; p.anim = 0x2B;
+        var before = w.pool.capture(); var selected = selectMonitor(w, before);
+        var r = response().respond(selected, p.actor(), w.playerGlobals(), w.worldGlobals(), before);
+        var expected = p.copy(); expected.yv = expectedVelocity;
+        assertEquals(expected.actor(), r.actor());
+        assertMonitorUnownedValues(w, r);
+        assertEquals(writes ? Exit.MONITOR_UPWARD_BOUNCE : Exit.MONITOR_UPWARD_NO_WRITE, r.exit());
+        if (writes) {
+            byte[] bytes = before.slots().get(8).copyBytes();
+            bytes[0x12] = (byte) 0xFE; bytes[0x13] = (byte) 0x80; bytes[0x25] = (byte) expectedFall;
+            assertEquals(1, r.changedSlots().size());
+            var image = r.changedSlots().getFirst();
+            assertArrayEquals(bytes, image.copyBytes());
+            assertEquals(selected.selectedSlot().orElseThrow().identity(), image.identity());
+            assertDoesNotThrow(() -> w.pool.validateRestore(before));
+        } else assertTrue(r.changedSlots().isEmpty());
+        assertEquals(before.slots(), w.pool.capture().slots());
+    }
+
+    @ParameterizedTest @CsvSource({
+            "512,2,0,2,-512,4,true", "0,2,0,2,0,4,true", "32767,2,0,254,-32767,0,true",
+            "1,2,0,255,-1,1,true", "0,2,0,255,0,1,true",
+            "512,0,4,2,512,2,false", "0,0,4,2,0,2,false", "512,3,4,254,512,254,false",
+            "1,255,0,255,1,255,false", "32767,2,4,0,-32767,2,true"})
+    void monitorGoingDownTestsAnimationRatherThanRollingStatusAndWrapsOnlyTheRoutineByte(
+            int velocity, int animation, int flags, int routine, int expectedVelocity, int expectedRoutine, boolean writes) {
+        var w = monitorWorld(0x0300, 0xA5, routine); var p = new Player();
+        p.y = 0x0300; p.yv = velocity; p.anim = animation; p.flags = flags;
+        var before = w.pool.capture(); var r = response().respond(selectMonitor(w, before), p.actor(),
+                w.playerGlobals(), w.worldGlobals(), before);
+        var expected = p.copy(); expected.yv = expectedVelocity;
+        assertEquals(expected.actor(), r.actor()); assertMonitorUnownedValues(w, r);
+        assertEquals(writes ? Exit.MONITOR_DOWNWARD_BOUNCE : Exit.MONITOR_DOWNWARD_NO_WRITE, r.exit());
+        if (writes) {
+            byte[] bytes = before.slots().get(8).copyBytes(); bytes[0x24] = (byte) expectedRoutine;
+            assertEquals(1, r.changedSlots().size());
+            assertArrayEquals(bytes, r.changedSlots().getFirst().copyBytes());
+            assertEquals(before.slots().get(8).identity(), r.changedSlots().getFirst().identity());
+        } else assertTrue(r.changedSlots().isEmpty());
+        assertEquals(before.slots(), w.pool.capture().slots());
+    }
+
+    @ParameterizedTest @CsvSource({"-256,256,MONITOR_UPWARD_BOUNCE", "512,-512,MONITOR_DOWNWARD_BOUNCE"})
+    void monitorHasNoHurtShieldInvincibilityTimeWarpOrDebugGate(int velocity, int expected,
+                                                               Exit exit) {
+        for (int[] gates : new int[][]{{0,0,0,0}, {0xFFFF,0,0,0}, {0,0x80,0,0},
+                {0,0,0xFF,0}, {0,0,0,0x80}, {0xFFFF,0xFF,0xFF,0xFF}}) {
+            var w = monitorWorld(0x0300, 0, 2); var p = new Player();
+            p.y = 0x0310; p.yv = velocity; p.anim = 2; p.hurt = gates[0];
+            w.shield = gates[1]; w.invincible = gates[2]; w.timeWarp = gates[3];
+            w.rings = 0; w.debugCheat = 0xFFFF; w.debugMode = 0x8000; w.mini = 1;
+            var cut = w.pool.capture(); var r = response().respond(selectMonitor(w, cut), p.actor(),
+                    w.playerGlobals(), w.worldGlobals(), cut);
+            var actor = p.copy(); actor.yv = expected;
+            assertEquals(actor.actor(), r.actor()); assertEquals(exit, r.exit());
+            assertMonitorUnownedValues(w, r); assertEquals(1, r.changedSlots().size());
+            assertEquals(cut.slots(), w.pool.capture().slots());
+        }
+    }
+
+    @Test void monitorRequiresSamePoolAndExactSelectedImageButNotSnapshotWrapperIdentity() {
+        var w = monitorWorld(0x0300, 0, 2); var p = new Player(); p.y = 0x0310; p.yv = -1;
+        var cut = w.pool.capture(); var selected = selectMonitor(w, cut); var samePool = w.pool.capture();
+        assertNotSame(cut, samePool); assertSame(cut.slots().get(8), samePool.slots().get(8));
+        var owner = response(); var expected = owner.respond(selected, p.actor(), w.playerGlobals(), w.worldGlobals(), cut);
+        assertEquals(expected, owner.respond(selected, p.actor(), w.playerGlobals(), w.worldGlobals(), samePool));
+        w.pool.write(w.pool.state(40).moveByte(ByteField.MAP_FRAME, 0x7F)); // Even an unowned byte makes it stale.
+        var stale = w.pool.capture();
+        assertThrows(IllegalArgumentException.class,
+                () -> owner.respond(selected, p.actor(), w.playerGlobals(), w.worldGlobals(), stale));
+        var foreign = monitorWorld(0x0300, 0, 2).pool.capture();
+        assertArrayEquals(cut.slots().get(8).copyBytes(), foreign.slots().get(8).copyBytes());
+        assertEquals(cut.slots().get(8).identity(), foreign.slots().get(8).identity());
+        assertThrows(IllegalArgumentException.class,
+                () -> owner.respond(selected, p.actor(), w.playerGlobals(), w.worldGlobals(), foreign));
+        var otherIndex = CdObjectPool.overlay(cut, List.of(cut.slots().get(8).moveByte(ByteField.MAP_FRAME, 1)));
+        assertThrows(IllegalArgumentException.class,
+                () -> owner.respond(selected, p.actor(), w.playerGlobals(), w.worldGlobals(), otherIndex));
+        assertEquals(stale.slots(), w.pool.capture().slots());
+    }
+
+    @ParameterizedTest @CsvSource({"0", "25"})
+    void monitorSelectedIdZeroOrNineteenHasTheSameWritesWithoutAllocation(int id) {
+        var w = monitorWorld(0x0300, 0, 2); var p = new Player(); p.y = 0x0310; p.yv = -1;
+        w.pool.write(w.pool.state(40).moveByte(ByteField.ID, id));
+        var cut = w.pool.capture(); var selected = selectMonitor(w, cut);
+        assertEquals(40, selected.selectedSlot().orElseThrow().identity().wholeIndex());
+        var r = response().respond(selected, p.actor(), w.playerGlobals(), w.worldGlobals(), cut);
+        assertEquals(Exit.MONITOR_UPWARD_BOUNCE, r.exit()); assertEquals(1, r.actor().motion().yVelocity());
+        assertEquals(1, r.changedSlots().size()); assertEquals(id, r.changedSlots().getFirst().id());
+        assertMonitorUnownedValues(w, r); assertEquals(cut.slots(), w.pool.capture().slots());
+        assertEquals(0, cut.slots().getFirst().id(), "the free earlier slot was neither allocated nor cleared");
+    }
+
+    @Test void monitorLiteralRightBottomEqualityReturnsWithoutWritesBeforeTheLaterRing() {
+        var w = new World(); var p = new Player(); p.x = 0x0100; p.y = 0x0200;
+        w.place(32, 0x19, 0x46, 0x0118, 0x0220); w.place(33, 0x10, 0x47, 0x0100, 0x0200);
+        var cut = w.pool.capture(); var selected = monitorScanner().scan(
+                new CdPlayerObjectTouch.PlayerCut(p.x, p.y, p.yr, 0, p.hurt), cut);
+        var handler = assertInstanceOf(CdPlayerObjectTouch.HandlerBoundary.class, selected);
+        assertEquals(CdPlayerObjectTouch.Kind.MONITOR, handler.kind());
+        assertSame(cut.slots().getFirst(), handler.selectedSlot().orElseThrow());
+        var r = response().respond(handler, p.actor(), w.playerGlobals(), w.worldGlobals(), cut);
+        assertEquals(p.actor(), r.actor()); assertTrue(r.changedSlots().isEmpty());
+        assertEquals(Exit.MONITOR_DOWNWARD_NO_WRITE, r.exit()); assertMonitorUnownedValues(w, r);
+        w.pool.write(w.pool.state(32).moveWord(WordField.X, 0x0119));
+        var later = monitorScanner().scan(new CdPlayerObjectTouch.PlayerCut(p.x, p.y, p.yr, 0, p.hurt), w.pool.capture());
+        assertEquals(CdPlayerObjectTouch.Kind.ITEM, later.kind());
+        assertEquals(33, later.selectedSlot().orElseThrow().identity().wholeIndex());
+    }
+
+    @Test void monitorResultIsFinalImmutableAndReplaysFromTheSavedCutAfterLiveMutationAndRestore() {
+        var w = monitorWorld(0x0300, 0, 2); var p = new Player(); p.y = 0x0310; p.yv = -1;
+        var cut = w.pool.capture(); var selected = selectMonitor(w, cut); var owner = response();
+        var first = owner.respond(selected, p.actor(), w.playerGlobals(), w.worldGlobals(), cut);
+        assertEquals(1, first.changedSlots().size(), "the two upward stores publish one final physical-slot image");
+        assertThrows(UnsupportedOperationException.class, () -> first.changedSlots().clear());
+        assertThrows(UnsupportedOperationException.class, () -> first.calls().clear());
+        byte[] detached = first.changedSlots().getFirst().copyBytes(); detached[0x25] = 99;
+        w.pool.deleteObject(40);
+        assertEquals(first, owner.respond(selected, p.actor(), w.playerGlobals(), w.worldGlobals(), cut));
+        w.pool.restore(cut);
+        var restored = w.pool.capture();
+        assertEquals(first, owner.respond(selectMonitor(w, restored), p.actor(), w.playerGlobals(), w.worldGlobals(), restored));
+        assertEquals(4, first.changedSlots().getFirst().unsignedByte(ByteField.ROUTINE_2));
+        assertEquals(cut.slots(), w.pool.capture().slots());
+    }
+
+    @Test void monitorExitsAppendWithoutChangingExistingExitOrdinalsOrMinusOneContracts() {
+        assertEquals(List.of(Exit.DAMAGE_ENEMY, Exit.KILL_ENEMY, Exit.NO_HURT, Exit.HURT,
+                Exit.KILL_PLAYER, Exit.KILL_PLAYER_DEBUG_NO_WRITE), Arrays.asList(Exit.values()).subList(0, 6));
+        for (var exit : List.of(Exit.MONITOR_UPWARD_NO_WRITE, Exit.MONITOR_UPWARD_BOUNCE,
+                Exit.MONITOR_DOWNWARD_NO_WRITE, Exit.MONITOR_DOWNWARD_BOUNCE)) {
+            assertFalse(exit.explicitMinusOne());
+            var p = new Player(); var w = monitorWorld(0x0300, 0, 2);
+            assertThrows(IllegalArgumentException.class, () -> new Result(p.actor(), w.playerGlobals(), w.worldGlobals(),
+                    List.of(), List.of(), OptionalInt.of(-1), exit));
+            assertDoesNotThrow(() -> new Result(p.actor(), w.playerGlobals(), w.worldGlobals(),
+                    List.of(), List.of(), OptionalInt.empty(), exit));
+        }
+    }
+
+    private static void assertMonitorUnownedValues(World w, Result r) {
+        assertEquals(w.playerGlobals(), r.player()); assertEquals(w.worldGlobals(), r.world());
+        assertTrue(r.calls().isEmpty()); assertEquals(OptionalInt.empty(), r.d0());
+    }
+    private static World monitorWorld(int y, int fall, int routine) {
+        var w = World.mosqui(0x46, 0x0270, y);
+        w.pool.write(w.pool.state(40).moveByte(ByteField.ID, 0x19).moveByte(ByteField.ROUTINE, routine)
+                .moveByte(ByteField.ROUTINE_2, fall).moveWord(WordField.Y_VELOCITY, 0x7777)
+                .moveWord(WordField.Y_FRACTION, 0x5678));
+        return w;
+    }
+    private static CdPlayerObjectTouch monitorScanner() {
+        var dimensions = new java.util.ArrayList<>(sizes());
+        dimensions.set(5, new CdR11aObjectAssets.TouchSize(0x10, 0x10)); // ObjColSizes selector6 (:404).
+        return new CdPlayerObjectTouch(dimensions);
+    }
+    private static CdPlayerObjectTouch.HandlerBoundary selectMonitor(World w, CdObjectPool.Snapshot cut) {
+        // Select the native entry independently of the actor vectors: this pure owner starts AFTER geometry.
+        var slot = cut.slots().get(8);
+        var selected = assertInstanceOf(CdPlayerObjectTouch.HandlerBoundary.class, monitorScanner().scan(
+                new CdPlayerObjectTouch.PlayerCut(slot.centreX(), slot.centreY(), 0x13, 0, 0), cut));
+        assertEquals(CdPlayerObjectTouch.Kind.MONITOR, selected.kind());
+        assertSame(slot, selected.selectedSlot().orElseThrow()); return selected;
     }
 
     private static void assertNoWrites(World w, Player p, Result r, Exit exit) {

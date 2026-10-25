@@ -4593,3 +4593,52 @@ ranJava/nativecode. Parentexecuted outcomes above are bounded component evidence
 Existing silent audio and actualMonitor19 frontier remain; no route/game/parity
 advance follows from these assets. Rawmovement and pureMONITOR touch candidates
 are separate next units. All5 source/test files here remain exactfrozen copies.
+
+### Shared raw-object movement and Monitor touch response — 25 October 2026 GMT
+
+Private/local continuation from `ecfa2c2a62448c8d2e731288c28bdbf300b35e4c`.
+The raw-object ports delegate to the same instruction integrator used by MODE,
+Hurt and Dead. They consume primitive raw fields and an optional actual standing
+slot projection, preserve the native read cuts and typed unsupported addresses,
+and retain no pool or snapshot. This extracts existing arithmetic without a
+second movement implementation. All 120 inherited Movement methods are retained.
+
+The pure PP contact response now admits MONITOR through its existing selected
+boundary and same call-cut snapshot. It models signed upward velocity, the
+unsigned wrapped Y comparison, zero-only falling-byte write and animation-2
+break bounce. It publishes final detached images without sounds, allocation,
+score or reward. Body adopts its final actor once before SpecialChunks. An absent
+response owner and SPECIAL still stop at their existing typed boundaries. The
+existing Frame/Runtime transaction and capture partitions are unchanged.
+
+Tests were authored externally before production. Root12876 tests-only compile
+failed at the absent raw APIs; Root4122 tests-only compile failed at the absent
+Monitor exits. Neither invoked JUnit. Independent reviews found no production
+P1/P2. The Monitor review did find one wrong Body expectation: stationary ground
+MODE selects idle animation 5 before touch, rather than retaining incoming 0.
+Root preserved the frozen R1 and changed only that expected literal in R2
+(`5abc461aa9e48312b2e72eaa1aab7d0db43147891f9176b7aa457a431409ac80`).
+Production was not changed to satisfy it. The optional Monitor-specific flipper
+no-write overlay assertion remains weaker than the existing Enemy/Item checks;
+the raw negative support-packet cases do not cover every non-flipper ID.
+
+Observed Root77298 from this six-file working candidate, immediate admission,
+Maven 1m45s, terminal `2026-10-25T02:30:04Z`:
+
+```text
+python3 <main-workspace>/tools/testing/maven_queue.py --normal -Dmse=off   -Dtest=TestCdPlayerMovement,TestCdPlayerTouchResponse,TestCdPlayerBody,TestCdPlayerFrameRuntime,TestCdOpeningObjectRuntime,TestSonicCdOpeningWorldLoad,TestSonicCdOpeningWorldEgl,TestModApiSignatureSurface   -Dsoniccd.media.root=<supplied-media-root> -Dsoniccd.opening.egl=true   -Dopenggf.headless.gl=surfaceless-egl -Dsonic2.rom.path=<verified-S2-REV01> test -B
+```
+
+All eight completed XML reports were inspected: Movement265, Touch130, Body237,
+Frame235, Runtime97, WorldLoad46, EGL12, API11: **1033 tests, zero failures,
+errors or skips**. Java25, actual media, EGL opt-in/backend and the verified S2
+SHA-1 were checked. The retail EnemyPoints test and all twelve EGL cases ran.
+The imported sources received fresh timestamps before compilation. This is
+bounded CD-consumer validation, not a broad-smoke, native-parity, Monitor-body,
+item-reward or completed-game certificate. The unchanged 400-Right observation
+still reaches unowned Monitor ID19 at physical slot59.
+
+External frozen handoffs/reviews remain under the private task directory:
+`object-motion-port-codex.md`, `object-motion-port-review.md`,
+`monitor-touch-response-codex.md`, `monitor-touch-response-review.md`.
+The review's P2 is reconciled above; original mirrors remain unchanged.

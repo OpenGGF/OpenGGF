@@ -10,6 +10,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.function.IntSupplier;
+import java.util.function.Supplier;
 
 /**
  * One R11A ordinary normal-sized MODE call (Main.asm:675-776), plus the shared
@@ -616,6 +618,75 @@ public final class CdPlayerMovement {
         };
     }
 
+    /**
+     * Raw native instruction input, not a player, slot image or ownership certificate. Positions are
+     * complete wrapping 16.16 longs; velocities are signed words. Bytes name their native offsets:
+     * status $22, control/scratch $2C (NOT subtype $28), and whole-pool stand link $3D.
+     * ObjMove ignores control2C; ObjMoveGrv ignores flags22/standLink3D. No MODE admission is implied.
+     */
+    public record RawObjectMotion(int centreX16_16, int centreY16_16, int xVelocity, int yVelocity,
+                                  int flags22, int control2C, int standLink3D) {
+        public RawObjectMotion {
+            signedWord(xVelocity); signedWord(yVelocity);
+            byteValue(flags22); byteValue(control2C); byteValue(standLink3D);
+        }
+    }
+    /** Exact final movement values only. ObjMove's local resistance never changes stored xVelocity. */
+    public record RawObjectMoveResult(int centreX16_16, int centreY16_16, int xVelocity, int yVelocity) {
+        public RawObjectMoveResult { signedWord(xVelocity); signedWord(yVelocity); }
+    }
+    /**
+     * Borrowed value cut of the ACTUAL selected slot's ID/$22, not a pool or authentication token.
+     * wholeIndex is the original unsigned link, not a dynamic index or normalized 24-bit alias.
+     * For whole0 the caller supplies its actual current primary header ID and primary flags, which
+     * need not be the moving raw body's flags. For whole32..127 use the existing call-cut slot image.
+     * The caller owns live context/coherence, same-owner and compare-and-set validation and publication;
+     * equal values cannot prove provenance. Reserved1..31/outside128..255 remain typed at a reached read.
+     * This packet and every context are invocation-local input and are never retained in a result.
+     */
+    public record RawObjectSupport(int wholeIndex, int id, int flags22) {
+        public RawObjectSupport { byteValue(wholeIndex); byteValue(id); byteValue(flags22); }
+    }
+
+    /** ObjMove (Object Functions.asm:91-128); missing support matters only when status bit3 is reached. */
+    public static RawObjectMoveResult moveObject(RawObjectMotion motion) {
+        return moveObject(motion, Optional.empty());
+    }
+    /**
+     * One raw ObjMove call. The optional selected-row cut is ignored on the native nonstanding branch.
+     * No implicit ID0/flags0, player projection, terrain probe, clock, sound, global or slot write exists.
+     */
+    public static RawObjectMoveResult moveObject(RawObjectMotion motion, Optional<RawObjectSupport> support) {
+        return integrateRaw(motion, false, support);
+    }
+    /** ObjMoveGrv (Object Functions.asm:42-82); it never reads stand link/ID/flags, even with flag3 set. */
+    public static RawObjectMoveResult moveObjectWithGravity(RawObjectMotion motion) {
+        return integrateRaw(motion, true, Optional.empty());
+    }
+    private static RawObjectMoveResult integrateRaw(RawObjectMotion motion, boolean gravity,
+                                                     Optional<RawObjectSupport> support) {
+        Objects.requireNonNull(motion); Objects.requireNonNull(support);
+        return integrateInstructions(motion.centreX16_16(), motion.centreY16_16(), motion.xVelocity(), motion.yVelocity(),
+                motion.flags22(), motion.control2C(), gravity, () -> rawSupport(motion.standLink3D(), support));
+    }
+    /** Called only at ObjMove's reached oID read, before any result is returned. */
+    private static MoveSupportRead rawSupport(int link, Optional<RawObjectSupport> support) {
+        int address = (0xFFD000 + (link << 6)) & 0xFFFFFF;
+        if ((link != 0 && link < 32) || link >= 128) {
+            var boundary = link < 32 ? UnsupportedBoundary.RESERVED_OBJECT_SLOT : UnsupportedBoundary.OBJECT_ADDRESS;
+            throw new UnsupportedMotion(boundary, "ObjMove: " + boundary + " $" + String.format("%06X", address));
+        }
+        if (support.isEmpty()) {
+            throw new UnsupportedMotion(UnsupportedBoundary.OBJECT_SUPPORT, "ObjMove: missing actual stood-slot cut for whole " + link);
+        }
+        var selected = support.orElseThrow();
+        if (selected.wholeIndex() != link) {
+            throw new UnsupportedMotion(UnsupportedBoundary.OBJECT_SUPPORT,
+                    "ObjMove: stood-slot cut whole " + selected.wholeIndex() + " does not match link " + link);
+        }
+        return new MoveSupportRead(selected.id(), selected::flags22);
+    }
+
     /** ObjMove (Object Functions.asm:91-130), also used by Hurt; no gravity or pool mutation. */
     public static CdPlayerMotionState moveWithoutGravity(CdPlayerMotionState state, Optional<ObjectContext> objects) {
         var c = new Cursor(Objects.requireNonNull(state), Objects.requireNonNull(objects));
@@ -630,23 +701,41 @@ public final class CdPlayerMovement {
         return c.motion();
     }
 
-    /** Single native integration implementation for both public ports and all four MODE tails. */
+    /** Player ports and every ordinary/resumed MODE tail delegate to the same raw instruction owner. */
     private static void integrate(Cursor c, boolean gravity) {
-        int oldY = c.yv, localX = c.xv;
-        if (gravity) {
-            // BTST preserves N: BPL still tests MOVE.W old Y, not the control byte's sign.
-            boolean rampNoGravity = oldY < 0 && (c.ctrl & 2) != 0 && uw(oldY) < 0xF800;
-            if ((c.ctrl & 8) == 0 && !rampNoGravity && (c.ctrl & 4) == 0) c.yv = sw(oldY + 0x38);
-            // .NoGravity still executes the cap. Word overflow into negative is deliberately uncapped.
-            if (c.yv >= 0x1000) c.yv = 0x1000;
-        } else if ((c.flags & 8) != 0) {
+        var moved = integrateInstructions(c.xpos, c.ypos, c.xv, c.yv, c.flags, c.ctrl, gravity, () -> {
             CdObjectState slot = supportSlot(c, "ObjMove");
-            if (supportId(c, slot) == 0x1E) {
-                localX = sw(localX + ((supportFlags(c, slot) & 1) == 0 ? -0x100 : 0x100));
+            // Keep the existing current-player alias and borrowed dynamic cut. Read flags only for ID $1E.
+            return new MoveSupportRead(supportId(c, slot), () -> supportFlags(c, slot));
+        });
+        c.xpos = moved.centreX16_16(); c.ypos = moved.centreY16_16(); c.yv = moved.yVelocity();
+    }
+    /** Ephemeral native read continuation only; never retained by a movement owner or result. */
+    private record MoveSupportRead(int id, IntSupplier flags22) { }
+
+    /**
+     * The sole ObjMove/ObjMoveGrv instruction implementation (Object Functions.asm:42-128).
+     * Shipped FixBugs=0: preserve old-Y N across BTST, signed word overflow and full long/fraction wrap.
+     * support is invoked only at ObjMove's actual ID read; flags is invoked only for ID $1E.
+     */
+    private static RawObjectMoveResult integrateInstructions(int xpos, int ypos, int xVelocity, int yVelocity,
+                                                             int flags22, int control2C, boolean gravity,
+                                                             Supplier<MoveSupportRead> support) {
+        int oldY = yVelocity, localX = xVelocity, storedY = oldY;
+        if (gravity) {
+            // BTST changes only Z: BPL at :56 still tests MOVE.W old Y (:51), not control2C's sign.
+            boolean rampNoGravity = oldY < 0 && (control2C & 2) != 0 && uw(oldY) < 0xF800;
+            if ((control2C & 8) == 0 && !rampNoGravity && (control2C & 4) == 0) storedY = sw(oldY + 0x38);
+            // .NoGravity still executes :69-73. Overflow into a negative word deliberately skips the cap.
+            if (storedY >= 0x1000) storedY = 0x1000;
+        } else if ((flags22 & 8) != 0) {
+            var selected = support.get();
+            if (selected.id() == 0x1E) {
+                localX = sw(localX + ((selected.flags22().getAsInt() & 1) == 0 ? -0x100 : 0x100));
             }
         }
-        c.xpos += localX << 8; // ObjMove's resistance never writes oXVel.
-        c.ypos += oldY << 8; // OLD velocity, including every fraction bit and native long wrap.
+        // ObjMove resistance remains local; both routines integrate OLD Y, including all fraction bits.
+        return new RawObjectMoveResult(xpos + (localX << 8), ypos + (oldY << 8), xVelocity, storedY);
     }
 
     /**

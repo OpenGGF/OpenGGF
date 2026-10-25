@@ -1551,4 +1551,182 @@ class TestCdPlayerMovement {
         }
     }
     private static void word(byte[] bytes, int at, int value) { bytes[at] = (byte) (value >>> 8); bytes[at + 1] = (byte) value; }
+
+    // Shared raw-object ObjMove/ObjMoveGrv extraction. Tests authored/frozen before its production mirror.
+    // ALL JAVA UNRUN. Literal vectors derive from Object Functions.asm:42-128 at the class's source pin.
+    @Test void rawObjectGravityLiteralFallUsesOldWordsAndRetainsEveryFractionBit() {
+        var before = new CdPlayerMovement.RawObjectMotion(0x10001234, 0x02005678, 0x100, -0x180, 0, 0, 0);
+        assertEquals(new CdPlayerMovement.RawObjectMoveResult(0x10011234, 0x01FED678, 0x100, -0x148),
+                CdPlayerMovement.moveObjectWithGravity(before));
+        assertEquals(new CdPlayerMovement.RawObjectMotion(0x10001234, 0x02005678, 0x100, -0x180, 0, 0, 0), before);
+    }
+
+    @ParameterizedTest @CsvSource({"-384,4,-384,01FED678", "-384,8,-384,01FED678",
+            "-384,128,-328,01FED678", "-2049,2,-2049,01F85578", "-2049,130,-2049,01F85578",
+            "-2048,2,-1992,01F85678", "-2047,2,-1991,01F85778", "0,2,56,02005678",
+            "256,2,312,02015678", "-32768,0,-32712,01805678", "4352,12,4096,02115678"})
+    void rawObjectGravityReadsControl2CAndPreservesOldYSignAcrossBtst(
+            int oldY, int control2C, int storedY, String expectedY) {
+        // Bit 3/pole and bit 2/bar suppress; bit 1 suppresses only negative unsigned Y<$F800.
+        // Control's sign does not replace the MOVE.W old-Y N flag. The cap still runs on .NoGravity.
+        var before = new CdPlayerMovement.RawObjectMotion(0x10001234, 0x02005678, 0x100, oldY, 0, control2C, 255);
+        assertEquals(new CdPlayerMovement.RawObjectMoveResult(0x10011234, rawObjectBits(expectedY), 0x100, storedY),
+                CdPlayerMovement.moveObjectWithGravity(before));
+    }
+
+    @ParameterizedTest @CsvSource({"32752,-32728,02804678", "4064,4096,02103678", "4096,4096,02105678"})
+    void rawObjectGravityNarrowsAddedWordBeforeCapButIntegratesTheOldWord(
+            int oldY, int storedY, String expectedY) {
+        // $7FF0+$38=$8028 stays negative/uncapped; $0FE0+$38=$1018 caps, with old delta $0FE000.
+        var before = new CdPlayerMovement.RawObjectMotion(0x10001234, 0x02005678, 0x100, oldY, 8, 0, 192);
+        assertEquals(new CdPlayerMovement.RawObjectMoveResult(0x10011234, rawObjectBits(expectedY), 0x100, storedY),
+                CdPlayerMovement.moveObjectWithGravity(before));
+    }
+
+    @ParameterizedTest @CsvSource({"0", "1", "31", "32", "127", "128", "191", "192", "255"})
+    void rawObjectNonstandingMoveIgnoresMissingOrForeignSupportAndControl(int link) {
+        var before = new CdPlayerMovement.RawObjectMotion(0x10001234, 0x02005678, 0x100, -0x180, 0, 0xFF, link);
+        var expected = new CdPlayerMovement.RawObjectMoveResult(0x10011234, 0x01FED678, 0x100, -0x180);
+        assertEquals(expected, CdPlayerMovement.moveObject(before));
+        var foreign = Optional.of(new CdPlayerMovement.RawObjectSupport(link == 33 ? 32 : 33, 0x1E, 1));
+        assertEquals(expected, CdPlayerMovement.moveObject(before, foreign));
+        assertEquals(link, before.standLink3D());
+    }
+
+    @ParameterizedTest @CsvSource({"0", "1", "31", "32", "127", "128", "191", "192", "255"})
+    void rawObjectGravityNeverDereferencesStandingLinksEvenWhenStatusBitThreeIsSet(int link) {
+        var before = new CdPlayerMovement.RawObjectMotion(0x10001234, 0x02005678, 0x100, -0x180, 8, 0, link);
+        assertEquals(new CdPlayerMovement.RawObjectMoveResult(0x10011234, 0x01FED678, 0x100, -0x148),
+                CdPlayerMovement.moveObjectWithGravity(before));
+    }
+
+    @ParameterizedTest @CsvSource({"32,0,1,9,10019234", "127,18,1,8,10019234",
+            "32,30,0,9,10009234", "127,30,1,8,10029234",
+            "32,30,128,9,10009234", "127,30,129,8,10029234"})
+    void rawObjectMoveUsesSelectedWholeSlotIdAndFlagsForLocalResistanceOnly(
+            int link, int id, int supportFlags, int bodyFlags, String expectedX) {
+        var before = new CdPlayerMovement.RawObjectMotion(0x10001234, 0x02005678, 0x180, -0x200, bodyFlags, 0xFF, link);
+        var support = new CdPlayerMovement.RawObjectSupport(link, id, supportFlags);
+        assertEquals(new CdPlayerMovement.RawObjectMoveResult(rawObjectBits(expectedX), 0x01FE5678, 0x180, -0x200),
+                CdPlayerMovement.moveObject(before, Optional.of(support)));
+        assertEquals(0x180, before.xVelocity());
+        assertEquals(supportFlags, support.flags22());
+    }
+
+    @ParameterizedTest @CsvSource({"1,1,10019234", "30,0,10009234", "30,1,10029234"})
+    void rawObjectStandZeroRequiresActualPrimaryIdAndFlagsRatherThanTheMovingBodyFlags(
+            int primaryId, int primaryFlags, String expectedX) {
+        // This raw body is not player0. Its flags0=1 must not supply the primary's flags0.
+        var before = new CdPlayerMovement.RawObjectMotion(0x10001234, 0x02005678, 0x180, -0x200, 9, 0, 0);
+        var primary = new CdPlayerMovement.RawObjectSupport(0, primaryId, primaryFlags);
+        assertEquals(new CdPlayerMovement.RawObjectMoveResult(rawObjectBits(expectedX), 0x01FE5678, 0x180, -0x200),
+                CdPlayerMovement.moveObject(before, Optional.of(primary)));
+    }
+
+    @ParameterizedTest @CsvSource({"32767,1,0531FEFE", "-32768,0,062FFFFE"})
+    void rawObjectResistanceWrapsTheLocalSignedWordBeforeLongSignExtension(
+            int xVelocity, int supportFlags, String expectedX) {
+        var before = new CdPlayerMovement.RawObjectMotion(0x05B0FFFE, 0x02005678, xVelocity, 0, 8, 0, 127);
+        assertEquals(new CdPlayerMovement.RawObjectMoveResult(rawObjectBits(expectedX), 0x02005678, xVelocity, 0),
+                CdPlayerMovement.moveObject(before, Optional.of(new CdPlayerMovement.RawObjectSupport(127, 0x1E, supportFlags))));
+    }
+
+    @ParameterizedTest @CsvSource({"FFFFFEFF,00000001,2,-1,000000FF,FFFFFF01",
+            "1234FFFE,0000FFFF,1,1,123500FE,000100FF"})
+    void rawObjectBothPortsKeepFullFractionCarryAndNativeLongWrap(
+            String x, String y, int xv, int yv, String expectedX, String expectedY) {
+        var before = new CdPlayerMovement.RawObjectMotion(rawObjectBits(x), rawObjectBits(y), xv, yv, 0, 12, 255);
+        var expected = new CdPlayerMovement.RawObjectMoveResult(rawObjectBits(expectedX), rawObjectBits(expectedY), xv, yv);
+        assertEquals(expected, CdPlayerMovement.moveObject(before));
+        assertEquals(expected, CdPlayerMovement.moveObjectWithGravity(before)); // Control 12 suppresses gravity.
+    }
+
+    @ParameterizedTest @CsvSource({"0", "32", "127"})
+    void rawObjectReachedSupportedAddressWithoutItsActualCutStopsAsObjectSupport(int link) {
+        var before = new CdPlayerMovement.RawObjectMotion(0x10001234, 0x02005678, 0x180, -0x200, 8, 0, link);
+        var ex = assertThrows(CdPlayerMovement.UnsupportedMotion.class, () -> CdPlayerMovement.moveObject(before));
+        assertEquals(CdPlayerMovement.UnsupportedBoundary.OBJECT_SUPPORT, ex.boundary());
+        assertTrue(ex.getMessage().contains("ObjMove"));
+        assertEquals(link, before.standLink3D());
+    }
+
+    @ParameterizedTest @CsvSource({"0,32", "32,0", "127,32"})
+    void rawObjectReachedCutMustMatchTheWholeIndexWithoutAliasNormalization(int link, int foreignWhole) {
+        var before = new CdPlayerMovement.RawObjectMotion(0x10001234, 0x02005678, 0x180, -0x200, 8, 0, link);
+        var foreign = Optional.of(new CdPlayerMovement.RawObjectSupport(foreignWhole, 0x1E, 1));
+        var ex = assertThrows(CdPlayerMovement.UnsupportedMotion.class,
+                () -> CdPlayerMovement.moveObject(before, foreign));
+        assertEquals(CdPlayerMovement.UnsupportedBoundary.OBJECT_SUPPORT, ex.boundary());
+        assertTrue(ex.getMessage().contains("ObjMove"));
+    }
+
+    @ParameterizedTest @CsvSource({"1,FFD040,RESERVED_OBJECT_SLOT", "31,FFD7C0,RESERVED_OBJECT_SLOT",
+            "128,FFF000,OBJECT_ADDRESS", "191,FFFFC0,OBJECT_ADDRESS", "192,000000,OBJECT_ADDRESS",
+            "255,000FC0,OBJECT_ADDRESS"})
+    void rawObjectReachedReservedAndOutsideAddressesStayTypedEvenWithAMatchingValuePacket(
+            int link, String address, CdPlayerMovement.UnsupportedBoundary boundary) {
+        var before = new CdPlayerMovement.RawObjectMotion(0x10001234, 0x02005678, 0x180, -0x200, 8, 0, link);
+        var matching = Optional.of(new CdPlayerMovement.RawObjectSupport(link, 0x1E, 1));
+        for (var cut : List.of(Optional.<CdPlayerMovement.RawObjectSupport>empty(), matching)) {
+            var ex = assertThrows(CdPlayerMovement.UnsupportedMotion.class,
+                    () -> CdPlayerMovement.moveObject(before, cut));
+            assertEquals(boundary, ex.boundary());
+            assertTrue(ex.getMessage().contains("ObjMove")); assertTrue(ex.getMessage().contains(address));
+        }
+    }
+
+    @ParameterizedTest @CsvSource({"0,9,10029234", "32,0,10009234", "127,1,10029234"})
+    void rawObjectExtractionMatchesExistingPlayerPortsAndPreservesAllOtherMotionFields(
+            int link, int supportFlags, String expectedX) {
+        var before = new CdPlayerMotionState(0x10001234, 0x02005678, 0x180, -0x200, -7, 6, 0x9A, 9, 0xBC,
+                7, 14, 0x1A, 0x1D, 1, 0x2E, -2, 0x80, 0, 0x41, 0x52);
+        var pool = new CdObjectPool();
+        if (link != 0) putSupport(pool, link, 0x1E, supportFlags, 12, 0x5B0, 0x20C);
+        var snapshot = pool.capture();
+        var oldCut = Optional.of(new CdPlayerMovement.ObjectContext(snapshot, link, 0x1E, 12));
+        var raw = new CdPlayerMovement.RawObjectMotion(0x10001234, 0x02005678, 0x180, -0x200, 9, 0, link);
+        var expectedMove = new CdPlayerMovement.RawObjectMoveResult(rawObjectBits(expectedX), 0x01FE5678, 0x180, -0x200);
+        assertEquals(expectedMove, CdPlayerMovement.moveObject(raw,
+                Optional.of(new CdPlayerMovement.RawObjectSupport(link, 0x1E, supportFlags))));
+        assertEquals(with(with(before, 0, rawObjectBits(expectedX)), 1, 0x01FE5678),
+                CdPlayerMovement.moveWithoutGravity(before, oldCut));
+        assertEquals(new CdPlayerMovement.RawObjectMoveResult(0x10019234, 0x01FE5678, 0x180, -0x1C8),
+                CdPlayerMovement.moveObjectWithGravity(raw));
+        assertEquals(with(with(with(before, 0, 0x10019234), 1, 0x01FE5678), 3, -0x1C8),
+                CdPlayerMovement.moveWithGravity(before));
+        assertEquals(snapshot.slots(), pool.capture().slots());
+    }
+
+    @Test void rawObjectControlSupportDoesNotBroadenExistingModeAdmission() {
+        var raw = new CdPlayerMovement.RawObjectMotion(0x10001234, 0x02005678, 0x100, -0x180, 0, 12, 255);
+        assertEquals(new CdPlayerMovement.RawObjectMoveResult(0x10011234, 0x01FED678, 0x100, -0x180),
+                CdPlayerMovement.moveObjectWithGravity(raw));
+        Actor a = new Actor(); a.ctrl = 12;
+        assertBoundary(new Fixture(false), a, CdPlayerMovement.UnsupportedBoundary.CONTROL_OWNER);
+    }
+
+    @Test void rawObjectPacketsRejectOutOfWidthValuesAndPortsRejectNullInputs() {
+        for (int bad : new int[]{-32769, 32768}) {
+            assertThrows(IllegalArgumentException.class, () -> new CdPlayerMovement.RawObjectMotion(0, 0, bad, 0, 0, 0, 0));
+            assertThrows(IllegalArgumentException.class, () -> new CdPlayerMovement.RawObjectMotion(0, 0, 0, bad, 0, 0, 0));
+            assertThrows(IllegalArgumentException.class, () -> new CdPlayerMovement.RawObjectMoveResult(0, 0, bad, 0));
+            assertThrows(IllegalArgumentException.class, () -> new CdPlayerMovement.RawObjectMoveResult(0, 0, 0, bad));
+        }
+        for (int bad : new int[]{-1, 256}) {
+            assertThrows(IllegalArgumentException.class, () -> new CdPlayerMovement.RawObjectMotion(0, 0, 0, 0, bad, 0, 0));
+            assertThrows(IllegalArgumentException.class, () -> new CdPlayerMovement.RawObjectMotion(0, 0, 0, 0, 0, bad, 0));
+            assertThrows(IllegalArgumentException.class, () -> new CdPlayerMovement.RawObjectMotion(0, 0, 0, 0, 0, 0, bad));
+            assertThrows(IllegalArgumentException.class, () -> new CdPlayerMovement.RawObjectSupport(bad, 0, 0));
+            assertThrows(IllegalArgumentException.class, () -> new CdPlayerMovement.RawObjectSupport(0, bad, 0));
+            assertThrows(IllegalArgumentException.class, () -> new CdPlayerMovement.RawObjectSupport(0, 0, bad));
+        }
+        var bits = new CdPlayerMovement.RawObjectMotion(Integer.MIN_VALUE, Integer.MAX_VALUE, -32768, 32767, 255, 255, 255);
+        assertEquals(Integer.MIN_VALUE, bits.centreX16_16()); assertEquals(Integer.MAX_VALUE, bits.centreY16_16());
+        assertThrows(NullPointerException.class, () -> CdPlayerMovement.moveObject(null));
+        assertThrows(NullPointerException.class, () -> CdPlayerMovement.moveObject(null, Optional.empty()));
+        assertThrows(NullPointerException.class, () -> CdPlayerMovement.moveObject(bits, null));
+        assertThrows(NullPointerException.class, () -> CdPlayerMovement.moveObjectWithGravity(null));
+    }
+
+    private static int rawObjectBits(String literal) { return Integer.parseUnsignedInt(literal, 16); }
 }
