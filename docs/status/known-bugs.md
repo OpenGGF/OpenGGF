@@ -73,7 +73,12 @@ strict capture/restore before removing this entry or revising the known-gap
 assertions. A null/self substitute is not established by the native branch.
 The [source/runtime audit](../architecture/audits/2026-10-24-rewind-disposition-review.md#s2-sideways-platform-allocation-failure-qualification)
 records the exact pin, citations, reproduction, commands and coverage limits.
-Production remains unchanged; broader fixed-slot ownership is deferred.
+The rejected fixed-tail-only candidate also established that supported raw
+retirement and genuine parent-slot reuse require authoritative parent storage;
+an unknown-owner exception or a default header does not close that boundary.
+The [Sideways storage design](../architecture/designs/2026-10-25-s2-sideways-storage.md)
+records the council alternatives and prerequisites for a complete migration.
+Production remains unchanged; the storage repair is not implemented.
 
 ---
 
