@@ -91,3 +91,15 @@ removing repeated query/order work. See the [performance evidence](../../audits/
 for exact focused commands, results and structural counts. This local component
 change adds no cold-route, donor/roster, viewport, native-picture or lifecycle
 product beyond the obligations already recorded above.
+
+
+## Shared hand-launcher phase correction — 2026-10-25
+
+The [HCZ1 repair record](s3k-hcz1-sonic.md#launcher-and-chopper-continuity-repairs--2026-10-25)
+changes the shared hand launcher to resolve solid contact after motion and retain
+prior-pass per-player standing for grab/release and rewind. The current
+`TestS3kHcz2TwistingLoopRegression` passes without skips in the87-case focused
+selection on base`61be1910` plus those object edits. This is one affected HCZ2
+regression, not a new HCZ2 route/width/donor/team/lifecycle or native-pixel claim.
+The continuous chain still has an inherited shared player-dispatch frontier;
+its later HCZ2 death is not certified fixed by the HCZ1 object work.

@@ -860,3 +860,25 @@ interrupt and direct-port closure plus the identified latch owners are not yet
 qualified. No runtime/test/fixture edits or Maven/native jobs were performed in
 this design slice. Existing matrix/backlog gaps and the unresolved frontier
 remain accurate; no new behavioral coverage is claimed.
+
+
+## HCZ continuity implementation handoff — 2026-10-25
+
+The isolated implementation on exact base`61be1910` corrects the two observed
+HCZ object owners: post-motion launcher solid/retained standing, then Chopper
+P1 lock/masked live logical publication. The [implementation evidence](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#hcz-object-phase-repairs-and-remaining-continuity-gate--2026-10-25)
+and [HCZ1 matrix](../validation/levels/s3k-hcz1-sonic.md#launcher-and-chopper-continuity-repairs--2026-10-25)
+record87 focused passes, five clean replay companions and the still-red chain.
+No shared loading/timing/physics or AIZ reset owner was changed.
+
+The old drowning stop68801 is passed; final ownership loss is70718 in HCZ2 after
+an ordinary P1 death. Earliest remaining causal motion difference is controlled
+Tails drowning3476: object control`81` bypasses the shared engine's pre-death
+movement/timer, while native primary routine`0C` bypasses ordinary control and
+moves before adding gravity. A routine-byte-only reporting correction or HCZ
+column release would conceal the gameplay defect. The finite next scope is shared
+primary-routine dispatch, CPU gating, fixed countdown/death ownership and rewind,
+with S1/S2 negatives. First later P1 velocity difference5065 is a missed miniboss
+hit; causation is not established before the earlier player frontier is repaired.
+Sideways and the independent alternate-AIZ representation work remain unchanged.
+Parent retains review, combined smoke, integration/push and checkout cleanup.

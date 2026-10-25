@@ -5061,6 +5061,20 @@ after the cooldown and angle gates and before the capture test. Use a
 per-participant checkpoint in that position. Test through real ObjectManager
 dispatch, because seeding the standing state hides a missing collision call.
 
+HCZ hand launcher ordering is the opposite of a fresh-contact grab check:
+`HCZHandLauncher_UpdateSolid` (sonic3k.asm:65864-65872) writes the final Y before
+its solid call; `HCZHandLauncher_TryGrabPlayer` (sonic3k.asm:66006-66008)
+reads the prior pass's retained standing bit. Capture that bit for rewind and
+preserve it when native/extension player bindings move. A pre-motion checkpoint
+both misses rising landings and changes grab/release timing.
+
+Drowning changes the primary player routine, not just control flags.
+`AirCountdown_ReduceAir` (sonic3k.asm:33579-33606) installs routine `$0C`;
+`loc_15828` (sonic3k.asm:29362-29367) moves Tails before adding `$10` even
+when object control remains `$81`. A shared normal-control early return must
+not intercept that primary routine. Releasing a local controlling object or
+changing only the reported routine byte conceals the wrong dispatch owner.
+
 ## Object deletion is not rider release
 
 LBZ rolling drum `loc_2C3CA` runs both participant routines before

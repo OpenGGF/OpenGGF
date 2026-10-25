@@ -1358,3 +1358,12 @@ focused GPU/resource checks and exact capture protocol](../architecture/plans/20
 record the bounded result. This repairs the sampled overlap gap without an
 accepted ROM deviation; complete timelines, other native configurations,
 cold/donor/PAL/PCM and strict timing/trace products remain separate obligations.
+
+
+HCZ object continuity follow-up (2026-10-25, local candidate):
+[HCZ1's affected obligations](../architecture/validation/levels/s3k-hcz1-sonic.md#launcher-and-chopper-continuity-repairs--2026-10-25)
+and the [HCZ2 shared-launcher regression](../architecture/validation/levels/s3k-hcz2.md#shared-hand-launcher-phase-correction--2026-10-25)
+record87 focused passes, retained-state restore/replay, five clean replay
+companions and the still-red continuous chain. The next real P2 difference is
+shared controlled-drowning dispatch at3476; source closure still fails at70718
+in HCZ2. This does not certify either act, broader products or whole-route rewind.
