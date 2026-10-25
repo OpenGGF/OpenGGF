@@ -332,6 +332,68 @@ public final class CdObjectPresentation {
                 new PixelSpan(normalSpring.firstTileId(), springLogicalBase, normalSpring.bytes())));
     }
 
+
+    /**
+     * Explicit USA_R11A_TUNNEL_DOOR_VERTICAL_DEV_PRELOADED_ART policy: the eleven Spring spans plus the owner's
+     * separate 12-tile Art_TunnelDoor decode, giving twelve spans / 412 patterns. PLC_Std row 1 places it at VRAM
+     * $6500 (Palmtree Panic/Data (Act 1 Present).asm:58-59); ObjTunnelDoorV_Init selects ObjectTileIDs entry $C
+     * (Tunnel Door/Main.asm:36-42), whose subtype-zero word is $8328 (Object Tile IDs (Act 1 Present).asm:20,40).
+     * Native tiles $328..$333 come only from that binding's metadata and actual decoded bytes. The complete
+     * NOW-serviced player and powerup windows are immutable snapshots, including the explicit powerup RAM tail.
+     * Every span is validated before returning, even for an empty SAT. This services no art or clock and creates
+     * no RAM, epoch, mutable owner or executed PLC residency; the caller owns world/source identity and bases.
+     */
+    public static PatternSource usaR11aTunnelDoorVerticalDevPreloadedArt(CdPlayerArtRuntime.State nowServicedPlayer,
+                                                                         CdPowerupArtRuntime.State nowServicedPowerup,
+                                                                         CdR11aObjectAssets objects,
+                                                                         CdR11aObjectAssets.FrontierArtBank frontier,
+                                                                         CdR11aObjectAssets.ContactArtBank contact,
+                                                                         CdR11aObjectAssets.FloatBlockArtBank floatBlock,
+                                                                         CdR11aObjectAssets.SpringArtBank spring,
+                                                                         CdR11aObjectAssets.TunnelDoorArtBank tunnelDoor,
+                                                                         int playerLogicalBase, int ringLogicalBase,
+                                                                         int mosquiLogicalBase, int plantLogicalBase,
+                                                                         int rampLogicalBase, int explosionLogicalBase,
+                                                                         int pointsLogicalBase, int flowerLogicalBase,
+                                                                         int powerupLogicalBase, int floatBlockLogicalBase,
+                                                                         int springLogicalBase,
+                                                                         int tunnelDoorVerticalLogicalBase) {
+        Objects.requireNonNull(nowServicedPlayer, "now-serviced player art");
+        Objects.requireNonNull(nowServicedPowerup, "now-serviced powerup art");
+        Objects.requireNonNull(objects, "authenticated opening object assets");
+        Objects.requireNonNull(frontier, "the owner's decoded frontier art bank");
+        Objects.requireNonNull(contact, "the owner's decoded contact art bank");
+        Objects.requireNonNull(floatBlock, "the owner's decoded FloatBlock art bank");
+        Objects.requireNonNull(spring, "the owner's decoded normal Spring art bank");
+        Objects.requireNonNull(tunnelDoor, "the owner's decoded Tunnel Door art bank");
+        if (objects.identity().variant() != CdReleaseVariant.USA) {
+            throw new UnsupportedOperationException("DEV preloaded object art is reviewed only for USA R11A");
+        }
+        var ring = objects.initialArtBank().binding(CdR11aAsset.ART_RINGS);
+        var mosqui = objects.initialArtBank().binding(CdR11aAsset.ART_MOSQUI);
+        var plant = frontier.binding(CdR11aAsset.ART_3D_PLANT);
+        var ramp = frontier.binding(CdR11aAsset.ART_3D_RAMP_BOOST);
+        var explosion = contact.binding(CdR11aAsset.ART_EXPLOSIONS);
+        var points = contact.binding(CdR11aAsset.ART_POINTS);
+        var flower = contact.binding(CdR11aAsset.ART_FLOWER);
+        var block = floatBlock.binding(CdR11aAsset.ART_FLOAT_BLOCK);
+        var normalSpring = spring.binding(CdR11aAsset.ART_SPRINGS);
+        var door = tunnelDoor.binding(CdR11aAsset.ART_TUNNEL_DOOR);
+        return declaredPixelBank(List.of(
+                new PixelSpan(CdPlayerArtRuntime.VRAM_BYTE_ADDRESS / 32, playerLogicalBase, nowServicedPlayer.residentBank()),
+                new PixelSpan(ring.firstTileId(), ringLogicalBase, ring.bytes()),
+                new PixelSpan(mosqui.firstTileId(), mosquiLogicalBase, mosqui.bytes()),
+                new PixelSpan(plant.firstTileId(), plantLogicalBase, plant.bytes()),
+                new PixelSpan(ramp.firstTileId(), rampLogicalBase, ramp.bytes()),
+                new PixelSpan(explosion.firstTileId(), explosionLogicalBase, explosion.bytes()),
+                new PixelSpan(points.firstTileId(), pointsLogicalBase, points.bytes()),
+                new PixelSpan(flower.firstTileId(), flowerLogicalBase, flower.bytes()),
+                powerupResidentSpan(nowServicedPowerup, powerupLogicalBase),
+                new PixelSpan(block.firstTileId(), floatBlockLogicalBase, block.bytes()),
+                new PixelSpan(normalSpring.firstTileId(), springLogicalBase, normalSpring.bytes()),
+                new PixelSpan(door.firstTileId(), tunnelDoorVerticalLogicalBase, door.bytes())));
+    }
+
     /** The complete $480-byte resident window as 36 tiles from $544; package-private for the pure test. */
     static PixelSpan powerupResidentSpan(CdPowerupArtRuntime.State nowServicedPowerup, int logicalBase) {
         Objects.requireNonNull(nowServicedPowerup, "now-serviced powerup art");

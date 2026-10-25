@@ -4437,3 +4437,41 @@ pool preflight. Native320 cold geometry and pending audio/PLC remain limited.
 Actual400-Right World currently stops at unowned35, not a completed act. Next:
 12-span412-picture join, real Runtime callbacks/dispatch, graphics cleanup range,
 actual route observation and rendered/replay checks. No full-suite/game claim.
+
+
+### Vertical Door counted mapping and twelve-span picture — 25 October 2026 GMT
+
+On component base7c5c28ea738515600091fbb60775fb53af808204, Root44297 ran
+only TestCdObjectMappings#actualUsaVerticalTunnelDoorJoinsItsExactSourceAndPreservesEveryPriorMappingRoot
+with the supplied media, --lean -Dmse=off and explicit surfaceless-EGL.
+Observed1/0failures/1error/0skips, immediateadmission/28.454sMaven,
+exit01:10:05Z: exact native20CE9A has no registered counted-table pointer.
+This behavioral negative used the new mapper test against unchanged production.
+
+Exact frozen production then adds only the existing actual-byte addObject join
+at20CE9A/count2 and a separate twelve-span412-pattern policy. The old eleven
+Spring spans/policy/convert and every old test/helper remain byte-identical.
+The new span is actual ART_TUNNEL_DOOR, native328..333/12tiles, appended after
+Spring logically. NOW-serviced immutable player/powerup resident windows retain
+the established tails, and all physical/logical spans validate before empty SAT.
+No service/state/default-seed/renderer callback or fallback is introduced here.
+
+Root45971 --lean -Dmse=off test selected exact qualified
+com.openggf.game.soniccd.level.TestCdObjectMappings and
+com.openggf.game.soniccd.resources.TestCdObjectPresentation, suppliedmedia,
+explicitEGL and noDISPLAY/WAYLAND. Observed41/0failures/0errors/0skips,
+immediateadmission/1m35sMaven, exit01:20:32Z. Both XML identities,17+24,
+Java25.0.5.0.2/media/backend and absence of aborted tests were inspected.
+Six new media-gated cases and the prior gated cases executed. Literal native
+closed/open mapping pieces, real pads, all412 pixels, every span pair/bound,
+raw flips, coordinates/palette/priority, actual CPU SAT and ADD.W attribute
+carry are checked. Separate source review reports noP1/P2; optional oracle
+qualifications do not claim same-world certificates or GPU/native residency.
+Frozen author/reviewer reports remain external, unchanged, private/local.
+
+This is CPU mapping/picture evidence only. No live Door Runtime/client412,
+World route/contact, GPU rendering, audio playback, nativePLC or regional
+parity is admitted by this checkpoint. Runtime tests-only build91483 separately
+failed compilation on expected absent12-bank/accessor/typedFM APIs; no JUnit
+ran and no behavioral Runtime negative is claimed. Its exact external tests
+remain preserved for the following Runtime import. Full-game goal stays active.

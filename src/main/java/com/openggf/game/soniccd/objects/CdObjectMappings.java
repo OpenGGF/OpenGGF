@@ -143,6 +143,9 @@ public final class CdObjectMappings implements CdDrawMappings {
             throw new IllegalArgumentException("Powerup mapping source range mismatch");
         }
         tables.add(new DeclaredTable(powerup.range().nativeAddress(), powerup.bytes(), 0, 13));
+        // ObjTunnelDoorV_Init stores actual USA $20CE9A (Tunnel Door/Main.asm:36,90-91).
+        // Reuse the exact-byte join: two counted static frames, four pieces and both real zero pads.
+        addObject(tables, objects, CdR11aObjectAssets.Table.TUNNEL_DOOR_VERTICAL_MAPPINGS, objects.tunnelDoorVertical());
         return new CdObjectMappings(tables, List.of());
     }
 

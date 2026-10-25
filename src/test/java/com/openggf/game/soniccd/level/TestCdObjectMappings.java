@@ -896,4 +896,142 @@ class TestCdObjectMappings {
             assertThrows(UnsupportedOperationException.class, () -> resolver.resolve(pointer, false, 0));
         }
     }
+
+    /** Source directives at N: Tunnel Door/Data/Mappings.asm:1-27; no synthetic picture or owner. */
+    private static final byte[] TUNNEL_DOOR_VERTICAL_SOURCE = bytes(
+            0x00, 0x04, 0x00, 0x10,
+            0x02, 0xE8, 0x01, 0x18, 0x04, 0xFC, 0xF8, 0x03, 0x18, 0x00, 0xFC, 0x00,
+            0x02, 0xE8, 0x0C, 0x00, 0x06, 0xFC, 0xE8, 0x04, 0x00, 0x0A, 0x1C, 0x00);
+    private static final int TUNNEL_DOOR_VERTICAL_MAP = 0x20CE9A;
+    private static final List<List<CdObjectDrawQueue.RawPiece>> TUNNEL_DOOR_VERTICAL_FRAMES = List.of(
+            List.of(new CdObjectDrawQueue.RawPiece(-24, 1, 0x1804, -4),
+                    new CdObjectDrawQueue.RawPiece(-8, 3, 0x1800, -4)),
+            List.of(new CdObjectDrawQueue.RawPiece(-24, 0xC, 0x0006, -4),
+                    new CdObjectDrawQueue.RawPiece(-24, 4, 0x000A, 28)));
+
+    @Test void declaredVerticalTunnelDoorKeepsBothCountedBodiesRawFlipsAndRealPads() throws Exception {
+        assertEquals(28, TUNNEL_DOOR_VERTICAL_SOURCE.length);
+        assertEquals("954bf4fd9df8e85b782482c17f65e68d32101f1e43e21fd4a7fe4058a91b5275",
+                sha256(TUNNEL_DOOR_VERTICAL_SOURCE), "source transcription, not media authentication");
+        assertEquals(4, word(TUNNEL_DOOR_VERTICAL_SOURCE, 0));
+        assertEquals(16, word(TUNNEL_DOOR_VERTICAL_SOURCE, 2));
+        assertEquals(0, TUNNEL_DOOR_VERTICAL_SOURCE[15]);
+        assertEquals(0, TUNNEL_DOOR_VERTICAL_SOURCE[27]);
+        var resolver = declared(TUNNEL_DOOR_VERTICAL_MAP, TUNNEL_DOOR_VERTICAL_SOURCE, 0, 2);
+        assertVerticalTunnelDoorFrames(resolver);
+        byte[] truncated = Arrays.copyOf(TUNNEL_DOOR_VERTICAL_SOURCE, 26);
+        var shortSource = declared(TUNNEL_DOOR_VERTICAL_MAP, truncated, 0, 2);
+        assertEquals(TUNNEL_DOOR_VERTICAL_FRAMES.getFirst(),
+                shortSource.resolve(TUNNEL_DOOR_VERTICAL_MAP, false, 0).pieces());
+        assertThrows(IllegalArgumentException.class,
+                () -> shortSource.resolve(TUNNEL_DOOR_VERTICAL_MAP, false, 1));
+        var visual = CdObjectVisualAssets.decodeStatic(TUNNEL_DOOR_VERTICAL_SOURCE, 2, 12);
+        assertEquals(2, visual.mappingFrames().size());
+        assertEquals(List.of(), visual.animations()); assertEquals(0, visual.animationTable().length());
+        for (int frame = 0; frame < 2; frame++) {
+            assertEquals(11, visual.mappingFrames().get(frame).bytes().length());
+        }
+        assertThrows(IllegalArgumentException.class,
+                () -> CdObjectVisualAssets.decodeStatic(TUNNEL_DOOR_VERTICAL_SOURCE, 2, 11));
+        for (int pad : new int[]{15, 27}) {
+            byte[] bad = TUNNEL_DOOR_VERTICAL_SOURCE.clone(); bad[pad] = 1;
+            assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decodeStatic(bad, 2, 12));
+        }
+    }
+
+    @Test void actualUsaVerticalTunnelDoorJoinsItsExactSourceAndPreservesEveryPriorMappingRoot() throws Exception {
+        var usa = usaMedia(); // Actual media closed before this optional mapping's first access.
+        var objects = usa.objects();
+        var initial = objects.initialArtBank();
+        var frontier = objects.frontierArtBank();
+        var contact = objects.contactArtBank();
+        var floatBlock = objects.floatBlockArtBank();
+        var spring = objects.springArtBank();
+        var table = CdR11aObjectAssets.Table.TUNNEL_DOOR_VERTICAL_MAPPINGS;
+        var view = objects.view(table);
+        assertEquals("MapSpr_FlapDoorV", table.nativeLabel());
+        assertEquals(0xCE9A, view.range().fileOffset());
+        assertEquals(28, view.range().length());
+        assertEquals(TUNNEL_DOOR_VERTICAL_MAP, view.range().nativeAddress());
+        assertEquals(table.range(), view.range());
+        assertArrayEquals(TUNNEL_DOOR_VERTICAL_SOURCE, view.bytes().copy());
+        var visual = objects.tunnelDoorVertical();
+        assertEquals(0, visual.mappingTableOffset());
+        assertEquals(2, visual.mappingFrames().size());
+        assertEquals(List.of(), visual.animations()); assertEquals(0, visual.animationTable().length());
+        assertArrayEquals(view.bytes().copy(), visual.mappings().copy());
+        assertArrayEquals(Arrays.copyOfRange(TUNNEL_DOOR_VERTICAL_SOURCE, 4, 15),
+                visual.mappingFrames().get(0).bytes().copy());
+        assertArrayEquals(Arrays.copyOfRange(TUNNEL_DOOR_VERTICAL_SOURCE, 16, 27),
+                visual.mappingFrames().get(1).bytes().copy());
+        var resolver = CdObjectMappings.fromOpeningAssets(usa.assets(), objects);
+        assertVerticalTunnelDoorFrames(resolver);
+
+        // All earlier visual roots, including the two independent Spring bases, retain every raw piece.
+        for (var oldVisual : List.of(objects.rings(), objects.normalMosqui(), objects.damagedMosqui(),
+                objects.plant(), objects.rampBooster(), objects.explosion(), objects.points(), objects.flower(),
+                objects.floatBlock(), objects.springVertical(), objects.springHorizontal())) {
+            int root;
+            if (oldVisual == objects.rings()) root = 0x20A0FA;
+            else if (oldVisual == objects.normalMosqui()) root = 0x20B6E6;
+            else if (oldVisual == objects.damagedMosqui()) root = 0x20B722;
+            else if (oldVisual == objects.plant()) root = 0x20E020;
+            else if (oldVisual == objects.rampBooster()) root = 0x21FDBC;
+            else if (oldVisual == objects.explosion()) root = 0x23F088;
+            else if (oldVisual == objects.points()) root = 0x20AC64;
+            else if (oldVisual == objects.flower()) root = 0x235EF4;
+            else if (oldVisual == objects.floatBlock()) root = FLOAT_BLOCK_MAP;
+            else if (oldVisual == objects.springVertical()) root = 0x209BA0;
+            else root = 0x209BA6;
+            for (int frame = 0; frame < oldVisual.mappingFrames().size(); frame++) {
+                var expected = oldVisual.mappingFrames().get(frame).pieces().stream()
+                        .map(p -> new CdObjectDrawQueue.RawPiece(p.y(), p.sizeByte(), p.rawTileWord(), p.x())).toList();
+                assertEquals(expected, resolver.resolve(root, false, frame).pieces());
+            }
+        }
+        int sonic = usa.assets().profile().range(CdR11aAsset.MAP_SPR_SONIC).nativeAddress();
+        for (int frame = 0; frame < usa.assets().sonic().mappingFrames().size(); frame++) {
+            var body = usa.assets().sonic().mappingFrames().get(frame);
+            var expected = new java.util.ArrayList<CdObjectDrawQueue.RawPiece>();
+            for (int piece = 0; piece < body.pieceCount(); piece++) {
+                int at = 1 + piece * 5;
+                expected.add(new CdObjectDrawQueue.RawPiece(body.bytes().signedByte(at), body.bytes().unsignedByte(at + 1),
+                        body.bytes().unsignedWord(at + 2), body.bytes().signedByte(at + 4)));
+            }
+            assertEquals(expected, resolver.resolve(sonic, false, frame).pieces());
+        }
+        assertGameOverRoots(resolver);
+        assertPowerupFrames(resolver);
+        assertSame(initial, objects.initialArtBank()); assertSame(frontier, objects.frontierArtBank());
+        assertSame(contact, objects.contactArtBank()); assertSame(floatBlock, objects.floatBlockArtBank());
+        assertSame(spring, objects.springArtBank()); assertSame(visual, objects.tunnelDoorVertical());
+        byte[] detached = view.bytes().copy(); Arrays.fill(detached, (byte) 0);
+        assertVerticalTunnelDoorFrames(resolver);
+        assertThrows(UnsupportedOperationException.class,
+                () -> resolver.resolve(TUNNEL_DOOR_VERTICAL_MAP, false, 0).pieces().clear());
+    }
+
+    private static void assertVerticalTunnelDoorFrames(CdObjectMappings resolver) {
+        for (int frame = 0; frame < 2; frame++) {
+            assertEquals(new CdObjectDrawQueue.FrameMapping(2, TUNNEL_DOOR_VERTICAL_FRAMES.get(frame)),
+                    resolver.resolve(TUNNEL_DOOR_VERTICAL_MAP, false, frame));
+        }
+        for (int frame = 2; frame <= 255; frame++) {
+            int badFrame = frame;
+            assertThrows(UnsupportedOperationException.class,
+                    () -> resolver.resolve(TUNNEL_DOOR_VERTICAL_MAP, false, badFrame));
+        }
+        for (int frame : new int[]{-1, 256}) {
+            assertThrows(IllegalArgumentException.class,
+                    () -> resolver.resolve(TUNNEL_DOOR_VERTICAL_MAP, false, frame));
+        }
+        for (int frame : new int[]{0, 1, 255}) {
+            assertThrows(UnsupportedOperationException.class,
+                    () -> resolver.resolve(TUNNEL_DOOR_VERTICAL_MAP, true, frame));
+        }
+        for (int pointer : new int[]{0x20CE99, 0x20CE9B, 0x20CE9C, 0x20CE9E, 0x20CEAA, 0x20CEB6,
+                0xFF20CE9A, 0x8020CE9A}) {
+            assertThrows(UnsupportedOperationException.class, () -> resolver.resolve(pointer, false, 0));
+        }
+    }
 }
