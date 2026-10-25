@@ -14,6 +14,10 @@ import openggf.timeattack.mp.RaceLobbyView;
 import openggf.timeattack.mp.RaceSession;
 import openggf.timeattack.mp.ServerBrowserView;
 import openggf.timeattack.mp.VoteTrackPools;
+import openggf.timeattack.mp.RoomAccessView;
+import openggf.timeattack.mp.LobbyInviteController;
+import com.openggf.net.protocol.RoomAccessPolicy;
+import com.openggf.net.protocol.RoomPassword;
 import com.openggf.mods.ui.NameFont;
 import openggf.timeattack.ui.MenuCue;
 import openggf.timeattack.ui.OverLevelCanvas;
@@ -64,6 +68,10 @@ public final class TimeAttackScene implements ModScene {
     private String joinInvite = "";
     private TextEntry inviteEditor;
     private TextEntry namePrompt;
+    private RoomAccessView accessView;
+    private TextEntry codeEditor;
+    private TextEntry passwordEditor;
+    private LobbyInviteController invites;
     private SceneContext context;
     private SettingsView settingsView;
     private VotePoolEditorView poolEditor;
@@ -93,7 +101,7 @@ public final class TimeAttackScene implements ModScene {
             status = "Previous settings could not be imported";
             settings = TimeAttackSettings.load(storage);
         }
-        joinInvite = settings.lastJoinAddress();
+        joinInvite = "";
         session = new RaceSession(identityDir, ghostStore, settings, storage,
                 (spec, host) -> ctx.gameplay().launch(spec, host), this::newRuntime, System::currentTimeMillis);
         // Every join (Hello) and lobby entry announces the look the settings hold for that game/character.
@@ -150,6 +158,28 @@ public final class TimeAttackScene implements ModScene {
         session.poll();
         syncViews();
         ViewInput input = ViewInput.of(ctx);
+        if (accessView != null) {
+            accessView.update(input);
+            return;
+        }
+        if (codeEditor != null) {
+            switch (codeEditor.update(input)) {
+                case ACCEPTED -> {
+                    String code = codeEditor.text();
+                    codeEditor.clear();
+                    codeEditor = null;
+                    session.joinCode(code);
+                }
+                case CANCELLED -> { codeEditor.clear(); codeEditor = null; }
+                case NONE -> { }
+            }
+            return;
+        }
+        if (session.state() == RaceSession.State.PASSWORD_REQUIRED) {
+            updatePassword(input);
+            return;
+        }
+        if (passwordEditor != null) { passwordEditor.clear(); passwordEditor = null; }
         switch (session.state()) {
             case CONNECTING -> {
                 if (input.back()) {
@@ -168,7 +198,7 @@ public final class TimeAttackScene implements ModScene {
             case RACING -> {
                 return;
             }
-            case IDLE -> { }
+            case IDLE, PASSWORD_REQUIRED -> { }
         }
         if (state == null) {
             if (input.back() || input.accept()) {
@@ -206,14 +236,85 @@ public final class TimeAttackScene implements ModScene {
             switch (inviteEditor.update(input)) {
                 case ACCEPTED -> {
                     joinInvite = inviteEditor.text().strip();
+                    inviteEditor.clear();
                     inviteEditor = null;
                 }
-                case CANCELLED -> inviteEditor = null;
+                case CANCELLED -> { inviteEditor.clear(); inviteEditor = null; }
                 case NONE -> { }
             }
             return;
         }
         updateMenu(ctx, input);
+    }
+
+    @FunctionalInterface
+    private interface CreateRoom {
+        void create(RoomAccessPolicy policy, RoomPassword password);
+    }
+
+    private void openAccess(CreateRoom create) {
+        accessView = new RoomAccessView(new RoomAccessView.Actions() {
+            @Override public void create(boolean privateRoom, boolean membersCanInvite, String password) {
+                accessView.close();
+                accessView = null;
+                RoomAccessPolicy policy = new RoomAccessPolicy(privateRoom ? RoomAccessPolicy.Mode.PRIVATE
+                        : RoomAccessPolicy.Mode.PUBLIC, membersCanInvite);
+                try (RoomPassword secret = privateRoom ? RoomPassword.of(password) : null) {
+                    create.create(policy, secret);
+                }
+            }
+            @Override public void cancelled() { accessView.close(); accessView = null; }
+        }, this::cue);
+    }
+
+    private void updatePassword(ViewInput input) {
+        if (passwordEditor == null) {
+            RaceSession.PasswordPrompt prompt = session.passwordPrompt();
+            String identity = prompt == null ? "" : prompt.hostIdentity();
+            if (identity != null && identity.length() > 12) identity = identity.substring(0, 12);
+            passwordEditor = TextEntry.password("ROOM PASSWORD")
+                    .withPrompt("Host " + (identity == null ? "unavailable" : identity));
+        }
+        switch (passwordEditor.update(input)) {
+            case ACCEPTED -> {
+                try (RoomPassword password = RoomPassword.of(passwordEditor.text())) {
+                    passwordEditor.clear();
+                    passwordEditor = null;
+                    joinInvite = "";
+                    session.submitPassword(password);
+                } catch (IllegalArgumentException invalid) {
+                    passwordEditor.withPrompt("Use 15 to 128 characters. Nothing is trimmed.");
+                }
+            }
+            case CANCELLED -> {
+                passwordEditor.clear();
+                passwordEditor = null;
+                joinInvite = "";
+                session.cancel();
+            }
+            case NONE -> { }
+        }
+    }
+
+    private void clearEditors() {
+        if (accessView != null) accessView.close();
+        accessView = null;
+        if (codeEditor != null) codeEditor.clear();
+        codeEditor = null;
+        if (passwordEditor != null) passwordEditor.clear();
+        passwordEditor = null;
+        if (inviteEditor != null) inviteEditor.clear();
+        inviteEditor = null;
+    }
+
+    @Override
+    public void focusLost(SceneContext ctx) {
+        if (accessView != null) accessView.focusLost();
+        if (codeEditor != null) { codeEditor.clear(); codeEditor = null; }
+        if (passwordEditor != null) passwordEditor.clear();
+        if (inviteEditor != null) { inviteEditor.clear(); inviteEditor = null; }
+        joinInvite = "";
+        if (invites != null) invites.focusLost();
     }
 
     /**
@@ -222,6 +323,13 @@ public final class TimeAttackScene implements ModScene {
      * again brings the menu back, like a pause menu. While hidden the menu takes no input.
      */
     private void updateLobby(ViewInput input) {
+        if (invites != null) {
+            invites.poll(context.clipboard());
+            if (invites.isOpen()) {
+                invites.update(input, context.mouse(), context.clipboard());
+                return;
+            }
+        }
         boolean overLevel = session.lobbyRunActive();
         lobby.setLevelBehind(overLevel);
         if (overLevel && !session.lobbyMenuShown()) {
@@ -264,7 +372,7 @@ public final class TimeAttackScene implements ModScene {
                 state.pressGo();
             } else if (focus == inviteRow) {
                 inviteEditor = new TextEntry("LAN INVITE", joinInvite, TimeAttackSettings.MAX_TEXT_LENGTH,
-                        INVITE_CHARACTERS);
+                        INVITE_CHARACTERS).masked();
             } else if (focus == settingsRow) {
                 settingsView = new SettingsView(settings, this::settingsChanged, this::cue,
                         state.currentGameId(), state.currentCharacter(),
@@ -309,8 +417,11 @@ public final class TimeAttackScene implements ModScene {
                 request.act(), request.character(), state.characterPolicy(), state.lockedCharacter(),
                 state.windowSeconds(), votePool);
         switch (mode) {
-            case HOST_LAN -> session.hostLan(setup, fingerprint.get());
-            case JOIN_LAN -> session.joinLan(joinInvite, request.character(), fingerprint.get());
+            case HOST_LAN -> openAccess((policy, password) -> session.hostLan(setup, fingerprint.get(), policy, password));
+            case JOIN_LAN -> {
+                session.joinLan(joinInvite, request.character(), fingerprint.get());
+                joinInvite = "";
+            }
             case BROWSE -> session.browse(setup, fingerprint.get());
             case SOLO -> { }
         }
@@ -334,7 +445,13 @@ public final class TimeAttackScene implements ModScene {
             browser = new ServerBrowserView(session.roomDirectory(), session.browseGameId(),
                     new ServerBrowserView.Actions() {
                         @Override public void join(ControlMessage.RoomSummary room) { session.joinMasterRoom(room); }
-                        @Override public void create(String routing) { session.createMasterRoom(routing); }
+                        @Override public void create(String routing) {
+                            openAccess((policy, password) -> session.createMasterRoom(routing, policy, password));
+                        }
+                        @Override public void joinCode() {
+                            codeEditor = new TextEntry("JOIN BY CODE", "", 32, " -").masked()
+                                    .withPrompt("Six characters. Uses your selected master.");
+                        }
                         @Override public void back() { session.leave(); }
                     }, this::cue, System::currentTimeMillis, settings.chatMode());
         } else if (!browsing && browser != null) {
@@ -342,15 +459,20 @@ public final class TimeAttackScene implements ModScene {
             browser = null;
         }
         boolean inRoom = current == RaceSession.State.LOBBY || current == RaceSession.State.RACING;
+        if (current == RaceSession.State.RACING && invites != null) invites.dismiss();
         if (inRoom && (lobby == null || lobbyCoordinator != session.coordinator())) {
             RaceSession raceSession = session;
             lobby = new RaceLobbyView(session.coordinator(), session.isHosting(), session.roundConfig(),
-                    session.lanInvite(), session::leave, this::cue,
+                    null, session::leave, this::cue,
                     () -> {
                         String game = raceSession.roundConfig() == null ? null : raceSession.roundConfig().gameId();
                         return new ProfileView(settings, game, raceSession.character(),
                                 stockLine(game, raceSession.character()), this::settingsChanged, this::cue);
                     });
+            if (invites != null) invites.close();
+            invites = new LobbyInviteController(session.coordinator(), session.isHosting(),
+                    session::manualInviteFallback, this::cue, System::currentTimeMillis);
+            lobby.setInviteAction(invites::open);
             lobby.setReadyRuleListener(rule -> {
                 settings.setReadyRule(rule);
                 settingsChanged();
@@ -361,6 +483,8 @@ public final class TimeAttackScene implements ModScene {
             });
             lobbyCoordinator = session.coordinator();
         } else if (!inRoom) {
+            if (invites != null) invites.close();
+            invites = null;
             lobby = null;
             lobbyCoordinator = null;
         }
@@ -406,12 +530,15 @@ public final class TimeAttackScene implements ModScene {
         if (session == null) {
             return false;
         }
+        if (accessView != null || codeEditor != null) return true;
         return switch (session.state()) {
-            case LOBBY -> lobby != null && lobby.isEditingText();
+            case LOBBY -> invites != null && invites.isEditingText() || lobby != null && lobby.isEditingText();
             case IDLE -> namePrompt != null || inviteEditor != null
                     || (settingsView != null && settingsView.isEditingText())
                     || (poolEditor != null && poolEditor.isEditingText());
-            case CONNECTING, BROWSING, RACING -> false;
+            case PASSWORD_REQUIRED -> true;
+            case BROWSING -> codeEditor != null || accessView != null;
+            case CONNECTING, RACING -> false;
         };
     }
 
@@ -455,6 +582,9 @@ public final class TimeAttackScene implements ModScene {
 
     @Override
     public void exit(SceneContext ctx) {
+        clearEditors();
+        joinInvite = "";
+        if (invites != null) invites.close();
         if (browser != null) {
             browser.deactivate();
         }
@@ -465,6 +595,14 @@ public final class TimeAttackScene implements ModScene {
 
     @Override
     public void draw(SceneContext ctx, SceneCanvas canvas) {
+        if (accessView != null) { accessView.draw(canvas); return; }
+        if (codeEditor != null) { codeEditor.draw(canvas); return; }
+        if (session.state() == RaceSession.State.PASSWORD_REQUIRED) {
+            if (passwordEditor != null) passwordEditor.draw(canvas);
+            else drawConnecting(canvas);
+            return;
+        }
+        if (invites != null && invites.isOpen()) { invites.draw(canvas); return; }
         switch (session.state()) {
             case CONNECTING -> {
                 drawConnecting(canvas);
@@ -482,7 +620,7 @@ public final class TimeAttackScene implements ModScene {
                 else drawPlayHint(canvas);
                 return;
             }
-            case IDLE -> { }
+            case IDLE, PASSWORD_REQUIRED -> { }
         }
         if (namePrompt != null && state != null) {
             namePrompt.draw(canvas);
@@ -558,7 +696,7 @@ public final class TimeAttackScene implements ModScene {
             drawRow(canvas, label, "< " + value + " >", index++);
         }
         if (joining()) {
-            drawRow(canvas, "Invite", joinInvite.isBlank() ? "Select to enter" : joinInvite, index++);
+            drawRow(canvas, "Invite", joinInvite.isBlank() ? "Select to enter" : "*** ***", index++);
         }
         String action = switch (state.mode()) {
             case SOLO -> "START RUN";

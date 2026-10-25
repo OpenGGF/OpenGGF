@@ -10,6 +10,19 @@ class TestChatProtocol {
     private final ControlJsonCodec codec = new ControlJsonCodec();
 
     @Test
+    void privateAdmissionAndCommunicationMetadataShareTheStrictWireContract() {
+        var policy = new RoomAccessPolicy(RoomAccessPolicy.Mode.PRIVATE, false);
+        var descriptor = new ControlMessage.RoomDescriptor("Private", "s2", 1, 0,
+                "OPEN", null, 8, false, policy, "QUICK_CHAT");
+        var admitted = new ControlMessage.JoinAccepted("token", 0, descriptor,
+                new ControlMessage.RoundSnapshot("LOBBY", null, 0, 0, List.of()));
+        String wire = codec.encode(null, admitted);
+        assertEquals(admitted, codec.decode(wire).message());
+        assertThrows(ProtocolViolationException.class, () -> codec.decode(
+                wire.replace("\"v\":" + Protocol.VERSION, "\"v\":6")));
+    }
+
+    @Test
     void modesRestrictCapabilitiesAndTheirIntersectionNeverAddsOne() {
         assertTrue(ChatMode.FULL_CHAT.allowsText());
         assertTrue(ChatMode.FULL_CHAT.allowsQuickChat());

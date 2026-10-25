@@ -50,10 +50,12 @@ class TestServerBrowserView {
         final List<ControlMessage.RoomSummary> joined = new ArrayList<>();
         final List<String> created = new ArrayList<>();
         int backs;
+        int codes;
 
         @Override public void join(ControlMessage.RoomSummary room) { joined.add(room); }
         @Override public void create(String routing) { created.add(routing); }
         @Override public void back() { backs++; }
+        @Override public void joinCode() { codes++; }
     }
 
     private ServerBrowserView browser(Directory directory) {
@@ -71,6 +73,7 @@ class TestServerBrowserView {
         input.tapRight(view::update);
         input.tapEnter(view::update);
         assertEquals(List.of("DIRECT"), actions.created);
+        input.tapDown(view::update);
         input.tapDown(view::update);
         input.tapEnter(view::update);
         assertEquals(2, directory.requestedPages.size());
@@ -190,9 +193,10 @@ class TestServerBrowserView {
         input.tapDown(view::update); // Create
         input.tapEnter(view::update);
         assertEquals(List.of("RELAY"), actions.created);
+        input.tapDown(view::update); // Code
         input.tapDown(view::update); // Refresh
         input.tapEnter(view::update);
-        assertEquals(List.of(MenuCue.CONFIRM, MenuCue.NAVIGATE, MenuCue.CONFIRM, MenuCue.NAVIGATE, MenuCue.CONFIRM), cues);
+        assertEquals(List.of(MenuCue.CONFIRM, MenuCue.NAVIGATE, MenuCue.CONFIRM, MenuCue.NAVIGATE, MenuCue.NAVIGATE, MenuCue.CONFIRM), cues);
         refresh.completeExceptionally(new IllegalStateException("Offline"));
         assertEquals(MenuCue.CONFIRM, cues.getLast(), "A transport callback must not report feedback");
         input.idle(view::update);
@@ -202,7 +206,7 @@ class TestServerBrowserView {
         assertEquals(count, cues.size(), "One failed request is announced once");
         RecordingSceneCanvas canvas = new RecordingSceneCanvas(320);
         view.draw(canvas);
-        assertTrue(canvas.joined().contains("Refresh failed: Offline"), canvas.joined());
+        assertTrue(canvas.joined().contains("Room list unavailable"), canvas.joined());
     }
 
     @Test
@@ -218,6 +222,23 @@ class TestServerBrowserView {
         view.draw(canvas);
         assertTrue(canvas.joined().contains("Master connection lost"), canvas.joined());
     }
+    @Test
+    void joinByCodeIsAVisibleActionAndHasAKeyboardShortcut() {
+        ServerBrowserView view = browser(new Directory(List.of()));
+        input.idle(view::update);
+        input.tapDown(view::update);
+        input.tapEnter(view::update);
+        assertEquals(1, actions.codes);
+        input.tapKey(view::update, SceneKeys.J);
+        assertEquals(2, actions.codes);
+        for (int width : new int[] {320, 400, 800}) {
+            RecordingSceneCanvas canvas = new RecordingSceneCanvas(width);
+            view.draw(canvas);
+            canvas.assertFillsOnScreen();
+            assertTrue(canvas.joined().contains("JOIN BY CODE"));
+        }
+    }
+
     @Test
     void browserShowsEffectiveRoomModeAndTheRequestedCreationMode() {
         ControlMessage.RoomSummary room = new ControlMessage.RoomSummary("room", "Room", "s2", 0, 0,

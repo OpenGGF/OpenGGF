@@ -68,6 +68,7 @@ public class TestProductionSingletonClosureGuard {
             "java.security.KeyFactory",
             "java.security.KeyPairGenerator",
             "java.security.Signature",
+            "javax.crypto.SecretKeyFactory",
             // Parses the JDK room host's self-signed certificate (net.host.jdk).
             "java.security.cert.CertificateFactory",
             "javax.net.ssl.SSLContext"
@@ -1022,6 +1023,7 @@ public class TestProductionSingletonClosureGuard {
                 package sample;
 
                 import java.security.MessageDigest;
+                import javax.crypto.SecretKeyFactory;
 
                 class ImportedFactory {
                     void hash() throws Exception {
@@ -1030,6 +1032,8 @@ public class TestProductionSingletonClosureGuard {
                                 .
                                 getInstance
                                 ("SHA-256");
+                        SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+                        javax.crypto.SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
                     }
                 }
                 """);
@@ -1054,12 +1058,19 @@ public class TestProductionSingletonClosureGuard {
                                 getInstance
                                 ();
                         MessageDigest.getInstance("custom");
+                        SecretKeyFactory.getInstance("custom");
                     }
                 }
 
                 class MessageDigest {
                     static MessageDigest getInstance(String algorithm) {
                         return new MessageDigest();
+                    }
+                }
+
+                class SecretKeyFactory {
+                    static SecretKeyFactory getInstance(String algorithm) {
+                        return new SecretKeyFactory();
                     }
                 }
                 """);
@@ -1069,7 +1080,8 @@ public class TestProductionSingletonClosureGuard {
 
         assertEquals(List.of(
                 "ProjectFactories.java:5 - .getInstance(",
-                "ProjectFactories.java:9 - .getInstance("), violations);
+                "ProjectFactories.java:9 - .getInstance(",
+                "ProjectFactories.java:10 - .getInstance("), violations);
     }
 
     @Test

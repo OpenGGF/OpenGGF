@@ -1,7 +1,9 @@
 # Private lobbies and invite codes: common multiplayer framework
 
-Date: 2026-10-25. Status: architecture proposal; no implementation in this
-change. Source inspected: `159655c8460dac15912dc4326491386a75368666`
+Date: 2026-10-25. Status: implemented. The
+[implementation record](../plans/2026-10-25-private-lobbies-and-invites.md)
+records verification, baseline failures and coverage limits. Original source inspected:
+`159655c8460dac15912dc4326491386a75368666`
 (`develop`, engine `0.7.prerelease`, networking protocol 5).
 
 ## Intent and decisions
@@ -21,8 +23,8 @@ service; offline short-code discovery is unnecessary.
 
 The user subsequently chose six-character codes and a rate limit of five
 attempts per minute. That supersedes the original 16-character recommendation
-in commit `f7620e579`. The 10-minute absolute lifetime below is this design's
-proposed default, not a user-specified duration.
+in commit `f7620e579`. The 10-minute absolute lifetime below is the implemented
+design default, not a user-specified duration.
 
 Other choices made by this design, rather than additional user requirements:
 

@@ -119,6 +119,7 @@ public final class ModApiSurfaceInventory {
             // Scene constant holders: mods use their constants, which no signature names.
             "com.openggf.mods.scene.SceneButtons",
             "com.openggf.mods.scene.SceneKeys",
+            "com.openggf.mods.scene.SceneClipboard",
             // Optional interface a scene implements; the engine finds it with instanceof.
             "com.openggf.mods.scene.DebuggableScene",
             // Stateful contributed event handlers participate in the owner rewind graph.
@@ -145,6 +146,8 @@ public final class ModApiSurfaceInventory {
             "com.openggf.net.client.LobbyPosePublisher",
             "com.openggf.net.client.MasterClient",
             "com.openggf.net.client.RaceClient",
+            "com.openggf.net.client.RoomAccessRequiredException",
+            "com.openggf.net.client.RoomInviteRejectedException",
             "com.openggf.net.client.RaceConnection",
             "com.openggf.net.client.RemoteGhostPlayback",
             "com.openggf.net.client.RemoteGhostRegistry",
@@ -171,6 +174,7 @@ public final class ModApiSurfaceInventory {
             "com.openggf.net.protocol.Protocol",
             "com.openggf.net.protocol.ProtocolViolationException",
             "com.openggf.net.protocol.ReadyRules",
+            "com.openggf.net.protocol.RoomInviteCode",
             // ROM-qualified art recipes and optional scene utilities.
             "com.openggf.mods.scene.art.StockSceneArt",
             "com.openggf.mods.scene.art.PaletteAssembly",

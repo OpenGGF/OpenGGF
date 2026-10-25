@@ -143,7 +143,21 @@ public final class RawWebSocketClient implements AutoCloseable {
         }
         sendText(ControlCodec.encode(null, handshake.onWelcome(typed)));
         ControlMessage result = nextControl();
+        ControlMessage.RoomAccessChallenge access = result instanceof ControlMessage.RoomAccessChallenge challenge
+                ? challenge : null;
+        if (access != null && !access.accessPolicy().passwordRequired()) {
+            if (access.challengeId() == null || access.challengeId().isBlank()
+                    || access.instanceId() == null || access.instanceId().isBlank()
+                    || access.accessEpoch() < 0) {
+                throw new IOException("invalid public room access challenge");
+            }
+            result = nextControl();
+        }
         if (result instanceof ControlMessage.JoinAccepted accepted) {
+            if (access == null || accepted.playerSlot() < 0 || accepted.room() == null
+                    || !accepted.room().accessPolicy().equals(access.accessPolicy())) {
+                throw new IOException("room admission does not match access challenge");
+            }
             sessionToken = accepted.sessionToken();
         }
         return result;

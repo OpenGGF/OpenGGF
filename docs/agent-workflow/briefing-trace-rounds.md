@@ -1232,6 +1232,7 @@ repair an unsupported debug combination by changing shared combat rules.
 | Rule | Signature | What it looks like |
 |---|---|---|
 | 25 | `-Dmse=off` missing | CLI `-D` properties silently never reach the fork |
+| 25a | A graphics flag only in `MAVEN_OPTS` | Tool preflight passes, but the test fork selects GLFW and skips an EGL picture test. Pass the backend to the test JVM and inspect skips; `JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl` reaches both processes. |
 | 26 | Self-report about process state | A suite *is* running when you were told none was |
 | 27 | `git checkout -- <path>` | Restores from the **index**, not HEAD |
 | 30 | Mass errors | An environment artefact until proven otherwise |

@@ -33,7 +33,8 @@ class TestLegacyTimeAttackSettings {
         assertEquals(295, settings.retryKey());
         assertEquals(30001, settings.hostPort());
         assertEquals("Tails' #1", settings.displayName());
-        assertEquals("host:1234#code", settings.lastJoinAddress());
+        assertFalse(settings.encode().contains("lastJoinAddress"));
+        assertFalse(settings.encode().contains("host:1234#code"));
         assertEquals("wss://example.test/master?token=one#two", settings.masterUrl());
         assertTrue(settings.masterTrustInsecure());
         assertFalse(settings.minimap());

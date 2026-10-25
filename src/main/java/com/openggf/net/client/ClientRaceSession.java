@@ -47,6 +47,13 @@ public final class ClientRaceSession {
             line -> EnglishQuickChat.text(line.phrase(), null);
 
     private ControlMessage.RoomDescriptor room;
+    private String instanceId;
+    private com.openggf.net.protocol.RoomAccessPolicy accessPolicy = com.openggf.net.protocol.RoomAccessPolicy.PUBLIC;
+    private long accessEpoch;
+    private long inviteEpoch;
+    private long nextDisclosureId;
+    private long pendingDisclosureId;
+    private ControlMessage.RoomInvite invite;
     private int localSlot = -1;
     private Phase basePhase = Phase.LOBBY;
     private ControlMessage.RoundConfig roundConfig;
@@ -70,7 +77,13 @@ public final class ClientRaceSession {
     }
 
     public void applyJoin(ControlMessage.JoinAccepted accepted) {
+        invalidateInvite();
+        kickReason = null;
+        instanceId = null;
+        accessEpoch = 0;
+        inviteEpoch = 0;
         room = accepted.room();
+        accessPolicy = room == null ? com.openggf.net.protocol.RoomAccessPolicy.PUBLIC : room.accessPolicy();
         clearChat();
         localSlot = accepted.playerSlot();
         players = List.of();
@@ -116,6 +129,33 @@ public final class ClientRaceSession {
 
     public void onControl(ControlMessage message) {
         switch (message) {
+            case ControlMessage.RoomAccessState state -> {
+                if (room == null || state.instanceId() == null || state.accessPolicy() == null
+                        || instanceId != null && !instanceId.equals(state.instanceId())
+                        || state.accessEpoch() < accessEpoch || state.inviteEpoch() < inviteEpoch) break;
+                if (state.accessEpoch() != accessEpoch || state.inviteEpoch() != inviteEpoch
+                        || !accessPolicy.equals(state.accessPolicy())) invite = null;
+                instanceId = state.instanceId();
+                accessEpoch = state.accessEpoch();
+                inviteEpoch = state.inviteEpoch();
+                accessPolicy = state.accessPolicy();
+            }
+            case ControlMessage.RoomInvite response -> {
+                if (pendingDisclosureId != 0 && response.disclosureId() == pendingDisclosureId
+                        && java.util.Objects.equals(instanceId, response.instanceId())
+                        && response.accessEpoch() == accessEpoch && response.inviteEpoch() == inviteEpoch
+                        && response.expiresAtMillis() > hubNowEstimateMillis()) {
+                    try {
+                        com.openggf.net.protocol.RoomInviteCode.parse(response.code());
+                        invite = response;
+                    } catch (IllegalArgumentException invalid) { invite = null; }
+                    pendingDisclosureId = 0;
+                }
+            }
+            case ControlMessage.RoomInviteRejected ignored -> invalidateInvite();
+            case ControlMessage.RoomInviteInvalidated invalidated -> {
+                if (java.util.Objects.equals(instanceId, invalidated.instanceId())) invalidateInvite();
+            }
             case ControlMessage.RoomState state -> players = sortedPlayers(state.players());
             case ControlMessage.PlayerUpsert upsert -> {
                 List<ControlMessage.PlayerInfo> updated = new ArrayList<>(players);
@@ -125,6 +165,7 @@ public final class ClientRaceSession {
                 players = sortedPlayers(updated);
             }
             case ControlMessage.PlayerLeft left -> {
+                if (left.slot() == localSlot) invalidateInvite();
                 players = players.stream().filter(player -> player.slot() != left.slot()).toList();
                 looks.remove(left.slot());
                 readySlots.remove(left.slot());
@@ -202,7 +243,10 @@ public final class ClientRaceSession {
                     offsetSamples.removeFirst();
                 }
             }
-            case ControlMessage.Kick kick -> kickReason = kick.reason();
+            case ControlMessage.Kick kick -> {
+                kickReason = kick.reason();
+                invalidateInvite();
+            }
             case ControlMessage.TrackVoteOffer offer -> {
                 basePhase = Phase.VOTE;
                 voteOptions = List.copyOf(offer.trackKeys());
@@ -221,6 +265,30 @@ public final class ClientRaceSession {
             default -> { }
         }
     }
+
+    public ControlMessage.RoomInviteRequest beginInviteRequest() {
+        invalidateInvite();
+        if (room == null || localSlot < 0 || kickReason != null || nextDisclosureId == Long.MAX_VALUE) {
+            throw new IllegalStateException("room membership unavailable");
+        }
+        pendingDisclosureId = ++nextDisclosureId;
+        return new ControlMessage.RoomInviteRequest(pendingDisclosureId);
+    }
+
+    public void invalidateInvite() {
+        invite = null;
+        pendingDisclosureId = 0;
+    }
+
+    public ControlMessage.RoomInvite invite() {
+        if (invite != null && invite.expiresAtMillis() <= hubNowEstimateMillis()) invalidateInvite();
+        return invite;
+    }
+
+    public String instanceId() { return instanceId; }
+    public com.openggf.net.protocol.RoomAccessPolicy accessPolicy() { return accessPolicy; }
+    public long accessEpoch() { return accessEpoch; }
+    public long inviteEpoch() { return inviteEpoch; }
 
     private static List<ControlMessage.PlayerInfo> sortedPlayers(List<ControlMessage.PlayerInfo> values) {
         return values.stream().sorted(java.util.Comparator.comparingInt(
@@ -322,7 +390,7 @@ public final class ClientRaceSession {
         ChatMode parsed = ChatMode.parse(mode);
         if (room == null || parsed == null || mode.equals(room.chatMode())) return;
         room = new ControlMessage.RoomDescriptor(room.name(), room.gameId(), room.zone(), room.act(),
-                room.characterPolicy(), room.lockedCharacter(), room.maxPlayers(), room.verified(), mode);
+                room.characterPolicy(), room.lockedCharacter(), room.maxPlayers(), room.verified(), accessPolicy, mode);
         if (parsed == ChatMode.OFF) clearChat();
     }
 

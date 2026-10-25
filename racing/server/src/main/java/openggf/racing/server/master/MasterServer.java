@@ -140,7 +140,8 @@ public final class MasterServer implements AutoCloseable {
             RoomBroker broker = new RoomBroker(masterIdentity, config, registry, store,
                     ladder, cache, clock, relays, tunnels,
                     key -> TimeAttackTrackCatalog.isEligibleKey(key) && profileExists(profiles, key),
-                    verifiers);
+                    verifiers, brokerLoop);
+            tunnels.setAccessAdmission(broker::allowRoomText);
             ConnectionHygiene.ConnectionCounter counter =
                     new ConnectionHygiene.ConnectionCounter(MAX_CONNECTIONS_PER_IP);
             SslContext ssl = sslContext(config);

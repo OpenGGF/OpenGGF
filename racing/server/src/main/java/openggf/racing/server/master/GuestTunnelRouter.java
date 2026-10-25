@@ -13,6 +13,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.OptionalInt;
 import java.nio.charset.StandardCharsets;
+import java.util.function.BiPredicate;
 
 /** Master-side pairing and routing for direct-room fallback guests. */
 public final class GuestTunnelRouter implements RoomBroker.DirectTunnelDirectory {
@@ -22,6 +23,11 @@ public final class GuestTunnelRouter implements RoomBroker.DirectTunnelDirectory
     private final Map<String, HubConnection> hostsByRoom = new HashMap<>();
     private final Map<Integer, Tunnel> tunnels = new HashMap<>();
     private int nextGuestId;
+    private BiPredicate<HubConnection, String> accessAdmission = (connection, text) -> true;
+
+    public void setAccessAdmission(BiPredicate<HubConnection, String> accessAdmission) {
+        this.accessAdmission = java.util.Objects.requireNonNull(accessAdmission);
+    }
 
     @Override
     public void registerHost(String roomId, HubConnection hostConnection) {
@@ -54,6 +60,10 @@ public final class GuestTunnelRouter implements RoomBroker.DirectTunnelDirectory
             if (text == null || text.getBytes(StandardCharsets.UTF_8).length
                     > Protocol.MAX_CONTROL_BYTES) {
                 rejectGuest(guestId, tunnel, "relay guest text exceeds inner frame cap");
+                return;
+            }
+            if (!accessAdmission.test(tunnel.guest(), text)) {
+                rejectGuest(guestId, tunnel, "room admission rate limited");
                 return;
             }
             String wrapped = ControlCodec.encode(null,

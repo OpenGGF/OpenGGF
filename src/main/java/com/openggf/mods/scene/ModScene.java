@@ -55,6 +55,13 @@ public interface ModScene {
     default void resumed(SceneContext ctx, com.openggf.mods.run.RunEndReason reason) {
     }
 
+    /**
+     * The window lost foreground focus or was minimized. Called on the engine/platform thread
+     * even while updates are paused or this scene is suspended. Clear revealed secrets here.
+     * This callback runs inside the owner's fault boundary and stops after the visit closes.
+     */
+    default void focusLost(SceneContext ctx) {}
+
     /** The scene is closing; save anything worth keeping. Images are released afterwards. */
     default void exit(SceneContext ctx) {
     }

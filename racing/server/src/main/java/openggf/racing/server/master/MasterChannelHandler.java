@@ -157,8 +157,20 @@ final class MasterChannelHandler extends SimpleChannelInboundHandler<WebSocketFr
         switch (mode) {
             case ROOM -> {
                 switch (frame) {
-                    case PendingText text -> roomAccess.loop().execute(() ->
-                            roomAccess.room().onText(current, text.text()));
+                    case PendingText text -> {
+                        RelayRoomManager.RoomAccess access = roomAccess;
+                        if (RoomBroker.isPasswordSubmission(text.text())) {
+                            brokerLoop.execute(() -> {
+                                if (broker.allowPasswordSubmission(current)) {
+                                    access.loop().execute(() -> access.room().onText(current, text.text()));
+                                } else {
+                                    current.close("room admission rate limited");
+                                }
+                            });
+                        } else {
+                            access.loop().execute(() -> access.room().onText(current, text.text()));
+                        }
+                    }
                     case PendingBinary binary -> roomAccess.loop().execute(() ->
                             roomAccess.room().onBinary(current, binary.data()));
                     case PendingIgnored ignored -> { }

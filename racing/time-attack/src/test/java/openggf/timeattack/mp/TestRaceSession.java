@@ -16,6 +16,8 @@ import com.openggf.net.hub.GhostHub;
 import com.openggf.net.hub.TrackValidationProfile;
 import com.openggf.net.identity.PlayerIdentity;
 import com.openggf.net.protocol.ControlMessage;
+import com.openggf.net.protocol.RoomAccessPolicy;
+import com.openggf.net.protocol.RoomPassword;
 import openggf.racing.server.master.MasterServer;
 import openggf.racing.server.master.TestMasterServer;
 import openggf.timeattack.GhostStore;
@@ -175,64 +177,48 @@ class TestRaceSession {
 
     @ParameterizedTest
     @ValueSource(booleans = {false, true})
-    void refusedOrThrownInvitePublicationDoesNotAbortHostingAndExitRetriesIt(boolean throwing) throws Exception {
+    void hostingNeverWritesAnInviteEvenWhenStorageWouldFail(boolean throwing) throws Exception {
         MemoryModStorage storage = new MemoryModStorage();
         storage.failures = 1;
         storage.throwWrites = throwing;
-        TimeAttackSettings settings = new TimeAttackSettings();
-        settings.setHostPort(freePort());
-        RaceSession host = session("invite-host-" + throwing, settings, storage, new Launches());
+        RaceSession host = session("private-export-" + throwing, settings(freePort()), storage, new Launches());
         host.hostLan(SETUP, FP);
-        assertDoesNotThrow(() -> pollUntil("host lobby", () -> host.state() == RaceSession.State.LOBBY, host));
-        String notice = host.consumeNotice();
-        assertNotNull(notice, "host must report refused invite publication");
-        assertTrue(notice.toLowerCase().contains("save"));
-        String invite = host.lanInvite();
+        pollUntil("host lobby", () -> host.state() == RaceSession.State.LOBBY, host);
+        assertNotNull(host.lanInvite());
+        for (int i = 0; i < 120; i++) host.poll();
         host.close();
-        assertEquals(invite + "\n", storage.read(RaceSession.INVITE_FILE).orElseThrow());
-        assertEquals(2, storage.writes);
+        assertTrue(storage.read(RaceSession.INVITE_FILE).isEmpty());
+        assertEquals(0, storage.writes);
     }
 
     @Test
-    void inviteRetriesKeepTheIssuedSnapshotAndBoundPublicationCadence() throws Exception {
+    void existingUserInviteExportsAreLeftUntouched() throws Exception {
         MemoryModStorage storage = new MemoryModStorage();
-        storage.failures = 2;
-        RaceSession host = session("invite-retry", settings(freePort()), storage, new Launches());
+        storage.write(RaceSession.INVITE_FILE, "user-authored export");
+        storage.writes = 0;
+        RaceSession host = session("preserved-export", settings(freePort()), storage, new Launches());
         host.hostLan(SETUP, FP);
         pollUntil("host lobby", () -> host.state() == RaceSession.State.LOBBY, host);
-        String issued = host.lanInvite();
-        for (int i = 0; i < 59; i++) host.poll();
-        assertEquals(1, storage.writes);
-        host.poll();
-        assertEquals(2, storage.writes);
-        for (int i = 0; i < 60; i++) host.poll();
-        assertEquals(3, storage.writes);
-        assertEquals(issued + "\n", storage.read(RaceSession.INVITE_FILE).orElseThrow());
         host.close();
-        assertEquals(3, storage.writes, "confirmed publication does not repeat on close");
+        assertEquals("user-authored export", storage.read(RaceSession.INVITE_FILE).orElseThrow());
+        assertEquals(0, storage.writes);
     }
 
-    @ParameterizedTest
-    @ValueSource(booleans = {false, true})
-    void successfulLanJoinKeepsSettingsDirtyWhenPublicationIsRefusedOrThrows(boolean throwing) throws Exception {
+    @Test
+    void joiningNeverPersistsTheInvite() throws Exception {
         int port = freePort();
-        RaceSession host = session("publication-host", settings(port), new MemoryModStorage(), new Launches());
+        RaceSession host = session("volatile-host", settings(port), new MemoryModStorage(), new Launches());
         host.hostLan(SETUP, FP);
         pollUntil("host lobby", () -> host.state() == RaceSession.State.LOBBY, host);
         String invite = host.lanInvite().replace("HOST_IP", "127.0.0.1");
         MemoryModStorage storage = new MemoryModStorage();
-        storage.failures = 1;
-        storage.throwWrites = throwing;
-        RaceSession guest = session("publication-guest-" + throwing, settings(port), storage, new Launches());
+        RaceSession guest = session("volatile-guest", settings(port), storage, new Launches());
         guest.joinLan(invite, "tails", FP);
-        assertDoesNotThrow(() -> pollUntil("guest lobby", () -> guest.state() == RaceSession.State.LOBBY, guest));
-        String notice = guest.consumeNotice();
-        assertNotNull(notice, "a successful join must report refused settings publication");
-        assertTrue(notice.toLowerCase().contains("save"));
+        pollUntil("guest lobby", () -> guest.state() == RaceSession.State.LOBBY, guest);
         for (int tick = 0; tick < 120; tick++) guest.poll();
-        assertEquals(invite, TimeAttackSettings.load(storage).lastJoinAddress());
-        assertTrue(storage.writes >= 2 && storage.writes <= 4);
         guest.close();
+        assertFalse(storage.read(TimeAttackSettings.FILE_NAME).orElse("").contains(invite));
+        assertEquals(0, storage.writes);
     }
 
     @Test
@@ -248,7 +234,7 @@ class TestRaceSession {
         assertEquals(com.openggf.net.protocol.ChatMode.FULL_CHAT, host.coordinator().session().chatMode());
         String invite = host.lanInvite();
         assertTrue(invite.startsWith("HOST_IP:" + port + "#"), invite);
-        assertEquals(invite + "\n", hostStorage.read(RaceSession.INVITE_FILE).orElseThrow());
+        assertTrue(hostStorage.read(RaceSession.INVITE_FILE).isEmpty());
         assertNotNull(host.hostServer());
 
         TimeAttackSettings guestSettings = settings(port);
@@ -261,9 +247,8 @@ class TestRaceSession {
                 && host.coordinator().session().players().size() == 2, host, guest);
         assertFalse(guest.isHosting());
         assertNull(guest.lanInvite());
-        assertEquals(guestInvite, guestSettings.lastJoinAddress());
-        assertTrue(guestStorage.read(TimeAttackSettings.FILE_NAME).orElseThrow()
-                .contains("lastJoinAddress=" + guestInvite));
+        assertFalse(guestSettings.encode().contains(guestInvite));
+        assertFalse(guestStorage.read(TimeAttackSettings.FILE_NAME).orElse("").contains(guestInvite));
 
         // Two players under the default rule: the owner's start waits for both to be ready.
         assertTrue(host.coordinator().session().readyRequired());
@@ -334,7 +319,7 @@ class TestRaceSession {
         guest.joinLan(host.lanInvite().replace("HOST_IP", "127.0.0.1"), "sonic", "0.8:deadbeef");
         pollUntil("the join to fail", () -> guest.state() == RaceSession.State.IDLE, guest);
         String notice = guest.consumeNotice();
-        assertTrue(notice.contains("determinism fingerprint mismatch"), notice);
+        assertTrue(notice.contains("Room access unavailable"), notice);
         assertNull(guest.coordinator());
         assertNull(guest.consumeNotice(), "a notice is shown once");
     }
@@ -415,7 +400,7 @@ class TestRaceSession {
                     new Launches());
             host.hostLan(SETUP, FP);
             pollUntil("hosting to fail", () -> host.state() == RaceSession.State.IDLE, host);
-            assertTrue(host.consumeNotice().startsWith("Failed:"));
+            assertTrue(host.consumeNotice().startsWith("Connection unavailable"));
             assertNull(host.hostServer());
         }
     }
@@ -515,7 +500,7 @@ class TestRaceSession {
         guest.joinMasterRoom(new ControlMessage.RoomSummary("missing", "Missing", "s2", 0, 0, "OPEN", 1, 8,
                 "RELAY", false));
         pollUntil("the join to fail", () -> guest.state() == RaceSession.State.BROWSING, guest);
-        assertTrue(guest.consumeNotice().startsWith("Failed:"));
+        assertTrue(guest.consumeNotice().startsWith("Room access unavailable"));
         assertNotNull(guest.masterClient());
         assertTrue(guest.masterClient().isOpen());
     }
@@ -707,6 +692,201 @@ class TestRaceSession {
                 room.getBytes(java.nio.charset.StandardCharsets.UTF_8), java.nio.charset.StandardCharsets.UTF_8));
         org.junit.jupiter.api.Assertions.assertEquals("Ana's room", RaceSession.roomName("Ana"));
     }
+    private static final String PRIVATE_PASSWORD = "  exact room password密碼🙂  ";
+    private static final RoomAccessPolicy PRIVATE = new RoomAccessPolicy(RoomAccessPolicy.Mode.PRIVATE, true);
+
+    private void hostPrivate(RaceSession host) throws Exception {
+        try (RoomPassword password = RoomPassword.of(PRIVATE_PASSWORD)) {
+            host.hostLan(SETUP, FP, PRIVATE, password);
+        }
+        pollUntil("private owner admission", () -> host.state() == RaceSession.State.LOBBY, host);
+    }
+
+    @Test
+    void privateLanSelfJoinAndClosedProbeRequireTheExactPasswordWithoutPersistence() throws Exception {
+        int port = freePort();
+        TimeAttackSettings ownerSettings = settings(port);
+        ownerSettings.setChatMode(com.openggf.net.protocol.ChatMode.OFF);
+        RaceSession owner = session("private-owner", ownerSettings, new MemoryModStorage(), new Launches());
+        hostPrivate(owner);
+        assertTrue(owner.coordinator().session().accessPolicy().passwordRequired());
+        assertEquals(com.openggf.net.protocol.ChatMode.OFF, owner.coordinator().session().chatMode());
+        assertEquals(1, owner.coordinator().session().players().size());
+        MemoryModStorage storage = new MemoryModStorage();
+        RaceSession guest = session("private-guest", settings(port), storage, new Launches());
+        String invite = owner.lanInvite().replace("HOST_IP", "127.0.0.1");
+        guest.joinLan(invite, "tails", FP);
+        pollUntil("local password prompt", () -> guest.state() == RaceSession.State.PASSWORD_REQUIRED, owner, guest);
+        assertEquals(0, guest.connectWorkersRunning(), "human input owns no pending connect worker");
+        assertNotNull(guest.passwordPrompt());
+        assertNull(guest.coordinator());
+        assertEquals(1, owner.coordinator().session().players().size(), "a probe never publishes a member");
+        try (RoomPassword password = RoomPassword.of(PRIVATE_PASSWORD)) { guest.submitPassword(password); }
+        pollUntil("private guest admission", () -> guest.state() == RaceSession.State.LOBBY
+                && owner.coordinator().session().players().size() == 2, owner, guest);
+        assertTrue(guest.coordinator().session().accessPolicy().passwordRequired());
+        assertEquals(com.openggf.net.protocol.ChatMode.OFF, guest.coordinator().session().chatMode());
+        guest.close();
+        assertEquals(0, storage.writes);
+        assertFalse(storage.read(TimeAttackSettings.FILE_NAME).orElse("").contains(invite));
+        assertFalse(storage.read(TimeAttackSettings.FILE_NAME).orElse("").contains(PRIVATE_PASSWORD));
+    }
+
+    @Test
+    void cancellingPrivatePromptDiscardsTheAttemptAndWrongPasswordDoesNotAdmit() throws Exception {
+        int port = freePort();
+        RaceSession owner = session("private-owner", settings(port), new MemoryModStorage(), new Launches());
+        hostPrivate(owner);
+        RaceSession guest = session("private-guest", settings(port), new MemoryModStorage(), new Launches());
+        String invite = owner.lanInvite().replace("HOST_IP", "127.0.0.1");
+        guest.joinLan(invite, "sonic", FP);
+        pollUntil("password prompt", () -> guest.state() == RaceSession.State.PASSWORD_REQUIRED, owner, guest);
+        guest.cancel();
+        assertEquals(RaceSession.State.IDLE, guest.state());
+        assertNull(guest.passwordPrompt());
+        guest.joinLan(invite, "sonic", FP);
+        pollUntil("second password prompt", () -> guest.state() == RaceSession.State.PASSWORD_REQUIRED, owner, guest);
+        try (RoomPassword password = RoomPassword.of("a wrong but long password")) { guest.submitPassword(password); }
+        pollUntil("wrong password rejection", () -> guest.state() == RaceSession.State.IDLE, owner, guest);
+        assertNull(guest.coordinator());
+        assertTrue(guest.consumeNotice().contains("Room access unavailable"));
+        assertEquals(1, owner.coordinator().session().players().size());
+    }
+
+    @Test
+    void aChangedAccessEpochDuringTheManualPromptCannotReceiveTheRetainedPassword() throws Exception {
+        int port = freePort();
+        RaceSession owner = session("epoch-owner", settings(port), new MemoryModStorage(), new Launches());
+        hostPrivate(owner);
+        RaceSession guest = session("epoch-guest", settings(port), new MemoryModStorage(), new Launches());
+        guest.joinLan(owner.lanInvite().replace("HOST_IP", "127.0.0.1"), "sonic", FP);
+        pollUntil("password prompt", () -> guest.state() == RaceSession.State.PASSWORD_REQUIRED, owner, guest);
+        long epoch = owner.coordinator().session().accessEpoch();
+        try (RoomPassword changed = RoomPassword.of("a replacement room password")) { owner.coordinator().changePassword(changed); }
+        pollUntil("new access epoch", () -> owner.coordinator().session().accessEpoch() > epoch, owner);
+        try (RoomPassword password = RoomPassword.of(PRIVATE_PASSWORD)) { guest.submitPassword(password); }
+        pollUntil("stale prompt rejection", () -> guest.state() == RaceSession.State.IDLE, owner, guest);
+        assertEquals(1, owner.coordinator().session().players().size());
+        assertNull(guest.coordinator());
+    }
+
+    @Test
+    void rejectedLanRegistrationKeepsPrivateAdmissionAndOffersOnlyExplicitManualSharing() throws Exception {
+        TimeAttackSettings settings = settings(freePort());
+        settings.setMasterUrl("ws://example.com/master");
+        RaceSession owner = session("fallback-owner", settings, new MemoryModStorage(), new Launches());
+        hostPrivate(owner);
+        assertTrue(owner.coordinator().session().accessPolicy().passwordRequired());
+        assertNotNull(owner.manualInviteFallback());
+        assertNull(owner.masterClient());
+        assertTrue(owner.consumeNotice().contains("Short code unavailable"));
+    }
+
+    private String startPrivateMaster(String identityName) throws Exception {
+        masterServer = MasterServer.start(TestMasterServer.testConfig(), dir.resolve("private-master"));
+        String fingerprint = PlayerIdentity.loadOrCreate(dir.resolve(identityName + "-identity")).fingerprint();
+        CountDownLatch established = new CountDownLatch(1);
+        masterServer.execute(() -> { masterServer.establishForTest(fingerprint); established.countDown(); });
+        assertTrue(established.await(5, TimeUnit.SECONDS));
+        return "ws://127.0.0.1:" + masterServer.port() + "/master";
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"DIRECT", "RELAY", "LAN"})
+    void privateCodeJoinsUseTheSelectedMasterAndNeverAppearInBrowserListings(String routing) throws Exception {
+        String url = startPrivateMaster("code-owner");
+        TimeAttackSettings ownerSettings = settings(freePort());
+        ownerSettings.setMasterUrl(url);
+        ownerSettings.setChatMode(com.openggf.net.protocol.ChatMode.QUICK_CHAT);
+        RaceSession owner = session("code-owner", ownerSettings, new MemoryModStorage(), new Launches());
+        if (routing.equals("LAN")) hostPrivate(owner);
+        else {
+            owner.browse(SETUP, FP);
+            pollUntil("owner browser", () -> owner.state() == RaceSession.State.BROWSING, owner);
+            try (RoomPassword password = RoomPassword.of(PRIVATE_PASSWORD)) { owner.createMasterRoom(routing, PRIVATE, password); }
+            pollUntil("owner admission", () -> owner.state() == RaceSession.State.LOBBY, owner);
+        }
+        assertTrue(owner.coordinator().session().accessPolicy().passwordRequired());
+        assertEquals(com.openggf.net.protocol.ChatMode.QUICK_CHAT, owner.coordinator().session().chatMode());
+        assertTrue(owner.masterLinkRunning());
+        assertNull(owner.manualInviteFallback(), "a registered LAN host has short codes");
+        owner.coordinator().requestInvite();
+        pollUntil("owner invite disclosure", () -> owner.coordinator().session().invite() != null, owner);
+        String code = owner.coordinator().session().invite().code();
+        TimeAttackSettings guestSettings = settings(freePort());
+        guestSettings.setMasterUrl(url);
+        RaceSession guest = session("code-guest", guestSettings, new MemoryModStorage(), new Launches());
+        guest.browse(SETUP, FP);
+        pollUntil("guest browser", () -> guest.state() == RaceSession.State.BROWSING, owner, guest);
+        assertTrue(guest.roomDirectory().listRooms("s2", 0).get(5, TimeUnit.SECONDS).rooms().isEmpty());
+        guest.joinCode(code);
+        pollUntil("code password prompt", () -> guest.state() == RaceSession.State.PASSWORD_REQUIRED, owner, guest);
+        assertTrue(guest.connectingFromBrowser());
+        assertNull(guest.coordinator());
+        assertEquals(0, guest.connectWorkersRunning());
+        guest.cancel();
+        assertEquals(RaceSession.State.BROWSING, guest.state());
+        assertNull(guest.passwordPrompt());
+        guest.joinCode(code);
+        pollUntil("fresh code prompt after cancellation", () -> guest.state() == RaceSession.State.PASSWORD_REQUIRED, owner, guest);
+        if (routing.equals("RELAY")) Thread.sleep(31_000); // The original attach grant expires while the user types.
+        try (RoomPassword password = RoomPassword.of(PRIVATE_PASSWORD)) { guest.submitPassword(password); }
+        pollUntil("code admission", () -> guest.state() == RaceSession.State.LOBBY
+                && owner.coordinator().session().players().size() == 2, owner, guest);
+        assertTrue(guest.coordinator().session().accessPolicy().passwordRequired());
+        assertEquals(com.openggf.net.protocol.ChatMode.QUICK_CHAT, guest.coordinator().session().chatMode());
+        guest.coordinator().requestInvite();
+        pollUntil("admitted member sharing", () -> guest.coordinator().session().invite() != null, owner, guest);
+        assertEquals(code, guest.coordinator().session().invite().code());
+        owner.coordinator().setMemberInvites(false);
+        pollUntil("authoritative host-only policy", () -> !guest.coordinator().session().accessPolicy().membersCanInvite(), owner, guest);
+        assertNull(guest.coordinator().session().invite());
+        assertEquals(RaceSession.State.LOBBY, guest.state());
+        owner.leave();
+        assertFalse(owner.masterLinkRunning());
+        assertNull(owner.hostServer());
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void wrongPasswordOrRotatedCodeReturnsToTheBrowserWithoutAdmitting(boolean rotate) throws Exception {
+        String url = startPrivateMaster("code-owner");
+        TimeAttackSettings ownerSettings = settings(freePort());
+        ownerSettings.setMasterUrl(url);
+        RaceSession owner = session("code-owner", ownerSettings, new MemoryModStorage(), new Launches());
+        owner.browse(SETUP, FP);
+        pollUntil("owner browser", () -> owner.state() == RaceSession.State.BROWSING, owner);
+        try (RoomPassword password = RoomPassword.of(PRIVATE_PASSWORD)) {
+            owner.createMasterRoom(rotate ? "RELAY" : "DIRECT", PRIVATE, password);
+        }
+        pollUntil("private owner", () -> owner.state() == RaceSession.State.LOBBY, owner);
+        owner.coordinator().requestInvite();
+        pollUntil("owner code", () -> owner.coordinator().session().invite() != null, owner);
+        String code = owner.coordinator().session().invite().code();
+        TimeAttackSettings guestSettings = settings(freePort());
+        guestSettings.setMasterUrl(url);
+        RaceSession guest = session("code-guest", guestSettings, new MemoryModStorage(), new Launches());
+        guest.browse(SETUP, FP);
+        pollUntil("guest browser", () -> guest.state() == RaceSession.State.BROWSING, owner, guest);
+        guest.joinCode(code);
+        pollUntil("password prompt", () -> guest.state() == RaceSession.State.PASSWORD_REQUIRED, owner, guest);
+        if (rotate) {
+            long epoch = owner.coordinator().session().inviteEpoch();
+            owner.coordinator().rotateInvite();
+            pollUntil("rotated invite", () -> owner.coordinator().session().inviteEpoch() > epoch, owner);
+        }
+        try (RoomPassword password = RoomPassword.of(rotate ? PRIVATE_PASSWORD : "a wrong private password")) {
+            guest.submitPassword(password);
+        }
+        pollUntil("denial returns to browser", () -> guest.state() == RaceSession.State.BROWSING, owner, guest);
+        assertNull(guest.coordinator());
+        assertEquals(1, owner.coordinator().session().players().size());
+        assertTrue(guest.masterClient().isOpen());
+        String notice = guest.consumeNotice();
+        assertFalse(notice.contains(code));
+        assertFalse(notice.contains(PRIVATE_PASSWORD));
+    }
+
     @Test
     void engineChatPreferencesApplyOnJoinLiveAndAfterRoundResume() {
         AtomicBoolean disabled = new AtomicBoolean(true);
