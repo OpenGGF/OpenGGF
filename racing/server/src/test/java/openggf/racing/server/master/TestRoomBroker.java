@@ -319,6 +319,47 @@ class TestRoomBroker {
     }
 
     @Test
+    void unrelatedConnectionOfTheSameIdentityCannotDeleteARegistration(@TempDir Path hostDir)
+            throws Exception {
+        FakeConnection owner = new FakeConnection();
+        String ownerToken = admit(owner, hostDir, "HOST");
+        establish(PlayerIdentity.loadOrCreate(hostDir).fingerprint());
+        broker.onText(owner, ControlCodec.encode(ownerToken, new ControlMessage.RoomCreate(
+                new ControlMessage.RoomDescriptor("R", "s3k", 0, 0, "OPEN", null, 8, false),
+                "DIRECT", 27888, "0.6:cafe", List.of(), DIRECT_CERT_PIN)));
+        String roomId = ((ControlMessage.RoomCreated) lastMessage(owner)).roomId();
+        FakeConnection unrelated = new FakeConnection();
+        String unrelatedToken = admit(unrelated, hostDir, "HOST");
+
+        broker.onText(unrelated, ControlCodec.encode(unrelatedToken, new ControlMessage.RoomLeave(roomId)));
+        broker.onDisconnected(unrelated);
+
+        assertTrue(registry.find(roomId).isPresent());
+        assertEquals(List.of(roomId), tunnels.registered);
+        broker.onDisconnected(owner);
+        assertTrue(registry.find(roomId).isEmpty());
+        assertTrue(tunnels.registered.isEmpty());
+    }
+
+    @Test
+    void unrelatedSameIdentityCannotHeartbeatOrChangeTrack(@TempDir Path hostDir) throws Exception {
+        FakeConnection owner = new FakeConnection();
+        String ownerToken = admit(owner, hostDir, "HOST");
+        establish(PlayerIdentity.loadOrCreate(hostDir).fingerprint());
+        broker.onText(owner, ControlCodec.encode(ownerToken, new ControlMessage.RoomCreate(
+                new ControlMessage.RoomDescriptor("R", "s3k", 0, 0, "OPEN", null, 8, false),
+                "DIRECT", 27888, "0.6:cafe", List.of(), DIRECT_CERT_PIN)));
+        String roomId = ((ControlMessage.RoomCreated) lastMessage(owner)).roomId();
+        SessionRegistry.RoomEntry original = registry.find(roomId).orElseThrow();
+        FakeConnection unrelated = new FakeConnection();
+        String unrelatedToken = admit(unrelated, hostDir, "HOST");
+        now += 1_000;
+        broker.onText(unrelated, ControlCodec.encode(unrelatedToken, new ControlMessage.Heartbeat(roomId, 8)));
+        broker.onText(unrelated, ControlCodec.encode(unrelatedToken, new ControlMessage.RoomTrackUpdate(roomId, 0, 1)));
+        assertEquals(original, registry.find(roomId).orElseThrow());
+    }
+
+    @Test
     void rateLimitedRoomListStillReceivesOneReply(@TempDir Path identityDir)
             throws Exception {
         FakeConnection browser = new FakeConnection();

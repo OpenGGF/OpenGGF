@@ -14,7 +14,7 @@ import com.openggf.net.protocol.ControlMessage;
 public final class ControlCodec {
     private static final ControlJsonCodec SHARED = new ControlJsonCodec();
 
-    public record DecodedControl(String token, ControlMessage message) {
+    public record DecodedControl(String token, ControlMessage message, long requestId) {
     }
 
     private ControlCodec() {
@@ -22,6 +22,10 @@ public final class ControlCodec {
 
     public static String encode(String tokenOrNull, ControlMessage message) {
         return SHARED.encode(tokenOrNull, message);
+    }
+
+    public static String encode(String tokenOrNull, ControlMessage message, long requestId) {
+        return SHARED.encode(tokenOrNull, message, requestId);
     }
 
     public static DecodedControl decode(String text) {
@@ -39,6 +43,6 @@ public final class ControlCodec {
     }
 
     private static DecodedControl wrap(ControlJsonCodec.Decoded decoded) {
-        return new DecodedControl(decoded.token(), decoded.message());
+        return new DecodedControl(decoded.token(), decoded.message(), decoded.requestId());
     }
 }

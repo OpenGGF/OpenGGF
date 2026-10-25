@@ -6,9 +6,11 @@ import com.openggf.net.hub.RoomHost;
 import com.openggf.net.hub.RoomHostConfig;
 import com.openggf.net.hub.RoomHostHooks;
 import com.openggf.net.hub.RoomRoundAccess;
+import com.openggf.net.hub.RoomInviteService;
 import com.openggf.net.hub.TrackValidationProfileSource;
 import com.openggf.net.identity.PlayerIdentity;
 import com.openggf.net.protocol.ControlMessage;
+import com.openggf.net.protocol.RoomPassword;
 
 import java.util.List;
 import java.util.Map;
@@ -16,6 +18,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.LongSupplier;
 import com.openggf.net.protocol.VerdictCodec;
@@ -139,12 +142,72 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory {
 
     @Override
     public String createRelayRoom(SessionRegistry.RoomEntry entry) {
+        if (entry.descriptor().accessPolicy().passwordRequired()) {
+            throw new IllegalStateException("private relay requires asynchronous preparation");
+        }
+        prepareRelayRoom(entry, null).join().publish(null);
+        return entry.roomId();
+    }
+
+    @Override
+    public CompletableFuture<PreparedRoom> prepareRelayRoom(SessionRegistry.RoomEntry entry,
+                                                           RoomPassword password) {
+        RoomAccess access = buildRoom(entry, password);
+        return access.room().ready().handle((ignored, failure) -> {
+            if (failure != null) {
+                access.loop().execute(() -> access.room().close("room preparation failed"));
+                throw new java.util.concurrent.CompletionException(failure);
+            }
+            return new PreparedRelayRoom(entry, access);
+        });
+    }
+
+    private enum Publication { PREPARED, PUBLISHED, CLOSED }
+
+    private final class PreparedRelayRoom implements PreparedRoom {
+        private final SessionRegistry.RoomEntry entry;
+        private final RoomAccess access;
+        private Publication state = Publication.PREPARED;
+
+        PreparedRelayRoom(SessionRegistry.RoomEntry entry, RoomAccess access) {
+            this.entry = entry;
+            this.access = access;
+        }
+
+        @Override public synchronized void publish(RoomInviteService inviteService) {
+            if (state != Publication.PREPARED) {
+                throw new IllegalStateException("relay preparation no longer available");
+            }
+            state = Publication.PUBLISHED;
+            access.room().setInviteService(inviteService);
+            if (rooms.putIfAbsent(entry.roomId(), access) != null) {
+                state = Publication.CLOSED;
+                access.loop().execute(() -> access.room().close("duplicate relay registration"));
+                throw new IllegalStateException("relay room already exists");
+            }
+            roomOwners.put(entry.roomId(), entry.hostFingerprint());
+            lastTrackKeys.put(entry.roomId(), trackKey(entry.descriptor()));
+        }
+
+        @Override public synchronized void close() {
+            Publication previous = state;
+            state = Publication.CLOSED;
+            if (previous == Publication.CLOSED) return;
+            if (previous == Publication.PUBLISHED && rooms.remove(entry.roomId(), access)) {
+                roomOwners.remove(entry.roomId(), entry.hostFingerprint());
+                lastTrackKeys.remove(entry.roomId());
+            }
+            access.loop().execute(() -> access.room().close("relay preparation canceled"));
+        }
+    }
+
+    private RoomAccess buildRoom(SessionRegistry.RoomEntry entry, RoomPassword password) {
         ControlMessage.RoomDescriptor descriptor = entry.descriptor();
         RoomHostConfig config = new RoomHostConfig(descriptor.name(), descriptor.gameId(),
                 descriptor.zone(), descriptor.act(), descriptor.characterPolicy(),
                 descriptor.lockedCharacter(), descriptor.maxPlayers(),
                 entry.determinismFingerprint(), entry.voteTrackKeys(),
-                descriptor.verified());
+                descriptor.verified(), descriptor.accessPolicy(), password, entry.instanceId());
         RoomHostHooks hooks = new RoomHostHooks(descriptor.maxPlayers() > 8,
                 (fingerprint, memberSince) ->
                         !isNewPlayer(fingerprint)
@@ -180,13 +243,7 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory {
         }
         Executor loop = roomLoops.get(Math.floorMod(
                 nextLoop.getAndIncrement(), roomLoops.size()));
-        RoomAccess old = rooms.putIfAbsent(entry.roomId(), new RoomAccess(room, loop));
-        if (old != null) {
-            throw new IllegalStateException("relay room already exists: " + entry.roomId());
-        }
-        roomOwners.put(entry.roomId(), entry.hostFingerprint());
-        lastTrackKeys.put(entry.roomId(), trackKey(descriptor));
-        return entry.roomId();
+        return new RoomAccess(room, loop);
     }
 
     @Override

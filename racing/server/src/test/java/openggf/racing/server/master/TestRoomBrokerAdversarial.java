@@ -347,7 +347,8 @@ class TestRoomBrokerAdversarial {
                             new ControlMessage.RoomTrackUpdate(room, 0, 1),
                             new ControlMessage.Heartbeat(room, Integer.MAX_VALUE),
                             new ControlMessage.AttemptStart(random.nextInt()),
-                            new ControlMessage.RoomCreate(null, "UNKNOWN", -1, FP),
+                            new ControlMessage.RoomCreate(new ControlMessage.RoomDescriptor(
+                                    "Attack", "s3k", 0, 0, "OPEN", null, 8, false), "UNKNOWN", -1, FP),
                             new ControlMessage.Hello(Integer.MAX_VALUE, "%%%", "Peer", FP, ""),
                             new ControlMessage.AuthProof(Base64.getEncoder().encodeToString(new byte[64])),
                             new ControlMessage.PowSolution(null, random.nextLong()));
@@ -421,9 +422,7 @@ class TestRoomBrokerAdversarial {
                             validRoom, "DIRECT", 27888, FP), false,
                             ControlMessage.RoomCreateRejected.class),
                     new Case("room-control-at-broker", new ControlMessage.AttemptStart(random.nextInt()),
-                            true, null),
-                    new Case("create-missing-descriptor", new ControlMessage.RoomCreate(
-                            null, "RELAY", 0, FP), true, ControlMessage.RoomCreateRejected.class));
+                            true, null));
             for (int op = 0; op < cases.size(); op++) {
                 Case scenario = cases.get(op);
                 String context = "seed=" + SEED + " state=ADMITTED_OWN_TOKEN op=" + op
@@ -467,6 +466,34 @@ class TestRoomBrokerAdversarial {
                 f.broker.onDisconnected(attack);
                 assertFalse(f.broker.isSessionTokenValid(token), context);
             }
+        }
+    }
+
+    @Test
+    void malformedRoomDescriptorIsRejectedAtWireBoundaryWithoutPublishing(@TempDir Path dir)
+            throws Exception {
+        try (Fixture f = new Fixture(dir)) {
+            PlayerIdentity owner = PlayerIdentity.loadOrCreate(dir.resolve("owner"));
+            f.establish(owner);
+            Connection witness = new Connection();
+            String token = f.admit(witness, owner);
+            String roomId = f.create(witness, token, "RELAY");
+            SessionRegistry.RoomEntry original = f.registry.find(roomId).orElseThrow();
+            Connection attacker = new Connection();
+            String attackToken = f.admit(attacker,
+                    PlayerIdentity.loadOrCreate(dir.resolve("attacker")));
+            ControlMessage.RoomCreate valid = new ControlMessage.RoomCreate(original.descriptor(),
+                    "RELAY", 0, FP);
+            var mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            var envelope = (com.fasterxml.jackson.databind.node.ObjectNode) mapper.readTree(
+                    ControlCodec.encode(attackToken, valid));
+            ((com.fasterxml.jackson.databind.node.ObjectNode) envelope.get("msg")).putNull("room");
+            for (int i = 0; i < 3; i++) f.broker.onText(attacker, envelope.toString());
+            assertNotNull(attacker.closed);
+            assertFalse(f.broker.isSessionTokenValid(attackToken));
+            assertEquals(original, f.registry.find(roomId).orElseThrow());
+            assertEquals(1, f.registry.list(null).size());
+            assertEquals(1, f.relays.roomCount());
         }
     }
 

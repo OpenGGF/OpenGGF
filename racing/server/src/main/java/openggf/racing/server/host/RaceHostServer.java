@@ -105,6 +105,7 @@ public final class RaceHostServer implements RaceRoomHost {
         ConnectionHygiene.ConnectionCounter counter =
                 new ConnectionHygiene.ConnectionCounter(MAX_CONNECTIONS_PER_IP);
         try {
+            room.ready().join();
             Channel serverChannel = new ServerBootstrap()
                     .group(group)
                     .channel(NioServerSocketChannel.class)
@@ -132,6 +133,7 @@ public final class RaceHostServer implements RaceRoomHost {
             return new RaceHostServer(group, serverChannel, room, certificate,
                     certificateSha256);
         } catch (RuntimeException | Error e) {
+            room.close("host startup failed");
             if (certificate != null) {
                 certificate.delete();
             }
@@ -164,14 +166,19 @@ public final class RaceHostServer implements RaceRoomHost {
     }
 
     @Override
-    public void close() {
-        if (!closed.compareAndSet(false, true)) {
+    public synchronized void close() {
+        if (closed.get()) {
             return;
         }
-        serverChannel.close().syncUninterruptibly();
-        group.shutdownGracefully(0, 5, TimeUnit.SECONDS).syncUninterruptibly();
-        if (tlsCertificate != null) {
-            tlsCertificate.delete();
+        try {
+            serverChannel.close().syncUninterruptibly();
+            group.next().submit(() -> room.close("host closed")).syncUninterruptibly();
+        } finally {
+            closed.set(true);
+            group.shutdownGracefully(0, 5, TimeUnit.SECONDS).syncUninterruptibly();
+            if (tlsCertificate != null) {
+                tlsCertificate.delete();
+            }
         }
     }
 }
