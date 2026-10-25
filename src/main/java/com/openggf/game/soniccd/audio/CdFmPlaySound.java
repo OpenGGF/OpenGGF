@@ -392,4 +392,398 @@ public final class CdFmPlaySound {
         try { return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes)); }
         catch (NoSuchAlgorithmException impossible) { throw new AssertionError(impossible); }
     }
+
+    /** Selected semantic targets for one direct UpdateTrack(IX), never a whole driver service. */
+    public enum TrackHandler { PANNING, INSTRUMENT, LEGATO, STOP, JUMP, REPEAT }
+
+    public record TrackLayout(int freqTableAddress, int instrumentRegsAddress, int insTlRegsAddress,
+                              int commandTableAddress, java.util.Map<TrackHandler,Integer> handlers) {
+        public TrackLayout {
+            wordWidth(freqTableAddress); wordWidth(instrumentRegsAddress);
+            wordWidth(insTlRegsAddress); wordWidth(commandTableAddress);
+            if (insTlRegsAddress != add16(instrumentRegsAddress,0x15)) {
+                throw new IllegalArgumentException("InsTLRegs must immediately follow 21 instrument register bytes");
+            }
+            handlers=java.util.Map.copyOf(Objects.requireNonNull(handlers));
+            if (handlers.size()!=TrackHandler.values().length) {
+                throw new IllegalArgumentException("Supply all six track handler identities");
+            }
+            var distinct=new java.util.HashSet<Integer>();
+            for (TrackHandler handler:TrackHandler.values()) {
+                Integer target=Objects.requireNonNull(handlers.get(handler),"Missing track handler");
+                wordWidth(target);
+                if (!distinct.add(target)) throw new IllegalArgumentException("Handler targets must be distinct");
+            }
+        }
+    }
+
+    /**
+     * Source-bound finite support classification only. No RAM is installed or exported by this view.
+     * Actual addresses are reconciled against N and the retained bank, not the superseded 06D8 ledger.
+     */
+    public static final class TrackView {
+        private final NativeView source;
+        private final TrackLayout layout;
+        private final BitSet instructions;
+        private final boolean authenticated;
+
+        private TrackView(NativeView source, TrackLayout layout, BitSet instructions, boolean authenticated) {
+            this.source=Objects.requireNonNull(source); this.layout=Objects.requireNonNull(layout);
+            checkMask(instructions);
+            this.instructions=(BitSet)instructions.clone(); this.authenticated=authenticated;
+            BitSet conflict=(BitSet)this.instructions.clone(); conflict.and(source.writableData);
+            if (!conflict.isEmpty()) throw new IllegalArgumentException("Track code intersects writable data");
+            trackData(layout.freqTableAddress(),24); trackData(layout.instrumentRegsAddress(),21);
+            trackData(layout.insTlRegsAddress(),4); trackData(layout.commandTableAddress(),64);
+            for (int target:layout.handlers().values()) {
+                if (target>=RAM_BYTES || !source.defined.get(target) || !this.instructions.get(target)) {
+                    throw new IllegalArgumentException("Handler entry must be known, instruction-classified source");
+                }
+            }
+        }
+
+        /** Only the existing actual retained-USA capability can reach this constructor. */
+        public static TrackView fromNative(NativeView source) {
+            Objects.requireNonNull(source);
+            if (!source.authenticated || source.actualSource==null || source.driverInfo!=0x6D7
+                    || !source.layout.equals(new Layout(8,0x322,0x3BB))) {
+                throw new IllegalArgumentException("Track view requires the authenticated retained USA format");
+            }
+            for (int a=0;a<INSTALLED_BYTES;a++) if (!source.defined.get(a)) {
+                throw new IllegalArgumentException("Incomplete retained bank source");
+            }
+            byte[] bank=Arrays.copyOf(source.image,INSTALLED_BYTES);
+            if (!BANK_SHA256.equals(sha256(bank))) throw new IllegalArgumentException("Retained bank identity differs");
+            BitSet code=(BitSet)source.instructions.clone();
+            // N FM UpdateTrack:157-188; UpdateFreq:197-218. The special body itself is excluded.
+            trackCode(bank,code,0x074,"cdbb012017cdf800ddcb0066c0cdc301cd6702cdee01cdac00c33b02ddcb0066c0dd7e1eb72806dd351eca5402cd6702ddcb0076c0cdee01");
+            trackCode(bank,code,0x0AC,"ddcb0056c0ddcb0046c2c5003ea44ccdbf023ea04dcdbf02c9");
+            trackCode(bank,code,0x0C5,"dd7e01fe0220ec"); // CheckFM3 channel predicate; boundary00CC.
+            // ParseNext/GetNote/ReadDuration:261-324; excluded SetPortaSpeed starts015C.
+            trackCode(bank,code,0x0F8,"dd5e03dd5604ddcb008eddcb00a61a13fee0d28e0408cd540208ddcb005ec26301b7f28901d681f22801ddcb00e61821");
+            trackCode(bank,code,0x128,"dd8605d516081e0c08af08933804088218f883217604df08b467d1dd750ddd740e");
+            trackCode(bank,code,0x149,"ddcb006e200d1ab7f28801dd7e0cdd770b1833");
+            trackCode(bank,code,0x188,"13cdb101dd770cdd7303dd7204dd7e0cdd770bddcb004ec0afdd7725dd7722dd7717dd7e1fdd771ec9");
+            trackCode(bank,code,0x1B1,"dd460205c84f8110fdc9");
+            trackCode(bank,code,0x1BB,"dd7e0b3ddd770bc9");
+            trackCode(bank,code,0x1C3,"ddcb077ec8ddcb004ec0"); // InitVibrato predicates only.
+            trackCode(bank,code,0x1EE,"dd7e07b7c8"); // UpdateVibrato predicate only.
+            trackCode(bank,code,0x23B,"dd7e0dddb60ec8dd7e00e606c0dd7e01f6f04f3e28cdcd02c9");
+            trackCode(bank,code,0x254,"dd7e00e606c0ddcb00b6dd4e013e28cdcd02c9");
+            trackCode(bank,code,0x267,"0600dd7e10b7f2710205dd660edd6e0d4f09eb3e07a2474bb7218302ed4238062185fa19180eb7210805ed423005217c0519ebebddcb006ec8dd740edd750dc9");
+            trackCode(bank,code,0x2AE,"dd6e2add662bafb028061119001910fdc9");
+            trackCode(bank,code,0x2BF,"ddcb01562011ddcb0056c0dd86013200400079320140c9ddcb0056c0dd8601d6043202400079320340c9");
+            trackCode(bank,code,0x2E9,"115504dd4e0a3eb4cdbf02cd0a03dd771b0614cd0a0310fbdd751cdd741dc3f905");
+            trackCode(bank,code,0x30A,"1a134e23cdbf02c9");
+            trackCode(bank,code,0x445,"3e800eff0604f5cdbf02f1c60410f7c9");
+            trackCode(bank,code,0x48E,"219a04e5d6e0219e04df1ae913c30601");
+            trackCode(bank,code,0x577,"ddcb00ce1bc9");
+            trackCode(bank,code,0x5C4,"cd45041add7708d547cdae02cde902d1c9");
+            trackCode(bank,code,0x5D5,"0e3fdd7e0aa1ebb6dd770a4f3eb4cdbf02ebc9");
+            trackCode(bank,code,0x5F9,"d9116a04dd6e1cdd661d06047eb7f20d06dd8606e67f4f1acdbf02132310edd9c9");
+            trackCode(bank,code,0x625,"eb5e23561bc9");
+            trackCode(bank,code,0x64F,"ddcb00be3e1f32151cdd4e01cd5a02af32181ce1e1c9");
+            trackCode(bank,code,0x6AA,"13c6284f0600dde5e1097eb720021a771335c2250613c9");
+            // Interspersed register/frequency/command/detune DATA never becomes executable or owned.
+            expect(bank,0x455,"b03038343c5058545c6068646c7078747c8088848c");
+            expect(bank,0x46A,"4048444c"); expect(bank,0x46E,"9098949c"); expect(bank,0x472,"adaeaca6");
+            expect(bank,0x476,"8402ab02d302fe022d035c038f03c503ff033c047c04c004");
+            expect(bank,0x49E,"d50537053b053f054f06c106f30577054505e8054f060d0516054f055605c405630571054f0665064f064f062506aa067d06970621061a062b0641067d05ec04");
+            expect(bank,0x5B4,"000032018e01e40134027e02c202f002");
+            // Boundary authentication is not permission to execute Call, Return or RepeatEnd.
+            expect(bank,0x67D,"4f131a47c5dde5e1dd3509dd4e09dd3509060009722b73d11bc9");
+            expect(bank,0x697,"dde5e1dd4e090600095e2356dd3409dd3409c9");
+            expect(bank,0x6C1,"13c6284f0600dde5e1097e3dcad20613c9af77c32506");
+            expect(bank,0x6D7,"8b070000eb06eb060000000090000000001c0000");
+            TrackLayout layout=new TrackLayout(0x476,0x455,0x46A,0x49E,java.util.Map.of(
+                    TrackHandler.PANNING,0x5D5,TrackHandler.INSTRUMENT,0x5C4,TrackHandler.LEGATO,0x577,
+                    TrackHandler.STOP,0x64F,TrackHandler.JUMP,0x625,TrackHandler.REPEAT,0x6AA));
+            return new TrackView(source,layout,code,true);
+        }
+
+        /** Exact caller declaration, never an actual-bank fallback or a populated driver state. */
+        public static TrackView declaredFormat(NativeView source, TrackLayout layout) {
+            Objects.requireNonNull(source); Objects.requireNonNull(layout);
+            if (source.authenticated) throw new IllegalArgumentException("Actual sources require fromNative");
+            return new TrackView(source,layout,source.instructions,false);
+        }
+        public boolean authenticated() { return authenticated; }
+        @Override public boolean equals(Object other) {
+            if (this==other) return true;
+            return other instanceof TrackView v && authenticated==v.authenticated && source.equals(v.source)
+                    && layout.equals(v.layout) && instructions.equals(v.instructions);
+        }
+        @Override public int hashCode() { return Objects.hash(source,layout,instructions,authenticated); }
+        private void trackData(int start,int length) {
+            for (int i=0;i<length;i++) {
+                int address=add16(start,i);
+                if (address<RAM_BYTES && instructions.get(address)) {
+                    throw new IllegalArgumentException("Track table intersects instruction classification");
+                }
+            }
+        }
+        private static void trackCode(byte[] bank,BitSet code,int address,String hex) {
+            expect(bank,address,hex); code.set(address,address+hex.length()/2);
+        }
+    }
+
+    public record TrackCall(int ix) { public TrackCall { wordWidth(ix); } }
+    /** Completed-command planning bound, not a clock, note count or instruction budget. */
+    public record TrackLimits(int maxCommands) {
+        public TrackLimits { if (maxCommands<0) throw new IllegalArgumentException("Negative command bound"); }
+    }
+    public enum TrackExit { ORDINARY_RETURN, STOP_COMMAND_EXIT }
+    public sealed interface TrackStop permits MemoryStop, CommandStop, RoutineStop, CommandLimitStop { }
+    public record MemoryStop(Fault fault) implements TrackStop {
+        public MemoryStop { Objects.requireNonNull(fault); }
+    }
+    public record CommandStop(int commandAddress, int opcode, int targetAddress) implements TrackStop {
+        public CommandStop { wordWidth(commandAddress); trackOpcode(opcode); wordWidth(targetAddress); }
+    }
+    public enum TrackRoutine {
+        INIT_VIBRATO_BODY, UPDATE_VIBRATO_BODY, RAW_FREQUENCY_PARSE,
+        PORTAMENTO_NOTE_PARSE, SPECIAL_FM3_FREQUENCY
+    }
+    public record RoutineStop(TrackRoutine routine) implements TrackStop {
+        public RoutineStop { Objects.requireNonNull(routine); }
+    }
+    public record CommandLimitStop(int commandAddress, int opcode, int completedCommands) implements TrackStop {
+        public CommandLimitStop {
+            wordWidth(commandAddress); trackOpcode(opcode);
+            if (completedCommands<0) throw new IllegalArgumentException("Negative completed command count");
+        }
+    }
+    public sealed interface TrackResult permits TrackReturned, TrackBoundedFault {
+        State projected();
+        List<Step> steps();
+    }
+    public record TrackReturned(State projected, List<Step> steps, TrackExit exit) implements TrackResult {
+        public TrackReturned {
+            Objects.requireNonNull(projected); steps=List.copyOf(Objects.requireNonNull(steps)); Objects.requireNonNull(exit);
+        }
+    }
+    /** Reached prefix only, wholly UNCOMMITTED. Supplying projected to another call starts a new entry. */
+    public record TrackBoundedFault(State projected, List<Step> steps, TrackStop stop) implements TrackResult {
+        public TrackBoundedFault {
+            Objects.requireNonNull(projected); steps=List.copyOf(Objects.requireNonNull(steps)); Objects.requireNonNull(stop);
+        }
+    }
+
+    /**
+     * One explicit UpdateTrack(IX), without play-bit scan, queue arbitration, PlaySoundID or a device.
+     * The private bridge clones the exact current State; it never resupplies ingress or reinstalls source.
+     */
+    public static TrackResult planTrack(TrackCall call, State before, TrackView view, TrackLimits limits) {
+        Objects.requireNonNull(call); Objects.requireNonNull(before); Objects.requireNonNull(view); Objects.requireNonNull(limits);
+        if (!view.source.equals(before.source)) throw new IllegalArgumentException("State belongs to another track source/format");
+        TrackProjection track=new TrackProjection(before,view,call.ix(),limits.maxCommands());
+        try {
+            TrackExit exit=track.update();
+            return new TrackReturned(track.p.state(),track.p.steps,exit);
+        } catch (Boundary boundary) {
+            return new TrackBoundedFault(track.p.state(),track.p.steps,new MemoryStop(boundary.fault));
+        } catch (TrackBoundary boundary) {
+            return new TrackBoundedFault(track.p.state(),track.p.steps,boundary.stop);
+        }
+    }
+
+    private static void trackOpcode(int opcode) {
+        if (opcode<0xE0 || opcode>0xFF) throw new IllegalArgumentException("Expected primary track command");
+    }
+    private static final class TrackBoundary extends RuntimeException {
+        private static final long serialVersionUID=1L;
+        private final TrackStop stop;
+        private TrackBoundary(TrackStop stop) { super(null,null,false,false); this.stop=stop; }
+    }
+
+    /**
+     * Narrow same-enclosing-owner bridge over Projection's current RAM and ordered logical intentions.
+     * No inherited Projection operation is changed. Additional code protection applies to track stores
+     * only; it neither grants ownership nor defines unknown bytes. Native implicit CPU stack is outside
+     * this byte projection; Stop's two POPs are represented solely by STOP_COMMAND_EXIT.
+     */
+    private static final class TrackProjection {
+        private final Projection p;
+        private final TrackView view;
+        private final int ix;
+        private final int maxCommands;
+        private int de;
+        private int completedCommands;
+        private TrackProjection(State before,TrackView view,int ix,int maxCommands) {
+            this.view=view; this.ix=ix; this.maxCommands=maxCommands;
+            p=new Projection(before,view.source);
+        }
+        private int at(int displacement) { return add16(ix,displacement); }
+        private int field(int displacement) { return p.read(at(displacement)); }
+        private void write(int address,int value) {
+            if (address<RAM_BYTES && view.instructions.get(address)) {
+                p.boundary(FaultKind.SELF_MODIFICATION,Access.WRITE,address);
+            }
+            p.write(address,value);
+        }
+        private void store(int displacement,int value) { write(at(displacement),value); }
+        private void routine(TrackRoutine routine) { throw new TrackBoundary(new RoutineStop(routine)); }
+        private void forceKeyOff() {
+            store(0,field(0)&0xBF);
+            p.ym(0,0x28,field(1));
+        }
+        private void keyOff() { if ((field(0)&6)==0) forceKeyOff(); }
+        private void keyOn() {
+            int low=field(0xD), high=field(0xE); // OR always reads high, including when low is nonzero.
+            if ((low|high)==0 || (field(0)&6)!=0) return;
+            p.ym(0,0x28,field(1)|0xF0);
+        }
+        /** Return native A: suppression leaves the register ID, an emitted leaf returns its data. */
+        private int ymTrack(int register,int value) {
+            int part=(field(1)&4)!=0 ? 1:0;
+            if ((field(0)&4)!=0) return register;
+            int adjusted=(register+field(1)-(part==1 ? 4:0))&255;
+            p.ym(part,adjusted,value);
+            return value;
+        }
+        private TrackExit update() {
+            int count=(field(0xB)-1)&255;
+            store(0xB,count); // UpdateDuration:420-424, first effect even for an inactive raw IX.
+            if (count==0) {
+                if (parse()) return TrackExit.STOP_COMMAND_EXIT;
+                if ((field(0)&0x10)!=0) return TrackExit.ORDINARY_RETURN;
+                if ((field(7)&0x80)!=0 && (field(0)&2)==0) routine(TrackRoutine.INIT_VIBRATO_BODY);
+                int frequency=portamento();
+                vibrato(); frequency(frequency); keyOn();
+            } else {
+                if ((field(0)&0x10)!=0) return TrackExit.ORDINARY_RETURN;
+                if (field(0x1E)!=0) {
+                    int staccato=(field(0x1E)-1)&255;
+                    store(0x1E,staccato);
+                    if (staccato==0) { keyOff(); return TrackExit.ORDINARY_RETURN; }
+                }
+                int frequency=portamento();
+                if ((field(0)&0x40)!=0) return TrackExit.ORDINARY_RETURN;
+                vibrato(); frequency(frequency);
+            }
+            return TrackExit.ORDINARY_RETURN;
+        }
+        private void vibrato() {
+            if (field(7)!=0) routine(TrackRoutine.UPDATE_VIBRATO_BODY);
+        }
+        private int portamento() {
+            int speed=field(0x10);
+            int high=field(0xE), low=field(0xD); // Native service reads HIGH before LOW.
+            int frequency=(((high<<8)|low)+(byte)speed)&0xFFFF;
+            int fnum=frequency&0x7FF;
+            if (fnum<=0x283) frequency=add16(frequency,-0x57B);
+            else if (fnum>0x508) frequency=add16(frequency,0x57C);
+            if ((field(0)&0x20)!=0) {
+                store(0xE,frequency>>>8); store(0xD,frequency&255); // Native HIGH then LOW writeback.
+            }
+            return frequency;
+        }
+        private void frequency(int frequency) {
+            if ((field(0)&4)!=0) return;
+            if ((field(0)&1)!=0 && field(1)==2) routine(TrackRoutine.SPECIAL_FM3_FREQUENCY);
+            ymTrack(0xA4,frequency>>>8); ymTrack(0xA0,frequency&255);
+        }
+        /** True only for the native nonlocal stop exit; no Finish/DataPtr stores on that path. */
+        private boolean parse() {
+            de=p.word(at(3));
+            store(0,field(0)&0xFD); store(0,field(0)&0xEF);
+            while (true) {
+                int commandAddress=de;
+                int opcode=p.read(de); de=add16(de,1);
+                if (opcode>=0xE0) {
+                    // Explicit support limit: after fetch, before table or mandatory look-ahead.
+                    if (completedCommands>=maxCommands) {
+                        throw new TrackBoundary(new CommandLimitStop(commandAddress,opcode,completedCommands));
+                    }
+                    int target=p.word(add16(view.layout.commandTableAddress(),2*(opcode-0xE0)));
+                    int parameter=p.read(de); // TrackCommand reads even for operandless handlers.
+                    TrackHandler handler=null;
+                    for (var entry:view.layout.handlers().entrySet()) if (entry.getValue()==target) {
+                        handler=entry.getKey(); break;
+                    }
+                    if (handler==null) throw new TrackBoundary(new CommandStop(commandAddress,opcode,target));
+                    switch (handler) {
+                        case PANNING -> {
+                            int pan=field(0xA)&0x3F;
+                            pan|=p.read(de); store(0xA,pan); ymTrack(0xB4,pan);
+                        }
+                        case INSTRUMENT -> instrument();
+                        case LEGATO -> { store(0,field(0)|2); de=add16(de,-1); }
+                        case STOP -> {
+                            store(0,field(0)&0x7F); write(0x1C15,0x1F);
+                            field(1); forceKeyOff(); write(0x1C18,0);
+                            return true;
+                        }
+                        case JUMP -> de=add16(p.word(de),-1);
+                        case REPEAT -> repeat(parameter);
+                    }
+                    completedCommands++;
+                    de=add16(de,1); // TrackCommand.Done, including the handler's own DE adjustments.
+                    continue;
+                }
+                keyOff();
+                if ((field(0)&8)!=0) routine(TrackRoutine.RAW_FREQUENCY_PARSE);
+                if (opcode<0x80) {
+                    duration(opcode);
+                } else {
+                    if (opcode==0x80) store(0,field(0)|0x10);
+                    else {
+                        int note=(opcode-0x81+field(5))&255;
+                        int block=(note/12*8)&255;
+                        int frequency=p.word(add16(view.layout.freqTableAddress(),2*(note%12)));
+                        store(0xD,frequency&255); store(0xE,(frequency>>>8)|block);
+                    }
+                    if ((field(0)&0x20)!=0) routine(TrackRoutine.PORTAMENTO_NOTE_PARSE);
+                    int next=p.read(de);
+                    if (next<0x80) { de=add16(de,1); duration(next); }
+                    else store(0xB,field(0xC)); // Implicit duration: this store precedes Finish's second store.
+                }
+                finish();
+                return false;
+            }
+        }
+        private void duration(int value) {
+            int multiplier=field(2); // Native DEC B/DJNZ: multiplier0 yields 256*input modulo256=0.
+            store(0xC,(value*multiplier)&255);
+        }
+        private void finish() {
+            store(3,de&255); store(4,de>>>8); store(0xB,field(0xC));
+            if ((field(0)&2)!=0) return;
+            store(0x25,0); store(0x22,0); store(0x17,0); // Shipped Finish clears only LOW VibFreq.
+            store(0x1E,field(0x1F));
+        }
+        private void instrument() {
+            for (int register:new int[]{0x80,0x84,0x88,0x8C}) ymTrack(register,0xFF);
+            int id=p.read(de); store(8,id);
+            int voice=add16(p.word(at(0x2A)),0x19*id);
+            int registers=view.layout.instrumentRegsAddress();
+            ymTrack(0xB4,field(0xA));
+            for (int n=0;n<21;n++) {
+                int register=p.read(registers); registers=add16(registers,1);
+                int value=p.read(voice); voice=add16(voice,1);
+                int returnedA=ymTrack(register,value);
+                if (n==0) store(0x1B,returnedA);
+            }
+            store(0x1C,voice&255); store(0x1D,voice>>>8);
+            int tl=p.word(at(0x1C));
+            int tlRegisters=view.layout.insTlRegsAddress();
+            for (int n=0;n<4;n++) {
+                int level=p.read(tl);
+                if ((level&0x80)!=0) level=(level+field(6))&255;
+                level&=0x7F;
+                int register=p.read(tlRegisters);
+                ymTrack(register,level);
+                tl=add16(tl,1); tlRegisters=add16(tlRegisters,1);
+            }
+        }
+        private void repeat(int index) {
+            de=add16(de,1);
+            int counter=add16(ix,(index+0x28)&255); // ADD A wraps before the unsigned IX displacement.
+            if (p.read(counter)==0) write(counter,p.read(de));
+            de=add16(de,1);
+            int remaining=(p.read(counter)-1)&255; write(counter,remaining);
+            if (remaining!=0) de=add16(p.word(de),-1);
+            else de=add16(de,1); // Done adds the second skip; no target read when count expires.
+        }
+    }
 }

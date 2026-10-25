@@ -6273,3 +6273,48 @@ complete act/game and regional breadth remain open.
 Final repaired World/route fixed-input review `535adfcaafc3aed3fb1e605948dc85b7fc65a7706d3a06713bce08c46a2760ba` found no new P1/P2; it records the two prior test findings and Root corrections. All reviewed inputs remained unchanged; executable outcomes are Root observations.
 
 Command paths use the portable placeholders `OPENGGF_MAIN` (project root), `SCD_MEDIA_ROOT` (supplied disc media) and `SONIC2_ROM` (verified World REV01 donor). The observed absolute paths remain in the private external task record.
+
+
+## 25 October 2026 — bounded native FM track projection
+
+Over private Anton base `2e9c4932848a50a9c12aeba610265fa7e9bf282b`,
+`CdFmPlaySound.planTrack/4` projects one explicit UpdateTrack(IX) entry over
+its existing immutable current RAM/source/defined/owned state. It adds no
+installer, scan, timer, queue arbitration, executor or audio service. The old
+394-line/22221-byte source prefix and existing PlaySoundID/StopSound test remain
+byte-identical. The retained-address discrepancy is reconciled: TrkCmd_Call is
+1A bytes, so DriverInfo remains06D7; actual retained-USA anchors now execute in
+the optional-media test rather than being source-only claims.
+
+The finite subset covers ordinary note/duration, panning, instrument, legato,
+jump, repeat and stop, retaining native store/read and untimed YM-intent order.
+Active vibrato, portamento note parsing, raw-frequency and special FM3 bodies,
+unsupported command targets, command limits and missing/unsupported RAM reads
+return typed uncommitted prefixes. A fault projection starts only a fresh whole
+entry. Current overlays/masks are retained; no source-baseline reconstruction,
+new RAM export, instruction ownership or fabricated IY is introduced. The six
+handlers and finite code/data classification are source-bound; declared-format
+views remain unauthenticated. This is neither track lifecycle nor synthesis,
+playback, device timing, all-sounds support or game completion.
+
+Frozen production SHA256 `f5849902d540ed1b9b636ee9c6f4f991e67ff74c8396a2226978cbe4cd251916`
+and new test `8208c90a6b189d1ad96bfeb5ac89d949815b18a51e1e0f82db9503f8de2cbceb`
+were imported with ordinary0644 modes/fresh mtimes after tests-only session87854
+failed compilation on the absent Track APIs (no JUnit execution). Exact R1
+positive55298 passes **87/0/0/0** across five fresh XML: TrackUpdate17,
+PlaySound18, RequestQueue18, Arbitration27 and Assets7. Java25.0.5.0.2,
+actual supplied-media property and private cwd are verified; the retained-USA
+composition test executed with no skip. Maven1m34, finished20:46:32Z, no queue
+wait. Independent fixed-input review
+`d965c6d02015f29000b7bb8d230183401f5c5d0b2ca73d84e0ab1e1acac348c1`
+found no P1/P2, with finite read-order/fault coverage limits explicit.
+
+Exact focused command from the private cwd:
+`env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 python3 ${OPENGGF_MAIN}/tools/testing/maven_queue.py --normal -Dmse=off '-Dtest=TestCdFmTrackUpdate,TestCdFmPlaySound,TestCdFmRequestQueue,TestCdFmSoundArbitration,TestCdFmSoundAssets' "-Dsoniccd.media.root=${SCD_MEDIA_ROOT}" test`.
+The planner proposes3752 smoke classes because this private CD owner is
+unclassified. These five directly affected pure-owner classes plus fresh
+structural guards are proportionate: no runtime/renderer/timing/shared-game
+algorithm or build/selection policy changed. Fresh guards20606 pass **728/0/0/0**,90 exact fresh XML, Java25/private cwd/Lua5.4,
+Maven5m04, finished20:55:38Z, no queue wait. Command:
+`env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 python3 ${OPENGGF_MAIN}/tools/testing/maven_queue.py --normal -Dmse=off -Pguards test -B`.
+No broad smoke/full-suite or audio-output claim follows.
