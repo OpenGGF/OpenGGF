@@ -792,3 +792,10 @@ after it. The loop boundary moves only once that redraw completes.
 The AIZ2 background-tree maker now places all seventeen trees, one per frame,
 in the slots after itself. It retries when no slot is free and gives each tree
 its original drawing priority.
+
+## Maintenance and release preparation
+
+- **Local ROM qualification:** Release preparation can bind the existing bounded
+  AIZ1/HCZ1 route pilot to a reviewed candidate commit, reject changed inputs and
+  require every named case to execute without skips. Original ROMs remain local
+  or private; hosted builds and automatic publication retain their existing flow.

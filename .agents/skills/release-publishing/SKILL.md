@@ -21,6 +21,15 @@ promoting versions.
 - Full ordinary validation is public-release-only: use explicit `-Pfull-suite`
   for release preparation. Plain Maven, category runs, PRs and routine manual CI
   use smoke. The Release workflow explicitly opts into the full suite.
+- Local release preparation also runs the existing AIZ1/HCZ1 obligation pilot
+  with `--run --expected-candidate <reviewed-full-SHA>` and an absolute existing
+  original S3&K ROM path. Strict mode binds the committed inventory and clean
+  candidate inputs, checks before/after source/fixture/ROM state, rebuilds through
+  the queue and rejects any missing, duplicate, failed or skipped required case.
+  It remains a 26-case pilot; full-suite, guards, required ROM/trace and campaign
+  gates remain separate. Keep ROMs local/private, never upload/copy/symlink them.
+  Hosted builds and automatic publication remain independent of private fixtures;
+  preserve the manual-ROM opt-in. Record concise results, not pass receipts.
 - Development branches may intentionally share a candidate commit through
   `candidateBranchAliases`. Before master promotion, clear aliases and set
   `targetBranch=master`; never carry the shared-development alias into publication.
