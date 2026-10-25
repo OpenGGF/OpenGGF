@@ -13094,3 +13094,122 @@ checkout/branch is retained; target/job ownership returns explicitly to the
 parent after final commit/source/report checks. No fetch/rebase, main write,
 integration, push, worktree/branch cleanup, subdelegation or new candidate work
 occurs in this worker delivery.
+
+### Native audio-mutator parent validation and finite frontier closure — 2026-10-25
+
+Parent mapped independent r2 source acceptance to direct-child implementation
+`1f011c1dc011560875ceebcc8993ea73db5152b8`, tree
+`93dbd989d14483906c5d0a19335318940cb667e8`. Main-Java tree remains
+`189c651269b4f17b047725ac4a8fb886f793ca9b`; all six Java blobs match the accepted
+`85e819e65877fcfb13338bdb04ad9825753e6006a04d8a244d045fa17fe52b16` manifest.
+The complete source tree, tests, tooling, hooks, POM and policy inputs match the
+reviewed overlay; only subsequent evidence prose may change. The accepted
+223-case characterization is byte-exact. R1 stopped for remapping after the
+announced withdrawal and grants no acceptance; r2 accepted the entire transfer,
+including the static concrete ingress, without P1/P2/P3 findings. Inverse
+normalization reproduced both complete base production files and all prior
+guard bytes.
+
+**Combined validation decision.** The actual read-only category plan against
+pre-task destination `03e20f57efcb0bdcc38d6518a27e9b9b1d76eb6a` selects all
+3,784 ordinary smoke candidates because `AudioManagerTestDiagnostics` is a
+shared/unclassified helper. Production itself maps to audio/rewind/tooling.
+The helper delta only observes the actual new owner for three mechanical layout
+migrations; its other behavior is unchanged. The production delta closes one
+manager-lifetime protocol, with unchanged public/protected contracts, native
+algorithms and other owners. The original-production security, thread, callback,
+reset and dispatch controls, unchanged post-move 223 cases, real maintained
+consumers and independent whole-file reconstruction bound its impact.
+Parent therefore uses the worker's 359 consumers, one ownership guard,
+24 compiled API/boundary/accounting cases and 63 engine-ROM/PCM cases, together
+with fresh complete global guards and actual composed controllers, instead of
+the ordinary helper fallback. The runner selection was inspected, not manually
+narrowed or executed. No broad smoke, full-suite or emulator-parity pass is
+claimed. New failures, unexpected skips or unexplained ownership/accounting
+changes would stop delivery for bounded attribution, without policy relaxation.
+
+Both parent commands ran through the normal queued wrapper in this worktree.
+They unset DISPLAY, WAYLAND_DISPLAY, XAUTHORITY, JAVA_TOOL_OPTIONS,
+JDK_JAVA_OPTIONS and MAVEN_ARGS, selected Java 25 and Lua 5.4, and supplied
+`-Dmse=off`, explicit surfaceless EGL and the three dotted false freeze flags.
+For portable reproduction, OPENGGF_ROM_ROOT denotes the existing root-ROM
+directory; the actual absolute properties used these filenames:
+
+```text
+-Dsonic1.rom.path=${OPENGGF_ROM_ROOT}/Sonic The Hedgehog (W) (REV01) [!].gen
+-Dsonic2.rom.path=${OPENGGF_ROM_ROOT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen
+-Ds3k.rom.path=${OPENGGF_ROM_ROOT}/Sonic and Knuckles & Sonic 3 (W) [!].gen
+-Dkis2.rom.path=${OPENGGF_ROM_ROOT}/kis2.gen
+```
+
+The exact Maven selections were `-Pguards test -B` without a field filter and:
+
+```text
+-Dtest=TestGameLoopSuspension,TestGameLoopZoneActHandoffS1#rootRequestRunsFadeLoadTitleAndFirstInputWithoutExtraPass,TestGameLoopZoneActHandoffS2#rootRequestRunsFadeLoadTitleAndFirstInputWithoutExtraPass,TestKis2SpecialStageControllerLifecycle#entryResultsReturnKeepsChipProvider test -B
+```
+
+| Parent handle | Cases/failures/errors/skips | Physical reports | Queue wait | Maven elapsed |
+| --- | --- | ---: | ---: | ---: |
+| 83957, fresh complete guards | 800/0/0/0 | 95 | 0 s | 5:13 |
+| 10052, composed controllers | 11/0/0/0 | 4 | 0 s | 26.834 s |
+
+The guard set includes all 34 ArchUnit cases, 45 audio-architecture cases,
+four session-authority cases and the new complete mutator ownership guard.
+The worker's eleven compiled API-surface cases remain separate: the full guards
+profile does not select that API class. Overlapping coverage is not summed.
+Controller identities reconcile to seven suspension cases, S1 root handoff,
+both S2 variants and genuine KiS2 entry/results/full return. The suspension
+report contains 82 exact null-FileChannel preload messages; the other three
+contain none. This is the known unrepaired issue, not loader repair evidence.
+
+Parent inspected every XML identity, failure/error/skip, Java 25.0.5.0.2,
+EGL property, four absolute ROM properties and rehashed identities, all three
+false freeze values and absence of an ArchUnit field filter. All thirteen frozen
+files remain exact to 03e, including 120 raw low-level records. Sorted full
+case-ID SHA-256 values are
+`2b22860733e525beaa0189cba08ca3c4677eea6a2256c03e5e87cb5c65b4a56a`
+(guards) and
+`1595be6a3d9f7d364fdef4ea64a8527ff1c8437bae3a776a532a12107cce5870`
+(controllers). Both handles are terminal. All 198 XML/text files, the empty
+rewind-disposition diagnostic and the 513-row two-column lifecycle inventory
+were inspected and consumed. No category acknowledgment, raw archive or
+validation receipt remains. Fetch/fast-forward pull found main develop still
+at 03e, with its four dirty reference submodules and five user files preserved.
+Integration, push and exact worktree/branch cleanup remain subsequent operations.
+
+**Finite remaining-authority assessment.** An independent Git-object-only
+assessment used accepted tree `b9c0c43fca934bee36bd183dc3b6ae4ee2349410`, now
+mapped to this commit's identical production. It found no worthwhile additional
+bounded transfer in these four composition roots. This is a source-level
+frontier disposition, not repository-wide architectural exhaustion or runtime
+correctness proof. Its retained authority and reopening facts are:
+
+| Root/boundary | Retained authority and concrete reopening evidence |
+| --- | --- |
+| AudioManager installation and ports | Root already executes transferred-port admission, clear-before-release, cursor retirement, backend compatibility and failure aggregation. ModSubsystem/view eligibility, manager custody and factory cursor residency are successive lifetimes. Reopen for competing installation/retirement authority or usable cursors surviving retirement. Backend selection composes the accepted owners rather than duplicating their algorithms. AM at the pinned tree: 287–375, 621–672. |
+| AudioManager routing, replay and frame work | Current source/routing choices, caller-supplied mappings, lexical replay exclusion, external-frame arbitration, isolated voice identities and deferred natural-restore intent remain manager composition. Timeline entries/cursors and registry restoration stay with their existing owners; observation counters do not decide playback. Reopen for independently installed routing state, durable exclusion admission, a shared transition invariant across clock origins, or an identity-specific pending-restore lifetime. AM: 713–767, 946–971, 1226–1242, 1372–2000, 2874–2882. |
+| Engine | Application/window/input, configured-headless bootstrap, current runtime/launch selection, viewport/display adoption and editor/import/quit presentation remain application authority. Existing controllers and the suspension owner execute their own algorithms/visits. Reopen for a separately replaceable application surface or an independent visit/display-generation lifetime split across owners. E: 689–962, 1241–2252, 2992–3035, 4399–4457. |
+| GameLoop | Current mode/bindings and scheduled-input publisher, pause/rate composition, per-iteration PLC/audio/rewind markers and deferred destination callbacks belong to outer-frame admission. Hosted-run termination and application destination selection intentionally differ. Reopen for competing mode/publisher writers, an independent durable pause lease or a marker consumed beyond its frame. GL: 327–389, 589–831, 1065–1138, 1883–1964. |
+| LevelManager | Loaded-world installation/progression, derived geometry, collaborator selection, load-local readiness and frame/reload/ring-phase coordination retain world-installation authority. Attempt/preparer, contributed-service runtime, render and transition algorithms already have owners. Reopen for an independently committed/retired world generation or one authority governing all visible, omitted and continuation readiness paths. LM: 528–556, 676–695, 847–873, 3354–3488, 4562–4629. |
+
+The closest rejected cuts would add a streamed-installation wrapper, combine
+different replay/frame clocks, absorb registry/producer restore ordering, or
+bundle unrelated loaded subsystems. This judgment follows authority and lifetime,
+not field count, migration cost, defect absence or frozen-record opportunity.
+The write-only `audioFrameAdvanced` marker supplies no independent ownership
+argument. Direct backend destruction by isolated silent placement/puppet callers
+is an explicit source-visible disposal limit; no complete disposal repair or
+qualification is claimed here.
+
+The original named families remain closed: ending/credits progression lives in
+the accepted session owner while Engine consumes its provider for drawing;
+GPU palette residency remains distinct from CPU aliases and adapter-observed
+capture association; SMPS restore destination, explicit manager configuration
+binding and mutable coordination/session state keep their separate authorities.
+Parent rechecked twelve delivered owner files against their accepted Git blobs;
+all are exact, and this transfer changes only the two reviewed audio files.
+Scene eligibility/residency, CPU capture adoption and S2 fixed-tail storage
+retentions remain unchanged. The fixed-tail bug stays open; native CPU-RAM queue
+acceptance remains neither VRAM/pixel proof nor Java storage/snapshot authority.
+No new owner, API permission, terminal, annotation, frozen record or campaign is
+selected by this final assessment. Parent still owns the final delivery audit.

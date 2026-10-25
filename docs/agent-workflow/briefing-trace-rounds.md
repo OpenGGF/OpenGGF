@@ -108,6 +108,16 @@ origin together; do not broaden a guard to every lambda or every manager call.
 The [diagnostic ownership evidence](../architecture/plans/2026-10-24-architecture-continuation.md)
 records the guard-only correction and separate focused rerun.
 
+An added composition getter can change a preservation oracle even when it is
+package-private and final. During native audio-mutator ownership extraction,
+ten rejected-operation cases observed the new getter on `spy(AudioManager.class)`;
+the original field read made no manager-instance call. A static concrete ingress
+for the exact supplied manager preserved that boundary without weakening the
+accepted assertions. Keep caller-loader inspection at its original public
+boundary before delegating through any new owner frame. The
+[mutator ownership evidence](../architecture/plans/2026-10-24-architecture-continuation.md)
+records the withdrawn freeze, exact replacement and complete consumer rerun.
+
 A Stageplay pixel oracle can compare two black S3K pictures while object art is
 still dormant or the native initial palette reveal is black (2026-10-24, facing
 correction, base `ac46111bc`). Require nonempty native sprite pixels and their
