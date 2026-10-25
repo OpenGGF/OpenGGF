@@ -43,7 +43,7 @@ import static org.mockito.Mockito.mock;
  * Physical-composition baseline on frozen SourcePublication commit 04a5a6c7
  * (AudioManager blob 5990cb9e), before any PresentationBinding extraction.
  * All stimuli use existing profile/backend/sink callbacks and real sessions.
- * Reflection only observes original Root/owner slots; it never injects state.
+ * Reflection only observes current private owner slots; it never injects state.
  * These ROM-free controls characterize publication, not native audio parity.
  */
 class TestAudioPresentationBindingContract {
@@ -675,6 +675,9 @@ class TestAudioPresentationBindingContract {
 
     @SuppressWarnings("unchecked")
     private <T> T root(String name) {
+        if (Set.of("shadowCommands", "shadowFactory", "shadowResolver", "shadowRegistry", "shadowProducer", "shadowSmpsSession", "shadowRequestService", "shadowFrameRate", "shadowParity", "shadowTuning", "nativeCompatiblePcmCapture", "nativeCompatiblePcmSessions", "standaloneTuning", "standaloneFrameRate", "presentationCoordFlagHandlers", "presentationCoordHandlerGameIds", "presentationSink", "presentationSpeakerFailed").contains(name)) {
+            return (T) AudioManagerTestDiagnostics.presentationField(audio, name, Object.class);
+        }
         try {
             Field slot = AudioManager.class.getDeclaredField(name);
             slot.setAccessible(true);

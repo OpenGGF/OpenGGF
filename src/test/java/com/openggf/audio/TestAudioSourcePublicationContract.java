@@ -822,6 +822,10 @@ class TestAudioSourcePublicationContract {
                     "sourceMutationInProgress", "donorSoundBindings", "donorMusicBindings").contains(name)) {
                 receiver = AudioManagerTestDiagnostics.sourcePublication(manager);
             }
+            if (receiver instanceof AudioManager manager
+                    && Set.of("shadowProducer", "shadowFactory", "shadowResolver").contains(name)) {
+                return (T) AudioManagerTestDiagnostics.presentationField(manager, name, Object.class);
+            }
             Field field = receiver.getClass().getDeclaredField(name);
             field.setAccessible(true);
             return (T) field.get(receiver);

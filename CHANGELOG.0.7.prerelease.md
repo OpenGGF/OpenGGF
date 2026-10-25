@@ -664,7 +664,10 @@ Unreleased. The earlier development themes remain in
   Production backends also retain their supplied manager as legacy configuration
   authority, querying its current factory after resets; existing constructors keep
   lazy singleton selection, independently of restoration. SoundTest windows retain
-  their configured destination for WAV export. Capture
+  their configured destination for WAV export. A private manager-lifetime binding
+  owns incremental physical presentation assembly, source-dependent replacement
+  and sink retirement while preserving source publication, capture continuity and
+  held-rewind policy with their existing owners. Capture
   admission, rebuild continuity and retirement share one manager-owned lifetime
   boundary, preserving live recordings across presentation replacements. Held
   rewind target selection, boundary replacement and release retries share a private

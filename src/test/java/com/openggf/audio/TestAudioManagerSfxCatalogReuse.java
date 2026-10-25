@@ -653,13 +653,8 @@ class TestAudioManagerSfxCatalogReuse {
     }
 
     private com.openggf.audio.presentation.AudioPresentationCommandResolver resolver() {
-        try {
-            var field = AudioManager.class.getDeclaredField("shadowResolver");
-            field.setAccessible(true);
-            return (com.openggf.audio.presentation.AudioPresentationCommandResolver) field.get(audio);
-        } catch (ReflectiveOperationException failure) {
-            throw new AssertionError(failure);
-        }
+        return AudioManagerTestDiagnostics.presentationField(audio, "shadowResolver",
+                com.openggf.audio.presentation.AudioPresentationCommandResolver.class);
     }
 
     private void installBase(CountingLoader loader) {

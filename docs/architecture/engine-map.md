@@ -541,6 +541,28 @@ remain observable. Physical residency and voice retirement stay session-owned;
 logical rewind restores sound bindings through owner effects, without rewinding
 music bindings, installed source tuples or generations.
 
+Each `AudioManager` retains one private, final `PresentationBinding` for its
+complete physical assembly. It owns all 18 physical slots, lazy incremental
+construction, coordination membership, profile-versus-ROM replacement decisions,
+sink association/failure, native-capture configuration and counting, current
+factory observer/streamed bindings, and retirement clearing. It is cold at manager
+construction and adds no monitor. Partial factories, failed session creation,
+closed producers retained after teardown failure, and reentrant current-slot
+clearing remain observable rather than becoming atomic installs.
+
+SourcePublication prepares an opaque binding-owned coordination preparation
+outside its backend rollback catch. Binding applies it through closed base/donor
+backend attempts, choosing transactional registration or direct application;
+SourcePublication retains attempted-state interpretation, live backend restoration,
+suppression and logical publication. Binding membership publishes immediately
+before the logical source tuple, and separate post-publication operations preserve
+profile admission refresh versus ROM no-op for partial factories. Held target and
+capture continuity stay with their existing owners, using current collaborators
+from the stable binding. Tempo snapshot still precedes held/capture invalidation;
+base replacement retains the virtual manager sink entry point. Scene sample
+scopes retain their captured producer and identity-based expiry. Natural restore
+intent and transferred launch-port lifetime remain with the manager.
+
 Each `AudioManager` also retains a private `HeldReverseRestore` owner for the
 held logical target across selection, detached replay, preparation, producer
 replacement, boundary supersession and release retries. It owns held admission

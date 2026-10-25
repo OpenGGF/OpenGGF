@@ -498,6 +498,10 @@ class TestSmpsRepeatedPlaybackBenchmark {
     }
 
     private static Object field(Object target, String name) {
+        if (target instanceof AudioManager audio
+                && (name.equals("shadowRegistry") || name.equals("shadowSmpsSession"))) {
+            return AudioManagerTestDiagnostics.presentationField(audio, name, Object.class);
+        }
         Class<?> type = target.getClass();
         while (type != null) {
             try {

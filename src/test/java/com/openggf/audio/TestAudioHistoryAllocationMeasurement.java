@@ -175,9 +175,7 @@ class TestAudioHistoryAllocationMeasurement {
      * Measure that ring.
      */
     private static PcmHistoryRing producerHistory(AudioManager audio) throws Exception {
-        Field producerField = AudioManager.class.getDeclaredField("shadowProducer");
-        producerField.setAccessible(true);
-        Object producer = producerField.get(audio);
+        Object producer = AudioManagerTestDiagnostics.presentationField(audio, "shadowProducer", Object.class);
         assertNotNull(producer, "the presentation producer must own capture history");
 
         Field historyField = producer.getClass().getDeclaredField("history");

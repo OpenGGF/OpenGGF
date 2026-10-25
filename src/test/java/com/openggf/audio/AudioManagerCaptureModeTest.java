@@ -827,15 +827,11 @@ class AudioManagerCaptureModeTest {
 
     private static AudioPresentationSink presentationSink(AudioManager audio)
             throws Exception {
-        Field field = AudioManager.class.getDeclaredField("presentationSink");
-        field.setAccessible(true);
-        return (AudioPresentationSink) field.get(audio);
+        return AudioManagerTestDiagnostics.presentationField(audio, "presentationSink", AudioPresentationSink.class);
     }
 
     private static Object producer(AudioManager audio) throws Exception {
-        Field field = AudioManager.class.getDeclaredField("shadowProducer");
-        field.setAccessible(true);
-        return field.get(audio);
+        return AudioManagerTestDiagnostics.presentationField(audio, "shadowProducer", Object.class);
     }
 
     private record CaptureModeProfile(
