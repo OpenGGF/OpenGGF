@@ -942,7 +942,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 						boolean recordedLogicalJumpPress = false;
 						if (context.useEffectiveRuntimeInput()) {
 							effectiveRight = (!controlLocked && right) || forcedRight;
-							effectiveLeft = ((!controlLocked && left) || forcedLeft) && !forcedRight;
+							effectiveLeft = ((!controlLocked && left) || forcedLeft) && !playable.isForceInputRight();
 							effectiveUp = (!controlLocked && up) || forcedUp;
 							effectiveDown = (!controlLocked && down) || forcedDown;
 							effectiveJump = (!controlLocked && jump) || forcedJump;

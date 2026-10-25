@@ -186,6 +186,57 @@ public class TestMegaChopperBadnikInstance {
     }
 
     @Test
+    public void bothDirectionsSurviveObjectThenProductionPlayerPassAndRewind() throws Exception {
+        var gameplay = TestEnvironment.activeGameplayMode();
+        var sprites = GameServices.sprites();
+        var level = org.mockito.Mockito.mock(com.openggf.level.LevelManager.class);
+        gameplay.attachLevelManagers(new com.openggf.level.WaterSystem(), new com.openggf.level.ParallaxManager(),
+                org.mockito.Mockito.mock(com.openggf.physics.TerrainCollisionManager.class),
+                org.mockito.Mockito.mock(com.openggf.physics.CollisionSystem.class), sprites, level);
+        GameServices.camera().setMaxX((short) 0x4000);
+        GameServices.camera().setMaxY((short) 0x2000);
+        GameServices.camera().setMaxYTarget((short) 0x2000);
+        var player = new com.openggf.sprites.playable.Sonic("sonic", (short) 0x200, (short) 0x180);
+        player.setCentreX((short) 0x200);
+        player.setCentreY((short) 0x180);
+        player.setRingCount(10);
+        GameServices.camera().setFocusedSprite(player);
+        sprites.addSprite(player);
+        player.setAir(true);
+        player.setYSpeed((short) 0x100);
+        MegaChopperBadnikInstance chopper = capturingChopper();
+        chopper.onTouchResponse(player, new TouchResponseResult(0x17, 0x20, 0x20, TouchCategory.SPECIAL), 0);
+        chopper.update(0, player);
+        player.recordFollowerHistoryForTick();
+        int oldHistory = player.getInputHistory(0);
+        player.endOfTick(); // preceding player slot completed before this late object write
+        player.setDirectionalInputPressed(false, true, true, true);
+        chopper.update(1, player);
+        assertEquals(oldHistory, player.getInputHistory(0));
+        assertEquals("CARRY", readState(chopper));
+        assertEquals(12, player.getLogicalInputState());
+        var snapshot = player.captureRewindState();
+        for (int replay = 0; replay < 2; replay++) {
+            if (replay != 0) player.restoreRewindState(snapshot);
+            var input = new com.openggf.control.InputHandler();
+            input.setLogicalOverride(com.openggf.control.LogicalInputSnapshot.ofPlayers(
+                    com.openggf.control.PlayerInputState.of(0, 0, 0, 0, false, false),
+                    com.openggf.control.PlayerInputState.neutral()));
+            sprites.update(input);
+            assertEquals(0, player.getXSpeed(), "native Sonic_ChgJumpDir executes left then right");
+            assertEquals(12, player.getLogicalInputState());
+            assertEquals(12, player.getInputHistory(0));
+            Field rawLeft = com.openggf.sprites.playable.AbstractPlayableSprite.class.getDeclaredField("leftInputPressed");
+            rawLeft.setAccessible(true);
+            assertFalse(rawLeft.getBoolean(player), "raw controller is independent of the retained logical word");
+            assertTrue(player.isControlLocked());
+        }
+        player.setForceInputRight(true);
+        sprites.update(new com.openggf.control.InputHandler());
+        assertTrue(player.getXSpeed() > 0, "legacy deliberate forced-right still overrides left");
+    }
+
+    @Test
     public void releaseClearsTheMainControlLock() throws Exception {
         MegaChopperBadnikInstance megaChopper = capturingChopper();
         TestablePlayableSprite player = mainPlayer();

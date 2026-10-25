@@ -1978,3 +1978,64 @@ All temporary source probes and inspected task-owned XML/trace diagnostics are
 consumed. There is no live Maven job or helper. The task checkout and local
 commit remain for parent review; combined smoke, integration, push, whole-route
 completion, remaining product matrices and checkout cleanup are parent-owned.
+
+
+## HCZ review follow-up: authoritative standing and logical-word consumption — 2026-10-25
+
+Parent review of frozen `e27a600` identified two bounded defects before delivery.
+Neither finding establishes the later campaign death. This continuation retains
+that commit and its exact `61be1910` base in `t3-191b48d4`; no rebase or upstream
+runtime import was performed.
+
+`MegaChopper_CarryFollowPlayer` publishes both horizontal bits when both are
+held (`sonic3k.asm:184449-184453`). `Sonic_ChgJumpDir` executes its Left and
+Right branches independently (`sonic3k.asm:23129-23158`). The legacy forced-mask
+API also enabled forced-right priority, so production player dispatch suppressed
+Left. An independent airborne, zero-X-speed capture followed by the real
+`SpriteManager.update` failed on frozen runtime with X velocity `$0018` rather
+than zero (1 test, 1 assertion failure, no errors or skips; 26.529 seconds Maven,
+zero queue wait). Immediate field tests had missed consumption. The correction
+adds an engine-internal scripted logical-word writer using existing captured
+mask/priority/logical fields. Existing deliberate forced-right writes retain
+priority. The object write updates the live logical word, leaves the already
+recorded follower slot untouched, and feeds the following player pass. The
+production control also restores the player and repeats consumption, verifies
+raw input independence, and checks the legacy override.
+
+`HCZHandLauncher_TryGrabPlayer` reads the object's authoritative standing bit
+before its next solid call (`sonic3k.asm:66006-66008`). `RideObject_SetRide`
+clears the previous owner's bit when another support acquires the player
+(`sonic3k.asm:42067-42079`). The private retained boolean introduced in
+`e27a600` survived that external clear. A manager-level landing, support transfer,
+and next hand pass failed independently (1 assertion failure, no skips). The
+hand now queries the existing solid manager latch. That owner already captures
+and restores object/player identities and standing state; the duplicate boolean
+has been removed. The final-Y checkpoint and prior-pass order are unchanged.
+The new manager test restores the landing and repeats the transfer/forward pass.
+
+The initial two-control run had 2 cases, 1 expected launcher failure and 1 fixture
+error (a sensorless test player entered real movement; 28.650 seconds Maven).
+A second Chopper control failed because its real Sonic centre was outside the
+capture range (27.616 seconds); fixing the fixture produced the independent
+velocity failure above. The first corrected-runtime run executed 28 cases:
+all 15 launcher and all 4 registered graph cases passed; Chopper movement passed,
+but its new history assertion exposed a missing preceding `endOfTick` in the
+fixture. That fixture boundary was corrected without changing runtime. Maven
+execution was 79 seconds and queue wait zero. These are focused checks, not a
+campaign or broad-suite result.
+
+The final review control passes (1 test, zero failures/errors/skips), including
+restore/forward, raw held-field independence, history phase, and the legacy
+forced-right override. It shared a focused invocation with the independent
+old-runtime drowning controls: 12 physical cases, 10 expected drowning failures,
+zero errors/skips, 28.893 seconds Maven, zero queue wait. The unchanged 27 passing
+review regressions above are reused; no broad suite or replay was repeated for
+this review-only correction. Exact selection was
+`TestMegaChopperBadnikInstance,TestHCZHandLauncherObjectInstance,TestS3kHczHandLauncherGraphRewind`
+followed by
+`TestMegaChopperBadnikInstance#bothDirectionsSurviveObjectThenProductionPlayerPassAndRewind,TestNativeDrowningDispatch`.
+Both used queued Maven `test -B -Dmse=off`, explicit surfaceless EGL, Java 25,
+Lua 5.4, and the three original verified absolute ROM paths. Display/Wayland and
+inherited JVM-option variables were unset. The remaining canonical replay is
+reserved for the completed drowning correction, so the last measured campaign
+frontier remains input 70718 / segment 11 row 3475 sidekick routine.

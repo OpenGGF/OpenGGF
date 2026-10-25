@@ -103,3 +103,11 @@ selection on base`61be1910` plus those object edits. This is one affected HCZ2
 regression, not a new HCZ2 route/width/donor/team/lifecycle or native-pixel claim.
 The continuous chain still has an inherited shared player-dispatch frontier;
 its later HCZ2 death is not certified fixed by the HCZ1 object work.
+
+
+HCZ review follow-up (2026-10-25): the existing launcher/Chopper regression
+selection now includes real player-pass simultaneous Left/Right consumption
+with restore/forward and a manager-level support transfer before the next grab,
+also repeated after restore. The 28 affected review cases pass across the final
+control and reused unchanged cases. These controls do not certify the still
+incomplete continuous route; see the appended HCZ audit for measured limits.

@@ -113197,3 +113197,20 @@ ownership at7643/input70718. The old input68801 drowning stop is passed, while
 segment closure and the campaign remain red. No shared player/physics owner was
 edited; parent owns the required rescope, combined smoke and delivery. Passive
 sources and consumed task-owned diagnostics are removed; task checkout retained.
+
+
+## 2026-10-25 — HCZ frozen-e27a600 review corrections
+
+`t3-191b48d4` retains `e27a600` over the exact `61be1910` base. Independent
+production controls proved simultaneous logical Left/Right became forced Right
+(X velocity `$0018` rather than zero) and a hand's private standing copy survived
+a later support transfer. Both are corrected with existing captured input fields
+and the solid manager's authoritative, rewindable standing latch. Focused review
+coverage is 28 physical cases, zero remaining failures/errors/skips across the
+unchanged 27 passing cases and final corrected-fixture control. See the appended
+[audit](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#hcz-review-follow-up-authoritative-standing-and-logical-word-consumption--2026-10-25)
+for exact selectors, fixture errors, timings, and limits. No replay was repeated:
+the last measured campaign remains incomplete at input 70718, segment 11 first
+row 3475 `sidekick_routine` `$0C/$02`. The authorized primary drowning owner is
+being corrected separately; these two review findings alone do not attribute
+the later death.

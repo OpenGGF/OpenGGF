@@ -177,6 +177,42 @@ class TestS3kHczHandLauncherGraphRewind {
         assertEquals(1, liveArms(objects).size());
     }
 
+    @Test
+    void laterSupportClearsHandStandingBeforeNextGrabIncludingRestore() throws Exception {
+        com.openggf.tests.TestEnvironment.configureGameModuleFixture(
+                com.openggf.tests.rules.SonicGame.SONIC_3K);
+        TestablePlayableSprite player = new TestablePlayableSprite(
+                "sonic", (short) (LAUNCHER_SPAWN.x() - 8), (short) LAUNCHER_SPAWN.y());
+        boolean[] standing = {false};
+        Harness harness = Harness.create(player, standing);
+        ObjectManager objects = harness.objectManager();
+        HCZHandLauncherObjectInstance launcher = objects.createDynamicObject(
+                () -> new HCZHandLauncherObjectInstance(LAUNCHER_SPAWN));
+        for (int pass = 0; pass < 6; pass++) launcher.update(pass, player);
+        standing[0] = true;
+        launcher.update(6, player);
+        objects.forceRidingObjectForBootstrap(player, launcher);
+        assertTrue(objects.hasObjectStandingBit(player, launcher));
+        var other = objects.createDynamicObject(() -> new HCZHandLauncherObjectInstance(
+                new ObjectSpawn(LAUNCHER_SPAWN.x() + 0x100, LAUNCHER_SPAWN.y(), 0x3A, 0, 0, false, 0)));
+        var registry = registryFor(objects);
+        var landed = registry.capture();
+        for (int replay = 0; replay < 2; replay++) {
+            if (replay != 0) registry.restore(landed);
+            launcher = objects.getActiveObjects().stream().filter(HCZHandLauncherObjectInstance.class::isInstance)
+                    .map(HCZHandLauncherObjectInstance.class::cast).filter(o -> o.getX() == LAUNCHER_SPAWN.x())
+                    .findFirst().orElseThrow();
+            other = objects.getActiveObjects().stream().filter(HCZHandLauncherObjectInstance.class::isInstance)
+                    .map(HCZHandLauncherObjectInstance.class::cast).filter(o -> o.getX() != LAUNCHER_SPAWN.x())
+                    .findFirst().orElseThrow();
+            objects.forceRidingObjectForBootstrap(player, other);
+            assertFalse(objects.hasObjectStandingBit(player, launcher));
+            standing[0] = false;
+            launcher.update(7, player);
+            assertFalse(player.isObjectControlled(), "RideObject_SetRide cleared the former owner's standing bit");
+        }
+    }
+
     private record Harness(ObjectManager objectManager, ObjectServices services) {
         static Harness create() { return create(null, new boolean[]{false}); }
 
@@ -195,6 +231,10 @@ class TestS3kHczHandLauncherGraphRewind {
                             .filter(HCZHandLauncherObjectInstance.class::isInstance)
                             .map(HCZHandLauncherObjectInstance.class::cast).findFirst().orElseThrow();
                     return new ObjectSolidExecutionContext(SolidExecutionRegistry.inert(), launcher, () -> {
+                        if (player != null) {
+                            if (standing[0]) holder[0].forceRidingObjectForBootstrap(player, launcher);
+                            else holder[0].releaseRidingObject(player, launcher);
+                        }
                         PlayerSolidContactResult contact = new PlayerSolidContactResult(
                                 ContactKind.TOP, true, false, false, false, PreContactState.ZERO,
                                 new PostContactState((short) 0, (short) 0, false, true, false), 0);

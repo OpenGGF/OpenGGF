@@ -341,6 +341,7 @@ class TestHCZHandLauncherObjectInstance {
     }
 
     private static final class ProbeHandLauncher extends HCZHandLauncherObjectInstance {
+        private SolidCheckpointBatch retainedBatch = new SolidCheckpointBatch(this, Map.of());
         private SolidCheckpointBatch checkpointBatch = new SolidCheckpointBatch(this, Map.of());
         private final List<Integer> checkpointYs = new java.util.ArrayList<>();
 
@@ -357,7 +358,14 @@ class TestHCZHandLauncherObjectInstance {
         }
 
         @Override
+        protected boolean hasRetainedStandingBit(com.openggf.sprites.playable.AbstractPlayableSprite player) {
+            var contact = retainedBatch.perPlayer().get(player);
+            return contact != null && contact.standingNow();
+        }
+
+        @Override
         protected SolidCheckpointBatch checkpointAll() {
+            retainedBatch = checkpointBatch;
             checkpointYs.add(getY());
             return checkpointBatch;
         }

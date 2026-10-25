@@ -7,6 +7,18 @@ public final class PlayableSpriteInternalAccess {
     private PlayableSpriteInternalAccess() {
     }
 
+    /**
+     * Writes a native scripted logical word without rewriting the follower history
+     * already recorded by the player slot. Unlike legacy forced-right steering,
+     * a logical word can retain both horizontal buttons (Sonic_ChgJumpDir,
+     * sonic3k.asm:23129-23158).
+     */
+    public static void writeScriptedLogicalInput(AbstractPlayableSprite sprite, int heldMask, boolean jumpPress) {
+        sprite.setForcedInputMask(heldMask);
+        sprite.forceInputRight = false;
+        sprite.logicalInputStateForScript(heldMask, jumpPress);
+    }
+
     public static void bindMutatorPolicies(AbstractPlayableSprite sprite, PlayableMutatorPolicySource source) {
         sprite.mutatorPolicySource = source;
     }

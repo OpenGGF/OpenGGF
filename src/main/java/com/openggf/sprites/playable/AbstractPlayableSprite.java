@@ -3804,6 +3804,11 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.logicalJumpPressState = jumpPress;
         }
 
+        void logicalInputStateForScript(int heldMask, boolean jumpPress) {
+                logicalInputState = (short) heldMask;
+                logicalJumpPressState = jumpPress;
+        }
+
         public void clearLogicalInputState() {
                 this.logicalInputState = 0;
                 this.logicalJumpPressState = false;

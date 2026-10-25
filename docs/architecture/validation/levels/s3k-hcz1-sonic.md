@@ -375,3 +375,11 @@ whole-route rewind, physical input shake ingress and remaining encounter/lifecyc
 obligations are inherited gaps, not certified products. The manual solid phase
 itself has no viewport dependency; physical timing/route qualification here uses
 only the recorded native Sonic+Tails product. Parent owns combined smoke and delivery.
+
+
+HCZ review follow-up (2026-10-25): the existing launcher/Chopper regression
+selection now includes real player-pass simultaneous Left/Right consumption
+with restore/forward and a manager-level support transfer before the next grab,
+also repeated after restore. The 28 affected review cases pass across the final
+control and reused unchanged cases. These controls do not certify the still
+incomplete continuous route; see the appended HCZ audit for measured limits.

@@ -427,14 +427,8 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
         if (player.isRightPressed()) {
             leftRight |= AbstractPlayableSprite.INPUT_RIGHT;
         }
-        player.clearLogicalInputState();
-        player.setForcedInputMask(leftRight);
-        // Publish the live Ctrl_1_logical word too. The explicit forced mask
-        // admits this script write through the control lock; it must not rewrite
-        // the follower-history entry Sonic_RecordPos already stored this pass.
-        player.setLogicalInputState(false, false,
-                (leftRight & AbstractPlayableSprite.INPUT_LEFT) != 0,
-                (leftRight & AbstractPlayableSprite.INPUT_RIGHT) != 0, false, false);
+        com.openggf.sprites.playable.PlayableSpriteInternalAccess.writeScriptedLogicalInput(
+                player, leftRight, false);
     }
 
     private void releaseMainControls() {
