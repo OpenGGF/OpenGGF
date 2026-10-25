@@ -123,3 +123,30 @@ Inspect skips, acknowledge consumed diagnostics, and retain no validation caches
   controls during implementation. Reconcile its overlapping chat/protocol/scene
   changes before combined verification. Preserve both features and regenerate
   the actual candidate API snapshot. No combined pass is claimed yet.
+- Reconciliation commit `407a5a4df` preserves private access and communication
+  modes together, including leases and epochs during metadata changes. Protocol
+  7 distinguishes the combined strict schema from destination protocol 6. The
+  actual regenerated 23,071-line API snapshot and six other focused classes
+  passed 72 cases without skips.
+- JDK teardown fix `1bbc087a4` is integrated as `f2534472c`. Its five-case
+  baseline reproduction failed as expected; 44 affected checks and the final
+  six-case lifecycle check passed. Independent common/server/scene review found
+  one additional handoff race. Fix `cec4827cd`, integrated as `ad4adf65a`, keeps
+  pending creation cancellation and late replies ahead of relay attachment.
+  Its delayed-response reproduction failed twice as expected; focused client
+  checks passed 38 cases and a final reentrant case passed separately.
+- The reconciled consumer/lifecycle selection ran 231 cases with no failures or
+  errors and one graphics skip. Its 35 socket cases include private direct,
+  relay and registered-LAN joins and the delayed password prompt. The graphics
+  skip demonstrated that `MAVEN_OPTS` does not set the test fork's backend.
+  A direct EGL rerun reached rendering and exposed a stale full-frame assertion:
+  hiding now removes cached invite metadata, so its expiry label changes to
+  unfetched. Compare with a fresh unfetched frame and with another hidden code,
+  while retaining distinct revealed-glyph and password pixel assertions.
+- Final client/reentrant-handoff and actual EGL rendering checks passed 40 cases
+  without skips on `ad4adf65a` plus the corrected pixel fixture. Actual pictures
+  at 320, 400 and 800 pixels use the production scene renderer. The Java 25,
+  Lua 5.4 and guard-tool preflight passed with the test JVM's explicit EGL
+  environment. The change-based plan selects 3,808 smoke candidate classes
+  across all ten categories plus separate guards. Coherent packaging and this
+  combined selection remain the next delivery gates.

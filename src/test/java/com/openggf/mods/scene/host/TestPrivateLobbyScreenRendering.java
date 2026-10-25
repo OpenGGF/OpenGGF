@@ -46,8 +46,12 @@ class TestPrivateLobbyScreenRendering {
                     RgbaImage otherReveal = render(renderer, font, width, second::draw);
                     assertTrue(codePixelsDiffer(revealed, otherReveal), "Distinct revealed code glyphs must reach the framebuffer");
                     first.hide();
+                    second.hide();
                     RgbaImage hidden = render(renderer, font, width, first::draw);
-                    assertArrayEquals(mask.pixels(), hidden.pixels(), "Focus/navigation hiding restores the complete masked picture");
+                    RgbaImage neverFetched = render(renderer, font, width, invitation(null)::draw);
+                    assertArrayEquals(neverFetched.pixels(), hidden.pixels(), "Hiding discards the code and restores the unfetched picture");
+                    assertArrayEquals(hidden.pixels(), render(renderer, font, width, second::draw).pixels(),
+                            "A hidden frame cannot retain code-dependent pixels");
                     export(mask, "invite-masked-" + width);
                     export(revealed, "invite-revealed-" + width);
 
