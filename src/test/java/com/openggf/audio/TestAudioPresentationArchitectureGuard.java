@@ -156,6 +156,85 @@ class TestAudioPresentationArchitectureGuard {
             "AL_PITCH");
 
     @Test
+    void logicalPublicationOwnsExactlyTwoColdFieldsAndTheCompletePublicationProtocol() throws Exception {
+        var publication = AudioManager.class.getDeclaredField("logicalPublication");
+        assertTrue(java.lang.reflect.Modifier.isPrivate(publication.getModifiers()));
+        assertTrue(java.lang.reflect.Modifier.isFinal(publication.getModifiers()));
+        assertFalse(java.lang.reflect.Modifier.isStatic(publication.getModifiers()));
+        Class<?> owner = publication.getType();
+        assertEquals(AudioManager.class, owner.getEnclosingClass());
+        assertTrue(java.lang.reflect.Modifier.isPrivate(owner.getModifiers()));
+        assertTrue(java.lang.reflect.Modifier.isFinal(owner.getModifiers()));
+        assertFalse(java.lang.reflect.Modifier.isStatic(owner.getModifiers()));
+        Map<String, Class<?>> fields = Map.of("ringLeft", boolean.class,
+                "logicalRestorePublications", int.class);
+        assertEquals(fields, Arrays.stream(owner.getDeclaredFields()).filter(field -> !field.isSynthetic())
+                .collect(java.util.stream.Collectors.toMap(java.lang.reflect.Field::getName,
+                        java.lang.reflect.Field::getType)), "no collaborators or duplicate logical state");
+        for (String name : fields.keySet()) {
+            assertThrows(NoSuchFieldException.class, () -> AudioManager.class.getDeclaredField(name));
+            assertEquals(java.lang.reflect.Modifier.PRIVATE, owner.getDeclaredField(name).getModifiers(),
+                    "logical values are private instance fields, without static/volatile modifiers");
+        }
+        assertEquals(Set.of("rawRingLeft", "setRingLeft", "playFallbackRing", "currentRingLeft",
+                        "captureLogicalSnapshot", "restoreLogicalSnapshotNow", "publishHeldRestoreLedger",
+                        "logicalRestorePublications", "resetLogicalRestorePublicationCount"),
+                Arrays.stream(owner.getDeclaredMethods()).filter(method -> !method.isSynthetic())
+                        .map(java.lang.reflect.Method::getName).collect(java.util.stream.Collectors.toSet()));
+        assertTrue(Arrays.stream(owner.getDeclaredMethods()).allMatch(method ->
+                java.lang.reflect.Modifier.isPrivate(method.getModifiers())
+                        && !java.lang.reflect.Modifier.isSynchronized(method.getModifiers())));
+        List<String> foreignStateAccesses = new ArrayList<>();
+        for (JavaClass caller : productionClasses()) {
+            caller.getFieldAccessesFromSelf().stream()
+                    .filter(access -> access.getTargetOwner().getName().equals(owner.getName()))
+                    .filter(access -> fields.containsKey(access.getTarget().getName()))
+                    .filter(access -> !access.getOriginOwner().getName().equals(owner.getName()))
+                    .map(Object::toString).forEach(foreignStateAccesses::add);
+        }
+        assertEquals(List.of(), foreignStateAccesses, "all raw reads and writes belong to the logical owner");
+        JavaClass bytecodeOwner = productionClasses().get(owner);
+        assertEquals(Set.of(Object.class.getName()), bytecodeOwner.getConstructors().stream()
+                .flatMap(constructor -> constructor.getConstructorCallsFromSelf().stream())
+                .map(call -> call.getTargetOwner().getName()).collect(java.util.stream.Collectors.toSet()));
+        assertEquals(List.of("java.util.Objects.requireNonNull(java.lang.Object)"),
+                bytecodeOwner.getConstructors().stream()
+                        .flatMap(constructor -> constructor.getMethodCallsFromSelf().stream())
+                        .map(call -> call.getTarget().getFullName()).sorted().toList(),
+                "cold construction only checks/stores the enclosing instance and initializes ring true");
+        var constructions = productionClasses().stream()
+                .flatMap(caller -> caller.getConstructorCallsFromSelf().stream())
+                .filter(call -> call.getTargetOwner().getName().equals(owner.getName())).toList();
+        assertEquals(1, constructions.size(), "one cold owner is constructed per manager");
+        assertEquals(AudioManager.class.getName(), constructions.getFirst().getOriginOwner().getName());
+        String manager = Files.readString(AUDIO_ROOT.resolve("AudioManager.java"));
+        String logical = methodBody(manager, "private final class LogicalPublication");
+        assertTrue(logical.replaceAll("\\s+", "").startsWith("privatebooleanringLeft=true;"));
+        assertTrue(logical.contains("private int logicalRestorePublications;"), "count starts at Java's zero default");
+        assertEquals("returnlogicalPublication.captureLogicalSnapshot();",
+                methodBody(manager, "public AudioLogicalSnapshot captureLogicalSnapshot()").replaceAll("\\s+", ""));
+        assertEquals("returnlogicalPublication.restoreLogicalSnapshotNow(snapshot,preservePresentation);",
+                methodBody(manager, "private boolean restoreLogicalSnapshotNow(").replaceAll("\\s+", ""));
+        assertEquals("logicalPublication.publishHeldRestoreLedger(selected,publishedBindings);",
+                methodBody(manager, "private void publishHeldRestoreLedger(").replaceAll("\\s+", ""));
+        assertEquals("AudioManager.this.playGameSfxResolved(ringLeft?GameSound.RING_LEFT:GameSound.RING_RIGHT,pitch);ringLeft=!ringLeft;",
+                methodBody(logical, "private void playFallbackRing(").replaceAll("\\s+", ""));
+        String capture = methodBody(logical, "private AudioLogicalSnapshot captureLogicalSnapshot()");
+        assertTrue(capture.indexOf("captureSoundBindings()") < capture.indexOf("currentRingLeft()"));
+        assertTrue(capture.indexOf("currentRingLeft()") < capture.indexOf("commandTimeline.currentFrame()"));
+        assertTrue(capture.indexOf("shadowProducer.snapshot()") < capture.indexOf("shadowRequestService.snapshot()"));
+        String eager = methodBody(logical, "private boolean restoreLogicalSnapshotNow(");
+        assertTrue(eager.indexOf("sourcePublication.copySoundBindings()") < eager.indexOf("try {"));
+        assertTrue(eager.contains("catch (RuntimeException failure)"));
+        assertTrue(eager.indexOf("sourcePublication.restoreSoundBindings(snapshot.donorBindings())")
+                < eager.indexOf("logicalRestorePublications++"));
+        assertTrue(eager.indexOf("failure.addSuppressed(rollbackFailure)")
+                < eager.indexOf("AudioDiagnosticObserverException.rethrowIfPresent(failure)"));
+        assertEquals("logicalRestorePublications++;ringLeft=selected.ringLeft();commandTimeline.restoreCursor(selected.commandTimelineFrame(),selected.commandTimelineNextOrder());sourcePublication.restoreSoundBindings(publishedBindings);",
+                methodBody(logical, "private void publishHeldRestoreLedger(").replaceAll("\\s+", ""));
+    }
+
+    @Test
     void presentationBindingOwnsCompleteColdAssemblyAndOpaquePhysicalDecisions() throws Exception {
         var binding = AudioManager.class.getDeclaredField("presentationBinding");
         int modifiers = binding.getModifiers();

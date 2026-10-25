@@ -494,7 +494,7 @@ class TestAudioSourcePublicationContract {
             assertNull(audio.getAudioProfile());
             assertEquals(0, generation(base()));
             assertNull(read(audio, "soundMap"));
-            assertEquals(Boolean.TRUE, read(audio, "ringLeft"));
+            assertEquals(Boolean.TRUE, AudioManagerTestDiagnostics.rawRingLeft(audio));
             assertEquals(0, audio.commandTimeline().entryCount());
             assertSame(routes, donors());
             assertSame(counters, generations());

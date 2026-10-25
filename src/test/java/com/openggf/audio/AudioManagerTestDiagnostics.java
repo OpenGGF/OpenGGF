@@ -226,6 +226,18 @@ public final class AudioManagerTestDiagnostics {
         }
     }
 
+    /** Raw fallback observation follows the actual manager-lifetime logical owner. */
+    public static boolean rawRingLeft(AudioManager audio) {
+        Object owner = field(audio, "logicalPublication", Object.class);
+        try {
+            Field field = owner.getClass().getDeclaredField("ringLeft");
+            field.setAccessible(true);
+            return field.getBoolean(owner);
+        } catch (ReflectiveOperationException failure) {
+            throw new IllegalStateException("cannot read logical publication ring", failure);
+        }
+    }
+
     /** Original publication diagnostics follow the one manager-lifetime source owner. */
     static Object sourcePublication(AudioManager audio) {
         return field(audio, "sourcePublication", Object.class);

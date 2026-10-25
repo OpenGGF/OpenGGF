@@ -75,7 +75,6 @@ public class AudioManager implements MusicRestoreSink {
     private AudioBackend backend;
     private final SourcePublication sourcePublication = new SourcePublication();
     private Map<GameSound, Integer> soundMap;
-    private boolean ringLeft = true;
     // Director-owned playlist admission survives producer/shot replacement until its scope closes.
     int levelMusicControls;
     int levelEntryMusicControls;
@@ -182,18 +181,13 @@ public class AudioManager implements MusicRestoreSink {
     /** Physical assembly and its publication slots have one manager-lifetime owner. */
     private final PresentationBinding presentationBinding = new PresentationBinding();
     private final CaptureLeases captureLeases = new CaptureLeases();
+    /** Logical ring and publication protocol span physical producer generations. */
+    private final LogicalPublication logicalPublication = new LogicalPublication();
     /** Held logical target policy survives presentation producer generations. */
     private final HeldReverseRestore heldReverseRestore = new HeldReverseRestore();
     private boolean audioFrameOwnedExternally;
     private boolean audioFrameAdvanced;
     private Runnable streamedMusicSessionInvalidator = () -> { };
-    /**
-     * Count of logical audio restores actually published to the presentation
-     * producer. Held rewind defers per-frame restores and publishes exactly one
-     * at release; this counter is the observable for that contract now that the
-     * legacy backend restore (which tests counted) is gone.
-     */
-    private int logicalRestorePublications;
     /**
      * Where an injected reverse-release failure is raised, relative to
      * successful return from {@code presentationBinding.shadowProducer.endReverse(...)}. Exceptions
@@ -725,7 +719,7 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     public void resetRingSound() {
-        ringLeft = true;
+        logicalPublication.setRingLeft(true);
         recordTimelineCommand(new AudioCommand.ResetRingAlternation(true));
     }
 
@@ -777,43 +771,8 @@ public class AudioManager implements MusicRestoreSink {
         commandTimeline.pruneBefore(entryIndex);
     }
 
-    /**
-     * The ring left/right alternation callers should observe. A game whose
-     * request service owns dispatch-time alternation (Sonic 2's
-     * {@code zPlaySound_CheckRing}) reports its own value; {@code ringLeft}
-     * never advances for such a game, since {@link #playSfx} hands ring
-     * requests straight to the mailbox and returns before its own
-     * caller-side toggle. Other games have no request service, so {@code
-     * ringLeft} stays the sole source of truth for them.
-     */
-    private boolean currentRingLeft() {
-        if (presentationBinding.shadowRequestService != null) {
-            Boolean serviceRingLeft = presentationBinding.shadowRequestService.ringLeft();
-            if (serviceRingLeft != null) {
-                return serviceRingLeft;
-            }
-        }
-        return ringLeft;
-    }
-
     public AudioLogicalSnapshot captureLogicalSnapshot() {
-        presentationBinding.ensureShadowPresentation();
-        Set<String> donorGameIds = new LinkedHashSet<>();
-        donorGameIds.addAll(sourcePublication.donorGameIds());
-
-        Set<AudioLogicalSnapshot.DonorSfxBindingSnapshot> donorBindings =
-                sourcePublication.captureSoundBindings();
-
-        return new AudioLogicalSnapshot(
-                currentRingLeft(),
-                commandTimeline.currentFrame(),
-                commandTimeline.nextOrder(),
-                commandTimeline.entryCount(),
-                presentationBinding.shadowProducer.snapshot(),
-                donorGameIds,
-                donorBindings,
-                presentationBinding.shadowRequestService == null
-                        ? null : presentationBinding.shadowRequestService.snapshot());
+        return logicalPublication.captureLogicalSnapshot();
     }
 
     public void restoreLogicalSnapshot(AudioLogicalSnapshot snapshot) {
@@ -822,53 +781,7 @@ public class AudioManager implements MusicRestoreSink {
 
     private boolean restoreLogicalSnapshotNow(
             AudioLogicalSnapshot snapshot, boolean preservePresentation) {
-        AudioPresentationSnapshot previousPresentation =
-                presentationBinding.shadowProducer.snapshot();
-        AudioPresentationForwardService.Snapshot previousForwardService =
-                presentationBinding.shadowRequestService == null
-                        ? null : presentationBinding.shadowRequestService.snapshot();
-        boolean previousRingLeft = ringLeft;
-        long previousTimelineFrame = commandTimeline.currentFrame();
-        int previousTimelineOrder = commandTimeline.nextOrder();
-        Map<GameSound, DonorSfxBinding> previousBindings =
-                sourcePublication.copySoundBindings();
-        try {
-            if ((presentationBinding.shadowRequestService == null)
-                    != (snapshot.forwardServiceSnapshot() == null)) {
-                throw new IllegalArgumentException(
-                        "audio snapshot forward-service ownership differs from the live profile");
-            }
-            presentationBinding.shadowProducer.restore(snapshot.presentation(), presentationBinding.shadowFactory,
-                    preservePresentation);
-            if (presentationBinding.shadowRequestService != null) {
-                presentationBinding.shadowRequestService.restore(snapshot.forwardServiceSnapshot());
-            }
-            ringLeft = snapshot.ringLeft();
-            commandTimeline.restoreCursor(snapshot.commandTimelineFrame(),
-                    snapshot.commandTimelineNextOrder());
-            sourcePublication.restoreSoundBindings(snapshot.donorBindings());
-            logicalRestorePublications++;
-            return true;
-        } catch (RuntimeException failure) {
-            ringLeft = previousRingLeft;
-            commandTimeline.restoreCursor(previousTimelineFrame,
-                    previousTimelineOrder);
-            sourcePublication.restoreSoundBindings(previousBindings);
-            try {
-                presentationBinding.shadowProducer.restore(previousPresentation, presentationBinding.shadowFactory,
-                        preservePresentation);
-                if (presentationBinding.shadowRequestService != null) {
-                    presentationBinding.shadowRequestService.restore(previousForwardService);
-                }
-            } catch (RuntimeException rollbackFailure) {
-                failure.addSuppressed(rollbackFailure);
-            }
-            AudioDiagnosticObserverException.rethrowIfPresent(failure);
-            LOGGER.log(Level.WARNING,
-                    "Audio snapshot restore failed; retained prior state",
-                    failure);
-            return false;
-        }
+        return logicalPublication.restoreLogicalSnapshotNow(snapshot, preservePresentation);
     }
 
     public void playSegaPcm() {
@@ -914,7 +827,7 @@ public class AudioManager implements MusicRestoreSink {
         if (suppressingRewindReplay()) {
             return;
         }
-        ringLeft = true;
+        logicalPublication.setRingLeft(true);
         recordTimelineCommand(
                 new AudioCommand.StopSegaPcmAndRetainGlobalStop(
                         sourceCommandId));
@@ -925,7 +838,7 @@ public class AudioManager implements MusicRestoreSink {
         if (suppressingRewindReplay()) {
             return;
         }
-        ringLeft = true;
+        logicalPublication.setRingLeft(true);
         recordTimelineCommand(
                 new AudioCommand.RetainGlobalStop(sourceCommandId));
     }
@@ -1081,7 +994,7 @@ public class AudioManager implements MusicRestoreSink {
             }
             case AudioCommand.RetainGlobalStop ignored ->
                     {
-                        ringLeft = true;
+                        logicalPublication.setRingLeft(true);
                         backend.stopPlayback();
                     }
             case AudioCommand.PlaySegaPcm ignored -> {
@@ -1091,7 +1004,7 @@ public class AudioManager implements MusicRestoreSink {
                 // The authoritative presentation owns raw SEGA PCM.
             }
             case AudioCommand.StopSegaPcmAndRetainGlobalStop ignored -> {
-                ringLeft = true;
+                logicalPublication.setRingLeft(true);
                 backend.stopPlayback();
             }
             case AudioCommand.ReferenceLimitation ignored -> {
@@ -1103,7 +1016,7 @@ public class AudioManager implements MusicRestoreSink {
             case AudioCommand.SetSpeedMultiplier speed -> backend.setSpeedMultiplier(speed.multiplier());
             case AudioCommand.SetMusicTempoPercent tempo -> backend.setMusicTempoPercent(tempo.percent());
             case AudioCommand.ChangeMusicTempo tempo -> backend.changeMusicTempo(tempo.dividingTiming());
-            case AudioCommand.ResetRingAlternation reset -> ringLeft = reset.ringLeft();
+            case AudioCommand.ResetRingAlternation reset -> logicalPublication.setRingLeft(reset.ringLeft());
         }
     }
 
@@ -1236,22 +1149,16 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     private void resetLogicalRestorePublicationCount() {
-        logicalRestorePublications = 0;
+        logicalPublication.resetLogicalRestorePublicationCount();
     }
 
     /**
-     * Root ledger effect, in its original order. A rejected timeline order can
-     * leave the counter and ring published before timeline/donor publication.
+     * Delegates the fixed ledger effect without moving held selection or release policy.
      */
     private void publishHeldRestoreLedger(
             AudioLogicalSnapshot selected,
             Map<GameSound, DonorSfxBinding> publishedBindings) {
-        logicalRestorePublications++;
-        ringLeft = selected.ringLeft();
-        commandTimeline.restoreCursor(
-                selected.commandTimelineFrame(),
-                selected.commandTimelineNextOrder());
-        sourcePublication.restoreSoundBindings(publishedBindings);
+        logicalPublication.publishHeldRestoreLedger(selected, publishedBindings);
     }
 
     /**
@@ -1357,11 +1264,11 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     int logicalRestorePublicationsForTesting() {
-        return logicalRestorePublications;
+        return logicalPublication.logicalRestorePublications();
     }
 
     void resetLogicalRestorePublicationsForTesting() {
-        logicalRestorePublications = 0;
+        logicalPublication.resetLogicalRestorePublicationCount();
     }
 
     void failNextReverseReleaseForTesting(ReverseReleaseFailurePoint point) {
@@ -1796,8 +1703,7 @@ public class AudioManager implements MusicRestoreSink {
                 observeBlockedRingAdmission(rawSoundId);
                 return;
             }
-            playGameSfxResolved(ringLeft ? GameSound.RING_LEFT : GameSound.RING_RIGHT, pitch);
-            ringLeft = !ringLeft;
+            logicalPublication.playFallbackRing(pitch);
             return;
         }
 
@@ -2822,7 +2728,7 @@ public class AudioManager implements MusicRestoreSink {
         if (backend != null) {
             installBackendDiagnosticObservers();
         }
-        this.ringLeft = true;
+        logicalPublication.setRingLeft(true);
         this.rewindReplaySuppressionDepth = 0;
         this.audioFrameOwnedExternally = false;
         this.audioFrameAdvanced = false;
@@ -3904,6 +3810,145 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     /**
+     * Manager-lifetime logical publication only. Collaborators are read from
+     * AudioManager at the original operation boundaries, never retained here.
+     * Timeline history, held selection and physical resources keep their owners.
+     */
+    private final class LogicalPublication {
+        private boolean ringLeft = true;
+        /**
+         * Count of logical audio restores actually published to the presentation
+         * producer. Held rewind defers per-frame restores and publishes exactly one
+         * at release; this counter is the observable for that contract now that the
+         * legacy backend restore (which tests counted) is gone.
+         */
+        private int logicalRestorePublications;
+
+        private boolean rawRingLeft() {
+            return ringLeft;
+        }
+
+        private void setRingLeft(boolean value) {
+            ringLeft = value;
+        }
+
+        private void playFallbackRing(float pitch) {
+            AudioManager.this.playGameSfxResolved(
+                    ringLeft ? GameSound.RING_LEFT : GameSound.RING_RIGHT, pitch);
+            ringLeft = !ringLeft;
+        }
+
+        /**
+         * The ring left/right alternation callers should observe. A game whose
+         * request service owns dispatch-time alternation (Sonic 2's
+         * {@code zPlaySound_CheckRing}) reports its own value; {@code ringLeft}
+         * never advances for such a game, since {@link #playSfx} hands ring
+         * requests straight to the mailbox and returns before its own
+         * caller-side toggle. Other games have no request service, so {@code
+         * ringLeft} stays the sole source of truth for them.
+         */
+        private boolean currentRingLeft() {
+            if (presentationBinding.shadowRequestService != null) {
+                Boolean serviceRingLeft = presentationBinding.shadowRequestService.ringLeft();
+                if (serviceRingLeft != null) {
+                    return serviceRingLeft;
+                }
+            }
+            return ringLeft;
+        }
+
+        private AudioLogicalSnapshot captureLogicalSnapshot() {
+            presentationBinding.ensureShadowPresentation();
+            Set<String> donorGameIds = new LinkedHashSet<>();
+            donorGameIds.addAll(sourcePublication.donorGameIds());
+
+            Set<AudioLogicalSnapshot.DonorSfxBindingSnapshot> donorBindings =
+                    sourcePublication.captureSoundBindings();
+
+            return new AudioLogicalSnapshot(
+                    currentRingLeft(),
+                    commandTimeline.currentFrame(),
+                    commandTimeline.nextOrder(),
+                    commandTimeline.entryCount(),
+                    presentationBinding.shadowProducer.snapshot(),
+                    donorGameIds,
+                    donorBindings,
+                    presentationBinding.shadowRequestService == null
+                            ? null : presentationBinding.shadowRequestService.snapshot());
+        }
+
+        private boolean restoreLogicalSnapshotNow(
+                AudioLogicalSnapshot snapshot, boolean preservePresentation) {
+            AudioPresentationSnapshot previousPresentation =
+                    presentationBinding.shadowProducer.snapshot();
+            AudioPresentationForwardService.Snapshot previousForwardService =
+                    presentationBinding.shadowRequestService == null
+                            ? null : presentationBinding.shadowRequestService.snapshot();
+            boolean previousRingLeft = ringLeft;
+            long previousTimelineFrame = commandTimeline.currentFrame();
+            int previousTimelineOrder = commandTimeline.nextOrder();
+            Map<GameSound, DonorSfxBinding> previousBindings =
+                    sourcePublication.copySoundBindings();
+            try {
+                if ((presentationBinding.shadowRequestService == null)
+                        != (snapshot.forwardServiceSnapshot() == null)) {
+                    throw new IllegalArgumentException(
+                            "audio snapshot forward-service ownership differs from the live profile");
+                }
+                presentationBinding.shadowProducer.restore(snapshot.presentation(), presentationBinding.shadowFactory,
+                        preservePresentation);
+                if (presentationBinding.shadowRequestService != null) {
+                    presentationBinding.shadowRequestService.restore(snapshot.forwardServiceSnapshot());
+                }
+                ringLeft = snapshot.ringLeft();
+                commandTimeline.restoreCursor(snapshot.commandTimelineFrame(),
+                        snapshot.commandTimelineNextOrder());
+                sourcePublication.restoreSoundBindings(snapshot.donorBindings());
+                logicalRestorePublications++;
+                return true;
+            } catch (RuntimeException failure) {
+                ringLeft = previousRingLeft;
+                commandTimeline.restoreCursor(previousTimelineFrame,
+                        previousTimelineOrder);
+                sourcePublication.restoreSoundBindings(previousBindings);
+                try {
+                    presentationBinding.shadowProducer.restore(previousPresentation, presentationBinding.shadowFactory,
+                            preservePresentation);
+                    if (presentationBinding.shadowRequestService != null) {
+                        presentationBinding.shadowRequestService.restore(previousForwardService);
+                    }
+                } catch (RuntimeException rollbackFailure) {
+                    failure.addSuppressed(rollbackFailure);
+                }
+                AudioDiagnosticObserverException.rethrowIfPresent(failure);
+                LOGGER.log(Level.WARNING,
+                        "Audio snapshot restore failed; retained prior state",
+                        failure);
+                return false;
+            }
+        }
+
+        private void publishHeldRestoreLedger(
+                AudioLogicalSnapshot selected,
+                Map<GameSound, DonorSfxBinding> publishedBindings) {
+            logicalRestorePublications++;
+            ringLeft = selected.ringLeft();
+            commandTimeline.restoreCursor(
+                    selected.commandTimelineFrame(),
+                    selected.commandTimelineNextOrder());
+            sourcePublication.restoreSoundBindings(publishedBindings);
+        }
+
+        private int logicalRestorePublications() {
+            return logicalRestorePublications;
+        }
+
+        private void resetLogicalRestorePublicationCount() {
+            logicalRestorePublications = 0;
+        }
+    }
+
+    /**
      * Manager-lifetime ownership of the held logical target and its release protocol.
      * Collaborators are read from AudioManager at their original execution points;
      * construction stores no producer, session, factory or presentation resources.
@@ -3953,7 +3998,7 @@ public class AudioManager implements MusicRestoreSink {
             if (deferredReverseLogicalSnapshot == null) {
                 presentationBinding.shadowResolver.submit(command);
                 presentationBinding.shadowProducer.applyPendingCommandsAtOwnerBoundary();
-                ringLeft = managerRingAfter(ringLeft, command);
+                logicalPublication.setRingLeft(managerRingAfter(logicalPublication.rawRingLeft(), command));
                 return;
             }
             AudioLogicalSnapshot selected = deferredReverseLogicalSnapshot;

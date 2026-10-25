@@ -569,11 +569,25 @@ replacement, boundary supersession and release retries. It owns held admission
 reads and after-restore cleanup ordering through the existing virtual manager
 entry points, without adding a lock or capturing producer dependencies. Prepared
 acknowledgment can outlive or differ from producer selection; release preserves
-partial effects from producer and ledger failures. Live snapshot capture, eager
-rollback/forward-service restore, the shared publication counter and ring/timeline
-state remain with the manager; sound-binding effects
-use SourcePublication without transferring ledger decisions. Producer tokens,
-restoration algorithms, cursors, history, clocks and output remain below.
+partial effects from producer and ledger failures. Selection, managerRingAfter,
+preparation, retries and metadata retirement remain held-owned. Its fixed ledger
+effect uses LogicalPublication without transferring held decisions. Producer
+tokens, restoration algorithms, cursors, history, clocks and output remain below.
+
+Each manager retains one cold private final `LogicalPublication` with exactly two
+persistent values: raw fallback ring side and logical restore publication count.
+It owns nullable service-preferred ring observation, fallback side selection and
+the then-current toggle after normal private dispatch, live snapshot assembly,
+the complete eager restore/rollback transaction and the fixed held ledger effect.
+It retains no collaborators and adds no monitor. Sampling still copies bindings
+before the ring callback, then reads cursor/count, producer and current service.
+Eager failures retain their exact diagnostic/partial-effect disposition, including
+irrecoverable PCM history loss; held publication remains counter, ring, cursor,
+then sound bindings. Fixed reset/stop/replay writes keep their original gate and
+ordering points. Timeline identity/history/appends remain with the timeline;
+Source owns binding storage, Binding owns physical slots, and Held owns targets.
+Frame arbitration, replay/silent scopes, routing, entry-music/playlist policy,
+natural restore intent and launch authority remain outside this owner.
 
 Each `AudioManager` retains one private `CaptureLeases` owner across producer
 generations. It owns offline/live admission, accepted release, rebuild carry,
