@@ -25,6 +25,110 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class TestStageplayAudioLifecycle {
+    @Test void laterStopCueAcquiresBeforeEntrySnapshotAndRetainsAdmissionAcrossSeekAndRefresh() throws Exception {
+        var manager = spy(AudioManager.class);
+        var first = mock(AudioManager.SceneAudioSamples.class);
+        var second = mock(AudioManager.SceneAudioSamples.class);
+        var entry = mock(AudioLogicalSnapshot.class);
+        doReturn(first, second).when(manager).prepareSceneSamples(anyMap());
+        doAnswer(call -> {
+            assertFalse(com.openggf.audio.LevelMusicAccess.allowsAutomatic(manager),
+                    "the whole document owns admission before its first entry snapshot");
+            return entry;
+        }).when(manager).captureLogicalSnapshot();
+        doNothing().when(manager).restoreLogicalSnapshot(any());
+        var document = StageplayDocument.empty("s2",0,0,0,0,320,224).withAudio(List.of(
+                new AudioCue("later",50,AudioKind.MUSIC_STOP,"s2",-1,"",1)));
+        try (var scene = new StageplayAudio(manager,mock(SceneRomLibrary.class),asset -> { throw new AssertionError(); })) {
+            scene.prepare(document);
+            assertTrue(com.openggf.audio.LevelMusicAccess.allowsAutomatic(manager), "prepare acquires no lease");
+            scene.playFrame(document,0);
+            verify(manager,never()).stopMusic();
+            scene.seek(8);
+            assertFalse(com.openggf.audio.LevelMusicAccess.allowsAutomatic(manager));
+            scene.refreshAfterNativeBoundary(10);
+            verify(first).close();
+            assertFalse(com.openggf.audio.LevelMusicAccess.allowsAutomatic(manager), "refresh retires voices, not control");
+            scene.restoreEntry(null);
+            assertTrue(com.openggf.audio.LevelMusicAccess.allowsAutomatic(manager));
+            scene.restoreEntry(entry);
+            assertFalse(com.openggf.audio.LevelMusicAccess.allowsAutomatic(manager));
+            scene.stop();
+            assertTrue(com.openggf.audio.LevelMusicAccess.allowsAutomatic(manager));
+        } finally { manager.destroy(); }
+    }
+
+    @Test void replacementPreparationPrecedesStoppingOldPlaybackAndFailureRetainsItsLease() throws Exception {
+        var manager = spy(AudioManager.class);
+        var first = mock(AudioManager.SceneAudioSamples.class);
+        var replacement = mock(AudioManager.SceneAudioSamples.class);
+        var entry = mock(AudioLogicalSnapshot.class);
+        doReturn(first).when(manager).prepareSceneSamples(anyMap());
+        doReturn(entry).when(manager).captureLogicalSnapshot();
+        doNothing().when(manager).restoreLogicalSnapshot(any());
+        var old = StageplayDocument.empty("s2",0,0,0,0,320,224).withAudio(List.of(
+                new AudioCue("later",50,AudioKind.MUSIC_STOP,"s2",-1,"",1)));
+        var next = StageplayDocument.empty("s2",0,0,0,0,320,224).withDurationFrames(90);
+        try (var scene = new StageplayAudio(manager,mock(SceneRomLibrary.class),asset -> { throw new AssertionError(); })) {
+            scene.prepare(old); scene.playFrame(old,0);
+            var failure = new IllegalStateException("replacement preparation");
+            doAnswer(call -> {
+                assertFalse(com.openggf.audio.LevelMusicAccess.allowsAutomatic(manager));
+                throw failure;
+            }).when(manager).prepareSceneSamples(anyMap());
+            assertSame(failure, assertThrows(IllegalStateException.class, () -> scene.prepare(next)));
+            assertSame(entry, scene.captureEntry());
+            assertFalse(com.openggf.audio.LevelMusicAccess.allowsAutomatic(manager));
+            verify(manager,never()).restoreLogicalSnapshot(any());
+            // prepare(old) calls stop even before playback, so clear only those earlier interactions.
+            clearInvocations(first);
+            var order = new java.util.ArrayList<String>();
+            doAnswer(call -> {
+                assertFalse(com.openggf.audio.LevelMusicAccess.allowsAutomatic(manager));
+                order.add("prepare"); return replacement;
+            }).when(manager).prepareSceneSamples(anyMap());
+            doAnswer(call -> {
+                assertFalse(com.openggf.audio.LevelMusicAccess.allowsAutomatic(manager));
+                order.add("stop-old"); return null;
+            }).when(first).stop();
+            scene.prepare(next);
+            assertEquals(List.of("prepare","stop-old"), order);
+            assertTrue(com.openggf.audio.LevelMusicAccess.allowsAutomatic(manager));
+            verify(first).close();
+        } finally { manager.destroy(); }
+    }
+
+    @ParameterizedTest @ValueSource(booleans = {false,true})
+    void closeAndAbandonReleaseAdmissionBeforeClosingSamplesEvenWhenStopFails(boolean abandon) throws Exception {
+        var manager = spy(AudioManager.class);
+        var samples = mock(AudioManager.SceneAudioSamples.class);
+        var entry = mock(AudioLogicalSnapshot.class);
+        doReturn(samples).when(manager).prepareSceneSamples(anyMap());
+        doReturn(entry).when(manager).captureLogicalSnapshot();
+        doNothing().when(manager).restoreLogicalSnapshot(any());
+        var document = StageplayDocument.empty("s2",0,0,0,0,320,224).withAudio(List.of(
+                new AudioCue("later",50,AudioKind.MUSIC_STOP,"s2",-1,"",1)));
+        var scene = new StageplayAudio(manager,mock(SceneRomLibrary.class),asset -> { throw new AssertionError(); });
+        try {
+            scene.prepare(document); scene.playFrame(document,0);
+            var failure = new IllegalStateException("sample stop");
+            doAnswer(call -> {
+                assertFalse(com.openggf.audio.LevelMusicAccess.allowsAutomatic(manager));
+                throw failure;
+            }).when(samples).stop();
+            doAnswer(call -> {
+                assertTrue(com.openggf.audio.LevelMusicAccess.allowsAutomatic(manager), "stop finally releases before sample close");
+                return null;
+            }).when(samples).close();
+            assertSame(failure, assertThrows(IllegalStateException.class, () -> {
+                if (abandon) scene.abandon(); else scene.close();
+            }));
+            assertTrue(com.openggf.audio.LevelMusicAccess.allowsAutomatic(manager));
+            verify(manager,never()).restoreLogicalSnapshot(any());
+            scene.close(); verify(samples,times(1)).close();
+        } finally { scene.close(); manager.destroy(); }
+    }
+
     @RequiresRom(SonicGame.SONIC_2)
     @ParameterizedTest @ValueSource(strings = {"NONE", "MUSIC_STOP", "ROM_MUSIC", "PREPARED"})
     void authoredMusicOwnsTheLateNativeLevelEntry(String control) throws Exception {

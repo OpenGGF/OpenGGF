@@ -11341,3 +11341,176 @@ TestGameDataSourceSharedFetches audio-init cases. Future work must characterize
 original production after this delivery, including raw S2 mailbox timing and
 real publication controls; silent admission-only fixtures are insufficient.
 This is a qualified next candidate, not implementation or runtime acceptance.
+
+### LevelMusicAccess original-production characterization — 2026-10-25
+
+**Boundary and handback.** This is test-only evidence on the delivered
+`f0566b9251a1507e6dc51b49aa399fafee013c57` (tree
+`43118c727ce735c504db12ce0952e4775edea1e4`), after LogicalPublication delivery.
+The T3-bound worktree is `t3-d9353f06`, locally renamed to
+`bugfix/ai-level-music-admission-owner-20261025`. No fetch/rebase, production
+extraction, constructor-bypass migration, failure hook, guard, pin/store, POM,
+permission, integration or push change is included. Local develop and
+origin/develop both remained at f056 at inspection. No child tasks were created.
+The parent owns independent evidence review, subsequent authorization and all
+main-workspace validation/delivery/cleanup. The task branch/worktree is retained.
+
+The unchanged production manifest is `src/main` tree
+`a3c8374e38af8937104902cdd0a39ce2648f6805`, AudioManager blob
+`4a48f130ee9c361d677efe423bcfc536194de753`, and LevelMusicAccess blob
+`4c3f93d6747321b4a4279af090323888a8ab1fb6`. Baseline `src/test` tree is
+`113183512d91f596b8bfdf8e976cd2411929da83`. The only Java changes are the new
+TestLevelMusicAccessContract and four additive cases in TestStageplayAudioLifecycle.
+The existing Stageplay tests and helpers, from their first test to EOF, compare
+byte-for-byte with f056; none of their assertions were replaced or removed.
+
+**Original source mapping.** LevelMusicAccess still owns its static predicates
+and Control protocol while AudioManager stores both counters. Queries and all
+closes, including duplicate closes, synchronize on the supplied manager. The
+constructor allocates the token before entering its counter-increment body;
+close checks and sets `closed` inside that monitor before decrementing, with no
+callbacks. Factories reject null before invoking that constructor; null queries
+fail at synchronization, including a null command query. These ordering facts
+are source evidence; no OOM experiment or synthetic callback hook is used.
+
+AudioManager's direct int music/stop/explicit fade gates precede mutator intent,
+replay suppression, observation/recording and fade-count mutation. Enum resolution
+and the current profile's no-argument fade callback precede their inner gate.
+Raw int SFX instead performs intent, replay suppression, source capture,
+presentation preparation, observation and command classification before the
+entry predicate. It constructs from the captured source but reads the current
+request-service slot after those callbacks. Replacing a profile redirects the
+submission without changing the captured command; clearing the service can leave
+an admitted call throwing NullPointerException, while a filtered call returns
+true without that dereference. The entry query releases the monitor before its
+category test and submission; this is not an atomic check-and-submit protocol.
+Only PlayMusic, FadeOutMusic and StopMusic are excluded by that predicate.
+
+Live backend forwarding is already disabled (`sendLiveBackendCommands` returns
+false). Positive controls therefore use non-silent constructed Root managers,
+real Sonic2SoundRequestService mailboxes/templates, and an actual ROM-backed song
+and fade. `createSilent` would suppress publication independently and is not used.
+The real raw S2 control queues F9 in SFX0 before acquiring entry suppression,
+rejects a later FE without overwriting that request, then observes F9 submission,
+committed timeline consequence and the music sequencer's active fade-out. There
+is no admission filter at dispatch. S2's pending music load can postpone mailbox
+consumption: a bounded condition loop presents at most 60 frames until the fade
+commits, rather than assuming the next packet is ready. S2 fade state is on the
+sequencer; its stateful policy does not opt into legacy driver fade counters.
+
+**Case inventory.** The new class has 22 test methods and 37 executed cases.
+The table records method names; parameter expansion is visible in the source
+and was checked against physical Surefire suite totals and failing identities.
+
+| Method | Original-production discriminator |
+| --- | --- |
+| constructedManagersKeepMixedNestedScopesIndependentInEitherCloseOrder | Two constructed receivers, fresh state, mixed/nested leases, both close orders, duplicates and reacquisition |
+| everyAcquireQueryAndCloseIncludingDuplicateUsesTheSuppliedManagerMonitor | Exact-monitor blocking for both acquisitions, all queries and both token kinds' first/duplicate closes; reentrancy and off-thread use |
+| resetProfileRomBackendDestroyAndReuseRetainOldScopesOnTheirOriginalManager | Counts survive source/profile/ROM/backend/reset/destruction/reuse; original tokens balance their original receiver |
+| closeIsEffectFreeAndTheTokenStronglyRetainsTheExactManagerAfterClose | No observer/mutator/classifier/backend/timeline/mailbox/fade effects; strong exact-manager reachability before/after close without pinning a field name |
+| nullFactoriesAndQueriesFailWhileNullCommandsRemainAllowed | Null boundary and valid-manager null-command admission |
+| theEntryPredicateExcludesOnlyTheThreeMusicCommandCategories | All current command categories, including PCM, reference limitation, speed, global stop and namespaced commands |
+| directControlsGateBeforeMutatorsObservationRecordingAndFadeCount | Early direct gates and ordinary-scope positive controls |
+| filteredRawRequestsAreObservedAndReturnTrueWithoutTouchingTheRealS2MailboxOrTemplates | Raw music/F9/FE/FF still observed and true; prequeued SFX0 and submission templates remain exact |
+| entryScopeStillSubmitsOrdinaryEffectsGapsAndNonMusicSystemCommands | Raw A0/F1/F8/FA/FB/FC/FD command categories and pitch |
+| rawPcmConstructionAlsoRunsBeforeTheFilterAndIsAdmitted | Actual PCM command construction at the existing profile seam |
+| rawObserverAndClassifierCanAcquireOrReleaseAdmissionBeforeTheLaterQuery | Reentrant acquisition/release at both supported callback boundaries |
+| directQueryReleasesTheMonitorAndDoesNotAtomicallyCheckAndSubmit | Off-thread lease acquisition in a downstream observer does not retract the already admitted direct request |
+| rawCallbacksUseCapturedSourceButTheThenCurrentService | Observer/classifier source replacement: original route/override, replacement service |
+| directMusicCapturesSourceAfterItsObserverInstead | Direct music's different source-capture boundary |
+| clearedCurrentServiceFailsOnlyWhenTheLaterFilterAllowsSubmission | Retained partial teardown and conditional current-slot null failure |
+| observerAndClassifierFailuresRetainPriorEffectsWithoutSubmitting | Callback effects survive their propagated failure; no mailbox/template submission |
+| rawSuppressionStillNotifiesTheMutatorBeforeSkippingPreparationAndObservation | Raw replay suppression follows intent; blocked direct controls precede it |
+| rawPreparationCanAcquireAdmissionAndPreparationFailurePrecedesObservation | Preparation before observer/classifier/query, including retained admission after a preparation failure |
+| enumResolutionAndNoArgumentFadeEvaluateTheCurrentProfileBeforeTheInnerGate | Successful resolution may return true while blocked; profile exceptions still propagate |
+| originalNonSilentRootDispatchesAPrequeuedRawS2FadeDuringEntrySuppression | ROM-backed Root publication, real SFX0/template/event path and unfiltered deferred dispatch |
+| musicMailboxNamedSemanticSecondaryAndRestoreSpeedIngressRemainOutsideTheEntryGate | Native music mailbox, named/GameSound/secondary SFX, restore, speed and override-end ingress |
+| donorAndNamespacedIngressRemainOutsideEntryAdmission | Donor music/SFX and namespaced track/SFX publication |
+
+The four added Stageplay cases establish later MUSIC_STOP ownership before the
+first entry snapshot, no acquisition during prepare, retention across seek and
+native refresh, null/non-null restoreEntry behavior, replacement preparation
+before stopping old playback (including failed preparation), and release before
+sample close when stop throws in close/abandon. Existing normal close/abandon
+restoration controls remain, as do all eight cross-game offline PCM routes and
+the native-entry no-control/PREPARED positive controls. StageplayLiveWorld's
+entry lease remains lexically scoped only around loadZoneAndAct, including
+exception unwinding, before later cleanup and cues. The success routes run here;
+load-failure unwinding is source-inspected, not separately injected. No new seam
+was introduced to fake that boundary. S2 scheduler cancellation/prior-water
+bookkeeping remains outside admission; the maintained initialization control
+still verifies unsuppressed F9/SFX0 before later SFX.
+
+**Commands and observed results.** Existing queued/running processes were
+inspected before submission; no matching job was active. One session/observer
+was retained per invocation. The leased `maven_queue.py -v` probe reported
+Maven 3.10.0 and Java 25.0.5.0.2. All test invocations used this environment and
+common argument list, with OPENGGF_ROM_ROOT denoting the existing ROM directory:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS -u MAVEN_ARGS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  -Darchunit.freeze.store.default.allowStoreCreation=false \
+  -Darchunit.freeze.store.default.allowStoreUpdate=false \
+  -Darchunit.freeze.refreeze=false \
+  "-Dsonic1.rom.path=$OPENGGF_ROM_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$OPENGGF_ROM_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$OPENGGF_ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dkis2.rom.path=$OPENGGF_ROM_ROOT/kis2.gen" \
+  <selection> test -B
+```
+
+SHA-1 identities were verified directly on all four existing root files:
+S1 `69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b`,
+S2 `8bca5dcef1af3e00098666fd892dc1c2a76333f9`,
+S3K `cfbf98c36c776677290a872547ac47c53d2761d6`,
+KiS2 `6cd0537a3aee0e012bb86d5837ddff9342595004`.
+No ROM file/link was created, renamed or copied. All four properties matter:
+the eight Stageplay cross-game routes are annotated only for S2 availability.
+
+| Terminal session | Exact selection | Observed cases/failures/errors/skips | Queue wait | Maven elapsed |
+| --- | --- | --- | ---: | ---: |
+| 76236 | `-Dtest=TestLevelMusicAccessContract` | Test compilation failed: PCM override used Rom instead of production Object; no tests executed | 0 s | 1:11 (display precision) |
+| 33404 | `-Dtest=TestLevelMusicAccessContract` | 37/1/1/0 | 0 s | 25.039 s |
+| 40342 | selector below | Contract 2/1/0/0; Stageplay 25/0/0/0; S2 init 9/0/0/0; no-device ownership 2/0/0/0; ROM boot identity 3/0/0/0 | 0 s | 26.808 s |
+| 9099 | `-Dtest=TestLevelMusicAccessContract#originalNonSilentRootDispatchesAPrequeuedRawS2FadeDuringEntrySuppression` | 1/0/0/0 | 0 s | 23.686 s |
+
+```text
+-Dtest=TestLevelMusicAccessContract#originalNonSilentRootDispatchesAPrequeuedRawS2FadeDuringEntrySuppression+theEntryPredicateExcludesOnlyTheThreeMusicCommandCategories,TestStageplayAudioLifecycle,TestSonic2LevelInitProfile,TestHeadlessAudioOwnership,TestHeadlessGameBootAudioIdentity
+```
+
+Session 33404's error was a test operand outside MusicTempoPercent's 25..100
+range (120 corrected to 75). Its failure assumed immediate F9 service despite
+the pending music load. Session 40342 verified the condition-loop correction
+and all 39 maintained controls; only its extra legacy fade-counter assertion
+failed. Source inspection located S2's sequencer fade owner, and 9099 verified
+that corrected assertion. These are test corrections on unchanged production.
+The other 35 contract cases passed in 33404 and were not rerun. Thus every one
+of the 37 contract identities and 39 maintained controls has passing bounded
+evidence across these runs; no single all-green combined run is claimed.
+Timing above is Maven execution/build time, separate from queue waiting;
+authoring and other unmeasured time is unknown.
+
+The contract source SHA-256 fingerprints for those executed states are:
+33404 `a3144f0fc896caeb0d521e4197e3ab22c163ed8e99722d1a350eb65c3ae0ab1c`,
+40342 `fb3db0fb575ea8723f1db9d70629da548eb3ad00010315335adb9cb4731fa415`,
+9099/final `7e791104f514f6d540f1d67e3b9389b1ef27ea0758c6776976a17b7551d4f3ae`.
+The final contract Git blob is `8aa8b1ea71f0f6b279c8873e94db8ba1bf7ea175`.
+Stageplay is unchanged across all executed states: Git blob
+`64cf8ac9ffc5865a9cc0730849bf8bc713d9b3d6`, SHA-256
+`419e010cfbc8dd22ebf75b343fa1dae17b60a0364914d12dc6d8666413daf4ff`.
+Earlier contract fingerprints are reconstructed in memory from the exact two
+subsequently edited method bodies, not retained source snapshots or pass caches.
+
+Surefire XML identities, failures, skips and effective JVM/EGL/strict-freeze/ROM
+properties were inspected. Owned XML/text and temporary logs were consumed;
+all handles are terminal. The known unrelated S2 null-FileChannel preload issue
+remains disclosed and unrepaired; these selected controls did not reproduce its
+previous 82 logged errors. This is neither broad smoke, full-suite, trace,
+performance, desktop/speaker nor extraction acceptance. Thread checks use
+latches, observed BLOCKED state and finite joins, without timing sleeps as their
+sole assertion. Production allocation/closed-before-decrement ordering and the
+Stageplay load-failure lexical boundary remain explicitly source evidence.
