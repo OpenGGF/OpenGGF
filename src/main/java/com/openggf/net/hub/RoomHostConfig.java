@@ -1,6 +1,8 @@
 package com.openggf.net.hub;
 
 import com.openggf.net.protocol.Protocol;
+import com.openggf.net.protocol.RoomAccessPolicy;
+import com.openggf.net.protocol.RoomPassword;
 
 import java.util.List;
 
@@ -9,10 +11,29 @@ import java.util.List;
 public record RoomHostConfig(String roomName, String gameId, int zone, int act,
                              String characterPolicy, String lockedCharacter,
                              int maxPlayers, String requiredDeterminismFingerprint,
-                             List<String> voteTrackKeys, boolean verified) {
+                             List<String> voteTrackKeys, boolean verified,
+                             RoomAccessPolicy accessPolicy, RoomPassword password,
+                             String instanceId) {
     public RoomHostConfig {
+        java.util.Objects.requireNonNull(accessPolicy, "access policy");
+        if (accessPolicy.passwordRequired() != (password != null)) {
+            throw new IllegalArgumentException("room credentials do not match access mode");
+        }
+        instanceId = instanceId == null ? java.util.UUID.randomUUID().toString() : instanceId;
+        if (instanceId.isBlank() || instanceId.length() > 128) {
+            throw new IllegalArgumentException("invalid room instance");
+        }
         maxPlayers = Math.min(Math.max(maxPlayers, 1), Protocol.MAX_PLAYERS_RELAY);
         voteTrackKeys = List.copyOf(voteTrackKeys == null ? List.of() : voteTrackKeys);
+    }
+
+    public RoomHostConfig(String roomName, String gameId, int zone, int act,
+                          String characterPolicy, String lockedCharacter,
+                          int maxPlayers, String requiredDeterminismFingerprint,
+                          List<String> voteTrackKeys, boolean verified) {
+        this(roomName, gameId, zone, act, characterPolicy, lockedCharacter, maxPlayers,
+                requiredDeterminismFingerprint, voteTrackKeys, verified,
+                RoomAccessPolicy.PUBLIC, null, null);
     }
 
     public RoomHostConfig(String roomName, String gameId, int zone, int act,

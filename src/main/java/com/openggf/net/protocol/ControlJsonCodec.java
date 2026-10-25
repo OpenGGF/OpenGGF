@@ -15,7 +15,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * Envelope codec for control messages: {@code {"v":3,"token":...,"msg":{...}}}.
+ * Envelope codec for control messages: {@code {"v":6,"token":...,"msg":{...}}}.
  *
  * <p>Each connection owner may retain one codec; instances are thread-safe once
  * constructed. The JSON implementation stays private to this typed protocol API.
@@ -30,23 +30,54 @@ public final class ControlJsonCodec {
             .enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
             .enable(DeserializationFeature.FAIL_ON_MISSING_CREATOR_PROPERTIES)
             .enable(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES);
-    private final Set<String> envelopeFields = Set.of("v", "token", "msg");
+    private final Set<String> envelopeFields = Set.of("v", "token", "msg", "requestId");
     private final Map<String, Class<? extends ControlMessage>> messageTypes =
             Arrays.stream(ControlMessage.class.getPermittedSubclasses())
                     .map(type -> type.asSubclass(ControlMessage.class))
                     .collect(Collectors.toUnmodifiableMap(Class::getSimpleName, Function.identity()));
 
     @com.openggf.game.ModApi
-    public record Decoded(String token, ControlMessage message) {
+    public record Decoded(String token, ControlMessage message, long requestId) {
+        public Decoded {
+            if (requestId < 0) throw new IllegalArgumentException("invalid request ID");
+        }
+        public Decoded(String token, ControlMessage message) { this(token, message, 0); }
     }
 
     public ControlJsonCodec() {
+        var secrets = new com.fasterxml.jackson.databind.module.SimpleModule();
+        secrets.addSerializer(RoomPassword.class, new com.fasterxml.jackson.databind.JsonSerializer<>() {
+            @Override
+            public void serialize(RoomPassword value, com.fasterxml.jackson.core.JsonGenerator output,
+                                  com.fasterxml.jackson.databind.SerializerProvider provider)
+                    throws java.io.IOException {
+                output.writeString(value.wireValue());
+            }
+        });
+        secrets.addDeserializer(RoomPassword.class, new com.fasterxml.jackson.databind.JsonDeserializer<>() {
+            @Override
+            public RoomPassword deserialize(com.fasterxml.jackson.core.JsonParser input,
+                                            com.fasterxml.jackson.databind.DeserializationContext context)
+                    throws java.io.IOException {
+                if (!input.hasToken(com.fasterxml.jackson.core.JsonToken.VALUE_STRING)) {
+                    throw new ProtocolViolationException("invalid room password");
+                }
+                return RoomPassword.of(input.getText());
+            }
+        });
+        mapper.registerModule(secrets);
     }
 
     public String encode(String tokenOrNull, ControlMessage message) {
+        return encode(tokenOrNull, message, 0);
+    }
+
+    public String encode(String tokenOrNull, ControlMessage message, long requestId) {
+        if (requestId < 0) throw new IllegalArgumentException("invalid request ID");
         try {
             ObjectNode envelope = mapper.createObjectNode();
             envelope.put("v", Protocol.VERSION);
+            if (requestId != 0) envelope.put("requestId", requestId);
             if (tokenOrNull == null) {
                 envelope.putNull("token");
             } else {
@@ -58,7 +89,7 @@ public final class ControlJsonCodec {
             return mapper.writeValueAsString(envelope);
         } catch (Exception e) {
             throw new ProtocolViolationException(
-                    "failed to encode " + message.getClass().getSimpleName(), e);
+                    "failed to encode " + message.getClass().getSimpleName());
         }
     }
 
@@ -129,11 +160,16 @@ public final class ControlJsonCodec {
                     > Protocol.MAX_CONTROL_BYTES) {
                 throw new ProtocolViolationException("relay guest text exceeds inner frame cap");
             }
-            return new Decoded(tokenValue, message);
+            JsonNode request = root.get("requestId");
+            if (request != null && (!request.isIntegralNumber() || !request.canConvertToLong()
+                    || request.longValue() < 0)) {
+                throw new ProtocolViolationException("invalid request ID");
+            }
+            return new Decoded(tokenValue, message, request == null ? 0 : request.longValue());
         } catch (ProtocolViolationException e) {
             throw e;
         } catch (Exception e) {
-            throw new ProtocolViolationException("undecodable control frame", e);
+            throw new ProtocolViolationException("undecodable control frame");
         }
     }
 

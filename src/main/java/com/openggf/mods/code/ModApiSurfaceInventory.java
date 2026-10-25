@@ -170,6 +170,7 @@ public final class ModApiSurfaceInventory {
             "com.openggf.net.protocol.Protocol",
             "com.openggf.net.protocol.ProtocolViolationException",
             "com.openggf.net.protocol.ReadyRules",
+            "com.openggf.net.protocol.RoomInviteCode",
             // ROM-qualified art recipes and optional scene utilities.
             "com.openggf.mods.scene.art.StockSceneArt",
             "com.openggf.mods.scene.art.PaletteAssembly",

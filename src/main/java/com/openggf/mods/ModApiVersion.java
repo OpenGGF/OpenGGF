@@ -7,6 +7,7 @@ import java.util.Objects;
 
 public final class ModApiVersion {
     /**
+     * Protocol v6 adds common private-room admission and invitation controls.
      * Current unpublished compiled-mod API candidate, including detached CPU-only title-preview
      * providers and their RGBA image/animation sequence contract, run-scoped native HUD profiles,
      * overlay HUD-origin measurement, and native decoded

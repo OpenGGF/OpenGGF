@@ -86,6 +86,10 @@ public final class RoomHost {
     private int roomZone;
     private int roomAct;
     private boolean closing;
+    private RoomInviteService inviteService;
+    private com.openggf.net.protocol.RoomAccessPolicy accessPolicy;
+    private long accessEpoch;
+    private long inviteEpoch;
 
     public RoomHost(RoomHostConfig config, PlayerIdentity hostIdentity,
                     LongSupplier wallClockMillis,
@@ -107,6 +111,7 @@ public final class RoomHost {
                     RoomHostHooks hooks, ControlJsonCodec codec) {
         this.codec = java.util.Objects.requireNonNull(codec, "codec");
         this.config = config;
+        accessPolicy = config.accessPolicy();
         this.hostIdentity = hostIdentity;
         this.wallClockMillis = wallClockMillis;
         this.hooks = hooks == null ? RoomHostHooks.none() : hooks;
@@ -138,6 +143,16 @@ public final class RoomHost {
         round.setVoteTrackPool(config.voteTrackKeys(), this.hooks.knownVoteTrack());
         hub.setTrack(config.gameId(), config.zone(), config.act());
     }
+
+    public String instanceId() { return config.instanceId(); }
+
+    public com.openggf.net.protocol.RoomAccessPolicy accessPolicy() { return accessPolicy; }
+
+    public long accessEpoch() { return accessEpoch; }
+
+    public long inviteEpoch() { return inviteEpoch; }
+
+    public void setInviteService(RoomInviteService service) { inviteService = service; }
 
     public void onConnected(HubConnection connection) {
         members.put(connection, new Member(connection,
@@ -317,7 +332,7 @@ public final class RoomHost {
     public ControlMessage.RoomDescriptor descriptor() {
         return new ControlMessage.RoomDescriptor(config.roomName(), roomGameId,
                 roomZone, roomAct, config.characterPolicy(),
-                config.lockedCharacter(), config.maxPlayers(), config.verified());
+                config.lockedCharacter(), config.maxPlayers(), config.verified(), accessPolicy);
     }
 
     public void sendToSlot(int slot, ControlMessage message) {
