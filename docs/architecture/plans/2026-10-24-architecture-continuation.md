@@ -9618,3 +9618,172 @@ form one local commit directly after a777. No subdelegation, main editing,
 fetch, integration, push or WT lifecycle cleanup occurs. All owned command handles
 are terminal; retain the clean branch/WT for independent parent code review and
 stop here.
+
+### PresentationBinding: original physical-composition characterization (2026-10-25)
+
+**Fixed predecessor and isolation.** This test-only slice starts in T3-owned
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-1714d350`, initially branch
+`presentation-binding-baseline` at
+`4eb8e8e1a8b5dd01474d9905fae2c85256582138`. Its own branch fast-forwards with
+`git merge --ff-only 04a5a6c7290b43db3952433b7317544e47fcb25b`, without fetching,
+and is renamed to `bugfix/ai-presentation-binding-owner-20261025`. T3's path and
+binding remain intact; its stored cosmetic branch label can remain old.
+`core.hooksPath=.githooks` was already installed. The fixed base tree is
+`c79dfd6dd65d90669710b5e7b73d9dea3584f17d`; its AudioManager blob is
+`5990cb9ee8fa7368d3a4ed99ee327afc4fdd92b2`. Earlier Binding research against
+`ade6` is historical, rather than this slice's executable baseline. Supplied
+predecessor behavior/guard outcomes are not independent executions here.
+
+**Mapping to the accepted predecessor.** No mapping revision or new production
+seam is necessary. Root still owns all 18 physical slots and the preparation
+record. `SourcePublication.initializeStandalone` initializes only the logical
+tuple; Root preserves sequential standalone sink/coordination installation and
+realization. `SourcePublication.setAudioProfile` prepares coordination outside
+its backend catch, retains the attempted marker and live backend reads, requests
+Root membership publication before its logical tuple publication, and then
+selects producer replacement versus partial-factory admission refresh. Its
+`setRom` publishes the logical tuple and replaces only an existing producer.
+Donor publication likewise retains preparation outside the backend catch,
+physical configuration, membership publication, then logical publication.
+Root `ensureShadowPresentation`, `replaceShadowPresentationForBaseMutation`
+and `closeShadowPresentation` still express incremental installation, tempo
+before held/capture invalidation, current-producer reconciliation, and
+unconditional current-slot clearing. CaptureLeases and HeldReverseRestore retain
+their own policies. This test slice neither closes those physical choices in a
+new owner nor transfers source rollback/publication policy.
+
+**New controls.** One new class,
+`src/test/java/com/openggf/audio/TestAudioPresentationBindingContract.java`, uses
+`spy(AudioManager.class)` directly, ROM-free profile callbacks, no-device sinks,
+and real SmpsDriverSessions. Local reflection is observation-only. No shared
+diagnostic helper, existing behavioral assertion, namespace control, guard,
+constructor allowance or production hook changes.
+
+| Area | Falsifiable observations |
+| --- | --- |
+| Coordination preparation/application, new/existing owner × base/donor paths | Callback replaces backend and realizes another producer; existing-owner callback retires a real previously open producer. Prepared/current/factory owner identities differ; backend attempt observes old logical tuple and unpublished candidate membership. New-owner publication reinstalls the prepared owner; existing-owner publication adds membership to the current set while registrations stay on the prepared owner. Base replacement sees membership and logical publication before closing. |
+| Construction reentry during admission policy | Old factory receiver gets outer policy, replacement factory retains nested policy; later sink callback sees newly published queue/registry/resolver; outer session local remains old while factory/coordination/sink reads use the replacement; nested producer is not retired atomically. |
+| Restore-policy failure after factory publication | Exact thrown object and actual callback/factory/session observation; tuning/coordination/factory survive while producer/session/queue/registry/resolver/parity/frame-rate publication is absent; subsequent profile publication refreshes that factory, subsequent ROM publication prepares its loader and advances generation without refreshing or realizing it. |
+| Native-stage timing | Actual stateful-policy callback observes the increment before any session/factory/producer publication; two failures preserve the same exception and count twice; third construction succeeds, and retirement retains native configuration/count. |
+| Off-owner base mutation | Real session owner check throws from captureSnapshot after backend configuration and logical generation/profile/loader publication; held acknowledgement/selected identity, capture identity/clock/pending samples, producer/history/prepared token and tempo remain intact; no sink close or carry marking occurs. |
+| Successful reentrant retirement | Accepted old close installs a new producer and carried-live/new-offline leases; reconciliation retains those leases by inspecting the open current producer, then outer completion unconditionally clears the current retirement slots while that producer stays open. Captured replacement producer and both raw leases are explicitly released in finally, even if Root loses them or assertions fail. |
+
+The existing virtual-dispatch, rejected/throwing/null-precedence close, manager
+monitor and pending-carry controls remain maintained evidence. Their unchanged
+fleets are not rerun for this isolated addition. No new logical-source reentry
+or namespace scenario is duplicated. No supported seam requires a production
+failure hook, changed policy, new public/protected surface or atomic install.
+
+**Scope accounting.** Byte comparisons against fixed `04a5` cover every tracked
+`src/main` input, all 13 frozen files, mod pins/descriptors and POM (4,638 checked
+files). The frozen low-level store has 120 records, not the historical 119.
+Unchanged pinned API text has 22,541 unique rows / 1,250 TYPE rows; unchanged
+ambient baseline is 6 methods / 5 files; unchanged executable package-edge set
+has 151 unique entries. These are file/source observations, not a new compiled
+guard run. All nine explicit-authority production files remain byte-identical
+to `ade6`, with the same sorted path/blob manifest SHA-256
+`aade7f37d9e202edbefc3b5d503ccb0ffa767c5abaf96d81f11fe64364f2c42e`.
+
+**Owned validation, initial run.** Commands use
+`JAVA_HOME=/usr/lib/jvm/java-25-openjdk` and prepend its `bin` to PATH. Fresh
+`python3 tools/testing/maven_queue.py -Dmse=off clean test-compile -B`
+(session 47343) compiled 4,353 main and 4,487 test source files at Java release 25,
+exit 0, Maven time 1m25s; build/activity admission time was not separately
+measured. The sole initial test request was:
+
+```text
+python3 tools/testing/maven_queue.py --lean -Dmse=off -Dtest=TestAudioPresentationBindingContract test -B
+```
+
+Its class selection expanded from seven to nine cases before admission, to
+cover both new/existing coordination-owner paths, without duplicating the queued
+request. Source inspection before admission also retained both later sink-rate
+reads (Root validation then producer validation) and added nonzero scene PCM to
+the off-owner capture observer. No file was changed during compilation/execution.
+Session 43388 waited 737s, then executed Maven for 30.664s. Physical XML contained
+9 cases / 1 failure / 1 error / 0 skips, class time 0.646s. All four coordination
+cases, construction reentry, partial-factory refresh and successful reentrant
+retirement passed. The two remaining cases had fixture prerequisite mistakes:
+
+- Native-stage setup hit `native-compatible output requires the accurate FM
+  core` in `SmpsPhysicalDevice.Settings` before its intended policy callback,
+  because the default is `fast`. The corrected case uses the established scoped
+  `GameServices.configuration()` session override to `accurate`, clearing it in
+  finally. It keeps the native count/session-publication assertions intact.
+- Off-owner setup requested tempo 137; `MusicTempoPercent.requireValid` rejects
+  values outside 25–100 before that case reaches its intended operation. Its
+  non-default tempo is corrected to 73 throughout; every preservation assertion
+  and nonzero pending-PCM observation remains.
+
+The exact initial XML case-ID SHA-256 (sorted `classname#name` plus final LF) is
+`7bacae9800f1bc1096e2b4ca9b655fbe097ac86a8be2bff351aa9f16172eebe8`.
+XML reports Java `25.0.5.0.2`, home `/usr/lib/jvm/java-25-openjdk`, the exact
+class selector and 1 GiB Surefire heap; S1/S2/S3K ROM properties and explicit
+graphics-backend properties are absent. Neither fixture requires a ROM or engine
+graphics context. The inspected XML/text reports were consumed before the
+two-case correction run. No broad/category/guard, native-emulator, performance,
+trace, speaker or desktop campaign runs here; parent owns combined validation.
+
+**Corrected focused result.** Only the two corrected cases were rerun:
+
+```text
+python3 tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestAudioPresentationBindingContract#statefulPolicyFailureCountsNativeStageBeforeSessionPublicationAndRetryCountsAgain+offOwnerBaseMutationPublishesLogicalSourceButTempoSnapshotPrecedesHeldCarryAndClose' test -B
+```
+
+Session 20507 waited 2s, then Maven executed for 29.234s, exit 0. It freshly
+compiled all 4,487 test files and executed exactly those two cases: **2 pass /
+0 failure / 0 error / 0 skip**, class time 0.502s. Physical XML confirmed Java
+`25.0.5.0.2`, the literal two-method selector, 1 GiB heap and absent ROM/graphics
+properties again. Their case-ID SHA-256 is
+`200f2e011b362d824fa141edc2ee3ba98a24b6ab7a23ccbed67df65ef01b076d`.
+Both tests now positively reach the intended callbacks/owner-thread failure.
+The off-owner case also compares a real nonzero pending scene-PCM packet and
+drains matching live/offline samples after rejection. Its new logical tuple is
+already published; held/capture/physical state and original tempo 73 survive.
+
+Across the two invocations there are **nine distinct passing case identities**,
+eleven total executions, and the two initial prerequisite failures described
+above. The other seven passing bodies and shared fixture helpers did not change;
+their passing coverage was reused rather than rerun. This is not a fresh
+nine-case execution of the final class, a broad suite, or compiled API/guard
+recertification. No selected unresolved failure remains.
+
+The literal case-ID inventory has prefix
+`com.openggf.audio.TestAudioPresentationBindingContract#`:
+
+```text
+coordinationPreparationRetainsItsOwnerAcrossPhysicalBackendReplacement(boolean)[1]
+coordinationPreparationRetainsItsOwnerAcrossPhysicalBackendReplacement(boolean)[2]
+existingCoordinationAttemptRetainsPreparedOwnerWhileMembershipFollowsReplacement(boolean)[1]
+existingCoordinationAttemptRetainsPreparedOwnerWhileMembershipFollowsReplacement(boolean)[2]
+constructionCapturesFactoryReceiverBeforePolicyButReadsLaterPhysicalSlotsLive
+restorePolicyFailureLeavesPartialFactoryThenProfileRefreshAndRomNoOpDiffer
+statefulPolicyFailureCountsNativeStageBeforeSessionPublicationAndRetryCountsAgain
+offOwnerBaseMutationPublishesLogicalSourceButTempoSnapshotPrecedesHeldCarryAndClose
+successfulReentrantCloseReconcilesLiveCurrentProducerThenUnconditionallyClearsCurrentSlots
+```
+
+The final new test Git blob is `1fdf95d56da6fef1edafc56bdf6f92459e427ea1`,
+raw SHA-256 `bfd0a6aa89d3a1e9cb263748d9da905f3e4f48769200f5132a5de094aaf16a30`.
+The changed-test fingerprint (sorted relative path + NUL + bytes + NUL; one file)
+is `58886a401695351642c03ad45e049c324a748c729eb64370a8b746df908674df`.
+Production `src/main` tree remains `c11c9343f64e3cd5ec3d05248693fdfd2d5e6b91`
+and `src/main/java` remains `6bc9ccded22dc41be18d20473941630d663e1c68`;
+the AM blob remains `5990cb9ee8fa7368d3a4ed99ee327afc4fdd92b2`.
+The final 4,638-file byte comparison is exact, including all 13 frozen blobs,
+120 low-level records and unchanged API/ambient/permission accounting. Existing
+source namespace controls and all production entry points remain unchanged.
+
+Owned sessions 47343, 43388 and 20507 are terminal. Both focused runs' inspected
+XML/text diagnostics were consumed; `target/diagnostics` and
+`target/trace-reports` are empty. No category run, receipt, pass cache or raw-log
+archive was created. Parent Source guard 89045, smoke 61664 and all other workers'
+source/targets/jobs were not inspected. Queue waits total 739s; measured Maven
+execution is 144.898s (85 + 30.664 + 29.234), with build admission and authoring
+time otherwise unmeasured; neither sum is elapsed delivery time.
+
+The sole code addition and this existing evidence append form the local baseline
+commit directly after `04a5`, with hooks and the required policy/co-author
+trailers. Retain the clean T3 worktree and local branch for the parent's
+independent preservation-evidence review. No fetch, main edit, branch switch,
+subdelegation, push, integration, worktree cleanup or extraction occurs here.
