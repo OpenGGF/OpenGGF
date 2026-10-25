@@ -3569,3 +3569,22 @@ remain outside the current observations. No bounded storage owner is qualified
 or authorized. All ten count-one bridge allowances and the 119-record store
 remain unchanged; the canonical Sideways bug and strict missing-reference
 qualification remain open.
+
+### Parent cleanup of native pressure diagnostics — 2026-10-25
+
+After the reusable probe, launcher, safety controls and qualified findings were
+delivered, parent removed this run's `s2-fixed-tail-native-pressure-20261024`
+scratch tree. Its three ownership records named the retired task worktree;
+all three staged 388-file source subsets matched TraceChaser pin
+`322851cbfa2e1c1803332142e11ab74b4eb34eea`. The remaining files were generated
+build products and declared noncanonical preflight/provenance/observation
+outputs. No symlink or matching live process remained. The earlier external
+artifact paths are historical locations, not retained fixtures; the committed
+tools and recorded inputs, identities, hashes and bounded conclusions remain.
+No ROM, movie, user archive or main reference checkout was removed or changed.
+
+This cleanup executed no native case and supplies no additional coverage or
+storage authority. The Sideways disposition and ten bridges remain unchanged.
+The historical 119-record count above belongs to that qualification; the later
+independent SourcePublication transfer accounts for the current 120-record
+baseline and does not qualify a fixed-tail storage owner.
