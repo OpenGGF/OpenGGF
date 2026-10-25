@@ -720,13 +720,7 @@ class TestUnifiedAudioPresentationIntegration {
     }
 
     private AudioPresentationSink presentationSink() {
-        try {
-            var field = AudioManager.class.getDeclaredField("presentationSink");
-            field.setAccessible(true);
-            return (AudioPresentationSink) field.get(audio);
-        } catch (ReflectiveOperationException failure) {
-            throw new AssertionError(failure);
-        }
+        return AudioManagerTestDiagnostics.presentationField(audio, "presentationSink", AudioPresentationSink.class);
     }
 
     private static void assertAudible(short[] packet, String what) {
@@ -859,10 +853,7 @@ class TestUnifiedAudioPresentationIntegration {
         @Override
         public void close() {
             try {
-                var producerField =
-                        AudioManager.class.getDeclaredField("shadowProducer");
-                producerField.setAccessible(true);
-                Object producer = producerField.get(owner);
+                Object producer = AudioManagerTestDiagnostics.presentationField(owner, "shadowProducer", Object.class);
                 var registryField = AudioPresentationProducer.class
                         .getDeclaredField("registry");
                 registryField.setAccessible(true);

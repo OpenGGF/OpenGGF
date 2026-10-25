@@ -393,17 +393,12 @@ class TestAudioManagerRuntimeInstallation {
 
     private static AudioPresentationSink presentationSink(AudioManager audio)
             throws Exception {
-        Field field = AudioManager.class.getDeclaredField("presentationSink");
-        field.setAccessible(true);
-        return (AudioPresentationSink) field.get(audio);
+        return AudioManagerTestDiagnostics.presentationField(audio, "presentationSink", AudioPresentationSink.class);
     }
 
     private static SmpsDriverSession shadowSession(AudioManager audio)
             throws Exception {
-        Field field = AudioManager.class.getDeclaredField(
-                "shadowSmpsSession");
-        field.setAccessible(true);
-        return (SmpsDriverSession) field.get(audio);
+        return AudioManagerTestDiagnostics.presentationField(audio, "shadowSmpsSession", SmpsDriverSession.class);
     }
 
     private static class FixedRateNullBackend extends NullAudioBackend {

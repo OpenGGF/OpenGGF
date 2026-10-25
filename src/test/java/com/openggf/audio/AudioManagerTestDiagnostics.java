@@ -119,7 +119,7 @@ public final class AudioManagerTestDiagnostics {
      */
     public static SmpsDriverSnapshot primeAdmittedSmpsMusic(
             AudioManager audio) {
-        SmpsDriverSession session = field(
+        SmpsDriverSession session = presentationField(
                 audio, "shadowSmpsSession", SmpsDriverSession.class);
         SmpsDriver driver = sessionDriver(session);
         SmpsDriverSnapshot before = driver.captureSnapshot();
@@ -194,6 +194,18 @@ public final class AudioManagerTestDiagnostics {
         } catch (ReflectiveOperationException failure) {
             throw new IllegalStateException(
                     "cannot open a scoped session SMPS epoch", failure);
+        }
+    }
+
+    /** Observes a slot on the actual manager-lifetime physical binding. */
+    public static <T> T presentationField(AudioManager audio, String name, Class<T> type) {
+        Object binding = field(audio, "presentationBinding", Object.class);
+        try {
+            Field field = binding.getClass().getDeclaredField(name);
+            field.setAccessible(true);
+            return type.cast(field.get(binding));
+        } catch (ReflectiveOperationException failure) {
+            throw new IllegalStateException("cannot read PresentationBinding." + name, failure);
         }
     }
 

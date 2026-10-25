@@ -631,8 +631,7 @@ class TestLiveRewindManagerAudioCleanup {
     }
 
     private int pendingPresentationCommands() throws Exception {
-        return ((AudioPresentationCommandQueue) getField(
-                audio, "shadowCommands")).size();
+        return ((AudioPresentationCommandQueue) com.openggf.audio.AudioManagerTestDiagnostics.presentationField(audio, "shadowCommands", Object.class)).size();
     }
 
     private static void submitRawPcm(

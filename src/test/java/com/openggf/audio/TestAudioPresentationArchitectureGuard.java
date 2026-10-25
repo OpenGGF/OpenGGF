@@ -156,6 +156,62 @@ class TestAudioPresentationArchitectureGuard {
             "AL_PITCH");
 
     @Test
+    void presentationBindingOwnsCompleteColdAssemblyAndOpaquePhysicalDecisions() throws Exception {
+        var binding = AudioManager.class.getDeclaredField("presentationBinding");
+        int modifiers = binding.getModifiers();
+        assertTrue(java.lang.reflect.Modifier.isPrivate(modifiers));
+        assertTrue(java.lang.reflect.Modifier.isFinal(modifiers));
+        assertFalse(java.lang.reflect.Modifier.isStatic(modifiers));
+        Class<?> owner = binding.getType();
+        assertEquals(AudioManager.class, owner.getEnclosingClass());
+        assertTrue(java.lang.reflect.Modifier.isPrivate(owner.getModifiers()));
+        assertTrue(java.lang.reflect.Modifier.isFinal(owner.getModifiers()));
+        assertFalse(java.lang.reflect.Modifier.isStatic(owner.getModifiers()));
+        Set<String> fields = Set.of("shadowCommands", "shadowFactory", "shadowResolver",
+                "shadowRegistry", "shadowProducer", "shadowSmpsSession", "shadowRequestService",
+                "shadowFrameRate", "shadowParity", "shadowTuning", "nativeCompatiblePcmCapture",
+                "nativeCompatiblePcmSessions", "standaloneTuning", "standaloneFrameRate",
+                "presentationCoordFlagHandlers", "presentationCoordHandlerGameIds",
+                "presentationSink", "presentationSpeakerFailed");
+        assertEquals(fields, Arrays.stream(owner.getDeclaredFields())
+                .filter(field -> !field.isSynthetic()).map(java.lang.reflect.Field::getName)
+                .collect(java.util.stream.Collectors.toSet()));
+        for (String field : fields) {
+            assertThrows(NoSuchFieldException.class, () -> AudioManager.class.getDeclaredField(field));
+        }
+        List<String> foreignMutationsOrSourceReads = new ArrayList<>();
+        for (JavaClass caller : productionClasses()) {
+            caller.getFieldAccessesFromSelf().stream()
+                    .filter(access -> access.getTargetOwner().getName().equals(owner.getName()))
+                    .filter(access -> fields.contains(access.getTarget().getName()))
+                    .filter(access -> !access.getOriginOwner().getName().equals(owner.getName()))
+                    .filter(access -> access.getAccessType()
+                            == com.tngtech.archunit.core.domain.JavaFieldAccess.AccessType.SET
+                            || access.getTarget().getName().equals("presentationCoordHandlerGameIds")
+                            || access.getOriginOwner().getName().startsWith(
+                                    AudioManager.class.getName() + "$SourcePublication"))
+                    .map(Object::toString).forEach(foreignMutationsOrSourceReads::add);
+        }
+        assertEquals(List.of(), foreignMutationsOrSourceReads);
+        JavaClass bytecodeOwner = productionClasses().get(owner);
+        assertEquals(Set.of(Object.class.getName(), java.util.LinkedHashSet.class.getName()),
+                bytecodeOwner.getConstructors().stream()
+                        .flatMap(constructor -> constructor.getConstructorCallsFromSelf().stream())
+                        .map(call -> call.getTargetOwner().getName())
+                        .collect(java.util.stream.Collectors.toSet()), "binding construction only initializes storage");
+        assertEquals(List.of("java.util.Objects.requireNonNull(java.lang.Object)"),
+                bytecodeOwner.getConstructors().stream()
+                        .flatMap(constructor -> constructor.getMethodCallsFromSelf().stream())
+                        .map(call -> call.getTarget().getFullName()).sorted().toList(),
+                "javac checks the implicit enclosing instance; construction invokes no callbacks");
+        String preparation = owner.getName() + "$PresentationCoordHandlerPreparation";
+        assertTrue(productionClasses().stream().flatMap(caller -> caller.getMethodCallsFromSelf().stream())
+                .filter(call -> call.getTargetOwner().getName().equals(preparation))
+                .allMatch(call -> call.getOriginOwner().getName().equals(owner.getName())),
+                "only binding interprets the opaque coordination preparation");
+    }
+
+    @Test
     void sourcePublicationOwnsOneCompleteColdManagerLifetimeNamespace() throws Exception {
         var publication = AudioManager.class.getDeclaredField("sourcePublication");
         int modifiers = publication.getModifiers();

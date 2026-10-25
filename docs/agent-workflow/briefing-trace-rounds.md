@@ -90,6 +90,15 @@ counts before reporting coverage or adding totals; a `Class#method` argument
 alone does not establish the executed set. The [ownership evidence](../architecture/plans/2026-10-24-architecture-continuation.md#held-reverse-target-owner-reviewed-extraction)
 records the unchanged selection and its actual expansion.
 
+ArchUnit's field engine can report `TestArchUnitRules` as its XML testcase
+classname while Jupiter reports `com.openggf.tests.TestArchUnitRules`. The
+PresentationBinding gate observed 27 field cases plus seven Jupiter cases in
+one 34-case suite. Count by the report suite and inspect member identities;
+matching only the fully qualified testcase classname undercounts coverage.
+Also inspect the actual profile selection: that complete `-Pguards` run did
+not select `TestModApiSignatureSurface`; its eleven API cases were separate
+focused worker evidence, not part of the parent's 796 guard cases.
+
 A Stageplay pixel oracle can compare two black S3K pictures while object art is
 still dormant or the native initial palette reveal is black (2026-10-24, facing
 correction, base `ac46111bc`). Require nonempty native sprite pixels and their

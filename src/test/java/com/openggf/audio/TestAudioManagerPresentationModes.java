@@ -816,8 +816,8 @@ class TestAudioManagerPresentationModes {
                 "prepared SMPS discard must not silence YM");
         assertEquals(0, prepared.psgWrites().get(),
                 "prepared SMPS discard must not silence PSG");
-        assertNull(field(AudioManager.class, "shadowProducer").get(audio));
-        assertNull(field(AudioManager.class, "shadowSmpsSession").get(audio));
+        assertNull(AudioManagerTestDiagnostics.presentationField(audio, "shadowProducer", Object.class));
+        assertNull(AudioManagerTestDiagnostics.presentationField(audio, "shadowSmpsSession", Object.class));
 
         closePath.close(audio);
 
@@ -825,8 +825,8 @@ class TestAudioManagerPresentationModes {
                 "a repeated manager lifecycle call must not consume twice");
         assertEquals(0, prepared.ymWrites().get());
         assertEquals(0, prepared.psgWrites().get());
-        assertNull(field(AudioManager.class, "shadowProducer").get(audio));
-        assertNull(field(AudioManager.class, "shadowSmpsSession").get(audio));
+        assertNull(AudioManagerTestDiagnostics.presentationField(audio, "shadowProducer", Object.class));
+        assertNull(AudioManagerTestDiagnostics.presentationField(audio, "shadowSmpsSession", Object.class));
     }
 
     @ParameterizedTest
@@ -940,15 +940,13 @@ class TestAudioManagerPresentationModes {
     private static AudioVoiceRegistry registry(AudioManager audio)
             throws Exception {
         audio.captureLogicalSnapshot();
-        return (AudioVoiceRegistry) field(
-                AudioManager.class, "shadowRegistry").get(audio);
+        return (AudioVoiceRegistry) AudioManagerTestDiagnostics.presentationField(audio, "shadowRegistry", Object.class);
     }
 
     private static AudioPresentationCommandQueue commands(AudioManager audio)
             throws Exception {
         audio.captureLogicalSnapshot();
-        return (AudioPresentationCommandQueue) field(
-                AudioManager.class, "shadowCommands").get(audio);
+        return (AudioPresentationCommandQueue) AudioManagerTestDiagnostics.presentationField(audio, "shadowCommands", Object.class);
     }
 
     private static AudioPresentationCommand.MusicVoiceEntry music(
@@ -1006,8 +1004,7 @@ class TestAudioManagerPresentationModes {
     private static AudioPresentationProducer shadowProducer(
             AudioManager audio) throws Exception {
         audio.captureLogicalSnapshot();
-        return (AudioPresentationProducer) field(
-                AudioManager.class, "shadowProducer").get(audio);
+        return (AudioPresentationProducer) AudioManagerTestDiagnostics.presentationField(audio, "shadowProducer", Object.class);
     }
 
     private static PreparedProducerRestore prepareObservedProducerRestore(
@@ -1114,9 +1111,7 @@ class TestAudioManagerPresentationModes {
         public void close() {
             try {
                 AudioPresentationProducer producer =
-                        (AudioPresentationProducer) field(
-                                AudioManager.class, "shadowProducer")
-                                .get(owner);
+                        (AudioPresentationProducer) AudioManagerTestDiagnostics.presentationField(owner, "shadowProducer", Object.class);
                 AudioVoiceRegistry registry =
                         (AudioVoiceRegistry) field(
                                 AudioPresentationProducer.class, "registry")

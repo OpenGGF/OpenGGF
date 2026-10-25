@@ -465,11 +465,8 @@ public final class S1Ghz1OpenGgfAudioTimelineCapture {
 
         private void installOnLiveDrivers() {
             try {
-                Field sessionField = AudioManager.class
-                        .getDeclaredField("shadowSmpsSession");
-                sessionField.setAccessible(true);
-                SmpsDriverSession session = (SmpsDriverSession)
-                        sessionField.get(GameServices.audio());
+                SmpsDriverSession session = com.openggf.audio.AudioManagerTestDiagnostics.presentationField(
+                        GameServices.audio(), "shadowSmpsSession", SmpsDriverSession.class);
                 if (session == null) {
                     return;
                 }

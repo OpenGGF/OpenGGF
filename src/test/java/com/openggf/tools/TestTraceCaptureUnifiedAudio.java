@@ -634,9 +634,8 @@ class TestTraceCaptureUnifiedAudio {
     }
 
     private static Object producer(AudioManager audio) throws Exception {
-        Field field = AudioManager.class.getDeclaredField("shadowProducer");
-        field.setAccessible(true);
-        return field.get(audio);
+        return com.openggf.audio.AudioManagerTestDiagnostics.presentationField(
+                audio, "shadowProducer", Object.class);
     }
 
     private static boolean hasSampleAsset(

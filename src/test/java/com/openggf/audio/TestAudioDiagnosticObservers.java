@@ -1601,34 +1601,15 @@ class TestAudioDiagnosticObservers {
     }
 
     private void setPresentationSfxBlocked(boolean blocked) {
-        try {
-            var field = AudioManager.class.getDeclaredField("shadowRegistry");
-            field.setAccessible(true);
-            ((com.openggf.audio.presentation.AudioVoiceRegistry) field.get(audio))
-                    .setSfxBlocked(blocked);
-        } catch (ReflectiveOperationException failure) {
-            throw new AssertionError(failure);
-        }
+        AudioManagerTestDiagnostics.presentationField(audio, "shadowRegistry", AudioVoiceRegistry.class).setSfxBlocked(blocked);
     }
 
     private AudioPresentationSourceFactory presentationFactory() {
-        try {
-            var field = AudioManager.class.getDeclaredField("shadowFactory");
-            field.setAccessible(true);
-            return (AudioPresentationSourceFactory) field.get(audio);
-        } catch (ReflectiveOperationException failure) {
-            throw new AssertionError(failure);
-        }
+        return AudioManagerTestDiagnostics.presentationField(audio, "shadowFactory", AudioPresentationSourceFactory.class);
     }
 
     private AudioVoiceRegistry presentationRegistry() {
-        try {
-            var field = AudioManager.class.getDeclaredField("shadowRegistry");
-            field.setAccessible(true);
-            return (AudioVoiceRegistry) field.get(audio);
-        } catch (ReflectiveOperationException failure) {
-            throw new AssertionError(failure);
-        }
+        return AudioManagerTestDiagnostics.presentationField(audio, "shadowRegistry", AudioVoiceRegistry.class);
     }
 
     private static void clearFactorySfxCache(
