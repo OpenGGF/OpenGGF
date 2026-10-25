@@ -1,0 +1,270 @@
+# Typing of the Hedgehog: Sonic 3 & Knuckles (1994) lore, display capitalisation.
+# Badnik and object names checked against docs/skdisasm Obj_ labels (Obj_Rhinobot,
+# Obj_Pointdexter art, Obj_Hyudoro, Obj_EggRobo and so on).
+# Zones and stages
+Angel Island
+Angel Island Zone
+Hydrocity
+Hydrocity Zone
+Marble Garden
+Marble Garden Zone
+Carnival Night
+Carnival Night Zone
+IceCap
+IceCap Zone
+Launch Base
+Launch Base Zone
+Mushroom Hill
+Mushroom Hill Zone
+Flying Battery
+Flying Battery Zone
+Sandopolis
+Sandopolis Zone
+Lava Reef
+Lava Reef Zone
+Hidden Palace
+Hidden Palace Zone
+Sky Sanctuary
+Sky Sanctuary Zone
+Death Egg
+Death Egg Zone
+The Doomsday
+The Doomsday Zone
+Floating Island
+Special Stage
+Bonus Stage
+Gumball Machine
+Slot Machine
+Blue Sphere
+Azure Lake
+Balloon Park
+Chrome Gadget
+Desert Palace
+Endless Mine
+Act One
+Act Two
+# Badniks
+Rhinobot
+Monkey Dude
+Bloominator
+Caterkiller Jr.
+Jawz
+Blastoid
+Buggernaut
+Turbo Spiker
+Mega Chopper
+Pointdexter
+Bubbles
+Tunnelbot
+Spiker
+Mantis
+Clamer
+Sparkle
+Batbot
+Blaster
+Technosqueek
+Penguinator
+Star Pointer
+Snale Blaster
+Ribot
+Orbinaut
+Corkey
+Flybot767
+Madmole
+Mushmeanie
+Dragonfly
+Butterdroid
+Cluckoid
+Skorp
+Sandworm
+Rockn
+Hyudoro
+Fireworm
+Iwamodoki
+Toxomister
+Spikebonker
+Chainspike
+Eggrobo
+Badnik
+Badniks
+# Characters and animals
+Sonic
+Tails
+Knuckles
+Knuckles the Echidna
+Miles Prower
+Sonic and Tails
+Dr. Robotnik
+Robotnik
+Eggman
+Mecha Sonic
+Super Sonic
+Hyper Sonic
+Super Tails
+Super Knuckles
+Hyper Knuckles
+Super Flickies
+Flicky
+Pocky
+Cucky
+Pecky
+Ricky
+Picky
+Rocky
+# Robotnik's machines
+Egg Mobile
+Egg Capsule
+Big Arm
+Battleship
+Death Egg Launch
+# Items and monitors
+Ring
+Rings
+Super Ring
+Speed Shoes
+Invincibility
+Extra Life
+1-Up
+Monitor
+Hidden Monitor
+Robotnik Monitor
+Fire Shield
+Flame Shield
+Bubble Shield
+Lightning Shield
+Insta-Shield
+Chaos Emerald
+Chaos Emeralds
+Super Emerald
+Super Emeralds
+Master Emerald
+Giant Ring
+Star Post
+Signpost
+Spring
+Spikes
+Bumper
+# Angel Island
+Zipline
+Hollow Tree
+Swinging Vine
+Flipping Bridge
+Drawbridge
+Falling Log
+Spiked Log
+Burning Jungle
+Waterfall
+# Hydrocity
+Water Slide
+Hand Launcher
+Large Fan
+Wall of Water
+Conveyor Belt
+Spinning Column
+Twisting Loop
+Water Rush
+# Marble Garden
+Spinning Top
+Swinging Spike Ball
+Smashing Pillar
+Collapsing Ruins
+# Carnival Night
+Balloon
+Cannon
+Barrel
+Barber Pole
+Vacuum Tube
+Giant Wheel
+Triangle Bumper
+Teleporter
+# IceCap
+Snowboard
+Ice Block
+Ice Spikes
+Stalactite
+Crushing Column
+Frozen Cave
+# Launch Base
+Cup Elevator
+Tube Elevator
+Flamethrower
+Gate Laser
+Spin Launcher
+# Mushroom Hill
+Mushroom Cap
+Mushroom Platform
+Mushroom Parachute
+Mushroom Catapult
+Swing Vine
+Changing Seasons
+# Flying Battery
+Magnetic Platform
+Magnetic Spike Ball
+Propeller
+Missile Launcher
+Spider Crane
+Floating Mine
+Airship
+# Sandopolis
+Quicksand
+Pushable Rock
+Rising Sand
+Light Switch
+Ghost Capsule
+Pyramid
+# Lava Reef
+Corkscrew
+Fireball Launcher
+Lava Fall
+Rock Crusher
+Crystal Cave
+# Hidden Palace and Sky Sanctuary
+Shrine
+Teleporter Beam
+Bouncy Cloud
+Ancient Ruins
+# Death Egg and Doomsday
+Gravity Switch
+Gravity Tube
+Energy Bridge
+Torpedo Launcher
+Tunnel Launcher
+Asteroid Field
+# Special and bonus stages
+Blue Spheres
+Red Spheres
+# Screens and tally
+Sega
+Title Screen
+Data Select
+Competition
+Grand Prix
+Match Race
+Time Attack
+Lock-On
+Knuckles in Sonic 2
+Level Select
+Debug Mode
+Sonic Got Through
+Knuckles Got Through
+Time Bonus
+Ring Bonus
+Game Over
+Time Over
+Continue
+# Moves and actions
+Spin Dash
+Spin Attack
+Jump
+Glide
+Climb
+Fly
+Swim
+Transform
+Carry Sonic
+Guard the Master Emerald
+Free the Animals
+Smash the Badniks
+Collect the Rings
+Find the Emeralds
+Stop Robotnik

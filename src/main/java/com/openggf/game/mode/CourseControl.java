@@ -48,6 +48,18 @@ public final class CourseControl {
     }
     void closeFrame() { frameClosed = true; }
 
+    /** Characters typed this row through the operating system's text input (layout- and
+     * Shift-aware, control characters omitted); consuming empties the row's text. Empty when the
+     * row has no live input handler. Pair with {@link GameplayFrameController#capturesKeyboardText()}
+     * so letter shortcuts do not also fire. */
+    public String typedText() { return input == null ? "" : input.consumeTypedText(); }
+
+    /** Held state of a GLFW key, including keys claimed by keyboard text capture. */
+    public boolean keyDown(int glfwKey) { return input != null && input.isCapturedKeyDown(glfwKey); }
+
+    /** Press edge of a GLFW key this row, including keys claimed by keyboard text capture. */
+    public boolean keyPressed(int glfwKey) { return input != null && input.isCapturedKeyPressed(glfwKey); }
+
     /** Records final presented PCM for a bounded reverse view (1..120 seconds; at most four live
      * recordings per session). Start immediately before its first forward row and close on
      * settlement, replay completion or cancellation. Paused/silent rows are not recorded.
@@ -340,24 +352,30 @@ public final class CourseControl {
         if (checkpoint.layoutVersion != context.getRewindRegistry().courseLayoutVersion())
             throw new IllegalArgumentException("Course checkpoint registry adapters have changed");
         context.getRewindRegistry().requireCourseLayout(checkpoint.snapshot);
-        selectCharacter(checkpoint.character);
-        var profile = context.getWorldSession().getGameModule().getLevelInitProfile();
-        boolean entryMusicPublished = !profile.isLevelMusicPublicationPending();
-        context.getRewindRegistry().restoreCourse(checkpoint.snapshot);
-        // A checkpoint taken during level entry still holds its ROM-timed Level_PlayBgm countdown
-        // (Sonic 2). Once that request has been published, restoring the course must not arm it
-        // again: the zone music would restart from its first bar after the countdown.
-        if (entryMusicPublished && profile.isLevelMusicPublicationPending()) profile.cancelPendingLevelLoadWork();
-        if (context.getRewindController() != null) context.getRewindController().invalidateCourseFuture();
-        // Course replacement retains mode time and the sound driver keeps running, as the Z80 does
-        // across 68000 state changes: sounds in flight finish on their own. A driver-wide SFX stop
-        // here gated the Sonic 2 presentation output (music included) until the next SFX admission.
-        int musicId = context.getWorldSession().getGameModule().getZoneRegistry()
-                .getMusicId(level.getCurrentZone(), level.getCurrentAct());
-        var currentMusic = GameServices.audio().captureLogicalSnapshot().presentation().activeMusic();
-        // While the entry countdown is still pending, its own publication starts the zone music.
-        if (!profile.isLevelMusicPublicationPending()
-                && (currentMusic == null || currentMusic.musicId() != musicId)) GameServices.audio().playMusic(musicId);
+        // A frame controller restores from inside its own callback. Engine objects the restore
+        // rebuilds must not inherit that creator as their owner (an inherited owner made adoption
+        // reject the HCZ fan platform, and the restore dropped it), so no creator owner is in scope.
+        com.openggf.ModSubsystem.withoutCreatorOwner(() -> {
+            selectCharacter(checkpoint.character);
+            var profile = context.getWorldSession().getGameModule().getLevelInitProfile();
+            boolean entryMusicPublished = !profile.isLevelMusicPublicationPending();
+            context.getRewindRegistry().restoreCourse(checkpoint.snapshot);
+            // A checkpoint taken during level entry still holds its ROM-timed Level_PlayBgm countdown
+            // (Sonic 2). Once that request has been published, restoring the course must not arm it
+            // again: the zone music would restart from its first bar after the countdown.
+            if (entryMusicPublished && profile.isLevelMusicPublicationPending()) profile.cancelPendingLevelLoadWork();
+            if (context.getRewindController() != null) context.getRewindController().invalidateCourseFuture();
+            // Course replacement retains mode time and the sound driver keeps running, as the Z80 does
+            // across 68000 state changes: sounds in flight finish on their own. A driver-wide SFX stop
+            // here gated the Sonic 2 presentation output (music included) until the next SFX admission.
+            int musicId = context.getWorldSession().getGameModule().getZoneRegistry()
+                    .getMusicId(level.getCurrentZone(), level.getCurrentAct());
+            var currentMusic = GameServices.audio().captureLogicalSnapshot().presentation().activeMusic();
+            // While the entry countdown is still pending, its own publication starts the zone music.
+            if (!profile.isLevelMusicPublicationPending()
+                    && (currentMusic == null || currentMusic.musicId() != musicId)) GameServices.audio().playMusic(musicId);
+            return null;
+        });
     }
 
     public void selectCharacter(String character) {

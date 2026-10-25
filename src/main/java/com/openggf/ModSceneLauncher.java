@@ -42,7 +42,10 @@ final class ModSceneLauncher {
         if (factory == null || config.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)) {
             return false;
         }
+        gameLoop.modSceneNavigation.setStartupSceneOpener(
+                () -> openStartupScene(gameLoop, config, window, graphics, logicalWidth, logicalHeight));
         prepareSceneAudio(module);
+        SceneRomLibrary library = romLibrary(module);
         SceneServices services = new SceneServices(
                 GameServices.audio(),
                 romArt(module),
@@ -50,12 +53,12 @@ final class ModSceneLauncher {
                 window == 0 ? null : mouseMapper(window, graphics, logicalWidth, logicalHeight),
                 () -> exitToGameTitle(gameLoop),
                 () -> gameLoop.fadeOutTo(gameLoop::returnToMasterTitle),
-                romLibrary(module), launch -> {
+                library, launch -> {
                     int zone = module.getZoneRegistry().resolveZoneKey(launch.destination()).orElseThrow(
                             () -> new IllegalArgumentException("Unregistered mod zone: " + launch.destination()));
                     if (launch.act() >= module.getZoneRegistry().getActCount(zone))
                         throw new IllegalArgumentException("Unregistered mod act: " + launch.act());
-                });
+                }, null, gameLoop.modSceneNavigation.forVisit(library));
         gameLoop.setGameMode(GameMode.MOD_SCENE);
         gameLoop.modSceneHost.open(factory, services, logicalWidth, logicalHeight);
         gameLoop.resolveFadeManager().startFadeFromBlack(null);

@@ -80,6 +80,7 @@ import com.openggf.testmode.TraceCameraFocusController;
 import com.openggf.trace.replay.TraceSuppressedRowClosure;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -142,6 +143,7 @@ public class GameLoop {
     /** The open mod scene, if any; {@link ModSceneLauncher} opens, draws and leaves it. */
     final ModSceneActBridge modSceneActBridge;
     final com.openggf.mods.scene.host.ModSceneHost modSceneHost = new com.openggf.mods.scene.host.ModSceneHost();
+    final ModSceneNavigation modSceneNavigation = new ModSceneNavigation(this);
     private final PresenceManager presenceManager;
     private final EscapeToMasterTitleController escapeToMasterTitleController;
     final GameLoopSuspension suspension = new GameLoopSuspension(this);
@@ -1093,7 +1095,7 @@ public class GameLoop {
                             () -> updateNonGameplayAudio(false)),
                     this::syncPlaybackInputBridge, this::beginGameplayAudioFrameForTick,
                     () -> advanceGameplayAudioFrameForTick(false),
-                    () -> { audioManager.resume(); initializeTitleScreenMode(); });
+                    () -> { audioManager.resume(); if (!modSceneNavigation.reopenStartupScene()) initializeTitleScreenMode(); });
             return;
         }
         if (lifecycleContext == null || !lifecycleContext.isGameplayRuntimeReady()) {
@@ -1208,7 +1210,8 @@ public class GameLoop {
                 com.openggf.game.TitleInputOwnership.routeQuit(masterScreen, () -> fadeOutTo(applicationExitHandler));
             }
             finishMasterTitleFrame();
-        if (masterScreen != null) masterScreen.finishPendingModApply();
+            if (masterScreen != null) masterScreen.finishPendingModApply();
+            modSceneNavigation.onMasterTitleFrame();
             return;
         }
 
@@ -2387,6 +2390,12 @@ public class GameLoop {
     }
 
     void launchGameByEntry(MasterTitleScreen.GameEntry entry, Runnable afterGameLoaded) {
+        launchGameByEntry(entry, afterGameLoaded, Map.of());
+    }
+
+    /** As above, applying session-only settings after the master-title exit clears overrides. */
+    void launchGameByEntry(MasterTitleScreen.GameEntry entry, Runnable afterGameLoaded,
+            Map<SonicConfiguration, Object> sessionOverrides) {
         MasterTitleScreen masterScreen = currentMasterTitleScreen();
         if (masterScreen == null) {
             throw new IllegalStateException("No master title screen available");
@@ -2396,6 +2405,7 @@ public class GameLoop {
                     "Cannot launch game: a master-title fade is already in flight");
         }
         masterTitleLaunchCoordinator.setPendingLaunchCallback(afterGameLoaded);
+        masterTitleLaunchCoordinator.setPendingSessionOverrides(sessionOverrides);
         try {
             masterScreen.selectEntry(entry);
             exitMasterTitleScreen(masterScreen);
@@ -2655,7 +2665,7 @@ public class GameLoop {
         return null;
     }
 
-    private void startLevelFromTitleScreenImmediate(int zone, int act) {
+    void startLevelFromTitleScreenImmediate(int zone, int act) {
         setGameMode(GameMode.LEVEL);
         GameServices.gameState().startNewGameFromTitle();
         try {

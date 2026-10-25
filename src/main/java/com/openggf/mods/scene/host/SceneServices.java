@@ -17,6 +17,7 @@ import java.nio.file.Path;
  * @param romLibrary  multi-ROM content for mixed-ROM scenes, or null
  * @param validateAct validates owned retained-act visits, or null in isolated tests
  * @param gameplay    launches gameplay runs from the scene, or null when the scene cannot
+ * @param navigator   starts stock acts and relaunches sessions, or null where unavailable
  */
 public record SceneServices(
         AudioManager audio,
@@ -27,7 +28,16 @@ public record SceneServices(
         Runnable toMasterTitle,
         SceneRomLibrary romLibrary,
         java.util.function.Consumer<com.openggf.mods.scene.ActLaunch> validateAct,
-        com.openggf.mods.scene.SceneGameplay gameplay) {
+        com.openggf.mods.scene.SceneGameplay gameplay,
+        SceneNavigator navigator) {
+
+    /** Existing retained-act and hosted-run services without startup navigation. */
+    public SceneServices(AudioManager audio, SceneRomArt romArt, Path storageRoot,
+            MouseMapper mouse, Runnable toGameTitle, Runnable toMasterTitle, SceneRomLibrary romLibrary,
+            java.util.function.Consumer<com.openggf.mods.scene.ActLaunch> validateAct,
+            com.openggf.mods.scene.SceneGameplay gameplay) {
+        this(audio, romArt, storageRoot, mouse, toGameTitle, toMasterTitle, romLibrary, validateAct, gameplay, null);
+    }
 
     /** Retained scenes launching their owner's registered acts. */
     public SceneServices(AudioManager audio, SceneRomArt romArt, Path storageRoot,
@@ -41,6 +51,13 @@ public record SceneServices(
             MouseMapper mouse, Runnable toGameTitle, Runnable toMasterTitle, SceneRomLibrary romLibrary,
             com.openggf.mods.scene.SceneGameplay gameplay) {
         this(audio, romArt, storageRoot, mouse, toGameTitle, toMasterTitle, romLibrary, null, gameplay);
+    }
+
+    /** Startup scenes launching stock acts or another supplied game. */
+    public SceneServices(AudioManager audio, SceneRomArt romArt, Path storageRoot,
+            MouseMapper mouse, Runnable toGameTitle, Runnable toMasterTitle, SceneRomLibrary romLibrary,
+            SceneNavigator navigator) {
+        this(audio, romArt, storageRoot, mouse, toGameTitle, toMasterTitle, romLibrary, null, null, navigator);
     }
 
     /** Legacy running-ROM scenes do not need a multi-ROM library. */

@@ -1,0 +1,18 @@
+# Sonic 1 stock badnik bodies that may join a typing fight: class simple name, the cast art key
+# that draws them, and whether a fight may convert them (yes) or must leave them to the stock game
+# (no). Read by the course (loaded fight targets) and the rail builder (the same conversion), so
+# both agree. Classes without a cast species stay out until the cast covers them.
+Sonic1BallHogBadnikInstance        ball_hog               yes
+Sonic1BatbrainBadnikInstance       batbrain               yes
+Sonic1BombBadnikInstance           bomb                   yes
+Sonic1BurrobotBadnikInstance       burrobot               yes
+Sonic1BuzzBomberBadnikInstance     buzz_bomber            yes
+Sonic1CaterkillerBadnikInstance    caterkiller            yes
+Sonic1ChopperBadnikInstance        chopper                yes
+Sonic1CrabmeatBadnikInstance       crabmeat               yes
+Sonic1JawsBadnikInstance           jaws                   yes
+Sonic1MotobugBadnikInstance        motobug                yes
+Sonic1NewtronBadnikInstance        newtron                yes
+Sonic1OrbinautBadnikInstance       orbinaut               yes
+Sonic1RollerBadnikInstance         roller                 yes
+Sonic1YadrinBadnikInstance         yadrin                 yes

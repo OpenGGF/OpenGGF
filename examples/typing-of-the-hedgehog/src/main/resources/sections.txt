@@ -1,0 +1,29 @@
+# Selected sections complement the four existing continuous forward rails.
+# game zone act GROUND|ESCORT|FINALE. Ground positions are derived and rehearsed from ROM terrain.
+s1 1 2 GROUND # Marble
+s1 2 2 GROUND # Spring Yard
+s1 3 2 GROUND # Labyrinth
+s1 4 2 GROUND # Star Light
+s1 5 1 GROUND # Scrap Brain
+s2 1 1 GROUND # Chemical Plant
+s2 2 1 GROUND # Aquatic Ruin
+s2 3 1 GROUND # Casino Night
+s2 4 1 GROUND # Hill Top
+s2 5 1 GROUND # Mystic Cave
+s2 6 1 GROUND # Oil Ocean
+s2 7 2 GROUND # Metropolis
+s2 8 0 ESCORT # Sky Chase
+s2 9 0 GROUND # Wing Fortress
+s3k 0 1 GROUND # Angel Island
+s3k 1 1 GROUND # Hydrocity
+s3k 2 1 GROUND # Marble Garden
+s3k 3 1 GROUND # Carnival Night
+s3k 4 1 GROUND # Flying Battery
+s3k 5 1 GROUND # IceCap
+s3k 6 1 GROUND # Launch Base
+s3k 7 1 GROUND # Mushroom Hill
+s3k 8 1 GROUND # Sandopolis
+s3k 9 1 GROUND # Lava Reef
+s3k 10 0 GROUND # Sky Sanctuary
+s3k 11 1 GROUND # Death Egg
+s3k 12 0 FINALE # The Doomsday

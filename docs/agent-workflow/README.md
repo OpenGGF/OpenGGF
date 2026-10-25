@@ -66,6 +66,9 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
   original directed Alice announcements through OpenRouter, preserves raw takes outside
   Git, verifies literal words after the approved metallic/vocoder/DAC processing, and
   derives manifest entries and queue leases from the final PCM (2026-10-08).
+- [Typing of the Hedgehog voice generator](../../tools/audio/typing_hedgehog_voice.py) generalises
+  it to a multi-speaker cast with per-speaker voices and presets, receipted auditions, approved-recipe
+  pins, taunt-tagged lines and a generated `VoiceLine` enum (2026-10-09).
 
 - [Creator kit builder](../../tools/modding/build_creator_kit.py) exports matching
   engine/SDK/API-doc/testkit artifacts, pinned portable examples and launchers;
@@ -236,6 +239,32 @@ The following `com.openggf.tools` CLIs. Maven examples quote each `-D...` proper
   prints the `RouteCompletionEvidence` line of each of the eleven FBZ2 complete-route
   matrix rows without asserting; diff the output before and after a route-controller
   or primitives refactor to prove byte-identical behaviour.
+- `TypingHedgehogRailProbe` (test scope, opt-in `-Dmse=off -Dtypinghog.rails=true`, optional
+  `typinghog.rails.only/phases/out`) replays committed BK2 pad programs and the S3K cold routes
+  per act as cold starts under a mod configuration (400 px, forced FAST load time, donation
+  off, solo or Sonic+Tails, lag rows kept or dropped, stock badniks optionally removed) and
+  writes validated length, failure class, first divergence from the recording
+  (comparison-only), boss/act-end rows and course-checkpoint stand determinism as TSV.
+  Origin: Typing of the Hedgehog rail kill tests, 2026-10-09.
+- `TypingHedgehogRailBuilderProbe` (test scope, opt-in `-Dmse=off -Dtypinghog.railbuild=<game or game:act>`,
+  `typinghog.railbuild.out=<rails dir>`) builds Typing of the Hedgehog `.rail` files: replays a recording slice
+  or authored route through the mod's controlled rail semantics at 320 px, repairs hurts and drift with bounded
+  local input edits spliced back onto the reference path (recorded states, comparison-only), re-validates every
+  repair by a fresh straight run, and picks soak-safe boss and stand rows whose whole stand chain restores
+  exactly. Its format-1 rails are retired (forward courses only since 2026-10-10); the forward builder below
+  reuses its targets and recorded-run loading. Origin: rails lane, 2026-10-09.
+- `TypingHedgehogRailsV2Probe` (test scope, opt-in `-Dmse=off -Dtypinghog.v2probe=all`, optional
+  `typinghog.v2probe.parts=1,1p,2,4,5,6,7`) answers the forward-course prerequisites on S1 GHZ3, S2 EHZ2 and
+  S3K SOZ1: launch-profile and production-boot entry equivalence, act-start `V_int_run_count` phase
+  sensitivity, the native spindash countdown, the mod's `CombatHandoff` conversion (slots, children, render),
+  respawn after a camera excursion, live-fight restore + reconversion against a zero-length fight, and floor
+  geometry against actual traversal. Origin: rails lane, rails v2, 2026-10-10.
+- `TypingHedgehogForwardRailBuilder` (test scope, opt-in `-Dmse=off -Dtypinghog.forward=<act,...>`,
+  `typinghog.forward.out=<rails dir>`, diagnostic `typinghog.forward.trace=<act>:<x0>:<x1>`) authors forward
+  (format 2) Typing of the Hedgehog rails by bounded beam search over native input macros under the mod's launch
+  profile: entry, native countdown, fights at braked flat stops soaked through the mod's `CombatHandoff`, a stock
+  boss endpoint; rejects hurt, native kills, backtracking and stalls; replays the route cold and under
+  `V_int_run_count` phase offsets before writing it. Origin: rails lane, rails v2 step 4, 2026-10-10.
 
 ## Docs
 

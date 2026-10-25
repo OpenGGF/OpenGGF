@@ -134,6 +134,10 @@ public final class ModApiVersion {
      * object dialogue speakers, cast identity on native object observations and bounded transient PCM.
      * Stageplay v8 also adds the required per-speaker voices list. These unpublished format and
      * signature changes retain candidate 0.7.0 without migration.
+     * Multi-game code mods carry per-game patches; startup scenes start stock acts,
+     * are reopened by controlled title requests and relaunch sessions with a team;
+     * controllers supply the native step's pad; scenes and controllers read typed text
+     * while claiming the keyboard from host shortcuts.
      */
     public static final SemanticVersion CURRENT = SemanticVersion.parse("0.7.0");
     public static final List<SemanticVersion> SUPPORTED_CONTRACTS = List.of(CURRENT);

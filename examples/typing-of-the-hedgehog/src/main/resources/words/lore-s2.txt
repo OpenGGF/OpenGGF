@@ -1,0 +1,253 @@
+# Typing of the Hedgehog: Sonic the Hedgehog 2 (1992) lore, display capitalisation.
+# Names checked against docs/s2disasm object headers (badniks, bosses, zone objects).
+# Zones and stages
+Emerald Hill
+Emerald Hill Zone
+Chemical Plant
+Chemical Plant Zone
+Aquatic Ruin
+Aquatic Ruin Zone
+Casino Night
+Casino Night Zone
+Hill Top
+Hill Top Zone
+Mystic Cave
+Mystic Cave Zone
+Oil Ocean
+Oil Ocean Zone
+Metropolis
+Metropolis Zone
+Sky Chase
+Sky Chase Zone
+Wing Fortress
+Wing Fortress Zone
+Death Egg
+Death Egg Zone
+Special Stage
+West Side Island
+Act One
+Act Two
+Act Three
+# Badniks
+Buzzer
+Coconuts
+Masher
+Spiny
+Grabber
+Chop Chop
+Whisp
+Grounder
+Crawl
+Crawlton
+Flasher
+Octus
+Aquis
+Sol
+Rexon
+Spiker
+Slicer
+Shellcracker
+Asteron
+Nebula
+Turtloid
+Balkiry
+Clucker
+Badnik
+Badniks
+# Characters and animals
+Sonic
+Tails
+Miles
+Miles Prower
+Sonic and Tails
+Sonic and Miles
+Super Sonic
+Dr. Robotnik
+Robotnik
+Eggman
+Silver Sonic
+Mecha Sonic
+Death Egg Robot
+Flicky
+Pocky
+Cucky
+Pecky
+Ricky
+Picky
+Rocky
+# Robotnik's machines
+Egg Mobile
+Egg Prison
+Drill Car
+Shield Orbs
+Wall Turret
+Laser
+# Items and monitors
+Ring
+Rings
+Super Ring
+Shield
+Invincibility
+Invincibility Stars
+Speed Shoes
+Extra Life
+1-Up
+Monitor
+Robotnik Monitor
+Teleport Monitor
+Question Mark Monitor
+Chaos Emerald
+Chaos Emeralds
+Seven Chaos Emeralds
+Fifty Rings
+Star Post
+Starpost
+Signpost
+Spring
+Red Spring
+Yellow Spring
+Spikes
+Bumper
+Button
+# Emerald Hill
+Bridge
+Waterfall
+Spiral Pathway
+Corkscrew
+Floating Platform
+Coconut
+# Chemical Plant
+Mega Mack
+Speed Booster
+Spin Tube
+Warp Pipe
+Moving Stairs
+Big Pylon
+Breakable Block
+Springboard
+Diving Board
+Chemical Pipes
+# Aquatic Ruin
+Arrow Shooter
+Arrows
+Rising Pillar
+Falling Pillar
+Swinging Platform
+Rotating Platforms
+Leaves
+Ancient Ruins
+Bubbles
+# Casino Night
+Pinball Flipper
+Flipper
+Slot Machine
+Round Bumper
+Flashing Blocks
+Elevator
+Conveyor Belt
+Pinball Mode
+Plunger Spring
+Ring Prize
+Jackpot
+Casino Lights
+# Hill Top
+Seesaw
+Zipline
+Rising Lava
+Earthquake
+Lava Bubble
+Smashable Ground
+Breakable Rock
+Mountain Peaks
+# Mystic Cave
+Lantern
+Vine Switch
+Hanging Vine
+Drawbridge
+Spike Block
+Stomper
+Brick
+Cave
+# Oil Ocean
+Oil
+Pressure Spring
+Fan
+Green Platform
+Sliding Spikes
+Falling Oil
+Launcher Ball
+Refinery
+# Metropolis
+Giant Cog
+Cog
+Nut
+Steam Spring
+Twin Stompers
+Floor Spike
+Rotating Cylinder
+Spring Wall
+Factory
+# Sky Chase and Wing Fortress
+Tornado
+Biplane
+Clouds
+Propeller
+Tilting Platform
+Wheel
+Speed Launcher
+Breakable Plating
+Rivet
+Airship
+# Death Egg
+One Way Barrier
+Space Station
+# Special Stage
+Half Pipe
+Bombs
+Checkpoint
+Emerald
+# Screens and tally
+Sega
+Sonic Team
+Title Screen
+One Player
+Two Player
+Versus
+Split Screen
+Options
+Player Select
+Sonic Alone
+Sound Test
+Level Select
+Sonic Got Through
+Time Bonus
+Ring Bonus
+Perfect Bonus
+Total
+Score
+Time
+Game Over
+Time Over
+Continue
+Lives
+# Moves and actions
+Spin Dash
+Spindash
+Spin Attack
+Spin Jump
+Roll
+Rolling
+Jump
+Run
+Skid
+Look Up
+Crouch
+Rev Up
+Transform
+Fly the Tornado
+Free the Animals
+Smash the Badniks
+Collect the Rings
+Find the Emeralds
+Stop Robotnik
+Follow Sonic
