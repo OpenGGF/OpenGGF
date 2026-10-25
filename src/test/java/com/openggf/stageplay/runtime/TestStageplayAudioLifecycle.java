@@ -137,7 +137,7 @@ class TestStageplayAudioLifecycle {
                      : StageplayLiveWorld.adoptOffline(library,SessionManager.getCurrentGameplayMode())) {
             var manager = services.audio();
             services.configuration().setSessionOverride(com.openggf.configuration.SonicConfiguration.AUDIO_ENABLED,true);
-            manager.setBackend(new com.openggf.audio.HeadlessSmpsAudioBackend(services.configuration(),services.profiler()));
+            manager.setBackend(new com.openggf.audio.HeadlessSmpsAudioBackend(services.configuration(),services.profiler(),manager,manager));
             var scene = StageplayDocument.empty(opening,0,0,0,500,320,224).withDurationFrames(450)
                     .withCamera(List.of(new CameraKey(0,0,500,1,Interpolation.HOLD),new CameraKey(90,0,500,1,Interpolation.HOLD)))
                     .withSceneChanges(List.of(new SceneChange("next",90,new SetSource(destination,0,0,"",""),Transition.CUT,0)))
