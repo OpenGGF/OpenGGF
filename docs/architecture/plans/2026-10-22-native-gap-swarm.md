@@ -8152,3 +8152,103 @@ preflight, unchanged broad rerun or native observation occurs.
 Normal-hook merge, actual committed-range/resource policy, final remote conflict
 check, PR-head publication/readiness and hosted checks follow this append.
 This source record does not claim those subsequent outcomes in advance.
+
+
+### 2026-10-25: hosted ROM-free admission failures and declared prerequisites
+
+Published normal-hook merge 251b3fbdee5a39162fae9e0c0b31f12ad8043b99 is ready
+for review against develop 61be1910ac29d5606410be315ec881a5745a75d3.
+The actual committed-range/resource policy passes (15,646 entries); its
+218.060-second non-JVM policy execution is separate from test and queue time.
+The existing authenticated GitHub CLI performed the authorized body/readiness
+updates after the connector's write integration returned 403. No token was
+extracted and no hook was bypassed. The app-owned PR watcher is the sole
+CI/review observer; no local polling process or manual workflow was started.
+
+Ready-event CI run 40236031749, test job 121297688897, actually completes Maven
+in 14:32 with 31,601 reported tests / 2 failures / 1 error / 6,389 skips.
+These are console-reported counters, not independently counted XML identities.
+The workflow is intentionally ROM-free. The full 8,715,800-character job log
+and all three failure stacks were read; no workflow artifacts were available.
+The default-executed-count gate is unreached after Maven fails. It is not
+reported as passing. The separate hosted policy and guards jobs pass; optional
+smoke/develop-trace jobs are skipped, not qualified validation.
+
+Exact failed identities on unchanged 251b:
+- TestKis2HeadlessBoot.repeatedFullLoadsRecreateTheActualChipPlcPublication:347
+  asserts a non-null stock S2 path before the next lock-on assertion.
+- TestKis2SpecialStageControllerLifecycle.entryResultsReturnKeepsChipProvider:25
+  asserts a non-null KiS2 lock-on image before entry/results/return.
+- TestLbzFinalBoss1GraphRewind.detachRetirementReplaysAndPostRetirementRestoreDoesNotResurrectHistory:105
+  dispatches a real S3kBossExplosionChild, whose rawByte guard requires verified
+  S3K bytes. The injected StubObjectServices legitimately returns null when no
+  S3K image is discovered.
+
+Source investigation identifies undeclared fixture prerequisites, not a
+production-loader fallback requirement. The two KiS2 classes had no RequiresRom
+declaration; their other existing headless methods already use availability
+assumptions. The neighboring TestKis2ResultsMessageHandoff demonstrates the
+same S2 annotation plus local lock-on assumption. Kis2TestRoms returns null for
+unavailable implicit discovery, but throws for an invalid/unreadable explicitly
+requested kis2.rom.path. That fail-closed behavior stays unchanged.
+
+The exact correction adds 12 lines and deletes none in three existing files.
+Both KiS2 classes declare RequiresRom(SONIC_2), retaining all original statements
+and non-null assertions. Each affected lock-on-dependent method adds the local
+availability assumption immediately before its existing assertion; no class-wide
+lock-on gate is added. Only the LBZ retirement method declares
+RequiresRom(SONIC_3K); the other nine allocation/graph cases stay ROM-free.
+Full-file inverses recover all three exact 251b blobs. No runtime, shared helper,
+harness, workflow, configuration, resource, pin, baseline, cap, timing, coordinate,
+expected value, oracle, explicit-missing/invalid-image control or assertion is
+changed. The verified-ROM guard remains intact.
+
+Frozen tested tree 6ca1f7b1544efb179aa7c6a86cd112f070a85846;
+own input frame
+57a524efc9f1d9d8590d8788b02a44b5db264f0099541ed171fcf386693c7ec9,
+13,616 paths / 864,246,915 bytes; 485 registered source/critical pins.
+One normal queued whole-owning-class request, original session 72349:
+actual 18 unique / 18P / 0F / 0E / 0S across headless 7, special lifecycle 1,
+LBZ graph 10. Maven 32.140s, printed queue 0s; planning allowance was 3–5 active
+minutes plus unknown queue, not a hard timeout. All original ROM-backed
+entry/results/return, chip PLC identity/publication and destructive retirement/
+restore/replay assertions execute. No skip substitutes for that body coverage.
+
+Readback consumes every actual identity, all 213 properties across three XML,
+nine recursive streams / 7,020 bytes, three text reports and the full 19,474-byte/
+194-line console. Java25/EGL/stock ROM/selector operands and complete sourcepost
+match. The 45 XML FAST/NONE warnings and console JOML/Unsafe deprecation do not
+establish native timing. No unexpected real fault, dump or drift is found.
+Seven exact owned raw report/log files are consumed; useful compiled output,
+source and worktree remain. Unknown older output is preserved.
+
+The local worktree has existing ROM files, so this request intentionally supplies
+the original four verified absolute stock properties and proves real execution.
+No ROM was deleted, renamed, copied, linked, hidden, aliased or substituted to
+manufacture a no-ROM local run. The absence branch still requires the subsequent
+automatic hosted ROM-free invocation on the published correction. Missing ROM
+skips there are declared prerequisites, not native gameplay qualification.
+The old 251b failure counts retain their own epoch and are not retroactively
+changed. Earlier 41 matched route causes, E8DF, positive HCZ SFX limits and other
+recorded gaps remain open.
+
+Reproduce in the existing portable environment/own target from the preceding
+section, using this exact selector and unchanged current Main queue wrapper:
+
+```text
+com.openggf.game.sonic2.kis2.TestKis2HeadlessBoot,com.openggf.game.sonic2.kis2.TestKis2SpecialStageControllerLifecycle,com.openggf.game.sonic3k.objects.TestLbzFinalBoss1GraphRewind
+selector SHA-256: 55a7278f7022a1beb2bf97f973e83dff8866f8d334ca773c6e464f53096500a2
+```
+
+```bash
+python3 "$OPENGGF_QUEUE_WRAPPER" --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -DmodApi.destinationBranch=develop "-Dsonic1.rom.path=$S1_ROM" "-Dsonic2.rom.path=$S2_ROM" "-Ds3k.rom.path=$S3K_ROM" "-Dkis2.rom.path=$KIS2_ROM" "-Dtest=$SELECTOR" test -B
+```
+
+Wrapper/import pins and original ROM metadata are rechecked before admission;
+unchanged stock metadata permits reuse of the prior CRC/SHA verification.
+No extra build, preflight, guard, API/helper repeat, broad local smoke, route,
+native, emulator or profile request occurs. A source-only reader supplies the
+two KiS2 prerequisite proposal; the parent authors and validates the complete
+three-file correction. No additional review round is requested.
+This append precedes the normal-hook test-only leaf, final range policy,
+FF-only publication and fresh hosted result; it does not claim their outcome.
