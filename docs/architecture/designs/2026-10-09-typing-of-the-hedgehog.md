@@ -1402,3 +1402,87 @@ to their earlier recorded source. No unrelated failures, guard limits or publish
 API pins were changed. Consumed worker-local Maven diagnostics are removed after
 inspection; the clean branch/worktree remain for parent integration without push,
 PR creation or worktree removal.
+
+## Delivery-wide smoke and baseline attribution (2026-10-25)
+
+The parent selected the complete change-based smoke plan against pre-task develop
+`f7620e579c1a8cf7b0371f9c5a438f6a4eff5ea7`: 3,825 candidate classes in 77 ordinary
+batches, using frozen production/test inputs at `ef8d0714f`. The launch environment
+passed Java 25, Lua 5.4 and PowerShell preflight. The original command was:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 \
+  MAVEN_ARGS=-Dopenggf.headless.gl=surfaceless-egl \
+  python3 tools/testing/run_categories.py \
+  --base f7620e579c1a8cf7b0371f9c5a438f6a4eff5ea7 \
+  --rom-directory "${ROM_ROOT}" \
+  --max-minutes 180 --run
+```
+
+The runner received SIGTERM after completing batches 1–66. The cause was not
+observed; the interrupted batch 67 had no final Maven result and was not counted.
+After its orphaned Maven JVM exited, a temporary continuation reused the original
+full selection, preparation contract and unchanged source fingerprint. It reran
+batch 67 and continued the remaining batches through the repository's worktree
+lock, Maven admission, execution watchdog, report summarizer and diagnostic cleanup.
+No candidates were dropped and no completed prefix was rerun. The original
+execution budget was retained, conservatively charging an upper bound for the
+interrupted attempt; its actual duration is unknown. Queue waiting remains
+separate from execution. The newer 800-case guard result at `d0ed0ecb9`, plus the
+121 affected guards at `d4bf35286`, covers the repaired integration source rather
+than rerunning the stale frozen-source guard lane.
+
+The frozen run found two inherited ordinary failures, reproduced by bounded
+matched baseline commands on develop `c502c600bb4df3a411438b1cd3814466aed9a83d`:
+
+- `TestModEngineWiringSeams#audioResetAndBackendReplacementReleaseStreamedSessionState`:
+  `public synchronized void resetState() is missing beginSourceMutation()`.
+  The baseline class executed 15 cases, one failure, zero errors/skips. Its test
+  and entire `AudioManager` are byte-identical to the candidate; the implementation
+  delegates through `sourcePublication.reset()`, which performs the mutation entry.
+- `com.openggf.game.sonic3k.objects.TestHczMinibossNativeRendering#allOrbitPhasesMatchRomSpriteCompositionInNativePixels`:
+  `GLFW must initialize for pixel verification`. The baseline executed one case,
+  one failure, zero errors/skips, before any pixel comparison. The fixture, native
+  implementation and rendering helper are byte-identical to the candidate. The
+  separate Typing EGL pixel qualification above passed with nonempty native pixels.
+
+Both baseline commands used the original main workspace without changing its
+branch or source, Java 25, `env -u DISPLAY -u WAYLAND_DISPLAY -u WAYLAND`,
+`LUA_BIN=/usr/bin/lua5.4`, and
+`MAVEN_ARGS=-Dopenggf.headless.gl=surfaceless-egl`. They invoked
+`python3 tools/testing/maven_queue.py --normal -Dmse=off -Dtest=<class> test`;
+the HCZ command additionally supplied the three absolute ROM properties from the
+table above. Those identities remain unchanged through develop `c9028e88c`.
+
+The other two frozen-source failures were the registration assertions
+`TestMutatorRegistration#sharedCatalogueCannotPublishGameSpecificServiceOrDecodedPatch`
+and `#sharedDecoratorsRequireTypedContentAndCannotSmuggleGameSpecificRegistrations`.
+A matched 10-case baseline selection on develop `94c75d8a8` passed with zero
+failures/errors/skips. These were integration work, not inherited failures: the
+follow-up repairs the catalogue-content boundary and replaces obsolete patch-only
+negatives with supported mixed-role cases, as recorded above. The repaired
+registration/loader/service/API and subsequent composition selections passed.
+
+All 77 ordinary batches completed: **40,163 cases, 40,061 passed, four failures,
+zero errors and 98 skips**, from 3,800 physical reports. The resumed tail introduced
+no additional failures; all four identities and assertions are the ones attributed
+above, with no omitted failure or skip records. Completed-batch execution totalled
+6,660.34 seconds; this excludes queue waits, preparation and the interrupted
+attempt, and is not elapsed delivery time.
+
+The 98 skips include opt-in measurements/soaks/picture refreshes, unavailable legacy
+GLFW/EGL prerequisites, an isolated OpenAL prerequisite, external Second Strike
+fixture packages, local audio-reference/timeline inputs, platform/flyer eligibility
+and one spin-tube capture assumption. No missing-ROM skip was reported. Dedicated
+Typing course, art and final pixel selections recorded above executed without
+skips. These are bounded smoke and focused results, not an exhaustive trace sweep,
+hardware-pad qualification or release full-suite pass.
+
+The frozen broad result remains red and attributed to `ef8d0714f`; it is not
+relabelled as a pass on later source. Integration source `d4bf35286` retains the
+verified registration repairs, upstream composition and ownership corrections.
+Its latest 405-case composition and 121 affected guards pass, alongside the earlier
+800-case guard run and affected checks recorded above. Only the two matched
+baseline failures remain unresolved. The original category diagnostics were
+consumed and acknowledged, and the temporary continuation was removed; the method
+and source-attributed evidence remain here.
