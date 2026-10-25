@@ -102,6 +102,20 @@ the dependency-complete runtime surface. This major/minor filename denotes a
 replaceable candidate pin; it carries no compatibility promise. Earlier 1.x and
 2.x labels were provisional development markers and carry no compatibility promise.
 
+`RunInput.physicalInput()` adds an immutable physical snapshot for an admitted
+run-host frame, matching the existing scene input value types. Its default is
+neutral, so existing run hosts remain source compatible. The engine captures
+once for the frame and keeps repeated reads stable; disabled controllers supply
+no pad state or transitions, while physical keyboard and logical replay input
+remain independent. This supports Time Attack's controller race Quick Chat
+without changing movement, jump, pause or replay mappings. Run keyboard queries
+also use `InputHandler.isPhysicalKeyPressed(int)` rather than engine shortcut
+substitutions, preventing a bumper from impersonating Q. The default-false
+`RunInput.resumedAfterPause()` marks the first callback after pause, letting a
+host rebaseline physical controls held while it was not being polled. The mutable
+`0.7` pin gains these three methods; descriptor candidate `0.7.0` and published baselines
+stay unchanged.
+
 The commit hooks compare source declarations without running Maven or reading
 compiled signatures. For nested engine-internal terminals, their shared lexical
 probe reads `ENGINE_INTERNAL_TYPES` in `ModApiSignatureSurface` from both compared

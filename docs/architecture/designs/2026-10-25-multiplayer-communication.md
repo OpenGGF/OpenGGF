@@ -85,12 +85,68 @@ the effective communication mode.
 Quick Chat is available alongside typed entry in Full Chat. The chooser offers
 the catalogue without arbitrary text. In Quick Chat mode typed entry disappears;
 Off disables communication actions. Personal disabling is receive/display only,
-as requested. The user confirmed lobby and race access, with keyboard shortcuts
-that do not pause the race or
-consume controller movement. Keep existing solo behavior unchanged.
+as requested. Lobby and race access support keyboard and controller. Neither
+race path pauses the simulation or consumes controller movement or jump. Keep
+existing solo behavior unchanged.
 Typed composition remains the existing lobby composer; the newly requested race
 input is Quick Chat. Full to Quick blocks future typed messages while retaining
 messages previously accepted under Full. Off clears history.
+
+### Controller race access follow-up
+
+The initial implementation at `c502c600b` exposed the race chooser only through
+Q/P and 1–8; its controller menu worked only in the lobby. The follow-up starts
+from `94c75d8a8` and reuses the same chooser: right-stick click toggles it,
+right-stick up/down selects a phrase, and the right trigger sends and closes.
+The HUD and chooser explain these controls. Lobby controls stay the normal menu
+navigation, confirm and Back.
+
+Using D-pad/left-stick selection or face-button confirmation during a race was
+rejected because those controls also move and jump. Start belongs to pause;
+the bumpers already serve rewind and frame advance. The right stick and trigger
+are independent physical controls, so no logical gameplay input is rewritten.
+`RunInput.physicalInput()` exposes one immutable snapshot per host frame, with a
+neutral default for existing hosts. Disabled controllers are removed from this
+channel, while keyboard state and logical replay remain independent.
+
+Input reconnaissance also found that the engine's debug/frame-step substitutions
+could report a bumper as Q through `RunInput.keyPressed()`. Run-host keyboard
+queries now use physical key state and edges; engine-level debug, rewind and
+frame-step mappings retain their existing behavior. A real `InputHandler` bridge
+test covers both the alias rejection and genuine Q presses. Review found that
+pause stops host polling; a trigger pressed while paused could otherwise appear
+new on resume. `RunInput.resumedAfterPause()` marks the first callback after an
+engine/window pause, and the chooser closes and rebaselines before accepting
+controller actions. Held controls during pause never send on resume.
+
+The chooser baselines connected pads and held controls, uses a trigger threshold
+and stick hysteresis, and repeats held navigation after a delay. It follows the
+first connected pad until that pad disconnects; disconnect closes a controller
+chooser and baselines any replacement. No held click can reopen the chooser
+after retry or a room-mode change. Controller actions do not suppress a separate
+keyboard retry edge. Focused checks cover these boundaries, keyboard/lobby
+regressions, continuing race input and the additive candidate API signature.
+
+Follow-up validation on `94c75d8a8` plus this change passed 632 selected cases
+with no failures, errors or skips. Queued Maven used `--normal -Dmse=off
+-Dopenggf.headless.gl=surfaceless-egl` and `test` with these exact focused groups:
+
+- 121 cases: `-Dtest=TestMultiplayerRaceCoordinator,TestTimeAttackQuickChat,TestHostedRunController,TestGameLoopTitleCardPause,TestScenePhysicalInput,TestInputHandlerLogicalSnapshot,TestModApiSignatureSurface`.
+- 74 cases: `-Dtest=TestModApiHookPolicy,TestModApiRuntimePolicy,TestNoProvisionalModApiShims,TestNetIsolationRules,TestModApiSdkPackager,TestModSdkArtifactVerifier,TestModApiJavadocTool`.
+- 437 cases: all remaining Time Attack and `com.openggf.control` test classes,
+  excluding the four already covered above, plus `TestHostedRunLeadIn`,
+  `TestHostedRunActCompletionWiring`, `TestModApiReleasePolicy`,
+  `TestModApiPinPolicy`, `TestGameLoopSuspension` and
+  `TestGameLoopSuspensionOwnership`. This is 50 candidate classes; the case count
+  includes nested suites. Original S1/S2/S3&K ROM paths and explicit EGL were
+  supplied. All 34 Time Attack and 14 input test classes are covered across the
+  groups. This is bounded regression coverage, not the release-only full suite.
+
+The compiled signature export exactly matches the three reviewed additions.
+The production chooser was rendered without a display at 256/320/400/640 × 224;
+the narrowest output was visually inspected. Controller tests use simulated
+physical devices through the real input bridge; no hardware-pad playtest is
+claimed.
 
 ## Delivery and evidence
 

@@ -677,6 +677,7 @@ public class GameLoop {
      */
     public synchronized void pause() {
         if (!paused) {
+            hostedRuns.suspendInput();
             editorMode.finishPendingEdits(currentGameMode);
             paused = true;
             updateAudioPauseState();
@@ -699,6 +700,7 @@ public class GameLoop {
      * This is separate from window focus pause so both can work independently.
      */
     public synchronized void toggleUserPause() {
+        if (!userPaused) hostedRuns.suspendInput();
         userPaused = !userPaused;
         updateAudioPauseState();
     }
@@ -1258,6 +1260,7 @@ public class GameLoop {
         boolean doFrameStep = !GameLoopPauseInput.configurationPaused(currentGameMode)
                 && GameLoopPauseInput.frameStep(inputHandler, configService, isPaused());
 
+        if (isPaused()) hostedRuns.suspendInput();
         if (isPaused() && !doFrameStep) {
             inputHandler.update();
             return;
@@ -1444,6 +1447,7 @@ public class GameLoop {
                 LevelIterationAdmissionController
                         ::deactivateTraceHardwareTimingForAdmission);
         if (admission == LevelFrameResult.PAUSED) {
+            hostedRuns.suspendInput();
             LevelFrameStep.serviceVBlankOnly(LevelFrameContext.from(gameplayMode),
                     activePlcLifecycleFrame, PlcLifecyclePhase.NORMAL_PAUSE);
             inputHandler.update();

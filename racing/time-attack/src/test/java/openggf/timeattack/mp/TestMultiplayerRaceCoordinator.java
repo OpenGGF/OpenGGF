@@ -706,6 +706,182 @@ class TestMultiplayerRaceCoordinator {
         }
     }
     @Test
+    void controllerQuickChatUsesUnusedControlsWhileMovementJumpAndTheRaceContinue(@TempDir Path root) {
+        Rig rig = rig(root);
+        handle(rig);
+        levelReady(rig.runtime());
+        ControllerInput input = new ControllerInput();
+        input.logical = LogicalInputSnapshot.ofPlayers(com.openggf.control.PlayerInputState.of(0x08, 0,
+                com.openggf.control.InputActionMasks.ACTION_A, 0, false, false),
+                com.openggf.control.PlayerInputState.neutral());
+        int held = input.logical.player1().heldMask();
+        assertTrue(step(rig, input, held, false, 100)); // Baseline the connected pad.
+        int before = rig.runtime().hudState().elapsedDisplayFrames();
+        input.click = true;
+        assertTrue(step(rig, input, held, false, 101));
+        assertTrue(rig.coordinator().isQuickChatOpen());
+        input.click = false;
+        input.stickY = 1;
+        assertTrue(step(rig, input, held, false, 102));
+        input.trigger = 1;
+        assertTrue(step(rig, input, held, false, 103));
+        assertFalse(rig.coordinator().isQuickChatOpen());
+        assertTrue(rig.transport().sentControl.contains(new ControlMessage.QuickChat("TOO_SLOW")));
+        assertEquals(held, input.input().player1().heldMask());
+        assertTrue(input.input().player1().actionHeldMask() != 0);
+        assertFalse(rig.runtime().holdsPlayerInput());
+        assertTrue(rig.runtime().hudState().elapsedDisplayFrames() > before);
+    }
+
+    @Test
+    void controllerQuickChatBaselinesConnectionsAndDoesNotSendHeldTriggersOrStealFaceButtons(@TempDir Path root) {
+        Rig rig = rig(root);
+        ControllerInput input = new ControllerInput();
+        input.click = true;
+        input.trigger = 1;
+        rig.coordinator().pollLocalInput(input);
+        assertFalse(rig.coordinator().isQuickChatOpen(), "connecting with controls held is not a press");
+        input.click = false;
+        rig.coordinator().pollLocalInput(input);
+        input.click = true;
+        rig.coordinator().pollLocalInput(input);
+        assertTrue(rig.coordinator().isQuickChatOpen());
+        for (int i = 0; i < 30; i++) rig.coordinator().pollLocalInput(input);
+        assertTrue(rig.coordinator().isQuickChatOpen(), "held click/trigger must not toggle or send");
+        assertFalse(rig.transport().sentControl.stream().anyMatch(ControlMessage.QuickChat.class::isInstance));
+        input.click = false;
+        input.trigger = -1;
+        input.faceButtons = true;
+        rig.coordinator().pollLocalInput(input);
+        assertTrue(rig.coordinator().isQuickChatOpen(), "movement and jump buttons belong to gameplay");
+        input.trigger = 1;
+        rig.coordinator().pollLocalInput(input);
+        assertFalse(rig.coordinator().isQuickChatOpen());
+        assertEquals(1, rig.transport().sentControl.stream().filter(ControlMessage.QuickChat.class::isInstance).count());
+    }
+
+    @Test
+    void controllerChooserClosesOnDisconnectOffAndRetryWithoutReopeningFromHeldInput(@TempDir Path root) {
+        Rig rig = rig(root);
+        ControllerInput input = new ControllerInput();
+        rig.coordinator().pollLocalInput(input);
+        input.click = true;
+        rig.coordinator().pollLocalInput(input);
+        assertTrue(rig.coordinator().isQuickChatOpen());
+        input.connected = false;
+        rig.coordinator().pollLocalInput(input);
+        assertFalse(rig.coordinator().isQuickChatOpen());
+        input.connected = true;
+        rig.coordinator().pollLocalInput(input);
+        assertFalse(rig.coordinator().isQuickChatOpen());
+        input.click = false;
+        rig.coordinator().pollLocalInput(input);
+        input.click = true;
+        rig.coordinator().pollLocalInput(input);
+        assertTrue(rig.coordinator().isQuickChatOpen());
+        rig.session().onControl(new ControlMessage.ChatModeState("OFF"));
+        rig.coordinator().pollLocalInput(input);
+        assertFalse(rig.coordinator().isQuickChatOpen());
+        rig.session().onControl(new ControlMessage.ChatModeState("QUICK_CHAT"));
+        rig.coordinator().pollLocalInput(input);
+        assertFalse(rig.coordinator().isQuickChatOpen(), "changing policy does not create a fresh click");
+        input.click = false;
+        rig.coordinator().pollLocalInput(input);
+        input.click = true;
+        rig.coordinator().pollLocalInput(input);
+        assertTrue(rig.coordinator().isQuickChatOpen());
+        levelReady(rig.runtime());
+        rig.coordinator().pollLocalInput(input);
+        assertFalse(rig.coordinator().isQuickChatOpen(), "retry must not turn a held click into a new menu");
+    }
+
+    private static final class ControllerInput implements RunInput {
+        boolean connected = true, click, faceButtons, retry, resumed;
+        float stickY, trigger = -1;
+        LogicalInputSnapshot logical = LogicalInputSnapshot.neutral();
+        @Override public LogicalInputSnapshot input() { return logical; }
+        @Override public boolean keyDown(int key) { return keyPressed(key); }
+        @Override public boolean keyPressed(int key) { return retry && key == SceneKeys.R; }
+        @Override public boolean resumedAfterPause() { return resumed; }
+        @Override public com.openggf.control.PhysicalInput physicalInput() {
+            boolean[] buttons = new boolean[15];
+            buttons[com.openggf.control.PhysicalGamepad.BUTTON_RIGHT_THUMB] = click;
+            buttons[com.openggf.control.PhysicalGamepad.BUTTON_A] = faceButtons;
+            float[] axes = {0, 0, 0, stickY, -1, trigger};
+            var pad = new com.openggf.control.PhysicalGamepad(0, "Xbox", buttons, axes);
+            return new com.openggf.control.PhysicalInput(0, List.of(), connected ? List.of(pad) : List.of(), List.of(), 0);
+        }
+    }
+
+    @Test
+    void controllerControlsHeldDuringPauseAreBaselinedBeforeAcceptingActions(@TempDir Path root) {
+        Rig rig = rig(root);
+        ControllerInput input = new ControllerInput();
+        rig.coordinator().pollLocalInput(input);
+        input.click = true;
+        rig.coordinator().pollLocalInput(input);
+        assertTrue(rig.coordinator().isQuickChatOpen());
+        input.click = false;
+        input.trigger = 1; // Pressed while paused; there were no host polls then.
+        input.resumed = true;
+        rig.coordinator().pollLocalInput(input);
+        assertFalse(rig.coordinator().isQuickChatOpen());
+        assertFalse(rig.transport().sentControl.stream().anyMatch(ControlMessage.QuickChat.class::isInstance));
+        input.resumed = false;
+        input.click = true;
+        rig.coordinator().pollLocalInput(input);
+        assertTrue(rig.coordinator().isQuickChatOpen());
+        input.resumed = true; // A second pause with the stick click held also cannot reopen it.
+        rig.coordinator().pollLocalInput(input);
+        assertFalse(rig.coordinator().isQuickChatOpen());
+        input.resumed = false;
+        rig.coordinator().pollLocalInput(input);
+        assertFalse(rig.coordinator().isQuickChatOpen());
+        input.click = false;
+        input.trigger = -1;
+        rig.coordinator().pollLocalInput(input);
+        input.click = true;
+        rig.coordinator().pollLocalInput(input);
+        input.click = false;
+        input.trigger = 1;
+        rig.coordinator().pollLocalInput(input);
+        assertEquals(1, rig.transport().sentControl.stream().filter(ControlMessage.QuickChat.class::isInstance).count());
+    }
+
+    @Test
+    void controllerQuickChatDoesNotSwallowAnIndependentKeyboardRetry(@TempDir Path root) {
+        Rig rig = rig(root);
+        CountingHandle handle = handle(rig);
+        ControllerInput input = new ControllerInput();
+        rig.runtime().admitStep(input);
+        input.click = true;
+        input.retry = true;
+        rig.runtime().admitStep(input);
+        assertEquals(1, handle.retries);
+        assertFalse(rig.coordinator().consumesRetryKey(), "only keyboard chat collisions consume a retry edge");
+    }
+
+    @Test
+    void controllerQuickChatRemainsAvailableWithoutReleasingTheCountdown(@TempDir Path root) {
+        Rig rig = rig(root, false);
+        rig.transport().inbound.add(new RaceClient.Control(new ControlMessage.RoundStart(
+                new ControlMessage.RoundConfig("s3k", 0, 0, 60, "OPEN", null), now + 3000, now + 63_000)));
+        rig.coordinator().pump();
+        rig.coordinator().attachRuntime(rig.runtime());
+        ControllerInput input = new ControllerInput();
+        assertFalse(rig.coordinator().admit(input));
+        input.click = true;
+        assertFalse(rig.coordinator().admit(input));
+        assertTrue(rig.coordinator().isQuickChatOpen());
+        input.click = false;
+        input.trigger = 1;
+        assertFalse(rig.coordinator().admit(input));
+        assertFalse(rig.coordinator().isQuickChatOpen());
+        assertTrue(rig.coordinator().holdGameplay());
+        assertTrue(rig.transport().sentControl.contains(new ControlMessage.QuickChat("BRUTAL")));
+    }
+
+    @Test
     void quickChatPreservesHeldMovementAndJumpWhileGameplayContinues(@TempDir Path root) {
         Rig rig = rig(root);
         handle(rig);

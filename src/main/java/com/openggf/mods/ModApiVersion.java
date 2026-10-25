@@ -31,6 +31,8 @@ public final class ModApiVersion {
      * scenes expose supplied-game art, immutable timestamped physical input and
      * bounded semantic ROM music with consumed-sample playback, section parts,
      * and bounded pitch-gliding ROM-part cues that preserve the song clock.
+     * Run hosts receive frame-stable physical input with controller enablement respected
+     * and an explicit input baseline boundary after pause.
      * Boot-prepared typed mutators declare independent action/option scopes,
      * immutable gravity/Stealth, scatter, fixed or ring-scaled head-presentation with
      * independent player/sidekick/badnik/boss targets, grouped checkboxes and declarative
