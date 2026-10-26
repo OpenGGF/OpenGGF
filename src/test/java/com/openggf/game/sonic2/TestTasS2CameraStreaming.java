@@ -25,8 +25,10 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestTasS2CameraStreaming {
     @Test
     void superspeedPassesThePlacementBeforeItLoadsButOrdinarySpeedDoesNot() {
-        assertFalse(passPlacement(0x4000));
-        assertTrue(passPlacement(0x600));
+        try (var reel = com.openggf.tests.reel.S2ComponentTestReel.open(0)) {
+            assertFalse(passPlacement(0x4000));
+            assertTrue(passPlacement(0x600));
+        }
     }
     private static boolean passPlacement(int speed) {
         TestEnvironment.configureGameModuleFixture(new Sonic2GameModule());
@@ -54,6 +56,7 @@ class TestTasS2CameraStreaming {
             camera.updatePosition();
             assertTrue(camera.getX() - oldCamera <= 16, "S2 camera must enforce its actual follow cap");
             objects.update(camera.getX(), player, List.of(), frames);
+            com.openggf.tests.reel.S2ComponentTestReel.cameraFrame(player, objects.getActiveObjects(), 0, 0, "placement component at declared x800/y700; gameplay camera unmodified", 640, 588);
             seen |= objects.getActiveObjects().stream().anyMatch(o -> o.getSpawn().equals(spawn));
         }
         assertTrue(player.getCentreX() >= 800, "must actually traverse the object coordinate");
@@ -63,6 +66,7 @@ class TestTasS2CameraStreaming {
             int waits = 0;
             do {
                 camera.updatePosition(); objects.update(camera.getX(), player, List.of(), ++frames);
+                com.openggf.tests.reel.S2ComponentTestReel.cameraFrame(player, objects.getActiveObjects(), 0, 0, "camera convergence placement component; gameplay camera unmodified", 640, 588);
                 if (objects.getActiveObjects().stream().anyMatch(o -> o.getSpawn().equals(spawn))) break;
             } while (++waits < 80);
             assertTrue(waits < 80, "the placement must load once the camera catches up");

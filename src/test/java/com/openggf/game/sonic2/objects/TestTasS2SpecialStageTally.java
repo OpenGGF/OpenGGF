@@ -35,7 +35,7 @@ class TestTasS2SpecialStageTally {
     }
 
     @Test
-    void surplusRingCostsOnePassOnlyAboveTheEmeraldBonusFloor() {
+    void surplusRingCostsOnePassOnlyAboveTheEmeraldBonusFloor() throws Exception {
         assertEquals(101, runTally(100));
         assertEquals(102, runTally(101));
         assertEquals(121, runTally(120));
@@ -45,24 +45,32 @@ class TestTasS2SpecialStageTally {
         assertEquals(101, runTally(41));
     }
 
-    private int runTally(int rings) {
-        int beforeScore = services.gameState().getScore();
-        var screen = new Sonic2SpecialStageResultsScreen(rings, 0, true, 0, 1, services);
-        int frame = 0;
-        while (screen.getState() != 2 && frame < 300) screen.update(++frame, null);
-        assertEquals(2, screen.getState(), "must reach Obj6F_TallyScore through slide and delay");
-        assertEquals(rings, screen.getDisplayedRingCount());
-        assertEquals(1000, screen.getEmeraldBonus());
-        int drains = Math.max(rings, 100);
-        for (int pass = 1; pass <= drains; pass++) {
+    private int runTally(int rings) throws Exception {
+        try (var presentation = com.openggf.tests.reel.S2TestReelPresentation.open()) {
+            int beforeScore = services.gameState().getScore();
+            var screen = new Sonic2SpecialStageResultsScreen(rings, 0, true, 0, 1, services);
+            presentation.attachResults(screen, services);
+            int frame = 0;
+            while (screen.getState() != 2 && frame < 300) {
+                screen.update(++frame, null);
+                com.openggf.tests.reel.S2TestReelPresentation.resultsFrame(screen, services);
+            }
+            assertEquals(2, screen.getState(), "must reach Obj6F_TallyScore through slide and delay");
+            assertEquals(rings, screen.getDisplayedRingCount());
+            assertEquals(1000, screen.getEmeraldBonus());
+            int drains = Math.max(rings, 100);
+            for (int pass = 1; pass <= drains; pass++) {
+                screen.update(++frame, null);
+                com.openggf.tests.reel.S2TestReelPresentation.resultsFrame(screen, services);
+                assertEquals(Math.max(0, rings - pass), screen.getDisplayedRingCount());
+                assertEquals(Math.max(0, 1000 - pass * 10), screen.getEmeraldBonus());
+                assertEquals(2, screen.getState(), "last draining pass must not advance routine");
+            }
             screen.update(++frame, null);
-            assertEquals(Math.max(0, rings - pass), screen.getDisplayedRingCount());
-            assertEquals(Math.max(0, 1000 - pass * 10), screen.getEmeraldBonus());
-            assertEquals(2, screen.getState(), "last draining pass must not advance routine");
+            com.openggf.tests.reel.S2TestReelPresentation.resultsFrame(screen, services);
+            assertEquals(3, screen.getState(), "only the already-empty pass enters the wait");
+            assertEquals(rings * 100 + 10000, services.gameState().getScore() - beforeScore);
+            return drains + 1;
         }
-        screen.update(++frame, null);
-        assertEquals(3, screen.getState(), "only the already-empty pass enters the wait");
-        assertEquals(rings * 100 + 10000, services.gameState().getScore() - beforeScore);
-        return drains + 1;
     }
 }

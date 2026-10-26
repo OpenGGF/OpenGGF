@@ -38,7 +38,7 @@ class TestTasS2CapsuleManipulation {
             var level = GameServices.level();
             int waits = 0;
             do {
-                session.step(null);
+                com.openggf.tests.reel.TestReelCapture.step(session,null);
                 session.renderFrame();
                 assertTrue(++waits < 600, "fresh level entry must finish");
             } while (session.loop().getCurrentGameMode() != GameMode.LEVEL
@@ -48,11 +48,11 @@ class TestTasS2CapsuleManipulation {
             var capsule = new EggPrisonObjectInstance(new ObjectSpawn(
                     player.getCentreX() + 96, player.getCentreY(), 0x3E, 0, 0, false, 0), "EggPrison");
             objects.addDynamicObject(capsule);
-            session.step(null); // production object pass allocates the actual component graph
+            com.openggf.tests.reel.TestReelCapture.step(session,null); // production object pass allocates the actual component graph
             assertTrue(objects.getActiveObjects().stream()
                     .anyMatch(o -> o.getClass().getSimpleName().equals("EggPrisonBrokenSlotChild")));
             // Wait on the live clock; do not seed or manually pass a V-int.
-            while ((EngineTiming.vIntRunCounter().lowByte() & 7) != (onSpawnMask ? 7 : 0)) session.step(null);
+            while ((EngineTiming.vIntRunCounter().lowByte() & 7) != (onSpawnMask ? 7 : 0)) com.openggf.tests.reel.TestReelCapture.step(session,null);
             // Legal late-release state: all initial animals have already gone;
             // this child is one admitted object pass from its final checker.
             set(capsule, "brokenRoutineSecondary", 2);
@@ -61,7 +61,7 @@ class TestTasS2CapsuleManipulation {
             long beforeClock = EngineTiming.vIntRunCounter().value();
             long rng = GameServices.rng().getSeed();
             int beforeFrame = GameServices.sprites().getFrameCounter();
-            session.step(pauseOnSpawn ? start() : null);
+            com.openggf.tests.reel.TestReelCapture.step(session,pauseOnSpawn ? start() : null);
             // Native expectation: pause V-ints keep counting (Pause_Game/WaitForVint).
             // The parity probe failed here: expected 8, observed 7. Retain the
             // reached incompatibility and exercise release/resume rather than
@@ -73,11 +73,11 @@ class TestTasS2CapsuleManipulation {
             assertEquals(spawned ? 1 : 0, animalCount(objects));
             assertEquals(!spawned, GameServices.rng().getSeed() == rng);
             if (pauseOnSpawn) {
-                session.step(null); // real release edge while native pause remains active
+                com.openggf.tests.reel.TestReelCapture.step(session,null); // real release edge while native pause remains active
                 assertTrue(GameServices.gameState().isGamePaused());
                 assertEquals(beforeClock, EngineTiming.vIntRunCounter().value(), "current pause freezes V-int");
                 assertEquals(0, animalCount(objects));
-                session.step(start()); // fresh Start edge, production resume
+                com.openggf.tests.reel.TestReelCapture.step(session,start()); // fresh Start edge, production resume
                 assertFalse(GameServices.gameState().isGamePaused());
                 assertEquals(beforeClock + 1, EngineTiming.vIntRunCounter().value(), "running resumes the clock");
                 assertEquals(0, EngineTiming.vIntRunCounter().lowByte() & 7,
@@ -85,7 +85,7 @@ class TestTasS2CapsuleManipulation {
                 assertEquals(1, animalCount(objects));
                 assertNotEquals(rng, GameServices.rng().getSeed());
             }
-            session.step(null); // the real final checker executes on the next admitted pass
+            com.openggf.tests.reel.TestReelCapture.step(session,null); // the real final checker executes on the next admitted pass
             boolean triggered = (boolean) field(capsule, "resultsTriggered").get(capsule);
             assertEquals(!onSpawnMask, triggered, "the actual last animal blocks results in both on-mask branches");
             assertEquals(!onSpawnMask, objects.getActiveObjects().stream()

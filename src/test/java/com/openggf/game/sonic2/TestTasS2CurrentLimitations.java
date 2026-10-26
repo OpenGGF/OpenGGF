@@ -31,53 +31,59 @@ class TestTasS2CurrentLimitations {
     @ParameterizedTest
     @ValueSource(booleans = {false, true})
     void currentLimitationUnderflowClampsLeftInsteadOfNativeFarRight(boolean lockOn) throws Exception {
-        var player = player(lockOn);
-        GameServices.camera().setMinX((short) 0);
-        GameServices.camera().setMaxX((short) 0x2000);
-        player.setCentreX((short) 24);
-        player.setXSpeed((short) -0x3000);
-        player.setGSpeed((short) -0x3000);
-        assertEquals(0xFFE8, (24 - 0x30) & 0xFFFF);
-        var boundary = PlayableSpriteMovement.class.getDeclaredMethod("doLevelBoundary");
-        boundary.setAccessible(true);
-        boundary.invoke(new PlayableSpriteMovement(player));
-        assertEquals(0, player.getXSpeed(), "must reach a boundary clamp");
-        assertEquals(0, player.getGSpeed());
-        // Sonic_LevelBound (s2.asm:37233-37254) uses unsigned word comparisons.
-        assertEquals(0x10, player.getCentreX() & 0xFFFF,
-                "Confirmed limitation: native exits at $2168, current signed clamp exits at $10");
-        player.setCentreX((short) 24);
-        player.setXSpeed((short) -0x100);
-        boundary.invoke(new PlayableSpriteMovement(player));
-        assertEquals(24, player.getCentreX());
-        assertEquals(-0x100, player.getXSpeed(), "ordinary in-bounds motion is the control");
+        try (var reel = com.openggf.tests.reel.S2ComponentTestReel.open(10)) {
+            var player = player(lockOn);
+            GameServices.camera().setMinX((short) 0);
+            GameServices.camera().setMaxX((short) 0x2000);
+            player.setCentreX((short) 24);
+            player.setXSpeed((short) -0x3000);
+            player.setGSpeed((short) -0x3000);
+            assertEquals(0xFFE8, (24 - 0x30) & 0xFFFF);
+            var boundary = PlayableSpriteMovement.class.getDeclaredMethod("doLevelBoundary");
+            boundary.setAccessible(true);
+            boundary.invoke(new PlayableSpriteMovement(player));
+            assertEquals(0, player.getXSpeed(), "must reach a boundary clamp");
+            assertEquals(0, player.getGSpeed());
+            // Sonic_LevelBound (s2.asm:37233-37254) uses unsigned word comparisons.
+            assertEquals(0x10, player.getCentreX() & 0xFFFF,
+                    "Confirmed limitation: native exits at $2168, current signed clamp exits at $10");
+            player.setCentreX((short) 24);
+            player.setXSpeed((short) -0x100);
+            boundary.invoke(new PlayableSpriteMovement(player));
+            assertEquals(24, player.getCentreX());
+            assertEquals(-0x100, player.getXSpeed(), "ordinary in-bounds motion is the control");
+        }
     }
 
     @ParameterizedTest
     @ValueSource(booleans = {false, true})
     void currentLimitationHurtLauncherRejectsNativeRoutineFourEntry(boolean lockOn) {
-        var player = player(lockOn);
-        player.setCentreX((short) 0x1000);
-        player.setCentreY((short) 0x1000);
-        assertTrue(player.applyHurtOrDeath(0x1001, true, true));
-        assertTrue(player.isHurt());
-        assertFalse(player.getDead());
-        var launcher = new LauncherBallObjectInstance(
-                new ObjectSpawn(0x1000, 0x1000, 0x48, 0, 0, false, 0), "LauncherBall");
-        launcher.setServices(new TestObjectServices().withCamera(GameServices.camera()));
-        launcher.update(1, player);
-        // loc_252F0 (s2.asm:51309-51387) rejects routine >=6, accepts hurt routine 4.
-        assertFalse(player.isObjectControlled(),
-                "Confirmed limitation: native routine 4 enters capture; current engine rejects it");
-        assertEquals(0, player.getGSpeed());
-        assertEquals(-0x200, player.getXSpeed());
-        assertEquals(-0x400, player.getYSpeed());
-        player.setHurt(false);
-        launcher.update(2, player);
-        assertTrue(player.isObjectControlled(), "same location and launcher must capture the normal control");
-        assertEquals(0x1000, player.getGSpeed());
-        assertEquals(0, player.getXSpeed());
-        assertEquals(0, player.getYSpeed());
+        try (var reel = com.openggf.tests.reel.S2ComponentTestReel.open(10)) {
+            var player = player(lockOn);
+            player.setCentreX((short) 0x1000);
+            player.setCentreY((short) 0x1000);
+            assertTrue(player.applyHurtOrDeath(0x1001, true, true));
+            assertTrue(player.isHurt());
+            assertFalse(player.getDead());
+            var launcher = new LauncherBallObjectInstance(
+                    new ObjectSpawn(0x1000, 0x1000, 0x48, 0, 0, false, 0), "LauncherBall");
+            launcher.setServices(new TestObjectServices().withCamera(GameServices.camera()));
+            launcher.update(1, player);
+            com.openggf.tests.reel.S2ComponentTestReel.frame(player, java.util.List.of(launcher), 0, 0, "hurt launcher");
+            // loc_252F0 (s2.asm:51309-51387) rejects routine >=6, accepts hurt routine 4.
+            assertFalse(player.isObjectControlled(),
+                    "Confirmed limitation: native routine 4 enters capture; current engine rejects it");
+            assertEquals(0, player.getGSpeed());
+            assertEquals(-0x200, player.getXSpeed());
+            assertEquals(-0x400, player.getYSpeed());
+            player.setHurt(false);
+            launcher.update(2, player);
+            com.openggf.tests.reel.S2ComponentTestReel.frame(player, java.util.List.of(launcher), 0, 0, "normal launcher control");
+            assertTrue(player.isObjectControlled(), "same location and launcher must capture the normal control");
+            assertEquals(0x1000, player.getGSpeed());
+            assertEquals(0, player.getXSpeed());
+            assertEquals(0, player.getYSpeed());
+        }
     }
 
     private TestablePlayableSprite player(boolean lockOn) {

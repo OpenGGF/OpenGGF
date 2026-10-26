@@ -31,24 +31,24 @@ class TestTasS2StarpostEntry {
         try (var session = new GameplayCaptureSession(settings)) {
             session.boot(Path.of(System.getProperty("sonic2.rom.path")), 0, 0, settings);
             int waits = 0;
-            do { session.step(null); session.renderFrame(); assertTrue(++waits < 600); }
+            do { com.openggf.tests.reel.TestReelCapture.step(session,null); session.renderFrame(); assertTrue(++waits < 600); }
             while (session.loop().getCurrentGameMode() != GameMode.LEVEL
                     || GameServices.level().hasPendingFreshLevelTransitionBoundary());
             var player = GameServices.sprites().getMainPlayable();
-            while (player.getAir() && waits++ < 800) session.step(null);
+            while (player.getAir() && waits++ < 800) com.openggf.tests.reel.TestReelCapture.step(session,null);
             assertFalse(player.getAir());
             player.setRingCount(rings); // declared pre-collected ring bank, never seed the invitation
             var objects = GameServices.level().getObjectManager();
             objects.addDynamicObject(new CheckpointObjectInstance(new ObjectSpawn(player.getCentreX(),
                     player.getCentreY(), 0x79, 1, 0, false, 0), "Starpost"));
-            session.step(null);
+            com.openggf.tests.reel.TestReelCapture.step(session,null);
             assertEquals(1, GameServices.level().getCheckpointState().getLastCheckpointIndex());
             assertEquals(rings == 50 ? 4 : 0, objects.getActiveObjects().stream()
                     .filter(CheckpointStarInstance.class::isInstance).count());
-            for (int i = 0; i < 130; i++) session.step(null);
+            for (int i = 0; i < 130; i++) com.openggf.tests.reel.TestReelCapture.step(session,null);
             for (int i = 0; i < 240 && session.loop().getCurrentGameMode() == GameMode.LEVEL; i++) {
                 boolean jump = !player.getAir() && (i & 1) == 0;
-                session.step(new Bk2FrameInput(i, jump ? AbstractPlayableSprite.INPUT_JUMP : 0, jump ? 1 : 0, false, "post jump"));
+                com.openggf.tests.reel.TestReelCapture.step(session,new Bk2FrameInput(i, jump ? AbstractPlayableSprite.INPUT_JUMP : 0, jump ? 1 : 0, false, "post jump"));
                 session.renderFrame();
             }
             assertEquals(rings == 50 ? GameMode.SPECIAL_STAGE : GameMode.LEVEL, session.loop().getCurrentGameMode());

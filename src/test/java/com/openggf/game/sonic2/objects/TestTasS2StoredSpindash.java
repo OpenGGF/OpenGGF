@@ -42,38 +42,45 @@ class TestTasS2StoredSpindash {
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
     void descendingBallLaunchPreservesTheIncomingCharge(boolean charging) throws Exception {
-        Fixture fixture = fixture(charging, 0);
-        fixture.ball.update(1, fixture.player);
+        try (var reel = com.openggf.tests.reel.S2ComponentTestReel.open(7)) {
+            Fixture fixture = fixture(charging, 0);
+            fixture.ball.update(1, fixture.player);
+            com.openggf.tests.reel.S2ComponentTestReel.frame(fixture.player, java.util.List.of(fixture.parent, fixture.ball), 0, 0, "seesaw contact/unchanged-tilt control");
 
-        assertTrue(fixture.player.getAir(), "ball contact must reach the launch branch");
-        assertFalse(fixture.player.isOnObject());
-        assertFalse(fixture.player.isJumping());
-        assertEquals(-0x638, fixture.player.getYSpeed(),
-                "ObjectMoveAndFall adds $38 before Obj14 negates the ball's $600 velocity");
-        assertEquals(Sonic2AnimationIds.SPRING.id(), fixture.player.getAnimationId());
-        assertEquals(charging, fixture.player.getSpindash(),
-                "fixBugs=0 omits clr.b spindash_flag; an uncharged rider must stay uncharged");
-        assertEquals(charging ? 0x400 : 0, fixture.player.getSpindashCounter());
-        assertEquals(0x580, fixture.player.getXSpeed(), "launch writes no x_vel");
-        assertEquals(0x640, fixture.player.getGSpeed(), "launch writes no inertia");
-        assertTrue(fixture.parent.getStandingPlayersInNativeOrder().isEmpty(),
-                "the native standing latch must be consumed, preventing a second launch");
-        fixture.ball.update(2, fixture.player);
-        assertEquals(-0x638, fixture.player.getYSpeed(), "resting ball must not relaunch the former rider");
+            assertTrue(fixture.player.getAir(), "ball contact must reach the launch branch");
+            assertFalse(fixture.player.isOnObject());
+            assertFalse(fixture.player.isJumping());
+            assertEquals(-0x638, fixture.player.getYSpeed(),
+                    "ObjectMoveAndFall adds $38 before Obj14 negates the ball's $600 velocity");
+            assertEquals(Sonic2AnimationIds.SPRING.id(), fixture.player.getAnimationId());
+            assertEquals(charging, fixture.player.getSpindash(),
+                    "fixBugs=0 omits clr.b spindash_flag; an uncharged rider must stay uncharged");
+            assertEquals(charging ? 0x400 : 0, fixture.player.getSpindashCounter());
+            assertEquals(0x580, fixture.player.getXSpeed(), "launch writes no x_vel");
+            assertEquals(0x640, fixture.player.getGSpeed(), "launch writes no inertia");
+            assertTrue(fixture.parent.getStandingPlayersInNativeOrder().isEmpty(),
+                    "the native standing latch must be consumed, preventing a second launch");
+            fixture.ball.update(2, fixture.player);
+            com.openggf.tests.reel.S2ComponentTestReel.frame(fixture.player, java.util.List.of(fixture.parent, fixture.ball), 0, 0, "seesaw contact/unchanged-tilt control");
+            assertEquals(-0x638, fixture.player.getYSpeed(), "resting ball must not relaunch the former rider");
+        }
     }
 
     @Test
     void landingWithoutAVisualTiltChangeDoesNotLaunchTheChargingRider() throws Exception {
-        Fixture fixture = fixture(true, 2);
-        fixture.ball.update(1, fixture.player);
+        try (var reel = com.openggf.tests.reel.S2ComponentTestReel.open(7)) {
+            Fixture fixture = fixture(true, 2);
+            fixture.ball.update(1, fixture.player);
+            com.openggf.tests.reel.S2ComponentTestReel.frame(fixture.player, java.util.List.of(fixture.parent, fixture.ball), 0, 0, "seesaw contact/unchanged-tilt control");
 
-        assertFalse(fixture.player.getAir());
-        assertTrue(fixture.player.isOnObject());
-        assertEquals(0, fixture.player.getYSpeed());
-        assertTrue(fixture.player.getSpindash());
-        assertEquals(0x400, fixture.player.getSpindashCounter());
-        assertSame(fixture.player, fixture.parent.getStandingPlayer1(),
-                "loc_21C1E skips launch and standing-bit clear when mapping_frame already equals 2");
+            assertFalse(fixture.player.getAir());
+            assertTrue(fixture.player.isOnObject());
+            assertEquals(0, fixture.player.getYSpeed());
+            assertTrue(fixture.player.getSpindash());
+            assertEquals(0x400, fixture.player.getSpindashCounter());
+            assertSame(fixture.player, fixture.parent.getStandingPlayer1(),
+                    "loc_21C1E skips launch and standing-bit clear when mapping_frame already equals 2");
+        }
     }
 
     private static Fixture fixture(boolean charging, int parentFrame) throws Exception {

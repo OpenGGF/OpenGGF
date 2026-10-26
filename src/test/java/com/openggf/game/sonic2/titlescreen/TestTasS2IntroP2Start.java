@@ -37,13 +37,13 @@ class TestTasS2IntroP2Start {
             timer.setAccessible(true);
             int ticks = 0;
             while (!(title.getState() == TitleScreenProvider.State.INTRO_TEXT_FADE_OUT
-                    && timer.getInt(title) == 21) && ticks++ < 1000) session.step(null);
+                    && timer.getInt(title) == 21) && ticks++ < 1000) com.openggf.tests.reel.TestReelCapture.step(session,null);
             assertTrue(ticks < 1000, "must naturally reach the final modeled intro-text fade step");
             assertEquals(21, timer.getInt(title));
-            session.step(new Bk2FrameInput(0, 0, 0, false, 0, 0, pressP2, "intro boundary"));
+            com.openggf.tests.reel.TestReelCapture.step(session,new Bk2FrameInput(0, 0, 0, false, 0, 0, pressP2, "intro boundary"));
             int elapsed = 1;
             while (title.getState() != TitleScreenProvider.State.ACTIVE && elapsed < 400) {
-                session.step(null); elapsed++;
+                com.openggf.tests.reel.TestReelCapture.step(session,null); elapsed++;
             }
             assertTrue(elapsed < 400, "must reach the title after the recorded input");
             return elapsed;
