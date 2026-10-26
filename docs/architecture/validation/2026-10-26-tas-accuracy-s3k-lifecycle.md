@@ -191,8 +191,9 @@ Parent must reconcile these names with the central scope/reel metadata.
 
 ## Local delivery checkpoint
 
-Implementation source commit: pending local commit. The final documentation-only
-checkpoint will name it after commit, without changing tested Java sources.
+Implementation source commit: `1926b38052161dd0c4361a59fece36360689f75c`.
+This documentation checkpoint changes no tested Java source. The implementation
+commit contains the exact candidate source exercised by the 169-test focused run.
 The first local commit attempt was rejected solely because this record used
 literal user-home paths; commands were normalized to `$HOME` and the hook was
 rerun. No Java source changed after the passing focused run.
