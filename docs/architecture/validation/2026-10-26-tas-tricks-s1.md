@@ -1,5 +1,10 @@
 # Sonic 1 TAS partial-family test obligations — 2026-10-26
 
+Historical record: the later [executed S1 verdict matrix](2026-10-26-tas-verdicts-s1.md)
+supersedes this pass's pending-route classification. Its representative scenarios,
+controls and reached limitations resolve the named mechanisms; this document is
+retained as the original execution/provenance record.
+
 Implementation base: `c50876b184612428ccaf22763412f88ffe505432`.
 Local branch: `feature/ai-tas-s1-tests-20261026`.
 Worktree: the isolated checkout bound to this task (reported in the handoff).

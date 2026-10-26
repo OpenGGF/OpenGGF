@@ -149,6 +149,33 @@ class TestTasS1Movement {
         }
     }
 
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void releasingForwardPreservesAboveCapAirMomentum(boolean right) {
+        // Valid post-slope-jump state; the input-cap exploit happens on this next tick.
+        sonic.setAir(true);
+        sonic.setCentreY((short) 800);
+        sonic.setXSpeed((short) 0x900);
+        sonic.setYSpeed((short) -0x500);
+        step(false, right, false, false);
+        assertTrue(sonic.getAir());
+        assertEquals(right ? 0x600 : 0x900, sonic.getXSpeed());
+        assertEquals(-0x4C8, sonic.getYSpeed());
+    }
+
+    @ParameterizedTest
+    @CsvSource({"0,1,62464", "65280,2,62208"})
+    void fractionalAlignmentChangesTheNextIntegerCrossing(int fraction, int pixels, int remainder) {
+        sonic.setGSpeed((short)0x200);
+        sonic.setXSpeed((short)0x200);
+        sonic.setSubpixelRaw(fraction,0);
+        int entryX=sonic.getCentreX();
+        step(false,false,false,false);
+        assertEquals(0x1F4,sonic.getXSpeed());
+        assertEquals(entryX+pixels,sonic.getCentreX());
+        assertEquals(remainder,sonic.getXSubpixelRaw());
+    }
+
     private void enterRoll() {
         step(false, false, true, false);
         assertTrue(sonic.getRolling(), "Down input must execute Sonic_Roll");
