@@ -1059,3 +1059,79 @@ updated base `dd39e01cb` with frozen `8b434c760` in isolated worktrees. The
 they establish no graphics coverage for those cases. Diagnostics were inspected
 and consumed. No complete-release, whole-campaign or green-delivery claim is
 made while attribution and integration remain open.
+
+## Matched S2 smoke attribution — 2026-10-26
+
+The isolated T3 worktree `/mnt/LinuxData/T3/worktrees/OpenGGF/t3-5229c888`,
+branch `bugfix/ai-native-repair-s2-attribution-20261026`, started clean at exact
+baseline `dd39e01cbc00c8af636750a13750d62b65dc3e8c`. After the baseline run it
+fast-forwarded cleanly to exact candidate
+`8b434c76079bc93b8f1a09a8fc699a8c3d31b13a`; both runs used `clean test`.
+Neither main nor the parent's integration tree was changed.
+
+The matched selectors and environment were below; `OPENGGF_ROM_DIR` denotes
+the existing original ROM directory. The task registry records the exact
+expanded absolute paths and commands.
+
+```bash
+S2_CASES='TestDrownedSidekickCpuPause#s2DrowningSidekickStillRunsItsCpuStep,TestCPZSpinTubeObjectInstance#hurtCapturePreservesTheShippedRoutineUntilLandingClearsTubeControl'
+env -u DISPLAY -u WAYLAND_DISPLAY -u JDK_JAVA_OPTIONS -u JAVA_TOOL_OPTIONS -u _JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk PATH=/usr/lib/jvm/java-25-openjdk/bin:$PATH \
+  LUA_BIN=/usr/bin/lua5.4 ALSOFT_DRIVERS=null \
+  python3 tools/testing/maven_queue.py -Dmse=off -Psmoke \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=$OPENGGF_ROM_DIR/s1.gen" \
+  "-Dsonic2.rom.path=$OPENGGF_ROM_DIR/s2.gen" \
+  "-Ds3k.rom.path=$OPENGGF_ROM_DIR/s3k.gen" \
+  "-Dtest=$S2_CASES" clean test -B
+```
+
+The three original ROMs matched both documented CRC32 and SHA-1 identities.
+Baseline completed 2/0F/1E/0S (Maven 78 seconds, zero queue wait); candidate
+completed 2/1F/1E/0S (Maven 83 seconds, 22 seconds queue wait).
+
+CPZ's exact physical case is inherited. Both runs throw
+`IllegalStateException: GameServices.gameState() requires an active gameplay mode. Open a gameplay session and attach managers before accessing gameplay-scoped managers.`
+The entire causal stack is identical, with no source-line shifts:
+`GameServices.requireGameplayMode:62 → gameState:276 → PlayableSpriteRuntimeServices.gameState:74 → AbstractPlayableSprite.currentGameState:1667 → setAir:2012 → setAir:1968 → TestCPZSpinTubeObjectInstance.hurtCapturePreservesTheShippedRoutineUntilLandingClearsTubeControl:38`.
+The fixture lands without first opening a gameplay session. This task leaves
+that inherited fixture error unchanged.
+
+The S2 drowning case passes on baseline and newly fails on candidate at
+unchanged test line 56, `expected: <true> but was: <false>`. This is a stale
+steering assertion, not evidence for reverting native object control.
+The task's `7e37a4b50` correctly replaces the engine-only control lock with
+native `$81` object control. At pinned S2 disassembly
+`34fc7f130a96db171e1a1c43e28e0bad81cd6ca7`,
+Obj0A_ReduceAir (s2.asm:42145-42176) writes `$81` and retains the primary
+routine with shipped `fixBugs=0`; the fixed branch would force routine 2 and
+stop the HUD timer for P1. Obj02_Control_Joypad2 (s2.asm:38963-38970) still
+calls CPU control. TailsCPU_Normal_SonicOK (s2.asm:39273-39278) calls the
+despawn owner before its signed object-control gate skips follow steering.
+TailsCPU_TickRespawnTimer (s2.asm:39429-39432) therefore still advances for an
+offscreen drowning sidekick. Merely expecting steering to stop would miss
+an erroneous whole-CPU bypass.
+
+The test-only correction preserves the existing case identity and checks the
+advancing offscreen respawn counter, the bit-7 branch, neutral generated input
+and unchanged facing. A separate ordinary S2 positive control retains the
+original steering expectation. The existing S3K control additionally checks
+that its counter stays frozen and no normal CPU step is entered. No runtime,
+semantic-rule, CPZ, route, renderer or timing source was changed.
+
+Focused validation used the same environment and Maven flags above, with
+`test -B` instead of `clean test -B` and this exact selector:
+
+```text
+TestDrownedSidekickCpuPause,TestCPZSpinTubeObjectInstance#hurtCapturePreservesTheShippedRoutineUntilLandingClearsTubeControl,TestNativeDrowningDispatch,TestDrownedPlayerMotionOrder,TestS3kFixedCountdownDrownAnimationOwnership,TestDrowningControllerMusicSelection,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils
+```
+
+At candidate plus the test correction, 109 physical cases complete with zero
+failures, one inherited CPZ error and zero skips (108 passes; Maven 36.672
+seconds, five seconds queue wait). Both physical `TestSonic3kLevelLoading`
+classes ran. This includes the S1/S2 ownership negatives, all 27 native
+drowning controls (including primary `$0C`, death precedence, raw input
+freshness, fixed lifetime, carry/respawn and rewind), and all mandatory S3K
+anchors. No broad/full suite or trace sweep was run; parent owns final affected
+selection and integration. Consumed temporary test diagnostics are removed;
+the task registry retains exact commands, source identities and case outcomes.
