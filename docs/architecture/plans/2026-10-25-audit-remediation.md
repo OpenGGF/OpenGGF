@@ -1135,3 +1135,87 @@ freshness, fixed lifetime, carry/respawn and rewind), and all mandatory S3K
 anchors. No broad/full suite or trace sweep was run; parent owns final affected
 selection and integration. Consumed temporary test diagnostics are removed;
 the task registry retains exact commands, source identities and case outcomes.
+
+
+## Final route attribution and integration disposition — 2026-10-26
+
+The matched route comparison completed on exact baseline
+`dd39e01cbc00c8af636750a13750d62b65dc3e8c` and frozen smoke candidate
+`8b434c76079bc93b8f1a09a8fc699a8c3d31b13a`, one clean run per arm in the
+isolated `bugfix/ai-native-repair-route-attribution-20261026` worktree.
+Each arm ran **45 physical cases: 41 assertion failures, four passes, zero
+errors and zero skips**. All 41 failures match by physical identity,
+exception type, full assertion message, reported causal stack and failure-text
+hash. Their type/message/project frames also match the original smoke run;
+there are no source-line shifts. The extra passes are parameter invocations
+1–4 of `TestSozColdRouteCapture#soloColdActCompletesWithTraversalReplayAndPlayableDestination`;
+its fifth invocation is the selected failure. Every failure is inherited;
+there is no candidate-only or inconsistent outcome in these bounded runs.
+This pair does not establish absence of flakiness.
+
+Both arms used the same command, environment, original ROMs, test/wrapper and
+route fixture hashes. `ROUTE_CASES` is the exact single-line selector below:
+
+```text
+com.openggf.tools.TestDezColdRouteCapture#coldIncomingActTwoTraversesBothTransportersWithRewind+coldIncomingActTwoTraversesGravityTubesConveyorAndStaircaseWithRewind+coldIncomingActTwoTraversesUpperTransportChainsAndEastHubWithRewind+coldIncomingActTwoDefeatsGravityBossAndLoadsFinalStageWithoutTransformation+coldIncomingActTwoCrossesTiltingBridgeWithoutAShieldWithRewind+coldIncomingActTwoClimbsEnergyBridgesAndTogglesGravityWithRewind+coldRouteClearsAllTurbinePanelsAndOpensDoorWhileObjectControlled+coldCompleteRouteDefeatsBothMinibossPhasesAndLoadsActTwo+coldIncomingActTwoDescendsInvertedSpringShaftWithRewind+coldUpperRouteTraversesLiftsConveyorsAndTimedBridgesWithRewind+coldIncomingActTwoCompletesUpperGravityRouteCarrierAndCountdownLaunchWithRewind,com.openggf.tools.TestDezIncomingFinalRouteCapture#coldOrdinarySoloTailsClearsAllFinalPhasesAndLoadsEnding+coldOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding+coldWideOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding+coldEmeraldTeamClearsBothActsFinalFightAndDoomsday+coldOrdinaryTeamClearsHandsCoreAndEscapeShipAndLoadsEnding,com.openggf.tools.TestDezSoloActTwoColdRouteCapture#coldWideSonicAloneClearsActTwoAndLoadsFinalStage+coldTailsAloneClearsActTwoAndLoadsFinalStage+coldTailsLowerGravityPadPreservesPendingContactAcrossRewind+coldSonicAloneClearsActTwoAndLoadsFinalStage,com.openggf.tools.TestDezSoloColdRouteCapture#coldSonicAloneClearsMinibossAndReachesPlayableActTwo+coldTailsAloneClearsMinibossAndReachesPlayableActTwo+coldWideSonicClearsBothBossPhasesAndReachesPlayableActTwo,com.openggf.tools.TestLrzKnucklesColdRouteCapture#coldKnucklesRestoresActTwoUpperClimbsAndDoorRelease+coldKnucklesReplaysIncomingRouteAndFirstActTwoDoor+coldKnucklesCompletesActTwoAndReachesPlayableHiddenPalace+coldKnucklesReachesMinibossAndRestoresTraversalAndCloudEscape+coldKnucklesClearsMinibossAndRestoresFightAndActTwoHandoff+coldKnucklesRestoresActTwoTraversalToTheMiddleCorridor,com.openggf.tools.TestMhzKnucklesColdRouteCapture#coldKnucklesCompletesActOneAndRestoresNativeInteractions+coldKnucklesCompletesActTwoAndIsolatesTheFbzTimeline,com.openggf.tools.TestS3kHpzJoinedColdRouteCapture#coldKnucklesReplaysUpperPadAndTheJoinedSszCraneControlRelease,com.openggf.tools.TestS3kLrzHpzSszColdCampaign#sonicColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory+tailsColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory+pairColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory+knucklesColdCampaignClearsSkySanctuaryTwoThroughTheEndingAndTitle,com.openggf.tools.TestSozColdRouteCapture#soloColdActCompletesWithTraversalReplayAndPlayableDestination+knucklesColdActTwoCompletesWithPuzzleReplayAndPlayableLavaReef+knucklesWideColdActTwoCompletesWithPuzzleReplayAndPlayableLavaReef,com.openggf.tools.TestSszWidePairedColdRouteCapture#coldFirstReplicaAndTransportReplayWithRetiredColumnDebris+coldCompleteWideRouteDefeatsAllBossesAndIsolatesTheDezTimeline
+```
+
+```bash
+WORKSPACE_ROOT="$HOME/code/projects/OpenGGF"
+env -u DISPLAY -u WAYLAND_DISPLAY -u JDK_JAVA_OPTIONS \
+  -u JAVA_TOOL_OPTIONS -u _JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  PATH=/usr/lib/jvm/java-25-openjdk/bin:"$PATH" \
+  LUA_BIN=/usr/bin/lua5.4 ALSOFT_DRIVERS=null \
+  python3 tools/testing/maven_queue.py -Dmse=off -Psmoke \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  -Dsonic1.rom.path="$WORKSPACE_ROOT/s1.gen" \
+  -Dsonic2.rom.path="$WORKSPACE_ROOT/s2.gen" \
+  -Ds3k.rom.path="$WORKSPACE_ROOT/s3k.gen" \
+  "-Dtest=$ROUTE_CASES" clean test -B
+```
+
+Baseline queue/execution/wall times were 56.0/499.5/555.5 seconds; candidate
+46.5/486.2/532.7 seconds. Execution includes clean compilation. The inherited
+assertions group as follows; all classes are in `com.openggf.tools`:
+
+| Class | Failed physical cases | Distinct unchanged assertion messages |
+| --- | ---: | --- |
+| `TestDezColdRouteCapture` | 11 | `expected: <9589> but was: <3203>` |
+| `TestDezIncomingFinalRouteCapture` | 5 | `death at 14721 ==> expected: <false> but was: <true>`; `death at 19930 ==> expected: <false> but was: <true>`; `death at 21162 ==> expected: <false> but was: <true>`; `death at 36000 ==> expected: <false> but was: <true>` |
+| `TestDezSoloActTwoColdRouteCapture` | 4 | `death at 19930 ==> expected: <false> but was: <true>`; `death at input 14721 ==> expected: <false> but was: <true>`; `death at input 19930 ==> expected: <false> but was: <true>`; `death at input 36000 ==> expected: <false> but was: <true>` |
+| `TestDezSoloColdRouteCapture` | 3 | `both eight-hit phases must be defeated through player contact ==> expected: <2> but was: <0>`; `death at input 14721 ==> expected: <false> but was: <true>`; `death at input 19930 ==> expected: <false> but was: <true>` |
+| `TestLrzKnucklesColdRouteCapture` | 6 | `death at input 15323 ==> expected: <false> but was: <true>`; `death at input 5027 ==> expected: <false> but was: <true>`; `first-door death at input 15323 ==> expected: <false> but was: <true>` |
+| `TestMhzKnucklesColdRouteCapture` | 2 | `cold Knuckles death at 26853 ==> expected: <false> but was: <true>` |
+| `TestS3kHpzJoinedColdRouteCapture` | 1 | `cold death 5027 ==> expected: <false> but was: <true>` |
+| `TestS3kLrzHpzSszColdCampaign` | 4 | `cold death 44639 ==> expected: <false> but was: <true>`; `cold death 5027 ==> expected: <false> but was: <true>`; `cold death 73285 ==> expected: <false> but was: <true>`; `cold death 80320 ==> expected: <false> but was: <true>` |
+| `TestSozColdRouteCapture` | 3 | `cold death at 11787 ==> expected: <false> but was: <true>`; `cold death at 15850 ==> expected: <false> but was: <true>`; `cold death at 23478 ==> expected: <false> but was: <true>` |
+| `TestSszWidePairedColdRouteCapture` | 2 | `FIRST_FORWARD [wide-route-11640] frame=11640 n=24 input=11664 ==> expected: <false> but was: <true>`; `expected: <46> but was: <48>` |
+
+All broad failures now have a disposition. The Sideways lifecycle guard is
+corrected in `69545f80b` and its 36-case selection passes. The newly red S2
+steering assertion is corrected in test-only `68edd06ad`, merged as
+`9a3fa66d6`, after source review of native CPU maintenance before the bit-7
+steering gate. Its 109-case selection has 108 passes and only the identical
+inherited CPZ setup error. The 41 route assertions remain inherited and
+unchanged. These focused results do not revise the historical broad totals:
+**43,692 ordinary cases / 42 failures / 1 error / 96 skips**, plus
+**805 guards / 1 failure / 0 errors or skips**.
+
+The composed executable delta after frozen smoke is exactly the tested
+Sideways helper call and the tested S2 assertion correction. Each file is
+byte-identical to its focused tested commit; the latter changes no runtime.
+Unchanged smoke and replay coverage is reused under the repository's
+proportionate-validation policy. No new or worsened failure remains unaddressed
+in the measured selection; this is not a green suite or release qualification.
+The 96 skipped cases retain their original coverage limits. Raw diagnostics
+were inspected and consumed, and neither attribution worker has live jobs.
+
+The final HCZ evidence remains the `3dd809f99` chain: segment 11 completes its
+14,208 represented rows and giant-ring boundary with 11 camera and 51 animation
+residuals, no non-camera physics mismatch. Segment 13 first differs at row 2147;
+SS7 results still stop at movie cursor 97208 without the required return.
+The alternate AIZ rings reset remains unresolved at row 26179; its native
+physical reset at row 26227 still requires the bounded setup continuation
+specified above. Safe Sideways intentionally avoids ROM storage corruption.
+None of these remaining fidelity obligations is waived by smoke attribution.
