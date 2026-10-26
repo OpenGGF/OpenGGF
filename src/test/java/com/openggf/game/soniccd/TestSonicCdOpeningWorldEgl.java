@@ -527,7 +527,7 @@ class TestSonicCdOpeningWorldEgl {
                             new com.openggf.game.soniccd.player.CdPlayerBody.AnimationCursor(0, 0, 0),
                             new com.openggf.game.soniccd.player.CdPlayerBody.Header(header.slotId(), header.mappingAddress(),
                                     header.tile() | 0x8000, 0, header.width()),
-                            new com.openggf.game.soniccd.player.CdPlayerBody.Timers(0, 0, 0, 0), old.history(), old.rotationDistance(), old.objectLinks());
+                            new com.openggf.game.soniccd.player.CdPlayerBody.Timers(0, 0, 0, 0), old.history(), old.rotationDistance(), old.objectLinks(), old.rotationAngle());
                     frame.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(), state, java.util.Optional.empty()));
                     module.requirePlayerActor().rebindAfterRestore();
                     runtime.placement().pool().clearDynamicSlots();
@@ -1660,7 +1660,7 @@ class TestSonicCdOpeningWorldEgl {
                 0, 0, 0, 2, 0, 2, 4, 9, 19, 0, m.previousAnimation(), 0, 0, 0, 0, 0,
                 m.previousPrimaryAngle(), m.previousSecondaryAngle());
         var state = new com.openggf.game.soniccd.player.CdPlayerBody.State(motion, old.animation(), old.header(), old.timers(),
-                old.history(), old.rotationDistance(), old.objectLinks());
+                old.history(), old.rotationDistance(), old.objectLinks(), old.rotationAngle());
         frame.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(), state, java.util.Optional.empty()));
         module.requirePlayerActor().rebindAfterRestore();
     }
@@ -2040,7 +2040,7 @@ class TestSonicCdOpeningWorldEgl {
                 rollingContact ? 2 : 0, m.previousAnimation(), rollingContact ? 1 : 0, 0, 0, 0, 0,
                 m.previousPrimaryAngle(), m.previousSecondaryAngle());
         var state = new com.openggf.game.soniccd.player.CdPlayerBody.State(motion, old.animation(), old.header(), old.timers(),
-                old.history(), old.rotationDistance(), old.objectLinks());
+                old.history(), old.rotationDistance(), old.objectLinks(), old.rotationAngle());
         frame.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(), state, java.util.Optional.empty()));
         module.requirePlayerActor().rebindAfterRestore();
         assertSame(old.header(), frame.state().header()); assertSame(old.timers(), frame.state().timers());
@@ -2430,7 +2430,7 @@ class TestSonicCdOpeningWorldEgl {
         var motion = new com.openggf.game.soniccd.player.CdPlayerMotionState(x << 16, y << 16, 0, 0, 0,
                 2, 0, 0, 4, 9, 19, 0, m.previousAnimation(), 0, 0, 0, 0, 0, m.previousPrimaryAngle(), m.previousSecondaryAngle());
         var state = new com.openggf.game.soniccd.player.CdPlayerBody.State(motion, old.animation(), old.header(), old.timers(),
-                old.history(), old.rotationDistance(), old.objectLinks());
+                old.history(), old.rotationDistance(), old.objectLinks(), old.rotationAngle());
         frame.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(), state, java.util.Optional.empty()));
         module.requirePlayerActor().rebindAfterRestore();
         assertSame(old.animation(), frame.state().animation()); assertSame(old.header(), frame.state().header());
@@ -2798,7 +2798,7 @@ class TestSonicCdOpeningWorldEgl {
         var motion = new com.openggf.game.soniccd.player.CdPlayerMotionState(x16_16, y16_16, 0, 0, 0,
                 2, 0, 2, 4, 9, 19, 0, m.previousAnimation(), 0, 0, 0, 0, 0, m.previousPrimaryAngle(), m.previousSecondaryAngle());
         var state = new com.openggf.game.soniccd.player.CdPlayerBody.State(motion, old.animation(), old.header(), old.timers(),
-                old.history(), old.rotationDistance(), old.objectLinks());
+                old.history(), old.rotationDistance(), old.objectLinks(), old.rotationAngle());
         frame.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(), state, java.util.Optional.empty()));
         module.requirePlayerActor().rebindAfterRestore();
         assertSame(old.animation(), frame.state().animation()); assertSame(old.header(), frame.state().header());
@@ -3241,7 +3241,7 @@ class TestSonicCdOpeningWorldEgl {
         var motion = new com.openggf.game.soniccd.player.CdPlayerMotionState(x16_16, y16_16, 0, 0, 0,
                 2, 0, 2, 4, 9, 19, 0, m.previousAnimation(), 0, 0, 0, 0, 0, m.previousPrimaryAngle(), m.previousSecondaryAngle());
         var state = new com.openggf.game.soniccd.player.CdPlayerBody.State(motion, old.animation(), old.header(), old.timers(),
-                old.history(), old.rotationDistance(), old.objectLinks());
+                old.history(), old.rotationDistance(), old.objectLinks(), old.rotationAngle());
         frame.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(), state, java.util.Optional.empty()));
         module.requirePlayerActor().rebindAfterRestore();
         assertSame(old.animation(), frame.state().animation()); assertSame(old.header(), frame.state().header());
@@ -3673,7 +3673,7 @@ class TestSonicCdOpeningWorldEgl {
         assertEquals(2,m.routine());assertEquals(0,old.objectLinks().standObject());assertEquals(0,old.objectLinks().pushObject());
         var motion=new com.openggf.game.soniccd.player.CdPlayerMotionState(x16_16,y16_16,0,0,0,2,0,2,4,9,19,0,
                 m.previousAnimation(),0,0,0,0,0,m.previousPrimaryAngle(),m.previousSecondaryAngle());
-        var state=new com.openggf.game.soniccd.player.CdPlayerBody.State(motion,old.animation(),old.header(),old.timers(),old.history(),old.rotationDistance(),old.objectLinks());
+        var state=new com.openggf.game.soniccd.player.CdPlayerBody.State(motion,old.animation(),old.header(),old.timers(),old.history(),old.rotationDistance(),old.objectLinks(), old.rotationAngle());
         frame.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(),state,java.util.Optional.empty())); module.requirePlayerActor().rebindAfterRestore();
         assertSame(old.animation(),frame.state().animation());assertSame(old.header(),frame.state().header());assertSame(old.timers(),frame.state().timers());
         assertSame(old.history(),frame.state().history());assertEquals(old.rotationDistance(),frame.state().rotationDistance());assertEquals(old.objectLinks(),frame.state().objectLinks());
@@ -4540,7 +4540,7 @@ class TestSonicCdOpeningWorldEgl {
         var motion=new com.openggf.game.soniccd.player.CdPlayerMotionState(x16_16,y16_16,0,0,0,2,0,0,4,9,19,0,
                 m.previousAnimation(),0,0,0,0,0,m.previousPrimaryAngle(),m.previousSecondaryAngle());
         var state=new com.openggf.game.soniccd.player.CdPlayerBody.State(motion,old.animation(),old.header(),old.timers(),
-                old.history(),old.rotationDistance(),old.objectLinks());
+                old.history(),old.rotationDistance(),old.objectLinks(), old.rotationAngle());
         frame.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(),state,java.util.Optional.empty()));
         module.requirePlayerActor().rebindAfterRestore();
         assertSame(old.animation(),frame.state().animation());assertSame(old.header(),frame.state().header());assertSame(old.timers(),frame.state().timers());
@@ -4951,7 +4951,7 @@ class TestSonicCdOpeningWorldEgl {
         assertEquals(2,m.routine());assertEquals(0,m.flags()&0x28);assertEquals(0,old.timers().hurt());
         var motion=new com.openggf.game.soniccd.player.CdPlayerMotionState(x16_16,y16_16,xv,0x200,0,2,0,2,4,9,19,0,
                 m.previousAnimation(),0,0,0,0,0,m.previousPrimaryAngle(),m.previousSecondaryAngle());
-        var state=new com.openggf.game.soniccd.player.CdPlayerBody.State(motion,old.animation(),old.header(),old.timers(),old.history(),old.rotationDistance(),old.objectLinks());
+        var state=new com.openggf.game.soniccd.player.CdPlayerBody.State(motion,old.animation(),old.header(),old.timers(),old.history(),old.rotationDistance(),old.objectLinks(), old.rotationAngle());
         frame.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(),state,java.util.Optional.empty()));module.requirePlayerActor().rebindAfterRestore();
         assertSame(old.animation(),frame.state().animation());assertSame(old.header(),frame.state().header());assertSame(old.timers(),frame.state().timers());
         assertSame(old.history(),frame.state().history());assertEquals(old.rotationDistance(),frame.state().rotationDistance());assertEquals(old.objectLinks(),frame.state().objectLinks());

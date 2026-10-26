@@ -71,6 +71,23 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+A native-fault fixture must first pass its loader (2026-10-26, CD Disc).
+Raw layout7F cannot represent an unavailable floor when the decoder rejects
+chunk127 against a121-chunk supply before gameplay. Use a source-backed
+admitted base and the actual querying actor's flag: rawF9/base121 plus player
+sprite bit6 selects native chunk122. Check the exact layout column, install
+the modified immutable actor, and assert FLOOR_PRIMARY/address21F2E0/detail,
+not merely any exception. Never enlarge production backing to make a fixture
+reach its intended stop.
+
+Preparing one owner after another has published is not full preflight
+(2026-10-26, CD Disc). The old Frame Solid convenience apply builds its values
+at call time. A stronger multi-owner bridge must prepare the pool overlay,
+same Frame's complete actor/environment and immutable sound ledger before
+the first assignment, then adopt those ready values. A prepared value or
+same-value CAS does not prove native origin or once-only execution; keep
+that authority in the actual private invocation.
+
 A positive native floor distance need not identify a floor (2026-10-26, CD
 Tamabboh fixture). At fixed actorX4350/probeY357 both queries returned26 with
 no angle write: that is the blank/blank sentinel31-(357&15), not ground26px

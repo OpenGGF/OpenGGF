@@ -6,6 +6,7 @@ import com.openggf.game.soniccd.CdReleaseVariant;
 import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdR11aAssets;
 import com.openggf.game.soniccd.objects.CdSolidObject;
+import com.openggf.game.soniccd.objects.CdSpinningDisc;
 import com.openggf.game.soniccd.objects.CdSpring;
 import com.openggf.game.soniccd.objects.CdSpinTunnelTag;
 import com.openggf.game.soniccd.resources.CdPlayerArtRuntime;
@@ -62,7 +63,7 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
                 m.animation(), m.previousAnimation(), m.playerJump(), m.charge(), m.moveLock(), m.stick(),
                 m.playerControl(), m.previousPrimaryAngle(), m.previousSecondaryAngle());
         var nextState = new CdPlayerBody.State(motion, state.animation(), state.header(), state.timers(),
-                state.history(), state.rotationDistance(), state.objectLinks());
+                state.history(), state.rotationDistance(), state.objectLinks(), state.rotationAngle());
         state = nextState;
     }
 
@@ -164,7 +165,7 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
         var nextHeader = kill ? new CdPlayerBody.Header(h.slotId(), h.mappingAddress(), actor.tile(), actor.priority(), h.width()) : h;
         var nextTimers = kill ? timers : new CdPlayerBody.Timers(actor.hurt(), timers.invincibility(), timers.speedShoes(), timers.reset());
         var nextState = new CdPlayerBody.State(actor.motion(), state.animation(), nextHeader, nextTimers,
-                state.history(), actor.rotationDistance(), state.objectLinks());
+                state.history(), actor.rotationDistance(), state.objectLinks(), state.rotationAngle());
         var m = environment.movement(); var g = m.globals(); var b = environment.globals();
         var movementGlobals = new CdPlayerMovement.Globals(g.lookMode(), g.cameraYCentre(), g.primaryAngle(), g.secondaryAngle(),
                 g.boredTimer(), globals.scoreChain(), g.debugAngle(), g.debugAngleShift(), g.debugQuadrant(), g.debugFloorDistance());
@@ -444,7 +445,7 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
         var cold = coldDevelopmentCut(assets, CdPlayerBody.DynamicSlots.UNIMPLEMENTED);
         var s = cold.state();
         var state = new CdPlayerBody.State(s.motion(), s.animation(), s.header(), s.timers(),
-                new CdPlayerBody.History(carried.history(), 0), s.rotationDistance(), s.objectLinks());
+                new CdPlayerBody.History(carried.history(), 0), s.rotationDistance(), s.objectLinks(), s.rotationAngle());
         var e = cold.environment(); var m = e.movement(); var g = m.globals(); var c = e.controls(); var b = e.globals();
         var globals = new CdPlayerMovement.Globals(g.lookMode(), g.cameraYCentre(), g.primaryAngle(), g.secondaryAngle(),
                 g.boredTimer(), g.scoreChain(), carried.debugAngle(), carried.debugAngleShift(), carried.debugQuadrant(),
@@ -583,7 +584,7 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
                 m.playerJump(), m.charge(), m.moveLock(), m.stick(), m.playerControl(),
                 m.previousPrimaryAngle(), m.previousSecondaryAngle());
         return new CdPlayerBody.State(next, before.animation(), before.header(), before.timers(), before.history(),
-                before.rotationDistance(), before.objectLinks());
+                before.rotationDistance(), before.objectLinks(), before.rotationAngle());
     }
 
     private record ColdCut(CdPlayerBody.State state, CdPlayerBody.Environment environment) { }
@@ -597,7 +598,7 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
         var state = new CdPlayerBody.State(motion, new CdPlayerBody.AnimationCursor(0, 0, 0),
                 new CdPlayerBody.Header(1, 0, 0, 0, 0), new CdPlayerBody.Timers(0, 0, 0, 0), // ClearObjects zeroes $3A too.
-                new CdPlayerBody.History(CdAssetBytes.copyOf(new byte[0x100]), 0), 0, new CdPlayerBody.ObjectLinks(0, 0)); // Cold ClearObjects owns byte39 and both object-link bytes.
+                new CdPlayerBody.History(CdAssetBytes.copyOf(new byte[0x100]), 0), 0, new CdPlayerBody.ObjectLinks(0, 0), 0); // LevelStart .ClearObjects (src/Level/Main.asm:186-192, source pin above) owns bytes $2B/$39 and both links.
         var movement = new CdPlayerMovement.Environment(new CdPlayerMovement.Physics(0, 0, 0),
                 new CdPlayerMovement.Bounds(bounds.left(), bounds.right(), bounds.bottom(), 0),
                 new CdPlayerMovement.Gates(0, 1, 0, 0, 0, 0, 0),
@@ -835,7 +836,7 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
                 m.routine(), m.angle(), m.flags(), m.spriteFlags(), m.xRadius(), m.yRadius(),
                 m.animation(), m.previousAnimation(), m.playerJump(), m.charge(), m.moveLock(), m.stick(), m.playerControl(),
                 m.previousPrimaryAngle(), m.previousSecondaryAngle());
-        state = new CdPlayerBody.State(motion, state.animation(), state.header(), state.timers(), state.history(), state.rotationDistance(), state.objectLinks());
+        state = new CdPlayerBody.State(motion, state.animation(), state.header(), state.timers(), state.history(), state.rotationDistance(), state.objectLinks(), state.rotationAngle());
     }
 
     /**
@@ -885,7 +886,7 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
     public void applyObjectSpringLaunch(CdSpring.LaunchCall call) {
         validateObjectSpringLaunch(call);
         var next = new CdPlayerBody.State(call.finalPlayer().actor().motion(), state.animation(), state.header(), state.timers(),
-                state.history(), state.rotationDistance(), state.objectLinks());
+                state.history(), state.rotationDistance(), state.objectLinks(), state.rotationAngle());
         state = next;
     }
 
@@ -944,7 +945,7 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
     public void applyObjectSpinTunnelResult(CdSpinTunnelTag.PlayerResult result) {
         validateObjectSpinTunnelResult(result);
         state = new CdPlayerBody.State(result.finalMotion(), state.animation(), state.header(), state.timers(),
-                state.history(), state.rotationDistance(), state.objectLinks());
+                state.history(), state.rotationDistance(), state.objectLinks(), state.rotationAngle());
     }
 
     private static int spinTunnelValue(CdPlayerMotionState motion, CdSpinTunnelTag.PlayerField field) {
@@ -992,7 +993,7 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
         var value = result.state(); var timers = state.timers();
         var nextState = new CdPlayerBody.State(state.motion(), state.animation(), state.header(),
                 new CdPlayerBody.Timers(timers.hurt(), timers.invincibility(), value.speedShoesTimer(), timers.reset()),
-                state.history(), state.rotationDistance(), state.objectLinks());
+                state.history(), state.rotationDistance(), state.objectLinks(), state.rotationAngle());
         var movement = environment.movement(); var gates = movement.gates();
         var nextGates = new CdPlayerMovement.Gates(gates.zoneAct(), gates.timeZone(), gates.miniSonic(),
                 gates.waterSlide(), gates.windTunnel(), value.speedShoes(), gates.timeWarpDirection());
@@ -1050,23 +1051,7 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
      */
     public void applyObjectSolidResult(CdSolidObject.Player expectedPlayer, CdSolidObject.Globals expectedGlobals,
                                        CdSolidObject.Result result) {
-        validateObjectSolidResult(expectedPlayer, expectedGlobals, result);
-        var player = result.player(); var actor = player.actor(); var globals = result.globals();
-        var h = state.header(); var timers = state.timers();
-        var nextState = new CdPlayerBody.State(actor.motion(), state.animation(),
-                new CdPlayerBody.Header(h.slotId(), h.mappingAddress(), actor.tile(), actor.priority(), h.width()),
-                new CdPlayerBody.Timers(actor.hurt(), timers.invincibility(), timers.speedShoes(), timers.reset()),
-                state.history(), actor.rotationDistance(), new CdPlayerBody.ObjectLinks(player.pushObject(), player.standObject()));
-        var m = environment.movement(); var g = m.globals(); var body = environment.globals();
-        var movementGlobals = new CdPlayerMovement.Globals(g.lookMode(), g.cameraYCentre(), globals.primaryAngle(),
-                globals.secondaryAngle(), g.boredTimer(), globals.scoreChain(), g.debugAngle(), g.debugAngleShift(),
-                g.debugQuadrant(), g.debugFloorDistance());
-        var nextEnvironment = new CdPlayerBody.Environment(
-                new CdPlayerMovement.Environment(m.physics(), m.bounds(), m.gates(), movementGlobals), environment.controls(),
-                new CdPlayerBody.Globals(body.levelFrames(), body.cameraXCentre(), body.timeAttackMode(), body.debugMode(),
-                        body.debugCheat(), body.timeWarpTimer(), globals.invincible(), body.bossMusic()), environment.dynamicSlots());
-        state = nextState;
-        environment = nextEnvironment;
+        applyPreparedObjectSolidPublication(prepareObjectSolidResult(expectedPlayer, expectedGlobals, result));
     }
 
     private static int solidPlayerValue(CdSolidObject.Player player, CdSolidObject.PlayerField field) {
@@ -1144,7 +1129,7 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
                 m.routine(), m.angle(), m.flags(), (m.spriteFlags() & 0x7F) | bit, m.xRadius(), m.yRadius(),
                 m.animation(), m.previousAnimation(), m.playerJump(), m.charge(), m.moveLock(), m.stick(), m.playerControl(),
                 m.previousPrimaryAngle(), m.previousSecondaryAngle());
-        var nextState = new CdPlayerBody.State(motion, state.animation(), state.header(), state.timers(), state.history(), state.rotationDistance(), state.objectLinks());
+        var nextState = new CdPlayerBody.State(motion, state.animation(), state.header(), state.timers(), state.history(), state.rotationDistance(), state.objectLinks(), state.rotationAngle());
         var nextDisplay = display.map(p -> new CdPlayerBody.DisplayPublication(p.queued(), p.mappingAddress(), p.tile(),
                 p.priority(), p.width(), p.mapFrame(), (p.spriteFlags() & 0x7F) | bit, p.centreX16_16(), p.centreY16_16()));
         state = nextState; display = nextDisplay;
@@ -1317,23 +1302,113 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
      */
     public void applyObjectSolidPrefix(CdSolidObject.Player expectedPlayer, CdSolidObject.Globals expectedGlobals,
                                        CdSolidObject.Prefix prefix) {
+        applyPreparedObjectSolidPublication(prepareObjectSolidPrefix(expectedPlayer, expectedGlobals, prefix));
+    }
+
+    // BEGIN prebuilt Solid and direct Disc player value publication ports.
+    /**
+     * Immutable values prepared by this Frame's checked Solid builders before any caller pool write.
+     * This is public data, not native-call, pool, phase, owner or exactly-once authority. Complete value
+     * equality deliberately cannot distinguish another equal-valued Frame or repeated same-value work.
+     */
+    public static final class ObjectSolidPublication {
+        private final CdPlayerBody.State expectedState;
+        private final CdPlayerBody.Environment expectedEnvironment;
+        private final CdPlayerBody.State finalState;
+        private final CdPlayerBody.Environment finalEnvironment;
+
+        private ObjectSolidPublication(CdPlayerBody.State expectedState, CdPlayerBody.Environment expectedEnvironment,
+                                       CdPlayerBody.State finalState, CdPlayerBody.Environment finalEnvironment) {
+            this.expectedState = expectedState;
+            this.expectedEnvironment = expectedEnvironment;
+            this.finalState = finalState;
+            this.finalEnvironment = finalEnvironment;
+        }
+
+        public CdPlayerBody.State expectedState() { return expectedState; }
+        public CdPlayerBody.Environment expectedEnvironment() { return expectedEnvironment; }
+        public CdPlayerBody.State finalState() { return finalState; }
+        public CdPlayerBody.Environment finalEnvironment() { return finalEnvironment; }
+    }
+
+    /** Validate the completed call, then build every Frame aggregate without assigning any owner value. */
+    public ObjectSolidPublication prepareObjectSolidResult(CdSolidObject.Player expectedPlayer,
+                                                           CdSolidObject.Globals expectedGlobals,
+                                                           CdSolidObject.Result result) {
+        validateObjectSolidResult(expectedPlayer, expectedGlobals, result);
+        return buildObjectSolidPublication(result.player(), result.globals());
+    }
+
+    /** Validate the reached prefix, then build every Frame aggregate without assigning any owner value. */
+    public ObjectSolidPublication prepareObjectSolidPrefix(CdSolidObject.Player expectedPlayer,
+                                                           CdSolidObject.Globals expectedGlobals,
+                                                           CdSolidObject.Prefix prefix) {
         validateObjectSolidPrefix(expectedPlayer, expectedGlobals, prefix);
-        var player = prefix.player(); var actor = player.actor(); var globals = prefix.globals();
-        var h = state.header(); var timers = state.timers();
-        var nextState = new CdPlayerBody.State(actor.motion(), state.animation(),
+        return buildObjectSolidPublication(prefix.player(), prefix.globals());
+    }
+
+    /** Recheck the existing closed-cut guards and the entire prepared actual State/Environment pair. */
+    public void validatePreparedObjectSolidPublication(ObjectSolidPublication publication) {
+        requireOpenIdle(); requireClosedFrame();
+        Objects.requireNonNull(publication, "prepared SolidObject publication");
+        if (!state.equals(publication.expectedState()) || !environment.equals(publication.expectedEnvironment())) {
+            throw new IllegalArgumentException("Stale prepared SolidObject State/Environment cut");
+        }
+    }
+
+    /** After caller preflight/pool publication, adopt only the already-built references; replay no work. */
+    public void applyPreparedObjectSolidPublication(ObjectSolidPublication publication) {
+        validatePreparedObjectSolidPublication(publication);
+        state = publication.finalState();
+        environment = publication.finalEnvironment();
+    }
+
+    /** The single existing-owner reconstruction for completed and stopped Solid final values. */
+    private ObjectSolidPublication buildObjectSolidPublication(CdSolidObject.Player player,
+                                                               CdSolidObject.Globals globals) {
+        var expectedState = state; var expectedEnvironment = environment;
+        var actor = player.actor(); var h = expectedState.header(); var timers = expectedState.timers();
+        var nextState = new CdPlayerBody.State(actor.motion(), expectedState.animation(),
                 new CdPlayerBody.Header(h.slotId(), h.mappingAddress(), actor.tile(), actor.priority(), h.width()),
                 new CdPlayerBody.Timers(actor.hurt(), timers.invincibility(), timers.speedShoes(), timers.reset()),
-                state.history(), actor.rotationDistance(), new CdPlayerBody.ObjectLinks(player.pushObject(), player.standObject()));
-        var m = environment.movement(); var g = m.globals(); var body = environment.globals();
+                expectedState.history(), actor.rotationDistance(),
+                new CdPlayerBody.ObjectLinks(player.pushObject(), player.standObject()), expectedState.rotationAngle());
+        var m = expectedEnvironment.movement(); var g = m.globals(); var body = expectedEnvironment.globals();
         var movementGlobals = new CdPlayerMovement.Globals(g.lookMode(), g.cameraYCentre(), globals.primaryAngle(),
                 globals.secondaryAngle(), g.boredTimer(), globals.scoreChain(), g.debugAngle(), g.debugAngleShift(),
                 g.debugQuadrant(), g.debugFloorDistance());
         var nextEnvironment = new CdPlayerBody.Environment(
-                new CdPlayerMovement.Environment(m.physics(), m.bounds(), m.gates(), movementGlobals), environment.controls(),
+                new CdPlayerMovement.Environment(m.physics(), m.bounds(), m.gates(), movementGlobals), expectedEnvironment.controls(),
                 new CdPlayerBody.Globals(body.levelFrames(), body.cameraXCentre(), body.timeAttackMode(), body.debugMode(),
-                        body.debugCheat(), body.timeWarpTimer(), globals.invincible(), body.bossMusic()), environment.dynamicSlots());
-        state = nextState;
-        environment = nextEnvironment;
+                        body.debugCheat(), body.timeWarpTimer(), globals.invincible(), body.bossMusic()), expectedEnvironment.dynamicSlots());
+        return new ObjectSolidPublication(expectedState, expectedEnvironment, nextState, nextEnvironment);
     }
+
+    /**
+     * Validate a direct Disc delta at the existing closed object cut. The complete actual value pair
+     * is compared before the Disc owner's shared pure store validator. No native invocation is implied.
+     */
+    public void validateObjectDiscPlayerResult(CdPlayerBody.State expectedState,
+                                               CdPlayerBody.Environment expectedEnvironment,
+                                               CdSpinningDisc.PlayerResult result) {
+        requireOpenIdle(); requireClosedFrame();
+        Objects.requireNonNull(expectedState, "Disc player State");
+        Objects.requireNonNull(expectedEnvironment, "Disc player Environment");
+        Objects.requireNonNull(result, "Disc player result");
+        if (!state.equals(expectedState) || !environment.equals(expectedEnvironment)) {
+            throw new IllegalArgumentException("Stale Disc player State/Environment cut");
+        }
+        CdSpinningDisc.validatePlayerResult(new CdSpinningDisc.PlayerCut(expectedState, expectedEnvironment), result);
+    }
+
+    /** Adopt the validated prebuilt pair only; no Body, store replay, service, sound or callback runs. */
+    public void applyObjectDiscPlayerResult(CdPlayerBody.State expectedState,
+                                            CdPlayerBody.Environment expectedEnvironment,
+                                            CdSpinningDisc.PlayerResult result) {
+        validateObjectDiscPlayerResult(expectedState, expectedEnvironment, result);
+        state = result.finalState();
+        environment = result.finalEnvironment();
+    }
+    // END prebuilt Solid and direct Disc player value publication ports.
 
 }

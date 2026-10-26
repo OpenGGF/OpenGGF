@@ -202,7 +202,7 @@ class TestCdOpeningObjectRuntime {
             f.runtime.placement().pool().write(f.slot(32).moveLong(MAPPINGS, s.header().mappingAddress())
                     .moveWord(TILE, 0x780).moveByte(MAP_FRAME, 7));
             f.frame.restoreActor(new CdPlayerFrameRuntime.ActorState(token.owner(),
-                    new CdPlayerBody.State(absolute, s.animation(), s.header(), s.timers(), s.history(), s.rotationDistance(), s.objectLinks()), Optional.empty()));
+                    new CdPlayerBody.State(absolute, s.animation(), s.header(), s.timers(), s.history(), s.rotationDistance(), s.objectLinks(), s.rotationAngle()), Optional.empty()));
             f.runtime.finishAfterCamera(POST);
             f.runtime.finishOrdinaryTail();
             var shared = f.frame.captureShared();
@@ -239,7 +239,7 @@ class TestCdOpeningObjectRuntime {
                     m.charge(), m.moveLock(), m.stick(), m.playerControl(), m.previousPrimaryAngle(), m.previousSecondaryAngle());
             f.frame.restoreActor(new CdPlayerFrameRuntime.ActorState(token.owner(),
                     new CdPlayerBody.State(absolute, new CdPlayerBody.AnimationCursor(0, 0, 7),
-                            s.header(), s.timers(), s.history(), s.rotationDistance(), s.objectLinks()), token.display()));
+                            s.header(), s.timers(), s.history(), s.rotationDistance(), s.objectLinks(), s.rotationAngle()), token.display()));
             var sat = f.runtime.finishAfterCamera(POST);
             int index = -1;
             for (int i = 0; i < sat.provenance().size(); i++) {
@@ -271,7 +271,7 @@ class TestCdOpeningObjectRuntime {
                         m.playerJump(), m.charge(), m.moveLock(), m.stick(), m.playerControl(),
                         m.previousPrimaryAngle(), m.previousSecondaryAngle());
                 f.frame.restoreActor(new CdPlayerFrameRuntime.ActorState(token.owner(),
-                        new CdPlayerBody.State(near, s.animation(), s.header(), s.timers(), s.history(), s.rotationDistance(), s.objectLinks()), Optional.empty()));
+                        new CdPlayerBody.State(near, s.animation(), s.header(), s.timers(), s.history(), s.rotationDistance(), s.objectLinks(), s.rotationAngle()), Optional.empty()));
                 var shared = f.frame.captureShared();
                 var e = shared.environment();
                 var g = e.globals();
@@ -431,7 +431,7 @@ class TestCdOpeningObjectRuntime {
             s = f.frame.state();
             f.frame.restoreActor(new CdPlayerFrameRuntime.ActorState(token.owner(),
                     new CdPlayerBody.State(s.motion(), s.animation(), s.header(), s.timers(),
-                            new CdPlayerBody.History(s.history().bytes(), 0x100), s.rotationDistance(), s.objectLinks()), token.display()));
+                            new CdPlayerBody.History(s.history().bytes(), 0x100), s.rotationDistance(), s.objectLinks(), s.rotationAngle()), token.display()));
             // A prematurely scanned/committed item would change this routine before
             // the real Body rejects its later-than-Display history address.
             f.runtime.placement().pool().write(f.slot(32)
@@ -1064,7 +1064,7 @@ class TestCdOpeningObjectRuntime {
                 var expected = new CdPlayerMotionState(0x01008000, 0x076D1234, 0x234, subtype == 0 ? -4096 : -2560,
                         0x345, 2, 0, 2, m.spriteFlags(), 9, 19, 0x10, 0x12, 0, 17, 0x4567, 1, 1, 0x31, 0x42);
                 assertEquals(new CdPlayerBody.State(expected, before.animation(), before.header(), before.timers(),
-                        before.history(), before.rotationDistance(), new CdPlayerBody.ObjectLinks(0, 40)), f.frame.state());
+                        before.history(), before.rotationDistance(), new CdPlayerBody.ObjectLinks(0, 40), before.rotationAngle()), f.frame.state());
                 assertEquals(env, f.frame.environment()); assertEquals(display, f.frame.display());
                 assertEquals(4, f.slot(40).routine()); assertEquals(0, f.slot(40).flags() & 8);
                 sounds.add(new CdOpeningObjectRuntime.SpringFm(CdSpring.FmSound.FM_SPRING));
@@ -1087,7 +1087,7 @@ class TestCdOpeningObjectRuntime {
                 var expected = new CdPlayerMotionState(0x01008000, 0x07951234, 0x234, subtype == 0 ? 4096 : 2560,
                         0x345, 2, 0x40, 2, before.motion().spriteFlags(), 9, 19, 0x1A, 0x12, 1, 17, 0x4567, 0, 0, 0x31, 0x42);
                 assertEquals(new CdPlayerBody.State(expected, before.animation(), before.header(), before.timers(),
-                        before.history(), before.rotationDistance(), new CdPlayerBody.ObjectLinks(0, 0)), f.frame.state());
+                        before.history(), before.rotationDistance(), new CdPlayerBody.ObjectLinks(0, 0), before.rotationAngle()), f.frame.state());
                 sounds.add(new CdOpeningObjectRuntime.PlayerSound(new CdPlayerFrameRuntime.ContactFmSound(CdPlayerTouchResponse.FmSound.FM_CHARGESTOP)));
                 sounds.add(new CdOpeningObjectRuntime.SpringFm(CdSpring.FmSound.FM_SPRING));
                 assertEquals(sounds, f.runtime.lastSoundRequests());
@@ -1115,7 +1115,7 @@ class TestCdOpeningObjectRuntime {
                 var expected = new CdPlayerMotionState((x << 16) | 0x8000, 0x07801234, speed, 0, speed, 2, 0,
                         rolling | flip, before.motion().spriteFlags(), 9, 19, rolling == 0 ? 0 : 0x1A, 0x12, 1, 9, 15, 1, 1, 0x31, 0x42);
                 assertEquals(new CdPlayerBody.State(expected, before.animation(), before.header(), before.timers(),
-                        before.history(), before.rotationDistance(), before.objectLinks()), f.frame.state());
+                        before.history(), before.rotationDistance(), before.objectLinks(), before.rotationAngle()), f.frame.state());
                 assertEquals(0x2233, f.frame.state().timers().invincibility(), "$32 is not Spring's $3E move lock");
                 assertEquals(display, f.frame.display(), "earlier Body projection is not rewritten by launch");
                 assertEquals(10, f.slot(40).routine()); assertEquals(flip, f.slot(40).flags());
@@ -1311,7 +1311,7 @@ class TestCdOpeningObjectRuntime {
                 9, 19, 0x1A, 0x12, 1, charge, 0x4567, 1, playerControl, 0x31, 0x42);
         f.frame.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(), new CdPlayerBody.State(motion, s.animation(),
                 s.header(), new CdPlayerBody.Timers(0x123, 0x2233, 0x3344, 0x55), s.history(), s.rotationDistance(),
-                new CdPlayerBody.ObjectLinks(0, stand)), actor.display()));
+                new CdPlayerBody.ObjectLinks(0, stand), s.rotationAngle()), actor.display()));
     }
 
     private static int satEntry(CpuSat sat, int whole) {
@@ -1333,7 +1333,7 @@ class TestCdOpeningObjectRuntime {
                 0, m.previousAnimation(), 0, charge, 0, 0, 0, m.previousPrimaryAngle(), m.previousSecondaryAngle());
         f.frame.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(),
                 new CdPlayerBody.State(next, s.animation(), s.header(), s.timers(), s.history(), s.rotationDistance(),
-                        new CdPlayerBody.ObjectLinks(0, stand)), actor.display()));
+                        new CdPlayerBody.ObjectLinks(0, stand), s.rotationAngle()), actor.display()));
     }
 
     // Catches applying the staged launch inside the body, deferring it past the next slot,
@@ -2455,7 +2455,7 @@ class TestCdOpeningObjectRuntime {
         f.frame.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(),
                 new CdPlayerBody.State(next, new CdPlayerBody.AnimationCursor(0, 0, 0), s.header(),
                         new CdPlayerBody.Timers(timers.hurt(), timers.invincibility(), timers.speedShoes(), reset),
-                        s.history(), s.rotationDistance(), s.objectLinks()), Optional.empty()));
+                        s.history(), s.rotationDistance(), s.objectLinks(), s.rotationAngle()), Optional.empty()));
     }
 
     /** Constructed ingress for transaction tests, not evidence of a normal-input route to this cut. */
@@ -2465,7 +2465,7 @@ class TestCdOpeningObjectRuntime {
                 7, 14, 2, 2, 1, 0, 0, 0, 0, 0, 0);
         f.frame.restoreActor(new CdPlayerFrameRuntime.ActorState(cut.owner(),
                 new CdPlayerBody.State(m, new CdPlayerBody.AnimationCursor(0, 0, 0), s.header(),
-                        s.timers(), s.history(), s.rotationDistance(), s.objectLinks()), Optional.empty()));
+                        s.timers(), s.history(), s.rotationDistance(), s.objectLinks(), s.rotationAngle()), Optional.empty()));
     }
 
     private static final class Fixture implements AutoCloseable {
@@ -2548,7 +2548,7 @@ class TestCdOpeningObjectRuntime {
             frame.restoreActor(new CdPlayerFrameRuntime.ActorState(token.owner(),
                     new CdPlayerBody.State(s.motion(), s.animation(),
                             new CdPlayerBody.Header(0, s.header().mappingAddress(), s.header().tile(),
-                                    s.header().priority(), s.header().width()), s.timers(), s.history(), s.rotationDistance(), s.objectLinks()), Optional.empty()));
+                                    s.header().priority(), s.header().width()), s.timers(), s.history(), s.rotationDistance(), s.objectLinks(), s.rotationAngle()), Optional.empty()));
         }
         @Override public void close() { runtime.close(); }
     }
@@ -2598,7 +2598,7 @@ class TestCdOpeningObjectRuntime {
             var expected = new CdPlayerMotionState(0x01001234, 0x0785BEEF, -0xA00, 0x234, 0xA00,
                     2, 0x60, 0xED, motion.spriteFlags(), 7, 14, 2, 0x12, 1, 0, 0x4567, 0, 0, 0x31, 0x42);
             assertEquals(new CdPlayerBody.State(expected, before.animation(), before.header(), before.timers(),
-                    before.history(), before.rotationDistance(), before.objectLinks()), f.frame.state());
+                    before.history(), before.rotationDistance(), before.objectLinks(), before.rotationAngle()), f.frame.state());
             var expectedTag = tag.moveByte(ROUTINE, 2).moveByte(SPRITE_FLAGS, 0x85).moveWord(TILE, 0x544)
                     .moveLong(MAPPINGS, 0x23EE9C).moveByte(MAP_FRAME, 1);
             assertArrayEquals(expectedTag.copyBytes(), f.slot(40).copyBytes());
@@ -2917,7 +2917,7 @@ class TestCdOpeningObjectRuntime {
     private static void seedSpinTunnelMotion(Fixture f, CdPlayerMotionState motion) {
         var actor = f.frame.captureActor(); var s = actor.state();
         f.frame.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(), new CdPlayerBody.State(motion,
-                s.animation(), s.header(), s.timers(), s.history(), s.rotationDistance(), s.objectLinks()), actor.display()));
+                s.animation(), s.header(), s.timers(), s.history(), s.rotationDistance(), s.objectLinks(), s.rotationAngle()), actor.display()));
     }
 
     /** Explicit public same-owner closed Frame ingress, never a claim of service/route reachability. */
@@ -3278,7 +3278,7 @@ class TestCdOpeningObjectRuntime {
         assertEquals(new CdPlayerBody.State(a.motion(), before.animation(),
                 new CdPlayerBody.Header(h.slotId(), h.mappingAddress(), a.tile(), a.priority(), h.width()),
                 new CdPlayerBody.Timers(a.hurt(), t.invincibility(), t.speedShoes(), t.reset()), before.history(), a.rotationDistance(),
-                new CdPlayerBody.ObjectLinks(p.pushObject(), p.standObject())), f.frame.state());
+                new CdPlayerBody.ObjectLinks(p.pushObject(), p.standObject()), before.rotationAngle()), f.frame.state());
         var m = env.movement(); var old = m.globals(); var b = env.globals();
         assertEquals(new CdPlayerBody.Environment(new CdPlayerMovement.Environment(m.physics(), m.bounds(), m.gates(),
                 new CdPlayerMovement.Globals(old.lookMode(), old.cameraYCentre(), g.primaryAngle(), g.secondaryAngle(), old.boredTimer(),
@@ -3616,7 +3616,7 @@ class TestCdOpeningObjectRuntime {
                 var motion = spinTunnelMotion(f, m.centreX16_16(), m.centreY16_16(), 0, 0, 0, flags, 0);
                 f.frame.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(), new CdPlayerBody.State(motion, s.animation(),
                         new CdPlayerBody.Header(id, s.header().mappingAddress(), s.header().tile(), s.header().priority(), s.header().width()),
-                        s.timers(), s.history(), s.rotationDistance(), s.objectLinks()), actor.display()));
+                        s.timers(), s.history(), s.rotationDistance(), s.objectLinks(), s.rotationAngle()), actor.display()));
                 var before = pool.state(40).moveByte(ID, 0x1A).moveByte(ANIMATION, 4).moveByte(FLAGS, 8)
                         .moveByte(STAND_LINK_3D, 0).moveWord(X, 0x100).moveWord(X_FRACTION, 0x1234)
                         .moveWord(Y, 0x780).moveWord(Y_FRACTION, 0x5678).moveWord(X_VELOCITY, 0x180);
@@ -3865,7 +3865,7 @@ class TestCdOpeningObjectRuntime {
     private static void assertMonitorFiveStores(Fixture f, CdPlayerBody.State before, CdPlayerBody.Environment env) {
         var t = before.timers(); var m = env.movement(); var g = m.gates();
         assertEquals(new CdPlayerBody.State(before.motion(), before.animation(), before.header(),
-                new CdPlayerBody.Timers(t.hurt(), t.invincibility(), 1320, t.reset()), before.history(), before.rotationDistance(), before.objectLinks()), f.frame.state());
+                new CdPlayerBody.Timers(t.hurt(), t.invincibility(), 1320, t.reset()), before.history(), before.rotationDistance(), before.objectLinks(), before.rotationAngle()), f.frame.state());
         assertEquals(new CdPlayerBody.Environment(new CdPlayerMovement.Environment(new CdPlayerMovement.Physics(0xC00, 0x18, 0x80), m.bounds(),
                 new CdPlayerMovement.Gates(g.zoneAct(), g.timeZone(), g.miniSonic(), g.waterSlide(), g.windTunnel(), 1, g.timeWarpDirection()), m.globals()),
                 env.controls(), env.globals(), env.dynamicSlots()), f.frame.environment());
@@ -4334,7 +4334,7 @@ class TestCdOpeningObjectRuntime {
         seedSpinTunnelMotion(f, spinTunnelMotion(f, 0x01000000, 0x07000000, 0, 0x100, 0, 2, 0));
         var actor = f.frame.captureActor(); var s = actor.state();
         f.frame.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(), new CdPlayerBody.State(s.motion(), s.animation(), s.header(),
-                new CdPlayerBody.Timers(0x123, 0, 0, 0), s.history(), s.rotationDistance(), s.objectLinks()), Optional.empty()));
+                new CdPlayerBody.Timers(0x123, 0, 0, 0), s.history(), s.rotationDistance(), s.objectLinks(), s.rotationAngle()), Optional.empty()));
         var shared = f.frame.captureShared(); var e = shared.environment(); var b = e.globals();
         var globals = new CdPlayerBody.Globals(b.levelFrames(), b.cameraXCentre(), b.timeAttackMode(), 0x12, 0xABCD,
                 b.timeWarpTimer(), 0xA5, 0xA6);
@@ -4351,7 +4351,7 @@ class TestCdOpeningObjectRuntime {
                 m.xRadius(), m.yRadius(), m.animation(), m.previousAnimation(), m.playerJump(), m.charge(),
                 m.moveLock(), m.stick(), m.playerControl(), m.previousPrimaryAngle(), m.previousSecondaryAngle());
         return new CdPlayerBody.State(motion, before.animation(), before.header(), before.timers(), before.history(),
-                before.rotationDistance(), before.objectLinks());
+                before.rotationDistance(), before.objectLinks(), before.rotationAngle());
     }
 
     private static void assertTimePostOnlyDirection(Fixture f, CdPlayerBody.State actor, CdPlayerBody.Environment before, int direction) {
@@ -6501,7 +6501,7 @@ class TestCdOpeningObjectRuntime {
         var a=expected.actor();var h=before.header();var t=before.timers();
         assertEquals(new CdPlayerBody.State(a.motion(),before.animation(),new CdPlayerBody.Header(h.slotId(),h.mappingAddress(),a.tile(),a.priority(),h.width()),
                 new CdPlayerBody.Timers(a.hurt(),t.invincibility(),t.speedShoes(),t.reset()),before.history(),a.rotationDistance(),
-                new CdPlayerBody.ObjectLinks(expected.pushObject(),expected.standObject())),f.frame.state());
+                new CdPlayerBody.ObjectLinks(expected.pushObject(),expected.standObject()), before.rotationAngle()),f.frame.state());
         var g=solid.globals();var movement=env.movement();var old=movement.globals();var b=env.globals();
         assertEquals(new CdPlayerBody.Environment(new CdPlayerMovement.Environment(movement.physics(),movement.bounds(),movement.gates(),
                 new CdPlayerMovement.Globals(old.lookMode(),old.cameraYCentre(),g.primaryAngle(),g.secondaryAngle(),old.boredTimer(),g.scoreChain(),old.debugAngle(),
@@ -7039,7 +7039,7 @@ class TestCdOpeningObjectRuntime {
     private static void spikesSeedPlayer(Fixture f,int flags,int stand,int charge,int yv,int x,int y,int hurt) {
         seedSolidPlayer(f,flags,stand,charge,0x234,yv,x,y);var actor=f.frame.captureActor();var s=actor.state();
         f.frame.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(),new CdPlayerBody.State(s.motion(),s.animation(),s.header(),
-                new CdPlayerBody.Timers(hurt,s.timers().invincibility(),s.timers().speedShoes(),s.timers().reset()),s.history(),s.rotationDistance(),s.objectLinks()),actor.display()));
+                new CdPlayerBody.Timers(hurt,s.timers().invincibility(),s.timers().speedShoes(),s.timers().reset()),s.history(),s.rotationDistance(),s.objectLinks(), s.rotationAngle()),actor.display()));
     }
     private static void spikesDebug(Fixture f,int debug,int cheat) {
         var shared=f.frame.captureShared();var e=shared.environment();var b=e.globals();
@@ -9525,7 +9525,7 @@ class TestCdOpeningObjectRuntime {
         var actor=f.frame.captureActor();var s=actor.state();var m=s.motion();var motion=new CdPlayerMotionState(((x&0xFFFF)<<16)|0xABCD,((y&0xFFFF)<<16)|0x1234,
                 m.xVelocity(),m.yVelocity(),m.groundVelocity(),m.routine(),m.angle(),m.flags(),m.spriteFlags(),m.xRadius(),m.yRadius(),m.animation(),m.previousAnimation(),
                 m.playerJump(),m.charge(),m.moveLock(),m.stick(),m.playerControl(),m.previousPrimaryAngle(),m.previousSecondaryAngle());
-        f.frame.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(),new CdPlayerBody.State(motion,s.animation(),s.header(),s.timers(),s.history(),s.rotationDistance(),s.objectLinks()),actor.display()));
+        f.frame.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(),new CdPlayerBody.State(motion,s.animation(),s.header(),s.timers(),s.history(),s.rotationDistance(),s.objectLinks(), s.rotationAngle()),actor.display()));
     }
     private static CdObjectState tamabbohChild(CdObjectState child,CdObjectState parent,int direction) {
         return child.moveByte(ID,parent.id()).moveByte(SUBTYPE,1).moveWord(TILE,parent.word(TILE)).moveByte(PRIORITY,parent.unsignedByte(PRIORITY)+1)

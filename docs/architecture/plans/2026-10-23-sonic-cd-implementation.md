@@ -7122,3 +7122,110 @@ no additional open production/resource P1/P2; the long-scene fixture P2
 remains explicit. Main/remote remain untouched. Next work is the reached
 Spinning Disc09, starting with unimported authenticated views, genuine plain
 Solid prefixes and raw rotation-byte ownership; none completes3259 yet.
+
+### Spinning Disc components and Frame publication, 26 October 2026
+
+The private tree now has authenticated Disc PlayerFrames16, animation8 and
+mappings36 at appended table ordinals59..61, total62. The sole cached visual
+getter and selector6/subtype2=0 reuse existing owners; all255 other subtype2
+values remain unadmitted. Existing Source17 bytes/cache/read extents are exact.
+Tests-first46693 stops testCompile on the absent views/getter; after importing
+the frozen asset owner,71893 passes156/0/0/0 at08:58:06Z (1m56s,queue0):
+108 unit and48 regional retail cases. Regional operand/data checks do not
+constitute JP/EU gameplay support.
+
+The mapper is exactly one new ordinary root2095C6; no new current pixels,
+bank, preload, Region or logical span. The author hit provider capacity after
+freezing both files, before its report; Root preserved those files, inspected
+the full delta and documented that interrupted custody. Removing one109-byte
+production line recovers the old mapper; removing the appended test block
+recovers all40 old tests. Old mapper82118 fails exactly on unregistered2095C6.
+Full positive33634 runs42/1/0/0 at09:17:02Z: all40 old cases and the new raw
+map/SAT/four-flip geometry case pass; the other new test incorrectly expects
+37 generic assets instead of the unchanged106. RootR2 changes only that
+literal, production unchanged; narrow91496 passes1 at09:28:47Z. This is41
+passing cases plus the corrected focused pass, not a fresh42-case green run.
+
+Plain SOLID_OBJECT enters the existing opt-in prefix cursor with no forced
+Top type1. Legacy run/6 and the actual algorithm remain exact. Tests-first
+57036 has34 identical old-admission errors; final51676-byte owner plus the
+one reviewed odd-row fixture correction passes232/0/0/0 in60341 at09:04:45Z
+(1m27s,queue wait unknown). That correction makes the intended raw odd lookup
+use sprite4, rather than sprite44 selecting another resident chunk.
+
+Body.State appends required raw rotationAngle2B as component8 with no default
+overload. Cold ClearObjects owns zero; ordinary reconstruction, capture,
+Solid/Hurt/Kill/Spring/tunnel/checkpoint carry the actual byte, and genuine
+new-LevelStart ingress clears it. Charge2A and distance39 remain distinct.
+All affected production and fixture constructors migrate explicitly, including
+38 Root-only callers. Tests-first62626 stops testCompile against State7.
+After the two production and seven fixture imports,56094 passes1203/0/0/0
+at09:35:34Z (1m53s,queue0): Body282, Frame427, Playable18, Carry31,
+Runtime392 and WorldLoad53. Exact fresh six-class XML/J25/private cwd/actual
+media/no skips checked. Actual Ring EGL/full-course25515 separately passes1
+at09:38:02Z. These precede the following Frame-port refactor.
+
+The new bounded Disc body uses genuine plain Solid once, native acquisition,
+orbit, cursor1B, controls and custom A0 jump, shared animation once, Draw and
+despawn. It has no Frame/pool authority beyond its existing component ports.
+Initial62983 runs75/6/1/0 at10:00:29Z: disclosed CSV literals and an invalid
+terrain-loader fixture fail. RootR2 preserves production and corrects six
+test spans in four methods: left orbit240; cardinal-before-directions18/16/18;
+jump from actual YV0 to-1664/-896 and unchanged GV567; and a constructible
+flaggedF9/player-sprite44 unavailable floor at native21F2E0. The latter now
+checks exact native stop details. The withdrawn angle80/X247 concern is not
+changed. Narrow77824 passes14 at10:04:56Z. Bounded independent review finds
+no new production/value-contract P1/P2 and substantiates the exact repairs.
+
+Frame's new ObjectSolidPublication holds four immutable values, with no owner
+or execution token. The two old apply methods reuse one aggregate builder;
+their validators stay byte exact. New prepare methods build the complete
+State/Environment before a Runtime can publish its pool overlay. Prepared
+apply does full-pair CAS then only assigns the two ready references. Direct
+Disc validate/apply uses the same pure33-site value validator and already
+prebuilt result. No fields, captures, clocks, services or phases are added.
+Private invocation/source/sequence/exact-once/FM and cross-owner preparation
+remain the future Runtime's responsibility; the public values grant none.
+
+Tests-first13589 stops testCompile on the six absent Frame ports. Final90167
+Frame and313502 test fixture pass combined49018:1058/0/0/0 at10:17:02Z
+(1m38s,queue0), comprising Frame591, old Runtime392 and the entire repaired
+Disc75. Thus all75 now have a fresh positive. Actual WorldLoad53 plus the
+exact Ring EGL/full-course case35430 pass54/0/0/0 at10:27:41Z
+(36.984s,queue0) after this refactor. Fresh exact XML, Java25, private cwd,
+media, EGL opt-in/surfaceless and donor flags/no skips checked. Frame-port
+review finds no actionable issue in this finite value-adoption scope.
+
+Focused commands use queued Maven, unset DISPLAY/WAYLAND_DISPLAY, Lua5.4,
+-Dmse=off and the actual CD media root. Exact selections are the classes and
+methods above; the existing actual-EGL method is
+TestSonicCdOpeningWorldEgl#actualEglNormalInputPickupAndFullCourseReplay.
+The component/Frame positive selects TestCdPlayerFrameRuntime,
+TestCdSpinningDisc,TestCdOpeningObjectRuntime. Complete structural guards are
+the remaining check before this component save. The dry3757-class smoke
+selection is disproportionate to this CD-only slice; affected CD owners,
+real World/replay/GPU consumers and guards are the bounded selection, not a
+release full-suite or full-game claim.
+
+Private tooling commitf381b4235 separately adds a frozen-packet checker,
+explicit pinned import and exact fresh JUnit summary, plus mirrored skill.
+Thirty-nine Python safety tests pass, independent review finds no actionable
+issue, and Root exercised real mapper/rotation/body/Frame imports and result
+attribution. It neither runs Maven nor bypasses its queue or preserves pass
+caches. It ignores stale unrelated XML while rejecting stale requested and
+unexpected fresh classes. Tool worktree cleanup preserves an unrelated
+pre-existing TraceChaser checkout difference.
+
+Runtime still has no ID09 dispatch at this checkpoint. Its source-only join
+is being authored separately. The natural recipe still returns3258 and
+stops3259 before Disc Init; no Disc contact/World, controlled Body, native
+timing/image/audio parity, whole-USA or JP/EU certification follows here.
+
+Final component guards11366, queued `maven_queue.py -Dmse=off -Pguards
+test -B` with unset displays/Lua5.4, pass728/0/0/0 at10:44:00Z
+(5m06s execution; queue wait not retained). All90 fresh executable XML
+reports, individual identities/counts, Java25/private cwd and zero skips are
+checked; stale unrelated reports are excluded. Current six production and
+twelve test files match their exact frozen packets/Root-only repairs.
+No Java changed during the run. The local component save follows these
+bounded checks; it does not import the pending Runtime join or move3259.

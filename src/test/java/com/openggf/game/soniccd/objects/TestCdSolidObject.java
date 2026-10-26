@@ -1198,7 +1198,7 @@ class TestCdSolidObject {
         assertEquals(cut.slots(), s.pool.capture().slots());
     }
 
-    @ParameterizedTest @ValueSource(strings = {"SOLID_OBJECT", "BTM_SOLID_OBJECT", "STAND_ON_OBJECT"})
+    @ParameterizedTest @ValueSource(strings = {"BTM_SOLID_OBJECT", "STAND_ON_OBJECT"})
     void prefixUnsupportedEntriesRejectBeforeTouchingAnyOtherInput(String entry) {
         var owner = new Scene().terrain.owner();
         assertThrows(IllegalArgumentException.class,
@@ -1293,5 +1293,539 @@ class TestCdSolidObject {
         assertEquals(IllegalStateException.class, stop.stop().originalException().getClass());
         assertEquals("Unavailable native collision word at $" + Integer.toHexString(address) + ": " + reason,
                 stop.stop().originalException().getMessage());
+    }
+
+    // Future Spinning Disc prerequisite only. Constructed native-format inputs; ALL JAVA UNRUN.
+    @ParameterizedTest @CsvSource({
+            "landing,STAND_ON,1", "carry,STAND_ON,1", "right,STAND_ON,1", "left,STAND_ON,1",
+            "dirty1,STAND_ON,1", "dirty2,STAND_ON,1", "dirty255,STAND_ON,1", "routine0,STAND_ON,1",
+            "debugLow,STAND_ON,1", "disc,STAND_ON,1", "side,HALT_ON_X,0", "sideRight,HALT_ON_X,0",
+            "sideAir,HALT_ON_X,0", "sideStop,STOP_PUSH,0", "tie,HALT_ON_X,0",
+            "bottom,HIT_BOTTOM,1", "bottom2,HIT_BOTTOM,1", "bottomCrush,HIT_BOTTOM,1",
+            "bottomDebug,HIT_BOTTOM,1", "spring2,HIT_BOTTOM,1", "springFlip,HIT_BOTTOM,1",
+            "alias0,STAND_ON,1", "free32,STAND_ON,1", "reused127,STAND_ON,1", "sameValue32,STAND_ON,1",
+            "hurtRoll,STAND_ON,1", "miniRoll,STAND_ON,1", "boredCarry,STAND_ON,1",
+            "floor,GET_OFF,0", "ceiling,STAND_ON,1", "ceilingKill,GET_OFF,0",
+            "pushKill,STOP_PUSH,0", "pushDebug,HALT_ON_X,0", "full,STAND_ON,1"})
+    void plainPrefixCompleteIsTheEntireLegacyResultWithLiteralNativeReturn(String vector, Path path, int d0) {
+        var s = new Scene();
+        switch (vector) {
+            case "carry" -> s.standing();
+            case "right", "left" -> {
+                s.standing(); s.p.xv = 0;
+                s.object(o -> o.moveWord(WordField.X_VELOCITY, vector.equals("right") ? 0x100 : -0x100));
+            }
+            case "dirty1", "dirty2", "dirty255" ->
+                    s.object(o -> o.moveByte(ByteField.ROUTINE_2, Integer.parseInt(vector.substring(5))));
+            case "routine0" -> s.object(o -> o.moveByte(ByteField.ROUTINE, 0));
+            case "debugLow" -> s.debugMode = 1;
+            case "disc" -> s.object(o -> o.moveByte(ByteField.ID, 9));
+            case "side", "sideRight", "sideAir", "sideStop", "tie", "pushKill", "pushDebug" -> {
+                s.p.x = 0x00E88000; s.p.y = 0x00801234; s.p.flags = 0; s.p.yv = 0;
+                if (vector.equals("sideRight")) { s.p.x = 0x01188000; s.p.xv = -0x123; }
+                if (vector.equals("sideAir")) s.p.flags = 2;
+                if (vector.equals("sideStop")) { s.p.xv = 0; s.p.flags = 0x20; s.p.push = 40; }
+                if (vector.equals("tie")) { s.p.x = 0x00ED8000; s.p.y = 0x00661234; } // d4=d5=7: horizontal.
+                if (vector.startsWith("push")) {
+                    s.p.push = 41; s.invincible = 1;
+                    s.object(o -> o.moveWord(WordField.X_VELOCITY, -0x100));
+                    s.other(41, o -> o.moveByte(ByteField.ID, 0).moveWord(WordField.X, 0xC0));
+                    if (vector.equals("pushDebug")) s.debugMode = 1;
+                }
+            }
+            case "bottom", "bottom2", "bottomCrush", "bottomDebug", "spring2", "springFlip" -> {
+                s.p.y = 0x009F1234; s.p.yv = -0x400;
+                if (vector.equals("bottom2") || vector.equals("spring2"))
+                    s.object(o -> o.moveByte(ByteField.ROUTINE_2, 2));
+                if (vector.startsWith("spring")) {
+                    s.object(o -> o.moveByte(ByteField.ID, 0xA));
+                    if (vector.equals("springFlip")) s.object(o -> o.moveByte(ByteField.SPRITE_FLAGS, 0x86));
+                }
+                if (vector.startsWith("bottom") && !vector.equals("bottom") && !vector.equals("bottom2")) {
+                    s.p.flags = 0; s.invincible = 1;
+                    s.object(o -> o.moveWord(WordField.Y_VELOCITY, 0x100));
+                    if (vector.equals("bottomDebug")) s.debugMode = 1;
+                }
+            }
+            case "alias0" -> { s.p.flags = 8; s.p.stand = 0; s.p.yv = 0; }
+            case "free32", "reused127", "sameValue32" -> {
+                int index = vector.equals("reused127") ? 127 : 32;
+                s.p.flags = 8; s.p.stand = index; s.p.yv = 0;
+                s.other(index, o -> o.moveByte(ByteField.ID, 0x20)
+                        .moveByte(ByteField.FLAGS, vector.equals("sameValue32") ? 0xA5 : 0xAD)
+                        .moveWord(WordField.X_FRACTION, 0xFFFF).moveWord(WordField.Y_FRACTION, 1)
+                        .moveLong(CdObjectState.LongField.CHECKPOINT_PARENT, 0x13579BDF)
+                        .moveWord(WordField.EXPLOSION_POINTS_FRAME, 0xCAFE));
+                if (vector.equals("free32")) s.pool.objNull(index);
+            }
+            case "hurtRoll", "miniRoll" -> {
+                s.p.flags = 6; s.p.routine = 4; s.p.hurt = 7; s.p.anim = 2;
+                if (vector.equals("miniRoll")) s.mini = 1;
+            }
+            case "boredCarry" -> { s.standing(); s.p.anim = 0x2B; s.p.yv = -1; }
+            case "floor" -> {
+                s.terrain.row(6, 0x6001); s.object(o -> o.moveWord(WordField.Y, 0x70)); s.p.y = 0x00531234;
+            }
+            case "ceiling", "ceilingKill" -> {
+                s.standing(); s.object(o -> o.moveWord(WordField.Y, 0x180).moveWord(WordField.Y_VELOCITY, -0x100));
+                s.p.y = 0x01611234;
+                if (vector.equals("ceilingKill")) {
+                    s.terrain.row(5, 0x5001); s.p.flags = 0x0C; s.p.ctrl = 1; s.p.charge = 1; s.invincible = 1;
+                }
+            }
+            case "full" -> { for (int i = 32; i < 128; i++) s.other(i, o -> o.moveByte(ByteField.ID, 0x20)); }
+            case "landing" -> { }
+            default -> fail(vector);
+        }
+        var r = plainCompleted(s);
+        assertEquals(path, r.path()); assertEquals(OptionalInt.of(d0), r.d0());
+        if (path != Path.GET_OFF) assertEquals(Optional.empty(), r.getOffReason());
+        assertTrue(r.objectWrites().contains(ByteField.SOLID_TYPE)); // Native exit/StandOn, never an entry store.
+        assertFalse(r.objectWrites().contains(ByteField.ROUTINE_2)); // Same address, no duplicate alias store.
+        if (vector.equals("floor")) assertEquals(Optional.of(GetOffReason.FLOOR_UNDER_OBJECT), r.getOffReason());
+        if (vector.equals("ceilingKill")) {
+            assertEquals(Optional.of(GetOffReason.CEILING_CRUSH), r.getOffReason());
+            assertEquals(List.of(FmSound.FM_CHARGESTOP, FmSound.FM_HURT, FmSound.FM_CHARGESTOP), r.fmRequests());
+        }
+        if (vector.equals("pushKill") || vector.equals("bottomCrush"))
+            assertEquals(List.of(FmSound.FM_HURT), r.fmRequests());
+        if (vector.equals("pushDebug") || vector.equals("bottomDebug")) {
+            assertTrue(r.fmRequests().isEmpty());
+            assertEquals(CdPlayerTouchResponse.Exit.KILL_PLAYER_DEBUG_NO_WRITE,
+                    r.calls().stream().filter(KillPlayerCall.class::isInstance).map(KillPlayerCall.class::cast)
+                            .findFirst().orElseThrow().result().exit());
+            assertFalse(r.globalWrites().contains(GlobalField.INVINCIBLE));
+        }
+        if (vector.equals("alias0")) {
+            assertEquals(0, r.player().actor().motion().flags()); assertTrue(r.otherSlots().isEmpty());
+            assertEquals(LANDING, r.playerWrites());
+        }
+        if (vector.equals("free32") || vector.equals("reused127") || vector.equals("sameValue32")) {
+            int index = vector.equals("reused127") ? 127 : 32;
+            assertEquals(List.of(s.pool.state(index).moveByte(ByteField.FLAGS, 0xA5)), r.otherSlots());
+            assertEquals(LANDING, r.playerWrites());
+            assertEquals(Set.of(ByteField.SOLID_TYPE, ByteField.FLAGS), r.objectWrites());
+        }
+        if (vector.equals("full")) assertTrue(s.pool.findObjSlot().isEmpty());
+    }
+
+    @ParameterizedTest @CsvSource({
+            "drowning,PLAYER_DROWNING", "invisible,PLAYER_INVISIBLE", "dead6,PLAYER_DEAD", "dead255,PLAYER_DEAD",
+            "absent,PLAYER_ABSENT", "offscreen,OBJECT_OFFSCREEN", "debugHigh,DEBUG_MODE",
+            "left,X_RANGE_LEFT", "right,X_RANGE_RIGHT", "bored,BORED_NOT_STOOD_ON",
+            "above,Y_RANGE_ABOVE", "below,Y_RANGE_BELOW", "type1rising,TOP_SOLID_RISING",
+            "type1side,TOP_SOLID_SIDE", "type1below,TOP_SOLID_BELOW", "discBelow,SPINNING_DISC_BELOW",
+            "monitorRoll,MONITOR_ROLLING", "springAir,SPRING_SIDE_AIRBORNE", "shallow,SHALLOW_SIDE",
+            "negativeWidth,X_RANGE_LEFT"})
+    void plainPrefixNativeGatesAndDirtyTypeBranchesKeepTheExactGetOffNonwrites(String vector, GetOffReason reason) {
+        var s = new Scene();
+        switch (vector) {
+            case "drowning" -> s.p.anim = 0x17;
+            case "invisible" -> s.p.ctrl = 0x40;
+            case "dead6" -> s.p.routine = 6;
+            case "dead255" -> s.p.routine = 255;
+            case "absent" -> s.p.id = 0;
+            case "offscreen" -> s.object(o -> o.moveByte(ByteField.SPRITE_FLAGS, 4));
+            case "debugHigh" -> s.debugMode = 0x100;
+            case "left" -> s.p.x = 0x00E58000;
+            case "right" -> s.p.x = 0x011A8000;
+            case "bored" -> s.p.anim = 0x2B;
+            case "above" -> s.p.y = 0x005E1234;
+            case "below" -> s.p.y = 0x00A11234;
+            case "type1rising" -> { s.object(o -> o.moveByte(ByteField.ROUTINE_2, 1)); s.p.yv = -1; }
+            case "type1side", "springAir", "shallow" -> {
+                s.p.x = 0x00E88000; s.p.y = 0x00801234; s.p.yv = 0;
+                if (vector.equals("type1side")) s.object(o -> o.moveByte(ByteField.ROUTINE_2, 1));
+                if (vector.equals("springAir")) s.object(o -> o.moveByte(ByteField.ID, 0xA));
+                if (vector.equals("shallow")) s.p.y = 0x00631234; // CMPI.B depth=4.
+            }
+            case "type1below", "discBelow" -> {
+                s.p.y = 0x009F1234; s.p.yv = 0;
+                if (vector.equals("type1below")) s.object(o -> o.moveByte(ByteField.ROUTINE_2, 1));
+                else s.object(o -> o.moveByte(ByteField.ID, 9));
+            }
+            case "monitorRoll" -> { s.object(o -> o.moveByte(ByteField.ID, 0x19)); s.p.flags = 6; }
+            case "negativeWidth" -> s.object(o -> o.moveByte(ByteField.WIDTH, 0x80));
+            default -> fail(vector);
+        }
+        var r = plainCompleted(s);
+        assertEquals(Path.GET_OFF, r.path()); assertEquals(Optional.of(reason), r.getOffReason());
+        assertEquals(OptionalInt.of(0), r.d0()); assertEquals(s.p.player(), r.player()); assertEquals(s.globals(), r.globals());
+        assertEquals(s.object().moveByte(ByteField.SOLID_TYPE, 0), r.object());
+        assertEquals(Set.of(ByteField.SOLID_TYPE), r.objectWrites()); assertTrue(r.playerWrites().isEmpty());
+        assertTrue(r.globalWrites().isEmpty()); assertTrue(r.otherSlots().isEmpty()); assertTrue(r.fmRequests().isEmpty());
+        assertEquals(List.of(call(Routine.STOP_OBJ_PUSH), call(Routine.GET_OFF_OBJECT)), r.calls());
+    }
+
+    @ParameterizedTest @CsvSource({
+            "0,0,1,1,256,256,97,256", "65535,65535,1,1,257,255,98,255",
+            "1,1,-1,-1,255,65281,96,65281", "65280,65280,1,1,257,0,98,0",
+            "256,256,-1,-1,256,0,97,0", "49152,4660,384,64,258,16384,97,21044"})
+    void plainPrefixCarriesBothLongsWithLiteralFirstLastAndBothFractionBoundaries(
+            int xf, int yf, int xv, int yv, int xWord, int xFraction, int yWord, int yFraction) {
+        var s = new Scene().standing(); s.p.x = 0x01000000 | xf; s.p.y = 0x00610000 | yf; s.p.xv = 0;
+        s.object(o -> o.moveWord(WordField.X_VELOCITY, xv).moveWord(WordField.Y_VELOCITY, yv));
+        var r = plainCompleted(s); var expected = s.p.copy();
+        expected.x = (xWord << 16) | xFraction; expected.y = (yWord << 16) | yFraction; expected.jump = 0;
+        assertEquals(expected.player(), r.player()); assertEquals(CARRY, r.playerWrites());
+        assertEquals(Set.of(ByteField.SOLID_TYPE, ByteField.FLAGS), r.objectWrites());
+        assertEquals(Path.STAND_ON, r.path()); assertEquals(OptionalInt.of(1), r.d0());
+        assertEquals(xv > 0 ? 0xC0 : 0x40, r.globals().primaryAngle());
+        assertEquals(r.globals().primaryAngle(), r.globals().secondaryAngle());
+    }
+
+    @ParameterizedTest @CsvSource({"side,0,0", "side,1,65535", "side,65535,1", "side,65535,65535",
+            "bottom,0,0", "bottom,1,65535", "bottom,65535,1", "bottom,65535,65535"})
+    void plainPrefixWordOnlyShovesPreserveEveryFractionAndDeclareNoLongStore(String kind, int xf, int yf) {
+        boolean side = kind.equals("side"); var s = side ? side() : below();
+        s.p.x = (side ? 0x00E80000 : 0x01000000) | xf;
+        s.p.y = (side ? 0x00800000 : 0x009F0000) | yf;
+        var r = plainCompleted(s); var expected = s.p.copy();
+        if (side) { expected.x = 0x00E60000 | xf; expected.flags = 0x20; expected.gv = 0; expected.xv = 0; expected.push = 40; }
+        else { expected.y = 0x00A10000 | yf; expected.yv = 0; }
+        assertEquals(expected.player(), r.player());
+        assertEquals(side ? Set.of(PUSH_OBJECT, CENTRE_X, FLAGS, GROUND_VELOCITY, X_VELOCITY)
+                : Set.of(CENTRE_Y, Y_VELOCITY), r.playerWrites());
+        assertFalse(r.playerWrites().contains(CENTRE_X_FRACTION)); assertFalse(r.playerWrites().contains(CENTRE_Y_FRACTION));
+        assertEquals(side ? Path.HALT_ON_X : Path.HIT_BOTTOM, r.path());
+        assertEquals(OptionalInt.of(side ? 0 : 1), r.d0());
+    }
+
+    @ParameterizedTest @ValueSource(ints = {0, 1, 2, 255})
+    void plainPrefixNeverForcesTypeOneBeforeItsFirstUnavailableFloorRead(int type) {
+        var s = plainDiscScene(); s.object(o -> o.moveByte(ByteField.ROUTINE_2, type));
+        s.p.spr = 0x44; prefixCell(s, 1, 0, 0xF9);
+        var stop = plainStopped(s, CdSolidObject.StopSite.FLOOR_PRIMARY); var e = s.p.copy(); e.y = 0x00611234;
+        plainPrefixValues(s, stop, s.object(), e, s.globals(), Set.of(), PREFIX_POSITION, Set.of(), List.of());
+        assertEquals(type, stop.prefix().object().unsignedByte(ByteField.SOLID_TYPE));
+        prefixWordStop(stop, 0x21F2E0, 1, 0xF9, 122,
+                com.openggf.game.soniccd.level.CdTerrainCollision.UnavailableReason.OUTSIDE_SUPPLIED_CHUNKS);
+    }
+
+    @ParameterizedTest @ValueSource(strings = {"first", "second", "primaryRaw", "secondaryRaw", "roomSeedRight",
+            "roomSeedLeft", "roomRaw", "ceilingRaw", "collisionId", "odd"})
+    void plainPrefixUsesTheReachedSharedProbeAndRetainsOnlyItsActualRawStores(String vector) {
+        var s = plainDiscScene(); s.p.spr = 0x44;
+        s.object(o -> o.moveByte(ByteField.ROUTINE_2, 0xA7));
+        switch (vector) {
+            case "first", "roomSeedRight", "roomSeedLeft" -> prefixCell(s, 1, 0, 0xF9);
+            case "second" -> {
+                s.object(o -> o.moveWord(WordField.X, 0xF8)); s.p.x = 0x00F88000;
+                prefixCell(s, 0, 0, 0xF9); prefixBlock(s, 2, 0, 7, 0x2001);
+                Arrays.fill(s.terrain.heights, 16, 32, (byte) 1);
+            }
+            case "primaryRaw" -> {
+                s.object(o -> o.moveWord(WordField.Y, 0x10B)); s.p.y = 0x00EE1234;
+                prefixCell(s, 1, 1, 0xF9); prefixBlock(s, 2, 0, 15, 0x2001);
+                s.terrain.angles[1] = 3; Arrays.fill(s.terrain.heights, 16, 32, (byte) 0);
+            }
+            case "secondaryRaw" -> {
+                s.object(o -> o.moveWord(WordField.X, 0xF8).moveWord(WordField.Y, 0x10B));
+                s.p.x = 0x00F88000; s.p.y = 0x00EE1234;
+                prefixCell(s, 0, 1, 0xF9); prefixBlock(s, 2, 14, 15, 0x2001);
+                s.terrain.angles[1] = 3; Arrays.fill(s.terrain.heights, 16, 32, (byte) 0);
+            }
+            case "roomRaw" -> {
+                s.object(o -> o.moveWord(WordField.X, 0xF4).moveWord(WordField.X_VELOCITY, 0x100));
+                s.p.x = 0x00F40000; s.p.xv = 0; s.p.yv = 0;
+                prefixCell(s, 1, 0, 0xF9); prefixBlock(s, 2, 15, 6, 0x4001); s.terrain.angles[1] = 3;
+            }
+            case "ceilingRaw" -> {
+                s.object(o -> o.moveWord(WordField.Y, 0x12A).moveWord(WordField.Y_VELOCITY, -0x100));
+                s.p.y = 0x010D1234; s.p.yv = 0;
+                prefixCell(s, 1, 0, 0xF9); prefixBlock(s, 2, 0, 0, 0x4001);
+                s.terrain.angles[1] = 3; Arrays.fill(s.terrain.heights, 16, 32, (byte) 0);
+            }
+            case "collisionId" -> { prefixCell(s, 1, 0, 0x82); prefixBlock(s, 3, 0, 7, 0x2384); }
+            case "odd" -> { s.p.spr = 4; prefixCell(s, 1, 0, 0x80); }
+            default -> fail(vector);
+        }
+        if (vector.equals("roomSeedRight")) {
+            s.object(o -> o.moveWord(WordField.X_VELOCITY, 0x100)); s.p.xv = 0; s.p.yv = 0;
+        }
+        if (vector.equals("roomSeedLeft")) {
+            s.object(o -> o.moveWord(WordField.X, 0x10B).moveWord(WordField.X_VELOCITY, -0x100));
+            s.p.x = 0x010B0000; s.p.xv = 0; s.p.yv = 0; s.primary = s.secondary = 0x40;
+        }
+        var e = s.p.copy(); e.y = 0x00611234; Globals globals = s.globals();
+        Set<PlayerField> players = PREFIX_POSITION; Set<GlobalField> writes = Set.of();
+        var site = CdSolidObject.StopSite.FLOOR_PRIMARY;
+        int address = 0x21F2E0, layoutOffset = 1, layoutByte = 0xF9, effective = 122;
+        switch (vector) {
+            case "second" -> {
+                site = CdSolidObject.StopSite.FLOOR_SECONDARY; address = 0x21F2FC; layoutOffset = 0;
+                globals = new Globals(0, 4, 0, 0x34); writes = Set.of(GlobalField.PRIMARY_ANGLE);
+            }
+            case "primaryRaw" -> {
+                e.y = 0x00EC1234; address = 0x21F200; layoutOffset = 129;
+                globals = new Globals(0, 4, 3, 0x34); writes = Set.of(GlobalField.PRIMARY_ANGLE);
+            }
+            case "secondaryRaw" -> {
+                e.y = 0x00EC1234; site = CdSolidObject.StopSite.FLOOR_SECONDARY;
+                address = 0x21F21C; layoutOffset = 128;
+                globals = new Globals(0, 4, 0x12, 3); writes = Set.of(GlobalField.SECONDARY_ANGLE);
+            }
+            case "roomSeedRight", "roomSeedLeft", "roomRaw" -> {
+                site = CdSolidObject.StopSite.ROOM_PRIMARY;
+                players = Set.of(CENTRE_X, CENTRE_X_FRACTION, CENTRE_Y);
+                writes = Set.of(GlobalField.PRIMARY_ANGLE, GlobalField.SECONDARY_ANGLE);
+                if (vector.equals("roomSeedRight")) { e.x = 0x01018000; address = 0x21F2C0; globals = new Globals(0, 4, 0xC0, 0xC0); }
+                if (vector.equals("roomSeedLeft")) { e.x = 0x010A0000; address = 0x21F2C0; globals = s.globals(); }
+                if (vector.equals("roomRaw")) { e.x = 0x00F50000; address = 0x21F2C0; globals = new Globals(0, 4, 3, 0xC0); }
+            }
+            case "ceilingRaw" -> {
+                e.y = 0x010A1234; site = CdSolidObject.StopSite.CEILING_PRIMARY; address = 0x21F3E0;
+                globals = new Globals(0, 4, 3, 0x34); writes = Set.of(GlobalField.PRIMARY_ANGLE);
+            }
+            case "collisionId" -> { }
+            case "odd" -> { address = 0x21FEE1; layoutByte = 0x80; effective = 0; }
+            case "first" -> { }
+            default -> fail(vector);
+        }
+        var stopped = plainStopped(s, site);
+        plainPrefixValues(s, stopped, s.object(), e, globals, Set.of(), players, writes, List.of());
+        if (vector.equals("collisionId")) {
+            assertEquals(new CdSolidObject.CollisionId(900), stopped.stop().detail());
+            assertEquals("Collision ID requires unavailable resident bytes: 900", stopped.stop().originalException().getMessage());
+        } else {
+            prefixWordStop(stopped, address, layoutOffset, layoutByte, effective,
+                    vector.equals("odd")
+                            ? com.openggf.game.soniccd.level.CdTerrainCollision.UnavailableReason.ODD_NATIVE_WORD_ADDRESS
+                            : com.openggf.game.soniccd.level.CdTerrainCollision.UnavailableReason.OUTSIDE_SUPPLIED_CHUNKS);
+        }
+        assertTrue(stopped.prefix().otherSlots().isEmpty()); assertTrue(stopped.prefix().fmRequests().isEmpty());
+    }
+
+    @ParameterizedTest @CsvSource({"1,RESERVED_SLOT_ADDRESS", "5,RESERVED_SLOT_ADDRESS", "31,RESERVED_SLOT_ADDRESS",
+            "128,OUT_OF_POOL_ADDRESS", "255,OUT_OF_POOL_ADDRESS"})
+    void plainPrefixStandReleaseHasItsOwnScopeAndKeepsAllPrecedingNativeStores(int stand, UnsupportedBoundary boundary) {
+        var s = plainDiscScene(); s.p.flags = 8; s.p.stand = stand; s.p.yv = 0;
+        s.object(o -> o.moveByte(ByteField.ROUTINE_2, 2));
+        var stopped = plainStopped(s, CdSolidObject.StopSite.STAND_RELEASE); var e = s.p.copy();
+        e.y = 0x00611234; e.jump = 0;
+        plainPrefixValues(s, stopped, s.object().moveByte(ByteField.SOLID_TYPE, 0).moveByte(ByteField.FLAGS, 8),
+                e, s.globals(), Set.of(ByteField.SOLID_TYPE, ByteField.FLAGS), CARRY, Set.of(),
+                List.of(new FloorDistance(27, NONE, NONE), call(Routine.STAND_ON_OBJECT)));
+        assertEquals(new CdSolidObject.SlotAddress(boundary, stand, Routine.STAND_ON_OBJECT), stopped.stop().detail());
+        var original = assertInstanceOf(UnsupportedSolidObject.class, stopped.stop().originalException());
+        assertEquals(boundary, original.boundary()); assertEquals(stand, original.slotByte());
+        assertEquals(Routine.STAND_ON_OBJECT, original.routine());
+    }
+
+    @ParameterizedTest @ValueSource(strings = {"kill", "rolledKill", "miniKill", "chargeOnly"})
+    void plainPrefixCompletedKillAndChargeRequestsSurviveALaterGenuineWallReadFaultInOrder(String vector) {
+        var s = plainLateWallScene(vector); var stopped = plainStopped(s, CdSolidObject.StopSite.ROOM_PRIMARY);
+        var e = s.p.copy(); e.x = 0x00E68000; e.flags = 2; e.stand = 0; e.stick = 0; e.ctrl = 0;
+        Set<PlayerField> players; Set<GlobalField> globalWrites;
+        if (vector.equals("chargeOnly")) {
+            e.push = 40;
+            players = Set.of(PUSH_OBJECT, STICK, FLAGS, PLAYER_CONTROL, STAND_OBJECT, CENTRE_X);
+            globalWrites = Set.of(GlobalField.PRIMARY_ANGLE, GlobalField.SECONDARY_ANGLE);
+            plainPrefixValues(s, stopped, s.object().moveByte(ByteField.FLAGS, 0).moveByte(ByteField.SOLID_TYPE, 0),
+                    e, new Globals(1, 4, 0x40, 0x40), Set.of(ByteField.FLAGS, ByteField.SOLID_TYPE),
+                    players, globalWrites,
+                    List.of(call(Routine.PUSH_OBJECT), call(Routine.GET_OFF_OBJECT),
+                            new PlayFm(FmSound.FM_CHARGESTOP), call(Routine.CHECK_WALL_CRUSH)));
+            assertEquals(List.of(FmSound.FM_CHARGESTOP), stopped.prefix().fmRequests());
+        } else {
+            int y = vector.equals("kill") ? 0x80 : vector.equals("miniKill") ? 0x7E : 0x7B;
+            e.y = (y << 16) | 0x1234; e.routine = 6; e.yv = -0x700; e.xv = 0; e.gv = 0;
+            e.rot = y; e.anim = 0x18; e.tile = 0x8780; e.priority = 0; e.jump = 0;
+            if (!vector.equals("kill")) { e.xr = s.mini != 0 ? 5 : 9; e.yr = s.mini != 0 ? 10 : 19; }
+            players = with(KILL, CENTRE_X, PLAYER_CONTROL, STAND_OBJECT);
+            if (!vector.equals("kill")) players = with(players, CENTRE_Y, X_RADIUS, Y_RADIUS);
+            globalWrites = EnumSet.allOf(GlobalField.class);
+            var calls = stopped.prefix().calls(); assertEquals(6, calls.size());
+            assertEquals(call(Routine.PUSH_OBJECT), calls.get(0));
+            var killed = kill(calls.get(1)); assertEquals(CdPlayerTouchResponse.Exit.KILL_PLAYER, killed.exit());
+            assertEquals(vector.equals("kill")
+                            ? List.of(new CdPlayerTouchResponse.ResetOnFloor(), new CdPlayerTouchResponse.PlayFm(FmSound.FM_HURT))
+                            : List.of(new CdPlayerTouchResponse.ResetOnFloor(),
+                                    new CdPlayerTouchResponse.PlayFm(FmSound.FM_CHARGESTOP),
+                                    new CdPlayerTouchResponse.PlayFm(FmSound.FM_HURT)), killed.calls());
+            assertEquals(List.of(call(Routine.GET_OFF_OBJECT), new PlayFm(FmSound.FM_CHARGESTOP),
+                    call(Routine.STOP_OBJ_PUSH), call(Routine.CHECK_WALL_CRUSH)), calls.subList(2, 6));
+            plainPrefixValues(s, stopped, s.object().moveByte(ByteField.FLAGS, 0).moveByte(ByteField.SOLID_TYPE, 0),
+                    e, new Globals(0, 0, 0x40, 0x40), Set.of(ByteField.FLAGS, ByteField.SOLID_TYPE),
+                    players, globalWrites, calls);
+            assertEquals(vector.equals("kill") ? List.of(FmSound.FM_HURT, FmSound.FM_CHARGESTOP)
+                    : List.of(FmSound.FM_CHARGESTOP, FmSound.FM_HURT, FmSound.FM_CHARGESTOP), stopped.prefix().fmRequests());
+        }
+        // No RoomInFront metadata exists without its return; no later push clear/XVel store ran.
+        assertTrue(stopped.prefix().calls().stream().noneMatch(RoomInFront.class::isInstance));
+        assertFalse(stopped.prefix().playerWrites().contains(CENTRE_X_FRACTION));
+        assertFalse(stopped.prefix().playerWrites().contains(CENTRE_Y_FRACTION));
+        assertTrue(stopped.prefix().otherSlots().isEmpty());
+        prefixWordStop(stopped, vector.equals("rolledKill") || vector.equals("miniKill") ? 0x21F2FA : 0x21F31A,
+                0, 0xF9, 122, com.openggf.game.soniccd.level.CdTerrainCollision.UnavailableReason.OUTSIDE_SUPPLIED_CHUNKS);
+        var original = stopped.stop().originalException();
+        assertEquals(IllegalStateException.class, original.getClass());
+        assertSame(original, assertThrows(IllegalStateException.class, () -> { throw stopped.stop().originalException(); }));
+        assertSame(original, stopped.stop().originalException()); // Exact terminal exception reference, never a replacement.
+    }
+
+    @ParameterizedTest @CsvSource({"1,RESERVED_SLOT_ADDRESS", "7,RESERVED_SLOT_ADDRESS", "31,RESERVED_SLOT_ADDRESS",
+            "128,OUT_OF_POOL_ADDRESS", "200,OUT_OF_POOL_ADDRESS", "255,OUT_OF_POOL_ADDRESS"})
+    void plainPrefixPushAddressFailureIsTheLegacyHostFailureBeforeAnySolidWrite(int push, UnsupportedBoundary boundary) {
+        var s = side(); s.p.push = push; s.p.stand = 40; s.p.flags = 8; s.p.charge = 1; s.p.ctrl = 1;
+        s.object(o -> o.moveByte(ByteField.FLAGS, 8).moveByte(ByteField.SOLID_TYPE, 2));
+        var owner = s.terrain.owner(); var cut = s.pool.capture(); var object = s.object(); var player = s.p.player();
+        var legacy = assertThrows(UnsupportedSolidObject.class,
+                () -> owner.run(Entry.SOLID_OBJECT, object, player, s.gates(), s.globals(), cut));
+        var actual = assertThrows(UnsupportedSolidObject.class,
+                () -> owner.runWithPrefix(Entry.SOLID_OBJECT, object, player, s.gates(), s.globals(), cut));
+        assertEquals(boundary, actual.boundary()); assertEquals(push, actual.slotByte());
+        assertEquals(Routine.PUSH_OBJECT, actual.routine()); assertEquals(legacy.getClass(), actual.getClass());
+        assertEquals(legacy.getMessage(), actual.getMessage());
+        assertEquals(object, s.object()); assertEquals(player, s.p.player()); plainPoolUnchanged(s, cut);
+        // PushObject's a2 read precedes GetOff, byte25 clear, shove and FM request. It is NOT STAND_RELEASE.
+    }
+
+    @Test void plainPrefixDiscardAndSameStateRepeatRetainNoCursorOrAuthority() {
+        var s = plainLateWallScene("rolledKill"); var owner = s.terrain.owner(); var cut = s.pool.capture();
+        var first = assertInstanceOf(CdSolidObject.NativeStopped.class,
+                owner.runWithPrefix(Entry.SOLID_OBJECT, s.object(), s.p.player(), s.gates(), s.globals(), cut));
+        var second = assertInstanceOf(CdSolidObject.NativeStopped.class,
+                owner.runWithPrefix(Entry.SOLID_OBJECT, s.object(), s.p.player(), s.gates(), s.globals(), cut));
+        assertEquals(first.prefix(), second.prefix()); assertEquals(first.stop().detail(), second.stop().detail());
+        assertEquals(first.stop().site(), second.stop().site());
+        assertNotSame(first.stop().originalException(), second.stop().originalException());
+        var fresh = s.p.copy(); fresh.spr = 4; // Same immutable terrain owner; selects resident chunk121 instead of122.
+        var legacy = owner.run(Entry.SOLID_OBJECT, s.object(), fresh.player(), s.gates(), s.globals(), cut);
+        assertEquals(legacy, assertInstanceOf(CdSolidObject.Completed.class,
+                owner.runWithPrefix(Entry.SOLID_OBJECT, s.object(), fresh.player(), s.gates(), s.globals(), cut)).completedResult());
+        assertEquals(List.of(FmSound.FM_CHARGESTOP, FmSound.FM_HURT, FmSound.FM_CHARGESTOP), first.prefix().fmRequests());
+        plainPoolUnchanged(s, cut);
+    }
+
+    @Test void plainPrefixHostNullInputsStillPropagateBeforeAnyNativeOutcome() {
+        var s = plainDiscScene(); var owner = s.terrain.owner(); var cut = s.pool.capture();
+        assertThrows(NullPointerException.class, () -> owner.runWithPrefix(Entry.SOLID_OBJECT, null, s.p.player(), s.gates(), s.globals(), cut));
+        assertThrows(NullPointerException.class, () -> owner.runWithPrefix(Entry.SOLID_OBJECT, s.object(), null, s.gates(), s.globals(), cut));
+        assertThrows(NullPointerException.class, () -> owner.runWithPrefix(Entry.SOLID_OBJECT, s.object(), s.p.player(), null, s.globals(), cut));
+        assertThrows(NullPointerException.class, () -> owner.runWithPrefix(Entry.SOLID_OBJECT, s.object(), s.p.player(), s.gates(), null, cut));
+        assertThrows(NullPointerException.class, () -> owner.runWithPrefix(Entry.SOLID_OBJECT, s.object(), s.p.player(), s.gates(), s.globals(), null));
+        plainPoolUnchanged(s, cut);
+    }
+
+    private static Scene plainDiscScene() {
+        var s = new Scene(); s.object(o -> o.moveByte(ByteField.ID, 9)); return s;
+    }
+
+    private static Scene plainLateWallScene(String vector) {
+        var s = side(); s.object(o -> o.moveByte(ByteField.ID, 9).moveByte(ByteField.FLAGS, 8)
+                .moveByte(ByteField.ROUTINE_2, 2).moveWord(WordField.X_VELOCITY, -0x100));
+        s.p.flags = vector.equals("rolledKill") || vector.equals("miniKill") ? 0x0C : 8;
+        s.p.stand = 40; s.p.charge = 1; s.p.ctrl = 1; s.p.stick = 0x55; s.p.rot = 0xAA; s.p.spr = 0x44;
+        s.invincible = 1;
+        if (!vector.equals("chargeOnly")) {
+            s.p.push = 41; s.other(41, o -> o.moveByte(ByteField.ID, 0).moveWord(WordField.X, 0xC0));
+        }
+        if (vector.equals("miniKill")) s.mini = 1;
+        prefixCell(s, 0, 0, 0xF9); return s;
+    }
+
+    private static Result plainCompleted(Scene s) {
+        var owner = s.terrain.owner(); var cut = s.pool.capture(); var object = s.object(); var player = s.p.player();
+        var legacy = owner.run(Entry.SOLID_OBJECT, object, player, s.gates(), s.globals(), cut);
+        var actual = assertInstanceOf(CdSolidObject.Completed.class,
+                owner.runWithPrefix(Entry.SOLID_OBJECT, object, player, s.gates(), s.globals(), cut)).completedResult();
+        assertEquals(legacy, actual); assertEquals(Entry.SOLID_OBJECT, actual.entry());
+        plainNonwrites(object, player, s.globals(), actual.object(), actual.player(), actual.globals(),
+                actual.objectWrites(), actual.playerWrites(), actual.globalWrites());
+        assertEquals(legacy.otherSlots(), actual.otherSlots()); assertEquals(legacy.calls(), actual.calls());
+        assertEquals(legacy.fmRequests(), actual.fmRequests()); plainPoolUnchanged(s, cut);
+        for (var other : actual.otherSlots()) {
+            var before = cut.slots().get(other.identity().dynamicIndex());
+            assertEquals(before.moveByte(ByteField.FLAGS, before.flags() & ~8), other);
+            assertArrayEquals(before.moveByte(ByteField.FLAGS, before.flags() & ~8).copyBytes(), other.copyBytes());
+        }
+        return actual;
+    }
+
+    private static CdSolidObject.NativeStopped plainStopped(Scene s, CdSolidObject.StopSite site) {
+        var owner = s.terrain.owner(); var cut = s.pool.capture(); var object = s.object(); var player = s.p.player();
+        var stopped = assertInstanceOf(CdSolidObject.NativeStopped.class,
+                owner.runWithPrefix(Entry.SOLID_OBJECT, object, player, s.gates(), s.globals(), cut));
+        assertEquals(site, stopped.stop().site()); assertEquals(Entry.SOLID_OBJECT, stopped.prefix().entry());
+        var original = stopped.stop().originalException();
+        var legacy = assertThrows(original.getClass(),
+                () -> owner.run(Entry.SOLID_OBJECT, object, player, s.gates(), s.globals(), cut));
+        assertEquals(legacy.getClass(), original.getClass()); assertEquals(legacy.getMessage(), original.getMessage());
+        var p = stopped.prefix();
+        plainNonwrites(object, player, s.globals(), p.object(), p.player(), p.globals(),
+                p.objectWrites(), p.playerWrites(), p.globalWrites());
+        assertSame(original, assertThrows(RuntimeException.class, () -> { throw original; }));
+        plainPoolUnchanged(s, cut); return stopped;
+    }
+
+    private static void plainPrefixValues(Scene s, CdSolidObject.NativeStopped stopped, CdObjectState object, P player,
+                                          Globals globals, Set<ByteField> objects, Set<PlayerField> players,
+                                          Set<GlobalField> globalWrites, List<Call> calls) {
+        var p = stopped.prefix(); assertEquals(object, p.object()); assertArrayEquals(object.copyBytes(), p.object().copyBytes());
+        assertEquals(player.player(), p.player()); assertEquals(globals, p.globals());
+        assertEquals(objects, p.objectWrites()); assertEquals(players, p.playerWrites());
+        assertEquals(globalWrites, p.globalWrites()); assertEquals(calls, p.calls());
+        assertEquals(s.p.id, p.player().slotId());
+    }
+
+    private static void plainPoolUnchanged(Scene s, CdObjectPool.Snapshot cut) {
+        assertEquals(96, cut.slots().size()); assertEquals(cut.slots(), s.pool.capture().slots());
+        for (int i = 0; i < 96; i++) assertArrayEquals(cut.slots().get(i).copyBytes(), s.pool.state(32 + i).copyBytes());
+    }
+
+    private static void plainNonwrites(CdObjectState beforeObject, Player before, Globals beforeGlobals,
+                                       CdObjectState afterObject, Player after, Globals afterGlobals,
+                                       Set<ByteField> objects, Set<PlayerField> players, Set<GlobalField> globals) {
+        byte[] a = beforeObject.copyBytes(), b = afterObject.copyBytes();
+        for (int offset = 0; offset < 64; offset++) {
+            int at = offset;
+            if (objects.stream().noneMatch(field -> field.byteOffset() == at)) assertEquals(a[offset], b[offset], "object+" + offset);
+        }
+        assertEquals(before.slotId(), after.slotId()); var m = before.actor().motion(); var n = after.actor().motion();
+        assertEquals(m.spriteFlags(), n.spriteFlags()); assertEquals(m.previousAnimation(), n.previousAnimation());
+        assertEquals(m.charge(), n.charge()); assertEquals(m.moveLock(), n.moveLock());
+        assertEquals(m.previousPrimaryAngle(), n.previousPrimaryAngle()); assertEquals(m.previousSecondaryAngle(), n.previousSecondaryAngle());
+        for (var field : PlayerField.values())
+            if (!players.contains(field)) assertEquals(plainPlayerValue(before, field), plainPlayerValue(after, field), field.name());
+        for (var field : GlobalField.values())
+            if (!globals.contains(field)) assertEquals(plainGlobalValue(beforeGlobals, field), plainGlobalValue(afterGlobals, field), field.name());
+    }
+
+    private static int plainPlayerValue(Player player, PlayerField field) {
+        var a = player.actor(); var m = a.motion();
+        return switch (field) {
+            case TILE -> a.tile();
+            case CENTRE_X -> m.centreX16_16() >>> 16;
+            case CENTRE_X_FRACTION -> m.centreX16_16() & 0xFFFF;
+            case CENTRE_Y -> m.centreY16_16() >>> 16;
+            case CENTRE_Y_FRACTION -> m.centreY16_16() & 0xFFFF;
+            case X_VELOCITY -> m.xVelocity();
+            case Y_VELOCITY -> m.yVelocity();
+            case GROUND_VELOCITY -> m.groundVelocity();
+            case Y_RADIUS -> m.yRadius();
+            case X_RADIUS -> m.xRadius();
+            case PRIORITY -> a.priority();
+            case ANIMATION -> m.animation();
+            case PUSH_OBJECT -> player.pushObject();
+            case FLAGS -> m.flags();
+            case ROUTINE -> m.routine();
+            case ANGLE -> m.angle();
+            case PLAYER_CONTROL -> m.playerControl();
+            case HURT -> a.hurt();
+            case STICK -> m.stick();
+            case ROTATION_DISTANCE -> a.rotationDistance();
+            case PLAYER_JUMP -> m.playerJump();
+            case STAND_OBJECT -> player.standObject();
+        };
+    }
+
+    private static int plainGlobalValue(Globals globals, GlobalField field) {
+        return switch (field) {
+            case INVINCIBLE -> globals.invincible();
+            case SCORE_CHAIN -> globals.scoreChain();
+            case PRIMARY_ANGLE -> globals.primaryAngle();
+            case SECONDARY_ANGLE -> globals.secondaryAngle();
+        };
     }
 }

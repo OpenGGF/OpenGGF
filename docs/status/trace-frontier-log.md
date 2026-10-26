@@ -113377,3 +113377,33 @@ smoke failures remain separately recorded. Next finite native owner: Monitor19.
   All production is unchanged from the earlier728 guard pass. Current natural
   frontier remains3258 returned /3259 ID09/live46 before Init. No full-smoke,
   full-USA or regional/native-parity certification; full goal continues.
+
+- 2026-10-26, privatef381b4235 plus the frozen Disc prerequisite packets:
+  authenticated assets156 pass71893; plain Solid232 pass60341; mapper42 has
+  one new enum-count fixture failure, repaired by only37→106/narrow91496=1.
+  State8 ownership/carry passes1203 across six affected classes56094, and
+  Ring EGL/full-course25515 passes1. Exact times/commands/failed identities
+  and source pins are in the dated implementation plan. These are separate
+  bounded results, not a combined total or a moved controller frontier.
+- Disc body62983 first runs75/6/1/0: six disclosed arithmetic/CSV assertions
+  plus a pre-game loader rejection. RootR2 changes no production, corrects
+  exact literals and supplies a constructible flaggedF9/player44 native
+  floor stop with explicit21F2E0 details; narrow77824 passes14. The withdrawn
+  old-angle80/X247 concern stays unchanged. After the prepared Frame ports,
+  combined49018 passes1058/0/0/0 at10:17:02Z (1m38s,queue0): Frame591,
+  old Runtime392, Disc75. Fresh exact XML/J25/privatecwd/media checked.
+- Actual WorldLoad53 plus Ring EGL/full-course35430 passes54/0/0/0 at
+  10:27:41Z (36.984s,queue0) after the Frame refactor. Command: queued Maven
+  -Dmse=off, actual media/S2 donor, surfaceless-egl and EGL opt-in,
+  '-Dtest=TestSonicCdOpeningWorldLoad,TestSonicCdOpeningWorldEgl#actualEglNormalInputPickupAndFullCourseReplay'.
+  Fresh properties/no skips verified. Source-only Body and Frame-port reviews
+  identify no new actionable P1/P2 within their finite contracts. Runtime
+  still stops3259 before unowned09 Init; no actual Disc World/contact,
+  controlled-body, whole-USA or regional/native-parity claim is made.
+
+- Final component guards11366 pass728/0/0/0 at10:44:00Z (5m06s execution,
+  queue wait not retained), command queued Maven -Dmse=off -Pguards test -B
+  with unset displays/Lua5.4. Ninety fresh executable XMLs/individual counts,
+  Java25/privatecwd and zero skips checked; all current Java pins unchanged.
+  This closes the component guard obligation, not the pending ID09 Runtime
+  join or controller3259. No full-smoke/release/full-game certification.

@@ -91,14 +91,16 @@ public final class CdPlayerBody {
      * Shared physics, look, angle buffers and controls are exclusively in Environment.
      * rotationDistance is native byte39 (oPlayerRotDist), adjacent to motion.stick at38.
      * Main/MODE do not write it; KillPlayer's word38 and later object owners do.
-     * There is no implicit zero/default overload: the actor ingress/capture supplies it.
+     * rotationAngle is the independent native byte2B (oPlayerRotAngle, Level/_Definitions.inc:88).
+     * ObjSonic does not write it; Disc owns its stores, and a new LevelStart .ClearObjects owns its clear.
+     * There is no implicit zero/default overload: the actor ingress/capture supplies both bytes.
      */
     public record State(CdPlayerMotionState motion, AnimationCursor animation, Header header,
-                        Timers timers, History history, int rotationDistance, ObjectLinks objectLinks) {
+                        Timers timers, History history, int rotationDistance, ObjectLinks objectLinks, int rotationAngle) {
         public State {
             Objects.requireNonNull(motion); Objects.requireNonNull(animation); Objects.requireNonNull(header);
             Objects.requireNonNull(timers); Objects.requireNonNull(history); byteValue(rotationDistance);
-            Objects.requireNonNull(objectLinks, "player object links");
+            Objects.requireNonNull(objectLinks, "player object links"); byteValue(rotationAngle);
         }
     }
 
@@ -1010,12 +1012,13 @@ public final class CdPlayerBody {
         final int levelFrames, timeAttack, debugMode, debugCheat, timeWarpTimer, bossMusic;
         int camX, invincible, hurt, invincibilityTimer, shoesTimer, resetTimer, rotationDistance;
         final ObjectLinks objectLinks;
+        private final int rotationAngle;
         boolean displayEligible;
         Optional<CdPlayerMovement.Boundary> modeBoundary = Optional.empty();
         final List<Effect> effects = new ArrayList<>();
         Cursor(State state, Environment environment) {
             motion = state.motion(); animation = state.animation(); header = state.header(); history = state.history();
-            rotationDistance = state.rotationDistance(); objectLinks = state.objectLinks();
+            rotationDistance = state.rotationDistance(); objectLinks = state.objectLinks(); rotationAngle = state.rotationAngle();
             env = environment; controls = environment.controls(); var g = environment.globals();
             levelFrames = g.levelFrames(); camX = g.cameraXCentre(); timeAttack = g.timeAttackMode();
             debugMode = g.debugMode(); debugCheat = g.debugCheat(); timeWarpTimer = g.timeWarpTimer();
@@ -1136,7 +1139,7 @@ public final class CdPlayerBody {
         }
         Result finish(Boundary boundary) {
             var state = new State(motion, animation, header, new Timers(hurt, invincibilityTimer, shoesTimer, resetTimer),
-                    history, rotationDistance, objectLinks);
+                    history, rotationDistance, objectLinks, rotationAngle);
             var globals = new Globals(levelFrames, camX, timeAttack, debugMode, debugCheat, timeWarpTimer, invincible, bossMusic);
             var environment = new Environment(env.movement(), controls, globals, env.dynamicSlots());
             Optional<DisplayPublication> display = boundary == Boundary.MAIN_RETURN || boundary == Boundary.HURT_RETURN

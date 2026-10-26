@@ -8,6 +8,7 @@ import com.openggf.game.soniccd.player.CdPlayerBody;
 import com.openggf.game.soniccd.player.CdPlayerObjectTouch;
 import com.openggf.game.soniccd.objects.CdLevelGlobals;
 import com.openggf.game.soniccd.objects.CdSolidObject;
+import com.openggf.game.soniccd.objects.CdSpinningDisc;
 import com.openggf.game.soniccd.objects.CdSpring;
 import com.openggf.game.soniccd.objects.CdSpinTunnelTag;
 import com.openggf.game.soniccd.objects.CdObjectPool;
@@ -58,13 +59,13 @@ class TestCdPlayerFrameRuntime {
             var fixture = new Fixture(); var f = spinTunnelDirtyFrame(fixture); var old = f.captureActor(); var s = old.state();
             var motion = hurtMotion(s.motion(), v[0], v[1], s.motion().flags());
             f.restoreActor(new CdPlayerFrameRuntime.ActorState(old.owner(), new CdPlayerBody.State(motion, s.animation(),
-                    s.header(), s.timers(), s.history(), s.rotationDistance(), s.objectLinks()), old.display()));
+                    s.header(), s.timers(), s.history(), s.rotationDistance(), s.objectLinks(), s.rotationAngle()), old.display()));
             var before = f.captureActor(); var shared = f.captureShared(); var a = hurtActor(f); int uploads = fixture.dmas.size();
             f.bindArtPublication((request, state) -> fail("Y prefix has no art publication authority"));
             f.validateObjectPreHurtYRewind(a, v[2]); assertEquals(before, f.captureActor()); assertEquals(shared, f.captureShared());
             f.applyObjectPreHurtYRewind(a, v[2]);
             var expected = new CdPlayerBody.State(hurtMotion(motion, v[2], v[1], motion.flags()), s.animation(),
-                    s.header(), s.timers(), s.history(), s.rotationDistance(), s.objectLinks());
+                    s.header(), s.timers(), s.history(), s.rotationDistance(), s.objectLinks(), s.rotationAngle());
             assertEquals(new CdPlayerFrameRuntime.ActorState(before.owner(), expected, before.display()), f.captureActor());
             assertSame(s.animation(), f.state().animation()); assertSame(s.header(), f.state().header());
             assertSame(s.timers(), f.state().timers()); assertSame(s.history(), f.state().history());
@@ -292,7 +293,7 @@ class TestCdPlayerFrameRuntime {
         var f = spinTunnelDirtyFrame(fixture); var a = f.captureActor(); var s = a.state();
         f.restoreActor(new CdPlayerFrameRuntime.ActorState(a.owner(), new CdPlayerBody.State(hurtMotion(s.motion(),
                 s.motion().centreY16_16(), s.motion().yVelocity(), flags), s.animation(), s.header(), s.timers(), s.history(),
-                s.rotationDistance(), s.objectLinks()), a.display()));
+                s.rotationDistance(), s.objectLinks(), s.rotationAngle()), a.display()));
         var shared = f.captureShared(); var e = shared.environment(); var m = e.movement(); var b = e.globals(); var gates = m.gates();
         var next = new CdPlayerBody.Environment(new CdPlayerMovement.Environment(m.physics(), m.bounds(),
                 new CdPlayerMovement.Gates(gates.zoneAct(), gates.timeZone(), mini, gates.waterSlide(), gates.windTunnel(),
@@ -342,7 +343,7 @@ class TestCdPlayerFrameRuntime {
         var s = before.state(); var h = s.header(); var t = s.timers(); var a = r.actor();
         var expected = new CdPlayerBody.State(a.motion(), s.animation(), new CdPlayerBody.Header(h.slotId(), h.mappingAddress(),
                 a.tile(), a.priority(), h.width()), new CdPlayerBody.Timers(a.hurt(), t.invincibility(), t.speedShoes(), t.reset()),
-                s.history(), a.rotationDistance(), s.objectLinks());
+                s.history(), a.rotationDistance(), s.objectLinks(), s.rotationAngle());
         assertEquals(new CdPlayerFrameRuntime.ActorState(before.owner(), expected, before.display()), f.captureActor());
         var e = shared.environment(); var m = e.movement(); var g = m.globals(); var b = e.globals();
         var movementGlobals = new CdPlayerMovement.Globals(g.lookMode(), g.cameraYCentre(), g.primaryAngle(), g.secondaryAngle(),
@@ -479,7 +480,7 @@ class TestCdPlayerFrameRuntime {
             var s = actor.state(); var t = s.timers(); var value = result.state();
             assertEquals(new CdPlayerBody.State(s.motion(), s.animation(), s.header(),
                     new CdPlayerBody.Timers(t.hurt(), t.invincibility(), value.speedShoesTimer(), t.reset()),
-                    s.history(), s.rotationDistance(), s.objectLinks()), f.state());
+                    s.history(), s.rotationDistance(), s.objectLinks(), s.rotationAngle()), f.state());
             var e = shared.environment(); var m = e.movement(); var g = m.gates();
             var next = new CdPlayerBody.Environment(new CdPlayerMovement.Environment(value.physics(), m.bounds(),
                     new CdPlayerMovement.Gates(g.zoneAct(), g.timeZone(), g.miniSonic(), g.waterSlide(),
@@ -647,7 +648,7 @@ class TestCdPlayerFrameRuntime {
             var actor = f.captureActor(); var s = actor.state(); var t = s.timers();
             f.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(), new CdPlayerBody.State(s.motion(),
                     s.animation(), s.header(), new CdPlayerBody.Timers(t.hurt(), invincibility, t.speedShoes(), t.reset()),
-                    s.history(), s.rotationDistance(), s.objectLinks()), actor.display()));
+                    s.history(), s.rotationDistance(), s.objectLinks(), s.rotationAngle()), actor.display()));
             var shared = f.captureShared(); var e = shared.environment(); var g = e.globals();
             f.restoreShared(new CdPlayerFrameRuntime.SharedState(shared.owner(), new CdPlayerBody.Environment(e.movement(),
                     e.controls(), new CdPlayerBody.Globals(g.levelFrames(), g.cameraXCentre(), g.timeAttackMode(),
@@ -688,7 +689,7 @@ class TestCdPlayerFrameRuntime {
         var actor = f.captureActor(); var s = actor.state(); var t = s.timers();
         f.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(), new CdPlayerBody.State(s.motion(), s.animation(),
                 s.header(), new CdPlayerBody.Timers(t.hurt(), t.invincibility(), value.speedShoesTimer(), t.reset()),
-                s.history(), s.rotationDistance(), s.objectLinks()), actor.display()));
+                s.history(), s.rotationDistance(), s.objectLinks(), s.rotationAngle()), actor.display()));
         var shared = f.captureShared(); var e = shared.environment(); var m = e.movement(); var g = m.gates();
         f.restoreShared(new CdPlayerFrameRuntime.SharedState(shared.owner(), new CdPlayerBody.Environment(
                 new CdPlayerMovement.Environment(value.physics(), m.bounds(), new CdPlayerMovement.Gates(g.zoneAct(),
@@ -744,7 +745,7 @@ class TestCdPlayerFrameRuntime {
         assertSame(s, f.state()); assertEquals(before, f.captureActor()); assertEquals(shared, f.captureShared());
         f.applyObjectSpinTunnelResult(result);
         assertEquals(new CdPlayerBody.State(expected, s.animation(), s.header(), s.timers(), s.history(),
-                s.rotationDistance(), s.objectLinks()), f.state());
+                s.rotationDistance(), s.objectLinks(), s.rotationAngle()), f.state());
         assertSame(result.finalMotion(), f.state().motion());
         assertSame(s.animation(), f.state().animation()); assertSame(s.header(), f.state().header());
         assertSame(s.timers(), f.state().timers()); assertSame(s.history(), f.state().history());
@@ -772,7 +773,7 @@ class TestCdPlayerFrameRuntime {
         f.applyObjectSpinTunnelResult(result);
         var s = before.state();
         assertEquals(new CdPlayerBody.State(after, s.animation(), s.header(), s.timers(), s.history(),
-                s.rotationDistance(), s.objectLinks()), f.state());
+                s.rotationDistance(), s.objectLinks(), s.rotationAngle()), f.state());
         assertEquals(before.display(), f.display()); assertEquals(shared, f.captureShared());
         var applied = f.captureActor(); var same = new CdSpinTunnelTag.PlayerResult(after, after, Set.of(field));
         f.validateObjectSpinTunnelResult(same); f.applyObjectSpinTunnelResult(same);
@@ -819,7 +820,7 @@ class TestCdPlayerFrameRuntime {
         f.applyObjectSpinTunnelResult(new CdSpinTunnelTag.PlayerResult(m, changed, Set.of(CdSpinTunnelTag.PlayerField.FLAGS)));
         var s = before.state();
         assertEquals(new CdPlayerBody.State(changed, s.animation(), s.header(), s.timers(), s.history(),
-                s.rotationDistance(), s.objectLinks()), f.state());
+                s.rotationDistance(), s.objectLinks(), s.rotationAngle()), f.state());
         assertEquals(before.display(), f.display()); assertEquals(shared, f.captureShared());
     }
 
@@ -844,7 +845,7 @@ class TestCdPlayerFrameRuntime {
         var motion = new CdPlayerMotionState(m.centreX16_16() | 0x1357, m.centreY16_16() | 0xBEEF, xv, yv, 0x111,
                 4, 0, 0xE9, 0xD5, 9, 19, 0x1A, 0x35, 1, 2, -3, 4, 0x85, 0x16, 0x27);
         f.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(), new CdPlayerBody.State(motion, s.animation(),
-                s.header(), s.timers(), s.history(), s.rotationDistance(), s.objectLinks()), actor.display()));
+                s.header(), s.timers(), s.history(), s.rotationDistance(), s.objectLinks(), s.rotationAngle()), actor.display()));
         var before = f.captureActor(); var shared = f.captureShared(); var pool = new CdObjectPool();
         var result = new CdSpinTunnelTag(new CdSpinTunnelTag.Assets(0x200000)).step(spinTunnelObject(pool, motion, subtype),
                 motion, new CdSpinTunnelTag.Gates(0, 0, 0, raw)).player();
@@ -854,7 +855,7 @@ class TestCdPlayerFrameRuntime {
         f.validateObjectSpinTunnelResult(result); assertEquals(before, f.captureActor()); assertEquals(shared, f.captureShared());
         f.applyObjectSpinTunnelResult(result);
         assertEquals(new CdPlayerBody.State(expected, s.animation(), s.header(), s.timers(), s.history(),
-                s.rotationDistance(), s.objectLinks()), f.state());
+                s.rotationDistance(), s.objectLinks(), s.rotationAngle()), f.state());
         assertEquals(before.display(), f.display()); assertEquals(shared, f.captureShared());
     }
 
@@ -932,10 +933,11 @@ class TestCdPlayerFrameRuntime {
         for (int i = 0; i < history.length; i++) history[i] = (byte) (0x33 + 17 * i);
         var motion = new CdPlayerMotionState(0xFFFC1234, 0xFFFDBEEF, 0x100, -0x234, 0x345,
                 4, 0x60, 0xE9, 0xD5, 9, 19, 0x1A, 0x35, 0x76, 0x11, -0x1234, 0x85, 0xA5, 0x44, 0x88);
+        // Constructed dirty fixture ingress explicitly declares raw $2B = $D7.
         var state = new CdPlayerBody.State(motion, new CdPlayerBody.AnimationCursor(5, 7, 0x23),
                 new CdPlayerBody.Header(h.slotId(), h.mappingAddress(), 0x6780, 5, 0x27),
                 new CdPlayerBody.Timers(0x1357, 0x2468, 0x369A, 0x48BC),
-                new CdPlayerBody.History(CdAssetBytes.copyOf(history), 0xBC), 0xAB, new CdPlayerBody.ObjectLinks(0x7B, 0x9D));
+                new CdPlayerBody.History(CdAssetBytes.copyOf(history), 0xBC), 0xAB, new CdPlayerBody.ObjectLinks(0x7B, 0x9D), 0xD7);
         // Earlier actual DrawObject publication is deliberately retained while the closed-cut values are dirtied.
         f.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(), state, actor.display()));
         var shared = f.captureShared(); var movement = shared.environment().movement();
@@ -1020,9 +1022,10 @@ class TestCdPlayerFrameRuntime {
                 m.xVelocity(), m.yVelocity(), m.groundVelocity(), m.routine(), m.angle(), m.flags(), m.spriteFlags(),
                 m.xRadius(), m.yRadius(), m.animation(), m.previousAnimation(), m.playerJump(), m.charge(),
                 0x4567, m.stick(), m.playerControl(), m.previousPrimaryAngle(), m.previousSecondaryAngle());
+        // Constructed Spring fixture ingress explicitly declares raw $2B = $E3.
         var seeded = new CdPlayerBody.State(seededMotion, s.animation(), s.header(),
                 new CdPlayerBody.Timers(0x55, 0x2233, 0x4455, 0x6677), s.history(), 0xAA,
-                new CdPlayerBody.ObjectLinks(47, 63));
+                new CdPlayerBody.ObjectLinks(47, 63), 0xE3);
         f.restoreActor(new CdPlayerFrameRuntime.ActorState(captured.owner(), seeded, captured.display()));
         var player = solidPlayer(f); var globals = solidGlobals(f);
         var next = player;
@@ -1034,7 +1037,7 @@ class TestCdPlayerFrameRuntime {
         assertEquals(before, f.captureActor()); assertEquals(shared, f.captureShared());
         f.applyObjectSpringLaunch(call);
         assertEquals(new CdPlayerBody.State(next.actor().motion(), seeded.animation(), seeded.header(), seeded.timers(),
-                seeded.history(), seeded.rotationDistance(), seeded.objectLinks()), f.state());
+                seeded.history(), seeded.rotationDistance(), seeded.objectLinks(), seeded.rotationAngle()), f.state());
         assertEquals(0x1234, f.state().motion().centreX16_16() & 0xFFFF);
         assertEquals(0x5678, f.state().motion().centreY16_16() & 0xFFFF);
         assertEquals(0x4566, f.state().motion().moveLock());
@@ -1150,7 +1153,7 @@ class TestCdPlayerFrameRuntime {
                 m.moveLock(), m.stick(), m.playerControl(), m.previousPrimaryAngle(), m.previousSecondaryAngle());
         var seeded = new CdPlayerBody.State(motion, s.animation(), s.header(),
                 new CdPlayerBody.Timers(7, s.timers().invincibility(), s.timers().speedShoes(), s.timers().reset()),
-                s.history(), s.rotationDistance(), new CdPlayerBody.ObjectLinks(47, 0));
+                s.history(), s.rotationDistance(), new CdPlayerBody.ObjectLinks(47, 0), s.rotationAngle());
         f.restoreActor(new CdPlayerFrameRuntime.ActorState(captured.owner(), seeded, captured.display()));
         var player = solidPlayer(f); var globals = solidGlobals(f);
         var pool = new CdObjectPool(); var object = solidObject(pool);
@@ -1345,7 +1348,7 @@ class TestCdPlayerFrameRuntime {
     void rotationByteRequiresExplicitUnsignedNativeStorage(int invalid) throws IOException {
         var s = new Fixture().runtime().state();
         assertThrows(IllegalArgumentException.class, () -> new CdPlayerBody.State(s.motion(), s.animation(),
-                s.header(), s.timers(), s.history(), invalid, s.objectLinks()));
+                s.header(), s.timers(), s.history(), invalid, s.objectLinks(), s.rotationAngle()));
     }
 
     // U5-B0, written before production. oPlayerReset ($3A, Level/_Definitions.inc:86) is actor state:
@@ -2445,13 +2448,14 @@ class TestCdPlayerFrameRuntime {
 
     /** Test edit of an explicit same-owner immutable capture, not another load/factory ingress. */
     private static final class Actor {
+        int rotationAngle;
         final CdPlayerBody.State base;
         CdPlayerBody.ObjectLinks objectLinks;
         int slot, charge, gv, invincibility, reset, flags, y, yv, routine, spriteFlags, animation, rotationDistance;
         Actor(CdPlayerFrameRuntime f) { base = f.state(); objectLinks = base.objectLinks(); slot = base.header().slotId(); charge = base.motion().charge();
             gv = base.motion().groundVelocity(); invincibility = base.timers().invincibility(); reset = base.timers().reset();
             flags = base.motion().flags(); yv = base.motion().yVelocity(); animation = base.motion().animation();
-            y = base.motion().centreY16_16(); routine = base.motion().routine(); spriteFlags = base.motion().spriteFlags(); rotationDistance = base.rotationDistance(); }
+            y = base.motion().centreY16_16(); routine = base.motion().routine(); spriteFlags = base.motion().spriteFlags(); rotationDistance = base.rotationDistance(); rotationAngle = base.rotationAngle(); }
         void install(CdPlayerFrameRuntime f) {
             var a = f.captureActor(); var m = base.motion(); var h = base.header();
             var motion = new CdPlayerMotionState(m.centreX16_16(), y, m.xVelocity(), yv, gv,
@@ -2459,7 +2463,7 @@ class TestCdPlayerFrameRuntime {
                     m.previousAnimation(), m.playerJump(), charge, m.moveLock(), m.stick(), m.playerControl(),
                     m.previousPrimaryAngle(), m.previousSecondaryAngle());
             var state = new CdPlayerBody.State(motion, base.animation(), new CdPlayerBody.Header(slot, h.mappingAddress(), h.tile(), h.priority(), h.width()),
-                    new CdPlayerBody.Timers(base.timers().hurt(), invincibility, base.timers().speedShoes(), reset), base.history(), rotationDistance, objectLinks);
+                    new CdPlayerBody.Timers(base.timers().hurt(), invincibility, base.timers().speedShoes(), reset), base.history(), rotationDistance, objectLinks, rotationAngle);
             var display = a.display().map(p -> new CdPlayerBody.DisplayPublication(p.queued(), p.mappingAddress(), p.tile(), p.priority(),
                     p.width(), p.mapFrame(), spriteFlags, p.centreX16_16(), p.centreY16_16()));
             f.restoreActor(new CdPlayerFrameRuntime.ActorState(a.owner(), state, display));
@@ -2951,7 +2955,7 @@ class TestCdPlayerFrameRuntime {
                 4, 0x60, 0x0C, 4, 9, 19, 2, m.previousAnimation(), m.playerJump(), m.charge(), m.moveLock(),
                 m.stick(), m.playerControl(), m.previousPrimaryAngle(), m.previousSecondaryAngle());
         var seeded = new CdPlayerBody.State(motion, s.animation(), s.header(), s.timers(), s.history(), s.rotationDistance(),
-                new CdPlayerBody.ObjectLinks(0x7B, 5));
+                new CdPlayerBody.ObjectLinks(0x7B, 5), s.rotationAngle());
         f.restoreActor(new CdPlayerFrameRuntime.ActorState(captured.owner(), seeded, captured.display()));
         var pool = new CdObjectPool(); var object = pool.state(40).moveByte(CdObjectState.ByteField.ID, 0x20)
                 .moveByte(CdObjectState.ByteField.SPRITE_FLAGS, 0x84).moveByte(CdObjectState.ByteField.WIDTH, 0x10)
@@ -3137,7 +3141,7 @@ class TestCdPlayerFrameRuntime {
         assertEquals(new CdPlayerBody.State(a.motion(), s.animation(), new CdPlayerBody.Header(h.slotId(), h.mappingAddress(),
                 a.tile(), a.priority(), h.width()), new CdPlayerBody.Timers(a.hurt(), s.timers().invincibility(),
                 s.timers().speedShoes(), s.timers().reset()), s.history(), a.rotationDistance(),
-                new CdPlayerBody.ObjectLinks(links.pushObject(), links.standObject())), f.state());
+                new CdPlayerBody.ObjectLinks(links.pushObject(), links.standObject()), s.rotationAngle()), f.state());
         var e = shared.environment(); var movement = e.movement(); var old = movement.globals(); var body = e.globals();
         assertEquals(new CdPlayerBody.Environment(new CdPlayerMovement.Environment(movement.physics(), movement.bounds(), movement.gates(),
                 new CdPlayerMovement.Globals(old.lookMode(), old.cameraYCentre(), g.primaryAngle(), g.secondaryAngle(), old.boredTimer(),
@@ -3150,4 +3154,924 @@ class TestCdPlayerFrameRuntime {
         assertSame(e.dynamicSlots(), f.environment().dynamicSlots()); assertSame(movement.physics(), f.environment().movement().physics());
         assertSame(movement.bounds(), f.environment().movement().bounds()); assertSame(movement.gates(), f.environment().movement().gates());
     }
+
+    // Explicit test-only $2B ingress; every owner below is the real public Frame component.
+    @Test void rotationAngleUsesTheExistingActorCaptureAndDoesNotWidenRestartOrSharedContracts() {
+        assertEquals(3, CdPlayerFrameRuntime.ActorState.class.getRecordComponents().length);
+        assertEquals(5, CdPlayerFrameRuntime.SharedState.class.getRecordComponents().length);
+        assertEquals(9, CdPlayerFrameRuntime.RestartIngress.class.getRecordComponents().length);
+        assertEquals(List.of("history", "artCpu", "artResident", "debugAngle", "debugAngleShift",
+                "debugQuadrant", "debugFloorDistance", "debugCheat", "rawHeld"),
+                Arrays.stream(CdPlayerFrameRuntime.RestartIngress.class.getRecordComponents()).map(c -> c.getName()).toList());
+        assertEquals(5, CdPlayerTouchResponse.Actor.class.getRecordComponents().length);
+        assertEquals(4, CdSolidObject.Player.class.getRecordComponents().length);
+    }
+
+    @ParameterizedTest @ValueSource(ints = {1, 0x2B, 0x80, 0xFF})
+    void rotationAngleSurvivesActualInitMainServicesProjectionRestoreAndForwardReplay(int rotationAngle) throws IOException {
+        var fixture = new Fixture(); var f = fixture.runtime();
+        var seed = new Actor(f); seed.rotationAngle = rotationAngle; seed.rotationDistance = 0x39; seed.install(f);
+        service(f, 0); var init = f.runBody(1);
+        assertEquals(CdPlayerBody.Boundary.INIT_RETURN, init.result().boundary());
+        assertEquals(rotationAngle, f.state().rotationAngle());
+        service(f, 0); var main = f.runBody(2);
+        assertEquals(CdPlayerBody.Boundary.MAIN_RETURN, main.result().boundary());
+        assertEquals(rotationAngle, f.state().rotationAngle());
+        var actor = f.captureActor(); var shared = f.captureShared();
+        f.publishDrawObjectOnScreen(true); f.applyObjectYVelocity(-0xC00); f.applyObjectPrimaryAngle(0x40);
+        assertEquals(rotationAngle, f.state().rotationAngle(), "Draw/Y-velocity/shared-angle ports preserve actual $2B");
+        var changed = new Actor(f); changed.rotationAngle = rotationAngle ^ 0xFF; changed.install(f);
+        assertEquals(rotationAngle ^ 0xFF, f.state().rotationAngle());
+        f.restoreActor(actor); f.restoreShared(shared);
+        assertEquals(actor, f.captureActor()); assertEquals(rotationAngle, f.state().rotationAngle());
+        service(f, 8); var first = f.runBody(3);
+        var forwardActor = f.captureActor(); var forwardShared = f.captureShared();
+        assertEquals(rotationAngle, forwardActor.state().rotationAngle());
+        f.restoreActor(actor); f.restoreShared(shared); service(f, 8); var replay = f.runBody(3);
+        assertEquals(first, replay); assertEquals(forwardActor, f.captureActor());
+        assertSharedValues(forwardShared, f.captureShared());
+        assertEquals(rotationAngle, f.state().rotationAngle());
+    }
+
+    @ParameterizedTest @ValueSource(ints = {0, 5})
+    void rotationAngleSurvivesActualPreHurtYPrefixHurtAndKillIncludingTheStickDistanceAlias(int rings) throws IOException {
+        var fixture = new Fixture(); var f = hurtFrame(fixture, 0xBD, 0, 0, 0);
+        assertEquals(0xD7, f.state().rotationAngle(), "Explicit dirty constructed ingress");
+        var a = hurtActor(f); int y = a.motion().centreY16_16() - (a.motion().yVelocity() << 8);
+        var beforeY = f.captureActor(); var sharedY = f.captureShared();
+        f.applyObjectPreHurtYRewind(a, y);
+        assertEquals(0xD7, f.state().rotationAngle());
+        var afterY = f.captureActor();
+        f.restoreActor(beforeY); f.applyObjectPreHurtYRewind(a, y);
+        assertEquals(afterY, f.captureActor()); assertEquals(sharedY, f.captureShared());
+        var actor = hurtActor(f); var globals = hurtPlayerGlobals(hurtGlobals(f), 2, 0);
+        var pool = hurtPool(); var result = directFrameHurt(f, globals, pool, rings);
+        assertEquals(rings == 0 ? CdPlayerTouchResponse.Exit.KILL_PLAYER : CdPlayerTouchResponse.Exit.HURT, result.exit());
+        var before = f.captureActor(); var shared = f.captureShared();
+        f.applyObjectHurtResult(actor, globals, result);
+        hurtAssertAdopted(f, before, shared, result);
+        assertEquals(0xD7, f.state().rotationAngle());
+        if (rings == 0) {
+            int postResetY = ((y >>> 16) - 5) & 0xFFFF;
+            assertEquals(postResetY >>> 8, f.state().motion().stick());
+            assertEquals(postResetY & 0xFF, f.state().rotationDistance());
+            assertNotEquals(before.state().rotationDistance(), f.state().rotationDistance());
+        }
+        var after = f.captureActor(); var afterShared = f.captureShared();
+        f.restoreActor(before); f.restoreShared(shared); f.applyObjectHurtResult(actor, globals, result);
+        assertEquals(after, f.captureActor()); assertEquals(afterShared, f.captureShared());
+    }
+
+    @Test void rotationAngleSurvivesCheckedSpringMotionAdoptionWithWholeStateEquality() throws IOException {
+        var f = new Fixture().runtime(); service(f, 0); f.runBody(1);
+        var seed = new Actor(f); seed.rotationAngle = 0xE3; seed.install(f);
+        var player = solidPlayer(f); var globals = solidGlobals(f); var next = player;
+        for (var field : CdSpring.LaunchPlayerField.values()) next = springChanged(next, field.name());
+        // This is the existing declared pure LaunchCall fixture, not a claim that an object dispatched.
+        var call = springLaunch(player, globals, next, globals, java.util.EnumSet.allOf(CdSpring.LaunchPlayerField.class), Set.of());
+        var before = f.captureActor(); var shared = f.captureShared(); var s = before.state();
+        f.applyObjectSpringLaunch(call);
+        assertEquals(new CdPlayerBody.State(next.actor().motion(), s.animation(), s.header(), s.timers(), s.history(),
+                s.rotationDistance(), s.objectLinks(), s.rotationAngle()), f.state());
+        assertEquals(0xE3, f.state().rotationAngle()); assertEquals(shared, f.captureShared());
+        var after = f.captureActor(); f.restoreActor(before); f.applyObjectSpringLaunch(call);
+        assertEquals(after, f.captureActor()); assertEquals(shared, f.captureShared());
+    }
+
+    @Test void rotationAngleSurvivesTheActualPureTunnelResultAndWholeStateReplay() throws IOException {
+        var fixture = new Fixture(); var f = spinTunnelDirtyFrame(fixture);
+        var before = f.captureActor(); var shared = f.captureShared(); var s = before.state();
+        assertEquals(0xD7, s.rotationAngle());
+        var pool = new CdObjectPool();
+        // Existing bounded format fixture; no authenticated mapping/retail or dispatch authority.
+        var result = new CdSpinTunnelTag(new CdSpinTunnelTag.Assets(0x200000))
+                .step(spinTunnelObject(pool, s.motion(), 0), s.motion(), new CdSpinTunnelTag.Gates(0, 0, 0, 0)).player();
+        f.applyObjectSpinTunnelResult(result);
+        assertEquals(new CdPlayerBody.State(result.finalMotion(), s.animation(), s.header(), s.timers(), s.history(),
+                s.rotationDistance(), s.objectLinks(), s.rotationAngle()), f.state());
+        assertEquals(0xD7, f.state().rotationAngle()); assertEquals(shared, f.captureShared());
+        var after = f.captureActor(); f.restoreActor(before); f.applyObjectSpinTunnelResult(result);
+        assertEquals(after, f.captureActor()); assertEquals(shared, f.captureShared());
+    }
+
+    @ParameterizedTest @ValueSource(booleans = {false, true})
+    void rotationAngleSurvivesRealSolidSuccessOrStoppedPrefixAdoptionAndReplay(boolean stopped) throws IOException {
+        var fixture = new Fixture(); var f = spinTunnelDirtyFrame(fixture); var captured = f.captureActor();
+        var s = captured.state(); var m = s.motion();
+        var motion = new CdPlayerMotionState(stopped ? 0x01008000 : 64 << 16, stopped ? 0x00731234 : 1899 << 16,
+                0x180, stopped ? 0 : 0x111, 0x345, 4, 0x60, stopped ? 0x0C : 4, 4, 9, 19, 2,
+                m.previousAnimation(), m.playerJump(), m.charge(), m.moveLock(), m.stick(), m.playerControl(),
+                m.previousPrimaryAngle(), m.previousSecondaryAngle());
+        var state = new CdPlayerBody.State(motion, s.animation(), s.header(), s.timers(), s.history(), s.rotationDistance(),
+                new CdPlayerBody.ObjectLinks(0x7B, stopped ? 5 : 0), s.rotationAngle());
+        f.restoreActor(new CdPlayerFrameRuntime.ActorState(captured.owner(), state, captured.display()));
+        var pool = new CdObjectPool();
+        var object = stopped ? pool.state(40).moveByte(CdObjectState.ByteField.ID, 0x20)
+                .moveByte(CdObjectState.ByteField.SPRITE_FLAGS, 0x84).moveByte(CdObjectState.ByteField.WIDTH, 0x10)
+                .moveByte(CdObjectState.ByteField.Y_RADIUS, 0x0C).moveWord(CdObjectState.WordField.X, 0x100)
+                .moveWord(CdObjectState.WordField.Y, 0x90) : solidObject(pool);
+        pool.write(object);
+        var player = solidPlayer(f); var globals = solidGlobals(f); var actor = f.captureActor(); var shared = f.captureShared();
+        var solid = CdSolidObject.fromAssets(f.assets());
+        if (stopped) {
+            var stop = assertInstanceOf(CdSolidObject.NativeStopped.class, solid.runWithPrefix(CdSolidObject.Entry.TOP_SOLID_OBJECT,
+                    object, player, new CdSolidObject.Gates(0, 0), globals, pool.capture()));
+            assertEquals(CdSolidObject.StopSite.STAND_RELEASE, stop.stop().site());
+            var prefix = stop.prefix();
+            f.applyObjectSolidPrefix(player, globals, prefix); prefixAssertAdopted(f, actor, shared, prefix);
+            assertEquals(0xD7, f.state().rotationAngle());
+            var after = f.captureActor(); var afterShared = f.captureShared();
+            f.restoreActor(actor); f.restoreShared(shared); f.applyObjectSolidPrefix(player, globals, prefix);
+            assertEquals(after, f.captureActor()); assertEquals(afterShared, f.captureShared());
+        } else {
+            var result = solid.run(CdSolidObject.Entry.STAND_ON_OBJECT, object, player, new CdSolidObject.Gates(0, 0),
+                    globals, pool.capture());
+            f.applyObjectSolidResult(player, globals, result);
+            assertEquals(rotationAngleSolidExpected(state, result.player()), f.state());
+            assertEquals(0xD7, f.state().rotationAngle());
+            var after = f.captureActor(); var afterShared = f.captureShared();
+            f.restoreActor(actor); f.restoreShared(shared); f.applyObjectSolidResult(player, globals, result);
+            assertEquals(after, f.captureActor()); assertEquals(afterShared, f.captureShared());
+        }
+    }
+
+    @Test void solidProjectionsWithoutRotationAngleCarryTheCurrentByteRatherThanCasAnUnrepresentedOldByte() throws IOException {
+        var f = spinTunnelDirtyFrame(new Fixture()); var player = solidPlayer(f); var globals = solidGlobals(f);
+        var result = solidResult(solidObject(new CdObjectPool()), player, globals, Set.of(), Set.of());
+        var prefix = prefixFrameValues(player, globals, Set.of(), Set.of());
+        assertEquals(0xD7, f.state().rotationAngle());
+        var edit = new Actor(f); edit.rotationAngle = 0x35; edit.install(f);
+        var actual = f.state(); var shared = f.captureShared();
+        assertEquals(player, solidPlayer(f), "The old projection contains no $2B");
+        f.applyObjectSolidResult(player, globals, result);
+        assertEquals(actual, f.state()); assertEquals(0x35, f.state().rotationAngle());
+        f.applyObjectSolidPrefix(player, globals, prefix);
+        assertEquals(actual, f.state()); assertEquals(0x35, f.state().rotationAngle());
+        assertEquals(shared, f.captureShared());
+    }
+
+    @Test void routineEightKeepsNonzeroRotationAngleThroughTheActualFrameAndTerminalResetReplay() throws IOException {
+        var f = new Fixture().runtime(); service(f, 0); f.runBody(1);
+        var seed = new Actor(f); seed.routine = 8; seed.reset = 1; seed.rotationAngle = 0xA9; seed.install(f);
+        var actor = f.captureActor(); var shared = f.captureShared();
+        var context = Optional.of(new CdPlayerBody.LevelContext(new CdObjectPool().capture(),
+                new CdRingGlobals(0, 3, 0, 0, 0, 0, 0, 0), new CdLevelGlobals(0, 0, 0, 0, 3, 0, 2, 0, 0)));
+        service(f, 0); var first = f.runBody(2, Optional.empty(), context);
+        assertEquals(CdPlayerBody.Boundary.RESTART_RETURN, first.result().boundary());
+        assertEquals(0, f.state().timers().reset()); assertEquals(0xA9, f.state().rotationAngle());
+        assertEquals(1, first.result().effects().stream().filter(CdPlayerBody.RestartCut.class::isInstance).count());
+        var after = f.captureActor(); var afterShared = f.captureShared();
+        f.restoreActor(actor); f.restoreShared(shared); service(f, 0); var replay = f.runBody(2, Optional.empty(), context);
+        assertEquals(first, replay); assertEquals(after, f.captureActor()); assertSharedValues(afterShared, f.captureShared());
+        assertEquals(0xA9, f.state().rotationAngle());
+    }
+
+    @Test void onlyANewLevelStartFactoryVisitClearsRotationAngleAndRestartIngressDoesNotCarryThePreviousByte() throws IOException {
+        var assets = new Fixture().assets();
+        try (var old = CdPlayerFrameRuntime.terrainOnlyDevelopment(assets)) {
+            var edit = new Actor(old); edit.rotationAngle = 0xBD; edit.install(old);
+            var saved = old.captureActor(); var e = old.environment(); var g = e.movement().globals();
+            var carried = new CdPlayerFrameRuntime.RestartIngress(old.state().history().bytes(), old.artState().cpuBuffer(),
+                    old.artState().residentBank(), g.debugAngle(), g.debugAngleShift(), g.debugQuadrant(), g.debugFloorDistance(),
+                    e.globals().debugCheat(), e.controls().rawHeld());
+            try (var cold = CdPlayerFrameRuntime.terrainOnlyDevelopment(assets);
+                 var external = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets);
+                 var declared = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, 7);
+                 var restarted = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, 7, carried);
+                 var checkpoint = CdPlayerFrameRuntime.checkpointRestartDevelopment(assets, 7, carried, port -> {
+                     port.store(new CdPlayerFrameRuntime.CheckpointLoadStore(CdPlayerFrameRuntime.CheckpointLoadField.PRIMARY_X,
+                             port.read(CdPlayerFrameRuntime.CheckpointLoadField.PRIMARY_X), 0x1234));
+                     port.store(new CdPlayerFrameRuntime.CheckpointLoadStore(CdPlayerFrameRuntime.CheckpointLoadField.PRIMARY_Y,
+                             port.read(CdPlayerFrameRuntime.CheckpointLoadField.PRIMARY_Y), 0x5678));
+                 })) {
+                for (var fresh : List.of(cold, external, declared, restarted, checkpoint)) {
+                    assertEquals(0, fresh.state().rotationAngle(), "Fresh ClearObjects-based LevelStart development visit");
+                    assertEquals(0, fresh.state().motion().routine());
+                    assertTrue(fresh.display().isEmpty()); assertEquals(0, fresh.vIntClock().deltaSinceAdmittedCut());
+                }
+                assertEquals(0x12340000, checkpoint.state().motion().centreX16_16());
+                assertEquals(0x56780000, checkpoint.state().motion().centreY16_16());
+                assertEquals(0xBD, old.state().rotationAngle(), "Constructing a new owner does not clear the previous one");
+                old.restoreActor(saved); assertEquals(saved, old.captureActor()); assertEquals(0xBD, old.state().rotationAngle());
+            }
+        }
+    }
+
+    /** Expected full actor value only; Solid's projection has no authority to supply or compare $2B. */
+    private static CdPlayerBody.State rotationAngleSolidExpected(CdPlayerBody.State s, CdSolidObject.Player player) {
+        var a = player.actor(); var h = s.header(); var t = s.timers();
+        return new CdPlayerBody.State(a.motion(), s.animation(),
+                new CdPlayerBody.Header(h.slotId(), h.mappingAddress(), a.tile(), a.priority(), h.width()),
+                new CdPlayerBody.Timers(a.hurt(), t.invincibility(), t.speedShoes(), t.reset()), s.history(), a.rotationDistance(),
+                new CdPlayerBody.ObjectLinks(player.pushObject(), player.standObject()), s.rotationAngle());
+    }
+    // BEGIN prepared Solid/direct Disc Frame ports. Source-only additions: every Java check is UNRUN.
+    @ParameterizedTest @ValueSource(booleans = {false, true})
+    void preparedSolidBuildsWithoutMutationThenAdoptsTheSameReferencesAfterARealPoolWrite(boolean stopped)
+            throws IOException {
+        var fixture = new Fixture();
+        try (var f = framePortSolidFrame(fixture, stopped)) {
+            var pool = new CdObjectPool(); var object = framePortSolidObject(pool);
+            var player = solidPlayer(f); var globals = solidGlobals(f); var poolBefore = pool.capture();
+            var actor = f.captureActor(); var shared = f.captureShared(); int uploads = fixture.dmas.size();
+            f.bindArtPublication((request, value) -> fail("A prepared player publication cannot service art"));
+            var outcome = CdSolidObject.fromAssets(f.assets()).runWithPrefix(CdSolidObject.Entry.SOLID_OBJECT,
+                    object, player, new CdSolidObject.Gates(0, 0), globals, poolBefore);
+            CdPlayerFrameRuntime.ObjectSolidPublication publication;
+            CdObjectState finalObject; List<CdObjectState> otherSlots;
+            if (stopped) {
+                var nativeStop = assertInstanceOf(CdSolidObject.NativeStopped.class, outcome);
+                assertEquals(CdSolidObject.StopSite.STAND_RELEASE, nativeStop.stop().site());
+                var prefix = nativeStop.prefix();
+                assertEquals(CdSolidObject.Entry.SOLID_OBJECT, prefix.entry());
+                publication = f.prepareObjectSolidPrefix(player, globals, prefix);
+                finalObject = prefix.object(); otherSlots = prefix.otherSlots();
+            } else {
+                var result = assertInstanceOf(CdSolidObject.Completed.class, outcome).completedResult();
+                assertEquals(CdSolidObject.Entry.SOLID_OBJECT, result.entry());
+                assertEquals(CdSolidObject.Path.STAND_ON, result.path());
+                assertEquals(OptionalInt.of(1), result.d0(), "The real Solid producer owns this return");
+                publication = f.prepareObjectSolidResult(player, globals, result);
+                finalObject = result.object(); otherSlots = result.otherSlots();
+            }
+            assertSame(actor.state(), publication.expectedState());
+            assertSame(shared.environment(), publication.expectedEnvironment());
+            assertEquals(actor, f.captureActor()); assertEquals(shared, f.captureShared());
+            assertSame(actor.state(), f.state()); assertSame(shared.environment(), f.environment());
+            assertEquals(poolBefore.slots(), pool.capture().slots());
+            assertEquals(0xD7, publication.finalState().rotationAngle());
+            assertSame(actor.state().animation(), publication.finalState().animation());
+            assertSame(actor.state().history(), publication.finalState().history());
+            assertEquals(actor.state().header().mappingAddress(), publication.finalState().header().mappingAddress());
+            assertEquals(actor.state().header().width(), publication.finalState().header().width());
+            assertEquals(actor.state().timers().reset(), publication.finalState().timers().reset());
+            assertSame(shared.environment().controls(), publication.finalEnvironment().controls());
+            assertSame(shared.environment().movement().physics(), publication.finalEnvironment().movement().physics());
+            assertSame(shared.environment().movement().bounds(), publication.finalEnvironment().movement().bounds());
+            assertSame(shared.environment().movement().gates(), publication.finalEnvironment().movement().gates());
+            assertEquals(0x8000, publication.finalState().motion().centreX16_16() & 0xFFFF);
+            assertEquals(0x1234, publication.finalState().motion().centreY16_16() & 0xFFFF);
+            f.validatePreparedObjectSolidPublication(publication);
+            assertEquals(actor, f.captureActor()); assertEquals(shared, f.captureShared());
+            var images = new ArrayList<CdObjectState>(); images.add(finalObject); images.addAll(otherSlots);
+            var finalPool = CdObjectPool.overlay(poolBefore, images);
+            pool.restore(finalPool);
+            f.applyPreparedObjectSolidPublication(publication);
+            assertSame(publication.finalState(), f.state());
+            assertSame(publication.finalEnvironment(), f.environment());
+            assertSame(actor.display(), f.display()); assertSame(shared.artState(), f.artState());
+            assertSame(shared.vIntClock(), f.vIntClock()); assertEquals(uploads, fixture.dmas.size());
+            assertEquals(finalPool.slots(), pool.capture().slots());
+            var preparedActor = f.captureActor(); var preparedShared = f.captureShared();
+            assertThrows(IllegalArgumentException.class, () -> f.applyPreparedObjectSolidPublication(publication));
+            assertEquals(preparedActor, f.captureActor()); assertEquals(preparedShared, f.captureShared());
+            f.restoreActor(actor); f.restoreShared(shared);
+            if (outcome instanceof CdSolidObject.Completed completed) {
+                f.applyObjectSolidResult(player, globals, completed.completedResult());
+            } else {
+                f.applyObjectSolidPrefix(player, globals, ((CdSolidObject.NativeStopped) outcome).prefix());
+            }
+            assertEquals(preparedActor, f.captureActor()); assertEquals(preparedShared, f.captureShared());
+            assertEquals(finalPool.slots(), pool.capture().slots()); assertEquals(uploads, fixture.dmas.size());
+        }
+    }
+
+    @Test void preparedSolidSameValueAndEqualFrameAcceptanceAreOnlyObservationalValueCas() throws IOException {
+        try (var a = spinTunnelDirtyFrame(new Fixture()); var b = spinTunnelDirtyFrame(new Fixture())) {
+            var pool = new CdObjectPool(); var object = framePortSolidObject(pool);
+            var player = solidPlayer(a); var globals = solidGlobals(a);
+            var result = CdSolidObject.fromAssets(a.assets()).run(CdSolidObject.Entry.GET_OFF_OBJECT, object,
+                    player, new CdSolidObject.Gates(0, 0), globals, pool.capture());
+            assertEquals(player, result.player()); assertEquals(globals, result.globals());
+            var p = a.prepareObjectSolidResult(player, globals, result);
+            var beforeA = a.captureActor(); var beforeB = b.captureActor(); var sharedB = b.captureShared();
+            a.applyPreparedObjectSolidPublication(p); a.applyPreparedObjectSolidPublication(p);
+            assertEquals(beforeA, a.captureActor()); assertSame(p.finalState(), a.state());
+            b.validatePreparedObjectSolidPublication(p); b.applyPreparedObjectSolidPublication(p);
+            assertEquals(beforeB, b.captureActor()); assertEquals(sharedB, b.captureShared());
+            assertSame(p.finalState(), b.state()); assertSame(p.finalEnvironment(), b.environment());
+            assertNotSame(beforeA.owner(), beforeB.owner(), "Data equality supplies no private invocation authority");
+        }
+    }
+
+    @Test void preparedSolidCapturesCurrentUnrepresentedFieldsRatherThanAnOlderProjection() throws IOException {
+        try (var f = spinTunnelDirtyFrame(new Fixture())) {
+            var player = solidPlayer(f); var globals = solidGlobals(f);
+            var pool = new CdObjectPool(); var object = framePortSolidObject(pool);
+            var result = CdSolidObject.fromAssets(f.assets()).run(CdSolidObject.Entry.GET_OFF_OBJECT, object,
+                    player, new CdSolidObject.Gates(0, 0), globals, pool.capture());
+            var old = f.captureActor(); var changed = framePortChangedState(old.state(), "ROTATION_ANGLE");
+            changed = framePortChangedState(changed, "SCRIPT_INDEX");
+            changed = framePortChangedState(changed, "RESET");
+            f.restoreActor(new CdPlayerFrameRuntime.ActorState(old.owner(), changed, old.display()));
+            assertEquals(player, solidPlayer(f), "The historical Solid projection omits these three domains");
+            var p = f.prepareObjectSolidResult(player, globals, result);
+            assertSame(changed, p.expectedState()); assertEquals(changed, p.finalState());
+            f.applyPreparedObjectSolidPublication(p); assertEquals(changed, f.state());
+        }
+    }
+
+    @Test void preparedSolidDataHasOnlyFourFinalValuesAndAPrivateFourArgumentConstructor() {
+        var type = CdPlayerFrameRuntime.ObjectSolidPublication.class;
+        assertTrue(java.lang.reflect.Modifier.isPublic(type.getModifiers()));
+        assertTrue(java.lang.reflect.Modifier.isStatic(type.getModifiers()));
+        assertTrue(java.lang.reflect.Modifier.isFinal(type.getModifiers()));
+        var constructors = type.getDeclaredConstructors(); assertEquals(1, constructors.length);
+        assertTrue(java.lang.reflect.Modifier.isPrivate(constructors[0].getModifiers()));
+        assertArrayEquals(new Class<?>[]{CdPlayerBody.State.class, CdPlayerBody.Environment.class,
+                CdPlayerBody.State.class, CdPlayerBody.Environment.class}, constructors[0].getParameterTypes());
+        var fields = type.getDeclaredFields(); assertEquals(4, fields.length);
+        var actual = new LinkedHashMap<String, Class<?>>();
+        for (var field : fields) {
+            assertTrue(java.lang.reflect.Modifier.isPrivate(field.getModifiers()));
+            assertTrue(java.lang.reflect.Modifier.isFinal(field.getModifiers()));
+            assertFalse(java.lang.reflect.Modifier.isStatic(field.getModifiers()));
+            actual.put(field.getName(), field.getType());
+        }
+        assertEquals(Map.of("expectedState", CdPlayerBody.State.class, "expectedEnvironment", CdPlayerBody.Environment.class,
+                "finalState", CdPlayerBody.State.class, "finalEnvironment", CdPlayerBody.Environment.class), actual);
+        assertEquals(Set.of("expectedState", "expectedEnvironment", "finalState", "finalEnvironment"),
+                Arrays.stream(type.getDeclaredMethods()).map(java.lang.reflect.Method::getName).collect(java.util.stream.Collectors.toSet()));
+        for (var method : type.getDeclaredMethods()) {
+            assertTrue(java.lang.reflect.Modifier.isPublic(method.getModifiers()));
+            assertFalse(java.lang.reflect.Modifier.isStatic(method.getModifiers()));
+            assertEquals(0, method.getParameterCount());
+        }
+    }
+
+    @Test void preparedSolidPreparationKeepsExistingValidationOrderAndMasks() throws IOException {
+        try (var f = spinTunnelDirtyFrame(new Fixture())) {
+            var player = solidPlayer(f); var globals = solidGlobals(f); var pool = new CdObjectPool();
+            var result = CdSolidObject.fromAssets(f.assets()).run(CdSolidObject.Entry.GET_OFF_OBJECT,
+                    framePortSolidObject(pool), player, new CdSolidObject.Gates(0, 0), globals, pool.capture());
+            var before = f.captureActor(); var shared = f.captureShared();
+            var prefix = prefixFrameValues(player, globals, Set.of(), Set.of());
+            assertThrows(NullPointerException.class, () -> f.prepareObjectSolidResult(null, globals, result));
+            assertThrows(NullPointerException.class, () -> f.prepareObjectSolidResult(player, null, result));
+            assertThrows(NullPointerException.class, () -> f.prepareObjectSolidResult(player, globals, null));
+            assertThrows(NullPointerException.class, () -> f.prepareObjectSolidPrefix(null, globals, prefix));
+            assertThrows(NullPointerException.class, () -> f.prepareObjectSolidPrefix(player, null, prefix));
+            assertThrows(NullPointerException.class, () -> f.prepareObjectSolidPrefix(player, globals, null));
+            assertThrows(NullPointerException.class, () -> f.validatePreparedObjectSolidPublication(null));
+            assertThrows(NullPointerException.class, () -> f.applyPreparedObjectSolidPublication(null));
+            var stale = springChanged(player, "CHARGE");
+            assertThrows(IllegalArgumentException.class, () -> f.prepareObjectSolidResult(stale, globals, result));
+            assertThrows(IllegalArgumentException.class, () -> f.prepareObjectSolidPrefix(stale, globals, prefix));
+            var badPlayer = springChanged(player, "PREVIOUS_ANIMATION");
+            var badResult = solidResult(result.object(), badPlayer, globals,
+                    java.util.EnumSet.allOf(CdSolidObject.PlayerField.class), Set.of());
+            var badPrefix = prefixFrameValues(badPlayer, globals,
+                    java.util.EnumSet.allOf(CdSolidObject.PlayerField.class), Set.of());
+            assertThrows(IllegalArgumentException.class, () -> f.prepareObjectSolidResult(player, globals, badResult));
+            assertThrows(IllegalArgumentException.class, () -> f.prepareObjectSolidPrefix(player, globals, badPrefix));
+            var undeclared = springChanged(player, "X_FRACTION");
+            var hiddenResult = solidResult(result.object(), undeclared, globals, Set.of(), Set.of());
+            var hiddenPrefix = prefixFrameValues(undeclared, globals, Set.of(), Set.of());
+            assertThrows(IllegalArgumentException.class, () -> f.prepareObjectSolidResult(player, globals, hiddenResult));
+            assertThrows(IllegalArgumentException.class, () -> f.prepareObjectSolidPrefix(player, globals, hiddenPrefix));
+            var changedGlobals = prefixChangedGlobals(globals, 3);
+            var hiddenGlobalsResult = solidResult(result.object(), player, changedGlobals, Set.of(), Set.of());
+            var hiddenGlobalsPrefix = prefixFrameValues(player, changedGlobals, Set.of(), Set.of());
+            assertThrows(IllegalArgumentException.class, () -> f.prepareObjectSolidResult(player, globals, hiddenGlobalsResult));
+            assertThrows(IllegalArgumentException.class, () -> f.prepareObjectSolidPrefix(player, globals, hiddenGlobalsPrefix));
+            assertEquals(before, f.captureActor()); assertEquals(shared, f.captureShared());
+        }
+    }
+
+    private static CdPlayerFrameRuntime framePortSolidFrame(Fixture fixture, boolean stopped) throws IOException {
+        var f = spinTunnelDirtyFrame(fixture); var captured = f.captureActor(); var s = captured.state(); var m = s.motion();
+        var motion = new CdPlayerMotionState(0x01008000, 0x00731234, 0x123, 0, 0x345,
+                4, 0x60, stopped ? 0x0C : 4, m.spriteFlags(), 9, 19, 2, m.previousAnimation(),
+                m.playerJump(), m.charge(), m.moveLock(), m.stick(), m.playerControl(),
+                m.previousPrimaryAngle(), m.previousSecondaryAngle());
+        f.restoreActor(new CdPlayerFrameRuntime.ActorState(captured.owner(),
+                new CdPlayerBody.State(motion, s.animation(), s.header(), s.timers(), s.history(), s.rotationDistance(),
+                        new CdPlayerBody.ObjectLinks(0x7B, stopped ? 5 : 0), s.rotationAngle()), captured.display()));
+        return f;
+    }
+
+    private static CdObjectState framePortSolidObject(CdObjectPool pool) {
+        var object = pool.state(40).moveByte(CdObjectState.ByteField.ID, 0x20)
+                .moveByte(CdObjectState.ByteField.SPRITE_FLAGS, 0x84).moveByte(CdObjectState.ByteField.WIDTH, 0x10)
+                .moveByte(CdObjectState.ByteField.Y_RADIUS, 0x0C).moveWord(CdObjectState.WordField.X, 0x100)
+                .moveWord(CdObjectState.WordField.Y, 0x90);
+        pool.write(object); return object;
+    }
+
+
+    @ParameterizedTest @ValueSource(strings = {"CENTRE_X", "X_FRACTION", "CENTRE_Y", "Y_FRACTION", "X_VELOCITY", "Y_VELOCITY", "GROUND_VELOCITY", "ROUTINE", "ANGLE", "FLAGS", "SPRITE_FLAGS", "X_RADIUS", "Y_RADIUS", "ANIMATION", "PREVIOUS_ANIMATION", "PLAYER_JUMP", "CHARGE", "MOVE_LOCK", "STICK", "PLAYER_CONTROL", "PREVIOUS_PRIMARY_ANGLE", "PREVIOUS_SECONDARY_ANGLE", "SCRIPT_INDEX", "ANIMATION_TIMER", "MAP_FRAME", "SLOT_ID", "MAPPING_ADDRESS", "TILE", "PRIORITY", "WIDTH", "HURT", "INVINCIBILITY", "SPEED_SHOES", "RESET", "HISTORY_INDEX", "ROTATION_DISTANCE", "PUSH_OBJECT", "STAND_OBJECT", "ROTATION_ANGLE", "HISTORY_BYTES"})
+    void preparedAndDiscPortsCasEveryActualStateFieldAndSharedValidatorRejectsItsUndeclaredChange(String field)
+            throws IOException {
+        try (var f = framePortDiscFrame(new Fixture())) {
+            var actor = f.captureActor(); var shared = f.captureShared(); var s = actor.state(); var e = shared.environment();
+            var changed = framePortChangedState(s, field); assertNotEquals(s, changed, field);
+            var pool = new CdObjectPool();
+            var solid = CdSolidObject.fromAssets(f.assets()).run(CdSolidObject.Entry.GET_OFF_OBJECT,
+                    framePortSolidObject(pool), solidPlayer(f), new CdSolidObject.Gates(0, 0), solidGlobals(f), pool.capture());
+            var publication = f.prepareObjectSolidResult(solidPlayer(f), solidGlobals(f), solid);
+            var noWrite = new CdSpinningDisc.PlayerResult(s, e, List.of());
+            f.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(), changed, actor.display()));
+            framePortPreparedRejected(f, publication, IllegalArgumentException.class);
+            framePortDiscRejected(f, s, e, noWrite, IllegalArgumentException.class);
+            f.restoreActor(actor);
+            var malicious = new CdSpinningDisc.PlayerResult(changed, e, List.of());
+            var sharedFailure = assertThrows(IllegalArgumentException.class,
+                    () -> CdSpinningDisc.validatePlayerResult(new CdSpinningDisc.PlayerCut(s, e), malicious));
+            var frameFailure = assertThrows(IllegalArgumentException.class,
+                    () -> f.validateObjectDiscPlayerResult(s, e, malicious));
+            assertEquals(sharedFailure.getMessage(), frameFailure.getMessage(), "Same shared validator owns nonwrites");
+            framePortDiscRejected(f, s, e, malicious, IllegalArgumentException.class);
+            assertEquals(actor, f.captureActor()); assertEquals(shared, f.captureShared());
+        }
+    }
+
+    @ParameterizedTest @ValueSource(strings = {"TOP_SPEED", "ACCELERATION", "DECELERATION", "BOUND_LEFT", "BOUND_RIGHT", "BOUND_BOTTOM", "BOUND_BOSS_FIGHT", "GATE_ZONE_ACT", "GATE_TIME_ZONE", "GATE_MINI_SONIC", "GATE_WATER_SLIDE", "GATE_WIND_TUNNEL", "GATE_SPEED_SHOES", "GATE_TIME_WARP_DIRECTION", "MOVEMENT_LOOK_MODE", "MOVEMENT_CAMERA_Y_CENTRE", "MOVEMENT_PRIMARY_ANGLE", "MOVEMENT_SECONDARY_ANGLE", "MOVEMENT_BORED_TIMER", "MOVEMENT_SCORE_CHAIN", "MOVEMENT_DEBUG_ANGLE", "MOVEMENT_DEBUG_ANGLE_SHIFT", "MOVEMENT_DEBUG_QUADRANT", "MOVEMENT_DEBUG_FLOOR_DISTANCE", "RAW_HELD", "RAW_TAP", "LOGICAL_HELD", "LOGICAL_TAP", "CONTROL_LOCKED", "BODY_LEVEL_FRAMES", "BODY_CAMERA_X_CENTRE", "BODY_TIME_ATTACK_MODE", "BODY_DEBUG_MODE", "BODY_DEBUG_CHEAT", "BODY_TIME_WARP_TIMER", "BODY_INVINCIBLE", "BODY_BOSS_MUSIC", "DYNAMIC_SLOTS"})
+    void preparedAndDiscPortsCasEveryEnvironmentFieldAndSharedValidatorRejectsItsUndeclaredChange(String field)
+            throws IOException {
+        try (var f = framePortDiscFrame(new Fixture())) {
+            var actor = f.captureActor(); var shared = f.captureShared(); var s = actor.state(); var e = shared.environment();
+            var changed = framePortChangedEnvironment(e, field); assertNotEquals(e, changed, field);
+            var pool = new CdObjectPool();
+            var solid = CdSolidObject.fromAssets(f.assets()).run(CdSolidObject.Entry.GET_OFF_OBJECT,
+                    framePortSolidObject(pool), solidPlayer(f), new CdSolidObject.Gates(0, 0), solidGlobals(f), pool.capture());
+            var publication = f.prepareObjectSolidResult(solidPlayer(f), solidGlobals(f), solid);
+            var noWrite = new CdSpinningDisc.PlayerResult(s, e, List.of());
+            f.restoreShared(new CdPlayerFrameRuntime.SharedState(shared.owner(), changed,
+                    shared.artState(), shared.paused(), shared.vIntClock()));
+            framePortPreparedRejected(f, publication, IllegalArgumentException.class);
+            framePortDiscRejected(f, s, e, noWrite, IllegalArgumentException.class);
+            f.restoreShared(shared);
+            var malicious = new CdSpinningDisc.PlayerResult(s, changed, List.of());
+            var sharedFailure = assertThrows(IllegalArgumentException.class,
+                    () -> CdSpinningDisc.validatePlayerResult(new CdSpinningDisc.PlayerCut(s, e), malicious));
+            var frameFailure = assertThrows(IllegalArgumentException.class,
+                    () -> f.validateObjectDiscPlayerResult(s, e, malicious));
+            assertEquals(sharedFailure.getMessage(), frameFailure.getMessage(), "Same shared validator owns nonwrites");
+            framePortDiscRejected(f, s, e, malicious, IllegalArgumentException.class);
+            assertEquals(actor, f.captureActor()); assertEquals(shared, f.captureShared());
+        }
+    }
+
+    private static void framePortPreparedRejected(CdPlayerFrameRuntime f,
+            CdPlayerFrameRuntime.ObjectSolidPublication publication, Class<? extends RuntimeException> type) {
+        var s = f.state(); var e = f.environment(); var a = f.artState(); var d = f.display(); var v = f.vIntClock();
+        assertThrows(type, () -> f.validatePreparedObjectSolidPublication(publication));
+        assertThrows(type, () -> f.applyPreparedObjectSolidPublication(publication));
+        assertSame(s, f.state()); assertSame(e, f.environment()); assertSame(a, f.artState());
+        assertSame(d, f.display()); assertSame(v, f.vIntClock());
+    }
+
+    private static void framePortDiscRejected(CdPlayerFrameRuntime f, CdPlayerBody.State expectedState,
+            CdPlayerBody.Environment expectedEnvironment, CdSpinningDisc.PlayerResult result,
+            Class<? extends RuntimeException> type) {
+        var s = f.state(); var e = f.environment(); var a = f.artState(); var d = f.display(); var v = f.vIntClock();
+        assertThrows(type, () -> f.validateObjectDiscPlayerResult(expectedState, expectedEnvironment, result));
+        assertThrows(type, () -> f.applyObjectDiscPlayerResult(expectedState, expectedEnvironment, result));
+        assertSame(s, f.state()); assertSame(e, f.environment()); assertSame(a, f.artState());
+        assertSame(d, f.display()); assertSame(v, f.vIntClock());
+    }
+
+
+    /** Constructed immutable single-site deltas test the real Frame/shared validator, not native execution. */
+    @ParameterizedTest @CsvSource({
+            "CONTROL_ACQUIRE,PLAYER_CONTROL,0xA4,0xA5",
+            "ANIMATION_ACQUIRE,ANIMATION,0x1A,0x2D",
+            "ROTATION_ZERO,ROTATION_ANGLE,0xD7,0",
+            "ROTATION_LEFT,ROTATION_ANGLE,0xD7,0x80",
+            "DISTANCE_ACQUIRE,ROTATION_DISTANCE,0xAB,0xFE",
+            "ROTATION_ADVANCE,ROTATION_ANGLE,0xD7,0xDF",
+            "ORBIT_X_BASE,CENTRE_X,0xFFFC,1",
+            "ORBIT_X_OFFSET,CENTRE_X,0xFFFC,2",
+            "SCRIPT_INDEX,SCRIPT_INDEX,5,0xF1",
+            "DISTANCE_CARDINAL,ROTATION_DISTANCE,0xAB,0xAC",
+            "LOGICAL_CONTROLS,LOGICAL_CONTROLS,0x0810,0x2C24",
+            "DISTANCE_GROW,ROTATION_DISTANCE,0xAB,0xAC",
+            "DISTANCE_SHRINK,ROTATION_DISTANCE,0xAB,0xAA",
+            "DISTANCE_CLAMP,ROTATION_DISTANCE,0xFF,0",
+            "CONTROL_CLEAR,PLAYER_CONTROL,0xA4,0",
+            "JUMP_X_VELOCITY,X_VELOCITY,0x0100,0x8001",
+            "JUMP_Y_VELOCITY,Y_VELOCITY,0xFDCC,0x7FFF",
+            "FLAGS_AIR,FLAGS,0xE9,0xEB",
+            "FLAGS_PUSH_CLEAR,FLAGS,0xE9,0xC9",
+            "JUMP_SET,PLAYER_JUMP,0x76,1",
+            "STICK_CLEAR,STICK,0x85,0",
+            "JUMP_Y_RADIUS_MINI,Y_RADIUS,19,10",
+            "JUMP_X_RADIUS_MINI,X_RADIUS,9,5",
+            "JUMP_Y_RADIUS_NORMAL,Y_RADIUS,19,19",
+            "JUMP_X_RADIUS_NORMAL,X_RADIUS,9,9",
+            "ROLL_Y_RADIUS_MINI,Y_RADIUS,19,10",
+            "ROLL_X_RADIUS_MINI,X_RADIUS,9,5",
+            "ROLL_Y_RADIUS_NORMAL,Y_RADIUS,19,14",
+            "ROLL_X_RADIUS_NORMAL,X_RADIUS,9,7",
+            "ROLL_Y_ADVANCE,CENTRE_Y,0xFFFD,2",
+            "FLAGS_ROLL,FLAGS,0xE9,0xED",
+            "ANIMATION_ROLL,ANIMATION,0x1A,2",
+            "FLAGS_ROLL_JUMP,FLAGS,0xE9,0xF9"
+    })
+    void directDiscAdoptsEveryFixedSiteAsAPrebuiltFullPairAndPreservesEveryNonwrite(
+            CdSpinningDisc.DiscPlayerField field, String target, int expectedRaw, int value) throws IOException {
+        var fixture = new Fixture();
+        try (var f = framePortDiscFrame(fixture)) {
+            if (field == CdSpinningDisc.DiscPlayerField.DISTANCE_CLAMP) {
+                var a = f.captureActor();
+                f.restoreActor(new CdPlayerFrameRuntime.ActorState(a.owner(),
+                        framePortReplaceState(a.state(), "ROTATION_DISTANCE", 255), a.display()));
+            }
+            var actor = f.captureActor(); var shared = f.captureShared(); var s = actor.state(); var e = shared.environment();
+            var finalState = target.equals("LOGICAL_CONTROLS") ? s : framePortReplaceState(s, target, value);
+            var finalEnvironment = target.equals("LOGICAL_CONTROLS") ? framePortLogicalWord(e, value) : e;
+            var store = new CdSpinningDisc.PlayerStore(field, expectedRaw, value);
+            var stores = new ArrayList<CdSpinningDisc.PlayerStore>(); stores.add(store);
+            var result = new CdSpinningDisc.PlayerResult(finalState, finalEnvironment, stores);
+            stores.clear(); assertEquals(List.of(store), result.stores());
+            assertThrows(UnsupportedOperationException.class, () -> result.stores().add(store));
+            int uploads = fixture.dmas.size();
+            f.bindArtPublication((request, state) -> fail("Direct Disc adoption cannot publish art or replay callbacks"));
+            CdSpinningDisc.validatePlayerResult(new CdSpinningDisc.PlayerCut(s, e), result);
+            f.validateObjectDiscPlayerResult(s, e, result);
+            assertSame(s, f.state()); assertSame(e, f.environment());
+            assertEquals(actor, f.captureActor()); assertEquals(shared, f.captureShared());
+            f.applyObjectDiscPlayerResult(s, e, result);
+            assertSame(finalState, f.state()); assertSame(finalEnvironment, f.environment());
+            assertEquals(new CdPlayerFrameRuntime.ActorState(actor.owner(), finalState, actor.display()), f.captureActor());
+            assertEquals(new CdPlayerFrameRuntime.SharedState(shared.owner(), finalEnvironment, shared.artState(),
+                    shared.paused(), shared.vIntClock()), f.captureShared());
+            assertSame(actor.display(), f.display()); assertSame(shared.artState(), f.artState());
+            assertSame(shared.vIntClock(), f.vIntClock()); assertEquals(uploads, fixture.dmas.size());
+            assertEquals(s.motion().centreX16_16() & 0xFFFF, f.state().motion().centreX16_16() & 0xFFFF);
+            assertEquals(s.motion().centreY16_16() & 0xFFFF, f.state().motion().centreY16_16() & 0xFFFF);
+            assertEquals(s.animation().timer(), f.state().animation().timer());
+            assertEquals(s.animation().mapFrame(), f.state().animation().mapFrame(), "Pose writes $1B, never map $1A");
+            assertEquals(s.motion().previousAnimation(), f.state().motion().previousAnimation());
+            assertEquals(s.motion().charge(), f.state().motion().charge());
+            assertEquals(s.motion().groundVelocity(), f.state().motion().groundVelocity());
+            assertEquals(s.motion().moveLock(), f.state().motion().moveLock());
+            assertEquals(s.header(), f.state().header()); assertEquals(s.timers(), f.state().timers());
+            assertEquals(s.history(), f.state().history()); assertEquals(s.objectLinks(), f.state().objectLinks());
+            assertEquals(e.movement(), f.environment().movement()); assertEquals(e.globals(), f.environment().globals());
+            assertEquals(e.dynamicSlots(), f.environment().dynamicSlots());
+            assertEquals(e.controls().rawHeld(), f.environment().controls().rawHeld());
+            assertEquals(e.controls().rawTap(), f.environment().controls().rawTap());
+            assertEquals(e.controls().controlLocked(), f.environment().controls().controlLocked());
+            if (!finalState.equals(s) || !finalEnvironment.equals(e)) {
+                framePortDiscRejected(f, s, e, result, IllegalArgumentException.class);
+            } else {
+                f.applyObjectDiscPlayerResult(s, e, result); // Equal-valued data is not a one-use authority.
+                assertSame(finalState, f.state()); assertSame(finalEnvironment, f.environment());
+            }
+            f.restoreActor(actor); f.restoreShared(shared); f.applyObjectDiscPlayerResult(s, e, result);
+            assertSame(finalState, f.state()); assertSame(finalEnvironment, f.environment());
+            assertEquals(uploads, fixture.dmas.size());
+        }
+    }
+
+    @ParameterizedTest @EnumSource(CdSpinningDisc.DiscPlayerField.class)
+    void directDiscMetadataRejectsBothOutOfWidthOperandsForEverySite(CdSpinningDisc.DiscPlayerField field) {
+        int overflow = field.widthBits() == 8 ? 0x100 : 0x10000;
+        for (int bad : new int[]{-1, overflow}) {
+            assertThrows(IllegalArgumentException.class, () -> new CdSpinningDisc.PlayerStore(field, bad, 0));
+            assertThrows(IllegalArgumentException.class, () -> new CdSpinningDisc.PlayerStore(field, 0, bad));
+        }
+        assertEquals(33, CdSpinningDisc.DiscPlayerField.values().length);
+        assertEquals(9, CdSpinningDisc.StoreKind.values().length);
+    }
+
+
+    /** Test-only field replacement over genuine captures; never constructs or forges an owner. */
+    private static CdPlayerBody.State framePortChangedState(CdPlayerBody.State s, String key) {
+        if (key.equals("HISTORY_BYTES")) {
+            var bytes = s.history().bytes().copy(); bytes[0xA7] ^= 1;
+            return new CdPlayerBody.State(s.motion(), s.animation(), s.header(), s.timers(),
+                    new CdPlayerBody.History(CdAssetBytes.copyOf(bytes), s.history().index()),
+                    s.rotationDistance(), s.objectLinks(), s.rotationAngle());
+        }
+        var m = s.motion(); var a = s.animation(); var h = s.header(); var t = s.timers();
+        int raw = switch (key) {
+            case "CENTRE_X" -> m.centreX16_16() >>> 16;
+            case "X_FRACTION" -> m.centreX16_16() & 0xFFFF;
+            case "CENTRE_Y" -> m.centreY16_16() >>> 16;
+            case "Y_FRACTION" -> m.centreY16_16() & 0xFFFF;
+            case "X_VELOCITY" -> m.xVelocity();
+            case "Y_VELOCITY" -> m.yVelocity();
+            case "GROUND_VELOCITY" -> m.groundVelocity();
+            case "ROUTINE" -> m.routine();
+            case "ANGLE" -> m.angle();
+            case "FLAGS" -> m.flags();
+            case "SPRITE_FLAGS" -> m.spriteFlags();
+            case "X_RADIUS" -> m.xRadius();
+            case "Y_RADIUS" -> m.yRadius();
+            case "ANIMATION" -> m.animation();
+            case "PREVIOUS_ANIMATION" -> m.previousAnimation();
+            case "PLAYER_JUMP" -> m.playerJump();
+            case "CHARGE" -> m.charge();
+            case "MOVE_LOCK" -> m.moveLock();
+            case "STICK" -> m.stick();
+            case "PLAYER_CONTROL" -> m.playerControl();
+            case "PREVIOUS_PRIMARY_ANGLE" -> m.previousPrimaryAngle();
+            case "PREVIOUS_SECONDARY_ANGLE" -> m.previousSecondaryAngle();
+            case "SCRIPT_INDEX" -> a.scriptIndex();
+            case "ANIMATION_TIMER" -> a.timer();
+            case "MAP_FRAME" -> a.mapFrame();
+            case "SLOT_ID" -> h.slotId();
+            case "MAPPING_ADDRESS" -> h.mappingAddress();
+            case "TILE" -> h.tile();
+            case "PRIORITY" -> h.priority();
+            case "WIDTH" -> h.width();
+            case "HURT" -> t.hurt();
+            case "INVINCIBILITY" -> t.invincibility();
+            case "SPEED_SHOES" -> t.speedShoes();
+            case "RESET" -> t.reset();
+            case "HISTORY_INDEX" -> s.history().index();
+            case "ROTATION_DISTANCE" -> s.rotationDistance();
+            case "PUSH_OBJECT" -> s.objectLinks().pushObject();
+            case "STAND_OBJECT" -> s.objectLinks().standObject();
+            case "ROTATION_ANGLE" -> s.rotationAngle();
+            default -> throw new IllegalArgumentException("Unknown State test field " + key);
+        };
+        return framePortReplaceState(s, key, raw ^ 1);
+    }
+
+    /** Explicit expected-value construction; native operation constants live in the parameter vectors. */
+    private static CdPlayerBody.State framePortReplaceState(CdPlayerBody.State s, String key, int value) {
+        var m = s.motion(); var a = s.animation(); var h = s.header(); var t = s.timers();
+        var motion = new CdPlayerMotionState(
+                key.equals("CENTRE_X") ? (value << 16) | (m.centreX16_16() & 0xFFFF) : key.equals("X_FRACTION") ? (m.centreX16_16() & 0xFFFF0000) | value : m.centreX16_16(),
+                key.equals("CENTRE_Y") ? (value << 16) | (m.centreY16_16() & 0xFFFF) : key.equals("Y_FRACTION") ? (m.centreY16_16() & 0xFFFF0000) | value : m.centreY16_16(),
+                key.equals("X_VELOCITY") ? (short) value : m.xVelocity(),
+                key.equals("Y_VELOCITY") ? (short) value : m.yVelocity(),
+                key.equals("GROUND_VELOCITY") ? (short) value : m.groundVelocity(),
+                key.equals("ROUTINE") ? value : m.routine(),
+                key.equals("ANGLE") ? value : m.angle(),
+                key.equals("FLAGS") ? value : m.flags(),
+                key.equals("SPRITE_FLAGS") ? value : m.spriteFlags(),
+                key.equals("X_RADIUS") ? value : m.xRadius(),
+                key.equals("Y_RADIUS") ? value : m.yRadius(),
+                key.equals("ANIMATION") ? value : m.animation(),
+                key.equals("PREVIOUS_ANIMATION") ? value : m.previousAnimation(),
+                key.equals("PLAYER_JUMP") ? value : m.playerJump(),
+                key.equals("CHARGE") ? value : m.charge(),
+                key.equals("MOVE_LOCK") ? (short) value : m.moveLock(),
+                key.equals("STICK") ? value : m.stick(),
+                key.equals("PLAYER_CONTROL") ? value : m.playerControl(),
+                key.equals("PREVIOUS_PRIMARY_ANGLE") ? value : m.previousPrimaryAngle(),
+                key.equals("PREVIOUS_SECONDARY_ANGLE") ? value : m.previousSecondaryAngle());
+        return new CdPlayerBody.State(motion,
+                new CdPlayerBody.AnimationCursor(key.equals("SCRIPT_INDEX") ? value : a.scriptIndex(),
+                        key.equals("ANIMATION_TIMER") ? value : a.timer(),
+                        key.equals("MAP_FRAME") ? value : a.mapFrame()),
+                new CdPlayerBody.Header(key.equals("SLOT_ID") ? value : h.slotId(),
+                        key.equals("MAPPING_ADDRESS") ? value : h.mappingAddress(),
+                        key.equals("TILE") ? value : h.tile(),
+                        key.equals("PRIORITY") ? value : h.priority(),
+                        key.equals("WIDTH") ? value : h.width()),
+                new CdPlayerBody.Timers(key.equals("HURT") ? value : t.hurt(),
+                        key.equals("INVINCIBILITY") ? value : t.invincibility(),
+                        key.equals("SPEED_SHOES") ? value : t.speedShoes(),
+                        key.equals("RESET") ? value : t.reset()),
+                key.equals("HISTORY_INDEX") ? new CdPlayerBody.History(s.history().bytes(), value) : s.history(),
+                key.equals("ROTATION_DISTANCE") ? value : s.rotationDistance(),
+                new CdPlayerBody.ObjectLinks(key.equals("PUSH_OBJECT") ? value : s.objectLinks().pushObject(),
+                        key.equals("STAND_OBJECT") ? value : s.objectLinks().standObject()),
+                key.equals("ROTATION_ANGLE") ? value : s.rotationAngle());
+    }
+
+    private static CdPlayerBody.Environment framePortChangedEnvironment(CdPlayerBody.Environment e, String key) {
+        if (key.equals("DYNAMIC_SLOTS")) {
+            var other = e.dynamicSlots() == CdPlayerBody.DynamicSlots.EMPTY_DEVELOPMENT_96
+                    ? CdPlayerBody.DynamicSlots.UNIMPLEMENTED : CdPlayerBody.DynamicSlots.EMPTY_DEVELOPMENT_96;
+            return new CdPlayerBody.Environment(e.movement(), e.controls(), e.globals(), other);
+        }
+        var m = e.movement(); var p = m.physics(); var b = m.bounds(); var q = m.gates(); var g = m.globals();
+        var c = e.controls(); var z = e.globals();
+        int raw = switch (key) {
+            case "TOP_SPEED" -> p.topSpeed();
+            case "ACCELERATION" -> p.acceleration();
+            case "DECELERATION" -> p.deceleration();
+            case "BOUND_LEFT" -> b.left();
+            case "BOUND_RIGHT" -> b.right();
+            case "BOUND_BOTTOM" -> b.bottom();
+            case "BOUND_BOSS_FIGHT" -> b.bossFight();
+            case "GATE_ZONE_ACT" -> q.zoneAct();
+            case "GATE_TIME_ZONE" -> q.timeZone();
+            case "GATE_MINI_SONIC" -> q.miniSonic();
+            case "GATE_WATER_SLIDE" -> q.waterSlide();
+            case "GATE_WIND_TUNNEL" -> q.windTunnel();
+            case "GATE_SPEED_SHOES" -> q.speedShoes();
+            case "GATE_TIME_WARP_DIRECTION" -> q.timeWarpDirection();
+            case "MOVEMENT_LOOK_MODE" -> g.lookMode();
+            case "MOVEMENT_CAMERA_Y_CENTRE" -> g.cameraYCentre();
+            case "MOVEMENT_PRIMARY_ANGLE" -> g.primaryAngle();
+            case "MOVEMENT_SECONDARY_ANGLE" -> g.secondaryAngle();
+            case "MOVEMENT_BORED_TIMER" -> g.boredTimer();
+            case "MOVEMENT_SCORE_CHAIN" -> g.scoreChain();
+            case "MOVEMENT_DEBUG_ANGLE" -> g.debugAngle();
+            case "MOVEMENT_DEBUG_ANGLE_SHIFT" -> g.debugAngleShift();
+            case "MOVEMENT_DEBUG_QUADRANT" -> g.debugQuadrant();
+            case "MOVEMENT_DEBUG_FLOOR_DISTANCE" -> g.debugFloorDistance();
+            case "RAW_HELD" -> c.rawHeld();
+            case "RAW_TAP" -> c.rawTap();
+            case "LOGICAL_HELD" -> c.logicalHeld();
+            case "LOGICAL_TAP" -> c.logicalTap();
+            case "CONTROL_LOCKED" -> c.controlLocked();
+            case "BODY_LEVEL_FRAMES" -> z.levelFrames();
+            case "BODY_CAMERA_X_CENTRE" -> z.cameraXCentre();
+            case "BODY_TIME_ATTACK_MODE" -> z.timeAttackMode();
+            case "BODY_DEBUG_MODE" -> z.debugMode();
+            case "BODY_DEBUG_CHEAT" -> z.debugCheat();
+            case "BODY_TIME_WARP_TIMER" -> z.timeWarpTimer();
+            case "BODY_INVINCIBLE" -> z.invincible();
+            case "BODY_BOSS_MUSIC" -> z.bossMusic();
+            default -> throw new IllegalArgumentException("Unknown Environment test field " + key);
+        };
+        int value = raw ^ 1;
+        var movement = new CdPlayerMovement.Environment(
+                new CdPlayerMovement.Physics(key.equals("TOP_SPEED") ? (short) value : p.topSpeed(),
+                        key.equals("ACCELERATION") ? (short) value : p.acceleration(),
+                        key.equals("DECELERATION") ? (short) value : p.deceleration()),
+                new CdPlayerMovement.Bounds(key.equals("BOUND_LEFT") ? value : b.left(),
+                        key.equals("BOUND_RIGHT") ? value : b.right(),
+                        key.equals("BOUND_BOTTOM") ? value : b.bottom(),
+                        key.equals("BOUND_BOSS_FIGHT") ? value : b.bossFight()),
+                new CdPlayerMovement.Gates(key.equals("GATE_ZONE_ACT") ? value : q.zoneAct(),
+                        key.equals("GATE_TIME_ZONE") ? value : q.timeZone(),
+                        key.equals("GATE_MINI_SONIC") ? value : q.miniSonic(),
+                        key.equals("GATE_WATER_SLIDE") ? value : q.waterSlide(),
+                        key.equals("GATE_WIND_TUNNEL") ? value : q.windTunnel(),
+                        key.equals("GATE_SPEED_SHOES") ? value : q.speedShoes(),
+                        key.equals("GATE_TIME_WARP_DIRECTION") ? value : q.timeWarpDirection()),
+                new CdPlayerMovement.Globals(key.equals("MOVEMENT_LOOK_MODE") ? value : g.lookMode(),
+                        key.equals("MOVEMENT_CAMERA_Y_CENTRE") ? value : g.cameraYCentre(),
+                        key.equals("MOVEMENT_PRIMARY_ANGLE") ? value : g.primaryAngle(),
+                        key.equals("MOVEMENT_SECONDARY_ANGLE") ? value : g.secondaryAngle(),
+                        key.equals("MOVEMENT_BORED_TIMER") ? value : g.boredTimer(),
+                        key.equals("MOVEMENT_SCORE_CHAIN") ? value : g.scoreChain(),
+                        key.equals("MOVEMENT_DEBUG_ANGLE") ? value : g.debugAngle(),
+                        key.equals("MOVEMENT_DEBUG_ANGLE_SHIFT") ? value : g.debugAngleShift(),
+                        key.equals("MOVEMENT_DEBUG_QUADRANT") ? value : g.debugQuadrant(),
+                        key.equals("MOVEMENT_DEBUG_FLOOR_DISTANCE") ? value : g.debugFloorDistance()));
+        return new CdPlayerBody.Environment(movement,
+                new CdPlayerBody.Controls(key.equals("RAW_HELD") ? value : c.rawHeld(),
+                        key.equals("RAW_TAP") ? value : c.rawTap(),
+                        key.equals("LOGICAL_HELD") ? value : c.logicalHeld(),
+                        key.equals("LOGICAL_TAP") ? value : c.logicalTap(),
+                        key.equals("CONTROL_LOCKED") ? value : c.controlLocked()),
+                new CdPlayerBody.Globals(key.equals("BODY_LEVEL_FRAMES") ? value : z.levelFrames(),
+                        key.equals("BODY_CAMERA_X_CENTRE") ? value : z.cameraXCentre(),
+                        key.equals("BODY_TIME_ATTACK_MODE") ? value : z.timeAttackMode(),
+                        key.equals("BODY_DEBUG_MODE") ? value : z.debugMode(),
+                        key.equals("BODY_DEBUG_CHEAT") ? value : z.debugCheat(),
+                        key.equals("BODY_TIME_WARP_TIMER") ? value : z.timeWarpTimer(),
+                        key.equals("BODY_INVINCIBLE") ? value : z.invincible(),
+                        key.equals("BODY_BOSS_MUSIC") ? value : z.bossMusic()),
+                e.dynamicSlots());
+    }
+
+    private static CdPlayerBody.Environment framePortLogicalWord(CdPlayerBody.Environment e, int value) {
+        var c = e.controls();
+        return new CdPlayerBody.Environment(e.movement(),
+                new CdPlayerBody.Controls(c.rawHeld(), c.rawTap(), value >>> 8, value & 0xFF, c.controlLocked()),
+                e.globals(), e.dynamicSlots());
+    }
+
+    private static CdPlayerFrameRuntime framePortDiscFrame(Fixture fixture) throws IOException {
+        var f = spinTunnelDirtyFrame(fixture); var actor = f.captureActor();
+        // Constructed entry makes BSET0 change $A4->$A5; it grants no actual Disc invocation.
+        f.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(),
+                framePortReplaceState(actor.state(), "PLAYER_CONTROL", 0xA4), actor.display()));
+        return f;
+    }
+
+
+    @Test void directDiscPreservesTwoOrbitWordStoresAndDuplicateMiniatureStoresAsObservations() throws IOException {
+        try (var f = framePortDiscFrame(new Fixture())) {
+            var actor = f.captureActor(); var shared = f.captureShared(); var s = actor.state(); var e = shared.environment();
+            var finalState = framePortReplaceState(s, "CENTRE_X", 0);
+            finalState = framePortReplaceState(finalState, "CENTRE_Y", 2);
+            finalState = framePortReplaceState(finalState, "Y_RADIUS", 10);
+            finalState = framePortReplaceState(finalState, "X_RADIUS", 5);
+            var stores = List.of(
+                    new CdSpinningDisc.PlayerStore(CdSpinningDisc.DiscPlayerField.ORBIT_X_BASE, 0xFFFC, 0xFFFF),
+                    new CdSpinningDisc.PlayerStore(CdSpinningDisc.DiscPlayerField.ORBIT_X_OFFSET, 0xFFFF, 0),
+                    new CdSpinningDisc.PlayerStore(CdSpinningDisc.DiscPlayerField.ROLL_Y_ADVANCE, 0xFFFD, 2),
+                    new CdSpinningDisc.PlayerStore(CdSpinningDisc.DiscPlayerField.JUMP_Y_RADIUS_MINI, 19, 10),
+                    new CdSpinningDisc.PlayerStore(CdSpinningDisc.DiscPlayerField.JUMP_X_RADIUS_MINI, 9, 5),
+                    new CdSpinningDisc.PlayerStore(CdSpinningDisc.DiscPlayerField.ROLL_Y_RADIUS_MINI, 10, 10),
+                    new CdSpinningDisc.PlayerStore(CdSpinningDisc.DiscPlayerField.ROLL_X_RADIUS_MINI, 5, 5));
+            var result = new CdSpinningDisc.PlayerResult(finalState, e, stores);
+            f.applyObjectDiscPlayerResult(s, e, result);
+            assertSame(finalState, f.state()); assertSame(e, f.environment()); assertEquals(stores, result.stores());
+            assertEquals(0x00001234, f.state().motion().centreX16_16());
+            assertEquals(0x0002BEEF, f.state().motion().centreY16_16());
+            assertEquals(10, f.state().motion().yRadius()); assertEquals(5, f.state().motion().xRadius());
+            assertEquals(s.rotationAngle(), f.state().rotationAngle());
+            assertEquals(s.rotationDistance(), f.state().rotationDistance());
+            assertEquals(s.motion().stick(), f.state().motion().stick());
+            assertEquals(s.motion().charge(), f.state().motion().charge());
+            f.restoreActor(actor); f.restoreShared(shared);
+            var wrongOld = new ArrayList<>(stores);
+            wrongOld.set(1, new CdSpinningDisc.PlayerStore(CdSpinningDisc.DiscPlayerField.ORBIT_X_OFFSET, 0xFFFC, 0));
+            framePortDiscRejected(f, s, e, new CdSpinningDisc.PlayerResult(finalState, e, wrongOld), IllegalArgumentException.class);
+            var wrongMini = new ArrayList<>(stores);
+            wrongMini.set(5, new CdSpinningDisc.PlayerStore(CdSpinningDisc.DiscPlayerField.ROLL_Y_RADIUS_MINI, 19, 10));
+            framePortDiscRejected(f, s, e, new CdSpinningDisc.PlayerResult(finalState, e, wrongMini), IllegalArgumentException.class);
+            assertEquals(actor, f.captureActor()); assertEquals(shared, f.captureShared());
+        }
+    }
+
+    @Test void directDiscSubtractionPrefixKeepsByteWrapBeforeItsSeparateClampAndRotationWrapsIndependently()
+            throws IOException {
+        try (var f = framePortDiscFrame(new Fixture())) {
+            var original = f.captureActor(); var seeded = framePortReplaceState(original.state(), "ROTATION_DISTANCE", 0);
+            seeded = framePortReplaceState(seeded, "ROTATION_ANGLE", 0xFC);
+            f.restoreActor(new CdPlayerFrameRuntime.ActorState(original.owner(), seeded, original.display()));
+            var e = f.environment(); var s = f.state();
+            var finalState = framePortReplaceState(s, "ROTATION_ANGLE", 4);
+            var stores = List.of(
+                    new CdSpinningDisc.PlayerStore(CdSpinningDisc.DiscPlayerField.DISTANCE_SHRINK, 0, 255),
+                    new CdSpinningDisc.PlayerStore(CdSpinningDisc.DiscPlayerField.DISTANCE_CLAMP, 255, 0),
+                    new CdSpinningDisc.PlayerStore(CdSpinningDisc.DiscPlayerField.ROTATION_ADVANCE, 0xFC, 4));
+            var result = new CdSpinningDisc.PlayerResult(finalState, e, stores);
+            f.applyObjectDiscPlayerResult(s, e, result);
+            assertSame(finalState, f.state()); assertEquals(0, f.state().rotationDistance());
+            assertEquals(4, f.state().rotationAngle()); assertEquals(s.motion().charge(), f.state().motion().charge());
+            assertEquals(List.of(255, 0, 4), result.stores().stream().map(CdSpinningDisc.PlayerStore::value).toList());
+        }
+    }
+
+    @Test void directDiscLogicalWordMustCopyActualRawPairEvenWithAControlLock() throws IOException {
+        try (var f = framePortDiscFrame(new Fixture())) {
+            var s = f.state(); var e = f.environment();
+            assertEquals(0x81, e.controls().controlLocked());
+            assertEquals(0x2C24, (e.controls().rawHeld() << 8) | e.controls().rawTap());
+            var wrongEnvironment = framePortLogicalWord(e, 0x2C25);
+            var wrong = new CdSpinningDisc.PlayerResult(s, wrongEnvironment, List.of(
+                    new CdSpinningDisc.PlayerStore(CdSpinningDisc.DiscPlayerField.LOGICAL_CONTROLS, 0x0810, 0x2C25)));
+            framePortDiscRejected(f, s, e, wrong, IllegalArgumentException.class);
+            var finalEnvironment = framePortLogicalWord(e, 0x2C24);
+            var result = new CdSpinningDisc.PlayerResult(s, finalEnvironment, List.of(
+                    new CdSpinningDisc.PlayerStore(CdSpinningDisc.DiscPlayerField.LOGICAL_CONTROLS, 0x0810, 0x2C24)));
+            f.applyObjectDiscPlayerResult(s, e, result);
+            assertSame(s, f.state()); assertSame(finalEnvironment, f.environment());
+            assertEquals(new CdPlayerBody.Controls(0x2C, 0x24, 0x2C, 0x24, 0x81), f.environment().controls());
+        }
+    }
+
+    @ParameterizedTest @CsvSource({
+            "CONTROL_ACQUIRE,0xA4,1", "ROTATION_ADVANCE,0xFC,0xFC",
+            "FLAGS_AIR,0xE9,2", "FLAGS_PUSH_CLEAR,0xE9,0", "FLAGS_ROLL,0xE9,4",
+            "FLAGS_ROLL_JUMP,0xE9,0x10", "CONTROL_CLEAR,0xA4,0xA4",
+            "STICK_CLEAR,0x85,0x85", "ROLL_Y_ADVANCE,0xFFFD,1", "DISTANCE_CLAMP,0,0"
+    })
+    void directDiscFixedOperationsCannotEraseOtherBitsOrChangeTheirNativeStore(
+            CdSpinningDisc.DiscPlayerField field, int expectedRaw, int value) {
+        assertThrows(IllegalArgumentException.class, () -> new CdSpinningDisc.PlayerStore(field, expectedRaw, value));
+    }
+
+    @Test void preparedAndDirectPortsRequireIdleClosedCutsBeforeNullCasOrSharedValidation() throws IOException {
+        try (var f = new Fixture().runtime()) {
+            var pool = new CdObjectPool(); var object = framePortSolidObject(pool);
+            var player = solidPlayer(f); var globals = solidGlobals(f);
+            var result = CdSolidObject.fromAssets(f.assets()).run(CdSolidObject.Entry.GET_OFF_OBJECT,
+                    object, player, new CdSolidObject.Gates(0, 0), globals, pool.capture());
+            var prefix = prefixFrameValues(player, globals, Set.of(), Set.of());
+            var publication = f.prepareObjectSolidResult(player, globals, result);
+            var s = f.state(); var e = f.environment(); var direct = new CdSpinningDisc.PlayerResult(s, e, List.of());
+            framePortDiscRejected(f, null, e, direct, NullPointerException.class);
+            framePortDiscRejected(f, s, null, direct, NullPointerException.class);
+            framePortDiscRejected(f, s, e, null, NullPointerException.class);
+            var selection = f.prepareInput(8);
+            framePortAllGuarded(f, player, globals, result, prefix, publication, s, e, direct);
+            int[] activeService = {0};
+            f.serviceVBlank(selection.phase(), () -> {
+                activeService[0]++;
+                framePortAllGuarded(f, player, globals, result, prefix, publication, s, e, direct);
+            });
+            assertEquals(1, activeService[0]);
+            framePortAllGuarded(f, player, globals, result, prefix, publication, s, e, direct);
+            assertEquals(CdPlayerBody.Boundary.INIT_RETURN, f.runBody(1).result().boundary(),
+                    "Rejected ports preserve the actual pending input and resulting Body entitlement");
+            f.close();
+            framePortAllGuarded(f, player, globals, result, prefix, publication, s, e, direct);
+        }
+    }
+
+    private static void framePortAllGuarded(CdPlayerFrameRuntime f, CdSolidObject.Player player,
+            CdSolidObject.Globals globals, CdSolidObject.Result result, CdSolidObject.Prefix prefix,
+            CdPlayerFrameRuntime.ObjectSolidPublication publication, CdPlayerBody.State s,
+            CdPlayerBody.Environment e, CdSpinningDisc.PlayerResult direct) {
+        var actualState = f.state(); var actualEnvironment = f.environment(); var art = f.artState();
+        var display = f.display(); var clock = f.vIntClock();
+        assertThrows(IllegalStateException.class, () -> f.prepareObjectSolidResult(player, globals, result));
+        assertThrows(IllegalStateException.class, () -> f.prepareObjectSolidPrefix(player, globals, prefix));
+        assertThrows(IllegalStateException.class, () -> f.prepareObjectSolidResult(null, null, null));
+        assertThrows(IllegalStateException.class, () -> f.prepareObjectSolidPrefix(null, null, null));
+        framePortPreparedRejected(f, publication, IllegalStateException.class);
+        framePortPreparedRejected(f, null, IllegalStateException.class);
+        framePortDiscRejected(f, s, e, direct, IllegalStateException.class);
+        framePortDiscRejected(f, null, null, null, IllegalStateException.class);
+        assertSame(actualState, f.state()); assertSame(actualEnvironment, f.environment()); assertSame(art, f.artState());
+        assertSame(display, f.display()); assertSame(clock, f.vIntClock());
+    }
+    // END prepared Solid/direct Disc Frame ports.
+
 }

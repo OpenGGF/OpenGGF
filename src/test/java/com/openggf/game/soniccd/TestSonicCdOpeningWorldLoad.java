@@ -184,7 +184,7 @@ class TestSonicCdOpeningWorldLoad {
                 0, routine == 4 ? 2 : 0, 4, 9, 19, routine == 4 ? 0x1A : 0, m.previousAnimation(),
                 0, 0, 0, 0, 0, m.previousPrimaryAngle(), m.previousSecondaryAngle());
         var actor = new CdPlayerBody.State(motion, old.animation(), old.header(),
-                new CdPlayerBody.Timers(0, 0, 0, old.timers().reset()), old.history(), old.rotationDistance(), old.objectLinks());
+                new CdPlayerBody.Timers(0, 0, 0, old.timers().reset()), old.history(), old.rotationDistance(), old.objectLinks(), old.rotationAngle());
         frame.restoreActor(new CdPlayerFrameRuntime.ActorState(captured.owner(), actor, Optional.empty()));
         h.module().requirePlayerActor().rebindAfterRestore();
         var pool = runtime.placement().pool();
@@ -708,7 +708,7 @@ class TestSonicCdOpeningWorldLoad {
         var motion = new CdPlayerMotionState(0x02A60000, 0x01600000, 0x600, 0, 0x123,
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0);
         frame.restoreActor(new CdPlayerFrameRuntime.ActorState(a.owner(), new CdPlayerBody.State(motion,
-                s.animation(), s.header(), s.timers(), s.history(), s.rotationDistance(), s.objectLinks()), Optional.empty()));
+                s.animation(), s.header(), s.timers(), s.history(), s.rotationDistance(), s.objectLinks(), s.rotationAngle()), Optional.empty()));
         var prior = scroll(h); var b = prior.background();
         var fg = new CdR11aForegroundScroll.State(0x200, 0x01001234, 0x10, 0x10,
                 0, 0, 0, 0x710, 0, 0, 0);
@@ -828,7 +828,7 @@ class TestSonicCdOpeningWorldLoad {
         var motion = new CdPlayerMotionState(64 << 16, 0x858 << 16, 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
         frame.restoreActor(new CdPlayerFrameRuntime.ActorState(a.owner(), new CdPlayerBody.State(motion,
-                s.animation(), s.header(), s.timers(), s.history(), s.rotationDistance(), s.objectLinks()), Optional.empty()));
+                s.animation(), s.header(), s.timers(), s.history(), s.rotationDistance(), s.objectLinks(), s.rotationAngle()), Optional.empty()));
         var old = scroll(h);
         h.module().getScrollHandlerProvider().getHandler(0).restoreRewindState(new SonicCdPlayerPresentation.ScrollCapture(
                 old.owner(), new CdR11aForegroundScroll.State(0, 0x07F80000, 0x10, 0x10,
@@ -1438,7 +1438,7 @@ class TestSonicCdOpeningWorldLoad {
                 m.playerControl(), m.previousPrimaryAngle(), m.previousSecondaryAngle());
         var timers = old.timers();
         var state = new CdPlayerBody.State(motion, old.animation(), old.header(), new CdPlayerBody.Timers(
-                timers.hurt(), timers.invincibility(), timers.speedShoes(), 1), old.history(), old.rotationDistance(), old.objectLinks());
+                timers.hurt(), timers.invincibility(), timers.speedShoes(), 1), old.history(), old.rotationDistance(), old.objectLinks(), old.rotationAngle());
         frame.restoreActor(new CdPlayerFrameRuntime.ActorState(captured.owner(), state, Optional.empty()));
         h.module().requirePlayerActor().rebindAfterRestore();
         step(h, LogicalInputSnapshot.neutral());

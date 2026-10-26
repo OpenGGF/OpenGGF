@@ -2225,5 +2225,244 @@ class TestCdObjectMappings {
     }
     // END TAMABBOH MAPPING JOIN R1
 
+    // BEGIN SPINNING DISC MAPPING JOIN R1
+    /** N 1ecc5f3af, Spinning Disc/Data/Mappings.asm:1-34, complete literal source including both real pads. */
+    private static final byte[] SPINNING_DISC_SOURCE = HexFormat.of().parseHex(
+            "00060012001e02f8050000f0f8050800000002f8050000f0f8050800000001f80d0004f0");
+    private static final int SPINNING_DISC_MAP = 0x2095C6;
+    private static final List<List<CdObjectDrawQueue.RawPiece>> SPINNING_DISC_FRAMES = List.of(
+            List.of(new CdObjectDrawQueue.RawPiece(-8, 5, 0x0000, -16),
+                    new CdObjectDrawQueue.RawPiece(-8, 5, 0x0800, 0)),
+            List.of(new CdObjectDrawQueue.RawPiece(-8, 5, 0x0000, -16),
+                    new CdObjectDrawQueue.RawPiece(-8, 5, 0x0800, 0)),
+            List.of(new CdObjectDrawQueue.RawPiece(-8, 0x0D, 0x0004, -16)));
+
+    @Test void actualUsaSpinningDiscJoinsOneFullLiteralRootAndDrawsNativeSatColumnMajorGeometry() throws Exception {
+        var usa = usaMedia(); // Authentic loader owner; source is closed before Disc's lazy views are requested.
+        var objects = usa.objects();
+        var table = CdR11aObjectAssets.Table.SPINNING_DISC_MAPPINGS;
+        var view = objects.view(table);
+        assertEquals(table, view.table()); assertEquals(table.range(), view.range());
+        assertEquals(0x95C6, view.range().fileOffset()); assertEquals(36, view.range().length());
+        assertEquals(SPINNING_DISC_MAP, view.range().nativeAddress());
+        assertArrayEquals(SPINNING_DISC_SOURCE, view.bytes().copy());
+        assertEquals("c74d267322eb765b6dc9677a3b53824fbeeb48328d419631199798257f7ddeb4",
+                sha256(view.bytes().copy()));
+        var visual = objects.spinningDisc();
+        assertSame(visual, objects.spinningDisc());
+        assertEquals(0, visual.mappingTableOffset()); assertEquals(3, visual.mappingFrames().size());
+        assertArrayEquals(SPINNING_DISC_SOURCE, visual.mappings().copy());
+        assertArrayEquals(bytes(0, 2, 1, 0, 1, 2, 0xFF, 0), visual.animationTable().copy());
+        assertEquals(1, visual.animations().size());
+        assertEquals(1, visual.animations().getFirst().delay());
+        assertEquals(List.of(0, 1, 2), visual.animations().getFirst().frameBytes());
+        assertEquals(CdObjectVisualAssets.Terminal.LOOP_FF, visual.animations().getFirst().terminal());
+        assertEquals(0x0409, objects.tileWord(6, 0));
+        assertEquals(0x2409, objects.tileWord(2, 0), "Anton shares tile indices but keeps its own palette-one word");
+
+        var mappings = CdObjectMappings.fromOpeningAssets(usa.assets(), objects);
+        int[] offsets = {6, 18, 30}, consumed = {11, 11, 6};
+        var sourceTiles = new TreeSet<Integer>();
+        for (int frame = 0; frame < 3; frame++) {
+            var expected = SPINNING_DISC_FRAMES.get(frame);
+            assertEquals(offsets[frame], word(SPINNING_DISC_SOURCE, frame * 2), "literal big-endian directory");
+            assertEquals(offsets[frame], visual.mappingFrames().get(frame).relativeOffset());
+            assertEquals(expected.size(), SPINNING_DISC_SOURCE[offsets[frame]] & 255);
+            assertEquals(expected, visual.mappingFrames().get(frame).pieces().stream().map(p ->
+                    new CdObjectDrawQueue.RawPiece(p.y(), p.sizeByte(), p.rawTileWord(), p.x())).toList());
+            assertArrayEquals(Arrays.copyOfRange(SPINNING_DISC_SOURCE, offsets[frame], offsets[frame] + consumed[frame]),
+                    visual.mappingFrames().get(frame).bytes().copy());
+            var actual = mappings.resolve(SPINNING_DISC_MAP, false, frame);
+            assertEquals(new CdObjectDrawQueue.FrameMapping(expected.size(), expected), actual);
+            assertThrows(UnsupportedOperationException.class, () -> actual.pieces().clear());
+            for (var piece : expected) {
+                int count = ((piece.sizeByte() >>> 2) + 1) * ((piece.sizeByte() & 3) + 1);
+                for (int tileIndex = 0; tileIndex < count; tileIndex++)
+                    sourceTiles.add((piece.rawTileWord() & 0x7FF) + tileIndex);
+            }
+            var geometry = actual.pieces().stream().map(p -> new com.openggf.level.render.SpriteMappingPiece(
+                    p.x(), p.y(), (p.sizeByte() >>> 2) + 1, (p.sizeByte() & 3) + 1,
+                    (0x0409 + p.rawTileWord()) & 0x7FF, (p.rawTileWord() & 0x0800) != 0,
+                    (p.rawTileWord() & 0x1000) != 0, (p.rawTileWord() >>> 13) & 3,
+                    (p.rawTileWord() & 0x8000) != 0)).toList();
+            for (int flip = 0; flip < 4; flip++) {
+                var bounds = com.openggf.level.render.SpritePieceRenderer.computeFrameBounds(
+                        geometry, (flip & 1) != 0, (flip & 2) != 0);
+                assertEquals(new com.openggf.level.render.SpritePieceRenderer.FrameBounds(-16, -8, 15, 7), bounds);
+                assertEquals(32, bounds.width()); assertEquals(16, bounds.height());
+            }
+        }
+        assertEquals(tileRange(0, 12), sourceTiles, "raw $0800 is a flip, never an extra tile offset");
+        assertEquals(0, view.bytes().unsignedByte(17)); assertEquals(0, view.bytes().unsignedByte(29));
+        assertNotEquals(offsets[0], offsets[1], "equal frames retain their distinct native bodies");
+        for (int frame = 3; frame <= 255; frame++) {
+            int absent = frame;
+            var failure = assertThrows(UnsupportedOperationException.class,
+                    () -> mappings.resolve(SPINNING_DISC_MAP, false, absent));
+            assertTrue(failure.getMessage().contains("frame outside the registered source table"));
+        }
+        for (int invalid : new int[]{-1, 256}) {
+            assertThrows(IllegalArgumentException.class, () -> mappings.resolve(SPINNING_DISC_MAP, false, invalid));
+            assertThrows(IllegalArgumentException.class, () -> mappings.resolve(0x2095D4, true, invalid),
+                    "full frame-byte validation still precedes pointer/mode lookup");
+        }
+        for (int frame = 0; frame <= 255; frame++) {
+            int selected = frame;
+            assertThrows(UnsupportedOperationException.class, () -> mappings.resolve(SPINNING_DISC_MAP, true, selected));
+        }
+        // Every interior byte, the preceding neighbor and exact include end stay unregistered.
+        // JP/EU's independently authenticated $2095D4 is one such interior, never a USA alias.
+        for (int offset = -1; offset <= 36; offset++) {
+            if (offset == 0) continue;
+            int pointer = SPINNING_DISC_MAP + offset;
+            assertThrows(UnsupportedOperationException.class, () -> mappings.resolve(pointer, false, 0));
+            assertThrows(UnsupportedOperationException.class, () -> mappings.resolve(pointer, true, 0));
+        }
+        for (int pointer : new int[]{0x95C6, 0xFF2095C6, 0x802095C6, 0x2095BE, 0x2095F8, 0x209496}) {
+            assertThrows(UnsupportedOperationException.class, () -> mappings.resolve(pointer, false, 0));
+            assertThrows(UnsupportedOperationException.class, () -> mappings.resolve(pointer, true, 0));
+        }
+        assertTamabbohFramesAndBounds(mappings); assertTamabbohPriorRoots(usa, mappings);
+
+        // Literal native-order SAT bytes, independently authored for no/H/V/HV object mirrors.
+        // Source frame0/1's second piece already has H set; ADD.W $0409 precedes the object XOR.
+        byte[][] twoPieceSat = {
+                bytes(0,0xF8,5,1,0x04,0x09,1,0x70, 0,0xF8,5,2,0x0C,0x09,1,0x80),
+                bytes(0,0xF8,5,1,0x0C,0x09,1,0x80, 0,0xF8,5,2,0x04,0x09,1,0x70),
+                bytes(0,0xF8,5,1,0x14,0x09,1,0x70, 0,0xF8,5,2,0x1C,0x09,1,0x80),
+                bytes(0,0xF8,5,1,0x1C,0x09,1,0x80, 0,0xF8,5,2,0x14,0x09,1,0x70)};
+        byte[][] onePieceSat = {
+                bytes(0,0xF8,0x0D,1,0x04,0x0D,1,0x70),
+                bytes(0,0xF8,0x0D,1,0x0C,0x0D,1,0x70),
+                bytes(0,0xF8,0x0D,1,0x14,0x0D,1,0x70),
+                bytes(0,0xF8,0x0D,1,0x1C,0x0D,1,0x70)};
+        // Columns own consecutive source patterns; traversal is row-first, with source H on piece two.
+        // Each tuple is (native pattern, unmirrored screen X, screen Y, source-H).
+        int[][] twoPieceTiles = {
+                {0x409,240,120,0},{0x40B,248,120,0},{0x40A,240,128,0},{0x40C,248,128,0},
+                {0x409,264,120,1},{0x40B,256,120,1},{0x40A,264,128,1},{0x40C,256,128,1}};
+        int[][] onePieceTiles = {
+                {0x40D,240,120,0},{0x40F,248,120,0},{0x411,256,120,0},{0x413,264,120,0},
+                {0x40E,240,128,0},{0x410,248,128,0},{0x412,256,128,0},{0x414,264,128,0}};
+        for (int frame = 0; frame < 3; frame++) for (int flip = 0; flip < 4; flip++) {
+            var sat = drawSpinningDiscMapping(mappings, frame, 4 | flip, objects.tileWord(6, 0));
+            byte[] raw = sat.bytes(), expectedSat = frame < 2 ? twoPieceSat[flip] : onePieceSat[flip];
+            assertEquals(frame < 2 ? 2 : 1, sat.spriteCount());
+            assertArrayEquals(expectedSat, Arrays.copyOf(raw, expectedSat.length));
+            assertArrayEquals(new byte[4], Arrays.copyOfRange(raw, expectedSat.length, expectedSat.length + 4));
+            var actualTiles = new java.util.ArrayList<List<Integer>>();
+            for (int index = 0; index < sat.spriteCount(); index++) {
+                int at = index * 8, size = raw[at + 2] & 255, tileWord = word(raw, at + 4);
+                assertEquals(0, (tileWord >>> 13) & 3); assertEquals(0, tileWord & 0x8000);
+                assertEquals(new CdObjectDrawQueue.Provenance(4, 0, new CdObjectDrawQueue.CdSlotRef(52), index),
+                        sat.provenance().get(index));
+                var piece = new com.openggf.level.render.SpritePieceRenderer.PreparedPiece(
+                        word(raw, at + 6) - 128, word(raw, at) - 128, (size >>> 2) + 1, (size & 3) + 1,
+                        tileWord & 0x7FF, tileWord & 0x7FF, (tileWord >>> 13) & 3,
+                        (tileWord & 0x0800) != 0, (tileWord & 0x1000) != 0, false, false, 0, (size & 3) + 1);
+                com.openggf.level.render.SpritePieceRenderer.renderPreparedPiece(piece,
+                        (pattern, h, v, palette, x, y) ->
+                                actualTiles.add(List.of(pattern, x, y, palette, h ? 1 : 0, v ? 1 : 0)));
+            }
+            int[][] literalTiles = frame < 2 ? twoPieceTiles : onePieceTiles;
+            var expectedTiles = new java.util.ArrayList<List<Integer>>();
+            for (int[] tile : literalTiles) {
+                int x = (flip & 1) == 0 ? tile[1] : 504 - tile[1];
+                int y = (flip & 2) == 0 ? tile[2] : 248 - tile[2];
+                expectedTiles.add(List.of(tile[0], x, y, 0, tile[3] ^ (flip & 1), (flip >>> 1) & 1));
+            }
+            assertEquals(expectedTiles, actualTiles, "literal column-major source indices, positions and palette-zero HV");
+        }
+        byte[] detached = view.bytes().copy(); Arrays.fill(detached, (byte) 0xA5);
+        assertArrayEquals(SPINNING_DISC_SOURCE, view.bytes().copy());
+        assertEquals(new CdObjectDrawQueue.FrameMapping(2, SPINNING_DISC_FRAMES.getFirst()),
+                mappings.resolve(SPINNING_DISC_MAP, false, 0));
+    }
+
+    @Test void spinningDiscMapperKeepsArtColdReusesOneVisualAndPreservesTheExistingPublicContract() throws Exception {
+        var usa = usaMedia(); var objects = usa.objects();
+        var initial = objects.initialArtBank();
+        String[] coldFields = {"frontierArtBank", "contactArtBank", "floatBlockArtBank", "springArtBank",
+                "tunnelDoorArtBank", "monitorTimeArtBank", "pataBataArtBank", "sectionArtSources"};
+        for (String name : coldFields) {
+            var field = CdR11aObjectAssets.class.getDeclaredField(name); field.setAccessible(true);
+            assertNull(field.get(objects), "cold before mapper: " + name);
+        }
+        var discCache = CdR11aObjectAssets.class.getDeclaredField("spinningDisc"); discCache.setAccessible(true);
+        assertNull(discCache.get(objects));
+        var sourceViews = CdR11aObjectAssets.class.getDeclaredField("frontierViews"); sourceViews.setAccessible(true);
+        assertTrue(((Map<?, ?>) sourceViews.get(objects)).isEmpty());
+        var mappings = CdObjectMappings.fromOpeningAssets(usa.assets(), objects);
+        var visual = objects.spinningDisc();
+        assertSame(visual, discCache.get(objects)); assertSame(visual, objects.spinningDisc());
+        var newView = objects.view(CdR11aObjectAssets.Table.SPINNING_DISC_MAPPINGS);
+        var newScript = objects.view(CdR11aObjectAssets.Table.SPINNING_DISC_ANIMATIONS);
+        var viewsAfter = new HashMap<>((Map<?, ?>) sourceViews.get(objects));
+        assertSame(newView, viewsAfter.get(CdR11aObjectAssets.Table.SPINNING_DISC_MAPPINGS));
+        assertSame(newScript, viewsAfter.get(CdR11aObjectAssets.Table.SPINNING_DISC_ANIMATIONS));
+        assertFalse(viewsAfter.containsKey(CdR11aObjectAssets.Table.SPINNING_DISC_PLAYER_FRAMES));
+        var again = CdObjectMappings.fromOpeningAssets(usa.assets(), objects);
+        assertSame(visual, discCache.get(objects));
+        var retainedViews = (Map<?, ?>) sourceViews.get(objects);
+        assertEquals(viewsAfter.keySet(), retainedViews.keySet());
+        viewsAfter.forEach((key, value) -> assertSame(value, retainedViews.get(key)));
+        assertSame(initial, objects.initialArtBank());
+        for (String name : coldFields) {
+            var field = CdR11aObjectAssets.class.getDeclaredField(name); field.setAccessible(true);
+            assertNull(field.get(objects), "mapper does not decode, preload or own pixels: " + name);
+        }
+
+        // All 33 old counted roots/counts remain, plus exactly one new three-frame root; static Monitor roots stay eight.
+        var tablesField = CdObjectMappings.class.getDeclaredField("tables"); tablesField.setAccessible(true);
+        var registered = (Map<?, ?>) tablesField.get(mappings);
+        assertEquals(34, registered.size()); assertEquals(registered.keySet(), ((Map<?, ?>) tablesField.get(again)).keySet());
+        var disc = (CdObjectMappings.DeclaredTable) registered.get(SPINNING_DISC_MAP);
+        assertNotNull(disc); assertEquals(SPINNING_DISC_MAP, disc.nativeStartBits());
+        assertEquals(0, disc.tableOffset()); assertEquals(3, disc.frameCount());
+        assertSame(newView.bytes(), disc.bytes()); assertArrayEquals(SPINNING_DISC_SOURCE, disc.bytes().copy());
+        assertEquals(0x2095EA, disc.nativeStartBits() + disc.bytes().length());
+        var staticField = CdObjectMappings.class.getDeclaredField("staticPieces"); staticField.setAccessible(true);
+        assertEquals(8, ((Map<?, ?>) staticField.get(mappings)).size());
+        assertTamabbohFramesAndBounds(mappings); assertTamabbohPriorRoots(usa, mappings);
+        assertEquals(List.of("declaredSourceViews/2", "fromOpeningAssets/2", "resolve/3"),
+                Arrays.stream(CdObjectMappings.class.getDeclaredMethods())
+                        .filter(m -> java.lang.reflect.Modifier.isPublic(m.getModifiers()))
+                        .map(m -> m.getName() + "/" + m.getParameterCount()).sorted().toList());
+        assertEquals(0, CdObjectMappings.class.getConstructors().length);
+        assertEquals(1, CdObjectMappings.class.getDeclaredConstructors().length);
+        assertEquals(2, CdObjectMappings.class.getDeclaredConstructors()[0].getParameterCount());
+        var getter = CdR11aObjectAssets.class.getDeclaredMethod("spinningDisc");
+        assertEquals(CdObjectVisualAssets.class, getter.getReturnType()); assertEquals(0, getter.getParameterCount());
+        assertTrue(java.lang.reflect.Modifier.isPublic(getter.getModifiers()));
+        assertTrue(java.lang.reflect.Modifier.isSynchronized(getter.getModifiers()));
+        assertEquals(0, getter.getExceptionTypes().length);
+        assertEquals(62, CdR11aObjectAssets.Table.values().length); assertEquals(106, CdR11aAsset.values().length);
+        // No art getter, source-bank access, pixel callback or residency snapshot is used by this contract.
+    }
+
+    /** Constructed ID09 draw-slot ingress only: actual mapper, public queue, no body execution or pixel source. */
+    private static CdObjectDrawQueue.CpuSat drawSpinningDiscMapping(CdObjectDrawQueue.CdDrawMappings mappings,
+                                                                  int frame, int flags, int base) {
+        var slots = new CdObjectDrawQueue.CdDrawSlots() {
+            private CdObjectDrawQueue.LiveDrawSlot current = new CdObjectDrawQueue.LiveDrawSlot(
+                    9, flags, 0x100, 0x80, 0x9999, SPINNING_DISC_MAP, frame, base);
+            @Override public CdObjectDrawQueue.LiveDrawSlot read(CdObjectDrawQueue.CdSlotRef ref) {
+                assertEquals(52, ref.wholeIndex()); return current;
+            }
+            @Override public void writeOnScreenBit(CdObjectDrawQueue.CdSlotRef ref, boolean on) {
+                assertEquals(52, ref.wholeIndex()); var s = current;
+                current = new CdObjectDrawQueue.LiveDrawSlot(s.idByte(), (s.spriteFlagsByte() & 127) | (on ? 128 : 0),
+                        s.xWord(), s.yWord(), s.screenYWord(), s.mappingAddressBits(), s.mapFrameByte(), s.baseTileWord());
+            }
+        };
+        try (var queue = new CdObjectDrawQueue(slots, mappings, new byte[CdObjectDrawQueue.SAT_BYTE_SIZE])) {
+            var camera = new CdObjectDrawQueue.CameraWords(0, 0); queue.beginPass();
+            assertEquals(CdObjectDrawQueue.EnqueueResult.QUEUED, queue.drawObject(new CdObjectDrawQueue.DrawCallCut(
+                    new CdObjectDrawQueue.CdSlotRef(52), flags, 0x100, 0x80, 8, 0x10, 4), camera));
+            return queue.finishAfterCamera(new CdObjectDrawQueue.DrawCameras(camera, camera, camera));
+        }
+    }
+    // END SPINNING DISC MAPPING JOIN R1
+
 }
 // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>

@@ -2731,6 +2731,7 @@ class TestCdPlayerBody {
     }
 
     static final class Actor {
+        int rotationAngle = 0; // Explicit constructed test-only ingress; not a production default.
         int x = 64 << 16, y = 76 << 16, xv, yv, gv, routine = 2, angle, flags, spr = 4;
         int xr = 9, yr = 19, anim, prev, jump, charge, lock, stick, ctrl, pri, sec, hurt, invinc, shoes, reset, rotationDistance;
         CdPlayerBody.ObjectLinks objectLinks = new CdPlayerBody.ObjectLinks(0, 0);
@@ -2740,7 +2741,7 @@ class TestCdPlayerBody {
         CdPlayerBody.State state() {
             return new CdPlayerBody.State(new CdPlayerMotionState(x, y, xv, yv, gv, routine, angle, flags, spr, xr, yr,
                     anim, prev, jump, charge, lock, stick, ctrl, pri, sec), cursor, header,
-                    new CdPlayerBody.Timers(hurt, invinc, shoes, reset), history, rotationDistance, objectLinks);
+                    new CdPlayerBody.Timers(hurt, invinc, shoes, reset), history, rotationDistance, objectLinks, rotationAngle);
         }
     }
 
@@ -2790,4 +2791,124 @@ class TestCdPlayerBody {
         }
     }
     private static void word(byte[] bytes, int at, int value) { bytes[at] = (byte) (value >>> 8); bytes[at + 1] = (byte) value; }
+
+    // Rotation byte $2B: constructed test ingress, independent of angle $26, charge $2A and distance $39.
+    @Test void rotationAngleIsTheLastRequiredStateComponentAndKeepsTheExistingPublicShapes() throws Exception {
+        var components = CdPlayerBody.State.class.getRecordComponents();
+        assertEquals(List.of("motion", "animation", "header", "timers", "history", "rotationDistance",
+                "objectLinks", "rotationAngle"), Arrays.stream(components).map(c -> c.getName()).toList());
+        assertEquals(List.of(CdPlayerMotionState.class, CdPlayerBody.AnimationCursor.class, CdPlayerBody.Header.class,
+                CdPlayerBody.Timers.class, CdPlayerBody.History.class, int.class, CdPlayerBody.ObjectLinks.class, int.class),
+                Arrays.stream(components).map(c -> c.getType()).toList());
+        assertNotNull(CdPlayerBody.State.class.getConstructor(CdPlayerMotionState.class, CdPlayerBody.AnimationCursor.class,
+                CdPlayerBody.Header.class, CdPlayerBody.Timers.class, CdPlayerBody.History.class, int.class,
+                CdPlayerBody.ObjectLinks.class, int.class));
+        assertThrows(NoSuchMethodException.class, () -> CdPlayerBody.State.class.getConstructor(CdPlayerMotionState.class,
+                CdPlayerBody.AnimationCursor.class, CdPlayerBody.Header.class, CdPlayerBody.Timers.class,
+                CdPlayerBody.History.class, int.class, CdPlayerBody.ObjectLinks.class));
+        assertEquals(1, CdPlayerBody.State.class.getConstructors().length);
+        assertEquals(20, CdPlayerMotionState.class.getRecordComponents().length);
+        assertEquals(4, CdPlayerBody.Environment.class.getRecordComponents().length);
+        assertEquals(5, CdPlayerTouchResponse.Actor.class.getRecordComponents().length);
+        assertEquals(4, com.openggf.game.soniccd.objects.CdSolidObject.Player.class.getRecordComponents().length);
+    }
+
+    @Test void rotationAngleAcceptsEveryRawByteAndRejectsFullWidthInvalidValuesWithoutMasking() {
+        Actor a = new Actor(); a.angle = 0x26; a.charge = 0x2A; a.rotationDistance = 0x39;
+        for (int raw = 0; raw <= 0xFF; raw++) {
+            a.rotationAngle = raw;
+            var state = a.state();
+            assertEquals(raw, state.rotationAngle());
+            assertEquals(0x26, state.motion().angle());
+            assertEquals(0x2A, state.motion().charge());
+            assertEquals(0x39, state.rotationDistance());
+            assertEquals(state, rotationAngleCopy(state, raw));
+            assertNotEquals(state, rotationAngleCopy(state, raw ^ 0xFF));
+        }
+        for (int bad : new int[]{-1, 0x100, 0x1FF, 0x10000, 0x1000000, Integer.MIN_VALUE, Integer.MAX_VALUE}) {
+            a.rotationAngle = bad;
+            assertThrows(IllegalArgumentException.class, a::state, "raw $2B " + bad);
+            a.rotationAngle = 0x2B; a.angle = bad;
+            assertThrows(IllegalArgumentException.class, a::state, "independent angle $26 " + bad);
+            a.angle = 0x26; a.charge = bad;
+            assertThrows(IllegalArgumentException.class, a::state, "independent charge $2A " + bad);
+            a.charge = 0x2A; a.rotationDistance = bad;
+            assertThrows(IllegalArgumentException.class, a::state, "independent distance $39 " + bad);
+            a.rotationDistance = 0x39;
+        }
+    }
+
+    @ParameterizedTest @ValueSource(ints = {0, 2, 4, 6, 8})
+    void actualSupportedBodyExitsCarryRotationAngleWithWholeStateAndEffectEquality(int routine) {
+        Fixture f = new Fixture();
+        Actor a = routine >= 6 ? deadActor() : routine == 4 ? hurtActor() : new Actor();
+        a.routine = routine; a.charge = 20; a.rotationDistance = 0x39; a.rotationAngle = 0xD7; a.reset = 2;
+        if (routine == 4) a.y = 200 << 16;
+        var input = a.state(); var environment = f.environment(); var owner = f.owner();
+        var level = Optional.of(new LevelCut().context());
+        var control = owner.step(rotationAngleCopy(input, 0), environment, Optional.empty(), level);
+        var result = owner.step(input, environment, Optional.empty(), level);
+        var boundary = switch (routine) {
+            case 0 -> CdPlayerBody.Boundary.INIT_RETURN;
+            case 2 -> CdPlayerBody.Boundary.MAIN_RETURN;
+            case 4 -> CdPlayerBody.Boundary.HURT_RETURN;
+            case 6 -> CdPlayerBody.Boundary.DEAD_RETURN;
+            case 8 -> CdPlayerBody.Boundary.RESTART_RETURN;
+            default -> throw new AssertionError(routine);
+        };
+        assertEquals(boundary, result.boundary());
+        assertEquals(0xD7, result.state().rotationAngle());
+        assertEquals(rotationAngleCopy(control.state(), 0xD7), result.state());
+        assertEquals(control.effects(), result.effects(), "Carrying $2B adds no ActorWrite or other effect");
+        assertEquals(control.environment(), result.environment());
+        assertEquals(control.display(), result.display());
+        assertEquals(control.modeBoundary(), result.modeBoundary());
+        assertEquals(result, owner.step(input, environment, Optional.empty(), level));
+        assertEquals(0xD7, input.rotationAngle(), "Ingress is immutable");
+    }
+
+    @Test void absentBodyAndTerminalRoutineEightResetRetainTheActualRotationByte() {
+        Fixture f = new Fixture(); Actor absent = new Actor(); absent.rotationAngle = 0xFE;
+        absent.header = new CdPlayerBody.Header(0, 0, 0, 0, 0);
+        var input = absent.state(); var missing = f.owner().step(input, f.environment());
+        assertEquals(CdPlayerBody.Boundary.SLOT_ABSENT, missing.boundary());
+        assertSame(input, missing.state()); assertEquals(0xFE, missing.state().rotationAngle());
+        assertTrue(missing.effects().isEmpty());
+        Actor a = deadActor(); a.routine = 8; a.reset = 1; a.rotationAngle = 0xAB;
+        var state = a.state(); var environment = f.environment(); var owner = f.owner();
+        var level = Optional.of(new LevelCut().context());
+        var result = owner.step(state, environment, Optional.empty(), level);
+        var control = owner.step(rotationAngleCopy(state, 0), environment, Optional.empty(), level);
+        assertEquals(CdPlayerBody.Boundary.RESTART_RETURN, result.boundary());
+        assertEquals(0, result.state().timers().reset());
+        assertEquals(1, restartCuts(result).size());
+        assertEquals(rotationAngleCopy(control.state(), 0xAB), result.state());
+        assertEquals(control.effects(), result.effects());
+        assertEquals(0xAB, result.state().rotationAngle(), "Routine 8 is not a new LevelStart clear");
+    }
+
+    @ParameterizedTest @ValueSource(ints = {0, 5})
+    void realTouchHurtAndKillKeepRotationAngleAcrossResetAndByte38WordAliasing(int rings) {
+        Fixture f = new Fixture(); Actor a = new Actor();
+        a.rotationAngle = 0xE9; a.rotationDistance = 0xA5; f.rawHeld = f.rawTap = 0x10;
+        CdObjectPool pool = new CdObjectPool(); touchSlot(pool, 33, 0xAB, 72, 81);
+        Contact contact = new Contact(); contact.rings = rings;
+        var touch = Optional.of(responseTouch(pool, contact)); var input = a.state(); var environment = f.environment();
+        var owner = f.owner(); var result = owner.step(input, environment, touch);
+        var control = owner.step(rotationAngleCopy(input, 0), environment, touch);
+        assertEquals(rings == 0 ? CdPlayerTouchResponse.Exit.KILL_PLAYER : CdPlayerTouchResponse.Exit.HURT,
+                response(result).exit());
+        assertEquals(rotationAngleCopy(control.state(), 0xE9), result.state());
+        assertEquals(control.effects(), result.effects());
+        assertEquals(control.environment(), result.environment()); assertEquals(control.display(), result.display());
+        assertEquals(0xE9, result.state().rotationAngle());
+        assertEquals(rings == 0 ? 0x4C : 0xA5, result.state().rotationDistance());
+        assertEquals(result, owner.step(input, environment, touch));
+    }
+
+    /** Test-only explicit actor-byte replacement; no production ingress/default or native store claim. */
+    private static CdPlayerBody.State rotationAngleCopy(CdPlayerBody.State s, int rotationAngle) {
+        return new CdPlayerBody.State(s.motion(), s.animation(), s.header(), s.timers(), s.history(),
+                s.rotationDistance(), s.objectLinks(), rotationAngle);
+    }
 }

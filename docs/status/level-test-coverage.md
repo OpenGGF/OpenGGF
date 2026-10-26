@@ -16,8 +16,13 @@ and verifies all659 client entries retire while unrelated entries survive.
 Its matched old658 client fails on the extra entry, then the659 client passes.
 This does not close the native Tamabboh World scene: its fixed3257 candidate
 stops before ingress on a blank-floor prerequisite. Five final source guards
-also pass. Spinning Disc assets and rotation carry are reviewed but not
-imported; full-act/USA gameplay and JP/EU parity remain incomplete.
+also pass. Spinning Disc prerequisites are now imported and reviewed:156
+asset,232 plain-Solid and1203 affected rotation/lifecycle cases pass in
+separate runs; the later Disc/Frame/old-Runtime check passes1058, followed
+by54 real World/replay/EGL cases. Exact failed-oracle repairs and limits are
+in the matrix/dated plan. Final component guards pass728 across90 fresh
+reports, no skips. ID09 Runtime dispatch and natural contact remain
+open; full-act/USA gameplay and JP/EU parity remain incomplete.
 
 ### Earlier CD checkpoints
 

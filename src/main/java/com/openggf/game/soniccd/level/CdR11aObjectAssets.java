@@ -101,7 +101,11 @@ public final class CdR11aObjectAssets {
         TAMABBOH_DAMAGED_ANIMATIONS("Ani_Tamabboh2", 0xB94E, 26),
         TAMABBOH_MAPPINGS("MapSpr_Tamabboh1/MapSpr_Tamabboh2", 0xB968, 62),
         TAMABBOH_MISSILE_ANIMATIONS("Ani_TamabbohMissile", 0xBA68, 8),
-        TAMABBOH_MISSILE_MAPPINGS("MapSpr_TamabbohMissile", 0xBA70, 42);
+        TAMABBOH_MISSILE_MAPPINGS("MapSpr_TamabbohMissile", 0xBA70, 42),
+        // Spinning Disc/Main.asm:96,111,228-233: actual USA operands; full native-order includes.
+        SPINNING_DISC_PLAYER_FRAMES("ObjSpinningDisc_PlayerFrames", 0x9496, 16),
+        SPINNING_DISC_ANIMATIONS("Ani_SpinningDisc", 0x95BE, 8),
+        SPINNING_DISC_MAPPINGS("MapSpr_SpinningDisc", 0x95C6, 36);
 
         private final String nativeLabel;
         private final int offset;
@@ -373,6 +377,7 @@ public final class CdR11aObjectAssets {
     private CdObjectVisualAssets tamabbohNormal;
     private CdObjectVisualAssets tamabbohDamaged;
     private CdObjectVisualAssets tamabbohMissile;
+    private CdObjectVisualAssets spinningDisc;
 
     private CdR11aObjectAssets(CdR11aAssets.Identity identity, Map<Table, View> views, List<Delta> deltas,
                                 List<TouchSize> dimensions, CdObjectVisualAssets rings,
@@ -918,6 +923,21 @@ public final class CdR11aObjectAssets {
         return tamabbohMissile;
     }
 
+
+    /**
+     * ObjSpinningDisc_Init stores MapSpr_SpinningDisc ($2095C6); the wrapper's absolute LEA
+     * at $2093BC selects Ani_SpinningDisc ($2095BE). Main.asm:111 keeps the separate raw
+     * sixteen-byte player-frame table on view(Table.SPINNING_DISC_PLAYER_FRAMES).
+     * Three counted frames use exactly twelve tiles from the existing section source.
+     */
+    public synchronized CdObjectVisualAssets spinningDisc() {
+        if (spinningDisc == null) {
+            spinningDisc = CdObjectVisualAssets.decode(read(Table.SPINNING_DISC_MAPPINGS), 3,
+                    read(Table.SPINNING_DISC_ANIMATIONS), 1, 12);
+        }
+        return spinningDisc;
+    }
+
     /** Pure component decoder; signed bytes are extended as in ObjRing_Init (Ring/Main.asm:81-85). */
     public static List<Delta> decodeRingDeltas(byte[] input) {
         var bytes = exact(input, 32, "ObjRing_Deltas");
@@ -941,6 +961,7 @@ public final class CdR11aObjectAssets {
      * (Spring/Main.asm:217-220), and common Spikes' selector $A (Spikes/Main.asm:24-25),
      * and Tamabboh selector 4 (Tamabboh/Main.asm:38-39), each at subtype2 0, are admitted. Anton selector 2 (Anton/Main.asm:33-34) additionally admits
      * subtype2 0/1 from its two-word body (Object Tile IDs (Act 1 Present).asm:29-30).
+     * Spinning Disc selector 6 (Spinning Disc/Main.asm:41-42) admits only subtype2 0 ($0409).
      * Ring writes literal $A7AE.
      */
     public static int decodeTileWord(byte[] input, int selector, int subtype2) {
@@ -948,9 +969,9 @@ public final class CdR11aObjectAssets {
             throw new IllegalArgumentException("Object tile selector/subtype width");
         }
         var bytes = exact(input, 74, "ObjectTileIDs");
-        if ((selector != 0 && selector != 1 && selector != 2 && selector != 4 && selector != 5 && selector != 0xA && selector != 0xB && selector != 0xC && selector != 0xF)
+        if ((selector != 0 && selector != 1 && selector != 2 && selector != 4 && selector != 5 && selector != 6 && selector != 0xA && selector != 0xB && selector != 0xC && selector != 0xF)
                 || (selector == 2 ? subtype2 > 1 : subtype2 != 0)) {
-            throw new UnsupportedOperationException("Only Mosqui selector 0 / Pata-Bata selector 1 / Tamabboh selector 4 / FloatBlock selector 5 / common Spikes selector $A / Boulder selector $B / Tunnel Door selector $C / primary diagonal Spring selector $F at subtype2 0, or Anton selector 2 at subtype2 0/1, are reviewed");
+            throw new UnsupportedOperationException("Only Mosqui selector 0 / Pata-Bata selector 1 / Tamabboh selector 4 / FloatBlock selector 5 / Spinning Disc selector 6 / common Spikes selector $A / Boulder selector $B / Tunnel Door selector $C / primary diagonal Spring selector $F at subtype2 0, or Anton selector 2 at subtype2 0/1, are reviewed");
         }
         int target = (short) bytes.unsignedWord(selector * 2);
         int end = bytes.length();
@@ -963,7 +984,7 @@ public final class CdR11aObjectAssets {
         }
         int selected = target + subtype2 * 2;
         if (end - selected < 2) {
-            throw new IllegalArgumentException((selector == 0 ? "Mosqui" : selector == 1 ? "Pata-Bata" : selector == 2 ? "Anton" : selector == 4 ? "Tamabboh" : selector == 5 ? "FloatBlock"
+            throw new IllegalArgumentException((selector == 0 ? "Mosqui" : selector == 1 ? "Pata-Bata" : selector == 2 ? "Anton" : selector == 4 ? "Tamabboh" : selector == 5 ? "FloatBlock" : selector == 6 ? "Spinning Disc"
                     : selector == 0xA ? "Common Spikes" : selector == 0xB ? "Boulder" : selector == 0xC ? "Tunnel Door" : "Primary diagonal Spring")
                     + " tile word crosses its selected body");
         }
