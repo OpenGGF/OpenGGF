@@ -22,6 +22,10 @@ which behavior is required; derive unspecified details from the requested route.
   part for movement, touch, solids, control, participation, or lifetime behavior.
 - Keep native player-slot semantics explicit. Check per-player state, child-to-parent
   writes, allocation failure, and same-pass update visibility where the ROM uses them.
+  The named [Sideways safe-admission exception](../../../docs/status/known-discrepancies.md#s2-sideways-platform-safe-admission-and-owned-child-retirement)
+  instead reserves before construction, publishes links only after admission,
+  and uses bounded owned-child retirement. Do not restore its omitted corruption
+  with SST/RAM/residue emulation or weaken strict rewind/trace validation.
 - Load art, mappings, DPLCs, and animation data through the ROM pipeline. Verify
   addresses and data shape, then register art and the object factory.
 - Transcribe the sprite bucket: `move.b #n,priority(a0)` is bucket `n`

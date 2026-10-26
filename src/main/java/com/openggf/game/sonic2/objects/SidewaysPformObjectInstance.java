@@ -15,6 +15,7 @@ import com.openggf.level.PatternDesc;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
@@ -116,8 +117,6 @@ public class SidewaysPformObjectInstance extends AbstractObjectInstance
         super(spawn, name);
         this.isChild = true;
         this.isMcz = parent.isMcz;
-        this.linkedPlatform = parent;
-        parent.linkedPlatform = this;
         initChild(parent);
         initialized = true;
     }
@@ -327,19 +326,80 @@ public class SidewaysPformObjectInstance extends AbstractObjectInstance
         );
 
         ObjectServices svc = services();
-        SidewaysPformObjectInstance child = ObjectConstructionContext.construct(
-                svc, () -> new SidewaysPformObjectInstance(childSpawn, name + "_child", this));
         ObjectManager objectManager = svc.objectManager();
-        if (objectManager == null) {
+        // Unmanaged/bootstrap and reconstruction receivers never fabricate a live
+        // companion. Rewind restores initialized scalars and exact links separately.
+        if (objectManager == null || ObjectConstructionContext.isProbeConstruction()
+                || ObjectConstructionContext.isRewindActiveRestore()) {
             return;
         }
-        if (ObjectConstructionContext.isRewindActiveRestore()) {
-            objectManager.registerRewindReconstructionChild(child);
-        } else {
-            // ROM Obj7A_SubObjectLoop uses AllocateObjectAfterCurrent, so the
-            // child must occupy the next free slot after the preallocated parent.
-            // docs/s2disasm/s2.asm:56192-56196
+        var parentIdentity = objectManager.objectQuery().identityOf(this).orElse(null);
+        if (parentIdentity == null || isDestroyed()) return;
+
+        // Obj7A_SubObjectLoop uses AllocateObjectAfterCurrent, not plain allocation
+        // (docs/s2disasm/s2.asm:56313-56329). The named safe-admission exception
+        // omits the subsequent failed-pointer writes into Tails's fixed storage.
+        int slot = ObjectLifetimeOps.reserveFindNextFreeChildSlot(objectManager, getSlotIndex());
+        if (slot < 0) return;
+        SidewaysPformObjectInstance child = null;
+        boolean admitted = false;
+        try {
+            child = ObjectConstructionContext.with(svc, slot,
+                    () -> new SidewaysPformObjectInstance(childSpawn, name + "_child", this));
             objectManager.addDynamicObjectAfterSlot(child, getSlotIndex());
+            // Stageplay can reject before service binding, without destroying the
+            // candidate. Only registration proves that this is an admitted child.
+            if (objectManager.objectQuery().identityOf(child).isEmpty()
+                    || !parentIdentity.equals(objectManager.objectQuery().identityOf(this).orElse(null))
+                    || isDestroyed()) return;
+            linkedPlatform = child;
+            child.linkedPlatform = this;
+            admitted = true;
+        } finally {
+            if (!admitted) {
+                if (child != null && objectManager.objectQuery().identityOf(child).isPresent()) {
+                    // Admission may throw after registration; remove only this identity.
+                    objectManager.removeDynamicObject(child);
+                } else if (child == null || child.getSlotIndex() == slot) {
+                    // Stageplay retirement already releases the reservation and clears
+                    // the candidate's slot before removal callbacks can reuse it.
+                    if (child != null) child.setSlotIndex(-1);
+                    // A removal/admission callback may already have installed a
+                    // replacement. Never release its slot through this old number.
+                    if (objectManager.objectIdInSlot(slot) < 0) objectManager.releaseDynamicSlot(slot);
+                }
+            }
+        }
+    }
+
+    @Override
+    public void setDestroyed(boolean destroyed) {
+        super.setDestroyed(destroyed);
+        if (destroyed) detachPartner(false);
+    }
+
+    @Override
+    public void setDestroyedByOffscreen() {
+        super.setDestroyedByOffscreen();
+        detachPartner(true);
+    }
+
+    @Override
+    protected void onRemovedFromObjectManager() {
+        detachPartner(true);
+    }
+
+    private void detachPartner(boolean offscreen) {
+        SidewaysPformObjectInstance partner = linkedPlatform;
+        linkedPlatform = null;
+        if (partner == null || partner == this || partner.linkedPlatform != this) return;
+        // Detach both edges before invoking destruction callbacks. This explicit
+        // Java ownership contract omits native cleared/reused-slot cross-writes:
+        // parent retirement owns its child; child retirement leaves a solo parent.
+        partner.linkedPlatform = null;
+        if (!isChild) {
+            if (offscreen) ObjectLifetimeOps.destroyRespawnableOffscreen(partner);
+            else ObjectLifetimeOps.deleteNoRespawn(partner);
         }
     }
 
