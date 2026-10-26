@@ -3754,3 +3754,175 @@ new links/anchors and `git diff --check` are checked before the local commit.
 Parent owns combined smoke/pilot coverage, integration and push. This delivers
 the prerequisite and the finite rejected-design evidence; it does not deliver
 the Sideways allocation/storage correction or certify an act.
+
+
+## Sideways safe admission and owned-child retirement (2026-10-25)
+
+This repair starts clean at requested main
+`08f0a5e78b4c7aaa11604e6e9eb9f2cb4151daa4` (PR223 merged), in the isolated
+`bugfix/ai-s2-sideways-safe-admission-20261025` checkout. Only the Sideways runtime
+class changes; allocator, manager, strict identity/schema/trace owners and the
+independent tail `prev_anim`/`$FD` correction are untouched. The parent owns
+combined smoke validation, integration, push and worktree cleanup. No native
+recapture is needed: the source-backed pressure/rejection observations and
+rendered demonstration retained above are reused with their original limits.
+
+The user explicitly authorized the [named safe-engine deviation](../../status/known-discrepancies.md#s2-sideways-platform-safe-admission-and-owned-child-retirement).
+The [reconvened design](../designs/2026-10-25-s2-sideways-storage.md#reconvened-council-bounded-engine-repair-october-25)
+supersedes the historical physical-storage target. The rejected candidate's 17
+controls/two failures are historical counterevidence, not this repair's results.
+No SST/fixed-tail/residue/RAM emulation, trace exception or gameplay hydration is
+introduced. Ordinary supported behavior outside the named exception remains a
+shipped-ROM fidelity obligation.
+
+### Admission and lifetime decisions
+
+Existing `reserveFindNextFreeChildSlot` reserves the first free slot strictly
+after the admitted parent, before construction. It does not substitute the
+competition-limited plain allocator. The child constructor initializes local
+position, bounds, direction, art selection and its initialized flag without
+publishing links. Admission uses the existing after-slot path, retaining service
+binding, creator boundaries and same-walk dispatch. Only a registered child and
+the **same live parent identity** permit reciprocal publication. A removed,
+re-registered or marked-but-unswept parent cannot acquire a newly published pair.
+
+Exhaustion constructs no child, consumes no slot, changes no Tails state and
+leaves the initialized parent with normal bounds, direction, X offset and
+movement. There is no retry until a fresh placement incarnation. Stageplay
+rejection is checked by registration, not `isDestroyed`: its existing retirement
+path releases the reservation and clears the candidate's slot index before any
+removal callback can reuse it. Local cleanup does not release it again. An
+exception before admission clears the saved slot and releases the still-owned
+reservation; an exception after admission removes only that exact child instance.
+The final publication rejection uses the same exact-child cleanup, never a
+numeric-slot deletion. The remaining empty-slot probe uses the manager's existing
+callback-aware query, not calls into arbitrary creator objects outside their
+fault boundary. No generic allocator API or lifecycle framework was added.
+
+Parent retirement detaches both links **before** marking its owned child for
+ordinary sweep. Child retirement detaches both links and leaves an initialized
+solo parent moving and endpoint-culling normally, without retry. Raw removal,
+marked deletion, offscreen retirement and Stageplay/editor retirement use that
+bounded asymmetric contract. Offscreen parent retirement preserves ordinary
+remember release and fresh placement. Repeated retirement is idempotent. Bulk
+reset discards the old graph; old Java references never resolve a new occupant
+by slot, and cannot affect reconstructed or reused-slot replacements. This is a
+deliberate ownership deviation from native cleared/reused partner cross-writes,
+not a claim to reproduce those writes.
+
+Unmanaged/bootstrap receivers, even with a manager service but no admitted
+identity, create no companion. Probe and active-restore update scopes do no live
+admission. Ordinary destructive rewind reconstructs from captured initialized
+state and exact links; it neither spawns nor applies the original X offset twice.
+Strict malformed-link rejection remains exercised by the existing graph and
+reference-closure controls.
+
+### Bounded physical controls and results
+
+The nine real-manager pressure cases use actual registered inert occupants,
+not a mocked allocator or fabricated identities:
+
+| Parent SST | Occupancy / subtype | Required outcome |
+| --- | --- | --- |
+| 40 | Full pool / `$06` | Solo initialized parent; no child construction |
+| 40 | Full later tail, earlier capacity / `$06` | Earlier capacity is not an anchored allocation |
+| 127 | Full pool / `$06` | No slot after the last dynamic SST |
+| 40 | Only SST16 free / `$06` | No fallback to the earlier hole |
+| 40 | Only SST49 free / `$06` | Child49, later same-walk movement |
+| 40 | SST47 and80 free / `$06` | First later free child47 |
+| 40 | Full pool / `$0C` | Native initial left direction/offset preserved |
+| 40 | Only SST49 free / `$0C` | Child49, independent default right direction |
+| 40 | SST47 and80 free / `$0C` | First later free child47 |
+
+Every exhausted case captures strictly, reconstructs fresh identities at the
+captured SSTs and replays forward without retry or double offset, including after
+capacity returns. Healthy pairs reconstruct exact reciprocal fresh links and
+forward positions; retained old instances cannot retire the restored pair.
+Additional controls cover native edge-equality direction toggles/collision
+parameters, endpoint remember/slot cleanup and camera-return reincarnation;
+either-member raw, marked, offscreen and Stageplay retirement (eight cases),
+strict capture **before** sweep and after reuse, repeated retirement, genuine
+stock slot reuse and bulk reset. Stageplay rejection has controls with and
+without a real replacement installed inside rejection, proving that local
+cleanup does not release that replacement. Admission exceptions are checked
+before and after identity registration. Final publication tests remove, mark,
+re-register or replace the parent after child admission. The marked case proves
+that a still-present identity is insufficient; re-registration proves that any
+present identity is insufficient. Bootstrap/probe/restore controls and a live
+Tails/controller snapshot preserve the existing native animation boundary.
+
+The initial test invocation did not reach tests: a proposed assertion used
+package-private `StageplayObjectDirection.graph` from another package. That
+fixture assertion was removed before establishing the behavioral baseline.
+The corrected old-production command ran all nine pressure controls at unchanged
+`08f0a5e78`: **9 assertion failures, 0 errors/skips**, exactly five rejected-child
+construction failures and four premature-link-publication failures. Queue wait
+was 0 seconds and Maven execution 35.735 seconds. Its physical XML identities,
+messages, environment and selector were inspected; this is real old-red evidence,
+not the earlier compilation failure or the historical expected-gap assertions.
+
+The first implementation selection passed **65 cases, 0 failures/errors/skips**:
+30 qualification cases plus existing Sideways graph, allocator, strict closure,
+reconstruction/schema and independent tail controls. Queue wait was 4 seconds;
+Maven reported 1:44 including changed-source compilation. Every physical XML
+suite/case and skip element was inspected. The final same-parent/live refinement
+and its added controls are a separate final selection recorded below; the first
+65-case result is not attributed unchanged to the refined source.
+
+Commands use the environment prefix below, verified original absolute ROMs and
+no inherited desktop/JVM overrides. The committed spelling uses `$HOME` to
+normalize the original absolute ROM directory for repository resource policy;
+the executed commands supplied those expanded absolute paths. The leased `-v` probe reports Java
+`25.0.5.0.2` (156 seconds queue wait). Lua resolves to `/usr/bin/lua5.4`.
+SHA-1/CRC32 of all three original ROMs match the AGENTS table; S2 is
+`8bca5dcef1af3e00098666fd892dc1c2a76333f9` / `7B905383`.
+These controls are ROM-free logic despite supplying paths and EGL; no GPU/native
+execution or pixel coverage is implied.
+
+```bash
+sideways_maven=(env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY
+  -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS -u _JAVA_OPTIONS -u MAVEN_OPTS
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4
+  PATH="/usr/lib/jvm/java-25-openjdk/bin:$PATH"
+  python3 tools/testing/maven_queue.py --lean -Dmse=off
+  -Dopenggf.headless.gl=surfaceless-egl
+  "-Dsonic1.rom.path=$HOME/code/projects/OpenGGF/s1.gen"
+  "-Dsonic2.rom.path=$HOME/code/projects/OpenGGF/s2.gen"
+  "-Ds3k.rom.path=$HOME/code/projects/OpenGGF/s3k.gen")
+# Old production, revised positive pressure assertions:
+"${sideways_maven[@]}" '-Dtest=TestS2SidewaysPformAdmissionQualification#safeAdmissionAndFreshReplay' test -B
+# First implementation:
+"${sideways_maven[@]}" '-Dtest=TestS2SidewaysPformAdmissionQualification,TestS2SidewaysPformGraphRewind,TestS2FixedTailStoragePrerequisite,TestTailsTailsDirectionalAnimation,TestTailsTailsFlightSelection,TestSpriteManagerMainTailsTailsDispatch,TestObjectManagerChildSlotAllocation,TestObjectManagerRewindReferenceClosure,TestObjectManagerDynamicChainRewindRestore,TestScalarOnlyCodecDeletion#s2SidewaysPformGraphRecreateClassesImplementRewindRecreatable,TestRewindSchemaRegistry#exactDefaultObjectPolicyCapturesSidewaysPlatformLink' test -B
+# Final same-parent/live refinement and local structural guards:
+"${sideways_maven[@]}" '-Dtest=TestS2SidewaysPformAdmissionQualification,TestS2SidewaysPformGraphRewind,TestObjectManagerRewindReferenceClosure,TestScalarOnlyCodecDeletion#s2SidewaysPformGraphRecreateClassesImplementRewindRecreatable,TestRewindSchemaRegistry#exactDefaultObjectPolicyCapturesSidewaysPlatformLink,TestObjectPhysicsStandardizationGuard#productionObjectLifecycleRawCallsMatchTheirCallerBaselines,TestRewindCoverageGuard' test -B
+```
+
+Final refined selection: **51 cases passed, 0 failures/errors/skips**, including
+all 35 Sideways qualification cases, four existing graph cases, eight strict
+reference-closure cases, the exact recreation/schema controls and the lifecycle
+raw-call/rewind-coverage guards. Queue wait was 7 seconds; Maven execution was
+1:40 including changed-source compilation. All seven physical suites, every
+qualification identity, guard identity, environment and skip/failure/error element
+were inspected. Final tested SHA-256 fingerprints are
+`e23bc6fe158db383dc8e6742bd8634b762c07a8dec5090e14ff98afba2108d65`
+for the runtime class and
+`4952eeb7a7fb07655226e06a29cf6ceefdeed9e865359f0e7d4a49dbaf245c7b`
+for the qualification source. Consumed reports are removed before handoff. The
+earlier allocator/tail selection is not rerun without a new affected change. No broad
+smoke/full suite or new trace sweep is part of this worker. Existing native demonstration timing and all old candidate
+results retain their own source/coverage limits. Other elapsed work time is
+unmeasured; queue wait and Maven execution above are separate intervals.
+
+### Sideways affected-act matrix
+
+| Act / route obligation | Evidence supplied by this repair | Qualified configuration | Inherited gap |
+| --- | --- | --- | --- |
+| CPZ2 OBJECT / LIFE / REWIND | Real S2 manager pressure/admission, pair direction toggle, endpoint/remember/reincarnation, destructive restore/forward and removal/reuse controls above | Local object fixtures at width320, ordinary stock S2 registry; subtype `$06`/`$0C`; existing graph checks endpoint buckets at320/528/800 | No cold or uninterrupted CPZ2 route, natural exhaustion frequency, real player solid-contact/riding route or all production width presets certified |
+| CPZ/MCZ other acts and character routes | Shared Obj7A implementation retains its existing art selection, movement and solid profile | Mechanics only; no new act placement or route run | Placement inventories, whole routes, MCZ pixels/art, donors, Sonic/Tails/Knuckles/team products, checkpoint/death/load/respawn breadth remain unqualified |
+| Native competition / human P2 | Existing after-slot allocator retained; no plain-allocation substitution or competition policy edits | No new two-player qualification | Human-P2 gameplay, dual-camera banks/bank retirement and corruption-dependent outcomes remain open |
+| Strict trace / PRESENT / ORACLE | Existing source-backed native pressure/demo evidence reused; comparators unchanged | No new trace or rendered engine result | Historic SST capture excludes the fixed tail cell; downstream corruption-dependent errors must remain visible. No pixel/audio parity or trace pass is claimed |
+
+The [coverage backlog](../../status/level-test-coverage.md) links this bounded
+matrix. The named accepted discrepancy deliberately leaves native corruption
+unmodeled; it is not certified by a green mechanics fixture or by missing trace
+columns. No complete act is certified by this repair.

@@ -1052,7 +1052,11 @@ Unreleased. The earlier development themes remain in
   dispatch base stays ROM-free. Rewinding a
   partially collapsed Sonic 1 false floor preserves the remaining break sequence
   and cleanup. Sonic 2 falling fragments retain their mapping pieces and resolve
-  current renderers after rewind. ICZ miniboss snapshots restore progressed helpers;
+  current renderers after rewind. Sonic 2 Sideways platforms reserve child slots
+  before constructing links; exhaustion preserves a moving solo parent and strict
+  rewind without reproducing the ROM's writes into Tails. Parent retirement owns
+  child cleanup, while child retirement leaves its initialized parent independent.
+  ICZ miniboss snapshots restore progressed helpers;
   LBZ's ride ship restores its exact child inventory while preserving flame
   retirement before boss allocation, including full-slot conditions.
   Rexon necks and Sol fireballs restore their exact owners and sparse links while

@@ -56,6 +56,54 @@ no discrepancy entry was added or reclassified by the cutover.
 37. [Fast FM Register-Level Timing and Output](#fast-fm-register-level-timing-and-output)
 38. [Knuckles in Sonic 2 Runs Tier Two With the Lock-On Dump and Tier One Without It](#knuckles-in-sonic-2-runs-tier-two-with-the-lock-on-dump-and-tier-one-without-it)
 39. [Fixed Native Sprite Capacity in Wider Presentation](#fixed-native-sprite-capacity-in-wider-presentation)
+40. [S2 Sideways Platform Safe Admission and Owned-Child Retirement](#s2-sideways-platform-safe-admission-and-owned-child-retirement)
+
+---
+
+## S2 Sideways Platform Safe Admission and Owned-Child Retirement
+
+The user explicitly requested a safe engine repair without reproducing Obj7A's
+corruption. This named exception overrides `fixBugs = 0` only for Sideways failed
+child allocation and cleared/reused partner storage; it is not a global policy
+for correcting ROM bugs, and no native `fixBugs` branch selects it.
+
+In S2 REV01, `AllocateObjectAfterCurrent` (s2.asm:33705-33726) leaves `a1` at
+`Dynamic_Object_RAM_End` on exhaustion. `Obj7A_SubObjectLoop_End`
+(s2.asm:56329-56351) still writes reciprocal pointers, bounds and an X offset
+through it. `Tails_Tails` (s2.constants.asm:1139-1151) occupies that fixed cell;
+`loc_294C4` (s2.asm:56374-56387) calls `DeleteObject2`
+(s2.asm:30334-30345), which can later clear it. A retained pointer can also read/write cleared or reused partner storage.
+The [source/runtime audit](../architecture/audits/2026-10-24-rewind-disposition-review.md#s2-sideways-platform-allocation-failure-qualification)
+and [reconvened design](../architecture/designs/2026-10-25-s2-sideways-storage.md#reconvened-council-bounded-engine-repair-october-25)
+preserve the source-backed native pressure and demonstration evidence.
+
+OpenGGF reserves the first free slot strictly after the parent before constructing
+a child. Exhaustion leaves the normally initialized parent moving alone, with
+its native bounds, direction and parent X offset. It consumes no child slot,
+retains no rejected link and never writes Tails. Links become reciprocal only
+after identity registration; Stageplay rejection releases the reservation and
+leaves both links absent. There is no retry until a fresh placement incarnation.
+Successful pairs retain their normal initialization, collision, movement and
+ascending same-pass dispatch, and endpoint retirement still releases the placed
+parent's remember state and both slots.
+
+The additional deliberate lifetime rule follows Java ownership: parent retirement
+detaches both links before retiring its child; child retirement detaches both
+links and preserves the initialized solo parent. Raw manager removal,
+marked-but-unswept deletion and Stageplay/editor retirement obey the same rule.
+A marked child awaits ordinary sweep, while a bulk reset discards the old graph.
+Old references never resolve a replacement by slot number. This is bounded
+engine ownership, not native cleared-slot or corruption compatibility.
+
+Strict rewind identities, field closure and trace comparison remain unchanged.
+Initialized solo parents and healthy pairs restore without spawning or applying
+initial offsets twice. No SST/RAM/residue model is introduced, and runtime assets
+still come exclusively from the ROM. The historic recorder omits the fixed tail
+cell, but downstream compared effects may still diverge: corruption-dependent
+replays remain visibly divergent, never exempted or hydrated. Natural route
+frequency, complete CPZ/MCZ routes and native two-player corruption are unqualified.
+Focused execution and inherited route limits are recorded in the audit's
+[repair qualification](../architecture/audits/2026-10-24-rewind-disposition-review.md#sideways-safe-admission-and-owned-child-retirement-2026-10-25).
 
 ---
 

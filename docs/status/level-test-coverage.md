@@ -155,15 +155,22 @@ checks. The [native audit](../architecture/audits/2026-10-07-s3k-parity-gap-veri
 records event PLC3 phase/readiness/save ordering and remaining presentation and
 route breadth. These local repairs do not certify either act or stage.
 
-S2 fixed-tail follow-up (2026-10-25): the
-[implementation record](../architecture/audits/2026-10-24-rewind-disposition-review.md#rejected-fixed-tail-only-implementation-and-finite-parent-boundary--2026-10-25)
-rejects a fixed-tail-only owner after reached raw-removal/reuse controls exposed
-missing physical parent-header authority. The original Sideways admission/strict
-rewind gap remains open. The independently retained tail-animation prerequisite
-preserves `anim`/`prev_anim` and the native script-change return through restore
-and forward replay; pure pose sampling follows the same boundary. These focused
-object/controller checks certify no CPZ/MCZ act, route, viewport/donor/team,
-load/respawn or GPU presentation product. Existing act-matrix gaps remain.
+S2 Sideways safe-admission follow-up (2026-10-25): the
+[repair qualification and affected-act matrix](../architecture/audits/2026-10-24-rewind-disposition-review.md#sideways-affected-act-matrix)
+records 35 positive local controls for real anchored pressure, initialized solo
+and pair rewind, either-member raw/marked/Stageplay retirement, strict capture
+before sweep, rejection/exception cleanup, remember/reincarnation and genuine
+slot reuse. The final 51-case focused selection includes unchanged malformed-link,
+lifecycle and rewind guards. The engine admission/strict-rewind defect is fixed
+under the [named accepted discrepancy](known-discrepancies.md#s2-sideways-platform-safe-admission-and-owned-child-retirement);
+native corruption and cleared/reused partner cross-writes are intentionally not
+modeled. The earlier [rejected storage candidate](../architecture/audits/2026-10-24-rewind-disposition-review.md#rejected-fixed-tail-only-implementation-and-finite-parent-boundary--2026-10-25)
+remains historical counterevidence. The independent tail `anim`/`prev_anim` and
+`$FD` prerequisite is untouched and its controls pass. These mechanics certify
+no complete CPZ/MCZ route, player-riding product, natural exhaustion frequency,
+donor/team/character breadth, native competition/human P2 or GPU presentation.
+Pressure is width320; existing graph checks cover endpoint buckets at320/528/800.
+Inherited load/respawn/route/presentation obligations remain open in the matrix.
 
 S3K monitor admission follow-up (2026-10-24): the
 [field audit](../architecture/audits/2026-10-24-rewind-disposition-review.md#s3k-monitor-contents-admission)

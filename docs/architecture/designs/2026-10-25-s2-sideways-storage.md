@@ -1,8 +1,10 @@
-# S2 Sideways: physical storage across object lifetimes
+# S2 Sideways: safe admission and owned-child lifetime
 
 Status: **physical-storage target superseded by the reconvened council outcome below**.
 The earlier design is retained as research, not an implementation instruction.
-No runtime change or repair qualification is included. Source baseline:
+The runtime implementation and focused qualification are tracked in the
+[repair audit](../audits/2026-10-24-rewind-disposition-review.md#sideways-safe-admission-and-owned-child-retirement-2026-10-25).
+Historical research source baseline:
 `d3fa3d519f6acb7285d538b5f972807036f1019e`.
 
 ## Reconvened council: bounded engine repair, October 25
@@ -11,8 +13,8 @@ The user rejected memory emulation as contrary to the project's goals and asked
 for a safe engine repair without reproducing the Sideways ROM corruption.
 Astra, Fable 5.1, GPT-6.1 Sol and Opus 5.5 independently reconsidered the prior
 proposal on source `61be1910ac29d5606410be315ec881a5745a75d3`. All four recommend
-a narrow, named compatibility exception. This records the implementation handoff;
-no gameplay repair or qualification is included in this documentation change.
+a narrow, named compatibility exception. The council recorded the implementation handoff; its read-only recommendation
+is separate from the later implementation/qualification below.
 
 ### Decision and scope
 
@@ -57,7 +59,7 @@ no unacceptable rejected-candidate side effects. A destroyed flag alone does not
 distinguish pool exhaustion from Stageplay rejection. Do not substitute ordinary
 allocation for anchored allocation or expose an accidental public Mod API.
 
-### Unresolved lifecycle choice
+### Council lifecycle alternatives
 
 Allocation failure does not settle independent removal of an already admitted
 pair. Astra recommends parent removal also retires the child; Sol recommends
@@ -72,6 +74,45 @@ Do not target an unrelated replacement occupant through an old Java reference.
 Native cleared/reused-slot cross-writes remain observed evidence, not permission
 to broaden this repair into memory emulation. Any additional deliberate lifetime
 deviation must be named explicitly with its effect on supported content.
+
+### Implemented bounded lifetime contract
+
+The implementation starts from current main `08f0a5e78b4c7aaa11604e6e9eb9f2cb4151daa4`,
+with no shared allocator/API changes. Existing
+`ObjectLifetimeOps.reserveFindNextFreeChildSlot` reserves strictly after the
+parent, preserving the distinction from competition-limited plain allocation.
+`ObjectConstructionContext.with` gives the candidate that reserved slot before
+construction; construction initializes only its local state. The existing
+anchored admission then supplies services, identity and later-slot same-pass
+execution. Only registered admission publishes the two links.
+
+On exhaustion no candidate exists. On Stageplay rejection its existing retirement
+path releases the reserved slot and clears the candidate's slot index before
+callbacks can install replacements. Local cleanup does not release it again.
+Exception cleanup removes only an admitted candidate identity, or releases its
+still-owned reservation after clearing the saved index; it never frees another
+current occupant through an old slot number. A destroyed flag is not an admission
+result. Unmanaged/bootstrap, probe and active-restore receivers create no live
+companion; ordinary rewind reconstruction restores captured initialized scalars
+and exact references without reinitializing or applying offsets twice.
+
+The selected lifetime is asymmetric: parent retirement detaches both edges then
+marks its owned child for ordinary sweep; child retirement detaches both edges
+and leaves the initialized parent moving and endpoint-culling alone, with no
+retry. This applies to raw manager removal, destruction markers before sweep and
+Stageplay/editor retirement. Offscreen parent retirement retains normal remember
+release and respawn. Repeated retirement is idempotent. Bulk reset discards the
+old graph, and retained references can affect only those old Java instances,
+never restored or reused-slot replacements. This additional deliberate deviation
+omits native cleared/reused partner cross-writes without introducing a generic
+cascade across object families.
+
+The [accepted discrepancy](../../status/known-discrepancies.md#s2-sideways-platform-safe-admission-and-owned-child-retirement)
+is the durable compatibility contract. The [repair qualification and affected-act
+matrix](../audits/2026-10-24-rewind-disposition-review.md#sideways-safe-admission-and-owned-child-retirement-2026-10-25)
+distinguish observed mechanics from inherited route/competition/trace gaps. The
+historical 17 passing controls/two failures below belong to the rejected storage
+candidate and are not evidence for this repair.
 
 ### Rewind, verification and documentation handoff
 
