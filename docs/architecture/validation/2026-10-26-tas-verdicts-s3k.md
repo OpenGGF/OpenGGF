@@ -1,6 +1,6 @@
 # S3&K TAS trick verdicts — 2026-10-26
 
-All **35 original family IDs** now have executed representative outcomes: **22 supported, 9 unsupported, 4 mixed**, comprising **48 named child scenarios**. Mixed is an aggregation of separately tested children. It is not an unverified category. There are no unresolved core scenarios in this report.
+**Interim follow-up:** all **35 original family IDs** are preserved, with **54 executed named children**. Of the original families, **20 are supported, 9 unsupported and 5 mixed** on their named representative mechanisms; **one family (`s3k-shields`) remains interim** with supported constituents and a distinct unresolved core: flame-dash deep slide followed by a bottom zip. Mixed aggregates tested supported/unsupported children; it never means unverified. The prior claim of no unresolved core scenarios is withdrawn.
 
 The broader original names and publication lists remain in the machine-readable report. A family verdict applies to the named representative children below, not every technique mentioned anywhere under that historical heading. In particular, supported no-Left/Right propulsion does not certify the campaign: the publication’s reset-assisted completion has its own unsupported child. No complete movie, ring total, campaign synchronization or every historical revision was executed.
 
@@ -8,11 +8,11 @@ This supersedes the route-level partial labels in the [previous S3K evidence mat
 
 ## Identity, ownership and method
 
-- Engine base and unchanged production: `c69447d77baddd8d3f7e4a177d73c8d327dd223d`. Source audit: `99b16240` (original census). Final evidence is the local commit containing this document; the external JSON records its full SHA after commit.
-- Owned worktree: `/mnt/LinuxData/T3/worktrees/OpenGGF/t3-86295626`, branch `feature/ai-tas-verdicts-s3k-20261026`. Fifteen new game-specific test classes and this documentation only. Parent owns shared records, final integration and push.
+- Engine base and unchanged production: `c69447d77baddd8d3f7e4a177d73c8d327dd223d`. Source audit: `99b16240` (original census). Initial evidence is `964c29d25fdab09fe8edd4acbe541a27fc64904c`. Follow-up evidence is the local commit containing this revision; the external JSON records that SHA for new children while retaining the initial SHA for unchanged children.
+- Owned worktree: `/mnt/LinuxData/T3/worktrees/OpenGGF/t3-86295626`, branch `feature/ai-tas-verdicts-s3k-20261026`. Initial delivery added fifteen game-specific classes; this follow-up extends `TestTasS3kTerrainEntry` and adds `TestTasS3kMhzRapidHit` and `TestTasS3kFlameSlope`, plus this owned documentation. Parent owns shared records, final integration and push.
 - Original ROM: `$HOME/code/projects/OpenGGF/s3k.gen`, 4,194,304 bytes; CRC32 `63522553`, SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6`. No copies or links were created. Every selected ROM-required case actually executed; all completed runs had zero skips.
 - Native reference: immutable `skdisasm` commit `8b2cf3c4178f2382f844da67798de4befc50c5e0`, `sonic3k.asm`, retail `FixBugs=0`. Read with immutable Git objects into the external task directory. Dirty main disassembly/tool checkouts were neither used as proof nor changed.
-- Author evidence: cached original submissions in `$HOME/scratch/agent-tmp/codex/tasvideos-trick-audit-2026-10-26/`, with child-specific publication/submission links below. No new web census. No native capture was necessary for these independently specified local branches, and no gameplay trace rows were imported into the engine.
+- Author evidence: cached original submissions in `$HOME/scratch/agent-tmp/codex/tasvideos-trick-audit-2026-10-26/`, with child-specific publication/submission links below. No new web census. Initial local branches used independently specified native source expectations. The follow-up additionally compares two independently captured ordinary SOZ inlets from the native helper. No gameplay trace rows are imported into the engine.
 - Final JSON: `$HOME/scratch/agent-tmp/codex/tas-trick-verdicts-2026-10-26/s3k-verdicts.json`. Each original family preserves its name, scope, original publication IDs and references; children carry their own publication IDs, native expectation, selector, observed result and evidence source.
 
 Synthetic inlets declare valid geometry, save data, slot occupancy or an owner boundary. Production input, collision, object, transition and load owners then execute the technique. A passing limitation test means confirmed unsupported behavior, never native parity. No runtime fixes, disabled tests, oracle resnapshots or unconditional failing assertions are included.
@@ -32,7 +32,7 @@ Child numbers link each family result to its exact executable scope below. Publi
 
 | Original stable ID | Verdict | Executed children |
 |---|---|---|
-| `s3k-movement` | **supported** | S01 |
+| `s3k-movement` | **supported** | S01, S49, S50 |
 | `s3k-rolljump` | **supported** | S02 |
 | `s3k-zip` | **supported** | S03, S04 |
 | `s3k-stair` | **supported** | S05 |
@@ -40,18 +40,18 @@ Child numbers link each family result to its exact executable scope below. Publi
 | `s3k-vwrap` | **supported** | S07 |
 | `s3k-offscreen` | **supported** | S08, S09 |
 | `s3k-camera` | **supported** | S10 |
-| `s3k-slope` | **supported** | S11 |
+| `s3k-slope` | **supported** | S11, S51 |
 | `s3k-coop` | **supported** | S12 |
 | `s3k-respawn` | **supported** | S13 |
 | `s3k-slots` | **supported** | S14 |
 | `s3k-bridge` | **unsupported** | S15 |
 | `s3k-hczslot` | **unsupported** | S16 |
 | `s3k-act` | **supported** | S17 |
-| `s3k-glide` | **supported** | S18, S19 |
+| `s3k-glide` | **supported** | S18, S19, S52 |
 | `s3k-flight` | **supported** | S20, S21 |
 | `s3k-nolr` | **mixed** | S22, S23, S24 |
 | `s3k-super` | **supported** | S25, S26 |
-| `s3k-shields` | **supported** | S27 |
+| `s3k-shields` | **interim; supported children** | S27, S54; core U01 unresolved |
 | `s3k-sphere-ring` | **supported** | S28 |
 | `s3k-sphere-motion` | **supported** | S29 |
 | `s3k-sphere-timing` | **mixed** | S30, S31, S32 |
@@ -59,7 +59,7 @@ Child numbers link each family result to its exact executable scope below. Publi
 | `s3k-ngplus` | **supported** | S34 |
 | `s3k-rings` | **supported** | S35 |
 | `s3k-rng` | **mixed** | S36, S37 |
-| `s3k-boss` | **supported** | S38 |
+| `s3k-boss` | **mixed** | S38, S53 |
 | `s3k-ddz` | **mixed** | S39, S40 |
 | `s3k-reset` | **unsupported** | S41 |
 | `s3k-competition` | **unsupported** | S42 |
@@ -84,7 +84,7 @@ Selector: `com.openggf.physics.TestTasS3kTerrainEntry#knucklesSpindashChargesRel
 
 Native evidence: SonicKnux_Spindash (23681 onward), Sonic_Move and Player_AnglePos; all references use the pinned file above. Reused component tests retain their independent native assertions and the prior matrix’s derivations.
 
-Boundaries: Executed charge/release plus existing AIZ loop traversal; individual damage-boost routes are not covered by the charge child.
+Boundaries: Spindash release, slope jump and ordinary hurt impulses have separate executed children. Rolling loop traversal also passed in original R1 via TestS3kAiz1SpindashLoopTraversal; complete damage-boost and jump routes remain outside these local checks.
 
 ### `s3k-rolljump` — supported
 
@@ -220,7 +220,7 @@ Selector: `com.openggf.physics.TestTasS3kTerrainEntry#airborneWheelDepartureReta
 
 Native evidence: sub_328E8 (68385 onward), Monitor_Break bounce, Player_AnglePos stick_to_convex (18764 onward); all references use the pinned file above. Reused component tests retain their independent native assertions and the prior matrix’s derivations.
 
-Boundaries: Sonic exercises the shared wheel/monitor/landing mechanism on declared floor geometry. ICZ block, elevator, capsule and animation-state variants are not separate tested routes.
+Boundaries: Wheel adhesion and FBZ stationary-mesh controls now have separate executed owners. The complete offscreen forced-spin approach and other object-specific departure routes are not certified.
 
 ### `s3k-coop` — supported
 
@@ -336,7 +336,7 @@ Selector: `com.openggf.sprites.managers.TestKnucklesWallClimbVerticalContract#up
 
 Native evidence: Knuckles glide floor/wall contact and wall-climb signed-word/radius routines; selected test native assertions; all references use the pinned file above. Reused component tests retain their independent native assertions and the prior matrix’s derivations.
 
-Boundaries: Named contact arbitration and wall-climb primitives are tested, not a Rhinobot-triggered superglide route.
+Boundaries: Contact arbitration, wall climbing and monitor superglide have separate executed children. The Rhinobot and first-monitor approach are alternative route inlets, not complete routes certified by the monitor child.
 
 ### `s3k-flight` — supported
 
@@ -416,7 +416,7 @@ Selector: `com.openggf.game.sonic3k.TestHyperKnucklesWallImpactGate`.
 
 Native evidence: Sonic Hyper directional dash table; Knuckles wall-impact unsigned ground_vel >= $480; all references use the pinned file above. Reused component tests retain their independent native assertions and the prior matrix’s derivations.
 
-### `s3k-shields` — supported
+### `s3k-shields` — interim; supported children
 
 Original family: Fire/bubble/lightning shield actions and collision boosts. Fire dash, bubble bounce and lightning jumps/attraction enable ground entry, altered speed and collection; losing or retaining a shield also changes boss/contact outcomes.
 
@@ -430,7 +430,7 @@ Selector: `com.openggf.sprites.managers.TestPlayableSpriteMovement#s3kLightningS
 
 Native evidence: Sonic lightning second-jump and steep bubble landing branches; selected test native assertions; all references use the pinned file above. Reused component tests retain their independent native assertions and the prior matrix’s derivations.
 
-Boundaries: Lightning and bubble actions have executed boundaries; no claim of every fire-dash/collision boost route.
+Boundaries: Lightning, bubble and the ordinary fire-dash/slide/exit-lock constituent have executed outcomes. The distinct fire-dash deep-slide/bottom-zip core mechanism remains explicitly unresolved, outside this edge list.
 
 ### `s3k-sphere-ring` — supported
 
@@ -564,7 +564,7 @@ Native evidence: Pause_Loop (1572 onward), VInt_Done (558 onward); Obj_EndSignFa
 
 Boundaries: Signpost RNG consumption is separately traced to 2468M/4087S, an additional source beyond the original family publication list. No selected later boss pattern is inferred.
 
-### `s3k-boss` — supported
+### `s3k-boss` — mixed
 
 Original family: Boss quick hits, capsule timing and unusual hitbox/arena routes. Use simultaneous players, tall rolling jumps, delayed last hits, pre-arena positioning, slope/ground entry, invulnerability timing, low cameras or delayed capsules to shorten fights and transitions.
 
@@ -578,7 +578,7 @@ Selector: `com.openggf.game.sonic3k.objects.bosses.TestMhzEndBossNativeDamage#pr
 
 Native evidence: sub_76782 / loc_767A0 pre-arena damage floor, loc_767B0 flash gate; all references use the pinned file above. Reused component tests retain their independent native assertions and the prior matrix’s derivations.
 
-Boundaries: Pre-arena damage and flash rejection are tested; six hits in six frames and all boss/capsule strategies are not inferred.
+Boundaries: Ordinary pre-arena health/flash behavior is supported. The separate early-hit six-update consequence is confirmed unsupported for 3422M/5427S only; other boss and capsule routes are not inferred.
 
 ### `s3k-ddz` — mixed
 
@@ -803,8 +803,173 @@ JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 python3 tools/tes
 
 An initial pre-R1 attempt stopped at Java compilation on a test-only `GroundSensor` radius cast; it ran no tests. The cast was corrected before R1. Wheel travel, wall anchor, crouch animation, completed-save action and lift visibility failures were fixture defects, not evidence of unsupported engine mechanisms. The pause, ORT and entry-buffer parity failures were reached discrepancies against independent native expectations; their retained limitation cases subsequently passed.
 
-No broad/category/full-suite, native tool build, desktop input injection or movie replay was launched. The parent owns combined validation, including the repository’s AIZ1 skip, level loading, bootstrap resolver and decoding checks if needed for integration. The measurement-hazard guidance was read before reporting. Queue wait and Maven execution times above are separate and are not summed as delivery wall time.
+During the initial R1–R10 pass, no broad/category/full-suite, native tool build, desktop input injection or movie replay was launched. The parent owns combined validation, including the repository’s AIZ1 skip, level loading, bootstrap resolver and decoding checks if needed for integration. The measurement-hazard guidance was read before reporting. Queue wait and Maven execution times above are separate and are not summed as delivery wall time.
 
 The focused disassembly citation checker passed all six recognized citation groups in the historical document at the pinned revision (`python3 tools/disasm/disasm_citations.py check docs/architecture/validation/2026-10-26-tas-tricks-s3k.md --rev skdisasm=8b2cf3c4178f2382f844da67798de4befc50c5e0 --strict --limit 10`). New native owner ranges above were read directly from that immutable file. `git diff --check` passed.
 
 Final report checks preserve all 35 original IDs exactly once, validate child verdict aggregation and publication references, and resolve every selector to an existing test method/class. Consumed task Maven logs are removed after this durable record is written. No task-owned live job or child is left at handoff. Main and shared production remain unchanged.
+
+## Follow-up core mechanisms and interim handoff
+
+The follow-up resolves five distinct mechanisms across four requested families and adds an ordinary fire-dash comparison. It does **not** close the fifth requested family’s deep-slide/bottom-zip mechanism. Parent explicitly requested this interim commit after both native candidate families proved ordinary slides; parent will seek an actual published-movie inlet. No additional geometry sweep or broad run was launched for handoff.
+
+### S49 — Slope-normal jump impulse and airborne clearance
+
+Family `s3k-movement`; **supported**. [156M / 261S](https://tasvideos.org/261S), [2593M / 4289S](https://tasvideos.org/4289S)
+
+Native expectation: Sonic_Jump adds the signed CalcSine normal impulse to existing velocity. With angle E0 and running velocity (1086,-1086), impulse (-1177,-1177) produces (-91,-2263); flat control produces (1536,-1664).
+
+Executed result and control: Both real-sensor floor inlets passed exact launch velocities and four subsequent airborne updates rising clear of the slope. No position advance occurs on the jump dispatch itself.
+
+Selector: `com.openggf.physics.TestTasS3kTerrainEntry#slopeJumpAddsTheNativeNormalImpulseAndLeavesTheSlope`.
+
+Native evidence: Sonic_Jump / loc_1182E (sonic3k.asm:23322-23396); 261S notes line 10 and 4289S notes line 266.
+
+Scope: Authored continuous 45-degree slope and flat control; the complete publication jump route is outside this local check.
+
+### S50 — Ordinary damage boost away from a hazard
+
+Family `s3k-movement`; **supported**. [1656M / 2877S](https://tasvideos.org/2877S)
+
+Native expectation: HurtCharacter with rings launches X away from the source at ±$200 and Y=-$400, clears ground velocity and installs 120 i-frames.
+
+Executed result and control: Left/right source cases pass exact native impulses, an opposite-side second-hit rejection, and four actual movement updates translating ±8 pixels while rising.
+
+Selector: `com.openggf.physics.TestTasS3kTerrainEntry#ordinaryDamageLaunchMovesAwayFromTheSourceAndRejectsASecondHit`.
+
+Native evidence: HurtCharacter / loc_102E0 through loc_10346 (sonic3k.asm:21126-21157); 2877S goal takes damage to save time, line 44.
+
+Scope: Declared accepted-touch boundary with rings; ring scatter geometry and each damage-boost route are separate.
+
+### S51 — FBZ stationary mesh unload preserves standing, wall suppression and pseudo-3D pose
+
+Family `s3k-slope`; **supported**. [3422M / 5427S](https://tasvideos.org/5427S)
+
+Native expectation: Obj70 captures a grounded fast participant and sets standing/object_control=$42 plus a mesh pose; range deletion skips normal release, so all survive owner removal.
+
+Executed result and control: Real mesh capture and ObjectManager range removal pass; 100 subsequent movement updates retain standing, wall-probe suppression and the captured mapping frame across unsupported floor. On-screen normal departure clears the three controls and falls.
+
+Selector: `com.openggf.physics.TestTasS3kTerrainEntry#stationaryMeshRangeUnloadRetainsStandingWallSuppressionAndPose`.
+
+Native evidence: Obj_FBZWireCageStationary, loc_3A252/sub_3A270/loc_3A2F0/loc_3A344 (sonic3k.asm:77907-78041); 5427S lines144-145.
+
+Scope: Valid mesh-mouth and camera-departure seams; does not require the complete offscreen forced-spin setup or entire FBZ route.
+
+### S52 — Fresh glide rebounds upward from a monitor and keeps gliding
+
+Family `s3k-glide`; **supported**. [2593M / 4289S](https://tasvideos.org/4289S)
+
+Native expectation: Fresh glide adds $200 to downward velocity; subsequent glide updates reduce it by $20. Touch_Monitor negates Y without clearing Knuckles glide. The rising glide persists after monitor break.
+
+Executed result and control: Actual release/repress activates glide at Y velocity 2160; real manager touch at update 5 negates 2032 to -2032. Knuckles rises more than 64 pixels and exits the monitor horizontally, still gliding. Out-of-reach monitor control keeps falling.
+
+Selector: `com.openggf.physics.TestTasS3kTerrainEntry#freshGlideIntoMonitorReboundsUpwardAndRetainsGlide`.
+
+Native evidence: Knux_Test_For_Glide (sonic3k.asm:32579-32626), Knuckles_Move_Glide (31638-31757), Touch_Monitor.checkdestroy (20888-20902), Touch_Sizes[6]=$10,$10; 4289S lines288/302/309.
+
+Scope: Declared falling-jump inlet tests monitor superglide itself. The first-monitor setup and Rhinobot route are alternative ways of reaching a fast contact, not certified complete routes.
+
+### S53 — Current limitation: early MHZ proxy hit does not repeat damage across weather destruction
+
+Family `s3k-boss`; **unsupported**. [3422M / 5427S](https://tasvideos.org/5427S)
+
+Native expectation: After one early proxy hit, routine 0 reinitialization restores parent flags/HP while proxy flags stay zero during flash. Weather destruction exits routine 0. sub_76782 then consumes six points on six updates, from 8 to 2, without six fresh attacks.
+
+Executed result and control: Native HP 2 parity assertion executed red: reached HP 8. Retained limitation and no-early-hit HP 9 control pass. Actual initialization creates proxy/weather; one proxy touch starts flash; real weather destruction sets bit 2 and routine 4/timer $3F; six owner updates reach timer $39. HP/routine/damaged flags are never seeded.
+
+Selector: `com.openggf.game.sonic3k.objects.bosses.TestTasS3kMhzRapidHit#currentLimitationEarlyProxyHitDoesNotRepeatDamageAfterWeatherDestruction`.
+
+Native evidence: loc_76004/loc_7601A (sonic3k.asm:157019-157031), sub_76782/loc_767A0/loc_767B0/loc_767E8 (157639-157690); 5427S line 140.
+
+Scope: Local accepted gliding contact boundary; exact published approach pixels and later auto-scroll fight are outside this test.
+
+### S54 — Fire dash after a rising SOZ2 approach lands, slides and receives the exit lock
+
+Family `s3k-shields`; **supported**. [1656M / 2877S](https://tasvideos.org/2877S)
+
+Native expectation: Sonic_FireShield replaces vx/ground speed with -$800 and vy with zero. After landing, the post-camera SOZ terrain owner enters an ordinary slide and sets move_lock=5 on its exit. Independent native capture supplies the ordinary trajectory comparison.
+
+Executed result and control: Both dash and neutral controls passed. Clear authored entry ($3440,$24A), vx/g=-$3000, vy=-$100; release reaches ($3411,$249) airborne. Fresh A lands/slides at ($3409,$232); first slide exit is tick49 with lock5, versus neutral tick86 with lock5. Native and engine tick100 endpoints are exactly ($36AF,$336) and ($345A,$2EC), respectively.
+
+Selector: `com.openggf.tests.TestTasS3kFlameSlope#fireDashAfterRisingSlopeApproachLandsAndExitsWithNativeLock`.
+
+Native evidence: Sonic_FireShield (sonic3k.asm:23446-23465), sub_730C/loc_734A SOZ post-camera slide owner; independent GPGX/BizHawk 2.11 comparison in native-soz-inlet/soz2-3440-comparison.csv.gz, TraceChaser 703bd92d32634ce5ebac60625b48c60ef5500427; 2877S lines60-61.
+
+Scope: This is an ordinary fire-dash/slide/exit-lock constituent, NOT proof of the separately named deep-slide/bottom-zip exploit. The original authored inlet predates capture; native gameplay rows are comparison-only.
+
+### U01 — Flame-dash deep slide followed by bottom zip: unresolved core
+
+Publication [1656M / 2877S](https://tasvideos.org/2877S), notes lines 60–61 and 258, describes dashing into the ground, sliding inside the slope and zipping at its bottom. [4266M / 6655S](https://tasvideos.org/6655S) additionally mentions fire-dash slope clips and vertical subpixel alignment. This is a distinct named mechanism, **not an edge case and not unsupported**. No tested inlet has reached the claimed exploit in either producer.
+
+Bounded engine investigation covered SOZ1/SOZ2 real slopes, ordinary and tall rolling-jump radii, both dash directions, clear airborne approaches, rising release ticks and full/half slide-table chunks. The dash runs only after a legal release update while still airborne. Candidates either landed normally, passed beneath top-only terrain, or corrected against a wall while still airborne. The observed 16/21-pixel airborne corrections do not establish a grounded continuous zip. Fixture failures are listed below rather than recast as engine limitations.
+
+The independent native helper used clean TraceChaser `703bd92d32634ce5ebac60625b48c60ef5500427` and read-only BizHawk `2.11.0.0`, GPGX, the original locked-on ROM and pinned disassembly above. It retained two comparisons under `$HOME/scratch/agent-tmp/codex/tas-trick-verdicts-2026-10-26/native-soz-inlet/`:
+
+| Native comparison | Valid inlet and action | Reached result |
+|---|---|---|
+| `soz2-3440-comparison.csv.gz` | Independently authored regular 14/7 airborne pose `($3440,$24A)`, vx/g `-$3000`, vy `-$100`; release, fresh A, neutral through tick100; all-neutral control. Offset-sensor contact foot `$25B` versus entry foot `$258` proves 3 pixels of clearance. | Both ordinary slides. Dash endpoint `$36AF,$336`, neutral `$345A,$2EC`, matching Java exactly. Maximum grounded deltas 9/11 pixels. Java S54 retains landing, real slide exit/lock and both endpoints. |
+| `soz2-half76-tall.csv.gz` | Actual native Right30, Down1, A1 creates a tall 19/9 rolling jump; preserve acquired radii/flags during a declared approach at `($FA8,$239)`, vx/g `-$3000`, vy `-$100`. Original ROM slope geometry proves 3/12-pixel foot clearance before release into adjacent full-solid `$76`; compare both dash directions and neutral. | Both dashes become ordinary slides, maximum grounded deltas 10/12 pixels. Neutral’s 34-pixel displacement is inherited approach speed followed by a wall stop, not dash-created zip. No Java parity verdict is claimed for this second candidate. |
+
+SHA-256: regular comparison `d0dd9ac642e369b144f27076a60f2a5922c65bd8eac9016a205a609e1b277c0b`; tall comparison `4bd0e055cc3d88c5384875b9c3428c1a4583e6cff2fb6c1a2ba4b11677ef1cec`.
+
+Native helper `README.md`/`result.json` retain source, compiler command, read-only runtime identity, observation PCs and rejected setup explanations. These compressed observations are comparison-only, not canonical replay fixtures or engine state inputs. There is no pending native job. The actual blocker is an exploit-producing published inlet; parent owns that continued work.
+
+### Follow-up focused execution
+
+The three changed class selectors for parent integration are:
+
+```text
+com.openggf.physics.TestTasS3kTerrainEntry,com.openggf.game.sonic3k.objects.bosses.TestTasS3kMhzRapidHit,com.openggf.tests.TestTasS3kFlameSlope
+```
+
+The retained twelve new cases have matching focused passes: six unchanged slope/damage/mesh cases in F2; monitor/MHZ four final cases in F11; ordinary flame two final cases in F14. No skips. F2’s additional reached MHZ native parity failure is preserved below; its ordinary CI replacement is explicitly named `currentLimitation...`. Existing rolling loop traversal was freshly executed in initial R1 (`com.openggf.tests.TestS3kAiz1SpindashLoopTraversal#aiz1SpindashLoop_traversesLoopWithin180Frames`); its actual neutral rolling traversal is reused without another unchanged run.
+
+All follow-up commands used Java 25, Lua 5.4, the original absolute ROM path and `--lean`. Exact command form (the shell expands `$HOME` to the ROM owner’s home):
+
+```bash
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+python3 tools/testing/maven_queue.py --lean -Dmse=off "-Dtest=$TAS_S3K_SELECTORS" \
+  "-Ds3k.rom.path=$HOME/code/projects/OpenGGF/s3k.gen" test
+```
+
+F1/F2 literal selector:
+
+```text
+com.openggf.physics.TestTasS3kTerrainEntry#slopeJumpAddsTheNativeNormalImpulseAndLeavesTheSlope+ordinaryDamageLaunchMovesAwayFromTheSourceAndRejectsASecondHit+stationaryMeshRangeUnloadRetainsStandingWallSuppressionAndPose,com.openggf.game.sonic3k.objects.bosses.TestTasS3kMhzRapidHit
+```
+
+F3 literal selector:
+
+```text
+com.openggf.physics.TestTasS3kTerrainEntry#freshGlideIntoMonitorReboundsUpwardAndRetainsGlide,com.openggf.game.sonic3k.objects.bosses.TestTasS3kMhzRapidHit,com.openggf.tests.TestTasS3kFlameSlope
+```
+
+F11 literal selector:
+
+```text
+com.openggf.physics.TestTasS3kTerrainEntry#freshGlideIntoMonitorReboundsUpwardAndRetainsGlide,com.openggf.game.sonic3k.objects.bosses.TestTasS3kMhzRapidHit
+```
+
+F4–F10 and F12–F14 literal selector: `com.openggf.tests.TestTasS3kFlameSlope`. Each invocation redirected its diagnostic output to `target/tas-s3k-followupN.log` for the corresponding N. Intermediate exploratory single-test versions were replaced by the two bounded final cases, with no disabled/skipped tests or retained failing parity assertion.
+
+| Run | Cases / failures / errors / skips | Maven time | Queue wait | Finished UTC | Interpretation |
+|---|---|---|---|---|---|
+| F1 | no tests | 31.096 s | 0s | 2026-10-26T14:25:50Z | Test compilation stopped on getter spelling (`getJumping` → `isJumping`); no tests. |
+| F2 | 8 / 1 / 0 / 0 | 41.179 s | 0s | 2026-10-26T14:26:54Z | Six slope/damage/mesh cases and MHZ neutral control passed. Native rapid-hit HP2 assertion reached HP8 and failed. |
+| F3 | 5 / 0 / 0 / 0 | 42.222 s | 0s | 2026-10-26T14:31:58Z | Monitor pair, named MHZ limitation/control and initial ROM slope survey passed. |
+| F4 | 1 / 1 / 0 / 0 | 48.411 s | 3s | 2026-10-26T14:34:40Z | Exploratory inlet landed on release before the intended dash; invalid airborne-entry precondition, not an engine mismatch. |
+| F5 | 1 / 0 / 0 / 0 | 43.328 s | 0s | 2026-10-26T14:36:04Z | 24 clear SOZ1 approaches reached ordinary slides, not the deep zip. |
+| F6 | 1 / 0 / 0 / 0 | 44.033 s | 20s | 2026-10-26T14:44:35Z | Fast horizontal approaches with nonnegative Y velocity landed before dash. |
+| F7 | 1 / 0 / 0 / 0 | 42.512 s | 22s | 2026-10-26T14:47:07Z | Rising fast approaches acquired overlap but corrected into ordinary landings. |
+| F8 | 1 / 1 / 0 / 0 | 43.484 s | 0s | 2026-10-26T14:49:46Z | Corrected radius/position construction exposed invalid 4-pixel-clearance inlet; fixture failure, not parity failure. |
+| F9 | 1 / 0 / 0 / 0 | 36.486 s | 0s | 2026-10-26T14:50:59Z | Corrected 6/8/12-pixel clearances and both facings still produced ordinary landings. |
+| F10 | 1 / 0 / 0 / 0 | 44.044 s | 0s | 2026-10-26T14:54:48Z | SOZ2 full chains and half/path-sensitive chunk approaches did not reach deep zip. |
+| F11 | 4 / 0 / 0 / 0 | 34.450 s | 0s | 2026-10-26T14:57:18Z | Final strengthened monitor constants and MHZ cleanup: four cases passed. |
+| F12 | 1 / 0 / 0 / 0 | 48.758 s | 0s | 2026-10-26T15:04:33Z | Faster ordinary/tall approaches gave ordinary landings and some airborne wall corrections. |
+| F13 | 1 / 0 / 0 / 0 | 46.162 s | 14s | 2026-10-26T15:13:03Z | Per-frame half-transition observation distinguished 16/21-pixel airborne corrections from grounded zip. |
+| F14 | 2 / 0 / 0 / 0 | 44.312 s | 0s | 2026-10-26T15:18:59Z | Final native-correlated ordinary flame and neutral cases passed landing, slide exit/lock and exact tick100 endpoints. |
+
+
+Follow-up source is based on `964c29d25fdab09fe8edd4acbe541a27fc64904c`; no production files changed. Later edits only affected the specifically rerun test methods/classes. Parent owns combined changed-class validation and required S3K domain gates. This worker handoff is interim, not final user delivery. Consumed worker Maven logs are deleted after recording the results here; useful native comparisons remain in the external task directory. No live owned Maven/native job or child remains.
+
+Follow-up report checks passed: all 35 original IDs exactly once; 54 executed children with valid publication associations and resolvable selectors; all 48 unchanged child evidence SHAs preserved; one explicit unresolved core outside `edge_cases`. Both compressed native artifact SHA-256 values match the helper manifest. Local documentation links and `git diff --check` pass. The pinned citation command above reports six recognized groups passing for this verdict document as well.
