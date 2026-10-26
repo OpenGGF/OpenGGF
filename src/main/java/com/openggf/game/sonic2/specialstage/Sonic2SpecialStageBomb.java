@@ -38,6 +38,14 @@ public class Sonic2SpecialStageBomb extends Sonic2SpecialStageObject {
 
         // Handle explosion animation for hit bombs
         if (state == State.EXPLODING) {
+            // loc_34F6A/loc_34F90 keep depth movement and test priority
+            // before movement. byte_36502 ends in $FF (loop), not deletion.
+            updateNativeEffectPriority();
+            decrementDepth(drawingIndex4, speedFactor);
+            if (depthFixed <= 0) {
+                markForRemoval();
+                return;
+            }
             updateExplosionAnimation();
             return;
         }
@@ -46,7 +54,7 @@ public class Sonic2SpecialStageBomb extends Sonic2SpecialStageObject {
         decrementDepth(drawingIndex4, speedFactor);
 
         // Check if object has passed the player
-        if (getDepth() <= 0) {
+        if (depthFixed <= 0) {
             markForRemoval();
             return;
         }
@@ -63,13 +71,13 @@ public class Sonic2SpecialStageBomb extends Sonic2SpecialStageObject {
      * Updates the explosion animation when the bomb is hit.
      */
     private void updateExplosionAnimation() {
-        animTimer++;
-        if (animTimer >= EXPLOSION_DELAY) {
-            animTimer = 0;
-            animFrame++;
-            if (animFrame >= EXPLOSION_FRAME_COUNT) {
-                markForRemoval();
-            }
+        if (!effectAnimationStarted) {
+            effectAnimationStarted = true;
+            animFrame = 0;
+            animTimer = EXPLOSION_DELAY;
+        } else if (--animTimer < 0) {
+            animTimer = EXPLOSION_DELAY;
+            animFrame = (animFrame + 1) % EXPLOSION_FRAME_COUNT;
         }
     }
 
@@ -87,6 +95,7 @@ public class Sonic2SpecialStageBomb extends Sonic2SpecialStageObject {
         animIndex = EXPLOSION_ANIM;
         animFrame = 0;
         animTimer = 0;
+        effectAnimationStarted = false;
         return true;
     }
 

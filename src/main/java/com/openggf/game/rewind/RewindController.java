@@ -6,6 +6,7 @@ import com.openggf.audio.rewind.AudioLogicalSnapshot;
 import com.openggf.audio.rewind.AudioPresentationPolicy;
 import com.openggf.audio.rewind.AudioReplayReason;
 import com.openggf.audio.rewind.AudioReplayScope;
+import com.openggf.audio.rewind.AudioTimelineInternalAccess;
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.SectionProfiler;
 import com.openggf.graphics.FadeManagerSnapshot;
@@ -332,6 +333,10 @@ public final class RewindController {
             AudioLogicalSnapshot earliestAudio = audioKeyframes.earliestSnapshot();
             if (earliestAudio != null) {
                 audioManager.pruneAudioCommandsBefore(earliestAudio.commandEntryCount());
+                if (earliestAudio.presentation().smpsSession() != null) {
+                    AudioTimelineInternalAccess.pruneBefore(audioManager.commandTimeline(),
+                            earliestAudio.presentation().smpsSession().nativeHistoryCursor());
+                }
             }
         }
         return earliestAvailableFrame();

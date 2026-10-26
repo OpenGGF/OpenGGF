@@ -156,6 +156,7 @@ class TestGameLoopBonusStageSession {
     void allReturnIoFailuresKeepWrapperAndThenCurrentFinallyBinding(boolean normal) throws Exception {
         var abort = new Abort(); var carrier = trusted(abort); var rebound = mock(LevelManager.class);
         var context = mock(GameplayModeContext.class);
+        when(context.runLevelLoads()).thenReturn(new com.openggf.trace.replay.runs.RunLevelLoadTracker());
         doAnswer(c -> { write(loop, "levelManager", rebound); throw carrier; }).when(levels).loadZoneAndAct(anyInt(), anyInt());
         try (var sessions = mockStatic(SessionManager.class, CALLS_REAL_METHODS)) {
             sessions.when(SessionManager::getCurrentGameplayMode).thenReturn(context);

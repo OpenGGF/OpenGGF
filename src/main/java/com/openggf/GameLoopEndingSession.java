@@ -11,8 +11,8 @@ import com.openggf.game.GameModule;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.TitleScreenProvider;
 import com.openggf.game.ZoneFeatureProvider;
+import com.openggf.game.internal.EndingEntryPresentation;
 import com.openggf.game.resources.PlcFrameLifecycleCoordinator.PlcLifecycleFrame;
-import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.game.save.SaveReason;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.graphics.FadeManager;
@@ -61,20 +61,7 @@ final class GameLoopEndingSession {
     void setTransitionPending(boolean pending) { endingTransitionPending = pending; }
 
     void runFrame(PlcLifecycleFrame frame) {
-        GameLoopPlcLifecycle.runPhase(frame, endingPhase(endingProvider), this::updateEnding);
-    }
-
-    private static PlcLifecyclePhase endingPhase(EndingProvider provider) {
-        if (provider == null) {
-            return PlcLifecyclePhase.ENDING;
-        }
-        return provider.plcLifecyclePhaseOverride().orElseGet(() ->
-                switch (provider.getCurrentPhase()) {
-                    case CREDITS_TEXT -> PlcLifecyclePhase.CREDITS_TEXT;
-                    case CREDITS_DEMO -> PlcLifecyclePhase.CREDITS_DEMO;
-                    case POST_CREDITS, FINISHED -> PlcLifecyclePhase.POST_CREDITS;
-                    case CUTSCENE -> PlcLifecyclePhase.ENDING;
-                });
+        GameLoopPlcLifecycle.runPhase(frame, GameLoopPlcLifecycle.endingPhase(endingProvider), this::updateEnding);
     }
 
     /**
@@ -88,6 +75,10 @@ final class GameLoopEndingSession {
             provider.saveReasonOnEndingStart().ifPresent(host::requestSessionSave);
         }
         endingTransitionPending = true;
+        if (provider instanceof EndingEntryPresentation presentation && presentation.ownsEntryPresentation()) {
+            doEnterEnding();
+            return;
+        }
         audioManager.fadeOutMusic();
         GameLoopPlcLifecycle.startToWhite(host.resolvedGameplayContext(), host.fade(), this::doEnterEnding);
     }
@@ -120,7 +111,8 @@ final class GameLoopEndingSession {
         // already start one during initialize() (e.g., S1 credits starts its own
         // fade-from-black with a state-advancing callback that must not be overwritten).
         FadeManager localFade = host.fade();
-        if (!localFade.isActive() || localFade.getState() == FadeManager.FadeState.HOLD_WHITE) {
+        if (!(endingProvider instanceof EndingEntryPresentation presentation && presentation.ownsEntryPresentation())
+                && (!localFade.isActive() || localFade.getState() == FadeManager.FadeState.HOLD_WHITE)) {
             // Screen is currently white from startEndingFade's fade-to-white.
             // ROM: Normal_palette starts all $0EEE (white), display enabled.
             GameLoopPlcLifecycle.startFromWhite(host.resolvedGameplayContext(), localFade, null);
@@ -445,6 +437,12 @@ final class GameLoopEndingSession {
      */
     private static void startEndingReturn(SpriteManager spriteManager, LevelManager levelManager, String mainCode,
             AudioManager audioManager, FadeManager fadeManager, GameplayModeContext context, Runnable onBlack) {
+        // The native caller departs once (S1 TryAg_Exit, docs/s1disasm/sonic.asm:4034-4036).
+        // Keep an already-requested departure's callback in charge until its
+        // wrapper closes the outgoing fade lease before entering the title.
+        if (fadeManager.hasPendingCompletion()) {
+            return;
+        }
         spriteManager.setInputSuppressed(false);
         levelManager.setForceHudSuppressed(false);
         if (spriteManager.getSprite(mainCode) instanceof AbstractPlayableSprite player) {

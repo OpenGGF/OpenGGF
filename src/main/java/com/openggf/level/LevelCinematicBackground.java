@@ -8,6 +8,13 @@ final class LevelCinematicBackground {
         var parameters = java.util.Objects.requireNonNull(scroll.backgroundBuildParameters(),
                 "Native scroll has no captured background build policy");
         tiles.setCinematicBackgroundParameters(parameters);
+        if (parameters.retainedBackground().active()) {
+            // Complete planes precede every legacy ring/window choice and keep their zero origin.
+            tiles.ensureBackgroundTilemapData(level::getBlockAtPosition, null, level.currentZone,
+                    null, scroll.tilemapMode(), scroll.registers().backgroundX(),
+                    scroll.registers().backgroundY(), level.verticalWrapEnabled);
+            return false;
+        }
         int x = scroll.registers().backgroundX();
         var mode = scroll.tilemapMode();
         boolean fullWidth = LevelManager.applyBackgroundTilemapWindowSelection(tiles, x, mode,

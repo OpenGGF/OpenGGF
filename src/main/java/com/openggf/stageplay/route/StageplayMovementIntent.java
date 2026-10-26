@@ -1,7 +1,5 @@
 package com.openggf.stageplay.route;
 
-import com.openggf.sprites.playable.route.NativeRouteSteering;
-
 /** The existing LIVE MOVE_TO controller; input selection only, never a physics-state write. */
 public final class StageplayMovementIntent {
     private StageplayMovementIntent() {}
@@ -15,7 +13,16 @@ public final class StageplayMovementIntent {
             boolean airborne,
             double targetX,
             double urgency) {
-        return NativeRouteSteering.movementDirection(centreX, xSpeed, runAccel, runDecel,
-                maxSpeed, airborne, targetX, urgency);
+        double speed = xSpeed / 256.0;
+        // Sonic_ChgJumpDir (s2.asm:37158-37175), shift at 37161, doubles runAccel.
+        // Ground countersteering uses runDecel; arrival/braking margins are authoring policy.
+        double brake = Math.max(1.0 / 256, (airborne ? 2 * runAccel : runDecel) / 256.0);
+        double dx = targetX - centreX;
+        if (urgency == 0
+                || Math.abs(dx) <= 4
+                || Math.abs(dx) <= speed * speed / (2 * brake) + Math.abs(speed) + 4)
+            return Math.abs(speed) <= Math.max(.25, brake) ? 0 : speed < 0 ? 1 : -1;
+        int toward = dx < 0 ? -1 : 1;
+        return speed * toward < 0 || Math.abs(speed) < maxSpeed / 256.0 * urgency ? toward : 0;
     }
 }

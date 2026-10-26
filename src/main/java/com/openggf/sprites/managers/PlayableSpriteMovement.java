@@ -35,9 +35,11 @@ import com.openggf.physics.TerrainCheckResult;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.GameSound;
+import com.openggf.audio.NativeAudioEffectCues;
 import com.openggf.level.objects.SkidDustObjectInstance;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.PlayableSpriteInternalAccess;
 import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.sprites.playable.SuperStateController;
 import com.openggf.game.PhysicsProfile;
@@ -387,6 +389,20 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		return camera != null && !sprite.isCpuControlled() ? camera : null;
 	}
 
+	/**
+	 * Knuckles_Move_Glide camera tail: unsigned WORD compare and two-unit step,
+	 * including overshoot across $60. Keep the established non-CPU actor owner.
+	 * S3K 8b2cf3c sonic3k.asm:31747-31757; KiS2 c336fede s2.asm:39005-39014.
+	 */
+	private void easeNativeKnucklesGlideCameraBias() {
+		Camera camera = playerCameraBiasController();
+		if (camera == null) return;
+		int bias = camera.getYPosBias() & 0xFFFF;
+		if (bias != 0x60) {
+			camera.setYPosBias((short) (bias < 0x60 ? bias + 2 : bias - 2));
+		}
+	}
+
 	private LevelManager levelManager() {
 		return sprite.currentLevelManager();
 	}
@@ -499,7 +515,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
         // S3K loc_125C6 / loc_15828 dispatch before all normal-control work.
         // Extra engine roster members without a native fixed slot retain a
         // fallback lifetime owner; native slots are timed only by their sidecar.
-        if (sprite.isDrowningPreDeath() && !sprite.isDebugMode()
+        if (sprite.isDrowningPreDeath() && !sprite.getDead() && !sprite.isDebugMode()
                 && (com.openggf.sprites.playable.PlayableSpriteInternalAccess.hasPrimaryDrowningRoutine(sprite)
                     || !com.openggf.sprites.playable.PlayableSpriteInternalAccess.fixedCountdownOwnsDrowning(sprite))) {
             short oldX = sprite.getX(), oldY = sprite.getY();
@@ -569,6 +585,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			return;
 		}
 
+		// A drowned player keeps moving under object_control: S3K's routine $C
+		// dispatch and S1/S2's countdown object move it regardless of the lock.
 		if (sprite.isObjectControlSuppressesMovement()
 				&& !sprite.isHurt()
 				&& !sprite.getDead()) {
@@ -688,6 +706,12 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		short originalY = sprite.getY();
 
 
+		var nativeDeath = com.openggf.game.competition.NativePlayerDeathPass.from(sprite);
+		if (nativeDeath != null && nativeDeath.runDeathPass(sprite)) {
+			sprite.updateSensors(originalX, originalY);
+			return;
+		}
+
 		if (sprite.getDead()) {
 			SidekickCpuController cpu = sprite.getCpuController();
 			if (cpu != null && cpu.applyDeferredGenericDeadDespawnIfCrossed()) {
@@ -747,6 +771,14 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		int glideState = sprite.getDoubleJumpFlag();
 		if (glideState >= 3 && glideState <= 5
 				&& sprite.getSecondaryAbility() == SecondaryAbility.GLIDE) {
+			// Knux_Glide_Freespace / KiS2 GlideControl run the common prelude
+			// before sliding, climbing and ledge-handler early returns. Flags !=1
+			// take only Move_Glide's camera tail, not its active speed controls.
+			// sonic3k.asm:30715-30737; KiS2 s2.asm:38147-38170.
+			easeNativeKnucklesGlideCameraBias();
+			doLevelBoundary();
+			if (isCpuLevelBoundaryKillActive()) return;
+			moveSpriteTestGravity(sprite.getXSpeed(), sprite.getYSpeed());
 			updateKnucklesGlide();
 			// Direction is managed by glide code, not updateFacingDirection
 			sprite.updateSensors(originalX, originalY);
@@ -992,6 +1024,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			// (velocity), Player_LevelBound, MoveSprite2, then Knuckles_Glide
 			// (collision + jump-release check).
 			updateKnucklesGlide();  // Knuckles_Move_Glide (velocity only, flag stays 1)
+			easeNativeKnucklesGlideCameraBias();
 			doLevelBoundary();
 			if (isCpuLevelBoundaryKillActive()) {
 				return;
@@ -1012,8 +1045,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		// Knuckles_Fall_From_Glide (double_jump_flag == 2). ROM dispatches this
 		// via Knux_Glide_Freespace (sonic3k.asm:30715-30722): Knuckles_Move_Glide
-		// is a no-op for flag != 1, then MoveSprite_TestGravity2 (== MoveSprite2
-		// under normal gravity: move by the CURRENT velocity, NO gravity) runs
+		// skips speed control for flag != 1 but keeps its camera tail; then
+		// MoveSprite_TestGravity2 moves the CURRENT velocity without gravity
 		// BEFORE Knuckles_Fall_From_Glide. Knuckles_Fall_From_Glide
 		// (sonic3k.asm:30935-30983) then runs Knux_ChgJumpDir (air control),
 		// applies +$38 gravity, and lands via collision. This move-then-control
@@ -1023,13 +1056,14 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// giant-ride-vine approach). The hurt variant keeps the shared airborne
 		// path below (its own recoil ordering).
 		if (inGlide && glideState == 2 && !sprite.isHurt()) {
+			easeNativeKnucklesGlideCameraBias();
 			doLevelBoundary();                    // Player_LevelBound
 			if (isCpuLevelBoundaryKillActive()) {
 				return;
 			}
 			// MoveSprite2 (no gravity): move by the pre-control velocity first.
 			moveSpriteTestGravity(sprite.getXSpeed(), sprite.getYSpeed());
-			doChgJumpDir();                       // Knux_ChgJumpDir (air control)
+			doChgJumpDir(true);                   // Knux_ChgJumpDir owns a second camera tail
 			applyGravity();                       // addi.w #$38,y_vel(a0)
 			applyUnderwaterAirGravityReduction(); // btst Status_Underwater; subi #$28
 			sprite.updateSensors(originalX, originalY);
@@ -2063,71 +2097,77 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	 * button released or velocity crosses zero.
 	 */
 	private void updateSliding() {
-		// ROM Knux_Glide_Freespace (sonic3k.asm:30715-30719) runs
-		// MoveSprite_TestGravity2 (== MoveSprite2 under normal gravity: move by
-		// the CURRENT velocity, no gravity) BEFORE dispatching to
-		// Knuckles_Sliding. The slide keeps y_vel = 0, so the move is purely
-		// horizontal. Doing the move here -- BEFORE the 0x20 deceleration --
-		// mirrors that order; the prior decelerate-then-move ordering used the
-		// post-decel velocity and left the slide 0x20 subpixels short of the ROM
-		// each frame.
-		sprite.move(sprite.getXSpeed(), (short) 0);
-
-		// ROM: Check if A/B/C button is held. If not → .getUp
 		if (!inputJump) {
 			slideGetUp();
 			return;
 		}
 
-		// Decelerate x_vel by 0x20 toward zero
+		// Knuckles_Sliding uses BMI on the negative branch and BPL on the
+		// nonnegative branch: +$20 -> 0 continues; -$20 -> 0 gets up.
 		int xVel = sprite.getXSpeed();
 		if (xVel < 0) {
-			// Going left: add 0x20
 			xVel += 0x20;
 			if (xVel >= 0) {
-				// Velocity crossed zero → .getUp
-				slideGetUp();
-				return;
-			}
-		} else if (xVel > 0) {
-			// Going right: subtract 0x20
-			xVel -= 0x20;
-			if (xVel <= 0) {
-				// Velocity crossed zero → .getUp
 				slideGetUp();
 				return;
 			}
 		} else {
-			// Already zero → .getUp
-			slideGetUp();
-			return;
-		}
-
-		sprite.setXSpeed((short) xVel);
-
-		// ROM .continueSliding (sonic3k.asm:31032-31060):
-		// Snap to floor. If floor distance >= 14,
-		// Knuckles has slid off a ledge → enter fall state.
-		// Probe floor distance and snap. ROM's sub_11FD6 (Sonic_CheckFloor) probes
-		// both foot sensors, not just center -- see checkGlideFloorDist() javadoc.
-		if (glideUsesTemporaryCollisionRadii()) sprite.applyCustomRadii(10, 10);
-		var floorResult = checkGlideFloorDist(
-				sprite.getCentreX(), sprite.getCentreY(), sprite.getXRadius(), sprite.getYRadius());
-		if (glideUsesTemporaryCollisionRadii()) sprite.restoreDefaultRadii();
-		if (floorResult != null) {
-			if (floorResult.distance() >= 14) {
-				// Slid off a ledge — enter fall state
-				sprite.setDoubleJumpFlag(2);
-				sprite.restoreDefaultRadii();
-				sprite.setAbilityMappingFrameControl(false);
-				sprite.setForcedAnimationId(0x21);  // GLIDE_DROP
-				sprite.setAir(true);
+			xVel -= 0x20;
+			if (xVel < 0) {
+				slideGetUp();
 				return;
 			}
-			// Snap to floor and update angle
-			NativePositionOps.addYPosPreserveSubpixel(sprite,
-					ReverseGravity.mirrorYDelta(isReverseGravityActive(), floorResult.distance()));
-			sprite.setAngle(floorResult.angle());
+		}
+		sprite.setXSpeed((short) xVel);
+
+		// .continueSliding calls collision-only CheckRet/DoLevelCollision2,
+		// THEN a separate floor scan at the corrected coordinates. Its contact
+		// flags do not dispatch active-glide landing or wall-grab responses.
+		// KiS2 retains temporary 10/10 through BOTH calls and the Y/angle writes
+		// (s2.asm:38449-38469); S3K keeps its existing radii (31032-31049).
+		boolean restoreTemporaryRadii = glideUsesTemporaryCollisionRadii();
+		if (restoreTemporaryRadii) sprite.applyCustomRadii(10, 10);
+		try {
+			int collision = collectGlideCollision();
+			boolean reversed = isReverseGravityActive();
+			int solidityBit = (collision >>> 8) & 0xFF;
+			boolean secondary = (collision & GLIDE_COLLISION_SECONDARY) != 0;
+			// Normal Sonic_CheckFloor reloads TOP/path; reverse CheckCeiling
+			// inherits the scanner context left by the collision-only pass.
+			if (!reversed) {
+				solidityBit = sprite.getTopSolidBit() & 0xFF;
+				secondary = solidityBit != 0x0C;
+			}
+			var floorResult = checkGlideFloorDist(sprite.getCentreX(), sprite.getCentreY(),
+					sprite.getXRadius(), sprite.getYRadius(), solidityBit, secondary, reversed);
+			if (floorResult != null) {
+				if (floorResult.distance() >= 14) {
+					sprite.setDoubleJumpFlag(2);
+					restoreTemporaryRadii = false;
+					sprite.restoreDefaultRadii();
+					sprite.setAbilityMappingFrameControl(false);
+					sprite.setForcedAnimationId(0x21);  // GLIDE_DROP
+					sprite.setAir(true);
+					return;
+				}
+				NativePositionOps.addYPosPreserveSubpixel(sprite,
+						ReverseGravity.mirrorYDelta(reversed, floorResult.distance()));
+				sprite.setAngle(floorResult.angle());
+				// S3K Knuckles_Sliding.continueSliding (31050-31058) queues
+				// GroundSlide AFTER the successful second-floor Y/angle writes.
+				// KiS2 removes this block; the installed profile defaults absent.
+				if (audioManager.getAudioProfile() instanceof NativeAudioEffectCues cues) {
+					int cue = cues.groundSlideSfxId();
+					if (cue >= 0) {
+						LevelManager level = levelManager();
+						if (level != null && (level.getFrameCounter() & 7) == 0) {
+							audioManager.playSfx(cue);
+						}
+					}
+				}
+			}
+		} finally {
+			if (restoreTemporaryRadii) sprite.restoreDefaultRadii();
 		}
 	}
 
@@ -2142,7 +2182,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		sprite.setYSpeed((short) 0);
 
 		// Adjust Y position for radii change (current→default)
-		int radiusDiff = sprite.getYRadius() - sprite.getStandYRadius();
+		int radiusDiff = (byte) (sprite.getYRadius() - sprite.getStandYRadius());
 		// Knuckles_Sliding .getUp (loc_16B2A) negates this word under
 		// Reverse_gravity_flag before Knux_TouchFloor restores standing radii.
 		// Use a native centre-word addition so the stored fraction survives.
@@ -2152,7 +2192,6 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		sprite.restoreDefaultRadii();
 		sprite.setAbilityMappingFrameControl(false);
 		sprite.setDoubleJumpFlag(0);
-		sprite.setDoubleJumpProperty((byte) 0);
 
 		// ROM: bsr.w Knux_TouchFloor (sonic3k.asm:31024). The slide itself runs
 		// with Status_InAir still set -- loc_1693E deliberately leaves it set when
@@ -2166,10 +2205,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// not gate: a held direction then accelerates x_vel away from the ROM's
 		// zero.
 		// (This build is FixBugs = 0; the site carries no bug-fix conditional.)
-		// double_jump_flag / double_jump_property are already zeroed above.
+		// double_jump_flag is cleared; native keeps double_jump_property.
 		// Status_RollJump, Chain_bonus_counter and scroll_delay_counter have no
 		// modelled engine state at this site; flip_type and flips_remaining do.
-		sprite.setAir(false);
+		com.openggf.sprites.playable.PlayableSpriteInternalAccess.landForNativeFloorReset(sprite);
 		sprite.setPushing(false);
 		sprite.setJumping(false);
 		sprite.setFlipAngle(0);
@@ -2229,6 +2268,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 	private void updateWallClimbWithCollisionRadii() {
 		int climbAnimDelta = 0;  // +1 = forward (climbing up), -1 = backward (climbing down)
+		SuperStateController powered = sprite.getSuperStateController();
+		int climbSpeed = powered != null && powered.isSuper() ? 2 : 1;
 
 		if (isReverseGravityActive() && (inputUp || inputDown)) {
 			climbAnimDelta = updateReversedWallClimb(inputUp);
@@ -2248,20 +2289,32 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			if (wallResult != null && wallResult.distance() != 0) {
 				// Small dip in wall — don't move
 			} else {
-				// Check ceiling clearance
-				var ceilResult = ObjectTerrainUtils.checkCeilingDist(
-						sprite.getCentreX(), sprite.getCentreY(), sprite.getYRadius());
+				// Knuckles_Wall_Climb: CY-8, then WithRadius subtracts signed XR;
+				// the native player height scan owns LRB solidity and collision path.
+				var ceilResult = com.openggf.physics.GlideWallGrabTerrain
+						.climbVerticalDistance(sprite, true, false);
 				if (ceilResult != null && ceilResult.distance() < 0) {
 					// Bumping ceiling — push out
 					NativePositionOps.addYPosPreserveSubpixel(sprite, -ceilResult.distance());
 				} else {
-					NativePositionOps.addYPosPreserveSubpixel(sprite, -1);
+					NativePositionOps.addYPosPreserveSubpixel(sprite, -climbSpeed);
+					// .moveUp clamps only this clear branch, using signed WORDs.
+					if (camera().getMinY() != (short) -0x100) {
+						int limit = (short) (camera().getMinY() + 16);
+						if (sprite.getCentreY() < limit) NativePositionOps.writeYPosPreserveSubpixel(sprite, limit);
+					}
 				}
 				climbAnimDelta = 1;
 			}
 		} else if (inputDown) {
-			// Climbing down: check wall distance at the bottom
 			boolean facingRight = sprite.getDirection() == Direction.RIGHT;
+			if (sprite.getMappingFrame() == 0xBD) {
+				// .skip4 undoes the first ledge pose before either terrain probe.
+				// These WORD writes leave the original wall anchor in x_sub.
+				sprite.setMappingFrame(0xB7);
+				NativePositionOps.addYPosPreserveSubpixel(sprite, 3);
+				NativePositionOps.addXPosPreserveSubpixel(sprite, facingRight ? -3 : 3);
+			}
 			int probeY = sprite.getCentreY() + 11;
 			var wallResult = getWallDistance(probeY, facingRight);
 
@@ -2271,16 +2324,16 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				return;
 			}
 
-			// Check floor clearance
-			var floorResult = ObjectTerrainUtils.checkFloorDist(
-					sprite.getCentreX(), sprite.getCentreY() + sprite.getYRadius());
-			if (floorResult != null && floorResult.distance() <= 0) {
-				// Reached floor
+			// .skip4: CY+9, then sub_F828 adds signed XR with TOP solidity.
+			var floorResult = com.openggf.physics.GlideWallGrabTerrain
+					.climbVerticalDistance(sprite, false, false);
+			if (floorResult != null && floorResult.distance() < 0) {
+				// BPL includes zero: only penetration takes .reachedFloor.
 				NativePositionOps.addYPosPreserveSubpixel(sprite, floorResult.distance());
-				exitWallClimbToGround();
+				landFromWallClimb(floorResult.angle());
 				return;
 			}
-			NativePositionOps.addYPosPreserveSubpixel(sprite, 1);
+			NativePositionOps.addYPosPreserveSubpixel(sprite, climbSpeed);
 			climbAnimDelta = -1;
 		}
 
@@ -2310,14 +2363,15 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// reached the floor and detaches (.reachedFloor).
 		if (!inputUp && !inputDown && (playerMovementRulesOrNull() == null
 				|| playerMovementRulesOrNull().air().idleWallClimbChecksFloor())) {
-			// ROM probe point: x_pos, y_pos + 9, top_solid_bit (sonic3k.asm:31389-31392).
-			int probeY = sprite.getCentreY() + 9;
-			int floorDistance = romFloorProbeDistance(
-					ObjectTerrainUtils.checkFloorDist(sprite.getCentreX(), probeY), probeY);
+			// .finishMoving always probes the normal-world floor, even reversed:
+			// CY+9+signed XR, TOP solidity. KiS2 omits this entire idle block.
+			int probeY = (short) (sprite.getCentreY() + 9 + (byte) sprite.getXRadius());
+			var floorResult = com.openggf.physics.GlideWallGrabTerrain
+					.climbVerticalDistance(sprite, false, false);
+			int floorDistance = romFloorProbeDistance(floorResult, probeY);
 			if (floorDistance < 0) {
-				// ROM .reachedFloor: add.w d1,y_pos, then detach to the ground.
-				sprite.setY((short) (sprite.getY() + floorDistance));
-				exitWallClimbToGround();
+				NativePositionOps.addYPosPreserveSubpixel(sprite, floorDistance);
+				landFromWallClimb(floorResult.angle());
 				return;
 			}
 			// The FixBugs = 0 clobber: d1 now holds the floor distance, not the delta.
@@ -2398,9 +2452,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			NativePositionOps.addYPosPreserveSubpixel(sprite,
 					towardsLedge ? vertical.distance() : -vertical.distance());
 			if (!towardsLedge) {
-				sprite.setAngle((byte) ReverseGravity.mirrorAngle(vertical.angle()));
-				exitWallClimbToGround();
-				sprite.setForcedAnimationId(5); // native anim = pushing after Knux_TouchFloor
+				landFromWallClimb((byte) ReverseGravity.mirrorAngle(vertical.angle()));
 				return 0;
 			}
 			return 1;
@@ -2419,7 +2471,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	}
 
 	/**
-	 * Maps an {@link ObjectTerrainUtils} floor probe onto the word the ROM's
+	 * Maps an absent floor probe onto the word the ROM's
 	 * {@code FindFloor} chain actually returns in {@code d1}.
 	 *
 	 * <p>The engine reports "nothing solid in either probed tile" with the
@@ -2460,17 +2512,41 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		sprite.setAnimationFrameIndex(1);
 	}
 
-	/** Transition from wall climb to standing on ground (reached floor while climbing down). */
+	/** Native .reachedFloor / Knux_TouchFloor tail, distinct from ledge completion. */
+	private void landFromWallClimb(byte angle) {
+		sprite.setAngle(angle); // raw Primary_Angle, not the helper's filtered d3
+		// Knux_TouchFloor / KiS2 ResetOnFloor retain the turn byte even while
+		// synchronous landing callbacks run; do not repair it after publication.
+		exitWallClimbToGround(true);
+		sprite.setPushing(false);
+		sprite.setRollingJump(false);
+		sprite.setFlipAngle(0);
+		sprite.setFlipType(0);
+		sprite.setFlipsRemaining(0);
+		sprite.setAnimationId(5); // move.b #5,anim; prev_anim remains untouched
+	}
+
+	/** Common ground exit, also used by ledge completion. */
 	private void exitWallClimbToGround() {
+		exitWallClimbToGround(false);
+	}
+
+	private void exitWallClimbToGround(boolean nativeTouchFloor) {
 		sprite.setGSpeed((short) 0);
 		sprite.setXSpeed((short) 0);
 		sprite.setYSpeed((short) 0);
 		sprite.restoreDefaultRadii();
 		sprite.setAbilityMappingFrameControl(false);
 		sprite.setDoubleJumpFlag(0);
-		sprite.setDoubleJumpProperty((byte) 0);
+		if (!nativeTouchFloor) {
+			sprite.setDoubleJumpProperty((byte) 0);
+		}
 		sprite.setForcedAnimationId(-1);
-		sprite.setAir(false);
+		if (nativeTouchFloor) {
+			com.openggf.sprites.playable.PlayableSpriteInternalAccess.landForNativeFloorReset(sprite);
+		} else {
+			sprite.setAir(false);
+		}
 		sprite.setJumping(false);
 	}
 
@@ -2569,63 +2645,133 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		}
 	}
 
+	private static final int GLIDE_COLLISION_PUSH = 1;
+	private static final int GLIDE_COLLISION_LAND = 2;
+	private static final int GLIDE_COLLISION_SECONDARY = 4;
+
 	private void doGlideCollisionWithRadii() {
-		int cx = sprite.getCentreX();
-		int cy = sprite.getCentreY();
-		int xRad = sprite.getXRadius();
-		int yRad = sprite.getYRadius();
+		int collision = collectGlideCollision();
+		boolean pushed = (collision & GLIDE_COLLISION_PUSH) != 0;
+		boolean landed = (collision & GLIDE_COLLISION_LAND) != 0;
 
-		// Knuckles_DoLevelCollision2 uses player FindWall with the live LRB bit,
-		// including secondary solidity and signed widths. Corrections are word writes.
-		// Check wall in movement direction
-		// Save the movement direction BEFORE zeroing velocity (needed by glideHitWall)
-		int xVel = sprite.getXSpeed();
-		boolean movingRight = xVel >= 0;
+		// The temporary native flags are local outcomes, not status(a0). KiS2
+		// GlideControl checks Push before restoring standing radii/InAir
+		// (s2.asm:38177-38188); S3K checks InAir before Push (30739-30746).
+		PlayerMovementRules rules = playerMovementRulesOrNull();
+		boolean floorFirst = rules == null || rules.air().glideFloorContactPrecedesWallGrab();
+		if (landed && (floorFirst || !pushed)) {
+			if (glideUsesTemporaryCollisionRadii()) sprite.restoreDefaultRadii();
+			glideHitFloor();
+		} else if (pushed) {
+			// HitWall chooses facing from the signed BYTE property+$40, even
+			// at zero velocity or a turn boundary (skdisasm044:30816-30819).
+			glideHitWall((byte) (sprite.getDoubleJumpProperty() + 0x40) >= 0);
+		}
+	}
 
-		if (xVel > 0) {
-			var result = com.openggf.physics.GlideWallGrabTerrain.glideWallDistance(sprite, true);
-			if (result != null && result.distance() < 0) {
-				NativePositionOps.addXPosPreserveSubpixel(sprite, result.distance());
-				sprite.setXSpeed((short) 0);
-				glideHitWall(movingRight);
-				return;
+
+	/** Collision corrections only; packed flags plus the native d5/path continuation. */
+	private int collectGlideCollision() {
+		// Knux_DoLevelCollision_CheckRet (skdisasm044:32665-32854) and KiS2
+		// Knuckles_DoLevelCollision2 (c336fede s2.asm:40587-40744). Dispatch once
+		// from the ORIGINAL velocities; earlier wall corrections can zero X.
+		int quadrant = TrigLookupTable.calcMovementQuadrant(sprite.getXSpeed(), sprite.getYSpeed());
+		boolean reversed = isReverseGravityActive();
+		boolean secondary = (sprite.getTopSolidBit() & 0xFF) != 0x0C;
+		int solidityBit = sprite.getLrbSolidBit() & 0xFF; // native d5
+		boolean pushed = false;
+		boolean landed = false;
+		switch (quadrant) {
+			case 0x00 -> {
+				pushed = correctGlideWall(false, solidityBit, secondary);
+				pushed |= correctGlideWall(true, solidityBit, secondary);
+				if (!reversed) {
+					solidityBit = sprite.getTopSolidBit() & 0xFF;
+					secondary = solidityBit != 0x0C;
+				}
+				landed = correctGlideFloor(solidityBit, secondary, reversed);
 			}
-		} else if (xVel < 0) {
-			var result = com.openggf.physics.GlideWallGrabTerrain.glideWallDistance(sprite, false);
-			if (result != null && result.distance() < 0) {
-				NativePositionOps.addXPosPreserveSubpixel(sprite, -result.distance());
-				sprite.setXSpeed((short) 0);
-				glideHitWall(movingRight);
-				return;
+			case 0x80 -> {
+				pushed = correctGlideWall(false, solidityBit, secondary);
+				pushed |= correctGlideWall(true, solidityBit, secondary);
+				if (reversed) {
+					solidityBit = sprite.getTopSolidBit() & 0xFF;
+					secondary = solidityBit != 0x0C;
+				}
+				var ceiling = checkGlideCeilingDist(solidityBit, secondary, reversed);
+				if (ceiling != null && ceiling.distance() < 0) {
+					NativePositionOps.addYPosPreserveSubpixel(sprite,
+							ReverseGravity.mirrorYDelta(reversed, -ceiling.distance()));
+					sprite.setYSpeed((short) 0); // upward quadrant stops Y unconditionally
+				}
 			}
+			case 0x40, 0xC0 -> {
+				boolean right = quadrant == 0xC0;
+				pushed = correctGlideWall(right, solidityBit, secondary);
+				// Reverse sub_11FEE calls Sonic_CheckFloor: it replaces BOTH d5
+				// and Collision_addr. A following reverse floor (ceiling) or the
+				// left deep-ceiling opposite-wall fallback inherits those values.
+				if (reversed) {
+					solidityBit = sprite.getTopSolidBit() & 0xFF;
+					secondary = solidityBit != 0x0C;
+				}
+				var ceiling = checkGlideCeilingDist(solidityBit, secondary, reversed);
+				if (ceiling != null && ceiling.distance() < 0) {
+					int penetration = (short) -ceiling.distance(); // NEG.W, then BHS
+					if (!right && (penetration & 0xFFFF) >= 0x14) {
+						pushed |= correctGlideWall(true, solidityBit, secondary);
+					} else {
+						NativePositionOps.addYPosPreserveSubpixel(sprite,
+								ReverseGravity.mirrorYDelta(reversed, penetration));
+						if (sprite.getYSpeed() < 0) sprite.setYSpeed((short) 0);
+					}
+				} else if (sprite.getYSpeed() >= 0) {
+					if (!reversed) {
+						solidityBit = sprite.getTopSolidBit() & 0xFF;
+						secondary = solidityBit != 0x0C;
+					}
+					landed = correctGlideFloor(solidityBit, secondary, reversed);
+				}
+			}
+			default -> throw new IllegalStateException("Invalid native movement quadrant " + quadrant);
 		}
 
-		// Check floor (only when descending or level)
-		if (sprite.getYSpeed() >= 0) {
-			var result = checkGlideFloorDist(cx, cy, xRad, yRad);
-			if (result != null && result.distance() < 0) {
-				NativePositionOps.addYPosPreserveSubpixel(sprite,
-						ReverseGravity.mirrorYDelta(isReverseGravityActive(), result.distance()));
-				sprite.setAngle(result.angle());
-				sprite.setYSpeed((short) 0);
-				glideHitFloor();
-				return;
-			}
-		}
+		return (solidityBit << 8) | (secondary ? GLIDE_COLLISION_SECONDARY : 0)
+				| (pushed ? GLIDE_COLLISION_PUSH : 0) | (landed ? GLIDE_COLLISION_LAND : 0);
+	}
 
-		// Check opposite wall too (ROM checks both walls in some quadrants)
-		if (xVel <= 0) {
-			var result = com.openggf.physics.GlideWallGrabTerrain.glideWallDistance(sprite, true);
-			if (result != null && result.distance() < 0) {
-				NativePositionOps.addXPosPreserveSubpixel(sprite, result.distance());
-			}
-		}
-		if (xVel >= 0) {
-			var result = com.openggf.physics.GlideWallGrabTerrain.glideWallDistance(sprite, false);
-			if (result != null && result.distance() < 0) {
-				NativePositionOps.addXPosPreserveSubpixel(sprite, -result.distance());
-			}
-		}
+	private boolean correctGlideWall(boolean right, int solidityBit, boolean secondary) {
+		var result = com.openggf.physics.GlideWallGrabTerrain
+				.glideWallDistance(sprite, right, solidityBit, secondary);
+		if (result == null || result.distance() >= 0) return false;
+		NativePositionOps.addXPosPreserveSubpixel(sprite, right ? result.distance() : -result.distance());
+		sprite.setXSpeed((short) 0);
+		return true;
+	}
+
+	private boolean correctGlideFloor(int solidityBit, boolean secondary, boolean reversed) {
+		var floor = checkGlideFloorDist(sprite.getCentreX(), sprite.getCentreY(),
+				sprite.getXRadius(), sprite.getYRadius(), solidityBit, secondary, reversed);
+		if (floor == null || floor.distance() >= 0) return false;
+		NativePositionOps.addYPosPreserveSubpixel(sprite,
+				ReverseGravity.mirrorYDelta(reversed, floor.distance()));
+		sprite.setAngle(floor.angle());
+		sprite.setYSpeed((short) 0);
+		return true;
+	}
+
+	private TerrainCheckResult checkGlideCeilingDist(int solidityBit, boolean secondary, boolean reversed) {
+		int cx = sprite.getCentreX(), cy = sprite.getCentreY();
+		int xr = sprite.getXRadius(), yr = sprite.getYRadius();
+		var right = reversed
+				? ObjectTerrainUtils.checkPlayerFloorDistWithFlipAwareAngle(cx + xr, cy + yr, solidityBit, secondary)
+				: ObjectTerrainUtils.checkPlayerCeilingDistWithFlipAwareAngle(cx + xr, cy, yr, solidityBit, secondary);
+		var left = reversed
+				? ObjectTerrainUtils.checkPlayerFloorDistWithFlipAwareAngle(cx - xr, cy + yr, solidityBit, secondary)
+				: ObjectTerrainUtils.checkPlayerCeilingDistWithFlipAwareAngle(cx - xr, cy, yr, solidityBit, secondary);
+		if (left == null) return right;
+		if (right == null) return left;
+		return left.distance() <= right.distance() ? left : right;
 	}
 
 	/**
@@ -2648,16 +2794,29 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	 * segment.
 	 */
 	private TerrainCheckResult checkGlideFloorDist(int cx, int cy, int xRad, int yRad) {
+		boolean reversed = isReverseGravityActive();
+		int topBit = sprite.getTopSolidBit() & 0xFF;
+		return checkGlideFloorDist(cx, cy, xRad, yRad,
+				reversed ? sprite.getLrbSolidBit() & 0xFF : topBit, topBit != 0x0C, reversed);
+	}
+
+	private TerrainCheckResult checkGlideFloorDist(int cx, int cy, int xRad, int yRad,
+			int solidityBit, boolean secondaryCollisionPath, boolean reversed) {
 		// sub_11FD6 selects Sonic_CheckCeiling under Reverse_gravity_flag.
 		// Both feet still compete by signed distance; only the world-facing
 		// probe and the final angle change, not the returned distance's sign.
-		boolean reversed = isReverseGravityActive();
+		// Sonic_CheckFloor selects Collision_addr from this player's top bit.
+		// Reverse sub_11FD6 keeps its caller's current bit, including inherited TOP.
 		var right = reversed
-				? ObjectTerrainUtils.checkCeilingDistWithFlipAwareAngle(cx + xRad, cy, yRad)
-				: ObjectTerrainUtils.checkFloorDistWithFlipAwareAngle(cx + xRad, cy + yRad);
+				? ObjectTerrainUtils.checkPlayerCeilingDistWithFlipAwareAngle(
+						cx + xRad, cy, yRad, solidityBit, secondaryCollisionPath)
+				: ObjectTerrainUtils.checkPlayerFloorDistWithFlipAwareAngle(
+						cx + xRad, cy + yRad, solidityBit, secondaryCollisionPath);
 		var left = reversed
-				? ObjectTerrainUtils.checkCeilingDistWithFlipAwareAngle(cx - xRad, cy, yRad)
-				: ObjectTerrainUtils.checkFloorDistWithFlipAwareAngle(cx - xRad, cy + yRad);
+				? ObjectTerrainUtils.checkPlayerCeilingDistWithFlipAwareAngle(
+						cx - xRad, cy, yRad, solidityBit, secondaryCollisionPath)
+				: ObjectTerrainUtils.checkPlayerFloorDistWithFlipAwareAngle(
+						cx - xRad, cy + yRad, solidityBit, secondaryCollisionPath);
 		TerrainCheckResult chosen;
 		if (left == null) {
 			chosen = right;
@@ -2894,7 +3053,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		short runAccel = sprite.getRunAccel();
 		short runDecel = motionMutators == null ? sprite.getRunDecel() : motionMutators.traction(sprite, sprite.getRunDecel());
-		short friction = motionMutators == null ? sprite.getFriction() : motionMutators.traction(sprite, sprite.getFriction());
+		short frictionBase = PlayableSpriteInternalAccess.neutralGroundFrictionBase(sprite);
+		short friction = motionMutators == null ? frictionBase : motionMutators.traction(sprite, frictionBase);
 		short max = sprite.getMax();
 		Camera camera = playerCameraBiasController();
 
@@ -3068,11 +3228,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		sprite.getAnimationManager().captureGroundMovementAnimSpeed((short) gSpeed);
 
 		// Friction
-		// ROM ref: s2.asm:36443-36446 — Super Sonic uses normal friction (0x0C) not his profile friction (0x30)
+		// Obj01_UpdateSpeedOnGround (s2.asm:36772-36776): the literal Super override was selected before traction.
 		if (!inputRawLeft && !inputRawRight) {
-			short effectiveFriction = sprite.isSuperSonic()
-					? (motionMutators == null ? (short) 0x0C : motionMutators.traction(sprite, (short) 0x0C)) : friction;
-			gSpeed = applyFriction(gSpeed, effectiveFriction);
+			gSpeed = applyFriction(gSpeed, friction);
 		}
 
 		if (motionMutators != null) {
@@ -3190,7 +3348,11 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private void doRollSpeed() {
 		short gSpeed = sprite.getGSpeed();
 		Camera camera = playerCameraBiasController();
-		if (camera != null) {
+		GameRules rules = sprite.getGameRules();
+		// FixBugs=0: Sonic_AngledRollSpeed (_incObj/01 Sonic.asm:829-842) omits
+		// recentering; the fixed branch adds the reset that S2/S3K always run.
+		if (camera != null && (rules == null || rules.camera() == null
+				|| rules.camera().groundedRollRecentersCameraBias())) {
 			camera.easeYBiasToDefault();
 		}
 
@@ -3391,6 +3553,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 	/** Sonic_ChgJumpDir: Air control and drag (s2.asm:36815) */
 	private void doChgJumpDir() {
+		doChgJumpDir(false);
+	}
+
+	private void doChgJumpDir(boolean nativeGlideCameraBias) {
 		short xSpeed = sprite.getXSpeed();
 		short ySpeed = sprite.getYSpeed();
 		short runAccel = sprite.getRunAccel();
@@ -3429,9 +3595,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			}
 		}
 
-		Camera camera = playerCameraBiasController();
-		if (camera != null) {
-			camera.easeYBiasToDefault();
+		if (nativeGlideCameraBias) {
+			// Knux_ChgJumpDir repeats the literal tail after the common prelude.
+			// S3K sonic3k.asm:32455-32465; KiS2 s2.asm:39801-39806.
+			easeNativeKnucklesGlideCameraBias();
+		} else {
+			Camera camera = playerCameraBiasController();
+			if (camera != null) camera.easeYBiasToDefault();
 		}
 
 		// Air drag near apex (-1024 <= ySpeed < 0)

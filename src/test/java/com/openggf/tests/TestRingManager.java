@@ -46,11 +46,23 @@ public class TestRingManager {
     @BeforeEach
     public void setUp() {
         TestEnvironment.resetAll();
+        GameServices.level().resetLevelGamestate(new LevelGamestate());
     }
 
     @AfterEach
     public void tearDown() {
         SessionManager.clear();
+    }
+
+    @Test
+    public void replacingPlacedRingsWithEmptyListRetiresOldActiveIndicesImmediately() {
+        var manager = buildRingManager(List.of(new RingSpawn(100, 100), new RingSpawn(110, 100)));
+        manager.reset(0);
+        assertEquals(2, manager.getActiveSpawns().size());
+        manager.resyncSpawnList(List.of());
+        assertTrue(manager.getActiveSpawns().isEmpty());
+        manager.update(0, null, 1, false);
+        assertTrue(manager.getActiveSpawns().isEmpty());
     }
 
     @Test
@@ -1134,23 +1146,6 @@ public class TestRingManager {
             groundSensors = new Sensor[0];
             ceilingSensors = new Sensor[0];
             pushSensors = new Sensor[0];
-        }
-
-        private int ringCount = 0;
-
-        @Override
-        public void addRings(int delta) {
-            ringCount += delta;
-        }
-
-        @Override
-        public int getRingCount() {
-            return ringCount;
-        }
-
-        @Override
-        public void setRingCount(int ringCount) {
-            this.ringCount = ringCount;
         }
 
         @Override

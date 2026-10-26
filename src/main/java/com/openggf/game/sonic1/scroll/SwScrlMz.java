@@ -1,5 +1,7 @@
 package com.openggf.game.sonic1.scroll;
 
+import com.openggf.game.internal.CheckpointBackgroundScroll;
+
 import com.openggf.level.scroll.AbstractZoneScrollHandler;
 import com.openggf.level.scroll.ScrollProjectionContext;
 import com.openggf.level.scroll.ScrollProjectionPhase;
@@ -26,7 +28,7 @@ import static com.openggf.level.scroll.M68KMath.*;
  *   <li>The 32-entry scroll buffer is sampled by BG Y in 16-line blocks</li>
  * </ul>
  */
-public class SwScrlMz extends AbstractZoneScrollHandler implements ScrollProjectionSource {
+public class SwScrlMz extends AbstractZoneScrollHandler implements Sonic1CheckpointScrollHandler, ScrollProjectionSource {
 
     private static final int LINES_PER_GROUP = 16;
     private static final int CLOUD_ENTRY_COUNT = 5;
@@ -57,6 +59,11 @@ public class SwScrlMz extends AbstractZoneScrollHandler implements ScrollProject
         bg3XPos = (long) cameraX << 16;
         lastCameraX = cameraX;
         initialized = true;
+    }
+
+    @Override
+    public void init(int actId, int cameraX, int cameraY) {
+        init(cameraX);
     }
 
     @Override
@@ -176,6 +183,43 @@ public class SwScrlMz extends AbstractZoneScrollHandler implements ScrollProject
         return lineStart + writeCount;
     }
 
+
+    @Override
+    public Object captureRewindState() {
+        return new State(
+                bg1XPos, bg2XPos, bg3XPos, lastCameraX, initialized, vscrollFactorBG, minScrollOffset,
+                maxScrollOffset);
+    }
+
+    @Override
+    public void restoreRewindState(Object state) {
+        if (state instanceof State saved) {
+            bg1XPos = saved.bg1XPos;
+            bg2XPos = saved.bg2XPos;
+            bg3XPos = saved.bg3XPos;
+            lastCameraX = saved.lastCameraX;
+            initialized = saved.initialized;
+            vscrollFactorBG = saved.vscrollFactorBG;
+            minScrollOffset = saved.minScrollOffset;
+            maxScrollOffset = saved.maxScrollOffset;
+        }
+    }
+
+    private record State(
+                long bg1XPos, long bg2XPos, long bg3XPos, int lastCameraX, boolean initialized,
+                short vscrollFactorBG, int minScrollOffset, int maxScrollOffset) { }
+
+    @Override
+    public CheckpointBackgroundScroll captureBackgroundScroll() {
+        return new CheckpointBackgroundScroll((int) (bg1XPos >> 16), vscrollFactorBG, (int) (bg2XPos >> 16), 0, (int) (bg3XPos >> 16), 0);
+    }
+
+    @Override
+    public void restoreBackgroundScroll(CheckpointBackgroundScroll state) {
+        bg1XPos = (long) state.bgX() << 16;
+        bg2XPos = (long) state.bg2X() << 16;
+        bg3XPos = (long) state.bg3X() << 16;
+    }
 
     @Override
     public ScrollProjectionPhase captureProjection(ScrollProjectionContext context) {

@@ -1,6 +1,7 @@
 package com.openggf.mods.code;
 
 import com.openggf.control.LogicalInputSnapshot;
+import com.openggf.data.RomGame;
 import com.openggf.editor.project.*;
 import com.openggf.editor.persistence.FullLevelExporter;
 import com.openggf.game.*;
@@ -10,6 +11,8 @@ import com.openggf.io.*;
 import com.openggf.level.*;
 import com.openggf.mods.*;
 import com.openggf.stageplay.*;
+import com.openggf.tests.RomCatalogueFixture;
+import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.Test;
@@ -127,18 +130,21 @@ class TestStageplayRegistration {
         Files.delete(sceneDir.resolve("film.ogfstage"));
         GameServices.audio().setBackend(new com.openggf.audio.NullAudioBackend());
         GameServices.graphics().initHeadless();
-        var module = OwnedModServices.decorate(GameServices.module(), plan, boundary());
-        var controller = module.gameplayFrameController();
-        var course = org.mockito.Mockito.mock(CourseControl.class, org.mockito.Mockito.RETURNS_DEEP_STUBS);
-        org.mockito.Mockito.when(course.presentationReady()).thenReturn(true);
-        try {
-            assertEquals(GameplayFrameDisposition.HOLD, controller.beforeFrame(course, LogicalInputSnapshot.neutral()));
-            assertEquals(StageplayControl.Status.PLAYING, module.getGameService(StageplayControl.class).status());
-            assertTrue(controller.drawScene());
-            // Drawing defers errors to the next owner-bound frame; advance once to prove it succeeded.
-            assertEquals(GameplayFrameDisposition.HOLD, controller.beforeFrame(course, LogicalInputSnapshot.neutral()));
-            assertEquals(1, module.getGameService(StageplayControl.class).frame());
-        } finally { controller.close(); com.openggf.tests.TestEnvironment.resetAll(); }
+        try (var catalogue = RomCatalogueFixture.bind(GameServices.configuration(), GameServices.rom(),
+                Map.of(RomGame.S2, RomTestUtils.ensureSonic2RomAvailable().toPath().toAbsolutePath().normalize()))) {
+            var module = OwnedModServices.decorate(GameServices.module(), plan, boundary());
+            var controller = module.gameplayFrameController();
+            var course = org.mockito.Mockito.mock(CourseControl.class, org.mockito.Mockito.RETURNS_DEEP_STUBS);
+            org.mockito.Mockito.when(course.presentationReady()).thenReturn(true);
+            try {
+                assertEquals(GameplayFrameDisposition.HOLD, controller.beforeFrame(course, LogicalInputSnapshot.neutral()));
+                assertEquals(StageplayControl.Status.PLAYING, module.getGameService(StageplayControl.class).status());
+                assertTrue(controller.drawScene());
+                // Drawing defers errors to the next owner-bound frame; advance once to prove it succeeded.
+                assertEquals(GameplayFrameDisposition.HOLD, controller.beforeFrame(course, LogicalInputSnapshot.neutral()));
+                assertEquals(1, module.getGameService(StageplayControl.class).frame());
+            } finally { controller.close(); }
+        } finally { com.openggf.tests.TestEnvironment.resetAll(); }
     }
 
     static class Controller implements GameplayFrameController,RewindSnapshottable<Integer> {

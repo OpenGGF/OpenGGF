@@ -13,11 +13,10 @@ import com.openggf.game.sonic3k.difficulty.AizMinibossAttackPolicy;
 import com.openggf.game.sonic3k.difficulty.S3kDifficultyRules;
 import com.openggf.game.sonic3k.events.S3kAizEventWriteSupport;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
-import com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardManager;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.Palette;
 import com.openggf.level.objects.ObjectLifetimeOps;
-import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
@@ -25,7 +24,6 @@ import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseResult;
-import com.openggf.level.objects.boss.AbstractBossChild;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -73,28 +71,6 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
     private static final int HOLD_TIME = 0x10;
     private static final int HORIZONTAL_CYCLE_COUNT = 4;    // ROM: move.b #4,$39(a0)
     private static final int INVULN_TIME = 0x20;
-    private static final int FATAL_HIT_DEFEAT_DELAY = 13;
-    // Obj_LevelResultsWait2 owns its literal #90 counter. Entries displaced
-    // by the delayed boss handoff are already carried into
-    // Obj_EndSignControlWait and must not be repeated by the results owner.
-    private static final int RESULTS_WAIT_DURATION_ADJUSTMENT = 0;
-    /**
-     * Native object-pass DISPATCH ENTRIES, not frames.
-     *
-     * <p>The name is easy to misread as a frame delay, and it is not one. It is
-     * threaded through {@code S3kBossDefeatSignpostFlow} into
-     * {@code S3kSignpostInstance} and on into
-     * {@code S3kResultsScreenObjectInstance}, where it is summed with other
-     * dispatch-boundary adjustments before it means anything.
-     *
-     * <p>Clearing it against the ROM therefore requires modelling the
-     * results-owner dispatch ordering across those owners, not reading a single
-     * constant out of a routine — noted here because a timing-constant sweep on
-     * 2026-08-21 opened it, found no single citation, and correctly left it
-     * alone. An uncited number invites a one-line fix; an uncited number whose
-     * name says something other than what it counts invites a wrong one.
-     */
-    private static final int RESULTS_POST_CONTROL_HANDOFF_DELAY_ENTRIES = 13;
     private static final int DEFEAT_WAIT_FADE_TIMER = 0x3F;
     private static final int FLAG_PARENT_BITS = 0x38;
     private static final int FLAG_PARENT_COUNTER = 0x39;
@@ -120,18 +96,10 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
     /** Callback for when the current horizontal swing count expires. */
     private HorizontalCallback horizontalCallback = HorizontalCallback.NONE;
     private boolean defeatRenderComplete;
-    private int retainedResultsOwnerSlot = -1;
-    private int pendingDefeatTimer = -1;
-    private int endSignControlWaitEntriesOwnedByBossBridge;
+    private boolean fatalTouchPending;
     private int defeatHandoffTimer = -1;
-    private boolean levelEndUnlockStarted;
-    private boolean levelEndSizeChangeStarted;
-    private boolean levelEndControlPollDeferred;
     /** Captured with this boss; a new spawn/respawn owns no preceding attack. */
     private int difficultyFollowupTimer = -1;
-
-    /** Stagger explosion controller for boss defeat (ROM: Child6_CreateBossExplosion subtype 0). */
-    private S3kBossExplosionController defeatExplosionController;
 
     private enum WaitCallback {
         NONE,
@@ -167,12 +135,8 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
         waitCallback = WaitCallback.NONE;
         horizontalCallback = HorizontalCallback.NONE;
         defeatRenderComplete = false;
-        pendingDefeatTimer = -1;
-        endSignControlWaitEntriesOwnedByBossBridge = 0;
+        fatalTouchPending = false;
         defeatHandoffTimer = -1;
-        levelEndUnlockStarted = false;
-        levelEndSizeChangeStarted = false;
-        defeatExplosionController = null;
         difficultyFollowupTimer = -1;
     }
 
@@ -247,17 +211,16 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
         if (state.hitCount <= 0) {
             state.hitCount = 0;
             difficultyFollowupTimer = -1;
-            // ROM loc_68F62 enters the defeat branch from the boss object's
-            // own collision_property poll after the fatal touch response has
-            // cleared collision_flags. The parent remains live for the
-            // intervening frames, which preserves the AIZ arena-edge contact
-            // seen in the trace before Wait_FadeToLevelMusic starts.
-            pendingDefeatTimer = FATAL_HIT_DEFEAT_DELAY;
+            // Obj_AIZMiniboss dispatches its current routine, then loc_68F62
+            // polls collision_flags/HP. Touch publishes the fatal HP write;
+            // it does not own a delayed defeat countdown (skdisasm 044fa46,
+            // sonic3k.asm:137292-137297,137831-137867).
+            fatalTouchPending = true;
         }
     }
 
-    private void triggerPendingDefeat() {
-        pendingDefeatTimer = -1;
+    private void commitFatalTouchPoll() {
+        fatalTouchPending = false;
         state.defeated = true;
         services().gameState().addScore(1000);
         onDefeatStarted();
@@ -278,31 +241,23 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
         state.invulnerabilityTimer = 0;
         loadBossPalette(); // Restore clean boss palette colors on line 1
 
-        // ROM loc_68FE0: jmp (BossDefeated_StopTimer).l (sonic3k.asm:137923).
+        // loc_68FE0 tail-calls BossDefeated_StopTimer (044fa46:137868-137869).
         stopLevelTimerOnBossDefeat();
 
-        // ROM: loc_46ED4 creates Child6_CreateBossExplosion (sub_52850, subtype 0).
-        // CreateBossExp00: timer=$20 (33 explosions), xRange=$20, yRange=$20.
-        // sub_52850 plays sfx_Explode each time it spawns an explosion child (every 3 frames).
-        defeatExplosionController = new S3kBossExplosionController(state.x, state.y, 0, services().rng());
-        // ROM loc_68FB6 switches the boss object to Wait_FadeToLevelMusic
-        // and creates Child6_CreateBossExplosion; the later loc_68C02
-        // Obj_EndSignControl callback is timed by the boss object's $2E,
-        // not by the explosion controller finishing (sonic3k.asm:137858-137871,
-        // 179651-179668,137381-137393).
+        // loc_68FB6 creates Child6_CreateBossExplosion subtype $10 through
+        // AfterCurrent. Its independent Obj_BossExpControl2 SST must continue
+        // after this boss becomes EndSignControl (044fa46:137858-137869).
+        spawnAfterCurrentSibling(() -> new MhzMinibossExplosionController(state.x, state.y));
+        // BossDefeated_StopTimer falls through BossDefeated, which writes
+        // #$3F,$2E. Wait_FadeToLevelMusic consumes 64 later own entries.
         defeatHandoffTimer = DEFEAT_WAIT_FADE_TIMER;
 
-        services().fadeOutMusic();
+        // Body/arm/barrel SSTs continue their own Child_Draw*Sprite2 entries.
+        // Status7 suppresses touch; only the later physical parent's $38 bit4
+        // selects their pending Delete_Current operation (044fa467:178173-178197).
 
-        // Clean up all visible children — barrels, body, arm, and live napalm shots.
-        for (var child : childComponents) {
-            child.setDestroyed(true);
-        }
-        childComponents.clear();
-
-        // Destroy all in-flight attack objects (barrel shots, flames, napalm projectiles).
-        // ROM: barrel children enter defeat animation and stop spawning new attacks;
-        // existing projectiles check parent state and become inert.
+        // Preserve the existing final-hit attack-object cleanup separately from
+        // the five component SSTs, whose routines continue through the wait.
         destroyAttackObjects();
     }
 
@@ -310,23 +265,7 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
     protected void updateBossLogic(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         updateDifficultyFollowup();
-        captureRetainedResultsOwnerSlot();
         maintainArenaCameraLock();
-        if (pendingDefeatTimer >= 0) {
-            if (pendingDefeatTimer > 1) {
-                // The fatal-touch collision bridge remains the executing SST
-                // owner for these entries, while the ROM's Obj_EndSignControl
-                // $77 wait has already begun. Preserve that elapsed owner state
-                // at the later Java handoff instead of shortening Obj_EndSign's
-                // post-landing countdown.
-                endSignControlWaitEntriesOwnedByBossBridge++;
-            }
-            pendingDefeatTimer--;
-            if (pendingDefeatTimer < 0) {
-                triggerPendingDefeat();
-            }
-            updateCustomFlash();
-        }
         switch (state.routine) {
             case ROUTINE_INIT -> updateInit();
             case ROUTINE_WAIT_TRIGGER -> updateWaitTrigger();
@@ -340,21 +279,14 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
             default -> {
             }
         }
+        // The native HP poll follows, rather than precedes, this routine's
+        // movement/Obj_Wait work. Its fresh $3F is first decremented on the
+        // next own dispatch; BossDefeated_StopTimer falls through BossDefeated
+        // to write that literal word (044fa46:180900-180913).
+        if (fatalTouchPending && !state.defeated) {
+            commitFatalTouchPoll();
+        }
         updateCustomFlash();
-    }
-
-    private void captureRetainedResultsOwnerSlot() {
-        ObjectManager objectManager = services().objectManager();
-        if (objectManager == null) {
-            return;
-        }
-        for (S3kResultsScreenObjectInstance results :
-                objectManager.activeObjectsOfType(S3kResultsScreenObjectInstance.class)) {
-            if (!results.isDestroyed() && results.getSlotIndex() >= 0) {
-                retainedResultsOwnerSlot = results.getSlotIndex();
-                return;
-            }
-        }
     }
 
     /**
@@ -416,85 +348,7 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
         int triggerX = currentPlayerCharacter() == PlayerCharacter.KNUCKLES
                 ? TRIGGER_X_KNUCKLES
                 : TRIGGER_X;
-        if (levelEndUnlockStarted || shouldReleaseArenaForAct2TitleExit()) {
-            levelEndUnlockStarted = true;
-            updateLevelEndCameraUnlock(triggerX);
-            return;
-        }
         lockArenaCamera(triggerX);
-    }
-
-    private boolean shouldReleaseArenaForAct2TitleExit() {
-        if (!state.defeated || !defeatRenderComplete) {
-            return false;
-        }
-        // ROM Obj_LevelResults changes into the in-level title-card object for
-        // Act 1 results. The retained owner reaches its LoadEnemyArt handoff
-        // before the later End_of_level_flag completion edge; Obj_EndSignControl
-        // may then run Change_Act2Sizes without waiting for the title overlay's
-        // remaining display-release entries (sonic3k.asm:62260-62293,
-        // 62276-62301, 180415-180419). Do not widen the arena during the child
-        // slide-out phase before that owner handoff exists.
-        Sonic3kTitleCardManager titleCardManager =
-                services().gameService(Sonic3kTitleCardManager.class);
-        return services().gameState().isEndOfLevelFlag()
-                || (titleCardManager != null
-                        && titleCardManager.hasPublishedInLevelRuntimeArtAdmission());
-    }
-
-    private void updateLevelEndCameraUnlock(int triggerX) {
-        var camera = services().camera();
-        var level = services().currentLevel();
-        if (!levelEndSizeChangeStarted) {
-            Sonic3kTitleCardManager titleCardManager =
-                    services().gameService(Sonic3kTitleCardManager.class);
-            if (!levelEndControlPollDeferred
-                    && titleCardManager != null
-                    && titleCardManager.retainedControlPollFollowsTitleCompletion()) {
-                // The title owner published End_of_level_flag from a higher
-                // SST slot, after this retained control slot had already run.
-                levelEndControlPollDeferred = true;
-                return;
-            }
-            levelEndSizeChangeStarted = true;
-            // ROM Change_Act2Sizes copies Act 2 size words into the stored
-            // camera-boundary memory and Camera_target_max_Y_pos, then creates
-            // gradual level-size objects (sonic3k.asm:180666-180700). Keep
-            // X/Y under the ROM gradual objects below; use the engine's target
-            // max-Y path for the copied Camera_target_max_Y_pos word. This
-            if (level != null) {
-                camera.setMinY((short) level.getMinY());
-                camera.setMaxYTarget((short) level.getMaxY());
-            }
-            ObjectManager objectManager = services().objectManager();
-            // Obj_LevelResults and its in-level title owner occupy one native SST.
-            // The engine carries that owner in a later consolidated slot. When that
-            // slot lies after this retained control owner, it is the first eligible
-            // representation of the hole Change_Act2Sizes sees; reuse it for the
-            // first Child1 worker, then continue FindNextFreeObj from there.
-            boolean reusedResultsOwnerSlot = retainedResultsOwnerSlot > getSlotIndex()
-                    && objectManager != null
-                    && objectManager.reserveDynamicSlot(retainedResultsOwnerSlot);
-            if (reusedResultsOwnerSlot) {
-                ObjectLifetimeOps.addDynamicAtReservedSlot(objectManager,
-                        new AizAct2CameraResizeController(
-                                AizAct2CameraResizeController.MAX_X),
-                        retainedResultsOwnerSlot);
-                spawnChildAfterSlot(retainedResultsOwnerSlot,
-                        () -> new AizAct2CameraResizeController(
-                                AizAct2CameraResizeController.MAX_Y));
-            } else {
-                spawnDynamicObject(new AizAct2CameraResizeController(
-                        AizAct2CameraResizeController.MAX_X));
-                spawnDynamicObject(new AizAct2CameraResizeController(
-                        AizAct2CameraResizeController.MAX_Y));
-            }
-            // Obj_EndSignControlDoStart calls Change_Act2Sizes and then
-            // Delete_Current_Sprite. The two workers above continue from
-            // their own slots (sonic3k.asm:180506-180510,180666-180700).
-            setDestroyed(true);
-        }
-        camera.setMinX((short) triggerX);
     }
 
     private void lockArenaCamera(int triggerX) {
@@ -680,19 +534,6 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
     }
 
     private void updateDefeated(int frameCounter) {
-        // Tick the stagger explosion controller each frame.
-        // ROM: Obj_CreateBossExplosion (sub_52850) spawns one explosion every 3 frames
-        // at random offsets within +/-$20 pixels. Total: 33 explosions over ~102 frames.
-        if (defeatExplosionController != null && !defeatExplosionController.isFinished()) {
-            defeatExplosionController.tick();
-            for (var pending : defeatExplosionController.drainPendingExplosions()) {
-                if (pending.playSfx()) {
-                    services().playSfx(Sonic3kSfx.EXPLODE.id);
-                }
-                spawnFreeChild(() -> new S3kBossExplosionChild(pending.x(), pending.y()));
-            }
-        }
-
         if (defeatHandoffTimer >= 0) {
             defeatHandoffTimer--;
             if (defeatHandoffTimer < 0) {
@@ -702,26 +543,26 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
     }
 
     private void startDefeatHandoff() {
-        // ROM: Wait_FadeToLevelMusic -> Obj_Song_Fade_ToLevelMusic ->
-        // loc_68C02 -> Obj_EndSignControl.
-        // The fire transition swaps tileset/palette to AIZ2's look, but the zone is still
-        // technically AIZ1 and the level music is AIZ1.
-        if (!defeatRenderComplete) {
-            defeatRenderComplete = true;
-            spawnDynamicObject(new SongFadeTransitionInstance(120, Sonic3kMusic.AIZ1.id));
-
-            // apparentAct = 0: AIZ miniboss ends act 1 (ROM's Apparent_act is 0 here,
-            // even though the engine reloaded act 2 resources for the fire terrain swap)
-            // Use spawnChild() so CONSTRUCTION_CONTEXT is set — the constructor calls services()
-            spawnChild(() -> new S3kBossDefeatSignpostFlow(
-                    state.x, 0,
-                    S3kBossDefeatSignpostFlow.CleanupAction.RESTORE_AIZ_FIRE_PALETTE,
-                    endSignControlWaitEntriesOwnedByBossBridge,
-                    0,
-                    RESULTS_WAIT_DURATION_ADJUSTMENT,
-                    RESULTS_POST_CONTROL_HANDOFF_DELAY_ENTRIES,
-                    true).withNativeControlSlot(getSlotIndex()));
-        }
+        if (defeatRenderComplete) return;
+        defeatRenderComplete = true;
+        // Wait_FadeToLevelMusic allocates its independent music owner, then
+        // tail-calls loc_68C02. That callback installs Obj_EndSignControl in
+        // the SAME physical SST (044fa46:179742-179759,137455-137458).
+        // Wait_FadeToLevelMusic uses global AllocateObject (sonic3k.asm:179754),
+        // so a lower free SST first dispatches on the following Process_Sprites pass.
+        spawnDynamicObjectLowestFreeSlot(new SongFadeTransitionInstance(120, Sonic3kMusic.AIZ1.id));
+        var retainedHeader = S3kChildDrawParentHeader.fromBoss(this);
+        int slot = ObjectLifetimeOps.detachSlotForTransfer(this);
+        ObjectLifetimeOps.deleteNoRespawn(this);
+        var flow = ObjectConstructionContext.construct(services(), () -> new S3kBossDefeatSignpostFlow(
+                state.x, 0, S3kBossDefeatSignpostFlow.CleanupAction.RESTORE_AIZ_FIRE_PALETTE,
+                0, 0, 0, 0, true, false, true));
+        ObjectLifetimeOps.addReplacementAtTransferredSlot(services().objectManager(), flow, slot);
+        // Native install writes fresh $77 and returns. Later own entries run
+        // the wait, sign/results and DoStart's three workers. The former
+        // auxiliary flow's displaced-entry/13-entry delays have no ROM owner.
+        flow.retainChildDrawHeader(retainedHeader);
+        flow.beginNativeReplacement(slot);
     }
 
     private void setWait(int frames, WaitCallback callback) {
@@ -773,9 +614,8 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
         }
     }
 
-    private void spawnBossComponent(java.util.function.Supplier<? extends AbstractBossChild> factory) {
-        AbstractBossChild child = spawnChild(factory);
-        childComponents.add(child);
+    private void spawnBossComponent(java.util.function.Supplier<? extends AizMinibossComponent> factory) {
+        spawnChild(factory);
     }
 
     private void spawnBreathFlames() {
@@ -812,7 +652,7 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
         // ROM pose for the admitted delay. Ordinary barrel flares are unchanged.
         int warnedBarrels = 0;
         java.util.ArrayList<AizMinibossBarrelShotFlareChild> admittedWarnings = new java.util.ArrayList<>(3);
-        for (var child : childComponents) {
+        for (var child : AizMinibossComponent.family(services().objectManager(), getSlotIndex())) {
             if (child instanceof AizMinibossFlameBarrelChild barrel && !barrel.isDestroyed()
                     && warnedBarrels++ < 3) {
                 var warning = spawnChild(() -> AizMinibossBarrelShotFlareChild.warning(barrel, delay));
@@ -847,8 +687,8 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
 
     /**
      * Destroy all in-flight attack objects spawned by this boss.
-     * ROM: barrel children enter defeat animation; existing shots/flames check parent
-     * state and stop. We achieve the same by scanning active objects.
+     * Existing final-hit cleanup for attack objects. The five component controllers
+     * retain their separate physical-SST routines and native bit4 retirement tail.
      */
     private void destroyAttackObjects() {
         var objectManager = services().objectManager();
@@ -920,16 +760,15 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
     public String traceDebugDetails() {
         var camera = services().camera();
         var gameState = services().gameState();
-        return String.format("r=%02X hp=%d inv=%s it=%d wait=%d pend=%d def=%s done=%s exp=%s boss=%04X end=%s flag=%s cam=%04X min=%04X max=%04X",
+        return String.format("r=%02X hp=%d inv=%s it=%d wait=%d fatal=%s def=%s done=%s boss=%04X end=%s flag=%s cam=%04X min=%04X max=%04X",
                 state.routine & 0xFF,
                 state.hitCount,
                 state.invulnerable,
                 state.invulnerabilityTimer,
                 waitTimer,
-                pendingDefeatTimer,
+                fatalTouchPending,
                 state.defeated,
                 defeatRenderComplete,
-                defeatExplosionController == null || defeatExplosionController.isFinished(),
                 gameState.getCurrentBossId(),
                 gameState.isEndOfLevelActive(),
                 gameState.isEndOfLevelFlag(),
@@ -945,22 +784,11 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
         return true;
     }
 
-    /**
-     * The AIZ miniboss is spawned in AIZ2 and fought there; it is never legitimately carried
-     * across a seamless act reload. It is {@code isPersistent()=true} and, because it does not use
-     * the defeat sequencer, keeps running {@code maintainArenaCameraLock()} every frame even after
-     * defeat — releasing the arena and self-destructing only when the end-of-level camera widening
-     * completes. If it were ever carried into the next act (e.g. while still defeated-but-alive),
-     * the default no-op carry hook would leave it un-offset and it would become an invisible,
-     * camera-locking ghost — the same failure mode fixed for the AIZ1 cutscene miniboss.
-     *
-     * <p>Guard against that: remove this object and its tracked children when the act transition
-     * carries them, matching the ROM where the boss object's RAM slot does not survive a reload.
-     */
+    /** A live fight cannot survive a seamless reload; the later native control is a replacement owner. */
     @Override
     public void onCarriedAcrossSeamlessTransition(int offsetX, int offsetY) {
         difficultyFollowupTimer = -1;
-        for (var child : childComponents) {
+        for (var child : AizMinibossComponent.family(services().objectManager(), getSlotIndex())) {
             ObjectLifetimeOps.destroyBossChildLatched(child);
         }
         childComponents.clear();

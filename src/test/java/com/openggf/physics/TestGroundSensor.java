@@ -11,6 +11,9 @@ import com.openggf.level.scroll.ZoneScrollHandler;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import com.openggf.level.ChunkDesc;
 import com.openggf.level.CollisionMode;
 import com.openggf.level.Level;
@@ -20,6 +23,7 @@ import com.openggf.level.SolidTile;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.GroundMode;
 import java.lang.reflect.Field;
+import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -31,6 +35,10 @@ import static org.mockito.ArgumentMatchers.anyByte;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.doCallRealMethod;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 public class TestGroundSensor {
@@ -173,6 +181,119 @@ public class TestGroundSensor {
 
     private ChunkDesc[][] chunkMapForLayer(byte layer) {
         return layer == 1 ? bgChunkMap : fgChunkMap;
+    }
+
+
+    private static Stream<Arguments> explicitVerticalArrayCases() {
+        return Stream.of(false, true).flatMap(secondary -> Stream.of(12, 13, 14, 15)
+                .flatMap(bit -> Stream.of(Direction.DOWN, Direction.UP)
+                        .flatMap(direction -> Stream.of((byte) 0, (byte) 1)
+                                .map(layer -> Arguments.of(secondary, bit, direction, layer)))));
+    }
+
+    private void configureExplicitVerticalArrays(boolean angleOnly) {
+        byte[] primaryHeights = new byte[16];
+        byte[] alternateHeights = new byte[16];
+        java.util.Arrays.fill(primaryHeights, (byte) (angleOnly ? 0 : 4));
+        java.util.Arrays.fill(alternateHeights, (byte) (angleOnly ? 0 : 8));
+        SolidTile[] primary = {null,
+                new SolidTile(8, primaryHeights, primaryHeights.clone(), (byte) 0x10), tiles[1]};
+        SolidTile[] alternate = {null,
+                new SolidTile(9, alternateHeights, alternateHeights.clone(), (byte) 0x28), tiles[1]};
+        // Exercise the real bit-derived adapter: it must not choose an explicit sensor's array.
+        doCallRealMethod().when(mockLevelManager)
+                .getSolidTileForChunkDesc(any(ChunkDesc.class), anyInt());
+        when(mockLevelManager.getSolidTileForChunkDesc(
+                any(ChunkDesc.class), anyInt(), anyBoolean())).thenAnswer(call -> {
+                    ChunkDesc desc = call.getArgument(0);
+                    boolean secondary = call.getArgument(2);
+                    return (secondary ? alternate : primary)[desc.getChunkIndex()];
+                });
+    }
+
+    private ChunkDesc explicitVerticalDesc(byte layer, int tileY, int chunk, int bit,
+                                           Direction direction) {
+        var desc = new ChunkDesc(chunk | (1 << bit) | (direction == Direction.UP ? 0x0800 : 0));
+        for (int other = 12; other <= 15; other++) {
+            assertEquals(other == bit, desc.isSolidityBitSet(other),
+                    "the fixture supplies only the requested solidity bit");
+        }
+        chunkMapForLayer(layer)[100 / 16][tileY / 16] = desc;
+        return desc;
+    }
+
+    private SensorResult scanExplicitVertical(boolean secondary, int bit, Direction direction,
+                                               byte layer) throws Exception {
+        var sensor = new GroundSensor(mockSprite, direction, (byte) 0, (byte) 0, true, secondary);
+        if (layer == 1) {
+            GameServices.camera().setX((short) 0);
+            GameServices.camera().setY((short) 0);
+            setParallaxField("cachedBgCameraX", Integer.MIN_VALUE);
+            setParallaxField("vscrollFactorBG", (short) 0);
+            return invokeBackgroundScan(sensor, (short) 100, (short) 100, bit, direction, true);
+        }
+        var method = GroundSensor.class.getDeclaredMethod("scanVerticalLayer", LevelManager.class,
+                short.class, short.class, int.class, Direction.class, boolean.class,
+                byte.class, boolean.class, SensorResult.class);
+        method.setAccessible(true);
+        return (SensorResult) method.invoke(sensor, mockLevelManager, (short) 100, (short) 100,
+                bit, direction, false, layer, false, new SensorResult());
+    }
+
+    private void assertExplicitVerticalResult(SensorResult result, boolean secondary,
+                                               Direction direction, int distance) {
+        assertNotNull(result);
+        assertEquals(distance, result.distance());
+        assertEquals(secondary ? 9 : 8, result.tileId());
+        assertEquals(direction == Direction.UP ? (secondary ? 0x58 : 0x70)
+                : (secondary ? 0x28 : 0x10), result.angle() & 0xFF);
+        assertEquals(direction, result.direction());
+        verify(mockLevelManager, never()).getSolidTileForChunkDesc(any(ChunkDesc.class), anyInt());
+    }
+
+    @ParameterizedTest
+    @MethodSource("explicitVerticalArrayCases")
+    void explicitVerticalCurrentTileKeepsArrayOwner(boolean secondary, int bit,
+                                                     Direction direction, byte layer) throws Exception {
+        configureExplicitVerticalArrays(false);
+        explicitVerticalDesc(layer, 96, 1, bit, direction);
+        var result = scanExplicitVertical(secondary, bit, direction, layer);
+        assertExplicitVerticalResult(result, secondary, direction,
+                direction == Direction.DOWN ? (secondary ? 3 : 7) : (secondary ? -4 : 0));
+    }
+
+    @ParameterizedTest
+    @MethodSource("explicitVerticalArrayCases")
+    void explicitVerticalExtensionKeepsArrayOwner(boolean secondary, int bit,
+                                                   Direction direction, byte layer) throws Exception {
+        configureExplicitVerticalArrays(false);
+        explicitVerticalDesc(layer, direction == Direction.DOWN ? 112 : 80, 1, bit, direction);
+        var result = scanExplicitVertical(secondary, bit, direction, layer);
+        assertExplicitVerticalResult(result, secondary, direction,
+                direction == Direction.DOWN ? (secondary ? 19 : 23) : (secondary ? 12 : 16));
+    }
+
+    @ParameterizedTest
+    @MethodSource("explicitVerticalArrayCases")
+    void explicitVerticalPreviousTileKeepsArrayOwner(boolean secondary, int bit,
+                                                      Direction direction, byte layer) throws Exception {
+        configureExplicitVerticalArrays(false);
+        explicitVerticalDesc(layer, 96, 2, bit, direction);
+        explicitVerticalDesc(layer, direction == Direction.DOWN ? 80 : 112, 1, bit, direction);
+        var result = scanExplicitVertical(secondary, bit, direction, layer);
+        assertExplicitVerticalResult(result, secondary, direction,
+                direction == Direction.DOWN ? (secondary ? -13 : -9) : (secondary ? -20 : -16));
+    }
+
+    @ParameterizedTest
+    @MethodSource("explicitVerticalArrayCases")
+    void explicitVerticalFootFallbackKeepsArrayOwner(boolean secondary, int bit,
+                                                      Direction direction, byte layer) throws Exception {
+        configureExplicitVerticalArrays(true);
+        var foot = explicitVerticalDesc(layer, 96, 1, bit, direction);
+        var result = scanExplicitVertical(secondary, bit, direction, layer);
+        assertExplicitVerticalResult(result, secondary, direction, 27);
+        verify(mockLevelManager, times(2)).getSolidTileForChunkDesc(eq(foot), eq(bit), eq(secondary));
     }
 
     @Test

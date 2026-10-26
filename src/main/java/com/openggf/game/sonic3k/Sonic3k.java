@@ -295,9 +295,17 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
             int levelIdx,
             DeferredLevelResourceTracker deferredResources)
             throws IOException {
-        LevelBuildInputs inputs = captureLevelBuildInputs(levelIdx);
+        LevelBuildInputs inputs = captureLevelBuildInputs(levelIdx, true);
         com.openggf.game.sonic3k.resources.S3kFrontendPatternResidency.validate(inputs.frontendPatterns());
-        Sonic3kLevel level = buildLevel(levelIdx, deferredResources, true, inputs);
+        // Load_Level does not clear Block_table. Capture only this synchronous,
+        // executing predecessor; prepared builds have no predecessor identity.
+        var levelManager = GameServices.levelOrNull();
+        Sonic3kLevel.ResidentChunkPatterns residentChunks =
+                levelManager != null && inputs.retainResidentDefinitions()
+                        && levelManager.getCurrentLevel() instanceof Sonic3kLevel resident
+                        && resident.hasStockRomZoneIdentity()
+                        ? resident.residentChunkPatterns() : Sonic3kLevel.ResidentChunkPatterns.EMPTY;
+        Sonic3kLevel level = buildLevel(levelIdx, deferredResources, true, inputs, residentChunks);
         finishLevelLoad(level, levelIdx);
         com.openggf.game.sonic3k.resources.S3kFrontendPatternResidency.installed(inputs.frontendPatterns());
         return level;
@@ -306,7 +314,7 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
     /** Captures live character/bootstrap choices before the ROM worker starts. */
     @Override
     public Callable<PreparedLevelBuild> prepareLevelBuildTask(int levelIndex, String mutationKey) {
-        LevelBuildInputs inputs = captureLevelBuildInputs(levelIndex);
+        LevelBuildInputs inputs = captureLevelBuildInputs(levelIndex, false);
         return () -> {
             Sonic3kLevel level = buildLevel(
                     levelIndex, DeferredLevelResourceTracker.none(), false, inputs);
@@ -349,29 +357,48 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
     Sonic3kLevel buildDetachedLevel(int zone, int act, Sonic3kLoadBootstrap.Mode bootstrapMode)
             throws IOException {
         return buildLevel(zone * Sonic3kConstants.ACTS_PER_ZONE_STRIDE + act, DeferredLevelResourceTracker.none(),
-                false, new LevelBuildInputs(bootstrapMode, "sonic", false, null));
+                false, new LevelBuildInputs(bootstrapMode, "sonic", false, null, new byte[0], false));
     }
 
     private record LevelBuildInputs(Sonic3kLoadBootstrap.Mode bootstrapMode, String mainCharacter,
                                     boolean omitSecondaryLevelPlc,
-            com.openggf.game.sonic3k.resources.S3kFrontendPatternResidency.Seed frontendPatterns) {
+            com.openggf.game.sonic3k.resources.S3kFrontendPatternResidency.Seed frontendPatterns,
+            byte[] residentBlocks, boolean retainResidentDefinitions) {
+        LevelBuildInputs { residentBlocks = residentBlocks.clone(); }
         Sonic3kLoadBootstrap bootstrap() {
             // Level construction consumes only the mode, never the mutable start-position array.
             return new Sonic3kLoadBootstrap(bootstrapMode, null);
         }
     }
 
-    private LevelBuildInputs captureLevelBuildInputs(int levelIndex) {
+    private LevelBuildInputs captureLevelBuildInputs(int levelIndex, boolean synchronousLoad) {
         int[] zoneAct = zoneAndActOf(levelIndex);
         var levelManager = GameServices.levelOrNull();
         var transitionRequest = levelManager != null
                 ? levelManager.getExecutingSeamlessTransitionRequest() : null;
+        // loc_7F310 -> StartNewLevel preserves RAM_start across a native Act3
+        // continuation; LoadLevelLoadBlock2 overwrites only its decoded prefix.
+        // beginLoad already validated the continuation's target before entering
+        // LOADING. Require this exact destination too; a cold/manual/unrelated
+        // build or a prepared worker must not borrow arbitrary live definitions.
+        boolean nativeContinuation = synchronousLoad && levelManager != null
+                && com.openggf.level.LevelContinuationCarry.bypassesInitialPresentation(levelManager)
+                && levelManager.getCurrentZone() == zoneAct[0]
+                && levelManager.getCurrentAct() == zoneAct[1];
+        // Both native definition tables share this owner/target qualification.
+        // Known16 bytes are captured only by the synchronous load entry above;
+        // prepared/default builds still pass ResidentChunkPatterns.EMPTY.
+        boolean retainResidentDefinitions = transitionRequest != null || nativeContinuation;
         return new LevelBuildInputs(
                 Sonic3kBootstrapResolver.resolve(zoneAct[0], zoneAct[1]).mode(),
                 resolveActiveMainCharacterCode(),
                 transitionRequest != null && transitionRequest.omitSecondaryLevelPlc(),
                 com.openggf.game.sonic3k.resources.S3kFrontendPatternResidency.currentOrNull() != null
-                        ? com.openggf.game.sonic3k.resources.S3kFrontendPatternResidency.currentOrNull().seed() : null);
+                        ? com.openggf.game.sonic3k.resources.S3kFrontendPatternResidency.currentOrNull().seed() : null,
+                retainResidentDefinitions
+                        && levelManager.getCurrentLevel() instanceof Sonic3kLevel resident
+                        && resident.hasStockRomZoneIdentity() ? resident.residentBlockBytes() : new byte[0],
+                retainResidentDefinitions);
     }
 
     /**
@@ -451,7 +478,7 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
             boolean publishGraphics)
             throws IOException {
         return buildLevel(levelIdx, deferredResources, publishGraphics,
-                captureLevelBuildInputs(levelIdx));
+                captureLevelBuildInputs(levelIdx, false));
     }
 
     private Sonic3kLevel buildLevel(
@@ -459,6 +486,14 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
             DeferredLevelResourceTracker deferredResources,
             boolean publishGraphics,
             LevelBuildInputs inputs) throws IOException {
+        return buildLevel(levelIdx, deferredResources, publishGraphics, inputs,
+                Sonic3kLevel.ResidentChunkPatterns.EMPTY);
+    }
+
+    private Sonic3kLevel buildLevel(
+            int levelIdx, DeferredLevelResourceTracker deferredResources,
+            boolean publishGraphics, LevelBuildInputs inputs,
+            Sonic3kLevel.ResidentChunkPatterns residentChunks) throws IOException {
         int[] zoneAct = zoneAndActOf(levelIdx);
         int zone = zoneAct[0];
         int act = zoneAct[1];
@@ -692,7 +727,8 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
                 objectSpawns, ringSpawns, ringSpriteSheet,
                 publishGraphics,
                 new Sonic3kLevel.TerrainArtSources(primaryArtAddr, secondaryArtAddr),
-                inputs.frontendPatterns() == null ? new byte[0] : inputs.frontendPatterns().packed());
+                inputs.frontendPatterns() == null ? new byte[0] : inputs.frontendPatterns().packed(),
+                inputs.residentBlocks(), residentChunks);
         validateCustomBounds(level, customResources);
         return level;
     }

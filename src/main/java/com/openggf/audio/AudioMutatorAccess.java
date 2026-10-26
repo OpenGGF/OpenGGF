@@ -41,7 +41,7 @@ public final class AudioMutatorAccess {
         else currentBinding.sfxIntent(id);
     }
 
-    private void submit(Runnable action) {
+    void submit(Runnable action) {
         submissionDepth++;
         try { action.run(); }
         finally { submissionDepth--; }

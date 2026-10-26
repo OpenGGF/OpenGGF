@@ -9,6 +9,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidObjectProvider;
@@ -109,8 +110,17 @@ public class HCZSnakeBlocksObjectInstance extends AbstractObjectInstance
         updateDynamicSpawn(x, y);
 
         if (!isBasePositionInRange()) {
-            setDestroyed(true);
+            // HCZSnakeBlocks_DeleteAndClearRespawn clears the layout's bit7
+            // before deletion, allowing later re-entry (sonic3k.asm:50957-50964).
+            ObjectLifetimeOps.destroyRespawnableOffscreen(this);
         }
+    }
+
+    @Override
+    public boolean usesCustomOutOfRangeCheck() {
+        // HCZSnakeBlocks_Main checks saved base X at $44, not animated x_pos
+        // (sonic3k.asm:50949-50954). update() already owns that delete path.
+        return true;
     }
 
     /**

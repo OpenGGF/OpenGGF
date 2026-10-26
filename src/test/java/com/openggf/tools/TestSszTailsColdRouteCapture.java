@@ -81,9 +81,10 @@ class TestSszTailsColdRouteCapture {
         try (var session = new GameplayCaptureSession(settings)) {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 10, 0, settings);
             assertEquals(width, GameServices.camera().getWidth());
-            // Spawner-pad approach and lift windows of the 2026-10-15 re-authored movies.
-            int first = width == 320 ? 10443 : 10667, second = width == 320 ? 10645 : 10819;
-            for (int frame = 0; frame < (width == 320 ? 10784 : 11306); frame++) {
+            // 320: observed pad approach/lift before native Mecha init11571 (two fresh cold replays).
+            // 800: observed pad activation/lift before native Mecha init11605 (two fresh cold replays).
+            int first = width == 320 ? 11324 : 11369, second = width == 320 ? 11524 : 11516;
+            for (int frame = 0; frame < (width == 320 ? 11572 : 11606); frame++) {
                 session.step(movie.getFrame(frame)); drawing.afterStep(session);
                 assertFalse(session.player().getDead(), "approach death at " + frame);
                 if (frame == first || frame == second) {
@@ -124,10 +125,11 @@ class TestSszTailsColdRouteCapture {
     void coldSoloTailsDefeatsBothReplicasAndRidesTheirTeleporters(int width) throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
                 "src/test/resources/routes/s3k/ssz1-tails-solo-cold-replicas-" + width + ".bk2"));
-        assertEquals(width == 320 ? 8200 : 8425, movie.getFrameCount());
+        assertEquals(width == 320 ? 8350 : 8425, movie.getFrameCount());
         var settings = new GameplayCaptureSession.Settings(width, "tails", "", "off", null, null, null);
-        // Spots up to 4460 precede the re-authored GHZ fight; later ones follow the fight,
-        // both transports and the MTZ fight of each width's 2026-10-15 re-authored movie.
+        // Retain all 53 original 320 windows. The 2026-10-21 controller additionally covers
+        // the observed carrier release, MTZ allocation/every hit/despawn and pad owner changes.
+        // The 800 movie and its original 2026-10-15 windows remain independent.
         var spots = width == 320 ? Set.of(2215, 2255, 2345, 2465, 2900, 3000, 3240, 3340, 3500, 3780,
                 4018, 4150, 4320, 4460, 4489, 4540, 4580, 4614, 4694, 4779, 4819, 4848, 4882, 4990, 5127,
                 5167, 5256, 5319, 5470, 5640, 5785, 6015, 6160, 6221, 6381, 6436, 6511, 6641, 6771, 6830,
@@ -136,6 +138,11 @@ class TestSszTailsColdRouteCapture {
                 4460, 4494, 4541, 4577, 4608, 4681, 4759, 4795, 4821, 4852, 4950, 5075, 5111, 5196, 5259,
                 5410, 5583, 5730, 5963, 6110, 6172, 6335, 6390, 6467, 6598, 6730, 6793, 6961, 7029, 7104,
                 7172, 7314, 7516, 7575, 7693, 7949, 8079, 8146, 8239, 8350);
+        if (width == 320) {
+            spots = new HashSet<>(spots);
+            spots.addAll(Set.of(5779, 5824, 7045, 7279, 7324, 7385, 7455, 7516, 7587,
+                    7619, 7651, 7835, 7967, 8116, 8171, 8236));
+        }
         var checked = new HashSet<Integer>();
         int ghzHealth = 8, mtzHealth = 8, ghzHits = 0, mtzHits = 0;
         boolean ghzSeen = false, mtzSeen = false;
@@ -193,8 +200,8 @@ class TestSszTailsColdRouteCapture {
                     .activeObjectsOfType(SszMtzBossObjectInstance.class).isEmpty());
             assertEquals(10, GameServices.level().getCurrentZone());
             assertEquals(0, GameServices.level().getCurrentAct());
-            // Each width's re-authored fights scatter and recollect different rings.
-            assertEquals(width == 320 ? 3 : 0, session.player().getRingCount());
+            // Controller outcomes: two fresh cold 320 replays retain 34 rings without damage.
+            assertEquals(width == 320 ? 34 : 0, session.player().getRingCount());
             assertEquals(5888, session.player().getCentreX());
             assertEquals(144, session.player().getCentreY());
             var zone = com.openggf.game.sonic3k.runtime.S3kRuntimeStates
@@ -209,18 +216,34 @@ class TestSszTailsColdRouteCapture {
     void coldSoloTailsDefeatsMechaAndLoadsDezWithIsolatedHistory(int width) throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
                 "src/test/resources/routes/s3k/ssz1-tails-solo-cold-complete-" + width + ".bk2"));
-        assertEquals(width == 320 ? 13667 : 15132, movie.getFrameCount());
+        assertEquals(width == 320 ? 14923 : 15072, movie.getFrameCount());
         int historyStart = movie.getFrameCount() - 120;
         var settings = new GameplayCaptureSession.Settings(width, "tails", "", "off", null, null, null);
-        // Upper route, Mecha fight and Death Egg lift windows of the 2026-10-15 re-authored movies.
+        // Retain all 47 original 320 windows and the independent 800 movie data.
+        // Added 320 boundaries follow two fresh cold replays: carriers/cloud wrap, pad states,
+        // spring launches, Mecha init/eight accepted hits, results and Death Egg launch/hover.
+        // Retain all 49 original 800 indices; add reached owner boundaries and the
+        // predecessors of wrap, Mecha allocation and every accepted hit to replay their dispatch.
         var spots = width == 800 ? Set.of(8225, 8298, 8347, 8451, 8535, 8660, 8793, 8848, 8897, 8932,
                 9022, 9134, 9217, 9308, 9357, 9426, 9635, 9705, 9775, 9844, 9928, 10053, 10179, 10262, 10471,
                 10541, 10631, 10680, 11053, 11306, 11359, 11473, 11562, 11651, 11841, 11968, 12120, 12247,
-                12374, 12501, 12602, 12678, 12818, 13008, 13388, 13828, 14228, 14628, 14878)
+                12374, 12501, 12602, 12678, 12818, 13008, 13388, 13828, 14228, 14628, 14878,
+                8425, 8603, 8606, 9008, 9027, 9061, 9064, 9068, 9144, 9145,
+                9195, 9196, 9230, 9722, 9872, 9903, 9968, 10020, 10201, 10889,
+                10949, 11039, 11282, 11369, 11516, 11567, 11604, 11605, 11632, 11653,
+                11717, 11797, 11890, 11891, 12008, 12009, 12166, 12167, 12310, 12311,
+                12367, 12368, 12651, 12652, 12697, 12698, 12743, 12744, 12872, 12883,
+                13003, 13488, 13518, 13618, 13633, 13713, 14837, 14838, 14868)
                 : Set.of(8001, 8074, 8123, 8227, 8310, 8435, 8568, 8623, 8671, 8706, 8796, 8908, 8991,
                 9081, 9130, 9199, 9408, 9477, 9547, 9616, 9700, 9825, 9950, 10033, 10242, 10311, 10401,
                 10450, 10719, 10781, 10812, 10874, 10921, 10983, 11044, 11134, 11153, 11190, 11230, 11292,
-                11336, 11420, 11778, 12150, 12393, 12943, 13489);
+                11336, 11420, 11778, 12150, 12393, 12943, 13489,
+                8350, 8529, 8540, 8683, 8781, 9022, 9041, 9084, 9088, 9174,
+                9214, 9250, 9743, 9892, 9923, 9988, 10040, 10221, 10698, 10904,
+                10964, 11053, 11132, 11324, 11337, 11484, 11524, 11535, 11571, 11600,
+                11619, 11683, 11763, 11807, 11886, 11946, 12005, 12128, 12205, 12251,
+                12613, 12741, 12742, 12862, 13339, 13369, 13469, 13484, 13565, 14689,
+                14719);
         var checked = new HashSet<Integer>();
         boolean seen = false;
         int health = 8, hits = 0;

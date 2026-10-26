@@ -487,6 +487,9 @@ public final class GenericFieldCapturer {
         if (declaredType.isPrimitive()
                 || WRAPPER_TYPES.contains(declaredType)
                 || declaredType == String.class
+                // Typed codec opaque keys retain immutable runtime identity.
+                // This clone case does not admit Class fields into scalar capture.
+                || declaredType == Class.class
                 || declaredType.isEnum()) {
             return value;
         }

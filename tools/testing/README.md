@@ -56,6 +56,8 @@ python3 tools/testing/run_categories.py --base develop --category audio --run
 python3 tools/testing/run_categories.py --category physics --run
 # All bounded smoke categories and separate guards (still excludes slow-suite).
 python3 tools/testing/run_categories.py --category all --run
+# Linux without a display: use surfaceless EGL throughout the validation run.
+python3 tools/testing/run_categories.py --category all --headless-gl surfaceless-egl --run
 ```
 
 Use the actual integration branch or pinned base SHA instead of `develop` where appropriate.
@@ -63,6 +65,13 @@ The diff includes committed, staged, unstaged, deleted, renamed and untracked fi
 checks both old and new paths. Explicit categories are additive: they cannot override an
 unknown change's all-smoke fallback. Without `--run`, no Maven process starts. Add `--json` only when the complete class
 inventory is needed; default plans cap changed-path detail at 50 entries to keep output bounded.
+
+On Linux, optional `--headless-gl surfaceless-egl` forwards the exact Maven argument
+`-Dopenggf.headless.gl=surfaceless-egl` to `test-compile`, every ordinary batch and
+the guard invocation. The selected backend is recorded in the plan, including the
+plan rebuilt under the worktree lock. Omitting the option keeps the existing command
+defaults. The option leaves environment variables, JVM capacity and test selection unchanged.
+Tool preflight checks prerequisites; it does not create or validate an EGL context.
 
 | Category | Coverage |
 |---|---|

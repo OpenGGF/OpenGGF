@@ -481,6 +481,8 @@ public class Sonic3kConstants {
     // ArtTile_ICZIntroSprites (sonic3k.constants.asm:1288) - loaded by PLC_1E_1F (ICZ1).
     // Base for the breakable-wall break debris (ObjDat3_8A41E: make_art_tile(ArtTile_ICZIntroSprites,2,1)).
     public static final int ARTTILE_ICZ_INTRO_SPRITES = 0x0347;
+    // PLC_1E_1F at $92680: ArtNem_ICZTeleport ($159CD0) -> VRAM $AE00.
+    public static final int ARTTILE_ICZ_TELEPORT = 0x0570;
     public static final int ARTTILE_LRZ_TENSION_BRIDGE = 0x0113;
     public static final int ARTTILE_LBZ_MISC = 0x03C3;
     public static final int ARTTILE_FBZ_MISC = 0x0379;
@@ -2013,6 +2015,8 @@ public class Sonic3kConstants {
 
     // ===== SSZ/DDZ Badnik Art =====
     public static final int ART_KOSM_EGG_ROBO_BADNIK_ADDR = 0x17B17E;
+    /** Native ArtTile_EggRoboBadnik, used by PLCKosM_SSZ and loc_91570. */
+    public static final int ARTTILE_EGG_ROBO_BADNIK = 0x0500;
     public static final int MAP_EGG_ROBO_ADDR = 0x184F34;
 
     // ===== DDZ (Doomsday) =====

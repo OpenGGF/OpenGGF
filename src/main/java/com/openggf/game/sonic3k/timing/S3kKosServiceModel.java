@@ -2,6 +2,9 @@ package com.openggf.game.sonic3k.timing;
 
 import java.util.Arrays;
 import java.util.Objects;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
 
 /**
  * Pure, resumable model of the shipped S3K Kosinski queue service: {@code Process_Kos_Queue} through
@@ -41,7 +44,8 @@ import java.util.Objects;
  * <p>{@link #COSTS} rows are {pc, opcode word, cycles (sequential or branch taken), cycles (branch not taken)}. They
  * equal the GPGX 051d430d {@code m68ki_cycles} entries and the Motorola MC68000 UM tables for every row; dynamic
  * rows (Bcc, DBcc) follow the 68000 rules (Bcc.s 10/8, Bcc.w 10/12, DBF 10/14). The constructor refuses a ROM whose
- * opcode words differ from the pins; addresses are the S3&amp;K ROM SHA-1 cfbf98c36c776677290a872547ac47c53d2761d6.
+ * opcode words or any operand byte differ from the pins; addresses are the S3&amp;K ROM SHA-1
+ * cfbf98c36c776677290a872547ac47c53d2761d6.
  *
  * <p>Not yet consumed by any timing service, profile, fingerprint or ledger: callers must not treat a budget
  * derived from anything other than engine-owned state as runtime input.
@@ -261,6 +265,7 @@ public final class S3kKosServiceModel {
         private final int[] d = new int[7];
         private final int[] a = new int[3];
         private int x, n, z, v, c;
+        private int srSystemBits = SR_SYSTEM_BITS;
         private final byte[] ram = new byte[0x10000];
         private int livePc = -1;
 
@@ -273,6 +278,7 @@ public final class S3kKosServiceModel {
             s.z = z;
             s.v = v;
             s.c = c;
+            s.srSystemBits = srSystemBits;
             System.arraycopy(ram, 0, s.ram, 0, ram.length);
             s.livePc = livePc;
             return s;
@@ -332,15 +338,22 @@ public final class S3kKosServiceModel {
             c = value & 1;
         }
 
+        int statusRegister() { return srSystemBits | ccr(); }
+
+        void setStatusRegister(int sr) {
+            srSystemBits = sr & 0xFF00;
+            setCcr(sr);
+        }
+
         @Override
         public boolean equals(Object other) {
             return other instanceof State s && Arrays.equals(d, s.d) && Arrays.equals(a, s.a) && ccr() == s.ccr()
-                    && livePc == s.livePc && Arrays.equals(ram, s.ram);
+                    && srSystemBits == s.srSystemBits && livePc == s.livePc && Arrays.equals(ram, s.ram);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(Arrays.hashCode(d), Arrays.hashCode(a), ccr(), livePc, Arrays.hashCode(ram));
+            return Objects.hash(Arrays.hashCode(d), Arrays.hashCode(a), ccr(), srSystemBits, livePc, Arrays.hashCode(ram));
         }
     }
 
@@ -350,13 +363,13 @@ public final class S3kKosServiceModel {
 
     /** @param rom the complete S3&amp;K ROM image, read through the ROM pipeline */
     public S3kKosServiceModel(byte[] rom) {
-        this.rom = Objects.requireNonNull(rom, "rom");
+        this.rom = Objects.requireNonNull(rom, "rom").clone();
         for (int[] row : COSTS) {
             int pc = row[0];
-            if (pc + 1 >= rom.length) {
+            if (pc + 1 >= this.rom.length) {
                 throw new IllegalArgumentException(String.format("ROM too short for pinned opcode at %06X", pc));
             }
-            int word = (rom[pc] & 0xFF) << 8 | (rom[pc + 1] & 0xFF);
+            int word = (this.rom[pc] & 0xFF) << 8 | (this.rom[pc + 1] & 0xFF);
             if (word != row[1]) {
                 throw new IllegalArgumentException(String.format(
                         "ROM opcode at %06X is %04X, not the pinned %04X", pc, word, row[1]));
@@ -364,7 +377,66 @@ public final class S3kKosServiceModel {
             taken[pc] = row[2];
             notTaken[pc] = row[3];
         }
+        if (!codeMatches(this.rom, PROCESS_KOS_QUEUE, TABLE_LIMIT,
+                "0df7c3df3656a11694522ab3cd50046d2fe7f58e8b6d5e999f0fd690011ee0cd")) {
+            throw new IllegalArgumentException("ROM Kos instruction operands differ from the shipped body");
+        }
     }
+
+    static boolean codeMatches(byte[] rom, int start, int end, String sha256) {
+        if (rom.length < end) return false;
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            digest.update(rom, start, end - start);
+            return MessageDigest.isEqual(HexFormat.of().parseHex(sha256), digest.digest());
+        } catch (NoSuchAlgorithmException impossible) {
+            throw new IllegalStateException("SHA-256 required for Kos instruction authentication", impossible);
+        }
+    }
+
+    /** Shared instruction seam: both the budget oracle and the bus core execute this same semantic switch. */
+    record InstructionStep(int nextPc, int cycles, int bytesOut, boolean retired) { }
+
+    /**
+     * Check every variable memory operand before any register/RAM effect. The bus core also calls
+     * this before charging fetch waits/refresh. Constant RAM operands are authenticated in the code
+     * body. This is bounded address validation, not a speculative instruction or a 64KiB transaction.
+     */
+    void validateInstructionAccesses(State s, int pc) {
+        if (pc < 0 || pc >= TABLE_LIMIT || ROW[pc] < 0) {
+            throw new IllegalArgumentException("not a Kos instruction: " + pc);
+        }
+        switch (pc) {
+            case 0x1C38, 0x1C4A, 0x1C66, 0x1C7A, 0x1C8C -> {
+                requireReadableByte(s.a[0]); requireWritableByte(s.a[2] + 1);
+            }
+            case 0x1C3C, 0x1C4E, 0x1C6A, 0x1C7E, 0x1C90 -> {
+                requireReadableByte(s.a[0]); requireWritableByte(s.a[2]);
+            }
+            case 0x1C58 -> {
+                // MOVE source postincrement must not escape when the destination is unsupported.
+                requireReadableByte(s.a[0]); requireWritableByte(s.a[1]);
+            }
+            case 0x1C9C, 0x1CA0, 0x1CA2, 0x1CC2 -> requireReadableByte(s.a[0]);
+            case 0x1CB6 -> requireReadableByte(s.a[1] + (short) s.d[2]);
+            case 0x1CBA -> requireWritableByte(s.a[1]);
+            case 0x1C3E, 0x1C50, 0x1C6C, 0x1C80, 0x1C92 -> requireRamAccess(s.a[2], 2);
+            case 0x1CEE, 0x1CF0, 0x1CF2, 0x1CF4, 0x1CF6, 0x1CF8 -> {
+                requireRamAccess(s.a[1], 4); requireRamAccess(s.a[0], 4);
+            }
+            default -> { } // register-only or authenticated fixed RAM operands
+        }
+    }
+
+    InstructionStep instruction(State s, int pc) {
+        validateInstructionAccesses(s, pc);
+        int next = step(s, pc);
+        return new InstructionStep(next == RETURNED_FROM_CALL ? -1 : next & ~NOT_TAKEN,
+                (next & NOT_TAKEN) != 0 && next != RETURNED_FROM_CALL ? notTaken[pc] : taken[pc],
+                pc == 0x1C58 || pc == 0x1CBA ? 1 : 0, pc == 0x1CE0);
+    }
+
+    static void writeBookmark(State state, int pc) { writeLong(state, KOS_DECOMP_BOOKMARK, pc); }
 
     /**
      * One {@code jsr (Process_Kos_Queue).l} call that a V-int interrupts once {@code budget} instruction cycles have
@@ -408,7 +480,7 @@ public final class S3kKosServiceModel {
                     // Set_Kos_Bookmark: move.l $42(sp),(Kos_decomp_bookmark).w and redirect the rte to
                     // Backup_Kos_Registers, which stores SR (move sr) and d0-d6/a0-a2 (movem.l)
                     writeLong(s, KOS_DECOMP_BOOKMARK, pc);
-                    writeWord(s, KOS_DECOMP_STORED_SR, SR_SYSTEM_BITS | s.ccr());
+                    writeWord(s, KOS_DECOMP_STORED_SR, s.statusRegister());
                     for (int k = 0; k < 7; k++) {
                         writeLong(s, KOS_DECOMP_STORED_REGISTERS + 4 * k, s.d[k]);
                     }
@@ -425,18 +497,15 @@ public final class S3kKosServiceModel {
                 throw new IllegalStateException(String.format("pc %06X outside the modelled routine", pc));
             }
             counts[row]++;
-            int step = step(s, pc);
-            lastCost = (step & NOT_TAKEN) != 0 ? notTaken[pc] : taken[pc];
+            InstructionStep instruction = instruction(s, pc);
+            lastCost = instruction.cycles();
             cycles += lastCost;
-            if (pc == 0x1C58 || pc == 0x1CBA) {
-                bytes++;
-            } else if (pc == 0x1CE0) {
-                retired = true;
-            }
-            if (step == RETURNED_FROM_CALL) {
+            bytes += instruction.bytesOut();
+            retired |= instruction.retired();
+            if (instruction.nextPc() == RETURNED_FROM_CALL) {
                 return new Result(Outcome.RETURNED, cycles, lastCost, bytes, -1, retired, counts);
             }
-            pc = step & ~NOT_TAKEN;
+            pc = instruction.nextPc();
         }
     }
 
@@ -499,7 +568,7 @@ public final class S3kKosServiceModel {
                 return pc + 2;
             }
             case 0x1C44, 0x1C60:
-                setWord(d, 6, SR_SYSTEM_BITS | s.ccr());
+                setWord(d, 6, s.statusRegister());
                 return pc + 2;
             case 0x1C46:
                 return dbf(d, 4, 0x1C54, 0x1C4A);
@@ -684,8 +753,17 @@ public final class S3kKosServiceModel {
                 // the pushed bookmark and SR are consumed by the rte below; the stack itself is not modelled
                 return pc + 4;
             case 0x1D0A:
-                s.setCcr(readWord(s, KOS_DECOMP_STORED_SR) & 0x1F);
+                s.setStatusRegister(readWord(s, KOS_DECOMP_STORED_SR));
                 return readLong(s, KOS_DECOMP_BOOKMARK) & 0xFFFFFF;
+            case BACKUP_KOS_REGISTERS:
+                writeWord(s, KOS_DECOMP_STORED_SR, s.statusRegister());
+                return 0x1D10;
+            case 0x1D10:
+                for (int k = 0; k < 7; k++) writeLong(s, KOS_DECOMP_STORED_REGISTERS + 4 * k, d[k]);
+                for (int k = 0; k < 3; k++) writeLong(s, KOS_DECOMP_STORED_REGISTERS + 28 + 4 * k, a[k]);
+                return 0x1D16;
+            case 0x1D16:
+                return RETURNED_FROM_CALL;
             default:
                 throw new IllegalStateException(String.format("unhandled pc %06X", pc));
         }
@@ -708,22 +786,35 @@ public final class S3kKosServiceModel {
     }
 
     private int readByte(State s, int address) {
+        requireReadableByte(address);
         int a = address & 0xFFFFFF;
         if (a >= 0xFF0000) {
             return s.ram[a & 0xFFFF] & 0xFF;
         }
-        if (a < rom.length) {
-            return rom[a] & 0xFF;
-        }
-        throw new IllegalStateException(String.format("read at %06X is outside ROM and RAM", a));
+        return rom[a] & 0xFF;
     }
 
     private static void writeByte(State s, int address, int v) {
+        requireWritableByte(address);
+        s.ram[address & 0xFFFF] = (byte) v;
+    }
+
+    private void requireReadableByte(int address) {
         int a = address & 0xFFFFFF;
-        if (a < 0xFF0000) {
+        if (a < 0xFF0000 && a >= rom.length)
+            throw new IllegalStateException(String.format("read at %06X is outside ROM and RAM", a));
+    }
+
+    private static void requireWritableByte(int address) {
+        int a = address & 0xFFFFFF;
+        if (a < 0xFF0000)
             throw new IllegalStateException(String.format("write at %06X is outside RAM", a));
-        }
-        s.ram[a & 0xFFFF] = (byte) v;
+    }
+
+    private static void requireRamAccess(int address, int bytes) {
+        if ((address & 1) != 0)
+            throw new IllegalStateException(String.format("unaligned RAM access at %06X", address & 0xFFFFFF));
+        for (int i = 0; i < bytes; i++) requireWritableByte(address + i);
     }
 
     private static int readWord(State s, int address) {

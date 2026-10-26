@@ -28,10 +28,14 @@ class TestSonic2AuthoredGoal {
                 @Override public int currentAct() { return act; }
                 @Override public GameStateManager gameState() { return gameState; }
                 @Override public SonicConfigurationService configuration() { return config; }
+                @Override public com.openggf.game.session.WorldSession worldSession() {
+                    throw new AssertionError("An authored campaign goal must not consult the native competition world");
+                }
             };
             object.setServices(services);
             var before = object.captureRewindState();
             object.update(0, player);
+            object.updatePostPlayer(0, player);
             assertFalse(object.isDestroyed()); assertTrue(gameState.isActCompletionSignalActive());
             assertFalse(gameState.isEndOfLevelActive());
             assertEquals(act, services.currentAct());
@@ -42,6 +46,7 @@ class TestSonic2AuthoredGoal {
             recreated.setServices(services); recreated.restoreRewindState(before);
             assertEquals(spawn, recreated.getSpawn());
             gameState.setActCompletionSignalActive(false); recreated.update(1, player);
+            recreated.updatePostPlayer(1, player);
             assertFalse(recreated.isDestroyed()); assertTrue(gameState.isActCompletionSignalActive());
         }
     }

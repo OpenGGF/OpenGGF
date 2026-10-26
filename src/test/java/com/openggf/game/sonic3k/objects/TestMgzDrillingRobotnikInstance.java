@@ -1474,14 +1474,15 @@ class TestMgzDrillingRobotnikInstance {
         generatedField.setAccessible(true);
         Pattern firstGeneratedTile = ((Pattern[]) generatedField.get(boss))[0];
         assertEquals(0x0, firstGeneratedTile.getPixel(0, 0));
-        assertEquals(0x2, firstGeneratedTile.getPixel(1, 0));
+        assertEquals(0x3, firstGeneratedTile.getPixel(1, 0));
         assertEquals(0x4, firstGeneratedTile.getPixel(2, 0));
-        assertEquals(0x6, firstGeneratedTile.getPixel(3, 0));
+        assertEquals(0x7, firstGeneratedTile.getPixel(3, 0));
         assertEquals(0x8, firstGeneratedTile.getPixel(4, 0),
                 "Perform_Art_Scaling reads ArtScaled_MGZEndBoss as 64-byte scanlines, not normal tile-major art");
-        assertEquals(0xA, firstGeneratedTile.getPixel(5, 0));
+        assertEquals(0xB, firstGeneratedTile.getPixel(5, 0));
         assertEquals(0xC, firstGeneratedTile.getPixel(6, 0));
-        assertEquals(0xE, firstGeneratedTile.getPixel(7, 0));
+        assertEquals(0xF, firstGeneratedTile.getPixel(7, 0),
+                "loc_24984 pairs each first byte's high nibble with the second byte's low nibble");
         assertEquals(0, services.scaledSheet.getPatterns()[0].getPixel(1, 0),
                 "runtime scaling must never mutate the provider's shared sheet");
     }

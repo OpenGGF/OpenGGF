@@ -1,8 +1,156 @@
 # S2 Sideways: physical storage across object lifetimes
 
-Status: council synthesis and recommended target, **not implementation-ready**.
+Status: **physical-storage target superseded by the reconvened council outcome below**.
+The earlier design is retained as research, not an implementation instruction.
 No runtime change or repair qualification is included. Source baseline:
 `d3fa3d519f6acb7285d538b5f972807036f1019e`.
+
+## Reconvened council: bounded engine repair, October 25
+
+The user rejected memory emulation as contrary to the project's goals and asked
+for a safe engine repair without reproducing the Sideways ROM corruption.
+Astra, Fable 5.1, GPT-6.1 Sol and Opus 5.5 independently reconsidered the prior
+proposal on source `61be1910ac29d5606410be315ec881a5745a75d3`. All four recommend
+a narrow, named compatibility exception. This records the implementation handoff;
+no gameplay repair or qualification is included in this documentation change.
+
+### Decision and scope
+
+Do not implement the physical SST authority, fixed-tail byte cell, occupant-byte
+views or generalized residue model proposed below for this repair. Preserve the
+native research and rejected-candidate evidence. Fix the invalid Java ownership
+created by Obj7A child-admission failure, deliberately omitting the ROM writes
+through its failed-allocation pointer into Tails's fixed storage. This is an
+explicit exception to shipped-ROM fidelity, not a global `FixBugs=1` selection.
+There is no disassembly fixBugs branch selecting this behavior.
+
+The [TAS submission 10042 author notes](https://tasvideos.org/10042S) describe
+object-exhaustion respawn-table desynchronization, duplicated bosses and an art
+queue overflow that changes lock-on mode. They illustrate how corruption
+compatibility can spread across systems. They do not prove that this BK2 could
+never be supported, that Sideways fidelity is impossible, or that ordinary
+semantic ROM bugs should be corrected. Failed spawns, slot order, respawn state
+and other modeled behavior remain fidelity obligations outside this exception.
+
+### Observed engine defect and required outcome
+
+The private Sideways child constructor publishes reciprocal links before
+`addDynamicObjectAfterSlot` succeeds. Exhaustion destroys the candidate before
+identity registration, leaving the parent's link pointing at an unregistered
+object. Strict rewind correctly rejects that graph. The native failure instead
+writes into the 64-byte Tails-tail cell and redirects its parent pointer.
+
+The repair must leave the initialized parent with its existing bounds, direction,
+X offset and movement, no rejected-child link, no consumed child slot and no
+writes to Tails. Do not retry until an ordinary fresh placement incarnation.
+Normal endpoint retirement must still release its remember bit and occupied slot.
+Successful pairs retain ordinary movement, collision, initialization, slot order
+and later-in-the-same-walk execution. Preserve the landed independent tail
+animation/previous-animation and `$FD` return prerequisite.
+
+Prefer reservation before construction, with reciprocal links published only
+after successful admission. The council disagreed whether existing anchored
+reservation facilities are sufficient or require a bounded adapter. Establish
+this from actual callers before choosing an API. A simple post-admission unlink
+is acceptable only if construction, service binding and Stageplay admission have
+no unacceptable rejected-candidate side effects. A destroyed flag alone does not
+distinguish pool exhaustion from Stageplay rejection. Do not substitute ordinary
+allocation for anchored allocation or expose an accidental public Mod API.
+
+### Unresolved lifecycle choice
+
+Allocation failure does not settle independent removal of an already admitted
+pair. Astra recommends parent removal also retires the child; Sol recommends
+unlinking either survivor without a new cascade; Opus recommends pair retirement
+because the child has no independent offscreen culling. Fable's narrow failure
+repair does not resolve all admitted-pair removal paths.
+
+The implementer must examine raw removal, marked-but-unswept destruction,
+Stageplay/editor removal, bulk reset and restore before selecting and documenting
+bounded semantics. Do not silently adopt either a cascade or an immortal orphan.
+Do not target an unrelated replacement occupant through an old Java reference.
+Native cleared/reused-slot cross-writes remain observed evidence, not permission
+to broaden this repair into memory emulation. Any additional deliberate lifetime
+deviation must be named explicitly with its effect on supported content.
+
+### Rewind, verification and documentation handoff
+
+Keep strict identity validation. Capture failed-admission state as an initialized
+parent with a legal absent/self partner representation; restore it without
+rerunning initialization, retrying allocation or applying the X offset again.
+Healthy pairs must reconstruct fresh reciprocal identities. Malformed dangling
+references must still fail. Verify whether initialization state is already captured.
+
+Focused controls must cover exhaustion and no retry, unaffected Tails, normal
+pair admission and dispatch order, endpoint/remember cleanup, either-member
+removal and genuine slot reuse, destructive reconstruction and forward replay.
+Check Stageplay rejection and unmanaged/bootstrap callers separately; qualify or
+state the two-player gap. Update existing known-gap assertions into positive
+repair assertions only when the behavior is implemented and checked. The earlier
+17 passing controls and two failed deletion/reuse controls remain counterevidence
+to the old candidate, not validation of this new proposal.
+
+Keep trace comparators unchanged. The historical S2 SST recording range excludes
+the fixed tail cell, but that does not prove corruption has no downstream compared
+effects. A corruption-dependent replay remains visibly divergent and attributed,
+never masked, hydrated or declared passing. Natural route frequency is unknown.
+
+At implementation, add a named accepted discrepancy with native consequence,
+engine behavior, citations and trace limits; revise the open-bug closure criteria,
+active changelog and affected coverage obligations. Mirror the explicit narrow
+fidelity exception in AGENTS.md/CLAUDE.md as needed. Existing S3K failed-allocation
+and coordinate-link precedents require a separate disposition, not silent removal
+or a blanket retrospective policy. Revisit this decision if ordinary supported
+routes materially depend on the omitted behavior or a bounded semantic solution
+meets the project boundary without memory emulation.
+
+The council was read-only and ran no builds, tests or native probes. Its agreement
+is a design recommendation; no vote substitutes for the implementation checks.
+
+### Demonstration and evidence limits
+
+A follow-up capture at source `61be1910a` uses the committed fixed-tail probe
+with two temporary diagnostic adaptations: advance every hardware frame through
+TraceChaser's published-video API, and position the constructed parent at camera
+Y + `$80` instead of the original below-viewport `$200`. Setup still uses the
+last dynamic slot, subtype `$06`, camera X + `$A8`, synthetic remember index and
+original CPZ2 BK2 inputs. These are declared RAM setup writes, not a natural
+route or a production engine repair. Subsequent failure/copy/deletion executes
+unmodified S2 REV01 code. The selected case is `live-last`.
+
+Original ROM SHA-1 is `8bca5dcef1af3e00098666fd892dc1c2a76333f9`;
+movie SHA-256 is `7e28cf822d5dbbe64646965cd857f264bf51d3349075af94db1a818cac7311e4`.
+The host is built from TraceChaser `322851cbfa2e1c1803332142e11ab74b4eb34eea`
+against the existing BizHawk 2.11 installation with strict preflight. No desktop
+or audio device is used. Preparation and native execution use the existing
+build/activity and test-admission leases. The native process exits zero with
+361 continuous frame-end observations and no unmet assertions. Setup is BK2
+input row 8791; the finite window ends at 9151. The tail parent changes from
+`$B040` to `$CFC0`, 153 native tail passes consume the platform parent, and
+retirement clears the fixed tail cell at relative sample 153. Queue wait is
+19 seconds and native process execution 10.43 seconds. This is new rendered
+observation, not a claim that historical measurements were rerun unchanged.
+
+The engine side was independently reproduced on unchanged source `61be1910a`
+with Java 25 using `python3 tools/testing/maven_queue.py -Dmse=off
+'-Dtest=TestS2SidewaysPformAdmissionQualification#characterizeRealAdmissionAndFreshReplay'
+test -B`. All nine parameterized cases passed with zero failures/errors/skips;
+these are known-gap characterization assertions, including the expected exact
+strict-capture rejection, not a repaired engine. Queue wait was 19 seconds;
+Maven reported 1:22 including compilation. The engine panel describes this
+observed assertion path, rather than inventing a gameplay crash.
+
+The external task directory is `sideways-demo-20261025`; the delivered
+`sideways-rom-and-engine.mp4` contains 361 native frames presented at 30 fps,
+about half speed, with state annotations. Its engine section is explicitly an
+explanatory panel of the Java graph failure, not rendered engine gameplay or a
+before/after repair comparison. Native state readings establish the corruption;
+individual sprites may be occluded, missing or visually ambiguous. Do not infer
+natural frequency, ordinary-route reachability or pixel parity from this demo.
+The durable video and diagnostic adaptation are outside the repository; original
+ROMs and raw generated host/build output are not committed.
+
+## Historical physical-storage proposal, superseded
 
 Use one physical SST authority mounted in each ObjectManager, with a canonical
 64-byte fixed tail cell and complete contracts for the fields of every supported

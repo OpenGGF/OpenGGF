@@ -18,6 +18,19 @@ public final class DezFinalScreenEvents {
 
     public static void initializeObjectsAndCamera(ObjectManager objects, DezFinalBossZoneRuntimeState state) {
         if (state.screenInitApplied()) return;
+        // DEZ3_ScreenInit loc_5A3FA clears the header-sized unused layout tail
+        // before object allocation. Keep this native scene write on the existing
+        // encoded owner/pipeline; Load_Level and resident definition tables are separate.
+        var layoutManager = objects.getObjectServices().levelManager();
+        if (layoutManager.getCurrentLevel() instanceof com.openggf.game.sonic3k.Sonic3kLevel level) {
+            var context = new LayoutMutationContext(LevelMutationSurface.forLevel(level),
+                    layoutManager::applyMutationEffects);
+            objects.getObjectServices().zoneLayoutMutationPipeline().applyImmediately(mutation -> {
+                level.clearUnusedSceneLayoutTail();
+                return MutationEffects.NONE;
+            }, context);
+        }
+
         // Native ScreenInit runs once during loading, before Process_Sprites. Engine loading
         // positions the camera after installing the zone state, so this runs at first
         // pre-physics instead. Capture the marker: restoring an arena must not spawn it again.

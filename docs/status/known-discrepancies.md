@@ -55,6 +55,7 @@ no discrepancy entry was added or reclassified by the cutover.
 36. [S2 stopMusic Bypasses the Mailbox While a Compressed Load Blocks It](#s2-stopmusic-bypasses-the-mailbox-while-a-compressed-load-blocks-it)
 37. [Fast FM Register-Level Timing and Output](#fast-fm-register-level-timing-and-output)
 38. [Knuckles in Sonic 2 Runs Tier Two With the Lock-On Dump and Tier One Without It](#knuckles-in-sonic-2-runs-tier-two-with-the-lock-on-dump-and-tier-one-without-it)
+39. [Fixed Native Sprite Capacity in Wider Presentation](#fixed-native-sprite-capacity-in-wider-presentation)
 
 ---
 
@@ -83,6 +84,13 @@ Trace replay does not use that approximation. Externally paced sessions disable
 it, and a recorded `lag_state.lagged` outcome admits the already-existing
 `VBlank_Lag` loop through the separate scheduling-only contract. That outcome
 supplies no gameplay value or work.
+
+Ordinary entry now spends the existing measured104-presentation NTSC load hold
+after fade-to-white and before track/player work; recorded startup does not add
+it again. This closes the unwired live entry presentation, while its full CPU/
+device derivation and PAL duration remain unqualified. The recurring bucket
+approximation above is still present; this hold is not evidence of exact live
+hardware pacing. See the [current source and validation record](../architecture/research/2026-10-22-s2-chain-pacing.md).
 
 ---
 
@@ -523,12 +531,13 @@ human P2 can use it in the native competition mode.
 
 ### Engine Implementation
 
-S2 has no competition session or human-P2 playable slot. The generic
-`TitleActionRoute.TWO_PLAYER` token is not a capability owner: the shared title
-router rejects that unsupported action, reinitializes the existing title provider
-and remains in `TITLE_SCREEN` without loading an ordinary level. Stock S2's
-title currently emits only `ONE_PLAYER`; S3K and creator providers can emit the
-generic two-player action. `GameplayTeamBootstrap`
+S2 has no connected competition world or human-P2 playable slot. The generic
+`TitleActionRoute.TWO_PLAYER` token is not a capability owner: absent a native
+competition provider, the shared title router reinitializes the title and remains
+in `TITLE_SCREEN` without loading an ordinary level. Stock S2 exposes its ROM
+one-player and options rows while that capability remains unavailable. The
+options screen selects the exact campaign team in a fresh no-save world and
+retains emerald progress on its direct level exit. `GameplayTeamBootstrap`
 constructs every configured secondary as a CPU sidekick, controller-2 bindings
 feed that sidekick's manual-input path, and
 `ObjectPlayerQuery.nativeP2OrNull()` names the first sidekick rather than a
@@ -1532,6 +1541,20 @@ Replace each embedded table with ROM-backed loaders or generated mappings
 through the normal user-supplied ROM pipeline, then reduce or remove the
 `sonic1EmbeddedRuntimeDataExceptionsStayDocumentedAndBounded` ratchet.
 
+## S1 Bomb conversion display queue
+
+Shipped `FixBugs=0` returns from `Bom_Shrapnel`'s `DisplaySprite` through
+`Bom_Fuse`'s `AnimateSprite`/`RememberState` tail, submitting the reused SST
+twice on the conversion tick. If the second path deletes it, the first queued
+pointer still exists. The engine's ordinary object render collection emits one
+part and suppresses destroyed objects, so this queue behavior remains unmodeled.
+Fresh child `Bom_Main` leaves frame 0 untouched until its first animation call;
+the engine now preserves that state and its animation phase, including restore.
+The separate zero-display-call initialization and duplicate/orphan queue behavior
+still require the coordinated native submission backend and Bomb consumer.
+Motion/fraction/status and allocator regressions do not certify those queue
+paths. See the [native source and route evidence](../architecture/audits/2026-10-22-s1-chain-gap-closure.md#native-sst-retirement-and-bomb-conversion).
+
 ## Batch-2 Rewind: Transient Cosmetic Children Not Rewound (Re-emit In-Frame)
 
 `Sonic1MotobugSmokeInstance` is intentionally **not** captured/recreated across a
@@ -1729,6 +1752,17 @@ baseline because the static `RewindCoverageAnalyzer` is codec-based and cannot s
 path (it documents such no-codec-but-correctly-restored classes as acceptable `#recreate`
 over-approximations). Verified by `TestBossChildNoDoubleSpawnParity` (count parity) and
 `TestBossChildExactStateRewind` (exact non-init state + reference integrity).
+
+Boss-child construction ordinals additionally retain their complete per-runtime-class
+next-ordinal history in snapshots, including retired highest ordinals and classes
+with no live children. Rebuilding the counters from surviving children lost this
+history and changed future child identities on replay. Phase-2 capture/restore now
+owns the counter map; the settled hook does not reconstruct it. The narrow
+`Map<Class<?>, Integer>` codec preserves exact in-memory class identity without
+resolving class names. Short EHZ controls cover live-highest, retired-highest and
+all-retired families; LRZ's maintained fight exposed the independent future-effect
+identity difference. This is shared rewind bookkeeping, not a native child-slot or
+ordinary gameplay-clock change.
 
 **Affected children (no codec, construction-spawned, adopted in place at exact state):**
 
@@ -3366,7 +3400,10 @@ the owning KiS2 routine in the catalogue):
   superspeed, gates wall pushing on facing, keeps the full signed inertia word
   for skid thresholds, restarts the balance script at index 4 on facing flips,
   temporarily uses 10/10 radii during glide/climb terrain checks and restores
-  standing radii for later touch checks. Its idle climb omits the S3K floor-below
+  standing radii for later touch checks. Slide continuation retains 10/10 through
+  collision correction and the separate floor scan; get-up preserves its turn byte
+  before callbacks. These component contracts do not qualify a complete KiS2 route.
+  Its idle climb omits the S3K floor-below
   detach probe. Near-edge/inside-bottom solid contacts use the existing matching
   rules; multi-sprite boss touch keeps $4D while normal duck touch uses $9C.
   Wall grabs now test both wall ends and the ROM ledge-fit range; glide floor
@@ -3374,6 +3411,12 @@ the owning KiS2 routine in the catalogue):
   store their native X anchor in `x_sub` and detach on displacement or object carry;
   wall and ledge steps preserve the low position words. Ledge entries use the native
   six-slot animation holds and same-slot grounding, with bounded rewind checks.
+  Vertical climb probes include the signed X radius after the caller's 8/9 offset,
+  use powered one/two-pixel movement and the signed upper-bound clamp, undo the
+  first ledge pose before descending, and land only on negative floor distance
+  with the raw angle and current animation 5 while retaining the climb timer.
+  [Independent real-terrain components](../architecture/research/trace/2026-09-14-kis2-chain-frontier.md#wall-climb-vertical-contract--2026-10-21)
+  qualify these local branches, not a complete KiS2 or CNZ route.
   Wall-grab suppression and complete rewind route coverage remain open.
 - **Zone mechanics.** Wind tunnels use the $420 first-tunnel minimum, clamp Up
   movement and clear roll-jump/glide state. Held vines pin the player each pass;
@@ -3463,3 +3506,52 @@ stage does not retain an old fade generation after rewind. The independent
 headless failure and complete S3K sanctuary entry/return qualification are
 recorded in the [completion plan](../architecture/plans/2026-10-13-s3k-playable-completion.md#immediate-scene-fade-publication-after-rewind--2026-10-17).
 This shared publication repair does not certify other games' route products.
+
+
+### Knuckles glide dispatcher and slide cue components (2026-10-22)
+
+Shared glide dispatch now preserves the native unsigned camera tail, existing
+non-CPU camera owner, boundary-before-move order and states3–5 early-return
+prelude. S3K supplies the optional ROM GroundSlide cue; other profiles default
+absent. The affected22 classes qualify599 unique cases after an independently
+attributed camera-bound fixture repair, without changing any climb expectation
+or maintained route data. This does not close native waveform, live dual-plane
+route breadth or prior-source MHZ37752 attribution. See the
+[MHZ matrix](../architecture/validation/levels/s3k-mhz-act2.md#native-glide-prelude-and-groundslide-component-closure--2026-10-22).
+
+
+### Current Knuckles MHZ delivery block and climb callbacks (2026-10-22)
+
+The unchanged complete MHZ consumer on372 stops at death26853, earlier than
+prior-source37752. Cause/first executed divergent owner are unexposed and the
+new frontier blocks delivery; focused599 coverage does not certify the route.
+The separate native climb callback gap is now corrected through the existing
+native floor bridge before either landing hook, with no late overwrite of
+callback writes. All604 affected component cases pass, including14 direct
+callback controls; ledge completion and ordinary landing still clear the byte.
+This independent component correction has no new maintained MHZ qualification
+and does not attribute or waive the death26853 delivery blocker.
+[Evidence and source boundary](../architecture/plans/2026-10-13-s3k-playable-completion.md#current372-maintained-mhz-consumer-block-and-climb-source-closure--2026-10-22).
+[Callback correction and limits](../architecture/plans/2026-10-13-s3k-playable-completion.md#root-climb-native-floor-callback-correction--2026-10-22).
+
+The composed source candidates retain the powered native vertical probes, signed
+radius offsets and KiS2's distinct radii and idle-probe rules. Aggregate affected
+qualification remains pending. No controller or comparison oracle was adapted.
+See the [aggregate checkpoint](../architecture/plans/2026-10-22-native-gap-swarm.md).
+
+## Fixed Native Sprite Capacity in Wider Presentation
+
+Gameplay SAT evaluation retains H40's native 20 pieces per scanline, 320 fetched
+pixels per scanline and 80 table entries at wider display aspects. Extra side
+pieces compete for the same capacity. Expanded coordinates do not wrap through
+the native nine-bit X field; explicit zero-X mask controls still cover the full
+logical line and exact pixel exhaustion still arms the following line. Native
+H32 consumers use their fixed inner 256-pixel region and 16/256/64 capacity.
+This is a presentation extension, not a claim of native widescreen parity.
+
+The ROM-native HUD footprints participate at the table head, including blank
+art and numeric regions; expanded letters/digits are replay fragments of those
+pieces. Reserved attracted rings submit at their actual object-slot phase, and
+ring visibility is filtered after admission. Explicit native FIFO entries precede
+the existing legacy SST suffix; this mixed bridge does not establish every
+object's native DisplaySprite topology. See the [design and source evidence](../architecture/designs/2026-10-22-native-sprite-scanline-budgets.md).

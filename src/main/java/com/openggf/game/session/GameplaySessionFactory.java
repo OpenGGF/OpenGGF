@@ -55,7 +55,8 @@ public final class GameplaySessionFactory {
 
     public static void attachManagers(GameplayModeContext gameplayMode,
                                       EngineContext services) {
-        attachManagers(gameplayMode, services, new Camera());
+        var roster = com.openggf.game.competition.NativeCompetitionRoster.from(gameplayMode.getWorldSession());
+        attachManagers(gameplayMode, services, roster == null ? new Camera() : roster.camera(0));
     }
 
     public static void attachManagers(GameplayModeContext gameplayMode,
@@ -65,7 +66,9 @@ public final class GameplaySessionFactory {
         Objects.requireNonNull(services, "services");
         Objects.requireNonNull(camera, "camera");
         TimerManager timers = new TimerManager();
-        GameStateManager gameState = new GameStateManager();
+        var roster = com.openggf.game.competition.NativeCompetitionRoster.from(gameplayMode.getWorldSession());
+        GameStateManager gameState = roster == null ? new GameStateManager()
+                : Objects.requireNonNull(roster.gameState(0), "native P1 game state");
         GameModule sessionModule = gameplayMode.getWorldSession() != null
                 ? gameplayMode.getWorldSession().getGameModule()
                 : null;
@@ -91,6 +94,16 @@ public final class GameplaySessionFactory {
         TerrainCollisionManager terrainCollisionManager = new TerrainCollisionManager();
         CollisionSystem collisionSystem = new CollisionSystem(terrainCollisionManager);
         SpriteManager spriteManager = new SpriteManager();
+        if (roster != null) {
+            // Install session-supplied humans before attachLevelManagers binds
+            // policies. Ordinary team bootstrap would create CPU followers.
+            for (int slot = 0; slot < 2; slot++) {
+                var actor = roster.player(slot);
+                if (actor == null) continue;
+                if (actor.isCpuControlled()) throw new IllegalArgumentException("Native human slot is CPU controlled");
+                spriteManager.addSprite(actor);
+            }
+        }
         LevelManager levelManager = new LevelManager(
                 camera, spriteManager, parallaxManager, collisionSystem, waterSystem, gameState, services,
                 gameplayMode.getWorldSession());
@@ -109,6 +122,7 @@ public final class GameplaySessionFactory {
                 advancedRenderModeController, zoneLayoutMutationPipeline);
         gameplayMode.attachBackgroundPlaneCollisionProvider(
                 gameplayMode.createDefaultBackgroundPlaneCollisionProvider());
+        com.openggf.game.competition.NativeCompetitionCameras.register(gameplayMode);
         WorldSessionPolicyAccess.bindGameplay(gameplayMode);
     }
 }

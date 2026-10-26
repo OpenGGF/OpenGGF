@@ -448,9 +448,13 @@ public class IczCrushingColumnObjectInstance extends AbstractObjectInstance
         private final IczCrushingColumnObjectInstance parent;
 
         private BottomDecoration(IczCrushingColumnObjectInstance parent) {
-            super(new ObjectSpawn(parent.x, parent.y + BOTTOM_DECORATION_Y_OFFSET,
+            this(new ObjectSpawn(parent.x, parent.y + BOTTOM_DECORATION_Y_OFFSET,
                     parent.spawn.objectId(), parent.subtype, parent.spawn.renderFlags(), false,
-                    parent.y + BOTTOM_DECORATION_Y_OFFSET), "ICZCrushingColumnDecoration");
+                    parent.y + BOTTOM_DECORATION_Y_OFFSET), parent);
+        }
+
+        private BottomDecoration(ObjectSpawn capturedSpawn, IczCrushingColumnObjectInstance parent) {
+            super(capturedSpawn, "ICZCrushingColumnDecoration");
             this.parent = parent;
         }
 
@@ -461,7 +465,9 @@ public class IczCrushingColumnObjectInstance extends AbstractObjectInstance
             if (liveParent == null) {
                 return null;
             }
-            return new BottomDecoration(liveParent);
+            // Preserve immutable construction metadata before phase-2 parent restore.
+            // loc_8A612's live Y remains parent-derived in getY(), independently of spawn.
+            return new BottomDecoration(ctx.spawn(), liveParent);
         }
 
         @Override

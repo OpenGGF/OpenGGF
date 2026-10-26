@@ -4,6 +4,7 @@ import com.openggf.game.mutators.PlayerFluidContextAccess;
 import com.openggf.game.GameServices;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.ShieldType;
+import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.objects.S3kAirCountdownObjectInstance;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectManager;
@@ -175,7 +176,7 @@ final class S3kFixedAirCountdownManager {
         private void countdown(AbstractPlayableSprite owner) {
             // Native fixed countdown owns the $78-pass lifetime even after water exit.
             if (obj30 != 0) {
-                owner.setAnimationId(0x17);
+                owner.setAnimationId(Sonic3kAnimationIds.DROWN);
                 obj30 = signed16(obj30 - 1);
                 if (obj30 == 0) {
                     com.openggf.sprites.playable.PlayableSpriteInternalAccess.finishFixedDrowning(owner);
@@ -192,7 +193,6 @@ final class S3kFixedAirCountdownManager {
             }
             if (!owner.isInWater()
                     || owner.getDead()
-                    || owner.isDrowningPreDeath()
                     || owner.getShieldType() == ShieldType.BUBBLE) {
                 return;
             }
@@ -224,7 +224,10 @@ final class S3kFixedAirCountdownManager {
                     obj30 = 0x78;
                     obj38 = 0x0A;
                     obj3a = 1;
-                    owner.applyDrownDeath();
+                    if (owner.applyDrownDeath()) {
+                        // AirCountdown_ReduceAir writes anim after Player_TouchFloor.
+                        owner.setAnimationId(Sonic3kAnimationIds.DROWN);
+                    }
                     return;
                 }
                 makeItem(owner);

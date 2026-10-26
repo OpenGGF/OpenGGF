@@ -61,7 +61,7 @@ public record GameRules(
                     true,
                     false,
                     new PlayerGroundPoseRules((short) 0, false, false),
-                    new PlayerAirMovementRules(false, false, true, false),
+                    new PlayerAirMovementRules(false, false, true, false, false),
                     false,
                     false,
                     false,
@@ -130,7 +130,8 @@ public record GameRules(
                     16,
                     true,
                     false,
-                    false
+                    false,
+                    false // groundedRollRecentersCameraBias: shipped FixBugs=0
             ),
             new RingRules(
                     3,
@@ -203,7 +204,8 @@ public record GameRules(
                     60,
                     0,
                     false,
-                    -136
+                    -136,
+                    false
             ),
             DynamicArtDmaServiceModel.SONIC_1_VBLANK_SONIC_GFX
     );
@@ -214,7 +216,7 @@ public record GameRules(
                     false,
                     true,
                     new PlayerGroundPoseRules((short) 0, false, false),
-                    new PlayerAirMovementRules(false, false, true, false),
+                    new PlayerAirMovementRules(false, false, true, false, false),
                     false,
                     true,
                     false,
@@ -290,7 +292,8 @@ public record GameRules(
                     16,
                     false,
                     false,
-                    true
+                    true,
+                    true // groundedRollRecentersCameraBias
             ),
             new RingRules(
                     7,
@@ -363,7 +366,8 @@ public record GameRules(
                     0,
                     8,
                     true,
-                    -136
+                    -136,
+                    false
             ),
             DynamicArtDmaServiceModel.SONIC_2_PROCESS_DMA_QUEUE
     );
@@ -374,7 +378,7 @@ public record GameRules(
                     false,
                     true,
                     new PlayerGroundPoseRules((short) 256, false, false),
-                    new PlayerAirMovementRules(true, false, true, false),
+                    new PlayerAirMovementRules(true, false, true, false, true),
                     true,
                     false,
                     true,
@@ -390,9 +394,9 @@ public record GameRules(
                     // tailsRollSpeedUsesEffectiveDecelQuarter: S3K Tails_RollSpeed is flat $20
                     false,
                     // waterVelocityChangeGatedByObjectControl: sonic3k.asm:22271, :27488
-                    true,
-                    true,
-                    true // drowningUsesPrimaryRoutine: loc_125C6 / loc_15828
+                    true
+            ,
+                    true
             ),
             new PlayerCapabilityRules(
                     true,
@@ -444,7 +448,8 @@ public record GameRules(
                     24,
                     false,
                     true,
-                    true
+                    true,
+                    true // groundedRollRecentersCameraBias
             ),
             new RingRules(
                     7,
@@ -471,7 +476,7 @@ public record GameRules(
                     false,
                     true,
                     false,
-                    false,
+                    true, // animalObjectUsesRenderFlagDeleteBounds: Obj_Animal loc_2C9E0/2CA68/2CAD0
                     true,
                     true,
                     true,
@@ -517,7 +522,8 @@ public record GameRules(
                     60,
                     8,
                     true,
-                    -256
+                    -256,
+                    true
             ),
             DynamicArtDmaServiceModel.EVERY_CLAIM_WITHOUT_PLAYER_ART_AUDIT,
             PaletteWhiteFadeModel.ROM_PALETTE

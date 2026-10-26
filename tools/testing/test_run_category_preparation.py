@@ -2,6 +2,7 @@
 from contextlib import contextmanager
 import io
 import json
+import os
 from pathlib import Path
 import tempfile
 import unittest
@@ -51,7 +52,6 @@ class PreparationTests(unittest.TestCase):
         self.assertEqual(self.root, cwd)
         self.assertTrue(temporary.is_dir())
         if 'test-compile' in command:
-            self.assertEqual(['mvn', '-Dmse=off', 'test-compile', '-B'], command)
             self.assertFalse(self.active)
             self.assertEqual(12, kwargs['queue_fd'])
             self.clock += 8 + self.preparation_wait
@@ -102,6 +102,9 @@ class PreparationTests(unittest.TestCase):
 
     def test_one_preparation_supplies_every_batch_and_guards_without_admission(self):
         self.assertEqual(0, self.execute())
+        self.assertEqual(['mvn', '-Dmse=off', 'test-compile', '-B'], self.commands[0])
+        self.assertFalse(any(arg.startswith('-Dopenggf.headless.gl=')
+                             for command in self.commands for arg in command))
         self.assertEqual(['ordinary', 'ordinary', 'ordinary', 'guards'], self.admissions)
         self.assertEqual(1, sum('test-compile' in command for command in self.commands))
         self.assertEqual(4, sum('surefire:test' in command for command in self.commands))
@@ -111,6 +114,33 @@ class PreparationTests(unittest.TestCase):
         self.assertEqual([3, 1], [lane['tests'] for lane in self.summary('results.json')])
         self.assertEqual('passed', self.summary('status.json')['status'])
         self.assertFalse((self.diagnostics() / 'preparation.log').exists())
+
+    def test_headless_gl_reaches_preparation_every_batch_and_guards_without_environment_changes(self):
+        self.plan['headless_gl'] = 'surfaceless-egl'
+        argument = '-Dopenggf.headless.gl=surfaceless-egl'
+        with patch.dict(os.environ, {'JAVA_TOOL_OPTIONS': 'preserve-java-options',
+                                    'MAVEN_OPTS': 'preserve-maven-options'}), \
+                patch.object(runner, 'run_logged', side_effect=self.maven) as launch:
+            environment = dict(os.environ)
+            self.assertEqual(0, self.execute())
+            self.assertEqual(environment, dict(os.environ))
+        self.assertEqual(5, len(self.commands))
+        self.assertEqual(['ordinary', 'ordinary', 'ordinary', 'guards'], self.admissions)
+        for command in self.commands:
+            self.assertEqual(1, command.count(argument), command)
+        self.assertTrue(all('environment' not in call.kwargs for call in launch.call_args_list))
+        self.assertEqual('surfaceless-egl', self.summary('plan.json')['headless_gl'])
+        for filename in ['preparation-command.json', 'ordinary-command-001.json',
+                         'ordinary-command-002.json', 'ordinary-command-003.json',
+                         'guards-command.json']:
+            self.assertEqual(1, self.summary(filename).count(argument), filename)
+
+    def test_unknown_headless_gl_plan_stops_before_preparation(self):
+        self.plan['headless_gl'] = 'glfw'
+        with self.assertRaisesRegex(ValueError, 'headless GL'):
+            self.execute()
+        self.assertEqual([], self.commands)
+        self.assertFalse((self.root / 'target').exists())
 
     def test_waiting_for_measurement_does_not_consume_invocation_budget(self):
         self.preparation_wait = 3600

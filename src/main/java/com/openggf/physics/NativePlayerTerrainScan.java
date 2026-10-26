@@ -17,6 +17,21 @@ final class NativePlayerTerrainScan {
     private SupportKind kind;
     SupportKind kind() { return kind; }
 
+    @FunctionalInterface
+    interface SolidTileLookup {
+        SolidTile lookup(LevelManager level, ChunkDesc desc, int solidityBit);
+    }
+
+    private final SolidTileLookup solidTileLookup;
+
+    NativePlayerTerrainScan() {
+        this(LevelManager::getSolidTileForChunkDesc);
+    }
+
+    NativePlayerTerrainScan(SolidTileLookup solidTileLookup) {
+        this.solidTileLookup = solidTileLookup;
+    }
+
     SensorResult scan(LevelManager lm, short x, short y, int solidityBit,
                                            Direction direction, boolean mirrorEmptyDefault,
                                            byte layer, boolean loopLowPlane, SensorResult resultTarget, int layoutYMask, Runnable charge) {
@@ -290,11 +305,11 @@ final class NativePlayerTerrainScan {
         return metric;
     }
 
-    private static SolidTile getSolidTile(LevelManager lm, ChunkDesc desc, int solidityBit) {
+    private SolidTile getSolidTile(LevelManager lm, ChunkDesc desc, int solidityBit) {
         if (desc == null || !desc.isSolidityBitSet(solidityBit)) {
             return null;
         }
-        return lm.getSolidTileForChunkDesc(desc, solidityBit);
+        return solidTileLookup.lookup(lm, desc, solidityBit);
     }
 
     private SensorResult createResultWithDistance(SensorResult target,

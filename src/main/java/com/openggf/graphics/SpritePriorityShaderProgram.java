@@ -23,6 +23,8 @@ public class SpritePriorityShaderProgram extends ShaderProgram {
     private int tileOcclusionPaletteMaskLocation = -1;
     private int screenSizeLocation = -1;
     private int viewportOffsetLocation = -1;
+    private int nativeSpriteOwnershipLocation = -1;
+    private int tilePriorityAvailableLocation = -1;
     // Uniform locations for underwater palette support
     private int underwaterPaletteLocation = -1;
     private int waterlineScreenYLocation = -1;
@@ -48,6 +50,8 @@ public class SpritePriorityShaderProgram extends ShaderProgram {
         tileOcclusionPaletteMaskLocation = glGetUniformLocation(programId, "TileOcclusionPaletteMask");
         screenSizeLocation = glGetUniformLocation(programId, "ScreenSize");
         viewportOffsetLocation = glGetUniformLocation(programId, "ViewportOffset");
+        nativeSpriteOwnershipLocation = glGetUniformLocation(programId, "NativeSpriteOwnership");
+        tilePriorityAvailableLocation = glGetUniformLocation(programId, "TilePriorityAvailable");
         // Cache underwater palette uniforms
         underwaterPaletteLocation = glGetUniformLocation(programId, "UnderwaterPalette");
         waterlineScreenYLocation = glGetUniformLocation(programId, "WaterlineScreenY");
@@ -70,6 +74,7 @@ public class SpritePriorityShaderProgram extends ShaderProgram {
         if (tilePriorityTextureLocation != -1) {
             glUniform1i(tilePriorityTextureLocation, textureUnit);
         }
+        if (tilePriorityAvailableLocation != -1) glUniform1i(tilePriorityAvailableLocation, 1);
     }
 
     /**
@@ -86,6 +91,11 @@ public class SpritePriorityShaderProgram extends ShaderProgram {
         if (tileOcclusionPaletteMaskLocation != -1) {
             glUniform1i(tileOcclusionPaletteMaskLocation, mask & 0xF);
         }
+    }
+
+    void setNativeSpriteOwnership(boolean enabled, boolean tilePriorityAvailable) {
+        if (nativeSpriteOwnershipLocation != -1) glUniform1i(nativeSpriteOwnershipLocation, enabled ? 1 : 0);
+        if (tilePriorityAvailableLocation != -1) glUniform1i(tilePriorityAvailableLocation, tilePriorityAvailable ? 1 : 0);
     }
 
     /**

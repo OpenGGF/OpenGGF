@@ -144,7 +144,7 @@ class TestShieldRewindRestore {
         if (registered) sprite.tickStatus();
         var live = sprite.captureRewindState();
         assertEquals(registered, live.playerExtra().instaShieldRegistered());
-        assertEquals(!registered, live.objectSubclassExtra() instanceof PendingInstaShieldRewindExtra);
+        assertEquals(!registered, PlayableEngineRewindExtra.pending(live.objectSubclassExtra()) instanceof PendingInstaShieldRewindExtra);
         PlayableSpriteInternalAccess.retirePersistentInstaShield(sprite);
         var absent = sprite.captureRewindState();
 
@@ -171,7 +171,7 @@ class TestShieldRewindRestore {
         assertFalse(secondRecreated.isDestroyed());
         assertEquals(registered, sprite.captureRewindState().playerExtra().instaShieldRegistered());
         if (!registered) {
-            assertTrue(sprite.captureRewindState().objectSubclassExtra() instanceof PendingInstaShieldRewindExtra);
+            assertTrue(PlayableEngineRewindExtra.pending(sprite.captureRewindState().objectSubclassExtra()) instanceof PendingInstaShieldRewindExtra);
             sprite.tickStatus();
             assertTrue(sprite.captureRewindState().playerExtra().instaShieldRegistered());
         }

@@ -186,6 +186,8 @@ public final class SmpsDriverSession implements AutoCloseable {
         private final boolean ringLeft;
         private final int musicFmDacTrackCount;
         private final SegaPcmTransport segaPcmTransport;
+        private final SmpsNativePauseState nativePause;
+        private final int nativeHistoryCursor;
         private final int diagnosticCount;
         private boolean commitPrepared;
         private boolean consumed;
@@ -215,6 +217,8 @@ public final class SmpsDriverSession implements AutoCloseable {
             musicTempoPercent = SmpsDriverSession.this.musicTempoPercent;
             ringLeft = SmpsDriverSession.this.ringLeft;
             musicFmDacTrackCount = SmpsDriverSession.this.musicFmDacTrackCount;
+            nativePause = SmpsDriverSession.this.nativePause;
+            nativeHistoryCursor = SmpsDriverSession.this.nativeHistoryCursor;
             segaPcmTransport =
                     SmpsDriverSession.this.segaPcmTransport == null
                             ? null
@@ -542,6 +546,9 @@ public final class SmpsDriverSession implements AutoCloseable {
     // S2 DACEnabled is driver RAM, not the existence of active music tracks.
     private int musicFmDacTrackCount;
     private SegaPcmTransport segaPcmTransport;
+    private SmpsNativePauseState nativePause = SmpsNativePauseState.RUNNING;
+    private int nativeHistoryCursor;
+    private Boolean nativePauseConsumed;
     private SmpsDriverServiceObserver.DriverIdentity openOwner;
     private long openEpoch;
     private long nextEpoch;
@@ -705,6 +712,38 @@ public final class SmpsDriverSession implements AutoCloseable {
         return driver != null;
     }
 
+    public void requireNativePauseSupported() {
+        requireInstalled();
+        configuration.statefulCommandPolicy().nativePausePolicy().requireSupported();
+    }
+
+    public int nativeHistoryCursor() {
+        return nativeHistoryCursor;
+    }
+
+    public void setNativeHistoryCursor(int cursor) {
+        if (cursor < 0) throw new IllegalArgumentException("negative native history cursor");
+        nativeHistoryCursor = cursor;
+    }
+
+    /** Ephemeral receipt, never inferred from rendered samples or a host boundary. */
+    public Boolean consumeNativePauseReceipt() {
+        Boolean consumed = nativePauseConsumed;
+        nativePauseConsumed = null;
+        return consumed;
+    }
+
+    /** Reconstructs a committed pause edge while borrowing a detached rewind state. */
+    public void replayNativePause(boolean paused) {
+        requireNativePauseSupported();
+        SmpsNativePausePolicy pausePolicy = configuration.statefulCommandPolicy().nativePausePolicy();
+        SmpsWriteProgram writes = paused
+                ? nativePause.paused() ? SmpsWriteProgram.EMPTY : pausePolicy.pause()
+                : pausePolicy.resume(driver.captureSnapshot());
+        withPort(driverIdentity, port -> { applyProgram(port, writes); return null; });
+        nativePause = new SmpsNativePauseState(paused, null);
+    }
+
     /** Captures one lock-held host-owned stateful-command input. */
     public SmpsStatefulCommandOperation prepareStatefulCommand(
             SmpsSessionCommand command) {
@@ -730,6 +769,27 @@ public final class SmpsDriverSession implements AutoCloseable {
             // 68000 PlaySegaSound also blocks in its busyloop while the
             // separate Z80 plays the chant (s1.sounddriver.asm:733-747).
             return SmpsServiceOutcome.SEGA_PCM_TRANSPORT;
+        }
+        // zVInt tests StopMusic before any S2 queue/track walk. Native resume
+        // also returns to DAC on this invocation (s2.sounddriver.asm:393-408).
+        if (nativePause.request() != null) {
+            SmpsNativePausePolicy pausePolicy = configuration.statefulCommandPolicy().nativePausePolicy();
+            boolean pause = nativePause.request();
+            SmpsWriteProgram writes = pause
+                    ? nativePause.paused() ? SmpsWriteProgram.EMPTY : pausePolicy.pause()
+                    : pausePolicy.resume(driver.captureSnapshot());
+            withPort(driverIdentity, port -> {
+                applyProgram(port, writes);
+                return null;
+            });
+            nativePause = new SmpsNativePauseState(pause, null);
+            nativePauseConsumed = pause;
+            if (pause || !pausePolicy.resumeContinuesService()) {
+                return SmpsServiceOutcome.ORDINARY;
+            }
+        }
+        if (nativePause.paused()) {
+            return SmpsServiceOutcome.ORDINARY;
         }
         if (pendingGlobalCommand == SmpsPendingGlobalCommand.STOP_ALL) {
             applyGlobalStopNow();
@@ -1083,11 +1143,16 @@ public final class SmpsDriverSession implements AutoCloseable {
         requireInstalled();
         Objects.requireNonNull(command, "command");
         if (!(command instanceof SmpsSessionCommand.ResetRingAlternation)
+                && !(command instanceof SmpsSessionCommand.NativePause)
                 && !(command instanceof SmpsSessionCommand.SetSpeedMultiplier)
                 && !(command instanceof SmpsSessionCommand.SetMusicTempoPercent)) {
             interruptSegaPcmForRequest();
         }
         switch (command) {
+            case SmpsSessionCommand.NativePause pause -> {
+                configuration.statefulCommandPolicy().nativePausePolicy().requireSupported();
+                nativePause = new SmpsNativePauseState(nativePause.paused(), pause.paused());
+            }
             case SmpsSessionCommand.AdmitSfx admit ->
                     admitSfx(admit.program());
             case SmpsSessionCommand.StopMusic ignored -> stopMusic();
@@ -1244,7 +1309,7 @@ public final class SmpsDriverSession implements AutoCloseable {
                                 segaPcmTransport.cursor,
                                 segaPcmTransport.cycleAccumulator,
                                 segaPcmTransport.stopRequested),
-                device.captureSnapshot());
+                device.captureSnapshot(), nativePause, nativeHistoryCursor);
     }
 
     /** Captures the one logical driver memento, including override save RAM. */
@@ -1286,6 +1351,9 @@ public final class SmpsDriverSession implements AutoCloseable {
                     "SMPS physical snapshot settings do not match");
         }
         validateLogicalSnapshot(resolvedLogical);
+        if (!resolvedSession.nativePause().equals(SmpsNativePauseState.RUNNING)) {
+            configuration.statefulCommandPolicy().nativePausePolicy().requireSupported();
+        }
         DacData resolvedDac = resolvedSession.selectedDacSource() == null
                 ? null : Objects.requireNonNull(
                         resolver.resolve(
@@ -1332,6 +1400,9 @@ public final class SmpsDriverSession implements AutoCloseable {
         musicTempoPercent = resolved.session().musicTempoPercent();
         ringLeft = resolved.session().ringLeft();
         musicFmDacTrackCount = resolved.session().musicFmDacTrackCount();
+        nativePause = resolved.session().nativePause();
+        nativeHistoryCursor = resolved.session().nativeHistoryCursor();
+        nativePauseConsumed = null;
         segaPcmTransport = materializeSegaPcmTransport(
                 resolved.session().segaPcmTransport());
         pendingService = materializePendingService(
@@ -1446,6 +1517,9 @@ public final class SmpsDriverSession implements AutoCloseable {
         musicTempoPercent = state.musicTempoPercent;
         ringLeft = state.ringLeft;
         musicFmDacTrackCount = state.musicFmDacTrackCount;
+        nativePause = state.nativePause;
+        nativeHistoryCursor = state.nativeHistoryCursor;
+        nativePauseConsumed = null;
         segaPcmTransport = state.segaPcmTransport;
         truncateDiagnostics(state.diagnosticCount);
         state.consumed = true;
@@ -1912,6 +1986,8 @@ public final class SmpsDriverSession implements AutoCloseable {
     }
 
     private void hardReset() {
+        nativePause = SmpsNativePauseState.RUNNING;
+        nativePauseConsumed = null;
         musicTempoPercent = 100;
         pendingService = null;
         pendingGlobalCommand = SmpsPendingGlobalCommand.NONE;

@@ -2,6 +2,8 @@ package com.openggf.tests;
 
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.data.RomGame;
+import com.openggf.data.RomManager;
 import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.GameServices;
 import com.openggf.game.rewind.CompositeSnapshot;
@@ -15,20 +17,30 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
+import java.util.Map;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 /** Declared positioned entry at the real $F80,$448 turbine; not a cold Act 2 route. */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestS3kLrzTurbineHeadless {
+    private RomCatalogueFixture donorCatalogue;
+
     @AfterEach
     void reset() {
-        CrossGameFeatureProvider.getInstance().resetState();
-        var config = SonicConfigurationService.getInstance();
-        config.clearSessionOverrides();
-        config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
-        config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
-        SessionManager.clear();
-        TestEnvironment.activeGameplayMode();
+        try {
+            CrossGameFeatureProvider.getInstance().resetState();
+            var config = SonicConfigurationService.getInstance();
+            config.clearSessionOverrides();
+            config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
+            config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
+            SessionManager.clear();
+            TestEnvironment.activeGameplayMode();
+        } finally {
+            if (donorCatalogue != null) {
+                donorCatalogue.close();
+            }
+        }
     }
 
     @ParameterizedTest(name = "{0}px {1} {2}")
@@ -47,6 +59,18 @@ class TestS3kLrzTurbineHeadless {
         config.resolveDisplayAspect();
         SessionManager.clear();
         TestEnvironment.activeGameplayMode();
+        if (!donor.equals("off")) {
+            RomGame game = switch (donor) {
+                case "s1" -> RomGame.S1;
+                case "s2" -> RomGame.S2;
+                default -> fail("Unexpected donor: " + donor);
+            };
+            var image = game == RomGame.S1 ? RomTestUtils.ensureSonic1RomAvailable()
+                    : RomTestUtils.ensureSonic2RomAvailable();
+            assertNotNull(image, "Missing donor ROM: " + donor);
+            donorCatalogue = RomCatalogueFixture.bind(config, RomManager.getInstance(),
+                    Map.of(game, image.toPath()));
+        }
         var fixture = HeadlessTestFixture.builder().withZoneAndAct(9, 1)
                 .startPosition((short) 0xF80, (short) 0x3F8).startPositionIsCentre()
                 .withCrossGameDonation(donor.equals("off") ? null : donor).build();

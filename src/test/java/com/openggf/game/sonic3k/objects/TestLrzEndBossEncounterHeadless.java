@@ -1,10 +1,15 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.data.RomGame;
+import com.openggf.data.RomManager;
 import com.openggf.game.GameServices;
 import com.openggf.game.ShieldType;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.tests.HeadlessTestFixture;
+import com.openggf.tests.RomCatalogueFixture;
+import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -12,24 +17,44 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+
+import java.util.Map;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 /** Short encounter boundaries; the entry signal is explicit setup, not a route claim. */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestLrzEndBossEncounterHeadless {
     private HeadlessTestFixture fixture;
+    private RomCatalogueFixture romCatalogue;
     private LrzEndBossObjectInstance boss;
     private String donor;
     @AfterEach void reset() {
-        com.openggf.game.CrossGameFeatureProvider.getInstance().resetState();
-        var config=com.openggf.configuration.SonicConfigurationService.getInstance();
-        config.clearSessionOverrides();
-        config.setConfigValue(com.openggf.configuration.SonicConfiguration.MAIN_CHARACTER_CODE,"sonic");
-        config.setConfigValue(com.openggf.configuration.SonicConfiguration.SIDEKICK_CHARACTER_CODE,"tails");
-        SessionManager.clear(); TestEnvironment.activeGameplayMode();
+        try {
+            com.openggf.game.CrossGameFeatureProvider.getInstance().resetState();
+            var config=com.openggf.configuration.SonicConfigurationService.getInstance();
+            config.clearSessionOverrides();
+            config.setConfigValue(com.openggf.configuration.SonicConfiguration.MAIN_CHARACTER_CODE,"sonic");
+            config.setConfigValue(com.openggf.configuration.SonicConfiguration.SIDEKICK_CHARACTER_CODE,"tails");
+            SessionManager.clear(); TestEnvironment.activeGameplayMode();
+        } finally {
+            if (romCatalogue != null) romCatalogue.close();
+        }
     }
     private void step() { fixture.stepFrame(false,false,false,false,false); }
     private void beforeBodyInitialization() {
+        if (donor != null) {
+            RomGame game = switch (donor) {
+                case "s1" -> RomGame.S1;
+                case "s2" -> RomGame.S2;
+                default -> throw new IllegalArgumentException("Unsupported encounter donor: " + donor);
+            };
+            var image = game == RomGame.S1 ? RomTestUtils.ensureSonic1RomAvailable()
+                    : RomTestUtils.ensureSonic2RomAvailable();
+            assertNotNull(image, "the requested " + donor + " encounter donor requires its ROM");
+            romCatalogue = RomCatalogueFixture.bind(SonicConfigurationService.getInstance(),
+                    RomManager.getInstance(), Map.of(game, image.toPath()));
+        }
         fixture=HeadlessTestFixture.builder().withZoneAndAct(22,0).withFreshLevelStartLifecycle()
                 .startPosition((short)0x9C0,(short)0x368).startPositionIsCentre()
                 .withCrossGameDonation(donor).build();

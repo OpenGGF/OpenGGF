@@ -952,8 +952,12 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                 pendingPreloadedTitleHandoff = preloadedNextActHandoff;
                 pendingAizTitleHandoff = aizAct1MinibossTitleHandoff;
                 pendingRetainedReloadTitleHandoff = retainedReloadState;
-                if (fbzCarriedTitleOwner || aizAct1MinibossTitleHandoff) {
-                    nativeTitleChildrenOwned = aizAct1MinibossTitleHandoff;
+                boolean nativeCarriedTitleWait = retainedReloadState
+                        && titlePublicationOwnedByCarriedObject
+                        && carriedTitleResetAdditionalDispatches
+                                == com.openggf.game.TitleCardResetGates.NATIVE_WAIT_GATE;
+                if (fbzCarriedTitleOwner || aizAct1MinibossTitleHandoff || nativeCarriedTitleWait) {
+                    nativeTitleChildrenOwned = aizAct1MinibossTitleHandoff || nativeCarriedTitleWait;
                     // loc_2DD06 only replaces this SST's code pointer. The
                     // following Process_Sprites pass runs Obj_TitleCardInit.
                     carriedTitlePhase = CarriedTitlePhase.TITLE_CARD_INIT;
@@ -1024,6 +1028,9 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
             if (retainedSstTitleOwner) {
                 if (nativeTitleChildrenOwned) s3kTitleCard.useNativeInLevelSstChildren();
                 else s3kTitleCard.useExternalInLevelGameplayOwner();
+                if (carriedTitleTimingExplicit && carriedTitleLockPlayerControl) {
+                    s3kTitleCard.requestInLevelPlayerControlLock();
+                }
             }
             if (pendingPreloadedTitleHandoff && !retainedSstTitleOwner) {
                 int releaseDispatches = carriedPreloadedActCameraReleaseDispatches;
@@ -1268,7 +1275,8 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                 } else
                 if (services().titleCardProvider() instanceof Sonic3kTitleCardManager title
                         && !title.isExternalInLevelWaitReady()) {
-                    title.updateExternalInLevelChildren();
+                    com.openggf.game.sonic3k.titlecard.S3kTitleCardWorldAccess.updateExternalChildren(title,
+                            services().levelManager() == null ? null : services().levelManager().getWorldSession());
                     return;
                 }
                 // ROM mutates this same SST owner into Obj_TitleCardWait, then
@@ -1317,7 +1325,8 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                     ObjectLifetimeOps.deleteNoRespawn(this);
                 } else if (provider instanceof Sonic3kTitleCardManager title) {
                     title.startExternalInLevelChildExit();
-                    title.updateExternalInLevelChildren();
+                    com.openggf.game.sonic3k.titlecard.S3kTitleCardWorldAccess.updateExternalChildren(title,
+                            services().levelManager() == null ? null : services().levelManager().getWorldSession());
                 }
             }
             case RESULTS, DONE -> {
@@ -1353,7 +1362,8 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
 
     private void advanceExternalTitleChildren() {
         if (services().titleCardProvider() instanceof Sonic3kTitleCardManager title) {
-            title.updateExternalInLevelChildren();
+            com.openggf.game.sonic3k.titlecard.S3kTitleCardWorldAccess.updateExternalChildren(title,
+                            services().levelManager() == null ? null : services().levelManager().getWorldSession());
         }
     }
 

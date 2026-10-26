@@ -86,6 +86,34 @@ public final class ObjectTerrainUtils {
         return checkFloorDistAtPoint(x, y, true, (byte) 0);
     }
 
+    /**
+     * Game-internal player FindFloor entry (Sonic_CheckFloor, skdisasm044:19875..19927).
+     * The caller supplies the querying player's live bit and collision-index path;
+     * object entry points retain their own fixed solidity and legacy camera defaults.
+     */
+    public static TerrainCheckResult checkPlayerFloorDistWithFlipAwareAngle(
+            int x, int y, int solidityBit, boolean secondaryCollisionPath) {
+        LevelManager lm = com.openggf.game.GameServices.levelOrNull();
+        if (lm == null) return TerrainCheckResult.noCollision();
+        BackgroundPlaneCollisionProvider provider =
+                com.openggf.game.GameServices.backgroundPlaneCollisionOrNull();
+        return checkFloorDistAtPoint(lm,
+                provider != null ? provider : BackgroundPlaneCollisionProvider.FOREGROUND_ONLY,
+                secondaryCollisionPath, x, y, true, solidityBit);
+    }
+
+    /**
+     * Player Sonic_CheckCeiling (20278..20311), also used by reverse sub_11FD6.
+     * D5 remains the caller's live LRB bit through the existing foreground scan.
+     */
+    public static TerrainCheckResult checkPlayerCeilingDistWithFlipAwareAngle(
+            int x, int y, int yRadius, int solidityBit, boolean secondaryCollisionPath) {
+        LevelManager lm = com.openggf.game.GameServices.levelOrNull();
+        if (lm == null) return TerrainCheckResult.noCollision();
+        return checkNativeUpwardCeilingDistAtPoint(lm, (byte) 0, x, y - yRadius,
+                true, solidityBit, secondaryCollisionPath);
+    }
+
     /** Check distance to ceiling from object top (x, y - yRadius) */
     public static TerrainCheckResult checkCeilingDist(int x, int y, int yRadius) {
         return checkCeilingDistAtPoint(x, y - yRadius, false);
@@ -234,14 +262,22 @@ public final class ObjectTerrainUtils {
                                                              boolean secondaryCollisionPath,
                                                              int x, int y,
                                                              boolean flipAwareAngle) {
+        return checkFloorDistAtPoint(lm, provider, secondaryCollisionPath,
+                x, y, flipAwareAngle, SOLIDITY_TOP);
+    }
 
+    private static TerrainCheckResult checkFloorDistAtPoint(LevelManager lm,
+                                                             BackgroundPlaneCollisionProvider provider,
+                                                             boolean secondaryCollisionPath,
+                                                             int x, int y,
+                                                             boolean flipAwareAngle, int solidityBit) {
         TerrainCheckResult foreground = checkFloorDistAtPoint(
-                lm, (byte) 0, x, y, flipAwareAngle, secondaryCollisionPath);
+                lm, (byte) 0, x, y, flipAwareAngle, secondaryCollisionPath, solidityBit);
         BackgroundPlaneCollisionProvider.State state = provider.state(lm);
         if (!state.active()) return foreground;
         TerrainCheckResult background = checkFloorDistAtPoint(
                 lm, (byte) 1, provider.backgroundX(state, x, Direction.DOWN),
-                provider.backgroundY(state, y), flipAwareAngle, secondaryCollisionPath);
+                provider.backgroundY(state, y), flipAwareAngle, secondaryCollisionPath, solidityBit);
         if (!background.foundSurface()) return foreground;
         if (!foreground.foundSurface() || background.distance() <= foreground.distance()) {
             return background;
@@ -252,13 +288,20 @@ public final class ObjectTerrainUtils {
     private static TerrainCheckResult checkFloorDistAtPoint(LevelManager lm, byte layer,
                                                              int x, int y, boolean flipAwareAngle,
                                                              boolean secondaryCollisionPath) {
+        return checkFloorDistAtPoint(lm, layer, x, y, flipAwareAngle,
+                secondaryCollisionPath, SOLIDITY_TOP);
+    }
+
+    private static TerrainCheckResult checkFloorDistAtPoint(LevelManager lm, byte layer,
+                                                             int x, int y, boolean flipAwareAngle,
+                                                             boolean secondaryCollisionPath, int solidityBit) {
 
         ChunkDesc desc = lm.getChunkDescAt(layer, x, y);
-        SolidTile tile = getSolidTile(lm, desc, SOLIDITY_TOP, secondaryCollisionPath);
+        SolidTile tile = getSolidTile(lm, desc, solidityBit, secondaryCollisionPath);
         byte metric = getHeightMetric(tile, desc, x);
         if (metric == 0) {
             // No surface - extend 16 pixels down
-            return checkFloorExtension(lm, layer, x, y, flipAwareAngle, secondaryCollisionPath);
+            return checkFloorExtension(lm, layer, x, y, flipAwareAngle, secondaryCollisionPath, solidityBit);
         }
 
         // ROM: neg.w produces negative metric for V-flipped tiles.
@@ -268,16 +311,16 @@ public final class ObjectTerrainUtils {
             int adjusted = metric + yInTile;
             if (adjusted >= 0) {
                 // No collision in this tile - extend to next tile
-                return checkFloorExtension(lm, layer, x, y, flipAwareAngle, secondaryCollisionPath);
+                return checkFloorExtension(lm, layer, x, y, flipAwareAngle, secondaryCollisionPath, solidityBit);
             }
             // Collision found - regress to previous tile
-            return checkFloorRegress(lm, layer, tile, desc, x, y, flipAwareAngle, secondaryCollisionPath);
+            return checkFloorRegress(lm, layer, tile, desc, x, y, flipAwareAngle, secondaryCollisionPath, solidityBit);
         }
 
         if (metric == FULL_TILE) {
             // Full tile - check previous tile up for edge detection
             TerrainCheckResult edgeResult = checkFloorEdge(
-                    lm, layer, tile, desc, x, y, flipAwareAngle, secondaryCollisionPath);
+                    lm, layer, tile, desc, x, y, flipAwareAngle, secondaryCollisionPath, solidityBit);
             if (edgeResult != null) return edgeResult;
         }
 
@@ -286,10 +329,10 @@ public final class ObjectTerrainUtils {
 
     private static TerrainCheckResult checkFloorExtension(LevelManager lm, byte layer,
                                                            int x, int y, boolean flipAwareAngle,
-                                                           boolean secondaryCollisionPath) {
+                                                           boolean secondaryCollisionPath, int solidityBit) {
         int nextY = y + 16;
         ChunkDesc desc = lm.getChunkDescAt(layer, x, nextY);
-        SolidTile tile = getSolidTile(lm, desc, SOLIDITY_TOP, secondaryCollisionPath);
+        SolidTile tile = getSolidTile(lm, desc, solidityBit, secondaryCollisionPath);
         byte metric = getHeightMetric(tile, desc, x);
 
         if (metric > 0) {
@@ -312,10 +355,10 @@ public final class ObjectTerrainUtils {
     private static TerrainCheckResult checkFloorRegress(LevelManager lm, byte layer, SolidTile origTile,
                                                          ChunkDesc origDesc, int x, int y,
                                                          boolean flipAwareAngle,
-                                                         boolean secondaryCollisionPath) {
+                                                         boolean secondaryCollisionPath, int solidityBit) {
         int prevY = y - 16;
         ChunkDesc desc = lm.getChunkDescAt(layer, x, prevY);
-        SolidTile tile = getSolidTile(lm, desc, SOLIDITY_TOP, secondaryCollisionPath);
+        SolidTile tile = getSolidTile(lm, desc, solidityBit, secondaryCollisionPath);
         byte metric = getHeightMetric(tile, desc, x);
 
         return createPreviousFloorResult(tile, desc, origTile, origDesc, metric, x, y, prevY, flipAwareAngle);
@@ -326,16 +369,16 @@ public final class ObjectTerrainUtils {
                                                          ChunkDesc origDesc, int x, int y,
                                                          boolean flipAwareAngle) {
         return checkFloorRegress(lm, (byte) 0, origTile, origDesc, x, y, flipAwareAngle,
-                legacySecondaryCollisionPath());
+                legacySecondaryCollisionPath(), SOLIDITY_TOP);
     }
 
     private static TerrainCheckResult checkFloorEdge(LevelManager lm, byte layer,
                                                      SolidTile origTile, ChunkDesc origDesc,
                                                      int x, int y, boolean flipAwareAngle,
-                                                     boolean secondaryCollisionPath) {
+                                                     boolean secondaryCollisionPath, int solidityBit) {
         int prevY = y - 16;
         ChunkDesc desc = lm.getChunkDescAt(layer, x, prevY);
-        SolidTile tile = getSolidTile(lm, desc, SOLIDITY_TOP, secondaryCollisionPath);
+        SolidTile tile = getSolidTile(lm, desc, solidityBit, secondaryCollisionPath);
         byte metric = getHeightMetric(tile, desc, x);
 
         return createPreviousFloorResult(tile, desc, origTile, origDesc, metric, x, y, prevY, flipAwareAngle);
@@ -346,7 +389,7 @@ public final class ObjectTerrainUtils {
                                                       ChunkDesc origDesc, int x, int y,
                                                       boolean flipAwareAngle) {
         return checkFloorEdge(lm, (byte) 0, origTile, origDesc, x, y, flipAwareAngle,
-                legacySecondaryCollisionPath());
+                legacySecondaryCollisionPath(), SOLIDITY_TOP);
     }
 
     private static TerrainCheckResult createPreviousFloorResult(SolidTile tile, ChunkDesc desc,
@@ -491,9 +534,9 @@ public final class ObjectTerrainUtils {
     // Internal authoring probes use explicit owners/path selection. Native callers
     // retain the existing entry points and their shipped arithmetic unchanged.
     static TerrainCheckResult routeCeilingDist(LevelManager lm, int x, int y, boolean secondary) {
-        TerrainCheckResult current = scanCeilingTile(lm, x, y, y, false, true, secondary);
+        TerrainCheckResult current = scanCeilingTile(lm, (byte) 0, x, y, y, false, true, SOLIDITY_ALL, secondary);
         if (current != null) return current;
-        TerrainCheckResult extension = scanCeilingTile(lm, x, y, y - FULL_TILE, true, true, secondary);
+        TerrainCheckResult extension = scanCeilingTile(lm, (byte) 0, x, y, y - FULL_TILE, true, true, SOLIDITY_ALL, secondary);
         return extension != null ? extension : TerrainCheckResult.noCollision();
     }
     static TerrainCheckResult routeWallDist(LevelManager lm, int x, int y, boolean secondary) {
@@ -502,12 +545,21 @@ public final class ObjectTerrainUtils {
 
     private static TerrainCheckResult checkNativeUpwardCeilingDistAtPoint(
             LevelManager lm, int x, int y, boolean flipAwareAngle) {
-        TerrainCheckResult current = scanCeilingTile(lm, x, y, y, false, flipAwareAngle);
+        return checkNativeUpwardCeilingDistAtPoint(lm, (byte) 0, x, y, flipAwareAngle,
+                SOLIDITY_ALL, legacySecondaryCollisionPath());
+    }
+
+    private static TerrainCheckResult checkNativeUpwardCeilingDistAtPoint(
+            LevelManager lm, byte layer, int x, int y, boolean flipAwareAngle,
+            int solidityBit, boolean secondaryCollisionPath) {
+        TerrainCheckResult current = scanCeilingTile(lm, layer, x, y, y, false,
+                flipAwareAngle, solidityBit, secondaryCollisionPath);
         if (current != null) {
             return current;
         }
         TerrainCheckResult extension = scanCeilingTile(
-                lm, x, y, y - FULL_TILE, true, flipAwareAngle);
+                lm, layer, x, y, y - FULL_TILE, true, flipAwareAngle,
+                solidityBit, secondaryCollisionPath);
         return extension != null ? extension : TerrainCheckResult.noCollision();
     }
 
@@ -517,16 +569,11 @@ public final class ObjectTerrainUtils {
      * still comes from the height map indexed by X (not the rotated width map).
      */
     private static TerrainCheckResult scanCeilingTile(
-            LevelManager lm, int x, int originalY, int checkY,
-            boolean extension, boolean flipAwareAngle) {
-        return scanCeilingTile(lm, x, originalY, checkY, extension, flipAwareAngle, legacySecondaryCollisionPath());
-    }
-
-    private static TerrainCheckResult scanCeilingTile(
-            LevelManager lm, int x, int originalY, int checkY,
-            boolean extension, boolean flipAwareAngle, boolean secondaryCollisionPath) {
-        ChunkDesc desc = lm.getChunkDescAt((byte) 0, x, checkY);
-        SolidTile tile = getSolidTile(lm, desc, SOLIDITY_ALL, secondaryCollisionPath);
+            LevelManager lm, byte layer, int x, int originalY, int checkY,
+            boolean extension, boolean flipAwareAngle,
+            int solidityBit, boolean secondaryCollisionPath) {
+        ChunkDesc desc = lm.getChunkDescAt(layer, x, checkY);
+        SolidTile tile = getSolidTile(lm, desc, solidityBit, secondaryCollisionPath);
         if (tile == null) {
             return null;
         }
@@ -553,7 +600,8 @@ public final class ObjectTerrainUtils {
 
             int regressY = checkY + FULL_TILE;
             TerrainCheckResult regress = scanCeilingTile(
-                    lm, x, originalY, regressY, true, flipAwareAngle, secondaryCollisionPath);
+                    lm, layer, x, originalY, regressY, true, flipAwareAngle,
+                    solidityBit, secondaryCollisionPath);
             if (regress != null) {
                 return regress;
             }
@@ -563,7 +611,8 @@ public final class ObjectTerrainUtils {
         if (metric == FULL_TILE && !extension) {
             int regressY = checkY + FULL_TILE;
             TerrainCheckResult regress = scanCeilingTile(
-                    lm, x, originalY, regressY, true, flipAwareAngle, secondaryCollisionPath);
+                    lm, layer, x, originalY, regressY, true, flipAwareAngle,
+                    solidityBit, secondaryCollisionPath);
             if (regress != null) {
                 return regress;
             }

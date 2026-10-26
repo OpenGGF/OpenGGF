@@ -38,6 +38,19 @@ Widths / donors / characters / teams: as act 1. Knuckles is level-select only
 Physical starpost activation, rewind and repeated death/reload breadth is now
 covered by the 2026-09-26 follow-up below; other lifecycle obligations remain open.
 
+## Direct-entry assertion correction (2026-10-22)
+
+`TestS3kDezColdRoutes.theColdActTwoEntryUsesItsOwnSpawnAndAcceptsControllerInput`
+checks an ordinary direct DEZ2 load at the ROM's $0140/$03AC spawn, no carried
+rings, a live player and at least64px of controller-driven progress. No position,
+velocity, camera or clock is copied from the native movie. The former test's
+`survived >= 0` passed on its first mismatch: native row18670 was the seamless
+inlet at$01E8/$072C with123 carried rings. It established zero frames of parity.
+The historical seeded free-play diagnostic is explicitly named diagnostic and
+cannot qualify a cold route, bootstrap or incoming act change. This correction
+does not withdraw the independent authored cold completion evidence below.
+[Commands, native bytes and limits](../2026-10-22-native-gap-assertions.md).
+
 ## Five claims
 
 | Claim | State |
@@ -1457,3 +1470,157 @@ the old load. No runtime behaviour changed.
 
 Validation: run `probe-v1` (focused queued selectors, S3K ROM, branch
 bugfix/ai-s3k-route-behaviour-regressions on 2adfa37a7) passed the owning test, 0 skips.
+
+## Knuckles cold first gravity corridor — 2026-10-21
+
+`8c78e7762b4394b5c5d9a531ccb2b21807491028` plus the new
+[`TestDezKnucklesColdGravityRouteCapture`](../../../../src/test/java/com/openggf/tools/TestDezKnucklesColdGravityRouteCapture.java)
+qualifies one ordinary native320 solo-Knuckles corridor. The
+[`script`](../../../../src/test/resources/routes/s3k/dez2-knuckles-cold-first-gravity-320.script)
+and round-tripped BK2 contain1020 inputs, neutral P2. Public
+`GameplayCaptureSession.boot(ROM,11,1,settings)` explicitly enables the title
+from input0, donor off, empty sidekick, and every setup seed null/false.
+This is level-select-only direct entry: ROM `$1E3D34` supplies centre
+`$140,$3AC`, with foreground4/background8 retained throughout. It does not
+exercise the seamless `Player_mode == 2` transport landing at `$3B0`.
+
+The locked ROM SHA-1 is `CFBF98C36C776677290A872547AC47C53D2761D6`, CRC32
+`63522553`. Its original494-record parsed DEZ2 table binds raw record29 to
+unflipped `$5B` at `$700,$3C0`, record30 to associated `$5A/$10`, record73 to
+flipped `$5B` at `$B00,$3C0`, and record74 to its `$5A/$10`. The consumer binds
+each actual live object by that raw placement and checks the actual P1 interact
+owner, riding state and continuous eight-unit tube-angle progression. Both
+gravity changes require the same live writer's seeded side latch to change
+left-to-right with P1 inside native `sub_49228`'s signed `[Y-$20,Y+$20)` band;
+class or coordinates alone do not establish a write.
+
+| Actual input spot (zero-based, after step) | Ordinary observation / replay window |
+| --- | --- |
+|20|Title remains active through65; actual control release is85|
+|630|Record30 mounts P1, centre1669/972, normal gravity|
+|651|Record29 sets gravity0→1, centre1792/948, record30 still owns P1|
+|662|Record30 progresses in the inverted world, centre1857/975|
+|673|Record30 releases P1 beyond its span, centre1922/957, still inverted|
+|805|Record74 mounts P1 while inverted, centre2693/947|
+|826|Record73 clears gravity1→0, centre2819/971, record74 still owns P1|
+|847|Record74 releases P1 beyond its span, centre2945/960, normal gravity|
+|900|Neutral grounded follow-through beyond record74, centre3056/997|
+
+Fresh A holds begin360 and750; braking Left854–893 continues through landing,
+then all buttons release894–1019. The final centre is3056/997, all velocities
+zero,11 rings/3 lives, no death/life loss, no support or object/control lock.
+Main and camera focus remain the same real Knuckles, with zero CPU followers.
+World/level/object-manager/runtime identities, zone11/act1,320×224 viewport,
+direct FG/BG values and the complete layout bytes stay unchanged.
+
+Two separate fresh JVM invocations of
+`#coldKnucklesCrossesTheFirstGravityWritersAndTubesUninterrupted` each pass
+**1T0F0E0S**, without any branch capture/restore. Each tick uses normal production
+drawing. Their complete run-local state/owner projection hashes agree:
+`86de41e3496a471125f5a11b5bea8a211376a3cb5c39f2514b263f769f527ad9`.
+The subsequent whole-class invocation passes **2T0F0E0S**, including
+`#coldKnucklesCrossesTheFirstGravityWritersAndTubesWithWorldReplay`: all nine
+spots perform two45-input restore/replay cycles, comparing every registered
+key and restoring external held-input history. Mode changes, pending fresh
+loads and callback-bearing fades are excluded. The title check is an internal
+world-registry replay within TITLE_CARD, not a claim that live title rewind is
+supported. Its first attempted40→85 window crossed GameLoop's actual mode/history
+boundary and failed at the title PLC queue; it was replaced by20→65 with an
+explicit constant-mode guard, without changing runtime or narrowing comparison.
+
+The production `InputLogAuthorTool` checked all1020 rows through `Bk2MovieLoader`;
+the container has only Header.txt and Input Log.txt. SHA-256: script
+`8d829172e4df4bc27365dcfd04a59a84dd352890a5184c678b383562b633368c`, BK2
+`41a59a7acd7eaac84ff7e5d303c4af19f45ca7188396e4c252017dfad43a5457`, Input Log
+`1e6c29f828d56d109051ccd89d1aee2285424dad1ea98d00389be8ae69ba02a5`.
+[Commands, rejected controller choices and timing](../../plans/2026-10-13-s3k-playable-completion.md#knuckles-dez2-cold-gravity-corridor--2026-10-21)
+are recorded in the existing plan. This closes this direct native320 Knuckles
+load/play/invert slice only. Full act/boss/ending, seamless entry, wider/donor/team
+breadth, native pixels and native timing remain open; no runtime parity repair
+or whole-matrix certification follows.
+
+
+### Root composed corridor check — 2026-10-21
+
+Root adopted independently reviewed `ed910d8c` in normal merge
+`c0ef03c779a769d4de4312def0450726ddaf4793`. On that composed tree, the whole
+`TestDezKnucklesColdGravityRouteCapture` passes **2T/0F/0E/0S**: uninterrupted
+ordinary traversal and complete-world replay. Both actual method identities,
+69 properties, the full8057-byte classpath and exact Surefire duplicate,
+all stdout/stderr and TXT summary were inspected. Java25.0.4.1, required
+absolute ROMs and surfaceless EGL match the intended launch.
+
+Both methods retain title release85, the nine source-bound windows above and
+the same run-local projection
+`86de41e3496a471125f5a11b5bea8a211376a3cb5c39f2514b263f769f527ad9`.
+The observed endpoint is3056/997,11 rings/3 lives; the maintained endpoint
+oracle remains grounded, released continuation beyond the tubes with zero
+velocities and unchanged lives. The replay compares every registered key,
+two45-input cycles per spot, with drawing and restored external input history.
+No state or comparison key was removed.
+
+Maven29.763s; XML suite4.097s; queue waiting and individual compiler intervals
+are unknown. Main was up to date;4,264 test sources compiled at release25 inside
+the sole request. FAST/no-manifest and two unmeasured Kos-profile deterministic
+estimates remain warnings, not native timing observations. Source/configuration
+remained unchanged; exact owned reports and extraction temporary files were
+consumed after inspection. This is the bounded direct-entry corridor scope
+above, not an act, seamless route, boss, ending, breadth or native acceptance.
+
+
+## Native tube ownership and Chainspike probe correction — 2026-10-23
+
+Frozen-base successor to `659b02c98a16da0723ef5f222acdc60ab7b0838f`, owned by
+`bugfix/ai-dez-native-object-fixes-20261023`; exact command, source blobs,
+reference pin and red/final manifests are in the
+[native-gap plan](../../plans/2026-10-22-native-gap-swarm.md#bounded-native-dez-successor--2026-10-23).
+The short checks use the actual DEZ2 ROM-loaded fixture with native Sonic at320,
+movement donation off. They are independent of long routes and rendering.
+
+- `TestS3kDezGravityTubeHeadless` adds the later-slot former-owner discriminator
+  and destructive full-registry recreation/replay of both tube owners and the
+  actual player latch. An airborne rolling horizontal mount restores the native
+  centre delta and fractional position in both gravity states, through recreation
+  and forward replay. A separate final-only control covers horizontal/vertical ×
+  grounded/airborne with unequal nonzero X/Y/ground velocity and incoming angle$60;
+  it verifies evaluated native velocity/angle/rolling/centre order and recreates
+  each tube before reproducing the same result. Horizontal uses
+  `RideObject_SetRide (sonic3k.asm:42067-42089)`; vertical uses
+  `sub_33C34 (sonic3k.asm:70207-70227)`. The existing support callback/rewind
+  adapter is retained. This does not introduce or certify a full Player_TouchFloor
+  tail/ability/bubble reset beyond the existing landing owners.
+- `TestChainspikeBadnikInstance` replaces the historical128-pixel-ahead rebound
+  expectation: the lower spike remains velocity8 at offsets8 and16 while its
+  centre probe is clear. Render half-height remains128; probe radius is0.
+  The exact-parent/orphan control also captures an extending child and parent,
+  destroys the original owner, recreates/restores both and compares the next
+  extension state before retaining the original orphan-retirement assertions.
+  `word_91EE6 (sonic3k.asm:199518-199520)` is decoded by
+  `SetUp_ObjAttributes3 (sonic3k.asm:176998-177005)`, which writes height_pixels;
+  `ObjCheckFloorDist (sonic3k.asm:20087-20095)` instead reads untouched y_radius.
+
+The old-source request executed the original four discriminators and failed all
+four assertions, with zero errors/skips; the later helper-order/gravity controls
+were added only after that run was terminal and are final-selection evidence.
+Final focused validation passes 99/99 with 0 failures/errors/skips, including 14
+tube and 10 Chainspike cases. The fresh guards pass 51/52, with no errors/skips:
+services, rewind architecture and field disposition pass; the lifecycle source
+ratchet reports inherited raw-destruction count 586 against budget 582. A matched
+static source audit finds the exact same call locations on frozen `659b02c98` and current;
+the failed method's later insertion assertion is unexecuted (static counts are
+also unchanged 10 against budget 9). No extra Maven request or unrelated fix was
+made; exact evidence and limitations are in the linked plan. These rows supersede
+the older Chainspike first-update rebound explanation, not the historical route
+observations. New controls are not native timing/trace or pixel comparisons.
+Act 1 bindings, other characters, P2/teams, donor/width products and cold/lifecycle
+route revalidation remain inherited obligations. The existing upper-spike signed
+outbound simplification is outside this bounded probe-radius correction.
+
+
+Inherited P2 limit: `loc_4906A (sonic3k.asm:95385-95404)` uses FixBugs=0,
+retaining possible d6 dirtiness from P1 before its byte standing-bit increment;
+FixBugs=1 instead reloads the whole register. Independent RiderState entries do
+not model that dirty support-bit/status aliasing. No runtime change or wider
+standing-bit owner interface follows here, and the focused P1 checks do not
+certify whole native two-player tube fidelity. The reverse-gravity centre
+control remains in the tested source.

@@ -34,7 +34,7 @@ public class TestGraphicsManagerSpriteSatReplay {
     }
 
     @Test
-    public void spriteSatReplay_replaysBucketsBackToFrontWhileReversingSatOrderWithinEachBucket() throws Exception {
+    public void spriteSatReplay_replaysNativeBucketsFrontToBackWithFirstSatEntryFirst() throws Exception {
         graphicsManager.cachePatternTexture(createSolidPattern((byte) 1), 0);
         graphicsManager.cachePatternTexture(createSolidPattern((byte) 2), 1);
         graphicsManager.cachePatternTexture(createSolidPattern((byte) 3), 2);
@@ -83,9 +83,9 @@ public class TestGraphicsManagerSpriteSatReplay {
         assertTrue(graphicsManager.commands.get(0) instanceof PatternRenderCommand);
         assertTrue(graphicsManager.commands.get(1) instanceof PatternRenderCommand);
         assertTrue(graphicsManager.commands.get(2) instanceof PatternRenderCommand);
-        assertEquals(20f, getFloatField(graphicsManager.commands.get(0), "x"));
+        assertEquals(10f, getFloatField(graphicsManager.commands.get(0), "x"));
         assertEquals(30f, getFloatField(graphicsManager.commands.get(1), "x"));
-        assertEquals(10f, getFloatField(graphicsManager.commands.get(2), "x"));
+        assertEquals(20f, getFloatField(graphicsManager.commands.get(2), "x"));
     }
 
     @Test
@@ -122,11 +122,25 @@ public class TestGraphicsManagerSpriteSatReplay {
             float v0 = getFloatField(command, "v0");
             float v1 = getFloatField(command, "v1");
             // Four of eight texel rows: half the atlas entry's V span.
-            PatternAtlas.Entry entry = graphicsManager.getPatternAtlas().getEntry(i == 0 ? 1 : 0);
+            PatternAtlas.Entry entry = graphicsManager.getPatternAtlas().getEntry(i);
             assertEquals((entry.v1() - entry.v0()) / 2f, Math.abs(v0 - v1), 1e-6f);
         }
         assertEquals(4f, heights[0]);
         assertEquals(4f, heights[1]);
+    }
+
+    @Test
+    public void nativeBudgetAppliesWithoutRequestingSpriteMask() {
+        graphicsManager.cachePatternTexture(createSolidPattern((byte) 1), 0);
+        graphicsManager.beginSpriteSatCollection();
+        for (int index = 0; index < 21; index++) {
+            graphicsManager.submitSpriteSatPiece(new SpritePieceRenderer.PreparedPiece(
+                    10 + index * 8, 20, 1, 1, 0, 0, 0,
+                    false, false, false, false, SpriteMaskReplayRole.NORMAL,
+                    0, 1, 0, 1, null));
+        }
+        graphicsManager.endSpriteSatCollectionAndReplay();
+        assertEquals(20, graphicsManager.commands.size(), "H40 admits only the first twenty pieces on a line");
     }
 
     @Test
@@ -186,26 +200,198 @@ public class TestGraphicsManagerSpriteSatReplay {
     }
 
     @Test
+    void shadowTileRepublishKeepsColouredGhostAndAllImmutablePresentationFields() {
+        graphicsManager.cachePatternTexture(createSolidPattern((byte) 15), 3);
+        var subject = new SpritePresentation.Subject("shadow-copy", SpritePresentation.Part.BODY, false, 100);
+        var tile = new SpritePresentation.Tile(SpritePresentation.Layer.PLAYER, 3, 3, true, false,
+                false, 40, 50, 8, 8, true, 5, true, 0.375f, 2, 7, subject, true,
+                SpriteSatEntry.PixelOperation.SHADOW_15);
+        var frame = SpritePresentation.prepare(graphicsManager, 7, 11,
+                () -> graphicsManager.renderShadowTile(tile, 13, 17, null, 1),
+                descriptor -> { throw new AssertionError("Republishing must retain the immutable tile"); });
+        assertEquals(List.of(new SpritePresentation.Tile(SpritePresentation.Layer.PLAYER, 3, 3, true, false,
+                false, 46, 56, 8, 8, true, 5, true, 0.375f, 2, 7, subject, true,
+                SpriteSatEntry.PixelOperation.SHADOW_15)), frame.tiles());
+        assertEquals(SpritePresentation.patternSample(graphicsManager, 3), frame.patternVersions().get(3));
+    }
+
+    @Test
+    void visualAttachmentsReplaceTheLeafWithoutLosingOrMutatingItsMetadata() throws Exception {
+        var subject = new SpritePresentation.Subject("directed-leaf", SpritePresentation.Part.OBJECT_BODY, false);
+        var piece = new SpritePieceRenderer.PreparedPiece(100, 80, 1, 1, 512, 512, 2,
+                true, false, false, false, SpriteMaskReplayRole.PRE_MASK_FRONT, 0, 1, 0, 1, "leaf");
+        graphicsManager.beginSpriteSatCollection();
+        graphicsManager.setCurrentSpriteTileOcclusionPaletteMask(5);
+        graphicsManager.beginGhostRenderEffect(.375f, true);
+        SpritePresentation.withSubject(graphicsManager, subject, () -> graphicsManager.submitSpriteSatPiece(piece));
+        graphicsManager.endGhostRenderEffect();
+        var original = collectedEntries().getLast();
+        ObjectVisualGraphicsAccess.attachLastVisualMask(graphicsManager, 0x17);
+        ObjectVisualGraphicsAccess.clipLastSatTile(graphicsManager, 2, 6);
+        var attached = collectedEntries().getLast();
+        assertNotSame(original, attached);
+        assertEquals(5, original.tileOcclusionPaletteMask());
+        assertEquals(SpriteSatEntry.UNCLIPPED_TOP, original.visibleTopY());
+        assertEquals(SpriteSatEntry.UNCLIPPED_BOTTOM, original.visibleBottomY());
+        assertEquals(7, attached.tileOcclusionPaletteMask());
+        assertEquals(82, attached.visibleTopY());
+        assertEquals(86, attached.visibleBottomY());
+        assertSame(original.piece(), attached.piece());
+        assertSame(subject, attached.presentationSubject());
+        assertEquals(original.ghost(), attached.ghost());
+        assertEquals(original.pixelOperation(), attached.pixelOperation());
+        assertNull(attached.replayFragments());
+
+        var composite = attached.withReplayFragments(List.of(original))
+                .withPixelOperation(SpriteSatEntry.PixelOperation.SHADOW_15);
+        var copy = composite.withTileOcclusionPaletteMask(3).withVisibleScanlines(83, 85);
+        assertEquals(composite.replayFragments(), copy.replayFragments());
+        assertSame(composite.piece(), copy.piece());
+        assertSame(subject, copy.presentationSubject());
+        assertEquals(composite.ghost(), copy.ghost());
+        assertEquals(SpriteSatEntry.PixelOperation.SHADOW_15, copy.pixelOperation());
+        assertEquals(7, composite.tileOcclusionPaletteMask());
+        assertEquals(82, composite.visibleTopY());
+        assertEquals(86, composite.visibleBottomY());
+    }
+
+    @Test
+    void noArgumentCollectionUsesExact350SpanAndReplaysTheWholeEdgeTile() throws Exception {
+        graphicsManager.cachePatternTexture(createSolidPattern((byte) 1), 0);
+        graphicsManager.setProjectionWidth(350);
+        graphicsManager.beginSpriteSatCollection();
+        Field field = GraphicsManager.class.getDeclaredField("spriteSatViewport");
+        field.setAccessible(true);
+        var viewport = (SpriteSatMaskPostProcessor.LogicalViewport) field.get(graphicsManager);
+        assertEquals(350, viewport.width()); assertEquals(320, viewport.hardwareWidth());
+        int edgeX = viewport.x() + 344, y = viewport.y() + 20;
+        graphicsManager.submitSpriteSatPiece(new SpritePieceRenderer.PreparedPiece(edgeX, y, 1, 1, 0, 0, 0,
+                false, false, false, false, SpriteMaskReplayRole.NORMAL, 0, 1, 0, 1, "edge"));
+        graphicsManager.submitSpriteSatPiece(new SpritePieceRenderer.PreparedPiece(viewport.x() + 350, y, 1, 1, 0, 0, 0,
+                false, false, false, false, SpriteMaskReplayRole.NORMAL, 0, 1, 0, 1, "outside"));
+        graphicsManager.endSpriteSatCollectionAndReplay();
+        assertEquals(1, graphicsManager.commands.size());
+        assertEquals((float) edgeX, getFloatField(graphicsManager.commands.getFirst(), "x"));
+        assertEquals(8f, getFloatField(graphicsManager.commands.getFirst(), "width"),
+                "the 350px destination viewport, rather than source-tile clipping, supplies the last six pixels");
+        assertFalse(graphicsManager.isSpriteSatCollectionActive()); assertTrue(collectedEntries().isEmpty());
+    }
+
+    @Test
+    void engineAlignedH32EntryKeepsInnerCapacityInside350Presentation() throws Exception {
+        graphicsManager.cachePatternTexture(createSolidPattern((byte) 1), 0);
+        graphicsManager.setProjectionWidth(350);
+        SpriteSatInternalAccess.beginCollection(graphicsManager, SpriteSatMaskPostProcessor.Raster.h32(47, 7, 100));
+        for (int i = 0; i < 17; i++) graphicsManager.submitSpriteSatPiece(new SpritePieceRenderer.PreparedPiece(
+                55, 20, 1, 1, 0, 0, 0, false, false, false, false, SpriteMaskReplayRole.NORMAL,
+                0, 1, 0, 1, null));
+        Field field = GraphicsManager.class.getDeclaredField("spriteSatViewport");
+        field.setAccessible(true);
+        var inner = (SpriteSatMaskPostProcessor.LogicalViewport) field.get(graphicsManager);
+        assertEquals(47, inner.x()); assertEquals(7, inner.y()); assertEquals(256, inner.width());
+        assertEquals(100, inner.height()); assertEquals(256, inner.hardwareWidth());
+        graphicsManager.endSpriteSatCollectionAndReplay();
+        assertEquals(16, graphicsManager.commands.size()); assertEquals(350, graphicsManager.getProjectionWidth());
+        int previousCommands = graphicsManager.commands.size();
+        SpriteSatInternalAccess.beginLogicalCollection(graphicsManager,
+                SpriteSatMaskPostProcessor.LogicalViewport.h40(47, 7, 350, 100));
+        for (int i = 0; i < 21; i++) graphicsManager.submitSpriteSatPiece(new SpritePieceRenderer.PreparedPiece(
+                55, 20, 1, 1, 0, 0, 0, false, false, false, false, SpriteMaskReplayRole.NORMAL,
+                0, 1, 0, 1, null));
+        graphicsManager.endSpriteSatCollectionAndReplay();
+        assertEquals(previousCommands + 20, graphicsManager.commands.size());
+    }
+
+    @Test
+    void shadowRestartRejectionPreservesLogicalCollectionAndNestedFragmentLifetimes() throws Exception {
+        graphicsManager.cachePatternTexture(createSolidPattern((byte) 15), 3);
+        var viewport = SpriteSatMaskPostProcessor.LogicalViewport.h40(7, 11, 350, 224);
+        graphicsManager.beginLogicalSpriteSatCollection(viewport);
+        graphicsManager.requestSpriteMask();
+        graphicsManager.setCurrentSpriteSatBucket(4);
+        graphicsManager.setCurrentSpriteSatDebugSource("preserved-edge");
+        graphicsManager.setCurrentSpriteTileOcclusionPaletteMask(5);
+        var subject = new SpritePresentation.Subject("logical-shadow", SpritePresentation.Part.BODY, false, 100);
+        var leaf = new SpritePieceRenderer.PreparedPiece(351, 31, 1, 1, 3, 3, 3,
+                true, true, false, false, SpriteMaskReplayRole.PRE_MASK_FRONT, 0, 1, 0, 1, "original");
+        Field fragmentsField = GraphicsManager.class.getDeclaredField("spriteSatFragments");
+        fragmentsField.setAccessible(true);
+        Field viewportField = GraphicsManager.class.getDeclaredField("spriteSatViewport");
+        viewportField.setAccessible(true);
+        graphicsManager.beginGhostRenderEffect(.375f, true);
+        try {
+            SpritePresentation.withSubject(graphicsManager, subject, () -> graphicsManager.submitShadowGroups(
+                    List.of(SpriteSatEntry.of(351, 31, 1, 1, 3, 3, false, false, false, false)), () -> {
+                        Object fragments = assertDoesNotThrow(() -> fragmentsField.get(graphicsManager));
+                        assertNotNull(fragments);
+                        graphicsManager.submitSpriteSatPiece(leaf);
+                        assertThrows(IllegalStateException.class, graphicsManager::beginSpriteSatCollection);
+                        assertThrows(IllegalStateException.class, () -> graphicsManager.beginSpriteSatCollection(null));
+                        assertThrows(IllegalStateException.class, () -> graphicsManager.beginSpriteSatCollection(
+                                SpriteSatMaskPostProcessor.Raster.h40(0, 0, 224)));
+                        assertThrows(IllegalStateException.class, () -> graphicsManager.beginLogicalSpriteSatCollection(null));
+                        assertThrows(IllegalStateException.class, () -> SpriteSatInternalAccess.beginLogicalCollection(
+                                graphicsManager, SpriteSatMaskPostProcessor.LogicalViewport.h40(0, 0, 350, 224)));
+                        assertThrows(IllegalStateException.class, graphicsManager::endSpriteSatCollectionAndReplay);
+                        assertThrows(IllegalStateException.class, () -> graphicsManager.submitSpriteSatGroups(List.of(), () -> fail("nested group ran")));
+                        assertSame(fragments, assertDoesNotThrow(() -> fragmentsField.get(graphicsManager)));
+                        assertSame(viewport, assertDoesNotThrow(() -> viewportField.get(graphicsManager)));
+                        assertTrue(graphicsManager.isSpriteSatCollectionActive());
+                        assertEquals(SpriteSatEntry.PixelOperation.SHADOW_15, graphicsManager.currentSpritePixelOperation);
+                        graphicsManager.submitShadowPieces(() -> graphicsManager.submitSpriteSatPiece(leaf));
+                        assertEquals(SpriteSatEntry.PixelOperation.SHADOW_15, graphicsManager.currentSpritePixelOperation);
+                    }));
+            assertEquals(SpriteSatEntry.PixelOperation.NORMAL, graphicsManager.currentSpritePixelOperation);
+            assertTrue(getBooleanField(graphicsManager, "spriteMaskRequested"));
+            assertNull(fragmentsField.get(graphicsManager));
+            var group = collectedEntries().getFirst();
+            assertEquals(SpriteSatEntry.PixelOperation.SHADOW_15, group.pixelOperation());
+            assertEquals(2, group.replayFragments().size());
+            for (var fragment : group.replayFragments()) {
+                assertSame(subject, fragment.presentationSubject());
+                assertEquals(new SpriteSatEntry.Ghost(.375f, true), fragment.ghost());
+                assertEquals(4, fragment.priorityBucket()); assertEquals(5, fragment.tileOcclusionPaletteMask());
+                assertEquals("preserved-edge", fragment.piece().debugSource());
+                assertEquals(SpriteMaskReplayRole.PRE_MASK_FRONT, fragment.piece().maskReplayRole());
+                assertEquals(SpriteSatEntry.PixelOperation.SHADOW_15, fragment.pixelOperation());
+                assertTrue(fragment.piece().hFlip()); assertTrue(fragment.piece().vFlip());
+            }
+            assertThrows(UnsupportedOperationException.class, () -> group.replayFragments().clear());
+            SpritePresentation.withSubject(graphicsManager, subject, () -> graphicsManager.submitSpriteSatPiece(leaf));
+            var ordinary = collectedEntries().getLast();
+            assertEquals(SpriteSatEntry.PixelOperation.NORMAL, ordinary.pixelOperation());
+            assertSame(subject, ordinary.presentationSubject()); assertEquals(group.replayFragments().getFirst().ghost(), ordinary.ghost());
+            assertEquals(4, ordinary.priorityBucket()); assertEquals("preserved-edge", ordinary.piece().debugSource());
+        } finally { graphicsManager.endGhostRenderEffect(); }
+        graphicsManager.cancelSpritePresentationCollection();
+        assertFalse(graphicsManager.isSpriteSatCollectionActive()); assertFalse(getBooleanField(graphicsManager, "spriteMaskRequested"));
+        assertTrue(collectedEntries().isEmpty()); assertNull(fragmentsField.get(graphicsManager));
+    }
+
+    @Test
     void wholeTileFallbackRetainsExpandedPaletteFlagsAndFloatGeometryAtIntegerExtremes() throws Exception {
         int id = PatternAtlasRange.OBJECTS.base();
         graphicsManager.cachePatternTexture(createSolidPattern((byte) 1), id);
         for (int flags = 0; flags < 8; flags++) {
             boolean h = (flags & 1) != 0, v = (flags & 2) != 0, priority = (flags & 4) != 0;
-            graphicsManager.beginSpriteSatCollection();
-            graphicsManager.submitSpriteSatPiece(new SpritePieceRenderer.PreparedPiece(
+            // Characterize the receiving command builder, not native SAT admission:
+            // the viewport correctly rejects these offscreen integer-extreme coordinates.
+            var replayCommands = graphicsManager.buildSpriteSatReplayCommands(List.of(SpriteSatEntry.of(
                     Integer.MAX_VALUE, Integer.MIN_VALUE, 1, 1, id, 0x123, 7,
-                    h, v, priority, false, SpriteMaskReplayRole.NORMAL, 0, 1, 0, 1, null));
-            graphicsManager.endSpriteSatCollectionAndReplay();
-            assertEquals(1, graphicsManager.commands.size());
-            Object command = graphicsManager.commands.getFirst();
-            assertEquals(7, field(command, "paletteIndex"));
-            assertEquals(h, field(command, "hFlip")); assertEquals(v, field(command, "vFlip"));
-            assertEquals(priority, field(command, "piecePriority"));
-            assertEquals(false, field(command, "textureCoordinatesResolved"));
-            assertEquals((float) Integer.MAX_VALUE, getFloatField(command, "x"));
-            assertEquals(224f - (float) Integer.MIN_VALUE - 8f, getFloatField(command, "y"),
-                    "whole commands convert to float before subtracting; obtainRows has int overflow here");
-            graphicsManager.commands.forEach(GLCommandable::discard); graphicsManager.commands.clear();
+                    h, v, priority, false)));
+            try {
+                assertEquals(1, replayCommands.size());
+                Object command = replayCommands.getFirst();
+                assertEquals(7, field(command, "paletteIndex"));
+                assertEquals(h, field(command, "hFlip")); assertEquals(v, field(command, "vFlip"));
+                assertEquals(priority, field(command, "piecePriority"));
+                assertEquals(false, field(command, "textureCoordinatesResolved"));
+                assertEquals((float) Integer.MAX_VALUE, getFloatField(command, "x"));
+                assertEquals(224f - (float) Integer.MIN_VALUE - 8f, getFloatField(command, "y"),
+                        "whole commands convert to float before subtracting; obtainRows has int overflow here");
+            } finally {
+                replayCommands.forEach(GLCommandable::discard); replayCommands.clear();
+            }
         }
     }
 

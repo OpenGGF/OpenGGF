@@ -7,6 +7,7 @@ import com.openggf.game.LevelAssemblyKind;
 import com.openggf.game.LevelInitProfile;
 import com.openggf.game.LevelLoadContext;
 import com.openggf.game.LevelLoadMode;
+import com.openggf.game.patch.DelegatingGameModule;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.tests.TestEnvironment;
@@ -17,9 +18,6 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.AdditionalAnswers.delegatesTo;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 class TestInitialProcessSpritesArmingEpoch {
 
@@ -109,8 +107,12 @@ class TestInitialProcessSpritesArmingEpoch {
 
     private static LevelManager managerWithProfile(LevelInitProfile profile) {
         Sonic3kGameModule real = new Sonic3kGameModule();
-        GameModule module = mock(GameModule.class, delegatesTo(real));
-        when(module.getLevelInitProfile()).thenReturn(profile);
+        GameModule module = new DelegatingGameModule(real, "test:initial-process-sprites-epoch") {
+            @Override
+            public LevelInitProfile getLevelInitProfile() {
+                return profile;
+            }
+        };
         TestEnvironment.configureGameModuleFixture(module);
         return TestEnvironment.activeGameplayMode().getLevelManager();
     }

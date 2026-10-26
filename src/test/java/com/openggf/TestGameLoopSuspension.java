@@ -1,13 +1,18 @@
 package com.openggf;
 
 import com.openggf.configuration.SonicConfiguration;
+import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
+import com.openggf.data.RomGame;
+import com.openggf.data.RomManager;
 import com.openggf.game.GameMode;
 import com.openggf.game.MasterTitleScreen;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestFixture;
+import com.openggf.tests.RomCatalogueFixture;
+import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -16,6 +21,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -32,6 +38,7 @@ import static org.mockito.Mockito.when;
 @RequiresRom(SonicGame.SONIC_2)
 class TestGameLoopSuspension {
     private HeadlessTestFixture fixture;
+    private RomCatalogueFixture romCatalogue;
     private GameplayModeContext gameplay;
     private InputHandler input;
     private GameLoop loop;
@@ -41,6 +48,10 @@ class TestGameLoopSuspension {
     @BeforeEach
     void setUp() {
         TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_2);
+        var image = RomTestUtils.ensureSonic2RomAvailable();
+        assertNotNull(image, "the suspension and recording fixture requires the Sonic 2 ROM");
+        romCatalogue = RomCatalogueFixture.bind(SonicConfigurationService.getInstance(),
+                RomManager.getInstance(), Map.of(RomGame.S2, image.toPath()));
         fixture = HeadlessTestFixture.builder().withZoneAndAct(0, 0).build();
         gameplay = SessionManager.getCurrentGameplayMode();
         input = new InputHandler();
@@ -58,7 +69,11 @@ class TestGameLoopSuspension {
 
     @AfterEach
     void tearDown() {
-        SessionManager.clear();
+        try {
+            SessionManager.clear();
+        } finally {
+            if (romCatalogue != null) romCatalogue.close();
+        }
     }
 
     @Test

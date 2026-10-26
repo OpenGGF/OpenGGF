@@ -70,6 +70,10 @@ public record PlcProgressSnapshot(
                 -1, 0, 0, -1, 0, null, false, false, -1);
     }
 
-    public record PendingKosModule(int sourceAddress, int destinationTile) {
+    public record PendingKosModule(int sourceAddress, int destinationTile,
+                                   boolean physicalPublication) {
+        public PendingKosModule(int sourceAddress, int destinationTile) {
+            this(sourceAddress, destinationTile, false);
+        }
     }
 }

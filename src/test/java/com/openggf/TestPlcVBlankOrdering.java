@@ -32,6 +32,35 @@ import static org.mockito.Mockito.when;
 class TestPlcVBlankOrdering {
 
     @Test
+    void externalScanCannotPrepareTheAlreadyPreparedNativeFadeTokenAgain() {
+        List<String> calls = new ArrayList<>();
+        PlcLifecycleService service = new PlcLifecycleService() {
+            @Override public void serviceVBlank(PlcLifecyclePhase phase) { calls.add("service:" + phase); }
+            @Override public boolean hasPreparationBoundary(PlcLifecyclePhase phase) { return true; }
+            @Override public void prepareAfterLoop(PlcLifecyclePhase phase) { calls.add("prepare:" + phase); }
+        };
+        var coordinator = new PlcFrameLifecycleCoordinator(service);
+        var frameContext = context(mock(GameModule.class), calls);
+        try (var fade = coordinator.beginNativeBlockingFade()) {
+            org.junit.jupiter.api.Assertions.assertDoesNotThrow(() ->
+                    coordinator.runLogicalIteration(() -> { }, frame -> {
+                        LevelFrameStep.executeHardwareTimedObjectScan(frameContext, frame,
+                                PlcLifecyclePhase.PALETTE_FADE, () -> calls.add("objects"));
+                        return null;
+                    }));
+        }
+        assertEquals(List.of("service:PALETTE_FADE", "prepare:PALETTE_FADE", "vint", "objects"), calls);
+
+        // The frame API still rejects a genuine duplicate tail from its owner.
+        var frame = coordinator.latchBeforeFadeUpdate();
+        frame.claim(PlcLifecyclePhase.SPECIAL_STAGE);
+        frame.prepareAfterLoop(PlcLifecyclePhase.SPECIAL_STAGE);
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class,
+                () -> frame.prepareAfterLoop(PlcLifecyclePhase.SPECIAL_STAGE));
+        frame.finish();
+    }
+
+    @Test
     void canonicalFrameStepDispatchesGameOwnedVBlankExactlyOnce() {
         AtomicInteger dispatched = new AtomicInteger();
         com.openggf.game.LevelInitProfile profile =

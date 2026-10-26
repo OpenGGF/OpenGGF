@@ -192,7 +192,7 @@ class TestGameLoopFreezeContractWiring {
         when(level.consumeTitleCardRequest()).thenReturn(true);
         setField(gameplay, "levelManager", level);
         GameLoop loop = spy(new GameLoop(new InputHandler()));
-        doNothing().when(loop).enterTitleCard(anyInt(), anyInt());
+        suppressNativeTitlePresentation(loop);
         doReturn(false).when(loop).consumeSpecialStageRequestDuringSuppressedRunRow();
         doReturn(false).when(loop).presentPendingTitleCardDuringSuppressedRunRow();
         doReturn(false).when(loop).startPendingRespawnDuringSuppressedRunRow();
@@ -243,7 +243,7 @@ class TestGameLoopFreezeContractWiring {
         when(level.consumeTitleCardRequest()).thenReturn(true);
         setField(gameplay, "levelManager", level);
         GameLoop loop = spy(new GameLoop(new InputHandler()));
-        doNothing().when(loop).enterTitleCard(anyInt(), anyInt());
+        suppressNativeTitlePresentation(loop);
         TitleCardProvider titleCard = mock(TitleCardProvider.class);
         when(titleCard.isOverlayActive()).thenReturn(true);
         com.openggf.TitleCardLifecycleTestAccess.provider(loop, titleCard);
@@ -278,7 +278,7 @@ class TestGameLoopFreezeContractWiring {
         when(level.consumeTitleCardRequest()).thenReturn(true);
         setField(gameplay, "levelManager", level);
         GameLoop loop = spy(new GameLoop(new InputHandler()));
-        doNothing().when(loop).enterTitleCard(anyInt(), anyInt());
+        suppressNativeTitlePresentation(loop);
 
         loop.step();
 
@@ -347,6 +347,12 @@ class TestGameLoopFreezeContractWiring {
         loop.step();
         assertFalse(loop.hostedRuns.isActive());
         assertEquals(1, ended.size());
+    }
+
+    private static void suppressNativeTitlePresentation(GameLoop loop) throws Exception {
+        var titleOwner = spy(TitleCardLifecycleTestAccess.owner(loop));
+        doNothing().when(titleOwner).enterTitleCard(anyInt(), anyInt());
+        setField(loop, "titleCardLifecycle", titleOwner);
     }
 
     private static GameplayModeContext install(com.openggf.game.GameModule module) {

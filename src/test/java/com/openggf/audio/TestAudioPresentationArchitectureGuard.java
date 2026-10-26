@@ -191,7 +191,7 @@ class TestAudioPresentationArchitectureGuard {
                 Arrays.stream(AudioMutatorAccess.class.getDeclaredMethods()).filter(method -> !method.isSynthetic())
                         .peek(method -> assertEquals(method.getName().equals("bind")
                                         ? java.lang.reflect.Modifier.PUBLIC | java.lang.reflect.Modifier.STATIC
-                                        : Set.of("reset", "musicIntent", "sfxIntent").contains(method.getName())
+                                        : Set.of("reset", "musicIntent", "sfxIntent", "submit").contains(method.getName())
                                         ? 0 : java.lang.reflect.Modifier.PRIVATE, method.getModifiers()))
                         .map(java.lang.reflect.Method::getName).collect(java.util.stream.Collectors.toSet()));
         assertEquals(Set.of(Object.class.getName()), compiled.getConstructors().stream()
@@ -225,7 +225,7 @@ class TestAudioPresentationArchitectureGuard {
                 }
                 if (access.getTargetOwner().isEquivalentTo(AudioManager.class) && access.getName().equals("mutatorAccess")
                         && !(caller.isEquivalentTo(AudioManager.class)
-                        && Set.of("<init>", "mutatorAccess", "mutatorMusicIntent", "mutatorSfxIntent", "resetState")
+                        && Set.of("<init>", "mutatorAccess", "mutatorMusicIntent", "mutatorSfxIntent", "resetState", "playSecondaryNativeRequest")
                         .contains(access.getOrigin().getName())
                         && (access.getAccessType() == com.tngtech.archunit.core.domain.JavaFieldAccess.AccessType.GET
                         || access.getOrigin().getName().equals("<init>")))) escaped.add(access.toString());
@@ -239,7 +239,8 @@ class TestAudioPresentationArchitectureGuard {
                             || caller.isEquivalentTo(AudioManager.class) && (
                             name.equals("musicIntent") && origin.equals("mutatorMusicIntent")
                             || name.equals("sfxIntent") && origin.equals("mutatorSfxIntent")
-                            || name.equals("reset") && origin.equals("resetState"))
+                            || name.equals("reset") && origin.equals("resetState")
+                            || name.equals("submit") && origin.equals("playSecondaryNativeRequest"))
                             || caller.isEquivalentTo(AudioMutatorAccess.Binding.class) && (
                             name.equals("isCurrent") && origin.equals("active")
                             || name.equals("release") && origin.equals("close")
@@ -253,6 +254,11 @@ class TestAudioPresentationArchitectureGuard {
             }
         }
         assertEquals(List.of(), escaped, "owner alone mutates policy; Root and subordinate capabilities use exact operation boundaries");
+        assertEquals(1, productionClasses().get(AudioManager.class).getMethodCallsFromSelf().stream()
+                .filter(call -> call.getOrigin().getName().equals("playSecondaryNativeRequest")
+                        && call.getTargetOwner().isEquivalentTo(AudioMutatorAccess.class)
+                        && call.getName().equals("submit")).count(),
+                "one native secondary submission owns its nested feedback suppression");
         String manager = Files.readString(AUDIO_ROOT.resolve("AudioManager.java"));
         String owner = Files.readString(AUDIO_ROOT.resolve("AudioMutatorAccess.java"));
         java.util.function.UnaryOperator<String> compact = text -> text.replaceAll("\\s+", "");
@@ -273,7 +279,7 @@ class TestAudioPresentationArchitectureGuard {
         assertEquals("if(currentBinding==null||submissionDepth!=0)return;if(id>=0xE0)currentBinding.musicIntent(Kind.COMMAND,id);elsecurrentBinding.sfxIntent(id);",
                 compact.apply(methodBody(owner, "void sfxIntent(int id)")));
         assertEquals("submissionDepth++;try{action.run();}finally{submissionDepth--;}",
-                compact.apply(methodBody(owner, "private void submit(Runnable action)")));
+                compact.apply(methodBody(owner, "void submit(Runnable action)")));
         assertEquals("if(EngineCallerAccess.callerOutside(AudioMutatorAccess.class).getClassLoader()!=AudioMutatorAccess.class.getClassLoader()"
                         + "||listener.getClass().getClassLoader()!=AudioMutatorAccess.class.getClassLoader())"
                         + "thrownewSecurityException(\"Nativeaudiobindingsbelongtotheengine\");"
@@ -391,7 +397,7 @@ class TestAudioPresentationArchitectureGuard {
                         entries.contains(name) && origin.equals(name)
                         || name.equals("reset") && origin.equals("resetNonSourceState")
                         || name.equals("installBackendDiagnosticObservers") && Set.of("setBackend", "setBackendForLaunch").contains(origin)
-                        || name.equals("requestObserver") && Set.of("playMusic", "playSfx", "playMusicMailboxNativeRequest").contains(origin)
+                        || name.equals("requestObserver") && Set.of("playMusic", "playSfx", "playMusicMailboxNativeRequest", "playSecondaryNativeRequest").contains(origin)
                         || name.equals("admissionObserver") && (origin.equals("observeBlockedRingAdmission")
                                 || origin.startsWith("lambda$observeBlockedRingAdmission$"))
                         // ArchUnit attributes lambda accesses to the enclosing production method.
@@ -404,6 +410,11 @@ class TestAudioPresentationArchitectureGuard {
         }
         assertEquals(List.of(), escapedState, "owner alone reads/writes installation; token constructor only initializes subordinate state");
         assertEquals(List.of(), escapedProtocol, "only exact compatibility, emission, Binding-read and token boundaries may enter");
+        assertEquals(4, productionClasses().get(AudioManager.class).getMethodCallsFromSelf().stream()
+                .filter(call -> call.getOrigin().getName().equals("playSecondaryNativeRequest")
+                        && call.getTargetOwner().getName().equals(owner.getName())
+                        && call.getName().equals("requestObserver")).count(),
+                "the four native-secondary branches retain their exact observer reads");
 
         String manager = Files.readString(AUDIO_ROOT.resolve("AudioManager.java"));
         String body = methodBody(manager, "private final class DiagnosticInstallation");
@@ -454,7 +465,12 @@ class TestAudioPresentationArchitectureGuard {
         String subordinate = methodBody(manager, "private final class DiagnosticObserverLease");
         assertEquals("returndiagnosticInstallation.active(this);", compact.apply(methodBody(subordinate, "public boolean active()")));
         assertEquals("diagnosticInstallation.close(this);", compact.apply(methodBody(subordinate, "public void close()")));
-        assertEquals(7, manager.split("diagnosticInstallation.requestObserver\\(\\).onRequested", -1).length - 1);
+        String nativeSecondary = methodBody(manager, "void playSecondaryNativeRequest(int nativeId)");
+        String requestEmission = "diagnosticInstallation.requestObserver\\(\\).onRequested";
+        int secondaryEmissions = nativeSecondary.split(requestEmission, -1).length - 1;
+        assertEquals(4, secondaryEmissions, "each native-secondary branch reports its one raw request");
+        assertEquals(7, manager.split(requestEmission, -1).length - 1 - secondaryEmissions,
+                "the original seven non-secondary emission sites remain exact");
         String reset = compact.apply(methodBody(manager, "private void resetNonSourceState()"));
         assertTrue(reset.startsWith("this.soundMap=null;diagnosticInstallation.reset();logicalPublication.setRingLeft(true);"));
     }
@@ -762,6 +778,31 @@ class TestAudioPresentationArchitectureGuard {
                     .map(Object::toString).forEach(foreignAccesses::add);
         }
         assertTrue(foreignAccesses.isEmpty(), () -> "source state accessed outside its owner: " + foreignAccesses);
+        var matchedIngress = AudioManager.class.getDeclaredMethod("installMatchedSource",
+                com.openggf.data.Rom.class, GameAudioProfile.class);
+        assertEquals(java.lang.reflect.Modifier.SYNCHRONIZED, matchedIngress.getModifiers(),
+                "the matched-source ingress uses the existing manager monitor without extending the creator API");
+        assertEquals(void.class, matchedIngress.getReturnType());
+        var matchedOperation = owner.getDeclaredMethod("installMatchedSource",
+                com.openggf.data.Rom.class, GameAudioProfile.class);
+        assertEquals(java.lang.reflect.Modifier.PRIVATE, matchedOperation.getModifiers());
+        String manager = Files.readString(AUDIO_ROOT.resolve("AudioManager.java"));
+        java.util.function.UnaryOperator<String> compact = text -> text.replaceAll("\\s+", "");
+        assertEquals("sourcePublication.installMatchedSource(rom,audioProfile);",
+                compact.apply(methodBody(manager, "synchronized void installMatchedSource(")));
+        String operation = compact.apply(methodBody(
+                methodBody(manager, "private final class SourcePublication"),
+                "private void installMatchedSource("));
+        assertTrue(operation.startsWith("beginSourceMutation();try{BaseAudioSourceprevious=baseAudioSource;"
+                        + "if(previous.profile()==audioProfile&&previous.rom()==rom){return;}"),
+                "mutation admission precedes even the identical or absent pair no-op");
+        for (String boundary : List.of("nextGeneration(", "createSmpsLoader(", "loadDac(",
+                "getSequencerConfig(", "prepareBaseCoordination(", "applyBaseCoordination(",
+                "publishPresentationCoordHandlers(", "baseAudioSource=newBaseAudioSource(",
+                "mutatorMusicIntent(AudioMutatorAccess.Kind.SOURCE,0)", "profilePublished(")) {
+            assertEquals(1, operation.split(Pattern.quote(boundary), -1).length - 1, boundary);
+        }
+        assertTrue(operation.endsWith("}finally{endSourceMutation();}"));
     }
 
     @Test
@@ -788,14 +829,24 @@ class TestAudioPresentationArchitectureGuard {
         added.removeAll(stored);
         System.out.println("SourcePublication live low-level records: " + live.size()
                 + "\nRemoved: " + removed + "\nAdded: " + added);
-        List<String> expected = new ArrayList<>(stored);
-        if (expected.remove("Method <com.openggf.audio.AudioManager.reinstallsInstalledSource(com.openggf.audio.GameAudioProfile, com.openggf.data.Rom)> has parameter of type <com.openggf.data.Rom> in (AudioManager.java:0)")) {
-            expected.add("Method <com.openggf.audio.AudioManager$SourcePublication.reinstallsInstalledSource(com.openggf.audio.GameAudioProfile, com.openggf.data.Rom)> has parameter of type <com.openggf.data.Rom> in (AudioManager.java:0)");
-            expected.add("Method <com.openggf.audio.AudioManager$SourcePublication.setRom(com.openggf.data.Rom)> has parameter of type <com.openggf.data.Rom> in (AudioManager.java:0)");
-        }
-        expected.sort(String::compareTo);
-        assertEquals(expected, live, "only the reviewed source-publication ROM records may differ, including multiplicity");
-        assertEquals(120, live.size());
+        // Exactly three intentional asset-reader boundaries were reviewed after
+        // the strict rule rejected them. The inherited debt remains byte-pinned
+        // after line-number normalization; this grants no general layer permission.
+        List<String> reviewedDelta = List.of(
+                "Method <com.openggf.audio.AudioManager.installMatchedSource(com.openggf.data.Rom, com.openggf.audio.GameAudioProfile)> has parameter of type <com.openggf.data.Rom> in (AudioManager.java:0)",
+                "Method <com.openggf.audio.AudioManager$SourcePublication.installMatchedSource(com.openggf.data.Rom, com.openggf.audio.GameAudioProfile)> has parameter of type <com.openggf.data.Rom> in (AudioManager.java:0)",
+                "Method <com.openggf.audio.AudioManagerInternalAccess.installMatchedSource(com.openggf.audio.AudioManager, com.openggf.data.Rom, com.openggf.audio.GameAudioProfile)> has parameter of type <com.openggf.data.Rom> in (AudioManagerInternalAccess.java:0)");
+        assertEquals(123, stored.size());
+        assertTrue(stored.containsAll(reviewedDelta));
+        List<String> inherited = stored.stream().filter(value -> !reviewedDelta.contains(value)).toList();
+        assertEquals(120, inherited.size());
+        byte[] inheritedBytes = (String.join("\n", inherited) + "\n")
+                .getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        assertEquals("ad9012cf9b961a727824f0a8cff98a9a789f89017a31cd0830206d6713b9f7ca", java.util.HexFormat.of().formatHex(
+                java.security.MessageDigest.getInstance("SHA-256").digest(inheritedBytes)),
+                "all 120 inherited records remain exact; only the three reviewed records were added");
+        assertEquals(stored, live, "live dependencies must match the exact reviewed inventory, including multiplicity");
+        assertEquals(123, live.size());
     }
 
     @Test

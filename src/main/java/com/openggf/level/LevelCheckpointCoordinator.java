@@ -42,6 +42,12 @@ final class LevelCheckpointCoordinator {
         }
     }
 
+    void restartFromStartAfterDeath() {
+        clear();
+        levelManager.restartCurrentLevelAfterDeath();
+        levelManager.skipPendingInitialTitleCardPresentation();
+    }
+
     RespawnState state() {
         return checkpointState;
     }
@@ -61,6 +67,17 @@ final class LevelCheckpointCoordinator {
         pendingPersistentRespawn = null;
         persistentRespawnForCameraSnap = state;
         return state;
+    }
+
+    /**
+     * InitObjectSystem retains the kept table until the later camera snap.
+     * Read it for InitRings without consuming the object-placement restore.
+     * ROM sub_EB1A/loc_EB30 preserves Ring_status_table with Respawn_table_keep.
+     */
+    long[] ringStatusTableForLoad(long[] bigRingReturnRingStatusTable) {
+        return persistentRespawnForCameraSnap != null
+                ? persistentRespawnForCameraSnap.ringStatusBits()
+                : bigRingReturnRingStatusTable;
     }
 
     PersistentRespawnState consumePersistentRespawnForCameraSnap() {
@@ -106,6 +123,7 @@ final class LevelCheckpointCoordinator {
         // bonus/big-ring returns separately restore their captured high-water afterward.
         checkpointState.restoreStarPostActivationMark(ctx.getCheckpointIndex());
         if (checkpointState instanceof CheckpointState cs) {
+            com.openggf.game.CheckpointBackgroundScrollAccess.restore(ctx, cs);
             cs.saveRingState(ctx.getCheckpointRings(), ctx.getCheckpointRingExtraLifeFlags());
             if (ctx.hasWaterState()) {
                 cs.saveWaterState(ctx.getCheckpointWaterLevel(), ctx.getCheckpointWaterRoutine());

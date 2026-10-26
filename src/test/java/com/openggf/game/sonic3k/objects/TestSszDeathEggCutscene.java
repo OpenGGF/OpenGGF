@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.GameServices;
+import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.palette.PaletteWriteSupport;
 import com.openggf.game.rewind.RewindSnapshotDiff;
 import com.openggf.level.objects.ObjectSpawn;
@@ -87,9 +88,17 @@ class TestSszDeathEggCutscene {
         var mask = manager.activeObjectsOfType(SszDeathEggChild.class).getFirst();
         mask.update(40, null);
         var graphics = services.graphicsManager();
+        var renderManager = services.renderManager();
+        assertNotNull(renderManager, "the loaded SSZ scene owns its object render manager");
+        var renderer = renderManager.getRenderer(Sonic3kObjectArtKeys.SSZ_DEATH_EGG_SMALL);
+        assertNotNull(renderer, "the loaded SSZ scene supplies the Death Egg renderer");
+        assertTrue(renderer.isReady(), "Death Egg art is ready before SAT collection");
         var provider = new com.openggf.game.sonic3k.Sonic3kZoneFeatureProvider();
         assertTrue(provider.useSpriteSatMasking(10), "loc_65B24 requires the SAT mask pass");
-        var frame = com.openggf.level.render.SpritePresentationRenderer.prepare(graphics, 0, 0, () -> {
+        // SAT admission uses this presentation origin; the scene is at $0200/$0Cxx.
+        int cameraX = 0x100;
+        int cameraY = 0xC00;
+        var frame = com.openggf.level.render.SpritePresentationRenderer.prepare(graphics, cameraX, cameraY, () -> {
             graphics.beginSpriteSatCollection();
             graphics.setCurrentSpriteSatBucket(mask.getPriorityBucket());
             mask.appendRenderCommands(new java.util.ArrayList<>());
@@ -99,7 +108,7 @@ class TestSszDeathEggCutscene {
         });
         assertFalse(frame.tiles().isEmpty(), "the egg has risen above the skyline");
         // Map_SpriteMask frame $C starts at -$30; the mask does not rise with the egg.
-        assertTrue(frame.tiles().stream().allMatch(t -> t.y() + t.rowEnd() <= 0xC38),
+        assertTrue(frame.tiles().stream().allMatch(t -> t.y() + t.rowEnd() + cameraY <= 0xC38),
                 "no Death Egg pixels may draw through the terrain below the skyline");
         assertFalse(egg.isHighPriority());
     }

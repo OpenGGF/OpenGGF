@@ -5,8 +5,8 @@ import com.openggf.game.LevelGamestate;
 import com.openggf.game.session.SessionManager;
 import com.openggf.tests.rules.SonicGame;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
-import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
+import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
@@ -32,6 +32,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.Mockito.*;
 
 public class TestMegaChopperBadnikInstance {
 
@@ -328,6 +331,287 @@ public class TestMegaChopperBadnikInstance {
         assertEquals(0, main.getForcedInputMask());
     }
 
+    @Test
+    public void visualReleaseDropsOnlyAcquiredChannelsAndPreservesNativeCarry() throws Exception {
+        var chopper = capturingChopper();
+        var player = spy(mainPlayer());
+        var unrelated = spy(new TestablePlayableSprite("tails", (short) 0x200, (short) 0x180));
+        GameServices.camera().setFocusedSprite(player);
+        unrelated.setControlLocked(true);
+        unrelated.setForcedInputMask(TestablePlayableSprite.INPUT_DOWN);
+        touch(chopper, player);
+        chopper.update(0, player);
+        player.setDirectionalInputPressed(false, false, true, false);
+        chopper.update(1, player);
+        assertEquals(TestablePlayableSprite.INPUT_LEFT, player.getForcedInputMask());
+        player.setForcedJumpPress(true);
+        var nativeBefore = nativeScalars(chopper);
+        int logicalBefore = player.getLogicalInputState();
+        clearInvocations(player, unrelated);
+
+        chopper.releasePlayersForVisualDirection();
+
+        verify(player).setForcedInputMask(0);
+        verify(player).setControlLocked(false);
+        verify(player, never()).clearForcedInputMask();
+        verify(player, never()).clearLogicalInputState();
+        verifyNoInteractions(unrelated);
+        assertTrue(player.isForcedJumpPress(), "visual release cannot reset another input latch");
+        assertEquals(logicalBefore, player.getLogicalInputState());
+        assertEquals(nativeBefore, nativeScalars(chopper));
+        assertSame(player, readField(chopper, "capturedPlayer"));
+        assertEquals(true, readField(chopper, "mainControlsLocked"));
+        assertTrue(unrelated.isControlLocked());
+        assertEquals(TestablePlayableSprite.INPUT_DOWN, unrelated.getForcedInputMask());
+        clearInvocations(player, unrelated);
+        chopper.releasePlayersForVisualDirection();
+        verifyNoInteractions(player, unrelated);
+    }
+
+    @Test
+    public void sidekickAndSimultaneousSelectorsDoNotOwnPreexistingControls() throws Exception {
+        for (int selector : List.of(2, 3)) {
+            var chopper = capturingChopper();
+            var main = spy(mainPlayer());
+            var sidekick = spy(new TestablePlayableSprite("tails", (short) 0x200, (short) 0x180));
+            sidekick.setRingCount(10);
+            GameServices.camera().setFocusedSprite(main);
+            chopper.setServices(new RecordingServices() {
+                @Override public com.openggf.camera.Camera camera() { return GameServices.camera(); }
+            });
+            var selected = selector == 2 ? sidekick : main;
+            selected.setControlLocked(true);
+            selected.setForcedInputMask(TestablePlayableSprite.INPUT_DOWN);
+            if (selector == 3) touch(chopper, main);
+            touch(chopper, sidekick);
+            chopper.update(0, main);
+            assertEquals("CARRY", readState(chopper));
+            assertSame(selected, readField(chopper, "capturedPlayer"));
+            assertEquals(false, readField(chopper, "mainControlsLocked"));
+            var nativeBefore = nativeScalars(chopper);
+            clearInvocations(main, sidekick);
+
+            chopper.releasePlayersForVisualDirection();
+            chopper.releasePlayersForVisualDirection();
+
+            verifyNoInteractions(main, sidekick);
+            assertEquals(nativeBefore, nativeScalars(chopper));
+            assertTrue(selected.isControlLocked());
+            assertEquals(TestablePlayableSprite.INPUT_DOWN, selected.getForcedInputMask());
+            clearInvocations(main, sidekick);
+            chopper.onUnload();
+            verifyNoInteractions(main, sidekick);
+            assertNull(readField(chopper, "capturedPlayer"));
+            assertEquals(nativeBefore, nativeScalars(chopper));
+        }
+    }
+
+    @Test
+    public void resumedForcedInputDoesNotReacquireSomebodyElsesControlLock() throws Exception {
+        var chopper = capturingChopper();
+        var player = spy(mainPlayer());
+        GameServices.camera().setFocusedSprite(player);
+        touch(chopper, player);
+        chopper.update(0, player);
+        player.setDirectionalInputPressed(false, false, true, false);
+        chopper.update(1, player);
+        chopper.releasePlayersForVisualDirection();
+        assertEquals(true, readField(chopper, "mainControlsLocked"));
+
+        // Free resumes CARRY. Only its existing forced-mask writer runs again.
+        player.setControlLocked(true); // A different owner acquired the lock.
+        player.setDirectionalInputPressed(false, false, false, true);
+        chopper.update(2, player);
+        assertEquals(TestablePlayableSprite.INPUT_RIGHT, player.getForcedInputMask());
+        var nativeBefore = nativeScalars(chopper);
+        clearInvocations(player);
+        chopper.releasePlayersForVisualDirection();
+        verify(player).setForcedInputMask(0);
+        verify(player, never()).setControlLocked(anyBoolean());
+        assertTrue(player.isControlLocked());
+        assertEquals(nativeBefore, nativeScalars(chopper));
+        clearInvocations(player);
+        chopper.releasePlayersForVisualDirection();
+        verifyNoInteractions(player);
+    }
+
+    @Test
+    public void nativeZeroPublicationAndNativeReleaseRelinquishTheirMetadata() throws Exception {
+        var chopper = capturingChopper();
+        var player = spy(mainPlayer());
+        GameServices.camera().setFocusedSprite(player);
+        touch(chopper, player);
+        chopper.update(0, player);
+        player.setDirectionalInputPressed(false, false, true, false);
+        chopper.update(1, player);
+        player.setDirectionalInputPressed(false, false, false, false);
+        chopper.update(2, player);
+        player.setForcedInputMask(TestablePlayableSprite.INPUT_DOWN);
+        clearInvocations(player);
+        chopper.releasePlayersForVisualDirection();
+        verify(player).setControlLocked(false);
+        verify(player, never()).setForcedInputMask(anyInt());
+        assertEquals(TestablePlayableSprite.INPUT_DOWN, player.getForcedInputMask());
+
+        player.setAnimationId(Sonic3kAnimationIds.ROLL.id());
+        chopper.update(3, player);
+        assertEquals("RELEASED", readState(chopper));
+        assertEquals(false, readField(chopper, "mainControlsLocked"));
+        assertNull(readField(chopper, "capturedPlayer"));
+        assertFalse(player.isControlLocked());
+        assertEquals(0, player.getForcedInputMask());
+        player.setControlLocked(true);
+        player.setForcedInputMask(TestablePlayableSprite.INPUT_UP);
+        clearInvocations(player);
+        chopper.releasePlayersForVisualDirection();
+        verifyNoInteractions(player);
+    }
+
+    @Test
+    public void neverAcquiredAndNativeUnloadKeepTheirDistinctContracts() throws Exception {
+        var chopper = capturingChopper();
+        var player = spy(mainPlayer());
+        GameServices.camera().setFocusedSprite(player);
+        player.setControlLocked(true);
+        player.setForcedInputMask(TestablePlayableSprite.INPUT_DOWN);
+        clearInvocations(player);
+        chopper.releasePlayersForVisualDirection();
+        verifyNoInteractions(player);
+        touch(chopper, player);
+        chopper.update(0, player);
+        player.setDirectionalInputPressed(false, false, true, false);
+        chopper.update(1, player);
+        var beforeUnload = nativeScalars(chopper);
+        chopper.onUnload();
+        assertNull(readField(chopper, "capturedPlayer"));
+        assertEquals(false, readField(chopper, "mainControlsLocked"));
+        assertEquals("CARRY", readState(chopper), "native unload does not start released flight");
+        var expected = new java.util.LinkedHashMap<>(beforeUnload);
+        expected.put("MegaChopperBadnikInstance.mainControlsLocked", false);
+        assertEquals(expected, nativeScalars(chopper));
+        assertFalse(player.isControlLocked());
+        assertEquals(0, player.getForcedInputMask());
+        clearInvocations(player);
+        chopper.releasePlayersForVisualDirection();
+        verifyNoInteractions(player);
+    }
+
+    @Test
+    public void freshIdentityRestoreDistinguishesBothChannelsBeforeDuringAndAfterOwnershipTwice() throws Exception {
+        var source = capturingChopper();
+        var original = spy(mainPlayer());
+        GameServices.camera().setFocusedSprite(original);
+        var captureContext = playerContext(original);
+        var before = source.captureRewindState(captureContext);
+        touch(source, original);
+        source.update(0, original);
+        var controlOnly = source.captureRewindState(captureContext);
+        original.setDirectionalInputPressed(false, false, true, false);
+        source.update(1, original);
+        var both = source.captureRewindState(captureContext);
+        var nativeCarrying = nativeScalars(source);
+        source.releasePlayersForVisualDirection();
+        var neither = source.captureRewindState(captureContext);
+        original.setDirectionalInputPressed(false, false, false, true);
+        source.update(2, original);
+        var forcedOnly = source.captureRewindState(captureContext);
+        var nativeResumed = nativeScalars(source);
+        original.setAnimationId(Sonic3kAnimationIds.ROLL.id());
+        source.update(3, original);
+        var nativeReleased = source.captureRewindState(captureContext);
+        record Phase(com.openggf.level.objects.PerObjectRewindSnapshot snapshot,
+                boolean controlLock, boolean forcedInput, boolean carrying) {}
+        var phases = List.of(new Phase(before, false, false, false),
+                new Phase(controlOnly, true, false, true), new Phase(both, true, true, true),
+                new Phase(neither, false, false, true), new Phase(forcedOnly, false, true, true),
+                new Phase(nativeReleased, false, false, false));
+
+        for (int replay = 0; replay < 2; replay++) {
+            for (var phase : phases) {
+                var restored = capturingChopper();
+                var replacement = spy(new TestablePlayableSprite("sonic", (short) 0x200, (short) 0x180));
+                var unrelated = spy(new TestablePlayableSprite("tails", (short) 0x200, (short) 0x180));
+                replacement.setRingCount(10);
+                replacement.setControlLocked(true);
+                replacement.setForcedInputMask(TestablePlayableSprite.INPUT_DOWN);
+                var restoreContext = playerContext(replacement);
+                restored.restoreRewindState(phase.snapshot(), restoreContext);
+                assertSame(phase.carrying() ? replacement : null,
+                        readField(restored, "capturedPlayer"));
+                var nativeBefore = nativeScalars(restored);
+                clearInvocations(original, replacement, unrelated);
+                restored.releasePlayersForVisualDirection();
+                verify(replacement, times(phase.forcedInput() ? 1 : 0)).setForcedInputMask(0);
+                verify(replacement, times(phase.controlLock() ? 1 : 0)).setControlLocked(false);
+                verify(replacement, never()).clearForcedInputMask();
+                verifyNoInteractions(original, unrelated);
+                assertEquals(nativeBefore, nativeScalars(restored));
+                assertEquals(!phase.controlLock(), replacement.isControlLocked());
+                assertEquals(phase.forcedInput() ? 0 : TestablePlayableSprite.INPUT_DOWN,
+                        replacement.getForcedInputMask());
+                clearInvocations(replacement);
+                restored.releasePlayersForVisualDirection();
+                verifyNoInteractions(replacement);
+            }
+            var replayed = capturingChopper();
+            var replacement = spy(new TestablePlayableSprite("sonic", (short) 0x200, (short) 0x180));
+            replacement.setRingCount(10);
+            GameServices.camera().setFocusedSprite(replacement);
+            replayed.restoreRewindState(before, playerContext(replacement));
+            touch(replayed, replacement);
+            replayed.update(0, replacement);
+            replacement.setDirectionalInputPressed(false, false, true, false);
+            replayed.update(1, replacement);
+            assertEquals(nativeCarrying, nativeScalars(replayed));
+            assertTrue(replacement.isControlLocked());
+            assertEquals(TestablePlayableSprite.INPUT_LEFT, replacement.getForcedInputMask());
+            replayed.releasePlayersForVisualDirection();
+            replacement.setControlLocked(true);
+            replacement.setDirectionalInputPressed(false, false, false, true);
+            replayed.update(2, replacement);
+            assertEquals(nativeResumed, nativeScalars(replayed));
+            clearInvocations(replacement);
+            replayed.releasePlayersForVisualDirection();
+            verify(replacement).setForcedInputMask(0);
+            verify(replacement, never()).setControlLocked(anyBoolean());
+            replacement.setAnimationId(Sonic3kAnimationIds.ROLL.id());
+            replayed.update(3, replacement);
+            assertEquals("RELEASED", readState(replayed));
+            assertFalse(replacement.isControlLocked());
+            assertEquals(0, replacement.getForcedInputMask());
+        }
+    }
+
+    private static com.openggf.game.rewind.schema.RewindCaptureContext playerContext(TestablePlayableSprite player) {
+        var identities = new com.openggf.game.rewind.identity.RewindIdentityTable();
+        identities.registerPlayer(player, com.openggf.game.rewind.identity.PlayerRefId.mainPlayer());
+        return com.openggf.game.rewind.schema.RewindCaptureContext.withIdentityTable(identities);
+    }
+
+    private static void touch(MegaChopperBadnikInstance chopper, TestablePlayableSprite player) {
+        chopper.onTouchResponse(player,
+                new TouchResponseResult(0x17, 0x20, 0x20, TouchCategory.SPECIAL), 0);
+    }
+
+    private static Object readField(Object target, String name) throws Exception {
+        var field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        return field.get(target);
+    }
+
+    private static java.util.Map<String, Object> nativeScalars(Object target) throws Exception {
+        var state = new java.util.LinkedHashMap<String, Object>();
+        for (Class<?> type = target.getClass(); type != Object.class; type = type.getSuperclass()) {
+            for (var field : type.getDeclaredFields()) {
+                if (java.lang.reflect.Modifier.isStatic(field.getModifiers())) continue;
+                if (!field.getType().isPrimitive() && !field.getType().isEnum()) continue;
+                field.setAccessible(true);
+                state.put(type.getSimpleName() + "." + field.getName(), field.get(target));
+            }
+        }
+        return state;
+    }
+
     private MegaChopperBadnikInstance capturingChopper() {
         MegaChopperBadnikInstance megaChopper = new MegaChopperBadnikInstance(
                 new ObjectSpawn(0x208, 0x180, Sonic3kObjectIds.MEGA_CHOPPER, 0, 0, false, 0));
@@ -362,6 +646,8 @@ public class TestMegaChopperBadnikInstance {
 
         assertEquals("CARRY", readState(megaChopper),
                 "MegaChopper native P2 fallback should resolve through ObjectPlayerQuery");
+        assertFalse(nativeP2.isControlLocked(),
+                "only collision_property 1 writes Ctrl_1_locked (sonic3k.asm:184431-184435)");
 
         assertFalse(nativeP2.isControlLocked(), "only P1-alone capture locks controls");
         nativeP2.setCentreX((short) 0x220);

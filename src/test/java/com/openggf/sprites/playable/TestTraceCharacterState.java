@@ -117,4 +117,60 @@ class TestTraceCharacterState {
         assertEquals(0x02, state.routine(),
                 "S3K's sampled RideObject landing closure publishes the normal routine");
     }
+
+    @Test
+    void s3kDrowningPlayerExportsDedicatedDrownRoutine() {
+        TestEnvironment.configureGameModuleFixture(new com.openggf.game.sonic3k.Sonic3kGameModule());
+        Tails tails = drowningCpuTails(GameRules.SONIC_3K);
+
+        // AirCountdown_ReduceAir writes routine $C to the drowning player
+        // (sonic3k.asm:33539-33573); Sonic_Index/Tails_Index dispatch $C to the
+        // drowned fall (loc_125AC / loc_15810).
+        assertEquals(0x0C, TraceCharacterState.routineFromSprite(tails));
+        assertEquals(0x0C, TraceCharacterState.fromSprite(tails).routine());
+        assertEquals(NativePlayableRoutine.DROWN, NativePlayableRoutine.resolve(tails));
+        assertEquals(0x0C, NativePlayableRoutine.DROWN.byteValue());
+    }
+
+    @Test
+    void s1AndS2DrowningPlayersKeepTheControlRoutine() {
+        // S1 Drown_Count and S2 Obj0A both write routine 2 after starting the
+        // drown animation ("0A LZ Drowning Countdown.asm":266; s2.asm:42172).
+        TestEnvironment.configureGameModuleFixture(new com.openggf.game.sonic1.Sonic1GameModule());
+        assertEquals(0x02, TraceCharacterState.routineFromSprite(drowningCpuTails(GameRules.SONIC_1)));
+
+        TestEnvironment.configureGameModuleFixture(new com.openggf.game.sonic2.Sonic2GameModule());
+        assertEquals(0x02, TraceCharacterState.routineFromSprite(drowningCpuTails(GameRules.SONIC_2)));
+    }
+
+    @Test
+    void deathAfterTheDrownSequencePublishesRoutineSix() {
+        TestEnvironment.configureGameModuleFixture(new com.openggf.game.sonic3k.Sonic3kGameModule());
+        Tails tails = drowningCpuTails(GameRules.SONIC_3K);
+        tails.setDead(true);
+
+        // loc_1857C replaces $C with routine 6 when the drown timer expires
+        // (sonic3k.asm:33569-33575).
+        assertEquals(0x06, TraceCharacterState.routineFromSprite(tails));
+        assertEquals(NativePlayableRoutine.DEAD, NativePlayableRoutine.resolve(tails));
+    }
+
+    @Test
+    void s3kHurtPlayerThatIsNotDrowningStillPublishesRoutineFour() {
+        TestEnvironment.configureGameModuleFixture(new com.openggf.game.sonic3k.Sonic3kGameModule());
+        Tails tails = new Tails("tails_p2", (short) 0x0100, (short) 0x0200);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
+        tails.setHurt(true);
+
+        assertEquals(0x04, TraceCharacterState.routineFromSprite(tails));
+    }
+
+    private static Tails drowningCpuTails(GameRules rules) {
+        Tails tails = new Tails("tails_p2", (short) 0x2F49, (short) 0x06B2);
+        tails.setGameRulesForTest(rules);
+        tails.setCpuControlled(true);
+        assertTrue(tails.applyDrownDeath());
+        assertTrue(tails.isDrowningPreDeath());
+        return tails;
+    }
 }

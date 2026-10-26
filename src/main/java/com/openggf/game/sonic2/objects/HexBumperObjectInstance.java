@@ -299,12 +299,17 @@ public class HexBumperObjectInstance extends AbstractObjectInstance
 
     @Override
     public boolean isCustomOutOfRange(int cameraX) {
+        if (com.openggf.game.competition.NativeCompetitionRoster.from(services().worldSession()) != null) {
+            // ObjD7_MainContinued branches to DisplaySprite before either
+            // endpoint test in native competition (loc_2C5C4, s2.asm:60076-60094).
+            return false;
+        }
         if ((spawn.subtype() & 0xFF) != SUBTYPE_MOVING) {
             return isRomOutOfRange(getCurrentX(), cameraX);
         }
         // Moving ObjD7 does not tail-call MarkObjGone. ROM tests both movement
         // bounds, objoff_30/objoff_32, and deletes only when both are outside
-        // the camera window (docs/s2disasm/s2.asm:59489-59510).
+        // the camera window (loc_2C5C4, docs/s2disasm/s2.asm:60076-60094).
         return isRomOutOfRange(minX, cameraX) && isRomOutOfRange(maxX, cameraX);
     }
 

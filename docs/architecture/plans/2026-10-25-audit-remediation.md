@@ -681,3 +681,14 @@ and late movement dispatch. Preserve upstream owners and adapt only missing
 semantics/tests in the parent-coordinated receiving tree. No merge/rebase/reset
 or new ObjectManager API was made here. Current-upstream continuity remains
 unmeasured; parent retains its independent review and combined smoke.
+
+## Sideways council reconvened: deliberate compatibility boundary
+
+The user subsequently rejected memory emulation for this repair. The reconvened
+Astra/Fable/Sol/Opus council recommends fixing invalid child ownership without
+reproducing Obj7A failed-allocation writes into Tails storage. The
+[updated Sideways design](../designs/2026-10-25-s2-sideways-storage.md#reconvened-council-bounded-engine-repair-october-25)
+supersedes the physical-storage implementation target, preserves its research,
+and records admission-side-effect, independent-retirement, rewind and policy
+obligations for the implementing agent. Pair-removal semantics remain unresolved;
+this documentation update lands no runtime fix and changes no trace comparison.

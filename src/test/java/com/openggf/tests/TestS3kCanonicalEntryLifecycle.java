@@ -217,14 +217,23 @@ class TestS3kCanonicalEntryLifecycle {
 
     static void assertRomStart(Entry row) throws IOException {
         // Shipped SpawnLevelMainSprites selects the character table. The eight
-        // canonical bindings have no bootstrap intro-position override.
+        // canonical bindings use that table, except ICZ1_ScreenInit's fresh
+        // Knuckles arrival which overwrites Y=$65C with $660 ($53608-$53648).
+        boolean iczArrival = row.main().equals("knuckles") && row.binding().zone() == 5
+                && row.binding().act() == 0;
+        if (iczArrival) {
+            // Execute the genuine deferred ScreenInit/Load_Sprites/Process_Sprites
+            // boundary before comparing its native override. Its first swing returns zero.
+            assertTrue(GameServices.level().consumePendingInitialProcessSpritesPass());
+        }
         int table = row.main().equals("knuckles") ? Sonic3kConstants.KNUX_START_LOCATIONS_ADDR
                 : Sonic3kConstants.SONIC_START_LOCATIONS_ADDR;
         int address = table + (row.binding().zone() * 2 + row.binding().act()) * 4;
         var rom = GameServices.rom().getRom();
         var main = GameServices.sprites().getMainPlayable();
         assertEquals(rom.read16BitAddr(address), main.getCentreX() & 0xFFFF, "ROM start X");
-        assertEquals(rom.read16BitAddr(address + 2), main.getCentreY() & 0xFFFF, "ROM start Y");
+        int expectedY = iczArrival ? 0x660 : rom.read16BitAddr(address + 2);
+        assertEquals(expectedY, main.getCentreY() & 0xFFFF, "ROM start Y / native ScreenInit override");
     }
 
     /**

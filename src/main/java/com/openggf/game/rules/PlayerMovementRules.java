@@ -77,40 +77,7 @@ public record PlayerMovementRules(
          * lands has the charge animation replaced by Walk on the landing frame while
          * the ROM holds it until release — visible for as long as the charge is held.
          */
-        boolean landingWalkWriteSkippedWhileSpindashing,
-        /** S3K routine $0C owns sinking; S1/S2 keep motion in their fixed countdown slot. */
-        boolean drowningUsesPrimaryRoutine) {
-
-    /** Retains the existing S1/S2 fixed-sidecar default for candidate API callers. */
-    public PlayerMovementRules(
-            boolean fixedAnglePosThreshold,
-            boolean inputAlwaysCapsGroundSpeed,
-            boolean angleDiffCardinalSnap,
-            PlayerGroundPoseRules groundPose,
-            PlayerAirMovementRules air,
-            boolean slopeResistStartsFromRest,
-            boolean slopeRepelChecksOnObject,
-            boolean slopeRepelUsesS3kSlipKick,
-            PlayerLandingRules landing,
-            PlayerLevelBoundaryRules levelBoundary,
-            boolean rollingJumpPinballGateRequiresSpindashFlag,
-            boolean rollStopsBelowMinimumSpeed,
-            boolean rollControlledDecelUsesEffectiveDecelQuarter,
-            boolean controlLockLatchesLogicalInput,
-            boolean hurtRoutineLatchesLogicalInput,
-            boolean waterExitBoostSkipsFastUpwardVelocity,
-            boolean slopeResistAppliesAtZeroInertia,
-            boolean tailsRollSpeedUsesEffectiveDecelQuarter,
-            boolean waterVelocityChangeGatedByObjectControl,
-            boolean landingWalkWriteSkippedWhileSpindashing) {
-        this(
-                fixedAnglePosThreshold, inputAlwaysCapsGroundSpeed, angleDiffCardinalSnap, groundPose,
-                air, slopeResistStartsFromRest, slopeRepelChecksOnObject, slopeRepelUsesS3kSlipKick,
-                landing, levelBoundary, rollingJumpPinballGateRequiresSpindashFlag, rollStopsBelowMinimumSpeed,
-                rollControlledDecelUsesEffectiveDecelQuarter, controlLockLatchesLogicalInput, hurtRoutineLatchesLogicalInput, waterExitBoostSkipsFastUpwardVelocity,
-                slopeResistAppliesAtZeroInertia, tailsRollSpeedUsesEffectiveDecelQuarter, waterVelocityChangeGatedByObjectControl, landingWalkWriteSkippedWhileSpindashing,
-                false);
-    }
+        boolean landingWalkWriteSkippedWhileSpindashing) {
 
     public boolean objectSolidHurtLandingRetainsRoutine() {
         return landing.objectSolidHurtLandingRetainsRoutine();

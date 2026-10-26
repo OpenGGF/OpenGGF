@@ -7,6 +7,8 @@ import com.openggf.game.GameServices;
 import com.openggf.game.patch.DelegatingGameModule;
 import com.openggf.game.session.SessionManager;
 import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.rules.RequiresRom;
+import com.openggf.tests.rules.SonicGame;
 import com.openggf.tools.GameplayCaptureSession;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -14,14 +16,17 @@ import org.junit.jupiter.api.Test;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /** Declared local checkpoint/progress, real patched entry/results/return; no campaign claim. */
+@RequiresRom(SonicGame.SONIC_2)
 class TestKis2SpecialStageControllerLifecycle {
     @AfterEach void cleanup() { SessionManager.clear(); TestEnvironment.resetAll(); }
 
     @Test void entryResultsReturnKeepsChipProvider() throws Exception {
         TestEnvironment.resetAll();
         Kis2TestRoms.configureExplicitCatalogue(SonicConfigurationService.getInstance());
+        assumeTrue(Kis2TestRoms.lockOnDumpOrNull() != null, "KiS2 lock-on dump required");
         assertNotNull(Kis2TestRoms.lockOnDumpOrNull(), "required KiS2 lock-on image");
         var settings = new GameplayCaptureSession.Settings(320, "knuckles", "", "off", null, null, null);
         try (var capture = new GameplayCaptureSession(settings)) {

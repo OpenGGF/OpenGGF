@@ -7,6 +7,7 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
 import com.openggf.game.GameServices;
+import com.openggf.game.patch.DelegatingGameModule;
 import com.openggf.mods.code.OwnedSceneFactory;
 import com.openggf.mods.scene.ModScene;
 import com.openggf.mods.scene.SceneCanvas;
@@ -34,12 +35,18 @@ class TestEggmansSkyStartupAudio {
     @Test
     void startupInstallsRomSourceBeforeEnterAndProducesMusicAndEffects() throws Exception {
         var rom = GameServices.rom().getRom();
-        var module = spy(GameServices.module());
+        var nativeModule = GameServices.module();
         var factory = mock(OwnedSceneFactory.class);
         var scene = new AudioScene();
         when(factory.ownerModId()).thenReturn("audio-probe");
         when(factory.create()).thenReturn(scene);
-        doReturn(factory).when(module).getGameService(OwnedSceneFactory.class);
+        var module = new DelegatingGameModule(nativeModule, "test:startup-audio") {
+            @Override
+            public <T> T getGameService(Class<T> type) {
+                return type == OwnedSceneFactory.class
+                        ? type.cast(factory) : super.getGameService(type);
+            }
+        };
         TestEnvironment.configureGameModuleFixture(module);
         GameServices.rom().setRom(rom);
         AudioManager audio = GameServices.audio();

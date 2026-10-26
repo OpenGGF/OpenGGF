@@ -19,8 +19,29 @@ import static org.mockito.Mockito.*;
 class TestDdzRomPalettes {
     private void boot() {
         com.openggf.game.session.SessionManager.clear(); TestEnvironment.activeGameplayMode();
-        HeadlessTestFixture.builder().withZoneAndAct(12,0).build().sprite().setDebugMode(true);
+        HeadlessTestFixture.builder().withZoneAndAct(12,0)
+                // Sonic_Init returns without a floor probe; loc_81554 owns the next movement.
+                .withFreshLevelStartLifecycle().build().sprite().setDebugMode(true);
     }
+    @Test void freshEntryDoesNotFabricateDefinitionsForAnUndeclaredTerrainProbe() throws Exception {
+        boot();
+        var level = GameServices.level().getCurrentLevel();
+        var rom = com.openggf.tests.TestEnvironment.currentRom();
+        int layout = rom.read32BitAddr(com.openggf.game.sonic3k.constants.Sonic3kConstants.LEVEL_PTRS_ADDR + 24 * 4);
+        assertEquals(20, rom.read16BitAddr(layout));
+        assertEquals(6, rom.read16BitAddr(layout + 4));
+        // Declared unsigned-word far-left probe, outside the flight owner's terrain contract.
+        int row = 2;
+        int address = (rom.read16BitAddr(layout + 8 + row * 4) + (0xFFFF >>> 7)) & 0xFFFF;
+        int selected = rom.readBytes(layout + address - 0x8000, 1)[0] & 0xFF;
+        assertEquals(0x82AF, address);
+        assertEquals(20, selected);
+        assertTrue(selected >= level.getBlockCount(), "this load has no producer for that definition");
+        var unsupported = assertThrows(IllegalStateException.class,
+                () -> GameServices.level().getChunkDescAt((byte) 0, -128, row * 128));
+        assertTrue(unsupported.getMessage().contains("$FF82AF: 128x128 definition 20"));
+    }
+
     @Test void bothFlashRowsUseTheTwelveNativeDestinationsAndRomColorWords() {
         boot(); var services=spy(TestEnvironment.objectServices()); var registry=mock(PaletteOwnershipRegistry.class);
         doReturn(registry).when(services).paletteOwnershipRegistryOrNull(); List<PaletteWrite> writes=new ArrayList<>();

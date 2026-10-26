@@ -8,7 +8,11 @@ import com.openggf.level.render.SpriteDplcFrame;
  * reports the ROM routine's own inputs and decides nothing.
  */
 public interface PlayerDplcDmaSink {
-    /** One {@code Tails_Tail_Load_PLC} call: the tail object's {@code mapping_frame} and that frame's DPLC. */
+    /**
+     * One tail DPLC call: the tail object's stored {@code mapping_frame} and that frame's ordinary renderer DPLC.
+     * For S2 only, {@code dplc} may be null when an engine-owned native ROM art receiver has no ordinary tail renderer;
+     * that receiver must parse the stored frame's ROM DPLC itself. S3K retains its ordinary renderer requirement.
+     */
     void tailsTailLoadPlc(int mappingFrame, SpriteDplcFrame dplc);
 
     /**

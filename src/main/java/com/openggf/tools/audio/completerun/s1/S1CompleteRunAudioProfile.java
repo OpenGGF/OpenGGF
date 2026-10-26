@@ -53,7 +53,7 @@ public final class S1CompleteRunAudioProfile {
         @Override public List<CompleteRunAudioTrace.HardwareRole> hardwareRoles() { return ROLES; }
         @Override public CompleteRunAudioTrace.StateInventory stateInventory() { return INVENTORY; }
         @Override public CompleteRunAudioTrace.ComparisonLayerInventory comparisonLayerInventory() {
-            String reason = "S1 complete-run v2 producers are not installed";
+            String reason = "S1 complete-run comparison awaits reviewed native evidence and runtime bindings";
             return new CompleteRunAudioTrace.ComparisonLayerInventory(java.util.Arrays.stream(
                     CompleteRunAudioTrace.ComparisonLayer.values()).map(layer ->
                             new CompleteRunAudioTrace.ComparisonLayerClaim(layer,
@@ -62,7 +62,7 @@ public final class S1CompleteRunAudioProfile {
         @Override public Map<CompleteRunAudioTrace.ProducerKind,
                 CompleteRunAudioTrace.ProducerObservationInventory> producerObservationInventories() {
             var unavailable = CompleteRunAudioTrace.ProducerObservationInventory.allUnobserved(
-                    "S1 complete-run v2 producer is not installed");
+                    "S1 canonical observation inventory has not been reviewed");
             return Map.of(CompleteRunAudioTrace.ProducerKind.REFERENCE, unavailable,
                     CompleteRunAudioTrace.ProducerKind.OPENGGF, unavailable);
         }
@@ -76,9 +76,12 @@ public final class S1CompleteRunAudioProfile {
         }
         @Override public Map<CompleteRunAudioTrace.ProducerKind, CompleteRunAudioTrace.ProducerBinding> producerBindings() {
             return Map.of(CompleteRunAudioTrace.ProducerKind.REFERENCE,
-                    new CompleteRunAudioTrace.UnavailableProducerBinding("Task 2 reference producer is not installed"),
+                    new CompleteRunAudioTrace.UnavailableProducerBinding("S1 raw.v1 chip conversion is implemented; "
+                            + "reviewed duplicate emerald-run evidence, terminal native frontier, "
+                            + "and installed reference identities are unavailable"),
                     CompleteRunAudioTrace.ProducerKind.OPENGGF,
-                    new CompleteRunAudioTrace.UnavailableProducerBinding("Task 5 OpenGGF producer is not installed"));
+                    new CompleteRunAudioTrace.UnavailableProducerBinding("S1 production startup is implemented; "
+                            + "authenticated OpenGGF artifact and observer trust roots are not installed"));
         }
 
         @Override

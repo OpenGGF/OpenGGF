@@ -205,14 +205,19 @@ class TestRewindSchemaRegistry {
     }
 
     @Test
-    void exactDefaultObjectPolicyCapturesS3kMonitorContentsSlot() {
-        RewindClassSchema schema =
+    void exactDefaultObjectPolicyCapturesIndependentS3kMonitorContents() throws Exception {
+        RewindClassSchema shell =
                 RewindSchemaRegistry.defaultObjectSubclassSchemaFor(Sonic3kMonitorObjectInstance.class);
+        assertTrue(shell.unsupportedFields().isEmpty(),
+                "S3K monitor compact schema must not fall back: "
+                        + shell.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
 
-        assertPolicy(schema, "monitorContentsSlot", RewindFieldPolicy.CAPTURED);
-        assertTrue(schema.unsupportedFields().isEmpty(),
-                "S3K monitor compact schema must capture the contents slot without fallback: "
-                        + schema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
+        RewindClassSchema contents = RewindSchemaRegistry.defaultObjectSubclassSchemaFor(Class.forName(
+                "com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance$MonitorContentsSlot"));
+        assertPolicy(contents, "type", RewindFieldPolicy.CAPTURED);
+        assertTrue(contents.unsupportedFields().isEmpty(),
+                "independent S3K monitor contents must capture their own state without fallback: "
+                        + contents.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
     }
 
     @Test

@@ -14,6 +14,16 @@ final class FreshLevelTransitionBoundaryController {
     private boolean initialPublished;
 
     void load(LevelManager level, int zone, int act) throws IOException {
+        boolean completed = false;
+        try {
+            loadBoundary(level, zone, act);
+            completed = true;
+        } finally {
+            if (!completed) level.revokeNativePlcTargetAdmission();
+        }
+    }
+
+    private void loadBoundary(LevelManager level, int zone, int act) throws IOException {
         if (pending != null) {
             throw new IllegalStateException("a fresh title-card transition boundary is already pending");
         }

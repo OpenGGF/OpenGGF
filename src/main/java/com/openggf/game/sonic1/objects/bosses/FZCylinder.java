@@ -72,6 +72,27 @@ public class FZCylinder extends AbstractBossChild implements SolidObjectProvider
                                         // frame; extension starts the next frame.
     private boolean drivesBossPosition; // ROM: objoff_30 < 0 branch drives boss X/Y
     private int currentFrame;
+    private boolean initialized;
+    private boolean renderedLastPass;
+    private boolean displayedThisPass;
+
+    @Override
+    protected boolean tracksViaChildComponents() { return false; }
+
+    @Override
+    protected boolean destroyWhenParentDestroyed() { return false; }
+
+    @Override
+    public boolean isPersistent() { return true; } // Native owns its explicit player-relative deletion.
+
+    @Override
+    public int getOnScreenHalfWidth() { return 32; }
+
+    @Override
+    public int getOnScreenHalfHeight() { return 96; }
+
+    @Override
+    protected boolean usesCustomRenderHeight() { return true; }
 
     @Override
     public boolean usesInclusiveRightEdge() {
@@ -176,6 +197,10 @@ public class FZCylinder extends AbstractBossChild implements SolidObjectProvider
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (!beginUpdate(vIntRunCount)) return;
+        if (!initialized) {
+            initialized = true;
+            renderedLastPass = true; // EggmanCylinder_Main explicitly seeds obRender bit7.
+        }
 
         if (!active || activationDeferred) {
             // ROM: Routine 2 (Action) — clear extension and seat at rest. On the
@@ -208,7 +233,26 @@ public class FZCylinder extends AbstractBossChild implements SolidObjectProvider
         // Calculate frame (ROM: loc_1A524 - loc_1A55C)
         calculateFrame();
 
+        // EggmanCylinder_UpdatePos.checkOffscreen checks its own PREVIOUS render
+        // flag only after Sonic has passed the cylinder by a native screen width.
+        if (player != null && (short) (player.getCentreX() - currentX) >= 320 && !renderedLastPass) {
+            setDestroyed(true);
+            return;
+        }
+        displayedThisPass = true;
+
         updateDynamicSpawn();
+    }
+
+    @Override
+    public void refreshPostCameraRenderState() {
+        if (!displayedThisPass) return;
+        displayedThisPass = false;
+        var camera = services().camera();
+        int sx = (short) (currentX - camera.getX());
+        int sy = (short) (currentY - camera.getY());
+        renderedLastPass = sx >= -32 && sx < camera.getWidth() + 32
+                && sy >= -96 && sy < camera.getHeight() + 96;
     }
 
     /**
@@ -321,13 +365,15 @@ public class FZCylinder extends AbstractBossChild implements SolidObjectProvider
             // Bottom cylinder frame calculation
             int negOffset = -offset;
             negOffset -= 8;
-            if (negOffset > 0) {
+            // EggmanCylinder_UpdatePos uses BCS after SUBQ #8: exact -8 advances.
+            if (negOffset >= 0) {
                 frame = 1 + (negOffset >> 4);
             }
         } else if (offset > 0) {
             // Top cylinder frame calculation
             offset -= 0x27;
-            if (offset > 0) {
+            // The ceiling's SUBI #$27 has the same borrow-only skip at exact +39.
+            if (offset >= 0) {
                 frame = 1 + (offset >> 4);
             }
         }

@@ -58,32 +58,90 @@ class TestSonic1PlcProducerCoverage {
     }
 
     @Test
-    void titleScreenOwnerPublishesMainBeforePresentationBegins() throws Exception {
-        Sonic1TitleScreenManager.getInstance().initialize();
+    void titleScreenClearsPriorWorkAndPublishesMainAfterObjectsAndMusic() throws Exception {
         Sonic1PlcService queue = GameServices.module().getGameService(Sonic1PlcService.class);
+        queue.append(1);
+        assertEquals(expectedDescriptors(1), queue.capture().queuedEntries());
+        Sonic1TitleScreenManager manager = Sonic1TitleScreenManager.getInstance();
+        manager.initialize();
+        assertEquals(List.of(), queue.capture().queuedEntries(), "GM_Sega must actually ClearPLC");
+        manager.update(new com.openggf.control.InputHandler());
+        assertEquals(List.of(), queue.capture().queuedEntries(), "SEGA palette work must not publish Main");
 
+        // A distinct pending descriptor makes ordering/replacement observable;
+        // no assumption is made about an elapsed title queue being empty.
+        queue.append(2);
+        com.openggf.audio.AudioManager audio = org.mockito.Mockito.mock(com.openggf.audio.AudioManager.class);
+        org.mockito.Mockito.doAnswer(invocation -> {
+            assertEquals(expectedDescriptors(2), queue.capture().queuedEntries(),
+                    "QueueSound2(Title) precedes NewPLC(Main)");
+            Field routine = Sonic1TitleScreenManager.class.getDeclaredField("sonicRoutine");
+            routine.setAccessible(true);
+            assertEquals(0, routine.getInt(manager), "QueueSound2(Title) precedes the first object pass");
+            return null;
+        }).when(audio).playMusic(com.openggf.game.sonic1.audio.Sonic1Music.TITLE.id);
+        try (var services = org.mockito.Mockito.mockStatic(GameServices.class,
+                org.mockito.Mockito.CALLS_REAL_METHODS)) {
+            services.when(GameServices::audio).thenReturn(audio);
+            enterMainTitle(manager);
+        }
         assertEquals(expectedDescriptors(0), queue.capture().queuedEntries(),
-                "S1 title initialization must replace the native Main PLC before presentation");
+                "GM_Title NewPLC(Main) belongs after title objects/music, before its fade-in");
+        Field routine = Sonic1TitleScreenManager.class.getDeclaredField("sonicRoutine");
+        routine.setAccessible(true);
+        assertEquals(2, routine.getInt(manager), "the first title object pass also precedes the fade-in");
     }
 
     @Test
-    void titleScreenRetriesRejectedMainReplacementOnceTheDecoderBecomesIdle() throws Exception {
+    void titleScreenRetriesRejectedClearWithoutPublishingMainAtSegaEntry() throws Exception {
         Sonic1PlcService queue = GameServices.module().getGameService(Sonic1PlcService.class);
         queue.append(0);
         queue.prepare();
-        assertNotNull(queue.capture().activeEntry(), "fixture must force a native replace rejection");
-
+        assertNotNull(queue.capture().activeEntry(), "setup must reject a native ClearPLC");
+        NemesisPlcQueueSnapshot before = queue.capture();
         Sonic1TitleScreenManager manager = Sonic1TitleScreenManager.getInstance();
         manager.initialize();
+        assertEquals(before, queue.capture(), "a rejected clear must preserve active and waiting work");
         drainActive(queue);
-        manager.update(org.mockito.Mockito.mock(com.openggf.control.InputHandler.class));
+        manager.update(new com.openggf.control.InputHandler());
+        assertEquals(List.of(), queue.capture().queuedEntries(),
+                "the pending operation is ClearPLC, not the later NewPLC(Main)");
+        queue.append(1);
+        manager.update(new com.openggf.control.InputHandler());
+        assertEquals(expectedDescriptors(1), queue.capture().queuedEntries(),
+                "successful ClearPLC must not repeat on later palette updates");
+    }
 
-        List<NemesisPlcQueueSnapshot.Entry> expected = expectedDescriptors(0);
-        assertEquals(expected, queue.capture().queuedEntries(),
-                "S1 title retry must publish Main once the decoder is idle");
-        manager.update(org.mockito.Mockito.mock(com.openggf.control.InputHandler.class));
-        assertEquals(expected, queue.capture().queuedEntries(),
-                "S1 title retry must not duplicate its successful replacement");
+    @Test
+    void mainTitleRetriesOnlyMainWithoutReplayingObjectsOrMusic() throws Exception {
+        Sonic1PlcService queue = GameServices.module().getGameService(Sonic1PlcService.class);
+        Sonic1TitleScreenManager manager = Sonic1TitleScreenManager.getInstance();
+        manager.initialize();
+        queue.append(2);
+        queue.prepare();
+        NemesisPlcQueueSnapshot before = queue.capture();
+        com.openggf.audio.AudioManager audio = org.mockito.Mockito.mock(com.openggf.audio.AudioManager.class);
+        try (var services = org.mockito.Mockito.mockStatic(GameServices.class,
+                org.mockito.Mockito.CALLS_REAL_METHODS)) {
+            services.when(GameServices::audio).thenReturn(audio);
+            enterMainTitle(manager);
+            assertEquals(before, queue.capture(), "rejected Main must not mutate the active decoder");
+            drainActive(queue);
+            manager.update(new com.openggf.control.InputHandler());
+            assertEquals(expectedDescriptors(0), queue.capture().queuedEntries());
+            queue.append(1);
+            manager.update(new com.openggf.control.InputHandler());
+            assertEquals(expectedDescriptors(0, 1), queue.capture().queuedEntries(),
+                    "successful Main replacement must not repeat");
+            verify(audio, org.mockito.Mockito.times(1))
+                    .playMusic(com.openggf.game.sonic1.audio.Sonic1Music.TITLE.id);
+        }
+    }
+
+    private static void enterMainTitle(Sonic1TitleScreenManager manager) throws Exception {
+        var transition = Sonic1TitleScreenManager.class.getDeclaredMethod("transitionToMainScreen");
+        transition.setAccessible(true);
+        transition.invoke(manager);
     }
 
     @ParameterizedTest(name = "title-card progression zone {0} maps to native animal PLC {1}")

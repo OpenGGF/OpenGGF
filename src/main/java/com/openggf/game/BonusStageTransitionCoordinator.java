@@ -5,7 +5,10 @@ import com.openggf.level.LevelManager;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.PersistentRespawnState;
+import com.openggf.level.rings.RingManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+
+import java.util.function.Supplier;
 
 /**
  * Captures and restores the level-owned state that crosses a bonus-stage
@@ -80,6 +83,11 @@ public final class BonusStageTransitionCoordinator {
         pendingRespawnState = objectManager != null
                 ? objectManager.capturePersistentRespawn()
                 : null;
+        RingManager ringManager = levelManager.getRingManager();
+        if (pendingRespawnState != null && ringManager != null) {
+            // Obj_StarPost loc_2D4CA keeps the ring table too; sub_EB1A skips its wipe.
+            pendingRespawnState = pendingRespawnState.withRingStatusBits(ringManager.captureRingStatusTable());
+        }
         return new EntryCapture(savedState, activationMark);
     }
 
@@ -92,6 +100,13 @@ public final class BonusStageTransitionCoordinator {
             return levelState.getRings();
         }
         return savedState != null ? savedState.savedRingCount() : 0;
+    }
+
+    /** Arms the return load, sampling its manager again after each preparation write. */
+    public void prepareReturnLoad(Supplier<LevelManager> levelManager, BonusStageState savedState) {
+        levelManager.get().setBonusStageReturnCheckpointIndex(savedState.savedLastStarPostHit());
+        levelManager.get().setSuppressNextMusicChange(true);
+        prepareReturnLoad(levelManager.get(), savedState);
     }
 
     /**

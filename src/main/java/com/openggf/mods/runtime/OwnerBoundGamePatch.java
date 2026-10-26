@@ -55,6 +55,18 @@ public final class OwnerBoundGamePatch {
         return handler instanceof Handler owned && owned.base instanceof GameModule inherited ? inherited : null;
     }
 
+    /** Engine-only BOOL proof for the fixed native title operation, never delegate access. */
+    public static boolean hasNativeTitleWorldUpdate(Object provider) {
+        requireEngineCaller();
+        return com.openggf.game.sonic3k.titlecard.S3kTitleCardWorldAccess.isNativeWorldUpdate(provider);
+    }
+
+    /** Engine-only BOOL proof for the fixed native results operation, never delegate access. */
+    public static boolean hasNativeSpecialResultsWorldCreation(Object provider) {
+        requireEngineCaller();
+        return com.openggf.game.sonic3k.specialstage.S3kSpecialStageWorldAccess.isNativeWorldCreation(provider);
+    }
+
     private static void requireEngineCaller() {
         ClassLoader caller = com.openggf.util.EngineCallerAccess
                 .callerOutside(OwnerBoundGamePatch.class).getClassLoader();
@@ -185,7 +197,8 @@ public final class OwnerBoundGamePatch {
                     interfaces.add(com.openggf.game.LevelEventRewindResolver.class);
                 Handler handler = new Handler(owner, value, inherited, boundary, wrappers, false);
                 ClassLoader loader = contract.getClassLoader() == null ? GameModule.class.getClassLoader() : contract.getClassLoader();
-                Object wrapped = Proxy.newProxyInstance(loader, interfaces.toArray(Class<?>[]::new), handler);
+                Object wrapped = Proxy.newProxyInstance(loader, interfaces.toArray(Class<?>[]::new),
+                        com.openggf.game.internal.NativeProviderDispatch.authenticate(handler, value));
                 if (value instanceof RewindSnapshottable<?> adapter) {
                     handler.rewindKey = com.openggf.game.rewind.RewindAdapterOwnership.bindDelegate(wrapped, value, owner,
                             boundary.call(owner, adapter::key));

@@ -290,9 +290,9 @@ public final class HCZWaterSkimHandler {
 
         // === Sustain / exit logic (sonic3k.asm:75465-75532) ===
 
-        // HCZWaterSplash_CheckSkimPlayers passes Ctrl_1/2_logical in d5;
-        // UpdateSkimmingPlayer masks its low-byte A/B/C press bits, not held
-        // input (sonic3k.asm:75408-75424,75471-75474).
+        // loc_385D2 masks the LOW pressed byte of Ctrl_*_logical (d5),
+        // not its held byte or the raw hardware pad. Native P2 may publish a
+        // CPU logical edge independently of that raw pad (sonic3k.asm:75470-75473).
         if (player.isLogicalJumpPressActive()) {
             return exitWithJump(player, playerIndex, extensionState);
         }

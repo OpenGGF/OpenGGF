@@ -1,8 +1,13 @@
 package com.openggf.game.sonic1.objects.bosses;
 
 import org.junit.jupiter.api.Test;
+import com.openggf.data.RomByteReader;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.TestObjectServices;
+import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.rules.RequiresRom;
+import com.openggf.tests.rules.SonicGame;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -12,9 +17,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class TestSonic1FZBossDamageFlash {
 
     @Test
+    @RequiresRom(SonicGame.SONIC_1)
     public void inTubeDamageAnimationAlternatesSurpriseAndIntubeFrames() throws Exception {
         Sonic1FZBossInstance boss = new Sonic1FZBossInstance(
                 new ObjectSpawn(0, 0, Sonic1ObjectIds.FZ_BOSS, 0, 0, false, 0));
+        boss.setServices(new TestObjectServices().withRomReader(
+                RomByteReader.fromRom(TestEnvironment.currentRom())));
 
         setIntField(boss, "seggAnim", Sonic1BossAnimations.ANIM_SEGG_INTUBE);
         setIntField(boss, "seggAnimPrev", -1);

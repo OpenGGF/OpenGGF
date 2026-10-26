@@ -109,14 +109,14 @@ class TestKis2MovementRules {
         player.setYSpeed((short) -1);
         player.restoreDefaultRadii();
         try (var terrain = mockStatic(com.openggf.physics.GlideWallGrabTerrain.class)) {
-            terrain.when(() -> com.openggf.physics.GlideWallGrabTerrain.glideWallDistance(player, true))
+            terrain.when(() -> com.openggf.physics.GlideWallGrabTerrain.glideWallDistance(player, true, player.getLrbSolidBit() & 0xFF, (player.getTopSolidBit() & 0xFF) != 0x0C))
                     .thenAnswer(call -> {
                         assertEquals(10, player.getXRadius());
                         assertEquals(10, player.getYRadius());
                         return null;
                     });
             invoke("doGlideCollision");
-            terrain.verify(() -> com.openggf.physics.GlideWallGrabTerrain.glideWallDistance(player, true));
+            terrain.verify(() -> com.openggf.physics.GlideWallGrabTerrain.glideWallDistance(player, true, player.getLrbSolidBit() & 0xFF, (player.getTopSolidBit() & 0xFF) != 0x0C));
         }
         assertEquals(9, player.getXRadius());
         assertEquals(19, player.getYRadius());
@@ -135,13 +135,14 @@ class TestKis2MovementRules {
             player.setCentreX((short) 0x100);
             player.setCentreY((short) 0x200);
             player.setSubpixelRaw(player.getCentreX() & 0xFFFF, player.getYSubpixelRaw());
+            player.applyCustomRadii(10, 10);
             player.setDoubleJumpFlag(4);
             player.setDoubleJumpProperty((byte) 0);
             player.setMappingFrame(0xB9);
             player.setAir(true);
             input(false, false, false, false, false, false);
-            try (var terrain = mockStatic(ObjectTerrainUtils.class)) {
-                terrain.when(() -> ObjectTerrainUtils.checkFloorDist(0x100, 0x209))
+            try (var terrain = mockStatic(com.openggf.physics.GlideWallGrabTerrain.class)) {
+                terrain.when(() -> com.openggf.physics.GlideWallGrabTerrain.climbVerticalDistance(player, false, false))
                         .thenReturn(new TerrainCheckResult(-3, (byte) 0, 1));
                 invoke("updateWallClimb");
                 if (rules == Kis2Rules.RULES) {
@@ -497,6 +498,8 @@ class TestKis2MovementRules {
                 player.setCentreX((short) centreX);
                 player.setSubpixelRaw(0x1234, 0x5678);
                 player.setDoubleJumpFlag(1);
+                // Native Glide activation owns facing in this byte; velocity can be zeroed by contact.
+                player.setDoubleJumpProperty((byte) (right ? 0 : 0x80));
                 player.setXSpeed((short) (right ? 0x400 : -0x400));
                 player.setYSpeed((short) 0x100);
                 player.setGSpeed((short) 0x400);

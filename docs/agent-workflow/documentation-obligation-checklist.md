@@ -120,15 +120,17 @@ supporting artifacts with the task. Do not create loose planning documents.
 
 ### 3. Changelog — `CHANGELOG.md`  →  trailer `Changelog`
 
-- **REQUIRED** for release-worthy engine changes: record current development prose in
-  `CHANGELOG.0.7.prerelease.md`. Keep the existing thematic structure:
-  add a `- **Lead:** ...` bullet under the matching `###`/`####` area section
-  (merge into an existing bullet when the change refines one), not a dated
-  entry at the top. Keep bullets free of commit hashes, frame numbers, and
-  test tallies. The root `CHANGELOG.md` is the release index; update it
-  only when the index changes. Its exact path owns the hook trailer: if only
-  the versioned file changes, use
-  `Changelog: n/a: release note recorded in CHANGELOG.0.7.prerelease.md`.
+- **REQUIRED** for release-worthy engine changes: use the per-version changelog
+  selected under “Which version am I writing for?” above (currently
+  `CHANGELOG.0.7.prerelease.md`). Keep the existing thematic structure: add a
+  `- **Lead:** ...` bullet under the matching `###`/`####` area section, or refine
+  an existing bullet when the change belongs to unreleased work. Do not add a
+  dated entry at the top. Keep commit hashes, frame numbers and test tallies in
+  engineering evidence. Historical changelog files change only for factual
+  corrections. The root `CHANGELOG.md` is the release index; update it only when
+  the index changes. Its exact path owns the hook trailer: when only the selected
+  versioned file changes, use
+  `Changelog: n/a: release note recorded in <actual per-version changelog path>`.
 - **JUSTIFIED SKIP** — special rule: on a `feat`/`fix`/`perf` commit that touches
   `src/main/`, a **bare** `Changelog: n/a` is **rejected**
   (`validate_changelog_justification`). You must either set `Changelog: updated`

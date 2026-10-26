@@ -14,6 +14,48 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 class TestSpriteSatMaskPostProcessor {
 
     @Test
+    void interleavedGhostsLeaveNativeTableLineAndPixelAdmissionUnchanged() {
+        var raster = SpriteSatMaskPostProcessor.Raster.h40(0, 0, 224);
+        var line = new java.util.ArrayList<SpriteSatEntry>();
+        for (int i = 0; i < 21; i++) line.add(SpriteSatEntry.of(8 + i * 8, 0, 1, 1, 0x100 + i, 0,
+                false, false, false, false));
+        var pixels = new java.util.ArrayList<SpriteSatEntry>();
+        for (int i = 0; i < 11; i++) pixels.add(SpriteSatEntry.of(i * 24, 0, 4, 1, 0x200 + i * 4, 0,
+                false, false, false, false));
+        var table = new java.util.ArrayList<SpriteSatEntry>();
+        for (int i = 0; i < 80; i++) table.add(SpriteSatEntry.of(8, -32, 1, 1, 0x300 + i, 0,
+                false, false, false, false));
+        table.add(SpriteSatEntry.of(8, 0, 1, 1, 0x400, 0, false, false, false, false));
+        for (var nativeEntries : List.of(line, pixels, table)) {
+            List<SpriteSatEntry> expected = SpriteSatMaskPostProcessor.process(nativeEntries, false, raster);
+            var augmented = new java.util.ArrayList<SpriteSatEntry>();
+            for (SpriteSatEntry entry : nativeEntries) {
+                augmented.add(SpriteSatEntry.of(16, 0, 4, 1, 0x500, 0, false, false, false, false)
+                        .withGhost(new SpriteSatEntry.Ghost(0.5f, true)));
+                augmented.add(entry);
+            }
+            List<SpriteSatEntry> actual = SpriteSatMaskPostProcessor.process(augmented, false, raster);
+            assertEquals(expected, actual.stream().filter(entry -> !entry.isGhost()).toList());
+            assertFalse(actual.stream().filter(SpriteSatEntry::isGhost).toList().isEmpty());
+        }
+    }
+
+    @Test
+    void ghostBetweenNativeMarkerAndCompanionDoesNotChangeTheirLinkOrLoseItsStyle() {
+        SpriteSatEntry marker = SpriteSatEntry.of(0, 0, 1, 1, 0x7C0, 0, false, false, false, false);
+        SpriteSatEntry companion = SpriteSatEntry.of(8, 0, 1, 1, 0x100, 0, false, false, false, false);
+        SpriteSatEntry later = SpriteSatEntry.of(16, 0, 1, 2, 0x200, 0, false, false, false, false);
+        SpriteSatEntry ghost = later.withGhost(new SpriteSatEntry.Ghost(0.25f, true));
+        List<SpriteSatEntry> expected = SpriteSatMaskPostProcessor.process(List.of(marker, companion, later), true);
+        List<SpriteSatEntry> actual = SpriteSatMaskPostProcessor.process(List.of(marker, ghost, companion, ghost, later), true);
+        assertEquals(expected, actual.stream().filter(entry -> !entry.isGhost()).toList());
+        List<SpriteSatEntry> ghosts = actual.stream().filter(SpriteSatEntry::isGhost).toList();
+        assertEquals(2, ghosts.size(), "the earlier ghost is visible; the later ghost loses the mask band");
+        assertEquals(8, ghosts.get(1).visibleTopY());
+        assertEquals(ghost.ghost(), ghosts.get(1).ghost());
+    }
+
+    @Test
     void publicMaskedPassReturnsFreshRetainableResult() {
         SpriteSatEntry marker = SpriteSatEntry.of(108, 24, 2, 2, 0x7C0, 0,
                 false, false, false, false);

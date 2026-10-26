@@ -3,6 +3,7 @@ package com.openggf.tests.trace;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
+import com.openggf.tests.trace.s1.TestS1Ghz1TraceReplay;
 import com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay;
 import com.openggf.tests.trace.s3k.TestS3kAizZoneSliceTraceReplay;
 import com.openggf.trace.TraceExecutionPhase;
@@ -24,8 +25,8 @@ class TestTraceReplayReferenceClosureGuard {
     private static final TraceFrame FRAME = TraceFrame.executionTestFrame(123, 4, 5, 0);
 
     @Test
-    void sonic1IsOutsideTraceClosureGuardScope() {
-        assertFalse(AbstractTraceReplayTest.shouldValidateRewindReferenceClosure(
+    void sonic1IsInsideTraceClosureGuardScope() {
+        assertTrue(AbstractTraceReplayTest.shouldValidateRewindReferenceClosure(
                 SonicGame.SONIC_1));
     }
 
@@ -312,5 +313,23 @@ class TestS3kReplayReferenceClosureIntegration extends TestS3kAizZoneSliceTraceR
     public void replayMatchesTrace() throws Exception {
         super.replayMatchesTrace();
         assertTrue(validations > 0, "S3K replay loop must validate rewind closure");
+    }
+}
+
+@RequiresRom(SonicGame.SONIC_1)
+class TestS1ReplayReferenceClosureIntegration extends TestS1Ghz1TraceReplay {
+    private int validations;
+
+    @Override
+    protected void onRewindReferenceClosureValidated(
+            int traceIndex, TraceFrame frame, TraceExecutionPhase phase) {
+        validations++;
+    }
+
+    @Test
+    @Override
+    public void replayMatchesTrace() throws Exception {
+        super.replayMatchesTrace();
+        assertTrue(validations > 0, "S1 general replay loop must validate rewind closure");
     }
 }

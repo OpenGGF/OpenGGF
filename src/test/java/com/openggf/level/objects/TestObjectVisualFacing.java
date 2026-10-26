@@ -8,6 +8,9 @@ import com.openggf.game.sonic1.objects.badniks.Sonic1BombBadnikInstance;
 import com.openggf.game.sonic1.objects.badniks.Sonic1CrabmeatBadnikInstance;
 import com.openggf.game.sonic1.objects.badniks.Sonic1MotobugBadnikInstance;
 import com.openggf.game.sonic2.objects.bosses.Sonic2WFZBossInstance;
+import com.openggf.game.sonic3k.competition.objects.CompetitionArenaObjectInstance;
+import com.openggf.game.sonic3k.competition.objects.CompetitionGoalObjectInstance;
+import com.openggf.game.sonic3k.competition.objects.CompetitionItemObjectInstance;
 import com.openggf.game.sonic3k.objects.badniks.ToxomisterBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.FirewormBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.FirewormHeadInstance;
@@ -51,8 +54,12 @@ class TestObjectVisualFacing {
     @Test void independentOwnersDoNotDependOnTheSharedBadnikBase() {
         assertEquals(RIGHT, ObjectVisualFacing.resolve(new Sonic1BallHogBadnikInstance(spawn(0))));
         assertEquals(LEFT, ObjectVisualFacing.resolve(new Sonic1BallHogBadnikInstance(spawn(1))));
-        assertEquals(RIGHT, ObjectVisualFacing.resolve(new Sonic1BombBadnikInstance(spawn(0))));
-        assertEquals(LEFT, ObjectVisualFacing.resolve(new Sonic1BombBadnikInstance(spawn(1))));
+        // Bomb construction exposes placement status before Bom_Main's first-dispatch bchg.
+        // TestSonic1BombBodyNativeSubmission checks initialized facing through ObjectManager.
+        assertEquals(LEFT, ObjectVisualFacing.resolve(new Sonic1BombBadnikInstance(spawn(0))),
+                "The pre-dispatch Bomb still owns its unmodified placement direction");
+        assertEquals(RIGHT, ObjectVisualFacing.resolve(new Sonic1BombBadnikInstance(spawn(1))),
+                "The mirrored pre-dispatch Bomb still owns its placement direction");
         assertEquals(LEFT, ObjectVisualFacing.resolve(new ToxomisterBadnikInstance(spawn(0))));
         assertEquals(RIGHT, ObjectVisualFacing.resolve(new ToxomisterBadnikInstance(spawn(1))));
     }
@@ -150,6 +157,107 @@ class TestObjectVisualFacing {
         var error = assertThrows(IllegalArgumentException.class, () -> ObjectVisualFacing.initialPlacementFlags(
                 new Sonic1CrabmeatBadnikInstance(spawn(0)), Basis.RIGHT, 0));
         assertTrue(error.getMessage().contains("ObjectVisualFacing.PlacementSource.initialPlacementFlags"));
+    }
+
+    @Test void competitionDirectionalKindsUseTheirNativePolarityAndLiveSubtypeWithoutTicking() throws Exception {
+        for (int flags : new int[]{0, 1, 2, 3}) {
+            var elephant = competitionArena(CompetitionArenaObjectInstance.Kind.ELEPHANT, 0x50, flags);
+            int extension = elephant.extensionWord();
+            field(CompetitionArenaObjectInstance.class, "xVelocity").setInt(elephant, -0x100);
+            field(CompetitionArenaObjectInstance.class, "frame").setInt(elephant, 1);
+            assertEquals((flags & 1) == 0 ? LEFT : RIGHT, ObjectVisualFacing.resolve(elephant));
+            assertEquals(extension, elephant.extensionWord());
+            assertEquals(1, elephant.mappingFrame());
+            assertFalse(field(CompetitionArenaObjectInstance.class, "initialized").getBoolean(elephant));
+            assertFalse(elephant.nativeDrawPublished());
+
+            for (var kind : List.of(CompetitionArenaObjectInstance.Kind.SPRING,
+                    CompetitionArenaObjectInstance.Kind.RETRACTING_SPRING)) {
+                var spring = competitionArena(kind, 0x10, flags);
+                for (int subtype : new int[]{0x10, 0x20, 0x30, 0}) {
+                    field(CompetitionArenaObjectInstance.class, "subtype").setInt(spring, subtype);
+                    Basis expected = subtype == 0x10 || subtype == 0x30
+                            ? ((flags & 1) == 0 ? RIGHT : LEFT) : NON_DIRECTIONAL;
+                    assertEquals(expected, ObjectVisualFacing.resolve(spring), kind + " subtype " + subtype);
+                    assertEquals(subtype, spring.nativeSubtype());
+                    assertEquals(0, spring.mappingFrame());
+                    assertEquals(0, spring.extensionWord());
+                    assertFalse(field(CompetitionArenaObjectInstance.class, "initialized").getBoolean(spring));
+                    assertFalse(spring.nativeDrawPublished());
+                }
+                assertEquals(flags, spring.getSpawn().renderFlags());
+            }
+            assertThrows(IllegalArgumentException.class,
+                    () -> ObjectVisualFacing.initialPlacementFlags(elephant, LEFT, flags),
+                    "A native render flip does not grant a generic Free-placement mapping");
+        }
+    }
+
+    @Test void competitionFixedGeometryAndIndependentFragmentsKeepTheirNativePositionsAndFlips() throws Exception {
+        for (var kind : CompetitionArenaObjectInstance.Kind.values()) {
+            if (kind == CompetitionArenaObjectInstance.Kind.ELEPHANT
+                    || kind == CompetitionArenaObjectInstance.Kind.SPRING
+                    || kind == CompetitionArenaObjectInstance.Kind.RETRACTING_SPRING) continue;
+            for (int flags : new int[]{0, 1, 2, 3}) {
+                var object = competitionArena(kind, kind == CompetitionArenaObjectInstance.Kind.ROCK ? 0x31 : 0, flags);
+                field(CompetitionArenaObjectInstance.class, "frame").setInt(object, 2);
+                field(CompetitionArenaObjectInstance.class, "xVelocity").setInt(object, -0x100);
+                int x = object.getX(), y = object.getY();
+                boolean xFlip = object.nativeRenderXFlip(), yFlip = object.nativeRenderYFlip();
+                assertEquals(NON_DIRECTIONAL, ObjectVisualFacing.resolve(object), kind.name());
+                assertEquals(flags, ObjectVisualFacing.initialPlacementFlags(object, RIGHT, flags));
+                assertEquals(x, object.getX());
+                assertEquals(y, object.getY());
+                assertEquals(xFlip, object.nativeRenderXFlip());
+                assertEquals(yFlip, object.nativeRenderYFlip());
+                assertEquals(2, object.mappingFrame());
+                assertEquals(-0x100, object.nativeXVelocity());
+                assertFalse(field(CompetitionArenaObjectInstance.class, "initialized").getBoolean(object));
+                assertFalse(object.nativeDrawPublished());
+            }
+        }
+    }
+
+    @Test void competitionGoalAndItemPoseOwnershipDoesNotInterpretOrbitDirectionAsBodyFacing() throws Exception {
+        for (int flags : new int[]{0, 1, 2, 3}) {
+            var goal = new CompetitionGoalObjectInstance(spawn(flags));
+            field(CompetitionGoalObjectInstance.class, "mappingFrame").setInt(goal, 3);
+            field(CompetitionGoalObjectInstance.class, "animationTimer").setInt(goal, 9);
+            assertInstanceOf(ObjectVisualFacing.NonDirectional.class, goal);
+            assertEquals(NON_DIRECTIONAL, ObjectVisualFacing.resolve(goal));
+            assertEquals(flags, ObjectVisualFacing.initialPlacementFlags(goal, LEFT, flags));
+            assertEquals(3, goal.mappingFrame());
+            assertEquals(9, field(CompetitionGoalObjectInstance.class, "animationTimer").getInt(goal));
+            assertFalse(field(CompetitionGoalObjectInstance.class, "initialized").getBoolean(goal));
+            assertFalse(goal.nativeDrawPublished());
+
+            var item = new CompetitionItemObjectInstance(spawn(flags));
+            assertInstanceOf(ObjectVisualFacing.PoseOwned.class, item);
+            for (var kind : CompetitionItemObjectInstance.Kind.values()) {
+                field(CompetitionItemObjectInstance.class, "kind").set(item, kind);
+                for (int angle : new int[]{0, 0x40, 0x80, 0xC0}) {
+                    field(CompetitionItemObjectInstance.class, "angle").setInt(item, angle);
+                    field(CompetitionItemObjectInstance.class, "mappingFrame").setInt(item, 0x15);
+                    field(CompetitionItemObjectInstance.class, "xVelocity").setInt(item, -0x400);
+                    field(CompetitionItemObjectInstance.class, "animationTimer").setInt(item, 9);
+                    assertEquals(NON_DIRECTIONAL, ObjectVisualFacing.resolve(item), kind.name());
+                    assertEquals(flags, ObjectVisualFacing.initialPlacementFlags(item, RIGHT, flags));
+                    assertEquals(kind, item.kind());
+                    assertEquals(angle, item.angle());
+                    assertEquals(0x15, item.mappingFrame());
+                    assertEquals(-0x400, field(CompetitionItemObjectInstance.class, "xVelocity").getInt(item));
+                    assertEquals(9, field(CompetitionItemObjectInstance.class, "animationTimer").getInt(item));
+                    assertEquals((flags & 1) == 0 ? 1 : -1,
+                            field(CompetitionItemObjectInstance.class, "angleStep").getInt(item));
+                    assertFalse(item.nativeDrawPublished());
+                }
+            }
+        }
+    }
+
+    private static CompetitionArenaObjectInstance competitionArena(CompetitionArenaObjectInstance.Kind kind,
+            int subtype, int flags) {
+        return new CompetitionArenaObjectInstance(new ObjectSpawn(100, 200, 0x40, subtype, flags, false, 0), kind);
     }
 
     private static ObjectSpawn spawn(int flags) { return new ObjectSpawn(100, 200, 0x40, 0, flags, false, 0); }

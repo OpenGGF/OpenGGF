@@ -702,6 +702,11 @@ public class AudioManager implements MusicRestoreSink {
         sourcePublication.setAudioProfile(audioProfile);
     }
 
+    /** Host-owned complete source selection, including an absent ROM or profile. */
+    synchronized void installMatchedSource(Rom rom, GameAudioProfile audioProfile) {
+        sourcePublication.installMatchedSource(rom, audioProfile);
+    }
+
     public GameAudioProfile getAudioProfile() {
         return sourcePublication.base().profile();
     }
@@ -1401,6 +1406,19 @@ public class AudioManager implements MusicRestoreSink {
         playSfx(nativeRequestId);
     }
 
+    /** Internal native PauseGame operation; preserves chip time and mailbox ownership. */
+    void requestNativePause(boolean paused) {
+        heldReverseRestore.requestNativePause(paused);
+    }
+
+    void replayNativePause(boolean paused, AudioPresentationForwardService.Snapshot forward) {
+        heldReverseRestore.replayNativePause(paused, forward);
+    }
+
+    void advanceNativeHistoryCursor(int cursor) {
+        heldReverseRestore.advanceNativeHistoryCursor(cursor);
+    }
+
     public void playMusic(int musicId) {
         if (!LevelMusicAccess.allowsEntryMusic(this)) return;
         mutatorMusicIntent(musicId >= 0xE0 ? AudioMutatorAccess.Kind.COMMAND : AudioMutatorAccess.Kind.MUSIC, musicId);
@@ -1667,6 +1685,46 @@ public class AudioManager implements MusicRestoreSink {
         playSfx(sound, 1.0f, true);
     }
 
+    /** Native operand ingress for the secondary sound mailbox, independent of GameSound mappings. */
+    void playSecondaryNativeRequest(int nativeId) {
+        mutatorSfxIntent(nativeId);
+        if (suppressingRewindReplay()) {
+            return;
+        }
+        BaseAudioSource source = sourcePublication.base();
+        GameAudioProfile profile = source.profile();
+        AudioCommand command = null;
+        if (profile != null) {
+            presentationBinding.ensureShadowPresentation();
+            command = commandForNativeRequest(source, nativeId);
+            if (presentationBinding.shadowRequestService != null) {
+                diagnosticInstallation.requestObserver().onRequested(sfxRequestClass(nativeId), nativeId);
+                presentationBinding.shadowRequestService.submitSecondarySound(nativeId, command);
+                return;
+            }
+        }
+        // Fallback consequences may call public controls; the raw intent already belongs
+        // to this submission and must not be observed again through those controls.
+        AudioCommand fallbackCommand = command;
+        mutatorAccess.submit(() -> {
+            if (fallbackCommand instanceof AudioCommand.PlayMusic music) {
+                diagnosticInstallation.requestObserver().onRequested(sfxRequestClass(nativeId), nativeId);
+                admitMusicWithoutRequestService(source, music.musicId());
+                return;
+            }
+            if (profile != null && profile.handleSystemCommand(nativeId, this)) {
+                diagnosticInstallation.requestObserver().onRequested(AudioRequestObserver.RequestClass.COMMAND, nativeId);
+                return;
+            }
+            diagnosticInstallation.requestObserver().onRequested(sfxRequestClass(nativeId), nativeId);
+            if (isRingSpeakerToggleRequest(nativeId)) {
+                playRingWithoutRequestService(nativeId, 1.0f);
+                return;
+            }
+            playBaseSfx(source, nativeId, 1.0f);
+        });
+    }
+
     private void playSfx(GameSound sound, float pitch, boolean secondaryRequest) {
         Integer observedId = sound == GameSound.RING
                 ? soundMap == null ? null : soundMap.get(GameSound.RING_RIGHT)
@@ -1693,17 +1751,21 @@ public class AudioManager implements MusicRestoreSink {
             }
         }
         if (sound == GameSound.RING) {
-            // Suppression precedes the driver's ring-speaker selection.
-            // The registry still rejects all other SFX at admission.
-            if (heldReverseRestore.blocksRingAdmission()) {
-                observeBlockedRingAdmission(rawSoundId);
-                return;
-            }
-            logicalPublication.playFallbackRing(pitch);
+            playRingWithoutRequestService(rawSoundId, pitch);
             return;
         }
 
         playGameSfxResolved(sound, pitch);
+    }
+
+    private void playRingWithoutRequestService(Integer rawSoundId, float pitch) {
+        // Suppression precedes the driver's ring-speaker selection.
+        // The registry still rejects all other SFX at admission.
+        if (heldReverseRestore.blocksRingAdmission()) {
+            observeBlockedRingAdmission(rawSoundId);
+            return;
+        }
+        logicalPublication.playFallbackRing(pitch);
     }
 
     /** Reports the caller-owned discard before ring-speaker selection mutates. */
@@ -1878,6 +1940,14 @@ public class AudioManager implements MusicRestoreSink {
     private AudioCommand commandForNativeRequest(
             BaseAudioSource source, int nativeId, float pitch) {
         Objects.requireNonNull(source.profile(), "audio profile");
+        if (source.profile() instanceof NativeMailboxMusicRoutes routes) {
+            int musicId = routes.musicForNativeRequest(nativeId);
+            if (musicId >= 0) {
+                // Translate only raw driver requests. Ordinary playMusic already receives an
+                // engine id, which can name a different song at the same numeric value.
+                return commandForNativeMusicRequest(source, musicId);
+            }
+        }
         if (nativeId >= 0xA0 && nativeId <= 0xF7) {
             return new AudioCommand.PlaySfx(nativeId, null,
                     AudioCommand.SfxRoute.BASE_SMPS_ID, pitch, null);
@@ -2813,6 +2883,10 @@ public class AudioManager implements MusicRestoreSink {
         if (!suppressingRewindReplay()) {
             AudioTimelineEntry entry = commandTimeline.record(command);
             mirrorShadowCommand(() -> presentationBinding.shadowResolver.submit(command));
+            if (presentationBinding.shadowSmpsSession != null) {
+                presentationBinding.shadowSmpsSession.setNativeHistoryCursor(
+                        com.openggf.audio.rewind.AudioTimelineInternalAccess.cursor(commandTimeline));
+            }
             return entry;
         }
         return null;
@@ -3555,6 +3629,45 @@ public class AudioManager implements MusicRestoreSink {
             }
         }
 
+        private void installMatchedSource(Rom rom, GameAudioProfile audioProfile) {
+            beginSourceMutation();
+            try {
+                BaseAudioSource previous = baseAudioSource;
+                if (previous.profile() == audioProfile && previous.rom() == rom) {
+                    return;
+                }
+                long candidateGeneration = nextGeneration(previous.generation());
+                SmpsLoader candidateLoader = audioProfile != null && rom != null
+                        ? audioProfile.createSmpsLoader(rom) : null;
+                DacData candidateDac = loadDac(candidateLoader);
+                SmpsSequencerConfig candidateConfig = audioProfile != null
+                        ? audioProfile.getSequencerConfig() : null;
+                PresentationBinding.PresentationCoordHandlerPreparation presentationPreparation =
+                        presentationBinding.prepareBaseCoordination(audioProfile);
+                BaseBackendAttempt backendConfiguration = new BaseBackendAttempt(audioProfile);
+                try {
+                    presentationBinding.applyBaseCoordination(presentationPreparation, backendConfiguration);
+                } catch (RuntimeException | Error failure) {
+                    if (backendConfiguration.attempted) {
+                        try {
+                            backend.setAudioProfile(previous.profile());
+                        } catch (RuntimeException | Error restoreFailure) {
+                            failure.addSuppressed(restoreFailure);
+                        }
+                    }
+                    throw failure;
+                }
+                presentationBinding.publishPresentationCoordHandlers(presentationPreparation);
+                baseAudioSource = new BaseAudioSource(
+                        rom, audioProfile, candidateLoader, candidateDac,
+                        candidateConfig, candidateGeneration);
+                mutatorMusicIntent(AudioMutatorAccess.Kind.SOURCE, 0);
+                presentationBinding.profilePublished();
+            } finally {
+                endSourceMutation();
+            }
+        }
+
         private void setRom(Rom rom) {
             if (reinstallsInstalledSource(baseAudioSource.profile(), rom)) {
                 return;
@@ -4055,14 +4168,35 @@ public class AudioManager implements MusicRestoreSink {
          * untouched until held release invokes the producer restore.
          */
         private void stageDeferredPresentationCommand(AudioCommand command) {
-            if (command == null) {
+            stageDeferredPresentationCommand(command, null, null);
+        }
+
+        private void stageDeferredPresentationCommand(AudioCommand command, Boolean nativePause,
+                AudioPresentationForwardService.Snapshot nativeForward) {
+            if (command == null && nativePause == null) {
                 return;
             }
             presentationBinding.ensureShadowPresentation();
             if (deferredReverseLogicalSnapshot == null) {
-                presentationBinding.shadowResolver.submit(command);
-                presentationBinding.shadowProducer.applyPendingCommandsAtOwnerBoundary();
-                logicalPublication.setRingLeft(managerRingAfter(logicalPublication.rawRingLeft(), command));
+                if (nativePause != null) {
+                    var previousForward = presentationBinding.shadowRequestService.snapshot();
+                    SmpsDriverSession.LiveMutationToken token = presentationBinding.shadowSmpsSession.captureLiveMutation();
+                    try {
+                        presentationBinding.shadowSmpsSession.replayNativePause(nativePause);
+                        presentationBinding.shadowRequestService.restore(nativeForward);
+                        presentationBinding.shadowSmpsSession.commitLiveMutation(token);
+                    } catch (RuntimeException failure) {
+                        try { presentationBinding.shadowRequestService.restore(previousForward); }
+                        catch (RuntimeException rollback) { failure.addSuppressed(rollback); }
+                        try { presentationBinding.shadowSmpsSession.rollbackLiveMutation(token); }
+                        catch (RuntimeException rollback) { failure.addSuppressed(rollback); }
+                        throw failure;
+                    }
+                } else {
+                    presentationBinding.shadowResolver.submit(command);
+                    presentationBinding.shadowProducer.applyPendingCommandsAtOwnerBoundary();
+                    logicalPublication.setRingLeft(managerRingAfter(logicalPublication.rawRingLeft(), command));
+                }
                 return;
             }
             AudioLogicalSnapshot selected = deferredReverseLogicalSnapshot;
@@ -4080,6 +4214,7 @@ public class AudioManager implements MusicRestoreSink {
                     presentationBinding.shadowFactory.beginDiagnosticTransaction();
             SmpsDriverSession.LiveMutationToken sessionMutation = null;
             RuntimeException primaryFailure = null;
+            AudioLogicalSnapshot stagedSelection;
             try {
                 stagedRegistry.restore(selected.presentation(), presentationBinding.shadowFactory);
                 String[] resolutionFailure = new String[1];
@@ -4109,7 +4244,7 @@ public class AudioManager implements MusicRestoreSink {
                 nextVoice = Math.max(
                         nextVoice, selected.presentation().nextVoiceId());
                 stagedResolver.reserveVoiceIdsThrough(nextVoice);
-                stagedResolver.submit(command);
+                if (command != null) stagedResolver.submit(command);
                 boolean optionalFallbackSfx =
                         command instanceof AudioCommand.PlaySfx sfx
                                 && (sfx.route()
@@ -4134,6 +4269,7 @@ public class AudioManager implements MusicRestoreSink {
                                 presentationBinding.shadowFactory::resolveDac);
                 sessionMutation = presentationBinding.shadowSmpsSession.captureLiveMutation();
                 presentationBinding.shadowSmpsSession.commitRestore(preparedSession);
+                if (nativePause != null) presentationBinding.shadowSmpsSession.replayNativePause(nativePause);
                 stagedCommands.applyPendingAtomically(commandToApply ->
                         AudioPresentationSessionCommandApplier.apply(
                                 presentationBinding.shadowSmpsSession, stagedRegistry,
@@ -4141,7 +4277,7 @@ public class AudioManager implements MusicRestoreSink {
                 AudioPresentationSnapshot staged = stagedRegistry.snapshot();
                 boolean stagedManagerRingLeft =
                         managerRingAfter(selected.ringLeft(), command);
-                deferredReverseLogicalSnapshot = new AudioLogicalSnapshot(
+                stagedSelection = new AudioLogicalSnapshot(
                         stagedManagerRingLeft,
                         selected.commandTimelineFrame(),
                         selected.commandTimelineNextOrder(),
@@ -4149,7 +4285,7 @@ public class AudioManager implements MusicRestoreSink {
                         staged,
                         selected.donorGameIds(),
                         selected.donorBindings(),
-                        selected.forwardServiceSnapshot());
+                        nativePause == null ? selected.forwardServiceSnapshot() : nativeForward);
             } catch (RuntimeException failure) {
                 primaryFailure = failure;
                 throw failure;
@@ -4182,6 +4318,103 @@ public class AudioManager implements MusicRestoreSink {
                     }
                 }
             }
+            publishDeferredNativeSelection(stagedSelection);
+        }
+
+        /** Invalidate an older prepared target before publishing a replacement. */
+        private void publishDeferredNativeSelection(AudioLogicalSnapshot selected) {
+            if (deferredReverseLogicalPrepared) {
+                presentationBinding.shadowProducer.discardPreparedRestoreSelection();
+                deferredReverseLogicalPrepared = false;
+            }
+            deferredReverseLogicalSnapshot = selected;
+        }
+
+        /** Internal native PauseGame operation; preserves chip time and mailbox ownership. */
+        private void requestNativePause(boolean paused) {
+            if (rewindReplaySuppressionDepth > 0) return;
+            presentationBinding.ensureShadowPresentation();
+            presentationBinding.shadowSmpsSession.requireNativePauseSupported();
+            if (!(presentationBinding.shadowRequestService instanceof AudioNativePauseAccess.Mailbox mailbox)) {
+                throw new UnsupportedOperationException("native pause mailbox is unavailable");
+            }
+            if (deferredReverseLogicalSnapshot == null) {
+                var previous = presentationBinding.shadowRequestService.snapshot();
+                try { mailbox.submitNativePause(paused); }
+                catch (RuntimeException failure) {
+                    try { presentationBinding.shadowRequestService.restore(previous); }
+                    catch (RuntimeException rollback) { failure.addSuppressed(rollback); }
+                    throw failure;
+                }
+                return;
+            }
+            AudioLogicalSnapshot selected = deferredReverseLogicalSnapshot;
+            AudioPresentationForwardService.Snapshot previous = presentationBinding.shadowRequestService.snapshot();
+            AudioPresentationForwardService.Snapshot staged;
+            RuntimeException primary = null;
+            try {
+                presentationBinding.shadowRequestService.restore(selected.forwardServiceSnapshot());
+                mailbox.submitNativePause(paused);
+                staged = presentationBinding.shadowRequestService.snapshot();
+            } catch (RuntimeException failure) {
+                primary = failure;
+                throw failure;
+            } finally {
+                try { presentationBinding.shadowRequestService.restore(previous); }
+                catch (RuntimeException rollback) {
+                    if (primary != null) primary.addSuppressed(rollback);
+                    else throw rollback;
+                }
+            }
+            publishDeferredNativeSelection(new AudioLogicalSnapshot(selected.ringLeft(),
+                    selected.commandTimelineFrame(), selected.commandTimelineNextOrder(),
+                    selected.commandEntryCount(), selected.presentation(), selected.donorGameIds(),
+                    selected.donorBindings(), staged));
+        }
+
+        private void replayNativePause(boolean paused, AudioPresentationForwardService.Snapshot forward) {
+            Objects.requireNonNull(forward, "forward");
+            presentationBinding.ensureShadowPresentation();
+            // Validate the source-owned snapshot before publishing any detached
+            // session selection; a failed validation restores the live source.
+            var previous = presentationBinding.shadowRequestService.snapshot();
+            RuntimeException primary = null;
+            try { presentationBinding.shadowRequestService.restore(forward); }
+            catch (RuntimeException failure) { primary = failure; throw failure; }
+            finally {
+                try { presentationBinding.shadowRequestService.restore(previous); }
+                catch (RuntimeException rollback) {
+                    if (primary != null) primary.addSuppressed(rollback);
+                    else throw rollback;
+                }
+            }
+            stageDeferredPresentationCommand(null, paused, forward);
+            refreshDeferredReverseLogicalSnapshot();
+        }
+
+        private void advanceNativeHistoryCursor(int cursor) {
+            presentationBinding.ensureShadowPresentation();
+            if (deferredReverseLogicalSnapshot == null) {
+                presentationBinding.shadowSmpsSession.setNativeHistoryCursor(cursor);
+                return;
+            }
+            AudioLogicalSnapshot selected = deferredReverseLogicalSnapshot;
+            AudioPresentationSnapshot p = selected.presentation();
+            var s = p.smpsSession();
+            if (s == null) return;
+            var session = new com.openggf.audio.session.SmpsDriverSessionSnapshot(s.initialized(),
+                    s.pendingGlobalCommand(), s.profile(), s.selectedDacSource(), s.speedShoesEnabled(),
+                    s.speedMultiplier(), s.musicTempoPercent(), s.ringLeft(), s.musicFmDacTrackCount(),
+                    s.segaPcmTransport(), s.physical(), s.nativePause(), cursor);
+            var presentation = new AudioPresentationSnapshot(p.nextVoiceId(), p.voices(), p.activeMusic(),
+                    p.overrideStack(), p.rawPcmVoiceId(), p.fmMuteMask(), p.fmSoloMask(), p.psgMuteMask(),
+                    p.psgSoloMask(), p.sfxBlocked(), p.sfxBlockHeldThroughFadeIn(), p.pendingRestore(),
+                    p.speedShoesEnabled(), p.speedMultiplier(), p.ringLeft(), p.coordFlagRuntimeState(),
+                    session, p.smpsLogical(), p.forwardTiming());
+            publishDeferredNativeSelection(new AudioLogicalSnapshot(selected.ringLeft(),
+                    selected.commandTimelineFrame(), selected.commandTimelineNextOrder(),
+                    selected.commandEntryCount(), presentation, selected.donorGameIds(),
+                    selected.donorBindings(), selected.forwardServiceSnapshot()));
         }
 
         private boolean managerRingAfter(
@@ -4290,6 +4523,8 @@ public class AudioManager implements MusicRestoreSink {
             AudioLogicalSnapshot selected = deferredReverseLogicalSnapshot;
             boolean preparedDuringAttempt = false;
             boolean producerReturned = false;
+            AudioPresentationForwardService.Snapshot previousForward = null;
+            boolean forwardRestoreAttempted = false;
             // Consumed once per entry, whichever exit this attempt takes, so an
             // armed injection can never leak into a later unrelated release.
             ReverseReleaseFailurePoint injectFailure = failNextReverseRelease;
@@ -4307,6 +4542,15 @@ public class AudioManager implements MusicRestoreSink {
                     // failures may still leave the characterized partial effects.
                     publishedBindings = sourcePublication.materializeSoundBindings(
                             selected.donorBindings());
+                    if ((presentationBinding.shadowRequestService == null)
+                            != (selected.forwardServiceSnapshot() == null)) {
+                        throw new IllegalArgumentException("reverse target forward-service ownership differs");
+                    }
+                    if (presentationBinding.shadowRequestService != null) {
+                        previousForward = presentationBinding.shadowRequestService.snapshot();
+                        forwardRestoreAttempted = true;
+                        presentationBinding.shadowRequestService.restore(selected.forwardServiceSnapshot());
+                    }
                 }
                 if (injectFailure
                         == ReverseReleaseFailurePoint.BEFORE_PRODUCER_COMMIT) {
@@ -4332,6 +4576,10 @@ public class AudioManager implements MusicRestoreSink {
                                     + "producer commit; completed the release from "
                                     + "the pre-commit ledger", failure);
                     return true;
+                }
+                if (forwardRestoreAttempted) {
+                    try { presentationBinding.shadowRequestService.restore(previousForward); }
+                    catch (RuntimeException rollback) { failure.addSuppressed(rollback); }
                 }
                 if (preparedDuringAttempt) {
                     try {

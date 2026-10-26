@@ -17,6 +17,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -198,13 +199,14 @@ class TestChainspikeBadnikInstance {
 
             lower.update(1, sprite);
             assertEquals(8, lower.extendOffsetForTest(), "add.w y_vel(a0),d0 (:199308-199309)");
-            // jsr (ObjCheckFloorDist) / tst.w d1 / bmi loc_91E46 (:199429-199431) with
-            // y_radius = height_pixels = $80 (word_91EE6, :199518): the spike probes 128 px
-            // ahead, so it finds the act's floor on its first outbound update and rebounds at
-            // a quarter of its speed, move.w y_vel(a0),d0 / asr.w #2 / neg.w (:199446-199449).
+            // word_91EE6 (sonic3k.asm:199518-199520) sets height_pixels=$80, not y_radius.
+            // ObjCheckFloorDist2 (:20090-20094) reads the untouched y_radius=0 byte. There
+            // is no floor at the child's centre yet, so the rendered height cannot rebound it.
+            assertEquals(0x80, lower.getOnScreenHalfHeight(), "retain the independent render bound");
+            assertEquals(8, lower.extendVelocityForTest(), "no premature 128-pixel-ahead rebound");
             lower.update(2, sprite);
-            assertEquals(-2, lower.extendVelocityForTest(), "-(8 >> 2)");
-            assertEquals(6, lower.extendOffsetForTest(), "and it starts back up the same update");
+            assertEquals(8, lower.extendVelocityForTest(), "the next centre probe is still clear");
+            assertEquals(16, lower.extendOffsetForTest(), "the lower spike keeps extending");
         } finally {
             SessionManager.clear();
         }
@@ -252,28 +254,45 @@ class TestChainspikeBadnikInstance {
 
     // --- helpers ---
 
-    /** Drives the body to the update on which {@code loc_91D12} sets the extend signal. */
+    /** Recreate the parent and extended child, replay movement, then preserve orphan retirement. */
     @Test
     void rewindRestoresExactParentAndKeepsRetiredParentOrphansRetired() {
         var fixture = fixture();
         var original = started(0, fixture.sprite());
         var child = original.childrenForTest().getFirst();
+        triggerExtend(original, fixture.sprite());
+        assertTrue(original.extendSignalForTest(), "precondition: native extension is triggered");
+        child.update(0, fixture.sprite());
+        child.update(1, fixture.sprite());
+        assertTrue(child.isExtendingForTest());
+        assertEquals(8, child.extendOffsetForTest());
+        assertEquals(8, child.extendVelocityForTest(), "capture before any floor rebound");
         var id = com.openggf.game.rewind.identity.ObjectRefId.layout(7, 1, 12);
         var before = new com.openggf.game.rewind.identity.RewindIdentityTable();
         before.registerObject(original, id);
-        var saved = child.captureRewindState(
-                com.openggf.game.rewind.schema.RewindCaptureContext.withIdentityTable(before));
+        var captureContext = com.openggf.game.rewind.schema.RewindCaptureContext.withIdentityTable(before);
+        var savedParent = original.captureRewindState(captureContext);
+        var saved = child.captureRewindState(captureContext);
+        var atCapture = extensionState(child);
+        child.update(2, fixture.sprite());
+        assertEquals(16, child.extendOffsetForTest(), "the original must advance before recreation");
+        var afterRun = extensionState(child);
         var replacement = new ChainspikeBadnikInstance(original.getSpawn());
         var after = new com.openggf.game.rewind.identity.RewindIdentityTable();
         after.registerObject(replacement, id);
         GameServices.level().getObjectManager().removeDynamicObject(original);
         assertTrue(original.isDestroyed(), "offscreen retirement publishes the parent status bit");
+        var restoreContext = com.openggf.game.rewind.schema.RewindCaptureContext.withIdentityTable(after);
+        replacement.restoreRewindState(savedParent, restoreContext);
         var restored = (ChainspikeBadnikInstance.ChainspikeChild) child.recreateForRewind(
                 new com.openggf.level.objects.RewindRecreateContext(child.getSpawn(), saved, null));
-        restored.restoreRewindState(saved,
-                com.openggf.game.rewind.schema.RewindCaptureContext.withIdentityTable(after));
-        restored.update(1, fixture.sprite());
+        restored.restoreRewindState(saved, restoreContext);
+        assertNotSame(child, restored, "exercise destructive child recreation");
+        assertNotSame(original, replacement, "exercise destructive parent recreation");
+        assertEquals(atCapture, extensionState(restored), "restore phase, extension, frame and flags");
+        restored.update(2, fixture.sprite());
         assertFalse(restored.isDestroyed(), "must follow the restored owner, not the retired instance");
+        assertEquals(afterRun, extensionState(restored), "the centre probe replays against the restored owner");
 
         com.openggf.level.objects.ObjectLifetimeOps.deleteNoRespawn(replacement);
         var retiredContext = com.openggf.game.rewind.schema.RewindCaptureContext.withIdentityTable(
@@ -285,6 +304,13 @@ class TestChainspikeBadnikInstance {
         assertTrue(restored.isDestroyed(), "Child_CheckParent retires an orphan on its next update");
     }
 
+    private List<Object> extensionState(ChainspikeBadnikInstance.ChainspikeChild child) {
+        return List.of(child.isExtendingForTest(), child.extendOffsetForTest(),
+                child.extendVelocityForTest(), child.mappingFrameForTest(),
+                child.getCollisionFlags(), child.getX(), child.getY());
+    }
+
+    /** Drives the body to the update on which {@code loc_91D12} sets the extend signal. */
     private void triggerExtend(ChainspikeBadnikInstance body, AbstractPlayableSprite sprite) {
         moveTo(sprite, OBJECT_X, OBJECT_Y);
         for (int update = 0; update < 400 && !body.extendSignalForTest(); update++) {

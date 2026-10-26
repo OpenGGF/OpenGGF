@@ -119,6 +119,7 @@ class TestStageplayCapsuleControlRelease {
         capsule.releasePlayersForVisualDirection();
         capsule.restoreRewindState(snapshot, fixture.context());
         clearInvocations(fixture.main, fixture.sidekick, cpu);
+        var nativeState = nativeScalarState(capsule);
         capsule.releasePlayersForVisualDirection();
         verify(fixture.main).applyObjectControlState(ObjectControlState.NONE);
         verify(fixture.main).setControlLocked(false);
@@ -128,7 +129,9 @@ class TestStageplayCapsuleControlRelease {
         verify(fixture.main, never()).setAnimationId(anyInt());
         verify(fixture.main, never()).setAir(anyBoolean());
         verify(fixture.sidekick, never()).setAir(anyBoolean());
-        assertFalse(field(capsule, "geyserSpawned").getBoolean(capsule));
+        assertEquals(nativeState, nativeScalarState(capsule), "Release must not advance any native capsule phase");
+        verify(fixture.services, never()).camera();
+        verify(fixture.services, never()).objectManager();
     }
 
     @Test
@@ -203,6 +206,20 @@ class TestStageplayCapsuleControlRelease {
         var identities = new RewindIdentityTable(); identities.registerPlayer(recreated, PlayerRefId.mainPlayer());
         owners.restore(refs, RewindCaptureContext.withIdentityTable(identities));
         assertSame(recreated, owners.players().getFirst());
+    }
+
+    private static java.util.Map<Field, Object> nativeScalarState(Object owner) throws Exception {
+        var result = new java.util.HashMap<Field, Object>();
+        for (Class<?> type = owner.getClass(); type != AbstractObjectInstance.class; type = type.getSuperclass()) {
+            for (var field : type.getDeclaredFields()) {
+                if (!java.lang.reflect.Modifier.isStatic(field.getModifiers())
+                        && (field.getType().isPrimitive() || field.getType().isEnum())) {
+                    field.setAccessible(true);
+                    result.put(field, field.get(owner));
+                }
+            }
+        }
+        return result;
     }
 
     private static ObjectSpawn spawn() { return new ObjectSpawn(100, 100, 0x81, 0, 0, false, 100); }

@@ -109,7 +109,8 @@ class TestStageplayObjectDirection {
         for (boolean remove : List.of(false, true)) for (String kind : List.of("vine", "tube", "grabber", "zipline", "pole", "grab", "spring", "hand", "pulley", "cup")) {
             Fixture fixture = new Fixture(List.of());
             var direction = ObjectDirectionAccess.forManager(fixture.objects);
-            var player = mock(com.openggf.sprites.playable.AbstractPlayableSprite.class);
+            var player = mock(com.openggf.sprites.playable.AbstractPlayableSprite.class,
+                    withSettings().name("kind=" + kind + ",remove=" + remove));
             var query = mock(ObjectPlayerQuery.class);
             when(fixture.services.playerQuery()).thenReturn(query);
             when(query.mainPlayerOrNull()).thenReturn(player);
@@ -797,6 +798,183 @@ class TestStageplayObjectDirection {
                             .toList());
         } finally {
             direction.close();
+        }
+    }
+
+    @Test
+    void directedNativeFifoKeepsInvertedRootChildSlotsAndEveryRepeatedAdmittedPart() {
+        Fixture fixture = new Fixture(List.of());
+        var direction = ObjectDirectionAccess.forManager(fixture.objects);
+        var root = nativePictureProbe(fixture, 70, 90);
+        var child = nativePictureProbe(fixture, 40, 99);
+        direction.childSpawned(root, child);
+        direction.direct(root, nativePictureTemplate(root, 70, 40), new Direction(0, 80, Basis.RIGHT, true, 0, -1));
+        try {
+            for (var object : List.of(root, child, root, child))
+                assertTrue(NativeSpriteSubmissionAccess.submit(fixture.objects, object, 4));
+            var ledger = fixture.objects.nativeSpriteSubmissions().capture();
+            assertEquals(List.of(70, 40, 70, 40), ledger.admissions().stream()
+                    .map(NativeSpriteSubmissionAccess.Admission::slot).toList());
+            for (int repeat = 0; repeat < 2; repeat++) {
+                assertEquals(List.of(3f, 1f, 3f, 1f), prepareDirectedPicture(fixture, true).tiles().stream()
+                        .map(com.openggf.graphics.SpritePresentation.Tile::x).toList(),
+                        "SAT replay reverses the actual root/child FIFO, not the SST order");
+                assertEquals(ledger, fixture.objects.nativeSpriteSubmissions().capture());
+                assertEquals(0, root.updates + child.updates);
+            }
+        } finally {
+            direction.close();
+        }
+    }
+
+    @Test
+    void refusedSixtyFourthNativeCallDoesNotFundPictureAdmissionOrBypassSatLimits() {
+        Fixture fixture = new Fixture(List.of());
+        var direction = ObjectDirectionAccess.forManager(fixture.objects);
+        var root = nativePictureProbe(fixture, 70, 90);
+        var child = nativePictureProbe(fixture, 40, 99);
+        direction.childSpawned(root, child);
+        direction.direct(root, nativePictureTemplate(root, 70, 40), new Direction(0, 80, Basis.RIGHT, true, 0, -1));
+        try {
+            for (int call = 0; call < 63; call++)
+                assertTrue(NativeSpriteSubmissionAccess.submit(fixture.objects, root, 4));
+            assertFalse(NativeSpriteSubmissionAccess.submit(fixture.objects, child, 4));
+            var ledger = fixture.objects.nativeSpriteSubmissions().capture();
+            var painter = prepareDirectedPicture(fixture, false);
+            assertEquals(63, painter.tiles().stream().filter(tile -> tile.x() == 1f).count());
+            assertEquals(1, painter.tiles().stream().filter(tile -> tile.x() == 3f).count(),
+                    "The unsubmitted child has separate explicit picture authority");
+            var sat = prepareDirectedPicture(fixture, true);
+            assertEquals(20, sat.tiles().size(), "Native repeats exhaust the H40 same-line SAT count");
+            assertTrue(sat.tiles().stream().allMatch(tile -> tile.x() == 1f),
+                    "The picture suffix still competes after the native FIFO prefix");
+            assertEquals(ledger, fixture.objects.nativeSpriteSubmissions().capture());
+            assertEquals(63, ledger.admissions().size());
+        } finally {
+            direction.close();
+        }
+    }
+
+    @Test
+    void rawAcceptedZeroIdAndOrphanAddressesSuppressPicturesAndReuseDrawsOnlyTheCurrentOwner() {
+        Fixture fixture = new Fixture(List.of());
+        var direction = ObjectDirectionAccess.forManager(fixture.objects);
+        var root = nativePictureProbe(fixture, 70, 90);
+        var child = nativePictureProbe(fixture, 40, 99);
+        direction.childSpawned(root, child);
+        direction.direct(root, nativePictureTemplate(root, 70, 40), new Direction(0, 80, Basis.RIGHT, true, 0, -1));
+        try {
+            assertTrue(NativeSpriteSubmissionAccess.submit(fixture.objects, root, 4));
+            assertTrue(NativeSpriteSubmissionAccess.submit(fixture.objects, child, 4));
+            root.liveId = 0;
+            fixture.objects.removeDynamicObject(child);
+            var ledger = fixture.objects.nativeSpriteSubmissions().capture();
+            assertTrue(prepareDirectedPicture(fixture, true).tiles().isEmpty(),
+                    "Neither raw accepted address may reappear as a separate picture");
+            var replacement = nativePictureProbe(fixture, 40, 99);
+            assertFalse(direction.suspended(replacement));
+            assertEquals(List.of(99f), prepareDirectedPicture(fixture, true).tiles().stream()
+                    .map(com.openggf.graphics.SpritePresentation.Tile::x).toList(),
+                    "A reused address resolves an undirected replacement, not the old child's template");
+            fixture.objects.removeDynamicObject(replacement);
+            assertTrue(prepareDirectedPicture(fixture, true).tiles().isEmpty());
+            assertEquals(ledger, fixture.objects.nativeSpriteSubmissions().capture());
+        } finally {
+            direction.close();
+        }
+    }
+
+    @Test
+    void emptyCompletedNativeLedgerRetainsExplicitPicturesAcrossPrepareRewindAndRelease() {
+        Fixture fixture = new Fixture(List.of());
+        var direction = ObjectDirectionAccess.forManager(fixture.objects);
+        var root = nativePictureProbe(fixture, 70, 90);
+        var child = nativePictureProbe(fixture, 40, 99);
+        direction.childSpawned(root, child);
+        direction.direct(root, nativePictureTemplate(root, 70, 40), new Direction(0, 80, Basis.RIGHT, true, 0, -1));
+        try {
+            assertTrue(NativeSpriteSubmissionAccess.submit(fixture.objects, root, 4));
+            fixture.objects.update(0, null, List.of(), 1, false);
+            var ledger = fixture.objects.nativeSpriteSubmissions().capture();
+            assertTrue(ledger.nativePassPresent());
+            assertTrue(ledger.admissions().isEmpty());
+            fixture.objects.setRewindInPlaceRestoreEnabledForTest(false);
+            var nativeState = fixture.objects.rewindSnapshottable().capture();
+            var pictures = direction.rewindSnapshottable().capture();
+            var rootId = fixture.objects.objectQuery().identityOf(root).orElseThrow();
+            var childId = fixture.objects.objectQuery().identityOf(child).orElseThrow();
+            for (int replay = 0; replay < 2; replay++) {
+                for (int prepare = 0; prepare < 2; prepare++) {
+                    assertEquals(List.of(1f, 3f), prepareDirectedPicture(fixture, true).tiles().stream()
+                            .map(com.openggf.graphics.SpritePresentation.Tile::x).toList());
+                    assertEquals(ledger, fixture.objects.nativeSpriteSubmissions().capture());
+                }
+                var liveRoot = (NativePictureProbe) fixture.objects.objectQuery().resolve(rootId).orElseThrow();
+                var liveChild = (NativePictureProbe) fixture.objects.objectQuery().resolve(childId).orElseThrow();
+                assertEquals(0, liveRoot.updates + liveChild.updates);
+                direction.releaseToFree(liveRoot);
+                assertTrue(prepareDirectedPicture(fixture, true).tiles().isEmpty(),
+                        "Releasing picture authority never supplies fallback for unsubmitted natives");
+                fixture.objects.rewindSnapshottable().restore(nativeState);
+                fixture.objects.nativeSpriteSubmissions().restore(ledger);
+                direction.rewindSnapshottable().restore(pictures);
+                assertNotSame(liveRoot, fixture.objects.objectQuery().resolve(rootId).orElseThrow());
+                assertEquals(ledger, fixture.objects.nativeSpriteSubmissions().capture());
+            }
+        } finally {
+            direction.close();
+        }
+    }
+
+    private static NativePictureProbe nativePictureProbe(Fixture fixture, int slot, int nativeX) {
+        var object = new NativePictureProbe(new ObjectSpawn(100, 80, 1, nativeX, 0, false, 80));
+        fixture.objects.addDynamicObjectAtSlot(object, slot);
+        return object;
+    }
+
+    private static VisualTemplate nativePictureTemplate(NativePictureProbe root, int... slots) {
+        var parts = new java.util.ArrayList<VisualPart>();
+        for (int index = 0; index < slots.length; index++) {
+            var tile = new VisualTile(0, 0, false, false, false, 1 + 2 * index, 0, 8, 8, false, 15, 0, 8);
+            parts.add(new VisualPart("root/" + index, 4, false, slots[index], 0, root.nativeFacing(), 0,
+                    List.of(new VisualPose(0, List.of(tile), List.of()))));
+        }
+        return new VisualTemplate(root.getX(), root.getY(), root.nativeFacing(), parts, List.of(new PatternPixels(1, 0, 0, 0)),
+                List.of(new PaletteColors(java.util.Collections.nCopies(16, 0))), List.of());
+    }
+
+    private static com.openggf.graphics.SpritePresentation.Frame prepareDirectedPicture(Fixture fixture, boolean sat) {
+        return com.openggf.level.render.SpritePresentationRenderer.prepare(fixture.graphics, 0, 0, () -> {
+            if (sat) {
+                com.openggf.graphics.SpriteSatInternalAccess.beginCollection(fixture.graphics,
+                        com.openggf.graphics.SpriteSatMaskPostProcessor.Raster.h40(0, 0, 224));
+                fixture.graphics.setCurrentSpriteSatBucket(4);
+            }
+            fixture.objects.drawUnifiedBucketWithPriority(4, fixture.graphics);
+            if (sat) fixture.graphics.endSpriteSatCollectionAndReplay();
+        });
+    }
+
+    public static final class NativePictureProbe extends AbstractObjectInstance
+            implements NativeSpriteSubmissionSource, SpawnRewindRecreatable, ObjectVisualFacing.Source {
+        int updates;
+        int liveId = 1;
+        public NativePictureProbe(ObjectSpawn spawn) { super(spawn, "native-picture-probe"); }
+        // The probe submits fixed coordinates, with no native horizontal facing transform.
+        @Override public Basis nativeFacing() { return Basis.NON_DIRECTIONAL; }
+        @Override public int getPriorityBucket() { return 4; }
+        @Override public int getLiveObjectId() { return liveId; }
+        @Override public boolean isPersistent() { return true; }
+        @Override public void update(int vIntRunCount, PlayableEntity player) { updates++; }
+        @Override public void appendRenderCommands(List<GLCommand> commands) {
+            var graphics = services().graphicsManager();
+            if (graphics.isSpriteSatCollectionActive()) {
+                graphics.submitSpriteSatPiece(new com.openggf.level.render.SpritePieceRenderer.PreparedPiece(
+                        getSpawn().subtype(), 80, 1, 1, 777, 777 & 0x7ff, 0,
+                        false, false, false, false, 0, 1));
+            } else {
+                graphics.renderPatternWithId(777, new com.openggf.level.PatternDesc(), getSpawn().subtype(), 80);
+            }
         }
     }
 

@@ -16,6 +16,10 @@ import java.util.Objects;
 public final class WorldSession {
     private final GameModule rootGameModule;
     private final GameModule gameModule;
+    final com.openggf.game.resources.PlcLifecycleService worldPlcLifecycle;
+    // Durable physical DATA survives context/editor rebuilds. Runtime composition
+    // separately publishes its reserved rewind projection.
+    final com.openggf.game.internal.NativePhysicalWorldData worldPhysicalData;
     private final SaveSessionContext saveSessionContext;
     private final GameDataSource dataSource;
     private final PlayableCharacterRegistry playableCharacterRegistry;
@@ -66,6 +70,15 @@ public final class WorldSession {
         this.saveSessionContext = saveSessionContext;
         var policyProvider = resolvedGameModule.getGameService(WorldSessionPolicyProvider.class);
         policies = policyProvider == null ? null : policyProvider.open(this);
+        var nativeRoot = com.openggf.game.internal.NativeGameModuleLineage.root(rootGameModule);
+        var plcFactory = nativeRoot == null ? null : nativeRoot.getGameService(WorldPlcLifecycleFactory.class);
+        worldPlcLifecycle = plcFactory == null ? null
+                : Objects.requireNonNull(plcFactory.open(this), "world PLC lifecycle");
+        var dataFactory = nativeRoot == null ? null
+                : nativeRoot.getGameService(com.openggf.game.internal.WorldRewindAdapterFactory.class);
+        worldPhysicalData = dataFactory == null ? null
+                : Objects.requireNonNull(dataFactory.open(java.lang.invoke.MethodHandles.lookup(), this),
+                        "world native DATA owner");
     }
 
     public GameModule rootGameModule() {

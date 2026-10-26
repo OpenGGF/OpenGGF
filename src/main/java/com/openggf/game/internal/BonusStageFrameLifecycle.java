@@ -17,7 +17,12 @@ public final class BonusStageFrameLifecycle {
     private BonusStageFrameLifecycle() { }
 
     public static void updateOverlay(TitleCardProvider title) {
-        if (title != null && title.isOverlayActive()) title.update();
+        updateOverlay(title, null);
+    }
+
+    public static void updateOverlay(TitleCardProvider title, com.openggf.game.session.WorldSession world) {
+        if (title != null && title.isOverlayActive())
+            WorldTitleCardUpdate.dispatch(title, world);
     }
 
     public static void updateProvider(BonusStageProvider provider) {
@@ -41,7 +46,8 @@ public final class BonusStageFrameLifecycle {
     }
 
     public static void beforeReplayFrame(GameplayModeContext context) {
-        if (activeProvider(context) != null) updateOverlay(context.getWorldSession().getGameModule().getTitleCardProvider());
+        if (activeProvider(context) != null) updateOverlay(context.getWorldSession().getGameModule().getTitleCardProvider(),
+                context.getWorldSession());
     }
 
     public static void afterReplayFrame(GameplayModeContext context) {

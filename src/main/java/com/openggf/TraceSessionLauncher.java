@@ -610,11 +610,8 @@ public final class TraceSessionLauncher {
     void configureStandaloneSpecialStageAudio() throws IOException {
         var audio = GameServices.audio();
         var profile = GameServices.module().getAudioProfile();
-        audio.setAudioProfile(profile);
         var rom = GameServices.rom().getRom();
-        if (rom != null) {
-            audio.setRom(rom);
-        }
+        com.openggf.audio.AudioManagerInternalAccess.installMatchedSource(audio, rom, profile);
         audio.setSoundMap(profile.getSoundMap());
         audio.resetRingSound();
     }
@@ -2794,9 +2791,24 @@ public final class TraceSessionLauncher {
     }
 
     static boolean suppressesRunNativeLevelBody(GameMode mode) {
+        // Closing the comparison segment does not leave the native level loop.
+        // Terminal input belongs to the physical driver, not logical playback.
         return mode == GameMode.LEVEL
                 && isRunFrameDriverActive()
-                && !allowsRunLogicalGameplayInput();
+                && !allowsRunLogicalGameplayInput()
+                && !hasRunDisposition(TraceRunFrameDriver.Disposition.TERMINAL_TAIL);
+    }
+
+    private static boolean hasRunDisposition(TraceRunFrameDriver.Disposition disposition) {
+        TraceSessionLauncher session = active();
+        if (session != null) {
+            return session.activeRunDisposition == disposition;
+        }
+        GameplayModeContext context = SessionManager.getCurrentGameplayMode();
+        return context != null
+                && context.traceRunFrameDriver()
+                        .map(TraceRunFrameDriver::currentDisposition)
+                        .orElse(null) == disposition;
     }
 
     /**

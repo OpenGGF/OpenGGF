@@ -14,6 +14,8 @@ import java.util.logging.Logger;
 public class CheckpointState implements RespawnState {
     private static final Logger LOGGER = Logger.getLogger(CheckpointState.class.getName());
 
+    com.openggf.game.internal.CheckpointBackgroundScroll savedBackgroundScroll;
+
     private int lastCheckpointIndex = -1;
     // Persistent star-post activation high-water: the highest star-post subtype
     // ever activated this life. Unlike lastCheckpointIndex (ROM Last_star_post_hit,
@@ -78,6 +80,7 @@ public class CheckpointState implements RespawnState {
      * Clear checkpoint state (called on level start/change).
      */
     public void clear() {
+        savedBackgroundScroll = null;
         lastCheckpointIndex = -1;
         starPostActivationMark = -1;
         savedX = 0;

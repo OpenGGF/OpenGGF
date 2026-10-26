@@ -14,7 +14,6 @@ import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
-import com.openggf.level.objects.boss.AbstractBossChild;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -375,10 +374,8 @@ public class AizMinibossCutsceneInstance extends AbstractBossInstance
         }
     }
 
-    private <T extends AbstractBossChild> T spawnTrackedChild(Supplier<T> factory) {
-        T child = spawnChild(factory);
-        childComponents.add(child);
-        return child;
+    private <T extends AizMinibossComponent> T spawnTrackedChild(Supplier<T> factory) {
+        return spawnChild(factory);
     }
 
     private void spawnDebris() {

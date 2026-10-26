@@ -100,7 +100,7 @@ class TestS3kFreshTitlePlcLoadBoundary {
     }
 
     private static Sonic3kLevelTitlePlcService plc() {
-        return GameServices.module().getGameService(Sonic3kLevelTitlePlcService.class);
+        return com.openggf.game.session.WorldPlcLifecycleAccess.require(GameServices.level().getWorldSession(), Sonic3kLevelTitlePlcService.class);
     }
 
     private static Sonic3kTitleCardManager title() {

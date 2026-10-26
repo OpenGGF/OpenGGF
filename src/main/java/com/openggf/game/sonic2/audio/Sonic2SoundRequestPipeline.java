@@ -53,6 +53,19 @@ public final class Sonic2SoundRequestPipeline<P> {
         }
     }
 
+    /** PauseGame writes Music0 directly, bypassing PlayMusic's fallback slot. */
+    public void overwriteMusic0ForNativePause(boolean paused, P payload) {
+        music0 = request(paused ? PAUSE : UNPAUSE, payload);
+    }
+
+    /** zPauseMusic clears StopMusic only on its actual resume invocation. */
+    public void completeNativeResume() {
+        if (stopMusic != READY) {
+            throw new IllegalStateException("native resume has not reached the bridge");
+        }
+        stopMusic = 0;
+    }
+
     /** Models {@code PlaySound}'s overwrite-only {@code SFX0} ({@code s2.asm:1535-1539}). */
     public void submitSound(int requestByte, P payload) {
         sfx0 = request(requestByte, payload);

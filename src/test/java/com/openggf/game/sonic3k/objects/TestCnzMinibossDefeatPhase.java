@@ -52,6 +52,7 @@ class TestCnzMinibossDefeatPhase {
         CnzMinibossInstance boss = new CnzMinibossInstance(
                 new ObjectSpawn(0x3240, 0x0200, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
         boss.setServices(services);
+        CnzMinibossPhaseFixture.releasedStart(boss, fixture);
         boss.forceRoutineForTest(0x0E);  // Lower2 is slot E (ROM: 144972), not C
         // $43(a0) = 4 (decremented per frame); restore $42(a0) = ROUTINE_MOVE_DUP
         // (0x06) on counter expiry. Migrated off the deprecated single-arg shim.
@@ -73,6 +74,7 @@ class TestCnzMinibossDefeatPhase {
         CnzMinibossInstance boss = new CnzMinibossInstance(
                 new ObjectSpawn(0x3240, 0x0200, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
         boss.setServices(services);
+        CnzMinibossPhaseFixture.releasedStart(boss, fixture);
 
         // Capture intermediate counter values to prove monotonic decrement.
         // A buggy impl that slammed hitCount to 0 on the first hit would pass
@@ -108,6 +110,7 @@ class TestCnzMinibossDefeatPhase {
         CnzMinibossInstance boss = new CnzMinibossInstance(
                 new ObjectSpawn(0x3240, 0x0200, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
         boss.setServices(services);
+        CnzMinibossPhaseFixture.releasedStart(boss, fixture);
         // Defeat replaces the current object routine but deliberately preserves
         // the live ROM $2E timer. Enter a valid live Move state with $2E=0;
         // attacking the never-initialized placement would leave $2E=-1, a state

@@ -50,9 +50,13 @@ public class TilemapGpuRenderer {
         foregroundWindowTexture = residency.foregroundWindowTexture;
         foregroundData = null; foregroundWidthTiles = 0; foregroundHeightTiles = 0; foregroundDirty = false;
         foregroundWindow = null; foregroundVerticalScrollSplit = null; uploadedWindowDescriptors = null;
+        PatternLookupBuffer savedLookupTexture = patternLookup;
+        patternLookup = cinematicPatternLookup;
         byte[] savedLookup = lookupData;
         int savedLookupSize = lookupSize;
         boolean savedLookupDirty = lookupDirty;
+        boolean savedClipHorizontal = clipHorizontal;
+        lookupData = null; lookupSize = 0; lookupDirty = false;
         cinematicBackgroundActive = true;
         restoreBackgroundResidency(new BackgroundResidencyState(residency.texture, null, null, null, 0, 0, false, false, 0, 0, 0, 0, 0, 0, 0, 0, -1, -1, 0, -1, 0));
         try { draw.run(); }
@@ -64,6 +68,8 @@ public class TilemapGpuRenderer {
             foregroundWidthTiles = savedForeground.width(); foregroundHeightTiles = savedForeground.height();
             foregroundDirty = savedForeground.dirty(); foregroundWindow = savedForeground.window();
             foregroundVerticalScrollSplit = savedForeground.split(); uploadedWindowDescriptors = savedForeground.uploadedWindow();
+            clipHorizontal = savedClipHorizontal;
+            patternLookup = savedLookupTexture;
             lookupData = savedLookup; lookupSize = savedLookupSize; lookupDirty = savedLookupDirty;
             cinematicBackgroundActive = false;
         }
@@ -116,7 +122,8 @@ public class TilemapGpuRenderer {
     public void setForegroundWindow(ForegroundWindow window) {
         foregroundWindow = window;
     }
-    private final PatternLookupBuffer patternLookup = new PatternLookupBuffer();
+    private PatternLookupBuffer patternLookup = new PatternLookupBuffer();
+    private final PatternLookupBuffer cinematicPatternLookup = new PatternLookupBuffer();
     private final HScrollBuffer foregroundLineScrollBuffer = new HScrollBuffer(true);
     private VScrollBuffer columnVScrollBuffer;
     private final QuadRenderer quadRenderer = new QuadRenderer();
@@ -1116,6 +1123,7 @@ public class TilemapGpuRenderer {
         foregroundWindow = null;
         foregroundVerticalScrollSplit = null;
         patternLookup.cleanup();
+        cinematicPatternLookup.cleanup();
         quadRenderer.cleanup();
         backgroundData = null;
         backgroundColumnUploadData = null;

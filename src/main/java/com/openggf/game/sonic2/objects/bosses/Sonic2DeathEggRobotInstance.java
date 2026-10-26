@@ -4,6 +4,9 @@ import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.palette.PaletteWriteSupport;
+import com.openggf.game.sonic2.Sonic2LevelAnimationManager;
+import com.openggf.level.objects.boss.BossExplosionObjectInstance;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.sonic2.audio.Sonic2Music;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
@@ -435,7 +438,6 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
 
     // Setup-ending state (ObjC7_SetupEnding, s2.asm:83050-83124)
     private int robotFollowOffset;  // Robot trails player by this amount, decremented every 32 frames
-    private int defeatFrameCounter; // Frame counter for setup-ending rumble timing
     private int defeatWalkFrameCounter; // Frames since loc_3D922 locked control before loc_3D93C force-right
     private int fadeTimer;          // Countdown for fade-to-white before credits
     private final Set<PlayableEntity> endingControlledPlayers =
@@ -476,7 +478,6 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
         facingLeft = false; // ROM: x_flip = 0 (ObjC7_SubObjData render_flags bit 0 clear), art naturally faces LEFT
         defeatPhase = 0;
         robotFollowOffset = 0;
-        defeatFrameCounter = 0;
         defeatWalkFrameCounter = 0;
         fadeTimer = 0;
         targetedPlayerX = 0;
@@ -973,8 +974,7 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
             case 0 -> updateDefeatFall(vIntRunCount);
             case 2 -> updateDefeatExplode(vIntRunCount);
             case 4 -> updateDefeatWalkPlayer(vIntRunCount, player);
-            case 6 -> updateDefeatSetupEnding(vIntRunCount, player);
-            case 8 -> updateDefeatFade();
+            case 6, 8 -> updateDefeatSetupEnding(vIntRunCount, player);
             case 10 -> {} // Terminal: ending triggered, waiting for game mode change
         }
     }
@@ -1072,7 +1072,6 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
             // Advance to setup-ending phase. Do NOT trigger credits yet.
             defeatPhase = 6;
             robotFollowOffset = INITIAL_ROBOT_FOLLOW_OFFSET;
-            defeatFrameCounter = 0;
 
             // ROM: set screen shake flag and DEZ shake timer ($1000)
             triggerDezScreenShake(0x1000);
@@ -1090,7 +1089,7 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
      * Robot position: X = player_X - offset, Y = player_Y.
      * Wait until Player X >= $EC0 (3776 decimal) before advancing to fade.
      */
-    private void updateDefeatSetupEnding(int frameCounter, AbstractPlayableSprite player) {
+    private void updateDefeatSetupEnding(int vIntRunCount, AbstractPlayableSprite player) {
         // Keep player controls locked and forcing right
         if (player != null) {
             visualControlOwners.acquire(player).setControlLocked(true);
@@ -1103,23 +1102,12 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
         }
         updateEndingSidekicks(player);
 
-        defeatFrameCounter++;
-
-        // ROM: Every 32 frames: play rumble sound, decrement follow-offset
-        if ((defeatFrameCounter & 0x1F) == 0) {
+        // ObjC7_SetupEnding (s2.asm:83155-83174) uses the ROM VInt clock,
+        // including during loc_3D9D6's fade. This is not an entry-relative timer.
+        if ((vIntRunCount & 0x1F) == 0) {
             services().playSfx(Sonic2Sfx.RUMBLING_2.id);
-            if (robotFollowOffset > 0) {
-                robotFollowOffset--;
-            }
+            robotFollowOffset = (short) (robotFollowOffset - 1);
         }
-
-        // ROM: ObjC7_SetupEnding calls loc_3DFBA EVERY frame to spawn an explosion
-        // at the robot's position. This is a DIFFERENT function from Boss_LoadExplosion
-        // (no 8-frame throttle) — it creates a continuous trail of explosions behind
-        // the player as the robot follows.
-        spawnDefeatExplosion();
-
-        // Position robot following behind the player
         if (player != null) {
             state.x = player.getCentreX() - robotFollowOffset;
             state.y = player.getCentreY();
@@ -1127,28 +1115,75 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
             bodyYFixed = (long) state.y << 16;
             state.xFixed = (int) bodyXFixed;
             state.yFixed = (int) bodyYFixed;
+        }
+        // loc_3DFBA (s2.asm:83842-83860) runs after positioning, on every pass.
+        spawnEndingExplosion();
 
-            // Check player X threshold for ending
-            if (player.getCentreX() >= DEFEAT_ENDING_PLAYER_X) {
-                defeatPhase = 8;
-                fadeTimer = FADE_DURATION;
-                services().fadeOutMusic();
+        if (defeatPhase == 8) {
+            updateDefeatFade();
+        } else if (player != null && player.getCentreX() >= DEFEAT_ENDING_PLAYER_X) {
+            defeatPhase = 8;
+            fadeTimer = FADE_DURATION;
+            // loc_3D9BE (s2.asm:83185-83191): freeze the native primary
+            // PalCycle_Timer. CPZ/DEZ use it for all three palette writes.
+            if (services().levelManager() != null
+                    && services().levelManager().getAnimatedPaletteManager()
+                    instanceof Sonic2LevelAnimationManager animation) {
+                animation.setPrimaryPaletteCycleTimer(0x7FFF);
             }
         }
     }
 
-    /**
-     * Defeat phase 8: Fade to white, then trigger credits transition.
-     * ROM: Fade palette to white over ~22 frames, then set game mode to ending.
-     */
-    private void updateDefeatFade() {
-        releaseAllEndingSidekicks();
-        fadeTimer--;
-        if (fadeTimer < 0) {
-            // ROM: move.b #id_Ending,(v_gamemode).w
-            services().requestCreditsTransition();
-            defeatPhase = 10; // Terminal state
+    private void spawnEndingExplosion() {
+        ObjectManager objects = services().objectManager();
+        if (objects == null) {
+            return;
         }
+        // AllocateObject precedes RandomNumber: a full SST must not consume RNG.
+        objects.createDynamicObjectWithReservedSlot(() -> {
+            int random = services().rng().nextWord();
+            int xOffset = ((random & 0xFF) >> 2) - 0x30;
+            int yOffset = (((random >>> 8) & 0xFF) >> 2) - 0x30;
+            return new BossExplosionObjectInstance(state.x + xOffset, state.y + yOffset,
+                    getBossExplosionObjectId(), getBossExplosionSfxId(),
+                    getBossExplosionPriorityBucket());
+        });
+    }
+
+    /** loc_3D9D6 (s2.asm:83194-83225): 21 colour passes, then fill white. */
+    private void updateDefeatFade() {
+        fadeTimer = (fadeTimer - 1) & 0xFF;
+        boolean complete = fadeTimer == 0;
+        var level = services().currentLevel();
+        if (level != null) {
+            for (int line = 0; line < 4; line++) {
+                for (int color = 0; color < 16; color++) {
+                    int word = PaletteWriteSupport.segaWordFromColor(level.getPalette(line).getColor(color));
+                    int next = complete ? 0xEEE : fadeEndingColorToWhite(word);
+                    PaletteWriteSupport.applyColor(services().paletteOwnershipRegistryOrNull(),
+                            level, services().graphicsManager(), "s2.dez.endingFade", 80,
+                            line, color, next);
+                }
+            }
+        }
+        if (complete) {
+            // FixBugs=0 sends MusID_FadeOut through PlaySound's SFX mailbox;
+            // explosions can crowd it out. FixBugs=1 uses PlayMusic instead.
+            services().playSfx(0xF9);
+            releaseAllEndingSidekicks();
+            services().requestCreditsTransition();
+            defeatPhase = 10;
+            setDestroyed(true);
+        }
+    }
+
+    private static int fadeEndingColorToWhite(int word) {
+        // Pal_FadeToWhite.UpdateColour (s2.asm:3623-3652) raises one
+        // component per pass: red, then green, then blue.
+        if ((word & 0xE) != 0xE) return word + 2;
+        if ((word & 0xE0) != 0xE0) return word + 0x20;
+        if ((word & 0xE00) != 0xE00) return word + 0x200;
+        return word;
     }
 
     // ========================================================================

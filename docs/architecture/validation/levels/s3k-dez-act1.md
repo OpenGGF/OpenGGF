@@ -542,3 +542,29 @@ qualified physical contact/death scope; other unchanged checks were not repeated
 [Exact selectors and source hashes](../../plans/2026-10-13-s3k-playable-completion.md#existing-checkpoint-driver-qualification-2026-10-14)
 are in the completion plan. Final boss-act and further mechanic/cold-route products remain open. No native pixel/audio, overall act
 certification, full-suite or combined delivery claim follows.
+
+
+## Native player-launcher art publication — 2026-10-20
+
+The active $78 factory already supplies launcher motion, SolidObjectTop and
+FLOOR_LAUNCHER sound. Its missing DEZ1 presentation entry is now supplied by
+Sonic3kPlcArtRegistry: native Obj_FBZDEZPlayerLauncher at $3B942 selects mapping
+frame1 at $3BA8A, art base $02FC, palette1. DEZ1 PLC$36 loads
+ArtNem_DEZMiniboss there. The provider compacts the selected frame to local0,
+so the existing object draw call stays unchanged.
+
+[TestS3kDezPlayerLauncherArt](../../../../src/test/java/com/openggf/game/sonic3k/TestS3kDezPlayerLauncherArt.java)
+passes four checks: plan selection, literal full native mapping/PLC/ten placed
+$78 records, actual fresh-DEZ1 provider/ready-renderer geometry and six patterns
+compared with the ROM decode, and unchanged fresh-FBZ1 frame0 control.
+The negative DEZ2 plan check is intentional: fresh PLC$38 does not load the
+$02FC resource. No DEZ2 fallback/load was invented.
+
+Qualified on local HEAD691de5183, fullsrc+pom fingerprint
+6d16137f01e4c88d142da720def8100c5a9e94eb3131b9edd31b737c431d070b.
+Candidate-3 has four maintained checks plus one separate ICZ authoring episode:
+5T/0F/0E/0S, Maven28.719s. Earlier compiler/API and fixture-reset errors remain
+in the [composition plan](../../plans/2026-10-13-s3k-playable-completion.md#native-ship-and-dez-launcher-art--2026-10-20).
+This checks ROM-backed data and prepared rendering, not native GPU pixels,
+physical display-list publication, launcher traversal or whole-act certification.
+Duplicate $78 registration remains a separate issue.

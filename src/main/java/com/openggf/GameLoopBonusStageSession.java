@@ -334,11 +334,11 @@ final class GameLoopBonusStageSession {
         int act = savedState.savedZoneAndAct() & 0xFF;
 
         try {
-            // Signal bonus stage return so onInitLevel() can skip intros (ROM: Level_FromSavedGame)
-            host.level().setBonusStageReturnCheckpointIndex(savedState.savedLastStarPostHit());
-            // Suppress auto-music: zone music starts below during the title card
-            host.level().setSuppressNextMusicChange(true);
-            bonusStageTransitionCoordinator.prepareReturnLoad(host.level(), savedState);
+            // Arm Level_FromSavedGame and suppress auto-music before preparing the
+            // captured respawn table; each write keeps its live manager lookup.
+            bonusStageTransitionCoordinator.prepareReturnLoad(host::level, savedState);
+            // Publish the return cause immediately before the synchronous load.
+            TraceSessionLauncher.markNextRunInteriorReturnLoad();
             host.level().loadZoneAndAct(zone, act);
             // Consume the auto-generated title card request — we initialize it ourselves below
             host.level().consumeTitleCardRequest();

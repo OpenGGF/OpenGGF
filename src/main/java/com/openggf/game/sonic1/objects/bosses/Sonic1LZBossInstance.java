@@ -82,6 +82,9 @@ public class Sonic1LZBossInstance extends AbstractS1EggmanBossInstance implement
     // Timer for cooldown state
     private int timer; // objoff_3C
 
+    // Current dispatch clock, before the base publishes its completed-pass stamp.
+    private int currentVIntRunCount;
+
     // Defeated flag — separate from base class 'defeated' for ROM accuracy
     // ROM: objoff_3D — set to -1 ($FF) when boss is hit to 0 HP
     private boolean bossDefeatedFlag; // objoff_3D
@@ -120,6 +123,11 @@ public class Sonic1LZBossInstance extends AbstractS1EggmanBossInstance implement
     }
 
     @Override
+    protected int getNativeEscapeRoutine() {
+        return STATE_CAMERA_EXPAND;
+    }
+
+    @Override
     protected int getInitialHitCount() {
         return 8; // ROM: obColProp = 8
     }
@@ -155,6 +163,7 @@ public class Sonic1LZBossInstance extends AbstractS1EggmanBossInstance implement
 
     @Override
     protected void updateBossLogic(int vIntRunCount, PlayableEntity playerEntity) {
+        currentVIntRunCount = vIntRunCount;
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (state.routineSecondary) {
             case STATE_ENTRY -> updateEntry(player);
@@ -167,11 +176,6 @@ public class Sonic1LZBossInstance extends AbstractS1EggmanBossInstance implement
             case STATE_CAMERA_EXPAND -> updateCameraExpand();
         }
 
-        // Update face animation based on state
-        updateFaceAnimation(player);
-
-        // Update flame animation based on movement
-        updateFlameAnimation();
     }
 
     // ========================================================================
@@ -543,7 +547,7 @@ public class Sonic1LZBossInstance extends AbstractS1EggmanBossInstance implement
      * The boss is NOT deleted here — it continues through its state machine.
      */
     private void handleBossDefeated() {
-        int vIntRunCount = state.lastUpdatedVIntRunCount;
+        int vIntRunCount = currentVIntRunCount;
         // ROM: move.b (v_vbla_byte).w,d0 / andi.b #7,d0 / bne.s .noexplosion
         if ((vIntRunCount & 7) == 0) {
             spawnDefeatExplosion();
@@ -567,7 +571,7 @@ public class Sonic1LZBossInstance extends AbstractS1EggmanBossInstance implement
      *
      * The ROM processes animation selection in two phases:
      * Phase 1 — priority cascade sets base animation (d1):
-     *   1. Defeated (objoff_3D) -> ANIM_FACE_DEFEAT (animation $A = 10)
+     *   1. Face-local objoff_3D is always zero under FixBugs=0.
      *   2. Being hit (obColType == 0) -> ANIM_FACE_HIT (animation 5)
      *   3. Player hurt (routine >= 4) -> ANIM_FACE_LAUGH (animation 4)
      *   4. Default -> ANIM_FACE_NORMAL_1 (animation 1)
@@ -575,18 +579,18 @@ public class Sonic1LZBossInstance extends AbstractS1EggmanBossInstance implement
      * Phase 2 — escape state override (AFTER phase 1):
      *   If ship state == $E: override to ANIM_FACE_PANIC (animation 6)
      */
-    private void updateFaceAnimation(AbstractPlayableSprite player) {
+    protected void updateFaceAnimation(AbstractPlayableSprite player) {
         // Phase 1: Priority cascade (ROM lines 336-353)
         // moveq #1,d1 — default animation
         int anim = Sonic1BossAnimations.ANIM_FACE_NORMAL_1;
 
         // ROM: tst.b objoff_3D(a0) — check defeated first
-        if (bossDefeatedFlag) {
-            anim = Sonic1BossAnimations.ANIM_FACE_DEFEAT;
-        }
+        // FixBugs=0 reads the FACE's own cleared $3D, never the ship's flag.
+        // FixBugs=1 changes a0 to a1 and enables the early-defeat face.
+        // The face-local byte remains zero throughout its native lifetime.
         // ROM: tst.b obColType(a1) / bne.s loc_18196
         // When obColType is 0 (cleared by hit), show hit face
-        else if (state.invulnerable) {
+        if (state.invulnerable) {
             anim = Sonic1BossAnimations.ANIM_FACE_HIT;
         }
         // ROM: cmpi.b #4,(v_player+obRoutine).w / blo.s loc_181A0
@@ -610,18 +614,17 @@ public class Sonic1LZBossInstance extends AbstractS1EggmanBossInstance implement
      *
      * Default: ANIM_BLANK (animation 7)
      * If ship in escape state ($E): ANIM_ESCAPE_FLAME (animation $B)
-     * If ship has X velocity: ANIM_FLAME_1 (animation 8)
+     * Normal X-velocity flames are unreachable in the shipped branch.
      *
      * Note: In the ROM, the flame code at loc_181E2 has a dead code section
      * (the velocity check after the escape check is unreachable due to a
-     * bra.s that always branches past it). We implement the intended behavior.
+     * bra.s that always branches past it). Preserve that shipped dead branch.
      */
-    private void updateFlameAnimation() {
+    protected void updateFlameAnimation() {
         if (state.routineSecondary == STATE_CAMERA_EXPAND) {
             flameAnim = Sonic1BossAnimations.ANIM_ESCAPE_FLAME;
-        } else if (state.xVel != 0) {
-            flameAnim = Sonic1BossAnimations.ANIM_FLAME_1;
         } else {
+            // Shipped branch skips the normal-velocity flame code entirely.
             flameAnim = Sonic1BossAnimations.ANIM_BLANK;
         }
     }

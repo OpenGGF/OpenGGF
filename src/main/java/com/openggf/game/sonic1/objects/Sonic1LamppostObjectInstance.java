@@ -163,6 +163,11 @@ public class Sonic1LamppostObjectInstance extends AbstractObjectInstance impleme
         // Save checkpoint state: bsr.w Lamp_StoreInfo
         if (respawnState instanceof CheckpointState cs) {
             cs.saveCheckpoint(checkpointIndex, spawn.x(), spawn.y(), cameraLockFlag);
+            if (services().parallaxManager() != null && services().levelManager() != null) {
+                com.openggf.game.CheckpointBackgroundScrollAccess.save(cs,
+                        com.openggf.level.ParallaxCheckpointAccess.capture(services().parallaxManager(),
+                                services().levelManager().getCurrentZone()));
+            }
 
             // ROM Lamp_StoreInfo also saves water state (v_waterpos2, v_wtr_routine)
             WaterSystem waterSystem = services().waterSystem();

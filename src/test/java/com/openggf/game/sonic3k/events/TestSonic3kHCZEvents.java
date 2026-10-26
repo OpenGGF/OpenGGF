@@ -5,15 +5,19 @@ import com.openggf.tests.TestEnvironment;
 
 import com.openggf.game.GameModule;
 import com.openggf.game.GameModuleRegistry;
+import com.openggf.game.patch.DelegatingGameModule;
 import com.openggf.game.GameRng;
 import com.openggf.game.GameServices;
 import com.openggf.game.ScrollHandlerProvider;
 import com.openggf.game.ScrollHandlerProvider.ZoneConstants;
 import com.openggf.game.save.SaveSessionContext;
+import com.openggf.game.save.SaveSnapshotProvider;
 import com.openggf.game.save.SelectedTeam;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
+import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
+import com.openggf.level.Level;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.timing.HardwareServiceBoundary;
@@ -42,12 +46,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 
+import com.openggf.level.SeamlessLevelTransitionRequest;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 @RequiresRom(SonicGame.SONIC_3K)
@@ -73,9 +79,17 @@ class TestSonic3kHCZEvents {
         Path saveDir = Path.of("saves").resolve(gameCode);
         deleteRecursively(saveDir);
 
-        GameModule sessionModule = spy(new Sonic3kGameModule());
-        when(sessionModule.getSaveSnapshotProvider()).thenReturn((reason, ctx) -> Map.of("marker", "hcz_transition"));
-        when(sessionModule.rngFlavour()).thenReturn(GameRng.Flavour.S3K);
+        GameModule sessionModule = new DelegatingGameModule(new Sonic3kGameModule(), "test:hcz-transition") {
+            @Override
+            public SaveSnapshotProvider getSaveSnapshotProvider() {
+                return (reason, ctx) -> Map.of("marker", "hcz_transition");
+            }
+
+            @Override
+            public GameRng.Flavour rngFlavour() {
+                return GameRng.Flavour.S3K;
+            }
+        };
 
         SaveSessionContext saveContext = SaveSessionContext.forSlot(
                 gameCode, 1, new SelectedTeam("sonic", List.of("tails")), 1, 0);
@@ -142,6 +156,41 @@ class TestSonic3kHCZEvents {
         // In-game saves encode on the frame but write on the save-writer thread.
         com.openggf.game.save.SessionSaveRequests.flushPendingSaves();
         assertTrue(Files.exists(saveDir.resolve("slot1.json")));
+    }
+
+    @Test
+    void act1TransitionKeepsTheArenaXLockUntilTheCarrierReleases() {
+        // HCZ's miniboss arena locks both X bounds at $3680 before the transition.
+        GameServices.camera().setX((short) 0x3680);
+        GameServices.camera().setMinX((short) 0x3680);
+        GameServices.camera().setMaxX((short) 0x3680);
+        Sonic3kHCZEvents events = new Sonic3kHCZEvents(() -> 0);
+        events.init(0);
+        events.setEventsFg5(true);
+        GameServices.gameState().setEndOfLevelFlag(true);
+        for (int frame = 0; frame < 100_000 && !events.isTransitionRequested(); frame++) {
+            serviceBoundary(HardwareServiceBoundary.VINT_SERVICE);
+            serviceBoundary(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            events.update(0, frame);
+            serviceBoundary(HardwareServiceBoundary.POST_OBJECTS);
+        }
+        assertTrue(events.isTransitionRequested());
+        SeamlessLevelTransitionRequest request = GameServices.level().consumeSeamlessTransitionRequest();
+        assertNotNull(request);
+        assertEquals(com.openggf.game.TitleCardResetGates.NATIVE_WAIT_GATE,
+                request.inLevelTitleCardResetAdditionalDispatches(),
+                "Obj_TitleCardWait consumes its actual children's movement latch after HCZ Load_Level");
+        int lock = 0x3680 - 0x3600;
+        assertEquals(lock, request.postTransitionMinX());
+        assertEquals(lock, request.postTransitionMaxX());
+        // Change_Act2Sizes stores HCZ2's sizes without applying them
+        // (sonic3k.asm:180671-180686); only loc_6A8AE's Make_LevelSizeObj
+        // later widens the bounds. The reload must not leave act-2 targets
+        // for the camera to ease toward in the meantime.
+        assertEquals(lock, request.postTransitionMinXTarget(),
+                "the live min-X lock has no act-2 target before the carrier releases");
+        assertEquals(lock, request.postTransitionMaxXTarget(),
+                "the live max-X lock has no act-2 target before the carrier releases");
     }
 
     private static void serviceBoundary(HardwareServiceBoundary boundary) {
@@ -270,6 +319,119 @@ class TestSonic3kHCZEvents {
         assertPlainCarrierRelease(player);
         assertPlainCarrierRelease(sidekick);
         assertFalse(secondSidekick.isObjectControlled());
+    }
+
+    @Test
+    void postTransitionCarrierSwingsAboutTheTargetStoredAtCapture() {
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x00F6, (short) 0x07F0);
+        GameServices.camera().setFocusedSprite(player);
+        GameServices.camera().setX((short) 0x0080);
+        player.setCpuControlled(false);
+        player.setInWater(true);
+        GameServices.sprites().addSprite(player, "sonic");
+
+        Sonic3kHCZEvents events = new Sonic3kHCZEvents(() -> 0);
+        events.init(1);
+        events.startPostTransitionCutscene();
+        assertCarrierControl(player);
+        int startX = player.getCentreX();
+        events.updateRetainedCarrierObjectPass(1);
+        assertEquals(startX, player.getCentreX(), "the init dispatch does not move the carrier");
+
+        // loc_6A80C writes $3A = Camera_X_pos+$A0 once (sonic3k.asm:140097).
+        // The camera moving afterwards must not move the swing centre that
+        // sub_6A916 compares against (sonic3k.asm:140182).
+        int target = 0x0080 + 0xA0;
+        GameServices.camera().setX((short) 0x0010);
+
+        // sub_6A940: |2*(x - target)| below $100, shifted left 4, signed like x - target.
+        int delta = startX - target;
+        int velocity = Math.max(0, 0x100 - Math.abs(2 * delta)) << 4;
+        if (delta < 0) velocity = -velocity;
+        boolean side = startX < target;
+        int xFixed = startX << 8;
+        int passes = 0;
+        while (events.isCutsceneActive() && passes < 64) {
+            // sub_6A916 then MoveSprite2.
+            boolean current = (xFixed >> 8) < target;
+            int acceleration = current ? 0x100 : -0x100;
+            velocity += acceleration;
+            if (current != side) {
+                velocity += acceleration;
+                side = current;
+            }
+            xFixed += velocity;
+            events.updateRetainedCarrierObjectPass(1);
+            passes++;
+            assertEquals(xFixed >> 8, player.getCentreX(), "carrier x after pass " + passes);
+        }
+        assertTrue(passes > 16, "the arc must cross the stored target at least once: " + passes);
+    }
+
+    @Test
+    void retainedCarrierTargetsSurviveManagerRestoreAndReplayThroughRelease() throws Exception {
+        TestablePlayableSprite p1 = new TestablePlayableSprite("sonic", (short) 0x00F6, (short) 0x07F0);
+        TestablePlayableSprite p2 = new TestablePlayableSprite("tails", (short) 0x0140, (short) 0x07E8);
+        p2.setCpuControlled(true);
+        for (var player : List.of(p1, p2)) {
+            player.setInWater(true);
+            GameServices.sprites().addSprite(player, player == p1 ? "sonic" : "tails");
+        }
+        var camera = GameServices.camera();
+        camera.setFocusedSprite(p1);
+        camera.setX((short) 0x0080);
+        camera.setMinX((short) 0x0080);
+        camera.setMaxX((short) 0x0080);
+        Level level = mock(Level.class);
+        when(level.getMaxX()).thenReturn(0x4000);
+        when(level.getMaxY()).thenReturn(0x0E00);
+        // This local object-pass fixture supplies only the stored act-2 sizes;
+        // installing a decoded world is covered by the transition/trace tests.
+        Field levelField = com.openggf.level.LevelManager.class.getDeclaredField("level");
+        levelField.setAccessible(true);
+        levelField.set(GameServices.level(), level);
+        Sonic3kLevelEventManager manager = new Sonic3kLevelEventManager();
+        manager.initLevel(Sonic3kZoneIds.ZONE_HCZ, 1);
+        Sonic3kHCZEvents events = manager.getHczEventsForTest();
+        events.startPostTransitionCutscene();
+        camera.setX((short) 0x0010);
+        // Before release and after P1 release: use the real manager sidecar,
+        // playable and camera snapshots, restore twice, then replay both arcs.
+        for (int checkpoint : new int[] {6, 32}) {
+            for (int i = 0; i < checkpoint; i++) events.updateRetainedCarrierObjectPass(1);
+            var eventSnapshot = manager.capture();
+            var p1Snapshot = p1.captureRewindState();
+            var p2Snapshot = p2.captureRewindState();
+            var cameraSnapshot = camera.capture();
+            List<List<Integer>> expected = carrierReplay(events, p1, p2, 40);
+            for (int repeat = 0; repeat < 2; repeat++) {
+                manager.restore(eventSnapshot);
+                p1.restoreRewindState(p1Snapshot);
+                p2.restoreRewindState(p2Snapshot);
+                camera.restore(cameraSnapshot);
+                assertEquals(0x0120, events.getCarrierP1TargetX());
+                assertEquals(0x0120, events.getCarrierP2TargetX());
+                assertEquals(expected, carrierReplay(events, p1, p2, 40));
+            }
+            assertFalse(events.isCutsceneActive());
+            assertPlainCarrierRelease(p1);
+            assertPlainCarrierRelease(p2);
+        }
+    }
+
+    private static List<List<Integer>> carrierReplay(Sonic3kHCZEvents events,
+            AbstractPlayableSprite p1, AbstractPlayableSprite p2, int passes) {
+        List<List<Integer>> result = new ArrayList<>();
+        for (int i = 0; i < passes; i++) {
+            events.updateRetainedCarrierObjectPass(1);
+            result.add(List.of(events.getCarrierP1XFixed(), events.getCarrierP1YFixed(),
+                    events.getCarrierP1XVelocity(), events.getCarrierP2XFixed(), events.getCarrierP2YFixed(),
+                    events.getCarrierP2XVelocity(), (int) p1.getCentreX(), (int) p1.getCentreY(),
+                    (int) p2.getCentreX(), (int) p2.getCentreY(), p1.isObjectControlled() ? 1 : 0,
+                    p2.isObjectControlled() ? 1 : 0, events.isLevelSizeTransitionActive() ? 1 : 0,
+                    (int) GameServices.camera().getMaxX(), (int) GameServices.camera().getMaxXTarget()));
+        }
+        return result;
     }
 
     @Test
@@ -506,4 +668,109 @@ class TestSonic3kHCZEvents {
                     .orElseThrow();
         }
     }
+
+    @Test
+    void directedEntryReadinessFollowsNativeWallTransitionWithoutDispatchingIt() throws Exception {
+        SwScrlHcz handler = new SwScrlHcz();
+        installParallaxHandler(Sonic3kZoneIds.ZONE_HCZ, handler);
+        AbstractPlayableSprite player = placePlayer(0x0B00, 0x0700);
+        var camera = GameServices.camera();
+        camera.setX((short) 0x0800);
+        camera.setY((short) 0x0600);
+        Sonic3kLevelEventManager manager = new Sonic3kLevelEventManager();
+        manager.initLevel(Sonic3kZoneIds.ZONE_HCZ, 1);
+        Sonic3kHCZEvents events = manager.getHczEventsForTest();
+        List<DirectedEntryState> states = new ArrayList<>();
+
+        tickAct2(events, 0); // HCZ2BGE_WallMoveInit falls through into WallMove.
+        camera.setX((short) 0x0BFF);
+        states.add(new DirectedEntryState("wall before $C00", manager.capture(), camera.capture(), true));
+        camera.setX((short) 0x0C00);
+        states.add(new DirectedEntryState("at $C00 before FG dispatch", manager.capture(), camera.capture(), false));
+        camera.setX((short) 0x0C01);
+        states.add(new DirectedEntryState("after $C00 before FG dispatch", manager.capture(), camera.capture(), false));
+
+        tickAct2(events, 1); // HCZ2_Resize signals Events_fg_5; WallMove selects state 8.
+        assertTrue(events.isEventsFg5());
+        camera.setX((short) 0x0BFF);
+        states.add(new DirectedEntryState("signalled transition below $C00",
+                manager.capture(), camera.capture(), false));
+        camera.setX((short) 0x0C00);
+        tickAct2(events, 2); // HCZ2BGE_NormalTransition selects the Plane B refresh.
+        assertEquals(SwScrlHcz.Hcz2BgPhase.NORMAL, handler.getHcz2BgPhase());
+        states.add(new DirectedEntryState("normal deformation still awaiting refresh",
+                manager.capture(), camera.capture(), false));
+        tickAct2(events, 3); // HCZ2BGE_NormalRefresh reaches HCZ2BGE_Normal.
+        assertTrue(events.isEventsFg5(), "normal readiness does not require clearing the native FG signal");
+        states.add(new DirectedEntryState("normal after refresh", manager.capture(), camera.capture(), true));
+
+        for (DirectedEntryState state : states) {
+            manager.restore(state.events());
+            camera.restore(state.camera());
+            assertReadinessQueryLeavesState(manager, events, List.of(player), handler,
+                    state.settled(), state.description());
+        }
+    }
+
+    @Test
+    void directedEntryReadinessDoesNotAdvanceRetainedCarriers() {
+        TestablePlayableSprite p1 = new TestablePlayableSprite("sonic", (short) 0x00F6, (short) 0x07F0);
+        TestablePlayableSprite p2 = new TestablePlayableSprite("tails", (short) 0x0140, (short) 0x07E8);
+        p2.setCpuControlled(true);
+        p1.setInWater(true);
+        p2.setInWater(true);
+        GameServices.sprites().addSprite(p1, "sonic");
+        GameServices.sprites().addSprite(p2, "tails");
+        GameServices.camera().setFocusedSprite(p1);
+        GameServices.camera().setX((short) 0x0080);
+        Sonic3kLevelEventManager manager = new Sonic3kLevelEventManager();
+        manager.initLevel(Sonic3kZoneIds.ZONE_HCZ, 1);
+        Sonic3kHCZEvents events = manager.getHczEventsForTest();
+        events.startPostTransitionCutscene();
+        assertTrue(events.isCutsceneActive());
+        assertReadinessQueryLeavesState(manager, events, List.of(p1, p2), null, true,
+                "readiness before the wall does not service the retained carrier object pass");
+    }
+
+    private static void assertReadinessQueryLeavesState(Sonic3kLevelEventManager manager,
+            Sonic3kHCZEvents events, List<? extends AbstractPlayableSprite> players,
+            SwScrlHcz handler, boolean settled, String description) {
+        var before = manager.capture();
+        var camera = GameServices.camera().capture();
+        var playerStates = players.stream().map(TestSonic3kHCZEvents::entryPlayerState).toList();
+        boolean bgCollision = GameServices.gameState().isBackgroundCollisionFlag();
+        var scroll = handler == null ? null
+                : List.of(handler.getHcz2BgPhase(), handler.getBgCameraX(), handler.getVscrollFactorBG());
+        for (int query = 0; query < 3; query++) {
+            assertEquals(settled, events.isDirectedEntrySettled(), description);
+        }
+        var after = manager.capture();
+        assertEquals(List.of(before.currentZone(), before.currentAct(), before.eventRoutineFg(),
+                        before.eventRoutineBg(), before.frameCounter(), before.timerFrames(), before.bossActive()),
+                List.of(after.currentZone(), after.currentAct(), after.eventRoutineFg(),
+                        after.eventRoutineBg(), after.frameCounter(), after.timerFrames(), after.bossActive()), description);
+        org.junit.jupiter.api.Assertions.assertArrayEquals(before.eventDataFg(), after.eventDataFg(), description);
+        org.junit.jupiter.api.Assertions.assertArrayEquals(before.eventDataBg(), after.eventDataBg(), description);
+        org.junit.jupiter.api.Assertions.assertArrayEquals(before.extra(), after.extra(),
+                description + ": native event and retained-carrier sidecars");
+        assertEquals(camera, GameServices.camera().capture(), description);
+        assertEquals(playerStates, players.stream().map(TestSonic3kHCZEvents::entryPlayerState).toList(), description);
+        assertEquals(bgCollision, GameServices.gameState().isBackgroundCollisionFlag(), description);
+        if (handler != null) {
+            assertEquals(scroll, List.of(handler.getHcz2BgPhase(), handler.getBgCameraX(),
+                    handler.getVscrollFactorBG()), description);
+        }
+    }
+
+    private static List<Object> entryPlayerState(AbstractPlayableSprite player) {
+        return List.of(player.getCentreX(), player.getCentreY(), player.getXSpeed(), player.getYSpeed(),
+                player.getGSpeed(), player.isObjectControlled(), player.isObjectControlAllowsCpu(),
+                player.isObjectControlSuppressesMovement(), player.isControlLocked(), player.getAir(),
+                player.getForcedAnimationId(), player.getAnimationId(), player.getAnimationFrameIndex(),
+                player.getAnimationTick());
+    }
+
+    private record DirectedEntryState(String description,
+            com.openggf.game.rewind.snapshot.LevelEventSnapshot events,
+            com.openggf.game.rewind.snapshot.CameraSnapshot camera, boolean settled) { }
 }

@@ -34,6 +34,7 @@ public final class EngineRenderDispatcher {
             case SPECIAL_STAGE -> actions.specialStage();
             case SPECIAL_STAGE_RESULTS -> actions.specialStageResults();
             case TITLE_SCREEN -> actions.titleScreen();
+            case OPTIONS, COMPETITION_MENU, COMPETITION, COMPETITION_RESULTS -> actions.nativeMenu();
             case LEVEL_SELECT -> actions.levelSelect();
             case DATA_SELECT -> actions.dataSelect();
             case CREDITS_TEXT, ENDING_CUTSCENE -> actions.ending();
@@ -73,6 +74,7 @@ public final class EngineRenderDispatcher {
             case SPECIAL_STAGE -> actions.specialStage();
             case SPECIAL_STAGE_RESULTS -> actions.specialStageResults();
             case TITLE_SCREEN -> actions.titleScreen();
+            case OPTIONS, COMPETITION_MENU, COMPETITION, COMPETITION_RESULTS -> actions.nativeMenu();
             case LEVEL_SELECT -> actions.levelSelect();
             case DATA_SELECT -> actions.dataSelect();
             case MOD_SCENE -> actions.modScene();
@@ -102,6 +104,7 @@ public final class EngineRenderDispatcher {
         void specialStage();
         void specialStageResults();
         void titleScreen();
+        default void nativeMenu() { black(); }
         void levelSelect();
         void dataSelect();
         void ending();
@@ -118,6 +121,7 @@ public final class EngineRenderDispatcher {
         void specialStage();
         void specialStageResults();
         void titleScreen();
+        default void nativeMenu() { }
         void levelSelect();
         void dataSelect();
         void modScene();

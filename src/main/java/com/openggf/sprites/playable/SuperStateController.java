@@ -222,7 +222,7 @@ public abstract class SuperStateController {
     }
 
     protected final void reconcileRewindPhysicsAndAnimationProfile(boolean activeSuper) {
-        player.applyExternalPhysicsProfile(activeSuper ? getSuperProfile() : getNormalProfile());
+        PlayableSpriteInternalAccess.installSuperPhysicsProfile(player, this, activeSuper ? getSuperProfile() : getNormalProfile());
         SpriteAnimationProfile current = player.getAnimationProfile();
         if (normalAnimProfile == null && current instanceof ScriptedVelocityAnimationProfile) {
             normalAnimProfile = current;
@@ -405,7 +405,7 @@ public abstract class SuperStateController {
         // frame uses them. Installing the profile at animation completion
         // instead left the transform frame on the normal constants, an ordinary
         // $18 step rather than the ROM's $60.
-        player.applyExternalPhysicsProfile(getSuperProfile());
+        PlayableSpriteInternalAccess.installSuperPhysicsProfile(player, this, getSuperProfile());
         // S2 Sonic_CheckGoSuper does NOT write Super_Sonic_frame_count, so the
         // first Sonic_Super pass decrements whatever it already held -- zero --
         // and drains a ring on the transformation frame itself before reloading
@@ -419,21 +419,40 @@ public abstract class SuperStateController {
         // Idempotent: TRANSFORMING is entered once per transformation.
         ObjectControlState.nativeBit7FullControl().applyTo(player);
         if (updateTransformationAnimation()) {
-            state = SuperState.SUPER;
-            swapToSuperAnimProfile();
-            onSuperActivated();
-            // The freeze is released HERE and nowhere else: one mechanism for
-            // one event. What ends the transformation is whatever
-            // updateTransformationAnimation reports, and for S2 that is the
-            // Super palette fade reaching Palette_frame $30, which is the pass
-            // on which the ROM executes
-            //   move.b #0,(MainCharacter+obj_control).w
-            // (docs/s2disasm/s2.asm:3139). There is no `clr.b obj_control(a0)`
-            // in s2.asm to cite -- an earlier comment here cited exactly that,
-            // and the instruction does not exist.
-            ObjectControlState.none().applyTo(player);
-            player.setForcedAnimationId(-1);
+            finishTransformation();
         }
+    }
+
+    /** Engine-only split for native control routines whose palette has a global owner. */
+    void updateNativeControlFrame() {
+        if (state == SuperState.TRANSFORMING) {
+            ObjectControlState.nativeBit7FullControl().applyTo(player);
+        }
+        if (state == SuperState.TRANSFORMING || state == SuperState.SUPER) {
+            runSuperFrameWork(false);
+        }
+    }
+
+    /** Called only after the native global palette routine releases its fade. */
+    void finishNativeTransformationAfterPalette() {
+        if (state == SuperState.TRANSFORMING) finishTransformation();
+    }
+
+    private void finishTransformation() {
+        state = SuperState.SUPER;
+        swapToSuperAnimProfile();
+        onSuperActivated();
+        // The freeze is released HERE and nowhere else: one mechanism for
+        // one event. What ends the transformation is whatever
+        // updateTransformationAnimation reports, and for S2 that is the
+        // Super palette fade reaching Palette_frame $30, which is the pass
+        // on which the ROM executes
+        //   move.b #0,(MainCharacter+obj_control).w
+        // (docs/s2disasm/s2.asm:3139). There is no `clr.b obj_control(a0)`
+        // in s2.asm to cite -- an earlier comment here cited exactly that,
+        // and the instruction does not exist.
+        ObjectControlState.none().applyTo(player);
+        player.setForcedAnimationId(-1);
     }
 
     private void updateSuper() {
@@ -445,6 +464,10 @@ public abstract class SuperStateController {
      * frame {@code Super_Sonic_flag} is set.
      */
     private void runSuperFrameWork() {
+        runSuperFrameWork(true);
+    }
+
+    private void runSuperFrameWork(boolean advancePalette) {
         // ROM: Sonic_Super checks Update_HUD_timer == 0 every frame.
         // When the signpost/egg prison clears the timer, Super Sonic reverts.
         // Do NOT use player.isObjectControlled() - many objects (CPZ pipes, grabbers)
@@ -454,7 +477,7 @@ public abstract class SuperStateController {
             revertToNormal();
             return;
         }
-        updateSuperPalette();
+        if (advancePalette) updateSuperPalette();
         // ROM: subq.w #1,(Super_Sonic_frame_count).w / bpl.w return
         // (s2.asm:37510-37511). The branch is taken while the DECREMENTED value
         // is still non-negative, so the drain fires only when the counter was
@@ -477,7 +500,7 @@ public abstract class SuperStateController {
         // Clear transformation freeze in case revert happens during transformation
         ObjectControlState.none().applyTo(player);
         player.setForcedAnimationId(-1);
-        player.applyExternalPhysicsProfile(getNormalProfile());
+        PlayableSpriteInternalAccess.installSuperPhysicsProfile(player, this, getNormalProfile());
         restoreNormalAnimProfile();
         onRevertStarted();
         state = SuperState.NORMAL;

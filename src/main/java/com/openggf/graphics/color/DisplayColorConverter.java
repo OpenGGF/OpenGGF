@@ -54,6 +54,35 @@ public final class DisplayColorConverter {
         return expand(toPackedRgb(r, g, b, profile), expansion);
     }
 
+    /**
+     * Native shadow selects 4-bit DAC code n instead of normal code 2*n. GPGX's
+     * palette_init/MAKE_PIXEL therefore give 17*n in limited digital RGB. Full
+     * output uses the same 0..14 normalization as the existing normal palette.
+     * Analog profiles are presentation curves: odd DAC steps interpolate their
+     * existing even normal points, before NTSC channel mixing and output gain.
+     */
+    public static int toNativeShadowPackedRgb(int r3, int g3, int b3, DisplayColorProfile profile,
+                                              DisplayColorExpansion expansion) {
+        if ((r3 | g3 | b3) < 0 || r3 > 7 || g3 > 7 || b3 > 7)
+            throw new IllegalArgumentException("Native CRAM channels must be 0..7");
+        if (profile == DisplayColorProfile.RAW_RGB) {
+            if (expansion == DisplayColorExpansion.LIMITED) return pack(r3 * 17, g3 * 17, b3 * 17);
+            return pack((r3 * 255 + 7) / 14, (g3 * 255 + 7) / 14, (b3 * 255 + 7) / 14);
+        }
+        int r = analogIntensity(r3), g = analogIntensity(g3), b = analogIntensity(b3);
+        if (profile == DisplayColorProfile.NTSC_SOFT) {
+            int luma = Math.round(r * 0.299f + g * 0.587f + b * 0.114f);
+            r = blend(r, luma); g = blend(g, luma); b = blend(b, luma);
+        }
+        return expand(pack(r, g, b), expansion);
+    }
+
+    private static int analogIntensity(int code) {
+        int lower = code / 2;
+        return (code & 1) == 0 ? MD_ANALOG_RAMP[lower]
+                : (MD_ANALOG_RAMP[lower] + MD_ANALOG_RAMP[lower + 1] + 1) / 2;
+    }
+
     private static int toPackedRgb(int r, int g, int b, DisplayColorProfile profile) {
         return switch (profile) {
             case RAW_RGB -> pack(r, g, b);

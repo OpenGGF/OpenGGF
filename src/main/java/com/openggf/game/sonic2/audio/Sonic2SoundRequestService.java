@@ -22,7 +22,8 @@ import java.util.function.Consumer;
  * {@code s2.sounddriver.asm:1496-1600}; SFX transforms follow {@code :2116-2178}, and music-load
  * state clearing follows {@code :2580-2655}.</p>
  */
-public final class Sonic2SoundRequestService implements AudioRequestService {
+public final class Sonic2SoundRequestService implements AudioRequestService,
+        com.openggf.audio.AudioNativePauseAccess.Mailbox {
     private final Sonic2SoundRequestPipeline<PendingRequest> pipeline =
             new Sonic2SoundRequestPipeline<>();
     private final List<EventTemplate> pendingSubmissionEvents = new ArrayList<>();
@@ -31,7 +32,17 @@ public final class Sonic2SoundRequestService implements AudioRequestService {
     private boolean observerLeased;
     private boolean forwardOpen;
     private long nextEventOrdinal = 1;
+    private Boolean pendingNativePause;
     private static final int EXTRA_LIFE_MUSIC = 0x98;
+
+    @Override
+    public void submitNativePause(boolean paused) {
+        int nativeId = paused ? 0xFE : 0xFF;
+        pipeline.overwriteMusic0ForNativePause(paused,
+                new PendingRequest(nativeId, new AudioCommand.StopMusic()));
+        pendingSubmissionEvents.add(new SubmissionTemplate(
+                Sonic2SoundRequestPipeline.SourceSlot.MUSIC0, nativeId));
+    }
 
     @Override
     public void submitMusic(int nativeRequestId, AudioCommand command) {
@@ -84,7 +95,7 @@ public final class Sonic2SoundRequestService implements AudioRequestService {
 
     @Override
     public Snapshot snapshot() {
-        return new Snapshot(pipeline.snapshot(), List.copyOf(pendingSubmissionEvents));
+        return new Snapshot(pipeline.snapshot(), List.copyOf(pendingSubmissionEvents), pendingNativePause);
     }
 
     /**
@@ -112,6 +123,7 @@ public final class Sonic2SoundRequestService implements AudioRequestService {
 
     private void restoreUnchecked(Snapshot snapshot) {
         pipeline.restore(snapshot.pipeline());
+        pendingNativePause = snapshot.pendingNativePause();
         pendingSubmissionEvents.clear();
         pendingSubmissionEvents.addAll(snapshot.pendingSubmissionEvents());
     }
@@ -150,6 +162,18 @@ public final class Sonic2SoundRequestService implements AudioRequestService {
                         transfer.requestByte(), transfer.voiceTablePointerAlias()));
             }
 
+            if (bridge.music().kind() == Sonic2SoundRequestPipeline.MusicBridgeKind.PAUSE) {
+                pendingNativePause = true;
+            } else if (bridge.music().kind() == Sonic2SoundRequestPipeline.MusicBridgeKind.UNPAUSE) {
+                pendingNativePause = false;
+            }
+            // zVInt returns to DAC for every nonzero StopMusic, including the
+            // resume invocation. M68K transfers above continue; the Z80 queue,
+            // priorities and spindash counter below do not advance.
+            if (pipeline.snapshot().stopMusic() != 0) {
+                return;
+            }
+
             int priorityBefore = pipeline.snapshot().sfxPriorityValue();
             Sonic2SoundRequestPipeline.CycleResult<PendingRequest> cycle = pipeline.cycleQueue();
             for (Sonic2SoundRequestPipeline.Request<PendingRequest> discarded
@@ -176,6 +200,24 @@ public final class Sonic2SoundRequestService implements AudioRequestService {
                 }
             }
             pipeline.finishDriverInvocation();
+        }
+
+        @Override
+        public com.openggf.audio.presentation.AudioPresentationCommand.NativePause nativePauseRequest() {
+            return pendingNativePause == null ? null
+                    : new com.openggf.audio.presentation.AudioPresentationCommand.NativePause(pendingNativePause);
+        }
+
+        @Override
+        public void onNativePauseConsumed() {
+            requireOpen();
+            if (pendingNativePause == null) {
+                throw new IllegalStateException("no native pause request is awaiting service");
+            }
+            if (!pendingNativePause) {
+                pipeline.completeNativeResume();
+            }
+            pendingNativePause = null;
         }
 
         @Override
@@ -369,8 +411,13 @@ public final class Sonic2SoundRequestService implements AudioRequestService {
 
     public record Snapshot(
             Sonic2SoundRequestPipeline.Snapshot<PendingRequest> pipeline,
-            List<EventTemplate> pendingSubmissionEvents)
+            List<EventTemplate> pendingSubmissionEvents,
+            Boolean pendingNativePause)
             implements AudioPresentationForwardService.Snapshot {
+        public Snapshot(Sonic2SoundRequestPipeline.Snapshot<PendingRequest> pipeline,
+                List<EventTemplate> pendingSubmissionEvents) {
+            this(pipeline, pendingSubmissionEvents, null);
+        }
         public Snapshot {
             Objects.requireNonNull(pipeline, "pipeline");
             pendingSubmissionEvents = List.copyOf(

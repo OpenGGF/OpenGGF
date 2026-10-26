@@ -209,6 +209,25 @@ class TestNativeDrowningDispatch {
         assertFalse(player.isDrowningPreDeath()); assertFalse(player.getDead());
     }
 
+    @Test void deadRoutineWinsOverAStaleDrowningMarkerBeforePlayerDispatch() throws Exception {
+        setup(SonicGame.SONIC_3K, false);
+        enterDrowning();
+        player.setDead(true); // a death owner can replace $0C before the sidecar retires its timer
+        player.setXSpeed((short) 0x123);
+        player.setGSpeed((short) 0x345);
+        GameServices.camera().setMaxY((short) 0x1000);
+        when(level.runPolicy()).thenReturn(com.openggf.game.session.GameplayRunPolicy.stock());
+
+        assertEquals(0x06, NativePlayableRoutine.resolve(player).byteValue());
+        assertEquals(0x06, com.openggf.trace.TraceCharacterState.routineFromSprite(player));
+        assertFalse(PlayableSpriteInternalAccess.hasPrimaryDrowningRoutine(player));
+        playerPass();
+
+        assertTrue(player.getDead());
+        assertEquals(0, player.getXSpeed(), "routine 6 owns death motion rather than the retained drown marker");
+        assertEquals(0, player.getGSpeed());
+    }
+
     private void setup(SonicGame game, boolean sidekick) throws Exception {
         TestEnvironment.configureGameModuleFixture(game);
         sprites = GameServices.sprites();

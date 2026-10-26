@@ -2,6 +2,7 @@ package com.openggf;
 
 import com.openggf.audio.AudioManager;
 import com.openggf.control.InputHandler;
+import com.openggf.control.RecordedInputOwnership;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameMode;
@@ -48,9 +49,11 @@ final class GameLoopPauseInput {
         if (!userPauseAllowed(mode)) {
             return false;
         }
-        // Gamepad Start owns visible host pause and audio, not silent ROM Game_paused.
+        // Live gamepad Start owns visible host pause. A recorded-input owner
+        // leaves that same edge to the native controller consumers instead.
         if (!overlayOwnsPause && !takeoverConsumed && (input.isKeyPressed(config.getInt(SonicConfiguration.PAUSE_KEY))
-                || (!TraceSessionLauncher.isRunFrameDriverActive()
+                || (!RecordedInputOwnership.active(input)
+                && !TraceSessionLauncher.isRunFrameDriverActive()
                 && !playback.isDriving(mode) && input.logical().player1().startPressed()))) {
             if (paused && requestTakeover.getAsBoolean()) {
                 return false;

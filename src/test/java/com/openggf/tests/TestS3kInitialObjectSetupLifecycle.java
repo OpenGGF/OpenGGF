@@ -19,6 +19,7 @@ import com.openggf.game.OscillationManager;
 import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.TitleCardProvider;
 import com.openggf.game.GameModuleRegistry;
+import com.openggf.game.patch.DelegatingGameModule;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.sonic3k.specialstage.Sonic3kSpecialStageComparisonState;
 import com.openggf.game.sonic3k.specialstage.Sonic3kSpecialStageManager;
@@ -46,7 +47,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.mockito.AdditionalAnswers.delegatesTo;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -599,15 +599,27 @@ class TestS3kInitialObjectSetupLifecycle {
     }
 
     private static LevelManager managerWithProfile(LevelInitProfile profile) {
-        Sonic3kGameModule real = new Sonic3kGameModule();
-        GameModule module = mock(GameModule.class, delegatesTo(real));
-        when(module.getLevelInitProfile()).thenReturn(profile);
+        GameModule module = new ProfiledGameModule(profile);
         TestEnvironment.configureGameModuleFixture(module);
         return TestEnvironment.activeGameplayMode().getLevelManager();
     }
 
     private static void installProfile(LevelInitProfile profile) {
-        when(GameModuleRegistry.getCurrent().getLevelInitProfile()).thenReturn(profile);
+        ((ProfiledGameModule) GameModuleRegistry.getCurrent()).profile = profile;
+    }
+
+    private static final class ProfiledGameModule extends DelegatingGameModule {
+        private LevelInitProfile profile;
+
+        private ProfiledGameModule(LevelInitProfile profile) {
+            super(new Sonic3kGameModule(), "test:initial-object-setup-lifecycle");
+            this.profile = profile;
+        }
+
+        @Override
+        public LevelInitProfile getLevelInitProfile() {
+            return profile;
+        }
     }
 
     private static ConvergenceState loadCnzThroughVisibleTitleRelease() throws Exception {

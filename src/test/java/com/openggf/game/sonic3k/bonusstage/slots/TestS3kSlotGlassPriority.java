@@ -12,6 +12,7 @@ import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -20,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestS3kSlotGlassPriority {
 
     @Test
-    void runtimePromotesCentralSlotMachineGlassAndKeepsSlotPlayerLowPriority() {
+    void runtimePreservesEveryRomGlassDescriptorAndKeepsSlotPlayerLowPriority() {
         SonicConfigurationService.getInstance()
                 .setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
         HeadlessTestFixture.builder()
@@ -31,24 +32,20 @@ class TestS3kSlotGlassPriority {
                 .build();
 
         LevelManager level = GameServices.level();
-        assertFalse(hasAnyHighPriorityGlassTile(level, false),
-                "The loaded slot machine glass descriptors are low-priority in source level data");
+        int[] romDescriptors = glassDescriptors(level, false);
 
         S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime(S3kSlotRomTestData.resources());
         runtime.bootstrap();
 
         assertTrue(runtime.isInitialized());
-        int liveHighPriorityCellsAfterBootstrap = countHighPriorityGlassTiles(level, true);
-        assertTrue(liveHighPriorityCellsAfterBootstrap > 20,
-                "Bootstrap should promote and retain high-priority glass cells in the live foreground tilemap");
-        int promotedCells = runtime.ensureForegroundGlassPriority();
-        assertFalse(promotedCells > 0,
-                "Foreground glass promotion should be idempotent after bootstrap"
-                        + " (secondPassPromoted=" + promotedCells + ")");
-        int liveHighPriorityCells = countHighPriorityGlassTiles(level, true);
-        assertTrue(liveHighPriorityCells > 20,
-                "The promoted live foreground tilemap should retain high-priority glass cells"
-                        + " (promoted=" + promotedCells + ", liveHigh=" + liveHighPriorityCells + ")");
+        assertArrayEquals(romDescriptors, glassDescriptors(level, true),
+                "Bootstrap must preserve complete ROM descriptor words, including priority and empty tiles");
+        var provider = level.getZoneFeatureProvider();
+        for (int pass = 0; pass < 3; pass++) {
+            provider.renderAfterBackground(GameServices.camera(), level.getFrameCounter());
+            assertArrayEquals(romDescriptors, glassDescriptors(level, true),
+                    "Repeated ordinary provider draws must preserve every original descriptor word");
+        }
 
         assertTrue(GameServices.sprites().getSprite("sonic") instanceof S3kSlotBonusPlayer);
         AbstractPlayableSprite slotPlayer = (AbstractPlayableSprite) GameServices.sprites().getSprite("sonic");
@@ -69,29 +66,20 @@ class TestS3kSlotGlassPriority {
         return false;
     }
 
-    private static boolean hasAnyHighPriorityGlassTile(LevelManager level, boolean liveTilemap) {
-        return countHighPriorityGlassTiles(level, liveTilemap) > 0;
-    }
-
-    private static int countHighPriorityGlassTiles(LevelManager level, boolean liveTilemap) {
-        int highPriorityTiles = 0;
+    private static int[] glassDescriptors(LevelManager level, boolean liveTilemap) {
+        int[] descriptors = new int[13 * 13];
+        int at = 0;
         for (int y = S3kSlotRomData.SLOT_BONUS_CAGE_CENTER_Y - 0x30;
              y <= S3kSlotRomData.SLOT_BONUS_CAGE_CENTER_Y + 0x30;
              y += 8) {
             for (int x = S3kSlotRomData.SLOT_BONUS_CAGE_CENTER_X - 0x30;
                  x <= S3kSlotRomData.SLOT_BONUS_CAGE_CENTER_X + 0x30;
                  x += 8) {
-                int descriptor = liveTilemap
+                descriptors[at++] = liveTilemap
                         ? level.getForegroundTileDescriptorFromTilemapAtWorld(x, y)
                         : level.getForegroundTileDescriptorAtWorld(x, y);
-                if ((descriptor & 0x7FF) == 0) {
-                    continue;
-                }
-                if ((descriptor & 0x8000) != 0) {
-                    highPriorityTiles++;
-                }
             }
         }
-        return highPriorityTiles;
+        return descriptors;
     }
 }

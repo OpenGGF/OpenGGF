@@ -2,7 +2,10 @@ package com.openggf.mods.code;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_BACKSPACE;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN;
@@ -12,7 +15,11 @@ import static org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT;
 import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
 import static org.lwjgl.glfw.GLFW.GLFW_RELEASE;
 
+import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.data.RomGame;
 import com.openggf.game.GameServices;
+import com.openggf.tests.RomCatalogueFixture;
+import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.SharedLevel;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -42,10 +49,15 @@ class TestThreeIslandsScene {
     Path work;
 
     private SharedLevel level;
+    private RomCatalogueFixture romCatalogue;
 
     @AfterEach
     void dispose() {
-        if (level != null) level.dispose();
+        try {
+            if (level != null) level.dispose();
+        } finally {
+            if (romCatalogue != null) romCatalogue.close();
+        }
     }
 
     private ExampleModHarness open() throws Exception {
@@ -53,6 +65,48 @@ class TestThreeIslandsScene {
         ExampleModHarness harness = ExampleModHarness.build(PROJECT, work.resolve("build"));
         harness.open(harness.apply(GameServices.module()), work.resolve("saves"), 400, 224);
         return harness;
+    }
+
+    private ExampleModHarness openWithRequiredSonic1() throws Exception {
+        level = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
+        bindRequiredSonic1();
+        ExampleModHarness harness = ExampleModHarness.build(PROJECT, work.resolve("build"));
+        harness.open(harness.apply(GameServices.module()), work.resolve("saves"), 400, 224);
+        return harness;
+    }
+
+    private void bindRequiredSonic1() {
+        var image = RomTestUtils.ensureSonic1RomAvailable();
+        assertNotNull(image, "this Three Islands route requires the Sonic 1 ROM");
+        romCatalogue = RomCatalogueFixture.bind(SonicConfigurationService.getInstance(),
+                GameServices.rom(), Map.of(RomGame.S1, image.toPath()));
+    }
+
+    private static void assertSonic1Destination(ExampleModHarness harness, String zoneName,
+                                               boolean marbleShrine) throws Exception {
+        Object game = value(harness.scene(), "game");
+        ClassLoader loader = game.getClass().getClassLoader();
+        Object expectedZone = loader.loadClass("threeislands.core.Zone").getField(zoneName).get(null);
+        Object destination = value(game, "screen");
+        assertEquals(loader.loadClass("threeislands.screen.FieldScreen"), destination.getClass(),
+                "the requested destination is a concrete field screen");
+        assertSame(expectedZone, value(destination, "zone"), "the requested zone is ready");
+        Object stage = value(destination, "stage");
+        assertSame(expectedZone, stage.getClass().getField("zone").get(stage));
+        Object field = value(destination, "field");
+        assertSame(expectedZone, field.getClass().getField("zone").get(field));
+        Object dungeon = field.getClass().getField("dungeon").get(field);
+        if (marbleShrine) {
+            assertNotNull(dungeon, "the indoor Continue reached the shrine");
+            assertEquals(loader.loadClass("threeislands.field.Dungeon"), dungeon.getClass());
+            assertSame(expectedZone, value(dungeon, "zone"));
+            // Dungeon.of(GREEN_HILL) uses Marble act 1 and its own ROM song.
+            assertEquals(1, value(dungeon, "artZone"));
+            assertEquals(0, value(dungeon, "artAct"));
+            assertEquals(0x83, value(dungeon, "music"));
+        } else {
+            assertNull(dungeon, "the requested destination is outdoors");
+        }
     }
 
     private static String screen(ExampleModHarness harness) throws Exception {
@@ -124,9 +178,10 @@ class TestThreeIslandsScene {
     @Test
     @RequiresRom(SonicGame.SONIC_1)
     void greenHillWaterUsesNativeReflectionPixelsAndSixTickPaletteCycle() throws Exception {
-        try (ExampleModHarness harness = open()) {
+        try (ExampleModHarness harness = openWithRequiredSonic1()) {
             play(harness, 3);
             assertTrue(harness.debugJump("field:ghz"));
+            assertSonic1Destination(harness, "GREEN_HILL", false);
             Object game = harness.scene().getClass().getMethod("game").invoke(harness.scene());
             Object screen = game.getClass().getMethod("screen").invoke(game);
             Object stage = screen.getClass().getMethod("stage").invoke(screen);
@@ -235,6 +290,7 @@ class TestThreeIslandsScene {
     @Test
     void continueStartsStarLightImmediatelyAndIndoorContinueSelectsMarble() throws Exception {
         level = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
+        bindRequiredSonic1();
         try (ExampleModHarness harness = ExampleModHarness.build(PROJECT, work.resolve("build"))) {
             Path saves = work.resolve("saves");
             Path save = saves.resolve("mods/three-islands/save.txt");
@@ -248,6 +304,7 @@ class TestThreeIslandsScene {
                 assertEquals("TITLE", screen(harness));
                 harness.press(GLFW_KEY_ENTER); // Continue is selected from the real disk save.
                 assertTrue(until(harness, inside ? "DUNGEON" : "FIELD", 700));
+                assertSonic1Destination(harness, inside ? "GREEN_HILL" : "STAR_LIGHT", inside);
                 Object game = value(harness.scene(), "game");
                 Object audio = game.getClass().getField("audio").get(game);
                 String expected = inside ? "s1:83" : "s1:84";
@@ -356,9 +413,10 @@ class TestThreeIslandsScene {
 
     @Test
     void greenHillMysteriesUseRealInteractionsAndPersistThroughContinue() throws Exception {
-        try (ExampleModHarness harness = open()) {
+        try (ExampleModHarness harness = openWithRequiredSonic1()) {
             play(harness, 2);
             assertTrue(harness.debugJump("field:ghz"), "this route requires the configured Sonic 1 ROM");
+            assertSonic1Destination(harness, "GREEN_HILL", false);
             Object game = harness.scene().getClass().getMethod("game").invoke(harness.scene());
             Object fieldScreen = game.getClass().getMethod("screen").invoke(game);
             Object field = fieldScreen.getClass().getMethod("field").invoke(fieldScreen);
@@ -393,6 +451,7 @@ class TestThreeIslandsScene {
             game.getClass().getMethod("continueGame", saved.get().getClass()).invoke(game, saved.get());
             assertTrue(until(harness, "LOADING", 60));
             assertTrue(until(harness, "FIELD", 700));
+            assertSonic1Destination(harness, "GREEN_HILL", false);
             Object resumed = game.getClass().getMethod("screen").invoke(game);
             Object model = resumed.getClass().getMethod("field").invoke(resumed);
             assertEquals(true, model.getClass().getMethod("bellsOpen").invoke(model));

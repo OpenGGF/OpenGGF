@@ -54,7 +54,7 @@ public final class ObjectVisualGraphicsAccess {
     }
 
     /**
-     * Only directed visuals attach a palette mask; ordinary native SAT retains its boolean path.
+     * Directed visual attachment is restricted to the active tile; ordinary explicit SAT masks remain available.
      */
     public static void attachLastVisualMask(GraphicsManager graphics, int mask) {
         graphics.attachObjectVisualSatMask(mask);

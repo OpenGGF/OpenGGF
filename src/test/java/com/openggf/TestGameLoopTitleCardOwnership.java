@@ -165,6 +165,7 @@ class TestGameLoopTitleCardOwnership {
         var frame = (PlcLifecycleFrame) raw("activePlcLifecycleFrame");
         var phase = com.openggf.game.resources.PlcLifecyclePhase.LEVEL_TITLE_CARD;
         when(frame.isOwnedBy(phase)).thenReturn(true);
+        when(frame.claim(phase)).thenReturn(true);
         Runnable rebind = () -> raw("levelManager", rebound);
         if (duringHardwareScan) {
             doAnswer(c -> { rebind.run(); return null; }).when(frame).prepareAfterLoop(phase);

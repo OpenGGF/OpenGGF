@@ -114,6 +114,32 @@ public abstract class AbstractGameOverCardObjectInstance extends AbstractObjectI
     protected void onWaitFrame() {
     }
 
+    /** Internal native-session exit, before the ordinary checkpoint and mode writes. */
+    protected boolean handleNativeDismiss() {
+        return false;
+    }
+
+    /** Only the native RAM consumed by this routine table; no engine display/exit flags. */
+    protected record NativeCardRam(int routine, int mappingFrame, int xPos, int waitTimer) {
+        public NativeCardRam {
+            routine &= 0xFF;
+            mappingFrame &= 0xFF;
+            xPos &= 0xFFFF;
+            waitTimer &= 0xFFFF;
+        }
+    }
+
+    protected final NativeCardRam captureNativeCardRam() {
+        return new NativeCardRam(routine, mappingFrame, xPos, waitTimer);
+    }
+
+    protected final void applyNativeCardRam(NativeCardRam ram) {
+        routine = ram.routine();
+        mappingFrame = ram.mappingFrame();
+        xPos = ram.xPos();
+        waitTimer = ram.waitTimer();
+    }
+
     // ---- ROM routine table ------------------------------------------------
 
     @Override
@@ -186,6 +212,9 @@ public abstract class AbstractGameOverCardObjectInstance extends AbstractObjectI
      */
     private void dismiss() {
         dismissed = true;
+        if (handleNativeDismiss()) {
+            return;
+        }
         if (isTimeOverFlagged()) {
             RespawnState checkpoint = services().checkpointState();
             if (checkpoint != null) {

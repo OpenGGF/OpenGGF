@@ -36,6 +36,10 @@ public final class Sonic2SpecialStageConstants {
     /** Number of track mapping frames */
     public static final int TRACK_FRAME_COUNT = 56;
 
+    /** SSCurveOffsets: signed X/Y bytes for each displayed track mapping frame. */
+    static final long GEOMETRY_OFFSETS_OFFSET = 0x768A;
+    static final int GEOMETRY_OFFSETS_SIZE = TRACK_FRAME_COUNT * 2;
+
     // ========== Art assets (Kosinski/Nemesis compressed) ==========
 
     /** Special stage track art - Kosinski compressed */

@@ -531,15 +531,16 @@ class TestS3kReverseGravityDezCorridor {
         HeadlessTestFixture fixture = fixtureFor(Character.KNUCKLES);
         AbstractPlayableSprite sprite = fixture.sprite();
         GameServices.gameState().setReverseGravityActive(true);
+        sprite.applyCustomRadii(10, 10); // native climb box; 8/9 are pre-radius offsets
         NativePositionOps.writeXPosResetSubpixel(sprite, CORRIDOR_X);
-        NativePositionOps.writeYPosResetSubpixel(sprite, FLOOR_SURFACE_Y - 8 + 3);
+        NativePositionOps.writeYPosResetSubpixel(sprite, FLOOR_SURFACE_Y - 18 + 3);
         TerrainCheckResult ledge = com.openggf.physics.GlideWallGrabTerrain
                 .climbVerticalDistance(sprite, true, true);
-        assertEquals(-3, ledge.distance(), "inverted Up checks the world floor at y+8");
-        NativePositionOps.writeYPosResetSubpixel(sprite, CEILING_CLEAR_Y + 9 - 3);
+        assertEquals(-3, ledge.distance(), "inverted Up checks the world floor at y+8+10");
+        NativePositionOps.writeYPosResetSubpixel(sprite, CEILING_CLEAR_Y + 19 - 3);
         TerrainCheckResult floor = com.openggf.physics.GlideWallGrabTerrain
                 .climbVerticalDistance(sprite, false, true);
-        assertEquals(-3, floor.distance(), "inverted Down checks the world ceiling at y-9");
+        assertEquals(-3, floor.distance(), "inverted Down checks the world ceiling at y-9-10");
     }
 
     @Test

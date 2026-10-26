@@ -40,16 +40,12 @@ public class SYZBossSpike extends AbstractBossChild implements TouchResponseProv
 
     // ROM: obColType = $84 when active (harmful, size category)
     private static final int SPIKE_COLLISION_TYPE = 0x84;
-    private static final int ENGINE_BEHIND_SHIP_PRIORITY = 6;
-    // ROM: BSYZ_ShipStart etc. use boss_syz bounds far wider than the 320px screen;
-    // the boss's own off-screen destroy check (isBossOnScreen()) uses a generous
-    // +/-64px margin around the viewport. Reuse the same tolerance so the spike's
-    // own off-screen self-delete during escape agrees with the ship's.
-    private static final int OFF_SCREEN_MARGIN = 64;
-
+    private static final int NATIVE_PRIORITY = 5;
     // Extension tracking
     private int extensionDepth; // objoff_3C — tracks how far the spike extends
     private boolean spikeActive;
+    private boolean renderedLastPass;
+    private boolean displayedThisPass;
 
     // Boss state cache (refreshed every frame in update(), read for extension tracking)
     private int bossRoutineSecondary;
@@ -57,9 +53,14 @@ public class SYZBossSpike extends AbstractBossChild implements TouchResponseProv
     private int bossTimer;
 
     public SYZBossSpike(Sonic1SYZBossInstance parent) {
-        super(parent, "SYZSpike", ENGINE_BEHIND_SHIP_PRIORITY, Sonic1ObjectIds.SYZ_BOSS);
+        super(parent, "SYZSpike", NATIVE_PRIORITY, Sonic1ObjectIds.SYZ_BOSS);
         this.extensionDepth = 0;
         this.spikeActive = false;
+    }
+
+    @Override
+    protected boolean tracksViaChildComponents() {
+        return false; // Native routine 8 executes at its own SST position.
     }
 
     @Override
@@ -88,7 +89,7 @@ public class SYZBossSpike extends AbstractBossChild implements TouchResponseProv
 
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
-        if (isDestroyed() || !shouldUpdate(vIntRunCount)) {
+        if (isDestroyed() || !beginUpdate(vIntRunCount)) {
             return;
         }
         // Defensive same-frame destroy sync (belt-and-suspenders alongside
@@ -103,21 +104,9 @@ public class SYZBossSpike extends AbstractBossChild implements TouchResponseProv
         bossDropSubPhase = boss.getDropSubPhase();
         bossTimer = boss.getGenericTimer();
 
-        // ROM: BossSpringYard_SpikeMain — cmpi.b #$A,ob2ndRout(a1) / tst.b obRender(a0) /
-        // bpl.s BossSpringYard_SpikeDelete (lines 656-659). Once the boss is fleeing
-        // (ob2ndRout==$A, STATE_ESCAPE) the spike self-deletes off its OWN on-screen
-        // status, the same shape as the ship's own escape self-delete
-        // (BSYZ_Escape.checkOffScreen). X-only, matching
-        // Sonic1SYZBossInstance.isBossOnScreen()'s own X-only window -- the boss arena's
-        // Y placement is not near screen-Y=0, so a Y-inclusive check (isOnScreen())
-        // would flag the spike off-screen long before the ship ever does.
-        // Currently redundant in practice: getX() is a live pass-through to
-        // parent.getX(), so this branch and the boss's own isBossOnScreen() destroy
-        // check always agree (spike X == boss X every frame) and
-        // AbstractBossChild.isDestroyed() already lazily destroys the spike the moment
-        // the boss is destroyed. Kept anyway to model the ROM's own independent check
-        // literally, in case a future change decouples spike X from the boss's.
-        if (bossRoutineSecondary == Sonic1SYZBossInstance.STATE_ESCAPE && !isOnScreenX(OFF_SCREEN_MARGIN)) {
+        // Native routine 8 tests its own retained BuildSprites bit before following
+        // the ship. Its later obActWid=8 differs from the face/flame width 32.
+        if (bossRoutineSecondary == Sonic1SYZBossInstance.STATE_ESCAPE && !renderedLastPass) {
             ObjectLifetimeOps.destroyBossChildLatched(this);
             return;
         }
@@ -129,6 +118,18 @@ public class SYZBossSpike extends AbstractBossChild implements TouchResponseProv
         spikeActive = !boss.getState().invulnerable && boss.getHoldingFlag() == 0;
 
         updateExtension();
+        displayedThisPass = true;
+    }
+
+    @Override
+    public void refreshPostCameraRenderState() {
+        if (!displayedThisPass) return;
+        displayedThisPass = false;
+        var camera = services().camera();
+        int sx = (short) (getX() - camera.getX());
+        int sy = (short) (getY() - camera.getY());
+        renderedLastPass = sx >= -8 && sx < camera.getWidth() + 8
+                && sy >= -32 && sy < camera.getHeight() + 32;
     }
 
     @Override
@@ -156,10 +157,8 @@ public class SYZBossSpike extends AbstractBossChild implements TouchResponseProv
 
     @Override
     public int getPriorityBucket() {
-        // ROM gives the SYZ boss parts the same obPriority, but the original
-        // sprite table order places the spike behind the ship. The engine
-        // renders the ship as one parent object, so use the next bucket back.
-        return ENGINE_BEHIND_SHIP_PRIORITY;
+        // Independent components retain the native table priority and SST order.
+        return NATIVE_PRIORITY;
     }
 
     @Override

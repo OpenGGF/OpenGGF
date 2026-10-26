@@ -61,3 +61,22 @@ re-render; an unrewound handler cache can retain future mode/words without
 advancing the restored event. Regress window selection, actual CPU descriptor
 cache/ROM pixel samples at both boundaries, and re-render after visiting future
 modes. Origin: SSZ presentation issue7, 2026-09-30, based on `05b5e35863`.
+
+## Restore rebuilds must not publish native state
+
+A post-restore `ScrollOutputRebuilder` rebuilds derived HScroll/vertical-scroll
+output from captured state; it must not call an ordinary update path that writes
+zone event state. CNZ's fallback rebuild called ordinary `CNZ1_Deform` publication
+and replaced captured fresh `deformPhaseBgX`/`publishedBgCameraX` zeros with
+camera-derived 5/16- and 7/16-scale X values. Keep ordinary
+arithmetic, dispatch order and publication intact; separate only the derived
+rebuild's write authority.
+
+Public parallax initialization does not execute or warm a native event phase.
+Regress both the fresh pre-first-dispatch world and an actually dispatched world:
+force object recreation, compare every registered snapshot key immediately after
+restore and after two identical ordinary forward replays, and check rebuilt
+HScroll output. Do not pre-seed the event fields or omit them from comparison.
+Origin: CNZ derived-rebuild correction, 2026-10-18; `SwScrlCnz` and
+`TestS3kCnzParallaxRegisteredRewind`. This local restore contract does not certify native
+presentation, contact/trace parity or the complete CNZ route.
