@@ -1,5 +1,12 @@
 # S3&K TAS trick regression obligations — 2026-10-26
 
+Historical route-level assessment. The later
+[executed S3K verdict matrix](2026-10-26-tas-verdicts-s3k.md) supersedes the
+partial/unverified dispositions below using the user’s representative-mechanism
+standard. It preserves all 35 original family IDs, distinguishes supported
+children from exercised current limitations, and keeps publication-route limits
+separate. The original notes and native derivations here remain evidence.
+
 Implementation base: `c50876b184612428ccaf22763412f88ffe505432`.
 Worktree: `/mnt/LinuxData/T3/worktrees/OpenGGF/t3-ca0b90be`, local branch
 `feature/ai-tas-s3k-tests-20261026`. Scope is tests and this matrix only;
