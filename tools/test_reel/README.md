@@ -109,7 +109,9 @@ integration check covers 80 one-frame cuts at normal and 4× held speed.
 For a complete census reel, add `--include-nondrawable-cards --require-complete`.
 Each reviewed non-drawable invocation receives exactly one labelled editorial
 frame saying **Not engine footage**, with its actual JUnit outcome and reason.
-Its recorded game-frame count remains zero. The edit map distinguishes these
+Its recorded game-frame count remains unchanged. Most such cases recorded zero
+frames; a reviewed empty-state control may have blank readbacks. Those are retained
+as evidence, with their omission counted explicitly in the edit map. The map distinguishes
 cards from real engine frames. Completeness requires every inventory entry to
 have a passed actual invocation, matching executed source hash, and either real
 frames or a reviewed non-drawable reason. Missing adapters/executions and unknown
@@ -184,8 +186,9 @@ It creates an owned EGL context over the **same** loaded world, uploads its CPU
 art, draws through native sprite priority, and checks that presentation did not
 change player position, velocity, angle, air/roll flags and animation fields. This is a listed-player-field guard, not proof of complete world-state purity.
 It does not reload the level, reset player art/animation, add ticks or recenter
-the camera. This adapter is currently verified for the S1 movement fixture only;
-other worlds/events need their own focused evidence before registration.
+the camera. The dated full-reel reports qualify S1 loaded-world fixtures and S3K
+flame-slope fixtures through this adapter, plus explicit session/component adapters
+across all three games. Other worlds/events need their own focused evidence before registration.
 
 Fixtures with component managers, mocked render consumers, custom geometry,
 multiple private worlds, or non-gameplay menus need explicit adapters at their

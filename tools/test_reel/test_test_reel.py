@@ -8,6 +8,17 @@ import test_reel as reel
 
 
 class InventoryTests(unittest.TestCase):
+    def test_reviewed_blank_control_keeps_raw_evidence_but_selects_one_card(self):
+        case={'id':'C#unreachable','junit_unique_id':'real-id','outcome':'passed',
+              'capture_fixture_sha256':'a'*64,'matches_inventory_source':True,
+              'capture_status':'captured','frames':29,
+              'drawable_disposition':'Actual monitor remains outside the component viewport; all29 readbacks blank'}
+        selected=reel.reel_cases({'cases':[case]},True,True)
+        self.assertEqual(('non-drawable-card',1),selected[0][1:])
+        self.assertEqual(29,case['frames'])
+        with self.assertRaisesRegex(ValueError,'non-drawable card disabled'):
+            reel.reel_cases({'cases':[case]},False,True)
+
     def test_specific_review_does_not_reclassify_other_methods_or_controls(self):
         scope = {'adapters':{'C':'actual object adapter'},
                  'non_drawable':{'C#logic':'No drawable model', 'C#mixed[2]':'Invisible control'}}

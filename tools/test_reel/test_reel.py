@@ -433,7 +433,19 @@ def reel_cases(plan, include_nondrawable_cards=False, require_complete=False):
                 raise ValueError(f'Reel requires a passed actual invocation: {case["id"]}')
             if not case.get('capture_fixture_sha256') or case.get('matches_inventory_source') is not True:
                 raise ValueError(f'Reel source identity is not qualified: {case["id"]}')
-        if status == 'captured':
+        disposition = case.get('drawable_disposition')
+        reviewed_nondrawable = disposition and disposition not in (
+            'Adapter available', 'Not yet reviewed for drawable state')
+        if require_complete and reviewed_nondrawable and not include_nondrawable_cards:
+            raise ValueError(f'Incomplete reel: non-drawable card disabled for {case["id"]}')
+        if include_nondrawable_cards and reviewed_nondrawable:
+            if (not case.get('junit_unique_id') or case.get('outcome') not in ('passed', 'failed', 'aborted')
+                    or case.get('frames', -1) < 0):
+                raise ValueError(f'Card requires an executed, reviewed non-drawable case: {case["id"]}')
+            # A qualified empty-state control may have real blank readbacks. Keep
+            # those raw counts/evidence intact, but explicitly select a card.
+            selected.append((case, 'non-drawable-card', 1))
+        elif status == 'captured':
             if case.get('frames', 0) <= 0:
                 raise ValueError(f'Captured case has no frames: {case["id"]}')
             selected.append((case, 'engine-frames', case['frames']))
@@ -506,7 +518,9 @@ def stitch(args):
         length=source_frames*args.slow
         chapters.append(f'[CHAPTER]\nTIMEBASE=1/60\nSTART={frame}\nEND={frame+length}\ntitle={case["id"]}\n')
         edit.append({'id':case['id'],'junit_unique_id':case['junit_unique_id'],'source':case['case_dir'],'kind':kind,
-                     'source_start_frame':0,'source_end_frame_exclusive':case['frames'],
+                     'source_start_frame':0,'source_end_frame_exclusive':case['frames'] if kind=='engine-frames' else 0,
+                     'recorded_frames':case['frames'],
+                     'omitted_recorded_frames':case['frames'] if kind=='non-drawable-card' else 0,
                      'output_start_frame':frame,'output_end_frame_exclusive':frame+length})
         case['clip'] = os.path.relpath(segment,root)
         frame+=length
@@ -533,6 +547,7 @@ def stitch(args):
     write_json(video.with_suffix('.edit.json'),{'fps':60,'frames':frame,'slow':args.slow,'clips':edit,
                                                'engine_frames':sum(c['frames'] for c,k,n in selected if k=='engine-frames'),
                                                'editorial_card_frames':sum(n for c,k,n in selected if k=='non-drawable-card'),
+                                               'reviewed_blank_frames_omitted':sum(c['frames'] for c,k,n in selected if k=='non-drawable-card'),
                                                'assembly_command':command,'ffprobe':probe})
     write_json(manifest_path,plan)
     print(f'{video}: {frame} frames / {frame/60:.3f}s, {len(edit)} actual test invocations')
