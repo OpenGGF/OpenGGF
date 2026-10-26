@@ -20,8 +20,8 @@ import static org.junit.jupiter.api.Assertions.*;
  * No stage state, input latch or startup counter is written by the fixture. */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestTasS3kSpecialStageEntryInput {
-    @ParameterizedTest @ValueSource(ints={0,1,2})
-    void currentLimitationPreLoadPulseIsLostBeforeFirstSpecialStagePlayerUpdate(int inputTiming) throws Exception {
+    @ParameterizedTest @ValueSource(ints={0,1,2,3,4})
+    void finalEntryFadeInputOwnsBootAndNormalSamplingResumes(int inputTiming) throws Exception {
         var settings=new GameplayCaptureSession.Settings(320,"knuckles","","off",null,null,null);
         try(var session=new GameplayCaptureSession(settings)) {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(),0,0,settings);
@@ -38,23 +38,23 @@ class TestTasS3kSpecialStageEntryInput {
             assertEquals(1,remainingEntryFade(manager));
             assertEquals(0,manager.captureComparisonState().frameCounter());
             assertFalse(manager.captureComparisonState().started());
-            com.openggf.tests.reel.TestReelCapture.step(session,inputTiming==1?up():null);
+            com.openggf.tests.reel.TestReelCapture.step(session,inputTiming==1||inputTiming==3?up():null);
             assertEquals(0,remainingEntryFade(manager));
             assertEquals(0,manager.captureComparisonState().frameCounter(),"final fade tick does not run sprites");
-            assertEquals(inputTiming==1?1:0,readInt(manager,"heldButtons"),"pre-load input reached the production stage input owner");
-            com.openggf.tests.reel.TestReelCapture.step(session,inputTiming==2?up():null);
+            assertEquals(inputTiming==1||inputTiming==3?1:0,readInt(manager,"heldButtons"),"pre-load input reached the production stage input owner");
+            com.openggf.tests.reel.TestReelCapture.step(session,inputTiming==2||inputTiming==3?up():null);
             var first=manager.captureComparisonState();
             assertEquals(1,first.frameCounter(),"boot Process_Sprites equivalent actually ran");
-            // Native parity was executed red for inputTiming=1: expected
-            // started=true / velocity=$200, observed started=false. The
-            // engine samples neutral again before its boot Process_Sprites
-            // equivalent, losing the native interrupt-masked-load latch.
-            assertEquals(inputTiming==2,first.started(),"confirmed pre-load pulse loss; boot-input positive control starts");
-            assertEquals(inputTiming==2?0x200:0,first.velocity());
-            for(int i=0;i<22;i++)com.openggf.tests.reel.TestReelCapture.step(session,null);
+            boolean startsAtBoot=inputTiming==1||inputTiming==3;
+            assertEquals(startsAtBoot,first.started(),"boot reads final fade input before the next native poll");
+            assertEquals(startsAtBoot?0x200:0,first.velocity());
+            for(int i=0;i<22;i++) {
+                com.openggf.tests.reel.TestReelCapture.step(session,inputTiming==3?up():null);
+                assertEquals(first.velocity(),manager.captureComparisonState().velocity(),"each fade-in tick holds motion");
+            }
             assertEquals(first.velocity(),manager.captureComparisonState().velocity(),"fade-in holds player motion");
-            com.openggf.tests.reel.TestReelCapture.step(session,null);
-            assertEquals(inputTiming==2?0x400:0,manager.captureComparisonState().velocity(),"first main-loop update exits the load/fade seam");
+            com.openggf.tests.reel.TestReelCapture.step(session,inputTiming==3||inputTiming==4?up():null);
+            assertEquals(startsAtBoot?0x400:inputTiming==4?0x200:0,manager.captureComparisonState().velocity(),"first main-loop update takes its normal input sample");
         }
     }
     private static Bk2FrameInput up() {return new Bk2FrameInput(0,AbstractPlayableSprite.INPUT_UP,0,false,"Up");}

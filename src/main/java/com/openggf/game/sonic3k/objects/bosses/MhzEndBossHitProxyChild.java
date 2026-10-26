@@ -18,8 +18,8 @@ import java.util.List;
  *
  * <p>ROM reference: {@code ChildObjDat_76982 -> loc_764A0}. The child refreshes
  * from parent offset {@code +$21,-$10}, uses {@code word_76964}
- * {@code collision_flags=$25}, and forwards accepted attacks to the parent
- * boss state the same way {@code sub_76782} walks through {@code parent3}.
+ * {@code collision_flags=$25}. Accepted contact changes this slot; the parent's
+ * post-dispatch {@code sub_76782} then consumes the cleared collision byte.
  */
 public final class MhzEndBossHitProxyChild extends AbstractObjectInstance
         implements TouchResponseProvider, TouchResponseAttackable, RewindRecreatable {
@@ -33,6 +33,9 @@ public final class MhzEndBossHitProxyChild extends AbstractObjectInstance
     private MhzEndBossInstance parent;
     private int x;
     private int y;
+    private int collisionFlags = ACTIVE_COLLISION_FLAGS;
+    private int collisionProperty = COLLISION_PROPERTY;
+    private PlayableEntity lastHitPlayer;
 
     private MhzEndBossHitProxyChild() {
         this(new ObjectSpawn(0, 0, Sonic3kObjectIds.MHZ_END_BOSS, 0, 0, false, 0));
@@ -49,6 +52,7 @@ public final class MhzEndBossHitProxyChild extends AbstractObjectInstance
         this(new ObjectSpawn(parent.getX() + X_OFFSET, parent.getY() + Y_OFFSET,
                 Sonic3kObjectIds.MHZ_END_BOSS, 0, 0, false, 0));
         this.parent = parent;
+        parent.bindHitProxy(this);
         refreshFromParent();
     }
 
@@ -79,6 +83,23 @@ public final class MhzEndBossHitProxyChild extends AbstractObjectInstance
         updateDynamicSpawn(x, y);
     }
 
+    @Override
+    public void setDestroyed(boolean destroyed) {
+        super.setDestroyed(destroyed);
+        // Allocation rejection also reaches this hook before the child acquires
+        // an ObjectManager identity. Never retain that unadmitted reference.
+        if (destroyed && parent != null) {
+            parent.retireHitProxy(this);
+        }
+    }
+
+    @Override
+    protected void onRemovedFromObjectManager() {
+        if (parent != null) {
+            parent.retireHitProxy(this);
+        }
+    }
+
     private void refreshFromParent() {
         x = parent.getX() + X_OFFSET;
         y = parent.getY() + Y_OFFSET;
@@ -106,13 +127,25 @@ public final class MhzEndBossHitProxyChild extends AbstractObjectInstance
 
     @Override
     public int getCollisionFlags() {
-        return parent == null || parent.getState().invulnerable || parent.getState().defeated
-                ? 0 : ACTIVE_COLLISION_FLAGS;
+        return parent == null || isDestroyed() || parent.getState().defeated ? 0 : collisionFlags;
+    }
+
+    void disableCollision() {
+        collisionFlags = 0;
+    }
+
+    void restoreCollision() {
+        collisionFlags = ACTIVE_COLLISION_FLAGS;
+        collisionProperty = COLLISION_PROPERTY;
+    }
+
+    PlayableEntity getLastHitPlayer() {
+        return lastHitPlayer;
     }
 
     @Override
     public int getCollisionProperty() {
-        return COLLISION_PROPERTY;
+        return collisionProperty;
     }
 
     @Override
@@ -120,7 +153,11 @@ public final class MhzEndBossHitProxyChild extends AbstractObjectInstance
         if (getCollisionFlags() == 0) {
             return;
         }
-        parent.onPlayerAttack(player, result);
+        // Touch_Enemy.checkhurtenemy mutates only the struck child slot.
+        // Its parent reads this state after its own routine dispatch.
+        collisionFlags = 0;
+        collisionProperty = (byte) (collisionProperty - 1);
+        lastHitPlayer = player;
     }
 
     @Override

@@ -136,6 +136,10 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
     private boolean touchChildrenRetired;
     private int finalHitExplosionTimer;
     private int finalHitExplosionIntervalCounter;
+    // Native collision_flags is independent of the $20 flash countdown.
+    private boolean collisionEnabled = true;
+    private MhzEndBossHitProxyChild hitProxy;
+    private PlayableEntity lastHitPlayer;
 
     public MhzEndBossInstance(ObjectSpawn spawn) {
         super(spawn, "MHZEndBoss");
@@ -219,7 +223,18 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
 
     @Override
     public int getCollisionFlags() {
-        return cameraRangePassed ? super.getCollisionFlags() : 0;
+        return cameraRangePassed && collisionEnabled && !state.defeated ? 0xC0 | COLLISION_SIZE : 0;
+    }
+
+    void bindHitProxy(MhzEndBossHitProxyChild child) {
+        // loc_764A0 publishes the child's exact slot into parent $44.
+        hitProxy = child;
+    }
+
+    void retireHitProxy(MhzEndBossHitProxyChild child) {
+        if (hitProxy == child) {
+            hitProxy = null;
+        }
     }
 
     @Override
@@ -270,6 +285,10 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
     }
 
     private void updateWaitForChildSignal() {
+        // Shipped loc_76004 (sonic3k.asm:157019-157024) repeats these writes
+        // on EVERY routine-0 pass. It does not reset the proxy or flash timer.
+        collisionEnabled = true;
+        state.hitCount = HIT_COUNT;
         if ((getCustomFlag(STATE_FLAGS_OFFSET) & FLAG_CHILD_SIGNAL) == 0) {
             return;
         }
@@ -952,18 +971,28 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
 
     @Override
     public void onPlayerAttack(PlayableEntity player, com.openggf.level.objects.TouchResponseResult result) {
-        if (state.invulnerable || state.defeated) {
+        if (!collisionEnabled || state.defeated) {
             return;
         }
-        // Accepted touch publishes the decremented count before the object pass.
-        // loc_767A0's pre-arena floor is checked after that pass's movement,
-        // which may itself set $38 bit7 through loc_760C4.
-        state.hitCount--;
+        // Touch_Enemy.checkhurtenemy (sonic3k.asm:20945-20958) changes only
+        // the struck slot. The routine dispatch can overwrite this body hit
+        // before sub_76782 decides whether to start a flash or clear the proxy.
+        state.hitCount = (state.hitCount - 1) & 0xFF;
+        collisionEnabled = false;
+        lastHitPlayer = player;
+    }
+
+    private void startMhzHitFlash() {
         state.invulnerabilityTimer = 0x20;
         state.invulnerable = true;
+        collisionEnabled = false;
+        if (hitProxy != null) {
+            hitProxy.disableCollision();
+        }
         services().playSfx(getBossHitSfxId());
-        if (player != null) {
-            player.setXSpeed((short) 0);
+        // loc_767E4 belongs to the post-dispatch damage tail, not contact.
+        if (lastHitPlayer != null) {
+            lastHitPlayer.setXSpeed((short) 0);
         }
     }
 
@@ -983,12 +1012,24 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
     }
 
     private void updateMhzHitFlash() {
-        if (!state.invulnerable) {
-            return;
+        // sub_76782 (sonic3k.asm:157639-157650) consumes a cleared proxy
+        // even while $20 is nonzero, provided the parent's byte is active.
+        // Routine 0 can restore that byte without restoring the proxy's byte.
+        if (collisionEnabled) {
+            if (hitProxy == null || hitProxy.getCollisionFlags() != 0) {
+                return;
+            }
+            state.hitCount = (state.hitCount - 1) & 0xFF;
+            lastHitPlayer = hitProxy.getLastHitPlayer();
         }
         // loc_767A0 observes the post-dispatch arena bit, not its value at touch.
-        if ((getCustomFlag(STATE_FLAGS_OFFSET) & FLAG_ARENA_PASS) == 0 && state.hitCount <= 1) {
+        if ((getCustomFlag(STATE_FLAGS_OFFSET) & FLAG_ARENA_PASS) == 0 && (byte) state.hitCount <= 1) {
             state.hitCount = 2;
+        }
+        // loc_767B0 clears collision only when beginning a new flash. An
+        // already-flashing, reinitialized parent keeps its active byte.
+        if (state.invulnerabilityTimer == 0) {
+            startMhzHitFlash();
         }
         // ROM loc_767E8: btst #0,$20(a0) reads the countdown BEFORE it is decremented below.
         // Bit0 clear (even) selects the white/flash row; bit0 set (odd) selects the real-color
@@ -1011,6 +1052,11 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
                 // the native counter stays1, rather than consuming a ninth hit.
                 state.defeated = true;
                 onDefeatStarted();
+            } else {
+                collisionEnabled = true;
+                if (hitProxy != null) {
+                    hitProxy.restoreCollision();
+                }
             }
         }
     }

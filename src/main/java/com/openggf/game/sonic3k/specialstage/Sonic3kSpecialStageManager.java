@@ -77,6 +77,10 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
 
     private int heldButtons;
     private int pressedButtons;
+    private EntryInput entryInputLatch;
+
+    /** Ctrl_1/2 retained while SpecialStage masks interrupts after Pal_FadeToWhite. */
+    record EntryInput(int heldButtons, int pressedButtons, int p2HeldButtons) { }
 
     // ==================== Banner State ====================
 
@@ -286,6 +290,7 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
         this.exitSpinStarted = false;
         this.exitWaitFramesRemaining = 0;
         this.firstUpdateCall = true;
+        this.entryInputLatch = null;
         this.mainLoopSpritesPublished = false;
         this.preBootFadeHoldFrames = PAL_FADE_TO_WHITE_FRAMES;
         this.postBootFadeHoldFrames = 22;
@@ -685,6 +690,12 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
         // these frames -- not even the stepped-frame counter.
         if (preBootFadeHoldFrames > 0) {
             preBootFadeHoldFrames--;
+            if (preBootFadeHoldFrames == 0) {
+                // SpecialStage masks interrupts after the final fade poll
+                // (sonic3k.asm:10621-10628). loc_8454 (sonic3k.asm:10750-10761)
+                // runs Process_Sprites before the next Wait_VSync.
+                entryInputLatch = new EntryInput(heldButtons, pressedButtons, p2HeldButtons);
+            }
             return;
         }
         if (!stagePalettesUploaded) {
@@ -702,8 +713,10 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
         // it is comparator-facing stepped-frame bookkeeping, not a ROM RAM
         // field -- but nothing else in this method (player/tails/collision/
         // banner/HUD/background) may observe these frames.
+        EntryInput bootInput = firstUpdateCall ? entryInputLatch : null;
         if (firstUpdateCall) {
             firstUpdateCall = false;
+            entryInputLatch = null;
         } else if (postBootFadeHoldFrames > 0) {
             postBootFadeHoldFrames--;
             return;
@@ -713,6 +726,11 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
 
         pacingOwner.acceptedSample();
         boolean exitLoopIteration = exitSpinStarted;
+        // Consume the load latch once, without overwriting the next sampled
+        // input. FAST entry has no sampled fade and uses its normal first input.
+        int frameHeldButtons = bootInput != null ? bootInput.heldButtons() : heldButtons;
+        int framePressedButtons = bootInput != null ? bootInput.pressedButtons() : pressedButtons;
+        int frameP2HeldButtons = bootInput != null ? bootInput.p2HeldButtons() : p2HeldButtons;
 
         // Banner state machine
         boolean bannerTriggeredAdvance = banner.update();
@@ -724,7 +742,7 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
         }
 
         // Player movement (includes speed timer, input, velocity, position)
-        player.update(heldButtons, pressedButtons);
+        player.update(frameHeldButtons, framePressedButtons);
 
         // Grid collision is the TAIL of the movement routine, not a separate
         // later pass: the ROM's per-frame player routine loc_903E calls
@@ -745,12 +763,12 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
         // Special_stage_jumping is not set until loc_90EE/loc_911E.
         processCollisionIfEligible();
 
-        player.updateJump(pressedButtons);
+        player.updateJump(framePressedButtons);
 
         // Update Tails (P2)
         if (tailsEnabled) {
             // Tails AI: replay P1 input with delay, or use P2 controller
-            int tailsInput = tailsAI.update(heldButtons, player.getJumping(), p2HeldButtons);
+            int tailsInput = tailsAI.update(frameHeldButtons, player.getJumping(), frameP2HeldButtons);
 
             // Tails jump — uses delayed input from AI (4 frames behind Sonic)
             if ((tailsInput & 0x70) != 0 && tailsJumping == 0) {
@@ -1293,6 +1311,7 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
                 heldButtons,
                 pressedButtons,
                 p2HeldButtons,
+                entryInputLatch,
                 clearRoutine,
                 clearTimer,
                 emeraldTimer,
@@ -1351,6 +1370,7 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
         heldButtons = snapshot.heldButtons();
         pressedButtons = snapshot.pressedButtons();
         p2HeldButtons = snapshot.p2HeldButtons();
+        entryInputLatch = snapshot.entryInputLatch();
         clearRoutine = snapshot.clearRoutine();
         clearTimer = snapshot.clearTimer();
         emeraldTimer = snapshot.emeraldTimer();
@@ -1495,6 +1515,7 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
         bannerOffset = 0;
         heldButtons = 0;
         pressedButtons = 0;
+        entryInputLatch = null;
         collisionQueue.clear();
     }
 
