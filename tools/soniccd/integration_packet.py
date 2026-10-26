@@ -356,7 +356,9 @@ def junit_summary(root, classes, since, properties):
                 result["issues"].append(f"{name}: property {key} expected={value!r} actual={prop.get(key)!r}")
         cases, counts, identities = [], dict(tests=0, failures=0, errors=0, skipped=0), set()
         for case in suite.findall("testcase"):
-            require(case.get("classname") == name and bool(case.get("name")), f"Testcase class/name owner mismatch: {path}")
+            reported_owner = case.get("classname")
+            require(reported_owner in (name, name.rsplit(".", 1)[-1]) and bool(case.get("name")),
+                    f"Testcase class/name owner mismatch: {path}")
             require(all(node.tag in ("failure", "error", "skipped", "system-out", "system-err") for node in case),
                     f"Unsupported testcase result structure: {path}")
             identity = name + "#" + case.get("name")
@@ -372,6 +374,8 @@ def junit_summary(root, classes, since, properties):
             cases.append(dict(identity=identity, status=status,
                               message=outcome.get("message", outcome.text or "") if outcome is not None else "",
                               type=outcome.get("type", "") if outcome is not None else ""))
+            if reported_owner != name:
+                cases[-1]["reported_classname"] = reported_owner
         require(counts["tests"] > 0, f"No observed testcases: {path}")
         for key, observed in counts.items():
             require(suite.get(key) is not None and suite.get(key).isdigit() and int(suite.get(key)) == observed,

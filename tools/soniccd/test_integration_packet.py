@@ -432,6 +432,22 @@ class JunitCliTests(PacketFixture):
         self.assertEqual(result.returncode, 2)
         self.assertIn("Stale XML", result.stderr)
 
+    def test_simple_testcase_owner_is_attributed_to_suite_but_foreign_qualified_owner_is_rejected(self):
+        path = self.report()
+        tree = ET.parse(path)
+        tree.getroot().find("testcase").set("classname", "TestOne")
+        tree.write(path, encoding="utf-8", xml_declaration=True)
+        result = self.summary()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        case = json.loads(result.stdout)["classes"][0]["cases"][0]
+        self.assertEqual(case["identity"], "example.TestOne#case(0)")
+        self.assertEqual(case["reported_classname"], "TestOne")
+        tree.getroot().find("testcase").set("classname", "foreign.TestOne")
+        tree.write(path, encoding="utf-8", xml_declaration=True)
+        result = self.summary()
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("owner mismatch", result.stderr)
+
     def test_stale_unrelated_reports_are_ignored_without_parsing_or_deleting_them(self):
         self.report()
         old = self.reports / "TEST-example.Historical.xml"

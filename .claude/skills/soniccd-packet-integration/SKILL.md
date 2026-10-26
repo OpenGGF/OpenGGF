@@ -128,6 +128,9 @@ matching suite/testcase ownership, unique actual identities, and consistent
 declared/observed counts. Unrelated reports older than the invocation cutoff
 are counted and ignored without parsing or deleting them. A requested class's
 stale report still fails, and any unexpected fresh class fails. The tool never
+accepts a foreign qualified testcase owner. Exact simple testcase class names
+(as emitted by ArchUnit) are attributed to the full suite owner while their
+reported name is retained separately in the output. The tool never
 deletes reports. It rejects stale requested, missing, unexpected fresh, empty
 and malformed evidence (reports also have a 16 MiB
 per-file read limit). It reports every observed test
