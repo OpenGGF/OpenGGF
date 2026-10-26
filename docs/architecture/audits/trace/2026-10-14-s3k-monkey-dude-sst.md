@@ -8943,3 +8943,47 @@ player-to-bar controls cover P1/P2 destructive/non-destructive release, register
 rewind, stale/held edges, forced logical words and independent scripted pads,
 while retaining logical/follower input. Their 9/10 old-red result is separate
 from Jawz's positive qualification and will receive its own correction/commit.
+
+
+## Primary drowning raw controller refresh review correction — 2026-10-26
+
+Independent review of frozen `b3374a56c` correctly found that the early primary
+routine bypass also skipped the physical ABC sample. `HCZBreakableBar_VerticalCheckPlayers`
+loads current Ctrl_1/2 (`sonic3k.asm:42821-42830`); its captured branch masks the
+fresh low-byte ABC bits without checking the player's routine
+(`sonic3k.asm:42859-42865`). The player must retain Ctrl_*_logical and bypass
+CPU/control work while still exposing the current physical sample to the later
+bar object. Merely running ordinary publication/CPU before the bypass is wrong.
+
+Ten independent production player-then-bar controls reproduce **9 assertion
+failures / 1 pass**, zero errors/skips on received input runtime. Four cases
+cover P1/P2 destructive and non-destructive release with registered player,
+fixed-countdown, bar and static-latch restore and repeated forward execution.
+Two cover stale press clearing, held ABC, neutral and a later fresh press; two
+keep forced logical words separate from raw ABC; two supply independent scripted
+controllers. P1's scripted path already worked and is the one old-source pass;
+P2's controller cache did not refresh. The old-red fingerprint and 21-second
+queue / 33.817-second Maven / 55.225-second wrapper timing are recorded in the
+preceding combined Jawz/anchor invocation. The fixture corrections reported
+there ran no behavior tests and are not counted as negative evidence.
+
+The correction samples the selected physical controller before primary dispatch.
+It respects native P1/P2 ports and explicit frame-scoped actor controllers;
+unassigned extra CPU actors do not inherit another physical port. P2's raw
+controller cache is refreshed without running AI. For primary drowning alone,
+the existing raw held/pressed fields refresh without merging forced/logical
+input or advancing the previous combined edge latch. Normal publication keeps
+its legacy combined state and the normal CPU pass retains its prior AI input
+fields until it publishes the new AI word. No new storage, logical/history
+write, timer owner, API candidate surface or comparator rule is introduced.
+
+Finished correction passes **186 physical cases, zero failures/errors/skips**,
+including all 27 native drowning cases (17 existing plus the ten review cases),
+15 bar cases, normal scripted/forced consumption, legacy S1/S2 lifetime/carry/death
+and competition consumers, API signatures and all four S3K anchors (60).
+Source fingerprint over `5b9de32d5` and owned changes is
+`00893c5e3ca456c2f4a4c0c7df56b1566ad54ceeeb17268baf76f3879a81cb26`;
+queue wait zero, Maven 97 seconds, wrapper elapsed 98.620 seconds. The exact
+16-selector command and environment are in hcz.json. All XML identities and
+skips were inspected. This is separate from Jawz and from the pending Turbo
+Spiker causal correction; final affected replay follows the finished source.

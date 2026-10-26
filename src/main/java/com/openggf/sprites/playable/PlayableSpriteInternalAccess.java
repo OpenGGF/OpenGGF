@@ -114,6 +114,21 @@ public final class PlayableSpriteInternalAccess {
         sprite.logicalInputStateForScript(heldMask, jumpPress);
     }
 
+    /**
+     * Refreshes the physical sample when a primary routine skips ordinary input
+     * publication. Do not merge forced/logical input or advance its edge latch:
+     * late objects read Ctrl_*, while history still records Ctrl_*_logical.
+     */
+    public static void refreshRawControllerSample(AbstractPlayableSprite sprite, int heldMask, int pressedMask) {
+        sprite.jumpInputPressed = (heldMask & AbstractPlayableSprite.INPUT_JUMP) != 0;
+        sprite.jumpInputJustPressed = (pressedMask & AbstractPlayableSprite.INPUT_JUMP) != 0;
+        sprite.setDirectionalInputPressed(
+                (heldMask & AbstractPlayableSprite.INPUT_UP) != 0,
+                (heldMask & AbstractPlayableSprite.INPUT_DOWN) != 0,
+                (heldMask & AbstractPlayableSprite.INPUT_LEFT) != 0,
+                (heldMask & AbstractPlayableSprite.INPUT_RIGHT) != 0);
+    }
+
     /** Native primary-routine selection precedes input publication and CPU control. */
     public static boolean hasPrimaryDrowningRoutine(AbstractPlayableSprite sprite) {
         var rules = sprite.getGameRules();

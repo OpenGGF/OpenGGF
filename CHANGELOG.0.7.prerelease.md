@@ -630,7 +630,8 @@ Unreleased. The earlier development themes remain in
   A drowning player sinks with the original motion, even while an object holds it,
   and in Sonic 3&K it keeps its underwater state until it dies, as in the original.
   Native fixed air slots own the lifetime; the primary drowning routine bypasses
-  normal control and releases carried players before motion.
+  normal control and releases carried players before motion. Fresh physical input
+  still releases a held Hydrocity bar while logical controls remain latched.
   Sonic 3&K's fixed air countdown also selects and maintains the drowning
   animation when object control bypasses ordinary movement animation.
   Offscreen Tails flight recovery in Sonic 2 and Sonic 3&K resets the native

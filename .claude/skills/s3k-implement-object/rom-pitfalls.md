@@ -6665,3 +6665,15 @@ collision_property; Jawz_Main owns the later harmful-child response. A hurt stac
 with source X identifies a position, not an object class: verify the original ROM
 placement ID before attributing the route (HCZ2 $2880,$07F0 is Turbo Spiker $96,
 not Jawz $93).
+
+
+Primary-routine bypass does not freeze physical controller RAM.
+`HCZBreakableBar_VerticalCheckPlayers` (sonic3k.asm:42821-42830) reads current
+Ctrl_1/2 even while a captured player drowns; its held release masks fresh ABC
+at HCZBreakableBar_VerticalHeld_CheckRelease (sonic3k.asm:42859-42865).
+Refresh the physical sample before dispatch without publishing a logical word
+or running AI. Keep normal CPU AI-held fields until their ordinary publication;
+only refresh their separate raw physical cache early. Test stale/held edges,
+independent scripted pads and forced logical words through the real next object
+consumer, including restore/forward. Existing player/controller state already
+captures these fields; no second input history or timing owner is needed.
