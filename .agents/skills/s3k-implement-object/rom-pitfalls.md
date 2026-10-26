@@ -6659,8 +6659,14 @@ do not rewrite the earlier follower-history slot to publish this late object rea
 A waiting badnik has not published its ObjDat collision byte.
 `Obj_Jawz` (sonic3k.asm:183616-183622) reaches SetUp_ObjAttributes only after
 Obj_WaitOffscreen has restored its entry and returned; use the existing captured
-initialized state for collision publication. Test actual player-slot touch before
-and after that boundary, including fresh graph recreation. Touch_Special queues
+initialized state for attribute visibility. That is not touch-list publication:
+Obj_Jawz returns through Set_VelocityXTrackSonic without reaching
+Sprite_CheckDeleteTouch. Only Jawz_Main with collision_property zero publishes
+(sonic3k.asm:183625-183632); its contact response branches do not. Use the existing
+object-owned publication predicate, and test the real previous-list player pass
+with both previous-list selection and inline/pre-update consumption enabled.
+Recreate initialized-but-unpublished and first-published graphs separately, then
+replay their next player/object passes. Touch_Special queues
 collision_property; Jawz_Main owns the later harmful-child response. A hurt stack
 with source X identifies a position, not an object class: verify the original ROM
 placement ID before attributing the route (HCZ2 $2880,$07F0 is Turbo Spiker $96,

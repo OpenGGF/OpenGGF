@@ -9075,3 +9075,103 @@ Turbo81, all with zero skips. Counts overlap and must not be summed as a suite.
 The final record update changes prose only. Parent owns final independent review,
 one combined change-based smoke, receiving integration/push and worktree cleanup.
 Consumed diagnostics are removed; no jobs/probes or desktop processes remain.
+
+
+### Jawz final-delta publication phase (2026-10-26)
+
+The final review of clean `90c16dc77` found an adjacent phase that the earlier
+Jawz69 qualification did not establish. `Obj_Jawz`
+(sonic3k.asm:183616-183622) installs ObjDat attributes and Jawz_Main, then
+returns through Set_VelocityXTrackSonic. It does not publish a collision-list
+entry. Only the subsequent `Jawz_Main` with zero collision_property reaches
+Sprite_CheckDeleteTouch (sonic3k.asm:183625-183632). Both contact-response
+branches return through deletion or Draw_Sprite instead
+(sonic3k.asm:183635-183649). Attribute visibility and list publication therefore
+have distinct boundaries. The initialized `$D7` gate remains correct.
+
+The old tests incorrectly accepted immediate touch after initialization.
+They now select the actual previous list and explicitly enable inline
+pre-update consumption, with player touch before the next object pass. An
+initial diagnostic omitted that final consumption argument: it produced
+3 assertion failures, zero errors/skips, but is not the native-order negative
+control (6-second queue wait, Maven 30.703 / wrapper 37.951 seconds). After
+correcting the test call, the meaningful old-red selection on unchanged
+`90c16dc77` runtime produced **3 tests, 3 failures, zero errors/skips**: P1
+property expected zero / actual one, P2 zero / two after initialization, and
+freshly restored initialized-but-unpublished P2 zero / two. Queue wait was
+zero, Maven 31.484 / wrapper 32.233 seconds. Its source fingerprint is
+`4d8700f0df99417f60f934ae6e43945263e01541c64db74a2551b7987d0910bb`.
+The selector was:
+
+```text
+-Dtest=TestS3kJawzBadnik#productionPreviousListWaitsForFirstMainPublication+registeredRecreationPreservesUnpublishedAndFirstPublishedPhases
+```
+
+Jawz now owns a captured scalar through the existing
+`publishesTouchResponseListEntryThisFrame()` contract. Each executed pass clears
+it; only the zero-property Jawz_Main tail sets it. Waiting, saved-entry restore,
+initialization and contact-response passes remain unpublished. No global list,
+input, timing, comparator, loading or retirement owner changes. Existing pointer
+identity, live fields, duplicate addresses and capacity remain the list owner's
+contract. The registered regression destroys the graph before restoring each
+initialized-but-unpublished and first-published boundary, forces fresh object
+recreation, then replays touch and movement twice. Separate P1/P2 production
+checks require no touch before publication, then the legitimate property and
+post-motion harmful-child response; an attacking-player control retains ordinary
+defeat without republishing Jawz.
+
+The finished runtime's focused command selected:
+
+```text
+-Dtest=TestS3kJawzBadnik,TestObjectCollisionResponseList,TestObjectTouchResponseRewindCapture,TestNativeCompetitionFixedSstAccess#previousReadRetainsPublishedOrderDuplicatesAndCapacityWithoutLiveEligibilityRescan+previousPointerDereferencesCurrentDynamicOwnerAndNeverManufacturesATouchForDeletion+deletedAddressesKeepBothNativeListsFullUntilTheCanonicalBuildResets,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils
+```
+
+It completed **82 tests, zero failures, one fixture error, zero skips**
+(queue zero, Maven 85 / wrapper 86.368 seconds). All 60 physical anchor cases,
+12 list/rewind cases and nine Jawz cases passed. The added attacking-defeat
+control reached score award with an unwired `TestObjectServices.gameState()`.
+Wiring the fixture's existing score owner fixes that prerequisite; no assertion
+or runtime behavior is relaxed. Its source fingerprint was
+`8175a67d7b5db5b3de730b19105aa0f01ce754b91cb313648c89e319a2feb45c`.
+Only the affected Jawz class is repeated after that fixture change; the unchanged
+runtime/list/anchor evidence is retained at its actual source.
+
+The corrected `-Dtest=TestS3kJawzBadnik` run is **10/0F/0E/0S**, queue zero,
+Maven 30.086 / wrapper 30.836 seconds. Together these runs qualify 82 distinct
+physical cases on the same runtime, with no skips. This is bounded focused
+coverage across a fixture correction, not an 82-case single green invocation.
+Final source fingerprint, also used for the affected chain, is
+`f32f49df7fb8fd68d58f9b1de77b2462b4bb4708b0c4b64f48548c0cfe469168`.
+All commands use the queue, Java25, Lua5.4.9, the three verified original
+absolute ROMs and explicit surfaceless EGL; display and inherited JVM-option
+variables are unset. Exact actual argv, selection fingerprints, fixture tree,
+ROM identities and job handles are in the required local `hcz.json` ownership
+checkpoint. Runtime source/fixtures remain frozen during each job. No broad or
+full suite, watcher or helper was launched.
+
+The exact affected-chain selector was repeated once on that frozen source:
+
+```text
+-Ptrace-replay -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds test -B
+```
+
+Result: **1 test, 1 known frontier assertion failure, zero errors/skips**;
+reported queue wait 257 seconds, Maven 59.099 / wrapper 316.580 seconds.
+Segment 11 still completes 14,208 stored rows and its required giant-ring exit
+with 62 differences: 11 camera physics / 51 animation, 59 lag rows, zero
+bootstrap errors, no non-camera physics mismatch. First strict residual is
+still row 6640 animation ID native `$13` / engine `$05`. Segment 13 still
+completes 5,393 stored rows with 4,145 differences (3,795 physics / 350 animation),
+7 lag rows, zero bootstrap errors; first non-camera mismatch remains row 2147
+P1 Y native `$04DA` / engine `$04DE`. Segments 0/2/4/6/8/9 remain clean.
+Dynamic-art evidence covers 14 gaps with zero failures. The unchanged terminal
+boundary is SS7 `SPECIAL_STAGE_RESULTS`, movie cursor 97208, before return to
+`hcz_4`. This is no new attribution to Jawz or an outside-HCZ owner. No further
+frontier investigation is part of this delta.
+
+All physical XML results and nine report groups were inspected before consuming
+the task-owned diagnostics. Earlier focused checks are not relabeled as a new
+full suite or final combined smoke. The original base and every ancestor through
+clean `90c16dc77` remain on the same isolated task branch; parent retains combined
+validation, receiving integration, push and cleanup. New main `dd39e01c` is a
+design-document-only advance and is intentionally not received here.
