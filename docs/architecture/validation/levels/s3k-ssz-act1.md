@@ -4668,3 +4668,16 @@ The [query/allocation audit](../../audits/performance/2026-10-22-native-object-q
 and its companion implementation records own exact tested states, commands and
 remaining delivery checks. These local checks do not close inherited viewport,
 donor/team, full-route, load/respawn, audiovisual or whole-world rewind products.
+
+
+## First crumble row and carried render lifetime (2026-10-26)
+
+The [bounded post-223 evidence](../../plans/2026-10-22-native-gap-swarm.md#post-223-ssz-crumble-lifetime-evidence-and-207-disposition-2026-10-26)
+retains the current native carried-render deletion model. One new component
+method passes at320/800: eight physical first-row allocations, four valid pieces
+surviving the seeded first dispatch, then deletion only on the dispatch after
+below-screen display publication. The production camera and all original tests
+remain unchanged. Pinned `loc_584DE` uses the carried sign, so the old draft's
+X-only deletion rewrite is rejected. Historical engine RGB changes are not native
+pixel evidence. No continuous launch, native sprite-build or pixel check was run;
+existing route, donor/roster, display and full-world acceptance limits remain.

@@ -8643,3 +8643,94 @@ The separately source-adjudicated crumble lifetime uses the carried render flag,
 not the draft's X-only cull. Its first-row regression stimulus remains a separate
 component check before #207 closure. Old route/native acceptance gaps and all
 uncommitted Native WIP remain outside these setup results.
+
+
+## Post-223 SSZ crumble lifetime evidence and #207 disposition (2026-10-26)
+
+The remaining #207 source question was the draft's coarse-X deletion claim.
+Adjudication used the repository's pinned disassembly object
+`8b2cf3c4178f2382f844da67798de4befc50c5e0`, read immutably without changing
+the user's disassembly checkout. `loc_584A2` handles descriptor sentinels;
+`loc_584BE` installs `$84` render flags and height8; `loc_584DE` tests the
+carried render sign and branches to `Delete_Current_Sprite` when clear
+(`sonic3k.asm:117587-117624`). Its tail queues `Draw_Sprite`, not
+`out_of_range.w`. `Render_Sprites` clears/recomputes that flag with X and Y
+bounds (`sonic3k.asm:36381-36410`). The current
+`SszLaunchCrumbleObjectInstance` is retained byte-for-byte: production SHA-256
+`3c186c26dec7391f91213a18c7d50bb429db3d094f617a0e7d4c78f5b639ad04`.
+No camera, route, timing, renderer, helper, art, allocation or rewind-policy
+change is justified by this finding.
+
+Preserve the old evidence reference: draft head
+`3df634b0a2c2f1293a7d8c17a86f368eaf29f35e`,
+`docs/architecture/plans/2026-09-17-ssz-bring-up.md`'s final
+`raw-44-ssz-debris-x-cull` addendum, and
+`TestS3kSszLaunchSequenceHeadless`'s first-row assertions. Its190/508/764
+changed-pixel engine comparisons remain historical engine observations,
+explicitly not native pixel matches. Its explanation of the native deletion
+tail is contradicted by the pinned routine; do not import that X-only rewrite.
+Also retain the native eight-slot allocation loop, including four `$FFFF`
+sentinels, rather than skipping those physical allocations to force four slots.
+
+One additive method in the existing `TestS3kSszMechaSpawnHeadless` preserves the
+useful first-row stimulus through the current owner. Actual ROM-backed parent
+execution allocates8 slots; the first child dispatch leaves4 valid pieces at
+`$870-$178=$6F8`. Their seeded render sign preserves that dispatch even below
+the declared native final-arena presentation window. Publishing the component
+bounds records offscreen state without deletion; the next child dispatch deletes
+those same4 pieces. All are horizontally inside the window, distinguishing this
+from coarse-X culling. It runs at320 and800. The existing test API publishes
+component render bounds; the production camera is not moved, and its coordinates
+are asserted unchanged. This is direct component dispatch, not a cold launch
+route or native sprite-build/pixel certificate. All original class methods and
+assertions remain byte-exact; removing this new block reconstructs525 source.
+Existing long launch/world-recreation evidence was not rerun or counted as new.
+
+Frozen executable tree `bd8f5a9efea6a005c3cb7a1ef12a789e73f8758a`, base
+`525ea022a892b036f7fa1d2e940808ee36a72767`, own input frame
+`2b3b1574c8bcb8f5a3ea352173746fae82adec1229c6e54161a3f2a9b3268de6`.
+Exact selector:
+
+```text
+com.openggf.tests.TestS3kSszMechaSpawnHeadless#firstCrumbleRowUsesItsSeededThenCarriedRenderFlag
+```
+
+Selector SHA-256:
+`d0aac1050ac9438b08a99ff0f2b0e7932f49c632fef25a363def3cf360971cd1`.
+Actual JUnit2 distinct parameterized identities,2 pass/0F/E/S. One unchanged
+normal queued request used:
+
+```bash
+python3 "$OPENGGF_QUEUE_WRAPPER" --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl -DmodApi.destinationBranch=develop \
+  "-Dsonic1.rom.path=$OPENGGF_ROM_DIR/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$OPENGGF_ROM_DIR/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$OPENGGF_ROM_DIR/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dtest=$SELECTOR" test -B
+```
+
+Use the actual Main queue wrapper by absolute path with own `<PR_WORKTREE>`
+cwd/target. Java25/Lua5.4/null OpenAL/surfaceless EGL and unset ambient launcher/
+display settings match the preceding focused checks. Verified original ROM
+CRC32/SHA-1 identities were retained with unchanged metadata; no ROM alias/copy.
+Maven printed1:31, queue3 seconds and supervisor95.727 seconds; they are separate
+intervals. The dry plan selected2,693 candidates through broad test ownership
+(selection SHA `c4121683ec46799c36df89006b77ff0f2fdde6b181289a8732c785c2a9d4df5e`).
+The exact new component method replaces that disproportionate coverage because
+no executable production owner changed. No standalone build/preflight/API/guard,
+broad smoke, route, native-emulator, manual-CI or GPU-pixel check was added.
+
+Full1 XML/70 properties, both actual identities,2 streams/468 bytes, text,
+112-line bounded console, dumps and sourcepost were read. No dumps, unexpected
+caught faults, skip or source drift occurred. FAST/NONE and compiler deprecations
+remain limitations. The3 exact owned raw files were consumed under the supported
+worktree lock; useful source/classes were retained through readback. No raw
+archive, pass cache or validation receipt was created.
+
+The source-content audit found current replacements for the other draft SSZ
+machinery/crane/Mecha/launch/ending work and no unique binary asset. The retained
+capture flag was separately delivered in525; this two-width lifetime proof
+accounts for the remaining disputed regression intent. Close #207 as superseded
+by those bounded receipts, without merging its old implementation branch or
+claiming full SSZ/native parity. #208's same-movie cold DEZ1 intake remains OPEN;
+no old floor, incoming Native WIP or unrelated route was received here.

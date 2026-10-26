@@ -734,6 +734,53 @@ class TestS3kSszMechaSpawnHeadless {
         assertEquals(0x200, second.priorityWordForTest(), "dc.w $200");
     }
 
+    /**
+     * The old #207 first-row witness retained four useful pieces. Native loc_58468
+     * allocates eight slots first, including the four $FFFF deletion sentinels.
+     * loc_584BE seeds render_flags=$84; loc_584DE consumes the preceding display's
+     * sign, not an X-only out_of_range tail (sonic3k.asm:117568-117624).
+     */
+    @ParameterizedTest
+    @ValueSource(ints = {320, 800})
+    void firstCrumbleRowUsesItsSeededThenCarriedRenderFlag(int width) {
+        var fixture = bootAtCheckpoint(width, PAD_X, PAD_Y);
+        var manager = GameServices.level().getObjectManager();
+        var camera = GameServices.camera();
+        var cameraBefore = List.of(camera.getX(), camera.getY(), camera.getXCopy(), camera.getYCopy());
+        requireState().setUnkEE98(1); // Declared component prerequisite written by the launch owner.
+        var controller = manager.createDynamicObject(() ->
+                new com.openggf.game.sonic3k.objects.SszLaunchCrumbleObjectInstance(
+                        new com.openggf.level.objects.ObjectSpawn(0, 0, 0, 0, 0, false, 0)));
+        try {
+            // Publish the native final-arena presentation window, without moving the camera
+            // or advancing a route. The first row is born below this Y window at $6F8.
+            com.openggf.level.objects.AbstractObjectInstance.updateCameraBounds(
+                    0x19A0, 0x5C0, 0x19A0 + width, 0x5C0 + 224, 0);
+            controller.update(0, fixture.sprite());
+            var allocated = manager.activeObjectsOfType(
+                            com.openggf.game.sonic3k.objects.SszLaunchCrumbleObjectInstance.class).stream()
+                    .filter(object -> object != controller).toList();
+            assertEquals(8, allocated.size(), "loc_58468 allocates the entire eight-word native row");
+            for (var child : allocated) child.update(0, fixture.sprite());
+            var pieces = allocated.stream().filter(object -> !object.isDestroyed()).toList();
+            assertEquals(4, pieces.size(), "four non-$FFFF first-row pieces survive their initial dispatch");
+            for (var child : pieces) {
+                assertEquals(0x6F8, child.getY(), "$870 minus $178 before any falling displacement");
+                assertTrue(child.getX() >= 0x1A08 && child.getX() < 0x1A88,
+                        "all pieces remain in the same horizontal window");
+                child.refreshPostCameraRenderState();
+                assertFalse(child.isDestroyed(), "display publication only records visibility");
+            }
+            for (var child : pieces) child.update(1, fixture.sprite());
+            assertTrue(pieces.stream().allMatch(com.openggf.level.objects.ObjectInstance::isDestroyed),
+                    "the next native dispatch consumes the carried below-screen render flag");
+            assertEquals(cameraBefore, List.of(camera.getX(), camera.getY(), camera.getXCopy(), camera.getYCopy()),
+                    "component presentation bounds do not move the production camera");
+        } finally {
+            com.openggf.level.objects.AbstractObjectInstance.resetCameraBoundsForTests();
+        }
+    }
+
     // --- helpers ------------------------------------------------------------------------------
 
     private static void sameSnapshot(CompositeSnapshot a, CompositeSnapshot b, String label) {

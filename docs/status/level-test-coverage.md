@@ -2082,3 +2082,9 @@ record the bounded `$A6/$A7` creation/discovery and typed-runtime wait controls.
 Whole encounter owners retain their allocation, defeat, handoff and graph replay
 coverage. The same-movie cold DEZ1 inlet remains open; this changes no route
 frontier or native acceptance claim.
+
+
+Post-223 SSZ crumble first row (2026-10-26): the [act-1 component increment](../architecture/validation/levels/s3k-ssz-act1.md#first-crumble-row-and-carried-render-lifetime-2026-10-26)
+adds2 passing320/800 checks for native first-row allocation and carried render
+lifetime, with no production change. This preserves a useful old-draft stimulus;
+continuous launch and native/pixel acceptance remain separate.
