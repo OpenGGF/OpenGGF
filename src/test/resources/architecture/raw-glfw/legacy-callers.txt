@@ -13,8 +13,6 @@
 1 com.openggf.graphics.TestArenaMaskRenderer#nativeWidthCentrePixelsFrameCadenceAndGlStateSurviveCaptureFbo()V->glfwInit()Z
 1 com.openggf.graphics.TestBackgroundScrollWrapPixels#integerScrollNeverSamplesOutsideTheRenderedPeriod()V->glfwCreateWindow(IILjava/lang/CharSequence;JJ)J
 1 com.openggf.graphics.TestBackgroundScrollWrapPixels#integerScrollNeverSamplesOutsideTheRenderedPeriod()V->glfwInit()Z
-1 com.openggf.graphics.TestForegroundWindowRendering#windowReplacesScrolledForegroundAndItsPriorityMask()V->glfwCreateWindow(IILjava/lang/CharSequence;JJ)J
-1 com.openggf.graphics.TestForegroundWindowRendering#windowReplacesScrolledForegroundAndItsPriorityMask()V->glfwInit()Z
 1 com.openggf.graphics.TestPresentationSpritePixels#admittedRowsFlipsWholeBodyTransformsAndDistinctFrozenTrailVersionsRenderAt320And640()V->glfwCreateWindow(IILjava/lang/CharSequence;JJ)J
 1 com.openggf.graphics.TestPresentationSpritePixels#admittedRowsFlipsWholeBodyTransformsAndDistinctFrozenTrailVersionsRenderAt320And640()V->glfwInit()Z
 1 com.openggf.graphics.TestScrollBufferUploadNative#arraysAndViewsUploadExactValuesAcrossResourceAndContextRecreation()V->glfwCreateWindow(IILjava/lang/CharSequence;JJ)J
@@ -31,8 +29,6 @@
 1 com.openggf.graphics.VisualRegressionTest#setUpClass()V->glfwInit()Z
 1 com.openggf.graphics.shaderlib.TestDisplayShaderPackDiagnostics$GlContext#open()Lcom/openggf/graphics/shaderlib/TestDisplayShaderPackDiagnostics$GlContext;->glfwCreateWindow(IILjava/lang/CharSequence;JJ)J
 1 com.openggf.graphics.shaderlib.TestDisplayShaderPackDiagnostics$GlContext#open()Lcom/openggf/graphics/shaderlib/TestDisplayShaderPackDiagnostics$GlContext;->glfwInit()Z
-1 com.openggf.graphics.shaderlib.TestDisplayShaderPipelineSmoke$GlContext#open()Lcom/openggf/graphics/shaderlib/TestDisplayShaderPipelineSmoke$GlContext;->glfwCreateWindow(IILjava/lang/CharSequence;JJ)J
-1 com.openggf.graphics.shaderlib.TestDisplayShaderPipelineSmoke$GlContext#open()Lcom/openggf/graphics/shaderlib/TestDisplayShaderPipelineSmoke$GlContext;->glfwInit()Z
 1 com.openggf.level.TestLevelRendererBackgroundSamplingPerformance#captureLiveBackgroundSamplingScenes()V->glfwCreateWindow(IILjava/lang/CharSequence;JJ)J
 1 com.openggf.level.TestLevelRendererBackgroundSamplingPerformance#captureLiveBackgroundSamplingScenes()V->glfwInit()Z
 1 com.openggf.level.render.TestScenePresentationPass#withContext(Ljava/lang/Runnable;)V->glfwCreateWindow(IILjava/lang/CharSequence;JJ)J

@@ -1,16 +1,15 @@
 package com.openggf.graphics;
 
+import com.openggf.tools.PresentationOffscreenTestContext;
 import org.junit.jupiter.api.Test;
 import org.lwjgl.glfw.GLFWErrorCallback;
-import org.lwjgl.opengl.GL;
 import org.lwjgl.system.MemoryUtil;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
-import static org.lwjgl.glfw.GLFW.*;
+import static org.lwjgl.glfw.GLFW.glfwSetErrorCallback;
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL13.*;
 
@@ -20,27 +19,13 @@ class TestForegroundWindowRendering {
     void windowReplacesScrolledForegroundAndItsPriorityMask() throws Exception {
         GLFWErrorCallback callback = GLFWErrorCallback.createPrint(System.err);
         GLFWErrorCallback previous = glfwSetErrorCallback(callback);
-        long context = 0;
-        boolean initialized = false;
+        PresentationOffscreenTestContext offscreen = null;
         TilemapGpuRenderer renderer = null;
         int atlas = 0;
         int palette = 0;
         try {
-            boolean nativeDisplay = Boolean.getBoolean("openggf.test.gl.native");
-            glfwInitHint(GLFW_PLATFORM, nativeDisplay ? GLFW_ANY_PLATFORM : GLFW_PLATFORM_NULL);
-            initialized = glfwInit();
-            assumeTrue(initialized, "GLFW null platform unavailable");
-            glfwDefaultWindowHints();
-            glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
-            if (!nativeDisplay) glfwWindowHint(GLFW_CONTEXT_CREATION_API, GLFW_EGL_CONTEXT_API);
-            glfwWindowHint(GLFW_DOUBLEBUFFER, GLFW_FALSE);
-            glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-            glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-            glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-            context = glfwCreateWindow(64, 64, "window parity", 0, 0);
-            assumeTrue(context != 0, "Surfaceless EGL unavailable (try EGL_PLATFORM=surfaceless)");
-            glfwMakeContextCurrent(context);
-            GL.createCapabilities();
+            offscreen = PresentationOffscreenTestContext.openConfigured(64, 64,
+                    PresentationOffscreenTestContext.LegacyProfile.CORE_41);
             glViewport(0, 0, 64, 64);
             renderer = new TilemapGpuRenderer();
             renderer.init("shaders/shader_tilemap.glsl");
@@ -174,17 +159,24 @@ class TestForegroundWindowRendering {
             }
             assertEquals(GL_NO_ERROR, glGetError());
         } finally {
-            if (renderer != null) renderer.cleanup();
-            if (atlas != 0) glDeleteTextures(atlas);
-            if (palette != 0) glDeleteTextures(palette);
-            if (context != 0) {
-                GL.setCapabilities(null);
-                glfwDestroyWindow(context);
+            try {
+                if (renderer != null) renderer.cleanup();
+            } finally {
+                try {
+                    if (atlas != 0) glDeleteTextures(atlas);
+                } finally {
+                    try {
+                        if (palette != 0) glDeleteTextures(palette);
+                    } finally {
+                        try {
+                            if (offscreen != null) offscreen.close();
+                        } finally {
+                            glfwSetErrorCallback(previous);
+                            callback.free();
+                        }
+                    }
+                }
             }
-            if (initialized) glfwTerminate();
-            glfwInitHint(GLFW_PLATFORM, GLFW_ANY_PLATFORM);
-            glfwSetErrorCallback(previous);
-            callback.free();
         }
     }
 

@@ -8252,3 +8252,214 @@ two KiS2 prerequisite proposal; the parent authors and validates the complete
 three-file correction. No additional review round is requested.
 This append precedes the normal-hook test-only leaf, final range policy,
 FF-only publication and fresh hosted result; it does not claim their outcome.
+
+
+### 2026-10-24 — Explicit offscreen ownership for graphics fixtures
+
+This isolated test-only slice starts from `24109a65bd7404636fd9bf67f6591607b2d4752c`.
+The original category epoch's fifteen shader skips and one foreground skip
+remain recorded as skips. A separate unchanged foreground diagnostic skipped
+again: GLFW initialized, but its 64×64 EGL window surface returned zero with
+`GLFW_PLATFORM_ERROR` 65544 and “An unrecognized attribute or attribute value
+was passed in the attribute list”; Mesa also reported bad surface attribute
+`0x3086`. The native-display property was absent. This fresh diagnostic does
+not retrospectively establish the original category skip's cause.
+
+Only `TestDisplayShaderPipelineSmoke` and `TestForegroundWindowRendering`
+change. Under the existing explicit surfaceless-EGL request, both use the
+public `PresentationOffscreenTestContext` owner with the original 64×64 surface.
+The unrequested legacy path remains. Shader/pipeline/sentinel resources retire
+inside failure-safe finally blocks while their context remains current; the
+foreground fixture retires renderer/atlas/palette resources before its context
+and callback. Runtime rendering helpers, production shader code, backend
+properties, POM, selection policy and API pins are unchanged. Mechanical
+whole-file inverses reconstruct both originals. The foreground pixel body and
+all private helpers remain byte-exact. Every original assertion/assumption and
+all fifteen GLSL text-block values after Java incidental indentation remain.
+
+One normal queued invocation selected exactly three complete families:
+
+```bash
+python3 "$OPENGGF_QUEUE_WRAPPER" --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=com.openggf.graphics.shaderlib.TestDisplayShaderPipelineSmoke,com.openggf.graphics.TestForegroundWindowRendering,com.openggf.tools.TestSurfacelessEglContext' \
+  test -B
+```
+
+`OPENGGF_QUEUE_WRAPPER` denotes the current main-workspace queue wrapper; the
+command ran from this isolated graphics worktree with Java 25,
+`EGL_PLATFORM=surfaceless`, `ALSOFT_DRIVERS=null`, and ambient display/JVM/Maven
+options absent. This ROM-free selection supplied no ROM properties. No separate
+build, preflight, profile, resource override, retry or additional request ran.
+Normal Maven lifecycle compilation preceded discovery.
+
+Actual result: **20 distinct tests, 20 PASS, zero failures/errors/skips** across
+three fresh XML families: foreground 1, shader 16 (the fifteen GL invocations
+plus the unchanged logic-only control), and surfaceless-owner controls 3.
+The actual pixels, uniforms, sizing, priority/scissor/caller-state, activation,
+VHS and failed-activation assertions executed. The two caught shader compiler
+faults were bound to the existing deliberately invalid-GLSL negative controls;
+no positive caught fault or fresh dump appeared. FAST/NONE warnings, dependency
+and compiler deprecations, and the initial temporary-directory warning were
+read separately from those declared negatives.
+
+Tested staged tree: `e0fc3fe1d245a8f26b46e3cc4dc9299c4e6e5fc6`.
+Complete input frame: `e870878f608469916541327797e7e8fca3de995cfce066106e26771e3f7c26cd`,
+13,178 paths / 856,493,775 bytes, exact through terminal readback. Tested source
+SHA-256 values are foreground `ce165b3db54456ee79abdfdc549c6f788650f7c51901678fc783968cf63e1aeb`
+and shader `1d369632073c4a914109b2d46afc83b827b6dd361daedd500b004eb952814355`.
+The unchanged surfaceless test, both context owners and production pipeline
+pins also matched. All 198 properties, 20 identities, two recursive streams
+(16,450 bytes), three text reports and the entire 283-line/33,051-byte console
+were read. Both classpaths had 79 nonempty owned/dependency entries plus the
+trailing implicit owned cwd; no foreign/prior target appeared. Java was
+25.0.5.0.2, class-file major 69, and the explicit backend reached the fork.
+
+Observed rounded queue wait was 46 seconds, Maven lifecycle 1:30, and supervised
+submission-to-terminal wall time 137.309 seconds; these are distinct measures.
+Seven consumed diagnostic files (122,705 bytes) and three jar-byte-verified
+native extractions (1,380,736 bytes) were removed under the supported metadata
+lock. Source, useful compiled outputs, unknown outputs and every lock file
+were preserved. No raw archive or pass cache was created.
+
+This is bounded Mesa offscreen fixture qualification. It certifies neither
+native windows/hardware nor ROM visual parity, and does not relabel any prior
+category epoch. The local leaf remains held from Root ancestry reception;
+there is no push, PR/CI action, new broad run or change to the closed Main,
+provider-activation or paired MHZ windows.
+
+
+### 2026-10-26 — ba3 configured offscreen fixtures received on develop
+
+The immediately preceding 2026-10-24 offscreen section is received verbatim
+from ba3a47e536f2242a160bae1d4bae78ad2aaa9dfa. Its source, command, twenty passes,
+skips and limits remain historical evidence, not a new result on develop.
+This receiving slice starts at Main/develop
+818ccb4902e138c16632d16934d378a152abd17b. Main fetch/fast-forward reports already
+up to date. Its existing dirty submodules and untracked user files remain
+unchanged. Native mutable work is excluded until its owner supplies a qualified
+committed boundary; no old draft branch is blindly merged.
+
+Both current fixture files are byte-identical to ba3's parent 24109a65bd7404636fd9bf67f6591607b2d4752c.
+Their unique patch therefore needs no competing oracle merge. Receive the
+incoming cleanup changes, then replace both duplicate context harnesses with
+PresentationOffscreenTestContext.openConfigured(64,64,CORE_41). The shader's
+original legacy path already requests 4.1 core. Foreground's former ad-hoc 3.3
+core/null-platform path now uses the shared 4.1 contract. Explicit surfaceless
+EGL retains a real 64x64 pbuffer and fails visibly if unavailable. The
+unconfigured legacy owner retains its supported prerequisite-abort behavior;
+this Linux check does not qualify native windows or all former host variants.
+No production, shared context, harness, POM, Mod API, runtime asset or game
+behavior is changed.
+
+Foreground's entire pixel body and private helpers remain byte-exact. Shader
+assertion order/expressions/messages and all fifteen normalized GLSL text-block
+values remain. Retain all thirteen pipeline-owner cleanup blocks, the rewind
+pass, sentinel cleanup and failure-safe shader/program helpers inside outer
+context lifetime. Foreground's renderer/atlas/palette retire before context
+closure and callback restoration. The source-only reader finds no shader ABI
+adaptation beyond the context helper; no graphics/palette lease API is involved.
+Its inherited limitation remains: applyRestoresCallerGlStateAfterSuccess does
+not assert active-pipeline state after apply, so that restoration assertion alone
+does not prove successful rendering. No assertion is fitted or weakened here.
+
+The migration removes actual raw glfwInit/glfwCreateWindow calls from both
+fixtures. The strict bytecode guard requires exact equality and rejects stale
+allowances, so delete exactly their four legacy-callers.txt rows. All other
+baseline rows, guard code, scanner rules, caps and rejection controls remain
+unchanged. This is retirement of debt, not spare allowance or an exception.
+
+Worktree creation uses the cow helper's supported no-checkout fallback, then
+populates only tracked files. The convenience post-checkout resource linking
+is not run: no new ROM/config link is created. No copy-on-write success is
+claimed for that fallback. Normal commit/merge/push policy hooks stay configured.
+Fresh target compilation uses no prior/foreign class tree or custom classpath.
+
+Frozen tested tree 3172a287063a8b2faacbdd61328f4a5b356b02b2;
+own input frame ea08c5ae7eee8229b431e592e4592932cdc79abccfdeebbbe254083fe10acbbb,
+13,617 paths / 864,350,332 bytes. Twenty-nine source/critical pins and the
+ten-file local import closure of the current Main wrapper are registered and
+match through terminal readback. Checkout mtimes are worktree-specific; they
+are not claimed portable to Main.
+
+Actual sequential original invocations:
+
+| Request | Actual identities | Source families | Maven execution | Printed queue | Supervisor wall |
+| --- | --- | --- | --- | --- | --- |
+| Ordinary / session95435 | 22P / 0F / 0E / 0S | foreground1, shader16, EGL3, cleanup-failure2 | 1:28 | 85s | 174.395s |
+| Fresh guards / session22579 | 5P / 0F / 0E / 0S | strict raw-GLFW owner1 | 30.713s | 255s | 286.151s |
+
+Queue, Maven and supervisor intervals are separate observations, not additive
+delivery elapsed time. Planning allowed fresh compilation plus roughly 1–3
+active minutes per request and unknown queue; it imposed no custom timeout,
+heap, fork or resource override. Keep each original handle through its wait.
+
+All actual identities/F/E/skips/properties/recursive streams/text reports,
+bounded full consoles and sourcepost are read. Ordinary has four XML / 268
+properties / two streams (16,450 bytes), console 33,461 bytes / 288 lines.
+Guard has one XML / 67 properties / zero streams, console 13,451 bytes / 101
+lines. Java25.0.5.0.2/class major69, explicit EGL and exact selectors reach the
+fork; classpaths stay in the owned target plus dependencies. No dump or drift
+appears. Exactly two compiler-fault streams belong to the existing deliberately
+invalid GLSL tests failedActivationKeepsPreviousShaderActive and
+brokenShaderActivationReturnsFalseAndInactive. Their original identity/state
+assertions execute. No positive caught shader/render fault is found.
+FAST/NONE, dependency/compiler deprecations, resource-encoding and initial
+temporary-directory warnings retain their ordinary timing/build limits.
+
+All five strict guard identities execute, including original historical fixture
+rejection, moved/increased-call rejection and method-reference scanning. The
+complete freshly compiled test tree matches the reduced baseline. Nine and
+three exact owned raw report/log files are consumed under the supported
+worktree metadata lock; useful compiled output and unknown output are preserved
+until normal task-worktree accounting. No lock is deleted or admission bypassed.
+
+At delivery, the actual change-based dry plan against pinned818 selects all
+4,160 smoke candidates because the four-row test-resource retirement is
+unclassified (selection SHA256
+aa23a0789bd82a1fbd51ee04cfed188617228d10e05c10e1911cfbad0b2b745f).
+Full=true there means all smoke categories, not release full-suite.
+That sweep is disproportionate to two component fixtures and exact debt removal:
+the four complete fixture/owner families plus fresh strict whole-test-bytecode
+inventory/scanner negatives cover this bounded impact. No shared runtime,
+algorithm, selection policy or published contract changes. No broad run,
+extra preflight/version probe, standalone build, ROM/property alias,
+native/emulator/profile/route or manual-CI request is made.
+
+Portable reproduction from the isolated own worktree:
+
+```bash
+export JAVA_HOME="<JDK25_HOME>" LUA_BIN="<LUA54_BIN>" ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless
+export PYTHONDONTWRITEBYTECODE=1
+unset JDK_JAVA_OPTIONS JAVA_TOOL_OPTIONS _JAVA_OPTIONS MAVEN_OPTS JAVA_OPTS MAVEN_ARGS
+unset DISPLAY WAYLAND_DISPLAY LD_LIBRARY_PATH LIBGL_DRIVERS_PATH LIBGL_ALWAYS_SOFTWARE MESA_LOADER_DRIVER_OVERRIDE
+cd "<GRAPHICS_WORKTREE>"
+
+# Ordinary
+python3 "$OPENGGF_QUEUE_WRAPPER" --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -DmodApi.destinationBranch=develop \
+  "-Dtest=com.openggf.graphics.shaderlib.TestDisplayShaderPipelineSmoke,com.openggf.graphics.TestForegroundWindowRendering,com.openggf.tools.TestSurfacelessEglContext,com.openggf.tools.TestPresentationOffscreenContextFailure" test -B
+
+# Guard
+python3 "$OPENGGF_QUEUE_WRAPPER" --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -DmodApi.destinationBranch=develop \
+  "-Dtest=com.openggf.tools.TestRawGlfwTestSetupGuard" -Pguards test -B
+```
+Ordinary selector SHA256: 427df0bc2ff20c9e9da320aef51fec457aa0aff254fc172017258d2d45a5186c
+
+Guard selector SHA256: a0943b894808fbb44fd47240a77b2d856bec4412cb1829e7476536cca1d40562
+
+Main wrapper SHA256: 77d3a3e53dfc213729a57b41d5d11dc1b2145a158a01fa0ca6313a61c3639720.
+
+All selected classes are ROM-free; no ROM properties or new links are needed.
+This qualifies Mesa component/context ownership, pixels, uniforms, sizing,
+caller GL state, shader activation and failure teardown. It certifies neither
+shipped-ROM visual parity nor all native-window platforms, and does not
+retroactively relabel earlier shader/category skips or close historical route,
+asset/audio or Native-WIP limits.
+
+The planned normal-hook leaf contains only these two fixtures, four retired
+baseline rows and this existing Plan append. Integration will use Main's
+current develop without switching branches. If its executable content remains
+the tested commit/tree, reuse the completed focused checks rather than
+repeat unchanged source as a ceremony; record Main content/parents explicitly,
+not the old worktree mtime frame. Normal hooks/resource policy, actual push and
+accounted worktree cleanup remain subsequent delivery steps at this record.
