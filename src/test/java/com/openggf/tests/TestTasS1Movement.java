@@ -176,6 +176,65 @@ class TestTasS1Movement {
         assertEquals(remainder,sonic.getXSubpixelRaw());
     }
 
+    /**
+     * 783M/1383S distinguishes the $1000 rolling X cap from faster grounded
+     * running. The valid high-speed running entry is declared; Down must enter
+     * roll through production input, and both measured ticks move on real floor.
+     *
+     * Native FixBugs=0: Sonic_CheckDpadLetGo (_incObj/01 Sonic.asm:499-513)
+     * subtracts $C for neutral running. Sonic_RollSpeed (_incObj/01 Sonic.asm:767-812)
+     * subtracts $6 on the following rolling tick.
+     * Sonic_AngledRollSpeed (_incObj/01 Sonic.asm:829-875) caps X to $1000
+     * without capping inertia.
+     * Sonic_MoveRight (_incObj/01 Sonic.asm:705-727) caps running input to $600.
+     * Sonic_MdNormal calls Sonic_Roll after Sonic_Move, so the Down entry tick
+     * still uses the uncapped running conversion. Expected positions below are
+     * independent native 16.16 sums of those two velocities, from X=384/fraction=0.
+     */
+    @ParameterizedTest
+    @CsvSource({
+            "6144,false,false,6120,6120,431,56320",
+            "6144,true,false,6126,4096,423,62464",
+            "6144,false,true,1536,1536,396,0",
+            "4113,true,false,4095,4095,416,1024",
+            "4114,true,false,4096,4096,416,1536",
+            "4115,true,false,4097,4096,416,1792"
+    })
+    void groundedRunningCanOutrunTheRollingHorizontalCap(
+            int initialSpeed, boolean roll, boolean forward, int expectedInertia,
+            int expectedXSpeed, int expectedX, int expectedFraction) {
+        step(false, true, false, false); // Acquire a real running animation/state.
+        assertEquals(0xC, sonic.getGSpeed());
+        assertFalse(sonic.getRolling());
+        assertEquals(384, sonic.getCentreX());
+        sonic.setGSpeed((short) initialSpeed);
+        sonic.setXSpeed((short) initialSpeed);
+        sonic.setSubpixelRaw(0, 0);
+
+        step(false, forward, roll, false);
+        int firstSpeed = forward ? 0x600 : initialSpeed - 0xC;
+        assertEquals(firstSpeed, sonic.getGSpeed());
+        assertEquals(firstSpeed, sonic.getXSpeed(),
+                "Down enters roll after the first native running velocity conversion");
+        assertEquals(384 + (firstSpeed >> 8), sonic.getCentreX());
+        assertEquals((firstSpeed << 8) & 0xFFFF, sonic.getXSubpixelRaw());
+        assertEquals(roll, sonic.getRolling());
+        assertFalse(sonic.getAir());
+        assertEquals(floorCentreY + (roll ? 5 : 0), sonic.getCentreY());
+
+        step(false, forward, roll, false);
+        assertEquals(expectedInertia, sonic.getGSpeed());
+        assertEquals(expectedXSpeed, sonic.getXSpeed());
+        assertEquals(expectedX, sonic.getCentreX(),
+                "The cap must change actual grounded displacement, not just a speed field");
+        assertEquals(expectedFraction, sonic.getXSubpixelRaw());
+        assertEquals(roll, sonic.getRolling());
+        assertFalse(sonic.getAir());
+        assertFalse(sonic.isOnObject());
+        assertEquals(0, sonic.getAngle());
+        assertEquals(floorCentreY + (roll ? 5 : 0), sonic.getCentreY());
+    }
+
     private void enterRoll() {
         step(false, false, true, false);
         assertTrue(sonic.getRolling(), "Down input must execute Sonic_Roll");

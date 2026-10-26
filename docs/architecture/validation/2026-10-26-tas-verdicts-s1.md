@@ -47,16 +47,19 @@ recorded separately and are not unsupported verdicts.
 
 The 23 original records resolve to **19 supported families, 2 unsupported
 families, 1 mixed family with two binary subtricks, and 1 source-note record**.
-There are 22 tested families and 26 explicitly named binary scenarios. No named
+There are 22 tested families and 28 binary scenario entries (27 distinct named
+scenarios; the cog launch is referenced by both momentum and cog families). No named
 mechanism is left partial because a publication route or movie was not replayed.
 `S1_UNSPECIFIED_ROUTE` has no support verdict and is excluded from that count.
 
-The final exact selection passed **54 cases, zero failures/errors/skips**.
+The original final exact selection passed **54 cases, zero failures/errors/skips**.
+The bounded grounded-momentum follow-up passed **6 additional cases**, also with
+zero failures/errors/skips, without repeating unchanged cog coverage.
 Reused tests were freshly executed: the first four-class selection passed 39
 cases (including 11 original movement cases now also in the final selection),
 and 30 additional existing cases passed within the documented exploratory run.
-Thus **112 distinct retained cases** passed in this work, including **43 new
-cases**. This is focused validation, not a smoke/full-suite or movie pass.
+Including that follow-up, **118 distinct retained cases** passed in this work,
+including **49 new cases**. This is focused validation, not a smoke/full-suite or movie pass.
 
 A family verdict aggregates its named local scenarios. Original family names,
 mechanisms and publication sets remain in the companion `s1-verdicts.json`.
@@ -228,7 +231,7 @@ preserved in JSON; the links below identify the specific scenario evidence.
 
 | Original ID | Verdict | Named executed scenario(s) and author source |
 | --- | --- | --- |
-| `S1_MOMENTUM` | **supported** | Release forward to retain above-cap airborne momentum — [783M](https://tasvideos.org/1383S), [1066M](https://tasvideos.org/1847S), [1937M](https://tasvideos.org/3378S), [2410M](https://tasvideos.org/3994S), [3570M](https://tasvideos.org/5702S) |
+| `S1_MOMENTUM` | **supported** | Release forward to retain above-cap airborne momentum — [783M](https://tasvideos.org/1383S), [1066M](https://tasvideos.org/1847S), [1937M](https://tasvideos.org/3378S), [2410M](https://tasvideos.org/3994S), [3570M](https://tasvideos.org/5702S)<br>Retain grounded running speed above the rolling horizontal cap — [783M](https://tasvideos.org/1383S)<br>Native cog slope launch (same completed scenario as `S1_COG`) — [2410M](https://tasvideos.org/3994S), [3570M](https://tasvideos.org/5702S) |
 | `S1_AIR_DRAG` | **supported** | Hit a ceiling to leave the upward apex-drag interval earlier — [783M](https://tasvideos.org/1383S), [1066M](https://tasvideos.org/1847S), [1937M](https://tasvideos.org/3378S), [2410M](https://tasvideos.org/3994S), [2629M](https://tasvideos.org/4348S) |
 | `S1_REVERSE_START` | **supported** | Use braking for a faster opposite-direction start — [795M](https://tasvideos.org/1437S), [1066M](https://tasvideos.org/1847S), [1401M](https://tasvideos.org/2457S) |
 | `S1_SUBPIXEL` | **supported** | Change the next integer crossing with fractional alignment — [1066M](https://tasvideos.org/1847S), [1401M](https://tasvideos.org/2457S), [2410M](https://tasvideos.org/3994S), [2629M](https://tasvideos.org/4348S), [3570M](https://tasvideos.org/5702S) |
@@ -261,7 +264,15 @@ its detailed movement, damage, push and special-stage disassembly citations.
 
 - **supported — Release forward to retain above-cap airborne momentum.** `TestTasS1Movement#releasingForwardPreservesAboveCapAirMomentum`. Two cases pass: release vx 0x900; Right vx 0x600; both continue real movement with vy=-0x4c8.
 
-Slope and loop routes are not replayed. The explicitly tested subtrick is input-cap preservation; these results do not claim every speed-generating route.
+- **supported — Retain grounded running speed above the rolling horizontal cap.** `TestTasS1Movement#groundedRunningCanOutrunTheRollingHorizontalCap`. Six cases pass: actual Down enters roll from a declared valid high-speed running state, and two real grounded movement ticks distinguish neutral running, rolling, and forward-held running. The rolling below/exact/above-cap controls verify inertia versus horizontal velocity and actual displacement. See the follow-up table below.
+- **supported — Native cog slope launch.** `TestTasS1TerrainVerdicts#cogJumpTimingSelectsForwardClipOrWallStop`, also listed under `S1_COG`. The original native-correlated pass at `ee4f11025` is reused; it was not rerun. Publication IDs remain 2410 and 3570.
+
+The three children separately resolve airborne input-cap preservation, grounded
+running/rolling speed, and a representative slope-oriented launch. The new
+speed fixture declares the fast running entry; it does not claim every route or
+object that first forces Sonic out of rolling. 783M's REV00 provenance remains
+separate from the independently specified shipped REV01 expectation. Full loop
+routes and movie synchronization are not claimed.
 
 ### `S1_AIR_DRAG`
 
@@ -413,8 +424,8 @@ The exact selections below were recovered from each completed run's Surefire
 `test` property. The first command passed 39/39. The second exploratory command
 ran 40 cases: 37 passed, and three failed (native slope parity, native pause-clock
 parity, and the invalid capsule postboss camera bound). Its 30 unchanged reused
-cases all passed; it is not described as a green run. The third is the final
-owned-source run: **54/54 passed**, zero failures/errors/skips, **42.625 s** Maven
+cases all passed; it is not described as a green run. The third finalized the original
+owned-source run at `ee4f11025`: **54/54 passed**, zero failures/errors/skips, **42.625 s** Maven
 execution and zero queue wait. It includes the curated named limitations and
 corrected capsule/continuous-zip fixtures. Counts are parameterized invocations.
 
@@ -443,7 +454,8 @@ The intermediate investigation also executed the unsigned-wrap native assertion
 red (expected 9767, actual 16), then its explicitly named limitation. No failing
 parity assertion remains in ordinary CI, and no test is disabled/skipped.
 Other failed experiments were setup errors described above, not engine verdicts.
-The final run confirms the complete retained owned source after those changes.
+That run confirms the original retained owned source after those changes; the
+additional momentum method is covered by the separate follow-up below.
 
 The 30 additional reused cases comprise `TestSonic1StaircaseWallCollision` (1),
 `TestS1FzEscapeNativeInput` (12), `TestS1SlzSpikeballNativeContact` (5),
@@ -457,3 +469,57 @@ Native probe sources, compressed observations and final verdict JSON remain in
 They are comparison evidence, not engine fixtures or canonical V5 replay traces.
 Consumed Maven diagnostics are removed after inspection. The local tested commit
 is supplied in the handoff and in every JSON record's `evidence_commit`.
+
+
+## Bounded grounded-momentum follow-up
+
+The remaining source claim is [783M/1383S](https://tasvideos.org/1383S), cached
+`s1-1383S.txt:172`: grounded rolling caps horizontal
+speed at 4096, whereas a running state can retain higher speed if forward is
+released. This is a distinct claim from the existing airborne-input-cap test.
+
+Independent oracle is the same immutable S1 pin and shipped `FixBugs=0`:
+`Sonic_MdNormal` calls `Sonic_Move` before `Sonic_Roll`, so the tick that enters
+roll through Down still moves with the running velocity.
+`Sonic_CheckDpadLetGo` (`_incObj/01 Sonic.asm:499-513`) subtracts `$C` while
+running with no direction;
+`Sonic_RollSpeed` (`_incObj/01 Sonic.asm:767-812`) subtracts `$6` on the following
+rolling tick. `Sonic_AngledRollSpeed` (`_incObj/01 Sonic.asm:829-875`) clamps X
+velocity to `$1000` but retains larger inertia.
+`Sonic_MoveRight` (`_incObj/01 Sonic.asm:705-727`) caps forward-held running at `$600`.
+
+The fixture first reaches GHZ1's real flat floor at `(384,940)` and uses an
+ordinary Right frame to acquire running. It then declares only a valid fast
+running speed and zero fractions. Two measured ticks use actual input: neutral,
+Down, or Right. No state or speed is injected between them. Every tick asserts
+actual position/fraction, speed, grounded state and roll transition; the final
+state also checks angle zero and absence of object support. These are short
+movement executions, not assertions about an existing branch.
+
+| Declared entry inertia | Input on both measured ticks | Second-tick inertia | Second-tick X speed | Final centre X / fraction |
+| --- | --- | --- | --- | --- |
+| `$1800` | Neutral (running) | `$17E8` | `$17E8` | `431 / $DC00` |
+| `$1800` | Down (actual roll entry) | `$17EE` | `$1000` | `423 / $F400` |
+| `$1800` | Right (running cap control) | `$600` | `$600` | `396 / $0000` |
+| `$1011` | Down (below roll cap) | `$FFF` | `$FFF` | `416 / $0400` |
+| `$1012` | Down (at roll cap) | `$1000` | `$1000` | `416 / $0600` |
+| `$1013` | Down (above roll cap) | `$1001` | `$1000` | `416 / $0700` |
+
+All six independent native expectations passed: **6 tests, 0 failures, 0 errors,
+0 skipped**. Maven execution took **40.770 s**, with zero queue wait. The exact
+focused command was:
+
+```bash
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+python3 tools/testing/maven_queue.py --lean -Dmse=off \
+  '-Dtest=TestTasS1Movement#groundedRunningCanOutrunTheRollingHorizontalCap' \
+  "-Dsonic1.rom.path=$MAIN_WORKSPACE/s1.gen" test
+```
+
+This closes the grounded rolling-speed child as **supported**. The existing cog
+launch provides the slope child under `S1_MOMENTUM` using its completed original
+test and native captures. No unchanged cog test or broad selection was repeated.
+The JSON assigns the new child's evidence to the follow-up commit and preserves
+`ee4f1102549675cda3e082a90b23c74a98da1c42` for every unchanged child's evidence.
+The source-note record describes the original undefined route provenance and
+remains separate from the tested-family inventory.
