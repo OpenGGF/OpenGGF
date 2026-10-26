@@ -39,6 +39,7 @@ class TestTasS2DezArtAlias {
         assertNotNull(renderer, "Obj58's actual render consumer must exist");
         assertArrayEquals(pixels(expectedFiery[0]), pixels(sheet.getPatterns()[0]),
                 "current limitation: both orders retain dedicated explosion art instead of native last-writer VRAM");
+        com.openggf.tests.reel.S2TestReelPresentation.explosionSheet(renderer);
         if (animalsLast) assertFalse(java.util.Arrays.equals(pixels(expectedAnimal[0]), pixels(sheet.getPatterns()[0])),
                 "independent native expectation is Pig art after the DEZ animal PLC");
     }

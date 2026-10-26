@@ -36,12 +36,12 @@ class TestTasS2CapsuleRng {
         try (var session = new GameplayCaptureSession(settings)) {
             session.boot(Path.of(System.getProperty("sonic2.rom.path")), 0, 0, settings);
             int waits = 0;
-            do { session.step(null); session.renderFrame(); assertTrue(++waits < 600); }
+            do { com.openggf.tests.reel.TestReelCapture.step(session,null); session.renderFrame(); assertTrue(++waits < 600); }
             while (session.loop().getCurrentGameMode() != GameMode.LEVEL
                     || GameServices.level().hasPendingFreshLevelTransitionBoundary());
             var objects = GameServices.level().getObjectManager();
             var player = GameServices.sprites().getMainPlayable();
-            while (player.getAir() && waits++ < 800) session.step(null);
+            while (player.getAir() && waits++ < 800) com.openggf.tests.reel.TestReelCapture.step(session,null);
             assertFalse(player.getAir());
             // Equal, valid pre-contact state and RNG in both branches. The optional
             // enemy is then defeated by the actual player touch and object passes.
@@ -51,26 +51,26 @@ class TestTasS2CapsuleRng {
             var enemy = new NebulaBadnikInstance(new ObjectSpawn(player.getCentreX() + 3, player.getCentreY(),
                     0x99, 0x12, 0, false, 0));
             if (defeat) objects.addDynamicObject(enemy);
-            session.step(null);
+            com.openggf.tests.reel.TestReelCapture.step(session,null);
             if (defeat) { assertTrue(enemy.isDestroyed()); assertEquals(100, GameServices.gameState().getScore()); }
-            for (int i = 0; i < 240; i++) session.step(null);
+            for (int i = 0; i < 240; i++) com.openggf.tests.reel.TestReelCapture.step(session,null);
             assertTrue(objects.getActiveObjects().stream().noneMatch(o -> o.getSpawn().objectId() == 0x28),
                     "the earlier enemy animal must actually leave before capsule timing starts");
             long seed = GameServices.rng().getSeed();
             assertEquals(!defeat, seed == 0x12345678L);
             var capsule = new EggPrisonObjectInstance(new ObjectSpawn(player.getCentreX() + 96,
                     player.getCentreY(), 0x3E, 0, 0, false, 0), "EggPrison");
-            objects.addDynamicObject(capsule); session.step(null);
-            while ((EngineTiming.vIntRunCounter().lowByte() & 7) != 7) session.step(null);
+            objects.addDynamicObject(capsule); com.openggf.tests.reel.TestReelCapture.step(session,null);
+            while ((EngineTiming.vIntRunCounter().lowByte() & 7) != 7) com.openggf.tests.reel.TestReelCapture.step(session,null);
             // Declared late-release child state: all previous animals have left.
             set(capsule, "brokenRoutineSecondary", 2); set(capsule, "brokenAnimDuration", 1);
-            session.step(null);
+            com.openggf.tests.reel.TestReelCapture.step(session,null);
             var animal = objects.getActiveObjects().stream().filter(EggPrisonAnimalInstance.class::isInstance)
                     .map(EggPrisonAnimalInstance.class::cast).findFirst().orElseThrow();
             int x = animal.getX() - capsule.getX();
             assertNotEquals(seed, GameServices.rng().getSeed());
             int delay = 0;
-            while (!(boolean) field(capsule, "resultsTriggered").get(capsule) && delay++ < 600) session.step(null);
+            while (!(boolean) field(capsule, "resultsTriggered").get(capsule) && delay++ < 600) com.openggf.tests.reel.TestReelCapture.step(session,null);
             assertTrue(delay < 600, "actual animal departure must release results");
             assertTrue(objects.getActiveObjects().stream().anyMatch(ResultsScreenObjectInstance.class::isInstance));
             return new Outcome(seed, x, delay);

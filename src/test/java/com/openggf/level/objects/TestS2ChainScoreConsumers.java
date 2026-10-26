@@ -49,6 +49,10 @@ class TestS2ChainScoreConsumers {
         var art = mock(ObjectRenderManager.class);
         pointsRenderer = mock(PatternSpriteRenderer.class);
         when(art.getPointsRenderer()).thenReturn(pointsRenderer);
+        doAnswer(call -> {
+            com.openggf.tests.reel.S2ComponentTestReel.pointsFrame(call.getArgument(0), call.getArgument(1), call.getArgument(2), call.getArgument(3), call.getArgument(4));
+            return null;
+        }).when(pointsRenderer).drawFrameIndex(anyInt(), anyInt(), anyInt(), anyBoolean(), anyBoolean());
         var sprites = mock(SpriteManager.class);
         player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
         player.setCentreX((short) 160);
@@ -74,58 +78,64 @@ class TestS2ChainScoreConsumers {
 
     @Test
     void turtloidRiderSixteenthKillAwardsTenThousandAndDrawsFrameFive() {
-        var base = objects.createDynamicObject(() -> new TurtloidBadnikInstance(
-                spawn(Sonic2ObjectIds.TURTLOID)));
-        base.update(0, player);
-        var rider = only(TurtloidRiderInstance.class);
-        rider.snapshotTouchResponseState();
-        int before = services.gameState().getScore();
+        try (var reel = com.openggf.tests.reel.S2ComponentTestReel.open(16)) {
+            var base = objects.createDynamicObject(() -> new TurtloidBadnikInstance(
+                    spawn(Sonic2ObjectIds.TURTLOID)));
+            base.update(0, player);
+            var rider = only(TurtloidRiderInstance.class);
+            rider.snapshotTouchResponseState();
+            int before = services.gameState().getScore();
 
-        rider.onPlayerAttack(player, null);
+            rider.onPlayerAttack(player, null);
 
-        assertTrue(rider.isDestroyed());
-        assertFalse(base.isParentDestroyed(), "only the rider is defeated");
-        assertEquals(10_000, services.gameState().getScore() - before);
-        assertPopupDrawsBonusFrame();
+            assertTrue(rider.isDestroyed());
+            assertFalse(base.isParentDestroyed(), "only the rider is defeated");
+            assertEquals(10_000, services.gameState().getScore() - before);
+            assertPopupDrawsBonusFrame();
+        }
     }
 
     @Test
     void rexonTipSixteenthKillAwardsTenThousandAndDrawsFrameFive() {
-        var base = objects.createDynamicObject(() -> new RexonBadnikInstance(spawn(Sonic2ObjectIds.REXON)));
-        base.update(0, player);
-        var tips = objects.getActiveObjects().stream().filter(RexonHeadObjectInstance.class::isInstance)
-                .map(RexonHeadObjectInstance.class::cast).filter(head -> (head.getCollisionFlags() & 0xC0) == 0)
-                .toList();
-        assertEquals(1, tips.size(), "the real parent creates one attackable tip");
-        var tip = tips.getFirst();
-        int before = services.gameState().getScore();
+        try (var reel = com.openggf.tests.reel.S2ComponentTestReel.open(16)) {
+            var base = objects.createDynamicObject(() -> new RexonBadnikInstance(spawn(Sonic2ObjectIds.REXON)));
+            base.update(0, player);
+            var tips = objects.getActiveObjects().stream().filter(RexonHeadObjectInstance.class::isInstance)
+                    .map(RexonHeadObjectInstance.class::cast).filter(head -> (head.getCollisionFlags() & 0xC0) == 0)
+                    .toList();
+            assertEquals(1, tips.size(), "the real parent creates one attackable tip");
+            var tip = tips.getFirst();
+            int before = services.gameState().getScore();
 
-        tip.onPlayerAttack(player, null);
+            tip.onPlayerAttack(player, null);
 
-        assertTrue(tip.isDestroyed());
-        assertFalse(base.isDestroyed());
-        assertEquals(10_000, services.gameState().getScore() - before);
-        assertPopupDrawsBonusFrame();
+            assertTrue(tip.isDestroyed());
+            assertFalse(base.isDestroyed());
+            assertEquals(10_000, services.gameState().getScore() - before);
+            assertPopupDrawsBonusFrame();
+        }
     }
 
     @Test
     void ordinarySixteenthKillCarriesBonusThroughDeferredAnimalIntoPopup() {
-        int before = services.gameState().getScore();
-        var enemy = nebula();
+        try (var reel = com.openggf.tests.reel.S2ComponentTestReel.open(16)) {
+            int before = services.gameState().getScore();
+            var enemy = nebula();
 
-        enemy.onPlayerAttack(player, null);
+            enemy.onPlayerAttack(player, null);
 
-        assertTrue(enemy.isDestroyed());
-        assertEquals(10_000, services.gameState().getScore() - before);
-        assertFalse(objects.getActiveObjects().stream().anyMatch(PointsObjectInstance.class::isInstance));
-        only(ExplosionObjectInstance.class).update(0, player);
-        var animal = only(AnimalObjectInstance.class);
-        assertFalse(objects.getActiveObjects().stream().anyMatch(PointsObjectInstance.class::isInstance),
-                "Obj27 passes the score to Obj28; Obj28 owns the deferred points allocation");
+            assertTrue(enemy.isDestroyed());
+            assertEquals(10_000, services.gameState().getScore() - before);
+            assertFalse(objects.getActiveObjects().stream().anyMatch(PointsObjectInstance.class::isInstance));
+            only(ExplosionObjectInstance.class).update(0, player);
+            var animal = only(AnimalObjectInstance.class);
+            assertFalse(objects.getActiveObjects().stream().anyMatch(PointsObjectInstance.class::isInstance),
+                    "Obj27 passes the score to Obj28; Obj28 owns the deferred points allocation");
 
-        animal.update(0, player);
+            animal.update(0, player);
 
-        assertPopupDrawsBonusFrame();
+            assertPopupDrawsBonusFrame();
+        }
     }
 
     private void defeatFifteenRealEnemies() {
