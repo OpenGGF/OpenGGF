@@ -80,9 +80,6 @@ class TestTasS2EnemyContact {
 
     @Test
     void consecutiveGroundedKillsRetainTheFirstFourNativeComboAwards() {
-        // The sixteenth-kill contract was executed separately and fails:
-        // native 10000, engine 1000. See the S2 TAS validation matrix for the
-        // exact diagnostic. This test deliberately certifies only early awards.
         int[] awards = {100, 200, 500, 1000};
         int expectedScore = 0;
         for (int i = 0; i < awards.length; i++) {
@@ -94,6 +91,17 @@ class TestTasS2EnemyContact {
             assertTrue(player.getRolling(), "a grounded badnik contact must not unroll the player");
             assertEquals(-0x100, player.getYSpeed());
         }
+    }
+
+    @Test
+    void sixteenthNormalKillAwardsTenThousandNativePoints() {
+        int before = 0;
+        for (int i = 1; i <= 16; i++) {
+            before = services.gameState().getScore();
+            defeat(i);
+        }
+        assertEquals(10000, services.gameState().getScore() - before,
+                "Touch_KillEnemy compares the incremented Chain_Bonus_counter against $20");
     }
 
     private void defeat(int pass) {

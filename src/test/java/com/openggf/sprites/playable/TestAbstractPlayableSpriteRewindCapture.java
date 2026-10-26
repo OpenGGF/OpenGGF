@@ -55,6 +55,27 @@ class TestAbstractPlayableSpriteRewindCapture {
     // -------------------------------------------------------------------------
 
     @Test
+    void rewindReplaysNormalAndPoweredAwardsAcrossBonusAndWordWrapBoundaries() {
+        for (int killsBeforeCapture : new int[] {15, 0x7FFF}) {
+            Sonic sonic = new Sonic("sonic", (short) 100, (short) 200);
+            for (int kill = 0; kill < killsBeforeCapture; kill++) {
+                sonic.incrementBadnikChain();
+            }
+            var saved = sonic.captureRewindState();
+            int firstAward = killsBeforeCapture == 15 ? 10_000 : 1000;
+            int secondAward = killsBeforeCapture == 15 ? 10_000 : 100;
+            for (int replay = 0; replay < 2; replay++) {
+                sonic.restoreRewindState(saved);
+                assertEquals(firstAward, sonic.incrementBadnikChain());
+                assertEquals(secondAward, PoweredBadnikScoring.incrementChain(sonic));
+                sonic.setAir(true);
+                sonic.setAir(false);
+                assertEquals(100, sonic.incrementBadnikChain());
+            }
+        }
+    }
+
+    @Test
     void rewindRestoresBothTilePriorityAndSpriteBucketInBothDirections() {
         Sonic sonic = new Sonic("sonic", (short) 100, (short) 200);
         for (boolean high : new boolean[] {false, true}) {
