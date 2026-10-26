@@ -103,7 +103,13 @@ class TestAiz2BossEndSequenceObjects {
     void cutsceneButtonRetainsConsumedUpHistoryAndUnlocksNextPlayerDispatch() throws Exception {
         S3kCutsceneButtonObjectInstance button =
                 new S3kCutsceneButtonObjectInstance(new ObjectSpawn(0x4B18, 0x0189, 0x83, 0, 0, false, 0));
-        button.setServices(new TestObjectServices());
+        Camera camera = TestEnvironment.activeGameplayMode().getCamera();
+        var services = new TestObjectServices().withCamera(camera);
+        var manager = new com.openggf.level.objects.ObjectManager(List.of(),
+                new Sonic3kObjectRegistry(), 0, null, null,
+                com.openggf.game.GameServices.graphics(), camera, services);
+        services.withDirectObjectManager(manager);
+        manager.addDynamicObjectAtSlot(button, 7);
 
         TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
         sonic.setControlLocked(true);
@@ -113,11 +119,11 @@ class TestAiz2BossEndSequenceObjects {
         short consumedInput = sonic.getInputHistory(0);
 
         CutsceneKnucklesAiz2Instance knuckles = CutsceneKnucklesAiz2Instance.createDefault();
+        manager.addDynamicObjectAtSlot(knuckles, 6);
+        knuckles.update(0, sonic); // arm _unkFAA4 through its native initializer
         setField(knuckles, "currentX", 0x4B10);
         setField(knuckles, "currentY", 0x0188);
-        // Button only triggers after Knuckles' jump is finished (LAUGH_2 phase)
-        setPhase(knuckles, "LAUGH_2");
-        Aiz2BossEndSequenceState.setActiveKnuckles(knuckles);
+        // Check_InMyRange has no animation/phase requirement.
 
         button.update(0, sonic);
 

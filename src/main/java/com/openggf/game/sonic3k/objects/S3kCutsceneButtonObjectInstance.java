@@ -3,10 +3,10 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
-import com.openggf.game.sonic3k.runtime.AizZoneRuntimeState;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.NativeSstSlotAccess;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SpawnRewindRecreatable;
@@ -19,10 +19,9 @@ import java.util.List;
  * Button used by the AIZ2 Knuckles post-boss cutscene.
  *
  * <p>ROM reference: Obj_CutsceneButton subtype 0.
- * The button is pressed when cutscene Knuckles finishes his jump/bounce
- * sequence and lands near it. It's NOT triggered during Knuckles' initial
- * run-in — only after the LAUGH_2 phase begins (Knuckles has completed
- * his jump and is now laughing at the player).
+ * The button reads the position words at the slot address saved by cutscene
+ * Knuckles. It does not inspect the occupant's type or animation phase, and
+ * a retired actor's slot can now contain the button itself.
  */
 public class S3kCutsceneButtonObjectInstance extends AbstractObjectInstance
         implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
@@ -91,16 +90,23 @@ public class S3kCutsceneButtonObjectInstance extends AbstractObjectInstance
         if (pressed) {
             return;
         }
-        CutsceneKnucklesAiz2Instance knuckles = Aiz2BossEndSequenceState.getActiveKnuckles();
-        if (knuckles == null) {
+        int slot = Aiz2BossEndSequenceState.getCutsceneKnucklesSlot();
+        var manager = services().objectManager();
+        if (slot < 0 || manager == null) {
             return;
         }
         // Obj_CutsceneButton reads the object pointer in _unkFAA4 and calls
         // Check_InMyRange directly; it does not require a landing/bounce flag
         // (sonic3k.asm:133988-134000).
-        int dx = knuckles.getX() - x;
-        int dy = knuckles.getY() - y;
-        if (dx >= RANGE_LEFT && dx < RANGE_RIGHT && dy >= RANGE_TOP && dy < RANGE_BOTTOM) {
+        var occupant = NativeSstSlotAccess.currentOwner(manager, slot);
+        // Delete_Current_Sprite zeros an empty slot. A reused slot exposes
+        // its live owner's position words, without a stale Java actor link.
+        int targetX = occupant == null ? 0 : (short) occupant.getX();
+        int targetY = occupant == null ? 0 : (short) occupant.getY();
+        // Check_InMyRange performs signed word comparisons against each
+        // endpoint (sonic3k.asm:180055-180073), not a Java unbounded delta.
+        if (targetX >= (short) (x + RANGE_LEFT) && targetX < (short) (x + RANGE_RIGHT)
+                && targetY >= (short) (y + RANGE_TOP) && targetY < (short) (y + RANGE_BOTTOM)) {
             // loc_65C04 installs loc_65C50, then immediately dispatches the
             // subtype action through off_65C40 in this same object pass.
             pressButton(playerEntity);

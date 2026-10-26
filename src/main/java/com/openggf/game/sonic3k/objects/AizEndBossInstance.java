@@ -242,7 +242,7 @@ public class AizEndBossInstance extends AbstractBossInstance
 
     public AizEndBossInstance(ObjectSpawn spawn) {
         super(spawn, "AIZEndBoss");
-        Aiz2BossEndSequenceState.reset();
+        Aiz2BossEndSequenceState.resetSequenceLatches();
     }
 
     // ===== Lifecycle =====
