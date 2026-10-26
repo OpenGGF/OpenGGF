@@ -113529,3 +113529,33 @@ smoke failures remain separately recorded. Next finite native owner: Monitor19.
   aliases suffice. No ID31 body execution, controlled player, natural Shadow
   image/timing, whole-USA or regional parity is claimed. Main and remote stay
   untouched; this milestone is a private local increment.
+
+
+### 2026-10-26 — Sonic Hole returns; ordinary time warp is the next boundary
+
+- This is an input-only engine controller frontier, **not a native trace**.
+  Source is `cffe153a0` plus World-load fixture SHA256
+  `e0f4217af24b7526d50a5c53e9344b028e04282520ea85c113528cf430bb4fbb`
+  in the private objects worktree. Same Right and four B windows, Start false.
+- Physical46 ID31 Init5323/Main5324 return, with full64 literals and nonwrites;
+  natural control remains0. No Hole activation, A3 or new World pixels inferred.
+  Existing Source17/Mosqui current aliases remain the only art owner.
+- The permanent route returns5414. Its real TimePost request `SCMD_PASTSFX`
+  sets raw time-warp direction255; timer and charge are0. First5415 raises
+  `CdPlayerMovement.UnsupportedMotion(TIME_WARP_ACTIVE)` before returned Body
+  and dynamic work. This is not another unowned-ID/slot failure.
+- Full/course5322→5323,5323→5324,5413→5414 compare complete checkpoint-aware
+  state before/after forward replay; every older edge and all53 cases remain.
+  The failed composite is never captured or resumed. Terminal Runtime/Frame,
+  original error/suppressed preparation guard, unchanged observed Body/full96/
+  saved766 and5414→5415 VInt are explicit bounded failure observations.
+- Fresh78472 passes53/0/0/0 at21:27:25Z (36.526s execution,16s queue);
+  Runtime/EGL/source52519 separately passes494/0/0/0 at21:14:30Z. Exact commands,
+  source pins, fresh identities/environments/skips and original fixture red are
+  in the dated implementation plan. These are not a single fresh547 invocation.
+- Native `ObjSonic_TimeWarp.NotPPZ1` (Sonic/Main.asm:585–601, N1ecc5f3)
+  reaches the active-direction path and timer start. Implementing its actual
+  state/services/prefixes is future work, not removing the current guard.
+  Controlled Sonic remains separately deferred. User requests pause after Hole,
+  handover and only `feature/ai-nothing-to-see-here` on next; no next-owner work,
+  whole-USA, native image/timing/audio or Japan/Europe certification claim.

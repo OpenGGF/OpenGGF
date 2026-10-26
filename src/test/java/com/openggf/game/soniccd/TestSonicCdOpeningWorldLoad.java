@@ -2612,7 +2612,7 @@ class TestSonicCdOpeningWorldLoad {
      * Hole's real service and Pata handoff precede the separately attempted ID22
      * dynamic-slot frontier. No failed-call resume or comparison-data ingress.
      */
-    @Test void controllerFourJumpRouteRunsLogShadowReplaysClosedCutsAndStopsAtObject31Slot46() throws Exception {
+    @Test void controllerFourJumpRouteRunsSonicHoleReplaysClosedCutsAndStopsAtTimeWarpActive() throws Exception {
         GameServices.configuration().setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, false);
         GameServices.configuration().setSessionOverride(SonicConfiguration.LIVE_REWIND_DETERMINISM_AUDIT, false);
         final String controllerScript = "1200 R;32 R+B;537 R;32 R+B;1200 R;32 R+B;1200 R";
@@ -3901,87 +3901,240 @@ class TestSonicCdOpeningWorldLoad {
         assertNaturalRestartCheckpoint(naturalCheckpoint, h);
         assertSame(naturalCheckpoint.saved(), runtime.checkpointState().saved());
 
-        // ONLY AFTER every valid full/course replay: attempt ordinary5323 ONCE, terminal on unowned31.
-        // The native ID31 object audit is separate/pending. No object name or raw layout row is assumed.
+        // Root OBSERVED observer36594, terminal21:00:48Z:5323 Init/5324 Main and every
+        // ordinary call through5414 returned; first5415 stops at TIME_WARP_ACTIVE.
+        // SOURCE-ONLY promotion: all author-side Java remains UNRUN. No time-warp owner is added.
+        replayRows = Arrays.copyOf(replayRows, 5415); // Successful closed rows0..5414 only.
+        precedingBodyRequests = Arrays.copyOf(precedingBodyRequests, 5415);
+        int[] sonicHoleCutCalls = {5322, 5323, 5413};
+        int[] sonicHoleThroughCalls = {5323, 5324, 5414};
+        State[] sonicHoleCutStates = new State[sonicHoleCutCalls.length];
+        var sonicHoleFullCuts = new com.openggf.game.rewind.CompositeSnapshot[sonicHoleCutCalls.length];
+        var sonicHoleCourseCuts = new com.openggf.game.rewind.CompositeSnapshot[sonicHoleCutCalls.length];
+        sonicHoleCutStates[0] = at5322;
+        sonicHoleFullCuts[0] = registry.capture(); sonicHoleCourseCuts[0] = registry.captureCourse();
+        var sonicHolePlayerHeader = new CdPlayerBody.Header(1, 2224640, 1920, 2, 24);
+        assertEquals(sonicHolePlayerHeader, frame.state().header());
+        assertEquals(new CdPlayerMotionState(352364032, 39281152, 1536, 336, 1536, 2,
+                0, 2, 0x84, 9, 19, 0, 0, 0, 0, 0, 0, 0, 0, 0), frame.state().motion());
+        assertArrayEquals(java.util.HexFormat.of().parseHex(
+                "14d0025414d6025414dc025414e2025414e8025414ee025414f4025514fa02561500025713b2024813b6024813ba024713be024713c2024613c6024613ca024513ce024513d2024413d6024413db024413df024513e3024413e8024413ec024413f0024413f5024513f9024613fe02461403024714070247140c02481411024914160249141b024a1420024a1425024b142a024b1430024b1435024b143a024b1440024b1445024b144a024b1450024b1456024b145b024c1461024c1467024d146d024e1473025014790251147f025314850255148b02571491025a14970250149e025014a4025114aa025114b1025214b7025214bd025314c3025314ca0254"), frame.state().history().bytes().copy(),
+                "Actual natural pre5323 history; comparison-only, never actor ingress");
         assertArrayEquals(new byte[64], pool.state(46).copyBytes());
-        var beforeTerminalArt = runtime.sectionArtState();
-        var beforeTerminalClock = frame.vIntClock();
+        assertEquals(0, at5322.objects().placement().savedFlags().unsignedByte(405));
+        byte[] sonicHolePlaced64 = java.util.HexFormat.of().parseHex(
+                "310000000000000016f0000002e80000000000000000000000000000000000000000008600000000000000000000000000000000000000000000000000000000");
+        byte[] sonicHoleInit64 = java.util.HexFormat.of().parseHex(
+                "310403a000208ad416f0000002e80000000000000000100006100000000000000000008602000000000000000000000000000000000000000000000000000000");
+        assertEquals(64, sonicHolePlaced64.length); assertEquals(64, sonicHoleInit64.length);
+        boolean[] sonicHoleInitWrites = new boolean[64];
+        // ObjSonicHole_Init (N Tunnel Path/Main.asm:24-45): only these source bytes are written.
+        // The raw mapping/header image is Root-observed comparison data, never a pool write.
+        for (int offset : new int[]{1, 2, 3, 4, 5, 6, 7, 0x16, 0x18, 0x19, 0x24})
+            sonicHoleInitWrites[offset] = true;
+        for (int call = 5323; call <= 5414; call++) {
+            assertNotNull(replayRows[call - 1]);
+            step(h, input(8, 0, false)); // Same Right-all/four-B-holds recipe; the last B ended5232.
+            assertClosedAtCall.accept(call);
+            assertNaturalRestartCheckpoint(naturalCheckpoint, h);
+            assertSame(naturalCheckpoint.saved(), runtime.checkpointState().saved());
+            assertSame(sourceBank, objectAssets.sectionArtSources());
+            assertEquals(tunnelSourceOwners.size(), sourceBank.sources().size());
+            for (int source = 0; source < tunnelSourceOwners.size(); source++) {
+                var sonicHoleRetainedSource = tunnelSourceOwners.get(source);
+                assertSame(sonicHoleRetainedSource, sourceBank.sources().get(source));
+                assertSame(sonicHoleRetainedSource, sourceBank.source(sonicHoleRetainedSource.source()));
+                assertSame(tunnelSourceReaders.get(source), sonicHoleRetainedSource.readerBytes());
+                assertSame(tunnelSourceDecodes.get(source), sonicHoleRetainedSource.decode());
+            }
+            replayRows[call] = state(h);
+            precedingBodyRequests[call] = List.copyOf(actorOwner.lastSoundRequests());
+            List<CdOpeningObjectRuntime.SoundRequest> sonicHoleExpectedSounds = call == 5369
+                    ? List.of(new CdOpeningObjectRuntime.SpringFm(
+                            com.openggf.game.soniccd.objects.CdSpring.FmSound.FM_SPRING))
+                    : call == 5414 ? List.of(new CdOpeningObjectRuntime.TimePostSubCpu(
+                            com.openggf.game.soniccd.objects.CdTimePost.SubCpuCommand.SCMD_PASTSFX))
+                    : List.of();
+            assertEquals(sonicHoleExpectedSounds, runtime.lastSoundRequests(),
+                    "Complete Root-measured ledger: Spring5369, cleared5370, Time Post5414");
+            assertTrue(actorOwner.lastSoundRequests().isEmpty(), "Actual Body metadata stays empty; object requests remain separate");
+            if (call == 5323 || call == 5324) {
+                var sonicHole46 = pool.state(46);
+                assertEquals(0xFFDB80, sonicHole46.identity().nativeAddress24());
+                assertEquals(0x31, sonicHole46.id()); assertEquals(2, sonicHole46.routine());
+                assertEquals(0x16F0, sonicHole46.centreX()); assertEquals(0x02E8, sonicHole46.centreY());
+                assertEquals(0x86, sonicHole46.savedFlagsId());
+                assertEquals(4, sonicHole46.spriteFlags()); assertEquals(0x03A0, sonicHole46.word(CdObjectState.WordField.TILE));
+                assertEquals(0x208AD4, sonicHole46.longBits(CdObjectState.LongField.MAPPINGS));
+                assertEquals(6, sonicHole46.unsignedByte(CdObjectState.ByteField.PRIORITY));
+                assertEquals(16, sonicHole46.unsignedByte(CdObjectState.ByteField.WIDTH));
+                assertEquals(16, sonicHole46.unsignedByte(CdObjectState.ByteField.Y_RADIUS));
+                assertArrayEquals(sonicHoleInit64, sonicHole46.copyBytes());
+                for (int offset = 0; offset < 64; offset++) if (!sonicHoleInitWrites[offset])
+                    assertEquals(sonicHolePlaced64[offset], sonicHole46.copyBytes()[offset],
+                            "Init/Main preserves the native nonstore byte " + offset);
+                assertEquals(0x80, runtime.placement().savedFlag(0x86, 1),
+                        "Native bank byte405: loaded bit7 remains; SetDisplay bit6 is clear at these closed cuts");
+                assertEquals(0, frame.state().motion().playerControl());
+                assertEquals(sonicHolePlayerHeader, frame.state().header());
+                assertEquals(new CdPlayerBody.Timers(0, 0, 0, 0), frame.state().timers());
+                assertEquals(new CdPlayerBody.ObjectLinks(0, 0), frame.state().objectLinks());
+                assertEquals(0, frame.state().rotationDistance()); assertEquals(0, frame.state().rotationAngle());
+                assertTrue(runtime.lastSoundRequests().isEmpty());
+                // Main (N :50-75) returns on actual control0; no acquisition, FM_A3 or Draw is claimed.
+                if (call == 5323) {
+                    assertEquals(new CdPlayerMotionState(352757248, 39367168, 1536, 392, 1536, 2,
+                            0, 2, 0x84, 9, 19, 0, 0, 0, 0, 0, 0, 0, 0, 0), frame.state().motion());
+                    assertEquals(new CdPlayerBody.AnimationCursor(2, 1, 76), frame.state().animation());
+                    assertEquals(40, frame.state().history().index());
+                    assertArrayEquals(java.util.HexFormat.of().parseHex(
+                            "14d0025414d6025414dc025414e2025414e8025414ee025414f4025514fa0256150002571506025813b6024813ba024713be024713c2024613c6024613ca024513ce024513d2024413d6024413db024413df024513e3024413e8024413ec024413f0024413f5024513f9024613fe02461403024714070247140c02481411024914160249141b024a1420024a1425024b142a024b1430024b1435024b143a024b1440024b1445024b144a024b1450024b1456024b145b024c1461024c1467024d146d024e1473025014790251147f025314850255148b02571491025a14970250149e025014a4025114aa025114b1025214b7025214bd025314c3025314ca0254"), frame.state().history().bytes().copy());
+                    assertEquals(122, frame.environment().globals().cameraXCentre());
+                } else {
+                    var sonicHoleBeforeMain = replayRows[5323].objects().placement().pool().slots().get(46 - 32);
+                    assertEquals(0x31, sonicHoleBeforeMain.id()); assertEquals(2, sonicHoleBeforeMain.routine());
+                    assertArrayEquals(sonicHoleBeforeMain.copyBytes(), sonicHole46.copyBytes(),
+                            "First actual pre-routine2 Main returns with the complete source64 unchanged");
+                    assertEquals(new CdPlayerMotionState(353150464, 39467520, 1536, 448, 1536, 2,
+                            0, 2, 0x84, 9, 19, 0, 0, 0, 0, 0, 0, 0, 0, 0), frame.state().motion());
+                    assertEquals(new CdPlayerBody.AnimationCursor(2, 0, 76), frame.state().animation());
+                    assertEquals(44, frame.state().history().index());
+                    assertArrayEquals(java.util.HexFormat.of().parseHex(
+                            "14d0025414d6025414dc025414e2025414e8025414ee025414f4025514fa02561500025715060258150c025a13ba024713be024713c2024613c6024613ca024513ce024513d2024413d6024413db024413df024513e3024413e8024413ec024413f0024413f5024513f9024613fe02461403024714070247140c02481411024914160249141b024a1420024a1425024b142a024b1430024b1435024b143a024b1440024b1445024b144a024b1450024b1456024b145b024c1461024c1467024d146d024e1473025014790251147f025314850255148b02571491025a14970250149e025014a4025114aa025114b1025214b7025214bd025314c3025314ca0254"), frame.state().history().bytes().copy());
+                    assertEquals(120, frame.environment().globals().cameraXCentre());
+                }
+            }
+            for (int cut = 1; cut < sonicHoleCutCalls.length; cut++) if (call == sonicHoleCutCalls[cut]) {
+                sonicHoleCutStates[cut] = replayRows[call];
+                sonicHoleFullCuts[cut] = registry.capture(); sonicHoleCourseCuts[cut] = registry.captureCourse();
+            }
+        }
+        var at5414 = replayRows[5414];
+        var sonicHoleLastPlayer = frame.state();
+        assertEquals(new CdPlayerMotionState(374136320, 48298496, 816, 952, 1536, 2,
+                0, 2, 0x84, 9, 19, 0, 0, 0, 0, 0, 0, 0, 0, 129), sonicHoleLastPlayer.motion());
+        assertEquals(new CdPlayerBody.AnimationCursor(2, 1, 76), sonicHoleLastPlayer.animation());
+        assertEquals(sonicHolePlayerHeader, sonicHoleLastPlayer.header());
+        assertEquals(new CdPlayerBody.Timers(0, 0, 0, 0), sonicHoleLastPlayer.timers());
+        assertEquals(148, sonicHoleLastPlayer.history().index());
+        assertArrayEquals(java.util.HexFormat.of().parseHex(
+                "161503331615032b161503231615031b161503141615030d16160306161602ff161702f9161702f3161802ec161902e7161a02e1161b02dc161c02d6161d02d1161e02cd162002c8162102c4162302c3162502c3162602c3162802c3162a02c4162c02c5162e02c6163102c7163302c9163502cb163802cd163b02cf163d02d1164002d4164302d7164602da164902dd164c02e015ae02d615b402dd15ba02e515c002ed15c602f615cc02fe15d2030715d8031015de031915e4032315ea032c15f0033615f6034015fc034a1602035516080360160e036b16140376161503811615037b16150371161503681615035e161503551615034c161503441615033b"), sonicHoleLastPlayer.history().bytes().copy());
+        assertEquals(0, sonicHoleLastPlayer.rotationDistance()); assertEquals(0, sonicHoleLastPlayer.rotationAngle());
+        assertEquals(new CdPlayerBody.ObjectLinks(0, 32), sonicHoleLastPlayer.objectLinks());
+        assertEquals(5612, h.mode().getCamera().getX()); assertEquals(643, h.mode().getCamera().getY());
+        var sonicHoleLastStatus = at5414.objects().placement().status();
+        assertEquals(5504, sonicHoleLastStatus.previousChunkWord());
+        assertEquals(306, sonicHoleLastStatus.rightRecordIndex()); assertEquals(252, sonicHoleLastStatus.leftRecordIndex());
+        assertEquals(140, sonicHoleLastStatus.rightSavedId()); assertEquals(118, sonicHoleLastStatus.leftSavedId());
+        assertEquals(5414, frame.environment().globals().levelFrames());
+        assertEquals(96, frame.environment().globals().cameraXCentre()); assertEquals(0, frame.environment().globals().timeWarpTimer());
+        assertEquals(new com.openggf.game.soniccd.player.CdPlayerMovement.Gates(0, 1, 0, 0, 0, 0, 255),
+                frame.environment().movement().gates());
+        assertEquals(5414L, frame.vIntClock().deltaSinceAdmittedCut());
+        assertEquals(List.of(new CdOpeningObjectRuntime.TimePostSubCpu(
+                com.openggf.game.soniccd.objects.CdTimePost.SubCpuCommand.SCMD_PASTSFX)), runtime.lastSoundRequests());
+        assertTrue(actorOwner.lastSoundRequests().isEmpty());
+
+        // Preserve ALL inherited edges. Add5322->5323,5323->5324,5413->5414, BOTH full/course.
+        // Only captured legitimate closed registry cuts are restored, with full checkpoint/saved/CPU comparisons.
+        for (int cut = 0; cut < sonicHoleCutCalls.length; cut++) {
+            assertNotNull(sonicHoleCutStates[cut]); assertNotNull(sonicHoleFullCuts[cut]); assertNotNull(sonicHoleCourseCuts[cut]);
+            for (boolean course : List.of(false, true)) {
+                if (course) registry.restoreCourse(sonicHoleCourseCuts[cut]); else registry.restore(sonicHoleFullCuts[cut]);
+                assertClosedAtCall.accept(sonicHoleCutCalls[cut]);
+                assertThreeJumpExtendedReplayCut(sonicHoleCutStates[cut], h);
+                assertEquals(precedingBodyRequests[sonicHoleCutCalls[cut]], actorOwner.lastSoundRequests());
+                assertNaturalRestartCheckpoint(naturalCheckpoint, h);
+                assertSame(naturalCheckpoint.saved(), runtime.checkpointState().saved());
+                for (int call = sonicHoleCutCalls[cut] + 1; call <= sonicHoleThroughCalls[cut]; call++) {
+                    step(h, input(8, 0, false));
+                    assertClosedAtCall.accept(call);
+                    assertNotNull(replayRows[call]);
+                    // Complete State/knowledge/native history, saved bank, SAT/picture and sounds:
+                    // BEFORE forwarding above and after EVERY intermediate returned row, never narrowed.
+                    assertThreeJumpExtendedReplayCut(replayRows[call], h);
+                    assertEquals(precedingBodyRequests[call], actorOwner.lastSoundRequests());
+                    assertNaturalRestartCheckpoint(naturalCheckpoint, h);
+                    assertSame(naturalCheckpoint.saved(), runtime.checkpointState().saved());
+                    assertSame(sourceBank, objectAssets.sectionArtSources());
+                    assertEquals(tunnelSourceOwners.size(), sourceBank.sources().size());
+                    for (int source = 0; source < tunnelSourceOwners.size(); source++) {
+                        var sonicHoleRetainedSource = tunnelSourceOwners.get(source);
+                        assertSame(sonicHoleRetainedSource, sourceBank.sources().get(source));
+                        assertSame(sonicHoleRetainedSource, sourceBank.source(sonicHoleRetainedSource.source()));
+                        assertSame(tunnelSourceReaders.get(source), sonicHoleRetainedSource.readerBytes());
+                        assertSame(tunnelSourceDecodes.get(source), sonicHoleRetainedSource.decode());
+                    }
+                }
+            }
+        }
+        assertClosedAtCall.accept(5414); assertThreeJumpExtendedReplayCut(at5414, h);
+        assertEquals(precedingBodyRequests[5414], actorOwner.lastSoundRequests());
+        assertNaturalRestartCheckpoint(naturalCheckpoint, h);
+        assertSame(naturalCheckpoint.saved(), runtime.checkpointState().saved());
+
+        // AFTER every valid full/course proof, attempt5415 ONCE. The next owner remains unimplemented.
+        var beforeTerminalPlayer = frame.state();
         var beforeTerminalEnvironment = frame.environment();
-        int beforeTerminalNativeFrame = beforeTerminalEnvironment.globals().levelFrames();
-        int beforeTerminalEngineFrame = level.getFrameCounter();
+        var beforeTerminalClock = frame.vIntClock();
+        var beforeTerminalArt = runtime.sectionArtState();
         var beforeTerminalRing = runtime.ringGlobals();
+        int beforeTerminalEngineFrame = level.getFrameCounter();
         var presentationOwner = (SonicCdPlayerPresentation) h.module().getScrollHandlerProvider();
         var beforeForeground = threeJumpReadField(presentationOwner, "scrollState");
         var beforeBackground = threeJumpReadField(presentationOwner, "backgroundState");
         var beforePreparedScroll = threeJumpReadField(presentationOwner, "preparedScroll");
         var queueOwner = (CdObjectDrawQueue) threeJumpReadField(runtime, "queue");
-        // ACTUAL CPU reference after the LAST forward replay, not the historical at5322 CPU object.
+        // Actual CPU object AFTER the last replay, not the equal-value historic at5414 CPU reference.
         var beforeCpu = assertInstanceOf(CdObjectDrawQueue.CpuSat.class, threeJumpReadField(queueOwner, "cpuSat"));
         assertSame(runtime.cpuSat(), beforeCpu);
-        assertArrayEquals(at5322.cpu().bytes(), beforeCpu.bytes());
-        assertEquals(at5322.cpu().spriteCount(), beforeCpu.spriteCount()); assertEquals(at5322.cpu().provenance(), beforeCpu.provenance());
-        var stopped = assertThrows(UnsupportedOperationException.class, () -> step(h, input(8, 0, false)));
-        assertEquals(UnsupportedOperationException.class, stopped.getClass());
-        assertEquals("Unowned CD object ID $31 at live physical slot 46", stopped.getMessage());
-        // Root observed a suppressed terminal hasPreparationBoundary cleanup read. Do not demand
-        // an empty suppressed list, mask the primary UOE, or alter production to erase that evidence.
-        // Retained diagnostics ONLY: no state(h), closed capture, module require, restore or next call.
-        var shadowTerminalSlot46 = pool.state(46);
-        assertEquals(0xFFDB80, shadowTerminalSlot46.identity().nativeAddress24());
-        assertEquals(0x31, shadowTerminalSlot46.id()); assertEquals(0, shadowTerminalSlot46.routine());
-        assertEquals(0x16F0, shadowTerminalSlot46.centreX()); assertEquals(0x02E8, shadowTerminalSlot46.centreY());
-        assertEquals(0x86, shadowTerminalSlot46.savedFlagsId());
-        assertArrayEquals(java.util.HexFormat.of().parseHex(
-                "310000000000000016f0000002e80000000000000000000000000000000000000000008600000000000000000000000000000000000000000000000000000000"),
-                shadowTerminalSlot46.copyBytes(), "Actual spawn-only31 image; its unowned body never runs");
-        int shadowPartialChanges = 0;
-        for (int whole = 32; whole < 128; whole++) {
-            if (!Arrays.equals(at5322.objects().placement().pool().slots().get(whole - 32).copyBytes(),
-                    pool.state(whole).copyBytes())) shadowPartialChanges++;
-        }
-        assertEquals(8, shadowPartialChanges, "Root-observed partial delta count, not a full96 native partial model");
-        var shadowTerminalPlayer = frame.state(); var shadowTerminalMotion = shadowTerminalPlayer.motion();
-        assertEquals(352757248, shadowTerminalMotion.centreX16_16()); assertEquals(39367168, shadowTerminalMotion.centreY16_16());
-        assertEquals(1536, shadowTerminalMotion.xVelocity()); assertEquals(392, shadowTerminalMotion.yVelocity());
-        assertEquals(1536, shadowTerminalMotion.groundVelocity()); assertEquals(2, shadowTerminalMotion.routine());
-        assertEquals(0, shadowTerminalMotion.angle()); assertEquals(2, shadowTerminalMotion.flags());
-        assertEquals(4, shadowTerminalMotion.spriteFlags()); assertEquals(9, shadowTerminalMotion.xRadius()); assertEquals(19, shadowTerminalMotion.yRadius());
-        assertEquals(0, shadowTerminalMotion.animation()); assertEquals(0, shadowTerminalMotion.playerJump());
-        assertEquals(0, shadowTerminalMotion.charge()); assertEquals(0, shadowTerminalMotion.playerControl());
-        assertEquals(0, shadowTerminalPlayer.objectLinks().pushObject()); assertEquals(0, shadowTerminalPlayer.objectLinks().standObject());
-        assertEquals(0, shadowTerminalPlayer.rotationAngle()); assertEquals(0, shadowTerminalPlayer.rotationDistance());
-        assertEquals(2, shadowTerminalPlayer.animation().scriptIndex()); assertEquals(1, shadowTerminalPlayer.animation().timer());
-        assertEquals(76, shadowTerminalPlayer.animation().mapFrame()); assertEquals(40, shadowTerminalPlayer.history().index());
+        assertArrayEquals(at5414.cpu().bytes(), beforeCpu.bytes());
+        assertEquals(at5414.cpu().spriteCount(), beforeCpu.spriteCount()); assertEquals(at5414.cpu().provenance(), beforeCpu.provenance());
+        var stopped = assertThrows(com.openggf.game.soniccd.player.CdPlayerMovement.UnsupportedMotion.class,
+                () -> step(h, input(8, 0, false)));
+        assertEquals(com.openggf.game.soniccd.player.CdPlayerMovement.UnsupportedMotion.class, stopped.getClass());
+        assertEquals(com.openggf.game.soniccd.player.CdPlayerMovement.UnsupportedBoundary.TIME_WARP_ACTIVE, stopped.boundary());
+        assertEquals("TIME_WARP_ACTIVE", stopped.getMessage());
+        assertTrue(Arrays.stream(stopped.getSuppressed()).anyMatch(suppressed ->
+                        suppressed instanceof IllegalStateException && "CD opening runtime is terminally closed".equals(suppressed.getMessage())),
+                "Preserve Root's original suppressed terminal hasPreparationBoundary cleanup failure");
+        // Retained unguarded diagnostics only below; no closed capture/module require/retry/resume.
+        // Unsupported MODE returns no Body Result, so Frame's staged level5415 and actor changes never commit.
+        assertEquals(beforeTerminalPlayer, frame.state(), "Complete actor/header/history/timers/links retain last CLOSED5414");
+        assertEquals(beforeTerminalEnvironment, frame.environment(), "Actual5415 service leaves this measured Environment value unchanged");
+        assertEquals(5414, frame.environment().globals().levelFrames());
+        assertEquals(255, frame.environment().movement().gates().timeWarpDirection());
         assertEquals(beforeTerminalClock.absoluteSeed(), frame.vIntClock().absoluteSeed());
         assertEquals((beforeTerminalClock.deltaSinceAdmittedCut() + 1) & 0xFFFF_FFFFL, frame.vIntClock().deltaSinceAdmittedCut());
-        assertEquals(5323L, frame.vIntClock().deltaSinceAdmittedCut());
-        assertEquals((beforeTerminalNativeFrame + 1) & 0xFFFF, frame.environment().globals().levelFrames());
-        assertEquals(5323, frame.environment().globals().levelFrames()); assertEquals(122, frame.environment().globals().cameraXCentre());
+        assertEquals(5415L, frame.vIntClock().deltaSinceAdmittedCut());
         assertEquals(beforeTerminalEngineFrame + 1, level.getFrameCounter());
-        assertEquals(beforeTerminalEnvironment.movement().gates(), frame.environment().movement().gates());
-        var shadowTerminalDebug = frame.environment().movement().globals();
-        assertEquals(10, shadowTerminalDebug.debugAngle()); assertEquals(234, shadowTerminalDebug.debugAngleShift());
-        assertEquals(192, shadowTerminalDebug.debugQuadrant()); assertEquals(254, shadowTerminalDebug.debugFloorDistance());
+        for (int whole = 32; whole < 128; whole++)
+            assertArrayEquals(at5414.objects().placement().pool().slots().get(whole - 32).copyBytes(), pool.state(whole).copyBytes(),
+                    "Actual5415 partial source image remains unchanged at physical " + whole);
+        assertEquals(at5414.objects().placement().status(), runtime.placement().status());
+        byte[] sonicHolePartialSaved = new byte[com.openggf.game.soniccd.objects.CdObjectPlacementRuntime.SAVED_BANK_BYTES];
+        var sonicHolePartialStatus = runtime.placement().status();
+        sonicHolePartialSaved[0] = (byte) sonicHolePartialStatus.rightSavedId();
+        sonicHolePartialSaved[1] = (byte) sonicHolePartialStatus.leftSavedId();
+        for (int offset = 2; offset < sonicHolePartialSaved.length; offset++)
+            sonicHolePartialSaved[offset] = (byte) runtime.placement().savedFlag((offset - 2) / 3, (offset - 2) % 3);
+        assertArrayEquals(at5414.objects().placement().savedFlags().copy(), sonicHolePartialSaved);
+        // V-int occurred and cleared the Runtime ledger; failed Body never publishes a new actor ledger.
         assertTrue(runtime.lastSoundRequests().isEmpty()); assertTrue(actorOwner.lastSoundRequests().isEmpty());
-        // VInt/Body/spawner and earlier physical visits survive. Unknown31 fails before its body;
-        // later slots are unvisited by RunObjects, but the earlier spawner may already have written them.
-        // No later-slot equality, whole-pool nonwrite, full partial-history or full96 native model is asserted.
-        assertSame(beforeTerminalArt, runtime.sectionArtState(),
-                "Zero remaining tiles makes VInt service a nonwrite; failed walk never reaches CPU section/PLC tail");
+        assertSame(beforeTerminalArt, runtime.sectionArtState(), "No active section tiles and no CPU update/prepare tail");
         assertEquals(beforeTerminalRing.ringAnimationTimer(), runtime.ringGlobals().ringAnimationTimer());
         assertEquals(beforeTerminalRing.ringAnimationFrame(), runtime.ringGlobals().ringAnimationFrame());
         assertSame(beforeForeground, threeJumpReadField(presentationOwner, "scrollState"), "No CPU Scroll");
         assertSame(beforeBackground, threeJumpReadField(presentationOwner, "backgroundState"), "No CPU background Scroll");
         assertSame(beforePreparedScroll, threeJumpReadField(presentationOwner, "preparedScroll"), "No new prepared scroll tail");
         assertSame(beforePreparedScroll, threeJumpReadField(presentationOwner, "publishedScroll"),
-                "VInt publishes the preceding completed scroll before the terminal dynamic failure");
-        assertSame(beforeCpu, threeJumpReadField(queueOwner, "cpuSat"), "No new CPU SAT build/commit after the last replay");
+                "V-int still publishes the previous completed scroll before the unsupported Body boundary");
+        assertSame(beforeCpu, threeJumpReadField(queueOwner, "cpuSat"), "No CPU SAT build/commit after last replay");
         assertEquals(generation, level.getCompletedProductionLoadGeneration()); assertTrue(boundaries.isEmpty());
         assertEquals(CdOpeningObjectRuntime.Phase.FAILED, runtime.phase());
         assertTrue(runtime.closed()); assertTrue(frame.closed());
-        // Stop: bounded closed5322 and one terminal5323, no failed capture/resume.
-        // All newly declared Java remains author-UNRUN. No natural Shadow pixels, controlled Body,
-        // tunnel path/release, complete USA act, JP/EU, native parity, media/render/audio or suite-pass claim.
+        // Stop at measured5414/unsupported5415. No time-warp/next-owner implementation or failed-world reuse.
+        // All new Java is author-UNRUN; no natural Hole activation/FM_A3/image/full-USA/native-parity claim.
 
     }
 

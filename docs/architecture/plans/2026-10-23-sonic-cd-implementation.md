@@ -7877,3 +7877,42 @@ User delivery changed: finish Sonic Hole, publish only
 `feature/ai-nothing-to-see-here` based on next, write a handover, then pause.
 Time warp and the next owner must not be implemented during this delivery.
 Full USA, then Japan/Europe, remains unfinished.
+
+
+## 26 October 2026 — permanent Sonic Hole route to ordinary time-warp boundary
+
+Source checkpoint is `cffe153a0a49a1363e69b38e7663720e339acab0` plus the
+World-load fixture SHA256
+`e0f4217af24b7526d50a5c53e9344b028e04282520ea85c113528cf430bb4fbb`.
+The temporary observer is absent. Exactly the permanent case's name and
+post5322 tail change; explicit two-edit whole-file forward/inverse verification
+recovers all326238 baseline bytes. All53 cases, imports, helpers, earlier
+controller recipe and replay edges remain intact.
+
+Fresh78472 passes53/0/0/0 at21:27:25Z (36.526s execution,16s queue), including
+`controllerFourJumpRouteRunsSonicHoleReplaysClosedCutsAndStopsAtTimeWarpActive`.
+Complete fresh class/case identities, Java25/private cwd, actual media, S2 REV01,
+surfaceless EGL properties and unchanged source pin are checked. Runtime494 and
+World53 are separate green invocations, not an invented combined547 run. No
+route fixture or production repair was needed. Independent static route review
+is pending at this save checkpoint; it conveys no native parity result.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 python3 "$OPENGGF_ROOT/tools/testing/maven_queue.py" --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dsoniccd.opening.egl=true "-Dsoniccd.media.root=$SCD_MEDIA_ROOT" "-Dsonic2.rom.path=$S2_ROM" '-Dtest=TestSonicCdOpeningWorldLoad' test -B
+```
+
+Natural Hole46 Init5323 and Main5324 return with the complete native header and
+unwritten bytes preserved. Player control stays0: no natural Hole activation,
+FM_A3 or Hole World-pixel claim. Full/course5322→5323,5323→5324,5413→5414 compare
+complete checkpoint-aware state before and after every forward row, alongside
+all older edges. The same input-only Right/four-jump recipe returns5414. The real
+TimePost requests `SCMD_PASTSFX` and sets raw direction255 on5414; timer/charge0
+reach the existing `TIME_WARP_ACTIVE` stop on5415. The original exception and
+terminal closure remain, no failed-composite capture or retry. The observed
+failed-call Body/environment/full96/saved766 equality and5414→5415 VInt are
+bounded observations, not a general native partial-prefix oracle.
+
+User's stopping point is now reached: no time-warp or controlled-Body
+implementation. The next-based feature worktree owns shared merge verification,
+final CD-only checks, handover, authorized feature-only push and cleanup.
+The full-USA-then-Japan/Europe objective remains unfinished.
