@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Validate/import frozen source packets and inspect fresh, explicitly scoped JUnit XML.
+"""Draft/validate/import frozen packets and inspect fresh, explicitly scoped JUnit XML.
 
-Inputs: version-1 JSON manifest, explicit Git worktree, or exact Surefire class set
-and UTC run-start cutoff. No game code, media, probes, tests or Git mutations run.
+Inputs: externally pinned draft spec or version-1 JSON manifest, explicit Git
+worktree, or exact Surefire class set and UTC run-start cutoff. No game code,
+media, probes, tests or Git mutations run.
 Origin: 2026-10-26 private Sonic CD integration tooling task. Schema and workflow:
 .agents/skills/soniccd-packet-integration/SKILL.md. Output is stdout/stderr only.
 """
@@ -26,8 +27,14 @@ import time
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / "tools/testing"))
-from maven_queue import worktree_build_slot  # noqa: E402; lease only, no scheduler execution
+
+
+def worktree_build_slot(root):
+    # Read-only commands need no queue module or lease. Apply retains the existing lock.
+    sys.path.insert(0, str(ROOT / "tools/testing"))
+    from maven_queue import worktree_build_slot as build_slot
+    return build_slot(root)
+
 
 HASH = re.compile(r"[0-9a-f]{64}\Z")
 COMMIT = re.compile(r"[0-9a-f]{40}\Z")
@@ -88,13 +95,15 @@ def worktree(path):
     return root, head
 
 
+def unique(pairs):
+    result = {}
+    for key, value in pairs:
+        require(key not in result, f"Duplicate JSON key: {key}")
+        result[key] = value
+    return result
+
+
 def read_manifest(path):
-    def unique(pairs):
-        result = {}
-        for key, value in pairs:
-            require(key not in result, f"Duplicate JSON key: {key}")
-            result[key] = value
-        return result
     with Path(path).open(encoding="utf-8") as stream:
         value = json.load(stream, object_pairs_hook=unique)
     keys(value, ("version", "worktree_head", "files"), "manifest")
@@ -208,6 +217,68 @@ def validate_packet(root, manifest):
     return root, head, planned
 
 
+def draft_manifest(root, spec_path):
+    """Observe a pinned external mapping and destination state; never approve or write.
+
+    Rechecks detect observed changes, not an atomic filesystem snapshot. The caller
+    must review stdout and establish source custody before normal packet/apply.
+    """
+    root, head = worktree(root)
+    require(isinstance(head, str) and COMMIT.fullmatch(head), "HEAD must be an exact lowercase Git commit SHA")
+    spec_path = canonical(Path(spec_path))
+    require(not spec_path.is_relative_to(root), "Draft spec must be external to selected worktree")
+    spec = snapshot(spec_path)
+    try:
+        value = json.loads(spec.data.decode("utf-8", errors="strict"), object_pairs_hook=unique)
+    except RecursionError as error:
+        raise PacketError("Draft spec JSON nesting exceeds decoder limit") from error
+    keys(value, ("version", "files"), "draft spec")
+    require(type(value["version"]) is int and value["version"] == 1, "Unsupported draft spec version")
+    require(isinstance(value["files"], list) and bool(value["files"]), "Empty/non-array draft files")
+    total = 0
+    for index, entry in enumerate(value["files"]):
+        keys(entry, ("source", "sha256", "bytes", "destination"), f"draft files[{index}]")
+        require(type(entry["bytes"]) is int and 0 <= entry["bytes"] <= MAX_FILE, "Malformed source byte length")
+        total += entry["bytes"]
+    require(total <= MAX_PACKET, "Packet exceeds 64 MiB limit")
+    manifest = dict(version=1, worktree_head=head, files=[])
+    baselines, directories = [], {}
+    for entry in value["files"]:
+        target = destination(root, entry["destination"])
+        # Track directory identities/metadata too, including absent destinations.
+        parent = target.parent
+        while parent.is_relative_to(root):
+            info = parent.stat()
+            require(stat.S_ISDIR(info.st_mode), f"Not a destination directory: {parent}")
+            if parent in directories:
+                require(directories[parent] == signature(info), f"Destination directory changed: {parent}")
+            else:
+                directories[parent] = signature(info)
+            if parent == root:
+                break
+            parent = parent.parent
+        current = snapshot(target, absent=True)
+        require(current.info is None or not os.path.samestat(current.info, spec.info),
+                f"Draft spec/destination hardlink alias: {target}")
+        expected = {"absent": True} if current.info is None else {"sha256": digest(current.data)}
+        manifest["files"].append(dict(entry, mode="0444", utf8=True, lf=True, expected=expected))
+        baselines.append(current)
+    # Share packet's frozen-source, UTF-8/LF, path, alias and budget contracts.
+    _, _, planned = validate_packet(root, manifest)
+    unchanged(spec, message="File changed during draft")
+    for source, current, _ in planned:
+        unchanged(source, message="File changed during draft")
+        unchanged(current, message="File changed during draft")
+    for current in baselines:
+        unchanged(current, message="File changed during draft")
+    for parent, saved in directories.items():
+        canonical(parent)
+        require(signature(parent.stat()) == saved, f"Destination directory changed: {parent}")
+    _, final_head = worktree(root)
+    require(final_head == head, f"Worktree HEAD changed during draft: current={final_head} expected={head}")
+    return manifest
+
+
 def plan_report(root, head, planned):
     return dict(worktree=str(root), head=head, applied=False,
                 files=[dict(source=str(source.path), destination=str(current.path), expected=expected,
@@ -229,12 +300,12 @@ def parent_fd(root, path):
         yield fd
 
 
-def unchanged(saved):
+def unchanged(saved, *, message="Concurrent file change; refusing replacement"):
     current = snapshot(saved.path, absent=True)
     require((saved.info is None and current.info is None) or
             (saved.info is not None and current.info is not None and
              signature(saved.info) == signature(current.info) and saved.data == current.data),
-            f"Concurrent file change; refusing replacement: {saved.path}")
+            f"{message}: {saved.path}")
 
 
 def replace_one(root, source, current):
@@ -393,6 +464,9 @@ def junit_summary(root, classes, since, properties):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
+    draft = commands.add_parser("draft", help="read-only manifest draft from externally pinned source spec; review before packet/apply")
+    draft.add_argument("--worktree", required=True, help="canonical absolute Git worktree root")
+    draft.add_argument("--spec", required=True, type=Path, help="external JSON: version=1, files=[{source, sha256, bytes, destination}]")
     packet = commands.add_parser("packet", help="validate all frozen sources/baselines; read-only unless --apply")
     packet.add_argument("--worktree", required=True, help="canonical absolute Git worktree root")
     packet.add_argument("--manifest", required=True, type=Path)
@@ -406,7 +480,9 @@ def main(argv=None):
                        help="exact expected property; repeat. Allowlist: " + ", ".join(sorted(PROPERTIES - {"java.version", "user.dir"})))
     args = parser.parse_args(argv)
     try:
-        if args.command == "packet":
+        if args.command == "draft":
+            result = draft_manifest(args.worktree, args.spec)
+        elif args.command == "packet":
             manifest = read_manifest(args.manifest)
             if args.apply:
                 # The existing lock helper writes human-readable notices; keep JSON stdout parseable.
@@ -419,7 +495,7 @@ def main(argv=None):
         else:
             result = junit_summary(args.worktree, args.classes, cutoff(args.since), requested_properties(args.property))
         print(json.dumps(result, indent=2, ensure_ascii=True))
-        return 0 if args.command == "packet" or result["clean"] else 1
+        return 0 if args.command in ("draft", "packet") or result["clean"] else 1
     except (ValueError, OSError, ET.ParseError) as error:
         report = dict(error=str(error), **(error.report if isinstance(error, PacketError) else {}))
         print(json.dumps(report, indent=2, ensure_ascii=True), file=sys.stderr)

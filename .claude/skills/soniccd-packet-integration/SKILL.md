@@ -1,6 +1,6 @@
 ---
 name: soniccd-packet-integration
-description: Use when integrating final frozen Sonic CD source packets or attributing fresh focused JUnit reports in an explicitly selected Git worktree. Provides packet validation, optional import and exact report summaries; does not run gameplay, probes or tests.
+description: Use when drafting manifests from externally pinned FINAL Sonic CD sources, integrating frozen source packets or attributing fresh focused JUnit reports in an explicitly selected Git worktree. Provides read-only drafting, packet validation, optional import and exact report summaries; does not run gameplay, probes or tests.
 ---
 
 # Sonic CD packet integration
@@ -25,8 +25,63 @@ helpers or probes. Independently check the fixed research/source pin named by th
 owning task against its retained provenance; this tool verifies file bytes and
 the destination worktree HEAD, not the truth of a source-model/oracle claim.
 
-Supply a version-1 manifest outside the repository, using actual per-invocation
-paths and measured hashes/lengths. This illustrative JSON uses dummy pins:
+### Draft from an explicit external mapping
+
+Use the read-only `draft` subcommand to avoid handwriting a packet manifest.
+Supply an external JSON spec with exactly `version` and nonempty `files`; every
+entry has exactly `source`, `sha256`, `bytes` and `destination`. Source pins must
+come from the externally supplied FINAL handoff. Do not manufacture those pins
+by measuring unknown input. Destinations explicitly name reviewed canonical
+relative POSIX paths; a mirror name or Java package is never path authority.
+This illustrative spec uses dummy pins:
+
+```json
+{
+  "version": 1,
+  "files": [
+    {
+      "source": "/external/frozen-worker/ReviewMirror.java",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "bytes": 123,
+      "destination": "src/test/java/example/TestCanonicalOwner.java"
+    }
+  ]
+}
+```
+
+```bash
+python3 -B tools/soniccd/integration_packet.py draft \
+  --worktree "$DESTINATION_WORKTREE" --spec "$EXTERNAL_MAPPING_JSON"
+```
+
+Draft verifies the supplied source pins and frozen-text contract below, using the
+same packet path, alias and source-budget checks. The spec must be canonical,
+external, regular, non-symlink UTF-8 JSON, at most 16 MiB; unknown/duplicate keys
+are rejected. It observes the actual destination HEAD and current destination
+bytes, including uncommitted changes, or absence. New files require existing
+parents. It emits only the existing version-1 manifest to stdout, with source
+pins retained, `mode=0444`, `utf8=true`, `lf=true`, and observed destination
+`expected` pins. It never infers destinations, approves source claims or dirty
+baselines, writes files, acquires a lease, queries jobs or executes supplied code.
+Only the existing fixed read-only Git root/HEAD calls run.
+
+Before emitting, draft rechecks the spec, sources, destination content/metadata,
+destination directories and HEAD; observed changes reject the draft. These are
+**non-atomic observations**, not a filesystem snapshot: changes between or after
+checks, including a HEAD change and restoration between reads, can escape them.
+Frozen mode does not establish provenance or prevent owner writes; reads may
+update atimes. Review the complete draft and independently establish FINAL source
+custody and acceptable current baselines before saving a manifest outside the
+repository and using normal read-only `packet`, then the authorized apply flow.
+Draft does not weaken or bypass either validation. Exit `0` emits a draft; `2`
+rejects it with diagnostics on stderr and no manifest stdout. There is no output,
+apply, Maven or scheduler option.
+
+### Review the normal packet manifest
+
+Supply a version-1 manifest outside the repository with actual invocation paths,
+externally supplied FINAL source pins and reviewed observed destination baselines.
+This illustrative JSON uses dummy pins:
 
 ```json
 {
