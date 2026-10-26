@@ -363,7 +363,7 @@ public class SidewaysPformObjectInstance extends AbstractObjectInstance
                 } else if (child == null || child.getSlotIndex() == slot) {
                     // Stageplay retirement already releases the reservation and clears
                     // the candidate's slot before removal callbacks can reuse it.
-                    if (child != null) child.setSlotIndex(-1);
+                    if (child != null) ObjectLifetimeOps.clearPreviousManagerSlot(child);
                     // A removal/admission callback may already have installed a
                     // replacement. Never release its slot through this old number.
                     if (objectManager.objectIdInSlot(slot) < 0) objectManager.releaseDynamicSlot(slot);

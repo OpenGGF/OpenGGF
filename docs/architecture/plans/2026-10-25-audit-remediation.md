@@ -989,3 +989,73 @@ list/rewind12 and anchor60 checks qualify 82 distinct cases across one fixture
 repair, no skips. The affected chain is measured separately; no new HCZ owner
 or outside-HCZ frontier investigation is authorized by this final delta. See the
 [audit](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#jawz-final-delta-publication-phase-2026-10-26).
+
+## Composed smoke and lifecycle-owner correction — 2026-10-26
+
+The clean composed candidate `8b434c76079bc93b8f1a09a8fc699a8c3d31b13a`
+contains HCZ `3dd809f99`, safe Sideways `faeb97910`, the rings prerequisite,
+and updated development base `dd39e01cb`. The latter adds only a multiplayer
+architecture document beyond `08f0a5e78`. Both Bash and PowerShell `ci-push`
+policy checks passed for `dd39e01cb..8b434c760`, auditing 15,648 tree entries.
+That is policy evidence, not engine validation.
+
+The final five canonical companions passed without skips. The alternate AIZ
+case retained exactly one assertion failure: row 26179, rings 72/0, across
+26,041 compared frames, with no errors or skips. The exact final HCZ chain
+result above was reused: the composed executable tree differs from its tested
+HCZ source only in the two independently qualified S2 Sideways files.
+
+The change-based smoke selection completed all 84 ordinary batches and its
+guard batch. Ordinary results were **43,692 tests / 42 failures / 1 error /
+96 skips**; guards were **805 / 1 failure / 0 errors / 0 skips**. There were no
+omitted failure or skip records. Preparation/execution took 2h14m37s, reported
+queue waiting approximately 1h07m43s, and wall time 3h22m34s. No timeout occurred.
+The run used the original ROMs, Java 25, Lua 5.4, explicit surfaceless EGL and
+no inherited desktop or JVM-option environment. The invocation was:
+
+```bash
+WORKSPACE_ROOT="$HOME/code/projects/OpenGGF"
+env -u DISPLAY -u WAYLAND_DISPLAY -u JDK_JAVA_OPTIONS \
+  -u JAVA_TOOL_OPTIONS -u _JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  PATH=/usr/lib/jvm/java-25-openjdk/bin:"$PATH" \
+  LUA_BIN=/usr/bin/lua5.4 ALSOFT_DRIVERS=null \
+  python3 tools/testing/run_categories.py \
+  --base 61be1910ac29d5606410be315ec881a5745a75d3 \
+  --rom-directory "$WORKSPACE_ROOT" --headless-gl surfaceless-egl \
+  --max-minutes 180 --run
+```
+
+The introduced guard failure identifies the direct `child.setSlotIndex(-1)`
+in Sideways rejection cleanup. The correction routes that identical operation
+through existing `ObjectLifetimeOps.clearPreviousManagerSlot(child)`. It adds
+no lifecycle API, changes no allocator or guard allowance, and preserves the
+exact-owner and replacement checks. Runtime SHA-256 after correction is
+`5a25fb112a34d1bfeb3690c39629531f2141f78edc732684c7eba725abc8d894`.
+Using the same environment above, the focused command was:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  -Dsonic1.rom.path="$WORKSPACE_ROOT/s1.gen" \
+  -Dsonic2.rom.path="$WORKSPACE_ROOT/s2.gen" \
+  -Ds3k.rom.path="$WORKSPACE_ROOT/s3k.gen" \
+  '-Dtest=TestS2SidewaysPformAdmissionQualification,TestObjectPhysicsStandardizationGuard#productionObjectPhysicsStandardizationHasNoUnapprovedViolations' \
+  test -B
+```
+
+Physical XML confirms **35 Sideways cases plus the exact failed guard, all
+passing with zero skips**, Java `25.0.5.0.2`, explicit EGL and the original S2
+ROM path. Queue wait was 7s; Maven took 1m33s. This closes that guard failure;
+it does not turn the preceding broad run green.
+
+The other ordinary outcomes remain pending matched attribution at this
+checkpoint: 41 route assertions, the S2 drowned-sidekick CPU assertion and
+the CPZ hurt-capture setup error. The route comparison includes all 41 failed
+identities; its one parameterized selector adds four sibling cases, making
+45 physical invocations per arm. Both attribution tasks compare the exact
+updated base `dd39e01cb` with frozen `8b434c760` in isolated worktrees. The
+96 smoke skips include one EGL-availability case and 15 raw-GLFW setup cases;
+they establish no graphics coverage for those cases. Diagnostics were inspected
+and consumed. No complete-release, whole-campaign or green-delivery claim is
+made while attribution and integration remain open.
