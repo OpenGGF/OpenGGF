@@ -113296,3 +113296,84 @@ smoke failures remain separately recorded. Next finite native owner: Monitor19.
   public API, physics, common renderer, build or selection implementation changed.
   Prior728 fresh guards belong to source13. Final static route review found no
   open P1/P2; private local save follows with no additional execution claim.
+
+
+- 2026-10-26, private4a78c8b6e plus frozen Tamabboh Runtime235934/a9deb and
+  testR3: unchanged genuine observer57473 completed3258 ordinary controller
+  calls; first implementation error at3259 is unowned09/live46 before Init
+  (native ObjectIndex:16 ObjSpinningDisc), not picture440.1/0/1/0at05:44:09Z,
+  32.200s/queue0, exactfreshXML/J25/media checked. Command: env -u DISPLAY
+  -u WAYLAND_DISPLAY LUA_BIN=lua5.4 python3 "$OPENGGF_ROOT/tools/testing/maven_queue.py"
+  --lean -Dmse=off -Dsoniccd.media.root="$SCD_MEDIA_ROOT"
+  '-Dtest=TestSonicCdOpeningWorldLoad#actualControllerThreeJumpsObservesQueuedArtAndTheNextNativeFrontier' test.
+  Temporary259346/157f1a observer restored to permanent255736/317e3c85 after
+  terminal. Failed3259 retains actual VInt Tam18 tiles/41 remaining, Body,
+  placement and earlier dynamics; Runtime/Frame close, no failed resume.
+  Waterfall29, Disc12 and Shadow16 now complete naturally; Tam59 is partial.
+  No full-act/native image/timing/audio parity; permanent route promotion open.
+
+- Permanent Tamabboh route RootR4 narrow4970 passes1/0/0/0at06:42:58Z,
+  34.548s/queue0; previous full53/1 and R3narrow1/1 retain exact test-oracle
+  attribution. The repaired proof compares native earlier Ring child stores
+  rather than assuming all later slots unchanged, then closes3259 once after
+  every valid replay. Source286694/cd1649d48fa685feceb60f8acd796e485ed6200e06ab419f2849b0ae3802834a,
+  private4a78 plus frozenRuntime235934/a9deb and C30component. Command: env
+  -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 python3 "$OPENGGF_ROOT/tools/testing/maven_queue.py"
+  --lean -Dmse=off -Dsoniccd.media.root="$SCD_MEDIA_ROOT"
+  '-Dtest=TestSonicCdOpeningWorldLoad#controllerThreeJumpRouteRunsTamabbohServicesQueuedArtAndStopsAtSpinningDiscSlot46' test.
+  Exact XML/J25/cwd/media/no skips checked; final review/combined checks pending,
+  no fresh full53-suite/native parity/failed-call resume claim.
+
+
+- 2026-10-26, private4a78c8b6e plus live Tamabboh/C30 join: combined exact
+  TestCdOpeningObjectRuntime,TestCdTamabbohPicture,TestSonicCdOpeningWorldLoad
+  run38429 via queued Maven --lean -Dmse=off and actual CD media completed
+  458/0/1/0 at06:58:56Z (1m44s,queue0). One inherited invalid-Platform
+  fixture constructed overflowing compat19 before its factory assertion;
+  RootR2 uses explicit20 arguments with disjoint singleton758 in that loop.
+  Exact method collapseEveryOldLogicalSpanAndBothIntegerBoundsRejectAtBothIngressesWithoutFrameWrites
+  run30993 passed1/0/0/0 at07:08:30Z (32.802s,queue421s), production unchanged.
+  Runtime now uses C30/twenty bases; client reservation659. No new current
+  owner, art producer, Region, preload or gameplay change. Natural frontier
+  remains completed3258/failed3259 ID09 slot46 before Init. No fresh458,
+  Tamabboh GPU659, completed3259, full-game or regional parity claim.
+
+
+- 2026-10-26, same private live-Tamabboh/C30 source: adjacent exact6-class
+  queued CPU run83314 passes629/0/0/0 at07:15:01Z (45.575s,queue7s), and fresh
+  -Pguards run51732 passes728/0/0/0 at07:22:01Z (5m12s,queue0), ninety XML
+  classes verified. Neither is a full-smoke/release/full-game certification.
+  Read-only permanent-route probe74288 passes1/0/0/0 at07:23:37Z
+  (32.802s,queue0):3257 native camera4350/210,centre96,previousChunk4224,
+  cursors213/186,savedIDs106/93; fixed actorX4350 implies camera target4254,
+  both in the retained chunk. Terrain/GPU fixture remains unproved. Original
+  permanent RootR4 source restored exactly; no input/gameplay/PLC changes and
+  no completed3259 claim. Commands and complete bounded limits are in the
+  existing dated implementation plan.
+
+- 2026-10-26, same private4a78c8b6e live-Tamabboh/C30 tree: existing Ring
+  EGL/full-course case94046 passes1/0/0/0 at07:35:28Z. External long native
+  Tamabboh World candidate96648 fails before ingress at its fixed-foot floor
+  prerequisite, repeated by read-only39773: actorX4350/probe357 gives both
+  distances26 with no angle write, native blank31-(357&15), not ground.
+  Candidate stays unpromoted; no pose/terrain/physics/spawner adjustment and
+  no native Tamabboh World/Fire/current59-view claim.
+- Independent short current440/659 resource check18997 with old658 client
+  fails1/1/0/0 at08:09:19Z (1m22s,queue295s), only on post-close offset658 /
+  residualID131730 after actual pixels, current source/version, live-World
+  nonwrites and installation checks. SAME test/Runtime/C30 with final659
+  client47662 passes1/0/0/0 at08:32:48Z (1m22s,queue870s). Genuine current440
+  is rendered in four flips from a separately serviced existing SectionArt
+  component, all659 installed IDs retire and unrelated entries survive.
+  Command is queued Maven -Dmse=off with surfaceless-egl, EGL opt-in, actual
+  CD media and absolute authenticated S2 donor, selector
+  TestSonicCdOpeningWorldEgl#actualEglCurrentTamabbohSingletonRendersAndRetiresThe659thClientPattern.
+  Fresh XML/J25/privatecwd/flags/zero skips verified. This independent resource
+  check is not the failed native scene or natural Tam59 completion.
+- Final two source-guard classes73500 pass5/0/0/0 at08:43:22Z
+  (28.905s,queue381s), fresh XML/J25/privatecwd checked; command
+  maven_queue.py -Dmse=off -Pguards
+  '-Dtest=TestJunit5MigrationGuard,TestNoAssertionFreeDiagnostics' test -B.
+  All production is unchanged from the earlier728 guard pass. Current natural
+  frontier remains3258 returned /3259 ID09/live46 before Init. No full-smoke,
+  full-USA or regional/native-parity certification; full goal continues.

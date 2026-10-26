@@ -1186,5 +1186,181 @@ public final class CdObjectPresentation {
             return previous.resolve(nativeId);
         };
     }
+
+    /**
+     * C30 retains C29's nineteen spans / 658 potential patterns and appends ONLY native $440
+     * (VRAM $8800) as one logical ID. Tamabboh's other58 patterns remain current Plant/Ramp
+     * aliases; there is no new producer bank or preload. SetObjectTileID selector4 stores $2428
+     * (scddisasm 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff,
+     * src/Level/Palmtree Panic/Object Tile IDs (Act 1 Present).asm:12,32).
+     * Shared normal/damaged frame2 piece0 is size $08 / raw $0016: its third column reaches
+     * $440, not a raw $0440 mapping word (Tamabboh/Data/Mappings.asm, unk_20B99A:48-58).
+     *
+     * <p>C29 runs FIRST, preserving validation order, eager579 and selected-current Anton22 /
+     * Platform57 policies. Only actual table/view/visual metadata and all nineteen explicit
+     * old native/logical extents are inspected here. No old resolver lookup discovers a lazy
+     * base. An empty or unrelated SAT never reads $440. A selected $440 strictly reads the
+     * supplied immutable physical State; UNKNOWN remains UNKNOWN_PATTERN at $8800, with no
+     * source-art fallback. Subsequent writes affect future sources, not this captured value.
+     * This factory executes no art service, queue, clock, lifecycle, capture or graphics work.</p>
+     */
+    public static PatternSource usaR11aCurrentCameraDevPreloadedArt(CdPlayerArtRuntime.State nowServicedPlayer,
+                                                                   CdPowerupArtRuntime.State nowServicedPowerup,
+                                                                   CdR11aObjectAssets objects,
+                                                                   CdR11aObjectAssets.FrontierArtBank frontier,
+                                                                   CdR11aObjectAssets.ContactArtBank contact,
+                                                                   CdR11aObjectAssets.FloatBlockArtBank floatBlock,
+                                                                   CdR11aObjectAssets.SpringArtBank spring,
+                                                                   CdR11aObjectAssets.TunnelDoorArtBank tunnelDoor,
+                                                                   CdR11aObjectAssets.MonitorTimeArtBank monitorTime,
+                                                                   CdR11aCameraArtResidency.State cameraResidency,
+                                                                   int playerLogicalBase, int ringLogicalBase,
+                                                                   int mosquiLogicalBase, int plantLogicalBase,
+                                                                   int rampLogicalBase, int explosionLogicalBase,
+                                                                   int pointsLogicalBase, int flowerLogicalBase,
+                                                                   int powerupLogicalBase, int floatBlockLogicalBase,
+                                                                   int springLogicalBase, int tunnelDoorVerticalLogicalBase,
+                                                                   int monitorTimeLogicalBase, int boulderLogicalBase,
+                                                                   int diagonalSpringLogicalBase, int spikesLogicalBase,
+                                                                   int checkpointLogicalBase, final int antonLogicalBase,
+                                                                   final int collapsePlatformLogicalBase,
+                                                                   final int tamabbohLogicalBase) {
+        var previous = usaR11aCurrentCameraDevPreloadedArt(nowServicedPlayer, nowServicedPowerup, objects,
+                frontier, contact, floatBlock, spring, tunnelDoor, monitorTime, cameraResidency,
+                playerLogicalBase, ringLogicalBase, mosquiLogicalBase, plantLogicalBase, rampLogicalBase,
+                explosionLogicalBase, pointsLogicalBase, flowerLogicalBase, powerupLogicalBase,
+                floatBlockLogicalBase, springLogicalBase, tunnelDoorVerticalLogicalBase,
+                monitorTimeLogicalBase, boulderLogicalBase, diagonalSpringLogicalBase, spikesLogicalBase,
+                checkpointLogicalBase, antonLogicalBase, collapsePlatformLogicalBase);
+        final int tileWord = objects.tileWord(4, 0), tamabbohFirst = tileWord & 0x7FF, tamabbohCount = 59;
+        final int first = 0x440;
+        var region = CdR11aCameraArtResidency.Region.AT_8480;
+        if (tileWord != 0x2428 || tamabbohFirst != 0x428 || tamabbohFirst > 2048 - tamabbohCount
+                || first != tamabbohFirst + 24 || first * 32 != 0x8800
+                || region.destinationWord() != 0x8480 || region.byteLength() != 0xB80
+                || tamabbohFirst * 32 < region.destinationWord()
+                || (long) (tamabbohFirst + tamabbohCount) * 32
+                        > (long) region.destinationWord() + region.byteLength()) {
+            throw new IllegalArgumentException("Tamabboh exceeds its existing physical owner");
+        }
+        long logicalEnd = (long) tamabbohLogicalBase + 1;
+        if (tamabbohLogicalBase < 0 || logicalEnd > (long) Integer.MAX_VALUE + 1) {
+            throw new IllegalArgumentException("Tamabboh singleton logical pattern extent must be nonnegative and bounded");
+        }
+        var tileIdsTable = CdR11aObjectAssets.Table.OBJECT_TILE_IDS;
+        var tileIdsView = objects.view(tileIdsTable);
+        if (tileIdsView.table() != tileIdsTable || !tileIdsView.range().equals(tileIdsTable.range())
+                || tileIdsView.bytes().length() != 74) {
+            throw new IllegalArgumentException("Tamabboh disagrees with its authenticated tile-word source");
+        }
+        var visuals = List.of(objects.tamabbohNormal(), objects.tamabbohDamaged(), objects.tamabbohMissile());
+        var mappingTables = List.of(CdR11aObjectAssets.Table.TAMABBOH_MAPPINGS,
+                CdR11aObjectAssets.Table.TAMABBOH_MAPPINGS, CdR11aObjectAssets.Table.TAMABBOH_MISSILE_MAPPINGS);
+        var animationTables = List.of(CdR11aObjectAssets.Table.TAMABBOH_NORMAL_ANIMATIONS,
+                CdR11aObjectAssets.Table.TAMABBOH_DAMAGED_ANIMATIONS,
+                CdR11aObjectAssets.Table.TAMABBOH_MISSILE_ANIMATIONS);
+        int[] mappingLengths = {62, 62, 42}, tableOffsets = {0, 22, 0}, frameCounts = {3, 3, 4};
+        int[] scriptLengths = {12, 26, 8}, scriptCounts = {2, 2, 1};
+        int[][] relativeOffsets = {{6, 34, 50}, {6, 12, 28}, {8, 14, 20, 31}};
+        var referenced = new HashSet<Integer>();
+        int sharedCellViews = 0;
+        for (int index = 0; index < visuals.size(); index++) {
+            var visual = visuals.get(index);
+            var mappingTable = mappingTables.get(index);
+            var animationTable = animationTables.get(index);
+            var mappingView = objects.view(mappingTable);
+            var animationView = objects.view(animationTable);
+            if (mappingView.table() != mappingTable || !mappingView.range().equals(mappingTable.range())
+                    || animationView.table() != animationTable || !animationView.range().equals(animationTable.range())
+                    || mappingView.bytes().length() != mappingLengths[index]
+                    || visual.mappings().length() != mappingLengths[index]
+                    || visual.mappingTableOffset() != tableOffsets[index]
+                    || visual.mappingFrames().size() != frameCounts[index]
+                    || animationView.bytes().length() != scriptLengths[index]
+                    || visual.animationTable().length() != scriptLengths[index]
+                    || visual.animations().size() != scriptCounts[index]
+                    || !java.util.Arrays.equals(mappingView.bytes().copy(), visual.mappings().copy())
+                    || !java.util.Arrays.equals(animationView.bytes().copy(), visual.animationTable().copy())) {
+                throw new IllegalArgumentException("Tamabboh disagrees with its authenticated full mapping/script sources");
+            }
+            for (int frameIndex = 0; frameIndex < frameCounts[index]; frameIndex++) {
+                var frame = visual.mappingFrames().get(frameIndex);
+                int bodyOffset = tableOffsets[index] + frame.relativeOffset();
+                if (frame.relativeOffset() != relativeOffsets[index][frameIndex]
+                        || mappingView.bytes().unsignedWord(tableOffsets[index] + frameIndex * 2) != frame.relativeOffset()
+                        || !java.util.Arrays.equals(frame.bytes().copy(),
+                                mappingView.bytes().slice(bodyOffset, 1 + frame.pieces().size() * 5).copy())) {
+                    throw new IllegalArgumentException("Tamabboh counted mapping body disagrees with its full raw include");
+                }
+                for (int pieceIndex = 0; pieceIndex < frame.pieces().size(); pieceIndex++) {
+                    var piece = frame.pieces().get(pieceIndex);
+                    for (int tile = 0; tile < piece.tileCount(); tile++) {
+                        int offset = piece.tileOffset() + tile;
+                        if (offset < 0 || offset >= tamabbohCount) {
+                            throw new IllegalArgumentException("Tamabboh mapping exceeds its fifty-nine current patterns");
+                        }
+                        referenced.add(offset);
+                        if (offset == 24) {
+                            if (index >= 2 || frameIndex != 2 || pieceIndex != 0 || tile != 2
+                                    || piece.sizeByte() != 0x08 || piece.rawTileWord() != 0x0016
+                                    || piece.widthTiles() != 3 || piece.heightTiles() != 1
+                                    || piece.x() != -9 || piece.y() != -16) {
+                                throw new IllegalArgumentException("Tamabboh $440 must be column2 of the shared frame2 3x1 piece");
+                            }
+                            sharedCellViews++;
+                        }
+                    }
+                }
+            }
+        }
+        if (referenced.size() != tamabbohCount || sharedCellViews != 2) {
+            throw new IllegalArgumentException("Tamabboh requires its fifty-nine-pattern union and two shared $440 views");
+        }
+        // Every old base is an explicit C29 parameter; no lazy Anton/Platform read discovers IDs.
+        // Binding extents and both current player/powerup widths are the same actual inputs as C29.
+        var oldRanges = new ArrayList<int[]>();
+        oldRanges.add(new int[]{CdPlayerArtRuntime.VRAM_BYTE_ADDRESS / 32,
+                nowServicedPlayer.residentBank().length() / 32, playerLogicalBase});
+        var bindings = List.of(objects.initialArtBank().binding(CdR11aAsset.ART_RINGS),
+                objects.initialArtBank().binding(CdR11aAsset.ART_MOSQUI),
+                frontier.binding(CdR11aAsset.ART_3D_PLANT), frontier.binding(CdR11aAsset.ART_3D_RAMP_BOOST),
+                contact.binding(CdR11aAsset.ART_EXPLOSIONS), contact.binding(CdR11aAsset.ART_POINTS),
+                contact.binding(CdR11aAsset.ART_FLOWER), floatBlock.binding(CdR11aAsset.ART_FLOAT_BLOCK),
+                spring.binding(CdR11aAsset.ART_SPRINGS), tunnelDoor.binding(CdR11aAsset.ART_TUNNEL_DOOR),
+                monitorTime.binding(CdR11aAsset.ART_MONITOR_TIME_POSTS));
+        int[] logicalBases = {ringLogicalBase, mosquiLogicalBase, plantLogicalBase, rampLogicalBase,
+                explosionLogicalBase, pointsLogicalBase, flowerLogicalBase, floatBlockLogicalBase,
+                springLogicalBase, tunnelDoorVerticalLogicalBase, monitorTimeLogicalBase};
+        for (int index = 0; index < bindings.size(); index++) {
+            if (index == 7) {
+                oldRanges.add(new int[]{CdPowerupArtRuntime.VRAM_BYTE_ADDRESS / 32,
+                        nowServicedPowerup.residentBank().length() / 32, powerupLogicalBase});
+            }
+            var binding = bindings.get(index);
+            oldRanges.add(new int[]{binding.firstTileId(), binding.tileCount(), logicalBases[index]});
+        }
+        oldRanges.add(new int[]{objects.tileWord(0x0B, 0), 19, boulderLogicalBase});
+        oldRanges.add(new int[]{objects.tileWord(0x0F, 0), 46, diagonalSpringLogicalBase});
+        oldRanges.add(new int[]{objects.tileWord(0x0A, 0), 8, spikesLogicalBase});
+        oldRanges.add(new int[]{0x6CB, 12, checkpointLogicalBase});
+        oldRanges.add(new int[]{objects.tileWord(2, 0) & 0x7FF, 22, antonLogicalBase});
+        oldRanges.add(new int[]{0x4BE, 57, collapsePlatformLogicalBase});
+        long nativeEnd = (long) first + 1;
+        for (int[] range : oldRanges) {
+            if ((first < (long) range[0] + range[1] && range[0] < nativeEnd)
+                    || (tamabbohLogicalBase < (long) range[2] + range[1] && range[2] < logicalEnd)) {
+                throw new IllegalArgumentException("Overlapping Tamabboh native or logical picture binding");
+            }
+        }
+        CdR11aCameraArtResidency.State snapshot = cameraResidency;
+        return nativeId -> {
+            // Equality admits only $440; every other ID, including invalid-width bits, delegates unchanged.
+            if (nativeId == first) {
+                return new TilePattern(tamabbohLogicalBase,
+                        patternVersion(CdR11aCameraArtResidency.readTile(snapshot, 0x440)));
+            }
+            return previous.resolve(nativeId);
+        };
+    }
 }
 // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>

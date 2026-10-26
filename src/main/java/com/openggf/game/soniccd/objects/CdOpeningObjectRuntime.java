@@ -78,7 +78,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
 
     /**
      * Stable bases in ONE root-governed atlas range exclusive to this picture.
-     * Root reserves/binds its nineteen disjoint subdivisions; this value neither
+     * Root reserves/binds its twenty disjoint subdivisions; this value neither
      * claims graphics ownership nor recommends the arbitrary IDs used by tests.
      * The three-argument form derives the sequential frontier spans the production
      * module uses: plant = mosqui + 70 and ramp = plant + 28.
@@ -95,10 +95,19 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
      * for 579 existing patterns. Anton appends 22 lazily selected current patterns (601 potential total).
      * Platform appends 57 current patterns after Anton (658 potential total); cold DEV seeds only that
      * Std-only window explicitly, without executing Std/title. Camera PLCs never initialize Platform.
-     * The canonical form takes all nineteen bases explicitly; no Anton preload is implied.
+     * Tamabboh appends only selected current native $440 (659 potential total); its other 58 tiles retain Plant/Ramp aliases.
+     * The canonical form takes all twenty bases explicitly; no Anton or Tamabboh preload is implied.
      */
     public record LogicalBanks(int player, int ring, int mosqui, int plant, int ramp,
-                               int explosion, int points, int flower, int powerup, int floatBlock, int spring, int tunnelDoorVertical, int monitorTime, int boulder, int diagonalSpring, int spikes, int checkpoint, int anton, int collapsePlatform) {
+                               int explosion, int points, int flower, int powerup, int floatBlock, int spring, int tunnelDoorVertical, int monitorTime, int boulder, int diagonalSpring, int spikes, int checkpoint, int anton, int collapsePlatform, int tamabboh) {
+        /** Compatibility19 preserves every old base; the singleton follows Platform without integer wrap. */
+        public LogicalBanks(int player, int ring, int mosqui, int plant, int ramp, int explosion, int points,
+                            int flower, int powerup, int floatBlock, int spring, int tunnelDoorVertical, int monitorTime,
+                            int boulder, int diagonalSpring, int spikes, int checkpoint, int anton, int collapsePlatform) {
+            this(player, ring, mosqui, plant, ramp, explosion, points, flower, powerup, floatBlock, spring,
+                    tunnelDoorVertical, monitorTime, boulder, diagonalSpring, spikes, checkpoint, anton, collapsePlatform,
+                    Math.addExact(collapsePlatform, 57));
+        }
         /** Compatibility18 preserves every old base; Platform follows Anton's twenty-two lazy patterns. */
         public LogicalBanks(int player, int ring, int mosqui, int plant, int ramp, int explosion, int points,
                             int flower, int powerup, int floatBlock, int spring, int tunnelDoorVertical, int monitorTime,
@@ -286,7 +295,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     }
 
     /** Ordered requests only, no playback and no claim to the omitted service/music ledger. */
-    public sealed interface SoundRequest permits PlayerSound, RingFm, RingSubCpu, MosquiFm, LostRingFm, GameOverSubCpu, SpringFm, TunnelDoorVerticalFm, TunnelDoorFm, MonitorFm, MonitorItemSubCpu, TimePostSubCpu, CheckpointFm, CollapsePlatformFm { }
+    public sealed interface SoundRequest permits PlayerSound, RingFm, RingSubCpu, MosquiFm, LostRingFm, GameOverSubCpu, SpringFm, TunnelDoorVerticalFm, TunnelDoorFm, MonitorFm, MonitorItemSubCpu, TimePostSubCpu, CheckpointFm, CollapsePlatformFm, TamabbohFm { }
     public record PlayerSound(CdPlayerFrameRuntime.Sound sound) implements SoundRequest {
         public PlayerSound { Objects.requireNonNull(sound, "player sound"); }
     }
@@ -298,6 +307,10 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     }
     public record LostRingFm(CdLostRing.Sound sound) implements SoundRequest {
         public LostRingFm { Objects.requireNonNull(sound, "LostRing FM sound"); }
+    }
+    /** Ordered DEV FM_A0 metadata only; not native driver queues or playback. */
+    public record TamabbohFm(CdTamabboh.FmSound sound) implements SoundRequest {
+        public TamabbohFm { Objects.requireNonNull(sound, "Tamabboh FM sound"); }
     }
     public record MosquiFm(CdMosqui.Sound sound) implements SoundRequest {
         public MosquiFm { Objects.requireNonNull(sound, "Mosqui FM sound"); }
@@ -422,6 +435,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     private final CdMosqui mosqui;
     private final CdPataBata pataBata;
     private final CdAnton anton;
+    private final CdTamabboh tamabboh;
     private final CdAnimal animal;
     private final Cd3dPlant plant;
     private final Cd3dRamp ramp;
@@ -507,6 +521,9 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     /** Native visit origin only; never saved gameplay state or a retained callback capability. */
     private record PlatformInvocation(CdPlatform body, int wholeIndex) { }
     private transient PlatformInvocation activePlatformInvocation;
+    /** Actual cached-body visit and stable Frame player only; never captured or a public capability. */
+    private record TamabbohInvocation(CdTamabboh body, int wholeIndex, CdPlayerBody.State player) { }
+    private transient TamabbohInvocation activeTamabbohInvocation;
     private int dispatchWholeIndex = -1;
 
     /**
@@ -722,11 +739,11 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         // Actual declared DEV ClearObjects-equivalent ingress for cold AND restart, never a restore default.
         var reserved = CdReservedObjectBank.clearedAfterLevelStart();
         var mappings = CdObjectMappings.fromOpeningAssets(assets, objects);
-        // Validate all nineteen spans: old579, lazy Anton22 and lazily selected current Platform57.
+        // Validate all twenty spans: old579, lazy Anton22, Platform57 and selected-only Tamabboh $440.
         // Empty SAT admission reads no canonical Anton pixels; cold $8120 remains intentionally UNKNOWN.
         CdObjectPresentation.usaR11aCurrentCameraDevPreloadedArt(frame.artState(), initialPowerup, objects, frontier, contact,
                 floatBlockArt, springArt, tunnelDoorArt, monitorTimeArt, initialSectionArt.residency(), banks.player(), banks.ring(), banks.mosqui(), banks.plant(), banks.ramp(),
-                banks.explosion(), banks.points(), banks.flower(), banks.powerup(), banks.floatBlock(), banks.spring(), banks.tunnelDoorVertical(), banks.monitorTime(), banks.boulder(), banks.diagonalSpring(), banks.spikes(), banks.checkpoint(), banks.anton(), banks.collapsePlatform());
+                banks.explosion(), banks.points(), banks.flower(), banks.powerup(), banks.floatBlock(), banks.spring(), banks.tunnelDoorVertical(), banks.monitorTime(), banks.boulder(), banks.diagonalSpring(), banks.spikes(), banks.checkpoint(), banks.anton(), banks.collapsePlatform(), banks.tamabboh());
         return new CdOpeningObjectRuntime(assets, frame, initialGlobals, initialContact, initialScore, initialLevel, checkpointBindings, initial,
                 banks, preScrollForeground, primaryAngleWrite, objects, frontier, contact, floatBlockArt, springArt, tunnelDoorArt, monitorTimeArt, placement, reserved, mappings, initialPowerup, sectionArt, initialSectionArt);
     }
@@ -783,6 +800,10 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                 (pool, slot) -> drawDynamic(pool, slot.wholeIndex()));
         anton = new CdAnton(placement, CdAnton.Assets.fromObjectAssets(objects),
                 new CdPlayerTerrain(assets.terrain()), this::commitAntonPrimaryAngle,
+                (pool, slot) -> drawDynamic(pool, slot.wholeIndex()));
+        tamabboh = new CdTamabboh(placement, CdTamabboh.Assets.fromObjectAssets(objects),
+                new CdPlayerTerrain(assets.terrain()), this::commitTamabbohPrimaryAngle,
+                this::readTamabbohPlayerWord, this::playTamabbohFm,
                 (pool, slot) -> drawDynamic(pool, slot.wholeIndex()));
         // Frontier bodies bind the same live placement/pool, the actual asset owner and the one shared
         // DrawObject adapter. The Animal's admitted path reads no assets and never draws.
@@ -949,7 +970,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                 var pixels = CdObjectPresentation.usaR11aCurrentCameraDevPreloadedArt(frame.artState(), powerupArtState,
                         objects, frontierArt, contactArt, floatBlockArt, springArt, tunnelDoorArt, monitorTimeArt, sectionArtState.residency(),
                         banks.player(), banks.ring(), banks.mosqui(), banks.plant(), banks.ramp(), banks.explosion(), banks.points(),
-                        banks.flower(), banks.powerup(), banks.floatBlock(), banks.spring(), banks.tunnelDoorVertical(), banks.monitorTime(), banks.boulder(), banks.diagonalSpring(), banks.spikes(), banks.checkpoint(), banks.anton(), banks.collapsePlatform());
+                        banks.flower(), banks.powerup(), banks.floatBlock(), banks.spring(), banks.tunnelDoorVertical(), banks.monitorTime(), banks.boulder(), banks.diagonalSpring(), banks.spikes(), banks.checkpoint(), banks.anton(), banks.collapsePlatform(), banks.tamabboh());
                 var nextDisplay = CdObjectPresentation.convert(queue.cpuSat(), pixels);
                 checkActive(Phase.SERVICING);
                 displayed = nextDisplay;
@@ -1275,6 +1296,21 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                     // is already applied by the same pool body; replay would run the same slot twice.
                     pataBata.run(whole, new CdPataBata.Globals(devGlobals.goodFuture(), gates.timeZone(),
                             gates.timeWarpDirection(), preScrollForeground.xWord()));
+                } else if (id == CdTamabboh.OBJECT_ID) {
+                    // ObjTamabboh (Tamabboh/Main.asm:7-18,213-224), pin 1ecc5f3a:
+                    // one live physical visit; the existing increasing walk alone visits later children.
+                    if (activeTamabbohInvocation != null) {
+                        throw new IllegalStateException("Tamabboh cannot nest its cached-body invocation");
+                    }
+                    var globals = new CdTamabboh.Globals(devGlobals.goodFuture(), gates.timeZone(),
+                            gates.timeWarpDirection(), environment.globals().debugMode(), preScrollForeground.xWord(),
+                            frame.environment().movement().globals().primaryAngle());
+                    activeTamabbohInvocation = new TamabbohInvocation(tamabboh, whole, frame.state());
+                    try {
+                        tamabboh.run(whole, globals); // Completed effects are observations, never replay commands.
+                    } finally {
+                        activeTamabbohInvocation = null; // Retire on completion, native boundary, exception or Error.
+                    }
                 } else if (id == CdAnton.OBJECT_ID) {
                     // Live physical ID$3F; use actual raw globals and Frame angle at this visit.
                     // Native Init/Place/Main, angle stores and guarded Draw already execute synchronously.
@@ -2128,6 +2164,123 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
             for (var fm : result.fmRequests()) appendSound(new PlayerSound(new CdPlayerFrameRuntime.ContactFmSound(fm)));
             checkActive(Phase.DYNAMIC_SLOTS);
         } finally { inSolidCommit = false; }
+    }
+
+    /** Only the actual cached run can establish origin; ordinary call records never do. */
+    private CdObjectState requireTamabbohCallback() {
+        checkActive(Phase.DYNAMIC_SLOTS);
+        var invocation = activeTamabbohInvocation;
+        if (invocation == null || invocation.body() != tamabboh || invocation.wholeIndex() != dispatchWholeIndex
+                || dispatchWholeIndex < CdObjectPool.FIRST_WHOLE_INDEX || dispatchWholeIndex >= CdObjectPool.END_WHOLE_INDEX
+                || frame.state() != invocation.player()
+                || inDrawCallback || inSolidCommit || inSpringLaunch || inSpinTunnelCommit || inTunnelDoorFm
+                || inHorizontalTunnelDoorSolid || inHorizontalTunnelDoorFm
+                || inMonitorAngle || inMonitorFm || inMonitorAward || inTimePostDirection || inTimePostSubCpu) {
+            throw new IllegalStateException("Tamabboh port requires its actual synchronous cached-body invocation and stable Frame player");
+        }
+        return placement.pool().state(dispatchWholeIndex);
+    }
+
+    /** Full same-owner96/source CAS, including every current byte and the invocation's actual Frame state. */
+    private void validateTamabbohCut(CdObjectPool.Snapshot cut, CdObjectState source) {
+        checkActive(Phase.DYNAMIC_SLOTS);
+        var invocation = activeTamabbohInvocation;
+        if (invocation == null || invocation.body() != tamabboh || invocation.wholeIndex() != dispatchWholeIndex
+                || dispatchWholeIndex < CdObjectPool.FIRST_WHOLE_INDEX || dispatchWholeIndex >= CdObjectPool.END_WHOLE_INDEX
+                || frame.state() != invocation.player()) {
+            throw new IllegalStateException("Tamabboh cut has no current cached-body/stable-Frame origin");
+        }
+        var pool = placement.pool();
+        validateDynamicCapture(cut);
+        pool.validateWrite(source);
+        var live = pool.state(dispatchWholeIndex);
+        if (source.identity().wholeIndex() != dispatchWholeIndex || !live.identity().equals(source.identity())
+                || live.id() != CdTamabboh.OBJECT_ID || !live.equals(source)
+                || !cut.slots().get(source.identity().dynamicIndex()).equals(source)
+                || !pool.capture().slots().equals(cut.slots())) {
+            throw new IllegalStateException("Tamabboh port differs from its actual current full96/source cut");
+        }
+    }
+
+    /**
+     * ObjTamabboh_Position/Main and ObjTamabbohMissile_Main (Tamabboh/Main.asm:62-72,94-109,256-280),
+     * ObjGetFloorDist (Collision Check.asm:157-179), pin 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff.
+     * Init already advanced to2; body floor sites are2/4, missile floor site is2. Preserve every reached
+     * store, including same-value pre-zero. Frame environment owns the sole byte; its player stays unchanged.
+     */
+    private void commitTamabbohPrimaryAngle(CdTamabboh.PrimaryAngleCall call) {
+        var live = requireTamabbohCallback();
+        inSolidCommit = true;
+        try {
+            Objects.requireNonNull(call, "reached Tamabboh primary-angle call");
+            validateTamabbohCut(call.callCut(), call.expectedSource());
+            if ((live.subtype() == 1 ? live.routine() != 2 : live.routine() != 2 && live.routine() != 4)
+                    || frame.environment().movement().globals().primaryAngle() != call.expectedPrimaryAngle()) {
+                throw new IllegalStateException("Tamabboh angle call is not its reached floor/expected Frame byte cut");
+            }
+            // Full preflight precedes exactly ONE publication. No legacy writer or completed-effect replay.
+            frame.applyObjectPrimaryAngle(call.value());
+            validateTamabbohCut(call.callCut(), call.expectedSource());
+        } finally {
+            inSolidCommit = false;
+        }
+    }
+
+    /**
+     * ObjTamabboh_Main/CheckInRange (Tamabboh/Main.asm:76-91,130-144), pin 1ecc5f3a.
+     * Authentic run owns Y-first and conditional-X sequence; do not replay its helper, pre-read positions,
+     * infer a callback stage or retain another player authority. Read only the actually requested WORD.
+     */
+    private int readTamabbohPlayerWord(CdTamabboh.PlayerReadCall call) {
+        var live = requireTamabbohCallback();
+        inSolidCommit = true;
+        try {
+            Objects.requireNonNull(call, "reached Tamabboh player-word read");
+            validateTamabbohCut(call.callCut(), call.expectedSource());
+            if (live.routine() != 4 || live.subtype() != 0 || live.word(TAMABBOH_COOLDOWN) != 0
+                    || frame.environment().globals().debugMode() != 0) {
+                throw new IllegalStateException("Tamabboh player read is not its reached Main range cut");
+            }
+            var player = frame.state().motion();
+            int value = switch (call.field()) {
+                case Y_WORD -> player.centreY16_16() >>> 16;
+                case X_WORD -> player.centreX16_16() >>> 16;
+            };
+            validateTamabbohCut(call.callCut(), call.expectedSource());
+            return value;
+        } finally {
+            inSolidCommit = false;
+        }
+    }
+
+    /**
+     * ObjTamabboh_Fire (Tamabboh/Main.asm:162-177), pin 1ecc5f3a: parent prefix precedes first Find,
+     * prior negative sprite sign admits FM_A0 BEFORE any first-child byte. A first-free candidate is still
+     * ID0, never allocated/reserved here. This existing DEV ledger policy does not execute PlayFMSound's
+     * three native queue bytes (Functions (General).asm:288-310) or playback.
+     */
+    private void playTamabbohFm(CdTamabboh.FmCall call) {
+        var live = requireTamabbohCallback();
+        inSolidCommit = true;
+        try {
+            Objects.requireNonNull(call, "reached Tamabboh FM call");
+            validateTamabbohCut(call.callCut(), call.expectedSource());
+            var pool = placement.pool();
+            if (live.routine() != 4 || live.subtype() != 0 || live.word(TAMABBOH_COOLDOWN) != 0x78
+                    || live.unsignedByte(ANIMATION) != 0 || live.signedByte(SPRITE_FLAGS) >= 0
+                    || call.sound() != CdTamabboh.FmSound.FM_A0
+                    || pool.findObjSlot().orElse(-1) != call.firstFreeWholeIndex()
+                    || pool.state(call.firstFreeWholeIndex()).id() != 0) {
+                throw new IllegalStateException("Tamabboh FM_A0 requires its actual Fire prefix and untouched first-free ID0 candidate");
+            }
+            var ledger = new ArrayList<SoundRequest>(sounds);
+            ledger.add(new TamabbohFm(call.sound()));
+            var nextSounds = List.copyOf(ledger); // Build complete immutable next value BEFORE the only assignment.
+            validateTamabbohCut(call.callCut(), call.expectedSource());
+            sounds = nextSounds;
+        } finally {
+            inSolidCommit = false;
+        }
     }
 
     /**

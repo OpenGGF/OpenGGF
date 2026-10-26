@@ -23,7 +23,9 @@ whole-act/region/viewport/donor/roster breadth remain open.
 | Source13 controller continuation to2347 |400 returned fresh calls after load1947, section0200/count0/head0; routine2/pushing at the bound | Controller limit, not a new unsupported feature or act completion; old observer's epoch summary label is stale after its fresh loop |
 | Three-jump route →moving ID21 contact →source3211 | Permanent input-only case passes: first real standing3206/live36 ID21/subtype15, partialBoulder3205; full/course3001→3002,3205→3210,3209→3210 compare checkpoint/live/knowledge before forwarding; next tail completesBoulder/POP then stops23AC08/7400 | RootR3 focused1/0/0/0 at03:50:46Z on source13 includes every replayed row, jump3002/FM, finalBoulder271 and terminal clocks/unreached tail; old52 preserved. Source-model Hole113/114 authenticated; source14..17 implementation pending. No completed3211/failed-call resume/native parity |
 | Actual Hole service →Pata prefix →Tamabboh3222 | Same controller recipe completes3221; Hole14 current by3216, Pata15 current at3221; attempted3222 commits3 more Pata tiles before unowned ID22/live40. Assets135 pass, Section53 plus narrow5 repair, Runtime/EGL/pictures429 pass | Complete WorldLoad53 pass at04:43:06Z includes nine valid full/course cuts and each intermediate row, knowledge and current bytes; final independent static review found no open P1/P2. Waterfall/Disc/Shadow remain unprepared naturally; no3222 completion or native timing/image parity |
-| Tamabboh body/missile and authenticated visual components | Normal/damaged shared62-byte roots and missile42, selector4/0, Init/Position/Main retries/Wait/Fire, dirty allocation, floor/animation prefixes;110 component cases and40 complete mapping cases pass | Assets145 passes plus one repaired inherited exclusion's narrow pass, separate static reviews. Live Runtime ports, controller3222, World/GPU/current440 remain unbound/unproved; not natural-route or whole-act coverage |
+| Tamabboh body/missile and authenticated visual components | Normal/damaged shared62-byte roots and missile42, selector4/0, Init/Position/Main retries/Wait/Fire, dirty allocation, floor/animation prefixes;110 component cases and40 complete mapping cases pass | Assets145 passes plus one repaired inherited exclusion's narrow pass, separate static reviews. Live Runtime and controller prefix are separately recorded below; World/GPU/current440 remain unproved; not natural-route or whole-act coverage |
+| Tamabboh natural Main and queued neighbors →Spinning Disc3259 | Same input recipe completes3258; actual Init/Main40, Waterfall29/Disc12/Shadow16 complete, Tam15 current then18 on failed3259. RootR4 valid full/course replay through3258 passes; complete53 passes in the affected consumer run | Native Fire/current440 selection and complete Tamabboh World scene remain unproved. No completed3259 or whole-act/native parity |
+| Current440 renderer and659 client retirement | Short independent EGL case completes actual PLC9 in a separate existing SectionArt component, renders genuine current440 in four flips, preserves the live World and retires659 entries plus unrelated-entry identities | Matched old658 client fails only on residual extra ID131730;659 passes. Component-current rendering/resource proof, not a native Tamabboh World/Fire or natural-queue completion claim |
 | Constructed collapsing platform →658 retirement | Eight initial-only scenes ×96 ordinary rows, four mapping roots/sparse40 rendered/current57, physical child ordering, Delay/Fall/delete, complete sound prefix, ordered GPU/PlaneB/omission controls and full/course forward state+pixels |41 ENGINE PNGs;17 unmapped patterns have current installation-only witnesses;658 installed is not658 scene-rendered. No natural collapse capture or native comparison |
 | Constructed Anton Init/Place/Main/animation →601 retirement | Actual Right649 first services current22; eight initial-only scenes, four frames/current22/SAT, real sloped terrain and ordered GPU/PlaneB/omission controls;112 full/course restores and4000 forward rows;113 ENGINE PNGs |601 is installed cleanup extent, not all rendered; terrain Y/raw-angle vector is integration evidence, not a separate native collision oracle; no producer fallback/cold Anton preload |
 | Constructed Checkpoint contact →orbit →animation →579 retirement | One initial pole/actor cut,44 ordinary neutral rows, final31 saved bytes/knowledge and AE,32 spin visits, real2/3 animation, current12/SAT/ordered GPU/PlaneB/omission checks, six full/course cut pairs | Twelve actual ENGINE PNGs; full saved18-store order is enforced by private component cursor, not inferred from equal World water bytes; no native image/timing parity |
@@ -205,3 +207,20 @@ reviewed files, 24 October 2026. It preserves the static entry and all outstandi
 route obligations. Exact commands, the initial charge-test failures and source
 attribution, unchanged rendered positives and incomplete broad-smoke state are
 recorded in the implementation plan. No additional visual capture is claimed.
+
+
+Live Tamabboh/C30 follow-up (26 October, private4a78c8b6e plus owned changes):
+Runtime has20 logical bases and both current conversions use C30; the client
+reserves659 potential patterns, adding only current440. Combined458 had one
+inherited fixture error, corrected by a source-only explicit20-base test
+migration and verified by focused1; the other457 cases passed. No fresh458
+pass is claimed. Adjacent629 and fresh728 structural guards pass separately;
+the final new-test source checks pass5. The four existing engine capture
+families shown in the26October digest remain constructed25October evidence.
+The independent current440/659 resource check passes with no skips, after a
+matched old658 cleanup failure. It services a separate pure SectionArt owner
+and leaves the actual World unchanged. The external native-scene candidate
+fails before ingress: its fixed actorX4350/probeY357 yields distance26 with
+no angle write at both feet, the native blank result rather than a floor.
+No terrain search or production adjustment was made. Native Tamabboh World
+motion/Fire/children, all10 views/59 scene tiles and its replay remain open.

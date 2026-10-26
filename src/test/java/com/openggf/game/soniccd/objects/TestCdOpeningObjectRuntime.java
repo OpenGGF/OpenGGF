@@ -4380,7 +4380,7 @@ class TestCdOpeningObjectRuntime {
         assertThrows(NullPointerException.class, () -> new CdOpeningObjectRuntime.TunnelDoorFm(null));
         assertEquals(CdTunnelDoor.FmSound.FM_A4,
                 new CdOpeningObjectRuntime.TunnelDoorFm(CdTunnelDoor.FmSound.FM_A4).sound());
-        assertEquals(19, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+        assertEquals(20, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
         var compact = new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138);
         assertEquals(494, compact.monitorTime() + 82 - compact.player());
         assertEquals(12, compact.monitorTime() - compact.tunnelDoorVertical());
@@ -4970,7 +4970,7 @@ class TestCdOpeningObjectRuntime {
                     () -> com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(state.residency(), 0x409));
             assertThrows(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.OwnershipBoundary.class,
                     () -> com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(state.residency(), 0x440));
-            assertEquals(19, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+            assertEquals(20, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
             var compact = new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138);
             assertEquals(494, compact.monitorTime() + 82 - compact.player());
             assertEquals(state, f.runtime.captureClosedCut().sectionArtState());
@@ -5523,7 +5523,7 @@ class TestCdOpeningObjectRuntime {
     @Test void boulderFourteenthBankPreservesEveryOldConstructorAndTheOneAggregate() {
         var expected = new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138, 208, 236, 299, 369, 374,
                 413, 449, 464, 500, 512, 594);
-        assertEquals(19, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+        assertEquals(20, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
         assertEquals(513, expected.boulder() + 19 - expected.player());
         assertEquals(expected, new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138));
         assertEquals(expected, new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138, 208, 236));
@@ -5998,7 +5998,7 @@ class TestCdOpeningObjectRuntime {
         var full = new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594,613);
         var old14 = new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594);
         assertEquals(full, old14); assertEquals(full, new CdOpeningObjectRuntime.LogicalBanks(100,124,138));
-        assertEquals(19, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+        assertEquals(20, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
         assertEquals("diagonalSpring", CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents()[14].getName());
         assertEquals(559, full.diagonalSpring() + 46 - full.player()); assertEquals(12475, BANKS.diagonalSpring());
         assertEquals(919, new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,900).diagonalSpring());
@@ -6579,7 +6579,7 @@ class TestCdOpeningObjectRuntime {
 
     @Test void spikesSixteenthBankPreservesEveryOlderConstructorAndOneCachedActualBody() {
         var full = new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594,613,659);
-        assertEquals(19, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+        assertEquals(20, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
         assertEquals("spikes", CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents()[15].getName());
         assertEquals(full, new CdOpeningObjectRuntime.LogicalBanks(100,124,138));
         assertEquals(full, new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236));
@@ -6592,7 +6592,7 @@ class TestCdOpeningObjectRuntime {
         assertEquals(full, new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594));
         assertEquals(full, new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594,613));
         assertEquals(567, full.spikes()+8-full.player()); assertEquals(BANKS.diagonalSpring()+46,BANKS.spikes());
-        assertEquals(List.of(3,5,8,9,10,11,12,13,14,15,16,17,18,19), java.util.Arrays.stream(CdOpeningObjectRuntime.LogicalBanks.class.getDeclaredConstructors())
+        assertEquals(List.of(3,5,8,9,10,11,12,13,14,15,16,17,18,19,20), java.util.Arrays.stream(CdOpeningObjectRuntime.LogicalBanks.class.getDeclaredConstructors())
                 .map(java.lang.reflect.Constructor::getParameterCount).sorted().toList());
         assertEquals(1, java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredFields()).filter(v->v.getType()==CdSpikes.class).count());
         assertFalse(java.util.Arrays.stream(CdOpeningObjectRuntime.Snapshot.class.getDeclaredFields()).anyMatch(v->
@@ -7107,10 +7107,10 @@ class TestCdOpeningObjectRuntime {
         var full = new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594,613,659,667);
         assertEquals(full, new CdOpeningObjectRuntime.LogicalBanks(100,124,138));
         assertEquals(full, new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594,613,659));
-        assertEquals(19, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+        assertEquals(20, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
         assertEquals("checkpoint", CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents()[16].getName());
         assertEquals(579, full.checkpoint()+12-full.player());
-        assertEquals(List.of(3,5,8,9,10,11,12,13,14,15,16,17,18,19),
+        assertEquals(List.of(3,5,8,9,10,11,12,13,14,15,16,17,18,19,20),
                 java.util.Arrays.stream(CdOpeningObjectRuntime.LogicalBanks.class.getDeclaredConstructors())
                         .map(java.lang.reflect.Constructor::getParameterCount).sorted().toList());
         assertEquals(1, java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredFields()).filter(v->v.getType()==CdCheckpoint.class).count());
@@ -7678,10 +7678,10 @@ class TestCdOpeningObjectRuntime {
         var old = new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594,613,659,667);
         var full = new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594,613,659,667,679);
         assertEquals(full, old); assertEquals(full, new CdOpeningObjectRuntime.LogicalBanks(100,124,138));
-        assertEquals(19, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+        assertEquals(20, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
         assertEquals("anton", CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents()[17].getName());
         assertEquals(579, old.checkpoint()+12-old.player()); assertEquals(601, full.anton()+22-full.player());
-        assertEquals(List.of(3,5,8,9,10,11,12,13,14,15,16,17,18,19),
+        assertEquals(List.of(3,5,8,9,10,11,12,13,14,15,16,17,18,19,20),
                 java.util.Arrays.stream(CdOpeningObjectRuntime.LogicalBanks.class.getDeclaredConstructors())
                         .map(java.lang.reflect.Constructor::getParameterCount).sorted().toList());
         assertEquals(1, java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredFields()).filter(v->v.getType()==CdAnton.class).count());
@@ -8087,7 +8087,7 @@ class TestCdOpeningObjectRuntime {
         assertEquals(full,old);assertEquals(full,new CdOpeningObjectRuntime.LogicalBanks(100,124,138));
         assertEquals(701,old.collapsePlatform());assertEquals(658,full.collapsePlatform()+57-full.player());
         assertEquals("collapsePlatform",CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents()[18].getName());
-        assertEquals(List.of(3,5,8,9,10,11,12,13,14,15,16,17,18,19),java.util.Arrays.stream(
+        assertEquals(List.of(3,5,8,9,10,11,12,13,14,15,16,17,18,19,20),java.util.Arrays.stream(
                 CdOpeningObjectRuntime.LogicalBanks.class.getDeclaredConstructors()).map(java.lang.reflect.Constructor::getParameterCount).sorted().toList());
         assertEquals(1,java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredFields()).filter(v->v.getType()==CdCollapsePlatform.class).count());
         var body=java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredFields()).filter(v->v.getType()==CdCollapsePlatform.class).findFirst().orElseThrow();
@@ -8124,7 +8124,7 @@ class TestCdOpeningObjectRuntime {
         invalid.add(-1);invalid.add(Integer.MAX_VALUE-55);
         try(var frame=CdPlayerFrameRuntime.externalTouchRequiredDevelopment(a,0)) {
             var actor=frame.captureActor();var shared=frame.captureShared();
-            for(int base:invalid){var banks=collapseBanks(base);
+            for(int base:invalid){var banks=new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594,613,659,667,679,base,758);
                 assertThrows(IllegalArgumentException.class,()->CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(
                         a,frame,INITIAL,CONTACT,SCORE,LEVEL,declaredCheckpointBindings(),new byte[640],banks,PRE,v->fail("no callback")));
                 assertThrows(IllegalArgumentException.class,()->CdOpeningObjectRuntime.usaR11aRestartDevEmptySatPreloadedArt(
@@ -8528,7 +8528,7 @@ class TestCdOpeningObjectRuntime {
     // BEGIN Platform21 Runtime R1. Appended tests FIRST; ALL JAVA UNRUN by this author.
     // Constructed actual-owner device cuts, never natural742, World, native-parity or GPU evidence.
     @Test void platform21CachedPrivateBodyAddsNoPublicLifecycleBankSoundOrSnapshotContract() throws Exception {
-        assertEquals(19,CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+        assertEquals(20,CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
         assertEquals(3,CdOpeningObjectRuntime.CheckpointBindings.class.getRecordComponents().length);
         assertEquals(List.of(11),java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods()).filter(m->m.getName().equals(
                 "usaR11aOpeningDevEmptySatPreloadedArt")).map(java.lang.reflect.Method::getParameterCount).toList());
@@ -9058,4 +9058,548 @@ class TestCdOpeningObjectRuntime {
                 new byte[6432],new byte[25600],chunks,fg,bg,ids,angles,heights,widths));
     }
     // END Platform21 Runtime R1.
+
+    // BEGIN Tamabboh Runtime R1. Tests-first SOURCE-ONLY packet; EVERY vector is UNRUN.
+    // N 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff: Tamabboh/Main.asm:7-282,
+    // Collision Check.asm:157-179, Object Spawner.asm:329-446, Object Functions.asm:11-33,137-196.
+    // Constructed ingress uses actual public pool/Frame APIs and the inherited real-media fixture.
+    // Read-only reflection inspects signatures/fields or invokes ports WITHOUT private origin;
+    // no new test manufactures Snapshot ownership, private invocation, phase or dispatch authority.
+    // Component-only callbacks below are explicitly distinguished from the cached Runtime body.
+    // Root owns compile/RED/positive/R2/import, mapper join and the unchanged C29/$440 boundary.
+    // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>
+
+    @Test void tamabbohRuntimeSurfaceKeepsNineteenBanksFactoriesAndOnlyPrivateTransientOrigin() throws Exception {
+        assertEquals(20,CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+        assertEquals(List.of(3,5,8,9,10,11,12,13,14,15,16,17,18,19,20),
+                java.util.Arrays.stream(CdOpeningObjectRuntime.LogicalBanks.class.getDeclaredConstructors())
+                        .map(java.lang.reflect.Constructor::getParameterCount).sorted().toList());
+        assertEquals(List.of(11),java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
+                .filter(m->m.getName().equals("usaR11aOpeningDevEmptySatPreloadedArt")).map(java.lang.reflect.Method::getParameterCount).toList());
+        assertEquals(List.of(14),java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
+                .filter(m->m.getName().equals("usaR11aRestartDevEmptySatPreloadedArt")).map(java.lang.reflect.Method::getParameterCount).toList());
+        assertEquals(3,CdOpeningObjectRuntime.CheckpointBindings.class.getRecordComponents().length);
+        var bodies=java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredFields()).filter(v->v.getType()==CdTamabboh.class).toList();
+        assertEquals(1,bodies.size());assertTrue(java.lang.reflect.Modifier.isPrivate(bodies.getFirst().getModifiers()));
+        assertTrue(java.lang.reflect.Modifier.isFinal(bodies.getFirst().getModifiers()));
+        var origin=CdOpeningObjectRuntime.class.getDeclaredField("activeTamabbohInvocation");
+        assertTrue(java.lang.reflect.Modifier.isPrivate(origin.getModifiers()));assertTrue(java.lang.reflect.Modifier.isTransient(origin.getModifiers()));
+        assertTrue(origin.getType().isRecord());assertTrue(java.lang.reflect.Modifier.isPrivate(origin.getType().getModifiers()));
+        assertEquals(List.of(CdTamabboh.class,int.class,CdPlayerBody.State.class),
+                java.util.Arrays.stream(origin.getType().getRecordComponents()).map(java.lang.reflect.RecordComponent::getType).toList());
+        assertFalse(java.util.Arrays.stream(CdOpeningObjectRuntime.Snapshot.class.getDeclaredFields()).anyMatch(v->
+                v.getType()==CdTamabboh.class||v.getType()==origin.getType()||v.getType()==CdTamabboh.Globals.class
+                        ||v.getType()==CdTamabboh.Result.class||v.getType()==CdTamabboh.PrimaryAngleCall.class
+                        ||v.getType()==CdTamabboh.PlayerReadCall.class||v.getType()==CdTamabboh.FmCall.class));
+        String[] names={"commitTamabbohPrimaryAngle","readTamabbohPlayerWord","playTamabbohFm"};
+        Class<?>[] args={CdTamabboh.PrimaryAngleCall.class,CdTamabboh.PlayerReadCall.class,CdTamabboh.FmCall.class};
+        for(int i=0;i<names.length;i++)assertTrue(java.lang.reflect.Modifier.isPrivate(
+                CdOpeningObjectRuntime.class.getDeclaredMethod(names[i],args[i]).getModifiers()));
+        assertEquals(int.class,CdOpeningObjectRuntime.class.getDeclaredMethod(names[1],args[1]).getReturnType());
+        assertTrue(java.util.Arrays.asList(CdOpeningObjectRuntime.SoundRequest.class.getPermittedSubclasses()).contains(CdOpeningObjectRuntime.TamabbohFm.class));
+        assertThrows(NullPointerException.class,()->new CdOpeningObjectRuntime.TamabbohFm(null));
+    }
+
+    @Test void tamabbohActualInitFallsIntoPositionWithEveryReachedAngleAndAllDirtyBytesRetained() throws Exception {
+        for(int subtype:List.of(0,2,0x80,0xFF))try(var f=new Fixture()) {
+            springDeviceCut(f);horizontalGates(f,0xFFFF,1);seedTunnelDoorGlobals(f,1,0x3456,0x55,0x66);
+            var p=f.runtime.placement().pool();var a=CdTamabboh.Assets.fromObjectAssets(f.assets.openingObjects());
+            var source=tamabbohPositionImage(f,0,subtype).moveByte(SPRITE_FLAGS,0x83).moveByte(MAP_FRAME,1)
+                    .moveByte(PREVIOUS_ANIMATION,9).moveByte(ANIMATION_FRAME,7).moveByte(ANIMATION_TIME,0xAA)
+                    .moveByte(ROUTINE_2,0x5A).moveByte(COLLISION_STATUS,2).moveWord(X_FRACTION,0x1234).moveWord(Y_FRACTION,0x5678)
+                    .moveWord(X_VELOCITY,0x2345).moveWord(Y_VELOCITY,0xFEDC);p.write(source);
+            var expected=source.moveByte(ROUTINE,2).moveByte(SPRITE_FLAGS,7).moveByte(PRIORITY,4)
+                    .moveByte(COLLISION_TYPE,0x2C).moveByte(X_RADIUS,16).moveByte(WIDTH,16).moveByte(Y_RADIUS,15)
+                    .moveWord(TAMABBOH_ANCHOR_X,source.centreX()).moveWord(TILE,0x2428)
+                    .moveLong(MAPPINGS,subtype==0?a.normalMappingsAddress():a.damagedMappingsAddress())
+                    .moveLong(CdObjectState.LongField.TAMABBOH_ANIMATION_SCRIPT,subtype==0?a.normalAnimationAddress():a.damagedAnimationAddress())
+                    .moveLong(CdObjectState.LongField.TAMABBOH_X_DELTA,subtype==0?-0xA000:-0x5000)
+                    .addLong(CdObjectState.LongField.Y_POSITION,0x10000);
+            var floor=tamabbohFloor(f,expected);assertTrue(floor.distance()<0);expected=expected.moveByte(ROUTINE,4);
+            var images=p.capture().slots();var player=f.frame.state();var clock=f.frame.vIntClock();var cached=checkpointGet(f.runtime,"tamabboh");
+            f.runtime.runDynamicSlotsAfterReservedSlots();assertEquals(expected,p.state(40));assertSame(player,f.frame.state());
+            assertEquals(clock,f.frame.vIntClock());assertEquals(floor.primaryAngle(),f.frame.environment().movement().globals().primaryAngle());
+            assertEquals(0x66,f.frame.environment().movement().globals().secondaryAngle());assertTrue(f.angleWrites.isEmpty());
+            platform21OtherImages(images,p,40);assertSame(cached,checkpointGet(f.runtime,"tamabboh"));
+            assertNull(checkpointGet(f.runtime,"activeTamabbohInvocation"));assertEquals(false,checkpointGet(f.runtime,"inSolidCommit"));
+        }
+    }
+
+    @Test void tamabbohActualPositionTwoDoesNotRunMainOrResetAnyAnimatorUntilAnotherDispatch() throws Exception {
+        try(var f=new Fixture()) {
+            springDeviceCut(f);var sounds=f.runtime.lastSoundRequests();var p=f.runtime.placement().pool();var source=tamabbohPositionImage(f,2,0xFF)
+                    .moveByte(SPRITE_FLAGS,0x84).moveLong(CdObjectState.LongField.TAMABBOH_X_DELTA,0x12345678)
+                    .moveByte(ANIMATION,1).moveByte(PREVIOUS_ANIMATION,0).moveByte(ANIMATION_FRAME,9).moveByte(ANIMATION_TIME,0x80);
+            p.write(source);var expected=source.addLong(CdObjectState.LongField.Y_POSITION,0x10000).moveByte(ROUTINE,4).moveByte(SPRITE_FLAGS,4);
+            var floor=tamabbohFloor(f,expected);var player=f.frame.state();f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(expected,p.state(40));assertEquals(floor.primaryAngle(),f.frame.environment().movement().globals().primaryAngle());
+            assertSame(player,f.frame.state());assertEquals(sounds,f.runtime.lastSoundRequests());
+        }
+    }
+
+    @Test void tamabbohActualSameValueFloorWritesStillReplaceOnlyFrameEnvironmentAndNeverLegacyAnglePort() throws Exception {
+        try(var f=new Fixture()) {
+            springDeviceCut(f);var p=f.runtime.placement().pool();var source=tamabbohGroundImage(f,4,2,false);
+            var writes=new ArrayList<Integer>();CdObjectCollisionCheck.objGetFloorDist(
+                    new com.openggf.game.soniccd.player.CdPlayerTerrain(f.assets.terrain()),source,writes::add);
+            assertFalse(writes.isEmpty());seedTunnelDoorGlobals(f,1,0x3456,writes.getLast(),0x66);p.write(source);
+            var env=f.frame.environment();var player=f.frame.state();f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertNotSame(env,f.frame.environment());assertSame(player,f.frame.state());assertTrue(f.angleWrites.isEmpty());
+            assertEquals(writes.getLast().intValue(),f.frame.environment().movement().globals().primaryAngle());
+            assertEquals(0x66,f.frame.environment().movement().globals().secondaryAngle());
+            assertEquals(env.controls(),f.frame.environment().controls());assertEquals(env.globals(),f.frame.environment().globals());
+        }
+    }
+
+    @Test void tamabbohActualMainReadsStableFrameForWrappedYThenConditionalXRange() throws Exception {
+        for(int[] delta:new int[][]{{-80,-80},{79,79},{0,80},{80,0}})try(var f=new Fixture()) {
+            springDeviceCut(f);seedTunnelDoorGlobals(f,0,0,0x55,0x66);var p=f.runtime.placement().pool();
+            var source=tamabbohGroundImage(f,4,0,false);tamabbohPlayer(f,source.centreX()+delta[0],source.centreY()+delta[1]);p.write(source);
+            var player=f.frame.state();boolean inside=delta[0]<80&&delta[1]<80;
+            var expected=inside?source.moveByte(ROUTINE,6):tamabbohAnimated(f,source.addWord(Y,tamabbohFloor(f,source).distance()),false);
+            f.runtime.runDynamicSlotsAfterReservedSlots();assertEquals(expected.moveByte(SPRITE_FLAGS,expected.spriteFlags()&0x7F),p.state(40));
+            assertSame(player,f.frame.state());assertEquals(inside?0x55:tamabbohFloor(f,source).primaryAngle(),f.frame.environment().movement().globals().primaryAngle());
+            assertNull(checkpointGet(f.runtime,"activeTamabbohInvocation"));assertTrue(f.angleWrites.isEmpty());
+        }
+    }
+
+    @Test void tamabbohActualCooldownReversalReentersRangeWithinOnePhysicalVisit() throws Exception {
+        try(var f=new Fixture()) {
+            springDeviceCut(f);seedTunnelDoorGlobals(f,0,0,0x55,0x66);var p=f.runtime.placement().pool();
+            var source=tamabbohImage(f,p.state(40),4,0).moveByte(SPRITE_FLAGS,0x84).moveWord(TAMABBOH_COOLDOWN,1)
+                    .moveLong(CdObjectState.LongField.TAMABBOH_X_DELTA,0x800000);
+            tamabbohPlayer(f,0x180,source.centreY());p.write(source);var player=f.frame.state();
+            var expected=source.addLong(CdObjectState.LongField.X_POSITION,0x800000).moveWord(TAMABBOH_COOLDOWN,0)
+                    .moveLong(CdObjectState.LongField.TAMABBOH_X_DELTA,-0x800000).moveByte(SPRITE_FLAGS,5).moveByte(FLAGS,source.flags()^1).moveByte(ROUTINE,6);
+            f.runtime.runDynamicSlotsAfterReservedSlots();assertEquals(expected,p.state(40));assertSame(player,f.frame.state());
+            assertEquals(0x55,f.frame.environment().movement().globals().primaryAngle());assertTrue(f.angleWrites.isEmpty());
+        }
+    }
+
+    @Test void tamabbohActualDebugWordHighByteAndDamagedSubtypeSkipRangeAndCooldownWithoutGatingDispatch() throws Exception {
+        for(int subtype:List.of(0,2))try(var f=new Fixture(new CdRingGlobals(0,3,0,0,0,1,0,0))) {
+            springDeviceCut(f);horizontalGates(f,subtype==0?0x100:0,0);var p=f.runtime.placement().pool();
+            var source=tamabbohGroundImage(f,4,subtype,false).moveWord(TAMABBOH_COOLDOWN,0xBEEF);
+            tamabbohPlayer(f,source.centreX(),source.centreY());p.write(source);var player=f.frame.state();
+            var expected=tamabbohAnimated(f,source.addWord(Y,tamabbohFloor(f,source).distance()),false);
+            f.runtime.runDynamicSlotsAfterReservedSlots();assertEquals(expected,p.state(40));assertSame(player,f.frame.state());
+            assertEquals(0xBEEF,p.state(40).word(TAMABBOH_COOLDOWN));assertEquals(4,p.state(40).routine());
+        }
+    }
+
+    @Test void tamabbohActualRawPeriodThreeAliasAndWarpDirectionUseExistingSavedBankWithoutNormalization() throws Exception {
+        for(int raw:List.of(3,0x83))try(var f=new Fixture()) {
+            springDeviceCut(f);monitorEnvironment(f,raw,0xFF,0,0);var placement=f.runtime.placement();var p=placement.pool();
+            seedSpinTunnelLoaded(placement,101,2);seedSpinTunnelLoaded(placement,102,0);
+            int before101=placement.savedFlag(101,2),before102=placement.savedFlag(102,0);
+            var source=tamabbohImage(f,p.state(40),8,0).moveByte(SAVED_FLAGS_ID,101).moveWord(TAMABBOH_ANCHOR_X,0x600)
+                    .moveByte(ANIMATION_TIME,7);p.write(source);f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(0,p.state(40).id());assertArrayEquals(new byte[64],p.state(40).copyBytes());
+            assertEquals(raw==3?before101:before101&0x7F,placement.savedFlag(101,2));
+            assertEquals(raw==3?before102&0x7F:before102,placement.savedFlag(102,0));
+            assertEquals(raw,f.frame.environment().movement().gates().timeZone());assertEquals(0xFF,f.frame.environment().movement().gates().timeWarpDirection());
+        }
+    }
+
+    @Test void tamabbohNonzeroGoodFutureIsAComponentInputAndNeverInventedAsRuntimeIngress() throws Exception {
+        for(int period:List.of(1,2))for(int subtype:List.of(0,2))try(var f=new Fixture()) {
+            springDeviceCut(f);assertEquals(0,f.runtime.devGlobals().goodFuture());var p=f.runtime.placement().pool();
+            var source=tamabbohImage(f,p.state(40),8,subtype).moveByte(ANIMATION_TIME,7).moveWord(X_FRACTION,0x1234).moveWord(Y_FRACTION,0x5678);p.write(source);
+            var draws=new ArrayList<CdObjectState>();var body=new CdTamabboh(f.runtime.placement(),CdTamabboh.Assets.fromObjectAssets(f.assets.openingObjects()),
+                    new com.openggf.game.soniccd.player.CdPlayerTerrain(f.assets.terrain()),c->fail("Wait has no floor"),c->{fail("Wait has no range");return 0;},
+                    c->fail("Wait has no FM"),(pool,id)->draws.add(pool.state(id.wholeIndex())));
+            var result=body.run(40,new CdTamabboh.Globals(1,period,0,0,PRE.xWord(),0));
+            if(period==1&&subtype==0){assertEquals(0x22,draws.getFirst().id());assertFalse(result.deleted());}
+            else {assertTrue(draws.isEmpty());assertEquals(0x18,p.state(40).id());assertEquals(source.centreX(),p.state(40).centreX());
+                assertEquals(source.centreY(),p.state(40).centreY());assertEquals(0,p.state(40).word(X_FRACTION));assertEquals(0,p.state(40).word(Y_FRACTION));}
+            assertEquals(0,f.runtime.devGlobals().goodFuture());assertNull(checkpointGet(f.runtime,"activeTamabbohInvocation"));
+        }
+    }
+
+    @Test void tamabbohComponentReachedPlayerReadOrderDoesNotPrefetchXWhenYFails() throws Exception {
+        for(boolean yInside:List.of(false,true))try(var f=new Fixture()) {
+            springDeviceCut(f);var p=f.runtime.placement().pool();var source=tamabbohGroundImage(f,4,0,false);p.write(source);
+            tamabbohPlayer(f,source.centreX(),source.centreY()+(yInside?0:80));var player=f.frame.state();var fields=new ArrayList<CdTamabboh.PlayerField>();
+            var body=new CdTamabboh(f.runtime.placement(),CdTamabboh.Assets.fromObjectAssets(f.assets.openingObjects()),
+                    new com.openggf.game.soniccd.player.CdPlayerTerrain(f.assets.terrain()),c->{},c->{
+                        assertSame(player,f.frame.state());fields.add(c.field());return c.field()==CdTamabboh.PlayerField.Y_WORD
+                                ?player.motion().centreY16_16()>>>16:player.motion().centreX16_16()>>>16;
+                    },c->fail("Main has no FM"),(pool,id)->{});
+            body.run(40,new CdTamabboh.Globals(0,1,0,0,PRE.xWord(),0));
+            assertEquals(yInside?List.of(CdTamabboh.PlayerField.Y_WORD,CdTamabboh.PlayerField.X_WORD):List.of(CdTamabboh.PlayerField.Y_WORD),fields);
+            assertSame(player,f.frame.state());assertNull(checkpointGet(f.runtime,"activeTamabbohInvocation"));
+        }
+    }
+
+    @Test void tamabbohActualWaitOneFallsIntoWaitTwoButDoesNotRedispatchFireOrAllocate() throws Exception {
+        try(var f=new Fixture()) {
+            springDeviceCut(f);var sounds=f.runtime.lastSoundRequests();var p=f.runtime.placement().pool();var source=tamabbohImage(f,p.state(40),6,0);p.write(source);
+            var images=p.capture().slots();var expected=tamabbohAnimated(f,source.moveByte(ROUTINE,8).moveByte(ANIMATION,1),false);
+            f.runtime.runDynamicSlotsAfterReservedSlots();assertEquals(expected,p.state(40));assertEquals(8,p.state(40).routine());
+            assertEquals(2,p.state(40).unsignedByte(MAP_FRAME));assertEquals(0x3B,p.state(40).unsignedByte(ANIMATION_TIME));
+            platform21OtherImages(images,p,40);assertEquals(sounds,f.runtime.lastSoundRequests());
+            // No next V-int/picture claim: selected shared frame2 still reaches the explicit C29/$440 boundary.
+        }
+    }
+
+    @Test void tamabbohActualWaitFcChangesRoutineForOnlyTheNextDispatchAndRestoreDoesNotExecuteIt() throws Exception {
+        try(var f=new Fixture()) {
+            springDeviceCut(f);var sounds=f.runtime.lastSoundRequests();f.makePlayerAbsent();var p=f.runtime.placement().pool();var source=tamabbohImage(f,p.state(40),8,0)
+                    .moveByte(ANIMATION,1).moveByte(PREVIOUS_ANIMATION,1).moveByte(ANIMATION_FRAME,1).moveByte(MAP_FRAME,0);p.write(source);
+            f.runtime.runDynamicSlotsAfterReservedSlots();assertEquals(10,p.state(40).routine());assertEquals(0,p.state(32).id());
+            assertEquals(sounds,f.runtime.lastSoundRequests());monitorFinish(f);var cut=f.runtime.captureClosedCut();var actor=f.frame.captureActor();var shared=f.frame.captureShared();
+            f.frame.validateActorRestore(actor);f.frame.validateSharedRestore(shared);f.runtime.validateRestore(cut);
+            f.frame.restoreActor(actor);f.frame.restoreShared(shared);f.runtime.restore(cut);
+            assertEquals(cut.placement().pool().slots(),p.capture().slots());assertEquals(10,p.state(40).routine());assertEquals(0,p.state(32).id());
+            assertEquals(sounds,f.runtime.lastSoundRequests());assertNull(checkpointGet(f.runtime,"activeTamabbohInvocation"));
+            monitorBegin(f,3);f.runtime.runDynamicSlotsAfterReservedSlots();assertEquals(0x22,p.state(32).id());assertEquals(0,p.state(32).routine());
+            assertEquals(1,f.runtime.lastSoundRequests().stream().filter(CdOpeningObjectRuntime.TamabbohFm.class::isInstance).count());
+        }
+    }
+
+    @Test void tamabbohActualFirePublishesOneTypedFmAndPreservesDirtyEarlierChildrenWithoutRedispatch() throws Exception {
+        try(var f=new Fixture()) {
+            springDeviceCut(f);var p=f.runtime.placement().pool();var source=tamabbohImage(f,p.state(40),10,0).moveByte(SPRITE_FLAGS,0x84)
+                    .moveByte(PRIORITY,0xFF).moveByte(ANIMATION,1).moveByte(PREVIOUS_ANIMATION,7);p.write(source);
+            var first=p.state(32).moveByte(ROUTINE,0x5A).moveByte(SPRITE_FLAGS,0xC3).moveByte(SAVED_FLAGS_ID,101).moveByte(COLLISION_STATUS,0xA5)
+                    .moveWord(X_FRACTION,0x1234).moveWord(Y_FRACTION,0xFEDC).moveLong(CdObjectState.LongField.TAMABBOH_MISSILE_Y_ACCEL,0x76543210);
+            var second=p.state(33).moveByte(ROUTINE,0x6C).moveByte(ANIMATION_TIME,0xAA).moveWord(X_FRACTION,0xBEEF).moveWord(Y_FRACTION,0xCAFE);
+            p.write(first);p.write(second);var before=p.capture().slots();var player=f.frame.state();var clock=f.frame.vIntClock();var sounds=f.runtime.lastSoundRequests();
+            f.runtime.runDynamicSlotsAfterReservedSlots();assertEquals(tamabbohChild(first,source,0),p.state(32));assertEquals(tamabbohChild(second,source,0xFF),p.state(33));
+            assertEquals(source.moveByte(ROUTINE,4).moveByte(ANIMATION,0).moveWord(TAMABBOH_COOLDOWN,0x78).moveByte(SPRITE_FLAGS,4),p.state(40));
+            var expectedSounds=new ArrayList<CdOpeningObjectRuntime.SoundRequest>(sounds);expectedSounds.add(new CdOpeningObjectRuntime.TamabbohFm(CdTamabboh.FmSound.FM_A0));
+            assertEquals(expectedSounds,f.runtime.lastSoundRequests());assertSame(player,f.frame.state());assertEquals(clock,f.frame.vIntClock());assertTrue(f.angleWrites.isEmpty());
+            for(int i=0;i<96;i++)if(i!=0&&i!=1&&i!=8)assertEquals(before.get(i),p.capture().slots().get(i));
+            assertNull(checkpointGet(f.runtime,"activeTamabbohInvocation"));
+        }
+    }
+
+    @Test void tamabbohActualPhysicalWalkInitializesLaterFireChildrenExactlyOnceWithoutMotion() throws Exception {
+        try(var f=new Fixture()) {
+            springDeviceCut(f);var expectedSounds=new ArrayList<CdOpeningObjectRuntime.SoundRequest>(f.runtime.lastSoundRequests());expectedSounds.add(new CdOpeningObjectRuntime.TamabbohFm(CdTamabboh.FmSound.FM_A0));var p=f.runtime.placement().pool();for(int whole=32;whole<40;whole++)p.write(tamabbohOccupant(p.state(whole)));
+            var source=tamabbohImage(f,p.state(40),10,0).moveByte(SPRITE_FLAGS,0x84);p.write(source);
+            var first=p.state(41).moveByte(SPRITE_FLAGS,0x81).moveByte(ANIMATION_TIME,0xAA).moveWord(X_FRACTION,0x1234).moveWord(Y_FRACTION,0x5678);
+            var second=p.state(42).moveByte(SPRITE_FLAGS,0x80).moveByte(ANIMATION_FRAME,9).moveWord(X_FRACTION,0xFEDC).moveWord(Y_FRACTION,0xBA98);
+            p.write(first);p.write(second);var player=f.frame.state();f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(tamabbohMissileInit(f,tamabbohChild(first,source,0)),p.state(41));
+            assertEquals(tamabbohMissileInit(f,tamabbohChild(second,source,0xFF)),p.state(42));
+            assertEquals(2,p.state(41).routine());assertEquals(0x1234,p.state(41).word(X_FRACTION));assertEquals(source.centreY()-10,p.state(41).centreY());
+            assertEquals(0xAA,p.state(41).unsignedByte(ANIMATION_TIME));assertSame(player,f.frame.state());
+            assertEquals(expectedSounds,f.runtime.lastSoundRequests());
+        }
+    }
+
+    @Test void tamabbohActualFireZeroOneTwoFreeAndPriorSpriteSignControlOnlyReachedFmAndChildren() throws Exception {
+        for(int free:List.of(0,1,2))for(int sprite:List.of(4,0x84))try(var f=new Fixture()) {
+            springDeviceCut(f);var p=f.runtime.placement().pool();for(int whole=32;whole<128;whole++)p.write(tamabbohOccupant(p.state(whole)));
+            for(int whole=32;whole<32+free;whole++)p.objNull(whole);
+            var source=tamabbohImage(f,p.state(40),10,0).moveByte(SPRITE_FLAGS,sprite);p.write(source);f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(free>0?0x22:0x24,p.state(32).id());assertEquals(free>1?0x22:0x24,p.state(33).id());
+            assertEquals(free>0&&sprite==0x84?1L:0L,f.runtime.lastSoundRequests().stream().filter(CdOpeningObjectRuntime.TamabbohFm.class::isInstance).count());
+            assertEquals(4,p.state(40).routine());assertEquals(0x78,p.state(40).word(TAMABBOH_COOLDOWN));assertEquals(0,p.state(40).unsignedByte(ANIMATION));
+            if(free>0){assertEquals(0,p.state(32).unsignedByte(TAMABBOH_MISSILE_DIRECTION));assertEquals(0,p.state(32).routine());}
+            if(free>1)assertEquals(0xFF,p.state(33).unsignedByte(TAMABBOH_MISSILE_DIRECTION));
+        }
+    }
+
+    @Test void tamabbohComponentFmErrorIsOriginalAndPrecedesEveryFirstChildDirtyByte() throws Exception {
+        try(var f=new Fixture()) {
+            springDeviceCut(f);var sounds=f.runtime.lastSoundRequests();var p=f.runtime.placement().pool();var source=tamabbohImage(f,p.state(40),10,0).moveByte(SPRITE_FLAGS,0x84);p.write(source);
+            var candidate=p.state(32).moveWord(X_FRACTION,0x1234).moveByte(ROUTINE,0x5A).moveByte(SPRITE_FLAGS,0x83);p.write(candidate);
+            var prefix=source.moveByte(ROUTINE,4).moveByte(ANIMATION,0).moveWord(TAMABBOH_COOLDOWN,0x78);
+            var failure=new AssertionError("constructed component FM port failure, not injected Runtime driver failure");var calls=new ArrayList<CdTamabboh.FmCall>();
+            var body=new CdTamabboh(f.runtime.placement(),CdTamabboh.Assets.fromObjectAssets(f.assets.openingObjects()),
+                    new com.openggf.game.soniccd.player.CdPlayerTerrain(f.assets.terrain()),c->fail("Fire has no floor"),c->{fail("Fire has no range");return 0;},c->{
+                        assertEquals(prefix,c.expectedSource());assertEquals(prefix,p.state(40));assertEquals(32,c.firstFreeWholeIndex());
+                        assertEquals(candidate,p.state(32));assertEquals(0,p.state(32).id());assertEquals(p.capture().slots(),c.callCut().slots());calls.add(c);throw failure;
+                    },(pool,id)->fail("FM failure precedes Draw"));
+            assertSame(failure,assertThrows(AssertionError.class,()->body.run(40,new CdTamabboh.Globals(0,1,0,0,PRE.xWord(),0))));
+            assertEquals(1,calls.size());assertEquals(prefix,p.state(40));assertEquals(candidate,p.state(32));assertEquals(0,p.state(33).id());
+            assertEquals(sounds,f.runtime.lastSoundRequests());assertFalse(f.runtime.closed());assertNull(checkpointGet(f.runtime,"activeTamabbohInvocation"));
+        }
+    }
+
+    @Test void tamabbohActualMissileInitUsesAllNonzeroDirectionsAsLeftAndHasNoFloorMotionOrBodyTimeTail() throws Exception {
+        for(int direction:List.of(0,1,0xFF))try(var f=new Fixture()) {
+            springDeviceCut(f);var sounds=f.runtime.lastSoundRequests();monitorEnvironment(f,0x83,0xFF,0,0);seedTunnelDoorGlobals(f,1,0x3456,0x55,0x66);var p=f.runtime.placement().pool();
+            var source=tamabbohImage(f,p.state(40),0,1).moveByte(SPRITE_FLAGS,0x83).moveByte(TAMABBOH_MISSILE_DIRECTION,direction)
+                    .moveByte(PREVIOUS_ANIMATION,9).moveByte(ANIMATION_FRAME,7).moveByte(ANIMATION_TIME,0xAA).moveByte(SAVED_FLAGS_ID,101)
+                    .moveWord(X_FRACTION,0x1234).moveWord(Y_FRACTION,0x5678).moveWord(X_VELOCITY,0x1234).moveWord(Y_VELOCITY,0xFEDC);p.write(source);
+            var saved=f.runtime.placement().capture().savedFlags().copy();var player=f.frame.state();f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(tamabbohMissileInit(f,source),p.state(40));assertSame(player,f.frame.state());
+            assertArrayEquals(saved,f.runtime.placement().capture().savedFlags().copy());assertEquals(0x55,f.frame.environment().movement().globals().primaryAngle());
+            assertEquals(sounds,f.runtime.lastSoundRequests());assertTrue(f.angleWrites.isEmpty());
+        }
+    }
+
+    @Test void tamabbohActualMissileMainUsesReachedFloorThenFourWrappingLongOperationsAndOneAnimation() throws Exception {
+        try(var f=new Fixture()) {
+            springDeviceCut(f);seedTunnelDoorGlobals(f,0,0,0x55,0x66);var p=f.runtime.placement().pool();
+            var source=tamabbohGroundImage(f,2,1,false).moveByte(SPRITE_FLAGS,0x84).moveWord(X_FRACTION,0x1234).moveWord(Y_FRACTION,0x5678)
+                    .moveLong(CdObjectState.LongField.TAMABBOH_MISSILE_X_DELTA,0x7FFFFFFF).moveLong(CdObjectState.LongField.TAMABBOH_MISSILE_Y_DELTA,0x80001234)
+                    .moveLong(CdObjectState.LongField.TAMABBOH_MISSILE_X_ACCEL,0x55667788).moveLong(CdObjectState.LongField.TAMABBOH_MISSILE_Y_ACCEL,0x7FFFEDCC);p.write(source);
+            var floor=tamabbohFloor(f,source);assertTrue(floor.distance()>=0);var expected=source
+                    .addLong(CdObjectState.LongField.X_POSITION,0x7FFFFFFF).addLong(CdObjectState.LongField.Y_POSITION,0x80001234)
+                    .addLong(CdObjectState.LongField.TAMABBOH_MISSILE_X_DELTA,0x55667788).addLong(CdObjectState.LongField.TAMABBOH_MISSILE_Y_DELTA,0x7FFFEDCC);
+            expected=tamabbohAnimated(f,expected,true).moveByte(SPRITE_FLAGS,4);var player=f.frame.state();f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(expected,p.state(40));assertEquals(2,p.state(40).unsignedByte(ANIMATION_TIME));assertEquals(1,p.state(40).unsignedByte(ANIMATION_FRAME));
+            assertEquals(floor.primaryAngle(),f.frame.environment().movement().globals().primaryAngle());assertSame(player,f.frame.state());assertTrue(f.angleWrites.isEmpty());
+        }
+    }
+
+    @Test void tamabbohActualMissileDeleteStillQueuesDrawOfClearedIdZeroAndNeverClearsDirtySavedId() throws Exception {
+        for(boolean visible:List.of(false,true))try(var f=new Fixture()) {
+            springDeviceCut(f);seedTunnelDoorGlobals(f,0,0,0x55,0x66);var p=f.runtime.placement().pool();seedSpinTunnelLoaded(f.runtime.placement(),101,1);
+            var saved=f.runtime.placement().capture().savedFlags().copy();var source=tamabbohGroundImage(f,2,1,true)
+                    .moveByte(SPRITE_FLAGS,visible?0x84:4).moveByte(SAVED_FLAGS_ID,101);p.write(source);var player=f.frame.state();
+            f.runtime.runDynamicSlotsAfterReservedSlots();assertArrayEquals(new byte[64],p.state(40).copyBytes());assertSame(player,f.frame.state());
+            assertEquals(visible?tamabbohFloor(f,source).primaryAngle():0x55,f.frame.environment().movement().globals().primaryAngle());
+            assertArrayEquals(saved,f.runtime.placement().capture().savedFlags().copy());var queue=checkpointGet(f.runtime,"queue");
+            assertEquals(2,((int[])checkpointGet(queue,"pointerByteCounts"))[0]);
+            assertEquals(new CdSlotRef(40),((CdSlotRef[][])checkpointGet(queue,"pointers"))[0][0]);
+            var sat=f.runtime.finishAfterCamera(POST);assertTrue(sat.provenance().stream().noneMatch(v->v.slotRef().wholeIndex()==40));f.runtime.finishOrdinaryTail();
+        }
+    }
+
+    @Test void tamabbohActualSharedEnemyTouchConvertsBeforeDynamicVisitAndRunsExistingExplosionOwner() throws Exception {
+        try(var f=new Fixture()) {
+            f.firstCycle();seedContactPlayer(f);var p=f.runtime.placement().pool();p.clearDynamicSlots();seedSpinTunnelLoaded(f.runtime.placement(),101,1);
+            var source=tamabbohImage(f,p.state(40),0,0).moveByte(SPRITE_FLAGS,0x84).moveByte(COLLISION_TYPE,0x2C)
+                    .moveByte(SAVED_FLAGS_ID,101).moveWord(X,64).moveWord(Y,0x759);p.write(source);
+            var saved=f.runtime.placement().capture().savedFlags().copy();f.service(0);f.runtime.spawnBeforeReservedSlots();var publication=f.body(2);
+            var response=publication.result().effects().stream().filter(CdPlayerBody.ObjectTouchResponse.class::isInstance)
+                    .map(CdPlayerBody.ObjectTouchResponse.class::cast).findFirst().orElseThrow().result();
+            assertEquals(CdPlayerTouchResponse.Exit.KILL_ENEMY,response.exit());assertEquals(0x18,p.state(40).id());
+            assertEquals(response.changedSlots().getFirst(),p.state(40));assertEquals(0,p.state(40).routine());
+            f.runtime.runDynamicSlotsAfterReservedSlots();assertEquals(0,p.state(40).unsignedByte(COLLISION_TYPE));assertEquals(0x1C,p.state(32).id());
+            assertArrayEquals(saved,f.runtime.placement().capture().savedFlags().copy());assertNull(checkpointGet(f.runtime,"activeTamabbohInvocation"));
+        }
+    }
+
+    @Test void tamabbohActualSharedMissileHazardUsesExistingShieldedHurtAndThenOrdinaryMissileInit() throws Exception {
+        try(var f=new Fixture(INITIAL,new CdPlayerBody.ContactGlobals(0,1,1),SCORE)) {
+            f.firstCycle();seedContactPlayer(f);var p=f.runtime.placement().pool();p.clearDynamicSlots();
+            p.write(tamabbohImage(f,p.state(40),0,1).moveByte(SPRITE_FLAGS,0x84).moveByte(COLLISION_TYPE,0xAD).moveWord(X,64).moveWord(Y,0x759));
+            f.service(0);f.runtime.spawnBeforeReservedSlots();var publication=f.body(2);
+            assertTrue(publication.result().effects().stream().anyMatch(CdPlayerBody.ObjectTouchResponse.class::isInstance));
+            assertEquals(4,f.frame.state().motion().routine());assertEquals(0x78,f.frame.state().timers().hurt());
+            assertEquals(new CdPlayerBody.ContactGlobals(0,0,1),f.runtime.contactGlobals());var player=f.frame.state();
+            f.runtime.runDynamicSlotsAfterReservedSlots();assertSame(player,f.frame.state());assertEquals(2,p.state(40).routine());assertEquals(0xAD,p.state(40).unsignedByte(COLLISION_TYPE));
+            assertTrue(p.capture().slots().stream().noneMatch(s->s.id()==0x11));assertEquals(SCORE,f.runtime.scoreGlobals());
+        }
+    }
+
+    @Test void tamabbohPlainCurrentStaleDerivedAndForeignPortValuesNeverAuthorizeRuntimePublication() throws Exception {
+        try(var f=new Fixture()) {
+            springDeviceCut(f);var p=f.runtime.placement().pool();var source=tamabbohImage(f,p.state(40),4,0);p.write(source);var cut=p.capture();
+            var sameOwnerDerived=CdObjectPool.overlay(cut,List.of(p.state(127).moveByte(ANIMATION_TIME,1)));
+            var foreign=new CdObjectPool();foreign.write(foreign.state(40).moveByte(ID,0x22).moveByte(ROUTINE,4));
+            for(var borrowed:List.of(cut,sameOwnerDerived,foreign.capture())) {
+                var image=borrowed.slots().get(8);
+                tamabbohReject(f,"commitTamabbohPrimaryAngle",CdTamabboh.PrimaryAngleCall.class,new CdTamabboh.PrimaryAngleCall(borrowed,image,0,0));
+                tamabbohReject(f,"readTamabbohPlayerWord",CdTamabboh.PlayerReadCall.class,new CdTamabboh.PlayerReadCall(borrowed,image,CdTamabboh.PlayerField.Y_WORD));
+                tamabbohReject(f,"playTamabbohFm",CdTamabboh.FmCall.class,new CdTamabboh.FmCall(borrowed,image,32,CdTamabboh.FmSound.FM_A0));
+            }
+            p.write(p.state(127).moveByte(ANIMATION_TIME,2));
+            tamabbohReject(f,"commitTamabbohPrimaryAngle",CdTamabboh.PrimaryAngleCall.class,new CdTamabboh.PrimaryAngleCall(cut,source,0,0));
+            assertNull(checkpointGet(f.runtime,"activeTamabbohInvocation"));assertFalse(f.runtime.closed());
+            // These reject without origin; no forged active phase/private token isolates later full-cut guards.
+        }
+    }
+
+    @Test void tamabbohCallFormatsRejectForeignSourcesInvalidBytesAndNonFirstFreeWithoutPrivateSnapshotForgery() throws Exception {
+        var p=new CdObjectPool();var source=p.state(40).moveByte(ID,0x22);p.write(source);var cut=p.capture();var foreign=new CdObjectPool();
+        assertThrows(IllegalArgumentException.class,()->new CdTamabboh.PrimaryAngleCall(cut,source,256,0));
+        assertThrows(IllegalArgumentException.class,()->new CdTamabboh.PrimaryAngleCall(cut,source,0,-1));
+        assertThrows(NullPointerException.class,()->new CdTamabboh.PlayerReadCall(cut,source,null));
+        assertThrows(IllegalArgumentException.class,()->new CdTamabboh.PlayerReadCall(cut,foreign.state(40),CdTamabboh.PlayerField.Y_WORD));
+        assertThrows(IllegalArgumentException.class,()->new CdTamabboh.FmCall(cut,source,33,CdTamabboh.FmSound.FM_A0));
+        assertThrows(IllegalArgumentException.class,()->CdObjectPool.overlay(cut,List.of(source,source)));
+        assertThrows(IllegalArgumentException.class,()->CdObjectPool.overlay(cut,List.of(foreign.state(40))));
+        assertEquals(cut.slots(),p.capture().slots());
+    }
+
+    @Test void tamabbohActualTileReadFaultRetainsOnlyReachedInitPrefixClosesBothOwnersAndRetiresOrigin() throws Exception {
+        try(var f=new Fixture()) {
+            springDeviceCut(f);seedTunnelDoorGlobals(f,0,0,0x55,0x66);var p=f.runtime.placement().pool();
+            var source=tamabbohImage(f,p.state(40),0,0).moveByte(SUBTYPE2,1).moveByte(SPRITE_FLAGS,0x80).moveWord(TILE,0xBEEF)
+                    .moveLong(MAPPINGS,0x12345678);p.write(source);p.write(p.state(41).moveByte(ID,0x7F));var later=p.state(41);
+            var fault=assertThrows(CdTamabboh.UnsupportedTamabboh.class,f.runtime::runDynamicSlotsAfterReservedSlots);
+            assertEquals(CdTamabboh.UnsupportedBoundary.TILE_ENTRY,fault.boundary());assertEquals(1,fault.value());assertEquals(40,fault.wholeIndex());
+            var expected=source.moveByte(ROUTINE,2).moveByte(SPRITE_FLAGS,0x84).moveByte(PRIORITY,4).moveByte(COLLISION_TYPE,0x2C)
+                    .moveByte(X_RADIUS,16).moveByte(WIDTH,16).moveByte(Y_RADIUS,15).moveWord(TAMABBOH_ANCHOR_X,source.centreX());
+            assertEquals(expected,p.state(40));assertEquals(later,p.state(41));assertEquals(0x55,f.frame.environment().movement().globals().primaryAngle());
+            tamabbohClosed(f);assertNull(checkpointGet(f.runtime,"activeTamabbohInvocation"));assertEquals(false,checkpointGet(f.runtime,"inSolidCommit"));
+            assertThrows(IllegalStateException.class,f.runtime::runDynamicSlotsAfterReservedSlots);assertEquals(expected,p.state(40));
+        }
+    }
+
+    @Test void tamabbohActualAnimationReadFaultRetainsCompletedMotionAndFrameAngleWithoutDrawOrLaterDispatch() throws Exception {
+        try(var f=new Fixture()) {
+            springDeviceCut(f);seedTunnelDoorGlobals(f,0,0,0x55,0x66);var p=f.runtime.placement().pool();
+            var source=tamabbohGroundImage(f,4,2,false).moveByte(SPRITE_FLAGS,0x84)
+                    .moveLong(CdObjectState.LongField.TAMABBOH_ANIMATION_SCRIPT,0xDEADBEEF);p.write(source);p.write(p.state(41).moveByte(ID,0x7F));var later=p.state(41);
+            var floor=tamabbohFloor(f,source);var expected=source.addWord(Y,floor.distance()).moveByte(ANIMATION_TIME,0xFF);var player=f.frame.state();
+            var fault=assertThrows(CdTamabboh.UnsupportedTamabboh.class,f.runtime::runDynamicSlotsAfterReservedSlots);
+            assertEquals(CdTamabboh.UnsupportedBoundary.ANIMATION_POINTER,fault.boundary());assertEquals(0xDEADBEEF,fault.value());
+            assertEquals(expected,p.state(40));assertEquals(later,p.state(41));assertSame(player,f.frame.state());
+            assertEquals(floor.primaryAngle(),f.frame.environment().movement().globals().primaryAngle());assertTrue(f.angleWrites.isEmpty());
+            tamabbohClosed(f);assertNull(checkpointGet(f.runtime,"activeTamabbohInvocation"));assertEquals(false,checkpointGet(f.runtime,"inSolidCommit"));
+        }
+    }
+
+    @Test void tamabbohActualLaterDispatchFailureKeepsPriorFmAndBothChildrenWithoutRollbackOrResume() throws Exception {
+        try(var f=new Fixture()) {
+            springDeviceCut(f);var expectedSounds=new ArrayList<CdOpeningObjectRuntime.SoundRequest>(f.runtime.lastSoundRequests());expectedSounds.add(new CdOpeningObjectRuntime.TamabbohFm(CdTamabboh.FmSound.FM_A0));var p=f.runtime.placement().pool();var source=tamabbohImage(f,p.state(40),10,0).moveByte(SPRITE_FLAGS,0x84);p.write(source);
+            var first=p.state(32);var second=p.state(33);p.write(p.state(41).moveByte(ID,0x7F));var later=p.state(41);
+            var fault=assertThrows(UnsupportedOperationException.class,f.runtime::runDynamicSlotsAfterReservedSlots);
+            assertTrue(fault.getMessage().contains("$7f"));assertTrue(fault.getMessage().contains("41"));
+            assertEquals(tamabbohChild(first,source,0),p.state(32));assertEquals(tamabbohChild(second,source,0xFF),p.state(33));assertEquals(later,p.state(41));
+            assertEquals(expectedSounds,f.runtime.lastSoundRequests());
+            var prefix=p.capture().slots();tamabbohClosed(f);assertNull(checkpointGet(f.runtime,"activeTamabbohInvocation"));
+            assertThrows(IllegalStateException.class,f.runtime::runDynamicSlotsAfterReservedSlots);assertEquals(prefix,p.capture().slots());
+        }
+    }
+
+    @Test void tamabbohActualFullAggregateCaptureRestoresFireCutAndReplaysOnlyNextOrdinaryDispatch() throws Exception {
+        try(var f=new Fixture()) {
+            springDeviceCut(f);f.makePlayerAbsent();var p=f.runtime.placement().pool();var source=tamabbohGroundImage(f,10,0,false).moveByte(SPRITE_FLAGS,0x84);p.write(source);
+            seedSpinTunnelLoaded(f.runtime.placement(),101,1);f.runtime.runDynamicSlotsAfterReservedSlots();monitorFinish(f);
+            var cut=f.runtime.captureClosedCut();var actor=f.frame.captureActor();var shared=f.frame.captureShared();var cpu=f.runtime.cpuSat();
+            var reserved=horizontalReserved(f.runtime);var cached=checkpointGet(f.runtime,"tamabboh");
+            CdOpeningObjectRuntime.Snapshot expected=null;CdPlayerFrameRuntime.ActorState expectedActor=null;CdPlayerFrameRuntime.SharedState expectedShared=null;CpuSat expectedCpu=null;
+            for(int replay=0;replay<2;replay++) {
+                if(replay!=0){f.frame.validateActorRestore(actor);f.frame.validateSharedRestore(shared);f.runtime.validateRestore(cut);
+                    f.frame.restoreActor(actor);f.frame.restoreShared(shared);f.runtime.restore(cut);
+                    assertMonitorSnapshot(cut,f.runtime.captureClosedCut());assertEquals(cut.sectionArtState(),f.runtime.sectionArtState());assertEquals(cut.checkpointState(),f.runtime.checkpointState());
+                    assertEquals(reserved,horizontalReserved(f.runtime));assertArrayEquals(cpu.bytes(),f.runtime.cpuSat().bytes());assertEquals(cpu.provenance(),f.runtime.cpuSat().provenance());
+                    assertEquals(actor,f.frame.captureActor());assertEquals(shared.environment(),f.frame.environment());assertEquals(shared.vIntClock(),f.frame.vIntClock());
+                    assertEquals(0,p.state(32).routine());assertEquals(0x78,p.state(40).word(TAMABBOH_COOLDOWN));
+                    assertEquals(cut.lastSoundRequests(),f.runtime.lastSoundRequests());assertSame(cached,checkpointGet(f.runtime,"tamabboh"));assertNull(checkpointGet(f.runtime,"activeTamabbohInvocation"));}
+                monitorBegin(f,3);f.runtime.runDynamicSlotsAfterReservedSlots();assertEquals(2,p.state(32).routine());assertEquals(2,p.state(33).routine());
+                assertEquals(0x77,p.state(40).word(TAMABBOH_COOLDOWN));monitorFinish(f);
+                if(replay==0){expected=f.runtime.captureClosedCut();expectedActor=f.frame.captureActor();expectedShared=f.frame.captureShared();expectedCpu=f.runtime.cpuSat();}
+                else {assertMonitorSnapshot(expected,f.runtime.captureClosedCut());assertEquals(expected.sectionArtState(),f.runtime.sectionArtState());assertEquals(expected.checkpointState(),f.runtime.checkpointState());
+                    assertEquals(expectedActor,f.frame.captureActor());assertEquals(expectedShared.environment(),f.frame.environment());assertEquals(expectedShared.vIntClock(),f.frame.vIntClock());
+                    assertArrayEquals(expectedCpu.bytes(),f.runtime.cpuSat().bytes());assertEquals(expectedCpu.provenance(),f.runtime.cpuSat().provenance());}
+            }
+        }
+    }
+
+    private static CdObjectState tamabbohImage(Fixture f,CdObjectState image,int routine,int subtype) throws java.io.IOException {
+        var a=CdTamabboh.Assets.fromObjectAssets(f.assets.openingObjects());
+        return image.moveByte(ID,0x22).moveByte(ROUTINE,routine).moveByte(SUBTYPE,subtype).moveByte(SUBTYPE2,0).moveByte(SPRITE_FLAGS,4)
+                .moveByte(PRIORITY,4).moveByte(X_RADIUS,subtype==1?8:16).moveByte(WIDTH,subtype==1?8:16).moveByte(Y_RADIUS,subtype==1?8:15)
+                .moveByte(SAVED_FLAGS_ID,0).moveWord(X,0x100).moveWord(Y,0x780).moveWord(TILE,0x2428).moveWord(TAMABBOH_ANCHOR_X,0x100)
+                .moveLong(MAPPINGS,subtype==1?a.missileMappingsAddress():subtype==0?a.normalMappingsAddress():a.damagedMappingsAddress())
+                .moveLong(CdObjectState.LongField.TAMABBOH_ANIMATION_SCRIPT,subtype==0?a.normalAnimationAddress():a.damagedAnimationAddress())
+                .moveLong(CdObjectState.LongField.TAMABBOH_X_DELTA,0).moveByte(ANIMATION,0).moveByte(PREVIOUS_ANIMATION,0)
+                .moveByte(ANIMATION_FRAME,0).moveByte(ANIMATION_TIME,0).moveByte(MAP_FRAME,0).moveWord(TAMABBOH_COOLDOWN,0);
+    }
+    private static CdObjectCollisionCheck.FloorDistance tamabbohFloor(Fixture f,CdObjectState image) {
+        return CdObjectCollisionCheck.objGetFloorDist(new com.openggf.game.soniccd.player.CdPlayerTerrain(f.assets.terrain()),image);
+    }
+    private static CdObjectState tamabbohPositionImage(Fixture f,int routine,int subtype) throws java.io.IOException {
+        var base=tamabbohImage(f,f.slot(40),routine,subtype);
+        for(int y=0x600;y<0x800;y++){var image=base.moveWord(Y,y);int distance=tamabbohFloor(f,image.addLong(CdObjectState.LongField.Y_POSITION,0x10000)).distance();
+            if(distance>=-7&&distance<0)return image;}
+        throw new AssertionError("Actual R11A terrain has no finite negative Tamabboh Position probe at X100");
+    }
+    private static CdObjectState tamabbohGroundImage(Fixture f,int routine,int subtype,boolean negative) throws java.io.IOException {
+        var base=tamabbohImage(f,f.slot(40),routine,subtype);
+        for(int y=0x600;y<0x800;y++){var image=base.moveWord(Y,y);int distance=tamabbohFloor(f,image).distance();
+            if(negative?distance>=-7&&distance<0:distance>=0&&distance<=7)return image;}
+        throw new AssertionError("Actual R11A terrain has no requested finite Tamabboh floor probe at X100");
+    }
+    private static CdObjectState tamabbohAnimated(Fixture f,CdObjectState s,boolean missile) throws java.io.IOException {
+        var a=CdTamabboh.Assets.fromObjectAssets(f.assets.openingObjects());var v=missile?a.missile():
+                s.longBits(CdObjectState.LongField.TAMABBOH_ANIMATION_SCRIPT)==a.normalAnimationAddress()?a.normal():a.damaged();
+        var r=CdObjectAnimation.step(new CdObjectAnimation.State(s.unsignedByte(ANIMATION),s.unsignedByte(PREVIOUS_ANIMATION),s.unsignedByte(ANIMATION_FRAME),
+                s.unsignedByte(ANIMATION_TIME),s.unsignedByte(MAP_FRAME),s.spriteFlags(),s.flags(),s.routine(),s.unsignedByte(ROUTINE_2)),
+                new CdObjectAnimation.AnimationTable(v.animationTable(),0,v.animations().size()));
+        return s.moveByte(ANIMATION,r.animationId()).moveByte(PREVIOUS_ANIMATION,r.previousId()).moveByte(ANIMATION_FRAME,r.scriptIndex())
+                .moveByte(ANIMATION_TIME,r.timer()).moveByte(MAP_FRAME,r.mapFrame()).moveByte(SPRITE_FLAGS,r.spriteFlags()).moveByte(FLAGS,r.statusFlags())
+                .moveByte(ROUTINE,r.routine()).moveByte(ROUTINE_2,r.routine2());
+    }
+    private static void tamabbohPlayer(Fixture f,int x,int y) {
+        var actor=f.frame.captureActor();var s=actor.state();var m=s.motion();var motion=new CdPlayerMotionState(((x&0xFFFF)<<16)|0xABCD,((y&0xFFFF)<<16)|0x1234,
+                m.xVelocity(),m.yVelocity(),m.groundVelocity(),m.routine(),m.angle(),m.flags(),m.spriteFlags(),m.xRadius(),m.yRadius(),m.animation(),m.previousAnimation(),
+                m.playerJump(),m.charge(),m.moveLock(),m.stick(),m.playerControl(),m.previousPrimaryAngle(),m.previousSecondaryAngle());
+        f.frame.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(),new CdPlayerBody.State(motion,s.animation(),s.header(),s.timers(),s.history(),s.rotationDistance(),s.objectLinks()),actor.display()));
+    }
+    private static CdObjectState tamabbohChild(CdObjectState child,CdObjectState parent,int direction) {
+        return child.moveByte(ID,parent.id()).moveByte(SUBTYPE,1).moveWord(TILE,parent.word(TILE)).moveByte(PRIORITY,parent.unsignedByte(PRIORITY)+1)
+                .moveWord(X,parent.centreX()).moveWord(Y,parent.centreY()-10).moveByte(TAMABBOH_MISSILE_DIRECTION,direction);
+    }
+    private static CdObjectState tamabbohMissileInit(Fixture f,CdObjectState source) throws java.io.IOException {
+        return source.addByte(ROUTINE,2).moveByte(SPRITE_FLAGS,(source.spriteFlags()|4)&0x7F).moveByte(COLLISION_TYPE,0xAD)
+                .moveByte(X_RADIUS,8).moveByte(WIDTH,8).moveByte(Y_RADIUS,8).moveLong(MAPPINGS,CdTamabboh.Assets.fromObjectAssets(f.assets.openingObjects()).missileMappingsAddress())
+                .moveLong(CdObjectState.LongField.TAMABBOH_MISSILE_X_ACCEL,0).moveLong(CdObjectState.LongField.TAMABBOH_MISSILE_Y_ACCEL,0x2000)
+                .moveLong(CdObjectState.LongField.TAMABBOH_MISSILE_X_DELTA,source.unsignedByte(TAMABBOH_MISSILE_DIRECTION)==0?0x20000:-0x20000)
+                .moveLong(CdObjectState.LongField.TAMABBOH_MISSILE_Y_DELTA,-0x40000);
+    }
+    private static CdObjectState tamabbohOccupant(CdObjectState image) { return image.moveByte(ID,CdAnimal.OBJECT_ID).moveWord(X,0x100).moveWord(Y,0x780); }
+    private static void tamabbohReject(Fixture f,String name,Class<?> type,Object call) throws Exception {
+        var p=f.runtime.placement().pool();var images=p.capture().slots();var player=f.frame.state();var env=f.frame.environment();var sounds=f.runtime.lastSoundRequests();
+        var method=CdOpeningObjectRuntime.class.getDeclaredMethod(name,type);method.setAccessible(true);
+        var fault=assertThrows(java.lang.reflect.InvocationTargetException.class,()->method.invoke(f.runtime,call));assertInstanceOf(IllegalStateException.class,fault.getCause());
+        assertEquals(images,p.capture().slots());assertSame(player,f.frame.state());assertSame(env,f.frame.environment());assertEquals(sounds,f.runtime.lastSoundRequests());
+        assertEquals(false,checkpointGet(f.runtime,"inSolidCommit"));assertNull(checkpointGet(f.runtime,"activeTamabbohInvocation"));
+    }
+    private static void tamabbohClosed(Fixture f) {
+        assertTrue(f.runtime.closed());assertTrue(f.frame.closed());assertEquals(CdOpeningObjectRuntime.Phase.FAILED,f.runtime.phase());
+        assertThrows(IllegalStateException.class,f.runtime::captureClosedCut);assertThrows(IllegalStateException.class,()->f.runtime.finishAfterCamera(POST));
+    }
+    // END Tamabboh Runtime R1.
+
+    // Root singleton-current $440 consumer contract. Existing nineteen bases retain their identities.
+    @Test void tamabbohTwentiethBankFollowsPlatformAndPreservesEveryCompatibilityConstructor() {
+        var old = new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594,613,659,667,679,701);
+        var full = new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594,613,659,667,679,701,758);
+        assertEquals(full, old);
+        assertEquals(full, new CdOpeningObjectRuntime.LogicalBanks(100,124,138));
+        assertEquals(758, full.tamabboh());
+        assertEquals(659, full.tamabboh()+1-full.player());
+        assertEquals("tamabboh", CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents()[19].getName());
+        assertEquals(20, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+        assertEquals(List.of(3,5,8,9,10,11,12,13,14,15,16,17,18,19,20), java.util.Arrays.stream(
+                CdOpeningObjectRuntime.LogicalBanks.class.getDeclaredConstructors()).map(java.lang.reflect.Constructor::getParameterCount).sorted().toList());
+        assertThrows(ArithmeticException.class, () -> new CdOpeningObjectRuntime.LogicalBanks(
+                100,124,138,208,236,299,369,374,413,449,464,500,512,594,613,659,667,679,Integer.MAX_VALUE-56));
+    }
+
+    @Test void tamabbohSingletonRejectsAllNineteenOverlapEndpointsBeforeColdOrRestartPublication() throws Exception {
+        var a=load(); var carry=cameraArtDevIngress(a);
+        int[] starts={100,124,138,208,236,299,369,374,413,449,464,500,512,594,613,659,667,679,701};
+        int[] counts={24,14,70,28,63,70,5,39,36,15,36,12,82,19,46,8,12,22,57};
+        var invalid=new ArrayList<Integer>(); invalid.add(-1);
+        for(int i=0;i<starts.length;i++){invalid.add(starts[i]);invalid.add(starts[i]+counts[i]-1);}
+        try(var frame=CdPlayerFrameRuntime.externalTouchRequiredDevelopment(a,0)) {
+            var actor=frame.captureActor(); var shared=frame.captureShared();
+            for(int tail:invalid) {
+                var banks=new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594,613,659,667,679,701,tail);
+                assertThrows(IllegalArgumentException.class,()->CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(
+                        a,frame,INITIAL,CONTACT,SCORE,LEVEL,declaredCheckpointBindings(),new byte[640],banks,PRE,v->fail("no angle store")));
+                assertThrows(IllegalArgumentException.class,()->CdOpeningObjectRuntime.usaR11aRestartDevEmptySatPreloadedArt(
+                        a,frame,INITIAL,CONTACT,SCORE,LEVEL,declaredCheckpointBindings(),CdAssetBytes.copyOf(new byte[CdObjectPlacementRuntime.SAVED_BANK_BYTES]),
+                        new CdPowerupArtRuntime.State(new byte[0x480],new byte[0x480]),carry,new byte[640],banks,PRE,v->fail("no angle store")));
+                assertEquals(actor,frame.captureActor()); assertEquals(shared.environment(),frame.environment());
+                assertFalse(frame.closed());
+            }
+        }
+    }
+
+    @Test void tamabbohColdEmptyPictureAcceptsMaxSingletonWithoutInitializingCurrent8800() throws Exception {
+        var a=load(); var banks=new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594,613,659,667,679,701,Integer.MAX_VALUE);
+        try(var frame=CdPlayerFrameRuntime.externalTouchRequiredDevelopment(a,0);
+            var runtime=CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(a,frame,INITIAL,CONTACT,SCORE,LEVEL,
+                    declaredCheckpointBindings(),new byte[640],banks,PRE,v->fail("no angle store"))) {
+            assertTrue(runtime.displayedFrame().tiles().isEmpty());
+            var fault=assertThrows(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.OwnershipBoundary.class,
+                    ()->com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(runtime.sectionArtState().residency(),0x440));
+            assertEquals(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.Boundary.UNKNOWN_PATTERN,fault.boundary());
+            assertEquals(0x8800,fault.destinationWord());
+            assertEquals(17,a.openingObjects().sectionArtSources().sources().size());
+        }
+    }
 }

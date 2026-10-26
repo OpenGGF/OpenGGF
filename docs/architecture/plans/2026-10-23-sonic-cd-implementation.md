@@ -6924,3 +6924,201 @@ and combined-consumer checks belong to the later live integration. The final
 body/mapper review37945B/SHAcb2efb87bf2d8136397b9f53db1711900e0735b7ccf08e4672f3ff8c263e1542
 covers all frozen body/aliases/root additions and RootR2 test substitutions;
 actual Root results remain separately attributed in that static report.
+
+
+### Live Tamabboh intake and actual Spinning Disc boundary, 26 October 2026
+
+The frozen Runtime235934B/SHAa9deb71e328315efad7e59a57a09c56f418ab94b70cdfc21a903084aa7676c6a
+adds cached actual-body invocation, stable Frame player, fresh96-slot angle/
+player-read/FM cuts and typedA0; Source17/C29/19banks/658 stay unchanged.
+AuthorR1's compound-var declaration and decimal22 expectation are repaired
+only in RootR2. Tests-first52364 stops testCompile on missing TamabbohFm in
+saved Runtime at05:33:33Z(28.598s/queue0), no tests. Complete389 Runtime62957
+at05:36:28Z yields389/9/0/0(1m35s/queue0): all362 inherited and18 new pass;
+nine new test oracles fail. RootR3 preserves full prior Body sound metadata
+instead of empty/A0-only ledgers and compares three complete766-byte saved
+banks by byte value rather than CdAssetBytes identity. It changes nine new
+methods only, no fixture/input/production adjustment. Narrow56269 passes9/0/0/0
+at05:41:12Z(31.185s/queue0); not a new389-case green invocation. Exact XML,
+Java25.0.5.0.2/private cwd/media/no skips verified. Final Runtime static review
+reports no new openP1/P2 and records the known R2/R3 test resolutions.
+
+The unchanged genuine observer259346B/SHA157f1a7ef2abcf181e6e6d30cd236d075eef8fdf2c42f266eceef3adf84ee3f9
+is reused once in57473:1/0/1/0at05:44:09Z(32.200s/queue0), fullXML/real media/
+private cwd/J25 checked. Same4233-controller recipe, no ingress, original
+production generation1: every ordinary call through3258 returns. Call3259
+commits its legitimate VInt/Body/spawn/earlier-dynamic prefix, then stops on
+unowned ID09/live46, nativeFFDB80, before Init. Pinned ObjectIndex line16 names
+ObjSpinningDisc. Before3258 slot46 is all zero; after3259 exact placement image:
+09000000000000001350000003880000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+(X4944,Y904,subtypes0,savedID0). Runtime/Frame FAILED/closed; no failed-call
+capture/restore/resume, later CPU SAT build/scroll/tail or epoch transition.
+Permanent WorldLoad255736/317e3c85 is restored644/freshmtime after terminal.
+
+Native queue milestones now naturally observed:3233 prepares Waterfall29;
+3243 completes Waterfall and prepares Disc12;3247 completes Disc/prepares
+Shadow16;3253 completes Shadow/prepares Tamabboh59;3258 has15 Tam tiles current,
+44 remaining. Failed3259 VInt commits three more,18 current/41 remaining.
+Waterfall/Disc/Shadow are now naturally completed producers, superseding the
+older Source17-only-not-yet-prepared limit. This observes service/current bytes,
+not native timing or completion of the whole59 Tam source. Tile440 is offset24
+and has no new Tam commit yet; no actual440 picture read was reached here.
+
+Closed3258 actor X16=291823872/Y16=22832128/XV1536/YV2520/routine2/flags2,
+links0; attempted3259 X16=292217088/Y16=23477248/YV2576, same routine/flags/links.
+Before/after placement chunk4224/right213/left186/saved106,93 ->
+4352/right225/left191/saved111,93. Rings3/lives3, score10/nextlife5000,
+checkpoint2/spawn1/HUDtimeDEV0/PLCflags3, generation1. Tam40 executes Main:
+closed3258 raw64
+220424280020b96811f98000020900000000000000000f1004100102000018002c0000650400000000001210ffff60000020b942000000000000000000000000
+partial3259 raw64
+220424280020b96811f8e000020900000000000000000f1004100102000017002c0000650400000000001210ffff60000020b942000000000000000000000000
+The previous integer/fraction4601.8000 becomes4600.E000 with native delta-A000;
+Y521 stays, animation timer24->23. No Fire/nativeA0 or440 closure follows from
+this Main observation. Root still owes permanent3258/replay/3259 promotion,
+combined consumers/fresh guards, current440 and constructed World pixels.
+
+
+The permanent53-case route candidate is now frozen. RootR2 changes only the
+old GoalPost surface assertion from C30 absence to presence while preserving
+C29. Full52671at06:25:50Z executes53/1/0/0(35.776s/queue0): all old52 pass,
+new case's invalid physical95 Ring proxy fails. RootR3 replaces it with the
+actual one Ring2-to6 identity transition, collision0/priority1, preserving
+reward3 and full sound checks. Narrow38305at06:32:29Z reaches the final prefix
+but fails on slot58: earlier Ring Init parents create later children before
+unsupported46. RootR4 adds a comparison-only unwarped native Ring Init store
+projection over the placement images (N Ring/Main.asm:38-210), preserving
+FindNext order, dirty bytes, collected bits, anchors and LOADED clears. It
+publishes nothing and invokes no body. The entire later tail remains checked.
+Narrow4970 passes1/0/0/0at06:42:58Z(34.548s/queue0), exactfreshXML/Java25/
+privatecwd/media/no skips checked. This is not a fresh53-case green run.
+RootR4 source286694B/SHAcd1649d48fa685feceb60f8acd796e485ed6200e06ab419f2849b0ae3802834a
+compares all valid full/course cuts before forwarding and every intermediate
+row through3258, then attempts3259 once. Independent final route review remains
+in progress; Runtime/current659 client integration and combined checks remain.
+
+C30's tests-first74657 stopped testCompile on absent arity30 at06:01:20Z
+(26.356s/queue0), no tests. First positive72889 executed13/1/0/0at06:04:53Z
+(1m32s/queue27). Twelve pass; the remaining immutable-mask test compared fresh
+CdAssetBytes wrappers at161 and168. RootR2 changes only those assertions to
+all-byte array equality. Narrow25358 passes1/0/0/0at06:06:56Z(29.918s/queue0),
+fresh exact XML/J25/cwd/media checked. Static review27066B/SHA80a3b31386c79ed47377b812e9e5cd7a7563aabd6cdb2345f51b060aa47bb7ed
+finds no productionP1/P2 and records the R1 mask defect/R2 resolution. This
+proves a component selected-current singleton, not a wired659-pattern World.
+
+
+### 26 October 2026 — live Tamabboh singleton consumer join
+
+On private4a78c8b6e plus the owned live-Tamabboh changes, Root appended
+LogicalBanks.tamabboh as component20, preserving all nineteen old bases and
+constructors. Compatibility19 uses Math.addExact(collapsePlatform,57); both
+Runtime current-camera conversions now select C30. The client reserves659
+patterns. No new art producer, preload, physical Region, capture partition,
+phase, factory argument or gameplay setter was introduced. The extra binding
+is only current native440 at8800; the other58 retain Plant/Ramp aliases.
+
+Tests-first12220 stopped in test compilation against the old19-component API
+(missing20-argument construction/accessor), with no test execution. Combined
+38429, command `env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 python3
+$OPENGGF_ROOT/tools/testing/maven_queue.py --lean -Dmse=off
+-Dsoniccd.media.root=$SCD_MEDIA_ROOT
+'-Dtest=TestCdOpeningObjectRuntime,TestCdTamabbohPicture,TestSonicCdOpeningWorldLoad'
+test`, completed at06:58:56Z in1m44s, queue0:458/0/1/0. WorldLoad53 and
+picture13 passed; Runtime392 had one error in an inherited invalid-Platform
+fixture. Its deliberately overflowing compatibility19 construction now fails
+before the intended factory assertion. RootR2 supplies explicit20 arguments
+and a disjoint singleton758 in that loop, retaining the old57-tile bounds
+assertion; production is unchanged. Exact corrected-method run30993 passed
+1/0/0/0 at07:08:30Z,32.802s execution after421s waiting. Fresh XML confirms
+Java25.0.5.0.2, private cwd, actual media property and no skips. These are457
+passing combined cases plus one corrected focused pass, not a fresh458 pass.
+
+Independent source reviews resolve the permanent route's exact Ring identity
+and earlier-parent allocation oracles and find no additional P1/P2 in the final
+route or659 consumer delta. Their execution evidence is attributed to Root.
+The newly wired659 client still needs its actual Tamabboh World/GPU proof,
+combined adjacent consumers and fresh structural guards before local save.
+Spinning Disc assets are separately authenticated and statically reviewed,
+remain unimported, and do not complete its player-rotation/Solid/control owner.
+
+
+Adjacent-owner run83314 completed at07:15:01Z,45.575s/queue7s,
+629/0/0/0 with exact actual-media selectors TestCdPlayerFrameRuntime413,
+TestCdPlayerObjectTouch19,TestCdObjectDrawQueue16,TestSonicCdRestartCarry31,
+TestCdTamabboh110 andTestCdObjectMappings40. The queued command uses the same
+unset display variables, LUA_BIN=lua5.4, --lean, -Dmse=off and CD-media property
+as above. Six fresh XMLs prove Java25/private cwd/media/no skips. Fresh
+separate-JVM `maven_queue.py -Dmse=off -Pguards test -B` run51732 completes
+728/0/0/0 at07:22:01Z,5m12s/queue0; ninety fresh executable XML classes total728.
+The dry change-based plan selects3757 smoke classes solely because private CD
+owners are unclassified. Focused CD consumers plus all structural guards are
+the proportionate bounded selection; no generic S1/S2/S3K algorithm changed.
+This is neither a full-smoke nor a release-only full-suite pass.
+
+A temporary read-only println in the SAME permanent controller case measures
+closed3257 in run74288:1/0/0/0 at07:23:37Z,32.802s/queue0. Native FG camera is
+4350/210; placement previousChunk4224,right213,left186,rightSaved106,leftSaved93;
+Frame cameraXCentre96; actor X16=291430656,Y16=22201344,XV/GV1536,YV2464;
+bounds0..10391,bottom784. Fixed constructed actorX=(4446-96)=4350 gives clamped
+camera target4254; old4350 and target4254 lie in chunk4224. This supports ONLY
+the horizontal no-new-spawner prerequisite. It does not prove flat terrain,
+new pixels or a complete constructed scene. No inputs/state writes changed;
+permanent286694-byte RootR4 was restored exactly after the diagnostic.
+
+The independent actual-EGL Ring pickup/full-course case94046 passes1/0/0/0
+at07:35:28Z (30.521s,queue26s), with the final C30/twenty-base consumer and
+actual USA media/S2 donor. The external native Tamabboh World candidate
+599058B/SHAeee3685ec11dcb58ccb52c4039c051adbdcb0beeec22ac8ba6d2de57a409c0d6
+compiles but run96648 fails1/1/0/0 at07:41:05Z (30.065s,queue0), before any
+constructed ingress, at its fixed-foot terrain prerequisite. Read-only
+probe39773 repeats that failure at07:45:58Z (30.803s,queue0): fixedactorX4350,
+probeY357, both distances26 and no angle write. This is the native blank
+31-(357&15) result, not a floor. No search, fitted pose, terrain/physics/
+camera/spawner repair or failed-call resume was used. The long candidate
+stays external and unpromoted. Its native Wait/Fire/children, actual10 views/
+59 scene offsets, full/course pixels and cleanup obligation remain open.
+
+A separate short test now independently checks current440 and resource
+ownership without that route prerequisite. It boots the actual USA World,
+then uses the existing pure SectionArt owner to service actualPLC9 to END,
+including cached Pata50/Anton22/Tam59. It does not service or change the live
+Runtime. All59 current component tiles match the cached authenticated source;
+C30 renders genuine440 in all four flips with actual palette/version and
+complete GPU pixels. The live capture and its unknown440 remain unchanged.
+All659 client entries are installed; transparent TEST witnesses may fill
+only missing old658 entries. The singleton must be a genuine current upload.
+Module close must remove659 and retain unrelated actual producer identities,
+followed by nested session/graphics/boot cleanup. No PNG or PASS artifact is
+produced. This is component-current renderer/resource evidence, not the open
+native Tamabboh World scene or natural queue's completion.
+
+The matched control18997 changes only the client back to saved658 while
+retaining this same short test/Runtime/C30. It executes1/1/0/0 at08:09:19Z
+(1m22s,queue295s): all prior pixel/version/nonwrite/installation checks pass;
+only post-close offset658 fails with residual actual patternID131730.
+Restoring final659 gives positive47662:1/0/0/0 at08:32:48Z (1m22s,queue870s).
+Both use queued Maven with -Dmse=off,
+-Dopenggf.headless.gl=surfaceless-egl,-Dsoniccd.opening.egl=true, actual media
+and the authenticated absolute S2 donor path, exact selector
+TestSonicCdOpeningWorldEgl#actualEglCurrentTamabbohSingletonRendersAndRetiresThe659thClientPattern.
+Fresh XML proves Java25.0.5.0.2, private cwd, all flags and zero skips.
+Final source-only guards73500, `maven_queue.py -Dmse=off -Pguards
+'-Dtest=TestJunit5MigrationGuard,TestNoAssertionFreeDiagnostics' test -B`, pass
+5/0/0/0 at08:43:22Z (28.905s,queue381s); both fresh XMLs/privatecwd/Java25
+checked. The earlier complete728 guards cover unchanged production; these
+five additionally cover the new short test. No unfiltered smoke/full-suite,
+whole-act, full-USA, JP/EU or native image/audio parity result is claimed.
+
+Final production pins before local save are Runtime236887/SHA
+b059bbd2e8cde70a4ff2f055386698e34ccb4a9de13e2e09848b126cffa344e5,
+ObjectPresentation105618/SHA
+6ca4154bfb2bee104190a02bd1c69f90e65da5e306ea2ed0876ccf27e54e2b21,
+and PlayerPresentation56282/SHA
+a58a03cf792e5bd90fc1f2097726fa28372bcf55e7302248ec725b9c1640f38e.
+Final EGL543723/SHA82827d4d189023bc3346d539243db000dac577e8b7eae89122a7bd16bef49a02
+contains22 tests: all21 prior tests plus the short independent resource case,
+not the failed external long scene. Independent bounded static reviews find
+no additional open production/resource P1/P2; the long-scene fixture P2
+remains explicit. Main/remote remain untouched. Next work is the reached
+Spinning Disc09, starting with unimported authenticated views, genuine plain
+Solid prefixes and raw rotation-byte ownership; none completes3259 yet.

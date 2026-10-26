@@ -164,7 +164,7 @@ class TestSonicCdOpeningWorldEgl {
                                 source.assets().openingObjects().monitorTimeArtBank(), runtime.sectionArtState().residency(),
                                 banks.player(), banks.ring(), banks.mosqui(), banks.plant(), banks.ramp(),
                                 banks.explosion(), banks.points(), banks.flower(), banks.powerup(), banks.floatBlock(), banks.spring(),
-                                banks.tunnelDoorVertical(), banks.monitorTime(), banks.boulder(), banks.diagonalSpring(), banks.spikes(), banks.checkpoint(), banks.anton(), banks.collapsePlatform()));
+                                banks.tunnelDoorVertical(), banks.monitorTime(), banks.boulder(), banks.diagonalSpring(), banks.spikes(), banks.checkpoint(), banks.anton(), banks.collapsePlatform(), banks.tamabboh()));
                 assertEquals(expectedPicture, runtime.displayedFrame(), "Next V-int uses the pickup CPU table and now-serviced art");
                 int playerBase = com.openggf.graphics.PatternAtlasRange.OBJECTS.base();
                 assertTrue(runtime.displayedFrame().patternVersions().keySet().stream()
@@ -2090,7 +2090,7 @@ class TestSonicCdOpeningWorldEgl {
                 module.requirePlayerFrame().artState(), runtime.powerupArtState(), objects, objects.frontierArtBank(), objects.contactArtBank(),
                 objects.floatBlockArtBank(), objects.springArtBank(), objects.tunnelDoorArtBank(), objects.monitorTimeArtBank(), runtime.sectionArtState().residency(),
                 banks.player(), banks.ring(), banks.mosqui(), banks.plant(), banks.ramp(), banks.explosion(), banks.points(), banks.flower(),
-                banks.powerup(), banks.floatBlock(), banks.spring(), banks.tunnelDoorVertical(), banks.monitorTime(), banks.boulder(), banks.diagonalSpring(), banks.spikes(), banks.checkpoint(), banks.anton(), banks.collapsePlatform());
+                banks.powerup(), banks.floatBlock(), banks.spring(), banks.tunnelDoorVertical(), banks.monitorTime(), banks.boulder(), banks.diagonalSpring(), banks.spikes(), banks.checkpoint(), banks.anton(), banks.collapsePlatform(), banks.tamabboh());
     }
 
     /** Literal N MM:157-167 and MM:55-60. Static item has ONE piece despite counted frame4 having four. */
@@ -4923,7 +4923,7 @@ class TestSonicCdOpeningWorldEgl {
                 assertAntonWorldCapture(beforeRetirement,module);var shared=new java.util.HashMap<Integer,Object>();
                 for(int id=0;id<=0x7FF;id++){var entry=atlas.getEntry(id);if(entry!=null)shared.put(id,entry);}
                 for(var range:atlas.registeredRangesForTesting())for(int id=range.base();id<range.base()+range.size();id++) {
-                    if(id>=base&&id<base+658)continue;var entry=atlas.getEntry(id);if(entry!=null)shared.put(id,entry);
+                    if(id>=base&&id<base+659)continue;var entry=atlas.getEntry(id);if(entry!=null)shared.put(id,entry);
                 }
                 assertFalse(shared.isEmpty());assertTrue(shared.keySet().stream().anyMatch(id->id<=0x7FF));
                 observations.append("mapped40 scene-selected/rendered; genuine current57 renderer-installed (unmapped17 installation-only); ALL658 installed; TEST missing-old601 transparent=")
@@ -5408,7 +5408,7 @@ class TestSonicCdOpeningWorldEgl {
                 var shared=new java.util.HashMap<Integer,Object>();
                 for(int id=0;id<=0x7FF;id++){var entry=atlas.getEntry(id);if(entry!=null)shared.put(id,entry);}
                 for(var range:atlas.registeredRangesForTesting())for(int id=range.base();id<range.base()+range.size();id++) {
-                    if(id>=base&&id<base+658)continue;var entry=atlas.getEntry(id);if(entry!=null)shared.put(id,entry);
+                    if(id>=base&&id<base+659)continue;var entry=atlas.getEntry(id);if(entry!=null)shared.put(id,entry);
                 }
                 assertFalse(shared.isEmpty());assertTrue(shared.keySet().stream().anyMatch(id->id<=0x7FF));assertAntonWorldCapture(beforeRetirement,module);
                 module.closeTerrainPlayer();assertTrue(runtime.closed());assertTrue(frame.closed());assertSame(atlas,GameServices.graphics().getPatternAtlas());
@@ -5572,4 +5572,101 @@ class TestSonicCdOpeningWorldEgl {
     }
     // END constructed actual World ID21 subset proof. All source-author oracles UNRUN; defects require Root R2.
     // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>
+
+    /**
+     * Short independent renderer/resource check, not the unadmitted fixed3257 native World scene.
+     * A separate actual-source SectionArt component executes PLC9; the live World stays unchanged.
+     * Only its completed immutable current $440 sample is supplied to a TEST render-only overlay.
+     */
+    @Test void actualEglCurrentTamabbohSingletonRendersAndRetiresThe659thClientPattern() throws Exception {
+        Assumptions.assumeTrue(Boolean.getBoolean("soniccd.opening.egl"),"Explicit actual EGL/media opt-in");
+        assertEquals("surfaceless-egl",System.getProperty("openggf.headless.gl"));
+        assertNull(System.getenv("DISPLAY"));assertNull(System.getenv("WAYLAND_DISPLAY"));
+        String media=System.getProperty("soniccd.media.root");assertNotNull(media);
+        CdGameDataSource source;
+        try(var files=Files.list(Path.of(media).resolve("USA"))) {
+            var cues=files.filter(p->p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".cue")).toList();
+            assertEquals(1,cues.size());source=CdStockLaunch.prepare(cues.getFirst(),CdStockLaunch.Request.r11a());
+        }
+        var neutral=new Bk2MovieLoader().parseInputLogText(Path.of("ENGINE-singleton-resource-two-neutral"),
+                InputScriptCompiler.compileToInputLog("2 -").lines().toList());
+        try(var boot=new HeadlessGameBoot(320,224)) {
+            try {
+                var loop=boot.bootSonicCdOpeningObjects(source);var mode=SessionManager.getCurrentGameplayMode();
+                var module=assertInstanceOf(SonicCdGameModule.class,mode.getWorldSession().getGameModule());
+                var runtime=assertInstanceOf(CdOpeningObjectRuntime.class,module.getGameService(NativeDynamicObjectPass.class));
+                var frame=module.requirePlayerFrame();assertEquals(NullAudioBackend.class,GameServices.audio().getBackend().getClass());
+                for(int row=0;row<2;row++)step(loop,neutral.getFrame(row));
+                render(module,false); // Install actual terrain entries owned by other producers.
+                var before=capture(module);var liveArt=runtime.sectionArtState();
+                var objects=source.assets().openingObjects();var sources=objects.sectionArtSources();assertEquals(17,sources.sources().size());
+                var tam=sources.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_TAMABBOH);
+                assertSame(tam,sources.sources().get(2));assertEquals(59,tam.tileCount());
+                assertEquals(9,tam.canonicalPlcId());assertEquals(2,tam.canonicalRowIndex());
+                int baseId=com.openggf.graphics.PatternAtlasRange.OBJECTS.base();
+                var banks=new CdOpeningObjectRuntime.LogicalBanks(baseId,baseId+24,baseId+38);
+                assertEquals(baseId+658,banks.tamabboh());
+                var frozenLive=monitorWorldPolicy(module,objects,banks);
+                var cold=assertThrows(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.OwnershipBoundary.class,
+                        ()->frozenLive.resolve(0x440));
+                assertEquals(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.Boundary.UNKNOWN_PATTERN,cold.boundary());
+                assertEquals(0x8800,cold.destinationWord());
+                // Explicit component-only InitPLC9: actual Pata50, Anton22, Tamabboh59 programs.
+                // This is neither a World service nor a producer reload into the live Runtime.
+                var component=com.openggf.game.soniccd.resources.CdR11aSectionArt.fromAssets(frame.assets());
+                var current=component.initList(component.devState(liveArt.residency(),liveArt.codeTable(),0),9);
+                int services=0;
+                while(current.queue().headSource()!=0) {
+                    assertTrue(services++<64,"Finite reviewed PLC9 component");
+                    current=component.prepare(current);current=component.serviceSlow(current,0);
+                }
+                assertEquals(0,current.remainingTilesWord());assertFalse(current.stopped());
+                for(int tile=0;tile<59;tile++)assertArrayEquals(tam.decode().bytes().slice(tile*32,32).copy(),
+                        com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(current.residency(),0x428+tile).copy());
+                var policy=com.openggf.game.soniccd.resources.CdObjectPresentation.usaR11aCurrentCameraDevPreloadedArt(
+                        frame.artState(),runtime.powerupArtState(),objects,objects.frontierArtBank(),objects.contactArtBank(),
+                        objects.floatBlockArtBank(),objects.springArtBank(),objects.tunnelDoorArtBank(),objects.monitorTimeArtBank(),current.residency(),
+                        banks.player(),banks.ring(),banks.mosqui(),banks.plant(),banks.ramp(),banks.explosion(),banks.points(),banks.flower(),
+                        banks.powerup(),banks.floatBlock(),banks.spring(),banks.tunnelDoorVertical(),banks.monitorTime(),banks.boulder(),
+                        banks.diagonalSpring(),banks.spikes(),banks.checkpoint(),banks.anton(),banks.collapsePlatform(),banks.tamabboh());
+                var sample=policy.resolve(0x440);assertEquals(banks.tamabboh(),sample.logicalPatternId());
+                assertEquals(com.openggf.game.soniccd.resources.CdObjectPresentation.patternVersion(
+                        com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(current.residency(),0x440)),sample.version());
+                var tiles=new ArrayList<com.openggf.graphics.SpritePresentation.Tile>();
+                for(int flip=0;flip<4;flip++)tiles.add(new com.openggf.graphics.SpritePresentation.Tile(
+                        com.openggf.graphics.SpritePresentation.Layer.OBJECT,sample.logicalPatternId(),1,(flip&1)!=0,(flip&2)!=0,false,
+                        16+flip*16,16,8,8,true,0,false,1f));
+                var overlay=new com.openggf.graphics.SpritePresentation.Frame(tiles,List.of(),java.util.Map.of(sample.logicalPatternId(),sample.version()));
+                int contrast=diagonalWorldContrastRgb(1);
+                var empty=renderDiagonalWorldPicture(module,com.openggf.graphics.SpritePresentation.Frame.empty(),contrast);
+                var rendered=renderDiagonalWorldPicture(module,overlay,contrast);int[] expected=empty.pixels().clone();
+                for(var tile:tiles)paintDiagonalWorldOtherSprite(overlay,tile,expected,0,0,320,224);
+                assertArrayEquals(expected,rendered.pixels(),"Exact GPU current440 pixels in all four flips; render-only geometry");
+                var atlas=GameServices.graphics().getPatternAtlas();var entry=atlas.getEntry(banks.tamabboh());
+                assertNotNull(entry,"The singleton is uploaded by the actual renderer, not a transparent witness");
+                assertTrue(glIsTexture(atlas.getTextureId(entry.atlasIndex())));
+                assertEquals(sample.version(),com.openggf.graphics.SpritePresentation.patternSample(GameServices.graphics(),banks.tamabboh()));
+                assertSame(liveArt,runtime.sectionArtState());
+                assertThrows(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.OwnershipBoundary.class,()->frozenLive.resolve(0x440));
+                assertAntonWorldCapture(before,module);
+                // Missing OLD658 may use TEST transparent installation witnesses; singleton stays genuine.
+                for(int offset=0;offset<659;offset++) {
+                    int id=baseId+offset;
+                    if(atlas.getEntry(id)==null){assertTrue(offset<658);GameServices.graphics().cachePatternTexture(new com.openggf.level.Pattern(),id);}
+                    assertNotNull(atlas.getEntry(id));
+                }
+                var shared=new java.util.HashMap<Integer,Object>();
+                for(int id=0;id<=0x7FF;id++){var old=atlas.getEntry(id);if(old!=null)shared.put(id,old);}
+                for(var range:atlas.registeredRangesForTesting())for(int id=range.base();id<range.base()+range.size();id++) {
+                    if(id>=baseId&&id<baseId+659)continue;var old=atlas.getEntry(id);if(old!=null)shared.put(id,old);
+                }
+                assertFalse(shared.isEmpty());assertTrue(shared.keySet().stream().anyMatch(id->id<=0x7FF));
+                module.closeTerrainPlayer();assertTrue(runtime.closed());assertTrue(frame.closed());
+                assertSame(atlas,GameServices.graphics().getPatternAtlas());
+                for(int offset=0;offset<659;offset++)assertNull(atlas.getEntry(baseId+offset),"Owned659 cleanup offset "+offset);
+                shared.forEach((id,old)->assertSame(old,atlas.getEntry(id),"Actual unrelated atlas identity "+id));
+            } finally {try{SessionManager.closeGameplaySession();}finally{GraphicsManager.destroyForReinit();}}
+        }
+        // No native Tamabboh-body/World-scene, natural3259, all659 scene-rendered or parity claim.
+    }
 }

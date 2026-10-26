@@ -71,6 +71,33 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+A positive native floor distance need not identify a floor (2026-10-26, CD
+Tamabboh fixture). At fixed actorX4350/probeY357 both queries returned26 with
+no angle write: that is the blank/blank sentinel31-(357&15), not ground26px
+below. Do not widen a fixture bound or place the actor on that result. Keep
+the failed prerequisite distinct from a separately passing component-current
+renderer/resource check; such a check does not certify native scene motion.
+
+An actor ingress cannot undo an earlier spawn boundary (2026-10-26, CD GPU
+fixture). SpawnObjects reads the retained pre-scroll camera before Body, so
+moving only the actor at a closed cut cannot prevent a pending chunk's next
+layout read. First compare actual camera&FF80 with placement previousChunk.
+For a fixed constructed scene, prove both old camera and the native clamped
+target remain in one128px chunk/section and check the real centre WORD; the
+observed3257 centre is96, not a guessed160. Terrain and per-row no-spawn
+invariants still need their own evidence. A failed prerequisite is a fixture
+limit, never authority to mute spawning, shift the camera or fit gameplay.
+
+
+A native sound ID is not a physical slot (2026-10-26, CD Tamabboh route).
+FM_RING95 proved a request, not a Ring at pool95. Witness the actual identity's
+native routine2-to6 transition and reward/collision/priority changes instead.
+An unvisited later slot can also contain legitimate stores from earlier Ring
+Init parents: FindNext publishes children before the walk reaches a later
+unsupported slot. Compare placement plus that reached child-creation prefix,
+including dirty nonstores and LOADED-bit effects; do not equate unvisited with
+unchanged or invoke a body again to construct its expected result.
+
 A per-owner cache is not a cached factory (2026-10-26, CD queued art).
 openingObjects() creates a new authenticated ObjectAssets owner each call;
 sectionArtSources() caches only inside that owner. Five new tests failed by

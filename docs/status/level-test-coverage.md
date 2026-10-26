@@ -1,3 +1,29 @@
+# Level test coverage backlog
+
+## Sonic CD private development — bounded coverage
+
+Latest26October evidence: the partial
+[Palmtree Panic Act1 Present matrix](../architecture/validation/levels/scd-palmtree-panic-act1-present.md)
+records the genuine controller route through3258 and its first Spinning Disc
+stop3259, with valid full/course replay before that failed call. Queued
+Waterfall, Disc and Shadow art complete naturally; Tamabboh is partial.
+Runtime now uses C30 through twenty bases and659 potential atlas IDs. The
+458-case CPU consumer run has457 passes plus one inherited fixture error
+corrected and passed narrowly; six adjacent consumers pass629 separately,
+and fresh structural guards pass728 across90 reports with no skips. An
+independent short EGL case renders genuine component-current440 in four flips
+and verifies all659 client entries retire while unrelated entries survive.
+Its matched old658 client fails on the extra entry, then the659 client passes.
+This does not close the native Tamabboh World scene: its fixed3257 candidate
+stops before ingress on a blank-floor prerequisite. Five final source guards
+also pass. Spinning Disc assets and rotation carry are reviewed but not
+imported; full-act/USA gameplay and JP/EU parity remain incomplete.
+
+### Earlier CD checkpoints
+
+The entries below describe their historical bounded milestones, not the
+current unsupported-object frontier or full-act certification.
+
 Sonic CD Tamabboh component update (2026-10-26): the partial matrix records
 110 body/missile cases and40 complete mapping cases, with authenticated visual
 views reusing the existing art cache. Runtime remains Source17, so the actual
@@ -43,7 +69,7 @@ scenes on the existing shared art span. A separate controller jump reaches a
 natural checkpoint reload and the next unowned Animals PLC source; it is not
 whole-act or regional certification. The eight-class affected check passes672/0/0/0 with no skips; fresh structural guards pass728/0/0/0 across90 reports.
 
-# Level test coverage backlog
+
 
 Sonic CD opening-object update (2026-10-25): the same partial act matrix now
 records source-ordered collapsing platforms, exact Solid failure prefixes,
@@ -63,6 +89,8 @@ rendered route has an identical restored replay; all three discs have bounded
 player lifecycle and render checks. Dynamic objects, time travel, complete
 gameplay/lifecycle and broader viewport/donor/roster products remain missing.
 The default entry stays static. These checks certify neither the act nor USA MVP.
+
+## Other current development updates
 
 Object-pipeline performance follow-up (2026-10-22, local candidate): the
 [query/allocation audit](../architecture/audits/performance/2026-10-22-native-object-query-performance.md)
