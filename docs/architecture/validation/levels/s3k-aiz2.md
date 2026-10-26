@@ -1236,3 +1236,7 @@ route cadence, retained display-child visibility, viewport/donor/team breadth
 and complete-world replay restoring both level and object clocks remain
 unqualified. This local source correction is not native audio or whole-act
 certification; combined delivery and integration remain Root-owned.
+
+## TAS mechanism accuracy — 2026-10-26
+
+The initialized Knuckles raw slot is captured separately from typed animation references. Actual retirement/reuse, self-occupancy, empty/unarmed/other-occupant controls and rewind distinguish the button behavior. Level reset clears the slot; boss-sequence reset preserves it. The full published bridge allocation/camera history remains unexecuted. See the [repair record](../2026-10-26-tas-accuracy-repairs.md) for source identities, commands and limits.

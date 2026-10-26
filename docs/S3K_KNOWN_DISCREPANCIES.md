@@ -12,8 +12,10 @@ Each entry describes what the ROM does, what we do, and why — focusing on *why
 **TAS mechanism verdicts (2026-10-26):** executed support and limitation checks
 are recorded in the [TAS verdict matrix](architecture/validation/2026-10-26-tas-verdicts-s3k.md).
 Reached gaps belong in [known bugs](status/s3k-known-bugs.md#tas-mechanism-limitations--2026-10-26),
-including raw-slot and mode-state incompatibilities. This test-only pass does not
-accept those mismatches as intentional deviations.
+including remaining raw-slot and mode-state incompatibilities. The subsequent
+[native-accuracy repairs](architecture/validation/2026-10-26-tas-accuracy-repairs.md)
+restore bounded collision, input and object-lifetime behavior without adding
+an accepted deviation or arbitrary RAM emulation.
 
 **Enemy-chain scoring correction (2026-10-26):** ordinary chained kills now
 retain the native 10,000-point threshold and word wrap, and the points popup

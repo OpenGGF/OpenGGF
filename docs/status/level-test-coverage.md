@@ -1,5 +1,12 @@
 # Level test coverage backlog
 
+TAS mechanism accuracy (2026-10-26): the [bounded repair record](../architecture/validation/2026-10-26-tas-accuracy-repairs.md)
+tracks native boundary, collision, input, boss and slot behavior with ordinary
+and restore-forward controls. These are representative mechanism obligations;
+complete publication approaches, campaign synchronization and the broader
+viewport/donor/team act matrix remain unexecuted. No full-act certification is
+inferred from the repaired local scenarios.
+
 S1 native exit-owner follow-up (2026-10-23): the [owner component evidence](../architecture/plans/2026-10-22-native-gap-swarm.md)
 records 90 focused and 109 structural checks without failures/errors/skips.
 Actual GHZ Results restart and special-entry controls preserve the published

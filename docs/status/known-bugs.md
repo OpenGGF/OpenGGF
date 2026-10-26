@@ -50,53 +50,38 @@ deviation; the verdict pass does not repair production behavior.
 
 ## TAS unsigned horizontal underflow — 2026-10-26
 
-**Location:** playable level-boundary prediction/clamping in `PlayableSpriteMovement`.
-
-**Symptom:** reached airborne left-underflow scenarios in S1, stock S2, KiS2
-and S3K clamp to the left edge (`$10`) and clear horizontal speed. Native word
-prediction wraps to a large unsigned X and takes the right-boundary branch:
-S1 GHZ1 expects 9767, S2/KiS2 expects `$2168`, and the S3K fixture expects `$1128`.
-Non-underflow controls exercise ordinary boundary behavior. These are local
-boundary checks, not claims about every published level-wrap route.
-
-**Suspected cause:** the engine's signed position/prediction reaches the left
-clamp before reproducing the native unsigned word comparison.
-
-**Removal condition:** pass the native right-clamp expectations and existing
-ordinary-boundary controls, preserving word/subpixel behavior. The
-[S1](../architecture/validation/2026-10-26-tas-verdicts-s1.md#s1_level_wrap),
-[S2](../architecture/validation/2026-10-26-tas-verdicts-s2.md), and
-[S3K](../architecture/validation/2026-10-26-tas-verdicts-s3k.md#s3k-hwrap--unsupported)
-matrices give the reached entries and retained limitation selectors.
+**Resolved local mechanism:** boundary prediction now performs the native
+unsigned word comparison, including fractional carry and each game's right-edge
+equality rule. S1, stock S2, KiS2 and S3K native right-clamp scenarios and ordinary
+controls pass. See the [repair record](../architecture/validation/2026-10-26-tas-accuracy-repairs.md)
+for the old red assertions, repaired checks and rewind coverage. Complete
+published wrap routes remain outside this bounded proof.
 
 ## S1 offscreen floating-platform standing retention — 2026-10-26
 
-**Location:** S1 floating-block solid dispatch and standing-release ownership.
-
-**Symptom:** `TestTasS1SlopeVerdict` lands on the real SBZ3 floating block,
-moves the camera offscreen and walks beyond its edge. The engine releases
-standing; native `FBlock_Action` omits `SolidObject` while offscreen, leaving the
-standing latch used by the documented slope-lock trigger. The object remains
-alive. The onscreen control correctly releases standing.
-
-**Suspected cause:** standing maintenance still runs when native render gating
-would omit the complete solid-object call.
-
-**Removal condition:** reproduce offscreen latch retention through the real
-object/collision seam while keeping the onscreen release control. See the
-[S1 mechanism evidence](../architecture/validation/2026-10-26-tas-verdicts-s1.md#s1_slope_glitch).
-The full SBZ3 shortcut is outside this local trigger check.
+**Resolved local trigger:** Obj56 now omits the complete solid checkpoint when
+its retained native render bit is offscreen. The actual SBZ3 ride/departure
+retains the standing latch; the visible control releases it. Render phase,
+width, jump, retirement and restore-forward controls are in the
+[repair record](../architecture/validation/2026-10-26-tas-accuracy-repairs.md).
+Native jump and object deletion do not themselves clear the player's OnObj bit;
+the repair preserves that ownership rather than adding cleanup. The complete
+SBZ3 shortcut remains outside this local trigger proof.
 
 ## S2 TAS launcher, boss, art and input limitations — 2026-10-26
 
 The [S2 verdict matrix](../architecture/validation/2026-10-26-tas-verdicts-s2.md)
 records native expectations, reached controls and exact commands at unchanged
 production `c69447d77`. Its first local test commit is `4f5eb1ee2de0b6128c39728289516c079d71064e`.
+The subsequent [accuracy repairs](../architecture/validation/2026-10-26-tas-accuracy-repairs.md)
+resolve actual hurt-state launcher admission/continuation and the live ARZ
+endpoint increment. Sonic/KiS2 transfer/exit/rewind and actual ARZ graph/escape/
+capsule controls pass. Complete repeated stacking, buried-ring collection and
+published boss approach routes remain unexecuted. The open mechanisms below
+remain unchanged.
 
 | Owner / requirement | Observed limitation | Removal condition |
 |---|---|---|
-| OOZ sphere launcher | Actual hurt routine 4 at the sphere centre is rejected in stock S2 and KiS2; native `Obj48 loc_252F0` accepts routines below 6. Normal entry works. `TestTasS2CurrentLimitations`. | Accept the native hurt-state entry and qualify the downstream speed effect without a route-specific exception. |
-| ARZ final-hit endpoint | Real final-hit contact reaches the travel endpoint, but engine routine becomes 4 instead of native `$A`; ordinary defeat reaches 8. `TestTasS2ArzBossEndpoint`. | Preserve the native assignment/addition ordering and execute the resulting explosion-skip transition. |
 | DEZ shared art address | Explosion and animal PLCs both target tile `$580`, but the dedicated explosion sheet cannot display the animal pixels after the animals-last load; reverse-order control stays fiery. `TestTasS2DezArtAlias`. | Render the native last-writer art result for both load orders through the ROM art pipeline. |
 | Halfpipe live pacing | Actual jumps occur, but their rendering-cost dependency is absent from the fixed live pacing owner. Running/jumping keep the same measured schedule. `TestTasS2JumpLag`. | Model and exercise the relevant jump-dependent native service cost. The test does not measure a native delta in the same 240-update window. |
 | Intro P2 input | Actual P2 Start at the engine's final modeled visible text-fade step does not affect title admission; both controls take 17 updates. `TestTasS2IntroP2Start`. | Exercise the native P2-sensitive transition with a synchronized entry and verify its title-loading consequence. The engine's timer 21 is not asserted to be a synchronized native frame. |

@@ -18,22 +18,28 @@ records these reached incompatibilities. Initial evidence is committed at
 `78d2365d06af34bb82e9c067195bcda9ee9ac2b5`. Passing limitation tests mean the
 specific mismatch is reproduced; they are not native-parity passes.
 
+The [subsequent accuracy repairs](../architecture/validation/2026-10-26-tas-accuracy-repairs.md)
+resolve the named initialized cutscene-slot read, water-skim retirement, boot
+input latch, MHZ early proxy consequence and SOZ response-axis scenarios. These
+are bounded native-parity passes with ordinary and rewind controls. The old
+negative evidence remains in the dated matrices. In particular the raw slot is
+armed by actual Knuckles initialization and retained across retirement; an
+unarmed slot-six coincidence is not sufficient. Full publication approaches,
+bridge allocation history and HCZ boss-overwrite routes remain unexecuted.
+
+The remaining open mechanisms are:
+
 | Owner / requirement | Observed limitation and discriminating control | Removal condition |
 |---|---|---|
-| AIZ cutscene-button slot lookup | A live button occupying slot 6 does not act as its own native raw-pointer target; a typed Knuckles at identical coordinates presses it. `TestTasS3kMemoryLimitations`. | Reproduce the documented native alias through an owned compatibility mechanism, retaining the typed-player control. |
-| HCZ water-skim lifetime | Actual activation, jump exit and offscreen departure leave the skim owner in slot 5, preventing reuse; a nonpersistent control unloads. `TestTasS3kWaterSkimLifetime`. | Match native participant/update/range retirement and demonstrate subsequent allocation reuse. |
 | KosM queue / mode alias | Four valid archives fill capacity; a fifth is rejected without the native adjacent-mode write. The identical archive succeeds after a slot is freed. `TestTasS3kMemoryLimitations`. | Reproduce the specific shipped corruption prerequisite with a controlled semantic model, or obtain an explicit disposition; unrelated queue success is insufficient. |
 | ORT leftward recovery | One remaining SST slot is consumed mid-pass; the engine resumes without the native duplicate of live B. Fully-full upfront control remains single. `TestTasS3kOrtExhaustion`. | Match the native mid-pass cursor/ORT recovery and subsequent duplicate without breaking the upfront-full control. |
 | Reset/Power movie actions | The production input-log parser consumes Reset/Power as neutral, while Start survives. `TestTasS3kUnavailableCapabilities`. | Expose and execute the actual native reset/power session action, preserving ordinary controller input. |
 | Competition mode | Selecting two-player returns to title with no stock competition host. `TestTasS3kTitleCapabilities`. | Launch and execute the native competition mode via the real title action. |
 | Standalone S&K entry | A detected standalone S&K title still dispatches one-player to the locked-on save grid rather than MHZ level entry; a distinct title action verifies dispatch. `TestTasS3kTitleCapabilities`. | Route the actual standalone title to its native level entry and qualify the standalone ROM path. |
-| Special-stage boot input | A last-fade Up pulse reaches the input owner but is replaced by neutral before the boot player update; neutral and boot-Up controls distinguish it. `TestTasS3kSpecialStageEntryInput`. | Preserve the interrupt-masked-load input through boot `Process_Sprites`, then sample the next input at its native boundary. |
-| MHZ early hit during initialization | One real proxy hit before weather-machine destruction reaches routine 4 with a live flash; six subsequent updates retain HP 8 where native flag/proxy ordering reaches HP 2. The no-hit control retains HP 9. `TestTasS3kMhzRapidHit`. | Preserve the native repeated-initialization collision flags and proxy-hit consequence through the weather-child signal; qualify the rapid reduction and ordinary flash controls. |
-| SOZ fire-dash under-slope zip | A legal rolling approach, actual roll-jump and fresh fire dash acquire embedded normal terrain. At the reached `$20` slope, native `loc_1137E` decrements the negative probe angle before rounding and applies the -2 px correction to X; `CollisionSystem.resolveGroundWallCollision` omits that adjustment and applies it to Y. Native repeated horizontal corrections exit left with X velocity -4345; the engine retains +707 and stays grounded at the corresponding completed player step. The no-dash endpoint matches. `TestTasS3kFlameSlope#currentLimitationFireDashSlopeEntryUsesVerticalCorrectionAndMissesNativeReverseZip`. | Model the shipped SOZ negative-angle response rule through the existing semantic rule owner, then pass the authored native dash and no-dash outcomes without fixture-specific behavior. |
 
 The cross-game [Start-pause clock](known-bugs.md#tas-pause-clock-does-not-advance-during-native-start-pause--2026-10-26)
-and [unsigned horizontal underflow](known-bugs.md#tas-unsigned-horizontal-underflow--2026-10-26)
-are tracked centrally. The pause gap also blocks the documented DDZ pause-phase
+is tracked centrally. Unsigned horizontal underflow is now a
+[resolved local mechanism](known-bugs.md#tas-unsigned-horizontal-underflow--2026-10-26). The pause gap also blocks the documented DDZ pause-phase
 optimization; natural missile launch and homing are separately supported.
 These outcomes establish local compatibility limits, not complete movie failure
 at a particular frame. The matrix preserves native owners, publication-specific

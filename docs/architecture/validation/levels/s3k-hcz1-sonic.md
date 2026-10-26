@@ -579,3 +579,7 @@ The existing audit records exact command/fingerprint, 58.066-second Maven /
 58.751-second wrapper timing with zero queue wait, separate receiving297,
 Jawz69, raw186 and Turbo81 focused qualifications, all zero-skip, and remaining
 fan/SS7 questions. Parent retains final review, combined smoke and delivery.
+
+## TAS mechanism accuracy — 2026-10-26
+
+The water-skim owner now retires after participants exit and the native P1-anchored range tail admits removal. Mixed-P2, range boundary, allocation reuse and restore-forward controls are bounded owner evidence. The full HCZ boss-overwrite/death route remains unexecuted. See the [repair record](../2026-10-26-tas-accuracy-repairs.md) for source identities, commands and limits.

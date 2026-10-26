@@ -1216,7 +1216,13 @@ its original drawing priority.
   non-drawable cases and strict execution/source checks for complete compilations.
   Normal tests remain recording-free. The separate
   [repair assessment](docs/architecture/validation/2026-10-26-tas-supportability.md)
-  groups unsupported mechanisms by feasible repair scope and complexity.
+  groups unsupported mechanisms by feasible repair scope and complexity. Its
+  bounded low/medium repairs restore unsigned level bounds, SOZ slope response,
+  S1 offscreen solid omission, S2 launcher and ARZ ordering, Blue Sphere boot
+  input, and S3K boss/slot lifetime behavior, with restore-forward controls.
+  Historical reel footage and limitation evidence retain their original source
+  identities; current verdicts are recorded in the
+  [accuracy repair record](docs/architecture/validation/2026-10-26-tas-accuracy-repairs.md).
 
 - **Local ROM qualification:** Release preparation can bind the existing bounded
   AIZ1/HCZ1 route pilot to a reviewed candidate commit, reject changed inputs and

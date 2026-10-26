@@ -1270,3 +1270,13 @@ The unchanged runtime372 MHZ death26853 remains delivery-blocking/unattributed.
 No maintained route, input, predicate or count changed or was rerun for this
 callback leaf. The new runtime has no new Act2/FBZ qualification.
 [Review, source boundary, exact command and limits](../../plans/2026-10-13-s3k-playable-completion.md#root-climb-native-floor-callback-correction--2026-10-22).
+
+## TAS mechanism accuracy — 2026-10-26
+
+One accepted early proxy contact now produces the native repeated damage after
+weather-child destruction. The routine-0 body-only control resets to HP9 and
+leaves the proxy active. Ordinary flash, clamp/terminal defeat, native transition
+admission, graph restore, and body/proxy × P1/P2 pending-contact replacement
+identity checks pass in the [lifecycle record](../2026-10-26-tas-accuracy-s3k-lifecycle.md).
+The exact published approach and later auto-scroll route remain outside this
+local proof; existing act/roster/viewport/donor obligations are unchanged.

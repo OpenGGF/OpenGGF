@@ -1,6 +1,11 @@
 # Unsupported TAS tricks: repair scope
 
-All 29 executed unsupported assessments are accounted for in 18 shared remediation groups. These are prospective repairs, not implemented support.
+**Subsequent implementation:** [native-accuracy repairs](2026-10-26-tas-accuracy-repairs.md)
+record the accepted low/medium changes, new evidence and current classifications.
+The counts, negative results and estimates below describe the original audit
+source; they are preserved as history rather than silently relabeled.
+
+At the original audit source, all 29 executed unsupported assessments were accounted for in 18 shared remediation groups. The estimates below were prospective. The linked accuracy-repair record supersedes implementation status for the nine accepted low/medium groups, while preserving these original estimates.
 
 **Low:** one bounded owner. **Medium:** several states/consumers with bounded parity work. **High:** timing, lifecycle, asset aliasing or new session features. **Very high:** substantial mode support or corruption compatibility.
 

@@ -949,3 +949,7 @@ command/environment and the current-vs-historical distinction are recorded in th
 [completion plan](../../plans/2026-10-13-s3k-playable-completion.md); owned raw
 diagnostics were consumed after readback. A fresh source-only comparison may
 propose later observation, but grants no new execution authority.
+
+## TAS mechanism accuracy — 2026-10-26
+
+The authored Sonic fire-dash entry now matches completed-player native correction and reverse exit, with the no-dash control and two registered-world restore-forward runs. Sonic/Tails response-axis component controls cover the native quadrant boundary. Existing long-route and Knuckles frontiers are unchanged; this is not a complete act replay. See the [repair record](../2026-10-26-tas-accuracy-repairs.md) for source identities, commands and limits.
