@@ -1,3 +1,12 @@
+Sonic CD queued-source update (2026-10-26): the partial matrix records actual
+Hole14 service and a Pata-Bata prefix through returned call3221, followed by
+an unimplemented Tamabboh at3222 after a legitimate VInt/body/spawn prefix.
+Four queued producers use the existing cache/current owner; component tests
+also exercise Waterfall/Disc/Shadow, but those are not naturally reached yet.
+The complete53-case WorldLoad promotion passes with nine valid full/course
+cuts and per-row comparisons; independent static review found no open P1/P2.429 affected
+consumers pass separately from the193 run's five repaired test-oracle failures.
+
 Sonic CD controller-contact update (2026-10-26): the same partial matrix now
 records a permanent three-jump input route through3210, genuine moving ID21
 standing from3206, and full/course checkpoint-aware replay at3001/3205/3209.

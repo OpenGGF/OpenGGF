@@ -1120,6 +1120,17 @@ public final class CdR11aObjectAssets {
             // Java consumes the original 448 bytes; native449 also reads Signpost's genuine $80
             // at $3229A, never its following $4C. Cache one read here, with no new art bank.
             var goalPostRead = decodeSectionArt(CdR11aAsset.ART_GOAL_POST, 24, 448);
+            // PLC_Cam3_Full (Data (Act 1 Present).asm:117-136), rows2/4/5/6, describes these
+            // actual PLC10 queued producers. Cache one existing-helper Java decode per source here.
+            // Hole: $800E XOR/14 tiles, source114 / Java113 / native114; native's final $00 is internal.
+            var sonicHoleRead = decodeSectionArt(CdR11aAsset.ART_SONIC_HOLE, 14, 113);
+            // Waterfall: $801D XOR/29 tiles, source328 / Java327 / native328; final refill stays internal.
+            var tunnelWaterfallRead = decodeSectionArt(CdR11aAsset.ART_TUNNEL_WATERFALL, 29, 327);
+            // Disc: $800C XOR/12 tiles, source166 / Java167 / native167. Both readers need Waterfall's
+            // genuine $80 at $36812, never its following $1D at $36813. Do not pad the inventory.
+            var spinningDiscRead = decodeSectionArt(CdR11aAsset.ART_SPINNING_DISC, 12, 167);
+            // Shadow: $0010 NORMAL/16 tiles, source24 / Java23 / native24; no XOR history is invented.
+            var logShadowRead = decodeSectionArt(CdR11aAsset.ART_LOG_SHADOW, 16, 23);
             sectionArtSources = new SectionArtSourceBank(List.of(
                     sectionArtSource(CdR11aAsset.ART_PATA_BATA, 9, 0, 0x7600, 50, 715, pata),
                     sectionArtSource(CdR11aAsset.ART_ANTON, 9, 1, 0x8120, 22, 485, anton),
@@ -1139,7 +1150,11 @@ public final class CdR11aObjectAssets {
                     // The adjacent $80 at $3837E is outside this retained source view and is never appended.
                     sectionArtSource(CdR11aAsset.ART_ANIMALS, 2, 1, 0x7100, 20, 446,
                             frontier.binding(CdR11aAsset.ART_ANIMALS).decode()),
-                    sectionArtSource(CdR11aAsset.ART_GOAL_POST, 2, 6, 0x9EE0, 24, 449, goalPostRead)));
+                    sectionArtSource(CdR11aAsset.ART_GOAL_POST, 2, 6, 0x9EE0, 24, 449, goalPostRead),
+                    sectionArtSource(CdR11aAsset.ART_SONIC_HOLE, 5, 2, 0x7400, 14, 114, sonicHoleRead),
+                    sectionArtSource(CdR11aAsset.ART_TUNNEL_WATERFALL, 5, 4, 0x7C80, 29, 328, tunnelWaterfallRead),
+                    sectionArtSource(CdR11aAsset.ART_SPINNING_DISC, 5, 5, 0x8120, 12, 167, spinningDiscRead),
+                    sectionArtSource(CdR11aAsset.ART_LOG_SHADOW, 5, 6, 0x8300, 16, 24, logShadowRead)));
         }
         return sectionArtSources;
     }

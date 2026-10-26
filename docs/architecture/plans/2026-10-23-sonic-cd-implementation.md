@@ -6778,3 +6778,96 @@ repeat0/pixel0/previousRow0. Terminal VInt/native/engine counters advance once;
 Ring/spill tail does not, no load epoch/boundary is invented. Old52 source bytes
 remain exact. Native image/timing parity and completed3211 remain unclaimed.
 The four accepted queued producer registrations are still external/UNRUN.
+
+
+### Actual queued Hole/Waterfall/Disc/Shadow sources — 26 October 2026
+
+Source17 candidate appends four exact producers through the existing synchronized
+cache/helper, after the old thirteen: Hole PLC5/row2 at7400,14tiles/Java113/native114;
+Waterfall5/4 at7C80,29/327/328; Disc5/5 at8120,12/167/167 despite inventory166;
+Shadow5/6 at8300,16/23/24, normal0010. Disc's actual extra80 is Waterfall's first
+header byte;1D remains outside both views. No new decoder, bank, Region, preload,
+logical/picture span, body or public API follows. Both cardinality guards become17.
+The actual queue is incremental10, not the canonical full5 association.
+
+Matched source13 RED53855 runs6/1/0/0 at04:01:28Z (33.248s/queue121s): the three
+format/finite unit cases and two regional negative cases pass; USA expects17
+and sees13. Earlier35627 stopped at test compilation (23.799s/queue116s) because
+a new fixture omitted checked IOException; it ran no tests. Root's separate
+unitR2 adds only that declaration to the helper and first test caller.
+
+First imported candidate15639 runs193/5/0/0 at04:09:51Z (2m10s/queue323s): all
+93 unit and42 retail cases pass; Section53/58 pass. Its five failures assert
+cross-owner identity after calling openingObjects() again. That factory loads
+a new authenticated ObjectAssets each time; the cache is per ObjectAssets, not
+per level-assets factory. RootSectionR3 retains one owner for the cache test,
+compares full finite inputs across distinct owners, and retains genuine input
+identity across the SAME captured decoder. It also includes the independently
+reviewed correction for Waterfall's unknown failed final tile8000: preserve
+all values/masks and expect strict UNKNOWN_PATTERN, never inject seed bytes.
+The five affected cases pass5/0/0/0 in59496 at04:12:31Z (33.992s/queue0).
+This is188 earlier passes+narrow5, not a fresh193all-green invocation.
+
+Affected current consumers83689 pass429/0/0/0 at04:26:49Z (1m40s/queue97s):
+Runtime362, real EGL21 and six picture classes46. Exact8freshXML/J25.0.5.0.2/
+actual media/privatecwd/EGL and knownS2 donor/no skips checked. Nine EGL source
+cardinalities and seven Runtime/three picture counts now17; logical19/658 and
+all current physical extents remain unchanged. No new quiet-hours visual output.
+Independent source/guard and Root test-repair reviews find no open P1/P2 after
+those recorded corrections. The broader permanent WorldLoad53 consumer remains
+pending promotion; no fully green delivery is inferred from429.
+
+Fresh controller observer53617 (same4233 planned recipe) completes3221 then
+stops inside3222 at unowned object22/live40. N's index names it Tamabboh.
+SourceHole prepares3211, services14 across3212..3216, and Pata prepares3216;
+closed3221 has15 Pata tiles and remaining35. The failed3222 VInt commits3 more
+Pata tiles before Body/spawner/earlier objects reach the unowned Tamabboh.
+Slot40 was zero at3221; its staged ID22/r0/XY4624,529/subtypes0/saved101 survive.
+Both owners close, no3222completed/resume. Waterfall/Disc/Shadow have component
+service evidence but are still unprepared on this natural route. Source-only
+permanent service/replay promotion and Tamabboh native audit are underway.
+
+
+### Permanent queued service/replay promotion — 26 October 2026
+
+The same53 WorldLoad cases now pass at04:43:06Z (71775,35.708s/queue10s),
+including the promoted controllerThreeJumpRouteServicesHoleReplaysClosedCutsAndStopsAtTamabbohSlot40.
+Original52 migrate only two complete source-bank counts/lists to17; selected
+PLC4 descriptor lists stay unchanged. The former53rd test's actual upper route,
+natural checkpoint/third jump and pre3210 replay remain. Nine selected valid
+cuts include3210/3211/3213/3215/3216/3220; full/course comparisons run BEFORE
+forwarding and on EVERY intermediate closed row through3221. Hole14/Pata15
+current bytes/masks/nonwrites are distinct from availability of all17 sources.
+Only after every valid replay does3222 assert the real Tamabboh40 spawn/body
+boundary, including the extra3 VInt Pata tiles, clocks and unreached tail.
+No failed3222 capture or continuation is admitted.
+
+AuthorR1 initially fails compilation at3181/3182 (29599,04:40:40Z,27.142s/queue22s):
+LiveAux.knownMask is an integer, not a byte-array wrapper. Separate RootR2
+changes only that explicit knowledge comparison to integer equality. Frozen
+255736B/SHA317e3c853cb7d2dd344c6fcecb3ae3596d2b6082d17ea2df7b04c35779bd3ab5
+is the tested53-case source; exact fresh XML/J25/privatecwd/media/no skips checked.
+Independent final route review is complete: no open P1/P2 in the exact R2
+route and three production overrides. Review is static, with the53 positive
+attributed to Root. Source17 is ready for a private local save.
+
+Change-based inspection at base626077597 selects3755smoke classes plus guards
+because these private CD paths are unclassified, not because shared engine
+algorithms changed. Focused actual-media owners/services, all affected runtime/
+EGL/picture consumers and complete WorldLoad cover the bounded registration
+impact. No constructor, field, public API, physics, common renderer, build or
+selection-policy implementation changed; existing structural code is byte-
+identical outside the source-cache appends/two numeric guards. The last fresh
+728 structural checks belong to source13 and are not relabeled new passes.
+No broad3755/full-suite rerun is claimed; release-only full-suite stays unused.
+
+A parallel source-only FM audit57659B/SHA25cc1ed1ea9250cabaac0046741b57717f7e568b7aba4a1784cc7a14de89fde4
+pins native queue/R/YM-status/TimerB/track order and missing lifecycle authority.
+Its direct UpdateTracks composition proposal is unaccepted/unimplemented, not
+playback. Tamabboh source audit62991B/SHA7379f684e1b09ecab95d0d18ccd5336a504965f29450c01090a9dfee3d987231
+pins body/missile closure and the existing picture gap440. Assets are frozen
+externally (five tables/three getters/selector4,0) but UNRUN/unimported. Body
+source-only authoring is active with nine slot aliases and synchronous read/
+angle/FM ports; no Tamabboh production is in the current tree. Preserve the
+picture gap as the current scoped boundary; any later admission must use exact
+selected current8800 bytes with no duplicate art or fabricated logical alias.

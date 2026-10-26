@@ -113219,3 +113219,80 @@ smoke failures remain separately recorded. Next finite native owner: Monitor19.
 - Original52 methods/helpers/imports/assertions recover byte-exact. No production
   change, source17 positive, native parity or completed3211 claim. The upcoming
   four actual-queue registrations and partial-service tests remain unimported.
+
+
+## 2026-10-26 — four queued PLC producers and actual Tamabboh3222 frontier
+
+- Private base62607759799bf53906fffdcb3f2896038d126418; uncommitted source17
+  appends Hole/Waterfall/Disc/Shadow through the same cache/helpers and two
+ 13→17 guards. No decoder/public API/Region/preload/C30/span change. Canonical
+  full5 rows2/4/5/6 are distinct from reached incremental10 rows1/3/4/5.
+- Matched source13 RED53855:6/1/0/0 at04:01:28Z,33.248s/queue121s; USA17vs13
+  atRetail4741, five other new cases pass. Earlier35627 only failedtestCompile
+  (missing checkedIOException),23.799s/queue116s, no tests; RootunitR2 fixes only
+  helper/caller declarations. Original frozen R1s remain unchanged.
+- First full assets/service candidate15639:193/5/0/0 at04:09:51Z,2m10s/queue323s;
+  unit93/retail42 pass,Section53/58 pass. Five new asserts confuse fresh
+  openingObjects owners with one cached bank. RootSectionR3 fixes only scope:
+  true per-owner cache identity, cross-owner full-byte equality, same-cut source
+  identity, plus reviewed UNKNOWN8000 nonwrites. Narrow59496 passes5/0/0/0 at
+ 04:12:31Z,33.992s/queue0.188+narrow5 is not fresh193all-green.
+- Affected consumers83689:429/0/0/0 at04:26:49Z,1m40s/queue97s. Command:
+  env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 python3
+  "$OPENGGF_ROOT/tools/testing/maven_queue.py" -Dmse=off
+  -Dsoniccd.media.root="$SCD_MEDIA_ROOT" -Dsoniccd.opening.egl=true
+  -Dopenggf.headless.gl=surfaceless-egl -Dsonic2.rom.path="$S2_ROM"
+  '-Dtest=TestCdOpeningObjectRuntime,TestSonicCdOpeningWorldEgl,TestCdBoulderPicture,TestCdDiagonalSpringPicture,TestCdSpikesPicture,TestCdCheckpointPicture,TestCdAntonPicture,TestCdCollapsePlatformPicture' test.
+  Exact8freshXML/J25/privatecwd/actualmedia/EGL/S2SHA1
+ 8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9/no skips verified. Runtime362,EGL21,
+  pictures46. No changed logical19/658 or physical452 ownership.
+- Actual observer53617 uses --lean and the same script4233 planned:
+  '-Dtest=TestSonicCdOpeningWorldLoad#actualControllerThreeJumpsObservesQueuedArtAndTheNextNativeFrontier'.
+ 1/0/1/0 at04:13:51Z,33.376s/queue0. FreshXML/case/J25/media/privatecwd/no skips.
+ 3221 complete ordinary calls, then3222 UnsupportedOperationException:
+  Unowned CD object ID22 at live40. Native ObjIndexAct1Present:41=ObjTamabboh.
+  Hole prepare3211(count14,23AC29/7400),14 complete3216 then Pata50 prepare.
+  Closed3221 Pata15 written/count35/input272/source237488/dest77E0/read0/shift9/
+  repeat4. Failed3222 VInt writes3more/count32/input307/source2374AB/dest7840/
+  read00CF/shift14/repeat0. No further table rebuild or Ring/spill tail.
+- Native slot40/FFDA00 old64bytes0; staged after spawner is
+ 22000000000000001210000002110000000000000000000000000000000000000000006500000000000000000000000000000000000000000000000000000000
+  ID22/r0/XY4624,529/subtype0/secondary0/saved101; Init is not executed.
+  Placement before3968/right207/left171/saved101,89; after4096/right211/left181/
+  saved104,91. ActorX16/Y16 before277274880/9040896/YV448 and after277668096/
+ 9155584/YV504; XV/GV1536,r2/flags2/link0. Generation1/CP2/spawn1 unchanged,
+  bothRuntime/Frameclosed, no failed resume or completed3222. Unprepared queued
+  Waterfall/Disc/Shadow remain only component-validated on this route.
+- Temporary observer259346/SHA157f1a7ef2abcf181e6e6d30cd236d075eef8fdf2c42f266eceef3adf84ee3f9
+  is external; permanent228570/db8c1a44... restored after terminal. New permanent
+  route/replay promotion is source-only pending; no fully green candidate,
+  whole-act/regional/native-gameplay parity or quiet-hours visual claim.
+
+
+## 2026-10-26 — permanent Hole/Pata/current-mask replay through3221
+
+- Same private base626077597/source17 candidate, no additional production edit.
+  AuthorR1 replaces only former53rd route case plus demonstrated old52 source-
+  bank17 counts/lists; no changed selected PLC4 queue, input or gameplay ingress.
+ 29599 fails only testCompile at04:40:40Z (27.142s/queue22s): LiveAux integer
+  knowledge mask was dereferenced. Separate RootR2 fixes only that assertion.
+- COMPLETE TestSonicCdOpeningWorldLoad passes53/0/0/0 in71775 at04:43:06Z,
+ 35.708s/queue10s. Command: env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4
+  python3 "$OPENGGF_ROOT/tools/testing/maven_queue.py" --lean -Dmse=off
+  -Dsoniccd.media.root="$SCD_MEDIA_ROOT" '-Dtest=TestSonicCdOpeningWorldLoad' test.
+  ExactfreshXML/J25.0.5.0.2/privatecwd/media/no skips checked. Tested255736B/SHA
+ 317e3c853cb7d2dd344c6fcecb3ae3596d2b6082d17ea2df7b04c35779bd3ab5.
+- New casecontrollerThreeJumpRouteServicesHoleReplaysClosedCutsAndStopsAtTamabbohSlot40
+  keeps all pre3210 checks; nine full/course cuts compare complete state,
+  checkpoint/live/knowledge/current finite inputs/pixels/sounds BEFORE forward
+  and at EVERY reached closed row through3221. Hole14current thenPata15current
+  and3222VInt's extra3 Pata tiles are separately checked. Only after all valid
+  replay does the one failed3222 assert slot40's real spawn prefix and close.
+  Waterfall/Disc/Shadow remain unprepared naturally. No native image/timing,
+  fully fresh675-case invocation, broad smoke/full-suite or whole-act claim.
+- Planner base626 selects3755smoke/guards solely from unclassified private CD
+  changes. Bounded focused actual-media owner/service/Runtime/EGL/picture/full
+  WorldLoad coverage is proportionate: no shared algorithm, constructor, field,
+  public API, physics, common renderer, build or selection implementation changed.
+  Prior728 fresh guards belong to source13. Final static route review found no
+  open P1/P2; private local save follows with no additional execution claim.

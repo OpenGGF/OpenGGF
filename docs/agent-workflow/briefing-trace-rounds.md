@@ -71,6 +71,16 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+A per-owner cache is not a cached factory (2026-10-26, CD queued art).
+openingObjects() creates a new authenticated ObjectAssets owner each call;
+sectionArtSources() caches only inside that owner. Five new tests failed by
+asserting identity across fresh owners. Retain one owner when testing its cache;
+compare exact finite bytes across independent owners, and retain true source
+identity across successive captures from the SAME decoder. Do not make a
+production factory global merely to satisfy an identity oracle. A strict read
+of an incoming UNKNOWN tile is not an expected byte value: compare its mask
+and full nonwrites, then require UNKNOWN_PATTERN before and after the fault.
+
 A real adjacent-byte refill is not source inventory growth (2026-10-26, CD
 GoalPost). Inventory/Java448 ends before Signpost; the native post-inline refill
 needs449 and consumes its actual first80 before emitting six final pixels.

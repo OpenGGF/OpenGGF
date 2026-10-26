@@ -5550,7 +5550,7 @@ class TestCdOpeningObjectRuntime {
     @Test void boulderColdDevSeedsExactlyNineteenCompleteTilesFromTheSameSevenSourceBank() throws Exception {
         try (var f = new Fixture()) {
             var objects = f.assets.openingObjects(); var bank = objects.sectionArtSources();
-            assertSame(bank, objects.sectionArtSources()); assertEquals(13, bank.sources().size());
+            assertSame(bank, objects.sectionArtSources()); assertEquals(17, bank.sources().size());
             var source = bank.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_BOULDER);
             assertEquals(2, source.canonicalPlcId()); assertEquals(0, source.canonicalRowIndex());
             assertEquals(f.assets.loadPlan().plcs().get(2).entries().getFirst(), source.canonicalPlc());
@@ -6042,7 +6042,7 @@ class TestCdOpeningObjectRuntime {
     @Test void diagonalColdSeedUsesExactlyTheEighthCanonicalSourceAndFortySixCompleteCurrentTiles() throws Exception {
         try (var f = new Fixture()) {
             var objects = f.assets.openingObjects(); var bank = objects.sectionArtSources(); assertSame(bank, objects.sectionArtSources());
-            assertEquals(13, bank.sources().size()); var source = bank.sources().get(7);
+            assertEquals(17, bank.sources().size()); var source = bank.sources().get(7);
             assertEquals(com.openggf.game.soniccd.level.CdR11aAsset.ART_DIAGONAL_SPRING, source.source());
             assertSame(source, bank.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_DIAGONAL_SPRING));
             assertEquals(1, source.canonicalPlcId()); assertEquals(5, source.canonicalRowIndex());
@@ -6603,7 +6603,7 @@ class TestCdOpeningObjectRuntime {
     @Test void spikesColdSeedsOnlyEightCompleteNinthCanonicalTilesAndKeepsTheSourceBankCached() throws Exception {
         try(var f=new Fixture()) {
             var objects=f.assets.openingObjects();var bank=objects.sectionArtSources();assertSame(bank,objects.sectionArtSources());
-            assertEquals(13,bank.sources().size());var source=bank.sources().get(8);
+            assertEquals(17,bank.sources().size());var source=bank.sources().get(8);
             assertSame(source,bank.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_SPIKES));
             assertEquals(1,source.canonicalPlcId());assertEquals(0,source.canonicalRowIndex());assertEquals(8,source.tileCount());
             assertEquals(0x8008,source.readerBytes().unsignedWord(0));assertEquals(256,source.decode().bytes().length());
@@ -7151,7 +7151,7 @@ class TestCdOpeningObjectRuntime {
     @Test void checkpointColdSeedsTwelveCompleteTilesFromTheSameTenthActualSourceOnly() throws Exception {
         try (var f = new Fixture()) {
             var o=f.assets.openingObjects();var bank=o.sectionArtSources();assertSame(bank,o.sectionArtSources());
-            assertEquals(13,bank.sources().size());var s=bank.sources().get(9);
+            assertEquals(17,bank.sources().size());var s=bank.sources().get(9);
             assertEquals(com.openggf.game.soniccd.level.CdR11aAsset.ART_CHECKPOINT,s.source());
             assertSame(s,bank.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_CHECKPOINT));
             assertEquals(0,s.canonicalPlcId());assertEquals(1,s.canonicalRowIndex());
@@ -7722,7 +7722,7 @@ class TestCdOpeningObjectRuntime {
     @Test void antonColdUnknownCanonicalPixelsAdmitEmptySatAndKeepAll579PreviousBindings() throws Exception {
         try(var f=new Fixture()) {
             var objects=f.assets.openingObjects();var bank=objects.sectionArtSources();assertSame(bank,objects.sectionArtSources());
-            assertEquals(13,bank.sources().size());assertSame(bank.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_ANTON),bank.sources().get(1));
+            assertEquals(17,bank.sources().size());assertSame(bank.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_ANTON),bank.sources().get(1));
             var state=f.runtime.sectionArtState();var pixels=antonPixels(f,state.residency());var old=checkpointPixels(f,state.residency());
             int[][] ranges={{0x780,24},{0x7AE,14},{0x3A0,70},{0x424,28},{0x441,63},{0x680,70},{0x6C6,5},{0x6D7,39},
                     {0x544,36},{0x334,15},{0x520,36},{0x328,12},{0x5A8,82},{0x374,19},{0x490,46},{0x320,8},{0x6CB,12}};
@@ -8138,7 +8138,7 @@ class TestCdOpeningObjectRuntime {
     @Test void collapseColdDevWritesExactlyFiftySevenCompleteTilesFromTheSameCachedEleventhSource() throws Exception {
         try(var f=new Fixture()) {
             var o=(com.openggf.game.soniccd.level.CdR11aObjectAssets)checkpointGet(f.runtime,"objects");
-            var bank=o.sectionArtSources();assertSame(bank,o.sectionArtSources());assertEquals(13,bank.sources().size());
+            var bank=o.sectionArtSources();assertSame(bank,o.sectionArtSources());assertEquals(17,bank.sources().size());
             var source=bank.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_PLATFORM);assertSame(source,bank.sources().get(10));
             assertSame(source.decode(),bank.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_PLATFORM).decode());
             assertEquals(1,source.canonicalPlcId());assertEquals(6,source.canonicalRowIndex());
@@ -8985,7 +8985,7 @@ class TestCdOpeningObjectRuntime {
             assertEquals(original.tiles(),now.tiles());assertNotEquals(original.patternVersions().get(logical),now.patternVersions().get(logical));
             assertEquals(CdObjectPresentation.patternVersion(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(resident,0x4BF)),original.patternVersions().get(logical));
             assertEquals(CdObjectPresentation.patternVersion(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(changed,0x4BF)),now.patternVersions().get(logical));
-            assertArrayEquals(sat.bytes(),f.runtime.cpuSat().bytes());assertEquals(13,o.sectionArtSources().sources().size());
+            assertArrayEquals(sat.bytes(),f.runtime.cpuSat().bytes());assertEquals(17,o.sectionArtSources().sources().size());
             f.service(0x80);assertEquals(original,f.runtime.displayedFrame());
         }
     }

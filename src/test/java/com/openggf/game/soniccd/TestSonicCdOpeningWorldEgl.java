@@ -2244,7 +2244,7 @@ class TestSonicCdOpeningWorldEgl {
                 var banks = new CdOpeningObjectRuntime.LogicalBanks(base, base + 24, base + 38);
                 assertEquals(base + 494, banks.boulder()); assertEquals(banks.monitorTime() + 82, banks.boulder());
                 var objects = source.assets().openingObjects();
-                var sources = objects.sectionArtSources(); assertEquals(13, sources.sources().size());
+                var sources = objects.sectionArtSources(); assertEquals(17, sources.sources().size());
                 var boulder = sources.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_BOULDER);
                 assertEquals(2, boulder.canonicalPlcId()); assertEquals(0, boulder.canonicalRowIndex());
                 assertEquals(0x6E80, boulder.canonicalPlc().vramAddress()); assertEquals(19, boulder.tileCount());
@@ -2597,7 +2597,7 @@ class TestSonicCdOpeningWorldEgl {
                 var banks = new CdOpeningObjectRuntime.LogicalBanks(baseId, baseId + 24, baseId + 38);
                 assertEquals(baseId + 513, banks.diagonalSpring()); assertEquals(banks.boulder() + 19, banks.diagonalSpring());
                 var objects = source.assets().openingObjects(); var sources = objects.sectionArtSources();
-                assertEquals(13, sources.sources().size());
+                assertEquals(17, sources.sources().size());
                 var diagonal = sources.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_DIAGONAL_SPRING);
                 assertEquals(1, diagonal.canonicalPlcId()); assertEquals(5, diagonal.canonicalRowIndex());
                 assertEquals(0x9200, diagonal.canonicalPlc().vramAddress()); assertEquals(46, diagonal.tileCount());
@@ -3084,7 +3084,7 @@ class TestSonicCdOpeningWorldEgl {
                 int base = com.openggf.graphics.PatternAtlasRange.OBJECTS.base();
                 var banks = new CdOpeningObjectRuntime.LogicalBanks(base, base + 24, base + 38);
                 assertEquals(base + 559, banks.spikes()); assertEquals(banks.diagonalSpring() + 46, banks.spikes());
-                var sources = objects.sectionArtSources(); assertEquals(13, sources.sources().size());
+                var sources = objects.sectionArtSources(); assertEquals(17, sources.sources().size());
                 var spikes = sources.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_SPIKES);
                 assertEquals(1, spikes.canonicalPlcId()); assertEquals(0, spikes.canonicalRowIndex());
                 assertEquals(0x6400, spikes.canonicalPlc().vramAddress()); assertEquals(8, spikes.tileCount());
@@ -3508,7 +3508,7 @@ class TestSonicCdOpeningWorldEgl {
                 assertEquals(base + 567, banks.checkpoint()); assertEquals(banks.spikes() + 8, banks.checkpoint());
                 assertEquals(banks, new CdOpeningObjectRuntime.LogicalBanks(base,base+24,base+38,base+108,base+136,base+199,
                         base+269,base+274,base+313,base+349,base+364,base+400,base+412,base+494,base+513,base+559,base+567));
-                var sources = objects.sectionArtSources(); assertEquals(13, sources.sources().size());
+                var sources = objects.sectionArtSources(); assertEquals(17, sources.sources().size());
                 var art = sources.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_CHECKPOINT);
                 assertEquals(0, art.canonicalPlcId()); assertEquals(1, art.canonicalRowIndex());
                 assertEquals(0xD960, art.canonicalPlc().vramAddress()); assertEquals(12, art.tileCount());
@@ -4280,7 +4280,7 @@ class TestSonicCdOpeningWorldEgl {
                 assertSame(source,mode.getWorldSession().getDataSource()); assertEquals(GameMode.LEVEL,loop.getCurrentGameMode());
                 assertEquals(NullAudioBackend.class,GameServices.audio().getBackend().getClass());
                 assertNull(GameServices.audio().captureLogicalSnapshot().presentation().activeMusic());
-                var sources = objects.sectionArtSources(); var producerIdentities = sources.sources(); assertEquals(13,producerIdentities.size());
+                var sources = objects.sectionArtSources(); var producerIdentities = sources.sources(); assertEquals(17,producerIdentities.size());
                 var antonSource = sources.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_ANTON);
                 assertEquals(9,antonSource.canonicalPlcId()); assertEquals(1,antonSource.canonicalRowIndex());
                 assertEquals(0x8120,antonSource.canonicalPlc().vramAddress()); assertEquals(22,antonSource.tileCount());
@@ -4585,7 +4585,7 @@ class TestSonicCdOpeningWorldEgl {
             com.openggf.game.soniccd.level.CdR11aObjectAssets.SectionArtSourceBank bank,
             List<com.openggf.game.soniccd.level.CdR11aObjectAssets.SectionArtSource> identities,
             com.openggf.game.soniccd.level.CdR11aObjectAssets.SectionArtSource anton) throws Exception {
-        assertSame(bank,objects.sectionArtSources());assertSame(identities,bank.sources());assertEquals(13,identities.size());
+        assertSame(bank,objects.sectionArtSources());assertSame(identities,bank.sources());assertEquals(17,identities.size());
         for(int i=0;i<11;i++)assertSame(identities.get(i),objects.sectionArtSources().sources().get(i));
         assertSame(anton,bank.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_ANTON));
         var current=runtime.sectionArtState().residency();
@@ -4755,7 +4755,7 @@ class TestSonicCdOpeningWorldEgl {
                 assertSame(source,mode.getWorldSession().getDataSource());assertEquals(GameMode.LEVEL,loop.getCurrentGameMode());
                 assertEquals(NullAudioBackend.class,GameServices.audio().getBackend().getClass());
                 assertNull(GameServices.audio().captureLogicalSnapshot().presentation().activeMusic());
-                var bank=objects.sectionArtSources();var identities=bank.sources();assertEquals(13,identities.size());
+                var bank=objects.sectionArtSources();var identities=bank.sources();assertEquals(17,identities.size());
                 var platform=bank.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_PLATFORM);
                 assertEquals(1,platform.canonicalPlcId());assertEquals(6,platform.canonicalRowIndex());
                 assertEquals(0x97C0,platform.canonicalPlc().vramAddress());assertEquals(57,platform.tileCount());
@@ -5065,7 +5065,7 @@ class TestSonicCdOpeningWorldEgl {
             com.openggf.game.soniccd.level.CdR11aObjectAssets.SectionArtSourceBank bank,
             List<com.openggf.game.soniccd.level.CdR11aObjectAssets.SectionArtSource> identities,
             com.openggf.game.soniccd.level.CdR11aObjectAssets.SectionArtSource platform) throws Exception {
-        assertSame(bank,objects.sectionArtSources());assertSame(identities,bank.sources());assertEquals(13,identities.size());
+        assertSame(bank,objects.sectionArtSources());assertSame(identities,bank.sources());assertEquals(17,identities.size());
         for(int i=0;i<11;i++)assertSame(identities.get(i),objects.sectionArtSources().sources().get(i));
         assertSame(platform,bank.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_PLATFORM));
         for(int tile=0;tile<57;tile++)assertArrayEquals(platform.decode().bytes().slice(tile*32,32).copy(),
@@ -5239,7 +5239,7 @@ class TestSonicCdOpeningWorldEgl {
                 assertSame(source,mode.getWorldSession().getDataSource());assertEquals(GameMode.LEVEL,loop.getCurrentGameMode());
                 assertEquals(NullAudioBackend.class,GameServices.audio().getBackend().getClass());
                 assertNull(GameServices.audio().captureLogicalSnapshot().presentation().activeMusic());
-                var bank=objects.sectionArtSources();var identities=bank.sources();assertEquals(13,identities.size());
+                var bank=objects.sectionArtSources();var identities=bank.sources();assertEquals(17,identities.size());
                 var platform=bank.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_PLATFORM);
                 assertEquals(1,platform.canonicalPlcId());assertEquals(6,platform.canonicalRowIndex());assertEquals(0x97C0,platform.canonicalPlc().vramAddress());
                 assertEquals(57,platform.tileCount());assertEquals(452,platform.decode().sourceBlobRange().length());assertEquals(453,platform.readerInputRange().length());

@@ -704,9 +704,9 @@ class TestCdR11aSectionArt {
         }
         var objects = assets.openingObjects();
         var sources = objects.sectionArtSources();
-        assertEquals(13, sources.sources().size());
+        assertEquals(17, sources.sources().size());
         assertEquals(List.of(ART_PATA_BATA, ART_ANTON, ART_TAMABBOH, ART_MOSQUI, ART_3D_PLANT,
-                ART_3D_RAMP_BOOST, ART_BOULDER, ART_DIAGONAL_SPRING, ART_SPIKES, ART_CHECKPOINT, ART_PLATFORM, ART_ANIMALS, ART_GOAL_POST),
+                ART_3D_RAMP_BOOST, ART_BOULDER, ART_DIAGONAL_SPRING, ART_SPIKES, ART_CHECKPOINT, ART_PLATFORM, ART_ANIMALS, ART_GOAL_POST, ART_SONIC_HOLE, ART_TUNNEL_WATERFALL, ART_SPINNING_DISC, ART_LOG_SHADOW),
                 sources.sources().stream().map(source -> source.source()).toList());
         var mosqui = sources.source(ART_MOSQUI).decode().bytes();
         var plant = sources.source(ART_3D_PLANT).decode().bytes();
@@ -759,7 +759,7 @@ class TestCdR11aSectionArt {
 
     // BEGIN COLLAPSE PLATFORM PICTURE R1
     @Test void actualEleventhPlatformSourceKeepsCanonicalRowAndDistinctFiniteConsumers() throws Exception {
-        var assets=collapseActualAssets();var bank=assets.openingObjects().sectionArtSources();assertEquals(13,bank.sources().size());
+        var assets=collapseActualAssets();var bank=assets.openingObjects().sectionArtSources();assertEquals(17,bank.sources().size());
         var source=bank.sources().get(10);assertSame(source,bank.source(ART_PLATFORM));assertEquals(ART_PLATFORM,source.source());
         assertEquals(1,source.canonicalPlcId());assertEquals(6,source.canonicalRowIndex());assertEquals(0x97C0,source.canonicalPlc().vramAddress());
         assertEquals(57,source.tileCount());assertEquals(0x8039,source.readerBytes().unsignedWord(0));
@@ -853,17 +853,18 @@ class TestCdR11aSectionArt {
         var bank = objects.sectionArtSources();
         var expected = List.of(ART_PATA_BATA, ART_ANTON, ART_TAMABBOH, ART_MOSQUI,
                 ART_3D_PLANT, ART_3D_RAMP_BOOST, ART_BOULDER, ART_DIAGONAL_SPRING,
-                ART_SPIKES, ART_CHECKPOINT, ART_PLATFORM, ART_ANIMALS, ART_GOAL_POST);
-        assertEquals(13, bank.sources().size());
+                ART_SPIKES, ART_CHECKPOINT, ART_PLATFORM, ART_ANIMALS, ART_GOAL_POST,
+                ART_SONIC_HOLE, ART_TUNNEL_WATERFALL, ART_SPINNING_DISC, ART_LOG_SHADOW);
+        assertEquals(17, bank.sources().size());
         assertEquals(expected, bank.sources().stream().map(source -> source.source()).toList());
         assertSame(bank, objects.sectionArtSources());
-        int[] tileCounts = {50, 22, 59, 70, 28, 63, 19, 46, 8, 12, 57, 20, 24};
-        int[] javaLengths = {714, 484, 1142, 846, 393, 677, 270, 779, 86, 211, 452, 445, 448};
-        int[] nativeLengths = {715, 485, 1143, 847, 393, 678, 271, 780, 87, 212, 453, 446, 449};
-        int[] canonicalIds = {9, 9, 9, 2, 2, 2, 2, 1, 1, 0, 1, 2, 2};
-        int[] canonicalRows = {0, 1, 2, 2, 4, 5, 0, 5, 0, 1, 6, 1, 6};
+        int[] tileCounts = {50, 22, 59, 70, 28, 63, 19, 46, 8, 12, 57, 20, 24, 14, 29, 12, 16};
+        int[] javaLengths = {714, 484, 1142, 846, 393, 677, 270, 779, 86, 211, 452, 445, 448, 113, 327, 167, 23};
+        int[] nativeLengths = {715, 485, 1143, 847, 393, 678, 271, 780, 87, 212, 453, 446, 449, 114, 328, 167, 24};
+        int[] canonicalIds = {9, 9, 9, 2, 2, 2, 2, 1, 1, 0, 1, 2, 2, 5, 5, 5, 5};
+        int[] canonicalRows = {0, 1, 2, 2, 4, 5, 0, 5, 0, 1, 6, 1, 6, 2, 4, 5, 6};
         int[] destinations = {0x7600, 0x8120, 0x8500, 0x7400, 0x8480, 0x8820, 0x6E80,
-                0x9200, 0x6400, 0xD960, 0x97C0, 0x7100, 0x9EE0};
+                0x9200, 0x6400, 0xD960, 0x97C0, 0x7100, 0x9EE0, 0x7400, 0x7C80, 0x8120, 0x8300};
         for (int index = 0; index < expected.size(); index++) {
             var source = bank.sources().get(index);
             assertSame(source, bank.source(expected.get(index)));
@@ -1301,5 +1302,508 @@ class TestCdR11aSectionArt {
         assertEquals(452, physicalTiles);
     }
     // END GOALPOST SECTION PROOF R1
+
+    // BEGIN QUEUED HOLE SECTION PROOF R1 -- ALL ORACLES UNRUN.
+    // J cc74a36ed4d1c5f731df05490ddb017884dbbb2c public APIs only; source17 append is Root-owned.
+    // N 1ecc5f3a: PLC_Cam3_Full / PLC_Cam3_Incr (Data (Act 1 Present).asm:117-136,192-207);
+    // ProcessPLCs / DecompPLCSlow / DecompPLC_Pop (Functions (General).asm:664-785).
+    // Finite bytes enter through the existing optional retained-USA loader, never a disassembly asset.
+    // All queues/devState values are component TEST ingress, not the natural call3211 or whole-act proof.
+    private record Queued17Vector(CdR11aAsset asset, int row, int address, int destination, int header,
+                                  int sourceLength, int javaLength, int nativeLength, int preparedOffset,
+                                  int preparedRead, int writtenEntries, String sourceSha, String javaSha,
+                                  String readerSha, String outputSha) {
+        int tiles() { return header & 0x7FFF; }
+    }
+
+    private static List<Queued17Vector> queued17Vectors() {
+        return List.of(
+                new Queued17Vector(ART_SONIC_HOLE, 2, 0x23AC08, 0x7400, 0x800E, 114, 113, 114, 33, 0x00AD, 252,
+                        "97622d18562de1a4b39b7d676a914fd7c266f11b9578b31cf91fa8fbecbe5c53",
+                        "14e61d20ac8d71bc5c4ea75bab1ccca138b11b01a5f9e6974d3f126b5ba58788",
+                        "97622d18562de1a4b39b7d676a914fd7c266f11b9578b31cf91fa8fbecbe5c53",
+                        "8038f15c0f2952ab7ce2c2e9bb2823a14888aab2e5d9d77146ed01ade5845399"),
+                new Queued17Vector(ART_TUNNEL_WATERFALL, 4, 0x236812, 0x7C80, 0x801D, 328, 327, 328, 39, 0x5A3B, 251,
+                        "08d33432bf01cd85abc8653cba9b9901bd7f305932234685bc348ce014192d8e",
+                        "2c5b448d27703b15b531e9f9cbbfbf0821c92674698d9606c7763e3dca46390a",
+                        "08d33432bf01cd85abc8653cba9b9901bd7f305932234685bc348ce014192d8e",
+                        "f3cc6438669479cd3bb36fa0f6cb176ed514865e9ec06d19ee0a5b80d993a8c6"),
+                new Queued17Vector(ART_SPINNING_DISC, 5, 0x23676C, 0x8120, 0x800C, 166, 167, 167, 48, 0x73FA, 252,
+                        "a2bb54013b05cf8b26ae95194cdab0532c8d24530e89259069bf37e5588b9022",
+                        "2ffa2baba308902cc6db0c11ac238ffe47c08fd1737d0fa6fd64967adc649c6d",
+                        "2ffa2baba308902cc6db0c11ac238ffe47c08fd1737d0fa6fd64967adc649c6d",
+                        "97ff27ee8b9ef0f8903cf420bafd651f954e4dd1f3468bd71e829dc932f24e86"),
+                new Queued17Vector(ART_LOG_SHADOW, 6, 0x235EC0, 0x8300, 0x0010, 24, 23, 24, 8, 0x0000, 128,
+                        "025a909ae3b46a5005c04784773e032147799851c0fe4a105a9c0ee9e3279b19",
+                        "862ef992c05ee6c789ad7aad29f07712b30b42081e1997d890cb88b6e3dc2e1d",
+                        "025a909ae3b46a5005c04784773e032147799851c0fe4a105a9c0ee9e3279b19",
+                        "fa208fd33608e8a21ed13a7c9a92cdbbd6a936acd1a377f4ac10e9d333113866"));
+    }
+
+    @Test void queued17ActualBankAppendsFourExactCanonicalSourcesAndFiniteViews() throws Exception {
+        var assets = collapseActualAssets();
+        var objects = assets.openingObjects(); var bank = objects.sectionArtSources();
+        assertEquals(17, bank.sources().size()); assertSame(bank, objects.sectionArtSources());
+        for (int index = 0; index < 4; index++) {
+            var v = queued17Vectors().get(index); var source = bank.sources().get(13 + index);
+            var blob = assets.view(v.asset()); var full = assets.loadPlan().plcs().get(5).entries().get(v.row());
+            var update = assets.loadPlan().plcs().get(10).entries().get(v.row() - 1);
+            assertEquals(v.asset(), source.source()); assertSame(source, bank.source(v.asset()));
+            assertSame(source, bank.source(full)); assertSame(source, bank.source(update));
+            assertEquals(5, source.canonicalPlcId()); assertEquals(v.row(), source.canonicalRowIndex());
+            assertEquals(full, source.canonicalPlc()); assertEquals(full, update);
+            assertEquals(v.address(), full.sourceRange().nativeAddress()); assertEquals(v.destination(), full.vramAddress());
+            assertEquals(v.sourceLength(), blob.range().length()); assertEquals(blob.range(), full.sourceRange());
+            assertEquals(blob.range(), source.decode().sourceBlobRange()); assertEquals(v.asset(), source.decode().asset());
+            assertEquals(v.javaLength(), source.decode().readerInputRange().length());
+            assertEquals(v.javaLength(), source.decode().consumedInputBytes());
+            assertEquals(v.nativeLength(), source.readerInputRange().length()); assertEquals(v.nativeLength(), source.readerBytes().length());
+            for (var range : List.of(source.readerInputRange(), source.decode().readerInputRange())) {
+                assertEquals(blob.range().file(), range.file()); assertEquals(blob.range().domain(), range.domain());
+                assertEquals(blob.range().fileOffset(), range.fileOffset());
+                assertEquals(v.address(), range.nativeAddress());
+            }
+            assertEquals(v.header(), source.readerBytes().unsignedWord(0)); assertEquals(v.tiles(), source.tileCount());
+            assertEquals(v.tiles() * 32, source.decode().bytes().length());
+            assertEquals(v.sourceSha(), goalPost13Sha256(blob.bytes()));
+            assertEquals(v.javaSha(), goalPost13Sha256(source.readerBytes().slice(0, v.javaLength())));
+            assertEquals(v.readerSha(), goalPost13Sha256(source.readerBytes()));
+            assertEquals(v.outputSha(), goalPost13Sha256(source.decode().bytes()));
+            assertArrayEquals(blob.bytes().copy(), source.readerBytes().slice(0, v.sourceLength()).copy());
+            assertSame(source.readerBytes(), bank.source(v.asset()).readerBytes()); assertSame(source.decode(), bank.source(v.asset()).decode());
+            var wrong = new CdR11aProfile.FileRange(blob.range().file(), blob.range().domain(), blob.range().fileOffset() + 2, blob.range().length());
+            assertThrows(IllegalArgumentException.class, () -> bank.source(new CdR11aLoadPlan.PlcEntry(v.asset(), wrong, v.destination())));
+            var other = queued17Vectors().get((index + 1) % 4).asset();
+            assertThrows(IllegalArgumentException.class, () -> bank.source(new CdR11aLoadPlan.PlcEntry(other, blob.range(), v.destination())));
+        }
+        var disc = bank.source(ART_SPINNING_DISC); var waterfall = bank.source(ART_TUNNEL_WATERFALL);
+        assertEquals(0x236812, disc.readerInputRange().endExclusive() + 0x200000 - 1);
+        assertEquals(0x80, disc.readerBytes().unsignedByte(166));
+        assertEquals(waterfall.readerBytes().unsignedByte(0), disc.readerBytes().unsignedByte(166));
+        assertEquals(0x1D, waterfall.readerBytes().unsignedByte(1)); // Not in Disc's finite reader.
+        int holes = 0;
+        for (var plc : assets.loadPlan().plcs()) for (int row = 0; row < plc.entries().size(); row++) {
+            var entry = plc.entries().get(row);
+            if (entry.source() == ART_SONIC_HOLE) {
+                holes++; assertTrue((plc.nativeId() == 5 && row == 2) || (plc.nativeId() == 10 && row == 1));
+                assertEquals(0x23AC08, entry.sourceRange().nativeAddress()); assertEquals(0x7400, entry.vramAddress());
+            }
+        }
+        assertEquals(19, assets.loadPlan().plcs().size()); assertEquals(2, holes);
+    }
+
+    @Test void queued17FiniteReadersMatchActualProductsAndRetainIncomingTableHoles() throws Exception {
+        var assets = collapseActualAssets(); var bank = assets.openingObjects().sectionArtSources();
+        for (var v : queued17Vectors()) {
+            var source = bank.source(v.asset()); var reader = source.readerBytes(); var output = source.decode().bytes();
+            var javaRead = com.openggf.game.soniccd.level.CdNemesisAsset.decode(reader.slice(0, v.javaLength()).copy(), v.tiles() * 32, v.tiles() * 32);
+            assertEquals(v.javaLength(), javaRead.consumedInputBytes()); assertArrayEquals(output.copy(), javaRead.bytes().copy());
+            assertThrows(java.io.IOException.class, () -> com.openggf.game.soniccd.level.CdNemesisAsset.decode(
+                    reader.slice(0, v.javaLength() - 1).copy(), v.tiles() * 32, v.tiles() * 32));
+            var zeroSeed = CdAssetBytes.copyOf(new byte[512]); var a5Seed = CdAssetBytes.copyOf(repeated(512, 0xA5));
+            var zero = CdNemesisPlcDecoder.prepare(reader, v.address(), zeroSeed);
+            var supplied = CdNemesisPlcDecoder.prepare(reader, v.address(), a5Seed);
+            queued17AssertDecoder(zero, v, v.preparedOffset(), v.tiles(), v.preparedRead(), 16, 0, 0, 0);
+            queued17AssertDecoder(supplied, v, v.preparedOffset(), v.tiles(), v.preparedRead(), 16, 0, 0, 0);
+            assertSame(reader, zero.sourceBytes()); assertSame(reader, supplied.sourceBytes());
+            int retained = 0;
+            for (int offset = 0; offset < 512; offset += 2) {
+                boolean hole = zero.codeTable().unsignedWord(offset) != supplied.codeTable().unsignedWord(offset);
+                if (hole) { retained++; assertEquals(0, zero.codeTable().unsignedWord(offset)); assertEquals(0xA5A5, supplied.codeTable().unsignedWord(offset)); }
+                if (v.asset() == ART_SONIC_HOLE) assertEquals(offset >= 0xFC * 2, hole);
+            }
+            assertEquals(256 - v.writtenEntries(), retained);
+            if (v.asset() == ART_SONIC_HOLE) assertEquals("db7573fbc01333b4efb150f8c7b81e85ab7b9358cebd314c3c53da1771b9a52c", goalPost13Sha256(zero.codeTable()));
+            var prepared = zero; byte[] preparedTable = zero.codeTable().copy();
+            for (int tile = 0; tile < v.tiles(); tile++) {
+                var a = CdNemesisPlcDecoder.decodeTile(zero); var b = CdNemesisPlcDecoder.decodeTile(supplied);
+                assertArrayEquals(output.slice(tile * 32, 32).copy(), a.bytes().copy()); assertArrayEquals(a.bytes().copy(), b.bytes().copy());
+                zero = a.state(); supplied = b.state();
+            }
+            assertEquals(v.nativeLength(), zero.inputOffset()); assertEquals(v.nativeLength(), supplied.inputOffset());
+            assertEquals((long) v.address() + v.nativeLength(), zero.sourcePointer()); assertEquals(0, zero.remainingTiles());
+            assertSame(reader, zero.sourceBytes()); assertEquals(v.nativeLength(), zero.sourceBytes().length());
+            assertEquals(v.preparedOffset(), prepared.inputOffset()); assertEquals(v.tiles(), prepared.remainingTiles());
+            assertArrayEquals(preparedTable, prepared.codeTable().copy());
+            assertArrayEquals(new byte[512], zeroSeed.copy()); assertArrayEquals(repeated(512, 0xA5), a5Seed.copy());
+            if (v.asset() == ART_LOG_SHADOW) { assertFalse(zero.xorMode()); assertEquals(0, zero.previousRow()); }
+        }
+    }
+
+    @Test void hole14Actual31And32BytePrepareFaultsRetainExactTableCountQueueAndSavedRam() throws Exception {
+        var assets = collapseActualAssets(); var source = assets.openingObjects().sectionArtSources().source(ART_SONIC_HOLE);
+        for (int length : new int[]{31, 32}) {
+            var reader = source.readerBytes().slice(0, length);
+            var owner = queued17PlanOwner(assets, ART_SONIC_HOLE, reader);
+            var before = queued17HolePrefix(owner, assets, false);
+            var full = CdNemesisPlcDecoder.prepare(source.readerBytes(), 0x23AC08, before.codeTable());
+            var fault = assertThrows(CdR11aSectionArt.SectionArtException.class, () -> owner.prepare(before));
+            assertEquals(DECODE_PREPARE, fault.reason()); assertEquals(0x23AC08L + length, fault.sourcePointer());
+            assertEquals(0x7400, fault.destinationWord()); var failed = fault.state();
+            assertEquals(14, failed.remainingTilesWord()); assertEquals(3, failed.processBudgetWord());
+            assertEquals(before.queue(), failed.queue()); assertEquals(before.savedDecoder(), failed.savedDecoder());
+            assertEquals(0x0401, failed.sectionWord()); assertSame(before.residency(), failed.residency());
+            assertTrue(failed.decoder().isEmpty()); assertArrayEquals(full.codeTable().copy(), failed.codeTable().copy());
+            for (int offset = 504; offset < 512; offset++) assertEquals(before.codeTable().unsignedByte(offset), failed.codeTable().unsignedByte(offset));
+            var cause = assertInstanceOf(CdNemesisPlcDecoder.DecodeException.class, fault.getCause());
+            assertEquals(CdNemesisPlcDecoder.Reason.SOURCE_EXHAUSTED, cause.reason()); var d = cause.diagnostic();
+            assertEquals(length == 31 ? "PREFETCH_HIGH" : "PREFETCH_LOW", d.phase());
+            assertEquals(length, d.inputOffset()); assertEquals(0x23AC08L + length, d.sourcePointer());
+            assertEquals(-1, d.tableOffset()); assertEquals(0, d.readWord()); assertEquals(0, d.shiftWord());
+            assertEquals(0, d.repeatWord()); assertEquals(0, d.pixelNibble()); assertEquals(0, d.previousRow());
+            assertEquals(0, d.row()); assertEquals(0, d.pixelsInRow()); assertEquals(0, d.emittedRows().length()); assertNull(d.boundaryState());
+            goalPost13AssertPrefix(before.residency(), failed.residency(), source.decode().bytes(), 0, 0x7400);
+            queued17AssertTerminal(owner, failed, 10);
+            assertThrows(IllegalArgumentException.class, () -> CdR11aSectionArt.fromAssets(assets).prepare(failed));
+        }
+    }
+
+    @Test void hole14ActualUpdate10SlowCutsMatchLiteralRegistersAndReplayExactCapturedInputs() throws Exception {
+        var assets = collapseActualAssets(); var source = assets.openingObjects().sectionArtSources().source(ART_SONIC_HOLE);
+        var v = queued17Vectors().getFirst(); var owner = CdR11aSectionArt.fromAssets(assets);
+        var before = queued17HolePrefix(owner, assets, false); var ready = owner.prepare(before);
+        assertEquals(3, ready.processBudgetWord()); assertEquals(0x7400, ready.queue().headDestination());
+        assertEquals(0x23AC29L, ready.queue().headSource()); assertSame(before.residency(), ready.residency());
+        queued17AssertDecoder(ready.decoder().orElseThrow(), v, 33, 14, 0x00AD, 16, 0, 0, 0);
+        for (int offset = 504; offset < 512; offset++) assertEquals(before.codeTable().unsignedByte(offset), ready.codeTable().unsignedByte(offset));
+        goalPost13AssertPrefix(before.residency(), ready.residency(), source.decode().bytes(), 0, 0x7400);
+        int[] offsets = {33, 48, 65, 84, 104, 114}; int[] remaining = {14, 11, 8, 5, 2, 0};
+        int[] reads = {0x00AD, 0x2D25, 0x9F00, 0xD9F3, 0x1D78, 0xA000};
+        int[] shifts = {16, 10, 13, 9, 14, 12}; int[] repeats = {0, 1, 0, 0, 0, 0};
+        int[] previous = {0, 0x10111111, 0x11111000, 0x00000111, 0x10000000, 0x00001110};
+        var cuts = new ArrayList<CdR11aSectionArt.State>(); cuts.add(ready);
+        var queues = new ArrayList<byte[]>(); var tables = new ArrayList<byte[]>(); var images = new ArrayList<byte[]>();
+        queues.add(ready.queue().bytes().copy()); tables.add(ready.codeTable().copy()); images.add(queued17Image(ready.residency()));
+        var state = ready;
+        for (int call = 1; call <= 5; call++) {
+            var prior = state; state = owner.serviceSlow(state, 0); cuts.add(state);
+            queued17AssertDecoder(state.decoder().orElseThrow(), v, offsets[call], remaining[call], reads[call], shifts[call], repeats[call], 0, previous[call]);
+            assertEquals(remaining[call], state.remainingTilesWord());
+            goalPost13AssertPrefix(ready.residency(), state.residency(), source.decode().bytes(), 14 - remaining[call], 0x7400);
+            if (call < 5) {
+                assertEquals(0x7400 + call * 96, state.queue().headDestination());
+                assertEquals(0x23AC08L + offsets[call], state.queue().headSource()); assertEquals(0, state.processBudgetWord());
+                queued17AssertSavedMatches(state.savedDecoder(), state.decoder().orElseThrow());
+            } else {
+                assertEquals(2, state.processBudgetWord()); assertEquals(prior.savedDecoder(), state.savedDecoder());
+                assertArrayEquals(goalPost13ExpectedPop(prior.queue(), 0x75E0), state.queue().bytes().copy());
+                assertArrayEquals(prior.queue().bytes().slice(88, 8).copy(), state.queue().bytes().slice(88, 8).copy());
+                assertEquals(0x237378L, state.queue().headSource()); assertEquals(0x7600, state.queue().headDestination());
+                assertSame(state, owner.serviceFast(state)); assertSame(state, owner.serviceSlow(state, 0));
+                assertSame(state, owner.updateSection(state, 0xF80));
+            }
+            queues.add(state.queue().bytes().copy()); tables.add(state.codeTable().copy()); images.add(queued17Image(state.residency()));
+        }
+        for (int cut = 0; cut < cuts.size(); cut++) {
+            var captured = cuts.get(cut);
+            // Compare supplied queue/table/finite-input/cursor BEFORE reusing this immutable owner cut.
+            assertArrayEquals(queues.get(cut), captured.queue().bytes().copy()); assertArrayEquals(tables.get(cut), captured.codeTable().copy());
+            assertArrayEquals(images.get(cut), queued17Image(captured.residency())); assertEquals(0x0401, captured.sectionWord());
+            assertSame(ready.decoder().orElseThrow().sourceBytes(), captured.decoder().orElseThrow().sourceBytes());
+            assertArrayEquals(source.readerBytes().copy(), captured.decoder().orElseThrow().sourceBytes().copy());
+            assertEquals(offsets[cut], captured.decoder().orElseThrow().inputOffset());
+            assertEquals(0x23AC08L + offsets[cut], captured.decoder().orElseThrow().sourcePointer());
+            var replay = captured;
+            for (int call = cut; call < 5; call++) replay = owner.serviceSlow(replay, 0);
+            assertEquals(state, replay); assertEquals(state.hashCode(), replay.hashCode());
+        }
+        assertThrows(IllegalArgumentException.class, () -> CdR11aSectionArt.fromAssets(assets).serviceFast(ready));
+        var next = owner.prepare(state); assertEquals(50, next.remainingTilesWord());
+        assertSame(state.residency(), next.residency()); assertEquals(2, next.processBudgetWord());
+    }
+
+    @Test void hole14FastAndRawScrollLockWordsKeepFullPreadvanceBudgetFiveAndSavedRam() throws Exception {
+        var assets = collapseActualAssets(); var owner = CdR11aSectionArt.fromAssets(assets);
+        var source = assets.openingObjects().sectionArtSources().source(ART_SONIC_HOLE);
+        var ready = owner.prepare(queued17HolePrefix(owner, assets, false));
+        var slow = owner.serviceSlow(ready, 0x0001); assertEquals(11, slow.remainingTilesWord()); assertEquals(0x7460, slow.queue().headDestination());
+        var done = owner.serviceFast(ready); assertEquals(done, owner.serviceSlow(ready, 0x0100));
+        assertEquals(0, done.remainingTilesWord()); assertEquals(5, done.processBudgetWord());
+        assertEquals(ready.savedDecoder(), done.savedDecoder());
+        queued17AssertDecoder(done.decoder().orElseThrow(), queued17Vectors().getFirst(), 114, 0, 0xA000, 12, 0, 0, 0x1110);
+        assertArrayEquals(goalPost13ExpectedPop(ready.queue(), 0x7640), done.queue().bytes().copy());
+        assertEquals(0x237378L, done.queue().headSource()); assertEquals(0x7600, done.queue().headDestination());
+        assertSame(done, owner.serviceFast(done)); assertSame(done, owner.serviceSlow(done, 0));
+        goalPost13AssertPrefix(ready.residency(), done.residency(), source.decode().bytes(), 14, 0x7400);
+        assertArrayEquals(CdR11aCameraArtResidency.readTile(ready.residency(), 0x3AE).copy(), CdR11aCameraArtResidency.readTile(done.residency(), 0x3AE).copy());
+        assertEquals(14, ready.remainingTilesWord()); assertEquals(33, ready.decoder().orElseThrow().inputOffset());
+    }
+
+    @Test void hole14FullDescriptorPopCopiesExactly88AndRetainsNonzeroTrailingEight() throws Exception {
+        var assets = collapseActualAssets(); var actual = assets.loadPlan().plcs().get(5);
+        var rows = new ArrayList<CdR11aLoadPlan.PlcEntry>();
+        // TEST buffer shape: repeat real PLC5 rows2..8; this is not PLC5's actual nine-row body.
+        for (int row = 0; row < 16; row++) rows.add(actual.entries().get(2 + row % 7));
+        var bank = assets.openingObjects().sectionArtSources(); var programs = new ArrayList<CdR11aSectionArt.SourceProgram>();
+        for (var source : bank.sources()) programs.add(new CdR11aSectionArt.SourceProgram(source.canonicalPlc(), source.readerBytes()));
+        var owner = new CdR11aSectionArt(List.of(new CdR11aLoadPlan.PlcList(5, actual.bodyRange(), rows)), assets.loadPlan().sections(), programs);
+        var ready = owner.prepare(owner.initList(owner.devState(queued17Resident(assets), CdAssetBytes.copyOf(repeated(512, 0xA5)), 0x0401), 5));
+        assertFalse(Arrays.equals(new byte[8], ready.queue().bytes().slice(88, 8).copy()));
+        var done = owner.serviceFast(ready);
+        assertArrayEquals(goalPost13ExpectedPop(ready.queue(), 0x7640), done.queue().bytes().copy());
+        assertArrayEquals(ready.queue().bytes().slice(88, 8).copy(), done.queue().bytes().slice(88, 8).copy());
+        assertEquals(0x237378L, done.queue().headSource()); assertEquals(0x7600, done.queue().headDestination());
+        assertEquals(5, done.processBudgetWord()); assertEquals(0, done.remainingTilesWord());
+        assertEquals(ready.savedDecoder(), done.savedDecoder()); assertSame(done, owner.serviceFast(done));
+        goalPost13AssertPrefix(ready.residency(), done.residency(), bank.source(ART_SONIC_HOLE).decode().bytes(), 14, 0x7400);
+    }
+
+    @Test void queued17ActualFull5AndUpdate10UseSeparateListsAndCurrentPhysicalAliases() throws Exception {
+        var assets = collapseActualAssets(); var bank = assets.openingObjects().sectionArtSources();
+        for (boolean full : new boolean[]{true, false}) {
+            var owner = CdR11aSectionArt.fromAssets(assets); var initial = queued17Initial(owner, assets, full);
+            var actual = assets.loadPlan().plcs().get(full ? 5 : 10); var state = initial;
+            var captures = new ArrayList<CdR11aSectionArt.State>(); var images = new ArrayList<byte[]>();
+            captures.add(initial); images.add(queued17Image(initial.residency()));
+            byte[] oldAnton = bank.source(ART_ANTON).decode().bytes().copy();
+            for (var entry : actual.entries()) {
+                var source = bank.source(entry); var before = state; var ready = owner.prepare(before);
+                assertEquals(Integer.toUnsignedLong(entry.sourceRange().nativeAddress()), before.queue().headSource());
+                assertEquals(entry.vramAddress(), before.queue().headDestination()); assertEquals(source.tileCount(), ready.remainingTilesWord());
+                assertArrayEquals(source.readerBytes().copy(), ready.decoder().orElseThrow().sourceBytes().copy());
+                assertEquals(entry.sourceRange().nativeAddress(), ready.decoder().orElseThrow().nativeAddress());
+                goalPost13AssertPrefix(before.residency(), ready.residency(), source.decode().bytes(), 0, entry.vramAddress());
+                state = drainOne(owner, ready, false);
+                goalPost13AssertPrefix(before.residency(), state.residency(), source.decode().bytes(), source.tileCount(), entry.vramAddress());
+                assertEquals(0, state.remainingTilesWord()); assertSame(state, owner.serviceFast(state));
+                if (entry.source() == ART_TUNNEL_WATERFALL) {
+                    queued17AssertRegionSlice(state, CdR11aCameraArtResidency.Region.AT_7400, 0x7C80, source.decode().bytes(), 0, 2);
+                    queued17AssertRegionSlice(state, CdR11aCameraArtResidency.Region.AT_7CC0, 0x7CC0, source.decode().bytes(), 64, 27);
+                }
+                if (entry.source() == ART_SPINNING_DISC) {
+                    queued17AssertRegionSlice(state, CdR11aCameraArtResidency.Region.AT_8120, 0x8120, source.decode().bytes(), 0, 12);
+                    for (int tile = 12; tile < 22; tile++) assertTile(state, 0x409 + tile, Arrays.copyOfRange(oldAnton, tile * 32, (tile + 1) * 32));
+                }
+                if (entry.source() == ART_LOG_SHADOW) {
+                    queued17AssertRegionSlice(state, CdR11aCameraArtResidency.Region.AT_8120, 0x8300, source.decode().bytes(), 0, 7);
+                    queued17AssertRegionSlice(state, CdR11aCameraArtResidency.Region.AT_83E0, 0x83E0, source.decode().bytes(), 224, 5);
+                    queued17AssertRegionSlice(state, CdR11aCameraArtResidency.Region.AT_8480, 0x8480, source.decode().bytes(), 384, 4);
+                    var disc = bank.source(ART_SPINNING_DISC).decode().bytes(); var plant = bank.source(ART_3D_PLANT).decode().bytes();
+                    for (int tile = 0; tile < 12; tile++) assertTile(state, 0x409 + tile, disc.slice(tile * 32, 32).copy());
+                    for (int tile = 12; tile < 15; tile++) assertTile(state, 0x409 + tile, Arrays.copyOfRange(oldAnton, tile * 32, (tile + 1) * 32));
+                    for (int tile = 4; tile < 28; tile++) assertTile(state, 0x424 + tile, plant.slice(tile * 32, 32).copy());
+                }
+                captures.add(state); images.add(queued17Image(state.residency()));
+            }
+            assertEquals(0, state.queue().headSource()); assertSame(state, owner.prepare(state));
+            for (int cut = 0; cut < captures.size(); cut++) assertArrayEquals(images.get(cut), queued17Image(captures.get(cut).residency()));
+            assertArrayEquals(oldAnton, bank.source(ART_ANTON).decode().bytes().copy());
+            assertEquals(full ? 9 : 7, actual.entries().size()); assertEquals(0x0401, state.sectionWord());
+        }
+    }
+
+    @Test void queued17OneShortNativeReadersKeepOnlyCompleteTilesAndExactTerminalRowEvidence() throws Exception {
+        var assets = collapseActualAssets(); var bank = assets.openingObjects().sectionArtSources();
+        String[] phases = {"CODE_REFILL", "INLINE_VALUE_REFILL", "CODE_REFILL", "CODE_REFILL"};
+        int[] reads = {0xA000, 0, 0x2000, 0}; int[] shifts = {16, 15, 15, 16}; int[] repeats = {3, 0x30, 4, 1};
+        int[] pixels = {0, 6, 0, 3}; int[] previous = {0x00111110, 0x55506660, 0x11111110, 0};
+        int[] rows = {0, 0x5050, 0, 0}; int[] rowPixels = {2, 4, 6, 0};
+        String[] rowPrefixSha = {"ba8bcdce5fc48cec1f176415a7cf0c0c86c8dbe8fb3883d53c1a634f6677d6ac",
+                "1374ec0a1afa61e2094f6673c837d717004f8b92e79b5ffcfdce88bfe7db97d1",
+                "b02e4d786760798dc3acf5a0745b9acbaf8b2027d7678d2daa42dc5f488a8ca7",
+                "23f769aa7f524ca73b8f00e2604c7586654da173a19075efbdb793e51aca68c4"};
+        for (int index = 0; index < 4; index++) {
+            var v = queued17Vectors().get(index); var output = bank.source(v.asset()).decode().bytes();
+            var reader = bank.source(v.asset()).readerBytes().slice(0, v.nativeLength() - 1);
+            var owner = queued17DeclaredOwner(assets, v.asset(), reader, v.destination());
+            var ready = owner.prepare(owner.initList(owner.devState(queued17Resident(assets), CdAssetBytes.copyOf(repeated(512, 0xA5)), 0x0401), 5));
+            int complete = v.tiles() - 1; int priorTiles = complete / 3 * 3; var state = ready;
+            for (int call = 0; call < complete / 3; call++) state = owner.serviceSlow(state, 0);
+            var prefix = state;
+            var fault = assertThrows(CdR11aSectionArt.SectionArtException.class, () -> owner.serviceSlow(prefix, 0)); var failed = fault.state();
+            assertEquals(DECODE_TILE, fault.reason()); assertEquals((long) v.address() + v.nativeLength() - 1, fault.sourcePointer());
+            assertEquals(v.destination() + complete * 32, fault.destinationWord());
+            assertEquals(1, failed.remainingTilesWord()); assertEquals(3 - complete % 3, failed.processBudgetWord());
+            assertEquals(v.destination() + (priorTiles + 3) * 32, failed.queue().headDestination());
+            assertEquals(prefix.queue().headSource(), failed.queue().headSource()); assertEquals(prefix.savedDecoder(), failed.savedDecoder());
+            assertSame(reader, failed.decoder().orElseThrow().sourceBytes()); assertEquals(1, failed.decoder().orElseThrow().remainingTiles());
+            var cause = assertInstanceOf(CdNemesisPlcDecoder.DecodeException.class, fault.getCause());
+            assertEquals(CdNemesisPlcDecoder.Reason.SOURCE_EXHAUSTED, cause.reason()); var d = cause.diagnostic();
+            assertEquals(phases[index], d.phase()); assertEquals(v.nativeLength() - 1, d.inputOffset());
+            assertEquals((long) v.address() + v.nativeLength() - 1, d.sourcePointer());
+            assertEquals(reads[index], d.readWord()); assertEquals(shifts[index], d.shiftWord()); assertEquals(repeats[index], d.repeatWord());
+            assertEquals(pixels[index], d.pixelNibble()); assertEquals(previous[index], d.previousRow());
+            assertEquals(rows[index], d.row()); assertEquals(rowPixels[index], d.pixelsInRow()); assertEquals(28, d.emittedRows().length());
+            assertEquals(failed.decoder().orElseThrow(), d.boundaryState()); assertArrayEquals(failed.codeTable().copy(), d.codeTable().copy());
+            if (index == 1) assertEquals(-1, d.tableOffset());
+            else { assertTrue(d.tableOffset() >= 0 && d.tableOffset() < 504 && d.tableOffset() % 2 == 0); assertEquals(repeats[index], d.codeTable().unsignedByte(d.tableOffset())); }
+            assertEquals("Reached byte read outside the finite source view [" + phases[index] + ", input+" + (v.nativeLength() - 1) + "]", cause.getMessage());
+            assertArrayEquals(output.slice(complete * 32, 28).copy(), d.emittedRows().copy());
+            byte[] rowEvidence = new byte[complete * 32 + 28];
+            System.arraycopy(output.copy(), 0, rowEvidence, 0, complete * 32); System.arraycopy(d.emittedRows().copy(), 0, rowEvidence, complete * 32, 28);
+            assertEquals(rowPrefixSha[index], goalPost13Sha256(CdAssetBytes.copyOf(rowEvidence)));
+            goalPost13AssertPrefix(ready.residency(), failed.residency(), output, complete, v.destination());
+            int failedPattern = (v.destination() >>> 5) + complete;
+            if (v.asset() == ART_TUNNEL_WATERFALL) {
+                // The final tile at $8000 is UNKNOWN in the incoming complementary region.
+                // Full byte/mask nonwrites were compared above; strict reads must still reject it.
+                var priorUnknown = assertThrows(CdR11aCameraArtResidency.OwnershipBoundary.class,
+                        () -> CdR11aCameraArtResidency.readTile(ready.residency(), failedPattern));
+                var stillUnknown = assertThrows(CdR11aCameraArtResidency.OwnershipBoundary.class,
+                        () -> CdR11aCameraArtResidency.readTile(failed.residency(), failedPattern));
+                assertEquals(CdR11aCameraArtResidency.Boundary.UNKNOWN_PATTERN, priorUnknown.boundary());
+                assertEquals(priorUnknown.boundary(), stillUnknown.boundary());
+                assertEquals(0x8000, priorUnknown.destinationWord());
+                assertEquals(priorUnknown.destinationWord(), stillUnknown.destinationWord());
+            } else {
+                assertTile(failed, failedPattern, CdR11aCameraArtResidency.readTile(ready.residency(), failedPattern).copy());
+            }
+            if (v.asset() == ART_SONIC_HOLE) {
+                assertEquals(13, complete); assertEquals(416, complete * 32); assertEquals(444, rowEvidence.length);
+                assertEquals(0x23AC70L, failed.queue().headSource()); assertEquals(0x75E0, failed.queue().headDestination());
+                queued17AssertDecoder(failed.decoder().orElseThrow(), v, 108, 1, 0x8411, 11, 0, 0, 0);
+                assertEquals(0x1D78, failed.savedDecoder().readWord()); assertEquals(14, failed.savedDecoder().shiftWord());
+                assertEquals(0x10000000, failed.savedDecoder().previousRow());
+                assertEquals("9fd03c34f086ea414771ba16a64a83164c6d5c557e9188ccb0b5368007979b4b", goalPost13Sha256(output.slice(0, 416)));
+            }
+            queued17AssertTerminal(owner, failed, 5);
+            assertThrows(IllegalArgumentException.class, () -> CdR11aSectionArt.fromAssets(assets).serviceFast(failed));
+            assertEquals(v.tiles(), ready.remainingTilesWord()); assertEquals(v.tiles() - priorTiles, prefix.remainingTilesWord());
+        }
+    }
+
+    @Test void queued17ActualProgramsHonorRelocatedQueueDestinationAndNativeSourceBinding() throws Exception {
+        var assets = collapseActualAssets(); var bank = assets.openingObjects().sectionArtSources();
+        for (var v : queued17Vectors()) {
+            var source = bank.source(v.asset()); var relocated = new CdR11aLoadPlan.PlcEntry(v.asset(), source.canonicalPlc().sourceRange(), 0x9000);
+            assertSame(source, bank.source(relocated)); assertEquals(v.destination(), source.canonicalPlc().vramAddress());
+            var owner = queued17DeclaredOwner(assets, v.asset(), source.readerBytes(), 0x9000);
+            var initial = owner.devState(queued17Resident(assets), CdAssetBytes.copyOf(repeated(512, 0xA5)), 0x0401);
+            var ready = owner.prepare(owner.initList(initial, 5)); var done = drainOne(owner, ready, true);
+            assertEquals(0x9000, ready.queue().headDestination()); assertEquals((long) v.address() + v.preparedOffset(), ready.queue().headSource());
+            assertEquals(v.address(), ready.decoder().orElseThrow().nativeAddress()); assertSame(source.readerBytes(), ready.decoder().orElseThrow().sourceBytes());
+            assertEquals((long) v.address() + v.nativeLength(), done.decoder().orElseThrow().sourcePointer());
+            goalPost13AssertPrefix(initial.residency(), done.residency(), source.decode().bytes(), v.tiles(), 0x9000);
+            assertTile(done, v.destination() >>> 5, CdR11aCameraArtResidency.readTile(initial.residency(), v.destination() >>> 5).copy());
+            assertEquals(0, done.queue().headSource()); assertSame(done, owner.serviceFast(done));
+        }
+    }
+
+    @Test void queued17SourceProgramAvailabilityDoesNotAuthorizeDifferentNativeProducer() throws Exception {
+        var assets = collapseActualAssets(); var bank = assets.openingObjects().sectionArtSources(); var actual = assets.loadPlan().plcs().get(5);
+        for (int index = 0; index < 4; index++) {
+            var selected = queued17Vectors().get(index); var available = bank.source(queued17Vectors().get((index + 1) % 4).asset());
+            var declaration = new CdR11aSectionArt.SourceProgram(available.canonicalPlc(), available.readerBytes());
+            assertSame(available.canonicalPlc(), declaration.entry()); assertSame(available.readerBytes(), declaration.readerBytes());
+            var owner = new CdR11aSectionArt(List.of(new CdR11aLoadPlan.PlcList(5, actual.bodyRange(), List.of(actual.entries().get(selected.row())))),
+                    assets.loadPlan().sections(), List.of(declaration));
+            var queued = owner.initList(owner.devState(queued17Resident(assets), CdAssetBytes.copyOf(repeated(512, 0xA5)), 0x0401), 5);
+            var fault = assertThrows(CdR11aSectionArt.SectionArtException.class, () -> owner.prepare(queued));
+            assertEquals(UNKNOWN_SOURCE, fault.reason()); assertEquals(Integer.toUnsignedLong(selected.address()), fault.sourcePointer());
+            assertEquals(selected.destination(), fault.destinationWord()); assertEquals(queued.queue(), fault.state().queue());
+            assertArrayEquals(queued.codeTable().copy(), fault.state().codeTable().copy()); assertSame(queued.residency(), fault.state().residency());
+            assertEquals(0, fault.state().remainingTilesWord()); assertTrue(fault.state().decoder().isEmpty());
+        }
+    }
+
+    private static CdR11aCameraArtResidency.State queued17Resident(CdR11aAssets assets) throws Exception {
+        // Explicit old current bytes: original Mosqui/Plant/Ramp, Platform57, final/trailing sentinels, Anton22.
+        // Complements remain genuinely unknown until a complete native tile writes them.
+        var resident = goalPost13Resident(assets); var anton = assets.openingObjects().sectionArtSources().source(ART_ANTON).decode().bytes();
+        for (int tile = 0; tile < 22; tile++) resident = CdR11aCameraArtResidency.writeTile(resident, 0x8120 + tile * 32, anton.slice(tile * 32, 32));
+        return resident;
+    }
+
+    private static CdR11aSectionArt queued17PlanOwner(CdR11aAssets assets, CdR11aAsset shortened, CdAssetBytes reader) throws Exception {
+        var sources = new ArrayList<CdR11aSectionArt.SourceProgram>();
+        for (var source : assets.openingObjects().sectionArtSources().sources()) sources.add(new CdR11aSectionArt.SourceProgram(
+                source.canonicalPlc(), source.source() == shortened ? reader : source.readerBytes()));
+        return new CdR11aSectionArt(assets.loadPlan().plcs(), assets.loadPlan().sections(), sources);
+    }
+
+    private static CdR11aSectionArt queued17DeclaredOwner(CdR11aAssets assets, CdR11aAsset asset, CdAssetBytes reader, int destination) throws Exception {
+        var actual = assets.loadPlan().plcs().get(5); var source = assets.openingObjects().sectionArtSources().source(asset);
+        var selected = new CdR11aLoadPlan.PlcEntry(asset, source.canonicalPlc().sourceRange(), destination);
+        // TEST one-row negative/relocation queue. SourceProgram retains canonical provenance and the finite input.
+        return new CdR11aSectionArt(List.of(new CdR11aLoadPlan.PlcList(5, actual.bodyRange(), List.of(selected))), assets.loadPlan().sections(),
+                List.of(new CdR11aSectionArt.SourceProgram(source.canonicalPlc(), reader)));
+    }
+
+    private static CdR11aSectionArt.State queued17Initial(CdR11aSectionArt owner, CdR11aAssets assets, boolean full) throws Exception {
+        var section = assets.loadPlan().sections().get(2); assertEquals(0x1980, section.rightThresholdWord());
+        assertEquals(5, section.initialPlcId()); assertEquals(10, section.updatePlcId());
+        var initial = owner.devState(queued17Resident(assets), CdAssetBytes.copyOf(repeated(512, 0xA5)), 0x0201);
+        var queued = full ? owner.loadSection(initial, 0xF80) : owner.updateSection(initial, 0xF80);
+        var actual = assets.loadPlan().plcs().get(full ? 5 : 10);
+        assertEquals(full ? 0xFCA2 : 0xFD60, actual.bodyRange().fileOffset());
+        assertEquals(full ? 56 : 44, actual.bodyRange().length()); assertEquals(full ? 9 : 7, actual.entries().size());
+        assertEquals(full ? List.of(ART_BOULDER, ART_ANIMALS, ART_SONIC_HOLE, ART_PATA_BATA, ART_TUNNEL_WATERFALL, ART_SPINNING_DISC, ART_LOG_SHADOW, ART_TAMABBOH, ART_GOAL_POST)
+                        : List.of(ART_BOULDER, ART_SONIC_HOLE, ART_PATA_BATA, ART_TUNNEL_WATERFALL, ART_SPINNING_DISC, ART_LOG_SHADOW, ART_TAMABBOH),
+                actual.entries().stream().map(CdR11aLoadPlan.PlcEntry::source).toList());
+        for (int row = 0; row < actual.entries().size(); row++) {
+            var entry = actual.entries().get(row);
+            assertEquals(Integer.toUnsignedLong(entry.sourceRange().nativeAddress()), queued.queue().bytes().unsignedLong(row * 6));
+            assertEquals(entry.vramAddress(), queued.queue().bytes().unsignedWord(row * 6 + 4));
+        }
+        assertEquals(0x0401, queued.sectionWord()); assertSame(queued.residency(), initial.residency());
+        assertArrayEquals(initial.codeTable().copy(), queued.codeTable().copy()); assertEquals(0, queued.remainingTilesWord());
+        assertSame(queued, owner.serviceFast(queued)); assertSame(queued, owner.updateSection(queued, 0xF80));
+        return queued;
+    }
+
+    private static CdR11aSectionArt.State queued17HolePrefix(CdR11aSectionArt owner, CdR11aAssets assets, boolean full) throws Exception {
+        var state = owner.prepare(queued17Initial(owner, assets, full));
+        assertEquals(19, state.remainingTilesWord());
+        for (int call = 0; call < 6; call++) state = owner.serviceSlow(state, 0);
+        assertEquals(1, state.remainingTilesWord()); assertEquals(0, state.processBudgetWord());
+        assertEquals(0x2365C5L, state.queue().headSource()); assertEquals(0x70C0, state.queue().headDestination());
+        assertArrayEquals(assets.openingObjects().sectionArtSources().source(ART_BOULDER).readerBytes().copy(),
+                state.decoder().orElseThrow().sourceBytes().copy());
+        if (!full) {
+            // Supplied seven-row prefix, checked against a source-derived component cut, not observed controller history.
+            byte[] expected = new byte[96]; byte[] rows = java.util.HexFormat.of().parseHex(
+                    "002365c570c00023ac087400002373787600002368127c800023676c812000235ec08300002379508500");
+            System.arraycopy(rows, 0, expected, 0, rows.length); assertArrayEquals(expected, state.queue().bytes().copy());
+        }
+        byte[] table = state.codeTable().copy(); byte[] queue = state.queue().bytes().copy(); var captured = state;
+        state = owner.serviceSlow(captured, 0); assertEquals(state, owner.serviceSlow(captured, 0));
+        assertArrayEquals(table, captured.codeTable().copy()); assertArrayEquals(queue, captured.queue().bytes().copy());
+        if (full) state = drainOne(owner, owner.prepare(state), false);
+        assertEquals(0, state.remainingTilesWord()); assertEquals(full ? 2 : 3, state.processBudgetWord());
+        assertEquals(0x23AC08L, state.queue().headSource()); assertEquals(0x7400, state.queue().headDestination());
+        assertSame(state, owner.updateSection(state, 0xF80)); return state;
+    }
+
+    private static void queued17AssertDecoder(CdNemesisPlcDecoder.State state, Queued17Vector v, int offset, int remaining,
+                                               int read, int shift, int repeat, int pixel, int previous) {
+        assertEquals(v.header(), state.headerWord()); assertEquals((v.header() & 0x8000) != 0, state.xorMode());
+        assertEquals(v.address(), state.nativeAddress()); assertEquals(offset, state.inputOffset());
+        assertEquals((long) v.address() + offset, state.sourcePointer()); assertEquals(remaining, state.remainingTiles());
+        assertEquals(read, state.readWord()); assertEquals(shift, state.shiftWord()); assertEquals(repeat, state.repeatWord());
+        assertEquals(pixel, state.pixelNibble()); assertEquals(previous, state.previousRow());
+    }
+
+    private static void queued17AssertSavedMatches(CdR11aSectionArt.SavedDecoder saved, CdNemesisPlcDecoder.State decoder) {
+        assertEquals(decoder.xorMode() ? CdR11aSectionArt.Writer.XOR : CdR11aSectionArt.Writer.NORMAL, saved.writer());
+        assertEquals(decoder.repeatWord(), saved.repeatWord()); assertEquals(decoder.pixelNibble(), saved.pixelNibble());
+        assertEquals(decoder.previousRow(), saved.previousRow()); assertEquals(decoder.readWord(), saved.readWord()); assertEquals(decoder.shiftWord(), saved.shiftWord());
+    }
+
+    private static void queued17AssertTerminal(CdR11aSectionArt owner, CdR11aSectionArt.State state, int list) {
+        assertTrue(state.stopped());
+        assertThrows(IllegalStateException.class, () -> owner.prepare(state)); assertThrows(IllegalStateException.class, () -> owner.serviceFast(state));
+        assertThrows(IllegalStateException.class, () -> owner.serviceSlow(state, 0)); assertThrows(IllegalStateException.class, () -> owner.initList(state, list));
+        assertThrows(IllegalStateException.class, () -> owner.appendList(state, list)); assertThrows(IllegalStateException.class, () -> owner.loadSection(state, 0xF80));
+        assertThrows(IllegalStateException.class, () -> owner.updateSection(state, 0xF80));
+    }
+
+    private static void queued17AssertRegionSlice(CdR11aSectionArt.State state, CdR11aCameraArtResidency.Region region,
+                                                 int address, CdAssetBytes output, int outputOffset, int tiles) {
+        assertTrue(address >= region.destinationWord() && address + tiles * 32 <= region.destinationWord() + region.byteLength());
+        for (int tile = 0; tile < tiles; tile++) assertTile(state, (address >>> 5) + tile, output.slice(outputOffset + tile * 32, 32).copy());
+    }
+
+    private static byte[] queued17Image(CdR11aCameraArtResidency.State state) {
+        byte[] image = new byte[452 * 32 * 2]; int cursor = 0;
+        for (var region : CdR11aCameraArtResidency.Region.values()) {
+            var bytes = state.region(region);
+            for (int offset = 0; offset < region.byteLength(); offset++) {
+                image[cursor++] = (byte) bytes.knownMask().unsignedByte(offset);
+                image[cursor++] = (byte) bytes.knownByte(offset).orElse(0);
+            }
+        }
+        assertEquals(image.length, cursor); return image;
+    }
+    // END QUEUED HOLE SECTION PROOF R1
 }
 // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>

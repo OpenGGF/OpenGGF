@@ -192,7 +192,7 @@ class TestCdAntonPicture {
     }
 
     @Test void actualPlc9CompletesPataHeadBeforePreparingAntonAndRetainsTheThreeTileServicePrefix() throws Exception {
-        var f=fixture();var sources=f.objects().sectionArtSources();assertEquals(13,sources.sources().size());
+        var f=fixture();var sources=f.objects().sectionArtSources();assertEquals(17,sources.sources().size());
         var actual=f.assets().loadPlan().plcs().get(9);assertEquals(3,actual.entries().size());
         var pata=sources.source(CdR11aAsset.ART_PATA_BATA);var anton=sources.source(CdR11aAsset.ART_ANTON);
         var tam=sources.source(CdR11aAsset.ART_TAMABBOH);

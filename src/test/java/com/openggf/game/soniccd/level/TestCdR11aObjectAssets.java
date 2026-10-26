@@ -3249,5 +3249,226 @@ class TestCdR11aObjectAssets {
 
     // End GoalPost source13 source-only tests.
 
+
+    // Begin queued PLC10 sources14..17 R1; frozen before production. Every oracle UNRUN by author.
+
+    static final List<CdR11aAsset> QUEUED_PLC_SOURCES = List.of(CdR11aAsset.ART_SONIC_HOLE,
+            CdR11aAsset.ART_TUNNEL_WATERFALL, CdR11aAsset.ART_SPINNING_DISC, CdR11aAsset.ART_LOG_SHADOW);
+    static final int[] QUEUED_PLC_OFFSETS = {0x3AC08,0x36812,0x3676C,0x35EC0};
+    static final int[] QUEUED_PLC_SOURCE_BYTES = {114,328,166,24};
+    static final int[] QUEUED_PLC_JAVA_BYTES = {113,327,167,23};
+    static final int[] QUEUED_PLC_NATIVE_BYTES = {114,328,167,24};
+    static final int[] QUEUED_PLC_TILES = {14,29,12,16};
+    static final int[] QUEUED_PLC_HEADERS = {0x800E,0x801D,0x800C,0x0010};
+    static final int[] QUEUED_PLC_ROWS = {2,4,5,6};
+    static final int[] QUEUED_PLC_DESTINATIONS = {0x7400,0x7C80,0x8120,0x8300};
+    static final String[] QUEUED_PLC_SOURCE_SHA256 = {
+            "97622d18562de1a4b39b7d676a914fd7c266f11b9578b31cf91fa8fbecbe5c53",
+            "08d33432bf01cd85abc8653cba9b9901bd7f305932234685bc348ce014192d8e",
+            "a2bb54013b05cf8b26ae95194cdab0532c8d24530e89259069bf37e5588b9022",
+            "025a909ae3b46a5005c04784773e032147799851c0fe4a105a9c0ee9e3279b19"};
+    static final String[] QUEUED_PLC_JAVA_SHA256 = {
+            "14e61d20ac8d71bc5c4ea75bab1ccca138b11b01a5f9e6974d3f126b5ba58788",
+            "2c5b448d27703b15b531e9f9cbbfbf0821c92674698d9606c7763e3dca46390a",
+            "2ffa2baba308902cc6db0c11ac238ffe47c08fd1737d0fa6fd64967adc649c6d",
+            "862ef992c05ee6c789ad7aad29f07712b30b42081e1997d890cb88b6e3dc2e1d"};
+    static final String[] QUEUED_PLC_NATIVE_SHA256 = {
+            "97622d18562de1a4b39b7d676a914fd7c266f11b9578b31cf91fa8fbecbe5c53",
+            "08d33432bf01cd85abc8653cba9b9901bd7f305932234685bc348ce014192d8e",
+            "2ffa2baba308902cc6db0c11ac238ffe47c08fd1737d0fa6fd64967adc649c6d",
+            "025a909ae3b46a5005c04784773e032147799851c0fe4a105a9c0ee9e3279b19"};
+    static final String[] QUEUED_PLC_OUTPUT_SHA256 = {
+            "8038f15c0f2952ab7ce2c2e9bb2823a14888aab2e5d9d77146ed01ade5845399",
+            "f3cc6438669479cd3bb36fa0f6cb176ed514865e9ec06d19ee0a5b80d993a8c6",
+            "97ff27ee8b9ef0f8903cf420bafd651f954e4dd1f3468bd71e829dc932f24e86",
+            "fa208fd33608e8a21ed13a7c9a92cdbbd6a936acd1a377f4ac10e9d333113866"};
+
+    @Test
+    void queuedFourSourcesKeepTheirInventoryHeadersAndActualFullAndIncrementalPlcRows() throws java.io.IOException {
+        for (var variant : CdReleaseVariant.values()) {
+            var profile = CdR11aProfile.forStage(variant, CdStageKey.parse("R11A"));
+            for (int i = 0; i < QUEUED_PLC_SOURCES.size(); i++) {
+                var asset = QUEUED_PLC_SOURCES.get(i);
+                var range = profile.range(asset);
+                assertEquals(new CdR11aProfile.FileRange(CdNativeFile.R11A,
+                        CdMmdImage.Domain.ORIGINAL_WORD_RAM, QUEUED_PLC_OFFSETS[i], QUEUED_PLC_SOURCE_BYTES[i]), range);
+                assertEquals(0x200000 + QUEUED_PLC_OFFSETS[i], range.nativeAddress());
+                assertEquals(QUEUED_PLC_OFFSETS[i] + QUEUED_PLC_SOURCE_BYTES[i], range.endExclusive());
+                assertEquals(CdR11aAsset.Encoding.NEMESIS, asset.encodingForReviewedConsumer());
+                int offset = QUEUED_PLC_OFFSETS[i], length = QUEUED_PLC_SOURCE_BYTES[i];
+                assertThrows(IllegalArgumentException.class, () -> new CdR11aProfile.FileRange(
+                        CdNativeFile.R11A, CdMmdImage.Domain.RELOCATED_COPY, offset, length));
+            }
+            var full = CdR11aLoadPlan.decodePlcBody(profile, java.util.HexFormat.of().parseHex(
+                    "0008002364c26e80002381c071000023ac087400002373787600002368127c800023676c812000235ec08300002379508500002320da9ee0"));
+            var incremental = CdR11aLoadPlan.decodePlcBody(profile, java.util.HexFormat.of().parseHex(
+                    "0006002364c26e800023ac087400002373787600002368127c800023676c812000235ec08300002379508500"));
+            assertEquals(List.of(CdR11aAsset.ART_BOULDER,CdR11aAsset.ART_ANIMALS,CdR11aAsset.ART_SONIC_HOLE,
+                    CdR11aAsset.ART_PATA_BATA,CdR11aAsset.ART_TUNNEL_WATERFALL,CdR11aAsset.ART_SPINNING_DISC,
+                    CdR11aAsset.ART_LOG_SHADOW,CdR11aAsset.ART_TAMABBOH,CdR11aAsset.ART_GOAL_POST),
+                    full.stream().map(CdR11aLoadPlan.PlcEntry::source).toList());
+            assertEquals(List.of(CdR11aAsset.ART_BOULDER,CdR11aAsset.ART_SONIC_HOLE,CdR11aAsset.ART_PATA_BATA,
+                    CdR11aAsset.ART_TUNNEL_WATERFALL,CdR11aAsset.ART_SPINNING_DISC,CdR11aAsset.ART_LOG_SHADOW,
+                    CdR11aAsset.ART_TAMABBOH), incremental.stream().map(CdR11aLoadPlan.PlcEntry::source).toList());
+            for (int i = 0; i < QUEUED_PLC_SOURCES.size(); i++) {
+                var expected = new CdR11aLoadPlan.PlcEntry(QUEUED_PLC_SOURCES.get(i),
+                        profile.range(QUEUED_PLC_SOURCES.get(i)), QUEUED_PLC_DESTINATIONS[i]);
+                assertEquals(expected, full.get(QUEUED_PLC_ROWS[i]));
+                assertEquals(expected, incremental.get(QUEUED_PLC_ROWS[i] - 1));
+                byte[] malformed = ByteBuffer.allocate(8).putShort((short) 0)
+                        .putInt(expected.sourceRange().nativeAddress() + 1)
+                        .putShort((short) expected.vramAddress()).array();
+                assertThrows(IllegalArgumentException.class, () -> CdR11aLoadPlan.decodePlcBody(profile, malformed));
+                byte[] unaligned = ByteBuffer.allocate(8).putShort((short) 0)
+                        .putInt(expected.sourceRange().nativeAddress())
+                        .putShort((short) (expected.vramAddress() + 1)).array();
+                assertThrows(IllegalArgumentException.class, () -> CdR11aLoadPlan.decodePlcBody(profile, unaligned));
+            }
+        }
+        assertEquals(54, CdR11aObjectAssets.Table.values().length);
+        assertEquals(166, QUEUED_PLC_SOURCE_BYTES[2]);
+        assertEquals(167, QUEUED_PLC_JAVA_BYTES[2]);
+        assertEquals(167, QUEUED_PLC_NATIVE_BYTES[2]);
+        assertEquals(0x0010, QUEUED_PLC_HEADERS[3]); // LogShadow is normal, not XOR.
+    }
+
+    @Test
+    void queuedFourJavaReadersUseGenuineRetainedBytesAndFailOneByteShort() throws Exception {
+        var image = queuedPlcComponentImage();
+        var profile = CdR11aProfile.forStage(CdReleaseVariant.USA, CdStageKey.parse("R11A"));
+        for (int i = 0; i < QUEUED_PLC_SOURCES.size(); i++) {
+            var blob = profile.range(QUEUED_PLC_SOURCES.get(i));
+            var javaRange = new CdR11aProfile.FileRange(blob.file(), blob.domain(), blob.fileOffset(), QUEUED_PLC_JAVA_BYTES[i]);
+            var nativeRange = new CdR11aProfile.FileRange(blob.file(), blob.domain(), blob.fileOffset(), QUEUED_PLC_NATIVE_BYTES[i]);
+            verifyQueuedPlcFiniteConsumer(i, blob.read(image), javaRange.read(image), nativeRange.read(image));
+        }
+        var disc = profile.range(CdR11aAsset.ART_SPINNING_DISC).read(image);
+        assertThrows(IOException.class, () -> CdNemesisAsset.decode(disc.copy(), 384, 384));
+        assertThrows(IndexOutOfBoundsException.class, () -> disc.unsignedByte(166));
+        assertArrayEquals(new byte[]{(byte) 0x80,0x1D}, image.readFile(0x36812,2));
+        assertEquals(0x36812, profile.range(CdR11aAsset.ART_SPINNING_DISC).endExclusive());
+        assertEquals(0x36812, profile.range(CdR11aAsset.ART_TUNNEL_WATERFALL).fileOffset());
+    }
+
+    @Test
+    void queuedFourLiteralMmdRangesNeverForgeAnAuthenticatedRegionalObjectOwner() throws Exception {
+        var image = queuedPlcComponentImage();
+        for (var variant : CdReleaseVariant.values()) {
+            var profile = CdR11aProfile.forStage(variant, CdStageKey.parse("R11A"));
+            for (int i = 0; i < QUEUED_PLC_SOURCES.size(); i++) {
+                assertArrayEquals(queuedPlcLiteralSource(i), profile.range(QUEUED_PLC_SOURCES.get(i)).read(image).copy());
+            }
+            var asserted = new CdR11aAssets.Identity(variant, profile.stage(), profile.file(), profile.domain(),
+                    profile.expectedMmdSha256(), "literal component bytes, not authenticated media");
+            if (variant == CdReleaseVariant.USA) {
+                assertThrows(IOException.class, () -> CdR11aObjectAssets.load(profile, asserted, image, null));
+            } else {
+                assertThrows(UnsupportedOperationException.class, () -> CdR11aObjectAssets.load(profile, asserted, image, null));
+            }
+        }
+    }
+
+    /** Finite Java consumer only; native range lengths/hashes are associations, not native execution. */
+    static void verifyQueuedPlcFiniteConsumer(int index, CdAssetBytes source, CdAssetBytes javaInput,
+            CdAssetBytes nativeInput) throws IOException {
+        int sourceBytes = QUEUED_PLC_SOURCE_BYTES[index], javaBytes = QUEUED_PLC_JAVA_BYTES[index];
+        int nativeBytes = QUEUED_PLC_NATIVE_BYTES[index], outputBytes = QUEUED_PLC_TILES[index] * 32;
+        assertEquals(sourceBytes, source.length());
+        assertEquals(javaBytes, javaInput.length()); assertEquals(nativeBytes, nativeInput.length());
+        assertEquals(QUEUED_PLC_SOURCE_SHA256[index], CdR11aProfile.sha256(source.copy()));
+        assertEquals(QUEUED_PLC_JAVA_SHA256[index], CdR11aProfile.sha256(javaInput.copy()));
+        assertEquals(QUEUED_PLC_NATIVE_SHA256[index], CdR11aProfile.sha256(nativeInput.copy()));
+        assertArrayEquals(queuedPlcLiteralSource(index), source.copy());
+        assertArrayEquals(source.slice(0, Math.min(sourceBytes,javaBytes)).copy(),
+                javaInput.slice(0, Math.min(sourceBytes,javaBytes)).copy());
+        assertArrayEquals(javaInput.copy(), nativeInput.slice(0, javaBytes).copy());
+        assertEquals(QUEUED_PLC_HEADERS[index], source.unsignedWord(0));
+        assertEquals(QUEUED_PLC_HEADERS[index], javaInput.unsignedWord(0));
+        assertEquals(QUEUED_PLC_HEADERS[index], nativeInput.unsignedWord(0));
+        assertEquals(QUEUED_PLC_TILES[index], nativeInput.unsignedWord(0) & 0x7FFF);
+        assertEquals(index != 3, (nativeInput.unsignedWord(0) & 0x8000) != 0);
+        assertThrows(IndexOutOfBoundsException.class, () -> source.unsignedByte(sourceBytes));
+        assertThrows(IndexOutOfBoundsException.class, () -> javaInput.unsignedByte(javaBytes));
+        assertThrows(IndexOutOfBoundsException.class, () -> nativeInput.unsignedByte(nativeBytes));
+        assertEquals(index == 2 ? 0x80 : 0, nativeInput.unsignedByte(nativeBytes - 1));
+        if (index == 2) {
+            assertEquals(0x80, javaInput.unsignedByte(166));
+            assertEquals(0x80, nativeInput.unsignedByte(166));
+            assertEquals(queuedPlcLiteralSource(1)[0], javaInput.copy()[166]);
+            assertThrows(IndexOutOfBoundsException.class, () -> nativeInput.unsignedByte(167));
+        }
+        var decoded = CdNemesisAsset.decode(javaInput.copy(), outputBytes, outputBytes);
+        assertEquals(javaBytes, decoded.consumedInputBytes());
+        assertEquals(outputBytes, decoded.bytes().length());
+        assertEquals(QUEUED_PLC_OUTPUT_SHA256[index], CdR11aProfile.sha256(decoded.bytes().copy()));
+        var longer = CdNemesisAsset.decode(nativeInput.copy(), outputBytes, outputBytes);
+        assertEquals(javaBytes, longer.consumedInputBytes());
+        assertArrayEquals(decoded.bytes().copy(), longer.bytes().copy());
+        var shortRead = assertThrows(IOException.class,
+                () -> CdNemesisAsset.decode(javaInput.slice(0, javaBytes - 1).copy(), outputBytes, outputBytes));
+        assertEquals("Unexpected end of input data", shortRead.getMessage());
+        byte[] wrongHeader = javaInput.copy(); wrongHeader[1]++;
+        assertThrows(IOException.class, () -> CdNemesisAsset.decode(wrongHeader, outputBytes, outputBytes));
+        assertThrows(IllegalArgumentException.class,
+                () -> CdNemesisAsset.decode(javaInput.copy(), outputBytes, outputBytes - 1));
+        byte[] changedSource = source.copy(); changedSource[0] ^= 1;
+        byte[] changedJava = javaInput.copy(); changedJava[javaBytes - 1] ^= 1;
+        byte[] changedNative = nativeInput.copy(); changedNative[nativeBytes - 1] ^= 1;
+        byte[] changedOutput = decoded.bytes().copy(); changedOutput[0] ^= 1;
+        assertEquals(QUEUED_PLC_SOURCE_SHA256[index], CdR11aProfile.sha256(source.copy()));
+        assertEquals(QUEUED_PLC_JAVA_SHA256[index], CdR11aProfile.sha256(javaInput.copy()));
+        assertEquals(QUEUED_PLC_NATIVE_SHA256[index], CdR11aProfile.sha256(nativeInput.copy()));
+        assertEquals(QUEUED_PLC_OUTPUT_SHA256[index], CdR11aProfile.sha256(decoded.bytes().copy()));
+        assertThrows(ReadOnlyBufferException.class, () -> source.buffer().put((byte) 0));
+        assertThrows(ReadOnlyBufferException.class, () -> javaInput.buffer().put((byte) 0));
+        assertThrows(ReadOnlyBufferException.class, () -> nativeInput.buffer().put((byte) 0));
+        assertThrows(ReadOnlyBufferException.class, () -> decoded.bytes().buffer().put((byte) 0));
+    }
+
+    /** Genuine pinned N includes; fixtures only. Disc's neighboring header is supplied separately. */
+    static byte[] queuedPlcLiteralSource(int index) {
+        return java.util.HexFormat.of().parseHex(switch (index) {
+            case 0 -> "800e80051c151d251a340a440c540b677d72008102011304251b351e477cff00add3a4349044035f3adbf7749d6d2d25"
+                    + "b8f5c7ea1bd3c9cdd3d720000003939f0069e3c69d40bdea71ecc72006b7484cf64bd9f39031b6bda6b65780fa9695ba"
+                    + "6db6db6dc9531d7829208411113b29d4a000";
+            case 1 -> "801d80030314082409340c440d540a651d7302830301177c85040b151e860300151c28faff5a3bcef17448e85a3bc5cd"
+                    + "11f5260e5c7cc3226cb3fb677223864619105fedbe4092cc7d33419a0cd0357beafdaf6eafbe490410430485c81a30c8"
+                    + "62b9054193870c9d3064e1c3459a28a507bf177e65b33fa53cf3f0c1692624484968c1a3a3449a1bc67a524549c29182"
+                    + "b4c167a57c82cb38597f279e6683e6853c55c4a074746fd4f1891012a197a3d1f46f4de957026e393fb6541415824af9"
+                    + "01993c8f45efa465c85de242460d11cc09282c487f38beb041d107416702346847a2cbb9b7e9fd2d0495063050c0c504"
+                    + "92e95857c651460e97f24e18f91c2ec3b80edde792815c541251cd0c4f18a0ba2399c628505433e23be7edfd2ae84150"
+                    + "61050203304559e57cdb82b6fb717be90ed6090a84850185268e8a127028fd1b1b6f8eddbfdb0000";
+            case 2 -> "800c800201140a263a477c577d65167200810408151e263b870409880519163626378905178c051a8e0518451cff73fa"
+                    + "9fdc46fdb9767b002d7adff335fbffce57efff397adff325eb3f22b6f6dfa69fd7e3bebf1ffe1afc7801f2ff86bff1b5"
+                    + "f8dd7f375f8dd7f37f53fc60f3fcfbe7fb300005a02d05a08fbefb2ffde7afcb80032fe9fac3c70f197f4e54fc97f2ef"
+                    + "edc7faeff9d900038e1e380022d00005a02d05a3ec20";
+            case 3 -> "0010837100ff000000000000000000000000000000000000";
+            default -> throw new IllegalArgumentException("Not one of the four queued PLC producers");
+        });
+    }
+
+    static byte[] queuedPlcLiteralNativeInput(int index) {
+        byte[] source = queuedPlcLiteralSource(index);
+        if (index != 2) { return source; }
+        byte[] reader = Arrays.copyOf(source, 167);
+        reader[166] = queuedPlcLiteralSource(1)[0]; // Actual adjacent Waterfall $80, never default padding/$1D.
+        return reader;
+    }
+
+    /** Format fixture: every consumed new byte is seeded from N; this cannot authenticate an owner. */
+    private static CdMmdImage queuedPlcComponentImage() throws java.io.IOException {
+        byte[] file = new byte[CdR11aProfile.FILE_BYTES];
+        ByteBuffer.wrap(file).putInt(8,0x200100).putInt(12,0x20010C).putInt(16,0x200112);
+        for (int i = 0; i < QUEUED_PLC_SOURCES.size(); i++) {
+            byte[] literal = queuedPlcLiteralSource(i);
+            System.arraycopy(literal, 0, file, QUEUED_PLC_OFFSETS[i], literal.length);
+        }
+        var image = CdMmdImage.parse(file);
+        Arrays.fill(file,(byte) 0); // The retained image, including Disc's authentic neighbor, must be detached.
+        return image;
+    }
+
+    // End queued PLC10 sources14..17 R1.
+
     // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>
 }
