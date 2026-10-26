@@ -59,8 +59,9 @@ class TestTasS3kTerrainEntry {
 
     @ParameterizedTest @ValueSource(booleans={false,true})
     void airborneWheelDepartureRetainsAdhesionAndCrossesAnUnsupportedGap(boolean airborneDeparture) {
+        try (var reel = com.openggf.tests.reel.S3kTestReelPresentation.open()) {
         world(4);
-        var p=new Sonic("sonic",(short)0,(short)0);
+        var p=new Sonic("sonic",(short)0,(short)0); reel.observeParticipant(p);
         p.setCentreX((short)0x400);p.setCentreY((short)(0x300-p.getYRadius()-1));p.setAir(false);
         p.setXSpeed((short)0x800);p.setGSpeed((short)0x800);
         var camera=GameServices.camera();camera.setMinX((short)0);camera.setMaxX((short)0x1000);camera.setMaxY((short)0x1000);
@@ -79,6 +80,7 @@ class TestTasS3kTerrainEntry {
             p.setAnimationId(Sonic3kAnimationIds.ROLL);
             monitor.onTouchResponse(p,new TouchResponseResult(0,0x0E,0x0E,TouchCategory.SPECIAL),1);
             monitor.update(1,p);
+            reel.afterObjects(java.util.List.of(monitor),3,0,0x360,0x290,com.openggf.game.sonic3k.Sonic3kObjectArtKeys.MONITOR);
             assertTrue(p.getAir());assertFalse(p.isOnObject());assertEquals(-0x400,p.getYSpeed());
         }
         wheel.update(1,p);
@@ -99,6 +101,7 @@ class TestTasS3kTerrainEntry {
         assertEquals(airborneDeparture,landedOutsideWheel);
         assertEquals(airborneDeparture,p.isStickToConvex());
         assertEquals(!airborneDeparture,p.getAir(),"retained adhesion walks across gap; grounded departure falls");
+            }
     }
 
     @ParameterizedTest @ValueSource(booleans={false,true})
@@ -151,8 +154,9 @@ class TestTasS3kTerrainEntry {
 
     @ParameterizedTest @ValueSource(booleans={false,true})
     void lbzLiftWallEntryProducesRepeatedReverseCorrectionsAndExit(boolean wallPresent) {
+        try (var reel = com.openggf.tests.reel.S3kTestReelPresentation.open()) {
         var collision=world(wallPresent?5:0);
-        var p=new Sonic("sonic",(short)0,(short)0);
+        var p=new Sonic("sonic",(short)0,(short)0); reel.observeParticipant(p);
         p.setCentreX((short)0x430);p.setCentreY((short)0x1D0);p.setAir(true);
         var camera=GameServices.camera();camera.setX((short)0x300);camera.setY((short)0x140);
         camera.setMinX((short)0);camera.setMaxX((short)0x1000);camera.setMaxY((short)0x1000);
@@ -169,6 +173,7 @@ class TestTasS3kTerrainEntry {
         for(int frame=0;frame<100;frame++) {
             movement.handleMovement(false,false,false,false,false,false,false,false);
             manager.update(camera.getX(),p,java.util.List.of(),frame,false,true,false);
+            reel.afterObjects(java.util.List.of(lift),6,0,0x300,0x140,com.openggf.game.sonic3k.Sonic3kObjectArtKeys.LBZ_MOVING_PLATFORM);
             acquiredRide|=p.isOnObject();
         }
         assertTrue(acquiredRide,"real platform landing reached; x="+p.getCentreX()+" y="+p.getCentreY()+" platform="+lift.getX()+","+lift.getY());assertTrue(p.isOnObject());
@@ -178,6 +183,7 @@ class TestTasS3kTerrainEntry {
             int before=p.getCentreX();boolean grounded=!p.getAir();
             movement.handleMovement(false,false,true,false,false,false,false,false);
             manager.update(camera.getX(),p,java.util.List.of(),frame,false,true,false);
+            reel.afterObjects(java.util.List.of(lift),6,0,0x300,0x140,com.openggf.game.sonic3k.Sonic3kObjectArtKeys.LBZ_MOVING_PLATFORM);
             int dx=p.getCentreX()-before;
             if(grounded && dx>=16)corrections++;
             if(wallPresent && frame<102) {
@@ -197,6 +203,7 @@ class TestTasS3kTerrainEntry {
         } else {
             assertEquals(0,corrections);assertTrue(p.getCentreX()<0x3B0,"same input moves left without embedded probes");
         }
+            }
     }
 
     @Test void currentLimitationLeftUnderflowClampsLeftInsteadOfUnsignedRightBoundary() throws Exception {
@@ -290,7 +297,8 @@ class TestTasS3kTerrainEntry {
 
     @ParameterizedTest @ValueSource(booleans={false,true})
     void freshGlideIntoMonitorReboundsUpwardAndRetainsGlide(boolean monitorPresent) {
-        var collision=world(0);var p=new Knuckles("knuckles",(short)0,(short)0);
+        try (var reel = com.openggf.tests.reel.S3kTestReelPresentation.open()) {
+        var collision=world(0);var p=new Knuckles("knuckles",(short)0,(short)0); reel.observeParticipant(p);
         // Declared falling-jump inlet beside a monitor. Fresh release/repress
         // must activate glide, acquire the touch, reverse Y, and fly clear.
         p.setCentreX((short)0x3D0);p.setCentreY((short)0x2D0);p.setAir(true);p.setJumping(true);
@@ -308,6 +316,7 @@ class TestTasS3kTerrainEntry {
         var movement=(PlayableSpriteMovement)p.getMovementManager();
         p.setJumpInputPressed(false,false);movement.handleMovement(false,false,false,false,false,false,false,false);
         manager.update(camera.getX(),p,java.util.List.of(),0,true,true,false);
+            reel.afterObjects(manager.getActiveObjects().stream().map(AbstractObjectInstance.class::cast).toList(),0,0,0x380,0x280,com.openggf.game.sonic3k.Sonic3kObjectArtKeys.MONITOR);
         boolean bounced=false;int bounceY=0;
         for(int frame=1;frame<=28;frame++){
             p.setJumpInputPressed(true,frame==1);
@@ -318,6 +327,7 @@ class TestTasS3kTerrainEntry {
             }
             int before=p.getYSpeed();
             manager.update(camera.getX(),p,java.util.List.of(),frame,true,true,false);
+            reel.afterObjects(manager.getActiveObjects().stream().map(AbstractObjectInstance.class::cast).toList(),0,0,0x380,0x280,com.openggf.game.sonic3k.Sonic3kObjectArtKeys.MONITOR);
             if(before>0 && p.getYSpeed()<0){
                 bounced=true;bounceY=p.getCentreY();assertEquals(5,frame);assertEquals(2032,before);
                 assertEquals(-2032,p.getYSpeed());assertEquals(1,p.getDoubleJumpFlag());
@@ -327,6 +337,7 @@ class TestTasS3kTerrainEntry {
         if(monitorPresent){assertEquals(0,monitor.getCollisionFlags());assertTrue(p.getCentreY()<bounceY-64);}
         else assertTrue(p.getCentreY()>0x300);
         assertTrue(p.getCentreX()>0x430,"actual glide exits the monitor's horizontal extent");
+            }
     }
 
     private static CollisionSystem world(int shape) {

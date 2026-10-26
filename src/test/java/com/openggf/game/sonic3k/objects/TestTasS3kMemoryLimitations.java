@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.camera.Camera;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
+import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.level.objects.*;
 import com.openggf.level.resources.KosinskiModuleQueue;
 import com.openggf.tests.TestEnvironment;
@@ -22,6 +23,7 @@ class TestTasS3kMemoryLimitations {
     @BeforeEach void setup() { TestEnvironment.configureGameModuleFixture(new Sonic3kGameModule()); }
 
     @Test void currentLimitationSelfOccupiedSlotSixCannotActAsCutsceneKnuckles() {
+        try (var reel = com.openggf.tests.reel.S3kTestReelPresentation.open()) {
         var camera = GameServices.camera(); camera.setX((short) 0x4A00);
         var services = new TestObjectServices().withCamera(camera);
         var manager = manager(camera, services);
@@ -32,7 +34,7 @@ class TestTasS3kMemoryLimitations {
         Aiz2BossEndSequenceState.reset();
         assertEquals(6, button.getSlotIndex());
         assertTrue(manager.getActiveObjects().contains(button));
-        button.update(0, sonic);
+        button.update(0, sonic); reel.afterObjects(List.of(button),0,1,0x4A78,0x119,Sonic3kObjectArtKeys.BUTTON);
         // Native _unkFAA4=$B180 reads the button's own x/y, so Check_InMyRange
         // succeeds (dx=dy=0) and loc_65C56 unlocks P1. Engine requires typed actor.
         assertFalse(Aiz2BossEndSequenceState.isButtonPressed(), "confirmed missing raw slot alias");
@@ -40,10 +42,11 @@ class TestTasS3kMemoryLimitations {
         var knuckles = CutsceneKnucklesAiz2Instance.createDefault();
         set(knuckles, "currentX", 0x4B18); set(knuckles, "currentY", 0x189);
         Aiz2BossEndSequenceState.setActiveKnuckles(knuckles);
-        button.update(1, sonic);
+        button.update(1, sonic); reel.afterObjects(List.of(button),0,1,0x4A78,0x119,Sonic3kObjectArtKeys.BUTTON);
         assertTrue(Aiz2BossEndSequenceState.isButtonPressed(), "real actor is a discriminating positive control");
         assertFalse(sonic.isControlLocked());
         Aiz2BossEndSequenceState.reset();
+            }
     }
 
     @Test void currentLimitationFifthKosMArchiveIsRejectedInsteadOfWritingAdjacentModeState() throws Exception {

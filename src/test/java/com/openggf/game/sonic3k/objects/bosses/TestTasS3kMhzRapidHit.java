@@ -21,6 +21,7 @@ class TestTasS3kMhzRapidHit {
     @org.junit.jupiter.api.AfterEach void cleanup(){com.openggf.game.session.SessionManager.clear();}
     @ParameterizedTest @ValueSource(booleans={false,true})
     void currentLimitationEarlyProxyHitDoesNotRepeatDamageAfterWeatherDestruction(boolean earlyHit) {
+        try (var reel = com.openggf.tests.reel.S3kTestReelPresentation.open()) {
         TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_3K);
         ObjectManager[] holder=new ObjectManager[1];
         var runtime=new MhzZoneRuntimeState(1,PlayerCharacter.KNUCKLES);
@@ -31,7 +32,7 @@ class TestTasS3kMhzRapidHit {
         var manager=new ObjectManager(List.of(),null,0,null,null,null,null,services);
         holder[0]=manager;manager.reset(0);
         var boss=manager.createDynamicObject(()->new MhzEndBossInstance(new ObjectSpawn(0x40C0,0x2E0,Sonic3kObjectIds.MHZ_END_BOSS,0,0,false,0)));
-        boss.update(0,null);
+        boss.update(0,null); reel.afterObjects(manager.getActiveObjects().stream().map(AbstractObjectInstance.class::cast).toList(),7,1,0x40C0,0x270,com.openggf.game.sonic3k.Sonic3kObjectArtKeys.MHZ_END_BOSS,com.openggf.game.sonic3k.Sonic3kObjectArtKeys.ROBOTNIK_SHIP);
         var proxy=manager.getActiveObjects().stream().filter(MhzEndBossHitProxyChild.class::isInstance).map(MhzEndBossHitProxyChild.class::cast).findFirst().orElseThrow();
         var weather=manager.getActiveObjects().stream().filter(MhzEndBossWeatherMachineChild.class::isInstance).map(MhzEndBossWeatherMachineChild.class::cast).findFirst().orElseThrow();
         assertEquals(9,boss.getState().hitCount);assertEquals(0,boss.getState().routine);
@@ -47,11 +48,11 @@ class TestTasS3kMhzRapidHit {
         assertEquals(earlyHit?0:0x25,proxy.getCollisionFlags());
         boss.update(1,p); // still routine0; native repeated initialization runs
         assertEquals(0,boss.getState().routine);
-        weather.onPlayerAttack(p,null);weather.update(1,p);
+        weather.onPlayerAttack(p,null);weather.update(1,p); reel.afterObjects(manager.getActiveObjects().stream().map(AbstractObjectInstance.class::cast).toList(),7,1,0x40C0,0x270,com.openggf.game.sonic3k.Sonic3kObjectArtKeys.MHZ_END_BOSS,com.openggf.game.sonic3k.Sonic3kObjectArtKeys.ROBOTNIK_SHIP);
         assertEquals(4,boss.getCustomFlag(0x38)&4,"real weather owner raises child signal");
-        boss.update(2,p); // last routine0 dispatch resets native HP9 then consumes one
+        boss.update(2,p); reel.afterObjects(manager.getActiveObjects().stream().map(AbstractObjectInstance.class::cast).toList(),7,1,0x40C0,0x270,com.openggf.game.sonic3k.Sonic3kObjectArtKeys.MHZ_END_BOSS,com.openggf.game.sonic3k.Sonic3kObjectArtKeys.ROBOTNIK_SHIP); // last routine0 dispatch resets native HP9 then consumes one
         assertEquals(4,boss.getState().routine);assertEquals(0x3F,boss.getCustomFlag(0x2E));
-        for(int frame=3;frame<=8;frame++)boss.update(frame,p);
+        for(int frame=3;frame<=8;frame++){ boss.update(frame,p); reel.afterObjects(manager.getActiveObjects().stream().map(AbstractObjectInstance.class::cast).toList(),7,1,0x40C0,0x270,com.openggf.game.sonic3k.Sonic3kObjectArtKeys.MHZ_END_BOSS,com.openggf.game.sonic3k.Sonic3kObjectArtKeys.ROBOTNIK_SHIP); }
         assertEquals(0x39,boss.getCustomFlag(0x2E),"six movement/flash owner passes reached");
         // The independently specified native HP2 assertion was executed red:
         // expected2, observed8. The engine conflates proxy flags with parent
@@ -62,5 +63,6 @@ class TestTasS3kMhzRapidHit {
             assertTrue(boss.getState().invulnerable);assertEquals(24,boss.getState().invulnerabilityTimer);
             assertEquals(0,proxy.getCollisionFlags());
         }
+            }
     }
 }
