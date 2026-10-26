@@ -1,6 +1,6 @@
 # Sonic 2 and official KiS2 executed TAS mechanism verdicts — 2026-10-26
 
-This supersedes the classification in [the earlier obligations](2026-10-26-tas-tricks-s2.md). All 24 original families have executed core outcomes: **15 supported, 6 unsupported, 3 mixed**. A mixed family is an aggregation of the explicitly named tested children below. It is not an untested category. No production code changed.
+This supersedes the classification in [the earlier obligations](2026-10-26-tas-tricks-s2.md). All 24 original families have executed core outcomes across 38 named children: **15 supported, 6 unsupported, 3 mixed**. A mixed family is an aggregation of the explicitly named tested children below. It is not an untested category. No production code changed.
 
 The source baseline is `c69447d77baddd8d3f7e4a177d73c8d327dd223d`, branch `feature/ai-tas-verdicts-s2-20261026`, worktree `/mnt/LinuxData/T3/worktrees/OpenGGF/t3-b2a013f5`. Native citations below use immutable S2 disassembly `34fc7f130a96db171e1a1c43e28e0bad81cd6ca7` read with `git show`; inherited dirty disassemblies were preserved and not used as proof. Native authoring probes use an isolated archive/build of TraceChaser `703bd92d32634ce5ebac60625b48c60ef5500427` and read-only BizHawk2.11.0.0 at `${TAS_USER_ROOT}/code/projects/OpenGGF/docs/BizHawk-2.11-linux-x64`. They are comparison-only, never engine hydration.
 
@@ -14,9 +14,9 @@ Representative mechanism proof closes the core technique without requiring every
 
 | Stable family | Outcome | Named executed scenarios |
 | --- | --- | --- |
-| `s2-spindash-momentum` | **supported** | Charge/release speed and slope projection (supported); KiS2 air steering retains existing superspeed (supported) |
+| `s2-spindash-momentum` | **supported** | Charge/release speed and slope projection (supported); KiS2 air steering retains existing superspeed (supported); sensed slope jump impulse (supported) |
 | `s2-monitor-momentum` | **supported** | Left-pixel monitor ride, fast roll-off and running landing (supported) |
-| `s2-p2-cooperation` | **supported** | Recorded P2 jump defeats an enemy while P1 waits (supported) |
+| `s2-p2-cooperation` | **supported** | Recorded P2 jump defeats an enemy while P1 waits (supported); offscreen timeout and periodic return (supported) |
 | `s2-zips` | **supported** | MTZ platform side-entry followed by continuous reverse wall zip (supported) |
 | `s2-horizontal-underflow` | **unsupported** | Unsigned left-boundary underflow wrap (S2 and KiS2 rules) (unsupported) |
 | `s2-slope-storage` | **supported** | Deleted support retains grounded travel over empty terrain (supported) |
@@ -24,7 +24,7 @@ Representative mechanism proof closes the core technique without requiring every
 | `s2-oil-speed-corruption` | **unsupported** | Hurt-state entry into OOZ launcher (unsupported) |
 | `s2-oil-hops` | **supported** | Repeated short oil hops preserve useful superspeed and avoid sinking (supported) |
 | `s2-pause-cycles` | **unsupported** | Pause gameplay while V-int-dependent object phase advances (unsupported) |
-| `s2-camera-streaming` | **supported** | Outrun the camera to postpone object admission (supported) |
+| `s2-camera-streaming` | **supported** | Outrun the camera to postpone object admission (supported); WFZ vertical ending gate (supported); high-entry look-up capsule culling (supported) |
 | `s2-capsule-rng` | **mixed** | Optional enemy defeat advances RNG and changes last-animal results delay (supported); Pause deletes the final V-int-masked animal spawn (unsupported) |
 | `s2-boss-optimization` | **mixed** | Attacking contact damages a boss and shapes the rebound (supported); ARZ final-hit travel-endpoint explosion skip (unsupported) |
 | `s2-path-switch` | **supported** | Miss a layer-switch span or consume its grounded-only latch in air (supported) |
@@ -61,7 +61,15 @@ Executed: `com.openggf.sprites.managers.TestKis2MovementRules#airSteeringRetains
 
 Evidence: KiS2 per-game air-steering rules, existing native comparison regression.
 
-Scope/edges: Route-specific slope jumps and publication frame savings are not asserted.
+**Sensed downhill slope jump adds horizontal launch speed — supported.** Publications: [2037M](https://tasvideos.org/2037M), [3325M](https://tasvideos.org/3325M), [3584M](https://tasvideos.org/3584M).
+
+Native expectation: After real terrain landing establishes angle $20, a fresh jump adds (cos,sin)(angle-$40) times $680 for Sonic or $600 for KiS2 Knuckles. Flat jump adds no horizontal component; neutral slope travel does not receive jump impulse.
+
+Executed: `com.openggf.game.sonic2.TestTasS2SlopeJump#sensedDownhillJumpAddsSpeedThatNeutralAndFlatLaunchDoNot`. Both parameter cases passed. Actual sensors land on authored continuous 45-degree slope, then a fresh jump exits airborne with exact native velocity: incoming g=$500 and vx=vy=905 produce Sonic vx 2081/vy -272 and KiS2 vx 1991/vy -181. Neutral stays grounded; flat launch vx 1280. KiS2 uses production Kis2Rules and Kis2Physics.KNUCKLES, explicitly verified at launch.
+
+Evidence: Sonic_Jump (S2 pin34fc7f13 s2.asm:37345-37377); KiS2 immutable c336fede00092017f48c9d7851e0d3728c4fae2b Sonic_Jump lines 39958-40005: gameRevision=3 selects $600 outside demo mode, then same angle-normal multiply/add. CalcSine at $E0 supplies cos181/sin-181. No native gameplay rows hydrate the authored terrain/state. Author notes: https://tasvideos.org/3557S (cached line184, OOZ1); https://tasvideos.org/5373S (cached line189, CP2); https://tasvideos.org/5735S (cached line189, CP2).
+
+Scope/edges: Exact published slope coordinates, successive slope-jump routes and reported frame savings are not asserted. Core slope jump, release projection and air steering now have separate executed children.
 
 ### `s2-monitor-momentum` — supported
 
@@ -89,7 +97,15 @@ Executed: `com.openggf.game.sonic2.TestTasS2ManualTails#manualP2JumpHitsTheEnemy
 
 Evidence: Native Ctrl_2/sidekick manual-input path and Touch_KillEnemy; actual ROM touch table.
 
-Scope/edges: Other gates, boss schedules and offscreen respawn routes remain route variants, not prerequisites for the manual-assistance verdict.
+**Offscreen timeout and periodic CPU return scheduling — supported.** Publications: [3584M](https://tasvideos.org/3584M).
+
+Native expectation: 300 consecutive offscreen CPU passes despawn Tails; an onscreen pass clears the count. With no manual return input, spawning waits for Level_frame_counter&$3F==0 and a grounded eligible leader, then writes leaderX/leaderY-$C0 and enters flying.
+
+Executed: `com.openggf.game.sonic2.TestTasS2SidekickSchedule#offscreenTimeoutThenPeriodicReturnHonoursVisibleAndAirborneControls`. Passed. Actual SpriteManager render flags mark distant Tails offscreen for 299 updates; one visible update resets 0. Another full 300 updates produces SPAWNING and x=$4000/y=0. Off-mask updates wait, airborne leader blocks frame 640, grounded next gate frame 704 enters APPROACHING at leaderX/leaderY-$C0. No CPU state/counter result is forced after initial NORMAL state.
+
+Evidence: TailsCPU_Spawning/TailsCPU_Respawn (s2.asm:39109-39136), TailsCPU_Despawn (39397-39406), TailsCPU_CheckDespawn/TailsCPU_TickRespawnTimer (39409-39440), pinned 34fc7f13. Five seconds means 300 active 60 Hz CPU passes; the interval gate reads Level_frame_counter, not V-int. Author notes: [5735S](https://tasvideos.org/5735S), cached line 193 (CNZ2).
+
+Scope/edges: The CNZ2 wall location and boss-hit schedule after return are route outcomes, not asserted by this bounded CPU lifecycle. Manual P2 attack and automatic respawn scheduling have separate executed children.
 
 ### `s2-zips` — supported
 
@@ -209,7 +225,23 @@ Executed: `com.openggf.game.sonic2.TestTasS2CameraStreaming#superspeedPassesTheP
 
 Evidence: Author5373S camera/streaming description; native camera speed and object placement window owners.
 
-Scope/edges: Signpost/capsule/boss-barrier layouts are variants, not claimed individually synchronized.
+**Airborne vertical catch-up reaches the WFZ ending gate earlier — supported.** Publications: [3584M](https://tasvideos.org/3584M).
+
+Native expectation: Outside its airborne deadzone, ScrollVerti catches up by 16 pixels per pass; ordinary grounded inertia below $800 at default bias uses 6. Reaching cameraY=$500 at the admitted WFZ approach locks player input and requests the Tornado PLC.
+
+Executed: `com.openggf.game.sonic2.TestTasS2VerticalCamera#actualJumpCatchesCameraAtSixteenInsteadOfSixAndReachesWfzEndingGateEarlier`. Passed. Real terrain landing precedes optional fresh jump, camera startsY=$4C0; actual movement/camera/WFZ event dispatch reaches the control-lock/Tornado gate in 4 passes airborne versus 11 grounded. Every step asserts 16/6, earlier frames retain subroutine 2, and exit asserts subroutine 4, control lock and actual PLC request IDs/count.
+
+Evidence: ScrollVerti (s2.asm:18144-18228) and LevEvents_WFZ_Routine5/6 (20683-20708), pinned 34fc7f13. This is the ending sequence control-lock/PLC trigger, not a complete Tornado/campaign ending replay. Author notes: [5735S](https://tasvideos.org/5735S), cached line 201 (Wing Fortress).
+
+**High boss entry preserves look-up camera motion to cull capsule animals — supported.** Publications: [3038M](https://tasvideos.org/3038M).
+
+Native expectation: EHZ2 only writes minY=$388 while its 90-pass boss-spawn routine sees cameraY>=$388. A high airborne entry keeps the camera above that limit until the event exits, preserving later Up panning. Animals whose cached render visibility falls below the raised viewport are deleted, allowing the capsule results owner to finish earlier.
+
+Executed: `com.openggf.game.sonic2.TestTasS2VerticalCamera#highBossEntryLeavesVerticalLimitOpenForLookUpToCullCapsuleAnimals`. Passed under KiS2 rules/profile. Valid high-platform airborne entry executes real gravity/camera and all 90 spawn passes; actual boss allocation reaches routine 6 with minY 0 versus ordinary entry minY 904. A separate declared post-defeat capsule inlet preserves that camera limit; real falling contact presses the button, Up reaches bias 200, real animal/object floor scans execute, and actual ResultsScreen appears. High branch: fixture resultsFrame 320, lowestCamera 608, 28 bottom culls; ordinary branch: frame 457, lowestCamera 904, 0 bottom culls. No exact published 137-frame saving is claimed.
+
+Evidence: LevEvents_EHZ2_Routine3 (s2.asm:20446-20465), Sonic_Lookup (36729-36741), Obj28_Prison and cached render-flag deletion (24732-24748), loc_3F406 capsule animal scan (85128 onward), pinned 34fc7f13; KiS2 c336fede retains the EHZ2 pre-spawn limit predicate at `LevEvents_EHZ2_Routine3`, lines 21148-21169. Actual SolidObject button, default solid registry, RNG and object floor/cull owners execute. Author notes: [4932S](https://tasvideos.org/4932S), cached lines 133-141 (Look at the sky / EHZ2).
+
+Scope/edges: The WFZ full Tornado/Death Egg ending sequence and published five-frame saving are not claimed. The EHZ high-platform approach and boss fight are declared entry scopes; the 90-pass limit gate and subsequent actual capsule/Up/animal/results exit execute. Other stage camera thresholds remain route-specific. Horizontal admission, WFZ vertical catch-up and high-entry capsule culling now have separate executed children.
 
 ### `s2-capsule-rng` — mixed
 
@@ -463,7 +495,7 @@ All executions used Java25 and Lua5.4 through the shared Maven queue; every comp
 
 ROMs were used in place, never linked/copied: S2 CRC32`7B905383`, SHA1`8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`; S3K CRC32`63522553`, SHA1`CFBF98C36C776677290A872547AC47C53D2761D6`; KiS2 CRC32`2AC1E7C6`, SHA1`6CD0537A3AEE0E012BB86D5837DDFF9342595004`. KiS2 tests configure the explicit production catalogue with all three absolute originals. GameplayCaptureSession and native presentation cases require `-Dopenggf.headless.gl=surfaceless-egl` with DISPLAY and WAYLAND_DISPLAY unset. Logic-only ROM cases also actually executed.
 
-Counts below are per invocation, not unique tests. Final successful methods are reused without ceremonial reruns; later changes to JumpLag/Intro only clarify comments/assertion messages, not behavior. The evidence commit is the local commit containing this document; the external JSON records its full SHA after committing.
+Counts below are per invocation, not unique tests. Final successful methods are reused without ceremonial reruns; later changes to JumpLag/Intro only clarify comments/assertion messages, not behavior. The original 34 children retain evidence commit `4f5eb1ee2de0b6128c39728289516c079d71064e`. The four follow-up children use the local follow-up commit containing their tests; the external JSON records each child’s full SHA after committing.
 
 | Run | Tests/failures/errors/skips | Result and interpretation |
 | --- | --- | --- |
@@ -585,3 +617,30 @@ The monitor probe starts from actual normal boot, authors a fresh monitor and va
 The pause comparison originally failed a legitimate native V-int assertion (8 versus7). The final test retains that exact limitation and exercises release/resume and running controls; it never manually advances V-int or skips a production dispatch. The DEZ/ARZ/underflow/hurt-launcher negative assertions likewise reached independently specified native results before being retained as named incompatibilities. In contrast, the initial jump-lag inequality and intro one-frame expectation were hypotheses without synchronized native windows; their final scope is the exercised unavailable capability, as stated in their family records. No unmeasured native frame delta is claimed.
 
 Worktree safety: main remained untouched; inherited dirty `docs/s1disasm` and `docs/s2disasm` were preserved. No fetch, pull, push, PR, shared ledger, production fix, ROM alias or extra agent was used. Parent owns integration, combined validation, push and worktree cleanup.
+
+
+## Bounded mechanism follow-up
+
+Parent source review distinguished actual slope jumps, the automatic CPU return schedule, vertical WFZ catch-up, and high-entry look-up capsule culling from the previous children. These four supported children add five executed cases in three new test classes. The final CPU method passed in F1, the final slope parameter cases passed in F3, and the final camera methods passed in F4; no unchanged successful method was rerun merely for handoff. All runs used source base `4f5eb1ee2de0b6128c39728289516c079d71064e` plus the owned new tests. No production or shared file changed.
+
+These are logic component tests, with real engine owner calls and authored valid terrain/state. They require no ROM annotation, render backend or native capture. The combined parent run still needs the earlier ROM/EGL environment. KiS2 uses `Kis2Rules.RULES` and `Kis2Physics.KNUCKLES`; this follow-up does not retest cartridge/profile selection. Native KiS2 evidence was read with `git show` at immutable `c336fede00092017f48c9d7851e0d3728c4fae2b`, the branch identified in [the existing branch catalogue](../../kis2/BRANCH_DIFFS.md). Its `Sonic_Jump` lines 39958-40005 select `$600` outside demo mode and retain the angle-normal multiply/add. Dirty submodule files were not consulted.
+
+The capsule test seeds two explicit entry scopes: an airborne high-platform approach before the full 90-pass boss-spawn window, then a post-defeat falling approach to a fresh capsule while preserving the acquired camera limits. It executes actual button contact, Up input, camera bias, animal spawning/floor/culling and results. It does not execute the high-platform route or the intervening boss fight. The fixture’s 137-pass contrast is an observation, not a claimed TAS publication saving.
+
+| Follow-up run | Tests/failures/errors/skips | Interpretation |
+| --- | --- | --- |
+| F1 | 5/3/0/0 | CPU 1 and WFZ 1 pass. Fixture errors: launch incorrectly expected same-pass gravity; KiS2 profile not installed; capsule used inert manual-solid registry. |
+| F2 | 4/1/0/0 | Stock slope and both camera cases pass. KiS2 exact jump impulse passes, but the negative-velocity assertion used an entry speed that exactly cancels vertical velocity. Lowered valid incoming g from $600 to $500 to make an upward launch in both games. |
+| F3 | 4/1/0/0 | Final slope 2 pass. Direct bottom-cull control added to camera test exposed missing three-argument object terrain lookup; player sensors had worked but animals fell through the authored floor. Corrected lookup and added independent object floor-scan reached assertion. |
+| F4 | 2/0/0/0 | Final vertical camera 2 pass, including actual terrain for animals, bottom-cull and capsule results controls. No production changes. |
+
+Exact commands (the same `${TAS_USER_ROOT}` expansion defined above):
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --lean -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestTasS2SlopeJump,TestTasS2SidekickSchedule,TestTasS2VerticalCamera' -Dsonic2.rom.path=${TAS_USER_ROOT}/code/projects/OpenGGF/s2.gen -Ds3k.rom.path=${TAS_USER_ROOT}/code/projects/OpenGGF/s3k.gen -Dkis2.rom.path=${TAS_USER_ROOT}/code/projects/OpenGGF/kis2.gen test > target/tas-s2-followup.log 2>&1
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --lean -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestTasS2SlopeJump,TestTasS2VerticalCamera' -Dsonic2.rom.path=${TAS_USER_ROOT}/code/projects/OpenGGF/s2.gen -Ds3k.rom.path=${TAS_USER_ROOT}/code/projects/OpenGGF/s3k.gen -Dkis2.rom.path=${TAS_USER_ROOT}/code/projects/OpenGGF/kis2.gen test > target/tas-s2-followup2.log 2>&1
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --lean -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestTasS2SlopeJump,TestTasS2VerticalCamera' -Dsonic2.rom.path=${TAS_USER_ROOT}/code/projects/OpenGGF/s2.gen -Ds3k.rom.path=${TAS_USER_ROOT}/code/projects/OpenGGF/s3k.gen -Dkis2.rom.path=${TAS_USER_ROOT}/code/projects/OpenGGF/kis2.gen test > target/tas-s2-followup3.log 2>&1
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --lean -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestTasS2VerticalCamera' -Dsonic2.rom.path=${TAS_USER_ROOT}/code/projects/OpenGGF/s2.gen -Ds3k.rom.path=${TAS_USER_ROOT}/code/projects/OpenGGF/s3k.gen -Dkis2.rom.path=${TAS_USER_ROOT}/code/projects/OpenGGF/kis2.gen test > target/tas-s2-followup4.log 2>&1
+```
+
+Maven reported totals F1=39.823s, F2=42.672s, F3=40.047s, F4=46.725s; these are invocation execution totals, not summed delivery elapsed time. All five final cases executed with zero skips. Intermediate fixture failures are preserved above; none was labeled an unsupported engine behavior. Consumed target logs were removed at handoff.
