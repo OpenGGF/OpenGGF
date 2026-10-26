@@ -3814,3 +3814,18 @@ timing while adding a visual-only consumer; record the discrepancy and keep its
 correction separately scoped. See the
 [Stageplay plan](../../../docs/architecture/plans/2026-10-21-stageplay-live-world-plan.md)
 and the [bug ledger](../../../docs/status/known-bugs.md#s2-ehz-boss-animation-tables-contain-three-extra-frames).
+
+
+## Enemy-chain points use both the old and updated word (2026-10-26)
+
+Cross-game: S1, S2 and S3K ordinary/powered enemy chains select the early
+100/200/500/1000 award from the old counter, then override it with 10000 when
+the updated unsigned word reaches `$20`. Native `addq.w #2` wraps: `$FFFE` to
+zero still awards 1000 from the old capped index, and the next kill awards 100.
+Do not derive both decisions from the updated count or saturate the word. A
+captured kill-count representation can preserve existing snapshots by wrapping
+modulo `$8000`; counter ownership and landing/reset semantics need separate proof.
+
+Source: `Touch_KillEnemy` (s2.asm:85514-85529). Cross-game source, boundary,
+reset and repeated-rewind evidence:
+`docs/architecture/validation/2026-10-26-tas-tricks-s2.md#scoring-owner-follow-up--2026-10-26`.

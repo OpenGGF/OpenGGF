@@ -9,6 +9,13 @@ This document tracks **intentional deviations** from the original Sonic 3 & Knuc
 
 Each entry describes what the ROM does, what we do, and why — focusing on *why* the divergence is acceptable.
 
+**Enemy-chain scoring correction (2026-10-26):** ordinary chained kills now
+retain the native 10,000-point threshold and word wrap, and the points popup
+selects frame 5 for that award. This repairs implementation defects without
+adding an accepted deviation. The [TAS regression record](architecture/validation/2026-10-26-tas-trick-regressions.md#final-source-qualification)
+separates arithmetic, draw-payload and S3K gate checks from unverified published
+routes and native global-counter sharing.
+
 **HCZ continuity repair (2026-10-25, local candidate):** rising-hand solid contact
 and Mega Chopper's P1 capture input now follow the native owners, including
 external support transfer and simultaneous logical Left/Right consumption. This corrects
