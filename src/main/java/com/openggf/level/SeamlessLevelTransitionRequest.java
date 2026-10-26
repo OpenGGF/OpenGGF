@@ -436,7 +436,9 @@ public final class SeamlessLevelTransitionRequest {
         }
 
         public Builder inLevelTitleCardResetAdditionalDispatches(int dispatches) {
-            this.inLevelTitleCardResetAdditionalDispatches = Math.max(0, dispatches);
+            this.inLevelTitleCardResetAdditionalDispatches =
+                    dispatches == com.openggf.game.TitleCardResetGates.NATIVE_WAIT_GATE
+                            ? dispatches : Math.max(0, dispatches);
             return this;
         }
 

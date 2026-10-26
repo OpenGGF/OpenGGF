@@ -108,6 +108,14 @@ public final class SszRotatingPlatformCarrierObjectInstance extends AbstractObje
     }
 
     @Override
+    public boolean allowsObjectControlledSolidContacts() {
+        // loc_45FE4 holds riders with object_control=3 before the next SolidObjectTop.
+        // MvSonicOnPtfm/loc_1E1CA rejects only signed-negative control (FixBugs=0);
+        // retain positive-control support and the inherited bit-7/new-contact rejection.
+        return true;
+    }
+
+    @Override
     public SolidExecutionMode solidExecutionMode() {
         return SolidExecutionMode.MANUAL_CHECKPOINT;
     }

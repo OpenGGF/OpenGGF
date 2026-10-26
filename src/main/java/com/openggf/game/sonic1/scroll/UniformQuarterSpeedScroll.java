@@ -1,5 +1,7 @@
 package com.openggf.game.sonic1.scroll;
 
+import com.openggf.game.internal.CheckpointBackgroundScroll;
+
 import com.openggf.level.scroll.AbstractZoneScrollHandler;
 import com.openggf.level.scroll.ScrollProjectionContext;
 import com.openggf.level.scroll.ScrollProjectionPhase;
@@ -12,7 +14,7 @@ import static com.openggf.level.scroll.M68KMath.*;
  * Final Zone uses Deform_SBZ2 and the REV01 BgScroll_SBZ initialization.
  * Each route owns a separate instance, including fractional camera state.
  */
-public final class UniformQuarterSpeedScroll extends AbstractZoneScrollHandler implements ScrollProjectionSource {
+public final class UniformQuarterSpeedScroll extends AbstractZoneScrollHandler implements Sonic1CheckpointScrollHandler, ScrollProjectionSource {
 
     // Persistent BG camera (16.16 fixed point)
     private long bgXPos;
@@ -84,6 +86,41 @@ public final class UniformQuarterSpeedScroll extends AbstractZoneScrollHandler i
     @Override
     public int getBgCameraX() {
         return (int) (bgXPos >> 16);
+    }
+
+    @Override
+    public Object captureRewindState() {
+        return new State(
+                bgXPos, bgYPos, lastCameraX, lastCameraY, initialized, vscrollFactorBG, minScrollOffset,
+                maxScrollOffset);
+    }
+
+    @Override
+    public void restoreRewindState(Object state) {
+        if (state instanceof State saved) {
+            bgXPos = saved.bgXPos;
+            bgYPos = saved.bgYPos;
+            lastCameraX = saved.lastCameraX;
+            lastCameraY = saved.lastCameraY;
+            initialized = saved.initialized;
+            vscrollFactorBG = saved.vscrollFactorBG;
+            minScrollOffset = saved.minScrollOffset;
+            maxScrollOffset = saved.maxScrollOffset;
+        }
+    }
+
+    private record State(
+                long bgXPos, long bgYPos, int lastCameraX, int lastCameraY, boolean initialized,
+                short vscrollFactorBG, int minScrollOffset, int maxScrollOffset) { }
+
+    @Override
+    public CheckpointBackgroundScroll captureBackgroundScroll() {
+        return new CheckpointBackgroundScroll((int) (bgXPos >> 16), (int) (bgYPos >> 16), 0, 0, 0, 0);
+    }
+
+    @Override
+    public void restoreBackgroundScroll(CheckpointBackgroundScroll state) {
+        bgXPos = (long) state.bgX() << 16;
     }
 
     @Override

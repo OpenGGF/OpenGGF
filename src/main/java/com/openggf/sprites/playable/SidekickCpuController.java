@@ -410,6 +410,14 @@ public class SidekickCpuController {
             updateDeadFalling();
             return;
         }
+        if (sidekick.isDrowningPreDeath() && drownInstallsDedicatedRoutine()) {
+            // S3K's drown installs routine $C (loc_15810). Tails_CPU_Control is
+            // reached only from the routine-2 control path, so the drowning
+            // sidekick runs no CPU step: no input, no facing write
+            // (sonic3k.asm:26180-26190, 29314-29330).
+            clearInputs();
+            return;
+        }
 
         if (controller2SignedLocked) {
             carryController().setParentagePending(false);
@@ -3553,7 +3561,7 @@ public class SidekickCpuController {
         // Tails's hurt/death/drown object routines bypass Tails_CPU_Control and
         // immediately clear Player_1 object_control plus Flying_carrying_Sonic_flag
         // before running hurt/death motion (sonic3k.asm:29220, 29312, 29356).
-        if (sidekick.isHurt() || sidekick.getDead()) {
+        if (sidekick.isHurt() || sidekick.getDead() || PlayableSpriteInternalAccess.hasPrimaryDrowningRoutine(sidekick)) {
             releaseCarryForCarrierDisabled();
             return;
         }
@@ -3583,7 +3591,7 @@ public class SidekickCpuController {
         }
 
         // 1. Hurt/dead (Sonic routine >= 4)
-        if (leader.isHurt() || leader.getDead()) {
+        if (leader.isHurt() || leader.getDead() || PlayableSpriteInternalAccess.hasPrimaryDrowningRoutine(leader)) {
             carryController().setParentagePending(false);
             releaseCarry(carryTrigger.carryLatchReleaseCooldownFrames());
             return;
@@ -4074,6 +4082,15 @@ public class SidekickCpuController {
                 sidekick.setCentreXPreserveSubpixel((short) 0);
                 sidekick.setCentreYPreserveSubpixel((short) 0);
                 ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
+                // Tails_FlySwim_Unknown (sonic3k.asm:26574-26588) and
+                // TailsCPU_Flying (s2.asm:39142-39155) write status=$02.
+                // Status writes do not resize the body or restore water physics.
+                sidekick.clearRollingFlagPreserveRadii();
+                sidekick.clearUnderwaterStatusPreserveWaterPhysics();
+                sidekick.setRollingJump(false);
+                sidekick.setOnObject(false);
+                sidekick.setPushing(false);
+                sidekick.setDirection(Direction.RIGHT);
                 sidekick.setAir(true);
                 sidekick.setDoubleJumpFlag(1);
                 sidekick.setDoubleJumpProperty((byte) FLIGHT_FUEL);
@@ -5477,6 +5494,13 @@ public class SidekickCpuController {
         return true;
     }
 
+    private boolean drownInstallsDedicatedRoutine() {
+        var rules = sidekick.getGameRules();
+        return rules != null
+                && rules.drowningBubble() != null
+                && rules.drowningBubble().drownInstallsDedicatedPlayerRoutine();
+    }
+
     private void clearInputs() {
         inputUp = false;
         inputDown = false;
@@ -5880,7 +5904,7 @@ public class SidekickCpuController {
     }
 
     public boolean usesFlyingCarryMovement() {
-        if (sidekick.isHurt() || sidekick.getDead()) {
+        if (sidekick.isHurt() || sidekick.getDead() || PlayableSpriteInternalAccess.hasPrimaryDrowningRoutine(sidekick)) {
             return false;
         }
         return carryController().isCarryingMainCharacter()

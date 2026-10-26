@@ -104,7 +104,12 @@ class TestPersistentBgNametable {
         nativeCells[retainedCell] = (byte) 0xab;
         nativeCells[retainedCell + 1] = (byte) 0xe1;
         byte[] before = nativeCells.clone();
+        var captureLevel = org.mockito.Mockito.mock(LevelManager.class);
+        captureLevel.zoneFeatureProvider = zoneFeatures;
+        captureLevel.camera = org.mockito.Mockito.mock(Camera.class);
+        var frozen = BackgroundBuildParameters.capture(captureLevel);
         var privateTiles = nativeTiles.cinematicBackgroundCopy();
+        privateTiles.setCinematicBackgroundParameters(frozen);
         assertNotSame(nativeCells, privateTiles.getBackgroundTilemapData());
         assertEquals(nativeTiles.getPersistentBgOriginXTiles(), privateTiles.getPersistentBgOriginXTiles());
         assertEquals(nativeTiles.getPersistentBgOriginYTiles(), privateTiles.getPersistentBgOriginYTiles());

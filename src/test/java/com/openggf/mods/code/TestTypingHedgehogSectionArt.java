@@ -1,5 +1,7 @@
 package com.openggf.mods.code;
 
+import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.openggf.game.GameModuleRegistry;
@@ -106,7 +108,12 @@ class TestTypingHedgehogSectionArt {
             SessionManager.clear();
             GameModuleRegistry.setCurrent(module);
             TestEnvironment.activeGameplayMode();
-            var fixture = HeadlessTestFixture.builder().withZoneAndAct(zone, act).build();
+            var builder = HeadlessTestFixture.builder().withZoneAndAct(zone, act);
+            if (sonicGame == SonicGame.SONIC_3K
+                    && zone == Sonic3kZoneIds.ZONE_DDZ && act == 0) {
+                builder.withFreshLevelStartLifecycle();
+            }
+            var fixture = builder.build();
             fixture.stepIdleFrames(240);
             var services = GameServices.level().getObjectManager().getObjectServices();
             var provider = services.renderManager().getArtProvider();

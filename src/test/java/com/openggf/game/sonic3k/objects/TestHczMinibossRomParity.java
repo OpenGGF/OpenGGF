@@ -133,6 +133,75 @@ class TestHczMinibossRomParity {
         assertEquals(false, invoke(boss, "isBodyEngineVisible"));
     }
 
+    @Test
+    void fightCallbackInstallsLoopAndNextPassInitializesWithoutMoving() throws Exception {
+        var manager = nativeEntryManager();
+        HczMinibossInstance boss = onlyBoss(manager);
+        int y = boss.getY();
+        boss.update(100, null); // Obj_Wait -> HCZMiniboss_StartFight changes only code pointer.
+        assertEquals(y, boss.getY());
+        assertEquals(0, field(field(boss, "state"), "yVel"));
+        assertEquals(0, boss.getCollisionFlags(), "loop attributes are not installed on the pointer-change pass");
+        boss.update(101, null); // Obj_HCZ_MinibossLoop -> HCZMinibossLoop_Init.
+        assertEquals(y, boss.getY(), "initialization has no MoveSprite2 call");
+        assertEquals(0x100, field(field(boss, "state"), "yVel"));
+        assertEquals(0xDF, field(boss, "waitTimer"));
+        boss.update(102, null); // first HCZMinibossLoop_MoveAndWait.
+        assertEquals(y + 1, boss.getY());
+        assertEquals(0xDE, field(boss, "waitTimer"));
+    }
+
+    @Test
+    void pendingFightEntrySurvivesRegisteredRecreationAndForward() throws Exception {
+        var manager = nativeEntryManager();
+        manager.setRewindInPlaceRestoreEnabledForTest(false);
+        var registry = new com.openggf.game.rewind.RewindRegistry();
+        registry.register(manager.rewindSnapshottable());
+        var waiting = registry.capture();
+        HczMinibossInstance boss = onlyBoss(manager);
+        int y = boss.getY();
+        boss.update(100, null);
+        var pending = registry.capture();
+        boss.update(101, null);
+        var initialized = registry.capture();
+        boss.update(102, null);
+        registry.restore(pending);
+        boss = onlyBoss(manager);
+        boss.update(101, null);
+        assertEquals(y, boss.getY(), "restored code-pointer transition initializes before the first move");
+        assertEquals(0xDF, field(boss, "waitTimer"));
+        registry.restore(initialized);
+        boss = onlyBoss(manager);
+        boss.update(102, null);
+        assertEquals(y + 1, boss.getY());
+        registry.restore(waiting);
+        boss = onlyBoss(manager);
+        boss.update(100, null);
+        boss.update(101, null);
+        assertEquals(y, boss.getY());
+    }
+
+    private static com.openggf.level.objects.ObjectManager nativeEntryManager() throws Exception {
+        com.openggf.tests.TestEnvironment.configureGameModuleFixture(com.openggf.tests.rules.SonicGame.SONIC_3K);
+        TestObjectServices services = new TestObjectServices().withCamera(mock(Camera.class))
+                .withGameState(new com.openggf.game.GameStateManager())
+                .withWaterSystem(new com.openggf.level.WaterSystem()).withIsolatedObjectManager();
+        var manager = services.objectManager();
+        HczMinibossInstance boss = manager.createDynamicObject(() -> new HczMinibossInstance(
+                new ObjectSpawn(0x3720, 0x0400, 0x99, 0, 0, false, 0)));
+        set(field(boss, "state"), "routine", 4);
+        set(boss, "waitTimer", 0);
+        var callback = findField(boss, "waitCallback");
+        for (Object value : callback.getType().getEnumConstants())
+            if (((Enum<?>) value).name().equals("START_FIGHT")) callback.set(boss, value);
+        return manager;
+    }
+
+    private static HczMinibossInstance onlyBoss(com.openggf.level.objects.ObjectManager manager) {
+        return manager.getActiveObjects().stream().filter(HczMinibossInstance.class::isInstance)
+                .map(HczMinibossInstance.class::cast).findFirst().orElseThrow();
+    }
+
     private static HczMinibossInstance boss(Camera camera) {
         TestObjectServices services = new TestObjectServices().withCamera(camera);
         HczMinibossInstance boss = ObjectConstructionContext.with(services, -1, () -> new HczMinibossInstance(

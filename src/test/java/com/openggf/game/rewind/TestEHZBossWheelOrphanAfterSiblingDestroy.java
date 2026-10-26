@@ -135,9 +135,9 @@ class TestEHZBossWheelOrphanAfterSiblingDestroy {
 
     /**
      * Repeat-rewind regression for {@code AbstractBossInstance#childSpawnOrdinalCounters}:
-     * the counter must be re-derived from the SETTLED post-restore children, not trusted
-     * at whatever value reconstruction's fixed always-re-spawn-3-wheels sequence happens
-     * to leave it at. A boss that spawns a same-class child BEYOND its construction-time
+     * captured history must replace whatever value reconstruction's fixed
+     * always-re-spawn-3-wheels sequence happens to leave behind.
+     * A boss that spawns a same-class child BEYOND its construction-time
      * set (simulated here by manually spawning a 4th {@code EHZBossWheel}, matching e.g. a
      * mid-fight repeat-spawn pattern) can have a live survivor whose captured ordinal
      * exceeds the reconstruction-time spawn count for that class -- leaving the counter at
@@ -198,15 +198,14 @@ class TestEHZBossWheelOrphanAfterSiblingDestroy {
 
         int counterAfterRestore1 = readOrdinalCounter(restoredBoss1, EHZBossWheel.class);
         assertEquals(4, counterAfterRestore1,
-                "childSpawnOrdinalCounters must be re-derived as max(live ordinal)+1 = 4, "
-                        + "NOT trusted at whatever the fixed 3-wheel reconstruction sequence left it at");
+                "captured next ordinal4 must replace the fixed 3-wheel reconstruction count");
 
         // A 5th wheel spawned post-restore must not collide with the just-restored
         // ordinal-3 survivor -- this is the exact ambiguity the ordinal scheme exists
         // to prevent, now proven closed across a rewind round-trip too.
         AbstractBossChild fifthWheel = spawnExtraWheel(restoredBoss1, -0x70, 4);
         assertEquals(4, fifthWheel.getChildOrdinal(),
-                "post-restore spawn must continue from the re-derived counter, not duplicate "
+                "post-restore spawn must continue from captured history, not duplicate "
                         + "the restored ordinal-3 survivor");
         List<AbstractBossChild> afterFifthSpawn = wheelsOf(restoredBoss1);
         assertEquals(1, countOrdinal(afterFifthSpawn, 4), "exactly one wheel may hold ordinal 4");
@@ -222,6 +221,53 @@ class TestEHZBossWheelOrphanAfterSiblingDestroy {
         // That orphan-on-recreate gap is real but out of scope for the ordinal-counter
         // fix this test targets; tracked separately in
         // docs/architecture/plans/s1-bug-batch-ledger-2026-07-05.md rather than silently left.
+    }
+
+    @Test
+    void retiredHighestChildDoesNotRollBackFutureOrdinalsAcrossRepeatedRestore() throws Exception {
+        assertRetiredOrdinalHistorySurvives(false);
+    }
+
+    @Test
+    void allRetiredChildrenKeepTheirClassHistoryAcrossRepeatedRestore() throws Exception {
+        assertRetiredOrdinalHistorySurvives(true);
+    }
+
+    private static void assertRetiredOrdinalHistorySurvives(boolean retireAll) throws Exception {
+        ObjectManager[] holder = new ObjectManager[1];
+        Camera camera = mockCamera();
+        ObjectServices services = new StubObjectServices() {
+            @Override public ObjectManager objectManager() { return holder[0]; }
+            @Override public Camera camera() { return camera; }
+        };
+        ObjectSpawn bossSpawn = new ObjectSpawn(160, 240,
+                Sonic2ObjectIds.EHZ_BOSS, 0, 0, false, 0);
+        ObjectManager om = new ObjectManager(List.of(bossSpawn), new Sonic2ObjectRegistry(),
+                0, null, null, GraphicsManager.getInstance(), camera, services);
+        holder[0] = om;
+        om.reset(0);
+        ObjectInstance boss = findActiveByClass(om, EHZ_BOSS_CLASS);
+        assertNotNull(boss);
+        AbstractBossChild extra = spawnExtraWheel(boss, -0x50, 4);
+        assertEquals(3, extra.getChildOrdinal());
+        for (AbstractBossChild wheel : wheelsOf(boss)) {
+            if (retireAll || wheel == extra) wheel.setDestroyed(true);
+        }
+        invokePrivate(om, "cleanupDestroyedDynamicObjects");
+        Set<Integer> survivors = retireAll ? Set.of() : Set.of(0, 1, 2);
+        assertEquals(survivors, ordinalsOf(wheelsOf(boss)));
+        RewindRegistry rewind = new RewindRegistry();
+        rewind.register(om.rewindSnapshottable());
+        CompositeSnapshot saved = rewind.capture();
+        for (int round = 1; round <= 2; round++) {
+            rewind.restore(saved);
+            ObjectInstance restored = findActiveByClass(om, EHZ_BOSS_CLASS);
+            assertNotNull(restored);
+            assertEquals(survivors, ordinalsOf(wheelsOf(restored)));
+            AbstractBossChild next = spawnExtraWheel(restored, -0x70, 4);
+            assertEquals(4, next.getChildOrdinal(),
+                    "retired ordinal3 remains construction history on restore round " + round);
+        }
     }
 
     /**

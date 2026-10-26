@@ -5,4 +5,7 @@ public interface NativeAudioEffectCues {
     boolean permitsTemporaryMusic(int musicId);
     boolean permitsLandingCue(int sfxId);
     boolean isWarningCue(int sfxId);
+
+    /** Native request ID in this installed profile's loader namespace; absent by default. */
+    default int groundSlideSfxId() { return -1; }
 }

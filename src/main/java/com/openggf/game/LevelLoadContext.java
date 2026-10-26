@@ -16,6 +16,8 @@ import com.openggf.level.LevelDescriptor;
  */
 @com.openggf.game.ModApi
 public class LevelLoadContext {
+    com.openggf.game.session.WorldSession runtimeWorld;
+    com.openggf.sprites.managers.SpriteManager runtimeSprites;
     private Rom rom;
     private int levelIndex = -1;
     private int zone = -1;
@@ -26,6 +28,7 @@ public class LevelLoadContext {
     private GameModule gameModule;
 
     // Checkpoint snapshot fields (saved before loadLevel clears checkpoint state)
+    com.openggf.game.internal.CheckpointBackgroundScroll checkpointBackgroundScroll;
     private boolean hasCheckpoint;
     private int checkpointX;
     private int checkpointY;
@@ -193,6 +196,8 @@ public class LevelLoadContext {
      * @param state the respawn state to snapshot (may be null)
      */
     public void snapshotCheckpoint(RespawnState state) {
+        checkpointBackgroundScroll = state instanceof CheckpointState cs && state.isActive()
+                ? cs.savedBackgroundScroll : null;
         if (state == null || !state.isActive()) {
             hasCheckpoint = false;
             checkpointX = 0;

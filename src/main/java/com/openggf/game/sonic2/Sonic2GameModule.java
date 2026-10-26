@@ -82,7 +82,15 @@ import java.util.Optional;
 
 import static java.security.MessageDigest.getInstance;
 
-public class Sonic2GameModule implements GameModule {
+public class Sonic2GameModule implements GameModule, com.openggf.game.internal.SpriteTableBuildProfile {
+    @Override
+    public PlacedRings placedRingEmission() {
+        return PlacedRings.BEFORE_OBJECT_BUCKETS;
+    }
+
+    @Override public PlacedRingY placedRingY() { return PlacedRingY.MASK_11_BEFORE_BIAS; }
+    @Override public boolean lostRingHighPriority() { return false; }
+
 
     private static final com.openggf.game.common.CommonObjectPlacementEncoding OBJECT_PLACEMENT_ENCODING =
             new com.openggf.game.common.CommonObjectPlacementEncoding();
@@ -106,6 +114,8 @@ public class Sonic2GameModule implements GameModule {
             levelEventManager, playerArtModeAuthority, levelMusicScheduler);
     private final TitleCardManager titleCardProvider = new TitleCardManager();
     private final TitleScreenManager titleScreenProvider = new TitleScreenManager();
+    private final com.openggf.game.sonic2.options.Sonic2NativeModeProvider nativeModes =
+            new com.openggf.game.sonic2.options.Sonic2NativeModeProvider();
     private final LevelSelectManager levelSelectProvider = new LevelSelectManager();
     private final S2DataSelectProfile dataSelectHostProfile = new S2DataSelectProfile(this::getZoneRegistry);
     private final CrossGameDonorProvider donorProvider = new Sonic2CrossGameDonorProvider();
@@ -331,6 +341,8 @@ public class Sonic2GameModule implements GameModule {
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getGameService(Class<T> type) {
+        if (type == com.openggf.game.nativemenu.NativeTitleModeProvider.class
+                || type == com.openggf.game.sonic2.options.Sonic2NativeModeProvider.class) return type.cast(nativeModes);
         if (type == com.openggf.level.render.ZonePictureSource.Factory.class) {
             // Public ZoneRegistry zone 1 / act 0 is CPZ1. Level index 2 resolves ROM zone $0D.
             return (T) (com.openggf.level.render.ZonePictureSource.Factory) rom ->
@@ -409,6 +421,7 @@ public class Sonic2GameModule implements GameModule {
 
     @Override
     public TitleScreenProvider getTitleScreenProvider() {
+        titleScreenProvider.setNativeMenuAvailability(nativeModes.competitionScreen() != null);
         return titleScreenProvider;
     }
 

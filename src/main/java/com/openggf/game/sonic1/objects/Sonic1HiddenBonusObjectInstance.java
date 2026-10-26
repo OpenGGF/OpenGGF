@@ -32,7 +32,7 @@ import java.util.List;
  *   <li>0 — blank frame, 0 points</li>
  *   <li>1 — "10000" frame, 10000 points</li>
  *   <li>2 — "1000" frame, 1000 points</li>
- *   <li>3 — "100" frame, 100 points</li>
+ *   <li>3 — "100" frame, 10 points (shipped ROM bug)</li>
  * </ul>
  * <p>
  * Art: Nem_Bonus at ArtTile_Hidden_Points ($4B6), palette 0, priority bit set.
@@ -49,9 +49,10 @@ public class Sonic1HiddenBonusObjectInstance extends AbstractObjectInstance impl
 
     // From disassembly: .points table — indexed by subtype, values passed to AddPoints
     // ROM stores: dc.w 0, 1000, 100, 1  (internal format, displayed = value * 10)
-    // Subtype 3 original ROM bug: dc.w 1 (displays as 10pts); FixBugs corrects to dc.w 10
+    // Bonus_Points: shipped FixBugs=0 awards 10 points under the "100" popup.
+    // FixBugs=1 changes the internal word to 10 and awards the advertised 100.
     // Engine uses displayed point values (same convention as addScore elsewhere).
-    private static final int[] BONUS_POINTS = { 0, 10000, 1000, 100 };
+    private static final int[] BONUS_POINTS = { 0, 10000, 1000, 10 };
 
     private enum State {
         WAITING,    // Routine 0: checking proximity

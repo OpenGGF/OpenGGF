@@ -95,6 +95,8 @@ class GlReadPixelsGrabberTest {
             for (int offset = 0; offset < pixels.length; offset += 4) {
                 assertRgba(pixels, offset, 0, 255, 0, 255);
             }
+            assertRgba(pixels, 0, 0, 255, 0, 255);
+            assertRgba(pixels, pixels.length - 4, 0, 255, 0, 255);
             assertEquals(GL_NO_ERROR, glGetError());
         }
     }

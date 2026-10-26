@@ -5,6 +5,8 @@ import com.openggf.game.GameStateManager;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.GameplaySessionFactory;
 import com.openggf.level.LevelManager;
+import com.openggf.level.Level;
+import com.openggf.game.internal.EncodedCollisionLayout;
 import com.openggf.level.WaterSystem;
 import com.openggf.mods.scene.host.SceneRomLibrary;
 import com.openggf.sprites.managers.SpriteManager;
@@ -33,12 +35,44 @@ class TestPlayerTerrainScanEquivalence {
     @Test @RequiresRom(SonicGame.SONIC_3K) void sonic3k() throws Exception {
         verify("s3k", "s3k.rom.path", "5ade97e5f1d420067331c1cf7abfffcc34d0100c8a9d5b527a8e0dced0ca4e97");
     }
+
+    @Test @RequiresRom(SonicGame.SONIC_3K)
+    void ordinaryVerticalScanStillUsesTheEncodedTerrainOwner() throws Exception {
+        try (var library = SceneRomLibrary.open(Map.of(
+                "s3k", Path.of(System.getProperty("s3k.rom.path"))))) {
+            var module = library.module("s3k");
+            var terrain = spy(library.level("s3k", 0, 0));
+            var encoded = assertInstanceOf(EncodedCollisionLayout.class, terrain);
+            assertTrue(encoded.hasEncodedCollisionLayout());
+            var services = EngineServices.current();
+            var level = GameplaySessionFactory.createCollisionOnlyLevel(module, terrain, 0, 0,
+                    services, new Camera(services.configuration()), new SpriteManager(services.configuration()),
+                    new CollisionSystem(new TerrainCollisionManager()), new WaterSystem(), new GameStateManager());
+            var sprite = mock(AbstractPlayableSprite.class);
+            when(sprite.getGameRules()).thenReturn(module.getRules());
+            var sensor = new GroundSensor(sprite, Direction.DOWN, (byte) 0, (byte) 0, true);
+            var scan = GroundSensor.class.getDeclaredMethod("scanVerticalLayer", LevelManager.class,
+                    short.class, short.class, int.class, Direction.class, boolean.class,
+                    byte.class, boolean.class, SensorResult.class);
+            scan.setAccessible(true);
+            assertNotNull(scan.invoke(sensor, level, (short) 7, (short) 8, 12,
+                    Direction.DOWN, false, (byte) 0, false, new SensorResult()));
+            org.mockito.Mockito.verify(encoded, atLeastOnce()).collisionChunkDescAt((byte) 0, 7, 8);
+        }
+    }
+
     private void verify(String game, String property, String expected) throws Exception {
         try (var library = SceneRomLibrary.open(Map.of(game, Path.of(System.getProperty(property))))) {
             var module = library.module(game);
             var terrain = library.level(game, 0, 0);
+            // The pre-extraction golden corpus used decoded maps. Keep those inputs
+            // fixed while the separate ordinary-scan control retains encoded dispatch.
+            var decodedEntry = mock(Level.class, withSettings().stubOnly()
+                    .defaultAnswer(org.mockito.AdditionalAnswers.delegatesTo(terrain)));
+            assertFalse(decodedEntry instanceof EncodedCollisionLayout);
+            assertSame(terrain.getMap(), decodedEntry.getMap());
             var services = EngineServices.current();
-            var level = GameplaySessionFactory.createCollisionOnlyLevel(module, terrain, 0, 0,
+            var level = GameplaySessionFactory.createCollisionOnlyLevel(module, decodedEntry, 0, 0,
                     services, new Camera(services.configuration()), new SpriteManager(services.configuration()),
                     new CollisionSystem(new TerrainCollisionManager()), new WaterSystem(), new GameStateManager());
             var sprite = mock(AbstractPlayableSprite.class);

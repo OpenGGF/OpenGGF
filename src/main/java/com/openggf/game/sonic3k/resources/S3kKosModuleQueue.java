@@ -208,7 +208,7 @@ public final class S3kKosModuleQueue {
                 rom, source, destinationPatternAddress, exportableAcrossSegment));
     }
 
-    private PreparedSubmission prepareSubmission(
+    PreparedSubmission prepareSubmission(
             Rom rom,
             int source,
             int destinationPatternAddress,
@@ -231,7 +231,7 @@ public final class S3kKosModuleQueue {
                 exportableAcrossSegment);
     }
 
-    private HardwareWorkHandle submitPrepared(PreparedSubmission prepared) {
+    HardwareWorkHandle submitPrepared(PreparedSubmission prepared) {
         S3kKosModuleDescriptor descriptor = prepared.descriptor();
         HardwareWorkHandle handle = timing.submit(new HardwareWorkSubmission(
                 HardwareWorkKind.KOS_MODULE_QUEUE,
@@ -247,7 +247,7 @@ public final class S3kKosModuleQueue {
         return handle;
     }
 
-    private record PreparedSubmission(
+    record PreparedSubmission(
             S3kKosModuleDescriptor descriptor,
             S3kKosModulePreparation preparation,
             boolean exportableAcrossSegment) {

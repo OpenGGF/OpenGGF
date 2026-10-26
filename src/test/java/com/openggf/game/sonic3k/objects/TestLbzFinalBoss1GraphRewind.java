@@ -17,6 +17,8 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PlaceholderObjectInstance;
 import com.openggf.level.objects.StubObjectServices;
+import com.openggf.tests.rules.RequiresRom;
+import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -86,6 +88,7 @@ class TestLbzFinalBoss1GraphRewind {
     }
 
     @Test
+    @RequiresRom(SonicGame.SONIC_3K)
     void detachRetirementReplaysAndPostRetirementRestoreDoesNotResurrectHistory() throws Exception {
         Harness h = new Harness();
         var boss = h.allocateBoss();

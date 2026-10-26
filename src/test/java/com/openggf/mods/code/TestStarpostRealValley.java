@@ -11,6 +11,7 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.configuration.WidescreenAspect;
 import com.openggf.data.Rom;
+import com.openggf.data.RomGame;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
@@ -33,6 +34,8 @@ import com.openggf.physics.TerrainCheckResult;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.SharedLevel;
+import com.openggf.tests.RomCatalogueFixture;
+import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -41,6 +44,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 import javax.tools.ToolProvider;
 import org.junit.jupiter.api.AfterEach;
@@ -73,6 +77,7 @@ class TestStarpostRealValley {
 
     private SharedLevel bootstrap;
     private ModTestKit kit;
+    private RomCatalogueFixture catalogue;
 
     @BeforeAll
     static void packageMod() throws Exception {
@@ -99,19 +104,28 @@ class TestStarpostRealValley {
     @AfterEach
     void close() throws Exception {
         try {
-            if (kit != null) {
-                kit.close();
+            try {
+                if (kit != null) {
+                    kit.close();
+                }
+            } finally {
+                if (bootstrap != null) {
+                    bootstrap.dispose();
+                }
             }
         } finally {
-            if (bootstrap != null) {
-                bootstrap.dispose();
-            }
+            if (catalogue != null) catalogue.close();
         }
     }
 
     /** Launches the valley act with {@code character} alone at {@code aspect}. */
     private HeadlessTestFixture launch(String character, WidescreenAspect aspect) throws Exception {
         bootstrap = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
+        var sonic1 = RomTestUtils.ensureSonic1RomAvailable();
+        if (sonic1 != null) {
+            catalogue = RomCatalogueFixture.bind(GameServices.configuration(), GameServices.rom(),
+                    Map.of(RomGame.S1, sonic1.toPath()));
+        }
         assumeTrue(LogicalRomResolver.fromRomManager(GameServices.rom()).isAvailable(LogicalRom.S1),
                 "Sonic 1 was not supplied");
         var config = SonicConfigurationService.getInstance();

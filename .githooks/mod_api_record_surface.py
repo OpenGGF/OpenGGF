@@ -29,6 +29,52 @@ def closing(ts, start, left='{', right='}'):
     raise ValueError('Unbalanced Java declaration')
 
 
+def field_declaration(ts):
+    """Keep every field declarator, excluding its executable initializer value."""
+    result = []
+    parens = brackets = braces = 0
+    initializer = False
+    for token in ts:
+        if initializer and parens == brackets == braces == 0 and token == ',':
+            initializer = False
+        if not initializer:
+            if token == '=' and parens == brackets == braces == 0:
+                initializer = True
+                continue
+            result.append(token)
+        if token == '(': parens += 1
+        elif token == ')': parens -= 1
+        elif token == '[': brackets += 1
+        elif token == ']': brackets -= 1
+        elif token == '{': braces += 1
+        elif token == '}': braces -= 1
+    return result
+
+
+def enum_surface(ts, owner):
+    """Retain constants, then inspect enum members with their own visibility."""
+    result = []
+    parens = brackets = 0
+    end = 0
+    while end < len(ts):
+        token = ts[end]
+        if token == '(': parens += 1
+        elif token == ')': parens -= 1
+        elif token == '[': brackets += 1
+        elif token == ']': brackets -= 1
+        elif parens == brackets == 0:
+            if token == ';':
+                return result + [';'] + member_surface(ts[end + 1:], owner)
+            if token == '{':
+                # An enum constant's anonymous implementation is executable code.
+                end = closing(ts, end) + 1
+                result.extend(['{', '}'])
+                continue
+        result.append(token)
+        end += 1
+    return result
+
+
 def policy_blob(ref):
     """Read only the compared tree/index, including absence in historical trees."""
     if ref == 'EMPTY':
@@ -210,14 +256,15 @@ def member_surface(ts, owner, implicit=False):
                             kind = header[nested]
                             name = header[nested + 1]
                             body = ts[end + 1:stop]
-                            result.extend(body if kind == 'enum' else member_surface(body, name, kind == 'interface'))
+                            result.extend(enum_surface(body, name) if kind == 'enum'
+                                          else member_surface(body, name, kind == 'interface'))
                         result.append('}')
                     start = stop + 1
                     break
                 if t == ';':
                     header = ts[start:end]
                     if 'private' not in header and ('public' in header or 'protected' in header or implicit):
-                        result.extend(header + [';'])
+                        result.extend(field_declaration(header) + [';'])
                     start = end + 1
                     break
             end += 1

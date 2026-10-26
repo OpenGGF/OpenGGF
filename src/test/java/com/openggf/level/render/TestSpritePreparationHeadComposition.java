@@ -7,10 +7,12 @@ import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.graphics.SpritePresentation;
 import com.openggf.graphics.SpritePresentation.*;
+import com.openggf.graphics.SpriteSatEntry;
 import com.openggf.level.Pattern;
 import com.openggf.level.PatternDesc;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -55,6 +57,30 @@ class TestSpritePreparationHeadComposition {
         assertNotSame(previous.tiles().getFirst(), next.tiles().getFirst());
         assertNotSame(previous.tiles().get(1), next.tiles().get(1), "changed geometry always replaces the tile");
         assertEquals(retained, previous);
+    }
+
+    @Test void headFragmentsPreserveGhostColourAndPixelOperation() {
+        Frame source = raw(mask(), 18);
+        var tiles = source.tiles().stream().map(tile -> new Tile(tile.layer(), tile.patternId(), 3,
+                tile.hFlip(), tile.vFlip(), true, tile.x(), tile.y(), tile.width(), tile.height(),
+                tile.priorityShader(), 13, true, .4f, tile.rowStart(), tile.rowEnd(), tile.subject(),
+                true, SpriteSatEntry.PixelOperation.SHADOW_15)).toList();
+        var patterns = new java.util.HashMap<Integer, PatternVersion>();
+        source.patternVersions().keySet().forEach(id -> patterns.put(id, new PatternVersion(-1L, -1L, -1L, -1L)));
+        Frame composed = PlayerHeadPresentation.compose(new Frame(tiles, source.primitives(), patterns), 0, 0);
+
+        assertEquals(4, composed.tiles().size(), "each source emits a body and an enlarged head fragment");
+        assertTrue(composed.tiles().stream().anyMatch(tile -> tile.width() == 8));
+        assertTrue(composed.tiles().stream().anyMatch(tile -> tile.width() == 12));
+        for (Tile tile : composed.tiles()) {
+            assertEquals(3, tile.palette());
+            assertTrue(tile.priority());
+            assertEquals(13, tile.occlusionMask());
+            assertTrue(tile.ghost());
+            assertEquals(.4f, tile.ghostAlpha());
+            assertTrue(tile.ghostColour());
+            assertEquals(SpriteSatEntry.PixelOperation.SHADOW_15, tile.pixelOperation());
+        }
     }
 
     private static HeadMask mask() {

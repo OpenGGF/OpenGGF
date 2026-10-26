@@ -90,6 +90,11 @@ class TestStageplayAcquiredControlRelease {
         object.releasePlayersForVisualDirection();
         assertEquals(nativeState, scalarState(object), "Release cannot reset native routine progress");
         assertFalse(mockingDetails(owner).getInvocations().isEmpty(), name);
+        if (object instanceof com.openggf.game.sonic1.objects.bosses.Sonic1FZBossInstance) {
+            verify(owner).setForcedInputMask(0);
+            verify(owner, never()).writeLogicalInputAndCurrentFollowerHistory(anyInt(), anyBoolean());
+            verify(owner, never()).clearForcedInputMask();
+        }
         verify(owner, never()).setXSpeed(anyShort());
         verify(owner, never()).setYSpeed(anyShort());
         verifyNoInteractions(unrelated);

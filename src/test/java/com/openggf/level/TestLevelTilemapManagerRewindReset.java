@@ -3,6 +3,9 @@ package com.openggf.level;
 import com.openggf.camera.Camera;
 import com.openggf.data.Rom;
 import com.openggf.game.ZoneFeatureProvider;
+import com.openggf.game.GameServices;
+import com.openggf.game.mutation.DirectLevelMutationSurface;
+import com.openggf.level.rewind.LevelRewindSnapshotAdapter;
 import com.openggf.game.session.SessionManager;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.objects.ObjectSpawn;
@@ -21,6 +24,8 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -380,6 +385,160 @@ public class TestLevelTilemapManagerRewindReset {
         assertTrue(manager.isBackgroundTilemapDirty(),
                 "forward event bytes cannot stand in for an earlier snapshot without exact reconciliation");
         assertFalse(manager.isRetainedBackgroundPlaneAuthoritative());
+    }
+
+    @Test
+    public void geometrySnapshotRestorePreservesUntouchedRetainedPlaneThroughNextRowPublication()
+            throws Exception {
+        LevelManager owner = installRealLevelOwner();
+        LevelTilemapManager tilemaps = owner.getTilemapManager();
+        owner.seedBackgroundVdpPlaneFromWorld(0);
+        byte[] ordinary = tilemaps.getBackgroundTilemapData().clone();
+        // Real native-style row writes leave physical history distinct from a layout rebuild.
+        owner.copyBackgroundTileRowFromWorldToVdpPlane(128, 64, 0xE400, 1);
+        byte[] retained = tilemaps.captureRetainedBackgroundVdpRing();
+        assertFalse(java.util.Arrays.equals(ordinary, retained), "fixture must contain actual retained history");
+        owner.ensureForegroundTilemapData();
+        byte[] expectedForeground = tilemaps.getForegroundTilemapData().clone();
+        var adapter = LevelRewindSnapshotAdapter.create(owner);
+        var snapshot = adapter.capture();
+        owner.copyBackgroundTileRowFromWorldToVdpPlane(256, 96, 0xE000, 1);
+        byte[] expectedAfterRow = tilemaps.getBackgroundTilemapData().clone();
+
+        // This is the level/plane partition, not a full-world certificate. The
+        // original production Slot pilots separately own whole-world replay.
+        for (int cycle = 0; cycle < 2; cycle++) {
+            mutateFirstChunkThroughProductionSurface(owner);
+            assertNotSame(snapshot.chunks(), level.chunksReference(), "actual geometry reference swap prerequisite");
+            owner.ensureForegroundTilemapData();
+            assertFalse(java.util.Arrays.equals(expectedForeground, tilemaps.getForegroundTilemapData()),
+                    "fixture mutation must be visible through the real geometry consumer");
+            byte[] discardedForeground = tilemaps.getForegroundTilemapData();
+            byte[] discardedLookup = tilemaps.getPatternLookupData();
+
+            // Production registration order: the parallax/event owner restores
+            // its captured physical image before the later level adapter.
+            owner.restoreBackgroundVdpPlane(retained);
+            assertArrayEquals(retained, tilemaps.getBackgroundTilemapData(), "exact physical restore prerequisite");
+            adapter.restore(snapshot);
+            tilemaps.resetTilemapsForRewindRestore();
+            assertSame(snapshot.chunks(), level.chunksReference());
+            assertTrue(tilemaps.isForegroundTilemapDirty(), "derived FG still needs geometry restoration");
+            assertTrue(getBoolean(tilemaps, "patternLookupDirty"), "pattern cache must be invalidated too");
+            owner.ensureForegroundTilemapData();
+            tilemaps.ensurePatternLookupData();
+            assertNotSame(discardedForeground, tilemaps.getForegroundTilemapData());
+            assertNotSame(discardedLookup, tilemaps.getPatternLookupData());
+            assertArrayEquals(expectedForeground, tilemaps.getForegroundTilemapData(),
+                    "real derived foreground must rebuild from restored geometry");
+            assertEquals(level.getPatternCount(), tilemaps.getPatternLookupSize());
+
+            owner.copyBackgroundTileRowFromWorldToVdpPlane(256, 96, 0xE000, 1);
+            // All 8192 bytes: the one legitimate publication may change only its
+            // declared cells; every untouched physical byte must retain history.
+            assertArrayEquals(expectedAfterRow, tilemaps.getBackgroundTilemapData(),
+                    "cycle " + cycle + ": geometry-cache restore must not erase untouched physical Plane B");
+        }
+    }
+
+    @Test
+    public void geometrySnapshotRestoreWithoutRetainedPlaneRebuildsOrdinaryBackground() {
+        LevelManager owner = installRealLevelOwner();
+        LevelTilemapManager tilemaps = owner.getTilemapManager();
+        owner.ensureBackgroundTilemapData();
+        byte[] expected = tilemaps.getBackgroundTilemapData().clone();
+        var adapter = LevelRewindSnapshotAdapter.create(owner);
+        var snapshot = adapter.capture();
+        mutateFirstChunkThroughProductionSurface(owner);
+        owner.ensureBackgroundTilemapData();
+        assertFalse(java.util.Arrays.equals(expected, tilemaps.getBackgroundTilemapData()));
+        byte[] discarded = tilemaps.getBackgroundTilemapData();
+
+        adapter.restore(snapshot);
+        tilemaps.resetTilemapsForRewindRestore();
+        assertTrue(tilemaps.isBackgroundTilemapDirty());
+        owner.ensureBackgroundTilemapData();
+        assertNotSame(discarded, tilemaps.getBackgroundTilemapData());
+        assertArrayEquals(expected, tilemaps.getBackgroundTilemapData(),
+                "without an exact retained restore, ordinary BG remains a derived cache");
+    }
+
+    @Test
+    public void geometrySnapshotRestoreRejectsForwardRetainedPlaneWithoutExactRestore() {
+        LevelManager owner = installRealLevelOwner();
+        LevelTilemapManager tilemaps = owner.getTilemapManager();
+        owner.ensureBackgroundTilemapData();
+        byte[] ordinary = tilemaps.getBackgroundTilemapData().clone();
+        var adapter = LevelRewindSnapshotAdapter.create(owner);
+        var snapshot = adapter.capture();
+        owner.seedBackgroundVdpPlaneFromWorld(0);
+        owner.copyBackgroundTileRowFromWorldToVdpPlane(128, 64, 0xE400, 1);
+        mutateFirstChunkThroughProductionSurface(owner);
+        owner.copyBackgroundTileRowFromWorldToVdpPlane(256, 96, 0xE000, 1);
+        assertTrue(tilemaps.isRetainedBackgroundPlaneAuthoritative());
+
+        adapter.restore(snapshot);
+        tilemaps.resetTilemapsForRewindRestore();
+
+        assertFalse(tilemaps.isRetainedBackgroundPlaneAuthoritative(),
+                "forward retained bytes without an exact restore must not survive geometry restoration");
+        assertTrue(tilemaps.isBackgroundTilemapDirty());
+        owner.ensureBackgroundTilemapData();
+        assertArrayEquals(ordinary, tilemaps.getBackgroundTilemapData());
+    }
+
+    @Test
+    public void liveGeometryMutationStillInvalidatesAnExactlyRestoredRetainedPlane() {
+        LevelManager owner = installRealLevelOwner();
+        LevelTilemapManager tilemaps = owner.getTilemapManager();
+        owner.seedBackgroundVdpPlaneFromWorld(0);
+        owner.copyBackgroundTileRowFromWorldToVdpPlane(128, 64, 0xE400, 1);
+        byte[] retained = tilemaps.captureRetainedBackgroundVdpRing();
+        owner.restoreBackgroundVdpPlane(retained);
+
+        mutateFirstChunkThroughProductionSurface(owner);
+
+        assertFalse(tilemaps.isRetainedBackgroundPlaneAuthoritative(),
+                "live terrain/art changes must not preserve an obsolete event image");
+        assertTrue(tilemaps.isBackgroundTilemapDirty());
+        owner.ensureBackgroundTilemapData();
+        assertFalse(java.util.Arrays.equals(retained, tilemaps.getBackgroundTilemapData()));
+    }
+
+    @Test
+    public void replacementSceneStillInvalidatesAnExactlyRestoredRetainedPlane() {
+        LevelManager owner = installRealLevelOwner();
+        LevelTilemapManager tilemaps = owner.getTilemapManager();
+        owner.seedBackgroundVdpPlaneFromWorld(0);
+        owner.copyBackgroundTileRowFromWorldToVdpPlane(128, 64, 0xE400, 1);
+        byte[] retained = tilemaps.captureRetainedBackgroundVdpRing();
+        owner.restoreBackgroundVdpPlane(retained);
+        StubLevel replacement = new StubLevel(MAP_HEIGHT_BLOCKS);
+
+        owner.setLevel(replacement);
+
+        assertFalse(tilemaps.isRetainedBackgroundPlaneAuthoritative());
+        assertTrue(tilemaps.isBackgroundTilemapDirty());
+        owner.ensureBackgroundTilemapData();
+        assertFalse(java.util.Arrays.equals(retained, tilemaps.getBackgroundTilemapData()),
+                "a real level replacement must not retain the preceding scene's physical history");
+    }
+
+    private LevelManager installRealLevelOwner() {
+        LevelManager owner = GameServices.level();
+        owner.setLevel(level);
+        owner.zoneFeatureProvider = new StubZoneFeatures(false, false, false);
+        owner.tilemapManager = new LevelTilemapManager(LevelGeometry.forLevel(level), graphicsManager, null);
+        return owner;
+    }
+
+    private void mutateFirstChunkThroughProductionSurface(LevelManager owner) {
+        Chunk changed = new Chunk();
+        for (int y = 0; y < 2; y++) {
+            for (int x = 0; x < 2; x++) changed.setPatternDesc(x, y, new PatternDesc(0xE83D));
+        }
+        var effects = new DirectLevelMutationSurface(level).restoreChunkState(0, changed.saveState());
+        owner.applyMutationEffects(effects);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

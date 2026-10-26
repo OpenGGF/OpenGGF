@@ -13,7 +13,7 @@ import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.util.Objects;
 
-/** Fixed S2 raw-v2 producer; publication awaits reviewed capture and installed identities. */
+/** Fixed S2 raw-v2 publication path, gated by reviewed capture and installed identities. */
 public final class S2CompleteRunReferenceProducer implements CompleteRunAudioProducer {
     private static final Path LAUNCHER = Path.of("bizhawk-headless/run-complete-audio.sh");
     private static final Path SERVICE_MANIFEST =
@@ -23,22 +23,25 @@ public final class S2CompleteRunReferenceProducer implements CompleteRunAudioPro
 
     @Override public void capture(Request request) throws Exception {
         validate(request);
-        var binding = S2CompleteRunAudioProfile.profile().producerBindings()
-                .get(CompleteRunAudioTrace.ProducerKind.REFERENCE);
-        if (binding instanceof CompleteRunAudioTrace.UnavailableProducerBinding unavailable) {
-            throw new IllegalStateException("S2 reference producer is unavailable: " + unavailable.reason());
-        }
-        throw new IllegalStateException(
-                "S2 reference publication awaits reviewed duplicate capture and installed identities");
+        var metadata = com.openggf.tools.audio.completerun.CompleteRunAudioProducerMetadata.reference(
+                request, S2CompleteRunAudioProfile.ID);
+        projectCaptured(request, metadata,
+                S2CompleteRunAudioProfile.profile().completeRunCapabilities()
+                        .get(CompleteRunAudioTrace.ProducerKind.REFERENCE));
     }
 
     void capturePipelineForTesting(Request request, CompleteRunAudioTrace.Metadata syntheticMetadata)
             throws Exception {
         validate(request);
+        projectCaptured(request, syntheticMetadata, null);
+    }
+
+    private static void projectCaptured(Request request, CompleteRunAudioTrace.Metadata metadata,
+            CompleteRunAudioTrace.NativeCapabilitySummary capability) throws Exception {
         try (var raw = new com.openggf.tools.audio.completerun.TraceChaserAudioProcess()
                 .capture(request, com.openggf.tools.audio.completerun.TraceChaserAudioProcess.Game.S2)) {
             new S2CompleteRunReferenceProjector().project(raw.raw(), request.rom(), request.output(),
-                    syntheticMetadata, null);
+                    metadata, capability);
         }
     }
 

@@ -367,6 +367,10 @@ def run_plan(root, plan, max_minutes=DEFAULT_MINUTES, keep_diagnostics=False, qu
     workers = plan.get('workers', 1)
     if workers not in (1, 2):
         raise ValueError('Ordinary workers must be 1 or 2')
+    headless_gl = plan.get('headless_gl')
+    if headless_gl not in (None, 'surfaceless-egl'):
+        raise ValueError('Unsupported headless GL backend; use surfaceless-egl')
+    headless_gl_args = [] if headless_gl is None else ['-Dopenggf.headless.gl=surfaceless-egl']
     if not plan['tests']:
         raise ValueError('No tests selected')
     target = root / 'target'
@@ -398,7 +402,7 @@ def run_plan(root, plan, max_minutes=DEFAULT_MINUTES, keep_diagnostics=False, qu
                            working_tree_fingerprint=initial_state)
         preparation_path = run / 'preparation.json'
         preparation_path.write_text(json.dumps(preparation, indent=2) + '\n')
-        command = ['mvn', '-Dmse=off', 'test-compile', '-B']
+        command = ['mvn', '-Dmse=off', *headless_gl_args, 'test-compile', '-B']
         (run / 'preparation-command.json').write_text(json.dumps(command, indent=2) + '\n')
         temporary = run / 'preparation-tmp'
         temporary.mkdir()
@@ -457,7 +461,7 @@ def run_plan(root, plan, max_minutes=DEFAULT_MINUTES, keep_diagnostics=False, qu
                         shutil.rmtree(reports)
                     for fork in (1, 2):
                         (temporary / f'fork-{fork}').mkdir(parents=True)
-                    command = ['mvn', '-Dmse=off', 'surefire:test', '-B',
+                    command = ['mvn', '-Dmse=off', *headless_gl_args, 'surefire:test', '-B',
                                f'-Dopenggf.surefire.reports={reports}',
                                f'-Dopenggf.test.tmpdir={temporary}']
                     if lane == 'guards':
@@ -550,6 +554,8 @@ def main(argv=None):
     parser.add_argument('--guards', action='store_true', help='also run guards during focused development (automatic with --base or all)')
     parser.add_argument('--workers', type=int, choices=(1, 2), default=1,
                         help='ordinary JVM workers (default: 1); guards always use one worker')
+    parser.add_argument('--headless-gl', choices=('surfaceless-egl',),
+                        help='explicit Linux graphics backend for preparation and every test batch')
     parser.add_argument('--run', action='store_true', help='execute the plan; otherwise print JSON only')
     parser.add_argument('--preflight', action='store_true', help='check Java and guard tools without running tests')
     parser.add_argument('--max-minutes', type=float, default=DEFAULT_MINUTES, help='per-invocation Maven timeout across lanes, excluding queue wait (default: 40 minutes)')
@@ -563,7 +569,7 @@ def main(argv=None):
         if not math.isfinite(args.max_minutes) or args.max_minutes <= 0:
             parser.error('--max-minutes must be a positive finite number')
         if args.acknowledge:
-            if args.run or args.preflight or args.base or args.category or args.guards or args.list or args.json or args.keep_diagnostics or args.workers != 1 or args.rom_directory:
+            if args.run or args.preflight or args.base or args.category or args.guards or args.list or args.json or args.keep_diagnostics or args.workers != 1 or args.rom_directory or args.headless_gl:
                 parser.error('--acknowledge must be used alone')
             acknowledge_run(ROOT, args.acknowledge)
             print('Diagnostics deleted.')
@@ -585,6 +591,8 @@ def main(argv=None):
         if set(args.category) - (set(data['categories']) | {'all'}):
             parser.error('unknown category; use --list')
         plan = make_plan(ROOT, data, args.base, args.category, args.guards, args.workers)
+        if args.headless_gl is not None:
+            plan['headless_gl'] = args.headless_gl
         if args.rom_directory is not None:
             plan['rom_directory'] = str(args.rom_directory)
         if args.run or args.preflight:
@@ -606,6 +614,8 @@ def main(argv=None):
             # admission is released between bounded batches and the guard lane.
             with worktree_build_slot(ROOT) as tree_fd:
                 plan = make_plan(ROOT, data, args.base, args.category, args.guards, args.workers)
+                if args.headless_gl is not None:
+                    plan['headless_gl'] = args.headless_gl
                 if args.rom_directory is not None:
                     plan['rom_directory'] = str(args.rom_directory)
                 preflight(ROOT, plan)

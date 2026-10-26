@@ -5,8 +5,10 @@ Status: dated native-movement solo Sonic, solo Tails, solo Knuckles and Sonic + 
 with rendered whole-world rewind checks and actual LRZ timeline isolation.
 Knuckles also has a separate 800px cold completion with the same replay obligations.
 The [2026-10-13 controller refresh](#knuckles-800px-controller-refresh-2026-10-13)
-passes its independent frozen-input check; fresh validation of all nine permanent
-cold-route cases on the latest merged runtime remains pending.
+passes its independent frozen-input check. On current pinned `fbeb962da80d3ec4ab726ad2b77e4b241c312e00`,
+the two maintained Knuckles cases fail as recorded below; the dated completion
+claims do not certify these current routes. Other current route coverage remains
+with the delivery lead.
 Full methodology acceptance, broader routes and native/visual parity remain open.
 “Native” configuration here means the engine movement profile, not emulator
 parity. Dated evidence retains its original scope; the final
@@ -14,6 +16,30 @@ parity. Dated evidence retains its original scope; the final
 Owning [v2 execution plan](../../plans/2026-09-15-soz-methodology-v2.md) and
 [placed inventory](../../research/s3k-zones/soz-object-inventory.md).
 
+
+## Current Knuckles cold-route limits (2026-10-22)
+
+An exact three-case focused selection on pinned
+`fbeb962da80d3ec4ab726ad2b77e4b241c312e00` includes
+`TestSozColdRouteCapture#knucklesColdActTwoCompletesWithPuzzleReplayAndPlayableLavaReef`
+and `#knucklesWideColdActTwoCompletesWithPuzzleReplayAndPlayableLavaReef`.
+The native320 case fails the survival assertion at zero-based input **12288**;
+the 800px case fails it at **24051**. The third selected case is solo Knuckles
+Act1, recorded in the [Act1 matrix](s3k-soz-act1.md). All three execute with
+zero skips or aborts. Separate uninterrupted ordinary observations reproduce
+the two Act2 deaths at `(5272,845)` and `(8583,172)` respectively.
+
+The configuration is native Knuckles, donor off, no followers, intro enabled,
+with the actual initial ProcessSprites pass consumed. Java 25.0.5 uses
+surfaceless EGL and no-device audio with no desktop/display connection. The
+absolute S3&K ROM has SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6`.
+No Act2 controller, count, expected result, gameplay owner or rewind/drawing
+predicate changes in this bounded Act1 controller investigation. The final exact-three selection after the Act1-only data update passes
+Knuckles Act1 and reproduces these same two Act2 survival failures: **1 pass,
+2 failures, 0 errors, 0 skips**,19.743 seconds in JUnit. These two failures
+remain open; this is neither a fresh Act2 completion nor native parity.
+The command, identities and delivery limits are recorded in the
+[dated completion plan](../../plans/2026-10-13-s3k-playable-completion.md).
 
 ## Cold-route revalidation (2026-09-27)
 
@@ -888,3 +914,38 @@ The [query/allocation audit](../../audits/performance/2026-10-22-native-object-q
 and its companion implementation records own exact tested states, commands and
 remaining delivery checks. These local checks do not close inherited viewport,
 donor/team, full-route, load/respawn, audiovisual or whole-world rewind products.
+
+
+## Current reconciled-source Knuckles negatives (2026-10-23)
+
+One separately authorized queued request at clean local merge
+`68662f644613ef94f978bd47721ac1835d7712b4` selected only the two maintained
+Knuckles Act2 methods, with unchanged controller inputs, setup, assertions and
+48 selected replay windows per width. Actual result: **2T/2F/0E/0S**.
+
+| Current method in TestSozColdRouteCapture | Width | First reported assertion |
+| --- | --- | --- |
+| knucklesColdActTwoCompletesWithPuzzleReplayAndPlayableLavaReef |320| cold death at11787, test188 |
+| knucklesWideColdActTwoCompletesWithPuzzleReplayAndPlayableLavaReef |800| cold death at23478, test188 |
+
+These are current delivery blockers. The older fbeb962 stops12288/24051 remain
+historical and are not substituted. No first differing production owner, damage
+receiver, writer, death cause or current terminal position was recorded. Earlier
+indices alone do not attribute a regression to one change. Complete48-window,
+boss/capsule/results and playable LRZ qualification was not reached; no earlier
+rewind mismatch was reported before the death assertion.
+
+Source hash `0c1ca516…` matched after the run; the worktree remained clean.
+Original BK2 hashes remain `8ee03087629c35f43abb02db24e4e2aa6dd453511e65d0b3e40b903129f300e8`
+(35315 inputs) and `21b57f734145320c1b99a5551dd0ccfc24fcd759b6e4fdbcb942c47a60bfabb9`
+(35412 inputs), with neutral P2. Java25.0.5, surfaceless EGL, intended cwd and the
+original absolute verified locked-on ROM property were inspected. Maven printed
+39.695s, suite9.709s, cases4.178/5.147s; no queue wait was printed. Individual
+compiler/parent times are unknown.
+
+The one-request scope stopped at terminal. No companion, retry, controller
+retiming, runtime fix, native capture, Main integration or push followed. Exact
+command/environment and the current-vs-historical distinction are recorded in the
+[completion plan](../../plans/2026-10-13-s3k-playable-completion.md); owned raw
+diagnostics were consumed after readback. A fresh source-only comparison may
+propose later observation, but grants no new execution authority.

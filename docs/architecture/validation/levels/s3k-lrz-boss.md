@@ -617,6 +617,32 @@ route is requalified without changing the movie or supplying gameplay state.
 See the [repair and validation record](../../plans/2026-10-13-s3k-playable-completion.md#wide-route-coarse-camera-discontinuity--2026-10-17)
 for the matched baseline, causal controls, exact commands and remaining limits.
 
+
+## R9 current terrain owner after restoration — 2026-10-17
+
+The short `TestS3kLrzBossCameraHeadless#freshEntryConsumesTwoIndependentSignalsAndRewindsTerrainEdits`
+now resolves the actual current level/map after whole-world restore. The S3K
+encoded-layout rewind adapter deliberately installs a new Map; the prior Java
+reference is detached. Native `loc_59B46` writes the first five row9 bytes,
+then `loc_59BA4` writes literal `$17` at `(requestX>>7)` and its next byte.
+On disassembly pin `044fa46725c71187399e13f5ddb70e11d32dc024`, original ROM
+layout `$0A766C` row9 points to `$FF81A8`; target bytes `$FF81A9/$FF81AA`
+start at `$14`. Independent ROM reads anchor those addresses and values.
+The production mutation pipeline must update both current decoded cells and
+encoded bytes, preserve prior captured COW data, and leave the detached Map
+unchanged. Both signal and edit boundaries force whole-world recreation and
+replay twice, comparing every registered key and keyset.
+
+Pre-edit `58042` on qualified R13 `0cd178d8f4bf8e9ea54e10b133aa2260a68483be`
+reproduced this stale-reference failure (23 expected/20 actual) alongside the
+separate ICZ assertion:2/2F/0E/0S. Reviewed LRZ test SHA-256
+`c5c3ed462fb006f397c8b5130810b8393eef2bdb617948e6d5300e79e7ed94ed`
+passes in `54296` at16:40:51UTC, .107s. That full invocation is **72/1F/0E/0S**:
+71 pass, solely ICZ's newly reached deferred16x16 index0 assertion remains red.
+This green slice changes no runtime or public API and does not certify ICZ,
+new route/configuration products, native pixels or the whole campaign.
+[Exact commands, source epochs and limits](../../plans/2026-10-13-s3k-playable-completion.md#r9-green-lrzddz-split-and-r10-icz-evidence-boundary--2026-10-17).
+
 ## Object-pipeline performance follow-up (2026-10-22)
 
 Boss platform break checks and the platform stream dereference their existing saved owned slots with the previous live-occupant predicate. Empty/reset-vector handling and replacement types remain unchanged. `TestLrzEndBossEncounterHeadless` is the focused encounter owner.

@@ -882,3 +882,46 @@ with S1/S2 negatives. First later P1 velocity difference5065 is a missed minibos
 hit; causation is not established before the earlier player frontier is repaired.
 Sideways and the independent alternate-AIZ representation work remain unchanged.
 Parent retains review, combined smoke, integration/push and checkout cleanup.
+
+## Authorized primary-drowning continuation — 2026-10-25
+
+The parent extended the HCZ scope to primary drowning dispatch and its necessary
+fixed timer/CPU/history/projection owners. Those corrections now pass 178 focused
+cases with no skips and qualify native P2 entry, sinking, death and despawn in the
+continuous source. Canonical six remains 6/1F/0E/0S; segment 11 first comparison
+is rings 3832 (104/94), with the first P1 motion still the miniboss contact at
+5065. The source is HCZ1's second stint; the premature replacement destination
+at 70718 is HCZ2. Rings and setup timing remain excluded. The native boss
+`StartFight` code-pointer handoff versus next-pass loop initialization is the
+bounded next owner, with a separate old-red control/commit. See the appended
+existing audit; no general player architecture or hardware-timing campaign is
+implied. Parent retains combined smoke and delivery ownership.
+
+
+HCZ retained-carrier continuation (2026-10-25): native capture retains the
+camera-derived target; the corrected HCZ event owner now does too. Independent
+P1/P2 old-red and registered before/pending/moving restore controls are qualified
+by 110 passing local/anchor cases with no skips. The affected chain walks all
+14,208 stored segment-11 rows without the former input-71601 replacement, but
+still fails its required giant-ring exit (1/1F/0E/0S), with 137,113 strict
+differences and first monitor/rings difference 3832 (104/94). First P1 motion
+moves to 8329: a measured held-versus-logical-press error in the HCZ water-skim
+handler. This is local progress, not route certification. The existing HCZ audit
+records exact source, selectors, queue/execution times and excluded shared
+monitor-content lifetime boundary; rings/setup timing remain outside this task.
+
+
+HCZ receiving-tree checkpoint (2026-10-25): local head `0dff5b225` plus the
+logical skim-press correction passes 118 focused physical cases with no skips.
+Eight independent P1/P2 old-red controls fail; exact source/command/timing is in
+the existing HCZ audit. The live job finished normally after parent notification
+of PR 223's production advance to `08f0a5e78`. No further old-base replay or
+runtime extension followed. Current upstream already has the skim guard,
+captured carrier targets, next-pass boss initialization and independent monitor
+contents; the old monitor/ring structural finding is not a current-upstream
+blocker assertion. Launcher authoritative-latch and Chopper logical-word review
+fixes remain absent; drowning has partial overlap but retains generic lifetime
+and late movement dispatch. Preserve upstream owners and adapt only missing
+semantics/tests in the parent-coordinated receiving tree. No merge/rebase/reset
+or new ObjectManager API was made here. Current-upstream continuity remains
+unmeasured; parent retains its independent review and combined smoke.

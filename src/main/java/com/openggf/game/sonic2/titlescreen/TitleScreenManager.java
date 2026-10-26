@@ -17,7 +17,11 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.render.SpriteFramePiece;
 import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.SpritePieceRenderer;
+import com.openggf.level.render.SpriteMappingPiece;
+import com.openggf.control.LogicalInputSnapshot;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -71,9 +75,14 @@ public class TitleScreenManager implements TitleScreenProvider {
     private boolean creditTextCached = false;
     private int segaLogoTimer = 0;
     private boolean segaPcmStarted = false;
-    private SegaLogoFadePhase segaLogoFadePhase = SegaLogoFadePhase.FADING_IN;
+    private SegaLogoPhase segaLogoPhase = SegaLogoPhase.VISUAL;
+    private int segaEndWaitTimer = 0;
+    // SegaScreen loads PalID_SEGA directly with PalLoad_Now before ObjB0
+    // (s2.asm:4158-4170). Its earlier fade belongs to the previous screen.
+    private SegaLogoFadePhase segaLogoFadePhase = SegaLogoFadePhase.ACTIVE;
     private int segaLogoFadeTimer = 0;
     private static final int SEGA_LOGO_FADE_FRAMES = 22;
+    // Existing visual approximation; native ObjB0/load costs remain separate.
     private static final int SEGA_LOGO_VISUAL_FRAMES = 106;
     private static final int SEGA_LOGO_PCM_WINDOW_FRAMES = 180;
     private static final int SEGA_SONIC_RUN_LEFT_FRAMES = 12;
@@ -82,9 +91,14 @@ public class TitleScreenManager implements TitleScreenProvider {
     private static final int SEGA_SONIC_RUN_RIGHT_FRAMES = 12;
 
     private enum SegaLogoFadePhase {
-        FADING_IN,
         ACTIVE,
         FADING_OUT
+    }
+
+    private enum SegaLogoPhase {
+        VISUAL,
+        EXTRA_VINT,
+        END_WAIT
     }
 
     record SegaGiantSonicPose(int localFrame, int centerX, boolean hFlip) {
@@ -112,6 +126,20 @@ public class TitleScreenManager implements TitleScreenProvider {
     private List<SpriteMappingFrame> titleMappingFrames;
     private boolean spritesInitialized = false;
     private boolean titlePlcPending;
+    private boolean competitionMenuReady;
+    private int titleSelection;
+    private TitleScreenAction exitAction = TitleScreenAction.OTHER;
+
+    /** Parent activates the retail three-selection menu only after competition is playable. */
+    public void setNativeMenuAvailability(boolean competitionReady) {
+        competitionMenuReady = competitionReady;
+        if (!competitionReady && titleSelection == 1) {
+            titleSelection = 0;
+        }
+    }
+
+    /** Retail Title_screen_option: 0=one player, 1=competition, 2=options. */
+    public int getNativeMenuSelection() { return titleSelection; }
 
     // --- Intro animation state ---
     private boolean introComplete = false;
@@ -324,7 +352,9 @@ public class TitleScreenManager implements TitleScreenProvider {
         introTextTimer = 0;
         segaLogoTimer = 0;
         segaPcmStarted = false;
-        segaLogoFadePhase = SegaLogoFadePhase.FADING_IN;
+        segaLogoPhase = SegaLogoPhase.VISUAL;
+        segaEndWaitTimer = 0;
+        segaLogoFadePhase = SegaLogoFadePhase.ACTIVE;
         segaLogoFadeTimer = 0;
         creditTextCached = false;
         cameraX = -0x280;  // From disassembly: move.w #-$280,(Camera_X_pos).w
@@ -335,6 +365,12 @@ public class TitleScreenManager implements TitleScreenProvider {
         rippleIndex = 0;
         starCycleIndex = 0;
         spritesInitialized = false;
+        // Obj0F_Init (s2.asm:27194-27202) discards a retained OPTIONS selection.
+        titleSelection &= 1;
+        if (!competitionMenuReady) {
+            titleSelection = 0;
+        }
+        exitAction = TitleScreenAction.OTHER;
 
         // Reset all animated sprites
         sonicSprite.reset();
@@ -422,11 +458,32 @@ public class TitleScreenManager implements TitleScreenProvider {
     }
 
     private void updateSegaLogo(InputHandler input) {
-        int jumpKey = configuration().getInt(SonicConfiguration.JUMP);
-        if (updateSegaLogoFadeIn()) {
+        if (updateSegaLogoFadeOut()) {
             return;
         }
-        if (updateSegaLogoFadeOut()) {
+
+        if (segaLogoPhase == SegaLogoPhase.EXTRA_VINT) {
+            // SegaScreen waits through one more Vint_SEGA after ObjB0 submits
+            // the chant, then seeds the end timer (s2.asm:4189-4191). This is
+            // the next admitted title iteration, not a PCM completion query:
+            // muted or unavailable audio cannot hold the native screen loop.
+            segaLogoPhase = SegaLogoPhase.END_WAIT;
+            segaEndWaitTimer = SEGA_LOGO_PCM_WINDOW_FRAMES;
+            return;
+        }
+        if (segaLogoPhase == SegaLogoPhase.END_WAIT) {
+            // The following iteration belongs to Vint_PCM, whose first pass
+            // decrements the freshly seeded timer before Sega_WaitEnd tests it.
+            if (segaEndWaitTimer > 0) {
+                segaEndWaitTimer--;
+            }
+            // Sega_WaitEnd tests Start from either controller, never face
+            // buttons (s2.asm:4198-4201). Menu confirmation is independent.
+            boolean startPressed = input.logical().player1().startPressed()
+                    || input.logical().player2().startPressed();
+            if (segaEndWaitTimer == 0 || startPressed) {
+                beginSegaLogoFadeOut();
+            }
             return;
         }
 
@@ -434,25 +491,8 @@ public class TitleScreenManager implements TitleScreenProvider {
         if (!segaPcmStarted && segaLogoTimer >= SEGA_LOGO_VISUAL_FRAMES) {
             segaPcmStarted = true;
             GameServices.audio().playMusic(Sonic2SmpsConstants.CMD_SEGA);
+            segaLogoPhase = SegaLogoPhase.EXTRA_VINT;
         }
-        boolean skipable = segaLogoTimer >= SEGA_LOGO_VISUAL_FRAMES;
-        boolean autoEnd = segaLogoTimer >= SEGA_LOGO_VISUAL_FRAMES + SEGA_LOGO_PCM_WINDOW_FRAMES;
-        if (autoEnd || (skipable && confirmPressed(input, jumpKey))) {
-            beginSegaLogoFadeOut();
-        }
-    }
-
-    private boolean updateSegaLogoFadeIn() {
-        if (segaLogoFadePhase != SegaLogoFadePhase.FADING_IN) {
-            return false;
-        }
-        segaLogoFadeTimer++;
-        if (segaLogoFadeTimer < SEGA_LOGO_FADE_FRAMES) {
-            return true;
-        }
-        segaLogoFadePhase = SegaLogoFadePhase.ACTIVE;
-        segaLogoFadeTimer = 0;
-        return false;
     }
 
     private boolean updateSegaLogoFadeOut() {
@@ -464,7 +504,7 @@ public class TitleScreenManager implements TitleScreenProvider {
             return true;
         }
         beginIntroTextScreen();
-        segaLogoFadePhase = SegaLogoFadePhase.FADING_IN;
+        segaLogoFadePhase = SegaLogoFadePhase.ACTIVE;
         segaLogoFadeTimer = 0;
         return true;
     }
@@ -481,17 +521,23 @@ public class TitleScreenManager implements TitleScreenProvider {
     private void beginIntroTextScreen() {
         segaLogoTimer = 0;
         segaPcmStarted = false;
+        segaLogoPhase = SegaLogoPhase.VISUAL;
+        segaEndWaitTimer = 0;
         introTextTimer = 0;
         state = State.INTRO_TEXT_FADE_IN;
         LOGGER.info("SEGA screen complete, entering INTRO_TEXT_FADE_IN state");
     }
 
     /**
-     * Keyboard Jump press or gamepad confirm (Start / any face action button),
-     * matching {@link com.openggf.game.MasterTitleScreen}'s gamepad-aware confirm gate.
+     * Preserve the host's introductory text/SEGA shortcut. Obj0F uses nativeStartPressed instead.
      */
     private static boolean confirmPressed(InputHandler input, int jumpKey) {
-        return input.isKeyPressed(jumpKey) || input.logical().menuAccept();
+        return input.isKeyPressed(jumpKey) || input.logical().menuAccept()
+                || input.logical().player2().startPressed();
+    }
+
+    private static boolean nativeStartPressed(InputHandler input) {
+        return input.logical().player1().startPressed() || input.logical().player2().startPressed();
     }
 
     private void skipIntroText() {
@@ -504,11 +550,9 @@ public class TitleScreenManager implements TitleScreenProvider {
     }
 
     private void updateIntroTextFadeIn(InputHandler input) {
-        int jumpKey = configuration().getInt(SonicConfiguration.JUMP);
-        if (confirmPressed(input, jumpKey)) {
-            skipIntroText();
-            return;
-        }
+        // TitleScreen fades the text, loads assets with interrupts disabled,
+        // then fades out; none of those owners tests controller input
+        // (s2.asm:4289-4330). The existing hold approximation is separate.
         introTextTimer++;
         if (introTextTimer >= INTRO_TEXT_FADE_DURATION) {
             introTextTimer = 0;
@@ -518,11 +562,6 @@ public class TitleScreenManager implements TitleScreenProvider {
     }
 
     private void updateIntroTextHold(InputHandler input) {
-        int jumpKey = configuration().getInt(SonicConfiguration.JUMP);
-        if (confirmPressed(input, jumpKey)) {
-            skipIntroText();
-            return;
-        }
         introTextTimer++;
         if (introTextTimer >= INTRO_TEXT_HOLD_DURATION) {
             introTextTimer = 0;
@@ -532,11 +571,6 @@ public class TitleScreenManager implements TitleScreenProvider {
     }
 
     private void updateIntroTextFadeOut(InputHandler input) {
-        int jumpKey = configuration().getInt(SonicConfiguration.JUMP);
-        if (confirmPressed(input, jumpKey)) {
-            skipIntroText();
-            return;
-        }
         introTextTimer++;
         if (introTextTimer >= INTRO_TEXT_FADE_DURATION) {
             introTextTimer = 0;
@@ -580,15 +614,42 @@ public class TitleScreenManager implements TitleScreenProvider {
         cameraX++;
         frameCounter++;
 
+        boolean skippedIntro = !introComplete && nativeStartPressed(input);
         updateIntroAnimation(input);
 
-        // Check for jump/start press to exit (only after intro completes)
+        // Obj0F is spawned only once the intro completes. The Start edge that skips the
+        // intro cannot also launch a game in this host iteration.
         if (introComplete) {
-            int jumpKey = configuration().getInt(SonicConfiguration.JUMP);
-            if (confirmPressed(input, jumpKey)) {
+            updateMenuSelection(input.logical());
+            if (!skippedIntro && nativeStartPressed(input)) {
+                exitAction = switch (titleSelection) {
+                    case 0 -> TitleScreenAction.ONE_PLAYER;
+                    case 1 -> TitleScreenAction.TWO_PLAYER;
+                    default -> TitleScreenAction.OPTIONS;
+                };
                 state = State.EXITING;
                 LOGGER.info("Title screen exiting");
             }
+        }
+    }
+
+    /** Obj0F_Main (s2.asm:27205-27235), both pad press bytes ORed before ordered tests. */
+    private void updateMenuSelection(LogicalInputSnapshot input) {
+        int pressed = input.player1().pressedMask() | input.player2().pressedMask();
+        if ((pressed & AbstractPlayableSprite.INPUT_UP) != 0) {
+            titleSelection = Math.floorMod(titleSelection - 1, 3);
+            if (!competitionMenuReady && titleSelection == 1) {
+                titleSelection = 0;
+            }
+        }
+        if ((pressed & AbstractPlayableSprite.INPUT_DOWN) != 0) {
+            titleSelection = (titleSelection + 1) % 3;
+            if (!competitionMenuReady && titleSelection == 1) {
+                titleSelection = 2;
+            }
+        }
+        if ((pressed & (AbstractPlayableSprite.INPUT_UP | AbstractPlayableSprite.INPUT_DOWN)) != 0) {
+            GameServices.audio().playSfx(Sonic2Sfx.BLIP.id);
         }
     }
 
@@ -598,8 +659,7 @@ public class TitleScreenManager implements TitleScreenProvider {
     private void updateIntroAnimation(InputHandler input) {
         // Check for skip (Start pressed before frame 288)
         if (!introComplete) {
-            int jumpKey = configuration().getInt(SonicConfiguration.JUMP);
-            if (confirmPressed(input, jumpKey)) {
+            if (nativeStartPressed(input)) {
                 skipToFinalState();
                 return;
             }
@@ -1104,6 +1164,9 @@ public class TitleScreenManager implements TitleScreenProvider {
         gm.flushPatternBatch();
 
         // Global fade overlay (for FADE_IN state at startup)
+        if (introComplete) {
+            drawNativeMenu(gm);
+        }
         if (state == State.FADE_IN) {
             float fadeAmount = 1.0f - (float) fadeTimer / FADE_DURATION;
             if (fadeAmount > 0.0f) {
@@ -1116,6 +1179,54 @@ public class TitleScreenManager implements TitleScreenProvider {
                 ));
             }
         }
+    }
+
+    /** Full native frames when enabled; otherwise show only the two supported destinations. */
+    List<SpriteMappingPiece> nativeMenuPieces() {
+        List<SpriteMappingFrame> frames = dataLoader.getMenuMappingFrames();
+        if (frames == null || frames.size() != 3) {
+            return List.of();
+        }
+        if (competitionMenuReady) {
+            return frames.get(titleSelection).pieces();
+        }
+        List<SpriteMappingPiece> pieces = new ArrayList<>();
+        // Retain native ONE PLAYER art and move the ROM OPTIONS/arrow to the second row.
+        // No TWO PLAYER text is advertised until the parent enables its actual product.
+        for (SpriteMappingPiece piece : frames.get(0).pieces()) {
+            if (piece.yOffset() == -12 && piece.tileIndex() != 0x3FA) {
+                pieces.add(menuPiece(piece, piece.yOffset(), titleSelection == 0 ? 3 : 0));
+            }
+        }
+        for (SpriteMappingPiece piece : frames.get(2).pieces()) {
+            if (piece.tileIndex() != 0x3FA) {
+                pieces.add(menuPiece(piece, 4, titleSelection == 2 ? 3 : 0));
+            }
+        }
+        SpriteMappingPiece arrow = frames.get(2).pieces().getLast();
+        pieces.add(menuPiece(arrow, titleSelection == 0 ? -12 : 4, 3));
+        return pieces;
+    }
+
+    private static SpriteMappingPiece menuPiece(SpriteMappingPiece source, int y, int palette) {
+        return new SpriteMappingPiece(source.xOffset(), y, source.widthTiles(), source.heightTiles(),
+                source.tileIndex(), source.hFlip(), source.vFlip(), palette, source.priority());
+    }
+
+    void drawNativeMenu(GraphicsManager gm) {
+        List<SpriteMappingPiece> pieces = nativeMenuPieces();
+        gm.beginPatternBatch();
+        // Native SAT ownership is first-piece-first; reverse for painter submission.
+        for (int i = pieces.size() - 1; i >= 0; i--) {
+            SpriteMappingPiece piece = pieces.get(i);
+            SpritePieceRenderer.renderPiece(piece, xOffset() + 168, 204, 0, -1, false, false,
+                    (tile, hFlip, vFlip, palette, x, y) -> {
+                        reusableDesc.set(tile | (palette << 13) | (hFlip ? 0x800 : 0)
+                                | (vFlip ? 0x1000 : 0) | (piece.priority() ? 0x8000 : 0));
+                        gm.renderPatternWithId(TitleScreenDataLoader.PATTERN_BASE + tile, reusableDesc, x, y);
+                    });
+        }
+        gm.flushPatternBatch();
     }
 
     private void drawSegaLogo(GraphicsManager gm) {
@@ -1147,9 +1258,6 @@ public class TitleScreenManager implements TitleScreenProvider {
     }
 
     private SegaPaletteFade.Mode segaLogoFadeMode() {
-        if (segaLogoFadePhase == SegaLogoFadePhase.FADING_IN) {
-            return SegaPaletteFade.Mode.FROM_BLACK;
-        }
         if (segaLogoFadePhase == SegaLogoFadePhase.FADING_OUT) {
             return SegaPaletteFade.Mode.TO_BLACK;
         }
@@ -1812,13 +1920,16 @@ public class TitleScreenManager implements TitleScreenProvider {
         introTextTimer = 0;
         segaLogoTimer = 0;
         segaPcmStarted = false;
-        segaLogoFadePhase = SegaLogoFadePhase.FADING_IN;
+        segaLogoPhase = SegaLogoPhase.VISUAL;
+        segaEndWaitTimer = 0;
+        segaLogoFadePhase = SegaLogoFadePhase.ACTIVE;
         segaLogoFadeTimer = 0;
         creditTextCached = false;
         introComplete = false;
         musicPlaying = false;
         sonicPaletteLoaded = false;
         spritesInitialized = false;
+        exitAction = TitleScreenAction.OTHER;
         LOGGER.info("Title screen reset to inactive");
     }
 
@@ -1839,7 +1950,9 @@ public class TitleScreenManager implements TitleScreenProvider {
 
     @Override
     public TitleScreenAction consumeExitAction() {
-        return TitleScreenAction.ONE_PLAYER;
+        TitleScreenAction action = exitAction;
+        exitAction = TitleScreenAction.OTHER;
+        return action;
     }
 
     /**

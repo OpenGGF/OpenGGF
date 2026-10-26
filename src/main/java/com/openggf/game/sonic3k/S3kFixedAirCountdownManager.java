@@ -4,6 +4,7 @@ import com.openggf.game.mutators.PlayerFluidContextAccess;
 import com.openggf.game.GameServices;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.ShieldType;
+import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.objects.S3kAirCountdownObjectInstance;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectManager;
@@ -173,13 +174,25 @@ final class S3kFixedAirCountdownManager {
         }
 
         private void countdown(AbstractPlayableSprite owner) {
+            // Native fixed countdown owns the $78-pass lifetime even after water exit.
+            if (obj30 != 0) {
+                owner.setAnimationId(Sonic3kAnimationIds.DROWN);
+                obj30 = signed16(obj30 - 1);
+                if (obj30 == 0) {
+                    com.openggf.sprites.playable.PlayableSpriteInternalAccess.finishFixedDrowning(owner);
+                    return;
+                }
+
+                if (obj3a != 0 && (obj3e = signed16(obj3e - 1)) < 0) makeItem(owner);
+                return;
+            }
+
             if (PlayerFluidContextAccess.breathProtected(owner)) {
                 if (owner.getDrowningController() != null) owner.getDrowningController().replenishAir();
                 return; // Protection precedes native timer/RNG/bubble emission.
             }
             if (!owner.isInWater()
                     || owner.getDead()
-                    || owner.isDrowningPreDeath()
                     || owner.getShieldType() == ShieldType.BUBBLE) {
                 return;
             }
@@ -208,7 +221,13 @@ final class S3kFixedAirCountdownManager {
                     if (drowning != null) {
                         drowning.resetAirTimerFromFixedCountdownDeath();
                     }
-                    owner.applyDrownDeath();
+                    obj30 = 0x78;
+                    obj38 = 0x0A;
+                    obj3a = 1;
+                    if (owner.applyDrownDeath()) {
+                        // AirCountdown_ReduceAir writes anim after Player_TouchFloor.
+                        owner.setAnimationId(Sonic3kAnimationIds.DROWN);
+                    }
                     return;
                 }
                 makeItem(owner);
@@ -228,17 +247,27 @@ final class S3kFixedAirCountdownManager {
             obj3e = (random & 0x0F) + 8;
 
             ObjectManager objectManager = objectManager();
+            if (objectManager != null && !objectManager.hasFreeDynamicSlot()) return;
+            int offset = owner.getDirection() == Direction.LEFT ? -MOUTH_OFFSET : MOUTH_OFFSET;
+            int angle = owner.getDirection() == Direction.LEFT ? 0x40 : 0x00;
+            int y = owner.getCentreY();
+            CountdownChild countdownChild;
+            if (obj30 != 0) {
+                // AirCountdown_MakeItem, loc_185D8 (sonic3k.asm:33648-33670):
+                // allocation precedes the faster timer and random mouth wobble.
+                obj3e &= 7;
+                y -= 0x0C;
+                angle = owner.currentRng().nextRaw() & 0xFF;
+                LevelManager level = GameServices.levelOrNull();
+                int levelFrame = level != null ? level.getFrameCounter() : 0;
+                countdownChild = new CountdownChild((levelFrame & 3) == 0 ? 0x0E : REGULAR_BUBBLE_SUBTYPE, 0);
+            } else {
+                countdownChild = countdownChildFor(owner);
+            }
             if (objectManager != null) {
-                int offset = owner.getDirection() == Direction.LEFT ? -MOUTH_OFFSET : MOUTH_OFFSET;
-                int angle = owner.getDirection() == Direction.LEFT ? 0x40 : 0x00;
-                CountdownChild countdownChild = countdownChildFor(owner);
                 S3kAirCountdownObjectInstance child = new S3kAirCountdownObjectInstance(
-                        owner.getCentreX() + offset,
-                        owner.getCentreY(),
-                        countdownChild.subtype(),
-                        angle,
-                        countdownChild.displayTimer(),
-                        isPrimaryPlayer(owner));
+                        owner.getCentreX() + offset, y, countdownChild.subtype(), angle,
+                        countdownChild.displayTimer(), isPrimaryPlayer(owner));
                 objectManager.addDynamicObject(child);
             }
 

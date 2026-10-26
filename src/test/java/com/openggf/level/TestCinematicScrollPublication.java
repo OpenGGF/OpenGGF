@@ -242,6 +242,342 @@ class TestCinematicScrollPublication {
         }
     }
 
+    @Test
+    void fullViewCameraAndSlicesReuseOneFrozenRetainedGenerationWithoutNativeOwnerCalls() {
+        TestEnvironment.resetAll();
+        GameServices.level().gameModule = new com.openggf.game.sonic2.Sonic2GameModule();
+        try {
+            var level = GameServices.level();
+            var nativeModule = level.gameModule;
+            enableDirectedSnapshots(level);
+            var foreground = new TestRetainedPlaneDescriptors.MutablePlane(128, 32);
+            var background = new TestRetainedPlaneDescriptors.MutablePlane(64, 64);
+            foreground.words[0] = 0xf123;
+            background.words[0] = 0xa456;
+            var provider = TestRetainedPlaneDescriptors.features(foreground, background);
+            level.zoneFeatureProvider = provider;
+            var handler = spy(new com.openggf.game.sonic3k.scroll.SwScrlS3kDefault());
+            var parallax = level.parallaxManager;
+            parallax.installContributedHandler(37, handler);
+            parallax.update(37, 0, level.camera, 8);
+            var nativeScroll = LevelScrollPresentation.capture(level, AdvancedRenderFrameState.disabled());
+            var frozen = nativeScroll.backgroundBuildParameters();
+            assertTrue(frozen.retainedForeground().active());
+            assertTrue(frozen.retainedBackground().active());
+            var tables = new LevelSpritePresentation.Tables();
+            tables.prepare(new SpritePresentation.Frame(List.of()), nativeScroll);
+            tables.publish();
+            var publication = tables.capture();
+            foreground.words[0] = 0x8888;
+            background.revision = 0;
+            when(((com.openggf.game.internal.RetainedPlaneDescriptorSource) provider).foregroundPlane())
+                    .thenReturn(new TestRetainedPlaneDescriptors.MutablePlane(32, 32));
+            clearInvocations(handler, provider);
+            int foregroundReads = foreground.reads, backgroundReads = background.reads;
+            for (int repeat = 0; repeat < 3; repeat++) {
+                var full = tables.publishedScroll().forCinematicView(-32, 80, 400, 300,
+                        nativeScroll.registers().arenaMask());
+                var camera = full.forCinematicCamera(96, -16, full.registers().arenaMask());
+                var slice = full.slice(17, 32, 63, 100, full.registers().arenaMask());
+                for (var sample : new LevelScrollPresentation[]{full, camera, slice}) {
+                    assertSame(frozen, sample.backgroundBuildParameters());
+                    assertEquals(0xf123, sample.backgroundBuildParameters().retainedForeground().descriptorAt(0, 0));
+                    assertEquals(0xa456, sample.backgroundBuildParameters().retainedBackground().descriptorAt(0, 0));
+                    assertEquals(nativeScroll.tilemapMode(), camera.tilemapMode());
+                }
+            }
+            assertEquals(foregroundReads, foreground.reads);
+            assertEquals(backgroundReads, background.reads);
+            verifyNoInteractions(handler, provider);
+            tables.restore(publication);
+            assertSame(frozen, tables.publishedScroll().backgroundBuildParameters());
+            level.gameModule = nativeModule;
+            parallax.update(37, 0, level.camera, 9);
+            assertNull(parallax.projectionPhase());
+            assertNull(parallax.backgroundBuildParameters());
+            assertNull(parallax.backgroundColumnProjection());
+            verifyNoInteractions(provider);
+        } finally {
+            SessionManager.clear();
+        }
+    }
+
+    @Test
+    void cameraOnlyScopeInstallsColdFrozenPlanesAndRestoresNativeResidencyAfterAnAbort() {
+        TestEnvironment.resetAll();
+        GameServices.level().gameModule = new com.openggf.game.sonic2.Sonic2GameModule();
+        var level = GameServices.level();
+        var focusedSprite = mock(com.openggf.sprites.playable.AbstractPlayableSprite.class);
+        level.camera.setFocusedSprite(focusedSprite);
+        var nativeGraphics = level.graphicsManager;
+        try {
+            enableDirectedSnapshots(level);
+            var foreground = new TestRetainedPlaneDescriptors.MutablePlane(128, 32);
+            var background = new TestRetainedPlaneDescriptors.MutablePlane(64, 64);
+            foreground.words[0] = 0xf123;
+            background.words[0] = 0xa456;
+            var provider = TestRetainedPlaneDescriptors.features(foreground, background);
+            level.zoneFeatureProvider = provider;
+            level.parallaxManager.installContributedHandler(37, new com.openggf.game.sonic3k.scroll.SwScrlS3kDefault());
+            level.parallaxManager.update(37, 0, level.camera, 8);
+            var gpu = new com.openggf.graphics.TilemapGpuRenderer();
+            var host = mock(com.openggf.graphics.GraphicsManager.class);
+            when(host.getTilemapGpuRenderer()).thenReturn(gpu);
+            level.graphicsManager = host;
+            var romLevel = mock(Level.class);
+            when(romLevel.getPatternCount()).thenReturn(8);
+            var nativeTiles = new LevelTilemapManager(new LevelGeometry(romLevel,
+                    16, 16, 16, 16, 16, 16, 1), host, null);
+            level.tilemapManager = nativeTiles;
+            byte[] nativeBytes = new byte[64 * 32 * 4];
+            gpu.setBackgroundTilemapDataPhysical(nativeBytes, 64, 32, 12, 8);
+            var nativeGpu = gpu.captureBackgroundRenderState();
+            var camera = level.camera.capture();
+            foreground.words[0] = 0x8888;
+            background.revision = 0;
+            clearInvocations(provider);
+            int fgReads = foreground.reads, bgReads = background.reads;
+            assertThrows(IllegalStateException.class,
+                    () -> LevelSpritePresentation.withCinematicCamera(level, -32, 80, () -> {
+                        assertNotSame(nativeTiles, level.tilemapManager);
+                        assertEquals(128, level.tilemapManager.getForegroundTilemapWidthTiles());
+                        assertEquals(64, level.tilemapManager.getBackgroundTilemapHeightTiles());
+                        assertEquals(0xf123, TestRetainedPlaneDescriptors.word(
+                                level.tilemapManager.getForegroundTilemapData(), 128, 0, 0));
+                        assertEquals(0xa456, TestRetainedPlaneDescriptors.word(
+                                level.tilemapManager.getBackgroundTilemapData(), 64, 0, 0));
+                        assertTrue(gpu.hasBackgroundBaseline(level.tilemapManager.getBackgroundTilemapData(), 64, 64));
+                        throw new IllegalStateException("abort private camera");
+                    }));
+            assertSame(focusedSprite, level.camera.getFocusedSprite());
+            assertSame(nativeTiles, level.tilemapManager);
+            assertNull(nativeTiles.getForegroundTilemapData());
+            assertNull(nativeTiles.getBackgroundTilemapData());
+            assertEquals(nativeGpu, gpu.captureBackgroundRenderState());
+            assertTrue(gpu.hasBackgroundBaseline(nativeBytes, 64, 32));
+            assertEquals(camera, level.camera.capture());
+            assertEquals(fgReads, foreground.reads);
+            assertEquals(bgReads, background.reads);
+            var source = (com.openggf.game.internal.RetainedPlaneDescriptorSource) provider;
+            verify(source, never()).foregroundPlane();
+            verify(source, never()).backgroundPlane();
+        } finally {
+            level.graphicsManager = nativeGraphics;
+            SessionManager.clear();
+        }
+    }
+
+    @Test
+    void entryModeResolvesOnceUnderNativeCameraWhileArenaAndBuildRemainPublicationFrozen() throws Exception {
+        TestEnvironment.resetAll();
+        var level = GameServices.level();
+        var nativeGraphics = level.graphicsManager;
+        try {
+            level.gameModule = new com.openggf.game.sonic3k.Sonic3kGameModule();
+            enableDirectedSnapshots(level);
+            var camera = spy(level.camera);
+            level.camera = camera;
+            var focusedSprite = mock(com.openggf.sprites.playable.AbstractPlayableSprite.class);
+            camera.setFocusedSprite(focusedSprite);
+            doReturn((short) 800).when(camera).getWidth();
+            camera.setX((short) 160); camera.setY((short) 80);
+            camera.setXCopy((short) 160); camera.setYCopy((short) 80);
+            camera.setShakeOffsets(7, 0);
+            var foreground = new TestRetainedPlaneDescriptors.MutablePlane(32, 32);
+            var background = new TestRetainedPlaneDescriptors.MutablePlane(32, 32);
+            foreground.words[0] = 0xe123; background.words[0] = 0xa456;
+            var provider = mock(ZoneFeatureProvider.class, withSettings().extraInterfaces(
+                    com.openggf.game.internal.NativeArenaCameraFraming.class,
+                    com.openggf.game.internal.RetainedPlaneDescriptorSource.class));
+            var retained = (com.openggf.game.internal.RetainedPlaneDescriptorSource) provider;
+            when(retained.foregroundPlane()).thenReturn(foreground);
+            when(retained.backgroundPlane()).thenReturn(background);
+            var framing = (com.openggf.game.internal.NativeArenaCameraFraming) provider;
+            when(framing.presentationNativeHorizontalOrigin()).thenReturn(java.util.OptionalInt.of(240));
+            level.zoneFeatureProvider = provider;
+            level.objectManager = mock(com.openggf.level.objects.ObjectManager.class);
+            when(level.objectManager.getFrameCounter()).thenReturn(11);
+            level.verticalWrapEnabled = true;
+            var handler = spy(new com.openggf.game.sonic3k.scroll.SwScrlS3kDefault());
+            doReturn(7).when(handler).getShakeOffsetX();
+            level.parallaxManager.installContributedHandler(37, handler);
+            level.parallaxManager.update(37, 0, camera, 8);
+            var nativeScroll = LevelScrollPresentation.capture(level, AdvancedRenderFrameState.disabled());
+            var frozen = nativeScroll.backgroundBuildParameters();
+            var renderer = spy(level.spritePresentationRenderer());
+            renderer.spriteTables.prepare(new SpritePresentation.Frame(List.of()), nativeScroll);
+            renderer.spriteTables.publish();
+            doReturn(new SpritePresentation.Frame(List.of())).when(renderer).captureSceneSpriteTable(any());
+            level.graphicsManager = mock(com.openggf.graphics.GraphicsManager.class);
+            when(level.graphicsManager.isHeadlessMode()).thenReturn(true);
+            level.tilemapManager = null;
+            level.level = mock(Level.class); // Exercise the actual draw mode-selection branch, without GL.
+            level.waterSystem = mock(WaterSystem.class);
+            var modeField = LevelRenderer.class.getDeclaredField("currentAdvancedRenderFrameState");
+            modeField.setAccessible(true);
+            var operands = new java.util.ArrayList<int[]>();
+            var seeding = new AtomicBoolean(true);
+            var contributor = mock(com.openggf.game.render.AdvancedRenderMode.class);
+            doAnswer(invocation -> {
+                var context = invocation.getArgument(0, com.openggf.game.render.AdvancedRenderModeContext.class);
+                assertSame(camera, context.camera());
+                operands.add(new int[]{context.frameCounter(), context.cameraX(),
+                        context.camera().getX(), context.camera().getY()});
+                var builder = invocation.getArgument(1, AdvancedRenderFrameState.Builder.class);
+                if (seeding.get()) builder.setForegroundVScrollOverride((short) 17)
+                        .setForegroundPerColumnVScrollOverride(new short[]{4, 9});
+                else builder.setForegroundVScrollOverride((short) 41);
+                return null;
+            }).when(contributor).contribute(any(), any());
+            var controller = GameServices.advancedRenderModeController();
+            controller.clear(); controller.register(contributor);
+            // Start with a real controller buffer. Later entry resolution reuses this
+            // buffer, so restoration requires the renderer's existing owned mode copy.
+            modeField.set(renderer, controller.resolve(new com.openggf.game.render.AdvancedRenderModeContext(
+                    camera, 99, level, 37, 0, 160)));
+            operands.clear(); seeding.set(false);
+            foreground.words[0] = 0; background.revision = 0;
+            when(framing.presentationNativeHorizontalOrigin()).thenReturn(java.util.OptionalInt.empty());
+            when(provider.foregroundWrapsHorizontally()).thenReturn(true);
+            camera.setMinX((short) 1000); camera.setMaxX((short) 900);
+            level.verticalWrapEnabled = false;
+            level.frameCounter = 99;
+            when(level.objectManager.getFrameCounter()).thenReturn(77);
+            var replacement = mock(ZoneFeatureProvider.class, withSettings().extraInterfaces(
+                    com.openggf.game.internal.NativeArenaCameraFraming.class));
+            when(((com.openggf.game.internal.NativeArenaCameraFraming) replacement)
+                    .presentationNativeHorizontalOrigin()).thenReturn(java.util.OptionalInt.of(900));
+            when(replacement.foregroundWrapsHorizontally()).thenReturn(true);
+            clearInvocations(provider, replacement, handler, level.objectManager);
+            int fgReads = foreground.reads, bgReads = background.reads;
+            var savedCamera = camera.capture();
+            int entries = 0;
+            for (var live : new ZoneFeatureProvider[]{provider, replacement, null}) {
+                level.zoneFeatureProvider = live;
+                int before = operands.size();
+                renderer.withCinematicView(80, 20, 800, 300, () -> {
+                    var full = cinematicScroll(renderer, "cinematicFullScroll");
+                    assertFrozenArena(full, frozen, 153, 473);
+                    assertEquals(87, full.registers().cameraXWithShake());
+                    assertEquals(-19, full.registers().overriddenForegroundY());
+                    renderer.withCinematicTile(17, 32, 600, 224, () -> {
+                        var tile = cinematicScroll(renderer, "cinematicScroll");
+                        assertFrozenArena(tile, frozen, 136, 456);
+                        assertEquals(104, tile.registers().cameraXWithShake());
+                        assertEquals(13, tile.registers().overriddenForegroundY());
+                        if (live == null) renderer.drawCinematicWorld(GameServices.sprites());
+                        assertEquals(before + 1, operands.size(), "Tiles and drawing never resolve another mode");
+                    });
+                    assertSame(focusedSprite, level.camera.getFocusedSprite());
+                });
+                assertSame(focusedSprite, level.camera.getFocusedSprite());
+                assertEquals(++entries, operands.size());
+                assertEquals(17, renderer.getCurrentAdvancedRenderFrameState().foregroundVScrollOverride());
+                assertArrayEquals(new short[]{4, 9}, renderer.getCurrentAdvancedRenderFrameState()
+                        .foregroundPerColumnVScrollOverride());
+                renderer.withCinematicCamera(80, 20, () -> {
+                    var directed = cinematicScroll(renderer, "cinematicScroll");
+                    assertFrozenArena(directed, frozen, 153, 473);
+                    assertEquals(87, directed.registers().cameraXWithShake());
+                    assertEquals(-19, directed.registers().overriddenForegroundY());
+                    if (live == null) renderer.drawCinematicWorld(GameServices.sprites());
+                    assertEquals(before + 2, operands.size(), "Camera drawing keeps its entry-time mode");
+                });
+                assertSame(focusedSprite, level.camera.getFocusedSprite());
+                assertEquals(++entries, operands.size());
+                assertEquals(savedCamera, camera.capture());
+                assertEquals(17, renderer.getCurrentAdvancedRenderFrameState().foregroundVScrollOverride());
+                assertArrayEquals(new short[]{4, 9}, renderer.getCurrentAdvancedRenderFrameState()
+                        .foregroundPerColumnVScrollOverride());
+                assertSame(nativeScroll, renderer.spriteTables.publishedScroll(), "SAT display generation stays separate");
+                assertFalse(renderer.spriteTables.publishedScroll().renderMode().hasForegroundVScrollOverride());
+            }
+            assertEquals(6, operands.size(), "One resolution for each full-view or camera entry, never zero");
+            assertThrows(IllegalStateException.class, () -> renderer.withCinematicView(80, 20, 800, 300,
+                    () -> { throw new IllegalStateException("abort full view"); }));
+            assertSame(focusedSprite, level.camera.getFocusedSprite());
+            assertEquals(7, operands.size());
+            assertEquals(17, renderer.getCurrentAdvancedRenderFrameState().foregroundVScrollOverride());
+            assertThrows(IllegalStateException.class, () -> renderer.withCinematicCamera(80, 20,
+                    () -> { throw new IllegalStateException("abort camera"); }));
+            assertSame(focusedSprite, level.camera.getFocusedSprite());
+            assertEquals(8, operands.size());
+            assertEquals(savedCamera, camera.capture());
+            assertEquals(17, renderer.getCurrentAdvancedRenderFrameState().foregroundVScrollOverride());
+            assertArrayEquals(new short[]{4, 9}, renderer.getCurrentAdvancedRenderFrameState()
+                    .foregroundPerColumnVScrollOverride());
+            verify(contributor, times(9)).contribute(any(), any()); // One explicit seed plus eight entries.
+            for (int[] actual : operands) assertArrayEquals(new int[]{99, 160, 160, 80}, actual);
+            assertEquals(fgReads, foreground.reads); assertEquals(bgReads, background.reads);
+            verifyNoInteractions(provider, replacement, handler, level.objectManager);
+        } finally {
+            level.graphicsManager = nativeGraphics;
+            SessionManager.clear();
+        }
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({
+            "100,100,800,false,53,373", "100,100,400,false,53,373",
+            "100,100,321,false,53,321", "100,100,320,false,0,320",
+            "100,100,319,false,0,319", "120,100,800,false,0,800",
+            "100,100,800,true,0,800"})
+    void frozenArenaUsesDestinationShakeAndRasterWidthWithoutNormalizingDomains(
+            int min, int max, int width, boolean wraps, int left, int right) {
+        TestEnvironment.resetAll();
+        try {
+            var level = GameServices.level();
+            level.gameModule = new com.openggf.game.sonic3k.Sonic3kGameModule();
+            enableDirectedSnapshots(level);
+            level.camera.setX((short) 160); level.camera.setXCopy((short) 160);
+            level.camera.setShakeOffsets(7, 0);
+            level.camera.setMinX((short) min); level.camera.setMaxX((short) max);
+            level.frameCounter = 13; level.objectManager = null;
+            var provider = mock(ZoneFeatureProvider.class);
+            when(provider.foregroundWrapsHorizontally()).thenReturn(wraps);
+            level.zoneFeatureProvider = provider;
+            var handler = spy(new com.openggf.game.sonic3k.scroll.SwScrlS3kDefault());
+            doReturn(7).when(handler).getShakeOffsetX();
+            level.parallaxManager.installContributedHandler(37, handler);
+            level.parallaxManager.update(37, 0, level.camera, 8);
+            var captured = LevelScrollPresentation.capture(level, AdvancedRenderFrameState.disabled());
+            level.zoneFeatureProvider = null;
+            level.camera.setMinX((short) 0); level.camera.setMaxX((short) 3000);
+            level.frameCounter = 88;
+            clearInvocations(provider, handler);
+            var view = captured.forCinematicView(40, 0, width, 224);
+            var camera = captured.forCinematicCamera(40, 0, width);
+            for (var sample : new LevelScrollPresentation[]{view, camera}) {
+                assertEquals(left, sample.registers().arenaMask().left());
+                assertEquals(right, sample.registers().arenaMask().right());
+                assertEquals(13, sample.registers().arenaMask().noiseFrame());
+                assertEquals(47, sample.registers().cameraXWithShake());
+            }
+            assertEquals(min, captured.backgroundBuildParameters().arenaBounds().minX());
+            assertEquals(max, captured.backgroundBuildParameters().arenaBounds().maxX());
+            verifyNoInteractions(provider, handler);
+        } finally { SessionManager.clear(); }
+    }
+
+    private static LevelScrollPresentation cinematicScroll(LevelRenderer renderer, String name) {
+        try {
+            var field = LevelRenderer.class.getDeclaredField(name);
+            field.setAccessible(true);
+            return (LevelScrollPresentation) field.get(renderer);
+        } catch (ReflectiveOperationException failure) { throw new AssertionError(failure); }
+    }
+
+    private static void assertFrozenArena(LevelScrollPresentation sample, BackgroundBuildParameters frozen,
+                                          int left, int right) {
+        assertSame(frozen, sample.backgroundBuildParameters());
+        assertEquals(left, sample.registers().arenaMask().left());
+        assertEquals(right, sample.registers().arenaMask().right());
+        assertEquals(11, sample.registers().arenaMask().noiseFrame());
+        assertTrue(frozen.foregroundVerticalWrap());
+        assertEquals(0xe123, frozen.retainedForeground().descriptorAt(0, 0));
+        assertEquals(0xa456, frozen.retainedBackground().descriptorAt(0, 0));
+    }
+
     private static void enableDirectedSnapshots(LevelManager level) {
         level.gameModule =
                 new com.openggf.game.patch.DelegatingGameModule(level.gameModule, "directed-test") {

@@ -10,6 +10,7 @@ import com.openggf.audio.rewind.AudioLogicalSnapshot;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
+import com.openggf.control.RecordedInputOwnership;
 import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.game.session.EngineContext;
 import com.openggf.tools.audio.completerun.CompleteRunAudioObserverLease.PreRowBoundary;
@@ -132,8 +133,10 @@ public final class ProductionBk2AudioRunner {
                     audio.captureLogicalSnapshot();
             PreRowBoundary preRow = observations.beginRow(
                     absoluteFrame, preSnapshot);
-            cursor.publish(input);
-            loop.step();
+            try (var recordedInput = RecordedInputOwnership.acquire(input)) {
+                cursor.publish(input);
+                loop.step();
+            }
             requireRetainedIdentity(audio, loop, input, backend);
             Engine.presentOuterAudioFrame(loop, false, false);
             AudioLogicalSnapshot postSnapshot =

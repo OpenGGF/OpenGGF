@@ -5,7 +5,6 @@ import static com.openggf.level.scroll.M68KMath.negWord;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.Sonic3kBonusStageCoordinator;
 import com.openggf.game.sonic3k.bonusstage.slots.S3kSlotBonusStageRuntime;
-import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.level.LevelManager;
 import com.openggf.level.scroll.AbstractZoneScrollHandler;
 import com.openggf.level.scroll.compose.ScrollEffectComposer;
@@ -71,8 +70,14 @@ public final class SwScrlSlots extends AbstractZoneScrollHandler implements com.
     private final int[] bandScrollValues = new int[BAND_COUNT];
     private final int[] expandedBandScrollValues = new int[DEFORM_HEIGHT_COUNT];
     private final List<BgPlaneRowUpdate> lastBgPlaneRowUpdates = new ArrayList<>(8);
+    private final List<BgPlaneRowUpdate> pendingBgPlaneRowUpdates = new ArrayList<>(8);
 
     private S3kSlotBonusStageRuntime activeRuntime;
+    // Derived ownership keys invalidate the immutable Plane-B image on scene/runtime replacement.
+    private LevelManager publishedPlaneOwner;
+    private com.openggf.level.Level publishedPlaneLevel;
+    private S3kSlotBonusStageRuntime publishedPlaneRuntime;
+    private PublishedPlane publishedPlane = PublishedPlane.EMPTY;
     private boolean screenInitialized;
     private boolean backgroundInitialized;
     private int foregroundOriginX;
@@ -121,7 +126,9 @@ public final class SwScrlSlots extends AbstractZoneScrollHandler implements com.
         }
 
         tickBackground(visualState.scalarIndex1());
-        applyPendingBackgroundPlaneUpdates();
+        // Slots_BackgroundEvent refills Plane_buffer_2; VInt_DrawLevel owns its visible writes.
+        pendingBgPlaneRowUpdates.clear();
+        pendingBgPlaneRowUpdates.addAll(lastBgPlaneRowUpdates);
 
         lastForegroundOriginX = foregroundOriginX;
         lastForegroundOriginY = foregroundOriginY;
@@ -144,10 +151,12 @@ public final class SwScrlSlots extends AbstractZoneScrollHandler implements com.
     private record RewindState(boolean runtimeAttached, boolean screenInitialized, boolean backgroundInitialized,
             int foregroundX, int foregroundY, int backgroundVelocity, int backgroundYFixed,
             int lastForegroundX, int lastForegroundY, int lastBackgroundX, int lastBackgroundY,
-            int[] bandScroll, int[] expandedScroll, List<BandRam> bands, List<BgPlaneRowUpdate> planeUpdates) {
+            int[] bandScroll, int[] expandedScroll, List<BandRam> bands, List<BgPlaneRowUpdate> planeUpdates,
+            List<BgPlaneRowUpdate> pendingPlaneUpdates, PublishedPlane publishedPlane) {
         RewindState {
             bandScroll=bandScroll.clone();expandedScroll=expandedScroll.clone();
             bands=List.copyOf(bands);planeUpdates=List.copyOf(planeUpdates);
+            pendingPlaneUpdates=List.copyOf(pendingPlaneUpdates);
         }
         @Override public int[] bandScroll() { return bandScroll.clone(); }
         @Override public int[] expandedScroll() { return expandedScroll.clone(); }
@@ -160,7 +169,8 @@ public final class SwScrlSlots extends AbstractZoneScrollHandler implements com.
         return new RewindState(activeRuntime!=null,screenInitialized,backgroundInitialized,
                 foregroundOriginX,foregroundOriginY,backgroundVelocity,backgroundCameraYFixed,
                 lastForegroundOriginX,lastForegroundOriginY,lastBackgroundOriginX,lastBackgroundOriginY,
-                bandScrollValues,expandedBandScrollValues,bands,lastBgPlaneRowUpdates);
+                bandScrollValues,expandedBandScrollValues,bands,lastBgPlaneRowUpdates,pendingBgPlaneRowUpdates,
+                capturePublishedPlane());
     }
     @Override
     public void restoreRewindState(Object captured) {
@@ -180,7 +190,59 @@ public final class SwScrlSlots extends AbstractZoneScrollHandler implements com.
             band.baseScroll=value.baseScroll();band.pendingAdvance=value.pending();
         }
         lastBgPlaneRowUpdates.clear();lastBgPlaneRowUpdates.addAll(state.planeUpdates());
+        pendingBgPlaneRowUpdates.clear();pendingBgPlaneRowUpdates.addAll(state.pendingPlaneUpdates());
+        invalidatePublishedPlane();
+        if (state.publishedPlane().bytes.length != 0) {
+            var level = currentPlaneOwner();
+            if (level == null) throw new IllegalStateException("Slot Plane-B owner has retired");
+            // The level API takes its own defensive copy; this immutable value remains shared by snapshots.
+            level.restoreBackgroundVdpPlane(state.publishedPlane().bytes);
+            retainPublishedPlane(level, state.publishedPlane());
+        }
     }
+    private record PublishedPlane(byte[] bytes) {
+        private static final PublishedPlane EMPTY = new PublishedPlane(new byte[0]);
+        PublishedPlane { bytes = bytes.clone(); }
+        @Override public byte[] bytes() { return bytes.clone(); }
+        @Override public boolean equals(Object other) {
+            return other instanceof PublishedPlane plane && Arrays.equals(bytes, plane.bytes);
+        }
+        @Override public int hashCode() { return Arrays.hashCode(bytes); }
+    }
+
+    private PublishedPlane capturePublishedPlane() {
+        var level = currentPlaneOwner();
+        if (level != publishedPlaneOwner || (level != null && level.getCurrentLevel() != publishedPlaneLevel)
+                || activeRuntime != publishedPlaneRuntime) invalidatePublishedPlane();
+        if (level != null && publishedPlane == PublishedPlane.EMPTY) {
+            // Initial decoded plane is the baseline. Later native writes are owned only by publication below.
+            byte[] initial = level.captureBackgroundVdpPlane();
+            if (initial.length != 0) retainPublishedPlane(level, new PublishedPlane(initial));
+        }
+        return publishedPlane;
+    }
+
+    private void retainPublishedPlane(LevelManager owner, PublishedPlane plane) {
+        publishedPlaneOwner = owner;
+        publishedPlaneLevel = owner.getCurrentLevel();
+        publishedPlaneRuntime = activeRuntime;
+        publishedPlane = plane;
+    }
+
+    private void invalidatePublishedPlane() {
+        publishedPlaneOwner = null;
+        publishedPlaneLevel = null;
+        publishedPlaneRuntime = null;
+        publishedPlane = PublishedPlane.EMPTY;
+    }
+
+    private LevelManager currentPlaneOwner() {
+        var level = GameServices.levelOrNull();
+        var parallax = GameServices.parallaxOrNull();
+        return level != null && parallax != null && parallax.getHandler(level.getCurrentZone()) == this
+                ? level : null;
+    }
+
     @Override
     public void rebuildOutput(int[] horizontal, int cameraX, int cameraY, int frameCounter, int actId) {
         // Slots_ScreenEvent/BackgroundEvent own movement, accumulator increments
@@ -231,6 +293,8 @@ public final class SwScrlSlots extends AbstractZoneScrollHandler implements com.
             return;
         }
         activeRuntime = runtime;
+        pendingBgPlaneRowUpdates.clear();
+        invalidatePublishedPlane();
         screenInitialized = false;
         backgroundInitialized = false;
         foregroundOriginX = cameraX;
@@ -254,11 +318,7 @@ public final class SwScrlSlots extends AbstractZoneScrollHandler implements com.
             return;
         }
 
-        if (scalarIndex1 == 0) {
-            expandBandScrollTable();
-            return;
-        }
-
+        // Slots_BackgroundEvent (skdisasm 044fa46): tst.w / bpl takes +$400 at zero too.
         int step = scalarIndex1 < 0 ? -BG_SCROLL_STEP : BG_SCROLL_STEP;
         backgroundVelocity = clampSignedLong(backgroundVelocity + step, BG_SCROLL_LIMIT);
         backgroundCameraYFixed += backgroundVelocity;
@@ -406,26 +466,18 @@ public final class SwScrlSlots extends AbstractZoneScrollHandler implements com.
         }
     }
 
-    private void applyPendingBackgroundPlaneUpdates() {
-        if (lastBgPlaneRowUpdates.isEmpty()) {
-            return;
+    /** Internal S3K VInt_DrawLevel owner; called only by the eligible, token-guarded profile phase. */
+    public void publishBackgroundPlaneRows(LevelManager levelManager) {
+        if (pendingBgPlaneRowUpdates.isEmpty()) return;
+        boolean changed = false;
+        for (BgPlaneRowUpdate update : pendingBgPlaneRowUpdates) {
+            changed |= levelManager.copyBackgroundTileRowFromWorldToVdpPlane(update.sourceX, update.sourceY,
+                    update.destVramAddress, update.longWordCount);
         }
-        try {
-            LevelManager levelManager = GameServices.level();
-            if (levelManager.getCurrentZone() != Sonic3kZoneIds.ZONE_SLOT_MACHINE
-                    && levelManager.getRomZoneId() != Sonic3kZoneIds.ZONE_SLOT_MACHINE) {
-                return;
-            }
-            boolean changed = false;
-            for (BgPlaneRowUpdate update : lastBgPlaneRowUpdates) {
-                changed |= levelManager.copyBackgroundTileRowFromWorldToVdpPlane(update.sourceX, update.sourceY,
-                        update.destVramAddress, update.longWordCount);
-            }
-            if (changed) {
-                levelManager.uploadBackgroundTilemap();
-            }
-        } catch (IllegalStateException ignored) {
-            // Unit tests and headless scroll probes can run without a gameplay session.
+        pendingBgPlaneRowUpdates.clear(); // VInt_DrawLevel_2 clears each consumed Plane_buffer_2 entry.
+        if (changed) {
+            levelManager.uploadBackgroundTilemap();
+            retainPublishedPlane(levelManager, new PublishedPlane(levelManager.captureBackgroundVdpPlane()));
         }
     }
 

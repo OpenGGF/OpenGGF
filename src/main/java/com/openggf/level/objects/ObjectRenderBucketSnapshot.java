@@ -81,6 +81,7 @@ final class ObjectRenderBucketSnapshot {
         return (extra << 40)
                 | (slot << 8)
                 | (long) (bucket << 1)
+                | (NativeSpriteSubmissionAccess.authoritative(instance) ? 1L << 4 : 0L)
                 | (instance.isHighPriority() ? 1L : 0L);
     }
 }

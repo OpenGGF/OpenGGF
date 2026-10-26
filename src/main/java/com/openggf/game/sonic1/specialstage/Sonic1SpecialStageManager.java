@@ -2551,6 +2551,15 @@ public final class Sonic1SpecialStageManager implements com.openggf.game.interna
 
     // ---- State queries ----
 
+    com.openggf.game.resources.PlcLifecyclePhase plcLifecyclePhase() {
+        // Both entry loops arm id_VBlank_PaletteFade before each wait:
+        // PaletteWhiteIn (_inc/Palette Fading.asm:212-234) and
+        // PaletteWhiteOut (_inc/Palette Fading.asm:313-323).
+        return initialized && startupHoldTicksRemaining > 0
+                ? com.openggf.game.resources.PlcLifecyclePhase.PALETTE_FADE
+                : com.openggf.game.resources.PlcLifecyclePhase.SPECIAL_STAGE;
+    }
+
     public boolean isFinished() {
         return finished;
     }

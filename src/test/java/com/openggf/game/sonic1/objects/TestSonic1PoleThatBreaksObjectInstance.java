@@ -1,9 +1,12 @@
 package com.openggf.game.sonic1.objects;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import com.openggf.game.rewind.identity.PlayerRefId;
 import com.openggf.game.rewind.identity.RewindIdentityTable;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
+import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic1.constants.Sonic1AnimationIds;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
@@ -17,6 +20,7 @@ import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.objects.TouchShieldDeflectCapability;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.tests.TestEnvironment;
 import java.lang.reflect.Field;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -239,6 +243,8 @@ public class TestSonic1PoleThatBreaksObjectInstance {
             pole.update(i, player);
         }
         assertTrue(player.isObjectControlled());
+        assertEquals(0, getPrivateInt(pole, "mappingFrame"),
+                "the timeout must expire before the broken frame is published");
         // 60th decrement: poleTime 1 -> 0, break + release
         pole.update(61, player);
 
@@ -261,7 +267,8 @@ public class TestSonic1PoleThatBreaksObjectInstance {
 
         assertFalse(player.isObjectControlled());
         assertEquals(0, pole.getCollisionFlags());
-        assertEquals(1, getPrivateInt(pole, "mappingFrame"));
+        assertEquals(0, getPrivateInt(pole, "mappingFrame"),
+                "Pole_Action manual release leaves the intact mapping frame unchanged");
     }
 
     @Test
@@ -278,7 +285,86 @@ public class TestSonic1PoleThatBreaksObjectInstance {
 
         assertFalse(player.isObjectControlled());
         assertEquals(0, pole.getCollisionFlags());
-        assertEquals(1, getPrivateInt(pole, "mappingFrame"));
+        assertEquals(0, getPrivateInt(pole, "mappingFrame"),
+                "Pole_Action manual release leaves the intact mapping frame unchanged");
+    }
+
+    @Test
+    public void manualReleasePreservesHeldPoseAndClearsNativeGrabFields() throws Exception {
+        Sonic1PoleThatBreaksObjectInstance pole = createPole(200, 320, 1);
+        TestPlayableSprite player = playerAtPole(false);
+        player.setSubpixelRaw(0x6400, 0x9000);
+        pole.onTouchResponse(player, TOUCH_RESULT, 1);
+        pole.update(1, player);
+        assertTrue((Boolean) getPrivateObject(pole, "nativeControlOwner"));
+
+        // Pole_Action checks UP/DOWN before its jump-release branch. Its word
+        // position writes preserve fractions; .release changes no player pose.
+        player.setDirectionalInputPressed(true, false, false, false);
+        player.setJumpInputPressed(true);
+        pole.update(2, player);
+
+        assertEquals(220, player.getCentreX());
+        assertEquals(319, player.getCentreY());
+        assertEquals(0x6400, player.getXSubpixelRaw());
+        assertEquals(0x9000, player.getYSubpixelRaw());
+        assertEquals(0, player.getXSpeed());
+        assertEquals(0, player.getYSpeed());
+        assertEquals(Sonic1AnimationIds.HANG.id(), player.getAnimationId(),
+                ".release leaves Sonic's animation to the following player pass");
+        assertEquals(0, getPrivateInt(pole, "mappingFrame"));
+        assertEquals(59, getPrivateInt(pole, "poleTime"));
+        assertReleasedFields(pole, player);
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    public void manualAndTimeoutReleaseReplayAfterRestore(boolean timeout) throws Exception {
+        boolean openedGameplayMode = SessionManager.getCurrentGameplayMode() == null;
+        try {
+            // Full player restore owns speed-shoes timers through the production
+            // gameplay context, including removal of an inactive timer.
+            TestEnvironment.activeGameplayMode();
+            Sonic1PoleThatBreaksObjectInstance pole = createPole(200, 320, 1);
+            TestPlayableSprite player = playerAtPole(false);
+            player.setSubpixelRaw(0x6400, 0x9000);
+            RewindIdentityTable identities = new RewindIdentityTable();
+            identities.registerPlayer(player, PlayerRefId.mainPlayer());
+            RewindCaptureContext context = RewindCaptureContext.withIdentityTable(identities);
+            pole.onTouchResponse(player, TOUCH_RESULT, 1);
+            pole.update(1, player);
+            // Retain one timeout tick, or two ticks for a release before expiry.
+            int lastHeldFrame = timeout ? 60 : 59;
+            for (int frame = 2; frame <= lastHeldFrame; frame++) {
+                pole.update(frame, player);
+            }
+            var heldPole = pole.captureRewindState(context);
+            var heldPlayer = player.captureRewindState();
+            assertEquals(0, getPrivateInt(pole, "mappingFrame"));
+
+            player.setJumpInputPressed(!timeout);
+            pole.update(lastHeldFrame + 1, player);
+            assertEquals(timeout ? 1 : 0, getPrivateInt(pole, "mappingFrame"));
+            assertReleasedFields(pole, player);
+            PoleReleaseState expected = releaseState(pole, player);
+
+            player.restoreRewindState(heldPlayer);
+            pole.restoreRewindState(heldPole, context);
+            assertTrue(player.isObjectControlled());
+            assertTrue((Boolean) getPrivateObject(pole, "poleGrabbed"));
+            assertSame(player, getPrivateObject(pole, "controlledPlayer"));
+            assertEquals(0, getPrivateInt(pole, "mappingFrame"));
+
+            player.setJumpInputPressed(!timeout);
+            pole.update(lastHeldFrame + 1, player);
+            assertReleasedFields(pole, player);
+            assertEquals(expected, releaseState(pole, player),
+                    "restore plus forward update must retain the chosen native release branch");
+        } finally {
+            if (openedGameplayMode) {
+                SessionManager.clear();
+            }
+        }
     }
 
     @Test
@@ -353,6 +439,31 @@ public class TestSonic1PoleThatBreaksObjectInstance {
         }
         assertEquals(320 + 0x0C, player.getCentreY());
     }
+
+    private static void assertReleasedFields(Sonic1PoleThatBreaksObjectInstance pole,
+                                             TestPlayableSprite player) throws Exception {
+        assertFalse(player.isObjectControlled());
+        assertFalse(player.isObjectControlSuppressesMovement());
+        assertEquals(0, pole.getCollisionFlags());
+        assertEquals("DISPLAY", getPrivateObject(pole, "routine").toString());
+        assertFalse((Boolean) getPrivateObject(pole, "poleGrabbed"));
+        assertFalse((Boolean) getPrivateObject(pole, "touchSignal"));
+        assertFalse((Boolean) getPrivateObject(pole, "nativeControlOwner"));
+        assertNull(getPrivateObject(pole, "controlledPlayer"));
+        assertNull(getPrivateObject(pole, "touchPlayer"));
+    }
+
+    private static PoleReleaseState releaseState(Sonic1PoleThatBreaksObjectInstance pole,
+                                                 TestPlayableSprite player) throws Exception {
+        return new PoleReleaseState(getPrivateInt(pole, "mappingFrame"),
+                getPrivateInt(pole, "poleTime"), player.getCentreX(), player.getCentreY(),
+                player.getXSubpixelRaw(), player.getYSubpixelRaw(),
+                player.getXSpeed(), player.getYSpeed(), player.getAnimationId());
+    }
+
+    private record PoleReleaseState(int mapping, int timeout, int x, int y,
+                                    int xFraction, int yFraction, int xSpeed,
+                                    int ySpeed, int animation) { }
 
     private static Sonic1PoleThatBreaksObjectInstance createPole(int x, int y, int subtype) {
         Sonic1PoleThatBreaksObjectInstance pole = new Sonic1PoleThatBreaksObjectInstance(

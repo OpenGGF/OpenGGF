@@ -152,7 +152,7 @@ public final class SszMtzBossOrbChild extends AbstractObjectInstance
     /** Which {@code byte_7AE14} row this orb was set up from; slot order in one value. */
     private int index;
 
-    private int routine = ROUTINE_ORBITING;
+    private int routine = ROUTINE_SETUP;
     /** 16.16 position, as {@code MoveSprite} reads it. */
     private int xPos;
     private int yPos;
@@ -172,8 +172,10 @@ public final class SszMtzBossOrbChild extends AbstractObjectInstance
     /** {@code $32(a0)}: the bounce angle, and {@code $38(a0)}: the floor it bounces from. */
     private int bounceAngle;
     private int bounceFloor = FLOOR_Y;
-    private int collisionFlags = COLLISION_ORBITING;
-    private int priorityWord = PRIORITY_INITIAL;
+    private int collisionFlags;
+    private int priorityWord;
+    /** loc_7AE12 returns without Add_SpriteToCollisionResponseList or Draw_Sprite. */
+    private boolean drawing;
     private int mappingFrame;
     private boolean renderFlipped;
     private int animStep = -1;
@@ -189,9 +191,6 @@ public final class SszMtzBossOrbChild extends AbstractObjectInstance
         this.index = Math.floorMod(index, ORB_COUNT);
         this.xPos = spawn.x() << 16;
         this.yPos = spawn.y() << 16;
-        // loc_7ADB2 is the shared setup block: routine 2, the seeded angles and $87 collision.
-        this.horizontalAngle = START_ANGLE[this.index];
-        this.verticalAngle = START_ANGLE[this.index];
     }
 
     /** Probe/rewind constructor: the spawn alone, with the parent re-resolved on restore. */
@@ -210,7 +209,7 @@ public final class SszMtzBossOrbChild extends AbstractObjectInstance
                                int collisionDelay, int bounceAngle, int bounceFloor,
                                int collisionFlags, int priorityWord, int mappingFrame,
                                boolean renderFlipped, int animStep, int animTimer,
-                               boolean animating, int collisionProperty)
+                               boolean animating, int collisionProperty, boolean drawing)
             implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {}
 
     @Override
@@ -221,7 +220,7 @@ public final class SszMtzBossOrbChild extends AbstractObjectInstance
                 parentId, index, routine, xPos, yPos, xVel, yVel, horizontalAngle, verticalAngle,
                 flattenAngle, centreX, centreY, depth, collisionDelay, bounceAngle, bounceFloor,
                 collisionFlags, priorityWord, mappingFrame, renderFlipped, animStep, animTimer,
-                animating, collisionProperty));
+                animating, collisionProperty, drawing));
     }
 
     @Override
@@ -253,6 +252,7 @@ public final class SszMtzBossOrbChild extends AbstractObjectInstance
         animating = extra.animating();
         index = extra.index();
         collisionProperty = extra.collisionProperty();
+        drawing = extra.drawing();
         parent = extra.parentId() == null ? null
                 : (SszMtzBossObjectInstance) context.requireIdentityTable()
                 .resolveObject(extra.parentId(), true);
@@ -260,6 +260,7 @@ public final class SszMtzBossOrbChild extends AbstractObjectInstance
 
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
+        drawing = false;
         if (parent == null || parent.isDestroyed()) {
             // Divergence, recorded in docs/status/s3k-known-bugs.md: an orb still in loc_7AE22 is
             // never popped by _unkFA88, because sub_7B0C2 is only reached from loc_7AFA4 and
@@ -275,12 +276,41 @@ public final class SszMtzBossOrbChild extends AbstractObjectInstance
             return;
         }
         switch (routine) {
+            case ROUTINE_SETUP -> {
+                setupRing();
+                return;
+            }
             case ROUTINE_ORBITING -> updateOrbiting();
             case ROUTINE_LAUNCHED -> updateLaunched(vIntRunCount);
             case ROUTINE_BOUNCING -> updateBouncing(vIntRunCount);
             case ROUTINE_POPPING -> pop();
             default -> { }
         }
+        drawing = !isDestroyed();
+    }
+
+    /** loc_7ADA2: initialize this slot first, then six global allocations; return on failure. */
+    private void setupRing() {
+        initializeOrb();
+        for (int siblingIndex = 1; siblingIndex < ORB_COUNT; siblingIndex++) {
+            SszMtzBossOrbChild sibling = parent.allocateOrb(siblingIndex);
+            if (sibling == null) {
+                // bne.s locret_7AE12: keep the successful prefix, with no later retry.
+                return;
+            }
+            sibling.initializeOrb();
+        }
+    }
+
+    /** loc_7ADB2: shared by this orb and each successfully allocated sibling. */
+    private void initializeOrb() {
+        routine = ROUTINE_ORBITING;
+        horizontalAngle = START_ANGLE[index];
+        verticalAngle = START_ANGLE[index];
+        flattenAngle = 0;
+        priorityWord = PRIORITY_INITIAL;
+        mappingFrame = 0;
+        collisionFlags = COLLISION_ORBITING;
     }
 
     /** {@code loc_7AE22}. */
@@ -608,6 +638,8 @@ public final class SszMtzBossOrbChild extends AbstractObjectInstance
 
     @Override public int getCollisionFlags() { return collisionFlags; }
 
+    @Override public boolean publishesTouchResponseListEntryThisFrame() { return drawing; }
+
     /** No {@code Obj_WaitOffscreen}: the fight's own defeat is what clears the orbs. */
     @Override public boolean isPersistent() { return true; }
 
@@ -642,6 +674,9 @@ public final class SszMtzBossOrbChild extends AbstractObjectInstance
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
+        if (!drawing) {
+            return;
+        }
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.SSZ_MTZ_ORBS);
         if (renderer != null && renderer.isReady()) {
             renderer.drawFrameIndex(mappingFrame, getX(), getY(), renderFlipped, false, 0);

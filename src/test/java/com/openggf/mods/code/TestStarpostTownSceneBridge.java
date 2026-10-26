@@ -1,6 +1,9 @@
 package com.openggf.mods.code;
 
+import com.openggf.data.RomGame;
 import com.openggf.game.GameServices;
+import com.openggf.tests.RomCatalogueFixture;
+import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.SharedLevel;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -18,9 +21,15 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestStarpostTownSceneBridge {
     @TempDir Path work;
     SharedLevel level;
-    @org.junit.jupiter.api.AfterEach void dispose() { if (level!=null) level.dispose(); }
+    private RomCatalogueFixture catalogue;
+    @org.junit.jupiter.api.AfterEach void dispose() { try { if (level!=null) level.dispose(); } finally { if (catalogue!=null) catalogue.close(); } }
     @Test void doorsRetainTheLiveGameAndAcceptedFestivalStartsWithoutAnotherQuestion() throws Exception {
         level=SharedLevel.load(SonicGame.SONIC_3K,0,0);
+        var sonic1=RomTestUtils.ensureSonic1RomAvailable();
+        if (sonic1!=null) {
+            catalogue=RomCatalogueFixture.bind(GameServices.configuration(),GameServices.rom(),
+                Map.of(RomGame.S1,sonic1.toPath()));
+        }
         try (ExampleModHarness harness=ExampleModHarness.build(Path.of("examples/starpost-valley"),work.resolve("build"))) {
             var effective=harness.apply(GameServices.module());
             harness.open(effective,work.resolve("saves"),400,224);

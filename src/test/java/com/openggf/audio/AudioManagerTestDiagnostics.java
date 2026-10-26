@@ -8,6 +8,9 @@ import com.openggf.audio.rewind.SmpsDriverSnapshot;
 import com.openggf.audio.rewind.AudioLogicalSnapshot;
 import com.openggf.audio.session.SmpsDriverSession;
 import com.openggf.audio.smps.DacData;
+import com.openggf.audio.smps.AbstractSmpsLoader;
+import com.openggf.audio.smps.SmpsLoader;
+import com.openggf.data.Rom;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -18,6 +21,44 @@ import java.util.function.Function;
 /** Test-source bridge for package-private audio diagnostics. */
 public final class AudioManagerTestDiagnostics {
     private AudioManagerTestDiagnostics() {
+    }
+
+    /** Read-only test view of the installed tuple and the loader's actual bound reader. */
+    public record BaseSmpsSourceBinding(Rom rom, GameAudioProfile profile,
+            SmpsLoader loader, Rom loaderRom, long generation) { }
+
+    public static BaseSmpsSourceBinding baseSmpsSourceBinding(AudioManager audio) {
+        synchronized (audio) {
+            try {
+                Object publication = sourcePublication(audio);
+                Field baseSource = publication.getClass().getDeclaredField("baseAudioSource");
+                baseSource.setAccessible(true);
+                Object source = baseSource.get(publication);
+                SmpsLoader loader = sourceComponent(source, "loader", SmpsLoader.class);
+                if (!(loader instanceof AbstractSmpsLoader)) {
+                    throw new IllegalStateException("installed loader has no native ROM binding");
+                }
+                Field reader = loader.getClass().getDeclaredField("rom");
+                reader.setAccessible(true);
+                return new BaseSmpsSourceBinding(
+                        sourceComponent(source, "rom", Rom.class),
+                        sourceComponent(source, "profile", GameAudioProfile.class),
+                        loader, (Rom) reader.get(loader),
+                        sourceComponent(source, "generation", Long.class));
+            } catch (ReflectiveOperationException failure) {
+                throw new IllegalStateException("cannot read native SMPS ROM binding", failure);
+            }
+        }
+    }
+
+    private static <T> T sourceComponent(Object source, String name, Class<T> type) {
+        try {
+            Method accessor = source.getClass().getDeclaredMethod(name);
+            accessor.setAccessible(true);
+            return type.cast(accessor.invoke(source));
+        } catch (ReflectiveOperationException failure) {
+            throw new IllegalStateException("cannot read base audio source " + name, failure);
+        }
     }
 
     public static AudioPresentationParityProbe.Snapshot shadowParitySnapshot(

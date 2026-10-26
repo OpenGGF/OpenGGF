@@ -6,9 +6,12 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
+import com.openggf.data.RomGame;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameServices;
 import com.openggf.mods.scene.host.ModSceneHost;
+import com.openggf.tests.RomCatalogueFixture;
+import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.SharedLevel;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -39,17 +42,29 @@ class TestStarpostValleyScene {
     Path work;
 
     private SharedLevel level;
+    private RomCatalogueFixture catalogue;
 
     @AfterEach
     void dispose() {
-        if (level != null) {
-            level.dispose();
+        try {
+            if (level != null) {
+                level.dispose();
+            }
+        } finally {
+            if (catalogue != null) {
+                catalogue.close();
+            }
         }
     }
 
     @Test
     void wateringCanWatersTheFacingTileInsteadOfHarvestingUnderfoot() throws Exception {
         level = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
+        var sonic1 = RomTestUtils.ensureSonic1RomAvailable();
+        if (sonic1 != null) {
+            catalogue = RomCatalogueFixture.bind(GameServices.configuration(), GameServices.rom(),
+                    Map.of(RomGame.S1, sonic1.toPath()));
+        }
         try (ExampleModHarness harness = ExampleModHarness.build(PROJECT, work.resolve("build"))) {
             harness.open(harness.apply(GameServices.module()), work.resolve("saves"), 400, 224);
             assumeTrue(harness.debugJump("new sonic"), "Sonic 1 was not supplied");
@@ -83,6 +98,11 @@ class TestStarpostValleyScene {
     @Test
     void wateringAtFieldEdgesOrInvalidTargetsNeverFallsBackUnderfoot() throws Exception {
         level = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
+        var sonic1 = RomTestUtils.ensureSonic1RomAvailable();
+        if (sonic1 != null) {
+            catalogue = RomCatalogueFixture.bind(GameServices.configuration(), GameServices.rom(),
+                    Map.of(RomGame.S1, sonic1.toPath()));
+        }
         try (ExampleModHarness harness = ExampleModHarness.build(PROJECT, work.resolve("build"))) {
             harness.open(harness.apply(GameServices.module()), work.resolve("saves"), 400, 224);
             assumeTrue(harness.debugJump("new sonic"), "Sonic 1 was not supplied");
@@ -124,6 +144,11 @@ class TestStarpostValleyScene {
     @Test
     void plantingStillUsesTheTileUnderfootAndThePondStillRefillsTheCan() throws Exception {
         level = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
+        var sonic1 = RomTestUtils.ensureSonic1RomAvailable();
+        if (sonic1 != null) {
+            catalogue = RomCatalogueFixture.bind(GameServices.configuration(), GameServices.rom(),
+                    Map.of(RomGame.S1, sonic1.toPath()));
+        }
         try (ExampleModHarness harness = ExampleModHarness.build(PROJECT, work.resolve("build"))) {
             harness.open(harness.apply(GameServices.module()), work.resolve("saves"), 400, 224);
             assumeTrue(harness.debugJump("new sonic"), "Sonic 1 was not supplied");
@@ -145,6 +170,11 @@ class TestStarpostValleyScene {
     @Test
     void refusedRealStoragePublishesTheOriginalBedtimeDuringOwnerExit() throws Exception {
         level = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
+        var sonic1 = RomTestUtils.ensureSonic1RomAvailable();
+        if (sonic1 != null) {
+            catalogue = RomCatalogueFixture.bind(GameServices.configuration(), GameServices.rom(),
+                    Map.of(RomGame.S1, sonic1.toPath()));
+        }
         try (ExampleModHarness harness = ExampleModHarness.build(PROJECT, work.resolve("build"))) {
             Path saves = work.resolve("saves");
             harness.open(harness.apply(GameServices.module()), saves, 400, 224);
@@ -206,6 +236,11 @@ class TestStarpostValleyScene {
     @Test
     void aYearOfScreensOpensPlaysAndDrawsWithoutFaults() throws Exception {
         level = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
+        var sonic1 = RomTestUtils.ensureSonic1RomAvailable();
+        if (sonic1 != null) {
+            catalogue = RomCatalogueFixture.bind(GameServices.configuration(), GameServices.rom(),
+                    Map.of(RomGame.S1, sonic1.toPath()));
+        }
         try (ExampleModHarness harness = ExampleModHarness.build(PROJECT, work.resolve("build"))) {
             GameModule effective = harness.apply(GameServices.module());
             harness.open(effective, work.resolve("saves"), 400, 224);

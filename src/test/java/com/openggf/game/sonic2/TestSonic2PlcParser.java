@@ -81,6 +81,74 @@ public class TestSonic2PlcParser {
     }
 
     @Test
+    void commonOnlyArtLoadsRealRomSheetsWithoutLookingUpAZoneHeader() throws IOException {
+        // Observe the parser boundary while retaining every real ROM parse and
+        // decode. Checking only sheets would miss the old rejected -1 lookup.
+        try (var plcs = org.mockito.Mockito.mockStatic(Sonic2PlcLoader.class,
+                org.mockito.Mockito.CALLS_REAL_METHODS)) {
+            var provider = new Sonic2ObjectArtProvider();
+            provider.loadArtForZone(-1);
+
+            plcs.verify(() -> Sonic2PlcLoader.getZonePlcIds(rom, -1),
+                    org.mockito.Mockito.never());
+            for (int plc : new int[]{Sonic2Constants.PLC_STD1,
+                    Sonic2Constants.PLC_STD2, Sonic2Constants.PLC_STD_WATER}) {
+                plcs.verify(() -> Sonic2PlcLoader.parsePlc(rom, plc));
+            }
+            for (String key : new String[]{ObjectArtKeys.MONITOR, ObjectArtKeys.CHECKPOINT,
+                    ObjectArtKeys.SHIELD, ObjectArtKeys.BUBBLES,
+                    ObjectArtKeys.EXPLOSION, ObjectArtKeys.SIGNPOST, ObjectArtKeys.GAME_OVER}) {
+                var sheet = provider.getSheet(key);
+                assertNotNull(sheet, key + " remains available without native zone PLCs");
+                assertNotNull(provider.getRenderer(key), key + " has a production renderer");
+                assertTrue(sheet.getPatterns().length > 0, key + " has decoded ROM patterns");
+                assertTrue(sheet.getFrameCount() > 0, key + " has ROM mapping frames");
+            }
+            assertTrue(provider.getHudDigitPatterns().length > 0);
+            assertTrue(provider.getHudTextPatterns().length > 0);
+            assertTrue(provider.getHudLivesPatterns().length > 0);
+            assertNull(provider.getSheet(Sonic2ObjectArtKeys.BUZZER),
+                    "common-only art must not fabricate Emerald Hill's native zone PLCs");
+            assertNull(provider.getSheet(ObjectArtKeys.SPRING_VERTICAL),
+                    "ordinary vertical springs belong to zone PLCs, not common-only art");
+            assertNull(provider.getRenderer(ObjectArtKeys.SPRING_VERTICAL),
+                    "ordinary vertical-spring renderers require their owning zone PLC");
+
+            // Only -1 is the documented common-only contract. Other invalid
+            // selectors still reach the unchanged stock parser's rejection.
+            provider.loadArtForZone(-2);
+            plcs.verify(() -> Sonic2PlcLoader.getZonePlcIds(rom, -2));
+            assertArrayEquals(new int[]{0, 0}, Sonic2PlcLoader.getZonePlcIds(rom, -2));
+            provider.loadArtForZone(17);
+            plcs.verify(() -> Sonic2PlcLoader.getZonePlcIds(rom, 17));
+            assertArrayEquals(new int[]{0, 0}, Sonic2PlcLoader.getZonePlcIds(rom, 17));
+        }
+    }
+
+    @Test
+    void zonePlcOwnsVerticalSpringArt() throws IOException {
+        for (int plc : new int[]{Sonic2Constants.PLC_STD1,
+                Sonic2Constants.PLC_STD2, Sonic2Constants.PLC_STD_WATER}) {
+            assertFalse(collectAddresses(Sonic2PlcLoader.parsePlc(rom, plc))
+                            .contains(Sonic2Constants.ART_NEM_SPRING_VERTICAL_ADDR),
+                    "standard common PLCs do not own ordinary vertical-spring art");
+        }
+        // PlrList_Ehz2 (s2.asm:89457-89462) publishes the vertical-spring art.
+        assertTrue(collectAddresses(Sonic2PlcLoader.parsePlc(rom, Sonic2Constants.PLC_EHZ2))
+                        .contains(Sonic2Constants.ART_NEM_SPRING_VERTICAL_ADDR),
+                "EHZ2 owns ordinary vertical-spring art");
+
+        var provider = new Sonic2ObjectArtProvider();
+        provider.loadArtForZone(Sonic2ZoneConstants.ROM_ZONE_EHZ);
+        var sheet = provider.getSheet(ObjectArtKeys.SPRING_VERTICAL);
+        assertNotNull(sheet, "EHZ zone PLCs publish the ordinary vertical-spring sheet");
+        assertNotNull(provider.getRenderer(ObjectArtKeys.SPRING_VERTICAL),
+                "EHZ zone PLCs publish the ordinary vertical-spring renderer");
+        assertTrue(sheet.getPatterns().length > 0, "vertical springs have decoded ROM patterns");
+        assertTrue(sheet.getFrameCount() > 0, "vertical springs have ROM mapping frames");
+    }
+
+    @Test
     public void testParseEhz1() throws IOException {
         PlcDefinition plc = Sonic2PlcLoader.parsePlc(rom, Sonic2Constants.PLC_EHZ1);
         assertNotNull(plc);

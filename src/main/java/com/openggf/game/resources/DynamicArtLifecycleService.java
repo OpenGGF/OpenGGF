@@ -943,7 +943,7 @@ public final class DynamicArtLifecycleService
     }
 
     /**
-     * Zeroes every player last-loaded-DPLC register the way a level load does.
+     * Clears level-scoped player DPLC registers and unpublished S1 readiness.
      *
      * <p>The registers are level-scoped RAM, not persistent state. Sonic 2's
      * {@code Level_ClrRam} runs {@code clearRAM Misc_Variables,Misc_Variables_End}
@@ -968,9 +968,23 @@ public final class DynamicArtLifecycleService
      * treats "no value yet" as the fresh-level state its own level-load
      * priming path expects, and the ROM's cleared byte is only ever read
      * again after that priming has rewritten it.
+     *
+     * <p>S1's same clear also resets {@code f_sonframechg} at F767, beside
+     * {@code v_sonframenum} at F766 (docs/s1disasm/_Variables.asm:230-231).
+     * Level_ClrRam clears F700-F7FF before the first title-card VBlank
+     * (docs/s1disasm/sonic.asm:2739-2743), so old unpublished preparation
+     * cannot upload there. The C800-CADF graphics buffer itself is outside
+     * that RAM clear (docs/s1disasm/_Variables.asm:34-35). Invalidate only
+     * readiness and its deferred bookkeeping, preserving published transfers,
+     * journal history, transfer IDs and S2's submitted queue.
      */
     public void clearPlayerDplcDedupRegistersForLevelLoad() {
         lastMappingFrames.clear();
+        s1Preparation = null;
+        s1PreparationAfterPreMainLoopTail = null;
+        initialLoadPreparation = null;
+        preMainLoopTailRows = -1;
+        preMainLoopHoldBoundaryRow = 0;
     }
 
     private ArtUpdate observeDplc(

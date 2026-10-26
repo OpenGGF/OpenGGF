@@ -1061,3 +1061,106 @@ Compared rows and fixture bytes are unchanged. The next investigation is that
 CPZ1 glide-position divergence, not the later ring-count cascade. Rings remain
 comparison-only; the final CPZ1 row reports native 82/engine 4 after the movement
 desync. Special-stage gameplay and inherited return-art timing gaps remain.
+
+
+## Wall-climb vertical contract — 2026-10-21
+
+This independently source-proven implementation starts at exact Root
+`c851683807aaa816dc3e4e6e9e4eccf99e18f5a2`, in the app-owned checkout
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-88040d75`, branch
+`feature/ai-knuckles-wall-climb-vertical-20261021`. The clean setup branch at
+`efd6051426` and all initialized submodule worktrees were preserved. Implementation
+ownership is `GlideWallGrabTerrain`'s vertical entry and the existing local
+`PlayableSpriteMovement` climb branches, not generic terrain algorithms or rules.
+
+The pre-edit plan and source audit are retained in the task registry. The plan is
+to establish literal real-profile red controls, repair the shared radius geometry
+and upright consumers, preserve reverse/idle and KiS2 distinctions, verify the
+focused movement/physics consumers and mandatory S3K classes, then freeze a local
+commit for Root's source review and composed qualification. Root owns broader
+validation, integration and delivery; this checkout does not push or integrate.
+
+The native pins are locked-on `skdisasm 044fa467`, `sonic3k.asm` blob
+`0f10a373ff0e3d5c0033ed7d13c678bcb927c7b0` (`Knuckles_Wall_Climb`
+31074–31445, floor-radius 19966, ceiling-radius 20372, `Knux_TouchFloor`
+32869–32910), and KiS2 `c336fede`, `s2.asm` blob
+`ecdd6560f345e33fd48b0f65ec0d79bb23a1769a` (`Knuckles_Climbing_Wall`
+38495–38821, floor-radius 47244, ceiling-radius 47597, floor cleanup 40963–41018).
+These source owners were read before editing; no native capture or new ROM build
+was performed for this task.
+
+The 8/9 caller offsets precede `EXT.W x_radius`: stock 10/10 scans are
+`CY-18` / `CY+19`, with reverse Up at `CY+18` and reverse Down at `CY-19`.
+The original upright object probes and the radius-less shared climb helper were
+both rejected by this geometry. A real width-15 wall at column `$130`, with
+centre `$126,$200`, independently returns wall distance zero. A V-flipped
+height-15 ceiling at `$1E0` gives upward distance -1 and native return `Y=$201`;
+a height-15 TOP floor at `$210` gives downward distance -3 and return `Y=$1FD`,
+raw angle `$20` (also tested with odd `$21`), current animation 5 and retained
+nonzero property 2. Height 12 gives distance zero and continues climbing. These
+are declared climb components driven through public movement, not naturally
+traversed wall admission or original-route evidence.
+
+Clear movement is one pixel or two when powered. The upright upward clamp uses
+signed WORD `minY+16`, bypassed at `$FF00`; ceiling correction bypasses that clamp.
+The BD undo precedes both descending probes and retains the original `x_sub`
+anchor, so a following entry observes its displacement. Native WORD movement
+retains both low words. Floor publication uses its own tail so ledge completion
+does not inherit a floor angle or animation. The generic air transition clears
+the climb property, so the floor tail restores the native preserved byte after
+that transition. S3K idle uses the normal-world downward radius probe even under
+reverse gravity, preserving the actual `FixBugs=0` animation-delta clobber. KiS2
+keeps temporary 10/10 collision radii, restores 19/9, and omits the idle probe.
+
+The first setup compile caught four new test-harness API/type mistakes; no tests
+ran in that invocation. After those corrections, unchanged production ran 50
+controls: 37 failures, zero errors/skips. That total includes four invalid floor
+inlets (the public roll-jump setter had restored standing radii) and two mistaken
+reverse-BD expected coordinates. Those fixture mistakes were corrected explicitly,
+without production changes. The corrected four floor controls then failed on the
+native output contract, all returning `$201` still climbing rather than `$1FD`
+grounded. The other meaningful red cases include all four real radius probes,
+powered movement, signed clamp, idle clobber, raw floor publication and rewind
+continuation. The existing real DEZ reverse probe control now declares 10/10 and
+includes the native radius in its initial position; its -3 assertions remain.
+
+There is no CNZ cause/completion claim: Root's separate exploratory wall distance
+-32 returns before any vertical scan in both implementations. No controller
+movie, trace data, fixture, frame, route, diagnostic, cap or timing policy changes
+are part of this correction.
+
+
+Queued validation used Java `25.0.4.1`, EGL, Lua 5.4 and the existing absolute
+ROM paths. The S1/S2/S3K files were newly hashed and match the repository's
+canonical CRC32/SHA-1 identities. No ROM links or submodule working states changed.
+The successful commands below use `OPENGGF_MAIN` for the current main workspace
+and `OPENGGF_ROM_ROOT` for the existing absolute ROM directory. Exact executed
+paths/commands are retained in the private task registry. They ran from the owned
+checkout with production at `c8516838` plus this implementation:
+
+```bash
+env JAVA_HOME=/usr/lib/jvm/java-25-openjdk PATH=/usr/lib/jvm/java-25-openjdk/bin:$PATH LUA_BIN=/usr/bin/lua5.4 DISPLAY= WAYLAND_DISPLAY= python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestKnucklesWallClimbVerticalContract,TestGlideWallGrabTerrain,TestPlayableSpriteMovement,TestKis2MovementRules,TestS3kGlidePlayerSolidityQuery' "-Dsonic1.rom.path=$OPENGGF_ROM_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=$OPENGGF_ROM_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=$OPENGGF_ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dkis2.rom.path=$OPENGGF_ROM_ROOT/kis2.gen" test -B
+
+env JAVA_HOME=/usr/lib/jvm/java-25-openjdk PATH=/usr/lib/jvm/java-25-openjdk/bin:$PATH LUA_BIN=/usr/bin/lua5.4 DISPLAY= WAYLAND_DISPLAY= python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestKnucklesWallClimbVerticalContract,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestS3kReverseGravityDezCorridor#reversedClimbProbesUseTheRealFloorAndCeilingAtTheirNativeOffsets,TestGroundSensor,TestNativePositionOps' "-Dsonic1.rom.path=$OPENGGF_ROM_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=$OPENGGF_ROM_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=$OPENGGF_ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dkis2.rom.path=$OPENGGF_ROM_ROOT/kis2.gen" test -B
+```
+
+Session 77538 completed **277 tests, zero failures/errors/skips** in 81 seconds
+of Maven execution, with no queue wait. That includes 45 new component cases.
+Two extra signed-WORD wrap cases and an unforced-animation assertion were then
+added only to the new test class; production did not change. Session 27713
+refreshed that class (47 cases) and ran the mandatory S3K classes plus the exact
+affected real-ROM reverse probe, GroundSensor and NativePositionOps: **145 tests,
+zero failures/errors/skips**, 30.650 seconds execution after 13 seconds queued.
+The superseding class result and the other focused results cover **377 distinct
+cases in 13 report classes**. XML identities, selectors, Java/EGL/ROM properties and
+skip counts were inspected. Existing deprecation and no-manifest FAST warnings
+remain; no warning was treated as a skipped or passed test.
+
+The change-based plan was inspected against `c8516838`. Its nominal 3,595-class
+smoke selection includes the inherited, unchanged TraceChaser worktree/gitlink
+mismatch. This implementation changes only the two local production owners;
+focused component/consumer checks are proportionate here, with broader composed
+qualification retained by Root. No broad smoke, release full suite or unchanged
+CNZ replay was launched. This is bounded implementation evidence, not a native
+runtime, complete-route or whole-suite certificate. Movement retains CRLF with
+zero bare LF; changed task links and the unchanged AGENTS/CLAUDE mirror were checked.

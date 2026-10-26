@@ -102,9 +102,6 @@ public class Sonic1SYZBossInstance extends AbstractS1EggmanBossInstance
     // Block reference (objoff_36 in ROM — pointer to grabbed block)
     private Sonic1BossBlockInstance grabbedBlock;
 
-    // Spike child component
-    private SYZBossSpike spikeChild;
-
     public Sonic1SYZBossInstance(ObjectSpawn spawn) {
         super(spawn, "SYZ Boss");
     }
@@ -131,8 +128,12 @@ public class Sonic1SYZBossInstance extends AbstractS1EggmanBossInstance
         faceAnim = Sonic1BossAnimations.ANIM_FACE_NORMAL_1;
         flameAnim = Sonic1BossAnimations.ANIM_BLANK;
 
-        // Spawn spike child component
-        spawnSpikeChild();
+
+    }
+
+    @Override
+    protected int getNativeEscapeRoutine() {
+        return STATE_ESCAPE;
     }
 
     @Override
@@ -197,9 +198,6 @@ public class Sonic1SYZBossInstance extends AbstractS1EggmanBossInstance
             case STATE_ESCAPE -> updateEscape();
         }
 
-        // Update face/flame animations
-        updateFaceAnimation(player);
-        updateFlameAnimation();
     }
 
     // ========================================================================
@@ -586,28 +584,12 @@ public class Sonic1SYZBossInstance extends AbstractS1EggmanBossInstance
     /**
      * Spawn the spike child component.
      */
-    private void spawnSpikeChild() {
-        if (services().objectManager() != null) {
-            spikeChild = spawnFreeChild(() -> new SYZBossSpike(this));
-        } else {
-            spikeChild = new SYZBossSpike(this);
-        }
-        childComponents.add(spikeChild);
+    @Override
+    protected void initializeNativeWeapon() {
+        spawnChild(() -> new SYZBossSpike(this));
     }
 
-    /**
-     * ROM: {@code BossSpringYard_SpikeMain} (routine 8) is a fully independent SST object
-     * that reads {@code ob2ndRout}/{@code obSubtype}/{@code BossSpringYard_GenericTimer} off
-     * the boss every frame via its own dispatch — it is never driven by the boss's own
-     * routine handler. {@link SYZBossSpike#update} now mirrors that by pulling this state
-     * directly (see the accessors below) instead of the boss pushing it in from
-     * {@code updateBossLogic()}, which is skipped for one frame during the post-hit defeat
-     * dispatch deferral ({@link #defeatDeferralAppliesToThisBoss()}). Pushing from there left
-     * the spike's collision/extension frozen at their pre-defeat values for that one frame —
-     * a real, if narrow, divergence from ROM's independently-dispatched spike. Pulling from
-     * the spike's own {@code update()} (called unconditionally every frame via
-     * {@code AbstractBossInstance.updateChildren()}) removes that dependency entirely.
-     */
+    /** The independent native spike reads these live ship fields at its own SST slot. */
     int getDropSubPhase() {
         return dropSubPhase;
     }
@@ -624,7 +606,7 @@ public class Sonic1SYZBossInstance extends AbstractS1EggmanBossInstance
      * Update face animation based on boss state.
      * ROM: BossSpringYard_FaceMain (routine 4)
      */
-    private void updateFaceAnimation(AbstractPlayableSprite player) {
+    protected void updateFaceAnimation(AbstractPlayableSprite player) {
         // ROM: off_19546 dispatch table
         switch (state.routineSecondary) {
             case STATE_APPROACH, STATE_PATROL -> {
@@ -635,7 +617,9 @@ public class Sonic1SYZBossInstance extends AbstractS1EggmanBossInstance
                 // ROM: loc_1955A — depends on drop sub-phase
                 if (dropSubPhase == DROP_SUB_HOLD) {
                     // During hold: panic face
-                    faceAnim = Sonic1BossAnimations.ANIM_FACE_PANIC;
+                    faceAnim = state.invulnerable ? Sonic1BossAnimations.ANIM_FACE_HIT
+                            : player != null && player.isHurt() ? Sonic1BossAnimations.ANIM_FACE_LAUGH
+                            : Sonic1BossAnimations.ANIM_FACE_PANIC;
                 } else {
                     faceAnim = resolveNormalFace(player);
                 }
@@ -671,7 +655,7 @@ public class Sonic1SYZBossInstance extends AbstractS1EggmanBossInstance
      * Update flame animation based on movement.
      * ROM: BossSpringYard_FlameMain (routine 6)
      */
-    private void updateFlameAnimation() {
+    protected void updateFlameAnimation() {
         if (state.routineSecondary == STATE_ESCAPE) {
             // ROM: cmpi.b #$A,ob2ndRout → heavy escape flame
             flameAnim = Sonic1BossAnimations.ANIM_ESCAPE_FLAME;

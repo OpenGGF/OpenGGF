@@ -26,6 +26,7 @@ import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.RecordComponent;
 import java.lang.reflect.Type;
+import java.lang.reflect.WildcardType;
 import java.nio.charset.StandardCharsets;
 import java.util.BitSet;
 import java.util.ArrayList;
@@ -334,6 +335,11 @@ public final class RewindCodecs {
             return Optional.of(new CollectionCodec(type, elementType));
         }
         if (Map.class.isAssignableFrom(type)) {
+            // Exact Class<?> keys are immutable in-memory identities, not names.
+            // Keep this narrow: no erased maps or arbitrary parameterized values.
+            if (args.length == 2 && isUnboundedClassType(args[0]) && args[1] == Integer.class) {
+                return Optional.of(new MapCodec(type, Class.class, Integer.class));
+            }
             if (args.length != 2
                     || !(args[0] instanceof Class<?> keyType)
                     || !(args[1] instanceof Class<?> valueType)
@@ -344,6 +350,17 @@ public final class RewindCodecs {
             return Optional.of(new MapCodec(type, keyType, valueType));
         }
         return Optional.empty();
+    }
+
+    private static boolean isUnboundedClassType(Type type) {
+        if (!(type instanceof ParameterizedType parameterized) || parameterized.getRawType() != Class.class) {
+            return false;
+        }
+        Type[] args = parameterized.getActualTypeArguments();
+        return args.length == 1 && args[0] instanceof WildcardType wildcard
+                && wildcard.getLowerBounds().length == 0
+                && wildcard.getUpperBounds().length == 1
+                && wildcard.getUpperBounds()[0] == Object.class;
     }
 
     private static boolean isCollectionValueType(Class<?> type) {
@@ -1513,7 +1530,7 @@ public final class RewindCodecs {
         if (value == null) {
             return;
         }
-        if (type == String.class) {
+        if (type == String.class || type == Class.class) {
             opaqueValues.add(value);
         } else if (type.isEnum()) {
             scalarData.writeInt(((Enum<?>) value).ordinal());
@@ -1544,7 +1561,7 @@ public final class RewindCodecs {
         if (!scalarData.readBoolean()) {
             return null;
         }
-        if (type == String.class) {
+        if (type == String.class || type == Class.class) {
             return opaqueIndex.next(opaqueValues);
         }
         if (type.isEnum()) {

@@ -126,7 +126,7 @@ class TestSonic3kMonitorContentOverride {
                 .map(RobotnikMonitor.class::cast).findFirst().orElseThrow();
         assertEquals(0, shell.getCollisionFlags(), "Remembered reload is the broken shell, never a fresh payout");
     }
-    @Test void colocatedFactoryShellsRestoreTheirExactContentsOwnersAndReplayIndependently() throws Exception {
+    @Test void colocatedFactoryShellsRestoreIndependentContentsAndReplayBothPayloads() throws Exception {
         var player = breaker();
         var camera = mock(Camera.class);
         when(camera.getWidth()).thenReturn((short) 320); when(camera.getHeight()).thenReturn((short) 224);
@@ -149,20 +149,17 @@ class TestSonic3kMonitorContentOverride {
         manager.rewindSnapshottable().restore(captured);
         var restoredA = (Sonic3kMonitorObjectInstance) manager.objectQuery().resolve(aId).orElseThrow();
         var restoredB = (Sonic3kMonitorObjectInstance) manager.objectQuery().resolve(bId).orElseThrow();
-        var ownerField = Sonic3kMonitorObjectInstance.class.getDeclaredField("monitorContentsSlot");
-        ownerField.setAccessible(true);
-        var aSlot = ownerField.get(restoredA); var bSlot = ownerField.get(restoredB);
-        assertNotNull(aSlot); assertNotNull(bSlot); assertNotSame(aSlot, bSlot);
-        var parentField = aSlot.getClass().getDeclaredField("parent"); parentField.setAccessible(true);
-        assertSame(restoredA, parentField.get(aSlot), "colocated icon belongs to captured shell A");
-        assertSame(restoredB, parentField.get(bSlot), "colocated icon belongs to captured shell B");
+        assertNotSame(restoredA, restoredB);
+        var contents = manager.getActiveObjects().stream()
+                .filter(object -> object.getClass().getName().endsWith("$MonitorContentsSlot")).toList();
+        assertEquals(2, contents.size(), "each colocated shell allocated its own contents");
         assertEquals(List.of(), RewindSnapshotDiff.diffKey("object-manager", captured, manager.rewindSnapshottable().capture()));
+        // Obj_MonitorContents is independent: removing a shell leaves both contents running.
         manager.removeDynamicObject(restoredA);
-        assertTrue(((ObjectInstance) aSlot).isDestroyed());
-        assertFalse(((ObjectInstance) bSlot).isDestroyed());
-        assertDoesNotThrow(() -> manager.rewindSnapshottable().capture(), "retired contents cannot retain an unregistered shell");
-        for (int tick = 1; tick <= 34; tick++) restoredB.update(tick, player);
-        verify(player).applyHurtOrDeath(0, false, true);
+        assertTrue(contents.stream().noneMatch(ObjectInstance::isDestroyed));
+        assertDoesNotThrow(() -> manager.rewindSnapshottable().capture(), "contents retain no shell reference");
+        for (int tick = 1; tick <= 34; tick++) manager.update(0, player, List.of(), tick);
+        verify(player, times(2)).applyHurtOrDeath(0, false, true);
         verify(player, never()).addRings(anyInt());
     }
 

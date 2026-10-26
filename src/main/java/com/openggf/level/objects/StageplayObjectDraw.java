@@ -72,7 +72,7 @@ final class StageplayObjectDraw {
     }
 
     boolean addRenderEntries(
-            ObjectInstance object,
+            ObjectInstance object, Set<Integer> nativeSlots,
             List<ObjectRenderParts.RenderEntry>[] unified,
             List<ObjectRenderParts.RenderEntry>[] low,
             List<ObjectRenderParts.RenderEntry>[] high) {
@@ -86,6 +86,7 @@ final class StageplayObjectDraw {
         Set<String> entries = new HashSet<>();
         for (var part : state.template.parts()) {
             int slot = renderSlot(state, part);
+            if (nativeSlots.contains(slot)) continue;
             String key = part.bucket() + ":" + part.highPriority() + ":" + slot;
             if (!entries.add(key)) {
                 continue;
@@ -99,11 +100,11 @@ final class StageplayObjectDraw {
     }
 
     void addVisualRenderEntries(
-            List<ObjectRenderParts.RenderEntry>[] unified,
+            Set<Integer> nativeSlots, List<ObjectRenderParts.RenderEntry>[] unified,
             List<ObjectRenderParts.RenderEntry>[] low,
             List<ObjectRenderParts.RenderEntry>[] high) {
         for (var visual : visuals.values()) {
-            addRenderEntries(visual, unified, low, high);
+            addRenderEntries(visual, nativeSlots, unified, low, high);
         }
     }
 
@@ -120,9 +121,10 @@ final class StageplayObjectDraw {
         if (state == null) {
             return false;
         }
-        if (object == state.root) {
-            draw(state, bucket, high, slot);
-        }
+        // Membership is resolved from the current physical owner, never from a
+        // class or stale slot owner. Child calls draw only their admitted part;
+        // duplicate native calls deliberately repeat that same selection.
+        draw(state, bucket, high, slot);
         return true;
     }
 

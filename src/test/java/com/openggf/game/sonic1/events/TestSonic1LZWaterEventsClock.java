@@ -16,8 +16,8 @@ class TestSonic1LZWaterEventsClock {
 
     @Test
     void preObjectWaterFeaturesObserveTheVblankThatObjectExecutionWillPublish() {
-        assertEquals(0xFF, Sonic1LZWaterEvents.romVisibleVblaByteBeforeObjectExecution(0x50FF));
-        assertEquals(0x00, Sonic1LZWaterEvents.romVisibleVblaByteBeforeObjectExecution(0x5100));
+        assertEquals(0x00, Sonic1LZWaterEvents.romVisibleVblaByteBeforeObjectExecution(0x50FF));
+        assertEquals(0x01, Sonic1LZWaterEvents.romVisibleVblaByteBeforeObjectExecution(0x5100));
     }
 
     @Test

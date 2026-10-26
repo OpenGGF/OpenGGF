@@ -2,6 +2,7 @@ package com.openggf.game.rewind.snapshot;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.identity.ObjectRefId;
+import com.openggf.game.rewind.identity.PlayerRefId;
 import com.openggf.game.solid.ContactKind;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
@@ -243,8 +244,16 @@ public record ObjectManagerSnapshot(
             ObjectRefId objectId,
             /** Owning compiled-mod id, or {@code null} for engine-defined classes. */
             String ownerModId,
-            boolean rewindableAuxiliary
+            boolean rewindableAuxiliary,
+            /** Captured registered player role; null retains the legacy unregistered-owner reference. */
+            PlayerRefId playerOwnerId
     ) {
+        public DynamicObjectEntry(String className, ObjectSpawn spawn, int slotIndex,
+                                  PerObjectRewindSnapshot state, PlayableEntity playerOwner,
+                                  ObjectRefId objectId, String ownerModId, boolean rewindableAuxiliary) {
+            this(className, spawn, slotIndex, state, playerOwner, objectId, ownerModId, rewindableAuxiliary, null);
+        }
+
         /** Backward-compatible constructor (pre-loader-aware rewind). */
         public DynamicObjectEntry(String className, ObjectSpawn spawn, int slotIndex,
                                   PerObjectRewindSnapshot state, PlayableEntity playerOwner,
@@ -332,8 +341,18 @@ public record ObjectManagerSnapshot(
             int objectSlotIndex,
             int x,
             int y,
-            int pieceIndex
-    ) {}
+            int pieceIndex,
+            PlayerRefId playerId
+    ) {
+        public SolidContactRidingEntry {
+            validateContactPlayer(player, playerId);
+        }
+
+        public SolidContactRidingEntry(PlayableEntity player, ObjectSpawn objectSpawn,
+                int objectSlotIndex, int x, int y, int pieceIndex) {
+            this(player, objectSpawn, objectSlotIndex, x, y, pieceIndex, null);
+        }
+    }
 
     /**
      * Complete snapshot of the solid-contact collaborator's hidden state.
@@ -350,7 +369,9 @@ public record ObjectManagerSnapshot(
             List<SolidContactHeadroomSnapshotEntry> headroomSnapshots,
             List<SolidContactLatchEntry> standingBits,
             List<SolidContactLatchEntry> pushingBits,
-            List<SolidContactLatchEntry> standingBitSnapshots
+            List<SolidContactLatchEntry> standingBitSnapshots,
+            List<SolidContactPlayerBinding> inlineSupportedPlayerBindings,
+            List<SolidContactPlayerBinding> forceAirOnStaleSupportLossPlayerBindings
     ) {
         public SolidContactState {
             riding = riding == null ? List.of() : List.copyOf(riding);
@@ -362,6 +383,27 @@ public record ObjectManagerSnapshot(
             standingBits = standingBits == null ? List.of() : List.copyOf(standingBits);
             pushingBits = pushingBits == null ? List.of() : List.copyOf(pushingBits);
             standingBitSnapshots = standingBitSnapshots == null ? List.of() : List.copyOf(standingBitSnapshots);
+            inlineSupportedPlayerBindings = inlineSupportedPlayerBindings == null
+                    ? List.of() : List.copyOf(inlineSupportedPlayerBindings);
+            forceAirOnStaleSupportLossPlayerBindings = forceAirOnStaleSupportLossPlayerBindings == null
+                    ? List.of() : List.copyOf(forceAirOnStaleSupportLossPlayerBindings);
+            if ((!inlineSupportedPlayers.isEmpty() && !inlineSupportedPlayerBindings.isEmpty())
+                    || (!forceAirOnStaleSupportLoss.isEmpty()
+                    && !forceAirOnStaleSupportLossPlayerBindings.isEmpty())) {
+                throw new IllegalArgumentException("Contact membership must use one player-binding channel");
+            }
+        }
+
+        /** Legacy standalone snapshots retain their original raw-player channels. */
+        public SolidContactState(int frameCounter, List<SolidContactRidingEntry> riding,
+                List<PlayableEntity> inlineSupportedPlayers, List<PlayableEntity> forceAirOnStaleSupportLoss,
+                List<SolidContactStandingSnapshotEntry> standingSnapshots,
+                List<SolidContactHeadroomSnapshotEntry> headroomSnapshots,
+                List<SolidContactLatchEntry> standingBits, List<SolidContactLatchEntry> pushingBits,
+                List<SolidContactLatchEntry> standingBitSnapshots) {
+            this(frameCounter, riding, inlineSupportedPlayers, forceAirOnStaleSupportLoss,
+                    standingSnapshots, headroomSnapshots, standingBits, pushingBits, standingBitSnapshots,
+                    List.of(), List.of());
         }
 
         public static SolidContactState empty() {
@@ -386,29 +428,76 @@ public record ObjectManagerSnapshot(
             PlayableEntity player,
             ContactKind kind,
             boolean standing,
-            boolean pushing
-    ) {}
+            boolean pushing,
+            PlayerRefId playerId
+    ) {
+        public SolidContactStandingSnapshotEntry {
+            validateContactPlayer(player, playerId);
+        }
+
+        public SolidContactStandingSnapshotEntry(PlayableEntity player, ContactKind kind,
+                boolean standing, boolean pushing) {
+            this(player, kind, standing, pushing, null);
+        }
+    }
 
     public record SolidContactHeadroomSnapshotEntry(
             PlayableEntity player,
             int hexAngle,
-            int distance
-    ) {}
+            int distance,
+            PlayerRefId playerId
+    ) {
+        public SolidContactHeadroomSnapshotEntry {
+            validateContactPlayer(player, playerId);
+        }
+
+        public SolidContactHeadroomSnapshotEntry(PlayableEntity player, int hexAngle, int distance) {
+            this(player, hexAngle, distance, null);
+        }
+    }
 
     public record SolidContactLatchEntry(
             PlayableEntity player,
-            List<SolidContactLatchKey> keys
+            List<SolidContactLatchKey> keys,
+            PlayerRefId playerId
     ) {
         public SolidContactLatchEntry {
+            validateContactPlayer(player, playerId);
             keys = keys == null ? List.of() : List.copyOf(keys);
+        }
+
+        public SolidContactLatchEntry(PlayableEntity player, List<SolidContactLatchKey> keys) {
+            this(player, keys, null);
+        }
+    }
+
+    /** A membership retains either its captured registered role or its standalone identity. */
+    public record SolidContactPlayerBinding(PlayableEntity player, PlayerRefId playerId) {
+        public SolidContactPlayerBinding {
+            validateContactPlayer(player, playerId);
+            if (player == null && playerId == null) {
+                throw new IllegalArgumentException("Contact membership requires a player binding");
+            }
+        }
+    }
+
+    private static void validateContactPlayer(PlayableEntity player, PlayerRefId playerId) {
+        if (playerId != null && (player != null || playerId.isNull())) {
+            throw new IllegalArgumentException("Registered contact player requires only a non-null role id");
         }
     }
 
     public record SolidContactLatchKey(
             ObjectSpawn spawn,
             int slotIndex,
-            boolean instanceKey
-    ) {}
+            boolean instanceKey,
+            int pieceIndex
+    ) {
+        /** Legacy single-owner latches have no folded child scope. */
+        public SolidContactLatchKey(ObjectSpawn spawn, int slotIndex, boolean instanceKey) {
+            this(spawn, slotIndex, instanceKey, -1);
+        }
+    }
 
     /**
      * Snapshot of {@code ObjectManager.Placement}'s cursor/window state.

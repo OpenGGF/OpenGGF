@@ -2,6 +2,8 @@ package com.openggf.game.sonic1.objects.bosses;
 
 import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.camera.Camera;
+import com.openggf.game.PlayableEntity;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.graphics.GLCommand;
@@ -17,9 +19,9 @@ import java.util.List;
 /**
  * Base class for the 5 standard Sonic 1 Eggman-ship bosses (GHZ, LZ, MZ, SLZ, SYZ).
  *
- * These bosses share the same Eggman ship sprite with face and flame overlays,
+ * These bosses share the same Eggman ship sprite with independently dispatched face and flame parts,
  * and use identical helper methods for fixed-point movement, on-screen checks,
- * face/flame frame mapping, defeat explosion spawning, and camera-expand escape.
+ * native component allocation, defeat explosion spawning, and camera-expand escape.
  *
  * The FZ boss is NOT included — it uses a completely different sprite set (Map_SEgg)
  * and has unique combat mechanics.
@@ -28,9 +30,7 @@ import java.util.List;
  * <ul>
  *   <li>{@link #bossMove()} — BossMove subroutine (applies velocity to fixed-point position)</li>
  *   <li>{@link #isBossOnScreen()} — camera-relative bounds check</li>
- *   <li>{@link #getFaceFrame()} — face animation ID to mapping frame index</li>
- *   <li>{@link #getFlameFrame()} — flame animation ID to mapping frame index</li>
- *   <li>{@link #renderEggmanShip()} — ship body + face overlay + flame overlay rendering</li>
+ *   <li>{@link #renderEggmanShip()} — ship body rendering</li>
  *   <li>{@link #runDefeatExplosions(int)} — countdown timer + explosion spawning</li>
  *   <li>{@link #runCameraExpandEscape(int)} — camera unlock + boundary expansion + off-screen destroy</li>
  * </ul>
@@ -48,6 +48,10 @@ public abstract class AbstractS1EggmanBossInstance extends AbstractBossInstance 
 
     /** Flame animation state — set by subclass in updateFlameAnimation(). */
     protected int flameAnim;
+
+    private boolean nativeComponentsInitialized;
+    private boolean shipRenderedLastPass;
+    private boolean shipDisplayedThisPass;
 
     protected AbstractS1EggmanBossInstance(ObjectSpawn spawn, String name) {
         super(spawn, name);
@@ -89,85 +93,95 @@ public abstract class AbstractS1EggmanBossInstance extends AbstractBossInstance 
         state.yFixed += (state.yVel << 8);
     }
 
-    /**
-     * Check if the boss is on-screen using camera-relative X bounds.
-     * ROM: tst.b obRender(a0) / bpl.s — bit 7 of obRender = on-screen flag.
-     * We approximate with a generous horizontal range of [-64, 384].
-     */
+    /** Native escape routines read the previous post-camera BuildSprites bit. */
     protected boolean isBossOnScreen() {
+        return shipRenderedLastPass;
+    }
+
+    @Override
+    public void refreshPostCameraRenderState() {
+        if (!shipDisplayedThisPass) return;
+        shipDisplayedThisPass = false;
         Camera camera = services().camera();
-        int screenX = state.x - camera.getX();
-        return screenX >= -64 && screenX <= 384;
+        int sx = (short) (state.x - camera.getX());
+        int sy = (short) (state.y - camera.getY());
+        shipRenderedLastPass = sx >= -32 && sx < camera.getWidth() + 32
+                && sy >= -32 && sy < camera.getHeight() + 32;
     }
 
-    /**
-     * Map face animation ID to the Eggman mapping frame index.
-     * ROM: Map_Eggman frame indices for each face animation.
-     *
-     * @return frame index (1-7), or -1 if no face should be drawn
-     */
-    protected int getFaceFrame() {
-        return switch (faceAnim) {
-            case Sonic1BossAnimations.ANIM_FACE_NORMAL_1,
-                 Sonic1BossAnimations.ANIM_FACE_NORMAL_2,
-                 Sonic1BossAnimations.ANIM_FACE_NORMAL_3 -> 1; // facenormal1
-            case Sonic1BossAnimations.ANIM_FACE_LAUGH -> 3;    // facelaugh1
-            case Sonic1BossAnimations.ANIM_FACE_HIT -> 5;      // facehit
-            case Sonic1BossAnimations.ANIM_FACE_PANIC -> 6;    // facepanic
-            case Sonic1BossAnimations.ANIM_FACE_DEFEAT -> 7;   // facedefeat
-            default -> -1;
-        };
+    @Override
+    public int getCollisionFlags() {
+        return nativeComponentsInitialized ? super.getCollisionFlags() : 0;
     }
 
-    /**
-     * Map flame animation ID to the Eggman mapping frame index.
-     * ROM: Map_Eggman frame indices for each flame animation.
-     *
-     * @return frame index (8 or 11), or -1 if no flame should be drawn
-     */
-    protected int getFlameFrame() {
-        return switch (flameAnim) {
-            case Sonic1BossAnimations.ANIM_FLAME_1,
-                 Sonic1BossAnimations.ANIM_FLAME_2 -> 8;        // flame1
-            case Sonic1BossAnimations.ANIM_ESCAPE_FLAME -> 11;  // escapeflame1
-            case Sonic1BossAnimations.ANIM_BLANK -> -1;         // no flame
-            default -> -1;
-        };
+    /** Native tables allocate the face, flame, then optional weapon during routine 0. */
+    @Override
+    public void update(int vIntRunCount, PlayableEntity player) {
+        if (!nativeComponentsInitialized) {
+            nativeComponentsInitialized = true;
+            if (spawnVisualComponent(S1EggmanVisualComponent.FACE)
+                    && spawnVisualComponent(S1EggmanVisualComponent.FLAME)) {
+                if (getAccessoryMappingFrame() >= 0) {
+                    spawnVisualComponent(S1EggmanVisualComponent.ACCESSORY);
+                } else {
+                    initializeNativeWeapon();
+                }
+            }
+        }
+        super.update(vIntRunCount, player);
+        shipDisplayedThisPass = !isDestroyed();
     }
 
-    /**
-     * Render the standard Eggman ship: body (frame 0), face overlay, flame overlay.
-     * ROM: All 5 S1 bosses use Map_Eggman with identical rendering logic for the
-     * base ship. Subclasses that need extra overlays (MZ exhaust tube, SLZ pipe)
-     * should override {@link #appendRenderCommands(List)} and call this first.
-     */
+    private boolean spawnVisualComponent(int component) {
+        S1EggmanVisualComponent child = spawnChild(() -> new S1EggmanVisualComponent(this, component));
+        return !child.isDestroyed();
+    }
+
+    protected void initializeNativeWeapon() {
+    }
+
+    protected int getAccessoryMappingFrame() {
+        return -1;
+    }
+
+    protected abstract void updateFaceAnimation(AbstractPlayableSprite player);
+
+    protected abstract void updateFlameAnimation();
+
+    protected abstract int getNativeEscapeRoutine();
+
+    int selectComponentAnimation(int component, PlayableEntity player) {
+        if (component == S1EggmanVisualComponent.FACE) {
+            updateFaceAnimation(player instanceof AbstractPlayableSprite sprite ? sprite : null);
+            return faceAnim;
+        }
+        updateFlameAnimation();
+        return flameAnim;
+    }
+
+    /** The ship, face and flame are independently dispatched native SST objects. */
     protected void renderEggmanShip() {
         ObjectRenderManager renderManager = services().renderManager();
         if (renderManager == null) {
             return;
         }
-
-        PatternSpriteRenderer eggmanRenderer = renderManager.getRenderer(ObjectArtKeys.EGGMAN);
-        if (eggmanRenderer == null || !eggmanRenderer.isReady()) {
-            return;
+        PatternSpriteRenderer renderer = renderManager.getRenderer(ObjectArtKeys.EGGMAN);
+        if (renderer != null && renderer.isReady()) {
+            renderer.drawFrameIndex(0, state.x, state.y, (state.renderFlags & 1) != 0, false);
         }
+    }
 
-        boolean flipped = (state.renderFlags & 1) != 0;
-
-        // Draw ship body (frame 0)
-        eggmanRenderer.drawFrameIndex(0, state.x, state.y, flipped, false);
-
-        // Draw face overlay (frames 1-7)
-        int faceFrame = getFaceFrame();
-        if (faceFrame >= 0) {
-            eggmanRenderer.drawFrameIndex(faceFrame, state.x, state.y, flipped, false);
-        }
-
-        // Draw flame overlay (frames 8-12)
-        int flameFrame = getFlameFrame();
-        if (flameFrame >= 0) {
-            eggmanRenderer.drawFrameIndex(flameFrame, state.x, state.y, flipped, false);
-        }
+    /** S1 BossDefeated: FindFreeObj precedes RNG; explosions are biased downward. */
+    @Override
+    protected void spawnDefeatExplosion() {
+        var manager = services().objectManager();
+        if (manager == null) return;
+        manager.createDynamicObjectWithReservedSlot(() -> {
+            int random = services().rng().nextWord();
+            int x = (state.x + ((random & 0xFF) >> 2) - 0x20) & 0xFFFF;
+            int y = (state.y + (((random >>> 8) & 0xFF) >> 3)) & 0xFFFF;
+            return new S1BossExplosion(x, y, services().renderManager());
+        });
     }
 
     /**
@@ -222,7 +236,7 @@ public abstract class AbstractS1EggmanBossInstance extends AbstractBossInstance 
     }
 
     // ========================================================================
-    // Default rendering — subclasses with extra overlays should override
+    // Default rendering — independently dispatched components draw themselves
     // ========================================================================
 
     @Override

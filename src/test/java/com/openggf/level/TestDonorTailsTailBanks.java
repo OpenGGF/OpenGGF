@@ -20,6 +20,8 @@ import static org.mockito.Mockito.*;
 
 @RequiresRom(SonicGame.SONIC_2)
 class TestDonorTailsTailBanks {
+    // Keep complete native mappings inside the SAT raster for the bank-content comparison.
+    private static final int DRAW_X = 160, DRAW_Y = 112;
     private GraphicsManager graphics;
 
     @org.junit.jupiter.api.BeforeEach
@@ -68,6 +70,7 @@ class TestDonorTailsTailBanks {
         }
         SonicConfigurationService config = mock(SonicConfigurationService.class);
         String mainCode = main.getCode();
+        when(level.resolveMainCharacterCode()).thenReturn(mainCode);
         when(config.getString(SonicConfiguration.MAIN_CHARACTER_CODE)).thenReturn(mainCode);
         try (var active = mockStatic(CrossGameFeatureProvider.class)) {
             active.when(CrossGameFeatureProvider::isActive).thenReturn(true);
@@ -96,7 +99,7 @@ class TestDonorTailsTailBanks {
         PlayerSpriteRenderer sideRenderer = renderer(side);
         for (int tailFrame : new int[]{0x49, 0x4A, 0x4B, 0x4C, 0x81, 0x82, 0x83, 0x84}) {
             var expected = com.openggf.level.render.SpritePresentationRenderer.prepare(graphics, 0, 0,
-                    () -> tail.drawFrame(tailFrame, 0, 0, false, false));
+                    () -> tail.drawFrame(tailFrame, DRAW_X, DRAW_Y, false, false));
             assertFalse(expected.patternVersions().isEmpty());
             for (boolean sat : new boolean[]{false, true}) {
                 for (boolean tailFirst : new boolean[]{false, true}) {
@@ -104,14 +107,15 @@ class TestDonorTailsTailBanks {
                         int frame = bodyFrame;
                         var combined = com.openggf.level.render.SpritePresentationRenderer.prepare(graphics, 0, 0, () -> {
                             if (sat) graphics.beginSpriteSatCollection();
-                            if (tailFirst) tail.drawFrame(tailFrame, 0, 0, false, false);
-                            mainRenderer.drawFrame(frame, 0, 0, false, false);
-                            sideRenderer.drawFrame(frame, 0, 0, false, false);
-                            if (!tailFirst) tail.drawFrame(tailFrame, 0, 0, false, false);
+                            if (tailFirst) tail.drawFrame(tailFrame, DRAW_X, DRAW_Y, false, false);
+                            mainRenderer.drawFrame(frame, DRAW_X, DRAW_Y, false, false);
+                            sideRenderer.drawFrame(frame, DRAW_X, DRAW_Y, false, false);
+                            if (!tailFirst) tail.drawFrame(tailFrame, DRAW_X, DRAW_Y, false, false);
                             if (sat) graphics.endSpriteSatCollectionAndReplay();
                         });
                         expected.patternVersions().forEach((id, pixels) -> assertEquals(pixels,
-                                combined.patternVersions().get(id), "donor tail pixels at " + id));
+                                combined.patternVersions().get(id), "donor tail pixels at " + id
+                                        + ", SAT=" + sat + ", tailFirst=" + tailFirst + ", bodyFrame=" + frame));
                     }
                 }
             }

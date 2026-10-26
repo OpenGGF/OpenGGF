@@ -50,8 +50,8 @@ public class SpindashDustController {
     private int splashTick;
 
     // Surface-emerge splash uses a caller-supplied renderer (e.g. ArtUnc_SplashDrown),
-    // keeping this controller game-agnostic. The reference is derived render state (not
-    // captured for rewind), matching the water splash above.
+    // keeping this controller game-agnostic. The internal effects snapshot retains
+    // this borrowed resource binding, not its mutable renderer/DPLC cache contents.
     private PlayerSpriteRenderer surfaceSplashRenderer;
     private boolean surfaceSplashActive;
     private int surfaceSplashX;
@@ -257,6 +257,46 @@ public class SpindashDustController {
         frameIndex = 0;
         frameTick = 0;
         currentFrame = DASH_FRAMES[0];
+    }
+
+    /**
+     * Engine-only fixed-Dust state, supplementary to the unchanged public four-field snapshot.
+     * S3K Sonic_InWater/OutWater select anim1; Obj_DashDust also retains anim4's
+     * world position, animation cursor and timer (LBZ launch loc_39AD2).
+     */
+    record EffectsRewindState(boolean splashActive, int splashX, int splashY,
+                              boolean splashFacingLeft, int splashFrameIndex, int splashTick,
+                              boolean surfaceSplashActive, int surfaceSplashX, int surfaceSplashY,
+                              int surfaceSplashAnimFrame, int surfaceSplashTimer, int surfaceSplashMappingFrame,
+                              PlayerSpriteRenderer surfaceSplashRenderer) {
+        private static final EffectsRewindState EMPTY = new EffectsRewindState(
+                false, 0, 0, false, 0, 0, false, 0, 0, 0, 0, SURFACE_SPLASH_FIRST_FRAME, null);
+    }
+
+    EffectsRewindState captureEffectsRewindState() {
+        // The surface renderer is a borrowed ROM-resource binding, not a controller
+        // or a copy of its mutable DPLC/pattern cache. PlayerSpriteRenderer owns its
+        // art/graphics references independently of the launching object's lifetime.
+        return new EffectsRewindState(splashActive, splashX, splashY, splashFacingLeft,
+                splashFrameIndex, splashTick, surfaceSplashActive, surfaceSplashX, surfaceSplashY,
+                surfaceSplashAnimFrame, surfaceSplashTimer, surfaceSplashMappingFrame, surfaceSplashRenderer);
+    }
+
+    void restoreEffectsRewindState(EffectsRewindState state) {
+        var value = state == null ? EffectsRewindState.EMPTY : state;
+        splashActive = value.splashActive();
+        splashX = value.splashX();
+        splashY = value.splashY();
+        splashFacingLeft = value.splashFacingLeft();
+        splashFrameIndex = value.splashFrameIndex();
+        splashTick = value.splashTick();
+        surfaceSplashActive = value.surfaceSplashActive();
+        surfaceSplashX = value.surfaceSplashX();
+        surfaceSplashY = value.surfaceSplashY();
+        surfaceSplashAnimFrame = value.surfaceSplashAnimFrame();
+        surfaceSplashTimer = value.surfaceSplashTimer();
+        surfaceSplashMappingFrame = value.surfaceSplashMappingFrame();
+        surfaceSplashRenderer = value.surfaceSplashRenderer();
     }
 
     public RewindState captureRewindState() {

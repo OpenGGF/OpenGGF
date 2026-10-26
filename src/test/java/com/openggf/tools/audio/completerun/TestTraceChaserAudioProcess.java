@@ -170,7 +170,8 @@ class TestTraceChaserAudioProcess {
 
         var invocation = observed.get();
         assertEquals(Map.of("PATH", "/usr/bin:/bin", "LC_ALL", "C", "LANG", "C",
-                "HOME", invocation.directory().getParent().resolve("home").toString()),
+                "HOME", invocation.directory().getParent().resolve("home").toString(),
+                "BIZHAWK_HOME", fixture.referenceHome.toString()),
                 invocation.environment());
         assertEquals("work", invocation.directory().getFileName().toString());
         assertFalse(Files.exists(invocation.directory().getParent()),

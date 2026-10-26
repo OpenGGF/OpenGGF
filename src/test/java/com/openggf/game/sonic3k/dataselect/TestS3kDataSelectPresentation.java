@@ -40,6 +40,7 @@ import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.TestSessionOutputPaths;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
+import com.openggf.tools.PresentationOffscreenTestContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -2656,7 +2657,9 @@ class TestS3kDataSelectPresentation {
     void visualCapture_selectedSaveSlotShowsRightBodyRail() throws Exception {
         File rom = RomTestUtils.ensureSonic3kRomAvailable();
         assumeTrue(rom != null && rom.exists(), "S3K ROM required for visual regression capture");
-        assumeTrue(glfwAvailable(), "GLFW unavailable for visual regression capture");
+        if (!PresentationOffscreenTestContext.requested()) {
+            assumeTrue(glfwAvailable(), "GLFW unavailable for visual regression capture");
+        }
 
         // The capture tool reads the ROM from this property. Restore it afterwards: the
         // surefire fork is reused, and a leaked value lets later tests that read the

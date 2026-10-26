@@ -6,6 +6,7 @@ import com.openggf.camera.Camera;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.runtime.CnzZoneRuntimeState;
 import com.openggf.level.scroll.AbstractZoneScrollHandler;
+import com.openggf.level.scroll.ScrollOutputRebuilder;
 import com.openggf.level.scroll.compose.DeformationPlan;
 import com.openggf.level.scroll.compose.ScrollEffectComposer;
 import com.openggf.level.scroll.compose.ScrollValueTable;
@@ -18,7 +19,7 @@ import com.openggf.level.scroll.compose.ScrollValueTable;
  * phase.
  */
 public class SwScrlCnz extends AbstractZoneScrollHandler
-        implements com.openggf.level.scroll.ScrollProjectionSource {
+        implements ScrollOutputRebuilder, com.openggf.level.scroll.ScrollProjectionSource {
 
     /** CNZ1_BGDeformArray: four finite bands followed by the remainder band. */
     private static final int[] CNZ1_BG_DEFORM = {0x80, 0x30, 0x60, 0xC0, 0x7FFF};
@@ -50,6 +51,20 @@ public class SwScrlCnz extends AbstractZoneScrollHandler
                        int cameraY,
                        int frameCounter,
                        int actId) {
+        buildOutput(horizScrollBuf, cameraX, cameraY, true);
+    }
+
+    @Override
+    public void rebuildOutput(int[] horizScrollBuf, int cameraX, int cameraY,
+                              int frameCounter, int actId) {
+        // Reconciliation rebuilds presentation from restored camera/zone state.
+        // CNZ1_Deform's Events_bg+$10/BG-copy publication is an ordinary native
+        // dispatch effect; retain even a captured pre-first-dispatch zero here.
+        buildOutput(horizScrollBuf, cameraX, cameraY, false);
+    }
+
+    private void buildOutput(int[] horizScrollBuf, int cameraX, int cameraY,
+                             boolean publishNativeState) {
         resetScrollTracking();
         composer.reset();
 
@@ -69,7 +84,7 @@ public class SwScrlCnz extends AbstractZoneScrollHandler
         composer.setVscrollFactorBG(bgY);
         buildNormalHScrollTable(cameraX);
         applyDeformation(horizScrollBuf, fgScroll, bgY);
-        publishNormalDeformOutputs(cameraX);
+        if (publishNativeState) publishNormalDeformOutputs(cameraX);
     }
 
     private boolean shouldUseBossScroll() {

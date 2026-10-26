@@ -3,10 +3,16 @@ package com.openggf.game.rewind;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.rewind.identity.ObjectRefId;
+import com.openggf.game.GameStateManager;
+import com.openggf.level.objects.TestObjectServices;
+import com.openggf.level.objects.boss.AbstractBossChild;
+import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.game.rewind.identity.RewindIdentityTable;
 import com.openggf.game.rewind.schema.CompactFieldCapturer;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.tests.TestSessionOutputPaths;
+import com.openggf.tests.rules.RequiresRom;
+import com.openggf.tests.rules.SonicGame;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossBlade;
@@ -43,6 +49,10 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.Mockito.*;
 
 class TestS3kHczEndBossGraphRewind {
 
@@ -107,6 +117,193 @@ class TestS3kHczEndBossGraphRewind {
                 "non-null required object references must still require registered rewind identities");
     }
 
+
+    @Test
+    @RequiresRom(SonicGame.SONIC_3K) // The defeated Ship now dispatches actual ROM-backed explosion children.
+    void identicalCoordinateFamiliesRestoreExactLinksAndForwardTwice() {
+        ObjectManager manager = familyWorld(null);
+        HczEndBossInstance bossA = familyBoss(manager);
+        HczEndBossInstance bossB = familyBoss(manager);
+        HczEndBossRobotnikShip shipA = manager.createDynamicObject(() -> new HczEndBossRobotnikShip(bossA));
+        HczEndBossRobotnikShip shipB = manager.createDynamicObject(() -> new HczEndBossRobotnikShip(bossB));
+        shipA.update(0, null);
+        shipB.update(0, null);
+        for (ObjectInstance head : named(manager, "HczEndBossRobotnikHead")) head.update(0, null);
+        ObjectInstance headA = linked(manager, "HczEndBossRobotnikHead", shipA);
+        ObjectInstance headB = linked(manager, "HczEndBossRobotnikHead", shipB);
+        invokeNoArg(bossA, "beginFleeSequence");
+        invokeNoArg(bossB, "beginFleeSequence");
+        bossB.getState().defeated = true;
+        ObjectRefId bossAId = id(manager, bossA), bossBId = id(manager, bossB);
+        ObjectRefId shipAId = id(manager, shipA), shipBId = id(manager, shipB);
+        ObjectRefId headAId = id(manager, headA), headBId = id(manager, headB);
+        RewindRegistry rewind = new RewindRegistry();
+        rewind.register(manager.rewindSnapshottable());
+        CompositeSnapshot snapshot = rewind.capture();
+        for (int cycle = 0; cycle < 2; cycle++) {
+            removeAllDynamic(manager);
+            rewind.restore(snapshot);
+            ObjectInstance restoredBossA = resolve(manager, bossAId), restoredBossB = resolve(manager, bossBId);
+            ObjectInstance restoredShipA = resolve(manager, shipAId), restoredShipB = resolve(manager, shipBId);
+            ObjectInstance restoredHeadA = resolve(manager, headAId), restoredHeadB = resolve(manager, headBId);
+            assertNotSame(shipA, restoredShipA);
+            assertNotSame(shipB, restoredShipB);
+            assertSame(restoredBossA, readObjectField(restoredShipA, "boss"));
+            assertSame(restoredBossB, readObjectField(restoredShipB, "boss"));
+            assertSame(restoredShipA, readObjectField(restoredHeadA, "ship"));
+            assertSame(restoredShipB, readObjectField(restoredHeadB, "ship"));
+            assertSame(restoredBossA, readObjectField(restoredHeadA, "boss"));
+            assertSame(restoredBossB, readObjectField(restoredHeadB, "boss"));
+            assertEquals(restoredShipA.getX(), restoredShipB.getX());
+            assertEquals(restoredShipA.getY(), restoredShipB.getY());
+            manager.update(0, null, List.of(), 1, false);
+            assertEquals(1, readIntField(restoredHeadA, "mappingFrame"));
+            assertEquals(3, readIntField(restoredHeadB, "mappingFrame"));
+            assertSame(restoredBossA, readObjectField(restoredHeadA, "boss"));
+            assertNull(readObjectField(restoredHeadB, "boss"), "END retires the unused native $44 read");
+            assertEquals(headAId, id(manager, restoredHeadA));
+            assertEquals(headBId, id(manager, restoredHeadB));
+        }
+    }
+
+    @Test
+    void familySurvivesExplicitRootRemovalAndRecreatesNativePendingDeleteTailTwice() {
+        PatternSpriteRenderer renderer = mock(PatternSpriteRenderer.class);
+        when(renderer.isReady()).thenReturn(true);
+        ObjectManager manager = familyWorld(renderer);
+        HczEndBossInstance boss = familyBoss(manager);
+        HczEndBossRobotnikShip ship = manager.createDynamicObject(() -> new HczEndBossRobotnikShip(boss));
+        ship.update(0, null);
+        ObjectInstance head = named(manager, "HczEndBossRobotnikHead").getFirst();
+        head.update(0, null);
+        boss.getState().defeated = true;
+        ship.update(1, null);
+        head.update(1, null);
+        boss.getState().routine = 16; // Declared component inlet: HCZ's native escape signal.
+        ship.update(2, null);
+        assertNull(readObjectField(ship, "boss"));
+        assertNull(readObjectField(head, "boss"));
+        // Declared READY target boundary; the word/fraction oracles live in TestShip.
+        ship.setPosition(ship.getX(), 0x40);
+        setIntField(ship, "yFixed", 0x0040BEEF);
+        ship.update(3, null);
+        ObjectInstance flame = named(manager, "HczEndBossRobotnikFlame").getFirst();
+        flame.update(3, null); // Actual Flame INIT, no draw.
+        // Deliberately remove the retained root to isolate independent Ship /
+        // Head / Flame recreation. Native flee completion now retains that
+        // hidden root; its actual terminal lifetime has separate world coverage.
+        manager.removeDynamicObject(boss);
+        // Isolate this family from separately tested capsule/camera/geyser responsibilities.
+        for (ObjectInstance object : List.copyOf(manager.getActiveObjects())) {
+            if (object != boss && object != ship && object != head && object != flame) {
+                manager.removeDynamicObject(object);
+            }
+        }
+        manager.update(0, null, List.of(), 1, false);
+        assertTrue(liveObjects(manager, HczEndBossInstance.class).isEmpty());
+        assertEquals(1, named(manager, "HczEndBossRobotnikHead").size());
+        assertEquals(1, named(manager, "HczEndBossRobotnikFlame").size());
+        assertFalse(ship.isDestroyed());
+        setIntField(ship, "timer", 0); // Independent native subq.w/bmi boundary.
+        ObjectRefId shipId = id(manager, ship), headId = id(manager, head), flameId = id(manager, flame);
+        int shipSlot = ship.getSlotIndex();
+        int headSlot = ((com.openggf.level.objects.AbstractObjectInstance) head).getSlotIndex();
+        int flameSlot = ((com.openggf.level.objects.AbstractObjectInstance) flame).getSlotIndex();
+        assertTrue(shipSlot < headSlot && headSlot < flameSlot);
+        RewindRegistry rewind = new RewindRegistry();
+        rewind.register(manager.rewindSnapshottable());
+        CompositeSnapshot snapshot = rewind.capture();
+        for (int cycle = 0; cycle < 2; cycle++) {
+            removeAllDynamic(manager);
+            rewind.restore(snapshot);
+            var restoredShip = (HczEndBossRobotnikShip) resolve(manager, shipId);
+            ObjectInstance restoredHead = resolve(manager, headId);
+            ObjectInstance restoredFlame = resolve(manager, flameId);
+            assertNull(readObjectField(restoredShip, "boss"));
+            assertNull(readObjectField(restoredHead, "boss"));
+            assertSame(restoredShip, readObjectField(restoredHead, "ship"));
+            assertSame(restoredShip, readObjectField(restoredFlame, "ship"));
+            manager.update(0, null, List.of(), 2, false);
+            assertFalse(restoredShip.isDestroyed(), "underflow only selects the next delete dispatch");
+            assertTrue((boolean) readObjectField(restoredShip, "pendingDelete"));
+            assertTrue((boolean) readObjectField(restoredHead, "pendingDelete"));
+            assertFalse((boolean) readObjectField(restoredHead, "visible"));
+            assertTrue(named(manager, "HczEndBossRobotnikFlame").isEmpty(), "Flame deletes in this pass");
+            int releasedFlame = manager.allocateSlotAfter(flameSlot - 1);
+            assertEquals(flameSlot, releasedFlame);
+            manager.releaseDynamicSlot(releasedFlame);
+            clearInvocations(renderer);
+            restoredShip.appendRenderCommands(new ArrayList<>());
+            restoredHead.appendRenderCommands(new ArrayList<>());
+            verify(renderer).drawFrameIndexForcedPriority(5, restoredShip.getX(), restoredShip.getY(),
+                    true, false, 0, true);
+            verify(renderer, atLeastOnce()).isReady();
+            verifyNoMoreInteractions(renderer);
+            CompositeSnapshot pending = rewind.capture();
+            int pendingX = restoredShip.getX();
+            removeAllDynamic(manager);
+            rewind.restore(pending);
+            var pendingShip = (HczEndBossRobotnikShip) resolve(manager, shipId);
+            assertEquals(pendingX, pendingShip.getX());
+            assertNull(readObjectField(resolve(manager, headId), "ship"));
+            manager.update(0, null, List.of(), 3, false);
+            assertTrue(liveObjects(manager, HczEndBossRobotnikShip.class).isEmpty());
+            assertTrue(named(manager, "HczEndBossRobotnikHead").isEmpty());
+            assertTrue(named(manager, "HczEndBossRobotnikFlame").isEmpty());
+            int releasedShip = manager.allocateSlotAfter(shipSlot - 1);
+            assertEquals(shipSlot, releasedShip);
+            manager.releaseDynamicSlot(releasedShip);
+        }
+    }
+
+    private static ObjectManager familyWorld(PatternSpriteRenderer renderer) {
+        TestObjectServices services = new TestObjectServices() {
+            @Override public com.openggf.level.objects.ObjectRenderManager renderManager() {
+                return new com.openggf.level.objects.ObjectRenderManager(null) {
+                    @Override public PatternSpriteRenderer getRenderer(String key) {
+                        return com.openggf.game.sonic3k.Sonic3kObjectArtKeys.ROBOTNIK_SHIP.equals(key)
+                                ? renderer : null;
+                    }
+                };
+            }
+        }.withConfiguration(DEFAULT_CONFIGURATION).withCamera(mockCameraAtOrigin())
+                .withGameState(new GameStateManager()).withGraphicsManager(GraphicsManager.getInstance());
+        ObjectManager manager = new ObjectManager(List.of(), new Sonic3kObjectRegistry(),
+                0, null, null, GraphicsManager.getInstance(), services.camera(), services);
+        services.withDirectObjectManager(manager);
+        manager.setRewindInPlaceRestoreEnabledForTest(false);
+        manager.reset(0);
+        return manager;
+    }
+
+    private static HczEndBossInstance familyBoss(ObjectManager manager) {
+        return manager.createDynamicObject(() -> new HczEndBossInstance(
+                new ObjectSpawn(0x100, 0x100, Sonic3kObjectIds.HCZ_END_BOSS, 0, 0, false, 0)));
+    }
+
+    private static List<ObjectInstance> named(ObjectManager manager, String simpleName) {
+        return manager.getActiveObjects().stream()
+                .filter(object -> !object.isDestroyed() && object.getClass().getSimpleName().equals(simpleName))
+                .toList();
+    }
+
+    private static ObjectInstance linked(ObjectManager manager, String name, ObjectInstance ship) {
+        return named(manager, name).stream().filter(object -> readObjectField(object, "ship") == ship)
+                .findFirst().orElseThrow();
+    }
+
+    private static ObjectRefId id(ObjectManager manager, ObjectInstance object) {
+        return manager.captureIdentityContext().requireIdentityTable().idFor(object);
+    }
+
+    private static ObjectInstance resolve(ObjectManager manager, ObjectRefId id) {
+        return manager.captureIdentityContext().requireIdentityTable().resolveObject(id, true);
+    }
+
+    private static void removeAllDynamic(ObjectManager manager) {
+        for (ObjectInstance object : List.copyOf(manager.getActiveObjects())) manager.removeDynamicObject(object);
+    }
+
     private static void assertAllReferencesPointAtRestoredGraph(HczGraph graph) throws Exception {
         assertSame(graph.boss(), readObjectField(graph.ship(), "boss"));
         assertSame(graph.boss(), readObjectField(graph.turbine(), "boss"));
@@ -126,8 +323,13 @@ class TestS3kHczEndBossGraphRewind {
                 "water column restore must relink the turbine back-reference");
 
         for (ObjectInstance child : graph.dynamicChildren()) {
-            assertSame(graph.boss(), readObjectField(child, "parent"),
-                    child.getClass().getSimpleName() + " must inherit the restored boss parent");
+            if (child instanceof AbstractBossChild) {
+                assertSame(graph.boss(), readObjectField(child, "parent"),
+                        child.getClass().getSimpleName() + " must inherit the restored boss parent");
+            } else if (child.getClass().getSimpleName().equals("HczEndBossRobotnikHead")) {
+                assertSame(graph.ship(), readObjectField(child, "ship"));
+                assertSame(graph.boss(), readObjectField(child, "boss"));
+            }
         }
     }
 
@@ -212,6 +414,7 @@ class TestS3kHczEndBossGraphRewind {
             column.update(0, null);
             invokeNoArg(column, "onSpinupComplete");
             only(objectManager, HczEndBossRobotnikShip.class).update(0, null);
+            named(objectManager, "HczEndBossRobotnikHead").getFirst().update(0, null);
             HczEndBossBlade blade0 = bladeBySubtype(objectManager, 0);
             setIntField(blade0, "currentX", 0x4140);
             invokeNoArg(blade0, "spawnSplash");

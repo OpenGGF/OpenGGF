@@ -259,17 +259,26 @@ public class TestPostLoadAssemblyBehavior {
     }
 
     @Test
-    public void s1ProfileHas6PostLoadSteps() {
+    public void s1ProfileAppendsSevenOrderedPostLoadStepsToFourteenCoreSteps() {
+        Sonic1LevelInitProfile profile = newS1Profile();
+        List<String> core = profile.levelLoadSteps(new LevelLoadContext()).stream()
+                .map(InitStep::name).toList();
+        assertEquals(List.of("InitGameModule", "ResetRng", "InitAudio", "LoadLevelData",
+                "QueueInitialPlcs", "InitAnimatedContent", "InitObjectSystem", "InitGameplayState",
+                "InitRings", "InitZoneFeatures", "InitArt", "InitPlayerAndCheckpoint",
+                "InitWater", "InitBackgroundRenderer"), core);
+
         LevelLoadContext ctx = new LevelLoadContext();
         ctx.setIncludePostLoadAssembly(true);
+        List<String> assembled = profile.levelLoadSteps(ctx).stream()
+                .map(InitStep::name).toList();
 
-        Sonic1LevelInitProfile profile = newS1Profile();
-        List<InitStep> steps = profile.levelLoadSteps(ctx);
-
-        // 12 resource steps + S1's v_misc_variables/RNG reset + native PLC
-        // lifecycle assembly + 6 post-load steps (no SpawnSidekick) = 20
-        // (InitObjectManager + InitCameraBounds merged into InitObjectSystem)
-        assertEquals(20, steps.size(), "S1 should have 20 steps (14 resource + 6 post-load)");
+        assertEquals(core, assembled.subList(0, core.size()),
+                "post-load assembly must preserve the complete resource prefix");
+        assertEquals(List.of("RestoreCheckpoint", "SpawnPlayer", "ResetPlayerState", "InitCamera",
+                        "InitBackgroundScroll", "InitLevelEvents", "RequestTitleCard"),
+                assembled.subList(core.size(), assembled.size()),
+                "S1 initializes native background scroll after the camera and before level events");
     }
 
     @Test

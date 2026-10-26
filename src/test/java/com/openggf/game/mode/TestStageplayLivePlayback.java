@@ -8,6 +8,7 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
 import com.openggf.control.LogicalInputSnapshot;
+import com.openggf.data.RomGame;
 import com.openggf.data.RomManager;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
@@ -18,6 +19,7 @@ import com.openggf.stageplay.StageplayControl;
 import com.openggf.stageplay.StageplayDocument;
 import com.openggf.stageplay.StageplayPlayback;
 import com.openggf.stageplay.runtime.StageplayNativeBinding;
+import com.openggf.tests.RomCatalogueFixture;
 import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
@@ -29,6 +31,7 @@ import org.junit.jupiter.api.parallel.Isolated;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 import static com.openggf.stageplay.StageplayDocument.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -58,14 +61,17 @@ class TestStageplayLivePlayback {
                 .withAudio(List.of(new AudioCue("music",0,AudioKind.ROM_MUSIC,"s2",130,"",1),
                         new AudioCue("ring",1,AudioKind.ROM_SFX,"s2",181,"",1)));
         var playback=new StageplayPlayback(scene,"hero",StageplayNativeBinding.FinishMode.RESTORE_ENTRY);
+        RomCatalogueFixture catalogue=null;
         try(var boot=new HeadlessGameBoot(320,224)) {
+            var sonic2=RomTestUtils.ensureSonic2RomAvailable().toPath().toAbsolutePath().normalize();
+            catalogue=RomCatalogueFixture.bind(config,RomManager.getInstance(),Map.of(RomGame.S2,sonic2));
             boot.setModuleDecorator(base->new DelegatingGameModule(base,"test:stageplay-live") {
                 @Override public GameplayFrameController gameplayFrameController() {return playback;}
                 @Override public List<com.openggf.game.rewind.RewindSnapshottable<?>> rewindAdapters() {
                     var adapters=new java.util.ArrayList<>(super.rewindAdapters());adapters.add(playback);return List.copyOf(adapters);
                 }
             });
-            var loop=boot.boot(RomTestUtils.ensureSonic2RomAvailable().toPath(),0,0);
+            var loop=boot.boot(sonic2,0,0);
             var runtime=SessionManager.getCurrentGameplayMode();
             // Complete real setup and the pending native entry-music publication before the cutscene borrows it.
             for(int frame=0;frame<180;frame++) {loop.step();HeadlessGameBoot.presentHeadlessOuterAudioFrame();}
@@ -116,7 +122,9 @@ class TestStageplayLivePlayback {
                 assertNull(audio.captureLogicalSnapshot().presentation().activeMusic());
             } finally {audio.endCaptureMode();}
         } finally {
-            playback.close();SessionManager.clear();RomManager.getInstance().setRom(null);
+            try {
+                playback.close();SessionManager.clear();RomManager.getInstance().setRom(null);
+            } finally {if(catalogue!=null)catalogue.close();}
             TestEnvironment.resetAll();config.resetToDefaults();GameModuleRegistry.reset();
             graphics.setViewport(oldViewport[0],oldViewport[1],oldViewport[2],oldViewport[3]);
             graphics.setProjectionWidth(oldWidth);graphics.setProjectionMatrixBuffer(oldProjection);

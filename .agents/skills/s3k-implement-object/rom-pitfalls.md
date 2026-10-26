@@ -2423,6 +2423,19 @@ ordinary sidekick init path; the landing routine writes Walk before Animate,
 and flight recovery writes Walk during its routine-4-to-6 handoff
 (`docs/skdisasm/sonic3k.asm:8143-8180,24365-24369,26671-26688`).
 
+**Fixed countdown ownership.** S3K `AirCountdown_Countdown` tests active `$30`
+before routine/shield/underwater guards; `loc_1857C` writes raw `anim=$17` on
+each active predeath pass. `AirCountdown_ReduceAir` writes the same byte after
+`Player_TouchFloor` at natural underflow (`sonic3k.asm:33530-33544,33579-33614`).
+Keep those publications in the fixed countdown owner. A common movement
+animation fallback may never execute under scripted object control. Preserve
+the mapping already selected by the player pass, then let the next ordinary
+player pass consume the ROM Drown script; do not force its mapping or restart
+animator history. `TestS3kFixedCountdownDrownAnimationOwnership` uses declared
+Blank and real natural air exhaustion to separate raw publication from later
+mapping for Tails and P1. Its component old-red/green is not a canonical writer
+observation or route certificate. See the existing dated HCZ audit R77–R80.
+
 **Originating commits.** `b18c254e3`; `<pending: S3K intro landing milestone>`.
 
 ---
@@ -3054,10 +3067,45 @@ never engaged, so the trace reported `x_speed 0x0400 vs 0x0300` — a player phy
 frames after the actual defect.
 
 **What to check, in this order.**
-1. Dump the fixture's `hardware_timing.jsonl` ordinals for the segment.
-2. Probe every engine `submitPrepared` with its ordinal, source and stack.
-3. Diff the two sequences. The first ordinal where they part is the missing producer; everything
-   after it is collateral.
+1. Inventory the existing canonical descriptors and completion edges separately for
+   physical module parents and direct children. Completion rows do not record native births.
+2. Observe actual successful production submissions with service/handle identity,
+   immutable ROM descriptor and caller. An attached last OUTSIDE clock is not a submit clock.
+3. Treat the first sequence disagreement as a producer question, then prove its native
+   branch and an independent component old-red. Do not infer a unique missing caller or
+   repair the complete offset by relabelling later ordinals.
+
+**Undrawn title art still has a real submission.** Obj_TitleCardInit queues four
+archives even for the two-label bonus banner. In the shipped locked-on Gumball
+entry, current/apparent `$1300` selects Num1 at `$53D` between Zone and Bonus;
+`Apparent_act` nonzero selects Num2. Do not derive work count from visible child
+count, omit the unused glyph, or fake readiness for a later matching descriptor.
+R23 observed three actual engine births at this owner; R25 independently failed
+its actual-ROM four-descriptor oracle and R28 passed all120 affected cases,
+including that oracle, after restoring the submission. The pending five-key partition restores/forwards
+twice, not whole-world/route parity. The separate97-case guard phase has one
+source-size failure and blocked the maintained route; neither the full remaining
+offset nor native birth timestamps/readiness were established. Source:
+skdisasm044fa46725c71187399e13f5ddb70e11d32dc024 Obj_TitleCardInit62143..62200,
+portal61952..61959; [existing owner record](../../../docs/architecture/plans/2026-10-13-s3k-playable-completion.md#r28-reviewed-native-bonus-number-affected-focus--2026-10-17).
+
+**Presentation, SST graph and terrain handoff are separate owners.** Native
+Level/loc_6310 -> LoadLevelLoadBlock queues bonus terrain after title/Nemesis
+readiness too (skdisasm044 :7793, :9737..9783). A plain bonus load must retain its
+existing captured title resource index without toggling a fresh-load flag that
+also enables an ordinary four-child SST graph; initializeBonus has two labels.
+Use actual active-bonus semantics, with onEnter before load/onExit before return,
+and preserve omitted(false)/initialization until the gate consumes that index.
+Prove the ROM primary/unique-secondary descriptor at VRAM0 through ordinary public
+entry; equal pointers deduplicate. Do not fit ordinals or infer jobs from eager
+CPU-decoded art. Observe initial TITLE_CARD and no pending request before calling
+LEVEL/card-complete/empty FIFO boot quiescent: otherwise a later origin title
+batch contaminates the component oracle. R34 clean old-red -> R36 five terrain/
+resource controls and145 focused cases qualify this component; recorded route,
+whole-world and full remaining ordinal difference do not follow. A water-only
+private-enter/immediate-private-exit fixture may pass its assertion while logging
+FIFO-full on both Main and candidate; attribute it with a matched method instead
+of waiving or changing the runtime queue. [Existing evidence](../../../docs/architecture/plans/2026-10-13-s3k-playable-completion.md#r37-qualified-component-preservation-and-inherited-warning--2026-10-18).
 
 **Do not** "fix" the consumer, and do not release the handle by relaxing the fingerprint match —
 that is the hardware-timing exception leaking outside its port. Find the unimplemented producer.
@@ -3544,6 +3592,19 @@ width byte, and the same default lives in the shared
 
 **Originating commit.** MGZ Sonic+Tails segment frame 4716 -> 10709; see
 `docs/status/trace-frontier-log.md`, 2026-08-15.
+
+**Full2 exception (HCZ R11, 2026-10-17).** Identify the actual helper before
+changing bounds. `Obj_HCZBlock` / `loc_1F3CA` (:43287–43297) calls
+`SolidObjectFull2`: its Player2 dispatch (:41091–41102) omits the player
+render_flags gate, and `SolidObjectFull2_1P` (:41105–41107) enters
+`SolidObject_cont` directly, bypassing the object's `loc_1DF88` gate
+(:41430–41434). Both require the existing object-local
+`bypassesOffscreenSolidGate()` capability, rather than wider geometry or a shared
+rule change. Calibrate an independent real-object checkpoint against an on-screen
+control: the object's initial first-dispatch guard can otherwise make every case
+red before either visibility gate is reached. R11's corrected controls distinguish
+P2-visible/object-offscreen from both offscreen, and twice-forced whole-world
+recreation/replay verifies the static capability survives normal reconstruction.
 
 ## P61 -- `swap` on a register `GetSineCosine` only word-wrote carries an inherited residue
 
@@ -4375,6 +4436,27 @@ Two consequences when implementing an S3K object:
   entry window. Anything that re-establishes the state *after* the entry-window scan is
   one scan too late.
 
+The same keep byte also covers `Ring_status_table`. Starpost bonus entry
+`loc_2D4CA` sets it before `Clear_SpriteRingMem` commits ring consumption
+(`sonic3k.asm:61954-61966,37983-38013`); Gumball `loc_61076` restores the origin
+without clearing it (`:127803-127814`). `sub_EB1A` skips the ring-table wipe
+when keep is set (`:18599-18616`), independently of the saved starpost index.
+Carrying only object bits or restoring the HUD count loses collected placements.
+
+Preserve both tables in the existing immutable respawn token. Object-window
+initialization can consume that token before ring initialization; the existing
+retained token for the later camera resnap must remain readable through InitRings.
+Apply ring bits immediately after reset and before touch/draw, without consuming
+the camera token or introducing another sticky keep flag. Keep the legacy giant-
+ring fallback and ordinary/death clearing independent. An empty capture restores
+nothing; a missing canonical placement must not masquerade as an uncollected bit.
+
+R88/R90 independently test natural input-driven acquisition before a public bonus
+request, saved return and final retained-bit assertion, plus a fresh-session
+ordinary reload that clears the bit. No cross-load snapshot, teleport, direct
+collection call, HUD-only oracle or current-route pickup attribution is involved.
+See the existing S3K completion Plan's R87-R90 evidence and bounded qualification.
+
 **Originating commit.** `<pending: S3K destroy-latch round trip>` -- AIZ1's rock at
 `(0x1D00, 0x04A9)`, smashed before the segment-0 giant ring, came back intact on the
 segment-2 return and blocked Sonic at `x = 0x1CDD` from frame 94. Chain frontier
@@ -4774,6 +4856,20 @@ injected background-collision provider independently. Do not equate foreground v
 background planes with primary vs secondary solidity paths. Covered by
 `TestSozPushableRock` with the service's focused-player path set secondary.
 
+The reciprocal player entry is distinct: Sonic_CheckFloor selects its collision
+array from the querying player's live top_solid_bit and supplies that bit to both
+FindFloor calls (pinned044 sonic3k.asm:19875..19927). Reverse sub_11FD6 retains the
+caller's live LRB bit through Sonic_CheckCeiling:20278..20311. Carry the selected
+bit and array through extension, regress and edge scans; keep FG/BG layout and
+provider translation independent. The legacy camera-focused object entry cannot
+stand in for this player contract. Independently vary player bits, camera focus,
+scan branch and gravity, and retain an object-default control. Equal probe XY or
+a helper distance does not identify the native winning tile or a route cause.
+Origin: FDF player-query component and local `8bcf0ab6`, 2026-10-18; its 113-test
+isolated qualification is a separate source epoch. Root's combined component
+lifecycle71445 subsequently passed379T0F0E0S; the maintained original route remains
+red, without a native winning-tile or route-cause attribution.
+
 
 ## SOZ1's entry lock requires a jump, not an idle delay
 
@@ -5064,8 +5160,11 @@ dispatch, because seeding the standing state hides a missing collision call.
 HCZ hand launcher ordering is the opposite of a fresh-contact grab check:
 `HCZHandLauncher_UpdateSolid` (sonic3k.asm:65864-65872) writes the final Y before
 its solid call; `HCZHandLauncher_TryGrabPlayer` (sonic3k.asm:66006-66008)
-reads the prior pass's retained standing bit. Capture that bit for rewind and
-preserve it when native/extension player bindings move. A pre-motion checkpoint
+reads the prior pass's retained standing bit. Query the authoritative solid
+manager latch: a later support's RideObject_SetRide clears the old object's
+status bit. A private boolean copied after a checkpoint misses that external
+clear. The manager already captures the latch and object/player identity for
+rewind; preserve grab ownership when native/extension bindings move. A pre-motion checkpoint
 both misses rising landings and changes grab/release timing.
 
 Drowning changes the primary player routine, not just control flags.
@@ -5074,6 +5173,19 @@ Drowning changes the primary player routine, not just control flags.
 when object control remains `$81`. A shared normal-control early return must
 not intercept that primary routine. Releasing a local controlling object or
 changing only the reported routine byte conceals the wrong dispatch owner.
+Select the primary routine before input publication, CPU steering and normal
+control side effects. Its fixed AirCountdown still owns the $78 lifetime and
+pending bubble/RNG burst. S1/S2 differ: their fixed countdown also owns the
+old-velocity move and $10 gravity, while the shipped FixBugs=0 player routine
+remains unchanged. Use a semantic profile, not a shared unconditional pre-death
+CPU return; that return blocks stale-state respawn and changes S2's native call.
+Test the actual next input consumer too: legacy forced-right priority is not a
+native logical word when both Left/Right must execute independently.
+A drowning CPU control needs an already-initialized native secondary state:
+constructor INIT legitimately writes a spawn position and is not proof of
+normal-routine steering during drowning. A controlled leader also blocks
+ordinary respawn. Use the native manual A/B/C/Start bypass for that physical
+case, or provide an eligible leader, and name which path was measured.
 
 ## Object deletion is not rider release
 
@@ -5515,6 +5627,18 @@ wait/publication/release/Init/delete markers, not just current visibility.
 
 Origin: 2026-10-14 Rhinobot parity slice over `6fc85aab8`.
 
+Saved continuation slots can later become fixed-point operands. EggRobo's shipped
+JSR at `$91518` is six bytes; Wait stores `$0009151E` at `$34`. `loc_91874` writes
+only the high Y word there, so `$36=$151E` survives into `sub_86180`'s long add.
+Replacing that partial write with a freshly cleared 16.16 anchor loses a real
+carry. Establish the residue from the actual caller address/instruction width at
+the continuation's initialization boundary, then preserve the existing captured
+field across restore. Test public motion at a literal carry and destructive
+replay on both sides of initialization. Do not transplant this return address
+into another caller/game or infer a route cause from the shared source omission.
+Origin: 2026-10-21 EggRobo waiter-fraction correction over `b078214e`; focused
+`TestSszEggRoboPresentation` component controls, not a native trajectory capture.
+
 
 ## Multipart SAT order and displayed scroll generation (2026-10-14)
 
@@ -5814,6 +5938,15 @@ an empty fresh-SST query alone does not prove completion. [Native graph and
 strict closure](../../../docs/architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#aiz-retained-resultstitle-sst-and-real-child-latches--2026-10-14).
 
 
+HCZ's carried reload uses the same `loc_2DD06`/Wait owner: an original-BK2
+instruction observer sees slot15 retain children16/18/19/20, the act child's
+final move still writes$34, the next parent clears it, and only the following
+poll clears rings. Carry the existing NATIVE_WAIT_GATE semantic intact through
+request normalization; clamping it to zero silently selects a countdown. A
+real allocation-hole component test restores/recreates every world key twice.
+[2026-10-17 HCZ observation and bounded closure](../../../docs/architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r4-retained-title-parent-and-child-movement-latch--2026-10-17).
+
+
 ## Same-SST code replacement must detach the obsolete Java handle
 
 Obj_HiddenMonitor loc_83760 changes the current SST to Obj_Monitor without
@@ -5983,6 +6116,512 @@ reshape the reference or fit the asset mapping to hide it. This table is S3K;
 the pointer-alias versus inferred-geometry lesson applies across games.
 Origin: Root Blue Sphere original-RGB mapping comparison,2026-10-17.
 
+
+## HCZ carrier targets and release-owned camera bounds
+
+`loc_6A80C` captures `Camera_X_pos + $A0` once in the carrier word `$3A`;
+`sub_6A916` compares that word on every swing pass. Persist the captured target
+for each native player and rewind it with that carrier. A camera move after
+capture is a useful disconfirming regression for a recomputed target; restore
+and forward-replay the actual manager/player/camera snapshots through release.
+
+`Change_Act2Sizes` stores HCZ2's sizes but explicitly skips applying HCZ's
+current X bounds. P1 release at `loc_6A8AE` creates `Child1_Act2LevelSize`, whose
+children own the later widening. An engine reload that overrides current X
+bounds must also retain the X easing targets until that owner runs; leaving the
+new level's targets active releases the lock early. Keep the real stored act-2
+sizes available to those children. This is an HCZ owner fact; the captured-read
+and current/target-bound distinction is reusable across games.
+Origin: retained HCZ repair `b6c4898e2`, merged with Root at `b9c1c8b3d`,
+2026-10-17; native owners verified in the locked-on disassembly.
+
+
+## Physical pointer replacement and literal allocation primitive at AIZ defeat
+
+A retained allocation cursor is insufficient if the Java flow still dispatches
+from a later auxiliary SST: a lower sign then misses its native birth-pass INIT.
+`loc_68C02` calls Obj_EndSignControl in the same physical a0; use the existing
+slot-transfer/replacement lifecycle, then beginNativeReplacement. Keep independent
+SongFade and subtype-$10 explosion controllers alive across that replacement.
+Wait_FadeToLevelMusic uses global AllocateObject, whereas the engine helper named
+spawnDynamicObject is AfterCurrent. Use existing spawnDynamicObjectLowestFreeSlot
+for this caller; a naturally freed lower hole must wait until the next scan.
+
+Follow tail calls through fallthrough writers: BossDefeated_StopTimer falls through
+BossDefeated, which writes literal$3F to$2E. The rejected 'invented63' hypothesis
+missed that writer. Preserve64 later decrement/branch passes, fresh$77 and results90;
+remove displaced-entry compensation only with the actual poll/physical owner.
+Full slot_dump can establish occupants that filtered object_state omits. Read the
+bound ObjectManager Vbla clock, actual phase/LF/execution/cursor independently;
+an unbound timing facade's0 cannot prove object timing.
+
+Origin: AIZ R3 on7ed6ba5b8,2026-10-17; skdisasm pin
+044fa46725c71187399e13f5ddb70e11d32dc024, sonic3k.asm137287–137292,
+137455–137458,137826–137869,179742–179759,180900–180913. The physical dispatch,
+allocator-name and fallthrough lessons apply across games. Native debris/full-SST
+and the alternate's newly exposed ring1/2 frontier remain separate unqualified
+obligations; see the existing AIZ2 matrix's R3 record.
+
+
+## Freed animals consume a previous render flag, with zero render height
+
+R5 AIZ allocation attribution (2026-10-17) found ordinary subtype0 Obj_Animal
+in native SST5 retiring9375 while the engine kept the same animal until9418.
+That occupied a hole later used by PathSwap, decor and camera-worker owners;
+changing the allocator or fitting ring phases would hide the wrong lifetime.
+
+At skdisasm044fa46725c71187399e13f5ddb70e11d32dc024, loc_2C9E0 polls
+render_flags bit7 before MAIN motion; loc_2CA68/loc_2CAD0 poll after walk/flight
+work. Init draws and returns first. Render_Sprites (36376–36417) publishes the
+bit from copied camera words: signed16 X, width8, rightedge0 inclusive and
+leftedge320 excluded. Animal init writes collision y_radius=C but leaves
+height_pixels=0, so Y is centre-only: unsigned `(y-copyY)&Screen_Y_wrap_value`
+must be below224. S2's approximate32px band and a fresh64px lifetime margin
+are different contracts. Keep the flag and first-init scalar captured through
+recreation; do not recompute the prior flag while restoring a world.
+
+The independent component uses real allocation and ROM terrain for natural
+pop/landing/flight and next-pass hole reuse, copied-camera/vertical-wrap edge
+cases, and twice forced whole-world recreation/forward replay. Shared nonzero
+animal subtypes have additional player-relative branches; ending/capsule animal
+owners are separate. Neither is certified by the subtype0 correction.
+
+
+## Child_DrawSprite2 lifetime is separate from defeated-parent touch gating
+
+AIZ normal body/arm/three barrels remain live through the defeated parent's
+64-pass fade wait. Child_Draw_Sprite2/Child_DrawTouch_Sprite2 consume parent38
+bit4, install Delete_Current and clear on the next own SST entry. Status7 only
+suppresses body touch; loc_686E8 still runs Animate_Raw, while loc_68C12 runs its
+own barrel routine and may create a flare/FallingShot even on the flag-observing
+replacement pass. A formerly immediate parent cleanup can mask both wrong gates.
+
+Use a captured physical parent slot and only known consumed x/y/render/$38/status
+fields across same-slot control replacement, with native bclr1 supported before
+the tail. Do not retain an unregistered Java boss or fabricate unknown full RAM.
+FallingShot runs its own INIT/motion before reading physical grandparent status7;
+a final-pass birth needs that same retained-header contract. Test active routine
+work as well as occupancy, naturally allocated holes, pending deletion and twice
+forced whole-world recreation before/after replacement. A default Sonic scene
+cannot qualify the Knuckles-only natural barrel activation branch.
+
+Origin: AIZ R7,2026-10-17,skdisasm044fa46725c71187399e13f5ddb70e11d32dc024,
+loc_686E8/68720/68C12,Child_Draw*Sprite2,Go_Delete_Sprite_2,Obj_EndSignControl.
+Independent body/barrel red-first controls and the AIZ2 matrix record the exact
+line ranges, rejected inlet assumptions and bounded replay closure. No allocator,
+ring phase or general boss-dispatch rewrite follows from a later slot mismatch.
+
+
+## Bumper score credit, popup allocation and the zero-respawn branch
+
+`sub_32F56` / `loc_32FC4` (locked-on `sonic3k.asm`, pinned skdisasm
+`044fa46725c71187399e13f5ddb70e11d32dc024`) tests the `$8A` hit-credit cap
+only when `respawn_addr(a0)` is nonzero. A zero address branches directly to
+`HUD_AddToScore`, then `AllocateObject`; allocation failure loses the popup,
+not the score. An unconditional Java ten-hit counter does not model that path.
+The popup receives the bumper centre and mapping frame4. Existing S3K points
+must also carry `Obj_EnemyScore`'s priority `$80` (bucket1) separately from
+`make_art_tile(ArtTile_StarPost,0,1)`'s high plane bit; ROM-backed mapping art
+alone does not override the render consumer's object header defaults.
+Origin: 2026-10-17 bounded Pachinko popup producer task over Root28fd18de8;
+real-contact old-red and twice-recreated whole-world lifetime evidence are in
+`docs/architecture/validation/levels/s3k-bonus-stage-transitions.md`.
+
+
+## Encoded collision word pointers can select ROM or adjacent resident assets
+
+Find_Tile_BG/FG ($EFB6/$EFF0, sonic3k.asm19151–19201) adds unsigned word X>>7
+to an encoded layout pointer, then MOVEA.W sign-extends the selected byte
+address.0000–7FFF selects ROM, not FF0000 RAM. After reading that byte, the
+separate ChunkAddrArray calculation deliberately retains D1's FFFF upper word
+for128×128 definition RAM. Do not merge these two address-space operations.
+A zero row pointer may therefore read current ROM bytes; width modulo, an empty
+row default, and treating every word as RAM can all yield plausible wrong data.
+
+A negative column can instead spill from layout8000–8FFF into live16×16 data
+at9000. The selected128×128 descriptor may come from a prior level's unwritten
+destination tail: HCZ2's shorter load preserves HCZ1's703E=0179. Trace both ROM
+producers and exact write extents; a cold target load cannot prove residency.
+Use immutable production asset carry and coherent map/definition mutations,
+with per-game restoration metadata and two forced whole-world replay controls.
+Observation RAM and trace rows never supply gameplay bytes. Unknown regions
+remain explicit limits. The reviewed safe ROM refusal was hit by the original
+route before HCZ; supporting aliases requires current-ROM pipeline ownership,
+not hardcoded observed zeros. Origin: HCZ R9/R10, e757 epoch, dated trace audit.
+
+
+## Slot row preparation is not VInt_DrawLevel publication
+
+`Slots_BackgroundEvent` (skdisasm044fa46725c71187399e13f5ddb70e11d32dc024,
+sonic3k.asm:119193 onward) starts with +$400 and takes `bpl` even for zero.
+Its `sub_4ECAA` rows prepare Plane_buffer_2. The visible row copy belongs to
+VInt_DrawLevel after Process_DMA_Queue/SpecialVInt_Function; next scroll update
+is not an equivalent publication boundary. DMA-only lag and output rebuild do
+not provide DrawLevel authority. Reusing the same physical service token must
+also reject work queued after its first service, not merely an empty queue.
+
+Capture pending and published visible data together. A scalar-only snapshot can
+restore the queue but replay from a later Plane B, failing complete-world forward
+equivalence. Use the existing plane capture/restore owner and immutable/COW
+values: retain the initial baseline and replace it after real writes, invalidating
+on actual manager/level/runtime identity. Defensive accessor clones alone should
+not cause an entire retained-plane copy in every rewind tick. Test unchanged
+value reuse, caller mutation and two forced world cycles around both boundaries.
+Origin: bounded Slot R2 over Roote8f2,2026-10-17; exact native phase controls,
+rejected next-update draft and original-RGB residuals are in the existing bonus
+transition validation matrix. No claim of complete RGB parity follows.
+
+
+## Slot cell order and opaque black require different checks
+
+Native Slots_RenderLayout/sub_4B490 (skdisasm044fa46725c71187399e13f5ddb70e11d32dc024,
+:98271–98343) appends row-major cells to the linked SAT. Earlier opaque pixels
+win. Slot's non-SAT direct painter must traverse cells in reverse while preserving
+PatternSpriteRenderer's existing piece traversal within each frame. A correct
+within-frame reversal does not fix inter-cell ordering. Nonzero palette indices
+remain opaque even when CRAM maps them to RGB black; only pattern index0 is
+transparent. Retained native row1017's SAT13/14 $63E4 black/blue overlap is the
+concrete witness. Map_SB_ColoredWall frame11, not1, supplies $A9+$33B=$3E4.
+
+An actual-ROM GPU test must flush its pattern batch and distinguish requested
+fade clear from displayed CRAM publication. A magenta clear plus controlled
+nonzero black/blue palette makes opacity explicit without treating fixture
+setup failure as the intended old-red. Keep capture comparison in the original
+pixel domain: this bounded correction recovers137 pixels across five fixed
+pictures, while the larger578/267 components remain unchanged and unattributed.
+Origin: Slot R3/R4,2026-10-17 over670cf; exact failed setup, genuine old-red,
+source hashes and residual limits are in the existing bonus validation matrix.
+
+
+## Results wait assertions must follow the production handoff
+
+`loc_2DCC0` writes literal90 before falling through into
+`Obj_LevelResultsWait2` (skdisasm044fa46725c71187399e13f5ddb70e11d32dc024,
+sonic3k.asm:62715–62730). After physical EndSignControl ownership is modeled,
+a test must not reflect a removed compensation constant or manufacture a
+results object with the former13-entry adjustment. Start the declared
+production EndSignControl component, let normal allocation/signpost/art/tally
+reach Wait2, then observe its first fallthrough, retained89th entry and90th
+transition without private timer/routine writes. This is a test migration, not
+a reason to retune the literal runtime wait. Origin: bounded R5 smoke repair,
+2026-10-17; actual production inlet passes, existing full fatal/handoff replay
+coverage remains qualified only at its recorded R7 epoch.
+
+
+## Resident pattern provenance is not decoded chunk capacity
+
+ICZ1BGE_Transition on skdisasm044fa467 calls Load_Level (layout-only copy), then
+LoadSolids (current collision pointers); neither clears Block_table. A deferred
+constructor may decode129 entries while retained128 definitions reference687,
+causing validation to allocate688 Chunks. Those empty placeholders are not ROM
+pattern writers. Carry only known native8byte groups within Block_table1800bytes,
+apply target ROM writes over them, and decode with target collision tables rather
+than copying predecessor metadata. Keep unknown gaps distinct from real zero writes.
+
+Provenance must follow geometry COW, collision-only updates, value snapshots and
+whole-world restore. An owned688-entry opaque snapshot temporarily overlaid to718
+must restore its saved extent too: prefix-only restore leaves temporary717 falsely
+known. Preserve external full-state prefix semantics separately. Private geometry
+markers and immutable sparse values can avoid changing public snapshot contracts.
+Async prepared builds lack predecessor identity/generation; do not silently reuse
+this synchronous inlet there. ICZ R11 (2026-10-17,077767+repair) proves the handoff
+and opaque counterexample with independent old-reds and twice-restored replay;
+see the existing ICZ1 matrix. No trace/observation bytes supply gameplay assets.
+
+
+## Cached offscreen release can preserve the object's standing latch
+
+HCZSpinningColumn sub_32784/loc_327FC checks the held player's cached render_flags
+sign before routine and standing. loc_328AC sets Air/priority100/control0;
+loc_328BE clears only held. Neither release clears OnObj or velocities. Active
+!standing branches directly to ClearHeldFlag, preserving control; inactive
+capture checks only this column's standing bit, with no positive-control3 gate.
+SolidObjectFull's offscreen P2 return precedes Full_1P, retaining native standing
+without publishing a new contact callback (skdisasm044fa46725c71187399e13f5ddb70e11d32dc024,
+sonic3k.asm sub_32784/loc_327FC/loc_328AC/loc_328BE and SolidObjectFull).
+
+Use the existing managed hasObjectStandingBit(player,this) for that native bit,
+not callback freshness, player-only OnObj or another object's sticky interaction.
+Keep unmanaged callback compatibility separate. Do not reuse a generic release
+that clears OnObj, reject retained positive control on inactive capture, or
+recalculate fresh visibility to bypass the existing cache-validity contract.
+Changing control bit1 may release its engine mapping-ownership projection while
+preserving the last published mapping/animation values.
+
+
+Retaining the native standing bit does not make an airborne offscreen rider a
+floor for pre-movement support recovery. SolidObjectFull_1P's Air branch returns
+through loc_1DC98; the earlier cached-P2 skip can leave that branch unconsumed.
+The column must opt into the existing airborneStaleStandingBitReturnsNoContact
+capability so the existing offscreen support filter preserves the next airborne
+player dispatch. Do not repair its consequence by freezing a global timer or
+changing CPU/facing arithmetic. Origin: R38 independent real-bubble/column
+old-red (final next-player lock35/34 after all forced-world controls), R39 local
+capability and R40 affected76green; R41 remains strict-red at11920.
+
+An object-only component setup can also reach the correct offscreen CPU despawn
+branch before its intended physics oracle: actual stored interact0 versus live
+column code word3, despite a real standing record. If the scenario requires a
+previously observed visible ride, express one ordinary visible CPU slot before
+the held/offscreen-release boundary and assert its stored projection. Do not
+seed or refresh the CPU latch through a setter, suppress the mismatch, move the
+leader to fit a guard, or reinterpret CATCH_UP as an ordinary movement result.
+
+Prove capture through real factory/allocation/SST FullSolid contact, visibility
+through the actual copied-camera/body publisher, and whole-world recreation/
+forward replay before visibility flip and after release/recapture. Manual
+onSolidContact tests alone miss this retained managed latch. Origin: HCZ R18
+owner witnessdf2bbf, R19 genuine oldred57dd6a035 and R20/R21 local qualification,
+2026-10-17; existing dated trace audit/HCZ2 matrix record strict residual limits.
+
+
+## A special animal caller can own launch mode and render flags
+
+EggRobo loc_915F6 → ChildObjDat_919E6 → loc_917C0..9181C (skdisasm
+044fa46725c71187399e13f5ddb70e11d32dc024, sonic3k.asm198614..198638/198774..198819)
+does not call the generic MAIN pop initializer. Its own child dispatch uses one
+full Random_Number: lowbit selects fixed word_2C7EA Rabbit/Chicken, original high
+word gives negative max(100,high&1FF), parent renderbit0 signs X, and frame1/
+routine4or6 draws once without translating. SetUp_ObjAttributes only sets bit2,
+so a parent conversion does not erase the consumed facing bit. Native flags5
+keeps render hFlip set for BOTH velocity signs, beyond the deferred RNG gate.
+Persist the semantic mode/profile/facing, not a fixture slot or Java parent link.
+
+Keep existing RNG-free recreation constructor selection intact: adding a longer
+constructor with required enum arguments can make generic default-argument
+recreation pass null. Existing private mutable enum/scalar codecs can preserve
+pending-before-own-init and already-initialized state without a snapshot/API change.
+Test both snapshots with forced whole-world recreation/forward replay, no redraw,
+and actual renderer arguments plus generic POP negative. An independent parent
+component proves its callback by construction; matching source coordinates in a
+campaign pool does not prove that campaign child's unique parent or retirement
+branch. R29 (2026-10-17) closes this launch unit, while original colddeath49613
+still blocks the campaign. Keep its first post-fix producer question separate.
+
+
+## A scene-owned layout clear is not decoder truncation
+
+DEZ3 Load_Level copies a full `$1000` layout bytes from ROM; the actual layout
+asset is `$F8` bytes and the following MHZ asset contributes nonzero tail bytes.
+DEZ3_ScreenInit then multiplies unsigned header words (20*4+8*4 decimal), keeps
+the low-word sum plus `$88`, and clears `$FF80F8..$FF8FFF` with inclusive DBF.
+Missing that separate owner can select following-asset bytes through valid native
+word row pointers. Preserve the full initial copy and put the clear once in the
+scene event, synchronizing encoded COW and flattened mutation aliases. Global
+loadMap truncation, visual-width wrapping or blanking collision profiles hides
+the missing writer. SensorResult.tileId is a collision-profile index, not a raw
+layout/128/16 descriptor. Retained16 patterns still use the destination LoadSolids
+bank (`$09CFC0/+1` for final DEZ), never predecessor indices.
+
+Qualify a real first production ScreenInit, preserve meaningful prefix/resources,
+then force two whole-world recreations/forwards and a later legitimate terrain
+edit before discriminating all tail bytes. Do not infer definition0 emptiness or
+native route equality from a clear or a successful authored route. The separate
+native four alias-word writes remain unimplemented. Origin: DEZ final residency/
+first-difference task,2026-10-17; see existing trace audit and final-boss matrix.
+
+
+## Literal CPU status writes preserve independent body and physics fields
+
+S3K Tails_FlySwim_Unknown (pinned044 sonic3k.asm:26574–26588) and S2
+TailsCPU_Flying (pinned34fc s2.asm:39142–39155) both write literal status02
+at the offscreen300-update timeout. Ordinary steering may legitimately face
+LEFT, and the on-screen branch only ORs InAir. A timeout that merely sets Air
+therefore retains status03 even though its integer-position marker is correct.
+
+Project the literal status through existing status-only operations: clear roll
+without restoring radii, clear underwater without restoring water speed constants,
+and clear rollingJump/OnObj/push/facing. Do not call generic setRolling(false),
+setInWater(false), a floor/ride reset or a global facing correction. The existing
+push setter clears derived push bookkeeping; it does not scan geometry.
+
+An independent component oracle can start at the public routine4 bootstrap with
+timer0, let299 actual updates establish LEFT, then check the native full-status
+write after update300. Keep the initial status fields declared independently of
+recorded rows; preserve ordinary/on-screen/handoff controls. Local sprite/CPU
+restore-forward coverage is not whole-world recreation or the actual route
+caller's witness. Origin: HCZ R43/R44 genuine S2/S3K status02/03 old-red after
+two local replay cycles per case; R45 timeout-only projection, R46 exact156green
+including separate declared7F/radii/water controls, R47 strict first13322.
+
+
+## Restore the producer before rebuilding its retained publication
+
+A saved Camera shake value is insufficient when post-restore parallax rebuild
+publishes an uncaptured mutable scroll handler. HCZ2 wall-chase shake/offset
+state belongs to SwScrlHcz; restore that private value through its existing
+capture/restore contract before derived reconciliation. An event's cached wall
+reference must then bind to the unique actual managed wall after ObjectManager
+recreation, without advancing the event or assuming the first arbitrary actor.
+Native044 HCZ2_BackgroundInit/HCZ2_BackgroundEvent/HCZ2_Deform own normal updates;
+rewind must reproduce those owners, not seed native clocks or published values.
+
+Prepared presentation equality can still fail when fixed player effects retain
+uncaptured producer state. Keep the published snapshot/API contract separate
+from an engine-owned supplementary immutable value, and bind it to the actual
+restored roster/controller. A borrowed ROM renderer resource is an identity
+binding, not a copy of its mutable art/cache; qualify that lifetime separately.
+Do not add cache snapshots, drop full-world keys or assign a draw caller from
+pattern ranges alone. Origin: HCZ R56 genuine joint red, R58 two-owner partial,
+R60 scalar witness, R61 supplementary owner and R62 unchanged joint142-case
+focused green (2026-10-18); existing dated trace audit/HCZ2 matrix retain limits.
+
+
+## Native object deletion can retain held player fields
+
+Do not reuse an ordinary player-release helper merely because an object unloads.
+HCZ native044 loc_30C76 calls Sprite_OnScreen_Test then Delete_Referenced_Sprite:
+only the object's $4A-byte SST is cleared, without player status/control/pose or
+interaction writes. Retire the engine object's native grab/standing/owner
+references without clearing the players. Keep explicitly tested extra-player
+extension cleanup separate; that engine policy need not become a native rule.
+
+Prove the lifecycle through ordinary managed ROM birth, SolidObjectTop capture,
+a real visible CPU latch update and manager range unload, with recreated-world
+and same-input forward controls before the final native oracle. A prior restore
+prerequisite failure is not an unload old-red. Origin: HCZ R64's genuine eight
+native control/status leaves after all four world cycles, sole local Hand817c,
+R66 exact149-green focus; existing dated audit and HCZ2 matrix retain the route,
+post-delete ride/freed-SST marker and actual native-caller limits.
+
+
+
+## Semantic interior-return cause belongs immediately before the actual load
+
+A bonus exit request/fade is earlier than its saved-origin synchronous load.
+After prepareReturnLoad succeeds, mark the existing interior-return load cause
+immediately before loadZoneAndAct; the successful receipt publication consumes
+that cause once. Do not mark method entry, null-saved-state fallback or ordinary
+loads. Prove natural public bonus entry/exit/title release/new generation/history
+retirement before the final cause oracle, then independently load another ordinary
+level to reject cause leakage. A green component does not serialize the receipt
+from an earlier failed route, or waive coordinator mode/title/readiness gates.
+
+Origin: bounded FDF R40–R45,2026-10-18, GameLoop529012/test74f65. Actual original
+Mega progress into returned AIZ ends in a separate KosM FIFO-full exception; the
+incomplete reports and unmatched completions are not native producer-birth proof.
+See the existing playable-completion Plan for exact epochs and stopping boundary.
+
+
+## An exited bonus provider cannot identify the saved-origin terrain load
+
+GameLoop calls the bonus provider's onExit before the synchronous saved-origin
+reload; activeType is already NONE. The existing checkpoint-derived bonus-return
+signal remains true during that load and is cleared finally. Use that semantic
+signal to arm the existing title terrain handoff. Do not turn the entire load
+into a fresh-runtime context: that can also install the ordinary four-child SST
+graph where a bonus owner has its own graph. Preserve ordinary host-load negatives.
+
+A title can mark terrainStarted before its publisher returns for a missing handoff
+index; that boolean alone proves no ROM queue submission. Require real public
+entry/return/title/Nemesis/history/receipt prerequisites and independent ROM
+primary/secondary descriptors before the final oracle. Fresh cached descriptor
+reads do not qualify a memoizing getter after rewind; retain full FIFO context.
+A component old-red-to-green and fresh guards do not prove current route submit/
+lease-consume/service timing or reassign historical physical occupants to a new
+source epoch. Native044 Level saved path7575..7577 -> loc_6310/LoadLevelLoadBlock
+7793/9737; Knuckles/AIZ1 selects table26. Origin: FDF R51–R57,2026-10-18,
+LM b36ebe/testfbb120,144 affected+99 guards green; original AIZ2 FIFO error and
+unvisited SS/FDF limits remain in the existing Plan/caller audit/frontier.
+
+
+## Saved-origin return title ownership is separate from fresh-load art eligibility
+
+Native044 saved restore7575..7577 reaches loc_62B6 at7762..7767, installing the
+fixed SST8 Obj_TitleCard; loc_64DC7906..7910 retains the same parent into Wait2.
+The ordinary saved-origin public load need not carry queueFreshLevelRuntimeArt.
+Use its existing synchronous bonus-return semantic signal for this narrow
+installer eligibility, preserving FULL/include-post/assembly, every exclusion,
+and the existing graph/owner code. Do not turn the whole load fresh to install
+this owner: art submission and the SST graph have distinct admission contracts.
+
+Make an absent expected graph the final oracle after real return prerequisites,
+not a seeded object or an early prerequisite that prevents the old-red. Retained
+destroyed references are history, not physical live SST. Outside sampled drained
+children/retired parent/consumed lease can support a public component test but
+do not identify an in-service consume callback or explain current route FIFO
+occupants. Origin FDF R58–R63: genuine unchanged503-line public-return test,
+168 affected/99 guards green; original Mega FIFO error and20 unmatched timing
+identities remain. See the existing playable-completion Plan for source epochs.
+
+
+## Event admission, object arming and raw PLC work have separate owners
+
+CNZ2 native044 `loc_5216C` admits actual Player_1 Knuckles at centre X >= `$4880`,
+Y >= `$B00`. This is earlier than `Obj_CNZTeleporter`’s `$4A38/$4A40` arm and
+airborne overshoot rule. Do not use a route-active flag or focused CPU to widen
+that object gate. Retain the two actual allocation results: the capsule searches
+after the teleporter’s slot, and only its success appends raw PLC `$083D74`; both
+failures still advance FG4 and publish the clamp.
+
+Keep arbitrary preceding FIFO descriptors/progress/order in the producer oracle.
+An empty-queue prerequisite can fail before reaching the question. Independent
+raw ROM count/source/destination/header values establish the expected append;
+readiness-only title/results drains do not prove ordinary Nemesis art publication.
+Check descriptor capacity before allocating/decoding rejected work. Ordinary
+service is after queued DMA and NemInit follows animated tiles; a producer-only
+pass leaves those stages, renderer refresh, world ownership and full-capacity
+retained-slot behavior open. Origin: Root2026-10-18 CNZ2 admission/raw-producer
+old-red/control gates, existing playable-completion Plan and CNZ2 coverage matrix.
+
+
+## Native second-player damage ownership is independent of CPU input
+
+Pinned044 HurtCharacter (sonic3k.asm:21101..21153) selects the non-competition
+secondary-player hurt tail by native slot before checking rings. S2 has the same
+ownership distinction (s2.asm:85604..85670). Use the actual first
+playerQuery.nativeP2OrNull identity with the existing companion-support and touch
+profile contracts; changing CPU input ownership does not turn that actor into P1.
+Do not reroute its whole touch pass: overlap, attack, listener, protection and
+damage-cause decisions retain their own owners. Keep P1, extra/unregistered
+actors and MAIN_ONLY profiles distinct; competition needs an explicit contract.
+
+A real candidate list alone does not prove damage eligibility. Render-gated
+hazards require ordinary managed execution to establish their visibility and
+first-touch state, independent ROM overlap geometry and actual roster binding.
+Public touch-disabled preparation can establish those prerequisites without
+prior damage; do not privately prime visibility or clear hurt/death. Origin:
+HCZ real-manager/ROM old-red and local `dae6c29e`, 2026-10-18. Its 195-test isolated
+qualification covers both P2 input variants and bit7/P1 controls. Root's combined
+component lifecycle71445 subsequently passed379T0F0E0S; the original route, native
+row 442 caller, competition and extra-player breadth remain unqualified.
+
+## Packed art scaling samples bytes, with a separate partial-tail boundary
+
+`sub_246DA` advances byte offsets, then masks alternating high/low nibbles.
+For modified scale 8, `loc_24984` merges HIGH(byte0)|LOW(byte1): literal
+`12 34` becomes `14`, not `13`. Modified 9 skips every ninth source byte;
+the smaller specialized branches mix whole-byte copies and nibble merges.
+Do not replace them with a pixel-coordinate sampler.
+
+Only `sub_24802` clears the just-read sample after ADD/ADDX makes the NEW
+byte index reach `$40`; `loc_2479C` full blocks retain that last sample.
+Both stock MGZ and EggRobo source banks duplicate every byte's nibbles,
+concealing interior nibble mistakes. At original scale `$7C`, MGZ row 16
+bytes `00/44/55/BB` at offsets `0/16/32/48` still produce `04 50`, not `04 5B`,
+because the fourth sample is cleared. Use literal instruction controls and
+separate full-block/tail tests; a second coordinate formula or an unexplained
+output CRC is not an independent oracle. Origin: packed-scaler correction,
+2026-10-20; `TestMgzEndBossArtScaler` and the MGZ2 coverage matrix. The Java
+caller is MGZ only; this does not establish an SSZ producer or scene parity.
+
+## Shared animation owners can advance after an SST copied their frame
+
+`loc_1A75C` (sonic3k.asm:35664–35667) and `loc_1A7E8`
+(sonic3k.asm:35715–35718) copy `Ring_spill_anim_frame` into `mapping_frame(a0)`
+before motion. `LevelLoop` later calls `ChangeRingFrame` before `Render_Sprites`.
+A converted attracted ring must retain its conversion mapping until its first
+actual bouncer dispatch, then capture the shared scalar on every such dispatch.
+Reading the live shared owner while drawing selects the following animation
+phase. Advancing global spin without another SST dispatch, paused drawing and
+registered destructive restore must all preserve the copied frame. Ordinary
+legacy approximations are a separate contract. Neither existing attracted-ring
+routine has a P1-dead gate; do not copy a host helper's early return into the
+native per-slot producer without checking that branch.
+Origin: native sprite/ring phase follow-up to `323239a13`, 2026-10-22; both ROM
+copy instructions independently verified as `11 78 FE B7 00 22`.
+
+
 ## Rejected monitor contents have neither an icon nor a reward
 
 `Obj_MonitorSpawnIcon` (sonic3k.asm:40685-40710) attempts contents first and
@@ -5998,3 +6637,20 @@ Use real manager pressure for zero, one and two free tail slots and capture befo
 another object dispatch. Do not weaken the reference codec or replace the bridge
 solely to change its spelling. Origin: 2026-10-24 monitor admission audit,
 `529b348aecf8884c0677f12c6aa64583883ffe81`.
+
+
+HCZ Act 2 carrier targets are captured words, not live camera expressions.
+`loc_6A80C` (sonic3k.asm:140086-140100) stores camera X+$A0 once;
+`sub_6A916` (sonic3k.asm:140178-140196) reads that word after the camera moves.
+Retain it per native participant and include it in registered event rewind.
+A direction test against the live camera can reverse at equality and change
+acceleration even when player velocities are suppressed by object control.
+
+
+HCZ water skim receives the current logical controller word.
+`HCZWaterSplash_CheckSkimPlayers` (sonic3k.asm:75408-75424) loads d5 separately
+for P1/P2; `HCZWaterSplash_UpdateSkimmingPlayer` (sonic3k.asm:75471-75474)
+masks its low A/B/C press bits. Use the logical press API: held input exits
+one pass late after activation, while raw controller press loses CPU/scripted
+logical edges. Rewind both the existing skim adapter and player logical state;
+do not rewrite the earlier follower-history slot to publish this late object read.

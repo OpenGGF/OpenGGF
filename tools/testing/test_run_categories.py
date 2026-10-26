@@ -1,6 +1,7 @@
 """Selection and runner safety tests; no Maven or ROMs required."""
 import json
 import io
+from contextlib import nullcontext
 from pathlib import Path
 import subprocess
 import tempfile
@@ -171,6 +172,51 @@ class CategoryPolicyTests(unittest.TestCase):
         self.assertEqual(1, serial.pop('workers'))
         self.assertEqual(2, concurrent.pop('workers'))
         self.assertEqual(serial, concurrent)
+
+    def test_headless_gl_is_opt_in_without_changing_selection(self):
+        with patch('sys.stdout', new_callable=io.StringIO) as output:
+            self.assertEqual(0, runner.main(['--category', 'physics', '--json']))
+        default = json.loads(output.getvalue())
+        self.assertNotIn('headless_gl', default)
+        with patch('sys.stdout', new_callable=io.StringIO) as output:
+            self.assertEqual(0, runner.main(['--category', 'physics', '--json',
+                                            '--headless-gl', 'surfaceless-egl']))
+        headless = json.loads(output.getvalue())
+        self.assertEqual('surfaceless-egl', headless.pop('headless_gl'))
+        self.assertEqual(default, headless)
+
+    def test_headless_gl_survives_plan_rebuild_under_the_worktree_lock(self):
+        with patch('sys.stdout', new_callable=io.StringIO), \
+                patch.object(runner, 'make_plan', wraps=runner.make_plan) as plans, \
+                patch.object(runner, 'worktree_build_slot', return_value=nullcontext(12)), \
+                patch.object(runner, 'preflight') as tools, \
+                patch.object(runner, 'run_plan', return_value=0) as run:
+            self.assertEqual(0, runner.main(['--category', 'physics', '--run',
+                                            '--headless-gl', 'surfaceless-egl']))
+        self.assertEqual(2, plans.call_count)
+        self.assertEqual('surfaceless-egl', tools.call_args.args[1]['headless_gl'])
+        self.assertEqual('surfaceless-egl', run.call_args.args[1]['headless_gl'])
+        self.assertEqual(12, run.call_args.kwargs['tree_fd'])
+
+    def test_unknown_headless_gl_is_rejected_before_tools_or_execution(self):
+        with patch('sys.stderr', new_callable=io.StringIO) as error, \
+                patch.object(runner, 'preflight') as tools, \
+                patch.object(runner, 'run_logged') as launch:
+            with self.assertRaises(SystemExit) as rejected:
+                runner.main(['--category', 'physics', '--run', '--headless-gl', 'glfw'])
+        self.assertEqual(2, rejected.exception.code)
+        self.assertIn('invalid choice', error.getvalue())
+        tools.assert_not_called()
+        launch.assert_not_called()
+
+    def test_acknowledge_rejects_headless_gl_without_deleting_results(self):
+        with patch('sys.stderr', new_callable=io.StringIO), \
+                patch.object(runner, 'acknowledge_run') as acknowledge:
+            with self.assertRaises(SystemExit) as rejected:
+                runner.main(['--acknowledge', 'existing-run',
+                             '--headless-gl', 'surfaceless-egl'])
+        self.assertEqual(2, rejected.exception.code)
+        acknowledge.assert_not_called()
 
     def test_invalid_workers_are_rejected_before_execution(self):
         for workers in ('0', '3', '1.5', 'auto'):

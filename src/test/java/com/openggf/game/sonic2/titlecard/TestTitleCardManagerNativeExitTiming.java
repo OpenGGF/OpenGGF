@@ -12,6 +12,38 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestTitleCardManagerNativeExitTiming {
 
     @Test
+    void omittedNativeLeaveRetainsTheLeadingPassAndExactBackgroundHandoff() {
+        TitleCardManager manager = new TitleCardManager(() -> null, () -> false);
+        manager.beginOmittedPresentationLeave(3, 1);
+        assertTrue(manager.shouldRunPlayerPhysics());
+        assertFalse(manager.shouldReleaseControl());
+        assertEquals(TitleCardState.EXIT_LEFT_SWOOSH, manager.getState());
+        // The leading RunObjects has no update/WaitForVint of its own.
+        manager.completeLockedIteration();
+        int deformations = 0;
+        for (int wait = 1; wait <= 25; wait++) {
+            if (manager.isFirstBackgroundLeavePass()) {
+                deformations++;
+                assertEquals(17, wait, "five left and eleven bottom passes precede BackgroundOutInit");
+                var before = manager.capture();
+                manager.update();
+                assertFalse(manager.isFirstBackgroundLeavePass());
+                manager.restore(before);
+                assertTrue(manager.isFirstBackgroundLeavePass(), "the handoff is part of the title owner's snapshot");
+            }
+            manager.update();
+            assertTrue(manager.shouldRunPlayerPhysics());
+            manager.completeLockedIteration();
+            assertEquals(wait == 25, manager.shouldReleaseControl());
+        }
+        assertEquals(1, deformations);
+        assertFalse(manager.shouldRunPlayerPhysics());
+        assertEquals(TitleCardState.TEXT_WAIT, manager.getState());
+        assertEquals(3, manager.capture().currentZone());
+        assertEquals(1, manager.capture().currentAct());
+    }
+
+    @Test
     void releaseFollowsTheTwentySixthObjectPassWithoutAnotherVblank() throws Exception {
         TitleCardManager manager = new TitleCardManager(() -> null, () -> false);
         setField(manager, "state", TitleCardState.ZONE_TILE_UPLOAD);

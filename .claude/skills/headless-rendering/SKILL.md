@@ -100,6 +100,8 @@ repository; `target/` is disposable.
 
 Pass the graphics property on Maven's command line so it reaches Surefire tests.
 `MAVEN_OPTS` alone does not establish propagation to the fork.
+For category batches, `run_categories.py --headless-gl surfaceless-egl` forwards
+the supported CLI property to preparation and every ordinary/guard batch.
 `JAVA_TOOL_OPTIONS`/`JDK_JAVA_OPTIONS` can propagate it, but add launcher notices
 that affect child-stderr assertions. The globally registered
 `HeadlessStateTeardownExtension` restores the incoming graphics-backend property

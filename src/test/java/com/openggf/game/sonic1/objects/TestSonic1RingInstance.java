@@ -21,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
@@ -95,6 +96,12 @@ class TestSonic1RingInstance {
         TouchResponseResult touch = mock(TouchResponseResult.class);
         when(touch.category()).thenReturn(TouchCategory.SPECIAL);
         ring.onTouchResponse(new TestPlayableSprite(), touch, 10);
+
+        assertEquals(2, ring.getPriorityBucket(),
+                "ReactToItem runs after this frame's Ring_Animate DisplaySprite submission");
+        ring.update(11, null);
+        assertEquals(1, ring.getPriorityBucket(),
+                "the next Ring_Collect/Sparkle execution submits the native foreground bucket");
 
         assertFalse(ring.isCustomOutOfRange(0x0400),
                 "Ring_Sparkle does not call out_of_range before Ring_Delete");

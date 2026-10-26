@@ -298,6 +298,27 @@ public class TestTornadoObjectInstance {
     }
 
     @Test
+    void wfzEdgeWritesOnlySonicsNativeWordsRegardlessOfWaterShoesOrForm() throws Exception {
+        TestEnvironment.configureGameModuleFixture(new Sonic2GameModule());
+        var sonic = new com.openggf.sprites.playable.Sonic("sonic", (short) 0x2E40, (short) 0x05EC);
+        var tails = new com.openggf.sprites.playable.Tails("tails", (short) 0x2E20, (short) 0x05EC);
+        GameServices.sprites().addSprite(sonic); tails.setCpuControlled(true); GameServices.sprites().addSprite(tails);
+        var world = GameServices.level().getWorldSession();
+        com.openggf.sprites.playable.PlayableSpriteInternalAccess.bindNativeSpeedOwner(sonic, world);
+        com.openggf.sprites.playable.PlayableSpriteInternalAccess.bindNativeSpeedOwner(tails, world);
+        sonic.setInWater(true); sonic.setSuperSonic(true); sonic.giveSpeedShoes(8); tails.giveSpeedShoes(8);
+        var tornado = createTornado(0x2E58, 0x066C, 0x54);
+        setField(tornado, "routineSecondary", 2);
+        tornado.update(0, sonic);
+        assertEquals(4, getField(tornado, "routineSecondary"));
+        assertEquals(0x600, com.openggf.sprites.playable.PlayableSpriteInternalAccess.nativeMaximumSpeedWord(sonic));
+        assertEquals(0xC, sonic.getRunAccel()); assertEquals(0x80, sonic.getRunDecel());
+        assertEquals(0xC00, com.openggf.sprites.playable.PlayableSpriteInternalAccess.nativeMaximumSpeedWord(tails));
+        assertTrue(sonic.isInWater()); assertTrue(sonic.hasSpeedShoes()); assertTrue(sonic.isSuperSonic());
+        assertEquals(0x10, sonic.getEffectiveGravity());
+    }
+
+    @Test
     public void tornadoUnloadBeforePrepareClearsEventOwnedControlForWholeTeam() throws Exception {
         TornadoObjectInstance tornado = createTornado(0x2E58, 0x066C, 0x54);
         TestPlayableSprite main = new TestPlayableSprite("main", (short) 0x2E31, (short) 0x0500);

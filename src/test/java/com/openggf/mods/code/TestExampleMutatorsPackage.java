@@ -41,8 +41,13 @@ class TestExampleMutatorsPackage {
     private static Object unwrapOwned(Object value) throws Exception {
         if (!java.lang.reflect.Proxy.isProxyClass(value.getClass())) return value;
         var handler=java.lang.reflect.Proxy.getInvocationHandler(value);
-        var delegate=handler.getClass().getDeclaredField("delegate");delegate.setAccessible(true);
-        return unwrapOwned(delegate.get(handler));
+        var trusted = Class.forName(
+                com.openggf.game.internal.NativeProviderDispatch.class.getName() + "$PublishedHandler",
+                false, com.openggf.game.internal.NativeProviderDispatch.class.getClassLoader());
+        assertSame(trusted, handler.getClass(), "Expected an authenticated engine provider envelope");
+        var source = trusted.getDeclaredField("source");
+        source.setAccessible(true);
+        return unwrapOwned(source.get(handler));
     }
     @Test void sourceBuildsPackagesAndRegistersRomOnlyBoundedPolicies() throws Exception {
         var project=Path.of("examples/example-mutators");var classes=temp.resolve("classes");Files.createDirectories(classes);

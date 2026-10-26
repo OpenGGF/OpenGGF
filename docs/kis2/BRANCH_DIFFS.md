@@ -177,11 +177,17 @@ supplies glide/climb.
 | WFZ Tornado cutscene (`ObjB2`) | re-timed (`$20` instead of `$30` wait), held inputs changed to press-only so Knuckles cannot glide, control locked above `y = $540` | n/a |
 | Speed control | identical to S3K including Super glide bonus and `Camera_Y_pos_bias` drift to `$60` | — |
 
-Engine note: `PlayableSpriteMovement`'s glide is the S3K model (grab/land
+Engine note: `PlayableSpriteMovement` shares the native glide owners (grab/land
 sounds through `GameSound.GRAB`/`GLIDE_LAND`, which the S2 sound map does
-not contain so they are silent on the S2 host; the S3K floor-below detach
-probe is implemented). The radius toggling and the missing detach probe are
-recorded in `docs/status/known-discrepancies.md`, not modelled.
+not contain so they are silent on the S2 host). `Kis2Rules` supplies the temporary
+10/10 then 19/9 collision radii and omits S3K's idle floor-below probe. Both native
+climb owners use 8/9 **pre-radius** offsets: the helpers subtract/add signed
+`x_radius`, so 10/10 scans reach `Y-18` / `Y+19`. Powered movement, signed
+`minY+16` clamp with `$FF00` bypass, BD-pose undo and strict-negative floor
+landing share the source contract. The local floor tail retains
+`double_jump_property` and writes the raw floor angle and current animation 5;
+S3K's idle distance clobber remains exclusive to its `FixBugs=0` path.
+[Evidence and qualification limits](../architecture/research/trace/2026-09-14-kis2-chain-frontier.md#wall-climb-vertical-contract--2026-10-21).
 
 ## Animation (`Sonic_Animate`, `SonicAniData`)
 

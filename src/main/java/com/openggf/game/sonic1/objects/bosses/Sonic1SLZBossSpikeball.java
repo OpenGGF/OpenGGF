@@ -767,17 +767,21 @@ public class Sonic1SLZBossSpikeball extends AbstractObjectInstance
      * ROM: uses BossSpikeball_BossHitbox (-24..+24) and BossSpikeball_BallHitbox (-8..+8).
      */
     private boolean checkBossCollision() {
-        int bossX = boss.getX();
-        int bossY = boss.getY();
-        int ballX = xPos >> 16;
-        int ballY = yPos >> 16;
+        // BossSpikeball_CheckCollision uses four CMP.W/BLO tests: touching
+        // endpoints count as contact, and every endpoint wraps as a word before
+        // its unsigned comparison. REV01 $19694/$196A4/$196B4/$196C4; signed
+        // cumulative hitbox deltas at $197D2 are -24,+48 and +8,-16 per axis.
+        int bossLeft = (boss.getX() - BOSS_HITBOX_HALF) & 0xFFFF;
+        int bossRight = (bossLeft + BOSS_HITBOX_HALF * 2) & 0xFFFF;
+        int ballRight = ((xPos >> 16) + BALL_HITBOX_HALF) & 0xFFFF;
+        int ballLeft = (ballRight - BALL_HITBOX_HALF * 2) & 0xFFFF;
+        int bossTop = (boss.getY() - BOSS_HITBOX_HALF) & 0xFFFF;
+        int bossBottom = (bossTop + BOSS_HITBOX_HALF * 2) & 0xFFFF;
+        int ballBottom = ((yPos >> 16) + BALL_HITBOX_HALF) & 0xFFFF;
+        int ballTop = (ballBottom - BALL_HITBOX_HALF * 2) & 0xFFFF;
 
-        // AABB overlap check — combined half-widths = 24 + 8 = 32
-        int dx = Math.abs(ballX - bossX);
-        int dy = Math.abs(ballY - bossY);
-
-        return dx < (BOSS_HITBOX_HALF + BALL_HITBOX_HALF)
-                && dy < (BOSS_HITBOX_HALF + BALL_HITBOX_HALF);
+        return ballRight >= bossLeft && bossRight >= ballLeft
+                && ballBottom >= bossTop && bossBottom >= ballTop;
     }
 
     /**

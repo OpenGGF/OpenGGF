@@ -7,6 +7,7 @@ import com.openggf.data.RomByteReader;
 import com.openggf.data.compression.NemesisReader;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageDataLoader;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStagePalette;
+import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageRomMappings;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageSpriteMappings.SpriteFrame;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageSpriteMappings.SpritePiece;
 import com.openggf.level.Palette;
@@ -40,6 +41,7 @@ public final class Kis2SpecialStageDataLoader extends Sonic2SpecialStageDataLoad
     private final LockOnAddressSpace addressSpace;
     private Pattern[] playerPatterns;
     private SpriteFrame[] frames;
+    private List<Sonic2SpecialStageRomMappings.Frame> nativeFrames;
     private List<SpriteDplcFrame> knucklesPlans;
 
     public Kis2SpecialStageDataLoader(Rom sonic2Rom, LockOnAddressSpace addressSpace) {
@@ -118,6 +120,14 @@ public final class Kis2SpecialStageDataLoader extends Sonic2SpecialStageDataLoad
         return frames[Math.max(0, Math.min(frame, FRAME_COUNT - 1))];
     }
 
+    @Override
+    public Sonic2SpecialStageRomMappings.Frame getNativeMainPlayerFrame(int frame) {
+        // Keep the lock-on six-byte hardware footprint; rendered art fragments
+        // below can cross DPLC requests without becoming individual SAT entries.
+        getMainPlayerFrame(frame);
+        return nativeFrames.get(Math.clamp(frame, 0, FRAME_COUNT - 1));
+    }
+
     private void decodeFrames() throws IOException {
         if (frames != null) return;
         LockOnAddressSpace.Read mappingRead = addressSpace.require(PLAYER_MAPPINGS);
@@ -128,6 +138,7 @@ public final class Kis2SpecialStageDataLoader extends Sonic2SpecialStageDataLoad
         int dplcBase = dplcRead.localAddress();
         int rendererArtBase = super.getPlayerArtPatterns().length;
         List<SpriteDplcFrame> plans = new ArrayList<>(FRAME_COUNT);
+        List<Sonic2SpecialStageRomMappings.Frame> geometry = new ArrayList<>(FRAME_COUNT);
         SpriteFrame[] decoded = new SpriteFrame[FRAME_COUNT];
         for (int frame = 0; frame < FRAME_COUNT; frame++) {
             int cue = dplcBase + dplc.readU16BE(dplcBase + frame * 2);
@@ -147,6 +158,7 @@ public final class Kis2SpecialStageDataLoader extends Sonic2SpecialStageDataLoad
             int mapping = mappingBase + mappings.readU16BE(mappingBase + frame * 2);
             int pieceCount = mappings.readU16BE(mapping);
             List<SpritePiece> pieces = new ArrayList<>();
+            List<Sonic2SpecialStageRomMappings.Piece> nativePieces = new ArrayList<>();
             for (int piece = 0; piece < pieceCount; piece++) {
                 int offset = mapping + 2 + piece * 6;
                 int y = (byte) mappings.readU8(offset);
@@ -156,6 +168,7 @@ public final class Kis2SpecialStageDataLoader extends Sonic2SpecialStageDataLoad
                 int width = ((size >>> 2) & 3) + 1;
                 int height = (size & 3) + 1;
                 int firstTile = tileWord & 0x7FF;
+                nativePieces.add(new Sonic2SpecialStageRomMappings.Piece(x, y, size, tileWord, tileWord));
                 // Resolve each destination tile independently: a mapping piece
                 // may span multiple DPLC requests with noncontiguous sources.
                 for (int column = 0; column < width; column++) {
@@ -171,8 +184,10 @@ public final class Kis2SpecialStageDataLoader extends Sonic2SpecialStageDataLoad
                 }
             }
             decoded[frame] = new SpriteFrame(pieces.toArray(SpritePiece[]::new));
+            geometry.add(new Sonic2SpecialStageRomMappings.Frame(mapping, nativePieces));
         }
         knucklesPlans = List.copyOf(plans);
+        nativeFrames = List.copyOf(geometry);
         frames = decoded;
     }
 

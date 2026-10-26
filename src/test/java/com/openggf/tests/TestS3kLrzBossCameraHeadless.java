@@ -3,9 +3,15 @@ package com.openggf.tests;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.configuration.WidescreenAspect;
+import com.openggf.data.RomGame;
+import com.openggf.data.RomManager;
 import com.openggf.game.GameServices;
 import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.rewind.RewindSnapshotDiff;
+import com.openggf.game.rewind.CompositeSnapshot;
+import com.openggf.game.rewind.snapshot.LevelSnapshot;
+import com.openggf.game.sonic3k.S3kCollisionLayoutRewindAdapter;
+import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
@@ -15,16 +21,25 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 
 @RequiresRom(SonicGame.SONIC_3K)
 class TestS3kLrzBossCameraHeadless {
+    private RomCatalogueFixture donorCatalogue;
+
     @AfterEach void reset() {
-        CrossGameFeatureProvider.getInstance().resetState();
-        var config=SonicConfigurationService.getInstance(); config.clearSessionOverrides();
-        config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE,"sonic");
-        config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE,"tails");
-        SessionManager.clear(); TestEnvironment.activeGameplayMode();
+        try {
+            CrossGameFeatureProvider.getInstance().resetState();
+            var config=SonicConfigurationService.getInstance(); config.clearSessionOverrides();
+            config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE,"sonic");
+            config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE,"tails");
+            SessionManager.clear(); TestEnvironment.activeGameplayMode();
+        } finally {
+            if (donorCatalogue != null) {
+                donorCatalogue.close();
+            }
+        }
     }
 
     @ParameterizedTest(name="checkpoint camera {0}px {1} {2}+{3}")
@@ -39,6 +54,18 @@ class TestS3kLrzBossCameraHeadless {
         var aspect=java.util.Arrays.stream(WidescreenAspect.values()).filter(a->a.pixelWidth()==width).findFirst().orElseThrow();
         config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT,aspect.name()); config.resolveDisplayAspect();
         SessionManager.clear(); TestEnvironment.activeGameplayMode();
+        if (!donor.equals("off")) {
+            RomGame game = switch (donor) {
+                case "s1" -> RomGame.S1;
+                case "s2" -> RomGame.S2;
+                default -> fail("Unexpected donor: " + donor);
+            };
+            var image = game == RomGame.S1 ? RomTestUtils.ensureSonic1RomAvailable()
+                    : RomTestUtils.ensureSonic2RomAvailable();
+            assertNotNull(image, "Missing donor ROM: " + donor);
+            donorCatalogue = RomCatalogueFixture.bind(config, RomManager.getInstance(),
+                    Map.of(game, image.toPath()));
+        }
         var fixture=HeadlessTestFixture.builder().withZoneAndAct(22,0).withFreshLevelStartLifecycle()
                 .startPosition((short)0x9C0,(short)0x368).startPositionIsCentre()
                 .withCrossGameDonation(donor.equals("off")?null:donor).build();
@@ -68,21 +95,80 @@ class TestS3kLrzBossCameraHeadless {
         var state=S3kRuntimeStates.currentLrz(GameServices.zoneRuntimeRegistry()).orElseThrow().bossAct();
         assertEquals(0,GameServices.camera().getMaxX()); assertEquals(-1,state.autoscrollRoutine());
         fixture.stepFrame(false,false,false,false,false); assertEquals(4,state.foregroundRoutine());
+        // Original ROM LRZ3 layout: row9 points to $FF81A8. loc_59BA4 writes
+        // literal $17 at row-pointer + (requestX >> 7), then its next byte.
+        var rom=TestEnvironment.currentRom();
+        int layout=rom.read32BitAddr(Sonic3kConstants.LEVEL_PTRS_ADDR+44*4);
+        assertEquals(0x81A8,rom.read16BitAddr(layout+8+9*4));
+        assertArrayEquals(new byte[]{0x14,0x14},rom.readBytes(layout+0x1A9,2));
+        GameServices.level().getObjectManager().setRewindInPlaceRestoreEnabledForTest(false);
         state.requestForegroundAdvance();
         var registry=fixture.gameplayMode().getRewindRegistry(); var before=registry.capture();
         fixture.stepFrame(false,false,false,false,false); assertEquals(8,state.foregroundRoutine()); assertEquals(-1,state.autoscrollRoutine());
-        var map=GameServices.level().getCurrentLevel().getMap();
-        for(int x=0;x<5;x++) assertEquals(x%2==0?0x16:0x15,map.getValue(0,x,9)&255);
-        var after=registry.capture(); registry.restore(before); fixture.stepFrame(false,false,false,false,false); var replay=registry.capture();
-        for(String key:after.entries().keySet()) assertTrue(RewindSnapshotDiff.diffKey(key,after.get(key),replay.get(key)).isEmpty(),()->key+RewindSnapshotDiff.diffKey(key,after.get(key),replay.get(key)));
+        var detachedMap=GameServices.level().getCurrentLevel().getMap();
+        for(int x=0;x<5;x++) assertEquals(x%2==0?0x16:0x15,detachedMap.getValue(0,x,9)&255);
+        var after=registry.capture();
+        for(int replay=0;replay<2;replay++) {
+            registry.restore(before);
+            assertBossWorld(before,registry.capture());
+            fixture.stepFrame(false,false,false,false,false);
+            assertBossWorld(after,registry.capture());
+            assertNotSame(detachedMap,GameServices.level().getCurrentLevel().getMap(),
+                    "encoded-layout restore installs the current map owner");
+            assertCurrentBossTerrain(registry.capture(),0x15,0x16);
+        }
+        // Rebind after the full-world restore; the earlier Map is detached.
+        state=S3kRuntimeStates.currentLrz(GameServices.zoneRuntimeRegistry()).orElseThrow().bossAct();
+        events=((Sonic3kLevelEventManager)GameServices.module().getLevelEventProvider()).getLrzEventsForTest();
         events.update(0,2); assertEquals(8,state.foregroundRoutine(),"one signal cannot skip the flash wait");
         state.requestForegroundAdvance(); state.setCameraFractions(0x1234,0x5678);
         events.update(0,3); assertEquals(12,state.foregroundRoutine()); assertEquals(0,state.autoscrollRoutine());
         assertEquals(0,state.cameraFractionX()); assertEquals(0,state.cameraFractionY());
+        var beforeEdit=registry.capture();
+        byte[] encodedBefore=((S3kCollisionLayoutRewindAdapter.State)beforeEdit.get("s3k-collision-layout")).encoded();
+        byte[] decodedBefore=((LevelSnapshot)beforeEdit.get("level")).mapData().clone();
+        byte[] detachedBefore=detachedMap.getData().clone();
         state.requestChunkEdit(0xC8,0x480); events.update(0,4);
-        assertEquals(0x17,map.getValue(0,1,9)&255); assertEquals(0x17,map.getValue(0,2,9)&255);
+        var edited=registry.capture();
+        assertCurrentBossTerrain(edited,0x17,0x17);
         assertEquals(0,state.chunkEditX());
+        assertArrayEquals(detachedBefore,detachedMap.getData(),"a detached map is not the mutation destination");
+        assertArrayEquals(encodedBefore,((S3kCollisionLayoutRewindAdapter.State)beforeEdit.get("s3k-collision-layout")).encoded(),
+                "encoded writes must leave the earlier captured row bytes intact");
+        assertArrayEquals(decodedBefore,((LevelSnapshot)beforeEdit.get("level")).mapData(),
+                "decoded aliases must preserve the earlier keyframe under COW");
+        for(int replay=0;replay<2;replay++) {
+            registry.restore(beforeEdit);
+            assertBossWorld(beforeEdit,registry.capture());
+            assertCurrentBossTerrain(registry.capture(),0x15,0x16);
+            var restoredState=S3kRuntimeStates.currentLrz(GameServices.zoneRuntimeRegistry()).orElseThrow().bossAct();
+            var restoredEvents=((Sonic3kLevelEventManager)GameServices.module().getLevelEventProvider()).getLrzEventsForTest();
+            restoredState.requestChunkEdit(0xC8,0x480); restoredEvents.update(0,4);
+            var replayed=registry.capture();
+            assertCurrentBossTerrain(replayed,0x17,0x17);
+            assertEquals(0,restoredState.chunkEditX());
+            assertBossWorld(edited,replayed);
+        }
     }
+
+    private static void assertCurrentBossTerrain(CompositeSnapshot snapshot,int first,int second) {
+        var map=GameServices.level().getCurrentLevel().getMap();
+        assertEquals(first,map.getValue(0,1,9)&255);
+        assertEquals(second,map.getValue(0,2,9)&255);
+        byte[] encoded=((S3kCollisionLayoutRewindAdapter.State)snapshot.get("s3k-collision-layout")).encoded();
+        int rowOffset=8+9*4;
+        assertEquals(0x81A8,((encoded[rowOffset]&255)<<8)|(encoded[rowOffset+1]&255));
+        assertEquals(first,encoded[0x1A9]&255,"native $FF81A9 and its decoded cell share the write");
+        assertEquals(second,encoded[0x1AA]&255,"native $FF81AA and its decoded cell share the write");
+    }
+
+    private static void assertBossWorld(CompositeSnapshot expected,CompositeSnapshot actual) {
+        assertEquals(expected.entries().keySet(),actual.entries().keySet());
+        for(String key:expected.entries().keySet()) assertTrue(
+                RewindSnapshotDiff.diffKey(key,expected.get(key),actual.get(key)).isEmpty(),
+                ()->key+RewindSnapshotDiff.diffKey(key,expected.get(key),actual.get(key)));
+    }
+
     @ParameterizedTest
     @org.junit.jupiter.params.provider.ValueSource(ints={320,352,400,528,800})
     void nativeBossEntryCentersPresentationAndReplaysTheLock(int width) {

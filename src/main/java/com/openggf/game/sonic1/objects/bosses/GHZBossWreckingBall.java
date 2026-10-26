@@ -1,363 +1,330 @@
 package com.openggf.game.sonic1.objects.bosses;
 
-import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.sonic1.audio.Sonic1Sfx;
+import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
-import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
-import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.level.objects.boss.AbstractBossChild;
 import com.openggf.level.objects.boss.AbstractBossInstance;
-import com.openggf.level.objects.boss.BossExplosionObjectInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
-import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
 
-/**
- * Object 0x48 — Eggman's swinging ball on a chain (GHZ boss).
- * ROM: _incObj/48 Eggman's Swinging Ball.asm
- *
- * Creates a chain of 6 links + 1 ball. The ball swings on the chain
- * using sine/cosine positioning relative to the Eggman ship.
- *
- * Chain link positions are calculated via GBall_PosData offsets:
- * {0x00, 0x10, 0x20, 0x30, 0x40, 0x60}
- *
- * Swing mechanics (Obj48_Move):
- * - Initial angle: 0x4080 (word — high byte = angle byte)
- * - Swing parameter starts at -0x200, increments/decrements by 8/frame
- * - Direction toggles at +0x200 / -0x200
- * - angle += swingParam each frame
- *
- * The ball (last link) has collision type 0x81 (enemy, size index 1).
- */
-public class GHZBossWreckingBall extends AbstractBossChild
-        implements TouchResponseProvider, RewindRecreatable {
-
-    // Chain link Y-offset data (GBall_PosData)
-    private static final int[] CHAIN_OFFSETS = {0x00, 0x10, 0x20, 0x30, 0x40, 0x60};
-    private static final int CHAIN_LINK_COUNT = 6; // links (not counting ball)
-    private static final int TOTAL_ELEMENTS = CHAIN_LINK_COUNT + 1; // 6 links + 1 ball
-
-    // Swing constants
-    private static final int INITIAL_ANGLE = 0x4080; // Word $4080 — high byte $40 = CalcSine angle
-    private static final int INITIAL_SWING_PARAM = -0x200;
-    private static final int SWING_INCREMENT = 8;
-    private static final int SWING_LIMIT = 0x200;
-
-    // Collision: obColType = $81 (enemy category $80, size index 1)
-    private static final int BALL_COLLISION_FLAGS = 0x81;
-
-    // GBall_Ball defeat countdown: BGHZ_BossGenericTimer holds the ball's
-    // chain-extension target (GBall_PosData last entry, $60) when the swing is
-    // fully deployed; GBall_Vanish decrements it once per frame after Eggman's
-    // defeated flag is set (3D, 48 Boss - GHZ Main and Wrecking Ball.asm:484,
-    // 578-596).
-    private static final int DEFEAT_EXPLOSION_TIMER = 0x60;
-
-
-    // Swing state
-    private int angle;          // obAngle — swing angle (byte)
-    private int swingParam;     // objoff_3E — swing velocity
-    private boolean swingForward; // objoff_3D — direction toggle
-
-    // Chain extension state (GBall_Base routine)
-    private final int[] chainExtension; // objoff_3C per link — current extension toward target
+/** Object $48: one anchor, four links, and one harmful ball, each in its own native SST slot. */
+public class GHZBossWreckingBall extends AbstractBossChild implements RewindRecreatable {
+    // GBall_PosData, shipped S1 REV01 ROM $1835E. Includes the anchor itself.
+    private static final int[] CHAIN_OFFSETS = {0, 0x10, 0x20, 0x30, 0x40, 0x60};
+    private static final int TOTAL_ELEMENTS = 6;
+    private boolean initialized;
+    private int elementCount = 1;
+    private NativeComponent[] components = new NativeComponent[TOTAL_ELEMENTS - 1];
+    private final int[] chainExtension = new int[TOTAL_ELEMENTS];
     private boolean chainFullyExtended;
-
-    // Vertical offset from parent (objoff_32) — grows from 0 to 0x20
     private int verticalOffset;
-
-    // Anchor position (synced from parent ship's objoff_30/objoff_38)
+    private int angle = 0x4080;
+    private int swingParam = -0x200;
+    private boolean swingForward;
     private int anchorX;
     private int anchorY;
-
-    // Per-element positions for rendering
-    private final int[] elementX;
-    private final int[] elementY;
-
-    // Ball frame toggle (alternates every frame per GBall_ChkVanish)
-    private int ballFrame; // 0 or 1 (toggles between check1 and shiny)
-
+    private int anchorFrame;
+    private int anchorFrameCounter;
     private boolean parentDefeated;
-    private int defeatTimer;
+    private boolean displayThisPass;
+    private int explosionFrame;
+    private int explosionDuration = -1;
 
     public GHZBossWreckingBall(AbstractBossInstance parent) {
-        super(parent, "GHZBall", 5, Sonic1ObjectIds.BOSS_BALL);
-        
-
-        // Initialize swing
-        this.angle = INITIAL_ANGLE;
-        this.swingParam = INITIAL_SWING_PARAM;
-        this.swingForward = false; // starts going forward (incrementing)
-
-        // Initialize chain extension
-        this.chainExtension = new int[TOTAL_ELEMENTS];
-        this.chainFullyExtended = false;
-        this.verticalOffset = 0;
-
-        // Initialize element positions
-        this.elementX = new int[TOTAL_ELEMENTS];
-        this.elementY = new int[TOTAL_ELEMENTS];
-
-        this.ballFrame = 1; // Start on check1 frame (frame 1 in Map_GBall)
-        this.parentDefeated = false;
+        super(parent, "GHZBallAnchor", 6, Sonic1ObjectIds.BOSS_BALL);
+        // BGHZ_MakeBall copies the ship's scratch BossX/BossY words, before
+        // BGHZ_ShipUpdate publishes this pass's sine-displaced display position.
+        setPosition((parent.getState().xFixed >>> 16) & 0xFFFF,
+                (parent.getState().yFixed >>> 16) & 0xFFFF);
+        updateDynamicSpawn();
     }
 
-    /**
-     * ROM: sub BossDefeated & BossMove.asm:6-36 — explosion at the ball's
-     * position plus a random offset; X uses (rand&$FF)>>2 - $20, Y uses the
-     * high byte >>3 with no left shift (the ROM's downward bias).
-     */
-    private void spawnBallDefeatExplosion() {
-        final ObjectRenderManager renderManager = services().renderManager();
-        if (renderManager == null || services().objectManager() == null) {
-            return;
-        }
-        int random = services().rng().nextWord();
-        final int xOff = ((random & 0xFF) >> 2) - 0x20;
-        final int yOff = ((random >>> 8) & 0xFF) >> 3;
-        services().objectManager().createDynamicObject(() -> new BossExplosionObjectInstance(
-                currentX + xOff, currentY + yOff,
-                Sonic1ObjectIds.EXPLOSION, Sonic1Sfx.BOSS_EXPLOSION.id,
-                BossExplosionObjectInstance.S1_PRIORITY_BUCKET));
+    @Override
+    protected boolean tracksViaChildComponents() { return false; }
+
+    @Override
+    public int getOnScreenHalfWidth() { return parentDefeated && explosionDuration >= 0 ? 12 : 8; }
+
+    @Override
+    protected void onRemovedFromObjectManager() {
+        super.onRemovedFromObjectManager();
+        if (parent instanceof Sonic1GHZBossInstance boss) boss.forgetWreckingBall(this);
     }
 
-    /**
-     * ROM: GBall_Vanish timer underflow — the ball object itself is replaced
-     * by an id_Explosion in place (3D, 48 Boss - GHZ Main and Wrecking
-     * Ball.asm:592-596).
-     */
-    private void spawnBallConversionExplosion() {
-        final ObjectRenderManager renderManager = services().renderManager();
-        if (renderManager == null || services().objectManager() == null) {
-            return;
-        }
-        services().objectManager().createDynamicObject(() -> new BossExplosionObjectInstance(
-                currentX, currentY,
-                Sonic1ObjectIds.EXPLOSION, Sonic1Sfx.BOSS_EXPLOSION.id,
-                BossExplosionObjectInstance.S1_PRIORITY_BUCKET));
+    @Override
+    public ObjectSpawn getSpawn() {
+        ObjectSpawn nativeSpawn = super.getSpawn();
+        return parentDefeated ? explosionSpawn(nativeSpawn) : nativeSpawn;
+    }
+
+    private static ObjectSpawn explosionSpawn(ObjectSpawn original) {
+        return new ObjectSpawn(original.x(), original.y(), Sonic1ObjectIds.EXPLOSION,
+                original.subtype(), original.renderFlags(), original.respawnTracked(), original.rawYWord());
     }
 
     @Override
     public GHZBossWreckingBall recreateForRewind(RewindRecreateContext ctx) {
-        if (ctx == null) {
-            return null;
-        }
-        ObjectServices objectServices = ctx.objectServices();
-        if (objectServices == null) {
-            return null;
-        }
-        ObjectManager objectManager = objectServices.objectManager();
-        if (objectManager == null) {
-            return null;
-        }
-        for (ObjectInstance object : objectManager.getActiveObjects()) {
-            if (object instanceof Sonic1GHZBossInstance boss && !boss.isDestroyed()) {
-                GHZBossWreckingBall restored = new GHZBossWreckingBall(boss);
-                boss.adoptWreckingBallForRewind(restored);
-                return restored;
-            }
+        Sonic1GHZBossInstance boss = findBoss(ctx);
+        if (boss == null) return null;
+        GHZBossWreckingBall restored = new GHZBossWreckingBall(boss);
+        boss.adoptWreckingBallForRewind(restored);
+        return restored;
+    }
+
+    private static Sonic1GHZBossInstance findBoss(RewindRecreateContext ctx) {
+        if (ctx == null || ctx.objectServices() == null || ctx.objectServices().objectManager() == null) return null;
+        for (ObjectInstance object : ctx.objectServices().objectManager().getActiveObjects()) {
+            if (object instanceof Sonic1GHZBossInstance boss && !boss.isDestroyed()) return boss;
         }
         return null;
     }
 
+    /** GBall_Main returns without running GBall_Base; construction/reconstruction allocates nothing. */
+    private void initializeComponents() {
+        initialized = true;
+        ObjectManager manager = services().objectManager();
+        if (manager == null || getSlotIndex() < 0) return;
+        for (int index = 1; index < TOTAL_ELEMENTS; index++) {
+            NativeComponent component = new NativeComponent(parent, index, currentX, currentY);
+            // FindNextFreeObj restarts at the root for each child, scanning live occupancy.
+            spawnAfterCurrentSibling(() -> component);
+            if (component.getSlotIndex() < 0 || component.isDestroyed()) {
+                // FixBugs=0: exhausted FindNextFreeObj leaves a1=v_lvlobjend.
+                // GBall_MakeBall writes to non-object (SMPS) RAM, NOT the last
+                // successful link. No live ball exists after partial allocation.
+                break;
+            }
+            components[index - 1] = component;
+            elementCount++;
+        }
+        if (elementCount == TOTAL_ELEMENTS) {
+            components[TOTAL_ELEMENTS - 2].makeBall();
+        }
+    }
+
     @Override
-    public void update(int vIntRunCount, PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        if (!shouldUpdate(vIntRunCount)) {
+    public void update(int vIntRunCount, PlayableEntity player) {
+        // ObjectManager dispatches this in its own slot, even below the ship.
+        if (!beginUpdate(vIntRunCount)) return;
+        if (!initialized) {
+            initializeComponents();
             return;
         }
-
-        // Check if parent boss is defeated
-        if (parent.getState().defeated || (parent.getState().renderFlags & 0x80) != 0) {
-            // ROM GBall_Ball (routine 8): once Eggman's defeated flag is set the
-            // ball disables collision, runs BossDefeated every frame (which
-            // spawns an explosion and draws RandomNumber only on
-            // v_vblank_byte&7 == 0 frames), and counts BGHZ_BossGenericTimer
-            // down from its chain target; when it underflows the ball turns
-            // itself into an explosion (3D, 48 Boss - GHZ Main and Wrecking
-            // Ball.asm:6-36 [sub BossDefeated], 578-596). The base and links
-            // become explosions immediately (GBall_UpdateBase/GBall_Link).
-            if (!parentDefeated) {
-                parentDefeated = true;
-                defeatTimer = DEFEAT_EXPLOSION_TIMER;
-            }
-            if ((vIntRunCount & 7) == 0) {
-                spawnBallDefeatExplosion();
-            }
-            defeatTimer--;
-            if (defeatTimer < 0) {
-                spawnBallConversionExplosion();
-                setDestroyed(true);
-            }
+        displayThisPass = true;
+        if (parentDefeated) {
+            updateExplosion();
             return;
         }
-
-        // Sync anchor position from parent's fixed-point position
-        anchorX = parent.getX();
-        anchorY = parent.getY();
-
-        // Extend chain (GBall_Base routine 2)
-        if (!chainFullyExtended) {
-            extendChain();
-        }
-
-        // Grow vertical offset from 0 to 0x20 (objoff_32)
-        if (verticalOffset < 0x20) {
-            verticalOffset++;
-        }
-
-        // Update swing
         if (chainFullyExtended) {
             updateSwing();
+        } else {
+            // GBall_Base tests the last distance AFTER increment. Routine 4
+            // dispatches next pass, and requires ship routine EXACTLY 6.
+            for (int index = 0; index < elementCount; index++) {
+                if (chainExtension[index] != CHAIN_OFFSETS[index]) {
+                    chainExtension[index] = (chainExtension[index] + 1) & 0xFF;
+                }
+            }
+            if (chainExtension[elementCount - 1] == CHAIN_OFFSETS[elementCount - 1]
+                    && parent.getState().routineSecondary == 6) chainFullyExtended = true;
+            if (verticalOffset != 0x20) verticalOffset = (verticalOffset + 1) & 0xFFFF;
         }
-
-        // Animate ball frame — toggles every frame (GBall_ChkVanish)
-        // ROM: tst.b obFrame / bne .set0 / addq #1,d0 — frame 0→1, non-zero→0
-        ballFrame = (ballFrame == 0) ? 1 : 0;
-
-        // Calculate all element positions via sine/cosine
+        // GBall_UpdateBase: obAniFrame +=32, toggle mapping on carry (every eight passes).
+        anchorFrameCounter += 0x20;
+        if (anchorFrameCounter > 0xFF) {
+            anchorFrameCounter &= 0xFF;
+            anchorFrame ^= 1;
+        }
+        anchorX = parent.getX();
+        anchorY = (parent.getY() + verticalOffset) & 0xFFFF;
+        parentDefeated = (parent.getState().renderFlags & 0x80) != 0;
         calculateChainPositions();
-
-        // Update our position to ball position (last element) for collision
-        currentX = elementX[TOTAL_ELEMENTS - 1];
-        currentY = elementY[TOTAL_ELEMENTS - 1];
         updateDynamicSpawn();
     }
 
-    /**
-     * Extend chain links toward their target offsets (GBall_Base).
-     * Each link's extension grows by 1 per frame until it matches the target.
-     */
-    private void extendChain() {
-        boolean allReached = true;
-        for (int i = 0; i < TOTAL_ELEMENTS; i++) {
-            int target = CHAIN_OFFSETS[Math.min(i, CHAIN_OFFSETS.length - 1)];
-            if (chainExtension[i] < target) {
-                chainExtension[i]++;
-                allReached = false;
-            }
-        }
-
-        // Check if fully extended AND parent has reached the combat-reverse state.
-        // ROM GBall_Base only advances to GBall_Base2 (swing start) when the chain
-        // has fully extended AND the parent ship's ob2ndRout == 6
-        // (docs/s1disasm/_incObj/3D, 48 Boss - GHZ Main and Wrecking Ball.asm:506-511:
-        //  cmp.b BGHZ_BossGenericTimer / bne / cmpi.b #6,ob2ndRout(a1) / bne / addq.b #2,obRoutine).
-        // STATE_COMBAT_REVERSE = 6; the comment previously said ">= 6" but the gate
-        // used >= 4, starting the swing one boss-state early and shifting the ball's
-        // swing phase ahead of ROM.
-        if (allReached && parent.getState().routineSecondary >= 6) {
-            chainFullyExtended = true;
-        }
-    }
-
-    /**
-     * Update swing angle (Obj48_Move).
-     * ROM: Increments/decrements swingParam by 8 each frame,
-     * adds swingParam to angle, toggles direction at limits.
-     */
     private void updateSwing() {
-        if (!swingForward) {
-            // Going forward: increment swing param
-            swingParam += SWING_INCREMENT;
-            if (swingParam >= SWING_LIMIT) {
-                swingForward = true; // toggle direction
-            }
-        } else {
-            // Going backward: decrement swing param
-            swingParam -= SWING_INCREMENT;
-            if (swingParam <= -SWING_LIMIT) {
-                swingForward = false; // toggle direction
-            }
-        }
-
-        // Add swing param to angle (word addition, take low byte)
+        // GBall_Move uses signed word speed, word angle and equality at the limits.
+        swingParam = (short) (swingParam + (swingForward ? -8 : 8));
         angle = (angle + swingParam) & 0xFFFF;
+        if (swingParam == (swingForward ? -0x200 : 0x200)) swingForward = !swingForward;
     }
 
-    /**
-     * Calculate chain element positions via Swing_Move2.
-     * ROM: CalcSine on angle byte, then for each element:
-     *   Y = anchorY + verticalOffset + (sin * extension) >> 8
-     *   X = anchorX + (cos * extension) >> 8
-     */
     private void calculateChainPositions() {
-        // Get byte angle (high byte of word, or just use low byte for CalcSine)
-        int angleForSine = (angle >> 8) & 0xFF;
-
-        int sinVal = TrigLookupTable.sinHex(angleForSine);
-        int cosVal = TrigLookupTable.cosHex(angleForSine);
-
-        int baseY = anchorY + verticalOffset;
-        int baseX = anchorX;
-
-        for (int i = 0; i < TOTAL_ELEMENTS; i++) {
-            int ext = chainExtension[i];
-            // ROM: muls.w d0,d4 / asr.l #8,d4 (sin * extension >> 8)
-            int yOff = (sinVal * ext) >> 8;
-            // ROM: muls.w d1,d5 / asr.l #8,d5 (cos * extension >> 8)
-            int xOff = (cosVal * ext) >> 8;
-
-            elementY[i] = baseY + yOff;
-            elementX[i] = baseX + xOff;
+        int sine = TrigLookupTable.sinHex((angle >>> 8) & 0xFF);
+        int cosine = TrigLookupTable.cosHex((angle >>> 8) & 0xFF);
+        currentX = anchorX;
+        currentY = anchorY;
+        for (int index = 1; index < elementCount; index++) {
+            NativeComponent component = components[index - 1];
+            if (component == null || component.isDestroyed()) continue;
+            component.positionFromAnchor(chainExtension[index],
+                    (anchorX + ((cosine * chainExtension[index]) >> 8)) & 0xFFFF,
+                    (anchorY + ((sine * chainExtension[index]) >> 8)) & 0xFFFF);
         }
     }
+
+    /** Obj3F converts in place, preserving this same SST slot for five eight-pass frames. */
+    private void updateExplosion() {
+        if (explosionDuration < 0) {
+            explosionDuration = 7;
+            displayThisPass = false;
+            services().playSfx(Sonic1Sfx.BOSS_EXPLOSION.id);
+            return; // Expl_Main jumps to QueueSound2; no animation fallthrough.
+        }
+        if (--explosionDuration < 0) {
+            explosionDuration = 7;
+            if (++explosionFrame == 5) setDestroyed(true);
+        }
+    }
+
+    @Override
+    public int getPriorityBucket() { return parentDefeated && explosionDuration >= 0 ? 1 : 6; }
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        if (parentDefeated || isDestroyed()) {
+        if (isDestroyed() || !displayThisPass || services().renderManager() == null) return;
+        if (parentDefeated && explosionDuration >= 0) {
+            drawExplosion(services().renderManager(), currentX, currentY, explosionFrame);
             return;
         }
+        PatternSpriteRenderer renderer = services().renderManager().getRenderer(ObjectArtKeys.BOSS_WEAPONS);
+        if (renderer != null && renderer.isReady()) {
+            renderer.drawFrameIndex(anchorFrame, currentX, currentY,
+                    (parent.getState().renderFlags & 1) != 0, false);
+        }
+    }
 
-        ObjectRenderManager renderManager = services().renderManager();
-        if (renderManager == null) {
-            return;
+    private static void drawExplosion(ObjectRenderManager renderManager, int x, int y, int frame) {
+        var renderer = renderManager.getBossExplosionRenderer();
+        if (renderer != null && renderer.isReady()) renderer.drawFrameIndex(frame, x, y, false, false);
+    }
+
+    /** Routine 6 link or routine 8 ball; the ship reference survives anchor deletion. */
+    public static final class NativeComponent extends AbstractBossChild
+            implements TouchResponseProvider, RewindRecreatable {
+        private int chainIndex;
+        private boolean ball;
+        private int distance;
+        private int ballFrame = 1;
+        private boolean parentDefeated;
+        private boolean convertedToExplosion;
+        private boolean displayThisPass;
+        private int explosionFrame;
+        private int explosionDuration = -1;
+
+        private NativeComponent(AbstractBossInstance parent, int index, int x, int y) {
+            super(parent, "GHZBallComponent", 6, Sonic1ObjectIds.BOSS_BALL);
+            chainIndex = index;
+            setPosition(x, y);
+            updateDynamicSpawn();
         }
 
-        boolean flipped = (parent.getState().renderFlags & 1) != 0;
+        private void makeBall() {
+            ball = true;
+            priority = 5;
+        }
 
-        // Render chain links (elements 0-5) using swing GHZ chain link art
-        PatternSpriteRenderer chainRenderer = renderManager.getRenderer(ObjectArtKeys.SWING_GHZ);
-        if (chainRenderer != null && chainRenderer.isReady()) {
-            for (int i = 0; i < CHAIN_LINK_COUNT; i++) {
-                // Frame 1 = chain link in Map_Swing_GHZ
-                // ROM: make_art_tile(ArtTile_GHZ_MZ_Swing,0,0) — palette 0 for boss chain
-                chainRenderer.drawFrameIndex(1, elementX[i], elementY[i], flipped, false, 0);
+        private void positionFromAnchor(int radius, int x, int y) {
+            distance = radius;
+            setPosition(x, y);
+            updateDynamicSpawn();
+        }
+
+        @Override
+        protected boolean tracksViaChildComponents() { return false; }
+
+        @Override
+        public int getOnScreenHalfWidth() { return convertedToExplosion && explosionDuration >= 0 ? 12 : 8; }
+
+        @Override
+        public ObjectSpawn getSpawn() {
+            ObjectSpawn nativeSpawn = super.getSpawn();
+            return convertedToExplosion ? explosionSpawn(nativeSpawn) : nativeSpawn;
+        }
+
+        @Override
+        public NativeComponent recreateForRewind(RewindRecreateContext ctx) {
+            Sonic1GHZBossInstance boss = findBoss(ctx);
+            return boss == null ? null : new NativeComponent(boss, 0, ctx.spawn().x(), ctx.spawn().y());
+        }
+
+        @Override
+        public void update(int vIntRunCount, PlayableEntity player) {
+            if (!beginUpdate(vIntRunCount)) return;
+            displayThisPass = true;
+            if (convertedToExplosion) {
+                if (explosionDuration < 0) {
+                    explosionDuration = 7;
+                    displayThisPass = false;
+                    services().playSfx(Sonic1Sfx.BOSS_EXPLOSION.id);
+                    return;
+                }
+                if (--explosionDuration < 0) {
+                    explosionDuration = 7;
+                    if (++explosionFrame == 5) setDestroyed(true);
+                }
+                return;
+            }
+            if (ball) ballFrame = ballFrame == 0 ? 1 : 0;
+            if ((parent.getState().renderFlags & 0x80) == 0) return;
+            parentDefeated = true;
+            if (!ball) {
+                convertedToExplosion = true;
+                return;
+            }
+            if ((vIntRunCount & 7) == 0) spawnDefeatExplosion();
+            // BGHZ_BossGenericTimer aliases GBall_LinkDist: early defeat uses
+            // the CURRENT radius, not a freshly seeded constant $60.
+            distance = (distance - 1) & 0xFF;
+            if ((byte) distance < 0) convertedToExplosion = true;
+        }
+
+        private void spawnDefeatExplosion() {
+            ObjectManager manager = services().objectManager();
+            if (manager == null) return;
+            // BossDefeated allocates BEFORE RandomNumber; full RAM consumes no RNG.
+            manager.createDynamicObjectWithReservedSlot(() -> {
+                int random = services().rng().nextWord();
+                int x = (currentX + ((random & 0xFF) >> 2) - 0x20) & 0xFFFF;
+                int y = (currentY + (((random >>> 8) & 0xFF) >> 3)) & 0xFFFF;
+                return new S1BossExplosion(x, y, services().renderManager());
+            });
+        }
+
+        @Override
+        public int getCollisionFlags() { return ball && !parentDefeated && !isDestroyed() ? 0x81 : 0; }
+
+        @Override
+        public int getCollisionProperty() { return 0; }
+
+        @Override
+        public int getPriorityBucket() { return convertedToExplosion && explosionDuration >= 0 ? 1 : ball ? 5 : 6; }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+            if (isDestroyed() || !displayThisPass || services().renderManager() == null) return;
+            if (convertedToExplosion && explosionDuration >= 0) {
+                drawExplosion(services().renderManager(), currentX, currentY, explosionFrame);
+                return;
+            }
+            PatternSpriteRenderer renderer = services().renderManager().getRenderer(
+                    ball ? ObjectArtKeys.BOSS_BALL : ObjectArtKeys.SWING_GHZ);
+            if (renderer != null && renderer.isReady()) {
+                renderer.drawFrameIndex(ball ? ballFrame : 1, currentX, currentY, false, false, ball ? -1 : 0);
             }
         }
-
-        // Render ball (element 6) using GHZ ball art
-        PatternSpriteRenderer ballRenderer = renderManager.getRenderer(ObjectArtKeys.BOSS_BALL);
-        if (ballRenderer != null && ballRenderer.isReady()) {
-            // Ball alternates between frames 0 (shiny) and 1 (check1)
-            ballRenderer.drawFrameIndex(ballFrame, elementX[CHAIN_LINK_COUNT], elementY[CHAIN_LINK_COUNT],
-                    flipped, false);
-        }
     }
 
-    // --- TouchResponseProvider for ball collision ---
-
-    @Override
-    public int getCollisionFlags() {
-        if (parentDefeated || isDestroyed() || !chainFullyExtended) {
-            return 0;
-        }
-        // ROM: obColType = $81 (enemy category, size index 1)
-        return BALL_COLLISION_FLAGS;
-    }
-
-    @Override
-    public int getCollisionProperty() {
-        return 0;
-    }
 }

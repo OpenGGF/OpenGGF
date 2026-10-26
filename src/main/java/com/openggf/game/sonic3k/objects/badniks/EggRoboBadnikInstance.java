@@ -3,14 +3,20 @@ package com.openggf.game.sonic3k.objects.badniks;
 import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.game.sonic3k.constants.Sonic3kConstants;
+import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.game.sonic3k.runtime.SszZoneRuntimeState;
+import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AnimalObjectInstance;
+import com.openggf.level.objects.AnimalType;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+
+import java.util.List;
 
 /**
  * ROM {@code Obj_EggRobo} ({@code $A0}, sonic3k.asm:198545-198867): Sky Sanctuary's EggRobo, in
@@ -45,11 +51,9 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
  * and only then does it join {@code loc_9159A} as a hovering fighter — without the
  * {@code _unkFA82} gate, which only {@code sub_91914} applies.
  *
- * <p>Two things this class does not reproduce, filed in {@code docs/status/s3k-known-bugs.md}: the
- * fly-by draws the badnik sheet rather than {@code ArtScaled_EggRoboFly} through
- * {@code Perform_Art_Scaling}, because the engine has no runtime art scaler; and the released
- * animal is the shared {@link AnimalObjectInstance} rather than {@code loc_917C0}'s own
- * {@code word_2C7EA} launch.
+ * <p>The fly-by still draws the badnik sheet rather than {@code ArtScaled_EggRoboFly} through
+ * {@code Perform_Art_Scaling}, because the engine has no runtime art scaler
+ * (filed in {@code docs/status/s3k-known-bugs.md}).
  */
 public final class EggRoboBadnikInstance extends AbstractS3kBadnikInstance
         implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
@@ -71,6 +75,12 @@ public final class EggRoboBadnikInstance extends AbstractS3kBadnikInstance
     static final int SCALE_FLOOR = 4;
     /** {@code move.w #$180,y_vel(a0)}. */
     static final int FLYBY_Y_VEL = 0x180;
+    /**
+     * Shipped FixBugs=0 Obj_EggRobo: JSR at $91518 is six bytes (4EB9 0008 5AAE).
+     * Obj_WaitOffscreen saves its return long at $34; loc_91874 replaces only the
+     * high Y word, leaving the return address's low word as sub_86180's fraction.
+     */
+    private static final int FLYBY_WAIT_Y_FRACTION = (0x91518 + 6) & 0xFFFF;
     /** {@code move.w #-$80,d0} in {@code loc_91874}. */
     static final int FLYBY_X_VEL = 0x80;
     /** {@code move.b #4,$39(a0)}. */
@@ -127,7 +137,14 @@ public final class EggRoboBadnikInstance extends AbstractS3kBadnikInstance
     private int previousPreviousY;
     private boolean childrenSpawned;
     private boolean lowPriorityArt;
-    private boolean flyByGateChecked;
+    /** Actual art_tile bit 15, written by ObjDat3 and copied at child allocation. */
+    private boolean artHigh;
+    // Obj_WaitOffscreen retains the preceding Render_Sprites bit 7. loc_85B02
+    // restores the continuation and returns; only the following dispatch initializes.
+    private boolean waitingForOnscreen = true;
+    private boolean renderedOnscreen;
+    private boolean drawSubmitted;
+    private boolean initialized;
 
     public EggRoboBadnikInstance(ObjectSpawn spawn) {
         super(spawn, "SSZEggRobo", Sonic3kObjectArtKeys.SSZ_EGG_ROBO,
@@ -145,9 +162,6 @@ public final class EggRoboBadnikInstance extends AbstractS3kBadnikInstance
         this.flyX = spawn.x() << 16;
         this.flyY = spawn.y() << 16;
         this.mappingFrame = mode == Mode.FIGHTER ? FIGHTER_FRAME : 0;
-        // move.w #-$80,d0 / btst #0,render_flags / bne (skip neg): a set bit keeps the negative.
-        this.xVelocity = badnikFacingLeft() ? FLYBY_X_VEL : -FLYBY_X_VEL;
-        this.yVelocity = mode == Mode.FLY_BY ? FLYBY_Y_VEL : 0;
         this.state = switch (mode) {
             case FLY_BY -> State.FLY_BY_ARC;
             case FIGHTER -> State.HOVER;
@@ -180,6 +194,9 @@ public final class EggRoboBadnikInstance extends AbstractS3kBadnikInstance
 
     /** True once {@code ObjDat3_919A6} is the loaded attribute row. */
     private boolean hasFighterAttributes() {
+        if (!initialized) {
+            return false;
+        }
         return switch (state) {
             case HOVER, HOVER_SHOOTING, RISING, FALLING -> true;
             default -> false;
@@ -188,20 +205,28 @@ public final class EggRoboBadnikInstance extends AbstractS3kBadnikInstance
 
     @Override
     protected void updateMovement(int vIntRunCount, PlayableEntity player) {
+        drawSubmitted = false;
         if (tryServices() == null || state == State.GONE) {
             return;
         }
-        if (!flyByGateChecked) {
-            flyByGateChecked = true;
-            // sub_91914: addq.w #8,sp / jmp (loc_85088) drops the caller and exits before the
-            // fighter's own init ever runs.
-            if (fighterWaitingOnItsFlyBy()) {
-                state = State.GONE;
-                ObjectLifetimeOps.deleteNoRespawn(this);
+        if (waitingForOnscreen) {
+            if (renderedOnscreen) {
+                waitingForOnscreen = false;
+                // loc_85B02 does not call Draw_Sprite. Its retained bit 7
+                // survives camera motion until the continuation next executes.
+            } else {
+                drawSubmitted = true;
+            }
+            return;
+        }
+        if (!initialized) {
+            initialize();
+            if (state == State.GONE) {
                 return;
             }
         }
-        // jsr (Obj_WaitOffscreen): every branch below is inside the on-screen gate.
+        // Obj_EggRobo resumes at sub_9185E, then jumps into the selected routine
+        // in this same dispatch. Subsequent active routines do not repeat the gate.
         switch (state) {
             case FLY_BY_ARC -> updateFlyBy();
             case HOVER, HOVER_SHOOTING -> updateHover(vIntRunCount, player);
@@ -215,6 +240,56 @@ public final class EggRoboBadnikInstance extends AbstractS3kBadnikInstance
         currentX = x;
         currentY = y;
         updateDynamicSpawn(x, y);
+        // Every surviving active routine reaches Draw_Sprite, directly for
+        // loc_9155E or through Sprite_CheckDeleteTouch for the other modes.
+        drawSubmitted = !isDestroyed() && state != State.GONE;
+    }
+
+    @Override
+    public void refreshPostCameraRenderState() {
+        if (drawSubmitted) {
+            drawSubmitted = false;
+            if (!isDestroyed()) {
+                // Render_Sprites rewrites bit 7 only for submitted objects.
+                // SetUp_ObjAttributes preserves it while changing the extents.
+                renderedOnscreen = isWithinRenderSpriteBounds(
+                        getOnScreenHalfWidth(), getOnScreenHalfHeight());
+            }
+        }
+    }
+
+    /** sub_9185E's three entries; Obj_EggRobo executes their selected routine after return. */
+    private void initialize() {
+        initialized = true;
+        switch (mode) {
+            case FLY_BY -> {
+                artHigh = true; // ObjDat3_9199A: $A500.
+                flyY = (y << 16) | FLYBY_WAIT_Y_FRACTION;
+                // loc_91874: clear render bit0 negates -$80; a set bit keeps it.
+                xVelocity = badnikFacingLeft() ? FLYBY_X_VEL : -FLYBY_X_VEL;
+                yVelocity = FLYBY_Y_VEL;
+            }
+            case FIGHTER -> {
+                // sub_91914 runs after the offscreen continuation, not at allocation.
+                if (fighterWaitingOnItsFlyBy()) {
+                    state = State.GONE;
+                    ObjectLifetimeOps.deleteNoRespawn(this);
+                    return;
+                }
+                artHigh = true; // ObjDat3_919A6: $8500, after the pairing guard.
+                // loc_918C4 never writes x_vel in the cleared SST. Its child
+                // allocation falls through into sub_918E2 before loc_9159A.
+                xVelocity = 0;
+                initializeSwing();
+                spawnChildrenOnce();
+            }
+            case ANIMAL_RELEASER -> {
+                artHigh = true; // ObjDat3_919B2: $8500.
+                // loc_918FC leaves both cleared velocities intact.
+                xVelocity = 0;
+                yVelocity = 0;
+            }
+        }
     }
 
     /** {@code loc_91526}. */
@@ -227,7 +302,7 @@ public final class EggRoboBadnikInstance extends AbstractS3kBadnikInstance
         }
         velocityDelta = (short) (velocityDelta - 1);
         yVelocity = (short) (yVelocity + velocityDelta);
-        if (yVelocity < 0 && !isOnScreen()) {
+        if (yVelocity < 0 && !renderedOnscreen) {
             leaveTheScreen();
             return;
         }
@@ -246,8 +321,16 @@ public final class EggRoboBadnikInstance extends AbstractS3kBadnikInstance
         if (ssz != null) {
             ssz.markEggRoboFlyByPassed(group);
         }
-        // lea (ArtKosM_EggRoboBadnik) / Queue_Kos_Module: the badnik sheet the fighter needs is
-        // already registered for this zone, so the re-queue has nothing left to do here.
+        // loc_91570: publish the pairing bit, restore ArtKosM_EggRoboBadnik
+        // at $A000, then delete even if the existing bounded FIFO rejects it.
+        // The coordinator owns an accepted job/claim beyond this actor's life.
+        try {
+            S3kRuntimeArtCoordinator.queueGlobalPatternModule(services(),
+                    Sonic3kConstants.ART_KOSM_EGG_ROBO_BADNIK_ADDR,
+                    Sonic3kConstants.ARTTILE_EGG_ROBO_BADNIK * 32);
+        } catch (java.io.IOException e) {
+            throw new IllegalStateException("Unable to queue EggRobo restoration art", e);
+        }
         state = State.GONE;
         ObjectLifetimeOps.deleteNoRespawn(this);
     }
@@ -269,14 +352,13 @@ public final class EggRoboBadnikInstance extends AbstractS3kBadnikInstance
         previousPreviousY = previousY;
         previousY = y;
         swingUpAndDown();
-        x = (x + (xVelocity >> 8)) & 0xFFFF;
-        y = (y + (yVelocity >> 8)) & 0xFFFF;
+        moveSprite2();
         // jsr (Find_OtherObject) / (Change_FlipX): the robot turns to face Player 1 and arms the
         // gun once it is within eight pixels vertically.
         if (!com.openggf.game.mutators.NativeObjectPolicyAccess.permitsTargeting(services()) || !(player instanceof AbstractPlayableSprite sprite)) {
             return;
         }
-        facingLeft = (sprite.getCentreX() & 0xFFFF) < x;
+        facingLeft = (short) (x - sprite.getCentreX()) >= 0;
         int dy = Math.abs((short) (((sprite.getCentreY() & 0xFFFF) - y) & 0xFFFF));
         if (dy <= GUN_ARM_Y_WINDOW && com.openggf.game.mutators.NativeObjectPolicyAccess.permitsFiring(services(), x)) {
             state = State.HOVER_SHOOTING;
@@ -284,7 +366,7 @@ public final class EggRoboBadnikInstance extends AbstractS3kBadnikInstance
         }
     }
 
-    /** {@code Swing_UpAndDown} (sonic3k.asm:181830-181858). */
+    /** {@code Swing_UpAndDown} (sonic3k.asm:177947-177976). */
     private void swingUpAndDown() {
         int acceleration = swingAcceleration;
         int velocity = yVelocity;
@@ -314,7 +396,7 @@ public final class EggRoboBadnikInstance extends AbstractS3kBadnikInstance
     private void updateReleasing(int vIntRunCount) {
         // move.b (V_int_run_count+3).w,d0: the +3 addresses the longword's low byte, so an
         // animal goes whenever the count itself is a multiple of 16.
-        if ((vIntRunCount & ANIMAL_PERIOD_MASK) != 0 || !isOnScreen()) {
+        if ((vIntRunCount & ANIMAL_PERIOD_MASK) != 0 || !renderedOnscreen) {
             return;
         }
         releaseAnimal();
@@ -323,27 +405,34 @@ public final class EggRoboBadnikInstance extends AbstractS3kBadnikInstance
         }
         // The releaser becomes a real EggRobo: ObjDat3_919A6, bclr #7,art_tile, and the children.
         lowPriorityArt = true;
+        artHigh = false; // bclr #7 precedes both CreateChild1_Normal copies.
         mappingFrame = FIGHTER_FRAME;
-        xVelocity = badnikFacingLeft() ? LAUNCH_X_VEL : -LAUNCH_X_VEL;
+        // loc_915F6 keeps -$300 when render bit0 is clear, negates it when set.
+        xVelocity = badnikFacingLeft() ? -LAUNCH_X_VEL : LAUNCH_X_VEL;
         spawnChildrenOnce();
         state = State.RISING;
     }
 
     /** {@code CreateChild6_Simple} over {@code ChildObjDat_919E6} -> {@code loc_917C0}. */
     private void releaseAnimal() {
-        spawnChild(() -> AnimalObjectInstance.deferredArtVariant(
-                new ObjectSpawn(x, y, 0, 0, 0, false, 0), services(), null));
+        // word_2C7EA's first two rows are fixed Rabbit/Chicken, independent of zone animals.
+        // loc_917E2 consumes parent render bit0. SetUp_ObjAttributes only bsets bit2, so
+        // even the final-release conversion preserves this bit before the child's own init
+        // (skdisasm044fa467:60996..61000,176987..177005,198614..198638,198784..198800).
+        spawnChild(() -> AnimalObjectInstance.deferredWalkingFlyingLaunch(
+                new ObjectSpawn(x, y, 0, 0, 0, false, 0), services(),
+                AnimalType.RABBIT, AnimalType.CHICKEN, !badnikFacingLeft()));
     }
 
     /** {@code loc_9164E}. */
     private void updateRising(int vIntRunCount) {
         mappingFrame = hoverFrame(vIntRunCount); // bsr.w sub_91988
         yVelocity = (short) (yVelocity + RISE_ACCELERATION);
-        x = (x + (xVelocity >> 8)) & 0xFFFF;
-        y = (y + (yVelocity >> 8)) & 0xFFFF;
+        moveSprite2();
         if (yVelocity <= RISE_LIMIT) {
             xVelocity = 0;
             lowPriorityArt = false;
+            artHigh = true; // loc_9164E raises only this body, not its existing children.
             state = State.FALLING;
         }
     }
@@ -352,16 +441,29 @@ public final class EggRoboBadnikInstance extends AbstractS3kBadnikInstance
     private void updateFalling(int vIntRunCount) {
         mappingFrame = hoverFrame(vIntRunCount); // bsr.w sub_91988
         yVelocity = (short) (yVelocity + FALL_ACCELERATION);
-        x = (x + (xVelocity >> 8)) & 0xFFFF;
-        y = (y + (yVelocity >> 8)) & 0xFFFF;
+        moveSprite2();
         if (yVelocity >= FALL_LIMIT) {
-            // sub_918E2.
-            swingMaximum = SWING_MAX_VELOCITY;
-            yVelocity = SWING_MAX_VELOCITY;
-            swingAcceleration = SWING_ACCELERATION;
-            swingDescending = false;
+            initializeSwing();
             state = State.HOVER;
         }
+    }
+
+    /** sub_918E2 writes velocities/parameters only; it preserves position fractions. */
+    private void initializeSwing() {
+        swingMaximum = SWING_MAX_VELOCITY;
+        yVelocity = SWING_MAX_VELOCITY;
+        swingAcceleration = SWING_ACCELERATION;
+        swingDescending = false;
+    }
+
+    /** MoveSprite2 sign-extends each velocity, shifts by 8, and adds to the full 16.16 position. */
+    private void moveSprite2() {
+        int fixedX = ((x << 16) | (xSubpixel & 0xFFFF)) + ((short) xVelocity << 8);
+        int fixedY = ((y << 16) | (ySubpixel & 0xFFFF)) + ((short) yVelocity << 8);
+        x = fixedX >>> 16;
+        y = fixedY >>> 16;
+        xSubpixel = fixedX & 0xFFFF;
+        ySubpixel = fixedY & 0xFFFF;
     }
 
     /** {@code CreateChild1_Normal} over {@code ChildObjDat_919D0}: the jet flame and the gun arm. */
@@ -370,10 +472,14 @@ public final class EggRoboBadnikInstance extends AbstractS3kBadnikInstance
             return;
         }
         childrenSpawned = true;
-        spawnChild(() -> new EggRoboJetFlameChildInstance(
-                new ObjectSpawn(x, y, 0, 0, getSpawn().renderFlags(), false, 0), this));
-        spawnChild(() -> new EggRoboGunArmChildInstance(
-                new ObjectSpawn(x, y, 0, 0, getSpawn().renderFlags(), false, 0), this));
+        spawnChild(() -> EggRoboJetFlameChildInstance.nativeChild(
+                new ObjectSpawn((x + EggRoboJetFlameChildInstance.CHILD_DX) & 0xFFFF,
+                        (y + EggRoboJetFlameChildInstance.CHILD_DY) & 0xFFFF,
+                        0, 0, getSpawn().renderFlags(), false, 0), this, artHigh));
+        spawnChild(() -> EggRoboGunArmChildInstance.nativeChild(
+                new ObjectSpawn((x + EggRoboGunArmChildInstance.CHILD_DX) & 0xFFFF,
+                        (y + EggRoboGunArmChildInstance.CHILD_DY) & 0xFFFF,
+                        0, 0, 0, false, 0), this, artHigh));
     }
 
     private SszZoneRuntimeState sszState() {
@@ -402,6 +508,13 @@ public final class EggRoboBadnikInstance extends AbstractS3kBadnikInstance
 
     int currentYVelocity() { return yVelocity; }
 
+    /**
+     * Native placement render bit 1: SetUp_ObjAttributes only sets bit 2, and the
+     * EggRobo's closed set of body render writers never changes V (FixBugs=0).
+     * Dynamic position spawns preserve these original low bits; no mutable copy is needed.
+     */
+    boolean nativeVFlip() { return (getSpawn().renderFlags() & 2) != 0; }
+
     public Mode mode() { return mode; }
     public int group() { return group; }
     public int scaleIndexForTest() { return scaleIndex; }
@@ -409,6 +522,7 @@ public final class EggRoboBadnikInstance extends AbstractS3kBadnikInstance
     public String stateForTest() { return state.name(); }
     public boolean lowPriorityArtForTest() { return lowPriorityArt; }
 
+    @Override public boolean isHighPriority() { return artHigh; }
     @Override public int getX() { return x; }
     @Override public int getY() { return y; }
     // All EggRobo branches own x_pos/y_pos here, not the base's currentX/Y.
@@ -416,6 +530,36 @@ public final class EggRoboBadnikInstance extends AbstractS3kBadnikInstance
     @Override protected int getBodyAnchorX() { return x; }
     @Override protected int getBodyAnchorY() { return y; }
 
-    @Override public int getOnScreenHalfWidth() { return mode == Mode.FIGHTER ? 0x14 : 0x20; }
-    @Override public int getOnScreenHalfHeight() { return mode == Mode.FIGHTER ? 0x18 : 0x20; }
+    @Override
+    public void appendRenderCommands(List<GLCommand> commands) {
+        if (!initialized || isDestroyed()) {
+            return;
+        }
+        var renderManager = services().renderManager();
+        if (renderManager == null) {
+            return;
+        }
+        var renderer = renderManager.getRenderer(Sonic3kObjectArtKeys.SSZ_EGG_ROBO);
+        if (renderer != null && renderer.isReady()) {
+            renderer.drawFrameIndexForcedPriority(
+                    mappingFrame, getRenderAnchorX(), getRenderAnchorY(), !facingLeft, nativeVFlip(), -1, artHigh);
+        }
+    }
+
+    @Override
+    public int getOnScreenHalfWidth() {
+        // Obj_WaitOffscreen / ObjDat3_9199A / ObjDat3_919B2 / ObjDat3_919A6.
+        if (!initialized || mode == Mode.FLY_BY) {
+            return 0x20;
+        }
+        return state == State.RELEASING ? 4 : 0x14;
+    }
+
+    @Override
+    public int getOnScreenHalfHeight() {
+        if (!initialized || mode == Mode.FLY_BY) {
+            return 0x20;
+        }
+        return state == State.RELEASING ? 4 : 0x18;
+    }
 }

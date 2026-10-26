@@ -36,8 +36,8 @@ final class S3kPatternModuleTransfer implements NativeKosModuleTransfer,
         Objects.requireNonNull(queue, "queue");
         if (physical != null && physical != queue)
             throw new IllegalStateException("Native module transfer cannot mix physical queue owners");
-        physical = queue;
         KosModuleTransferAccess.bind(queue, this);
+        physical = queue;
     }
     void bind(KosinskiModuleQueue queue, HardwareWorkHandle handle, S3kKosModuleDescriptor descriptor) {
         attach(queue);

@@ -91,6 +91,43 @@ class TestPaletteUploadLatch {
         }
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void restoredOwnerRebindDoesNotInventAPendingFadeWhenTheDisplayedGenerationAlreadyMatches(boolean active) {
+        if (active) graphics.setPaletteFadePresentation(PaletteFadePresentation.Mode.FROM_BLACK, 4,
+                PaletteFadePresentation.LINES_1_TO_3);
+        var displayed = PaletteUploadPresentation.captureDisplayedFade(graphics);
+        assertFalse(displayed.pending());
+        for (int cycle = 0; cycle < 2; cycle++) {
+            PaletteUploadPresentation.release(graphics);
+            graphics.setPaletteFadePresentation(PaletteFadePresentation.Mode.FROM_BLACK, active ? 5 : 4,
+                    PaletteFadePresentation.LINES_1_TO_3);
+            PaletteUploadPresentation.restoreDisplayedFade(graphics, displayed);
+            if (active) graphics.setPaletteFadePresentation(PaletteFadePresentation.Mode.FROM_BLACK, 4,
+                    PaletteFadePresentation.LINES_1_TO_3);
+            else graphics.clearPaletteFadePresentation();
+            assertEquals(displayed, PaletteUploadPresentation.captureDisplayedFade(graphics),
+                    "restored owner rebind must preserve every captured fade field, including pending, cycle " + cycle);
+        }
+    }
+
+    @Test
+    void matchingRestoredOwnerRebindPreservesAnAlreadyCapturedPendingPublication() {
+        graphics.setPaletteFadePresentation(PaletteFadePresentation.Mode.FROM_BLACK, 5,
+                PaletteFadePresentation.LINES_1_TO_3);
+        var captured = new PaletteUploadPresentation.DisplayedFade(PaletteFadePresentation.Mode.FROM_BLACK,
+                4, PaletteFadePresentation.LINES_1_TO_3, true);
+        PaletteUploadPresentation.restoreDisplayedFade(graphics, captured);
+        graphics.setPaletteFadePresentation(PaletteFadePresentation.Mode.FROM_BLACK, 4,
+                PaletteFadePresentation.LINES_1_TO_3);
+        assertEquals(captured, PaletteUploadPresentation.captureDisplayedFade(graphics),
+                "idempotent owner rebinding cannot erase the snapshot's genuine pending work");
+        PaletteUploadPresentation.publishAndLatch(graphics);
+        assertEquals(new PaletteUploadPresentation.DisplayedFade(PaletteFadePresentation.Mode.FROM_BLACK,
+                4, PaletteFadePresentation.LINES_1_TO_3, false),
+                PaletteUploadPresentation.captureDisplayedFade(graphics));
+    }
+
     @Test
     void cinematicRevealRestoresNativeFadeAndPublicationOwnershipEvenWhenDrawingFails() {
         graphics.setPaletteFadePresentation(PaletteFadePresentation.Mode.FROM_BLACK, 0,

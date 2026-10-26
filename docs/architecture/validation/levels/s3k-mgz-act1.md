@@ -132,3 +132,21 @@ with the original absolute S1/S2/S3K ROM properties and `test`, on `0197c5a5a` p
 35 tests / 0 failures / 0 errors / 0 skips (class 34 in 12.35 s; temporary red 1), Maven
 finished 2026-10-17T01:39:47Z. Only class comments changed after the run. Test-only; no
 production source changed, so no neighbour or required-four rerun was needed.
+
+
+## Native attracted-ring intervals (2026-10-22)
+
+The [native SAT evidence](../../designs/2026-10-22-native-sprite-scanline-budgets.md#ring-repair-and-two-movie-qualification)
+qualifies two independent committed BK2 input intervals through fresh ROM MGZ1
+entry: native320 Sonic plus CPU Tails, natural LIGHTNING acquisition, actual
+reserved-slot ring motion, bucket2→bucket1 admission, awards, sparkle deletion
+and destructive registered restore/forward. Exact test:
+`TestS3kAttractedRingMoviePhase` (2/2, zero failures/errors/skips in focused job36034).
+The standalone interval runs rows0–650 with rewind534→550; the complete-movie
+MGZ interval runs rows0–500 with rewind447→465. Comparison rows never install
+pose/camera/RNG or shield state. Separate short source-backed controls cover
+dead-P1 flight/sparkle and converted-bouncer per-SST animation copies.
+
+This is a bounded ring contract. Other mains, donors, widths, participant teams,
+complete traversal/physics/art and full-campaign incoming arrival remain inherited
+obligations; the act remains uncertified.

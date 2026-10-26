@@ -67,6 +67,9 @@ public final class NemesisPlcServiceQueue {
         }
     }
 
+    /** Current immutable prepared descriptor, without allocating a queue snapshot. */
+    public NemesisPlcQueueSnapshot.Entry activeEntry() { return activeEntry; }
+
     /** Returns whether the active slot or any unprepared FIFO entry remains. */
     public boolean isBusy() {
         return activeEntry != null || !queuedEntries.isEmpty();

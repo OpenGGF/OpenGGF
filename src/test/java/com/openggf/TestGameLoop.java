@@ -2371,11 +2371,30 @@ public class TestGameLoop {
     }
 
     @Test
-    void testRealSonic2TitleScreenAdvertisesOnePlayerExitAction() {
+    void testRealSonic2TitleScreenProducesOnePlayerOnlyAfterStartAndConsumesItOnce() throws Exception {
         Sonic2GameModule module = new Sonic2GameModule();
+        var title = module.getTitleScreenProvider();
+        assertEquals(TitleScreenAction.OTHER, title.consumeExitAction());
+        // Match TestSonic2NativeTitleControls.activeTitle's ready-state fixture;
+        // the action itself must still be produced by the real Start branch.
+        setPrivateField(title, "state", TitleScreenProvider.State.ACTIVE);
+        setPrivateField(title, "introComplete", true);
+        setPrivateField(title, "musicPlaying", true);
+        setPrivateField(title, "sonicPaletteLoaded", true);
+        var input = new InputHandler();
+        input.setLogicalOverride(LogicalInputSnapshot.neutral());
+        title.update(input);
+        assertFalse(title.isExiting());
+        assertEquals(TitleScreenAction.OTHER, title.consumeExitAction());
 
-        assertEquals(TitleScreenAction.ONE_PLAYER,
-                module.getTitleScreenProvider().consumeExitAction());
+        input.setLogicalOverride(LogicalInputSnapshot.ofPlayers(
+                com.openggf.control.PlayerInputState.of(0, 0, 0, 0, true, true),
+                com.openggf.control.PlayerInputState.of(0, 0, 0, 0, false, false)));
+        title.update(input);
+
+        assertTrue(title.isExiting());
+        assertEquals(TitleScreenAction.ONE_PLAYER, title.consumeExitAction());
+        assertEquals(TitleScreenAction.OTHER, title.consumeExitAction());
     }
 
     @Test
@@ -2387,13 +2406,13 @@ public class TestGameLoop {
     }
 
     @Test
-    void testTitleScreenExitHandlerUsesExplicitRouteResolutionWithoutStartingSecondFade() throws Exception {
+    void testOtherTitleExitHandlerUsesExplicitLevelFallbackWithoutStartingSecondFade() throws Exception {
         SessionManager.clear();
         com.openggf.configuration.SonicConfigurationService.getInstance()
                 .setConfigValue(com.openggf.configuration.SonicConfiguration.LEVEL_SELECT_ON_STARTUP, false);
 
-        StubTitleScreenProvider titleScreen = new StubTitleScreenProvider(TitleScreenProvider.TitleScreenAction.OPTIONS);
-        StubDataSelectProvider dataSelect = new StubDataSelectProvider(DataSelectAction.none());
+        StubTitleScreenProvider titleScreen = new StubTitleScreenProvider(TitleScreenAction.OTHER);
+        StubDataSelectProvider dataSelect = spy(new StubDataSelectProvider(DataSelectAction.none()));
         GameModule module = neutralGameModule();
         when(module.getTitleScreenProvider()).thenReturn(titleScreen);
         when(module.getDataSelectProvider()).thenReturn(dataSelect);
@@ -2415,7 +2434,8 @@ public class TestGameLoop {
         assertEquals(GameMode.LEVEL, gameLoop.getCurrentGameMode());
         verify(levelManager).loadZoneAndActForFreshRuntime(0, 0);
         verify(fadeManager, never()).startFadeToBlack(any());
-        assertTrue(dataSelect.isActive(), "Explicit route resolution should prevent OPTIONS from entering Data Select");
+        verify(dataSelect, never()).initialize();
+        assertTrue(dataSelect.isActive(), "The explicit OTHER fallback must leave Data Select unentered");
     }
 
     @Test
@@ -2513,7 +2533,7 @@ public class TestGameLoop {
     }
 
     @Test
-    void testExitTitleScreenRoutesLevelWithoutGenericFade() throws Exception {
+    void testOtherTitleExitRoutesLevelWithoutGenericFade() throws Exception {
         SessionManager.clear();
         com.openggf.configuration.SonicConfigurationService.getInstance()
                 .setConfigValue(com.openggf.configuration.SonicConfiguration.LEVEL_SELECT_ON_STARTUP, false);
@@ -2522,8 +2542,8 @@ public class TestGameLoop {
         com.openggf.configuration.SonicConfigurationService.getInstance()
                 .setConfigValue(com.openggf.configuration.SonicConfiguration.CROSS_GAME_SOURCE, "s3k");
 
-        StubTitleScreenProvider titleScreen = new StubTitleScreenProvider(TitleScreenAction.OPTIONS);
-        StubDataSelectProvider dataSelect = new StubDataSelectProvider(DataSelectAction.none());
+        StubTitleScreenProvider titleScreen = new StubTitleScreenProvider(TitleScreenAction.OTHER);
+        StubDataSelectProvider dataSelect = spy(new StubDataSelectProvider(DataSelectAction.none()));
         GameModule module = neutralGameModule();
         when(module.getTitleScreenProvider()).thenReturn(titleScreen);
         when(module.getDataSelectProvider()).thenReturn(dataSelect);
@@ -2544,6 +2564,7 @@ public class TestGameLoop {
         assertEquals(GameMode.LEVEL, gameLoop.getCurrentGameMode());
         verify(levelManager).loadZoneAndActForFreshRuntime(0, 0);
         verify(fadeManager, never()).startFadeToBlack(any());
+        verify(dataSelect, never()).initialize();
     }
 
     @Test

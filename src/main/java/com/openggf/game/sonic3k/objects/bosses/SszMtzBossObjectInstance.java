@@ -493,24 +493,25 @@ public final class SszMtzBossObjectInstance extends AbstractBossInstance
         head = spawnChild(() -> new SszMechaSonicHeadChild(
                 new ObjectSpawn(getX() + SszMechaSonicHeadChild.CHILD_DX,
                         getY() + SszMechaSonicHeadChild.CHILD_DY, 0, 0, 0, false, 0), this));
-        // jsr (AllocateObject).l / move.l #loc_7AD8A,(a1) / move.l a0,$34(a1): one slot, which
-        // loc_7ADA2 then turns into the first of seven orbs and allocates the other six from.
-        SszMtzBossOrbChild first = spawnChild(() -> new SszMtzBossOrbChild(
-                new ObjectSpawn(getX(), getY(), 0, 0, 0, false, 0), this, 0));
-        if (first != null) {
-            orbs.add(first);
-            for (int index = 1; index < SszMtzBossOrbChild.ORB_COUNT; index++) {
-                final int slot = index;
-                SszMtzBossOrbChild orb = spawnChild(() -> new SszMtzBossOrbChild(
-                        new ObjectSpawn(getX(), getY(), 0, 0, 0, false, 0), this, slot));
-                if (orb == null) {
-                    // bne.s locret_7AE12: a failed allocation ends the loop with fewer orbs.
-                    break;
-                }
-                orbs.add(orb);
-            }
+        if (head != null && head.isDestroyed()) {
+            head = null;
         }
+        // jsr (AllocateObject).l / move.l #loc_7AD8A,(a1) / move.l a0,$34(a1): one slot, which
+        // loc_7ADA2 initializes on its OWN dispatch. Unlike the head, it scans the global pool.
+        allocateOrb(0);
         applyPairingWordOverwrite();
+    }
+
+    /** Global AllocateObject for loc_7A72C / loc_7ADAA, retaining the ship's ownership hook. */
+    SszMtzBossOrbChild allocateOrb(int index) {
+        SszMtzBossOrbChild orb = spawnFreeChild(() -> new SszMtzBossOrbChild(
+                new ObjectSpawn(0, 0, 0, 0, 0, false, 0), this, index));
+        // The allocation helper returns a destroyed shell on exhaustion, rather than null.
+        if (orb == null || orb.isDestroyed()) {
+            return null;
+        }
+        orbs.add(orb);
+        return orb;
     }
 
     /** {@code loc_7A7C4}. */
@@ -992,7 +993,7 @@ public final class SszMtzBossObjectInstance extends AbstractBossInstance
 
     public int collisionSizeForTest() { return collisionSize; }
 
-    void releaseOrb(SszMtzBossOrbChild child) { orbs.remove(child); }
+    void releaseOrb(SszMtzBossOrbChild child) { orbs.removeIf(orb -> orb == child); }
 
     public List<SszMtzBossOrbChild> orbsForTest() { return List.copyOf(orbs); }
 

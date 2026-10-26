@@ -143,12 +143,14 @@ final class ObjectStageplayController {
             throw new IllegalArgumentException("Object placement has no native factory");
         }
         if (instance instanceof AbstractObjectInstance object) {
-            objects.bindObjectServices(object);
-            if (object.getSlotIndex() < 0) object.setSlotIndex(slot);
-            if (objects.placement.isCounterBasedRespawn()) {
-                int counter = objects.placement.getCounterForSpawn(spawn);
-                if (counter >= 0) object.setRespawnStateIndex(counter);
-            }
+            objects.runObjectCallback(instance, () -> {
+                objects.bindObjectServices(object);
+                if (object.getSlotIndex() < 0) object.setSlotIndex(slot);
+                if (objects.placement.isCounterBasedRespawn()) {
+                    int counter = objects.placement.getCounterForSpawn(spawn);
+                    if (counter >= 0) object.setRespawnStateIndex(counter);
+                }
+            });
         } else objects.releaseSlot(slot);
         // Explicit cast ownership must exist before the persistent clear admission gate.
         // Keep vanilla placement scans filtered while permitting this authored readmission.

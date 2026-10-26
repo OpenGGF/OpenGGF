@@ -1,5 +1,6 @@
 package com.openggf.audio;
 
+import com.openggf.data.Rom;
 import com.openggf.audio.runtime.AudioFrameClock;
 import com.openggf.audio.presentation.PresentationMode;
 import com.openggf.audio.presentation.AudioPresentationFrameView;
@@ -16,10 +17,12 @@ import java.util.function.Consumer;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
@@ -139,6 +142,47 @@ class AudioManagerLiveCaptureTest {
 
         handle.close();
         audio.beginLiveCaptureAudio(1).close();
+    }
+
+    @Test
+    void matchedSourceChangeCarriesCaptureClockAndReinstallKeepsProducerExact()
+            throws ReflectiveOperationException {
+        audio.setBackend(new FixedRateNullBackend(3));
+        var profile = new AudioTestFixtures.StubAudioProfile(new AudioTestFixtures.StubSmpsLoader());
+        Rom first = new Rom();
+        Rom second = new Rom();
+        AudioManagerInternalAccess.installMatchedSource(audio, first, profile);
+        try (var capture = audio.beginLiveCaptureAudio(2)) {
+            audio.presentFrame(PresentationMode.FORWARD);
+            assertEquals(1, capture.drainPresentationFrame(new short[4]));
+            assertEquals(1, capture.totalStereoFrames());
+            assertEquals(new AudioFrameClock.Snapshot(3, 2, 1, 1), capture.clockSnapshot());
+            Object before = AudioManagerTestDiagnostics.presentationField(audio, "shadowProducer", Object.class);
+            assertNotNull(before);
+
+            AudioManagerInternalAccess.installMatchedSource(audio, second, profile);
+
+            Object replacement = AudioManagerTestDiagnostics.presentationField(audio, "shadowProducer", Object.class);
+            assertNotNull(replacement);
+            assertNotSame(before, replacement);
+            // A new lease starts its own count, retaining the prior fractional phase.
+            assertEquals(new AudioFrameClock.Snapshot(3, 2, 0, 1), capture.clockSnapshot());
+            assertEquals(1, capture.totalStereoFrames());
+            audio.presentFrame(PresentationMode.FORWARD);
+            assertEquals(2, capture.drainPresentationFrame(new short[4]));
+            assertEquals(3, capture.totalStereoFrames());
+            assertEquals(new AudioFrameClock.Snapshot(3, 2, 2, 0), capture.clockSnapshot());
+            var retained = AudioManagerTestDiagnostics.producerFingerprint(audio);
+            Object retainedProducer = AudioManagerTestDiagnostics.presentationField(audio, "shadowProducer", Object.class);
+            AudioManagerInternalAccess.installMatchedSource(audio, second, profile);
+            assertSame(retainedProducer, AudioManagerTestDiagnostics.presentationField(audio, "shadowProducer", Object.class));
+            assertEquals(retained, AudioManagerTestDiagnostics.producerFingerprint(audio));
+            assertThrows(IllegalStateException.class, () -> audio.beginLiveCaptureAudio(2));
+            audio.presentFrame(PresentationMode.FORWARD);
+            assertEquals(1, capture.drainPresentationFrame(new short[4]));
+            assertEquals(4, capture.totalStereoFrames());
+            assertEquals(new AudioFrameClock.Snapshot(3, 2, 3, 1), capture.clockSnapshot());
+        }
     }
 
     /**

@@ -27,6 +27,7 @@ class TestStageplayLiveWorldRendering {
         config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE,"");
         config.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED,false);
         try(var boot=new HeadlessGameBoot(320,224)) {
+            try {
             boot.setBootToTitle(true); boot.boot(path,0,0);
             try(var library=SceneRomLibrary.open(Map.of("s3k",path));
                 var world=StageplayLiveWorld.adoptOffline(library,SessionManager.getCurrentGameplayMode());
@@ -80,6 +81,10 @@ class TestStageplayLiveWorldRendering {
                             +"; film centre="+x+","+y+"; zoom="+zoom);
                 }
                 assertSame(frame,world.resolve(document,StageplayTimeline.sample(document,atFrame)),"Drawing cannot tick the world");
+            }
+            } finally {
+                // Retire process-owned GPU caches after the world closes, while this context is current.
+                GameServices.graphics().cleanup();
             }
         }
     }

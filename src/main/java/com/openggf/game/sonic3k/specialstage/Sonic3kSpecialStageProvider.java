@@ -29,7 +29,7 @@ import java.util.Optional;
  * S3K special stages are accessed via giant rings hidden in levels.
  * Each stage awards one of seven Chaos Emeralds upon successful completion.
  */
-public class Sonic3kSpecialStageProvider implements SpecialStageProvider, com.openggf.game.internal.NativeSpecialStagePacing, SpecialStageResultsEntry {
+public class Sonic3kSpecialStageProvider implements SpecialStageProvider, com.openggf.game.internal.NativeSpecialStagePacing, SpecialStageResultsEntry, S3kSpecialStageWorldAccess.ContextualResults {
     private final Sonic3kSpecialStageManager manager;
     private SpecialStageViewport viewport = SpecialStageViewport.nativeViewport();
 
@@ -282,18 +282,26 @@ public class Sonic3kSpecialStageProvider implements SpecialStageProvider, com.op
     @Override
     public ResultsScreen createResultsScreen(int ringsCollected, boolean gotEmerald,
                                              int stageIndex, int totalEmeraldCount) {
+        throw new IllegalStateException("S3K special-stage results require an explicit gameplay context");
+    }
+
+    @Override
+    public ResultsScreen createResultsScreenInWorld(int ringsCollected, boolean gotEmerald,
+            int stageIndex, int totalEmeraldCount, com.openggf.game.session.GameplayModeContext context) {
+        var world = java.util.Objects.requireNonNull(context, "gameplay context").getWorldSession();
         // ROM SpecialStage_Results copies Current_zone_and_act into
         // Special_stage_zone_and_act, so the reveal branch at loc_2E540 tests the zone the
         // Big Ring was collected in — still the loaded level at this point.
-        boolean skSideOrigin = GameServices.hasRuntime()
-                && Sonic3kZoneIds.isSkSideZone(GameServices.level().getCurrentZone());
+        boolean skSideOrigin = Sonic3kZoneIds.isSkSideZone(world.getCurrentZone());
         var character = manager.getPlayerCharacter();
         boolean superEmeraldMode = manager.isSuperEmeraldMode();
         int ringsRemaining = resultsRingsRemaining;
         try {
-            return new S3kSpecialStageResultsPreparation(GameServices.rom().getRom(), character,
-                    S3kRuntimeArtCoordinator.current().moduleQueue(),
-                    GameServices.module().getGameService(
+            var rom = world.getDataSource().rom().orElseThrow(
+                    () -> new IOException("Special-stage results world ROM is unavailable"));
+            return new S3kSpecialStageResultsPreparation(rom, character,
+                    S3kRuntimeArtCoordinator.from(context.runtimeArtCoordinator()).moduleQueue(),
+                    com.openggf.game.session.WorldPlcLifecycleAccess.require(world,
                             Sonic3kLevelTitlePlcService.class),
                     () -> new S3kSpecialStageResultsScreen(
                             ringsCollected, gotEmerald, ringsRemaining, stageIndex, totalEmeraldCount,

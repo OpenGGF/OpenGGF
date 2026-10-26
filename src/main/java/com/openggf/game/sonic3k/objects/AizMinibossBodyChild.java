@@ -14,7 +14,6 @@ import com.openggf.level.objects.TouchOverlapStopPolicy;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchShieldDeflectCapability;
-import com.openggf.level.objects.boss.AbstractBossChild;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -29,7 +28,7 @@ import java.util.List;
  * - collision_flags=$9C (hurt)
  * - animated body frames while active
  */
-public class AizMinibossBodyChild extends AbstractBossChild implements TouchResponseProvider, RewindRecreatable {
+public class AizMinibossBodyChild extends AizMinibossComponent implements TouchResponseProvider, RewindRecreatable {
     private static final int Y_OFFSET = 0x20;
     private static final int COLLISION_FLAGS = 0x9C;
     private static final int SHIELD_REACTION = 1 << 4;
@@ -59,60 +58,32 @@ public class AizMinibossBodyChild extends AbstractBossChild implements TouchResp
     private int animTimer = ANIM_DELAY;
 
     public AizMinibossBodyChild(AbstractBossInstance parent) {
-        super(parent, "AIZMinibossBody", 3, 0x90);
+        super(parent, "AIZMinibossBody", 3, 0);
+        initializeAdjustedPosition(parent, 0, Y_OFFSET);
+        updateDynamicSpawn();
     }
 
-    private AizMinibossBodyChild(ObjectSpawn spawn, AizMinibossInstance parent) {
-        this(parent);
+    private AizMinibossBodyChild(ObjectSpawn spawn) {
+        super(spawn, "AIZMinibossBody", 3);
     }
 
     @Override
     public AizMinibossBodyChild recreateForRewind(RewindRecreateContext ctx) {
-        AbstractBossInstance boss = AizMinibossRewindLinks.nearestSharedBoss(ctx);
-        return boss == null ? null : new AizMinibossBodyChild(boss);
+        return new AizMinibossBodyChild(ctx.spawn());
     }
 
-    @Override
-    public void syncPositionWithParent() {
-        if (parent != null && !parent.isDestroyed()) {
-            this.currentX = parent.getX();
-            this.currentY = parent.getY() + Y_OFFSET;
-        }
-    }
-
-    private boolean nativeRetirementPending;
-
-    @Override
-    protected boolean destroyWhenParentDestroyed() {
-        // Cutscene children execute their own Child_Draw*Sprite2 bit4 tail.
-        return !(parent instanceof AizMinibossCutsceneInstance);
-    }
+    @Override public void syncPositionWithParent() { refreshAdjustedPosition(0, Y_OFFSET); }
 
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        if (!shouldUpdate(vIntRunCount)) {
-            return;
-        }
-        if (nativeRetirementPending) {
-            com.openggf.level.objects.ObjectLifetimeOps.deleteNoRespawn(this);
-            return;
-        }
+        if (!beginOwnDispatch(vIntRunCount)) return;
         syncPositionWithParent();
         updateAnimation();
-        // Child_Draw_Sprite2 / Child_DrawTouch_Sprite2 returns through
-        // Go_Delete_Sprite_2 instead of drawing when parent $38 bit4 is set.
-        if (parent instanceof AizMinibossCutsceneInstance
-                && (parent.getCustomFlag(0x38) & 0x10) != 0) nativeRetirementPending = true;
-        updateDynamicSpawn();
+        finishNativeDrawTail();
     }
 
     private void updateAnimation() {
-        if (parent == null || parent.getState().defeated) {
-            mappingFrame = FRAME_B;
-            return;
-        }
-
+        // loc_686E8 runs Animate_Raw before the separate status7 touch gate.
         animTimer--;
         if (animTimer > 0) {
             return;
@@ -125,7 +96,7 @@ public class AizMinibossBodyChild extends AbstractBossChild implements TouchResp
 
     @Override
     public int getCollisionFlags() {
-        if (nativeRetirementPending || parent == null || parent.getState().defeated || isDestroyed()) {
+        if (nativeRetirementPending || parentHeader().defeated() || isDestroyed()) {
             return 0;
         }
         return COLLISION_FLAGS;
@@ -176,7 +147,7 @@ public class AizMinibossBodyChild extends AbstractBossChild implements TouchResp
         if (renderer == null || !renderer.isReady()) {
             return;
         }
-        boolean hFlip = parent != null && (parent.getState().renderFlags & 1) != 0;
+        boolean hFlip = (nativeRenderFlags & 1) != 0;
         renderer.drawFrameIndex(mappingFrame, currentX, currentY, hFlip, false, PALETTE_OVERRIDE);
     }
 }

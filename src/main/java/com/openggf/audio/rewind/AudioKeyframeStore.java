@@ -1,6 +1,7 @@
 package com.openggf.audio.rewind;
 
 import com.openggf.audio.AudioManager;
+import com.openggf.audio.AudioNativePauseAccess;
 
 import java.util.Map;
 import java.util.NavigableMap;
@@ -35,21 +36,7 @@ public final class AudioKeyframeStore {
                 Math.toIntExact(keyframe.getKey()),
                 Math.toIntExact(targetFrame),
                 reason)) {
-            AudioCommandTimeline timeline = audio.commandTimeline();
-            // The firstRetainedEntryIndex clamp is unreachable while pruning
-            // stays in lockstep (the timeline is pruned to the EARLIEST
-            // retained keyframe's commandEntryCount, so every retained
-            // snapshot's count is >= it); it is a skip-don't-crash safety net
-            // should that coupling ever break.
-            int start = Math.max(snapshot.commandEntryCount(), timeline.firstRetainedEntryIndex());
-            int end = timeline.entryCount();
-            for (int i = start; i < end; i++) {
-                AudioTimelineEntry entry = timeline.entryAt(i);
-                if (entry.frame() <= targetFrame) {
-                    audio.replayTimelineCommand(entry.command());
-                    replayed++;
-                }
-            }
+            replayed = replayHistory(audio, snapshot, targetFrame, false);
         }
         return replayed;
     }
@@ -68,19 +55,41 @@ public final class AudioKeyframeStore {
 
         AudioLogicalSnapshot snapshot = keyframe.getValue();
         audio.restoreLogicalSnapshot(snapshot);
-        int replayed = 0;
+        return replayHistory(audio, snapshot, commandTimelineFrame, true);
+    }
+
+    private int replayHistory(AudioManager audio, AudioLogicalSnapshot snapshot,
+                              long commandTimelineFrame, boolean logicalOnly) {
         AudioCommandTimeline timeline = audio.commandTimeline();
-        // Same skip-don't-crash safety net as replayTo: unreachable under
-        // lockstep pruning, diagnosable if the prune coupling breaks.
-        int start = Math.max(snapshot.commandEntryCount(), timeline.firstRetainedEntryIndex());
-        int end = timeline.entryCount();
-        for (int i = start; i < end; i++) {
-            AudioTimelineEntry entry = timeline.entryAt(i);
-            if (entry.frame() <= commandTimelineFrame) {
-                audio.replayTimelineCommandLogically(entry.command());
-                replayed++;
+        var session = snapshot.presentation().smpsSession();
+        int snapshotCursor = session != null ? session.nativeHistoryCursor() : 0;
+        // Retention normally keeps these floors aligned with the earliest
+        // keyframe. Clamps retain the previous skip-don't-crash public behavior.
+        int cursor = Math.max(snapshotCursor,
+                AudioTimelineInternalAccess.firstRetainedCursor(timeline));
+        int firstPublic = Math.max(snapshot.commandEntryCount(),
+                timeline.firstRetainedEntryIndex());
+        int replayed = 0;
+        for (AudioTimelineInternalAccess.Event event :
+                AudioTimelineInternalAccess.eventsFrom(timeline, cursor, commandTimelineFrame)) {
+            if (event.command() != null) {
+                // Pending public commands have always been covered by the
+                // snapshot's public count; a native cursor must not replay them.
+                if (event.publicEntryIndex() >= firstPublic) {
+                    if (logicalOnly) {
+                        audio.replayTimelineCommandLogically(event.command());
+                    } else {
+                        audio.replayTimelineCommand(event.command());
+                    }
+                    replayed++;
+                }
+            } else {
+                AudioNativePauseAccess.replay(audio, event.nativePause(), event.forwardSnapshot());
             }
+            cursor = event.cursor() + 1;
         }
+        AudioNativePauseAccess.advanceHistoryCursor(audio, cursor);
+        // Existing callers count public commands, not internal native controls.
         return replayed;
     }
 

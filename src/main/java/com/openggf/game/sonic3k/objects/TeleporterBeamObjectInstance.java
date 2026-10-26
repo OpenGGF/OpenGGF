@@ -8,6 +8,7 @@ import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
@@ -25,8 +26,8 @@ import java.util.List;
  *
  * <p>{@code $46(a0)} is the progress byte the parent teleporter reads: it toggles 0/$FF while
  * segments are added, then counts up to {@code $18} every four frames while expanding.
- * The parent sets {@code routine} to contract the beam; on underflow the beam deletes itself
- * and clears the parent's {@code $38} flag.
+ * The parent sets {@code routine} to contract the beam; on underflow the beam clears the
+ * parent's {@code $38} flag and draws main frame 9. Its next own dispatch deletes it.
  */
 public final class TeleporterBeamObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
 
@@ -34,7 +35,8 @@ public final class TeleporterBeamObjectInstance extends AbstractObjectInstance i
     private static final int PHASE_SPAWN = 0;
     private static final int PHASE_WAIT = 1;
     private static final int PHASE_EXPAND = 2;
-    private static final int PALETTE_LINE = 3;
+    /** Obj_TeleporterBeamExpand installs Delete_Current_Sprite after drawing its final main image. */
+    private static final int PHASE_DELETE = 3;
     private static final int SEGMENT_SPACING = 0x20;
     private static final int MAX_SEGMENTS = 7;
     private static final int MAX_PROGRESS = 0x18;
@@ -66,7 +68,7 @@ public final class TeleporterBeamObjectInstance extends AbstractObjectInstance i
     private final int[] childY = new int[MAX_SEGMENTS];
     private final int[] childFrame = new int[MAX_SEGMENTS];
 
-    private record RewindExtra(String artKey, int y, int phase, int progress, int timer, int segmentCount,
+    private record RewindExtra(String artKey, int expandBaseY, int y, int phase, int progress, int timer, int segmentCount,
                                boolean contracting, boolean visibleThisFrame,
                                int[] childX, int[] childY, int[] childFrame, ObjectRefId parentId)
             implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {}
@@ -112,6 +114,19 @@ public final class TeleporterBeamObjectInstance extends AbstractObjectInstance i
         return new TeleporterBeamObjectInstance(spawn, parent, Sonic3kObjectArtKeys.SSZ_TELEPORTER, false);
     }
 
+    /** Obj_CNZTeleporterMain: $24EE art word and word_467FC's flat-Y expansion. */
+    public static TeleporterBeamObjectInstance cnzTransportBeam(ObjectSpawn spawn, TeleporterBeamOwner parent) {
+        return new TeleporterBeamObjectInstance(spawn, parent, Sonic3kObjectArtKeys.CNZ_TELEPORTER, false);
+    }
+
+    /** Obj_ICZTeleporter ($53ADE): already expanded, contracting, with its own $80 base offset. */
+    public static TeleporterBeamObjectInstance iczArrivalBeam(ObjectSpawn spawn, TeleporterBeamOwner parent) {
+        var beam = new TeleporterBeamObjectInstance(spawn, parent, Sonic3kObjectArtKeys.ICZ_TELEPORTER, true);
+        beam.expandBaseY = (spawn.y() - 0x80) & 0xFFFF;
+        beam.contracting = true;
+        return beam;
+    }
+
     @Override
     public TeleporterBeamObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         if (ctx.state() == null || !(ctx.state().objectSubclassExtra() instanceof RewindExtra extra)) {
@@ -127,7 +142,7 @@ public final class TeleporterBeamObjectInstance extends AbstractObjectInstance i
         ObjectRefId parentId = context.identityTable()
                 .map(table -> table.encodeObject(parent)).orElse(null);
         return super.captureRewindState(context).withObjectSubclassExtra(new RewindExtra(
-                artKey, y, phase, progress, timer, segmentCount, contracting, visibleThisFrame,
+                artKey, expandBaseY, y, phase, progress, timer, segmentCount, contracting, visibleThisFrame,
                 childX.clone(), childY.clone(), childFrame.clone(), parentId));
     }
 
@@ -135,6 +150,7 @@ public final class TeleporterBeamObjectInstance extends AbstractObjectInstance i
     public void restoreRewindState(PerObjectRewindSnapshot snapshot, RewindCaptureContext context) {
         super.restoreRewindState(snapshot, context);
         if (snapshot.objectSubclassExtra() instanceof RewindExtra extra) {
+            expandBaseY = extra.expandBaseY();
             y = extra.y();
             phase = extra.phase();
             progress = extra.progress();
@@ -169,6 +185,7 @@ public final class TeleporterBeamObjectInstance extends AbstractObjectInstance i
         switch (phase) {
             case PHASE_SPAWN -> updateSpawn(frameCounter);
             case PHASE_WAIT -> updateWait(frameCounter);
+            case PHASE_DELETE -> ObjectLifetimeOps.deleteNoRespawn(this);
             default -> updateExpand(frameCounter);
         }
     }
@@ -231,20 +248,28 @@ public final class TeleporterBeamObjectInstance extends AbstractObjectInstance i
         y = baseY;
         int spread = Math.min(progress, 0x12) + 6;
         int[] row = EXPAND_TABLE[Math.max(0, Math.min(progress, MAX_PROGRESS))];
+        // word_467FC shares the frame pairs with word_46734, but every Y word
+        // is zero. The captured art selector owns this semantic variant; do not
+        // consult the current zone during recreation of an older world.
+        boolean flatY = usesFlatY();
         childX[0] = x - spread;
-        childY[0] = baseY + row[0];
+        childY[0] = baseY + (flatY ? 0 : row[0]);
         childFrame[0] = row[1];
         childX[1] = x + spread;
-        childY[1] = baseY + row[2];
+        childY[1] = baseY + (flatY ? 0 : row[2]);
         childFrame[1] = row[3];
         if (contracting) {
             progress--;
             if (progress < 0) {
                 segmentCount = 0;
+                // sonic3k.asm:91387-91405: mapping_frame=9, childsprites=0,
+                // code=Delete_Current_Sprite, clear parent's $38, then Draw_Sprite.
+                // The new code pointer executes next dispatch, even on an even LF.
+                phase = PHASE_DELETE;
                 if (parent != null) {
                     parent.onBeamFinished();
                 }
-                setDestroyed(true);
+                visibleThisFrame = true;
                 return;
             }
         } else if ((frameCounter & 2) != 0 && progress < MAX_PROGRESS) {
@@ -267,6 +292,11 @@ public final class TeleporterBeamObjectInstance extends AbstractObjectInstance i
     int segmentCountForTest() { return segmentCount; }
     int phaseForTest() { return phase; }
 
+    private boolean usesFlatY() {
+        return Sonic3kObjectArtKeys.CNZ_TELEPORTER.equals(artKey)
+                || Sonic3kObjectArtKeys.ICZ_TELEPORTER.equals(artKey);
+    }
+
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         if (!visibleThisFrame) {
@@ -276,11 +306,16 @@ public final class TeleporterBeamObjectInstance extends AbstractObjectInstance i
         if (renderer == null) {
             return;
         }
+        if (phase == PHASE_DELETE) {
+            renderer.drawFrameIndex(9, x, y, false, false, usesFlatY() ? 1 : 3);
+            return;
+        }
         // Render_Sprites loc_1AEE4 / loc_1AF1C: zero mapping_frame skips the
         // multi-sprite main image and draws only its children. Frame 0 is a pad,
         // so drawing it here creates a floating second teleporter under the beam.
         for (int index = 0; index < segmentCount && index < MAX_SEGMENTS; index++) {
-            renderer.drawFrameIndex(childFrame[index], childX[index], childY[index], false, false, PALETTE_LINE);
+            renderer.drawFrameIndex(childFrame[index], childX[index], childY[index], false, false,
+                    usesFlatY() ? 1 : 3);
         }
     }
 }

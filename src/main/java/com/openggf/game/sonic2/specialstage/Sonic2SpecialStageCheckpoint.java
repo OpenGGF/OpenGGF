@@ -1,9 +1,13 @@
 package com.openggf.game.sonic2.specialstage;
 
+import com.openggf.physics.TrigLookupTable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.function.IntSupplier;
 import java.util.logging.Logger;
+
+import static com.openggf.game.sonic2.specialstage.Sonic2SpecialStageSlotPool.Kind.*;
 
 /**
  * Manages checkpoint state and messages in Sonic 2 Special Stage.
@@ -71,6 +75,11 @@ public class Sonic2SpecialStageCheckpoint {
         public int flyoutAngle;
         public int flyoutSpeed;
         public boolean visible;
+        private Sonic2SpecialStageSlotPool.Handle nativeHandle;
+        private int nativeTimer = 0x46;
+        private int nativeRoutine = 4;
+
+        public Sonic2SpecialStageSlotPool.Handle getNativeHandle() { return nativeHandle; }
 
         public MessageLetter(int x, int y, int tileOffset) {
             this.x = x;
@@ -93,6 +102,9 @@ public class Sonic2SpecialStageCheckpoint {
         private int x;
         private int y;
         private boolean active;
+        private Sonic2SpecialStageSlotPool.Handle nativeHandle;
+
+        public Sonic2SpecialStageSlotPool.Handle getNativeHandle() { return nativeHandle; }
 
         private RainbowRing(int baseIndex) {
             this.baseIndex = baseIndex;
@@ -181,6 +193,16 @@ public class Sonic2SpecialStageCheckpoint {
 
     // Live combined ring count, read at the moment the result is resolved.
     private IntSupplier liveRingCount;
+    private Sonic2SpecialStageSlotPool nativeSlotPool;
+    private Sonic2SpecialStageSlotPool.Handle nativeMarker;
+    private Sonic2SpecialStageSlotPool.Handle nativeWings;
+    private Sonic2SpecialStageSlotPool.Handle nativeHand;
+    private int nativeWingsTimer;
+    private int nativeHandTimer;
+    private int nativeHandRoutine;
+    private Consumer<Sonic2SpecialStageSlotPool.Handle> onNativeRingRequirementMessage;
+    private Consumer<Boolean> onNativeMessageVisibility;
+    private boolean nativeHandCompleted;
 
     /**
      * Supplies the combined ring count ({@code Ring_count + Ring_count_2P}) as it
@@ -192,6 +214,30 @@ public class Sonic2SpecialStageCheckpoint {
     public void setLiveRingCount(IntSupplier liveRingCount) {
         this.liveRingCount = liveRingCount;
     }
+
+    public void attachNativeSlotPool(Sonic2SpecialStageSlotPool pool) {
+        nativeSlotPool = pool;
+    }
+
+    public void setOnNativeRingRequirementMessage(
+            Consumer<Sonic2SpecialStageSlotPool.Handle> callback) {
+        onNativeRingRequirementMessage = callback;
+    }
+
+    public void setOnNativeMessageVisibility(Consumer<Boolean> callback) {
+        onNativeMessageVisibility = callback;
+    }
+
+    /** Keeps the streamed marker occupied while Obj5A_Init waits for straight track. */
+    public boolean hasNativeSlotPool() { return nativeSlotPool != null; }
+
+    public void queueNativeMarker(Sonic2SpecialStageSlotPool.Handle marker) {
+        nativeMarker = marker;
+    }
+
+    public Sonic2SpecialStageSlotPool.Handle getNativeMarkerHandle() { return nativeMarker; }
+    public Sonic2SpecialStageSlotPool.Handle getNativeWingsHandle() { return nativeWings; }
+    public Sonic2SpecialStageSlotPool.Handle getNativeHandHandle() { return nativeHand; }
 
     /**
      * Sets a callback for when music fade is requested.
@@ -229,6 +275,11 @@ public class Sonic2SpecialStageCheckpoint {
         showCheckpointHand = false;
         messageLetters.clear();
         startRainbowRings();
+
+        if (nativeSlotPool != null) {
+            nativeSlotPool.release(nativeMarker);
+            nativeMarker = null;
+        }
 
         LOGGER.info("Checkpoint " + checkpointNumber + " triggered: " +
                    "required=" + ringRequirement + ", collected=" + ringsCollected);
@@ -337,6 +388,22 @@ public class Sonic2SpecialStageCheckpoint {
      * @return true if the checkpoint sequence is complete
      */
     public boolean update(boolean drawingIndex4) {
+        if (nativeSlotPool != null) {
+            // The manager has already executed each live slot once. This group
+            // boundary only reports completion; it must never tick them again.
+            if (phase != MessagePhase.NONE && phase != MessagePhase.RAINBOW_RINGS
+                    && phase != MessagePhase.COMPLETE) {
+                phaseTimer++;
+                boolean live = nativeSlotPool.isLive(nativeWings)
+                        || nativeSlotPool.isLive(nativeHand)
+                        || messageLetters.stream().anyMatch(letter -> nativeSlotPool.isLive(letter.nativeHandle));
+                if (!live) {
+                    phase = MessagePhase.COMPLETE;
+                    showCheckpointHand = false;
+                }
+            }
+            return phase == MessagePhase.COMPLETE && (nativeHandCompleted || rainbowOnly);
+        }
         switch (phase) {
             case RAINBOW_RINGS:
                 updateRainbowPhase(drawingIndex4);
@@ -510,8 +577,224 @@ public class Sonic2SpecialStageCheckpoint {
 
     private void startRainbowRings() {
         rainbowRings.clear();
+        if (nativeSlotPool != null) {
+            // Obj5A_Init allocates base6 first, while the marker still owns RAM
+            // (s2.asm:71524-71554). Each failed allocation merely skips that child.
+            for (int i = RAINBOW_RING_COUNT - 1; i >= 0; i--) {
+                Sonic2SpecialStageSlotPool.Handle handle = nativeSlotPool.allocate(
+                        RAINBOW, 0x5A, 5, i, nativeMarker);
+                if (handle != null) {
+                    RainbowRing ring = new RainbowRing(i);
+                    ring.nativeHandle = handle;
+                    nativeSlotPool.setRoutine(handle, 2);
+                    rainbowRings.add(ring);
+                }
+            }
+            return;
+        }
         for (int i = 0; i < RAINBOW_RING_COUNT; i++) {
             rainbowRings.add(new RainbowRing(i));
+        }
+    }
+
+    /** Runs one real native slot in the manager's ascending RunObjects pass. */
+    public boolean executeNativeSlot(Sonic2SpecialStageSlotPool.Entry entry, boolean drawingIndex4) {
+        if (nativeSlotPool == null || entry == null || !nativeSlotPool.isLive(entry.handle())) {
+            return false;
+        }
+        for (RainbowRing ring : rainbowRings) {
+            if (entry.handle().equals(ring.nativeHandle)) {
+                executeNativeRainbow(ring, drawingIndex4);
+                return true;
+            }
+        }
+        if (entry.handle().equals(nativeWings)) {
+            if (--nativeWingsTimer == 0) {
+                nativeSlotPool.release(nativeWings);
+            }
+            return true;
+        }
+        if (entry.handle().equals(nativeHand)) {
+            executeNativeHand();
+            return true;
+        }
+        for (MessageLetter letter : messageLetters) {
+            if (!entry.handle().equals(letter.nativeHandle)) {
+                continue;
+            }
+            if (letter.nativeRoutine == 4) {
+                if (--letter.nativeTimer == 0) {
+                    letter.nativeRoutine = 8;
+                    letter.flyoutAngle = TrigLookupTable.calcAngle(
+                            (short) (letter.x - 0x80), (short) (letter.y - 0x70));
+                    nativeSlotPool.setRoutine(letter.nativeHandle, 8);
+                    if (phase != MessagePhase.FADE_OUT) {
+                        phase = MessagePhase.MESSAGE_FLYOUT;
+                    }
+                }
+            } else {
+                letter.x += TrigLookupTable.cosHex(letter.flyoutAngle) * letter.flyoutSpeed >> 8;
+                letter.y += TrigLookupTable.sinHex(letter.flyoutAngle) * letter.flyoutSpeed >> 8;
+                if (letter.x < 0 || letter.x > 0x100 || letter.y < 0) {
+                    letter.visible = false;
+                    nativeSlotPool.release(letter.nativeHandle);
+                }
+            }
+            return true;
+        }
+        return false;
+    }
+
+    private void executeNativeRainbow(RainbowRing ring, boolean drawingIndex4) {
+        if (!drawingIndex4) {
+            return;
+        }
+        int frame = RAINBOW_FRAMES[ring.frameIndex];
+        ring.mappingFrame = frame;
+        if (frame < 0) {
+            // The first/lowest rainbow (base6) creates the complete message
+            // while its own slot and the later rainbow slots remain occupied.
+            if (ring.x == RAINBOW_COMPLETE_TRIGGER_X) {
+                if (rainbowOnly) {
+                    phase = MessagePhase.COMPLETE;
+                } else {
+                    if (onNativeMessageVisibility != null) {
+                        onNativeMessageVisibility.accept(true);
+                    }
+                    resolveCheckpointResult();
+                    beginNativeMessagePhase(ring.nativeHandle);
+                }
+            }
+            ring.active = false;
+            nativeSlotPool.release(ring.nativeHandle);
+            return;
+        }
+        ring.frameIndex++;
+        int posIndex = ring.baseIndex * 2 + ring.positionOffset;
+        ring.x = RAINBOW_POSITIONS[posIndex];
+        ring.y = RAINBOW_POSITIONS[posIndex + 1];
+        ring.positionOffset += RAINBOW_POSITION_STRIDE;
+    }
+
+    private void beginNativeMessagePhase(Sonic2SpecialStageSlotPool.Handle source) {
+        phase = MessagePhase.MESSAGE_DISPLAY;
+        phaseTimer = 0;
+        nativeHandCompleted = false;
+        handThumbsUp = lastResult != Result.FAILED;
+        handMovingDown = false;
+        handY = CHECKPOINT_HANDSHAKE_Y;
+        handTargetY = CHECKPOINT_HANDSHAKE_Y;
+        nativeWings = nativeSlotPool.allocate(WING, 0x5A, 1, 0x14, source);
+        nativeHand = null;
+        if (nativeWings != null) {
+            nativeWingsTimer = 0x46;
+            nativeSlotPool.setRoutine(nativeWings, 6);
+            nativeHand = nativeSlotPool.allocate(HAND, 0x5A, 0, 0x15, source);
+            if (nativeHand != null) {
+                nativeHandTimer = 0x46;
+                nativeHandRoutine = 6;
+                nativeSlotPool.setRoutine(nativeHand, 6);
+            }
+        }
+        showCheckpointHand = nativeHand != null;
+        createCheckpointMessage();
+        for (int i = 0; i < messageLetters.size(); i++) {
+            MessageLetter letter = messageLetters.get(i);
+            letter.nativeHandle = nativeSlotPool.allocateAfterCurrent(
+                    source, MESSAGE_LETTER, 0x5A, 1, i, source);
+            letter.visible = letter.nativeHandle != null;
+            if (letter.nativeHandle != null) {
+                nativeSlotPool.setRoutine(letter.nativeHandle, 4);
+            }
+        }
+        messageLetters.removeIf(letter -> letter.nativeHandle == null);
+        if (onCheckpointResolved != null) {
+            onCheckpointResolved.onCheckpointResolved(lastResult, currentCheckpoint,
+                    ringRequirement, ringsCollected, pendingFinalCheckpoint);
+        }
+    }
+
+    private void executeNativeHand() {
+        if (nativeHandRoutine == 0xC) {
+            if (--nativeHandTimer == 0) {
+                // Obj5A_RingCheckTrigger -> SSClearObjs (s2.asm:71986-71993,
+                // 72619-72650) clears fixed owners and persistent hidden UI too.
+                nativeSlotPool.clear();
+                nativeHandCompleted = true;
+                phase = MessagePhase.COMPLETE;
+                showCheckpointHand = false;
+            }
+            return;
+        }
+        // Obj5A_Handshake clamps after crossing +/-4, giving +/-3 endpoints.
+        if (!handMovingDown) {
+            handY--;
+            if (handY <= handTargetY - 4) {
+                handY = handTargetY - 3;
+                handMovingDown = true;
+            }
+        } else {
+            handY++;
+            if (handY >= handTargetY + 4) {
+                handY = handTargetY + 3;
+                handMovingDown = false;
+            }
+        }
+        if (--nativeHandTimer != 0) {
+            return;
+        }
+        if (!handThumbsUp) {
+            nativeHandRoutine = 0xC;
+            nativeHandTimer = FADE_OUT_FRAMES;
+            nativeSlotPool.setRoutine(nativeHand, 0xC);
+            phase = MessagePhase.FADE_OUT;
+            showCheckpointHand = false;
+            if (onMusicFadeRequested != null) {
+                onMusicFadeRequested.run();
+            }
+        } else {
+            nativeHandCompleted = true;
+            if (onNativeRingRequirementMessage != null) {
+                onNativeRingRequirementMessage.accept(nativeHand);
+            }
+            nativeSlotPool.release(nativeHand);
+            showCheckpointHand = false;
+        }
+    }
+
+    /** One immutable state per actual live native owner, even when not displayed. */
+    public List<Sonic2SpecialStageSlotPool.RenderState> nativeRenderStates() {
+        if (nativeSlotPool == null) {
+            return List.of();
+        }
+        List<Sonic2SpecialStageSlotPool.RenderState> states = new ArrayList<>();
+        addNativeRenderState(states, nativeMarker, 0, 0, 0, false, false,
+                Sonic2SpecialStageSlotPool.ArtRole.MESSAGES);
+        addNativeRenderState(states, nativeWings, handX, handTargetY, 0x14, true, false,
+                Sonic2SpecialStageSlotPool.ArtRole.MESSAGES);
+        addNativeRenderState(states, nativeHand, handX, handY, 0x15,
+                nativeHandRoutine == 6, !handThumbsUp, Sonic2SpecialStageSlotPool.ArtRole.MESSAGES);
+        for (RainbowRing ring : rainbowRings) {
+            addNativeRenderState(states, ring.nativeHandle, ring.x, ring.y, ring.mappingFrame,
+                    ring.isVisible(), false, Sonic2SpecialStageSlotPool.ArtRole.RING);
+        }
+        for (MessageLetter letter : messageLetters) {
+            addNativeRenderState(states, letter.nativeHandle, letter.x, letter.y,
+                    Sonic2SpecialStageIntro.nativeMessageFrame(letter.tileOffset), letter.visible, false,
+                    Sonic2SpecialStageSlotPool.ArtRole.MESSAGES);
+        }
+        states.sort(java.util.Comparator.comparingInt(state -> state.identity().slot()));
+        return List.copyOf(states);
+    }
+
+    private void addNativeRenderState(List<Sonic2SpecialStageSlotPool.RenderState> states,
+                                      Sonic2SpecialStageSlotPool.Handle handle,
+                                      int x, int y, int frame, boolean visible, boolean yFlip,
+                                      Sonic2SpecialStageSlotPool.ArtRole artRole) {
+        Sonic2SpecialStageSlotPool.Entry entry = nativeSlotPool.entry(handle);
+        if (entry != null) {
+            states.add(new Sonic2SpecialStageSlotPool.RenderState(entry, x, y, frame,
+                    false, yFlip, visible, artRole));
         }
     }
 
@@ -584,7 +867,10 @@ public class Sonic2SpecialStageCheckpoint {
                     letter.tileOffset,
                     letter.flyoutAngle,
                     letter.flyoutSpeed,
-                    letter.visible));
+                    letter.visible,
+                    letter.nativeHandle,
+                    letter.nativeTimer,
+                    letter.nativeRoutine));
         }
 
         ArrayList<Sonic2SpecialStageSnapshot.CheckpointRainbowRingSnapshot> rings =
@@ -597,7 +883,8 @@ public class Sonic2SpecialStageCheckpoint {
                     ring.mappingFrame,
                     ring.x,
                     ring.y,
-                    ring.active));
+                    ring.active,
+                    ring.nativeHandle));
         }
 
         return new Sonic2SpecialStageSnapshot.CheckpointSnapshot(
@@ -618,7 +905,14 @@ public class Sonic2SpecialStageCheckpoint {
                 pendingRingRequirement,
                 pendingRingsCollected,
                 pendingFinalCheckpoint,
-                rainbowOnly);
+                rainbowOnly,
+                nativeMarker,
+                nativeWings,
+                nativeHand,
+                nativeWingsTimer,
+                nativeHandTimer,
+                nativeHandRoutine,
+                nativeHandCompleted);
     }
 
     void restoreRewindSnapshot(Sonic2SpecialStageSnapshot.CheckpointSnapshot snapshot) {
@@ -638,6 +932,13 @@ public class Sonic2SpecialStageCheckpoint {
         pendingRingsCollected = snapshot.pendingRingsCollected();
         pendingFinalCheckpoint = snapshot.pendingFinalCheckpoint();
         rainbowOnly = snapshot.rainbowOnly();
+        nativeMarker = snapshot.nativeMarker();
+        nativeWings = snapshot.nativeWings();
+        nativeHand = snapshot.nativeHand();
+        nativeWingsTimer = snapshot.nativeWingsTimer();
+        nativeHandTimer = snapshot.nativeHandTimer();
+        nativeHandRoutine = snapshot.nativeHandRoutine();
+        nativeHandCompleted = snapshot.nativeHandCompleted();
 
         messageLetters.clear();
         for (Sonic2SpecialStageSnapshot.CheckpointMessageLetterSnapshot letter : snapshot.messageLetters()) {
@@ -645,6 +946,9 @@ public class Sonic2SpecialStageCheckpoint {
             restored.flyoutAngle = letter.flyoutAngle();
             restored.flyoutSpeed = letter.flyoutSpeed();
             restored.visible = letter.visible();
+            restored.nativeHandle = letter.nativeHandle();
+            restored.nativeTimer = letter.nativeTimer();
+            restored.nativeRoutine = letter.nativeRoutine();
             messageLetters.add(restored);
         }
 
@@ -657,6 +961,7 @@ public class Sonic2SpecialStageCheckpoint {
             restored.x = ring.x();
             restored.y = ring.y();
             restored.active = ring.active();
+            restored.nativeHandle = ring.nativeHandle();
             rainbowRings.add(restored);
         }
     }
@@ -665,6 +970,20 @@ public class Sonic2SpecialStageCheckpoint {
      * Resets the checkpoint state.
      */
     public void reset() {
+        if (nativeSlotPool != null) {
+            nativeSlotPool.release(nativeMarker);
+            nativeSlotPool.release(nativeWings);
+            nativeSlotPool.release(nativeHand);
+            messageLetters.forEach(letter -> nativeSlotPool.release(letter.nativeHandle));
+            rainbowRings.forEach(ring -> nativeSlotPool.release(ring.nativeHandle));
+        }
+        nativeMarker = null;
+        nativeWings = null;
+        nativeHand = null;
+        nativeWingsTimer = 0;
+        nativeHandTimer = 0;
+        nativeHandRoutine = 0;
+        nativeHandCompleted = false;
         phase = MessagePhase.NONE;
         phaseTimer = 0;
         messageLetters.clear();
@@ -712,8 +1031,15 @@ public class Sonic2SpecialStageCheckpoint {
     }
 
     public boolean isHandVisible() {
+        if (nativeSlotPool != null) {
+            return nativeSlotPool.isLive(nativeHand) && nativeHandRoutine == 6;
+        }
         return showCheckpointHand && (phase == MessagePhase.MESSAGE_DISPLAY ||
                phase == MessagePhase.MESSAGE_FLYOUT || phase == MessagePhase.FADE_OUT);
+    }
+
+    public boolean isWingsVisible() {
+        return nativeSlotPool != null ? nativeSlotPool.isLive(nativeWings) : isHandVisible();
     }
 
     public int getHandX() {

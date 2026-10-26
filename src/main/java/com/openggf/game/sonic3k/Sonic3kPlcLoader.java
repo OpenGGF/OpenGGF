@@ -181,6 +181,27 @@ public final class Sonic3kPlcLoader {
         });
     }
 
+    /**
+     * One frame-lent physical Nemesis write. No level/context is retained by
+     * the world PLC owner. Reject a missing target before binding or journaling.
+     */
+    public static boolean publishConfirmedPattern(KosinskiModuleQueue queue,
+            com.openggf.level.objects.ObjectServices services, Sonic3kLevel expectedLevel,
+            int destination, byte[] pattern) {
+        if (pattern == null || pattern.length != Pattern.PATTERN_SIZE_IN_ROM
+                || destination < 0 || destination > 0xFFE0 || (destination & 31) != 0)
+            throw new IllegalArgumentException("Physical Nemesis publication requires one aligned VRAM pattern");
+        if (queue == null || services == null || expectedLevel == null
+                || services.currentLevel() != expectedLevel) return false;
+        int tile = destination / Pattern.PATTERN_SIZE_IN_ROM;
+        if (tile >= expectedLevel.getPatternCount() || expectedLevel.getPattern(tile) == null) return false;
+        if (services.kosinskiModuleQueue() != queue || services.levelManager() == null
+                || services.levelManager().getCurrentLevel() != expectedLevel)
+            throw new IllegalArgumentException("Nemesis pattern target belongs to another gameplay context");
+        bindRuntimePatternDmaTarget(queue, services);
+        return com.openggf.level.resources.KosModuleTransferAccess.publishPattern(queue, destination, pattern);
+    }
+
     private static byte[] readPatternBytes(Sonic3kLevel level, int destinationVramBytes, int length) {
         int usableLength = Math.max(0, length / Pattern.PATTERN_SIZE_IN_ROM * Pattern.PATTERN_SIZE_IN_ROM);
         byte[] result = new byte[usableLength];

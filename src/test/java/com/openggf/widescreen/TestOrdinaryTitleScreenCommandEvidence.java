@@ -83,14 +83,10 @@ class TestOrdinaryTitleScreenCommandEvidence {
     void masterTitleDrawExpandsBackdropAndFitsActionPaneAtEveryWidth() throws Exception {
         SonicConfigurationService configuration = GameServices.configuration();
         when(configuration.getString(SonicConfiguration.DISPLAY_ASPECT)).thenReturn("NATIVE_4_3");
-        LaunchProfileStore profiles = mock(LaunchProfileStore.class);
-        LaunchProfile profile = LaunchProfile.stockFor(MasterTitleScreen.GameEntry.SONIC_2);
-        when(profiles.load(MasterTitleScreen.GameEntry.SONIC_2)).thenReturn(profile);
-        when(profiles.displayValue(profile, LaunchProfile.Row.MAIN_CHARACTER,
-                MasterTitleScreen.GameEntry.SONIC_2)).thenReturn("Sonic");
-        when(profiles.displayValue(profile, LaunchProfile.Row.SIDEKICK,
-                MasterTitleScreen.GameEntry.SONIC_2)).thenReturn("Tails");
-        MasterTitleScreen title = new MasterTitleScreen(configuration, profiles);
+        when(configuration.getString(SonicConfiguration.LAUNCH_S2_SIDEKICK)).thenReturn("tails");
+        MasterTitleScreen title = new MasterTitleScreen(configuration,
+                new LaunchProfileStore(configuration));
+        assertEquals("s2", title.getSelectedGameId(), "The available-game layout fixture selects Sonic 2");
         title.setRomAvailableForTest(MasterTitleScreen.GameEntry.SONIC_2, true);
         RecordingQuadRenderer renderer = new RecordingQuadRenderer();
         RecordingFont font = new RecordingFont();

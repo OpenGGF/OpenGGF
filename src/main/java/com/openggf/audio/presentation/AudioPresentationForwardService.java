@@ -20,6 +20,12 @@ public interface AudioPresentationForwardService {
     interface ForwardBoundary {
         void service(Consumer<AudioCommand> commandSink);
 
+        /** Native control selected by this bridge, independent of music resolution. */
+        default AudioPresentationCommand.NativePause nativePauseRequest() { return null; }
+
+        /** Acknowledges only the session's actual native pause/resume invocation. */
+        default void onNativePauseConsumed() { }
+
         void reserveOutcome(OutcomeReservation reservation);
 
         void applyOutcome(AppliedOutcome outcome);

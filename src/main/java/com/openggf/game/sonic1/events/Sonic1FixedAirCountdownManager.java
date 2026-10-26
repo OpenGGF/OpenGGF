@@ -141,10 +141,19 @@ final class Sonic1FixedAirCountdownManager {
         }
 
         private void countdown(AbstractPlayableSprite owner) {
+            // Native fixed countdown owns the $78-pass lifetime even after water exit.
             if (obj2c != 0) {
+
                 obj2c = signed16(obj2c - 1);
+                if (obj2c == 0) {
+                    com.openggf.sprites.playable.PlayableSpriteInternalAccess.finishFixedDrowning(owner);
+                    return;
+                }
+                com.openggf.sprites.playable.PlayableSpriteInternalAccess.moveFixedDrowning(owner);
+                if (obj36 != 0 && (obj3a = signed16(obj3a - 1)) < 0) makeItem(owner);
                 return;
             }
+
             if (!owner.isInWater()
                     || owner.getDead()
                     || owner.isDrowningPreDeath()
@@ -176,6 +185,9 @@ final class Sonic1FixedAirCountdownManager {
                     if (drowning != null) {
                         drowning.resetAirTimerFromFixedCountdownDeath();
                     }
+                    obj2c = 0x78;
+                    obj34 = 0x0A;
+                    obj36 = 1;
                     owner.applyDrownDeath();
                     return;
                 }
@@ -210,6 +222,18 @@ final class Sonic1FixedAirCountdownManager {
             // objoff_34, stopping ~5 retries early and leaving the engine RNG
             // behind the ROM by the time the LZ air-bubble maker spawns.
             if (!hasFreeDynamicSlot(owner)) {
+                return;
+            }
+
+            if (obj2c != 0) {
+                // Drown_Countdown .sinking/.spawnExtraBubbles and Obj0A_PlayerHasDrowned:
+                // successful allocation shortens the timer and consumes the angle RNG.
+                obj3a &= 7;
+                int angle = owner.currentRng().nextRaw() & 0xFF;
+                com.openggf.sprites.playable.PlayableSpriteInternalAccess.spawnFixedDrowningBubble(
+                        owner, angle, true);
+                obj34 = (obj34 - 1) & 0xFF;
+                if ((byte) obj34 < 0) obj36 = 0;
                 return;
             }
 

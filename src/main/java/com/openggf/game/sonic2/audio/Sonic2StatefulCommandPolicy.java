@@ -5,13 +5,18 @@ import com.openggf.audio.session.SmpsStatefulCommandPolicy;
 /** Command side effects owned by the Sonic 2 Z80 sound driver. */
 public final class Sonic2StatefulCommandPolicy implements SmpsStatefulCommandPolicy {
     public static final Sonic2StatefulCommandPolicy INSTANCE = new Sonic2StatefulCommandPolicy();
-    private static final Identity IDENTITY = new Identity("sonic2-commands-v1");
+    private static final Identity IDENTITY = new Identity("sonic2-commands-v2-native-pause");
 
     private Sonic2StatefulCommandPolicy() { }
 
     @Override
     public Identity identity() {
         return IDENTITY;
+    }
+
+    @Override
+    public com.openggf.audio.session.SmpsNativePausePolicy nativePausePolicy() {
+        return Sonic2NativePausePolicy.INSTANCE;
     }
 
     @Override

@@ -34,7 +34,8 @@ import java.io.IOException;
  * @see <a href="docs/plans/2026-02-27-rom-driven-init-profiles-design.md">
  *      Design doc: Sonic 1 Level Init Profile (44 steps)</a>
  */
-public class Sonic1LevelInitProfile extends AbstractLevelInitProfile {
+public class Sonic1LevelInitProfile extends AbstractLevelInitProfile
+        implements com.openggf.game.internal.BlockingLevelEntryFade {
     private final Sonic1LevelEventManager levelEventManager;
     private final Sonic1SwitchManager switchManager;
     private final Sonic1ConveyorState conveyorState;
@@ -106,6 +107,15 @@ public class Sonic1LevelInitProfile extends AbstractLevelInitProfile {
             steps.add(spawnPlayerStep(ctx));
             steps.add(resetPlayerStateStep(ctx));
             steps.add(initCameraStep());
+            steps.add(new InitStep("InitBackgroundScroll", "S1: BgScrollSpeed after LevSz_InitCameraPositions",
+                    () -> {
+                        var camera = GameServices.camera();
+                        var parallax = GameServices.parallax();
+                        com.openggf.level.ParallaxCheckpointAccess.initialize(parallax,
+                                GameServices.level().getCurrentZone(), GameServices.level().getCurrentAct(),
+                                camera.getX(), camera.getY(), ctx.hasCheckpoint()
+                                        ? com.openggf.game.CheckpointBackgroundScrollAccess.saved(ctx) : null);
+                    }));
             steps.add(initLevelEventsStep());
             if (!isPreviewCapture(ctx)) {
                 steps.add(requestTitleCardStep(ctx));

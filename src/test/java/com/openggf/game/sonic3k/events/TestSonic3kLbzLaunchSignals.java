@@ -116,7 +116,8 @@ class TestSonic3kLbzLaunchSignals {
         assertNotNull(level);
         com.openggf.level.Map map = level.getMap();
         assertNotNull(map);
-        int width = map.getWidth();
+        int width = level.getLayerWidthBlocks(1);
+        assertEquals(4, width, "ROM LBZ2 BG rows occupy four bytes, independent of FG width");
         for (int col = 0; col < width; col++) {
             map.setValue(1, col, 0, (byte) 0x11);
             map.setValue(1, col, 1, (byte) 0x22);
@@ -137,6 +138,105 @@ class TestSonic3kLbzLaunchSignals {
             assertEquals(map.getValue(1, col, 3), map.getValue(1, col, 1),
                     "ROM LBZ2BGE_Normal copies BG row 3 over row 1 when the Death Egg launch starts");
         }
+    }
+
+    @Test
+    void launchRepointsTheRomRowsWithoutOverwritingTheirByteOwners() throws Exception {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_LBZ, 1).build();
+        var level = GameServices.level().getCurrentLevel();
+        var rom = TestEnvironment.currentRom();
+        int layoutAddress = rom.read32BitAddr(Sonic3kConstants.LEVEL_PTRS_ADDR + 13 * 4);
+        byte[] original = rom.readBytes(layoutAddress, 0x1000);
+        assertEquals(4, level.getLayerWidthBlocks(1));
+        assertEquals(0x8EF8, layoutWord(original, 10));
+        assertEquals(0x8EFC, layoutWord(original, 14));
+        assertEquals(0x8F00, layoutWord(original, 18));
+        assertEquals(0x8F04, layoutWord(original, 22));
+        byte[] before = capturedLayout(fixture);
+        assertArrayEquals(Arrays.copyOfRange(original, 0xEF8, 0xF28),
+                Arrays.copyOfRange(before, 0xEF8, 0xF28), "the production ROM load owns these BG bytes");
+        reframeBackground();
+        byte[] expected = before.clone();
+        // loc_544C6: a3=Level_layout_main+2; copy WORD pointers, never row bytes.
+        System.arraycopy(original, 18, expected, 10, 2);
+        System.arraycopy(original, 22, expected, 14, 2);
+        assertArrayEquals(expected, capturedLayout(fixture),
+                "only the two destination pointer words may change; source rows retain their bytes");
+        for (int col = 0; col < level.getLayerWidthBlocks(1); col++) {
+            assertEquals(original[0xF00 + col], level.getMap().getValue(1, col, 0));
+            assertEquals(original[0xF04 + col], level.getMap().getValue(1, col, 1));
+        }
+    }
+
+    @Test
+    void repointedRowsKeepMutationAliasesAfterTwoWholeWorldRestores() throws Exception {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_LBZ, 1).build();
+        fixture.stepIdleFrames(1); // Capture the settled incoming timeline, not a load-reset predecessor.
+        GameServices.level().getObjectManager().setRewindInPlaceRestoreEnabledForTest(false);
+        var registry = fixture.gameplayMode().getRewindRegistry();
+        var before = registry.capture();
+        reframeMutateAndAdvance(fixture);
+        var after = registry.capture();
+        for (int replay = 0; replay < 2; replay++) {
+            registry.restore(before);
+            assertWholeWorld(before, registry.capture());
+            reframeMutateAndAdvance(fixture);
+            assertWholeWorld(after, registry.capture());
+        }
+    }
+
+    private static void reframeMutateAndAdvance(HeadlessTestFixture fixture) throws Exception {
+        var manager = GameServices.level();
+        var level = manager.getCurrentLevel();
+        var map = level.getMap();
+        int unaffected = map.getValue(1, 0, 0) & 0xFF;
+        int replacement = map.getValue(1, 0, 5) & 0xFF; // Another installed production ROM block.
+        reframeBackground();
+        assertEquals(map.getValue(1, 0, 3), map.getValue(1, 0, 1));
+        var context = new com.openggf.game.mutation.LayoutMutationContext(
+                LevelMutationSurface.forLevel(level), manager::applyMutationEffects);
+        GameServices.zoneLayoutMutationPipeline().applyImmediately(
+                c -> c.surface().setBlockInMap(1, 0, 3, replacement), context);
+        assertEquals(replacement, map.getValue(1, 0, 1) & 0xFF,
+                "destination row must share the new native byte owner, not a one-time decoded copy");
+        assertEquals(map.getValue(1, 0, 2), map.getValue(1, 0, 0));
+        assertNotEquals(unaffected, map.getValue(1, 0, 0) & 0xFF, "real ROM rows discriminate the reframe");
+        assertEquals(level.getBlock(replacement).getChunkDesc(0, 0).get(),
+                manager.getChunkDescAt((byte) 1, 0, 128).get());
+        byte[] encoded = capturedLayout(fixture);
+        assertEquals(layoutWord(encoded, 22), layoutWord(encoded, 14));
+        assertEquals(replacement, encoded[layoutWord(encoded, 22) - 0x8000] & 0xFF);
+        fixture.stepIdleFrames(2);
+    }
+
+    private static void assertWholeWorld(com.openggf.game.rewind.CompositeSnapshot expected,
+                                         com.openggf.game.rewind.CompositeSnapshot actual) {
+        assertEquals(expected.entries().keySet(), actual.entries().keySet());
+        for (String key : expected.entries().keySet()) {
+            assertTrue(com.openggf.game.rewind.RewindSnapshotDiff.keyEquals(key, expected.get(key), actual.get(key)),
+                    () -> key + ": " + com.openggf.game.rewind.RewindSnapshotDiff.diffKey(
+                            key, expected.get(key), actual.get(key)));
+        }
+    }
+
+    private static void reframeBackground() throws Exception {
+        var events = ((com.openggf.game.sonic3k.Sonic3kLevelEventManager)
+                GameServices.module().getLevelEventProvider()).getLbzEvents();
+        var owner = Sonic3kLBZEvents.class.getDeclaredMethod("applyDeathEggSmallBackgroundReframe");
+        owner.setAccessible(true);
+        owner.invoke(events);
+    }
+
+    private static int layoutWord(byte[] bytes, int offset) {
+        return ((bytes[offset] & 0xFF) << 8) | (bytes[offset + 1] & 0xFF);
+    }
+
+    private static byte[] capturedLayout(HeadlessTestFixture fixture) {
+        return ((com.openggf.game.sonic3k.S3kCollisionLayoutRewindAdapter.State)
+                fixture.gameplayMode().getRewindRegistry().capture()
+                        .get("s3k-collision-layout")).encoded();
     }
 
     @Test

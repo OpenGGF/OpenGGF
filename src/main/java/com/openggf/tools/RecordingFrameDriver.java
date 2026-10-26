@@ -376,7 +376,8 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
         }
         TitleCardProvider titleCardProvider = GameServices.module().getTitleCardProvider();
         if (titleCardProvider != null && titleCardProvider.isOverlayActive()) {
-            titleCardProvider.update();
+            com.openggf.game.sonic3k.titlecard.S3kTitleCardWorldAccess.update(
+                    titleCardProvider, levelManager.getWorldSession());
             if (titleCardProvider.ownsInLevelPlayerControlLock()) {
                 applyInLevelTitleCardControlLock(
                         titleCardProvider.shouldLockPlayerControlForInLevelOverlay());
@@ -480,10 +481,12 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
                     context,
                     lifecycleFrame,
                     PlcLifecyclePhase.LEVEL_TITLE_CARD,
-                    provider::update);
+                    () -> com.openggf.game.sonic3k.titlecard.S3kTitleCardWorldAccess.update(
+                            provider, levelManager.getWorldSession()));
             levelManager.advanceTitleCardVblankOnly();
         } else {
-            provider.update();
+            com.openggf.game.sonic3k.titlecard.S3kTitleCardWorldAccess.update(
+                    provider, levelManager.getWorldSession());
             LevelFrameStep.serviceVBlankOnly(
                     context, lifecycleFrame, PlcLifecyclePhase.LAG);
         }
@@ -687,7 +690,7 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
                 normalTitleCardActive,
                 GameServices.module().getTitleCardProvider(),
                 this::startPendingInLevelTitleCardIfRequested,
-                this::applyInLevelTitleCardControlLock);
+                this::applyInLevelTitleCardControlLock, levelManager.getWorldSession());
         applyPendingSeamlessTransition();
         boolean loadedZoneActTransition = applyPendingZoneActTransition();
         // A normal title card is still a ROM-owned object during a suppressed

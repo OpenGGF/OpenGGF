@@ -1,13 +1,17 @@
 package com.openggf.debug.playback;
 
 import com.openggf.control.InputHandler;
+import com.openggf.control.InputHandlerInternalAccess;
+import com.openggf.control.LogicalInputSnapshot;
 import com.openggf.game.GameMode;
 import com.openggf.sprites.managers.SpriteManager;
 
 /** Owns publication and cleanup of recorded logical input during playback. */
 public final class PlaybackInputBridge {
     private boolean inputSuppressed;
-    private boolean logicalOverrideApplied;
+    private OwnedOverride ownedOverride;
+
+    private record OwnedOverride(InputHandler input, LogicalInputSnapshot snapshot) { }
 
     public void sync(
             PlaybackDebugManager playback,
@@ -17,7 +21,7 @@ public final class PlaybackInputBridge {
         boolean shouldDrive = playback.isDriving(mode);
         if (sprites == null) {
             playback.clearLastAppliedState();
-            clearOwnedOverride(input);
+            clearOwnedOverride();
             inputSuppressed = false;
             return;
         }
@@ -30,7 +34,7 @@ public final class PlaybackInputBridge {
             return;
         }
         playback.clearLastAppliedState();
-        clearOwnedOverride(input);
+        clearOwnedOverride();
     }
 
     public void publishImmediately(
@@ -42,19 +46,22 @@ public final class PlaybackInputBridge {
             inputSuppressed = true;
         }
         if (input != null) {
+            if (ownedOverride != null && ownedOverride.input() != input) {
+                clearOwnedOverride();
+            }
             input.setLogicalOverride(playback.getCurrentLogicalInputSnapshot());
-            logicalOverrideApplied = true;
+            // Capture immediately after publication, before a native stage can
+            // replace the logical sample while leaving the raw override intact.
+            ownedOverride = new OwnedOverride(input, input.logical());
         }
     }
 
-    private void clearOwnedOverride(InputHandler input) {
-        if (!logicalOverrideApplied) {
-            return;
+    private void clearOwnedOverride() {
+        OwnedOverride owned = ownedOverride;
+        ownedOverride = null;
+        if (owned != null && InputHandlerInternalAccess.clearLogicalOverrideIfSame(
+                owned.input(), owned.snapshot())) {
+            owned.input().refreshLogicalSnapshot();
         }
-        if (input != null) {
-            input.clearLogicalOverride();
-            input.refreshLogicalSnapshot();
-        }
-        logicalOverrideApplied = false;
     }
 }

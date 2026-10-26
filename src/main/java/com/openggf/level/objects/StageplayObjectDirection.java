@@ -579,13 +579,14 @@ public final class StageplayObjectDirection implements AutoCloseable {
                                                 + target));
     }
 
-    boolean addRenderEntries(ObjectInstance object, List<ObjectRenderParts.RenderEntry>[] unified,
+    boolean addRenderEntries(ObjectInstance object, Set<Integer> nativeSlots,
+            List<ObjectRenderParts.RenderEntry>[] unified,
             List<ObjectRenderParts.RenderEntry>[] low, List<ObjectRenderParts.RenderEntry>[] high) {
-        return drawing.addRenderEntries(object, unified, low, high);
+        return drawing.addRenderEntries(object, nativeSlots, unified, low, high);
     }
-    void addVisualRenderEntries(List<ObjectRenderParts.RenderEntry>[] unified,
+    void addVisualRenderEntries(Set<Integer> nativeSlots, List<ObjectRenderParts.RenderEntry>[] unified,
             List<ObjectRenderParts.RenderEntry>[] low, List<ObjectRenderParts.RenderEntry>[] high) {
-        drawing.addVisualRenderEntries(unified, low, high);
+        drawing.addVisualRenderEntries(nativeSlots, unified, low, high);
     }
     boolean drawReplacement(ObjectInstance object, int bucket, boolean high, int slot) {
         return drawing.drawReplacement(object, bucket, high, slot);

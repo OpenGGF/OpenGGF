@@ -502,6 +502,16 @@ public class TestOwnerBoundGamePatch {
         public static PatchOwnershipBinding hiddenPatchOwner() { return com.openggf.mods.runtime.OwnerBoundGamePatch::wrap; }
         public static StandaloneOwnershipBinding hiddenStandaloneOwner() { return com.openggf.mods.runtime.OwnerBoundGamePatch::wrapStandaloneRewinds; }
         public static CallbackConstruction hiddenCallbacks() { return com.openggf.mods.runtime.OwnerBoundCallbacks::new; }
+        public static java.util.function.BiFunction<java.lang.reflect.InvocationHandler,Object,
+                java.lang.reflect.InvocationHandler> hiddenProviderProjection() {
+            return com.openggf.game.internal.NativeProviderDispatch::authenticate;
+        }
+        public static java.util.function.Predicate<Object> hiddenTitleWorldProof() {
+            return com.openggf.mods.runtime.OwnerBoundGamePatch::hasNativeTitleWorldUpdate;
+        }
+        public static java.util.function.Predicate<Object> hiddenResultsWorldProof() {
+            return com.openggf.mods.runtime.OwnerBoundGamePatch::hasNativeSpecialResultsWorldCreation;
+        }
         public static java.util.function.BiConsumer<com.openggf.game.session.WorldSession,List<RewindSnapshottable<?>>> hiddenInstaller() {
             return com.openggf.game.session.ModZoneRuntimeInstaller::install;
         }
@@ -562,6 +572,17 @@ public class TestOwnerBoundGamePatch {
             assertDoesNotThrow(()->enginePatchOwner.wrap("engine-known",patch(base->base),fixture().boundary()));
             StandaloneOwnershipBinding engineStandaloneOwner=com.openggf.mods.runtime.OwnerBoundGamePatch::wrapStandaloneRewinds;
             assertDoesNotThrow(()->engineStandaloneOwner.wrap("engine-known",new com.openggf.game.sonic2.Sonic2GameModule(),fixture().boundary()));
+            @SuppressWarnings("unchecked") var hiddenProjection=(java.util.function.BiFunction<
+                    java.lang.reflect.InvocationHandler,Object,java.lang.reflect.InvocationHandler>)
+                    probe.getMethod("hiddenProviderProjection").invoke(null);
+            assertThrows(SecurityException.class, () -> hiddenProjection.apply((proxy,method,args) -> null,
+                    new com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardManager()));
+            @SuppressWarnings("unchecked") var hiddenTitleProof=(java.util.function.Predicate<Object>)
+                    probe.getMethod("hiddenTitleWorldProof").invoke(null);
+            assertThrows(SecurityException.class,()->hiddenTitleProof.test(new com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardManager()));
+            @SuppressWarnings("unchecked") var hiddenResultsProof=(java.util.function.Predicate<Object>)
+                    probe.getMethod("hiddenResultsWorldProof").invoke(null);
+            assertThrows(SecurityException.class,()->hiddenResultsProof.test(new com.openggf.game.sonic3k.specialstage.Sonic3kSpecialStageProvider()));
             var hiddenCallbacks=(CallbackConstruction)probe.getMethod("hiddenCallbacks").invoke(null);
             assertThrows(SecurityException.class,()->hiddenCallbacks.create("other-owner",fixture().boundary(),10,Map.of()));
             @SuppressWarnings("unchecked") var hiddenInstaller=(java.util.function.BiConsumer<

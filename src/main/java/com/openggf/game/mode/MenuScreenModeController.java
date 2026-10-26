@@ -18,6 +18,7 @@ public final class MenuScreenModeController {
                 || mode == GameMode.TITLE_SCREEN
                 || mode == GameMode.LEVEL_SELECT
                 || mode == GameMode.DATA_SELECT
+                || com.openggf.game.nativemenu.NativeMenuController.handles(mode)
                 || mode == GameMode.MOD_SCENE;
     }
 

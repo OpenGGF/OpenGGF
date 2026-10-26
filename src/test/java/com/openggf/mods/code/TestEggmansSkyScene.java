@@ -355,8 +355,28 @@ class TestEggmansSkyScene {
             pt.getField("tutorial").setInt(player, 99);
             pt.getField("menuOpened").setBoolean(player, true);
             pt.getField("menuTab").setInt(player, 2);
+            Object surface = game.getClass().getMethod("mode").invoke(game);
+            assertEquals("SurfaceMode", surface.getClass().getSimpleName());
+            var phase = surface.getClass().getDeclaredField("phase");
+            var playPhase = surface.getClass().getDeclaredField("PLAY");
+            var phaseTicks = surface.getClass().getDeclaredField("phaseTicks");
+            var dialog = surface.getClass().getDeclaredField("dialogTitle");
+            phase.setAccessible(true);
+            playPhase.setAccessible(true);
+            phaseTicks.setAccessible(true);
+            dialog.setAccessible(true);
+            assertNull(dialog.get(surface), "the production menu entry has no modal dialog");
+            for (int awaited = 0; awaited < 500 && phase.getInt(surface) != playPhase.getInt(null); awaited++) {
+                play(harness, 1);
+                assertSame(surface, game.getClass().getMethod("mode").invoke(game),
+                        "the real descent retains its current surface");
+                assertNull(dialog.get(surface), "neutral descent must not hide a modal dialog");
+            }
+            assertEquals(playPhase.getInt(null), phase.getInt(surface),
+                    "the real descent must reach PLAY before menu input; phaseTicks=" + phaseTicks.getInt(surface));
             harness.press(GLFW_KEY_ENTER);
             play(harness, 5);
+            assertEquals("MenuMode", mode(harness), "the first Enter opens the production menu");
             harness.press(GLFW_KEY_ENTER);
             play(harness, 5);
             assertEquals("BatchMode", mode(harness));

@@ -46,6 +46,11 @@ public class HudRenderManager {
     private int hexDigitsPatternIndex;
     private HudStaticArt staticHudArt;
     private int staticHudPatternIndex;
+    private com.openggf.game.internal.HudSatLayout nativeSatLayout;
+    private boolean collectingSatFragments;
+
+    void setSatLayout(com.openggf.game.internal.HudSatLayout layout) { nativeSatLayout = layout; }
+
 
     // One bounded scratch array serves every numeric row synchronously.
     private final int[] numericDigits = new int[9];
@@ -237,6 +242,25 @@ public class HudRenderManager {
             return;
         }
         SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.HUD);
+        if (graphicsManager.isSpriteSatCollectionActive() && nativeSatLayout != null
+                && !collectingSatFragments && (currentProfile().equals(HudProfile.stock()) || bonusStageHudLayout
+                || player != null && player.isDebugMode())) {
+            var frame = nativeSatLayout.frame(timerWarning(levelGamestate) && flashCycle(levelGamestate),
+                    levelGamestate.getRings() == 0 && flashCycle(levelGamestate), bonusStageHudLayout);
+            int satOrigin = bonusStageHudLayout ? 0 : nativeOrigin();
+            var geometry = new java.util.ArrayList<com.openggf.graphics.SpriteSatEntry>();
+            for (var piece : frame.pieces()) {
+                geometry.add(com.openggf.graphics.SpriteSatEntry.of(
+                        satOrigin + 16 + camera.getXWithShake() + piece.xOffset(),
+                        136 + camera.getYWithShake() + piece.yOffset(), piece.widthTiles(), piece.heightTiles(),
+                        0, piece.paletteIndex(), piece.hFlip(), piece.vFlip(), true, true));
+            }
+            appendOptionalTimeGeometry(geometry, satOrigin, player);
+            collectingSatFragments = true;
+            try { com.openggf.graphics.SpriteSatInternalAccess.submitGroups(graphicsManager, geometry, () -> draw(levelGamestate, player)); }
+            finally { collectingSatFragments = false; }
+            return;
+        }
 
         var presentation = HudProfileAccess.runtime(graphicsManager);
         if (presentation != null && presentation.active() && !SpritePresentation.isPreparing(graphicsManager)) {
@@ -296,6 +320,43 @@ public class HudRenderManager {
                 graphicsManager.flushPatternBatch();
             }
         }
+    }
+
+    private void appendOptionalTimeGeometry(List<com.openggf.graphics.SpriteSatEntry> geometry,
+                                            int origin, PlayableEntity player) {
+        if (bonusStageHudLayout || player != null && player.isDebugMode()
+                || !(timeHundredths || hostTimeHundredths)) return;
+        for (var row : currentProfile().rows()) {
+            if (!row.visible() || row.metric() != HudMetric.TIME) continue;
+            // Native whole-second boxes remain unchanged. Packed punctuation can
+            // straddle their edge, so added groups must own full fragment boxes,
+            // not just the ink or the nominal .HH cells. Each group is <=4 tiles.
+            int cursor = 0, start = -1, end = 0;
+            String shape = "0:00.00";
+            for (int i = 0; i < shape.length(); i++) {
+                char c = shape.charAt(i);
+                boolean separator = c == ':' || c == '.';
+                boolean packed = separatorInkLeft >= 0 && separator;
+                int cell = packed ? cursor + 2 - separatorInkLeft : cursor;
+                cursor += packed ? timeSeparatorWidth() : 8;
+                if (cell + 8 <= row.maxDigits() * 8) continue;
+                if (start >= 0 && cell + 8 - start > 32) {
+                    appendTimeGroup(geometry, row, origin, start, end);
+                    start = -1;
+                }
+                if (start < 0) start = cell;
+                end = cell + 8;
+            }
+            if (start >= 0) appendTimeGroup(geometry, row, origin, start, end);
+        }
+    }
+
+    private void appendTimeGroup(List<com.openggf.graphics.SpriteSatEntry> geometry,
+                                 HudRow row, int origin, int start, int end) {
+        geometry.add(com.openggf.graphics.SpriteSatEntry.of(
+                origin + row.valueRightX() + start + camera.getXWithShake(),
+                row.valueY() + camera.getYWithShake(), (end - start + 7) / 8, 2, 0,
+                hudPatternDesc.getPaletteIndex(), false, false, true, true));
     }
 
     private void drawOrdinaryRows(List<HudRow> rows, LevelState levelGamestate, PlayableEntity player,
@@ -457,10 +518,13 @@ public class HudRenderManager {
             return;
         }
         int digitCount = numberToDigits(saturateNumeric(lives, maxDigits), numericDigits);
+        // Native Hud_Lives writes the tens and units into the last two bottom
+        // cells of the name piece: x48/x56. The units anchor stays x56 for 0..9.
+        int firstDigitX = numDrawX - (digitCount - 1) * 8;
         for (int i = 0; i < digitCount; i++) {
             int digit = numericDigits[i];
             renderSafe(livesNumbersPatternIndex + digit, livesNumberPatternDesc,
-                    hudOrigin + numDrawX + camX + (i * 8), line2Y + camY);
+                    hudOrigin + firstDigitX + camX + (i * 8), line2Y + camY);
         }
     }
 
@@ -537,7 +601,7 @@ public class HudRenderManager {
         // renderPatternWithId consumes the desc immediately (batch copies
         // floats; PatternRenderCommand.init copies fields), so the reusable
         // desc can be passed without a copy.
-        graphicsManager.renderPatternWithId(patternId, staticPieceDesc, drawX, drawY);
+        renderSafe(patternId, staticPieceDesc, drawX, drawY);
     }
 
     private SpriteMappingFrame selectTimeFrame(boolean shouldFlashTimer, boolean flashCycle) {
@@ -705,6 +769,11 @@ public class HudRenderManager {
     }
 
     private void renderSafe(int patternId, PatternDesc desc, int x, int y) {
-        graphicsManager.renderPatternWithId(patternId, desc, x, y);
+        if (graphicsManager.isSpriteSatCollectionActive()) {
+            graphicsManager.submitSpriteSatPiece(new SpritePieceRenderer.PreparedPiece(
+                    x, y, 1, 1, patternId, patternId & 0x7FF, desc.getPaletteIndex(),
+                    desc.getHFlip(), desc.getVFlip(), desc.getPriority(), true,
+                    com.openggf.graphics.SpriteMaskReplayRole.NORMAL, 0, 1, 0, 1, null));
+        } else graphicsManager.renderPatternWithId(patternId, desc, x, y);
     }
 }

@@ -9,13 +9,14 @@ import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.SuperState;
 
 import java.util.List;
 
 /**
  * Super Sonic Stars (Object 0x7E) - sparkle effect when Super Sonic runs fast.
  *
- * <p>ROM reference: s2.asm:42488-42531 (Obj7E). State machine:
+ * <p>ROM reference: Obj7E_Main (s2.asm:42940-42997). State machine:
  * <ol>
  *   <li>Cycle 1: position tracks player every frame (freezeFlag=false)</li>
  *   <li>Animation completes: freezeFlag set, one frame invisible</li>
@@ -23,7 +24,8 @@ import java.util.List;
  *       then frozen for remainder - creates trailing effect as Sonic runs ahead</li>
  *   <li>Speed drops below 0x800: flags cleared, star invisible</li>
  * </ol>
- * <p>Each animation frame displays for 2 game frames (anim_frame_duration=1, counts down).
+ * <p>Active animation steps reload anim_frame_duration=1 (two game frames).
+ * The idle trigger retains the old timer, so a fresh zeroed object's first frame lasts one pass.
  * 6-frame cycle: small-medium-large-medium-small-empty.
  */
 public class SuperSonicStarsObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
@@ -78,7 +80,6 @@ public class SuperSonicStarsObjectInstance extends AbstractObjectInstance implem
 
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (animActive) {
             frameTimer--;
             if (frameTimer >= 0) {
@@ -103,10 +104,16 @@ public class SuperSonicStarsObjectInstance extends AbstractObjectInstance implem
         }
 
         // Not animating - check speed trigger
-        if (!this.player.isObjectControlled() && Math.abs(this.player.getGSpeed()) >= SPEED_THRESHOLD) {
+        // Sonic_CheckGoSuper writes obj_control=$81 immediately. The playable
+        // dispatcher applies its movement freeze on the next call, so reflect
+        // that already-written native byte for Obj7E's same-pass idle gate.
+        boolean transforming = player.getSuperStateController() != null
+                && player.getSuperStateController().getState() == SuperState.TRANSFORMING;
+        if (!player.isObjectControlled() && !transforming && Math.abs(player.getGSpeed()) >= SPEED_THRESHOLD) {
             // Start new animation cycle
             mappingFrame = 0;
-            frameTimer = FRAME_DURATION;
+            // loc_1E188 leaves anim_frame_duration untouched. A newly cleared
+            // SST retains zero; a subsequent cycle retains the last reload.
             animActive = true;
             // Position always updates at cycle start (ROM: bra.s loc_1E176 bypasses freeze check)
             snapX = this.player.getCentreX();

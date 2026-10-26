@@ -18,7 +18,7 @@ final class PlcProducerRouteRegistry {
 
     static List<Binding> bindings() {
         return List.of(
-                b("S1_TITLE", S1, "titleScreenOwnerPublishesMainBeforePresentationBegins"),
+                b("S1_TITLE", S1, "titleScreenClearsPriorWorkAndPublishesMainAfterObjectsAndMusic"),
                 b("S1_CREDITS", S1, "creditsOwnerPrequeuesEveryTextPageInNativeRomZoneOrder"),
                 b("S1_LEVEL", S1, "levelInitOwnerClearsThenPublishesHeaderPrimaryAndMain2BeforeTitleCard"),
                 b("S1_GHZ_EVENT", S1_EVENTS, "GHZ3 boss"), b("S1_LZ_EVENT", S1_EVENTS, "LZ3 boss"),

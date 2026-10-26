@@ -21,6 +21,9 @@ public final class CompleteRunAudioOpenGgfProducerPreflight {
             throw new IllegalArgumentException(
                     "OpenGGF producer profile does not match its fixed game binding");
         }
+        if (!CompleteRunAudioProducerRegistry.tryLoadProfile(fixedProfileId)) {
+            throw new IllegalArgumentException("unknown fixed producer profile");
+        }
         return CompleteRunAudioProducerRegistry.requirePinned(
                 fixedProfileId, ProducerKind.OPENGGF);
     }

@@ -14,6 +14,7 @@ import java.util.Objects;
  */
 public sealed interface AudioPresentationCommand
         permits AudioPresentationCommand.ReplaceMusic,
+        AudioPresentationCommand.NativePause,
         AudioPresentationCommand.PushMusicOverride,
         AudioPresentationCommand.RestoreMusicOverride,
         AudioPresentationCommand.EndMusicOverride,
@@ -40,6 +41,8 @@ public sealed interface AudioPresentationCommand
         AudioPresentationCommand.ToggleSolo,
         AudioPresentationCommand.RewindBoundary,
         AudioPresentationCommand.HardReset {
+
+    record NativePause(boolean paused) implements AudioPresentationCommand { }
 
     default boolean structural() {
         return !(this instanceof StartSampleSfx

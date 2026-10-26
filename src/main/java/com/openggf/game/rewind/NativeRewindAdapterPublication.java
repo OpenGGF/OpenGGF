@@ -96,6 +96,107 @@ public final class NativeRewindAdapterPublication {
         registry.registerNativePublication(adapter, root);
     }
 
+    /** The authenticated native factory reserves its new owner before returning it to the world. */
+    public static void reserveWorldPlcCreation(com.openggf.game.session.WorldSession world,
+            com.openggf.game.session.WorldPlcLifecycleFactory factory,
+            com.openggf.game.resources.PlcLifecycleService owner) {
+        requireEngineCaller();
+        Objects.requireNonNull(world, "world");
+        Objects.requireNonNull(factory, "factory");
+        Objects.requireNonNull(owner, "owner");
+        Class<?> caller = com.openggf.util.EngineCallerAccess.callerOutside(NativeRewindAdapterPublication.class);
+        GameModule root = nativeRoot(world.rootGameModule());
+        if (caller != factory.getClass() || caller.getClassLoader() != GameModule.class.getClassLoader()
+                || root == null || root.getGameService(com.openggf.game.session.WorldPlcLifecycleFactory.class) != factory
+                || com.openggf.game.session.WorldPlcLifecycleAccess.owned(world) != null
+                || !(owner instanceof RewindSnapshottable<?>))
+            throw new IllegalArgumentException("World PLC creation must come from its actual native factory");
+        var companions = worldPlcCompanions(owner);
+        // Reserve the complete exact bundle before the factory exposes any
+        // identity to a world/context or a contributed provider.
+        if (RewindAdapterOwnership.isOwned(owner) && !RewindAdapterOwnership.isNativePublication(owner))
+            throw new IllegalArgumentException("A creator-owned PLC owner cannot become native");
+        for (var companion : companions) {
+            if (RewindAdapterOwnership.isOwned(companion)
+                    && !RewindAdapterOwnership.isNativePublication(companion))
+                throw new IllegalArgumentException("A creator-owned PLC companion cannot become native");
+        }
+        RewindAdapterOwnership.markNativePublication(owner);
+        for (var companion : companions) RewindAdapterOwnership.markNativePublication(companion);
+    }
+
+    /** Core world PLC state is not a replaceable module service incarnation. */
+    public static void registerWorldPlc(RewindRegistry registry,
+            com.openggf.game.session.WorldSession world, RewindSnapshottable<?> adapter) {
+        requireEngineCaller();
+        Objects.requireNonNull(registry, "registry");
+        Objects.requireNonNull(world, "world");
+        Objects.requireNonNull(adapter, "adapter");
+        if (nativeRoot(world.rootGameModule()) == null
+                || com.openggf.game.session.WorldPlcLifecycleAccess.owned(world) != adapter
+                || !RewindAdapterOwnership.isNativePublication(adapter))
+            throw new IllegalArgumentException("Adapter is not this world's native PLC owner");
+        var companions = worldPlcCompanions(adapter);
+        for (var companion : companions) {
+            if (!RewindAdapterOwnership.isNativePublication(companion))
+                throw new IllegalArgumentException("World PLC companion was not reserved by its native factory");
+        }
+        // Preflight the whole strongly bound bundle, so a colliding companion
+        // cannot leave a newly registered half-owner behind.
+        registry.validateNativePublication(adapter, world);
+        for (var companion : companions) registry.validateNativePublication(companion, world);
+        registry.registerNativePublication(adapter, world);
+        for (var companion : companions) registry.registerNativePublication(companion, world);
+    }
+
+    /** Reserve before the exact factory exposes this final world DATA owner. */
+    public static void reserveWorldDataCreation(java.lang.invoke.MethodHandles.Lookup lookup,
+            com.openggf.game.session.WorldSession world,
+            com.openggf.game.internal.WorldRewindAdapterFactory factory, RewindSnapshottable<?> owner) {
+        requireEngineCaller();
+        Objects.requireNonNull(world); Objects.requireNonNull(factory); Objects.requireNonNull(owner);
+        Class<?> caller = com.openggf.util.EngineCallerAccess.callerOutside(NativeRewindAdapterPublication.class);
+        GameModule root = nativeRoot(world.rootGameModule());
+        if (lookup == null || !lookup.hasFullPrivilegeAccess() || lookup.lookupClass() != caller
+                || caller != factory.getClass() || caller.getClassLoader() != GameModule.class.getClassLoader()
+                || root == null || root.getGameService(com.openggf.game.internal.WorldRewindAdapterFactory.class) != factory
+                || com.openggf.game.session.WorldRewindAdapterAccess.owned(java.lang.invoke.MethodHandles.lookup(), world) != null
+                || RewindAdapterOwnership.isOwned(owner))
+            throw new SecurityException("World DATA reservation requires its original native factory construction");
+        RewindAdapterOwnership.markNativePublication(owner);
+    }
+
+    public static void registerWorldData(RewindRegistry registry,
+            com.openggf.game.session.WorldSession world, RewindSnapshottable<?> adapter) {
+        requireEngineCaller();
+        Class<?> caller = com.openggf.util.EngineCallerAccess.callerOutside(NativeRewindAdapterPublication.class);
+        if (caller != com.openggf.game.session.WorldRewindAdapterAccess.class
+                || nativeRoot(Objects.requireNonNull(world).rootGameModule()) == null
+                || com.openggf.game.session.WorldRewindAdapterAccess.owned(java.lang.invoke.MethodHandles.lookup(), world) != adapter
+                || adapter == null || !RewindAdapterOwnership.isNativePublication(adapter))
+            throw new SecurityException("Only this world's reserved DATA owner may be published");
+        Objects.requireNonNull(registry).validateNativePublication(adapter, world);
+        registry.registerNativePublication(adapter, world);
+    }
+
+    private static java.util.List<RewindSnapshottable<?>> worldPlcCompanions(Object owner) {
+        if (!(owner instanceof com.openggf.game.internal.WorldPlcPatternPublication publication))
+            return java.util.List.of();
+        var companions = new java.util.ArrayList<RewindSnapshottable<?>>();
+        companions.add(Objects.requireNonNull(publication.recipeState(), "native PLC recipe companion"));
+        var schedule = publication.ordinaryScheduleState();
+        if (schedule != null) companions.add(schedule);
+        var keys = new java.util.HashSet<String>();
+        keys.add(Objects.requireNonNull(((RewindSnapshottable<?>) owner).key(), "native PLC owner key"));
+        for (var companion : companions) {
+            if (companion == owner || companion.getClass().getClassLoader() != owner.getClass().getClassLoader()
+                    || Proxy.isProxyClass(companion.getClass())
+                    || !keys.add(Objects.requireNonNull(companion.key(), "native PLC companion key")))
+                throw new IllegalArgumentException("Invalid native world PLC companion bundle");
+        }
+        return java.util.List.copyOf(companions);
+    }
+
     private static Inventories inventories(Lineage lineage) {
         var canonical = lineage.canonical() == null ? List.<RewindSnapshottable<?>>of()
                 : publications(lineage.canonical());

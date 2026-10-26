@@ -60,7 +60,6 @@ class TestAizMinibossShotNativeGraph {
         var fight = h.manager.createDynamicObjectAtSlot(() -> new TestAizMinibossShotNativeInit.FrozenFightBoss(
                 new ObjectSpawn(0x3100, 0x34C, 0x91, 0, 0, false, 0)), 11);
         var fightBarrel = h.manager.createDynamicObjectAtSlot(() -> new AizMinibossFlameBarrelChild(fight, 2, false), 12);
-        fight.getChildComponents().add(fightBarrel);
         var cutsceneShot = addShot(h, 9, h.boss(), h.barrel(8), AizMinibossBarrelShotChild.Mode.ADVANCED_NON_COLLIDING);
         addShot(h, 10, fight, fightBarrel, AizMinibossBarrelShotChild.Mode.ADVANCED_COLLIDING);
         for (int frame = 0; frame <= 6; frame++) h.step(frame);

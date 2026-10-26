@@ -501,6 +501,7 @@ public final class StockArtOverrideCatalog {
             "icz_platforms_misc2",
             "icz_snowdust",
             "icz_star_pointer",
+            "icz_teleporter",
             "icz_wall_and_column",
             "insta_shield",
             "knux_final_boss_crane",

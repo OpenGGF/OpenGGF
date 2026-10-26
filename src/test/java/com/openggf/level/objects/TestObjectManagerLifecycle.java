@@ -4,6 +4,9 @@ import com.openggf.tests.TestEnvironment;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.GameServices;
 import com.openggf.level.TransitionSstOccupant;
+import com.openggf.game.rewind.RewindSnapshotDiff;
+import com.openggf.game.rewind.identity.ObjectRefId;
+import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -210,6 +213,201 @@ public class TestObjectManagerLifecycle {
                 "Accessor results must be cloned");
         assertArrayEquals(new long[]{0x56L}, state.stayActiveBits(),
                 "Accessor results must be cloned");
+    }
+
+    @Test
+    public void resyncRetiresPlacedSlotsWithoutUnloadAndPreservesLiveDynamics() {
+        var f = new ResyncFixture();
+        var first = f.first();
+        var second = f.second();
+        int firstSlot = first.getSlotIndex();
+        int secondSlot = second.getSlotIndex();
+        var retained = f.dynamic(0x74);
+        var retainedSecond = f.dynamic(0x75);
+        var before = f.snapshot();
+        assertTrue(firstSlot >= 4 && secondSlot > firstSlot);
+        assertTrue(retained.getSlotIndex() > secondSlot);
+
+        f.manager.resyncSpawnList(List.of());
+
+        assertEquals(-1, first.getSlotIndex());
+        assertEquals(-1, second.getSlotIndex());
+        assertEquals(0, first.unloadCount + first.removalCount);
+        assertEquals(0, second.unloadCount + second.removalCount);
+        assertFalse(f.manager.getActiveObjects().contains(first));
+        assertFalse(f.manager.getActiveObjects().contains(second));
+        assertTrue(f.manager.getActiveObjects().contains(retained));
+        assertTrue(f.manager.getActiveObjects().contains(retainedSecond));
+        assertEquals(before.dynamicObjects().stream().map(e -> e.objectId()).toList(),
+                f.snapshot().dynamicObjects().stream().map(e -> e.objectId()).toList());
+        assertEquals(before.dynamicObjects().stream().map(e -> e.slotIndex()).toList(),
+                f.snapshot().dynamicObjects().stream().map(e -> e.slotIndex()).toList());
+        assertEquals(firstSlot, f.manager.firstFreeDynamicSlot());
+
+        var replacement = f.dynamic(0x76);
+        assertEquals(firstSlot, replacement.getSlotIndex());
+        f.manager.releaseSlot(first); // A stale editor reference must not free its replacement.
+        assertEquals(secondSlot, f.manager.firstFreeDynamicSlot());
+        var secondReplacement = f.dynamic(0x77);
+        assertEquals(secondSlot, secondReplacement.getSlotIndex());
+        f.manager.releaseSlot(second);
+        assertTrue(f.manager.firstFreeDynamicSlot() > retainedSecond.getSlotIndex());
+        assertEquals(firstSlot, replacement.getSlotIndex());
+        assertEquals(secondSlot, secondReplacement.getSlotIndex());
+    }
+
+    @Test
+    public void resyncReleasesOnlyUnconsumedChildReservations() {
+        var f = new ResyncFixture();
+        var first = f.first();
+        var second = f.second();
+        int firstSlot = first.getSlotIndex();
+        int[] firstReservations = f.manager.allocateChildSlots(f.firstSpawn, 3);
+        int consumedSlot = firstReservations[0];
+        int firstUnused = firstReservations[1];
+        int secondUnused = firstReservations[2];
+        var consumedChild = new ResyncProbe(ResyncFixture.spawn(0x72));
+        f.manager.addDynamicObjectToReservedSlot(consumedChild, f.firstSpawn, 0);
+        assertEquals(-1, firstReservations[0], "the reservation must really transfer to a live child");
+        var retained = f.dynamic(0x74);
+        int retainedSlot = retained.getSlotIndex();
+        int[] secondReservations = f.manager.allocateChildSlots(f.secondSpawn, 2).clone();
+        var before = f.snapshot();
+        assertEquals(consumedSlot, consumedChild.getSlotIndex());
+        assertEquals(2, before.childSpawns().size());
+
+        f.manager.resyncSpawnList(List.of());
+
+        var after = f.snapshot();
+        assertTrue(after.childSpawns().isEmpty());
+        assertEquals(-1, first.getSlotIndex());
+        assertEquals(-1, second.getSlotIndex());
+        assertEquals(consumedSlot, consumedChild.getSlotIndex());
+        assertEquals(retainedSlot, retained.getSlotIndex());
+        assertTrue(f.manager.getActiveObjects().contains(consumedChild));
+        assertTrue(f.manager.getActiveObjects().contains(retained));
+        assertEquals(before.dynamicObjects().stream().map(e -> e.objectId()).toList(),
+                after.dynamicObjects().stream().map(e -> e.objectId()).toList());
+        assertEquals(before.dynamicObjects().stream().map(e -> e.slotIndex()).toList(),
+                after.dynamicObjects().stream().map(e -> e.slotIndex()).toList());
+        assertEquals(0, first.unloadCount + first.removalCount + second.unloadCount + second.removalCount);
+        assertEquals(firstSlot, f.manager.firstFreeDynamicSlot());
+        assertEquals(firstUnused, f.manager.allocateSlotAfter(consumedSlot - 1),
+                "the consumed child SST must remain occupied");
+        assertEquals(secondUnused, f.manager.allocateSlotAfter(firstUnused));
+        assertEquals(secondReservations[0], f.manager.allocateSlotAfter(secondUnused),
+                "the unrelated retained dynamic SST must remain occupied");
+        assertEquals(secondReservations[1], f.manager.allocateSlotAfter(secondReservations[0]));
+    }
+
+    @Test
+    public void resyncFirstFreeAndAfterCurrentAdmissionsReplayTwiceWithFreshOwners() {
+        var f = new ResyncFixture();
+        int retiredFirstSlot = f.first().getSlotIndex();
+        var owner = f.dynamic(0x74);
+        owner.allocatePair = true;
+        ObjectRefId ownerId = f.manager.captureIdentityContext().requireIdentityTable().idFor(owner);
+        var replacementSpawn = ResyncFixture.spawn(0x71);
+        f.manager.resyncSpawnList(List.of(replacementSpawn));
+        assertEquals(retiredFirstSlot, f.manager.firstFreeDynamicSlot());
+        f.manager.setRewindInPlaceRestoreEnabledForTest(false);
+        var before = f.snapshot();
+
+        f.frame(1);
+        assertEquals(retiredFirstSlot, f.role(0x71).getSlotIndex());
+        var lower = f.role(0x72);
+        var upper = f.role(0x73);
+        assertTrue(lower.getSlotIndex() < owner.getSlotIndex());
+        assertTrue(upper.getSlotIndex() > owner.getSlotIndex());
+        assertEquals(0, lower.updateCount, "first-free behind the cursor waits for the next pass");
+        assertEquals(1, upper.updateCount, "after-current admission runs during this actual pass");
+        var afterFirst = f.snapshot();
+        f.frame(2);
+        assertEquals(1, lower.updateCount);
+        assertEquals(2, upper.updateCount);
+        var afterSecond = f.snapshot();
+
+        for (int cycle = 0; cycle < 2; cycle++) {
+            f.manager.rewindSnapshottable().restore(before);
+            f.same(before);
+            assertTrue(owner != f.manager.captureIdentityContext().requireIdentityTable().resolveObject(ownerId, true),
+                    "the replay must use a recreated owner, not a warmed live instance");
+            f.frame(1);
+            f.same(afterFirst);
+            assertEquals(0, f.role(0x72).updateCount);
+            assertEquals(1, f.role(0x73).updateCount);
+            f.frame(2);
+            f.same(afterSecond);
+        }
+    }
+
+    private static final class ResyncFixture {
+        final ObjectSpawn firstSpawn = new ObjectSpawn(0x100, 0x100, 0x70, 0, 0, false, 0x100, 1);
+        final ObjectSpawn secondSpawn = new ObjectSpawn(0x120, 0x100, 0x70, 0, 0, false, 0x100, 2);
+        final Camera camera = new Camera();
+        final ObjectManager manager;
+
+        ResyncFixture() {
+            var registry = new ObjectRegistry() {
+                @Override public ObjectInstance create(ObjectSpawn spawn) { return new ResyncProbe(spawn); }
+                @Override public void reportCoverage(List<ObjectSpawn> spawns) { }
+                @Override public String getPrimaryName(int objectId) { return "resync-probe"; }
+                @Override public ObjectSlotLayout objectSlotLayout() { return ObjectSlotLayout.SONIC_3K; }
+            };
+            ObjectManager[] boundManager = new ObjectManager[1];
+            var services = new StubObjectServices() {
+                @Override public ObjectManager objectManager() { return boundManager[0]; }
+                @Override public Camera camera() { return camera; }
+            };
+            manager = new ObjectManager(List.of(firstSpawn, secondSpawn), registry, 0, null, null,
+                    null, camera, services);
+            boundManager[0] = manager;
+            manager.enableExecThenLoadPlacement();
+            manager.reset(0);
+            manager.preloadInitialSpawnsForHydration();
+            assertTrue(first() != null && second() != null, "materialize real placed owners before resync");
+        }
+
+        static ObjectSpawn spawn(int objectId) {
+            return new ObjectSpawn(0x180, 0x100, objectId, 0, 0, false, 0x100);
+        }
+        ResyncProbe first() { return (ResyncProbe) manager.getActiveObjectForRewind(firstSpawn); }
+        ResyncProbe second() { return (ResyncProbe) manager.getActiveObjectForRewind(secondSpawn); }
+        ResyncProbe dynamic(int objectId) { return manager.createDynamicObject(() -> new ResyncProbe(spawn(objectId))); }
+        ResyncProbe role(int objectId) {
+            return manager.getActiveObjects().stream().filter(ResyncProbe.class::isInstance)
+                    .map(ResyncProbe.class::cast).filter(value -> value.getSpawn().objectId() == objectId)
+                    .findFirst().orElseThrow();
+        }
+        void frame(int frame) { manager.update(0, null, List.of(), frame, false); }
+        ObjectManagerSnapshot snapshot() { return manager.rewindSnapshottable().capture(); }
+        void same(ObjectManagerSnapshot expected) {
+            var actual = snapshot();
+            assertTrue(RewindSnapshotDiff.diffKey("object-manager", expected, actual).isEmpty(),
+                    () -> RewindSnapshotDiff.diffKey("object-manager", expected, actual).toString());
+        }
+    }
+
+    public static final class ResyncProbe extends AbstractObjectInstance implements SpawnRewindRecreatable {
+        private int updateCount;
+        private boolean allocatePair;
+        private boolean allocatedPair;
+        private int unloadCount;
+        private int removalCount;
+
+        public ResyncProbe(ObjectSpawn spawn) { super(spawn, "resync-probe"); }
+        @Override public boolean isPersistent() { return true; }
+        @Override public void appendRenderCommands(List<GLCommand> commands) { }
+        @Override public void onUnload() { unloadCount++; }
+        @Override protected void onRemovedFromObjectManager() { removalCount++; }
+        @Override public void update(int vIntRunCount, PlayableEntity player) {
+            updateCount++;
+            if (allocatePair && !allocatedPair) {
+                allocatedPair = true;
+                spawnFreeChild(() -> new ResyncProbe(ResyncFixture.spawn(0x72)));
+                spawnAfterCurrentSibling(() -> new ResyncProbe(ResyncFixture.spawn(0x73)));
+            }
+        }
     }
 
     private static final class TestRegistry implements ObjectRegistry {
