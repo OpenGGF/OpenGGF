@@ -7574,3 +7574,47 @@ actual route still returns5255 then stops unowned33 at5256. Body, mapper,
 five missing current bindings/C31 and eventual live dispatch remain separate;
 no current Log Shadow pixel, full-act/native timing or regional gameplay
 certification is claimed. Full USA then JP/EU continues privately.
+
+### Log Shadow native component — 26 October 2026
+
+On saved metadata5ed206c94, new CdLogShadow models ObjLogShadow
+(Log Shadow/Main.asm:7–70 at N1ecc5f3): routine0 Init/routine2 RTS, then one
+unconditional shared Draw and live-slot reload before the shared despawn tail.
+The nine Init stores retain dirty bytes; seven precede the selected base WORD,
+and MOVE.W/ORI.W precede Draw. Native raw byte/word ALU, saved-bank linear
+addressing, warp-only clamping and full-slot deletion retain their source order.
+Short constructed base views fail only at the reached read, with earlier
+stores visible. Callback exceptions preserve their identity/prefix; reentry
+is rejected and its transient guard retires in finally. Returned immutable
+effects describe completed work and supply no replay authority.
+
+The core is constructor3 / Assets3 / Globals5 / run2 / Result2, with one
+existing-shape DrawObjectCall/2 port. The actual assets binder reuses the
+authenticated two views and static visual. There is no new State alias,
+player/Frame/clock/Solid/FM/allocation/art/Region/source/capture owner.
+The native object has no FixBugs alternative in this closure.
+
+Root imports only the frozen test first;15453 stops during testCompile on the
+expected absent CdLogShadow (no JUnit; exact completion time/duration not
+retained). After the frozen production import38456 passes35/0/0/0 at17:07:51Z
+(1m32s execution,5s queue). The affected JUnit/source guards23786 separately
+pass5/0/0/0 at17:11:05Z (34.351s,queue0). Exact fresh XML/individual identities,
+counts/Java25.0.5.0.2/private cwd/zero skips were checked. No source repair or
+RootR2 was needed. These are constructed public-owner component vectors,
+not another fresh535 consumer run or successful controller5256.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 python3 "$OPENGGF_ROOT/tools/testing/maven_queue.py" --lean -Dmse=off '-Dtest=TestCdLogShadow' test -B
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 python3 "$OPENGGF_ROOT/tools/testing/maven_queue.py" --lean -Dmse=off '-Dtest=TestJunit5MigrationGuard,TestNoAssertionFreeDiagnostics' test -B
+```
+
+Tested production13059B/SHA1ec402144ba7261a7644fe66bf575704d598e0887010bcb2495f242eb8f6cbea
+and test36816B/SHAfd8c10e4937a36ab5926e32653032e5477038e304f46a13811247dc3aa7b778a
+remain identical to the external0444 inputs through both completed selections.
+Source-only review29741B/SHA59cc6927f1bc4a8357c114855324c4e89bc0e1e816fb5147b07ed464930d03a0
+inspects the complete production/test/native closure and finds no P1/P2;
+it executes no Java. The actual mapper/current five-pattern policy, client and
+Runtime binding remain separate. No broad smoke/structural728 repeat is
+needed for this unbound component. The current route remains5255 returned /
+5256 unknown33; actual Init, native pixels/timing, full USA and JP/EU gameplay
+certification remain open.
