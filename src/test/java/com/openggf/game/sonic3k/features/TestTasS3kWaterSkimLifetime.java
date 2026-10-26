@@ -22,6 +22,7 @@ class TestTasS3kWaterSkimLifetime {
     @AfterEach void cleanup() { HCZWaterSkimHandler.reset(); }
 
     @Test void currentLimitationWaterSkimOwnerSurvivesParticipantExitAndRangeDeparture() {
+        try (var reel = com.openggf.tests.reel.S3kTestReelPresentation.open()) {
         TestEnvironment.configureGameModuleFixture(new Sonic3kGameModule());
         HCZWaterSkimHandler.reset();
         var camera=GameServices.camera();camera.setX((short)0);
@@ -38,19 +39,19 @@ class TestTasS3kWaterSkimLifetime {
         p.setAir(false);p.setXSpeed((short)0x800);p.setGSpeed((short)0x800);p.setYSpeed((short)0);
         var query=new ObjectPlayerQuery(()->p,List::of);
         HCZWaterSkimHandler.update(query,0x200,1);
-        manager.update(0,p,List.of(),1);
+        manager.update(0,p,List.of(),1); reel.afterWaterSkim(p,0x200);
         assertTrue(HCZWaterSkimHandler.isSkimActiveP1());assertTrue(control.updates>0);
         assertTrue(manager.getActiveObjects().contains(control));
         p.setLogicalInputState(false,false,false,false,true,true);
         HCZWaterSkimHandler.update(query,0x200,2);
-        manager.update(0,p,List.of(),2);
+        manager.update(0,p,List.of(),2); reel.afterWaterSkim(p,0x200);
         assertFalse(HCZWaterSkimHandler.isSkimActiveP1());assertTrue(p.getAir());assertEquals(-0x680,p.getYSpeed());
         p.setLogicalInputState(false,false,false,false,false,false);
         camera.setX((short)0x3000);
         for(int frame=3;frame<=10;frame++) {
             p.move(p.getXSpeed(),p.getYSpeed());
             HCZWaterSkimHandler.update(query,0x200,frame);
-            manager.update(0x3000,p,List.of(),frame);
+            manager.update(0x3000,p,List.of(),frame); reel.afterWaterSkim(p,0x200);
         }
         assertFalse(HCZWaterSkimHandler.isSkimActiveP1());
         assertFalse(manager.getActiveObjects().contains(control),"nonpersistent control proves range-unload phase ran");
@@ -58,6 +59,7 @@ class TestTasS3kWaterSkimLifetime {
         assertFalse(skim.isDestroyed());assertEquals(5,skim.getSlotIndex());
         var replacement=new RangeControl();manager.addDynamicObject(replacement);
         assertNotEquals(5,replacement.getSlotIndex());
+            }
     }
 
     private static final class RangeControl extends AbstractObjectInstance {

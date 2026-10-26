@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.*;
+import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.sonic3k.runtime.DdzZoneRuntimeState;
@@ -20,6 +21,7 @@ class TestTasS3kDdzMissileSteering {
     @AfterEach void cleanup() { SessionManager.clear(); }
     @ParameterizedTest @ValueSource(ints={4,5})
     void globalClockPhaseChangesHomingButNotTheMovementTick(int vIntPhase) throws Exception {
+        try (var reel = com.openggf.tests.reel.S3kTestReelPresentation.open()) {
         TestEnvironment.configureGameModuleFixture(new Sonic3kGameModule());
         var p=new TestablePlayableSprite("sonic",(short)0x600,(short)0x100);
         var sprites=mock(SpriteManager.class);when(sprites.getMainPlayable()).thenReturn(p);
@@ -33,18 +35,19 @@ class TestTasS3kDdzMissileSteering {
         launcher.update(0,p);
         var missiles=manager.activeObjectsOfType(DdzMissileObjectInstance.class);
         assertEquals(3,missiles.size());var missile=missiles.getFirst();
-        assertEquals(0,number(missile,"index"));
-        for(int i=0;i<100&&number(missile,"state")!=DdzMissileObjectInstance.STATE_HOME;i++) missile.update(i+1,p);
+        assertEquals(0,number(missile,"index")); reel.afterObjects(List.of(missile),12,0,0x238,0x90,Sonic3kObjectArtKeys.DDZ_MISC);
+        for(int i=0;i<100&&number(missile,"state")!=DdzMissileObjectInstance.STATE_HOME;i++) { missile.update(i+1,p); reel.afterObjects(List.of(missile),12,0,0x238,0x90,Sonic3kObjectArtKeys.DDZ_MISC); }
         assertEquals(DdzMissileObjectInstance.STATE_HOME,number(missile,"state"));
         assertEquals(0xC0,missile.angleForExhaust(),"first missile completes its native half-turn");
         p.setCentreX((short)missile.getX());p.setCentreY((short)(missile.getY()+0x100));
         int oldX=number(missile,"xPos"),oldY=number(missile,"yPos");
-        missile.update(vIntPhase,p);
+        missile.update(vIntPhase,p); reel.afterObjects(List.of(missile),12,0,0x238,0x90,Sonic3kObjectArtKeys.DDZ_MISC);
         assertEquals(vIntPhase==4?0xC0:0xC2,missile.angleForExhaust(),"sub_82A82 skips turns at V-int &3 ==0");
         assertNotEquals(oldX,number(missile,"xPos"),"both phases still move");
         if(vIntPhase==4) assertEquals(oldY,number(missile,"yPos"));
         else assertTrue(number(missile,"yPos")>oldY,"two-angle turn curves toward Player 1");
         assertFalse(missile.isDestroyed());
+            }
     }
     private static int number(Object owner,String name) throws Exception {
         var field=owner.getClass().getDeclaredField(name);field.setAccessible(true);return ((Number)field.get(owner)).intValue();

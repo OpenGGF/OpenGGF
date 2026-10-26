@@ -18,14 +18,14 @@ class TestTasS3kTallyDeath {
         var settings=new GameplayCaptureSession.Settings(320,"sonic","","off",null,0x3EC0,0x1A0);
         try(var session=new GameplayCaptureSession(settings)) {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(),6,0,settings);
-            for(int i=0;i<5;i++)session.step(null);
+            for(int i=0;i<5;i++)com.openggf.tests.reel.TestReelCapture.step(session,null);
             var level=GameServices.level();var manager=level.getObjectManager();
             assertEquals(0,level.getCurrentAct());assertFalse(session.player().getDead());
             // ResultsInit is normally created by the stopped signpost. This
             // valid owner inlet precedes its art queue, children and act signal.
             GameServices.gameState().setEndOfLevelActive(true);
             var results=manager.createDynamicObject(()->new S3kResultsScreenObjectInstance(PlayerCharacter.SONIC_ALONE,0));
-            for(int i=0;i<180&&level.getCurrentAct()==0;i++)session.step(null);
+            for(int i=0;i<180&&level.getCurrentAct()==0;i++)com.openggf.tests.reel.TestReelCapture.step(session,null);
             assertEquals(1,level.getCurrentAct(),"real ResultsCreate signalled LBZ1BGE_DoTransition");
             assertTrue(GameServices.gameState().isEndOfLevelActive());
             assertTrue(level.getObjectManager().getActiveObjects().contains(results),"tally survived seamless act load");
@@ -33,7 +33,7 @@ class TestTasS3kTallyDeath {
             var beforeRestart=level.getObjectManager();
             if(die) {
                 assertTrue(GameServices.sprites().getMainPlayable().applyPitDeath());
-                for(int i=0;i<600&&level.getObjectManager()==beforeRestart;i++)session.step(null);
+                for(int i=0;i<600&&level.getObjectManager()==beforeRestart;i++)com.openggf.tests.reel.TestReelCapture.step(session,null);
                 assertNotSame(beforeRestart,level.getObjectManager(),"death reached actual fresh reload");
                 assertEquals(1,level.getCurrentAct(),"restart uses already-loaded act 2");
                 assertFalse(level.getObjectManager().getActiveObjects().contains(results));
@@ -41,7 +41,7 @@ class TestTasS3kTallyDeath {
                 assertEquals(lives-1,GameServices.gameState().getLives());
                 assertEquals(score,GameServices.gameState().getScore(),"death skips remaining tally rewards");
             } else {
-                session.step(null);
+                com.openggf.tests.reel.TestReelCapture.step(session,null);
                 assertSame(beforeRestart,level.getObjectManager());
                 assertTrue(level.getObjectManager().getActiveObjects().contains(results));
                 assertEquals(lives,GameServices.gameState().getLives());

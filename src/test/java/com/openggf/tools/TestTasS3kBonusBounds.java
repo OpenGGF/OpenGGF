@@ -17,15 +17,15 @@ class TestTasS3kBonusBounds {
         var settings=new GameplayCaptureSession.Settings(320,"knuckles","","off",null,null,null);
         try(var session=new GameplayCaptureSession(settings)) {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(),0,1,settings);
-            for(int i=0;i<60;i++)session.step(null);
+            for(int i=0;i<60;i++)com.openggf.tests.reel.TestReelCapture.step(session,null);
             assertEquals(GameMode.LEVEL,session.loop().getCurrentGameMode());
             assertFalse(session.player().getDead());
             assertEquals(0x1040,GameServices.camera().getMinX()&0xFFFF,"AIZ2_KnuxResize1 publishes native route lock");
-            for(int i=0;i<20;i++)session.step(null);
+            for(int i=0;i<20;i++)com.openggf.tests.reel.TestReelCapture.step(session,null);
             assertEquals(0x1040,GameServices.camera().getMinX()&0xFFFF,"neutral no-bonus control retains lock");
             GameServices.level().requestBonusStageEntry(BonusStageType.GUMBALL);
             for(int i=0;i<600;i++) {
-                session.step(null);
+                com.openggf.tests.reel.TestReelCapture.step(session,null);
                 if(session.loop().getCurrentGameMode()==GameMode.BONUS_STAGE && fadeDone())break;
             }
             assertEquals(GameMode.BONUS_STAGE,session.loop().getCurrentGameMode());assertTrue(fadeDone());
@@ -34,7 +34,7 @@ class TestTasS3kBonusBounds {
             var interior=GameServices.level().getObjectManager();
             coordinator.requestExit();
             for(int i=0;i<800;i++) {
-                session.step(null);
+                com.openggf.tests.reel.TestReelCapture.step(session,null);
                 if(session.loop().getCurrentGameMode()==GameMode.LEVEL && fadeDone()
                         && GameServices.level().getObjectManager()!=interior
                         && !GameServices.level().hasPendingFreshLevelTransitionBoundary())break;
