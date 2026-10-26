@@ -25,6 +25,11 @@ and current440 rendering remain separate bounded products;
 the native Tamabboh World scene still fails its fixed blank-floor prerequisite.
 Full-act/USA gameplay and subsequent JP/EU parity remain incomplete.
 
+Sonic Hole metadata separately passes180 cases; its unbound native component
+and mapper pass22+52 inside a fresh591-case affected selection, with no skips.
+Its read-only primary ports and current aliases add no source/bank/Frame owner.
+The live Runtime join, actual activation and next controller frontier are pending.
+
 ### Earlier CD checkpoints
 
 The entries below describe their historical bounded milestones, not the

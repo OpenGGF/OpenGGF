@@ -2415,7 +2415,7 @@ class TestCdObjectMappings {
         // The existing 34 registered roots remain; Log Shadow adds one. Static Monitor roots stay eight.
         var tablesField = CdObjectMappings.class.getDeclaredField("tables"); tablesField.setAccessible(true);
         var registered = (Map<?, ?>) tablesField.get(mappings);
-        assertEquals(35, registered.size()); assertEquals(registered.keySet(), ((Map<?, ?>) tablesField.get(again)).keySet());
+        assertEquals(36, registered.size()); assertEquals(registered.keySet(), ((Map<?, ?>) tablesField.get(again)).keySet());
         var disc = (CdObjectMappings.DeclaredTable) registered.get(SPINNING_DISC_MAP);
         assertNotNull(disc); assertEquals(SPINNING_DISC_MAP, disc.nativeStartBits());
         assertEquals(0, disc.tableOffset()); assertEquals(3, disc.frameCount());
@@ -2436,7 +2436,7 @@ class TestCdObjectMappings {
         assertTrue(java.lang.reflect.Modifier.isPublic(getter.getModifiers()));
         assertTrue(java.lang.reflect.Modifier.isSynchronized(getter.getModifiers()));
         assertEquals(0, getter.getExceptionTypes().length);
-        assertEquals(66, CdR11aObjectAssets.Table.values().length); assertEquals(106, CdR11aAsset.values().length);
+        assertEquals(67, CdR11aObjectAssets.Table.values().length); assertEquals(106, CdR11aAsset.values().length);
         // No art getter, source-bank access, pixel callback or residency snapshot is used by this contract.
     }
 
@@ -2517,7 +2517,7 @@ class TestCdObjectMappings {
             assertEquals(mappings.resolve(LOG_SHADOW_MAP, false, frame).pieces().getFirst().rawTileWord(), visual.mappingFrames().get(frame).pieces().getFirst().rawTileWord());
         }
         var field = CdObjectMappings.class.getDeclaredField("tables"); field.setAccessible(true);
-        var tables = (Map<?, ?>) field.get(mappings); assertEquals(35, tables.size());
+        var tables = (Map<?, ?>) field.get(mappings); assertEquals(36, tables.size());
         var registered = (CdObjectMappings.DeclaredTable) tables.get(LOG_SHADOW_MAP);
         assertSame(view.bytes(), registered.bytes()); assertEquals(0, registered.tableOffset()); assertEquals(2, registered.frameCount());
         var again = CdObjectMappings.fromOpeningAssets(usa.assets(), objects); assertSame(visual, objects.logShadow());
@@ -2527,7 +2527,7 @@ class TestCdObjectMappings {
         }
         assertTamabbohFramesAndBounds(mappings); assertTamabbohPriorRoots(usa, mappings);
         for (int frame = 0; frame < 3; frame++) assertEquals(SPINNING_DISC_FRAMES.get(frame), mappings.resolve(SPINNING_DISC_MAP, false, frame).pieces());
-        assertEquals(66, CdR11aObjectAssets.Table.values().length); assertEquals(106, CdR11aAsset.values().length);
+        assertEquals(67, CdR11aObjectAssets.Table.values().length); assertEquals(106, CdR11aAsset.values().length);
         var getter = CdR11aObjectAssets.class.getDeclaredMethod("logShadow");
         assertEquals(CdObjectVisualAssets.class, getter.getReturnType()); assertEquals(0, getter.getParameterCount());
         assertTrue(java.lang.reflect.Modifier.isPublic(getter.getModifiers())); assertTrue(java.lang.reflect.Modifier.isSynchronized(getter.getModifiers()));
@@ -2539,6 +2539,336 @@ class TestCdObjectMappings {
         for (int frame = 2; frame <= 255; frame++) { final int selected = frame; assertThrows(UnsupportedOperationException.class, () -> mappings.resolve(LOG_SHADOW_MAP, false, selected)); }
     }
     // END LOG SHADOW MAPPING JOIN R1
+
+    // BEGIN SONIC HOLE MAPPING JOIN R1
+    /**
+     * scddisasm 1ecc5f3af, Tunnel Path/Main.asm:27-33,101-103 and
+     * Data/Mappings (Hole).asm:1-18: one counted directory word and three literal pieces.
+     * Constructed inputs and CPU SAT expectations below do not execute ID31 or certify resident pixels.
+     */
+    private static final int SONIC_HOLE_MAP = 0x208AD4;
+    private static final byte[] SONIC_HOLE_SOURCE = HexFormat.of().parseHex(
+            "000203f00d0000f000040008f8080c000af0");
+    private static final List<CdObjectDrawQueue.RawPiece> SONIC_HOLE_PIECES = List.of(
+            new CdObjectDrawQueue.RawPiece(-16, 0x0D, 0x0000, -16),
+            new CdObjectDrawQueue.RawPiece(0, 0x04, 0x0008, -8),
+            new CdObjectDrawQueue.RawPiece(8, 0x0C, 0x000A, -16));
+
+    @Test void declaredSonicHoleRetainsOneLiteralUnscriptedRootAndAllFourteenTileOffsets() {
+        var mappings = declared(SONIC_HOLE_MAP, SONIC_HOLE_SOURCE, 0, 1);
+        var visual = CdObjectVisualAssets.decodeStatic(SONIC_HOLE_SOURCE, 1, 14);
+        assertEquals(18, SONIC_HOLE_SOURCE.length);
+        assertEquals(2, word(SONIC_HOLE_SOURCE, 0));
+        assertEquals(0, visual.mappingTableOffset()); assertEquals(1, visual.mappingFrames().size());
+        assertEquals(0, visual.animationTable().length()); assertTrue(visual.animations().isEmpty());
+        var frame = visual.mappingFrames().getFirst();
+        assertEquals(2, frame.relativeOffset()); assertEquals(3, frame.pieces().size());
+        assertArrayEquals(Arrays.copyOfRange(SONIC_HOLE_SOURCE, 2, 18), frame.bytes().copy());
+        assertEquals(SONIC_HOLE_PIECES, frame.pieces().stream().map(p ->
+                new CdObjectDrawQueue.RawPiece(p.y(), p.sizeByte(), p.rawTileWord(), p.x())).toList());
+        assertEquals(new CdObjectDrawQueue.FrameMapping(3, SONIC_HOLE_PIECES),
+                mappings.resolve(SONIC_HOLE_MAP, false, 0));
+        assertThrows(UnsupportedOperationException.class,
+                () -> mappings.resolve(SONIC_HOLE_MAP, false, 0).pieces().clear());
+        assertEquals(List.of(4, 2, 4), frame.pieces().stream().map(CdObjectVisualAssets.Piece::widthTiles).toList());
+        assertEquals(List.of(2, 1, 1), frame.pieces().stream().map(CdObjectVisualAssets.Piece::heightTiles).toList());
+        var offsets = new TreeSet<Integer>(); var normal = new TreeSet<Integer>(); var past = new TreeSet<Integer>();
+        for (var piece : frame.pieces()) for (int tile = 0; tile < piece.tileCount(); tile++) {
+            int offset = piece.tileOffset() + tile;
+            offsets.add(offset); normal.add(0x03A0 + offset); past.add(0x03BB + offset);
+        }
+        assertEquals(tileRange(0, 14), offsets);
+        assertEquals(tileRange(0x3A0, 0x3AE), normal);
+        assertEquals(tileRange(0x3BB, 0x3C9), past);
+        // These are native pattern ranges inside the existing Mosqui70 alias, not an art-residency assertion.
+        assertSonicHoleSelectionDomain(mappings);
+        byte[] detached = visual.mappings().copy(); Arrays.fill(detached, (byte) 0xA5);
+        assertArrayEquals(SONIC_HOLE_SOURCE, visual.mappings().copy());
+    }
+
+    @Test void sonicHoleFormatRejectsTruncationEscapingDirectoryBadSizeAndInsufficientCapacity() {
+        assertThrows(IllegalArgumentException.class,
+                () -> CdObjectVisualAssets.decodeStatic(SONIC_HOLE_SOURCE, 1, 13));
+        assertThrows(IllegalArgumentException.class,
+                () -> CdObjectVisualAssets.decodeStatic(Arrays.copyOf(SONIC_HOLE_SOURCE, 17), 1, 14));
+        assertThrows(IllegalArgumentException.class,
+                () -> declared(SONIC_HOLE_MAP, Arrays.copyOf(SONIC_HOLE_SOURCE, 17), 0, 1)
+                        .resolve(SONIC_HOLE_MAP, false, 0));
+        for (int[] change : new int[][]{{0, 0xFF}, {1, 0xFF}, {2, 4}, {4, 0x10}, {16, 0x0B}}) {
+            byte[] malformed = SONIC_HOLE_SOURCE.clone(); malformed[change[0]] = (byte) change[1];
+            assertThrows(IllegalArgumentException.class,
+                    () -> CdObjectVisualAssets.decodeStatic(malformed, 1, 14));
+        }
+        byte[] attributes = SONIC_HOLE_SOURCE.clone(); attributes[15] = (byte) 0xF8;
+        var attributed = declared(SONIC_HOLE_MAP, attributes, 0, 1).resolve(SONIC_HOLE_MAP, false, 0);
+        assertEquals(List.of(new CdObjectDrawQueue.RawPiece(-16, 0x0D, 0, -16),
+                new CdObjectDrawQueue.RawPiece(0, 4, 8, -8),
+                new CdObjectDrawQueue.RawPiece(8, 0x0C, 0xF80A, -16)), attributed.pieces());
+        assertEquals(0xF80A, CdObjectVisualAssets.decodeStatic(attributes, 1, 14)
+                .mappingFrames().getFirst().pieces().get(2).rawTileWord());
+    }
+
+    @Test void actualUsaSonicHoleJoinsExactCachedOwnerRootKeepsArtColdAndPreservesMapperApi() throws Exception {
+        var usa = usaMedia(); var objects = usa.objects(); var initial = objects.initialArtBank();
+        String[] cold = {"frontierArtBank", "contactArtBank", "floatBlockArtBank", "springArtBank",
+                "tunnelDoorArtBank", "monitorTimeArtBank", "pataBataArtBank", "sectionArtSources"};
+        for (String name : cold) {
+            var field = CdR11aObjectAssets.class.getDeclaredField(name); field.setAccessible(true);
+            assertNull(field.get(objects), name);
+        }
+        var cache = CdR11aObjectAssets.class.getDeclaredField("sonicHole"); cache.setAccessible(true);
+        assertNull(cache.get(objects));
+        var viewsField = CdR11aObjectAssets.class.getDeclaredField("frontierViews"); viewsField.setAccessible(true);
+        assertTrue(((Map<?, ?>) viewsField.get(objects)).isEmpty());
+        var mappings = CdObjectMappings.fromOpeningAssets(usa.assets(), objects);
+        var table = CdR11aObjectAssets.Table.SONIC_HOLE_MAPPINGS;
+        var view = objects.view(table); var visual = objects.sonicHole();
+        assertEquals(usa.assets().identity(), objects.identity());
+        assertEquals(66, table.ordinal()); assertEquals(67, CdR11aObjectAssets.Table.values().length);
+        assertEquals(106, CdR11aAsset.values().length);
+        assertEquals("MapSpr_SonicHole", table.nativeLabel());
+        assertEquals(table, view.table()); assertEquals(table.range(), view.range());
+        assertEquals(0x8AD4, view.range().fileOffset()); assertEquals(18, view.range().length());
+        assertEquals(SONIC_HOLE_MAP, view.range().nativeAddress());
+        assertEquals(0x208AE6, view.range().nativeAddress() + view.range().length());
+        assertArrayEquals(SONIC_HOLE_SOURCE, view.bytes().copy());
+        assertArrayEquals(SONIC_HOLE_SOURCE, visual.mappings().copy());
+        assertSame(visual, cache.get(objects)); assertSame(visual, objects.sonicHole());
+        assertEquals(0, visual.mappingTableOffset()); assertEquals(1, visual.mappingFrames().size());
+        assertEquals(2, visual.mappingFrames().getFirst().relativeOffset());
+        assertEquals(0, visual.animationTable().length()); assertTrue(visual.animations().isEmpty());
+        assertEquals(SONIC_HOLE_PIECES, visual.mappingFrames().getFirst().pieces().stream().map(p ->
+                new CdObjectDrawQueue.RawPiece(p.y(), p.sizeByte(), p.rawTileWord(), p.x())).toList());
+        var tablesField = CdObjectMappings.class.getDeclaredField("tables"); tablesField.setAccessible(true);
+        var registered = (Map<?, ?>) tablesField.get(mappings); assertEquals(36, registered.size());
+        var hole = (CdObjectMappings.DeclaredTable) registered.get(SONIC_HOLE_MAP); assertNotNull(hole);
+        assertEquals(SONIC_HOLE_MAP, hole.nativeStartBits()); assertEquals(SONIC_HOLE_MAP, hole.tableAddressBits());
+        assertEquals(0, hole.tableOffset()); assertEquals(1, hole.frameCount()); assertSame(view.bytes(), hole.bytes());
+        var staticField = CdObjectMappings.class.getDeclaredField("staticPieces"); staticField.setAccessible(true);
+        assertEquals(8, ((Map<?, ?>) staticField.get(mappings)).size());
+        var retainedViews = new HashMap<>((Map<?, ?>) viewsField.get(objects));
+        assertSame(view, retainedViews.get(table));
+        var again = CdObjectMappings.fromOpeningAssets(usa.assets(), objects);
+        assertEquals(registered.keySet(), ((Map<?, ?>) tablesField.get(again)).keySet());
+        var afterViews = (Map<?, ?>) viewsField.get(objects);
+        assertEquals(retainedViews.keySet(), afterViews.keySet());
+        retainedViews.forEach((key, value) -> assertSame(value, afterViews.get(key)));
+        assertSame(visual, objects.sonicHole()); assertSame(initial, objects.initialArtBank());
+        for (String name : cold) {
+            var field = CdR11aObjectAssets.class.getDeclaredField(name); field.setAccessible(true);
+            assertNull(field.get(objects), "mapper must not decode or preload art: " + name);
+        }
+        assertEquals(List.of("declaredSourceViews/2", "fromOpeningAssets/2", "resolve/3"),
+                Arrays.stream(CdObjectMappings.class.getDeclaredMethods())
+                        .filter(m -> java.lang.reflect.Modifier.isPublic(m.getModifiers()))
+                        .map(m -> m.getName() + "/" + m.getParameterCount()).sorted().toList());
+        assertEquals(0, CdObjectMappings.class.getConstructors().length);
+        assertEquals(1, CdObjectMappings.class.getDeclaredConstructors().length);
+        assertEquals(2, CdObjectMappings.class.getDeclaredConstructors()[0].getParameterCount());
+        var getter = CdR11aObjectAssets.class.getDeclaredMethod("sonicHole");
+        assertEquals(CdObjectVisualAssets.class, getter.getReturnType()); assertEquals(0, getter.getParameterCount());
+        assertTrue(java.lang.reflect.Modifier.isPublic(getter.getModifiers()));
+        assertTrue(java.lang.reflect.Modifier.isSynchronized(getter.getModifiers()));
+        assertEquals(0, getter.getExceptionTypes().length);
+        assertTamabbohFramesAndBounds(mappings); assertTamabbohPriorRoots(usa, mappings);
+        for (int frame = 0; frame < 3; frame++)
+            assertEquals(SPINNING_DISC_FRAMES.get(frame), mappings.resolve(SPINNING_DISC_MAP, false, frame).pieces());
+        assertEquals(List.of(new CdObjectDrawQueue.RawPiece(-16, 15, 0, -16)),
+                mappings.resolve(LOG_SHADOW_MAP, false, 0).pieces());
+        assertEquals(List.of(new CdObjectDrawQueue.RawPiece(-8, 13, 0, -16)),
+                mappings.resolve(LOG_SHADOW_MAP, false, 1).pieces());
+        assertSonicHoleSelectionDomain(mappings);
+        assertSonicHoleNativeSatFlips(mappings);
+        assertSonicHoleDeferredSelection(mappings);
+        byte[] detached = view.bytes().copy(); Arrays.fill(detached, (byte) 0xA5);
+        assertArrayEquals(SONIC_HOLE_SOURCE, view.bytes().copy());
+        assertEquals(new CdObjectDrawQueue.FrameMapping(3, SONIC_HOLE_PIECES),
+                mappings.resolve(SONIC_HOLE_MAP, false, 0));
+    }
+
+    @Test void sonicHoleFactoryRejectsForeignIdentityAndNullOwnersBeforeLazySelection() throws Exception {
+        var usa = usaMedia(); var objects = usa.objects(); var assets = usa.assets(); var id = assets.identity();
+        var cache = CdR11aObjectAssets.class.getDeclaredField("sonicHole"); cache.setAccessible(true);
+        var views = CdR11aObjectAssets.class.getDeclaredField("frontierViews"); views.setAccessible(true);
+        assertNull(cache.get(objects)); assertTrue(((Map<?, ?>) views.get(objects)).isEmpty());
+        var foreign = new CdR11aAssets.Identity(id.variant(), id.stage(), id.file(), id.domain(), id.mmdSha256(), "foreign");
+        var mismatch = new CdR11aAssets(assets.profile(), foreign, null, null, null, null, null, null,
+                assets.sonic(), null, null);
+        var failure = assertThrows(IllegalArgumentException.class,
+                () -> CdObjectMappings.fromOpeningAssets(mismatch, objects));
+        assertTrue(failure.getMessage().contains("different source identities"));
+        assertThrows(NullPointerException.class, () -> CdObjectMappings.fromOpeningAssets(null, objects));
+        assertThrows(NullPointerException.class, () -> CdObjectMappings.fromOpeningAssets(assets, null));
+        assertNull(cache.get(objects)); assertTrue(((Map<?, ?>) views.get(objects)).isEmpty());
+    }
+
+    private static void assertSonicHoleSelectionDomain(CdObjectMappings mappings) {
+        assertEquals(new CdObjectDrawQueue.FrameMapping(3, SONIC_HOLE_PIECES),
+                mappings.resolve(SONIC_HOLE_MAP, false, 0));
+        for (int frame = 1; frame <= 255; frame++) {
+            final int selected = frame;
+            var failure = assertThrows(UnsupportedOperationException.class,
+                    () -> mappings.resolve(SONIC_HOLE_MAP, false, selected));
+            assertTrue(failure.getMessage().contains("frame outside the registered source table"));
+        }
+        for (int frame = 0; frame <= 255; frame++) {
+            final int selected = frame;
+            assertThrows(UnsupportedOperationException.class, () -> mappings.resolve(SONIC_HOLE_MAP, true, selected));
+        }
+        // Includes every interior byte, the exact end, and research-only JP/EU root $208AE2.
+        for (int offset = -1; offset <= 18; offset++) {
+            if (offset == 0) continue;
+            final int pointer = SONIC_HOLE_MAP + offset;
+            assertThrows(UnsupportedOperationException.class, () -> mappings.resolve(pointer, false, 0));
+            assertThrows(UnsupportedOperationException.class, () -> mappings.resolve(pointer, true, 0));
+        }
+        for (int pointer : new int[]{0x8AD4, 0xFF208AD4, 0x01208AD4, 0x80208AD4, 0x208AD2, 0x208AF4}) {
+            assertThrows(UnsupportedOperationException.class, () -> mappings.resolve(pointer, false, 0));
+            assertThrows(UnsupportedOperationException.class, () -> mappings.resolve(pointer, true, 0));
+        }
+        for (int invalid : new int[]{-1, 256, Integer.MAX_VALUE}) {
+            assertThrows(IllegalArgumentException.class, () -> mappings.resolve(SONIC_HOLE_MAP, false, invalid));
+            assertThrows(IllegalArgumentException.class, () -> mappings.resolve(SONIC_HOLE_MAP, true, invalid));
+            assertThrows(IllegalArgumentException.class, () -> mappings.resolve(0, false, invalid));
+        }
+    }
+
+    @Test void declaredSonicHoleCpuSatMatchesIndependentNativeNoHVMirrorBytesAtBothLiteralBases() {
+        assertSonicHoleNativeSatFlips(declared(SONIC_HOLE_MAP, SONIC_HOLE_SOURCE, 0, 1));
+    }
+
+    /** Literal native-order bytes from Object Functions.asm:382-567; no expected byte is resolved from the mapper. */
+    private static void assertSonicHoleNativeSatFlips(CdObjectDrawQueue.CdDrawMappings mappings) {
+        byte[][][] literalSat = {
+                {
+                        HexFormat.of().parseHex("00f00d0103a001700100040203a8017801080c0303aa0170"),
+                        HexFormat.of().parseHex("00f00d010ba00170010004020ba8017801080c030baa0170"),
+                        HexFormat.of().parseHex("01000d0113a0017000f8040213a8017800f00c0313aa0170"),
+                        HexFormat.of().parseHex("01000d011ba0017000f804021ba8017800f00c031baa0170")
+                },
+                {
+                        HexFormat.of().parseHex("00f00d0103bb01700100040203c3017801080c0303c50170"),
+                        HexFormat.of().parseHex("00f00d010bbb0170010004020bc3017801080c030bc50170"),
+                        HexFormat.of().parseHex("01000d0113bb017000f8040213c3017800f00c0313c50170"),
+                        HexFormat.of().parseHex("01000d011bbb017000f804021bc3017800f00c031bc50170")
+                }
+        };
+        int[] bases = {0x03A0, 0x03BB};
+        for (int base = 0; base < bases.length; base++) for (int flip = 0; flip < 4; flip++) {
+            var sat = drawSonicHoleMapping(mappings, 4 | flip, bases[base]); var raw = sat.bytes();
+            assertEquals(3, sat.spriteCount()); assertEquals(3, sat.provenance().size());
+            assertArrayEquals(literalSat[base][flip], Arrays.copyOf(raw, 24));
+            assertArrayEquals(new byte[4], Arrays.copyOfRange(raw, 24, 28));
+            for (int piece = 0; piece < 3; piece++)
+                assertEquals(new CdObjectDrawQueue.Provenance(6, 0, new CdObjectDrawQueue.CdSlotRef(46), piece),
+                        sat.provenance().get(piece));
+        }
+    }
+
+    @Test void sonicHoleCpuSatAddsTheFullRawTileWordBeforeFlipXorAndKeepsWordWrap() {
+        var mappings = declared(SONIC_HOLE_MAP, SONIC_HOLE_SOURCE, 0, 1);
+        int[][][] literalWords = {
+                {{0xA7FC, 0xA804, 0xA806}, {0xAFFC, 0xA004, 0xA006},
+                        {0xB7FC, 0xB804, 0xB806}, {0xBFFC, 0xB004, 0xB006}},
+                {{0xFFF8, 0x0000, 0x0002}, {0xF7F8, 0x0800, 0x0802},
+                        {0xEFF8, 0x1000, 0x1002}, {0xE7F8, 0x1800, 0x1802}}
+        };
+        int[] bases = {0xA7FC, 0xFFF8};
+        for (int base = 0; base < bases.length; base++) for (int flip = 0; flip < 4; flip++) {
+            var sat = drawSonicHoleMapping(mappings, 4 | flip, bases[base]); assertEquals(3, sat.spriteCount());
+            byte[] raw = sat.bytes();
+            for (int piece = 0; piece < 3; piece++)
+                assertEquals(literalWords[base][flip][piece], word(raw, piece * 8 + 4));
+        }
+    }
+
+    @Test void declaredSonicHoleQueueDefersPointerModeFrameAndBaseSelectionUntilTheLiveBuild() {
+        assertSonicHoleDeferredSelection(declared(SONIC_HOLE_MAP, SONIC_HOLE_SOURCE, 0, 1));
+    }
+
+    /** Constructed physical-slot ingress only; no component, player, Runtime, source bank or picture conversion. */
+    private static void assertSonicHoleDeferredSelection(CdObjectDrawQueue.CdDrawMappings mappings) {
+        for (int mode = 0; mode < 5; mode++) {
+            var slots = new SonicHoleMappingSlots(sonicHoleMappingSlot(
+                    mode == 0 ? 0x24 : 4, mode == 0 ? 0xFF208AD4 : SONIC_HOLE_MAP, mode == 0 ? 255 : 0, 0x03A0));
+            var selected = new java.util.ArrayList<List<Integer>>();
+            CdObjectDrawQueue.CdDrawMappings observed = (address, staticPiece, frame) -> {
+                selected.add(List.of(address, staticPiece ? 1 : 0, frame));
+                return mappings.resolve(address, staticPiece, frame);
+            };
+            var camera = new CdObjectDrawQueue.CameraWords(0, 0);
+            try (var queue = new CdObjectDrawQueue(slots, observed, new byte[CdObjectDrawQueue.SAT_BYTE_SIZE])) {
+                queue.beginPass();
+                assertEquals(CdObjectDrawQueue.EnqueueResult.QUEUED, queue.drawObject(
+                        new CdObjectDrawQueue.DrawCallCut(new CdObjectDrawQueue.CdSlotRef(46), 4, 0x100, 0x80,
+                                0x10, 0x10, 6), camera));
+                assertEquals(0, slots.reads); assertTrue(selected.isEmpty());
+                assertEquals(List.of(false), slots.onScreenWrites);
+                int pointer = mode == 3 ? 0xFF208AD4 : SONIC_HOLE_MAP;
+                int frame = mode == 1 ? 1 : 0;
+                int flags = mode == 2 ? 0x24 : 7;
+                slots.current = sonicHoleMappingSlot(flags, pointer, frame, 0x03BB);
+                if (mode == 4) {
+                    slots.current = new CdObjectDrawQueue.LiveDrawSlot(0, 0x24, 0x100, 0x80, 0x9999,
+                            0xFF208AD4, 255, 0xFFFF);
+                    var sat = queue.finishAfterCamera(new CdObjectDrawQueue.DrawCameras(camera, camera, camera));
+                    assertEquals(0, sat.spriteCount()); assertTrue(selected.isEmpty());
+                    assertEquals(List.of(false), slots.onScreenWrites);
+                } else if (mode == 0) {
+                    var sat = queue.finishAfterCamera(new CdObjectDrawQueue.DrawCameras(camera, camera, camera));
+                    assertEquals(3, sat.spriteCount());
+                    assertArrayEquals(HexFormat.of().parseHex(
+                            "01000d011bbb017000f804021bc3017800f00c031bc50170"), Arrays.copyOf(sat.bytes(), 24));
+                    assertEquals(List.of(List.of(SONIC_HOLE_MAP, 0, 0)), selected);
+                    assertEquals(List.of(false, true), slots.onScreenWrites);
+                    assertEquals(0x87, slots.current.spriteFlagsByte());
+                } else {
+                    var failure = assertThrows(UnsupportedOperationException.class,
+                            () -> queue.finishAfterCamera(new CdObjectDrawQueue.DrawCameras(camera, camera, camera)));
+                    assertInstanceOf(UnsupportedOperationException.class, failure.getCause());
+                    assertEquals(CdObjectDrawQueue.Phase.FAILED, queue.phase());
+                    assertEquals(List.of(List.of(pointer, mode == 2 ? 1 : 0, frame)), selected);
+                    assertEquals(List.of(false), slots.onScreenWrites);
+                    assertThrows(IllegalStateException.class, queue::cpuSat);
+                }
+                assertEquals(1, slots.reads);
+            }
+        }
+    }
+
+    private static CdObjectDrawQueue.LiveDrawSlot sonicHoleMappingSlot(int flags, int pointer, int frame, int base) {
+        return new CdObjectDrawQueue.LiveDrawSlot(0x31, flags, 0x100, 0x80, 0x9999, pointer, frame, base);
+    }
+
+    private static CdObjectDrawQueue.CpuSat drawSonicHoleMapping(CdObjectDrawQueue.CdDrawMappings mappings,
+                                                               int flags, int base) {
+        var slots = new SonicHoleMappingSlots(sonicHoleMappingSlot(flags, SONIC_HOLE_MAP, 0, base));
+        var camera = new CdObjectDrawQueue.CameraWords(0, 0);
+        try (var queue = new CdObjectDrawQueue(slots, mappings, new byte[CdObjectDrawQueue.SAT_BYTE_SIZE])) {
+            queue.beginPass();
+            assertEquals(CdObjectDrawQueue.EnqueueResult.QUEUED, queue.drawObject(
+                    new CdObjectDrawQueue.DrawCallCut(new CdObjectDrawQueue.CdSlotRef(46), flags, 0x100, 0x80,
+                            0x10, 0x10, 6), camera));
+            return queue.finishAfterCamera(new CdObjectDrawQueue.DrawCameras(camera, camera, camera));
+        }
+    }
+
+    private static final class SonicHoleMappingSlots implements CdObjectDrawQueue.CdDrawSlots {
+        private CdObjectDrawQueue.LiveDrawSlot current;
+        private int reads;
+        private final java.util.ArrayList<Boolean> onScreenWrites = new java.util.ArrayList<>();
+        private SonicHoleMappingSlots(CdObjectDrawQueue.LiveDrawSlot current) { this.current = current; }
+        @Override public CdObjectDrawQueue.LiveDrawSlot read(CdObjectDrawQueue.CdSlotRef ref) {
+            assertEquals(46, ref.wholeIndex()); reads++; return current;
+        }
+        @Override public void writeOnScreenBit(CdObjectDrawQueue.CdSlotRef ref, boolean on) {
+            assertEquals(46, ref.wholeIndex()); onScreenWrites.add(on);
+            var s = current;
+            current = new CdObjectDrawQueue.LiveDrawSlot(s.idByte(), (s.spriteFlagsByte() & 127) | (on ? 128 : 0),
+                    s.xWord(), s.yWord(), s.screenYWord(), s.mappingAddressBits(), s.mapFrameByte(), s.baseTileWord());
+        }
+    }
+    // END SONIC HOLE MAPPING JOIN R1
 
 }
 // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>

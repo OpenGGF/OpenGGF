@@ -112,7 +112,9 @@ public final class CdR11aObjectAssets {
         TUNNEL_PATH_COORDINATES("ObjTunnelPath_Paths", 0x8D98, 284),
         // Log Shadow/Main.asm:26,53,60-70; actual USA operands join both complete raw tables.
         LOG_SHADOW_BASE_TILES("ObjLogShadow_BaseTileList", 0x89DE, 16),
-        LOG_SHADOW_MAPPINGS("MapSpr_LogShadow", 0x89EE, 16);
+        LOG_SHADOW_MAPPINGS("MapSpr_LogShadow", 0x89EE, 16),
+        // Tunnel Path/Main.asm:27-33,101-103; actual USA Init stores $208AD4. No EVEN pad.
+        SONIC_HOLE_MAPPINGS("MapSpr_SonicHole", 0x8AD4, 18);
 
         private final String nativeLabel;
         private final int offset;
@@ -386,6 +388,7 @@ public final class CdR11aObjectAssets {
     private CdObjectVisualAssets tamabbohMissile;
     private CdObjectVisualAssets spinningDisc;
     private CdObjectVisualAssets logShadow;
+    private CdObjectVisualAssets sonicHole;
 
     private CdR11aObjectAssets(CdR11aAssets.Identity identity, Map<Table, View> views, List<Delta> deltas,
                                 List<TouchSize> dimensions, CdObjectVisualAssets rings,
@@ -952,6 +955,14 @@ public final class CdR11aObjectAssets {
             logShadow = CdObjectVisualAssets.decodeStatic(read(Table.LOG_SHADOW_MAPPINGS), 2, 16);
         }
         return logShadow;
+    }
+
+    /** ObjSonicHole_Init uses one counted frame and literal tile words; no animation scripts or art reads. */
+    public synchronized CdObjectVisualAssets sonicHole() {
+        if (sonicHole == null) {
+            sonicHole = CdObjectVisualAssets.decodeStatic(read(Table.SONIC_HOLE_MAPPINGS), 1, 14);
+        }
+        return sonicHole;
     }
 
     /** Pure component decoder; signed bytes are extended as in ObjRing_Init (Ring/Main.asm:81-85). */

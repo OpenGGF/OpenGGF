@@ -256,6 +256,7 @@ class TestCdR11aObjectRetailAssets {
         hashes.put(TUNNEL_PATH_COORDINATES, "ffdca0eca125c54bf14c076060a27657bf82bcc3ce52d3e912c4ac14e5b5cd93");
         hashes.put(LOG_SHADOW_BASE_TILES, "b9a30c86ce81139722854af604422196b077c78a0e79dcac3cca3b506c06d637");
         hashes.put(LOG_SHADOW_MAPPINGS, "bb3b5b1a67fd3665a520a4a6c1d7ff89212992a766df61ec42b6c41aa1d38f7b");
+        hashes.put(SONIC_HOLE_MAPPINGS, "294c5d0eb7d5d0a19a3799ebf5bed56036e7f842b7d50da8488a5cfccaddce35");
         assertEquals(CdR11aObjectAssets.Table.values().length, hashes.size(), "every admitted table has a pinned digest");
         for (var table : CdR11aObjectAssets.Table.values()) {
             var view = objects.view(table);
@@ -4411,18 +4412,19 @@ class TestCdR11aObjectRetailAssets {
         assertSame(platform, objects.platform()); assertSame(flying, objects.flyingAnimal());
         assertSame(ground, objects.groundAnimal());
         assertEquals(0x388, objects.animalBaseTile(0, 1));
-        // Complete 66-table digest manifest: retain every inherited row and append both Log Shadow tables.
-        assertEquals(66, CdR11aObjectAssets.Table.values().length);
+        // Complete 67-table digest manifest: retain every inherited row and append the Sonic Hole mapping.
+        assertEquals(67, CdR11aObjectAssets.Table.values().length);
         assertEquals(45, COLLAPSE_OLD_SHA256.length); assertEquals(6, COLLAPSE_SHA256.length);
         assertEquals(3, PLATFORM21_SHA256.length);
-        for (int i = 0; i < 66; i++) {
+        for (int i = 0; i < 67; i++) {
             var table = CdR11aObjectAssets.Table.values()[i]; var view = objects.view(table);
             String expected = i < 45 ? COLLAPSE_OLD_SHA256[i]
                     : i < 51 ? COLLAPSE_SHA256[i - 45] : i < 54 ? PLATFORM21_SHA256[i - 51]
                     : i < 59 ? TestCdR11aObjectAssets.TAMABBOH_SHA256[i - 54]
                     : i < 62 ? TestCdR11aObjectAssets.SPINNING_DISC_SHA256[i - 59]
                     : i < 64 ? TestCdR11aObjectAssets.TUNNEL_PATH_SHA256[i - 62]
-                    : TestCdR11aObjectAssets.LOG_SHADOW_SHA256[i - 64];
+                    : i < 66 ? TestCdR11aObjectAssets.LOG_SHADOW_SHA256[i - 64]
+                    : "294c5d0eb7d5d0a19a3799ebf5bed56036e7f842b7d50da8488a5cfccaddce35";
             assertEquals(expected, CdR11aProfile.sha256(view.bytes().copy()), table.name());
             assertSame(view, objects.view(table));
             assertArrayEquals(table.range().read(image).copy(), view.bytes().copy());
@@ -5017,13 +5019,14 @@ class TestCdR11aObjectRetailAssets {
         for (int i = 0; i < 5; i++) { assertSame(views.get(i),viewsFirst.view(TestCdR11aObjectAssets.TAMABBOH_TABLES.get(i))); }
         for (var objects : List.of(visualFirst,sourceFirst,viewsFirst)) {
             verifyTamabbohUnchangedSource17(objects,owner,retained);
-            for (int i = 0; i < 66; i++) {
+            for (int i = 0; i < 67; i++) {
                 var table = CdR11aObjectAssets.Table.values()[i]; var view = objects.view(table);
                 String expected = i < 45 ? COLLAPSE_OLD_SHA256[i] : i < 51 ? COLLAPSE_SHA256[i-45]
                         : i < 54 ? PLATFORM21_SHA256[i-51] : i < 59 ? TestCdR11aObjectAssets.TAMABBOH_SHA256[i-54]
                         : i < 62 ? TestCdR11aObjectAssets.SPINNING_DISC_SHA256[i-59]
                         : i < 64 ? TestCdR11aObjectAssets.TUNNEL_PATH_SHA256[i-62]
-                        : TestCdR11aObjectAssets.LOG_SHADOW_SHA256[i-64];
+                        : i < 66 ? TestCdR11aObjectAssets.LOG_SHADOW_SHA256[i-64]
+                        : "294c5d0eb7d5d0a19a3799ebf5bed56036e7f842b7d50da8488a5cfccaddce35";
                 assertEquals(expected,CdR11aProfile.sha256(view.bytes().copy()),table.name());
                 assertSame(view,objects.view(table)); assertArrayEquals(table.range().read(retained).copy(),view.bytes().copy());
                 byte[] detached = view.bytes().copy(); detached[0] ^= 1;
@@ -5786,6 +5789,174 @@ class TestCdR11aObjectRetailAssets {
             throws Exception {
         var after = logShadowOtherFields(objects); assertEquals(before.keySet(), after.keySet());
         for (var entry : before.entrySet()) { assertSame(entry.getValue(), after.get(entry.getKey()), entry.getKey()); }
+    }
+
+
+    // Sonic Hole assets R1: regional byte authentication never grants a JP/EU USA-only owner.
+    @ParameterizedTest(name = "{0} Sonic Hole ID31 actual operands and retained USA mapping without art reads")
+    @EnumSource(CdReleaseVariant.class)
+    void sonicHoleAuthenticatesActualRegionalOperandsAndCachesOnlyTheUsaStaticVisual(CdReleaseVariant variant)
+            throws Exception {
+        String configured = System.getProperty("soniccd.media.root");
+        Assumptions.assumeTrue(configured != null && !configured.isBlank(),
+                "Set soniccd.media.root for supplied-media checks");
+        String directory = switch (variant) { case USA -> "USA"; case JAPAN -> "Japan"; case EUROPE -> "Europe"; };
+        Path cue;
+        try (var files = Files.list(Path.of(configured).resolve(directory))) {
+            var cues = files.filter(p -> p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".cue")).toList();
+            assertEquals(1, cues.size()); cue = cues.getFirst();
+        }
+        CdR11aAssets owner; CdMmdImage retained;
+        CdR11aObjectAssets visualFirst = null, rawFirst = null;
+        try (var program = CdProgramAssets.open(cue, Optional.of(variant), Optional.empty())) {
+            owner = CdR11aAssetLoader.load(program, variant, CdStageKey.parse("R11A"));
+            retained = program.mmd(CdNativeFile.R11A);
+            assertEquals(262144, retained.fileBytes());
+            assertEquals(owner.profile().expectedMmdSha256(),
+                    CdR11aProfile.sha256(retained.readFile(0, retained.fileBytes())));
+            owner.profile().verifyProgram(owner.profile().file(), owner.profile().domain(), retained);
+            verifySonicHoleActualNativeOperands(retained, variant);
+            if (variant != CdReleaseVariant.USA) {
+                assertThrows(UnsupportedOperationException.class, owner::openingObjects);
+                assertThrows(UnsupportedOperationException.class, () -> CdR11aObjectAssets.load(
+                        owner.profile(), owner.identity(), retained, owner.loadPlan()));
+                var usa = CdR11aProfile.forStage(CdReleaseVariant.USA, CdStageKey.parse("R11A"));
+                var asserted = new CdR11aAssets.Identity(CdReleaseVariant.USA, usa.stage(), usa.file(), usa.domain(),
+                        usa.expectedMmdSha256(), owner.identity().observedWholeDiscSha256());
+                assertThrows(IOException.class, () -> CdR11aObjectAssets.load(usa, asserted, retained, owner.loadPlan()));
+            } else {
+                visualFirst = owner.openingObjects(); rawFirst = owner.openingObjects();
+                assertNotSame(visualFirst, rawFirst);
+                for (var objects : List.of(visualFirst, rawFirst)) {
+                    assertSame(owner.identity(), objects.identity()); verifySonicHoleArtCold(objects);
+                    var cache = CdR11aObjectAssets.class.getDeclaredField("sonicHole"); cache.setAccessible(true);
+                    assertNull(cache.get(objects));
+                }
+                for (int offset : new int[]{0x3EF4, 0x3EF7, 0x89FE, 0x8A12, 0x8A18, 0x8A24,
+                        0x8A32, 0x8A36, 0x8A38, 0x8A3B, 0x8AD3, 0x8AE6, 0x8AE7}) {
+                    byte[] changed = retained.readFile(0, retained.fileBytes()); changed[offset] ^= 1;
+                    assertThrows(IOException.class, () -> CdR11aObjectAssets.load(owner.profile(), owner.identity(),
+                            CdMmdImage.parse(changed), owner.loadPlan()), "changed Sonic Hole operand/boundary " + offset);
+                }
+                for (int offset = 0x8AD4; offset < 0x8AE6; offset++) {
+                    byte[] changed = retained.readFile(0, retained.fileBytes()); changed[offset] ^= 1;
+                    assertThrows(IOException.class, () -> CdR11aObjectAssets.load(owner.profile(), owner.identity(),
+                            CdMmdImage.parse(changed), owner.loadPlan()), "changed complete Sonic Hole mapping byte " + offset);
+                }
+            }
+        }
+        if (variant != CdReleaseVariant.USA) { return; }
+        assertNotNull(visualFirst); assertNotNull(rawFirst);
+        var optional = CdR11aObjectAssets.class.getDeclaredField("frontierViews"); optional.setAccessible(true);
+        var cache = CdR11aObjectAssets.class.getDeclaredField("sonicHole"); cache.setAccessible(true);
+        assertTrue(((Map<?, ?>) optional.get(visualFirst)).isEmpty());
+        assertTrue(((Map<?, ?>) optional.get(rawFirst)).isEmpty());
+        var visualBefore = sonicHoleOtherFields(visualFirst);
+        var visual = visualFirst.sonicHole();
+        assertSame(visual, visualFirst.sonicHole()); assertSame(visual, cache.get(visualFirst));
+        TestCdR11aObjectAssets.verifySonicHoleVisual(visual);
+        assertEquals(List.of(SONIC_HOLE_MAPPINGS), List.copyOf(((Map<?, ?>) optional.get(visualFirst)).keySet()));
+        assertSonicHoleOtherFieldsUnchanged(visualFirst, visualBefore);
+        verifySonicHoleArtCold(visualFirst);
+
+        var rawBefore = sonicHoleOtherFields(rawFirst);
+        var raw = rawFirst.view(SONIC_HOLE_MAPPINGS);
+        assertNull(cache.get(rawFirst)); assertSonicHoleOtherFieldsUnchanged(rawFirst, rawBefore);
+        assertEquals(List.of(SONIC_HOLE_MAPPINGS), List.copyOf(((Map<?, ?>) optional.get(rawFirst)).keySet()));
+        var rawVisual = rawFirst.sonicHole();
+        assertSame(rawVisual, rawFirst.sonicHole()); assertSame(rawVisual, cache.get(rawFirst));
+        assertNotSame(visual, rawVisual);
+        TestCdR11aObjectAssets.verifySonicHoleVisual(rawVisual);
+        assertSame(raw, rawFirst.view(SONIC_HOLE_MAPPINGS));
+        assertSonicHoleOtherFieldsUnchanged(rawFirst, rawBefore); verifySonicHoleArtCold(rawFirst);
+
+        for (var objects : List.of(visualFirst, rawFirst)) {
+            var before = sonicHoleOtherFields(objects);
+            var view = objects.view(SONIC_HOLE_MAPPINGS);
+            assertEquals(SONIC_HOLE_MAPPINGS, view.table()); assertEquals(SONIC_HOLE_MAPPINGS.range(), view.range());
+            assertSame(view, objects.view(SONIC_HOLE_MAPPINGS)); assertSame(owner.identity(), objects.identity());
+            assertEquals(18, view.bytes().length());
+            assertArrayEquals(TestCdR11aObjectAssets.sonicHoleLiteral(), view.bytes().copy());
+            assertArrayEquals(SONIC_HOLE_MAPPINGS.range().read(retained).copy(), view.bytes().copy());
+            assertEquals("294c5d0eb7d5d0a19a3799ebf5bed56036e7f842b7d50da8488a5cfccaddce35",
+                    CdR11aProfile.sha256(view.bytes().copy()));
+            byte[] detached = view.bytes().copy(); detached[0] ^= 1;
+            assertArrayEquals(TestCdR11aObjectAssets.sonicHoleLiteral(), view.bytes().copy());
+            assertThrows(ReadOnlyBufferException.class, () -> view.bytes().buffer().put((byte) 1));
+            assertThrows(IndexOutOfBoundsException.class, () -> view.bytes().unsignedByte(-1));
+            assertThrows(IndexOutOfBoundsException.class, () -> view.bytes().unsignedByte(18));
+            assertThrows(IndexOutOfBoundsException.class, () -> view.bytes().unsignedWord(17));
+            assertThrows(IndexOutOfBoundsException.class, () -> view.bytes().slice(0, 19));
+            assertSonicHoleOtherFieldsUnchanged(objects, before); verifySonicHoleArtCold(objects);
+        }
+    }
+
+    private static void verifySonicHoleActualNativeOperands(CdMmdImage image, CdReleaseVariant variant) {
+        // Each regional operand row was independently read from its original MMD, never shifted from USA.
+        int[] sites = switch (variant) {
+            case USA -> new int[]{0x3A22, 0x3E34, 0x3EF4, 0x89FE, 0x8A12, 0x8A18, 0x8A36, 0x8AD4};
+            case JAPAN -> new int[]{0x3A1E, 0x3E30, 0x3EF0, 0x8A0C, 0x8A20, 0x8A26, 0x8A44, 0x8AE2};
+            case EUROPE -> new int[]{0x3A1E, 0x3E30, 0x3EF0, 0x8A0C, 0x8A20, 0x8A26, 0x8A44, 0x8AE2};
+        };
+        int dispatch = sites[0], index = sites[1], cell = sites[2], body = sites[3];
+        assertArrayEquals(hexBytes("d040d04043f9"), image.readFile(dispatch - 4, 6));
+        assertEquals(index, ByteBuffer.wrap(image.readFile(dispatch + 2, 4)).getInt() - 0x200000);
+        assertArrayEquals(hexBytes("227100fc4e91"), image.readFile(dispatch + 6, 6));
+        assertEquals(index + (0x31 - 1) * 4, cell);
+        assertEquals(0x200000 + body, ByteBuffer.wrap(image.readFile(cell, 4)).getInt());
+        assertArrayEquals(hexBytes("700010280024303b000c4ebb0008"), image.readFile(body, 14));
+        assertEquals(214, sites[7] - body);
+        assertEquals(variant == CdReleaseVariant.USA
+                        ? "d8f258fcd017dbb5e99a84b040c2893450b4012200f6e082770c76cf96092171"
+                        : "b69002b07908dde57242751b1db56a5b5ff55a6e508e0ab8270d00f40d83379d",
+                CdR11aProfile.sha256(image.readFile(body, 214)));
+        assertArrayEquals(hexBytes("000600520098"), image.readFile(sites[4], 6));
+        assertEquals(sites[5], sites[4] + ByteBuffer.wrap(image.readFile(sites[4], 2)).getShort());
+        assertArrayEquals(hexBytes("54280024002800040001317c03a000024a3900ff152e6606317c03bb0002"),
+                image.readFile(sites[5], 30));
+        int mapStore = sites[6];
+        assertArrayEquals(hexBytes("217c"), image.readFile(mapStore, 2));
+        assertArrayEquals(hexBytes("0004"), image.readFile(mapStore + 6, 2));
+        int rawPointer = ByteBuffer.wrap(image.readFile(mapStore + 2, 4)).getInt();
+        assertEquals(0x200000 + sites[7], rawPointer);
+        assertArrayEquals(hexBytes("117c00100019117c00100016117c00060018"), image.readFile(mapStore + 8, 18));
+        assertArrayEquals(TestCdR11aObjectAssets.sonicHoleLiteral(), image.readFile(sites[7], 18));
+        assertEquals("294c5d0eb7d5d0a19a3799ebf5bed56036e7f842b7d50da8488a5cfccaddce35",
+                CdR11aProfile.sha256(image.readFile(sites[7], 18)));
+        assertArrayEquals(hexBytes("0839"), image.readFile(sites[7] + 18, 2));
+        if (variant == CdReleaseVariant.USA) {
+            assertEquals(SONIC_HOLE_MAPPINGS.range().nativeAddress(), rawPointer);
+        } else {
+            assertNotEquals(SONIC_HOLE_MAPPINGS.range().nativeAddress(), rawPointer);
+            assertFalse(Arrays.equals(TestCdR11aObjectAssets.sonicHoleLiteral(),
+                    image.readFile(SONIC_HOLE_MAPPINGS.range().fileOffset(), 18)));
+        }
+    }
+
+    /** Observe every unrelated field, including Source17 and existing decoded art, without warming any cache. */
+    private static Map<String, Object> sonicHoleOtherFields(CdR11aObjectAssets objects) throws Exception {
+        Map<String, Object> before = new HashMap<>();
+        for (var field : CdR11aObjectAssets.class.getDeclaredFields()) {
+            if (java.lang.reflect.Modifier.isStatic(field.getModifiers())
+                    || List.of("sonicHole", "frontierViews").contains(field.getName())) { continue; }
+            field.setAccessible(true); before.put(field.getName(), field.get(objects));
+        }
+        return before;
+    }
+
+    private static void assertSonicHoleOtherFieldsUnchanged(CdR11aObjectAssets objects, Map<String, Object> before)
+            throws Exception {
+        var after = sonicHoleOtherFields(objects); assertEquals(before.keySet(), after.keySet());
+        for (var entry : before.entrySet()) { assertSame(entry.getValue(), after.get(entry.getKey()), entry.getKey()); }
+    }
+
+
+    private static void verifySonicHoleArtCold(CdR11aObjectAssets objects) throws Exception {
+        for (String name : List.of("sectionArtSources", "frontierArtBank", "contactArtBank", "floatBlockArtBank",
+                "springArtBank", "monitorTimeArtBank", "tunnelDoorArtBank", "pataBataArtBank")) {
+            var field = CdR11aObjectAssets.class.getDeclaredField(name); field.setAccessible(true);
+            assertNull(field.get(objects), "Sonic Hole must not initialize optional art cache " + name);
+        }
     }
 
     // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>

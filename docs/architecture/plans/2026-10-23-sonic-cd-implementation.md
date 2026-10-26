@@ -7769,3 +7769,70 @@ metadata/body/read-only primary/FM/mapping/Runtime are the next bounded join.
 No new art source/span is indicated. Controlled Body remains deferred.
 Full USA then JP/EU, native timing/image parity and whole-act closure remain
 open. This is private local progress, with no main-workspace/remote change.
+
+
+### Sonic Hole authenticated component and mapping — 26 October 2026
+
+Over saved private basef9068367f3c98892d824476009683d37c1702c64, append
+Table66 SONIC_HOLE_MAPPINGS at USAfile8AD4/18 and one synchronized lazy
+sonicHole()/0 through the existing static1-frame/14-tile decoder. All old66
+rows and the complete Source17/cache/reader/selector suffix remain exact.
+Independent original regional operands and full18 bytes are authenticated;
+JP/EU view bytes do not authorize USA gameplay ownership. Root tests-only
+24049 reaches absent enum/getter compile RED; after production,35566 passes
+123 unit+57 regional=180/0/0/0 at19:59:51Z (2m06 execution,483s queue).
+Fresh exact two-class identities, Java25/private cwd/media/skips and pins
+were checked. No new art/preload/physical region or tile selector is added.
+
+CdSonicHole uses constructor5 and existing placement, a read-only primary
+port, FM_A3 metadata port and Draw. Native ObjSonicHole (Tunnel Path/Main.asm:
+11–103 at N1ecc5f3) dispatches raw0/2/4. Init retains width-specific native
+stores and raw-timeZone tile03A0/03BB. SetDisplay always uses raw linear
+2+3*savedID+timeZone, including saved0; old-clear BSET6→BCLR6 falls through
+Main, old-set goes to routine4/Draw. Main samples actual CONTROL2C first,
+then X WORD and Y WORD only behind the native rectangle gates. Successful
+overlap commits saved6, requests FM_A3, advances routine4 and Draws. Waiting
+Main has no Draw. Draw remains mutating; the shared tail reloads its actual
+source before aligned distance/warp/loaded-bit/delete behavior.
+
+Every read/FM callback receives fresh actual full96/source64. Private
+finally checks all placement Status fields,766 saved bytes and96 images;
+the original callback Throwable retains identity with distinct verifier
+faults suppressed. There is no rollback, Frame/player writer, capture owner,
+angle/Solid/terrain/animation behavior or command replay. Equal-value stores
+and mutate/undo remain unobservable value-check limits. Root Runtime must
+supply actual private invocation/field sequence/full Frame-pair/FM authority.
+
+One ordinary mapper registration resolves the one complete counted root and
+its three pieces/fourteen tiles on existing Mosqui70/current aliases. Root's
+enum auditor finds both outside66 totals at mapping tests2439/2530 before
+integration. It visibly returns incomplete for indirect uses; zero stale
+counts is never a complete consumer certificate. The mapper packet performs
+those two total migrations, root census35→36 and static census7→8; seven
+new cases retain all prior source bytes outside those four tokens.
+
+Both component tests import first. Build-only59567 uses test-compile and
+reaches absent CdSonicHole without requesting a test-queue slot or running
+JUnit. That compile RED does not claim a separate old-mapper JUnit failure.
+After both production imports, combined91006 passes591/0/0/0 at20:06:36Z
+(2m07 execution, queue0): Body22, mapper52, old Runtime456, allWorldLoad53,
+actual Ring/current440/currentShadow EGL3 and source guards5. The22 Body
+methods stream65536 SetDisplay,65536 tail and32768 warp vectors plus callback
+and raw-byte cases; those loops are not additional JUnit case counts. Exact
+seven fresh classes/identities/Java25/media/S2/EGL opt-in/skips and all seven
+source pins were checked. Earlier180 is a separate run, not a fresh771 total.
+No source/test repair was needed. Independent metadata and Body/mapper
+static reviews found no actionable P1/P2; no broader unchanged run repeated.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 python3 "$OPENGGF_ROOT/tools/testing/maven_queue.py" --lean -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dsoniccd.opening.egl=true "-Dsoniccd.media.root=$SCD_MEDIA_ROOT" "-Dsonic2.rom.path=$S2_ROM" '-Dtest=TestCdSonicHole,TestCdObjectMappings,TestCdOpeningObjectRuntime,TestSonicCdOpeningWorldLoad,TestSonicCdOpeningWorldEgl#actualEglNormalInputPickupAndFullCourseReplay+actualEglCurrentTamabbohSingletonRendersAndRetiresThe659thClientPattern+actualEglCurrentLogShadowFivePatternsRenderAndRetireThe664EntryClientRange,TestJunit5MigrationGuard,TestNoAssertionFreeDiagnostics' test -B
+```
+
+The component is still unbound from the Runtime at this checkpoint. Natural
+route5322/first5323unowned31 remains the measurement; no returned5323,
+Sonic Hole activation/current scene image, FM playback or native parity is
+claimed. C31,21 logical banks,664 client entries, Source17 and the Frame are
+unchanged. User requests a break after the live Sonic Hole join, a handover,
+and GitHub feature/ai-nothing-to-see-here based on next. This supersedes the
+prior local-only publication restriction for that requested feature branch;
+main remains untouched and no release/PR/other-branch push is requested.

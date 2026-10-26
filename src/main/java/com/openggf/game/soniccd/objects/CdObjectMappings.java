@@ -182,6 +182,7 @@ public final class CdObjectMappings implements CdDrawMappings {
         addObject(tables, objects, CdR11aObjectAssets.Table.TAMABBOH_MISSILE_MAPPINGS, objects.tamabbohMissile());
         addObject(tables, objects, CdR11aObjectAssets.Table.SPINNING_DISC_MAPPINGS, objects.spinningDisc());
         addObject(tables, objects, CdR11aObjectAssets.Table.LOG_SHADOW_MAPPINGS, objects.logShadow());
+        addObject(tables, objects, CdR11aObjectAssets.Table.SONIC_HOLE_MAPPINGS, objects.sonicHole());
         var monitorView = objects.view(CdR11aObjectAssets.Table.MONITOR_TIME_MAPPINGS);
         var staticPieces = new ArrayList<DeclaredStaticPiece>();
         // ObjMonitorItem_Init (:451-459) adds the signed frame word and then one byte, skipping the count.
