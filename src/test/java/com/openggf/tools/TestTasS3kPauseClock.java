@@ -17,20 +17,20 @@ class TestTasS3kPauseClock {
         try(var session=new GameplayCaptureSession(settings)) {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(),0,0,settings);
             for(int i=0;i<600;i++) {
-                session.step(null);
+                com.openggf.tests.reel.TestReelCapture.step(session,null);
                 if(session.loop().getCurrentGameMode()==GameMode.LEVEL&&!GameServices.level().hasPendingFreshLevelTransitionBoundary()) break;
             }
             assertEquals(GameMode.LEVEL,session.loop().getCurrentGameMode());
             assertFalse(GameServices.level().hasPendingFreshLevelTransitionBoundary());
-            for(int i=0;i<60;i++)session.step(null);
+            for(int i=0;i<60;i++)com.openggf.tests.reel.TestReelCapture.step(session,null);
             var level=GameServices.level();var player=session.player();var manager=level.getObjectManager();
             int vint=manager.getVblaCounter(),levelFrame=level.getFrameCounter();
             assertTrue(vint>0,"unpaused gameplay reached the V-int clock owner");
             long timer=level.getLevelGamestate().getTimerFrames();
             int x=player.getCentreX(),y=player.getCentreY();
-            session.step(new Bk2FrameInput(0,0,0,true,"pause"));
+            com.openggf.tests.reel.TestReelCapture.step(session,new Bk2FrameInput(0,0,0,true,"pause"));
             assertTrue(GameServices.gameState().isGamePaused());
-            session.step(null);session.step(null);
+            com.openggf.tests.reel.TestReelCapture.step(session,null);com.openggf.tests.reel.TestReelCapture.step(session,null);
             // Native parity assertion was red: Pause_Loop waits three VBlanks
             // and VInt_Done increments the clock three times. Current engine
             // freezes the bound global clock at this exercised pause boundary.
@@ -38,7 +38,7 @@ class TestTasS3kPauseClock {
             assertEquals(vint,com.openggf.game.session.EngineTiming.vIntRunCounter().value());
             assertEquals(levelFrame,level.getFrameCounter());assertEquals(timer,level.getLevelGamestate().getTimerFrames());
             assertEquals(x,player.getCentreX());assertEquals(y,player.getCentreY());
-            session.step(new Bk2FrameInput(0,0,0,true,"resume"));
+            com.openggf.tests.reel.TestReelCapture.step(session,new Bk2FrameInput(0,0,0,true,"resume"));
             assertFalse(GameServices.gameState().isGamePaused());
             assertEquals(levelFrame+1,level.getFrameCounter());
             assertEquals(vint+1,manager.getVblaCounter(),"resume control executes the clock owner again");
