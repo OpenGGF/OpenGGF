@@ -10,6 +10,13 @@ This document tracks **intentional deviations** from the original Sonic 1 / 2 / 
 
 Each entry describes what the ROM does, what we do, and why — focusing on *why* the divergence is acceptable.
 
+**TAS mechanism verdicts (2026-10-26):** the
+[executed verdict record](../architecture/validation/2026-10-26-tas-trick-verdicts.md)
+separates supported tricks from reached compatibility gaps. Newly demonstrated
+limitations are linked from [known bugs](known-bugs.md); this test-only pass
+adds no accepted deviations. The local paused-clock mismatch is distinct from
+whole-run timing limits and is not waived by them.
+
 **TraceChaser extraction note (2026-08-29):** moving recorder and analysis
 utilities to the optional pinned `tools/tracechaser` submodule changes source
 ownership only. It introduces no cross-game or ROM-behaviour discrepancy, so

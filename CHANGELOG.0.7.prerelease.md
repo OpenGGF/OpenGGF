@@ -1206,9 +1206,11 @@ its original drawing priority.
 ## Maintenance and release preparation
 
 - **TAS trick regressions:** Focused tests exercise native movement, object-contact
-  and special-stage behaviors described in published Sonic TAS notes. A linked
-  coverage record tracks all 48 previously partial trick families, distinguishing
-  reproduced mechanisms, component checks and remaining native input fixtures.
+  and special-stage behaviors described in published Sonic TAS notes. The
+  [representative verdict record](docs/architecture/validation/2026-10-26-tas-trick-verdicts.md)
+  separates supported named tricks from executed engine limitations, with
+  controls, original publication links and explicit route boundaries. Passing
+  limitation checks document incompatibilities without treating them as repairs.
 
 - **Local ROM qualification:** Release preparation can bind the existing bounded
   AIZ1/HCZ1 route pilot to a reviewed candidate commit, reject changed inputs and

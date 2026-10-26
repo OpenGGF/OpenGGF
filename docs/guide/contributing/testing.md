@@ -4,11 +4,18 @@ This page covers the engine's test infrastructure and how to write tests for new
 
 All new or updated tests must use JUnit 5 / Jupiter. Do not add JUnit 4 tests, rules, runners, or `org.junit.*` imports.
 
-Published Sonic TAS trick regressions and remaining native-fixture requirements
-are indexed in the [TAS trick coverage record](../../architecture/validation/2026-10-26-tas-trick-regressions.md).
-It distinguishes a reproduced mechanism from component evidence and records the
-original submission, independent expectation and exact test selector. Passing a
-component check does not qualify an entire published movie.
+Published Sonic TAS tricks are indexed in the
+[representative verdict record](../../architecture/validation/2026-10-26-tas-trick-verdicts.md).
+Each completed assessment records an independent native expectation, an executed
+production scenario, a relevant control and a supported or unsupported verdict.
+The record explicitly identifies any remaining named mechanism under investigation.
+A passing
+current-limitation regression confirms an engine mismatch; it is not proof that
+the trick works. Broad families retain their original IDs and can contain
+different named tricks with different outcomes. Publication-route and whole-movie
+synchronization remain separate from representative mechanism support. The
+[first regression pass](../../architecture/validation/2026-10-26-tas-trick-regressions.md)
+preserves the earlier component-evidence assessment.
 
 ## Running Tests
 

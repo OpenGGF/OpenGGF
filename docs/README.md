@@ -47,6 +47,8 @@ Architecture artifacts are classified by the question they answer:
   for test classifications, measured improvements and ranked redesigns.
 - [Validation](architecture/validation/) — did an implementation meet its
   contract?
+  The [Sonic TAS trick verdicts](architecture/validation/2026-10-26-tas-trick-verdicts.md)
+  link published author notes to executed support and limitation checks.
 
 External trace producers and analysis utilities are documented in the pinned
 [`OpenGGF/TraceChaser`](https://github.com/OpenGGF/TraceChaser) submodule under

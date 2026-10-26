@@ -9,6 +9,12 @@ This document tracks **intentional deviations** from the original Sonic 3 & Knuc
 
 Each entry describes what the ROM does, what we do, and why — focusing on *why* the divergence is acceptable.
 
+**TAS mechanism verdicts (2026-10-26):** executed support and limitation checks
+are recorded in the [TAS verdict matrix](architecture/validation/2026-10-26-tas-verdicts-s3k.md).
+Reached gaps belong in [known bugs](status/s3k-known-bugs.md#tas-mechanism-limitations--2026-10-26),
+including raw-slot and mode-state incompatibilities. This test-only pass does not
+accept those mismatches as intentional deviations.
+
 **Enemy-chain scoring correction (2026-10-26):** ordinary chained kills now
 retain the native 10,000-point threshold and word wrap, and the points popup
 selects frame 5 for that award. This repairs implementation defects without

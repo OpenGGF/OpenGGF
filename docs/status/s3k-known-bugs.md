@@ -8,6 +8,35 @@ deliberate bug-fixes of ROM data), see
 
 For general (cross-game) bugs, see [known-bugs.md](known-bugs.md).
 
+## TAS mechanism limitations — 2026-10-26
+
+At unchanged production `c69447d77`, the
+[executed TAS matrix](../architecture/validation/2026-10-26-tas-verdicts-s3k.md)
+records these reached incompatibilities. Initial evidence is committed at
+`964c29d25fdab09fe8edd4acbe541a27fc64904c`; the MHZ early-hit follow-up is at
+`57e89fb6c5e2a0a68691892b641f9c27033b37b0`. Passing limitation tests mean the
+specific mismatch is reproduced; they are not native-parity passes.
+
+| Owner / requirement | Observed limitation and discriminating control | Removal condition |
+|---|---|---|
+| AIZ cutscene-button slot lookup | A live button occupying slot 6 does not act as its own native raw-pointer target; a typed Knuckles at identical coordinates presses it. `TestTasS3kMemoryLimitations`. | Reproduce the documented native alias through an owned compatibility mechanism, retaining the typed-player control. |
+| HCZ water-skim lifetime | Actual activation, jump exit and offscreen departure leave the skim owner in slot 5, preventing reuse; a nonpersistent control unloads. `TestTasS3kWaterSkimLifetime`. | Match native participant/update/range retirement and demonstrate subsequent allocation reuse. |
+| KosM queue / mode alias | Four valid archives fill capacity; a fifth is rejected without the native adjacent-mode write. The identical archive succeeds after a slot is freed. `TestTasS3kMemoryLimitations`. | Reproduce the specific shipped corruption prerequisite with a controlled semantic model, or obtain an explicit disposition; unrelated queue success is insufficient. |
+| ORT leftward recovery | One remaining SST slot is consumed mid-pass; the engine resumes without the native duplicate of live B. Fully-full upfront control remains single. `TestTasS3kOrtExhaustion`. | Match the native mid-pass cursor/ORT recovery and subsequent duplicate without breaking the upfront-full control. |
+| Reset/Power movie actions | The production input-log parser consumes Reset/Power as neutral, while Start survives. `TestTasS3kUnavailableCapabilities`. | Expose and execute the actual native reset/power session action, preserving ordinary controller input. |
+| Competition mode | Selecting two-player returns to title with no stock competition host. `TestTasS3kTitleCapabilities`. | Launch and execute the native competition mode via the real title action. |
+| Standalone S&K entry | A detected standalone S&K title still dispatches one-player to the locked-on save grid rather than MHZ level entry; a distinct title action verifies dispatch. `TestTasS3kTitleCapabilities`. | Route the actual standalone title to its native level entry and qualify the standalone ROM path. |
+| Special-stage boot input | A last-fade Up pulse reaches the input owner but is replaced by neutral before the boot player update; neutral and boot-Up controls distinguish it. `TestTasS3kSpecialStageEntryInput`. | Preserve the interrupt-masked-load input through boot `Process_Sprites`, then sample the next input at its native boundary. |
+| MHZ early hit during initialization | One real proxy hit before weather-machine destruction reaches routine 4 with a live flash; six subsequent updates retain HP 8 where native flag/proxy ordering reaches HP 2. The no-hit control retains HP 9. `TestTasS3kMhzRapidHit`. | Preserve the native repeated-initialization collision flags and proxy-hit consequence through the weather-child signal; qualify the rapid reduction and ordinary flash controls. |
+
+The cross-game [Start-pause clock](known-bugs.md#tas-pause-clock-does-not-advance-during-native-start-pause--2026-10-26)
+and [unsigned horizontal underflow](known-bugs.md#tas-unsigned-horizontal-underflow--2026-10-26)
+are tracked centrally. The pause gap also blocks the documented DDZ pause-phase
+optimization; natural missile launch and homing are separately supported.
+These outcomes establish local compatibility limits, not complete movie failure
+at a particular frame. The matrix preserves native owners, publication-specific
+associations, test selectors, failed native assertions and positive controls.
+
 **Saved-origin bonus ring retention, 2026-10-18 (locally qualified):** bonus
 entry now carries the actual collected-ring table in the existing persistent
 respawn token; InitRings restores it after reset and before touch. The unchanged

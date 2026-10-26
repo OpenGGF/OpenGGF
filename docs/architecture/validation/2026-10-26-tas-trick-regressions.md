@@ -1,5 +1,10 @@
 # TAS publication trick regression coverage — 2026-10-26
 
+The [representative verdict follow-up](2026-10-26-tas-trick-verdicts.md) evaluates
+concrete named tricks with executed support or limitation scenarios. This record
+preserves the first pass's stricter family-wide assessment and component evidence;
+its historical classifications are not the follow-up inventory.
+
 This work turns the 48 partially supported or unverified trick families from the
 TASVideos publication audit into explicit test obligations. The audit covered
 all 55 current and obsolete publications returned by the supplied

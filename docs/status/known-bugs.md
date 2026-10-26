@@ -17,6 +17,102 @@ Entries should include:
 
 ---
 
+## TAS pause clock does not advance during native Start pause — 2026-10-26
+
+**Location:** `GameLoop.prepareAdmittedIteration`,
+`LevelFrameStep.serviceVBlankOnly`, and the `VIntRunCounter` binding to
+`ObjectManager`.
+
+**Symptom:** representative S1, S2 and S3K Start-pause checks at `c69447d77`
+reach paused iterations with no advance in the bound V-int counter. All reach
+ordinary gameplay and confirm that resume advances the counter.
+Native V-int continues while the level frame and player wait; the independent
+S1 GPGX control observes counter 629 through 633
+while level frame 181 holds. Pause-based capsule and RNG phase manipulation
+therefore cannot rely on the native clock behavior in these reached scenarios.
+The S2 capsule test reaches the consequence: resume still hits the original
+modulo-eight spawn phase, creates the late animal and delays results. Its
+ordinary off-mask control omits that animal and reaches results.
+Prepared S1 PLC work can still finish during pause, a separate supported action.
+
+**Cause identified in source:** the global carrier reads the bound object clock
+and deliberately avoids incrementing it. The paused frame services art and
+hardware boundaries, then returns without the object-clock increment performed
+by ordinary object execution.
+
+**Removal condition:** the real Start/release/resume paths advance the native
+counter once per represented V-int while preserving the paused level/player and
+existing art-service boundaries. Convert the explicit limitation regressions
+to native expectations and retain their running/resume controls. The
+[TAS verdict record](../architecture/validation/2026-10-26-tas-trick-verdicts.md#observed-limitations)
+records the tests and their scope. This is a parity defect, not an accepted
+deviation; the verdict pass does not repair production behavior.
+
+## TAS unsigned horizontal underflow — 2026-10-26
+
+**Location:** playable level-boundary prediction/clamping in `PlayableSpriteMovement`.
+
+**Symptom:** reached airborne left-underflow scenarios in S1, stock S2, KiS2
+and S3K clamp to the left edge (`$10`) and clear horizontal speed. Native word
+prediction wraps to a large unsigned X and takes the right-boundary branch:
+S1 GHZ1 expects 9767, S2/KiS2 expects `$2168`, and the S3K fixture expects `$1128`.
+Non-underflow controls exercise ordinary boundary behavior. These are local
+boundary checks, not claims about every published level-wrap route.
+
+**Suspected cause:** the engine's signed position/prediction reaches the left
+clamp before reproducing the native unsigned word comparison.
+
+**Removal condition:** pass the native right-clamp expectations and existing
+ordinary-boundary controls, preserving word/subpixel behavior. The
+[S1](../architecture/validation/2026-10-26-tas-verdicts-s1.md#s1_level_wrap),
+[S2](../architecture/validation/2026-10-26-tas-verdicts-s2.md), and
+[S3K](../architecture/validation/2026-10-26-tas-verdicts-s3k.md#s3k-hwrap--unsupported)
+matrices give the reached entries and retained limitation selectors.
+
+## S1 offscreen floating-platform standing retention — 2026-10-26
+
+**Location:** S1 floating-block solid dispatch and standing-release ownership.
+
+**Symptom:** `TestTasS1SlopeVerdict` lands on the real SBZ3 floating block,
+moves the camera offscreen and walks beyond its edge. The engine releases
+standing; native `FBlock_Action` omits `SolidObject` while offscreen, leaving the
+standing latch used by the documented slope-lock trigger. The object remains
+alive. The onscreen control correctly releases standing.
+
+**Suspected cause:** standing maintenance still runs when native render gating
+would omit the complete solid-object call.
+
+**Removal condition:** reproduce offscreen latch retention through the real
+object/collision seam while keeping the onscreen release control. See the
+[S1 mechanism evidence](../architecture/validation/2026-10-26-tas-verdicts-s1.md#s1_slope_glitch).
+The full SBZ3 shortcut is outside this local trigger check.
+
+## S2 TAS launcher, boss, art and input limitations — 2026-10-26
+
+The [S2 verdict matrix](../architecture/validation/2026-10-26-tas-verdicts-s2.md)
+records native expectations, reached controls and exact commands at unchanged
+production `c69447d77`. Its first local test commit is `4f5eb1ee2de0b6128c39728289516c079d71064e`.
+
+| Owner / requirement | Observed limitation | Removal condition |
+|---|---|---|
+| OOZ sphere launcher | Actual hurt routine 4 at the sphere centre is rejected in stock S2 and KiS2; native `Obj48 loc_252F0` accepts routines below 6. Normal entry works. `TestTasS2CurrentLimitations`. | Accept the native hurt-state entry and qualify the downstream speed effect without a route-specific exception. |
+| ARZ final-hit endpoint | Real final-hit contact reaches the travel endpoint, but engine routine becomes 4 instead of native `$A`; ordinary defeat reaches 8. `TestTasS2ArzBossEndpoint`. | Preserve the native assignment/addition ordering and execute the resulting explosion-skip transition. |
+| DEZ shared art address | Explosion and animal PLCs both target tile `$580`, but the dedicated explosion sheet cannot display the animal pixels after the animals-last load; reverse-order control stays fiery. `TestTasS2DezArtAlias`. | Render the native last-writer art result for both load orders through the ROM art pipeline. |
+| Halfpipe live pacing | Actual jumps occur, but their rendering-cost dependency is absent from the fixed live pacing owner. Running/jumping keep the same measured schedule. `TestTasS2JumpLag`. | Model and exercise the relevant jump-dependent native service cost. The test does not measure a native delta in the same 240-update window. |
+| Intro P2 input | Actual P2 Start at the engine's final modeled visible text-fade step does not affect title admission; both controls take 17 updates. `TestTasS2IntroP2Start`. | Exercise the native P2-sensitive transition with a synchronized entry and verify its title-loading consequence. The engine's timer 21 is not asserted to be a synchronized native frame. |
+
+The pause/capsule clock gap is tracked separately above. These entries describe
+local mechanisms or missing capabilities, not full publication synchronization.
+The DEZ author associates animal explosions with quick boss defeats; the test
+proves the independently identified PLC alias prerequisite, not that causal route.
+
+## S3K TAS memory, mode and entry-input limitations — 2026-10-26
+
+The [S3K bug record](s3k-known-bugs.md#tas-mechanism-limitations--2026-10-26)
+links reached slot-lifetime, allocation recovery, mode capability and
+special-stage input mismatches to their executable controls. These tests
+record compatibility gaps; they do not designate new intentional deviations.
+
 ## Current stock parity frontiers — 2026-10-08
 
 The [continued stock audit](../architecture/audits/2026-10-07-stock-parity-gap-verification.md)
