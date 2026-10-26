@@ -129,6 +129,14 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance
     }
 
     @Override
+    public int getCollisionFlags() {
+        // Obj_WaitOffscreen returns through the saved entry before
+        // TurboSpiker_Init publishes ObjDat_TurboSpiker. Its placeholder has
+        // no body collision (sonic3k.asm:183959-183983).
+        return initialized ? super.getCollisionFlags() : 0;
+    }
+
+    @Override
     protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         if (isDestroyed()) {
             return;

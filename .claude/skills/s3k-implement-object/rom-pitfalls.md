@@ -6677,3 +6677,11 @@ only refresh their separate raw physical cache early. Test stale/held edges,
 independent scripted pads and forced logical words through the real next object
 consumer, including restore/forward. Existing player/controller state already
 captures these fields; no second input history or timing owner is needed.
+
+
+The same initialization gate belongs to Turbo Spiker's body, independently of
+its shell. `Obj_TurboSpiker` (sonic3k.asm:183959-183965) waits before dispatch;
+`TurboSpiker_Init` (sonic3k.asm:183978-183983) publishes ObjDat attributes.
+Do not advertise inherited body collision while the waiting placeholder is
+uninitialized. Preserve the initialized body's inherited flags and existing
+shell lifecycle; the captured initialized state already provides rewind authority.

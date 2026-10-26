@@ -8987,3 +8987,29 @@ queue wait zero, Maven 97 seconds, wrapper elapsed 98.620 seconds. The exact
 16-selector command and environment are in hcz.json. All XML identities and
 skips were inspected. This is separate from Jawz and from the pending Turbo
 Spiker causal correction; final affected replay follows the finished source.
+
+
+## ROM-identified Turbo Spiker placeholder body — 2026-10-26
+
+The original HCZ2 placement record `$1E7056` identifies the actual row-442 source
+as Turbo Spiker `$96` subtype `$20`. Its native `Obj_TurboSpiker` waits before
+routine dispatch (`sonic3k.asm:183959-183965`); `TurboSpiker_Init` then calls
+SetUp_ObjAttributes (`sonic3k.asm:183978-183983`). The old Java body inherited
+`$1A` enemy collision while `initialized` remained false, so offscreen P2 could
+be hurt before the native object published attributes. Three independent
+old-red controls reproduce **3 assertion failures, zero errors/skips**: the
+exact production vulnerable-P2 hurt, direct waiting/restored-entry publication
+and registered fresh body/shell recreation phase. Queue wait zero, Maven
+28.921 seconds / wrapper 29.588 seconds, source
+`1272d0a61b3fa2727dcb95a2bfa0b4321a0613e404ad81842ec177b0e179e689`.
+
+The body now returns zero before its existing captured `initialized` state,
+then preserves inherited body flags. No shell, object manager, shared badnik
+base, touch handler, timer or new state was changed. Finished selection is
+`TestTurboSpikerBadnikInstance,TestModApiSignatureSurface,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`:
+**81 tests, zero failures/errors/skips** (body/shell 10, API 11, four anchors 60),
+Maven 97 seconds / wrapper 97.862 seconds. Source over `0ebd8d884` is
+`086fb84fe9a5c35949afce56b47d8172a58db9e885b72b26d37de34600d99106`.
+The affected chain replay follows the finished source; no campaign consequence
+is claimed solely from these local controls. The prior raw-input 186-case
+selection retains matching owner/test closures and is not repeated here.
