@@ -8840,3 +8840,238 @@ are reused rather than repeated. Thus all 297 unique focused physical cases
 are qualified, without implying a single pristine invocation or broad smoke.
 The exact canonical six selection is next on this receiving source; previous
 old-base route outcomes do not qualify this composition.
+
+
+### Receiving canonical six and qualified segment-11 continuity
+
+On merge `b3374a56c`, the exact canonical six selector completes **6 tests,
+1 chain assertion failure, zero errors/skips**, 2 seconds queue wait,
+129 seconds Maven / 132.877 seconds wrapper elapsed. Diagnostic source
+fingerprint is `963e8fb0c46f900fdb2c7132957db15d8e96d42452c79ff0673b124a964d2cd9`.
+All three prefixes and standalone AIZ/HCZ pass. Continuous segments
+0/2/4/6/8/9 remain clean; 8/9 retain 62/55 lag rows. Segment 11 walks all 14,208
+stored rows and crosses the production giant-ring boundary into SS6. Its report
+is complete with 62 differences: 11 camera physics and 51 animation, 59 lag rows,
+zero bootstrap errors and no non-camera physics mismatch. The comparator's
+first-non-camera tracking covers every error before its bounded recent list;
+this classification is not inferred from the late recent mapping entries.
+First strict difference is 6640 `player_animation_id`, native `$13` / engine
+`$05`. Primary motion at 1768, 3475, 3619, 5065, 6804, 7140 and 8329 matches.
+The earlier monitor/ring deficit is gone under upstream's independent contents
+owner; no ring source was edited here. This qualifies the requested segment-11
+production continuity, not a zero-difference trace or complete HCZ campaign.
+
+The chain advances through segment 13 into SS7. Segment 13 walks all 5,393
+stored rows with 37,930 differences (33,300 physics / 4,630 animation), 7 lag
+rows and zero bootstrap errors. Earliest non-camera error is P2 hurt at row 442:
+native x velocity `$01C7`, engine `$FF00`; engine also has y velocity `$FE00`,
+routine 4 and hurt animation while native remains routine 2. First P1 motion is
+later at 2147, Y `$04DA/$04DE`, y velocity `$0000/$0488` and ground velocity
+`$0001/$FDDC`. These are separate observations, not an attributed causal chain.
+The terminal walk also reaches SS7 results at movie cursor 97208 rather than
+its represented destination; its cause is unproven and no hardware/setup or
+boundary owner is changed. A bounded comparison-only damage call-stack probe
+will establish the P2 writer before any further local HCZ correction. The
+canonical observer source was restored byte-for-byte; reports were inspected.
+
+
+### Segment-13 Jawz placeholder collision owner — 2026-10-26
+
+A single comparison-only CPU hurt stack discriminator reproduced the unchanged
+chain failure: **1/1F/0E/0S**, 56 seconds queue wait, 119 seconds Maven /
+176.624 seconds wrapper elapsed, fingerprint
+`e1db9a0e58237f238a1d2b998401a8ef32e76f57ae2677c25cddb50ca2640712`.
+The actual unwanted hurt is P2 at `$286C,$07F0`, source X `$2880`, cause NORMAL,
+through ObjectTouchResponseController's vulnerable sidekick enemy arm. Native
+slot 8 at `$2880,$07F0` still executes `$85AD2` (`Obj_WaitOffscreen`) with no
+initialized collision byte. `JawzBadnikInstance.getCollisionFlags` nevertheless
+returns `$D7` while its existing `initialized` state is false. Native
+`Obj_Jawz` first waits, then reaches `SetUp_ObjAttributes`
+(`sonic3k.asm:183616-183622`); only `ObjDat_Jawz` then supplies `$D7`
+(`sonic3k.asm:183654-183658`). This is a local collision-publication owner,
+not a shared touch-dispatch or physics correction. The parent was notified
+before edits. The temporary shared playable printf/stack probe was restored
+byte-for-byte and its diagnostic reports inspected before consumption.
+
+Four independent old-red controls cover the waiting / restored-entry / initialized
+attribute boundary, actual ObjectManager player-slot touch for native P1/P2
+below the camera, and registered fresh recreation at all three phases with
+repeated forward execution. They do not key runtime behavior on this route,
+frame or coordinates and do not seed the collision byte. The intended correction
+uses only Jawz's existing captured initialization state; no new timing or rewind
+storage is introduced. Results follow after the queued controls complete.
+
+
+Jawz's four valid negatives are two phase/recreation assertions plus two
+production P1/P2 callback assertions. The first attempted fixture did not compile
+because resetTouchResponses is package-private (74 seconds queue / 86 seconds
+Maven / 160.779 seconds wrapper). The public-reset attempt gave 2 expected
+phase failures and 2 fixture errors from a missing debug overlay (10 / 31.104 /
+41.990 seconds). Supplying an explicit no-overlay mock then reproduces both
+production callback failures, 2/2F/0E/0S (43 / 30.312 / 74.017 seconds), source
+`cfa88646f0849a4d8553067a9a99ba441234099acf2e18c4e3944f4715c5056a`.
+Touch_Special queues property 1/2; its later Jawz_Main owns the harmful child,
+so positives correctly test that phase rather than assume instant hurt.
+
+The corrected Jawz selection passes **69 physical cases** (Jawz 9 plus all four
+S3K anchors 60), zero failures/errors/skips. It shared one invocation with ten
+new primary-drowning raw-controller old-red controls: total **79 tests,
+9 expected raw-review assertion failures, zero errors/skips**. Nine new raw
+cases fail, while the existing P1 scripted-controller path passes. Source is
+`e7e276fc93115b7f42d4db8278b7a64251c5fd11c1ff8f3f62db9b94648d8bf7`;
+queue 21 seconds, Maven 33.817 seconds, wrapper 55.225 seconds. The preceding
+combined compile attempt ran no tests because the unselected new raw fixture
+used a fluent query method belonging to a different test service type; an
+explicit player-query override corrected it (0 / 79 / 80.825 seconds).
+The Jawz predicate adds no state and its registered recreation controls pass.
+Its original direct callback test now initializes attributes before asserting
+`$D7`, preserving the assertion at its correct native owner boundary.
+
+**Route attribution correction.** The hurt stack identified position/source,
+not the source class. Reading the original ROM's HCZ2 object list at `$1E6990`
+(the production pointer-table/6-byte placement grammar) identifies record
+`$1E7056`: X `$2880`, Y `$07F0`, object **`$96` Turbo Spiker**, subtype `$20`.
+It is not Jawz `$93`. Thus the local Jawz contract defect is proven and fixed,
+but its attribution to segment-13 row 442 is rejected. The parent was informed
+promptly. TurboSpikerBadnikInstance also advertises its inherited body flags
+while its existing initialized state is false; it is the next bounded HCZ body
+owner to qualify. No shared badnik base or touch dispatcher is to be changed.
+
+The frozen-b337 independent review separately proves that primary drowning skips
+raw ABC refresh before a captured HCZ bar reads Ctrl_1/2. The ten new production
+player-to-bar controls cover P1/P2 destructive/non-destructive release, registered
+rewind, stale/held edges, forced logical words and independent scripted pads,
+while retaining logical/follower input. Their 9/10 old-red result is separate
+from Jawz's positive qualification and will receive its own correction/commit.
+
+
+## Primary drowning raw controller refresh review correction — 2026-10-26
+
+Independent review of frozen `b3374a56c` correctly found that the early primary
+routine bypass also skipped the physical ABC sample. `HCZBreakableBar_VerticalCheckPlayers`
+loads current Ctrl_1/2 (`sonic3k.asm:42821-42830`); its captured branch masks the
+fresh low-byte ABC bits without checking the player's routine
+(`sonic3k.asm:42859-42865`). The player must retain Ctrl_*_logical and bypass
+CPU/control work while still exposing the current physical sample to the later
+bar object. Merely running ordinary publication/CPU before the bypass is wrong.
+
+Ten independent production player-then-bar controls reproduce **9 assertion
+failures / 1 pass**, zero errors/skips on received input runtime. Four cases
+cover P1/P2 destructive and non-destructive release with registered player,
+fixed-countdown, bar and static-latch restore and repeated forward execution.
+Two cover stale press clearing, held ABC, neutral and a later fresh press; two
+keep forced logical words separate from raw ABC; two supply independent scripted
+controllers. P1's scripted path already worked and is the one old-source pass;
+P2's controller cache did not refresh. The old-red fingerprint and 21-second
+queue / 33.817-second Maven / 55.225-second wrapper timing are recorded in the
+preceding combined Jawz/anchor invocation. The fixture corrections reported
+there ran no behavior tests and are not counted as negative evidence.
+
+The correction samples the selected physical controller before primary dispatch.
+It respects native P1/P2 ports and explicit frame-scoped actor controllers;
+unassigned extra CPU actors do not inherit another physical port. P2's raw
+controller cache is refreshed without running AI. For primary drowning alone,
+the existing raw held/pressed fields refresh without merging forced/logical
+input or advancing the previous combined edge latch. Normal publication keeps
+its legacy combined state and the normal CPU pass retains its prior AI input
+fields until it publishes the new AI word. No new storage, logical/history
+write, timer owner, API candidate surface or comparator rule is introduced.
+
+Finished correction passes **186 physical cases, zero failures/errors/skips**,
+including all 27 native drowning cases (17 existing plus the ten review cases),
+15 bar cases, normal scripted/forced consumption, legacy S1/S2 lifetime/carry/death
+and competition consumers, API signatures and all four S3K anchors (60).
+Source fingerprint over `5b9de32d5` and owned changes is
+`00893c5e3ca456c2f4a4c0c7df56b1566ad54ceeeb17268baf76f3879a81cb26`;
+queue wait zero, Maven 97 seconds, wrapper elapsed 98.620 seconds. The exact
+16-selector command and environment are in hcz.json. All XML identities and
+skips were inspected. This is separate from Jawz and from the pending Turbo
+Spiker causal correction; final affected replay follows the finished source.
+
+
+## ROM-identified Turbo Spiker placeholder body — 2026-10-26
+
+The original HCZ2 placement record `$1E7056` identifies the actual row-442 source
+as Turbo Spiker `$96` subtype `$20`. Its native `Obj_TurboSpiker` waits before
+routine dispatch (`sonic3k.asm:183959-183965`); `TurboSpiker_Init` then calls
+SetUp_ObjAttributes (`sonic3k.asm:183978-183983`). The old Java body inherited
+`$1A` enemy collision while `initialized` remained false, so offscreen P2 could
+be hurt before the native object published attributes. Three independent
+old-red controls reproduce **3 assertion failures, zero errors/skips**: the
+exact production vulnerable-P2 hurt, direct waiting/restored-entry publication
+and registered fresh body/shell recreation phase. Queue wait zero, Maven
+28.921 seconds / wrapper 29.588 seconds, source
+`1272d0a61b3fa2727dcb95a2bfa0b4321a0613e404ad81842ec177b0e179e689`.
+
+The body now returns zero before its existing captured `initialized` state,
+then preserves inherited body flags. No shell, object manager, shared badnik
+base, touch handler, timer or new state was changed. Finished selection is
+`TestTurboSpikerBadnikInstance,TestModApiSignatureSurface,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`:
+**81 tests, zero failures/errors/skips** (body/shell 10, API 11, four anchors 60),
+Maven 97 seconds / wrapper 97.862 seconds. Source over `0ebd8d884` is
+`086fb84fe9a5c35949afce56b47d8172a58db9e885b72b26d37de34600d99106`.
+The affected chain replay follows the finished source; no campaign consequence
+is claimed solely from these local controls. The prior raw-input 186-case
+selection retains matching owner/test closures and is not repeated here.
+
+
+## Final receiving candidate and continuity boundary — 2026-10-26
+
+Clean runtime candidate `0d7c25c68229862b64d212b16e3c78498f20c535` was replayed
+once with the existing affected chain selector, without any passive probe or
+uncommitted source:
+
+```text
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dsonic1.rom.path=<original-absolute-S1-ROM> -Dsonic2.rom.path=<original-absolute-S2-ROM> -Ds3k.rom.path=<original-absolute-S3K-ROM> -Ptrace-replay -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds test -B
+```
+
+The command block uses neutral placeholders for the three original absolute ROM
+paths; the exact executed argv is retained in the required local hcz.json registry.
+Launch retains Java25, Lua5.4.9, original verified ROM identities and explicit
+surfaceless EGL with DISPLAY/WAYLAND_DISPLAY and inherited JVM-option variables
+unset. Source fingerprint is
+`427c64121aecde657792b449dbd21e159dfa4bf6e78a7b93c04e0c8cd061a89c`.
+Result: **1 test, 1 expected frontier assertion failure, zero errors/skips**;
+queue wait zero, Maven 58.066 seconds / wrapper 58.751 seconds. No broad/full
+suite or watcher was run. Physical XML and all report groups were inspected.
+
+Segment 11 completes all 14,208 stored rows and crosses the required production
+giant-ring exit into SS6. It has **no non-camera physics mismatch**, 11 camera
+physics / 51 animation differences, 59 lag rows and zero bootstrap errors.
+First strict residual remains 6640 animation ID `$13/$05`. This is the qualified
+HCZ continuity boundary requested by the task; it is not a zero-difference
+trace claim. Segments 0/2/4/6/8/9 remain clean. The five canonical companions
+passed on receiving merge `b3374a56c`; only the affected continuous chain was
+repeated after the separate raw/placeholder edits, so their older pass is
+reported at its actual tested source rather than relabeled as a final-source run.
+
+The actual Turbo Spiker consequence is now measured: P2's first hurt at row442
+is absent, and **all non-camera state matches through segment13 row2146**.
+The segment completes all 5,393 stored rows with **4,145 differences**
+(3,795 physics / 350 animation), down from 37,930 (33,300 / 4,630), 7 lag rows
+and zero bootstrap errors. First non-camera error is now P1 Y at2147,
+native `$04DA` / engine `$04DE`. Native then has y velocity zero, ground velocity
+one and animation zero; its nearby fan at `$29C8,$04F4` is the next local
+apply-lift question. No fan countdown was adjusted from the observed one-pass
+offset; an exact activation/initialization discriminator would be needed before
+changing its existing timing model. That later question is outside this task's
+now-qualified segment11 continuity boundary.
+
+The chain also enters SS7 and ends at its uncompared physical results boundary:
+mode `SPECIAL_STAGE_RESULTS`, movie cursor **97208**, expected return destination
+`hcz_4` not observed. Its cause is unproven; no claim attributes it to HCZ, a
+specific storage owner or hardware timing. Changing the source/destination walk,
+readiness authority or result timing without a matching production cause would
+cross the task's proven boundary. The coordinator and comparator remain unchanged.
+
+Reviewable receiving commits are `b3374a56c` (ordinary exact08 merge),
+`5b9de32d5` (independent Jawz publication contract), `0ebd8d884` (reviewed raw
+controller freshness) and `0d7c25c68` (ROM-identified Turbo Spiker body).
+All original `e3078d61c` ancestors remain. No redundant PlayerMovementRules flag
+or API baseline/version change survives; the received semantic profile and
+signature surface are retained. Focused qualifications are reported separately:
+297 unique receiving cases across one fixture correction; Jawz69; raw186;
+Turbo81, all with zero skips. Counts overlap and must not be summed as a suite.
+The final record update changes prose only. Parent owns final independent review,
+one combined change-based smoke, receiving integration/push and worktree cleanup.
+Consumed diagnostics are removed; no jobs/probes or desktop processes remain.

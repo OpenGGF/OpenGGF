@@ -228,6 +228,154 @@ class TestNativeDrowningDispatch {
         assertEquals(0, player.getGSpeed());
     }
 
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"false,false", "false,true", "true,false", "true,true"})
+    void freshRawPressReleasesCapturedDrowningBarThroughPlayerThenObjectPassAndRewind(
+            boolean p2, boolean nonDestructive) throws Exception {
+        setup(SonicGame.SONIC_3K, p2);
+        var bar = capturedBar(nonDestructive);
+        player.setLogicalInputState(false, false, true, false, false, false);
+        int logical = player.getLogicalInputState();
+        enterDrowning();
+        var registry = registryWithBar(bar);
+        var captured = registry.capture();
+        for (int replay = 0; replay < 2; replay++) {
+            if (replay != 0) registry.restore(captured);
+            physicalPlayerPass(p2, jumpPad(true), false);
+            assertEquals(logical, player.getLogicalInputState(), "primary drowning retains Ctrl_*_logical");
+            assertEquals(logical, player.getInputHistory(0));
+            assertFalse(player.getJumpPressHistory(0), "raw press does not overwrite logical follower history");
+            assertTrue(player.isDrowningPreDeath());
+            bar.update(frame++, GameServices.camera().getFocusedSprite());
+            assertFalse(player.isObjectControlled(), "the bar reads this frame's fresh physical ABC press");
+            assertEquals(!nonDestructive, barBroken(bar));
+        }
+    }
+
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void staleRawPressIsClearedAndHeldJumpDoesNotReleaseDrowningBar(boolean p2) throws Exception {
+        setup(SonicGame.SONIC_3K, p2);
+        var bar = capturedBar(false);
+        player.setJumpInputPressed(true, true);
+        if (p2) player.getCpuController().setController2Input(AbstractPlayableSprite.INPUT_JUMP,
+                AbstractPlayableSprite.INPUT_JUMP);
+        enterDrowning();
+        int logical = player.getLogicalInputState();
+        physicalPlayerPass(p2, jumpPad(false), false);
+        assertFalse(player.isRawControllerJumpJustPressed());
+        bar.update(frame++, GameServices.camera().getFocusedSprite());
+        assertTrue(player.isObjectControlled(), "held ABC is not a fresh press");
+        assertFalse(barBroken(bar));
+        physicalPlayerPass(p2, PlayerInputState.neutral(), false);
+        bar.update(frame++, GameServices.camera().getFocusedSprite());
+        assertTrue(player.isObjectControlled());
+        assertEquals(logical, player.getLogicalInputState());
+        physicalPlayerPass(p2, jumpPad(true), false);
+        bar.update(frame++, GameServices.camera().getFocusedSprite());
+        assertFalse(player.isObjectControlled());
+        assertTrue(barBroken(bar));
+    }
+
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void forcedLogicalJumpDoesNotReplaceTheDrowningBarsPhysicalPress(boolean p2) throws Exception {
+        setup(SonicGame.SONIC_3K, p2);
+        var bar = capturedBar(false);
+        PlayableSpriteInternalAccess.writeScriptedLogicalInput(player,
+                AbstractPlayableSprite.INPUT_LEFT | AbstractPlayableSprite.INPUT_JUMP, true);
+        player.setForcedJumpPress(true);
+        int logical = player.getLogicalInputState();
+        enterDrowning();
+        physicalPlayerPass(p2, PlayerInputState.neutral(), false);
+        assertEquals(logical, player.getLogicalInputState());
+        assertFalse(player.isRawControllerJumpJustPressed());
+        bar.update(frame++, GameServices.camera().getFocusedSprite());
+        assertTrue(player.isObjectControlled());
+        physicalPlayerPass(p2, jumpPad(true), false);
+        assertEquals(logical, player.getLogicalInputState());
+        bar.update(frame++, GameServices.camera().getFocusedSprite());
+        assertFalse(player.isObjectControlled());
+        assertTrue(barBroken(bar));
+    }
+
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void independentScriptedControllerRefreshesOnlyItsDrowningBarsRawSample(boolean p2) throws Exception {
+        setup(SonicGame.SONIC_3K, p2);
+        var bar = capturedBar(false);
+        player.setLogicalInputState(false, false, true, false, false, false);
+        int logical = player.getLogicalInputState();
+        enterDrowning();
+        physicalPlayerPass(p2, jumpPad(true), true);
+        assertEquals(logical, player.getLogicalInputState());
+        bar.update(frame++, GameServices.camera().getFocusedSprite());
+        assertFalse(player.isObjectControlled());
+        assertTrue(barBroken(bar));
+    }
+
+    private com.openggf.game.sonic3k.objects.HCZBreakableBarObjectInstance capturedBar(boolean nonDestructive) {
+        com.openggf.game.sonic3k.objects.HCZWaterRushObjectInstance.HCZBreakableBarState.setState(0);
+        var main = GameServices.camera().getFocusedSprite();
+        var bar = new com.openggf.game.sonic3k.objects.HCZBreakableBarObjectInstance(
+                new com.openggf.level.objects.ObjectSpawn(player.getCentreX() - 0x15, player.getCentreY(),
+                        0x36, nonDestructive ? 0x40 : 0, 0, false, 0));
+        bar.setServices(new com.openggf.level.objects.TestObjectServices() {
+            public com.openggf.level.objects.ObjectPlayerQuery playerQuery() {
+                return new com.openggf.level.objects.ObjectPlayerQuery(() -> main,
+                        () -> main == player ? java.util.List.of() : java.util.List.of(player));
+            }
+        });
+        bar.update(frame++, main);
+        assertTrue(player.isObjectControlled());
+        return bar;
+    }
+
+    private RewindRegistry registryWithBar(com.openggf.game.sonic3k.objects.HCZBreakableBarObjectInstance bar) {
+        var registry = registry();
+        var identities = new com.openggf.game.rewind.identity.RewindIdentityTable();
+        var main = GameServices.camera().getFocusedSprite();
+        identities.registerPlayer(main, com.openggf.game.rewind.identity.PlayerRefId.mainPlayer());
+        if (main != player) identities.registerPlayer(player, com.openggf.game.rewind.identity.PlayerRefId.sidekick(0));
+        var context = com.openggf.game.rewind.schema.RewindCaptureContext.withIdentityTable(identities);
+        registry.register(new RewindSnapshottable<PerObjectRewindSnapshot>() {
+            public String key() { return "bar"; }
+            public PerObjectRewindSnapshot capture() { return bar.captureRewindState(context); }
+            public void restore(PerObjectRewindSnapshot state) { bar.restoreRewindState(state, context); }
+        });
+        registry.register(new com.openggf.game.sonic3k.objects.HCZBreakableBarStaticAdapter());
+        return registry;
+    }
+
+    private static boolean barBroken(com.openggf.game.sonic3k.objects.HCZBreakableBarObjectInstance bar)
+            throws ReflectiveOperationException {
+        var field = bar.getClass().getDeclaredField("broken");
+        field.setAccessible(true);
+        return field.getBoolean(bar);
+    }
+
+    private static PlayerInputState jumpPad(boolean fresh) {
+        return PlayerInputState.of(AbstractPlayableSprite.INPUT_JUMP, fresh ? AbstractPlayableSprite.INPUT_JUMP : 0,
+                com.openggf.control.InputActionMasks.ACTION_A,
+                fresh ? com.openggf.control.InputActionMasks.ACTION_A : 0, false, false);
+    }
+
+    private void physicalPlayerPass(boolean p2, PlayerInputState pad, boolean scripted) {
+        var main = GameServices.camera().getFocusedSprite();
+        if (scripted) {
+            var pads = new java.util.HashMap<String, PlayerInputState>();
+            pads.put(main.getCode(), p2 ? PlayerInputState.neutral() : pad);
+            if (p2) pads.put(player.getCode(), pad);
+            sprites.updateScripted(pads);
+        } else {
+            var input = new InputHandler();
+            input.setLogicalOverride(LogicalInputSnapshot.ofPlayers(
+                    p2 ? PlayerInputState.neutral() : pad, p2 ? pad : PlayerInputState.neutral()));
+            sprites.update(input);
+        }
+        frame++;
+    }
+
     private void setup(SonicGame game, boolean sidekick) throws Exception {
         TestEnvironment.configureGameModuleFixture(game);
         sprites = GameServices.sprites();

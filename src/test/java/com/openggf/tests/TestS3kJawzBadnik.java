@@ -11,15 +11,157 @@ import com.openggf.level.objects.TestObjectServices;
 import com.openggf.level.objects.TouchCategory;
 import com.openggf.level.objects.TouchCategoryDecodeMode;
 import com.openggf.level.objects.TouchResponseResult;
+import com.openggf.level.objects.TouchResponseTable;
+import com.openggf.game.GameServices;
+import com.openggf.game.session.SessionManager;
+import com.openggf.game.rewind.RewindRegistry;
+import com.openggf.game.rewind.RewindSnapshottable;
+import com.openggf.level.objects.PerObjectRewindSnapshot;
+import com.openggf.tests.rules.SonicGame;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.lang.reflect.Field;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class TestS3kJawzBadnik {
+
+    @AfterEach
+    void clearSession() { SessionManager.clear(); }
+
+    @Test
+    void collisionBeginsOnlyWhenTheRestoredEntryInitializesAttributes() {
+        var fixture = touchFixture();
+        var jawz = onlyJawz(fixture.manager());
+        assertEquals(0, jawz.getCollisionFlags(), "Obj_WaitOffscreen has no ObjDat collision byte");
+        fixture.manager().update(0, fixture.main(), List.of(fixture.p2()), 0, false);
+        fixture.manager().refreshPostCameraRenderState();
+        assertEquals(0, jawz.getCollisionFlags());
+
+        GameServices.camera().setY((short) 400);
+        fixture.manager().refreshPostCameraRenderState();
+        fixture.manager().update(0, fixture.main(), List.of(fixture.p2()), 1, false);
+        assertEquals(0, jawz.getCollisionFlags(), "restoring Obj_Jawz does not run SetUp_ObjAttributes");
+        fixture.manager().update(0, fixture.main(), List.of(fixture.p2()), 2, false);
+        assertEquals(0xD7, jawz.getCollisionFlags(), "attributes are available to the next player slot");
+    }
+
+    @ParameterizedTest(name = "P2={0}: offscreen placeholder does not touch the player")
+    @ValueSource(booleans = {false, true})
+    void productionTouchCannotReachAWaitingJawz(boolean p2) {
+        var fixture = touchFixture();
+        var target = p2 ? fixture.p2() : fixture.main();
+        for (int frame = 0; frame < 3; frame++) {
+            fixture.manager().snapshotTouchResponseState();
+            fixture.manager().runTouchResponsesForPlayer(target, frame);
+            assertFalse(target.isHurt(), "a waiting native SST cannot hurt a player below the camera");
+            assertEquals(0, onlyJawz(fixture.manager()).getCollisionProperty());
+            fixture.manager().update(0, fixture.main(), List.of(fixture.p2()), frame, false);
+            fixture.manager().refreshPostCameraRenderState();
+        }
+        GameServices.camera().setY((short) 400);
+        fixture.manager().refreshPostCameraRenderState();
+        fixture.manager().update(0, fixture.main(), List.of(fixture.p2()), 3, false);
+        fixture.manager().snapshotTouchResponseState();
+        fixture.manager().runTouchResponsesForPlayer(target, 4);
+        assertFalse(target.isHurt());
+        assertEquals(0, onlyJawz(fixture.manager()).getCollisionProperty());
+        fixture.manager().update(0, fixture.main(), List.of(fixture.p2()), 4, false);
+        fixture.manager().snapshotTouchResponseState();
+        fixture.manager().runTouchResponsesForPlayer(target, 5);
+        assertEquals(p2 ? 2 : 1, onlyJawz(fixture.manager()).getCollisionProperty());
+        assertFalse(target.isHurt(), "Touch_Special queues the object response for Jawz_Main");
+    }
+
+    @Test
+    void registeredRecreationPreservesWaitingPendingAndInitializedTouchPhases() {
+        var fixture = touchFixture();
+        fixture.manager().setRewindInPlaceRestoreEnabledForTest(false);
+        var registry = new RewindRegistry();
+        registry.register(fixture.manager().rewindSnapshottable());
+        int index = 0;
+        for (var player : List.of(fixture.main(), fixture.p2())) {
+            String key = "player-" + index++;
+            registry.register(new RewindSnapshottable<PerObjectRewindSnapshot>() {
+                public String key() { return key; }
+                public PerObjectRewindSnapshot capture() { return player.captureRewindState(); }
+                public void restore(PerObjectRewindSnapshot state) { player.restoreRewindState(state); }
+            });
+        }
+        var waiting = registry.capture();
+        GameServices.camera().setY((short) 400);
+        fixture.manager().refreshPostCameraRenderState();
+        fixture.manager().update(0, fixture.main(), List.of(fixture.p2()), 1, false);
+        var pending = registry.capture();
+        fixture.manager().update(0, fixture.main(), List.of(fixture.p2()), 2, false);
+        var initialized = registry.capture();
+
+        for (int replay = 0; replay < 2; replay++) {
+            registry.restore(waiting);
+            assertEquals(0, onlyJawz(fixture.manager()).getCollisionFlags());
+            fixture.manager().refreshPostCameraRenderState();
+            fixture.manager().update(0, fixture.main(), List.of(fixture.p2()), 1, false);
+            assertEquals(0, onlyJawz(fixture.manager()).getCollisionFlags());
+            fixture.manager().update(0, fixture.main(), List.of(fixture.p2()), 2, false);
+            assertEquals(0xD7, onlyJawz(fixture.manager()).getCollisionFlags());
+            registry.restore(pending);
+            assertEquals(0, onlyJawz(fixture.manager()).getCollisionFlags());
+            fixture.manager().snapshotTouchResponseState();
+            fixture.manager().runTouchResponsesForPlayer(fixture.p2(), 2);
+            assertFalse(fixture.p2().isHurt());
+            fixture.manager().update(0, fixture.main(), List.of(fixture.p2()), 2, false);
+            registry.restore(initialized);
+            fixture.manager().snapshotTouchResponseState();
+            fixture.manager().runTouchResponsesForPlayer(fixture.p2(), 3);
+            assertFalse(fixture.p2().isHurt());
+            assertEquals(2, onlyJawz(fixture.manager()).getCollisionProperty());
+        }
+    }
+
+    private record TouchFixture(ObjectManager manager, TestablePlayableSprite main, TestablePlayableSprite p2) {}
+
+    private static TouchFixture touchFixture() {
+        TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_3K);
+        var main = new TestablePlayableSprite("sonic", (short) 160, (short) 500);
+        var p2 = new TestablePlayableSprite("tails", (short) 160, (short) 500);
+        p2.setCpuControlled(true);
+        GameServices.camera().setFocusedSprite(main);
+        GameServices.camera().setX((short) 0);
+        GameServices.camera().setY((short) 0);
+        for (var player : List.of(main, p2)) {
+            player.setRingCount(10);
+            GameServices.sprites().addSprite(player, player.getCode());
+        }
+        ObjectManager[] holder = new ObjectManager[1];
+        var services = new TestObjectServices() {
+            public ObjectManager objectManager() { return holder[0]; }
+            public ObjectPlayerQuery playerQuery() { return new ObjectPlayerQuery(() -> main, () -> List.of(p2)); }
+            public com.openggf.camera.Camera camera() { return GameServices.camera(); }
+        };
+        services.withDebugOverlay(mock(com.openggf.debug.DebugOverlayManager.class));
+        var table = mock(TouchResponseTable.class);
+        when(table.getWidthRadius(0x17)).thenReturn(8);
+        when(table.getHeightRadius(0x17)).thenReturn(8);
+        var manager = new ObjectManager(List.of(), null, -1, null, table, null, GameServices.camera(), services);
+        holder[0] = manager;
+        manager.reset(0);
+        manager.createDynamicObject(() -> new JawzBadnikInstance(
+                new ObjectSpawn(160, 500, Sonic3kObjectIds.JAWZ, 0, 0, false, 0)));
+        return new TouchFixture(manager, main, p2);
+    }
+
+    private static JawzBadnikInstance onlyJawz(ObjectManager manager) {
+        return manager.getActiveObjects().stream().filter(JawzBadnikInstance.class::isInstance)
+                .map(JawzBadnikInstance.class::cast).findFirst().orElseThrow();
+    }
 
     @Test
     public void jawzInitializesVelocityTowardPlayerOnFirstVisibleFrame() throws Exception {
@@ -102,6 +244,11 @@ public class TestS3kJawzBadnik {
                 return new ObjectPlayerQuery(() -> sonic, () -> java.util.List.of(tails));
             }
         });
+        AbstractObjectInstance.updateCameraBounds(0, 0, 319, 223, 0);
+        jawz.update(0, sonic);
+        jawz.refreshPostCameraRenderState();
+        jawz.update(1, sonic);
+        jawz.update(2, sonic); // SetUp_ObjAttributes owns the collision byte.
         TouchResponseResult result = new TouchResponseResult(
                 0x17, 8, 8, TouchCategory.SPECIAL, 0);
 

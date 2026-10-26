@@ -163,7 +163,10 @@ public final class JawzBadnikInstance extends AbstractS3kBadnikInstance
 
     @Override
     public int getCollisionFlags() {
-        return COLLISION_FLAGS;
+        // Obj_Jawz cannot publish ObjDat_Jawz's $D7 until its saved entry
+        // reaches SetUp_ObjAttributes after Obj_WaitOffscreen returns
+        // (sonic3k.asm:183616-183622,183654-183658).
+        return initialized ? COLLISION_FLAGS : 0;
     }
 
     @Override

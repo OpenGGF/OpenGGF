@@ -56,6 +56,109 @@ public class TestTurboSpikerBadnikInstance {
     }
 
     @Test
+    void bodyCollisionStartsAfterTheSavedEntryInitializesAttributes() {
+        var fixture = waitingBodyFixture();
+        var body = onlyBody(fixture.manager());
+        assertEquals(0, body.getCollisionFlags(), "Obj_WaitOffscreen has not run SetUp_ObjAttributes");
+        fixture.manager().update(0, fixture.main(), List.of(fixture.p2()), 0, false);
+        assertEquals(0, body.getCollisionFlags());
+        com.openggf.game.GameServices.camera().setY((short) 400);
+        fixture.manager().refreshPostCameraRenderState();
+        fixture.manager().update(0, fixture.main(), List.of(fixture.p2()), 1, false);
+        assertEquals(0, body.getCollisionFlags(), "restoring the entry does not initialize its attributes");
+        fixture.manager().update(0, fixture.main(), List.of(fixture.p2()), 2, false);
+        assertEquals(0x1A, body.getCollisionFlags());
+    }
+
+    @Test
+    void waitingBodyCannotHurtNativeP2ThroughProductionPlayerTouch() {
+        var fixture = waitingBodyFixture();
+        for (int frame = 0; frame < 3; frame++) {
+            fixture.manager().snapshotTouchResponseState();
+            fixture.manager().runTouchResponsesForPlayer(fixture.p2(), frame);
+            assertFalse(fixture.p2().isHurt(), "the offscreen placeholder cannot enter Touch_Enemy");
+            fixture.manager().update(0, fixture.main(), List.of(fixture.p2()), frame, false);
+            fixture.manager().refreshPostCameraRenderState();
+        }
+        com.openggf.game.GameServices.camera().setY((short) 400);
+        fixture.manager().refreshPostCameraRenderState();
+        fixture.manager().update(0, fixture.main(), List.of(fixture.p2()), 3, false);
+        fixture.manager().snapshotTouchResponseState();
+        fixture.manager().runTouchResponsesForPlayer(fixture.p2(), 4);
+        assertFalse(fixture.p2().isHurt());
+        fixture.manager().update(0, fixture.main(), List.of(fixture.p2()), 4, false);
+        fixture.manager().snapshotTouchResponseState();
+        fixture.manager().runTouchResponsesForPlayer(fixture.p2(), 5);
+        assertTrue(fixture.p2().isHurt(), "an initialized enemy retains its native vulnerable-P2 response");
+    }
+
+    @Test
+    void registeredFreshBodyAndShellRestoreRetainsTheCollisionPublicationPhase() {
+        var fixture = waitingBodyFixture();
+        fixture.manager().setRewindInPlaceRestoreEnabledForTest(false);
+        var registry = new com.openggf.game.rewind.RewindRegistry();
+        registry.register(fixture.manager().rewindSnapshottable());
+        var waiting = registry.capture();
+        com.openggf.game.GameServices.camera().setY((short) 400);
+        fixture.manager().refreshPostCameraRenderState();
+        fixture.manager().update(0, fixture.main(), List.of(fixture.p2()), 1, false);
+        var pending = registry.capture();
+        fixture.manager().update(0, fixture.main(), List.of(fixture.p2()), 2, false);
+        var initialized = registry.capture();
+        for (int replay = 0; replay < 2; replay++) {
+            registry.restore(waiting);
+            assertEquals(0, onlyBody(fixture.manager()).getCollisionFlags());
+            fixture.manager().refreshPostCameraRenderState();
+            fixture.manager().update(0, fixture.main(), List.of(fixture.p2()), 1, false);
+            assertEquals(0, onlyBody(fixture.manager()).getCollisionFlags());
+            fixture.manager().update(0, fixture.main(), List.of(fixture.p2()), 2, false);
+            assertEquals(0x1A, onlyBody(fixture.manager()).getCollisionFlags());
+            registry.restore(pending);
+            assertEquals(0, onlyBody(fixture.manager()).getCollisionFlags());
+            fixture.manager().update(0, fixture.main(), List.of(fixture.p2()), 2, false);
+            assertEquals(0x1A, onlyBody(fixture.manager()).getCollisionFlags());
+            registry.restore(initialized);
+            assertEquals(0x1A, onlyBody(fixture.manager()).getCollisionFlags());
+        }
+    }
+
+    private record WaitingBodyFixture(ObjectManager manager, TestablePlayableSprite main, TestablePlayableSprite p2) {}
+
+    private static WaitingBodyFixture waitingBodyFixture() {
+        com.openggf.tests.TestEnvironment.configureGameModuleFixture(com.openggf.tests.rules.SonicGame.SONIC_3K);
+        var main = new TestablePlayableSprite("sonic", (short) 160, (short) 500);
+        var p2 = new TestablePlayableSprite("tails", (short) 160, (short) 500);
+        p2.setCpuControlled(true);
+        var camera = com.openggf.game.GameServices.camera();
+        camera.setFocusedSprite(main);
+        camera.setX((short) 0);
+        camera.setY((short) 0);
+        for (var player : List.of(main, p2))
+            com.openggf.game.GameServices.sprites().addSprite(player, player.getCode());
+        ObjectManager[] holder = new ObjectManager[1];
+        var services = new com.openggf.level.objects.TestObjectServices() {
+            public ObjectManager objectManager() { return holder[0]; }
+            public ObjectPlayerQuery playerQuery() { return new ObjectPlayerQuery(() -> main, () -> List.of(p2)); }
+            public com.openggf.camera.Camera camera() { return camera; }
+        };
+        services.withDebugOverlay(mock(com.openggf.debug.DebugOverlayManager.class));
+        var table = mock(com.openggf.level.objects.TouchResponseTable.class);
+        org.mockito.Mockito.when(table.getWidthRadius(0x1A)).thenReturn(8);
+        org.mockito.Mockito.when(table.getHeightRadius(0x1A)).thenReturn(8);
+        var manager = new ObjectManager(List.of(), null, -1, null, table, null, camera, services);
+        holder[0] = manager;
+        manager.reset(0);
+        manager.createDynamicObject(() -> new TurboSpikerBadnikInstance(
+                new ObjectSpawn(160, 500, Sonic3kObjectIds.TURBO_SPIKER, 0x20, 0, false, 0)));
+        return new WaitingBodyFixture(manager, main, p2);
+    }
+
+    private static TurboSpikerBadnikInstance onlyBody(ObjectManager manager) {
+        return manager.getActiveObjects().stream().filter(TurboSpikerBadnikInstance.class::isInstance)
+                .map(TurboSpikerBadnikInstance.class::cast).findFirst().orElseThrow();
+    }
+
+    @Test
     public void approachingPlayerTriggersShellLaunchSequence() throws Exception {
         try (MockedStatic<ObjectTerrainUtils> ignored = mockWalkableFloor()) {
             RecordingServices services = new RecordingServices();

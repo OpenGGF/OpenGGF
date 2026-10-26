@@ -622,6 +622,8 @@ Unreleased. The earlier development themes remain in
   A Mega Chopper that catches Sonic alone locks his controls and passes through
   only left and right, including both directions together, so he must shake it
   off rather than roll, duck or jump.
+  Jawz and Turbo Spiker begin touch collision only after their native visible
+  initialization passes.
   The Hydrocity miniboss spends the original start-up pass before it descends,
   so its dives, hits and whirlpool grab and release land on the original frames.
   Its retained act-change carriers keep their captured swing targets and the
@@ -629,7 +631,8 @@ Unreleased. The earlier development themes remain in
   A drowning player sinks with the original motion, even while an object holds it,
   and in Sonic 3&K it keeps its underwater state until it dies, as in the original.
   Native fixed air slots own the lifetime; the primary drowning routine bypasses
-  normal control and releases carried players before motion.
+  normal control and releases carried players before motion. Fresh physical input
+  still releases a held Hydrocity bar while logical controls remain latched.
   Sonic 3&K's fixed air countdown also selects and maintains the drowning
   animation when object control bypasses ordinary movement animation.
   Offscreen Tails flight recovery in Sonic 2 and Sonic 3&K resets the native
