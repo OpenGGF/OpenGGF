@@ -11,6 +11,7 @@ import com.openggf.game.soniccd.objects.CdSolidObject;
 import com.openggf.game.soniccd.objects.CdSpinningDisc;
 import com.openggf.game.soniccd.objects.CdSpring;
 import com.openggf.game.soniccd.objects.CdSpinTunnelTag;
+import com.openggf.game.soniccd.objects.CdTunnelPath;
 import com.openggf.game.soniccd.objects.CdObjectPool;
 import com.openggf.game.soniccd.objects.CdObjectState;
 import com.openggf.game.soniccd.objects.CdRingGlobals;
@@ -4073,5 +4074,371 @@ class TestCdPlayerFrameRuntime {
         assertSame(display, f.display()); assertSame(clock, f.vIntClock());
     }
     // END prepared Solid/direct Disc Frame ports.
+
+
+    // BEGIN Tunnel Path Frame preparation. Constructed public values; Java checks are UNRUN.
+    // These cases exercise the pure Frame port, never a private Runtime/native-visit authority.
+    @ParameterizedTest @CsvSource({
+            "HURT_ROUTINE, ROUTINE, 04, 02",
+            "HURT_TIMER, HURT, 1357, 0078",
+            "ACQUIRE_CONTROL, PLAYER_CONTROL, 00, 81",
+            "ACQUIRE_INVISIBLE, PLAYER_CONTROL, 81, C1",
+            "ACQUIRE_ANIMATION, ANIMATION, 1A, 02",
+            "ACQUIRE_GVEL_BASE, GROUND_VELOCITY, F123, 1000",
+            "ACQUIRE_GVEL_RAISE, GROUND_VELOCITY, 1000, 1001",
+            "ACQUIRE_X_VELOCITY, X_VELOCITY, F123, 0000",
+            "ACQUIRE_Y_VELOCITY, Y_VELOCITY, 8123, 0000",
+            "ACQUIRE_PUSH_CLEAR, FLAGS, E9, C9",
+            "ACQUIRE_AIR, FLAGS, C9, CB",
+            "ACQUIRE_JUMP_CLEAR, PLAYER_JUMP, 76, 00",
+            "ACQUIRE_X_SNAP, CENTRE_X, FFFC, 13F0",
+            "ACQUIRE_Y_SNAP, CENTRE_Y, FFFD, 00F0",
+            "SPEED_Y_X_VELOCITY, X_VELOCITY, 8123, 0000",
+            "SPEED_Y_Y_VELOCITY, Y_VELOCITY, 0123, F000",
+            "SPEED_X_Y_VELOCITY, Y_VELOCITY, F123, 0000",
+            "SPEED_X_X_VELOCITY, X_VELOCITY, 0123, 1000",
+            "COMPLETE_X_SNAP, CENTRE_X, FFFC, 1700",
+            "COMPLETE_Y_SNAP, CENTRE_Y, FFFD, 02F0",
+            "MOVE_X_LONG, X_LONG, 7FFFFFF0, 800000F0",
+            "MOVE_Y_LONG, Y_LONG, 00000080, FFFFFF80",
+            "RELEASE_Y_MASK, CENTRE_Y, F923, 0123",
+            "RELEASE_CONTROL_CLEAR, PLAYER_CONTROL, C1, 00"})
+    void tunnelPreparationChecksEveryFiniteStoreAndAdoptsOnlyReadyFullPairReferences(
+            CdTunnelPath.TunnelPlayerField field, String key, String oldHex, String valueHex) throws IOException {
+        var fixture = new Fixture();
+        try (var f = spinTunnelDirtyFrame(fixture)) {
+            int oldRaw = (int) Long.parseLong(oldHex, 16), value = (int) Long.parseLong(valueHex, 16);
+            var captured = f.captureActor();
+            var input = tunnelFrameReplace(captured.state(), key, oldRaw);
+            f.restoreActor(new CdPlayerFrameRuntime.ActorState(captured.owner(), input, captured.display()));
+            var actor = f.captureActor(); var shared = f.captureShared(); int uploads = fixture.dmas.size();
+            var expected = tunnelFrameReplace(input, key, value);
+            var stores = new ArrayList<CdTunnelPath.PlayerStore>();
+            stores.add(new CdTunnelPath.PlayerStore(field, oldRaw, value));
+            var result = new CdTunnelPath.PlayerResult(expected, shared.environment(), stores);
+            stores.clear();
+            assertEquals(List.of(new CdTunnelPath.PlayerStore(field, oldRaw, value)), result.stores());
+            assertThrows(UnsupportedOperationException.class, () -> result.stores().clear());
+            f.bindArtPublication((request, art) -> fail("Tunnel preparation must not service art"));
+            var pool = new CdObjectPool(); var poolBefore = pool.capture();
+            var publication = tunnelFramePrepare(f, input, shared.environment(), result);
+            assertSame(input, publication.expectedState());
+            assertSame(shared.environment(), publication.expectedEnvironment());
+            assertSame(expected, publication.finalState());
+            assertSame(shared.environment(), publication.finalEnvironment());
+            assertEquals(actor, f.captureActor()); assertEquals(shared, f.captureShared());
+            assertEquals(poolBefore.slots(), pool.capture().slots()); assertEquals(uploads, fixture.dmas.size());
+            if (field.widthBits() != 32) {
+                int beyond = 1 << field.widthBits();
+                assertThrows(IllegalArgumentException.class, () -> new CdTunnelPath.PlayerStore(field, oldRaw | beyond, value));
+                assertThrows(IllegalArgumentException.class, () -> new CdTunnelPath.PlayerStore(field, oldRaw, value | beyond));
+                assertThrows(IllegalArgumentException.class, () -> new CdTunnelPath.PlayerStore(field, -1, value));
+                assertThrows(IllegalArgumentException.class, () -> new CdTunnelPath.PlayerStore(field, oldRaw, -1));
+            } else {
+                // Every int bit pattern is a native LONG; no invented narrower LONG range.
+                assertDoesNotThrow(() -> new CdTunnelPath.PlayerStore(field, Integer.MIN_VALUE, Integer.MAX_VALUE));
+            }
+            f.validatePreparedObjectSolidPublication(publication);
+            assertEquals(actor, f.captureActor()); assertEquals(shared, f.captureShared());
+            f.applyPreparedObjectSolidPublication(publication);
+            assertSame(expected, f.state()); assertSame(shared.environment(), f.environment());
+            assertEquals(expected, f.captureActor().state());
+            assertSame(actor.display(), f.display()); assertSame(shared.artState(), f.artState());
+            assertSame(shared.vIntClock(), f.vIntClock()); assertEquals(shared.paused(), f.paused());
+            assertEquals(poolBefore.slots(), pool.capture().slots()); assertEquals(uploads, fixture.dmas.size());
+            framePortPreparedRejected(f, publication, IllegalArgumentException.class);
+        }
+    }
+
+    @ParameterizedTest @ValueSource(strings = {"CENTRE_X", "X_FRACTION", "CENTRE_Y", "Y_FRACTION", "X_VELOCITY", "Y_VELOCITY", "GROUND_VELOCITY", "ROUTINE", "ANGLE", "FLAGS", "SPRITE_FLAGS", "X_RADIUS", "Y_RADIUS", "ANIMATION", "PREVIOUS_ANIMATION", "PLAYER_JUMP", "CHARGE", "MOVE_LOCK", "STICK", "PLAYER_CONTROL", "PREVIOUS_PRIMARY_ANGLE", "PREVIOUS_SECONDARY_ANGLE", "SCRIPT_INDEX", "ANIMATION_TIMER", "MAP_FRAME", "SLOT_ID", "MAPPING_ADDRESS", "TILE", "PRIORITY", "WIDTH", "HURT", "INVINCIBILITY", "SPEED_SHOES", "RESET", "HISTORY_INDEX", "ROTATION_DISTANCE", "PUSH_OBJECT", "STAND_OBJECT", "ROTATION_ANGLE", "HISTORY_BYTES"})
+    void tunnelPreparationCasChecksEveryStateFieldAndDelegatesEveryUndeclaredChange(String field) throws IOException {
+        try (var f = spinTunnelDirtyFrame(new Fixture())) {
+            var actor = f.captureActor(); var shared = f.captureShared(); var s = actor.state(); var e = shared.environment();
+            var changed = framePortChangedState(s, field); assertNotEquals(s, changed, field);
+            var noWrite = new CdTunnelPath.PlayerResult(s, e, List.of());
+            var ready = tunnelFramePrepare(f, s, e, noWrite);
+            var stale = tunnelFrameRejected(f, changed, e, noWrite, IllegalArgumentException.class);
+            assertEquals("Stale Tunnel Path player State/Environment cut", stale.getMessage());
+            var malicious = new CdTunnelPath.PlayerResult(changed, e, List.of());
+            var pure = assertThrows(IllegalArgumentException.class,
+                    () -> CdTunnelPath.validatePlayerResult(new CdTunnelPath.PlayerCut(s, e), malicious));
+            var delegated = tunnelFrameRejected(f, s, e, malicious, IllegalArgumentException.class);
+            assertEquals(pure.getMessage(), delegated.getMessage());
+            f.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(), changed, actor.display()));
+            tunnelFrameRejected(f, s, e, noWrite, IllegalArgumentException.class);
+            framePortPreparedRejected(f, ready, IllegalArgumentException.class);
+            f.restoreActor(actor);
+            assertEquals(actor, f.captureActor()); assertEquals(shared, f.captureShared());
+        }
+    }
+
+    @ParameterizedTest @ValueSource(strings = {"TOP_SPEED", "ACCELERATION", "DECELERATION", "BOUND_LEFT", "BOUND_RIGHT", "BOUND_BOTTOM", "BOUND_BOSS_FIGHT", "GATE_ZONE_ACT", "GATE_TIME_ZONE", "GATE_MINI_SONIC", "GATE_WATER_SLIDE", "GATE_WIND_TUNNEL", "GATE_SPEED_SHOES", "GATE_TIME_WARP_DIRECTION", "MOVEMENT_LOOK_MODE", "MOVEMENT_CAMERA_Y_CENTRE", "MOVEMENT_PRIMARY_ANGLE", "MOVEMENT_SECONDARY_ANGLE", "MOVEMENT_BORED_TIMER", "MOVEMENT_SCORE_CHAIN", "MOVEMENT_DEBUG_ANGLE", "MOVEMENT_DEBUG_ANGLE_SHIFT", "MOVEMENT_DEBUG_QUADRANT", "MOVEMENT_DEBUG_FLOOR_DISTANCE", "RAW_HELD", "RAW_TAP", "LOGICAL_HELD", "LOGICAL_TAP", "CONTROL_LOCKED", "BODY_LEVEL_FRAMES", "BODY_CAMERA_X_CENTRE", "BODY_TIME_ATTACK_MODE", "BODY_DEBUG_MODE", "BODY_DEBUG_CHEAT", "BODY_TIME_WARP_TIMER", "BODY_INVINCIBLE", "BODY_BOSS_MUSIC", "DYNAMIC_SLOTS"})
+    void tunnelPreparationCasChecksEveryEnvironmentFieldAndNeverPublishesEnvironmentWrites(String field) throws IOException {
+        try (var f = spinTunnelDirtyFrame(new Fixture())) {
+            var actor = f.captureActor(); var shared = f.captureShared(); var s = actor.state(); var e = shared.environment();
+            var changed = framePortChangedEnvironment(e, field); assertNotEquals(e, changed, field);
+            var noWrite = new CdTunnelPath.PlayerResult(s, e, List.of());
+            var ready = tunnelFramePrepare(f, s, e, noWrite);
+            var stale = tunnelFrameRejected(f, s, changed, noWrite, IllegalArgumentException.class);
+            assertEquals("Stale Tunnel Path player State/Environment cut", stale.getMessage());
+            var malicious = new CdTunnelPath.PlayerResult(s, changed, List.of());
+            var pure = assertThrows(IllegalArgumentException.class,
+                    () -> CdTunnelPath.validatePlayerResult(new CdTunnelPath.PlayerCut(s, e), malicious));
+            var delegated = tunnelFrameRejected(f, s, e, malicious, IllegalArgumentException.class);
+            assertEquals(pure.getMessage(), delegated.getMessage());
+            f.restoreShared(new CdPlayerFrameRuntime.SharedState(shared.owner(), changed,
+                    shared.artState(), shared.paused(), shared.vIntClock()));
+            tunnelFrameRejected(f, s, e, noWrite, IllegalArgumentException.class);
+            framePortPreparedRejected(f, ready, IllegalArgumentException.class);
+            f.restoreShared(shared);
+            assertEquals(actor, f.captureActor()); assertEquals(shared, f.captureShared());
+        }
+    }
+
+    @ParameterizedTest @CsvSource({"2, 0", "2, 1", "4, 0", "4, 1"})
+    void tunnelPreparationCarriesExactAcquisitionValuesWithoutResettingOtherPlayerPartitions(
+            int routine, int secondary) throws IOException {
+        var fixture = new Fixture();
+        try (var f = spinTunnelDirtyFrame(fixture)) {
+            var actor = f.captureActor(); var input = framePortReplaceState(actor.state(), "ROUTINE", routine);
+            input = framePortReplaceState(input, "PLAYER_CONTROL", 0);
+            input = framePortReplaceState(input, "CENTRE_X", 0x13F0);
+            input = framePortReplaceState(input, "CENTRE_Y", 0x00F0);
+            f.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(), input, actor.display()));
+            var s = f.state(); var e = f.environment(); var m = s.motion(); var shared = f.captureShared();
+            var stores = new ArrayList<CdTunnelPath.PlayerStore>();
+            if (routine == 4) {
+                stores.add(new CdTunnelPath.PlayerStore(CdTunnelPath.TunnelPlayerField.HURT_ROUTINE, 4, 2));
+                stores.add(new CdTunnelPath.PlayerStore(CdTunnelPath.TunnelPlayerField.HURT_TIMER, 0x1357, 0x78));
+            }
+            stores.add(new CdTunnelPath.PlayerStore(CdTunnelPath.TunnelPlayerField.ACQUIRE_CONTROL, 0, 0x81));
+            if (secondary != 0)
+                stores.add(new CdTunnelPath.PlayerStore(CdTunnelPath.TunnelPlayerField.ACQUIRE_INVISIBLE, 0x81, 0xC1));
+            stores.add(new CdTunnelPath.PlayerStore(CdTunnelPath.TunnelPlayerField.ACQUIRE_ANIMATION, 0x1A, 2));
+            stores.add(new CdTunnelPath.PlayerStore(CdTunnelPath.TunnelPlayerField.ACQUIRE_GVEL_BASE, 0x345, 0x1000));
+            var baseMotion = new CdPlayerMotionState(0x13F01234, 0x00F0BEEF, 0x100, -0x234, 0x1000,
+                    2, m.angle(), 0xE9, m.spriteFlags(), m.xRadius(), m.yRadius(), 2, m.previousAnimation(),
+                    m.playerJump(), m.charge(), m.moveLock(), m.stick(), secondary != 0 ? 0xC1 : 0x81,
+                    m.previousPrimaryAngle(), m.previousSecondaryAngle());
+            var baseState = new CdPlayerBody.State(baseMotion, s.animation(), s.header(),
+                    new CdPlayerBody.Timers(routine == 4 ? 0x78 : 0x1357, s.timers().invincibility(),
+                            s.timers().speedShoes(), s.timers().reset()), s.history(), s.rotationDistance(),
+                    s.objectLinks(), s.rotationAngle());
+            var base = tunnelFramePrepare(f, s, e, new CdTunnelPath.PlayerResult(baseState, e, stores));
+            assertEquals(routine == 4 ? 0x78 : 0x1357, base.finalState().timers().hurt());
+            assertSame(s.animation(), base.finalState().animation()); assertSame(s.header(), base.finalState().header());
+            assertSame(s.history(), base.finalState().history()); assertSame(s.objectLinks(), base.finalState().objectLinks());
+            assertEquals(0xD7, base.finalState().rotationAngle()); assertEquals(0xAB, base.finalState().rotationDistance());
+            f.applyPreparedObjectSolidPublication(base);
+            var finishStores = List.of(
+                    new CdTunnelPath.PlayerStore(CdTunnelPath.TunnelPlayerField.ACQUIRE_X_VELOCITY, 0x100, 0),
+                    new CdTunnelPath.PlayerStore(CdTunnelPath.TunnelPlayerField.ACQUIRE_Y_VELOCITY, 0xFDCC, 0),
+                    new CdTunnelPath.PlayerStore(CdTunnelPath.TunnelPlayerField.ACQUIRE_PUSH_CLEAR, 0xE9, 0xC9),
+                    new CdTunnelPath.PlayerStore(CdTunnelPath.TunnelPlayerField.ACQUIRE_AIR, 0xC9, 0xCB),
+                    new CdTunnelPath.PlayerStore(CdTunnelPath.TunnelPlayerField.ACQUIRE_JUMP_CLEAR, 0x76, 0),
+                    new CdTunnelPath.PlayerStore(CdTunnelPath.TunnelPlayerField.ACQUIRE_X_SNAP, 0x13F0, 0x13F0),
+                    new CdTunnelPath.PlayerStore(CdTunnelPath.TunnelPlayerField.ACQUIRE_Y_SNAP, 0xF0, 0xF0));
+            var finishMotion = new CdPlayerMotionState(0x13F01234, 0x00F0BEEF, 0, 0, 0x1000,
+                    2, m.angle(), 0xCB, m.spriteFlags(), m.xRadius(), m.yRadius(), 2, m.previousAnimation(),
+                    0, m.charge(), m.moveLock(), m.stick(), secondary != 0 ? 0xC1 : 0x81,
+                    m.previousPrimaryAngle(), m.previousSecondaryAngle());
+            var finishState = new CdPlayerBody.State(finishMotion, s.animation(), s.header(), baseState.timers(),
+                    s.history(), s.rotationDistance(), s.objectLinks(), s.rotationAngle());
+            var finish = tunnelFramePrepare(f, baseState, e, new CdTunnelPath.PlayerResult(finishState, e, finishStores));
+            f.applyPreparedObjectSolidPublication(finish);
+            assertSame(finishState, f.state()); assertSame(e, f.environment());
+            assertEquals(shared, f.captureShared()); assertSame(actor.display(), f.display());
+            assertEquals(0x1234, f.state().motion().centreX16_16() & 0xFFFF);
+            assertEquals(0xBEEF, f.state().motion().centreY16_16() & 0xFFFF);
+            assertEquals(0, f.state().motion().flags() & 4, "Animation 02 does not invent a rolling/radius reset");
+        }
+    }
+
+    @ParameterizedTest @ValueSource(booleans = {false, true})
+    void tunnelPreparationRetainsBothNativeVelocityStoreOrdersAsData(boolean yDominant) throws IOException {
+        try (var f = spinTunnelDirtyFrame(new Fixture())) {
+            var s = f.state(); var e = f.environment();
+            int xv = yDominant ? 0 : 0x1000, yv = yDominant ? 0x1000 : 0;
+            var first = new CdTunnelPath.PlayerStore(yDominant ? CdTunnelPath.TunnelPlayerField.SPEED_Y_X_VELOCITY
+                    : CdTunnelPath.TunnelPlayerField.SPEED_X_Y_VELOCITY, yDominant ? 0x100 : 0xFDCC, yDominant ? xv : yv);
+            var second = new CdTunnelPath.PlayerStore(yDominant ? CdTunnelPath.TunnelPlayerField.SPEED_Y_Y_VELOCITY
+                    : CdTunnelPath.TunnelPlayerField.SPEED_X_X_VELOCITY, yDominant ? 0xFDCC : 0x100, yDominant ? yv : xv);
+            var expected = framePortReplaceState(framePortReplaceState(s, "X_VELOCITY", xv), "Y_VELOCITY", yv);
+            var result = new CdTunnelPath.PlayerResult(expected, e, List.of(first, second));
+            var publication = tunnelFramePrepare(f, s, e, result);
+            assertEquals(List.of(first, second), result.stores());
+            f.applyPreparedObjectSolidPublication(publication);
+            assertSame(expected, f.state()); assertSame(e, f.environment());
+        }
+    }
+
+    @ParameterizedTest @CsvSource({
+            "7FFFFFF0, 00000080, 0001, FFFF, 800000F0, FFFFFF80",
+            "FFFF0000, 00000000, 1000, 8000, 000F0000, FF800000"})
+    void tunnelPreparationPreservesSignedLongIntegrationWrapAndCarries(
+            String xHex, String yHex, String xvHex, String yvHex, String finalXHex, String finalYHex) throws IOException {
+        try (var f = spinTunnelDirtyFrame(new Fixture())) {
+            int x = (int) Long.parseLong(xHex, 16), y = (int) Long.parseLong(yHex, 16);
+            int xv = Integer.parseInt(xvHex, 16), yv = Integer.parseInt(yvHex, 16);
+            int finalX = (int) Long.parseLong(finalXHex, 16), finalY = (int) Long.parseLong(finalYHex, 16);
+            var actor = f.captureActor();
+            var input = tunnelFrameReplace(tunnelFrameReplace(actor.state(), "X_LONG", x), "Y_LONG", y);
+            input = framePortReplaceState(framePortReplaceState(input, "X_VELOCITY", xv), "Y_VELOCITY", yv);
+            f.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(), input, actor.display()));
+            var s = f.state(); var e = f.environment();
+            assertEquals(finalX, x + ((short) xv << 8)); assertEquals(finalY, y + ((short) yv << 8));
+            var expected = tunnelFrameReplace(tunnelFrameReplace(s, "X_LONG", finalX), "Y_LONG", finalY);
+            var result = new CdTunnelPath.PlayerResult(expected, e, List.of(
+                    new CdTunnelPath.PlayerStore(CdTunnelPath.TunnelPlayerField.MOVE_X_LONG, x, finalX),
+                    new CdTunnelPath.PlayerStore(CdTunnelPath.TunnelPlayerField.MOVE_Y_LONG, y, finalY)));
+            var publication = tunnelFramePrepare(f, s, e, result);
+            f.applyPreparedObjectSolidPublication(publication);
+            assertSame(expected, f.state()); assertSame(e, f.environment());
+            assertEquals(s.timers(), f.state().timers()); assertSame(s.history(), f.state().history());
+        }
+    }
+
+    @Test void tunnelPreparationCompletionThenReleaseKeepsFractionsVelocitiesAndEveryUnlistedField() throws IOException {
+        try (var f = spinTunnelDirtyFrame(new Fixture())) {
+            var actor = f.captureActor(); var initial = framePortReplaceState(actor.state(), "PLAYER_CONTROL", 0xC1);
+            f.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(), initial, actor.display()));
+            var s = f.state(); var e = f.environment();
+            var snapped = framePortReplaceState(framePortReplaceState(s, "CENTRE_X", 0x1700), "CENTRE_Y", 0xF923);
+            var snapResult = new CdTunnelPath.PlayerResult(snapped, e, List.of(
+                    new CdTunnelPath.PlayerStore(CdTunnelPath.TunnelPlayerField.COMPLETE_X_SNAP, 0xFFFC, 0x1700),
+                    new CdTunnelPath.PlayerStore(CdTunnelPath.TunnelPlayerField.COMPLETE_Y_SNAP, 0xFFFD, 0xF923)));
+            var snap = tunnelFramePrepare(f, s, e, snapResult);
+            f.applyPreparedObjectSolidPublication(snap);
+            var released = framePortReplaceState(framePortReplaceState(snapped, "CENTRE_Y", 0x0123), "PLAYER_CONTROL", 0);
+            var release = tunnelFramePrepare(f, snapped, e, new CdTunnelPath.PlayerResult(released, e, List.of(
+                    new CdTunnelPath.PlayerStore(CdTunnelPath.TunnelPlayerField.RELEASE_Y_MASK, 0xF923, 0x0123),
+                    new CdTunnelPath.PlayerStore(CdTunnelPath.TunnelPlayerField.RELEASE_CONTROL_CLEAR, 0xC1, 0))));
+            f.applyPreparedObjectSolidPublication(release);
+            assertSame(released, f.state()); assertSame(e, f.environment());
+            assertEquals(0x17001234, f.state().motion().centreX16_16());
+            assertEquals(0x0123BEEF, f.state().motion().centreY16_16());
+            assertEquals(s.motion().xVelocity(), f.state().motion().xVelocity());
+            assertEquals(s.motion().yVelocity(), f.state().motion().yVelocity());
+            assertEquals(s.motion().groundVelocity(), f.state().motion().groundVelocity());
+            assertEquals(s.motion().flags(), f.state().motion().flags()); assertEquals(s.timers(), f.state().timers());
+            assertEquals(s.animation(), f.state().animation()); assertEquals(s.header(), f.state().header());
+            assertSame(s.history(), f.state().history()); assertEquals(s.objectLinks(), f.state().objectLinks());
+            assertEquals(s.rotationAngle(), f.state().rotationAngle()); assertEquals(s.rotationDistance(), f.state().rotationDistance());
+            assertSame(actor.display(), f.display());
+        }
+    }
+
+    @Test void tunnelPreparationRejectsWrongOldValuesMissingEffectsAndConflictingDuplicatePrefixes() throws IOException {
+        try (var f = spinTunnelDirtyFrame(new Fixture())) {
+            var s = f.state(); var e = f.environment(); var expected = framePortReplaceState(s, "X_VELOCITY", 0x200);
+            var store = new CdTunnelPath.PlayerStore(CdTunnelPath.TunnelPlayerField.SPEED_Y_X_VELOCITY, 0x100, 0x200);
+            var wrongOld = new CdTunnelPath.PlayerStore(CdTunnelPath.TunnelPlayerField.SPEED_Y_X_VELOCITY, 0x101, 0x200);
+            var wrongFlags = List.of(
+                    new CdTunnelPath.PlayerStore(CdTunnelPath.TunnelPlayerField.ACQUIRE_PUSH_CLEAR, 0xE9, 0xC9),
+                    new CdTunnelPath.PlayerStore(CdTunnelPath.TunnelPlayerField.ACQUIRE_AIR, 0xE9, 0xEB));
+            var malformed = List.of(
+                    new CdTunnelPath.PlayerResult(expected, e, List.of(wrongOld)),
+                    new CdTunnelPath.PlayerResult(expected, e, List.of()),
+                    new CdTunnelPath.PlayerResult(s, e, List.of(store)),
+                    new CdTunnelPath.PlayerResult(expected, e, List.of(store, store)),
+                    new CdTunnelPath.PlayerResult(s, e, wrongFlags));
+            for (var result : malformed) {
+                var pure = assertThrows(IllegalArgumentException.class,
+                        () -> CdTunnelPath.validatePlayerResult(new CdTunnelPath.PlayerCut(s, e), result));
+                var delegated = tunnelFrameRejected(f, s, e, result, IllegalArgumentException.class);
+                assertEquals(pure.getMessage(), delegated.getMessage());
+            }
+            var stale = framePortChangedState(s, "ROTATION_ANGLE");
+            var precedence = tunnelFrameRejected(f, stale, e, malformed.getFirst(), IllegalArgumentException.class);
+            assertEquals("Stale Tunnel Path player State/Environment cut", precedence.getMessage(),
+                    "Complete pair CAS precedes the pure field predicate");
+        }
+    }
+
+    @Test void tunnelPreparationSameValueDuplicatesAndEqualFramesConveyOnlyValueCas() throws IOException {
+        try (var a = spinTunnelDirtyFrame(new Fixture()); var b = spinTunnelDirtyFrame(new Fixture())) {
+            var s = a.state(); var e = a.environment(); var beforeA = a.captureActor(); var beforeB = b.captureActor();
+            var sharedA = a.captureShared(); var sharedB = b.captureShared();
+            var same = new CdTunnelPath.PlayerStore(CdTunnelPath.TunnelPlayerField.SPEED_Y_X_VELOCITY, 0x100, 0x100);
+            var result = new CdTunnelPath.PlayerResult(s, e, List.of(same, same));
+            // The pure predicate admits same-value observations; only Runtime can enforce reached-site shape/once.
+            var publication = tunnelFramePrepare(a, s, e, result);
+            a.applyPreparedObjectSolidPublication(publication); a.applyPreparedObjectSolidPublication(publication);
+            var equalFrame = tunnelFramePrepare(b, s, e, result);
+            b.applyPreparedObjectSolidPublication(equalFrame);
+            assertEquals(beforeA, a.captureActor()); assertEquals(beforeB, b.captureActor());
+            assertEquals(sharedA, a.captureShared()); assertEquals(sharedB, b.captureShared());
+            assertSame(s, b.state()); assertSame(e, b.environment());
+            assertNotSame(beforeA.owner(), beforeB.owner(), "Equal values are not a private native producer identity");
+        }
+    }
+
+    @Test void tunnelPreparationNullPendingEntitlementActiveServiceAndClosedGuardsPreserveTheirCuts() throws IOException {
+        var fixture = new Fixture();
+        try (var f = fixture.runtime()) {
+            var s = f.state(); var e = f.environment(); var result = new CdTunnelPath.PlayerResult(s, e, List.of());
+            var ready = tunnelFramePrepare(f, s, e, result);
+            tunnelFrameRejected(f, null, e, result, NullPointerException.class);
+            tunnelFrameRejected(f, s, null, result, NullPointerException.class);
+            tunnelFrameRejected(f, s, e, null, NullPointerException.class);
+            assertThrows(NullPointerException.class, () -> new CdTunnelPath.PlayerResult(s, e, null));
+            assertThrows(NullPointerException.class, () -> new CdTunnelPath.PlayerStore(null, 0, 0));
+            var selection = f.prepareInput(8);
+            tunnelFrameGuarded(f, s, e, result, ready);
+            int[] callbacks = {0};
+            f.serviceVBlank(selection.phase(), () -> {
+                callbacks[0]++;
+                tunnelFrameGuarded(f, s, e, result, ready);
+            });
+            assertEquals(1, callbacks[0]); assertEquals(8, f.environment().controls().rawHeld());
+            assertEquals(1, f.vIntClock().deltaSinceAdmittedCut());
+            tunnelFrameGuarded(f, s, e, result, ready);
+            assertEquals(CdPlayerBody.Boundary.INIT_RETURN, f.runBody(1).result().boundary(),
+                    "Rejected preparation cannot consume the pending sample or its Body entitlement");
+            var current = new CdTunnelPath.PlayerResult(f.state(), f.environment(), List.of());
+            var currentReady = tunnelFramePrepare(f, f.state(), f.environment(), current);
+            f.close();
+            tunnelFrameGuarded(f, f.state(), f.environment(), current, currentReady);
+            assertTrue(f.closed()); assertTrue(fixture.dmas.isEmpty());
+        }
+    }
+
+    /** Test-only immutable replacements over an actual public Frame fixture's same-owner capture. */
+    private static CdPlayerBody.State tunnelFrameReplace(CdPlayerBody.State s, String key, int value) {
+        if (key.equals("X_LONG"))
+            return framePortReplaceState(framePortReplaceState(s, "CENTRE_X", value >>> 16), "X_FRACTION", value & 0xFFFF);
+        if (key.equals("Y_LONG"))
+            return framePortReplaceState(framePortReplaceState(s, "CENTRE_Y", value >>> 16), "Y_FRACTION", value & 0xFFFF);
+        return framePortReplaceState(s, key, value);
+    }
+
+    private static CdPlayerFrameRuntime.ObjectSolidPublication tunnelFramePrepare(CdPlayerFrameRuntime f,
+            CdPlayerBody.State s, CdPlayerBody.Environment e, CdTunnelPath.PlayerResult result) {
+        var values = observe(f); var actualState = f.state(); var actualEnvironment = f.environment();
+        var art = f.artState(); var display = f.display(); var clock = f.vIntClock();
+        var publication = f.prepareObjectTunnelPathPlayerResult(s, e, result);
+        assertEquals(values, observe(f)); assertSame(actualState, f.state()); assertSame(actualEnvironment, f.environment());
+        assertSame(art, f.artState()); assertSame(display, f.display()); assertSame(clock, f.vIntClock());
+        return publication;
+    }
+
+    private static <T extends RuntimeException> T tunnelFrameRejected(CdPlayerFrameRuntime f,
+            CdPlayerBody.State s, CdPlayerBody.Environment e, CdTunnelPath.PlayerResult result, Class<T> type) {
+        var values = observe(f); var actualState = f.state(); var actualEnvironment = f.environment();
+        var art = f.artState(); var display = f.display(); var clock = f.vIntClock();
+        var failure = assertThrows(type, () -> f.prepareObjectTunnelPathPlayerResult(s, e, result));
+        assertEquals(values, observe(f)); assertSame(actualState, f.state()); assertSame(actualEnvironment, f.environment());
+        assertSame(art, f.artState()); assertSame(display, f.display()); assertSame(clock, f.vIntClock());
+        return failure;
+    }
+
+    private static void tunnelFrameGuarded(CdPlayerFrameRuntime f, CdPlayerBody.State s, CdPlayerBody.Environment e,
+            CdTunnelPath.PlayerResult result, CdPlayerFrameRuntime.ObjectSolidPublication publication) {
+        tunnelFrameRejected(f, s, e, result, IllegalStateException.class);
+        tunnelFrameRejected(f, null, null, null, IllegalStateException.class);
+        framePortPreparedRejected(f, publication, IllegalStateException.class);
+        framePortPreparedRejected(f, null, IllegalStateException.class);
+    }
+    // END Tunnel Path Frame preparation.
 
 }

@@ -49,7 +49,10 @@ public final class CdObjectState {
         // Tamabboh/Main.asm:177,181,237: overlapping native direction byte only.
         TAMABBOH_MISSILE_DIRECTION(0x3F),
         // Collapsing Platform/Main.asm:102,168,193,271,286: overlapping native bytes only.
-        COLLAPSE_SOLID_MARKER(0x3E), COLLAPSE_SAVED_SOURCE_ID(0x3F);
+        COLLAPSE_SOLID_MARKER(0x3E), COLLAPSE_SAVED_SOURCE_ID(0x3F),
+        // ID07 oTunnelSteps/oTunnelVar32/oTunnelIndex/oTunnelEnd (Tunnel Path/Main.asm:109-115,257-270).
+        // SUBQ.B addresses the HIGH byte of the big-endian steps WORD; these are storage aliases only.
+        TUNNEL_PATH_STEPS_HIGH(0x2E), TUNNEL_PATH_SCRATCH(0x32), TUNNEL_PATH_INDEX(0x3A), TUNNEL_PATH_END(0x3B);
         private final int offset;
         ByteField(int offset) { this.offset = offset; }
         public int byteOffset() { return offset; }
@@ -88,7 +91,11 @@ public final class CdObjectState {
         // Tamabboh/Main.asm:37,82-85,165 and wrapper:16: overlapping native WORD storage only.
         TAMABBOH_ANCHOR_X(0x2A), TAMABBOH_COOLDOWN(0x34),
         // Collapsing Platform/Main.asm:94,105,202,295: overlapping WORD countdown only.
-        COLLAPSE_DELAY(0x2A);
+        COLLAPSE_DELAY(0x2A),
+        // ID07 Tunnel Path/Main.asm:193-196,261-277,294-299,343,369: overlapping native WORD storage.
+        // Release MOVE.W #2 at routine writes bytes $24/$25=00/02, rather than routine BYTE02.
+        TUNNEL_PATH_STEPS(0x2E), TUNNEL_PATH_TARGET_X(0x36), TUNNEL_PATH_TARGET_Y(0x38),
+        TUNNEL_PATH_INDEX_END(0x3A), TUNNEL_PATH_ROUTINE_WORD(0x24);
         private final int offset;
         WordField(int offset) { this.offset = offset; }
         public int byteOffset() { return offset; }
@@ -109,7 +116,9 @@ public final class CdObjectState {
         TAMABBOH_MISSILE_X_DELTA(0x2A), TAMABBOH_MISSILE_Y_DELTA(0x2E),
         TAMABBOH_MISSILE_X_ACCEL(0x32), TAMABBOH_MISSILE_Y_ACCEL(0x36),
         // Collapsing Platform/Main.asm:115-117,184,282: overlapping signed 16.16 fall delta only.
-        COLLAPSE_FALL_DELTA(0x2C);
+        COLLAPSE_FALL_DELTA(0x2C),
+        // ID07 oTunnelData (Tunnel Path/Main.asm:115,194,274): retain the complete raw32 pointer bits.
+        TUNNEL_PATH_DATA(0x3C);
         private final int offset;
         LongField(int offset) { this.offset = offset; }
         public int byteOffset() { return offset; }

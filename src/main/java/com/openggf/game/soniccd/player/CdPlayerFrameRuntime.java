@@ -9,6 +9,7 @@ import com.openggf.game.soniccd.objects.CdSolidObject;
 import com.openggf.game.soniccd.objects.CdSpinningDisc;
 import com.openggf.game.soniccd.objects.CdSpring;
 import com.openggf.game.soniccd.objects.CdSpinTunnelTag;
+import com.openggf.game.soniccd.objects.CdTunnelPath;
 import com.openggf.game.soniccd.resources.CdPlayerArtRuntime;
 
 import java.util.ArrayList;
@@ -1411,4 +1412,24 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
     }
     // END prebuilt Solid and direct Disc player value publication ports.
 
+
+    /**
+     * Prepare an ID07 player value pair at the existing closed object cut without publishing it.
+     * The complete current State/Environment pair and the tunnel owner's pure finite store predicate
+     * are checked before allocating the existing carrier. These values supply no native invocation,
+     * source/pool identity, phase, reentry or exactly-once authority; the private Runtime owns those.
+     */
+    public ObjectSolidPublication prepareObjectTunnelPathPlayerResult(CdPlayerBody.State expectedState,
+                                                                      CdPlayerBody.Environment expectedEnvironment,
+                                                                      CdTunnelPath.PlayerResult result) {
+        requireOpenIdle(); requireClosedFrame();
+        Objects.requireNonNull(expectedState, "Tunnel Path player State");
+        Objects.requireNonNull(expectedEnvironment, "Tunnel Path player Environment");
+        Objects.requireNonNull(result, "Tunnel Path player result");
+        if (!state.equals(expectedState) || !environment.equals(expectedEnvironment)) {
+            throw new IllegalArgumentException("Stale Tunnel Path player State/Environment cut");
+        }
+        CdTunnelPath.validatePlayerResult(new CdTunnelPath.PlayerCut(expectedState, expectedEnvironment), result);
+        return new ObjectSolidPublication(expectedState, expectedEnvironment, result.finalState(), result.finalEnvironment());
+    }
 }

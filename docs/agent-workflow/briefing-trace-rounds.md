@@ -71,6 +71,21 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+An adversarial callback may erase its own mutation (2026-10-26, CD Tunnel
+Path). A COMMIT fixture changes another slot, then restores an overlay built
+from the pre-attack cut; its returning image is valid and cannot demonstrate
+nonwrite rejection. Keep the expected cut immutable and make the adversarial
+delta survive the callback. Building the harness overlay from its actual
+post-attack pool preserves that delta; an unattacked pool remains identical.
+Do not change production to reject an unobservable restored transient.
+
+A valid selected read need not complete its containing helper (2026-10-26,
+CD Tunnel Path). The aligned offset2 alias really publishes targets0108/1490;
+subsequent SetPlayerSpeed DIVS overflows, leaves a zero low WORD and reaches
+a later divide-by-zero. Assert that precise later stop and the already
+published read prefix. Do not fit speed/pose/backing values merely to turn
+an alignment-ownership vector into an unrelated successful whole call.
+
 A replayed immutable product need not retain its historical reference
 (2026-10-26, CD Disc route). Forward SAT building creates a fresh CpuSat.
 Compare all bytes, count and provenance against the historical cut. For a

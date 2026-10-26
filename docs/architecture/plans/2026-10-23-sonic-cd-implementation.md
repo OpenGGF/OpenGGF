@@ -7365,3 +7365,62 @@ env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 python3 "$OPENGGF_ROOT/tools/te
 ```
 
 Independent static review24737B/SHA19bbcbac80685b3e19507ad1a5824a412bbb71ddbad545389a194e8fe5b9da6e finds no actionable P1/P2; no execution by the reviewer. Validation is bounded to actual metadata consumers; a broad smoke repeat is disproportionate to these two raw enum rows. The component Body/State and prepared Frame packets are separate, unimported work. The permanent route still returns3420 and fails3421 at unknown07/live63. No new object dispatch, controlled Body, native image/timing or regional gameplay parity is claimed.
+
+### Tunnel Path component and prepared Frame values — 26 October 2026
+
+Based on saved metadataaa5097649, the source-only body implements native
+ObjTunnelPath (Tunnel Path/Main.asm:119–388 at N1ecc5f3): prelude saved-bank
+clear before player gates; raw routines0/2/4/6; Init/Main acquisition81/C1;
+branch-dependent signed SUB/BGE/DIVS, high-byte countdown, WORD snaps/LONG
+integration and release bytes24/25=00/02. Raw32 pointers retain their bits,
+selected WORD reads resolve the owned24-bit bus views/alignment, and actual
+unowned reads/divide-zero stop after reached prefixes. There is no Draw,
+animation, Solid, allocation, movement helper, art/queue or controlled Body
+implementation. Ten State aliases are additive; inverse removal recovers the
+complete old10949-byte source.
+
+The component carries eight finite cross-owner publications as prebuilt own
+source64 plus complete State8/unchanged Environment4 and ordered finite scalar
+stores. Its synchronous ports check actual source/full96/nonwrites; returned
+metadata triggers no work. Private producer/site/order/once-only authority,
+Frame ownership, all-owner preflight and typed FM91 ledger acceptance still
+belong to the future actual Runtime binding. Public equal values and a no-op
+cannot prove that authority. Current live Runtime still does not dispatch07.
+
+The Frame delta is exactly one import and one public prepareObjectTunnelPathPlayerResult/3.
+Existing open/closed guards and full State AND Environment CAS precede the
+Body's pure finite predicate; only then it constructs the existing private
+four-reference ObjectSolidPublication. Old validate/applyPrepared/1 methods
+adopt ready references unchanged. No apply/type/field/helper/owner/capture or
+old-method refactor is added; both complete old Frame/fixture byte inverses
+pass. All705 expected Frame cases are executed below, including114 new
+24-field/full-State/full-Environment/nonwrite/guard/adoption vectors.
+
+Root tests-first43026 stops at the expected missing Body/alias compile RED;
+source import then85026 stops at testCompile13:35:27Z (1m23s,queue0): a test
+lambda captures the changing path loop index. RootR2 adds a stable local and
+fixes the independently confirmed COMMIT-return fixture whose old overlay
+erased its own attack. The harness now overlays its post-attack actual pool,
+retaining the foreign-slot delta; production and expected immutable cuts do
+not change. R2 run90413 executes64/0/1/0 at13:37:36Z (32.674s,queue0). Its
+one alignment vector completes both valid WORD reads but legitimately reaches
+later DIVIDE_X_SPEED/ZERO_DIVISOR. RootR3 retains the pointer/targets and
+requires that exact later stop/published prefix. Narrow17028 passes1/0/0/0 at
+13:46:47Z (36.208s,queue0); no native speed/pose or production tuning occurs.
+Frozen R1 remains unchanged; final RootR3 test is46267B/SHA0c94b1c62cbf55e5b13cfba15f57e24e1cc6738c788805b07595d4348d6af6d0.
+
+Frame tests-first8469 fails only missing prepare3 at13:54:32Z (28.646s,queue0).
+After frozen91692B/SHAc0c8622196adfc3e65297d0f23b4a9b88ebeaefa546241efe0374c65a68a880c production import, combined88818 passes1179/0/0/0 at13:57:06Z:
+Frame705, allBody64 and existingRuntime410 (1m32s,queue1s). This is a fresh
+all64 pass after the three bounded test repairs. Root uses actual media,
+Java25/private cwd and exact fresh XML/individual identities/zero skips.
+World/real EGL/source-guard run12112 then passes60/0/0/0 at13:59:48Z
+(38.277s,queue36s): allWorldLoad53, Ring/full-course/current659 EGL2 and
+JUnit/assertion-free guards5; actual media/S2/EGL opt-in/surfaceless checked.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 python3 "$OPENGGF_ROOT/tools/testing/maven_queue.py" --lean -Dmse=off "-Dsoniccd.media.root=$SCD_MEDIA_ROOT" '-Dtest=TestCdPlayerFrameRuntime,TestCdTunnelPath,TestCdOpeningObjectRuntime' test -B
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 python3 "$OPENGGF_ROOT/tools/testing/maven_queue.py" --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dsoniccd.opening.egl=true "-Dsoniccd.media.root=$SCD_MEDIA_ROOT" "-Dsonic2.rom.path=$S2_ROM" '-Dtest=TestSonicCdOpeningWorldLoad,TestSonicCdOpeningWorldEgl#actualEglNormalInputPickupAndFullCourseReplay+actualEglCurrentTamabbohSingletonRendersAndRetiresThe659thClientPattern,TestJunit5MigrationGuard,TestNoAssertionFreeDiagnostics' test -B
+```
+
+Original Body static review33565B/SHAa94ed9be98228fc6d0d68f5284d4cfa6d36282e3e0c86d8a1ab3595424fb23af confirms the disclosed fixture P2/no additional production P1/P2. Separate Frame/RootR3 review24121B/SHAce78ca370f632f10b736011741b2a0dc48354afaa698901c45ef0812039fe0f1 confirms the exact three repairs resolve it and finds no new actionable P1/P2. Both are static, not execution results. Focused actual-owner/World coverage is proportionate to this CD-only addition; no broad smoke or release-only full suite was repeated. The actual07 Runtime/publication binding and fresh ordinary3421 continuation remain separate pending work; no whole-act/native timing/pixel/regional certification.
