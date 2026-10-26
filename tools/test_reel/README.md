@@ -153,9 +153,18 @@ For tests already using `GameplayCaptureSession`, replace each existing
 exactly once, then uses the session's production render/readback path only while
 recording. The S2 live P2 control and S3K pause limitation are examples.
 
+Component adapters can check `TestReelCapture.isRecording()` before acquiring
+presentation resources, then call `recordFrame(image, mode, input)` with the
+actual production renderer's 320×224 image. The hook records the supplied pixels,
+mode and both controller states without stepping anything. Own component GL/art
+resources inside the test's recording branch and guard its gameplay state across
+draw. A blank component backdrop is legitimate; a substitute game world is not.
+
 For a loaded native 320×224 `HeadlessTestFixture`, call
 `TestReelCapture.afterHeadlessFrame(fixture, up, down, left, right, jump)`
 immediately after the existing step. The S1 movement helper demonstrates this.
+The overload `afterHeadlessFrame(fixture, input, mode)` preserves actual Start
+and P2 inputs and a `PAUSED` or other observation mode.
 It creates an owned EGL context over the **same** loaded world, uploads its CPU
 art, draws through native sprite priority, and checks that presentation did not
 change player position, velocity, angle, air/roll flags and animation fields. This is a listed-player-field guard, not proof of complete world-state purity.

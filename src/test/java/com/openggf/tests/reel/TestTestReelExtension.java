@@ -76,6 +76,41 @@ class TestTestReelExtension {
         assertEquals("TITLE_SCREEN",row.get("mode"));
     }
 
+    @Test void componentFrameHookIsInertWithoutRecording() {
+        assertFalse(TestReelCapture.isRecording());
+        assertDoesNotThrow(() -> TestReelCapture.recordFrame(null, null, null));
+    }
+
+    @Test void componentFrameRetainsPixelsModeAndBothControllerInputs() throws Exception {
+        com.openggf.tests.TestEnvironment.resetAll();
+        System.setProperty("openggf.testReel.dir", output.toString());
+        try {
+            var input = new com.openggf.debug.playback.Bk2FrameInput(17, 4, 0, true, 8, 2, false, "actual fixture input");
+            int[] pixels = new int[320 * 224];
+            java.util.Arrays.fill(pixels, 0xff123456);
+            try (var capture = TestReelCapture.begin("component-hook", "component", "Probe", "draw", java.util.List.of())) {
+                assertTrue(TestReelCapture.isRecording());
+                assertThrows(IllegalArgumentException.class, () -> TestReelCapture.recordFrame(
+                        new com.openggf.graphics.RgbaImage(1, 1, new int[1]), "PAUSED", input));
+                TestReelCapture.recordFrame(new com.openggf.graphics.RgbaImage(320, 224, pixels), "PAUSED", input);
+                capture.bodyOutcome("passed", "");
+            }
+            assertFalse(TestReelCapture.isRecording());
+            try (var dirs = Files.list(output.resolve("cases"))) {
+                var directory = dirs.findFirst().orElseThrow();
+                var json = new ObjectMapper();
+                var row = json.readTree(Files.readString(directory.resolve("state.jsonl")));
+                assertEquals("PAUSED", row.path("mode").asText());
+                assertEquals(17, row.path("input").path("frameIndex").asInt());
+                assertTrue(row.path("input").path("p1StartPressed").asBoolean());
+                assertEquals(8, row.path("input").path("p2InputMask").asInt());
+                assertEquals(2, row.path("input").path("p2ActionMask").asInt());
+                assertEquals(1, json.readTree(directory.resolve("case.json").toFile()).path("frames").asInt());
+                assertEquals(0xff123456, javax.imageio.ImageIO.read(directory.resolve("frames/000000.png").toFile()).getRGB(20, 30));
+            }
+        } finally { System.clearProperty("openggf.testReel.dir"); }
+    }
+
     private org.junit.platform.launcher.listeners.TestExecutionSummary execute() {
         var listener=new SummaryGeneratingListener();
         LauncherFactory.create().execute(LauncherDiscoveryRequestBuilder.request()

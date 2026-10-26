@@ -63,6 +63,19 @@ public final class TestReelCapture implements AutoCloseable {
         catch (IOException failure) { throw new UncheckedIOException(failure); }
     }
 
+    /** Lets an owned component adapter avoid any presentation work in ordinary tests. */
+    public static boolean isRecording() { return ACTIVE.get() != null; }
+
+    /** Records a frame already drawn by the fixture's own presentation owner; never advances it. */
+    public static void recordFrame(RgbaImage image, String mode, Bk2FrameInput input) {
+        var capture = ACTIVE.get();
+        if (capture == null) return;
+        Objects.requireNonNull(image, "fixture image");
+        if (image.width() != 320 || image.height() != 224)
+            throw new IllegalArgumentException("Test reel source must be 320x224");
+        capture.frame(image, Objects.requireNonNull(mode, "fixture mode"), input);
+    }
+
     /** Use at the exact existing step call: no extra inputs, ticks, settling or pacing. */
     public static void step(GameplayCaptureSession session, Bk2FrameInput input) {
         session.step(input);
@@ -73,6 +86,12 @@ public final class TestReelCapture implements AutoCloseable {
     /** Attach after a headless fixture's existing step. Presentation is initialized over that same world. */
     public static void afterHeadlessFrame(HeadlessTestFixture fixture, boolean up, boolean down,
             boolean left, boolean right, boolean jump) {
+        int mask = (up?1:0)|(down?2:0)|(left?4:0)|(right?8:0)|(jump?16:0);
+        afterHeadlessFrame(fixture,
+                new Bk2FrameInput(fixture.frameCount(),mask,jump?1:0,false,"fixture logical input"), "LEVEL");
+    }
+    /** Preserves the fixture's real Start edge and mode for pause/presentation observations. */
+    public static void afterHeadlessFrame(HeadlessTestFixture fixture, Bk2FrameInput input, String mode) {
         var capture = ACTIVE.get();
         if (capture == null) return;
         try {
@@ -86,9 +105,7 @@ public final class TestReelCapture implements AutoCloseable {
             glFinish();
             if (!before.equals(playerInvariant(fixture.sprite())))
                 throw new IllegalStateException("Recording presentation mutated the fixture player");
-            int mask = (up?1:0)|(down?2:0)|(left?4:0)|(right?8:0)|(jump?16:0);
-            capture.frame(ScreenshotCapture.captureFramebuffer(320,224), "LEVEL",
-                    new Bk2FrameInput(fixture.frameCount(),mask,jump?1:0,false,"fixture logical input"));
+            recordFrame(ScreenshotCapture.captureFramebuffer(320,224), mode, input);
         } catch (IOException failure) { throw new UncheckedIOException(failure); }
     }
     private static List<Object> playerInvariant(com.openggf.sprites.playable.AbstractPlayableSprite p) {
