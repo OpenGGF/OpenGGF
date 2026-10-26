@@ -343,6 +343,9 @@ class TestMhzBossObjects {
         MhzEndBossInstance endBoss = new MhzEndBossInstance(new ObjectSpawn(
                 0x4200, 0x0300, Sonic3kObjectIds.MHZ_END_BOSS, 0, 0, false, 0));
         endBoss.setServices(services);
+        // Isolate the ordinary post-weather flash, after routine0 reinitialization.
+        endBoss.getState().routine = 4;
+        endBoss.setCustomFlag(0x2E, 1000);
         endBoss.update(0, null);
         services.registry.resolveInto(services.level.palettes(), null, null, null);
 
@@ -373,6 +376,9 @@ class TestMhzBossObjects {
         MhzEndBossInstance endBoss = new MhzEndBossInstance(new ObjectSpawn(
                 0x4200, 0x0300, Sonic3kObjectIds.MHZ_END_BOSS, 0, 0, false, 0));
         endBoss.setServices(services);
+        // Isolate the ordinary post-weather flash, after routine0 reinitialization.
+        endBoss.getState().routine = 4;
+        endBoss.setCustomFlag(0x2E, 1000);
         endBoss.update(0, null);
         services.registry.resolveInto(services.level.palettes(), null, null, null);
 
@@ -1200,6 +1206,9 @@ class TestMhzBossObjects {
         MhzEndBossInstance endBoss = new MhzEndBossInstance(new ObjectSpawn(
                 0x4200, 0x0300, Sonic3kObjectIds.MHZ_END_BOSS, 0, 0, false, 0));
         endBoss.setServices(services);
+        // Ordinary active-phase contact: routine 0 intentionally reinitializes HP9.
+        endBoss.getState().routine = 0x0E;
+        endBoss.setCustomFlag(0x2E, 1000);
         endBoss.getState().hitCount = 2;
         endBoss.setCustomFlag(0x38, 0x80);
 

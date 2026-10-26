@@ -19,6 +19,7 @@ record Sonic3kSpecialStageSnapshot(
         int heldButtons,
         int pressedButtons,
         int p2HeldButtons,
+        Sonic3kSpecialStageManager.EntryInput entryInputLatch,
         int clearRoutine,
         int clearTimer,
         int emeraldTimer,
@@ -64,7 +65,7 @@ record Sonic3kSpecialStageSnapshot(
         return new Sonic3kSpecialStageSnapshot(
                 0, false, false, false, false,
                 0, 0, 0, 0,
-                0, 0, 0,
+                0, 0, 0, null,
                 0, 0, 0, 0, 0, false, 0, 0, false,
                 0, 0, 0, 0, 0,
                 0, 0, 0, 1, 0, 0L, 0L,

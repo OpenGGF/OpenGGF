@@ -33,6 +33,7 @@ public final class MhzEndBossHitProxyChild extends AbstractObjectInstance
     private MhzEndBossInstance parent;
     private int x;
     private int y;
+    private int collisionFlags = ACTIVE_COLLISION_FLAGS;
 
     private MhzEndBossHitProxyChild() {
         this(new ObjectSpawn(0, 0, Sonic3kObjectIds.MHZ_END_BOSS, 0, 0, false, 0));
@@ -49,6 +50,7 @@ public final class MhzEndBossHitProxyChild extends AbstractObjectInstance
         this(new ObjectSpawn(parent.getX() + X_OFFSET, parent.getY() + Y_OFFSET,
                 Sonic3kObjectIds.MHZ_END_BOSS, 0, 0, false, 0));
         this.parent = parent;
+        parent.bindHitProxy(this);
         refreshFromParent();
     }
 
@@ -79,6 +81,23 @@ public final class MhzEndBossHitProxyChild extends AbstractObjectInstance
         updateDynamicSpawn(x, y);
     }
 
+    @Override
+    public void setDestroyed(boolean destroyed) {
+        super.setDestroyed(destroyed);
+        // Allocation rejection also reaches this hook before the child acquires
+        // an ObjectManager identity. Never retain that unadmitted reference.
+        if (destroyed && parent != null) {
+            parent.retireHitProxy(this);
+        }
+    }
+
+    @Override
+    protected void onRemovedFromObjectManager() {
+        if (parent != null) {
+            parent.retireHitProxy(this);
+        }
+    }
+
     private void refreshFromParent() {
         x = parent.getX() + X_OFFSET;
         y = parent.getY() + Y_OFFSET;
@@ -106,8 +125,15 @@ public final class MhzEndBossHitProxyChild extends AbstractObjectInstance
 
     @Override
     public int getCollisionFlags() {
-        return parent == null || parent.getState().invulnerable || parent.getState().defeated
-                ? 0 : ACTIVE_COLLISION_FLAGS;
+        return parent == null || isDestroyed() || parent.getState().defeated ? 0 : collisionFlags;
+    }
+
+    void disableCollision() {
+        collisionFlags = 0;
+    }
+
+    void restoreCollision() {
+        collisionFlags = ACTIVE_COLLISION_FLAGS;
     }
 
     @Override
@@ -120,6 +146,7 @@ public final class MhzEndBossHitProxyChild extends AbstractObjectInstance
         if (getCollisionFlags() == 0) {
             return;
         }
+        collisionFlags = 0;
         parent.onPlayerAttack(player, result);
     }
 

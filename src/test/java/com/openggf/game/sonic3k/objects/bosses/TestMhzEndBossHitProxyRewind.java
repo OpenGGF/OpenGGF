@@ -26,6 +26,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 @ExtendWith(SingletonResetExtension.class)
@@ -103,17 +104,39 @@ class TestMhzEndBossHitProxyRewind {
         restoredParent.getState().invulnerable = false;
         restoredParent.getState().defeated = false;
         assertEquals(0x25, restoredProxy.getCollisionFlags(),
-                "restored proxy collision flags must derive from the restored parent state");
+                "restored proxy retains its own native collision byte");
         restoredParent.getState().invulnerable = true;
-        assertEquals(0, restoredProxy.getCollisionFlags(),
-                "restored proxy must stop colliding while the restored parent is invulnerable");
+        assertEquals(0x25, restoredProxy.getCollisionFlags(),
+                "the parent flash flag alone must not rewrite the proxy collision byte");
         restoredParent.getState().invulnerable = false;
         int hitsBefore = restoredParent.getState().hitCount;
         restoredProxy.onPlayerAttack(null,
                 new TouchResponseResult(0, 0, 0, TouchCategory.ENEMY));
         assertEquals(hitsBefore - 1, restoredParent.getState().hitCount,
                 "restored proxy must delegate accepted attacks to the restored parent");
+        assertEquals(0, restoredProxy.getCollisionFlags(), "accepted contact clears the actual proxy byte");
+        assertSame(restoredProxy, readHitProxy(restoredParent), "restored parent retains its exact native $44 link");
 
+    }
+
+    @Test
+    void removedOrRejectedProxyCannotLeaveAnUncapturableParentReference() throws Exception {
+        var manager = installObjectManager();
+        var boss = manager.createDynamicObject(() -> new MhzEndBossInstance(
+                new ObjectSpawn(0x3C40, 0x300, Sonic3kObjectIds.MHZ_END_BOSS, 0, 0, false, 0)));
+        var proxy = manager.createDynamicObject(() -> new MhzEndBossHitProxyChild(boss));
+        manager.removeDynamicObject(proxy);
+        assertNull(readHitProxy(boss), "permanent removal detaches the exact reverse link");
+        var registry = new RewindRegistry();
+        registry.register(manager.rewindSnapshottable());
+        registry.capture();
+
+        // ObjectManager rejects an exhausted allocation by marking the freshly
+        // constructed instance destroyed before assigning its slot/identity.
+        var rejected = new MhzEndBossHitProxyChild(boss);
+        rejected.setDestroyed(true);
+        assertNull(readHitProxy(boss), "an unadmitted proxy cannot become rewind authority");
+        registry.capture();
     }
 
     private static ObjectManager installObjectManager() {
@@ -136,6 +159,13 @@ class TestMhzEndBossHitProxyRewind {
         holder[0] = objectManager;
         objectManager.reset(0);
         return objectManager;
+    }
+
+    private static MhzEndBossHitProxyChild readHitProxy(MhzEndBossInstance boss)
+            throws ReflectiveOperationException {
+        Field field = MhzEndBossInstance.class.getDeclaredField("hitProxy");
+        field.setAccessible(true);
+        return (MhzEndBossHitProxyChild) field.get(boss);
     }
 
     private static MhzEndBossInstance readParent(MhzEndBossHitProxyChild proxy)
