@@ -74,6 +74,41 @@ while concatenating. It is rejected. All lossless segments now explicitly use
 `bgr0`, and both source decoding during assembly and final decoding use `-xerror`.
 The corrected 71-frame assembly has no decode errors.
 
+Independent shared-tool review then identified a separate timestamp defect:
+Matroska rounds a one-frame 60 Hz segment to 17 ms. Concatenated durations can
+make `fps=60` duplicate/drop source frames even when a forced total count passes.
+An 80-segment alternating-colour control reproduced wrong frame identity at
+output frame25 (normal speed) and28 (4× hold). Assembly now discards fragment
+timestamps and uses `settb=1/60,setpts=N*slow` before resampling. The same control
+checks every output frame at both speeds and passes. All 17 Python tests pass,
+zero skips; the real 70-frame emerald plus one-card encode/decode also passes
+again with frame-index timing. Earlier check videos are superseded.
+
+Explicit `--prefer-last` chooses the final recording for each identity before
+validating selected source hashes. Superseded inputs are listed in the combined
+manifest; they never satisfy the selected-source check. This permits a corrected
+pause record to replace an older dirty revision, while a mismatching final
+revision still fails. The regression exercises both directions.
+
+## Repair assessment
+
+All 29 unsupported scenario IDs and their publication assignments reconcile
+against the delivered binary verdict report. They form 18 remediation groups:
+1 low, 8 medium, 7 high and 2 very high complexity. Individual scoped estimates
+remain in the machine-readable report; shared groups use the most demanding
+affected owner. For example S1's local unsigned comparison is low, while a
+cross-game movement repair is medium; pause-clock delivery is high when including
+hardware/PLC/fade admission and duplicate-tick prevention.
+
+The [repair assessment](2026-10-26-tas-supportability.md) records proposed changes,
+acceptance cases and pinned engine-owner links. The external interactive/JSON
+report also retains native owners, dependencies, rewind impact, confidence and
+open design questions. Five negative reconciliation controls reject missing IDs,
+duplicates, changed publication attribution, unknown complexity and absent native
+evidence. All 46 referenced engine/document paths and line bounds were checked.
+No prospective repair is promoted to supported. The S2 P2 intro transition still
+needs a synchronized native causal inlet before implementation scope is firm.
+
 ## Combined validation scope
 
 The change-based plan at `7e1e53607` against pre-task destination `94b2a5bf`

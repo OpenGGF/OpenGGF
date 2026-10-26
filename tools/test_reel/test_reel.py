@@ -364,12 +364,21 @@ def combine(args):
     out = Path(args.out).resolve()
     out.mkdir(parents=True, exist_ok=False)
     inputs = []
-    for item in args.manifest:
-        path = Path(item).resolve()
-        recording = json.loads(path.read_text())
+    recordings = [(Path(item).resolve(), json.loads(Path(item).read_text())) for item in args.manifest]
+    latest = {}
+    if args.prefer_last:
+        for ordinal, (_, recording) in enumerate(recordings):
+            for case in recording['cases']:
+                if case.get('case_dir'):
+                    latest[case['id']] = ordinal
+    superseded = []
+    for ordinal, (path, recording) in enumerate(recordings):
         inputs.append(str(path))
         for case in recording['cases']:
             if not case.get('case_dir'):
+                continue
+            if args.prefer_last and latest[case['id']] != ordinal:
+                superseded.append({'id':case['id'], 'manifest':str(path)})
                 continue
             target = next((c for c in plan['cases'] if c['id']==case['id']),None)
             if target is None:
@@ -405,6 +414,7 @@ def combine(args):
             if not target.get('roms'):
                 target['roms'] = metadata.get('roms',{})
     plan['combined_from'] = inputs
+    plan['superseded_recordings'] = superseded
     write_json(out/'manifest.json',plan)
     print(out/'manifest.json')
 
@@ -437,6 +447,12 @@ def reel_cases(plan, include_nondrawable_cards=False, require_complete=False):
         elif require_complete:
             raise ValueError(f'Incomplete reel: non-drawable card disabled for {case["id"]}')
     return selected
+
+
+def assembly_filter(slow):
+    # Matroska fragments use millisecond timestamps. Ignoring their rounded
+    # durations prevents fps from substituting frames across short clip cuts.
+    return f'settb=expr=1/60,setpts=N*{slow},fps=60,tpad=stop_mode=clone:stop={slow}'
 
 
 def stitch(args):
@@ -504,7 +520,7 @@ def stitch(args):
     chapter_path.write_text(';FFMETADATA1\n'+''.join(chapters))
     command=['ffmpeg','-v','error','-xerror','-nostdin','-f','concat','-safe','0','-i',str(concat),
              '-f','ffmetadata','-i',str(chapter_path),'-map_metadata','1','-map_chapters','1',
-             '-vf',f'setpts={args.slow}*(PTS-STARTPTS),fps=60,tpad=stop_mode=clone:stop_duration={args.slow/60}',
+             '-vf',assembly_filter(args.slow),
              '-frames:v',str(frame),'-r','60','-an','-c:v','libx264','-threads','2',
              '-pix_fmt','yuv420p','-movflags','+faststart',str(video)]
     run(command)

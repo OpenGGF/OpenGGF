@@ -102,6 +102,9 @@ MP4 is encoded once, decoded in full with `-xerror`, and checked against the exa
 expected frame count. Source frames, state and manifests are retained. Existing
 MP4s are never overwritten. `--slow 4` is an explicit debug presentation; the
 edit map records its speed factor. Default speed is always 1.
+Assembly timestamps come from sequential decoded frame indices at exactly 60 Hz,
+not the lossless containers' rounded millisecond durations. The frame-identity
+integration check covers 80 one-frame cuts at normal and 4× held speed.
 
 For a complete census reel, add `--include-nondrawable-cards --require-complete`.
 Each reviewed non-drawable invocation receives exactly one labelled editorial
@@ -128,6 +131,8 @@ python3 tools/test_reel/test_reel.py stitch \
 
 Combination checks fixture identities and rejects duplicate captures by default.
 `--prefer-last` explicitly selects a corrected later revision of a duplicate.
+Selection precedes source-hash validation; superseded records are listed but
+cannot qualify the chosen recording, whose canonical run hash must still match.
 The development-only `--allow-legacy-source` admits the initial v1 preview with
 the same pinned source base and retained dirty diff, marking its missing per-file
 fingerprint as a provenance limit. This option cannot bypass a known actual hash

@@ -19,3 +19,21 @@ note separate. Its output is a self-contained HTML page and machine-readable
 JSON. Counts are scenario assessments, not unique tests. Full-movie playback
 remains unverified. Inputs and generated reports live outside the repository.
 See the [validation record](../../docs/architecture/validation/2026-10-26-tas-trick-verdicts.md).
+
+The separate supportability report groups reviewed repair estimates while keeping
+every executed unsupported verdict and publication attribution unchanged:
+
+```bash
+python3 tools/tas_audit/render_supportability_report.py \
+  --verdicts "$TASK_DIR/report/verdict-report.json" \
+  --assessment "$REEL_DIR/full/s1/supportability.json" \
+  --assessment "$REEL_DIR/full/s2/supportability.json" \
+  --assessment "$REEL_DIR/full/s3k/supportability.json" \
+  --out "$REEL_DIR/full/repair-report"
+```
+
+Missing/duplicate scenario IDs, changed publication attribution and incomplete
+repair evidence fail reconciliation. Shared groups use the highest affected-owner
+complexity and retain individual estimates. JSON/Markdown/HTML describe prospective
+repairs, acceptance checks and source owners, never implemented support. See the
+[repair assessment](../../docs/architecture/validation/2026-10-26-tas-supportability.md).

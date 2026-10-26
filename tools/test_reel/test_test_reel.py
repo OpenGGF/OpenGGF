@@ -124,6 +124,13 @@ class InventoryTests(unittest.TestCase):
             self.assertIn('run-2',chosen['case_dir'])
             self.assertIsNone(chosen['adapter'])
             self.assertEqual('Reviewed: mock draw contract only',chosen['drawable_disposition'])
+            # A deliberately superseded revision is not a selected source. Only
+            # the final chosen recording may satisfy the target inventory hash.
+            (root/'run-1/run.json').write_text(json.dumps({'source_file_hashes':{'C.java':'b'*64}}))
+            args.out=str(root/'superseded');reel.combine(args)
+            combined=json.loads((root/'superseded/manifest.json').read_text())
+            self.assertEqual('a'*64,combined['cases'][0]['capture_fixture_sha256'])
+            self.assertEqual([{'id':'C#m','manifest':records[0]}],combined['superseded_recordings'])
             broken=json.loads(Path(records[1]).read_text())
             # A stale/forged manifest claim must not override the actual recorded source snapshot.
             broken['cases'][0]['capture_fixture_sha256']='a'*64

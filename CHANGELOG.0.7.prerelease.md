@@ -1212,8 +1212,11 @@ its original drawing priority.
   controls, original publication links and explicit route boundaries. Passing
   limitation checks document incompatibilities without treating them as repairs.
   An opt-in [test reel tool](tools/test_reel/README.md) records actual fixture
-  frames and stitches short labelled clips, with an explicit inventory of cases
-  that still need a rendering adapter. Normal tests remain recording-free.
+  frames and stitches labelled clips, with one-frame editorial cards for reviewed
+  non-drawable cases and strict execution/source checks for complete compilations.
+  Normal tests remain recording-free. The separate
+  [repair assessment](docs/architecture/validation/2026-10-26-tas-supportability.md)
+  groups unsupported mechanisms by feasible repair scope and complexity.
 
 - **Local ROM qualification:** Release preparation can bind the existing bounded
   AIZ1/HCZ1 route pilot to a reviewed candidate commit, reject changed inputs and
