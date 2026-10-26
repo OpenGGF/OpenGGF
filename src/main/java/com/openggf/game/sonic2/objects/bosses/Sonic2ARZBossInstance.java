@@ -106,6 +106,8 @@ public class Sonic2ARZBossInstance extends AbstractBossInstance implements Rewin
     private int bossCollisionRoutine;
     private boolean targetFlag;
     private boolean initialized;
+    /** Native boss_defeated is written by Sub8, not by the killing hit. */
+    private boolean explosionPhaseEntered;
     /** Publication latch; keeps an equality-timed animal/explosion request retryable. */
     private boolean animalExplosionSubmitted;
 
@@ -373,12 +375,14 @@ public class Sonic2ARZBossInstance extends AbstractBossInstance implements Rewin
         alignParts();
         if (!targetFlag) {
             if ((bossXPos >> 16) >= RIGHT_TARGET_X) {
-                state.routine = MAIN_SUB4;
+                // Obj89_Main_Sub2_AtTarget (s2.asm:65070-65072) adds to the
+                // live routine: HandleFace may just have changed 2 to defeat 8.
+                state.routine += 2;
                 bossXVel = 0;
             }
         } else {
             if ((bossXPos >> 16) <= LEFT_TARGET_X) {
-                state.routine = MAIN_SUB4;
+                state.routine += 2;
                 bossXVel = 0;
             }
         }
@@ -418,6 +422,7 @@ public class Sonic2ARZBossInstance extends AbstractBossInstance implements Rewin
     }
 
     private void updateMainSub8(int vIntRunCount) {
+        explosionPhaseEntered = true;
         bossCountdown--;
         if (bossCountdown < 0) {
             setupEscapeAnim();
@@ -440,9 +445,15 @@ public class Sonic2ARZBossInstance extends AbstractBossInstance implements Rewin
             bossYVel += 0x18;
         } else if (bossCountdown < 0x18) {
             bossYVel -= 8;
-        } else if (bossCountdown >= 0x18 && !animalExplosionSubmitted) {
+        } else if (bossCountdown == 0x18 && !animalExplosionSubmitted) {
             if (!Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_ANIMALS_ARZ,
-                    Sonic2Constants.PLC_EXPLOSION)) return;
+                    Sonic2Constants.PLC_EXPLOSION)) {
+                // Retain this equality checkpoint for a rejected publication.
+                // Sub2's native defeat skip enters A with $B3, bypassing this
+                // checkpoint entirely (Obj89_Main_SubA_Phase2, s2.asm:65347-65366).
+                bossCountdown--;
+                return;
+            }
             animalExplosionSubmitted = true;
             bossYVel = 0;
             int levelMusic = services().getCurrentLevelMusicId();
@@ -555,7 +566,9 @@ public class Sonic2ARZBossInstance extends AbstractBossInstance implements Rewin
         sub2Y = state.y;
         sub4X = state.x;
         sub4Y = state.y;
-        if (!state.defeated) {
+        // Obj89_Main_AlignParts tests boss_defeated, set only in Sub8. A final
+        // hit at the travel endpoint skips Sub8 and keeps the hammer attached.
+        if (!explosionPhaseEntered) {
             sub3X = state.x;
             sub3Y = state.y;
             hammerYPos = state.y << 16;

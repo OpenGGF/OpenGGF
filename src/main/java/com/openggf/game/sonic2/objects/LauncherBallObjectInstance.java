@@ -24,7 +24,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Logger;
 
 /**
  * OOZ Launcher Ball / Transporter Ball (Object 0x48).
@@ -33,7 +32,7 @@ import java.util.logging.Logger;
  * the player in a cardinal direction. Multiple launcher balls chain together to
  * transport the player across the level.
  * <p>
- * Based on Obj48 from the Sonic 2 disassembly (s2.asm lines 50755-51024).
+ * Based on Obj48 from the Sonic 2 disassembly (docs/s2disasm/s2.asm:51230-51500).
  * <p>
  * State machine per player:
  * <ul>
@@ -54,8 +53,6 @@ public class LauncherBallObjectInstance extends AbstractObjectInstance implement
         return xVelocity < 0 ? ObjectVisualFacing.Basis.LEFT
                 : xVelocity > 0 ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.NON_DIRECTIONAL;
     }
-
-    private static final Logger LOGGER = Logger.getLogger(LauncherBallObjectInstance.class.getName());
 
     // Player states (matches ROM objoff_2C/objoff_36 values)
     private static final int STATE_DETECTION = 0;
@@ -105,13 +102,8 @@ public class LauncherBallObjectInstance extends AbstractObjectInstance implement
     };
     private static final int[] START_FRAMES = {0, 7, 0, 7, 0, 7, 0, 7};
 
-    // Static registry to track which launcher currently holds each player.
-    // When a new launcher captures a player, the previous launcher's state is cleared.
-    private static final Map<AbstractPlayableSprite, LauncherBallObjectInstance> activeCaptures = new HashMap<>();
-
     // Per-player state tracking
     private final Map<AbstractPlayableSprite, Integer> playerStates = new HashMap<>();
-    private final Map<AbstractPlayableSprite, int[]> playerVelocities = new HashMap<>();
     private final Map<AbstractPlayableSprite, Integer> playerCooldowns = new HashMap<>();
 
     // Object properties (computed from subtype at init)
@@ -190,8 +182,10 @@ public class LauncherBallObjectInstance extends AbstractObjectInstance implement
             return;
         }
 
-        // Skip if player is hurt or dead (ROM: cmpi.b #6,routine(a1); bhs)
-        if (player.isHurt() || player.getDead()) {
+        // loc_252F0 (s2.asm:51328-51365): routine >=6 is rejected, but hurt
+        // routine 4 enters. Shipped fixBugs=0 omits the optional routine-2
+        // write; keeping hurt lets its player-slot movement continue under $81.
+        if (player.getDead()) {
             return;
         }
 
@@ -213,22 +207,21 @@ public class LauncherBallObjectInstance extends AbstractObjectInstance implement
             return;
         }
 
-        // If player is currently held by another launcher, clear that launcher's state
+        // Preserve the OOZ entry-launcher's existing transfer bridge.
         OOZLauncherObjectInstance.clearActiveLauncherFor(player);
-        LauncherBallObjectInstance previousLauncher = activeCaptures.get(player);
-        if (previousLauncher != null && previousLauncher != this) {
-            previousLauncher.playerStates.put(player, STATE_DETECTION);
-            previousLauncher.playerVelocities.remove(player);
-            previousLauncher.playerCooldowns.remove(player);
-        }
-
-        // If player is on another object, clear that relationship
+        // loc_252F0 clears the previous ball's participant routine through
+        // interact only while on_object is set. The player's captured contact
+        // identity is relinked after rewind; a separate static registry would
+        // instead retain an instance from the discarded timeline. Arbitrary
+        // writes into non-launcher object slots are deliberately not emulated.
         if (player.isOnObject()) {
+            if (player.getLatchedSolidObjectInstance() instanceof LauncherBallObjectInstance previousLauncher
+                    && previousLauncher != this) {
+                previousLauncher.playerStates.remove(player);
+                previousLauncher.playerCooldowns.remove(player);
+            }
             player.setOnObject(false);
         }
-
-        // Register this launcher as holding the player
-        activeCaptures.put(player, this);
 
         // Transition to animation state
         playerStates.put(player, STATE_ANIMATION);
@@ -245,6 +238,7 @@ public class LauncherBallObjectInstance extends AbstractObjectInstance implement
         player.setGSpeed((short) 0x1000);
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
+        player.setPushing(false);
         player.setAir(true);
         player.setOnObject(true);
         player.setLatchedSolidObject(spawn.objectId(), this);
@@ -275,7 +269,7 @@ public class LauncherBallObjectInstance extends AbstractObjectInstance implement
      */
     private void processAnimation(AbstractPlayableSprite player) {
         // Check if player died while captured
-        if (player.isHurt() || player.getDead() || player.isDebugMode()) {
+        if (player.getDead() || player.isDebugMode()) {
             releasePlayer(player);
             return;
         }
@@ -333,7 +327,6 @@ public class LauncherBallObjectInstance extends AbstractObjectInstance implement
 
         player.setXSpeed((short) xVel);
         player.setYSpeed((short) yVel);
-        playerVelocities.put(player, new int[]{xVel, yVel});
 
         animFrameDuration = LAUNCH_CLOSE_DURATION;
 
@@ -345,12 +338,13 @@ public class LauncherBallObjectInstance extends AbstractObjectInstance implement
             player.setAir(true);
             player.setOnObject(false);
             player.setJumping(false);
+            // loc_25408 (s2.asm:51433): only the negative-subtype exit writes
+            // routine 2. Capture and intermediate launchers preserve hurt.
+            player.setHurt(false);
 
             // Enter cooldown state
             playerStates.put(player, STATE_COOLDOWN);
             playerCooldowns.put(player, COOLDOWN_FRAMES);
-
-            activeCaptures.remove(player);
         } else {
             // Chaining: player stays on_object, continues to next launcher
             playerStates.put(player, STATE_MOVEMENT);
@@ -363,7 +357,7 @@ public class LauncherBallObjectInstance extends AbstractObjectInstance implement
      */
     private void processMovement(AbstractPlayableSprite player) {
         // Check if player died while moving
-        if (player.isHurt() || player.getDead() || player.isDebugMode()) {
+        if (player.getDead() || player.isDebugMode()) {
             releasePlayer(player);
             return;
         }
@@ -406,8 +400,10 @@ public class LauncherBallObjectInstance extends AbstractObjectInstance implement
         // Move player using velocity (ROM sub-pixel accumulation via move.l)
         // ROM: ext.l d0; asl.l #8,d0; add.l d0,x_pos(a1)
         // LAUNCH_VELOCITY = 0x1000, shifted right 8 = 0x10 = 16 pixels/frame
-        int[] vel = playerVelocities.getOrDefault(player, new int[]{0, 0});
-        player.move((short) vel[0], (short) vel[1]);
+        // Obj48_MoveCharacter (s2.asm:51476-51487) reads live player velocity.
+        // Hurt runs ObjectMove/gravity earlier even under obj_control=$81,
+        // so both slots move the player and this slot sees the new y velocity.
+        player.move(player.getXSpeed(), player.getYSpeed());
     }
 
     /**
@@ -418,9 +414,8 @@ public class LauncherBallObjectInstance extends AbstractObjectInstance implement
         int timer = playerCooldowns.getOrDefault(player, 0);
         timer--;
         if (timer < 0) {
-            playerStates.put(player, STATE_DETECTION);
+            playerStates.remove(player);
             playerCooldowns.remove(player);
-            playerVelocities.remove(player);
         } else {
             playerCooldowns.put(player, timer);
         }
@@ -430,14 +425,14 @@ public class LauncherBallObjectInstance extends AbstractObjectInstance implement
      * Release player from this launcher (emergency release on death/debug/offscreen).
      */
     private void releasePlayer(AbstractPlayableSprite player) {
+        // loc_25474 writes the participant directly, even if another object
+        // has since changed interact. Do not add an ownership gate here.
         ObjectControlState.none().applyTo(player);
         player.setControlLocked(false);
         player.setAir(true);
         player.setOnObject(false);
-        playerStates.put(player, STATE_DETECTION);
-        playerVelocities.remove(player);
+        playerStates.remove(player);
         playerCooldowns.remove(player);
-        activeCaptures.remove(player);
     }
 
     /**
@@ -476,8 +471,14 @@ public class LauncherBallObjectInstance extends AbstractObjectInstance implement
             }
         }
         for (AbstractPlayableSprite p : toRelease) {
-            releasePlayer(p);
+            // Engine teardown must not disturb a later capture. Native
+            // offscreen release above has its own unconditional player writes.
+            if (p.getLatchedSolidObjectInstance() == this) {
+                releasePlayer(p);
+            }
         }
+        playerStates.clear();
+        playerCooldowns.clear();
     }
 
     // Obj48_Init move.b #1,priority(a0): docs/s2disasm/s2.asm:51284.
@@ -496,10 +497,10 @@ public class LauncherBallObjectInstance extends AbstractObjectInstance implement
     }
 
     /**
-     * Clear the static capture registry. Call on level load to prevent stale references.
+     * Reset the related OOZ entry-launcher bridge on level load. Transport balls
+     * use the player's rewind-owned interact binding and retain no static players.
      */
     public static void clearActiveCaptures() {
-        activeCaptures.clear();
         OOZLauncherObjectInstance.clearActiveLaunchers();
     }
 }
