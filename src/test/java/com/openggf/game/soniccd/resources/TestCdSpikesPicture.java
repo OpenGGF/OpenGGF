@@ -160,7 +160,7 @@ class TestCdSpikesPicture {
 
     @Test void actualStdQueueServicesTheEightTilePrefixAndReplaysItsPartialSnapshotsWithoutAnySeedFallback() throws Exception {
         var f=fixture();var source=f.objects().sectionArtSources().source(CdR11aAsset.ART_SPIKES);
-        assertEquals(11,f.objects().sectionArtSources().sources().size());assertEquals(1,source.canonicalPlcId());assertEquals(0,source.canonicalRowIndex());
+        assertEquals(13,f.objects().sectionArtSources().sources().size());assertEquals(1,source.canonicalPlcId());assertEquals(0,source.canonicalRowIndex());
         assertEquals(0x238018,source.canonicalPlc().sourceRange().nativeAddress());assertEquals(0x6400,source.canonicalPlc().vramAddress());
         assertEquals(0x8008,source.readerBytes().unsignedWord(0));assertEquals(8,source.tileCount());
         assertEquals(86,source.decode().consumedInputBytes());assertEquals(87,source.readerBytes().length());

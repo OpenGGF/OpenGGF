@@ -113107,3 +113107,39 @@ smoke failures remain separately recorded. Next finite native owner: Monitor19.
   finds no actionable P1/P2; registration/Natural review also accepted its fixed
   scope. Reviewers did not execute. Original718 invocation remains red with a
   separately repaired narrow oracle; it is never relabeled all-green.
+
+
+## 2026-10-26 — private CD finite GoalPost service and controller bound2347
+
+- Candidate over527d9986afaefa4860f431112aca1eb075287350. One existing-helper
+  cached GoalPost decode appends source13, canonical2/6 versus actual4/5;
+  source448/Java448/native449/XOR24. Real adjacent80 is consumed, Signpost stays
+  unregistered. No Region/C30/658 growth, preload or goal-object execution.
+- Natural selector controllerJumpRouteRestartsNaturallyAndServicesGoalPostWithFreshEpochReplay:
+  matched Source12 RED11797 fails fresh59/2006 at2320DA/9EE0,4/0/1/0 including
+  three passing old-count repairs. Source13 positive72042 passes179/0/0/0 at
+ 02:02:25Z,1m53/queue140s, exact4freshXML/J25/media/privatecwd/noskips. Fresh59
+  prepare and60..67 all24 complete current tiles/queue-empty/full-course cuts pass.
+  Native448 support-negative preserves23 tiles and withholds partial last tile.
+- Saved Source12 older-picture baseline42506:46/4/0/0,57.082s/queue339s;
+  three11vs12 counts and Boulder-unregistered-Animals oracle only. Root changes
+  literal counts and one prepare/no-write oracle; no production tuning. Boulder
+  narrow32688 passes1/0/0/0 before source13 import. Original reds remain red.
+- Remaining2319 passes481/0/0/0 at02:27:54Z,1m42/queue221s:9 exactfreshXML,
+  J25/media/EGL/S2/privatecwd/noskips;362 Runtime/52 World-load/21 EGL/46pictures.
+  Permanent World-load196490/000eb8f8... restored before the full-class check.
+  Source13 fresh structural guards pending; prior728 belongs Source12.
+- Observer61311 passes1/0/0/0 at02:18:53Z,30.921s/queue626s;2347 returned calls,
+  including400 fresh rows after1947. Actor222745856/48966912,routine2,flags32,
+  velocities0; section0200/count0/head0. This is a controller/pushing bound, no
+  new implementation exception. Summary retained its first-epoch label despite
+  the completed fresh loop; it does not prove another reload. No failed-call
+  resume, native timing/pixel parity or whole-act/game/regional completion claim.
+- Both fixed-input independent reviews find no actionable P1/P2; no reviewer
+  execution. Commands and reader/diagnostic/committed-byte distinctions are in
+  the dated CD implementation record. Full private goal remains active.
+
+- Source13 fresh guards31748 pass728/0/0/0 at02:40:19Z,5m02 execution,
+  queue wait unknown;90 exactfresh executable-class XML/J25/privatecwd/noskips.
+  All13 final Java files match frozen revisions; permanent World-load restored.
+  No source13 Java repair was needed; historical red invocations remain recorded.

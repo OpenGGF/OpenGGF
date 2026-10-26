@@ -1,3 +1,11 @@
+Sonic CD GoalPost art update (2026-10-26): the partial matrix adds actual
+natural fresh-epoch preparation/service of all24 XOR tiles and full/course
+replay. Existing cache/current ownership is retained; no goal object is executed.
+Source13 passes179 focused owner/service cases and481 remaining consumer cases,
+with no skips. A separate2347-call diagnostic ends at its controller bound while
+pushing, not at an unsupported feature or an act-end event. Fresh source13
+guards pass728/0/0/0 across90 exact fresh reports with no skips.
+
 Sonic CD cached Animals update (2026-10-26): the partial matrix now includes
 controller-only natural Checkpoint death/load and fresh Animals service through14,
 with old-epoch rejection and full/course replay. A separate continuation completes

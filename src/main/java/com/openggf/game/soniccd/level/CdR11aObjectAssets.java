@@ -1115,6 +1115,11 @@ public final class CdR11aObjectAssets {
             // real retained bytes, never padding: Pata reads TagaTaga's $80 at $37642; Anton reads Mosqui's
             // $00 at $3702A; Tamabboh reads Springboard's $00 at $37DC6; Mosqui reads Pata's $80 at $37378;
             // Plant reads Booster's $80 at $3AE02; Ramp's final $00 at $3B0A7 remains inside its own blob.
+            // Art_GoalPost (Data (Act 1 Present).asm:99-100,305-310): canonical PLC2 row6;
+            // actual PLC4 row5 aliases the same source. Header $8018 declares XOR/24 tiles.
+            // Java consumes the original 448 bytes; native449 also reads Signpost's genuine $80
+            // at $3229A, never its following $4C. Cache one read here, with no new art bank.
+            var goalPostRead = decodeSectionArt(CdR11aAsset.ART_GOAL_POST, 24, 448);
             sectionArtSources = new SectionArtSourceBank(List.of(
                     sectionArtSource(CdR11aAsset.ART_PATA_BATA, 9, 0, 0x7600, 50, 715, pata),
                     sectionArtSource(CdR11aAsset.ART_ANTON, 9, 1, 0x8120, 22, 485, anton),
@@ -1133,7 +1138,8 @@ public final class CdR11aObjectAssets {
                     // Reuse frontier's Java445 read; native446 ends at the real final source $00 ($3837D).
                     // The adjacent $80 at $3837E is outside this retained source view and is never appended.
                     sectionArtSource(CdR11aAsset.ART_ANIMALS, 2, 1, 0x7100, 20, 446,
-                            frontier.binding(CdR11aAsset.ART_ANIMALS).decode())));
+                            frontier.binding(CdR11aAsset.ART_ANIMALS).decode()),
+                    sectionArtSource(CdR11aAsset.ART_GOAL_POST, 2, 6, 0x9EE0, 24, 449, goalPostRead)));
         }
         return sectionArtSources;
     }

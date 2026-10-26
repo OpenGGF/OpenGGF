@@ -151,7 +151,7 @@ class TestCdBoulderPicture {
         assertEquals(frozen,CdObjectPresentation.convert(sat,bank(f,initial,BASE,BOULDER_BASE)));
     }
 
-    @Test void actualBoulderPlcServiceCompletesSevenSlowCallsThenStopsAtUnownedAnimals() throws Exception {
+    @Test void actualBoulderPlcServiceCompletesSevenSlowCallsThenPreparesAnimalsWithoutPixelWrites() throws Exception {
         var f=fixture();var owner=CdR11aSectionArt.fromAssets(f.assets());
         var seed=owner.devState(legacySeed(f),CdAssetBytes.copyOf(new byte[512]),0);
         var state=owner.prepare(owner.initList(seed,8));assertEquals(19,state.remainingTilesWord());
@@ -165,14 +165,27 @@ class TestCdBoulderPicture {
         var next=f.assets().loadPlan().plcs().get(8).entries().get(1);
         assertNotEquals(CdR11aAsset.ART_BOULDER,next.source());
         assertEquals(Integer.toUnsignedLong(next.sourceRange().nativeAddress()),state.queue().headSource());
-        var done=state;var fault=assertThrows(CdR11aSectionArt.SectionArtException.class,()->owner.prepare(done));
-        assertEquals(CdR11aSectionArt.Reason.UNKNOWN_SOURCE,fault.reason());assertTrue(fault.state().stopped());
-        assertEquals(done.residency(),fault.state().residency());assertEquals(done.queue(),fault.state().queue());
-        assertEquals(done.queue().headSource(),fault.sourcePointer()); assertEquals(0x7100,fault.destinationWord());
+        var done=state;var ready=owner.prepare(done);
+        assertEquals(CdR11aAsset.ART_ANIMALS,next.source());
+        assertFalse(ready.stopped());assertEquals(20,ready.remainingTilesWord());
+        assertEquals(3,ready.processBudgetWord());assertEquals(0x7100,ready.queue().headDestination());
+        assertEquals(done.residency(),ready.residency(),"ProcessPLCs preparation writes no current tile or mask");
+        var decoder=ready.decoder().orElseThrow();
+        assertEquals(0x2381C0L,decoder.nativeAddress());assertEquals(0x0014,decoder.headerWord());
+        assertFalse(decoder.xorMode());assertEquals(89,decoder.inputOffset());
+        assertEquals(0x238219L,ready.queue().headSource());assertEquals(0x6CD5,decoder.readWord());
+        assertEquals(16,decoder.shiftWord());assertEquals(CdR11aSectionArt.Writer.NORMAL,ready.savedDecoder().writer());
+        assertArrayEquals(java.util.Arrays.copyOfRange(done.queue().bytes().copy(),4,96),
+                java.util.Arrays.copyOfRange(ready.queue().bytes().copy(),4,96));
         var animal=assertThrows(CdR11aCameraArtResidency.OwnershipBoundary.class,()->CdR11aCameraArtResidency.readTile(done.residency(),0x388));
         assertEquals(CdR11aCameraArtResidency.Boundary.UNKNOWN_PATTERN,animal.boundary());
-        assertThrows(IllegalStateException.class,()->owner.serviceFast(fault.state()));
+        var stillUnknown=assertThrows(CdR11aCameraArtResidency.OwnershipBoundary.class,
+                ()->CdR11aCameraArtResidency.readTile(ready.residency(),0x388));
+        assertEquals(CdR11aCameraArtResidency.Boundary.UNKNOWN_PATTERN,stillUnknown.boundary());
+        // An adjacent finite-reader byte never registers Signpost as an executable producer.
+        assertThrows(UnsupportedOperationException.class,()->f.objects().sectionArtSources().source(CdR11aAsset.ART_SIGNPOST));
         var replay=prepared;for(int call=0;call<7;call++)replay=owner.serviceSlow(replay,0);assertEquals(done,replay);
+        assertEquals(ready,owner.prepare(replay));
     }
 
     private record Fixture(CdR11aAssets assets,CdR11aObjectAssets objects,CdPlayerArtRuntime.State player,

@@ -3078,5 +3078,176 @@ class TestCdR11aObjectAssets {
 
     // End Animals source12 source-only tests.
 
+
+    // GoalPost source13: authored before the production mirror exists; all Java checks UNRUN here.
+
+    @Test
+    void goalPostSource13KeepsTheOriginal448ByteInventoryAndCanonicalMetadata() {
+        for (var variant : CdReleaseVariant.values()) {
+            var profile = CdR11aProfile.forStage(variant, CdStageKey.parse("R11A"));
+            var range = profile.range(CdR11aAsset.ART_GOAL_POST);
+            assertEquals(new CdR11aProfile.FileRange(CdNativeFile.R11A,
+                    CdMmdImage.Domain.ORIGINAL_WORD_RAM, 0x320DA, 448), range);
+            assertEquals(0x2320DA, range.nativeAddress());
+            assertEquals(0x3229A, range.endExclusive());
+        }
+        assertEquals(CdR11aAsset.Encoding.NEMESIS, CdR11aAsset.ART_GOAL_POST.encodingForReviewedConsumer());
+        assertThrows(IllegalArgumentException.class, () -> new CdR11aProfile.FileRange(CdNativeFile.R11A,
+                CdMmdImage.Domain.RELOCATED_COPY, 0x320DA, 448));
+        var profile = CdR11aProfile.forStage(CdReleaseVariant.USA, CdStageKey.parse("R11A"));
+        // A component declaration is not an authenticated owner, nor a selected runtime PLC.
+        var rows = CdR11aLoadPlan.decodePlcBody(profile,
+                java.util.HexFormat.of().parseHex("0000002320da9ee0"));
+        assertEquals(List.of(new CdR11aLoadPlan.PlcEntry(CdR11aAsset.ART_GOAL_POST,
+                profile.range(CdR11aAsset.ART_GOAL_POST), 0x9EE0)), rows);
+        assertThrows(IllegalArgumentException.class, () -> CdR11aLoadPlan.decodePlcBody(profile,
+                java.util.HexFormat.of().parseHex("0000002320db9ee0")));
+        assertThrows(IllegalArgumentException.class, () -> CdR11aLoadPlan.decodePlcBody(profile,
+                java.util.HexFormat.of().parseHex("0000002320da9ee1")));
+        // The complete inherited 54-table manifest above remains authoritative and unchanged.
+    }
+
+    @Test
+    void goalPostSource13UsesJava448AndNative449WithIndependentOneShortConsumerFaults() throws Exception {
+        byte[] source = goalPost13LiteralSource();
+        byte[] nativeInput = Arrays.copyOf(source, 449);
+        nativeInput[448] = (byte) 0x80; // Pinned adjacent Signpost header, not invented zero padding.
+        verifyGoalPost13FiniteConsumers(CdAssetBytes.copyOf(source), CdAssetBytes.copyOf(nativeInput));
+    }
+
+    @Test
+    void goalPostSource13LiteralAndNeighborDoNotForgeAnAuthenticatedOwner() throws Exception {
+        byte[] literal = goalPost13LiteralSource();
+        byte[] file = new byte[CdR11aProfile.FILE_BYTES];
+        ByteBuffer.wrap(file).putInt(8, 0x200100).putInt(12, 0x20010C).putInt(16, 0x200112);
+        System.arraycopy(literal, 0, file, 0x320DA, literal.length);
+        file[0x3229A] = (byte) 0x80;
+        file[0x3229B] = 0x4C; // Explicit second neighbor: excluded from the 449-byte reader.
+        var image = CdMmdImage.parse(file);
+        Arrays.fill(file, (byte) 0);
+        Arrays.fill(literal, (byte) 0);
+        for (var variant : CdReleaseVariant.values()) {
+            var profile = CdR11aProfile.forStage(variant, CdStageKey.parse("R11A"));
+            assertArrayEquals(goalPost13LiteralSource(), profile.range(CdR11aAsset.ART_GOAL_POST).read(image).copy());
+            var asserted = new CdR11aAssets.Identity(variant, profile.stage(), profile.file(), profile.domain(),
+                    profile.expectedMmdSha256(), "literal component input, not authenticated retail media");
+            if (variant == CdReleaseVariant.USA) {
+                assertThrows(IOException.class, () -> CdR11aObjectAssets.load(profile, asserted, image, null));
+            } else {
+                assertThrows(UnsupportedOperationException.class,
+                        () -> CdR11aObjectAssets.load(profile, asserted, image, null));
+            }
+        }
+        var nativeRange = new CdR11aProfile.FileRange(CdNativeFile.R11A,
+                CdMmdImage.Domain.ORIGINAL_WORD_RAM, 0x320DA, 449);
+        assertEquals(0x80, nativeRange.read(image).unsignedByte(448));
+        assertThrows(IndexOutOfBoundsException.class, () -> nativeRange.read(image).unsignedByte(449));
+        assertEquals(0x4C, Byte.toUnsignedInt(image.readFile(0x3229B, 1)[0]));
+    }
+
+    /** Real Java consumers on finite bytes; this neither invokes native code nor exercises PLC service. */
+    static void verifyGoalPost13FiniteConsumers(CdAssetBytes source, CdAssetBytes nativeInput) throws IOException {
+        assertEquals(448, source.length());
+        assertEquals(449, nativeInput.length());
+        assertEquals("24aac969ce8508df0f412a0ad98d87102adc2029b3ae1f28b972eb7b6646979f", CdR11aProfile.sha256(source.copy()));
+        assertEquals("1ba1c7e9a34a071c8786cc2eb94eaf2adf0e58b480ef8d62f6501bb7f3006250", CdR11aProfile.sha256(nativeInput.copy()));
+        assertArrayEquals(source.copy(), nativeInput.slice(0, 448).copy());
+        assertEquals(0x8018, source.unsignedWord(0));
+        assertEquals(0x80, nativeInput.unsignedByte(448));
+        assertThrows(IndexOutOfBoundsException.class, () -> source.unsignedByte(448));
+        assertThrows(IndexOutOfBoundsException.class, () -> nativeInput.unsignedByte(449));
+
+        var javaRead = CdNemesisAsset.decode(source.copy(), 768, 768);
+        assertEquals(448, javaRead.consumedInputBytes());
+        assertEquals(768, javaRead.bytes().length());
+        assertEquals("68359c6e3dc65e9cf72db3d20ce887acc3728fdd32de20abc1fd5af185ff4c9a", CdR11aProfile.sha256(javaRead.bytes().copy()));
+        assertArrayEquals(java.util.HexFormat.of().parseHex("00000000007666660767999908679555086795550867955b086795bb086795bf"),
+                javaRead.bytes().slice(0, 32).copy());
+        assertArrayEquals(java.util.HexFormat.of().parseHex("0000000000000000000000008000000088800000788888007788888811111111"),
+                javaRead.bytes().slice(736, 32).copy());
+        var shortJava = assertThrows(IOException.class,
+                () -> CdNemesisAsset.decode(source.slice(0, 447).copy(), 768, 768));
+        assertEquals("Unexpected end of input data", shortJava.getMessage());
+
+        byte[] seed = new byte[512];
+        Arrays.fill(seed, (byte) 0xA5);
+        var state = com.openggf.game.soniccd.resources.CdNemesisPlcDecoder.prepare(
+                nativeInput, 0x2320DAL, CdAssetBytes.copyOf(seed));
+        assertEquals(0x8018, state.headerWord());
+        assertTrue(state.xorMode());
+        assertEquals(24, state.remainingTiles());
+        assertEquals(88, state.inputOffset());
+        assertEquals(0x232132L, state.sourcePointer());
+        assertEquals(0x12D7, state.readWord());
+        assertEquals(16, state.shiftWord());
+        // Independent source-table expansion leaves precisely these six incoming WORD holes unwritten.
+        for (int hole : new int[]{249, 251, 252, 253, 254, 255}) {
+            assertEquals(0xA5A5, state.codeTable().unsignedWord(hole * 2));
+        }
+        byte[] nativeOutput = new byte[768];
+        for (int tile = 0; tile < 24; tile++) {
+            var result = com.openggf.game.soniccd.resources.CdNemesisPlcDecoder.decodeTile(state);
+            assertEquals(32, result.bytes().length());
+            System.arraycopy(result.bytes().copy(), 0, nativeOutput, tile * 32, 32);
+            state = result.state();
+            assertEquals(23 - tile, state.remainingTiles());
+        }
+        assertEquals(449, state.inputOffset());
+        assertEquals(0x23229BL, state.sourcePointer());
+        assertEquals("68359c6e3dc65e9cf72db3d20ce887acc3728fdd32de20abc1fd5af185ff4c9a", CdR11aProfile.sha256(nativeOutput));
+        assertArrayEquals(javaRead.bytes().copy(), nativeOutput);
+        for (int hole : new int[]{249, 251, 252, 253, 254, 255}) {
+            assertEquals(0xA5A5, state.codeTable().unsignedWord(hole * 2));
+        }
+
+        var shortState = com.openggf.game.soniccd.resources.CdNemesisPlcDecoder.prepare(
+                nativeInput.slice(0, 448), 0x2320DAL, CdAssetBytes.copyOf(seed));
+        byte[] completePrefix = new byte[736];
+        for (int tile = 0; tile < 23; tile++) {
+            var result = com.openggf.game.soniccd.resources.CdNemesisPlcDecoder.decodeTile(shortState);
+            System.arraycopy(result.bytes().copy(), 0, completePrefix, tile * 32, 32);
+            shortState = result.state();
+        }
+        var boundary = shortState;
+        assertEquals(1, boundary.remainingTiles());
+        assertEquals(437, boundary.inputOffset());
+        assertArrayEquals(javaRead.bytes().slice(0, 736).copy(), completePrefix);
+        var fault = assertThrows(com.openggf.game.soniccd.resources.CdNemesisPlcDecoder.DecodeException.class,
+                () -> com.openggf.game.soniccd.resources.CdNemesisPlcDecoder.decodeTile(boundary));
+        assertEquals(com.openggf.game.soniccd.resources.CdNemesisPlcDecoder.Reason.SOURCE_EXHAUSTED, fault.reason());
+        assertEquals("INLINE_VALUE_REFILL", fault.diagnostic().phase());
+        assertEquals(448, fault.diagnostic().inputOffset());
+        assertEquals(0x23229AL, fault.diagnostic().sourcePointer());
+        assertEquals(28, fault.diagnostic().emittedRows().length());
+        assertEquals(2, fault.diagnostic().pixelsInRow());
+        assertSame(boundary, fault.diagnostic().boundaryState());
+        assertEquals(1, boundary.remainingTiles());
+        assertEquals(437, boundary.inputOffset()); // A failed attempt does not mutate the complete-tile input.
+        assertArrayEquals(javaRead.bytes().slice(736, 28).copy(), fault.diagnostic().emittedRows().copy());
+        assertThrows(ReadOnlyBufferException.class, () -> nativeInput.buffer().put((byte) 0));
+        assertThrows(ReadOnlyBufferException.class, () -> javaRead.bytes().buffer().put((byte) 0));
+        byte[] changed = nativeInput.copy(); changed[448] = 0;
+        byte[] changedOutput = javaRead.bytes().copy(); changedOutput[0] ^= 1;
+        assertEquals(0x80, nativeInput.unsignedByte(448));
+        assertEquals("68359c6e3dc65e9cf72db3d20ce887acc3728fdd32de20abc1fd5af185ff4c9a", CdR11aProfile.sha256(javaRead.bytes().copy()));
+    }
+
+    /** N 1ecc5f3a Goal Post .nem, matched byte-for-byte to original retail MMD; test data only. */
+    static byte[] goalPost13LiteralSource() {
+        return java.util.HexFormat.of().parseHex(
+            "801880030115122514362f4634562e651873008105131772477876388404042775850407177327768606321636870635"
+            + "17798805151774890405163727778b0406177a28f88c28fa8d063318f68e040818f78f0516ff12d7f8c75e5fbf36a7d0"
+            + "c45d0134845005c8ba3e19d2e67c30be3f44671e0acff8f25f000ffb7fffff87f7cd284f647629de90b9f5e7ec7f6a92"
+            + "fe2e89994bd16aeb9f64592e7d115d0ef9952fd5d24dd98a39f83cd8fecb7fc971ff7e0000c7f5a5fd912fe89ff701ff"
+            + "6fffffb3f057427eb98c22feb5d8ff251e5fb42855cf34b9af9978cca14fd6aa297ee8f4eae565d98fe50fc16e6da7a3"
+            + "ff2e3fefcabbd7902b3f79a8072b46f16cbbedde9b5388f3b798a7bdfbedb9ffb7ffff05afd7e4b5cdd8c668ea5db44b"
+            + "930f445476542b4fc1dcf9a9753ecf2796ed279f5294ec5e9f05a6eda7abffe5c7fdf802326b95326a564a99315bd532"
+            + "b92b3a24da249368a4da2ff7bbfad2fdfccea7ea962c00c30c463386d17098e6da7a02efd145fe2267f8f353e1400049"
+            + "b0c00c2d75db5aa8000000000016baedad540c574e94fd44add2fb1feced55cbce4b502763c8da7697295a5394e93be6"
+            + "72febe5c0151d34b4bf514b5fd36fec8");
+    }
+
+    // End GoalPost source13 source-only tests.
+
     // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>
 }

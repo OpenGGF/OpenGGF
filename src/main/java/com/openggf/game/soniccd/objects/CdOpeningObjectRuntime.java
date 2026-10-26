@@ -57,7 +57,7 @@ import static com.openggf.game.soniccd.objects.CdObjectState.WordField.*;
  * Every other ID fails at its live dispatch; standing-object MODE remains a typed player boundary.
  * Time Post activation submits only typed voice metadata; the next actual Main retains Movement's
  * TIME_WARP_ACTIVE boundary. Bounded current-camera PLC requests/preparation/service use the actual plan and
- * twelve finite sources, with one immutable resident generation; later unowned producers stop when reached.
+ * thirteen finite sources, with one immutable resident generation; later unowned producers stop when reached.
  * This does not execute native title/HUD/immediate-PLC prehistory, palette cycling or audio playback.
  * The loader, not declarations or this composition, authenticates asset bytes.</p>
  *
@@ -615,7 +615,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         // SAME authenticated object owner/source bank: reuse its actual seed decodes; never reopen via fromAssets.
         var sourceBank = objects.sectionArtSources();
         var plan = assets.loadPlan();
-        if (sourceBank.sources().size() != 12) throw new IllegalArgumentException("Twelve reviewed section source views required");
+        if (sourceBank.sources().size() != 13) throw new IllegalArgumentException("Thirteen reviewed section source views required");
         var programs = new ArrayList<CdR11aSectionArt.SourceProgram>();
         for (var source : sourceBank.sources()) {
             var entry = source.canonicalPlc(); var reader = source.readerInputRange(); var blob = entry.sourceRange();
@@ -648,7 +648,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                 throw new IllegalArgumentException("Boulder DEV preload requires the actual canonical PLC2 row0 nineteen tiles");
             }
             // PLC_Cam1_Full row0 (Palmtree Panic/Data (Act 1 Present).asm:85-88): explicit DEV preload,
-            // exactly nineteen complete tile writes from the SAME authenticated twelve-source bank. No PLC
+            // exactly nineteen complete tile writes from the SAME authenticated thirteen-source bank. No PLC
             // execution/decoder/table/count/history is fabricated; Animals and all adjacent gaps stay UNKNOWN.
             var decoded = source.decode().bytes();
             for (int offset = 0; offset < decoded.length(); offset += 32) {
@@ -684,7 +684,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                         spikesSource.canonicalPlc().vramAddress() + offset, spikesDecoded.slice(offset, 32));
             }
             // PLC_Level row1 (Data (Act 1 Present).asm:47-52). Cold DEV ONLY, AFTER all old writes.
-            // SAME retained twelve-source bank and cached actual decode; exactly twelve complete writes.
+            // SAME retained thirteen-source bank and cached actual decode; exactly twelve complete writes.
             var checkpointSource = sourceBank.source(CdR11aAsset.ART_CHECKPOINT);
             var checkpointDecoded = checkpointSource.decode().bytes();
             if (checkpointSource.canonicalPlcId() != 0 || checkpointSource.canonicalRowIndex() != 1

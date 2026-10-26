@@ -6625,3 +6625,100 @@ registration/Natural review `a957eb2423ccef7dffff03e158cf1d3f5aa017ce2a61ff975dc
 also finds no new P1/P2 within its fixed scope. Neither reviewer executed tests.
 All nine current Java files match their final frozen author/Root revisions;
 permanent WorldLoad is restored and the diagnostic observer is outside Git.
+
+
+## Finite GoalPost art and natural queue completion — 26 October 2026
+
+Private candidate over `527d9986afaefa4860f431112aca1eb075287350`.
+Actual PLC4/row5 source2320DA/VRAM9EE0 is authenticated as GoalPost, canonical
+PLC2/row6. Header8018 means XOR24/768 bytes. No previous GoalPost cached read
+exists: one new NemesisRead is computed through the existing private helper
+inside the same synchronized sectionArtSources cache. It appends source13;
+the two existing size guards and demonstrated source-list contracts migrate.
+First12 source identities/order/cache/extents remain exact. No public API,
+new decoder/bank/current owner/physical region, C30/logical span, cold preload,
+body or658 reservation change is made. GoalPost physical4F7..50E lies in
+existingAT_9000; its art registration does not execute the goal object.
+
+Original USA/JP/EU source448 is identical to the pinned native include.
+Independent Python models first establish Java448/native449, with447/448
+one-short failures. Native449 consumes the real adjacent Signpost header byte80
+at3229A; next4C is excluded. Inventory stays448. The successful768-byte output
+SHA256 is68359c6e3dc65e9cf72db3d20ce887acc3728fdd32de20abc1fd5af185ff4c9a.
+Production checks now corroborate both finite readers, six retained incoming
+code-table entries, XOR output, slow3/fast18 WORD-high-byte gates, full descriptor
+preadvance, no final saved-decoder RAM write, and the shipped88-byte POP. A
+native448 support-negative fails on tile24 with23 complete tiles736 resident
+bytes;28 diagnostic bytes never become resident, and the old final tile/masks
+survive. Fast failure preserves budget13/A360; slow preserves budget1/A1E0.
+No Signpost producer is admitted by consuming its first byte.
+
+The new permanent selector is
+`TestSonicCdOpeningWorldLoad#controllerJumpRouteRestartsNaturallyAndServicesGoalPostWithFreshEpochReplay`.
+It uses opening/load and ordinary input only:1200R,32R+B,thenR. No actor,
+object, terrain, PLC or gameplay values are injected. Actual old death/reset/
+load1947 and retired-epoch rejection precede the same saved camera2583/651,
+section0200/fullPLC4. Fresh59 now prepares GoalPost with budget2 and zero pixel
+writes; fresh60..67 services all24 tiles and empties the actual queue. Full/course
+cuts58/59/63/66 compare saved/live/knowledge and complete State BEFORE forward
+replay, then all intermediate and final states. C29 and all physical nonwrites
+remain intact. This does not claim goal contact, native timer/title/audio,
+act completion, full USA or regional gameplay parity.
+
+Matched Source12 RED11797:4/0/1/0 at01:46:58Z,33.101s/queue57s; the new natural
+case reaches exactly UNKNOWN_SOURCE2320DA/9EE0 at direct step2308/fresh59,
+while three source-count picture fixes pass. Assets RED47471:129/10/0/0 at
+01:54:42Z,51.686s; all90 unit cases pass, ten retail failures are only missing13/
+complete GoalPost lists. Source13 first positive72042 passes179/0/0/0 at02:02:25Z,
+1m53/queue140s: unit90,retail39,Section48,Natural2. Exact4 fresh XML,
+Java25.0.5.0.2/private cwd/actual media and zero skips were verified.
+
+A wider direct-consumer census attributes four stale picture oracles on saved
+Source12:42506 runs46/4/0/0 at01:41:17Z,57.082s/queue339s. Three counts still
+expected11; Boulder expected Animals to remain unavailable. The other42 pass.
+Only those literal counts and Boulder's one method/name migrate. Boulder now
+checks genuine Animals preparation with no current writes, input89/read6CD5/
+shift16/count20/budget3, immutable replay and an unknown Signpost guard. It passes
+alone on Source12 in32688 at01:43:21Z,31.413s/queue16s. These are test-contract
+repairs, with no gameplay tuning. The original red invocations remain red.
+
+Remaining consumers2319 pass481/0/0/0 at02:27:54Z,1m42/queue221s: Runtime362,
+World-load52,EGL21 and six older picture classes46. Exact9 fresh XML,
+Java25/private cwd/media/EGL/actual S2 ROM/zero skips were checked. The full
+World-load class rechecks the permanent restored file after a temporary observer
+compile, and retains all older50 cases; only its two natural cases overlap179.
+No unchanged unit/retail/Section batch is repeated. Fresh source13 structural
+guards31748 pass728/0/0/0 at02:40:19Z,5m02 execution; queue wait was not
+retained and is unknown. Exact90 fresh executable-class XML,Java25.0.5.0.2/
+private cwd/no skips checked, excluding only the historical no-Jupiter facade. The unclassified
+private CD planner scope selects3755 smoke classes. One cached registration,
+count joins and direct consumers have bounded impact; this owner/replay/render
+selection plus structural guards is proportionate, not a full-smoke/full-suite
+or all-game certification.
+
+Command shape, from the private worktree with DISPLAY/WAYLAND_DISPLAY unset:
+`python3 ${OPENGGF_MAIN}/tools/testing/maven_queue.py --normal -Dmse=off '-Dtest=TestCdR11aObjectAssets,TestCdR11aObjectRetailAssets,TestCdR11aSectionArt,TestSonicCdOpeningWorldLoad#controllerJumpRouteRestartsNaturallyAndServicesGoalPostWithFreshEpochReplay+controllerJumpRouteRestartsFromNaturalCheckpointAndServicesAnimalsWithFreshEpochReplay' "-Dsoniccd.media.root=${SCD_MEDIA_ROOT}" test`.
+Remaining consumers select
+`TestCdOpeningObjectRuntime,TestSonicCdOpeningWorldLoad,TestSonicCdOpeningWorldEgl,TestCdSpikesPicture,TestCdCheckpointPicture,TestCdAntonPicture,TestCdBoulderPicture,TestCdDiagonalSpringPicture,TestCdCollapsePlatformPicture`
+with actual media/S2,soniccd.opening.egl=true and surfaceless EGL. Guards use the
+existing -Pguards command and LUA_BIN=lua5.4. No public release suite is launched.
+
+Separate controller-only observer61311 passes1/0/0/0 at02:18:53Z,
+30.921s/queue626s. All2347 calls return, including400 fresh calls after load1947.
+Final actor X16=222745856,Y16=48966912,routine2,flags32,XV/YV/GV0; section0200,
+remaining0/head0. It reaches a controller bound while pushing, not an unsupported
+implementation or act-end boundary. Its inherited summary label still names the
+first epoch replacement; the400 FRESH_RETURNED rows establish that no second
+replacement caused this stop. The permanent196490-byte World-load source was
+restored with fresh mtime before481. Do not infer a fresh raw object link from
+an older epoch's diagnostics or resume a previously failed2006 call.
+
+Frozen independent reviews find no actionable P1/P2: natural proof
+ad3e317cb968ed654b2a70a1e0266512ef1dde22976e73b6bc878be7b49ed6b2;
+source/service/contracts b2d28da793b93d3295c91250c64c33d04fbf6edba1e7edc3292e48138781f2dd.
+Reviewers did not execute. The original first asset-author attempt stopped before
+writing because Root's E alias was ambiguous; the corrected absolute-path brief
+produced the final files. All R1 mirrors remain immutable; no Java repair was
+needed after the179/481 positives. No remote/main-tree operation or new quiet-
+hours visual publication occurs. Preparatory end-of-act source research is
+separate from a reached route frontier and does not authorize implementation.

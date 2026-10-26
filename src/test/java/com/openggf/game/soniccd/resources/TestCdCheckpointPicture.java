@@ -123,7 +123,7 @@ class TestCdCheckpointPicture {
 
     @Test void actualCheckpointSourceServicesFourSlowCutsAndOneFastCutInAnExplicitSingleRowComponentList() throws Exception {
         var f=fixture();var source=f.objects().sectionArtSources().source(CdR11aAsset.ART_CHECKPOINT);
-        assertEquals(11,f.objects().sectionArtSources().sources().size());assertEquals(0,source.canonicalPlcId());assertEquals(1,source.canonicalRowIndex());
+        assertEquals(13,f.objects().sectionArtSources().sources().size());assertEquals(0,source.canonicalPlcId());assertEquals(1,source.canonicalRowIndex());
         assertEquals(0x235DC6,source.canonicalPlc().sourceRange().nativeAddress());assertEquals(0xD960,source.canonicalPlc().vramAddress());
         assertEquals(0x800C,source.readerBytes().unsignedWord(0));assertEquals(211,source.decode().consumedInputBytes());assertEquals(212,source.readerBytes().length());
         var actual=f.assets().loadPlan().plcs().get(0);

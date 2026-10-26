@@ -71,6 +71,20 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+A real adjacent-byte refill is not source inventory growth (2026-10-26, CD
+GoalPost). Inventory/Java448 ends before Signpost; the native post-inline refill
+needs449 and consumes its actual first80 before emitting six final pixels.
+Keep separate source and reader ranges, retain original-media provenance, and
+exercise each one-short cut. Diagnostic partial rows do not become resident
+bytes: only returned complete tiles commit. Consuming that byte does not admit
+the adjacent producer, a logical picture span or a body.
+
+An observer's final label can outlive its stop condition (2026-10-26, CD
+continuation). After an epoch change the observer ran400 fresh calls but kept
+its earlier epoch-stop label. Read actual returned rows, current generation,
+positions and loop bound before naming a new reload/frontier. Fix diagnostic
+reporting separately; do not infer gameplay from stale summary text.
+
 Canonical source metadata is not the reached PLC selection (2026-10-26, CD
 Animals). The cached source is canonically PLC2/row1; saved section0200 actually
 loads fullPLC4, while a camera reversal to section0 appends incrementalPLC8.
