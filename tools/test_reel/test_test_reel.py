@@ -8,6 +8,21 @@ import test_reel as reel
 
 
 class InventoryTests(unittest.TestCase):
+    def test_explicit_rename_uses_current_identity_and_merges_history(self):
+        result = reel.resolve_method_history('C', {'limitation':['a'], 'supported':['b']},
+            {'supported':{}}, {'C#limitation':'supported'})
+        self.assertEqual({'supported':{'commits':['a','b'], 'historical_methods':['limitation']}}, result)
+
+    def test_historical_source_keeps_original_identity_despite_later_rename(self):
+        result = reel.resolve_method_history('C', {'limitation':['a']}, {'limitation':{}},
+            {'C#limitation':'supported'})
+        self.assertEqual({'limitation':{'commits':['a'], 'historical_methods':[]}},result)
+
+    def test_removed_test_without_valid_existing_replacement_stops_inventory(self):
+        for renames in ({}, {'C#old':'missing'}, {'C#old':'Other#new'}):
+            with self.assertRaisesRegex(ValueError,'Removed test needs explicit disposition'):
+                reel.resolve_method_history('C', {'old':['a']}, {'new':{}}, renames)
+
     def test_reviewed_blank_control_keeps_raw_evidence_but_selects_one_card(self):
         case={'id':'C#unreachable','junit_unique_id':'real-id','outcome':'passed',
               'capture_fixture_sha256':'a'*64,'matches_inventory_source':True,

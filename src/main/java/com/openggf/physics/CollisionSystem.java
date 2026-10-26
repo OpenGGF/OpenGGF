@@ -418,6 +418,11 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
             return;
         }
 
+        if (levelManager.getZoneFeatureProvider()
+                instanceof com.openggf.game.internal.GroundWallResponsePolicy policy) {
+            mode = (policy.groundWallResponseAngle(rotatedAngle) + 0x20) & 0xC0;
+        }
+
         // Tails_Move/Sonic_Move applies CalcRoomInFront once. The later S2
         // SolidObject_Always/DropOnFloor object pass does not repeat a negative
         // terrain response; only the exactly-flush handoff above is deferred.

@@ -3039,6 +3039,7 @@ public final class ObjectSolidContactController {
         // (docs/skdisasm/sonic3k.asm:41046-41050 before 41021-41034).
         if (ridingObject != null && player.getAir()
                 && !preserveAirborneRideForEarlierPieces
+                && !suppressesSolidPassThisFrame(ridingObject, player)
                 && !shouldSkipRidingAirUnseatForOffscreenSidekick(player, ridingObject)
                 && !(keepsOnObjWhenAirborneAfterSameFrameStandingContact(player, ridingObject)
                         && wasStandingBitEstablishedThisFrame(player, ridingObject, ridingPieceIndex))) {
@@ -3121,7 +3122,7 @@ public final class ObjectSolidContactController {
                 int maxRelXExclusive = (ridingHalfWidth * 2) + stickyX;
                 boolean inBounds = relX >= minRelX && relX < maxRelXExclusive;
                 // ROM: s2.asm:35387 — skip repositioning if obj_control bit 7 set
-                if (inBounds && provider.suppressSlopeSampleThisFrame(player)) {
+                if (provider.suppressSlopeSampleThisFrame(player)) {
                     ridingX = currentX;
                     ridingY = currentY;
                     putRidingState(player, ridingObject, ridingX, ridingY, ridingPieceIndex);

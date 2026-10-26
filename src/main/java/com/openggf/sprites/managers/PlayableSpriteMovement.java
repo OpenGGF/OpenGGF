@@ -3793,9 +3793,12 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		// ROM: move.l obX(a0),d1 / ext.l d0 / asl.l #8,d0 / add.l d0,d1 / swap d1
 		// Uses 32-bit position (pixel:16 | subpixel:16) + velocity << 8.
-		// The subpixel byte is in bits 8-15 of xSubpixel (high byte of low word).
-		int xTotal = (sprite.getCentreX() * 256) + ((sprite.getXSubpixelRaw() >> 8) & 0xFF) + sprite.getXSpeed();
-		int predictedX = xTotal >> 8;
+		// CMP.W/BHI/BLS compare the resulting word unsigned. A negative prediction
+		// wraps to the far-right word; positive overflow wraps back to the left.
+		// Sonic_LevelBound (_incObj/01 Sonic.asm:1057-1079; s2.asm:37233-37251),
+		// Player_LevelBound (sonic3k.asm:23207-23221).
+		int xPosition = (sprite.getCentreX() << 16) | (sprite.getXSubpixelRaw() & 0xFFFF);
+		int predictedX = (xPosition + (sprite.getXSpeed() << 8)) >>> 16;
 
 		int minX = camera.getMinX();
 		int maxX = camera.getMaxX();
@@ -3806,7 +3809,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			maxY = sprite.getCpuController().getMaxYBound(maxY);
 		}
 
-		int leftBoundary = minX + LEFT_OFFSET;
+		int leftBoundary = (minX + LEFT_OFFSET) & 0xFFFF;
 		PlayerMovementRules movementRules = playerMovementRulesOrNull();
 		// S3K Player_Boundary_Sides/Tails_Check_Screen_Boundaries use
 		// Camera_max_X_pos+$128 directly, with no normal-play +$40 extension
@@ -3830,16 +3833,16 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			// S2 player slots run before later object/boundary-release writes reach Sonic_LevelBound.
 			maxX = camera.getMaxXBeforeBoundaryEasing();
 		}
-		int rightBoundary = RightBoundary.compute(maxX, LEVEL_DESIGN_WIDTH, SONIC_WIDTH, RIGHT_EXTRA, strict);
+		int rightBoundary = RightBoundary.compute(maxX, LEVEL_DESIGN_WIDTH, SONIC_WIDTH, RIGHT_EXTRA, strict) & 0xFFFF;
 
 		// ROM comparison: left is always bhi.s (<). S1/S2 right uses bls.s
 		// (>=), while S3K uses blo.s (>), gated by PlayerMovementRules.
 		if (predictedX < leftBoundary) {
-			sprite.setCentreX((short) leftBoundary);
+			NativePositionOps.writeXPosResetSubpixel(sprite, leftBoundary);
 			sprite.setXSpeed((short) 0);
 			sprite.setGSpeed((short) 0);
 		} else if (isPastRightLevelBoundary(predictedX, rightBoundary)) {
-			sprite.setCentreX((short) rightBoundary);
+			NativePositionOps.writeXPosResetSubpixel(sprite, rightBoundary);
 			sprite.setXSpeed((short) 0);
 			sprite.setGSpeed((short) 0);
 		}

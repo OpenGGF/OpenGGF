@@ -135,6 +135,22 @@ def presentation_disposition(scope, class_name, method, ordinal):
     return None, 'Not yet reviewed for drawable state'
 
 
+def resolve_method_history(class_name, touched, final, renames):
+    """Follow explicitly reviewed renames without reusing historical invocation identity."""
+    resolved = {}
+    for old_name, commits in sorted(touched.items()):
+        name = old_name
+        if name not in final:
+            name = renames.get(f'{class_name}#{old_name}')
+            if not isinstance(name, str) or not re.fullmatch(r'[A-Za-z_$][\w$]*', name) or name not in final:
+                raise ValueError(f'Removed test needs explicit disposition: {class_name}#{old_name}')
+        history = resolved.setdefault(name, {'commits': [], 'historical_methods': []})
+        history['commits'] = list(dict.fromkeys([*history['commits'], *commits]))
+        if old_name != name:
+            history['historical_methods'].append(old_name)
+    return resolved
+
+
 def inventory(scope, source_ref, extra=(), include_unmerged=False):
     source_ref = git('rev-parse', source_ref)
     touched = {}
@@ -159,11 +175,11 @@ def inventory(scope, source_ref, extra=(), include_unmerged=False):
         file_ref = overlays.get(path, source_ref)
         file_source = blob(file_ref,path)
         final, original = methods(file_source), methods(blob(scope['audit_base'], path))
-        for name, commits in sorted(names.items()):
-            if name not in final:
-                raise ValueError(f'Removed test needs explicit disposition: {path}#{name}')
+        class_name = path.removeprefix('src/test/java/').removesuffix('.java').replace('/', '.')
+        histories = resolve_method_history(class_name, names, final, scope.get('method_renames', {}))
+        for name, history in sorted(histories.items()):
+            commits = history['commits']
             method = final[name]
-            class_name = path.removeprefix('src/test/java/').removesuffix('.java').replace('/', '.')
             for ordinal, arguments in enumerate(method['arguments'], 1):
                 adapter, disposition = presentation_disposition(
                     scope, class_name, name, ordinal if method['parameterized'] else None)
@@ -181,6 +197,7 @@ def inventory(scope, source_ref, extra=(), include_unmerged=False):
                               'kind': kind, 'game': game, 'source_file': path, 'source_ref': file_ref,
                               'fixture_sha256':hashlib.sha256(file_source.encode()).hexdigest(),
                               'unmerged_source':path in overlays, 'task_commits': commits,
+                              'historical_methods': history['historical_methods'],
                               'adapter': adapter,
                               'drawable_disposition': disposition,
                               'inventory_kind': 'static-source-expansion', 'junit_unique_id': None,

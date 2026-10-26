@@ -57,7 +57,18 @@ import java.util.logging.Logger;
  * Handles AIZ intro ocean phase detection, title card suppression,
  * and other S3K-specific zone features.
  */
-public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.BackgroundBuildProjectionSource, com.openggf.game.internal.BackgroundColumnProjectionSource, com.openggf.game.internal.LevelStartCameraPosition, com.openggf.game.internal.ForegroundVerticalScrollSplit, com.openggf.game.internal.ForegroundDescriptorOverride, com.openggf.game.internal.NativeArenaCameraFraming, com.openggf.game.internal.BackgroundColumnRemap, com.openggf.game.internal.BackgroundDescriptorOverride, ZoneFeatureProvider, com.openggf.game.internal.ZoneTumbleAnimationPolicy, com.openggf.level.render.PriorityBucketSpriteSource {
+public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.BackgroundBuildProjectionSource, com.openggf.game.internal.BackgroundColumnProjectionSource, com.openggf.game.internal.LevelStartCameraPosition, com.openggf.game.internal.ForegroundVerticalScrollSplit, com.openggf.game.internal.ForegroundDescriptorOverride, com.openggf.game.internal.NativeArenaCameraFraming, com.openggf.game.internal.BackgroundColumnRemap, com.openggf.game.internal.BackgroundDescriptorOverride, ZoneFeatureProvider, com.openggf.game.internal.ZoneTumbleAnimationPolicy, com.openggf.game.internal.GroundWallResponsePolicy, com.openggf.level.render.PriorityBucketSpriteSource {
+
+    @Override
+    public int groundWallResponseAngle(int rotatedAngle) {
+        // Both Sonic/Knuckles loc_1137E and Tails loc_14BA8 decrement a negative
+        // byte angle in SOZ before response rounding, after the wall probe.
+        // sonic3k.asm:22764-22781,28014-28031. This can change the correction axis.
+        int angle = rotatedAngle & 0xFF;
+        return getFeatureZoneId() == Sonic3kZoneIds.ZONE_SOZ && (angle & 0x80) != 0
+                ? (angle - 1) & 0xFF : angle;
+    }
+
     @Override
     public void initializeLevelStartCamera(Camera camera, AbstractPlayableSprite player,
                                            int zone, int act, boolean checkpoint) {

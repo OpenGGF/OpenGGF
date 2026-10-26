@@ -169,6 +169,11 @@ public class Sonic1FloatingBlockObjectInstance extends AbstractObjectInstance
     // Whether the object is in LZ (uses door art)
     private boolean isLZ;
 
+    // FBlock_Action reads the previous BuildSprites result, before this pass's
+    // DisplaySprite. These scalar latches are included in generic object rewind.
+    private boolean romRenderOnScreen;
+    private boolean romDisplayedLastPass;
+
     // Art key for rendering
     private final String artKey;
 
@@ -276,6 +281,27 @@ public class Sonic1FloatingBlockObjectInstance extends AbstractObjectInstance
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         applyMovement();
         updateDynamicSpawn(x, y);
+        romDisplayedLastPass = true;
+    }
+
+    @Override
+    public void refreshPostCameraRenderState() {
+        if (!romDisplayedLastPass) return;
+        romDisplayedLastPass = false;
+        romRenderOnScreen = isWithinRenderSpriteBounds(halfWidth, 32);
+    }
+
+    @Override
+    public int getOnScreenHalfWidth() {
+        // FBlock_Main (_incObj/56 SYZ, SLZ Floating Blocks and LZ Doors.asm:46-52).
+        return halfWidth;
+    }
+
+    @Override
+    public int getOnScreenHalfHeight() {
+        // FBlock_Main sets only sprite_cam_field. BuildSprites .assumeHeight
+        // (_inc/BuildSprites.asm:86-94) uses 32, not the collision height.
+        return 32;
     }
 
     @Override
@@ -323,6 +349,21 @@ public class Sonic1FloatingBlockObjectInstance extends AbstractObjectInstance
     public boolean isTopSolidOnly() {
         // SolidObject provides all-sides solidity
         return false;
+    }
+
+    @Override
+    public boolean isSkipSolidContactThisFrame() {
+        // FBlock_Action (_incObj/56 SYZ, SLZ Floating Blocks and LZ Doors.asm:141-150)
+        // skips the entire SolidObject call when obRender bit 7 is clear.
+        return !romRenderOnScreen;
+    }
+
+    @Override
+    public boolean suppressSlopeSampleThisFrame(PlayableEntity player) {
+        // The same omitted call also leaves an existing rider's status untouched,
+        // even beyond the standing bounds. Reuse the solid controller's skipped-
+        // routine contract: no carry, surface sample, or airborne/bounds release.
+        return isSkipSolidContactThisFrame();
     }
 
     @Override

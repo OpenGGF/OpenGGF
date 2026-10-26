@@ -30,7 +30,7 @@ class TestTasS2CurrentLimitations {
 
     @ParameterizedTest
     @ValueSource(booleans = {false, true})
-    void currentLimitationUnderflowClampsLeftInsteadOfNativeFarRight(boolean lockOn) throws Exception {
+    void underflowClampsToUnsignedNativeFarRight(boolean lockOn) throws Exception {
         try (var reel = com.openggf.tests.reel.S2ComponentTestReel.open(10)) {
             var player = player(lockOn);
             GameServices.camera().setMinX((short) 0);
@@ -45,8 +45,8 @@ class TestTasS2CurrentLimitations {
             assertEquals(0, player.getXSpeed(), "must reach a boundary clamp");
             assertEquals(0, player.getGSpeed());
             // Sonic_LevelBound (s2.asm:37233-37254) uses unsigned word comparisons.
-            assertEquals(0x10, player.getCentreX() & 0xFFFF,
-                    "Confirmed limitation: native exits at $2168, current signed clamp exits at $10");
+            assertEquals(0x2168, player.getCentreX() & 0xFFFF,
+                    "Native word comparison clamps underflow to the right edge");
             player.setCentreX((short) 24);
             player.setXSpeed((short) -0x100);
             boundary.invoke(new PlayableSpriteMovement(player));
