@@ -10032,7 +10032,7 @@ class TestCdOpeningObjectRuntime {
     @Test void tunnel07ApiAddsOnlyTypedFmAndPrivateCachedInvocationWithoutChangingCaptureOwners() throws Exception {
         assertEquals(36, java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
                 .filter(m -> java.lang.reflect.Modifier.isPublic(m.getModifiers())).count());
-        assertEquals(17, CdOpeningObjectRuntime.SoundRequest.class.getPermittedSubclasses().length);
+        assertEquals(18, CdOpeningObjectRuntime.SoundRequest.class.getPermittedSubclasses().length);
         assertEquals(1, CdOpeningObjectRuntime.TunnelPathFm.class.getRecordComponents().length);
         assertEquals(CdTunnelPath.FmSound.class, CdOpeningObjectRuntime.TunnelPathFm.class.getRecordComponents()[0].getType());
         assertThrows(NullPointerException.class, () -> new CdOpeningObjectRuntime.TunnelPathFm(null));
@@ -10503,7 +10503,7 @@ class TestCdOpeningObjectRuntime {
         assertEquals(36, java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
                 .filter(m -> java.lang.reflect.Modifier.isPublic(m.getModifiers())).count());
         assertEquals(15, CdOpeningObjectRuntime.Snapshot.class.getDeclaredFields().length);
-        assertEquals(17, CdOpeningObjectRuntime.SoundRequest.class.getPermittedSubclasses().length);
+        assertEquals(18, CdOpeningObjectRuntime.SoundRequest.class.getPermittedSubclasses().length);
         assertEquals(21, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
         assertEquals("logShadow", CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents()[20].getName());
         assertEquals(List.of(11), java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
@@ -10966,4 +10966,829 @@ class TestCdOpeningObjectRuntime {
     // replacement body, new global ingress, current-art write or manual SAT is used by these additions.
     // No actual664 atlas retirement, natural5256, controlled Body bit0, full-USA or JP/EU result is claimed.
     // END Log Shadow Runtime R1.
+
+
+    // BEGIN SonicHole31 Runtime R1. Independently authored tests FIRST; all Java UNRUN here.
+    // N 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff:
+    // Tunnel Path/Main.asm:11-103; Object Spawner.asm:385-446; Object Functions.asm:137-196,228-237.
+    // Constructed public owner edits are ingress, never a natural route/5323/native-pixel certificate.
+    // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>
+
+    @Test void sonicHole31ApiAddsOnlyTypedFmAndPrivateCachedInvocation() throws Exception {
+        assertEquals(36, java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
+                .filter(m -> java.lang.reflect.Modifier.isPublic(m.getModifiers())).count());
+        assertEquals(15, CdOpeningObjectRuntime.Snapshot.class.getDeclaredFields().length);
+        assertEquals(21, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+        assertEquals(List.of(11), java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
+                .filter(m -> m.getName().equals("usaR11aOpeningDevEmptySatPreloadedArt")).map(java.lang.reflect.Method::getParameterCount).toList());
+        assertEquals(List.of(14), java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
+                .filter(m -> m.getName().equals("usaR11aRestartDevEmptySatPreloadedArt")).map(java.lang.reflect.Method::getParameterCount).toList());
+        var permitted = CdOpeningObjectRuntime.SoundRequest.class.getPermittedSubclasses();
+        assertEquals(18, permitted.length);
+        assertEquals(List.of("PlayerSound", "RingFm", "RingSubCpu", "MosquiFm", "LostRingFm", "GameOverSubCpu",
+                "SpringFm", "TunnelDoorVerticalFm", "TunnelDoorFm", "MonitorFm", "MonitorItemSubCpu", "TimePostSubCpu",
+                "CheckpointFm", "CollapsePlatformFm", "TamabbohFm", "SpinningDiscFm", "TunnelPathFm", "SonicHoleFm"),
+                java.util.Arrays.stream(permitted).map(Class::getSimpleName).toList());
+        var bodies = java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredFields())
+                .filter(v -> v.getType() == CdSonicHole.class).toList();
+        assertEquals(1, bodies.size()); assertEquals("sonicHole", bodies.getFirst().getName());
+        assertTrue(java.lang.reflect.Modifier.isPrivate(bodies.getFirst().getModifiers()));
+        assertTrue(java.lang.reflect.Modifier.isFinal(bodies.getFirst().getModifiers()));
+        var scope = CdOpeningObjectRuntime.class.getDeclaredField("activeSonicHoleInvocation");
+        assertTrue(java.lang.reflect.Modifier.isPrivate(scope.getModifiers()));
+        assertTrue(java.lang.reflect.Modifier.isTransient(scope.getModifiers()));
+        var type = scope.getType();
+        assertTrue(java.lang.reflect.Modifier.isPrivate(type.getModifiers()));
+        assertTrue(java.lang.reflect.Modifier.isStatic(type.getModifiers()));
+        assertEquals(6, type.getDeclaredFields().length);
+        assertEquals(List.of(4), java.util.Arrays.stream(type.getDeclaredConstructors())
+                .map(java.lang.reflect.Constructor::getParameterCount).toList());
+        assertTrue(java.util.Arrays.stream(type.getDeclaredConstructors())
+                .allMatch(c -> java.lang.reflect.Modifier.isPrivate(c.getModifiers())));
+        assertEquals(List.of("body", "wholeIndex", "player", "environment", "next", "lastPoolCut"),
+                java.util.Arrays.stream(type.getDeclaredFields()).map(java.lang.reflect.Field::getName).toList());
+        var next = type.getDeclaredField("next").getType();
+        assertTrue(next.isEnum()); assertTrue(java.lang.reflect.Modifier.isPrivate(next.getModifiers()));
+        assertEquals(List.of("CONTROL", "X", "Y", "FM", "DONE"),
+                java.util.Arrays.stream(next.getEnumConstants()).map(Object::toString).toList());
+        String[] names = {"runSonicHole", "requireSonicHoleCallback", "validateSonicHoleCut", "readSonicHolePrimary", "playSonicHoleFm"};
+        Class<?>[][] arguments = {{int.class}, {}, {CdObjectPool.Snapshot.class, CdObjectState.class},
+                {CdSonicHole.PlayerField.class, CdObjectPool.Snapshot.class, CdObjectState.class},
+                {CdSonicHole.FmSound.class, CdObjectPool.Snapshot.class, CdObjectState.class}};
+        for (int i = 0; i < names.length; i++) {
+            assertTrue(java.lang.reflect.Modifier.isPrivate(CdOpeningObjectRuntime.class.getDeclaredMethod(names[i], arguments[i]).getModifiers()));
+        }
+        assertTrue(java.util.Arrays.stream(CdOpeningObjectRuntime.Snapshot.class.getDeclaredFields()).noneMatch(v ->
+                v.getType() == CdSonicHole.class || v.getType() == type || v.getType() == CdSonicHole.Result.class
+                        || v.getType() == CdSonicHole.Globals.class || v.getType() == CdSonicHole.Assets.class));
+    }
+
+    @Test void sonicHole31TypedFmIsNonnullAndDistinctFromCollapseFmA3() throws Exception {
+        var type = CdOpeningObjectRuntime.SonicHoleFm.class;
+        assertTrue(type.isRecord()); assertEquals(1, type.getRecordComponents().length);
+        assertEquals("sound", type.getRecordComponents()[0].getName());
+        assertEquals(CdSonicHole.FmSound.class, type.getRecordComponents()[0].getType());
+        assertEquals(List.of(1), java.util.Arrays.stream(type.getDeclaredConstructors())
+                .map(java.lang.reflect.Constructor::getParameterCount).toList());
+        assertThrows(NullPointerException.class, () -> new CdOpeningObjectRuntime.SonicHoleFm(null));
+        var request = new CdOpeningObjectRuntime.SonicHoleFm(CdSonicHole.FmSound.FM_A3);
+        assertEquals(0xA3, request.sound().nativeId());
+        assertEquals(request, new CdOpeningObjectRuntime.SonicHoleFm(CdSonicHole.FmSound.FM_A3));
+        assertNotEquals((Object) request, new CdOpeningObjectRuntime.CollapsePlatformFm(0xA3));
+    }
+
+    @Test void sonicHole31OpeningAndRestartFactoriesReuseOneCachedBody() throws Exception {
+        var assets = load(); var carry = cameraArtDevIngress(assets);
+        for (boolean restart : new boolean[]{false, true}) {
+            try (var frame = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, 0);
+                 var runtime = restart ? CdOpeningObjectRuntime.usaR11aRestartDevEmptySatPreloadedArt(
+                         assets, frame, INITIAL, CONTACT, SCORE, LEVEL, declaredCheckpointBindings(),
+                         CdAssetBytes.copyOf(new byte[CdObjectPlacementRuntime.SAVED_BANK_BYTES]),
+                         new CdPowerupArtRuntime.State(new byte[0x480], new byte[0x480]), carry,
+                         new byte[640], BANKS, PRE, value -> fail("Hole owns no angle"))
+                         : CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(assets, frame, INITIAL, CONTACT, SCORE,
+                         LEVEL, declaredCheckpointBindings(), new byte[640], BANKS, PRE, value -> fail("Hole owns no angle"))) {
+                var artPublications = new ArrayList<CdPlayerArtRuntime.State>();
+                frame.bindArtPublication((request, state) -> artPublications.add(state));
+                var cached = checkpointGet(runtime, "sonicHole"); assertInstanceOf(CdSonicHole.class, cached);
+                for (int cycle = 1; cycle <= 2; cycle++) {
+                    runtime.setPreScrollForeground(PRE); var selected = frame.prepareInput(0);
+                    runtime.serviceVBlank(selected.phase()); runtime.spawnBeforeReservedSlots();
+                    var publication = runtime.runPlayerBody(cycle);
+                    for (var effect : publication.result().effects()) {
+                        if (effect instanceof CdPlayerBody.DisplayEligibility cut && cut.eligible()) runtime.enqueuePlayer(cut);
+                    }
+                    var pool = runtime.placement().pool(); pool.clearDynamicSlots();
+                    pool.write(pool.state(40).moveByte(ID, 0x31).moveByte(SPRITE_FLAGS, 0x80)
+                            .moveWord(X, 0x100).moveWord(Y, 0x780));
+                    var player = frame.state(); var environment = frame.environment();
+                    runtime.runDynamicSlotsAfterReservedSlots();
+                    assertEquals(2, pool.state(40).routine()); assertSame(player, frame.state()); assertSame(environment, frame.environment());
+                    assertSame(cached, checkpointGet(runtime, "sonicHole"));
+                    assertNull(checkpointGet(runtime, "activeSonicHoleInvocation"));
+                    assertEquals(false, checkpointGet(runtime, "inSolidCommit"));
+                    runtime.finishAfterCamera(POST); runtime.finishOrdinaryTail();
+                }
+            }
+        }
+    }
+
+    @Test void sonicHole31InitOldClearFallsThroughWithActualZeroControlAndNoDraw() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var pool = f.runtime.placement().pool();
+            assertEquals(0, f.frame.state().motion().playerControl());
+            var source = sonicHole31Image(f, 40, 0, 0x80, 7, 0x100, 0x780); pool.write(source);
+            var before = f.runtime.placement().capture(); var player = f.frame.state(); var environment = f.frame.environment();
+            var checkpoint = f.runtime.checkpointState(); var sounds = f.runtime.lastSoundRequests(); var clock = f.frame.vIntClock();
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertArrayEquals(sonicHole31ExpectedInit(f, source, 1, false), f.slot(40).copyBytes());
+            assertArrayEquals(before.savedFlags().copy(), f.runtime.placement().capture().savedFlags().copy());
+            assertEquals(before.status(), f.runtime.placement().status()); assertEquals(sounds, f.runtime.lastSoundRequests());
+            sonicHole31Unchanged(f, before.pool(), player, environment, checkpoint, 40);
+            assertEquals(clock, f.frame.vIntClock()); sonicHole31Retired(f);
+            var sat = f.runtime.finishAfterCamera(POST);
+            assertTrue(sat.provenance().stream().noneMatch(p -> p.slotRef().wholeIndex() == 40));
+        }
+    }
+
+    @Test void sonicHole31InitOldSetDrawsRoutine4WithoutPlayerFm() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var placement = f.runtime.placement(); var pool = placement.pool();
+            placement.bsetSavedFlag(7, 1, CdObjectPlacementRuntime.SavedBit.MEMBER_7);
+            var source = sonicHole31Image(f, 40, 0, 0x80, 7, 0x100, 0x780); pool.write(source);
+            var before = placement.capture(); var player = f.frame.state(); var environment = f.frame.environment();
+            var checkpoint = f.runtime.checkpointState(); var sounds = f.runtime.lastSoundRequests();
+            var expected = sonicHole31ExpectedInit(f, source, 1, true); expected[1] &= 0x7F;
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertArrayEquals(expected, f.slot(40).copyBytes()); assertEquals(sounds, f.runtime.lastSoundRequests());
+            assertArrayEquals(before.savedFlags().copy(), placement.capture().savedFlags().copy());
+            assertEquals(before.status(), placement.status());
+            sonicHole31Unchanged(f, before.pool(), player, environment, checkpoint, 40); sonicHole31Retired(f);
+            var sat = f.runtime.finishAfterCamera(POST);
+            assertEquals(3, sat.provenance().stream().filter(p -> p.slotRef().wholeIndex() == 40).count());
+            assertEquals(0x84, f.slot(40).spriteFlags());
+        }
+    }
+
+    @Test void sonicHole31DirtyInitPreservesAllUnwrittenSourceBytes() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var pool = f.runtime.placement().pool(); var source = pool.state(40);
+            for (var field : CdObjectState.LongField.values()) source = source.moveLong(field, 0xA1B2C3D4 ^ field.byteOffset());
+            source = source.moveByte(ID, 0x31).moveByte(ROUTINE, 0).moveByte(SPRITE_FLAGS, 0xA3)
+                    .moveByte(SAVED_FLAGS_ID, 7).moveWord(X, 0x100).moveWord(Y, 0x780);
+            pool.write(source);
+            var before = f.runtime.placement().capture(); var player = f.frame.state(); var environment = f.frame.environment();
+            var checkpoint = f.runtime.checkpointState(); var sounds = f.runtime.lastSoundRequests();
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertArrayEquals(sonicHole31ExpectedInit(f, source, 1, false), f.slot(40).copyBytes());
+            assertArrayEquals(before.savedFlags().copy(), f.runtime.placement().capture().savedFlags().copy());
+            assertEquals(before.status(), f.runtime.placement().status()); assertEquals(sounds, f.runtime.lastSoundRequests());
+            sonicHole31Unchanged(f, before.pool(), player, environment, checkpoint, 40); sonicHole31Retired(f);
+        }
+    }
+
+    @Test void sonicHole31MainAllControlBytesUseTheActualPrimary() throws Exception {
+        for (int control = 0; control <= 255; control++) try (var f = new Fixture()) {
+            springDeviceCut(f); sonicHole31SeedPrimary(f, 0x0100BEEF, 0x0780CAFE, control);
+            var placement = f.runtime.placement(); var pool = placement.pool();
+            var source = sonicHole31Image(f, 40, 2, 0x84, 7, 0x100, 0x780); pool.write(source);
+            var before = placement.capture(); var expectedBank = before.savedFlags().copy();
+            var player = f.frame.state(); var environment = f.frame.environment(); var checkpoint = f.runtime.checkpointState();
+            var expectedSounds = new ArrayList<CdOpeningObjectRuntime.SoundRequest>(f.runtime.lastSoundRequests());
+            if (control != 0) {
+                expectedBank[24] |= 0x40;
+                expectedSounds.add(new CdOpeningObjectRuntime.SonicHoleFm(CdSonicHole.FmSound.FM_A3));
+            }
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertArrayEquals((control == 0 ? source : source.moveByte(ROUTINE, 4).moveByte(SPRITE_FLAGS, 4)).copyBytes(),
+                    f.slot(40).copyBytes(), "raw control " + control);
+            assertArrayEquals(expectedBank, placement.capture().savedFlags().copy()); assertEquals(before.status(), placement.status());
+            assertEquals(expectedSounds, f.runtime.lastSoundRequests());
+            sonicHole31Unchanged(f, before.pool(), player, environment, checkpoint, 40); sonicHole31Retired(f);
+        }
+    }
+
+    @Test void sonicHole31WordRectangleEdgesAndWrapSelectActivation() throws Exception {
+        int[] anchors = {0, 0x10, 0x7FFF, 0x8000, 0xFFF0, 0xFFFF};
+        int[] deltas = {-32768, -33, -32, -1, 0, 31, 32, 32767};
+        for (int anchor : anchors) for (int axis = 0; axis < 2; axis++) for (int delta : deltas) {
+            try (var f = new Fixture()) {
+                springDeviceCut(f); var placement = f.runtime.placement(); var pool = placement.pool();
+                int px = axis == 0 ? (anchor + delta) & 0xFFFF : anchor;
+                int py = axis == 1 ? (anchor + delta) & 0xFFFF : anchor;
+                sonicHole31SeedPrimary(f, (px << 16) | 0xBEEF, (py << 16) | 0xCAFE, 0x80);
+                var source = sonicHole31Image(f, 40, 2, 0x84, 0, anchor, anchor); pool.write(source);
+                var before = placement.capture(); var bank = before.savedFlags().copy();
+                var player = f.frame.state(); var environment = f.frame.environment(); var checkpoint = f.runtime.checkpointState();
+                var ledger = new ArrayList<CdOpeningObjectRuntime.SoundRequest>(f.runtime.lastSoundRequests());
+                boolean hit = delta >= -32 && delta <= 31;
+                if (hit) { bank[3] |= 0x40; ledger.add(new CdOpeningObjectRuntime.SonicHoleFm(CdSonicHole.FmSound.FM_A3)); }
+                f.runtime.runDynamicSlotsAfterReservedSlots();
+                int distance = ((anchor & 0xFF80) - 0xFF80) & 0xFFFF;
+                byte[] expected = hit && distance > 0x280 ? new byte[64]
+                        : (hit ? source.moveByte(ROUTINE, 4).moveByte(SPRITE_FLAGS, 4) : source).copyBytes();
+                assertArrayEquals(expected, f.slot(40).copyBytes(), "anchor/axis/delta " + anchor + "/" + axis + "/" + delta);
+                assertEquals(ledger, f.runtime.lastSoundRequests()); assertArrayEquals(bank, placement.capture().savedFlags().copy());
+                assertEquals(before.status(), placement.status());
+                sonicHole31Unchanged(f, before.pool(), player, environment, checkpoint, 40); sonicHole31Retired(f);
+            }
+        }
+    }
+
+    @Test void sonicHole31ReadsCurrentPostBodyFrameInsteadOfPriorClosedCut() throws Exception {
+        try (var f = new Fixture()) {
+            f.firstCycle(); var oldClosedPlayer = f.frame.state();
+            monitorBegin(f, 2); f.runtime.placement().pool().clearDynamicSlots();
+            // Explicit actual Frame ingress AFTER this genuine Body, never a supplied CLOSED5322 row.
+            sonicHole31SeedPrimary(f, 0x0123BEEF, 0x0777CAFE, 0x80);
+            var player = f.frame.state(); var environment = f.frame.environment();
+            assertNotSame(oldClosedPlayer, player); assertEquals(0, oldClosedPlayer.motion().playerControl());
+            var source = sonicHole31Image(f, 40, 2, 0x84, 0, 0x123, 0x777); f.runtime.placement().pool().write(source);
+            var before = f.runtime.placement().capture(); var checkpoint = f.runtime.checkpointState();
+            var expected = new ArrayList<CdOpeningObjectRuntime.SoundRequest>(f.runtime.lastSoundRequests());
+            expected.add(new CdOpeningObjectRuntime.SonicHoleFm(CdSonicHole.FmSound.FM_A3));
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(expected, f.runtime.lastSoundRequests()); assertEquals(4, f.slot(40).routine());
+            sonicHole31Unchanged(f, before.pool(), player, environment, checkpoint, 40); sonicHole31Retired(f);
+            var bank = before.savedFlags().copy(); bank[3] |= 0x40;
+            assertArrayEquals(bank, f.runtime.placement().capture().savedFlags().copy()); assertEquals(before.status(), f.runtime.placement().status());
+        }
+    }
+
+    @Test void sonicHole31EarlierTunnelPublicationRemainsTheCompleteCurrentPair() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var pool = f.runtime.placement().pool();
+            var tunnel = tunnel07Image(f, 39, 2, 0, 0, 0x100, 0x780); pool.write(tunnel);
+            var hole = sonicHole31Image(f, 40, 2, 0x84, 7, 0x100, 0x780); pool.write(hole);
+            tunnel07SeedPlayer(f, 0x010FBEEF, 0x0770CAFE, 0x123, -0x234, -0x345, 2, 0x19, 0, 0xF5);
+            var player = f.frame.state(); var environment = f.frame.environment(); var before = f.runtime.placement().capture();
+            var checkpoint = f.runtime.checkpointState(); var clock = f.frame.vIntClock(); var reserved = horizontalReserved(f.runtime);
+            var ledger = new ArrayList<CdOpeningObjectRuntime.SoundRequest>(f.runtime.lastSoundRequests());
+            ledger.add(new CdOpeningObjectRuntime.TunnelPathFm(CdTunnelPath.FmSound.FM_91));
+            ledger.add(new CdOpeningObjectRuntime.SonicHoleFm(CdSonicHole.FmSound.FM_A3));
+            var expectedPair = tunnel07Expected(player, 0x0100BEEF, 0x0780CAFE, 0, 0, 0x1000, 2,
+                    (0xF5 & ~0x20) | 2, 2, 0, 0x81, player.timers().hurt());
+            var images = new ArrayList<>(before.pool().slots());
+            images.set(7, tunnel.moveByte(ROUTINE, 4).moveByte(FLAGS, tunnel.flags() & ~0x20)
+                    .moveByte(CdObjectState.ByteField.TUNNEL_PATH_SCRATCH, 0));
+            images.set(8, hole.moveByte(ROUTINE, 4).moveByte(SPRITE_FLAGS, 4));
+            var bank = before.savedFlags().copy(); bank[24] |= 0x40;
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(expectedPair, f.frame.state()); assertSame(environment, f.frame.environment());
+            assertEquals(images, pool.capture().slots()); assertArrayEquals(bank, f.runtime.placement().capture().savedFlags().copy());
+            assertEquals(before.status(), f.runtime.placement().status()); assertEquals(ledger, f.runtime.lastSoundRequests());
+            assertSame(checkpoint, f.runtime.checkpointState()); assertEquals(clock, f.frame.vIntClock());
+            assertEquals(reserved, horizontalReserved(f.runtime)); sonicHole31Retired(f); tunnel07Retired(f);
+            // No next Body is executed while bit0 control belongs to Tunnel.
+        }
+    }
+
+
+    @Test void sonicHole31OverlapPublishesOneFmBeforeRoutine4Draw() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); sonicHole31SeedPrimary(f, 0x0100BEEF, 0x0780CAFE, 1);
+            var placement = f.runtime.placement(); var pool = placement.pool();
+            var source = sonicHole31Image(f, 40, 2, 0x84, 7, 0x100, 0x780); pool.write(source);
+            var before = placement.capture(); var player = f.frame.state(); var environment = f.frame.environment();
+            var checkpoint = f.runtime.checkpointState(); var expected = new ArrayList<CdOpeningObjectRuntime.SoundRequest>(f.runtime.lastSoundRequests());
+            expected.add(new CdOpeningObjectRuntime.SonicHoleFm(CdSonicHole.FmSound.FM_A3));
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(source.moveByte(ROUTINE, 4).moveByte(SPRITE_FLAGS, 4), f.slot(40));
+            var bank = before.savedFlags().copy(); bank[24] |= 0x40;
+            assertArrayEquals(bank, placement.capture().savedFlags().copy()); assertEquals(before.status(), placement.status());
+            assertEquals(expected, f.runtime.lastSoundRequests()); sonicHole31Retired(f);
+            sonicHole31Unchanged(f, before.pool(), player, environment, checkpoint, 40);
+            var ledger = f.runtime.lastSoundRequests();
+            assertEquals(0xA3, ((CdOpeningObjectRuntime.SonicHoleFm) ledger.getLast()).sound().nativeId());
+            assertSame(ledger, f.runtime.lastSoundRequests()); assertEquals(expected, ledger);
+            var sat = f.runtime.finishAfterCamera(POST);
+            assertEquals(3, sat.provenance().stream().filter(p -> p.slotRef().wholeIndex() == 40).count());
+            assertEquals(expected, f.runtime.lastSoundRequests());
+        }
+    }
+
+    @Test void sonicHole31TwoPhysicalOverlapsPreserveOrderedDuplicateFm() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); sonicHole31SeedPrimary(f, 0x0100BEEF, 0x0780CAFE, 0xFF);
+            var placement = f.runtime.placement(); var pool = placement.pool();
+            var first = sonicHole31Image(f, 40, 2, 0x84, 7, 0x100, 0x780);
+            var second = sonicHole31Image(f, 42, 2, 0x84, 8, 0x110, 0x790); pool.write(first); pool.write(second);
+            var before = placement.capture(); var player = f.frame.state(); var environment = f.frame.environment();
+            var checkpoint = f.runtime.checkpointState(); var expected = new ArrayList<>(before.pool().slots());
+            expected.set(8, first.moveByte(ROUTINE, 4).moveByte(SPRITE_FLAGS, 4));
+            expected.set(10, second.moveByte(ROUTINE, 4).moveByte(SPRITE_FLAGS, 4));
+            var ledger = new ArrayList<CdOpeningObjectRuntime.SoundRequest>(f.runtime.lastSoundRequests());
+            ledger.add(new CdOpeningObjectRuntime.SonicHoleFm(CdSonicHole.FmSound.FM_A3));
+            ledger.add(new CdOpeningObjectRuntime.SonicHoleFm(CdSonicHole.FmSound.FM_A3));
+            var bank = before.savedFlags().copy(); bank[24] |= 0x40; bank[27] |= 0x40;
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(expected, pool.capture().slots()); assertEquals(ledger, f.runtime.lastSoundRequests());
+            assertArrayEquals(bank, placement.capture().savedFlags().copy()); assertEquals(before.status(), placement.status());
+            assertSame(player, f.frame.state()); assertSame(environment, f.frame.environment()); assertSame(checkpoint, f.runtime.checkpointState());
+            sonicHole31Retired(f);
+            var sat = f.runtime.finishAfterCamera(POST);
+            assertEquals(List.of(40, 40, 40, 42, 42, 42), sat.provenance().stream()
+                    .filter(p -> p.slotRef().wholeIndex() == 40 || p.slotRef().wholeIndex() == 42)
+                    .map(p -> p.slotRef().wholeIndex()).toList());
+        }
+    }
+
+    @Test void sonicHole31Routine4DrawsWithoutRepeatingFm() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); sonicHole31SeedPrimary(f, 0x0100BEEF, 0x0780CAFE, 0x80);
+            var pool = f.runtime.placement().pool(); pool.write(sonicHole31Image(f, 40, 2, 0x84, 7, 0x100, 0x780));
+            f.runtime.runDynamicSlotsAfterReservedSlots(); assertEquals(4, f.slot(40).routine());
+            assertEquals(1, f.runtime.lastSoundRequests().stream().filter(CdOpeningObjectRuntime.SonicHoleFm.class::isInstance).count());
+            monitorFinish(f);
+            // Reset constructed control before the next ordinary Body; no controlled-Body return is claimed.
+            sonicHole31SeedPrimary(f, f.frame.state().motion().centreX16_16(), f.frame.state().motion().centreY16_16(), 0);
+            monitorBegin(f, 3);
+            var before = f.runtime.placement().capture(); var player = f.frame.state(); var environment = f.frame.environment();
+            var checkpoint = f.runtime.checkpointState(); var sounds = f.runtime.lastSoundRequests(); var source = f.slot(40);
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertArrayEquals(source.moveByte(SPRITE_FLAGS, source.spriteFlags() & 0x7F).copyBytes(), f.slot(40).copyBytes());
+            assertEquals(sounds, f.runtime.lastSoundRequests());
+            assertTrue(sounds.stream().noneMatch(CdOpeningObjectRuntime.SonicHoleFm.class::isInstance));
+            assertArrayEquals(before.savedFlags().copy(), f.runtime.placement().capture().savedFlags().copy());
+            assertEquals(before.status(), f.runtime.placement().status());
+            sonicHole31Unchanged(f, before.pool(), player, environment, checkpoint, 40); sonicHole31Retired(f);
+            var sat = f.runtime.finishAfterCamera(POST);
+            assertEquals(3, sat.provenance().stream().filter(p -> p.slotRef().wholeIndex() == 40).count());
+        }
+    }
+
+    @Test void sonicHole31All96PhysicalVisitsKeepReservedAndUnrelatedOwners() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var placement = f.runtime.placement(); var pool = placement.pool();
+            for (int whole = 32; whole < 128; whole++) pool.write(sonicHole31Image(f, whole, 0, 0x80, 0, 0x100, 0x780)
+                    .moveByte(SUBTYPE, whole).moveByte(SUBTYPE2, 255 - whole));
+            var before = placement.capture(); var player = f.frame.state(); var environment = f.frame.environment();
+            var checkpoint = f.runtime.checkpointState(); var reserved = horizontalReserved(f.runtime); var sounds = f.runtime.lastSoundRequests();
+            var section = f.runtime.sectionArtState(); var power = f.runtime.powerupArtState(); var clock = f.frame.vIntClock();
+            var expected = new ArrayList<byte[]>();
+            for (var source : before.pool().slots()) expected.add(sonicHole31ExpectedInit(f, source, 1, false));
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            for (int whole = 32; whole < 128; whole++) assertArrayEquals(expected.get(whole - 32), f.slot(whole).copyBytes(), "physical " + whole);
+            assertArrayEquals(before.savedFlags().copy(), placement.capture().savedFlags().copy()); assertEquals(before.status(), placement.status());
+            assertSame(player, f.frame.state()); assertSame(environment, f.frame.environment()); assertSame(checkpoint, f.runtime.checkpointState());
+            assertEquals(reserved, horizontalReserved(f.runtime)); assertEquals(sounds, f.runtime.lastSoundRequests());
+            assertSame(section, f.runtime.sectionArtState()); assertSame(power, f.runtime.powerupArtState());
+            assertEquals(clock, f.frame.vIntClock()); assertTrue(f.angleWrites.isEmpty()); sonicHole31Retired(f);
+        }
+    }
+
+    @Test void sonicHole31RawTimeZoneAndSavedZeroReachExactSetDisplayAliases() throws Exception {
+        for (int rawZone : new int[]{0, 1, 2, 3, 0x80, 0xFF}) for (int saved : new int[]{0, 1}) {
+            try (var f = new Fixture()) {
+                springDeviceCut(f); sonicHole31SetRawGates(f, rawZone, 0);
+                var placement = f.runtime.placement(); var pool = placement.pool();
+                var source = sonicHole31Image(f, 40, 0, 0x80, saved, 0x100, 0x780); pool.write(source);
+                var before = placement.capture(); var player = f.frame.state(); var environment = f.frame.environment();
+                var checkpoint = f.runtime.checkpointState(); var sounds = f.runtime.lastSoundRequests();
+                byte[] expected = (rawZone & 0x80) != 0 ? new byte[64] : sonicHole31ExpectedInit(f, source, rawZone, false);
+                f.runtime.runDynamicSlotsAfterReservedSlots();
+                assertArrayEquals(expected, f.slot(40).copyBytes(), "raw zone/saved " + rawZone + "/" + saved);
+                assertArrayEquals(before.savedFlags().copy(), placement.capture().savedFlags().copy());
+                assertEquals(before.status(), placement.status()); assertEquals(sounds, f.runtime.lastSoundRequests());
+                sonicHole31Unchanged(f, before.pool(), player, environment, checkpoint, 40); sonicHole31Retired(f);
+            }
+        }
+    }
+
+    @Test void sonicHole31SetDisplayBank765And766RetainExactInitPrefixes() throws Exception {
+        for (int rawZone : new int[]{1, 2}) try (var f = new Fixture()) {
+            springDeviceCut(f); sonicHole31SetRawGates(f, rawZone, 0);
+            var placement = f.runtime.placement(); var pool = placement.pool();
+            var source = sonicHole31Image(f, 40, 0, 0x80, 254, 0x100, 0x780); pool.write(source);
+            var before = placement.capture(); var player = f.frame.state(); var environment = f.frame.environment();
+            var checkpoint = f.runtime.checkpointState(); var sounds = f.runtime.lastSoundRequests();
+            if (rawZone == 1) {
+                f.runtime.runDynamicSlotsAfterReservedSlots(); assertFalse(f.runtime.closed()); sonicHole31Retired(f);
+            } else {
+                var fault = assertThrows(CdSonicHole.UnsupportedSonicHole.class, f.runtime::runDynamicSlotsAfterReservedSlots);
+                assertEquals(CdSonicHole.UnsupportedBoundary.SAVED_FLAGS_ADDRESS, fault.boundary());
+                assertEquals(40, fault.wholeIndex()); assertEquals(766, fault.value()); sonicHole31Closed(f);
+            }
+            assertArrayEquals(sonicHole31ExpectedInit(f, source, rawZone, false), f.slot(40).copyBytes());
+            assertArrayEquals(before.savedFlags().copy(), placement.capture().savedFlags().copy()); assertEquals(before.status(), placement.status());
+            assertEquals(sounds, f.runtime.lastSoundRequests()); sonicHole31Unchanged(f, before.pool(), player, environment, checkpoint, 40);
+        }
+    }
+
+    @Test void sonicHole31EveryOtherRoutineByteStopsBeforeAnyHoleStore() throws Exception {
+        for (int routine = 0; routine <= 255; routine++) {
+            if (routine == 0 || routine == 2 || routine == 4) continue;
+            try (var f = new Fixture()) {
+                springDeviceCut(f); var pool = f.runtime.placement().pool();
+                pool.write(sonicHole31Image(f, 40, routine, 0x84, 7, 0x100, 0x780));
+                var before = f.runtime.placement().capture(); var player = f.frame.state(); var environment = f.frame.environment();
+                var checkpoint = f.runtime.checkpointState(); var sounds = f.runtime.lastSoundRequests();
+                var fault = assertThrows(CdSonicHole.UnsupportedSonicHole.class, f.runtime::runDynamicSlotsAfterReservedSlots);
+                assertEquals(CdSonicHole.UnsupportedBoundary.ROUTINE_DISPATCH, fault.boundary());
+                assertEquals(40, fault.wholeIndex()); assertEquals(routine, fault.value());
+                assertEquals(before.pool().slots(), pool.capture().slots()); assertArrayEquals(before.savedFlags().copy(), f.runtime.placement().capture().savedFlags().copy());
+                assertEquals(before.status(), f.runtime.placement().status()); assertEquals(sounds, f.runtime.lastSoundRequests());
+                sonicHole31Unchanged(f, before.pool(), player, environment, checkpoint, 40); sonicHole31Closed(f);
+            }
+        }
+    }
+
+    @Test void sonicHole31FmAndEarlierBodyPrefixSurviveLaterUnknownPhysicalId() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var placement = f.runtime.placement(); var pool = placement.pool();
+            var tunnel = tunnel07Image(f, 39, 2, 0, 0, 0x100, 0x780); pool.write(tunnel);
+            var hole = sonicHole31Image(f, 40, 2, 0x84, 7, 0x100, 0x780); pool.write(hole);
+            pool.write(pool.state(41).moveByte(ID, 0x7F).moveByte(ROUTINE, 0xA5));
+            pool.write(sonicHole31Image(f, 42, 0, 0x80, 8, 0x100, 0x780));
+            tunnel07SeedPlayer(f, 0x010FBEEF, 0x0770CAFE, 0x123, -0x234, -0x345, 2, 0x19, 0, 0xF5);
+            var player = f.frame.state(); var environment = f.frame.environment(); var before = placement.capture();
+            var checkpoint = f.runtime.checkpointState(); var reserved = horizontalReserved(f.runtime);
+            var ledger = new ArrayList<CdOpeningObjectRuntime.SoundRequest>(f.runtime.lastSoundRequests());
+            ledger.add(new CdOpeningObjectRuntime.TunnelPathFm(CdTunnelPath.FmSound.FM_91));
+            ledger.add(new CdOpeningObjectRuntime.SonicHoleFm(CdSonicHole.FmSound.FM_A3));
+            var images = new ArrayList<>(before.pool().slots());
+            images.set(7, tunnel.moveByte(ROUTINE, 4).moveByte(FLAGS, tunnel.flags() & ~0x20)
+                    .moveByte(CdObjectState.ByteField.TUNNEL_PATH_SCRATCH, 0));
+            images.set(8, hole.moveByte(ROUTINE, 4).moveByte(SPRITE_FLAGS, 4));
+            var bank = before.savedFlags().copy(); bank[24] |= 0x40;
+            var fault = assertThrows(UnsupportedOperationException.class, f.runtime::runDynamicSlotsAfterReservedSlots);
+            assertTrue(fault.getMessage().contains("slot 41")); assertEquals(images, pool.capture().slots());
+            assertEquals(tunnel07Expected(player, 0x0100BEEF, 0x0780CAFE, 0, 0, 0x1000, 2,
+                    (0xF5 & ~0x20) | 2, 2, 0, 0x81, player.timers().hurt()), f.frame.state());
+            assertSame(environment, f.frame.environment()); assertSame(checkpoint, f.runtime.checkpointState());
+            assertArrayEquals(bank, placement.capture().savedFlags().copy()); assertEquals(before.status(), placement.status());
+            assertEquals(ledger, f.runtime.lastSoundRequests()); assertEquals(reserved, horizontalReserved(f.runtime)); sonicHole31Closed(f);
+        }
+    }
+
+    @Test void sonicHole31PublishedFmSurvivesLaterKnownBodySupportStop() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); sonicHole31SeedPrimary(f, 0x0100BEEF, 0x0780CAFE, 0x80);
+            var placement = f.runtime.placement(); var pool = placement.pool();
+            var hole = sonicHole31Image(f, 40, 2, 0x84, 7, 0x100, 0x780); pool.write(hole);
+            pool.write(logShadow33Image(f, 41, 3, 0, 0x80));
+            var before = placement.capture(); var player = f.frame.state(); var environment = f.frame.environment();
+            var checkpoint = f.runtime.checkpointState(); var ledger = new ArrayList<CdOpeningObjectRuntime.SoundRequest>(f.runtime.lastSoundRequests());
+            ledger.add(new CdOpeningObjectRuntime.SonicHoleFm(CdSonicHole.FmSound.FM_A3));
+            var expected = new ArrayList<>(before.pool().slots()); expected.set(8, hole.moveByte(ROUTINE, 4).moveByte(SPRITE_FLAGS, 4));
+            var fault = assertThrows(CdLogShadow.UnsupportedLogShadow.class, f.runtime::runDynamicSlotsAfterReservedSlots);
+            assertEquals(CdLogShadow.UnsupportedBoundary.ROUTINE_DISPATCH, fault.boundary()); assertEquals(41, fault.wholeIndex());
+            assertEquals(3, fault.value()); assertEquals(expected, pool.capture().slots());
+            var bank = before.savedFlags().copy(); bank[24] |= 0x40;
+            assertArrayEquals(bank, placement.capture().savedFlags().copy()); assertEquals(before.status(), placement.status());
+            assertEquals(ledger, f.runtime.lastSoundRequests());
+            sonicHole31Unchanged(f, before.pool(), player, environment, checkpoint, 40); sonicHole31Closed(f);
+        }
+    }
+
+    @Test void sonicHole31BadRawMappingFailsOnlyAtSelectedBuildAfterFm() throws Exception {
+        try (var f = new Fixture()) {
+            f.makePlayerAbsent(); springDeviceCut(f); sonicHole31SeedPrimary(f, 0x0100BEEF, 0x0780CAFE, 1);
+            var placement = f.runtime.placement(); var pool = placement.pool();
+            var source = sonicHole31Image(f, 40, 2, 0x84, 7, 0x100, 0x780).moveLong(MAPPINGS, 0xFF208AD4); pool.write(source);
+            var before = placement.capture(); var player = f.frame.state(); var environment = f.frame.environment();
+            var checkpoint = f.runtime.checkpointState(); var ledger = new ArrayList<CdOpeningObjectRuntime.SoundRequest>(f.runtime.lastSoundRequests());
+            ledger.add(new CdOpeningObjectRuntime.SonicHoleFm(CdSonicHole.FmSound.FM_A3));
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(source.moveByte(ROUTINE, 4).moveByte(SPRITE_FLAGS, 4), f.slot(40)); assertEquals(ledger, f.runtime.lastSoundRequests());
+            sonicHole31Retired(f); var fault = assertThrows(UnsupportedOperationException.class, () -> f.runtime.finishAfterCamera(POST));
+            assertTrue(fault.getMessage().contains("FF208AD4"));
+            var bank = before.savedFlags().copy(); bank[24] |= 0x40;
+            assertArrayEquals(bank, placement.capture().savedFlags().copy()); assertEquals(before.status(), placement.status());
+            assertEquals(source.moveByte(ROUTINE, 4).moveByte(SPRITE_FLAGS, 4), f.slot(40)); assertEquals(ledger, f.runtime.lastSoundRequests());
+            sonicHole31Unchanged(f, before.pool(), player, environment, checkpoint, 40); sonicHole31Closed(f);
+        }
+    }
+
+
+    @Test void sonicHole31DirtyMapFrameAndStaticFlagRemainDownstreamSelections() throws Exception {
+        for (int frame : new int[]{1, 255}) for (int sprite : new int[]{0x84, 0xA4}) try (var f = new Fixture()) {
+            f.makePlayerAbsent(); springDeviceCut(f); sonicHole31SeedPrimary(f, 0x0100BEEF, 0x0780CAFE, 1);
+            var placement = f.runtime.placement(); var pool = placement.pool();
+            var source = sonicHole31Image(f, 40, 2, sprite, 7, 0x100, 0x780).moveByte(MAP_FRAME, frame); pool.write(source);
+            var before = placement.capture(); var player = f.frame.state(); var environment = f.frame.environment();
+            var checkpoint = f.runtime.checkpointState(); var ledger = new ArrayList<CdOpeningObjectRuntime.SoundRequest>(f.runtime.lastSoundRequests());
+            ledger.add(new CdOpeningObjectRuntime.SonicHoleFm(CdSonicHole.FmSound.FM_A3));
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            var expected = source.moveByte(ROUTINE, 4).moveByte(SPRITE_FLAGS, sprite & 0x7F);
+            assertEquals(expected, f.slot(40)); assertEquals(frame, f.slot(40).unsignedByte(MAP_FRAME));
+            var fault = assertThrows(UnsupportedOperationException.class, () -> f.runtime.finishAfterCamera(POST));
+            assertTrue(fault.getMessage().contains("static=" + ((sprite & 0x20) != 0)));
+            assertEquals(expected, f.slot(40)); assertEquals(ledger, f.runtime.lastSoundRequests());
+            var bank = before.savedFlags().copy(); bank[24] |= 0x40;
+            assertArrayEquals(bank, placement.capture().savedFlags().copy()); assertEquals(before.status(), placement.status());
+            sonicHole31Unchanged(f, before.pool(), player, environment, checkpoint, 40); sonicHole31Closed(f);
+        }
+    }
+
+    @Test void sonicHole31DespawnUsesRealDrawResultAndPreservesSavedBit6() throws Exception {
+        int[][] rows = {{4, 0x200, 1, 0, 7}, {4, 0x280, 1, 0, 7}, {2, 0x4000, 1, 0, 7},
+                {2, 0x4000, 0x81, 1, 7}, {4, 0x280, 0x81, 0xFF, 7}, {4, 0x280, 0xFF, 0x80, 0}};
+        for (int[] row : rows) try (var f = new Fixture()) {
+            springDeviceCut(f); sonicHole31SetRawGates(f, row[2], row[3]);
+            var placement = f.runtime.placement(); var pool = placement.pool();
+            for (int period = 0; period < 3; period++) {
+                placement.bsetSavedFlag(7, period, CdObjectPlacementRuntime.SavedBit.MEMBER_7);
+                placement.bsetSavedFlag(7, period, CdObjectPlacementRuntime.SavedBit.LOADED);
+            }
+            var source = sonicHole31Image(f, 40, row[0], 0x84, row[4], row[1], 0x780); pool.write(source);
+            var before = placement.capture(); var bank = before.savedFlags().copy(); var player = f.frame.state();
+            var environment = f.frame.environment(); var checkpoint = f.runtime.checkpointState(); var sounds = f.runtime.lastSoundRequests();
+            int postFlags = row[0] == 4 ? 4 : 0x84;
+            int distance = ((row[1] & 0xFF80) - 0xFF80) & 0xFFFF;
+            boolean deleted = (row[2] & 0x80) != 0 || (postFlags < 0x80 && distance > 0x280);
+            if (deleted && row[4] != 0) {
+                int period = row[2] & 0x7F;
+                if ((row[2] & 0x80) != 0) {
+                    int direction = row[3] < 128 ? row[3] : row[3] - 256;
+                    int adjusted = period - direction; period = adjusted < 0 ? 0 : Math.min(adjusted, 2);
+                }
+                bank[2 + 3 * row[4] + period] &= 0x7F;
+            }
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertArrayEquals(deleted ? new byte[64] : source.moveByte(SPRITE_FLAGS, postFlags).copyBytes(), f.slot(40).copyBytes());
+            assertArrayEquals(bank, placement.capture().savedFlags().copy()); assertEquals(before.status(), placement.status());
+            assertEquals(sounds, f.runtime.lastSoundRequests());
+            sonicHole31Unchanged(f, before.pool(), player, environment, checkpoint, 40); sonicHole31Retired(f);
+        }
+    }
+
+    @Test void sonicHole31LaterTailBankFaultKeepsCompletedDrawAndEarlierLedger() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); sonicHole31SetRawGates(f, 2, 0); sonicHole31SeedPrimary(f, 0x0100BEEF, 0x0780CAFE, 1);
+            var placement = f.runtime.placement(); var pool = placement.pool();
+            var first = sonicHole31Image(f, 40, 2, 0x84, 0, 0x100, 0x780); pool.write(first);
+            var failing = sonicHole31Image(f, 41, 4, 0x84, 254, 0x280, 0x780); pool.write(failing);
+            var before = placement.capture(); var player = f.frame.state(); var environment = f.frame.environment();
+            var checkpoint = f.runtime.checkpointState(); var expected = new ArrayList<>(before.pool().slots());
+            expected.set(8, first.moveByte(ROUTINE, 4).moveByte(SPRITE_FLAGS, 4)); expected.set(9, failing.moveByte(SPRITE_FLAGS, 4));
+            var ledger = new ArrayList<CdOpeningObjectRuntime.SoundRequest>(f.runtime.lastSoundRequests());
+            ledger.add(new CdOpeningObjectRuntime.SonicHoleFm(CdSonicHole.FmSound.FM_A3));
+            var fault = assertThrows(CdSonicHole.UnsupportedSonicHole.class, f.runtime::runDynamicSlotsAfterReservedSlots);
+            assertEquals(CdSonicHole.UnsupportedBoundary.SAVED_FLAGS_ADDRESS, fault.boundary());
+            assertEquals(41, fault.wholeIndex()); assertEquals(766, fault.value()); assertEquals(expected, pool.capture().slots());
+            var bank = before.savedFlags().copy(); bank[4] |= 0x40;
+            assertArrayEquals(bank, placement.capture().savedFlags().copy()); assertEquals(before.status(), placement.status());
+            assertEquals(ledger, f.runtime.lastSoundRequests()); assertSame(player, f.frame.state()); assertSame(environment, f.frame.environment());
+            assertSame(checkpoint, f.runtime.checkpointState()); sonicHole31Closed(f);
+        }
+    }
+
+    @Test void sonicHole31LaterUnknownStopsBeforeFollowingHoleInit() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var placement = f.runtime.placement(); var pool = placement.pool();
+            var first = sonicHole31Image(f, 40, 0, 0x80, 7, 0x100, 0x780); pool.write(first);
+            pool.write(pool.state(41).moveByte(ID, 0x7F).moveByte(ROUTINE, 0xA5));
+            pool.write(sonicHole31Image(f, 42, 0, 0x80, 8, 0x100, 0x780));
+            var before = placement.capture(); var player = f.frame.state(); var environment = f.frame.environment();
+            var checkpoint = f.runtime.checkpointState(); var sounds = f.runtime.lastSoundRequests();
+            var fault = assertThrows(UnsupportedOperationException.class, f.runtime::runDynamicSlotsAfterReservedSlots);
+            assertTrue(fault.getMessage().contains("slot 41"));
+            assertArrayEquals(sonicHole31ExpectedInit(f, first, 1, false), f.slot(40).copyBytes());
+            assertArrayEquals(before.savedFlags().copy(), placement.capture().savedFlags().copy()); assertEquals(before.status(), placement.status());
+            assertEquals(sounds, f.runtime.lastSoundRequests());
+            sonicHole31Unchanged(f, before.pool(), player, environment, checkpoint, 40); sonicHole31Closed(f);
+        }
+    }
+
+    @Test void sonicHole31VerticalCullAndQueueCapacityKeepNativeSoundOwnership() throws Exception {
+        for (boolean capacity : new boolean[]{false, true}) try (var f = new Fixture()) {
+            f.makePlayerAbsent(); springDeviceCut(f);
+            sonicHole31SeedPrimary(f, 0x0100BEEF, (capacity ? 0x0780CAFE : 0x0500CAFE), 1);
+            var placement = f.runtime.placement(); var pool = placement.pool();
+            int count = capacity ? 96 : 1;
+            for (int n = 0; n < count; n++) pool.write(sonicHole31Image(f, 32 + n, 2, 0x84, 0, 0x100, capacity ? 0x780 : 0x500));
+            var before = placement.capture(); var player = f.frame.state(); var environment = f.frame.environment();
+            var checkpoint = f.runtime.checkpointState(); var ledger = new ArrayList<CdOpeningObjectRuntime.SoundRequest>(f.runtime.lastSoundRequests());
+            var expected = new ArrayList<>(before.pool().slots());
+            for (int n = 0; n < count; n++) {
+                ledger.add(new CdOpeningObjectRuntime.SonicHoleFm(CdSonicHole.FmSound.FM_A3));
+                expected.set(n, expected.get(n).moveByte(ROUTINE, 4).moveByte(SPRITE_FLAGS, 4));
+            }
+            f.runtime.runDynamicSlotsAfterReservedSlots(); assertEquals(expected, pool.capture().slots());
+            assertEquals(ledger, f.runtime.lastSoundRequests()); assertSame(player, f.frame.state()); assertSame(environment, f.frame.environment());
+            var bank = before.savedFlags().copy(); bank[3] |= 0x40;
+            assertArrayEquals(bank, placement.capture().savedFlags().copy()); assertEquals(before.status(), placement.status());
+            assertSame(checkpoint, f.runtime.checkpointState()); sonicHole31Retired(f);
+            var sat = f.runtime.finishAfterCamera(POST); assertEquals(capacity ? 80 : 0, sat.spriteCount());
+            assertEquals(ledger, f.runtime.lastSoundRequests());
+            if (capacity) {
+                assertTrue(sat.provenance().stream().allMatch(p -> p.slotRef().wholeIndex() >= 32 && p.slotRef().wholeIndex() <= 58));
+                for (int n = 0; n < 63; n++) expected.set(n, expected.get(n).moveByte(SPRITE_FLAGS, 0x84));
+            }
+            assertEquals(expected, pool.capture().slots());
+        }
+    }
+
+    @Test void sonicHole31WaitingCaptureRestoreReplayMatchesAllPartitions() throws Exception {
+        try (var f = new Fixture()) {
+            f.firstCycle(); f.makePlayerAbsent(); var pool = f.runtime.placement().pool(); pool.clearDynamicSlots();
+            pool.write(sonicHole31Image(f, 40, 0, 0x80, 7, 0x100, 0x780));
+            var cut = f.runtime.captureClosedCut(); var actor = f.frame.captureActor(); var shared = f.frame.captureShared();
+            var cached = checkpointGet(f.runtime, "sonicHole"); var reserved = horizontalReserved(f.runtime);
+            CdOpeningObjectRuntime.Snapshot expected = null; CdPlayerFrameRuntime.ActorState expectedActor = null;
+            CdPlayerFrameRuntime.SharedState expectedShared = null; byte[] expectedCpu = null; List<Provenance> provenance = null;
+            for (int replay = 0; replay < 2; replay++) {
+                if (replay != 0) {
+                    f.runtime.validateRestore(cut); f.frame.validateActorRestore(actor); f.frame.validateSharedRestore(shared);
+                    f.frame.restoreActor(actor); f.frame.restoreShared(shared); f.runtime.restore(cut);
+                    assertEquals(actor, f.frame.captureActor()); assertEquals(shared, f.frame.captureShared());
+                }
+                monitorBegin(f, 2); f.runtime.runDynamicSlotsAfterReservedSlots(); sonicHole31Retired(f); monitorFinish(f);
+                assertSame(cached, checkpointGet(f.runtime, "sonicHole")); assertEquals(reserved, horizontalReserved(f.runtime));
+                if (replay == 0) {
+                    expected = f.runtime.captureClosedCut(); expectedActor = f.frame.captureActor(); expectedShared = f.frame.captureShared();
+                    expectedCpu = f.runtime.cpuSat().bytes(); provenance = f.runtime.cpuSat().provenance();
+                } else {
+                    assertMonitorSnapshot(expected, f.runtime.captureClosedCut()); assertEquals(expectedActor, f.frame.captureActor());
+                    assertEquals(expectedShared, f.frame.captureShared()); assertArrayEquals(expectedCpu, f.runtime.cpuSat().bytes());
+                    assertEquals(provenance, f.runtime.cpuSat().provenance()); assertEquals(expected.sectionArtState(), f.runtime.sectionArtState());
+                    assertEquals(expected.checkpointState(), f.runtime.checkpointState());
+                }
+            }
+        }
+    }
+
+    @Test void sonicHole31ActivatedCaptureRestoreReplayKeepsOneFmPerVisit() throws Exception {
+        try (var f = new Fixture()) {
+            f.firstCycle(); f.makePlayerAbsent(); var pool = f.runtime.placement().pool(); pool.clearDynamicSlots();
+            pool.write(sonicHole31Image(f, 40, 2, 0x84, 7, 0x100, 0x780));
+            pool.write(sonicHole31Image(f, 41, 2, 0x84, 8, 0x100, 0x780));
+            var cut = f.runtime.captureClosedCut(); var actor = f.frame.captureActor(); var shared = f.frame.captureShared();
+            var cached = checkpointGet(f.runtime, "sonicHole"); var reserved = horizontalReserved(f.runtime);
+            CdOpeningObjectRuntime.Snapshot expected = null; CdPlayerFrameRuntime.ActorState expectedActor = null;
+            CdPlayerFrameRuntime.SharedState expectedShared = null; byte[] expectedCpu = null; List<Provenance> provenance = null;
+            for (int replay = 0; replay < 2; replay++) {
+                if (replay != 0) {
+                    f.runtime.validateRestore(cut); f.frame.validateActorRestore(actor); f.frame.validateSharedRestore(shared);
+                    f.frame.restoreActor(actor); f.frame.restoreShared(shared); f.runtime.restore(cut);
+                }
+                monitorBegin(f, 2); sonicHole31SeedPrimary(f, 0x0100BEEF, 0x0780CAFE, 1);
+                var player = f.frame.state(); var environment = f.frame.environment();
+                f.runtime.runDynamicSlotsAfterReservedSlots();
+                assertSame(player, f.frame.state()); assertSame(environment, f.frame.environment());
+                assertEquals(2, f.runtime.lastSoundRequests().stream().filter(CdOpeningObjectRuntime.SonicHoleFm.class::isInstance).count());
+                sonicHole31Retired(f); monitorFinish(f);
+                assertSame(cached, checkpointGet(f.runtime, "sonicHole")); assertEquals(reserved, horizontalReserved(f.runtime));
+                if (replay == 0) {
+                    expected = f.runtime.captureClosedCut(); expectedActor = f.frame.captureActor(); expectedShared = f.frame.captureShared();
+                    expectedCpu = f.runtime.cpuSat().bytes(); provenance = f.runtime.cpuSat().provenance();
+                } else {
+                    assertMonitorSnapshot(expected, f.runtime.captureClosedCut()); assertEquals(expectedActor, f.frame.captureActor());
+                    assertEquals(expectedShared, f.frame.captureShared()); assertArrayEquals(expectedCpu, f.runtime.cpuSat().bytes());
+                    assertEquals(provenance, f.runtime.cpuSat().provenance()); assertEquals(expected.sectionArtState(), f.runtime.sectionArtState());
+                    assertEquals(expected.checkpointState(), f.runtime.checkpointState());
+                }
+                // Restore the earlier zero-control actor before another Body; no controlled-Body run.
+            }
+        }
+    }
+
+    @Test void sonicHole31UsesExistingSource17AndMosquiSpanWithoutInventoryGrowth() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); sonicHole31SeedPrimary(f, 0x0100BEEF, 0x0780CAFE, 1);
+            var objects = f.assets.openingObjects(); var sources = objects.sectionArtSources();
+            assertEquals(17, sources.sources().size());
+            assertEquals(14, sources.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_SONIC_HOLE).tileCount());
+            var section = f.runtime.sectionArtState(); var power = f.runtime.powerupArtState(); var art = f.frame.artState();
+            var clock = f.frame.vIntClock(); var calls = f.artPublications.size(); var reserved = horizontalReserved(f.runtime);
+            var banks = checkpointGet(f.runtime, "banks"); assertEquals(BANKS, banks);
+            var sequential = logShadow33Banks(759); assertEquals(664, sequential.logShadow() + 5 - sequential.player());
+            var pool = f.runtime.placement().pool(); var source = sonicHole31Image(f, 40, 2, 0x84, 0, 0x100, 0x780); pool.write(source);
+            var before = f.runtime.placement().capture(); var player = f.frame.state(); var environment = f.frame.environment();
+            var checkpoint = f.runtime.checkpointState(); var ledger = new ArrayList<CdOpeningObjectRuntime.SoundRequest>(f.runtime.lastSoundRequests());
+            ledger.add(new CdOpeningObjectRuntime.SonicHoleFm(CdSonicHole.FmSound.FM_A3));
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertSame(sources, objects.sectionArtSources()); assertEquals(17, sources.sources().size());
+            assertSame(section, f.runtime.sectionArtState()); assertSame(power, f.runtime.powerupArtState()); assertSame(art, f.frame.artState());
+            assertEquals(calls, f.artPublications.size()); assertEquals(clock, f.frame.vIntClock());
+            assertEquals(reserved, horizontalReserved(f.runtime)); assertSame(banks, checkpointGet(f.runtime, "banks"));
+            assertEquals(ledger, f.runtime.lastSoundRequests()); assertEquals(source.moveByte(ROUTINE, 4).moveByte(SPRITE_FLAGS, 4), f.slot(40));
+            var bank = before.savedFlags().copy(); bank[3] |= 0x40;
+            assertArrayEquals(bank, f.runtime.placement().capture().savedFlags().copy()); assertEquals(before.status(), f.runtime.placement().status());
+            sonicHole31Unchanged(f, before.pool(), player, environment, checkpoint, 40); sonicHole31Retired(f);
+        }
+    }
+
+    @Test void sonicHole31PrivatePortsRejectNoOriginFreshStaleAndForeignValues() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var pool = f.runtime.placement().pool();
+            pool.write(sonicHole31Image(f, 40, 2, 0x84, 7, 0x100, 0x780));
+            var stale = pool.capture(); var oldSource = pool.state(40);
+            pool.write(oldSource.moveByte(SUBTYPE2, 0xE7)); var fresh = pool.capture(); var source = pool.state(40);
+            var foreign = new CdObjectPool().capture();
+            CdObjectPool.Snapshot[] cuts = {fresh, stale, foreign, fresh};
+            CdObjectState[] sources = {source, oldSource, foreign.slots().get(8), pool.state(41)};
+            for (int n = 0; n < cuts.length; n++) {
+                for (var field : CdSonicHole.PlayerField.values()) sonicHole31NoOrigin(f, "readSonicHolePrimary",
+                        new Class<?>[]{CdSonicHole.PlayerField.class, CdObjectPool.Snapshot.class, CdObjectState.class},
+                        new Object[]{field, cuts[n], sources[n]});
+                sonicHole31NoOrigin(f, "playSonicHoleFm",
+                        new Class<?>[]{CdSonicHole.FmSound.class, CdObjectPool.Snapshot.class, CdObjectState.class},
+                        new Object[]{CdSonicHole.FmSound.FM_A3, cuts[n], sources[n]});
+            }
+            assertFalse(f.runtime.closed()); assertEquals(CdOpeningObjectRuntime.Phase.PLAYER_DONE, f.runtime.phase());
+        }
+    }
+
+    @Test void sonicHole31NormalAndFaultExitsRetireOriginAndKeepTerminalAdmission() throws Exception {
+        for (int scenario = 0; scenario < 5; scenario++) try (var f = new Fixture()) {
+            f.firstCycle(); f.makePlayerAbsent(); var healthy = f.runtime.captureClosedCut();
+            monitorBegin(f, 2); f.runtime.placement().pool().clearDynamicSlots();
+            if (scenario == 2 || scenario == 3) sonicHole31SetRawGates(f, 2, 0);
+            if (scenario == 4) sonicHole31SeedPrimary(f, 0x0100BEEF, 0x0780CAFE, 1);
+            int routine = scenario == 1 ? 3 : scenario == 3 ? 4 : scenario == 4 ? 2 : 0;
+            var source = sonicHole31Image(f, 40, routine, 0x84, scenario == 2 || scenario == 3 ? 254 : 0,
+                    scenario == 3 ? 0x280 : 0x100, 0x780);
+            if (scenario == 4) source = source.moveLong(MAPPINGS, 0xFF208AD4);
+            f.runtime.placement().pool().write(source);
+            var player = f.frame.state(); var environment = f.frame.environment();
+            if (scenario == 0 || scenario == 4) {
+                f.runtime.runDynamicSlotsAfterReservedSlots(); sonicHole31Retired(f);
+                if (scenario == 0) {
+                    monitorFinish(f); assertNotNull(f.runtime.captureClosedCut()); assertFalse(f.runtime.closed()); sonicHole31Retired(f);
+                    continue;
+                }
+                assertThrows(UnsupportedOperationException.class, () -> f.runtime.finishAfterCamera(POST));
+            } else {
+                var fault = assertThrows(CdSonicHole.UnsupportedSonicHole.class, f.runtime::runDynamicSlotsAfterReservedSlots);
+                assertEquals(scenario == 1 ? CdSonicHole.UnsupportedBoundary.ROUTINE_DISPATCH
+                        : CdSonicHole.UnsupportedBoundary.SAVED_FLAGS_ADDRESS, fault.boundary());
+                assertEquals(scenario == 1 ? 3 : 766, fault.value());
+            }
+            assertSame(player, f.frame.state()); assertSame(environment, f.frame.environment()); sonicHole31Closed(f);
+            assertThrows(IllegalStateException.class, () -> f.runtime.restore(healthy));
+            assertThrows(IllegalStateException.class, () -> f.runtime.finishAfterCamera(POST));
+            assertThrows(IllegalStateException.class, f.runtime::finishOrdinaryTail);
+        }
+    }
+
+    private static CdObjectState sonicHole31Image(Fixture f, int whole, int routine, int sprite, int saved, int x, int y) throws java.io.IOException {
+        return f.slot(whole).moveByte(ID, 0x31).moveByte(ROUTINE, routine).moveByte(SPRITE_FLAGS, sprite)
+                .moveByte(SAVED_FLAGS_ID, saved).moveByte(SUBTYPE, 0xA5).moveByte(SUBTYPE2, 0xD6).moveByte(FLAGS, 0xB7)
+                .moveWord(X, x).moveWord(X_FRACTION, 0xBEEF).moveWord(Y, y).moveWord(Y_FRACTION, 0xCAFE)
+                .moveByte(PRIORITY, routine == 0 ? 0xA6 : 6).moveByte(WIDTH, routine == 0 ? 3 : 16)
+                .moveByte(Y_RADIUS, routine == 0 ? 5 : 16).moveByte(MAP_FRAME, 0)
+                .moveLong(MAPPINGS, routine == 0 ? 0xDEADBEEF : f.assets.openingObjects().view(
+                        com.openggf.game.soniccd.level.CdR11aObjectAssets.Table.SONIC_HOLE_MAPPINGS).range().nativeAddress())
+                .moveWord(TILE, routine == 0 ? 0xBEEF : 0x03A0);
+    }
+
+    private static byte[] sonicHole31ExpectedInit(Fixture f, CdObjectState source, int rawTimeZone, boolean oldBit6Set) throws java.io.IOException {
+        // Independent raw offsets, not Body setters/effects. Queue bit7/tail are asserted by each reached path.
+        byte[] expected = source.copyBytes();
+        expected[0x24] = (byte) ((source.routine() + (oldBit6Set ? 4 : 2)) & 255);
+        expected[1] = (byte) (source.spriteFlags() | 4);
+        int tile = rawTimeZone == 0 ? 0x03BB : 0x03A0;
+        expected[2] = (byte) (tile >>> 8); expected[3] = (byte) tile;
+        int mapping = f.assets.openingObjects().view(
+                com.openggf.game.soniccd.level.CdR11aObjectAssets.Table.SONIC_HOLE_MAPPINGS).range().nativeAddress();
+        expected[4] = (byte) (mapping >>> 24); expected[5] = (byte) (mapping >>> 16);
+        expected[6] = (byte) (mapping >>> 8); expected[7] = (byte) mapping;
+        expected[0x19] = 0x10; expected[0x16] = 0x10; expected[0x18] = 6;
+        return expected;
+    }
+
+    private static void sonicHole31SeedPrimary(Fixture f, int xLong, int yLong, int control) {
+        var actor = f.frame.captureActor(); var state = actor.state(); var m = state.motion();
+        var motion = new CdPlayerMotionState(xLong, yLong, m.xVelocity(), m.yVelocity(), m.groundVelocity(),
+                m.routine(), m.angle(), m.flags(), m.spriteFlags(), m.xRadius(), m.yRadius(), m.animation(), m.previousAnimation(),
+                m.playerJump(), m.charge(), m.moveLock(), m.stick(), control, m.previousPrimaryAngle(), m.previousSecondaryAngle());
+        f.frame.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(),
+                new CdPlayerBody.State(motion, state.animation(), state.header(), state.timers(), state.history(),
+                        state.rotationDistance(), state.objectLinks(), state.rotationAngle()), actor.display()));
+    }
+
+    private static void sonicHole31SetRawGates(Fixture f, int rawTimeZone, int rawDirection) {
+        var shared = f.frame.captureShared(); var e = shared.environment(); var movement = e.movement(); var gates = movement.gates();
+        var next = new CdPlayerMovement.Gates(gates.zoneAct(), rawTimeZone, gates.miniSonic(), gates.waterSlide(),
+                gates.windTunnel(), gates.speedShoes(), rawDirection);
+        f.frame.restoreShared(new CdPlayerFrameRuntime.SharedState(shared.owner(),
+                new CdPlayerBody.Environment(new CdPlayerMovement.Environment(movement.physics(), movement.bounds(), next, movement.globals()),
+                        e.controls(), e.globals(), e.dynamicSlots()), shared.artState(), shared.paused(), shared.vIntClock()));
+    }
+
+    private static void sonicHole31Unchanged(Fixture f, CdObjectPool.Snapshot poolBefore, CdPlayerBody.State player,
+                                             CdPlayerBody.Environment environment, CdOpeningObjectRuntime.CheckpointOwnerState checkpoint, int changedWhole) {
+        var current = f.runtime.placement().pool().capture().slots(); assertEquals(96, current.size());
+        for (int index = 0; index < 96; index++) {
+            assertEquals(index + 32, current.get(index).identity().wholeIndex()); assertEquals(64, current.get(index).copyBytes().length);
+            if (index + 32 != changedWhole) assertArrayEquals(poolBefore.slots().get(index).copyBytes(), current.get(index).copyBytes(), "physical " + (index + 32));
+        }
+        assertSame(player, f.frame.state()); assertSame(environment, f.frame.environment());
+        assertSame(checkpoint, f.runtime.checkpointState()); assertTrue(f.angleWrites.isEmpty());
+    }
+
+    private static void sonicHole31NoOrigin(Fixture f, String name, Class<?>[] types, Object[] arguments) throws Exception {
+        var placement = f.runtime.placement(); var before = placement.capture(); var player = f.frame.state(); var environment = f.frame.environment();
+        var sounds = f.runtime.lastSoundRequests(); var checkpoint = f.runtime.checkpointState(); var phase = f.runtime.phase();
+        var method = CdOpeningObjectRuntime.class.getDeclaredMethod(name, types); method.setAccessible(true);
+        var fault = assertThrows(java.lang.reflect.InvocationTargetException.class, () -> method.invoke(f.runtime, arguments));
+        assertInstanceOf(IllegalStateException.class, fault.getCause());
+        assertEquals(before.pool().slots(), placement.pool().capture().slots()); assertEquals(before.status(), placement.status());
+        assertArrayEquals(before.savedFlags().copy(), placement.capture().savedFlags().copy());
+        assertSame(player, f.frame.state()); assertSame(environment, f.frame.environment());
+        assertSame(sounds, f.runtime.lastSoundRequests()); assertSame(checkpoint, f.runtime.checkpointState()); assertEquals(phase, f.runtime.phase());
+        sonicHole31Retired(f);
+    }
+
+    private static void sonicHole31Retired(Fixture f) {
+        assertNull(checkpointGet(f.runtime, "activeSonicHoleInvocation"));
+        assertEquals(false, checkpointGet(f.runtime, "inSolidCommit"));
+    }
+
+    private static void sonicHole31Closed(Fixture f) {
+        assertEquals(CdOpeningObjectRuntime.Phase.FAILED, f.runtime.phase()); assertTrue(f.runtime.closed()); assertTrue(f.frame.closed());
+        sonicHole31Retired(f);
+        assertThrows(IllegalStateException.class, f.runtime::runDynamicSlotsAfterReservedSlots);
+        assertThrows(IllegalStateException.class, f.runtime::captureClosedCut);
+    }
+
+    // Public ingress cannot inject an in-scope wrong field/site, repeated FM, swapped cached body/cut,
+    // reentrant read/FM or chosen callback Throwable. No private origin/constructor is forged.
+    // Those guards, full-pair/no-write discipline, ledger prebuild and original-Throwable propagation
+    // are source-review obligations; no-origin reflection does not claim their mid-scope coverage.
+    // No allocation-failure/concurrent-host guarantee, natural5323 return, controlled next Body,
+    // new native/GL/pixel/audio/full-USA/JP/EU result is claimed. All new Java is UNRUN by this author.
+    // END SonicHole31 Runtime R1.
 }

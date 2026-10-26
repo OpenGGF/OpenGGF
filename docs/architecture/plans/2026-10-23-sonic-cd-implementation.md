@@ -7836,3 +7836,44 @@ unchanged. User requests a break after the live Sonic Hole join, a handover,
 and GitHub feature/ai-nothing-to-see-here based on next. This supersedes the
 prior local-only publication restriction for that requested feature branch;
 main remains untouched and no release/PR/other-branch push is requested.
+
+
+## 26 October 2026 — Sonic Hole live Runtime, before permanent route promotion
+
+The source-only body, assets and mapper are saved in `2b31c6c95` with the
+separate 180-case metadata and 591-case component/old-consumer positives. The
+live ID31 join now caches the real body and validates actual dispatch scope,
+control → conditional X/Y → FM order, complete96/source64 and the actual Frame
+pair before ordered sound publication. It adds only typed `SonicHoleFm`, no new
+Frame writer, art source, region, bank or logical span. Returned effects remain
+completed metadata, never commands.
+
+Tests-only build21956 stops on the expected missing `SonicHoleFm` declaration,
+with no JUnit run. First positive56391 runs494 with0 failures,1 error,0 skips at
+20:50:11Z: one factory test omitted the existing host resident-art sink. RootR2
+adds a recording sink to that fixture only. Narrow17880 passes1; fresh full52519
+passes494/0/0/0 at21:14:30Z (39.516s execution,46s queue): Runtime486, selected
+Ring/current440/currentShadow EGL3, source guards5. Complete fresh class/case
+identities, Java25, media, S2 REV01, surfaceless EGL and explicit opt-in are
+checked; production and RootR2 test hashes remain unchanged. The independent R1
+Runtime review reports no concrete P1/P2; it is source evidence, not execution.
+
+Actual command, from the private source worktree with existing absolute inputs:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 python3 "$OPENGGF_ROOT/tools/testing/maven_queue.py" --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dsoniccd.opening.egl=true "-Dsoniccd.media.root=$SCD_MEDIA_ROOT" "-Dsonic2.rom.path=$S2_ROM" '-Dtest=TestCdOpeningObjectRuntime,TestSonicCdOpeningWorldEgl#actualEglNormalInputPickupAndFullCourseReplay+actualEglCurrentTamabbohSingletonRendersAndRetiresThe659thClientPattern+actualEglCurrentLogShadowFivePatternsRenderAndRetireThe664EntryClientRange,TestJunit5MigrationGuard,TestNoAssertionFreeDiagnostics' test -B
+```
+
+Temporary observer36594 returns5414 ordinary four-jump calls, including Hole
+Init5323/Main5324 at physical46, then rethrows `TIME_WARP_ACTIVE` on5415.
+TimePost requests `SCMD_PASTSFX` and sets raw direction255 on5414; timer and charge
+are0. Runtime/Frame close, Body and all96 images stay at the last completed
+values, and VInt advances5414→5415. The failed composite is never captured or
+resumed. Observer source is removed immediately and the permanent53-case file
+restored byte-exact. Promotion/replay is pending at this checkpoint. Natural
+control remains0, so Hole activation, A3 and new Hole World pixels are not proved.
+
+User delivery changed: finish Sonic Hole, publish only
+`feature/ai-nothing-to-see-here` based on next, write a handover, then pause.
+Time warp and the next owner must not be implemented during this delivery.
+Full USA, then Japan/Europe, remains unfinished.
