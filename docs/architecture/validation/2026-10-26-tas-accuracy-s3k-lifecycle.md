@@ -1,5 +1,8 @@
 # S3K TAS lifecycle accuracy repairs — 2026-10-26
 
+The review follow-up at the end supersedes the initial MHZ contact-timing
+implementation and its pre-dispatch assertions. Sphere source is unchanged.
+
 Assigned scope: `special-stage-entry-input-latch` (`s3k-sphere-timing:2`)
 and `mhz-proxy-repeated-damage` (`s3k-boss:2`). Parent owns classification,
 shared-loop/rules changes, combined validation, central documentation and delivery.
@@ -200,3 +203,96 @@ rerun. No Java source changed after the passing focused run.
 No live validation job remains. Focused logs were consumed into this record;
 workflow-generated diagnostic files are disposable. Central changelog,
 discrepancy/index/scope files were deliberately left to the parent as assigned.
+
+
+## Review follow-up — struck-slot contact before the MHZ damage tail
+
+The reviewer identified a missing negative control in source
+`1926b38052161dd0c4361a59fece36360689f75c`: calling the body's `onPlayerAttack`
+immediately started its flash and cleared the proxy too. That manufactured the
+same repeated-damage consequence for an early body-only hit as for the intended
+early proxy hit. The original positive case and ordinary post-update outcomes
+could not distinguish those causes. This follow-up starts from
+`80f3359e85067a173477aa3008e98303bf9a31ab` in the same owned branch/worktree.
+
+`Touch_Enemy.checkhurtenemy` (sonic3k.asm:20945-20958) clears/decrements only
+the struck slot and records its attacker. `loc_76004`
+(sonic3k.asm:157019-157024) subsequently restores parent HP/collision during
+routine0. With an untouched active proxy, `sub_76782`
+(sonic3k.asm:157639-157645) returns before starting any flash. Native expectation
+for body-only entry is therefore HP9, proxy active, flash0, no boss-hit sound,
+and no MHZ-owned attacker stop. The early proxy positive remains HP2 after the
+weather transition and six following updates.
+
+Red command on unchanged production, with the new negative added:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestTasS3kMhzRapidHit' "-Ds3k.rom.path=$HOME/code/projects/OpenGGF/s3k.gen" test
+```
+
+**4 tests, 1 failure, 0 errors, 0 skips.** Queue 109s; Maven 30.600s.
+`TestTasS3kMhzRapidHit#earlyBodyOnlyHitIsDiscardedByRoutineZeroWithoutDamagingTheProxy`
+reached the completed tail and failed: expected HP9, observed HP2.
+The existing proxy-positive, neutral and restore-forward cases passed. This is
+kill evidence for the eager shared-flash approach, not a setup failure.
+
+Repair: body contact changes only parent HP/collision/attacker. Proxy contact
+changes only its collision byte, its own signed-byte hit property (`-1 -> -2`),
+and its attacker. The parent damage tail consumes those fields after dispatch,
+selects the proper attacker when consuming the proxy, and only then starts the
+flash, clears both collision owners, plays the hit sound and stops that attacker.
+Existing player-reference codecs capture both owner-held attacker references;
+no shared game-loop, collision, physics, rules or rewind code changes.
+
+The earlier immediate proxy-parent HP decrement and immediate flash/attacker-stop
+assertions were incorrect observation boundaries. They are replaced by assertions
+that the unstruck owner and flash remain unchanged before dispatch, followed by
+the existing decrement/flash/stop assertions after the actual tail. Ordinary
+32-update flash expiry, pre-arena clamp, terminal defeat, native phase transitions,
+and deletion checks remain. No old scenario selector was renamed in this
+follow-up. Added selectors are the body-only negative above and
+`TestMhzEndBossNativeDamage#pendingContactRestoresTheStruckSlotAndStopsOnlyTheResolvedAttacker`
+(body/proxy × P1/P2, four cases). Existing capture hooks are retained.
+
+The body-only test restores before and after contact through actual fresh object
+recreation and replays weather destruction plus the six-update tail. The four
+pending-hit cases register the fixture roster with the real identity table,
+replace both Java player incarnations before restore, and assert that only the
+resolved attacking participant is stopped by the replayed tail. This prevents
+an unregistered player reference being silently captured as null from falsely
+certifying the delayed effect. Scope remains the declared local contact/owner
+boundaries; no published approach or full-route claim is added.
+
+Affected MHZ candidate command:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestTasS3kMhzRapidHit,TestMhzEndBossNativeDamage,TestMhzEndBossHitProxyRewind,TestMhzBossObjects,TestS3kMhzEndBossGraphRewind' "-Ds3k.rom.path=$HOME/code/projects/OpenGGF/s3k.gen" test
+```
+
+Additional static checks:
+
+```bash
+python3 tools/disasm/disasm_citations.py check --strict --limit 12 src/main/java/com/openggf/game/sonic3k/objects/bosses/MhzEndBossInstance.java src/main/java/com/openggf/game/sonic3k/objects/bosses/MhzEndBossHitProxyChild.java docs/architecture/validation/2026-10-26-tas-accuracy-s3k-lifecycle.md
+git diff --check
+```
+
+Citation checker exit0: `near=1, ok=7, unverifiable=5` against the pinned
+references; this does not certify every prose citation. Relevant contact/tail
+instructions were also inspected directly. Whitespace check passed.
+
+**153 tests passed, 0 failures, 0 errors, 0 skips.** Queue wait475s;
+Maven1:33. Completed 2026-10-26T19:57:36Z under Java25 with the original absolute
+S3K ROM and surfaceless EGL. Per class: `TestTasS3kMhzRapidHit`4,
+`TestMhzEndBossNativeDamage`20, `TestMhzEndBossHitProxyRewind`2,
+`TestMhzBossObjects`124, `TestS3kMhzEndBossGraphRewind`3. The failed body-only
+expectation is now green beside the retained early proxy/neutral controls.
+No setup failure or skip occurred in this follow-up. The run emitted the known
+FAST-load profile warning (no manifest, falls back to NONE); these MHZ object
+fixtures do not claim a FAST entry timing check.
+
+No Java/test source changed after submitting that candidate run. The source SHA
+will be added in the local documentation checkpoint after committing the tested
+source. Sphere validation from the initial run is reused because no Sphere
+source/test changed. Parent continues to own combined smoke/domain validation,
+central documentation and integration. No follow-up test IDs were renamed.
+No live validation job remains.

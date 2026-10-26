@@ -44,7 +44,10 @@ class TestTasS3kMhzRapidHit {
             var h = new Harness();
             h.present(reel);
             if (earlyHit) h.attackProxy();
-            assertEquals(earlyHit ? 8 : 9, h.boss.getState().hitCount);
+            assertEquals(9, h.boss.getState().hitCount, "proxy contact has not dispatched the parent tail");
+            assertEquals(0, h.boss.getState().invulnerabilityTimer);
+            assertEquals(0, h.hitSounds());
+            assertEquals(earlyHit ? -2 : -1, h.proxy.getCollisionProperty());
             assertEquals(earlyHit ? 0 : 0x25, h.proxy.getCollisionFlags());
             h.releaseWeather(reel);
             assertEquals(earlyHit ? 8 : 9, h.boss.getState().hitCount,
@@ -65,6 +68,45 @@ class TestTasS3kMhzRapidHit {
                 assertEquals(0xCF, h.boss.getCollisionFlags(), "routine0 restored the parent collision byte");
                 assertEquals(0, h.proxy.getCollisionFlags(), "the proxy remains independently cleared");
             }
+        }
+    }
+
+    @Test
+    void earlyBodyOnlyHitIsDiscardedByRoutineZeroWithoutDamagingTheProxy() {
+        try (var reel = S3kTestReelPresentation.open()) {
+            var h = new Harness();
+            h.player.setXSpeed((short) 0x600);
+            var beforeContact = h.registry.capture();
+            h.boss.onPlayerAttack(h.player, null);
+            assertEquals(8, h.boss.getState().hitCount, "the struck body loses its own hit point at contact");
+            assertEquals(0x25, h.proxy.getCollisionFlags(), "contact must not clear the unstruck proxy");
+            assertEquals(-1, h.proxy.getCollisionProperty());
+            assertEquals(0, h.boss.getState().invulnerabilityTimer);
+            assertEquals(0x600, h.player.getXSpeed(), "only an admitted damage tail may stop the attacker");
+            var afterContact = h.registry.capture();
+            h.releaseWeather(reel);
+            h.advance(6);
+            h.present(reel);
+            assertEquals(9, h.boss.getState().hitCount,
+                    "routine0 resets a body-only hit; an untouched proxy cannot publish repeated damage");
+            assertEquals(0x25, h.proxy.getCollisionFlags());
+            assertFalse(h.boss.getState().invulnerable);
+            assertEquals(0, h.boss.getState().invulnerabilityTimer);
+            assertEquals(0, h.hitSounds(), "sub_76782 returns before starting a flash");
+            assertEquals(0x39, h.boss.getCustomFlag(0x2E));
+            assertEquals(0x600, h.player.getXSpeed());
+            var afterTail = h.registry.capture();
+            h.restore(afterContact, 0);
+            h.releaseWeather(reel);
+            h.advance(6);
+            same(afterTail, h.registry.capture(), "body-only pending contact restore-forward");
+            assertEquals(0x600, h.player.getXSpeed());
+            h.restore(beforeContact, 0);
+            h.boss.onPlayerAttack(h.player, null);
+            same(afterContact, h.registry.capture(), "body-only pre-contact restore-forward");
+            h.releaseWeather(reel);
+            h.advance(6);
+            same(afterTail, h.registry.capture(), "body-only complete local inlet replay");
         }
     }
 
@@ -107,6 +149,7 @@ class TestTasS3kMhzRapidHit {
             assertEquals(0, h.boss.getState().invulnerabilityTimer);
             assertEquals(0xCF, h.boss.getCollisionFlags());
             assertEquals(0x25, h.proxy.getCollisionFlags());
+            assertEquals(-1, h.proxy.getCollisionProperty(), "flash expiry restores the proxy hit property");
             var afterFlash = h.registry.capture();
             h.advance(1);
             var next = h.registry.capture();
@@ -127,7 +170,8 @@ class TestTasS3kMhzRapidHit {
             assertNull(h.weather, "native weather wait retired its slot");
             assertEquals(2, h.boss.getState().hitCount);
             h.attackProxy(); // A distinct ordinary terminal hit AFTER the early-hit tail and flash expiry.
-            assertEquals(1, h.boss.getState().hitCount);
+            assertEquals(2, h.boss.getState().hitCount, "terminal proxy contact waits for its parent tail");
+            assertEquals(0, h.boss.getState().invulnerabilityTimer);
             int terminalClock = h.clock;
             var terminalFlash = h.registry.capture();
             h.advance(31);
@@ -168,8 +212,12 @@ class TestTasS3kMhzRapidHit {
             TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_3K);
             ObjectManager[] holder = new ObjectManager[1];
             var runtime = new MhzZoneRuntimeState(1, PlayerCharacter.KNUCKLES);
+            var roster = new com.openggf.sprites.managers.SpriteManager() {
+                @Override public Knuckles getMainPlayable() { return player; }
+            };
             var services = new StubObjectServices() {
                 @Override public ObjectManager objectManager() { return holder[0]; }
+                @Override public com.openggf.sprites.managers.SpriteManager spriteManager() { return roster; }
                 @Override public MhzZoneRuntimeState zoneRuntimeState() { return runtime; }
                 @Override public void playSfx(int id) { sounds.add(id); }
             };
@@ -198,7 +246,7 @@ class TestTasS3kMhzRapidHit {
             player.setXSpeed((short) 0x600);
             proxyAttacks++;
             proxy.onPlayerAttack(player, null);
-            assertEquals(0, player.getXSpeed());
+            assertEquals(0x600, player.getXSpeed(), "proxy contact defers the stop to the parent damage tail");
         }
 
         void releaseWeather(S3kTestReelPresentation reel) {

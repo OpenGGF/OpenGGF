@@ -112,8 +112,10 @@ class TestMhzEndBossHitProxyRewind {
         int hitsBefore = restoredParent.getState().hitCount;
         restoredProxy.onPlayerAttack(null,
                 new TouchResponseResult(0, 0, 0, TouchCategory.ENEMY));
-        assertEquals(hitsBefore - 1, restoredParent.getState().hitCount,
-                "restored proxy must delegate accepted attacks to the restored parent");
+        assertEquals(hitsBefore, restoredParent.getState().hitCount,
+                "restored proxy publishes only its own contact state before the parent dispatch");
+        assertEquals(-2, restoredProxy.getCollisionProperty(), "only the struck proxy property decrements");
+        assertEquals(0, restoredParent.getState().invulnerabilityTimer);
         assertEquals(0, restoredProxy.getCollisionFlags(), "accepted contact clears the actual proxy byte");
         assertSame(restoredProxy, readHitProxy(restoredParent), "restored parent retains its exact native $44 link");
 

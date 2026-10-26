@@ -18,8 +18,8 @@ import java.util.List;
  *
  * <p>ROM reference: {@code ChildObjDat_76982 -> loc_764A0}. The child refreshes
  * from parent offset {@code +$21,-$10}, uses {@code word_76964}
- * {@code collision_flags=$25}, and forwards accepted attacks to the parent
- * boss state the same way {@code sub_76782} walks through {@code parent3}.
+ * {@code collision_flags=$25}. Accepted contact changes this slot; the parent's
+ * post-dispatch {@code sub_76782} then consumes the cleared collision byte.
  */
 public final class MhzEndBossHitProxyChild extends AbstractObjectInstance
         implements TouchResponseProvider, TouchResponseAttackable, RewindRecreatable {
@@ -34,6 +34,8 @@ public final class MhzEndBossHitProxyChild extends AbstractObjectInstance
     private int x;
     private int y;
     private int collisionFlags = ACTIVE_COLLISION_FLAGS;
+    private int collisionProperty = COLLISION_PROPERTY;
+    private PlayableEntity lastHitPlayer;
 
     private MhzEndBossHitProxyChild() {
         this(new ObjectSpawn(0, 0, Sonic3kObjectIds.MHZ_END_BOSS, 0, 0, false, 0));
@@ -134,11 +136,16 @@ public final class MhzEndBossHitProxyChild extends AbstractObjectInstance
 
     void restoreCollision() {
         collisionFlags = ACTIVE_COLLISION_FLAGS;
+        collisionProperty = COLLISION_PROPERTY;
+    }
+
+    PlayableEntity getLastHitPlayer() {
+        return lastHitPlayer;
     }
 
     @Override
     public int getCollisionProperty() {
-        return COLLISION_PROPERTY;
+        return collisionProperty;
     }
 
     @Override
@@ -146,8 +153,11 @@ public final class MhzEndBossHitProxyChild extends AbstractObjectInstance
         if (getCollisionFlags() == 0) {
             return;
         }
+        // Touch_Enemy.checkhurtenemy mutates only the struck child slot.
+        // Its parent reads this state after its own routine dispatch.
         collisionFlags = 0;
-        parent.onPlayerAttack(player, result);
+        collisionProperty = (byte) (collisionProperty - 1);
+        lastHitPlayer = player;
     }
 
     @Override

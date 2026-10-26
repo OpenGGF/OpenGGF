@@ -139,6 +139,7 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
     // Native collision_flags is independent of the $20 flash countdown.
     private boolean collisionEnabled = true;
     private MhzEndBossHitProxyChild hitProxy;
+    private PlayableEntity lastHitPlayer;
 
     public MhzEndBossInstance(ObjectSpawn spawn) {
         super(spawn, "MHZEndBoss");
@@ -973,18 +974,12 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
         if (!collisionEnabled || state.defeated) {
             return;
         }
-        // Accepted touch publishes the decremented count before the object pass.
-        // loc_767A0's pre-arena floor is checked after that pass's movement,
-        // which may itself set $38 bit7 through loc_760C4.
+        // Touch_Enemy.checkhurtenemy (sonic3k.asm:20945-20958) changes only
+        // the struck slot. The routine dispatch can overwrite this body hit
+        // before sub_76782 decides whether to start a flash or clear the proxy.
         state.hitCount = (state.hitCount - 1) & 0xFF;
         collisionEnabled = false;
-        if (state.invulnerabilityTimer != 0) {
-            return;
-        }
-        startMhzHitFlash();
-        if (player != null) {
-            player.setXSpeed((short) 0);
-        }
+        lastHitPlayer = player;
     }
 
     private void startMhzHitFlash() {
@@ -995,6 +990,10 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
             hitProxy.disableCollision();
         }
         services().playSfx(getBossHitSfxId());
+        // loc_767E4 belongs to the post-dispatch damage tail, not contact.
+        if (lastHitPlayer != null) {
+            lastHitPlayer.setXSpeed((short) 0);
+        }
     }
 
     @Override
@@ -1021,6 +1020,7 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
                 return;
             }
             state.hitCount = (state.hitCount - 1) & 0xFF;
+            lastHitPlayer = hitProxy.getLastHitPlayer();
         }
         // loc_767A0 observes the post-dispatch arena bit, not its value at touch.
         if ((getCustomFlag(STATE_FLAGS_OFFSET) & FLAG_ARENA_PASS) == 0 && (byte) state.hitCount <= 1) {

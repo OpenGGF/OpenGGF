@@ -1234,6 +1234,10 @@ class TestMhzBossObjects {
         player.setXSpeed((short) 0x0600);
 
         ((TouchResponseAttackable) hitProxy).onPlayerAttack(player, null);
+        assertEquals(2, endBoss.getState().hitCount, "proxy contact has not dispatched the parent");
+        assertEquals(0x600, player.getXSpeed(), "attacker stop belongs to the damage tail");
+        assertEquals(-2, ((TouchResponseProvider) hitProxy).getCollisionProperty());
+        endBoss.update(1, player);
 
         assertEquals(1, endBoss.getState().hitCount,
                 "sub_76782 consumes the accepted hit through the child slot's parent pointer");
@@ -1997,6 +2001,8 @@ class TestMhzBossObjects {
 
         assertEquals(1, endBoss.getState().hitCount,
                 "sub_76782 consumes one boss hit before starting the invulnerability flash");
+        assertEquals(0x600, player.getXSpeed(), "direct contact does not start the flash");
+        endBoss.update(0, player);
         assertEquals(0, player.getXSpeed(),
                 "sub_76782 clears x_vel on the player that struck the MHZ end-boss hit child");
     }
