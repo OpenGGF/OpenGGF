@@ -6,7 +6,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.SpawnCoordinateZeroScalarArgsRewindRecreatable;
+import com.openggf.level.objects.SpawnTrailingZeroIntsRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.game.PlayableEntity;
 
@@ -17,7 +17,7 @@ import java.util.List;
  * Uses ArtNem_FieryExplosion with mappings from Obj58_MapUnc_2D50A.
  */
 public class BossExplosionObjectInstance extends AbstractObjectInstance
-        implements SpawnCoordinateZeroScalarArgsRewindRecreatable, ObjectVisualFacing.NonDirectional {
+        implements SpawnTrailingZeroIntsRewindRecreatable, ObjectVisualFacing.NonDirectional {
     private static final int FRAME_DELAY = 7;
     private static final int LAST_FRAME = 6;
 
@@ -44,7 +44,12 @@ public class BossExplosionObjectInstance extends AbstractObjectInstance
     }
 
     public BossExplosionObjectInstance(int x, int y, int objectId, int sfxId, int priorityBucket) {
-        super(new ObjectSpawn(x, y, objectId, 0, 0, false, 0), "Boss Explosion");
+        this(new ObjectSpawn(x, y, objectId, 0, 0, false, 0), sfxId, priorityBucket);
+    }
+
+    /** Preserve native spawn identity; sound and draw priority are scalar-restored. */
+    private BossExplosionObjectInstance(ObjectSpawn spawn, int sfxId, int priorityBucket) {
+        super(spawn, "Boss Explosion");
         this.sfxId = sfxId;
         this.priorityBucket = RenderPriority.bucket(priorityBucket);
         this.mappingFrame = 0;

@@ -57,7 +57,7 @@ class TestTasS2CurrentLimitations {
 
     @ParameterizedTest
     @ValueSource(booleans = {false, true})
-    void currentLimitationHurtLauncherRejectsNativeRoutineFourEntry(boolean lockOn) {
+    void hurtLauncherAdmitsNativeRoutineFourEntry(boolean lockOn) {
         try (var reel = com.openggf.tests.reel.S2ComponentTestReel.open(10)) {
             var player = player(lockOn);
             player.setCentreX((short) 0x1000);
@@ -71,11 +71,12 @@ class TestTasS2CurrentLimitations {
             launcher.update(1, player);
             com.openggf.tests.reel.S2ComponentTestReel.frame(player, java.util.List.of(launcher), 0, 0, "hurt launcher");
             // loc_252F0 (s2.asm:51309-51387) rejects routine >=6, accepts hurt routine 4.
-            assertFalse(player.isObjectControlled(),
-                    "Confirmed limitation: native routine 4 enters capture; current engine rejects it");
-            assertEquals(0, player.getGSpeed());
-            assertEquals(-0x200, player.getXSpeed());
-            assertEquals(-0x400, player.getYSpeed());
+            assertTrue(player.isObjectControlled(), "native routine 4 enters capture");
+            assertTrue(player.isHurt(), "FixBugs=0 does not write player routine 2 at admission");
+            assertEquals(0x1000, player.getGSpeed());
+            assertEquals(0, player.getXSpeed());
+            assertEquals(0, player.getYSpeed());
+            launcher.onUnload();
             player.setHurt(false);
             launcher.update(2, player);
             com.openggf.tests.reel.S2ComponentTestReel.frame(player, java.util.List.of(launcher), 0, 0, "normal launcher control");
