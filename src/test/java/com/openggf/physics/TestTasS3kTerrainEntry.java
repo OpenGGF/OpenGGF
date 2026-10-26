@@ -215,16 +215,132 @@ class TestTasS3kTerrainEntry {
         assertEquals(32,p.getCentreX());assertEquals(-0x100,p.getXSpeed(),"in-bounds control preserves motion");
     }
 
+    @ParameterizedTest @ValueSource(booleans={false,true})
+    void slopeJumpAddsTheNativeNormalImpulseAndLeavesTheSlope(boolean uphill) {
+        world(uphill?6:2);
+        var p=new Sonic("sonic",(short)0,(short)0);
+        // Valid running contact on an authored continuous 45-degree slope (or
+        // flat control). The right floor probe is one pixel above the surface.
+        p.setCentreX((short)0x400);p.setCentreY((short)(uphill?0x2F2:0x2EC));
+        p.setAir(false);p.setAngle((byte)(uphill?0xE0:0));p.setGSpeed((short)0x600);
+        p.setXSpeed((short)(uphill?1086:1536));p.setYSpeed((short)(uphill?-1086:0));
+        var camera=GameServices.camera();camera.setMinX((short)0);camera.setMaxX((short)0x1000);camera.setMaxY((short)0x1000);
+        var probe=new GroundSensor(p,Direction.DOWN,(byte)9,(byte)p.getYRadius(),true).scan();
+        assertNotNull(probe);assertEquals(0,probe.distance());
+        var movement=(PlayableSpriteMovement)p.getMovementManager();
+        p.setJumpInputPressed(true,true);
+        movement.handleMovement(false,false,false,false,true,false,false,false);
+        // loc_1182E: angle-$40, signed CalcSine products, ASR8; no
+        // SpeedToPos on this dispatch. E0 gives -1177 on each axis.
+        assertTrue(p.getAir());assertTrue(p.isJumping());
+        assertEquals(uphill?-91:1536,p.getXSpeed());
+        assertEquals(uphill?-2263:-1664,p.getYSpeed());
+        int y=p.getCentreY();p.setJumpInputPressed(true,false);
+        for(int i=0;i<4;i++)movement.handleMovement(false,false,false,false,true,false,false,false);
+        assertTrue(p.getAir());assertTrue(p.getCentreY()<y-20,"real airborne exit rises clear of surface");
+    }
+
+    @ParameterizedTest @ValueSource(booleans={false,true})
+    void ordinaryDamageLaunchMovesAwayFromTheSourceAndRejectsASecondHit(boolean sourceOnLeft) {
+        world(0);
+        var p=new Sonic("sonic",(short)0,(short)0);
+        p.setCentreX((short)0x400);p.setCentreY((short)0x200);p.setAir(false);
+        var camera=GameServices.camera();camera.setMinX((short)0);camera.setMaxX((short)0x1000);camera.setMaxY((short)0x1000);
+        // HurtCharacter entry after the touch owner has established rings.
+        // No hurt flags or launch velocity are supplied by the fixture.
+        assertTrue(p.applyHurtOrDeath(sourceOnLeft?0x3F0:0x410,false,true));
+        assertTrue(p.isHurt());assertTrue(p.getAir());assertFalse(p.getDead());
+        assertEquals(sourceOnLeft?0x200:-0x200,p.getXSpeed());assertEquals(-0x400,p.getYSpeed());
+        assertEquals(0,p.getGSpeed());assertEquals(120,p.getInvulnerableFrames());
+        assertFalse(p.applyHurtOrDeath(sourceOnLeft?0x410:0x3F0,false,true),"fresh i-frames reject the opposite knockback");
+        var movement=(PlayableSpriteMovement)p.getMovementManager();
+        for(int i=0;i<4;i++)movement.handleMovement(false,false,false,false,false,false,false,false);
+        assertEquals(0x400+(sourceOnLeft?8:-8),p.getCentreX());assertTrue(p.getCentreY()<0x200);
+    }
+
+    @ParameterizedTest @ValueSource(booleans={false,true})
+    void stationaryMeshRangeUnloadRetainsStandingWallSuppressionAndPose(boolean unload) {
+        var collision=world(0);
+        var p=new Knuckles("knuckles",(short)0,(short)0);
+        p.setCentreX((short)(0x700-0xB8));p.setCentreY((short)0x400);p.setAir(false);
+        p.setXSpeed((short)0x600);p.setGSpeed((short)0x600);
+        // Declared valid mesh-mouth inlet. Capture, all native control flags,
+        // range deletion, and the subsequent unsupported-floor traversal run.
+        var camera=GameServices.camera();camera.setX((short)0x600);camera.setY((short)0x380);
+        camera.setMinX((short)0);camera.setMaxX((short)0x2000);camera.setMaxY((short)0x1000);
+        var services=new TestObjectServices(){@Override public ObjectPlayerQuery playerQuery(){return new ObjectPlayerQuery(()->p,java.util.List::of);}}.withCamera(camera);
+        var manager=new ObjectManager(java.util.List.of(),new com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry(),0,null,null,null,camera,services);
+        services.withDirectObjectManager(manager);collision.setObjectManager(manager);
+        var cage=manager.createDynamicObject(()->new com.openggf.game.sonic3k.objects.FbzWireCageStationaryObjectInstance(new ObjectSpawn(0x700,0x400,0x70,0,0,false,0)));
+        manager.update(camera.getX(),p,java.util.List.of(),0,false,true,false);
+        assertTrue(p.isOnObject());assertTrue(p.isObjectMappingFrameControl());assertTrue(p.isSuppressGroundWallCollision());
+        int capturedPose=p.getMappingFrame();assertNotEquals(0,capturedPose);
+        if(unload)camera.setX((short)0x1000); // valid camera seam; no player state is changed
+        var movement=(PlayableSpriteMovement)p.getMovementManager();
+        for(int frame=1;frame<=100;frame++){
+            movement.handleMovement(false,false,false,true,false,false,false,false);
+            manager.update(camera.getX(),p,java.util.List.of(),frame,false,true,false);
+        }
+        assertTrue(p.getCentreX()>0x7C0,"actual movement leaves mesh extent");
+        assertEquals(unload,cage.isDestroyed());
+        assertEquals(unload,p.isOnObject());assertEquals(unload,p.isSuppressGroundWallCollision());
+        assertEquals(unload,p.isObjectMappingFrameControl());assertEquals(!unload,p.getAir());
+        if(unload){assertEquals(capturedPose,p.getMappingFrame());assertFalse(manager.getActiveObjects().contains(cage));}
+    }
+
+    @ParameterizedTest @ValueSource(booleans={false,true})
+    void freshGlideIntoMonitorReboundsUpwardAndRetainsGlide(boolean monitorPresent) {
+        var collision=world(0);var p=new Knuckles("knuckles",(short)0,(short)0);
+        // Declared falling-jump inlet beside a monitor. Fresh release/repress
+        // must activate glide, acquire the touch, reverse Y, and fly clear.
+        p.setCentreX((short)0x3D0);p.setCentreY((short)0x2D0);p.setAir(true);p.setJumping(true);
+        p.setRolling(true);p.applyRollingRadii(true);p.setXSpeed((short)0x400);p.setYSpeed((short)0x600);
+        p.setDirection(Direction.RIGHT);
+        var camera=GameServices.camera();camera.setX((short)0x380);camera.setY((short)0x280);
+        camera.setMinX((short)0);camera.setMaxX((short)0x1000);camera.setMaxY((short)0x1000);
+        // Touch_Sizes[6] at $FF6E contains $10,$10 in the pinned ROM.
+        var table=mock(TouchResponseTable.class);when(table.getWidthRadius(6)).thenReturn(16);when(table.getHeightRadius(6)).thenReturn(16);
+        var debug=mock(com.openggf.debug.DebugOverlayManager.class);
+        var services=new TestObjectServices().withCamera(camera).withDebugOverlay(debug);
+        var manager=new ObjectManager(java.util.List.of(),new com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry(),0,null,table,null,camera,services);
+        services.withDirectObjectManager(manager);collision.setObjectManager(manager);
+        var monitor=manager.createDynamicObject(()->new Sonic3kMonitorObjectInstance(new ObjectSpawn(monitorPresent?0x400:0x800,0x300,1,3,0,false,0)));
+        var movement=(PlayableSpriteMovement)p.getMovementManager();
+        p.setJumpInputPressed(false,false);movement.handleMovement(false,false,false,false,false,false,false,false);
+        manager.update(camera.getX(),p,java.util.List.of(),0,true,true,false);
+        boolean bounced=false;int bounceY=0;
+        for(int frame=1;frame<=28;frame++){
+            p.setJumpInputPressed(true,frame==1);
+            movement.handleMovement(false,false,false,false,true,false,false,false);
+            if(frame==1){
+                assertEquals(1,p.getDoubleJumpFlag(),"fresh input activates the real glide owner");
+                assertEquals(2160,p.getYSpeed(),"$600 fall + $38 release gravity + $200 glide activation + $38 activation-frame gravity");
+            }
+            int before=p.getYSpeed();
+            manager.update(camera.getX(),p,java.util.List.of(),frame,true,true,false);
+            if(before>0 && p.getYSpeed()<0){
+                bounced=true;bounceY=p.getCentreY();assertEquals(5,frame);assertEquals(2032,before);
+                assertEquals(-2032,p.getYSpeed());assertEquals(1,p.getDoubleJumpFlag());
+            }
+        }
+        assertEquals(monitorPresent,bounced);assertEquals(1,p.getDoubleJumpFlag());
+        if(monitorPresent){assertEquals(0,monitor.getCollisionFlags());assertTrue(p.getCentreY()<bounceY-64);}
+        else assertTrue(p.getCentreY()>0x300);
+        assertTrue(p.getCentreX()>0x430,"actual glide exits the monitor's horizontal extent");
+    }
+
     private static CollisionSystem world(int shape) {
         TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_3K);
         var mode=TestEnvironment.activeGameplayMode();var terrain=mode.getTerrainCollisionManager();
         var collision=new CollisionSystem(terrain);var level=mock(LevelManager.class);
         when(level.getCurrentLevel()).thenReturn(mock(Level.class));
         var desc=new ChunkDesc(1|(shape==3||shape==5?0x3000:0x1000));byte[] heights=new byte[16];Arrays.fill(heights,(byte)16);
-        var tile=new SolidTile(1,heights,heights,(byte)0);
+        if(shape==6)for(int i=0;i<16;i++)heights[i]=(byte)(i+1);
+        var tile=new SolidTile(1,heights,heights,(byte)(shape==6?0xE0:0));
         when(level.getSolidTileForChunkDesc(any(ChunkDesc.class),anyInt())).thenAnswer(c->desc.isSolidityBitSet(c.getArgument(1))?tile:null);
         when(level.getSolidTileForChunkDesc(any(ChunkDesc.class),anyInt(),anyBoolean())).thenAnswer(c->desc.isSolidityBitSet(c.getArgument(1))?tile:null);
         when(level.getChunkDescAt(anyByte(),anyInt(),anyInt(),anyBoolean())).thenAnswer(c->switch(shape) {
+            case 6 -> ((int)c.getArgument(2)&~15)==0x700-((int)c.getArgument(1)&~15)?desc:null;
             case 1 -> (int)c.getArgument(2)>=0x300&&(int)c.getArgument(2)<0x310?desc:null;
             case 2 -> (int)c.getArgument(2)>=0x300?desc:null;
             case 5 -> (int)c.getArgument(1)>=0x200&&(int)c.getArgument(1)<0x400&&(int)c.getArgument(2)>=0x140&&(int)c.getArgument(2)<0x240?desc:null;
