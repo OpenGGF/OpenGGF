@@ -109,7 +109,10 @@ public final class CdR11aObjectAssets {
         // Tunnel Path/Main.asm:191,382,392-478; actual USA operands join both complete raw tables.
         // ID07 stores the existing Powerup mapping pointer and literal $0541 without drawing or decoding art.
         TUNNEL_PATH_GROUND_SPEEDS("ObjTunnelPath_GVels", 0x8D90, 8),
-        TUNNEL_PATH_COORDINATES("ObjTunnelPath_Paths", 0x8D98, 284);
+        TUNNEL_PATH_COORDINATES("ObjTunnelPath_Paths", 0x8D98, 284),
+        // Log Shadow/Main.asm:26,53,60-70; actual USA operands join both complete raw tables.
+        LOG_SHADOW_BASE_TILES("ObjLogShadow_BaseTileList", 0x89DE, 16),
+        LOG_SHADOW_MAPPINGS("MapSpr_LogShadow", 0x89EE, 16);
 
         private final String nativeLabel;
         private final int offset;
@@ -382,6 +385,7 @@ public final class CdR11aObjectAssets {
     private CdObjectVisualAssets tamabbohDamaged;
     private CdObjectVisualAssets tamabbohMissile;
     private CdObjectVisualAssets spinningDisc;
+    private CdObjectVisualAssets logShadow;
 
     private CdR11aObjectAssets(CdR11aAssets.Identity identity, Map<Table, View> views, List<Delta> deltas,
                                 List<TouchSize> dimensions, CdObjectVisualAssets rings,
@@ -940,6 +944,14 @@ public final class CdR11aObjectAssets {
                     read(Table.SPINNING_DISC_ANIMATIONS), 1, 12);
         }
         return spinningDisc;
+    }
+
+    /** ObjLogShadow_Init selects the complete two-frame counted mapping table without animation scripts. */
+    public synchronized CdObjectVisualAssets logShadow() {
+        if (logShadow == null) {
+            logShadow = CdObjectVisualAssets.decodeStatic(read(Table.LOG_SHADOW_MAPPINGS), 2, 16);
+        }
+        return logShadow;
     }
 
     /** Pure component decoder; signed bytes are extended as in ObjRing_Init (Ring/Main.asm:81-85). */

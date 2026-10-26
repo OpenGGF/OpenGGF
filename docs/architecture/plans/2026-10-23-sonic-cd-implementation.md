@@ -7517,3 +7517,60 @@ body and existing art producer, with five missing logical current bindings.
 No implementation is included here. Full USA then JP/EU remains active;
 native Tamabboh scene/controlled Body/full-act/image/timing and regional
 certification remain open. No main-workspace or remote integration occurred.
+
+### Log Shadow metadata and first use of the migration tools — 26 October 2026
+
+Based on private277d5ecf4, append Table64 LOG_SHADOW_BASE_TILES at USA89DE/16
+and65 LOG_SHADOW_MAPPINGS at89EE/16. The only new public API is synchronized
+cached logShadow()/0, using existing decodeStatic/3 with two counted frames
+and sixteen tiles. It reads no art/base selector. The two source tables and
+actual ID33 Init operands were independently authenticated in USA, Japan and
+Europe by the author; owner admission remains USA-only. Old64 table rows,
+all selector negatives and the complete Source17 suffix are byte-exact.
+There is no new art producer, bank, Region, preload, C30/659 or live dispatch.
+
+The first author prompt ambiguously abbreviated the audit directory. The
+author froze both tests, stopped before production and retained a partial
+report. Root supplied the exact external audit path/hash; the author verified
+it, kept tests/partial report unchanged, then created production once and wrote
+a separate final report. No frozen Java repair occurred. Root used the new
+read-only draft command plus ordinary packet validation/apply for both imports.
+
+Tests-first68229 stops at expected missing enum values/getter in testCompile;
+no JUnit ran (queue0; exact completion time/execution duration not retained).
+After production import39084 passes171/0/0/0 at16:32:37Z: unit117 and54
+regional retail invocations (2m11s execution,queue0). The new enum auditor
+compares actual full CD production/test scope against277d5ecf4, confirms the
+64→66 append and finds exactly one stale direct total in mapper test2439.
+Root changes only that literal64→66; the adjoining asset total106 stays exact.
+Re-audit has no direct stale total but still returns incomplete3 for18 indirect
+uses. This is lexical evidence, not complete symbol or consumer proof.
+
+Affected22355 then passes535/0/0/0 at16:35:35Z (55.562s execution,62s queue):
+mapper42, Runtime433, allWorldLoad53, actual Ring/current440 EGL2 and source
+guards5. Exact fresh class sets/individual identities/counts/Java25.0.5.0.2/
+private cwd/media/zero skips were checked with the packet helper; consumer
+checks additionally verify actual S2 donor, surfaceless EGL and EGL opt-in.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 python3 "$OPENGGF_ROOT/tools/testing/maven_queue.py" --lean -Dmse=off "-Dsoniccd.media.root=$SCD_MEDIA_ROOT" '-Dtest=TestCdR11aObjectAssets,TestCdR11aObjectRetailAssets' test -B
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 python3 "$OPENGGF_ROOT/tools/testing/maven_queue.py" --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dsoniccd.opening.egl=true "-Dsoniccd.media.root=$SCD_MEDIA_ROOT" "-Dsonic2.rom.path=$S2_ROM" '-Dtest=TestCdObjectMappings,TestCdOpeningObjectRuntime,TestSonicCdOpeningWorldLoad,TestSonicCdOpeningWorldEgl#actualEglNormalInputPickupAndFullCourseReplay+actualEglCurrentTamabbohSingletonRendersAndRetiresThe659thClientPattern,TestJunit5MigrationGuard,TestNoAssertionFreeDiagnostics' test -B
+```
+
+Tested production79487B/SHA17218466af3e34549249fda1f72a73a10548de8fd82faafcd5915f5fecc9cc45,
+unit297149B/SHA6a9e8a13c19482e9ec5e29f4dc8503caf495952e85e82238f963b84e3a8fe68e,
+retail439197B/SHAf9ce41646c4ba706537a29e8ea9863a6992ba2a6223efac48a5820106ab1be87,
+mapper180271B/SHAc4b1a492a5b1b5b21bea0b982e0891918e6c6977c79fdba2969cbf75827f47d2
+remain unchanged through both completed selections. Independent static review
+25663B/SHA7be7d90d7a17ff1a94a94123a735e30ad90a1040005732b02524e37a87e82ec3
+finds no actionable P1/P2 in the exact packet. All three byte inverses and
+essential complete-manifest/subset migrations were checked. That reviewer
+executed no Java/tests/media and supplied no runtime success.
+
+Two raw views and a lazy visual getter have bounded understood consumers;
+focused actual-owner/World/EGL/source checks are proportionate. No fresh broad
+smoke, structural728 repeat or release-only full suite was launched. The
+actual route still returns5255 then stops unowned33 at5256. Body, mapper,
+five missing current bindings/C31 and eventual live dispatch remain separate;
+no current Log Shadow pixel, full-act/native timing or regional gameplay
+certification is claimed. Full USA then JP/EU continues privately.

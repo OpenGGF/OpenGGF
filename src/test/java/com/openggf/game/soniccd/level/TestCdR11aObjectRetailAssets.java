@@ -254,6 +254,8 @@ class TestCdR11aObjectRetailAssets {
         hashes.put(SPINNING_DISC_MAPPINGS, "c74d267322eb765b6dc9677a3b53824fbeeb48328d419631199798257f7ddeb4");
         hashes.put(TUNNEL_PATH_GROUND_SPEEDS, "6421e780611a8a1f2d7c46b123246ca2072d8d8115454f62cdae39738a6e9836");
         hashes.put(TUNNEL_PATH_COORDINATES, "ffdca0eca125c54bf14c076060a27657bf82bcc3ce52d3e912c4ac14e5b5cd93");
+        hashes.put(LOG_SHADOW_BASE_TILES, "b9a30c86ce81139722854af604422196b077c78a0e79dcac3cca3b506c06d637");
+        hashes.put(LOG_SHADOW_MAPPINGS, "bb3b5b1a67fd3665a520a4a6c1d7ff89212992a766df61ec42b6c41aa1d38f7b");
         assertEquals(CdR11aObjectAssets.Table.values().length, hashes.size(), "every admitted table has a pinned digest");
         for (var table : CdR11aObjectAssets.Table.values()) {
             var view = objects.view(table);
@@ -4409,17 +4411,18 @@ class TestCdR11aObjectRetailAssets {
         assertSame(platform, objects.platform()); assertSame(flying, objects.flyingAnimal());
         assertSame(ground, objects.groundAnimal());
         assertEquals(0x388, objects.animalBaseTile(0, 1));
-        // Complete 64-table digest manifest: retain every inherited row and append both Tunnel Path tables.
-        assertEquals(64, CdR11aObjectAssets.Table.values().length);
+        // Complete 66-table digest manifest: retain every inherited row and append both Log Shadow tables.
+        assertEquals(66, CdR11aObjectAssets.Table.values().length);
         assertEquals(45, COLLAPSE_OLD_SHA256.length); assertEquals(6, COLLAPSE_SHA256.length);
         assertEquals(3, PLATFORM21_SHA256.length);
-        for (int i = 0; i < 64; i++) {
+        for (int i = 0; i < 66; i++) {
             var table = CdR11aObjectAssets.Table.values()[i]; var view = objects.view(table);
             String expected = i < 45 ? COLLAPSE_OLD_SHA256[i]
                     : i < 51 ? COLLAPSE_SHA256[i - 45] : i < 54 ? PLATFORM21_SHA256[i - 51]
                     : i < 59 ? TestCdR11aObjectAssets.TAMABBOH_SHA256[i - 54]
                     : i < 62 ? TestCdR11aObjectAssets.SPINNING_DISC_SHA256[i - 59]
-                    : TestCdR11aObjectAssets.TUNNEL_PATH_SHA256[i - 62];
+                    : i < 64 ? TestCdR11aObjectAssets.TUNNEL_PATH_SHA256[i - 62]
+                    : TestCdR11aObjectAssets.LOG_SHADOW_SHA256[i - 64];
             assertEquals(expected, CdR11aProfile.sha256(view.bytes().copy()), table.name());
             assertSame(view, objects.view(table));
             assertArrayEquals(table.range().read(image).copy(), view.bytes().copy());
@@ -5014,12 +5017,13 @@ class TestCdR11aObjectRetailAssets {
         for (int i = 0; i < 5; i++) { assertSame(views.get(i),viewsFirst.view(TestCdR11aObjectAssets.TAMABBOH_TABLES.get(i))); }
         for (var objects : List.of(visualFirst,sourceFirst,viewsFirst)) {
             verifyTamabbohUnchangedSource17(objects,owner,retained);
-            for (int i = 0; i < 64; i++) {
+            for (int i = 0; i < 66; i++) {
                 var table = CdR11aObjectAssets.Table.values()[i]; var view = objects.view(table);
                 String expected = i < 45 ? COLLAPSE_OLD_SHA256[i] : i < 51 ? COLLAPSE_SHA256[i-45]
                         : i < 54 ? PLATFORM21_SHA256[i-51] : i < 59 ? TestCdR11aObjectAssets.TAMABBOH_SHA256[i-54]
                         : i < 62 ? TestCdR11aObjectAssets.SPINNING_DISC_SHA256[i-59]
-                        : TestCdR11aObjectAssets.TUNNEL_PATH_SHA256[i-62];
+                        : i < 64 ? TestCdR11aObjectAssets.TUNNEL_PATH_SHA256[i-62]
+                        : TestCdR11aObjectAssets.LOG_SHADOW_SHA256[i-64];
                 assertEquals(expected,CdR11aProfile.sha256(view.bytes().copy()),table.name());
                 assertSame(view,objects.view(table)); assertArrayEquals(table.range().read(retained).copy(),view.bytes().copy());
                 byte[] detached = view.bytes().copy(); detached[0] ^= 1;
@@ -5569,6 +5573,220 @@ class TestCdR11aObjectRetailAssets {
         for (var entry : before.entrySet()) { assertSame(entry.getValue(), after.get(entry.getKey()), entry.getKey()); }
     }
 
+
+
+    // Log Shadow assets R1: independently authenticated regional operands; USA-only retained asset owner.
+    @ParameterizedTest(name = "{0} Log Shadow ID33 actual operands and retained static USA visual")
+    @EnumSource(CdReleaseVariant.class)
+    void logShadowAuthenticatesRegionalOperandsAndRetainsOnlyTheUsaStaticVisualWithoutNewArtReads(
+            CdReleaseVariant variant) throws Exception {
+        String configured = System.getProperty("soniccd.media.root");
+        Assumptions.assumeTrue(configured != null && !configured.isBlank(),
+                "Set soniccd.media.root for supplied-media checks");
+        String directory = switch (variant) { case USA -> "USA"; case JAPAN -> "Japan"; case EUROPE -> "Europe"; };
+        Path cue;
+        try (var files = Files.list(Path.of(configured).resolve(directory))) {
+            var cues = files.filter(p -> p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".cue")).toList();
+            assertEquals(1, cues.size()); cue = cues.getFirst();
+        }
+        CdR11aAssets owner; CdMmdImage retained;
+        CdR11aObjectAssets visualFirst = null, viewsFirst = null, sourceFirst = null;
+        try (var program = CdProgramAssets.open(cue, Optional.of(variant), Optional.empty())) {
+            owner = CdR11aAssetLoader.load(program, variant, CdStageKey.parse("R11A"));
+            retained = program.mmd(CdNativeFile.R11A);
+            assertEquals(262144, retained.fileBytes());
+            assertEquals(owner.profile().expectedMmdSha256(),
+                    CdR11aProfile.sha256(retained.readFile(0, retained.fileBytes())));
+            owner.profile().verifyProgram(owner.profile().file(), owner.profile().domain(), retained);
+            verifyLogShadowActualNativeOperands(retained, variant);
+            if (variant != CdReleaseVariant.USA) {
+                assertThrows(UnsupportedOperationException.class, owner::openingObjects);
+                assertThrows(UnsupportedOperationException.class, () -> CdR11aObjectAssets.load(
+                        owner.profile(), owner.identity(), retained, owner.loadPlan()));
+                var usa = CdR11aProfile.forStage(CdReleaseVariant.USA, CdStageKey.parse("R11A"));
+                var asserted = new CdR11aAssets.Identity(CdReleaseVariant.USA, usa.stage(), usa.file(), usa.domain(),
+                        usa.expectedMmdSha256(), owner.identity().observedWholeDiscSha256());
+                assertThrows(IOException.class, () -> CdR11aObjectAssets.load(usa, asserted, retained, owner.loadPlan()));
+            } else {
+                visualFirst = owner.openingObjects(); viewsFirst = owner.openingObjects(); sourceFirst = owner.openingObjects();
+                assertNotSame(visualFirst, viewsFirst); assertNotSame(viewsFirst, sourceFirst);
+                assertNotSame(visualFirst, sourceFirst);
+                for (var objects : List.of(visualFirst, viewsFirst, sourceFirst)) {
+                    assertSame(owner.identity(), objects.identity()); verifyLogShadowArtCold(objects);
+                    var field = CdR11aObjectAssets.class.getDeclaredField("logShadow"); field.setAccessible(true);
+                    assertNull(field.get(objects));
+                }
+                for (int offset : new int[]{0x3EFC, 0x3EFF, 0x897A, 0x897D, 0x898E, 0x8990, 0x8993,
+                        0x89A6, 0x89A8, 0x89B0, 0x89B9, 0x89C6, 0x89D0, 0x89D3, 0x89D6, 0x89DD, 0x89FE}) {
+                    byte[] changed = retained.readFile(0, retained.fileBytes()); changed[offset] ^= 1;
+                    assertThrows(IOException.class, () -> CdR11aObjectAssets.load(owner.profile(), owner.identity(),
+                            CdMmdImage.parse(changed), owner.loadPlan()), "changed Log Shadow native byte " + offset);
+                }
+                for (var table : TestCdR11aObjectAssets.LOG_SHADOW_TABLES) {
+                    for (int offset = table.range().fileOffset(); offset < table.range().endExclusive(); offset++) {
+                        byte[] changed = retained.readFile(0, retained.fileBytes()); changed[offset] ^= 1;
+                        assertThrows(IOException.class, () -> CdR11aObjectAssets.load(owner.profile(), owner.identity(),
+                                CdMmdImage.parse(changed), owner.loadPlan()), "changed complete Log Shadow source byte " + offset);
+                    }
+                }
+            }
+        }
+        if (variant != CdReleaseVariant.USA) { return; }
+        assertNotNull(visualFirst); assertNotNull(viewsFirst); assertNotNull(sourceFirst);
+        var optional = CdR11aObjectAssets.class.getDeclaredField("frontierViews"); optional.setAccessible(true);
+        var cache = CdR11aObjectAssets.class.getDeclaredField("logShadow"); cache.setAccessible(true);
+        assertTrue(((Map<?, ?>) optional.get(visualFirst)).isEmpty());
+        var coldBefore = logShadowOtherFields(visualFirst);
+        var initial = visualFirst.initialArtBank();
+        var initialReads = initial.bindings().stream().map(CdR11aObjectAssets.ArtBinding::decode).toList();
+        var initialOutputs = initialReads.stream().map(CdR11aAssets.NemesisRead::bytes).toList();
+        var visual = visualFirst.logShadow();
+        assertSame(visual, visualFirst.logShadow()); assertSame(visual, cache.get(visualFirst));
+        TestCdR11aObjectAssets.verifyLogShadowVisual(visual);
+        assertEquals(List.of(LOG_SHADOW_MAPPINGS), List.copyOf(((Map<?, ?>) optional.get(visualFirst)).keySet()));
+        assertLogShadowOtherFieldsUnchanged(visualFirst, coldBefore);
+        verifyLogShadowArtCold(visualFirst);
+        assertSame(initial, visualFirst.initialArtBank());
+        for (int i = 0; i < initialReads.size(); i++) {
+            assertSame(initialReads.get(i), initial.bindings().get(i).decode());
+            assertSame(initialOutputs.get(i), initial.bindings().get(i).decode().bytes());
+        }
+
+        var rawBefore = logShadowOtherFields(viewsFirst);
+        var rawViews = TestCdR11aObjectAssets.LOG_SHADOW_TABLES.stream().map(viewsFirst::view).toList();
+        assertNull(cache.get(viewsFirst)); assertLogShadowOtherFieldsUnchanged(viewsFirst, rawBefore);
+        assertEquals(TestCdR11aObjectAssets.LOG_SHADOW_TABLES,
+                List.copyOf(((Map<?, ?>) optional.get(viewsFirst)).keySet()));
+        var rawFirstVisual = viewsFirst.logShadow(); assertSame(rawFirstVisual, viewsFirst.logShadow());
+        TestCdR11aObjectAssets.verifyLogShadowVisual(rawFirstVisual);
+        assertLogShadowOtherFieldsUnchanged(viewsFirst, rawBefore); verifyLogShadowArtCold(viewsFirst);
+
+        // Observe the inherited Source17 cache by identity; do not add an art decoder, reader or producer.
+        var bank = sourceFirst.sectionArtSources(); var sources = List.copyOf(bank.sources());
+        assertEquals(17, sources.size());
+        assertEquals(SECTION_SOURCES, sources.stream().map(CdR11aObjectAssets.SectionArtSource::source).toList());
+        var reads = sources.stream().map(CdR11aObjectAssets.SectionArtSource::decode).toList();
+        var inputs = sources.stream().map(CdR11aObjectAssets.SectionArtSource::readerBytes).toList();
+        var outputs = reads.stream().map(CdR11aAssets.NemesisRead::bytes).toList();
+        var sourceBefore = logShadowOtherFields(sourceFirst);
+        var warmVisual = sourceFirst.logShadow(); assertSame(warmVisual, sourceFirst.logShadow());
+        TestCdR11aObjectAssets.verifyLogShadowVisual(warmVisual);
+        assertLogShadowOtherFieldsUnchanged(sourceFirst, sourceBefore);
+        assertSame(bank, sourceFirst.sectionArtSources());
+        for (int i = 0; i < 17; i++) {
+            assertSame(sources.get(i), bank.sources().get(i)); assertSame(reads.get(i), bank.sources().get(i).decode());
+            assertSame(inputs.get(i), bank.sources().get(i).readerBytes());
+            assertSame(outputs.get(i), bank.sources().get(i).decode().bytes());
+        }
+
+        for (var objects : List.of(visualFirst, viewsFirst, sourceFirst)) {
+            var before = logShadowOtherFields(objects);
+            for (int i = 0; i < 2; i++) {
+                var table = TestCdR11aObjectAssets.LOG_SHADOW_TABLES.get(i); var view = objects.view(table);
+                assertEquals(table, view.table()); assertEquals(table.range(), view.range());
+                assertSame(owner.identity(), objects.identity()); assertSame(view, objects.view(table));
+                assertEquals(16, view.bytes().length());
+                assertArrayEquals(TestCdR11aObjectAssets.logShadowLiteral(i), view.bytes().copy());
+                assertArrayEquals(table.range().read(retained).copy(), view.bytes().copy());
+                assertEquals(TestCdR11aObjectAssets.LOG_SHADOW_SHA256[i], CdR11aProfile.sha256(view.bytes().copy()));
+                byte[] detached = view.bytes().copy(); detached[0] ^= 1;
+                assertArrayEquals(TestCdR11aObjectAssets.logShadowLiteral(i), view.bytes().copy());
+                assertThrows(ReadOnlyBufferException.class, () -> view.bytes().buffer().put((byte) 1));
+                assertThrows(IndexOutOfBoundsException.class, () -> view.bytes().unsignedByte(-1));
+                assertThrows(IndexOutOfBoundsException.class, () -> view.bytes().unsignedByte(16));
+                assertThrows(IndexOutOfBoundsException.class, () -> view.bytes().unsignedWord(15));
+                assertThrows(IndexOutOfBoundsException.class, () -> view.bytes().slice(0, 17));
+            }
+            assertLogShadowOtherFieldsUnchanged(objects, before);
+        }
+        for (int i = 0; i < 2; i++) {
+            assertSame(rawViews.get(i), viewsFirst.view(TestCdR11aObjectAssets.LOG_SHADOW_TABLES.get(i)));
+        }
+        assertLogShadowOtherFieldsUnchanged(visualFirst, coldBefore);
+        verifyLogShadowArtCold(visualFirst); verifyLogShadowArtCold(viewsFirst);
+    }
+
+    private static void verifyLogShadowActualNativeOperands(CdMmdImage image, CdReleaseVariant variant) {
+        // Literal rows independently observed in each original regional MMD; no offset-shift fallback.
+        int[] sites = switch (variant) {
+            case USA -> new int[]{0x3A22, 0x3E34, 0x8960, 0x897A, 0x897E, 0x898E, 0x89AE, 0x89D0, 0x89DE, 0x89EE};
+            case JAPAN -> new int[]{0x3A1E, 0x3E30, 0x896E, 0x8988, 0x898C, 0x899C, 0x89BC, 0x89DE, 0x89EC, 0x89FC};
+            case EUROPE -> new int[]{0x3A1E, 0x3E30, 0x896E, 0x8988, 0x898C, 0x899C, 0x89BC, 0x89DE, 0x89EC, 0x89FC};
+        };
+        int dispatch = sites[0], directory = sites[1], body = sites[2], index = sites[3], init = sites[4];
+        assertArrayEquals(hexBytes("d040d04043f9"), image.readFile(dispatch - 4, 6));
+        assertEquals(directory, ByteBuffer.wrap(image.readFile(dispatch + 2, 4)).getInt() - 0x200000);
+        assertArrayEquals(hexBytes("227100fc4e91"), image.readFile(dispatch + 6, 6));
+        assertEquals(body, ByteBuffer.wrap(image.readFile(directory + (0x33 - 1) * 4, 4)).getInt() - 0x200000);
+        assertArrayEquals(hexBytes("700010280024303b00124ebb000e4eb9"), image.readFile(body, 16));
+        assertEquals(126, sites[8] - body);
+        assertEquals(variant == CdReleaseVariant.USA
+                        ? "28562c653b10ba11ddb1a5419569d6b6e10551b486fccd94848e5b3f532db34e"
+                        : "f075583c3170ac09ce0dfcc313e0f454d114fd5f273a7b0327009bc172df0f61",
+                CdR11aProfile.sha256(image.readFile(body, 126)));
+        assertArrayEquals(hexBytes("00040032"), image.readFile(index, 4));
+        assertEquals(init, index + ByteBuffer.wrap(image.readFile(index, 2)).getShort());
+        assertEquals(sites[6] - 2, index + ByteBuffer.wrap(image.readFile(index + 2, 2)).getShort());
+        assertArrayEquals(hexBytes("54280024002800040001117c00060018"), image.readFile(init, 16));
+        int mapStore = sites[5];
+        assertArrayEquals(hexBytes("217c"), image.readFile(mapStore, 2));
+        assertArrayEquals(hexBytes("0004"), image.readFile(mapStore + 6, 2));
+        int mappings = ByteBuffer.wrap(image.readFile(mapStore + 2, 4)).getInt() - 0x200000;
+        assertEquals(sites[9], mappings);
+        assertArrayEquals(hexBytes("11680028001a117c00100019117c0010001661000004"),
+                image.readFile(mapStore + 8, 22));
+        int branch = mapStore + 26;
+        assertEquals(sites[6], branch + 2 + ByteBuffer.wrap(image.readFile(branch + 2, 2)).getShort());
+        assertArrayEquals(hexBytes("4e75"), image.readFile(sites[6] - 2, 2));
+        assertArrayEquals(hexBytes("7000103900ff152e0200007f0c0000026606d03900ff156a"
+                        + "d040d03900ff1507d040317b000c00020068400000024e75"),
+                image.readFile(sites[6], 48));
+        int baseRead = sites[7];
+        assertArrayEquals(hexBytes("317b000c0002"), image.readFile(baseRead, 6));
+        int bases = baseRead + 2 + image.readFile(baseRead + 3, 1)[0];
+        assertEquals(sites[8], bases); assertEquals(bases + 16, mappings);
+        int[] roots = {bases, mappings};
+        for (int i = 0; i < 2; i++) {
+            assertArrayEquals(TestCdR11aObjectAssets.logShadowLiteral(i), image.readFile(roots[i], 16));
+            assertEquals(TestCdR11aObjectAssets.LOG_SHADOW_SHA256[i],
+                    CdR11aProfile.sha256(image.readFile(roots[i], 16)));
+            if (variant == CdReleaseVariant.USA) {
+                assertEquals(TestCdR11aObjectAssets.LOG_SHADOW_TABLES.get(i).range().fileOffset(), roots[i]);
+            } else {
+                assertFalse(Arrays.equals(TestCdR11aObjectAssets.logShadowLiteral(i),
+                        image.readFile(TestCdR11aObjectAssets.LOG_SHADOW_TABLES.get(i).range().fileOffset(), 16)));
+            }
+        }
+        assertArrayEquals(hexBytes("7000"), image.readFile(mappings + 16, 2));
+    }
+
+    /** Raw mapping/base views may be warm while every optional art cache remains cold. */
+    private static void verifyLogShadowArtCold(CdR11aObjectAssets objects) throws Exception {
+        for (String name : List.of("sectionArtSources", "frontierArtBank", "contactArtBank", "floatBlockArtBank",
+                "springArtBank", "monitorTimeArtBank", "tunnelDoorArtBank", "pataBataArtBank")) {
+            var field = CdR11aObjectAssets.class.getDeclaredField(name); field.setAccessible(true);
+            assertNull(field.get(objects), "Log Shadow must not initialize optional art cache " + name);
+        }
+        assertEquals(List.of(ART_RINGS, ART_MOSQUI), objects.initialArtBank().bindings().stream()
+                .map(CdR11aObjectAssets.ArtBinding::source).toList());
+    }
+
+    /** Compare all unrelated owner fields by identity, permitting only the new visual and raw view cache. */
+    private static Map<String, Object> logShadowOtherFields(CdR11aObjectAssets objects) throws Exception {
+        Map<String, Object> before = new HashMap<>();
+        for (var field : CdR11aObjectAssets.class.getDeclaredFields()) {
+            if (java.lang.reflect.Modifier.isStatic(field.getModifiers())
+                    || List.of("logShadow", "frontierViews").contains(field.getName())) { continue; }
+            field.setAccessible(true); before.put(field.getName(), field.get(objects));
+        }
+        return before;
+    }
+
+    private static void assertLogShadowOtherFieldsUnchanged(CdR11aObjectAssets objects, Map<String, Object> before)
+            throws Exception {
+        var after = logShadowOtherFields(objects); assertEquals(before.keySet(), after.keySet());
+        for (var entry : before.entrySet()) { assertSame(entry.getValue(), after.get(entry.getKey()), entry.getKey()); }
+    }
 
     // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>
 }
