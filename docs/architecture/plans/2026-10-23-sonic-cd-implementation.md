@@ -7618,3 +7618,63 @@ Runtime binding remain separate. No broad smoke/structural728 repeat is
 needed for this unbound component. The current route remains5255 returned /
 5256 unknown33; actual Init, native pixels/timing, full USA and JP/EU gameplay
 certification remain open.
+
+
+### Log Shadow mapping and selected current policy — 26 October 2026
+
+On component base f4a968965, one mapper registration joins the authenticated
+static two-frame root. One additive C31 overload keeps the complete old C30
+parameter prefix and appends the Log Shadow logical base. It calls C30 first,
+checks metadata and all twenty explicit prior extents, then strictly reads
+captured current residency only when native41F..423 is selected. Existing
+Anton418..41E and Plant424..427 remain aliases of the old policy. No source,
+decode, physical Region, preload, actor-specific pixel selection or lifecycle
+owner is added. Source17 and all earlier overload bodies remain unchanged.
+The Runtime/client join is separate; C31 alone does not reserve664 patterns.
+
+Tests-first15918 stops at the expected absent C31 overload during testCompile
+(no JUnit; exact execution/end time not retained). Before production import,
+RootR2 corrects the mapper registration census34→35 and compares known-mask
+bytes rather than distinct CdAssetBytes wrapper identities. First positive41198
+finishes17:36:42Z with67/1/0/0 (2m00s execution,63s queue): the sole failure is
+an expected SAT link byte. Native DrawSprite399–402 increments/stores the link;
+DrawObjects357–365 clears the next entry, except at the full80-entry limit.
+RootR3 changes exactly eight expected link bytes00→01 across two frames/four
+flips; all640-byte and next-terminator checks remain. The narrow79423 passes1
+at17:42:05Z (32.474s,queue0), followed by fresh full picture coverage below.
+RootR4 appends30/31 to an older Spikes complete-overload inventory ending29;
+no other inherited assertion changes. No production repair was made.
+
+Fresh picture selection25851 passes152/0/0/0 at17:52:58Z (1m40s execution,
+20s queue): mapper45, Anton10, Boulder7, Checkpoint7, CollapsePlatform7,
+DiagonalSpring7, LogShadow9, ObjectPresentation39, Spikes8 and Tamabboh13.
+Separate affected-consumer selection77381 passes493/0/0/0 at17:56:57Z
+(43.707s execution,41s queue): Runtime433, World53, selected actual EGL2 and
+JUnit/source guards5. Exact fresh class sets, individual identities/counts,
+Java25.0.5.0.2, private cwd, media, zero skips and the second run's authenticated
+S2 path/surfaceless EGL/explicit opening opt-in were checked. These are two
+separate completed selections, not an invented combined run or full-suite pass.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 python3 "$OPENGGF_ROOT/tools/testing/maven_queue.py" --lean -Dmse=off "-Dsoniccd.media.root=$SCD_MEDIA_ROOT" '-Dtest=TestCdObjectMappings,TestCdAntonPicture,TestCdBoulderPicture,TestCdCheckpointPicture,TestCdCollapsePlatformPicture,TestCdDiagonalSpringPicture,TestCdLogShadowPicture,TestCdObjectPresentation,TestCdSpikesPicture,TestCdTamabbohPicture' test -B
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 python3 "$OPENGGF_ROOT/tools/testing/maven_queue.py" --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dsoniccd.opening.egl=true "-Dsoniccd.media.root=$SCD_MEDIA_ROOT" "-Dsonic2.rom.path=$S2_ROM" '-Dtest=TestCdOpeningObjectRuntime,TestSonicCdOpeningWorldLoad,TestSonicCdOpeningWorldEgl#actualEglNormalInputPickupAndFullCourseReplay+actualEglCurrentTamabbohSingletonRendersAndRetiresThe659thClientPattern,TestJunit5MigrationGuard,TestNoAssertionFreeDiagnostics' test -B
+```
+
+Tested Presentation115275B/SHA3067064c419940a26df86a624b280b38c782c046ce74f2aeecb96ed4c7eab3ba,
+Mappings19288B/SHA258416467f0fe26aee27c27c664f9dc02d06aa1eec34c467a0e01bc5f3a886d4,
+MappingTest186935B/SHAfc5d96040470499f207df4468621fa96c99ed240d596473ec0a1db19c71fddd2,
+ShadowPictureTest25667B/SHA61efe923b3b0acbea1ba109902153d076646300e3e9f12bc218eb99023aa7339
+and SpikesPictureTest21788B/SHA59d0b88582423085e5c066ccd4c923d43ae63ee939d37f6c1e54c51239ee6703
+remain unchanged through both completed selections. Source-only review21353B/
+SHAa70e6e846f50b307a912b05254ff8fb29dee89c74077322fd4253b8d0b6e3f9c
+finds the same eight SAT literal errors and no additional production P1/P2;
+it reviewed R1/RootR2 and executed no Java. The exact source-backed R3 repair
+resolves that finding. All frozen worker originals and bounded inverses remain.
+
+The impact is one additive policy and registration with understood consumers;
+focused actual-owner/World/EGL and complete CPU picture-family checks are
+proportionate. No unchanged structural728 repeat, broad smoke or release-only
+full suite was launched. Native Log Shadow scene pixels, real664 installation
+and retirement, live Init/Main and natural5256 return remain unproved. The
+actual route remains5255 returned / first5256 unowned33. Full USA then JP/EU
+continues privately.

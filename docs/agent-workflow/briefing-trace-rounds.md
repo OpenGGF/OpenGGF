@@ -71,6 +71,14 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+A normal native SAT ends at the next entry (2026-10-26, CD Log Shadow).
+DrawSprite increments and stores each emitted sprite's link. With fewer than80
+entries, DrawObjects clears the next entry's first LONG; it does not clear the
+emitted last sprite's link. Only a full80-entry table clears that last link.
+Literal CPU SAT fixtures must check the emitted link and the following zero
+terminator separately. A plausible last-link-zero expectation can hide this
+distinction; do not change the producer to fit it.
+
 BK2 direction and action fields use different representations (2026-10-26,
 CD four-jump route). `Bk2FrameInput.p1InputMask()` combines directions with
 the engine's generic `INPUT_JUMP` whenever any A/B/C action is held;

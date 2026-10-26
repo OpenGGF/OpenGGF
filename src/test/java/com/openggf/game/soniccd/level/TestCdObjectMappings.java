@@ -2412,10 +2412,10 @@ class TestCdObjectMappings {
             assertNull(field.get(objects), "mapper does not decode, preload or own pixels: " + name);
         }
 
-        // All 33 old counted roots/counts remain, plus exactly one new three-frame root; static Monitor roots stay eight.
+        // The existing 34 registered roots remain; Log Shadow adds one. Static Monitor roots stay eight.
         var tablesField = CdObjectMappings.class.getDeclaredField("tables"); tablesField.setAccessible(true);
         var registered = (Map<?, ?>) tablesField.get(mappings);
-        assertEquals(34, registered.size()); assertEquals(registered.keySet(), ((Map<?, ?>) tablesField.get(again)).keySet());
+        assertEquals(35, registered.size()); assertEquals(registered.keySet(), ((Map<?, ?>) tablesField.get(again)).keySet());
         var disc = (CdObjectMappings.DeclaredTable) registered.get(SPINNING_DISC_MAP);
         assertNotNull(disc); assertEquals(SPINNING_DISC_MAP, disc.nativeStartBits());
         assertEquals(0, disc.tableOffset()); assertEquals(3, disc.frameCount());
@@ -2463,6 +2463,82 @@ class TestCdObjectMappings {
         }
     }
     // END SPINNING DISC MAPPING JOIN R1
+
+    // BEGIN LOG SHADOW MAPPING JOIN R1
+    private static final int LOG_SHADOW_MAP = 0x2089EE;
+    private static final byte[] LOG_SHADOW_SOURCE = HexFormat.of().parseHex("0004000a01f00f0000f001f80d0000f0");
+
+    @Test void declaredLogShadowKeepsBothLiteralCountedFramesAndExactRawLongDomain() {
+        var mappings = declared(LOG_SHADOW_MAP, LOG_SHADOW_SOURCE, 0, 2);
+        assertEquals(List.of(new CdObjectDrawQueue.RawPiece(-16, 15, 0, -16)), mappings.resolve(LOG_SHADOW_MAP, false, 0).pieces());
+        assertEquals(List.of(new CdObjectDrawQueue.RawPiece(-8, 13, 0, -16)), mappings.resolve(LOG_SHADOW_MAP, false, 1).pieces());
+        for (int frame = 2; frame <= 255; frame++) {
+            final int selected = frame;
+            assertThrows(UnsupportedOperationException.class, () -> mappings.resolve(LOG_SHADOW_MAP, false, selected));
+        }
+        for (int pointer : new int[]{0x89EE, 0xFF2089EE, 0x012089EE, 0x2089FC, LOG_SHADOW_MAP + 4, LOG_SHADOW_MAP + 10}) {
+            assertThrows(UnsupportedOperationException.class, () -> mappings.resolve(pointer, false, 0));
+        }
+        assertThrows(UnsupportedOperationException.class, () -> mappings.resolve(LOG_SHADOW_MAP, true, 0));
+        for (int frame : new int[]{-1, 256, Integer.MAX_VALUE}) {
+            assertThrows(IllegalArgumentException.class, () -> mappings.resolve(LOG_SHADOW_MAP, false, frame));
+        }
+    }
+
+    @Test void logShadowFormatBoundsRejectEscapesTruncationBadSizeAndTileSixteen() {
+        for (int[] change : new int[][]{{0, 0xFF}, {1, 0x7F}, {4, 2}, {6, 0x10}, {8, 1}}) {
+            byte[] malformed = LOG_SHADOW_SOURCE.clone(); malformed[change[0]] = (byte) change[1];
+            assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decodeStatic(malformed, 2, 16));
+        }
+        assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decodeStatic(Arrays.copyOf(LOG_SHADOW_SOURCE, 15), 2, 16));
+        assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decodeStatic(LOG_SHADOW_SOURCE, 2, 15));
+        byte[] escaping = LOG_SHADOW_SOURCE.clone(); escaping[0] = (byte) 0xFF; escaping[1] = (byte) 0xFF;
+        assertThrows(IllegalArgumentException.class, () -> declared(LOG_SHADOW_MAP, escaping, 0, 2).resolve(LOG_SHADOW_MAP, false, 0));
+        assertThrows(IllegalArgumentException.class, () -> declared(LOG_SHADOW_MAP, Arrays.copyOf(LOG_SHADOW_SOURCE, 15), 0, 2).resolve(LOG_SHADOW_MAP, false, 1));
+        assertThrows(IllegalArgumentException.class, () -> new CdObjectMappings.DeclaredTable(0xFFFFFFF8, CdAssetBytes.copyOf(LOG_SHADOW_SOURCE), 0, 2));
+    }
+
+    @Test void actualUsaLogShadowAddsOneCachedCountedRootWithoutReadingAnyColdArt() throws Exception {
+        var usa = usaMedia(); var objects = usa.objects();
+        String[] cold = {"frontierArtBank", "contactArtBank", "floatBlockArtBank", "springArtBank", "tunnelDoorArtBank",
+                "monitorTimeArtBank", "pataBataArtBank", "sectionArtSources"};
+        for (String name : cold) {
+            var field = CdR11aObjectAssets.class.getDeclaredField(name); field.setAccessible(true); assertNull(field.get(objects));
+        }
+        var cache = CdR11aObjectAssets.class.getDeclaredField("logShadow"); cache.setAccessible(true); assertNull(cache.get(objects));
+        var mappings = CdObjectMappings.fromOpeningAssets(usa.assets(), objects);
+        var visual = objects.logShadow(); assertSame(visual, cache.get(objects)); assertSame(visual, objects.logShadow());
+        var view = objects.view(CdR11aObjectAssets.Table.LOG_SHADOW_MAPPINGS);
+        assertEquals(LOG_SHADOW_MAP, view.range().nativeAddress()); assertArrayEquals(LOG_SHADOW_SOURCE, view.bytes().copy());
+        assertArrayEquals(LOG_SHADOW_SOURCE, visual.mappings().copy()); assertEquals(0, visual.mappingTableOffset());
+        assertEquals(2, visual.mappingFrames().size()); assertTrue(visual.animations().isEmpty()); assertEquals(0, visual.animationTable().length());
+        for (int frame = 0; frame < 2; frame++) {
+            assertEquals(frame == 0 ? 4 : 10, visual.mappingFrames().get(frame).relativeOffset());
+            assertEquals(mappings.resolve(LOG_SHADOW_MAP, false, frame).pieces().getFirst().rawTileWord(), visual.mappingFrames().get(frame).pieces().getFirst().rawTileWord());
+        }
+        var field = CdObjectMappings.class.getDeclaredField("tables"); field.setAccessible(true);
+        var tables = (Map<?, ?>) field.get(mappings); assertEquals(35, tables.size());
+        var registered = (CdObjectMappings.DeclaredTable) tables.get(LOG_SHADOW_MAP);
+        assertSame(view.bytes(), registered.bytes()); assertEquals(0, registered.tableOffset()); assertEquals(2, registered.frameCount());
+        var again = CdObjectMappings.fromOpeningAssets(usa.assets(), objects); assertSame(visual, objects.logShadow());
+        assertEquals(tables.keySet(), ((Map<?, ?>) field.get(again)).keySet());
+        for (String name : cold) {
+            var art = CdR11aObjectAssets.class.getDeclaredField(name); art.setAccessible(true); assertNull(art.get(objects), name);
+        }
+        assertTamabbohFramesAndBounds(mappings); assertTamabbohPriorRoots(usa, mappings);
+        for (int frame = 0; frame < 3; frame++) assertEquals(SPINNING_DISC_FRAMES.get(frame), mappings.resolve(SPINNING_DISC_MAP, false, frame).pieces());
+        assertEquals(66, CdR11aObjectAssets.Table.values().length); assertEquals(106, CdR11aAsset.values().length);
+        var getter = CdR11aObjectAssets.class.getDeclaredMethod("logShadow");
+        assertEquals(CdObjectVisualAssets.class, getter.getReturnType()); assertEquals(0, getter.getParameterCount());
+        assertTrue(java.lang.reflect.Modifier.isPublic(getter.getModifiers())); assertTrue(java.lang.reflect.Modifier.isSynchronized(getter.getModifiers()));
+        assertEquals(List.of("declaredSourceViews/2", "fromOpeningAssets/2", "resolve/3"), Arrays.stream(CdObjectMappings.class.getDeclaredMethods())
+                .filter(m -> java.lang.reflect.Modifier.isPublic(m.getModifiers())).map(m -> m.getName() + "/" + m.getParameterCount()).sorted().toList());
+        for (int pointer : new int[]{0x89EE, 0xFF2089EE, 0x012089EE, 0x2089FC, LOG_SHADOW_MAP + 4})
+            assertThrows(UnsupportedOperationException.class, () -> mappings.resolve(pointer, false, 0));
+        assertThrows(UnsupportedOperationException.class, () -> mappings.resolve(LOG_SHADOW_MAP, true, 0));
+        for (int frame = 2; frame <= 255; frame++) { final int selected = frame; assertThrows(UnsupportedOperationException.class, () -> mappings.resolve(LOG_SHADOW_MAP, false, selected)); }
+    }
+    // END LOG SHADOW MAPPING JOIN R1
 
 }
 // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>

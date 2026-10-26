@@ -1362,5 +1362,129 @@ public final class CdObjectPresentation {
             return previous.resolve(nativeId);
         };
     }
+    // BEGIN LOG SHADOW PICTURE C31 R1
+    /**
+     * C31 calls unchanged C30 first, then admits only final native $41F..$423 in the existing
+     * AT_83E0 physical region. Log Shadow's Present $4418 tile word covers $418..$427:
+     * seven Anton identities and four Plant identities remain C30 aliases. Palette/flip/priority
+     * conversion stays with the normal SAT converter, never an actor-specific pixel choice.
+     * Source: scddisasm 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff,
+     * src/Level/Palmtree Panic/Objects/Log Shadow/Main.asm:26,53-70 and Data/Mappings.asm:1-15.
+     *
+     * <p>Only mapping and explicit logical-extent metadata is inspected after C30. No new current
+     * pixels are read during binding or an empty/unrelated SAT. A selected new pattern strictly
+     * reads the captured immutable current State; UNKNOWN remains its native-address boundary.
+     * Existing errors, eager/selected reads and all other raw native IDs delegate unchanged.
+     * Source17, decoding, PLC service, preload, physical ownership and lifecycle stay with their
+     * existing owners. This factory supplies no native execution or residency-history proof.</p>
+     */
+    public static PatternSource usaR11aCurrentCameraDevPreloadedArt(CdPlayerArtRuntime.State nowServicedPlayer,
+                                                                   CdPowerupArtRuntime.State nowServicedPowerup,
+                                                                   CdR11aObjectAssets objects,
+                                                                   CdR11aObjectAssets.FrontierArtBank frontier,
+                                                                   CdR11aObjectAssets.ContactArtBank contact,
+                                                                   CdR11aObjectAssets.FloatBlockArtBank floatBlock,
+                                                                   CdR11aObjectAssets.SpringArtBank spring,
+                                                                   CdR11aObjectAssets.TunnelDoorArtBank tunnelDoor,
+                                                                   CdR11aObjectAssets.MonitorTimeArtBank monitorTime,
+                                                                   CdR11aCameraArtResidency.State cameraResidency,
+                                                                   int playerLogicalBase, int ringLogicalBase,
+                                                                   int mosquiLogicalBase, int plantLogicalBase,
+                                                                   int rampLogicalBase, int explosionLogicalBase,
+                                                                   int pointsLogicalBase, int flowerLogicalBase,
+                                                                   int powerupLogicalBase, int floatBlockLogicalBase,
+                                                                   int springLogicalBase, int tunnelDoorVerticalLogicalBase,
+                                                                   int monitorTimeLogicalBase, int boulderLogicalBase,
+                                                                   int diagonalSpringLogicalBase, int spikesLogicalBase,
+                                                                   int checkpointLogicalBase, final int antonLogicalBase,
+                                                                   final int collapsePlatformLogicalBase,
+                                                                   final int tamabbohLogicalBase,
+                                                                   final int logShadowLogicalBase) {
+        var previous = usaR11aCurrentCameraDevPreloadedArt(nowServicedPlayer, nowServicedPowerup, objects,
+                frontier, contact, floatBlock, spring, tunnelDoor, monitorTime, cameraResidency,
+                playerLogicalBase, ringLogicalBase, mosquiLogicalBase, plantLogicalBase, rampLogicalBase,
+                explosionLogicalBase, pointsLogicalBase, flowerLogicalBase, powerupLogicalBase,
+                floatBlockLogicalBase, springLogicalBase, tunnelDoorVerticalLogicalBase,
+                monitorTimeLogicalBase, boulderLogicalBase, diagonalSpringLogicalBase, spikesLogicalBase,
+                checkpointLogicalBase, antonLogicalBase, collapsePlatformLogicalBase, tamabbohLogicalBase);
+        final int first = 0x41F, count = 5;
+        var region = CdR11aCameraArtResidency.Region.AT_83E0;
+        if (region.destinationWord() != first * 32 || region.byteLength() != count * 32
+                || (first + count) * 32 != 0x8480) {
+            throw new IllegalArgumentException("Log Shadow's five new patterns exceed their existing physical owner");
+        }
+        long logicalEnd = (long) logShadowLogicalBase + count;
+        if (logShadowLogicalBase < 0 || logicalEnd > (long) Integer.MAX_VALUE + 1) {
+            throw new IllegalArgumentException("Log Shadow logical pattern extent must be nonnegative and bounded");
+        }
+        var table = CdR11aObjectAssets.Table.LOG_SHADOW_MAPPINGS;
+        var view = objects.view(table);
+        var visual = objects.logShadow();
+        if (view.table() != table || !view.range().equals(table.range())
+                || view.bytes().length() != 16 || visual.mappings().length() != 16
+                || visual.mappingTableOffset() != 0 || visual.mappingFrames().size() != 2
+                || !visual.animations().isEmpty() || visual.animationTable().length() != 0
+                || !java.util.Arrays.equals(view.bytes().copy(), visual.mappings().copy())) {
+            throw new IllegalArgumentException("Log Shadow disagrees with its complete unscripted mapping source");
+        }
+        for (int index = 0; index < 2; index++) {
+            var frame = visual.mappingFrames().get(index);
+            if (frame.relativeOffset() != (index == 0 ? 4 : 10) || frame.pieces().size() != 1
+                    || view.bytes().unsignedWord(index * 2) != frame.relativeOffset()
+                    || !java.util.Arrays.equals(frame.bytes().copy(),
+                            view.bytes().slice(frame.relativeOffset(), 1 + frame.pieces().size() * 5).copy())) {
+                throw new IllegalArgumentException("Log Shadow counted body disagrees with its full raw include");
+            }
+            for (var piece : frame.pieces()) {
+                if (piece.tileOffset() > 16 - piece.tileCount()) {
+                    throw new IllegalArgumentException("Log Shadow mapping exceeds its sixteen physical source offsets");
+                }
+            }
+        }
+        // All twenty C30 bases and extents are explicit; never resolve a lazy old ID to find a base.
+        var oldRanges = new ArrayList<int[]>();
+        oldRanges.add(new int[]{CdPlayerArtRuntime.VRAM_BYTE_ADDRESS / 32,
+                nowServicedPlayer.residentBank().length() / 32, playerLogicalBase});
+        oldRanges.add(new int[]{CdPowerupArtRuntime.VRAM_BYTE_ADDRESS / 32,
+                nowServicedPowerup.residentBank().length() / 32, powerupLogicalBase});
+        var bindings = List.of(objects.initialArtBank().binding(CdR11aAsset.ART_RINGS),
+                objects.initialArtBank().binding(CdR11aAsset.ART_MOSQUI),
+                frontier.binding(CdR11aAsset.ART_3D_PLANT), frontier.binding(CdR11aAsset.ART_3D_RAMP_BOOST),
+                contact.binding(CdR11aAsset.ART_EXPLOSIONS), contact.binding(CdR11aAsset.ART_POINTS),
+                contact.binding(CdR11aAsset.ART_FLOWER), floatBlock.binding(CdR11aAsset.ART_FLOAT_BLOCK),
+                spring.binding(CdR11aAsset.ART_SPRINGS), tunnelDoor.binding(CdR11aAsset.ART_TUNNEL_DOOR),
+                monitorTime.binding(CdR11aAsset.ART_MONITOR_TIME_POSTS));
+        int[] logicalBases = {ringLogicalBase, mosquiLogicalBase, plantLogicalBase, rampLogicalBase,
+                explosionLogicalBase, pointsLogicalBase, flowerLogicalBase, floatBlockLogicalBase,
+                springLogicalBase, tunnelDoorVerticalLogicalBase, monitorTimeLogicalBase};
+        for (int index = 0; index < bindings.size(); index++) {
+            var binding = bindings.get(index);
+            oldRanges.add(new int[]{binding.firstTileId(), binding.tileCount(), logicalBases[index]});
+        }
+        oldRanges.add(new int[]{objects.tileWord(0x0B, 0), 19, boulderLogicalBase});
+        oldRanges.add(new int[]{objects.tileWord(0x0F, 0), 46, diagonalSpringLogicalBase});
+        oldRanges.add(new int[]{objects.tileWord(0x0A, 0), 8, spikesLogicalBase});
+        oldRanges.add(new int[]{0x6CB, 12, checkpointLogicalBase});
+        oldRanges.add(new int[]{objects.tileWord(2, 0) & 0x7FF, 22, antonLogicalBase});
+        oldRanges.add(new int[]{0x4BE, 57, collapsePlatformLogicalBase});
+        oldRanges.add(new int[]{0x440, 1, tamabbohLogicalBase});
+        long nativeEnd = (long) first + count;
+        for (int[] range : oldRanges) {
+            if ((first < (long) range[0] + range[1] && range[0] < nativeEnd)
+                    || (logShadowLogicalBase < (long) range[2] + range[1] && range[2] < logicalEnd)) {
+                throw new IllegalArgumentException("Overlapping Log Shadow native or logical picture binding");
+            }
+        }
+        CdR11aCameraArtResidency.State snapshot = cameraResidency;
+        return nativeId -> {
+            if (nativeId >= first && nativeId < nativeEnd) {
+                return new TilePattern(logShadowLogicalBase + (nativeId - first),
+                        patternVersion(CdR11aCameraArtResidency.readTile(snapshot, nativeId)));
+            }
+            return previous.resolve(nativeId);
+        };
+    }
+    // END LOG SHADOW PICTURE C31 R1
+
 }
 // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>

@@ -41,7 +41,7 @@ class TestCdSpikesPicture {
             assertEquals(CdObjectPresentation.PatternSource.class,method.getReturnType());
             assertEquals(int.class,method.getParameterTypes()[method.getParameterCount()-1]);
         }
-        assertEquals(new TreeSet<>(List.of(23,24,25,26,27,28,29)),arities);
+        assertEquals(new TreeSet<>(List.of(23,24,25,26,27,28,29,30,31)),arities);
     }
 
     @Test void all567NativeAndLogicalBindingsKeepEveryOld559IdAndItsExactCurrentVersion() throws Exception {
