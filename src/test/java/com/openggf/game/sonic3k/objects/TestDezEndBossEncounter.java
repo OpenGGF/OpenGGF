@@ -19,6 +19,37 @@ class TestDezEndBossEncounter {
         com.openggf.configuration.SonicConfigurationService.getInstance().clearSessionOverrides();
         com.openggf.game.session.SessionManager.clear();
     }
+    @Test void nativeGateDefersUntilDezRuntimeStateIsInstalled() {
+        var f = boot();
+        var runtimes = GameServices.zoneRuntimeRegistry();
+        var installed = runtimes.current();
+        var beforeObjects = List.copyOf(f.manager.getActiveObjects());
+        var beforeState = installed.captureBytes();
+        var camera = GameServices.camera();
+        var beforeBounds = List.of(camera.getMinX(), camera.getMaxX(),
+                camera.getMinY(), camera.getMaxYTarget());
+        try {
+            for (var incompatible : List.of(
+                    com.openggf.game.zone.NoOpZoneRuntimeState.INSTANCE,
+                    org.mockito.Mockito.mock(com.openggf.game.zone.ZoneRuntimeState.class))) {
+                runtimes.install(incompatible);
+                assertDoesNotThrow(() -> f.root.update(0, null));
+                assertEquals(0, f.root.codePointer);
+                assertFalse(f.root.visible);
+                assertFalse(f.root.isDestroyed());
+                assertEquals(beforeObjects, List.copyOf(f.manager.getActiveObjects()));
+                assertArrayEquals(beforeState, installed.captureBytes());
+                assertEquals(beforeBounds, List.of(camera.getMinX(), camera.getMaxX(),
+                        camera.getMinY(), camera.getMaxYTarget()));
+            }
+        } finally {
+            runtimes.install(installed);
+        }
+        f.root.update(0, null);
+        assertEquals(0x7F0CE, f.root.codePointer);
+        assertEquals(2, f.manager.activeObjectsOfType(DezEndBossEscape.class).size());
+    }
+
     private record Fixture(HeadlessTestFixture game,ObjectManager manager,DezEndBossInstance root) { }
     private Fixture boot() { return boot(320); }
     private Fixture boot(int width) {

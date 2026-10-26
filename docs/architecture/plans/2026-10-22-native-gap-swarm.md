@@ -8463,3 +8463,101 @@ the tested commit/tree, reuse the completed focused checks rather than
 repeat unchanged source as a ceremony; record Main content/parents explicitly,
 not the old worktree mtime frame. Normal hooks/resource policy, actual push and
 accounted worktree cleanup remain subsequent delivery steps at this record.
+
+
+## Post-223 DEZ boss admission and discovery receipt (2026-10-26)
+
+The source-only old-draft audit found a useful containment intent in #208
+(`4fdf7c69c` and `949c7e2ab`), rather than an implementation branch to merge.
+Receive only the `$A6/$A7` state-dependent boss slice on develop
+`d93d2af05b212973910e2845dedc7534d1515ee7`. S3KL keeps its CNZ owners;
+SKL admits the current DEZ bosses only for the stock Death Egg identity.
+Custom SKL levels cannot advertise those bosses by reporting zone `$0B`.
+Creation, catalog admission and the object-profile inventory agree. Stateless
+custom aliases, notably `$4F/$5D..$61`, remain available; the draft's blanket
+25-alias restriction was rejected.
+
+A valid placement can precede event-runtime installation. After each original
+native spatial gate, initialization now waits for the existing typed
+`S3kDezZoneRuntimeState`; it retains the zero code pointer and retries later.
+No camera lock, music/art request or child allocation occurs in the wait.
+The existing encounter bodies, child graphs, timing, fields and rewind codecs
+are unchanged. Arbitrary runtime replacement during an already-running fight
+is outside this correction.
+
+The first queued owning request stopped at `testCompile`, before JUnit:
+new test source omitted the `bosses.CnzEndBossInstance` package and passed a
+conditional class expression that Java could not infer for `assertInstanceOf`.
+Production main compilation succeeded; no runtime result followed. This was
+source tree `26b90b5854f1eb4710a69dbbaa1a4d04e2e8c806`, frame
+`9bd24d3bfe3dd4263df0186839e76506c32ea4bc08e41a550300f34e231dd8d9`.
+Maven printed 1:26, queue 0 seconds, supervisor 86.756 seconds. Only the test
+qualification and a local `Class<?>` assignment were repaired. The failed
+input's pins and index were retained; its complete post-run mtime frame was
+not recaptured before that repair, so no such post-frame claim is made.
+
+Final tested executable tree:
+`dbdbe96bda5e9b65ba77874649d0d53115fd2863`; own-worktree input frame:
+`3c98610df73a9fde59c172b47a2f117e41c0a426605709b4baec55f909ea007d`.
+The exact frozen ordinary selector was:
+
+```text
+com.openggf.game.sonic3k.objects.TestSonic3kModZoneObjectSet,com.openggf.sonic.tools.TestSonic3kObjectProfile,com.openggf.game.sonic3k.objects.TestDezMinibossEncounter,com.openggf.game.sonic3k.objects.TestDezEndBossEncounter
+```
+
+Its UTF-8 SHA-256 is
+`1a06442095d339a232909845ea0d8450129b53d116bfae73a49743831863f266`.
+Actual JUnit: 52 distinct identities, all pass, zero failures/errors/skips:
+registry18, profile7, miniboss11 and end boss16. This includes both new
+wrong/absent-runtime deferred-init controls, stock zones `$00..$17`, both custom
+tables and legacy creation, real placed entry at320/800, allocation prefixes,
+defeat/handoff and full graph recreation/replay. Maven40.288 seconds,
+printed queue125 seconds, supervisor165.896 seconds; these intervals are
+separate measurements, not summed delivery elapsed time.
+
+The fresh guards request selected only
+`com.openggf.sonic.tools.TestSonic3kObjectProfileRegistryGuard` with `-Pguards`.
+Actual JUnit2/2 pass, zero failures/errors/skips; its two rules perform6,656
+factory attempts, which are not6,656 test cases. Maven30.132 seconds,
+queue0, supervisor30.814 seconds. Both original requests completed unchanged.
+
+Commands used this portable shape from `<PR_WORKTREE>` with the current
+absolute Main queue wrapper:
+
+```bash
+python3 "$OPENGGF_QUEUE_WRAPPER" --normal -Dmse=off   -Dopenggf.headless.gl=surfaceless-egl -DmodApi.destinationBranch=develop   "-Dsonic1.rom.path=$OPENGGF_ROM_DIR/Sonic The Hedgehog (W) (REV01) [!].gen"   "-Dsonic2.rom.path=$OPENGGF_ROM_DIR/Sonic The Hedgehog 2 (W) (REV01) [!].gen"   "-Ds3k.rom.path=$OPENGGF_ROM_DIR/Sonic and Knuckles & Sonic 3 (W) [!].gen"   "-Dtest=$SELECTOR" test -B
+# The separate guard request adds -Pguards with its exact selector above.
+```
+
+Java25, Lua5.4, null OpenAL and surfaceless EGL were selected; ambient launcher
+options and display variables were unset. Original stock ROM CRC32/SHA-1 were
+freshly verified against repository identities before admission and their
+metadata remained unchanged. No ROM copies, links or aliases were created.
+No version/preflight/build-only/route/native-emulator or manual-CI run occurred.
+The change-based dry plan selected all4,160 smoke candidates solely because
+of the profile-tool rule (ordered selection SHA
+`aa23a0789bd82a1fbd51ee04cfed188617228d10e05c10e1911cfbad0b2b745f`).
+Focused coverage replaces that disproportionate plan for this two-ID contract;
+there is no shared algorithm, ABI, selection or timing change.
+
+Full XML identities/properties, recursive streams, text, dumps and bounded
+console were consumed. Ordinary4 XML/280 properties,45 streams/11,232 bytes;
+guard1 XML/70 properties,2 streams/312 bytes; no dumps, unexpected caught
+runtime faults or source drift. FAST/NONE and unmeasured KOS deterministic
+load-profile warnings remain timing limitations, not native timing proof.
+The ordinary9 and guard3 exact owned diagnostic files were removed under the
+supported worktree lock; source and compiled outputs were retained through
+readback. No raw archive or validation receipt was created. Candidate0.7 and
+its normalized pin remain unchanged.
+
+The same-movie cold DEZ1 obligation from
+`TestS3kDezColdRoutes#recordedInputsAdvanceTheColdActOneRoute`, movie offset468982,
+remains OPEN. Historical4372/15191/maximum-X thresholds were not restored or
+fitted. The old returned-step-to-physics-row mapping does not establish matching
+fresh inlet/readiness/row correspondence and also mishandles an entirely matching
+prefix. Its harness is not generically obsolete; neither the canonical segment's
+different bootstrap nor newer authored cold inputs replaces this obligation.
+Requalifying that intake remains separate from this safety increment. All old
+matched41 route failures, E8DF and native-lane WIP limitations retain their own
+attribution. No uncommitted Native source was received and no whole draft branch
+was merged. #208 is not closed by this partial receipt.

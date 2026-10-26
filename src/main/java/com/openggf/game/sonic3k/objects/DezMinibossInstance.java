@@ -94,7 +94,9 @@ public final class DezMinibossInstance extends DezMinibossSprite implements Spaw
             if(isCoarseXOutOfRange(getX(),x,coarseXCullRange())) ObjectLifetimeOps.destroyRespawnableOffscreen(this);
             return;
         }
-        var state=runtime(); state.setBossFlag(true);
+        // Placement can precede installation of its zone runtime.
+        if (!(services().zoneRuntimeState() instanceof S3kDezZoneRuntimeState state)) return;
+        state.setBossFlag(true);
         state.setCameraStoredMinX(camera.getMinX()); state.setCameraStoredMaxX(camera.getMaxX());
         state.setCameraStoredMinY(camera.getMinY()); state.setCameraStoredMaxY(camera.getMaxYTarget());
         services().fadeOutMusic();

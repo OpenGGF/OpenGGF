@@ -827,7 +827,10 @@ Unreleased. The earlier development themes remain in
   identity for leaders and followers. Sonic clears the rolling state; Tails
   and Knuckles retain it with the ROM's literal radii and position adjustment.
 
-- **S3K objects:** GAME OVER and TIME OVER wait for the event-owned ROM PLC3
+- **S3K objects:** Death Egg bosses are admitted only by their stock runtime
+  context, while Carnival Night and stateless custom-zone aliases retain their
+  own factories. Boss initialization waits for its typed zone state before
+  publishing encounter side effects. GAME OVER and TIME OVER wait for the event-owned ROM PLC3
   job before the cards initialize or GAME saves lives/continues; ordinary level
   service and partial-work rewind retain the native queue ordering. Hydrocity 2
   cutscene Knuckles probes actual terrain, retaining penetration and facing on

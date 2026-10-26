@@ -107,7 +107,7 @@ public class TestSonic3kObjectProfile {
         // Numeric slots whose SKL owner is implemented too, so the id is legitimately in both
         // sets under two different names. $A4 joined them when Obj_Spikebonker landed for the
         // Death Egg and $A5 when Obj_Chainspike did; CNZ's own $A4 and $A5 are Obj_Sparkle
-        // and Obj_Batbot. The $A6/$A7 pair now also has concrete DEZ bosses.
+        // and Obj_Batbot. The concrete $A6/$A7 DEZ bosses additionally require stock DEZ.
         var sklOwners = java.util.Map.ofEntries(
                 java.util.Map.entry(0x41, "SOZLightSwitch"),
                 java.util.Map.entry(0x43, "SOZSwingingPlatform"),
@@ -134,8 +134,9 @@ public class TestSonic3kObjectProfile {
                         "object $" + Integer.toHexString(objectId) + " has one owner in both sets");
             } else if (sklOwners.containsKey(objectId)) {
                 assertEquals(sklOwners.get(objectId), registry.getPrimaryName(objectId, S3kZoneSet.SKL));
-                assertTrue(profile.getImplementedIds(mhz1).contains(objectId),
-                        "implemented SOZ owner shares the numeric slot with CNZ");
+                assertEquals(objectId != 0xA6 && objectId != 0xA7,
+                        profile.getImplementedIds(mhz1).contains(objectId),
+                        "Only the DEZ boss pair requires the stock DEZ owner");
             } else {
                 assertFalse(profile.getImplementedIds(mhz1).contains(objectId),
                         "CNZ object $" + Integer.toHexString(objectId) + " must stay out of the SKL set");

@@ -42,6 +42,38 @@ class TestDezMinibossEncounter {
         assertFalse(game.sprite().getDead());
     }
 
+    @Test void nativeGateDefersUntilDezRuntimeStateIsInstalled() {
+        var f = boot();
+        var runtimes = GameServices.zoneRuntimeRegistry();
+        var installed = runtimes.current();
+        var beforeObjects = List.copyOf(f.manager.getActiveObjects());
+        var beforeState = installed.captureBytes();
+        var camera = GameServices.camera();
+        var beforeBounds = List.of(camera.getMinX(), camera.getMaxX(),
+                camera.getMinY(), camera.getMaxYTarget());
+        try {
+            for (var incompatible : List.of(
+                    com.openggf.game.zone.NoOpZoneRuntimeState.INSTANCE,
+                    org.mockito.Mockito.mock(com.openggf.game.zone.ZoneRuntimeState.class))) {
+                runtimes.install(incompatible);
+                assertDoesNotThrow(() -> f.root.update(0, null));
+                assertEquals(0, f.root.codePointer);
+                assertFalse(f.root.visible);
+                assertFalse(f.root.isDestroyed());
+                assertEquals(beforeObjects, List.copyOf(f.manager.getActiveObjects()));
+                assertArrayEquals(beforeState, installed.captureBytes());
+                assertEquals(beforeBounds, List.of(camera.getMinX(), camera.getMaxX(),
+                        camera.getMinY(), camera.getMaxYTarget()));
+            }
+        } finally {
+            runtimes.install(installed);
+        }
+        f.root.update(0, null);
+        assertEquals(0x7DE28, f.root.codePointer);
+        assertEquals(1, f.manager.activeObjectsOfType(DezMinibossEye.class).size());
+        assertEquals(8, f.manager.activeObjectsOfType(DezMinibossOrb.class).size());
+    }
+
     private record Fixture(HeadlessTestFixture game,ObjectManager manager,DezMinibossInstance root) { }
     private Fixture boot() {
         var game=HeadlessTestFixture.builder().withZoneAndAct(11,0)

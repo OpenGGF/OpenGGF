@@ -2075,3 +2075,10 @@ corrected Jawz10 plus unchanged list/rewind12 and four-anchor60 coverage qualify
 Destructive registered recreation covers both initialized-but-unpublished and
 first-published phases twice. This refines the existing HCZ2 object obligation;
 viewport, donor, team and full-act gaps remain inherited. See [Jawz final-delta evidence](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#jawz-final-delta-publication-phase-2026-10-26).
+
+
+Post-223 DEZ boss admission (2026-10-26): the [two act matrices](../architecture/validation/levels/s3k-dez-act1.md#typed-boss-admission-and-deferred-initialization-2026-10-26)
+record the bounded `$A6/$A7` creation/discovery and typed-runtime wait controls.
+Whole encounter owners retain their allocation, defeat, handoff and graph replay
+coverage. The same-movie cold DEZ1 inlet remains open; this changes no route
+frontier or native acceptance claim.

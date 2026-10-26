@@ -111,7 +111,8 @@ public final class DezEndBossInstance extends DezEndBossSprite implements SpawnR
             if(isCoarseXOutOfRange(getX(),x,coarseXCullRange())) ObjectLifetimeOps.destroyRespawnableOffscreen(this);
             return;
         }
-        var state=runtime();
+        // Placement can precede installation of its zone runtime.
+        if (!(services().zoneRuntimeState() instanceof S3kDezZoneRuntimeState state)) return;
         // ROM word_7F0C6 permits X $3400..$34E0, a moving 320px window.
         // Native 320px follows Sonic horizontally within this range. Widescreen
         // can show the arena at once, so fix its X at the range midpoint ($3470)

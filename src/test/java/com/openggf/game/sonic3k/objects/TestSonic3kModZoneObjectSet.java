@@ -202,6 +202,44 @@ class TestSonic3kModZoneObjectSet {
     }
 
     @Test
+    void cnzDezBossOwnersMatchCreationAndDiscoveryContexts() {
+        for (int objectId : new int[] {0xA6, 0xA7}) {
+            Class<?> cnzOwner = objectId == 0xA6 ? CnzMinibossInstance.class
+                    : com.openggf.game.sonic3k.objects.bosses.CnzEndBossInstance.class;
+            Class<?> dezOwner = objectId == 0xA6 ? DezMinibossInstance.class : DezEndBossInstance.class;
+            for (int zone = 0; zone <= 0x17; zone++) {
+                var registry = new LevelBackedRegistry(stockLevel(zone));
+                boolean available = S3kZoneSet.forZone(zone) == S3kZoneSet.S3KL || zone == 0x0B;
+                Class<?> expected = S3kZoneSet.forZone(zone) == S3kZoneSet.S3KL ? cnzOwner
+                        : zone == 0x0B ? dezOwner : com.openggf.level.objects.PlaceholderObjectInstance.class;
+                assertInstanceOf(expected, registry.create(spawn(objectId)), "stock zone " + zone);
+                var entry = com.openggf.level.objects.ObjectRegistryCatalog.entry(registry,
+                        new com.openggf.level.objects.ObjectRegistryCatalog.Context(zone, 0), objectId);
+                assertEquals(available
+                                ? com.openggf.level.objects.ObjectRegistryCatalog.FactoryStatus.REGISTERED
+                                : com.openggf.level.objects.ObjectRegistryCatalog.FactoryStatus.CONTEXT_REJECTED,
+                        entry.status(), "catalog zone " + zone);
+                assertEquals(available,
+                        com.openggf.tools.Sonic3kObjectProfile.implementedIdsForZone(zone).contains(objectId),
+                        "profile zone " + zone);
+            }
+            for (S3kZoneSet table : S3kZoneSet.values()) {
+                var custom = mock(com.openggf.game.sonic3k.Sonic3kLevel.class);
+                when(custom.hasStockRomZoneIdentity()).thenReturn(false);
+                when(custom.getObjectZoneSet()).thenReturn(table);
+                when(custom.getZoneIndex()).thenReturn(0x0B);
+                var registry = new LevelBackedRegistry(custom);
+                Class<?> expected = table == S3kZoneSet.S3KL ? cnzOwner
+                        : com.openggf.level.objects.PlaceholderObjectInstance.class;
+                assertInstanceOf(expected, registry.create(spawn(objectId)), "custom " + table);
+                assertEquals(table == S3kZoneSet.S3KL, registry.canCreateInCustomZone(table, objectId));
+            }
+            assertInstanceOf(cnzOwner, new Sonic3kObjectRegistry().create(spawn(objectId)),
+                    "bare legacy construction retains CNZ");
+        }
+    }
+
+    @Test
     void everyStockZoneDependentFactoryIsExplicitlyInventoried() {
         Sonic3kObjectRegistry registry = new Sonic3kObjectRegistry();
 
@@ -210,8 +248,8 @@ class TestSonic3kModZoneObjectSet {
                 // a slot has a custom-compatible base or no base factory.
                 0x02, 0x05, 0x07, 0x28, 0x33, 0x38, 0x4F,
                 0x5D, 0x5E, 0x5F, 0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66,
-                // LRZ/SSZ stock overrides coexist with the other ROM pointer table.
-                0x25,
+                // LRZ/SSZ/DEZ stock overrides coexist with the other ROM pointer table.
+                0x25, Sonic3kObjectIds.CNZ_MINIBOSS, Sonic3kObjectIds.CNZ_END_BOSS,
                 Sonic3kObjectIds.LBZ_CUP_ELEVATOR_POLE,
                 Sonic3kObjectIds.LRZ_BIG_DOOR,
                 Sonic3kObjectIds.LRZ_BUTTON_HORIZONTAL,
@@ -310,8 +348,9 @@ class TestSonic3kModZoneObjectSet {
                 0x28, 0x29, 0x2B, 0x2C, 0x2D, 0x33, 0x37, 0x38,
                 0x4F, 0x5D, 0x5E, 0x5F, 0x60, 0x61,
                 0x99, 0x9A, 0x9B, 0x9C, 0x9D, 0x9E, 0xAD, 0xAF, 0xB2);
-        // FBZ/ICZ base factories are explicitly restricted to the S3KL table.
+        // FBZ/ICZ and CNZ boss base factories are restricted to the S3KL table.
         Set<Integer> s3klBaseIds = Set.of(
+                0xA6, 0xA7,
                 0x75, 0x76, 0x77, 0x7A, 0x7B, 0x7C, 0x7D, 0x7E, 0x7F,
                 0xB0, 0xB4, 0xB5, 0xB6, 0xB7, 0xB8);
         for (int objectId : registry.stockZoneBoundFactoryIds()) {

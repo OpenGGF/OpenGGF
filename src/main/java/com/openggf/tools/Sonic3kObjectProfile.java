@@ -153,8 +153,6 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x90, // AIZMinibossCutscene / Cluckoid
             0xA4, // Sparkle / Spikebonker
             0xA5, // Batbot / Chainspike
-            0xA6, // CNZMiniboss / DEZMiniboss
-            0xA7, // CNZEndBoss / DEZEndBoss
             0xA8, // Blaster / MHZ1CutsceneKnuckles
             0xA9, // TechnoSqueek / MHZ1CutsceneButton
             0xEB // GumballItem
@@ -162,6 +160,8 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
 
     // S3KL-only implementations (zones 0-6: AIZ through LBZ), on top of SHARED.
     private static final Set<Integer> S3KL_ONLY_IDS = Set.of(
+            0xA6, // CNZMiniboss
+            0xA7, // CNZEndBoss
             0x03, // AIZHollowTree
             0x06, // AIZRideVine
             0x09, // AIZ1Tree
@@ -296,6 +296,9 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x8B // SpriteMask
     );
 
+    // These SKL bosses require the stock Death Egg runtime owner.
+    private static final Set<Integer> DEZ_ONLY_IDS = Set.of(0xA6, 0xA7);
+
     // MHZ-only implementations from SKL ids gated on ZONE_MHZ.
     private static final Set<Integer> MHZ_ONLY_IDS = Set.of(
             0x03, // MHZTwistedVine
@@ -375,6 +378,9 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
     /** Implemented ids for one ROM zone id, resolved through the same gates as the registry. */
     public static Set<Integer> implementedIdsForZone(int zoneId) {
         if (S3kZoneSet.forZone(zoneId) == S3kZoneSet.SKL) {
+            if (zoneId == Sonic3kZoneIds.ZONE_DEZ) {
+                return union(SHARED_IMPLEMENTED_IDS, SKL_ONLY_IDS, DEZ_ONLY_IDS);
+            }
             if (zoneId == Sonic3kZoneIds.ZONE_MHZ) {
                 return union(SHARED_IMPLEMENTED_IDS, SKL_ONLY_IDS, MHZ_ONLY_IDS);
             }

@@ -1246,22 +1246,16 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com
                     }
                     return new HczEndBossInstance(spawn);
                 });
-        factories.put(Sonic3kObjectIds.CNZ_MINIBOSS,
-                (spawn, registry) -> {
-                    S3kZoneSet zoneSet = getCurrentZoneSet();
-                    if (zoneSet != S3kZoneSet.S3KL) {
-                        return new DezMinibossInstance(spawn);
-                    }
-                    return new CnzMinibossInstance(spawn);
-                });
-        factories.put(Sonic3kObjectIds.CNZ_END_BOSS,
-                (spawn, registry) -> {
-                    S3kZoneSet zoneSet = getCurrentZoneSet();
-                    if (zoneSet != S3kZoneSet.S3KL) {
-                        return new DezEndBossInstance(spawn);
-                    }
-                    return new CnzEndBossInstance(spawn);
-                });
+        registerZoneSetBound(Sonic3kObjectIds.CNZ_MINIBOSS, S3kZoneSet.S3KL,
+                (spawn, registry) -> new CnzMinibossInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.CNZ_MINIBOSS,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_DEZ,
+                (spawn, registry) -> new DezMinibossInstance(spawn));
+        registerZoneSetBound(Sonic3kObjectIds.CNZ_END_BOSS, S3kZoneSet.S3KL,
+                (spawn, registry) -> new CnzEndBossInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.CNZ_END_BOSS,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_DEZ,
+                (spawn, registry) -> new DezEndBossInstance(spawn));
         factories.put(Sonic3kObjectIds.FBZ_MINIBOSS,
                 (spawn, registry) -> {
                     if (getCurrentZoneSet() != S3kZoneSet.S3KL) {

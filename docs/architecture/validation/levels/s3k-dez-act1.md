@@ -568,3 +568,17 @@ in the [composition plan](../../plans/2026-10-13-s3k-playable-completion.md#nati
 This checks ROM-backed data and prepared rendering, not native GPU pixels,
 physical display-list publication, launcher traversal or whole-act certification.
 Duplicate $78 registration remains a separate issue.
+
+
+## Typed boss admission and deferred initialization (2026-10-26)
+
+The [bounded receiving record](../../plans/2026-10-22-native-gap-swarm.md#post-223-dez-boss-admission-and-discovery-receipt-2026-10-26)
+qualifies stock-DEZ-only SKL `$A6/$A7` admission with matching catalog/profile
+metadata, preserved CNZ/custom-table contracts and typed-runtime initialization
+waiting. The whole miniboss/end-boss owners execute27 cases within the52-case
+ordinary cohort; a separate fresh profile guard executes2 cases. No F/E/skips
+or unexpected caught faults occurred. Existing allocation, defeat, transition
+and graph-recreation oracles remain intact. This is component/lifecycle coverage,
+not a cold route or native timing certificate; the original same-movie DEZ1
+cold intake at offset468982 still needs requalification. Existing roster, donor,
+viewport and native acceptance gaps above remain.
