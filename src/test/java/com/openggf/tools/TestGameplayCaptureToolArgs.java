@@ -57,6 +57,58 @@ class TestGameplayCaptureToolArgs {
     }
 
     @Test
+    void endOfLevelIsOffByDefaultAndAcceptsNoValue() {
+        assertFalse(GameplayCaptureTool.Arguments.parse(new String[] {
+                "--zone", "mhz", "--act", "1", "--out-dir", "out"}).endOfLevel());
+        var declared = GameplayCaptureTool.Arguments.parse(new String[] {
+                "--end-of-level", "--zone", "mhz", "--act", "1", "--out-dir", "out",
+                "--star-post", "--rings", "17", "--reverse-gravity"});
+        assertTrue(declared.endOfLevel());
+        assertTrue(declared.starPost());
+        assertEquals(17, declared.rings());
+        assertTrue(declared.reverseGravity());
+    }
+
+    @Test
+    void previousFullArgumentsConstructorRetainsEveryOperandAndDefaultsEndOfLevelOff() {
+        var expected = GameplayCaptureTool.Arguments.parse(new String[] {
+                "--game", "s3k", "--rom", "host.gen", "--zone", "mhz", "--act", "1",
+                "--x", "0x1200", "--y", "0x700", "--width", "400", "--main", "tails",
+                "--sidekick", "sonic", "--donor", "s1", "--donor-rom", "donor.gen", "--input", "in.bk2",
+                "--settle", "3", "--input-start", "4", "--frames", "8", "--stills", "2,4",
+                "--stop-on-death", "false", "--death-grace", "5", "--no-video", "--scale", "2",
+                "--out-dir", "out", "--emeralds", "1230123", "--title-card", "--vint-run-count", "41",
+                "--camera-x-sub", "42", "--star-post", "--rings", "17", "--reverse-gravity",
+                "--mod", "patch.jar", "--audio", "--interactive-pacing", "--native-pcm"});
+        var legacy = new GameplayCaptureTool.Arguments(expected.game(), expected.rom(), expected.zone(), expected.act(),
+                expected.startX(), expected.startY(), expected.width(), expected.mainCharacter(), expected.sidekickCharacter(),
+                expected.donor(), expected.donorRom(), expected.input(), expected.settle(), expected.inputStart(),
+                expected.frames(), expected.captureFrom(), expected.every(), expected.stills(), expected.stopOnDeath(),
+                expected.deathGrace(), expected.video(), expected.scale(), expected.fps(), expected.outDir(),
+                expected.emeralds(), expected.titleCard(), expected.completeSpecialStage(), expected.vIntRunCount(),
+                expected.cameraXSub(), expected.starPost(), expected.rings(), expected.reverseGravity(), expected.mod(),
+                expected.titleScreen(), expected.audio(), expected.interactivePacing(), expected.nativePcm());
+        assertEquals(expected, legacy);
+        assertFalse(legacy.endOfLevel());
+    }
+
+    @Test
+    void previousFullSettingsConstructorDefaultsEndOfLevelOffAndRetainsSetup() {
+        var legacy = new GameplayCaptureSession.Settings(400, "tails", "sonic", "s1",
+                Path.of("donor.gen"), 0x1200, 0x700, "1230123", true, true, 41, 42, true, 17, true);
+        var explicit = new GameplayCaptureSession.Settings(400, "tails", "sonic", "s1",
+                Path.of("donor.gen"), 0x1200, 0x700, "1230123", true, true, 41, 42, true, 17, true, false);
+        assertEquals(explicit, legacy);
+        assertFalse(legacy.endOfLevel());
+        var declared = new GameplayCaptureSession.Settings(320, "sonic", "", "off",
+                null, 0x1200, 0x700, null, false, false, null, null, true, 17, false, true);
+        assertTrue(declared.endOfLevel());
+        assertTrue(declared.starPost());
+        assertEquals(17, declared.rings());
+        assertFalse(declared.reverseGravity());
+    }
+
+    @Test
     void modJarIsOptional() {
         assertNull(GameplayCaptureTool.Arguments.parse(new String[] {
                 "--game", "s2", "--zone", "0", "--act", "1", "--out-dir", "out"}).mod());
@@ -88,7 +140,7 @@ class TestGameplayCaptureToolArgs {
         var flags=new String[]{"--game","s2","--zone","ehz","--act","1","--out-dir","out","--title-screen","--audio"};
         var args=GameplayCaptureTool.Arguments.parse(flags);assertTrue(args.titleScreen());assertTrue(args.audio());
         for(String[] extra:new String[][]{{"--x","100"},{"--y","100"},{"--star-post"},{"--vint-run-count","12"},
-                {"--camera-x-sub","2"},{"--rings","1"},{"--emeralds","1111111"},{"--reverse-gravity"},{"--donor","s1"},
+                {"--camera-x-sub","2"},{"--rings","1"},{"--emeralds","1111111"},{"--reverse-gravity"},{"--end-of-level"},{"--donor","s1"},
                 {"--every","2"},{"--capture-from","1"},{"--fps","50"}}) {
             var combined=new java.util.ArrayList<String>(java.util.List.of(flags));combined.addAll(java.util.List.of(extra));
             assertThrows(IllegalArgumentException.class,()->GameplayCaptureTool.Arguments.parse(combined.toArray(String[]::new)),java.util.Arrays.toString(extra));

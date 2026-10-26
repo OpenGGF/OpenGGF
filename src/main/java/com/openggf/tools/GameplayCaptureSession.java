@@ -128,6 +128,9 @@ public final class GameplayCaptureSession implements AutoCloseable {
         if (loop != null) {
             throw new IllegalStateException("session is already booted");
         }
+        if (startAtTitle && settings.endOfLevel()) {
+            throw new IllegalArgumentException("--end-of-level requires direct-level capture, not --title-screen");
+        }
         loop = boot.boot(romPath, zone, act);
         if (GameServices.configuration().getBoolean(SonicConfiguration.LIVE_REWIND_VHS_EFFECT)) {
             rewindEffect.prewarm(width, HEIGHT, width, HEIGHT);
@@ -235,6 +238,11 @@ public final class GameplayCaptureSession implements AutoCloseable {
             // restoreRings false and the reposition re-runs the level events, either of which can
             // zero a count written earlier. Ported from the Lava Reef campaign's b35f59d33.
             player.setRingCount(settings.rings());
+        }
+        if (settings.endOfLevel()) {
+            // Declared inherited End_of_level_flag, once after checkpoint/position/ring setup.
+            // Production writers remain authoritative on subsequent steps.
+            GameServices.gameState().setEndOfLevelFlag(true);
         }
     }
 
@@ -707,7 +715,16 @@ public final class GameplayCaptureSession implements AutoCloseable {
     public record Settings(int width, String mainCharacter, String sidekickCharacter, String donor,
                            Path donorRom, Integer startX, Integer startY, String emeraldStates,
                            boolean showTitleCard, boolean completeSpecialStage, Integer vIntRunCount,
-                           Integer cameraXSub, boolean starPost, Integer rings, boolean reverseGravity) {
+                           Integer cameraXSub, boolean starPost, Integer rings, boolean reverseGravity,
+                           boolean endOfLevel) {
+        public Settings(int width, String mainCharacter, String sidekickCharacter, String donor,
+                        Path donorRom, Integer startX, Integer startY, String emeraldStates,
+                        boolean showTitleCard, boolean completeSpecialStage, Integer vIntRunCount,
+                        Integer cameraXSub, boolean starPost, Integer rings, boolean reverseGravity) {
+            this(width, mainCharacter, sidekickCharacter, donor, donorRom, startX, startY, emeraldStates,
+                    showTitleCard, completeSpecialStage, vIntRunCount, cameraXSub, starPost, rings, reverseGravity, false);
+        }
+
         public Settings(int width, String mainCharacter, String sidekickCharacter, String donor,
                         Path donorRom, Integer startX, Integer startY) {
             this(width, mainCharacter, sidekickCharacter, donor, donorRom, startX, startY, null, false,

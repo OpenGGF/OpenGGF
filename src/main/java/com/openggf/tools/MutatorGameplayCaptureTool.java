@@ -120,7 +120,7 @@ public final class MutatorGameplayCaptureTool {
         Files.createDirectories(frames);
         var settings = new GameplayCaptureSession.Settings(a.width(), a.mainCharacter(), a.sidekickCharacter(),
                 a.donor(), null, a.startX(), a.startY(), a.emeralds(), a.titleCard(), a.completeSpecialStage(),
-                a.vIntRunCount(), a.cameraXSub(), a.starPost(), a.rings(), a.reverseGravity());
+                a.vIntRunCount(), a.cameraXSub(), a.starPost(), a.rings(), a.reverseGravity(), a.endOfLevel());
         int zone = GameplayCaptureTool.ZoneIds.resolve(a.game(), a.zone());
         int dead = -1, stepped = 0;
         try (var session = new GameplayCaptureSession(settings);

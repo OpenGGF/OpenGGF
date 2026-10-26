@@ -58,6 +58,16 @@ class TestMutatorGameplayCaptureTool {
     }
 
     @Test
+    void endOfLevelIsAnExplicitValuelessCaptureSeed() {
+        assertFalse(options().capture().endOfLevel());
+        var declared = options("--end-of-level", "--star-post", "--rings", "17").capture();
+        assertTrue(declared.endOfLevel());
+        assertTrue(declared.starPost());
+        assertEquals(17, declared.rings());
+        assertFalse(declared.reverseGravity());
+    }
+
+    @Test
     void argumentsRejectIgnoredFeaturesAndUnboundedOrIncompatibleWorkBeforeBoot() {
         for (String flag : List.of("--stills", "--scale", "--donor-rom")) {
             var failure = assertThrows(IllegalArgumentException.class, () -> options(flag, "1"));
@@ -72,7 +82,8 @@ class TestMutatorGameplayCaptureTool {
                 new String[]{"--interactive-pacing", "--every", "2"},
                 new String[]{"--interactive-pacing", "--capture-from", "1"},
                 new String[]{"--interactive-pacing", "--complete-special-stage"},
-                new String[]{"--interactive-pacing", "--title-screen"}, new String[]{"--unknown"}))
+                new String[]{"--interactive-pacing", "--title-screen"},
+                new String[]{"--title-screen", "--end-of-level"}, new String[]{"--unknown"}))
             assertThrows(IllegalArgumentException.class, () -> options(flags), List.of(flags).toString());
         assertThrows(IllegalArgumentException.class, () -> MutatorGameplayCaptureTool.Options.boundedFrames(Long.MAX_VALUE));
         assertEquals(36000, MutatorGameplayCaptureTool.Options.boundedFrames(36000));

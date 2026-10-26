@@ -78,6 +78,7 @@ Use a task directory outside the repository for captures the user should keep.
 | `--input-start <n>` | `0` | First movie frame to play (e.g. a level start late in a complete-run `.bk2`) |
 | `--emeralds <7 digits>` | unchanged | S3K `Collected_emeralds_array` setup (0 none, 1 Chaos, 2 grey Super, 3 Super), applied after boot |
 | `--vint-run-count <n>` | fresh | Declared inherited `V_int_run_count` (objects gating on its low bits, e.g. DDZ turret aim) |
+| `--end-of-level` | off | Direct-level only: seed declared inherited `End_of_level_flag` once after declared setup; does not prove boss or route completion |
 | `--rings <n>` | unchanged | Declared ring count the route carried in; a boss filmed from a positioned start otherwise begins on 0 rings, where the first touch is fatal |
 | `--camera-x-sub <n>` | fresh | Declared inherited `Camera_X_pos` low word; only zones that keep a camera fraction (S3K DDZ) accept it |
 | `--rings <n>` | unchanged | Declared ring count the route carried in; a boss filmed from a positioned start otherwise begins on 0 rings, where the first touch is fatal |

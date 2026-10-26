@@ -8561,3 +8561,85 @@ Requalifying that intake remains separate from this safety increment. All old
 matched41 route failures, E8DF and native-lane WIP limitations retain their own
 attribution. No uncommitted Native source was received and no whole draft branch
 was merged. #208 is not closed by this partial receipt.
+
+
+## Post-223 retained capture end-of-level setup (2026-10-26)
+
+Receive only the useful capture-setup intent of #207's
+`6eb93933029006c22e1d903a87d6653167f41822`. The valueless `--end-of-level`
+flag defaults off. Both normal and mutator capture tools forward it to the
+session, which writes the declared inherited `End_of_level_flag` once, after
+checkpoint/position/ring setup. It does not assert `EndOfLevelActive`, finish a
+boss or certify a route. Production writers remain authoritative after setup.
+Title-first capture rejects this setup before boot. Previous complete Arguments
+and Settings constructors remain available and default only the new flag off;
+all existing operands, guards and default behavior remain. Both capture-skill
+mirrors document the flag. No production gameplay, helper, POM, configuration,
+ROM resource, API descriptor or normalized pin changed.
+
+Initial frozen source on `d93d2af05b212973910e2845dedc7534d1515ee7`:
+tree `ada71de6352c186c894e93614c50cc03152f0645`, own input frame
+`84370c440fb9d9d7d333921a6a3d6db7d865e0c3ebaa7ac7f7133604c3b58284`.
+The exact selector was:
+
+```text
+com.openggf.tools.TestGameplayCaptureToolArgs,com.openggf.tools.TestMutatorGameplayCaptureTool,com.openggf.tools.TestGameplayCaptureFreshLoad#titleFirstRejectsEndOfLevelBeforeLoadingARom+declaredEndOfLevelFlagIsAppliedOnceAfterPositionedCheckpointSetup
+```
+
+Selector UTF-8 SHA-256:
+`2c4958e534e1195edc1c548b156ecfe8152ffea7d3607ceaad6e39e06b1d102d`.
+Actual JUnit25 pass/0F/E/S:11 normal parser/constructor controls,11 mutator-tool
+controls and3 setup controls (title-first plus explicit false/true). The latter
+perform two actual MHZ boots with positioned checkpoint/rings setup, clear the
+flag through its owner and step once to reject reapplication. Every old parser
+assertion and title/admission matrix remains.
+
+After the independently qualified DEZ registry receipt, the worktree
+fast-forwarded to `99b16240df435f6034880aef29f9271ec8d7f659` while preserving
+all eight capture/skill files exactly. Because the registry is consumed by boot,
+repeat only the3 affected real setup controls on the combined tree; do not rerun
+the22 unchanged parser cases. Exact selector:
+
+```text
+com.openggf.tools.TestGameplayCaptureFreshLoad#titleFirstRejectsEndOfLevelBeforeLoadingARom+declaredEndOfLevelFlagIsAppliedOnceAfterPositionedCheckpointSetup
+```
+
+Its SHA-256 is
+`f97da87b06f8fc614b8400dbe692b27a86e7861546b31132df3fbc1936cbc304`.
+Final tested executable tree `20063a247f4979e0be835086ffa5c4ad2f1b7766`, frame
+`5b7c49fab7225b66f012215cab2ce2743a7d189a0b1d37cb8c66be620e00372f`:
+actual3 pass/0F/E/S. This is a new combined-base epoch, not28 unique new cases
+or a repeated25-case qualification. Both source frames and all selected pins
+remained exact through terminal readback.
+
+Both commands used the current absolute Main queue wrapper from
+`<PR_WORKTREE>`: `python3 "$OPENGGF_QUEUE_WRAPPER" --normal -Dmse=off
+-Dopenggf.headless.gl=surfaceless-egl -DmodApi.destinationBranch=develop
+-Dtest=<exact selector above> <three original absolute stock ROM properties>
+test -B`. Use `$OPENGGF_ROM_DIR` and the unchanged stock filenames/properties
+from the preceding DEZ receiving command. Java25/Lua5.4/null OpenAL/surfaceless
+EGL were selected and ambient launcher/display overrides unset. The original
+stock CRC32/SHA-1 and metadata were verified; no copied/linked/aliased ROM or
+custom classpath/resource/timeout was supplied. No preflight/version probe,
+standalone build, helper/API/guard/broad/native/route/manual-CI repeat occurred.
+The dry plan selected4,160 smoke candidates through the generic tooling rule;
+focused coverage replaces it for this opt-in capture-only setup and explicit
+consumers. Its selection hash remains
+`aa23a0789bd82a1fbd51ee04cfed188617228d10e05c10e1911cfbad0b2b745f`.
+
+Initial Maven1:31, printed queue64 seconds; combined-base Maven1:31, queue0.
+Supervisor intervals were 156.351 seconds and 92.494 seconds respectively; overlapping worktree jobs
+are not summed into delivery elapsed time. Initial3 XML/210 properties and final
+1 XML/70 properties were read with all identities, streams, text, bounded console,
+dumps and sourcepost. No dumps or unexpected caught runtime faults occurred.
+FAST/NONE, JDK/library/compiler deprecations and the initial temporary-directory
+warning remain environmental limits, not native timing proof. Exact owned raw
+outputs7 then3 were consumed under the supported worktree lock; useful source
+and compiled outputs were retained through readback. No raw archive/pass cache
+or validation receipt was created.
+
+This receives one unique tooling feature, not the entire old SSZ branch.
+The separately source-adjudicated crumble lifetime uses the carried render flag,
+not the draft's X-only cull. Its first-row regression stimulus remains a separate
+component check before #207 closure. Old route/native acceptance gaps and all
+uncommitted Native WIP remain outside these setup results.

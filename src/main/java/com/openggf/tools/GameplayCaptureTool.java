@@ -75,7 +75,7 @@ public final class GameplayCaptureTool {
                 arguments.width(), arguments.mainCharacter(), arguments.sidekickCharacter(),
                 arguments.donor(), donorRom, arguments.startX(), arguments.startY(), arguments.emeralds(), arguments.titleCard(),
                 arguments.completeSpecialStage(), arguments.vIntRunCount(), arguments.cameraXSub(),
-                arguments.starPost(), arguments.rings(), arguments.reverseGravity());
+                arguments.starPost(), arguments.rings(), arguments.reverseGravity(), arguments.endOfLevel());
         int zone = ZoneIds.resolve(arguments.game(), arguments.zone());
         int act = arguments.act();
 
@@ -246,7 +246,21 @@ public final class GameplayCaptureTool {
                             Path outDir, String emeralds, boolean titleCard, boolean completeSpecialStage,
                             Integer vIntRunCount, Integer cameraXSub, boolean starPost, Integer rings, boolean reverseGravity,
                             Path mod, boolean titleScreen, boolean audio, boolean interactivePacing,
-                            boolean nativePcm) {
+                            boolean nativePcm, boolean endOfLevel) {
+
+        public Arguments(String game, Path rom, String zone, int act, Integer startX, Integer startY, int width,
+                         String mainCharacter, String sidekickCharacter, String donor, Path donorRom, Path input,
+                         int settle, int inputStart, Integer frames, int captureFrom, int every, Set<Integer> stills,
+                         boolean stopOnDeath, int deathGrace, boolean video, int scale, int fps,
+                         Path outDir, String emeralds, boolean titleCard, boolean completeSpecialStage,
+                         Integer vIntRunCount, Integer cameraXSub, boolean starPost, Integer rings, boolean reverseGravity,
+                         Path mod, boolean titleScreen, boolean audio, boolean interactivePacing,
+                         boolean nativePcm) {
+            this(game, rom, zone, act, startX, startY, width, mainCharacter, sidekickCharacter, donor, donorRom, input,
+                    settle, inputStart, frames, captureFrom, every, stills, stopOnDeath, deathGrace, video, scale, fps,
+                    outDir, emeralds, titleCard, completeSpecialStage, vIntRunCount, cameraXSub, starPost, rings,
+                    reverseGravity, mod, titleScreen, audio, interactivePacing, nativePcm, false);
+        }
 
         public static Arguments parse(String[] argv) {
             String game = "s3k";
@@ -276,6 +290,7 @@ public final class GameplayCaptureTool {
             Path outDir = null;
             String emeralds = null;
             boolean reverseGravity = false;
+            boolean endOfLevel = false;
             Integer vIntRunCount = null;
             Integer cameraXSub = null;
             Integer rings = null;
@@ -326,6 +341,7 @@ public final class GameplayCaptureTool {
                     case "--out-dir" -> outDir = Path.of(value(argv, ++i, flag));
                     case "--emeralds" -> emeralds = value(argv, ++i, flag);
                     case "--reverse-gravity" -> reverseGravity = true;
+                    case "--end-of-level" -> endOfLevel = true;
                     case "--title-card" -> titleCard = true;
                     case "--star-post" -> starPost = true;
                     case "--vint-run-count" -> vIntRunCount = number(value(argv, ++i, flag), flag);
@@ -348,7 +364,7 @@ public final class GameplayCaptureTool {
                 throw new IllegalArgumentException("--act is one-based (1 or 2)");
             }
             if (titleScreen && (startX!=null || startY!=null || starPost || rings!=null || emeralds!=null
-                    || reverseGravity || vIntRunCount!=null || cameraXSub!=null || !donor.equals("off")
+                    || reverseGravity || endOfLevel || vIntRunCount!=null || cameraXSub!=null || !donor.equals("off")
                     || ZoneIds.resolve(game,zone)!=0 || act!=1))
                 throw new IllegalArgumentException("--title-screen starts before assembly: use first zone/act and no positioned/donor setup");
             if (audio && (captureFrom!=0 || every!=1 || fps!=60)) throw new IllegalArgumentException("--audio requires capture-from 0, every 1, fps 60");
@@ -360,7 +376,7 @@ public final class GameplayCaptureTool {
                     settle, inputStart, frames, captureFrom, every, Set.copyOf(stills), stopOnDeath, deathGrace,
                     video, scale, fps, outDir, emeralds, titleCard, completeSpecialStage,
                     vIntRunCount, cameraXSub, starPost, rings, reverseGravity, mod, titleScreen, audio, interactivePacing,
-                    nativePcm);
+                    nativePcm, endOfLevel);
         }
 
         private static String value(String[] argv, int index, String flag) {

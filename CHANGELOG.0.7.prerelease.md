@@ -945,7 +945,9 @@ Unreleased. The earlier development themes remain in
   fire shield that keeps the lava from hurting Sonic during the fight.
   Wider views restore the entry objects when the camera returns from beyond the level's left edge.
 
-- **Capture and controller tools:** Input branches reject checkpoints whose pending
+- **Capture and controller tools:** Direct-level captures can explicitly seed
+  the inherited end-of-level flag once after declared setup; title-first captures
+  reject that seed and later gameplay remains authoritative. Input branches reject checkpoints whose pending
   fresh assembly or transition callback cannot be restored by gameplay rewind.
   An individual trace segment resolves its validated containing run's declared
   movie, preserving shared-movie priority and rejecting unsafe source aliases.

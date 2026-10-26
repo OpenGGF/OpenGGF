@@ -11,6 +11,36 @@ import static org.junit.jupiter.api.Assertions.*;
 /** A capture that omits title drawing must still finish the real destination assembly. */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestGameplayCaptureFreshLoad {
+    @Test
+    void titleFirstRejectsEndOfLevelBeforeLoadingARom() {
+        var settings = new GameplayCaptureSession.Settings(320, "sonic", "", "off",
+                null, null, null, null, false, false, null, null, false, null, false, true);
+        try (var session = new GameplayCaptureSession(settings)) {
+            session.startAtTitle();
+            var failure = assertThrows(IllegalArgumentException.class, () -> session.boot(null, 0, 0, settings));
+            assertTrue(failure.getMessage().contains("--end-of-level"));
+            assertThrows(IllegalStateException.class, session::loop);
+        }
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void declaredEndOfLevelFlagIsAppliedOnceAfterPositionedCheckpointSetup(boolean endOfLevel) throws Exception {
+        var settings = new GameplayCaptureSession.Settings(320, "sonic", "", "off",
+                null, 0x1200, 0x700, null, false, false, null, null, true, 17, false, endOfLevel);
+        try (var session = new GameplayCaptureSession(settings)) {
+            session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 7, 0, settings);
+            var state = GameServices.gameState();
+            assertEquals(endOfLevel, state.isEndOfLevelFlag());
+            assertFalse(state.isEndOfLevelActive());
+            assertEquals(17, session.player().getRingCount());
+            assertFalse(state.isReverseGravityActive());
+            state.setEndOfLevelFlag(false);
+            session.step(null);
+            assertFalse(GameServices.gameState().isEndOfLevelFlag(), "capture must not reapply the declared seed");
+        }
+    }
+
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.MethodSource("lockedScreenInitScenes")
     void bootRetainsTheNativeScreenInitCameraAcrossSupportedViewports(int width,int zone,int act,int x,int y) throws Exception {
