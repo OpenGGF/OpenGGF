@@ -1,5 +1,7 @@
 package com.openggf.tests;
 
+import com.openggf.tests.reel.S1ReelFrames;
+
 import com.openggf.game.GameServices;
 import com.openggf.sprites.playable.DrowningController;
 import com.openggf.tests.rules.RequiresRom;
@@ -19,7 +21,7 @@ class TestTasS1WaterVerdicts {
     void lastAirSurfaceCrossingEscapesWhileLaterCrossingDrowns(int depth) throws Exception {
         var f=HeadlessTestFixture.builder().withSharedLevel(level).startPosition((short)96,(short)512).startPositionIsCentre().build();
         var s=f.sprite();
-        f.stepIdleFrames(2);
+        S1ReelFrames.idle(f,2);
         int water=GameServices.water().getGameplayWaterLevelY(GameServices.level().getFeatureZoneId(),0);
         assertTrue(water>100,"Loaded native LZ1 water surface");
         s.setCentreY((short)(water+depth)); s.setAir(true); s.setInWater(true);
@@ -33,7 +35,7 @@ class TestTasS1WaterVerdicts {
         var timer=controller.getClass().getDeclaredField("drownTime");timer.setAccessible(true);timer.setInt(controller,0);
         assertTrue(s.getCentreY()>water); assertFalse(s.isDrowningDeath());
         assertEquals(0,s.getDrowningController().getRemainingAir());
-        f.stepFrame(false,false,false,false,false);
+        S1ReelFrames.step(f,false,false,false,false,false);
         if(depth==2){
             assertFalse(s.isInWater()); assertFalse(s.isDrowningDeath());
             assertEquals(-0x6e0,s.getYSpeed());

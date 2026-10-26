@@ -1,5 +1,7 @@
 package com.openggf.tests;
 
+import com.openggf.tests.reel.S1ReelFrames;
+
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.Test;
@@ -15,7 +17,7 @@ class TestTasS1TerrainVerdicts {
             int expected = f.camera().getMaxX() + 320 - 24 + 64;
             assertEquals(16, s.getCentreX());
             assertEquals(0xfff0, (s.getCentreX() + (s.getXSpeed() >> 8)) & 0xffff);
-            f.stepFrame(false,false,false,false,false);
+            S1ReelFrames.step(f,false,false,false,false,false);
             assertEquals(16, s.getCentreX(), "Confirmed limitation: signed compare clamps left instead of native unsigned right");
             assertNotEquals(expected, s.getCentreX());
             assertEquals(0, s.getXSpeed());
@@ -30,7 +32,7 @@ class TestTasS1TerrainVerdicts {
             var f = scope.f; var s = f.sprite();
             s.setGSpeed((short)0xf00); s.setXSpeed((short)0xf00);
             for(int i=0;i<=8;i++) {
-                f.stepFrame(false,false,false,false,i>=jumpFrame);
+                S1ReelFrames.step(f,false,false,false,false,i>=jumpFrame);
                 if(i==2) { assertEquals(0x2d9,s.getCentreX()); assertEquals(0x718,s.getCentreY()); assertTrue(s.isStickToConvex()); assertFalse(s.getAir()); }
                 if(i==jumpFrame) { assertTrue(s.getAir()); assertTrue(s.getXSpeed()>0x1000); assertFalse(s.isStickToConvex()); }
                 if(i==7 && jumpFrame==3) { assertEquals(0x320,s.getCentreX()); assertFalse(s.getAir()); assertTrue(s.isStickToConvex()); }
@@ -53,7 +55,7 @@ class TestTasS1TerrainVerdicts {
         try (var scope = new Scope(5, 0, 0x1240, 0x2e4)) {
             var f=scope.f;var s=f.sprite();
             for(int n=0;n<=28;n++){
-                f.stepFrame(false,n<16,n>=16&&left,n>=16&&!left,false);
+                S1ReelFrames.step(f,false,n<16,n>=16&&left,n>=16&&!left,false);
                 if(n==8){assertTrue(s.isOnObject());assertEquals(0x2ec,s.getCentreY());assertEquals(0,s.getXSpeed());}
                 if(n==15)assertEquals(0x1208,s.getCentreX(),"Real moving platform carries Sonic toward the wall");
                 if(n==16){assertEquals(0x1203,s.getCentreX());assertEquals(left?756:12,s.getXSpeed());}
@@ -68,7 +70,7 @@ class TestTasS1TerrainVerdicts {
         try(var scope=new Scope(0,0,40,700)) {
             var s=scope.f.sprite();s.setAir(true);s.setXSpeed((short)-0x2000);
             assertEquals(8,s.getCentreX()+(s.getXSpeed()>>8));
-            scope.f.stepFrame(false,false,false,false,false);
+            S1ReelFrames.step(scope.f,false,false,false,false,false);
             assertEquals(16,s.getCentreX());assertEquals(0,s.getXSpeed());
         }
     }

@@ -1,5 +1,6 @@
 package com.openggf.tests;
 import com.openggf.*;
+import com.openggf.tests.reel.S1ReelFrames;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic1.resources.Sonic1PlcService;
 import com.openggf.tests.rules.*;
@@ -25,6 +26,7 @@ class TestTasS1PausePlcVerdicts {
             int levelFrame=GameServices.level().getFrameCounter();
             do {
                 var result=LevelFrameTestStep.executeWithPause(context,GameServices.level(),f.camera(),()->active[0]++,frames==0,LevelFrameStep.DIRECT_WRAPPER);
+                S1ReelFrames.afterPauseStep(f,frames,frames==0,true);
                 assertEquals(LevelFrameResult.PAUSED,result);
                 assertEquals(0,active[0]);
                 frames++;
@@ -35,6 +37,7 @@ class TestTasS1PausePlcVerdicts {
             assertEquals(levelFrame,GameServices.level().getFrameCounter());
             assertTrue(frames>0);
             LevelFrameTestStep.executeWithPause(context,GameServices.level(),f.camera(),()->active[0]++,true,LevelFrameStep.DIRECT_WRAPPER);
+            S1ReelFrames.afterPauseStep(f,frames,true,false);
             assertEquals(1,active[0],"Fresh Start resumes the active loop; held pause was the control");
         } finally { level.dispose(); }
     }
@@ -42,16 +45,19 @@ class TestTasS1PausePlcVerdicts {
         var level=SharedLevel.load(SonicGame.SONIC_1,0,0);
         try {
             var f=HeadlessTestFixture.builder().withSharedLevel(level).build();
-            f.stepIdleFrames(1);
+            S1ReelFrames.idle(f,1);
             var objects=GameServices.level().getObjectManager();
             int before=objects.getVblaCounter();int levelFrame=GameServices.level().getFrameCounter();
-            for(int i=0;i<3;i++)assertEquals(LevelFrameResult.PAUSED,
-                f.runner().stepFrame(false,false,false,false,false,i==0));
+            for(int i=0;i<3;i++) {
+                assertEquals(LevelFrameResult.PAUSED, f.runner().stepFrame(false,false,false,false,false,i==0));
+                S1ReelFrames.afterPauseStep(f,i==0,true);
+            }
             assertEquals(levelFrame,GameServices.level().getFrameCounter());
             // Native parity expected before+3, observed before. Retain the limitation.
             assertEquals(before,objects.getVblaCounter(),"Confirmed limitation: paused service freezes the bound VInt counter");
             assertNotEquals(before+3,objects.getVblaCounter(),"Native VBlank_Exit increments even inside PauseGame");
             assertEquals(LevelFrameResult.GAMEPLAY_FRAME,f.runner().stepFrame(false,false,false,false,false,true));
+            S1ReelFrames.afterPauseStep(f,true,false);
             assertEquals(before+1,objects.getVblaCounter(),"Unpause really resumes the same counter owner");
             assertEquals(levelFrame+1,GameServices.level().getFrameCounter());
             assertNotEquals((before+4)&7,objects.getVblaCounter()&7,"Pri_Animals now sees the wrong native modulo-eight spawn phase");
