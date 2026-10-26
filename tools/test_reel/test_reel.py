@@ -123,6 +123,18 @@ def methods(source):
     return result
 
 
+def presentation_disposition(scope, class_name, method, ordinal):
+    """A reviewed invocation/method overrides a class-wide rendering disposition."""
+    method_id = f'{class_name}#{method}'
+    keys = ([f'{method_id}[{ordinal}]'] if ordinal is not None else []) + [method_id, class_name]
+    for key in keys:
+        if key in scope.get('non_drawable', {}):
+            return None, scope['non_drawable'][key]
+        if key in scope.get('adapters', {}):
+            return scope['adapters'][key], 'Adapter available'
+    return None, 'Not yet reviewed for drawable state'
+
+
 def inventory(scope, source_ref, extra=(), include_unmerged=False):
     source_ref = git('rev-parse', source_ref)
     touched = {}
@@ -153,6 +165,8 @@ def inventory(scope, source_ref, extra=(), include_unmerged=False):
             method = final[name]
             class_name = path.removeprefix('src/test/java/').removesuffix('.java').replace('/', '.')
             for ordinal, arguments in enumerate(method['arguments'], 1):
+                adapter, disposition = presentation_disposition(
+                    scope, class_name, name, ordinal if method['parameterized'] else None)
                 previous = original.get(name)
                 kind = ('new-test' if previous is None else 'new-parameter' if arguments not in previous['arguments']
                         else 'extended-test')
@@ -167,11 +181,11 @@ def inventory(scope, source_ref, extra=(), include_unmerged=False):
                               'kind': kind, 'game': game, 'source_file': path, 'source_ref': file_ref,
                               'fixture_sha256':hashlib.sha256(file_source.encode()).hexdigest(),
                               'unmerged_source':path in overlays, 'task_commits': commits,
-                              'adapter': scope.get('adapters', {}).get(class_name),
-                              'drawable_disposition': scope.get('non_drawable', {}).get(class_name, 'Adapter available' if class_name in scope.get('adapters', {}) else 'Not yet reviewed for drawable state'),
+                              'adapter': adapter,
+                              'drawable_disposition': disposition,
                               'inventory_kind': 'static-source-expansion', 'junit_unique_id': None,
                               'capture_status': 'not-run',
-                              'reason': 'Adapter available; not executed' if class_name in scope.get('adapters', {}) else
+                              'reason': 'Adapter available; not executed' if adapter else
                               'No adapter yet: inspect actual fixture drawable state; no substitute footage'})
     order = {'s1':0,'s2':1,'kis2':2,'s3k':3,'shared':4}
     cases.sort(key=lambda c:(order[c['game']],c['class'],c['method'],c['invocation_index'] or 0))
@@ -379,7 +393,7 @@ def combine(args):
             if target.get('case_dir') and not args.prefer_last:
                 raise ValueError(f"Duplicate recording: {case['id']}; supply only the selected revision")
             inventory_fields = {key:target[key] for key in ('fixture_sha256', 'source_ref', 'unmerged_source',
-                                'task_commits', 'kind', 'source_arguments') if key in target}
+                                'task_commits', 'kind', 'source_arguments', 'adapter', 'drawable_disposition') if key in target}
             target.update(case)
             target.update(inventory_fields)
             target['inventory_fixture_sha256'] = target.get('fixture_sha256')
@@ -395,6 +409,36 @@ def combine(args):
     print(out/'manifest.json')
 
 
+def reel_cases(plan, include_nondrawable_cards=False, require_complete=False):
+    """Keep real frame counts distinct from explicitly requested editorial cards."""
+    selected = []
+    for case in plan['cases']:
+        status = case.get('capture_status')
+        if status not in ('captured', 'no-adapter'):
+            if require_complete:
+                raise ValueError(f'Incomplete reel: no executed capture for {case["id"]}')
+            continue
+        if require_complete:
+            if not case.get('junit_unique_id') or case.get('outcome') != 'passed':
+                raise ValueError(f'Reel requires a passed actual invocation: {case["id"]}')
+            if not case.get('capture_fixture_sha256') or case.get('matches_inventory_source') is not True:
+                raise ValueError(f'Reel source identity is not qualified: {case["id"]}')
+        if status == 'captured':
+            if case.get('frames', 0) <= 0:
+                raise ValueError(f'Captured case has no frames: {case["id"]}')
+            selected.append((case, 'engine-frames', case['frames']))
+        elif include_nondrawable_cards:
+            disposition = case.get('drawable_disposition')
+            if (not disposition or disposition in ('Adapter available', 'Not yet reviewed for drawable state')
+                    or not case.get('junit_unique_id') or case.get('outcome') not in ('passed', 'failed', 'aborted')
+                    or case.get('frames') != 0):
+                raise ValueError(f'Card requires an executed, reviewed non-drawable case: {case["id"]}')
+            selected.append((case, 'non-drawable-card', 1))
+        elif require_complete:
+            raise ValueError(f'Incomplete reel: non-drawable card disabled for {case["id"]}')
+    return selected
+
+
 def stitch(args):
     manifest_path = Path(args.manifest).resolve()
     root = manifest_path.parent
@@ -403,45 +447,62 @@ def stitch(args):
     if video.exists():
         raise ValueError('Refusing to overwrite reel')
     video.parent.mkdir(parents=True,exist_ok=True)
+    selected = reel_cases(plan, args.include_nondrawable_cards, args.require_complete)
     segments, chapters, edit = [], [], []
+    segment_root = video.with_suffix('.segments')
+    segment_root.mkdir(exist_ok=False)
     frame = 0
-    for case in plan['cases']:
-        if case['capture_status'] != 'captured':
-            continue
-        directory = root/case['case_dir']
-        pngs = sorted((directory/'frames').glob('*.png'))
-        if len(pngs) != case['frames'] or not pngs:
-            raise ValueError(f"Missing frames: {case['id']}")
-        for i,png in enumerate(pngs):
-            if png.name != f'{i:06d}.png':
-                raise ValueError('Frame sequence is not contiguous')
+    for ordinal, (case, kind, source_frames) in enumerate(selected):
+        directory = segment_root/f'{ordinal:04d}'
+        directory.mkdir()
+        source = root/case['case_dir']
+        if kind == 'engine-frames':
+            pngs = sorted((source/'frames').glob('*.png'))
+            if len(pngs) != case['frames'] or not pngs:
+                raise ValueError(f"Missing frames: {case['id']}")
+            for i,png in enumerate(pngs):
+                if png.name != f'{i:06d}.png':
+                    raise ValueError('Frame sequence is not contiguous')
         label = directory/'label.txt'
-        label.write_text(f"{case['game'].upper()} {case['class'].split('.')[-1]}\n{case['method']}"
-                         + (f" [{case['invocation_index']}] {', '.join(case['arguments'])}" if case['arguments'] else ''))
+        text = (f"{case['game'].upper()} {case['class'].split('.')[-1]}\n{case['method']}"
+                + (f" [{case['invocation_index']}] {', '.join(case['arguments'])}" if case['arguments'] else ''))
+        label.write_text(text)
         segment = directory/'segment.mkv'
         # textfile prevents filter/shell interpolation of test names and parameters.
         # Relative fixed label name also avoids FFmpeg path escaping traps.
-        command = ['ffmpeg','-v','error','-nostdin','-y','-framerate','60','-i','frames/%06d.png',
-                   '-vf',"scale=960:672:flags=neighbor,pad=960:720:0:48:black,drawtext=expansion=none:textfile=label.txt:fontcolor=white:fontsize=14:x=6:y=5",
-                   '-frames:v',str(case['frames']),'-an','-c:v','ffv1','-threads','1',str(segment)]
+        if kind == 'engine-frames':
+            input_args = ['-framerate','60','-i',str(source/'frames/%06d.png')]
+            filters = 'scale=960:672:flags=neighbor,pad=960:720:0:48:black,'
+            filters += 'drawtext=expansion=none:textfile=label.txt:fontcolor=white:fontsize=14:x=6:y=5'
+        else:
+            import textwrap
+            label.write_text('NON-DRAWABLE TEST — ONE-FRAME CARD\nNot engine footage\n\n'
+                             + '\n'.join(textwrap.fill(line, 72) for line in text.splitlines())
+                             + '\n\n' + textwrap.fill(case['drawable_disposition'], 72)
+                             + '\n\nJUnit outcome: '+case['outcome'])
+            input_args = ['-f','lavfi','-i','color=c=0x18202c:s=960x720:r=60']
+            filters = 'drawtext=expansion=none:textfile=label.txt:fontcolor=white:fontsize=20:line_spacing=8:x=35:y=50'
+        command = ['ffmpeg','-v','error','-xerror','-nostdin',*input_args,'-vf',filters,
+                   '-frames:v',str(source_frames),'-an','-c:v','ffv1','-pix_fmt','bgr0',
+                   '-threads','1',str(segment)]
         subprocess.run(command,cwd=directory,check=True)
         segments.append(segment)
-        length=case['frames']*args.slow
+        length=source_frames*args.slow
         chapters.append(f'[CHAPTER]\nTIMEBASE=1/60\nSTART={frame}\nEND={frame+length}\ntitle={case["id"]}\n')
-        edit.append({'id':case['id'],'junit_unique_id':case['junit_unique_id'],'source':case['case_dir'],
+        edit.append({'id':case['id'],'junit_unique_id':case['junit_unique_id'],'source':case['case_dir'],'kind':kind,
                      'source_start_frame':0,'source_end_frame_exclusive':case['frames'],
                      'output_start_frame':frame,'output_end_frame_exclusive':frame+length})
         case['clip'] = os.path.relpath(segment,root)
         frame+=length
     if not segments:
-        raise ValueError('No real captured frames to stitch')
+        raise ValueError('No executed invocations selected for stitching')
     concat=video.with_suffix('.ffconcat')
     def quote(path):
         return "'"+str(path).replace("'", "'\\''")+"'"
     concat.write_text('ffconcat version 1.0\n'+''.join('file '+quote(p)+'\n' for p in segments))
     chapter_path=video.with_suffix('.ffmetadata')
     chapter_path.write_text(';FFMETADATA1\n'+''.join(chapters))
-    command=['ffmpeg','-v','error','-nostdin','-f','concat','-safe','0','-i',str(concat),
+    command=['ffmpeg','-v','error','-xerror','-nostdin','-f','concat','-safe','0','-i',str(concat),
              '-f','ffmetadata','-i',str(chapter_path),'-map_metadata','1','-map_chapters','1',
              '-vf',f'setpts={args.slow}*(PTS-STARTPTS),fps=60,tpad=stop_mode=clone:stop_duration={args.slow/60}',
              '-frames:v',str(frame),'-r','60','-an','-c:v','libx264','-threads','2',
@@ -454,6 +515,8 @@ def stitch(args):
     if actual != frame:
         raise ValueError(f'Encoded frames {actual} differ from edit list {frame}')
     write_json(video.with_suffix('.edit.json'),{'fps':60,'frames':frame,'slow':args.slow,'clips':edit,
+                                               'engine_frames':sum(c['frames'] for c,k,n in selected if k=='engine-frames'),
+                                               'editorial_card_frames':sum(n for c,k,n in selected if k=='non-drawable-card'),
                                                'assembly_command':command,'ffprobe':probe})
     write_json(manifest_path,plan)
     print(f'{video}: {frame} frames / {frame/60:.3f}s, {len(edit)} actual test invocations')
@@ -472,6 +535,8 @@ def main():
     p=sub.add_parser('combine');p.add_argument('--inventory',required=True);p.add_argument('--manifest',action='append',required=True);p.add_argument('--out',required=True);p.add_argument('--prefer-last',action='store_true');p.add_argument('--allow-legacy-source',action='store_true')
     p=sub.add_parser('stitch');p.add_argument('--manifest',required=True);p.add_argument('--out',required=True)
     p.add_argument('--slow',type=int,choices=range(1,17),default=1)
+    p.add_argument('--include-nondrawable-cards',action='store_true',help='One explicitly labelled editorial frame per executed, reviewed non-drawable case')
+    p.add_argument('--require-complete',action='store_true',help='Reject missing/failed executions, unknown source identity or omitted cases')
     args=parser.parse_args()
     if args.action=='inventory':
         plan=inventory(json.loads(Path(args.scope).read_text()),args.source,args.add_commit,args.include_unmerged)

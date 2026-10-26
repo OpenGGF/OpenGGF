@@ -51,3 +51,37 @@ retained records remain provenance, not qualified video. Qualified special-stage
 component footage is independent of this adapter and can be reused. Final
 game-specific visual qualification and assembly are still pending at this
 checkpoint.
+
+## Complete-census assembly checks
+
+The stitcher distinguishes recorded engine frames from requested one-frame
+non-drawable cards. Every card requires a reviewed disposition and an actual
+invocation/outcome. `--require-complete` additionally requires a passing outcome
+and a matching executed source hash for every inventory case. Method/control
+overrides preserve mixed classes; combination retains the final inventory review
+instead of an earlier capture's unreviewed planning label.
+
+Python safety checks: 16 passed using
+`python3 -m unittest discover -s tools/test_reel -p 'test_test_*.py' -v`.
+A bounded assembly used a real 70-frame S1 emerald invocation and an executed
+zero-frame scoring-popup mock invocation. It produces 71 output frames, including
+one editorial card, with the mock's engine frame count still zero. Full decode and
+frame-count checks passed, and the final card was visually inspected.
+
+The first assembly exposed a real encoder mismatch: PNG and colour-source inputs
+selected different FFV1 pixel formats, producing `quant_table_index out of range`
+while concatenating. It is rejected. All lossless segments now explicitly use
+`bgr0`, and both source decoding during assembly and final decoding use `-xerror`.
+The corrected 71-frame assembly has no decode errors.
+
+## Combined validation scope
+
+The change-based plan at `7e1e53607` against pre-task destination `94b2a5bf`
+selects 4,226 smoke classes because the recorder is under shared test
+infrastructure. That selection is disproportionate for opt-in test-only capture
+hooks: no production, POM, test-selection policy or normal test lifecycle changes
+are present. Focused coverage includes the actual inventory invocations with
+their capture paths, recorder inactive/lifecycle checks, real GPU transfer,
+Python source/provenance/card checks, final media decode, relevant graphics
+isolation guards and required S3K gates. The latter combined checks remain pending
+at this checkpoint. No release-only full suite is requested or claimed.

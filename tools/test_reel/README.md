@@ -103,6 +103,16 @@ expected frame count. Source frames, state and manifests are retained. Existing
 MP4s are never overwritten. `--slow 4` is an explicit debug presentation; the
 edit map records its speed factor. Default speed is always 1.
 
+For a complete census reel, add `--include-nondrawable-cards --require-complete`.
+Each reviewed non-drawable invocation receives exactly one labelled editorial
+frame saying **Not engine footage**, with its actual JUnit outcome and reason.
+Its recorded game-frame count remains zero. The edit map distinguishes these
+cards from real engine frames. Completeness requires every inventory entry to
+have a passed actual invocation, matching executed source hash, and either real
+frames or a reviewed non-drawable reason. Missing adapters/executions and unknown
+legacy hashes cannot silently become cards. Lossless segments live beside the
+output video; original capture directories are not changed by encoding.
+
 Later capture batches can be assembled without recapturing earlier cases:
 
 ```bash
@@ -177,7 +187,9 @@ multiple private worlds, or non-gameplay menus need explicit adapters at their
 real ownership boundary. Do not boot an unrelated level under their logic and
 call it their footage. If no drawable state exists, retain the per-case outcome
 and reason with zero frames. Register reviewed dispositions and available adapters
-in the scope JSON; unreviewed cases remain explicit. Never turn a placeholder or
+in the scope JSON by class, `class#method`, or `class#method[ordinal]`; the most
+specific review wins. Combination preserves the target inventory's reviewed
+disposition instead of an older recording's planning label. Unreviewed cases remain explicit. Never turn a placeholder or
 an omission into an in-engine clip.
 
 ## Focused checks
