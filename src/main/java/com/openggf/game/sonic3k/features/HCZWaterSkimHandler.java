@@ -81,6 +81,8 @@ public final class HCZWaterSkimHandler {
     // ===== Per-player skim state =====
     private static boolean skimActiveP1;
     private static boolean skimActiveP2;
+    /** The init-only native SST was deleted by Sprite_OnScreen_Test. */
+    private static boolean slotRetired;
     private static int splashAnimFrameP1;
     private static int splashAnimFrameP2;
     private static int splashAnimTimerP1;
@@ -123,7 +125,7 @@ public final class HCZWaterSkimHandler {
 
     /** Advances the object-local counter once before the playable slots run. */
     public static void beginFrame() {
-        frameCounter++;
+        if (!slotRetired) frameCounter++;
     }
 
     /**
@@ -136,7 +138,7 @@ public final class HCZWaterSkimHandler {
 
     /** Runs the skim routine for one player at ROM post-player timing. */
     public static void updateAfterPlayablePhysics(AbstractPlayableSprite player) {
-        if (player == null || player.getDead() || player.isDebugMode()) {
+        if (slotRetired || player == null || player.getDead() || player.isDebugMode()) {
             return;
         }
         ObjectPlayerQuery query = playerQueryFromGameServices();
@@ -170,6 +172,7 @@ public final class HCZWaterSkimHandler {
     }
 
     static void update(ObjectPlayerQuery query, int waterLevel, int frameCounter) {
+        if (slotRetired) return;
         AbstractPlayableSprite player = asPlayableSprite(query.mainPlayerOrNull());
         if (player == null) {
             return;
@@ -458,7 +461,7 @@ public final class HCZWaterSkimHandler {
      * ROM: loc_384B2 (sonic3k.asm:75355-75398) — splash follows player X at water level.
      */
     public static void render(Camera camera) {
-        if (splashRenderer == null || !artLoaded) return;
+        if (slotRetired || splashRenderer == null || !artLoaded) return;
 
         int waterLevel = getWaterLevel();
         if (waterLevel == 0) return;
@@ -513,7 +516,20 @@ public final class HCZWaterSkimHandler {
         return state != null && state.active;
     }
 
-    public static void reset() {
+    /**
+     * Delete_Current_Sprite clears the skim status/child sprites after this
+     * tick's participant work. Keep the art/configuration for rewind, but do
+     * not let the detached post-player hook run or draw a deleted object.
+     */
+    public static void retireSlot() {
+        for (PlayableEntity participant : lastParticipants) {
+            if (participant instanceof AbstractPlayableSprite sprite) sprite.setWaterSkimActive(false);
+        }
+        clearParticipantState();
+        slotRetired = true;
+    }
+
+    private static void clearParticipantState() {
         skimActiveP1 = false;
         skimActiveP2 = false;
         splashAnimFrameP1 = 0;
@@ -524,6 +540,11 @@ public final class HCZWaterSkimHandler {
         pendingExtensionStates.clear();
         lastParticipants = List.of();
         nativeP2Binding.reset(false);
+    }
+
+    public static void reset() {
+        clearParticipantState();
+        slotRetired = false;
         splashRenderer = null;
         artLoaded = false;
         actId = 0;
@@ -541,7 +562,8 @@ public final class HCZWaterSkimHandler {
             int splashAnimFrameP1, int splashAnimFrameP2,
             int splashAnimTimerP1, int splashAnimTimerP2,
             int frameCounter,
-            List<ExtensionSkimSnapshot> extensionStates) {
+            List<ExtensionSkimSnapshot> extensionStates,
+            boolean slotRetired) {
         public Snapshot(boolean skimActiveP1, boolean skimActiveP2,
                         int splashAnimFrameP1, int splashAnimFrameP2,
                         int splashAnimTimerP1, int splashAnimTimerP2,
@@ -549,7 +571,7 @@ public final class HCZWaterSkimHandler {
             this(skimActiveP1, skimActiveP2,
                     splashAnimFrameP1, splashAnimFrameP2,
                     splashAnimTimerP1, splashAnimTimerP2,
-                    frameCounter, List.of());
+                    frameCounter, List.of(), false);
         }
     }
 
@@ -570,7 +592,7 @@ public final class HCZWaterSkimHandler {
         return new Snapshot(skimActiveP1, skimActiveP2,
                 splashAnimFrameP1, splashAnimFrameP2,
                 splashAnimTimerP1, splashAnimTimerP2,
-                frameCounter, List.copyOf(extensions));
+                frameCounter, List.copyOf(extensions), slotRetired);
     }
 
     /** Restores per-player skim state from a previously captured snapshot. */
@@ -582,6 +604,7 @@ public final class HCZWaterSkimHandler {
         splashAnimTimerP1 = snapshot.splashAnimTimerP1();
         splashAnimTimerP2 = snapshot.splashAnimTimerP2();
         frameCounter = snapshot.frameCounter();
+        slotRetired = snapshot.slotRetired();
         extensionStates.clear();
         pendingExtensionStates.clear();
         for (ExtensionSkimSnapshot state : snapshot.extensionStates()) {

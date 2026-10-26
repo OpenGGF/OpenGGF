@@ -16,11 +16,23 @@ public final class Aiz2BossEndSequenceState {
     /** Cross-act latches captured and restored by Aiz2BossEndSequenceStaticAdapter. */
     private static volatile int tailsControlReleaseDelay = -1;
     private static volatile CutsceneKnucklesAiz2Instance activeKnuckles;
+    // Obj_CutsceneKnuckles writes a0 to _unkFAA4 (sonic3k.asm:128646-128652).
+    // A native address survives retirement and names the NEXT slot occupant;
+    // the typed pointer above remains only for the cutscene's actor consumers.
+    private static volatile int cutsceneKnucklesSlot = -1;
 
     private Aiz2BossEndSequenceState() {
     }
 
     public static void reset() {
+        // loc_60DE clears _unkFA80 through DMA_queue, including _unkFAA4
+        // (sonic3k.asm:7650-7655). An unarmed reference is not slot 6.
+        cutsceneKnucklesSlot = -1;
+        resetSequenceLatches();
+    }
+
+    /** Boss setup resets its Java coordination, not the native _unkFAA4 word. */
+    static void resetSequenceLatches() {
         bridgeDropTriggered = false;
         buttonPressed = false;
         eggCapsuleReleased = false;
@@ -87,6 +99,15 @@ public final class Aiz2BossEndSequenceState {
         activeKnuckles = knuckles;
     }
 
+    /** Called only by the actor's native initializer, never by restore rebinding. */
+    static void armCutsceneKnucklesSlot(int slot) {
+        if (slot >= 0) cutsceneKnucklesSlot = slot;
+    }
+
+    public static int getCutsceneKnucklesSlot() {
+        return cutsceneKnucklesSlot;
+    }
+
     /**
      * Immutable rewind snapshot of the boss-endgame static latches. These
      * ratchet forward (bridge drop, button press, capsule release, cutscene
@@ -102,13 +123,14 @@ public final class Aiz2BossEndSequenceState {
                            boolean eggCapsuleReleased,
                            boolean cutsceneOverrideObjectsActive,
                            int tailsControlReleaseDelay,
-                           boolean drawBridgeBurnActive) {
+                           boolean drawBridgeBurnActive,
+                           int cutsceneKnucklesSlot) {
     }
 
     public static Snapshot snapshot() {
         return new Snapshot(bridgeDropTriggered, buttonPressed, eggCapsuleReleased,
                 cutsceneOverrideObjectsActive, tailsControlReleaseDelay,
-                AizCollapsingLogBridgeObjectInstance.isDrawBridgeBurnActive());
+                AizCollapsingLogBridgeObjectInstance.isDrawBridgeBurnActive(), cutsceneKnucklesSlot);
     }
 
     public static void restore(Snapshot snapshot) {
@@ -117,6 +139,7 @@ public final class Aiz2BossEndSequenceState {
         eggCapsuleReleased = snapshot.eggCapsuleReleased();
         cutsceneOverrideObjectsActive = snapshot.cutsceneOverrideObjectsActive();
         tailsControlReleaseDelay = snapshot.tailsControlReleaseDelay();
+        cutsceneKnucklesSlot = snapshot.cutsceneKnucklesSlot();
         AizCollapsingLogBridgeObjectInstance.setDrawBridgeBurnActive(
                 snapshot.drawBridgeBurnActive());
         // Drop any stale live pointer; rebound from the restored object set by
