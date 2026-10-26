@@ -2612,7 +2612,7 @@ class TestSonicCdOpeningWorldLoad {
      * Hole's real service and Pata handoff precede the separately attempted ID22
      * dynamic-slot frontier. No failed-call resume or comparison-data ingress.
      */
-    @Test void controllerThreeJumpRouteRunsDiscAndStopsAtTunnelPathSlot63() throws Exception {
+    @Test void controllerFourJumpRouteRunsDiscAndTunnelPathAndStopsAtLogShadowSlot47() throws Exception {
         GameServices.configuration().setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, false);
         GameServices.configuration().setSessionOverride(SonicConfiguration.LIVE_REWIND_DETERMINISM_AUDIT, false);
         final String controllerScript = "1200 R;32 R+B;537 R;32 R+B;1200 R;32 R+B;1200 R";
@@ -3519,7 +3519,30 @@ class TestSonicCdOpeningWorldLoad {
         assertClosedAtCall.accept(3420); assertThreeJumpExtendedReplayCut(at3420, h);
         assertSame(naturalCheckpoint.saved(), runtime.checkpointState().saved());
 
-        // ONLY AFTER every healthy full/course replay: ordinary3421 is attempted ONCE and is terminal.
+        // Root OBSERVED observer57554, terminal1/0/1/0 at 2026-10-26T14:44:26Z:
+        // this fresh four-held-jump recipe returned through5255 in the SAME epoch/generation1.
+        // Source-only promotion; all author-side engine/build/test/media/native checks are UNRUN.
+        // The inherited4233 input/proofs above remain byte-exact; extend only the ordinary input recipe.
+        final String finalControllerScript = controllerScript + ";967 R;32 R+B;24 R";
+        var finalLog = com.openggf.tools.InputScriptCompiler.compileToInputLog(finalControllerScript);
+        var finalMovie = new com.openggf.debug.playback.Bk2MovieLoader().parseInputLogText(
+                Path.of("four-jump-natural-checkpoint-controller"), finalLog.lines().toList());
+        assertEquals(5256, finalMovie.getFrameCount());
+        for (int call = 1; call <= 5256; call++) {
+            var row = finalMovie.getFrame(call - 1);
+            int expectedActions = (call >= 1201 && call <= 1232) || (call >= 1770 && call <= 1801)
+                    || (call >= 3002 && call <= 3033) || (call >= 5201 && call <= 5232) ? 2 : 0;
+            assertEquals(8 | (expectedActions == 0 ? 0 : com.openggf.sprites.playable.AbstractPlayableSprite.INPUT_JUMP), row.p1InputMask());
+            assertEquals(expectedActions, row.p1ActionMask());
+            assertFalse(row.p1StartPressed());
+            if (call <= movie.getFrameCount()) {
+                var inheritedRow = movie.getFrame(call - 1);
+                assertEquals(inheritedRow.p1InputMask(), row.p1InputMask());
+                assertEquals(inheritedRow.p1ActionMask(), row.p1ActionMask());
+                assertEquals(inheritedRow.p1StartPressed(), row.p1StartPressed());
+            }
+        }
+
         // N forward bound4480+0280=5120 excludes record239; left4480-0080=4352 excludes record195.
         var placement3420 = at3420.objects().placement(); var status3420 = placement3420.status();
         assertEquals(4352, status3420.previousChunkWord());
@@ -3535,79 +3558,266 @@ class TestSonicCdOpeningWorldLoad {
         assertEquals(5104, Short.toUnsignedInt(ByteBuffer.wrap(tunnelPlacement64).getShort(8)));
         assertEquals(240, Short.toUnsignedInt(ByteBuffer.wrap(tunnelPlacement64).getShort(12)));
         assertEquals(0, Byte.toUnsignedInt(tunnelPlacement64[0x24])); assertEquals(1, Byte.toUnsignedInt(tunnelPlacement64[0x29]));
-        // This projection supplies ONLY slot63's comparison image. No full96 dynamic-prefix model:
-        // earlier Ring parents may publish children into later empty slots before unknown63.
+        // Detached comparison ONLY. ObjTunnelPath_Init (N Tunnel Path/Main.asm:180-196)
+        // writes these exact widths in order, retaining every unaddressed placement/dirty byte.
+        byte[] tunnelInit64 = tunnelPlacement64.clone();
+        var tunnelComparison = ByteBuffer.wrap(tunnelInit64);
+        tunnelComparison.putInt(4, 0x23EE9C);
+        tunnelComparison.put(1, (byte) 4);
+        tunnelComparison.put(0x18, (byte) 1);
+        tunnelComparison.put(0x19, (byte) 0x10);
+        tunnelComparison.putShort(2, (short) 0x0541);
+        tunnelComparison.put(0x24, (byte) ((Byte.toUnsignedInt(tunnelPlacement64[0x24]) + 2) & 0xFF));
+        // Paths/Path0 (N Main.asm:398-405): selected header0088, coordinates208DA0, first1440/00F0.
+        tunnelComparison.putShort(0x3A, (short) 0x0088);
+        tunnelComparison.putInt(0x3C, 0x208DA0);
+        tunnelComparison.putShort(0x36, (short) 0x1440);
+        tunnelComparison.putShort(0x38, (short) 0x00F0);
+        assertArrayEquals(java.util.HexFormat.of().parseHex(
+                "070405410023ee9c13f0000000f000000000000000000000011000000000000000000000020000000001000000000000000000000000144000f0008800208da0"),
+                tunnelInit64, "Root-supplied actual3421/5200/5255 bytes independently bind the literal native Init");
+        // This is a slot63 comparison image, never a full96 partial dynamic-prefix model.
+        // No live pool/player write, gameplay hydration, helper execution or effect replay occurs here.
+
+        replayRows = Arrays.copyOf(replayRows, 5256); // Only successful closed rows0..5255.
+        precedingBodyRequests = Arrays.copyOf(precedingBodyRequests, 5256);
+        int[] tunnelCutCalls = {3420, 3421, 5200, 5254};
+        int[] tunnelThroughCalls = {3421, 3422, 5201, 5255};
+        State[] tunnelCutStates = new State[tunnelCutCalls.length];
+        var tunnelFullCuts = new com.openggf.game.rewind.CompositeSnapshot[tunnelCutCalls.length];
+        var tunnelCourseCuts = new com.openggf.game.rewind.CompositeSnapshot[tunnelCutCalls.length];
+        tunnelCutStates[0] = at3420;
+        tunnelFullCuts[0] = registry.capture(); tunnelCourseCuts[0] = registry.captureCourse();
+        var tunnelSourceOwners = List.copyOf(sourceBank.sources());
+        var tunnelSourceReaders = tunnelSourceOwners.stream().map(source -> source.readerBytes()).toList();
+        var tunnelSourceDecodes = tunnelSourceOwners.stream().map(source -> source.decode()).toList();
+        assertEquals(17, tunnelSourceOwners.size());
+        for (int call = 3421; call <= 5255; call++) {
+            var row = finalMovie.getFrame(call - 1);
+            step(h, input(row.p1InputMask(), row.p1ActionMask(), row.p1StartPressed()));
+            assertClosedAtCall.accept(call);
+            assertNaturalRestartCheckpoint(naturalCheckpoint, h);
+            assertSame(naturalCheckpoint.saved(), runtime.checkpointState().saved());
+            assertSame(sourceBank, objectAssets.sectionArtSources());
+            assertEquals(tunnelSourceOwners.size(), sourceBank.sources().size());
+            for (int source = 0; source < tunnelSourceOwners.size(); source++) {
+                var retainedSource = tunnelSourceOwners.get(source);
+                assertSame(retainedSource, sourceBank.sources().get(source));
+                assertSame(retainedSource, sourceBank.source(retainedSource.source()));
+                assertSame(tunnelSourceReaders.get(source), retainedSource.readerBytes());
+                assertSame(tunnelSourceDecodes.get(source), retainedSource.decode());
+            }
+            var slot63 = pool.state(63);
+            assertEquals(0xFFDFC0, slot63.identity().nativeAddress24());
+            assertEquals(7, slot63.id()); assertEquals(2, slot63.routine());
+            assertArrayEquals(tunnelInit64, slot63.copyBytes(),
+                    "Init3421 returns; every later healthy ID07 image remains the same native routine2 image");
+            assertEquals(0x23EE9C, slot63.longBits(CdObjectState.LongField.MAPPINGS));
+            assertEquals(0x0541, slot63.word(CdObjectState.WordField.TILE));
+            assertEquals(1, slot63.unsignedByte(CdObjectState.ByteField.PRIORITY));
+            assertEquals(0x10, slot63.unsignedByte(CdObjectState.ByteField.WIDTH));
+            assertEquals(4, slot63.spriteFlags());
+            assertEquals(0, slot63.subtype()); assertEquals(1, slot63.subtype2());
+            assertEquals(0, slot63.unsignedByte(CdObjectState.ByteField.SAVED_FLAGS_ID));
+            assertEquals(0, slot63.word(CdObjectState.WordField.TUNNEL_PATH_STEPS));
+            assertEquals(0x0088, slot63.word(CdObjectState.WordField.TUNNEL_PATH_INDEX_END));
+            assertEquals(0x208DA0, slot63.longBits(CdObjectState.LongField.TUNNEL_PATH_DATA));
+            assertEquals(0x1440, slot63.word(CdObjectState.WordField.TUNNEL_PATH_TARGET_X));
+            assertEquals(0x00F0, slot63.word(CdObjectState.WordField.TUNNEL_PATH_TARGET_Y));
+            var player = frame.state();
+            assertEquals(0, player.motion().playerControl());
+            assertEquals(0, player.rotationAngle()); assertEquals(0, player.rotationDistance());
+            // Main (N Main.asm:200-214): compare its unsigned X operand at the measured cuts.
+            // This detached arithmetic neither selects nor executes a native gameplay branch.
+            int nativeXGate = ((player.motion().centreX16_16() >>> 16) - slot63.centreX() + 16) & 0xFFFF;
+            assertFalse(runtime.lastSoundRequests().stream().anyMatch(CdOpeningObjectRuntime.TunnelPathFm.class::isInstance),
+                    "Rejected Init/Main emits no ID07 FM; other actual ledger owners remain compared in full");
+            if (call == 3421) {
+                assertEquals(0x12264900, player.motion().centreX16_16());
+                assertEquals(0x026B8400, player.motion().centreY16_16());
+                assertEquals(1248, player.motion().xVelocity()); assertEquals(1248, player.motion().groundVelocity());
+                assertEquals(0, player.motion().yVelocity()); assertEquals(2, player.motion().routine());
+                assertEquals(0, player.motion().flags()); assertEquals(0x84, player.motion().spriteFlags());
+                assertEquals(34, player.timers().hurt()); assertEquals(112, player.history().index());
+                assertEquals(0xFE46, nativeXGate, "Init falls through Main and rejects X before Y/control");
+            }
+            if (call == 3422) {
+                var precedingTunnel = replayRows[3421].objects().placement().pool().slots().get(63 - 32);
+                assertEquals(2, precedingTunnel.routine());
+                assertTrue(nativeXGate >= 32, "The first Main visit rejects X before Y/control");
+                assertArrayEquals(tunnelInit64, precedingTunnel.copyBytes());
+                assertArrayEquals(precedingTunnel.copyBytes(), slot63.copyBytes(),
+                        "The first actual pre-routine2 visit returns without changing its own image");
+            }
+            if (call == 5200) {
+                assertEquals(0x1335B900, player.motion().centreX16_16());
+                assertEquals(0x028BFC00, player.motion().centreY16_16());
+                assertEquals(60, player.motion().xVelocity()); assertEquals(60, player.motion().groundVelocity());
+                assertEquals(0, player.motion().yVelocity()); assertEquals(2, player.motion().routine());
+                assertEquals(0x20, player.motion().flags()); assertEquals(0x84, player.motion().spriteFlags());
+                assertEquals(0, player.timers().hurt());
+                assertEquals(0, player.objectLinks().pushObject()); assertEquals(0, player.objectLinks().standObject());
+                assertEquals(0xFF55, nativeXGate, "The measured pre-fourth-action bound is still pushing, without attachment");
+            }
+            var art = runtime.sectionArtState();
+            assertFalse(art.stopped());
+            replayRows[call] = state(h);
+            precedingBodyRequests[call] = List.copyOf(actorOwner.lastSoundRequests());
+            var bodyPrefix = actorOwner.lastSoundRequests().stream().map(CdOpeningObjectRuntime.PlayerSound::new).toList();
+            assertEquals(bodyPrefix, runtime.lastSoundRequests().subList(0, bodyPrefix.size()),
+                    "Entire actual preceding Body ledger stays before all actual dynamic requests");
+            var aliases = threeJumpCurrentAliases(replayRows[call], objectAssets, banks, art.residency());
+            assertThreeJumpCurrentAliases(aliases, art.residency(), banks);
+            for (int cut = 1; cut < tunnelCutCalls.length; cut++) {
+                if (call == tunnelCutCalls[cut]) {
+                    tunnelCutStates[cut] = replayRows[call];
+                    tunnelFullCuts[cut] = registry.capture(); tunnelCourseCuts[cut] = registry.captureCourse();
+                }
+            }
+        }
+        var at5255 = replayRows[5255];
+        var healthyPlayer = frame.state();
+        assertEquals(0x13A28E00, healthyPlayer.motion().centreX16_16());
+        assertEquals(0x024A0400, healthyPlayer.motion().centreY16_16());
+        assertEquals(982, healthyPlayer.motion().xVelocity()); assertEquals(982, healthyPlayer.motion().groundVelocity());
+        assertEquals(0, healthyPlayer.motion().yVelocity()); assertEquals(2, healthyPlayer.motion().routine());
+        assertEquals(0xFC, healthyPlayer.motion().angle()); assertEquals(0, healthyPlayer.motion().flags());
+        assertEquals(0x84, healthyPlayer.motion().spriteFlags()); assertEquals(0, healthyPlayer.motion().playerControl());
+        assertEquals(0, healthyPlayer.rotationAngle()); assertEquals(0, healthyPlayer.rotationDistance());
+        assertEquals(0, healthyPlayer.timers().hurt()); assertEquals(24, healthyPlayer.history().index());
+        assertEquals(3, healthyPlayer.animation().scriptIndex()); assertEquals(3, healthyPlayer.animation().timer());
+        assertEquals(55, healthyPlayer.animation().mapFrame());
+        assertEquals(0, healthyPlayer.objectLinks().pushObject()); assertEquals(0, healthyPlayer.objectLinks().standObject());
+        assertEquals(4866, h.mode().getCamera().getX()); assertEquals(490, h.mode().getCamera().getY());
+        assertEquals(4866, scroll(h).state().cameraX()); assertEquals(32112640, scroll(h).state().cameraY16_16());
+        var healthyPlacement = at5255.objects().placement().status();
+        assertEquals(2, healthyPlacement.routine()); assertEquals(4736, healthyPlacement.previousChunkWord());
+        assertEquals(252, healthyPlacement.rightRecordIndex()); assertEquals(207, healthyPlacement.leftRecordIndex());
+        assertEquals(118, healthyPlacement.rightSavedId()); assertEquals(101, healthyPlacement.leftSavedId());
+        assertArrayEquals(new byte[64], pool.state(47).copyBytes(), "The next frontier slot is still empty at closed5255");
+        assertEquals(0x0400, runtime.sectionArtState().sectionWord());
+        assertEquals(0, runtime.sectionArtState().remainingTilesWord()); assertEquals(0L, runtime.sectionArtState().queue().headSource());
+        assertArrayEquals(new byte[96], runtime.sectionArtState().queue().bytes().copy());
+        assertTrue(runtime.lastSoundRequests().isEmpty()); assertTrue(actorOwner.lastSoundRequests().isEmpty());
+
+        // Four new one-call cuts, BOTH full/course, after all inherited replay proofs.
+        // Restore only valid closed captures. No pending-input ingress, rebind, reseed or failed-world reuse.
+        for (int cut = 0; cut < tunnelCutCalls.length; cut++) {
+            assertNotNull(tunnelCutStates[cut]); assertNotNull(tunnelFullCuts[cut]); assertNotNull(tunnelCourseCuts[cut]);
+            for (boolean course : List.of(false, true)) {
+                if (course) registry.restoreCourse(tunnelCourseCuts[cut]); else registry.restore(tunnelFullCuts[cut]);
+                assertClosedAtCall.accept(tunnelCutCalls[cut]);
+                assertThreeJumpExtendedReplayCut(tunnelCutStates[cut], h);
+                assertEquals(precedingBodyRequests[tunnelCutCalls[cut]], actorOwner.lastSoundRequests());
+                assertNaturalRestartCheckpoint(naturalCheckpoint, h);
+                assertSame(naturalCheckpoint.saved(), runtime.checkpointState().saved());
+                assertSame(sourceBank, objectAssets.sectionArtSources());
+                assertEquals(tunnelSourceOwners.size(), sourceBank.sources().size());
+                for (int source = 0; source < tunnelSourceOwners.size(); source++) {
+                    var retainedSource = tunnelSourceOwners.get(source);
+                    assertSame(retainedSource, sourceBank.sources().get(source));
+                    assertSame(retainedSource, sourceBank.source(retainedSource.source()));
+                    assertSame(tunnelSourceReaders.get(source), retainedSource.readerBytes());
+                    assertSame(tunnelSourceDecodes.get(source), retainedSource.decode());
+                }
+                for (int call = tunnelCutCalls[cut] + 1; call <= tunnelThroughCalls[cut]; call++) {
+                    var row = finalMovie.getFrame(call - 1);
+                    step(h, input(row.p1InputMask(), row.p1ActionMask(), row.p1StartPressed()));
+                    assertClosedAtCall.accept(call);
+                    assertNotNull(replayRows[call]);
+                    // Complete actor/history/environment, reserved/dynamic pool, every saved/queue byte,
+                    // checkpoint owner/live/saved knowledge, art/source identity, SAT/picture/scroll,
+                    // clock, resident pixels and full sound ledger are compared after EVERY forward row.
+                    assertThreeJumpExtendedReplayCut(replayRows[call], h);
+                    assertEquals(precedingBodyRequests[call], actorOwner.lastSoundRequests());
+                    assertNaturalRestartCheckpoint(naturalCheckpoint, h);
+                    assertSame(naturalCheckpoint.saved(), runtime.checkpointState().saved());
+                    assertSame(sourceBank, objectAssets.sectionArtSources());
+                    assertEquals(tunnelSourceOwners.size(), sourceBank.sources().size());
+                    for (int source = 0; source < tunnelSourceOwners.size(); source++) {
+                        var retainedSource = tunnelSourceOwners.get(source);
+                        assertSame(retainedSource, sourceBank.sources().get(source));
+                        assertSame(retainedSource, sourceBank.source(retainedSource.source()));
+                        assertSame(tunnelSourceReaders.get(source), retainedSource.readerBytes());
+                        assertSame(tunnelSourceDecodes.get(source), retainedSource.decode());
+                    }
+                }
+            }
+        }
+        assertClosedAtCall.accept(5255); assertThreeJumpExtendedReplayCut(at5255, h);
+        assertEquals(precedingBodyRequests[5255], actorOwner.lastSoundRequests());
+        assertNaturalRestartCheckpoint(naturalCheckpoint, h);
+        assertSame(naturalCheckpoint.saved(), runtime.checkpointState().saved());
+
+        // ONLY AFTER all healthy full/course proofs: ordinary5256 is attempted ONCE and is terminal.
+        // N ObjectIndex (Object Index (Act 1 Present).asm:58) identifies33 as ObjLogShadow.
+        // Source Runtime's physical walk reaches47 before63; no ID33 Init or later63 visit can run.
+        assertArrayEquals(new byte[64], pool.state(47).copyBytes());
         var beforeTerminalArt = runtime.sectionArtState();
-        assertEquals(tamComplete, beforeTerminalArt); assertEquals(0, beforeTerminalArt.remainingTilesWord());
-        assertEquals(0L, beforeTerminalArt.queue().headSource());
+        assertEquals(0x0400, beforeTerminalArt.sectionWord()); assertEquals(0, beforeTerminalArt.remainingTilesWord());
+        assertEquals(0L, beforeTerminalArt.queue().headSource()); assertArrayEquals(new byte[96], beforeTerminalArt.queue().bytes().copy());
         var beforeTerminalClock = frame.vIntClock();
         int beforeTerminalNativeFrame = frame.environment().globals().levelFrames();
         int beforeTerminalEngineFrame = level.getFrameCounter();
-        var beforeTerminalRings = runtime.ringGlobals();
         var presentationOwner = (SonicCdPlayerPresentation) h.module().getScrollHandlerProvider();
         var beforeForeground = threeJumpReadField(presentationOwner, "scrollState");
         var beforeBackground = threeJumpReadField(presentationOwner, "backgroundState");
         var beforePreparedScroll = threeJumpReadField(presentationOwner, "preparedScroll");
         var queueOwner = (CdObjectDrawQueue) threeJumpReadField(runtime, "queue");
-        // Forward replay builds a fresh immutable SAT; retain its actual reference for the failed-call check.
+        // Retain the ACTUAL current SAT after replay; the historical5255 SAT has equal values,
+        // but replay may have built another immutable product with a different identity.
         var beforeCpu = assertInstanceOf(CdObjectDrawQueue.CpuSat.class, threeJumpReadField(queueOwner, "cpuSat"));
-        assertArrayEquals(at3420.cpu().bytes(), beforeCpu.bytes());
-        assertEquals(at3420.cpu().spriteCount(), beforeCpu.spriteCount());
-        assertEquals(at3420.cpu().provenance(), beforeCpu.provenance());
-        var terminalInput = movie.getFrame(3420);
+        assertArrayEquals(at5255.cpu().bytes(), beforeCpu.bytes());
+        assertEquals(at5255.cpu().spriteCount(), beforeCpu.spriteCount()); assertEquals(at5255.cpu().provenance(), beforeCpu.provenance());
+        var terminalInput = finalMovie.getFrame(5255);
         assertEquals(8, terminalInput.p1InputMask()); assertEquals(0, terminalInput.p1ActionMask());
         assertFalse(terminalInput.p1StartPressed());
         var stopped = assertThrows(UnsupportedOperationException.class, () -> step(h, input(8, 0, false)));
         assertEquals(UnsupportedOperationException.class, stopped.getClass());
-        assertEquals("Unowned CD object ID $7 at live physical slot 63", stopped.getMessage());
-        // Retained read-only references ONLY. No state(h)/capture/module require, live helper execution,
-        // restore, retry, next frame, external camera sampling or saved-placement-bank sampling after failure.
-        var slot63 = pool.state(63);
-        assertEquals(0xFFDFC0, slot63.identity().nativeAddress24());
-        assertEquals(7, slot63.id()); assertEquals(0, slot63.routine());
-        assertEquals(tunnelRow.centreX(), slot63.centreX()); assertEquals(tunnelRow.centreY(), slot63.centreY());
-        assertEquals(tunnelRow.subtype(), slot63.subtype()); assertEquals(tunnelRow.subtype2(), slot63.subtype2());
-        assertArrayEquals(tunnelPlacement64, slot63.copyBytes(),
-                "Native-width placement/dirty nonstores survive; unknown slot63 has no body admission");
-        // Actual published earlier Body prefix supplied by Root; this is not an invented pure Body outcome.
-        var terminalPlayer = frame.state();
-        assertEquals(304498944, terminalPlayer.motion().centreX16_16());
-        assertEquals(40600576, terminalPlayer.motion().centreY16_16());
-        assertEquals(1248, terminalPlayer.motion().xVelocity()); assertEquals(1248, terminalPlayer.motion().groundVelocity());
-        assertEquals(0, terminalPlayer.motion().yVelocity());
-        assertEquals(0, terminalPlayer.motion().playerControl());
+        assertEquals("Unowned CD object ID $33 at live physical slot 47", stopped.getMessage());
+        // Retained read-only owners ONLY below. Never state(h), capture, restore, retry, another
+        // frame, module require, external camera sampling, saved-bank sampling or placement-cursor sampling.
+        var slot47 = pool.state(47);
+        assertEquals(0xFFDBC0, slot47.identity().nativeAddress24());
+        assertEquals(0x33, slot47.id()); assertEquals(0, slot47.routine());
+        assertEquals(0x1548, slot47.centreX()); assertEquals(0x0088, slot47.centreY());
+        assertArrayEquals(java.util.HexFormat.of().parseHex(
+                "33000000000000001548000000880000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
+                slot47.copyBytes(), "Actual partial placement47 only; ID33 body was never admitted");
+        assertArrayEquals(tunnelInit64, pool.state(63).copyBytes(), "Physical63 lies after the failed47 and receives no visit");
+        var terminalPlayer = frame.state(); // Actual earlier Body publication, never a complete5256 world.
+        assertEquals(0x13A66400, terminalPlayer.motion().centreX16_16());
+        assertEquals(0x024AA300, terminalPlayer.motion().centreY16_16());
+        assertEquals(982, terminalPlayer.motion().xVelocity()); assertEquals(-97, terminalPlayer.motion().yVelocity());
+        assertEquals(990, terminalPlayer.motion().groundVelocity()); assertEquals(2, terminalPlayer.motion().routine());
+        assertEquals(0xFC, terminalPlayer.motion().angle()); assertEquals(0, terminalPlayer.motion().flags());
+        assertEquals(4, terminalPlayer.motion().spriteFlags()); assertEquals(0, terminalPlayer.motion().playerControl());
         assertEquals(0, terminalPlayer.rotationAngle()); assertEquals(0, terminalPlayer.rotationDistance());
-        assertEquals(34, terminalPlayer.timers().hurt()); assertEquals(112, terminalPlayer.history().index());
+        assertEquals(0, terminalPlayer.timers().hurt()); assertEquals(28, terminalPlayer.history().index());
+        assertEquals(3, terminalPlayer.animation().scriptIndex()); assertEquals(2, terminalPlayer.animation().timer());
+        assertEquals(55, terminalPlayer.animation().mapFrame());
         assertEquals(beforeTerminalClock.absoluteSeed(), frame.vIntClock().absoluteSeed());
         assertEquals((beforeTerminalClock.deltaSinceAdmittedCut() + 1) & 0xFFFF_FFFFL,
                 frame.vIntClock().deltaSinceAdmittedCut());
+        assertEquals(5256L, frame.vIntClock().deltaSinceAdmittedCut());
         assertEquals((beforeTerminalNativeFrame + 1) & 0xFFFF, frame.environment().globals().levelFrames());
+        assertEquals(5256, frame.environment().globals().levelFrames());
         assertEquals(beforeTerminalEngineFrame + 1, level.getFrameCounter());
-        // VInt serviced the already empty queue; the failed dynamic walk cannot reach CPU art/tail.
+        assertTrue(runtime.lastSoundRequests().isEmpty()); assertTrue(actorOwner.lastSoundRequests().isEmpty());
+        // Empty-queue VInt precedes Body/enqueue/unknown47. CPU art, Scroll and new CPU SAT do not run.
         assertSame(beforeTerminalArt, runtime.sectionArtState());
-        assertEquals(0x0400, runtime.sectionArtState().sectionWord()); assertFalse(runtime.sectionArtState().stopped());
-        assertEquals(beforeTerminalRings.ringAnimationTimer(), runtime.ringGlobals().ringAnimationTimer());
-        assertEquals(beforeTerminalRings.ringAnimationFrame(), runtime.ringGlobals().ringAnimationFrame());
-        assertEquals(1, runtime.ringGlobals().rings()); assertEquals(3, runtime.ringGlobals().lives());
-        assertEquals(10, runtime.scoreGlobals().score()); assertEquals(0, frame.environment().globals().debugMode());
-        assertEquals(2, runtime.levelGlobals().checkpoint()); assertEquals(1, runtime.levelGlobals().spawnMode());
-        assertEquals(0, runtime.levelGlobals().levelRestart()); assertEquals(0, runtime.levelGlobals().updateHudTime());
-        assertSame(naturalCheckpoint.saved(), runtime.checkpointState().saved());
-        assertEquals(naturalCheckpoint.saved(), runtime.checkpointState().saved());
-        assertArrayEquals(naturalCheckpoint.saved().knownMask().copy(), runtime.checkpointState().saved().knownMask().copy());
-        assertEquals(0, com.openggf.game.soniccd.objects.CdCheckpointLiveAux.read(
-                runtime.checkpointState().live(), com.openggf.game.soniccd.objects.CdCheckpointLiveAux.Field.TIME_LONG));
         assertSame(beforeForeground, threeJumpReadField(presentationOwner, "scrollState"), "No CPU Scroll");
         assertSame(beforeBackground, threeJumpReadField(presentationOwner, "backgroundState"), "No CPU background Scroll");
         assertSame(beforePreparedScroll, threeJumpReadField(presentationOwner, "preparedScroll"), "No new prepared scroll tail");
         assertSame(beforePreparedScroll, threeJumpReadField(presentationOwner, "publishedScroll"),
-                "VInt published the previous completed scroll before the terminal dynamic boundary");
+                "VInt publishes the previous completed scroll before the terminal dynamic boundary");
         assertSame(beforeCpu, threeJumpReadField(queueOwner, "cpuSat"), "No new CPU SAT build/commit");
         assertEquals(generation, level.getCompletedProductionLoadGeneration()); assertTrue(boundaries.isEmpty());
         assertEquals(CdOpeningObjectRuntime.Phase.FAILED, runtime.phase());
         assertTrue(runtime.closed()); assertTrue(frame.closed());
-        // Stop here. No complete3421, full dynamic prefix, natural controlled Disc, Fire/A0,
-        // native execution/parity, full-USA, JP/EU, rendering, audio or media claim.
+        // Stop here: bounded ordinary controller success through5255 and one actual unsupported5256.
+        // No full96 partial model, controlled Body, tunnel acquisition/path/release, native parity,
+        // feature/act completion, broader-USA, JP/EU, rendering, audio or media claim.
 
     }
 

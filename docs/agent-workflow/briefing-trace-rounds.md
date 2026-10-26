@@ -71,6 +71,14 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+BK2 direction and action fields use different representations (2026-10-26,
+CD four-jump route). `Bk2FrameInput.p1InputMask()` combines directions with
+the engine's generic `INPUT_JUMP` whenever any A/B/C action is held;
+`p1ActionMask()` separately distinguishes those actions. A Right+B row is
+therefore not direction mask8 alone. Check both against their actual API
+contract; do not alter an input recipe or native button sampling to repair
+an assertion about the combined engine mask.
+
 An adversarial callback may erase its own mutation (2026-10-26, CD Tunnel
 Path). A COMMIT fixture changes another slot, then restores an overlay built
 from the pre-attack cut; its returning image is valid and cannot demonstrate

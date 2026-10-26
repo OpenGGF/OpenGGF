@@ -2,27 +2,23 @@
 
 ## Sonic CD private development — bounded coverage
 
-Latest26October evidence: the partial
+Latest 26 October evidence: the partial
 [Palmtree Panic Act1 Present matrix](../architecture/validation/levels/scd-palmtree-panic-act1-present.md)
-records the genuine controller route through3258 and its first Spinning Disc
-stop3259, with valid full/course replay before that failed call. Queued
-Waterfall, Disc and Shadow art complete naturally; Tamabboh is partial.
-Runtime now uses C30 through twenty bases and659 potential atlas IDs. The
-458-case CPU consumer run has457 passes plus one inherited fixture error
-corrected and passed narrowly; six adjacent consumers pass629 separately,
-and fresh structural guards pass728 across90 reports with no skips. An
-independent short EGL case renders genuine component-current440 in four flips
-and verifies all659 client entries retire while unrelated entries survive.
-Its matched old658 client fails on the extra entry, then the659 client passes.
-This does not close the native Tamabboh World scene: its fixed3257 candidate
-stops before ingress on a blank-floor prerequisite. Five final source guards
-also pass. Spinning Disc prerequisites are now imported and reviewed:156
-asset,232 plain-Solid and1203 affected rotation/lifecycle cases pass in
-separate runs; the later Disc/Frame/old-Runtime check passes1058, followed
-by54 real World/replay/EGL cases. Exact failed-oracle repairs and limits are
-in the matrix/dated plan. Final component guards pass728 across90 fresh
-reports, no skips. ID09 Runtime dispatch and natural contact remain
-open; full-act/USA gameplay and JP/EU parity remain incomplete.
+records the ordinary four-jump route through returned call5255, with genuine
+Disc Init3259/Main3260 and Tunnel Path Init3421/Main3422. The first5256 call
+stops at unowned Log Shadow33/live47; healthy full/course cuts precede it and
+the failed call remains terminal. Neither object acquires the player on this
+route. Controlled Body and native contact/image/timing parity remain open.
+
+The fresh affected selection passes493 cases: Runtime433, WorldLoad53, two
+real EGL products and five source guards. A separate fresh structural run
+passes728 cases across90 classes. Both have zero failures, errors or skips;
+exact commands, identities and fixture-only corrections are in the dated
+plan. Tunnel component/Frame validation separately passed1179 cases.
+Runtime retains Source17, C30, twenty logical bases and659 potential atlas
+entries. Current440 rendering/retirement remains a separate bounded product;
+the native Tamabboh World scene still fails its fixed blank-floor prerequisite.
+Full-act/USA gameplay and subsequent JP/EU parity remain incomplete.
 
 ### Earlier CD checkpoints
 

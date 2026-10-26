@@ -10021,4 +10021,472 @@ class TestCdOpeningObjectRuntime {
     // reflection cases. Component cases prove identical rethrow/pre-FM host-failure prefixes separately.
     // No successful bit0-controlled next Body, natural controller3259, whole-USA or JP/EU claim.
     // END Disc09 Runtime R1.
+
+    // BEGIN Tunnel07 Runtime R1: tests-first, SOURCE-ONLY, every appended case UNRUN by this author.
+    // Source oracles: N 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff,
+    // Tunnel Path/Main.asm:119-388,392-478; Object Spawner.asm:385-446; Object Functions.asm:228-237.
+    // Public owner edits below are constructed ingress, never a naturally reached route or a repaired failed3421.
+    // No private Snapshot/origin is forged; no pure call or returned effect is replayed.
+    // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>
+
+    @Test void tunnel07ApiAddsOnlyTypedFmAndPrivateCachedInvocationWithoutChangingCaptureOwners() throws Exception {
+        assertEquals(36, java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
+                .filter(m -> java.lang.reflect.Modifier.isPublic(m.getModifiers())).count());
+        assertEquals(17, CdOpeningObjectRuntime.SoundRequest.class.getPermittedSubclasses().length);
+        assertEquals(1, CdOpeningObjectRuntime.TunnelPathFm.class.getRecordComponents().length);
+        assertEquals(CdTunnelPath.FmSound.class, CdOpeningObjectRuntime.TunnelPathFm.class.getRecordComponents()[0].getType());
+        assertThrows(NullPointerException.class, () -> new CdOpeningObjectRuntime.TunnelPathFm(null));
+        assertEquals(0x91, new CdOpeningObjectRuntime.TunnelPathFm(CdTunnelPath.FmSound.FM_91).sound().nativeId());
+        var bodies = java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredFields()).filter(v -> v.getType() == CdTunnelPath.class).toList();
+        assertEquals(1, bodies.size()); assertTrue(java.lang.reflect.Modifier.isPrivate(bodies.getFirst().getModifiers()));
+        assertTrue(java.lang.reflect.Modifier.isFinal(bodies.getFirst().getModifiers()));
+        var origin = CdOpeningObjectRuntime.class.getDeclaredField("activeTunnelPathInvocation");
+        assertTrue(java.lang.reflect.Modifier.isPrivate(origin.getModifiers()));
+        assertTrue(java.lang.reflect.Modifier.isTransient(origin.getModifiers()));
+        assertTrue(java.util.Arrays.stream(origin.getType().getDeclaredConstructors()).allMatch(c -> java.lang.reflect.Modifier.isPrivate(c.getModifiers())));
+        assertEquals(15, CdOpeningObjectRuntime.Snapshot.class.getDeclaredFields().length);
+        assertTrue(java.util.Arrays.stream(CdOpeningObjectRuntime.Snapshot.class.getDeclaredFields()).noneMatch(v ->
+                v.getType() == CdTunnelPath.class || v.getType() == origin.getType() || v.getType() == CdTunnelPath.PlayerCut.class
+                        || v.getType() == CdTunnelPath.PlayerCall.class || v.getType() == CdTunnelPath.FmCall.class));
+        assertEquals(20, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+        assertEquals(List.of(11), java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
+                .filter(m -> m.getName().equals("usaR11aOpeningDevEmptySatPreloadedArt")).map(java.lang.reflect.Method::getParameterCount).toList());
+        assertEquals(List.of(14), java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
+                .filter(m -> m.getName().equals("usaR11aRestartDevEmptySatPreloadedArt")).map(java.lang.reflect.Method::getParameterCount).toList());
+    }
+
+    @Test void tunnel07InitRunsOnlyNativeHeaderAndSelectedPathReadsWithoutDrawAnimationOrPlayerWrites() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var p = f.runtime.placement().pool();
+            var input = tunnel07Image(f, 40, 0, 0, 1, 0x100, 0x780)
+                    .moveWord(TUNNEL_PATH_INDEX_END, 0xA1B2).moveLong(CdObjectState.LongField.TUNNEL_PATH_DATA, 0xC3D4E5F6)
+                    .moveWord(TUNNEL_PATH_TARGET_X, 0x1234).moveWord(TUNNEL_PATH_TARGET_Y, 0x5678);
+            p.write(input); tunnel07SeedPlayer(f, 0x0500BEEF, 0x07001234, 0x123, -0x234, -0x345, 2, 0x19, 0, 0xF5);
+            var state = f.frame.state(); var env = f.frame.environment(); var images = p.capture().slots();
+            var clock = f.frame.vIntClock(); var checkpoint = f.runtime.checkpointState(); var art = f.runtime.sectionArtState();
+            var power = f.runtime.powerupArtState(); var artCalls = f.artPublications.size(); var ledger = f.runtime.lastSoundRequests();
+            var cached = checkpointGet(f.runtime, "tunnelPath");
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            var expected = input.moveLong(MAPPINGS, com.openggf.game.soniccd.level.CdR11aObjectAssets.Table.POWERUP_MAPPINGS.range().nativeAddress())
+                    .moveByte(SPRITE_FLAGS, 4).moveByte(PRIORITY, 1).moveByte(WIDTH, 0x10).moveWord(TILE, 0x0541)
+                    .moveByte(ROUTINE, 2).moveWord(TUNNEL_PATH_INDEX_END, 0x0088)
+                    .moveLong(CdObjectState.LongField.TUNNEL_PATH_DATA, 0x208DA0)
+                    .moveWord(TUNNEL_PATH_TARGET_X, 0x1440).moveWord(TUNNEL_PATH_TARGET_Y, 0x00F0);
+            assertEquals(expected, p.state(40)); platform21OtherImages(images, p, 40);
+            assertSame(state, f.frame.state()); assertSame(env, f.frame.environment()); assertEquals(clock, f.frame.vIntClock());
+            assertEquals(checkpoint, f.runtime.checkpointState()); assertEquals(art, f.runtime.sectionArtState()); assertEquals(power, f.runtime.powerupArtState());
+            assertEquals(artCalls, f.artPublications.size()); assertEquals(ledger, f.runtime.lastSoundRequests());
+            assertSame(cached, checkpointGet(f.runtime, "tunnelPath")); tunnel07Retired(f);
+        }
+    }
+
+    @Test void tunnel07AnimationAndDeadGatesPrecedeUnsupportedRawRoutineDispatchAndOmitTail() throws Exception {
+        for (int[] row : new int[][]{{3, 2, 0x2B}, {1, 6, 0x19}, {0xFF, 0xFF, 0x19}}) {
+            try (var f = new Fixture()) {
+                springDeviceCut(f); var p = f.runtime.placement().pool();
+                var input = tunnel07Image(f, 40, row[0], 0, 1, 0x5000, 0x780).moveByte(SPRITE_FLAGS, 0);
+                p.write(input); tunnel07SeedPlayer(f, 0x0100BEEF, 0x07801234, 1, 2, 3, row[1], row[2], 0, 0xF5);
+                var state = f.frame.state(); var env = f.frame.environment(); var images = p.capture().slots(); var ledger = f.runtime.lastSoundRequests();
+                f.runtime.runDynamicSlotsAfterReservedSlots();
+                assertEquals(images, p.capture().slots()); assertEquals(input, p.state(40));
+                assertSame(state, f.frame.state()); assertSame(env, f.frame.environment()); assertEquals(ledger, f.runtime.lastSoundRequests());
+                assertEquals(CdOpeningObjectRuntime.Phase.DYNAMIC_DONE, f.runtime.phase()); tunnel07Retired(f);
+            }
+        }
+    }
+
+    @Test void tunnel07UngatedUnsupportedRoutineStopsAtNativeDispatchAfterLegalFullRead() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var p = f.runtime.placement().pool(); var input = tunnel07Image(f, 40, 3, 0, 1, 0x100, 0x780);
+            p.write(input); tunnel07SeedPlayer(f, 0x0100BEEF, 0x07801234, 1, 2, 3, 2, 0x19, 0, 0xF5);
+            var state = f.frame.state(); var env = f.frame.environment(); var images = p.capture().slots(); var ledger = f.runtime.lastSoundRequests();
+            var failure = assertThrows(CdTunnelPath.UnsupportedTunnelPath.class, f.runtime::runDynamicSlotsAfterReservedSlots);
+            assertEquals(CdTunnelPath.UnsupportedBoundary.ROUTINE_DISPATCH, failure.boundary()); assertEquals(3, failure.value());
+            assertEquals(images, p.capture().slots()); assertSame(state, f.frame.state()); assertSame(env, f.frame.environment());
+            assertEquals(ledger, f.runtime.lastSoundRequests()); tunnel07Failed(f);
+        }
+    }
+
+    @Test void tunnel07TravelPreclearUsesSignedDirectionBeforeAnimationGateAndChangesOnlyOneBankByte() throws Exception {
+        for (int direction : new int[]{1, 0xFF, 0x80}) {
+            try (var f = new Fixture()) {
+                springDeviceCut(f); monitorEnvironment(f, 0x81, direction, 0, 0);
+                var placement = f.runtime.placement(); var p = placement.pool();
+                for (int period = 0; period < 3; period++) placement.bsetSavedFlag(3, period, CdObjectPlacementRuntime.SavedBit.LOADED);
+                var input = tunnel07Image(f, 40, 3, 0, 1, 0x5000, 0x780).moveByte(SAVED_FLAGS_ID, 3).moveByte(SPRITE_FLAGS, 0);
+                p.write(input); tunnel07SeedPlayer(f, 0x0100BEEF, 0x07801234, 1, 2, 3, 2, 0x2B, 0, 0xF5);
+                var before = placement.capture(); var bank = before.savedFlags().copy(); var state = f.frame.state(); var env = f.frame.environment();
+                int selected = direction == 1 ? 0 : 2; bank[2 + 3 * 3 + selected] &= 0x7F;
+                f.runtime.runDynamicSlotsAfterReservedSlots();
+                assertArrayEquals(bank, placement.capture().savedFlags().copy()); assertEquals(before.status(), placement.capture().status());
+                assertEquals(before.pool().slots(), p.capture().slots()); assertSame(state, f.frame.state()); assertSame(env, f.frame.environment());
+                assertTrue(f.runtime.lastSoundRequests().stream().noneMatch(CdOpeningObjectRuntime.TunnelPathFm.class::isInstance)); tunnel07Retired(f);
+            }
+        }
+    }
+
+    @Test void tunnel07ContactUsesWrappedMinus16ThroughPlus15AndRejectsEveryNonzeroControlByte() throws Exception {
+        int[][] rows = {{-17, 0, 0}, {-16, 0, 0}, {15, 0, 0}, {16, 0, 0},
+                {0, -17, 0}, {0, -16, 0}, {0, 15, 0}, {0, 16, 0},
+                {0, 0, 1}, {0, 0, 4}, {0, 0, 8}, {0, 0, 0x80}, {0, 0, 0xFF}};
+        for (int[] row : rows) try (var f = new Fixture()) {
+            springDeviceCut(f); var p = f.runtime.placement().pool(); var input = tunnel07Image(f, 40, 2, 0, 1, 0x100, 0x780); p.write(input);
+            tunnel07SeedPlayer(f, (((0x100 + row[0]) & 0xFFFF) << 16) | 0xBEEF,
+                    (((0x780 + row[1]) & 0xFFFF) << 16) | 0x1234, 1, 2, 3, 2, 0x19, row[2], 0xF5);
+            var before = f.frame.state(); var env = f.frame.environment(); var images = p.capture().slots();
+            boolean acquire = row[0] >= -16 && row[0] <= 15 && row[1] >= -16 && row[1] <= 15 && row[2] == 0;
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            if (acquire) {
+                assertEquals(4, p.state(40).routine()); assertEquals(0xC1, f.frame.state().motion().playerControl());
+                assertEquals(1, f.runtime.lastSoundRequests().stream().filter(CdOpeningObjectRuntime.TunnelPathFm.class::isInstance).count());
+            } else {
+                assertEquals(input, p.state(40)); assertSame(before, f.frame.state());
+                assertTrue(f.runtime.lastSoundRequests().stream().noneMatch(CdOpeningObjectRuntime.TunnelPathFm.class::isInstance));
+            }
+            assertSame(env, f.frame.environment()); platform21OtherImages(images, p, 40); tunnel07Retired(f);
+        }
+    }
+
+    @Test void tunnel07AcquirePublishesExactFullPairAndSourceForVisibleHiddenAndHurtBranches() throws Exception {
+        for (int secondary : new int[]{0, 1}) for (int routine : new int[]{2, 4}) try (var f = new Fixture()) {
+            springDeviceCut(f); var p = f.runtime.placement().pool(); var input = tunnel07Image(f, 40, 2, 0, secondary, 0x100, 0x780); p.write(input);
+            tunnel07SeedPlayer(f, 0x010FBEEF, 0x07701234, 0x123, -0x234, -0x345, routine, 0x19, 0, 0xF5);
+            var before = f.frame.state(); var env = f.frame.environment(); var images = p.capture().slots();
+            var checkpoint = f.runtime.checkpointState(); var clock = f.frame.vIntClock();
+            var expectedSounds = new java.util.ArrayList<>(f.runtime.lastSoundRequests());
+            expectedSounds.add(new CdOpeningObjectRuntime.TunnelPathFm(CdTunnelPath.FmSound.FM_91));
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            var expected = tunnel07Expected(before, 0x0100BEEF, 0x07801234, 0, 0, 0x1000, 2,
+                    (0xF5 & ~0x20) | 2, 2, 0, secondary == 0 ? 0x81 : 0xC1, routine == 4 ? 0x78 : before.timers().hurt());
+            assertEquals(expected, f.frame.state()); assertSame(env, f.frame.environment());
+            assertEquals(input.moveByte(ROUTINE, 4).moveByte(FLAGS, input.flags() & ~0x20)
+                    .moveByte(CdObjectState.ByteField.TUNNEL_PATH_SCRATCH, 0), p.state(40));
+            platform21OtherImages(images, p, 40); assertEquals(clock, f.frame.vIntClock()); assertEquals(checkpoint, f.runtime.checkpointState());
+            assertEquals(expectedSounds, f.runtime.lastSoundRequests()); tunnel07Retired(f);
+        }
+    }
+
+    @Test void tunnel07GroundSpeedBaseThenRawTableAliasRaiseOrNegativeSubtypeSkipUsesActualBodyPorts() throws Exception {
+        // GVels+16 aliases Paths+8 = native first Path0 X $1440 (Main.asm:392-405), not a fitted subtype whitelist.
+        for (int subtype : new int[]{0, 1, 2, 3, 4, 8, 0x80, 0xFF}) try (var f = new Fixture()) {
+            springDeviceCut(f); var p = f.runtime.placement().pool(); p.write(tunnel07Image(f, 40, 2, subtype, 1, 0x100, 0x780));
+            tunnel07SeedPlayer(f, 0x0100BEEF, 0x07801234, 0x123, -0x234, 0x6000, 2, 0x19, 0, 0xF5);
+            var before = f.frame.state(); var env = f.frame.environment();
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(tunnel07Expected(before, 0x0100BEEF, 0x07801234, 0, 0, subtype == 8 ? 0x1440 : 0x1000,
+                    2, (0xF5 & ~0x20) | 2, 2, 0, 0xC1, before.timers().hurt()), f.frame.state());
+            assertSame(env, f.frame.environment()); assertEquals(4, p.state(40).routine()); tunnel07Retired(f);
+        }
+    }
+
+    @Test void tunnel07GotPlayerFirstPathXSpeedPrecedesRoutineAndFmWithoutIntegratingPosition() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var p = f.runtime.placement().pool(); var input = tunnel07Image(f, 40, 4, 0, 1, 0x13F0, 0x00F0); p.write(input);
+            tunnel07SeedPlayer(f, 0x13F0BEEF, 0x00F01234, 0x123, -0x234, 0x1000, 2, 2, 0xC1, 0xF5);
+            var before = f.frame.state(); var env = f.frame.environment(); var images = p.capture().slots();
+            var expectedSounds = new java.util.ArrayList<>(f.runtime.lastSoundRequests());
+            expectedSounds.add(new CdOpeningObjectRuntime.TunnelPathFm(CdTunnelPath.FmSound.FM_91));
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(tunnel07Expected(before, 0x13F0BEEF, 0x00F01234, 0x1000, 0, 0x1000, 2, 0xF5, 2, 1, 0xC1, before.timers().hurt()), f.frame.state());
+            assertEquals(input.moveWord(TUNNEL_PATH_STEPS, 0x0500).moveByte(ROUTINE, 6), p.state(40));
+            assertSame(env, f.frame.environment()); platform21OtherImages(images, p, 40);
+            assertEquals(expectedSounds, f.runtime.lastSoundRequests()); tunnel07Retired(f);
+        }
+    }
+
+    @Test void tunnel07GotPlayerYDominantTieAndNegativeXUseNativeSignedDirectionsAndFractionalSteps() throws Exception {
+        int[][] rows = {{0x300, 0x700, 0x300, 0x788, 0, 0x1000, 0x0880},
+                {0x300, 0x700, 0x320, 0x720, 0x1000, 0x1000, 0x0200},
+                {0x1440, 0xF0, 0x13F0, 0xF0, -0x1000, 0, 0x0500},
+                {0x7FFF, 0, 0x8000, 0, -0x1000, 0, 0x0010}};
+        for (int[] row : rows) try (var f = new Fixture()) {
+            springDeviceCut(f); var p = f.runtime.placement().pool();
+            var input = tunnel07Image(f, 40, 4, 0, 1, 0x100, 0x780).moveWord(TUNNEL_PATH_TARGET_X, row[2]).moveWord(TUNNEL_PATH_TARGET_Y, row[3]); p.write(input);
+            tunnel07SeedPlayer(f, (row[0] << 16) | 0xBEEF, (row[1] << 16) | 0x1234, 0x123, -0x234, 0x1000, 2, 2, 0xC1, 0xF5);
+            var before = f.frame.state(); var env = f.frame.environment();
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(tunnel07Expected(before, before.motion().centreX16_16(), before.motion().centreY16_16(), row[4], row[5], 0x1000,
+                    2, 0xF5, 2, 1, 0xC1, before.timers().hurt()), f.frame.state());
+            assertEquals(input.moveWord(TUNNEL_PATH_STEPS, row[6]).moveByte(ROUTINE, 6), p.state(40)); assertSame(env, f.frame.environment()); tunnel07Retired(f);
+        }
+    }
+
+    @Test void tunnel07MoveDecrementsOnlyHighByteThenIntegratesOrderedFullPositionLongs() throws Exception {
+        for (int steps : new int[]{0x0500, 0x807F}) try (var f = new Fixture()) {
+            springDeviceCut(f); var p = f.runtime.placement().pool(); var input = tunnel07Image(f, 40, 6, 0, 1, 0x100, 0x780).moveWord(TUNNEL_PATH_STEPS, steps); p.write(input);
+            tunnel07SeedPlayer(f, 0x13F0BEEF, 0x00F01234, 0x1000, -0x0180, 0x1000, 2, 2, 0xC1, 0xF5);
+            var before = f.frame.state(); var env = f.frame.environment(); var images = p.capture().slots();
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(tunnel07Expected(before, 0x1400BEEF, 0x00EE9234, 0x1000, -0x0180, 0x1000, 2, 0xF5, 2, 1, 0xC1, before.timers().hurt()), f.frame.state());
+            assertEquals(input.moveByte(CdObjectState.ByteField.TUNNEL_PATH_STEPS_HIGH, ((steps >>> 8) - 1) & 255), p.state(40));
+            assertSame(env, f.frame.environment()); platform21OtherImages(images, p, 40);
+            assertTrue(f.runtime.lastSoundRequests().stream().noneMatch(CdOpeningObjectRuntime.TunnelPathFm.class::isInstance)); tunnel07Retired(f);
+        }
+    }
+
+    @Test void tunnel07CompletionLoadsNextTargetThroughFullRaw32PointerAnd24BitBusBeforeSpeed() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var p = f.runtime.placement().pool(); var input = tunnel07Image(f, 40, 6, 0, 1, 0x100, 0x780)
+                    .moveWord(TUNNEL_PATH_STEPS, 0x0080).moveLong(CdObjectState.LongField.TUNNEL_PATH_DATA, 0xAB208DA0); p.write(input);
+            tunnel07SeedPlayer(f, 0x13F0BEEF, 0x00E01234, 0x123, -0x234, 0x1000, 2, 2, 0xC1, 0xF5);
+            var before = f.frame.state(); var env = f.frame.environment(); var images = p.capture().slots();
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(tunnel07Expected(before, 0x1440BEEF, 0x00F01234, 0x1000, 0x06DB, 0x1000, 2, 0xF5, 2, 1, 0xC1, before.timers().hurt()), f.frame.state());
+            assertEquals(input.moveWord(TUNNEL_PATH_STEPS, 0x0380).moveByte(CdObjectState.ByteField.TUNNEL_PATH_INDEX, 4)
+                    .moveWord(TUNNEL_PATH_TARGET_X, 0x1478).moveWord(TUNNEL_PATH_TARGET_Y, 0x0108), p.state(40));
+            assertSame(env, f.frame.environment()); platform21OtherImages(images, p, 40);
+            assertTrue(f.runtime.lastSoundRequests().stream().noneMatch(CdOpeningObjectRuntime.TunnelPathFm.class::isInstance)); tunnel07Retired(f);
+        }
+    }
+
+    @Test void tunnel07ReleaseMasksOnlyYWordAndWritesRoutineBytes0002WithoutResettingOtherState() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var p = f.runtime.placement().pool(); var input = tunnel07Image(f, 40, 6, 0, 1, 0x100, 0x780)
+                    .moveWord(TUNNEL_PATH_STEPS, 0x0080).moveWord(TUNNEL_PATH_INDEX_END, 0x4044).moveByte(ROUTINE_2, 0xA7)
+                    .moveWord(TUNNEL_PATH_TARGET_X, 0x1440).moveWord(TUNNEL_PATH_TARGET_Y, 0xF923); p.write(input);
+            // Native Path1 last index40 +4 == end44 releases without reading a next target or pointer.
+            tunnel07SeedPlayer(f, 0x13F0BEEF, 0x00E01234, 0x123, -0x234, 0x1000, 2, 2, 0xC1, 0xF5);
+            var before = f.frame.state(); var env = f.frame.environment(); var images = p.capture().slots();
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(tunnel07Expected(before, 0x1440BEEF, 0x01231234, 0x123, -0x234, 0x1000, 2, 0xF5, 2, 1, 0, before.timers().hurt()), f.frame.state());
+            assertEquals(input.moveWord(TUNNEL_PATH_STEPS, 0xFF80).moveWord(TUNNEL_PATH_ROUTINE_WORD, 2), p.state(40));
+            assertEquals(0, p.state(40).routine()); assertEquals(2, p.state(40).unsignedByte(ROUTINE_2));
+            assertSame(env, f.frame.environment()); platform21OtherImages(images, p, 40); tunnel07Retired(f);
+        }
+    }
+
+    @Test void tunnel07OddNextWordStopsAfterRealDecrementSnapAndIndexWithoutPrefetchOrFm() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var p = f.runtime.placement().pool(); var input = tunnel07Image(f, 40, 6, 0, 1, 0x100, 0x780)
+                    .moveWord(TUNNEL_PATH_STEPS, 0x0080).moveLong(CdObjectState.LongField.TUNNEL_PATH_DATA, 0xAB208DA1); p.write(input);
+            tunnel07SeedPlayer(f, 0x13F0BEEF, 0x00E01234, 0x123, -0x234, 0x1000, 2, 2, 0xC1, 0xF5);
+            var before = f.frame.state(); var env = f.frame.environment(); var images = p.capture().slots();
+            var failure = assertThrows(CdTunnelPath.UnsupportedTunnelPath.class, f.runtime::runDynamicSlotsAfterReservedSlots);
+            assertEquals(CdTunnelPath.UnsupportedBoundary.NEXT_X_WORD, failure.boundary()); assertEquals(CdTunnelPath.StopReason.UNALIGNED_WORD, failure.reason());
+            assertEquals(tunnel07Expected(before, 0x1440BEEF, 0x00F01234, 0x123, -0x234, 0x1000, 2, 0xF5, 2, 1, 0xC1, before.timers().hurt()), f.frame.state());
+            assertEquals(input.moveWord(TUNNEL_PATH_STEPS, 0xFF80).moveByte(CdObjectState.ByteField.TUNNEL_PATH_INDEX, 4), p.state(40));
+            assertSame(env, f.frame.environment()); platform21OtherImages(images, p, 40);
+            assertTrue(f.runtime.lastSoundRequests().stream().noneMatch(CdOpeningObjectRuntime.TunnelPathFm.class::isInstance)); tunnel07Failed(f);
+        }
+    }
+
+    @Test void tunnel07UnownedNextYWordRetainsActuallyLoadedXAndEarlierPlayerSnap() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var p = f.runtime.placement().pool();
+            int base = com.openggf.game.soniccd.level.CdR11aObjectAssets.Table.TUNNEL_PATH_COORDINATES.range().nativeAddress();
+            // Paths284 ends with Path2's final Y $0268. index4 selects that real last WORD then an unowned next WORD.
+            var input = tunnel07Image(f, 40, 6, 0, 1, 0x100, 0x780).moveWord(TUNNEL_PATH_STEPS, 0x0080)
+                    .moveLong(CdObjectState.LongField.TUNNEL_PATH_DATA, base + 278); p.write(input);
+            tunnel07SeedPlayer(f, 0x13F0BEEF, 0x00E01234, 0x123, -0x234, 0x1000, 2, 2, 0xC1, 0xF5);
+            var before = f.frame.state(); var env = f.frame.environment(); var images = p.capture().slots();
+            var failure = assertThrows(CdTunnelPath.UnsupportedTunnelPath.class, f.runtime::runDynamicSlotsAfterReservedSlots);
+            assertEquals(CdTunnelPath.UnsupportedBoundary.NEXT_Y_WORD, failure.boundary()); assertEquals(CdTunnelPath.StopReason.UNOWNED_ADDRESS, failure.reason());
+            assertEquals(tunnel07Expected(before, 0x1440BEEF, 0x00F01234, 0x123, -0x234, 0x1000, 2, 0xF5, 2, 1, 0xC1, before.timers().hurt()), f.frame.state());
+            assertEquals(input.moveWord(TUNNEL_PATH_STEPS, 0xFF80).moveByte(CdObjectState.ByteField.TUNNEL_PATH_INDEX, 4)
+                    .moveWord(TUNNEL_PATH_TARGET_X, 0x0268), p.state(40));
+            assertSame(env, f.frame.environment()); platform21OtherImages(images, p, 40); tunnel07Failed(f);
+        }
+    }
+
+    @Test void tunnel07GotDivisionByZeroPreservesWholePairAndSourceBeforeRoutineIncrementOrFm() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var p = f.runtime.placement().pool(); var input = tunnel07Image(f, 40, 4, 0, 1, 0x100, 0x780); p.write(input);
+            tunnel07SeedPlayer(f, 0x13F0BEEF, 0x00F01234, 0x123, -0x234, 0, 2, 2, 0xC1, 0xF5);
+            var state = f.frame.state(); var env = f.frame.environment(); var images = p.capture().slots(); var ledger = f.runtime.lastSoundRequests();
+            var failure = assertThrows(CdTunnelPath.UnsupportedTunnelPath.class, f.runtime::runDynamicSlotsAfterReservedSlots);
+            assertEquals(CdTunnelPath.UnsupportedBoundary.DIVIDE_X_TIME, failure.boundary()); assertEquals(CdTunnelPath.StopReason.ZERO_DIVISOR, failure.reason());
+            assertEquals(images, p.capture().slots()); assertSame(state, f.frame.state()); assertSame(env, f.frame.environment());
+            assertEquals(ledger, f.runtime.lastSoundRequests()); tunnel07Failed(f);
+        }
+    }
+
+    @Test void tunnel07DivsOverflowLeavesDividendAndLaterActualZeroDivisorRemainsItsOwnBoundary() throws Exception {
+        for (int targetY : new int[]{0, 1}) try (var f = new Fixture()) {
+            springDeviceCut(f); var p = f.runtime.placement().pool(); var input = tunnel07Image(f, 40, 4, 0, 1, 0x100, 0x780)
+                    .moveWord(TUNNEL_PATH_TARGET_X, 0x7FFF).moveWord(TUNNEL_PATH_TARGET_Y, targetY); p.write(input);
+            tunnel07SeedPlayer(f, 0x0000BEEF, 0x00001234, 0x123, -0x234, 1, 2, 2, 0xC1, 0xF5);
+            var before = f.frame.state(); var env = f.frame.environment(); var images = p.capture().slots();
+            if (targetY == 0) {
+                f.runtime.runDynamicSlotsAfterReservedSlots();
+                assertEquals(tunnel07Expected(before, 0x0000BEEF, 0x00001234, 1, 0, 1, 2, 0xF5, 2, 1, 0xC1, before.timers().hurt()), f.frame.state());
+                assertEquals(input.moveWord(TUNNEL_PATH_STEPS, 0).moveByte(ROUTINE, 6), p.state(40)); tunnel07Retired(f);
+            } else {
+                var failure = assertThrows(CdTunnelPath.UnsupportedTunnelPath.class, f.runtime::runDynamicSlotsAfterReservedSlots);
+                assertEquals(CdTunnelPath.UnsupportedBoundary.DIVIDE_Y_SPEED, failure.boundary()); assertEquals(CdTunnelPath.StopReason.ZERO_DIVISOR, failure.reason());
+                assertEquals(images, p.capture().slots()); assertSame(before, f.frame.state());
+                assertTrue(f.runtime.lastSoundRequests().stream().noneMatch(CdOpeningObjectRuntime.TunnelPathFm.class::isInstance)); tunnel07Failed(f);
+            }
+            assertSame(env, f.frame.environment());
+        }
+    }
+
+    @Test void tunnel07InitSelectedHeaderFaultKeepsSixHeaderStoresAndNothingFromLaterReads() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var p = f.runtime.placement().pool(); var input = tunnel07Image(f, 40, 0, 4, 1, 0x100, 0x780); p.write(input);
+            // subtype4 selects directory WORD Paths+8 = $1440 (native Path0 X), then the unowned header at Paths+$1440.
+            tunnel07SeedPlayer(f, 0x0100BEEF, 0x07801234, 0x123, -0x234, 0x1000, 2, 2, 0, 0xF5);
+            var state = f.frame.state(); var env = f.frame.environment(); var images = p.capture().slots();
+            var failure = assertThrows(CdTunnelPath.UnsupportedTunnelPath.class, f.runtime::runDynamicSlotsAfterReservedSlots);
+            assertEquals(CdTunnelPath.UnsupportedBoundary.HEADER_WORD, failure.boundary()); assertEquals(CdTunnelPath.StopReason.UNOWNED_ADDRESS, failure.reason());
+            assertEquals(input.moveLong(MAPPINGS, com.openggf.game.soniccd.level.CdR11aObjectAssets.Table.POWERUP_MAPPINGS.range().nativeAddress())
+                    .moveByte(SPRITE_FLAGS, 4).moveByte(PRIORITY, 1).moveByte(WIDTH, 0x10).moveWord(TILE, 0x0541).moveByte(ROUTINE, 2), p.state(40));
+            assertSame(state, f.frame.state()); assertSame(env, f.frame.environment()); platform21OtherImages(images, p, 40); tunnel07Failed(f);
+        }
+    }
+
+    @Test void tunnel07PublishedFmAndPlayerPrefixSurviveLaterActualUnknownPhysicalVisit() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var p = f.runtime.placement().pool(); var input = tunnel07Image(f, 40, 4, 0, 1, 0x100, 0x780); p.write(input);
+            p.write(p.state(41).moveByte(ID, 0x7F));
+            tunnel07SeedPlayer(f, 0x13F0BEEF, 0x00F01234, 0x123, -0x234, 0x1000, 2, 2, 0xC1, 0xF5);
+            var before = f.frame.state(); var env = f.frame.environment();
+            var expectedSounds = new java.util.ArrayList<>(f.runtime.lastSoundRequests());
+            expectedSounds.add(new CdOpeningObjectRuntime.TunnelPathFm(CdTunnelPath.FmSound.FM_91));
+            var failure = assertThrows(UnsupportedOperationException.class, f.runtime::runDynamicSlotsAfterReservedSlots);
+            assertTrue(failure.getMessage().contains("slot 41"));
+            assertEquals(input.moveWord(TUNNEL_PATH_STEPS, 0x0500).moveByte(ROUTINE, 6), p.state(40));
+            assertEquals(tunnel07Expected(before, 0x13F0BEEF, 0x00F01234, 0x1000, 0, 0x1000, 2, 0xF5, 2, 1, 0xC1, before.timers().hurt()), f.frame.state());
+            assertSame(env, f.frame.environment()); assertEquals(expectedSounds, f.runtime.lastSoundRequests()); tunnel07Failed(f);
+        }
+    }
+
+    @Test void tunnel07UnmintableOriginAndPublicSameValueFramePreparationDoNotGrantRuntimeCallbackAuthority() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var state = f.frame.state(); var env = f.frame.environment(); var images = f.runtime.placement().pool().capture().slots();
+            var ready = f.frame.prepareObjectTunnelPathPlayerResult(state, env, new CdTunnelPath.PlayerResult(state, env, List.of()));
+            assertSame(state, ready.finalState()); assertSame(env, ready.finalEnvironment());
+            String[] names = {"readTunnelPathPlayer", "commitTunnelPathPlayer", "playTunnelPathFm"};
+            Class<?>[][] types = {{}, {CdTunnelPath.PlayerCall.class}, {CdTunnelPath.FmCall.class}};
+            for (int index = 0; index < names.length; index++) {
+                var method = CdOpeningObjectRuntime.class.getDeclaredMethod(names[index], types[index]); method.setAccessible(true);
+                Object[] arguments = types[index].length == 0 ? new Object[0] : new Object[]{null};
+                var failure = assertThrows(java.lang.reflect.InvocationTargetException.class, () -> method.invoke(f.runtime, arguments));
+                assertInstanceOf(IllegalStateException.class, failure.getCause());
+            }
+            assertEquals(images, f.runtime.placement().pool().capture().slots()); assertSame(state, f.frame.state()); assertSame(env, f.frame.environment()); tunnel07Retired(f);
+            // No active origin is minted. These absent-origin calls do not cover mid-producer reentry or a hostile concurrent host CAS.
+        }
+    }
+
+    @Test void tunnel07FramePreparationRejectsStaleFullStateEnvironmentAndNonwriteChangesBeforePoolPublication() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var state = f.frame.state(); var env = f.frame.environment(); var images = f.runtime.placement().pool().capture().slots();
+            var changed = new CdPlayerBody.State(state.motion(), state.animation(), state.header(), state.timers(), state.history(),
+                    state.rotationDistance(), state.objectLinks(), state.rotationAngle() ^ 1);
+            assertThrows(IllegalArgumentException.class, () -> f.frame.prepareObjectTunnelPathPlayerResult(changed, env,
+                    new CdTunnelPath.PlayerResult(changed, env, List.of())));
+            assertThrows(IllegalArgumentException.class, () -> f.frame.prepareObjectTunnelPathPlayerResult(state, env,
+                    new CdTunnelPath.PlayerResult(changed, env, List.of())));
+            var c = env.controls(); var other = new CdPlayerBody.Environment(env.movement(),
+                    new CdPlayerBody.Controls(c.rawHeld(), c.rawTap(), c.logicalHeld() ^ 1, c.logicalTap(), c.controlLocked()), env.globals(), env.dynamicSlots());
+            assertThrows(IllegalArgumentException.class, () -> f.frame.prepareObjectTunnelPathPlayerResult(state, other,
+                    new CdTunnelPath.PlayerResult(state, other, List.of())));
+            assertThrows(IllegalArgumentException.class, () -> f.frame.prepareObjectTunnelPathPlayerResult(state, env,
+                    new CdTunnelPath.PlayerResult(state, other, List.of())));
+            var ready = f.frame.prepareObjectTunnelPathPlayerResult(state, env, new CdTunnelPath.PlayerResult(state, env, List.of()));
+            var actor = f.frame.captureActor(); f.frame.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(), changed, actor.display()));
+            assertThrows(IllegalArgumentException.class, () -> f.frame.validatePreparedObjectSolidPublication(ready));
+            assertThrows(IllegalArgumentException.class, () -> f.frame.applyPreparedObjectSolidPublication(ready));
+            assertSame(changed, f.frame.state()); assertSame(env, f.frame.environment()); assertEquals(images, f.runtime.placement().pool().capture().slots()); tunnel07Retired(f);
+        }
+    }
+
+    @Test void tunnel07HealthyClosedCutReplaysThroughExistingSnapshotAndFrameOwnersWithoutRetainingCursor() throws Exception {
+        try (var f = new Fixture()) {
+            f.firstCycle(); f.makePlayerAbsent(); var p = f.runtime.placement().pool(); p.clearDynamicSlots();
+            p.write(tunnel07Image(f, 40, 0, 0, 1, 0x100, 0x780)); tunnel07SeedPlayer(f, 0x0500BEEF, 0x07001234, 0, 0, 0, 2, 2, 0, 0xF5);
+            var cut = f.runtime.captureClosedCut(); var actor = f.frame.captureActor(); var shared = f.frame.captureShared(); var cached = checkpointGet(f.runtime, "tunnelPath");
+            CdOpeningObjectRuntime.Snapshot expected = null; CdPlayerFrameRuntime.ActorState expectedActor = null; CdPlayerFrameRuntime.SharedState expectedShared = null;
+            for (int replay = 0; replay < 2; replay++) {
+                if (replay != 0) {
+                    f.frame.validateActorRestore(actor); f.frame.validateSharedRestore(shared); f.runtime.validateRestore(cut);
+                    f.frame.restoreActor(actor); f.frame.restoreShared(shared); f.runtime.restore(cut);
+                }
+                monitorBegin(f, 2); f.runtime.runDynamicSlotsAfterReservedSlots(); monitorFinish(f); tunnel07Retired(f);
+                assertSame(cached, checkpointGet(f.runtime, "tunnelPath")); assertEquals(17, f.assets.openingObjects().sectionArtSources().sources().size());
+                if (replay == 0) { expected = f.runtime.captureClosedCut(); expectedActor = f.frame.captureActor(); expectedShared = f.frame.captureShared(); }
+                else { assertMonitorSnapshot(expected, f.runtime.captureClosedCut()); assertEquals(expectedActor, f.frame.captureActor()); assertEquals(expectedShared, f.frame.captureShared()); }
+            }
+        }
+    }
+
+    @Test void tunnel07ComponentFmThrowObservesPublishedPrefixAndRethrowsSameHostFailureWithoutLedgerReplay() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var p = f.runtime.placement().pool(); var input = tunnel07Image(f, 40, 2, 0, 1, 0x100, 0x780); p.write(input);
+            tunnel07SeedPlayer(f, 0x0100BEEF, 0x07801234, 0x123, -0x234, 0x1000, 2, 2, 0, 0xF5);
+            var before = f.frame.state(); var env = f.frame.environment(); var images = p.capture().slots();
+            var marker = new IllegalStateException("explicit component FM host fault"); var reached = new CdTunnelPath.FmCall[1]; var calls = new int[1];
+            var body = new CdTunnelPath(f.runtime.placement(), CdTunnelPath.Assets.fromObjectAssets(f.assets.openingObjects()),
+                    new CdTunnelPath.PlayerOwner() {
+                        @Override public CdTunnelPath.PlayerCut read() { return new CdTunnelPath.PlayerCut(f.frame.state(), f.frame.environment()); }
+                        @Override public void commit(CdTunnelPath.PlayerCall call) { tunnel07ComponentPublish(f, call); }
+                    }, call -> {
+                        reached[0] = call; calls[0]++;
+                        assertEquals(p.capture().slots(), call.actualCut().slots()); assertEquals(p.state(40), call.expectedSource());
+                        assertSame(f.frame.state(), call.expectedPlayer().state()); assertSame(f.frame.environment(), call.expectedPlayer().environment());
+                        throw marker;
+                    });
+            var thrown = assertThrows(IllegalStateException.class, () -> body.run(40, new CdTunnelPath.Globals(1, 0, PRE.xWord())));
+            assertSame(marker, thrown); assertEquals(1, calls[0]); assertEquals(CdTunnelPath.FmSite.MAIN_ACQUIRE, reached[0].site());
+            assertEquals(tunnel07Expected(before, 0x0100BEEF, 0x07801234, 0, 0, 0x1000, 2, (0xF5 & ~0x20) | 2, 2, 0, 0xC1, before.timers().hurt()), f.frame.state());
+            assertEquals(input.moveByte(ROUTINE, 4).moveByte(FLAGS, input.flags() & ~0x20).moveByte(CdObjectState.ByteField.TUNNEL_PATH_SCRATCH, 0), p.state(40));
+            assertSame(env, f.frame.environment()); platform21OtherImages(images, p, 40);
+            assertTrue(f.runtime.lastSoundRequests().stream().noneMatch(CdOpeningObjectRuntime.TunnelPathFm.class::isInstance)); tunnel07Retired(f);
+            // This actual component callback proves its host-failure prefix; it does not mint a private Runtime invocation.
+        }
+    }
+
+    private static CdObjectState tunnel07Image(Fixture f, int whole, int routine, int subtype, int subtype2, int x, int y) {
+        return f.runtime.placement().pool().state(whole).moveByte(ID, 7).moveByte(ROUTINE, routine).moveByte(ROUTINE_2, 0xD3)
+                .moveByte(SPRITE_FLAGS, 0x84).moveByte(FLAGS, 0xA5).moveByte(SUBTYPE, subtype).moveByte(SUBTYPE2, subtype2)
+                .moveByte(SAVED_FLAGS_ID, 0).moveLong(MAPPINGS, 0x13579BDF).moveWord(TILE, 0x6A5C).moveByte(PRIORITY, 7).moveByte(WIDTH, 0x23)
+                .moveByte(X_RADIUS, 0x35).moveByte(Y_RADIUS, 0x46).moveWord(X, x).moveWord(X_FRACTION, 0xBEEF)
+                .moveWord(Y, y).moveWord(Y_FRACTION, 0xCAFE).moveByte(ANIMATION, 0x17).moveByte(PREVIOUS_ANIMATION, 0x28)
+                .moveByte(ANIMATION_FRAME, 0x39).moveByte(ANIMATION_TIME, 0x4A).moveByte(MAP_FRAME, 0x5B)
+                .moveWord(TUNNEL_PATH_STEPS, 0x0080).moveByte(CdObjectState.ByteField.TUNNEL_PATH_SCRATCH, 0x9A)
+                .moveWord(TUNNEL_PATH_TARGET_X, 0x1440).moveWord(TUNNEL_PATH_TARGET_Y, 0x00F0).moveWord(TUNNEL_PATH_INDEX_END, 0x0008)
+                .moveLong(CdObjectState.LongField.TUNNEL_PATH_DATA, 0xAB208DA0);
+    }
+
+    private static void tunnel07SeedPlayer(Fixture f, int x, int y, int xv, int yv, int gv, int routine, int animation, int control, int flags) {
+        var actor = f.frame.captureActor(); var state = actor.state();
+        var motion = new CdPlayerMotionState(x, y, xv, yv, gv, routine, 0xA6, flags, 0x94, 9, 19,
+                animation, 0x7D, 1, 0x55, 0x4567, 1, control, 0x73, 0x84);
+        var ready = new CdPlayerBody.State(motion, new CdPlayerBody.AnimationCursor(0xA7, 0xF3, 0), state.header(),
+                new CdPlayerBody.Timers(0x4567, 0x2345, 0x3456, 0x78), state.history(), 0x2A,
+                new CdPlayerBody.ObjectLinks(0x37, 0x48), 0xD7);
+        f.frame.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(), ready, actor.display()));
+    }
+
+    private static CdPlayerBody.State tunnel07Expected(CdPlayerBody.State old, int x, int y, int xv, int yv, int gv,
+                                                        int routine, int flags, int animation, int jump, int control, int hurt) {
+        var m = old.motion(); var t = old.timers();
+        return new CdPlayerBody.State(new CdPlayerMotionState(x, y, xv, yv, gv, routine, m.angle(), flags, m.spriteFlags(),
+                m.xRadius(), m.yRadius(), animation, m.previousAnimation(), jump, m.charge(), m.moveLock(), m.stick(),
+                control, m.previousPrimaryAngle(), m.previousSecondaryAngle()), old.animation(), old.header(),
+                new CdPlayerBody.Timers(hurt, t.invincibility(), t.speedShoes(), t.reset()), old.history(), old.rotationDistance(), old.objectLinks(), old.rotationAngle());
+    }
+
+    private static void tunnel07ComponentPublish(Fixture f, CdTunnelPath.PlayerCall call) {
+        // Only a live public Body callback supplies these ready values; no pure fabricated call is executed.
+        var pool = f.runtime.placement().pool(); var readyPool = CdObjectPool.overlay(call.actualCut(), List.of(call.finalSource()));
+        pool.validateRestore(readyPool); pool.validateWrite(call.finalSource());
+        var readyPair = f.frame.prepareObjectTunnelPathPlayerResult(call.expectedPlayer().state(), call.expectedPlayer().environment(), call.result());
+        assertEquals(call.actualCut().slots(), pool.capture().slots()); f.frame.validatePreparedObjectSolidPublication(readyPair);
+        pool.write(call.finalSource()); f.frame.applyPreparedObjectSolidPublication(readyPair);
+    }
+
+    private static void tunnel07Retired(Fixture f) {
+        assertNull(checkpointGet(f.runtime, "activeTunnelPathInvocation")); assertEquals(false, checkpointGet(f.runtime, "inSolidCommit"));
+    }
+
+    private static void tunnel07Failed(Fixture f) {
+        assertEquals(CdOpeningObjectRuntime.Phase.FAILED, f.runtime.phase()); assertTrue(f.runtime.closed()); assertTrue(f.frame.closed()); tunnel07Retired(f);
+        assertThrows(IllegalStateException.class, f.runtime::runDynamicSlotsAfterReservedSlots); assertThrows(IllegalStateException.class, f.runtime::captureClosedCut);
+    }
+    // Ordinary public ingress cannot inject a mid-producer private wrong-site/reentry call, swap its cached body,
+    // or prove atomicity against an out-of-contract concurrent host mutation. No private origin/Snapshot is forged.
+    // Source review covers those guard/order/preparation contracts; these limits are not claimed as execution coverage.
+    // No Error/OOM injection, natural3421 positive, next controlled Body, full-USA or JP/EU success is claimed.
+    // END Tunnel07 Runtime R1.
 }

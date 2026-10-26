@@ -296,7 +296,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     }
 
     /** Ordered requests only, no playback and no claim to the omitted service/music ledger. */
-    public sealed interface SoundRequest permits PlayerSound, RingFm, RingSubCpu, MosquiFm, LostRingFm, GameOverSubCpu, SpringFm, TunnelDoorVerticalFm, TunnelDoorFm, MonitorFm, MonitorItemSubCpu, TimePostSubCpu, CheckpointFm, CollapsePlatformFm, TamabbohFm, SpinningDiscFm { }
+    public sealed interface SoundRequest permits PlayerSound, RingFm, RingSubCpu, MosquiFm, LostRingFm, GameOverSubCpu, SpringFm, TunnelDoorVerticalFm, TunnelDoorFm, MonitorFm, MonitorItemSubCpu, TimePostSubCpu, CheckpointFm, CollapsePlatformFm, TamabbohFm, SpinningDiscFm, TunnelPathFm { }
     public record PlayerSound(CdPlayerFrameRuntime.Sound sound) implements SoundRequest {
         public PlayerSound { Objects.requireNonNull(sound, "player sound"); }
     }
@@ -308,6 +308,10 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     }
     public record LostRingFm(CdLostRing.Sound sound) implements SoundRequest {
         public LostRingFm { Objects.requireNonNull(sound, "LostRing FM sound"); }
+    }
+    /** ID07's reached FM_91 backedge; ordered request metadata, never driver execution. */
+    public record TunnelPathFm(CdTunnelPath.FmSound sound) implements SoundRequest {
+        public TunnelPathFm { Objects.requireNonNull(sound, "Tunnel Path FM sound"); }
     }
     /** Disc's actual synchronous PlayFMSound cut; ordered FM_A0 metadata only, no playback. */
     public record SpinningDiscFm(CdSpinningDisc.FmSound sound) implements SoundRequest {
@@ -452,6 +456,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     private final CdBoulder boulder;
     private final CdCollapsePlatform collapsePlatform;
     private final CdSpinningDisc spinningDisc;
+    private final CdTunnelPath tunnelPath;
     private final CdPlatform platform;
     private final CdSpikes spikes;
     private final CdCheckpoint checkpoint;
@@ -542,6 +547,35 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     }
     private transient SpinningDiscInvocation activeSpinningDiscInvocation;
     // END Disc09 private invocation.
+    // BEGIN Tunnel07 private invocation. Neither captured state nor a public producer capability.
+    private enum TunnelStep {
+        MAIN, ACQUIRE_GVEL_OR_FINISH, ACQUIRE_FINISH, MAIN_FM,
+        GOT_SPEED, GOT_FM, MOVE, NEXT_SPEED_OR_RELEASE, DONE, STOPPED
+    }
+    private static final class TunnelPathInvocation {
+        private final CdTunnelPath body;
+        private final int wholeIndex;
+        private final int ingressRoutine;
+        private CdObjectState lastSource;
+        private CdObjectPool.Snapshot lastPool;
+        private TunnelStep next;
+        private List<SoundRequest> expectedFmLedger;
+        private List<SoundRequest> readyFmLedger;
+
+        private TunnelPathInvocation(CdTunnelPath body, int wholeIndex,
+                                     CdObjectPool.Snapshot pool, CdObjectState source) {
+            this.body = body; this.wholeIndex = wholeIndex; ingressRoutine = source.routine();
+            lastSource = source; lastPool = pool;
+            next = switch (ingressRoutine) {
+                case 0, 2 -> TunnelStep.MAIN;
+                case 4 -> TunnelStep.GOT_SPEED;
+                case 6 -> TunnelStep.MOVE;
+                default -> TunnelStep.STOPPED;
+            };
+        }
+    }
+    private transient TunnelPathInvocation activeTunnelPathInvocation;
+    // END Tunnel07 private invocation.
     private int dispatchWholeIndex = -1;
 
     /**
@@ -849,6 +883,11 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                     @Override public CdSpinningDisc.PlayerCut read() { return readSpinningDiscPlayer(); }
                     @Override public void commit(CdSpinningDisc.PlayerCall call) { commitSpinningDiscPlayer(call); }
                 }, this::playSpinningDiscFm, (pool, slot) -> drawDynamic(pool, slot.wholeIndex()));
+        tunnelPath = new CdTunnelPath(placement, CdTunnelPath.Assets.fromObjectAssets(objects),
+                new CdTunnelPath.PlayerOwner() {
+                    @Override public CdTunnelPath.PlayerCut read() { return readTunnelPathPlayer(); }
+                    @Override public void commit(CdTunnelPath.PlayerCall call) { commitTunnelPathPlayer(call); }
+                }, this::playTunnelPathFm);
         collapsePlatform = new CdCollapsePlatform(placement, CdCollapsePlatform.Assets.fromObjectAssets(objects),
                 solid, this::commitCollapseSolid,
                 (pool, slot) -> drawDynamic(pool, slot.wholeIndex()), this::playCollapseFm);
@@ -1436,6 +1475,9 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                     // Actual live ID21; native Init/Main owns every reached gate, helper, child and tail.
                     // Completed effects describe synchronous work and are never replayed.
                     runPlatform(whole);
+                } else if (id == CdTunnelPath.OBJECT_ID) {
+                    // Actual physical ID07; all native stores and FM happen inside the cached producer.
+                    runTunnelPath(whole); // Returned observations never execute or replay work.
                 } else if (id == CdSpinningDisc.OBJECT_ID) {
                     // Actual physical pre-scroll visit. The cached body owns every reached helper and store.
                     runSpinningDisc(whole); // Completed observations never cause replay or a second helper.
@@ -2969,6 +3011,406 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
             sounds = nextSounds;
         } finally { inSolidCommit = false; }
     }
+
+    // BEGIN Tunnel07 Runtime R1. Authored source only; author execution is UNRUN.
+    // N 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff, Tunnel Path/Main.asm:119-388;
+    // Object Spawner.asm:385-446, Object Functions.asm:228-237. No FixBugs alternative here.
+    // Private actual cached invocation grants producer authority; public values/enums/effects do not.
+    // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>
+
+    private void runTunnelPath(int wholeIndex) {
+        checkActive(Phase.DYNAMIC_SLOTS);
+        if (activeTunnelPathInvocation != null || activeSpinningDiscInvocation != null
+                || activeCollapseInvocation != null || activePlatformInvocation != null || activeTamabbohInvocation != null
+                || inDrawCallback || inSolidCommit || inSpringLaunch || inSpinTunnelCommit || inTunnelDoorFm
+                || inHorizontalTunnelDoorSolid || inHorizontalTunnelDoorFm || inMonitorAngle || inMonitorFm || inMonitorAward
+                || inTimePostDirection || inTimePostSubCpu || inCheckpointDispatch
+                || wholeIndex != dispatchWholeIndex || placement.pool().state(wholeIndex).id() != CdTunnelPath.OBJECT_ID) {
+            throw new IllegalStateException("Tunnel Path requires its actual nonnested physical ID07 visit");
+        }
+        var gates = frame.environment().movement().gates();
+        var globals = new CdTunnelPath.Globals(gates.timeZone(), gates.timeWarpDirection(), preScrollForeground.xWord());
+        var pool = placement.pool();
+        activeTunnelPathInvocation = new TunnelPathInvocation(tunnelPath, wholeIndex, pool.capture(), pool.state(wholeIndex));
+        try {
+            tunnelPath.run(wholeIndex, globals);
+        } finally {
+            activeTunnelPathInvocation = null; // Success, native boundary, host exception and Error.
+        }
+    }
+
+    /** Reads are admitted even at DONE/STOPPED; Body's animation/dead gates precede raw routine dispatch. */
+    private CdObjectState requireTunnelPathCallback() {
+        checkActive(Phase.DYNAMIC_SLOTS);
+        var invocation = activeTunnelPathInvocation;
+        if (invocation == null || invocation.body != tunnelPath || invocation.wholeIndex != dispatchWholeIndex
+                || dispatchWholeIndex < CdObjectPool.FIRST_WHOLE_INDEX || dispatchWholeIndex >= CdObjectPool.END_WHOLE_INDEX
+                || activeSpinningDiscInvocation != null || activeCollapseInvocation != null
+                || activePlatformInvocation != null || activeTamabbohInvocation != null
+                || inDrawCallback || inSolidCommit || inSpringLaunch || inSpinTunnelCommit || inTunnelDoorFm
+                || inHorizontalTunnelDoorSolid || inHorizontalTunnelDoorFm || inMonitorAngle || inMonitorFm || inMonitorAward
+                || inTimePostDirection || inTimePostSubCpu || inCheckpointDispatch
+                || frame.assets() != assets || frame.environment().dynamicSlots() != CdPlayerBody.DynamicSlots.UNIMPLEMENTED) {
+            throw new IllegalStateException("Tunnel callback has no current cached producer or has a nested owner");
+        }
+        frame.captureActor(); // Existing open/idle/closed-Frame guard only; no retained capture partition.
+        var source = placement.pool().state(dispatchWholeIndex);
+        if (source.id() != CdTunnelPath.OBJECT_ID) {
+            throw new IllegalStateException("Tunnel callback lost its actual physical ID07 source");
+        }
+        // No routine/visibility/control gate here: a legitimate earlier native read must remain earlier.
+        return source;
+    }
+
+    private CdTunnelPath.PlayerCut readTunnelPathPlayer() {
+        var source = requireTunnelPathCallback();
+        inSolidCommit = true;
+        try {
+            var cut = placement.pool().capture();
+            var pair = new CdTunnelPath.PlayerCut(frame.state(), frame.environment());
+            validateTunnelPathCut(cut, source, pair);
+            return pair; // Reading never advances the mutation cursor or adopts a historical ingress.
+        } finally { inSolidCommit = false; }
+    }
+
+    private void validateTunnelPathCut(CdObjectPool.Snapshot cut, CdObjectState source, CdTunnelPath.PlayerCut expected) {
+        checkActive(Phase.DYNAMIC_SLOTS);
+        var invocation = activeTunnelPathInvocation;
+        if (invocation == null || invocation.body != tunnelPath || invocation.wholeIndex != dispatchWholeIndex) {
+            throw new IllegalStateException("Tunnel full cut has no actual cached invocation");
+        }
+        Objects.requireNonNull(source, "Tunnel source64"); Objects.requireNonNull(expected, "Tunnel State8/Environment4");
+        frame.captureActor();
+        var pool = placement.pool(); validateDynamicCapture(cut); pool.validateWrite(source);
+        var live = pool.state(dispatchWholeIndex);
+        if (source.identity().wholeIndex() != dispatchWholeIndex || live.id() != CdTunnelPath.OBJECT_ID
+                || !live.equals(source) || !cut.slots().get(source.identity().dynamicIndex()).equals(source)
+                || !pool.capture().slots().equals(cut.slots())
+                || expected.state() != frame.state() || expected.environment() != frame.environment()) {
+            throw new IllegalStateException("Tunnel source64/full96/full State-Environment cut is stale or foreign");
+        }
+    }
+
+    /**
+     * Compare only an actually reached own-only prefix. These are read-only byte/operand checks;
+     * no gameplay owner, planning algorithm, shadow owner, returned effect or store command runs.
+     * Read callbacks deliberately do not call this: native Init/decrement/routine stores may be ongoing.
+     */
+    private void validateTunnelPathSource(CdObjectState source) {
+        var invocation = activeTunnelPathInvocation;
+        var before = invocation.lastSource;
+        boolean[] writes = new boolean[CdObjectState.BYTE_SIZE];
+        int[] ranges = {};
+        boolean valid = true;
+        switch (invocation.next) {
+            case MAIN -> {
+                if (invocation.ingressRoutine == 0) {
+                    // Init has already completed its selected reads before this Main player publication.
+                    int base = CdR11aObjectAssets.Table.TUNNEL_PATH_COORDINATES.range().nativeAddress();
+                    int pointer = base + (short) tunnelPathWord(base + ((before.subtype() * 2) & 0xFE));
+                    int header = tunnelPathWord(pointer);
+                    valid = source.longBits(MAPPINGS) == CdR11aObjectAssets.Table.POWERUP_MAPPINGS.range().nativeAddress()
+                            && source.spriteFlags() == 4 && source.unsignedByte(PRIORITY) == 1
+                            && source.unsignedByte(WIDTH) == 0x10 && source.word(TILE) == 0x0541
+                            && source.routine() == 2 && source.word(TUNNEL_PATH_INDEX_END) == header
+                            && source.longBits(CdObjectState.LongField.TUNNEL_PATH_DATA) == pointer + 2
+                            && source.word(TUNNEL_PATH_TARGET_X) == tunnelPathWord(pointer + 2)
+                            && source.word(TUNNEL_PATH_TARGET_Y) == tunnelPathWord(pointer + 4);
+                    ranges = new int[]{4, 4, 1, 1, 0x18, 2, 2, 2, 0x24, 1, 0x3A, 2, 0x3C, 4, 0x36, 4};
+                }
+            }
+            case MOVE -> {
+                valid = source.unsignedByte(CdObjectState.ByteField.TUNNEL_PATH_STEPS_HIGH)
+                        == ((before.unsignedByte(CdObjectState.ByteField.TUNNEL_PATH_STEPS_HIGH) - 1) & 255);
+                ranges = new int[]{0x2E, 1}; // HIGH byte only; the low byte is a nonwrite.
+            }
+            case NEXT_SPEED_OR_RELEASE -> {
+                int index = (before.unsignedByte(CdObjectState.ByteField.TUNNEL_PATH_INDEX) + 4) & 255;
+                if (index < before.unsignedByte(CdObjectState.ByteField.TUNNEL_PATH_END)) {
+                    int pointer = before.longBits(CdObjectState.LongField.TUNNEL_PATH_DATA);
+                    valid = source.unsignedByte(CdObjectState.ByteField.TUNNEL_PATH_INDEX) == index
+                            && source.word(TUNNEL_PATH_TARGET_X) == tunnelPathWord(pointer + index)
+                            && source.word(TUNNEL_PATH_TARGET_Y) == tunnelPathWord(pointer + index + 2);
+                    ranges = new int[]{0x3A, 1, 0x36, 4};
+                }
+            }
+            case GOT_FM -> {
+                valid = source.routine() == ((before.routine() + 2) & 255);
+                ranges = new int[]{0x24, 1};
+            }
+            default -> { } // No own-only native store between the previous publication and this reached site.
+        }
+        for (int index = 0; index < ranges.length; index += 2) {
+            for (int at = ranges[index]; at < ranges[index] + ranges[index + 1]; at++) writes[at] = true;
+        }
+        byte[] oldBytes = before.copyBytes(), actualBytes = source.copyBytes();
+        for (int at = 0; at < CdObjectState.BYTE_SIZE; at++) {
+            if (!writes[at] && oldBytes[at] != actualBytes[at]) valid = false;
+        }
+        var pool = placement.pool(); pool.validateRestore(invocation.lastPool);
+        var actual = pool.capture();
+        for (int index = 0; index < CdObjectPool.DYNAMIC_COUNT; index++) {
+            if (index != source.identity().dynamicIndex()
+                    && !actual.slots().get(index).equals(invocation.lastPool.slots().get(index))) valid = false;
+        }
+        if (!valid) throw new IllegalStateException("Tunnel source/full96 differs from its actually reached native prefix");
+    }
+
+    /** Read an already reached validation operand, retaining raw32 arithmetic and the native 24-bit bus. */
+    private int tunnelPathWord(int addressBits) {
+        if ((addressBits & 1) != 0) throw new IllegalStateException("A published Tunnel cut followed an unaligned native WORD");
+        var speeds = objects.view(CdR11aObjectAssets.Table.TUNNEL_PATH_GROUND_SPEEDS);
+        var paths = objects.view(CdR11aObjectAssets.Table.TUNNEL_PATH_COORDINATES);
+        int word = 0;
+        for (int index = 0; index < 2; index++) {
+            int bus = (addressBits + index) & 0xFFFFFF, selected = -1;
+            int speedOffset = (bus - (speeds.range().nativeAddress() & 0xFFFFFF)) & 0xFFFFFF;
+            int pathOffset = (bus - (paths.range().nativeAddress() & 0xFFFFFF)) & 0xFFFFFF;
+            if (speedOffset < 8 && speedOffset < speeds.bytes().length()) selected = speeds.bytes().unsignedByte(speedOffset);
+            if (pathOffset < 284 && pathOffset < paths.bytes().length()) {
+                int value = paths.bytes().unsignedByte(pathOffset);
+                if (selected >= 0 && selected != value) throw new IllegalStateException("Ambiguous reached Tunnel bus byte");
+                selected = value;
+            }
+            if (selected < 0) throw new IllegalStateException("A published Tunnel cut followed an unowned native WORD");
+            word = (word << 8) | selected;
+        }
+        return word;
+    }
+
+    /** Independent finite old/value/width/order checks over reached native stores; produces no gameplay result. */
+    private List<CdTunnelPath.NativeStore> tunnelPathExpectedStores(CdTunnelPath.PlayerCall call) {
+        var source = call.expectedSource(); var state = call.expectedPlayer().state(); var m = state.motion();
+        var stores = new ArrayList<CdTunnelPath.NativeStore>();
+        switch (call.site()) {
+            case ACQUIRE_BASE -> {
+                if (source.routine() != 2 || m.animation() == 0x2B || m.routine() >= 6 || m.playerControl() != 0
+                        || ((((m.centreX16_16() >>> 16) - source.centreX() + 16) & 0xFFFF) >= 32)
+                        || ((((m.centreY16_16() >>> 16) - source.centreY() + 16) & 0xFFFF) >= 32)) {
+                    throw new IllegalStateException("Tunnel acquisition is outside its actual Main branches");
+                }
+                if (m.routine() == 4) {
+                    stores.add(new CdTunnelPath.PlayerStore(CdTunnelPath.TunnelPlayerField.HURT_ROUTINE, 4, 2));
+                    stores.add(new CdTunnelPath.PlayerStore(CdTunnelPath.TunnelPlayerField.HURT_TIMER, state.timers().hurt(), 0x78));
+                }
+                stores.add(new CdTunnelPath.ObjectStore(CdTunnelPath.ObjectField.ACQUIRE_ROUTINE, source.routine(), 4));
+                stores.add(new CdTunnelPath.PlayerStore(CdTunnelPath.TunnelPlayerField.ACQUIRE_CONTROL, m.playerControl(), 0x81));
+                if (source.subtype2() != 0) stores.add(new CdTunnelPath.PlayerStore(CdTunnelPath.TunnelPlayerField.ACQUIRE_INVISIBLE, 0x81, 0xC1));
+                stores.add(new CdTunnelPath.PlayerStore(CdTunnelPath.TunnelPlayerField.ACQUIRE_ANIMATION, m.animation(), 2));
+                stores.add(new CdTunnelPath.PlayerStore(CdTunnelPath.TunnelPlayerField.ACQUIRE_GVEL_BASE, m.groundVelocity() & 0xFFFF, 0x1000));
+            }
+            case ACQUIRE_GVEL_RAISE, ACQUIRE_FINISH -> {
+                if (source.routine() != 4 || m.animation() != 2
+                        || m.playerControl() != (source.subtype2() == 0 ? 0x81 : 0xC1)) {
+                    throw new IllegalStateException("Tunnel acquisition continuation lost its actual published base");
+                }
+                boolean needsRaise = false; int selected = 0;
+                if (activeTunnelPathInvocation.next == TunnelStep.ACQUIRE_GVEL_OR_FINISH && (source.subtype() & 0x80) == 0) {
+                    // The Body already returned from this selected WORD read; never move it before ACQUIRE_BASE.
+                    int base = CdR11aObjectAssets.Table.TUNNEL_PATH_GROUND_SPEEDS.range().nativeAddress();
+                    selected = tunnelPathWord(base + 2 * (source.subtype() & 15));
+                    needsRaise = (short) selected > 0x1000;
+                }
+                if (call.site() == CdTunnelPath.NativeCut.ACQUIRE_GVEL_RAISE) {
+                    if (!needsRaise || (m.groundVelocity() & 0xFFFF) != 0x1000) {
+                        throw new IllegalStateException("Tunnel GVel raise does not match the reached native signed comparison");
+                    }
+                    stores.add(new CdTunnelPath.PlayerStore(CdTunnelPath.TunnelPlayerField.ACQUIRE_GVEL_RAISE, 0x1000, selected));
+                } else {
+                    if (needsRaise) throw new IllegalStateException("Tunnel finish skipped its reached GVel raise");
+                    stores.add(new CdTunnelPath.PlayerStore(CdTunnelPath.TunnelPlayerField.ACQUIRE_X_VELOCITY, m.xVelocity() & 0xFFFF, 0));
+                    stores.add(new CdTunnelPath.PlayerStore(CdTunnelPath.TunnelPlayerField.ACQUIRE_Y_VELOCITY, m.yVelocity() & 0xFFFF, 0));
+                    stores.add(new CdTunnelPath.ObjectStore(CdTunnelPath.ObjectField.ACQUIRE_PUSH_CLEAR, source.flags(), source.flags() & ~0x20));
+                    stores.add(new CdTunnelPath.PlayerStore(CdTunnelPath.TunnelPlayerField.ACQUIRE_PUSH_CLEAR, m.flags(), m.flags() & ~0x20));
+                    stores.add(new CdTunnelPath.PlayerStore(CdTunnelPath.TunnelPlayerField.ACQUIRE_AIR, m.flags() & ~0x20, (m.flags() & ~0x20) | 2));
+                    stores.add(new CdTunnelPath.PlayerStore(CdTunnelPath.TunnelPlayerField.ACQUIRE_JUMP_CLEAR, m.playerJump(), 0));
+                    stores.add(new CdTunnelPath.PlayerStore(CdTunnelPath.TunnelPlayerField.ACQUIRE_X_SNAP, m.centreX16_16() >>> 16, source.centreX()));
+                    stores.add(new CdTunnelPath.PlayerStore(CdTunnelPath.TunnelPlayerField.ACQUIRE_Y_SNAP, m.centreY16_16() >>> 16, source.centreY()));
+                    stores.add(new CdTunnelPath.ObjectStore(CdTunnelPath.ObjectField.ACQUIRE_SCRATCH_CLEAR,
+                            source.unsignedByte(CdObjectState.ByteField.TUNNEL_PATH_SCRATCH), 0));
+                }
+            }
+            case SPEED_Y, SPEED_X -> {
+                int requiredRoutine = activeTunnelPathInvocation.next == TunnelStep.GOT_SPEED ? 4 : 6;
+                if (source.routine() != requiredRoutine || m.animation() == 0x2B || m.routine() >= 6) {
+                    throw new IllegalStateException("Tunnel speed is outside the actual admitted Got/next-target source");
+                }
+                int x = m.centreX16_16() >>> 16, y = m.centreY16_16() >>> 16;
+                int tx = source.word(TUNNEL_PATH_TARGET_X), ty = source.word(TUNNEL_PATH_TARGET_Y);
+                int dx = (tx - x) & 0xFFFF, dy = (ty - y) & 0xFFFF, mx = dx, my = dy;
+                int sx = m.groundVelocity() & 0xFFFF, sy = sx;
+                if (!tunnelPathWordBge(tx, x)) { mx = (-mx) & 0xFFFF; sx = (-sx) & 0xFFFF; }
+                if (!tunnelPathWordBge(ty, y)) { my = (-my) & 0xFFFF; sy = (-sy) & 0xFFFF; }
+                if (my >= mx) {
+                    if (call.site() != CdTunnelPath.NativeCut.SPEED_Y) throw new IllegalStateException("Tunnel speed skipped its Y/tie branch");
+                    int time = tunnelPathSignedDivide(dy << 16, sy);
+                    int xv = dx == 0 ? 0 : tunnelPathSignedDivide(dx << 16, time & 0xFFFF);
+                    int steps = time & 0xFFFF; if ((short) steps < 0) steps = (-steps) & 0xFFFF;
+                    stores.add(new CdTunnelPath.PlayerStore(CdTunnelPath.TunnelPlayerField.SPEED_Y_X_VELOCITY, m.xVelocity() & 0xFFFF, xv & 0xFFFF));
+                    stores.add(new CdTunnelPath.PlayerStore(CdTunnelPath.TunnelPlayerField.SPEED_Y_Y_VELOCITY, m.yVelocity() & 0xFFFF, sy));
+                    stores.add(new CdTunnelPath.ObjectStore(CdTunnelPath.ObjectField.SPEED_STEPS_Y, source.word(TUNNEL_PATH_STEPS), steps));
+                } else {
+                    if (call.site() != CdTunnelPath.NativeCut.SPEED_X) throw new IllegalStateException("Tunnel speed skipped its X branch");
+                    int time = tunnelPathSignedDivide(dx << 16, sx);
+                    int yv = dy == 0 ? 0 : tunnelPathSignedDivide(dy << 16, time & 0xFFFF);
+                    int steps = time & 0xFFFF; if ((short) steps < 0) steps = (-steps) & 0xFFFF;
+                    stores.add(new CdTunnelPath.PlayerStore(CdTunnelPath.TunnelPlayerField.SPEED_X_Y_VELOCITY, m.yVelocity() & 0xFFFF, yv & 0xFFFF));
+                    stores.add(new CdTunnelPath.PlayerStore(CdTunnelPath.TunnelPlayerField.SPEED_X_X_VELOCITY, m.xVelocity() & 0xFFFF, sx));
+                    stores.add(new CdTunnelPath.ObjectStore(CdTunnelPath.ObjectField.SPEED_STEPS_X, source.word(TUNNEL_PATH_STEPS), steps));
+                }
+            }
+            case COMPLETE_SNAP, INTEGRATE -> {
+                boolean integrate = source.unsignedByte(CdObjectState.ByteField.TUNNEL_PATH_STEPS_HIGH) < 0x80;
+                if (source.routine() != 6 || m.animation() == 0x2B || m.routine() >= 6
+                        || integrate != (call.site() == CdTunnelPath.NativeCut.INTEGRATE)) {
+                    throw new IllegalStateException("Tunnel Move site does not match the actual high-byte decrement branch");
+                }
+                if (integrate) {
+                    stores.add(new CdTunnelPath.PlayerStore(CdTunnelPath.TunnelPlayerField.MOVE_X_LONG,
+                            m.centreX16_16(), m.centreX16_16() + ((short) m.xVelocity() << 8)));
+                    stores.add(new CdTunnelPath.PlayerStore(CdTunnelPath.TunnelPlayerField.MOVE_Y_LONG,
+                            m.centreY16_16(), m.centreY16_16() + ((short) m.yVelocity() << 8)));
+                } else {
+                    stores.add(new CdTunnelPath.PlayerStore(CdTunnelPath.TunnelPlayerField.COMPLETE_X_SNAP,
+                            m.centreX16_16() >>> 16, source.word(TUNNEL_PATH_TARGET_X)));
+                    stores.add(new CdTunnelPath.PlayerStore(CdTunnelPath.TunnelPlayerField.COMPLETE_Y_SNAP,
+                            m.centreY16_16() >>> 16, source.word(TUNNEL_PATH_TARGET_Y)));
+                }
+            }
+            case RELEASE -> {
+                int index = (source.unsignedByte(CdObjectState.ByteField.TUNNEL_PATH_INDEX) + 4) & 255;
+                if (source.routine() != 6 || index < source.unsignedByte(CdObjectState.ByteField.TUNNEL_PATH_END)) {
+                    throw new IllegalStateException("Tunnel release is outside its actual unsigned end branch");
+                }
+                stores.add(new CdTunnelPath.PlayerStore(CdTunnelPath.TunnelPlayerField.RELEASE_Y_MASK,
+                        m.centreY16_16() >>> 16, (m.centreY16_16() >>> 16) & 0x7FF));
+                stores.add(new CdTunnelPath.ObjectStore(CdTunnelPath.ObjectField.RELEASE_ROUTINE_CLEAR, source.routine(), 0));
+                stores.add(new CdTunnelPath.PlayerStore(CdTunnelPath.TunnelPlayerField.RELEASE_CONTROL_CLEAR, m.playerControl(), 0));
+                stores.add(new CdTunnelPath.ObjectStore(CdTunnelPath.ObjectField.RELEASE_ROUTINE_WORD,
+                        source.word(TUNNEL_PATH_ROUTINE_WORD) & 255, 2)); // Native CLR.B then MOVE.W => bytes24/25=00/02.
+            }
+            default -> throw new IllegalStateException("Not one of the eight actual cross-owner Tunnel sites");
+        }
+        return List.copyOf(stores);
+    }
+
+    private boolean tunnelPathWordBge(int left, int right) {
+        int result = (left - right) & 0xFFFF;
+        boolean negative = (result & 0x8000) != 0, overflow = ((left ^ right) & (left ^ result) & 0x8000) != 0;
+        return negative == overflow;
+    }
+
+    private int tunnelPathSignedDivide(int dividend, int divisorBits) {
+        int divisor = (short) divisorBits;
+        if (divisor == 0) throw new IllegalStateException("A Tunnel publication cannot follow native division by zero");
+        long quotient = (long) dividend / divisor;
+        if (quotient < -32768 || quotient > 32767) return dividend; // Native DIVS overflow leaves Dn unreplaced.
+        int remainder = (int) ((long) dividend % divisor);
+        return (remainder << 16) | ((int) quotient & 0xFFFF);
+    }
+
+    private TunnelStep tunnelPathNextStep(CdTunnelPath.PlayerCall call) {
+        return switch (activeTunnelPathInvocation.next) {
+            case MAIN -> {
+                if (call.site() != CdTunnelPath.NativeCut.ACQUIRE_BASE) throw new IllegalStateException("Tunnel Main requires its first acquisition span");
+                yield TunnelStep.ACQUIRE_GVEL_OR_FINISH;
+            }
+            case ACQUIRE_GVEL_OR_FINISH -> switch (call.site()) {
+                case ACQUIRE_GVEL_RAISE -> TunnelStep.ACQUIRE_FINISH;
+                case ACQUIRE_FINISH -> TunnelStep.MAIN_FM;
+                default -> throw new IllegalStateException("Tunnel acquisition continuation is out of order");
+            };
+            case ACQUIRE_FINISH -> {
+                if (call.site() != CdTunnelPath.NativeCut.ACQUIRE_FINISH) throw new IllegalStateException("Tunnel GVel requires its once-only finish span");
+                yield TunnelStep.MAIN_FM;
+            }
+            case GOT_SPEED -> {
+                if (call.site() != CdTunnelPath.NativeCut.SPEED_Y && call.site() != CdTunnelPath.NativeCut.SPEED_X) {
+                    throw new IllegalStateException("Tunnel GotPlayer requires its reached speed span");
+                }
+                yield TunnelStep.GOT_FM;
+            }
+            case MOVE -> switch (call.site()) {
+                case INTEGRATE -> TunnelStep.DONE;
+                case COMPLETE_SNAP -> TunnelStep.NEXT_SPEED_OR_RELEASE;
+                default -> throw new IllegalStateException("Tunnel Move requires its actual decrement-selected span");
+            };
+            case NEXT_SPEED_OR_RELEASE -> {
+                // A next-target source already contains the new index; distinguish using the previous completed snap.
+                var before = activeTunnelPathInvocation.lastSource;
+                boolean nextTarget = ((before.unsignedByte(CdObjectState.ByteField.TUNNEL_PATH_INDEX) + 4) & 255)
+                        < before.unsignedByte(CdObjectState.ByteField.TUNNEL_PATH_END);
+                boolean speed = call.site() == CdTunnelPath.NativeCut.SPEED_Y || call.site() == CdTunnelPath.NativeCut.SPEED_X;
+                if (nextTarget ? !speed : call.site() != CdTunnelPath.NativeCut.RELEASE) {
+                    throw new IllegalStateException("Tunnel completion did not follow its actual next-target/release branch");
+                }
+                yield TunnelStep.DONE;
+            }
+            default -> throw new IllegalStateException("Tunnel mutation site is repeated, terminal or outside its actual source routine");
+        };
+    }
+
+    private void commitTunnelPathPlayer(CdTunnelPath.PlayerCall call) {
+        var source = requireTunnelPathCallback();
+        inSolidCommit = true;
+        try {
+            Objects.requireNonNull(call, "actual Tunnel player call");
+            validateTunnelPathCut(call.actualCut(), call.expectedSource(), call.expectedPlayer());
+            if (!source.equals(call.expectedSource())) throw new IllegalArgumentException("Tunnel player call differs from its actual source64");
+            var next = tunnelPathNextStep(call);
+            validateTunnelPathSource(source);
+            if (!call.stores().equals(tunnelPathExpectedStores(call))
+                    || !call.stores().stream().filter(CdTunnelPath.PlayerStore.class::isInstance)
+                    .map(CdTunnelPath.PlayerStore.class::cast).toList().equals(call.result().stores())) {
+                throw new IllegalArgumentException("Tunnel mixed native old/value/width/order or player subsequence differs");
+            }
+            var pool = placement.pool();
+            var readyPool = CdObjectPool.overlay(call.actualCut(), List.of(call.finalSource()));
+            pool.validateRestore(readyPool); pool.validateWrite(call.finalSource());
+            var readyPair = frame.prepareObjectTunnelPathPlayerResult(call.expectedPlayer().state(),
+                    call.expectedPlayer().environment(), call.result());
+            var expectedLedger = sounds;
+            List<SoundRequest> readyLedger = expectedLedger;
+            if (next == TunnelStep.MAIN_FM || next == TunnelStep.GOT_FM) {
+                var ledger = new ArrayList<SoundRequest>(expectedLedger);
+                ledger.add(new TunnelPathFm(CdTunnelPath.FmSound.FM_91));
+                readyLedger = List.copyOf(ledger);
+            }
+            validateTunnelPathCut(call.actualCut(), source, call.expectedPlayer());
+            frame.validatePreparedObjectSolidPublication(readyPair);
+            // All fallible preparation is above. Existing owner methods now adopt already-validated ready values.
+            // No allocation, native owner, external callback or aggregate reconstruction between these assignments.
+            pool.write(call.finalSource());
+            frame.applyPreparedObjectSolidPublication(readyPair);
+            var invocation = activeTunnelPathInvocation;
+            invocation.lastSource = call.finalSource(); invocation.lastPool = readyPool; invocation.next = next;
+            invocation.expectedFmLedger = expectedLedger; invocation.readyFmLedger = readyLedger;
+            // A staged FM ledger is not emitted here. Only the actual later source backedge may append it.
+        } finally { inSolidCommit = false; }
+    }
+
+    private void playTunnelPathFm(CdTunnelPath.FmCall call) {
+        var source = requireTunnelPathCallback();
+        inSolidCommit = true;
+        try {
+            Objects.requireNonNull(call, "actual Tunnel FM call");
+            validateTunnelPathCut(call.actualCut(), call.expectedSource(), call.expectedPlayer());
+            var invocation = activeTunnelPathInvocation;
+            boolean actualSite = invocation.next == TunnelStep.MAIN_FM && call.site() == CdTunnelPath.FmSite.MAIN_ACQUIRE
+                    || invocation.next == TunnelStep.GOT_FM && call.site() == CdTunnelPath.FmSite.GOT_PLAYER;
+            if (!actualSite || !source.equals(call.expectedSource()) || call.sound() != CdTunnelPath.FmSound.FM_91
+                    || invocation.readyFmLedger == null || sounds != invocation.expectedFmLedger) {
+                throw new IllegalStateException("Tunnel FM requires its once-only actual completed native prefix");
+            }
+            validateTunnelPathSource(source);
+            validateTunnelPathCut(call.actualCut(), source, call.expectedPlayer());
+            sounds = invocation.readyFmLedger;
+            invocation.lastSource = source; invocation.lastPool = call.actualCut(); invocation.next = TunnelStep.DONE;
+            invocation.readyFmLedger = null; invocation.expectedFmLedger = null;
+            // Read-only pool/pair, including faults. Metadata never executes after producer return.
+        } finally { inSolidCommit = false; }
+    }
+    // END Tunnel07 Runtime R1.
 
     // BEGIN Platform21 Runtime R1 private integration.
     // BEGIN Disc09 Runtime R1. SOURCE-ONLY; authored Java is UNRUN by this author.

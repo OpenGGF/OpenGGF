@@ -113462,3 +113462,32 @@ smoke failures remain separately recorded. Next finite native owner: Monitor19.
   repairs, separately from prior complete728 guards. Static route review
   remains pending before save. Full USA then JP/EU remains active; no new
   3421 completion, controlled-player, native Disc World/timing/pixel parity.
+
+- 2026-10-26, private componentcb423035d plus the live ID07 candidate:
+  cached Tunnel Path publication retains source/full96/Frame and ordered FM
+  prefixes. Three new singleton-ledger expectations fail in the first433 run;
+  only those tests are corrected to preserve the full pre-Dynamic Body ledger
+  before FM91. Combined25655 then passes440 at14:59:05Z, queue0/execution42.568s.
+- Ordinary three-jump observer31273 returns5200 without acquisition; adding
+  B5201..5232 returns5255 and observer57554 first stops5256 at unknown33/live47
+  (1/0/1/0,14:44:26Z,35.590s execution,101s queue). Native ObjectIndex names
+  ObjLogShadow; Present row261 supplies X1548/Y0088/subtype0, distinct from
+  Future row260. The failed47 image has routine0; no Log Shadow Init ran.
+  Earlier VInt/Body prefixes remain, but later63 is unvisited. Last-closed
+  camera/saved diagnostics are not partial-failure observations. Both temporary
+  observers were removed; no failed-call capture, retry or resume occurred.
+- Permanent controllerFourJumpRouteRunsDiscAndTunnelPathAndStopsAtLogShadowSlot47
+  retains53 cases and old proofs, adds actual Init3421/Main3422 and full/course
+  edges3420→3421,3421→3422,5200→5201,5254→5255. A BK2 generic-jump mask assertion
+  alone is repaired after first75564; narrow1208 passes1 at15:24:38Z. Actual
+  input remains Right throughout and B only1201..1232,1770..1801,3002..3033,
+  5201..5232, with Start false. No native player attachment is inferred.
+- Fresh combined88405 passes493/0/0/0 at15:27:54Z (42.851s,queue1s):
+  Runtime433, allWorldLoad53, actual Ring/current440 EGL2 and source guards5.
+  Fresh guards68532 pass728/0/0/0 across90 classes at15:36:53Z
+  (5m03s execution,23s queue). Exact fresh XML/identities/Java25/private cwd
+  and zero skips checked; combined uses actual media/S2/surfaceless/EGL opt-in.
+  Exact commands and unchanged source hashes are in the dated implementation
+  plan. Bounded static Runtime and route/FM reviews find no actionable P1/P2.
+  This is not full smoke, full USA, controlled Body, native image/timing or
+  regional certification. Next unsupported owner is33 at5256, not07 at3421.

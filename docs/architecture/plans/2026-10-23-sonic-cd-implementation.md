@@ -7424,3 +7424,96 @@ env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 python3 "$OPENGGF_ROOT/tools/te
 ```
 
 Original Body static review33565B/SHAa94ed9be98228fc6d0d68f5284d4cfa6d36282e3e0c86d8a1ab3595424fb23af confirms the disclosed fixture P2/no additional production P1/P2. Separate Frame/RootR3 review24121B/SHAce78ca370f632f10b736011741b2a0dc48354afaa698901c45ef0812039fe0f1 confirms the exact three repairs resolve it and finds no new actionable P1/P2. Both are static, not execution results. Focused actual-owner/World coverage is proportionate to this CD-only addition; no broad smoke or release-only full suite was repeated. The actual07 Runtime/publication binding and fresh ordinary3421 continuation remain separate pending work; no whole-act/native timing/pixel/regional certification.
+
+### Live Tunnel Path and permanent Log Shadow frontier — 26 October 2026
+
+Based on saved componentcb423035d, cached ID07 now enters the actual dynamic
+pass through constructor4/run2. A private invocation owns source progression,
+eight finite cross-owner store cuts, site/order/once-only admission and FM91.
+Each cut checks the full96 pool, source64 and complete actual Frame State8 /
+Environment4. Pool overlay, Frame prepared references and the immutable sound
+ledger are ready before the first owner assignment. Effects do not replay work;
+all failures retire the private scope and preserve earlier native publications.
+Source17, LogicalBanks20, C30/659, snapshots, phases and clocks are unchanged.
+The only public Runtime addition is typed SoundRequest.TunnelPathFm/1.
+
+The author froze tests before production; Root's test-first53710 stops at
+expected missing TunnelPathFm compilation, without JUnit. First5794 executes
+433/3/0/0 at14:18:09Z (1m37s,queue0). All three failures are new expectations
+that discarded an earlier real Body FM_CHARGESTOP. RootR2 copies the whole
+pre-Dynamic ledger, appends FM91 and compares the complete ordered result in
+exactly those three methods. No production or inherited410 case changes.
+Narrow69297 passes3 at14:34:42Z (41.432s,queue0); combined25655 then passes
+440 at14:59:05Z (42.568s,queue0): Runtime433, real EGL2 and source guards5.
+
+Controller observer31273 returns all5200 three-jump calls without attachment
+(1/0/0/0,14:37:25Z,33.754s execution,27s queue). A fourth ordinary B jump at
+5201..5232 reaches5255; observer57554 first fails5256 at unowned ID33/live47
+(1/0/1/0,14:44:26Z,35.590s execution,101s queue). These are input-only calls,
+not actor/slot/camera/art staging. Both temporary observers were removed and
+the permanent source restored exactly before route promotion.
+
+The final fixed recipe is Right throughout, B only1201..1232,1770..1801,
+3002..3033 and5201..5232; Start is false. It is equivalent to
+1200R;32RB;537R;32RB;1200R;32RB;2167R;32RB;24R through the attempted5256.
+Genuine Tunnel Init3421 and next pre-routine2 visit3422 return; live63 retains
+its initialized image through5255. No acquisition, rotation or controlled Body
+is inferred from those routine visits.
+
+Closed5255 remains in epoch/load generation1: primary XY13A28E00/024A0400,
+XV=GV982/YV0/routine2/angleFC/flags0, camera4866/490, section0400 with empty
+queue and sound ledger. Failed5256 has the exact newly placed64-byte live47
+image ID33/routine0/X1548/Y0088. Earlier Body reaches XY13A66400/024AA300,
+XV982/YV-97/GV990 and native/VInt5256. Physical63 is after47 and receives no
+failed-call visit. Last-closed camera/placement/saved diagnostics are not
+partial-failure observations; no complete96 failed dynamic-prefix claim,
+closed capture, retry or resume is made. N ObjectIndex names ObjLogShadow;
+unique Present layout row261 matches, distinct from Future row260.
+
+The permanent53-case method is now
+controllerFourJumpRouteRunsDiscAndTunnelPathAndStopsAtLogShadowSlot47.
+Only its name and post3420 tail change; old proofs/helpers/imports are exact.
+Full/course cuts3420→3421,3421→3422,5200→5201 and5254→5255 compare complete
+checkpoint-aware state and natural save BEFORE forwarding and after every
+row. Only then5256 is attempted once, checking the physical47 prefix and
+terminal nonpublication against the actual current pre-call SAT reference.
+
+First route75564 runs1/1/0/0 at15:17:15Z (32.602s,queue0): its script assertion
+mistakes the BK2 combined engine input mask for directions alone. RootR2
+changes only that assertion to Right8 OR generic INPUT_JUMP on action rows;
+separate exact action2/Start/old-row equality and the actual input recipe stay
+unchanged. Narrow1208 passes1 at15:24:38Z (34.323s,queue14s). The reusable
+representation lesson is in the existing measurement-hazard catalogue.
+
+Fresh combined88405 passes493/0/0/0 at15:27:54Z (42.851s,queue1s): all433
+Runtime, all53 WorldLoad, Ring/full-course and current440/659-retirement EGL2,
+JUnit-migration3/assertion-source2. Fresh guards68532 pass728/0/0/0 across90
+classes at15:36:53Z (5m03s,queue23s). Exact fresh XML classes/individual
+identities, Java25.0.5.0.2, private cwd and zero skips were inspected with the
+packet helper. The combined run additionally verifies actual CD media,
+authenticated S2 donor, surfaceless EGL and explicit EGL opt-in.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 python3 "$OPENGGF_ROOT/tools/testing/maven_queue.py" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dsoniccd.opening.egl=true "-Dsoniccd.media.root=$SCD_MEDIA_ROOT" "-Dsonic2.rom.path=$S2_ROM" '-Dtest=TestCdOpeningObjectRuntime,TestSonicCdOpeningWorldLoad,TestSonicCdOpeningWorldEgl#actualEglNormalInputPickupAndFullCourseReplay+actualEglCurrentTamabbohSingletonRendersAndRetiresThe659thClientPattern,TestJunit5MigrationGuard,TestNoAssertionFreeDiagnostics' test -B
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 python3 "$OPENGGF_ROOT/tools/testing/maven_queue.py" --normal -Dmse=off -Pguards test -B
+```
+
+The exact tested production is288277B/SHA
+b4049db264f1955930e6f1a25e6c87e30e3d0e84fc65fd73dd915b255f0a3688;
+Runtime RootR2 test900260B/SHA
+08ebdde2133c9578b651bf2baef6d041011f5b0c29614a708cba60f5232b6883;
+permanent route RootR2 test312430B/SHA
+d3989357f39b342499869a5cb4e28ca31cccea817f40cd5f9751d15e3413323d.
+They remained unchanged through combined and guards. Independent Runtime
+review30579B/SHA6e5960c2ae978c65c8113da3277e015d3a96e04eab3b1618381f2dd0906ecaae
+and route/FM-repair review28881B/SHA508ade4a1e916cbfa645952a30db00400bb9861f348a6ca8364329085b535c8a
+find no actionable P1/P2 within their static scope. The latter reviewed route
+R1; Root's one representation-only R2 correction is separately attributed above.
+
+Focused actual owners/World/EGL plus fresh structural guards address this
+CD-only slice. No broad3757-class smoke catalogue or release-only full suite
+was repeated. Next owner is Log Shadow33; its audit finds a small routine0/2
+body and existing art producer, with five missing logical current bindings.
+No implementation is included here. Full USA then JP/EU remains active;
+native Tamabboh scene/controlled Body/full-act/image/timing and regional
+certification remain open. No main-workspace or remote integration occurred.
