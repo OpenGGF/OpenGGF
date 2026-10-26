@@ -2,7 +2,10 @@
 
 Implementation base: `c50876b184612428ccaf22763412f88ffe505432`.
 App-created worktree `t3-b3209dce`, branch
-`feature/ai-tas-s2-tests-20261026`. Production code is unchanged.
+`feature/ai-tas-s2-tests-20261026`. That initial test-only slice left production
+unchanged. The scoring-owner follow-up below starts at local commit
+`391b671e383e4f329f278aa7b174c39c1bdd1d22` in app-created worktree
+`t3-417fb95a`, branch `bugfix/ai-tas-chain-score-20261026`.
 
 The completed audit is the census authority, not a new research pass:
 `${TAS_AUDIT_DIR}/audit.json`
@@ -23,11 +26,13 @@ passing it cannot establish an exploit trajectory. **Native fixture pending**
 names the missing route recording/setup/oracle. **Observed mismatch** requires an
 executed reproducer against a native expectation, not a source suspicion.
 
-Final family disposition: **0 exact published-trick regressions, 11 component-only,
-1 observed mismatch**. All 12 have native route fixtures pending (an outstanding
-obligation, not an additional mutually exclusive family count). Five new classes
-provide **21 passing component cases**; **24 existing cases** were selected and
-passed, including four non-S2 camera controls in a reused parameterized method.
+Current family disposition after the scoring follow-up: **0 exact published-trick
+regressions, 12 component-only, 0 unresolved observed scoring mismatches in this
+fixture**. All 12 have native route fixtures pending (an outstanding
+obligation, not an additional mutually exclusive family count). The initial
+test-only slice supplied **21 passing component cases** in five new classes and selected **24 existing passing cases**, including four non-S2 camera
+controls in a reused parameterized method. The follow-up restores the sixth N5
+case; its focused validation is recorded separately below.
 
 The new tests exercise public object updates, oil contacts, the real switcher
 controller, results dispatch, and ROM-backed enemy touch dispatch. They seed
@@ -52,7 +57,7 @@ Every partial audit ID appears once in this matrix. `N` selectors are new;
 | `s2-ring-attack` | [3339M](https://tasvideos.org/3339M) / [5385S](https://tasvideos.org/5385S), Knuckles 5163/5174-ring route. | **Component-only**, E8: stock ring hitbox and KiS2 CNZ placement counts with the actual lock-on image. No maximum-ring guarantee. | Start with KiS2 OOZ1 Aquis-assisted fourth monitor at author frames 104310–104573; record per-ring/monitor identities and count deltas through collection/recovery, then the distinct OOZ/MTZ buried-ring entries. Full totals require a per-act ledger, respawn/recollection policy and all missed-ring controls. The endlessly respawning OOZ monitor was explicitly not farmed in the notes. |
 | `s2-special-stage-tally` | [5412M](https://tasvideos.org/5412M) / [8376S](https://tasvideos.org/8376S), KiS2 minimum required rings. | **Component-only**, N4 and E9: executes the real exhausted tally transition and tests surplus-ring savings above the emerald floor; separate P1/P2 parallel countdowns already covered. | KiS2 special stage 1 final-checkpoint requirement, exact collected P1/P2 counts and player mode, got-emerald/emerald-count/perfect flags at result entry. Record native results-entry through exit with V-int/lag clocks; compare an otherwise identical successful surplus-ring route. Test samples here are controlled counts, not publication minimums or KiS2 presentation proof. |
 | `s2-damage-bounce` | [600M](https://tasvideos.org/600M) / [1198S](https://tasvideos.org/1198S), intentional damage and ceiling rebounds; [3339M](https://tasvideos.org/3339M) / [5385S](https://tasvideos.org/5385S), enemy rebounds. | **Component-only**, N5 and E3/E6: real enemy contact chooses above/equal/below/rising rebound branches without changing horizontal momentum; existing hurt-oil and boss reflection. | 1198S DEZ ceiling-assisted final jump: exact hit/ceiling/input-release sequence and resultant landing/next-hit clock. For injury, record the selected spike/enemy entry with rings/shield and hurt routine through recovery. KiS2 ring-attack rebound does not itself prove intentional injury; its OOZ1 Aquis approach needs the separate route fixture above. |
-| `s2-combo-score` | [3339M](https://tasvideos.org/3339M) / [5385S](https://tasvideos.org/5385S), Sky Chase Knuckles no-jump chain; author claims 372900 maximum. | **Observed mismatch in stock-S2 normal scoring**, shared producer used by this family: actual kill 16 gives 1000 points instead of native 10000. N5 retains passing early-chain and rebound checks; it does not certify the full chain. | Native KiS2 SCZ entry through final enemy: each defeated slot/species, score award and chain word, jump/glide/landing events, plane standing state and final score. A forced jump/landing control must reset the chain. Stock S2 component scoring cannot certify the claimed KiS2 maximum. |
+| `s2-combo-score` | [3339M](https://tasvideos.org/3339M) / [5385S](https://tasvideos.org/5385S), Sky Chase Knuckles no-jump chain; author claims 372900 maximum. | **Component-only**, N5: the observed stock-S2 normal-score mismatch (kill 16: 1000 instead of native 10000) is corrected by the shared scoring-owner follow-up below. The restored real-enemy regression, early-chain and rebound checks do not certify the SCZ route or KiS2 maximum. | Native KiS2 SCZ entry through final enemy: each defeated slot/species, score award and chain word, jump/glide/landing events, plane standing state and final score. A forced jump/landing control must reset the chain. Stock S2 component scoring cannot certify the claimed KiS2 maximum. |
 
 ## Selected executable coverage
 
@@ -168,22 +173,21 @@ timing mode; these tests make no loading/lag-time claim. Ring sound was not test
 
 ## Observed normal-enemy score mismatch
 
-**Expected 10000, actual 1000 at kill 16.** The stock S2 ROM checks the incremented
+**Initial red, corrected by the follow-up below: expected 10000, actual 1000 at kill 16.** The stock S2 ROM checks the incremented
 `Chain_Bonus_counter` against `$20` in `Touch_KillEnemy (s2.asm:85514-85529)`;
 `Enemy_Points (s2.asm:85565)` supplies the earlier 100/200/500/1000 progression.
-The engine's normal destruction path calls `incrementBadnikChain()`, which stays
-at 1000. The separate powered-screen producer's sixteen-kill behavior does not
-cover normal touches. This test uses real Nebula destruction through a native-ROM
+At the test-only baseline, the engine's normal destruction path called
+`incrementBadnikChain()`, which stayed at 1000. The separate powered-screen
+producer's sixteen-kill behavior did not cover normal touches. This test uses real Nebula destruction through a native-ROM
 touch table, verifies every kill, and never invokes the score increment directly.
 It is a stock-S2 mismatch; KiS2's exact route maximum remains unverified.
 
-The failing diagnostic was **not weakened to expect 1000** and production was not
-changed. It was a temporary investigation, removed from the normal regression
-class after recording the failure so this test-only task does not introduce an
-always-red suite. Its complete body is preserved here: insert it into
-`TestTasS2EnemyContact` (it uses that class's unchanged `defeat` helper and setup),
-then use the focused command immediately below. This explicit diagnostic remains
-red until the normal-score owner is fixed in a separately authorized task.
+The original test-only slice **did not weaken the diagnostic to expect 1000**
+and left production unchanged. It removed this temporary failing method after
+recording the failure. The separately authorized scoring follow-up restores the
+complete body below to `TestTasS2EnemyContact`, using its unchanged `defeat`
+helper and setup, proves it red again against unchanged production, and fixes
+the normal-score owner. The command below is now the retained regression selector.
 
 ```java
 @Test
@@ -202,8 +206,9 @@ void sixteenthNormalKillAwardsTenThousandNativePoints() {
 python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=com.openggf.game.sonic2.objects.TestTasS2EnemyContact#sixteenthNormalKillAwardsTenThousandNativePoints' "-Dsonic2.rom.path=${OPENGGF_MAIN}/s2.gen" test
 ```
 
-That final single-method command is a reproduction instruction, not a claim that
-it was separately executed: the observed failure came from the six-case run above.
+In the initial test-only slice, that single-method command was a reproduction
+instruction; its observed failure came from the six-case run above. The follow-up
+actually executes the single-method red proof, as recorded below.
 Passing early-chain tests do not discharge this mismatch or the pending SCZ
 jump/landing/reset, KiS2 and maximum-score obligations.
 
@@ -220,7 +225,143 @@ Surefire XML/text reports are removed after inspection; the worktree remains for
 the parent's integration/cleanup.
 
 The parent owns shared changelog, discrepancy and central validation-index edits,
-combined integration and broad checks. This branch contains only S2 tests and this
-matrix. In particular any new mismatch below must be carried into the parent's
-shared discrepancy record; this worker does not edit it or change production to
-force a green run.
+combined integration and broad checks. The original slice contained only S2 tests
+and this matrix. The authorized follow-up additionally changes the shared scoring
+owner and focused scoring/rewind tests; it does not edit shared ledgers.
+
+## Scoring-owner follow-up — 2026-10-26
+
+The fix belongs in `AbstractPlayableSprite.incrementBadnikChain()`, reached by
+ordinary `DestructionEffects` scoring, the S2 Turtloid rider and Rexon head.
+`PoweredBadnikScoring` reaches the same captured counter through
+`incrementPoweredBadnikChain()`; that method now delegates to the normal owner.
+No touch, bounce, destruction, allocation or game-selection behavior changes.
+
+Immutable source proof, using the gitlinks listed at the top of this document
+(S1 `28872a46e2d4c94c5c4818cbd3c04e6eb17edb67`, S3K
+`8b2cf3c4178f2382f844da67798de4befc50c5e0`, and the S2 pin already recorded):
+
+- S1 `React_BadnikHit (_incObj/Sonic ReactToItem.asm:274-292)` and
+  `React_PointsCombo (_incObj/Sonic ReactToItem.asm:317-322)` give
+  100/200/500/1000, then 10000 when the updated unsigned word reaches `$20`.
+  Invincibility reaches that same routine; S1 has no separate powered-screen
+  scoring producer.
+- S2 `Touch_KillEnemy (s2.asm:85514-85529)` and
+  `Enemy_Points (s2.asm:85565)` use the identical threshold and table.
+  Invincibility/spindash/roll enter through `Touch_Enemy (s2.asm:85479-85488)`.
+- S3K `Touch_EnemyNormal (sonic3k.asm:20989-21007)` and powered
+  `HyperTouch_DestroyEnemy (sonic3k.asm:21403-21427)` use identical arithmetic.
+  All these paths add two to a **word**, look up the table using the old
+  counter capped at six, then test the incremented counter with unsigned `blo`.
+  There is no FixBugs-dependent scoring branch in these routines.
+
+Keep the existing snapshot field's unit as kills, half the native even word.
+It now wraps modulo `$8000` kills: the `$FFFE -> $0000` native transition awards
+1000 from the **old** capped index, and the following kills award 100/200/500.
+The wrap award comes from the old capped index even though the updated counter
+is zero. Saturation or an unbounded Java increment would disagree with the ROM.
+Both normal and powered paths now use this logic.
+
+Reset ownership is unchanged. S1
+`Sonic_ResetOnFloor (_incObj/01 Sonic.asm:1868-1872)`, S2
+`Sonic_ResetOnFloor_Part3 (s2.asm:38142-38147)` and
+`Tails_ResetOnFloor_Part3 (s2.asm:41033-41044)`, and S3K
+`loc_121D8 (sonic3k.asm:24405-24410)`,
+`loc_1565E (sonic3k.asm:29198-29203)` and
+`loc_17B6A (sonic3k.asm:32894-32899)` clear the native chain on landing.
+S2's shipped `fixBugs=0` omits the optional AI-Tails ownership check, so his
+landing can clear the shared native chain; the fixed branch restricts that reset.
+This bounded arithmetic fix retains the engine's existing per-player captured
+counter and separate smash-block `GameStateManager.itemBonus` storage. It does
+not establish native P1/P2 or enemy/block shared-counter parity, level-load
+lifecycle coverage, or a KiS2 route/maximum-score guarantee.
+
+The restored N5 method is byte-for-byte the preserved method body (indentation
+only). `TestBadnikChainScoring` adds nine ROM-free cases over real Sonic players:
+normal/powered 1–20 boundaries, unsigned high-word and wrap behavior, explicit
+reset, takeoff/native-control-restore retention versus floor-landing reset, and
+mixed normal/powered chains in both orders. One new case in
+`TestAbstractPlayableSpriteRewindCapture` captures naturally reached kill 15 and
+kill 32767, restores/replays normal then powered awards twice, and exercises a
+landing/reset between replays. No new snapshot field or format is introduced.
+
+### Follow-up execution record
+
+All commands below ran in `t3-417fb95a` on `391b671e3` plus this follow-up's
+uncommitted inputs, with `JAVA_HOME=/usr/lib/jvm/java-25-openjdk` and
+`LUA_BIN=/usr/bin/lua5.4`. `${OPENGGF_MAIN}` has the portable meaning above;
+the S2 property expanded to the existing original `s2.gen`, CRC32 `7B905383`.
+The measurement-hazard table was read before reporting, and each completed
+run's exact Surefire identities, assertions and skips were inspected.
+
+1. Unchanged production, restored original method only: **1 test, 1 failure,
+   0 errors, 0 skips**, completed `2026-10-26T10:55:04Z`, Maven `1:28`;
+   queue wait `0s`. The failure was exactly
+   `sixteenthNormalKillAwardsTenThousandNativePoints`: expected 10000, actual
+   1000 after all sixteen `defeat` calls verified real Nebula destruction.
+
+   ```bash
+   python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=com.openggf.game.sonic2.objects.TestTasS2EnemyContact#sixteenthNormalKillAwardsTenThousandNativePoints' "-Dsonic2.rom.path=${OPENGGF_MAIN}/s2.gen" test
+   ```
+
+2. Unchanged production, new owner and rewind regressions: **10 tests,
+   6 failures, 0 errors, 0 skips**, completed `2026-10-26T10:56:51Z`, Maven
+   `33.538s`; queue wait `0s`. Failed identities in `TestBadnikChainScoring`:
+   `normalAndPoweredAwardsRespectTheFifteenSixteenBoundary(false)` (kill 16),
+   `wordWrapUsesTheOldWordForTheWrapAwardThenRestartsEarlyAwards(false)`
+   (high unsigned word still got 1000), that same method with `true`
+   (wrap got 10000 instead of 1000),
+   `landingResetsTheChainButTakeoffAndNativeControlRestoreRetainIt(false)`
+   (retained chain kill 16), and
+   `normalAndPoweredKillsContributeToTheSameChainInEitherOrder`
+   (normal kill 16 after powered kills). The sixth failure was
+   `TestAbstractPlayableSpriteRewindCapture#rewindReplaysNormalAndPoweredAwardsAcrossBonusAndWordWrapBoundaries`
+   at the restored normal kill 16. The two explicit-reset cases, powered
+   boundary case and powered landing/control case passed.
+
+   ```bash
+   python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=com.openggf.sprites.playable.TestBadnikChainScoring,com.openggf.sprites.playable.TestAbstractPlayableSpriteRewindCapture#rewindReplaysNormalAndPoweredAwardsAcrossBonusAndWordWrapBoundaries' test
+   ```
+
+3. Fixed production, complete focused selection: **55 tests passed, 0 failures,
+   0 errors, 0 skips**, completed `2026-10-26T10:58:51Z`, Maven `1:34`;
+   queue wait `0s`. Exact class counts: N5 `TestTasS2EnemyContact` 6,
+   `TestBadnikChainScoring` 9, `TestAbstractPlayableSpriteRewindCapture` 15,
+   `TestPoweredScreenAttack` 9, `TestDestructionEffects` 6,
+   `TestTurtloidBadnikInstance` 5, `TestPlayableGroundTransitions` 5.
+   This includes all ten red/control cases from run 2 and the original ROM-backed
+   failing method from run 1. Existing four bounce cases and early-chain awards
+   remain unchanged. Only comment/citation formatting and this evidence document
+   changed after the completed green run; executable production/tests are unchanged.
+
+   ```bash
+   python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=com.openggf.game.sonic2.objects.TestTasS2EnemyContact,com.openggf.sprites.playable.TestBadnikChainScoring,com.openggf.sprites.playable.TestAbstractPlayableSpriteRewindCapture,com.openggf.level.objects.TestPoweredScreenAttack,com.openggf.level.objects.TestDestructionEffects,com.openggf.game.sonic2.objects.badniks.TestTurtloidBadnikInstance,com.openggf.sprites.playable.TestPlayableGroundTransitions' "-Dsonic2.rom.path=${OPENGGF_MAIN}/s2.gen" test
+   ```
+
+These are bounded component checks, not smoke/full-suite or movie playback.
+The parent owns combined change-based validation, the shared changelog/index
+and any shared discrepancy/status updates. The stock-S2 kill-16 mismatch is
+resolved; KiS2 SCZ and the native global-counter sharing limits above remain
+outside the demonstrated scope. No trace frontier was run or moved.
+Consumed Surefire XML/text diagnostics were inspected and removed after each run;
+no category-runner diagnostics or child jobs were created.
+
+
+### Follow-up static checks and inherited citation debt
+
+```bash
+python3 tools/disasm/disasm_citations.py check --strict src/test/java/com/openggf/sprites/playable/TestBadnikChainScoring.java src/test/java/com/openggf/game/sonic2/objects/TestTasS2EnemyContact.java docs/architecture/validation/2026-10-26-tas-tricks-s2.md
+git diff --cached --check
+```
+
+Strict citation checking of the two scoring test files and this matrix passes
+with 29 anchored citations (24 `ok`, 5 `near`). Checking all of the changed
+production file also reports **11 stale citations and 1 missing-file citation**
+elsewhere in that large pre-existing file. A bounded in-memory comparison using
+`disasm_citations.py`'s parser/classifier against
+`git show 391b671e383e4f329f278aa7b174c39c1bdd1d22:src/main/java/com/openggf/sprites/playable/AbstractPlayableSprite.java`
+confirmed the identical failure multiset by kind, target path/range and detail;
+none was added or worsened. All four added production scoring citations resolve
+and anchor (`ok` or `near`) at the pinned revisions. Those unrelated baseline
+citations were left unchanged. The restored original regression body was also
+mechanically matched to the preserved fenced body, allowing indentation only.

@@ -2424,6 +2424,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 angle = (byte) currentAngle;
         }
 
+        // Kill count: half the native even word, retained in rewind snapshots.
         private int badnikChainCounter = 0;
 
         public void resetBadnikChain() {
@@ -2431,27 +2432,27 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         public int incrementBadnikChain() {
-                badnikChainCounter++;
-                // 1st: 100, 2nd: 200, 3rd: 500, 4th+: 1000
-                return switch (badnikChainCounter) {
-                        case 1 -> 100;
-                        case 2 -> 200;
-                        case 3 -> 500;
+                // React_BadnikHit (_incObj/Sonic ReactToItem.asm:278-292),
+                // Touch_KillEnemy (s2.asm:85514-85529),
+                // Touch_EnemyNormal (sonic3k.asm:20989-21007) and
+                // HyperTouch_DestroyEnemy (sonic3k.asm:21403-21421) share this arithmetic.
+                int previousKills = badnikChainCounter;
+                // Native addq.w #2 wraps after 32768 kills. Compare the updated
+                // word unsigned, but index the early-award table with the old one.
+                badnikChainCounter = (previousKills + 1) & 0x7FFF;
+                if (badnikChainCounter >= 16) {
+                        return 10_000;
+                }
+                return switch (previousKills) {
+                        case 0 -> 100;
+                        case 1 -> 200;
+                        case 2 -> 500;
                         default -> 1000;
                 };
         }
 
         int incrementPoweredBadnikChain() {
-                badnikChainCounter++;
-                if (badnikChainCounter >= 16) {
-                        return 10_000;
-                }
-                return switch (badnikChainCounter) {
-                        case 1 -> 100;
-                        case 2 -> 200;
-                        case 3 -> 500;
-                        default -> 1000;
-                };
+                return incrementBadnikChain();
         }
 
         public byte getTopSolidBit() {
