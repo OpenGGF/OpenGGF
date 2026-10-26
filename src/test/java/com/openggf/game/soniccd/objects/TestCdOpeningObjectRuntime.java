@@ -9602,4 +9602,423 @@ class TestCdOpeningObjectRuntime {
             assertEquals(17,a.openingObjects().sectionArtSources().sources().size());
         }
     }
+
+    // BEGIN Disc09 Runtime R1: tests-first SOURCE-ONLY; every added case is UNRUN.
+    // N 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff, Spinning Disc/Main.asm:7-223;
+    // Object Solid.asm:15-146,188-479. Constructed component cuts are NOT controller3259.
+    // Reflection below inspects shape or calls ports WITHOUT origin; it never mints an invocation,
+    // phase, Snapshot or CaptureOwner. The actual cached Runtime always uses authenticated assets.
+    // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>
+
+    @Test void disc09OnlyAddsTypedSoundAndOnePrivateCachedBodyWithoutChangingExistingPartitions() throws Exception {
+        assertEquals(1, CdOpeningObjectRuntime.SpinningDiscFm.class.getRecordComponents().length);
+        assertEquals(CdSpinningDisc.FmSound.class, CdOpeningObjectRuntime.SpinningDiscFm.class.getRecordComponents()[0].getType());
+        assertThrows(NullPointerException.class, () -> new CdOpeningObjectRuntime.SpinningDiscFm(null));
+        assertEquals(0xA0, new CdOpeningObjectRuntime.SpinningDiscFm(CdSpinningDisc.FmSound.FM_A0).sound().nativeId());
+        var bodies = java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredFields())
+                .filter(v -> v.getType() == CdSpinningDisc.class).toList();
+        assertEquals(1, bodies.size()); assertTrue(java.lang.reflect.Modifier.isPrivate(bodies.getFirst().getModifiers()));
+        assertTrue(java.lang.reflect.Modifier.isFinal(bodies.getFirst().getModifiers()));
+        var origin = CdOpeningObjectRuntime.class.getDeclaredField("activeSpinningDiscInvocation");
+        assertTrue(java.lang.reflect.Modifier.isPrivate(origin.getModifiers()));
+        assertTrue(java.lang.reflect.Modifier.isTransient(origin.getModifiers()));
+        assertTrue(java.lang.reflect.Modifier.isPrivate(origin.getType().getModifiers()));
+        assertEquals(List.of(2), java.util.Arrays.stream(origin.getType().getDeclaredConstructors())
+                .map(java.lang.reflect.Constructor::getParameterCount).toList());
+        assertEquals(20, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+        assertEquals(3, CdOpeningObjectRuntime.CheckpointBindings.class.getRecordComponents().length);
+        assertEquals(List.of(11), java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
+                .filter(m -> m.getName().equals("usaR11aOpeningDevEmptySatPreloadedArt")).map(java.lang.reflect.Method::getParameterCount).toList());
+        assertEquals(List.of(14), java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
+                .filter(m -> m.getName().equals("usaR11aRestartDevEmptySatPreloadedArt")).map(java.lang.reflect.Method::getParameterCount).toList());
+        assertTrue(java.util.Arrays.stream(CdOpeningObjectRuntime.Snapshot.class.getDeclaredFields()).noneMatch(v ->
+                v.getType() == CdSpinningDisc.class || v.getType() == origin.getType()
+                        || v.getType() == CdSpinningDisc.PlayerCut.class || v.getType() == CdSpinningDisc.PlayerCall.class
+                        || v.getType() == CdSpinningDisc.SolidCall.class || v.getType() == CdSpinningDisc.FmCall.class));
+        String[] names = {"readSpinningDiscPlayer", "commitSpinningDiscSolid", "commitSpinningDiscPlayer", "playSpinningDiscFm"};
+        Class<?>[][] args = {{}, {CdSpinningDisc.SolidCall.class}, {CdSpinningDisc.PlayerCall.class}, {CdSpinningDisc.FmCall.class}};
+        for (int i = 0; i < names.length; i++) assertTrue(java.lang.reflect.Modifier.isPrivate(
+                CdOpeningObjectRuntime.class.getDeclaredMethod(names[i], args[i]).getModifiers()));
+    }
+
+    @Test void disc09InitAssignsNativeHeaderThenSharedAnimationAndDrawWithoutAcquiringPlayer() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var p = f.runtime.placement().pool();
+            var input = disc09Image(f, p.state(40), 0, 0xFF, 0x61, 0x100, 0x780)
+                    .moveByte(WIDTH, 0xE1).moveByte(Y_RADIUS, 0xE2).moveByte(PRIORITY, 0xE3).moveWord(TILE, 0xE4E5)
+                    .moveLong(MAPPINGS, 0xDEADBEEF).moveByte(ANIMATION, 0).moveByte(PREVIOUS_ANIMATION, 0xFF)
+                    .moveByte(ANIMATION_FRAME, 0xE6).moveByte(ANIMATION_TIME, 0xE7);
+            p.write(input); var before = p.capture().slots(); var player = f.frame.state(); var env = f.frame.environment();
+            var clock = f.frame.vIntClock(); var sounds = f.runtime.lastSoundRequests(); var cached = checkpointGet(f.runtime, "spinningDisc");
+            var a = CdSpinningDisc.Assets.fromObjectAssets(f.assets.openingObjects());
+            var expected = disc09Animated(input.addByte(ROUTINE, 2).moveByte(SPRITE_FLAGS, 4).moveByte(PRIORITY, 4)
+                    .moveLong(MAPPINGS, a.mappingAddressBits()).moveWord(TILE,
+                            com.openggf.game.soniccd.level.CdR11aObjectAssets.decodeTileWord(a.objectTileIds().copy(), 6, 0))
+                    .moveByte(WIDTH, 16).moveByte(Y_RADIUS, 8), a);
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(expected, p.state(40)); assertSame(player, f.frame.state()); assertSame(env, f.frame.environment());
+            assertEquals(clock, f.frame.vIntClock()); assertEquals(sounds, f.runtime.lastSoundRequests());
+            platform21OtherImages(before, p, 40); disc09Retired(f); assertSame(cached, checkpointGet(f.runtime, "spinningDisc"));
+            var sat = f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+            assertTrue(sat.provenance().stream().anyMatch(v -> v.slotRef().wholeIndex() == 40));
+            assertEquals(0x85, p.state(40).spriteFlags());
+        }
+    }
+
+    @Test void disc09NativeTimeStopSkipsAnimationButStillRunsInitAndGuardedDraw() throws Exception {
+        try (var f = new Fixture(new CdRingGlobals(0, 3, 0, 0, 0, 0x100, 0, 0))) {
+            springDeviceCut(f); var p = f.runtime.placement().pool();
+            var source = disc09Image(f, p.state(40), 0, 0xFF, 0, 0x100, 0x780)
+                    .moveByte(ANIMATION, 0xEE).moveByte(PREVIOUS_ANIMATION, 0xDD).moveByte(ANIMATION_FRAME, 0xCC)
+                    .moveByte(ANIMATION_TIME, 0xBB).moveByte(MAP_FRAME, 2);
+            p.write(source); f.runtime.runDynamicSlotsAfterReservedSlots(); var after = p.state(40);
+            assertEquals(0x100, f.runtime.ringGlobals().timeStopTimer()); assertEquals(2, after.routine());
+            assertEquals(4, after.spriteFlags()); assertEquals(16, after.unsignedByte(WIDTH)); assertEquals(8, after.unsignedByte(Y_RADIUS));
+            assertEquals(List.of(0xEE, 0xDD, 0xCC, 0xBB, 2), List.of(after.unsignedByte(ANIMATION), after.unsignedByte(PREVIOUS_ANIMATION),
+                    after.unsignedByte(ANIMATION_FRAME), after.unsignedByte(ANIMATION_TIME), after.unsignedByte(MAP_FRAME)));
+            assertTrue(f.runtime.finishAfterCamera(POST).provenance().stream().anyMatch(v -> v.slotRef().wholeIndex() == 40));
+            f.runtime.finishOrdinaryTail(); disc09Retired(f);
+        }
+    }
+
+    @Test void disc09ActualPlainSolidOrbitPreservesFullFrameNonwritesAndReleasesRealOtherSlot() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var p = f.runtime.placement().pool();
+            p.write(p.state(98).moveByte(FLAGS, 0xED).moveWord(X, 0xCAFE));
+            var source = disc09Contact(f, 98, 8, 0xA0, 8, 0, 0, 0x40);
+            var before = f.frame.state(); var env = f.frame.environment(); var images = p.capture().slots(); var clock = f.frame.vIntClock();
+            var solid = assertInstanceOf(CdSolidObject.Completed.class, disc09Outcome(f, source)).completedResult();
+            assertEquals(CdSolidObject.Entry.SOLID_OBJECT, solid.entry()); assertEquals(1, solid.d0().orElseThrow());
+            assertEquals(1, solid.otherSlots().size()); var expectedSolid = f.frame.prepareObjectSolidResult(tunnelDoorPlayer(f), tunnelDoorGlobals(f), solid);
+            f.runtime.runDynamicSlotsAfterReservedSlots(); var after = f.frame.state(); var m = after.motion();
+            assertEquals(8, after.rotationAngle()); assertEquals(17, after.rotationDistance()); assertEquals(0xA1, m.playerControl());
+            assertEquals(0x2D, m.animation()); assertEquals(40, after.objectLinks().standObject());
+            assertEquals(0xBEEF, m.centreX16_16() & 0xFFFF); assertEquals(0x1234, m.centreY16_16() & 0xFFFF);
+            assertEquals(before.header(), after.header()); assertEquals(before.timers(), after.timers()); assertEquals(before.history(), after.history());
+            assertEquals(before.animation().timer(), after.animation().timer()); assertEquals(before.animation().mapFrame(), after.animation().mapFrame());
+            assertEquals(CdSpinningDisc.Assets.fromObjectAssets(f.assets.openingObjects()).playerFrames().unsignedByte(0), after.animation().scriptIndex());
+            assertEquals(env.controls().rawHeld(), f.frame.environment().controls().logicalHeld());
+            assertEquals(env.controls().rawTap(), f.frame.environment().controls().logicalTap());
+            assertEquals(0xFE, f.frame.environment().controls().controlLocked());
+            assertEquals(expectedSolid.finalEnvironment().movement(), f.frame.environment().movement());
+            assertEquals(env.globals(), f.frame.environment().globals()); assertEquals(clock, f.frame.vIntClock());
+            assertEquals(images.get(98 - 32).moveByte(FLAGS, 0xE5), p.state(98));
+            for (var image : images) if (image.identity().wholeIndex() != 40 && image.identity().wholeIndex() != 98)
+                assertEquals(image, p.state(image.identity().wholeIndex()));
+            assertTrue(f.runtime.lastSoundRequests().stream().noneMatch(CdOpeningObjectRuntime.SpinningDiscFm.class::isInstance)); disc09Retired(f);
+        }
+    }
+
+    @Test void disc09NormalJumpUsesTypedFmOnceAndKeepsEveryEarlierNativePrefix() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var source = disc09Contact(f, 40, 8, 0xA0, 12, 0x10, 0, 0);
+            var before = f.frame.state(); var sounds = f.runtime.lastSoundRequests();
+            f.runtime.runDynamicSlotsAfterReservedSlots(); var after = f.frame.state(); var m = after.motion();
+            assertEquals(0, m.playerControl()); assertEquals(1, m.playerJump()); assertEquals(0, m.stick());
+            assertEquals(14, m.yRadius()); assertEquals(7, m.xRadius()); assertEquals(2, m.animation());
+            assertEquals(0x400 - 0x680, m.yVelocity()); assertEquals(0x123, m.xVelocity());
+            assertEquals(0x0E, m.flags() & 0x3E); assertEquals(0x55, m.charge()); assertEquals(0x4567, m.moveLock());
+            assertEquals(before.header(), after.header()); assertEquals(before.timers(), after.timers()); assertEquals(before.history(), after.history());
+            assertEquals(40, after.objectLinks().standObject()); assertEquals(before.objectLinks().pushObject(), after.objectLinks().pushObject());
+            assertEquals(0xBEEF, m.centreX16_16() & 0xFFFF); assertEquals(0x1234, m.centreY16_16() & 0xFFFF);
+            assertEquals((source.centreY() - 27 + 5) & 0xFFFF, m.centreY16_16() >>> 16);
+            var expected = new ArrayList<CdOpeningObjectRuntime.SoundRequest>(sounds);
+            expected.add(new CdOpeningObjectRuntime.SpinningDiscFm(CdSpinningDisc.FmSound.FM_A0));
+            assertEquals(expected, f.runtime.lastSoundRequests()); disc09Retired(f);
+        }
+    }
+
+    @Test void disc09MiniWaterAndAlreadyRollingBranchesKeepIndependentAngleDistanceAndCursor() throws Exception {
+        for (int mini : List.of(0, 1)) try (var f = new Fixture()) {
+            springDeviceCut(f); var source = disc09Contact(f, 40, 12, 0xA1, 0, 0x70, mini, 8 | 0x40);
+            var before = f.frame.state();
+            var y = ((source.centreY() - 27) << 16) | (before.motion().centreY16_16() & 0xFFFF);
+            f.runtime.runDynamicSlotsAfterReservedSlots(); var after = f.frame.state();
+            assertEquals(0xDF, after.rotationAngle()); assertEquals(0x2A, after.rotationDistance());
+            assertEquals(mini == 0 ? 19 : 10, after.motion().yRadius()); assertEquals(mini == 0 ? 9 : 5, after.motion().xRadius());
+            assertEquals(0x10, after.motion().flags() & 0x10); assertEquals(0, after.motion().playerControl());
+            assertEquals(y, after.motion().centreY16_16()); assertEquals(0, after.motion().animation(), "old control bit skips acquisition animation");
+            assertEquals(before.animation().mapFrame(), after.animation().mapFrame()); assertEquals(before.animation().timer(), after.animation().timer());
+            assertEquals(CdSpinningDisc.Assets.fromObjectAssets(f.assets.openingObjects()).playerFrames().unsignedByte(13), after.animation().scriptIndex());
+            assertEquals(1, f.runtime.lastSoundRequests().stream().filter(CdOpeningObjectRuntime.SpinningDiscFm.class::isInstance).count()); disc09Retired(f);
+        }
+    }
+
+    @Test void disc09ZeroSolidAdoptsGetOffChargeStopWithoutAcquisitionOrDiscFm() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var p = f.runtime.placement().pool();
+            var source = disc09Image(f, p.state(40), 2, 0x84, 8, 0x100, 0x780); p.write(source);
+            disc09SeedPlayer(f, 0x0300BEEF, 0x07801234, 8, 40, 0xA1, 0, 0, 0);
+            var before = f.frame.state(); var oldSounds = f.runtime.lastSoundRequests();
+            var result = assertInstanceOf(CdSolidObject.Completed.class, disc09Outcome(f, source)).completedResult();
+            assertEquals(0, result.d0().orElseThrow()); assertFalse(result.fmRequests().isEmpty());
+            var prepared = f.frame.prepareObjectSolidResult(tunnelDoorPlayer(f), tunnelDoorGlobals(f), result);
+            f.runtime.runDynamicSlotsAfterReservedSlots(); assertEquals(prepared.finalState(), f.frame.state());
+            assertEquals(prepared.finalEnvironment(), f.frame.environment()); assertEquals(before.rotationAngle(), f.frame.state().rotationAngle());
+            var expected = new ArrayList<CdOpeningObjectRuntime.SoundRequest>(oldSounds);
+            for (var sound : result.fmRequests()) expected.add(new CdOpeningObjectRuntime.PlayerSound(new CdPlayerFrameRuntime.ContactFmSound(sound)));
+            assertEquals(expected, f.runtime.lastSoundRequests()); assertEquals(0, f.frame.state().objectLinks().standObject()); disc09Retired(f);
+        }
+    }
+
+    @Test void disc09StoppedSolidPublishesActualPrefixThenClosesRuntimeAndRetiresReadScope() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var source = disc09Contact(f, 1, 8, 0xA0, 0, 0, 0, 0);
+            var p = f.runtime.placement().pool(); var cut = p.capture();
+            var stopped = assertInstanceOf(CdSolidObject.NativeStopped.class, disc09Outcome(f, source));
+            assertEquals(CdSolidObject.StopSite.STAND_RELEASE, stopped.stop().site());
+            var prepared = f.frame.prepareObjectSolidPrefix(tunnelDoorPlayer(f), tunnelDoorGlobals(f), stopped.prefix());
+            var expectedPool = CdObjectPool.overlay(cut, List.of(stopped.prefix().object()));
+            var failure = assertThrows(CdSolidObject.UnsupportedSolidObject.class, f.runtime::runDynamicSlotsAfterReservedSlots);
+            assertEquals(1, failure.slotByte()); assertEquals(CdSolidObject.Routine.STAND_ON_OBJECT, failure.routine()); assertNull(failure.getCause());
+            assertEquals(expectedPool.slots(), p.capture().slots()); assertEquals(prepared.finalState(), f.frame.state());
+            assertEquals(prepared.finalEnvironment(), f.frame.environment()); assertEquals(0xD7, f.frame.state().rotationAngle());
+            assertTrue(f.runtime.lastSoundRequests().stream().noneMatch(CdOpeningObjectRuntime.SpinningDiscFm.class::isInstance));
+            disc09Closed(f); disc09Retired(f); disc09Reject(f, "readSpinningDiscPlayer", new Class<?>[0]);
+        }
+    }
+
+    @Test void disc09LaterUnknownDispatchRetainsJumpFmAndAllCompletedDirectStores() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); disc09Contact(f, 40, 8, 0xA0, 8, 0x10, 0, 0);
+            var p = f.runtime.placement().pool(); p.write(p.state(43).moveByte(ID, 0x7E));
+            var failure = assertThrows(UnsupportedOperationException.class, f.runtime::runDynamicSlotsAfterReservedSlots);
+            assertTrue(failure.getMessage().contains("43")); assertTrue(failure.getMessage().contains("7e"));
+            assertEquals(0, f.frame.state().motion().playerControl()); assertEquals(2, f.frame.state().motion().animation());
+            assertEquals(1, f.runtime.lastSoundRequests().stream().filter(CdOpeningObjectRuntime.SpinningDiscFm.class::isInstance).count());
+            disc09Closed(f); disc09Retired(f);
+        }
+    }
+
+    @Test void disc09AnimationFailureAfterFinalHitboxKeepsTypedFmAndTerminalPrefixWithoutResume() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var source = disc09Contact(f, 40, 8, 0xA0, 0, 0x10, 0, 0);
+            f.runtime.placement().pool().write(source.moveByte(ANIMATION, 1).moveByte(PREVIOUS_ANIMATION, 1).moveByte(ANIMATION_TIME, 0));
+            var failure = assertThrows(CdSpinningDisc.UnsupportedSpinningDisc.class, f.runtime::runDynamicSlotsAfterReservedSlots);
+            assertEquals(CdSpinningDisc.UnsupportedBoundary.ANIMATION_DIRECTORY_ENTRY, failure.boundary());
+            assertEquals(14, f.frame.state().motion().yRadius()); assertEquals(2, f.frame.state().motion().animation());
+            assertEquals(0, f.frame.state().motion().playerControl()); assertEquals(0xFF, f.slot(40).unsignedByte(ANIMATION_TIME));
+            assertEquals(1, f.runtime.lastSoundRequests().stream().filter(CdOpeningObjectRuntime.SpinningDiscFm.class::isInstance).count());
+            disc09Closed(f); disc09Retired(f);
+        }
+    }
+
+    @Test void disc09UnownedRoutinePreservesItsImageAndStopsBeforeAnimationDrawOrPlayerWrites() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var p = f.runtime.placement().pool(); var source = disc09Image(f, p.state(40), 4, 0x84, 0x63, 0x100, 0x780);
+            p.write(source); var player = f.frame.state(); var env = f.frame.environment(); var images = p.capture().slots(); var sounds = f.runtime.lastSoundRequests();
+            var failure = assertThrows(CdSpinningDisc.UnsupportedSpinningDisc.class, f.runtime::runDynamicSlotsAfterReservedSlots);
+            assertEquals(CdSpinningDisc.UnsupportedBoundary.ROUTINE_DISPATCH, failure.boundary()); assertEquals(images, p.capture().slots());
+            assertSame(player, f.frame.state()); assertSame(env, f.frame.environment()); assertEquals(sounds, f.runtime.lastSoundRequests());
+            disc09Closed(f); disc09Retired(f);
+        }
+    }
+
+    @Test void disc09PublicSameValueAndForeignCallsHaveNoAuthorityBeforeOrAfterActualReturn() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); f.makePlayerAbsent(); var p = f.runtime.placement().pool(); p.write(disc09Image(f, p.state(40), 2, 0x84, 0, 0x100, 0x780));
+            for (int visit = 0; visit < 2; visit++) {
+                var source = p.state(40); var cut = p.capture(); var pair = new CdSpinningDisc.PlayerCut(f.frame.state(), f.frame.environment());
+                var same = new CdSpinningDisc.PlayerResult(pair.state(), pair.environment(), List.of());
+                var call = new CdSpinningDisc.PlayerCall(cut, source, pair, same);
+                disc09Reject(f, "readSpinningDiscPlayer", new Class<?>[0]);
+                disc09Reject(f, "commitSpinningDiscPlayer", new Class<?>[]{CdSpinningDisc.PlayerCall.class}, call);
+                disc09Reject(f, "commitSpinningDiscPlayer", new Class<?>[]{CdSpinningDisc.PlayerCall.class}, call);
+                disc09Reject(f, "commitSpinningDiscSolid", new Class<?>[]{CdSpinningDisc.SolidCall.class},
+                        new CdSpinningDisc.SolidCall(cut, source, pair, disc09Outcome(f, source)));
+                disc09Reject(f, "playSpinningDiscFm", new Class<?>[]{CdSpinningDisc.FmCall.class},
+                        new CdSpinningDisc.FmCall(cut, source, pair, CdSpinningDisc.FmSound.FM_A0));
+                var foreign = new CdObjectPool(); var other = foreign.state(40).moveByte(ID, 9).moveByte(ROUTINE, 2); foreign.write(other);
+                disc09Reject(f, "commitSpinningDiscPlayer", new Class<?>[]{CdSpinningDisc.PlayerCall.class},
+                        new CdSpinningDisc.PlayerCall(foreign.capture(), other, pair, same));
+                if (visit == 0) f.runtime.runDynamicSlotsAfterReservedSlots();
+            }
+            disc09Retired(f);
+        }
+    }
+
+    @Test void disc09DirectFramePortChecksEntireStateEnvironmentAndUndeclaredNonwritesBeforeAssignment() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var s = f.frame.state(); var e = f.frame.environment();
+            var a = s.animation(); var altered = new CdPlayerBody.State(s.motion(), new CdPlayerBody.AnimationCursor(a.scriptIndex(), a.timer() ^ 1, a.mapFrame()),
+                    s.header(), s.timers(), s.history(), s.rotationDistance(), s.objectLinks(), s.rotationAngle());
+            var stale = new CdSpinningDisc.PlayerResult(altered, e, List.of());
+            assertThrows(IllegalArgumentException.class, () -> f.frame.validateObjectDiscPlayerResult(altered, e, stale));
+            assertThrows(IllegalArgumentException.class, () -> f.frame.validateObjectDiscPlayerResult(s, e, stale));
+            var c = e.controls(); var other = new CdPlayerBody.Environment(e.movement(),
+                    new CdPlayerBody.Controls(c.rawHeld(), c.rawTap(), c.logicalHeld() ^ 1, c.logicalTap(), c.controlLocked()), e.globals(), e.dynamicSlots());
+            var otherResult = new CdSpinningDisc.PlayerResult(s, other, List.of());
+            assertThrows(IllegalArgumentException.class, () -> f.frame.applyObjectDiscPlayerResult(s, other, otherResult));
+            assertThrows(IllegalArgumentException.class, () -> f.frame.applyObjectDiscPlayerResult(s, e, otherResult));
+            assertSame(s, f.frame.state()); assertSame(e, f.frame.environment());
+            var noop = new CdSpinningDisc.PlayerResult(s, e, List.of());
+            f.frame.validateObjectDiscPlayerResult(s, e, noop); // Value acceptance deliberately supplies no Runtime entitlement.
+            disc09Reject(f, "readSpinningDiscPlayer", new Class<?>[0]);
+        }
+    }
+
+    @Test void disc09PreparedSolidIsBuiltBeforePoolAndRejectsAStaleFullStatePairWithoutPublication() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var source = disc09Contact(f, 40, 8, 0xA0, 0, 0, 0, 0); var p = f.runtime.placement().pool();
+            var result = assertInstanceOf(CdSolidObject.Completed.class, disc09Outcome(f, source)).completedResult();
+            var actor = f.frame.captureActor(); var shared = f.frame.captureShared(); var cut = p.capture();
+            var prepared = f.frame.prepareObjectSolidResult(tunnelDoorPlayer(f), tunnelDoorGlobals(f), result);
+            assertSame(actor.state(), f.frame.state()); assertEquals(cut.slots(), p.capture().slots());
+            var s = actor.state(); var changed = new CdPlayerBody.State(s.motion(), s.animation(), s.header(), s.timers(), s.history(),
+                    s.rotationDistance(), s.objectLinks(), s.rotationAngle() ^ 1);
+            f.frame.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(), changed, actor.display()));
+            assertThrows(IllegalArgumentException.class, () -> f.frame.validatePreparedObjectSolidPublication(prepared));
+            assertThrows(IllegalArgumentException.class, () -> f.frame.applyPreparedObjectSolidPublication(prepared));
+            assertSame(changed, f.frame.state()); assertEquals(shared.environment(), f.frame.environment()); assertEquals(cut.slots(), p.capture().slots());
+        }
+    }
+
+    @Test void disc09RawWarpDirectionUsesActualPreScrollCutAndOnlyItsNativeSavedByte() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); f.makePlayerAbsent(); monitorEnvironment(f, 0x81, 0xFF, 0, 0);
+            var placement = f.runtime.placement(); var p = placement.pool();
+            for (int period = 0; period < 3; period++) placement.bsetSavedFlag(3, period, CdObjectPlacementRuntime.SavedBit.LOADED);
+            p.write(disc09Image(f, p.state(40), 0, 0, 0, 0x100, 0x780).moveByte(SAVED_FLAGS_ID, 3));
+            f.runtime.runDynamicSlotsAfterReservedSlots(); assertEquals(0, p.state(40).id());
+            assertEquals(0x80, placement.savedFlag(3, 0)); assertEquals(0x80, placement.savedFlag(3, 1)); assertEquals(0, placement.savedFlag(3, 2));
+            assertEquals(0x81, f.frame.environment().movement().gates().timeZone());
+            assertEquals(0xFF, f.frame.environment().movement().gates().timeWarpDirection()); disc09Retired(f);
+        }
+    }
+
+    @Test void disc09HealthyClosedCutRestoresAndReplaysWithoutNewBanksSourcesOrInvocationState() throws Exception {
+        try (var f = new Fixture()) {
+            f.firstCycle(); f.makePlayerAbsent(); var p = f.runtime.placement().pool(); p.clearDynamicSlots();
+            p.write(disc09Image(f, p.state(40), 0, 0, 0, 0x100, 0x780));
+            var cut = f.runtime.captureClosedCut(); var actor = f.frame.captureActor(); var shared = f.frame.captureShared();
+            var cached = checkpointGet(f.runtime, "spinningDisc"); CdOpeningObjectRuntime.Snapshot expected = null;
+            CdPlayerFrameRuntime.ActorState expectedActor = null; CdPlayerFrameRuntime.SharedState expectedShared = null;
+            for (int replay = 0; replay < 2; replay++) {
+                if (replay != 0) { f.frame.validateActorRestore(actor); f.frame.validateSharedRestore(shared); f.runtime.validateRestore(cut);
+                    f.frame.restoreActor(actor); f.frame.restoreShared(shared); f.runtime.restore(cut); }
+                monitorBegin(f, 2); f.runtime.runDynamicSlotsAfterReservedSlots(); monitorFinish(f); disc09Retired(f);
+                assertSame(cached, checkpointGet(f.runtime, "spinningDisc")); assertEquals(17, f.assets.openingObjects().sectionArtSources().sources().size());
+                assertEquals(20, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+                if (replay == 0) { expected = f.runtime.captureClosedCut(); expectedActor = f.frame.captureActor(); expectedShared = f.frame.captureShared(); }
+                else { assertMonitorSnapshot(expected, f.runtime.captureClosedCut()); assertEquals(expected.sectionArtState(), f.runtime.sectionArtState());
+                    assertEquals(expectedActor, f.frame.captureActor()); assertEquals(expectedShared, f.frame.captureShared()); }
+            }
+        }
+    }
+
+    @Test void disc09ComponentStoppedCallRethrowsIdenticalOriginalAfterPreparedPrefixAndVerificationReads() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); disc09Contact(f, 1, 8, 0xA0, 0, 0, 0, 0);
+            var original = new RuntimeException[1]; var reads = new int[1]; var publications = new int[1];
+            var body = new CdSpinningDisc(f.runtime.placement(), CdSpinningDisc.Assets.fromObjectAssets(f.assets.openingObjects()),
+                    new com.openggf.game.soniccd.player.CdPlayerMath(f.assets.player()), CdSolidObject.fromAssets(f.assets), call -> {
+                        var stopped = assertInstanceOf(CdSolidObject.NativeStopped.class, call.outcome()); original[0] = stopped.stop().originalException();
+                        disc09ComponentSolid(f, call); publications[0]++;
+                    }, new CdSpinningDisc.PlayerOwner() {
+                        @Override public CdSpinningDisc.PlayerCut read() { reads[0]++; return new CdSpinningDisc.PlayerCut(f.frame.state(), f.frame.environment()); }
+                        @Override public void commit(CdSpinningDisc.PlayerCall call) { fail("stopped plain Solid has no direct stores"); }
+                    }, call -> fail("stopped plain Solid has no Disc FM"), (pool, identity) -> fail("stopped prefix has no wrapper Draw"));
+            var thrown = assertThrows(RuntimeException.class, () -> body.run(40, new CdSpinningDisc.Globals(0, PRE.xWord(), 1, 0)));
+            assertNotNull(original[0]); assertSame(original[0], thrown); assertEquals(1, publications[0]); assertTrue(reads[0] > 1);
+            assertEquals(0xD7, f.frame.state().rotationAngle()); assertFalse(f.frame.closed(), "standalone component is not a Runtime closure test");
+        }
+    }
+
+    @Test void disc09ComponentFmHostFailureKeepsPreFmPlayerPairAndSkipsEveryHitboxAndWrapperStore() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); disc09Contact(f, 40, 8, 0xA0, 0, 0x10, 0, 0);
+            var marker = new IllegalStateException("explicit component FM host failure"); var reached = new CdSpinningDisc.PlayerCut[1]; var calls = new int[1];
+            var body = new CdSpinningDisc(f.runtime.placement(), CdSpinningDisc.Assets.fromObjectAssets(f.assets.openingObjects()),
+                    new com.openggf.game.soniccd.player.CdPlayerMath(f.assets.player()), CdSolidObject.fromAssets(f.assets), call -> disc09ComponentSolid(f, call),
+                    new CdSpinningDisc.PlayerOwner() {
+                        @Override public CdSpinningDisc.PlayerCut read() { return new CdSpinningDisc.PlayerCut(f.frame.state(), f.frame.environment()); }
+                        @Override public void commit(CdSpinningDisc.PlayerCall call) {
+                            f.frame.validateObjectDiscPlayerResult(call.expectedPlayer().state(), call.expectedPlayer().environment(), call.result());
+                            f.frame.applyObjectDiscPlayerResult(call.expectedPlayer().state(), call.expectedPlayer().environment(), call.result());
+                        }
+                    }, call -> { calls[0]++; reached[0] = call.expectedPlayer(); throw marker; }, (pool, identity) -> fail("FM failure suppresses wrapper"));
+            var thrown = assertThrows(IllegalStateException.class, () -> body.run(40, new CdSpinningDisc.Globals(0, PRE.xWord(), 1, 0)));
+            assertSame(marker, thrown); assertEquals(1, calls[0]); assertSame(reached[0].state(), f.frame.state()); assertSame(reached[0].environment(), f.frame.environment());
+            assertEquals(19, f.frame.state().motion().yRadius()); assertEquals(9, f.frame.state().motion().xRadius());
+            assertEquals(0x2D, f.frame.state().motion().animation()); assertEquals(0, f.frame.state().motion().playerControl());
+        }
+    }
+
+    private static CdObjectState disc09Image(Fixture f, CdObjectState image, int routine, int sprite, int flags, int x, int y) throws Exception {
+        var a = CdSpinningDisc.Assets.fromObjectAssets(f.assets.openingObjects());
+        return image.moveByte(ID, 9).moveByte(ROUTINE, routine).moveByte(SPRITE_FLAGS, sprite).moveByte(FLAGS, flags)
+                .moveLong(MAPPINGS, a.mappingAddressBits()).moveWord(TILE,
+                        com.openggf.game.soniccd.level.CdR11aObjectAssets.decodeTileWord(a.objectTileIds().copy(), 6, 0))
+                .moveByte(PRIORITY, 4).moveByte(WIDTH, 16).moveByte(Y_RADIUS, 8).moveWord(X, x).moveWord(Y, y);
+    }
+    private static CdObjectState disc09Animated(CdObjectState image, CdSpinningDisc.Assets assets) {
+        var next = CdObjectAnimation.step(new CdObjectAnimation.State(image.unsignedByte(ANIMATION), image.unsignedByte(PREVIOUS_ANIMATION),
+                image.unsignedByte(ANIMATION_FRAME), image.unsignedByte(ANIMATION_TIME), image.unsignedByte(MAP_FRAME), image.spriteFlags(),
+                image.flags(), image.routine(), image.unsignedByte(ROUTINE_2)), new CdObjectAnimation.AnimationTable(assets.visual().animationTable(), 0, 1));
+        return image.moveByte(ANIMATION, next.animationId()).moveByte(PREVIOUS_ANIMATION, next.previousId()).moveByte(ANIMATION_FRAME, next.scriptIndex())
+                .moveByte(ANIMATION_TIME, next.timer()).moveByte(MAP_FRAME, next.mapFrame()).moveByte(SPRITE_FLAGS, next.spriteFlags())
+                .moveByte(FLAGS, next.statusFlags()).moveByte(ROUTINE, next.routine()).moveByte(ROUTINE_2, next.routine2());
+    }
+    private static void disc09SeedPlayer(Fixture f, int x, int y, int flags, int stand, int control, int held, int tap, int mini) {
+        var actor = f.frame.captureActor(); var s = actor.state(); var m = s.motion();
+        var motion = new CdPlayerMotionState(x, y, 0x123, 0x400, 0x345, 2, 0, flags, m.spriteFlags(), 9, 19, 0, 0x12,
+                1, 0x55, 0x4567, 1, control, 0x73, 0x84);
+        f.frame.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(), new CdPlayerBody.State(motion,
+                new CdPlayerBody.AnimationCursor(0xA7, 0xF3, 0), s.header(), s.timers(), s.history(), 0x2A,
+                new CdPlayerBody.ObjectLinks(0x37, stand), 0xD7), actor.display()));
+        var shared = f.frame.captureShared(); var e = shared.environment(); var v = e.movement(); var g = v.gates();
+        f.frame.restoreShared(new CdPlayerFrameRuntime.SharedState(shared.owner(), new CdPlayerBody.Environment(
+                new CdPlayerMovement.Environment(v.physics(), v.bounds(), new CdPlayerMovement.Gates(g.zoneAct(), g.timeZone(), mini,
+                        g.waterSlide(), g.windTunnel(), g.speedShoes(), g.timeWarpDirection()), v.globals()),
+                new CdPlayerBody.Controls(held, tap, 0xA5, 0x5A, 0xFE), e.globals(), e.dynamicSlots()), shared.artState(), shared.paused(), shared.vIntClock()));
+    }
+    /** Finite authentic-Solid contact search defines constructed ingress only; outcomes are never adopted/replayed. */
+    private static CdObjectState disc09Contact(Fixture f, int stand, int flags, int control, int held, int tap, int mini, int objectFlags) throws Exception {
+        var p = f.runtime.placement().pool();
+        for (int y = 0x710; y < 0x7F0; y++) {
+            var image = disc09Image(f, p.state(40), 2, 0x84, objectFlags, 0x100, y); p.write(image);
+            disc09SeedPlayer(f, 0x0110BEEF, ((y - 27 + 2) << 16) | 0x1234, flags, stand, control, held, tap, mini);
+            var outcome = disc09Outcome(f, image);
+            if (stand == 1 && outcome instanceof CdSolidObject.NativeStopped stop && stop.stop().site() == CdSolidObject.StopSite.STAND_RELEASE) return image;
+            if (stand != 1 && outcome instanceof CdSolidObject.Completed done && done.completedResult().path() == CdSolidObject.Path.STAND_ON) return image;
+        }
+        throw new AssertionError("Actual bounded R11A terrain supplied no declared Disc contact");
+    }
+    private static CdSolidObject.Outcome disc09Outcome(Fixture f, CdObjectState source) {
+        return CdSolidObject.fromAssets(f.assets).runWithPrefix(CdSolidObject.Entry.SOLID_OBJECT, source, tunnelDoorPlayer(f),
+                new CdSolidObject.Gates(f.frame.environment().globals().debugMode(), f.frame.environment().movement().gates().miniSonic()),
+                tunnelDoorGlobals(f), f.runtime.placement().pool().capture());
+    }
+    private static void disc09ComponentSolid(Fixture f, CdSpinningDisc.SolidCall call) {
+        CdPlayerFrameRuntime.ObjectSolidPublication prepared; CdObjectState object; List<CdObjectState> others;
+        if (call.outcome() instanceof CdSolidObject.Completed done) {
+            var result = done.completedResult(); prepared = f.frame.prepareObjectSolidResult(tunnelDoorPlayer(f), tunnelDoorGlobals(f), result);
+            object = result.object(); others = result.otherSlots();
+        } else {
+            var prefix = ((CdSolidObject.NativeStopped) call.outcome()).prefix();
+            prepared = f.frame.prepareObjectSolidPrefix(tunnelDoorPlayer(f), tunnelDoorGlobals(f), prefix); object = prefix.object(); others = prefix.otherSlots();
+        }
+        var images = new ArrayList<CdObjectState>(); images.add(object); images.addAll(others);
+        var nextPool = CdObjectPool.overlay(call.actualCut(), images); f.runtime.placement().pool().validateRestore(nextPool);
+        f.frame.validatePreparedObjectSolidPublication(prepared); f.runtime.placement().pool().restore(nextPool); f.frame.applyPreparedObjectSolidPublication(prepared);
+    }
+    private static void disc09Reject(Fixture f, String name, Class<?>[] types, Object... arguments) throws Exception {
+        var p = f.runtime.placement().pool(); var images = p.capture().slots(); var state = f.frame.state(); var env = f.frame.environment();
+        var sounds = f.runtime.lastSoundRequests(); var method = CdOpeningObjectRuntime.class.getDeclaredMethod(name, types); method.setAccessible(true);
+        var failure = assertThrows(java.lang.reflect.InvocationTargetException.class, () -> method.invoke(f.runtime, arguments));
+        assertInstanceOf(IllegalStateException.class, failure.getCause()); assertEquals(images, p.capture().slots());
+        assertSame(state, f.frame.state()); assertSame(env, f.frame.environment()); assertEquals(sounds, f.runtime.lastSoundRequests()); disc09Retired(f);
+    }
+    private static void disc09Retired(Fixture f) {
+        assertNull(checkpointGet(f.runtime, "activeSpinningDiscInvocation")); assertEquals(false, checkpointGet(f.runtime, "inSolidCommit"));
+    }
+    private static void disc09Closed(Fixture f) {
+        assertEquals(CdOpeningObjectRuntime.Phase.FAILED, f.runtime.phase()); assertTrue(f.runtime.closed()); assertTrue(f.frame.closed());
+        assertThrows(IllegalStateException.class, f.runtime::runDynamicSlotsAfterReservedSlots); assertThrows(IllegalStateException.class, f.runtime::captureClosedCut);
+    }
+    // Public ingress cannot inject a mid-invocation wrong-site/reentrant callback or observe Runtime's
+    // private Solid originalException instance. Those adversaries are NOT claimed covered by the no-origin
+    // reflection cases. Component cases prove identical rethrow/pre-FM host-failure prefixes separately.
+    // No successful bit0-controlled next Body, natural controller3259, whole-USA or JP/EU claim.
+    // END Disc09 Runtime R1.
 }

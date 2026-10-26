@@ -113407,3 +113407,58 @@ smoke failures remain separately recorded. Next finite native owner: Monitor19.
   Java25/privatecwd and zero skips checked; all current Java pins unchanged.
   This closes the component guard obligation, not the pending ID09 Runtime
   join or controller3259. No full-smoke/release/full-game certification.
+
+- 2026-10-26, private558dd7d00 plus ID09 Runtime packet: test-first26758
+  compilation RED on missing SpinningDiscFm; first35484 runs410/3/0/0 at
+  11:15:28Z (315s queue,1m38s execution). Only three new fixture assertions
+  fail: animator restores low flip; same-disc StandOn retains incoming YV;
+  Solid changes Y before already-rolling jump. RootR2 changes four test spans
+  only;83319 narrow3 passes at11:22:27Z (32.475s,queue0). Runtime production
+  remains257318/SHA92f04b7e9a210c4555aa71717a08db90cf4c4cd122c16c1993ac601f9d77e9a3.
+  This is407 earlier passes plus3 narrow corrections, not a fresh410 total.
+- Actual Ring/full-course and current440/659-retirement EGL29031 passes2/0/0/0
+  at11:26:00Z (31.641s,queue0); exact two-method selection is recorded in the
+  dated implementation plan. Fresh XML/Java25/private cwd/media/S2/EGL opt-in
+  and zero skips verified. Runtime review/controller-only observer remain
+  pending;3258/failed3259 is still the measured natural frontier, not a new
+  successful controlled-player or native Disc World claim.
+
+- 2026-10-26, same private558dd7d00 plus reviewed Runtime packet: guards88371
+  passes728/0/0/0 at11:33:40Z (5m05s,queue15s),90 exact fresh executable
+  reports/identities/Java25/privatecwd/no skips checked. Independent static
+  Runtime review finds no actionable P1/P2; its scope does not certify a route.
+- Controller-only observer98700 completes3420; first3421 stops unowned07/live63
+  (N ObjectIndex, Palmtree Panic/Object Index (Act1 Present).asm:14 ObjTunnelPath).
+  Terminal1/0/1/0 at11:35:36Z (33.507s,queue25s); command queued --lean
+  -Dmse=off "-Dsoniccd.media.root=$SCD_MEDIA_ROOT"
+  '-Dtest=TestSonicCdOpeningWorldLoad#actualControllerThreeJumpsObservesSpinningDiscAndTheNextNativeFrontier' test -B.
+  Recipe1200R;32RB;537R;32RB;1200R;32RB;1200R uses only ordinary controls.
+  Disc Init3259 and pre09/routine2 call3260 return; no rotation change before
+  stop, and physical46 later contains a Spring. Failed63 is routine0 at
+  FFDFC0/X13F0/Y00F0 after real earlier VInt/Body prefixes; last-closed
+  camera/saved-bank values are not partial-failure observations. Failed visit
+  remains terminal with no closed capture/retry. Temporary observer removed,
+  permanent WorldLoad286774/c2899ca8... restored exactly. Permanent route
+  promotion/source audit07 pending; controlled Body remains deferred, not
+  silently admitted. No native image/timing/full-USA/regional parity claim.
+
+- Permanent Disc route R1 first24230 runs1/1/0/0at12:04:02Z (35.446s,q0),
+  after healthy new replays: historicalCpuSat identity is not retained by a
+  forward replay build. RootR2 only compares bytes/count/provenance and keeps
+  the current reference for failed3421 nonpublication;88410 passes1/0/0/0
+  at12:07:48Z (34.005s,q61s). Exact fresh XML/Java25/privatecwd/media checked.
+  New method controllerThreeJumpRouteRunsDiscAndStopsAtTunnelPathSlot63 retains
+  all53 cases/earlier proofs and adds three full/course edges through3420,
+  then once-only unknown07/63/FFDFC0 plus prior Body/VInt/terminal checks.
+  No whole96 partial-prefix or natural attachment/controlled-body claim.
+  Independent review and combined consumers remain pending.
+
+- Combined76706 passes470/0/0/0at2026-10-26T12:21:00Z (42.122s execution,
+  queue353s): Runtime410 + WorldLoad53 + actual Ring/current440 EGL2 +
+  JUnit-migration3/assertion-source2. Exact complete five-class fresh XML,
+  all identities/counts/Java25/privatecwd/media/S2/EGL opt-in/surfaceless and
+  zero skips checked. Exact queued command is in the dated plan. This now
+  establishes the fresh410/all53 current pass after the documented test-only
+  repairs, separately from prior complete728 guards. Static route review
+  remains pending before save. Full USA then JP/EU remains active; no new
+  3421 completion, controlled-player, native Disc World/timing/pixel parity.

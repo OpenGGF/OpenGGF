@@ -7229,3 +7229,103 @@ checked; stale unrelated reports are excluded. Current six production and
 twelve test files match their exact frozen packets/Root-only repairs.
 No Java changed during the run. The local component save follows these
 bounded checks; it does not import the pending Runtime join or move3259.
+
+## Spinning Disc Runtime integration — 26 October 2026, private/local
+
+Based on private `558dd7d00`, the cached ID09 body now runs at its physical
+dynamic slot with the actual time-stop word, pre-scroll camera and raw gates.
+Its private invocation cursor authenticates synchronous Solid/direct-player/FM
+calls. Pool overlay, same-Frame publication and immutable sound ledger are
+prepared before any owner assignment; stopped Solid prefixes publish before the
+identical native exception closes the visit. Public records/equal values do not
+grant replay or once-only authority. LogicalBanks20/C30/659, source17, capture
+partitions, clocks and ordinary-tail ordering remain unchanged.
+
+Test-first26758 failed compilation on the absent SpinningDiscFm record. After
+production import,35484 completed410/3/0/0 at11:15:28Z (queue315s, execution1m38s).
+The three new fixture failures were independently traced to animator flip restore,
+already-own-stand preserving incoming YV0400, and Solid moving Y before an
+already-rolling jump. RootR2 changes only four spans in those three tests;
+production is unchanged. Narrow83319 passes3/0/0/0 at11:22:27Z (32.475s, queue0).
+This records407 earlier passes plus3 corrected cases, not a fresh410 pass.
+
+Actual EGL29031 passes2/0/0/0 at11:26:00Z (31.641s, queue0), selecting
+`TestSonicCdOpeningWorldEgl#actualEglNormalInputPickupAndFullCourseReplay+actualEglCurrentTamabbohSingletonRendersAndRetiresThe659thClientPattern`.
+Commands use the queued wrapper, -Dmse=off, actual media/S2, surfaceless EGL and
+explicit EGL opt-in. Exact fresh XML, Java25/private cwd and zero skips were
+checked with the integration helper. This covers existing World consumers and
+resource retirement; it does not establish native Disc contact or Tamabboh Fire.
+
+Independent Runtime review18501/SHA51c874f310c32a518c5a794f67d1f091a4888b25c1aa198dfd741ea2724cdbea
+finds no actionable P1/P2. Fresh guards88371 pass728/0/0/0 across90 exact
+source-selected executable classes at11:33:40Z (5m05s,queue15s), Java25/private
+cwd/no skips checked. No additional review loop was requested.
+
+Temporary controller observer98700 then completes3420 ordinary calls; first3421
+stops unowned ID07/live63 (native ObjTunnelPath). It is1/0/1/0 at11:35:36Z
+(33.507s,queue25s), not a passing route test. Genuine Disc Init3259 and subsequent
+pre-routine2 call3260 return; rotation remains unchanged and the physical46 slot
+is later reused as a Spring. No Disc attachment or controlled Body success is
+inferred. The source-only observer was removed after inspection, restoring the
+permanent WorldLoad286774/c2899ca8... exactly with fresh0644 mtime. Its full53
+case route promotion and the new Tunnel Path source audit are pending.
+
+At closed3420 cameraX4481/Y521 and placement previousChunk4352 precede a new
+chunk visit. Failed3421 has native07 at FFDFC0/X13F0/Y00F0 with routine0 and
+retains earlier VInt/Body publications before terminal closure. External
+camera/saved-bank diagnostics belong only to the last closed cut, not the
+partial failed call. No capture/retry/continuation of that failed visit occurs.
+Controlled Body API design is accepted but implementation is deferred: its
+bit0 boundary was not the observed next frontier. Full USA then JP/EU, native
+timing/pixels and full-act coverage remain open; no main/remote integration.
+
+### Permanent Disc continuation and SAT identity correction
+
+Frozen route R1 preserves53 cases by changing only the one method name and its
+post3258 tail; Root independently reconstructs the exact286774-byte J baseline.
+First24230 completes the healthy forward/replay work but fails at12:04:02Z
+(35.446s,queue0),1/1/0/0: it compares historical3420 CpuSat reference identity
+after replay has legitimately built a fresh immutable SAT. RootR2 changes only
+that comparison span: all640 bytes, sprite count and provenance must match;
+the actual current reference remains the before/after failed-call witness. No
+production or replay rule changes. Narrow88410 passes1/0/0/0at12:07:48Z
+(34.005s,queue61s), exact fresh XML/Java25/privatecwd/media/no skips checked.
+
+The promoted method is
+`controllerThreeJumpRouteRunsDiscAndStopsAtTunnelPathSlot63`: genuine returned
+Disc Init3259/Main3260; ordinary input through3420; full/course3258→3259,
+3259→3260 and3419→3420 compare complete checkpoint-aware state before
+forwarding and after each row. All earlier proof blocks remain byte-exact.
+It then attempts3421 once, verifies unknown07/native FFDFC0 placement plus
+earlier Body/VInt/terminal nonpublication, and never resumes that failed visit.
+It deliberately does not claim a complete96-slot partial dynamic-prefix oracle
+or any natural rotation/controlled Body. Independent route review and combined
+affected consumer/test-source-guard validation are pending.
+
+### Final affected Runtime/route consumers
+
+Combined76706 passes470/0/0/0 at2026-10-26T12:21:00Z: Runtime410, allWorldLoad53,
+Ring/full-course and current440/659-retirement EGL2, JUnit-migration guard3 and
+assertion-free-diagnostics guard2. Queue353s; execution42.122s. Exact five fresh
+XML class sets/individual identities/counts/Java25/privatecwd/media/S2/EGL
+opt-in/surfaceless and zero skips verified with the integration helper. Command (repository/media/ROM
+paths supplied as OPENGGF_ROOT, SCD_MEDIA_ROOT and S2_ROM):
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 python3 "$OPENGGF_ROOT/tools/testing/maven_queue.py" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dsoniccd.opening.egl=true "-Dsoniccd.media.root=$SCD_MEDIA_ROOT" "-Dsonic2.rom.path=$S2_ROM" '-Dtest=TestCdOpeningObjectRuntime,TestSonicCdOpeningWorldLoad,TestSonicCdOpeningWorldEgl#actualEglNormalInputPickupAndFullCourseReplay+actualEglCurrentTamabbohSingletonRendersAndRetiresThe659thClientPattern,TestJunit5MigrationGuard,TestNoAssertionFreeDiagnostics' test -B
+```
+
+This is a fresh combined410 Runtime pass after the three documented fixture
+corrections, and a fresh all53 pass with the permanent3421 frontier and replay
+proofs. The prior full728 guard run is separate; the two affected source guards
+were repeated here after the test-only route change. No repeated full-smoke or
+release-only full suite was launched. The exact all-smoke catalogue remains
+disproportionate to this bounded CD-only dispatch/owner slice; actual CD
+consumers, real EGL and structural guards cover its understood dependencies.
+Independent route review21643/SHA69bc1dd390d05a2f66da6fc77e45e62aa24a6c08ae509a9eb0c3aa6d9b16caa1 finds no actionable P1/P2 in the exact R1/R2 scope; no execution was performed by the reviewer. The local milestone is ready to save.
+
+Next native owner is ID07 Tunnel Path. Its complete source/media audit pins
+the unique common row236 and two raw views (GVels8/paths284), no drawing or
+allocation and no new art/source/Region. Its own future controlled81/C1 branch
+is distinct from actual observed contact; controlled Body remains deferred.
+No new3421 successful continuation or whole-game/regional certification.

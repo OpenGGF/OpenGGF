@@ -32,6 +32,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import static com.openggf.game.soniccd.objects.CdObjectDrawQueue.*;
+import static com.openggf.game.soniccd.objects.CdSpinningDisc.DiscPlayerField.*;
 import static com.openggf.game.soniccd.objects.CdObjectState.ByteField.*;
 import static com.openggf.game.soniccd.objects.CdObjectState.LongField.MAPPINGS;
 import static com.openggf.game.soniccd.objects.CdObjectState.WordField.*;
@@ -295,7 +296,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     }
 
     /** Ordered requests only, no playback and no claim to the omitted service/music ledger. */
-    public sealed interface SoundRequest permits PlayerSound, RingFm, RingSubCpu, MosquiFm, LostRingFm, GameOverSubCpu, SpringFm, TunnelDoorVerticalFm, TunnelDoorFm, MonitorFm, MonitorItemSubCpu, TimePostSubCpu, CheckpointFm, CollapsePlatformFm, TamabbohFm { }
+    public sealed interface SoundRequest permits PlayerSound, RingFm, RingSubCpu, MosquiFm, LostRingFm, GameOverSubCpu, SpringFm, TunnelDoorVerticalFm, TunnelDoorFm, MonitorFm, MonitorItemSubCpu, TimePostSubCpu, CheckpointFm, CollapsePlatformFm, TamabbohFm, SpinningDiscFm { }
     public record PlayerSound(CdPlayerFrameRuntime.Sound sound) implements SoundRequest {
         public PlayerSound { Objects.requireNonNull(sound, "player sound"); }
     }
@@ -307,6 +308,10 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     }
     public record LostRingFm(CdLostRing.Sound sound) implements SoundRequest {
         public LostRingFm { Objects.requireNonNull(sound, "LostRing FM sound"); }
+    }
+    /** Disc's actual synchronous PlayFMSound cut; ordered FM_A0 metadata only, no playback. */
+    public record SpinningDiscFm(CdSpinningDisc.FmSound sound) implements SoundRequest {
+        public SpinningDiscFm { Objects.requireNonNull(sound, "Spinning Disc FM sound"); }
     }
     /** Ordered DEV FM_A0 metadata only; not native driver queues or playback. */
     public record TamabbohFm(CdTamabboh.FmSound sound) implements SoundRequest {
@@ -446,6 +451,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     private final CdGameOver gameOver;
     private final CdBoulder boulder;
     private final CdCollapsePlatform collapsePlatform;
+    private final CdSpinningDisc spinningDisc;
     private final CdPlatform platform;
     private final CdSpikes spikes;
     private final CdCheckpoint checkpoint;
@@ -524,6 +530,18 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     /** Actual cached-body visit and stable Frame player only; never captured or a public capability. */
     private record TamabbohInvocation(CdTamabboh body, int wholeIndex, CdPlayerBody.State player) { }
     private transient TamabbohInvocation activeTamabbohInvocation;
+    // BEGIN Disc09 private invocation. Not a capture, gameplay phase, ROM clock or public capability.
+    private enum DiscStep { SOLID, ACQUIRE, ORBIT, INPUT, JUMP_CLEAR, JUMP_VELOCITY, FM, HITBOX, DONE, STOPPED }
+    private static final class SpinningDiscInvocation {
+        private final CdSpinningDisc body;
+        private final int wholeIndex;
+        private DiscStep next = DiscStep.SOLID;
+        private SpinningDiscInvocation(CdSpinningDisc body, int wholeIndex) {
+            this.body = body; this.wholeIndex = wholeIndex;
+        }
+    }
+    private transient SpinningDiscInvocation activeSpinningDiscInvocation;
+    // END Disc09 private invocation.
     private int dispatchWholeIndex = -1;
 
     /**
@@ -824,6 +842,13 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         gameOver = new CdGameOver(placement, CdGameOver.Assets.fromObjectAssets(objects),
                 (pool, slot) -> drawDynamic(pool, slot.wholeIndex()));
         var solid = CdSolidObject.fromAssets(assets);
+        // Same authenticated placement/assets, one retained math owner and the existing shared pure Solid.
+        spinningDisc = new CdSpinningDisc(placement, CdSpinningDisc.Assets.fromObjectAssets(objects),
+                new CdPlayerMath(assets.player()), solid, this::commitSpinningDiscSolid,
+                new CdSpinningDisc.PlayerOwner() {
+                    @Override public CdSpinningDisc.PlayerCut read() { return readSpinningDiscPlayer(); }
+                    @Override public void commit(CdSpinningDisc.PlayerCall call) { commitSpinningDiscPlayer(call); }
+                }, this::playSpinningDiscFm, (pool, slot) -> drawDynamic(pool, slot.wholeIndex()));
         collapsePlatform = new CdCollapsePlatform(placement, CdCollapsePlatform.Assets.fromObjectAssets(objects),
                 solid, this::commitCollapseSolid,
                 (pool, slot) -> drawDynamic(pool, slot.wholeIndex()), this::playCollapseFm);
@@ -1411,6 +1436,9 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                     // Actual live ID21; native Init/Main owns every reached gate, helper, child and tail.
                     // Completed effects describe synchronous work and are never replayed.
                     runPlatform(whole);
+                } else if (id == CdSpinningDisc.OBJECT_ID) {
+                    // Actual physical pre-scroll visit. The cached body owns every reached helper and store.
+                    runSpinningDisc(whole); // Completed observations never cause replay or a second helper.
                 } else if (id == CdBoulder.OBJECT_ID) {
                     // ObjBoulder_Main (Boulder/Main.asm:41-48) reads the actual primary at this physical
                     // visit; its own sprite sign is the only outer Solid gate. No good-future/route gate.
@@ -2943,6 +2971,274 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     }
 
     // BEGIN Platform21 Runtime R1 private integration.
+    // BEGIN Disc09 Runtime R1. SOURCE-ONLY; authored Java is UNRUN by this author.
+    // N 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff, Spinning Disc/Main.asm:7-223;
+    // Object Solid.asm:15-146,188-479. Shipped branches have no FixBugs alternative here.
+    // Only the private cached producer scope grants origin. Public values/cuts/masks are checked data.
+    // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>
+
+    /** Exactly one cached-body call at its actual physical walk position, retired on every exit. */
+    private void runSpinningDisc(int wholeIndex) {
+        checkActive(Phase.DYNAMIC_SLOTS);
+        if (activeSpinningDiscInvocation != null || activeCollapseInvocation != null || activePlatformInvocation != null
+                || activeTamabbohInvocation != null || wholeIndex != dispatchWholeIndex
+                || placement.pool().state(wholeIndex).id() != CdSpinningDisc.OBJECT_ID) {
+            throw new IllegalStateException("Disc dispatch requires its actual nonnested physical ID09 visit");
+        }
+        var gates = frame.environment().movement().gates();
+        var globals = new CdSpinningDisc.Globals(ringGlobals.timeStopTimer(), preScrollForeground.xWord(),
+                gates.timeZone(), gates.timeWarpDirection());
+        activeSpinningDiscInvocation = new SpinningDiscInvocation(spinningDisc, wholeIndex);
+        try {
+            spinningDisc.run(wholeIndex, globals);
+            // Hidden/noncontact and no-jump returns legitimately leave unused later cursor sites.
+        } finally {
+            activeSpinningDiscInvocation = null; // Success, native stop, host exception and Error alike.
+        }
+    }
+
+    /** Reads remain legal at DONE/STOPPED until the actual body returns; they consume no site. */
+    private CdObjectState requireSpinningDiscCallback() {
+        checkActive(Phase.DYNAMIC_SLOTS);
+        var invocation = activeSpinningDiscInvocation;
+        if (invocation == null || invocation.body != spinningDisc || invocation.wholeIndex != dispatchWholeIndex
+                || dispatchWholeIndex < CdObjectPool.FIRST_WHOLE_INDEX || dispatchWholeIndex >= CdObjectPool.END_WHOLE_INDEX
+                || activeCollapseInvocation != null || activePlatformInvocation != null || activeTamabbohInvocation != null
+                || inDrawCallback || inSolidCommit || inSpringLaunch || inSpinTunnelCommit || inTunnelDoorFm
+                || inHorizontalTunnelDoorSolid || inHorizontalTunnelDoorFm || inMonitorAngle || inMonitorFm || inMonitorAward
+                || inTimePostDirection || inTimePostSubCpu || inCheckpointDispatch
+                || frame.assets() != assets || frame.environment().dynamicSlots() != CdPlayerBody.DynamicSlots.UNIMPLEMENTED) {
+            throw new IllegalStateException("Disc callback requires its current synchronous cached-body origin and idle mutual guards");
+        }
+        frame.captureActor(); // Existing open/idle/closed-Frame guard only; retain no capture or ingress pair.
+        var source = placement.pool().state(dispatchWholeIndex);
+        if (source.id() != CdSpinningDisc.OBJECT_ID || source.routine() != 2 || source.signedByte(SPRITE_FLAGS) >= 0) {
+            throw new IllegalStateException("Disc callback is outside its actual visible Main plain-Solid/player sites");
+        }
+        return source;
+    }
+
+    /** Return the complete current immutable owners, never the Solid projection or a cached visit ingress. */
+    private CdSpinningDisc.PlayerCut readSpinningDiscPlayer() {
+        var source = requireSpinningDiscCallback();
+        inSolidCommit = true;
+        try {
+            var cut = placement.pool().capture();
+            var pair = new CdSpinningDisc.PlayerCut(frame.state(), frame.environment());
+            validateSpinningDiscCut(cut, source, pair);
+            return pair;
+        } finally { inSolidCommit = false; }
+    }
+
+    /** Full same-owner source64/physical96 and the exact currently sampled Frame pair, before any writes. */
+    private void validateSpinningDiscCut(CdObjectPool.Snapshot cut, CdObjectState source, CdSpinningDisc.PlayerCut expected) {
+        checkActive(Phase.DYNAMIC_SLOTS);
+        var invocation = activeSpinningDiscInvocation;
+        if (invocation == null || invocation.body != spinningDisc || invocation.wholeIndex != dispatchWholeIndex) {
+            throw new IllegalStateException("Disc value cut has no actual cached invocation");
+        }
+        Objects.requireNonNull(source, "Disc complete source"); Objects.requireNonNull(expected, "Disc actual Frame pair");
+        frame.captureActor(); // Guard only, no retained Frame partition and no reconstructed player value.
+        var pool = placement.pool(); validateDynamicCapture(cut); pool.validateWrite(source);
+        var live = pool.state(dispatchWholeIndex);
+        if (source.identity().wholeIndex() != dispatchWholeIndex || !live.identity().equals(source.identity())
+                || live.id() != CdSpinningDisc.OBJECT_ID || live.routine() != 2 || live.signedByte(SPRITE_FLAGS) >= 0
+                || !live.equals(source) || !cut.slots().get(source.identity().dynamicIndex()).equals(source)
+                || !pool.capture().slots().equals(cut.slots())
+                || expected.state() != frame.state() || expected.environment() != frame.environment()) {
+            throw new IllegalStateException("Disc source/full96/full-State-Environment cut is stale or foreign");
+        }
+    }
+
+    /** Plain Solid owns bits3/5, canonical byte25 clears and genuine previous-stand BCLR3 images. */
+    private List<CdObjectState> validateSpinningDiscImages(CdSpinningDisc.SolidCall call, CdObjectState source,
+            CdObjectState object, List<CdObjectState> otherSlots, java.util.Set<CdObjectState.ByteField> writes) {
+        var pool = placement.pool(); pool.validateWrite(object);
+        if (!source.identity().equals(object.identity()) || object.copyBytes().length != CdObjectState.BYTE_SIZE
+                || writes.stream().anyMatch(field -> field != FLAGS && field != SOLID_TYPE)
+                || writes.contains(SOLID_TYPE) && object.unsignedByte(SOLID_TYPE) != 0
+                || ((source.flags() ^ object.flags()) & ~(8 | 0x20)) != 0) {
+            throw new IllegalArgumentException("Disc plain Solid output changes identity, canonical byte25 or unowned flag bits");
+        }
+        byte[] before = source.copyBytes(), after = object.copyBytes();
+        for (int offset = 0; offset < CdObjectState.BYTE_SIZE; offset++) {
+            if (offset == FLAGS.byteOffset() && writes.contains(FLAGS)
+                    || offset == SOLID_TYPE.byteOffset() && writes.contains(SOLID_TYPE)) continue;
+            if (before[offset] != after[offset]) throw new IllegalArgumentException("Undeclared Disc Solid source byte " + offset);
+        }
+        if (otherSlots.size() > 1) throw new IllegalArgumentException("Plain Solid releases at most one other dynamic stand slot");
+        var images = new ArrayList<CdObjectState>(1 + otherSlots.size()); images.add(object);
+        for (var other : otherSlots) {
+            pool.validateWrite(other); int whole = other.identity().wholeIndex();
+            if (whole == dispatchWholeIndex || whole != call.expectedPlayer().state().objectLinks().standObject()) {
+                throw new IllegalArgumentException("Disc Solid release differs from the actual distinct previous stand byte");
+            }
+            var original = call.actualCut().slots().get(other.identity().dynamicIndex());
+            if (!original.identity().equals(other.identity())
+                    || !original.moveByte(FLAGS, original.flags() & ~8).equals(other)) {
+                throw new IllegalArgumentException("Disc Solid other-slot image changes more than native BCLR3");
+            }
+            images.add(other); // A dirty ID0 is real physical storage, not a reason to reject its release.
+        }
+        return List.copyOf(images);
+    }
+
+    /** Stage every aggregate before publishing pool, prebuilt Frame pair, then the one ready sound ledger. */
+    private void commitSpinningDiscSolid(CdSpinningDisc.SolidCall call) {
+        var source = requireSpinningDiscCallback();
+        inSolidCommit = true;
+        try {
+            Objects.requireNonNull(call, "actual Disc plain Solid call");
+            if (activeSpinningDiscInvocation.next != DiscStep.SOLID) {
+                throw new IllegalStateException("Disc plain Solid site was already consumed or is out of order");
+            }
+            validateSpinningDiscCut(call.actualCut(), call.expectedSource(), call.expectedPlayer());
+            if (!source.equals(call.expectedSource())) throw new IllegalArgumentException("Disc Solid source differs from its actual callback");
+            CdObjectState object; List<CdObjectState> others; java.util.Set<CdObjectState.ByteField> writes;
+            List<CdPlayerTouchResponse.FmSound> requests; CdPlayerFrameRuntime.ObjectSolidPublication prepared;
+            DiscStep next;
+            var expectedPlayer = solidPlayer(); var expectedGlobals = solidGlobals();
+            if (call.outcome() instanceof CdSolidObject.Completed done) {
+                var result = done.completedResult();
+                if (result.entry() != CdSolidObject.Entry.SOLID_OBJECT || result.d0().isEmpty()) {
+                    throw new IllegalArgumentException("Disc requires the genuine completed plain Solid return");
+                }
+                object = result.object(); others = result.otherSlots(); writes = result.objectWrites(); requests = result.fmRequests();
+                prepared = frame.prepareObjectSolidResult(expectedPlayer, expectedGlobals, result);
+                next = result.d0().orElseThrow() == 0 ? DiscStep.DONE : DiscStep.ACQUIRE;
+            } else {
+                var stopped = (CdSolidObject.NativeStopped) call.outcome(); var prefix = stopped.prefix();
+                if (prefix.entry() != CdSolidObject.Entry.SOLID_OBJECT) {
+                    throw new IllegalArgumentException("Disc stopped outcome must be its actual plain Solid prefix");
+                }
+                object = prefix.object(); others = prefix.otherSlots(); writes = prefix.objectWrites(); requests = prefix.fmRequests();
+                prepared = frame.prepareObjectSolidPrefix(expectedPlayer, expectedGlobals, prefix); next = DiscStep.STOPPED;
+            }
+            var pool = placement.pool();
+            var nextPool = CdObjectPool.overlay(call.actualCut(), validateSpinningDiscImages(call, source, object, others, writes));
+            pool.validateRestore(nextPool);
+            if (prepared.expectedState() != call.expectedPlayer().state()
+                    || prepared.expectedEnvironment() != call.expectedPlayer().environment()) {
+                throw new IllegalStateException("Prepared Disc Solid lost its actual complete Frame input pair");
+            }
+            var ledger = new ArrayList<SoundRequest>(sounds);
+            for (var request : requests) ledger.add(new PlayerSound(new CdPlayerFrameRuntime.ContactFmSound(request)));
+            var nextSounds = List.copyOf(ledger);
+            frame.validatePreparedObjectSolidPublication(prepared);
+            validateSpinningDiscCut(call.actualCut(), source, call.expectedPlayer());
+            pool.restore(nextPool);
+            frame.applyPreparedObjectSolidPublication(prepared); // Assign already-built references; no legacy build-at-apply port.
+            sounds = nextSounds;
+            activeSpinningDiscInvocation.next = next;
+            // Body verifies the actual output, reads even at STOPPED, and rethrows the identical native exception.
+        } finally { inSolidCommit = false; }
+    }
+
+    /** Fixed instruction spans only. Private origin grants execution; these branch/value checks do not replay stores. */
+    private DiscStep spinningDiscNextStep(CdSpinningDisc.PlayerCall call) {
+        var fields = new ArrayList<CdSpinningDisc.DiscPlayerField>();
+        var player = call.expectedPlayer(); var state = player.state(); var motion = state.motion();
+        DiscStep next;
+        switch (activeSpinningDiscInvocation.next) {
+            case ACQUIRE -> {
+                fields.add(CONTROL_ACQUIRE);
+                if ((motion.playerControl() & 1) == 0) {
+                    fields.add(ANIMATION_ACQUIRE); fields.add(ROTATION_ZERO);
+                    if ((motion.centreX16_16() >>> 16) < call.expectedSource().centreX()) fields.add(ROTATION_LEFT);
+                    fields.add(DISTANCE_ACQUIRE);
+                }
+                // The unsigned routine gate is AFTER the entire acquisition prefix, exactly as native.
+                if (motion.routine() < 6) { fields.add(ROTATION_ADVANCE); next = DiscStep.ORBIT; }
+                else next = DiscStep.DONE;
+            }
+            case ORBIT -> { fields.add(ORBIT_X_BASE); fields.add(ORBIT_X_OFFSET); next = DiscStep.INPUT; }
+            case INPUT -> {
+                fields.add(SCRIPT_INDEX);
+                if ((state.rotationAngle() & 0x3F) == 0) fields.add(DISTANCE_CARDINAL);
+                fields.add(LOGICAL_CONTROLS);
+                boolean left = (motion.centreX16_16() >>> 16) < call.expectedSource().centreX();
+                int held = player.environment().controls().rawHeld();
+                if ((held & (left ? 4 : 8)) != 0) fields.add(DISTANCE_GROW);
+                else if ((held & (left ? 8 : 4)) != 0) {
+                    int index = fields.size(); fields.add(DISTANCE_SHRINK);
+                    if (call.result().stores().size() <= index) throw new IllegalArgumentException("Missing native Disc shrink site");
+                    // The pure validator checks this observation against the current distance; no live store is replayed.
+                    if (call.result().stores().get(index).expectedRaw() == 0) fields.add(DISTANCE_CLAMP);
+                }
+                next = DiscStep.JUMP_CLEAR;
+            }
+            case JUMP_CLEAR -> {
+                if ((player.environment().controls().logicalTap() & 0x70) == 0) {
+                    throw new IllegalStateException("Disc has no reached jump entrance for these actual logical controls");
+                }
+                fields.add(CONTROL_CLEAR); next = DiscStep.JUMP_VELOCITY;
+            }
+            case JUMP_VELOCITY -> {
+                fields.addAll(List.of(JUMP_X_VELOCITY, JUMP_Y_VELOCITY, FLAGS_AIR, FLAGS_PUSH_CLEAR, JUMP_SET, STICK_CLEAR));
+                next = DiscStep.FM;
+            }
+            case HITBOX -> {
+                boolean mini = player.environment().movement().gates().miniSonic() != 0;
+                fields.add(mini ? JUMP_Y_RADIUS_MINI : JUMP_Y_RADIUS_NORMAL);
+                fields.add(mini ? JUMP_X_RADIUS_MINI : JUMP_X_RADIUS_NORMAL);
+                if ((motion.flags() & 4) != 0) fields.add(FLAGS_ROLL_JUMP);
+                else {
+                    fields.add(mini ? ROLL_Y_RADIUS_MINI : ROLL_Y_RADIUS_NORMAL);
+                    fields.add(mini ? ROLL_X_RADIUS_MINI : ROLL_X_RADIUS_NORMAL);
+                    if (!mini) fields.add(ROLL_Y_ADVANCE);
+                    fields.add(FLAGS_ROLL); fields.add(ANIMATION_ROLL);
+                }
+                next = DiscStep.DONE;
+            }
+            default -> throw new IllegalStateException("Disc direct player span is repeated, out of order or after its last publication");
+        }
+        requireSpinningDiscFields(call.result().stores(), fields);
+        return next;
+    }
+
+    private void requireSpinningDiscFields(List<CdSpinningDisc.PlayerStore> stores, List<CdSpinningDisc.DiscPlayerField> fields) {
+        if (stores.size() != fields.size()) throw new IllegalArgumentException("Disc direct span does not match its actual native site length");
+        for (int index = 0; index < fields.size(); index++) {
+            if (stores.get(index).field() != fields.get(index)) throw new IllegalArgumentException("Disc direct span differs at native site " + index);
+        }
+    }
+
+    /** Complete pair CAS plus finite site consumption; the already-built result is adopted once by Frame. */
+    private void commitSpinningDiscPlayer(CdSpinningDisc.PlayerCall call) {
+        var source = requireSpinningDiscCallback();
+        inSolidCommit = true;
+        try {
+            Objects.requireNonNull(call, "actual Disc direct player call");
+            validateSpinningDiscCut(call.actualCut(), call.expectedSource(), call.expectedPlayer());
+            if (!source.equals(call.expectedSource())) throw new IllegalArgumentException("Disc direct player source differs from its actual callback");
+            frame.validateObjectDiscPlayerResult(call.expectedPlayer().state(), call.expectedPlayer().environment(), call.result());
+            var next = spinningDiscNextStep(call);
+            frame.applyObjectDiscPlayerResult(call.expectedPlayer().state(), call.expectedPlayer().environment(), call.result());
+            activeSpinningDiscInvocation.next = next;
+            // Frame changes only. Body checks all96 nonwrites and freshly reads the actual new full pair.
+        } finally { inSolidCommit = false; }
+    }
+
+    /** Only the actual post-jump/pre-hitbox PlayFMSound site can extend the immutable ledger once. */
+    private void playSpinningDiscFm(CdSpinningDisc.FmCall call) {
+        var source = requireSpinningDiscCallback();
+        inSolidCommit = true;
+        try {
+            Objects.requireNonNull(call, "actual Disc FM call");
+            validateSpinningDiscCut(call.actualCut(), call.expectedSource(), call.expectedPlayer());
+            if (!source.equals(call.expectedSource()) || activeSpinningDiscInvocation.next != DiscStep.FM
+                    || call.sound() != CdSpinningDisc.FmSound.FM_A0) {
+                throw new IllegalStateException("Disc FM requires its once-only actual completed jump prefix before hitbox stores");
+            }
+            var ledger = new ArrayList<SoundRequest>(sounds); ledger.add(new SpinningDiscFm(call.sound()));
+            var nextSounds = List.copyOf(ledger);
+            validateSpinningDiscCut(call.actualCut(), source, call.expectedPlayer());
+            sounds = nextSounds; activeSpinningDiscInvocation.next = DiscStep.HITBOX;
+            // No player/pool write, service, playback or execution of public request metadata.
+        } finally { inSolidCommit = false; }
+    }
+    // END Disc09 Runtime R1.
+
     /** Mint the private origin only around this cached body's actual admitted physical visit. */
     private void runPlatform(int wholeIndex) {
         checkActive(Phase.DYNAMIC_SLOTS);

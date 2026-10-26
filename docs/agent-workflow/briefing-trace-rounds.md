@@ -71,6 +71,14 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+A replayed immutable product need not retain its historical reference
+(2026-10-26, CD Disc route). Forward SAT building creates a fresh CpuSat.
+Compare all bytes, count and provenance against the historical cut. For a
+later failed-call nonpublication check, retain the actual current reference
+immediately before that call and compare that reference afterward. Historical
+reference identity is not a replay-state contract or a reason to change the
+producer. Keep owner identity checks separate from immutable product equality.
+
 A native-fault fixture must first pass its loader (2026-10-26, CD Disc).
 Raw layout7F cannot represent an unavailable floor when the decoder rejects
 chunk127 against a121-chunk supply before gameplay. Use a source-backed
