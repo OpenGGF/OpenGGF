@@ -1,6 +1,6 @@
 # S3&K TAS trick verdicts — 2026-10-26
 
-**Interim follow-up:** all **35 original family IDs** are preserved, with **54 executed named children**. Of the original families, **20 are supported, 9 unsupported and 5 mixed** on their named representative mechanisms; **one family (`s3k-shields`) remains interim** with supported constituents and a distinct unresolved core: flame-dash deep slide followed by a bottom zip. Mixed aggregates tested supported/unsupported children; it never means unverified. The prior claim of no unresolved core scenarios is withdrawn.
+**All 35 original family IDs have executed representative outcomes:** **20 supported, 9 unsupported and 6 mixed**, comprising **55 named children**. The last core mechanism, flame-dash deep entry followed by a bottom reverse zip, is now **confirmed unsupported** by a matched native/engine inlet and no-dash control (S55). No core scenario remains interim. Mixed aggregates separately executed supported and unsupported children; it never means unverified.
 
 The broader original names and publication lists remain in the machine-readable report. A family verdict applies to the named representative children below, not every technique mentioned anywhere under that historical heading. In particular, supported no-Left/Right propulsion does not certify the campaign: the publication’s reset-assisted completion has its own unsupported child. No complete movie, ring total, campaign synchronization or every historical revision was executed.
 
@@ -8,11 +8,11 @@ This supersedes the route-level partial labels in the [previous S3K evidence mat
 
 ## Identity, ownership and method
 
-- Engine base and unchanged production: `c69447d77baddd8d3f7e4a177d73c8d327dd223d`. Source audit: `99b16240` (original census). Initial evidence is `964c29d25fdab09fe8edd4acbe541a27fc64904c`. Follow-up evidence is the local commit containing this revision; the external JSON records that SHA for new children while retaining the initial SHA for unchanged children.
+- Engine base and unchanged production: `c69447d77baddd8d3f7e4a177d73c8d327dd223d`. Source audit: `99b16240` (original census). Initial evidence is `964c29d25fdab09fe8edd4acbe541a27fc64904c`; five-mechanism/ordinary-flame follow-up is `57e89fb6c5e2a0a68691892b641f9c27033b37b0`. Final flame evidence is the local commit containing this revision. The external JSON pins each child to its own tested commit: 48 initial, six first-follow-up, one final-flame child.
 - Owned worktree: `/mnt/LinuxData/T3/worktrees/OpenGGF/t3-86295626`, branch `feature/ai-tas-verdicts-s3k-20261026`. Initial delivery added fifteen game-specific classes; this follow-up extends `TestTasS3kTerrainEntry` and adds `TestTasS3kMhzRapidHit` and `TestTasS3kFlameSlope`, plus this owned documentation. Parent owns shared records, final integration and push.
 - Original ROM: `$HOME/code/projects/OpenGGF/s3k.gen`, 4,194,304 bytes; CRC32 `63522553`, SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6`. No copies or links were created. Every selected ROM-required case actually executed; all completed runs had zero skips.
 - Native reference: immutable `skdisasm` commit `8b2cf3c4178f2382f844da67798de4befc50c5e0`, `sonic3k.asm`, retail `FixBugs=0`. Read with immutable Git objects into the external task directory. Dirty main disassembly/tool checkouts were neither used as proof nor changed.
-- Author evidence: cached original submissions in `$HOME/scratch/agent-tmp/codex/tasvideos-trick-audit-2026-10-26/`, with child-specific publication/submission links below. No new web census. Initial local branches used independently specified native source expectations. The follow-up additionally compares two independently captured ordinary SOZ inlets from the native helper. No gameplay trace rows are imported into the engine.
+- Author evidence: cached original submissions in `$HOME/scratch/agent-tmp/codex/tasvideos-trick-audit-2026-10-26/`, with child-specific publication/submission links below. No new web census. Initial local branches used independently specified native source expectations. The first follow-up compares two independently captured ordinary SOZ inlets. Final flame closure additionally uses the parent/native helper’s original Gens 11b published-movie reproduction and separately authored counterpart/control. No gameplay trace rows are imported into the engine.
 - Final JSON: `$HOME/scratch/agent-tmp/codex/tas-trick-verdicts-2026-10-26/s3k-verdicts.json`. Each original family preserves its name, scope, original publication IDs and references; children carry their own publication IDs, native expectation, selector, observed result and evidence source.
 
 Synthetic inlets declare valid geometry, save data, slot occupancy or an owner boundary. Production input, collision, object, transition and load owners then execute the technique. A passing limitation test means confirmed unsupported behavior, never native parity. No runtime fixes, disabled tests, oracle resnapshots or unconditional failing assertions are included.
@@ -51,7 +51,7 @@ Child numbers link each family result to its exact executable scope below. Publi
 | `s3k-flight` | **supported** | S20, S21 |
 | `s3k-nolr` | **mixed** | S22, S23, S24 |
 | `s3k-super` | **supported** | S25, S26 |
-| `s3k-shields` | **interim; supported children** | S27, S54; core U01 unresolved |
+| `s3k-shields` | **mixed** | S27, S54, S55 |
 | `s3k-sphere-ring` | **supported** | S28 |
 | `s3k-sphere-motion` | **supported** | S29 |
 | `s3k-sphere-timing` | **mixed** | S30, S31, S32 |
@@ -416,7 +416,7 @@ Selector: `com.openggf.game.sonic3k.TestHyperKnucklesWallImpactGate`.
 
 Native evidence: Sonic Hyper directional dash table; Knuckles wall-impact unsigned ground_vel >= $480; all references use the pinned file above. Reused component tests retain their independent native assertions and the prior matrix’s derivations.
 
-### `s3k-shields` — interim; supported children
+### `s3k-shields` — mixed
 
 Original family: Fire/bubble/lightning shield actions and collision boosts. Fire dash, bubble bounce and lightning jumps/attraction enable ground entry, altered speed and collection; losing or retaining a shield also changes boss/contact outcomes.
 
@@ -430,7 +430,7 @@ Selector: `com.openggf.sprites.managers.TestPlayableSpriteMovement#s3kLightningS
 
 Native evidence: Sonic lightning second-jump and steep bubble landing branches; selected test native assertions; all references use the pinned file above. Reused component tests retain their independent native assertions and the prior matrix’s derivations.
 
-Boundaries: Lightning, bubble and the ordinary fire-dash/slide/exit-lock constituent have executed outcomes. The distinct fire-dash deep-slide/bottom-zip core mechanism remains explicitly unresolved, outside this edge list.
+Boundaries: Lightning, bubble and ordinary special-slide fire-dash actions have supported child outcomes. The separate normal-floor fire-dash reverse zip is confirmed unsupported for 1656M/2877S. Exact 6655S clipping locations, vertical subpixel variants and complete publication routes are not certified by this child.
 
 ### `s3k-sphere-ring` — supported
 
@@ -809,9 +809,9 @@ The focused disassembly citation checker passed all six recognized citation grou
 
 Final report checks preserve all 35 original IDs exactly once, validate child verdict aggregation and publication references, and resolve every selector to an existing test method/class. Consumed task Maven logs are removed after this durable record is written. No task-owned live job or child is left at handoff. Main and shared production remain unchanged.
 
-## Follow-up core mechanisms and interim handoff
+## First follow-up core mechanisms and historical interim handoff
 
-The follow-up resolves five distinct mechanisms across four requested families and adds an ordinary fire-dash comparison. It does **not** close the fifth requested family’s deep-slide/bottom-zip mechanism. Parent explicitly requested this interim commit after both native candidate families proved ordinary slides; parent will seek an actual published-movie inlet. No additional geometry sweep or broad run was launched for handoff.
+The first follow-up (`57e89fb6c`) resolved five distinct mechanisms across four requested families and added an ordinary fire-dash comparison. Its deep-slide/bottom-zip mechanism remained explicitly unresolved. Parent requested that interim commit and then found the actual published inlet. That history is retained below; S55 records the subsequent completed verdict. No further geometry sweep or broad run was launched.
 
 ### S49 — Slope-normal jump impulse and airborne clearance
 
@@ -897,9 +897,9 @@ Native evidence: Sonic_FireShield (sonic3k.asm:23446-23465), sub_730C/loc_734A S
 
 Scope: This is an ordinary fire-dash/slide/exit-lock constituent, NOT proof of the separately named deep-slide/bottom-zip exploit. The original authored inlet predates capture; native gameplay rows are comparison-only.
 
-### U01 — Flame-dash deep slide followed by bottom zip: unresolved core
+### U01 investigation history — subsequently closed by S55
 
-Publication [1656M / 2877S](https://tasvideos.org/2877S), notes lines 60–61 and 258, describes dashing into the ground, sliding inside the slope and zipping at its bottom. [4266M / 6655S](https://tasvideos.org/6655S) additionally mentions fire-dash slope clips and vertical subpixel alignment. This is a distinct named mechanism, **not an edge case and not unsupported**. No tested inlet has reached the claimed exploit in either producer.
+Publication [1656M / 2877S](https://tasvideos.org/2877S), notes lines 60–61 and 258, describes dashing into the ground, sliding inside the slope and zipping at its bottom. [4266M / 6655S](https://tasvideos.org/6655S) additionally mentions fire-dash slope clips and vertical subpixel alignment. At the first handoff this distinct named mechanism remained **unresolved, not an edge case or unsupported**. Those initial inlets had not reached the exploit in either producer. The subsequent published reproduction and matched counterpart in S55 supersede that interim status.
 
 Bounded engine investigation covered SOZ1/SOZ2 real slopes, ordinary and tall rolling-jump radii, both dash directions, clear airborne approaches, rising release ticks and full/half slide-table chunks. The dash runs only after a legal release update while still airborne. Candidates either landed normally, passed beneath top-only terrain, or corrected against a wall while still airborne. The observed 16/21-pixel airborne corrections do not establish a grounded continuous zip. Fixture failures are listed below rather than recast as engine limitations.
 
@@ -912,7 +912,7 @@ The independent native helper used clean TraceChaser `703bd92d32634ce5ebac60625b
 
 SHA-256: regular comparison `d0dd9ac642e369b144f27076a60f2a5922c65bd8eac9016a205a609e1b277c0b`; tall comparison `4bd0e055cc3d88c5384875b9c3428c1a4583e6cff2fb6c1a2ba4b11677ef1cec`.
 
-Native helper `README.md`/`result.json` retain source, compiler command, read-only runtime identity, observation PCs and rejected setup explanations. These compressed observations are comparison-only, not canonical replay fixtures or engine state inputs. There is no pending native job. The actual blocker is an exploit-producing published inlet; parent owns that continued work.
+Native helper `README.md`/`result.json` retain source, compiler command, read-only runtime identity, observation PCs and rejected setup explanations. These compressed observations are comparison-only, not canonical replay fixtures or engine state inputs. At that handoff there was no pending native job; the missing evidence was an exploit-producing published inlet. Parent’s later native capture supplied it in ordinary curved floor, not the special-slide chunks used by these earlier probes. S55 closes that specific evidence gap.
 
 ### Follow-up focused execution
 
@@ -970,6 +970,80 @@ F4–F10 and F12–F14 literal selector: `com.openggf.tests.TestTasS3kFlameSlope
 | F14 | 2 / 0 / 0 / 0 | 44.312 s | 0s | 2026-10-26T15:18:59Z | Final native-correlated ordinary flame and neutral cases passed landing, slide exit/lock and exact tick100 endpoints. |
 
 
-Follow-up source is based on `964c29d25fdab09fe8edd4acbe541a27fc64904c`; no production files changed. Later edits only affected the specifically rerun test methods/classes. Parent owns combined changed-class validation and required S3K domain gates. This worker handoff is interim, not final user delivery. Consumed worker Maven logs are deleted after recording the results here; useful native comparisons remain in the external task directory. No live owned Maven/native job or child remains.
+Follow-up source is based on `964c29d25fdab09fe8edd4acbe541a27fc64904c`; no production files changed. Later edits only affected the specifically rerun test methods/classes. Parent owns combined changed-class validation and required S3K domain gates. That first worker handoff was interim, not final user delivery; S55 below completes the worker’s remaining core verdict. Consumed worker Maven logs are deleted after recording the results here; useful native comparisons remain in the external task directory. No live owned Maven/native job or child remains.
 
-Follow-up report checks passed: all 35 original IDs exactly once; 54 executed children with valid publication associations and resolvable selectors; all 48 unchanged child evidence SHAs preserved; one explicit unresolved core outside `edge_cases`. Both compressed native artifact SHA-256 values match the helper manifest. Local documentation links and `git diff --check` pass. The pinned citation command above reports six recognized groups passing for this verdict document as well.
+First-follow-up report checks passed at `57e89fb6c`: all 35 original IDs exactly once, 54 executed children, all 48 earlier child SHAs preserved, and U01 explicitly unresolved outside `edge_cases`. The final checks below now include completed S55. Both compressed native artifact SHA-256 values match the helper manifest. Local documentation links and `git diff --check` pass. The pinned citation command above reports six recognized groups passing for this verdict document as well.
+
+## S55 — Normal-slope fire-dash reverse zip: confirmed unsupported
+
+Family `s3k-shields`; publication **[1656M / 2877S](https://tasvideos.org/2877S)** only. The author’s dash-into-ground, retained slope entry and bottom zip are distinct from the ordinary special-slide behavior in S54. S54 remains supported with its original evidence SHA. The 6655S movie was acquired by the parent/native helper but its route was not natively executed here, so this unsupported child is not attributed to 4266M.
+
+Selector: `com.openggf.tests.TestTasS3kFlameSlope#currentLimitationFireDashSlopeEntryUsesVerticalCorrectionAndMissesNativeReverseZip` (dash and no-dash cases).
+
+### Author claim, valid inlet and actual actions
+
+Original Gens 11b replayed the relevant published 2877S route using the original GMV. It reaches a real rolling jump at emulator frame 71235 and fresh leftward fire dash at 71243. The later grounded forward probe returns distances −2/−3/−5/−9/−18 pixels; collision adds reverse X velocity and ejects Sonic at 71272, centre `$830.0500/$409.7500`, vx −4601, airborne. Clearing only P1 B at GMV zero-based index 71242 (byte `$DB` → `$FB`, retaining Left) leaves the original no-dash control without those negative corrections. Both native branches agree through the complete 74-byte player state before that single changed input.
+
+Those observations located **normal ROM floor** in chunks `$04/$59`. The Java fixture was then authored independently at centre `$889/$411`, zero subpixels, ordinary rolling 14/7 radii, standard full-spindash vx/ground speed `-$C00`, vy/angle zero, facing Left with a fire shield. The actual ROM surface at the left foot is `$420`; bottom `$41F` has the native one-pixel contact gap (sensor distance zero). This is a valid ordinary grounded rolling inlet. It does not seed overlap, rolling jump, shield ability, slope lock or sliding. There are no position/flag writes after input begins.
+
+Both branches execute **2 Left, 3 Left+Jump, 5 Left, 1 Left+Jump, 1 Left, 24 Right, 9 neutral**; no-dash removes only the fresh jump at tick10. The Java jump boolean and native B use the same A/B/C jump mask. Actual jump dispatch produces 19/9 tall radii and the native launch impulse. The fresh dash publishes its camera-history effect. Full engine frames keep terrain, object, camera and zone-feature ordering active; the separate SOZ special-slide flag stays false throughout. Player_SlopeRepel’s actual 30-frame lock is reached.
+
+The native helper separately ran this exact authored zero-fraction counterpart and its no-dash control after a legitimate native rolling prefix. It writes only the declared ordinary pose/velocities/angle; the acquired rolling/radii/shield flags are asserted and preserved. Native gameplay/terrain rows are **comparison-only**: no CSV parser, native snapshot import, trace hydration or runtime special case is used by the Java test.
+
+### Reached contradiction and control
+
+| Boundary | Native counterpart | Engine observation |
+|---|---|---|
+| Tick9, before fresh dash | Centre `$83B.9700/$3ED.4F00`, vx0, vy−744, g−800 (decimal), tall19/9, rolling jump, no lock/ability | Exact checked match; valid approach and jump reached. |
+| Completed tick34 / next explicit probe | Native `player_movement_complete` at logical tick34 has centre `$856.7100/$409.ED00`, vx/vy529, g749, angle `$20`, grounded. The following tick35 `pre_ground_wall_probe` hook retains the same position and has accelerated vx/vy545, g771. | Completed engine tick34 matches the position, velocities, ground speed and angle. A real floor sensor reports less than −14, proving deep embedding was acquired through movement. |
+| Tick35, forward probe distance −2 | Pre-response vx/vy545; applies −512 to X: vx33/vy545, g0 | Applies −512 to Y: vx545/vy33, g771. The actual collision owner ran and chose the wrong response axis. |
+| Ticks36–39 | Negative distances −3/−5/−9/−17 add to X, producing −761/−1273/−2297/−4345. Tick39 exits airborne at `$834.AE00/$40C.2A00`. | No reverse X sequence. Tick39 remains grounded at `$863.0000/$402.1C00`, vx+707. |
+| Tick44, no-dash control | `$855.CC00/$3F8.1C00`, vx/vy569, grounded; no reverse correction | Exact checked position/subpixel/velocity match. |
+
+A rejected timing inference must not be reused: native `after_frame` tick10 was sampled at PC `$12072`, inside player collision. The completed-player extraction confirms that native tick10 **matches** engine landing at `$837.9700/$3EC.4F00`, velocities/ground speed zero, angle `$20`, ability zero; tick15 lock30 also matches. There is no early-landing discrepancy. The test’s tick10 checks only verify ability execution effects. The limitation rests on explicit correction hooks and completed-player exit.
+
+The native exit assertion was actually run and failed: **expected vx −4345, observed +707** after the full 45-tick branch. The retained test is explicitly named `currentLimitation...`; it asserts the reached incompatibility and the matched no-dash result. Its pass means **confirmed unsupported**, never native parity. The engine dash branch continues right to tick44 `$871.3400/$408.8000`, grounded. Both retained cases pass without skips.
+
+The source explains the decisive response: `loc_1137E/loc_113A0` (`sonic3k.asm:22764-22794`) decrements a negative probe angle in SOZ before selecting the correction quadrant. With ground angle `$20` and positive ground speed, rotated angle `$E0` becomes `$DF`; adding `$20` selects horizontal `$C0`. Current `CollisionSystem.resolveGroundWallCollision` uses unadjusted `$E0`, selecting vertical `$00`. Thus the same −2-pixel penetration changes Y instead of X. `Player_AnglePos` (`sonic3k.asm:18764-18855`) ignores corrections deeper than −14; `Player_SlopeRepel` (`sonic3k.asm:23947-23990`) supplies the lock. No production correction is included in this verdict pass.
+
+### Native identity and retained evidence
+
+The original ROM and immutable disassembly identities at the top remain unchanged. This final capture uses **Original Gens 11b**, matching the publication’s emulator, independently of the earlier BizHawk ordinary-slide captures. Parent/native helper ran it on an owned authenticated Xvfb/private Wine prefix with audio disabled; no ambient desktop input was injected. All native invocations completed and stopped.
+
+- Official Gens11b archive SHA-256: `6cdcac97f374f7774bfeee072b4b67d8cf4c5369a3c42b5608d06328d3726823`; executable SHA-256: `e6ac88499e2db82bb48a0d666e7c3b52416214a9aa10752e1267a4756931d9dc`.
+- Original 2877S GMV SHA-256: `55009871f04d45652e6047c5b38aa7733c4837da7df8f9190d1399885cd0632f`.
+- Full native provenance, input validation, scripts, original/control details, immutable-ROM geometry and rejected setup history: `$HOME/scratch/agent-tmp/codex/tas-trick-verdicts-2026-10-26/published-flame-inlet/native-inlet-result.json`. The original GMV input mapping is independently checked. For authored comparisons, **logical tick is `player_serial - 347`**, from the actual input-copy hook `$10BFC`; completion hooks are `$10C26` (`player_movement_complete`) and `$10C8E` (`player_object_complete`). Raw emulator frame labels are unsuitable as completion boundaries: the control can execute two player steps within one raw frame. The bounded completion capture verifies 47 logical inputs (45 measured plus two drain inputs). The response hook `$113A0` observes low D0=`$DF`, D1=−512; `$113CE` observes vx33/vy545/g0. Native snapshots are never used to hydrate Java.
+
+The first four compressed comparisons below were hash-checked against the original manifest. The final two are the preferred completed-player extraction, hashed directly and checked by logical player serial. These local observations are not canonical V5 replay fixtures:
+
+| Artifact in `published-flame-inlet/` | SHA-256 |
+|---|---|
+| `gens-2877-soz2.csv.gz` | `247c3429a75b1e7eefa18706fea0fb1dc26974fa3d4148d253ad36364ee70e19` |
+| `gens-2877-no-dash.csv.gz` | `2cae80114ebfe17ffb13a2a85d328b08f28ddc8f45ca5d288c7247a46dbe85c5` |
+| `gens-authored-rounded-dash.csv.gz` | `84e858cfa8baeba7f3c064761171afcd356fe6f6af438114306727478f965661` |
+| `gens-authored-rounded-no-dash.csv.gz` | `75208a63698eb82ded43e4117b4993ccab58067eea52fc41cadabb60d62c93ff` |
+| `gens-authored-completed-dash.csv.gz` | `3299661cbd1f24adfa58a593cefb5dc4610a0b9a2581dd351db7acef519b9240` |
+| `gens-authored-completed-no-dash.csv.gz` | `cb44d2956fbc3404e4b927b3bcca106bc3cb8d432e3416702ae4c68d88a98745` |
+
+### Final focused execution and handoff
+
+Source base is `57e89fb6c5e2a0a68691892b641f9c27033b37b0`; only `TestTasS3kFlameSlope` and this owned matrix changed in the repository. The original two ordinary-slide cases were not rerun: their source behavior and `57e89fb6c` evidence remain unchanged. Parent owns combined affected-class/domain validation and final integration/push.
+
+N1–N3 used the exploratory method selector `com.openggf.tests.TestTasS3kFlameSlope#rollingJumpFireDashEntersNormalSlopeAndExitsWithReverseCorrection`. N4 used the final exact selector above. Every invocation used this command with its literal selector, and redirected output to `target/tas-s3k-flame-normalN.log`:
+
+```bash
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+python3 tools/testing/maven_queue.py --lean -Dmse=off "-Dtest=$TAS_S3K_SELECTORS" \
+  "-Ds3k.rom.path=$HOME/code/projects/OpenGGF/s3k.gen" test
+```
+
+| Run | Cases / failures / errors / skips | Maven time | Queue wait | Finished UTC | Interpretation |
+|---|---|---|---|---|---|
+| N1 | no tests | 27.972 s | 0s | 2026-10-26T16:28:15Z | Compilation-only failure: getter is `getRollingJump`, not `isRollingJump`; no tests executed. |
+| N2 | 2 / 0 / 0 / 0 | 42.614 s | 7s | 2026-10-26T16:29:25Z | Two bounded diagnostic branches reached actual roll-jump/dash/normal-floor traversal. No verdict was assigned before the matched native counterpart existed. |
+| N3 | 2 / 1 / 0 / 0 | 41.278 s | 0s | 2026-10-26T16:39:18Z | Native exit parity red after full branch: expected vx−4345, observed +707; matched no-dash control passed. |
+| N4 | 2 / 0 / 0 / 0 | 41.888 s | 34s | 2026-10-26T16:42:30Z | Final named limitation and no-dash control passed with native-identical approach/pre-correction checks, actual acquired embedding, wrong-axis response and continued exit observation. |
+
+No broad run, arbitrary geometry sweep, runtime fix or new native capture was launched by this worker. The final report preserves all 35 original IDs, validates 55 child selectors/publication associations and aggregates the shield family as mixed from S27/S54 supported plus S55 unsupported. Every unchanged child retains its earlier evidence SHA. Consumed local Maven logs are removed after this durable record; useful native evidence stays in the external task directory. No owned live job or child remains at handoff.
+
+Final boundary audit: `player_movement_complete`/`player_object_complete`, indexed by player serial, confirms the tested native tick9, tick34, correction tick35, exit tick39 and no-dash tick44 values. The final post-test source edits are comments only; executable assertions remain those passed in N4. Pinned citation validation reports nine groups passing. JSON checks retain 35 original IDs and 55 valid child selectors/publication associations, preserve all 54 earlier child evidence SHAs and leave no interim core.
