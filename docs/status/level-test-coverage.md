@@ -2050,3 +2050,13 @@ The existing audit records exact command/fingerprint, 58.066-second Maven /
 58.751-second wrapper timing with zero queue wait, separate receiving297,
 Jawz69, raw186 and Turbo81 focused qualifications, all zero-skip, and remaining
 fan/SS7 questions. Parent retains final review, combined smoke and delivery.
+
+
+Jawz final-delta qualification (2026-10-26): initialized collision attributes
+and previous-list publication are now checked separately through real P1/P2
+player→object order. Three old-red cases fail at the expected early property;
+corrected Jawz10 plus unchanged list/rewind12 and four-anchor60 coverage qualify
+82 distinct physical cases across one score-service fixture repair, zero skips.
+Destructive registered recreation covers both initialized-but-unpublished and
+first-published phases twice. This refines the existing HCZ2 object obligation;
+viewport, donor, team and full-act gaps remain inherited. See [Jawz final-delta evidence](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#jawz-final-delta-publication-phase-2026-10-26).

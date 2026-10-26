@@ -29,6 +29,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -38,7 +39,7 @@ public class TestS3kJawzBadnik {
     void clearSession() { SessionManager.clear(); }
 
     @Test
-    void collisionBeginsOnlyWhenTheRestoredEntryInitializesAttributes() {
+    void collisionAttributesBeginWhenTheRestoredEntryInitializes() {
         var fixture = touchFixture();
         var jawz = onlyJawz(fixture.manager());
         assertEquals(0, jawz.getCollisionFlags(), "Obj_WaitOffscreen has no ObjDat collision byte");
@@ -51,17 +52,17 @@ public class TestS3kJawzBadnik {
         fixture.manager().update(0, fixture.main(), List.of(fixture.p2()), 1, false);
         assertEquals(0, jawz.getCollisionFlags(), "restoring Obj_Jawz does not run SetUp_ObjAttributes");
         fixture.manager().update(0, fixture.main(), List.of(fixture.p2()), 2, false);
-        assertEquals(0xD7, jawz.getCollisionFlags(), "attributes are available to the next player slot");
+        assertEquals(0xD7, jawz.getCollisionFlags(), "SetUp_ObjAttributes installs the live collision byte");
     }
 
-    @ParameterizedTest(name = "P2={0}: offscreen placeholder does not touch the player")
+    @ParameterizedTest(name = "P2={0}: only Jawz_Main publishes to the next player pass")
     @ValueSource(booleans = {false, true})
-    void productionTouchCannotReachAWaitingJawz(boolean p2) {
+    void productionPreviousListWaitsForFirstMainPublication(boolean p2) {
         var fixture = touchFixture();
         var target = p2 ? fixture.p2() : fixture.main();
         for (int frame = 0; frame < 3; frame++) {
-            fixture.manager().snapshotTouchResponseState();
-            fixture.manager().runTouchResponsesForPlayer(target, frame);
+            fixture.manager().snapshotTouchResponseState(true);
+            fixture.manager().runTouchResponsesForPlayer(target, frame, true);
             assertFalse(target.isHurt(), "a waiting native SST cannot hurt a player below the camera");
             assertEquals(0, onlyJawz(fixture.manager()).getCollisionProperty());
             fixture.manager().update(0, fixture.main(), List.of(fixture.p2()), frame, false);
@@ -70,19 +71,36 @@ public class TestS3kJawzBadnik {
         GameServices.camera().setY((short) 400);
         fixture.manager().refreshPostCameraRenderState();
         fixture.manager().update(0, fixture.main(), List.of(fixture.p2()), 3, false);
-        fixture.manager().snapshotTouchResponseState();
-        fixture.manager().runTouchResponsesForPlayer(target, 4);
+        fixture.manager().snapshotTouchResponseState(true);
+        fixture.manager().runTouchResponsesForPlayer(target, 4, true);
         assertFalse(target.isHurt());
         assertEquals(0, onlyJawz(fixture.manager()).getCollisionProperty());
         fixture.manager().update(0, fixture.main(), List.of(fixture.p2()), 4, false);
-        fixture.manager().snapshotTouchResponseState();
-        fixture.manager().runTouchResponsesForPlayer(target, 5);
+        assertEquals(0xD7, onlyJawz(fixture.manager()).getCollisionFlags());
+        fixture.manager().snapshotTouchResponseState(true);
+        fixture.manager().runTouchResponsesForPlayer(target, 5, true);
+        assertEquals(0, onlyJawz(fixture.manager()).getCollisionProperty(),
+                "Obj_Jawz returns via Set_VelocityXTrackSonic without publishing the initialized SST");
+        assertFalse(target.isHurt());
+
+        fixture.manager().update(0, fixture.main(), List.of(fixture.p2()), 5, false);
+        var jawz = onlyJawz(fixture.manager());
+        assertEquals(158, jawz.getX(), "the first Jawz_Main moves before publishing");
+        fixture.manager().snapshotTouchResponseState(true);
+        fixture.manager().runTouchResponsesForPlayer(target, 6, true);
         assertEquals(p2 ? 2 : 1, onlyJawz(fixture.manager()).getCollisionProperty());
         assertFalse(target.isHurt(), "Touch_Special queues the object response for Jawz_Main");
+        fixture.manager().update(0, fixture.main(), List.of(fixture.p2()), 6, false);
+        assertTrue(jawz.isDestroyed(), "the next Main consumes the vulnerable player's property");
+        assertFalse(jawz.publishesTouchResponseListEntryThisFrame(),
+                "the harmful-child/delete branch does not reach Sprite_CheckDeleteTouch");
+        var explosion = fixture.manager().getActiveObjects().stream()
+                .filter(HczHarmfulExplosionObjectInstance.class::isInstance).findFirst().orElseThrow();
+        assertEquals(156, explosion.getX(), "the contact-response Main also moves before replacing Jawz");
     }
 
     @Test
-    void registeredRecreationPreservesWaitingPendingAndInitializedTouchPhases() {
+    void registeredRecreationPreservesUnpublishedAndFirstPublishedPhases() {
         var fixture = touchFixture();
         fixture.manager().setRewindInPlaceRestoreEnabledForTest(false);
         var registry = new RewindRegistry();
@@ -102,10 +120,19 @@ public class TestS3kJawzBadnik {
         fixture.manager().update(0, fixture.main(), List.of(fixture.p2()), 1, false);
         var pending = registry.capture();
         fixture.manager().update(0, fixture.main(), List.of(fixture.p2()), 2, false);
-        var initialized = registry.capture();
+        var initializedUnpublished = registry.capture();
+        fixture.manager().update(0, fixture.main(), List.of(fixture.p2()), 3, false);
+        var firstPublished = registry.capture();
 
         for (int replay = 0; replay < 2; replay++) {
+            var oldJawz = onlyJawz(fixture.manager());
+            fixture.manager().snapshotTouchResponseState(true);
+            fixture.manager().runTouchResponsesForPlayer(fixture.p2(), 4, true);
+            assertEquals(2, oldJawz.getCollisionProperty());
+            fixture.manager().update(0, fixture.main(), List.of(fixture.p2()), 4, false);
+            assertTrue(oldJawz.isDestroyed(), "restore must recreate a deleted graph, not reuse live state");
             registry.restore(waiting);
+            assertNotSame(oldJawz, onlyJawz(fixture.manager()));
             assertEquals(0, onlyJawz(fixture.manager()).getCollisionFlags());
             fixture.manager().refreshPostCameraRenderState();
             fixture.manager().update(0, fixture.main(), List.of(fixture.p2()), 1, false);
@@ -114,16 +141,69 @@ public class TestS3kJawzBadnik {
             assertEquals(0xD7, onlyJawz(fixture.manager()).getCollisionFlags());
             registry.restore(pending);
             assertEquals(0, onlyJawz(fixture.manager()).getCollisionFlags());
-            fixture.manager().snapshotTouchResponseState();
-            fixture.manager().runTouchResponsesForPlayer(fixture.p2(), 2);
+            fixture.manager().snapshotTouchResponseState(true);
+            fixture.manager().runTouchResponsesForPlayer(fixture.p2(), 2, true);
             assertFalse(fixture.p2().isHurt());
             fixture.manager().update(0, fixture.main(), List.of(fixture.p2()), 2, false);
-            registry.restore(initialized);
-            fixture.manager().snapshotTouchResponseState();
-            fixture.manager().runTouchResponsesForPlayer(fixture.p2(), 3);
+            fixture.manager().update(0, fixture.main(), List.of(fixture.p2()), 3, false);
+            var beforeUnpublishedRestore = onlyJawz(fixture.manager());
+            fixture.manager().snapshotTouchResponseState(true);
+            fixture.manager().runTouchResponsesForPlayer(fixture.p2(), 4, true);
+            fixture.manager().update(0, fixture.main(), List.of(fixture.p2()), 4, false);
+            assertTrue(beforeUnpublishedRestore.isDestroyed());
+            registry.restore(initializedUnpublished);
+            var restoredUnpublished = onlyJawz(fixture.manager());
+            assertNotSame(beforeUnpublishedRestore, restoredUnpublished);
+            assertEquals(0xD7, restoredUnpublished.getCollisionFlags());
+            fixture.manager().snapshotTouchResponseState(true);
+            fixture.manager().runTouchResponsesForPlayer(fixture.p2(), 3, true);
             assertFalse(fixture.p2().isHurt());
-            assertEquals(2, onlyJawz(fixture.manager()).getCollisionProperty());
+            assertEquals(0, restoredUnpublished.getCollisionProperty(),
+                    "fresh reconstruction must not publish an initialized but unpublished SST");
+            assertFalse(restoredUnpublished.publishesTouchResponseListEntryThisFrame());
+            fixture.manager().update(0, fixture.main(), List.of(fixture.p2()), 3, false);
+            assertEquals(158, restoredUnpublished.getX());
+            fixture.manager().snapshotTouchResponseState(true);
+            fixture.manager().runTouchResponsesForPlayer(fixture.p2(), 4, true);
+            assertEquals(2, restoredUnpublished.getCollisionProperty());
+            fixture.manager().update(0, fixture.main(), List.of(fixture.p2()), 4, false);
+            assertTrue(restoredUnpublished.isDestroyed());
+
+            registry.restore(firstPublished);
+            var restoredPublished = onlyJawz(fixture.manager());
+            assertNotSame(restoredUnpublished, restoredPublished);
+            assertEquals(158, restoredPublished.getX());
+            assertTrue(restoredPublished.publishesTouchResponseListEntryThisFrame());
+            fixture.manager().snapshotTouchResponseState(true);
+            fixture.manager().runTouchResponsesForPlayer(fixture.p2(), 4, true);
+            assertEquals(2, restoredPublished.getCollisionProperty(),
+                    "the restored previous-list pointer must resolve to the recreated first-Main SST");
+            assertFalse(fixture.p2().isHurt());
+            // Restore the same published boundary again before the next destructive replay.
+            registry.restore(firstPublished);
         }
+    }
+
+    @Test
+    void attackingPlayerDefeatDoesNotPublishJawzAgain() {
+        var fixture = touchFixture();
+        fixture.main().setAnimationId(2);
+        GameServices.camera().setY((short) 400);
+        fixture.manager().refreshPostCameraRenderState();
+        fixture.manager().update(0, fixture.main(), List.of(fixture.p2()), 1, false);
+        fixture.manager().update(0, fixture.main(), List.of(fixture.p2()), 2, false);
+        fixture.manager().update(0, fixture.main(), List.of(fixture.p2()), 3, false);
+        var jawz = onlyJawz(fixture.manager());
+        fixture.manager().snapshotTouchResponseState(true);
+        fixture.manager().runTouchResponsesForPlayer(fixture.main(), 4, true);
+        assertEquals(1, jawz.getCollisionProperty());
+        fixture.manager().update(0, fixture.main(), List.of(fixture.p2()), 4, false);
+        assertTrue(jawz.isDestroyed());
+        assertEquals(156, jawz.getX());
+        assertFalse(jawz.publishesTouchResponseListEntryThisFrame(),
+                "Jawz_Defeated draws the replacement without publishing the old Jawz SST");
+        assertTrue(fixture.manager().getActiveObjects().stream()
+                .noneMatch(HczHarmfulExplosionObjectInstance.class::isInstance));
     }
 
     private record TouchFixture(ObjectManager manager, TestablePlayableSprite main, TestablePlayableSprite p2) {}
@@ -147,6 +227,7 @@ public class TestS3kJawzBadnik {
             public com.openggf.camera.Camera camera() { return GameServices.camera(); }
         };
         services.withDebugOverlay(mock(com.openggf.debug.DebugOverlayManager.class));
+        services.withGameState(GameServices.gameState());
         var table = mock(TouchResponseTable.class);
         when(table.getWidthRadius(0x17)).thenReturn(8);
         when(table.getHeightRadius(0x17)).thenReturn(8);

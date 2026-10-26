@@ -744,3 +744,15 @@ The existing audit records exact command/fingerprint, 58.066-second Maven /
 58.751-second wrapper timing with zero queue wait, separate receiving297,
 Jawz69, raw186 and Turbo81 focused qualifications, all zero-skip, and remaining
 fan/SS7 questions. Parent retains final review, combined smoke and delivery.
+
+
+Jawz final-delta disposition (2026-10-26): the bounded review finding is
+confirmed by Obj_Jawz's returning initialization and Jawz_Main's later
+Sprite_CheckDeleteTouch tail. Preserve the initialized collision-byte gate and
+use the existing object-owned publication predicate; shared list semantics stay
+with their current owner. Three real previous-list old-red cases reproduce the
+early P1/P2 property, including fresh reconstruction. Jawz10 plus retained
+list/rewind12 and anchor60 checks qualify 82 distinct cases across one fixture
+repair, no skips. The affected chain is measured separately; no new HCZ owner
+or outside-HCZ frontier investigation is authorized by this final delta. See the
+[audit](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#jawz-final-delta-publication-phase-2026-10-26).

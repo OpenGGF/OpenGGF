@@ -115779,3 +115779,28 @@ The existing audit records exact command/fingerprint, 58.066-second Maven /
 58.751-second wrapper timing with zero queue wait, separate receiving297,
 Jawz69, raw186 and Turbo81 focused qualifications, all zero-skip, and remaining
 fan/SS7 questions. Parent retains final review, combined smoke and delivery.
+
+
+Jawz final-delta publication correction (2026-10-26, isolated
+`bugfix/ai-hcz-continuity-repair-20261025` atop clean `90c16dc77`): the native
+initialization exposes attributes but does not publish a collision-list entry.
+Three real previous-list old-red controls fail; Jawz now publishes only from
+its zero-property Main tail. Focused qualification covers 82 distinct cases
+across one fixture repair, zero skips, including destructive phase restore and
+all four S3K anchors. Exact affected command:
+
+```text
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dsonic1.rom.path=<original-S1-absolute-path> -Dsonic2.rom.path=<original-S2-absolute-path> -Ds3k.rom.path=<original-S3K-absolute-path> -Ptrace-replay -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds test -B
+```
+
+Source fingerprint `f32f49df7fb8fd68d58f9b1de77b2462b4bb4708b0c4b64f48548c0cfe469168`;
+Java25/Lua5.4, verified original ROMs, display/JVM-option variables unset.
+Result 1T/1F/0E/0S; queue 257 seconds, Maven 59.099 / wrapper 316.580 seconds.
+Frontier unchanged: segment 11 completes its giant-ring boundary with 62
+differences (11 camera / 51 animation), 59 lag, 0 bootstrap and no non-camera
+physics mismatch; first strict row 6640 animation $13/$05. Segment 13 completes
+with 4,145 differences (3,795 physics / 350 animation), 7 lag, 0 bootstrap; first
+non-camera row 2147 P1 Y $04DA/$04DE. Terminal SS7 results at movie cursor 97208 persists.
+No new owner is attributed or investigated. Exact cases, source/fixture/selection
+identity, old-red and fixture-error limits are in the
+[audit](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#jawz-final-delta-publication-phase-2026-10-26).

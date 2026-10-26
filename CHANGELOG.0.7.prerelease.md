@@ -622,8 +622,9 @@ Unreleased. The earlier development themes remain in
   A Mega Chopper that catches Sonic alone locks his controls and passes through
   only left and right, including both directions together, so he must shake it
   off rather than roll, duck or jump.
-  Jawz and Turbo Spiker begin touch collision only after their native visible
-  initialization passes.
+  Jawz and Turbo Spiker expose collision attributes only after their native
+  visible initialization passes. Jawz joins the touch list after its first swim
+  pass, so the player cannot touch it during initialization.
   The Hydrocity miniboss spends the original start-up pass before it descends,
   so its dives, hits and whirlpool grab and release land on the original frames.
   Its retained act-change carriers keep their captured swing targets and the

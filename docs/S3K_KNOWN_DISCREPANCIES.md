@@ -1877,3 +1877,14 @@ The existing audit records exact command/fingerprint, 58.066-second Maven /
 58.751-second wrapper timing with zero queue wait, separate receiving297,
 Jawz69, raw186 and Turbo81 focused qualifications, all zero-skip, and remaining
 fan/SS7 questions. Parent retains final review, combined smoke and delivery.
+
+
+Jawz publication-phase correction (2026-10-26): the earlier Jawz69 evidence
+proved the initialized collision-byte gate but accepted touch one pass too early.
+The object now distinguishes live attributes from collision-list publication:
+Obj_Jawz initializes without publishing; the next zero-property Jawz_Main
+publishes, while its contact-response branches do not. Real previous-list P1/P2
+and fresh graph restore controls reproduce three old-red assertion failures.
+Corrected focused qualification is 82 distinct cases across one fixture repair,
+zero skips, including both publication phases and ordinary defeat. See the
+[audit](architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#jawz-final-delta-publication-phase-2026-10-26); historical Jawz69 is not a complete publication qualification.
