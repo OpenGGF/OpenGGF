@@ -28,25 +28,25 @@ class TestTasS2WfzSpindashStorage {
         try (var session = new GameplayCaptureSession(settings)) {
             session.boot(Path.of(System.getProperty("sonic2.rom.path")), 0, 0, settings);
             int waits = 0;
-            do { session.step(null); session.renderFrame(); assertTrue(++waits < 600); }
+            do { com.openggf.tests.reel.TestReelCapture.step(session,null); session.renderFrame(); assertTrue(++waits < 600); }
             while (session.loop().getCurrentGameMode() != GameMode.LEVEL
                     || GameServices.level().hasPendingFreshLevelTransitionBoundary());
             var player = GameServices.sprites().getMainPlayable();
-            while (player.getAir() && waits++ < 800) session.step(null);
+            while (player.getAir() && waits++ < 800) com.openggf.tests.reel.TestReelCapture.step(session,null);
             var objects = GameServices.level().getObjectManager();
             int start = player.getCentreX() + 96, y = player.getCentreY() - 32;
             var platform = new SpeedLauncherObjectInstance(new ObjectSpawn(start, y, 0xC0, 8, 1, false, 0), "Slider");
             objects.addDynamicObject(platform);
             player.setCentreX((short) start); player.setCentreY((short) (y - 0x11 - player.getYRadius() + 3));
             player.setAir(true); player.setYSpeed((short) 0x100);
-            session.step(null);
+            com.openggf.tests.reel.TestReelCapture.step(session,null);
             assertTrue(objects.isRidingObject(player, platform), "actual top landing must arm the slider");
             boolean charged = false;
             int frame = 0;
             do {
                 int held = charge ? AbstractPlayableSprite.INPUT_DOWN : 0;
                 if (charge && (frame == 1 || frame == 3 || frame == 5)) held |= AbstractPlayableSprite.INPUT_JUMP;
-                session.step(new Bk2FrameInput(frame, held, (held & AbstractPlayableSprite.INPUT_JUMP) != 0 ? 1 : 0, false, "catapult charge"));
+                com.openggf.tests.reel.TestReelCapture.step(session,new Bk2FrameInput(frame, held, (held & AbstractPlayableSprite.INPUT_JUMP) != 0 ? 1 : 0, false, "catapult charge"));
                 charged |= player.getSpindash();
                 assertTrue(++frame < 30, "catapult must reach its endpoint");
             } while (!player.getAir());

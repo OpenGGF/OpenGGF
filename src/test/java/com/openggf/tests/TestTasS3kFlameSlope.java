@@ -31,7 +31,7 @@ class TestTasS3kFlameSlope {
         SessionManager.clear();TestEnvironment.activeGameplayMode();
         var f=HeadlessTestFixture.builder().withSkippedZoneIntro().withZoneAndAct(8,1)
                 .withFreshLevelStartLifecycle().build();
-        f.stepFrame(false,false,false,false,false);
+        step(f,false,false,false,false,false);
         var p=f.sprite();var level=GameServices.level();
         // Independently authored full-spindash rolling entry on the ROM's
         // ordinary floor: surface $420, radius14, one-pixel sensor gap.
@@ -53,7 +53,7 @@ class TestTasS3kFlameSlope {
             boolean left=tick<=11;
             boolean right=tick>=12&&tick<=35;
             boolean jump=(tick>=2&&tick<=4)||(dash&&tick==10);
-            f.stepFrame(false,false,left,right,jump);
+            step(f,false,false,left,right,jump);
             if(tick==2){
                 assertTrue(p.getAir());assertTrue(p.getRollingJump());assertEquals(19,p.getYRadius());
                 assertEquals(-2633,p.getXSpeed());assertEquals(-1911,p.getYSpeed());
@@ -125,7 +125,7 @@ class TestTasS3kFlameSlope {
         SessionManager.clear();TestEnvironment.activeGameplayMode();
         var f=HeadlessTestFixture.builder().withSkippedZoneIntro().withZoneAndAct(8,1)
                 .withFreshLevelStartLifecycle().build();
-        f.stepFrame(false,false,false,false,false);
+        step(f,false,false,false,false,false);
         var p=f.sprite();var level=GameServices.level();
         assertEquals(0x77,level.getBlockIdAt(0x3440,0x260));
         // Valid clear airborne jump beside the real ROM slope. Neither overlap,
@@ -141,10 +141,10 @@ class TestTasS3kFlameSlope {
         var camera=f.camera();camera.setFrozen(false);camera.setMinX((short)0);camera.setMaxX((short)0x3F00);
         camera.setMaxY((short)0x7FF);camera.updatePosition(true);
 
-        f.stepFrame(false,false,false,false,false); // release/approach acquires overlap
+        step(f,false,false,false,false,false); // release/approach acquires overlap
         assertTrue(p.getAir());assertEquals(0x3411,p.getCentreX());assertEquals(0x249,p.getCentreY());
         assertEquals(-0x2E80,p.getXSpeed());assertEquals(-0xC8,p.getYSpeed());
-        f.stepFrame(false,false,false,false,dash);
+        step(f,false,false,false,false,dash);
         if(dash){
             assertEquals(0x3409,p.getCentreX());assertEquals(0x232,p.getCentreY());
             assertEquals(-0x800,p.getXSpeed());assertEquals(0,p.getYSpeed());assertEquals(0,p.getGSpeed());
@@ -156,7 +156,7 @@ class TestTasS3kFlameSlope {
         int firstSlideExit=-1;
         for(int tick=2;tick<=100;tick++){
             boolean sliding=p.isSliding();
-            f.stepFrame(false,false,false,false,false); // includes post-camera SOZ terrain owner
+            step(f,false,false,false,false,false); // includes post-camera SOZ terrain owner
             if(sliding&&!p.isSliding()&&firstSlideExit<0){
                 firstSlideExit=tick;assertEquals(5,p.getMoveLockTimer(),"loc_734A owns the actual slide exit");
                 assertEquals(dash,p.getAir(),"dash route first exits in air; neutral control exits grounded");
@@ -165,4 +165,10 @@ class TestTasS3kFlameSlope {
         assertEquals(dash?49:86,firstSlideExit);
         assertEquals(dash?0x36AF:0x345A,p.getCentreX());assertEquals(dash?0x336:0x2EC,p.getCentreY());
     }
+    private static void step(HeadlessTestFixture fixture, boolean up, boolean down,
+            boolean left, boolean right, boolean jump) {
+        fixture.stepFrame(up,down,left,right,jump);
+        com.openggf.tests.reel.TestReelCapture.afterHeadlessFrame(fixture,up,down,left,right,jump);
+    }
+
 }

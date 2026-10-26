@@ -8,6 +8,58 @@ import test_reel as reel
 
 
 class InventoryTests(unittest.TestCase):
+    def test_reviewed_blank_control_keeps_raw_evidence_but_selects_one_card(self):
+        case={'id':'C#unreachable','junit_unique_id':'real-id','outcome':'passed',
+              'capture_fixture_sha256':'a'*64,'matches_inventory_source':True,
+              'capture_status':'captured','frames':29,
+              'drawable_disposition':'Actual monitor remains outside the component viewport; all29 readbacks blank'}
+        selected=reel.reel_cases({'cases':[case]},True,True)
+        self.assertEqual(('non-drawable-card',1),selected[0][1:])
+        self.assertEqual(29,case['frames'])
+        with self.assertRaisesRegex(ValueError,'non-drawable card disabled'):
+            reel.reel_cases({'cases':[case]},False,True)
+
+    def test_specific_review_does_not_reclassify_other_methods_or_controls(self):
+        scope = {'adapters':{'C':'actual object adapter'},
+                 'non_drawable':{'C#logic':'No drawable model', 'C#mixed[2]':'Invisible control'}}
+        self.assertEqual((None,'No drawable model'),reel.presentation_disposition(scope,'C','logic',None))
+        self.assertEqual(('actual object adapter','Adapter available'),reel.presentation_disposition(scope,'C','mixed',1))
+        self.assertEqual((None,'Invisible control'),reel.presentation_disposition(scope,'C','mixed',2))
+
+    def test_complete_reel_separates_real_frames_from_one_frame_logic_cards(self):
+        common = {'junit_unique_id':'actual-id', 'outcome':'passed',
+                  'capture_fixture_sha256':'a'*64, 'matches_inventory_source':True}
+        video = common | {'id':'C#video','capture_status':'captured','frames':7}
+        logic = common | {'id':'C#logic','capture_status':'no-adapter','frames':0,
+                          'drawable_disposition':'Mock renderer contract; no framebuffer'}
+        selected = reel.reel_cases({'cases':[video,logic]}, True, True)
+        self.assertEqual([('engine-frames',7),('non-drawable-card',1)],
+                         [(kind,frames) for _,kind,frames in selected])
+        self.assertEqual(0,logic['frames'])
+
+    def test_full_reel_cannot_turn_missing_execution_or_unreviewed_case_into_a_card(self):
+        case = {'id':'C#missing','capture_status':'not-executed','frames':0}
+        with self.assertRaisesRegex(ValueError,'Incomplete reel'):
+            reel.reel_cases({'cases':[case]}, True, True)
+        case.update(capture_status='no-adapter',junit_unique_id='actual-id',outcome='passed',
+                    capture_fixture_sha256='a'*64,matches_inventory_source=True,
+                    drawable_disposition='Not yet reviewed for drawable state')
+        with self.assertRaisesRegex(ValueError,'reviewed non-drawable'):
+            reel.reel_cases({'cases':[case]}, True, True)
+        case['drawable_disposition']='Adapter available'
+        with self.assertRaisesRegex(ValueError,'reviewed non-drawable'):
+            reel.reel_cases({'cases':[case]}, True, True)
+
+    def test_complete_reel_requires_passed_matching_executed_sources(self):
+        case = {'id':'C#video','capture_status':'captured','frames':2,
+                'junit_unique_id':'actual-id','outcome':'failed',
+                'capture_fixture_sha256':'a'*64,'matches_inventory_source':True}
+        with self.assertRaisesRegex(ValueError,'passed actual invocation'):
+            reel.reel_cases({'cases':[case]}, False, True)
+        case['outcome']='passed';case['matches_inventory_source']=False
+        with self.assertRaisesRegex(ValueError,'source identity'):
+            reel.reel_cases({'cases':[case]}, False, True)
+
     def test_expands_controls_in_both_annotation_orders_and_respects_literal_braces(self):
         source = '''class Cases {
             @ParameterizedTest @CsvSource({"false, 12", "true, 128"})
@@ -62,13 +114,15 @@ class InventoryTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root=Path(temp)
             base={'id':'C#m','class':'C','method':'m','arguments':[],'invocation_index':None,
-                  'source_file':'C.java','fixture_sha256':'a'*64,'capture_status':'not-run'}
+                  'source_file':'C.java','fixture_sha256':'a'*64,'capture_status':'not-run',
+                  'adapter':None,'drawable_disposition':'Reviewed: mock draw contract only'}
             inventory=root/'inventory.json';inventory.write_text(json.dumps({'source_commit':'base','cases':[base]}))
             records=[]
             for i in (1,2):
                 directory=root/f'run-{i}';directory.mkdir()
                 (directory/'run.json').write_text(json.dumps({'roms':{},'source_file_hashes':{'C.java':'a'*64}}))
-                capture=base | {'case_dir':'cases/actual','capture_fixture_sha256':'a'*64,'junit_unique_id':'real-id'}
+                capture=base | {'case_dir':'cases/actual','capture_fixture_sha256':'a'*64,'junit_unique_id':'real-id',
+                                'adapter':'stale claim','drawable_disposition':'Not yet reviewed for drawable state'}
                 record=directory/'manifest.json';record.write_text(json.dumps({'source_commit':'base','cases':[capture]}))
                 records.append(str(record))
             args=argparse.Namespace(inventory=str(inventory),out=str(root/'out'),manifest=records,
@@ -79,6 +133,15 @@ class InventoryTests(unittest.TestCase):
             reel.combine(args)
             chosen=json.loads((root/'chosen/manifest.json').read_text())['cases'][0]
             self.assertIn('run-2',chosen['case_dir'])
+            self.assertIsNone(chosen['adapter'])
+            self.assertEqual('Reviewed: mock draw contract only',chosen['drawable_disposition'])
+            # A deliberately superseded revision is not a selected source. Only
+            # the final chosen recording may satisfy the target inventory hash.
+            (root/'run-1/run.json').write_text(json.dumps({'source_file_hashes':{'C.java':'b'*64}}))
+            args.out=str(root/'superseded');reel.combine(args)
+            combined=json.loads((root/'superseded/manifest.json').read_text())
+            self.assertEqual('a'*64,combined['cases'][0]['capture_fixture_sha256'])
+            self.assertEqual([{'id':'C#m','manifest':records[0]}],combined['superseded_recordings'])
             broken=json.loads(Path(records[1]).read_text())
             # A stale/forged manifest claim must not override the actual recorded source snapshot.
             broken['cases'][0]['capture_fixture_sha256']='a'*64

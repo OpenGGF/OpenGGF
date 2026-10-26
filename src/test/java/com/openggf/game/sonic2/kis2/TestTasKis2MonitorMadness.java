@@ -33,19 +33,19 @@ class TestTasKis2MonitorMadness {
             session.boot(Path.of(System.getProperty("sonic2.rom.path")), 0, 0, settings);
             int waits = 0;
             do {
-                session.step(null); session.renderFrame();
+                com.openggf.tests.reel.TestReelCapture.step(session,null); session.renderFrame();
                 assertTrue(++waits < 600);
             } while (session.loop().getCurrentGameMode() != GameMode.LEVEL
                     || GameServices.level().hasPendingFreshLevelTransitionBoundary());
             var player = GameServices.sprites().getMainPlayable();
-            while (player.getAir() && waits++ < 800) session.step(null);
+            while (player.getAir() && waits++ < 800) com.openggf.tests.reel.TestReelCapture.step(session,null);
             assertFalse(player.getAir());
             int floorY = player.getCentreY() + player.getYRadius();
             int monitorX = player.getCentreX() + 120;
             var monitor = new MonitorObjectInstance(new ObjectSpawn(monitorX, floorY - 16,
                     0x26, 4, 0, false, 0), "Monitor");
             GameServices.level().getObjectManager().addDynamicObject(monitor);
-            session.step(null); // initialize the real monitor before the authored landing
+            com.openggf.tests.reel.TestReelCapture.step(session,null); // initialize the real monitor before the authored landing
             // Valid falling entry at the leftmost visible pixel (width_pixels=$0F).
             // Acquire the standing bit through actual SolidObject, never seed it.
             player.setCentreX((short) (monitorX - 15));
@@ -55,7 +55,7 @@ class TestTasKis2MonitorMadness {
             player.setAnimationId(0);
             int landing = 0;
             while (!GameServices.level().getObjectManager().isRidingObject(player, monitor) && landing++ < 8)
-                session.step(null);
+                com.openggf.tests.reel.TestReelCapture.step(session,null);
             assertTrue(GameServices.level().getObjectManager().isRidingObject(player, monitor),
                     "must acquire actual monitor support at its left visible pixel");
             assertFalse(player.getAir());
@@ -63,14 +63,14 @@ class TestTasKis2MonitorMadness {
             // Declared legal superspeed on support, not a seeded roll/air exit.
             player.setGSpeed((short) (fast ? 0x4000 : 0x400));
             player.setXSpeed(player.getGSpeed());
-            session.step(new Bk2FrameInput(0, AbstractPlayableSprite.INPUT_DOWN, 0, false, "roll"));
+            com.openggf.tests.reel.TestReelCapture.step(session,new Bk2FrameInput(0, AbstractPlayableSprite.INPUT_DOWN, 0, false, "roll"));
             assertTrue(player.getRolling(), "actual Down must enter the roll path");
             if (fast) {
                 assertTrue(player.getCentreX() > monitorX + 26, "one movement pass clears the monitor");
                 assertTrue(player.getAir(), "Obj26 edge check releases support after the roll");
                 assertEquals(0x46, monitor.getCollisionFlags(), "the fast edge trick leaves the monitor intact");
                 short retained = player.getXSpeed();
-                for (int i = 0; i < 20 && player.getAir(); i++) session.step(null);
+                for (int i = 0; i < 20 && player.getAir(); i++) com.openggf.tests.reel.TestReelCapture.step(session,null);
                 assertFalse(player.getDead());
                 assertFalse(player.getAir(), "must land through actual terrain");
                 assertFalse(player.getRolling(), "the airborne roll returns to running on landing");

@@ -49,11 +49,11 @@ class TestTasS3kNewGamePlus {
             session.startAtTitle();session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(),0,0,settings);
             try(var input=MutatorGameplayCaptureTool.PresentationInput.install(session.loop())) {
                 for(int i=0;i<1800&&session.loop().getCurrentGameMode()!=GameMode.DATA_SELECT;i++)
-                    session.stepPresentation(i%20==10?new Bk2FrameInput(0,0,0,true,"title Start"):null,input);
+                    stepPresentation(session,i%20==10?new Bk2FrameInput(0,0,0,true,"title Start"):null,input);
                 assertEquals(GameMode.DATA_SELECT,session.loop().getCurrentGameMode());
-                for(int i=0;i<60;i++)session.stepPresentation(null,input);
-                session.stepPresentation(new Bk2FrameInput(0,AbstractPlayableSprite.INPUT_RIGHT,0,false,"slot 1"),input);
-                session.stepPresentation(null,input);
+                for(int i=0;i<60;i++)stepPresentation(session,null,input);
+                stepPresentation(session,new Bk2FrameInput(0,AbstractPlayableSprite.INPUT_RIGHT,0,false,"slot 1"),input);
+                stepPresentation(session,null,input);
                 var menu=assertInstanceOf(AbstractDataSelectProvider.class,session.loop().getDataSelectProvider());
                 if(completed) {
                     // Cleared files default to the terminal icon. Cycle to AIZ
@@ -63,8 +63,8 @@ class TestTasS3kNewGamePlus {
                 }
                 var choice=menu.getSessionController().confirmSelection();
                 assertEquals(completed?DataSelectActionType.CLEAR_RESTART:DataSelectActionType.LOAD_SLOT,choice.type());assertEquals(0,choice.zone());assertEquals(0,choice.act());
-                session.stepPresentation(new Bk2FrameInput(0,0,InputActionMasks.ACTION_A,false,"load AIZ"),input);
-                for(int i=0;i<700&&session.loop().getCurrentGameMode()!=GameMode.LEVEL;i++)session.stepPresentation(null,input);
+                stepPresentation(session,new Bk2FrameInput(0,0,InputActionMasks.ACTION_A,false,"load AIZ"),input);
+                for(int i=0;i<700&&session.loop().getCurrentGameMode()!=GameMode.LEVEL;i++)stepPresentation(session,null,input);
                 assertEquals(GameMode.LEVEL,session.loop().getCurrentGameMode());
             }
             assertEquals(0,GameServices.level().getCurrentZone());assertEquals(0,GameServices.level().getCurrentAct());
@@ -74,4 +74,11 @@ class TestTasS3kNewGamePlus {
             assertEquals(1,SessionManager.getCurrentWorldSession().getSaveSessionContext().activeSlot().orElseThrow());
         }
     }
+    /** Records the same production presentation-input tick without a second update. */
+    private static void stepPresentation(GameplayCaptureSession session, Bk2FrameInput frame,
+            MutatorGameplayCaptureTool.PresentationInput input) {
+        session.stepPresentation(frame,input);
+        com.openggf.tests.reel.S3kTestReelPresentation.afterSessionFrame(session,frame);
+    }
+
 }

@@ -65,43 +65,49 @@ class TestTasS2EnemyContact {
     @CsvSource({"-1,512,-512", "0,512,256", "1,512,256", "-1,-512,-256"})
     void realEnemyContactUsesCentreAndVelocityBranchesWithoutLosingHorizontalMomentum(
             int playerYOffset, int incomingY, int expectedY) {
-        player.setAir(true);
-        player.setCentreY((short) (0x70 + playerYOffset));
-        player.setYSpeed((short) incomingY);
-        defeat(1);
+        try (var reel = com.openggf.tests.reel.S2ComponentTestReel.open(16)) {
+            player.setAir(true);
+            player.setCentreY((short) (0x70 + playerYOffset));
+            player.setYSpeed((short) incomingY);
+            defeat(1);
 
-        assertEquals(expectedY, player.getYSpeed());
-        assertEquals(0xA00, player.getXSpeed());
-        assertEquals(0xB00, player.getGSpeed());
-        assertTrue(player.getAir());
-        assertTrue(player.getRolling());
-        assertEquals(100, services.gameState().getScore());
+            assertEquals(expectedY, player.getYSpeed());
+            assertEquals(0xA00, player.getXSpeed());
+            assertEquals(0xB00, player.getGSpeed());
+            assertTrue(player.getAir());
+            assertTrue(player.getRolling());
+            assertEquals(100, services.gameState().getScore());
+        }
     }
 
     @Test
     void consecutiveGroundedKillsRetainTheFirstFourNativeComboAwards() {
-        int[] awards = {100, 200, 500, 1000};
-        int expectedScore = 0;
-        for (int i = 0; i < awards.length; i++) {
-            player.setYSpeed((short) 0);
-            defeat(i + 1);
-            expectedScore += awards[i];
-            assertEquals(expectedScore, services.gameState().getScore());
-            assertFalse(player.getAir(), "Touch_KillEnemy does not set the airborne bit");
-            assertTrue(player.getRolling(), "a grounded badnik contact must not unroll the player");
-            assertEquals(-0x100, player.getYSpeed());
+        try (var reel = com.openggf.tests.reel.S2ComponentTestReel.open(16)) {
+            int[] awards = {100, 200, 500, 1000};
+            int expectedScore = 0;
+            for (int i = 0; i < awards.length; i++) {
+                player.setYSpeed((short) 0);
+                defeat(i + 1);
+                expectedScore += awards[i];
+                assertEquals(expectedScore, services.gameState().getScore());
+                assertFalse(player.getAir(), "Touch_KillEnemy does not set the airborne bit");
+                assertTrue(player.getRolling(), "a grounded badnik contact must not unroll the player");
+                assertEquals(-0x100, player.getYSpeed());
+            }
         }
     }
 
     @Test
     void sixteenthNormalKillAwardsTenThousandNativePoints() {
-        int before = 0;
-        for (int i = 1; i <= 16; i++) {
-            before = services.gameState().getScore();
-            defeat(i);
+        try (var reel = com.openggf.tests.reel.S2ComponentTestReel.open(16)) {
+            int before = 0;
+            for (int i = 1; i <= 16; i++) {
+                before = services.gameState().getScore();
+                defeat(i);
+            }
+            assertEquals(10000, services.gameState().getScore() - before,
+                    "Touch_KillEnemy compares the incremented Chain_Bonus_counter against $20");
         }
-        assertEquals(10000, services.gameState().getScore() - before,
-                "Touch_KillEnemy compares the incremented Chain_Bonus_counter against $20");
     }
 
     private void defeat(int pass) {
@@ -109,6 +115,7 @@ class TestTasS2EnemyContact {
         objects.addDynamicObject(enemy);
         objects.snapshotTouchResponseState();
         objects.runTouchResponsesForPlayer(player, pass);
+        com.openggf.tests.reel.S2ComponentTestReel.frame(player, objects.getActiveObjects(), 0, 0, "enemy touch slot; later object loop intentionally absent");
         assertTrue(enemy.isDestroyed(), "must reach native enemy destruction on pass " + pass
                 + "; anim=" + player.getAnimationId() + ", rolling=" + player.getRolling()
                 + ", hurt=" + player.isHurt() + ", score=" + services.gameState().getScore());

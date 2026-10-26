@@ -102,6 +102,21 @@ MP4 is encoded once, decoded in full with `-xerror`, and checked against the exa
 expected frame count. Source frames, state and manifests are retained. Existing
 MP4s are never overwritten. `--slow 4` is an explicit debug presentation; the
 edit map records its speed factor. Default speed is always 1.
+Assembly timestamps come from sequential decoded frame indices at exactly 60 Hz,
+not the lossless containers' rounded millisecond durations. The frame-identity
+integration check covers 80 one-frame cuts at normal and 4× held speed.
+
+For a complete census reel, add `--include-nondrawable-cards --require-complete`.
+Each reviewed non-drawable invocation receives exactly one labelled editorial
+frame saying **Not engine footage**, with its actual JUnit outcome and reason.
+Its recorded game-frame count remains unchanged. Most such cases recorded zero
+frames; a reviewed empty-state control may have blank readbacks. Those are retained
+as evidence, with their omission counted explicitly in the edit map. The map distinguishes
+cards from real engine frames. Completeness requires every inventory entry to
+have a passed actual invocation, matching executed source hash, and either real
+frames or a reviewed non-drawable reason. Missing adapters/executions and unknown
+legacy hashes cannot silently become cards. Lossless segments live beside the
+output video; original capture directories are not changed by encoding.
 
 Later capture batches can be assembled without recapturing earlier cases:
 
@@ -118,6 +133,8 @@ python3 tools/test_reel/test_reel.py stitch \
 
 Combination checks fixture identities and rejects duplicate captures by default.
 `--prefer-last` explicitly selects a corrected later revision of a duplicate.
+Selection precedes source-hash validation; superseded records are listed but
+cannot qualify the chosen recording, whose canonical run hash must still match.
 The development-only `--allow-legacy-source` admits the initial v1 preview with
 the same pinned source base and retained dirty diff, marking its missing per-file
 fingerprint as a provenance limit. This option cannot bypass a known actual hash
@@ -153,22 +170,34 @@ For tests already using `GameplayCaptureSession`, replace each existing
 exactly once, then uses the session's production render/readback path only while
 recording. The S2 live P2 control and S3K pause limitation are examples.
 
+Component adapters can check `TestReelCapture.isRecording()` before acquiring
+presentation resources, then call `recordFrame(image, mode, input)` with the
+actual production renderer's 320×224 image. The hook records the supplied pixels,
+mode and both controller states without stepping anything. Own component GL/art
+resources inside the test's recording branch and guard its gameplay state across
+draw. A blank component backdrop is legitimate; a substitute game world is not.
+
 For a loaded native 320×224 `HeadlessTestFixture`, call
 `TestReelCapture.afterHeadlessFrame(fixture, up, down, left, right, jump)`
 immediately after the existing step. The S1 movement helper demonstrates this.
+The overload `afterHeadlessFrame(fixture, input, mode)` preserves actual Start
+and P2 inputs and a `PAUSED` or other observation mode.
 It creates an owned EGL context over the **same** loaded world, uploads its CPU
 art, draws through native sprite priority, and checks that presentation did not
 change player position, velocity, angle, air/roll flags and animation fields. This is a listed-player-field guard, not proof of complete world-state purity.
 It does not reload the level, reset player art/animation, add ticks or recenter
-the camera. This adapter is currently verified for the S1 movement fixture only;
-other worlds/events need their own focused evidence before registration.
+the camera. The dated full-reel reports qualify S1 loaded-world fixtures and S3K
+flame-slope fixtures through this adapter, plus explicit session/component adapters
+across all three games. Other worlds/events need their own focused evidence before registration.
 
 Fixtures with component managers, mocked render consumers, custom geometry,
 multiple private worlds, or non-gameplay menus need explicit adapters at their
 real ownership boundary. Do not boot an unrelated level under their logic and
 call it their footage. If no drawable state exists, retain the per-case outcome
 and reason with zero frames. Register reviewed dispositions and available adapters
-in the scope JSON; unreviewed cases remain explicit. Never turn a placeholder or
+in the scope JSON by class, `class#method`, or `class#method[ordinal]`; the most
+specific review wins. Combination preserves the target inventory's reviewed
+disposition instead of an older recording's planning label. Unreviewed cases remain explicit. Never turn a placeholder or
 an omission into an in-engine clip.
 
 ## Focused checks

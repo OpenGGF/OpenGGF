@@ -1,5 +1,7 @@
 package com.openggf.game.sonic1.objects;
 
+import com.openggf.tests.reel.S1ReelFrames;
+
 import com.openggf.game.GameServices;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.tests.HeadlessTestFixture;
@@ -20,7 +22,7 @@ class TestTasS1SlopeVerdict {
         try {
             var f=HeadlessTestFixture.builder().withSharedLevel(level).startPosition((short)0x1a0,(short)0x1ed).startPositionIsCentre().build();
             var s=f.sprite();var objects=GameServices.level().getObjectManager();
-            f.stepIdleFrames(2);
+            S1ReelFrames.idle(f,2);
             var block=objects.getRidingObject(s);
             assertInstanceOf(Sonic1FloatingBlockObjectInstance.class,block);
             assertEquals(0x1a0,block.getX());assertEquals(0x210,block.getY());
@@ -31,7 +33,7 @@ class TestTasS1SlopeVerdict {
             assertEquals(!offscreen,block.isWithinSolidContactBounds(),"Reach the native obRender collision gate");
             s.setGSpeed((short)0x600);s.setXSpeed((short)0x600);
             int edge=block.getX()+64+11;
-            for(int i=0;i<25&&s.getCentreX()<=edge;i++)f.stepFrame(false,false,false,true,false);
+            for(int i=0;i<25&&s.getCentreX()<=edge;i++)S1ReelFrames.step(f,false,false,false,true,false);
             assertTrue(s.getCentreX()>edge,"Right input really walks beyond the native solid's standing range");
             assertFalse(block.isDestroyed(),"This tests offscreen collision dispatch, not deletion");
             // Native parity assertion (expected offscreen) was executed red first.

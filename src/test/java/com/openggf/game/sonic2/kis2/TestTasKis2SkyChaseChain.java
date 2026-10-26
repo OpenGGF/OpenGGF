@@ -43,14 +43,14 @@ class TestTasKis2SkyChaseChain {
             var player = GameServices.sprites().getMainPlayable();
             var objects = GameServices.level().getObjectManager();
             int waits = 0;
-            while (!objects.isRidingObject(player) && waits++ < 180) session.step(null);
+            while (!objects.isRidingObject(player) && waits++ < 180) com.openggf.tests.reel.TestReelCapture.step(session,null);
             assertTrue(objects.isRidingObject(player), "native SCZ spawn must land on ObjB2");
             assertFalse(player.getAir());
             int cameraX = GameServices.camera().getX();
             // Legal moving, supported entry. Down must execute the actual roll.
             player.setGSpeed((short) 0x300);
             player.setXSpeed((short) 0x300);
-            session.step(input(AbstractPlayableSprite.INPUT_DOWN));
+            com.openggf.tests.reel.TestReelCapture.step(session,input(AbstractPlayableSprite.INPUT_DOWN));
             assertTrue(player.getRolling(), "Down must enter the attacking roll on the plane");
             int before = GameServices.gameState().getScore();
             killNearbyEnemy(session, player);
@@ -58,19 +58,19 @@ class TestTasKis2SkyChaseChain {
             assertFalse(player.getAir(), "grounded enemy rebound writes velocity without setting air");
 
             if (jumpBetweenKills) {
-                session.step(input(AbstractPlayableSprite.INPUT_JUMP));
+                com.openggf.tests.reel.TestReelCapture.step(session,input(AbstractPlayableSprite.INPUT_JUMP));
                 assertTrue(player.getAir(), "fresh jump must leave real Tornado support");
                 assertTrue(player.isJumping());
                 waits = 0;
-                while (player.getAir() && waits++ < 180) session.step(null);
+                while (player.getAir() && waits++ < 180) com.openggf.tests.reel.TestReelCapture.step(session,null);
                 assertFalse(player.getAir(), "control must really reland, not time out");
                 assertTrue(objects.isRidingObject(player));
                 player.setGSpeed((short) 0x300);
                 player.setXSpeed((short) 0x300);
-                session.step(input(AbstractPlayableSprite.INPUT_DOWN));
+                com.openggf.tests.reel.TestReelCapture.step(session,input(AbstractPlayableSprite.INPUT_DOWN));
             } else {
                 for (int i = 0; i < 4; i++) {
-                    session.step(input(AbstractPlayableSprite.INPUT_DOWN));
+                    com.openggf.tests.reel.TestReelCapture.step(session,input(AbstractPlayableSprite.INPUT_DOWN));
                     assertTrue(objects.isRidingObject(player));
                     assertFalse(player.getAir());
                 }
@@ -87,7 +87,7 @@ class TestTasKis2SkyChaseChain {
         var enemy = new NebulaBadnikInstance(new ObjectSpawn(
                 player.getCentreX() + 2, player.getCentreY(), 0x99, 0x12, 0, false, 0));
         GameServices.level().getObjectManager().addDynamicObject(enemy);
-        session.step(input(AbstractPlayableSprite.INPUT_DOWN));
+        com.openggf.tests.reel.TestReelCapture.step(session,input(AbstractPlayableSprite.INPUT_DOWN));
         assertTrue(enemy.isDestroyed(), "real ROM-backed touch dispatch must destroy the authored Nebula");
     }
 

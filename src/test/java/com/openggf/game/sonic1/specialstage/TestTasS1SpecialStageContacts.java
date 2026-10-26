@@ -1,6 +1,7 @@
 package com.openggf.game.sonic1.specialstage;
 
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.tests.reel.S1SpecialStageReel;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
@@ -26,15 +27,17 @@ import static org.junit.jupiter.api.Assertions.*;
 @RequiresRom(SonicGame.SONIC_1)
 class TestTasS1SpecialStageContacts {
     private Sonic1SpecialStageManager manager;
+    private S1SpecialStageReel reel;
     private byte[] layout;
 
     @BeforeEach
     void setup() throws Exception {
         GraphicsManager.getInstance().initHeadless();
+        reel = S1SpecialStageReel.open();
         manager = new Sonic1SpecialStageManager();
         manager.initialize(0);
         manager.advanceToEntryPresentation();
-        manager.update(); // Run Obj09_Main, so it cannot overwrite the test's entry state.
+        S1SpecialStageReel.update(manager); // Run Obj09_Main, so it cannot overwrite the test's entry state.
         layout = (byte[]) field("layout").get(manager);
         Arrays.fill(layout, (byte) 0);
         set("ssAngle", 0);
@@ -49,9 +52,11 @@ class TestTasS1SpecialStageContacts {
 
     @AfterEach
     void cleanup() {
-        if (manager != null) manager.reset();
-        GraphicsManager.getInstance().cleanup();
-        GraphicsManager.getInstance().resetState();
+        try {
+            if (manager != null) manager.reset();
+            GraphicsManager.getInstance().cleanup();
+            GraphicsManager.getInstance().resetState();
+        } finally { if (reel != null) reel.close(); }
     }
 
     @ParameterizedTest
@@ -62,7 +67,7 @@ class TestTasS1SpecialStageContacts {
         layout[20 * 128 + 21] = (byte) topRight;
         layout[21 * 128 + 21] = (byte) bottomRight;
 
-        manager.update();
+        S1SpecialStageReel.update(manager);
 
         var state = manager.captureComparisonState();
         // CalcAngle(24,24)=$20; native sine/cosine=$B5, muls #-$700/asr #8=-1267.
@@ -78,7 +83,7 @@ class TestTasS1SpecialStageContacts {
     @ValueSource(ints = {0x10, 0x20, 0x40})
     void sideContactWithoutFloorAllowsFreshJumpOnFollowingUpdate(int button) throws Exception {
         prepareSideContact(1);
-        manager.update();
+        S1SpecialStageReel.update(manager);
         var contact = manager.captureComparisonState();
         assertFalse(contact.sonicAirborne(), "SonicSS_Fall clears in-air when the X probe alone hits");
         assertEquals(0, contact.sonicVelX());
@@ -86,7 +91,7 @@ class TestTasS1SpecialStageContacts {
         assertEquals(483L << 16, contact.sonicPosX());
 
         manager.handleInput(button, button);
-        manager.update();
+        S1SpecialStageReel.update(manager);
         var jump = manager.captureComparisonState();
         assertTrue(jump.sonicAirborne());
         assertEquals(0, jump.sonicVelX());
@@ -98,11 +103,11 @@ class TestTasS1SpecialStageContacts {
     void airborneContactFramePressIsNotBufferedAndHeldJumpDoesNotRetrigger() throws Exception {
         prepareSideContact(1);
         manager.handleInput(0x40, 0x40);
-        manager.update();
+        S1SpecialStageReel.update(manager);
         assertFalse(manager.captureComparisonState().sonicAirborne());
         assertEquals(0x2A, manager.captureComparisonState().sonicVelY());
         // No new handleInput call: held remains set but the consumed edge must be gone.
-        manager.update();
+        S1SpecialStageReel.update(manager);
         assertEquals(0x54, manager.captureComparisonState().sonicVelY());
         assertTrue(manager.captureComparisonState().sonicAirborne(), "Without another collision the player falls");
     }
@@ -111,12 +116,12 @@ class TestTasS1SpecialStageContacts {
     @ValueSource(ints = {0, 0x28, 0x3A})
     void emptyAndNonSolidCellsCannotCreateTheSideContactJumpWindow(int block) throws Exception {
         prepareSideContact(block);
-        manager.update();
+        S1SpecialStageReel.update(manager);
         var before = manager.captureComparisonState();
         assertTrue(before.sonicAirborne());
         assertEquals(0x100, before.sonicVelX());
         manager.handleInput(0x40, 0x40);
-        manager.update();
+        S1SpecialStageReel.update(manager);
         assertEquals(0x54, manager.captureComparisonState().sonicVelY(),
                 "A jump edge while airborne cannot replace falling velocity");
     }

@@ -71,6 +71,16 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Passing gameplay assertions do not qualify recorded pixels (2026-10-26, full TAS
+test reel). Enabling GL replaced a headless atlas while sprite renderers retained
+their allocated tile bases, so terrain and tests looked correct but capsules,
+animals and monitors vanished. Transfer the already cached ROM pixels and logical
+aliases; do not reload player art, which can reset animation. Check GPU pixels and
+actual frames. Conversely, a component player whose unchanged mapping frame has
+zero native pieces genuinely draws nothing: do not select a different pose or add
+animation ticks merely to make footage. Keep its executed outcome and explicit
+non-drawable disposition. See the [full-reel record](../architecture/validation/2026-10-26-tas-full-reel.md).
+
 An emulator frame callback is not necessarily a completed player update
 (2026-10-26, SOZ fire-dash comparison). A Gens `after_frame` row stopped at
 `PC=$12072` inside pending floor collision and appeared airborne; the completed

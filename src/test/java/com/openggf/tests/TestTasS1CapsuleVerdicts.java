@@ -1,5 +1,7 @@
 package com.openggf.tests;
 
+import com.openggf.tests.reel.S1ReelFrames;
+
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic1.events.Sonic1LevelEventManager;
 import com.openggf.game.sonic1.objects.Sonic1AnimalsObjectInstance;
@@ -30,7 +32,7 @@ class TestTasS1CapsuleVerdicts {
             f.camera().setMaxX((short) 0x2160); // BSLZ_Escape final right boundary.
             var s = f.sprite();
             var objects = GameServices.level().getObjectManager();
-            f.stepIdleFrames(2);
+            S1ReelFrames.idle(f,2);
             var body = objects.getActiveObjects().stream()
                     .filter(o -> o instanceof Sonic1EggPrisonObjectInstance)
                     .map(o -> (Sonic1EggPrisonObjectInstance) o).findFirst().orElseThrow();
@@ -38,7 +40,7 @@ class TestTasS1CapsuleVerdicts {
             assertEquals(0x2bf, body.getY());
             assertEquals(2, objects.getVblaCounter(), "Declared local starting phase");
             GameServices.rng().setSeed(0x12345678L);
-            f.stepIdleFrames(delay);
+            S1ReelFrames.idle(f,delay);
             // Valid pre-contact descent. The button contact itself is not seeded.
             s.setCentreX((short) 0x2200);
             s.setCentreY((short) 0x270);
@@ -54,7 +56,7 @@ class TestTasS1CapsuleVerdicts {
             int triggerFrame = -1;
             int actualResultsFrame = -1;
             for (int n = 0; n < 400; n++) {
-                f.stepFrame(false, false, false, false, false);
+                S1ReelFrames.step(f,false, false, false, false, false);
                 if (triggerFrame < 0 && triggered.getBoolean(body)) triggerFrame = n;
                 if (n == 70 || n == 210) {
                     long animals = objects.getActiveObjects().stream()

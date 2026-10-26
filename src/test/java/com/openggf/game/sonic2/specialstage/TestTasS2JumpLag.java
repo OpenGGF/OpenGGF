@@ -21,21 +21,27 @@ class TestTasS2JumpLag {
     @Test
     void currentLimitationJumpingDoesNotChangeTheLiveLagSchedule() throws Exception {
         GameServices.graphics().initHeadless();
-        var manager = new Sonic2SpecialStageManager();
-        manager.initialize(0);
-        int waits = 0;
-        while (!manager.getIntro().isComplete() && waits++ < 2000) manager.update();
-        assertTrue(manager.getIntro().isComplete(), "must reach the ROM-backed playable half-pipe");
-        assertFalse(manager.isFinished());
-        var entry = manager.captureRewindSnapshot();
-        var running = exercise(manager, false);
-        manager.restoreRewindSnapshot(entry);
-        var jumping = exercise(manager, true);
-        assertEquals(0, running.jumpFrames());
-        assertTrue(jumping.jumpFrames() > 20, "input must execute real jump physics");
-        assertTrue(running.lagRows().stream().anyMatch(Boolean::booleanValue), "window must contain actual live lag");
-        assertEquals(running.lagRows(), jumping.lagRows(),
-                "current limitation: native jump-dependent rendering cost is absent from the live pacing model");
+        try (var presentation = com.openggf.tests.reel.S2TestReelPresentation.open()) {
+            var manager = new Sonic2SpecialStageManager();
+            presentation.ownStage(manager);
+            manager.initialize(0);
+            int waits = 0;
+            while (!manager.getIntro().isComplete() && waits++ < 2000) {
+                manager.update();
+                com.openggf.tests.reel.S2TestReelPresentation.stageFrame(manager, manager::captureRewindSnapshot, 0);
+            }
+            assertTrue(manager.getIntro().isComplete(), "must reach the ROM-backed playable half-pipe");
+            assertFalse(manager.isFinished());
+            var entry = manager.captureRewindSnapshot();
+            var running = exercise(manager, false);
+            manager.restoreRewindSnapshot(entry);
+            var jumping = exercise(manager, true);
+            assertEquals(0, running.jumpFrames());
+            assertTrue(jumping.jumpFrames() > 20, "input must execute real jump physics");
+            assertTrue(running.lagRows().stream().anyMatch(Boolean::booleanValue), "window must contain actual live lag");
+            assertEquals(running.lagRows(), jumping.lagRows(),
+                    "current limitation: native jump-dependent rendering cost is absent from the live pacing model");
+        }
     }
 
     private static Observation exercise(Sonic2SpecialStageManager manager, boolean jump) {
@@ -48,6 +54,7 @@ class TestTasS2JumpLag {
             manager.handleInput(buttons, buttons);
             int before = manager.captureRewindSnapshot().renderFrameCounter;
             manager.update();
+            com.openggf.tests.reel.S2TestReelPresentation.stageFrame(manager, manager::captureRewindSnapshot, buttons);
             lagRows.add(manager.captureRewindSnapshot().renderFrameCounter == before);
             if (manager.getSonicPlayer().isJumping()) jumpFrames++;
         }

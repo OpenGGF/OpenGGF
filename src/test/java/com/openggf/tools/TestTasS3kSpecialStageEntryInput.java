@@ -25,24 +25,24 @@ class TestTasS3kSpecialStageEntryInput {
         var settings=new GameplayCaptureSession.Settings(320,"knuckles","","off",null,null,null);
         try(var session=new GameplayCaptureSession(settings)) {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(),0,0,settings);
-            for(int i=0;i<60;i++)session.step(null);
+            for(int i=0;i<60;i++)com.openggf.tests.reel.TestReelCapture.step(session,null);
             assertEquals(GameMode.LEVEL,session.loop().getCurrentGameMode());
             GameServices.level().requestSpecialStageEntry();
-            for(int i=0;i<60&&session.loop().getCurrentGameMode()!=GameMode.SPECIAL_STAGE;i++)session.step(null);
+            for(int i=0;i<60&&session.loop().getCurrentGameMode()!=GameMode.SPECIAL_STAGE;i++)com.openggf.tests.reel.TestReelCapture.step(session,null);
             assertEquals(GameMode.SPECIAL_STAGE,session.loop().getCurrentGameMode());
             var provider=assertInstanceOf(Sonic3kSpecialStageProvider.class,session.loop().getActiveSpecialStageProvider());
             var manager=provider.getManager();
             assertTrue(manager.isInitialized());assertTrue(manager.getSpheresLeft()>0,"real ROM layout loaded");
             assertTrue(remainingEntryFade(manager)>0,"entry fade, before first player update, was reached");
-            for(int i=0;i<22&&remainingEntryFade(manager)>1;i++)session.step(null);
+            for(int i=0;i<22&&remainingEntryFade(manager)>1;i++)com.openggf.tests.reel.TestReelCapture.step(session,null);
             assertEquals(1,remainingEntryFade(manager));
             assertEquals(0,manager.captureComparisonState().frameCounter());
             assertFalse(manager.captureComparisonState().started());
-            session.step(inputTiming==1?up():null);
+            com.openggf.tests.reel.TestReelCapture.step(session,inputTiming==1?up():null);
             assertEquals(0,remainingEntryFade(manager));
             assertEquals(0,manager.captureComparisonState().frameCounter(),"final fade tick does not run sprites");
             assertEquals(inputTiming==1?1:0,readInt(manager,"heldButtons"),"pre-load input reached the production stage input owner");
-            session.step(inputTiming==2?up():null);
+            com.openggf.tests.reel.TestReelCapture.step(session,inputTiming==2?up():null);
             var first=manager.captureComparisonState();
             assertEquals(1,first.frameCounter(),"boot Process_Sprites equivalent actually ran");
             // Native parity was executed red for inputTiming=1: expected
@@ -51,9 +51,9 @@ class TestTasS3kSpecialStageEntryInput {
             // equivalent, losing the native interrupt-masked-load latch.
             assertEquals(inputTiming==2,first.started(),"confirmed pre-load pulse loss; boot-input positive control starts");
             assertEquals(inputTiming==2?0x200:0,first.velocity());
-            for(int i=0;i<22;i++)session.step(null);
+            for(int i=0;i<22;i++)com.openggf.tests.reel.TestReelCapture.step(session,null);
             assertEquals(first.velocity(),manager.captureComparisonState().velocity(),"fade-in holds player motion");
-            session.step(null);
+            com.openggf.tests.reel.TestReelCapture.step(session,null);
             assertEquals(inputTiming==2?0x400:0,manager.captureComparisonState().velocity(),"first main-loop update exits the load/fade seam");
         }
     }

@@ -56,8 +56,10 @@ class TestTasS2VerticalCamera {
         return new World(player, new PlayableSpriteMovement(player, collision, GameServices.gameState()), objects);
     }
     @Test void actualJumpCatchesCameraAtSixteenInsteadOfSixAndReachesWfzEndingGateEarlier() {
-        assertEquals(4, endingGate(true));
-        assertEquals(11, endingGate(false));
+        try (var reel = com.openggf.tests.reel.S2ComponentTestReel.open(0)) {
+            assertEquals(4, endingGate(true));
+            assertEquals(11, endingGate(false));
+        }
     }
     private static int endingGate(boolean jump) {
         var w = world(false, 0x620); var p = w.player(); var camera = GameServices.camera();
@@ -87,14 +89,16 @@ class TestTasS2VerticalCamera {
         return frame;
     }
     @Test void highBossEntryLeavesVerticalLimitOpenForLookUpToCullCapsuleAnimals() throws Exception {
-        var high = capsuleAfterBoss(true);
-        var ordinary = capsuleAfterBoss(false);
-        assertTrue(high.resultsFrame() < ordinary.resultsFrame(), "look-up culling must release the actual capsule results earlier");
-        assertTrue(high.lowestCamera() < 0x388);
-        assertEquals(0x388, ordinary.lowestCamera());
-        assertTrue(high.verticalCulls() > 0, "animals must actually disappear below the raised viewport");
-        assertEquals(0, ordinary.verticalCulls(), "the retained boss limit prevents those bottom culls");
-        System.out.println("S2 look-up capsule: high=" + high + ", ordinary=" + ordinary);
+        try (var reel = com.openggf.tests.reel.S2ComponentTestReel.open(0)) {
+            var high = capsuleAfterBoss(true);
+            var ordinary = capsuleAfterBoss(false);
+            assertTrue(high.resultsFrame() < ordinary.resultsFrame(), "look-up culling must release the actual capsule results earlier");
+            assertTrue(high.lowestCamera() < 0x388);
+            assertEquals(0x388, ordinary.lowestCamera());
+            assertTrue(high.verticalCulls() > 0, "animals must actually disappear below the raised viewport");
+            assertEquals(0, ordinary.verticalCulls(), "the retained boss limit prevents those bottom culls");
+            System.out.println("S2 look-up capsule: high=" + high + ", ordinary=" + ordinary);
+        }
     }
     private record CapsuleExit(int resultsFrame, int lowestCamera, int verticalCulls) { }
     private static CapsuleExit capsuleAfterBoss(boolean high) throws Exception {
@@ -106,11 +110,15 @@ class TestTasS2VerticalCamera {
         p.setAir(high); p.setYSpeed((short)(high ? -0x600 : 0));
         camera.setX((short)0x28F0); camera.setY((short)(high ? 0x120 : 0x390));
         var events = new Sonic2EHZEvents(); events.init(1);
-        events.update(1, 0); events.update(1, 1);
+        events.update(1, 0);
+        com.openggf.tests.reel.S2ComponentTestReel.cameraFrame(p, w.objects().getActiveObjects(), 0, 0, "boss-entry event frame0; collision-only terrain", camera.getX(), camera.getY());
+        events.update(1, 1);
+        com.openggf.tests.reel.S2ComponentTestReel.cameraFrame(p, w.objects().getActiveObjects(), 0, 0, "boss-entry event frame1; collision-only terrain", camera.getX(), camera.getY());
         assertEquals(4, events.getEventRoutine());
         for (int frame = 2; frame < 92; frame++) {
             w.movement().handleMovement(false,false,false,false,false,false,false,false);
             camera.updatePosition(); events.update(1, frame);
+            com.openggf.tests.reel.S2ComponentTestReel.cameraFrame(p, w.objects().getActiveObjects(), 0, 0, "boss-entry camera; collision-only terrain", camera.getX(), camera.getY());
         }
         assertEquals(6, events.getEventRoutine());
         assertEquals(90, events.getBossSpawnDelay());
@@ -134,7 +142,9 @@ class TestTasS2VerticalCamera {
                     .filter(o -> o.getY() >= camera.getY() + camera.getHeight() + 32).toList();
             w.objects().update(camera.getX(), p, List.of(), frame, false, true, true);
             for (var animal : belowViewport) if (animal.isDestroyed()) verticalCulls++;
-            camera.updatePosition(); events.update(1, frame); w.objects().refreshPostCameraRenderState();
+            camera.updatePosition(); events.update(1, frame);
+            w.objects().refreshPostCameraRenderState();
+            com.openggf.tests.reel.S2ComponentTestReel.cameraFrame(p, w.objects().getActiveObjects(), 1, 0, "capsule look-up; collision-only terrain", camera.getX(), camera.getY());
             pressed |= button.getBoolean(capsule);
             sawAnimals |= w.objects().getActiveObjects().stream().anyMatch(EggPrisonAnimalInstance.class::isInstance);
             lowest = Math.min(lowest, camera.getY());

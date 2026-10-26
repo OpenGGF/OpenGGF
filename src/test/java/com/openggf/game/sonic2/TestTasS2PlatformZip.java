@@ -31,10 +31,12 @@ import static org.mockito.Mockito.*;
 class TestTasS2PlatformZip {
     @Test
     void platformEntryThenOppositeInputProducesTerrainEjectionWithEmptyWallControl() {
-        int zipped = run(true);
-        int ordinary = run(false);
-        assertTrue(zipped >= 16, "native FindWall regression must eject right against Left input");
-        assertTrue(ordinary <= 0, "without the wall Left must move left normally");
+        try (var reel = com.openggf.tests.reel.S2ComponentTestReel.open(4)) {
+            int zipped = run(true);
+            int ordinary = run(false);
+            assertTrue(zipped >= 16, "native FindWall regression must eject right against Left input");
+            assertTrue(ordinary <= 0, "without the wall Left must move left normally");
+        }
     }
     private static int run(boolean wall) {
         TestEnvironment.configureGameModuleFixture(new Sonic2GameModule());
@@ -78,6 +80,7 @@ class TestTasS2PlatformZip {
             movement.handleMovement(false, false, false, false, false, false, false, false);
             OscillationManager.update(ticks);
             objects.update(camera.getX(), player, List.of(), ticks, false, true, true);
+            com.openggf.tests.reel.S2ComponentTestReel.frame(player, objects.getActiveObjects(), 0, 0, "platform approach; authored collision terrain omitted");
         }
         assertTrue(ticks < 200, "moving platform must actually push the player into the wall column; x="
                 + player.getCentreX() + " platform=" + platform.getX() + " air=" + player.getAir());
@@ -86,6 +89,7 @@ class TestTasS2PlatformZip {
         objects.removeDynamicObject(platform); // isolate the terrain response after the moving blocker has passed
         int before = player.getCentreX();
         movement.handleMovement(false, false, true, false, false, false, false, false);
+        com.openggf.tests.reel.S2ComponentTestReel.frame(player, objects.getActiveObjects(), 4, 0, "reverse zip/empty-wall control; collision terrain omitted");
         int after = player.getCentreX();
         int firstDisplacement = after - before;
         if (wall) {
@@ -94,6 +98,7 @@ class TestTasS2PlatformZip {
             while (player.getCentreX() - player.getXRadius() < 416 && zipPasses++ < 12) {
                 int prior = player.getCentreX();
                 movement.handleMovement(false, false, true, false, false, false, false, false);
+        com.openggf.tests.reel.S2ComponentTestReel.frame(player, objects.getActiveObjects(), 4, 0, "reverse zip/empty-wall control; collision terrain omitted");
                 assertFalse(player.getAir(), "zip remains on the grounded movement path");
                 if (player.getCentreX() - prior >= 16) corrections++;
             }
@@ -102,6 +107,7 @@ class TestTasS2PlatformZip {
                     "the entire collision box must exit the far wall face");
             int exit = player.getCentreX();
             movement.handleMovement(false, false, false, true, false, false, false, false);
+            com.openggf.tests.reel.S2ComponentTestReel.frame(player, objects.getActiveObjects(), 8, 0, "post-exit right input");
             assertTrue(Math.abs(player.getCentreX() - exit) < 4, "ordinary control resumes after exit");
             verify(level, atLeastOnce()).getChunkDescAt(anyByte(), anyInt(), anyInt(), anyBoolean());
         }
