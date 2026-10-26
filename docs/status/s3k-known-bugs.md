@@ -14,7 +14,8 @@ At unchanged production `c69447d77`, the
 [executed TAS matrix](../architecture/validation/2026-10-26-tas-verdicts-s3k.md)
 records these reached incompatibilities. Initial evidence is committed at
 `964c29d25fdab09fe8edd4acbe541a27fc64904c`; the MHZ early-hit follow-up is at
-`57e89fb6c5e2a0a68691892b641f9c27033b37b0`. Passing limitation tests mean the
+`57e89fb6c5e2a0a68691892b641f9c27033b37b0`, and the final SOZ flame-zip evidence at
+`78d2365d06af34bb82e9c067195bcda9ee9ac2b5`. Passing limitation tests mean the
 specific mismatch is reproduced; they are not native-parity passes.
 
 | Owner / requirement | Observed limitation and discriminating control | Removal condition |
@@ -28,6 +29,7 @@ specific mismatch is reproduced; they are not native-parity passes.
 | Standalone S&K entry | A detected standalone S&K title still dispatches one-player to the locked-on save grid rather than MHZ level entry; a distinct title action verifies dispatch. `TestTasS3kTitleCapabilities`. | Route the actual standalone title to its native level entry and qualify the standalone ROM path. |
 | Special-stage boot input | A last-fade Up pulse reaches the input owner but is replaced by neutral before the boot player update; neutral and boot-Up controls distinguish it. `TestTasS3kSpecialStageEntryInput`. | Preserve the interrupt-masked-load input through boot `Process_Sprites`, then sample the next input at its native boundary. |
 | MHZ early hit during initialization | One real proxy hit before weather-machine destruction reaches routine 4 with a live flash; six subsequent updates retain HP 8 where native flag/proxy ordering reaches HP 2. The no-hit control retains HP 9. `TestTasS3kMhzRapidHit`. | Preserve the native repeated-initialization collision flags and proxy-hit consequence through the weather-child signal; qualify the rapid reduction and ordinary flash controls. |
+| SOZ fire-dash under-slope zip | A legal rolling approach, actual roll-jump and fresh fire dash acquire embedded normal terrain. At the reached `$20` slope, native `loc_1137E` decrements the negative probe angle before rounding and applies the -2 px correction to X; `CollisionSystem.resolveGroundWallCollision` omits that adjustment and applies it to Y. Native repeated horizontal corrections exit left with X velocity -4345; the engine retains +707 and stays grounded at the corresponding completed player step. The no-dash endpoint matches. `TestTasS3kFlameSlope#currentLimitationFireDashSlopeEntryUsesVerticalCorrectionAndMissesNativeReverseZip`. | Model the shipped SOZ negative-angle response rule through the existing semantic rule owner, then pass the authored native dash and no-dash outcomes without fixture-specific behavior. |
 
 The cross-game [Start-pause clock](known-bugs.md#tas-pause-clock-does-not-advance-during-native-start-pause--2026-10-26)
 and [unsigned horizontal underflow](known-bugs.md#tas-unsigned-horizontal-underflow--2026-10-26)

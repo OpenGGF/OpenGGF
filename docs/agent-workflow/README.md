@@ -35,6 +35,8 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
 
 ## Tools
 
+- [TAS evidence reports](../../tools/tas_audit/README.md) preserve the original publication census and render reviewed binary scenario verdicts; the [Gens SOZ observer](../../tools/gens/README.md) records read-only input-owner, completed-player and collision-response boundaries (2026-10-26 TAS audit).
+
 - [Stock native-clock diagnostic reader](../../tools/tracechaser/bizhawk-headless/README.md#stock-native-clock-diagnostic-adapter): preserves reviewed stock-core identity/access checks and raw scalar copying with explicit inputs; dormant, with no recorder/gameplay/readiness wiring or qualified phase origin (2026-10-17 S3K ending timing investigation).
 
 - [ColdCampaign pool journal](../../src/test/java/com/openggf/tools/ColdCampaignPoolJournal.java): opt-in **maintained-driver-call protocol**, with no installed campaign instrumentation. The tested R30 typed extension adds all Animal/EggRobo phase transitions and last actual removal snapshots to bounded raw SST ownership, explicit input/restore keys and sample/write passivity checks; source-epoch absence and motion-only limits stay explicit. The [existing plan](../architecture/plans/2026-10-13-s3k-playable-completion.md#r30r34-matched-typed-pool-evidence-and-preservation--2026-10-17) records both803/781c arms, post-footer qualification and reversible markers (R32–R34).

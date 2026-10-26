@@ -71,6 +71,17 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+An emulator frame callback is not necessarily a completed player update
+(2026-10-26, SOZ fire-dash comparison). A Gens `after_frame` row stopped at
+`PC=$12072` inside pending floor collision and appeared airborne; the completed
+native movement instead landed exactly where the engine did. A control even
+executed two player steps in one emulator frame. Label inputs at the actual
+player input-copy boundary and compare movement/object-complete hooks, retaining
+the raw frame observations separately. In this case completed-state equality
+through the slope entry and directly hooked negative-distance correction still
+proved a later horizontal-versus-vertical response mismatch. The rejected early
+landing inference is not evidence for that verdict.
+
 Fast emulation can bypass the observer and its stopping condition (2026-10-26,
 published TAS inlet capture). Original Gens11b reproduced the movie's zone
 progression, but `speedmode("maximum")` with `frameadvance` produced no registered

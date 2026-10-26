@@ -12,11 +12,10 @@
     "4f5eb1ee2de0b6128c39728289516c079d71064e",
     "d1f2f9cf831868d46ab7b193b581b008d3ebea6d",
     "964c29d25fdab09fe8edd4acbe541a27fc64904c",
-    "57e89fb6c5e2a0a68691892b641f9c27033b37b0"
+    "57e89fb6c5e2a0a68691892b641f9c27033b37b0",
+    "78d2365d06af34bb82e9c067195bcda9ee9ac2b5"
   ],
-  "pending": [
-    "Flame-dash under-slope zip: add any later executed test commit when available"
-  ],
+  "pending": [],
   "adapters": {
     "com.openggf.tests.TestTasS1Movement": "headless-native-level",
     "com.openggf.game.sonic2.TestTasS2ManualTails": "gameplay-session",

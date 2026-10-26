@@ -64,6 +64,13 @@ tools/*
 !tools/test_reel/*.json
 !tools/test_reel/README.md
 /tools/test_reel/__pycache__/
+!tools/tas_audit/
+!tools/tas_audit/*.py
+!tools/tas_audit/README.md
+/tools/tas_audit/__pycache__/
+!tools/gens/
+!tools/gens/observe_soz_flame.lua
+!tools/gens/README.md
 !tools/testing/
 !tools/testing/**
 !tools/modding/
