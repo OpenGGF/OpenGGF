@@ -1,0 +1,31 @@
+{
+  "name": "TAS audit, scoring and verdict cases \u2014 2026-10-26",
+  "audit_base": "99b16240df435f6034880aef29f9271ec8d7f659",
+  "commits": [
+    "cfa45ebd0244a1f94972e47ab19b929eaf805ea8",
+    "391b671e383e4f329f278aa7b174c39c1bdd1d22",
+    "f2d0a1f7e7d3b25caec669ed44f9eb39719b2e73",
+    "5160b94bb3967f6a52280c6675c8c4a5fc7f2862",
+    "b943cad36bd723ae64bb9e2d0497aebf575c2b0e",
+    "ee4f1102549675cda3e082a90b23c74a98da1c42",
+    "77e4c3845319f47ec840da7c2148fe4cb48a685c",
+    "4f5eb1ee2de0b6128c39728289516c079d71064e",
+    "d1f2f9cf831868d46ab7b193b581b008d3ebea6d",
+    "964c29d25fdab09fe8edd4acbe541a27fc64904c"
+  ],
+  "pending": [
+    "S3K terrain/MHZ/flame-slope follow-up: append parent's final SHA with --add-commit"
+  ],
+  "adapters": {
+    "com.openggf.tests.TestTasS1Movement": "headless-native-level",
+    "com.openggf.game.sonic2.TestTasS2ManualTails": "gameplay-session",
+    "com.openggf.tools.TestTasS3kPauseClock": "gameplay-session"
+  },
+  "non_drawable": {
+    "com.openggf.sprites.playable.TestBadnikChainScoring": "Logic-only Sonic scoring ledger; no loaded level or drawable world",
+    "com.openggf.level.objects.TestEnemyChainPointsMapping": "Mock PatternSpriteRenderer draw-consumer contract; no framebuffer or loaded level",
+    "com.openggf.level.objects.TestS2ChainScoreConsumers": "Synthetic ObjectManager contacts and mocked points renderer; no complete drawable world",
+    "com.openggf.game.sonic2.TestTasS2OilHops": "Authored open oil column and null terrain sensors; no loaded level",
+    "com.openggf.game.sonic3k.TestTasS3kUnavailableCapabilities": "Input parser/capability assertions; no drawable world"
+  }
+}

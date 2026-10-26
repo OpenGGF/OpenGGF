@@ -28,13 +28,13 @@ class TestTasS2ManualTails {
             session.boot(Path.of(System.getProperty("sonic2.rom.path")), 0, 0, settings);
             int waits = 0;
             do {
-                session.step(null); session.renderFrame();
+                com.openggf.tests.reel.TestReelCapture.step(session,null); session.renderFrame();
                 assertTrue(++waits < 600);
             } while (session.loop().getCurrentGameMode() != GameMode.LEVEL
                     || GameServices.level().hasPendingFreshLevelTransitionBoundary());
             var sonic = GameServices.sprites().getMainPlayable();
             var tails = GameServices.sprites().getSidekicks().getFirst();
-            while (tails.getAir() && waits++ < 800) session.step(null);
+            while (tails.getAir() && waits++ < 800) com.openggf.tests.reel.TestReelCapture.step(session,null);
             assertFalse(tails.getAir(), "Tails must stand on the real EHZ floor before input");
             assertTrue(tails.isCpuControlled());
             // Authored enemy in the clear space above the follower, away from Sonic.
@@ -43,7 +43,7 @@ class TestTasS2ManualTails {
             GameServices.level().getObjectManager().addDynamicObject(enemy);
             int score = GameServices.gameState().getScore();
             int sonicY = sonic.getCentreY();
-            for (int i = 0; i < 5; i++) session.step(new Bk2FrameInput(i, 0, 0, false,
+            for (int i = 0; i < 5; i++) com.openggf.tests.reel.TestReelCapture.step(session,new Bk2FrameInput(i, 0, 0, false,
                     jump ? AbstractPlayableSprite.INPUT_JUMP : 0, jump ? 1 : 0, false, "P2 assistance"));
             assertEquals(jump, enemy.isDestroyed());
             assertEquals(jump ? 100 : 0, GameServices.gameState().getScore() - score);

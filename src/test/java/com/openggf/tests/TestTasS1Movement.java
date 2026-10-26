@@ -245,5 +245,6 @@ class TestTasS1Movement {
 
     private void step(boolean left, boolean right, boolean down, boolean jump) {
         fixture.stepFrame(false, down, left, right, jump);
+        com.openggf.tests.reel.TestReelCapture.afterHeadlessFrame(fixture, false, down, left, right, jump);
     }
 }
