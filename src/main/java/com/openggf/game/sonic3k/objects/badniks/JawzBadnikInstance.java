@@ -58,6 +58,7 @@ public final class JawzBadnikInstance extends AbstractS3kBadnikInstance
     private boolean initialized;
     private boolean waitingForOnscreen = true;
     private boolean placeholderRenderedOnscreen;
+    private boolean publishedTouchResponseListEntryThisFrame;
     private int animTimer = ANIM_RESET_DELAY;
     private int collisionProperty;
 
@@ -69,6 +70,7 @@ public final class JawzBadnikInstance extends AbstractS3kBadnikInstance
 
     @Override
     protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
+        publishedTouchResponseListEntryThisFrame = false;
         if (isDestroyed()) {
             return;
         }
@@ -96,7 +98,15 @@ public final class JawzBadnikInstance extends AbstractS3kBadnikInstance
 
         moveWithVelocity();
         advanceAnimation();
-        processPendingTouch();
+        if ((collisionProperty & 0xFF) == 0) {
+            // Jawz_Main alone reaches Sprite_CheckDeleteTouch. Obj_Jawz's
+            // attribute/velocity initialization returns without publishing;
+            // a pending contact instead takes the defeat/delete branch
+            // (sonic3k.asm:183616-183649).
+            publishedTouchResponseListEntryThisFrame = true;
+        } else {
+            processPendingTouch();
+        }
     }
 
     @Override
@@ -163,7 +173,15 @@ public final class JawzBadnikInstance extends AbstractS3kBadnikInstance
 
     @Override
     public int getCollisionFlags() {
-        return COLLISION_FLAGS;
+        // Obj_Jawz cannot expose ObjDat_Jawz's $D7 until its saved entry
+        // reaches SetUp_ObjAttributes after Obj_WaitOffscreen returns
+        // (sonic3k.asm:183616-183622,183654-183658).
+        return initialized ? COLLISION_FLAGS : 0;
+    }
+
+    @Override
+    public boolean publishesTouchResponseListEntryThisFrame() {
+        return publishedTouchResponseListEntryThisFrame;
     }
 
     @Override

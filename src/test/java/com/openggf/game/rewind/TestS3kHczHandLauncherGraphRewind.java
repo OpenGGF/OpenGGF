@@ -1,6 +1,15 @@
 package com.openggf.game.rewind;
 
 import com.openggf.camera.Camera;
+import com.openggf.game.solid.ContactKind;
+import com.openggf.game.solid.ObjectSolidExecutionContext;
+import com.openggf.game.solid.PlayerSolidContactResult;
+import com.openggf.game.solid.PostContactState;
+import com.openggf.game.solid.PreContactState;
+import com.openggf.game.solid.SolidCheckpointBatch;
+import com.openggf.game.solid.SolidExecutionRegistry;
+import com.openggf.level.objects.PerObjectRewindSnapshot;
+import com.openggf.tests.TestablePlayableSprite;
 import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.objects.HCZHandLauncherObjectInstance;
@@ -20,8 +29,10 @@ import org.junit.jupiter.api.Test;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -41,6 +52,7 @@ class TestS3kHczHandLauncherGraphRewind {
     @AfterEach
     void tearDown() {
         GraphicsManager.getInstance().resetState();
+        com.openggf.game.session.SessionManager.clear();
     }
 
     @Test
@@ -92,16 +104,144 @@ class TestS3kHczHandLauncherGraphRewind {
                 "HCZ hand-launcher arm must restore through generic graph recreate");
     }
 
+    @Test
+    void retainedStandingRestoresBothWaysAndReplaysGrabAndRelease() throws Exception {
+        com.openggf.tests.TestEnvironment.configureGameModuleFixture(
+                com.openggf.tests.rules.SonicGame.SONIC_3K);
+        TestablePlayableSprite player = new TestablePlayableSprite(
+                "sonic", (short) (LAUNCHER_SPAWN.x() - 8), (short) LAUNCHER_SPAWN.y());
+        boolean[] standing = {false};
+        Harness harness = Harness.create(player, standing);
+        ObjectManager objects = harness.objectManager();
+        objects.setRewindInPlaceRestoreEnabledForTest(false);
+        HCZHandLauncherObjectInstance launcher = objects.createDynamicObject(
+                () -> new HCZHandLauncherObjectInstance(LAUNCHER_SPAWN));
+        for (int pass = 0; pass < 6; pass++) launcher.update(pass, player);
+        assertEquals(LAUNCHER_SPAWN.y() + 0x20, launcher.getY());
+        ObjectRefId id = objectId(objects, launcher);
+        RewindRegistry registry = registryFor(objects);
+        registry.register(new RewindSnapshottable<PerObjectRewindSnapshot>() {
+            @Override public String key() { return "test-player"; }
+            @Override public PerObjectRewindSnapshot capture() { return player.captureRewindState(); }
+            @Override public void restore(PerObjectRewindSnapshot snapshot) {
+                player.restoreRewindState(snapshot);
+            }
+        });
+        CompositeSnapshot beforeLanding = registry.capture();
+        standing[0] = true;
+        launcher.update(6, player);
+        assertEquals(LAUNCHER_SPAWN.y() + 0x18, launcher.getY());
+        assertFalse(player.isObjectControlled());
+        CompositeSnapshot landed = registry.capture();
+        standing[0] = false;
+        launcher.update(7, player);
+        assertTrue(player.isObjectControlled(), "retained landing must grab without a new contact");
+        CompositeSnapshot held = registry.capture();
+        player.setJumpInputPressed(true);
+        launcher.update(8, player);
+        assertFalse(player.isObjectControlled());
+        assertEquals(-0x400, player.getYSpeed());
+
+        registry.restore(beforeLanding);
+        launcher = objectById(objects, HCZHandLauncherObjectInstance.class, id);
+        // Different forward contact after restoring the clear bit must not
+        // inherit the later landing/grab, even across fresh object recreation.
+        launcher.update(6, player);
+        launcher.update(7, player);
+        assertFalse(player.isObjectControlled());
+
+        registry.restore(landed);
+        launcher = objectById(objects, HCZHandLauncherObjectInstance.class, id);
+        launcher.update(7, player);
+        assertTrue(player.isObjectControlled());
+        assertEquals(1, liveArms(objects).size());
+        registry.restore(held);
+        launcher = objectById(objects, HCZHandLauncherObjectInstance.class, id);
+        assertTrue(player.isObjectControlled());
+        player.setJumpInputPressed(true);
+        launcher.update(8, player);
+        assertFalse(player.isObjectControlled());
+        assertEquals(-0x400, player.getYSpeed());
+        assertEquals(0x800, player.getXSpeed());
+        assertEquals(1, liveArms(objects).size());
+
+        registry.restore(landed);
+        launcher = objectById(objects, HCZHandLauncherObjectInstance.class, id);
+        launcher.update(7, player);
+        for (int pass = 8; pass < 180 && player.isObjectControlled(); pass++) {
+            launcher.update(pass, player);
+        }
+        assertFalse(player.isObjectControlled());
+        assertEquals(0x1000, player.getXSpeed());
+        assertEquals(0, player.getYSpeed());
+        assertEquals(1, liveArms(objects).size());
+    }
+
+    @Test
+    void laterSupportClearsHandStandingBeforeNextGrabIncludingRestore() throws Exception {
+        com.openggf.tests.TestEnvironment.configureGameModuleFixture(
+                com.openggf.tests.rules.SonicGame.SONIC_3K);
+        TestablePlayableSprite player = new TestablePlayableSprite(
+                "sonic", (short) (LAUNCHER_SPAWN.x() - 8), (short) LAUNCHER_SPAWN.y());
+        boolean[] standing = {false};
+        Harness harness = Harness.create(player, standing);
+        ObjectManager objects = harness.objectManager();
+        HCZHandLauncherObjectInstance launcher = objects.createDynamicObject(
+                () -> new HCZHandLauncherObjectInstance(LAUNCHER_SPAWN));
+        for (int pass = 0; pass < 6; pass++) launcher.update(pass, player);
+        standing[0] = true;
+        launcher.update(6, player);
+        objects.forceRidingObjectForBootstrap(player, launcher);
+        assertTrue(objects.hasObjectStandingBit(player, launcher));
+        var other = objects.createDynamicObject(() -> new HCZHandLauncherObjectInstance(
+                new ObjectSpawn(LAUNCHER_SPAWN.x() + 0x100, LAUNCHER_SPAWN.y(), 0x3A, 0, 0, false, 0)));
+        var registry = registryFor(objects);
+        var landed = registry.capture();
+        for (int replay = 0; replay < 2; replay++) {
+            if (replay != 0) registry.restore(landed);
+            launcher = objects.getActiveObjects().stream().filter(HCZHandLauncherObjectInstance.class::isInstance)
+                    .map(HCZHandLauncherObjectInstance.class::cast).filter(o -> o.getX() == LAUNCHER_SPAWN.x())
+                    .findFirst().orElseThrow();
+            other = objects.getActiveObjects().stream().filter(HCZHandLauncherObjectInstance.class::isInstance)
+                    .map(HCZHandLauncherObjectInstance.class::cast).filter(o -> o.getX() != LAUNCHER_SPAWN.x())
+                    .findFirst().orElseThrow();
+            objects.forceRidingObjectForBootstrap(player, other);
+            assertFalse(objects.hasObjectStandingBit(player, launcher));
+            standing[0] = false;
+            launcher.update(7, player);
+            assertFalse(player.isObjectControlled(), "RideObject_SetRide cleared the former owner's standing bit");
+        }
+    }
+
     private record Harness(ObjectManager objectManager, ObjectServices services) {
-        static Harness create() {
+        static Harness create() { return create(null, new boolean[]{false}); }
+
+        static Harness create(TestablePlayableSprite player, boolean[] standing) {
             ObjectManager[] holder = new ObjectManager[1];
             Camera camera = mockCameraAtOrigin();
-            ObjectPlayerQuery playerQuery = new ObjectPlayerQuery(() -> null, List::of);
+            if (player != null) camera.setFocusedSprite(player);
+            ObjectPlayerQuery playerQuery = new ObjectPlayerQuery(() -> player, List::of);
             ObjectServices services = new StubObjectServices() {
                 @Override public ObjectManager objectManager() { return holder[0]; }
                 @Override public Camera camera() { return camera; }
                 @Override public GraphicsManager graphicsManager() { return GraphicsManager.getInstance(); }
                 @Override public ObjectPlayerQuery playerQuery() { return playerQuery; }
+                @Override public ObjectSolidExecutionContext solidExecution() {
+                    HCZHandLauncherObjectInstance launcher = holder[0].getActiveObjects().stream()
+                            .filter(HCZHandLauncherObjectInstance.class::isInstance)
+                            .map(HCZHandLauncherObjectInstance.class::cast).findFirst().orElseThrow();
+                    return new ObjectSolidExecutionContext(SolidExecutionRegistry.inert(), launcher, () -> {
+                        if (player != null) {
+                            if (standing[0]) holder[0].forceRidingObjectForBootstrap(player, launcher);
+                            else holder[0].releaseRidingObject(player, launcher);
+                        }
+                        PlayerSolidContactResult contact = new PlayerSolidContactResult(
+                                ContactKind.TOP, true, false, false, false, PreContactState.ZERO,
+                                new PostContactState((short) 0, (short) 0, false, true, false), 0);
+                        return new SolidCheckpointBatch(launcher,
+                                standing[0] && player != null ? Map.of(player, contact) : Map.of());
+                    });
+                }
             };
             ObjectManager objectManager = new ObjectManager(
                     List.of(),

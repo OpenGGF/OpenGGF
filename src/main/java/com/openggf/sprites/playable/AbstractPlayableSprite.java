@@ -2677,7 +2677,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * Whether the player is in the drowning pre-death phase (120-frame sink before death).
          */
         public boolean isDrowningPreDeath() {
-                return drowningDeath && drownPreDeathTimer > 0;
+                return !dead && drowningDeath && drownPreDeathTimer > 0;
         }
 
         /**
@@ -3083,7 +3083,10 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         return false;
                 }
                 drowningDeath = true;
-                controlLocked = true;
+                // AirCountdown_ReduceAir / Obj0A_ReduceAir / Drown_Countdown
+                // write object_control=$81, not Ctrl_1_locked.
+                ObjectControlState.nativeBit7FullControl().applyTo(this);
+                setAnimationId(0x17);
                 gSpeed = 0;
                 xSpeed = 0;
                 ySpeed = 0;
@@ -3782,6 +3785,11 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 if (jump) input |= INPUT_JUMP;
                 this.logicalInputState = input;
                 this.logicalJumpPressState = jumpPress;
+        }
+
+        void logicalInputStateForScript(int heldMask, boolean jumpPress) {
+                logicalInputState = (short) heldMask;
+                logicalJumpPressState = jumpPress;
         }
 
         public void clearLogicalInputState() {
@@ -5247,7 +5255,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 inWater = nowInWater;
         }
 
-        private boolean fixedLevelObjectOwnsDrowningBubbleCadence() {
+        boolean fixedLevelObjectOwnsDrowningBubbleCadence() {
                 try {
                         return currentGameModule().getLevelEventProvider()
                                         .ownsFixedDrowningBubbleCadence(this);

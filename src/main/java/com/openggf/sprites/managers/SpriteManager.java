@@ -910,10 +910,20 @@ public class SpriteManager implements PlayableSstDispatcher {
 						}
 					}
 
+                    boolean primaryDrowning = com.openggf.sprites.playable.PlayableSpriteInternalAccess
+                            .hasPrimaryDrowningRoutine(playable);
+                    refreshPhysicalControllerBeforePrimaryDispatch(playable, input, nativeRoster, primaryDrowning);
+
 					if (context.initialAssemblySlot()) {
 						publishInitialAssemblyInput(playable, input);
 						continue;
 					}
+
+                    if (primaryDrowning) {
+                        tickPlayablePhysics(playable, false, false, false, false, false, false,
+                                false, false, levelManager, cadence);
+                        continue;
+                    }
 
 					boolean effectiveUp, effectiveDown, effectiveLeft, effectiveRight, effectiveJump, effectiveTest;
 					boolean skipCpuPhysicsThisFrame = false;
@@ -926,10 +936,6 @@ public class SpriteManager implements PlayableSstDispatcher {
 						var cpuController = playable.getCpuController();
 						cpuControllerForDiagnostics = cpuController;
 						playable.capturePreCpuControlSnapshot();
-						boolean isFirstSidekick = !sidekicks.isEmpty() && sidekicks.getFirst() == playable;
-						if (isFirstSidekick) {
-							cpuController.setController2Input(input.p2Held(), input.p2Pressed());
-						}
 						cpuController.update(cadence);
 						skipCpuPhysicsThisFrame = cpuController.consumeSkipPhysicsThisFrame();
 
@@ -1009,7 +1015,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 						boolean recordedLogicalJumpPress = false;
 						if (context.useEffectiveRuntimeInput()) {
 							effectiveRight = (!controlLocked && right) || forcedRight;
-							effectiveLeft = ((!controlLocked && left) || forcedLeft) && !forcedRight;
+							effectiveLeft = ((!controlLocked && left) || forcedLeft) && !playable.isForceInputRight();
 							effectiveUp = (!controlLocked && up) || forcedUp;
 							effectiveDown = (!controlLocked && down) || forcedDown;
 							effectiveJump = (!controlLocked && jump) || forcedJump;
@@ -1460,8 +1466,13 @@ public class SpriteManager implements PlayableSstDispatcher {
 						}
 						activePlayableUpdate = playable;
 						try {
-							playable.applyQueuedControlStateForFrameStart();
-							var cpuController = playable.getCpuController();
+                            playable.applyQueuedControlStateForFrameStart();
+                            if (com.openggf.sprites.playable.PlayableSpriteInternalAccess.hasPrimaryDrowningRoutine(playable)) {
+                                tickPlayablePhysics(playable, false, false, false, false, false, false,
+                                        false, false, levelManager, frameCounter);
+                                continue;
+                            }
+                            var cpuController = playable.getCpuController();
 							cpuController.update(frameCounter);
 							boolean skipCpuPhysicsThisFrame = cpuController.consumeSkipPhysicsThisFrame();
 
@@ -1585,6 +1596,42 @@ public class SpriteManager implements PlayableSstDispatcher {
 			mutation.run();
 		}
 	}
+
+    /** Physical Ctrl_* is current even when a primary routine bypasses logical publication/CPU control. */
+    private void refreshPhysicalControllerBeforePrimaryDispatch(AbstractPlayableSprite playable,
+            InitialPlayableInput input, com.openggf.game.competition.NativeCompetitionRoster roster,
+            boolean primaryDrowning) {
+        PlayerInputState actor = scriptedActorInputs == null ? null : scriptedActorInputs.get(playable.getCode());
+        if (scriptedActorInputs != null && actor == null)
+            throw new IllegalArgumentException("Missing scripted controller: " + playable.getCode());
+        boolean firstCpuSidekick = playable.isCpuControlled()
+                && !sidekicks.isEmpty() && sidekicks.getFirst() == playable;
+        boolean secondController = (roster != null && roster.slotOf(playable) == 1) || firstCpuSidekick;
+        int held;
+        int pressed;
+        if (actor != null) {
+            held = actor.heldMask();
+            pressed = actor.pressedMask();
+        } else if (secondController) {
+            held = input.p2Held();
+            pressed = input.p2Pressed();
+        } else if (!playable.isCpuControlled()) {
+            held = input.p1Held();
+            pressed = input.p1Pressed();
+        } else {
+            // Extra CPU actors have no physical port unless the frame supplies
+            // their independent scripted controller. Never inherit P1 or P2.
+            held = pressed = 0;
+        }
+        if (playable.isCpuControlled() && playable.getCpuController() != null)
+            playable.getCpuController().setController2Input(held, pressed);
+        if (primaryDrowning) {
+            // Normal publication still owns its combined held/forced edge state.
+            // Only the bypassed primary routine needs this separate raw refresh.
+            com.openggf.sprites.playable.PlayableSpriteInternalAccess.refreshRawControllerSample(
+                    playable, held, pressed);
+        }
+    }
 
 	private static void publishInputState(AbstractPlayableSprite playable,
 			boolean rawUp, boolean rawDown, boolean rawLeft, boolean rawRight,
@@ -2185,6 +2232,15 @@ public class SpriteManager implements PlayableSstDispatcher {
 										   boolean up, boolean down, boolean left, boolean right,
 										   boolean jump, boolean test, boolean speedUp, boolean slowDown,
 										   LevelManager levelManager, int frameCounter) {
+        if (com.openggf.sprites.playable.PlayableSpriteInternalAccess.hasPrimaryDrowningRoutine(playable)) {
+            // loc_15810 clears the carrier latch before the drowning move.
+            playable.getTailsCarryController().releaseAfterCarrierHurt();
+            playable.getMovementManager().handleMovement(false, false, false, false, false, false, false, false);
+            playable.recordFollowerHistoryForTick();
+            playable.getAnimationManager().update(frameCounter);
+            playable.endOfTick();
+            return;
+        }
 		boolean isUnified = requiresPostMovementSolidPass(playable);
 		boolean usesInlineSolidResolution = levelManager != null && levelManager.objectsExecuteAfterPlayerPhysics();
 		// Capture the hurt-routine membership BEFORE movement runs, because the

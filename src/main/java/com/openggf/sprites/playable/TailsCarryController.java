@@ -284,6 +284,8 @@ public final class TailsCarryController {
      */
     public void releaseAfterCarrierHurt() {
         if (carrying) {
+            AbstractPlayableSprite main = resolveMain();
+            if (main != null && main != carrier) main.setAir(true);
             release(0);
         }
     }

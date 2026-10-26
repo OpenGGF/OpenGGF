@@ -341,6 +341,11 @@ Follow its current guide and verified BizHawk 2.11 dependency. Use
    commands and initial decoders are exempt.
 7. Model `FixBugs = 0` / `fixBugs = 0`, matching shipped ROMs. Near conditional
    code, comment which branch is used, why, and what the fixed branch changes.
+   The user-authorized [S2 Sideways safe-admission exception](docs/status/known-discrepancies.md#s2-sideways-platform-safe-admission-and-owned-child-retirement)
+   deliberately omits failed-allocation corruption and cleared/reused-slot
+   cross-writes. Keep its bounded Java admission/lifetime contract; do not
+   reintroduce SST/RAM emulation or relax strict rewind/trace checks for it.
+   This named exception selects no global fixed-bug policy.
 
 8. `mod-api-release-policy.properties` is the sole authority for branch topology,
    API version/status, and published baselines. Mod API surface/version changes

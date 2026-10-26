@@ -215,6 +215,11 @@ public class BreathingBubbleInstance extends AbstractObjectInstance implements R
         this.maxBubbleFrame = maxBubbleFrame;
     }
 
+    /** Native fixed drowning spawners initialize the captured angle after allocation. */
+    public void setInitialWobbleAngle(int angle) {
+        wobbleAngle = angle & 0xFF;
+    }
+
     public BreathingBubbleInstance(ObjectSpawn spawn) {
         this(spawn.x(), spawn.y(), startsFacingLeft(spawn), countdownNumber(spawn),
                 artKey(spawn), countdownFrameMap(spawn), maxBubbleFrame(spawn),

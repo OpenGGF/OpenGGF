@@ -152,7 +152,7 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
             // clears child_dx/child_dy. It does NOT fall through to
             // MegaChopper_Swim: it returns, so this dispatch moves the badnik
             // zero pixels and never reaches MegaChopper_CheckCapture, which is
-            // reachable only from MegaChopper_Swim (sonic3k.asm:184359). The swim
+            // reachable only from MegaChopper_Swim (sonic3k.asm:184360). The swim
             // begins on the following dispatch.
             initPending = false;
             childDx = 0;
@@ -442,9 +442,13 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
         if (player.isRightPressed()) {
             leftRight |= AbstractPlayableSprite.INPUT_RIGHT;
         }
-        player.clearLogicalInputState();
-        (leftRight != 0 ? forcedInputOwners.acquire(player) : forcedInputOwners.relinquish(player))
-                .setForcedInputMask(leftRight);
+        // Acquire only a nonempty forced channel; a zero word relinquishes it.
+        // Publication changes the live logical word without rewriting the player
+        // history already recorded earlier in this pass.
+        var inputOwner = leftRight != 0 ? forcedInputOwners.acquire(player)
+                : forcedInputOwners.relinquish(player);
+        com.openggf.sprites.playable.PlayableSpriteInternalAccess.writeScriptedLogicalInput(
+                inputOwner, leftRight, false);
     }
 
     private void releaseMainControls() {

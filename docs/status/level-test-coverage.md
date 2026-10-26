@@ -155,15 +155,22 @@ checks. The [native audit](../architecture/audits/2026-10-07-s3k-parity-gap-veri
 records event PLC3 phase/readiness/save ordering and remaining presentation and
 route breadth. These local repairs do not certify either act or stage.
 
-S2 fixed-tail follow-up (2026-10-25): the
-[implementation record](../architecture/audits/2026-10-24-rewind-disposition-review.md#rejected-fixed-tail-only-implementation-and-finite-parent-boundary--2026-10-25)
-rejects a fixed-tail-only owner after reached raw-removal/reuse controls exposed
-missing physical parent-header authority. The original Sideways admission/strict
-rewind gap remains open. The independently retained tail-animation prerequisite
-preserves `anim`/`prev_anim` and the native script-change return through restore
-and forward replay; pure pose sampling follows the same boundary. These focused
-object/controller checks certify no CPZ/MCZ act, route, viewport/donor/team,
-load/respawn or GPU presentation product. Existing act-matrix gaps remain.
+S2 Sideways safe-admission follow-up (2026-10-25): the
+[repair qualification and affected-act matrix](../architecture/audits/2026-10-24-rewind-disposition-review.md#sideways-affected-act-matrix)
+records 35 positive local controls for real anchored pressure, initialized solo
+and pair rewind, either-member raw/marked/Stageplay retirement, strict capture
+before sweep, rejection/exception cleanup, remember/reincarnation and genuine
+slot reuse. The final 51-case focused selection includes unchanged malformed-link,
+lifecycle and rewind guards. The engine admission/strict-rewind defect is fixed
+under the [named accepted discrepancy](known-discrepancies.md#s2-sideways-platform-safe-admission-and-owned-child-retirement);
+native corruption and cleared/reused partner cross-writes are intentionally not
+modeled. The earlier [rejected storage candidate](../architecture/audits/2026-10-24-rewind-disposition-review.md#rejected-fixed-tail-only-implementation-and-finite-parent-boundary--2026-10-25)
+remains historical counterevidence. The independent tail `anim`/`prev_anim` and
+`$FD` prerequisite is untouched and its controls pass. These mechanics certify
+no complete CPZ/MCZ route, player-riding product, natural exhaustion frequency,
+donor/team/character breadth, native competition/human P2 or GPU presentation.
+Pressure is width320; existing graph checks cover endpoint buckets at320/528/800.
+Inherited load/respawn/route/presentation obligations remain open in the matrix.
 
 S3K monitor admission follow-up (2026-10-24): the
 [field audit](../architecture/audits/2026-10-24-rewind-disposition-review.md#s3k-monitor-contents-admission)
@@ -297,6 +304,14 @@ records a strict uninterrupted original-movie prefix through the first HCZ row,
 with the native load/title PLC boundary and twice-restored queue/job regression.
 The full chain still stops in returned HCZ1 at input 68801; the independent
 pilot above and this load boundary do not certify HCZ completion or other products.
+
+Alternate AIZ-to-HCZ counter boundary (2026-10-25, unresolved): the
+[HCZ1 matrix](../architecture/validation/levels/s3k-hcz1-sonic.md#alternate-fresh-load-counter-boundary--2026-10-25)
+separates early position publication from the native post-CPU reset, including
+the physical tail omitted by ordinary comparison. The bounded source audit
+identifies a missing fresh-load continuation model under current timing authority;
+it lands no runtime change or new engine validation. Independent rewind phases,
+nonzero/checkpoint destination selection and eventual tail reset remain open.
 
 S3K playable completion (2026-10-13, delivery in progress): the [native ending matrix](../architecture/validation/levels/s3k-ending.md)
 records Sonic/Tails `$0D01`, Knuckles SSZ2 and all native emerald-progress branches.
@@ -1560,6 +1575,48 @@ accepted ROM deviation; complete timelines, other native configurations,
 cold/donor/PAL/PCM and strict timing/trace products remain separate obligations.
 
 
+HCZ object continuity follow-up (2026-10-25, local candidate):
+[HCZ1's affected obligations](../architecture/validation/levels/s3k-hcz1-sonic.md#launcher-and-chopper-continuity-repairs--2026-10-25)
+and the [HCZ2 shared-launcher regression](../architecture/validation/levels/s3k-hcz2.md#shared-hand-launcher-phase-correction--2026-10-25)
+record87 focused passes, retained-state restore/replay, five clean replay
+companions and the still-red continuous chain. The next real P2 difference is
+shared controlled-drowning dispatch at3476; source closure still fails at70718
+in HCZ2. This does not certify either act, broader products or whole-route rewind.
+
+
+HCZ primary-drowning continuation (2026-10-25): 178 focused cases pass without
+skips, including source-backed S1/S2/S3K motion/lifetime differences, P2 death and
+manual respawn, carry release, registered rewind and all four S3K anchors. The
+canonical six still has one chain assertion failure; native P2 now matches,
+while source HCZ1 segment 11 first differs at rings 3832 and P1 motion at miniboss
+5065. The replacement destination at input 70718 is HCZ2; this does not qualify
+an HCZ2 route. See the appended HCZ1/HCZ2 matrices and existing causal audit.
+
+
+HCZ retained-carrier continuation (2026-10-25): native capture retains the
+camera-derived target; the corrected HCZ event owner now does too. Independent
+P1/P2 old-red and registered before/pending/moving restore controls are qualified
+by 110 passing local/anchor cases with no skips. The affected chain walks all
+14,208 stored segment-11 rows without the former input-71601 replacement, but
+still fails its required giant-ring exit (1/1F/0E/0S), with 137,113 strict
+differences and first monitor/rings difference 3832 (104/94). First P1 motion
+moves to 8329: a measured held-versus-logical-press error in the HCZ water-skim
+handler. This is local progress, not route certification. The existing HCZ audit
+records exact source, selectors, queue/execution times and excluded shared
+monitor-content lifetime boundary; rings/setup timing remain outside this task.
+
+
+HCZ skim follow-up and upstream hold (2026-10-25): eight independent P1/P2
+held/logical/raw press and registered rewind controls fail on the old guard;
+the corrected local selection passes 118/0F/0E/0S, including all four S3K anchors.
+Develop then advanced to `08f0a5e78`, which already contains that guard, retained
+carrier targets, boss next-pass initialization and independent monitor contents.
+No post-skim chain or current-upstream route qualification is claimed. Launcher
+and Chopper review corrections and complete drowning ownership still require
+receiving-tree reconciliation. See the existing audit's upstream boundary;
+parent owns that review, affected replays and combined smoke. This extends no
+act/viewport/donor/team or whole-route rewind certification.
+
 R3 HCZ follow-up (2026-10-17), local worker merge21327d78a with Main460:
 full canonical6/1F/0E/0S reaches returned HCZ11's complete14208-row reference
 window but lacks the giant-ring exit;134710 field errors split115689physics and
@@ -1956,3 +2013,65 @@ remains unmodelled by independent RiderState entries; no whole two-player tube
 fidelity or FixBugs=1 adoption is claimed. No long route,
 broad smoke, native capture, rendering or new act/character/roster/donor/width
 certification is claimed; inherited matrix obligations remain open.
+
+
+HCZ receiving qualification (2026-10-26): merge `b3374a56c` preserves exact
+upstream08 and qualifies 297 unique focused cases without skips. Canonical six
+is 6/1F/0E/0S; five companions pass. Segment11 now crosses its giant-ring
+boundary, with no non-camera physics error and bounded residual 11 camera /
+51 animation errors. Segment13 and the later SS7 result boundary remain open.
+Jawz's independent waiting/initialization collision correction qualifies 69
+local/anchor cases without skips; it is not attributed to the row442 P2 hurt.
+Original ROM placement identifies that source as Turbo Spiker `$96`, a separate
+local HCZ owner. Independent review also reproduces stale raw ABC during primary
+drowning (9 failures in 10 new controls), with logical/CPU bypass retained;
+its correction remains separate. See the existing HCZ audit for commands,
+fingerprints, queue/execution times, corrected fixture errors and limits.
+
+
+Primary-drowning raw-input review correction (2026-10-26): ten production
+player→captured-bar controls reproduce nine old-source assertion failures and
+one existing P1-scripted pass. The correction refreshes the selected physical
+pad before primary dispatch, without logical publication or AI. All ten cases
+now pass, including P1/P2 release/break with registered restore/forward, stale
+and held edges, forced logical input and independent scripted controllers.
+Finished affected selection is 186/0F/0E/0S with all four S3K anchors and actual
+API signatures unchanged. Exact source/command/timing is in the existing HCZ
+audit. The original segment11 continuity remains crossed; final affected replay
+will also include the separately identified Turbo Spiker placeholder owner.
+
+
+Turbo Spiker continuation (2026-10-26): original HCZ2 ROM placement `$1E7056`
+identifies the row442 source as object `$96`. Its inherited `$1A` body collision
+was exposed before native initialization. Three independent old-red controls
+fail without errors/skips, including actual vulnerable-P2 production touch and
+registered fresh body/shell phase restore. The existing initialized-state gate
+now qualifies 81 local/API/anchor cases with zero skips, preserving shell and
+shared touch owners. Final affected chain results follow in the existing audit;
+this local qualification adds no viewport/donor/team or full-route claim.
+
+
+Final local HCZ receiving result (2026-10-26, runtime `0d7c25c68`): the exact
+affected chain is 1/1F/0E/0S. Segment11 completes 14,208 stored rows and crosses
+its required giant-ring exit with no non-camera physics error; residuals are
+11 camera / 51 animation errors, 59 lag rows, zero bootstrap errors. This
+qualifies the requested production continuity, not a zero-difference trace or
+act-wide breadth. Turbo Spiker's row442 P2 hurt is gone: segment13 first
+non-camera state now differs at2147 P1 Y `$04DA/$04DE`; its 4,145 differences
+split 3,795 physics / 350 animation (7 lag, zero bootstrap), and it enters SS7.
+The terminal outside-HCZ boundary remains SS7 results at movie cursor97208;
+its cause is unproven and no timing/loader/comparator owner was changed.
+The existing audit records exact command/fingerprint, 58.066-second Maven /
+58.751-second wrapper timing with zero queue wait, separate receiving297,
+Jawz69, raw186 and Turbo81 focused qualifications, all zero-skip, and remaining
+fan/SS7 questions. Parent retains final review, combined smoke and delivery.
+
+
+Jawz final-delta qualification (2026-10-26): initialized collision attributes
+and previous-list publication are now checked separately through real P1/P2
+player→object order. Three old-red cases fail at the expected early property;
+corrected Jawz10 plus unchanged list/rewind12 and four-anchor60 coverage qualify
+82 distinct physical cases across one score-service fixture repair, zero skips.
+Destructive registered recreation covers both initialized-but-unpublished and
+first-published phases twice. This refines the existing HCZ2 object obligation;
+viewport, donor, team and full-act gaps remain inherited. See [Jawz final-delta evidence](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#jawz-final-delta-publication-phase-2026-10-26).

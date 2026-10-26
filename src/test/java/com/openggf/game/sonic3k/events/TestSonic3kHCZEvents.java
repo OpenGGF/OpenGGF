@@ -489,6 +489,88 @@ class TestSonic3kHCZEvents {
         return player;
     }
 
+    @Test
+    void retainedCarrierUsesItsCaptureTargetAfterTheLiveCameraMoves() {
+        var pair = carrierPlayers();
+        Sonic3kHCZEvents events = new Sonic3kHCZEvents(() -> 0);
+        events.init(1);
+        events.startPostTransitionCutscene();
+        events.updateRetainedCarrierObjectPass(1); // init dispatch installs its movement handler
+        GameServices.camera().setX((short) 0);
+        events.updateRetainedCarrierObjectPass(1);
+        for (var player : pair) {
+            assertEquals(0x00F5, player.getCentreX(),
+                    "retained target $120: old -$C00 velocity plus $100, rather than a false side crossing");
+            assertEquals(0x07F2, player.getCentreY());
+        }
+    }
+
+    @Test
+    void registeredCarrierRestoreRetainsTargetBeforeAndAfterMotion() {
+        var pair = carrierPlayers();
+        Sonic3kHCZEvents events = new Sonic3kHCZEvents(() -> 0);
+        events.init(1);
+        var registry = new com.openggf.game.rewind.RewindRegistry();
+        registry.register(new com.openggf.game.rewind.RewindSnapshottable<byte[]>() {
+            public String key() { return "hcz-events"; }
+            public byte[] capture() {
+                return com.openggf.game.rewind.schema.ZoneEventSchemaSidecar.capture(events);
+            }
+            public void restore(byte[] state) {
+                com.openggf.game.rewind.schema.ZoneEventSchemaSidecar.restore(events, state);
+            }
+        });
+        for (int index = 0; index < pair.size(); index++) {
+            var player = pair.get(index);
+            String key = "player-" + index;
+            registry.register(new com.openggf.game.rewind.RewindSnapshottable<com.openggf.level.objects.PerObjectRewindSnapshot>() {
+                public String key() { return key; }
+                public com.openggf.level.objects.PerObjectRewindSnapshot capture() { return player.captureRewindState(); }
+                public void restore(com.openggf.level.objects.PerObjectRewindSnapshot state) { player.restoreRewindState(state); }
+            });
+        }
+        var before = registry.capture();
+        events.startPostTransitionCutscene();
+        var pending = registry.capture();
+        events.updateRetainedCarrierObjectPass(1);
+        events.updateRetainedCarrierObjectPass(1);
+        var moving = registry.capture();
+        GameServices.camera().setX((short) 0x400);
+        events.startPostTransitionCutscene(); // overwrite the live captured target in a divergent future
+        registry.restore(pending);
+        GameServices.camera().setX((short) 0);
+        events.updateRetainedCarrierObjectPass(1);
+        events.updateRetainedCarrierObjectPass(1);
+        for (var player : pair) assertEquals(0xF5, player.getCentreX());
+        registry.restore(moving);
+        events.updateRetainedCarrierObjectPass(1);
+        for (var player : pair) {
+            assertEquals(0xEB, player.getCentreX());
+            assertEquals(0x7F4, player.getCentreY());
+        }
+        registry.restore(before);
+        assertFalse(events.isCutsceneActive());
+        for (var player : pair) assertFalse(player.isObjectControlled());
+        GameServices.camera().setX((short) 0x80);
+        events.startPostTransitionCutscene();
+        events.updateRetainedCarrierObjectPass(1);
+        events.updateRetainedCarrierObjectPass(1);
+        for (var player : pair) assertEquals(0xF5, player.getCentreX());
+    }
+
+    private static List<TestablePlayableSprite> carrierPlayers() {
+        var p1 = new TestablePlayableSprite("sonic", (short) 0x100, (short) 0x7F0);
+        var p2 = new TestablePlayableSprite("tails", (short) 0x100, (short) 0x7F0);
+        GameServices.camera().setFocusedSprite(p1);
+        GameServices.camera().setX((short) 0x80);
+        p2.setCpuControlled(true);
+        for (var player : List.of(p1, p2)) {
+            player.setInWater(true);
+            GameServices.sprites().addSprite(player, player.getCode());
+        }
+        return List.of(p1, p2);
+    }
+
     private static void assertCarrierControl(AbstractPlayableSprite sprite) {
         assertTrue(sprite.isObjectControlled());
         assertTrue(sprite.isObjectControlAllowsCpu());

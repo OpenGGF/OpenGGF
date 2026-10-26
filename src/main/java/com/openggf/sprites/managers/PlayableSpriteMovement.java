@@ -512,6 +512,20 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	@Override
 	public void handleMovement(boolean up, boolean down, boolean left, boolean right, boolean jump, boolean testKey,
 			boolean speedUp, boolean slowDown) {
+        // S3K loc_125C6 / loc_15828 dispatch before all normal-control work.
+        // Extra engine roster members without a native fixed slot retain a
+        // fallback lifetime owner; native slots are timed only by their sidecar.
+        if (sprite.isDrowningPreDeath() && !sprite.getDead() && !sprite.isDebugMode()
+                && (com.openggf.sprites.playable.PlayableSpriteInternalAccess.hasPrimaryDrowningRoutine(sprite)
+                    || !com.openggf.sprites.playable.PlayableSpriteInternalAccess.fixedCountdownOwnsDrowning(sprite))) {
+            short oldX = sprite.getX(), oldY = sprite.getY();
+            moveSpriteTestGravity(sprite.getXSpeed(), sprite.getYSpeed());
+            sprite.setYSpeed((short) (sprite.getYSpeed() + 0x10));
+            if (!com.openggf.sprites.playable.PlayableSpriteInternalAccess.fixedCountdownOwnsDrowning(sprite)
+                    && sprite.tickDrownPreDeath()) sprite.setDead(true);
+            sprite.updateSensors(oldX, oldY);
+            return;
+        }
 		if (motionMutators != null) motionMutators.beginFluidMovement(sprite);
 		try {
 			handleMovementDispatch(up, down, left, right, jump, testKey, speedUp, slowDown);
@@ -575,8 +589,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// dispatch and S1/S2's countdown object move it regardless of the lock.
 		if (sprite.isObjectControlSuppressesMovement()
 				&& !sprite.isHurt()
-				&& !sprite.getDead()
-				&& !sprite.isDrowningPreDeath()) {
+				&& !sprite.getDead()) {
 			// S3K Knuckles_Control loc_165AE clears double_jump_flag when
 			// object_control bit 0 skips movement. Previously we only returned,
 			// leaving glide physics active after a grabbing object's release.
@@ -692,22 +705,6 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		short originalX = sprite.getX();
 		short originalY = sprite.getY();
 
-		// ROM-accurate drowning pre-death: 120 frames of slow sinking before death.
-		// Move by the current velocity, then add $10: S1 .sinking SpeedToPos
-		// ("0A LZ Drowning Countdown.asm":280-285), S2 Obj0A ObjectMove
-		// (s2.asm:42186-42190), S3K MoveSprite_TestGravity2 in routine $C
-		// (sonic3k.asm:24702-24704, 29322-29324). No terrain, no input.
-		if (sprite.isDrowningPreDeath()) {
-			if (sprite.tickDrownPreDeath()) {
-				// Timer expired - transition to dead state (no upward bounce)
-				sprite.setDead(true);
-			}
-			moveSpriteTestGravity(sprite.getXSpeed(), sprite.getYSpeed());
-			sprite.setYSpeed((short) (sprite.getYSpeed() + 0x10));
-			sprite.updateSensors(originalX, originalY);
-			applyScreenYWrapValueAfterControl();
-			return;
-		}
 
 		var nativeDeath = com.openggf.game.competition.NativePlayerDeathPass.from(sprite);
 		if (nativeDeath != null && nativeDeath.runDeathPass(sprite)) {

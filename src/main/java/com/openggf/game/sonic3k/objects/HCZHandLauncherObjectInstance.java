@@ -175,39 +175,16 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
         // HCZHandLauncher_UpdateSolid writes y_pos and then always calls
         // SolidObjectTop, so a rising or returning pass also lands/carries
         // riders. HCZHandLauncher_UpdateAfterLaunch makes the same call only
-        // while $30 <= $18 (sonic3k.asm:65829-65838, 65868-65879).
+        // while $30 <= $18 (sonic3k.asm:65864-65872, 65903-65914).
         if (solidActive) {
-            retainStandingBits(checkpointAll(), player);
+            checkpointAll();
         }
     }
 
-    /**
-     * Records the per-player standing bits that this pass's SolidObjectTop
-     * leaves in {@code status(a0)}. The next pass's grab, escape and release
-     * checks read those bits before its own solid call runs.
-     */
-    private void retainStandingBits(SolidCheckpointBatch batch, AbstractPlayableSprite player) {
-        NativePlayerSlots slots = nativePlayerSlots(player);
-        nativeStates[0].standing = standingNow(batch, slots.p1());
-        nativeStates[1].standing = standingNow(batch, slots.p2());
-        for (AbstractPlayableSprite candidate : participatingPlayers(player)) {
-            if (candidate == slots.p1() || candidate == slots.p2()) continue;
-            boolean standing = standingNow(batch, candidate);
-            GrabState state = standing
-                    ? extensionStates.computeIfAbsent(candidate, ignored -> new GrabState())
-                    : extensionStates.get(candidate);
-            if (state != null) {
-                state.standing = standing;
-            }
-        }
-    }
-
-    private static boolean standingNow(SolidCheckpointBatch batch, AbstractPlayableSprite player) {
-        if (player == null) {
-            return false;
-        }
-        PlayerSolidContactResult result = batch.perPlayer().get(player);
-        return result != null && result.standingNow();
+    /** The solid owner retains status(a0) across passes and clears it on support transfer. */
+    protected boolean hasRetainedStandingBit(AbstractPlayableSprite player) {
+        var manager = services().objectManager();
+        return player != null && manager != null && manager.hasObjectStandingBit(player, this);
     }
 
     private void repositionGrabbedPlayers(AbstractPlayableSprite player, int deltaY) {
@@ -290,7 +267,7 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
     private void processButtonCheckAllPlayers(AbstractPlayableSprite player) {
         // HCZHandLauncher_CheckPlayers runs before this pass's SolidObjectTop
         // and reads the standing bits the previous pass left in status(a0)
-        // (sonic3k.asm:65819-65821, 65971-65973).
+        // (sonic3k.asm:65854-65856, 66006-66008).
         NativePlayerSlots slots = nativePlayerSlots(player);
         if (slots.p1() != null) {
             processButtonCheckForPlayer(slots.p1(), nativeStates[0]);
@@ -316,7 +293,7 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        if (!grabState.standing) {
+        if (!hasRetainedStandingBit(player)) {
             return;
         }
 
@@ -362,7 +339,6 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
 
     private void escapePlayer(AbstractPlayableSprite player, GrabState grabState) {
         grabState.grabbed = false;
-        grabState.standing = false;
 
         int xDir = facingLeft ? -1 : 1;
         player.setGSpeed((short) (ESCAPE_GROUND_VEL * xDir));
@@ -378,7 +354,7 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
 
     private void launchReleaseAllPlayers(AbstractPlayableSprite player) {
         // HCZHandLauncher_ReleaseHeldPlayers clears the retained status(a0)
-        // standing bits; it does not run a solid pass (sonic3k.asm:65885-65923).
+        // standing bits; it does not run a solid pass (sonic3k.asm:65920-65958).
         NativePlayerSlots slots = nativePlayerSlots(player);
         if (slots.p1() != null) {
             launchReleasePlayer(slots.p1(), nativeStates[0]);
@@ -395,8 +371,7 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
     private void launchReleasePlayer(
             AbstractPlayableSprite player,
             GrabState grabState) {
-        boolean wasStanding = grabState.standing;
-        grabState.standing = false;
+        boolean wasStanding = hasRetainedStandingBit(player);
         if (grabState.grabbed) {
             grabState.grabbed = false;
 
@@ -481,7 +456,7 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
     private void bindNativeState(GrabState nativeState,
             AbstractPlayableSprite previousOwner, AbstractPlayableSprite currentOwner) {
         if (previousOwner == currentOwner) return;
-        if (previousOwner != null && (nativeState.grabbed || nativeState.standing)) {
+        if (previousOwner != null && nativeState.grabbed) {
             extensionStates.computeIfAbsent(previousOwner, ignored -> new GrabState()).copyFrom(nativeState);
         }
         nativeState.clear();
@@ -542,31 +517,26 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
     private static final class GrabState implements RewindStateful<GrabState.Snapshot> {
         /** This player's bit in {@code $35(a0)}. */
         private boolean grabbed;
-        /** This player's standing bit in {@code status(a0)}, left by the last SolidObjectTop. */
-        private boolean standing;
 
         private void clear() {
             grabbed = false;
-            standing = false;
         }
 
         private void copyFrom(GrabState other) {
             grabbed = other.grabbed;
-            standing = other.standing;
         }
 
         @Override
         public Snapshot captureRewindStateValue() {
-            return new Snapshot(grabbed, standing);
+            return new Snapshot(grabbed);
         }
 
         @Override
         public void restoreRewindStateValue(Snapshot state) {
             grabbed = state.grabbed();
-            standing = state.standing();
         }
 
-        private record Snapshot(boolean grabbed, boolean standing) {
+        private record Snapshot(boolean grabbed) {
         }
     }
 

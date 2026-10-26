@@ -57,28 +57,34 @@ native presentation obligations remain in the [coverage backlog](level-test-cove
 
 ## S2 Sideways Platform Allocation and Strict Rewind Gap
 
-**Location:** `SidewaysPformObjectInstance#createChildPlatform` / `linkedPlatform`.
+**Status:** Engine ownership defect fixed under the user-authorized
+[Sideways safe-admission and owned-child-retirement exception](known-discrepancies.md#s2-sideways-platform-safe-admission-and-owned-child-retirement).
+Native corruption compatibility is deliberately omitted.
 
-**Symptom:** With no free SST after the parent, child admission rejects the
-constructed platform but the parent retains its unregistered reference. Strict
-rewind capture fails at `SidewaysPformObjectInstance#linkedPlatform`. The
-[retained real-manager qualification](../../src/test/java/com/openggf/game/sonic2/objects/TestS2SidewaysPformAdmissionQualification.java)
-characterizes this open failure; passing its known-gap assertions is not a fix.
+**Former symptom:** Exhausted anchored child allocation constructed a rejected,
+unregistered Java child, published reciprocal links and broke strict rewind at
+`SidewaysPformObjectInstance#linkedPlatform`. The earlier retained qualification
+expected that failure; those historical passes were not a repair.
 
-**Cause and removal condition:** The pinned native failure branch aliases the
-fixed `Tails_Tails` SST, skips child initialization, and still performs reciprocal
-pointer, boundary and offset writes. Resolve the native empty/live fixed-Tails
-states, failed pointer writes, paired deletion/respawn release and reversible
-strict capture/restore before removing this entry or revising the known-gap
-assertions. A null/self substitute is not established by the native branch.
-The [source/runtime audit](../architecture/audits/2026-10-24-rewind-disposition-review.md#s2-sideways-platform-allocation-failure-qualification)
-records the exact pin, citations, reproduction, commands and coverage limits.
-The rejected fixed-tail-only candidate also established that supported raw
-retirement and genuine parent-slot reuse require authoritative parent storage;
-an unknown-owner exception or a default header does not close that boundary.
-The [Sideways storage design](../architecture/designs/2026-10-25-s2-sideways-storage.md)
-records the council alternatives and prerequisites for a complete migration.
-Production remains unchanged; the storage repair is not implemented.
+**Closure evidence:** The [repair qualification](../architecture/audits/2026-10-24-rewind-disposition-review.md#sideways-safe-admission-and-owned-child-retirement-2026-10-25)
+records nine actual old-red pressure controls, followed by positive strict
+capture/reconstruction/forward checks. The final focused selection passes 51
+cases with zero failures/errors/skips, including 35 Sideways qualification cases,
+malformed-link rejection and unchanged lifecycle/rewind guards. Exhaustion now
+leaves a normally initialized solo parent without retry, rejected link, consumed
+slot or Tails write. Admitted pairs preserve anchored dispatch and normal endpoint
+remember/slot cleanup. Either-member retirement, marked-but-unswept capture,
+Stageplay rejection, identity changes during admission and genuine slot reuse
+are covered by the bounded ownership contract.
+
+Closure requires those engine invariants and strict identity checks to remain
+intact; it no longer requires emulation of native failed-pointer writes, fixed
+Tails storage or cleared/reused-slot cross-writes. Those effects belong to the
+named accepted discrepancy. Natural route frequency, complete CPZ/MCZ and native
+two-player/corruption-dependent trace outcomes remain unqualified. Reopen an
+engine ownership regression if these controls fail; ordinary-route dependency on
+the omitted behavior calls for revisiting the explicit compatibility decision,
+not silently restoring RAM emulation or weakening comparison.
 
 ---
 

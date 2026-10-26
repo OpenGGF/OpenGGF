@@ -102,6 +102,62 @@ public final class PlayableSpriteInternalAccess {
     private PlayableSpriteInternalAccess() {
     }
 
+    /**
+     * Writes a native scripted logical word without rewriting the follower history
+     * already recorded by the player slot. Unlike legacy forced-right steering,
+     * a logical word can retain both horizontal buttons (Sonic_ChgJumpDir,
+     * sonic3k.asm:23129-23158).
+     */
+    public static void writeScriptedLogicalInput(AbstractPlayableSprite sprite, int heldMask, boolean jumpPress) {
+        sprite.setForcedInputMask(heldMask);
+        sprite.forceInputRight = false;
+        sprite.logicalInputStateForScript(heldMask, jumpPress);
+    }
+
+    /**
+     * Refreshes the physical sample when a primary routine skips ordinary input
+     * publication. Do not merge forced/logical input or advance its edge latch:
+     * late objects read Ctrl_*, while history still records Ctrl_*_logical.
+     */
+    public static void refreshRawControllerSample(AbstractPlayableSprite sprite, int heldMask, int pressedMask) {
+        sprite.jumpInputPressed = (heldMask & AbstractPlayableSprite.INPUT_JUMP) != 0;
+        sprite.jumpInputJustPressed = (pressedMask & AbstractPlayableSprite.INPUT_JUMP) != 0;
+        sprite.setDirectionalInputPressed(
+                (heldMask & AbstractPlayableSprite.INPUT_UP) != 0,
+                (heldMask & AbstractPlayableSprite.INPUT_DOWN) != 0,
+                (heldMask & AbstractPlayableSprite.INPUT_LEFT) != 0,
+                (heldMask & AbstractPlayableSprite.INPUT_RIGHT) != 0);
+    }
+
+    /** Native primary-routine selection precedes input publication and CPU control. */
+    public static boolean hasPrimaryDrowningRoutine(AbstractPlayableSprite sprite) {
+        var rules = sprite.getGameRules();
+        return sprite.isDrowningPreDeath() && !sprite.getDead() && !sprite.isDebugMode()
+                && rules != null && rules.drowningBubble() != null
+                && rules.drowningBubble().drownInstallsDedicatedPlayerRoutine();
+    }
+
+    public static boolean fixedCountdownOwnsDrowning(AbstractPlayableSprite sprite) {
+        return sprite.fixedLevelObjectOwnsDrowningBubbleCadence();
+    }
+
+    /** The fixed countdown is the sole lifetime owner for the native player slots. */
+    public static void finishFixedDrowning(AbstractPlayableSprite sprite) {
+        sprite.drownPreDeathTimer = 0;
+        sprite.setDead(true);
+    }
+
+    /** S1/S2 fixed drowning slots move with the old velocity, then add $10. */
+    public static void moveFixedDrowning(AbstractPlayableSprite sprite) {
+        sprite.move(sprite.getXSpeed(), sprite.getYSpeed());
+        sprite.setYSpeed((short) (sprite.getYSpeed() + 0x10));
+    }
+
+    public static void spawnFixedDrowningBubble(AbstractPlayableSprite sprite, int angle, boolean skipFirstUpdate) {
+        if (sprite.getDrowningController() != null)
+            sprite.getDrowningController().spawnFixedDrowningBubble(angle, skipFirstUpdate);
+    }
+
     public static void bindMutatorPolicies(AbstractPlayableSprite sprite, PlayableMutatorPolicySource source) {
         sprite.mutatorPolicySource = source;
     }

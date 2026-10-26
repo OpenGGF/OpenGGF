@@ -275,6 +275,14 @@ public class DrowningController {
     }
 
     private void spawnBubble(int countdownNumber, boolean skipFirstUpdate) {
+        spawnBubble(countdownNumber, skipFirstUpdate, -1, 0);
+    }
+
+    void spawnFixedDrowningBubble(int angle, boolean skipFirstUpdate) {
+        spawnBubble(-1, skipFirstUpdate, angle, -0x0C);
+    }
+
+    private void spawnBubble(int countdownNumber, boolean skipFirstUpdate, int angle, int yOffset) {
         LevelManager levelManager = player.currentLevelManagerIfAvailable();
         if (levelManager == null || levelManager.getObjectManager() == null) {
             return;
@@ -293,7 +301,7 @@ public class DrowningController {
         // Calculate spawn position at player's mouth
         int xOffset = player.getDirection() == Direction.LEFT ? -BUBBLE_X_OFFSET : BUBBLE_X_OFFSET;
         int bubbleX = player.getCentreX() + xOffset;
-        int bubbleY = player.getCentreY(); // Player's centre Y (ROM uses centre coordinates for obY)
+        int bubbleY = player.getCentreY() + yOffset; // Player's centre Y (ROM uses centre coordinates for obY)
 
         DrowningBubbleRules rules = drowningBubbleRulesOrNull();
         int riseVelocity = rules != null ? rules.mouthBubbleRiseVelocity() : -0x88;
@@ -307,6 +315,7 @@ public class DrowningController {
             skipFirstUpdate && deferFirstPass, player
         );
 
+        if (angle >= 0) bubble.setInitialWobbleAngle(angle);
         if (deferFirstPass) {
             levelManager.getObjectManager().addDynamicObjectNextFrame(bubble);
         } else {

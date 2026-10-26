@@ -592,7 +592,8 @@ Unreleased. The earlier development themes remain in
   Hydrocity fan timing. Hydrocity's hand launcher checks its top surface on every
   pass, as in the original, so a rising hand catches a player rolling over it.
   Its removal preserves Sonic and Tails' held state, as in the original, while
-  ordinary launches still release them.
+  ordinary launches still release them. Transfers to another support clear
+  the hand's retained standing latch before its next grab.
   Knuckles' glide foot probes use his own live solidity bits and collision array,
   including inverted ceiling contacts, independently of camera focus. Glide collision
   follows the original velocity quadrant through wall, ceiling and floor checks;
@@ -619,13 +620,20 @@ Unreleased. The earlier development themes remain in
   Water skimming launches on a new jump-button press, so holding the spin-dash
   button through release preserves the run across water.
   A Mega Chopper that catches Sonic alone locks his controls and passes through
-  only left and right, so he must shake it off rather than roll, duck or jump.
+  only left and right, including both directions together, so he must shake it
+  off rather than roll, duck or jump.
+  Jawz and Turbo Spiker expose collision attributes only after their native
+  visible initialization passes. Jawz joins the touch list after its first swim
+  pass, so the player cannot touch it during initialization.
   The Hydrocity miniboss spends the original start-up pass before it descends,
   so its dives, hits and whirlpool grab and release land on the original frames.
   Its retained act-change carriers keep their captured swing targets and the
   arena's camera lock until the original release event widens the boundaries.
   A drowning player sinks with the original motion, even while an object holds it,
   and in Sonic 3&K it keeps its underwater state until it dies, as in the original.
+  Native fixed air slots own the lifetime; the primary drowning routine bypasses
+  normal control and releases carried players before motion. Fresh physical input
+  still releases a held Hydrocity bar while logical controls remain latched.
   Sonic 3&K's fixed air countdown also selects and maintains the drowning
   animation when object control bypasses ordinary movement animation.
   Offscreen Tails flight recovery in Sonic 2 and Sonic 3&K resets the native
@@ -1048,7 +1056,11 @@ Unreleased. The earlier development themes remain in
   dispatch base stays ROM-free. Rewinding a
   partially collapsed Sonic 1 false floor preserves the remaining break sequence
   and cleanup. Sonic 2 falling fragments retain their mapping pieces and resolve
-  current renderers after rewind. ICZ miniboss snapshots restore progressed helpers;
+  current renderers after rewind. Sonic 2 Sideways platforms reserve child slots
+  before constructing links; exhaustion preserves a moving solo parent and strict
+  rewind without reproducing the ROM's writes into Tails. Parent retirement owns
+  child cleanup, while child retirement leaves its initialized parent independent.
+  ICZ miniboss snapshots restore progressed helpers;
   LBZ's ride ship restores its exact child inventory while preserving flame
   retirement before boss allocation, including full-slot conditions.
   Rexon necks and Sol fireballs restore their exact owners and sparse links while

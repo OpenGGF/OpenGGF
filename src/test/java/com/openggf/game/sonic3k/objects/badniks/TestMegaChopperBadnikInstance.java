@@ -87,7 +87,7 @@ public class TestMegaChopperBadnikInstance {
         player.setRingCount(3);
         GameServices.camera().setFocusedSprite(player);
 
-        // Obj_MegaChopper begins with jsr (Obj_WaitOffscreen).l (sonic3k.asm:184326),
+        // Obj_MegaChopper (sonic3k.asm:184325-184326) begins with its offscreen-wait call,
         // so no routine runs until Render_Sprites has drawn the placeholder. These
         // cases exercise post-Init behaviour directly, so release the gate here as
         // production does once render_flags bit 7 is set.
@@ -96,9 +96,6 @@ public class TestMegaChopperBadnikInstance {
         megaChopper.onTouchResponse(player, new TouchResponseResult(0x17, 0x20, 0x20, TouchCategory.SPECIAL), 0);
         megaChopper.update(0, player);
 
-        // A Player_1-only capture sets Ctrl_1_locked; the player stays mobile
-        // through the left/right bits MegaChopper_CarryFollowPlayer republishes
-        // (sonic3k.asm:184361-184365, 184436-184440).
         assertTrue(player.isControlLocked());
         assertFalse(player.isObjectControlled());
         assertEquals("CARRY", readState(megaChopper));
@@ -130,7 +127,7 @@ public class TestMegaChopperBadnikInstance {
         player.setRingCount(10);
         GameServices.camera().setFocusedSprite(player);
 
-        // Obj_MegaChopper begins with jsr (Obj_WaitOffscreen).l (sonic3k.asm:184326),
+        // Obj_MegaChopper (sonic3k.asm:184325-184326) begins with its offscreen-wait call,
         // so no routine runs until Render_Sprites has drawn the placeholder. These
         // cases exercise post-Init behaviour directly, so release the gate here as
         // production does once render_flags bit 7 is set.
@@ -162,7 +159,7 @@ public class TestMegaChopperBadnikInstance {
         megaChopper.update(0, player);
 
         // MegaChopper_CheckCapture: clr.w (Ctrl_1_logical).w / st (Ctrl_1_locked).w
-        // when collision_property is exactly 1 (sonic3k.asm:184436-184440).
+        // when collision_property is exactly 1 (sonic3k.asm:184524-184528).
         assertEquals("CARRY", readState(megaChopper));
         assertTrue(player.isControlLocked());
         assertEquals(0, player.getLogicalInputState());
@@ -170,19 +167,76 @@ public class TestMegaChopperBadnikInstance {
 
         // MegaChopper_CarryFollowPlayer: Ctrl_1 & $8C8C -> Ctrl_1_logical, so
         // the next player pass sees left/right only; down, up and A/B/C drop out
-        // (sonic3k.asm:184361-184365).
+        // (sonic3k.asm:184449-184453).
+        player.recordFollowerHistoryForTick();
+        int recordedInput = player.getInputHistory(0);
         player.setDirectionalInputPressed(true, true, true, false);
         player.setJumpInputPressed(true, true);
         megaChopper.update(1, player);
 
         assertEquals("CARRY", readState(megaChopper));
         assertEquals(com.openggf.sprites.playable.AbstractPlayableSprite.INPUT_LEFT, player.getForcedInputMask());
-        assertEquals(0, player.getLogicalInputState());
+        assertEquals(com.openggf.sprites.playable.AbstractPlayableSprite.INPUT_LEFT,
+                player.getLogicalInputState(), "late native Ctrl_1_logical write is live immediately");
+        assertEquals(recordedInput, player.getInputHistory(0),
+                "Sonic_RecordPos precedes this object's late logical write");
 
         player.setDirectionalInputPressed(false, true, false, false);
         megaChopper.update(2, player);
         assertEquals(0, player.getForcedInputMask(),
                 "a pass with no left/right held publishes an empty logical word");
+        assertEquals(0, player.getLogicalInputState());
+    }
+
+    @Test
+    public void bothDirectionsSurviveObjectThenProductionPlayerPassAndRewind() throws Exception {
+        var gameplay = TestEnvironment.activeGameplayMode();
+        var sprites = GameServices.sprites();
+        var level = org.mockito.Mockito.mock(com.openggf.level.LevelManager.class);
+        gameplay.attachLevelManagers(new com.openggf.level.WaterSystem(), new com.openggf.level.ParallaxManager(),
+                org.mockito.Mockito.mock(com.openggf.physics.TerrainCollisionManager.class),
+                org.mockito.Mockito.mock(com.openggf.physics.CollisionSystem.class), sprites, level);
+        GameServices.camera().setMaxX((short) 0x4000);
+        GameServices.camera().setMaxY((short) 0x2000);
+        GameServices.camera().setMaxYTarget((short) 0x2000);
+        var player = new com.openggf.sprites.playable.Sonic("sonic", (short) 0x200, (short) 0x180);
+        player.setCentreX((short) 0x200);
+        player.setCentreY((short) 0x180);
+        player.setRingCount(10);
+        GameServices.camera().setFocusedSprite(player);
+        sprites.addSprite(player);
+        player.setAir(true);
+        player.setYSpeed((short) 0x100);
+        MegaChopperBadnikInstance chopper = capturingChopper();
+        chopper.onTouchResponse(player, new TouchResponseResult(0x17, 0x20, 0x20, TouchCategory.SPECIAL), 0);
+        chopper.update(0, player);
+        player.recordFollowerHistoryForTick();
+        int oldHistory = player.getInputHistory(0);
+        player.endOfTick(); // preceding player slot completed before this late object write
+        player.setDirectionalInputPressed(false, true, true, true);
+        chopper.update(1, player);
+        assertEquals(oldHistory, player.getInputHistory(0));
+        assertEquals("CARRY", readState(chopper));
+        assertEquals(12, player.getLogicalInputState());
+        var snapshot = player.captureRewindState();
+        for (int replay = 0; replay < 2; replay++) {
+            if (replay != 0) player.restoreRewindState(snapshot);
+            var input = new com.openggf.control.InputHandler();
+            input.setLogicalOverride(com.openggf.control.LogicalInputSnapshot.ofPlayers(
+                    com.openggf.control.PlayerInputState.of(0, 0, 0, 0, false, false),
+                    com.openggf.control.PlayerInputState.neutral()));
+            sprites.update(input);
+            assertEquals(0, player.getXSpeed(), "native Sonic_ChgJumpDir executes left then right");
+            assertEquals(12, player.getLogicalInputState());
+            assertEquals(12, player.getInputHistory(0));
+            Field rawLeft = com.openggf.sprites.playable.AbstractPlayableSprite.class.getDeclaredField("leftInputPressed");
+            rawLeft.setAccessible(true);
+            assertFalse(rawLeft.getBoolean(player), "raw controller is independent of the retained logical word");
+            assertTrue(player.isControlLocked());
+        }
+        player.setForceInputRight(true);
+        sprites.update(new com.openggf.control.InputHandler());
+        assertTrue(player.getXSpeed() > 0, "legacy deliberate forced-right still overrides left");
     }
 
     @Test
@@ -196,7 +250,7 @@ public class TestMegaChopperBadnikInstance {
         assertTrue(player.isControlLocked());
 
         // anim 2 (roll) releases; MegaChopper_ReleasePlayer clears
-        // Ctrl_1_locked when $38 bit 2 is set (sonic3k.asm:184353-184356, 184398-184401).
+        // Ctrl_1_locked when $38 bit 2 is set (sonic3k.asm:184441-184446, 184486-184489).
         player.setAnimationId(Sonic3kAnimationIds.ROLL.id());
         megaChopper.update(2, player);
 
@@ -216,20 +270,39 @@ public class TestMegaChopperBadnikInstance {
         identities.registerPlayer(player, com.openggf.game.rewind.identity.PlayerRefId.mainPlayer());
         com.openggf.game.rewind.schema.RewindCaptureContext context =
                 com.openggf.game.rewind.schema.RewindCaptureContext.withIdentityTable(identities);
-        var carrying = megaChopper.captureRewindState(context);
+        var registry = new com.openggf.game.rewind.RewindRegistry();
+        registry.register(new com.openggf.game.rewind.RewindSnapshottable<com.openggf.level.objects.PerObjectRewindSnapshot>() {
+            @Override public String key() { return "chopper"; }
+            @Override public com.openggf.level.objects.PerObjectRewindSnapshot capture() {
+                return megaChopper.captureRewindState(context);
+            }
+            @Override public void restore(com.openggf.level.objects.PerObjectRewindSnapshot snapshot) {
+                megaChopper.restoreRewindState(snapshot, context);
+            }
+        });
+        registry.register(new com.openggf.game.rewind.RewindSnapshottable<com.openggf.level.objects.PerObjectRewindSnapshot>() {
+            @Override public String key() { return "player"; }
+            @Override public com.openggf.level.objects.PerObjectRewindSnapshot capture() {
+                return player.captureRewindState();
+            }
+            @Override public void restore(com.openggf.level.objects.PerObjectRewindSnapshot snapshot) {
+                player.restoreRewindState(snapshot);
+            }
+        });
+        var carrying = registry.capture();
 
         for (int cycle = 0; cycle < 2; cycle++) {
             if (cycle != 0) {
-                megaChopper.restoreRewindState(carrying, context);
-                // The player's own snapshot restores Ctrl_1_locked with it.
-                player.setControlLocked(true);
-                player.setAnimationId(0);
+                registry.restore(carrying);
+                assertTrue(player.isControlLocked());
             }
             player.setDirectionalInputPressed(false, true, false, true);
             megaChopper.update(1, player);
             assertEquals("CARRY", readState(megaChopper));
             assertEquals(com.openggf.sprites.playable.AbstractPlayableSprite.INPUT_RIGHT,
                     player.getForcedInputMask(), "restored $38 bit 2 still republishes Ctrl_1 & $8C8C");
+            assertEquals(com.openggf.sprites.playable.AbstractPlayableSprite.INPUT_RIGHT,
+                    player.getLogicalInputState());
 
             player.setAnimationId(Sonic3kAnimationIds.ROLL.id());
             megaChopper.update(2, player);
@@ -250,7 +323,7 @@ public class TestMegaChopperBadnikInstance {
         megaChopper.update(0, main);
 
         // collision_property 3 selects Player_1 but skips the cmpi.w #1,d2 lock
-        // arm (sonic3k.asm:184436-184442).
+        // arm (sonic3k.asm:184524-184530).
         assertEquals("CARRY", readState(megaChopper));
         assertFalse(main.isControlLocked());
         main.setDirectionalInputPressed(false, false, true, false);
@@ -562,7 +635,7 @@ public class TestMegaChopperBadnikInstance {
                 new ObjectSpawn(0x210, 0x180, Sonic3kObjectIds.MEGA_CHOPPER, 0, 0, false, 0));
         megaChopper.setServices(new QueryOnlyPlayerServices(null, List.of(nativeP2), List.of()));
 
-        // Obj_MegaChopper begins with jsr (Obj_WaitOffscreen).l (sonic3k.asm:184326),
+        // Obj_MegaChopper (sonic3k.asm:184325-184326) begins with its offscreen-wait call,
         // so no routine runs until Render_Sprites has drawn the placeholder. These
         // cases exercise post-Init behaviour directly, so release the gate here as
         // production does once render_flags bit 7 is set.
@@ -576,6 +649,7 @@ public class TestMegaChopperBadnikInstance {
         assertFalse(nativeP2.isControlLocked(),
                 "only collision_property 1 writes Ctrl_1_locked (sonic3k.asm:184431-184435)");
 
+        assertFalse(nativeP2.isControlLocked(), "only P1-alone capture locks controls");
         nativeP2.setCentreX((short) 0x220);
         nativeP2.setCentreY((short) 0x184);
         megaChopper.update(1, new TestablePlayableSprite("sonic", (short) 0x300, (short) 0x180));

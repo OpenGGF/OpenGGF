@@ -5157,6 +5157,36 @@ after the cooldown and angle gates and before the capture test. Use a
 per-participant checkpoint in that position. Test through real ObjectManager
 dispatch, because seeding the standing state hides a missing collision call.
 
+HCZ hand launcher ordering is the opposite of a fresh-contact grab check:
+`HCZHandLauncher_UpdateSolid` (sonic3k.asm:65864-65872) writes the final Y before
+its solid call; `HCZHandLauncher_TryGrabPlayer` (sonic3k.asm:66006-66008)
+reads the prior pass's retained standing bit. Query the authoritative solid
+manager latch: a later support's RideObject_SetRide clears the old object's
+status bit. A private boolean copied after a checkpoint misses that external
+clear. The manager already captures the latch and object/player identity for
+rewind; preserve grab ownership when native/extension bindings move. A pre-motion checkpoint
+both misses rising landings and changes grab/release timing.
+
+Drowning changes the primary player routine, not just control flags.
+`AirCountdown_ReduceAir` (sonic3k.asm:33579-33606) installs routine `$0C`;
+`loc_15828` (sonic3k.asm:29362-29367) moves Tails before adding `$10` even
+when object control remains `$81`. A shared normal-control early return must
+not intercept that primary routine. Releasing a local controlling object or
+changing only the reported routine byte conceals the wrong dispatch owner.
+Select the primary routine before input publication, CPU steering and normal
+control side effects. Its fixed AirCountdown still owns the $78 lifetime and
+pending bubble/RNG burst. S1/S2 differ: their fixed countdown also owns the
+old-velocity move and $10 gravity, while the shipped FixBugs=0 player routine
+remains unchanged. Use a semantic profile, not a shared unconditional pre-death
+CPU return; that return blocks stale-state respawn and changes S2's native call.
+Test the actual next input consumer too: legacy forced-right priority is not a
+native logical word when both Left/Right must execute independently.
+A drowning CPU control needs an already-initialized native secondary state:
+constructor INIT legitimately writes a spawn position and is not proof of
+normal-routine steering during drowning. A controlled leader also blocks
+ordinary respawn. Use the native manual A/B/C/Start bypass for that physical
+case, or provide an eligible leader, and name which path was measured.
+
 ## Object deletion is not rider release
 
 LBZ rolling drum `loc_2C3CA` runs both participant routines before
@@ -6607,3 +6637,57 @@ Use real manager pressure for zero, one and two free tail slots and capture befo
 another object dispatch. Do not weaken the reference codec or replace the bridge
 solely to change its spelling. Origin: 2026-10-24 monitor admission audit,
 `529b348aecf8884c0677f12c6aa64583883ffe81`.
+
+
+HCZ Act 2 carrier targets are captured words, not live camera expressions.
+`loc_6A80C` (sonic3k.asm:140086-140100) stores camera X+$A0 once;
+`sub_6A916` (sonic3k.asm:140178-140196) reads that word after the camera moves.
+Retain it per native participant and include it in registered event rewind.
+A direction test against the live camera can reverse at equality and change
+acceleration even when player velocities are suppressed by object control.
+
+
+HCZ water skim receives the current logical controller word.
+`HCZWaterSplash_CheckSkimPlayers` (sonic3k.asm:75408-75424) loads d5 separately
+for P1/P2; `HCZWaterSplash_UpdateSkimmingPlayer` (sonic3k.asm:75471-75474)
+masks its low A/B/C press bits. Use the logical press API: held input exits
+one pass late after activation, while raw controller press loses CPU/scripted
+logical edges. Rewind both the existing skim adapter and player logical state;
+do not rewrite the earlier follower-history slot to publish this late object read.
+
+
+A waiting badnik has not published its ObjDat collision byte.
+`Obj_Jawz` (sonic3k.asm:183616-183622) reaches SetUp_ObjAttributes only after
+Obj_WaitOffscreen has restored its entry and returned; use the existing captured
+initialized state for attribute visibility. That is not touch-list publication:
+Obj_Jawz returns through Set_VelocityXTrackSonic without reaching
+Sprite_CheckDeleteTouch. Only Jawz_Main with collision_property zero publishes
+(sonic3k.asm:183625-183632); its contact response branches do not. Use the existing
+object-owned publication predicate, and test the real previous-list player pass
+with both previous-list selection and inline/pre-update consumption enabled.
+Recreate initialized-but-unpublished and first-published graphs separately, then
+replay their next player/object passes. Touch_Special queues
+collision_property; Jawz_Main owns the later harmful-child response. A hurt stack
+with source X identifies a position, not an object class: verify the original ROM
+placement ID before attributing the route (HCZ2 $2880,$07F0 is Turbo Spiker $96,
+not Jawz $93).
+
+
+Primary-routine bypass does not freeze physical controller RAM.
+`HCZBreakableBar_VerticalCheckPlayers` (sonic3k.asm:42821-42830) reads current
+Ctrl_1/2 even while a captured player drowns; its held release masks fresh ABC
+at HCZBreakableBar_VerticalHeld_CheckRelease (sonic3k.asm:42859-42865).
+Refresh the physical sample before dispatch without publishing a logical word
+or running AI. Keep normal CPU AI-held fields until their ordinary publication;
+only refresh their separate raw physical cache early. Test stale/held edges,
+independent scripted pads and forced logical words through the real next object
+consumer, including restore/forward. Existing player/controller state already
+captures these fields; no second input history or timing owner is needed.
+
+
+The same initialization gate belongs to Turbo Spiker's body, independently of
+its shell. `Obj_TurboSpiker` (sonic3k.asm:183959-183965) waits before dispatch;
+`TurboSpiker_Init` (sonic3k.asm:183978-183983) publishes ObjDat attributes.
+Do not advertise inherited body collision while the waiting placeholder is
+uninitialized. Preserve the initialized body's inherited flags and existing
+shell lifecycle; the captured initialized state already provides rewind authority.

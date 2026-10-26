@@ -626,3 +626,596 @@ supersedes the physical-storage implementation target, preserves its research,
 and records admission-side-effect, independent-retirement, rewind and policy
 obligations for the implementing agent. Pair-removal semantics remain unresolved;
 this documentation update lands no runtime fix and changes no trace comparison.
+
+## Fresh-load CPU boundary feasibility — 2026-10-25
+
+The rings implementation follow-up starts at exact clean base
+`61be1910ac29d5606410be315ec881a5745a75d3`, task branch
+`bugfix/ai-aiz-ring-reset-boundary-20261025`, worktree `t3-9ba1b3b9`.
+**The premature ring reset remains unresolved.** The bounded source audit found
+no faithful post-Kos CPU completion signal expressible by the existing production
+owners and timing authority. This is a missing continuation model, not evidence
+that full console emulation is necessary. No runtime patch was made.
+
+The semantic owner split remains appropriate: S3K's fresh-load owner must finish
+its synchronous setup before the shared transition boundary publishes the
+policy-selected destination rings, independently of position publication and
+before initial sprite dispatch. A callback expressing that order alone does not
+qualify its physical scheduling. Additional source inspection narrows the gap:
+
+- `LoadLevelLoadBlock2 (sonic3k.asm:38714-38782)` calls synchronous `Kos_Decomp`
+  for the selected block/chunk streams, copies the layout, then conditionally
+  submits the secondary PLC and loads the palette. These are direct calls,
+  not pending `Queue_Kos` jobs with a polled readiness bank. Prepared host construction and
+  `KosinskiInspectionCache` already decode these values; their completion time
+  cannot authenticate when native CPU execution returns from this routine.
+- `loc_6310 (sonic3k.asm:7788-7801)` masks interrupts around `j_LevelSetup`.
+  `LevelSetup (sonic3k.asm:102231-102275)` dispatches both plane initializers.
+  For this destination, `HCZ1_ScreenInit (sonic3k.asm:105722-105725)` and
+  `HCZ1_BackgroundInit (sonic3k.asm:105732-105753)` each reach
+  `Refresh_PlaneFull (sonic3k.asm:103110-103122)`: sixteen rows of thirty-two
+  blocks, through `Setup_TileRowDraw (sonic3k.asm:102923-103022)` and direct
+  `VInt_DrawLevel (sonic3k.asm:102405-102469)` VDP writes. Wrap/flip branches and
+  deformation depend on actual ROM data and destination state. Moving an event
+  initialization callback cannot account for that native work or interrupt mask.
+- `ResumableKosinskiDecoder` counts commands. The direct queue's
+  `DirectPreparation.serviceBoundary` completes its decoder at one
+  `PRE_MAIN_LOOP` service. Neither prices synchronous `Kos_Decomp` CPU
+  progress. `S3kVIntInstructionCycles` explicitly excludes FIFO/bus waits and
+  unpriced callees including `VInt_DrawLevel`; its ledger is diagnostic.
+
+A read-only fixture audit confirms the last timing event is module ordinal 42
+at physical row 26208. The unchanged `hardware_timing.jsonl` SHA-256 is
+`b8ebb4662c7361984e21541824166fbd597970171eed5025b6fdadbee6b4df24`;
+the other fixture hashes match the investigation above. There is no later
+completion event. Rings remain 72 on all 48 physical rows 26179–26226, then
+become zero at 26227. Rows 26209–26224
+advance the lag bank from 1 through 16; 26225–26226 hold both V-int and lag;
+26227 advances lag to 17 while publishing zero rings and assembled players.
+The latter row is `VBLANK_ONLY` despite those gameplay changes. These observations
+disconfirm queue-empty reset, a "next non-lag frame" gate, and inferring the
+reset from the two unchanged-counter rows. They locate no production continuation
+inside a lag interrupt. The prior native before/after-PC observations above
+remain the reset evidence; no new native replay was needed.
+
+The [timing contract](../designs/2026-07-27-cross-game-hardware-timing-trace-contract.md#2026-08-02-suppressed-row-boundary-clarification)
+does not permit a partial CPU prefix from held counters. Its external-completion
+contract also requires an actual polled readiness owner while the main loop can
+continue; synchronous setup does not satisfy that shape. Renaming it a queue
+job, adding a rings-derived event, promoting diagnostic cycles, or fitting an
+elapsed delay would add unsupported authority. Moving the reset to `complete()`
+would still hide it beyond the compared tail, as the prior passive run proves.
+
+The finite prerequisite is a fresh-load continuation design through `loc_63B4`,
+not merely the return from `j_LevelSetup`. It must include the subsequent
+animation, collision, water, control and fixed-object setup before counter
+publication. Represent its progress and interrupt-enabled/masked sections;
+authenticate completion through production-owned work and interrupt/VDP
+semantics; then publish counters and admit initial sprite dispatch. Qualify the
+proposed boundaries against independent native PC/interrupt observations on a
+second destination and checkpoint path before treating them as a release clock.
+Do not extend the timing registry without a separate contract decision. Once
+that prerequisite is supported, implement independent rewind phases and the
+non-72 source, zero/nonzero destination, omitted-tail, checkpoint, idempotence,
+exactly-once dispatch, S1/S2 and no-title controls listed above. This follow-up
+does not implement a CPU/VDP emulator or claim those controls passed.
+
+Validation is documentation-only: source/ROM identity and immutable fixture
+inspection, citation/link checks and ordinary Git policy hooks. The audited
+boundary, title, art, load-profile, loader, recording-driver and execution-model
+sources are unchanged from `d3fa3d519f6acb7285d538b5f972807036f1019e`; the
+current `src/main` tree is `d42d563b0aba4604cf32466f830c4a99e26a2cda`.
+The inherited one-case failure and 26,041 compared-frame frontier above remain
+at their original tested source, not a new run on this base. No Maven/native
+jobs, queue/execution timings, skips or new behavioral results exist for this
+follow-up. No frontier moved, so no new trace-frontier or release-note claim is
+made. Parent owns independent challenge/review, any combined validation,
+integration/push and worktree cleanup.
+
+### Bounded continuation proposal and go/no-go gates
+
+Design follow-up on retained commit `78c5bf8ab69fcee6388e3353fd1411e4e952b66b`;
+same worktree, base/runtime tree and disassembly pin. Independent Sol review
+corrected the prefix extent: `loc_6310 (sonic3k.asm:7788-7835)` reaches
+`Animate_Init`, `LoadSolids`, water handling and control/object writes before
+`loc_63B4`. In particular, `Animate_Init (sonic3k.asm:56413-56416)` calls
+`sub_279D4 (sonic3k.asm:54157-54198)`, which can submit animation DMA. A setup
+return callback before those operations would still publish rings prematurely.
+
+**Proposal:** one S3K fresh-load continuation, supplied by a new **internal
+semantic capability** on `Sonic3kLevelInitProfile`, owns this finite sequence.
+Shared `LevelManager` drives it; an S3K adapter registered through existing
+`GameModule.rewindAdapters()` alone captures its cursor. Shared code sees progress,
+counter-publication and assembly-admission results, never S3K routine names.
+Do not add methods to the public Mod API or a new `HardwareWorkKind`. Existing
+effect owners retain their data; the continuation orders their publication.
+Admission follows an actual fresh `Level:` load, independent of title visibility;
+preview, restoration and genuine in-place continuation retain their current path.
+
+The following is the complete ownership partition for this prefix and its
+transfer. Each row denotes a source operation, not a fixed-duration callback.
+"Early" permits immutable preparation only; it grants no runtime publication.
+
+| Native operation / publication phase | Current eager or deferred effect → proposed sole production owner | Suspended state and rewind ownership |
+| --- | --- | --- |
+| Position/deformation before terrain; terrain-wait return | `FreshLevelTransitionBoundaryController.publishInitial` keeps position/camera publication, without rings. `Sonic3kLevelInitProfile.prepareInitialLevelScroll` belongs before terrain, not again inside the later `InitialProcessSpritesExecutor`. `S3kRuntimeArtCoordinator` retains actual terrain jobs and their return gate. | Shared boundary captures position-publication bit, saved players/camera and assembly token; camera/parallax adapters own published values. Art/timing adapters own job handles. S3K continuation latches return once and records remaining physical-time uncertainty. |
+| `LoadLevelLoadBlock2`: blocks/chunks, layout | `Sonic3k.buildLevel` / `Sonic3kLevel` resource plan may prepare immutable decoded data early. The S3K continuation orders destination RAM visibility; it must audit interrupt readers before treating a whole decoded bank as atomic. | Continuation owns selected ROM descriptors, stream/command/copy cursor and committed ranges; level adapter owns visible geometry. Immutable prepared buffers need no second mutable authority. |
+| Same routine: conditional secondary `Load_PLC`, `LoadPalette` | Resource-plan PLC art preload is preparation. `Sonic3kLevelTitlePlcService` needs a source-selected secondary submission operation; it alone owns Nemesis occupancy. Existing palette ownership path publishes the CPU palette at this call, distinct from later CRAM visibility. | Continuation records submission/palette phase once; PLC snapshot owns FIFO progress, palette snapshot owns published bank. No synthetic Kos job or early queue admission. |
+| SR `$2700`, `j_LevelSetup`: reset setup words, dispatch both plane initializers, scroll copies and VDP writes | `Sonic3kLevelEventManager` owns event state; camera/parallax owners retain scroll state. S3K continuation separates their current eager initialization / deferred `prepareInitialScreenObjects` work into native order. Direct plane-write progress needs a new, bounded S3K setup presentation component, not the renderer's host completion callback. | Event/camera adapters capture published words. Continuation captures initializer/row/block/port-write cursor, mask and pending interrupt state. A qualified presentation component must capture its FIFO/transfer progress; none exists today. |
+| SR `$2300`, `Animate_Init` | Split `Sonic3kLevelAnimationManager.runInitialLevelAnimationPass`: `Sonic3kPatternAnimator.runAnimateInitTransfers` runs here; post-object `Animate_Tiles` remains later. `Sonic3kAniPlcPublicationQueue` owns DMA submissions and visibility through existing V-int publication. Other native `Animate_Init` branches need their selected profile operations, not an HCZ-wide fallback. | Pattern animator snapshot owns counters, pending uploads and presented bytes; continuation owns only whether/suboperation at which the call completed. Predecoding ROM art is early; queuing DMA or mutating counters is observable. |
+| `LoadSolids` | Early ROM collision decode remains in `Sonic3kLevel`. S3K load owner selects/installs the active primary/secondary collision bank at this operation, preserving the native format branch. | Immutable banks can be prepared; continuation records selected bank/publication. Existing level/collision binding restore must reproduce it, rather than rerunning load. |
+| `Handle_Onscreen_Water_Height` | `LevelWaterCoordinator` / `WaterSystem` own dynamic/mean/current/target water and full-screen state. A source-specific S3K setup operation must run the applicable tunnel/dynamic-height and trailing terrain effects on the **pre-spawn** players. Initial water configuration is not this call. `H_int_counter` publication needs an explicit S3K water/presentation owner; existing derived water state is not proof of that latch. | Water snapshot owns its bank; player/event adapters own resulting writes. Continuation records subcall progress. Missing interrupt/presentation latch state must be added to that owner's snapshot before qualification. |
+| Save `Ctrl_2` in `_unkFF7C`; clear four control words, lock controls, clear level-start; install conditional wave/splash/pollen owners | S3K setup control operation uses production input, player locks and camera state; no exact `_unkFF7C` latch owner is identified. `Sonic3kZoneFeatureProvider` owns wave-splash setup; `Sonic3kObjectRegistry.installFixedSstObjects` / event manager own splash SST5 and pollen SST4. Prepared factories publish here, without a second installation at assembly. | Input/player/camera snapshots own controls/flags; continuation retains the control latch. Object snapshots own identities/slots. Wave cache initialization is not native installation: feature ownership needs a rewindable installed gate, separate from resource/GPU readiness. Continuation records completed installs, not duplicate object state. |
+| `loc_63B4`: conditional P1/P2 rings/timer/extra-life and saved-bank clears | Shared boundary publishes the **existing policy-selected** destination ring bank once on S3K's authenticated counter edge. S3K operation owns native `Last_star_post_hit` branching and companion timer/flags/`Saved_status_secondary`/`Saved2_status_secondary`/`Respawn_table_keep` writes; do not hardcode zero or reinterpret checkpoint policy. Current `initPlayerAndCheckpoint` / `resetPlayerForLevelStart` may prepare selection, not expose it early. | Separate shared `countersPublished` bit and selected bank; `LevelRewindSnapshotAdapter` owns visible main rings, threshold flags and timer. Checkpoint/transition/player owners retain their saved banks; P2 equivalence needs the audit below. Never restore a stale whole state over intervening writes. |
+| `loc_6404` through `loc_6468`, then existing assembly | Field assignments/gaps are below. Split only the late oscillator reset from `Sonic3kGameModule.onLevelLoad`. Publish HUD/timer/level-start flags with native hub exceptions. Shared boundary transfers once to saved players plus `InitialProcessSpritesLifecycle`, retaining placement/fixed dispatch and post-object animation owners. | Existing adapters own published fields, including `OscillationStaticAdapter`; continuation records tail completion. Shared `LevelTransitionRewindAdapter` owns position/counter/assembly publication bits and selected bank. Preserve subordinate snapshots; restoring the cursor dispatches nothing. Missing fields need a consumer/owner decision, not duplicate generic RAM. |
+
+`LoadSolids (sonic3k.asm:9575-9599)` is pointer selection, not collision
+decompression. `Handle_Onscreen_Water_Height (sonic3k.asm:8506-8556)` includes
+subcalls and H-int/full-screen publication. `loc_63B4 (sonic3k.asm:7826-7854)`
+and `loc_6404 (sonic3k.asm:7856-7883)` distinguish conditional counter clears
+from unconditional tail setup. The table does not move the earlier fresh-load
+RNG/DMA clears, title PLC submissions or music to this later prefix.
+The saved `_unkFF7C` reader is in the later competition/debug branch
+`loc_663A (sonic3k.asm:8001-8018)`; mapping that write does not authorize
+implementing competition. Single-player reader analysis must justify its
+retention/disposal, with unsupported consumer breadth explicit. Likewise, do
+not delay an entire eager manager reset when some of its fields clear earlier.
+
+Tail assignments are restart → `LevelTransitionCoordinator`, super status →
+`Sonic3kSuperStateController`, rocks routine → `LrzZoneRuntimeState`, oscillator →
+`OscillationManager`, HUD timer/level-start → `LevelGamestate` / camera. Existing
+`LevelGamestate.isTimeOver()` derives from `LevelTimer`, so it is **not yet an
+equivalent owner** of the independently cleared native time-over flag on a
+checkpoint path. Exact P2 ring/timer, debug-placement, teleport timer/flag,
+P1/P2 totals, monitor counts and loser-time counterparts were not identified.
+The proposed S3K setup operation owns their zero-store timing, but stage 1 must
+assign any observable value to its real consumer and snapshot owner (including
+HUD dirty bits), or prove it inert in the admitted single-player path. Do not
+add unused mirror fields merely to mark writes complete. These are explicit
+semantic-inventory gaps, not silently implemented entries.
+
+**Physical driving and missing evidence.** Live title lifecycle and
+`RecordingFrameDriver` must invoke the same shared advance operation; rendering
+or `provider.update()` must not serve as the clock. Start at the retiring terrain
+service, consuming only a proved residual budget, not at the next title update.
+`LevelFrameStep` / `PlcFrameLifecycleCoordinator` need one production owner of
+accepted interrupts: the current unconditional title V-int dispatch cannot
+continue during masked setup, nor may a lag interrupt prepare extra queue work.
+Finish terrain return,
+run the interrupt-enabled data prefix, enter masked screen setup, re-enable
+interrupts, finish the post-screen prefix, publish counters, complete the tail,
+then transfer once. No title object scan, ordinary gameplay, oscillation tick or
+queue preparation is implied by a partial prefix. A host re-entry resumes the
+saved operation/subcursor; a load replacement retires that generation's cursor.
+Snapshot the residual physical budget, mask, pending interrupt and publication
+bits. Masked physical intervals advance setup work without inventing V-int
+counter/services; re-enabling accepts pending interrupts according to a derived
+production interrupt rule. Current one-closure-per-iteration infrastructure does
+not supply that rule. Existing lag/starvation classification supplies neither
+the cursor nor completion. Extending replay's partial-prefix authority requires
+an explicit design/contract review; do not smuggle it through a suppressed row.
+
+Finite cost candidates are source path counts: actual Kos descriptors/refills/
+copy lengths; layout copy count; selected PLC/palette/pointer/control stores;
+both plane traversals, tile wrap/flip branches and deformation; actual animation
+script/DMA submissions; water subcalls; and reset-tail operations. Immutable
+results can stay precomputed only after a reader audit proves no interrupt,
+palette/DMA, slot-allocation or presentation effect escapes before its phase.
+This removes host work without removing native elapsed work. Derive instruction
+costs from the verified native implementation; do not price Java callbacks.
+The synchronous Kos routine needs its own path counts, not the queue decoder's
+per-service budget. The layout copy has a source-fixed count; water/script/plane
+branches need their selected inputs. A descriptor count alone prices neither.
+
+The open timing inputs are the physical entry phase/residual budget at the
+terrain return, applicable interrupt paths/costs, and VDP acceptance progress.
+Precisely, `Refresh_PlaneFull` → `VInt_VRAMWrite (sonic3k.asm:102457-102469)`
+executes `move.l (a0)+,(a6)` against the VDP data port. Counting writes is finite,
+but their stalls need source-backed mode/beam/FIFO/contending-transfer state or
+proven conservative bounds. Animation-DMA submission after SR `$2300` also
+needs ordering against the next accepted interrupt; the diagnostic ledger
+cannot supply a complete interrupt cost or port schedule.
+
+Bounds are useful only if the whole possible completion interval, including
+entry-phase and interrupt uncertainty, falls within one physical observation
+window **and** every intervening publication/interrupt order is unambiguous.
+Otherwise they cannot determine the reset edge. No such bounds have been
+established. If direct VDP writes cannot meet this test without a larger
+presentation timing model, stop specifically at that operation and review its
+cost/scope; this is not proof that a general CPU interpreter or console emulator
+is required. The prefix has no asynchronously polled setup readiness bank, so a
+new external-completion event is not a substitute. No trace-schema change is
+proposed; a different authority needs separate approval/design.
+
+**Finite implementation/negative-control sequence; all remain future work:**
+
+1. Prove the operation/reader inventory and timing bounds above on the selected
+   fresh-load profiles. Reuse existing native PC evidence and ROM inputs;
+   obtain missing work/interrupt/port-path evidence, not additional traces of
+   elapsed delays. Kill the proposal if any effect has duplicate ownership,
+   an unbounded/unpriced prerequisite, or ambiguous critical frame/order.
+2. Add the internal capability and rewindable cursor in isolation. Separate
+   position, counter and assembly phases; split the two animation calls and
+   initial deformation. Controls must fail the present early reset and also a
+   deliberately never-reset candidate. Do not enable a half-timed runtime path.
+3. Integrate both drivers through that single owner. Demonstrate a non-72 source
+   survives position publication and held setup; selected zero and nonzero
+   destination banks publish at `loc_63B4`, including every physical omitted
+   tail observation. Exercise native checkpoint/saved-entry branching, rewind
+   before/after position, mid-work/mask/DMA, before/after counters and after
+   transfer; forward replay twice with all owner snapshots. Repeated calls must
+   preserve a later ring write and dispatch initial sprites exactly once.
+4. Preserve intentionally omitted presentation (same semantic work, explicit
+   existing fast-forward policy), genuine no-title continuation, S1/S2 and the
+   four S3K startup anchors. Strict recording cannot fast-forward because its
+   presentation is hidden. Qualify alternate and independent canonical AIZ→HCZ
+   prefixes plus a checkpoint entry with different camera/water branch inputs;
+   qualify any claimed second region/timing mode against its native path.
+   Stop if correctness depends on movie/row/lag count, a fitted cost, extra
+   timing authority, or silently dropping a physical observation.
+
+**Readiness: no-go for runtime implementation of an exact reset clock.** The
+semantic split and operation owners are concrete; physical start-phase,
+interrupt and direct-port closure plus the identified latch owners are not yet
+qualified. No runtime/test/fixture edits or Maven/native jobs were performed in
+this design slice. Existing matrix/backlog gaps and the unresolved frontier
+remain accurate; no new behavioral coverage is claimed.
+
+
+## HCZ continuity implementation handoff — 2026-10-25
+
+The isolated implementation on exact base`61be1910` corrects the two observed
+HCZ object owners: post-motion launcher solid/retained standing, then Chopper
+P1 lock/masked live logical publication. The [implementation evidence](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#hcz-object-phase-repairs-and-remaining-continuity-gate--2026-10-25)
+and [HCZ1 matrix](../validation/levels/s3k-hcz1-sonic.md#launcher-and-chopper-continuity-repairs--2026-10-25)
+record87 focused passes, five clean replay companions and the still-red chain.
+No shared loading/timing/physics or AIZ reset owner was changed.
+
+The old drowning stop68801 is passed; final ownership loss is70718 in HCZ2 after
+an ordinary P1 death. Earliest remaining causal motion difference is controlled
+Tails drowning3476: object control`81` bypasses the shared engine's pre-death
+movement/timer, while native primary routine`0C` bypasses ordinary control and
+moves before adding gravity. A routine-byte-only reporting correction or HCZ
+column release would conceal the gameplay defect. The finite next scope is shared
+primary-routine dispatch, CPU gating, fixed countdown/death ownership and rewind,
+with S1/S2 negatives. First later P1 velocity difference5065 is a missed miniboss
+hit; causation is not established before the earlier player frontier is repaired.
+Sideways and the independent alternate-AIZ representation work remain unchanged.
+Parent retains review, combined smoke, integration/push and checkout cleanup.
+
+## Authorized primary-drowning continuation — 2026-10-25
+
+The parent extended the HCZ scope to primary drowning dispatch and its necessary
+fixed timer/CPU/history/projection owners. Those corrections now pass 178 focused
+cases with no skips and qualify native P2 entry, sinking, death and despawn in the
+continuous source. Canonical six remains 6/1F/0E/0S; segment 11 first comparison
+is rings 3832 (104/94), with the first P1 motion still the miniboss contact at
+5065. The source is HCZ1's second stint; the premature replacement destination
+at 70718 is HCZ2. Rings and setup timing remain excluded. The native boss
+`StartFight` code-pointer handoff versus next-pass loop initialization is the
+bounded next owner, with a separate old-red control/commit. See the appended
+existing audit; no general player architecture or hardware-timing campaign is
+implied. Parent retains combined smoke and delivery ownership.
+
+
+HCZ retained-carrier continuation (2026-10-25): native capture retains the
+camera-derived target; the corrected HCZ event owner now does too. Independent
+P1/P2 old-red and registered before/pending/moving restore controls are qualified
+by 110 passing local/anchor cases with no skips. The affected chain walks all
+14,208 stored segment-11 rows without the former input-71601 replacement, but
+still fails its required giant-ring exit (1/1F/0E/0S), with 137,113 strict
+differences and first monitor/rings difference 3832 (104/94). First P1 motion
+moves to 8329: a measured held-versus-logical-press error in the HCZ water-skim
+handler. This is local progress, not route certification. The existing HCZ audit
+records exact source, selectors, queue/execution times and excluded shared
+monitor-content lifetime boundary; rings/setup timing remain outside this task.
+
+
+HCZ receiving-tree checkpoint (2026-10-25): local head `0dff5b225` plus the
+logical skim-press correction passes 118 focused physical cases with no skips.
+Eight independent P1/P2 old-red controls fail; exact source/command/timing is in
+the existing HCZ audit. The live job finished normally after parent notification
+of PR 223's production advance to `08f0a5e78`. No further old-base replay or
+runtime extension followed. Current upstream already has the skim guard,
+captured carrier targets, next-pass boss initialization and independent monitor
+contents; the old monitor/ring structural finding is not a current-upstream
+blocker assertion. Launcher authoritative-latch and Chopper logical-word review
+fixes remain absent; drowning has partial overlap but retains generic lifetime
+and late movement dispatch. Preserve upstream owners and adapt only missing
+semantics/tests in the parent-coordinated receiving tree. No merge/rebase/reset
+or new ObjectManager API was made here. Current-upstream continuity remains
+unmeasured; parent retains its independent review and combined smoke.
+
+
+HCZ receiving qualification (2026-10-26): merge `b3374a56c` preserves exact
+upstream08 and qualifies 297 unique focused cases without skips. Canonical six
+is 6/1F/0E/0S; five companions pass. Segment11 now crosses its giant-ring
+boundary, with no non-camera physics error and bounded residual 11 camera /
+51 animation errors. Segment13 and the later SS7 result boundary remain open.
+Jawz's independent waiting/initialization collision correction qualifies 69
+local/anchor cases without skips; it is not attributed to the row442 P2 hurt.
+Original ROM placement identifies that source as Turbo Spiker `$96`, a separate
+local HCZ owner. Independent review also reproduces stale raw ABC during primary
+drowning (9 failures in 10 new controls), with logical/CPU bypass retained;
+its correction remains separate. See the existing HCZ audit for commands,
+fingerprints, queue/execution times, corrected fixture errors and limits.
+
+
+Primary-drowning raw-input review correction (2026-10-26): ten production
+player→captured-bar controls reproduce nine old-source assertion failures and
+one existing P1-scripted pass. The correction refreshes the selected physical
+pad before primary dispatch, without logical publication or AI. All ten cases
+now pass, including P1/P2 release/break with registered restore/forward, stale
+and held edges, forced logical input and independent scripted controllers.
+Finished affected selection is 186/0F/0E/0S with all four S3K anchors and actual
+API signatures unchanged. Exact source/command/timing is in the existing HCZ
+audit. The original segment11 continuity remains crossed; final affected replay
+will also include the separately identified Turbo Spiker placeholder owner.
+
+
+Turbo Spiker continuation (2026-10-26): original HCZ2 ROM placement `$1E7056`
+identifies the row442 source as object `$96`. Its inherited `$1A` body collision
+was exposed before native initialization. Three independent old-red controls
+fail without errors/skips, including actual vulnerable-P2 production touch and
+registered fresh body/shell phase restore. The existing initialized-state gate
+now qualifies 81 local/API/anchor cases with zero skips, preserving shell and
+shared touch owners. Final affected chain results follow in the existing audit;
+this local qualification adds no viewport/donor/team or full-route claim.
+
+
+Final local HCZ receiving result (2026-10-26, runtime `0d7c25c68`): the exact
+affected chain is 1/1F/0E/0S. Segment11 completes 14,208 stored rows and crosses
+its required giant-ring exit with no non-camera physics error; residuals are
+11 camera / 51 animation errors, 59 lag rows, zero bootstrap errors. This
+qualifies the requested production continuity, not a zero-difference trace or
+act-wide breadth. Turbo Spiker's row442 P2 hurt is gone: segment13 first
+non-camera state now differs at2147 P1 Y `$04DA/$04DE`; its 4,145 differences
+split 3,795 physics / 350 animation (7 lag, zero bootstrap), and it enters SS7.
+The terminal outside-HCZ boundary remains SS7 results at movie cursor97208;
+its cause is unproven and no timing/loader/comparator owner was changed.
+The existing audit records exact command/fingerprint, 58.066-second Maven /
+58.751-second wrapper timing with zero queue wait, separate receiving297,
+Jawz69, raw186 and Turbo81 focused qualifications, all zero-skip, and remaining
+fan/SS7 questions. Parent retains final review, combined smoke and delivery.
+
+
+Jawz final-delta disposition (2026-10-26): the bounded review finding is
+confirmed by Obj_Jawz's returning initialization and Jawz_Main's later
+Sprite_CheckDeleteTouch tail. Preserve the initialized collision-byte gate and
+use the existing object-owned publication predicate; shared list semantics stay
+with their current owner. Three real previous-list old-red cases reproduce the
+early P1/P2 property, including fresh reconstruction. Jawz10 plus retained
+list/rewind12 and anchor60 checks qualify 82 distinct cases across one fixture
+repair, no skips. The affected chain is measured separately; no new HCZ owner
+or outside-HCZ frontier investigation is authorized by this final delta. See the
+[audit](../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#jawz-final-delta-publication-phase-2026-10-26).
+
+## Composed smoke and lifecycle-owner correction — 2026-10-26
+
+The clean composed candidate `8b434c76079bc93b8f1a09a8fc699a8c3d31b13a`
+contains HCZ `3dd809f99`, safe Sideways `faeb97910`, the rings prerequisite,
+and updated development base `dd39e01cb`. The latter adds only a multiplayer
+architecture document beyond `08f0a5e78`. Both Bash and PowerShell `ci-push`
+policy checks passed for `dd39e01cb..8b434c760`, auditing 15,648 tree entries.
+That is policy evidence, not engine validation.
+
+The final five canonical companions passed without skips. The alternate AIZ
+case retained exactly one assertion failure: row 26179, rings 72/0, across
+26,041 compared frames, with no errors or skips. The exact final HCZ chain
+result above was reused: the composed executable tree differs from its tested
+HCZ source only in the two independently qualified S2 Sideways files.
+
+The change-based smoke selection completed all 84 ordinary batches and its
+guard batch. Ordinary results were **43,692 tests / 42 failures / 1 error /
+96 skips**; guards were **805 / 1 failure / 0 errors / 0 skips**. There were no
+omitted failure or skip records. Preparation/execution took 2h14m37s, reported
+queue waiting approximately 1h07m43s, and wall time 3h22m34s. No timeout occurred.
+The run used the original ROMs, Java 25, Lua 5.4, explicit surfaceless EGL and
+no inherited desktop or JVM-option environment. The invocation was:
+
+```bash
+WORKSPACE_ROOT="$HOME/code/projects/OpenGGF"
+env -u DISPLAY -u WAYLAND_DISPLAY -u JDK_JAVA_OPTIONS \
+  -u JAVA_TOOL_OPTIONS -u _JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  PATH=/usr/lib/jvm/java-25-openjdk/bin:"$PATH" \
+  LUA_BIN=/usr/bin/lua5.4 ALSOFT_DRIVERS=null \
+  python3 tools/testing/run_categories.py \
+  --base 61be1910ac29d5606410be315ec881a5745a75d3 \
+  --rom-directory "$WORKSPACE_ROOT" --headless-gl surfaceless-egl \
+  --max-minutes 180 --run
+```
+
+The introduced guard failure identifies the direct `child.setSlotIndex(-1)`
+in Sideways rejection cleanup. The correction routes that identical operation
+through existing `ObjectLifetimeOps.clearPreviousManagerSlot(child)`. It adds
+no lifecycle API, changes no allocator or guard allowance, and preserves the
+exact-owner and replacement checks. Runtime SHA-256 after correction is
+`5a25fb112a34d1bfeb3690c39629531f2141f78edc732684c7eba725abc8d894`.
+Using the same environment above, the focused command was:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  -Dsonic1.rom.path="$WORKSPACE_ROOT/s1.gen" \
+  -Dsonic2.rom.path="$WORKSPACE_ROOT/s2.gen" \
+  -Ds3k.rom.path="$WORKSPACE_ROOT/s3k.gen" \
+  '-Dtest=TestS2SidewaysPformAdmissionQualification,TestObjectPhysicsStandardizationGuard#productionObjectPhysicsStandardizationHasNoUnapprovedViolations' \
+  test -B
+```
+
+Physical XML confirms **35 Sideways cases plus the exact failed guard, all
+passing with zero skips**, Java `25.0.5.0.2`, explicit EGL and the original S2
+ROM path. Queue wait was 7s; Maven took 1m33s. This closes that guard failure;
+it does not turn the preceding broad run green.
+
+The other ordinary outcomes remain pending matched attribution at this
+checkpoint: 41 route assertions, the S2 drowned-sidekick CPU assertion and
+the CPZ hurt-capture setup error. The route comparison includes all 41 failed
+identities; its one parameterized selector adds four sibling cases, making
+45 physical invocations per arm. Both attribution tasks compare the exact
+updated base `dd39e01cb` with frozen `8b434c760` in isolated worktrees. The
+96 smoke skips include one EGL-availability case and 15 raw-GLFW setup cases;
+they establish no graphics coverage for those cases. Diagnostics were inspected
+and consumed. No complete-release, whole-campaign or green-delivery claim is
+made while attribution and integration remain open.
+
+## Matched S2 smoke attribution — 2026-10-26
+
+The isolated T3 worktree `/mnt/LinuxData/T3/worktrees/OpenGGF/t3-5229c888`,
+branch `bugfix/ai-native-repair-s2-attribution-20261026`, started clean at exact
+baseline `dd39e01cbc00c8af636750a13750d62b65dc3e8c`. After the baseline run it
+fast-forwarded cleanly to exact candidate
+`8b434c76079bc93b8f1a09a8fc699a8c3d31b13a`; both runs used `clean test`.
+Neither main nor the parent's integration tree was changed.
+
+The matched selectors and environment were below; `OPENGGF_ROM_DIR` denotes
+the existing original ROM directory. The task registry records the exact
+expanded absolute paths and commands.
+
+```bash
+S2_CASES='TestDrownedSidekickCpuPause#s2DrowningSidekickStillRunsItsCpuStep,TestCPZSpinTubeObjectInstance#hurtCapturePreservesTheShippedRoutineUntilLandingClearsTubeControl'
+env -u DISPLAY -u WAYLAND_DISPLAY -u JDK_JAVA_OPTIONS -u JAVA_TOOL_OPTIONS -u _JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk PATH=/usr/lib/jvm/java-25-openjdk/bin:$PATH \
+  LUA_BIN=/usr/bin/lua5.4 ALSOFT_DRIVERS=null \
+  python3 tools/testing/maven_queue.py -Dmse=off -Psmoke \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=$OPENGGF_ROM_DIR/s1.gen" \
+  "-Dsonic2.rom.path=$OPENGGF_ROM_DIR/s2.gen" \
+  "-Ds3k.rom.path=$OPENGGF_ROM_DIR/s3k.gen" \
+  "-Dtest=$S2_CASES" clean test -B
+```
+
+The three original ROMs matched both documented CRC32 and SHA-1 identities.
+Baseline completed 2/0F/1E/0S (Maven 78 seconds, zero queue wait); candidate
+completed 2/1F/1E/0S (Maven 83 seconds, 22 seconds queue wait).
+
+CPZ's exact physical case is inherited. Both runs throw
+`IllegalStateException: GameServices.gameState() requires an active gameplay mode. Open a gameplay session and attach managers before accessing gameplay-scoped managers.`
+The entire causal stack is identical, with no source-line shifts:
+`GameServices.requireGameplayMode:62 → gameState:276 → PlayableSpriteRuntimeServices.gameState:74 → AbstractPlayableSprite.currentGameState:1667 → setAir:2012 → setAir:1968 → TestCPZSpinTubeObjectInstance.hurtCapturePreservesTheShippedRoutineUntilLandingClearsTubeControl:38`.
+The fixture lands without first opening a gameplay session. This task leaves
+that inherited fixture error unchanged.
+
+The S2 drowning case passes on baseline and newly fails on candidate at
+unchanged test line 56, `expected: <true> but was: <false>`. This is a stale
+steering assertion, not evidence for reverting native object control.
+The task's `7e37a4b50` correctly replaces the engine-only control lock with
+native `$81` object control. At pinned S2 disassembly
+`34fc7f130a96db171e1a1c43e28e0bad81cd6ca7`,
+Obj0A_ReduceAir (s2.asm:42145-42176) writes `$81` and retains the primary
+routine with shipped `fixBugs=0`; the fixed branch would force routine 2 and
+stop the HUD timer for P1. Obj02_Control_Joypad2 (s2.asm:38963-38970) still
+calls CPU control. TailsCPU_Normal_SonicOK (s2.asm:39273-39278) calls the
+despawn owner before its signed object-control gate skips follow steering.
+TailsCPU_TickRespawnTimer (s2.asm:39429-39432) therefore still advances for an
+offscreen drowning sidekick. Merely expecting steering to stop would miss
+an erroneous whole-CPU bypass.
+
+The test-only correction preserves the existing case identity and checks the
+advancing offscreen respawn counter, the bit-7 branch, neutral generated input
+and unchanged facing. A separate ordinary S2 positive control retains the
+original steering expectation. The existing S3K control additionally checks
+that its counter stays frozen and no normal CPU step is entered. No runtime,
+semantic-rule, CPZ, route, renderer or timing source was changed.
+
+Focused validation used the same environment and Maven flags above, with
+`test -B` instead of `clean test -B` and this exact selector:
+
+```text
+TestDrownedSidekickCpuPause,TestCPZSpinTubeObjectInstance#hurtCapturePreservesTheShippedRoutineUntilLandingClearsTubeControl,TestNativeDrowningDispatch,TestDrownedPlayerMotionOrder,TestS3kFixedCountdownDrownAnimationOwnership,TestDrowningControllerMusicSelection,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils
+```
+
+At candidate plus the test correction, 109 physical cases complete with zero
+failures, one inherited CPZ error and zero skips (108 passes; Maven 36.672
+seconds, five seconds queue wait). Both physical `TestSonic3kLevelLoading`
+classes ran. This includes the S1/S2 ownership negatives, all 27 native
+drowning controls (including primary `$0C`, death precedence, raw input
+freshness, fixed lifetime, carry/respawn and rewind), and all mandatory S3K
+anchors. No broad/full suite or trace sweep was run; parent owns final affected
+selection and integration. Consumed temporary test diagnostics are removed;
+the task registry retains exact commands, source identities and case outcomes.
+
+
+## Final route attribution and integration disposition — 2026-10-26
+
+The matched route comparison completed on exact baseline
+`dd39e01cbc00c8af636750a13750d62b65dc3e8c` and frozen smoke candidate
+`8b434c76079bc93b8f1a09a8fc699a8c3d31b13a`, one clean run per arm in the
+isolated `bugfix/ai-native-repair-route-attribution-20261026` worktree.
+Each arm ran **45 physical cases: 41 assertion failures, four passes, zero
+errors and zero skips**. All 41 failures match by physical identity,
+exception type, full assertion message, reported causal stack and failure-text
+hash. Their type/message/project frames also match the original smoke run;
+there are no source-line shifts. The extra passes are parameter invocations
+1–4 of `TestSozColdRouteCapture#soloColdActCompletesWithTraversalReplayAndPlayableDestination`;
+its fifth invocation is the selected failure. Every failure is inherited;
+there is no candidate-only or inconsistent outcome in these bounded runs.
+This pair does not establish absence of flakiness.
+
+Both arms used the same command, environment, original ROMs, test/wrapper and
+route fixture hashes. `ROUTE_CASES` is the exact single-line selector below:
+
+```text
+com.openggf.tools.TestDezColdRouteCapture#coldIncomingActTwoTraversesBothTransportersWithRewind+coldIncomingActTwoTraversesGravityTubesConveyorAndStaircaseWithRewind+coldIncomingActTwoTraversesUpperTransportChainsAndEastHubWithRewind+coldIncomingActTwoDefeatsGravityBossAndLoadsFinalStageWithoutTransformation+coldIncomingActTwoCrossesTiltingBridgeWithoutAShieldWithRewind+coldIncomingActTwoClimbsEnergyBridgesAndTogglesGravityWithRewind+coldRouteClearsAllTurbinePanelsAndOpensDoorWhileObjectControlled+coldCompleteRouteDefeatsBothMinibossPhasesAndLoadsActTwo+coldIncomingActTwoDescendsInvertedSpringShaftWithRewind+coldUpperRouteTraversesLiftsConveyorsAndTimedBridgesWithRewind+coldIncomingActTwoCompletesUpperGravityRouteCarrierAndCountdownLaunchWithRewind,com.openggf.tools.TestDezIncomingFinalRouteCapture#coldOrdinarySoloTailsClearsAllFinalPhasesAndLoadsEnding+coldOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding+coldWideOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding+coldEmeraldTeamClearsBothActsFinalFightAndDoomsday+coldOrdinaryTeamClearsHandsCoreAndEscapeShipAndLoadsEnding,com.openggf.tools.TestDezSoloActTwoColdRouteCapture#coldWideSonicAloneClearsActTwoAndLoadsFinalStage+coldTailsAloneClearsActTwoAndLoadsFinalStage+coldTailsLowerGravityPadPreservesPendingContactAcrossRewind+coldSonicAloneClearsActTwoAndLoadsFinalStage,com.openggf.tools.TestDezSoloColdRouteCapture#coldSonicAloneClearsMinibossAndReachesPlayableActTwo+coldTailsAloneClearsMinibossAndReachesPlayableActTwo+coldWideSonicClearsBothBossPhasesAndReachesPlayableActTwo,com.openggf.tools.TestLrzKnucklesColdRouteCapture#coldKnucklesRestoresActTwoUpperClimbsAndDoorRelease+coldKnucklesReplaysIncomingRouteAndFirstActTwoDoor+coldKnucklesCompletesActTwoAndReachesPlayableHiddenPalace+coldKnucklesReachesMinibossAndRestoresTraversalAndCloudEscape+coldKnucklesClearsMinibossAndRestoresFightAndActTwoHandoff+coldKnucklesRestoresActTwoTraversalToTheMiddleCorridor,com.openggf.tools.TestMhzKnucklesColdRouteCapture#coldKnucklesCompletesActOneAndRestoresNativeInteractions+coldKnucklesCompletesActTwoAndIsolatesTheFbzTimeline,com.openggf.tools.TestS3kHpzJoinedColdRouteCapture#coldKnucklesReplaysUpperPadAndTheJoinedSszCraneControlRelease,com.openggf.tools.TestS3kLrzHpzSszColdCampaign#sonicColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory+tailsColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory+pairColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory+knucklesColdCampaignClearsSkySanctuaryTwoThroughTheEndingAndTitle,com.openggf.tools.TestSozColdRouteCapture#soloColdActCompletesWithTraversalReplayAndPlayableDestination+knucklesColdActTwoCompletesWithPuzzleReplayAndPlayableLavaReef+knucklesWideColdActTwoCompletesWithPuzzleReplayAndPlayableLavaReef,com.openggf.tools.TestSszWidePairedColdRouteCapture#coldFirstReplicaAndTransportReplayWithRetiredColumnDebris+coldCompleteWideRouteDefeatsAllBossesAndIsolatesTheDezTimeline
+```
+
+```bash
+WORKSPACE_ROOT="$HOME/code/projects/OpenGGF"
+env -u DISPLAY -u WAYLAND_DISPLAY -u JDK_JAVA_OPTIONS \
+  -u JAVA_TOOL_OPTIONS -u _JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  PATH=/usr/lib/jvm/java-25-openjdk/bin:"$PATH" \
+  LUA_BIN=/usr/bin/lua5.4 ALSOFT_DRIVERS=null \
+  python3 tools/testing/maven_queue.py -Dmse=off -Psmoke \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  -Dsonic1.rom.path="$WORKSPACE_ROOT/s1.gen" \
+  -Dsonic2.rom.path="$WORKSPACE_ROOT/s2.gen" \
+  -Ds3k.rom.path="$WORKSPACE_ROOT/s3k.gen" \
+  "-Dtest=$ROUTE_CASES" clean test -B
+```
+
+Baseline queue/execution/wall times were 56.0/499.5/555.5 seconds; candidate
+46.5/486.2/532.7 seconds. Execution includes clean compilation. The inherited
+assertions group as follows; all classes are in `com.openggf.tools`:
+
+| Class | Failed physical cases | Distinct unchanged assertion messages |
+| --- | ---: | --- |
+| `TestDezColdRouteCapture` | 11 | `expected: <9589> but was: <3203>` |
+| `TestDezIncomingFinalRouteCapture` | 5 | `death at 14721 ==> expected: <false> but was: <true>`; `death at 19930 ==> expected: <false> but was: <true>`; `death at 21162 ==> expected: <false> but was: <true>`; `death at 36000 ==> expected: <false> but was: <true>` |
+| `TestDezSoloActTwoColdRouteCapture` | 4 | `death at 19930 ==> expected: <false> but was: <true>`; `death at input 14721 ==> expected: <false> but was: <true>`; `death at input 19930 ==> expected: <false> but was: <true>`; `death at input 36000 ==> expected: <false> but was: <true>` |
+| `TestDezSoloColdRouteCapture` | 3 | `both eight-hit phases must be defeated through player contact ==> expected: <2> but was: <0>`; `death at input 14721 ==> expected: <false> but was: <true>`; `death at input 19930 ==> expected: <false> but was: <true>` |
+| `TestLrzKnucklesColdRouteCapture` | 6 | `death at input 15323 ==> expected: <false> but was: <true>`; `death at input 5027 ==> expected: <false> but was: <true>`; `first-door death at input 15323 ==> expected: <false> but was: <true>` |
+| `TestMhzKnucklesColdRouteCapture` | 2 | `cold Knuckles death at 26853 ==> expected: <false> but was: <true>` |
+| `TestS3kHpzJoinedColdRouteCapture` | 1 | `cold death 5027 ==> expected: <false> but was: <true>` |
+| `TestS3kLrzHpzSszColdCampaign` | 4 | `cold death 44639 ==> expected: <false> but was: <true>`; `cold death 5027 ==> expected: <false> but was: <true>`; `cold death 73285 ==> expected: <false> but was: <true>`; `cold death 80320 ==> expected: <false> but was: <true>` |
+| `TestSozColdRouteCapture` | 3 | `cold death at 11787 ==> expected: <false> but was: <true>`; `cold death at 15850 ==> expected: <false> but was: <true>`; `cold death at 23478 ==> expected: <false> but was: <true>` |
+| `TestSszWidePairedColdRouteCapture` | 2 | `FIRST_FORWARD [wide-route-11640] frame=11640 n=24 input=11664 ==> expected: <false> but was: <true>`; `expected: <46> but was: <48>` |
+
+All broad failures now have a disposition. The Sideways lifecycle guard is
+corrected in `69545f80b` and its 36-case selection passes. The newly red S2
+steering assertion is corrected in test-only `68edd06ad`, merged as
+`9a3fa66d6`, after source review of native CPU maintenance before the bit-7
+steering gate. Its 109-case selection has 108 passes and only the identical
+inherited CPZ setup error. The 41 route assertions remain inherited and
+unchanged. These focused results do not revise the historical broad totals:
+**43,692 ordinary cases / 42 failures / 1 error / 96 skips**, plus
+**805 guards / 1 failure / 0 errors or skips**.
+
+The composed executable delta after frozen smoke is exactly the tested
+Sideways helper call and the tested S2 assertion correction. Each file is
+byte-identical to its focused tested commit; the latter changes no runtime.
+Unchanged smoke and replay coverage is reused under the repository's
+proportionate-validation policy. No new or worsened failure remains unaddressed
+in the measured selection; this is not a green suite or release qualification.
+The 96 skipped cases retain their original coverage limits. Raw diagnostics
+were inspected and consumed, and neither attribution worker has live jobs.
+
+The final HCZ evidence remains the `3dd809f99` chain: segment 11 completes its
+14,208 represented rows and giant-ring boundary with 11 camera and 51 animation
+residuals, no non-camera physics mismatch. Segment 13 first differs at row 2147;
+SS7 results still stop at movie cursor 97208 without the required return.
+The alternate AIZ rings reset remains unresolved at row 26179; its native
+physical reset at row 26227 still requires the bounded setup continuation
+specified above. Safe Sideways intentionally avoids ROM storage corruption.
+None of these remaining fidelity obligations is waived by smoke attribution.

@@ -61,9 +61,9 @@ class TestHCZHandLauncherObjectInstance {
         for (int frame = 0; frame < 5; frame++) {
             int calls = launcher.checkpointYs().size();
             launcher.update(frame, player);
-            // HCZHandLauncher_WaitForGrab subtracts 8 and branches straight to
-            // HCZHandLauncher_UpdateSolid, which writes y_pos before
-            // SolidObjectTop (sonic3k.asm:65809-65838).
+            // HCZHandLauncher_WaitForGrab (sonic3k.asm:65844-65851) subtracts 8.
+            // HCZHandLauncher_UpdateSolid (sonic3k.asm:65864-65872) then writes
+            // y_pos before calling the top-solid helper.
             assertEquals(calls + 1, launcher.checkpointYs().size(),
                     "every Main pass ends in SolidObjectTop, including a rising pass");
             assertEquals(launcher.getY(), launcher.checkpointYs().getLast(),
@@ -87,7 +87,7 @@ class TestHCZHandLauncherObjectInstance {
         launcher.update(1, player);
 
         // HCZHandLauncher_RestoreOffset adds 8 and falls into
-        // HCZHandLauncher_UpdateSolid (sonic3k.asm:65824-65838).
+        // HCZHandLauncher_UpdateSolid (sonic3k.asm:65859-65872).
         assertEquals(0x20, launcher.getYOffset());
         assertEquals(calls + 1, launcher.checkpointYs().size());
         assertEquals(launcher.getY(), launcher.checkpointYs().getLast());
@@ -113,7 +113,7 @@ class TestHCZHandLauncherObjectInstance {
         // HCZHandLauncher_TryGrabPlayer tests status(a0) before this pass's
         // SolidObjectTop runs, so the retained bit grabs even though the
         // later solid pass of the same dispatch reports no contact
-        // (sonic3k.asm:65819-65821, 65971-65973).
+        // (sonic3k.asm:65854-65856, 66006-66008).
         launcher.setCheckpointBatch(empty);
         launcher.update(2, player);
         assertTrue(player.isObjectControlled());
@@ -136,7 +136,7 @@ class TestHCZHandLauncherObjectInstance {
         assertEquals(0x20, launcher.getYOffset());
 
         // HCZHandLauncher_UpdateAfterLaunch calls SolidObjectTop only while
-        // $30 <= $18 (sonic3k.asm:65868-65879); the release pass already
+        // $30 <= $18 (sonic3k.asm:65903-65914); the release pass already
         // moved to $20, so neither it nor the rest of the return resolves.
         assertEquals(callsBeforePass, launcher.checkpointYs().size(),
                 "HCZHandLauncher_ReleaseHeldPlayers uses the retained standing bits, not a new solid pass");
@@ -517,6 +517,7 @@ class TestHCZHandLauncherObjectInstance {
     }
 
     private static final class ProbeHandLauncher extends HCZHandLauncherObjectInstance {
+        private SolidCheckpointBatch retainedBatch = new SolidCheckpointBatch(this, Map.of());
         private SolidCheckpointBatch checkpointBatch = new SolidCheckpointBatch(this, Map.of());
         private final List<Integer> checkpointYs = new java.util.ArrayList<>();
 
@@ -533,7 +534,14 @@ class TestHCZHandLauncherObjectInstance {
         }
 
         @Override
+        protected boolean hasRetainedStandingBit(com.openggf.sprites.playable.AbstractPlayableSprite player) {
+            var contact = retainedBatch.perPlayer().get(player);
+            return contact != null && contact.standingNow();
+        }
+
+        @Override
         protected SolidCheckpointBatch checkpointAll() {
+            retainedBatch = checkpointBatch;
             checkpointYs.add(getY());
             return checkpointBatch;
         }

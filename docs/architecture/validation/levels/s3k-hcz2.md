@@ -765,3 +765,138 @@ removing repeated query/order work. See the [performance evidence](../../audits/
 for exact focused commands, results and structural counts. This local component
 change adds no cold-route, donor/roster, viewport, native-picture or lifecycle
 product beyond the obligations already recorded above.
+
+
+## Shared hand-launcher phase correction — 2026-10-25
+
+The [HCZ1 repair record](s3k-hcz1-sonic.md#launcher-and-chopper-continuity-repairs--2026-10-25)
+changes the shared hand launcher to resolve solid contact after motion and retain
+prior-pass per-player standing for grab/release and rewind. The current
+`TestS3kHcz2TwistingLoopRegression` passes without skips in the87-case focused
+selection on base`61be1910` plus those object edits. This is one affected HCZ2
+regression, not a new HCZ2 route/width/donor/team/lifecycle or native-pixel claim.
+The continuous chain still has an inherited shared player-dispatch frontier;
+its later HCZ2 death is not certified fixed by the HCZ1 object work.
+
+
+HCZ review follow-up (2026-10-25): the existing launcher/Chopper regression
+selection now includes real player-pass simultaneous Left/Right consumption
+with restore/forward and a manager-level support transfer before the next grab,
+also repeated after restore. The 28 affected review cases pass across the final
+control and reused unchanged cases. These controls do not certify the still
+incomplete continuous route; see the appended HCZ audit for measured limits.
+
+
+## Primary drowning continuation — 2026-10-25
+
+The shared drowning correction adds 16 independent native-owner controls:
+P1 across S1/S2/S3K, P2 in S2/S3K, move-before-gravity, exactly 120 fixed-slot
+passes, registered before/after transition restore and forward replay, controlled
+wait preservation, carry release, full P2 death marker/manual respawn, and
+successful/failed allocation RNG. The affected selection passes 178 physical
+cases with zero failures/errors/skips, including all four S3K anchors.
+
+Canonical coverage remains bounded: all three prefixes and standalone AIZ/HCZ
+pass, but segment 11 has 31,207 differences, first row 3832 rings 104/94. P2
+entry/death/despawn now match native; first P1 motion still differs at miniboss
+row 5065. The source segment is the second HCZ1 stint (`hcz_2`); the unexpected
+replacement destination at cursor 70718 is HCZ2, generation 9. This adds no HCZ2
+route/viewport/donor/team or native-picture qualification. Exact source, commands,
+fixture corrections, timing and limits are in the appended HCZ audit. The ring
+owner is excluded and the source-proven miniboss loop-entry question is separate.
+
+
+HCZ miniboss continuation (2026-10-25): next-pass loop entry now has two
+independent old-red controls, registered before/pending/initialized recreation
+and forward replay, and 91 passing local/anchor cases with no skips. The actual
+chain contact at 5065 now matches; first P1 motion moves to the retained Act2
+carrier at 6804, with source ownership replacement 71601. The chain remains
+1/1F/0E/0S and the first comparison is excluded monitor/rings3832. This qualifies
+the local boss entry, not HCZ2 or whole-route breadth; see the appended audit.
+
+
+HCZ retained-carrier continuation (2026-10-25): native capture retains the
+camera-derived target; the corrected HCZ event owner now does too. Independent
+P1/P2 old-red and registered before/pending/moving restore controls are qualified
+by 110 passing local/anchor cases with no skips. The affected chain walks all
+14,208 stored segment-11 rows without the former input-71601 replacement, but
+still fails its required giant-ring exit (1/1F/0E/0S), with 137,113 strict
+differences and first monitor/rings difference 3832 (104/94). First P1 motion
+moves to 8329: a measured held-versus-logical-press error in the HCZ water-skim
+handler. This is local progress, not route certification. The existing HCZ audit
+records exact source, selectors, queue/execution times and excluded shared
+monitor-content lifetime boundary; rings/setup timing remain outside this task.
+
+
+HCZ skim follow-up and upstream hold (2026-10-25): eight independent P1/P2
+held/logical/raw press and registered rewind controls fail on the old guard;
+the corrected local selection passes 118/0F/0E/0S, including all four S3K anchors.
+Develop then advanced to `08f0a5e78`, which already contains that guard, retained
+carrier targets, boss next-pass initialization and independent monitor contents.
+No post-skim chain or current-upstream route qualification is claimed. Launcher
+and Chopper review corrections and complete drowning ownership still require
+receiving-tree reconciliation. See the existing audit's upstream boundary;
+parent owns that review, affected replays and combined smoke. This extends no
+act/viewport/donor/team or whole-route rewind certification.
+
+
+HCZ receiving qualification (2026-10-26): merge `b3374a56c` preserves exact
+upstream08 and qualifies 297 unique focused cases without skips. Canonical six
+is 6/1F/0E/0S; five companions pass. Segment11 now crosses its giant-ring
+boundary, with no non-camera physics error and bounded residual 11 camera /
+51 animation errors. Segment13 and the later SS7 result boundary remain open.
+Jawz's independent waiting/initialization collision correction qualifies 69
+local/anchor cases without skips; it is not attributed to the row442 P2 hurt.
+Original ROM placement identifies that source as Turbo Spiker `$96`, a separate
+local HCZ owner. Independent review also reproduces stale raw ABC during primary
+drowning (9 failures in 10 new controls), with logical/CPU bypass retained;
+its correction remains separate. See the existing HCZ audit for commands,
+fingerprints, queue/execution times, corrected fixture errors and limits.
+
+
+Primary-drowning raw-input review correction (2026-10-26): ten production
+player→captured-bar controls reproduce nine old-source assertion failures and
+one existing P1-scripted pass. The correction refreshes the selected physical
+pad before primary dispatch, without logical publication or AI. All ten cases
+now pass, including P1/P2 release/break with registered restore/forward, stale
+and held edges, forced logical input and independent scripted controllers.
+Finished affected selection is 186/0F/0E/0S with all four S3K anchors and actual
+API signatures unchanged. Exact source/command/timing is in the existing HCZ
+audit. The original segment11 continuity remains crossed; final affected replay
+will also include the separately identified Turbo Spiker placeholder owner.
+
+
+Turbo Spiker continuation (2026-10-26): original HCZ2 ROM placement `$1E7056`
+identifies the row442 source as object `$96`. Its inherited `$1A` body collision
+was exposed before native initialization. Three independent old-red controls
+fail without errors/skips, including actual vulnerable-P2 production touch and
+registered fresh body/shell phase restore. The existing initialized-state gate
+now qualifies 81 local/API/anchor cases with zero skips, preserving shell and
+shared touch owners. Final affected chain results follow in the existing audit;
+this local qualification adds no viewport/donor/team or full-route claim.
+
+
+Final local HCZ receiving result (2026-10-26, runtime `0d7c25c68`): the exact
+affected chain is 1/1F/0E/0S. Segment11 completes 14,208 stored rows and crosses
+its required giant-ring exit with no non-camera physics error; residuals are
+11 camera / 51 animation errors, 59 lag rows, zero bootstrap errors. This
+qualifies the requested production continuity, not a zero-difference trace or
+act-wide breadth. Turbo Spiker's row442 P2 hurt is gone: segment13 first
+non-camera state now differs at2147 P1 Y `$04DA/$04DE`; its 4,145 differences
+split 3,795 physics / 350 animation (7 lag, zero bootstrap), and it enters SS7.
+The terminal outside-HCZ boundary remains SS7 results at movie cursor97208;
+its cause is unproven and no timing/loader/comparator owner was changed.
+The existing audit records exact command/fingerprint, 58.066-second Maven /
+58.751-second wrapper timing with zero queue wait, separate receiving297,
+Jawz69, raw186 and Turbo81 focused qualifications, all zero-skip, and remaining
+fan/SS7 questions. Parent retains final review, combined smoke and delivery.
+
+
+Jawz final-delta qualification (2026-10-26): the initialized `$D7` attribute
+gate remains; only a zero-property Jawz_Main pass publishes the next touch list.
+Three independent old-red production/restore cases fail, then Jawz10 and retained
+list/rewind12 plus mandatory-anchor60 checks qualify 82 distinct cases across
+one fixture correction, zero skips. P1/P2 ordering, first legitimate touch,
+destructive fresh restore of both publication phases, movement and both defeat
+paths are covered. This adds no viewport/donor/team or whole-act claim. See the
+[existing audit](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#jawz-final-delta-publication-phase-2026-10-26).
