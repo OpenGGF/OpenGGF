@@ -4,6 +4,7 @@
 Run: python3 -B -m unittest discover -s tools/soniccd -p test_integration_packet.py
 Origin: 2026-10-26 private Sonic CD packet integration aid.
 """
+import base64
 import hashlib
 import io
 import json
@@ -843,6 +844,365 @@ class DraftCliTests(PacketFixture):
         result = self.cli("draft", "--help")
         self.assertEqual(result.returncode, 0)
         self.assertIn("--spec", result.stdout)
+
+
+class PreserveCliTests(unittest.TestCase):
+    """Whole-file byte observations with synthetic, externally pinned frozen files."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(prefix="packet-preserve-test-")
+        self.addCleanup(self.temp.cleanup)
+        self.base = Path(self.temp.name).resolve()
+        self.baseline = self.base / "baseline.java"
+        self.final = self.base / "FINAL.java"
+        self.recipe = self.base / "recipe.json"
+        self.configure(b"count=2;\nold\nend\n", b"count=3;\nnew\nend\nappend\n",
+                       [(6, b"2", b"3"), (9, b"old", b"new"), (17, b"", b"append\n")])
+
+    @staticmethod
+    def frozen(path, data):
+        if path.exists():
+            path.chmod(0o644)
+        path.write_bytes(data)
+        path.chmod(0o444)
+
+    @staticmethod
+    def pin(path, data):
+        return dict(path=str(path), sha256=packet.digest(data), bytes=len(data))
+
+    @staticmethod
+    def edit(offset, before, after):
+        return dict(offset=offset, before=base64.b64encode(before).decode("ascii"),
+                    after=base64.b64encode(after).decode("ascii"))
+
+    def configure(self, baseline, final, edits):
+        self.frozen(self.baseline, baseline)
+        self.frozen(self.final, final)
+        self.value = dict(version=1, baseline=self.pin(self.baseline, baseline),
+                          final=self.pin(self.final, final),
+                          edits=[self.edit(*edit) for edit in edits])
+        self.write_recipe()
+
+    def write_recipe(self):
+        self.frozen(self.recipe, json.dumps(self.value).encode("utf-8"))
+
+    def cli(self, *extra):
+        argv = ["preserve", "--recipe", str(self.recipe), *map(str, extra)]
+        out, err = io.StringIO(), io.StringIO()
+        with redirect_stdout(out), redirect_stderr(err):
+            try:
+                code = packet.main(argv)
+            except SystemExit as stop:
+                code = stop.code
+        return subprocess.CompletedProcess(argv, code, out.getvalue(), err.getvalue())
+
+    def reject(self, text=None):
+        result = self.cli()
+        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+        self.assertEqual(result.stdout, "")
+        self.assertLessEqual(len(result.stderr), 4096)
+        self.assertNotIn("Traceback", result.stderr)
+        if text:
+            self.assertIn(text.lower(), result.stderr.lower())
+        return result
+
+    def test_count_and_append_migration_cli_is_read_only_across_invocations(self):
+        # Real 0444 files and CLI subprocesses, not a mock of the verifier.
+        saved = {p: (p.read_bytes(), packet.signature(p.stat()))
+                 for p in (self.recipe, self.baseline, self.final)}
+        for _ in range(2):
+            result = subprocess.run([sys.executable, "-B", str(SCRIPT), "preserve",
+                                     "--recipe", str(self.recipe)], capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stderr, "")
+            report = json.loads(result.stdout)
+            self.assertTrue(report["forward_equal"])
+            self.assertTrue(report["inverse_equal"])
+            self.assertEqual(report["edits"], 3)
+            for name in ("baseline", "final"):
+                self.assertEqual(report[name], {k: self.value[name][k] for k in ("sha256", "bytes")})
+            self.assertIn("non-atomic", report["observation"].lower())
+            self.assertLess(len(result.stdout), 1500)
+            self.assertNotIn("append", result.stdout)
+        self.assertEqual({p.name for p in self.base.iterdir()}, {p.name for p in saved})
+        for path, (data, info) in saved.items():
+            self.assertEqual(path.read_bytes(), data)
+            self.assertEqual(packet.signature(path.stat()), info)
+
+    def test_insert_replace_delete_with_lf_and_utf8_byte_offsets(self):
+        baseline = "α\nold\nremove\nend\n".encode()
+        final = "α\ninsert\noβ\nend\n".encode()
+        self.configure(baseline, final, [(3, b"", b"insert\n"), (4, b"ld", "β".encode()),
+                                       (7, b"remove\n", b"")])
+        self.assertEqual(self.cli().returncode, 0)
+
+    def test_twenty_five_declared_migrations_do_not_shift_baseline_offsets(self):
+        baseline = b"x\n" * 25
+        edits = [(index * 2, b"x", str(index).encode()) for index in range(25)]
+        final = b"".join(str(index).encode() + b"\n" for index in range(25))
+        self.configure(baseline, final, edits)
+        self.assertEqual(json.loads(self.cli().stdout)["edits"], 25)
+
+    def test_inverse_reconstructs_all_original_bytes_with_cumulative_shifts(self):
+        edits = [(6, b"2", b"three"), (9, b"old\n", b""), (17, b"", b"append\n")]
+        baseline, final = b"count=2;\nold\nend\n", b"count=three;\nend\nappend\n"
+        self.configure(baseline, final, edits)
+        self.assertEqual(packet.reconstruct_preservation(final, edits, inverse=True), baseline)
+        # A preserved gap must also survive the inverse; it cannot only undo edit fragments.
+        self.assertNotEqual(packet.reconstruct_preservation(final.replace(b"end", b"END", 1), edits,
+                                                           inverse=True), baseline)
+        real = packet.reconstruct_preservation
+
+        def corrupt_inverse(data, edits, *, inverse=False):
+            result = real(data, edits, inverse=inverse)
+            return result + b"!" if inverse else result
+        with mock.patch.object(packet, "reconstruct_preservation", side_effect=corrupt_inverse):
+            self.reject("inverse")
+
+    def test_empty_edit_list_requires_identical_independent_files_and_empty_files_work(self):
+        for data in (b"", b"unchanged\n"):
+            self.configure(data, data, [])
+            self.assertEqual(self.cli().returncode, 0)
+        self.configure(b"old\n", b"new\n", [])
+        self.reject("forward")
+
+    def test_whole_file_insertion_deletion_and_adjacent_edits(self):
+        for before, after, edits in ((b"", b"new\n", [(0, b"", b"new\n")]),
+                                     (b"old\n", b"", [(0, b"old\n", b"")]),
+                                     (b"abc\n", b"ABc\n", [(0, b"a", b"A"), (1, b"b", b"B")])):
+            with self.subTest(before=before):
+                self.configure(before, after, edits)
+                self.assertEqual(self.cli().returncode, 0)
+
+    def test_wrong_original_even_with_revised_pin_is_rejected(self):
+        self.frozen(self.baseline, b"count=9;\nold\nend\n")
+        self.value["baseline"] = self.pin(self.baseline, self.baseline.read_bytes())
+        self.write_recipe()
+        self.reject("before")
+
+    def test_undeclared_extra_byte_or_replacement_even_with_correct_final_pin(self):
+        for data in (b"count=3;\nnew\nend!\nappend\n", b"count=3;\nnew\nEND\nappend\n"):
+            self.frozen(self.final, data)
+            self.value["final"] = self.pin(self.final, data)
+            self.write_recipe()
+            result = self.reject("forward")
+            self.assertIn("offset", result.stderr)
+            self.assertNotIn("count=", result.stderr)
+
+    def test_duplicate_decreasing_overlapping_and_out_of_range_offsets(self):
+        for edits in ([(6, b"2", b"3"), (6, b"", b"x")],
+                      [(9, b"old", b"new"), (6, b"2", b"3")],
+                      [(6, b"2;", b"3;"), (7, b";", b";")],
+                      [(18, b"", b"x")], [(16, b"\nx", b"\n")]):
+            self.value["edits"] = [self.edit(*edit) for edit in edits]
+            self.write_recipe()
+            self.reject()
+
+    def test_offset_types_overflow_and_empty_empty_edit(self):
+        for offset in (True, -1, 1.0, "6", 10 ** 100):
+            self.value["edits"] = [self.edit(offset, b"2", b"3")]
+            self.write_recipe()
+            self.reject("offset")
+        self.value["edits"] = [self.edit(0, b"", b"")]
+        self.write_recipe()
+        self.reject("empty")
+
+    def test_base64_must_be_canonical_standard_strict_text(self):
+        for encoded in (None, 7, "Mg", "Mg===", "Mh==", "Mg==\n", "_w==", "é", "!!!!"):
+            for name in ("before", "after"):
+                self.value["edits"] = [self.edit(6, b"2", b"3")]
+                self.value["edits"][0][name] = encoded
+                self.write_recipe()
+                self.reject("base64")
+
+    def test_unknown_missing_and_wrong_container_recipe_keys(self):
+        original = json.loads(self.recipe.read_text())
+        for where in ((), ("baseline",), ("final",), ("edits", 0)):
+            for change in ("extra", "missing"):
+                self.value = json.loads(json.dumps(original))
+                selected = self.value
+                for key in where:
+                    selected = selected[key]
+                if change == "extra":
+                    selected["unknown"] = "never execute"
+                else:
+                    selected.pop(next(iter(selected)))
+                self.write_recipe()
+                self.reject("keys")
+        for key, value in (("version", True), ("version", 2), ("edits", {}),
+                           ("baseline", []), ("final", None), ("edits", [None])):
+            self.value = dict(original, **{key: value})
+            self.write_recipe()
+            self.reject()
+
+    def test_duplicate_keys_malformed_non_utf8_nonfinite_and_nested_json(self):
+        for data in (b'{"version":1,"version":1}', b'{"a":{"x":1,"x":2}}', b'{', b'\xff',
+                     b'{"version":NaN}', b'[' * 1500 + b']' * 1500):
+            self.frozen(self.recipe, data)
+            self.reject()
+
+    def test_pins_are_external_required_exact_lowercase_and_bounded(self):
+        original = json.loads(self.recipe.read_text())
+        for name in ("baseline", "final"):
+            for key, value in (("sha256", "0" * 64), ("sha256", "A" * 64), ("sha256", None),
+                               ("bytes", 1), ("bytes", True), ("bytes", -1),
+                               ("bytes", packet.MAX_FILE + 1)):
+                self.value = json.loads(json.dumps(original))
+                self.value[name][key] = value
+                self.write_recipe()
+                self.reject()
+
+    def test_frozen_text_contract_applies_to_both_files(self):
+        for name in ("baseline", "final"):
+            self.configure(b"count=2;\nold\nend\n", b"count=3;\nnew\nend\nappend\n",
+                           [(6, b"2", b"3"), (9, b"old", b"new"), (17, b"", b"append\n")])
+            path = getattr(self, name)
+            for data in (b"bad\r\n", b"bad\0\n", b"\xff\n", b"missing LF"):
+                self.frozen(path, data)
+                self.value[name] = self.pin(path, data)
+                self.write_recipe()
+                self.reject()
+            path.chmod(0o644)
+            self.reject("0444")
+            path.chmod(0o444)
+
+    def test_paths_must_be_explicit_canonical_external_regular_and_distinct(self):
+        original = str(self.baseline)
+        for path in (None, "relative.java", str(self.base / "missing"), str(self.base),
+                     str(self.base) + "/./baseline.java", str(self.base) + "//baseline.java",
+                     str(self.base / ".." / self.base.name / "baseline.java")):
+            self.value["baseline"]["path"] = path
+            self.write_recipe()
+            self.reject()
+        self.value["baseline"]["path"] = original
+        self.write_recipe()
+        with mock.patch.object(packet, "ROOT", self.base):
+            self.reject("external")
+        self.value["final"]["path"] = original
+        self.write_recipe()
+        self.reject("alias")
+
+    def test_file_parent_symlink_loop_hardlink_and_recipe_aliases(self):
+        link = self.base / "link.java"
+        link.symlink_to(self.baseline)
+        loop = self.base / "loop"
+        loop.symlink_to(loop)
+        parent = self.base / "linked-parent"
+        parent.symlink_to(self.base, target_is_directory=True)
+        hard = self.base / "hard.java"
+        os.link(self.baseline, hard)
+        for path in (link, loop, parent / self.baseline.name, hard, self.recipe):
+            self.value["final"]["path"] = str(path)
+            self.write_recipe()
+            self.reject()
+
+    def test_recipe_path_is_also_canonical_regular_external_and_bounded(self):
+        saved = self.recipe
+        alias = self.base / "alias.json"
+        alias.symlink_to(saved)
+        for path in (alias, self.base, self.base / "missing", Path("relative.json")):
+            self.recipe = path
+            self.reject()
+        self.recipe = saved
+        with mock.patch.object(packet, "MAX_RECIPE", self.recipe.stat().st_size - 1):
+            self.reject("limit")
+
+    def test_actual_oversized_regular_files_are_rejected_before_reading(self):
+        for path, limit in ((self.baseline, packet.MAX_FILE), (self.recipe, packet.MAX_RECIPE)):
+            saved = path.read_bytes()
+            path.chmod(0o644)
+            with path.open("wb") as stream:
+                stream.truncate(limit + 1)
+            path.chmod(0o444)
+            self.reject("limit")
+            self.frozen(path, saved)
+
+    def test_each_source_must_be_external_even_when_recipe_is_external(self):
+        checkout = self.base / "checkout"
+        checkout.mkdir()
+        inside = checkout / "source.java"
+        self.frozen(inside, self.baseline.read_bytes())
+        for name in ("baseline", "final"):
+            original = self.value[name]["path"]
+            self.value[name]["path"] = str(inside)
+            self.write_recipe()
+            with mock.patch.object(packet, "ROOT", checkout):
+                self.reject("external")
+            self.value[name]["path"] = original
+
+    def test_input_edit_count_decoded_and_reconstructed_size_budgets(self):
+        with mock.patch.object(packet, "MAX_FILE", 16):
+            self.reject("limit")
+        with mock.patch.object(packet, "MAX_EDITS", 2):
+            self.reject("limit")
+        with mock.patch.object(packet, "MAX_EDIT_BYTES", 9):
+            self.reject("limit")
+        self.configure(b"a" * 12000 + b"\n", b"a" * 12000 + b"\n", [(0, b"", b"b" * 2000)])
+        with mock.patch.object(packet, "MAX_FILE", 13000):
+            self.reject("reconstructed")
+
+    def mutate_after_snapshot(self, path, mutation):
+        real = packet.snapshot
+        changed = False
+
+        def observing(candidate, **kwargs):
+            nonlocal changed
+            saved = real(candidate, **kwargs)
+            if candidate == path and not changed:
+                changed = True
+                mutation()
+            return saved
+        return mock.patch.object(packet, "snapshot", side_effect=observing)
+
+    def test_observed_input_content_mode_identity_and_recipe_changes_reject(self):
+        for path in (self.baseline, self.final, self.recipe):
+            saved = path.read_bytes()
+            for change in (lambda: self.frozen(path, saved + b"\n"),
+                           lambda: path.chmod(0o644),
+                           lambda: (path.unlink(), self.frozen(path, saved))):
+                self.frozen(path, saved)
+                with self.mutate_after_snapshot(path, change):
+                    self.reject("change")
+                # The verifier never repairs another writer's change.
+                self.assertEqual(path.read_bytes(), saved + b"\n" if path.stat().st_size != len(saved) else saved)
+            self.frozen(path, saved)
+
+    def test_observed_parent_replacement_rejects_even_when_file_inode_is_retained(self):
+        parent = self.base / "exports"
+        parent.mkdir()
+        nested = parent / "baseline.java"
+        self.baseline.rename(nested)
+        self.baseline = nested
+        self.value["baseline"]["path"] = str(nested)
+        self.write_recipe()
+        replacement = self.base / "replacement"
+        replacement.mkdir()
+        os.link(nested, replacement / nested.name)
+
+        def replace_parent():
+            parent.rename(self.base / "old-exports")
+            replacement.rename(parent)
+        with self.mutate_after_snapshot(nested, replace_parent):
+            self.reject("directory changed")
+
+    def test_preserve_never_calls_git_apply_lock_or_executes_recipe_data(self):
+        with mock.patch.object(packet, "worktree", side_effect=AssertionError("no Git")), \
+             mock.patch.object(packet.subprocess, "check_output", side_effect=AssertionError("no command")), \
+             mock.patch.object(packet, "worktree_build_slot", side_effect=AssertionError("no lock")), \
+             mock.patch.object(packet, "apply_packet", side_effect=AssertionError("no apply")), \
+             mock.patch.object(packet.os, "replace", side_effect=AssertionError("no write")):
+            self.assertEqual(self.cli().returncode, 0)
+
+    def test_errors_are_bounded_and_do_not_dump_source_or_long_untrusted_keys(self):
+        self.frozen(self.recipe, ('{"' + 'sensitive' * 10000 + '":0,"' +
+                                  'sensitive' * 10000 + '":1}').encode())
+        self.reject()
+        self.frozen(self.recipe, b'{"baseline": "secret source text"}')
+        self.assertNotIn("secret source", self.reject().stderr)
+
+    def test_no_apply_output_worktree_or_scheduler_options(self):
+        for option in ("--apply", "--output", "--worktree", "--maven-terminal"):
+            self.assertEqual(self.cli(option).returncode, 2)
 
 
 if __name__ == "__main__":

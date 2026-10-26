@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
-"""Draft/validate/import frozen packets and inspect fresh, explicitly scoped JUnit XML.
+"""Verify declared byte preservation, draft/validate/import packets, inspect JUnit XML.
 
-Inputs: externally pinned draft spec or version-1 JSON manifest, explicit Git
-worktree, or exact Surefire class set and UTC run-start cutoff. No game code,
-media, probes, tests or Git mutations run.
-Origin: 2026-10-26 private Sonic CD integration tooling task. Schema and workflow:
+Inputs: external preservation recipe with pinned frozen baseline/FINAL text and
+baseline-coordinate Base64 edits; or packet/draft pins and explicit Git worktree;
+or exact Surefire classes and UTC cutoff. No supplied code or Git mutations run.
+Origin: 2026-10-26 private Sonic CD packet preservation tooling task. Workflow:
 .agents/skills/soniccd-packet-integration/SKILL.md. Output is stdout/stderr only.
 """
 from __future__ import annotations
 
 import argparse
+import base64
+import binascii
 from contextlib import contextmanager, ExitStack
 from dataclasses import dataclass
 from datetime import datetime
@@ -44,6 +46,10 @@ PROPERTIES = frozenset({"java.version", "user.dir", "openggf.headless.gl",
 # Source packets are bounded UTF-8 text; refusing binary and oversized inputs is intentional.
 MAX_FILE = 16 * 1024 * 1024
 MAX_PACKET = 64 * 1024 * 1024
+# Preservation is a small explicit recipe, not a general patch engine.
+MAX_RECIPE = 4 * 1024 * 1024
+MAX_EDITS = 4096
+MAX_EDIT_BYTES = 1024 * 1024  # aggregate decoded before + after bytes
 
 
 class PacketError(ValueError):
@@ -308,6 +314,153 @@ def unchanged(saved, *, message="Concurrent file change; refusing replacement"):
             f"{message}: {saved.path}")
 
 
+def reconstruct_preservation(data, edits, *, inverse=False):
+    """Splice declared bytes in linear space; inverse offsets include prior deltas."""
+    pieces, cursor, delta = [], 0, 0
+    for index, (offset, before, after) in enumerate(edits):
+        start = offset + delta if inverse else offset
+        old, new = (after, before) if inverse else (before, after)
+        require(data[start:start + len(old)] == old,
+                f"{'Inverse' if inverse else 'Before'} mismatch: edit={index} baseline_offset={offset}")
+        pieces.extend((data[cursor:start], new))
+        cursor = start + len(old)
+        delta += len(after) - len(before)
+    pieces.append(data[cursor:])
+    return b"".join(pieces)
+
+
+def preservation_equal(actual, expected, label):
+    if actual != expected:
+        offset = next((i for i, (a, b) in enumerate(zip(actual, expected)) if a != b),
+                      min(len(actual), len(expected)))
+        raise PacketError(f"{label} mismatch at byte offset {offset}; "
+                          f"expected_bytes={len(expected)} actual_bytes={len(actual)}")
+
+
+def verify_preservation(recipe_path):
+    """Observe two pinned files and both whole-file transformations; never write.
+
+    File/directory rechecks are non-atomic. Custody and semantic acceptance remain
+    with the caller; 0444 does not prevent an owner from changing an input.
+    """
+    directories = {}
+
+    def external(value):
+        require(isinstance(value, str) and 0 < len(value) <= 4096 and
+                "\0" not in value and str(Path(value)) == value,
+                "Require an explicit canonical absolute external path (limit 4096 characters)")
+        path = canonical(Path(value))
+        require(not path.is_relative_to(ROOT), "Preservation inputs must be external to the tool checkout")
+        for parent in path.parents:
+            info = parent.lstat()
+            require(stat.S_ISDIR(info.st_mode), "Preservation parent is not a regular directory")
+            identity = (info.st_dev, info.st_ino, info.st_mode)
+            if parent in directories:
+                require(directories[parent] == identity, "Preservation parent directory changed")
+            else:
+                directories[parent] = identity
+        return path
+
+    def bounded_snapshot(path, limit):
+        require(path.lstat().st_size <= limit, f"Preservation input exceeds {limit}-byte limit")
+        saved = snapshot(path)
+        require(len(saved.data) <= limit, f"Preservation input exceeds {limit}-byte limit")
+        return saved
+
+    recipe = bounded_snapshot(external(str(recipe_path)), MAX_RECIPE)
+
+    def nonfinite(_):
+        raise PacketError("Nonfinite JSON constants are not supported")
+
+    def recipe_keys(pairs):
+        result = {}
+        for key, item in pairs:
+            require(key not in result, "Duplicate JSON key in preservation recipe")
+            result[key] = item
+        return result
+
+    try:
+        value = json.loads(recipe.data.decode("utf-8", errors="strict"),
+                           object_pairs_hook=recipe_keys, parse_constant=nonfinite)
+    except RecursionError as error:
+        raise PacketError("Preservation recipe nesting exceeds decoder limit") from error
+    keys(value, ("version", "baseline", "final", "edits"), "preservation recipe")
+    require(type(value["version"]) is int and value["version"] == 1, "Unsupported preservation recipe version")
+    require(isinstance(value["edits"], list) and len(value["edits"]) <= MAX_EDITS,
+            f"Edits must be an array within {MAX_EDITS}-edit limit")
+    files, identities = {}, {(recipe.info.st_dev, recipe.info.st_ino)}
+    for name in ("baseline", "final"):
+        entry = value[name]
+        keys(entry, ("path", "sha256", "bytes"), name)
+        require(isinstance(entry["sha256"], str) and HASH.fullmatch(entry["sha256"]),
+                f"{name}: require externally supplied lowercase SHA256")
+        require(type(entry["bytes"]) is int and 0 <= entry["bytes"] <= MAX_FILE,
+                f"{name}: byte pin exceeds {MAX_FILE}-byte limit or has wrong type")
+        path = external(entry["path"])
+        require(path not in (recipe.path, *(saved.path for saved in files.values())),
+                "Preservation input path alias")
+        saved = bounded_snapshot(path, MAX_FILE)
+        identity = (saved.info.st_dev, saved.info.st_ino)
+        require(identity not in identities, "Preservation input hardlink alias")
+        identities.add(identity)
+        require(stat.S_IMODE(saved.info.st_mode) == 0o444, f"{name}: require frozen mode 0444")
+        require(len(saved.data) == entry["bytes"] and digest(saved.data) == entry["sha256"],
+                f"{name}: external SHA256/byte pin mismatch")
+        saved.data.decode("utf-8", errors="strict")
+        require(b"\r" not in saved.data and b"\0" not in saved.data and
+                (not saved.data or saved.data.endswith(b"\n")),
+                f"{name}: require LF-terminated UTF-8 text without CR/NUL")
+        files[name] = saved
+
+    edits, decoded, last, cursor = [], 0, -1, 0
+    expected_size = len(files["baseline"].data)
+    for index, entry in enumerate(value["edits"]):
+        keys(entry, ("offset", "before", "after"), f"edits[{index}]")
+        offset = entry["offset"]
+        require(type(offset) is int and last < offset <= len(files["baseline"].data) and offset >= cursor,
+                f"Invalid, duplicate, decreasing or overlapping baseline offset: edit={index}")
+        fragments = []
+        for name in ("before", "after"):
+            encoded = entry[name]
+            require(isinstance(encoded, str), f"edit={index}: {name} must be standard Base64 text")
+            # Bound allocation before decoding, then enforce the precise aggregate size.
+            require(len(encoded) <= 4 * ((MAX_EDIT_BYTES - decoded + 2) // 3),
+                    "Decoded edit bytes exceed aggregate limit")
+            try:
+                fragment = base64.b64decode(encoded, validate=True)
+            except (ValueError, binascii.Error) as error:
+                raise PacketError(f"edit={index}: malformed standard Base64 {name}") from error
+            require(base64.b64encode(fragment).decode("ascii") == encoded,
+                    f"edit={index}: noncanonical standard Base64 {name}")
+            decoded += len(fragment)
+            require(decoded <= MAX_EDIT_BYTES, "Decoded edit bytes exceed aggregate limit")
+            fragments.append(fragment)
+        before, after = fragments
+        require(before or after, f"edit={index}: empty/empty edit is not allowed")
+        require(len(before) <= len(files["baseline"].data) - offset,
+                f"Before range exceeds baseline at offset: edit={index}")
+        edits.append((offset, before, after))
+        last, cursor = offset, offset + len(before)
+        expected_size += len(after) - len(before)
+    require(0 <= expected_size <= MAX_FILE, f"Reconstructed file exceeds {MAX_FILE}-byte limit")
+    baseline, final = files["baseline"].data, files["final"].data
+    expected = reconstruct_preservation(baseline, edits)
+    preservation_equal(final, expected, "Forward")
+    restored = reconstruct_preservation(final, edits, inverse=True)
+    preservation_equal(restored, baseline, "Inverse")
+    for saved in (recipe, *files.values()):
+        unchanged(saved, message="Preservation input changed during verification")
+    for parent, identity in directories.items():
+        canonical(parent)
+        info = parent.lstat()
+        require((info.st_dev, info.st_ino, info.st_mode) == identity,
+                "Preservation parent directory changed during verification")
+    return dict(version=1, baseline={key: value["baseline"][key] for key in ("sha256", "bytes")},
+                final={key: value["final"][key] for key in ("sha256", "bytes")}, edits=len(edits),
+                forward_equal=True, inverse_equal=True,
+                observation="Non-atomic byte observations and rechecks only; no semantic/API/test/native authenticity")
+
+
 def replace_one(root, source, current):
     with parent_fd(root, current.path) as fd:
         temporary = ".integration-packet-" + secrets.token_hex(12)
@@ -464,6 +617,8 @@ def junit_summary(root, classes, since, properties):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
+    preserve = commands.add_parser("preserve", help="read-only whole-file forward/inverse checks from explicit external pins and edits")
+    preserve.add_argument("--recipe", required=True, help="canonical external version-1 JSON recipe; see mirrored skill")
     draft = commands.add_parser("draft", help="read-only manifest draft from externally pinned source spec; review before packet/apply")
     draft.add_argument("--worktree", required=True, help="canonical absolute Git worktree root")
     draft.add_argument("--spec", required=True, type=Path, help="external JSON: version=1, files=[{source, sha256, bytes, destination}]")
@@ -480,7 +635,9 @@ def main(argv=None):
                        help="exact expected property; repeat. Allowlist: " + ", ".join(sorted(PROPERTIES - {"java.version", "user.dir"})))
     args = parser.parse_args(argv)
     try:
-        if args.command == "draft":
+        if args.command == "preserve":
+            result = verify_preservation(args.recipe)
+        elif args.command == "draft":
             result = draft_manifest(args.worktree, args.spec)
         elif args.command == "packet":
             manifest = read_manifest(args.manifest)
@@ -495,8 +652,12 @@ def main(argv=None):
         else:
             result = junit_summary(args.worktree, args.classes, cutoff(args.since), requested_properties(args.property))
         print(json.dumps(result, indent=2, ensure_ascii=True))
-        return 0 if args.command in ("draft", "packet") or result["clean"] else 1
+        return 0 if args.command in ("preserve", "draft", "packet") or result["clean"] else 1
     except (ValueError, OSError, ET.ParseError) as error:
+        if args.command == "preserve":
+            # No source dumps or unbounded attacker-controlled JSON keys/path diagnostics.
+            print(json.dumps(dict(error=str(error)[:512]), ensure_ascii=True), file=sys.stderr)
+            return 2
         report = dict(error=str(error), **(error.report if isinstance(error, PacketError) else {}))
         print(json.dumps(report, indent=2, ensure_ascii=True), file=sys.stderr)
         return 3 if report.get("partial") else 2

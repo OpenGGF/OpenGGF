@@ -1,18 +1,82 @@
 ---
 name: soniccd-packet-integration
-description: Use when drafting manifests from externally pinned FINAL Sonic CD sources, integrating frozen source packets or attributing fresh focused JUnit reports in an explicitly selected Git worktree. Provides read-only drafting, packet validation, optional import and exact report summaries; does not run gameplay, probes or tests.
+description: Verify declared whole-file byte preservation between pinned frozen Sonic CD handoffs, draft or integrate source packets, or attribute exact fresh JUnit reports. Observes bytes and reports; does not establish semantic authenticity or run supplied code or tests.
 ---
 
 # Sonic CD packet integration
 
 Use `tools/soniccd/integration_packet.py` to replace repeated ad hoc packet and
-Surefire inspection snippets. It uses the Python standard library and the existing
-worktree build/test lock. Run it from the checkout containing this tool, selecting
+Surefire inspection snippets. Read-only modes use the Python standard library;
+apply also uses the existing worktree build/test lock. Run it from the checkout containing this tool, selecting
 the destination worktree explicitly; it does not stage, commit, fetch, push, launch
 Maven, inspect foreign jobs or execute any supplied source.
 
 Keep the full USA then JP/EU integration goal in the owning task. A validated
 source packet is an integration aid, not evidence that a region or feature works.
+
+## Verify declared inherited-byte preservation
+
+Use `preserve --recipe` for a whole-file check after declared migrations. Root must
+independently export and retain the known baseline snapshot and supply its pins,
+along with the FINAL handoff pins. Never generate baseline pins from an unknown
+file, use moving checkout source, infer or approve edits, or auto-fix a mismatch.
+This mode does not invoke Git, acquire a lease, import, or execute supplied code.
+
+```bash
+python3 -B "$OPENGGF_ROOT/tools/soniccd/integration_packet.py" preserve \
+  --recipe "$EXTERNAL_RECIPE_JSON"
+```
+
+The external UTF-8 JSON recipe has exactly this version-1 shape. This example
+describes `old\n` becoming `new\n`; its dummy SHA256 values must be replaced with
+the independently supplied pins before use:
+
+```json
+{
+  "version": 1,
+  "baseline": {
+    "path": "/external/retained/Baseline.java",
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "bytes": 4
+  },
+  "final": {
+    "path": "/external/frozen/FINAL.java",
+    "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+    "bytes": 4
+  },
+  "edits": [{"offset": 0, "before": "b2xk", "after": "bmV3"}]
+}
+```
+
+Offsets are zero-based **BASELINE byte coordinates**, including LF and UTF-8
+bytes, never character indices or offsets shifted by earlier edits. Supply unique,
+strictly increasing offsets and nonoverlapping `before` ranges, with exact original
+bytes. `before` and `after` use canonical standard Base64 (including required
+padding, no whitespace or URL alphabet). An empty string permits insertion or
+deletion; empty/empty is rejected. An empty edits array checks identical files.
+Unknown/duplicate keys, nonfinite values and wrong scalar/container types fail.
+
+Both files require the frozen UTF-8/LF contract below and independently supplied
+lowercase SHA256 plus exact byte counts; no pins are invented. Recipe and files
+must be distinct canonical absolute regular paths, external to the checkout
+containing the tool; symlinks, lexical aliases and mutual hardlink aliases fail.
+This does not establish externality to some other checkout. Paths are limited to
+4096 characters; recipe to 4 MiB; each input/reconstructed file to 16 MiB; edits
+to 4096 and aggregate decoded `before` + `after` bytes to 1 MiB.
+
+The verifier reconstructs expected FINAL from baseline and declared edits, compares
+**all bytes** with the pinned FINAL, then reconstructs and compares the full inverse
+with baseline. Preserved gaps participate in both comparisons. It rechecks recipe,
+input content/metadata and parent directory identities before emitting a summary.
+These observations are **non-atomic**: changes between or after checks, including
+change-and-restore between observations, may escape detection. Mode `0444` cannot
+prevent owner writes; reads may update atimes. Pins do not prove provenance,
+semantic/API acceptance, test execution or native authenticity.
+
+Exit `0` emits only pins, byte/edit counts, equality flags and that limit to stdout;
+`2` emits a bounded JSON error on stderr with no success stdout. Mismatches name
+an edit or first differing byte offset, without source excerpts. The mode writes
+no files, receipts, caches or logs, and has no apply/output/worktree option.
 
 ## Freeze and pin the packet
 
