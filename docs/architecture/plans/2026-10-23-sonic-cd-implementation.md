@@ -6871,3 +6871,56 @@ source-only authoring is active with nine slot aliases and synchronous read/
 angle/FM ports; no Tamabboh production is in the current tree. Preserve the
 picture gap as the current scoped boundary; any later admission must use exact
 selected current8800 bytes with no duplicate art or fabricated logical alias.
+
+
+### Tamabboh component intake, 26 October 2026
+
+Source17 was saved privately as baf29bd50787ce33c5c737be6eaf5f298752d70d.
+Frozen Tamabboh views append five tables (59 total), three lazy cached visual
+getters and selector4/subtype0 only, preserving the complete17-source suffix.
+No source, decoder, physical region or current-art preload was added. Actual
+USA normal/damaged roots20B968/20B97E share the complete62-byte include;
+missile20BA70 keeps42 bytes and its odd frame offset31. Three ordinary mapper
+registrations use the unchanged exact-byte join. Child Y subtraction is decimal
+10, matching native immediate #10 without a hexadecimal prefix.
+
+Tests-first Source17 failed testCompile on absent tables/getters (70196;
+25s queue, duration unavailable from bounded output; no tests). First complete
+asset selection47999 executed146/1/0/0 at05:06:15Z (2m01s/queue0). All45 retail
+cases passed. The sole inherited FloatBlock short negative loop still rejected
+selector4; separate RootR2 adds only that exclusion. Narrow38502 passes1/0/0/0
+at05:07:49Z (31.762s/queue3). Do not label this a new146-case green invocation.
+Independent asset review17900B/SHA9bddce26e5d54782ef4ac824b72d6a2d80c9b9f03a5b2bcaee34d5ca89c7a2be
+records the R1 P2 and exact R2 source resolution; R1 remains unchanged.
+
+Body tests-first31917 fails testCompile on absent CdTamabboh/aliases at05:09:36Z
+(23.016s/queue0), no tests. BodyR2 changes only two source-derived CSV mistakes:
+641 masks to640, so the deletion vector is768; raw254 selects warp and clamps
+to period2/index7 for savedID1. Exact R2 test52887B/SHA301074c399aec739d01f20a11b6763f107883023c80cb1a216849a7c8fca3764
+passes COMPLETE TestCdTamabboh110/0/0/0 in30106 at05:18:55Z (1m28s/queue112).
+The same command's two new mapping tests against the old mapper yield2/0/1/0,
+with the actual-owner case stopping at unregistered20B968. That is a matched
+mapper RED, not a112-case positive. The frozen three registrations are then
+imported; COMPLETE TestCdObjectMappings passes40/0/0/0 in39749 at05:22:18Z
+(1m39s/queue13). Each terminal XML is fresh, Java25.0.5.0.2/private cwd/supplied
+media/zero skips checked. These are component and format/actual-media proofs,
+not native gameplay/image parity or a completed3222.
+
+The new body has nine enum aliases only, synchronous fresh96-slot angle/player/
+FM ports and scalar completed metadata. Root must still bind actual phase,
+cached invocation, stable player Frame, primary-angle CAS and FM ledger. Independent body/mapper static review is complete with no new P1/P2; the exact
+two R1 CSV defects are resolved by RootR2. Source-only Runtime composition is
+still active; Runtime
+and its362-case test file remain exact saved Source17 at this checkpoint.
+C29/19 logical banks/658 patterns and the unadmitted native440 gap remain.
+No Tamabboh natural route or constructed World/GPU proof has run. Current
+component changes remain uncommitted; the full USA/JP/EU goal stays active.
+
+
+This component-only save uses bounded owner/actual-media/mapping checks because
+all shared algorithms are unchanged and Runtime is still byte-identical to
+Source17. It is not a new full smoke/guards/full-suite result. Fresh structural
+and combined-consumer checks belong to the later live integration. The final
+body/mapper review37945B/SHAcb2efb87bf2d8136397b9f53db1711900e0735b7ccf08e4672f3ff8c263e1542
+covers all frozen body/aliases/root additions and RootR2 test substitutions;
+actual Root results remain separately attributed in that static report.

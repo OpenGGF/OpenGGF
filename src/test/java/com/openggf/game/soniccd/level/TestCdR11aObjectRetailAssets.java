@@ -244,6 +244,11 @@ class TestCdR11aObjectRetailAssets {
         hashes.put(PLATFORM_MAPPINGS, "a8b6e5695090a558c67e7e776db8c4b642731a7ef7445608264b29f15529afd7");
         hashes.put(PLATFORM_WIDTHS, "87d0fad66b7f6fe31844c828bbfa818f478c885f0f7672d1bb38d89ed6bfb9d3");
         hashes.put(PLATFORM_RANGES, "ce513997025ae549282209565f4c74aae2258cd6c391acd643d3b7f1b8071c9a");
+        hashes.put(TAMABBOH_NORMAL_ANIMATIONS, "ad1878521436e3e2ad03488f523fb96cda2ce64229265514a4bb6972a7e50474");
+        hashes.put(TAMABBOH_DAMAGED_ANIMATIONS, "09a26ea9ee38de8e1799d02b191d160beac335155b9d6bae6c3d1ed678577f84");
+        hashes.put(TAMABBOH_MAPPINGS, "e30906f183ff4995fb9bfb0661be6003d3cd0431caa10b9d784ecf64a5b36847");
+        hashes.put(TAMABBOH_MISSILE_ANIMATIONS, "764bc1e99533aeb906c6b6ecf4627f5fc11904307d477b1827a49776f41c57a5");
+        hashes.put(TAMABBOH_MISSILE_MAPPINGS, "10cba8d961bb868885a64ddb360f0182e18b4b5256eebac3665363c984e992cb");
         assertEquals(CdR11aObjectAssets.Table.values().length, hashes.size(), "every admitted table has a pinned digest");
         for (var table : CdR11aObjectAssets.Table.values()) {
             var view = objects.view(table);
@@ -626,7 +631,7 @@ class TestCdR11aObjectRetailAssets {
         // Selector 1 is now the authenticated Pata-Bata consumer; the other unowned selectors still reject.
         assertEquals(0x23B0, objects.tileWord(1, 0));
         assertEquals(0x0320, objects.tileWord(0xA, 0));
-        for (int selector : new int[]{4, 6, 17}) {
+        for (int selector : new int[]{6, 17}) {
             assertThrows(UnsupportedOperationException.class, () -> objects.tileWord(selector, 0));
         }
 
@@ -4399,14 +4404,15 @@ class TestCdR11aObjectRetailAssets {
         assertSame(platform, objects.platform()); assertSame(flying, objects.flyingAnimal());
         assertSame(ground, objects.groundAnimal());
         assertEquals(0x388, objects.animalBaseTile(0, 1));
-        // Complete inherited 54-table digest manifest: do not narrow to a prior prefix.
-        assertEquals(54, CdR11aObjectAssets.Table.values().length);
+        // Complete 59-table digest manifest: retain every inherited row and append all five Tamabboh tables.
+        assertEquals(59, CdR11aObjectAssets.Table.values().length);
         assertEquals(45, COLLAPSE_OLD_SHA256.length); assertEquals(6, COLLAPSE_SHA256.length);
         assertEquals(3, PLATFORM21_SHA256.length);
-        for (int i = 0; i < 54; i++) {
+        for (int i = 0; i < 59; i++) {
             var table = CdR11aObjectAssets.Table.values()[i]; var view = objects.view(table);
             String expected = i < 45 ? COLLAPSE_OLD_SHA256[i]
-                    : i < 51 ? COLLAPSE_SHA256[i - 45] : PLATFORM21_SHA256[i - 51];
+                    : i < 51 ? COLLAPSE_SHA256[i - 45] : i < 54 ? PLATFORM21_SHA256[i - 51]
+                    : TestCdR11aObjectAssets.TAMABBOH_SHA256[i - 54];
             assertEquals(expected, CdR11aProfile.sha256(view.bytes().copy()), table.name());
             assertSame(view, objects.view(table));
             assertArrayEquals(table.range().read(image).copy(), view.bytes().copy());
@@ -4897,6 +4903,253 @@ class TestCdR11aObjectRetailAssets {
     }
 
     // End queued PLC10 sources14..17 R1 retail coverage.
+
+
+    // Tamabboh full-table/native-operand closure; all production execution is Root-owned.
+    @ParameterizedTest(name = "{0} Tamabboh body and missile tables over the unchanged seventeen-source cache")
+    @EnumSource(CdReleaseVariant.class)
+    void tamabbohAuthenticatesEveryNativeRootAndRetainsThreeColdVisualsWithoutAnotherArtRead(
+            CdReleaseVariant variant) throws Exception {
+        String configured = System.getProperty("soniccd.media.root");
+        Assumptions.assumeTrue(configured != null && !configured.isBlank(),
+                "Set soniccd.media.root for supplied-media checks");
+        String directory = switch (variant) { case USA -> "USA"; case JAPAN -> "Japan"; case EUROPE -> "Europe"; };
+        Path cue;
+        try (var files = Files.list(Path.of(configured).resolve(directory))) {
+            var cues = files.filter(p -> p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".cue")).toList();
+            assertEquals(1,cues.size()); cue = cues.getFirst();
+        }
+        CdR11aAssets owner; CdMmdImage retained;
+        CdR11aObjectAssets visualFirst = null, sourceFirst = null, viewsFirst = null;
+        try (var program = CdProgramAssets.open(cue,Optional.of(variant),Optional.empty())) {
+            owner = CdR11aAssetLoader.load(program,variant,CdStageKey.parse("R11A"));
+            retained = program.mmd(CdNativeFile.R11A);
+            assertEquals(262144,retained.fileBytes());
+            assertEquals(variant == CdReleaseVariant.USA
+                            ? "7aa54c36ab94dbe14068a18613c574b883ce446337bfaa9c571ec3523aff14e2"
+                            : "241be9620fbad1229792fedd1604066ae3e7d943cb7cc27bc94a4a837452d9b6",
+                    CdR11aProfile.sha256(retained.readFile(0,retained.fileBytes())));
+            owner.profile().verifyProgram(owner.profile().file(),owner.profile().domain(),retained);
+            verifyTamabbohNativeReferences(retained,owner,variant);
+            if (variant != CdReleaseVariant.USA) {
+                assertThrows(UnsupportedOperationException.class,owner::openingObjects);
+                assertThrows(UnsupportedOperationException.class,() -> CdR11aObjectAssets.load(
+                        owner.profile(),owner.identity(),retained,owner.loadPlan()));
+                var usa = CdR11aProfile.forStage(CdReleaseVariant.USA,CdStageKey.parse("R11A"));
+                var asserted = new CdR11aAssets.Identity(CdReleaseVariant.USA,usa.stage(),usa.file(),usa.domain(),
+                        usa.expectedMmdSha256(),owner.identity().observedWholeDiscSha256());
+                assertThrows(IOException.class,() -> CdR11aObjectAssets.load(usa,asserted,retained,owner.loadPlan()));
+            } else {
+                visualFirst = owner.openingObjects(); sourceFirst = owner.openingObjects(); viewsFirst = owner.openingObjects();
+                assertNotSame(visualFirst,sourceFirst); assertNotSame(visualFirst,viewsFirst);
+                for (var objects : List.of(visualFirst,sourceFirst,viewsFirst)) {
+                    assertSame(owner.identity(),objects.identity()); verifySectionSourcesCold(objects);
+                    for (String name : List.of("tamabbohNormal","tamabbohDamaged","tamabbohMissile")) {
+                        var field = CdR11aObjectAssets.class.getDeclaredField(name); field.setAccessible(true);
+                        assertNull(field.get(objects));
+                    }
+                }
+                for (int offset : new int[]{0x3A24,0x3EB8,0xB764,0xB76C,0xB792,0xB79E,0xB7CC,
+                        0xB7D0,0xB7DC,0xB7E0,0xB7EC,0xB7F0,0xB7FA,0xB7FE,0xB91E,0xB9A6,
+                        0xB9E2,0xBA60,0xCF50,0xCF76,0x7F7E,0x7F85,0x37950,0x37DC5,0x37DC6}) {
+                    byte[] changed = retained.readFile(0,retained.fileBytes()); changed[offset] ^= 1;
+                    assertThrows(IOException.class,() -> CdR11aObjectAssets.load(owner.profile(),owner.identity(),
+                            CdMmdImage.parse(changed),owner.loadPlan()),"changed Tamabboh owner/operand byte "+offset);
+                }
+                for (var table : TestCdR11aObjectAssets.TAMABBOH_TABLES) {
+                    for (int offset : new int[]{table.range().fileOffset(),table.range().endExclusive()-1}) {
+                        byte[] changed = retained.readFile(0,retained.fileBytes()); changed[offset] ^= 1;
+                        assertThrows(IOException.class,() -> CdR11aObjectAssets.load(owner.profile(),owner.identity(),
+                                CdMmdImage.parse(changed),owner.loadPlan()),"changed full Tamabboh table byte "+offset);
+                    }
+                }
+            }
+        }
+        assertThrows(UnsupportedOperationException.class,() -> owner.decoded(CdR11aAsset.ART_TAMABBOH));
+        if (variant != CdReleaseVariant.USA) { return; }
+        assertNotNull(visualFirst); assertNotNull(sourceFirst); assertNotNull(viewsFirst);
+        var optional = CdR11aObjectAssets.class.getDeclaredField("frontierViews"); optional.setAccessible(true);
+        var sourceField = CdR11aObjectAssets.class.getDeclaredField("sectionArtSources"); sourceField.setAccessible(true);
+        var visualBefore = tamabbohOtherFields(visualFirst);
+        verifyTamabbohCachedVisuals(visualFirst);
+        assertNull(sourceField.get(visualFirst),"all three visual getters leave the source bank cold");
+        assertEquals(TestCdR11aObjectAssets.TAMABBOH_TABLES,
+                List.copyOf(((Map<?,?>) optional.get(visualFirst)).keySet()));
+        assertTamabbohOtherFieldsUnchanged(visualFirst,visualBefore);
+        var sourceBank = sourceFirst.sectionArtSources();
+        var sourceBefore = tamabbohOtherFields(sourceFirst);
+        var sourceObjects = sourceBank.sources().toArray(CdR11aObjectAssets.SectionArtSource[]::new);
+        var reads = sourceBank.sources().stream().map(CdR11aObjectAssets.SectionArtSource::decode).toList();
+        var nativeInputs = sourceBank.sources().stream().map(CdR11aObjectAssets.SectionArtSource::readerBytes).toList();
+        var outputs = reads.stream().map(CdR11aAssets.NemesisRead::bytes).toList();
+        verifyTamabbohCachedVisuals(sourceFirst); assertTamabbohOtherFieldsUnchanged(sourceFirst,sourceBefore);
+        assertSame(sourceBank,sourceFirst.sectionArtSources());
+        for (int i = 0; i < 17; i++) {
+            assertSame(sourceObjects[i],sourceBank.sources().get(i));
+            assertSame(reads.get(i),sourceObjects[i].decode()); assertSame(nativeInputs.get(i),sourceObjects[i].readerBytes());
+            assertSame(outputs.get(i),sourceObjects[i].decode().bytes());
+        }
+        var rawBefore = tamabbohOtherFields(viewsFirst);
+        var views = TestCdR11aObjectAssets.TAMABBOH_TABLES.stream().map(viewsFirst::view).toList();
+        assertNull(sourceField.get(viewsFirst));
+        for (String name : List.of("tamabbohNormal","tamabbohDamaged","tamabbohMissile")) {
+            var field = CdR11aObjectAssets.class.getDeclaredField(name); field.setAccessible(true);
+            assertNull(field.get(viewsFirst),"raw table view does not decode a visual");
+        }
+        var missile = viewsFirst.tamabbohMissile(); var damaged = viewsFirst.tamabbohDamaged();
+        var normal = viewsFirst.tamabbohNormal();
+        assertSame(missile,viewsFirst.tamabbohMissile()); assertSame(damaged,viewsFirst.tamabbohDamaged());
+        assertSame(normal,viewsFirst.tamabbohNormal()); assertNull(sourceField.get(viewsFirst));
+        TestCdR11aObjectAssets.verifyTamabbohVisual(normal,0);
+        TestCdR11aObjectAssets.verifyTamabbohVisual(damaged,1);
+        TestCdR11aObjectAssets.verifyTamabbohVisual(missile,2);
+        assertTamabbohOtherFieldsUnchanged(viewsFirst,rawBefore);
+        for (int i = 0; i < 5; i++) { assertSame(views.get(i),viewsFirst.view(TestCdR11aObjectAssets.TAMABBOH_TABLES.get(i))); }
+        for (var objects : List.of(visualFirst,sourceFirst,viewsFirst)) {
+            verifyTamabbohUnchangedSource17(objects,owner,retained);
+            for (int i = 0; i < 59; i++) {
+                var table = CdR11aObjectAssets.Table.values()[i]; var view = objects.view(table);
+                String expected = i < 45 ? COLLAPSE_OLD_SHA256[i] : i < 51 ? COLLAPSE_SHA256[i-45]
+                        : i < 54 ? PLATFORM21_SHA256[i-51] : TestCdR11aObjectAssets.TAMABBOH_SHA256[i-54];
+                assertEquals(expected,CdR11aProfile.sha256(view.bytes().copy()),table.name());
+                assertSame(view,objects.view(table)); assertArrayEquals(table.range().read(retained).copy(),view.bytes().copy());
+                byte[] detached = view.bytes().copy(); detached[0] ^= 1;
+                assertArrayEquals(table.range().read(retained).copy(),view.bytes().copy());
+                assertThrows(ReadOnlyBufferException.class,() -> view.bytes().buffer().put((byte) 1));
+            }
+            assertEquals(0x2428,objects.tileWord(4,0));
+            for (int subtype2 = 1; subtype2 <= 255; subtype2++) {
+                int rejected = subtype2;
+                assertThrows(UnsupportedOperationException.class,() -> objects.tileWord(4,rejected));
+            }
+        }
+    }
+
+    private static void verifyTamabbohNativeReferences(CdMmdImage image,CdR11aAssets owner,CdReleaseVariant variant) {
+        int delta = variant == CdReleaseVariant.USA ? 0 : 14;
+        int directory = variant == CdReleaseVariant.USA ? 0x3E34 : 0x3E30;
+        int dispatch = variant == CdReleaseVariant.USA ? 0x3A22 : 0x3A1E;
+        assertEquals(0x43F9,Short.toUnsignedInt(ByteBuffer.wrap(image.readFile(dispatch,2)).getShort()));
+        assertEquals(0x200000+directory,ByteBuffer.wrap(image.readFile(dispatch+2,4)).getInt());
+        assertEquals(0x20B764+delta,ByteBuffer.wrap(image.readFile(directory+33*4,4)).getInt());
+        assertArrayEquals(hexBytes("0c28000100286700023a"),image.readFile(0xB764+delta,10));
+        assertEquals(0xB9A6+delta,0xB76C+delta+ByteBuffer.wrap(image.readFile(0xB76C+delta,2)).getShort());
+        assertArrayEquals(hexBytes("000c0072008c01260130013a"),image.readFile(0xB792+delta,12));
+        assertEquals(0xB79E+delta,0xB792+delta+ByteBuffer.wrap(image.readFile(0xB792+delta,2)).getShort());
+        assertArrayEquals(hexBytes("54280024002800040001117c00040018117c002c0020117c00100017"
+                + "117c00100019117c000f001631680008002a7004"),image.readFile(0xB79E+delta,48));
+        assertEquals(0x4EB9,Short.toUnsignedInt(ByteBuffer.wrap(image.readFile(0xB7CE+delta,2)).getShort()));
+        assertEquals(0x20CF26+delta,ByteBuffer.wrap(image.readFile(0xB7D0+delta,4)).getInt());
+        assertArrayEquals(hexBytes("4a280028661043fa018c45fa0162203cffff6000600e"
+                + "43fa019245fa015e203cffffb00021490004214a00302140002c"),image.readFile(0xB7D4+delta,48));
+        int[] operands = {0xB7DA,0xB7DE,0xB7EA,0xB7EE,0xBA5E};
+        int[] targets = {0xB968,0xB942,0xB97E,0xB94E,0xBA68};
+        for (int i = 0; i < operands.length; i++) {
+            int at = operands[i]+delta;
+            assertEquals(i == 1 || i == 3 ? 0x45FA : 0x43FA,
+                    Short.toUnsignedInt(ByteBuffer.wrap(image.readFile(at,2)).getShort()));
+            assertEquals(targets[i]+delta,at+2+ByteBuffer.wrap(image.readFile(at+2,2)).getShort());
+        }
+        assertArrayEquals(hexBytes("136800000000137c00010028336800020002"),image.readFile(0xB912+delta,18));
+        assertArrayEquals(hexBytes("217c"),image.readFile(0xB9E0+delta,2));
+        assertEquals(0x20BA70+delta,ByteBuffer.wrap(image.readFile(0xB9E2+delta,4)).getInt());
+        assertEquals(4,Short.toUnsignedInt(ByteBuffer.wrap(image.readFile(0xB9E6+delta,2)).getShort()));
+        assertEquals(0x205CFA+delta,ByteBuffer.wrap(image.readFile(0xBA64+delta,4)).getInt());
+        assertArrayEquals(hexBytes("43f9"),image.readFile(0xCF26+delta,2));
+        assertEquals(0x20CF48+delta,ByteBuffer.wrap(image.readFile(0xCF28+delta,4)).getInt());
+        assertArrayEquals(hexBytes("d040383b001845fb4014720012280029d2413a321000314500024e75"),
+                image.readFile(0xCF2C+delta,28));
+        assertEquals(46,ByteBuffer.wrap(image.readFile(0xCF50+delta,2)).getShort());
+        assertEquals(0x2428,Short.toUnsignedInt(ByteBuffer.wrap(image.readFile(0xCF76+delta,2)).getShort()));
+        assertArrayEquals(hexBytes(TestCdR11aObjectAssets.TAMABBOH_TILE_IDS_HEX),image.readFile(0xCF48+delta,74));
+        int[] offsets = {0xB942,0xB94E,0xB968,0xBA68,0xBA70};
+        for (int i = 0; i < 5; i++) {
+            byte[] expected = TestCdR11aObjectAssets.tamabbohLiteral(i);
+            assertArrayEquals(expected,image.readFile(offsets[i]+delta,expected.length));
+            assertEquals(TestCdR11aObjectAssets.TAMABBOH_SHA256[i],
+                    CdR11aProfile.sha256(image.readFile(offsets[i]+delta,expected.length)));
+            if (variant != CdReleaseVariant.USA) {
+                assertFalse(Arrays.equals(expected,image.readFile(offsets[i],expected.length)),
+                        "a matching regional table has its own independently located root");
+            }
+        }
+        assertEquals(0,image.readFile(0xB9A5+delta,1)[0]); // Real final mapping byte; next opcode is MOVEQ.
+        assertArrayEquals(hexBytes("7000"),image.readFile(0xB9A6+delta,2));
+        assertArrayEquals(hexBytes("4eb9"),image.readFile(0xBA9A+delta,2)); // No invented missile pad.
+        if (variant != CdReleaseVariant.USA) {
+            assertNotEquals(0x20B764,ByteBuffer.wrap(image.readFile(0x3EB8,4)).getInt());
+            assertFalse(Arrays.equals(hexBytes("217c0020ba700004"),image.readFile(0xB9E0,8)));
+        }
+        var placements = owner.placements().records().stream().filter(p -> p.objectId()==0x22).toList();
+        assertEquals(List.of(148,155,207,247,248,254,276,314,373,472,485),
+                placements.stream().map(CdObjectPlacements.Placement::index).toList());
+        assertTrue(placements.stream().allMatch(p -> p.subtype2()==0));
+        assertEquals(List.of(0,255,0,0,255,255,255,0,0,0,0),
+                placements.stream().map(CdObjectPlacements.Placement::subtype).toList());
+        assertEquals(List.of(207,247,276,314),placements.stream().filter(p -> (p.periodFlags()&0x40)!=0)
+                .map(CdObjectPlacements.Placement::index).toList());
+        assertArrayEquals(hexBytes("12100211a2004000"),image.readFile(0x7F7E+delta,8));
+        assertEquals(0x803B,Short.toUnsignedInt(ByteBuffer.wrap(image.readFile(0x37950,2)).getShort()));
+        assertArrayEquals(hexBytes("002379508500"),image.readFile(0xFD5A+delta,6));
+    }
+
+    private static void verifyTamabbohCachedVisuals(CdR11aObjectAssets objects) {
+        var normal = objects.tamabbohNormal(); var damaged = objects.tamabbohDamaged(); var missile = objects.tamabbohMissile();
+        assertSame(normal,objects.tamabbohNormal()); assertSame(damaged,objects.tamabbohDamaged());
+        assertSame(missile,objects.tamabbohMissile());
+        TestCdR11aObjectAssets.verifyTamabbohVisual(normal,0);
+        TestCdR11aObjectAssets.verifyTamabbohVisual(damaged,1);
+        TestCdR11aObjectAssets.verifyTamabbohVisual(missile,2);
+    }
+
+    private static Map<String,Object> tamabbohOtherFields(CdR11aObjectAssets objects) throws Exception {
+        Map<String,Object> result = new HashMap<>();
+        for (var field : CdR11aObjectAssets.class.getDeclaredFields()) {
+            if (java.lang.reflect.Modifier.isStatic(field.getModifiers()) || field.getName().equals("frontierViews")
+                    || List.of("tamabbohNormal","tamabbohDamaged","tamabbohMissile").contains(field.getName())) { continue; }
+            field.setAccessible(true); result.put(field.getName(),field.get(objects));
+        }
+        return result;
+    }
+
+    private static void assertTamabbohOtherFieldsUnchanged(CdR11aObjectAssets objects,Map<String,Object> before)
+            throws Exception {
+        var after = tamabbohOtherFields(objects); assertEquals(before.keySet(),after.keySet());
+        for (var entry : before.entrySet()) { assertSame(entry.getValue(),after.get(entry.getKey()),entry.getKey()); }
+    }
+
+    private static void verifyTamabbohUnchangedSource17(CdR11aObjectAssets objects,CdR11aAssets owner,CdMmdImage image)
+            throws Exception {
+        var bank = objects.sectionArtSources(); assertSame(bank,objects.sectionArtSources());
+        assertEquals(17,bank.sources().size());
+        assertEquals(SECTION_SOURCES,bank.sources().stream().map(CdR11aObjectAssets.SectionArtSource::source).toList());
+        int[] plcIds = {9,9,9,2,2,2,2,1,1,0,1,2,2,5,5,5,5};
+        int[] rows = {0,1,2,2,4,5,0,5,0,1,6,1,6,2,4,5,6};
+        for (int i = 0; i < 17; i++) {
+            var source = bank.sources().get(i); var read = source.decode(); var asset = SECTION_SOURCES.get(i);
+            assertSame(source,bank.source(asset)); assertEquals(asset,source.source()); assertEquals(asset,read.asset());
+            assertEquals(plcIds[i],source.canonicalPlcId()); assertEquals(rows[i],source.canonicalRowIndex());
+            assertSame(owner.loadPlan().plcs().get(plcIds[i]).entries().get(rows[i]),source.canonicalPlc());
+            assertEquals(owner.profile().range(asset),read.sourceBlobRange());
+            assertEquals(SECTION_TILES[i],source.tileCount()); assertEquals(SECTION_TILES[i]*32,read.bytes().length());
+            assertEquals(SECTION_JAVA_BYTES[i],read.readerInputRange().length());
+            assertEquals(SECTION_JAVA_BYTES[i],read.consumedInputBytes());
+            assertEquals(SECTION_NATIVE_BYTES[i],source.readerInputRange().length());
+            assertEquals(SECTION_BLOB_SHA256[i],CdR11aProfile.sha256(read.sourceBlobRange().read(image).copy()));
+            assertEquals(SECTION_NATIVE_SHA256[i],CdR11aProfile.sha256(source.readerBytes().copy()));
+            assertEquals(SECTION_DECODED_SHA256[i],CdR11aProfile.sha256(read.bytes().copy()));
+            assertArrayEquals(source.readerInputRange().read(image).copy(),source.readerBytes().copy());
+        }
+        var tamabboh = bank.sources().get(2); assertSame(tamabboh,bank.source(CdR11aAsset.ART_TAMABBOH));
+        assertEquals(59,tamabboh.tileCount()); assertEquals(1142,tamabboh.decode().sourceBlobRange().length());
+        assertEquals(1142,tamabboh.decode().readerInputRange().length()); assertEquals(1143,tamabboh.readerInputRange().length());
+        assertEquals(0,tamabboh.readerBytes().unsignedByte(1142));
+        assertThrows(UnsupportedOperationException.class,bank.sources()::clear);
+        assertThrows(ReadOnlyBufferException.class,() -> tamabboh.readerBytes().buffer().put((byte) 1));
+        assertThrows(ReadOnlyBufferException.class,() -> tamabboh.decode().bytes().buffer().put((byte) 1));
+        byte[] detached = tamabboh.readerBytes().copy(); detached[0] ^= 1;
+        assertEquals(0x803B,tamabboh.readerBytes().unsignedWord(0));
+    }
 
     // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>
 }

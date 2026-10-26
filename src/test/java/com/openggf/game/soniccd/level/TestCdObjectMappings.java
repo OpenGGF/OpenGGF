@@ -2051,5 +2051,179 @@ class TestCdObjectMappings {
         assertMonitorPriorRoots(usa,resolver);assertAntonFrames(resolver);
     }
 
+    // BEGIN TAMABBOH MAPPING JOIN R1
+    /** N 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff, Tamabboh/Data/Mappings.asm:1-60
+     * and Mappings (Missile).asm:1-39. Independently expanded source directives only;
+     * these declared fixtures do not authenticate media, an object owner or native execution. */
+    private static final byte[] TAMABBOH_BODY_SOURCE = HexFormat.of().parseHex(
+            "00060022003203f10d0000f0010c0008f00908000cf80006000c001c01f00f002bf0"
+            + "03f20d0000f0020c000ff00a080013f802f0080016f7f80e0019ef00");
+    private static final byte[] TAMABBOH_MISSILE_SOURCE = HexFormat.of().parseHex(
+            "0008000e0014001f01fc000025fc01fc000026fc02f8040027f800041027f802f8040029f800041029f8");
+    private static final int[] TAMABBOH_ROOTS = {0x20B968, 0x20B97E, 0x20BA70};
+    private static final List<List<CdObjectDrawQueue.RawPiece>> TAMABBOH_NORMAL_FRAMES = List.of(
+            List.of(new CdObjectDrawQueue.RawPiece(-15, 13, 0x0000, -16),
+                    new CdObjectDrawQueue.RawPiece(1, 12, 0x0008, -16),
+                    new CdObjectDrawQueue.RawPiece(9, 8, 0x000C, -8)),
+            List.of(new CdObjectDrawQueue.RawPiece(-14, 13, 0x0000, -16),
+                    new CdObjectDrawQueue.RawPiece(2, 12, 0x000F, -16),
+                    new CdObjectDrawQueue.RawPiece(10, 8, 0x0013, -8)),
+            List.of(new CdObjectDrawQueue.RawPiece(-16, 8, 0x0016, -9),
+                    new CdObjectDrawQueue.RawPiece(-8, 14, 0x0019, -17)));
+    private static final List<List<CdObjectDrawQueue.RawPiece>> TAMABBOH_DAMAGED_FRAMES = List.of(
+            List.of(new CdObjectDrawQueue.RawPiece(-16, 15, 0x002B, -16)),
+            TAMABBOH_NORMAL_FRAMES.get(1), TAMABBOH_NORMAL_FRAMES.get(2));
+    private static final List<List<CdObjectDrawQueue.RawPiece>> TAMABBOH_MISSILE_FRAMES = List.of(
+            List.of(new CdObjectDrawQueue.RawPiece(-4, 0, 0x0025, -4)),
+            List.of(new CdObjectDrawQueue.RawPiece(-4, 0, 0x0026, -4)),
+            List.of(new CdObjectDrawQueue.RawPiece(-8, 4, 0x0027, -8),
+                    new CdObjectDrawQueue.RawPiece(0, 4, 0x1027, -8)),
+            List.of(new CdObjectDrawQueue.RawPiece(-8, 4, 0x0029, -8),
+                    new CdObjectDrawQueue.RawPiece(0, 4, 0x1029, -8)));
+
+    @Test void declaredTamabbohRootsAreNonAuthenticatingFormatInputsWithAllLiteralPiecesAndBounds() throws Exception {
+        assertEquals(62, TAMABBOH_BODY_SOURCE.length);
+        assertEquals(42, TAMABBOH_MISSILE_SOURCE.length);
+        assertEquals("e30906f183ff4995fb9bfb0661be6003d3cd0431caa10b9d784ecf64a5b36847",
+                sha256(TAMABBOH_BODY_SOURCE));
+        assertEquals("10cba8d961bb868885a64ddb360f0182e18b4b5256eebac3665363c984e992cb",
+                sha256(TAMABBOH_MISSILE_SOURCE));
+        var body = CdAssetBytes.copyOf(TAMABBOH_BODY_SOURCE);
+        var missile = CdAssetBytes.copyOf(TAMABBOH_MISSILE_SOURCE);
+        assertEquals(0, body.unsignedByte(61), "explicit source dc.b 0, outside the last counted body");
+        assertEquals(22, TAMABBOH_ROOTS[1] - TAMABBOH_ROOTS[0]);
+        // Declared inputs exercise parsing only. They cannot stand in for the supplied-media owner below.
+        var mappings = CdObjectMappings.declaredSourceViews(List.of(
+                new CdObjectMappings.DeclaredTable(0x20B968, body, 0, 3),
+                new CdObjectMappings.DeclaredTable(0x20B968, body, 22, 3),
+                new CdObjectMappings.DeclaredTable(0x20BA70, missile, 0, 4)), List.of());
+        assertTamabbohFramesAndBounds(mappings);
+    }
+
+    @Test void actualUsaTamabbohJoinsThreeExactOwnerRootsFullIncludesAndPreservesInheritedRegistrations() throws Exception {
+        var usa = usaMedia(); // Existing loader authenticates and closes media; no constructed owner bypass.
+        var objects = usa.objects();
+        var body = objects.view(CdR11aObjectAssets.Table.TAMABBOH_MAPPINGS);
+        var missile = objects.view(CdR11aObjectAssets.Table.TAMABBOH_MISSILE_MAPPINGS);
+        assertEquals(CdR11aObjectAssets.Table.TAMABBOH_MAPPINGS, body.table());
+        assertEquals(CdR11aObjectAssets.Table.TAMABBOH_MISSILE_MAPPINGS, missile.table());
+        assertEquals(CdR11aObjectAssets.Table.TAMABBOH_MAPPINGS.range(), body.range());
+        assertEquals(CdR11aObjectAssets.Table.TAMABBOH_MISSILE_MAPPINGS.range(), missile.range());
+        assertEquals(0xB968, body.range().fileOffset()); assertEquals(62, body.range().length());
+        assertEquals(0x20B968, body.range().nativeAddress());
+        assertEquals(0xBA70, missile.range().fileOffset()); assertEquals(42, missile.range().length());
+        assertEquals(0x20BA70, missile.range().nativeAddress());
+        assertArrayEquals(TAMABBOH_BODY_SOURCE, body.bytes().copy());
+        assertArrayEquals(TAMABBOH_MISSILE_SOURCE, missile.bytes().copy());
+        var normal = objects.tamabbohNormal();
+        var damaged = objects.tamabbohDamaged();
+        var child = objects.tamabbohMissile();
+        assertSame(normal, objects.tamabbohNormal());
+        assertSame(damaged, objects.tamabbohDamaged());
+        assertSame(child, objects.tamabbohMissile());
+        var visuals = List.of(normal, damaged, child);
+        var expectedFrames = List.of(TAMABBOH_NORMAL_FRAMES, TAMABBOH_DAMAGED_FRAMES, TAMABBOH_MISSILE_FRAMES);
+        int[] roots = {0, 22, 0};
+        int[][] relative = {{6, 34, 50}, {6, 12, 28}, {8, 14, 20, 31}};
+        for (int root = 0; root < 3; root++) {
+            var visual = visuals.get(root);
+            var source = root < 2 ? TAMABBOH_BODY_SOURCE : TAMABBOH_MISSILE_SOURCE;
+            var view = root < 2 ? body : missile;
+            assertEquals(roots[root], visual.mappingTableOffset());
+            assertEquals(TAMABBOH_ROOTS[root], view.range().nativeAddress() + visual.mappingTableOffset());
+            assertArrayEquals(source, visual.mappings().copy(), "normal and damaged both retain the complete62");
+            assertEquals(relative[root].length, visual.mappingFrames().size());
+            for (int frame = 0; frame < relative[root].length; frame++) {
+                var actual = visual.mappingFrames().get(frame);
+                var expected = expectedFrames.get(root).get(frame);
+                int absolute = roots[root] + relative[root][frame];
+                assertEquals(relative[root][frame], actual.relativeOffset());
+                assertEquals(relative[root][frame], word(source, roots[root] + frame * 2));
+                assertEquals(expected.size(), source[absolute] & 255, "literal native count byte");
+                assertArrayEquals(Arrays.copyOfRange(source, absolute, absolute + 1 + expected.size() * 5),
+                        actual.bytes().copy(), "only the counted body is consumed");
+                assertEquals(expected, actual.pieces().stream().map(p ->
+                        new CdObjectDrawQueue.RawPiece(p.y(), p.sizeByte(), p.rawTileWord(), p.x())).toList());
+            }
+        }
+        assertEquals(16, normal.mappingFrames().getFirst().bytes().length(),
+                "the other root's index and damaged frame remain unconsumed raw tail bytes22..33");
+        assertEquals(11, normal.mappingFrames().get(2).bytes().length());
+        assertEquals(0, normal.mappings().unsignedByte(61));
+        for (int frame = 1; frame < 3; frame++) {
+            assertArrayEquals(normal.mappingFrames().get(frame).bytes().copy(), damaged.mappingFrames().get(frame).bytes().copy());
+            assertEquals(normal.mappingFrames().get(frame).pieces(), damaged.mappingFrames().get(frame).pieces());
+        }
+        assertEquals(31, child.mappingFrames().get(3).relativeOffset());
+        assertEquals(0x20BA8F, missile.range().nativeAddress() + child.mappingFrames().get(3).relativeOffset());
+        assertEquals(0x1027, child.mappingFrames().get(2).pieces().get(1).rawTileWord());
+        assertEquals(0x1029, child.mappingFrames().get(3).pieces().get(1).rawTileWord());
+        var mappings = CdObjectMappings.fromOpeningAssets(usa.assets(), objects);
+        assertTamabbohFramesAndBounds(mappings);
+        assertTamabbohPriorRoots(usa, mappings);
+        byte[] detachedBody = body.bytes().copy(), detachedMissile = missile.bytes().copy();
+        Arrays.fill(detachedBody, (byte) 0xA5); Arrays.fill(detachedMissile, (byte) 0x5A);
+        assertArrayEquals(TAMABBOH_BODY_SOURCE, body.bytes().copy());
+        assertArrayEquals(TAMABBOH_MISSILE_SOURCE, missile.bytes().copy());
+        assertTamabbohFramesAndBounds(mappings);
+    }
+
+    private static void assertTamabbohFramesAndBounds(CdObjectMappings mappings) {
+        var frames = List.of(TAMABBOH_NORMAL_FRAMES, TAMABBOH_DAMAGED_FRAMES, TAMABBOH_MISSILE_FRAMES);
+        for (int root = 0; root < TAMABBOH_ROOTS.length; root++) {
+            int pointer = TAMABBOH_ROOTS[root];
+            for (int frame = 0; frame < frames.get(root).size(); frame++) {
+                var expected = frames.get(root).get(frame);
+                assertEquals(new CdObjectDrawQueue.FrameMapping(expected.size(), expected),
+                        mappings.resolve(pointer, false, frame), "literal Tamabboh root/frame " + root + "/" + frame);
+            }
+            for (int frame = frames.get(root).size(); frame <= 255; frame++) {
+                int absent = frame;
+                assertThrows(UnsupportedOperationException.class, () -> mappings.resolve(pointer, false, absent));
+            }
+            for (int invalid : new int[]{-1, 256})
+                assertThrows(IllegalArgumentException.class, () -> mappings.resolve(pointer, false, invalid));
+            for (int frame : new int[]{0, 255})
+                assertThrows(UnsupportedOperationException.class, () -> mappings.resolve(pointer, true, frame));
+            for (int foreign : new int[]{pointer | 0xFF000000, pointer | 0x80000000})
+                assertThrows(UnsupportedOperationException.class, () -> mappings.resolve(foreign, false, 0));
+        }
+        assertEquals(mappings.resolve(0x20B968, false, 1), mappings.resolve(0x20B97E, false, 1));
+        assertEquals(mappings.resolve(0x20B968, false, 2), mappings.resolve(0x20B97E, false, 2));
+        // Known source interiors, ends and script roots are not counted-table roots.
+        for (int pointer : new int[]{0x20B969, 0x20B96E, 0x20B97D, 0x20B97F, 0x20B984,
+                0x20B98A, 0x20B99A, 0x20B9A6, 0x20BA71, 0x20BA78, 0x20BA7E, 0x20BA84,
+                0x20BA8F, 0x20BA9A, 0x20B942, 0x20B94E, 0x20BA68}) {
+            assertThrows(UnsupportedOperationException.class, () -> mappings.resolve(pointer, false, 0));
+            assertThrows(UnsupportedOperationException.class, () -> mappings.resolve(pointer, true, 0));
+        }
+    }
+
+    private static void assertTamabbohPriorRoots(UsaR11a usa, CdObjectMappings mappings) {
+        // Reuse the inherited source-specific assertions, rather than inventing a universal image-root list.
+        assertMonitorPriorRoots(usa, mappings); assertMonitorTimeFrames(mappings);
+        assertHorizontalTunnelDoorFrames(mappings); assertPataBataFrames(mappings); assertAntonFrames(mappings);
+        var objects = usa.objects();
+        var visuals = List.of(objects.springDiagonal(), objects.boulder(), objects.spikes(), objects.checkpoint(),
+                objects.collapsePlatform1(), objects.collapsePlatform2(), objects.collapsePlatform3(),
+                objects.collapsePlatform4(), objects.platform());
+        // These exact roots are already joined in pinned J's fromOpeningAssets and its inherited tests.
+        int[] roots = {0x209BF0, 0x209654, 0x20C1F0, 0x23F120,
+                0x20C520, 0x20C5EC, 0x20C5AE, 0x20C7AC, 0x20CCC8};
+        for (int root = 0; root < roots.length; root++) {
+            int pointer = roots[root]; var visual = visuals.get(root);
+            for (int frame = 0; frame < visual.mappingFrames().size(); frame++) {
+                var expected = visual.mappingFrames().get(frame).pieces().stream().map(p ->
+                        new CdObjectDrawQueue.RawPiece(p.y(), p.sizeByte(), p.rawTileWord(), p.x())).toList();
+                assertEquals(new CdObjectDrawQueue.FrameMapping(expected.size(), expected), mappings.resolve(pointer, false, frame));
+            }
+            assertThrows(UnsupportedOperationException.class, () -> mappings.resolve(pointer, true, 0));
+        }
+        for (int item = 0; item < 8; item++)
+            assertEquals(new CdObjectDrawQueue.StaticMapping(monitorPieces(item).getFirst()),
+                    mappings.resolve(MONITOR_ITEM_POINTERS[item], true, 255));
+    }
+    // END TAMABBOH MAPPING JOIN R1
+
 }
 // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>

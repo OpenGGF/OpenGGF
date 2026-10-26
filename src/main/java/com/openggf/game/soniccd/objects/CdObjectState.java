@@ -46,6 +46,8 @@ public final class CdObjectState {
         CHECKPOINT_ACTIVE(0x2E), CHECKPOINT_BALL_ANGLE(0x34),
         // Platform/Main.asm:48-55,135-535: overlapping native byte aliases only.
         PLATFORM_PHASE(0x2A), PLATFORM_SUBSTATE(0x2B), PLATFORM_SAG(0x2C), PLATFORM_RANGE(0x2D), PLATFORM_TIMER(0x2E),
+        // Tamabboh/Main.asm:177,181,237: overlapping native direction byte only.
+        TAMABBOH_MISSILE_DIRECTION(0x3F),
         // Collapsing Platform/Main.asm:102,168,193,271,286: overlapping native bytes only.
         COLLAPSE_SOLID_MARKER(0x3E), COLLAPSE_SAVED_SOURCE_ID(0x3F);
         private final int offset;
@@ -83,6 +85,8 @@ public final class CdObjectState {
         ANTON_ANCHOR_X(0x2E),
         // Platform/Main.asm:34-36,100,136-535: overlapping original/anchor WORD aliases only.
         PLATFORM_INITIAL_Y(0x36), PLATFORM_ANCHOR_X(0x38), PLATFORM_ANCHOR_Y(0x3A),
+        // Tamabboh/Main.asm:37,82-85,165 and wrapper:16: overlapping native WORD storage only.
+        TAMABBOH_ANCHOR_X(0x2A), TAMABBOH_COOLDOWN(0x34),
         // Collapsing Platform/Main.asm:94,105,202,295: overlapping WORD countdown only.
         COLLAPSE_DELAY(0x2A);
         private final int offset;
@@ -100,6 +104,10 @@ public final class CdObjectState {
         CHECKPOINT_PARENT(0x30),
         // Anton/Main.asm:48,69,91: overlapping signed 16.16 motion long only.
         ANTON_X_DELTA(0x2A),
+        // Tamabboh/Main.asm:55-57,94,123,156,234-250,273-280: overlapping LONG storage only.
+        TAMABBOH_X_DELTA(0x2C), TAMABBOH_ANIMATION_SCRIPT(0x30),
+        TAMABBOH_MISSILE_X_DELTA(0x2A), TAMABBOH_MISSILE_Y_DELTA(0x2E),
+        TAMABBOH_MISSILE_X_ACCEL(0x32), TAMABBOH_MISSILE_Y_ACCEL(0x36),
         // Collapsing Platform/Main.asm:115-117,184,282: overlapping signed 16.16 fall delta only.
         COLLAPSE_FALL_DELTA(0x2C);
         private final int offset;

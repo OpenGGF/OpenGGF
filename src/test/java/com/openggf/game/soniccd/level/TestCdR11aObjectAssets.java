@@ -165,7 +165,7 @@ class TestCdR11aObjectAssets {
 
     @Test
     void metadataNamesOriginalUsaFileRangesWithoutChangingTheExistingAssetEnumeration() {
-        assertEquals(54, CdR11aObjectAssets.Table.values().length);
+        assertEquals(59, CdR11aObjectAssets.Table.values().length);
         for (var table : CdR11aObjectAssets.Table.values()) {
             assertEquals(CdNativeFile.R11A, table.range().file());
             assertEquals(CdMmdImage.Domain.ORIGINAL_WORD_RAM, table.range().domain());
@@ -353,7 +353,7 @@ class TestCdR11aObjectAssets {
         assertEquals(0x23A0, CdR11aObjectAssets.decodeTileWord(raw, 0, 0));
         assertEquals(0x4334, CdR11aObjectAssets.decodeTileWord(raw, 5, 0));
         for (int selector = 1; selector < 18; selector++) {
-            if (selector == 1 || selector == 2 || selector == 5 || selector == 0xA || selector == 0xB || selector == 0xC || selector == 0xF) { continue; }
+            if (selector == 1 || selector == 2 || selector == 4 || selector == 5 || selector == 0xA || selector == 0xB || selector == 0xC || selector == 0xF) { continue; }
             int unreviewed = selector;
             assertThrows(UnsupportedOperationException.class, () -> CdR11aObjectAssets.decodeTileWord(raw, unreviewed, 0));
         }
@@ -775,7 +775,7 @@ class TestCdR11aObjectAssets {
         var table = CdR11aObjectAssets.Table.TUNNEL_DOOR_VERTICAL_MAPPINGS;
         assertEquals(31, table.ordinal(), "append after all 31 existing tables");
         assertEquals(table, CdR11aObjectAssets.Table.values()[31]);
-        assertEquals(54, CdR11aObjectAssets.Table.values().length);
+        assertEquals(59, CdR11aObjectAssets.Table.values().length);
         assertEquals("MapSpr_FlapDoorV", table.nativeLabel());
         assertEquals(new CdR11aProfile.FileRange(CdNativeFile.R11A,
                 CdMmdImage.Domain.ORIGINAL_WORD_RAM, 0xCE9A, 28), table.range());
@@ -881,7 +881,7 @@ class TestCdR11aObjectAssets {
         assertEquals(0x4334, CdR11aObjectAssets.decodeTileWord(raw, 5, 0));
         assertEquals(0x8328, CdR11aObjectAssets.decodeTileWord(raw, 0xC, 0));
         for (int selector = 0; selector <= 0x7FFF; selector++) {
-            if (selector == 0 || selector == 1 || selector == 2 || selector == 5 || selector == 0xA || selector == 0xB || selector == 0xC || selector == 0xF) { continue; }
+            if (selector == 0 || selector == 1 || selector == 2 || selector == 4 || selector == 5 || selector == 0xA || selector == 0xB || selector == 0xC || selector == 0xF) { continue; }
             int unsupported = selector;
             assertThrows(UnsupportedOperationException.class,
                     () -> CdR11aObjectAssets.decodeTileWord(raw, unsupported, 0));
@@ -977,7 +977,7 @@ class TestCdR11aObjectAssets {
     void monitorTimeAppendsTwoUsaTablesAndPreservesEveryPriorOrdinal() throws Exception {
         var scripts = CdR11aObjectAssets.Table.MONITOR_TIME_ANIMATIONS;
         var maps = CdR11aObjectAssets.Table.MONITOR_TIME_MAPPINGS;
-        assertEquals(54, CdR11aObjectAssets.Table.values().length);
+        assertEquals(59, CdR11aObjectAssets.Table.values().length);
         assertEquals(32, scripts.ordinal());
         assertEquals(33, maps.ordinal());
         assertEquals(List.of("Ani_Monitor", "MapSpr_MonitorTime"), List.of(scripts.nativeLabel(), maps.nativeLabel()));
@@ -1183,7 +1183,7 @@ class TestCdR11aObjectAssets {
     void horizontalTunnelDoorAppendsTwoUsaTablesWithoutAnotherArtSourceOrBank() throws Exception {
         var scripts = CdR11aObjectAssets.Table.TUNNEL_DOOR_ANIMATIONS;
         var maps = CdR11aObjectAssets.Table.TUNNEL_DOOR_MAPPINGS;
-        assertEquals(54, CdR11aObjectAssets.Table.values().length);
+        assertEquals(59, CdR11aObjectAssets.Table.values().length);
         assertEquals(34, scripts.ordinal());
         assertEquals(35, maps.ordinal());
         assertEquals(List.of("Ani_TunnelDoor", "MapSpr_TunnelDoor"), List.of(scripts.nativeLabel(), maps.nativeLabel()));
@@ -1362,7 +1362,7 @@ class TestCdR11aObjectAssets {
         var tables = List.of(CdR11aObjectAssets.Table.PATA_BATA_ANIMATIONS,
                 CdR11aObjectAssets.Table.PATA_BATA_NORMAL_MAPPINGS,
                 CdR11aObjectAssets.Table.PATA_BATA_DAMAGED_MAPPINGS);
-        assertEquals(54, CdR11aObjectAssets.Table.values().length);
+        assertEquals(59, CdR11aObjectAssets.Table.values().length);
         assertEquals(tables, Arrays.stream(CdR11aObjectAssets.Table.values()).skip(36).limit(3).toList());
         assertEquals(List.of(36, 37, 38), tables.stream().map(Enum::ordinal).toList());
         assertEquals(List.of("Ani_PataBata", "MapSpr_PataBata1", "MapSpr_PataBata2"),
@@ -1525,7 +1525,7 @@ class TestCdR11aObjectAssets {
         for (int subtype : new int[]{-1, 256, Integer.MAX_VALUE}) {
             assertThrows(IllegalArgumentException.class, () -> CdR11aObjectAssets.decodeTileWord(ids, 1, subtype));
         }
-        for (int selector : new int[]{3, 4, 6, 17, 18, 0x7FFF}) {
+        for (int selector : new int[]{3, 6, 17, 18, 0x7FFF}) {
             assertThrows(UnsupportedOperationException.class, () -> CdR11aObjectAssets.decodeTileWord(ids, selector, 0));
         }
         for (int target : new int[]{0, 34, 37, 74, 0x8000, 0xFFFF}) {
@@ -1581,7 +1581,7 @@ class TestCdR11aObjectAssets {
         assertEquals(CdAssetBytes.class, source.getMethod("readerBytes").getReturnType());
         assertEquals(int.class, source.getMethod("tileCount").getReturnType());
         // Structure only: no reflective construction of an asserted authenticated owner or source bank.
-        assertEquals(54, CdR11aObjectAssets.Table.values().length);
+        assertEquals(59, CdR11aObjectAssets.Table.values().length);
     }
 
     @Test
@@ -1628,7 +1628,7 @@ class TestCdR11aObjectAssets {
     void boulderAppendsOneExactUsaMappingAndOnlyOnePublicVisualAccessor() throws Exception {
         var table = CdR11aObjectAssets.Table.BOULDER_MAPPINGS;
         assertEquals(39, table.ordinal());
-        assertEquals(54, CdR11aObjectAssets.Table.values().length);
+        assertEquals(59, CdR11aObjectAssets.Table.values().length);
         assertEquals("MapSpr_Boulder", table.nativeLabel());
         assertEquals(new CdR11aProfile.FileRange(CdNativeFile.R11A,
                 CdMmdImage.Domain.ORIGINAL_WORD_RAM, 0x9654, 14), table.range());
@@ -1724,7 +1724,7 @@ class TestCdR11aObjectAssets {
                     () -> CdR11aObjectAssets.decodeTileWord(ids, 0xB, unsupported));
         }
         for (int selector = 0; selector <= 0x7FFF; selector++) {
-            if (selector == 0 || selector == 1 || selector == 2 || selector == 5 || selector == 0xA || selector == 0xB || selector == 0xC || selector == 0xF) { continue; }
+            if (selector == 0 || selector == 1 || selector == 2 || selector == 4 || selector == 5 || selector == 0xA || selector == 0xB || selector == 0xC || selector == 0xF) { continue; }
             int unsupported = selector;
             assertThrows(UnsupportedOperationException.class,
                     () -> CdR11aObjectAssets.decodeTileWord(ids, unsupported, 0));
@@ -1763,7 +1763,7 @@ class TestCdR11aObjectAssets {
         assertEquals(CdObjectVisualAssets.class, getter.getReturnType());
         assertTrue(Modifier.isSynchronized(getter.getModifiers()));
         assertEquals(0, getter.getExceptionTypes().length);
-        assertEquals(54, CdR11aObjectAssets.Table.values().length);
+        assertEquals(59, CdR11aObjectAssets.Table.values().length);
         assertEquals(200, CdR11aObjectAssets.Table.SPRING_MAPPINGS.range().length());
         assertEquals(14, CdR11aObjectAssets.Table.SPRING_ANIMATIONS.range().length());
         assertTrue(Arrays.stream(CdR11aObjectAssets.class.getDeclaredClasses())
@@ -1884,7 +1884,7 @@ class TestCdR11aObjectAssets {
     @Test
     void spikesAppendsOneUsaTableAndOnlyALazyStaticVisualAccessor() throws Exception {
         var table = CdR11aObjectAssets.Table.SPIKES_MAPPINGS;
-        assertEquals(40, table.ordinal()); assertEquals(54, CdR11aObjectAssets.Table.values().length);
+        assertEquals(40, table.ordinal()); assertEquals(59, CdR11aObjectAssets.Table.values().length);
         assertEquals("MapSpr_Spikes", table.nativeLabel());
         assertEquals(new CdR11aProfile.FileRange(CdNativeFile.R11A,
                 CdMmdImage.Domain.ORIGINAL_WORD_RAM, 0xC1F0, 24), table.range());
@@ -2004,7 +2004,7 @@ class TestCdR11aObjectAssets {
             assertThrows(IllegalArgumentException.class, () -> CdR11aObjectAssets.decodeTileWord(ids,bad,0));
         }
         for (int selector = 0; selector <= 0x7FFF; selector++) {
-            if (selector==0 || selector==1 || selector==2 || selector==5 || selector==0xA || selector==0xB || selector==0xC || selector==0xF) { continue; }
+            if (selector==0 || selector==1 || selector==2 || selector==4 || selector==5 || selector==0xA || selector==0xB || selector==0xC || selector==0xF) { continue; }
             int unsupported = selector;
             assertThrows(UnsupportedOperationException.class, () -> CdR11aObjectAssets.decodeTileWord(ids,unsupported,0));
         }
@@ -2043,7 +2043,7 @@ class TestCdR11aObjectAssets {
     /** Checkpoint tables use the actual USA $23F120 root, not historical $20 labels. */
     @Test
     void checkpointAppendsTwoExactTablesAndOneLazyAccessorWithoutANewOwner() throws Exception {
-        assertEquals(54, CdR11aObjectAssets.Table.values().length);
+        assertEquals(59, CdR11aObjectAssets.Table.values().length);
         var animations = CdR11aObjectAssets.Table.CHECKPOINT_ANIMATIONS;
         var mappings = CdR11aObjectAssets.Table.CHECKPOINT_MAPPINGS;
         assertEquals(41, animations.ordinal()); assertEquals(42, mappings.ordinal());
@@ -2225,7 +2225,7 @@ class TestCdR11aObjectAssets {
     void antonAppendsTwoExactUsaTablesAndOneLazyArityZeroVisualOnly() throws Exception {
         var animations = CdR11aObjectAssets.Table.ANTON_ANIMATIONS;
         var mappings = CdR11aObjectAssets.Table.ANTON_MAPPINGS;
-        assertEquals(54, CdR11aObjectAssets.Table.values().length);
+        assertEquals(59, CdR11aObjectAssets.Table.values().length);
         assertEquals(43, animations.ordinal()); assertEquals(44, mappings.ordinal());
         assertEquals(List.of(animations,mappings),
                 Arrays.stream(CdR11aObjectAssets.Table.values()).skip(43).limit(2).toList());
@@ -2397,7 +2397,7 @@ class TestCdR11aObjectAssets {
             assertThrows(UnsupportedOperationException.class, () -> CdR11aObjectAssets.decodeTileWord(ids,2,unsupported));
         }
         for (int selector = 0; selector <= 0x7FFF; selector++) {
-            if (selector==0 || selector==1 || selector==2 || selector==5 || selector==0xA
+            if (selector==0 || selector==1 || selector==2 || selector==4 || selector==5 || selector==0xA
                     || selector==0xB || selector==0xC || selector==0xF) { continue; }
             int unsupported = selector;
             assertThrows(UnsupportedOperationException.class, () -> CdR11aObjectAssets.decodeTileWord(ids,unsupported,0));
@@ -2481,7 +2481,7 @@ class TestCdR11aObjectAssets {
 
     @Test
     void collapsePlatformAppendsSixLiteralRangesAfterTheUnchangedFortyFiveRowManifest() {
-        assertEquals(54,CdR11aObjectAssets.Table.values().length);
+        assertEquals(59,CdR11aObjectAssets.Table.values().length);
         assertEquals(COLLAPSE_MANIFEST,Arrays.stream(CdR11aObjectAssets.Table.values())
                 .map(t -> t.name()+"|"+t.nativeLabel()+"|"+Integer.toHexString(t.range().fileOffset())
                         +"|"+t.range().length()).toList());
@@ -2709,7 +2709,12 @@ class TestCdR11aObjectAssets {
             "COLLAPSE_PLATFORM_MAPPINGS_4|MapSpr_CollapsePlatform4|c7ac|158",
             "PLATFORM_MAPPINGS|MapSpr_Platform|ccc8|132",
             "PLATFORM_WIDTHS|ObjPlatform_Widths|c940|4",
-            "PLATFORM_RANGES|ObjPlatform_Ranges|c944|4");
+            "PLATFORM_RANGES|ObjPlatform_Ranges|c944|4",
+            "TAMABBOH_NORMAL_ANIMATIONS|Ani_Tamabboh1|b942|12",
+            "TAMABBOH_DAMAGED_ANIMATIONS|Ani_Tamabboh2|b94e|26",
+            "TAMABBOH_MAPPINGS|MapSpr_Tamabboh1/MapSpr_Tamabboh2|b968|62",
+            "TAMABBOH_MISSILE_ANIMATIONS|Ani_TamabbohMissile|ba68|8",
+            "TAMABBOH_MISSILE_MAPPINGS|MapSpr_TamabbohMissile|ba70|42");
     // Plain pinned-N dc/include/EVEN expansion, independently compared with original media.
     private static final List<CdR11aObjectAssets.Table> COLLAPSE_TABLES = List.of(
             CdR11aObjectAssets.Table.COLLAPSE_PLATFORM_MAPPINGS_1,
@@ -2741,8 +2746,8 @@ class TestCdR11aObjectAssets {
 
     @Test
     void platformAppendsThreeAuthenticatedRangesAfterTheUnchangedFiftyOneRows() {
-        assertEquals(54,CdR11aObjectAssets.Table.values().length);
-        assertEquals(PLATFORM21_TABLES,Arrays.stream(CdR11aObjectAssets.Table.values()).skip(51).toList());
+        assertEquals(59,CdR11aObjectAssets.Table.values().length);
+        assertEquals(PLATFORM21_TABLES,Arrays.stream(CdR11aObjectAssets.Table.values()).skip(51).limit(3).toList());
         assertEquals(COLLAPSE_MANIFEST.subList(0,51),Arrays.stream(CdR11aObjectAssets.Table.values()).limit(51)
                 .map(t -> t.name()+"|"+t.nativeLabel()+"|"+Integer.toHexString(t.range().fileOffset())
                         +"|"+t.range().length()).toList());
@@ -2985,7 +2990,12 @@ class TestCdR11aObjectAssets {
                 "COLLAPSE_PLATFORM_MAPPINGS_4|MapSpr_CollapsePlatform4|51116|158",
                 "PLATFORM_MAPPINGS|MapSpr_Platform|52424|132",
                 "PLATFORM_WIDTHS|ObjPlatform_Widths|51520|4",
-                "PLATFORM_RANGES|ObjPlatform_Ranges|51524|4"),
+                "PLATFORM_RANGES|ObjPlatform_Ranges|51524|4",
+                "TAMABBOH_NORMAL_ANIMATIONS|Ani_Tamabboh1|47426|12",
+                "TAMABBOH_DAMAGED_ANIMATIONS|Ani_Tamabboh2|47438|26",
+                "TAMABBOH_MAPPINGS|MapSpr_Tamabboh1/MapSpr_Tamabboh2|47464|62",
+                "TAMABBOH_MISSILE_ANIMATIONS|Ani_TamabbohMissile|47720|8",
+                "TAMABBOH_MISSILE_MAPPINGS|MapSpr_TamabbohMissile|47728|42"),
                 Arrays.stream(CdR11aObjectAssets.Table.values())
                         .map(table -> table.name() + "|" + table.nativeLabel() + "|"
                                 + table.range().fileOffset() + "|" + table.range().length()).toList());
@@ -3325,7 +3335,7 @@ class TestCdR11aObjectAssets {
                 assertThrows(IllegalArgumentException.class, () -> CdR11aLoadPlan.decodePlcBody(profile, unaligned));
             }
         }
-        assertEquals(54, CdR11aObjectAssets.Table.values().length);
+        assertEquals(59, CdR11aObjectAssets.Table.values().length);
         assertEquals(166, QUEUED_PLC_SOURCE_BYTES[2]);
         assertEquals(167, QUEUED_PLC_JAVA_BYTES[2]);
         assertEquals(167, QUEUED_PLC_NATIVE_BYTES[2]);
@@ -3469,6 +3479,299 @@ class TestCdR11aObjectAssets {
     }
 
     // End queued PLC10 sources14..17 R1.
+
+
+    // Tamabboh source-only asset packet: frozen before its production mirror; execution is Root-owned.
+    static final List<CdR11aObjectAssets.Table> TAMABBOH_TABLES = List.of(
+            CdR11aObjectAssets.Table.TAMABBOH_NORMAL_ANIMATIONS,
+            CdR11aObjectAssets.Table.TAMABBOH_DAMAGED_ANIMATIONS,
+            CdR11aObjectAssets.Table.TAMABBOH_MAPPINGS,
+            CdR11aObjectAssets.Table.TAMABBOH_MISSILE_ANIMATIONS,
+            CdR11aObjectAssets.Table.TAMABBOH_MISSILE_MAPPINGS);
+    static final String[] TAMABBOH_HEX = {
+            "000400081d0001ff3b02fc00",
+            "000400160500010001000100010001000100010001fc0b02fc00",
+            "00060022003203f10d0000f0010c0008f00908000cf80006000c001c01f00f002bf003f20d0000f0020c000ff00a080013f802f0080016f7f80e0019ef00",
+            "00020200010203ff",
+            "0008000e0014001f01fc000025fc01fc000026fc02f8040027f800041027f802f8040029f800041029f8"};
+    static final String[] TAMABBOH_SHA256 = {
+            "ad1878521436e3e2ad03488f523fb96cda2ce64229265514a4bb6972a7e50474",
+            "09a26ea9ee38de8e1799d02b191d160beac335155b9d6bae6c3d1ed678577f84",
+            "e30906f183ff4995fb9bfb0661be6003d3cd0431caa10b9d784ecf64a5b36847",
+            "764bc1e99533aeb906c6b6ecf4627f5fc11904307d477b1827a49776f41c57a5",
+            "10cba8d961bb868885a64ddb360f0182e18b4b5256eebac3665363c984e992cb"};
+    static final String TAMABBOH_TILE_IDS_HEX =
+            "002400260028002c002e0030003a0034003800360032003c003e00400042004400460048"
+            + "23a023b024092370200024284334032000004000400004090374832800000000049003e40000";
+
+    /** Independently expanded pinned-N full includes, never extracted media or manufactured art. */
+    static byte[] tamabbohLiteral(int row) { return java.util.HexFormat.of().parseHex(TAMABBOH_HEX[row]); }
+
+    private static CdObjectVisualAssets tamabbohComponent(int which) {
+        return switch (which) {
+            case 0 -> CdObjectVisualAssets.decode(tamabbohLiteral(2),3,tamabbohLiteral(0),2,59,
+                    java.util.Map.of(0,12));
+            case 1 -> CdObjectVisualAssets.decodeIndexed(tamabbohLiteral(2),22,3,28,62,
+                    tamabbohLiteral(1),2,59);
+            case 2 -> CdObjectVisualAssets.decode(tamabbohLiteral(4),4,tamabbohLiteral(3),1,59);
+            default -> throw new IllegalArgumentException("Tamabboh component index");
+        };
+    }
+
+    @Test
+    void tamabbohAppendsFiveCompleteIncludesAfterEveryExistingTableWithoutNewArtMetadata() {
+        assertEquals(59,CdR11aObjectAssets.Table.values().length);
+        assertEquals(TAMABBOH_TABLES,Arrays.stream(CdR11aObjectAssets.Table.values()).skip(54).toList());
+        assertEquals(COLLAPSE_MANIFEST,Arrays.stream(CdR11aObjectAssets.Table.values())
+                .map(t -> t.name()+"|"+t.nativeLabel()+"|"+Integer.toHexString(t.range().fileOffset())
+                        +"|"+t.range().length()).toList());
+        String[] labels = {"Ani_Tamabboh1","Ani_Tamabboh2","MapSpr_Tamabboh1/MapSpr_Tamabboh2",
+                "Ani_TamabbohMissile","MapSpr_TamabbohMissile"};
+        int[] offsets = {0xB942,0xB94E,0xB968,0xBA68,0xBA70}, lengths = {12,26,62,8,42};
+        for (int i = 0; i < 5; i++) {
+            var table = TAMABBOH_TABLES.get(i); var range = table.range();
+            assertEquals(54+i,table.ordinal()); assertEquals(labels[i],table.nativeLabel());
+            assertEquals(CdNativeFile.R11A,range.file()); assertEquals(CdMmdImage.Domain.ORIGINAL_WORD_RAM,range.domain());
+            assertEquals(offsets[i],range.fileOffset()); assertEquals(lengths[i],range.length());
+            assertEquals(0x200000+offsets[i],range.nativeAddress());
+            assertEquals(lengths[i],tamabbohLiteral(i).length);
+            assertEquals(TAMABBOH_SHA256[i],CdR11aProfile.sha256(tamabbohLiteral(i)));
+            for (var other : CdR11aObjectAssets.Table.values()) {
+                if (other == table) { continue; }
+                assertTrue(range.endExclusive() <= other.range().fileOffset()
+                        || other.range().endExclusive() <= range.fileOffset(),other.name());
+            }
+        }
+        for (var variant : CdReleaseVariant.values()) {
+            assertEquals(new CdR11aProfile.FileRange(CdNativeFile.R11A,CdMmdImage.Domain.ORIGINAL_WORD_RAM,0x37950,1142),
+                    CdR11aProfile.forStage(variant,CdStageKey.parse("R11A")).range(CdR11aAsset.ART_TAMABBOH));
+        }
+        assertEquals(CdR11aAsset.Encoding.NEMESIS,CdR11aAsset.ART_TAMABBOH.encodingForReviewedConsumer());
+    }
+
+    @Test
+    void tamabbohNormalRetainsTheOtherRootAndDamagedBodyAsExactlyTwelveUnconsumedBytes() {
+        var normal = tamabbohComponent(0); verifyTamabbohVisual(normal,0);
+        assertArrayEquals(Arrays.copyOfRange(tamabbohLiteral(2),22,34),
+                normal.mappings().slice(22,12).copy());
+        assertArrayEquals(java.util.HexFormat.of().parseHex("0006000c001c01f00f002bf0"),
+                normal.mappings().slice(22,12).copy());
+        assertEquals(16,normal.mappingFrames().getFirst().bytes().length());
+        assertThrows(IllegalArgumentException.class,() -> CdObjectVisualAssets.decode(
+                tamabbohLiteral(2),3,tamabbohLiteral(0),2,59));
+        for (int tail : new int[]{0,6,11,13}) {
+            assertThrows(IllegalArgumentException.class,() -> CdObjectVisualAssets.decode(
+                    tamabbohLiteral(2),3,tamabbohLiteral(0),2,59,java.util.Map.of(0,tail)));
+        }
+        assertThrows(IllegalArgumentException.class,() -> CdObjectVisualAssets.decodeIndexed(
+                tamabbohLiteral(2),0,3,6,62,tamabbohLiteral(0),2,59));
+    }
+
+    @Test
+    void tamabbohDamagedUsesTheNativePlusTwentyTwoRootAndSharesBothLaterCountedBodies() {
+        var normal = tamabbohComponent(0); var damaged = tamabbohComponent(1);
+        verifyTamabbohVisual(damaged,1);
+        assertEquals(22,damaged.mappingTableOffset());
+        assertEquals(28,damaged.mappingTableOffset()+damaged.mappingFrames().getFirst().relativeOffset());
+        assertEquals(59,damaged.mappingFrames().getFirst().pieces().getFirst().tileOffset()
+                +damaged.mappingFrames().getFirst().pieces().getFirst().tileCount());
+        for (int frame = 1; frame < 3; frame++) {
+            assertEquals(normal.mappingFrames().get(frame).pieces(),damaged.mappingFrames().get(frame).pieces());
+            assertArrayEquals(normal.mappingFrames().get(frame).bytes().copy(),
+                    damaged.mappingFrames().get(frame).bytes().copy());
+        }
+        assertEquals(0,damaged.mappings().unsignedByte(61));
+        assertEquals(11,damaged.mappingFrames().get(2).bytes().length());
+        assertThrows(IllegalArgumentException.class,() -> CdObjectVisualAssets.decodeIndexed(
+                tamabbohLiteral(2),22,3,28,62,tamabbohLiteral(1),2,58));
+    }
+
+    @Test
+    void tamabbohMissileKeepsAllFourFramesRealFlipBitsAndItsOnlyFullScript() {
+        var missile = tamabbohComponent(2); verifyTamabbohVisual(missile,2);
+        assertEquals(0x1027,missile.mappingFrames().get(2).pieces().get(1).rawTileWord());
+        assertEquals(0x1029,missile.mappingFrames().get(3).pieces().get(1).rawTileWord());
+        assertEquals(43,missile.mappingFrames().get(3).pieces().getFirst().tileOffset()
+                +missile.mappingFrames().get(3).pieces().getFirst().tileCount());
+        assertThrows(IllegalArgumentException.class,() -> CdObjectVisualAssets.decode(
+                tamabbohLiteral(4),4,tamabbohLiteral(3),1,42));
+        byte[] invalidScript = tamabbohLiteral(3); invalidScript[6] = 4;
+        assertThrows(IllegalArgumentException.class,() -> CdObjectVisualAssets.decode(
+                tamabbohLiteral(4),4,invalidScript,1,59));
+    }
+
+    @Test
+    void tamabbohFormatsRejectWrongRootsTruncationInvalidPieceWidthAndArtOverrun() {
+        for (int root : new int[]{-2,1,20,24,62}) {
+            assertThrows(IllegalArgumentException.class,() -> CdObjectVisualAssets.decodeIndexed(
+                    tamabbohLiteral(2),root,3,28,62,tamabbohLiteral(1),2,59));
+        }
+        for (int target : new int[]{0,22,26,62,0x8000,0xFFFF}) {
+            byte[] bad = tamabbohLiteral(2); ByteBuffer.wrap(bad).putShort(22,(short) target);
+            assertThrows(IllegalArgumentException.class,() -> CdObjectVisualAssets.decodeIndexed(
+                    bad,22,3,28,62,tamabbohLiteral(1),2,59));
+        }
+        assertThrows(IllegalArgumentException.class,() -> CdObjectVisualAssets.decode(
+                Arrays.copyOf(tamabbohLiteral(2),60),3,tamabbohLiteral(0),2,59,java.util.Map.of(0,12)));
+        assertThrows(IllegalArgumentException.class,() -> CdObjectVisualAssets.decode(
+                Arrays.copyOf(tamabbohLiteral(4),41),4,tamabbohLiteral(3),1,59));
+        byte[] wrongWidth = tamabbohLiteral(4); wrongWidth[10] = 16;
+        assertThrows(IllegalArgumentException.class,() -> CdObjectVisualAssets.decode(
+                wrongWidth,4,tamabbohLiteral(3),1,59));
+        byte[] pastArt = tamabbohLiteral(2); ByteBuffer.wrap(pastArt).putShort(31,(short) 44);
+        assertThrows(IllegalArgumentException.class,() -> CdObjectVisualAssets.decodeIndexed(
+                pastArt,22,3,28,62,tamabbohLiteral(1),2,59));
+        assertThrows(IllegalArgumentException.class,() -> CdObjectVisualAssets.decode(
+                tamabbohLiteral(2),3,tamabbohLiteral(0),2,36,java.util.Map.of(0,12)));
+    }
+
+    @Test
+    void tamabbohTileSelectorAdmitsOnlyFourZeroAndPreservesEveryOtherConsumerAndNegativePair() {
+        byte[] raw = java.util.HexFormat.of().parseHex(TAMABBOH_TILE_IDS_HEX);
+        assertEquals(74,raw.length); assertEquals(46,ByteBuffer.wrap(raw).getShort(8));
+        assertEquals(0x2428,CdR11aObjectAssets.decodeTileWord(raw,4,0));
+        assertEquals(0x8500,(CdR11aObjectAssets.decodeTileWord(raw,4,0)&0x7FF)*32);
+        for (int[] old : new int[][]{{0,0x23A0},{1,0x23B0},{2,0x2409},{5,0x4334},
+                {0xA,0x320},{0xB,0x374},{0xC,0x8328},{0xF,0x490}}) {
+            assertEquals(old[1],CdR11aObjectAssets.decodeTileWord(raw,old[0],0));
+        }
+        assertEquals(0x2370,CdR11aObjectAssets.decodeTileWord(raw,2,1));
+        for (int subtype2 = 1; subtype2 <= 255; subtype2++) {
+            int rejected = subtype2;
+            assertThrows(UnsupportedOperationException.class,() -> CdR11aObjectAssets.decodeTileWord(raw,4,rejected));
+        }
+        for (int selector = 0; selector <= 0x7FFF; selector++) {
+            if (selector==0 || selector==1 || selector==2 || selector==4 || selector==5 || selector==0xA
+                    || selector==0xB || selector==0xC || selector==0xF) { continue; }
+            int rejected = selector;
+            assertThrows(UnsupportedOperationException.class,() -> CdR11aObjectAssets.decodeTileWord(raw,rejected,0));
+        }
+        for (int bad : new int[]{-1,256,Integer.MAX_VALUE}) {
+            assertThrows(IllegalArgumentException.class,() -> CdR11aObjectAssets.decodeTileWord(raw,4,bad));
+        }
+        for (int bad : new int[]{-1,0x8000,Integer.MAX_VALUE}) {
+            assertThrows(IllegalArgumentException.class,() -> CdR11aObjectAssets.decodeTileWord(raw,bad,0));
+        }
+        for (int length : new int[]{0,73,75}) {
+            assertThrows(IllegalArgumentException.class,() -> CdR11aObjectAssets.decodeTileWord(
+                    Arrays.copyOf(raw,length),4,0));
+        }
+        for (int target : new int[]{0,34,37,74,0x8000,0xFFFF}) {
+            byte[] bad = raw.clone(); ByteBuffer.wrap(bad).putShort(8,(short) target);
+            assertThrows(IllegalArgumentException.class,() -> CdR11aObjectAssets.decodeTileWord(bad,4,0));
+        }
+    }
+
+    @Test
+    void tamabbohConstructedRangesStayDetachedAndCannotAuthenticateAnyRegionalOwner() throws Exception {
+        byte[] file = new byte[CdR11aProfile.FILE_BYTES];
+        ByteBuffer.wrap(file).putInt(8,0x200100).putInt(12,0x20010C).putInt(16,0x200112);
+        for (int i = 0; i < 5; i++) {
+            System.arraycopy(tamabbohLiteral(i),0,file,TAMABBOH_TABLES.get(i).range().fileOffset(),tamabbohLiteral(i).length);
+        }
+        var image = CdMmdImage.parse(file); Arrays.fill(file,(byte) 0);
+        for (int i = 0; i < 5; i++) {
+            var range = TAMABBOH_TABLES.get(i).range(); var bytes = range.read(image);
+            assertArrayEquals(tamabbohLiteral(i),bytes.copy());
+            assertEquals(TAMABBOH_SHA256[i],CdR11aProfile.sha256(bytes.copy()));
+            assertThrows(ReadOnlyBufferException.class,() -> bytes.buffer().put((byte) 1));
+            assertThrows(IndexOutOfBoundsException.class,() -> bytes.unsignedByte(range.length()));
+            byte[] detached = bytes.copy(); detached[0] ^= 1;
+            assertArrayEquals(tamabbohLiteral(i),range.read(image).copy());
+        }
+        for (var variant : CdReleaseVariant.values()) {
+            var profile = CdR11aProfile.forStage(variant,CdStageKey.parse("R11A"));
+            var asserted = new CdR11aAssets.Identity(variant,profile.stage(),profile.file(),profile.domain(),
+                    profile.expectedMmdSha256(),"raw source tables do not authenticate media");
+            if (variant == CdReleaseVariant.USA) {
+                assertThrows(IOException.class,() -> CdR11aObjectAssets.load(profile,asserted,image,null));
+            } else {
+                assertThrows(UnsupportedOperationException.class,() -> CdR11aObjectAssets.load(profile,asserted,image,null));
+            }
+        }
+        assertThrows(IllegalArgumentException.class,() -> new CdR11aProfile.FileRange(CdNativeFile.R11A,
+                CdMmdImage.Domain.RELOCATED_COPY,0xB968,62));
+    }
+
+    @Test
+    void tamabbohAddsOnlyThreeSynchronizedVisualGettersWithoutAnArtGetterOrNewSourceBank() throws Exception {
+        for (String name : List.of("tamabbohNormal","tamabbohDamaged","tamabbohMissile")) {
+            var method = CdR11aObjectAssets.class.getDeclaredMethod(name);
+            assertEquals(CdObjectVisualAssets.class,method.getReturnType()); assertEquals(0,method.getParameterCount());
+            assertTrue(Modifier.isPublic(method.getModifiers())); assertTrue(Modifier.isSynchronized(method.getModifiers()));
+            assertEquals(0,method.getExceptionTypes().length);
+            var field = CdR11aObjectAssets.class.getDeclaredField(name);
+            assertEquals(CdObjectVisualAssets.class,field.getType()); assertTrue(Modifier.isPrivate(field.getModifiers()));
+            assertFalse(Modifier.isStatic(field.getModifiers())); assertFalse(Modifier.isFinal(field.getModifiers()));
+        }
+        assertThrows(NoSuchMethodException.class,() -> CdR11aObjectAssets.class.getDeclaredMethod("tamabbohArtBank"));
+        assertThrows(NoSuchFieldException.class,() -> CdR11aObjectAssets.class.getDeclaredField("tamabbohArtBank"));
+    }
+
+    static void verifyTamabbohVisual(CdObjectVisualAssets visual,int which) {
+        int mapRow = which == 2 ? 4 : 2, scriptRow = which == 0 ? 0 : which == 1 ? 1 : 3;
+        assertArrayEquals(tamabbohLiteral(mapRow),visual.mappings().copy());
+        assertArrayEquals(tamabbohLiteral(scriptRow),visual.animationTable().copy());
+        assertEquals(TAMABBOH_SHA256[mapRow],CdR11aProfile.sha256(visual.mappings().copy()));
+        assertEquals(TAMABBOH_SHA256[scriptRow],CdR11aProfile.sha256(visual.animationTable().copy()));
+        assertEquals(which == 1 ? 22 : 0,visual.mappingTableOffset());
+        List<Integer> relative = which == 0 ? List.of(6,34,50) : which == 1 ? List.of(6,12,28) : List.of(8,14,20,31);
+        assertEquals(relative,visual.mappingFrames().stream().map(CdObjectVisualAssets.MappingFrame::relativeOffset).toList());
+        List<List<CdObjectVisualAssets.Piece>> expected;
+        var body1 = List.of(new CdObjectVisualAssets.Piece(-14,13,0,-16),
+                new CdObjectVisualAssets.Piece(2,12,15,-16),new CdObjectVisualAssets.Piece(10,8,19,-8));
+        var body2 = List.of(new CdObjectVisualAssets.Piece(-16,8,22,-9),new CdObjectVisualAssets.Piece(-8,14,25,-17));
+        if (which == 0) {
+            expected = List.of(List.of(new CdObjectVisualAssets.Piece(-15,13,0,-16),
+                    new CdObjectVisualAssets.Piece(1,12,8,-16),new CdObjectVisualAssets.Piece(9,8,12,-8)),body1,body2);
+        } else if (which == 1) {
+            expected = List.of(List.of(new CdObjectVisualAssets.Piece(-16,15,43,-16)),body1,body2);
+        } else {
+            expected = List.of(List.of(new CdObjectVisualAssets.Piece(-4,0,37,-4)),
+                    List.of(new CdObjectVisualAssets.Piece(-4,0,38,-4)),
+                    List.of(new CdObjectVisualAssets.Piece(-8,4,39,-8),new CdObjectVisualAssets.Piece(0,4,0x1027,-8)),
+                    List.of(new CdObjectVisualAssets.Piece(-8,4,41,-8),new CdObjectVisualAssets.Piece(0,4,0x1029,-8)));
+        }
+        int maximum = 0;
+        for (int i = 0; i < expected.size(); i++) {
+            var frame = visual.mappingFrames().get(i); assertEquals(expected.get(i),frame.pieces());
+            int consumed = 1+5*expected.get(i).size(); assertEquals(consumed,frame.bytes().length());
+            assertArrayEquals(Arrays.copyOfRange(tamabbohLiteral(mapRow),
+                    visual.mappingTableOffset()+relative.get(i),visual.mappingTableOffset()+relative.get(i)+consumed),
+                    frame.bytes().copy());
+            assertThrows(UnsupportedOperationException.class,frame.pieces()::clear);
+            assertThrows(ReadOnlyBufferException.class,() -> frame.bytes().buffer().put((byte) 1));
+            for (var piece : frame.pieces()) {
+                assertTrue(piece.tileOffset()+piece.tileCount() <= 59);
+                maximum = Math.max(maximum,piece.tileOffset()+piece.tileCount());
+            }
+        }
+        assertEquals(which == 0 ? 37 : which == 1 ? 59 : 43,maximum);
+        int[] offsets = which == 0 ? new int[]{4,8} : which == 1 ? new int[]{4,22} : new int[]{2};
+        int[] delays = which == 0 ? new int[]{29,59} : which == 1 ? new int[]{5,11} : new int[]{2};
+        assertEquals(offsets.length,visual.animations().size());
+        for (int i = 0; i < offsets.length; i++) {
+            var script = visual.animations().get(i); assertEquals(offsets[i],script.relativeOffset());
+            assertEquals(delays[i],script.delay());
+            List<Integer> frames = which == 2 ? List.of(0,1,2,3) : i == 1 ? List.of(2) : which == 0
+                    ? List.of(0,1) : java.util.stream.IntStream.range(0,16).map(v -> v&1).boxed().toList();
+            assertEquals(frames,script.frameBytes());
+            assertEquals(which == 2 || (which == 0 && i == 0) ? CdObjectVisualAssets.Terminal.LOOP_FF
+                    : CdObjectVisualAssets.Terminal.ADVANCE_ROUTINE_FC,script.terminal());
+            int end = i+1<offsets.length ? offsets[i+1] : tamabbohLiteral(scriptRow).length;
+            assertArrayEquals(Arrays.copyOfRange(tamabbohLiteral(scriptRow),offsets[i],end),script.bytes().copy());
+            assertThrows(UnsupportedOperationException.class,script.frameBytes()::clear);
+            assertThrows(ReadOnlyBufferException.class,() -> script.bytes().buffer().put((byte) 1));
+        }
+        assertThrows(UnsupportedOperationException.class,visual.mappingFrames()::clear);
+        assertThrows(UnsupportedOperationException.class,visual.animations()::clear);
+        assertThrows(ReadOnlyBufferException.class,() -> visual.mappings().buffer().put((byte) 1));
+        assertThrows(ReadOnlyBufferException.class,() -> visual.animationTable().buffer().put((byte) 1));
+        byte[] detachedMap = visual.mappings().copy(), detachedScript = visual.animationTable().copy();
+        detachedMap[0] ^= 1; detachedScript[0] ^= 1;
+        assertArrayEquals(tamabbohLiteral(mapRow),visual.mappings().copy());
+        assertArrayEquals(tamabbohLiteral(scriptRow),visual.animationTable().copy());
+    }
 
     // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>
 }

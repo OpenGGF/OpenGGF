@@ -1,3 +1,9 @@
+Sonic CD Tamabboh component update (2026-10-26): the partial matrix records
+110 body/missile cases and40 complete mapping cases, with authenticated visual
+views reusing the existing art cache. Runtime remains Source17, so the actual
+controller3222 boundary has not moved. Live publication, current440 pixels and
+World/route coverage remain open; these component checks certify no full act.
+
 Sonic CD queued-source update (2026-10-26): the partial matrix records actual
 Hole14 service and a Pata-Bata prefix through returned call3221, followed by
 an unimplemented Tamabboh at3222 after a legitimate VInt/body/spawn prefix.

@@ -95,7 +95,13 @@ public final class CdR11aObjectAssets {
         // Platform/Main.asm:37/40/43,51,55,85-86,559-561: actual USA LONG/PC-indexed operands.
         PLATFORM_MAPPINGS("MapSpr_Platform", 0xCCC8, 132),
         PLATFORM_WIDTHS("ObjPlatform_Widths", 0xC940, 4),
-        PLATFORM_RANGES("ObjPlatform_Ranges", 0xC944, 4);
+        PLATFORM_RANGES("ObjPlatform_Ranges", 0xC944, 4),
+        // Tamabboh/Main.asm:40-57,202-209,233,280-290: independently authenticated USA operands.
+        TAMABBOH_NORMAL_ANIMATIONS("Ani_Tamabboh1", 0xB942, 12),
+        TAMABBOH_DAMAGED_ANIMATIONS("Ani_Tamabboh2", 0xB94E, 26),
+        TAMABBOH_MAPPINGS("MapSpr_Tamabboh1/MapSpr_Tamabboh2", 0xB968, 62),
+        TAMABBOH_MISSILE_ANIMATIONS("Ani_TamabbohMissile", 0xBA68, 8),
+        TAMABBOH_MISSILE_MAPPINGS("MapSpr_TamabbohMissile", 0xBA70, 42);
 
         private final String nativeLabel;
         private final int offset;
@@ -364,6 +370,9 @@ public final class CdR11aObjectAssets {
     private CdObjectVisualAssets collapsePlatform3;
     private CdObjectVisualAssets collapsePlatform4;
     private CdObjectVisualAssets platform;
+    private CdObjectVisualAssets tamabbohNormal;
+    private CdObjectVisualAssets tamabbohDamaged;
+    private CdObjectVisualAssets tamabbohMissile;
 
     private CdR11aObjectAssets(CdR11aAssets.Identity identity, Map<Table, View> views, List<Delta> deltas,
                                 List<TouchSize> dimensions, CdObjectVisualAssets rings,
@@ -877,6 +886,38 @@ public final class CdR11aObjectAssets {
         return exact(input, 22, "ObjAnimal_BaseTileList").unsignedWord((act * 4 + timeZone) * 2);
     }
 
+    /**
+     * ObjTamabboh_Init (Tamabboh/Main.asm:40-57) selects the native root at include+0.
+     * Full Mappings.asm:1-60 retains the other root's six-byte index and damaged-only six-byte body
+     * between normal frames 0 and 1. Those twelve bytes remain raw, never counted normal pieces.
+     * This reads only the retained mapping/script tables; source ordinal 3 already owns Tamabboh art.
+     */
+    public synchronized CdObjectVisualAssets tamabbohNormal() {
+        if (tamabbohNormal == null) {
+            tamabbohNormal = CdObjectVisualAssets.decode(read(Table.TAMABBOH_MAPPINGS), 3,
+                    read(Table.TAMABBOH_NORMAL_ANIMATIONS), 2, 59, Map.of(0, 12));
+        }
+        return tamabbohNormal;
+    }
+
+    /** Native damaged root is full include+22 ($20B97E); both later bodies are shared with the normal root. */
+    public synchronized CdObjectVisualAssets tamabbohDamaged() {
+        if (tamabbohDamaged == null) {
+            tamabbohDamaged = CdObjectVisualAssets.decodeIndexed(read(Table.TAMABBOH_MAPPINGS), 22, 3, 28, 62,
+                    read(Table.TAMABBOH_DAMAGED_ANIMATIONS), 2, 59);
+        }
+        return tamabbohDamaged;
+    }
+
+    /** Tamabboh/Main.asm:226-234,280-289: four child frames and its one real FF script, using parent art. */
+    public synchronized CdObjectVisualAssets tamabbohMissile() {
+        if (tamabbohMissile == null) {
+            tamabbohMissile = CdObjectVisualAssets.decode(read(Table.TAMABBOH_MISSILE_MAPPINGS), 4,
+                    read(Table.TAMABBOH_MISSILE_ANIMATIONS), 1, 59);
+        }
+        return tamabbohMissile;
+    }
+
     /** Pure component decoder; signed bytes are extended as in ObjRing_Init (Ring/Main.asm:81-85). */
     public static List<Delta> decodeRingDeltas(byte[] input) {
         var bytes = exact(input, 32, "ObjRing_Deltas");
@@ -898,7 +939,7 @@ public final class CdR11aObjectAssets {
      * (Floating Block/Main.asm:43-44), Boulder's selector $B (Boulder/Main.asm:34-35), and Tunnel Door's
      * selector $C (Tunnel Door/Main.asm:41-42), and primary diagonal Spring's selector $F
      * (Spring/Main.asm:217-220), and common Spikes' selector $A (Spikes/Main.asm:24-25),
-     * each at subtype2 0, are admitted. Anton selector 2 (Anton/Main.asm:33-34) additionally admits
+     * and Tamabboh selector 4 (Tamabboh/Main.asm:38-39), each at subtype2 0, are admitted. Anton selector 2 (Anton/Main.asm:33-34) additionally admits
      * subtype2 0/1 from its two-word body (Object Tile IDs (Act 1 Present).asm:29-30).
      * Ring writes literal $A7AE.
      */
@@ -907,9 +948,9 @@ public final class CdR11aObjectAssets {
             throw new IllegalArgumentException("Object tile selector/subtype width");
         }
         var bytes = exact(input, 74, "ObjectTileIDs");
-        if ((selector != 0 && selector != 1 && selector != 2 && selector != 5 && selector != 0xA && selector != 0xB && selector != 0xC && selector != 0xF)
+        if ((selector != 0 && selector != 1 && selector != 2 && selector != 4 && selector != 5 && selector != 0xA && selector != 0xB && selector != 0xC && selector != 0xF)
                 || (selector == 2 ? subtype2 > 1 : subtype2 != 0)) {
-            throw new UnsupportedOperationException("Only Mosqui selector 0 / Pata-Bata selector 1 / FloatBlock selector 5 / common Spikes selector $A / Boulder selector $B / Tunnel Door selector $C / primary diagonal Spring selector $F at subtype2 0, or Anton selector 2 at subtype2 0/1, are reviewed");
+            throw new UnsupportedOperationException("Only Mosqui selector 0 / Pata-Bata selector 1 / Tamabboh selector 4 / FloatBlock selector 5 / common Spikes selector $A / Boulder selector $B / Tunnel Door selector $C / primary diagonal Spring selector $F at subtype2 0, or Anton selector 2 at subtype2 0/1, are reviewed");
         }
         int target = (short) bytes.unsignedWord(selector * 2);
         int end = bytes.length();
@@ -922,7 +963,7 @@ public final class CdR11aObjectAssets {
         }
         int selected = target + subtype2 * 2;
         if (end - selected < 2) {
-            throw new IllegalArgumentException((selector == 0 ? "Mosqui" : selector == 1 ? "Pata-Bata" : selector == 2 ? "Anton" : selector == 5 ? "FloatBlock"
+            throw new IllegalArgumentException((selector == 0 ? "Mosqui" : selector == 1 ? "Pata-Bata" : selector == 2 ? "Anton" : selector == 4 ? "Tamabboh" : selector == 5 ? "FloatBlock"
                     : selector == 0xA ? "Common Spikes" : selector == 0xB ? "Boulder" : selector == 0xC ? "Tunnel Door" : "Primary diagonal Spring")
                     + " tile word crosses its selected body");
         }
