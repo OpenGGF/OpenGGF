@@ -17,6 +17,32 @@ Entries should include:
 
 ---
 
+## Sonic CD remains an incomplete development entry — 2026-10-26
+
+**Location:** `game/soniccd/`, especially the explicit opening-object DEV launch,
+player movement/time-warp gates, and remaining stock boot/mode/service owners.
+
+**Symptom:** the USA four-jump controller route reaches Sonic Hole Init/Main at
+calls 5323/5324, returns 5414, then stops at the explicit `TIME_WARP_ACTIVE`
+movement boundary on 5415. The preceding TimePost sets raw direction 255 and
+requests `SCMD_PASTSFX`; this does not execute a native time warp. The default
+static entry and the playable DEV opening remain separate. A full game, ordinary
+title/startup, whole-act completion, audible FM/PCM/CDDA, complete time travel,
+special stages and Japan/Europe certification are not delivered.
+
+**Cause:** bounded native owners are implemented incrementally and fail at
+unowned actions. Current-art, rewind and component positives do not certify
+native timing, images or gameplay parity. The natural Hole visit does not
+activate its control-gated response, and no new Hole World-pixel proof is claimed.
+
+**Removal condition:** close the finite USA products in the
+[implementation plan](../architecture/plans/2026-10-23-sonic-cd-implementation.md),
+then verify Japan and Europe with actual media/native comparisons. Preserve the
+existing controller and full/course replay products in the
+[partial level matrix](../architecture/validation/levels/scd-palmtree-panic-act1-present.md).
+Implementation is paused after Sonic Hole; resume from the measured time-warp
+boundary rather than assuming another object or the controlled-player branch.
+
 ## TAS pause clock does not advance during native Start pause — 2026-10-26
 
 **Location:** `GameLoop.prepareAdmittedIteration`,

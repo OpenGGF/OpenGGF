@@ -1,6 +1,6 @@
 # Implement Sonic CD with complete regional parity
 
-Date: 2026-10-23. Status: implementation plan, not implemented game support.
+Date: 2026-10-23; pause handover 26 October. Status: partial implementation, not complete game support.
 Design: [fourth-game architecture](../designs/2026-10-23-sonic-cd-fourth-game.md).
 Engine baseline: `b979916808b7f9379ede2b5dcdde1bcdc8bf8357`.
 Reference pin: `1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff`.
@@ -10,11 +10,11 @@ release first, then Japan and Europe. USA MVP means the complete native USA
 game and its required features. A playable Palmtree Panic demonstration is
 an intermediate proof, not the MVP or a full-parity claim.
 
-This task delivers the reference setup, architecture, and execution plan.
-It does not start the multi-phase engine implementation or a recurring agent
-program. Execute later work through the repository's current development,
-verification, integration, push, and cleanup flow. No new release number,
-publication date, or public API commitment is assigned here.
+The initial 23 October task established the reference setup, architecture and
+execution plan. Subsequent bounded implementation is recorded below and in the
+[partial level matrix](../validation/levels/scd-palmtree-panic-act1-present.md).
+The full USA game, then Japan and Europe, remains the objective. No release
+number, publication date or completed stock-game claim is assigned here.
 
 ## Track work and evidence
 
@@ -7836,3 +7836,83 @@ unchanged. User requests a break after the live Sonic Hole join, a handover,
 and GitHub feature/ai-nothing-to-see-here based on next. This supersedes the
 prior local-only publication restriction for that requested feature branch;
 main remains untouched and no release/PR/other-branch push is requested.
+
+
+## 26 October 2026 — Sonic Hole live Runtime, before permanent route promotion
+
+The source-only body, assets and mapper are saved in `2b31c6c95` with the
+separate 180-case metadata and 591-case component/old-consumer positives. The
+live ID31 join now caches the real body and validates actual dispatch scope,
+control → conditional X/Y → FM order, complete96/source64 and the actual Frame
+pair before ordered sound publication. It adds only typed `SonicHoleFm`, no new
+Frame writer, art source, region, bank or logical span. Returned effects remain
+completed metadata, never commands.
+
+Tests-only build21956 stops on the expected missing `SonicHoleFm` declaration,
+with no JUnit run. First positive56391 runs494 with0 failures,1 error,0 skips at
+20:50:11Z: one factory test omitted the existing host resident-art sink. RootR2
+adds a recording sink to that fixture only. Narrow17880 passes1; fresh full52519
+passes494/0/0/0 at21:14:30Z (39.516s execution,46s queue): Runtime486, selected
+Ring/current440/currentShadow EGL3, source guards5. Complete fresh class/case
+identities, Java25, media, S2 REV01, surfaceless EGL and explicit opt-in are
+checked; production and RootR2 test hashes remain unchanged. The independent R1
+Runtime review reports no concrete P1/P2; it is source evidence, not execution.
+
+Actual command, from the private source worktree with existing absolute inputs:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 python3 "$OPENGGF_ROOT/tools/testing/maven_queue.py" --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dsoniccd.opening.egl=true "-Dsoniccd.media.root=$SCD_MEDIA_ROOT" "-Dsonic2.rom.path=$S2_ROM" '-Dtest=TestCdOpeningObjectRuntime,TestSonicCdOpeningWorldEgl#actualEglNormalInputPickupAndFullCourseReplay+actualEglCurrentTamabbohSingletonRendersAndRetiresThe659thClientPattern+actualEglCurrentLogShadowFivePatternsRenderAndRetireThe664EntryClientRange,TestJunit5MigrationGuard,TestNoAssertionFreeDiagnostics' test -B
+```
+
+Temporary observer36594 returns5414 ordinary four-jump calls, including Hole
+Init5323/Main5324 at physical46, then rethrows `TIME_WARP_ACTIVE` on5415.
+TimePost requests `SCMD_PASTSFX` and sets raw direction255 on5414; timer and charge
+are0. Runtime/Frame close, Body and all96 images stay at the last completed
+values, and VInt advances5414→5415. The failed composite is never captured or
+resumed. Observer source is removed immediately and the permanent53-case file
+restored byte-exact. Promotion/replay is pending at this checkpoint. Natural
+control remains0, so Hole activation, A3 and new Hole World pixels are not proved.
+
+User delivery changed: finish Sonic Hole, publish only
+`feature/ai-nothing-to-see-here` based on next, write a handover, then pause.
+Time warp and the next owner must not be implemented during this delivery.
+Full USA, then Japan/Europe, remains unfinished.
+
+
+## 26 October 2026 — permanent Sonic Hole route to ordinary time-warp boundary
+
+Source checkpoint is `cffe153a0a49a1363e69b38e7663720e339acab0` plus the
+World-load fixture SHA256
+`e0f4217af24b7526d50a5c53e9344b028e04282520ea85c113528cf430bb4fbb`.
+The temporary observer is absent. Exactly the permanent case's name and
+post5322 tail change; explicit two-edit whole-file forward/inverse verification
+recovers all326238 baseline bytes. All53 cases, imports, helpers, earlier
+controller recipe and replay edges remain intact.
+
+Fresh78472 passes53/0/0/0 at21:27:25Z (36.526s execution,16s queue), including
+`controllerFourJumpRouteRunsSonicHoleReplaysClosedCutsAndStopsAtTimeWarpActive`.
+Complete fresh class/case identities, Java25/private cwd, actual media, S2 REV01,
+surfaceless EGL properties and unchanged source pin are checked. Runtime494 and
+World53 are separate green invocations, not an invented combined547 run. No
+route fixture or production repair was needed. Independent static route review
+is pending at this save checkpoint; it conveys no native parity result.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 python3 "$OPENGGF_ROOT/tools/testing/maven_queue.py" --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dsoniccd.opening.egl=true "-Dsoniccd.media.root=$SCD_MEDIA_ROOT" "-Dsonic2.rom.path=$S2_ROM" '-Dtest=TestSonicCdOpeningWorldLoad' test -B
+```
+
+Natural Hole46 Init5323 and Main5324 return with the complete native header and
+unwritten bytes preserved. Player control stays0: no natural Hole activation,
+FM_A3 or Hole World-pixel claim. Full/course5322→5323,5323→5324,5413→5414 compare
+complete checkpoint-aware state before and after every forward row, alongside
+all older edges. The same input-only Right/four-jump recipe returns5414. The real
+TimePost requests `SCMD_PASTSFX` and sets raw direction255 on5414; timer/charge0
+reach the existing `TIME_WARP_ACTIVE` stop on5415. The original exception and
+terminal closure remain, no failed-composite capture or retry. The observed
+failed-call Body/environment/full96/saved766 equality and5414→5415 VInt are
+bounded observations, not a general native partial-prefix oracle.
+
+User's stopping point is now reached: no time-warp or controlled-Body
+implementation. The next-based feature worktree owns shared merge verification,
+final CD-only checks, handover, authorized feature-only push and cleanup.
+The full-USA-then-Japan/Europe objective remains unfinished.

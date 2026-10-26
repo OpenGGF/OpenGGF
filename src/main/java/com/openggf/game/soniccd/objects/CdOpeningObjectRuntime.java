@@ -51,7 +51,7 @@ import static com.openggf.game.soniccd.objects.CdObjectState.WordField.*;
  * The initial Ring, contact, score and level globals are caller-declared DEV ingress, never an entry proof.
  * Live dynamic IDs $10 Ring, $11 LostRing, $3D Mosqui, $3E Pata-Bata, $24 Animal, $2C 3D plant and $2A 3D ramp,
  * aftermath IDs $18/$1C/$1F, $12 Floating Block, normal and diagonal $0A Spring, $34 Spin tunnel tag, $0D horizontal Door,
- * $35 vertical Tunnel Door, $1B Boulder, $26 common Spikes, $33 Log Shadow, $13 Checkpoint, $20 Collapsing Platform, $19 Monitor/Time Post and $1A shoes item and the death row's $3B Game/Time Over are owned.
+ * $35 vertical Tunnel Door, $1B Boulder, $26 common Spikes, $31 Sonic Hole, $33 Log Shadow, $13 Checkpoint, $20 Collapsing Platform, $19 Monitor/Time Post and $1A shoes item and the death row's $3B Game/Time Over are owned.
  * The zero reserved bank is NOT post-native HUD/title initialization: later native owners of slots 2..31
  * (Level/Main.asm:261-274) remain omitted by this DEV policy. Primary slot 0 stays exclusively in Frame;
  * dynamic slots 32..127 stay exclusively in placement's existing pool. ID $0B splash execution stays unowned.
@@ -306,7 +306,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     }
 
     /** Ordered requests only, no playback and no claim to the omitted service/music ledger. */
-    public sealed interface SoundRequest permits PlayerSound, RingFm, RingSubCpu, MosquiFm, LostRingFm, GameOverSubCpu, SpringFm, TunnelDoorVerticalFm, TunnelDoorFm, MonitorFm, MonitorItemSubCpu, TimePostSubCpu, CheckpointFm, CollapsePlatformFm, TamabbohFm, SpinningDiscFm, TunnelPathFm { }
+    public sealed interface SoundRequest permits PlayerSound, RingFm, RingSubCpu, MosquiFm, LostRingFm, GameOverSubCpu, SpringFm, TunnelDoorVerticalFm, TunnelDoorFm, MonitorFm, MonitorItemSubCpu, TimePostSubCpu, CheckpointFm, CollapsePlatformFm, TamabbohFm, SpinningDiscFm, TunnelPathFm, SonicHoleFm { }
     public record PlayerSound(CdPlayerFrameRuntime.Sound sound) implements SoundRequest {
         public PlayerSound { Objects.requireNonNull(sound, "player sound"); }
     }
@@ -322,6 +322,10 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     /** ID07's reached FM_91 backedge; ordered request metadata, never driver execution. */
     public record TunnelPathFm(CdTunnelPath.FmSound sound) implements SoundRequest {
         public TunnelPathFm { Objects.requireNonNull(sound, "Tunnel Path FM sound"); }
+    }
+    /** SonicHole's reached synchronous FM_A3 metadata; no driver queue, audio execution or replay. */
+    public record SonicHoleFm(CdSonicHole.FmSound sound) implements SoundRequest {
+        public SonicHoleFm { Objects.requireNonNull(sound, "SonicHole FM sound"); }
     }
     /** Disc's actual synchronous PlayFMSound cut; ordered FM_A0 metadata only, no playback. */
     public record SpinningDiscFm(CdSpinningDisc.FmSound sound) implements SoundRequest {
@@ -456,6 +460,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     private final CdAnton anton;
     private final CdTamabboh tamabboh;
     private final CdLogShadow logShadow;
+    private final CdSonicHole sonicHole;
     private final CdAnimal animal;
     private final Cd3dPlant plant;
     private final Cd3dRamp ramp;
@@ -587,6 +592,24 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     }
     private transient TunnelPathInvocation activeTunnelPathInvocation;
     // END Tunnel07 private invocation.
+
+    // BEGIN SonicHole31 private synchronous origin. Never captured gameplay or a public value capability.
+    private enum SonicHoleStep { CONTROL, X, Y, FM, DONE }
+    private static final class SonicHoleInvocation {
+        private final CdSonicHole body;
+        private final int wholeIndex;
+        private final CdPlayerBody.State player;
+        private final CdPlayerBody.Environment environment;
+        private SonicHoleStep next = SonicHoleStep.CONTROL;
+        private CdObjectPool.Snapshot lastPoolCut;
+
+        private SonicHoleInvocation(CdSonicHole body, int wholeIndex, CdPlayerBody.State player,
+                                    CdPlayerBody.Environment environment) {
+            this.body = body; this.wholeIndex = wholeIndex; this.player = player; this.environment = environment;
+        }
+    }
+    private transient SonicHoleInvocation activeSonicHoleInvocation;
+    // END SonicHole31 private origin.
     private int dispatchWholeIndex = -1;
 
     /**
@@ -869,6 +892,9 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                 this::readTamabbohPlayerWord, this::playTamabbohFm,
                 (pool, slot) -> drawDynamic(pool, slot.wholeIndex()));
         logShadow = new CdLogShadow(placement, CdLogShadow.Assets.fromObjectAssets(objects),
+                (pool, slot) -> drawDynamic(pool, slot.wholeIndex()));
+        sonicHole = new CdSonicHole(placement, CdSonicHole.Assets.fromObjectAssets(objects),
+                this::readSonicHolePrimary, this::playSonicHoleFm,
                 (pool, slot) -> drawDynamic(pool, slot.wholeIndex()));
         // Frontier bodies bind the same live placement/pool, the actual asset owner and the one shared
         // DrawObject adapter. The Animal's admitted path reads no assets and never draws.
@@ -1393,6 +1419,9 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                     // The cached body owns Init, Draw and despawn; completed Result effects are never replayed.
                     logShadow.run(whole, new CdLogShadow.Globals(gates.timeZone(), devGlobals.goodFuture(),
                             gates.zoneAct() & 0xFF, gates.timeWarpDirection(), preScrollForeground.xWord()));
+                } else if (id == CdSonicHole.OBJECT_ID) {
+                    // ObjSonicHole (Tunnel Path/Main.asm:11-103): one current cached-body visit, no effect replay.
+                    runSonicHole(whole);
                 } else if (id == CdAnton.OBJECT_ID) {
                     // Live physical ID$3F; use actual raw globals and Frame angle at this visit.
                     // Native Init/Place/Main, angle stores and guarded Draw already execute synchronously.
@@ -4181,6 +4210,160 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
             checkActive(Phase.DYNAMIC_SLOTS);
         } finally { inSolidCommit = false; }
     }
+
+
+    // BEGIN SonicHole31 Runtime R1. Source-only authoring; all new Java UNRUN by this author.
+    // N 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff:
+    // ObjSonicHole (Tunnel Path/Main.asm:11-103), PlayFMSound (Functions (General).asm:288-310).
+    // Only this actual cached-body scope grants origin; public source/cut/result values never do.
+    // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>
+
+    private void runSonicHole(int wholeIndex) {
+        checkActive(Phase.DYNAMIC_SLOTS);
+        if (activeSonicHoleInvocation != null || activeTunnelPathInvocation != null || activeSpinningDiscInvocation != null
+                || activeCollapseInvocation != null || activePlatformInvocation != null || activeTamabbohInvocation != null
+                || inDrawCallback || inSolidCommit || inSpringLaunch || inSpinTunnelCommit || inTunnelDoorFm
+                || inHorizontalTunnelDoorSolid || inHorizontalTunnelDoorFm || inMonitorAngle || inMonitorFm || inMonitorAward
+                || inTimePostDirection || inTimePostSubCpu || inCheckpointDispatch
+                || wholeIndex < CdObjectPool.FIRST_WHOLE_INDEX || wholeIndex >= CdObjectPool.END_WHOLE_INDEX
+                || wholeIndex != dispatchWholeIndex || placement.pool().state(wholeIndex).id() != CdSonicHole.OBJECT_ID
+                || frame.assets() != assets || frame.environment().dynamicSlots() != CdPlayerBody.DynamicSlots.UNIMPLEMENTED) {
+            throw new IllegalStateException("SonicHole requires its actual nonnested physical ID31 visit");
+        }
+        frame.captureActor(); // Existing open/idle/no-pending-Body guard only; retain no actor capture.
+        var gates = frame.environment().movement().gates();
+        var globals = new CdSonicHole.Globals(gates.timeZone(), gates.timeWarpDirection(), preScrollForeground.xWord());
+        var invocation = new SonicHoleInvocation(sonicHole, wholeIndex, frame.state(), frame.environment());
+        activeSonicHoleInvocation = invocation;
+        try {
+            sonicHole.run(wholeIndex, globals); // Completed observations are never commands or replay authority.
+            checkActive(Phase.DYNAMIC_SLOTS);
+            if (frame.state() != invocation.player || frame.environment() != invocation.environment) {
+                throw new IllegalStateException("SonicHole changed its complete actual State8/Environment4 pair");
+            }
+            // Direct Init-old-set/routine4 Display may leave unused CONTROL entitlement; retire it, never invent a read.
+        } finally {
+            activeSonicHoleInvocation = null; // Completion, support stop, callback RuntimeException and Error.
+        }
+    }
+
+    private SonicHoleInvocation requireSonicHoleCallback() {
+        checkActive(Phase.DYNAMIC_SLOTS);
+        var invocation = activeSonicHoleInvocation;
+        if (invocation == null || invocation.body != sonicHole || invocation.wholeIndex != dispatchWholeIndex
+                || dispatchWholeIndex < CdObjectPool.FIRST_WHOLE_INDEX || dispatchWholeIndex >= CdObjectPool.END_WHOLE_INDEX
+                || activeTunnelPathInvocation != null || activeSpinningDiscInvocation != null
+                || activeCollapseInvocation != null || activePlatformInvocation != null || activeTamabbohInvocation != null
+                || inDrawCallback || inSolidCommit || inSpringLaunch || inSpinTunnelCommit || inTunnelDoorFm
+                || inHorizontalTunnelDoorSolid || inHorizontalTunnelDoorFm || inMonitorAngle || inMonitorFm || inMonitorAward
+                || inTimePostDirection || inTimePostSubCpu || inCheckpointDispatch
+                || frame.assets() != assets || frame.environment().dynamicSlots() != CdPlayerBody.DynamicSlots.UNIMPLEMENTED
+                || frame.state() != invocation.player || frame.environment() != invocation.environment) {
+            throw new IllegalStateException("SonicHole callback has no current cached origin or has a nested/changed owner");
+        }
+        frame.captureActor();
+        return invocation;
+    }
+
+    private void validateSonicHoleCut(CdObjectPool.Snapshot actualPoolCut, CdObjectState source) {
+        checkActive(Phase.DYNAMIC_SLOTS);
+        var invocation = activeSonicHoleInvocation;
+        if (invocation == null || invocation.body != sonicHole || invocation.wholeIndex != dispatchWholeIndex
+                || dispatchWholeIndex < CdObjectPool.FIRST_WHOLE_INDEX || dispatchWholeIndex >= CdObjectPool.END_WHOLE_INDEX
+                || !inSolidCommit || activeTunnelPathInvocation != null || activeSpinningDiscInvocation != null
+                || activeCollapseInvocation != null || activePlatformInvocation != null || activeTamabbohInvocation != null
+                || inDrawCallback || inSpringLaunch || inSpinTunnelCommit || inTunnelDoorFm
+                || inHorizontalTunnelDoorSolid || inHorizontalTunnelDoorFm || inMonitorAngle || inMonitorFm || inMonitorAward
+                || inTimePostDirection || inTimePostSubCpu || inCheckpointDispatch) {
+            throw new IllegalStateException("SonicHole full cut is outside its admitted synchronous callback");
+        }
+        Objects.requireNonNull(source, "actual SonicHole source64");
+        frame.captureActor();
+        var pool = placement.pool();
+        validateDynamicCapture(actualPoolCut); pool.validateWrite(source);
+        var live = pool.state(dispatchWholeIndex);
+        if (source.identity().wholeIndex() != dispatchWholeIndex || !live.identity().equals(source.identity())
+                || live.id() != CdSonicHole.OBJECT_ID || live.routine() != 2 || !live.equals(source)
+                || actualPoolCut.slots().get(source.identity().dynamicIndex()) != source
+                || !pool.capture().slots().equals(actualPoolCut.slots()) || actualPoolCut == invocation.lastPoolCut
+                || frame.assets() != assets || frame.environment().dynamicSlots() != CdPlayerBody.DynamicSlots.UNIMPLEMENTED
+                || frame.state() != invocation.player || frame.environment() != invocation.environment) {
+            throw new IllegalStateException("SonicHole source64/full96/complete Frame pair is stale, foreign or outside Main");
+        }
+    }
+
+    private int readSonicHolePrimary(CdSonicHole.PlayerField field, CdObjectPool.Snapshot actualPoolCut, CdObjectState source) {
+        var invocation = requireSonicHoleCallback();
+        Objects.requireNonNull(field, "actual SonicHole primary field");
+        var expected = switch (field) {
+            case CONTROL_2C -> SonicHoleStep.CONTROL;
+            case X_WORD -> SonicHoleStep.X;
+            case Y_WORD -> SonicHoleStep.Y;
+        };
+        if (invocation.next != expected) {
+            throw new IllegalStateException("SonicHole primary field is repeated or outside its reached conditional site");
+        }
+        inSolidCommit = true;
+        try {
+            validateSonicHoleCut(actualPoolCut, source);
+            // Native primary slot only, sampled NOW after real Body and earlier physical publications.
+            int value = switch (field) {
+                case CONTROL_2C -> frame.state().motion().playerControl();
+                case X_WORD -> frame.state().motion().centreX16_16() >>> 16;
+                case Y_WORD -> frame.state().motion().centreY16_16() >>> 16;
+            };
+            SonicHoleStep next;
+            if (field == CdSonicHole.PlayerField.CONTROL_2C) {
+                next = value == 0 ? SonicHoleStep.DONE : SonicHoleStep.X;
+            } else {
+                // Main.asm:54-65 WORD SUB/ADD, BMI then unsigned CMP; not physics or a second gameplay owner.
+                int coordinate = field == CdSonicHole.PlayerField.X_WORD ? source.centreX() : source.centreY();
+                int word = (value - coordinate + 0x20) & 0xFFFF;
+                next = (short) word < 0 || word >= 0x40 ? SonicHoleStep.DONE
+                        : field == CdSonicHole.PlayerField.X_WORD ? SonicHoleStep.Y : SonicHoleStep.FM;
+            }
+            validateSonicHoleCut(actualPoolCut, source);
+            invocation.lastPoolCut = actualPoolCut;
+            invocation.next = next;
+            return value;
+        } finally {
+            inSolidCommit = false;
+        }
+    }
+
+    private void playSonicHoleFm(CdSonicHole.FmSound sound, CdObjectPool.Snapshot actualPoolCut, CdObjectState source) {
+        var invocation = requireSonicHoleCallback();
+        if (invocation.next != SonicHoleStep.FM || sound != CdSonicHole.FmSound.FM_A3) {
+            throw new IllegalStateException("SonicHole FM_A3 requires its once-only reached Y-overlap site");
+        }
+        inSolidCommit = true;
+        try {
+            validateSonicHoleCut(actualPoolCut, source);
+            // Main.asm:66-68 / SetDisplay:85-95: raw period and saved0, AFTER actual BSET6, BEFORE routine2->4.
+            int index = 2 + (short) ((3 * source.savedFlagsId()
+                    + invocation.environment.movement().gates().timeZone()) & 0xFFFF);
+            if (index < 2 || index >= CdObjectPlacementRuntime.SAVED_BANK_BYTES
+                    || (placement.capture().savedFlags().unsignedByte(index) & 0x40) == 0) {
+                throw new IllegalStateException("SonicHole FM lacks its exact completed saved-bit6 store");
+            }
+            var expectedLedger = sounds;
+            var ledger = new ArrayList<SoundRequest>(expectedLedger);
+            ledger.add(new SonicHoleFm(sound));
+            var readyLedger = List.copyOf(ledger);
+            validateSonicHoleCut(actualPoolCut, source);
+            if (invocation.next != SonicHoleStep.FM || sounds != expectedLedger
+                    || (placement.capture().savedFlags().unsignedByte(index) & 0x40) == 0) {
+                throw new IllegalStateException("SonicHole FM prefix or prepared immutable ledger changed before adoption");
+            }
+            // All fallible preparation/revalidation is above; retain the complete earlier ordered prefix/duplicates.
+            sounds = readyLedger;
+            invocation.lastPoolCut = actualPoolCut;
+            invocation.next = SonicHoleStep.DONE;
+        } finally {
+            inSolidCommit = false;
+        }
+    }
+    // END SonicHole31 Runtime R1.
 
     private void drawDynamic(CdObjectPool pool, int whole) {
         checkActive(Phase.DYNAMIC_SLOTS);
