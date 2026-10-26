@@ -14,6 +14,10 @@ needed. Runtime data comes from the user-supplied ROM, not these reference files
 
 ## Lookup commands
 
+For immutable source-only label/caller lookup without a populated checkout, use
+[disasm-source-lookup](../disasm-source-lookup/SKILL.md). It reports exact paths,
+ambiguity and hash-bound source windows; ROM-offset verification remains below.
+
 Run from the repository/worktree root; replace the example label with the target:
 
 ```bash

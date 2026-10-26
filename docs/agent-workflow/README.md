@@ -32,6 +32,8 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
 
 ## Tools
 
+- [Immutable disassembly lookup](../../tools/disasm/disasm_citations.py): `lookup --git-dir <absolute-existing-gitdir> --rev <full-commit> --root <literal-tree-root> --label <exact-label> --json` finds colon definitions/code references with explicit ambiguity and bounded hash-bound source windows, without a checkout or runtime execution; [mirrored skill](../../.agents/skills/disasm-source-lookup/SKILL.md). Origin: 2026-10-26 private integration path-lookup task.
+
 - [Sonic CD packet integration](../../tools/soniccd/integration_packet.py): validates frozen source mirrors and exact destination baseline pins, optionally imports under the existing worktree lock, and summarizes an exact fresh Surefire class set without running tests; [mirrored skill](../../.agents/skills/soniccd-packet-integration/SKILL.md). Origin: 2026-10-26 private integration tooling.
 
 - [Sonic CD catalogue audit](../../tools/soniccd/catalogue.py) checks native file,

@@ -15,6 +15,8 @@ a disassembly gains comments or labels. This tool:
   through the line mapping of ``git diff A B``. Citations touching changed
   lines are reported, never guessed. Run it in the same commit that moves a
   submodule pin, so citations follow the content.
+* ``lookup`` finds exact colon labels and code references in an explicitly pinned
+  Git tree, with bounded source windows and byte/hash provenance (no checkout).
 
 Inputs: the superproject (cwd or --repo); disassembly history is read from git
 objects, so a linked worktree whose submodules are not initialised still works
@@ -644,7 +646,11 @@ def main(argv=None):
     r.add_argument('--carry-edited', action='store_true',
                    help='also carry ranges across same-size, same-mnemonic edits (e.g. renamed constants)')
     r.add_argument('--strict', action='store_true', help='exit non-zero when any citation needs review')
+    from disasm_lookup import add_parser
+    add_parser(sub, LABEL_DEF)
     args = p.parse_args(argv)
+    if args.cmd == 'lookup':
+        return args.handler(args)
     return {'check': cmd_check, 'remap': cmd_remap}[args.cmd](args)
 
 
