@@ -118,7 +118,9 @@ public final class TestReelCapture implements AutoCloseable {
         context = PresentationOffscreenTestContext.openConfigured(320,224,
                 PresentationOffscreenTestContext.LegacyProfile.CORE_41);
         var graphics = GameServices.graphics();
+        var cachedArt = com.openggf.graphics.TestReelPatternTransfer.capture(graphics);
         graphics.setHeadlessMode(false); graphics.init(Engine.RESOURCES_SHADERS_PIXEL_SHADER_GLSL);
+        cachedArt.upload(graphics);
         glViewport(0,0,320,224); glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
         graphics.setProjectionWidth(320); graphics.applyResolvedDisplayWidth(320);
         graphics.setProjectionMatrixBuffer(new Matrix4f().ortho2D(0,320,0,224).get(new float[16]));
