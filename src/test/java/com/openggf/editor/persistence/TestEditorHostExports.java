@@ -41,7 +41,7 @@ class TestEditorHostExports {
         try(Rom rom=new Rom()) {
             assertTrue(rom.open(file.getAbsolutePath()));
             TestEnvironment.configureRomFixture(rom);
-            GameModule module=GameServices.module(); module.createGame(rom);
+            GameModule module=GameServices.module(); module.createGame(GameServices.worldSession().getDataSource());
             var fixture=new Fixture(game);
             fixture.getBlock(0).restoreState(fixture.getBlock(1).saveState());
             fixture.getMap().setValue(0,0,0,(byte)0);
@@ -93,7 +93,7 @@ class TestEditorHostExports {
         assumeTrue(file!=null,"Configured S3K ROM required for authored runtime handoff");
         try(Rom rom=new Rom()) {
             assertTrue(rom.open(file.getAbsolutePath())); TestEnvironment.configureRomFixture(rom);
-            GameModule module=GameServices.module(); var nativeGame=module.createGame(rom);
+            GameModule module=GameServices.module(); var nativeGame=module.createGame(GameServices.worldSession().getDataSource());
             var data=new FullLevelExporter(new ModLevelExportStagingValidator(module)).prepareHostData(
                     MutableLevel.snapshot(new Fixture(GameId.S3K)),request(GameId.S3K,temp.resolve("fresh-art")));
             var loaded=assertInstanceOf(com.openggf.game.sonic3k.Sonic3kLevel.class,
@@ -124,7 +124,7 @@ class TestEditorHostExports {
         assumeTrue(file!=null,"Configured ROM required for native authored goal");
         try(Rom rom=new Rom()) {
             assertTrue(rom.open(file.getAbsolutePath())); TestEnvironment.configureRomFixture(rom);
-            GameModule module=GameServices.module(); module.createGame(rom);
+            GameModule module=GameServices.module(); module.createGame(GameServices.worldSession().getDataSource());
             Fixture fixture=new Fixture(game);
             fixture.setObjects(List.of(game!=GameId.S3K
                     ? module.getObjectPlacementEncoding().create(32,64,0x0D,0,0,true,9)

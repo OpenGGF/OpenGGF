@@ -33,8 +33,9 @@ class TestSonic3kVineAngleOwnership {
         Rom rom = TestEnvironment.currentRom();
         Sonic3kGameModule module = new Sonic3kGameModule();
 
-        Sonic3k first = (Sonic3k) module.createGame(rom);
-        Sonic3k second = (Sonic3k) module.createGame(rom);
+        var source = new com.openggf.game.RomDataSource(rom, "rom:test:vine-ownership");
+        Sonic3k first = (Sonic3k) module.createGame(source);
+        Sonic3k second = (Sonic3k) module.createGame(source);
 
         assertNotSame(first, second,
                 "each level load builds a new Game; the test premise requires that");

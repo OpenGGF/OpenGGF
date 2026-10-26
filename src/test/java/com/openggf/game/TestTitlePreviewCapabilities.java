@@ -16,6 +16,13 @@ import static org.mockito.Mockito.*;
 
 class TestTitlePreviewCapabilities {
     @Test
+    void incompleteCdMenusDoNotBorrowCartridgeTitleOrAudioCapabilities() {
+        assertSame(TitlePreviewProvider.NONE, GameModuleRegistry.createStockTitlePreview(GameId.SCD));
+        assertThrows(IllegalArgumentException.class, () -> GameModuleRegistry.createStockMenuAudio(GameId.SCD));
+        assertThrows(IllegalArgumentException.class, () -> GameModuleRegistry.stockRomSoundCatalog(GameId.SCD));
+    }
+
+    @Test
     void stockCapabilityResolutionDoesNotReadLiveServices() {
         try (var liveServices = mockStatic(GameServices.class)) {
             for (GameId game : GameId.values()) {

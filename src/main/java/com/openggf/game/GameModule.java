@@ -2,8 +2,6 @@ package com.openggf.game;
 
 import com.openggf.audio.GameAudioProfile;
 import com.openggf.game.Game;
-import com.openggf.data.Rom;
-import com.openggf.data.RomByteReader;
 import com.openggf.game.dataselect.DataSelectHostProfile;
 import com.openggf.game.dataselect.DataSelectPresentationProvider;
 import com.openggf.game.modzone.ModZoneAdapter;
@@ -68,22 +66,14 @@ public interface GameModule {
 
     String getIdentifier();
 
-    Game createGame(Rom rom);
-
-    /** Creates the game from the active session capability; stock modules require a ROM. */
-    default Game createGame(GameDataSource source) {
-        return createGame(source.rom().orElseThrow(() ->
-                new IllegalStateException("Game module requires a ROM data source")));
-    }
+    /** Creates the game from the active session's source capability. */
+    Game createGame(GameDataSource source);
 
     /**
-     * Creates touch-response data from the session capability. The default is stock-only and
-     * requires a ROM; standalone modules must override this method and decode bounded assets.
+     * Creates touch-response data from the active session's source capability.
+     * Each module owns decoding and any required source capabilities.
      */
-    default TouchResponseTable createTouchResponseTable(GameDataSource source) throws java.io.IOException {
-        return createTouchResponseTable(RomByteReader.fromRom(source.rom().orElseThrow(() ->
-                new IllegalStateException("Game module requires a ROM data source"))));
-    }
+    TouchResponseTable createTouchResponseTable(GameDataSource source) throws java.io.IOException;
 
     /** One immutable character-registry view owned by this resolved module. */
     default PlayableCharacterRegistry getPlayableCharacterRegistry() {
@@ -197,8 +187,6 @@ public interface GameModule {
     ObjectPlacementEncoding getObjectPlacementEncoding();
 
     GameAudioProfile getAudioProfile();
-
-    TouchResponseTable createTouchResponseTable(RomByteReader romReader);
 
     int getPlaneSwitcherObjectId();
 

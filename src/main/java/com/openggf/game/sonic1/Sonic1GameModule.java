@@ -15,6 +15,7 @@ import com.openggf.game.sonic1.titlescreen.Sonic1TitleScreenManager;
 import com.openggf.game.DebugOverlayProvider;
 import com.openggf.game.EndingProvider;
 import com.openggf.game.GameModule;
+import com.openggf.game.GameDataSource;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.LevelInitProfile;
@@ -170,6 +171,12 @@ public class Sonic1GameModule implements GameModule, com.openggf.game.internal.S
     }
 
     @Override
+    public Game createGame(GameDataSource source) {
+        return createGame(source.rom().orElseThrow(() ->
+                new IllegalStateException("Sonic 1 requires a ROM data source")));
+    }
+
+    /** Cartridge convenience factory; session callers supply a GameDataSource. */
     public Game createGame(Rom rom) {
         additiveRom = java.util.Objects.requireNonNull(rom);
         additiveRingSheet = null;
@@ -207,6 +214,12 @@ public class Sonic1GameModule implements GameModule, com.openggf.game.internal.S
     }
 
     @Override
+    public TouchResponseTable createTouchResponseTable(GameDataSource source) throws java.io.IOException {
+        return createTouchResponseTable(RomByteReader.fromRom(source.rom().orElseThrow(() ->
+                new IllegalStateException("Sonic 1 requires a ROM data source"))));
+    }
+
+    /** Cartridge convenience factory for an already-open byte reader. */
     public TouchResponseTable createTouchResponseTable(RomByteReader romReader) {
         // S1 ReactToItem .sizes table: 36 entries at 0x1B5E4.
         // S1 uses `lea .sizes-2(pc,d0.w)` so effective base is .sizes-2 = 0x1B5E2.

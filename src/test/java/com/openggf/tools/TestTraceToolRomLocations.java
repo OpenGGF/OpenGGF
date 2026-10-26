@@ -73,4 +73,15 @@ class TestTraceToolRomLocations {
     private SonicConfigurationService configuration() {
         return SonicConfigurationService.createStandalone(configurationDirectory);
     }
+
+    @Test
+    void rejectsDiscAndStandaloneSourcesBeforeCartridgePathResolution() {
+        var configuration = configuration();
+        configuration.setConfigValue(SonicConfiguration.SONIC_2_ROM, "unrelated-sonic-two.gen");
+        configuration.setConfigValue(SonicConfiguration.SONIC_3K_ROM, "unrelated-sonic-three-k.gen");
+        for (String game : new String[]{"scd", "standalone"}) {
+            assertThrows(IllegalArgumentException.class,
+                    () -> TraceToolRomLocations.resolve(game, configuration, configurationDirectory));
+        }
+    }
 }

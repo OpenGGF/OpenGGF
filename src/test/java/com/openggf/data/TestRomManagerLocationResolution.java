@@ -70,6 +70,15 @@ class TestRomManagerLocationResolution {
     }
 
     @Test
+    void discGameCannotResolveTheDefaultOrSecondaryCartridgeFallback() {
+        configureDefaultS2("unrelated-sonic-two.gen");
+        assertThrows(IllegalArgumentException.class,
+                () -> RomManager.getInstance().getSecondaryRom("scd"));
+        configuration.setConfigValue(SonicConfiguration.DEFAULT_ROM, "scd");
+        assertThrows(IllegalArgumentException.class, () -> RomManager.getInstance().getRom());
+    }
+
+    @Test
     void legacyForwarderReturnsWhitespaceOnlyConfigurationVerbatim() {
         configuration.setConfigValue(SonicConfiguration.SONIC_3K_ROM, " \t");
 

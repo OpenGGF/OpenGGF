@@ -1,7 +1,6 @@
 package com.openggf.game.sonic2.objects;
 
 import com.openggf.camera.Camera;
-import com.openggf.data.RomByteReader;
 import com.openggf.debug.DebugOverlayManager;
 import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
@@ -11,7 +10,6 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
-import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.TestablePlayableSprite;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -49,7 +47,7 @@ class TestTasS2EnemyContact {
                 .withGameState(new GameStateManager())
                 .withDebugOverlay(mock(DebugOverlayManager.class));
         var table = GameServices.module().createTouchResponseTable(
-                RomByteReader.fromRom(TestEnvironment.currentRom()));
+                GameServices.level().getWorldSession().getDataSource());
         objects = new ObjectManager(List.of(), null, 0, null, table, null, camera, services);
         services.withDirectObjectManager(objects);
         player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);

@@ -11,6 +11,7 @@ import com.openggf.game.LevelAssemblyKind;
 import com.openggf.game.LevelLoadContext;
 import com.openggf.game.LevelLoadMode;
 import com.openggf.game.ObjectArtProvider;
+import com.openggf.game.RomDataSource;
 import com.openggf.game.RomOffsetProvider;
 import com.openggf.game.ScrollHandlerProvider;
 import com.openggf.game.resources.PlcLifecyclePhase;
@@ -244,7 +245,8 @@ class TestS3kCompetitionLevelInitProfile {
         assertInstanceOf(S3kCompetitionZoneFeatures.class,module.getZoneFeatureProvider());
         var retained=assertInstanceOf(com.openggf.game.internal.RetainedPlaneDescriptorSource.class,module.getZoneFeatureProvider());
         assertNull(retained.foregroundPlane());assertNull(retained.backgroundPlane());
-        module.createGame(rom); verify(base).createGame(rom);
+        var source = new RomDataSource(rom, "rom:s3k-competition-level-init-test");
+        module.createGame(source); verify(base).createGame(source);
         module.onLevelLoad(); verify(base).onLevelLoad();
         assertNull(module.getTitleCardProvider()); assertFalse(module.supportsSidekick());
         assertNull(module.getGameService(PlcLifecycleService.class));

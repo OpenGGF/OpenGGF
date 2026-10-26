@@ -2782,6 +2782,7 @@ FIELD com.openggf.game.EndingPhase public,static,final com.openggf.game.EndingPh
 FIELD com.openggf.game.GameId public,static,final com.openggf.game.GameId S1
 FIELD com.openggf.game.GameId public,static,final com.openggf.game.GameId S2
 FIELD com.openggf.game.GameId public,static,final com.openggf.game.GameId S3K
+FIELD com.openggf.game.GameId public,static,final com.openggf.game.GameId SCD
 FIELD com.openggf.game.GameId public,static,final com.openggf.game.GameId STANDALONE
 FIELD com.openggf.game.GameMode public,static,final com.openggf.game.GameMode BONUS_STAGE
 FIELD com.openggf.game.GameMode public,static,final com.openggf.game.GameMode COMPETITION
@@ -5719,9 +5720,7 @@ METHOD com.openggf.game.AbstractStandaloneGameModule public  com.openggf.level.o
 METHOD com.openggf.game.AbstractStandaloneGameModule public  com.openggf.level.objects.TouchResponseTable createTouchResponseTable(com.openggf.game.GameDataSource) THROWS java.io.IOException
 METHOD com.openggf.game.AbstractStandaloneGameModule public  int getPlaneSwitcherObjectId()
 METHOD com.openggf.game.AbstractStandaloneGameModule public  java.lang.String getIdentifier()
-METHOD com.openggf.game.AbstractStandaloneGameModule public,final  com.openggf.game.Game createGame(com.openggf.data.Rom)
 METHOD com.openggf.game.AbstractStandaloneGameModule public,final  com.openggf.game.GameId getGameId()
-METHOD com.openggf.game.AbstractStandaloneGameModule public,final  com.openggf.level.objects.TouchResponseTable createTouchResponseTable(com.openggf.data.RomByteReader)
 METHOD com.openggf.game.AbstractStandaloneGameModule public,final  java.lang.String getGameCode()
 METHOD com.openggf.game.ActExit public,static  com.openggf.game.ActExit valueOf(java.lang.String)
 METHOD com.openggf.game.ActExit public,static  com.openggf.game.ActExit[] values()
@@ -6027,7 +6026,6 @@ METHOD com.openggf.game.Game public,abstract  boolean canSave()
 METHOD com.openggf.game.Game public,abstract  boolean isCompatible()
 METHOD com.openggf.game.Game public,abstract  boolean relocateLevels(boolean) THROWS java.io.IOException
 METHOD com.openggf.game.Game public,abstract  boolean save(int,com.openggf.level.Level)
-METHOD com.openggf.game.Game public,abstract  com.openggf.data.Rom getRom()
 METHOD com.openggf.game.Game public,abstract  com.openggf.level.Level loadLevel(int) THROWS java.io.IOException
 METHOD com.openggf.game.Game public,abstract  int getMusicId(int) THROWS java.io.IOException
 METHOD com.openggf.game.Game public,abstract  int[] getBackgroundScroll(int,int,int)
@@ -6039,6 +6037,7 @@ METHOD com.openggf.game.GameDataSource public,abstract  java.lang.String identit
 METHOD com.openggf.game.GameDataSource public,abstract  java.util.Optional<com.openggf.data.Rom> rom()
 METHOD com.openggf.game.GameId public  com.openggf.data.RomGame romGame()
 METHOD com.openggf.game.GameId public  java.lang.String code()
+METHOD com.openggf.game.GameId public  java.util.Optional<com.openggf.data.RomGame> cartridgeGame()
 METHOD com.openggf.game.GameId public,static  com.openggf.game.GameId fromCode(java.lang.String)
 METHOD com.openggf.game.GameId public,static  com.openggf.game.GameId valueOf(java.lang.String)
 METHOD com.openggf.game.GameId public,static  com.openggf.game.GameId[] values()
@@ -6058,7 +6057,6 @@ METHOD com.openggf.game.GameModule public  com.openggf.game.DataSelectProvider g
 METHOD com.openggf.game.GameModule public  com.openggf.game.DebugModeProvider getDebugModeProvider()
 METHOD com.openggf.game.GameModule public  com.openggf.game.DonorCapabilities getDonorCapabilities()
 METHOD com.openggf.game.GameModule public  com.openggf.game.EndingProvider getEndingProvider()
-METHOD com.openggf.game.GameModule public  com.openggf.game.Game createGame(com.openggf.game.GameDataSource)
 METHOD com.openggf.game.GameModule public  com.openggf.game.GameOverFlowProvider getGameOverFlowProvider()
 METHOD com.openggf.game.GameModule public  com.openggf.game.GameRng$Flavour rngFlavour()
 METHOD com.openggf.game.GameModule public  com.openggf.game.GameplayPolicyProvider getGameplayPolicyProvider()
@@ -6089,7 +6087,6 @@ METHOD com.openggf.game.GameModule public  com.openggf.game.timing.LoadTimeProfi
 METHOD com.openggf.game.GameModule public  com.openggf.level.InitialFixedSstDispatcher createInitialFixedSstDispatcher(com.openggf.sprites.managers.SpriteManager,com.openggf.level.objects.ObjectManager,com.openggf.game.ZoneFeatureProvider)
 METHOD com.openggf.game.GameModule public  com.openggf.level.Level loadLevelOverride(int) THROWS java.io.IOException
 METHOD com.openggf.game.GameModule public  com.openggf.level.Level transformDecodedLevel(com.openggf.level.Level)
-METHOD com.openggf.game.GameModule public  com.openggf.level.objects.TouchResponseTable createTouchResponseTable(com.openggf.game.GameDataSource) THROWS java.io.IOException
 METHOD com.openggf.game.GameModule public  com.openggf.level.rings.RingSpriteSheet getAdditiveLevelRingSpriteSheet() THROWS java.io.IOException
 METHOD com.openggf.game.GameModule public  com.openggf.sprites.art.SpriteArtSet loadTailsTailArt()
 METHOD com.openggf.game.GameModule public  com.openggf.sprites.playable.SidekickCarryTrigger getSidekickCarryTrigger()
@@ -6122,7 +6119,7 @@ METHOD com.openggf.game.GameModule public  void resetModuleScopedState()
 METHOD com.openggf.game.GameModule public <T> T getGameService(java.lang.Class<T>)
 METHOD com.openggf.game.GameModule public,abstract  com.openggf.audio.GameAudioProfile getAudioProfile()
 METHOD com.openggf.game.GameModule public,abstract  com.openggf.game.DebugOverlayProvider getDebugOverlayProvider()
-METHOD com.openggf.game.GameModule public,abstract  com.openggf.game.Game createGame(com.openggf.data.Rom)
+METHOD com.openggf.game.GameModule public,abstract  com.openggf.game.Game createGame(com.openggf.game.GameDataSource)
 METHOD com.openggf.game.GameModule public,abstract  com.openggf.game.GameId getGameId()
 METHOD com.openggf.game.GameModule public,abstract  com.openggf.game.LevelEventProvider getLevelEventProvider()
 METHOD com.openggf.game.GameModule public,abstract  com.openggf.game.LevelState createLevelState()
@@ -6135,7 +6132,7 @@ METHOD com.openggf.game.GameModule public,abstract  com.openggf.game.ZoneRegistr
 METHOD com.openggf.game.GameModule public,abstract  com.openggf.level.objects.ObjectPlacementEncoding getObjectPlacementEncoding()
 METHOD com.openggf.game.GameModule public,abstract  com.openggf.level.objects.ObjectRegistry createObjectRegistry()
 METHOD com.openggf.game.GameModule public,abstract  com.openggf.level.objects.PlaneSwitcherConfig getPlaneSwitcherConfig()
-METHOD com.openggf.game.GameModule public,abstract  com.openggf.level.objects.TouchResponseTable createTouchResponseTable(com.openggf.data.RomByteReader)
+METHOD com.openggf.game.GameModule public,abstract  com.openggf.level.objects.TouchResponseTable createTouchResponseTable(com.openggf.game.GameDataSource) THROWS java.io.IOException
 METHOD com.openggf.game.GameModule public,abstract  int getPlaneSwitcherObjectId()
 METHOD com.openggf.game.GameModule public,abstract  java.lang.String getIdentifier()
 METHOD com.openggf.game.GameOverExit public,static  com.openggf.game.GameOverExit valueOf(java.lang.String)
@@ -6474,7 +6471,6 @@ METHOD com.openggf.game.ModGame public  int[] getBackgroundScroll(int,int,int)
 METHOD com.openggf.game.ModGame public  java.lang.String getIdentifier()
 METHOD com.openggf.game.ModGame public  java.util.List<java.lang.String> getTitleCards()
 METHOD com.openggf.game.ModGame public  java.util.Map<com.openggf.audio.GameSound,java.lang.Integer> getSoundMap()
-METHOD com.openggf.game.ModGame public,final  com.openggf.data.Rom getRom()
 METHOD com.openggf.game.MusicReference public,static  com.openggf.game.MusicReference namespaced(java.lang.String,java.lang.String)
 METHOD com.openggf.game.MusicReference public,static  com.openggf.game.MusicReference stock(int)
 METHOD com.openggf.game.MusicReference$Namespaced public  java.lang.String localName()
@@ -7471,7 +7467,6 @@ METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.game.Debu
 METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.game.DebugOverlayProvider getDebugOverlayProvider()
 METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.game.DonorCapabilities getDonorCapabilities()
 METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.game.EndingProvider getEndingProvider()
-METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.game.Game createGame(com.openggf.data.Rom)
 METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.game.Game createGame(com.openggf.game.GameDataSource)
 METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.game.GameId getGameId()
 METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.game.GameOverFlowProvider getGameOverFlowProvider()
@@ -7515,7 +7510,6 @@ METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.level.Lev
 METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.level.objects.ObjectPlacementEncoding getObjectPlacementEncoding()
 METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.level.objects.ObjectRegistry createObjectRegistry()
 METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.level.objects.PlaneSwitcherConfig getPlaneSwitcherConfig()
-METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.level.objects.TouchResponseTable createTouchResponseTable(com.openggf.data.RomByteReader)
 METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.level.objects.TouchResponseTable createTouchResponseTable(com.openggf.game.GameDataSource) THROWS java.io.IOException
 METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.level.rings.RingSpriteSheet getAdditiveLevelRingSpriteSheet() THROWS java.io.IOException
 METHOD com.openggf.game.patch.DelegatingGameModule public  com.openggf.sprites.art.SpriteArtSet loadTailsTailArt()

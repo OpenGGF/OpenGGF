@@ -106,7 +106,6 @@ public final class InfiniteSonicMod implements GgfMod {
             if (stockObjects == null) stockObjects = createObjectRegistry();
             return stockObjects;
         }
-        @Override public Game createGame(Rom rom) { return game = super.createGame(rom); }
         @Override public Game createGame(com.openggf.game.GameDataSource source) {
             return game = super.createGame(source);
         }

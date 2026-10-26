@@ -153,7 +153,8 @@ class TestS3kNativeP2TouchHurtEligibility {
         fixture.camera().setFrozen(true);
         fixture.camera().setX((short) (X - 0x80));
         fixture.camera().setY((short) (Y - 0x70));
-        var table = GameServices.module().createTouchResponseTable(services.romReader());
+        var table = GameServices.module().createTouchResponseTable(
+                GameServices.level().getWorldSession().getDataSource());
         var objects = new ObjectManager(List.of(), GameServices.module().createObjectRegistry(),
                 0, null, table, null, fixture.camera(), services);
         // Public geometry-only recreation form; default native object state.

@@ -100,7 +100,7 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
         return globalAnimationState;
     }
 
-    @Override
+    /** Returns this cartridge game's backing ROM. */
     public Rom getRom() {
         return rom;
     }

@@ -94,8 +94,9 @@ class TestStandaloneGameSpec {
         assertEquals(MusicReference.namespaced("sample","theme"),module.getLevelMusicReference(0,0));
         assertTrue(module.supportsSidekick());
         assertEquals(GameId.STANDALONE,module.getGameId());
-        assertNull(game.getRom());
-        assertThrows(UnsupportedOperationException.class,()->module.createGame((com.openggf.data.Rom)null));
+        assertTrue(source.rom().isEmpty());
+        assertFalse(game.canSave());
+        assertFalse(game.canRelocateLevels());
         assertNull(module.getAudioProfile().createSmpsLoader(null));
         assertTrue(module.getAudioProfile().getSoundMap().isEmpty());
     }

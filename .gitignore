@@ -78,6 +78,8 @@ tools/*
 !tools/disasm/
 !tools/disasm/*.py
 /tools/disasm/__pycache__/
+!tools/soniccd/
+/tools/soniccd/__pycache__/
 /tools/testing/__pycache__/
 /.openggf/test-runs/
 !tools/audio/lib/s1_audio_parity_protocol.sh

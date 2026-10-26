@@ -17,7 +17,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -33,14 +32,14 @@ class TestS1S2PlcSessionOwnership {
     @Test
     void sequentialSonic1AndSonic2SessionsDoNotSharePlcProgressOrAdapterIdentity() {
         Sonic1GameModule sonic1 = new Sonic1GameModule();
-        sonic1.createGame(new Rom());
+        sonic1.createGame(new com.openggf.game.RomDataSource(new Rom(), "rom:test:plc-ownership"));
         Sonic1PlcService s1Service = sonic1.getGameService(Sonic1PlcService.class);
         s1Service.restore(nonEmptySnapshot());
         assertTrue(s1Service.isBusy());
         assertSingleAdapter(sonic1, s1Service);
 
         Sonic2GameModule sonic2 = new Sonic2GameModule();
-        sonic2.createGame(new Rom());
+        sonic2.createGame(new com.openggf.game.RomDataSource(new Rom(), "rom:test:plc-ownership"));
         Sonic2PlcService s2Service = sonic2.getGameService(Sonic2PlcService.class);
         assertFalse(s2Service.isBusy(), "the next session must start with an empty PLC FIFO");
         assertEquals(3, sonic2.rewindAdapters().size());
@@ -64,11 +63,12 @@ class TestS1S2PlcSessionOwnership {
         Sonic1GameModule module = new Sonic1GameModule();
         GameplayModeContext context = attachedBeforeGameCreation(module);
         assertFalse(context.getRewindRegistry().capture().containsKey(Sonic1PlcService.REWIND_KEY));
+        CompositeSnapshot beforePlc = context.getRewindRegistry().capture();
 
-        module.createGame(new Rom());
+        module.createGame(new com.openggf.game.RomDataSource(new Rom(), "rom:test:plc-ownership"));
         context.registerLevelAdapters(context.getLevelManager());
         Sonic1PlcService service = module.getGameService(Sonic1PlcService.class);
-        assertRegistryReplaysAndResetsMissingAdapter(context, service, Sonic1PlcService.REWIND_KEY,
+        assertRegistryReplaysAndResetsMissingAdapter(context, beforePlc, service, Sonic1PlcService.REWIND_KEY,
                 service::prepare, service::serviceLevelVBlank, service::clearQueued);
     }
 
@@ -79,11 +79,12 @@ class TestS1S2PlcSessionOwnership {
         assertFalse(context.getRewindRegistry().capture().containsKey(Sonic2PlcService.REWIND_KEY));
         assertTrue(context.getRewindRegistry().capture()
                 .containsKey(Sonic2LevelMusicScheduler.REWIND_KEY));
+        CompositeSnapshot beforePlc = context.getRewindRegistry().capture();
 
-        module.createGame(new Rom());
+        module.createGame(new com.openggf.game.RomDataSource(new Rom(), "rom:test:plc-ownership"));
         context.registerLevelAdapters(context.getLevelManager());
         Sonic2PlcService service = module.getGameService(Sonic2PlcService.class);
-        assertRegistryReplaysAndResetsMissingAdapter(context, service, Sonic2PlcService.REWIND_KEY,
+        assertRegistryReplaysAndResetsMissingAdapter(context, beforePlc, service, Sonic2PlcService.REWIND_KEY,
                 service::prepare, service::serviceLevelVBlank, service::clearQueued);
     }
 
@@ -105,6 +106,7 @@ class TestS1S2PlcSessionOwnership {
 
     private static void assertRegistryReplaysAndResetsMissingAdapter(
             GameplayModeContext context,
+            CompositeSnapshot beforePlc,
             RewindSnapshottable<NemesisPlcQueueSnapshot> service,
             String rewindKey,
             Runnable prepare,
@@ -126,7 +128,7 @@ class TestS1S2PlcSessionOwnership {
         assertEquals(original, advanceBusySequence(service, prepare, serviceFrame),
                 "registry restore must preserve the exact consumer release frame");
 
-        context.getRewindRegistry().restore(legacySnapshotWithout(snapshot, rewindKey));
+        context.getRewindRegistry().restore(beforePlc);
         assertFalse(service.capture().activeEntry() != null || !service.capture().queuedEntries().isEmpty(),
                 "a pre-PLC snapshot must reset the newly registered queue instead of retaining live work");
     }
@@ -143,12 +145,6 @@ class TestS1S2PlcSessionOwnership {
             result.add(isBusy(service.capture()));
         }
         return List.copyOf(result);
-    }
-
-    private static CompositeSnapshot legacySnapshotWithout(CompositeSnapshot snapshot, String key) {
-        LinkedHashMap<String, Object> entries = new LinkedHashMap<>(snapshot.entries());
-        entries.remove(key);
-        return new CompositeSnapshot(entries);
     }
 
     private static boolean isBusy(NemesisPlcQueueSnapshot snapshot) {

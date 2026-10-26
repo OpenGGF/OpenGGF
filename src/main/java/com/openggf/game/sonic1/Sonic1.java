@@ -67,7 +67,7 @@ public class Sonic1 extends Game implements PlayerSpriteArtProvider, AnimatedPat
         this.rom = rom;
     }
 
-    @Override
+    /** Returns this cartridge game's backing ROM. */
     public Rom getRom() {
         return rom;
     }

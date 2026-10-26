@@ -7,6 +7,7 @@ import com.openggf.game.DamageCause;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameRng;
+import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.rewind.RewindRegistry;
@@ -413,7 +414,8 @@ class TestS1GhzWreckingBallNative {
             @Override public ObjectRenderManager renderManager() { return renderManager; }
         };
         ObjectManager manager = new ObjectManager(List.of(), new Sonic1ObjectRegistry(), 0, null,
-                module.createTouchResponseTable(rom), GraphicsManager.getInstance(), camera, services);
+                module.createTouchResponseTable(GameServices.level().getWorldSession().getDataSource()),
+                GraphicsManager.getInstance(), camera, services);
         owner[0] = manager;
         Sonic1GHZBossInstance boss = manager.createDynamicObjectAtSlot(
                 () -> new Sonic1GHZBossInstance(new ObjectSpawn(128, 80, Sonic1ObjectIds.GHZ_BOSS, 0, 0, false, 0)), bossSlot);

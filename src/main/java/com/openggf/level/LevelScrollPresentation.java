@@ -98,6 +98,24 @@ final class LevelScrollPresentation {
                 scroll.backgroundBuildParameters());
     }
 
+    /** A standalone scroll scope can draw the ordinary player before any mask transition was prepared.
+     * Retain cold geometry now, without advancing that transition or changing native-table capture semantics.
+     */
+    static LevelScrollPresentation captureForDrawScope(LevelManager level, AdvancedRenderFrameState mode) {
+        var captured = capture(level, mode);
+        var r = captured.registers;
+        if (r.arenaMask() != null) return captured;
+        var withMask = new Registers(r.cameraX(), r.cameraY(), r.cameraXWithShake(),
+                r.foregroundY(), r.backgroundY(), r.backgroundX(), r.backgroundPeriod(),
+                r.heatHaze(), r.perLineForeground(), r.reversePlanes(),
+                r.overrideForegroundY(), r.overriddenForegroundY(), r.overrideBackgroundY(), r.overriddenBackgroundY(),
+                captureArenaMask(level));
+        return new LevelScrollPresentation(withMask, captured.horizontal, captured.backgroundLines,
+                captured.backgroundColumns, captured.foregroundColumns, captured.overrideColumns,
+                captured.phase, captured.columnPhaseX, captured.tilemapMode, captured.columnProjection,
+                captured.columnsRemap, captured.spritePositions, captured.backgroundBuild);
+    }
+
     /** Capture the bounds in the same generation as the displayed camera and sprite table.
      * ROM camera bounds remain gameplay-owned; this only hides newly exposed wide pixels.
      * No zone ID, boss flag or explicit mask activation decides whether an edge is visible.
@@ -395,6 +413,18 @@ final class LevelScrollPresentation {
         if (registers.overrideForegroundY()) builder.setForegroundVScrollOverride(registers.overriddenForegroundY());
         if (registers.overrideBackgroundY()) builder.setBackgroundVScrollOverride(registers.overriddenBackgroundY());
         builder.setForegroundPerColumnVScrollOverride(copy(overrideColumns));
+        return builder.build();
+    }
+
+    /** Retain a controller result without sampling live scroll or its double-buffered storage. */
+    static AdvancedRenderFrameState copyRenderMode(AdvancedRenderFrameState mode) {
+        var builder = AdvancedRenderFrameState.builder();
+        if (mode.enableForegroundHeatHaze()) builder.enableForegroundHeatHaze();
+        if (mode.enablePerLineForegroundScroll()) builder.enablePerLineForegroundScroll();
+        if (mode.reversePlaneAssignment()) builder.reversePlaneAssignment();
+        if (mode.hasForegroundVScrollOverride()) builder.setForegroundVScrollOverride(mode.foregroundVScrollOverride());
+        if (mode.hasBackgroundVScrollOverride()) builder.setBackgroundVScrollOverride(mode.backgroundVScrollOverride());
+        builder.setForegroundPerColumnVScrollOverride(mode.foregroundPerColumnVScrollOverride());
         return builder.build();
     }
 

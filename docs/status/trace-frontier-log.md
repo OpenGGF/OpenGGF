@@ -115836,3 +115836,605 @@ is held outside the delivered tree. This does not move a passing trace frontier
 or close #208. The [bounded attribution record](../architecture/plans/2026-10-22-native-gap-swarm.md#post-223-same-movie-cold-dez1-attribution-2026-10-26)
 keeps all six epochs, including the separate instrumentation error, source
 findings and remaining Native-ownership boundary.
+
+
+## 2026-10-25 — private CD R11A live-object frontier (not a canonical trace)
+
+Private objects worktree on547318cd9 plus native Door Runtime/412client imports:
+normal400Right input now reaches unowned ID19 at physical59, after the formerly
+unowned35 dispatch is admitted. Root77883 selected WorldLoad/EGL/Frame/API304
+actual-media cases; sole failure was stale expected35 vs observed19 (01:31:54Z).
+Root51832 reran only the renamed Monitor-frontier method after updating that
+assertion,1/0/0/0 at01:33:25Z. Input schedule, source-native logic and placement
+are unchanged; first failing input-call number was not recorded. No native/V5
+physics trace parity or Monitor interaction is established.
+
+Commands used the main-workspace maven_queue.py from the private cwd, Java25,
+-Dmse=off, -Dsoniccd.media.root=<supplied-media-root>,
+-Dopenggf.headless.gl=surfaceless-egl and the supplied absolute S2ROM path.
+The normal combined selector was TestSonicCdOpeningWorldLoad,
+TestSonicCdOpeningWorldEgl,TestCdPlayerFrameRuntime,TestModApiSignatureSurface
+with -Dsoniccd.opening.egl=true. The lean affected rerun selected
+TestSonicCdOpeningWorldLoad#ordinaryRampApproachPassesOwnedSpringsTagsAndVerticalDoorAndStopsAtTheMonitorDispatcher.
+Root24309 Runtime97 passed separately. ConstructedDoor EGL geometry/retirement
+proof passed after the test-only per-pixel oracle correction in51554; source,
+negative controls and bounded evidence are in the dated CD implementation plan.
+No full-suite/full-game or broad-smoke-green claim; prior baseline-attributed
+smoke failures remain separately recorded. Next finite native owner: Monitor19.
+
+## 2026-10-25 — private Sonic CD controller frontier, not a native trace
+
+- Private `feature/ai-sonic-cd-objects-local` candidate over `ea8dabcf67`:
+  actual USA GameLoop Right completes Checkpoint13 Init at582 and through603;
+  full/course581/582 replay passes. Inside604 it rejects `Unowned CD object
+  ID $3f at live physical slot 55` (Anton, X2832/Y1061, subtypeFF, routine0).
+  Earlier pool bodies have committed; later56/57/58 have not run. Never resume
+  the failed pass or label604 complete. Frame X/Y at the stop are raw16.16
+  162147840/29340160; this is a host-loop boundary, not V5 native parity data.
+- Queue command27422 selected two actual Checkpoint EGL products plus
+  `TestSonicCdOpeningWorldLoad#checkpointNaturalRightFrontierObservation` with
+  actual CD media/S2 donor, Java25 and surfaceless EGL:3/0/0/0, no skips.
+  The temporary observer is replaced by
+  `ordinaryRightRouteCompletesCheckpointAt582ReplaysThenStopsAtAnton604`;
+  its permanent582/603 replay and exact partial604 assertions passed in
+  consumers25852 (1149/0/0/0,18 classes, fresh XML/no skips); fresh guards68483
+  passed728/0/0/0.
+- No native trace fixture/timing row was changed or used to hydrate gameplay.
+  The natural route did not activate this Checkpoint. Separate initial-only
+  constructed World cases prove contact/save/ball animation/current pixels,
+  real death/reset/fresh load and same-new-epoch replay. USA whole-game,
+  JP/EU gameplay, HUD clock and broader act breadth remain uncertified.
+
+## 2026-10-25 — private CD Anton and natural Checkpoint, controller frontier
+
+- Candidate over b9816d16a656358840d547d47ec34887dc791d12 on private
+  feature/ai-sonic-cd-objects-local; no main merge/push. No V5 fixture or timing
+  row was changed or used as gameplay input. Actual USA held Right completes
+  Anton 55 Init 604, Place 609/610 and through 656. Natural Checkpoint contact/save
+  occurs649 (31 known saved bytes / raw DEV0/AE), with full/course pre-contact
+  owner comparison plus forward replay. This is a host-loop observation, not
+  native trace/frame/pixel parity or a complete act/game.
+- First stop657: UnsupportedOperationException, Unowned CD object ID $20 at
+  live physical slot40 (collapsing platform), X3248/Y784/subtypeC0/saved44/r0.
+  Earlier physical bodies commit; later Anton 55 is unvisited in657. Partial
+  primary XY16.16=183030784/48438784, XV1534/YV-300; Runtime/Frame fail closed.
+  Never resume it or label657 complete. Permanent test:
+  TestSonicCdOpeningWorldLoad#ordinaryRightRouteCompletesAntonAndNaturalCheckpointSaveReplaysThenStopsAtCollapsePlatform657.
+- Focused actual route and new EGL selection64511: route passes; EGL fails an
+  unproved terrain prerequisite, not a cleanup negative. Root fixture corrections
+  use actual slope/current-window support, preserve native physics/spawning,
+  and strengthen saved-owner restore before replay.73125 then reaches EXACT
+  old 579 teardown failure at new owned 131651;601 two-line cleanup18640 passes
+  full8-scene current22/SAT/pixel/replay/retirement/cleanup proof.113 actual ENGINE
+  captures include the controller649 save before construction; no emulator
+  image or native palette/timing comparison was made.
+- Final queue37663 exact10 affected classes:634/0/0/0, actual media/J25/EGL/S2,
+  no skips/fresh reports; command is recorded in the dated CD implementation
+  plan. Seven current terrain consumers47868 separately pass263/0/0/0.
+  Fresh structural guards 45840:728/0/0/0,90 fresh reports/J25/Lua5.4,
+  Maven 5m04/20:27:44Z/no queue wait. No full-suite/full-smoke claim. Next finite
+  owner is platform 20; live HUD/audio/native startup and broad act/region
+  obligations remain open.
+
+
+## 2026-10-25 — private CD collapsing platform, controller frontier742
+
+- Candidate over74b4aa0ce54a36bd3125f3411a2f45063fced0d2, private
+  feature/ai-sonic-cd-objects-local only. Controller-only heldRight now completes
+ 657 (two platform Init),723 native C0 breakup/A3once,732 Delay→Fall and741;
+  selected full/course replay preserves earlier Anton/Checkpoint649 saved owner.
+- First partial742: UnsupportedOperationException, Unowned CD object ID $21 at
+  live physical slot75. Raw source X3824/Y348/subtype40/routine0; SpawnObjects
+  creates it inside742 BEFORE Body/dynamic dispatch. Earlier35 Fall is retained,
+  Y032F4000/delta00048000; actor XY216737536/48973568,XV1536,YV0. Runtime/Frame
+  close; no failed-call resume/completed742 or native emulator parity claim.
+- Permanent selector: TestSonicCdOpeningWorldLoad#ordinaryRightRouteCompletesAntonCheckpointAndCollapseThenStopsAtPlatform21At742WithReplay.
+  Narrow13854 passes1/0/0/0 (31.399s/22:27:02Z/no queue). Exact new art is one
+  current physical57-tile producer inside AT_9000; cold preload is explicitDEV,
+  not native title/Std service. C29 preserves selected-current reads/UNKNOWN.
+- Actual EGL World positive79137 passes1/0/0/0 after exact old601 cleanup RED
+  at new owned131673. Eight96-row scenes execute child order/Delay/Fall/delete,
+  sparse40 current pixels, full/course replay and658 installed retirement;
+ 41 ENGINE PNGs after allcleanup. Source fixture cell14=5 correction only;
+  no gameplay/terrain change fitted to the oracle.
+- Final25-class27102 runs2147/1/0/0: only inherited Anton source-count10 vs11;
+  narrow count-only correction56421 passes all10 picture cases. Other2146 passed,
+  including20 EGL/50 World-load/327 Runtime, exactfreshXML/J25/media/EGL/S2/zero
+  skips. No fresh all-green2147 invocation/full-suite claim. Exact commands and
+  earlier RED/corrections are in the dated CD implementation record. Fresh guards
+ 68138 pass728/0/0/0 across90 exactfreshXML/J25/Lua5.4,5m16/22:39:19Z/noqueue.
+  Legacy picture count/inventory migrations are narrowly rechecked (29/1 then
+  corrected Spikes8/0); the old C28 inventory omission is source-attributed,
+  not claimed baseline-executed. Native startup/HUD/audio, next21 and whole
+  act/region breadth remain open.
+
+
+## 2026-10-26 — private CD ID21 and fresh restart Animals PLC frontier
+
+- Candidate overd975f191b3e181e3bd75ba577318970cac7dfef9 in private
+  feature/ai-sonic-cd-objects-local only. Native ID21 Init742 and Main743 now
+  complete. Permanent Right route reaches1200 with full/course replay at
+ 741/742/1199; its old741/742 unowned boundary is historical above.
+- Permanent selector: TestSonicCdOpeningWorldLoad#ordinaryRightRouteCompletesAntonCheckpointCollapseAndPlatform21Through1200WithReplay;
+ 10332 passes1/0/0/0 at00:04:58Z,30.062s/noqueue, exact source SHA03604cdcd7e95e996422dbe0d3741343168a9ecab003d53224828a5c6dc2623b.
+  Retains all earlier natural Checkpoint649 owner comparisons BEFORE replay.
+- World21+narrow Runtime69042 passes2/0/0/0 at23:44:13Z25Oct,41.024s/queue40s,
+  Java25/actual media/S2/surfaceless EGL/no skips.16 scenes/6273 ordinary calls,
+  current12 native patterns/all12 size-flip products/full-course pixels/selected
+  retirement;81 original ENGINE PNGs after allcleanup. No658-rendered claim.
+- Right-only observers24768/22894 complete1200/3600 with no unsupported call;
+  the latter ends pushing, not at an implementation boundary. Controller script
+ 1200R;32R+B;1200R then observes actual Kill1802, routine8/reset60 at1886 and
+  production generation2 at1947. Old Runtime/Frame/actor/level retire; no
+  old-epoch replay. Probe84710 passes its bounded stop-on-epoch observation.
+- Follow-up probe33660 errors1/0/1/0 at23:59:58Z25Oct,31.041s/noqueue, source
+ 1de37190f05ac59deaec6227e0aeebf484003ebc8388a034d8049767991099a5
+ 145611B (temporary observer, external frozen mirror). Fresh calls1..6 complete;
+  fresh7/global1954 fails in finishOrdinaryTail.prepare: SectionArtException
+  UNKNOWN_SOURCE2381C0/VRAM7100. Earlier service finishes the final Boulder tile,
+  pops the queue and retains count0/budget3/head2381C0; old table/decoder remain
+  diagnostic. No failed-call resume/completed1954/native parity claim.
+- Same C29/shared Platform57/source11/bank19/658. The next source must reuse
+  cached FrontierArtBank Animals; finite native authentication/source12 and
+  permanent fresh-route promotion remain next work. Final affected31987 passes672/0/0/0 at00:11:10Z (1m48/queue21s),
+  exact8freshXML/Java25/media/EGL/S2/no skips. Fresh guards74260 pass728/0/0/0 across90 fresh reports
+  (Java25/Lua5.4;5m15/queue272s;00:22:45Z); historical fixture reds are documented
+  in the dated implementation record, not claimed green.
+
+
+## 2026-10-26 — private CD cached Animals service and next source2006
+
+- Over0afaea40f8b01a5e58cdb2b5d8b3a1123c5db35c in the same private worktree;
+  append source12 from the existing FrontierArtBank cached Java445 read, native
+  finite446/20tiles. Only Runtime/SectionArt count guards and inherited count/
+  source contracts migrate. No new bank/preload/region/logical or picture policy.
+- Permanent selector controllerJumpRouteRestartsFromNaturalCheckpointAndServicesAnimalsWithFreshEpochReplay
+  in TestSonicCdOpeningWorldLoad drives1200R/32R+B/thenR. Old11 matched RED83312
+  fails fresh7/global1954 at2381C0/7100; new12 positive2447 passes4/0/0/0 including
+  natural proof1 and Boulder retail3. Actual load1947 retires old captures;
+  fresh7..14 current Animals20 and full/course loaded0/1/7/10 replay pass.
+- Nine-class affected96460:718/1/0/0 at00:57:44Z,1m52/noqueue. Sole stale Runtime
+  Animals-negative is repaired to actual six-row incrementalPLC8 completion;
+  Root R2/R3 wrongly expected fullPLC2 GoalPost and failed. R4 selector
+  cameraArtActiveReversalCompletesActualIncrementalSourcesWithoutDroppingCurrentPrefix
+  passes1/0/0/0 in34195 at01:10:59Z,29.167s/noqueue.717 combined plus narrow repair
+  is not a fresh all-green718 run. Fresh source12 guards pending; old728 belongs0af.
+- Separate temporary controller observer22838 errors1/0/1/0 at01:12:59Z,
+ 30.011s/queue14s:2005 complete calls/fresh58, attempted2006/fresh59 stops at
+  SectionArt UNKNOWN_SOURCE2320DA/9EE0 during ordinary-tail prepare. Count0/
+  budget2 and advanced queue retain earlier service prefix. Permanent source
+ 155082B/6f8e7e82f4d3b5935acd6dc7bab9415c123a2f89342e0bb9310aa72c1a6124ab restored;
+  temporary145612B observer remains external. Next-source research is separate;
+  no completed2006/failed-call resume/act or native parity claim.
+- Commands, exact media/J25/EGL/S2 scope, model-vs-native limits, initial asset
+  reds and Root corrections are in the dated CD implementation record. No
+  public delivery or new quiet-hours visual; full private USA-then-JP/EU goal active.
+
+- Source12 final structural guards11227 pass728/0/0/0 at01:23:55Z,
+ 4m58/queue31s,90 exact fresh executable-class XML/J25/privatecwd/no skips.
+  Independent R4 review f2af1642d40318f771b7e09cb4408d275d6769722e6afd6426b9027a7efc5486
+  finds no actionable P1/P2; registration/Natural review also accepted its fixed
+  scope. Reviewers did not execute. Original718 invocation remains red with a
+  separately repaired narrow oracle; it is never relabeled all-green.
+
+
+## 2026-10-26 — private CD finite GoalPost service and controller bound2347
+
+- Candidate over527d9986afaefa4860f431112aca1eb075287350. One existing-helper
+  cached GoalPost decode appends source13, canonical2/6 versus actual4/5;
+  source448/Java448/native449/XOR24. Real adjacent80 is consumed, Signpost stays
+  unregistered. No Region/C30/658 growth, preload or goal-object execution.
+- Natural selector controllerJumpRouteRestartsNaturallyAndServicesGoalPostWithFreshEpochReplay:
+  matched Source12 RED11797 fails fresh59/2006 at2320DA/9EE0,4/0/1/0 including
+  three passing old-count repairs. Source13 positive72042 passes179/0/0/0 at
+ 02:02:25Z,1m53/queue140s, exact4freshXML/J25/media/privatecwd/noskips. Fresh59
+  prepare and60..67 all24 complete current tiles/queue-empty/full-course cuts pass.
+  Native448 support-negative preserves23 tiles and withholds partial last tile.
+- Saved Source12 older-picture baseline42506:46/4/0/0,57.082s/queue339s;
+  three11vs12 counts and Boulder-unregistered-Animals oracle only. Root changes
+  literal counts and one prepare/no-write oracle; no production tuning. Boulder
+  narrow32688 passes1/0/0/0 before source13 import. Original reds remain red.
+- Remaining2319 passes481/0/0/0 at02:27:54Z,1m42/queue221s:9 exactfreshXML,
+  J25/media/EGL/S2/privatecwd/noskips;362 Runtime/52 World-load/21 EGL/46pictures.
+  Permanent World-load196490/000eb8f8... restored before the full-class check.
+  Source13 fresh structural guards pending; prior728 belongs Source12.
+- Observer61311 passes1/0/0/0 at02:18:53Z,30.921s/queue626s;2347 returned calls,
+  including400 fresh rows after1947. Actor222745856/48966912,routine2,flags32,
+  velocities0; section0200/count0/head0. This is a controller/pushing bound, no
+  new implementation exception. Summary retained its first-epoch label despite
+  the completed fresh loop; it does not prove another reload. No failed-call
+  resume, native timing/pixel parity or whole-act/game/regional completion claim.
+- Both fixed-input independent reviews find no actionable P1/P2; no reviewer
+  execution. Commands and reader/diagnostic/committed-byte distinctions are in
+  the dated CD implementation record. Full private goal remains active.
+
+- Source13 fresh guards31748 pass728/0/0/0 at02:40:19Z,5m02 execution,
+  queue wait unknown;90 exactfresh executable-class XML/J25/privatecwd/noskips.
+  All13 final Java files match frozen revisions; permanent World-load restored.
+  No source13 Java repair was needed; historical red invocations remain recorded.
+
+
+## 2026-10-26 — private CD three-jump controller frontier3211
+
+- Saved source13 cc74a36ed4d1c5f731df05490ddb017884dbbb2c; no production change.
+  Input-only second gesture trial21406 completes3001/3001 ordinary cuts,1/0/0/0
+  at02:47:31Z,30.048s/queue74s. Script1200R;32RB;537R;32RB;1200R. Actual1770
+  emitsFM_JUMP;1802 remains airborne routine2 instead of the earlier recipe's
+  Kill. Last push71 is real ID19/raw20AA4E/05A8, not inferred from a link.
+- Third gesture appends32RB;1200R (4233 planned). Observer21222 completes3210
+  and errors inside3211: SectionArt UNKNOWN_SOURCE23AC08/VRAM7400 during
+  ordinary-tail preparation.1/0/1/0 at02:54:24Z,29.662s;queue wait unrecorded.
+  ExactfreshXML/J25/privatecwd/media/no skips checked. No completed3211/resume.
+- Closed3210 section0400,remaining1/budget0,lastBouldersource2365C5/dest70C0.
+ 3211 finishes that tile,pops88 bytes,then stops newhead23AC08/7400,count0/
+  budget3. Prior table/saved RAM and all earlier Body/dynamic/scroll/Draw effects
+  survive; Runtime/Frame close. Enum calls this ART_SONIC_HOLE,114 bytes; actual
+  media/finite Java/native extents still need independent authentication.
+- Genuine controller ID21 contact already occurs: live physical36/routine2/
+  subtype15/tile44BE/map20CCC8,X4139/Y157; actor stands on36. Source timer bytes
+  progress BD→BE and5→6 across the failing call. Actor after prefixX16=273342720,
+  Y16=8573952,XV/GV1536,YV0,routine2/flags8; saved checkpoint2/spawn1 retained.
+  This extends actual route coverage, not native image/timing or act certification.
+- Temporary observer source146598/SHA48f6673c3c8eeabb625bb7d001778a694de25f95c3270c1723e14d0e2b86df0c
+  is external. Permanent196490/000eb8f8... restored; no target/branch/public
+  mutation beyond this private observation. New source-only authentication and
+  permanent-route/replay authoring are underway; their vectors remain UNRUN.
+
+
+## 2026-10-26 — permanent three-jump controller contact/replay proof
+
+- Base/private production cc74a36ed4d1c5f731df05490ddb017884dbbb2c remains
+  unchanged. Frozen author test224959B/SHA
+  b0ea2e5047898820ed0e26b4f44bca2ece27d8e6f0603b65e4394afd84143b62
+  appends one case; all old52/imports/helpers/assertions recover byte-exact.
+- Command from ai-sonic-cd-objects-local: env -u DISPLAY -u WAYLAND_DISPLAY
+  LUA_BIN=lua5.4 python3 "$OPENGGF_ROOT/tools/testing/maven_queue.py"
+  -Dmse=off -Dsoniccd.media.root="$SCD_MEDIA_ROOT"
+  '-Dtest=TestSonicCdOpeningWorldLoad#controllerThreeJumpRouteRetainsNaturalCheckpointReplaysClosedCutsAndStopsAtUnknownSource14' test.
+  Session97259 passes1/0/0/0 at03:27:53Z; Maven30.097s,queue60s. Fresh exact
+  XML/case/J25.0.5.0.2/privatecwd/media/no skips verified. No production edits.
+- Actual discovery: partialBoulder3205/count16 and first genuine ID21 standing
+  3206/live36. Six full/course restores compare complete state plus saved/live
+  checkpoint knowledge BEFORE forwarding3001→3002,3205→3210,3209→3210.
+  Detached pictures/sounds/cache identity also survive. Only afterward does
+ 3211 fail as expected at UNKNOWN_SOURCE23AC08/7400 after Boulder/POP; prior
+  native/body/dynamic/scroll/Draw prefix remains and both owners close.
+- This successful negative-boundary proof does not complete3211 or resume a
+  failed call. Independent source-only research52475B/SHA
+  f78cce3eb9fc9cfb344bc8df295612556da9b67ca0ec6e8beef6bb2497d58fc1
+  authenticates Hole Java113/native114 and three actual queued neighbours.
+  Four existing-helper cache appends14..17 are accepted but unimported/UNRUN.
+  Existing regions, C29/19banks/658potential, startup and restart carry remain.
+
+
+## 2026-10-26 — three-jump RootR3 resolves reviewed assertion gaps
+
+- Same source13/privatecc74 production, same focused command/selector as above.
+  R1 pass did not cover third-jump sound/acceptance, intermediate replay rows,
+  native Boulder final cursor or terminal clocks/unreached tail. Independent
+  review identifies these4P2; RootR2 adds their exact native-derived assertions.
+- R2 review finds1P1 package-private hash call, no furtherP2. Own queued17990
+  waited624s, began compilation, cancelledexit130 before tests once known bad.
+  No execution result claimed. RootR3 changes only that hash expression to the
+  public JDK API, frozen228570B/SHAdb8c1a44b9973e751140aadaab26b44d52eecb5fa42f41042a82892ab8afcf39.
+- Session67192 PASS1/0/0/0 at03:50:46Z, Maven30.883s/queue75s. Exactfresh XML/
+  selector/J25.0.5.0.2/privatecwd/actualmedia/no skips checked. Every replayed
+  row now compares complete State/pictures/sounds/checkpoint/live/knowledge,
+  not only endpoints. Thirdjump3002 is actual AIR/ROLL/FM_JUMP. Boulder native
+  final271/source2365D1/read8080/shift15/repeat0/pixel0/history0 is independent
+  of its19 resident tiles and PRIOR saved RAM retained across POP. The failed
+ 3211 increments legitimate clocks once but cannot advance Ring/spill tail or
+  load epoch. No unchanged-all96 or failed-call-resume assertion is introduced.
+- Original52 methods/helpers/imports/assertions recover byte-exact. No production
+  change, source17 positive, native parity or completed3211 claim. The upcoming
+  four actual-queue registrations and partial-service tests remain unimported.
+
+
+## 2026-10-26 — four queued PLC producers and actual Tamabboh3222 frontier
+
+- Private base62607759799bf53906fffdcb3f2896038d126418; uncommitted source17
+  appends Hole/Waterfall/Disc/Shadow through the same cache/helpers and two
+ 13→17 guards. No decoder/public API/Region/preload/C30/span change. Canonical
+  full5 rows2/4/5/6 are distinct from reached incremental10 rows1/3/4/5.
+- Matched source13 RED53855:6/1/0/0 at04:01:28Z,33.248s/queue121s; USA17vs13
+  atRetail4741, five other new cases pass. Earlier35627 only failedtestCompile
+  (missing checkedIOException),23.799s/queue116s, no tests; RootunitR2 fixes only
+  helper/caller declarations. Original frozen R1s remain unchanged.
+- First full assets/service candidate15639:193/5/0/0 at04:09:51Z,2m10s/queue323s;
+  unit93/retail42 pass,Section53/58 pass. Five new asserts confuse fresh
+  openingObjects owners with one cached bank. RootSectionR3 fixes only scope:
+  true per-owner cache identity, cross-owner full-byte equality, same-cut source
+  identity, plus reviewed UNKNOWN8000 nonwrites. Narrow59496 passes5/0/0/0 at
+ 04:12:31Z,33.992s/queue0.188+narrow5 is not fresh193all-green.
+- Affected consumers83689:429/0/0/0 at04:26:49Z,1m40s/queue97s. Command:
+  env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 python3
+  "$OPENGGF_ROOT/tools/testing/maven_queue.py" -Dmse=off
+  -Dsoniccd.media.root="$SCD_MEDIA_ROOT" -Dsoniccd.opening.egl=true
+  -Dopenggf.headless.gl=surfaceless-egl -Dsonic2.rom.path="$S2_ROM"
+  '-Dtest=TestCdOpeningObjectRuntime,TestSonicCdOpeningWorldEgl,TestCdBoulderPicture,TestCdDiagonalSpringPicture,TestCdSpikesPicture,TestCdCheckpointPicture,TestCdAntonPicture,TestCdCollapsePlatformPicture' test.
+  Exact8freshXML/J25/privatecwd/actualmedia/EGL/S2SHA1
+ 8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9/no skips verified. Runtime362,EGL21,
+  pictures46. No changed logical19/658 or physical452 ownership.
+- Actual observer53617 uses --lean and the same script4233 planned:
+  '-Dtest=TestSonicCdOpeningWorldLoad#actualControllerThreeJumpsObservesQueuedArtAndTheNextNativeFrontier'.
+ 1/0/1/0 at04:13:51Z,33.376s/queue0. FreshXML/case/J25/media/privatecwd/no skips.
+ 3221 complete ordinary calls, then3222 UnsupportedOperationException:
+  Unowned CD object ID22 at live40. Native ObjIndexAct1Present:41=ObjTamabboh.
+  Hole prepare3211(count14,23AC29/7400),14 complete3216 then Pata50 prepare.
+  Closed3221 Pata15 written/count35/input272/source237488/dest77E0/read0/shift9/
+  repeat4. Failed3222 VInt writes3more/count32/input307/source2374AB/dest7840/
+  read00CF/shift14/repeat0. No further table rebuild or Ring/spill tail.
+- Native slot40/FFDA00 old64bytes0; staged after spawner is
+ 22000000000000001210000002110000000000000000000000000000000000000000006500000000000000000000000000000000000000000000000000000000
+  ID22/r0/XY4624,529/subtype0/secondary0/saved101; Init is not executed.
+  Placement before3968/right207/left171/saved101,89; after4096/right211/left181/
+  saved104,91. ActorX16/Y16 before277274880/9040896/YV448 and after277668096/
+ 9155584/YV504; XV/GV1536,r2/flags2/link0. Generation1/CP2/spawn1 unchanged,
+  bothRuntime/Frameclosed, no failed resume or completed3222. Unprepared queued
+  Waterfall/Disc/Shadow remain only component-validated on this route.
+- Temporary observer259346/SHA157f1a7ef2abcf181e6e6d30cd236d075eef8fdf2c42f266eceef3adf84ee3f9
+  is external; permanent228570/db8c1a44... restored after terminal. New permanent
+  route/replay promotion is source-only pending; no fully green candidate,
+  whole-act/regional/native-gameplay parity or quiet-hours visual claim.
+
+
+## 2026-10-26 — permanent Hole/Pata/current-mask replay through3221
+
+- Same private base626077597/source17 candidate, no additional production edit.
+  AuthorR1 replaces only former53rd route case plus demonstrated old52 source-
+  bank17 counts/lists; no changed selected PLC4 queue, input or gameplay ingress.
+ 29599 fails only testCompile at04:40:40Z (27.142s/queue22s): LiveAux integer
+  knowledge mask was dereferenced. Separate RootR2 fixes only that assertion.
+- COMPLETE TestSonicCdOpeningWorldLoad passes53/0/0/0 in71775 at04:43:06Z,
+ 35.708s/queue10s. Command: env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4
+  python3 "$OPENGGF_ROOT/tools/testing/maven_queue.py" --lean -Dmse=off
+  -Dsoniccd.media.root="$SCD_MEDIA_ROOT" '-Dtest=TestSonicCdOpeningWorldLoad' test.
+  ExactfreshXML/J25.0.5.0.2/privatecwd/media/no skips checked. Tested255736B/SHA
+ 317e3c853cb7d2dd344c6fcecb3ae3596d2b6082d17ea2df7b04c35779bd3ab5.
+- New casecontrollerThreeJumpRouteServicesHoleReplaysClosedCutsAndStopsAtTamabbohSlot40
+  keeps all pre3210 checks; nine full/course cuts compare complete state,
+  checkpoint/live/knowledge/current finite inputs/pixels/sounds BEFORE forward
+  and at EVERY reached closed row through3221. Hole14current thenPata15current
+  and3222VInt's extra3 Pata tiles are separately checked. Only after all valid
+  replay does the one failed3222 assert slot40's real spawn prefix and close.
+  Waterfall/Disc/Shadow remain unprepared naturally. No native image/timing,
+  fully fresh675-case invocation, broad smoke/full-suite or whole-act claim.
+- Planner base626 selects3755smoke/guards solely from unclassified private CD
+  changes. Bounded focused actual-media owner/service/Runtime/EGL/picture/full
+  WorldLoad coverage is proportionate: no shared algorithm, constructor, field,
+  public API, physics, common renderer, build or selection implementation changed.
+  Prior728 fresh guards belong to source13. Final static route review found no
+  open P1/P2; private local save follows with no additional execution claim.
+
+
+- 2026-10-26, private4a78c8b6e plus frozen Tamabboh Runtime235934/a9deb and
+  testR3: unchanged genuine observer57473 completed3258 ordinary controller
+  calls; first implementation error at3259 is unowned09/live46 before Init
+  (native ObjectIndex:16 ObjSpinningDisc), not picture440.1/0/1/0at05:44:09Z,
+  32.200s/queue0, exactfreshXML/J25/media checked. Command: env -u DISPLAY
+  -u WAYLAND_DISPLAY LUA_BIN=lua5.4 python3 "$OPENGGF_ROOT/tools/testing/maven_queue.py"
+  --lean -Dmse=off -Dsoniccd.media.root="$SCD_MEDIA_ROOT"
+  '-Dtest=TestSonicCdOpeningWorldLoad#actualControllerThreeJumpsObservesQueuedArtAndTheNextNativeFrontier' test.
+  Temporary259346/157f1a observer restored to permanent255736/317e3c85 after
+  terminal. Failed3259 retains actual VInt Tam18 tiles/41 remaining, Body,
+  placement and earlier dynamics; Runtime/Frame close, no failed resume.
+  Waterfall29, Disc12 and Shadow16 now complete naturally; Tam59 is partial.
+  No full-act/native image/timing/audio parity; permanent route promotion open.
+
+- Permanent Tamabboh route RootR4 narrow4970 passes1/0/0/0at06:42:58Z,
+  34.548s/queue0; previous full53/1 and R3narrow1/1 retain exact test-oracle
+  attribution. The repaired proof compares native earlier Ring child stores
+  rather than assuming all later slots unchanged, then closes3259 once after
+  every valid replay. Source286694/cd1649d48fa685feceb60f8acd796e485ed6200e06ab419f2849b0ae3802834a,
+  private4a78 plus frozenRuntime235934/a9deb and C30component. Command: env
+  -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 python3 "$OPENGGF_ROOT/tools/testing/maven_queue.py"
+  --lean -Dmse=off -Dsoniccd.media.root="$SCD_MEDIA_ROOT"
+  '-Dtest=TestSonicCdOpeningWorldLoad#controllerThreeJumpRouteRunsTamabbohServicesQueuedArtAndStopsAtSpinningDiscSlot46' test.
+  Exact XML/J25/cwd/media/no skips checked; final review/combined checks pending,
+  no fresh full53-suite/native parity/failed-call resume claim.
+
+
+- 2026-10-26, private4a78c8b6e plus live Tamabboh/C30 join: combined exact
+  TestCdOpeningObjectRuntime,TestCdTamabbohPicture,TestSonicCdOpeningWorldLoad
+  run38429 via queued Maven --lean -Dmse=off and actual CD media completed
+  458/0/1/0 at06:58:56Z (1m44s,queue0). One inherited invalid-Platform
+  fixture constructed overflowing compat19 before its factory assertion;
+  RootR2 uses explicit20 arguments with disjoint singleton758 in that loop.
+  Exact method collapseEveryOldLogicalSpanAndBothIntegerBoundsRejectAtBothIngressesWithoutFrameWrites
+  run30993 passed1/0/0/0 at07:08:30Z (32.802s,queue421s), production unchanged.
+  Runtime now uses C30/twenty bases; client reservation659. No new current
+  owner, art producer, Region, preload or gameplay change. Natural frontier
+  remains completed3258/failed3259 ID09 slot46 before Init. No fresh458,
+  Tamabboh GPU659, completed3259, full-game or regional parity claim.
+
+
+- 2026-10-26, same private live-Tamabboh/C30 source: adjacent exact6-class
+  queued CPU run83314 passes629/0/0/0 at07:15:01Z (45.575s,queue7s), and fresh
+  -Pguards run51732 passes728/0/0/0 at07:22:01Z (5m12s,queue0), ninety XML
+  classes verified. Neither is a full-smoke/release/full-game certification.
+  Read-only permanent-route probe74288 passes1/0/0/0 at07:23:37Z
+  (32.802s,queue0):3257 native camera4350/210,centre96,previousChunk4224,
+  cursors213/186,savedIDs106/93; fixed actorX4350 implies camera target4254,
+  both in the retained chunk. Terrain/GPU fixture remains unproved. Original
+  permanent RootR4 source restored exactly; no input/gameplay/PLC changes and
+  no completed3259 claim. Commands and complete bounded limits are in the
+  existing dated implementation plan.
+
+- 2026-10-26, same private4a78c8b6e live-Tamabboh/C30 tree: existing Ring
+  EGL/full-course case94046 passes1/0/0/0 at07:35:28Z. External long native
+  Tamabboh World candidate96648 fails before ingress at its fixed-foot floor
+  prerequisite, repeated by read-only39773: actorX4350/probe357 gives both
+  distances26 with no angle write, native blank31-(357&15), not ground.
+  Candidate stays unpromoted; no pose/terrain/physics/spawner adjustment and
+  no native Tamabboh World/Fire/current59-view claim.
+- Independent short current440/659 resource check18997 with old658 client
+  fails1/1/0/0 at08:09:19Z (1m22s,queue295s), only on post-close offset658 /
+  residualID131730 after actual pixels, current source/version, live-World
+  nonwrites and installation checks. SAME test/Runtime/C30 with final659
+  client47662 passes1/0/0/0 at08:32:48Z (1m22s,queue870s). Genuine current440
+  is rendered in four flips from a separately serviced existing SectionArt
+  component, all659 installed IDs retire and unrelated entries survive.
+  Command is queued Maven -Dmse=off with surfaceless-egl, EGL opt-in, actual
+  CD media and absolute authenticated S2 donor, selector
+  TestSonicCdOpeningWorldEgl#actualEglCurrentTamabbohSingletonRendersAndRetiresThe659thClientPattern.
+  Fresh XML/J25/privatecwd/flags/zero skips verified. This independent resource
+  check is not the failed native scene or natural Tam59 completion.
+- Final two source-guard classes73500 pass5/0/0/0 at08:43:22Z
+  (28.905s,queue381s), fresh XML/J25/privatecwd checked; command
+  maven_queue.py -Dmse=off -Pguards
+  '-Dtest=TestJunit5MigrationGuard,TestNoAssertionFreeDiagnostics' test -B.
+  All production is unchanged from the earlier728 guard pass. Current natural
+  frontier remains3258 returned /3259 ID09/live46 before Init. No full-smoke,
+  full-USA or regional/native-parity certification; full goal continues.
+
+- 2026-10-26, privatef381b4235 plus the frozen Disc prerequisite packets:
+  authenticated assets156 pass71893; plain Solid232 pass60341; mapper42 has
+  one new enum-count fixture failure, repaired by only37→106/narrow91496=1.
+  State8 ownership/carry passes1203 across six affected classes56094, and
+  Ring EGL/full-course25515 passes1. Exact times/commands/failed identities
+  and source pins are in the dated implementation plan. These are separate
+  bounded results, not a combined total or a moved controller frontier.
+- Disc body62983 first runs75/6/1/0: six disclosed arithmetic/CSV assertions
+  plus a pre-game loader rejection. RootR2 changes no production, corrects
+  exact literals and supplies a constructible flaggedF9/player44 native
+  floor stop with explicit21F2E0 details; narrow77824 passes14. The withdrawn
+  old-angle80/X247 concern stays unchanged. After the prepared Frame ports,
+  combined49018 passes1058/0/0/0 at10:17:02Z (1m38s,queue0): Frame591,
+  old Runtime392, Disc75. Fresh exact XML/J25/privatecwd/media checked.
+- Actual WorldLoad53 plus Ring EGL/full-course35430 passes54/0/0/0 at
+  10:27:41Z (36.984s,queue0) after the Frame refactor. Command: queued Maven
+  -Dmse=off, actual media/S2 donor, surfaceless-egl and EGL opt-in,
+  '-Dtest=TestSonicCdOpeningWorldLoad,TestSonicCdOpeningWorldEgl#actualEglNormalInputPickupAndFullCourseReplay'.
+  Fresh properties/no skips verified. Source-only Body and Frame-port reviews
+  identify no new actionable P1/P2 within their finite contracts. Runtime
+  still stops3259 before unowned09 Init; no actual Disc World/contact,
+  controlled-body, whole-USA or regional/native-parity claim is made.
+
+- Final component guards11366 pass728/0/0/0 at10:44:00Z (5m06s execution,
+  queue wait not retained), command queued Maven -Dmse=off -Pguards test -B
+  with unset displays/Lua5.4. Ninety fresh executable XMLs/individual counts,
+  Java25/privatecwd and zero skips checked; all current Java pins unchanged.
+  This closes the component guard obligation, not the pending ID09 Runtime
+  join or controller3259. No full-smoke/release/full-game certification.
+
+- 2026-10-26, private558dd7d00 plus ID09 Runtime packet: test-first26758
+  compilation RED on missing SpinningDiscFm; first35484 runs410/3/0/0 at
+  11:15:28Z (315s queue,1m38s execution). Only three new fixture assertions
+  fail: animator restores low flip; same-disc StandOn retains incoming YV;
+  Solid changes Y before already-rolling jump. RootR2 changes four test spans
+  only;83319 narrow3 passes at11:22:27Z (32.475s,queue0). Runtime production
+  remains257318/SHA92f04b7e9a210c4555aa71717a08db90cf4c4cd122c16c1993ac601f9d77e9a3.
+  This is407 earlier passes plus3 narrow corrections, not a fresh410 total.
+- Actual Ring/full-course and current440/659-retirement EGL29031 passes2/0/0/0
+  at11:26:00Z (31.641s,queue0); exact two-method selection is recorded in the
+  dated implementation plan. Fresh XML/Java25/private cwd/media/S2/EGL opt-in
+  and zero skips verified. Runtime review/controller-only observer remain
+  pending;3258/failed3259 is still the measured natural frontier, not a new
+  successful controlled-player or native Disc World claim.
+
+- 2026-10-26, same private558dd7d00 plus reviewed Runtime packet: guards88371
+  passes728/0/0/0 at11:33:40Z (5m05s,queue15s),90 exact fresh executable
+  reports/identities/Java25/privatecwd/no skips checked. Independent static
+  Runtime review finds no actionable P1/P2; its scope does not certify a route.
+- Controller-only observer98700 completes3420; first3421 stops unowned07/live63
+  (N ObjectIndex, Palmtree Panic/Object Index (Act1 Present).asm:14 ObjTunnelPath).
+  Terminal1/0/1/0 at11:35:36Z (33.507s,queue25s); command queued --lean
+  -Dmse=off "-Dsoniccd.media.root=$SCD_MEDIA_ROOT"
+  '-Dtest=TestSonicCdOpeningWorldLoad#actualControllerThreeJumpsObservesSpinningDiscAndTheNextNativeFrontier' test -B.
+  Recipe1200R;32RB;537R;32RB;1200R;32RB;1200R uses only ordinary controls.
+  Disc Init3259 and pre09/routine2 call3260 return; no rotation change before
+  stop, and physical46 later contains a Spring. Failed63 is routine0 at
+  FFDFC0/X13F0/Y00F0 after real earlier VInt/Body prefixes; last-closed
+  camera/saved-bank values are not partial-failure observations. Failed visit
+  remains terminal with no closed capture/retry. Temporary observer removed,
+  permanent WorldLoad286774/c2899ca8... restored exactly. Permanent route
+  promotion/source audit07 pending; controlled Body remains deferred, not
+  silently admitted. No native image/timing/full-USA/regional parity claim.
+
+- Permanent Disc route R1 first24230 runs1/1/0/0at12:04:02Z (35.446s,q0),
+  after healthy new replays: historicalCpuSat identity is not retained by a
+  forward replay build. RootR2 only compares bytes/count/provenance and keeps
+  the current reference for failed3421 nonpublication;88410 passes1/0/0/0
+  at12:07:48Z (34.005s,q61s). Exact fresh XML/Java25/privatecwd/media checked.
+  New method controllerThreeJumpRouteRunsDiscAndStopsAtTunnelPathSlot63 retains
+  all53 cases/earlier proofs and adds three full/course edges through3420,
+  then once-only unknown07/63/FFDFC0 plus prior Body/VInt/terminal checks.
+  No whole96 partial-prefix or natural attachment/controlled-body claim.
+  Independent review and combined consumers remain pending.
+
+- Combined76706 passes470/0/0/0at2026-10-26T12:21:00Z (42.122s execution,
+  queue353s): Runtime410 + WorldLoad53 + actual Ring/current440 EGL2 +
+  JUnit-migration3/assertion-source2. Exact complete five-class fresh XML,
+  all identities/counts/Java25/privatecwd/media/S2/EGL opt-in/surfaceless and
+  zero skips checked. Exact queued command is in the dated plan. This now
+  establishes the fresh410/all53 current pass after the documented test-only
+  repairs, separately from prior complete728 guards. Static route review
+  remains pending before save. Full USA then JP/EU remains active; no new
+  3421 completion, controlled-player, native Disc World/timing/pixel parity.
+
+- 2026-10-26, private componentcb423035d plus the live ID07 candidate:
+  cached Tunnel Path publication retains source/full96/Frame and ordered FM
+  prefixes. Three new singleton-ledger expectations fail in the first433 run;
+  only those tests are corrected to preserve the full pre-Dynamic Body ledger
+  before FM91. Combined25655 then passes440 at14:59:05Z, queue0/execution42.568s.
+- Ordinary three-jump observer31273 returns5200 without acquisition; adding
+  B5201..5232 returns5255 and observer57554 first stops5256 at unknown33/live47
+  (1/0/1/0,14:44:26Z,35.590s execution,101s queue). Native ObjectIndex names
+  ObjLogShadow; Present row261 supplies X1548/Y0088/subtype0, distinct from
+  Future row260. The failed47 image has routine0; no Log Shadow Init ran.
+  Earlier VInt/Body prefixes remain, but later63 is unvisited. Last-closed
+  camera/saved diagnostics are not partial-failure observations. Both temporary
+  observers were removed; no failed-call capture, retry or resume occurred.
+- Permanent controllerFourJumpRouteRunsDiscAndTunnelPathAndStopsAtLogShadowSlot47
+  retains53 cases and old proofs, adds actual Init3421/Main3422 and full/course
+  edges3420→3421,3421→3422,5200→5201,5254→5255. A BK2 generic-jump mask assertion
+  alone is repaired after first75564; narrow1208 passes1 at15:24:38Z. Actual
+  input remains Right throughout and B only1201..1232,1770..1801,3002..3033,
+  5201..5232, with Start false. No native player attachment is inferred.
+- Fresh combined88405 passes493/0/0/0 at15:27:54Z (42.851s,queue1s):
+  Runtime433, allWorldLoad53, actual Ring/current440 EGL2 and source guards5.
+  Fresh guards68532 pass728/0/0/0 across90 classes at15:36:53Z
+  (5m03s execution,23s queue). Exact fresh XML/identities/Java25/private cwd
+  and zero skips checked; combined uses actual media/S2/surfaceless/EGL opt-in.
+  Exact commands and unchanged source hashes are in the dated implementation
+  plan. Bounded static Runtime and route/FM reviews find no actionable P1/P2.
+  This is not full smoke, full USA, controlled Body, native image/timing or
+  regional certification. Next unsupported owner is33 at5256, not07 at3421.
+
+
+### 2026-10-26 — private CD Log Shadow visits; next Sonic Hole31 at5323
+
+- Private candidate overbe61f9b089fe93e4fc4b716c7e3212192f8dcea5 binds cached
+  ID33 through the existing increasing physical pass. C31/21 logical bases
+  and client664 preserve Source17/current regions/preload/restart ownership.
+- Same Right/four B windows1201..1232,1770..1801,3002..3033,5201..5232:
+  actual Shadow47 Init5256/Main5257 return with full64 literals; physical44
+  is routine2 at5286. Ordinary controller calls1..5322 return. These culled
+  Y0088/sprite04 visits do not establish natural Shadow scene pixels.
+- First5323 stops once at unowned31/live46/FFDB80 after earlier VInt/Body/
+  spawner work. Native ObjectIndex/ObjSonicHole (Tunnel Path/Main.asm:11–103,
+  N1ecc5f3) and row297/raw16f002e8b100e000/saved86 authenticate its owner.
+  The partial slot is placement-only/routine0. Eight changed dynamics are an
+  aggregate; no complete96 native partial model, failed capture or retry.
+- Temporary observer88056 ended1/0/1/0at18:38:16Z and was removed. Permanent
+  route37307 passes1/0/0/0at19:35:53Z (34.498s execution,628s queue), with
+  complete full/course5255→5256,5256→5257,5321→5322 before/after comparisons
+  plus every retained earlier proof. Existing terminal suppressed lifecycle
+  read is not repaired away; CPU identity comes from the actual post-replay
+  reference. Independent static route review found no actionable P1/P2.
+- Separate actual-current Shadow5/664 EGL product completes all69 PLC10
+  services/199tiles in the existing component, preserves the live World and
+  retires the complete installed range. Old659 client12593 fails exactly at
+  cleanupoffset659; restored664 client90812 passes1/0/0/0at19:01:01Z. Uniform
+  native33 art cannot visually distinguish flips/equal IDs; resource identity
+  checks remain separate. No all664 scene-rendered/native geometry claim.
+- Combined90516 passes517/0/0/0at19:40:44Z (52.839s execution,76s queue):
+  Runtime456, completeWorldLoad53, actual Ring/current440/currentShadow EGL3,
+  source guards5. Exact fresh identities/XML/J25/privatecwd/media/authS2/
+  surfaceless/explicit EGL opt-in/no skips and unchanged source pins checked.
+  Exact command and five source hashes are in the dated implementation plan.
+  Earlier728 structural guards are separate, not a new full-smoke pass.
+- Next concrete owner is Sonic Hole31; existing Source17/Mosqui70 current
+  aliases suffice. No ID31 body execution, controlled player, natural Shadow
+  image/timing, whole-USA or regional parity is claimed. Main and remote stay
+  untouched; this milestone is a private local increment.

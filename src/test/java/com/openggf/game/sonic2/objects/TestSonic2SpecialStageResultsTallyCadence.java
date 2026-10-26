@@ -33,7 +33,7 @@ class TestSonic2SpecialStageResultsTallyCadence {
 
     @BeforeEach
     void setUp() {
-        GameServices.module().createGame(TestEnvironment.currentRom());
+        GameServices.module().createGame(GameServices.worldSession().getDataSource());
         services = (TestObjectServices) new TestObjectServices() {
             @Override
             public <T> T gameService(Class<T> type) {

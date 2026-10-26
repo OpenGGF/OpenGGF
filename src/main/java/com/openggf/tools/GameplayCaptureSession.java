@@ -64,9 +64,11 @@ public final class GameplayCaptureSession implements AutoCloseable {
     private AbstractPlayableSprite player;
     private Bk2FrameInput previousInput;
     private boolean closed;
+    private final Settings initialSettings;
 
     public GameplayCaptureSession(Settings settings) {
         Objects.requireNonNull(settings, "settings");
+        this.initialSettings = settings;
         this.width = settings.width();
         WidescreenAspect aspect = Arrays.stream(WidescreenAspect.values())
                 .filter(candidate -> candidate.pixelWidth() == settings.width())
@@ -112,6 +114,34 @@ public final class GameplayCaptureSession implements AutoCloseable {
 
     private boolean showTitleCard;
     private boolean completeSpecialStage;
+
+    /** Render a prepared static CD stage through this session's ordinary controller passes. */
+    public void bootSonicCdStatic(com.openggf.game.soniccd.CdGameDataSource source) throws IOException {
+        if (loop != null || closed) {
+            throw new IllegalStateException("session is already booted or closed");
+        }
+        if (startAtTitle || developmentMod != null) {
+            throw new IllegalStateException("Static CD capture does not execute native titles or cartridge patch mods");
+        }
+        loop = boot.bootSonicCdStatic(source);
+    }
+
+    /** Normal capture renderer and input path for the explicit terrain-only CD player. */
+    public void bootSonicCdTerrainPlayer(com.openggf.game.soniccd.CdGameDataSource source) throws IOException {
+        Objects.requireNonNull(source, "source");
+        if (loop != null || closed) throw new IllegalStateException("session is already booted or closed");
+        var settings = initialSettings;
+        if (startAtTitle || developmentMod != null || width != 320 || !"sonic".equals(settings.mainCharacter())
+                || !settings.sidekickCharacter().isBlank() || settings.donorActive() || settings.donorRom() != null
+                || settings.startX() != null || settings.startY() != null || settings.emeraldStates() != null
+                || settings.showTitleCard() || settings.completeSpecialStage() || settings.vIntRunCount() != null
+                || settings.cameraXSub() != null || settings.starPost() || settings.rings() != null
+                || settings.reverseGravity()) {
+            throw new IllegalArgumentException("CD terrain PLAYER capture requires the unmodified 320x224 Sonic-only source entry");
+        }
+        loop = boot.bootSonicCdTerrainPlayer(source);
+        player = Objects.requireNonNull(GameServices.camera().getFocusedSprite(), "CD terrain player");
+    }
 
     /** Boots with a packaged patch mod applied, as if it were enabled in the launcher. */
     public void applyMod(Path modJar) throws IOException {

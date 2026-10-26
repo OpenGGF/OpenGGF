@@ -636,7 +636,16 @@ public class RewindBenchmark {
         int size = layout.size();
         // Layout object, ordered key array, HashMap, and one HashMap node/index
         // value per key. The layout is shared across captures and charged once.
-        long bytes = 40L;
+        long bytes = 48L; // Includes the opaque world-scope reference, even when null.
+        // Test-only inspection keeps the production layout free of a scope/token getter.
+        try {
+            var scopeField = CompositeSnapshotLayout.class.getDeclaredField("scope");
+            scopeField.setAccessible(true);
+            Object scope = scopeField.get(layout);
+            if (scope != null && seen.put(scope, Boolean.TRUE) == null) bytes += 16L;
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException("Failed to estimate composite world scope", e);
+        }
         bytes += align8(16L + (long) size * 8L);
         bytes += 48L + (long) size * 32L;
         int tableCapacity = hashTableCapacityForEntries(size);

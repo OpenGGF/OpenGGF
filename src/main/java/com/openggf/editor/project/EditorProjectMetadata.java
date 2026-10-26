@@ -31,7 +31,7 @@ public record EditorProjectMetadata(GameId gameId, String name, int sourceZone, 
         Objects.requireNonNull(name, "name");
         Objects.requireNonNull(sourceFingerprint, "sourceFingerprint");
         Objects.requireNonNull(music, "music");
-        if (gameId == GameId.STANDALONE) throw new IllegalArgumentException("Choose Sonic 1, Sonic 2 or Sonic 3&K");
+        if (gameId.cartridgeGame().isEmpty()) throw new IllegalArgumentException("Choose Sonic 1, Sonic 2 or Sonic 3&K");
         if (name.isBlank() || name.length() > 256 || sourceFingerprint.length() > 512
                 || sourceZone < 0 || sourceAct < 0 || sourceAct > 255) {
             throw new IllegalArgumentException("Project name/source identity exceeds its bounded format");

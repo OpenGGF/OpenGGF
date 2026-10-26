@@ -27,7 +27,7 @@ public final class LoadedLevelScene {
 
     public LoadedLevelScene(LevelManager level, GraphicsManager graphics) throws IOException {
         this.level = level; this.graphics = graphics;
-        if (level.getGame() == null || level.getGame().getRom() == null) {
+        if (level.getGame() == null || level.getWorldSession().getDataSource().rom().isEmpty()) {
             throw new IllegalStateException("Read-only scene requires a locally ROM-loaded resource session");
         }
         // Animated source recipes precede destination slots: both independently loaded consumers

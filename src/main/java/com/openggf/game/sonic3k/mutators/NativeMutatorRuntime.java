@@ -142,7 +142,7 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
         bossActive = context.levelEventProvider() instanceof com.openggf.game.AbstractLevelEventManager events && events.isBossActive();
         if (touchSizes == null && world.getDataSource().rom().isPresent()) {
             try {
-                touchSizes = world.getGameModule().createTouchResponseTable(com.openggf.data.RomByteReader.fromRom(world.getDataSource().rom().orElseThrow()));
+                touchSizes = world.getGameModule().createTouchResponseTable(world.getDataSource());
             } catch (java.io.IOException missing) {
                 // A missing ROM table cannot become a guessed attack envelope.
             }

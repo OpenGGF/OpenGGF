@@ -88,11 +88,9 @@ public final class Sonic2CompetitionRuntimeModule extends DelegatingGameModule {
         return runtimeArt;
     }
 
-    @Override public Game createGame(Rom rom) {
-        requireArtRuntime();
-        var game = super.createGame(rom);
-        installNativeArt(rom);
-        return game;
+    /** Cartridge convenience; session callers retain their actual data source. */
+    public Game createGame(Rom rom) {
+        return createGame(new com.openggf.game.RomDataSource(rom, "rom:s2-competition:explicit"));
     }
 
     @Override public Game createGame(GameDataSource source) {

@@ -217,6 +217,109 @@ the local graph, identities, timers and collision width. Player riding/contact,
 native rendered output, the full SBZ2 route and viewport/donor/team breadth
 remain inherited obligations; no complete SBZ2 act matrix is claimed.
 
+## Sonic CD private development — bounded coverage
+
+Latest 26 October evidence: the partial
+[Palmtree Panic Act1 Present matrix](../architecture/validation/levels/scd-palmtree-panic-act1-present.md)
+records the ordinary four-jump route through returned call5322, with genuine
+Disc Init3259/Main3260, Tunnel Path Init3421/Main3422 and Log Shadow
+Init5256/Main5257. The first5323 call stops at unowned Sonic Hole31/live46;
+healthy full/course cuts precede it and the failed call remains terminal.
+No player acquisition or controlled Body is established on this route.
+Native contact/image/timing parity remains open.
+
+The fresh affected selection passes517 cases: Runtime456, WorldLoad53, three
+real EGL products and five source guards. A separate fresh structural run
+passes728 cases across90 classes. Both have zero failures, errors or skips;
+exact commands, identities and fixture-only corrections are in the dated
+plan. Tunnel component/Frame validation separately passed1179 cases.
+Runtime retains Source17 and joins C31, twenty-one logical bases and664
+potential atlas entries. Actual current Shadow5 rendering/664 retirement
+passes after a matched old659-client cleanup failure. All69 genuine PLC10
+services run in a separate existing component; the live World is unchanged.
+Uniform33 art does not visually distinguish flips. These resource checks
+and current440 rendering remain separate bounded products;
+the native Tamabboh World scene still fails its fixed blank-floor prerequisite.
+Full-act/USA gameplay and subsequent JP/EU parity remain incomplete.
+
+Sonic Hole metadata separately passes180 cases; its unbound native component
+and mapper pass22+52 inside a fresh591-case affected selection, with no skips.
+Its read-only primary ports and current aliases add no source/bank/Frame owner.
+The live Runtime join, actual activation and next controller frontier are pending.
+
+### Earlier CD checkpoints
+
+The entries below describe their historical bounded milestones, not the
+current unsupported-object frontier or full-act certification.
+
+Sonic CD Tamabboh component update (2026-10-26): the partial matrix records
+110 body/missile cases and40 complete mapping cases, with authenticated visual
+views reusing the existing art cache. Runtime remains Source17, so the actual
+controller3222 boundary has not moved. Live publication, current440 pixels and
+World/route coverage remain open; these component checks certify no full act.
+
+Sonic CD queued-source update (2026-10-26): the partial matrix records actual
+Hole14 service and a Pata-Bata prefix through returned call3221, followed by
+an unimplemented Tamabboh at3222 after a legitimate VInt/body/spawn prefix.
+Four queued producers use the existing cache/current owner; component tests
+also exercise Waterfall/Disc/Shadow, but those are not naturally reached yet.
+The complete53-case WorldLoad promotion passes with nine valid full/course
+cuts and per-row comparisons; independent static review found no open P1/P2.429 affected
+consumers pass separately from the193 run's five repaired test-oracle failures.
+
+Sonic CD controller-contact update (2026-10-26): the same partial matrix now
+records a permanent three-jump input route through3210, genuine moving ID21
+standing from3206, and full/course checkpoint-aware replay at3001/3205/3209.
+The next attempted3211 is an asserted SonicHole source boundary after the last
+Boulder tile/POP. A focused pass certifies this finite case; it does not claim
+completed3211, act completion, region breadth or native image/timing parity.
+
+Sonic CD GoalPost art update (2026-10-26): the partial matrix adds actual
+natural fresh-epoch preparation/service of all24 XOR tiles and full/course
+replay. Existing cache/current ownership is retained; no goal object is executed.
+Source13 passes179 focused owner/service cases and481 remaining consumer cases,
+with no skips. A separate2347-call diagnostic ends at its controller bound while
+pushing, not at an unsupported feature or an act-end event. Fresh source13
+guards pass728/0/0/0 across90 exact fresh reports with no skips.
+
+Sonic CD cached Animals update (2026-10-26): the partial matrix now includes
+controller-only natural Checkpoint death/load and fresh Animals service through14,
+with old-epoch rejection and full/course replay. A separate continuation completes
+2005 calls and stops inside2006/fresh59 at source2320DA/9EE0. Source12 reuses the
+existing cache and physical owner; no new rendered product or act certification.
+The nine-class718 check has717 passes/one stale Runtime oracle; its source-correct
+incremental-PLC8 replacement passes narrowly. Fresh source12 structural guards
+pass728/0/0/0 across90 exact fresh executable-class reports, with no skips.
+
+Sonic CD ID21 update (2026-10-26): the partial act matrix adds native Platform
+Init/Main controller cuts through1200 and16 constructed carry/oscillation/fall
+scenes on the existing shared art span. A separate controller jump reaches a
+natural checkpoint reload and the next unowned Animals PLC source; it is not
+whole-act or regional certification. The eight-class affected check passes672/0/0/0 with no skips; fresh structural guards pass728/0/0/0 across90 reports.
+
+
+
+Sonic CD opening-object update (2026-10-25): the same partial act matrix now
+records source-ordered collapsing platforms, exact Solid failure prefixes,
+eight constructed96-row breakup/fall/render/replay scenes and658-entry cleanup.
+Controller-only Right naturally saves Checkpoint649, completes platform Init657,
+breaks723, reaches Fall732 and completes741, stopping inside742 at newly placed
+platform21/physical75. Earlier Checkpoint/Anton and constructed restart evidence
+remains. These extend the historical checks; they certify neither native
+cold/title/PLC timing, HUD time/audio, the whole act/USA nor JP/EU object parity.
+
+Sonic CD local development entry (2026-10-24): the
+[Palmtree Panic Act 1 Present matrix](../architecture/validation/levels/scd-palmtree-panic-act1-present.md)
+records authenticated regional data, existing-engine terrain presentation and
+an explicitly selected terrain-only Sonic player through normal input, source
+movement/camera, pause, rendering and same-world restoration. A USA 132-input
+rendered route has an identical restored replay; all three discs have bounded
+player lifecycle and render checks. Dynamic objects, time travel, complete
+gameplay/lifecycle and broader viewport/donor/roster products remain missing.
+The default entry stays static. These checks certify neither the act nor USA MVP.
+
+## Other current development updates
+
 Object-pipeline performance follow-up (2026-10-22, local candidate): the
 [query/allocation audit](../architecture/audits/performance/2026-10-22-native-object-query-performance.md)
 and linked wave records track native owned-slot, FBZ/SOZ collision-allocation and

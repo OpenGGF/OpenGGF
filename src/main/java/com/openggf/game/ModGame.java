@@ -2,7 +2,6 @@ package com.openggf.game;
 
 import com.openggf.audio.GameSound;
 import com.openggf.game.Game;
-import com.openggf.data.Rom;
 
 import java.util.List;
 import java.util.Map;
@@ -12,8 +11,8 @@ import java.util.Objects;
  * Minimal no-ROM game base for a standalone module.
  *
  * <p>Creators provide level and music loading while neutral defaults disable ROM
- * relocation, ROM saving, title cards, and native sound maps. {@link #getRom()}
- * intentionally returns null; open authored assets through {@link #dataSource()}.</p>
+ * relocation, ROM saving, title cards, and native sound maps. Open authored
+ * assets through {@link #dataSource()}.</p>
  */
 @ModApi
 public abstract class ModGame extends Game {
@@ -27,7 +26,6 @@ public abstract class ModGame extends Game {
 
     /** Returns the durable bounded source supplied by the owning standalone launch. */
     protected final GameDataSource dataSource() { return source; }
-    @Override public final Rom getRom() { return null; }
     @Override public boolean isCompatible() { return true; }
     @Override public String getIdentifier() { return identifier; }
     @Override public List<String> getTitleCards() { return List.of(); }

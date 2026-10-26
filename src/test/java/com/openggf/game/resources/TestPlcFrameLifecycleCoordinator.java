@@ -472,6 +472,7 @@ class TestPlcFrameLifecycleCoordinator {
         org.junit.jupiter.api.Assertions.assertEquals(1, thrown.getSuppressed().length);
         assertTrue(thrown.getSuppressed()[0].getMessage()
                 .contains("missing PLC preparation for ORDINARY_LEVEL"));
+        coordinator.runLogicalIteration(() -> { }, frame -> null);
     }
 
     /**
@@ -824,13 +825,12 @@ class TestPlcFrameLifecycleCoordinator {
                     failedPublication.afterConsumedIteration(() -> events.add("failed-publication"));
                     return null;
                 }));
-        failedPublication.reset();
         failedPublication.runLogicalIteration(() -> { }, frame -> null);
         assertFalse(events.contains("failed-publication"));
     }
 
     @Test
-    void missingHeldPatternVblankDiscardsCompletionEvenIfTheFrameIsLaterClosed() {
+    void missingHeldPatternVblankRetiresOwnedFrameAndDiscardsCompletion() {
         PlcLifecycleService service = mock(PlcLifecycleService.class,
                 org.mockito.Mockito.withSettings().extraInterfaces(
                         com.openggf.game.internal.WorldPlcPatternPublication.class));
@@ -858,13 +858,52 @@ class TestPlcFrameLifecycleCoordinator {
         org.mockito.Mockito.verify(service, org.mockito.Mockito.never())
                 .prepareAfterLoop(PlcLifecyclePhase.ORDINARY_LEVEL);
 
-        // Closing the originally failed frame later cannot revive its discarded history work.
-        failedFrame.get().dispatchGameVBlank(() -> { }, null, null);
-        failedFrame.get().finish();
-        org.mockito.Mockito.verify(service).prepareAfterLoop(PlcLifecyclePhase.ORDINARY_LEVEL);
+        // An owned iteration has unwound: neither service nor finish may revive it.
+        assertThrows(IllegalStateException.class, () ->
+                failedFrame.get().dispatchGameVBlank(() -> { }, null, null));
+        assertThrows(IllegalStateException.class, () -> failedFrame.get().finish());
+        org.mockito.Mockito.verify(service, org.mockito.Mockito.never())
+                .prepareAfterLoop(PlcLifecyclePhase.ORDINARY_LEVEL);
         assertEquals(0, completions.get());
+        coordinator.runLogicalIteration(() -> { }, frame -> {
+            frame.claim(PlcLifecyclePhase.SPECIAL_STAGE);
+            coordinator.afterConsumedIteration(completions::incrementAndGet);
+            return null;
+        });
+        assertEquals(1, completions.get(), "a fresh owned iteration remains valid");
+    }
+
+    @Test
+    void missingHeldPatternVblankAllowsRawTokenCorrectionWithoutRevivingCompletion() {
+        PlcLifecycleService service = mock(PlcLifecycleService.class,
+                org.mockito.Mockito.withSettings().extraInterfaces(
+                        com.openggf.game.internal.WorldPlcPatternPublication.class));
+        when(service.hasPreparationBoundary(PlcLifecyclePhase.ORDINARY_LEVEL)).thenReturn(true);
+        var coordinator = new PlcFrameLifecycleCoordinator(service);
+        coordinator.markRepresentedIterationDefersLoopTailPreparation();
+        coordinator.runLogicalIteration(() -> { }, frame -> {
+            frame.claim(PlcLifecyclePhase.ORDINARY_LEVEL);
+            frame.prepareAfterLoop(PlcLifecyclePhase.ORDINARY_LEVEL);
+            return null;
+        });
+
+        // Raw tokens retain explicit finish/service/finish correction; no owned call unwound.
+        var frame = coordinator.latchBeforeFadeUpdate();
+        var completions = new java.util.concurrent.atomic.AtomicInteger();
+        frame.claim(PlcLifecyclePhase.LAG);
         coordinator.afterConsumedIteration(completions::incrementAndGet);
-        assertEquals(1, completions.get(), "new completion after the closed frame remains valid");
+        IllegalStateException failure = assertThrows(IllegalStateException.class, frame::finish);
+        assertEquals("missing physical VBlank before held Nemesis Init", failure.getMessage());
+        org.mockito.Mockito.verify(service, org.mockito.Mockito.never())
+                .prepareAfterLoop(PlcLifecyclePhase.ORDINARY_LEVEL);
+        assertEquals(0, completions.get());
+
+        frame.dispatchGameVBlank(() -> { }, null, null);
+        frame.finish();
+        org.mockito.Mockito.verify(service).prepareAfterLoop(PlcLifecyclePhase.ORDINARY_LEVEL);
+        assertEquals(0, completions.get(), "correction cannot revive discarded history work");
+        coordinator.afterConsumedIteration(completions::incrementAndGet);
+        assertEquals(1, completions.get(), "completion outside the closed frame remains valid");
     }
 
     private static void observeSonicDplc(

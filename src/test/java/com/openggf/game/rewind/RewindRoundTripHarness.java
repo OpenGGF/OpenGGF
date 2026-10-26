@@ -1408,6 +1408,8 @@ public final class RewindRoundTripHarness {
             case S1 -> new Sonic1ObjectRegistry();
             case S2 -> new Sonic2ObjectRegistry();
             case S3K -> new Sonic3kObjectRegistry();
+            case SCD -> throw new IllegalArgumentException(
+                    "Native Sonic CD object execution is not supported by this cartridge harness");
             case STANDALONE -> throw new IllegalArgumentException(
                     "Standalone object registries require an owning module");
         };

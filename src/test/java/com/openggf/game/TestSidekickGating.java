@@ -2,8 +2,6 @@ package com.openggf.game;
 
 import com.openggf.audio.GameAudioProfile;
 import com.openggf.game.Game;
-import com.openggf.data.Rom;
-import com.openggf.data.RomByteReader;
 import com.openggf.game.sonic1.Sonic1GameModule;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
@@ -92,14 +90,14 @@ class TestSidekickGating {
     void defaultMethod_returnsFalse() {
         GameModule anonymousModule = new GameModule() {
             public String getIdentifier() { return "test"; }
-            public Game createGame(Rom rom) { return null; }
+            public Game createGame(GameDataSource source) { return null; }
             public ObjectRegistry createObjectRegistry() { return null; }
             public com.openggf.level.objects.ObjectPlacementEncoding getObjectPlacementEncoding() {
                 return new com.openggf.game.common.CommonObjectPlacementEncoding();
             }
             public GameAudioProfile getAudioProfile() { return null; }
             public TouchResponseTable createTouchResponseTable(
-                    RomByteReader r) { return null; }
+                    GameDataSource source) { return null; }
             public int getPlaneSwitcherObjectId() { return 0; }
             public PlaneSwitcherConfig getPlaneSwitcherConfig() { return null; }
             public LevelEventProvider getLevelEventProvider() { return null; }

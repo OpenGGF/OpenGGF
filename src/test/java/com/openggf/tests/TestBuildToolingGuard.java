@@ -5039,11 +5039,11 @@ class TestBuildToolingGuard {
     }
 
     private static List<String> canonicalDisassemblyPaths() {
-        return List.of("docs/s1disasm", "docs/s2disasm", "docs/skdisasm");
+        return List.of("docs/s1disasm", "docs/s2disasm", "docs/skdisasm", "docs/scddisasm");
     }
 
     private static List<String> localDisassemblyPaths() {
-        return List.of("docs/kis2disasm", "docs/scddisasm");
+        return List.of("docs/kis2disasm");
     }
 
     private record ProcessResult(int exitCode, String output) {

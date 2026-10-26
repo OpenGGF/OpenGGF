@@ -357,6 +357,291 @@ and recovered during the 2026-10-23 branch reconciliation. Keep the current
 own-tree, test-admission and exclusive build-activity lease ordering; the old
 foreign-worktree removal retry (`808d9eead4e2`) belongs to its superseded design.
 
+A normal native SAT ends at the next entry (2026-10-26, CD Log Shadow).
+DrawSprite increments and stores each emitted sprite's link. With fewer than80
+entries, DrawObjects clears the next entry's first LONG; it does not clear the
+emitted last sprite's link. Only a full80-entry table clears that last link.
+Literal CPU SAT fixtures must check the emitted link and the following zero
+terminator separately. A plausible last-link-zero expectation can hide this
+distinction; do not change the producer to fit it.
+
+BK2 direction and action fields use different representations (2026-10-26,
+CD four-jump route). `Bk2FrameInput.p1InputMask()` combines directions with
+the engine's generic `INPUT_JUMP` whenever any A/B/C action is held;
+`p1ActionMask()` separately distinguishes those actions. A Right+B row is
+therefore not direction mask8 alone. Check both against their actual API
+contract; do not alter an input recipe or native button sampling to repair
+an assertion about the combined engine mask.
+
+An adversarial callback may erase its own mutation (2026-10-26, CD Tunnel
+Path). A COMMIT fixture changes another slot, then restores an overlay built
+from the pre-attack cut; its returning image is valid and cannot demonstrate
+nonwrite rejection. Keep the expected cut immutable and make the adversarial
+delta survive the callback. Building the harness overlay from its actual
+post-attack pool preserves that delta; an unattacked pool remains identical.
+Do not change production to reject an unobservable restored transient.
+
+A valid selected read need not complete its containing helper (2026-10-26,
+CD Tunnel Path). The aligned offset2 alias really publishes targets0108/1490;
+subsequent SetPlayerSpeed DIVS overflows, leaves a zero low WORD and reaches
+a later divide-by-zero. Assert that precise later stop and the already
+published read prefix. Do not fit speed/pose/backing values merely to turn
+an alignment-ownership vector into an unrelated successful whole call.
+
+A replayed immutable product need not retain its historical reference
+(2026-10-26, CD Disc route). Forward SAT building creates a fresh CpuSat.
+Compare all bytes, count and provenance against the historical cut. For a
+later failed-call nonpublication check, retain the actual current reference
+immediately before that call and compare that reference afterward. Historical
+reference identity is not a replay-state contract or a reason to change the
+producer. Keep owner identity checks separate from immutable product equality.
+
+A native-fault fixture must first pass its loader (2026-10-26, CD Disc).
+Raw layout7F cannot represent an unavailable floor when the decoder rejects
+chunk127 against a121-chunk supply before gameplay. Use a source-backed
+admitted base and the actual querying actor's flag: rawF9/base121 plus player
+sprite bit6 selects native chunk122. Check the exact layout column, install
+the modified immutable actor, and assert FLOOR_PRIMARY/address21F2E0/detail,
+not merely any exception. Never enlarge production backing to make a fixture
+reach its intended stop.
+
+Preparing one owner after another has published is not full preflight
+(2026-10-26, CD Disc). The old Frame Solid convenience apply builds its values
+at call time. A stronger multi-owner bridge must prepare the pool overlay,
+same Frame's complete actor/environment and immutable sound ledger before
+the first assignment, then adopt those ready values. A prepared value or
+same-value CAS does not prove native origin or once-only execution; keep
+that authority in the actual private invocation.
+
+A positive native floor distance need not identify a floor (2026-10-26, CD
+Tamabboh fixture). At fixed actorX4350/probeY357 both queries returned26 with
+no angle write: that is the blank/blank sentinel31-(357&15), not ground26px
+below. Do not widen a fixture bound or place the actor on that result. Keep
+the failed prerequisite distinct from a separately passing component-current
+renderer/resource check; such a check does not certify native scene motion.
+
+An actor ingress cannot undo an earlier spawn boundary (2026-10-26, CD GPU
+fixture). SpawnObjects reads the retained pre-scroll camera before Body, so
+moving only the actor at a closed cut cannot prevent a pending chunk's next
+layout read. First compare actual camera&FF80 with placement previousChunk.
+For a fixed constructed scene, prove both old camera and the native clamped
+target remain in one128px chunk/section and check the real centre WORD; the
+observed3257 centre is96, not a guessed160. Terrain and per-row no-spawn
+invariants still need their own evidence. A failed prerequisite is a fixture
+limit, never authority to mute spawning, shift the camera or fit gameplay.
+
+
+A native sound ID is not a physical slot (2026-10-26, CD Tamabboh route).
+FM_RING95 proved a request, not a Ring at pool95. Witness the actual identity's
+native routine2-to6 transition and reward/collision/priority changes instead.
+An unvisited later slot can also contain legitimate stores from earlier Ring
+Init parents: FindNext publishes children before the walk reaches a later
+unsupported slot. Compare placement plus that reached child-creation prefix,
+including dirty nonstores and LOADED-bit effects; do not equate unvisited with
+unchanged or invoke a body again to construct its expected result.
+
+A per-owner cache is not a cached factory (2026-10-26, CD queued art).
+openingObjects() creates a new authenticated ObjectAssets owner each call;
+sectionArtSources() caches only inside that owner. Five new tests failed by
+asserting identity across fresh owners. Retain one owner when testing its cache;
+compare exact finite bytes across independent owners, and retain true source
+identity across successive captures from the SAME decoder. Do not make a
+production factory global merely to satisfy an identity oracle. A strict read
+of an incoming UNKNOWN tile is not an expected byte value: compare its mask
+and full nonwrites, then require UNKNOWN_PATTERN before and after the fault.
+
+A real adjacent-byte refill is not source inventory growth (2026-10-26, CD
+GoalPost). Inventory/Java448 ends before Signpost; the native post-inline refill
+needs449 and consumes its actual first80 before emitting six final pixels.
+Keep separate source and reader ranges, retain original-media provenance, and
+exercise each one-short cut. Diagnostic partial rows do not become resident
+bytes: only returned complete tiles commit. Consuming that byte does not admit
+the adjacent producer, a logical picture span or a body.
+
+An observer's final label can outlive its stop condition (2026-10-26, CD
+continuation). After an epoch change the observer ran400 fresh calls but kept
+its earlier epoch-stop label. Read actual returned rows, current generation,
+positions and loop bound before naming a new reload/frontier. Fix diagnostic
+reporting separately; do not infer gameplay from stale summary text.
+
+Canonical source metadata is not the reached PLC selection (2026-10-26, CD
+Animals). The cached source is canonically PLC2/row1; saved section0200 actually
+loads fullPLC4, while a camera reversal to section0 appends incrementalPLC8.
+FullPLC2 has a GoalPost row; incremental8 does not. Two authored negative oracles
+failed because they inferred the queue from canonical metadata. Pin the actual
+section table, initial/update selector and complete reached row list before
+predicting the next unavailable producer. Preserve the unknown-source guard and
+correct the oracle; never change gameplay to force an expected stop.
+
+A controller bound is not an implementation frontier (2026-10-26, CD ID21).
+Right1200 and Right3600 returned every ordinary call while Sonic pushed a live
+raw object link. Record endpoint positions/flags/links and the actual stop
+reason; do not call a loop limit an unowned feature. A subsequent authored
+controller jump reached death/reload. Retire old Runtime/Frame captures at the
+real generation change, then observe the fresh visit separately. Rewind never
+turns a failed call into a completed frame.
+
+Ceiling adjacency reverses a negative step on the full-height branch
+(2026-10-26, CD ID21): FindLevelFloor .MaxFloor subtracts a3. ObjGetCeilDist
+passes-16, so query307 reaches317. A fixture at2F7 can miss the fault despite
+correct angle writes. Keep invalid words on a legitimate unvalidated alternate
+path, not the primary chunk which terrain admission rejects before the probe.
+A later mapping reader also remains active under time-stop; dirty subtypeFF
+must not accidentally select unadmitted frame3 when testing dispatch bypass.
+
+A closed cut can precede a legitimate native placement write (2026-10-25, CD
+platform742). The unowned physical75 was free at741, then SpawnObjects created
+ID21 before Body/the failing walk742. Comparing all later images to the prior
+closed cut falsely blamed dispatch. Pin the reached source phase and permit the
+actual placement prefix; still check zero Init fields and earlier committed
+Solid/Fall effects. A failed pass is not a completed frame and must not resume.
+
+A private exception constructor does not prove invocation origin (2026-10-25,
+CD prefix probes). Public callers can retain a genuine unavailable-read marker
+and throw it during a later callback over available terrain. Catching it around
+the whole leaf mislabels that host interruption as a current native read. Keep
+callback exceptions separate until the actual leaf identifies its own read,
+and test exact exception identity for both feet/ceiling/wall; never parse messages.
+
+
+A successful replay can hide a failed saved-state restore (2026-10-25, CD
+Checkpoint contact). If restore reinstates collision/checkpoint globals but
+retains post-contact saved bytes/knowledge, replayed contact rewrites those same
+values. Comparing only afterward passes. Compare the complete saved/live/known
+aggregate immediately after full/course restore and BEFORE the next gameplay
+step, then compare the completed replay. No duplicate capture owner is needed.
+
+A constructed actor pose can advance real object prefetch (2026-10-25, CD Anton).
+Moving Sonic96px forward crossed a camera window and loaded the next unowned
+platform. Do not disable spawning or clear it during execution. Establish the
+scene on actual terrain within its warmed camera window, preserve placement
+cursors, and label initial-only ingress separately from the controller route.
+A flat-floor assumption also failed: query the real shaped content for fixture
+support and keep native collision behavior unchanged. Distinguish this fixture
+failure from an intended teardown negative reached only after the full proof.
+
+Metadata validation must not imply current pixel knowledge (2026-10-25, CD
+Anton). Canonical22 are legitimately UNKNOWN before PLC9, so resolving a tile to
+discover its logical base can break even an empty SAT. Validate intervals from
+metadata/explicit bases and perform the strict current physical read only for
+an actually selected final native ID. Physical ownership, known bytes, logical
+extent, selected tiles and rendered pixels are different quantities.
+
+
+A device-time sound ledger may already contain the completed Body prefix
+(2026-10-25, CD Checkpoint). A no-FM or failed-save assertion must preserve that
+prefix and reject additional device requests, not require an empty ledger or
+clear legitimate prior sounds. Native DrawObject also masks priority to three
+bits and only enqueues: priorityFF is valid, while a malformed mapping frame is
+reached later in DrawObjects. Keep failure tests at their actual source phase;
+do not add production validation to make an invented boundary throw.
+
+A flipped object can change the collision entry and allocation timing (2026-10-25,
+CD Spikes). Upright collision0 reaches direct Hurt after Solid in physical40,
+after free physical32 was visited. Vertical collision83 reaches Body scanner
+Hurt before the walk, so32 initializes its LostRing in the same pass. Preserve
+these separate sound/global/pool prefixes instead of forcing one contact route
+or replaying response metadata. Landing also zeroes YV before Spikes' LONG-Y
+rewind: a correct World case can certify a same-value32-bit store while nonzero
+fractional carry/borrow still needs its component cases.
+
+A source-opaque pixel need not differ from its background (2026-10-25, CD
+diagonal Spring). Requiring every nonempty tile to change native-terrain RGB
+rejected a correctly rendered tile. Preserve the actual ordered World and
+native-background comparison; use a separate, explicitly test-only contrast
+background outside the current palette to establish missing-tile sensitivity.
+Likewise, a legitimate earlier player sprite can overlap an object. Compare the
+actual painter order and use a render-only isolated object control to inspect
+covered geometry, rather than moving actors or excluding valid overlap.
+
+A native slot number is not necessarily a pool capability (2026-10-25, CD
+Spring launch). The launch record's Identity contains only wholeIndex; two
+pools can supply equal identities and equal expected values. A foreign-pool
+rejection assertion therefore tested authority the API never carried. Keep the
+actual value/phase checks and test a mismatching current native index. The Solid
+call separately carries a real owner-bound pool cut and must still reject a
+foreign cut. Test observers inside a guarded callback must also avoid calling a
+getter that deliberately rejects owner reentry; do not relax that production
+guard to make an observation possible.
+
+A physical pass can progress without completing another frame (2026-10-25, CD
+diagonal Spring). Implementing slot47 advanced call561 to unowned slot61 in the
+same call. Requiring a later frame would reject real progress and conceal the
+new partial prefix. Pata52 also retained integerY628 while its fractional words
+changed; integer coordinates alone did not prove it was unvisited. Record the
+exact next slot, complete prefix and failure boundary, without resuming a failed
+pass or calling it a completed frame. See the [CD component record](../architecture/plans/2026-10-23-sonic-cd-implementation.md).
+
+Registered renderer ranges are not a resident-entry inventory (2026-10-25,
+CD Boulder teardown). Native pattern IDs0..7FF are implicitly governed, while
+`registeredRangesForTesting()` enumerates explicit virtual ranges. An empty
+filtered range list did not mean the atlas lacked shared terrain entries. Inspect
+actual native entries and the explicit virtual ranges without registering a new
+producer to make the observation nonempty. Verify the identity of surviving
+entries; an invented minimum count tests the observer rather than cleanup.
+
+Two equal sound IDs can be two ordered native requests (2026-10-25, CD Boulder
+EGL oracle). A ground movement-stop request does not necessarily return from
+MODE. The reached path can continue through CheckCharge and emit ChargeStop,
+including when charge is zero. Read the caller's continuation and previous-angle
+gate; keep both ordered owners in the expected ledger instead of treating them
+as mutually exclusive or deduplicating by sound ID. The fixture was corrected;
+no runtime sound or physics behavior changed to fit it.
+
+An actual pattern write need not produce a different pixel version (2026-10-25,
+CD camera PLC). Pata-Bata tile0 and Mosqui tile16 are both blank. The native write
+still advances the transfer budget, cursor and destination; equal immutable pixels
+cannot identify which source wrote them. Pin exact written bytes and transfer
+state, and use independently checked differing tiles as visual witnesses. Never
+require every touched tile to differ or use source identity to choose pixels.
+
+A sufficient finite input for a Java decompressor may be too short for the native
+consumer (2026-10-25, CD camera PLC). Native Nemesis preloads16 bits and refills
+below9 bits before emitting a run, including its final run. The existing Java
+reader's final pre-symbol peek has a different cursor: five of the six reviewed
+camera producers need one more native byte than that Java extent. Equal decoded
+hashes do not prove equal reads. Retain distinct exact consumer ranges, require
+real adjacent source bytes when reached and test both full and one-byte-short
+views. Never append invented padding or change the existing consumer's extent
+to hide the distinction. See the [CD component record](../architecture/plans/2026-10-23-sonic-cd-implementation.md).
+
+Preserved import timestamps can leave old bytecode under new source (2026-10-24,
+CD PLC cleanup). Copying a frozen source with its older mtime let Maven skip
+production compilation while compiling newer tests. Source hashes matched the
+candidate, but failures and the class constant pool showed the old owner ran.
+Copy source content with a fresh timestamp, or update that changed file's mtime
+before a normal build. Confirm compilation and the relevant executed class when
+this hazard is suspected. The stale-bytecode run is not evidence for the new
+implementation; rerun its affected selection after correcting the prerequisite.
+Never reuse or copy another worktree's target to solve it.
+
+Stored velocity is not proof of movement (2026-10-24, CD charge reference).
+Retail spindash can retain nonzero X/Y velocity while the complete 16:16 position
+stays fixed. Require observed displacement within the admitted release continuation
+before certifying a launch, and check raw/logical held-and-tap latches on the
+charge-to-zero row as well as while charge is positive. A source helper's return
+also precedes the remaining movement tail; post-frame values are not its direct
+outputs. See the [CD player component record](../architecture/plans/2026-10-23-sonic-cd-implementation.md).
+
+A callback scope name does not authenticate its CPU owner (2026-10-23, Sonic CD
+device research). Both M68K and S68K reach hooks advertised as `M68K BUS`; the
+stock adapter drops CPU identity and access width. An ownership poll can prove
+image bytes were sampled before consumption without identifying the exact final
+render service edge. Keep backend sector reads, graphics busy clear, final pixel
+output and Word RAM return as distinct source boundaries. A partial fixture must
+retain its actual cursors and completed lines, enforce supported 2M ownership and
+bind mode/priority across ingress and egress. Comparing all RAM bytes proves the
+bounded transform, not scheduling or full-submission state. See the
+[local CD observation handoff](../architecture/plans/2026-10-23-sonic-cd-implementation.md#native-continuation-and-service-observation-handoff).
+
+Register mirrors must follow each native CPU map and handler decoder, including
+both independently decoded word legs of a long write. Canonical-port captures
+cannot certify alias selection. Within one identified binary, compare complete
+observer-enabled/disabled states to test side effects; different loader/core
+binaries have pointer-bearing state and are not raw-state equivalents. An
+unretained differing checkpoint hash cannot later be explained by matching
+public RAM/CPU views. See the [owner-ledger evidence](../architecture/plans/2026-10-23-sonic-cd-implementation.md#verified-owner-ledger-r4).
+
 Different virtual pattern IDs do not imply different physical atlas pages
 (2026-10-22, object-pipeline batching). A page-barrier seam incorrectly expected
 separate commands for two IDs that the allocator placed on the same page. Use

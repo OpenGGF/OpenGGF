@@ -107,8 +107,9 @@ public final class HubMusicController implements AutoCloseable {
     }
 
     static Session openRomSession(String gameId, SonicConfigurationService config, boolean noDevice) throws Exception {
-        RomIdentity identity = switch (gameId) { case "s1" -> RomIdentity.S1; case "s2" -> RomIdentity.S2; default -> RomIdentity.S3K; };
-        GameId stockGame = switch (gameId) { case "s1" -> GameId.S1; case "s2" -> GameId.S2; default -> GameId.S3K; };
+        GameId stockGame = GameId.fromCode(gameId);
+        RomIdentity identity = stockGame.cartridgeGame().orElseThrow(() ->
+                new IllegalArgumentException("Cartridge title audio does not support game: " + gameId)).identity();
         var source = GameModuleRegistry.createStockMenuAudio(stockGame);
         GameAudioProfile profile = source.profile();
         int titleId = source.titleMusicId();

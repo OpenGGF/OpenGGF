@@ -126,7 +126,9 @@ class TestSamplePlatformerIntegration {
                 @Override public String identity() { return "standalone:" + OWNER + ":acceptance"; }
             };
             var game = module.createGame(source);
-            assertNull(game.getRom());
+            assertTrue(source.rom().isEmpty());
+            assertFalse(game.canSave());
+            assertFalse(game.canRelocateLevels());
             var acceptanceLevel = game.loadLevel(0x400);
             assertInstanceOf(ModLevel.class, acceptanceLevel);
             List<String> placedObjectKeys = acceptanceLevel.getObjects().stream()

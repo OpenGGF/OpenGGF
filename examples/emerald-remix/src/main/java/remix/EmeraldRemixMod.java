@@ -1,7 +1,6 @@
 package remix;
 
 import com.openggf.game.Game;
-import com.openggf.data.Rom;
 import com.openggf.game.GameModule;
 import com.openggf.game.patch.DelegatingGameModule;
 import com.openggf.game.patch.GamePatch;
@@ -66,7 +65,6 @@ public final class EmeraldRemixMod implements GgfMod {
             this.recipe = recipe;
         }
 
-        @Override public Game createGame(Rom rom) { return game = super.createGame(rom); }
         @Override public Game createGame(com.openggf.game.GameDataSource source) { return game = super.createGame(source); }
 
         private int levelIndex(RemixRecipe.Act act) {

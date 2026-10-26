@@ -2,8 +2,6 @@ package com.openggf.game;
 
 import com.openggf.audio.GameAudioProfile;
 import com.openggf.game.Game;
-import com.openggf.data.Rom;
-import com.openggf.data.RomByteReader;
 import com.openggf.level.objects.ObjectPlacementEncoding;
 import com.openggf.level.objects.ObjectRegistry;
 import com.openggf.level.objects.PlaneSwitcherConfig;
@@ -17,7 +15,7 @@ import com.openggf.level.objects.TouchResponseTable;
  * manifest owner. The optional {@link StandaloneGameSpec} constructor supplies
  * source-based games, registries, physics, launch initialization and save defaults.
  * No-argument subclasses retain the expert provider override path. Other providers
- * have no-ROM-safe neutral defaults; ROM-shaped creation methods deliberately throw.</p>
+ * have no-ROM-safe neutral defaults.</p>
  */
 @ModApi
 public abstract class AbstractStandaloneGameModule implements GameModule {
@@ -41,14 +39,6 @@ public abstract class AbstractStandaloneGameModule implements GameModule {
 
     @Override public PlayableCharacterRegistry getPlayableCharacterRegistry() {
         return PlayableCharacterRegistry.empty();
-    }
-
-    @Override public final Game createGame(Rom rom) {
-        throw new UnsupportedOperationException("Standalone modules use GameDataSource");
-    }
-
-    @Override public final TouchResponseTable createTouchResponseTable(RomByteReader reader) {
-        throw new UnsupportedOperationException("Standalone modules use GameDataSource");
     }
 
     @Override public Game createGame(GameDataSource source) { return specification().createGame(source); }

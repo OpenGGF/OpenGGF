@@ -16,7 +16,9 @@ import com.openggf.level.Block;
 import com.openggf.level.Chunk;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
+import com.openggf.game.session.GameplayRewindFixture;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Isolated;
 
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
@@ -30,7 +32,31 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@Isolated
 class TestRewindBenchmarkSizeEstimator {
+
+    @Test
+    void compositeEstimateChargesLayoutScopeReferenceAndOpaqueOwnerOnlyOnce() {
+        try (var gameplay = new GameplayRewindFixture()) {
+            assertEquals(224L, RewindBenchmark.estimateStructuralSize(new CompositeSnapshot(Map.of())),
+                    "empty unscoped container includes the layout's additional reference slot");
+            var world = gameplay.newWorld();
+            var first = gameplay.emptyRegistry(world);
+            var rebuilt = gameplay.emptyRegistry(world);
+            var foreign = gameplay.emptyRegistry(gameplay.newWorld());
+            IdentityHashMap<Object, Boolean> seen = new IdentityHashMap<>();
+            assertEquals(240L, RewindBenchmark.estimateStructuralSizeShared(first.capture(), seen),
+                    "first layout charges its scope reference and the 16-byte opaque Object");
+            assertEquals(112L, RewindBenchmark.estimateStructuralSizeShared(first.capture(), seen),
+                    "another frame shares the layout and scope but owns its container and value array");
+            assertEquals(224L, RewindBenchmark.estimateStructuralSizeShared(first.captureCourse(), seen),
+                    "a course layout owns its reference slot but shares the already charged scope");
+            assertEquals(224L, RewindBenchmark.estimateStructuralSizeShared(rebuilt.capture(), seen),
+                    "a rebuilt registry has a distinct layout over the same opaque scope");
+            assertEquals(240L, RewindBenchmark.estimateStructuralSizeShared(foreign.capture(), seen),
+                    "a different world retains its own scope object");
+        }
+    }
 
     @Test
     void expandedCollisionSchemaPreservesOrderedIdsAndPartialBuildState() {

@@ -258,6 +258,7 @@ public class RomManager implements AutoCloseable {
         return switch (gameId != null ? gameId.toLowerCase(Locale.ROOT) : "s2") {
             case "s1" -> RomGame.S1;
             case "s3k" -> RomGame.S3K;
+            case "scd" -> throw new IllegalArgumentException("Sonic CD requires an explicit disc source, not a cartridge ROM");
             default -> RomGame.S2;
         };
     }

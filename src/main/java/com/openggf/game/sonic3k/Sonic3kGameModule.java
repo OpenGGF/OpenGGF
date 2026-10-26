@@ -14,6 +14,7 @@ import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.DebugOverlayProvider;
 import com.openggf.game.GameModule;
+import com.openggf.game.GameDataSource;
 import com.openggf.game.GameServices;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.LevelInitProfile;
@@ -198,6 +199,12 @@ public class Sonic3kGameModule implements GameModule, com.openggf.game.internal.
     }
 
     @Override
+    public Game createGame(GameDataSource source) {
+        return createGame(source.rom().orElseThrow(() ->
+                new IllegalStateException("Sonic 3 & Knuckles requires a ROM data source")));
+    }
+
+    /** Cartridge convenience factory; session callers supply a GameDataSource. */
     public Game createGame(Rom rom) {
         try {
             activeGame = new Sonic3k(rom, globalAnimationState);
@@ -324,6 +331,12 @@ public class Sonic3kGameModule implements GameModule, com.openggf.game.internal.
     }
 
     @Override
+    public TouchResponseTable createTouchResponseTable(GameDataSource source) throws java.io.IOException {
+        return createTouchResponseTable(RomByteReader.fromRom(source.rom().orElseThrow(() ->
+                new IllegalStateException("Sonic 3 & Knuckles requires a ROM data source"))));
+    }
+
+    /** Cartridge convenience factory for an already-open byte reader. */
     public TouchResponseTable createTouchResponseTable(RomByteReader romReader) {
         return new TouchResponseTable(romReader,
                 Sonic3kConstants.TOUCH_SIZES_ADDR,

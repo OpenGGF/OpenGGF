@@ -378,7 +378,9 @@ class TestRewindArchitectureGuard {
     );
 
     private static final Set<String> REWIND_REGISTRY_PRODUCTION_ALLOWLIST = Set.of(
-            "src/main/java/com/openggf/game/session/GameplayModeContext.java"
+            "src/main/java/com/openggf/game/session/GameplayModeContext.java",
+            // Cross-package scoped construction is restricted to GameplayModeContext's exact caller class.
+            "src/main/java/com/openggf/game/rewind/EngineRewindRegistryFactory.java"
     );
 
     @Test

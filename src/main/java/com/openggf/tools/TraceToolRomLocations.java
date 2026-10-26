@@ -14,8 +14,10 @@ final class TraceToolRomLocations {
     static Path resolve(String gameId, SonicConfigurationService configuration,
                         Path workingDirectory) {
         GameId resolvedGameId = GameId.fromCode(gameId);
+        var cartridge = resolvedGameId.cartridgeGame().orElseThrow(() ->
+                new IllegalArgumentException("ROM trace tools do not support game: " + gameId));
         return new RomLocationResolver(configuration, workingDirectory)
-                .resolve(resolvedGameId.romGame())
+                .resolve(cartridge)
                 .map(location -> location.resolvedPath())
                 .orElseThrow(() -> new IllegalStateException(
                         "No ROM configured for game: " + gameId));

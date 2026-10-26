@@ -22,6 +22,8 @@ public final class WorldSession {
     final com.openggf.game.internal.NativePhysicalWorldData worldPhysicalData;
     private final SaveSessionContext saveSessionContext;
     private final GameDataSource dataSource;
+    // Identity only: survives manager/context rebuilds without retaining a mutable world in history.
+    private final Object rewindScope = new Object();
     private final PlayableCharacterRegistry playableCharacterRegistry;
     private LoadTimeSimulationMode loadTimeSimulationMode;
 
@@ -97,6 +99,11 @@ public final class WorldSession {
     }
 
     public GameDataSource getDataSource() { return dataSource; }
+
+    // Package-private identity hand-off; disposable registry composition belongs to the gameplay context.
+    Object rewindScope() {
+        return rewindScope;
+    }
 
     /** Returns the one immutable registry view pinned when this session opened. */
     public PlayableCharacterRegistry getPlayableCharacterRegistry() {

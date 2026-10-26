@@ -1,6 +1,11 @@
 package com.openggf.game.rewind;
 
+import com.openggf.game.session.GameplayRewindFixture;
+import com.openggf.game.session.SessionManager;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Isolated;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -8,7 +13,207 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@Isolated
 class TestRewindRegistry {
+
+    @Test
+    void gameplayFixtureClosesEveryContextAndBaselineEvenWhenControllersThrow() {
+        List<String> closed = new ArrayList<>();
+        try (var gameplay = new GameplayRewindFixture()) {
+            gameplay.emptyRegistry(gameplay.newWorld(closingController("first", closed)));
+            gameplay.emptyRegistry(gameplay.newWorld(closingController("second", closed)));
+
+            var failure = assertThrows(IllegalStateException.class, gameplay::close);
+
+            assertEquals("second", failure.getMessage());
+            assertEquals(List.of("second", "first"), closed);
+            assertEquals(1, failure.getSuppressed().length);
+            assertEquals("first", failure.getSuppressed()[0].getMessage());
+            assertNull(SessionManager.getCurrentGameplayMode());
+            assertNull(SessionManager.getCurrentEditorMode());
+            assertNull(SessionManager.getCurrentWorldSession());
+            assertThrows(IllegalStateException.class, gameplay::newWorld);
+            assertDoesNotThrow(gameplay::close);
+        }
+    }
+
+    private static com.openggf.game.mode.GameplayFrameController closingController(
+            String name, List<String> closed) {
+        return new com.openggf.game.mode.GameplayFrameController() {
+            @Override public boolean beforeTick(com.openggf.game.mode.CourseControl course,
+                    com.openggf.control.LogicalInputSnapshot input) { return false; }
+            @Override public void afterTick(com.openggf.game.mode.CourseControl course, boolean advanced) { }
+            @Override public void close() {
+                closed.add(name);
+                throw new IllegalStateException(name);
+            }
+        };
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"identical", "reordered", "missing"})
+    void foreignScopeRejectsFullAndCourseBeforeAnyMutation(String shape) {
+        try (var gameplay = new GameplayRewindFixture()) {
+            var source = gameplay.emptyRegistry(gameplay.newWorld());
+            var target = gameplay.emptyRegistry(gameplay.newWorld());
+            var events = new ArrayList<String>();
+            AtomicInteger writable = new AtomicInteger(99);
+            AtomicInteger rng = new AtomicInteger(123);
+            var first = intSnap("first", new AtomicInteger(7));
+            var late = intSnap("late", new AtomicInteger(8));
+            if (shape.equals("reordered")) source.register(late);
+            source.register(first);
+            source.register(intSnap("gamerng", new AtomicInteger(9)));
+            if (!shape.equals("missing")) source.register(intSnap("missing", new AtomicInteger(10)));
+            if (!shape.equals("reordered")) source.register(late);
+
+            target.register(new RewindSnapshottable<Integer>() {
+                @Override public String key() { return "first"; }
+                @Override public Integer capture() { return writable.get(); }
+                @Override public void restore(Integer value) { events.add("write"); writable.set(value); }
+            });
+            target.register(new RewindSnapshottable<Integer>() {
+                @Override public String key() { return "gamerng"; }
+                @Override public Integer capture() { return rng.get(); }
+                @Override public void restore(Integer value) { events.add("rng"); rng.set(value); }
+            });
+            target.register(new RewindSnapshottable<Integer>() {
+                @Override public String key() { return "missing"; }
+                @Override public Integer capture() { return 10; }
+                @Override public void restore(Integer value) { events.add("missing-restore"); }
+                @Override public void resetForMissingSnapshot() { events.add("reset"); }
+            });
+            target.register(new RewindSnapshottable<Integer>() {
+                @Override public String key() { return "late"; }
+                @Override public Integer capture() { return 8; }
+                @Override public void restore(Integer value) {
+                    events.add("late");
+                    throw new IllegalArgumentException("late adapter must never see a foreign snapshot");
+                }
+            });
+            target.registerPostRestoreCallback("observer", () -> events.add("callback"));
+
+            assertThrows(IllegalArgumentException.class, () -> target.restore(source.capture()));
+            assertThrows(IllegalArgumentException.class, () -> target.requireCourseLayout(source.captureCourse()));
+            assertThrows(IllegalArgumentException.class, () -> target.restoreCourse(source.captureCourse()));
+            assertEquals(List.of(), events, "rejection must precede even the first adapter or missing-state reset");
+            assertEquals(99, writable.get());
+            assertEquals(123, rng.get());
+        }
+    }
+
+    @Test
+    void emptyPartitionsStillRequireMatchingScopeInBothDirections() {
+        try (var gameplay = new GameplayRewindFixture()) {
+            var first = gameplay.emptyRegistry(gameplay.newWorld());
+            var second = gameplay.emptyRegistry(gameplay.newWorld());
+            var unscoped = new RewindRegistry();
+            AtomicInteger callbacks = new AtomicInteger();
+            for (var registry : List.of(first, second, unscoped)) {
+                registry.registerPostRestoreCallback("observer", callbacks::incrementAndGet);
+            }
+            for (var target : List.of(first, second, unscoped)) {
+                for (var source : List.of(first, second, unscoped)) {
+                    if (target == source) continue;
+                    assertThrows(IllegalArgumentException.class, () -> target.restore(source.capture()));
+                    assertThrows(IllegalArgumentException.class, () -> target.requireCourseLayout(source.captureCourse()));
+                    assertThrows(IllegalArgumentException.class, () -> target.restoreCourse(source.captureCourse()));
+                }
+            }
+            assertEquals(0, callbacks.get());
+        }
+    }
+
+    @Test
+    void payloadMapCopiesCannotRecoverEngineAdmissionAndPrivateMapsRemainCompatible() {
+        try (var gameplay = new GameplayRewindFixture()) {
+            var engine = gameplay.emptyRegistry(gameplay.newWorld());
+            AtomicInteger value = new AtomicInteger(7);
+            engine.register(intSnap("state", value));
+            var full = engine.capture();
+            var course = engine.captureCourse();
+            value.set(99);
+            var privateRegistry = new RewindRegistry();
+            privateRegistry.register(intSnap("state", value));
+            for (var original : List.of(full, course)) {
+                var copy = new CompositeSnapshot(new java.util.LinkedHashMap<>(original.entries()));
+                assertThrows(IllegalArgumentException.class, () -> engine.restore(copy));
+                assertThrows(IllegalArgumentException.class, () -> engine.restoreCourse(copy));
+                assertEquals(99, value.get());
+                assertThrows(IllegalArgumentException.class, () -> privateRegistry.restore(original));
+                assertThrows(IllegalArgumentException.class, () -> privateRegistry.restoreCourse(original));
+            }
+            assertThrows(IllegalArgumentException.class, () -> engine.restore(privateRegistry.capture()));
+            assertThrows(IllegalArgumentException.class, () -> engine.restoreCourse(privateRegistry.captureCourse()));
+            privateRegistry.restore(new CompositeSnapshot(full.entries()));
+            assertEquals(7, value.get());
+            value.set(99);
+            privateRegistry.restoreCourse(new CompositeSnapshot(course.entries()));
+            assertEquals(7, value.get());
+            var otherPrivate = new RewindRegistry();
+            otherPrivate.register(intSnap("state", new AtomicInteger(42)));
+            privateRegistry.restore(otherPrivate.capture());
+            assertEquals(42, value.get());
+            value.set(99);
+            privateRegistry.restoreCourse(otherPrivate.captureCourse());
+            assertEquals(42, value.get());
+        }
+    }
+
+    @Test
+    void sameWorldChangedLayoutKeepsKeyMatchingResetsAndDelayedRngOrder() {
+        try (var gameplay = new GameplayRewindFixture()) {
+            var world = gameplay.newWorld();
+            var source = gameplay.emptyRegistry(world);
+            source.register(intSnap("removed", new AtomicInteger(2)));
+            source.register(intSnap("gamerng", new AtomicInteger(7)));
+            source.register(intSnap("normal", new AtomicInteger(1)));
+            var snapshot = source.capture();
+            var target = gameplay.emptyRegistry(world);
+            List<String> events = new ArrayList<>();
+            AtomicInteger rng = new AtomicInteger(99);
+            target.register(new RewindSnapshottable<Integer>() {
+                @Override public String key() { return "gamerng"; }
+                @Override public Integer capture() { return rng.get(); }
+                @Override public void restore(Integer value) { rng.set(value); events.add("rng:" + value); }
+            });
+            target.register(new RewindSnapshottable<Integer>() {
+                @Override public String key() { return "normal"; }
+                @Override public Integer capture() { return 99; }
+                @Override public void restore(Integer value) { rng.set(123); events.add("normal:" + value); }
+            });
+            target.register(new RewindSnapshottable<Integer>() {
+                @Override public String key() { return "new"; }
+                @Override public Integer capture() { return 99; }
+                @Override public void restore(Integer value) { fail("new adapter has no captured value"); }
+                @Override public void resetForMissingSnapshot() { events.add("reset"); }
+            });
+            target.registerPostRestoreCallback("observer", () -> events.add("callback:" + rng.get()));
+            target.restore(snapshot);
+            assertEquals(List.of("normal:1", "reset", "rng:7", "callback:7"), events);
+        }
+    }
+
+    @Test
+    void scopedCapturesShareFullLayoutAndOwnSeparateFullAndCourseStorage() {
+        try (var gameplay = new GameplayRewindFixture()) {
+            var registry = gameplay.emptyRegistry(gameplay.newWorld());
+            AtomicInteger value = new AtomicInteger(7);
+            registry.register(intSnap("state", value));
+            var first = registry.capture();
+            var course = registry.captureCourse();
+            value.set(99);
+            var second = registry.capture();
+            assertSame(first.layout(), second.layout());
+            assertFalse(first.sharesValueStorageWith(second));
+            assertFalse(first.sharesValueStorageWith(course));
+            assertEquals(7, first.get("state"));
+            registry.restoreCourse(course);
+            assertEquals(7, value.get());
+            registry.restore(second);
+            assertEquals(99, value.get());
+        }
+    }
 
     private static RewindSnapshottable<Integer> intSnap(String key, AtomicInteger ref) {
         return new RewindSnapshottable<>() {
@@ -39,20 +244,24 @@ class TestRewindRegistry {
         @Override public void afterTick(com.openggf.game.mode.CourseControl course, boolean advanced) { }
     }
 
-    @Test
-    void coursePartitionExcludesOnlySessionControllerIdentity() {
-        var mode = new ModeAdapter();
-        var reg = new RewindRegistry(null, mode);
-        AtomicInteger creatorValue = new AtomicInteger(7);
-        reg.register(mode);
-        reg.register(intSnap("mode:creator-chosen-prefix", creatorValue));
-        var checkpoint = reg.captureCourse();
-        assertFalse(checkpoint.containsKey(mode.key()));
-        assertTrue(checkpoint.containsKey("mode:creator-chosen-prefix"));
-        mode.value = 99; creatorValue.set(88);
-        reg.restoreCourse(checkpoint);
-        assertEquals(99, mode.value, "mode ledger is outside course rollback regardless of its key");
-        assertEquals(7, creatorValue.get(), "creator prefix cannot exempt arbitrary state");
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void coursePartitionExcludesOnlySessionControllerIdentity(boolean scoped) {
+        try (var gameplay = scoped ? new GameplayRewindFixture() : null) {
+            var mode = new ModeAdapter();
+            var reg = scoped ? gameplay.emptyRegistry(gameplay.newWorld(mode))
+                    : new RewindRegistry(null, mode);
+            AtomicInteger creatorValue = new AtomicInteger(7);
+            reg.register(mode);
+            reg.register(intSnap("mode:creator-chosen-prefix", creatorValue));
+            var checkpoint = reg.captureCourse();
+            assertFalse(checkpoint.containsKey(mode.key()));
+            assertTrue(checkpoint.containsKey("mode:creator-chosen-prefix"));
+            mode.value = 99; creatorValue.set(88);
+            reg.restoreCourse(checkpoint);
+            assertEquals(99, mode.value, "mode ledger is outside course rollback regardless of its key");
+            assertEquals(7, creatorValue.get(), "creator prefix cannot exempt arbitrary state");
+        }
     }
 
     @Test

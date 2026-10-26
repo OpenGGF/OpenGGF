@@ -372,7 +372,7 @@ public final class CourseControl {
                     .getMusicId(level.getCurrentZone(), level.getCurrentAct());
             var currentMusic = GameServices.audio().captureLogicalSnapshot().presentation().activeMusic();
             // While the entry countdown is still pending, its own publication starts the zone music.
-            if (!profile.isLevelMusicPublicationPending()
+            if (musicId >= 0 && !profile.isLevelMusicPublicationPending()
                     && (currentMusic == null || currentMusic.musicId() != musicId)) GameServices.audio().playMusic(musicId);
             return null;
         });

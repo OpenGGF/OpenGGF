@@ -22,7 +22,13 @@ import java.util.Objects;
  * registered when a snapshot was captured may have been deregistered
  * since); such entries are skipped. The reverse — registered subsystems
  * with no entry in the snapshot — explicitly resets them, failing closed when
- * a subsystem does not provide a missing-snapshot reset implementation.
+ * a subsystem does not provide a missing-snapshot reset implementation. An
+ * admitted native restore guard instead rejects a missing payload before any
+ * subsystem is restored or reset.
+ * This key compatibility applies only after world admission: engine registries
+ * reject foreign or unscoped composites before any subsystem mutation. Public
+ * constructors create unscoped private registries compatible with Map snapshots
+ * and other unscoped registries.
  */
 @com.openggf.game.ModApi
 public final class RewindRegistry {
@@ -36,18 +42,22 @@ public final class RewindRegistry {
     private final Map<String, Runnable> postRestoreCallbacks = new LinkedHashMap<>();
     private final SectionProfiler profiler;
     private final Object modeAdapter;
+    private final Object scope;
     private long layoutVersion;
     private long courseLayoutVersion;
     private LayoutState layoutState;
 
+    // Assign directly: public private-registry construction must not invoke the engine-scoped constructor.
     public RewindRegistry() {
         this.profiler = null;
         this.modeAdapter = null;
+        this.scope = null;
     }
 
     public RewindRegistry(SectionProfiler profiler) {
         this.profiler = profiler;
         this.modeAdapter = null;
+        this.scope = null;
     }
 
     /** The session supplies its actual controller; creator keys never select the partition. */
@@ -55,6 +65,14 @@ public final class RewindRegistry {
                           com.openggf.game.mode.GameplayFrameController controller) {
         this.profiler = profiler;
         this.modeAdapter = controller instanceof RewindSnapshottable<?> ? controller : null;
+        this.scope = null;
+    }
+
+    RewindRegistry(SectionProfiler profiler,
+                   com.openggf.game.mode.GameplayFrameController controller, Object scope) {
+        this.profiler = profiler;
+        this.modeAdapter = controller instanceof RewindSnapshottable<?> ? controller : null;
+        this.scope = scope;
     }
 
     public void register(RewindSnapshottable<?> s) {
@@ -196,7 +214,8 @@ public final class RewindRegistry {
     }
 
     public void restore(CompositeSnapshot cs) {
-        Objects.requireNonNull(cs, "cs");
+        requireScope(cs);
+        validateNativePublications(cs, false);
         if (profiler != null) {
             profiler.beginSection("rewind.restore");
         }
@@ -222,19 +241,54 @@ public final class RewindRegistry {
 
     /** Captures a course partition, omitting only the session controller by identity. */
     public CompositeSnapshot captureCourse() {
-        var values = new LinkedHashMap<String, Object>();
+        var keys = new ArrayList<String>(entries.size());
+        var values = new ArrayList<Object>(entries.size());
         entries.forEach((key, adapter) -> {
-            if (adapter != modeAdapter) values.put(key, Objects.requireNonNull(adapter.capture(), key));
+            if (adapter != modeAdapter) {
+                keys.add(key);
+                values.add(Objects.requireNonNull(adapter.capture(), key));
+            }
         });
-        return new CompositeSnapshot(values);
+        return CompositeSnapshot.owned(
+                CompositeSnapshotLayout.fromKeys(courseLayoutVersion, keys, scope), values.toArray());
     }
 
     /** Validates the entire partition before mutating any subsystem. */
     public void requireCourseLayout(CompositeSnapshot snapshot) {
+        requireScope(snapshot);
         var keys = new java.util.LinkedHashSet<>(entries.keySet());
         keys.removeIf(key -> entries.get(key) == modeAdapter);
         if (!keys.equals(snapshot.entries().keySet()))
             throw new IllegalArgumentException("Course checkpoint belongs to a different registry layout");
+        validateNativePublications(snapshot, true);
+    }
+
+    /** A current native service may reject a retired visit before unrelated adapters can mutate. */
+    private void validateNativePublications(CompositeSnapshot snapshot, boolean courseOnly) {
+        for (var entry : entries.entrySet()) {
+            var adapter = entry.getValue();
+            if (courseOnly && adapter == modeAdapter) continue;
+            // Authority belongs to this registry's actual root publication, never an interface or reported key alone.
+            if (nativePublicationAuthorities.containsKey(entry.getKey())
+                    && adapter instanceof NativeRewindRestoreGuard<?> guard) {
+                if (!snapshot.containsKey(entry.getKey())) {
+                    throw new IllegalArgumentException("Missing native rewind capture: " + entry.getKey());
+                }
+                validateNativeGuard(guard, snapshot.get(entry.getKey()));
+            }
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void validateNativeGuard(NativeRewindRestoreGuard<?> guard, Object snapshot) {
+        ((NativeRewindRestoreGuard<Object>) guard).validateRestore(snapshot);
+    }
+
+    private void requireScope(CompositeSnapshot snapshot) {
+        Objects.requireNonNull(snapshot, "snapshot");
+        if (!snapshot.layout().hasScope(scope)) {
+            throw new IllegalArgumentException("Rewind snapshot belongs to a different world scope");
+        }
     }
 
     /** Restores the exact course partition while retaining the match/mode ledger. */
@@ -286,7 +340,7 @@ public final class RewindRegistry {
             index++;
         }
         state = new LayoutState(
-                CompositeSnapshotLayout.fromKeys(layoutVersion, keys),
+                CompositeSnapshotLayout.fromKeys(layoutVersion, keys, scope),
                 adapters,
                 gameRngIndex);
         layoutState = state;

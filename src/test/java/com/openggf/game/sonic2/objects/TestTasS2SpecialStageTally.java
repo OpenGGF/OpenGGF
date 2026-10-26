@@ -4,7 +4,6 @@ import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageResultsScreen;
 import com.openggf.level.objects.TestObjectServices;
-import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,7 +25,7 @@ class TestTasS2SpecialStageTally {
 
     @BeforeEach
     void setUp() {
-        GameServices.module().createGame(TestEnvironment.currentRom());
+        GameServices.module().createGame(GameServices.level().getWorldSession().getDataSource());
         services = new TestObjectServices() {
             @Override public <T> T gameService(Class<T> type) {
                 return GameServices.module().getGameService(type);

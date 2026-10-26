@@ -151,6 +151,10 @@ public final class ModApiVersion {
      * are reopened by controlled title requests and relaunch sessions with a team;
      * controllers supply the native step's pad; scenes and controllers read typed text
      * while claiming the keyboard from host shortcuts.
+
+     * GameModule factories require the session GameDataSource; ROM conveniences
+     * belong to concrete cartridge modules. Game no longer requires a ROM accessor;
+     * consumers obtain that optional capability from the owning world source.
      */
     public static final SemanticVersion CURRENT = SemanticVersion.parse("0.7.0");
     public static final List<SemanticVersion> SUPPORTED_CONTRACTS = List.of(CURRENT);

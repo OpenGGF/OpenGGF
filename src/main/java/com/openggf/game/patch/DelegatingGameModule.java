@@ -2,8 +2,6 @@ package com.openggf.game.patch;
 
 import com.openggf.audio.GameAudioProfile;
 import com.openggf.game.Game;
-import com.openggf.data.Rom;
-import com.openggf.data.RomByteReader;
 import com.openggf.game.*;
 import com.openggf.game.dataselect.DataSelectHostProfile;
 import com.openggf.game.dataselect.DataSelectPresentationProvider;
@@ -58,11 +56,6 @@ public class DelegatingGameModule implements GameModule {
     @Override
     public String getIdentifier() {
         return base.getIdentifier();
-    }
-
-    @Override
-    public Game createGame(Rom rom) {
-        return base.createGame(rom);
     }
 
     @Override public Game createGame(GameDataSource source) { return base.createGame(source); }
@@ -141,11 +134,6 @@ public class DelegatingGameModule implements GameModule {
     @Override
     public GameAudioProfile getAudioProfile() {
         return base.getAudioProfile();
-    }
-
-    @Override
-    public TouchResponseTable createTouchResponseTable(RomByteReader romReader) {
-        return base.createTouchResponseTable(romReader);
     }
 
     @Override

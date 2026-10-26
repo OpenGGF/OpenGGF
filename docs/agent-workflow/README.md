@@ -47,6 +47,105 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
 - [Stageplay route helper](../../src/main/java/com/openggf/tools/StageplayRouteTool.java): bounded shot-entry native-input search with cold LIVE qualification, or visual object floor/headroom paths; same cancellable logic worker and content-bound result in both editors. Inputs are canonical scenes and supplied ROMs; see [route limits](../guide/creating/stageplay-authoring.md#route-helper). Origin: 2026-10-22 complete-cast task.
 
 
+- [Java enum contract migration audit](../../tools/soniccd/enum_contract_audit.py): read-only, bounded lexical enum/order comparison and stale literal-count/unbounded slice inventory before costly validation; [mirrored skill](../../.agents/skills/java-enum-contract-audit/SKILL.md). Origin: 2026-10-26 private enum-contract tooling.
+
+- [Immutable disassembly lookup](../../tools/disasm/disasm_citations.py): `lookup --git-dir <absolute-existing-gitdir> --rev <full-commit> --root <literal-tree-root> --label <exact-label> --json` finds colon definitions/code references with explicit ambiguity and bounded hash-bound source windows, without a checkout or runtime execution; [mirrored skill](../../.agents/skills/disasm-source-lookup/SKILL.md). Origin: 2026-10-26 private integration path-lookup task.
+
+- [Sonic CD packet integration](../../tools/soniccd/integration_packet.py): verifies whole-file forward/inverse byte preservation from independently pinned frozen baseline/FINAL files and declared baseline-coordinate edits, drafts manifests from explicit source pins and canonical mappings, validates frozen mirrors and exact destination baselines, optionally imports under the existing worktree lock, and summarizes an exact fresh Surefire class set without running tests; [mirrored skill](../../.agents/skills/soniccd-packet-integration/SKILL.md). Origin: 2026-10-26 private integration/preservation tooling.
+
+- [Sonic CD catalogue audit](../../tools/soniccd/catalogue.py) checks native file,
+  command, program and regional source facts against the pinned disassembly.
+  [Native boot probe](../../tools/soniccd/oracle_boot.py) repeats bounded
+  CUE/BIOS boots without display or audio devices. These diagnostic observations
+  are separate from canonical TraceChaser V5 recording. Origin and limits are in
+  the [local implementation plan](../architecture/plans/2026-10-23-sonic-cd-implementation.md#local-implementation-checkpoint-23-october-2026).
+- [Sonic CD media inspection](../../src/main/java/com/openggf/tools/SonicCdMediaInspectTool.java)
+  reads complete supplied-media identities and program-local MMD views;
+  [retail profile reproduction](../../tools/soniccd/retail_profiles.py) binds the
+  known content records to primary checksum metadata. Header agreement and
+  content matching do not certify physical provenance or gameplay parity.
+- [CD device observation](../../tools/soniccd/device_observer_run.py),
+  [service callbacks](../../tools/soniccd/service_events_run.py) and
+  [stamp continuation fixtures](../../tools/soniccd/stamp_fixture_run.py)
+  preserve pinned native provenance and repeated/control/restore evidence.
+  The [fixture validator](../../tools/soniccd/stamp_fixture_validate.py) compares
+  complete external RAM payloads. Origin and limits are in the
+  [23 October implementation plan](../architecture/plans/2026-10-23-sonic-cd-implementation.md#native-continuation-and-service-observation-handoff).
+- [Pure CD stamp graphics](../../src/main/java/com/openggf/game/soniccd/device/CdStampGraphics.java)
+  executes bounded line transforms over caller-owned Word RAM. Opt-in
+  `TestCdStampNativeContinuations` checks complete external RAM payloads;
+  scheduling and ownership remain outside the transform. Origin: 2026-10-23 CD-05.
+- [CD stamp graphics service](../../src/main/java/com/openggf/game/soniccd/service/graphics/CdStampGraphicsService.java)
+  advances stable production submissions from explicit CD clocks and RAM ownership.
+  `TestCdStampOwnerLedgerSourceModel` compares external native scalar boundaries;
+  it does not supply runtime timing or certify physical hardware. Origin: 2026-10-23 CD-05.
+- [CD PCM sample device](../../src/main/java/com/openggf/game/soniccd/device/pcm/CdPcmDevice.java)
+  owns integer chip state and bounded sample work. The
+  [PCM source oracle](../../tools/soniccd/pcm_oracle_check.py) checks constructed
+  expectations against pinned integer C with delta collection; it is secondary
+  source-model evidence, not official-core audio or resampling proof. Origin: 2026-10-23 CD-06.
+- [Native CD owner build](../../tools/soniccd/native_owner_build.py) and
+  [event controls](../../tools/soniccd/native_owner_run.py) prepare a separate
+  pinned core with read-only owner hooks, typed Waterbox exports and explicit
+  clock epochs. [Inspection](../../tools/soniccd/native_owner_inspect.py) binds
+  ABI/storage identity; [analysis](../../tools/soniccd/native_owner_analyze.py)
+  rejects incomplete event evidence. Origin and bounded USA title coverage are
+  recorded in the [local plan](../architecture/plans/2026-10-23-sonic-cd-implementation.md#verified-owner-ledger-r4).
+- [CD stage inventory](../../tools/soniccd/stage_inventory.py) binds supplied
+  regional MMDs to pinned source/table/consumer evidence and writes external
+  metadata. R11A has bounded semantic views; other stages are header-only.
+  Encoding and consumed reads require checked consumers, not filename suffixes.
+  Origin: 2026-10-23 CD-01/CD-04/CD-10.
+- [Native PCM blocks](../../tools/soniccd/pcm_native_run.py) capture explicit
+  integer-loop ingress/egress from a separate pinned core. The
+  [checker](../../tools/soniccd/pcm_native_check.py) validates full state, RAM,
+  samples, provenance and controls. Captures are comparison-only; startup
+  coverage is distinct from active gameplay and resampling. Origin: 2026-10-23 CD-06.
+- [PCM native comparisons](../../src/test/java/com/openggf/game/soniccd/device/pcm/TestCdPcmNativeContinuations.java)
+  admit complete external integer-loop blocks and compare chip state, RAM and
+  every sample/delta. `TestCdPcmNativeMusic` also checks retail music-preview and
+  active native restore payloads. These test imports never hydrate gameplay.
+  Origin: 2026-10-23 CD-06.
+- [Retail Sound Test PCM route](../../tools/soniccd/pcm_route_soundtest_check.py)
+  checks controller-authored music selection, loaded program identity and active
+  native restoration against immutable captures. Music preview remains distinct
+  from in-level parity. Origin: 2026-10-23 CD-06.
+- [R11A asset loader](../../src/main/java/com/openggf/game/soniccd/level/CdR11aAssetLoader.java)
+  authenticates supplied media before decoding immutable native stage data.
+  [Reference checks](../../tools/soniccd/r11a_asset_check.py) independently
+  compare decompression output and bounded native fields against R2 metadata.
+  This supports R11A assets, not a playable module or other stage paths.
+  Origin: 2026-10-23 CD-04/CD-10.
+- [Native CD player reference](../../tools/soniccd/player_reference.py) records
+  source-gated post-frame observations, lossless pictures and repeat/restore controls
+  from controller recipes. Its [checker](../../tools/soniccd/player_reference_check.py)
+  verifies complete actor fields; the [charge checker](../../tools/soniccd/charge_reference_check.py)
+  requires consistent release latches and actual full-position movement. Output
+  preflight protects all registered checkouts of the producer repository. Exact
+  player/V-int instruction phase remains unknown; rows never drive engine state.
+  Origin: 2026-10-24 CD-08.
+- [Native CD enemy-contact reference](../../tools/soniccd/contact_reference.py)
+  captures controller-only defeat/hurt routes with independent retained specimens;
+  its [checker](../../tools/soniccd/contact_reference_check.py) pins imports and
+  enforces checkpoint/end-state comparisons. The [secondary corroborator](../../tools/soniccd/corroborate.py)
+  compares constants from the static report, not an independent source oracle.
+  Origin: private USA R11A contact work, 2026-10-24; full hurt state and native
+  poll phase remain unresolved.
+- [CD Sonic visual conversion](../../src/main/java/com/openggf/game/soniccd/resources/CdPlayerVisualAdapter.java)
+  binds five-byte native mappings, source tiles and complete explicit residency to
+  existing renderer data. `TestCdPlayerVisualRendering` checks selected poses over
+  the static production stage, no implicit cue, repeated drawing and pixel-exact
+  bank restore through EGL. This is component rendering, not a playable actor.
+  Origin: 2026-10-24 CD-08.
+- `HeadlessGameBoot.bootSonicCdStatic` and `GameplayCaptureSession.bootSonicCdStatic`
+  join authenticated detached disc data to the existing world, load and rendering
+  owners. `TestSonicCdDirectStageBoot` checks three regional static views and
+  same-world camera restore through display-free EGL. This is terrain presentation,
+  not native player/object execution; see the
+  [partial R11A matrix](../architecture/validation/levels/scd-palmtree-panic-act1-present.md).
+- [Stageplay capture](../../src/main/java/com/openggf/tools/StageplayCaptureTool.java): render a saved `.stageplay` scene with supplied ROMs to synchronized lossless MKV; see the [guide](../guide/creating/stageplay.md). [Stageplay HUD pictures](../../src/test/java/com/openggf/editor/project/TestStageplayHudPictures.java) use explicit `-Dopenggf.stageplay.hudPictures=true`, surfaceless EGL and an absolute S2 REV01 ROM path, writing `target/stageplay-hud/` for visual review; desktop has its equivalent `TestStageplayChromePictures` in OpenGGF Editor. Origin: 2026-10-21 Stageplay delivery.
+- [Stageplay authoring CLI](../../tools/stageplay/stageplay.py): compiles shot-local screenplays, discovers supplied-ROM resources, samples/validates scenes and renders offline. [Command reference](../guide/creating/stageplay-authoring.md); skill `stageplay-authoring`. Origin: 2026-10-21 directing extension.
+
 - [Seven-Chaos gateway diagnostic](../../src/main/java/com/openggf/tools/S3kSevenChaosGatewayCaptureTool.java): repeats the declared Tails/LRZ2 ring→sanctuary→sphere-stage→results→return scenario with verified ROM identity, fixed Limited/RAW_RGB, event/state CSVs and original PNGs; `--rom` and `--out-dir` require absolute paths, Linux uses surfaceless EGL with no display. This preserves the 2026-10-17 native RGB investigation; it is not a cold-route certificate.
 
 - [Trace SST occupancy probe](../../src/test/java/com/openggf/tests/trace/SlotOccupancyProbe.java): optional comparison-only `OGGF_SLOT_PROBE=1` diagnostics over existing V5 slot dumps; `OGGF_SLOT_PROBE_FULL=1` prints physical owner/phase labels, fails closed on duplicate SST owners, and writes only below `target/` (2026-10-14 AIZ retained results/title audit). Labels alone do not certify native code parity.
@@ -451,3 +550,5 @@ and [live-world plan](../architecture/plans/2026-10-21-stageplay-live-world-plan
 - `com.openggf.tools.editor.ObjectPropertyCoverageTool`: print the per-game editor subtype schema/raw-fallback inventory (no ROM required).
 
 - `tools/test_reel/test_reel.py`: explicit-commit, per-case JUnit census, opt-in actual-fixture EGL recording and deterministic silent hard-cut assembly, including explicitly labelled non-drawable cards (TAS test reel, 2026-10-26); see [usage and adapter limits](../../tools/test_reel/README.md). `tools/tas_audit/render_supportability_report.py` reconciles prospective repair groups against the exact executed unsupported scenarios; see [report inputs](../../tools/tas_audit/README.md).
+
+- [Java declaration census](../../tools/soniccd/java_declaration_census.py): bounded immutable-source declaration/arity inventory and optional externally pinned FINAL diff; source evidence only, never compiler/ABI certification (2026-10-26 private local tooling).

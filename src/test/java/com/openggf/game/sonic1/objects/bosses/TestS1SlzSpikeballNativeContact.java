@@ -6,6 +6,7 @@ import com.openggf.debug.DebugOverlayManager;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameRng;
+import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.rewind.RewindRegistry;
@@ -213,7 +214,8 @@ class TestS1SlzSpikeballNativeContact {
             @Override public GameStateManager gameState() { return gameState; }
         };
         ObjectManager manager = new ObjectManager(List.of(), new Sonic1ObjectRegistry(), 0, null,
-                module.createTouchResponseTable(rom), GraphicsManager.getInstance(), camera, services);
+                module.createTouchResponseTable(GameServices.level().getWorldSession().getDataSource()),
+                GraphicsManager.getInstance(), camera, services);
         owner[0] = manager;
         Sonic1SLZBossInstance boss = manager.createDynamicObjectAtSlot(() -> new Sonic1SLZBossInstance(
                 new ObjectSpawn(0x2180, 0x260, Sonic1ObjectIds.SLZ_BOSS, 0, 0, false, 0)), 0x21);

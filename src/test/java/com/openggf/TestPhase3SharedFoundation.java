@@ -136,8 +136,11 @@ class TestPhase3SharedFoundation {
             @Override public PhysicsProvider getPhysicsProvider() { return mock(PhysicsProvider.class); }
         };
         GameDataSource source = missingSource("standalone-assets");
-        assertNull(module.createGame(source).getRom());
-        assertThrows(UnsupportedOperationException.class, () -> module.createGame(mock(com.openggf.data.Rom.class)));
+        var game = module.createGame(source);
+        assertEquals("standalone-test", game.getIdentifier());
+        assertTrue(source.rom().isEmpty());
+        assertFalse(game.canSave());
+        assertFalse(game.canRelocateLevels());
         assertNull(module.getObjectArtProvider());
         assertNull(module.getLevelEventProvider());
     }

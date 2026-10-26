@@ -134,7 +134,6 @@ public final class SurvivorsMod implements GgfMod {
 
         private Profile profile() { return base().getGameService(Profile.class); }
 
-        @Override public Game createGame(Rom rom) { return game = super.createGame(rom); }
         @Override public Game createGame(com.openggf.game.GameDataSource source) { return game = super.createGame(source); }
 
         /** The route stage and act for a level index, or null for Sky Chase and anything off the route. */

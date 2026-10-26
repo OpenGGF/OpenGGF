@@ -5,6 +5,13 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Sonic CD development support:** authenticated user-disc sources now feed an
+  experimental Palmtree Panic player, terrain and native-object runtime with
+  current-art loading, checkpoint lifecycle and rewind checks. The default
+  static entry and explicit playable development entry remain distinct; complete
+  acts, native audio and all-region gameplay are still in development. Game
+  modules consume session data sources without requiring a cartridge ROM.
+
 - **Enemy-chain bonuses:** Ordinary enemy kills award 10,000 points from the
   sixteenth consecutive defeat, matching the native games. Normal and powered
   kills share the calculation, including native counter wrap and rewind. Sonic 2
@@ -1204,6 +1211,12 @@ its original drawing priority.
   at level load and through the boss PLC.
 
 ## Maintenance and release preparation
+
+- **Source research and integration tools:** immutable disassembly label lookup,
+  frozen-source packet imports and byte-preservation checks, fresh JUnit report
+  attribution, and bounded Java enum/declaration audits have matching reusable
+  agent skills. These tools report evidence and limits rather than certifying
+  native parity or whole-game completion.
 
 - **TAS trick regressions:** Focused tests exercise native movement, object-contact
   and special-stage behaviors described in published Sonic TAS notes. The

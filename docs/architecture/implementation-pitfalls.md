@@ -44,6 +44,87 @@ assertion during teardown; restoring the previous handle alone then crashed at
 owned contexts for standalone surveys. See the
 [menu readability audit](audits/2026-10-24-stageplay-menu-readability.md).
 
+
+**Immutable byte wrappers can still compare by identity.** CD `CdAssetBytes`
+does not define content equality. A record containing it, such as an art state
+or DMA request, can therefore differ after a valid decode/restore/replay even
+when every byte matches. Compare the complete byte copies and relevant scalar
+metadata at independently rebuilt service cuts. Do not weaken the production
+owner checks: `CdObjectState` equality deliberately also binds its pool and
+physical slot; cross-pool restart comparisons need an explicit value projection.
+See the [CD component and restart evidence](plans/2026-10-23-sonic-cd-implementation.md).
+
+**A standalone scroll draw can precede presentation preparation.** The arena
+mask transition can still have no sample at a cold load. Capturing that null
+and then drawing an ordinary player fails on real GL, while logic-headless and
+tiles-only checks can both pass. A standalone scope must retain actual cold
+geometry without advancing the transition, and preserve any existing sample;
+do not resample live bounds during delayed drawing or suppress the player.
+Keep native sprite-table capture semantics unchanged and test the real cold
+player path as well as immutable capture purity.
+
+**Texture upload and one changed pixel do not prove complete sprite geometry.**
+Frozen presentation replays can upload every pattern before deciding which tiles
+actually draw. An aggregate framebuffer difference can still pass when an entire
+tile is missing. Pin full tile metadata and compare every source nibble at literal
+flipped screen coordinates against the current engine palette, using terrain for
+transparent pixels. A partial-image negative must fail that oracle. Keep engine
+palette/display-policy validation separate from native hardware colour parity.
+See the [CD Door GPU-oracle correction](plans/2026-10-23-sonic-cd-implementation.md#vertical-door-live-runtime-world-cleanup-and-complete-gpu-oracle--25-october-2026-gmt).
+
+**A byte memory operand at a native word reads its high byte.** The 68000 is
+big-endian: CD `Player_LvlColAir_Down` reads `move.b oYVel(a0),d2`, with no
+`+1`, then ADDQ.B/NEG.B and signed byte distance comparisons
+(`scddisasm/src/Level/_Objects/Sonic/Main.asm:2093-2099`). Extract velocity
+bits 15..8 before the byte arithmetic. A byte operation on a data register
+instead uses its low byte. Post-gravity velocities 0138 and 01F8 therefore
+share threshold -9. R1 incorrectly read the low byte and its authored test
+endorsed the same error; an independent source review and distinguishing
+landing/rejection tests exposed it. Preserve fractions through later word-only
+position corrections. See the [MODE correction evidence](plans/2026-10-23-sonic-cd-implementation.md#native-player-mode-and-body-calls--24-october-2026).
+
+**An MMD relocation may copy resident Word RAM beyond the file.** Sonic CD's
+`RunMMD` (`scddisasm/src/CD Initial Program/IPX.asm:1323-1340`) checks the full
+entry long, then copies an unsigned DBF count from Word RAM plus the 256-byte
+MMD header to a nonzero origin. Some shipped programs, including the title,
+declare more copied bytes than remain in their file. The tail belongs to
+previous Word RAM state; a file-backed view must not invent zero padding.
+Retain original and relocated address domains, the raw 32-bit header fields,
+the 24-bit bus address and the unresolved tail separately. An entry of zero
+returns before relocation, interrupt changes and ownership flags. The
+[local implementation evidence](plans/2026-10-23-sonic-cd-implementation.md#asset-and-device-observation-checkpoint)
+records the bounded component checks.
+
+**Asset filenames do not establish compression or consumed extent.** Sonic CD's
+`LoadShieldArt` (`scddisasm/src/Level/_Objects/Powerup/Main.asm:157-176`) copies
+1,024 raw bytes even for Game Over and Time Over files named `.nem`. Some reads
+continue into the next blob. Its 1,152-byte DMA then reads a further 128 bytes
+from resident animated-art RAM, not the file. Conversely, Sonic DPLCs consume
+one verified alignment byte beyond the raw Sonic art blob. Bind encoding and
+read bounds to the owning consumer and actual media; keep source blobs, file
+reads and resident RAM separate. See the
+[stage-inventory correction](plans/2026-10-23-sonic-cd-implementation.md#verified-r11a-source-and-consumer-inventory).
+
+**Decoder lookahead is distinct from required compressed bits.** The existing
+Nemesis reader's eight-bit lookup consumes one real adjacent file byte after
+R11A's level-tile stream. An independent prefix decoder needs no bits from it;
+00/55/AA/FF controls preserve decoded output. Keep the matched source blob and
+the bounded reader-input view distinct, and use the actual media byte instead
+of invented EOF padding. Native CD chunk words also use different drawing
+(`0x3FF`) and collision (`0x7FF`) masks. Validate references used by the layout;
+unreferenced words can address unavailable resident data and must not create
+zero-filled blocks. See the
+[R11A loader checkpoint](plans/2026-10-23-sonic-cd-implementation.md#verified-r11a-loader-graphics-service-and-pcm-comparisons).
+
+**A live level load must preserve its initialized tilemap renderer.**
+`GraphicsManager.resetState()` destroys the non-lazy `TilemapGpuRenderer` as well
+as cached level data. For a decoded-level replacement within an active GL owner,
+use `resetPatternAndPaletteState()` and rebind the normal camera/fade owners;
+reserve full reset for teardown or logic-only headless setup. Publish decoded
+patterns and palettes before rebuilding derived tilemaps. The CD static-stage
+entry exercises this through the ordinary load lifecycle and capture renderer;
+see the [partial R11A matrix](validation/levels/scd-palmtree-panic-act1-present.md).
+
 A headless boot must release its audio base-ROM reference before closing the
 owned ROM. A later title boot installs its audio profile before the new ROM;
 otherwise the loader reads the previous, closed FileChannel. Close/reboot
@@ -1546,6 +1627,14 @@ A port that teleports the player can make an incorrectly positioned checkpoint
 fixture pass. Preserve the shipped writes' lack of player effect, assert that
 screen setup retains the incoming position, and declare the real checkpoint
 coordinates in route probes. The September 22 campaign audit records the correction.
+
+Native storage counters include unnamed reservations. Sonic CD's
+`src/_Include/System.inc:183` reserves an unnamed byte between command labels.
+A labelled-only `rs.b` walk omitted it, making both new production command IDs
+and their tests agree on values one too small. Count every `rs.b`/`rs.w`/`rs.l`
+declaration at its actual width; verify representative operands independently.
+The correct shoes/fade commands are `$6C/$82`. The October 23 CD implementation
+plan records the rejected `$6B/$81` derivation and its source-supported repair.
 
 ### Seamless target initialization must precede resource handoff
 

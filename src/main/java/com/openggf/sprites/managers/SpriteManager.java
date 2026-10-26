@@ -15,6 +15,7 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
 import com.openggf.control.PlayerInputState;
 import com.openggf.game.CollisionModel;
+import com.openggf.game.internal.NativePlayableSlot;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameServices;
 import com.openggf.timer.TimerManager;
@@ -602,7 +603,8 @@ public class SpriteManager implements PlayableSstDispatcher {
 		publishedEffectivePlayerOne = null;
 		publishedEffectivePlayerOne = filterPlayerOne(raw, publishedGameplayInputFilter);
 		for (Sprite sprite : getAllSprites()) {
-			if (sprite instanceof AbstractPlayableSprite playable && !playable.isCpuControlled())
+			if (sprite instanceof AbstractPlayableSprite playable && !playable.isCpuControlled()
+					&& !(playable instanceof NativePlayableSlot))
 				playable.applyQueuedControlStateForFrameStart();
 		}
 		publishPlayerOneSnapshot(publishedEffectivePlayerOne, handler.logical().player2(), suppressInput);
@@ -637,7 +639,8 @@ public class SpriteManager implements PlayableSstDispatcher {
 		boolean left = (p1Held & AbstractPlayableSprite.INPUT_LEFT) != 0;
 		boolean right = (p1Held & AbstractPlayableSprite.INPUT_RIGHT) != 0;
 		for (Sprite sprite : getAllSprites()) {
-			if (sprite instanceof AbstractPlayableSprite playable && !playable.isCpuControlled()) {
+			if (sprite instanceof AbstractPlayableSprite playable && !playable.isCpuControlled()
+					&& !(playable instanceof NativePlayableSlot)) {
 				var roster = nativeCompetitionRoster();
 				if (roster != null && roster.slotOf(playable) == 1) {
 					int held = suppressInput ? 0 : p2.heldMask();
@@ -667,6 +670,7 @@ public class SpriteManager implements PlayableSstDispatcher {
     public void withScriptedInputs(java.util.Map<String, PlayerInputState> inputs,
                                    java.util.function.Consumer<InputHandler> frame) {
         if (scriptedActorInputs != null) throw new IllegalStateException("Nested scripted input frame");
+        rejectNativePlayableSlots("withScriptedInputs");
         scriptedActorInputs = java.util.Map.copyOf(inputs);
         var handler = new InputHandler();
         var main = getMainPlayable();
@@ -797,6 +801,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 			throw new IllegalArgumentException(
 					"initial playable dispatch must not advance the gameplay counter");
 		}
+		rejectNativePlayableSlots("processInitialPlayableSlots");
 		validateInitialProcessSpritesEpoch(epoch);
 		processPlayableSlots(PlayableDispatchContext.initial(epoch, input));
 	}
@@ -889,6 +894,12 @@ public class SpriteManager implements PlayableSstDispatcher {
 			for (AbstractPlayableSprite playable : playables) {
 				activePlayableUpdate = playable;
 				try {
+					if (playable instanceof NativePlayableSlot nativeSlot) {
+						// The complete routine owns even an Init-only return. Do not publish
+						// legacy input/control state or run any cartridge tail around it.
+						nativeSlot.runPlayableSlot(levelManager, levelManager.getFrameCounter() & 0xFFFF);
+						continue;
+					}
 					if (context.initialAssemblySlot()) {
 						initializeInitialAssemblyPlayableSlot(playable);
 					}
@@ -1232,11 +1243,13 @@ public class SpriteManager implements PlayableSstDispatcher {
 	 */
 	public void advanceTailsTailsAfterObjectExecution() {
 		AbstractPlayableSprite main = getMainPlayable();
-		if (main != null && main.getTailsTailsController() != null) {
+		if (main != null && !(main instanceof NativePlayableSlot)
+				&& main.getTailsTailsController() != null) {
 			main.getTailsTailsController().update();
 		}
 		for (AbstractPlayableSprite sidekick : getRegisteredSidekicks()) {
-			if (sidekick != null && sidekick.getTailsTailsController() != null) {
+			if (sidekick != null && !(sidekick instanceof NativePlayableSlot)
+					&& sidekick.getTailsTailsController() != null) {
 				sidekick.getTailsTailsController().update();
 			}
 		}
@@ -1247,6 +1260,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 				sprites, sidekicks, isCpuSidekickSuppressed(),
 				playableOrderScratch, playableScheduledScratch, playableAvailableScratch);
 		for (AbstractPlayableSprite playable : playables) {
+			if (playable instanceof NativePlayableSlot) continue;
 			if (!(playable.getMovementManager() instanceof PlayableSpriteMovement movement)) {
 				continue;
 			}
@@ -1255,6 +1269,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 	}
 
 	public void processInitialTailsFixedSlot() {
+		rejectNativePlayableSlots("processInitialTailsFixedSlot");
 		// S3K's Level_object_RAM slot 97 is Tails_tails. In a solo Tails
 		// session its parent is the main playable; in a Sonic-and-Tails session
 		// it is the Tails sidekick. Select the parent that owns Obj05 rather than
@@ -1270,6 +1285,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 	}
 
 	public void processInitialDustFixedSlot(int playerIndex) {
+		rejectNativePlayableSlots("processInitialDustFixedSlot");
 		AbstractPlayableSprite owner;
 		if (playerIndex == 0) {
 			owner = getMainPlayable();
@@ -1299,6 +1315,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 	 * later dynamic-object slots.
 	 */
 	public void advancePlayableSlotPrefix() {
+		rejectNativePlayableSlots("advancePlayableSlotPrefix");
 		AbstractPlayableSprite leader = getMainPlayable();
 		if (leader != null) {
 			leader.recordFollowerHistoryForTick();
@@ -1333,6 +1350,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 	}
 
 	public void updateWithoutInput() {
+		rejectNativePlayableSlots("updateWithoutInput");
 		clearPublishedPlayerOne();
 		if (mutatorPolicySource != null) mutatorPolicySource.beforeForwardTick();
 		if (motionMutators != null) motionMutators.admitInput(PlayerInputState.neutral(), true);
@@ -1361,6 +1379,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 		if (frames <= 0 || levelManager == null || mainPlayable == null) {
 			return;
 		}
+		requireLegacyPlayablePath(mainPlayable, "warmUpFreshMainPlayableOnly");
 		int savedFrameCounter = frameCounter;
 		try {
 			mainPlayable.setAir(false);
@@ -1421,6 +1440,14 @@ public class SpriteManager implements PlayableSstDispatcher {
 			AbstractPlayableSprite leaderFallback) {
 		if (frames <= 0 || levelManager == null) {
 			return;
+		}
+		rejectNativePlayableSlots("warmUpCpuSidekicksOnly");
+		requireLegacyPlayablePath(leaderFallback, "warmUpCpuSidekicksOnly leader");
+		for (AbstractPlayableSprite sidekick : getSidekicks()) {
+			if (sidekick.getCpuController() != null) {
+				requireLegacyPlayablePath(sidekick.getCpuController().getLeader(),
+						"warmUpCpuSidekicksOnly leader");
+			}
 		}
 		int savedFrameCounter = frameCounter;
 		try {
@@ -1560,6 +1587,22 @@ public class SpriteManager implements PlayableSstDispatcher {
 		deferredPostTickMutations.computeIfAbsent(target, ignored -> new ArrayList<>()).add(mutation);
 	}
 
+	/** Legacy helpers have no serviced-world latch contract; never synthesize a neutral slot. */
+	private void rejectNativePlayableSlots(String operation) {
+		for (Sprite candidate : getAllSprites()) {
+			if (candidate instanceof AbstractPlayableSprite playable) {
+				requireLegacyPlayablePath(playable, operation);
+			}
+		}
+	}
+
+	private static void requireLegacyPlayablePath(AbstractPlayableSprite playable, String operation) {
+		if (playable instanceof NativePlayableSlot) {
+			throw new IllegalStateException(operation
+					+ " cannot dispatch a complete native playable slot without its serviced world frame");
+		}
+	}
+
 	private void beginPlayableFrame(List<AbstractPlayableSprite> playables) {
 		playableFrameActive = true;
 		playableUpdateOrder.clear();
@@ -1576,7 +1619,9 @@ public class SpriteManager implements PlayableSstDispatcher {
 			// have run. ROM only clears Status_OnObj later in solid-object
 			// processing (sub_1FF1E sonic3k.asm:44346-44359, loc_1FFC4
 			// sonic3k.asm:44409-44421).
-			playable.captureOnObjectAtFrameStart();
+			// The shared snapshot also resets display/hurt bookkeeping; a complete
+			// native slot owns those writes along with its own frame-start observations.
+			if (!(playable instanceof NativePlayableSlot)) playable.captureOnObjectAtFrameStart();
 		}
 	}
 
@@ -1664,7 +1709,8 @@ public class SpriteManager implements PlayableSstDispatcher {
 			return;
 		}
 		for (Sprite sprite : getAllSprites()) {
-			if (sprite instanceof AbstractPlayableSprite playable) {
+			if (sprite instanceof AbstractPlayableSprite playable
+					&& !(playable instanceof NativePlayableSlot)) {
 				boolean refresh = playable.shouldRefreshRenderFlagThisFrame();
 				// The hurt routine's unconditional DisplaySprite owns only the
 				// current BuildSprites pass.
@@ -2044,6 +2090,8 @@ public class SpriteManager implements PlayableSstDispatcher {
 		this.inputSuppressed = suppressed;
 	}
 
+    boolean inputSuppressed() { return inputSuppressed; }
+
 	/**
 	 * Suppresses keyboard-driven gameplay input specifically for playback mode.
 	 * This is separate from generic suppression used by title cards/credits.
@@ -2232,6 +2280,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 										   boolean up, boolean down, boolean left, boolean right,
 										   boolean jump, boolean test, boolean speedUp, boolean slowDown,
 										   LevelManager levelManager, int frameCounter) {
+		requireLegacyPlayablePath(playable, "tickPlayablePhysics");
         if (com.openggf.sprites.playable.PlayableSpriteInternalAccess.hasPrimaryDrowningRoutine(playable)) {
             // loc_15810 clears the carrier latch before the drowning move.
             playable.getTailsCarryController().releaseAfterCarrierHurt();

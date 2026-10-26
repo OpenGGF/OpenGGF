@@ -54,7 +54,7 @@ class TestSecondStrikePolicyComposition {
         when(data.rom()).thenReturn(Optional.of(rom));
         var sizes = mock(TouchResponseTable.class); when(sizes.getWidthRadius(anyInt())).thenReturn(16);
         when(sizes.getHeightRadius(anyInt())).thenReturn(16);
-        when(module.createTouchResponseTable(any(com.openggf.data.RomByteReader.class))).thenReturn(sizes);
+        when(module.createTouchResponseTable(data)).thenReturn(sizes);
         when(module.getGameService(WorldSessionPolicyProvider.class)).thenReturn(world -> {
             runtime = new NativeMutatorRuntime(world);
             return CompositeWorldSessionPolicyState.of(state, runtime);

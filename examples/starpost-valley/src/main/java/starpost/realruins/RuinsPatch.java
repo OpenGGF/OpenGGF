@@ -34,7 +34,8 @@ public final class RuinsPatch implements GamePatch {
                 if (source==null) {
                     if (context==null) throw new IOException("Ruins requires the logical-ROM context");
                     try (var rom=Rom.fromReader(context.openLogicalRom(LogicalRom.S1),"Starpost Ruins S1")) {
-                        var game=RomDetectionService.getInstance().detectAndCreateModule(rom).orElseThrow().createGame(rom);
+                        var module=RomDetectionService.getInstance().detectAndCreateModule(rom).orElseThrow();
+                        var game=module.createGame(new com.openggf.game.RomDataSource(rom,"rom:starpost-valley:ruins:s1"));
                         source=S1TerrainReader.read(game.loadLevel(sourceIndex));
                         terrain.put(sourceIndex,source);
                     }

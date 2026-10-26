@@ -264,7 +264,7 @@ class TestEmeraldRemix {
             EngineServices.current().graphics().initHeadless();
             GameModule module = new Sonic2GameModule();
             GameModuleRegistry.setCurrent(module);
-            module.createGame(rom);
+            module.createGame(new com.openggf.game.RomDataSource(rom, "rom:test:explicit"));
             ModLevelDefinition parsed;
             Path root = CLOVER.toAbsolutePath();
             try (var assets = ModAssetRoot.directory(root.getParent(), root, ModInputLimits.production(), DirectoryAccess.DEVELOPMENT)) {

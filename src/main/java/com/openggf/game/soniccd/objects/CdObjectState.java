@@ -1,0 +1,203 @@
+package com.openggf.game.soniccd.objects;
+
+import java.util.Arrays;
+import java.util.Objects;
+
+/**
+ * Immutable image of one physical CD dynamic slot, including all unwritten bytes.
+ * Source: Level/_Definitions.inc:oSize/oID..oSubtype2 (25-66), pin
+ * 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff. This is neither a player image nor a CPU address map.
+ */
+public final class CdObjectState {
+    public static final int BYTE_SIZE = 0x40;
+
+    /** Whole-pool identity is independent of layout row, saved ID and object ID. */
+    public record Identity(int wholeIndex) {
+        public Identity { Objects.checkIndex(wholeIndex - 32, 96); }
+        public int dynamicIndex() { return wholeIndex - 32; }
+        public int nativeAddress24() { return 0xFFD000 + wholeIndex * BYTE_SIZE; }
+    }
+
+    /** Native byte fields; overlapping aliases are intentional. No reserved/player field aliases. */
+    public enum ByteField {
+        ID(0), SPRITE_FLAGS(1), SCREEN_Y(0x0A), Y_RADIUS(0x16), X_RADIUS(0x17),
+        PRIORITY(0x18), WIDTH(0x19), MAP_FRAME(0x1A), ANIMATION_FRAME(0x1B),
+        ANIMATION(0x1C), PREVIOUS_ANIMATION(0x1D), ANIMATION_TIME(0x1E),
+        COLLISION_TYPE(0x20), COLLISION_STATUS(0x21), FLAGS(0x22), SAVED_FLAGS_ID(0x23),
+        // oSolidType / oLayer (Level/_Definitions.inc:59-66) use rs.b 0
+        // after the primary byte, aliasing the following secondary byte.
+        ROUTINE(0x24), SOLID_TYPE(0x25), ROUTINE_2(0x25), ANGLE(0x26), SUBTYPE(0x28),
+        LAYER(0x29), SUBTYPE2(0x29),
+        // Raw ObjMoveGrv/ObjMove reads (Object Functions.asm:53-64,100): storage only, also on non-player slots.
+        RAW_CONTROL_2C(0x2C), STAND_LINK_3D(0x3D),
+        // ObjRing_Init:.InitSubObj / ObjRing_Collect: one-based member at oVar34.
+        RING_MEMBER(0x34),
+        // Obj3DRamp_Main (3D Ramp/Main.asm:230,294,326): launch timer byte at oVar2E. Storage only.
+        RAMP_TIMER(0x2E),
+        // ObjPoints (HUD and Points/Main.asm:11,40,47): oPntsTimer EQU oVar2A, a byte lifetime. Storage only.
+        POINTS_TIMER(0x2A),
+        // ObjTimePost_Spin (Monitor and Time Post/Main.asm:60,180): overlapping post byte, not new storage.
+        TIME_POST_SPIN(0x2A),
+        // ObjSpring .DisplayOnly (Spring/Main.asm:156-159): signed parent-relative bytes. Storage only.
+        SPRING_PARENT_X_OFFSET(0x38), SPRING_PARENT_Y_OFFSET(0x39),
+        // ObjTunnelDoorV_Reset (Tunnel Door/Main.asm:77): ADDQ.B at HIGH oVar3A, never low $3B. Storage only.
+        TUNNEL_DOOR_TIMER_HIGH(0x3A),
+        // Checkpoint/Main.asm:7-11: overlapping native storage aliases only.
+        CHECKPOINT_ACTIVE(0x2E), CHECKPOINT_BALL_ANGLE(0x34),
+        // Platform/Main.asm:48-55,135-535: overlapping native byte aliases only.
+        PLATFORM_PHASE(0x2A), PLATFORM_SUBSTATE(0x2B), PLATFORM_SAG(0x2C), PLATFORM_RANGE(0x2D), PLATFORM_TIMER(0x2E),
+        // Tamabboh/Main.asm:177,181,237: overlapping native direction byte only.
+        TAMABBOH_MISSILE_DIRECTION(0x3F),
+        // Collapsing Platform/Main.asm:102,168,193,271,286: overlapping native bytes only.
+        COLLAPSE_SOLID_MARKER(0x3E), COLLAPSE_SAVED_SOURCE_ID(0x3F),
+        // ID07 oTunnelSteps/oTunnelVar32/oTunnelIndex/oTunnelEnd (Tunnel Path/Main.asm:109-115,257-270).
+        // SUBQ.B addresses the HIGH byte of the big-endian steps WORD; these are storage aliases only.
+        TUNNEL_PATH_STEPS_HIGH(0x2E), TUNNEL_PATH_SCRATCH(0x32), TUNNEL_PATH_INDEX(0x3A), TUNNEL_PATH_END(0x3B);
+        private final int offset;
+        ByteField(int offset) { this.offset = offset; }
+        public int byteOffset() { return offset; }
+    }
+
+    public enum WordField {
+        TILE(2), X(8), X_FRACTION(0x0A), Y(0x0C), Y_FRACTION(0x0E),
+        // ObjPataBata (Pata-Bata/Main.asm:18,64,67-73): overlapping storage aliases only.
+        PATA_BATA_ANCHOR_X(0x2A), PATA_BATA_PHASE(0x34),
+        PATA_BATA_PHASE_SPEED(0x36), PATA_BATA_SHIFT(0x38),
+        X_VELOCITY(0x10), Y_VELOCITY(0x12),
+        // oMonItemDel EQU oAnimTime; Monitor and Time Post/Main.asm:415,482,625 accesses a WORD at $1E.
+        MONITOR_ITEM_DELETE(0x1E),
+        // ObjMosqui_Init / ObjRing_Init:.InitSubObj: original anchors, not current X shadows.
+        MOSQUI_ANCHOR_X(0x2A), RING_ANCHOR_X(0x32),
+        // Obj3DPlant_Init / Obj3DRamp_Init (3D Ramp/Main.asm:51,59,74,220): the family's shared original X at
+        // oVar2A, the plant's own base X at oVar2C and the booster's anchor at oVar2A. Overlapping storage only.
+        PLANT_ANCHOR_X(0x2A), PLANT_BASE_X(0x2C), RAMP_ANCHOR_X(0x2A),
+        // MOVE.W #imm,oAnim(a0) (Explosion/Main.asm:80,83; Flower/Main.asm:55) writes oAnim and oPrevAnim together.
+        ANIMATION_WORD(0x1C),
+        // oExplodePoints EQU oVar3E (Explosion/Main.asm:8,19); Player_TouchEnemy .KillEnemy writes it
+        // (Player Object Collision.asm:165,170). Its low byte selects the points frame. Storage only.
+        EXPLOSION_POINTS_FRAME(0x3E),
+        // oGmOverDestX EQU oVar2A (Game Over/Main.asm:7,34,83,94): the text's destination X word. Overlapping storage only.
+        GAME_OVER_DEST_X(0x2A),
+        // ObjSpring (Spring/Main.asm:151,162,238): signed launch speed, parent low address, original X. Storage only.
+        SPRING_SPEED(0x30), SPRING_PARENT(0x34), SPRING_ANCHOR_X(0x36),
+        // ObjTunnelDoorV_Main (Tunnel Door/Main.asm:62): CLR.W oVar3A clears $3A and $3B. Storage only.
+        TUNNEL_DOOR_TIMER(0x3A),
+        // Checkpoint/Main.asm:7-8: ball orbit anchors, not retained parent objects.
+        CHECKPOINT_BALL_X(0x2A), CHECKPOINT_BALL_Y(0x2C),
+        // Anton/Main.asm:32,72 and wrapper:14: overlapping original-X word only.
+        ANTON_ANCHOR_X(0x2E),
+        // Platform/Main.asm:34-36,100,136-535: overlapping original/anchor WORD aliases only.
+        PLATFORM_INITIAL_Y(0x36), PLATFORM_ANCHOR_X(0x38), PLATFORM_ANCHOR_Y(0x3A),
+        // Tamabboh/Main.asm:37,82-85,165 and wrapper:16: overlapping native WORD storage only.
+        TAMABBOH_ANCHOR_X(0x2A), TAMABBOH_COOLDOWN(0x34),
+        // Collapsing Platform/Main.asm:94,105,202,295: overlapping WORD countdown only.
+        COLLAPSE_DELAY(0x2A),
+        // ID07 Tunnel Path/Main.asm:193-196,261-277,294-299,343,369: overlapping native WORD storage.
+        // Release MOVE.W #2 at routine writes bytes $24/$25=00/02, rather than routine BYTE02.
+        TUNNEL_PATH_STEPS(0x2E), TUNNEL_PATH_TARGET_X(0x36), TUNNEL_PATH_TARGET_Y(0x38),
+        TUNNEL_PATH_INDEX_END(0x3A), TUNNEL_PATH_ROUTINE_WORD(0x24);
+        private final int offset;
+        WordField(int offset) { this.offset = offset; }
+        public int byteOffset() { return offset; }
+    }
+
+    public enum LongField {
+        MAPPINGS(4), X_POSITION(8), Y_POSITION(0x0C),
+        // ObjPataBata (Pata-Bata/Main.asm:19-20,42,49,74): overlapping storage aliases only.
+        PATA_BATA_ANCHOR_Y(0x2C), PATA_BATA_X_DELTA(0x30),
+        // ObjMosqui_Init:.SetInfo (Mosqui/Main.asm:51-54). Storage only; no body execution here.
+        MOSQUI_X_DELTA(0x2C), MOSQUI_ANIMATION_SCRIPT(0x30),
+        // Checkpoint/Main.asm:10,108,154: raw FULL MOVE.L a0 parent bits. Storage only.
+        CHECKPOINT_PARENT(0x30),
+        // Anton/Main.asm:48,69,91: overlapping signed 16.16 motion long only.
+        ANTON_X_DELTA(0x2A),
+        // Tamabboh/Main.asm:55-57,94,123,156,234-250,273-280: overlapping LONG storage only.
+        TAMABBOH_X_DELTA(0x2C), TAMABBOH_ANIMATION_SCRIPT(0x30),
+        TAMABBOH_MISSILE_X_DELTA(0x2A), TAMABBOH_MISSILE_Y_DELTA(0x2E),
+        TAMABBOH_MISSILE_X_ACCEL(0x32), TAMABBOH_MISSILE_Y_ACCEL(0x36),
+        // Collapsing Platform/Main.asm:115-117,184,282: overlapping signed 16.16 fall delta only.
+        COLLAPSE_FALL_DELTA(0x2C),
+        // ID07 oTunnelData (Tunnel Path/Main.asm:115,194,274): retain the complete raw32 pointer bits.
+        TUNNEL_PATH_DATA(0x3C);
+        private final int offset;
+        LongField(int offset) { this.offset = offset; }
+        public int byteOffset() { return offset; }
+    }
+
+    private final Object owner;
+    private final Identity identity;
+    private final byte[] bytes;
+
+    private CdObjectState(Object owner, Identity identity, byte[] ownedBytes) {
+        this.owner = owner;
+        this.identity = identity;
+        this.bytes = ownedBytes;
+    }
+
+    static CdObjectState cleared(Object owner, int wholeIndex) {
+        return new CdObjectState(owner, new Identity(wholeIndex), new byte[BYTE_SIZE]);
+    }
+
+    boolean belongsTo(Object candidate) { return owner == candidate; }
+    public Identity identity() { return identity; }
+    public byte[] copyBytes() { return bytes.clone(); }
+    public int unsignedByte(ByteField field) { return Byte.toUnsignedInt(bytes[Objects.requireNonNull(field).offset]); }
+    public byte signedByte(ByteField field) { return bytes[Objects.requireNonNull(field).offset]; }
+    public int word(WordField field) { return readWord(Objects.requireNonNull(field).offset); }
+    public short signedWord(WordField field) { return (short) word(field); }
+    public int longBits(LongField field) {
+        int at = Objects.requireNonNull(field).offset;
+        return (readWord(at) << 16) | readWord(at + 2);
+    }
+
+    public int id() { return unsignedByte(ByteField.ID); }
+    public int spriteFlags() { return unsignedByte(ByteField.SPRITE_FLAGS); }
+    public int flags() { return unsignedByte(ByteField.FLAGS); }
+    public int centreX() { return word(WordField.X); }
+    public int centreY() { return word(WordField.Y); }
+    public int routine() { return unsignedByte(ByteField.ROUTINE); }
+    public int savedFlagsId() { return unsignedByte(ByteField.SAVED_FLAGS_ID); }
+    public int subtype() { return unsignedByte(ByteField.SUBTYPE); }
+    public int subtype2() { return unsignedByte(ByteField.SUBTYPE2); }
+
+    /** MOVE.B semantics: truncate only the addressed byte, retaining every other byte. */
+    public CdObjectState moveByte(ByteField field, int value) {
+        byte[] next = bytes.clone();
+        next[Objects.requireNonNull(field).offset] = (byte) value;
+        return new CdObjectState(owner, identity, next);
+    }
+
+    /** MOVE.W semantics; X/Y writes deliberately retain the fraction words. */
+    public CdObjectState moveWord(WordField field, int value) {
+        byte[] next = bytes.clone();
+        putWord(next, Objects.requireNonNull(field).offset, value);
+        return new CdObjectState(owner, identity, next);
+    }
+
+    /** MOVE.L semantics, including integer/fraction aliases for native position writers. */
+    public CdObjectState moveLong(LongField field, int bits) {
+        byte[] next = bytes.clone();
+        int at = Objects.requireNonNull(field).offset;
+        putWord(next, at, bits >>> 16);
+        putWord(next, at + 2, bits);
+        return new CdObjectState(owner, identity, next);
+    }
+
+    public CdObjectState addByte(ByteField field, int delta) { return moveByte(field, unsignedByte(field) + delta); }
+    public CdObjectState addWord(WordField field, int delta) { return moveWord(field, word(field) + delta); }
+    public CdObjectState addLong(LongField field, int delta) { return moveLong(field, longBits(field) + delta); }
+
+    private int readWord(int at) { return (Byte.toUnsignedInt(bytes[at]) << 8) | Byte.toUnsignedInt(bytes[at + 1]); }
+    private static void putWord(byte[] bytes, int at, int value) {
+        bytes[at] = (byte) (value >>> 8);
+        bytes[at + 1] = (byte) value;
+    }
+
+    @Override public boolean equals(Object other) {
+        return other instanceof CdObjectState state && owner == state.owner
+                && identity.equals(state.identity) && Arrays.equals(bytes, state.bytes);
+    }
+    @Override public int hashCode() {
+        return 31 * (31 * System.identityHashCode(owner) + identity.hashCode()) + Arrays.hashCode(bytes);
+    }
+}

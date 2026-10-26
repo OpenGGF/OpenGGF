@@ -14,6 +14,27 @@ uses an ordinary `CLEAR_OBJECTS` command; rings retain their separate native own
 the current format directly. Preview/export processes and ROM transport remain
 engine internals; publication state and branch topology are unchanged.
 
+The canonical `GameModule` factories now require the session `GameDataSource`.
+Their former ROM-only interface overloads and `Game.getRom()` are removed;
+concrete cartridge modules retain their convenience factories/accessors. Decorators
+forward the exact source, and resource consumers query its optional cartridge
+capability. `GameId.SCD` is a stock identity with no cartridge mapping;
+`GameId.cartridgeGame()` distinguishes that capability from stock membership.
+The mutable `0.7` pin and runtime description change together. Candidate `0.7.0`,
+the descriptor and published baselines remain unchanged. Existing compiled mods
+that implement the replaced candidate factories must rebuild against this surface.
+
+Stageplay keeps the mutable candidate at 0.7.0. Portable document version five
+adds opt-in LIVE worlds, stable ROM-placement targets, bounded waits, native
+ability intents, fixed-scale camera following and sampled native state/events.
+Screenplay version three compiles that contract. Versions one through four retain
+their terrain-only migration; prior record constructors remain available, including
+version-four canonical callers. Puppet/Poser, dialogue/reveal sampling, camera effects
+and accessory poses remain supported. LIVE editor previews use an isolated native
+worker; these ownership/process details are outside the creator API. The normalized
+candidate pin changes with the typed document/timeline surface; published baselines,
+API version and release topology do not.
+
 Creator dynamic objects implement `ModRewindRecreatable` and receive
 `ObjectReconstructionContext`: captured spawn and typed payload, restore-time
 services, read-only object/player queries and deferred player-bound admission.

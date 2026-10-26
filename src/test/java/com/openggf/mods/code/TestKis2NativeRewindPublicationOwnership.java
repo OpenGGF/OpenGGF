@@ -86,7 +86,7 @@ class TestKis2NativeRewindPublicationOwnership {
         assertNull(module.getGameService(PlcLifecycleService.class), "cold reservation creates no service/work");
         context.registerGameModuleRewindAdapters();
 
-        module.createGame(rom);
+        module.createGame(world.getDataSource());
         var old = module.getGameService(Sonic2PlcService.class);
         assertSame(old, module.getGameService(PlcLifecycleService.class));
         assertTrue(module.rewindAdapters().stream().anyMatch(adapter -> adapter == old));
@@ -127,7 +127,7 @@ class TestKis2NativeRewindPublicationOwnership {
         assertEquals(advanced, old.capture(), "registry-captured ROM queue replays exact progress and FIFO");
 
         long epoch = registry.courseLayoutVersion();
-        module.createGame(rom);
+        module.createGame(world.getDataSource());
         var current = module.getGameService(Sonic2PlcService.class);
         assertNotSame(old, current);
         assertThrows(IllegalStateException.class, () -> registry.registerOrRefresh(current));
@@ -157,7 +157,7 @@ class TestKis2NativeRewindPublicationOwnership {
         assertSame(module, NativeRewindAdapterPublication.publicationOwner(world.rootGameModule(), module));
         NativeRewindAdapterPublication.reserve(module);
         assertNull(module.getGameService(PlcLifecycleService.class));
-        module.createGame(rom);
+        module.createGame(world.getDataSource());
         var recreated = module.getGameService(Sonic2PlcService.class);
         assertNotSame(current, recreated);
         context.registerGameModuleRewindAdapters();
@@ -179,7 +179,7 @@ class TestKis2NativeRewindPublicationOwnership {
         var context = new GameplayModeContext(new WorldSession(base, resolved, StockGameDataSources.pinned(rom, base), null));
         context.attachGameplayManagers(new Camera(), new TimerManager(), new GameStateManager(),
                 new FadeManager(), new GameRng(GameRng.Flavour.S1_S2), new DefaultSolidExecutionRegistry());
-        resolved.createGame(rom);
+        resolved.createGame(context.getWorldSession().getDataSource());
         var old = module.getGameService(Sonic2PlcService.class);
         assertSame(old, resolved.getGameService(Sonic2PlcService.class));
         assertSame(old, resolved.getGameService(PlcLifecycleService.class));
@@ -190,7 +190,7 @@ class TestKis2NativeRewindPublicationOwnership {
         var ownedController = (RewindSnapshottable<?>) resolved.gameplayFrameController();
         assertFalse(course.containsKey(ownedController.key()));
         assertFalse(RewindAdapterOwnership.isNativePublication(ownedController));
-        resolved.createGame(rom);
+        resolved.createGame(context.getWorldSession().getDataSource());
         var current = module.getGameService(Sonic2PlcService.class);
         assertNotSame(old, current);
         context.registerGameModuleRewindAdapters();
@@ -209,7 +209,7 @@ class TestKis2NativeRewindPublicationOwnership {
         for (boolean expert : List.of(false, true)) {
             var base = new Sonic2GameModule();
             var module = lockOn(base, chip);
-            if (!target.equals("cold")) module.createGame(TestEnvironment.currentRom());
+            if (!target.equals("cold")) module.createGame(StockGameDataSources.pinned(TestEnvironment.currentRom(), base));
             var state = target.equals("cold") ? module.rewindAdapters().getFirst()
                     : (target.equals("base") ? base : module).getGameService(Sonic2PlcService.class);
             var before = state.capture();

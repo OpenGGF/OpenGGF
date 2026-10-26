@@ -1,7 +1,6 @@
 package com.openggf.game;
 
 import com.openggf.audio.GameSound;
-import com.openggf.data.Rom;
 import com.openggf.level.Level;
 
 import java.io.IOException;
@@ -50,7 +49,4 @@ public abstract class Game {
      * @return An array containing [bgScrollX, bgScrollY].
      */
     public abstract int[] getBackgroundScroll(int levelIdx, int cameraX, int cameraY);
-
-    /** Returns the backing ROM, or {@code null} for standalone asset-backed games. */
-    public abstract Rom getRom();
 }

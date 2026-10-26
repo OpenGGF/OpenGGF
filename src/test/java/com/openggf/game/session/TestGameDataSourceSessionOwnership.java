@@ -6,6 +6,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Isolated;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
@@ -46,6 +48,48 @@ class TestGameDataSourceSessionOwnership {
 
         assertSame(com.openggf.game.PlayableCharacterRegistry.empty(),
                 world.getPlayableCharacterRegistry());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"resume", "restart", "reopen"})
+    void retainedWorldAdmitsCompatibleRawSnapshotsAfterActualContextTransition(String transition) {
+        var module = new com.openggf.game.sonic2.Sonic2GameModule();
+        GameDataSource source = missingSource("same-source-through-rebuild");
+        var first = SessionManager.openGameplaySession(module, module, source, null);
+        attachCoreManagers(first);
+        var world = first.getWorldSession();
+        var registry = first.getRewindRegistry();
+        first.getCamera().setX((short) 71);
+        var full = registry.capture();
+        first.getCamera().setX((short) 82);
+        var course = registry.captureCourse();
+
+        GameplayModeContext rebuilt;
+        if (transition.equals("reopen")) {
+            rebuilt = SessionManager.reopenGameplaySession(
+                    com.openggf.game.timing.HardwareReadinessAdmissionPolicy.LIVE);
+        } else {
+            SessionManager.enterEditorMode(new EditorCursorState(3, 4));
+            rebuilt = transition.equals("resume") ? SessionManager.resumeGameplayFromEditor()
+                    : SessionManager.restartGameplayFromBeginning();
+        }
+        attachCoreManagers(rebuilt);
+        assertSame(world, rebuilt.getWorldSession());
+        assertSame(source, rebuilt.getWorldSession().getDataSource());
+        assertNotSame(first, rebuilt);
+        assertNotSame(registry, rebuilt.getRewindRegistry());
+        assertEquals(0, rebuilt.getCamera().getX(), "new managers still begin with fresh state");
+        rebuilt.getRewindRegistry().restore(full);
+        assertEquals(71, rebuilt.getCamera().getX());
+        rebuilt.getRewindRegistry().restoreCourse(course);
+        assertEquals(82, rebuilt.getCamera().getX());
+    }
+
+    private static void attachCoreManagers(GameplayModeContext context) {
+        context.attachGameplayManagers(new com.openggf.camera.Camera(), new com.openggf.timer.TimerManager(),
+                new com.openggf.game.GameStateManager(), new com.openggf.graphics.FadeManager(),
+                new com.openggf.game.GameRng(com.openggf.game.GameRng.Flavour.S1_S2),
+                new com.openggf.game.solid.DefaultSolidExecutionRegistry());
     }
 
     private static GameDataSource missingSource(String identity) {
