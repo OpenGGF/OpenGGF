@@ -6654,3 +6654,14 @@ masks its low A/B/C press bits. Use the logical press API: held input exits
 one pass late after activation, while raw controller press loses CPU/scripted
 logical edges. Rewind both the existing skim adapter and player logical state;
 do not rewrite the earlier follower-history slot to publish this late object read.
+
+
+A waiting badnik has not published its ObjDat collision byte.
+`Obj_Jawz` (sonic3k.asm:183616-183622) reaches SetUp_ObjAttributes only after
+Obj_WaitOffscreen has restored its entry and returned; use the existing captured
+initialized state for collision publication. Test actual player-slot touch before
+and after that boundary, including fresh graph recreation. Touch_Special queues
+collision_property; Jawz_Main owns the later harmful-child response. A hurt stack
+with source X identifies a position, not an object class: verify the original ROM
+placement ID before attributing the route (HCZ2 $2880,$07F0 is Turbo Spiker $96,
+not Jawz $93).
