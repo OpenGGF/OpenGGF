@@ -105,7 +105,11 @@ public final class CdR11aObjectAssets {
         // Spinning Disc/Main.asm:96,111,228-233: actual USA operands; full native-order includes.
         SPINNING_DISC_PLAYER_FRAMES("ObjSpinningDisc_PlayerFrames", 0x9496, 16),
         SPINNING_DISC_ANIMATIONS("Ani_SpinningDisc", 0x95BE, 8),
-        SPINNING_DISC_MAPPINGS("MapSpr_SpinningDisc", 0x95C6, 36);
+        SPINNING_DISC_MAPPINGS("MapSpr_SpinningDisc", 0x95C6, 36),
+        // Tunnel Path/Main.asm:191,382,392-478; actual USA operands join both complete raw tables.
+        // ID07 stores the existing Powerup mapping pointer and literal $0541 without drawing or decoding art.
+        TUNNEL_PATH_GROUND_SPEEDS("ObjTunnelPath_GVels", 0x8D90, 8),
+        TUNNEL_PATH_COORDINATES("ObjTunnelPath_Paths", 0x8D98, 284);
 
         private final String nativeLabel;
         private final int offset;

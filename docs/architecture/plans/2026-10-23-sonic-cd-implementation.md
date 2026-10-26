@@ -7329,3 +7329,39 @@ the unique common row236 and two raw views (GVels8/paths284), no drawing or
 allocation and no new art/source/Region. Its own future controlled81/C1 branch
 is distinct from actual observed contact; controlled Body remains deferred.
 No new3421 successful continuation or whole-game/regional certification.
+
+### Authenticated Tunnel Path raw views — 26 October 2026
+
+This metadata-only increment is based on private saved61945ae41, after the
+saved live-Disc milestone42fc3f354. Table ordinals62/63 append the complete
+8-byte GVels and284-byte Paths views at USA offsets8D90/8D98. Native owners
+are ObjTunnelPath_SetPlayerGVel and ObjTunnelPath_Paths (Tunnel Path/Main.asm:
+375–478 at pinned N1ecc5f3). Actual USA/JP/EU operands and complete raw bytes
+were authenticated independently in the source packet; the runtime owner stays
+USA-only. There is no getter, decode, selector, art/source/Region, current-pixel
+or queue change. Existing62 table rows and the full Source17 suffix are exact.
+Complete manifests migrate to64; the Spinning Disc three-table subset remains
+bounded with limit(3). All selector-negative vectors are preserved.
+
+Tests freeze before production; Root first imports only those tests and
+run45986 stops at expected testCompile missing both TUNNEL_PATH enum values.
+No JUnit was reached. Root then imports the single frozen production file as
+0644 with a fresh mtime. Positive73344 passes163/0/0/0 at12:49:31Z (112 unit,
+51 regional retail;2m03s execution,19s queue). Exact fresh classes/identities,
+Java25, media and skips were inspected with the integration helper.
+
+Affected consumers34306 complete512/1/0/0 at13:19:24Z (58.575s,queue0):
+Runtime410, all WorldLoad53, real Ring/current659 EGL2, mapping42 and source
+guards5. The sole failure is the inherited mapper contract's total-table
+literal62 versus actual64. Root changes only that literal; narrow53206 passes
+1/0/0/0 at13:29:36Z (31.645s,queue0). This is not a fresh all512 green claim;
+the other511 identities were observed passing in the prior run. Actual
+media/S2/surfaceless/EGL opt-in/private cwd/Java25/zero skips were checked.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 python3 "$OPENGGF_ROOT/tools/testing/maven_queue.py" --lean -Dmse=off "-Dsoniccd.media.root=$SCD_MEDIA_ROOT" '-Dtest=TestCdR11aObjectAssets,TestCdR11aObjectRetailAssets' test -B
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 python3 "$OPENGGF_ROOT/tools/testing/maven_queue.py" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dsoniccd.opening.egl=true "-Dsoniccd.media.root=$SCD_MEDIA_ROOT" "-Dsonic2.rom.path=$S2_ROM" '-Dtest=TestCdObjectMappings,TestCdOpeningObjectRuntime,TestSonicCdOpeningWorldLoad,TestSonicCdOpeningWorldEgl#actualEglNormalInputPickupAndFullCourseReplay+actualEglCurrentTamabbohSingletonRendersAndRetiresThe659thClientPattern,TestJunit5MigrationGuard,TestNoAssertionFreeDiagnostics' test -B
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 python3 "$OPENGGF_ROOT/tools/testing/maven_queue.py" --lean -Dmse=off "-Dsoniccd.media.root=$SCD_MEDIA_ROOT" '-Dtest=TestCdObjectMappings#spinningDiscMapperKeepsArtColdReusesOneVisualAndPreservesTheExistingPublicContract' test -B
+```
+
+Independent static review24737B/SHA19bbcbac80685b3e19507ad1a5824a412bbb71ddbad545389a194e8fe5b9da6e finds no actionable P1/P2; no execution by the reviewer. Validation is bounded to actual metadata consumers; a broad smoke repeat is disproportionate to these two raw enum rows. The component Body/State and prepared Frame packets are separate, unimported work. The permanent route still returns3420 and fails3421 at unknown07/live63. No new object dispatch, controlled Body, native image/timing or regional gameplay parity is claimed.

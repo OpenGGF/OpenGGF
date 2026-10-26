@@ -2436,7 +2436,7 @@ class TestCdObjectMappings {
         assertTrue(java.lang.reflect.Modifier.isPublic(getter.getModifiers()));
         assertTrue(java.lang.reflect.Modifier.isSynchronized(getter.getModifiers()));
         assertEquals(0, getter.getExceptionTypes().length);
-        assertEquals(62, CdR11aObjectAssets.Table.values().length); assertEquals(106, CdR11aAsset.values().length);
+        assertEquals(64, CdR11aObjectAssets.Table.values().length); assertEquals(106, CdR11aAsset.values().length);
         // No art getter, source-bank access, pixel callback or residency snapshot is used by this contract.
     }
 

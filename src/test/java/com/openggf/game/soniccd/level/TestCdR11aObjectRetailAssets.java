@@ -252,6 +252,8 @@ class TestCdR11aObjectRetailAssets {
         hashes.put(SPINNING_DISC_PLAYER_FRAMES, "51995b0191d2a4a3dff61e17629c017c209c1170fbf06d5172a5ce046b325389");
         hashes.put(SPINNING_DISC_ANIMATIONS, "bebbcc2ef135a5349ad7b24690b63ab06bdf5ddae18b774d7fcde1824b340260");
         hashes.put(SPINNING_DISC_MAPPINGS, "c74d267322eb765b6dc9677a3b53824fbeeb48328d419631199798257f7ddeb4");
+        hashes.put(TUNNEL_PATH_GROUND_SPEEDS, "6421e780611a8a1f2d7c46b123246ca2072d8d8115454f62cdae39738a6e9836");
+        hashes.put(TUNNEL_PATH_COORDINATES, "ffdca0eca125c54bf14c076060a27657bf82bcc3ce52d3e912c4ac14e5b5cd93");
         assertEquals(CdR11aObjectAssets.Table.values().length, hashes.size(), "every admitted table has a pinned digest");
         for (var table : CdR11aObjectAssets.Table.values()) {
             var view = objects.view(table);
@@ -4407,16 +4409,17 @@ class TestCdR11aObjectRetailAssets {
         assertSame(platform, objects.platform()); assertSame(flying, objects.flyingAnimal());
         assertSame(ground, objects.groundAnimal());
         assertEquals(0x388, objects.animalBaseTile(0, 1));
-        // Complete 62-table digest manifest: retain every inherited row and append all three Spinning Disc tables.
-        assertEquals(62, CdR11aObjectAssets.Table.values().length);
+        // Complete 64-table digest manifest: retain every inherited row and append both Tunnel Path tables.
+        assertEquals(64, CdR11aObjectAssets.Table.values().length);
         assertEquals(45, COLLAPSE_OLD_SHA256.length); assertEquals(6, COLLAPSE_SHA256.length);
         assertEquals(3, PLATFORM21_SHA256.length);
-        for (int i = 0; i < 62; i++) {
+        for (int i = 0; i < 64; i++) {
             var table = CdR11aObjectAssets.Table.values()[i]; var view = objects.view(table);
             String expected = i < 45 ? COLLAPSE_OLD_SHA256[i]
                     : i < 51 ? COLLAPSE_SHA256[i - 45] : i < 54 ? PLATFORM21_SHA256[i - 51]
                     : i < 59 ? TestCdR11aObjectAssets.TAMABBOH_SHA256[i - 54]
-                    : TestCdR11aObjectAssets.SPINNING_DISC_SHA256[i - 59];
+                    : i < 62 ? TestCdR11aObjectAssets.SPINNING_DISC_SHA256[i - 59]
+                    : TestCdR11aObjectAssets.TUNNEL_PATH_SHA256[i - 62];
             assertEquals(expected, CdR11aProfile.sha256(view.bytes().copy()), table.name());
             assertSame(view, objects.view(table));
             assertArrayEquals(table.range().read(image).copy(), view.bytes().copy());
@@ -5011,11 +5014,12 @@ class TestCdR11aObjectRetailAssets {
         for (int i = 0; i < 5; i++) { assertSame(views.get(i),viewsFirst.view(TestCdR11aObjectAssets.TAMABBOH_TABLES.get(i))); }
         for (var objects : List.of(visualFirst,sourceFirst,viewsFirst)) {
             verifyTamabbohUnchangedSource17(objects,owner,retained);
-            for (int i = 0; i < 62; i++) {
+            for (int i = 0; i < 64; i++) {
                 var table = CdR11aObjectAssets.Table.values()[i]; var view = objects.view(table);
                 String expected = i < 45 ? COLLAPSE_OLD_SHA256[i] : i < 51 ? COLLAPSE_SHA256[i-45]
                         : i < 54 ? PLATFORM21_SHA256[i-51] : i < 59 ? TestCdR11aObjectAssets.TAMABBOH_SHA256[i-54]
-                        : TestCdR11aObjectAssets.SPINNING_DISC_SHA256[i-59];
+                        : i < 62 ? TestCdR11aObjectAssets.SPINNING_DISC_SHA256[i-59]
+                        : TestCdR11aObjectAssets.TUNNEL_PATH_SHA256[i-62];
                 assertEquals(expected,CdR11aProfile.sha256(view.bytes().copy()),table.name());
                 assertSame(view,objects.view(table)); assertArrayEquals(table.range().read(retained).copy(),view.bytes().copy());
                 byte[] detached = view.bytes().copy(); detached[0] ^= 1;
@@ -5381,6 +5385,190 @@ class TestCdR11aObjectRetailAssets {
         var after = spinningDiscOtherFields(objects); assertEquals(before.keySet(),after.keySet());
         for (var entry : before.entrySet()) { assertSame(entry.getValue(),after.get(entry.getKey()),entry.getKey()); }
     }
+
+    // Tunnel Path assets R1: original-media operands and raw retained views only; execution is Root-owned.
+    @ParameterizedTest(name = "{0} Tunnel Path ID07 actual operands and two finite retained raw views")
+    @EnumSource(CdReleaseVariant.class)
+    void tunnelPathAuthenticatesRegionalOperandsAndKeepsUsaViewsLazyWithoutReadingArt(
+            CdReleaseVariant variant) throws Exception {
+        String configured = System.getProperty("soniccd.media.root");
+        Assumptions.assumeTrue(configured != null && !configured.isBlank(),
+                "Set soniccd.media.root for supplied-media checks");
+        String directory = switch (variant) { case USA -> "USA"; case JAPAN -> "Japan"; case EUROPE -> "Europe"; };
+        Path cue;
+        try (var files = Files.list(Path.of(configured).resolve(directory))) {
+            var cues = files.filter(p -> p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".cue")).toList();
+            assertEquals(1, cues.size()); cue = cues.getFirst();
+        }
+        CdR11aAssets owner; CdMmdImage retained;
+        CdR11aObjectAssets cold = null, warm = null;
+        try (var program = CdProgramAssets.open(cue, Optional.of(variant), Optional.empty())) {
+            owner = CdR11aAssetLoader.load(program, variant, CdStageKey.parse("R11A"));
+            retained = program.mmd(CdNativeFile.R11A);
+            assertEquals(262144, retained.fileBytes());
+            assertEquals(owner.profile().expectedMmdSha256(),
+                    CdR11aProfile.sha256(retained.readFile(0, retained.fileBytes())));
+            owner.profile().verifyProgram(owner.profile().file(), owner.profile().domain(), retained);
+            verifyTunnelPathActualNativeOperands(retained, variant);
+            if (variant != CdReleaseVariant.USA) {
+                assertThrows(UnsupportedOperationException.class, owner::openingObjects);
+                assertThrows(UnsupportedOperationException.class, () -> CdR11aObjectAssets.load(
+                        owner.profile(), owner.identity(), retained, owner.loadPlan()));
+                var usa = CdR11aProfile.forStage(CdReleaseVariant.USA, CdStageKey.parse("R11A"));
+                var asserted = new CdR11aAssets.Identity(CdReleaseVariant.USA, usa.stage(), usa.file(), usa.domain(),
+                        usa.expectedMmdSha256(), owner.identity().observedWholeDiscSha256());
+                assertThrows(IOException.class, () -> CdR11aObjectAssets.load(usa, asserted, retained, owner.loadPlan()));
+            } else {
+                cold = owner.openingObjects(); warm = owner.openingObjects();
+                assertNotSame(cold, warm); assertSame(owner.identity(), cold.identity());
+                assertSame(owner.identity(), warm.identity());
+                verifySectionSourcesCold(cold); verifySectionSourcesCold(warm);
+                // No new view is requested here. A genuine identity cannot authenticate changed native operands.
+                for (int offset : new int[]{0x3E4C, 0x3E4F, 0x8B62, 0x8B69, 0x8B6A, 0x8B6C, 0x8B6F,
+                        0x8B84, 0x8B86, 0x8B98, 0x8B9A, 0x8D80, 0x8D82, 0x8EB4}) {
+                    byte[] changed = retained.readFile(0, retained.fileBytes()); changed[offset] ^= 1;
+                    assertThrows(IOException.class, () -> CdR11aObjectAssets.load(owner.profile(), owner.identity(),
+                            CdMmdImage.parse(changed), owner.loadPlan()), "changed Tunnel Path native byte " + offset);
+                }
+                for (var table : TestCdR11aObjectAssets.TUNNEL_PATH_TABLES) {
+                    for (int offset = table.range().fileOffset(); offset < table.range().endExclusive(); offset++) {
+                        byte[] changed = retained.readFile(0, retained.fileBytes()); changed[offset] ^= 1;
+                        assertThrows(IOException.class, () -> CdR11aObjectAssets.load(owner.profile(), owner.identity(),
+                                CdMmdImage.parse(changed), owner.loadPlan()), "changed full Tunnel Path source byte " + offset);
+                    }
+                }
+            }
+        }
+        if (variant != CdReleaseVariant.USA) { return; }
+        assertNotNull(cold); assertNotNull(warm);
+        var optional = CdR11aObjectAssets.class.getDeclaredField("frontierViews"); optional.setAccessible(true);
+        var coldBefore = tunnelPathOtherFields(cold);
+        var initial = cold.initialArtBank();
+        var initialReads = initial.bindings().stream().map(CdR11aObjectAssets.ArtBinding::decode).toList();
+        var initialOutputs = initialReads.stream().map(CdR11aAssets.NemesisRead::bytes).toList();
+        var coldViews = TestCdR11aObjectAssets.TUNNEL_PATH_TABLES.stream().map(cold::view).toList();
+        assertEquals(TestCdR11aObjectAssets.TUNNEL_PATH_TABLES,
+                List.copyOf(((Map<?, ?>) optional.get(cold)).keySet()));
+        assertTunnelPathOtherFieldsUnchanged(cold, coldBefore);
+        assertSame(initial, cold.initialArtBank());
+        for (int i = 0; i < initialReads.size(); i++) {
+            assertSame(initialReads.get(i), initial.bindings().get(i).decode());
+            assertSame(initialOutputs.get(i), initial.bindings().get(i).decode().bytes());
+        }
+
+        // The second real owner has its existing source bank decoded before either new raw view is requested.
+        var bank = warm.sectionArtSources(); var sources = List.copyOf(bank.sources());
+        var reads = sources.stream().map(CdR11aObjectAssets.SectionArtSource::decode).toList();
+        var outputs = reads.stream().map(CdR11aAssets.NemesisRead::bytes).toList();
+        var nativeInputs = sources.stream().map(CdR11aObjectAssets.SectionArtSource::readerBytes).toList();
+        var warmBefore = tunnelPathOtherFields(warm);
+        var coordinatesFirst = warm.view(TUNNEL_PATH_COORDINATES);
+        var speedsSecond = warm.view(TUNNEL_PATH_GROUND_SPEEDS);
+        assertTunnelPathOtherFieldsUnchanged(warm, warmBefore);
+        assertSame(coordinatesFirst, warm.view(TUNNEL_PATH_COORDINATES));
+        assertSame(speedsSecond, warm.view(TUNNEL_PATH_GROUND_SPEEDS));
+        assertSame(bank, warm.sectionArtSources());
+        for (int i = 0; i < sources.size(); i++) {
+            assertSame(sources.get(i), bank.sources().get(i)); assertSame(reads.get(i), bank.sources().get(i).decode());
+            assertSame(outputs.get(i), bank.sources().get(i).decode().bytes());
+            assertSame(nativeInputs.get(i), bank.sources().get(i).readerBytes());
+        }
+        verifyTamabbohUnchangedSource17(warm, owner, retained);
+
+        for (var objects : List.of(cold, warm)) {
+            for (int i = 0; i < 2; i++) {
+                var table = TestCdR11aObjectAssets.TUNNEL_PATH_TABLES.get(i); var view = objects.view(table);
+                assertEquals(table, view.table()); assertEquals(table.range(), view.range());
+                assertSame(owner.identity(), objects.identity()); assertSame(view, objects.view(table));
+                assertEquals(table.range().length(), view.bytes().length());
+                assertArrayEquals(TestCdR11aObjectAssets.tunnelPathLiteral(i), view.bytes().copy());
+                assertArrayEquals(table.range().read(retained).copy(), view.bytes().copy());
+                assertEquals(TestCdR11aObjectAssets.TUNNEL_PATH_SHA256[i], CdR11aProfile.sha256(view.bytes().copy()));
+                byte[] detached = view.bytes().copy(); detached[0] ^= 1;
+                assertArrayEquals(TestCdR11aObjectAssets.tunnelPathLiteral(i), view.bytes().copy());
+                assertThrows(ReadOnlyBufferException.class, () -> view.bytes().buffer().put((byte) 1));
+                assertThrows(IndexOutOfBoundsException.class, () -> view.bytes().unsignedByte(-1));
+                assertThrows(IndexOutOfBoundsException.class, () -> view.bytes().unsignedByte(table.range().length()));
+                assertThrows(IndexOutOfBoundsException.class, () -> view.bytes().unsignedWord(table.range().length() - 1));
+            }
+        }
+        for (int i = 0; i < 2; i++) {
+            assertSame(coldViews.get(i), cold.view(TestCdR11aObjectAssets.TUNNEL_PATH_TABLES.get(i)));
+        }
+        assertTunnelPathOtherFieldsUnchanged(cold, coldBefore);
+    }
+
+    private static void verifyTunnelPathActualNativeOperands(CdMmdImage image, CdReleaseVariant variant) {
+        // Each complete row was independently read from its original regional MMD, never shifted from USA.
+        int[] sites = switch (variant) {
+            case USA -> new int[]{0x3A22, 0x3E34, 0x8AE6, 0x8B62, 0x8B6A, 0x8B98, 0x8D80, 0x8D90, 0x8D98};
+            case JAPAN -> new int[]{0x3A1E, 0x3E30, 0x8AF4, 0x8B70, 0x8B78, 0x8BA6, 0x8D8E, 0x8D9E, 0x8DA6};
+            case EUROPE -> new int[]{0x3A1E, 0x3E30, 0x8AF4, 0x8B70, 0x8B78, 0x8BA6, 0x8D8E, 0x8D9E, 0x8DA6};
+        };
+        int dispatch = sites[0], directory = sites[1], body = sites[2], index = sites[3], init = sites[4];
+        assertArrayEquals(hexBytes("d040d04043f9"), image.readFile(dispatch - 4, 6));
+        assertEquals(directory, ByteBuffer.wrap(image.readFile(dispatch + 2, 4)).getInt() - 0x200000);
+        assertArrayEquals(hexBytes("227100fc4e91"), image.readFile(dispatch + 6, 6));
+        assertEquals(body, ByteBuffer.wrap(image.readFile(directory + (7 - 1) * 4, 4)).getInt() - 0x200000);
+        assertArrayEquals(hexBytes("0839000700ff152e6740700010280023"), image.readFile(body, 16));
+        assertEquals(682, sites[7] - body);
+        assertEquals(variant == CdReleaseVariant.USA
+                        ? "d0efe1f60dc7fd6bfc579e70c421cf90f3d83b6bdcc1974ac23fec0f7ebde811"
+                        : "9c819d0193ce05e356e0347cd3d60472720792b60f641ab7ea4456e077fe15b2",
+                CdR11aProfile.sha256(image.readFile(body, 682)));
+        assertArrayEquals(hexBytes("0008004e00ee0102"), image.readFile(index, 8));
+        assertEquals(init, index + ByteBuffer.wrap(image.readFile(index, 2)).getShort());
+        // Full Init: literal MapSpr_Powerup/$0541 stores and the real PC-relative path LEA.
+        assertArrayEquals(hexBytes("217c0023ee9c0004117c00040001117c00010018117c00100019"
+                        + "317c054100025428002410280028d040024000fe45fa01fed4f20000315a003a214a003c315a0036315a0038"),
+                image.readFile(init, 70));
+        int mapping = ByteBuffer.wrap(image.readFile(init + 2, 4)).getInt() - 0x200000;
+        assertEquals(0x3EE9C, mapping);
+        assertEquals(POWERUP_MAPPINGS.range().fileOffset(), mapping);
+        assertEquals("d79b2da45d7a63478f2f38d9288704bea375982e1d35d8aa97863cfdffb5f3fc",
+                CdR11aProfile.sha256(image.readFile(mapping, 274)));
+        int lea = sites[5], gvelRead = sites[6];
+        assertArrayEquals(hexBytes("45fa01fe"), image.readFile(lea, 4));
+        int coordinates = lea + 2 + ByteBuffer.wrap(image.readFile(lea + 2, 2)).getShort();
+        assertEquals(sites[8], coordinates);
+        assertArrayEquals(hexBytes("303b000e"), image.readFile(gvelRead, 4));
+        int speeds = gvelRead + 2 + image.readFile(gvelRead + 3, 1)[0];
+        assertEquals(sites[7], speeds); assertEquals(coordinates, speeds + 8);
+        int[] roots = {speeds, coordinates};
+        for (int i = 0; i < 2; i++) {
+            byte[] expected = TestCdR11aObjectAssets.tunnelPathLiteral(i);
+            assertArrayEquals(expected, image.readFile(roots[i], expected.length));
+            assertEquals(TestCdR11aObjectAssets.TUNNEL_PATH_SHA256[i],
+                    CdR11aProfile.sha256(image.readFile(roots[i], expected.length)));
+            int usa = TestCdR11aObjectAssets.TUNNEL_PATH_TABLES.get(i).range().fileOffset();
+            if (variant == CdReleaseVariant.USA) {
+                assertEquals(usa, roots[i]);
+            } else {
+                assertFalse(Arrays.equals(expected, image.readFile(usa, expected.length)),
+                        "USA offsets do not identify this regional table");
+            }
+        }
+        assertArrayEquals(hexBytes("0006009000d6"), image.readFile(coordinates, 6));
+        assertArrayEquals(hexBytes("0828000300226768"), image.readFile(coordinates + 284, 8));
+    }
+
+    /** Observe only; raw views may populate frontierViews and may not initialize any other field. */
+    private static Map<String, Object> tunnelPathOtherFields(CdR11aObjectAssets objects) throws Exception {
+        Map<String, Object> before = new HashMap<>();
+        for (var field : CdR11aObjectAssets.class.getDeclaredFields()) {
+            if (java.lang.reflect.Modifier.isStatic(field.getModifiers())
+                    || field.getName().equals("frontierViews")) { continue; }
+            field.setAccessible(true); before.put(field.getName(), field.get(objects));
+        }
+        return before;
+    }
+
+    private static void assertTunnelPathOtherFieldsUnchanged(CdR11aObjectAssets objects, Map<String, Object> before)
+            throws Exception {
+        var after = tunnelPathOtherFields(objects); assertEquals(before.keySet(), after.keySet());
+        for (var entry : before.entrySet()) { assertSame(entry.getValue(), after.get(entry.getKey()), entry.getKey()); }
+    }
+
 
     // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>
 }
