@@ -58,7 +58,7 @@ class EnumLexing(unittest.TestCase):
             }, /* FAKE, FAKE2 */
             BETA("""
               enum Table { TEXT, BLOCK } // comment-looking
-              escaped \\" quote, commas,,, 
+              escaped \\" quote, commas,,,\x20
               """),
             GAMMA('x'),;
             String after = "NOT_CONSTANT";
