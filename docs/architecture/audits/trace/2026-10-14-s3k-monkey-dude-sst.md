@@ -9013,3 +9013,65 @@ Maven 97 seconds / wrapper 97.862 seconds. Source over `0ebd8d884` is
 The affected chain replay follows the finished source; no campaign consequence
 is claimed solely from these local controls. The prior raw-input 186-case
 selection retains matching owner/test closures and is not repeated here.
+
+
+## Final receiving candidate and continuity boundary — 2026-10-26
+
+Clean runtime candidate `0d7c25c68229862b64d212b16e3c78498f20c535` was replayed
+once with the existing affected chain selector, without any passive probe or
+uncommitted source:
+
+```text
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dsonic1.rom.path=<original-absolute-S1-ROM> -Dsonic2.rom.path=<original-absolute-S2-ROM> -Ds3k.rom.path=<original-absolute-S3K-ROM> -Ptrace-replay -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical -Dtest=TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds test -B
+```
+
+The command block uses neutral placeholders for the three original absolute ROM
+paths; the exact executed argv is retained in the required local hcz.json registry.
+Launch retains Java25, Lua5.4.9, original verified ROM identities and explicit
+surfaceless EGL with DISPLAY/WAYLAND_DISPLAY and inherited JVM-option variables
+unset. Source fingerprint is
+`427c64121aecde657792b449dbd21e159dfa4bf6e78a7b93c04e0c8cd061a89c`.
+Result: **1 test, 1 expected frontier assertion failure, zero errors/skips**;
+queue wait zero, Maven 58.066 seconds / wrapper 58.751 seconds. No broad/full
+suite or watcher was run. Physical XML and all report groups were inspected.
+
+Segment 11 completes all 14,208 stored rows and crosses the required production
+giant-ring exit into SS6. It has **no non-camera physics mismatch**, 11 camera
+physics / 51 animation differences, 59 lag rows and zero bootstrap errors.
+First strict residual remains 6640 animation ID `$13/$05`. This is the qualified
+HCZ continuity boundary requested by the task; it is not a zero-difference
+trace claim. Segments 0/2/4/6/8/9 remain clean. The five canonical companions
+passed on receiving merge `b3374a56c`; only the affected continuous chain was
+repeated after the separate raw/placeholder edits, so their older pass is
+reported at its actual tested source rather than relabeled as a final-source run.
+
+The actual Turbo Spiker consequence is now measured: P2's first hurt at row442
+is absent, and **all non-camera state matches through segment13 row2146**.
+The segment completes all 5,393 stored rows with **4,145 differences**
+(3,795 physics / 350 animation), down from 37,930 (33,300 / 4,630), 7 lag rows
+and zero bootstrap errors. First non-camera error is now P1 Y at2147,
+native `$04DA` / engine `$04DE`. Native then has y velocity zero, ground velocity
+one and animation zero; its nearby fan at `$29C8,$04F4` is the next local
+apply-lift question. No fan countdown was adjusted from the observed one-pass
+offset; an exact activation/initialization discriminator would be needed before
+changing its existing timing model. That later question is outside this task's
+now-qualified segment11 continuity boundary.
+
+The chain also enters SS7 and ends at its uncompared physical results boundary:
+mode `SPECIAL_STAGE_RESULTS`, movie cursor **97208**, expected return destination
+`hcz_4` not observed. Its cause is unproven; no claim attributes it to HCZ, a
+specific storage owner or hardware timing. Changing the source/destination walk,
+readiness authority or result timing without a matching production cause would
+cross the task's proven boundary. The coordinator and comparator remain unchanged.
+
+Reviewable receiving commits are `b3374a56c` (ordinary exact08 merge),
+`5b9de32d5` (independent Jawz publication contract), `0ebd8d884` (reviewed raw
+controller freshness) and `0d7c25c68` (ROM-identified Turbo Spiker body).
+All original `e3078d61c` ancestors remain. No redundant PlayerMovementRules flag
+or API baseline/version change survives; the received semantic profile and
+signature surface are retained. Focused qualifications are reported separately:
+297 unique receiving cases across one fixture correction; Jawz69; raw186;
+Turbo81, all with zero skips. Counts overlap and must not be summed as a suite.
+The final record update changes prose only. Parent owns final independent review,
+one combined change-based smoke, receiving integration/push and worktree cleanup.
+Consumed diagnostics are removed; no jobs/probes or desktop processes remain.
