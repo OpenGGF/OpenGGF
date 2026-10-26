@@ -36,8 +36,9 @@ class InventoryTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root=Path(temp)
             cases=[{'id':f'C#m[{i}]','class':'C','method':'m','arguments':['true'],
-                    'invocation_index':i,'junit_unique_id':None,'capture_status':'not-run'} for i in (1,2)]
-            (root/'run.json').write_text(json.dumps({'selected_ids':[c['id'] for c in cases]}))
+                    'invocation_index':i,'source_file':'C.java','junit_unique_id':None,'capture_status':'not-run'} for i in (1,2)]
+            (root/'run.json').write_text(json.dumps({'selected_ids':[c['id'] for c in cases],
+                                                   'source_file_hashes':{'C.java':'a'*64}}))
             for i in (1,2):
                 directory=root/'cases'/str(i);directory.mkdir(parents=True)
                 (directory/'case.json').write_text(json.dumps({
@@ -60,13 +61,14 @@ class InventoryTests(unittest.TestCase):
     def test_combination_refuses_duplicate_and_changed_fixtures(self):
         with tempfile.TemporaryDirectory() as temp:
             root=Path(temp)
-            base={'id':'C#m','fixture_sha256':'same','capture_status':'not-run'}
+            base={'id':'C#m','class':'C','method':'m','arguments':[],'invocation_index':None,
+                  'source_file':'C.java','fixture_sha256':'a'*64,'capture_status':'not-run'}
             inventory=root/'inventory.json';inventory.write_text(json.dumps({'source_commit':'base','cases':[base]}))
             records=[]
             for i in (1,2):
                 directory=root/f'run-{i}';directory.mkdir()
-                (directory/'run.json').write_text('{"roms":{}}')
-                capture=base | {'case_dir':'cases/actual','capture_fixture_sha256':'same','junit_unique_id':'real-id'}
+                (directory/'run.json').write_text(json.dumps({'roms':{},'source_file_hashes':{'C.java':'a'*64}}))
+                capture=base | {'case_dir':'cases/actual','capture_fixture_sha256':'a'*64,'junit_unique_id':'real-id'}
                 record=directory/'manifest.json';record.write_text(json.dumps({'source_commit':'base','cases':[capture]}))
                 records.append(str(record))
             args=argparse.Namespace(inventory=str(inventory),out=str(root/'out'),manifest=records,
@@ -78,10 +80,120 @@ class InventoryTests(unittest.TestCase):
             chosen=json.loads((root/'chosen/manifest.json').read_text())['cases'][0]
             self.assertIn('run-2',chosen['case_dir'])
             broken=json.loads(Path(records[1]).read_text())
-            broken['cases'][0]['capture_fixture_sha256']='changed'
-            Path(records[1]).write_text(json.dumps(broken));args.out=str(root/'rejected')
+            # A stale/forged manifest claim must not override the actual recorded source snapshot.
+            broken['cases'][0]['capture_fixture_sha256']='a'*64
+            Path(records[1]).write_text(json.dumps(broken))
+            (root/'run-2/run.json').write_text(json.dumps({'source_file_hashes':{'C.java':'b'*64}}))
+            args.out=str(root/'rejected')
             with self.assertRaisesRegex(ValueError,'Fixture changed'):
                 reel.combine(args)
+
+    def test_dirty_recorded_fixture_cannot_masquerade_as_committed_inventory(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp);run=root/'run';directory=run/'cases'/'actual';directory.mkdir(parents=True)
+            hash_a,hash_b='a'*64,'b'*64
+            case={'id':'C#m[1]','class':'C','method':'m','arguments':['true'],'invocation_index':1,
+                  'source_file':'src/test/java/C.java','fixture_sha256':hash_a,'capture_status':'not-run'}
+            (run/'run.json').write_text(json.dumps({'selected_ids':[case['id']],'source_commit':'base',
+                'source_file_hashes':{case['source_file']:hash_b}}))
+            (directory/'case.json').write_text(json.dumps({'class':'C','method':'m','arguments':['true'],
+                'junit_unique_id':'[engine:junit-jupiter]/[test-template-invocation:#1]',
+                'capture_status':'no-adapter','capture_reason':'No drawable state','frames':0}))
+            recording={'source_commit':'base','cases':[dict(case)]}
+            reel.reconcile(recording,run)
+            self.assertEqual(hash_b,recording['cases'][0]['capture_fixture_sha256'])
+            self.assertEqual(hash_a,recording['cases'][0]['fixture_sha256'])
+            manifest=run/'manifest.json';manifest.write_text(json.dumps(recording))
+            inventory=root/'inventory.json';inventory.write_text(json.dumps({'source_commit':'base','cases':[case]}))
+            args=argparse.Namespace(inventory=str(inventory),out=str(root/'reject-a'),manifest=[str(manifest)],
+                                   prefer_last=False,allow_legacy_source=False)
+            with self.assertRaisesRegex(ValueError,'Fixture changed'):
+                reel.combine(args)
+            case['fixture_sha256']=hash_b
+            inventory.write_text(json.dumps({'source_commit':'base','cases':[case]}))
+            args.out=str(root/'accept-b');reel.combine(args)
+            combined=json.loads((root/'accept-b/manifest.json').read_text())['cases'][0]
+            self.assertEqual(hash_b,combined['fixture_sha256'])
+            self.assertEqual(hash_b,combined['capture_fixture_sha256'])
+
+    def test_dirty_provider_arguments_and_ordinals_are_not_relabelled(self):
+        case={'id':'C#m[1]','source_file':'C.java','method':'m','arguments':['true'],'invocation_index':1}
+        source='@ParameterizedTest @ValueSource(booleans={false}) void m(boolean value) {}'
+        with self.assertRaisesRegex(ValueError,'Arguments/ordinals changed'):
+            reel.validate_selected_cases([case],{'C.java':source})
+        source=source.replace('false','true')
+        reel.validate_selected_cases([case],{'C.java':source})
+        with self.assertRaisesRegex(ValueError,'ordinal mismatch'):
+            reel.validate_invocation(case | {'junit_unique_id':'[test-template-invocation:#2]'})
+
+    def test_missing_hash_is_only_an_explicit_legacy_limit_never_an_inventory_hash(self):
+        case={'id':'C#m','source_file':'C.java','fixture_sha256':'a'*64}
+        with self.assertRaisesRegex(ValueError,'hash unavailable'):
+            reel.recorded_fixture_hash({},case)
+        self.assertIsNone(reel.recorded_fixture_hash({},case,allow_legacy_source=True))
+        # A new run with an incomplete hash map is corrupt, not a legacy exception.
+        with self.assertRaisesRegex(ValueError,'hash unavailable'):
+            reel.recorded_fixture_hash({'source_file_hashes':{}},case,allow_legacy_source=True)
+        with self.assertRaisesRegex(ValueError,'hash unavailable'):
+            reel.recorded_fixture_hash({'source_fingerprint':'new-format'},case,allow_legacy_source=True)
+        with self.assertRaisesRegex(ValueError,'changed while queued/running'):
+            reel.recorded_fixture_hash({'source_file_hashes':{'C.java':'a'*64},
+                                        'source_files_changed':['C.java']},case)
+
+    def test_matching_file_hash_does_not_authorize_changed_invocation_arguments(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp);run=root/'run';run.mkdir()
+            case={'id':'C#m[1]','class':'C','method':'m','arguments':['true'],'invocation_index':1,
+                  'source_file':'C.java','fixture_sha256':'b'*64,'capture_status':'not-run'}
+            inventory=root/'inventory.json';inventory.write_text(json.dumps({'cases':[case]}))
+            (run/'run.json').write_text(json.dumps({'source_file_hashes':{'C.java':'b'*64}}))
+            for field,value in [('arguments',['false']),('invocation_index',2)]:
+                captured=case | {'case_dir':'cases/actual','junit_unique_id':'[test-template-invocation:#1]',field:value}
+                manifest=run/'manifest.json';manifest.write_text(json.dumps({'cases':[captured]}))
+                args=argparse.Namespace(inventory=str(inventory),out=str(root/field),manifest=[str(manifest)],
+                                       prefer_last=False,allow_legacy_source=False)
+                with self.assertRaisesRegex(ValueError,'identity mismatch'):
+                    reel.combine(args)
+
+    def test_reconciliation_export_preserves_raw_evidence_and_keeps_hashes_separate(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp);run=root/'run';directory=run/'cases'/'actual';directory.mkdir(parents=True)
+            case={'id':'C#m','class':'C','method':'m','arguments':[],'invocation_index':None,
+                  'source_file':'C.java','fixture_sha256':'a'*64,'capture_status':'not-run'}
+            inventory=root/'inventory.json';inventory.write_text(json.dumps({'source_commit':'base','cases':[case]}))
+            (run/'run.json').write_text(json.dumps({'selected_ids':['C#m'],'source_commit':'base',
+                'source_file_hashes':{'C.java':'b'*64}}))
+            (directory/'case.json').write_text(json.dumps({'class':'C','method':'m','arguments':[],
+                'junit_unique_id':'actual-id','capture_status':'no-adapter','capture_reason':'Logic','frames':0}))
+            before={p:p.read_bytes() for p in (inventory,run/'run.json',directory/'case.json')}
+            reel.reconcile_command(argparse.Namespace(inventory=str(inventory),run_dir=str(run),
+                                                      out=str(root/'derived'),allow_legacy_source=False))
+            derived=json.loads((root/'derived/manifest.json').read_text())['cases'][0]
+            self.assertEqual('a'*64,derived['inventory_fixture_sha256'])
+            self.assertEqual('b'*64,derived['capture_fixture_sha256'])
+            self.assertFalse(derived['matches_inventory_source'])
+            self.assertEqual(directory,(root/'derived'/derived['case_dir']).resolve())
+            for path,content in before.items():
+                self.assertEqual(content,path.read_bytes())
+
+    def test_legacy_combination_retains_unknown_actual_hash(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp);run=root/'run';run.mkdir()
+            case={'id':'C#m','class':'C','method':'m','arguments':[],'invocation_index':None,
+                  'source_file':'C.java','fixture_sha256':'a'*64,'capture_status':'not-run'}
+            inventory=root/'inventory.json';inventory.write_text(json.dumps({'source_commit':'base','cases':[case]}))
+            (run/'run.json').write_text('{"source_commit":"base"}')
+            capture=case | {'case_dir':'cases/actual','capture_fixture_sha256':'a'*64,'junit_unique_id':'actual-id'}
+            manifest=run/'manifest.json';manifest.write_text(json.dumps({'source_commit':'base','cases':[capture]}))
+            args=argparse.Namespace(inventory=str(inventory),out=str(root/'denied'),manifest=[str(manifest)],
+                                   prefer_last=False,allow_legacy_source=False)
+            with self.assertRaisesRegex(ValueError,'hash unavailable'):
+                reel.combine(args)
+            args.allow_legacy_source=True;args.out=str(root/'legacy');reel.combine(args)
+            actual=json.loads((root/'legacy/manifest.json').read_text())['cases'][0]
+            self.assertIsNone(actual['capture_fixture_sha256'])
+            self.assertIsNone(actual['matches_inventory_source'])
+            self.assertIn('unavailable',actual['provenance_limit'])
 
 
 if __name__=='__main__':
