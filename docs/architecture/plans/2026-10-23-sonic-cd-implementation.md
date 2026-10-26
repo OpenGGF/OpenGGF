@@ -6722,3 +6722,59 @@ produced the final files. All R1 mirrors remain immutable; no Java repair was
 needed after the179/481 positives. No remote/main-tree operation or new quiet-
 hours visual publication occurs. Preparatory end-of-act source research is
 separate from a reached route frontier and does not authorize implementation.
+
+
+### Controller navigation after source13 — 26 October 2026
+
+Private saved cc74a36ed, production unchanged. A later B press at1770 genuinely
+jumps and avoids the earlier recipe's Kill1802; all3001 calls return before a
+pushing bound. Appending a third32-row B press at3002 reaches the actual next
+implementation boundary inside3211 after3210 complete ordinary calls.
+UNKNOWN_SOURCE23AC08/7400 occurs only after the final queued Boulder tile and
+native POP; section0400/count0/budget3/prior table/RAM are retained, and both
+owners close. ART_SONIC_HOLE/114 is an inventory hint until actual source/PLC/
+finite-reader authentication. Physical36 is real ID21 subtype15 under Sonic;
+this is natural upper-path platform contact, unlike the earlier offscreen75.
+The permanent test now preserves every old52 case byte-for-byte and appends
+controllerThreeJumpRouteRetainsNaturalCheckpointReplaysClosedCutsAndStopsAtUnknownSource14.
+The fresh focused positive at03:27:53Z passes1/0/0/0 on Java25.0.5.0.2/actual
+media/privatecwd (Maven30.097s, queue60s). It discovers partialBoulder3205
+(count16) and first real ID21 standing3206, then verifies full/course closed
+3001→3002,3205→3210,3209→3210 with checkpoint/live/knowledge comparisons before
+forwarding. The final attempted3211 is an asserted terminal negative after
+the last Boulder tile/POP; it is never restored or resumed. Production remains
+exactly cc74/source13. Old52 coverage from the source13 consumer run remains
+attributed there; no unchanged179/481/728 coverage is repeated for this append.
+
+Independent source-model research now authenticates Hole Java113/native114,
+header800E/14tiles, plus the three producers already queued behind it:
+Waterfall327/328/29tiles, Disc167/167/12tiles (real next-header80), and
+Shadow23/24/16normal tiles. The four full transfers fit existing disjoint
+physical regions; no Region/C30/span/preload change follows. Root has accepted
+one existing-helper cached read each and append sources14..17, with old13
+identities preserved. Source-only assets and native-service proof authors are
+working externally; no new source is imported or claimed executed yet.
+
+
+### Reviewed route-proof correction and positive — 26 October 2026 03:50 UTC
+
+The first positive1/0/0/0 was narrow evidence with four subsequently identified
+P2 assertion gaps. Separate RootR2 adds native third-jump acceptance/FM_JUMP3002,
+complete comparisons after every replayed row, finite Boulder271 completion,
+and terminal clocks/load-boundary/unreached Ring/spill-tail checks. Its fresh
+review found no additional P2 but caught one P1 compile-access error in a hash
+call. RootR3 replaces only that inaccessible helper with public JDK MessageDigest
+and HexFormat; production is unchanged. R2 job17990 waited624s, began testCompile,
+and was cancelled exit130 as known-uncompilable before tests; validation is
+incomplete, not a behavior pass or observed compiler-failure result.
+
+RootR3 frozen228570B/SHA
+ db8c1a44b9973e751140aadaab26b44d52eecb5fa42f41042a82892ab8afcf39
+passes the same focused selector1/0/0/0 at03:50:46Z in session67192:
+Maven30.883s/queue75s, fresh exact XML/J25.0.5.0.2/privatecwd/actual media/no skips.
+The native reader oracle is separate from resident pixels and retained savedRAM:
+Boulder payload49/1761 consumed bits yields271/source2365D1/read8080/shift15,
+repeat0/pixel0/previousRow0. Terminal VInt/native/engine counters advance once;
+Ring/spill tail does not, no load epoch/boundary is invented. Old52 source bytes
+remain exact. Native image/timing parity and completed3211 remain unclaimed.
+The four accepted queued producer registrations are still external/UNRUN.

@@ -1,3 +1,10 @@
+Sonic CD controller-contact update (2026-10-26): the same partial matrix now
+records a permanent three-jump input route through3210, genuine moving ID21
+standing from3206, and full/course checkpoint-aware replay at3001/3205/3209.
+The next attempted3211 is an asserted SonicHole source boundary after the last
+Boulder tile/POP. A focused pass certifies this finite case; it does not claim
+completed3211, act completion, region breadth or native image/timing parity.
+
 Sonic CD GoalPost art update (2026-10-26): the partial matrix adds actual
 natural fresh-epoch preparation/service of all24 XOR tiles and full/course
 replay. Existing cache/current ownership is retained; no goal object is executed.

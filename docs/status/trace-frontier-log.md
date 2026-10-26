@@ -113143,3 +113143,79 @@ smoke failures remain separately recorded. Next finite native owner: Monitor19.
   queue wait unknown;90 exactfresh executable-class XML/J25/privatecwd/noskips.
   All13 final Java files match frozen revisions; permanent World-load restored.
   No source13 Java repair was needed; historical red invocations remain recorded.
+
+
+## 2026-10-26 — private CD three-jump controller frontier3211
+
+- Saved source13 cc74a36ed4d1c5f731df05490ddb017884dbbb2c; no production change.
+  Input-only second gesture trial21406 completes3001/3001 ordinary cuts,1/0/0/0
+  at02:47:31Z,30.048s/queue74s. Script1200R;32RB;537R;32RB;1200R. Actual1770
+  emitsFM_JUMP;1802 remains airborne routine2 instead of the earlier recipe's
+  Kill. Last push71 is real ID19/raw20AA4E/05A8, not inferred from a link.
+- Third gesture appends32RB;1200R (4233 planned). Observer21222 completes3210
+  and errors inside3211: SectionArt UNKNOWN_SOURCE23AC08/VRAM7400 during
+  ordinary-tail preparation.1/0/1/0 at02:54:24Z,29.662s;queue wait unrecorded.
+  ExactfreshXML/J25/privatecwd/media/no skips checked. No completed3211/resume.
+- Closed3210 section0400,remaining1/budget0,lastBouldersource2365C5/dest70C0.
+ 3211 finishes that tile,pops88 bytes,then stops newhead23AC08/7400,count0/
+  budget3. Prior table/saved RAM and all earlier Body/dynamic/scroll/Draw effects
+  survive; Runtime/Frame close. Enum calls this ART_SONIC_HOLE,114 bytes; actual
+  media/finite Java/native extents still need independent authentication.
+- Genuine controller ID21 contact already occurs: live physical36/routine2/
+  subtype15/tile44BE/map20CCC8,X4139/Y157; actor stands on36. Source timer bytes
+  progress BD→BE and5→6 across the failing call. Actor after prefixX16=273342720,
+  Y16=8573952,XV/GV1536,YV0,routine2/flags8; saved checkpoint2/spawn1 retained.
+  This extends actual route coverage, not native image/timing or act certification.
+- Temporary observer source146598/SHA48f6673c3c8eeabb625bb7d001778a694de25f95c3270c1723e14d0e2b86df0c
+  is external. Permanent196490/000eb8f8... restored; no target/branch/public
+  mutation beyond this private observation. New source-only authentication and
+  permanent-route/replay authoring are underway; their vectors remain UNRUN.
+
+
+## 2026-10-26 — permanent three-jump controller contact/replay proof
+
+- Base/private production cc74a36ed4d1c5f731df05490ddb017884dbbb2c remains
+  unchanged. Frozen author test224959B/SHA
+  b0ea2e5047898820ed0e26b4f44bca2ece27d8e6f0603b65e4394afd84143b62
+  appends one case; all old52/imports/helpers/assertions recover byte-exact.
+- Command from ai-sonic-cd-objects-local: env -u DISPLAY -u WAYLAND_DISPLAY
+  LUA_BIN=lua5.4 python3 "$OPENGGF_ROOT/tools/testing/maven_queue.py"
+  -Dmse=off -Dsoniccd.media.root="$SCD_MEDIA_ROOT"
+  '-Dtest=TestSonicCdOpeningWorldLoad#controllerThreeJumpRouteRetainsNaturalCheckpointReplaysClosedCutsAndStopsAtUnknownSource14' test.
+  Session97259 passes1/0/0/0 at03:27:53Z; Maven30.097s,queue60s. Fresh exact
+  XML/case/J25.0.5.0.2/privatecwd/media/no skips verified. No production edits.
+- Actual discovery: partialBoulder3205/count16 and first genuine ID21 standing
+  3206/live36. Six full/course restores compare complete state plus saved/live
+  checkpoint knowledge BEFORE forwarding3001→3002,3205→3210,3209→3210.
+  Detached pictures/sounds/cache identity also survive. Only afterward does
+ 3211 fail as expected at UNKNOWN_SOURCE23AC08/7400 after Boulder/POP; prior
+  native/body/dynamic/scroll/Draw prefix remains and both owners close.
+- This successful negative-boundary proof does not complete3211 or resume a
+  failed call. Independent source-only research52475B/SHA
+  f78cce3eb9fc9cfb344bc8df295612556da9b67ca0ec6e8beef6bb2497d58fc1
+  authenticates Hole Java113/native114 and three actual queued neighbours.
+  Four existing-helper cache appends14..17 are accepted but unimported/UNRUN.
+  Existing regions, C29/19banks/658potential, startup and restart carry remain.
+
+
+## 2026-10-26 — three-jump RootR3 resolves reviewed assertion gaps
+
+- Same source13/privatecc74 production, same focused command/selector as above.
+  R1 pass did not cover third-jump sound/acceptance, intermediate replay rows,
+  native Boulder final cursor or terminal clocks/unreached tail. Independent
+  review identifies these4P2; RootR2 adds their exact native-derived assertions.
+- R2 review finds1P1 package-private hash call, no furtherP2. Own queued17990
+  waited624s, began compilation, cancelledexit130 before tests once known bad.
+  No execution result claimed. RootR3 changes only that hash expression to the
+  public JDK API, frozen228570B/SHAdb8c1a44b9973e751140aadaab26b44d52eecb5fa42f41042a82892ab8afcf39.
+- Session67192 PASS1/0/0/0 at03:50:46Z, Maven30.883s/queue75s. Exactfresh XML/
+  selector/J25.0.5.0.2/privatecwd/actualmedia/no skips checked. Every replayed
+  row now compares complete State/pictures/sounds/checkpoint/live/knowledge,
+  not only endpoints. Thirdjump3002 is actual AIR/ROLL/FM_JUMP. Boulder native
+  final271/source2365D1/read8080/shift15/repeat0/pixel0/history0 is independent
+  of its19 resident tiles and PRIOR saved RAM retained across POP. The failed
+ 3211 increments legitimate clocks once but cannot advance Ring/spill tail or
+  load epoch. No unchanged-all96 or failed-call-resume assertion is introduced.
+- Original52 methods/helpers/imports/assertions recover byte-exact. No production
+  change, source17 positive, native parity or completed3211 claim. The upcoming
+  four actual-queue registrations and partial-service tests remain unimported.
