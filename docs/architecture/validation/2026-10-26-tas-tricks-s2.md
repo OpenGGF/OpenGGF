@@ -365,3 +365,125 @@ none was added or worsened. All four added production scoring citations resolve
 and anchor (`ok` or `near`) at the pinned revisions. Those unrelated baseline
 citations were left unchanged. The restored original regression body was also
 mechanically matched to the preserved fenced body, allowing indentation only.
+
+## Popup consumers and bespoke producers — 2026-10-26 follow-up
+
+Implementation base: `5160b94bb3967f6a52280c6675c8c4a5fc7f2862`, in the same
+`t3-417fb95a` worktree and `bugfix/ai-tas-chain-score-20261026` branch. Parent
+consumer review identified that correcting the award alone did not establish
+correct popup frame selection. The same three immutable disassembly gitlinks
+above remain the source authority; dirty main-checkout working files were not read.
+
+S2 `Touch_KillEnemy (s2.asm:85514-85529)` stores the old capped table-byte
+offset six for 1000 points and explicitly stores `$A` for 10000. The explosion
+`Obj27_InitWithAnimal (s2.asm:46712-46719)` copies that word to the animal.
+`Obj28_InitRandom (s2.asm:24628-24635)` copies it into `d0`, shifts it right
+once, and stores the result as the new Obj29 `mapping_frame`. Therefore these
+are **frame 3 for 1000** and **frame 5 for 10000**, with 100/200/500 using
+frames 0/1/2. `Obj29_Init (s2.asm:24918-24926)` installs its mapping pointer
+without overwriting that selected frame.
+`Map_obj29 (mappings/sprite/obj29.asm:1-8)` lists these entries in the same
+order; `Map_obj29_002C (mappings/sprite/obj29.asm:22-25)` is frame 3, and
+`Map_obj29_0048 (mappings/sprite/obj29.asm:31-34)` is frame 5. The latter
+combines the 100 prefix with the trailing zeroes, not an alternate large 1000.
+
+The requested cross-game check confirmed S1's existing 1000→3 and 10000→5
+cases against `Map_Poi_internal (_maps/Points.asm:4-11)`; S1 production needs
+no change. S3K also lacked a 10000 case and incorrectly fell back to frame 0.
+Its normal and powered producers store the same six/`$A` offsets in
+`Touch_EnemyNormal (sonic3k.asm:20989-21007)` and
+`HyperTouch_DestroyEnemy (sonic3k.asm:21403-21421)`.
+Animal code `loc_2C940 (sonic3k.asm:61121-61128)` performs the same right shift
+before creating the `Obj_EnemyScore` frame.
+`Map_EnemyScore_ (General/Sprites/Enemy Misc/Map - Enemy Points.asm:1-8)`
+lists frame 3 and frame 5 independently of Java's score lookup. The follow-up
+therefore corrects S2 1000→3 and 10000→5, and adds only S3K 10000→5. No art,
+priority, motion, allocation, chain-counter or P1/P2 behavior is changed.
+
+`TestEnemyChainPointsMapping` supplies explicit native expectations for
+100/200/500/1000/10000 in each game, independently exercising both constructor
+payload selection and `setScore` replacement. Each of its 30 cases passes the
+actual popup through `appendRenderCommands` and checks the frame sent to the
+mocked `PatternSpriteRenderer`. These are draw-payload assertions, not rendered
+pixel claims. S1 is an unchanged cross-game control; both S2 and S3K have all
+five requested score boundaries.
+
+`TestS2ChainScoreConsumers` closes the earlier null-player coverage limitation.
+Every case first performs **15 actual Nebula destruction callbacks with a real
+player**, checks every destruction and the independent 12800-point preroll sum,
+and retires the deliberately unexecuted aftermath between preroll contacts.
+It then separately exercises the actual Turtloid rider destruction, the real
+parent-created attackable Rexon tip, or a sixteenth ordinary Nebula destruction.
+All assert the 10000 score delta and the actual points object's frame-5 draw
+payload. The bespoke Turtloid/Rexon paths currently allocate their popup directly;
+the ordinary path separately verifies no popup before the animal's first
+routine pass and observes the real explosion→animal→points deferred transfer.
+The tests use public parent updates to create riders/heads, not reflection or
+private counter injection. They remain synthetic contact-entry component tests;
+no touch geometry, movie route, native allocation-order parity, pixels, or
+P1/P2 counter-sharing guarantee is inferred from them.
+
+
+### Popup follow-up execution record
+
+The following commands used Java 25 and Lua 5.4 via the same `JAVA_HOME` and
+`LUA_BIN` settings recorded above, in `t3-417fb95a` at `5160b94bb` plus these
+follow-up inputs. They are ROM-free callback/allocation/draw-payload checks;
+no ROM-dependent case was silently omitted. The parent owns the separate
+25-class combined run on `506c7b4e` and final integration/S3K gates; this worker
+does not duplicate that run.
+
+1. **Red**, unchanged production popup mappings: **33 tests, 9 failures,
+   0 errors, 0 skips**, completed `2026-10-26T11:15:30Z`, Maven `1:34`;
+   queue wait `148s` (separate from execution).
+
+   ```bash
+   python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=com.openggf.level.objects.TestEnemyChainPointsMapping,com.openggf.level.objects.TestS2ChainScoreConsumers' test
+   ```
+
+   `TestEnemyChainPointsMapping`: 30 cases, six failures. Both constructor and
+   `setScore` methods failed at CSV row 9 (S2 1000: expected frame 3, actual 5),
+   row 10 (S2 10000: expected 5, actual 0), and row 15
+   (S3K 10000: expected 5, actual 0). The other 24 cases passed, including all
+   ten S1 controls and the lower S2/S3K awards.
+   All three `TestS2ChainScoreConsumers` methods reached their final draw-payload
+   assertion after passing every preroll destruction, the 12800 score control,
+   the actual sixteenth destruction and the 10000 score delta. They each failed
+   expected frame 5 versus actual frame 0:
+   `turtloidRiderSixteenthKillAwardsTenThousandAndDrawsFrameFive`,
+   `rexonTipSixteenthKillAwardsTenThousandAndDrawsFrameFive`, and
+   `ordinarySixteenthKillCarriesBonusThroughDeferredAnimalIntoPopup`.
+   The ordinary case also passed its no-popup-before-animal checks.
+
+
+2. **Green**, corrected S2/S3K popup mappings: **39 passed, 0 failures,
+   0 errors, 0 skips**, completed `2026-10-26T11:17:39Z`, Maven `1:33`;
+   queue wait `2s`. The exact 33 new cases from the red run all passed, along
+   with all six existing `TestS3kEnemyScorePresentation` priority/header controls.
+   Class counts: `TestEnemyChainPointsMapping` 30,
+   `TestS2ChainScoreConsumers` 3, `TestS3kEnemyScorePresentation` 6.
+   No executable source/test changed after this completed run.
+
+   ```bash
+   python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=com.openggf.level.objects.TestEnemyChainPointsMapping,com.openggf.level.objects.TestS2ChainScoreConsumers,com.openggf.level.objects.TestS3kEnemyScorePresentation' test
+   ```
+
+The completed Surefire XML was checked by class and method/invocation identity,
+including all requested native boundary controls and all three reached producer
+paths. Consumed XML/text reports were removed after each run. No category run,
+broad smoke, full suite, rendering context, or additional agent was launched.
+The measurement hazards were reread for source-state attribution, zero skips,
+actual producer reach and the distinction between draw payload and pixels.
+
+```bash
+python3 tools/disasm/disasm_citations.py check --strict src/main/java/com/openggf/game/sonic2/objects/PointsObjectInstance.java src/main/java/com/openggf/game/sonic3k/objects/Sonic3kPointsObjectInstance.java src/test/java/com/openggf/level/objects/TestEnemyChainPointsMapping.java docs/architecture/validation/2026-10-26-tas-tricks-s2.md
+git diff --cached --check
+```
+
+Both checks pass; strict citation checking reports **44 anchored citations**
+(33 `ok`, 11 `near`) across the two changed popup implementations, new mapping
+regressions and this matrix. This follow-up does not alter the earlier
+production scoring file or its separately attributed baseline citation debt.
+Parent delivery still owns shared changelog/index/discrepancy updates, integration
+and final-source S3K gates. The earlier 25-class job is evidence for its earlier
+tested source; it is not claimed as coverage for these popup edits.
