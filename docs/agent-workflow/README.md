@@ -32,6 +32,8 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
 
 ## Tools
 
+- [Sonic CD packet integration](../../tools/soniccd/integration_packet.py): validates frozen source mirrors and exact destination baseline pins, optionally imports under the existing worktree lock, and summarizes an exact fresh Surefire class set without running tests; [mirrored skill](../../.agents/skills/soniccd-packet-integration/SKILL.md). Origin: 2026-10-26 private integration tooling.
+
 - [Sonic CD catalogue audit](../../tools/soniccd/catalogue.py) checks native file,
   command, program and regional source facts against the pinned disassembly.
   [Native boot probe](../../tools/soniccd/oracle_boot.py) repeats bounded
