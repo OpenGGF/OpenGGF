@@ -51,7 +51,7 @@ import static com.openggf.game.soniccd.objects.CdObjectState.WordField.*;
  * The initial Ring, contact, score and level globals are caller-declared DEV ingress, never an entry proof.
  * Live dynamic IDs $10 Ring, $11 LostRing, $3D Mosqui, $3E Pata-Bata, $24 Animal, $2C 3D plant and $2A 3D ramp,
  * aftermath IDs $18/$1C/$1F, $12 Floating Block, normal and diagonal $0A Spring, $34 Spin tunnel tag, $0D horizontal Door,
- * $35 vertical Tunnel Door, $1B Boulder, $26 common Spikes, $13 Checkpoint, $20 Collapsing Platform, $19 Monitor/Time Post and $1A shoes item and the death row's $3B Game/Time Over are owned.
+ * $35 vertical Tunnel Door, $1B Boulder, $26 common Spikes, $33 Log Shadow, $13 Checkpoint, $20 Collapsing Platform, $19 Monitor/Time Post and $1A shoes item and the death row's $3B Game/Time Over are owned.
  * The zero reserved bank is NOT post-native HUD/title initialization: later native owners of slots 2..31
  * (Level/Main.asm:261-274) remain omitted by this DEV policy. Primary slot 0 stays exclusively in Frame;
  * dynamic slots 32..127 stay exclusively in placement's existing pool. ID $0B splash execution stays unowned.
@@ -79,7 +79,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
 
     /**
      * Stable bases in ONE root-governed atlas range exclusive to this picture.
-     * Root reserves/binds its twenty disjoint subdivisions; this value neither
+     * Root reserves/binds its twenty-one disjoint subdivisions; this value neither
      * claims graphics ownership nor recommends the arbitrary IDs used by tests.
      * The three-argument form derives the sequential frontier spans the production
      * module uses: plant = mosqui + 70 and ramp = plant + 28.
@@ -97,10 +97,20 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
      * Platform appends 57 current patterns after Anton (658 potential total); cold DEV seeds only that
      * Std-only window explicitly, without executing Std/title. Camera PLCs never initialize Platform.
      * Tamabboh appends only selected current native $440 (659 potential total); its other 58 tiles retain Plant/Ramp aliases.
-     * The canonical form takes all twenty bases explicitly; no Anton or Tamabboh preload is implied.
+     * Log Shadow appends five selected current patterns (664 potential total); its other eleven retain Anton/Plant aliases.
+     * The canonical form takes all twenty-one bases explicitly; no Anton, Tamabboh or Log Shadow preload is implied.
      */
     public record LogicalBanks(int player, int ring, int mosqui, int plant, int ramp,
-                               int explosion, int points, int flower, int powerup, int floatBlock, int spring, int tunnelDoorVertical, int monitorTime, int boulder, int diagonalSpring, int spikes, int checkpoint, int anton, int collapsePlatform, int tamabboh) {
+                               int explosion, int points, int flower, int powerup, int floatBlock, int spring, int tunnelDoorVertical, int monitorTime, int boulder, int diagonalSpring, int spikes, int checkpoint, int anton, int collapsePlatform, int tamabboh, int logShadow) {
+        /** Compatibility20 preserves every old base; the five-pattern span follows Tamabboh without integer wrap. */
+        public LogicalBanks(int player, int ring, int mosqui, int plant, int ramp, int explosion, int points,
+                            int flower, int powerup, int floatBlock, int spring, int tunnelDoorVertical, int monitorTime,
+                            int boulder, int diagonalSpring, int spikes, int checkpoint, int anton, int collapsePlatform,
+                            int tamabboh) {
+            this(player, ring, mosqui, plant, ramp, explosion, points, flower, powerup, floatBlock, spring,
+                    tunnelDoorVertical, monitorTime, boulder, diagonalSpring, spikes, checkpoint, anton, collapsePlatform,
+                    tamabboh, Math.addExact(tamabboh, 1));
+        }
         /** Compatibility19 preserves every old base; the singleton follows Platform without integer wrap. */
         public LogicalBanks(int player, int ring, int mosqui, int plant, int ramp, int explosion, int points,
                             int flower, int powerup, int floatBlock, int spring, int tunnelDoorVertical, int monitorTime,
@@ -445,6 +455,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     private final CdPataBata pataBata;
     private final CdAnton anton;
     private final CdTamabboh tamabboh;
+    private final CdLogShadow logShadow;
     private final CdAnimal animal;
     private final Cd3dPlant plant;
     private final Cd3dRamp ramp;
@@ -791,11 +802,11 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         // Actual declared DEV ClearObjects-equivalent ingress for cold AND restart, never a restore default.
         var reserved = CdReservedObjectBank.clearedAfterLevelStart();
         var mappings = CdObjectMappings.fromOpeningAssets(assets, objects);
-        // Validate all twenty spans: old579, lazy Anton22, Platform57 and selected-only Tamabboh $440.
-        // Empty SAT admission reads no canonical Anton pixels; cold $8120 remains intentionally UNKNOWN.
+        // Validate all twenty-one spans: old579, lazy Anton22, Platform57, Tamabboh $440 and Log Shadow5.
+        // Empty SAT admission reads no Anton/Log Shadow pixels; cold $8120/$83E0 remain intentionally UNKNOWN.
         CdObjectPresentation.usaR11aCurrentCameraDevPreloadedArt(frame.artState(), initialPowerup, objects, frontier, contact,
                 floatBlockArt, springArt, tunnelDoorArt, monitorTimeArt, initialSectionArt.residency(), banks.player(), banks.ring(), banks.mosqui(), banks.plant(), banks.ramp(),
-                banks.explosion(), banks.points(), banks.flower(), banks.powerup(), banks.floatBlock(), banks.spring(), banks.tunnelDoorVertical(), banks.monitorTime(), banks.boulder(), banks.diagonalSpring(), banks.spikes(), banks.checkpoint(), banks.anton(), banks.collapsePlatform(), banks.tamabboh());
+                banks.explosion(), banks.points(), banks.flower(), banks.powerup(), banks.floatBlock(), banks.spring(), banks.tunnelDoorVertical(), banks.monitorTime(), banks.boulder(), banks.diagonalSpring(), banks.spikes(), banks.checkpoint(), banks.anton(), banks.collapsePlatform(), banks.tamabboh(), banks.logShadow());
         return new CdOpeningObjectRuntime(assets, frame, initialGlobals, initialContact, initialScore, initialLevel, checkpointBindings, initial,
                 banks, preScrollForeground, primaryAngleWrite, objects, frontier, contact, floatBlockArt, springArt, tunnelDoorArt, monitorTimeArt, placement, reserved, mappings, initialPowerup, sectionArt, initialSectionArt);
     }
@@ -856,6 +867,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         tamabboh = new CdTamabboh(placement, CdTamabboh.Assets.fromObjectAssets(objects),
                 new CdPlayerTerrain(assets.terrain()), this::commitTamabbohPrimaryAngle,
                 this::readTamabbohPlayerWord, this::playTamabbohFm,
+                (pool, slot) -> drawDynamic(pool, slot.wholeIndex()));
+        logShadow = new CdLogShadow(placement, CdLogShadow.Assets.fromObjectAssets(objects),
                 (pool, slot) -> drawDynamic(pool, slot.wholeIndex()));
         // Frontier bodies bind the same live placement/pool, the actual asset owner and the one shared
         // DrawObject adapter. The Animal's admitted path reads no assets and never draws.
@@ -1034,7 +1047,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                 var pixels = CdObjectPresentation.usaR11aCurrentCameraDevPreloadedArt(frame.artState(), powerupArtState,
                         objects, frontierArt, contactArt, floatBlockArt, springArt, tunnelDoorArt, monitorTimeArt, sectionArtState.residency(),
                         banks.player(), banks.ring(), banks.mosqui(), banks.plant(), banks.ramp(), banks.explosion(), banks.points(),
-                        banks.flower(), banks.powerup(), banks.floatBlock(), banks.spring(), banks.tunnelDoorVertical(), banks.monitorTime(), banks.boulder(), banks.diagonalSpring(), banks.spikes(), banks.checkpoint(), banks.anton(), banks.collapsePlatform(), banks.tamabboh());
+                        banks.flower(), banks.powerup(), banks.floatBlock(), banks.spring(), banks.tunnelDoorVertical(), banks.monitorTime(), banks.boulder(), banks.diagonalSpring(), banks.spikes(), banks.checkpoint(), banks.anton(), banks.collapsePlatform(), banks.tamabboh(), banks.logShadow());
                 var nextDisplay = CdObjectPresentation.convert(queue.cpuSat(), pixels);
                 checkActive(Phase.SERVICING);
                 displayed = nextDisplay;
@@ -1375,6 +1388,11 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                     } finally {
                         activeTamabbohInvocation = null; // Retire on completion, native boundary, exception or Error.
                     }
+                } else if (id == CdLogShadow.OBJECT_ID) {
+                    // ObjLogShadow (Log Shadow/Main.asm:7-13,22-54), pin 1ecc5f3a: one live physical visit.
+                    // The cached body owns Init, Draw and despawn; completed Result effects are never replayed.
+                    logShadow.run(whole, new CdLogShadow.Globals(gates.timeZone(), devGlobals.goodFuture(),
+                            gates.zoneAct() & 0xFF, gates.timeWarpDirection(), preScrollForeground.xWord()));
                 } else if (id == CdAnton.OBJECT_ID) {
                     // Live physical ID$3F; use actual raw globals and Frame angle at this visit.
                     // Native Init/Place/Main, angle stores and guarded Draw already execute synchronously.

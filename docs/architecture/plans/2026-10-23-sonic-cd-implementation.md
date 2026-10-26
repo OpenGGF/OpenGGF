@@ -7678,3 +7678,94 @@ full suite was launched. Native Log Shadow scene pixels, real664 installation
 and retirement, live Init/Main and natural5256 return remain unproved. The
 actual route remains5255 returned / first5256 unowned33. Full USA then JP/EU
 continues privately.
+
+
+### Live Log Shadow, current five patterns and Sonic Hole frontier — 26 October 2026
+
+Over private saved base `be61f9b089fe93e4fc4b716c7e3212192f8dcea5`, the live
+Runtime caches the existing CdLogShadow body and visits physical ID33 once in
+the unchanged increasing object walk. Its Globals use actual timeZone,
+goodFuture, low act BYTE, raw timeWarpDirection and pre-scroll camera X.
+There is no new player/Frame/Solid/FM/capture/phase owner. LogicalBanks appends
+component21 and checked compatibility20; all older constructor bodies remain
+exact. Both pixel-policy sites call C31. The client changes exactly its
+reservation comment and count,659→664; load/restart/camera methods are exact.
+Source17, physical regions, cold writes, readers, caches and restart carry do
+not change. Twenty indispensable inherited test migrations retain the full
+old contract;23 additions give456 Runtime cases.
+
+Tests-first Root26987 reached the expected absent21/getter compile boundary.
+After importing the two production mirrors,39361 passed456/0/0/0 at18:13:10Z
+(1m38s execution, queue0). No production/test repair was required. Independent
+bounded Runtime/client, resource and route reviews found no actionable
+P1/P2; authors' source-only counts are not execution results.
+
+Temporary observer88056 returned5322 ordinary calls and failed once at5323:
+`Unowned CD object ID $31 at live physical slot 46` (18:38:16Z,
+34.166s execution,318s queue,1 test/0 failures/1 expected diagnostic error/0
+skips). It was restored out of the checkout before permanent promotion.
+The four-jump recipe stays Right throughout, with B only1201..1232,
+1770..1801,3002..3033 and5201..5232; Start is false. Actual Shadow47 enters
+Init5256 and routine2 Main5257 with complete64 image preservation; another
+Shadow44 is routine2 at5286. Y0088/sprite04 is culled above camera490, so
+these visits establish no natural Shadow scene pixels or player acquisition.
+
+Permanent `controllerFourJumpRouteRunsLogShadowReplaysClosedCutsAndStopsAtObject31Slot46`
+retains all53 cases, imports/helpers, previous assertions and prior replay
+edges. Only its name and post5255 tail change. New full/course edges
+5255→5256,5256→5257,5321→5322 compare complete checkpoint-aware state before
+forwarding and every returned intermediate cut. The first5323 attempt occurs
+once after healthy replay. Supplied full64 slot46 placement, earlier
+Body/VInt values, terminal closure and CPU/scroll/tail nonpublication are
+checked without a failed composite capture, retry or resume. Eight changed
+dynamic images are an observed aggregate, not a native full96 partial oracle.
+The original suppressed terminal hasPreparationBoundary read is preserved.
+Focused37307 passes1/0/0/0 at19:35:53Z,34.498s execution after628s queue.
+
+The short independent EGL resource test runs ALL seven actual PLC10 programs
+through the existing SectionArt component:69 service calls and199 tiles,
+including genuine current Shadow16. Five selected new patterns upload and
+render against exact CPU pixels in four flip settings. Native pixels are
+uniform33: flips/equal native IDs cannot be visually distinguished, so the
+separate ID/version/entry/texture checks carry those resource obligations.
+Only missing old659 entries use transparent TEST installation witnesses.
+The live World stays unchanged; all664 installed client entries retire and
+actual other-producer entry identities remain. Old659 client12593 fails
+at cleanup offset659 after all preceding service/GPU/nonmutation assertions
+(18:54:11Z,1m24s execution,392s queue,1/1/0/0). Restored664 client90812 passes
+1/0/0/0 at19:01:01Z,1m35s execution,queue0. No fixture fitting or producer
+repair was needed. No PNG/native World geometry/all664 scene-rendered claim.
+
+Fresh combined90516 passes517/0/0/0 at19:40:44Z,52.839s execution after76s
+queue. Exact five fresh XML classes, all unique case identities, Java
+25.0.5.0.2/private cwd, actual media/authenticated S2, surfaceless EGL and
+explicit soniccd.opening.egl=true were checked. Its selection is Runtime456,
+WorldLoad53, real Ring/current440/currentShadow EGL3, JUnit migration3 and
+assertion-source2. This is proportionate affected coverage of the two small
+production joins and their direct consumers, following the unchanged recent
+728 structural guards; it is not full smoke/full suite or whole-game parity.
+No unchanged broad run was repeated merely as a save ceremony.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 python3 "$OPENGGF_ROOT/tools/testing/maven_queue.py" --lean -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dsoniccd.opening.egl=true "-Dsoniccd.media.root=$SCD_MEDIA_ROOT" "-Dsonic2.rom.path=$S2_ROM" '-Dtest=TestCdOpeningObjectRuntime,TestSonicCdOpeningWorldLoad,TestSonicCdOpeningWorldEgl#actualEglNormalInputPickupAndFullCourseReplay+actualEglCurrentTamabbohSingletonRendersAndRetiresThe659thClientPattern+actualEglCurrentLogShadowFivePatternsRenderAndRetireThe664EntryClientRange,TestJunit5MigrationGuard,TestNoAssertionFreeDiagnostics' test -B
+```
+
+Source pins: Runtime290019/SHA59d7cfd2498cd2005b08f1c5fcd9c7fe1027e0d4d0bd6c93603f4d463016a229;
+client56286/SHA6246915598be82f075ef747d4e56bd0e3079dd3eccd302221ecd5a25499336a4;
+RuntimeTest937503/SHAb59a634081069e60a2fa304e4611d30784080b810f15f31d9797ab4badacff0d;
+WorldLoad326238/SHAa342f26c5b05c71aca03e32d8e43abbaa947fb9a5b698d5a9b2d752efffb53a5;
+EGL558642/SHA16209f6237e7854529c61212868a7820ce1f29584ae7cf981a70032eeee71fb0.
+Frozen author mirrors remain0444, imported sources0644/fresh-mtime. The new
+packet preservation tool checks declared byte migrations in both directions;
+these checks establish bytes, not runtime authority or native parity.
+
+Native ObjLogShadow (Log Shadow/Main.asm:7–70), DrawObject (Object
+Functions.asm:137–180) and the shared spawner/despawn routines explain these
+cuts at N1ecc5f3. Independently authenticated ID31 is ObjSonicHole, row297,
+saved86, raw16f002e8b100e000 (Tunnel Path/Main.asm:11–103; Object Index Act1
+Present:56). Failed slot46 has routine0 and no ID31 Init has executed.
+Existing Source17 and Mosqui70 current aliases cover its fourteen tiles;
+metadata/body/read-only primary/FM/mapping/Runtime are the next bounded join.
+No new art source/span is indicated. Controlled Body remains deferred.
+Full USA then JP/EU, native timing/image parity and whole-act closure remain
+open. This is private local progress, with no main-workspace/remote change.

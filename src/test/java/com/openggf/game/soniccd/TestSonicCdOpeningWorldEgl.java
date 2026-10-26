@@ -5669,4 +5669,147 @@ class TestSonicCdOpeningWorldEgl {
         }
         // No native Tamabboh-body/World-scene, natural3259, all659 scene-rendered or parity claim.
     }
+
+    /**
+     * Short actual-EGL resource proof: separate actual-source PLC10, TEST-only five-tile overlay.
+     * No Log Shadow body, native mapping geometry, live section service or natural5256 claim.
+     * Source art is uniformly $33: the four raw flip combinations cannot be visually distinguished.
+     */
+    @Test void actualEglCurrentLogShadowFivePatternsRenderAndRetireThe664EntryClientRange() throws Exception {
+        Assumptions.assumeTrue(Boolean.getBoolean("soniccd.opening.egl"),"Explicit actual EGL/media opt-in");
+        assertEquals("surfaceless-egl",System.getProperty("openggf.headless.gl"));
+        assertNull(System.getenv("DISPLAY"));assertNull(System.getenv("WAYLAND_DISPLAY"));
+        String media=System.getProperty("soniccd.media.root");assertNotNull(media);assertFalse(media.isBlank());
+        CdGameDataSource source;
+        try(var files=Files.list(Path.of(media).resolve("USA"))) {
+            var cues=files.filter(p->p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".cue")).toList();
+            assertEquals(1,cues.size());source=CdStockLaunch.prepare(cues.getFirst(),CdStockLaunch.Request.r11a());
+        }
+        var neutral=new Bk2MovieLoader().parseInputLogText(Path.of("TEST-log-shadow-resource-two-neutral"),
+                InputScriptCompiler.compileToInputLog("2 -").lines().toList());
+        assertEquals(2,neutral.getFrameCount());
+        try(var boot=new HeadlessGameBoot(320,224)) {
+            try {
+                var loop=boot.bootSonicCdOpeningObjects(source);var mode=SessionManager.getCurrentGameplayMode();
+                var module=assertInstanceOf(SonicCdGameModule.class,mode.getWorldSession().getGameModule());
+                var runtime=assertInstanceOf(CdOpeningObjectRuntime.class,module.getGameService(NativeDynamicObjectPass.class));
+                var frame=module.requirePlayerFrame();assertSame(source,mode.getWorldSession().getDataSource());
+                assertEquals(GameMode.LEVEL,loop.getCurrentGameMode());
+                assertEquals(NullAudioBackend.class,GameServices.audio().getBackend().getClass());
+                assertNull(GameServices.audio().captureLogicalSnapshot().presentation().activeMusic());
+                for(int row=0;row<2;row++)step(loop,neutral.getFrame(row));
+                render(module,false); // Install genuine terrain entries belonging to other producers.
+                var before=capture(module);var liveArt=runtime.sectionArtState();
+                var objects=source.assets().openingObjects();var sources=objects.sectionArtSources();var identities=sources.sources();
+                assertEquals(17,identities.size());var shadow=sources.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_LOG_SHADOW);
+                var decoded=shadow.decode();assertSame(shadow,identities.get(16));assertEquals(16,shadow.tileCount());
+                assertEquals(5,shadow.canonicalPlcId());assertEquals(6,shadow.canonicalRowIndex());
+                assertEquals(0x8300,shadow.canonicalPlc().vramAddress());assertEquals(0x235EC0L,shadow.readerInputRange().nativeAddress());
+                assertEquals(24,shadow.readerBytes().length());assertEquals(24,decoded.sourceBlobRange().length());
+                assertEquals(23,decoded.readerInputRange().length());assertEquals(23,decoded.consumedInputBytes());assertEquals(512,decoded.bytes().length());
+                assertEquals(0x0010,shadow.readerBytes().unsignedWord(0));
+                for(byte value:decoded.bytes().copy())assertEquals(0x33,value&255,"Authenticated uniform art; no flip-discrimination claim");
+                int baseId=com.openggf.graphics.PatternAtlasRange.OBJECTS.base();
+                var banks=new CdOpeningObjectRuntime.LogicalBanks(baseId,baseId+24,baseId+38);
+                assertEquals(baseId+658,banks.tamabboh());assertEquals(baseId+659,banks.logShadow());
+                var coldPolicy=com.openggf.game.soniccd.resources.CdObjectPresentation.usaR11aCurrentCameraDevPreloadedArt(
+                        frame.artState(),runtime.powerupArtState(),objects,objects.frontierArtBank(),objects.contactArtBank(),
+                        objects.floatBlockArtBank(),objects.springArtBank(),objects.tunnelDoorArtBank(),objects.monitorTimeArtBank(),liveArt.residency(),
+                        banks.player(),banks.ring(),banks.mosqui(),banks.plant(),banks.ramp(),banks.explosion(),banks.points(),banks.flower(),
+                        banks.powerup(),banks.floatBlock(),banks.spring(),banks.tunnelDoorVertical(),banks.monitorTime(),banks.boulder(),
+                        banks.diagonalSpring(),banks.spikes(),banks.checkpoint(),banks.anton(),banks.collapsePlatform(),banks.tamabboh(),banks.logShadow());
+                for(int offset=0;offset<5;offset++) {
+                    int nativeId=0x41F+offset;
+                    var cold=assertThrows(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.OwnershipBoundary.class,()->coldPolicy.resolve(nativeId));
+                    assertEquals(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.Boundary.UNKNOWN_PATTERN,cold.boundary());
+                    assertEquals(nativeId*32,cold.destinationWord());
+                }
+                var atlas=GameServices.graphics().getPatternAtlas();var shared=new java.util.HashMap<Integer,Object>();
+                for(int id=0;id<=0x7FF;id++){var entry=atlas.getEntry(id);if(entry!=null)shared.put(id,entry);}
+                for(var range:atlas.registeredRangesForTesting())for(int id=range.base();id<range.base()+range.size();id++) {
+                    if(id>=baseId&&id<baseId+664)continue;var entry=atlas.getEntry(id);if(entry!=null)shared.put(id,entry);
+                }
+                assertFalse(shared.isEmpty());assertTrue(shared.keySet().stream().anyMatch(id->id<=0x7FF));
+                // N PLC_Cam3_Incr, Data (Act 1 Present).asm:192-207. Keep ALL seven actual rows/order.
+                // Existing finite native readers: Boulder271, Hole114, Pata715, Waterfall328, Disc167, Shadow24, Tam1143.
+                // DecompPLCSlow uses3 tiles (Functions (General).asm:721-758): ceil counts sum to69.
+                var plc=frame.assets().loadPlan().plcs().get(10);assertEquals(10,plc.nativeId());assertEquals(7,plc.entries().size());
+                assertSame(shadow,sources.source(plc.entries().get(5)));
+                var expectedSources=new com.openggf.game.soniccd.level.CdR11aAsset[]{
+                        com.openggf.game.soniccd.level.CdR11aAsset.ART_BOULDER,com.openggf.game.soniccd.level.CdR11aAsset.ART_SONIC_HOLE,
+                        com.openggf.game.soniccd.level.CdR11aAsset.ART_PATA_BATA,com.openggf.game.soniccd.level.CdR11aAsset.ART_TUNNEL_WATERFALL,
+                        com.openggf.game.soniccd.level.CdR11aAsset.ART_SPINNING_DISC,com.openggf.game.soniccd.level.CdR11aAsset.ART_LOG_SHADOW,
+                        com.openggf.game.soniccd.level.CdR11aAsset.ART_TAMABBOH};
+                int[] destinations={0x6E80,0x7400,0x7600,0x7C80,0x8120,0x8300,0x8500},counts={19,14,50,29,12,16,59},readers={271,114,715,328,167,24,1143};
+                var component=com.openggf.game.soniccd.resources.CdR11aSectionArt.fromAssets(frame.assets());
+                var current=component.initList(component.devState(liveArt.residency(),liveArt.codeTable(),0),10);int services=0;
+                for(int row=0;row<7;row++) {
+                    var queued=plc.entries().get(row);var program=sources.source(queued);
+                    assertSame(expectedSources[row],queued.source());assertEquals(destinations[row],queued.vramAddress());
+                    assertEquals(counts[row],program.tileCount());assertEquals(readers[row],program.readerBytes().length());
+                    assertEquals(queued.sourceRange().nativeAddress(),current.queue().headSource());assertEquals(destinations[row],current.queue().headDestination());
+                    current=component.prepare(current);assertEquals(counts[row],current.remainingTilesWord());
+                    for(int service=0;service<(counts[row]+2)/3;service++) {
+                        assertTrue(services++<69,"Hard source-derived PLC10 bound; no retry or replacement program");
+                        current=component.serviceSlow(current,0);
+                        assertEquals(Math.max(0,counts[row]-(service+1)*3),current.remainingTilesWord());
+                    }
+                    assertEquals(readers[row],current.decoder().orElseThrow().inputOffset(),"Exact reached finite native reader, row "+row);
+                }
+                assertEquals(69,services);assertEquals(0L,current.queue().headSource());assertEquals(0,current.remainingTilesWord());assertFalse(current.stopped());
+                for(int tile=0;tile<16;tile++)assertArrayEquals(decoded.bytes().slice(tile*32,32).copy(),
+                        com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(current.residency(),0x418+tile).copy(),
+                        "ALL16 actual serviced Shadow tiles, not decoded-source render fallback "+tile);
+                assertSame(liveArt,runtime.sectionArtState());assertAntonWorldCapture(before,module);
+                var policy=com.openggf.game.soniccd.resources.CdObjectPresentation.usaR11aCurrentCameraDevPreloadedArt(
+                        frame.artState(),runtime.powerupArtState(),objects,objects.frontierArtBank(),objects.contactArtBank(),
+                        objects.floatBlockArtBank(),objects.springArtBank(),objects.tunnelDoorArtBank(),objects.monitorTimeArtBank(),current.residency(),
+                        banks.player(),banks.ring(),banks.mosqui(),banks.plant(),banks.ramp(),banks.explosion(),banks.points(),banks.flower(),
+                        banks.powerup(),banks.floatBlock(),banks.spring(),banks.tunnelDoorVertical(),banks.monitorTime(),banks.boulder(),
+                        banks.diagonalSpring(),banks.spikes(),banks.checkpoint(),banks.anton(),banks.collapsePlatform(),banks.tamabboh(),banks.logShadow());
+                var versions=new java.util.HashMap<Integer,com.openggf.graphics.SpritePresentation.PatternVersion>();
+                for(int tile=0;tile<16;tile++) {
+                    var sample=policy.resolve(0x418+tile);
+                    int logicalId=tile<7?banks.anton()+15+tile:tile<12?banks.logShadow()+tile-7:banks.plant()+tile-12;
+                    assertEquals(logicalId,sample.logicalPatternId(),"Seven Anton/four Plant aliases retain their existing IDs");
+                    assertEquals(com.openggf.game.soniccd.resources.CdObjectPresentation.patternVersion(
+                            com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(current.residency(),0x418+tile)),sample.version());
+                    if(tile>=7&&tile<12)assertNull(versions.put(logicalId,sample.version()));
+                }
+                assertEquals(5,versions.size());var tiles=new ArrayList<com.openggf.graphics.SpritePresentation.Tile>();
+                // TEST-only separated 8x8 samples, NOT native Log Shadow mapping/body/World geometry.
+                for(int offset=0;offset<5;offset++)for(int flip=0;flip<4;flip++)tiles.add(new com.openggf.graphics.SpritePresentation.Tile(
+                        com.openggf.graphics.SpritePresentation.Layer.OBJECT,banks.logShadow()+offset,2,(flip&1)!=0,(flip&2)!=0,false,
+                        16+offset*16,16+flip*16,8,8,true,0,false,1f));
+                var overlay=new com.openggf.graphics.SpritePresentation.Frame(tiles,List.of(),versions);assertEquals(20,overlay.tiles().size());
+                int contrast=diagonalWorldContrastRgb(2);var empty=renderDiagonalWorldPicture(module,com.openggf.graphics.SpritePresentation.Frame.empty(),contrast);
+                var rendered=renderDiagonalWorldPicture(module,overlay,contrast);int[] expected=empty.pixels().clone();
+                for(var tile:tiles)paintDiagonalWorldOtherSprite(overlay,tile,expected,0,0,320,224);
+                assertFalse(Arrays.equals(empty.pixels(),rendered.pixels()),"Genuine opaque current samples must visibly replace TEST contrast");
+                assertArrayEquals(expected,rendered.pixels(),"Exact actual GPU pixels for all five IDs; uniform $33 cannot distinguish flips");
+                for(int offset=0;offset<5;offset++) {
+                    int id=banks.logShadow()+offset;var entry=atlas.getEntry(id);assertNotNull(entry,"Every NEW entry must be genuinely rendered/uploaded");
+                    assertEquals(id,entry.patternId());assertTrue(glIsTexture(atlas.getTextureId(entry.atlasIndex())));
+                    assertEquals(versions.get(id),com.openggf.graphics.SpritePresentation.patternSample(GameServices.graphics(),id));
+                    int nativeId=0x41F+offset;
+                    var cold=assertThrows(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.OwnershipBoundary.class,()->coldPolicy.resolve(nativeId));
+                    assertEquals(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.Boundary.UNKNOWN_PATTERN,cold.boundary());assertEquals(nativeId*32,cold.destinationWord());
+                }
+                assertSame(liveArt,runtime.sectionArtState());assertSame(sources,objects.sectionArtSources());assertSame(identities,sources.sources());assertSame(decoded,shadow.decode());
+                for(int i=0;i<17;i++)assertSame(identities.get(i),objects.sectionArtSources().sources().get(i));
+                assertAntonWorldCapture(before,module);shared.forEach((id,entry)->assertSame(entry,atlas.getEntry(id)));
+                // Only missing OLD659 may use TEST transparent installation witnesses; all NEW5 stay genuine.
+                for(int offset=0;offset<664;offset++) {
+                    int id=baseId+offset;
+                    if(atlas.getEntry(id)==null){assertTrue(offset<659);GameServices.graphics().cachePatternTexture(new com.openggf.level.Pattern(),id);}
+                    assertNotNull(atlas.getEntry(id),"ALL664 installed before close, offset "+offset);
+                }
+                assertAntonWorldCapture(before,module);
+                module.closeTerrainPlayer();assertTrue(runtime.closed());assertTrue(frame.closed());assertSame(atlas,GameServices.graphics().getPatternAtlas());
+                for(int offset=0;offset<664;offset++)assertNull(atlas.getEntry(baseId+offset),"Owned664 cleanup offset "+offset);
+                shared.forEach((id,entry)->assertSame(entry,atlas.getEntry(id),"Actual unrelated terrain/registered-range identity "+id));
+            } finally {try{SessionManager.closeGameplaySession();}finally{GraphicsManager.destroyForReinit();}}
+        }
+        // Resource-only proof; no natural5256, body, full-USA, all664 scene-rendered or parity claim.
+    }
 }

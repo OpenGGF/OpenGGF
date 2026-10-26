@@ -4380,7 +4380,7 @@ class TestCdOpeningObjectRuntime {
         assertThrows(NullPointerException.class, () -> new CdOpeningObjectRuntime.TunnelDoorFm(null));
         assertEquals(CdTunnelDoor.FmSound.FM_A4,
                 new CdOpeningObjectRuntime.TunnelDoorFm(CdTunnelDoor.FmSound.FM_A4).sound());
-        assertEquals(20, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+        assertEquals(21, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
         var compact = new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138);
         assertEquals(494, compact.monitorTime() + 82 - compact.player());
         assertEquals(12, compact.monitorTime() - compact.tunnelDoorVertical());
@@ -4970,7 +4970,7 @@ class TestCdOpeningObjectRuntime {
                     () -> com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(state.residency(), 0x409));
             assertThrows(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.OwnershipBoundary.class,
                     () -> com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(state.residency(), 0x440));
-            assertEquals(20, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+            assertEquals(21, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
             var compact = new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138);
             assertEquals(494, compact.monitorTime() + 82 - compact.player());
             assertEquals(state, f.runtime.captureClosedCut().sectionArtState());
@@ -5523,7 +5523,7 @@ class TestCdOpeningObjectRuntime {
     @Test void boulderFourteenthBankPreservesEveryOldConstructorAndTheOneAggregate() {
         var expected = new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138, 208, 236, 299, 369, 374,
                 413, 449, 464, 500, 512, 594);
-        assertEquals(20, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+        assertEquals(21, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
         assertEquals(513, expected.boulder() + 19 - expected.player());
         assertEquals(expected, new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138));
         assertEquals(expected, new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138, 208, 236));
@@ -5998,7 +5998,7 @@ class TestCdOpeningObjectRuntime {
         var full = new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594,613);
         var old14 = new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594);
         assertEquals(full, old14); assertEquals(full, new CdOpeningObjectRuntime.LogicalBanks(100,124,138));
-        assertEquals(20, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+        assertEquals(21, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
         assertEquals("diagonalSpring", CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents()[14].getName());
         assertEquals(559, full.diagonalSpring() + 46 - full.player()); assertEquals(12475, BANKS.diagonalSpring());
         assertEquals(919, new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,900).diagonalSpring());
@@ -6579,7 +6579,7 @@ class TestCdOpeningObjectRuntime {
 
     @Test void spikesSixteenthBankPreservesEveryOlderConstructorAndOneCachedActualBody() {
         var full = new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594,613,659);
-        assertEquals(20, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+        assertEquals(21, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
         assertEquals("spikes", CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents()[15].getName());
         assertEquals(full, new CdOpeningObjectRuntime.LogicalBanks(100,124,138));
         assertEquals(full, new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236));
@@ -6592,7 +6592,7 @@ class TestCdOpeningObjectRuntime {
         assertEquals(full, new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594));
         assertEquals(full, new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594,613));
         assertEquals(567, full.spikes()+8-full.player()); assertEquals(BANKS.diagonalSpring()+46,BANKS.spikes());
-        assertEquals(List.of(3,5,8,9,10,11,12,13,14,15,16,17,18,19,20), java.util.Arrays.stream(CdOpeningObjectRuntime.LogicalBanks.class.getDeclaredConstructors())
+        assertEquals(List.of(3,5,8,9,10,11,12,13,14,15,16,17,18,19,20,21), java.util.Arrays.stream(CdOpeningObjectRuntime.LogicalBanks.class.getDeclaredConstructors())
                 .map(java.lang.reflect.Constructor::getParameterCount).sorted().toList());
         assertEquals(1, java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredFields()).filter(v->v.getType()==CdSpikes.class).count());
         assertFalse(java.util.Arrays.stream(CdOpeningObjectRuntime.Snapshot.class.getDeclaredFields()).anyMatch(v->
@@ -7107,10 +7107,10 @@ class TestCdOpeningObjectRuntime {
         var full = new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594,613,659,667);
         assertEquals(full, new CdOpeningObjectRuntime.LogicalBanks(100,124,138));
         assertEquals(full, new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594,613,659));
-        assertEquals(20, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+        assertEquals(21, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
         assertEquals("checkpoint", CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents()[16].getName());
         assertEquals(579, full.checkpoint()+12-full.player());
-        assertEquals(List.of(3,5,8,9,10,11,12,13,14,15,16,17,18,19,20),
+        assertEquals(List.of(3,5,8,9,10,11,12,13,14,15,16,17,18,19,20,21),
                 java.util.Arrays.stream(CdOpeningObjectRuntime.LogicalBanks.class.getDeclaredConstructors())
                         .map(java.lang.reflect.Constructor::getParameterCount).sorted().toList());
         assertEquals(1, java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredFields()).filter(v->v.getType()==CdCheckpoint.class).count());
@@ -7678,10 +7678,10 @@ class TestCdOpeningObjectRuntime {
         var old = new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594,613,659,667);
         var full = new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594,613,659,667,679);
         assertEquals(full, old); assertEquals(full, new CdOpeningObjectRuntime.LogicalBanks(100,124,138));
-        assertEquals(20, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+        assertEquals(21, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
         assertEquals("anton", CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents()[17].getName());
         assertEquals(579, old.checkpoint()+12-old.player()); assertEquals(601, full.anton()+22-full.player());
-        assertEquals(List.of(3,5,8,9,10,11,12,13,14,15,16,17,18,19,20),
+        assertEquals(List.of(3,5,8,9,10,11,12,13,14,15,16,17,18,19,20,21),
                 java.util.Arrays.stream(CdOpeningObjectRuntime.LogicalBanks.class.getDeclaredConstructors())
                         .map(java.lang.reflect.Constructor::getParameterCount).sorted().toList());
         assertEquals(1, java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredFields()).filter(v->v.getType()==CdAnton.class).count());
@@ -8087,7 +8087,7 @@ class TestCdOpeningObjectRuntime {
         assertEquals(full,old);assertEquals(full,new CdOpeningObjectRuntime.LogicalBanks(100,124,138));
         assertEquals(701,old.collapsePlatform());assertEquals(658,full.collapsePlatform()+57-full.player());
         assertEquals("collapsePlatform",CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents()[18].getName());
-        assertEquals(List.of(3,5,8,9,10,11,12,13,14,15,16,17,18,19,20),java.util.Arrays.stream(
+        assertEquals(List.of(3,5,8,9,10,11,12,13,14,15,16,17,18,19,20,21),java.util.Arrays.stream(
                 CdOpeningObjectRuntime.LogicalBanks.class.getDeclaredConstructors()).map(java.lang.reflect.Constructor::getParameterCount).sorted().toList());
         assertEquals(1,java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredFields()).filter(v->v.getType()==CdCollapsePlatform.class).count());
         var body=java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredFields()).filter(v->v.getType()==CdCollapsePlatform.class).findFirst().orElseThrow();
@@ -8528,7 +8528,7 @@ class TestCdOpeningObjectRuntime {
     // BEGIN Platform21 Runtime R1. Appended tests FIRST; ALL JAVA UNRUN by this author.
     // Constructed actual-owner device cuts, never natural742, World, native-parity or GPU evidence.
     @Test void platform21CachedPrivateBodyAddsNoPublicLifecycleBankSoundOrSnapshotContract() throws Exception {
-        assertEquals(20,CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+        assertEquals(21,CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
         assertEquals(3,CdOpeningObjectRuntime.CheckpointBindings.class.getRecordComponents().length);
         assertEquals(List.of(11),java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods()).filter(m->m.getName().equals(
                 "usaR11aOpeningDevEmptySatPreloadedArt")).map(java.lang.reflect.Method::getParameterCount).toList());
@@ -9070,8 +9070,8 @@ class TestCdOpeningObjectRuntime {
     // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>
 
     @Test void tamabbohRuntimeSurfaceKeepsNineteenBanksFactoriesAndOnlyPrivateTransientOrigin() throws Exception {
-        assertEquals(20,CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
-        assertEquals(List.of(3,5,8,9,10,11,12,13,14,15,16,17,18,19,20),
+        assertEquals(21,CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+        assertEquals(List.of(3,5,8,9,10,11,12,13,14,15,16,17,18,19,20,21),
                 java.util.Arrays.stream(CdOpeningObjectRuntime.LogicalBanks.class.getDeclaredConstructors())
                         .map(java.lang.reflect.Constructor::getParameterCount).sorted().toList());
         assertEquals(List.of(11),java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
@@ -9561,8 +9561,8 @@ class TestCdOpeningObjectRuntime {
         assertEquals(758, full.tamabboh());
         assertEquals(659, full.tamabboh()+1-full.player());
         assertEquals("tamabboh", CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents()[19].getName());
-        assertEquals(20, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
-        assertEquals(List.of(3,5,8,9,10,11,12,13,14,15,16,17,18,19,20), java.util.Arrays.stream(
+        assertEquals(21, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+        assertEquals(List.of(3,5,8,9,10,11,12,13,14,15,16,17,18,19,20,21), java.util.Arrays.stream(
                 CdOpeningObjectRuntime.LogicalBanks.class.getDeclaredConstructors()).map(java.lang.reflect.Constructor::getParameterCount).sorted().toList());
         assertThrows(ArithmeticException.class, () -> new CdOpeningObjectRuntime.LogicalBanks(
                 100,124,138,208,236,299,369,374,413,449,464,500,512,594,613,659,667,679,Integer.MAX_VALUE-56));
@@ -9590,7 +9590,7 @@ class TestCdOpeningObjectRuntime {
     }
 
     @Test void tamabbohColdEmptyPictureAcceptsMaxSingletonWithoutInitializingCurrent8800() throws Exception {
-        var a=load(); var banks=new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594,613,659,667,679,701,Integer.MAX_VALUE);
+        var a=load(); var banks=new CdOpeningObjectRuntime.LogicalBanks(100,124,138,208,236,299,369,374,413,449,464,500,512,594,613,659,667,679,701,Integer.MAX_VALUE,759);
         try(var frame=CdPlayerFrameRuntime.externalTouchRequiredDevelopment(a,0);
             var runtime=CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(a,frame,INITIAL,CONTACT,SCORE,LEVEL,
                     declaredCheckpointBindings(),new byte[640],banks,PRE,v->fail("no angle store"))) {
@@ -9625,7 +9625,7 @@ class TestCdOpeningObjectRuntime {
         assertTrue(java.lang.reflect.Modifier.isPrivate(origin.getType().getModifiers()));
         assertEquals(List.of(2), java.util.Arrays.stream(origin.getType().getDeclaredConstructors())
                 .map(java.lang.reflect.Constructor::getParameterCount).toList());
-        assertEquals(20, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+        assertEquals(21, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
         assertEquals(3, CdOpeningObjectRuntime.CheckpointBindings.class.getRecordComponents().length);
         assertEquals(List.of(11), java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
                 .filter(m -> m.getName().equals("usaR11aOpeningDevEmptySatPreloadedArt")).map(java.lang.reflect.Method::getParameterCount).toList());
@@ -9898,7 +9898,7 @@ class TestCdOpeningObjectRuntime {
                     f.frame.restoreActor(actor); f.frame.restoreShared(shared); f.runtime.restore(cut); }
                 monitorBegin(f, 2); f.runtime.runDynamicSlotsAfterReservedSlots(); monitorFinish(f); disc09Retired(f);
                 assertSame(cached, checkpointGet(f.runtime, "spinningDisc")); assertEquals(17, f.assets.openingObjects().sectionArtSources().sources().size());
-                assertEquals(20, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+                assertEquals(21, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
                 if (replay == 0) { expected = f.runtime.captureClosedCut(); expectedActor = f.frame.captureActor(); expectedShared = f.frame.captureShared(); }
                 else { assertMonitorSnapshot(expected, f.runtime.captureClosedCut()); assertEquals(expected.sectionArtState(), f.runtime.sectionArtState());
                     assertEquals(expectedActor, f.frame.captureActor()); assertEquals(expectedShared, f.frame.captureShared()); }
@@ -10048,7 +10048,7 @@ class TestCdOpeningObjectRuntime {
         assertTrue(java.util.Arrays.stream(CdOpeningObjectRuntime.Snapshot.class.getDeclaredFields()).noneMatch(v ->
                 v.getType() == CdTunnelPath.class || v.getType() == origin.getType() || v.getType() == CdTunnelPath.PlayerCut.class
                         || v.getType() == CdTunnelPath.PlayerCall.class || v.getType() == CdTunnelPath.FmCall.class));
-        assertEquals(20, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+        assertEquals(21, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
         assertEquals(List.of(11), java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
                 .filter(m -> m.getName().equals("usaR11aOpeningDevEmptySatPreloadedArt")).map(java.lang.reflect.Method::getParameterCount).toList());
         assertEquals(List.of(14), java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
@@ -10489,4 +10489,481 @@ class TestCdOpeningObjectRuntime {
     // Source review covers those guard/order/preparation contracts; these limits are not claimed as execution coverage.
     // No Error/OOM injection, natural3421 positive, next controlled Body, full-USA or JP/EU success is claimed.
     // END Tunnel07 Runtime R1.
+
+
+    // BEGIN Log Shadow Runtime R1: accepted census, tests authored before both production mirrors.
+    // J f4a968965ef55f47ebff8b3c7aa0827c8ef7aad4; N 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff.
+    // Log Shadow/Main.asm:7-70; Object Functions.asm:137-196,228-237,251-361;
+    // Object Spawner.asm:385-446. Every added case is UNRUN by this source-only author.
+    // These public-owner constructed cuts are not returned5256, a route or native runtime parity.
+    // No private Snapshot/origin/phase is minted, no body is replaced, and no current pixels are fitted.
+    // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>
+
+    @Test void logShadow33ApiKeepsExistingPartitionsAndOneCachedBody() throws Exception {
+        assertEquals(36, java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
+                .filter(m -> java.lang.reflect.Modifier.isPublic(m.getModifiers())).count());
+        assertEquals(15, CdOpeningObjectRuntime.Snapshot.class.getDeclaredFields().length);
+        assertEquals(17, CdOpeningObjectRuntime.SoundRequest.class.getPermittedSubclasses().length);
+        assertEquals(21, CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+        assertEquals("logShadow", CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents()[20].getName());
+        assertEquals(List.of(11), java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
+                .filter(m -> m.getName().equals("usaR11aOpeningDevEmptySatPreloadedArt"))
+                .map(java.lang.reflect.Method::getParameterCount).toList());
+        assertEquals(List.of(14), java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods())
+                .filter(m -> m.getName().equals("usaR11aRestartDevEmptySatPreloadedArt"))
+                .map(java.lang.reflect.Method::getParameterCount).toList());
+        var fields = java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredFields())
+                .filter(v -> v.getType() == CdLogShadow.class).toList();
+        assertEquals(1, fields.size()); assertEquals("logShadow", fields.getFirst().getName());
+        assertTrue(java.lang.reflect.Modifier.isPrivate(fields.getFirst().getModifiers()));
+        assertTrue(java.lang.reflect.Modifier.isFinal(fields.getFirst().getModifiers()));
+        assertTrue(java.util.Arrays.stream(CdOpeningObjectRuntime.Snapshot.class.getDeclaredFields()).noneMatch(v ->
+                v.getType() == CdLogShadow.class || v.getType() == CdLogShadow.Globals.class
+                        || v.getType() == CdLogShadow.Assets.class || v.getType() == CdLogShadow.Result.class));
+        try (var f = new Fixture()) {
+            assertInstanceOf(CdLogShadow.class, checkpointGet(f.runtime, "logShadow"));
+            assertEquals(0, f.runtime.devGlobals().goodFuture());
+            assertEquals(0, f.frame.environment().movement().gates().zoneAct());
+            assertEquals(1, f.frame.environment().movement().gates().timeZone());
+        }
+    }
+
+    @Test void logShadow33CompatibilityPreservesEveryOldBaseAndChecksAppend() throws Exception {
+        int[] bases = {100,124,138,208,236,299,369,374,413,449,464,500,512,594,613,659,667,679,701,758,759};
+        var expected = logShadow33Banks(759);
+        assertEquals(List.of(3,5,8,9,10,11,12,13,14,15,16,17,18,19,20,21),
+                java.util.Arrays.stream(CdOpeningObjectRuntime.LogicalBanks.class.getDeclaredConstructors())
+                        .map(java.lang.reflect.Constructor::getParameterCount).sorted().toList());
+        for (var constructor : CdOpeningObjectRuntime.LogicalBanks.class.getDeclaredConstructors()) {
+            assertTrue(java.lang.reflect.Modifier.isPublic(constructor.getModifiers()));
+            var arguments = new Object[constructor.getParameterCount()];
+            for (int i = 0; i < arguments.length; i++) arguments[i] = bases[i];
+            assertEquals(expected, constructor.newInstance(arguments), "public constructor arity " + arguments.length);
+        }
+        assertEquals(659, expected.tamabboh() + 1 - expected.player(), "historical prefix through Tamabboh");
+        assertEquals(664, expected.logShadow() + 5 - expected.player(), "complete current sequential inventory");
+        assertThrows(ArithmeticException.class, () -> new CdOpeningObjectRuntime.LogicalBanks(
+                100,124,138,208,236,299,369,374,413,449,464,500,512,594,613,659,667,679,701,Integer.MAX_VALUE));
+        var independent = new CdOpeningObjectRuntime.LogicalBanks(
+                100,124,138,208,236,299,369,374,413,449,464,500,512,594,613,659,667,679,701,Integer.MAX_VALUE,759);
+        assertEquals(Integer.MAX_VALUE, independent.tamabboh()); assertEquals(759, independent.logShadow());
+    }
+
+    @Test void logShadow33SpanRejectsEveryOldOverlapAndInvalidBoundAtBothIngresses() throws Exception {
+        var assets = load(); var carry = cameraArtDevIngress(assets);
+        int[] starts = {100,124,138,208,236,299,369,374,413,449,464,500,512,594,613,659,667,679,701,758};
+        int[] counts = {24,14,70,28,63,70,5,39,36,15,36,12,82,19,46,8,12,22,57,1};
+        var invalid = new ArrayList<Integer>(); invalid.add(-1); invalid.add(Integer.MAX_VALUE - 3);
+        for (int i = 0; i < starts.length; i++) {
+            invalid.add(starts[i] - 4); invalid.add(starts[i]); invalid.add(starts[i] + counts[i] - 1);
+        }
+        try (var frame = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, 0)) {
+            var actor = frame.captureActor(); var shared = frame.captureShared();
+            for (int base : invalid) {
+                var banks = logShadow33Banks(base);
+                assertThrows(IllegalArgumentException.class, () -> CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(
+                        assets, frame, INITIAL, CONTACT, SCORE, LEVEL, declaredCheckpointBindings(),
+                        new byte[640], banks, PRE, v -> fail("no angle write during rejected admission")));
+                assertThrows(IllegalArgumentException.class, () -> CdOpeningObjectRuntime.usaR11aRestartDevEmptySatPreloadedArt(
+                        assets, frame, INITIAL, CONTACT, SCORE, LEVEL, declaredCheckpointBindings(),
+                        CdAssetBytes.copyOf(new byte[CdObjectPlacementRuntime.SAVED_BANK_BYTES]),
+                        new CdPowerupArtRuntime.State(new byte[0x480], new byte[0x480]), carry,
+                        new byte[640], banks, PRE, v -> fail("no angle write during rejected admission")));
+                assertEquals(actor, frame.captureActor()); assertEquals(shared, frame.captureShared());
+                assertFalse(frame.closed());
+            }
+        }
+    }
+
+    @Test void logShadow33MaxFivePatternExtentAdmitsEmptyColdAndRestartPictures() throws Exception {
+        var assets = load(); var carry = cameraArtDevIngress(assets); var banks = logShadow33Banks(Integer.MAX_VALUE - 4);
+        assertEquals((long) Integer.MAX_VALUE + 1, (long) banks.logShadow() + 5);
+        for (boolean restart : new boolean[]{false, true}) {
+            try (var frame = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, 0);
+                 var runtime = restart
+                         ? CdOpeningObjectRuntime.usaR11aRestartDevEmptySatPreloadedArt(
+                                 assets, frame, INITIAL, CONTACT, SCORE, LEVEL, declaredCheckpointBindings(),
+                                 CdAssetBytes.copyOf(new byte[CdObjectPlacementRuntime.SAVED_BANK_BYTES]),
+                                 new CdPowerupArtRuntime.State(new byte[0x480], new byte[0x480]), carry,
+                                 new byte[640], banks, PRE, v -> fail("no angle write at admission"))
+                         : CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(
+                                 assets, frame, INITIAL, CONTACT, SCORE, LEVEL, declaredCheckpointBindings(),
+                                 new byte[640], banks, PRE, v -> fail("no angle write at admission"))) {
+                assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT, runtime.phase());
+                assertTrue(runtime.displayedFrame().tiles().isEmpty()); assertEquals(0, runtime.cpuSat().spriteCount());
+                if (restart) assertSame(carry.residency(), runtime.sectionArtState().residency());
+                for (int nativeId = 0x41F; nativeId <= 0x423; nativeId++) {
+                    final int selected = nativeId;
+                    var fault = assertThrows(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.OwnershipBoundary.class,
+                            () -> com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(
+                                    runtime.sectionArtState().residency(), selected));
+                    assertEquals(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.Boundary.UNKNOWN_PATTERN, fault.boundary());
+                    assertEquals(selected * 32, fault.destinationWord());
+                }
+            }
+        }
+    }
+
+    @Test void logShadow33ColdBindingAddsNoCurrentKnowledgeOrSource() throws Exception {
+        try (var f = new Fixture()) {
+            var objects = f.assets.openingObjects(); var bank = objects.sectionArtSources();
+            assertSame(bank, objects.sectionArtSources()); assertEquals(17, bank.sources().size());
+            var source = bank.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_LOG_SHADOW);
+            assertSame(source, bank.sources().get(16)); assertSame(source.decode(), bank.source(source.source()).decode());
+            assertEquals(5, source.canonicalPlcId()); assertEquals(6, source.canonicalRowIndex());
+            assertEquals(0x8300, source.canonicalPlc().vramAddress()); assertEquals(16, source.tileCount());
+            assertEquals(0x10, source.readerBytes().unsignedWord(0)); assertEquals(512, source.decode().bytes().length());
+            var state = f.runtime.sectionArtState(); int known = 0;
+            for (var region : com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.Region.values()) {
+                for (byte mask : state.residency().region(region).knownMask().copy()) known += mask;
+            }
+            assertEquals((70 + 28 + 63 + 19 + 46 + 8 + 12 + 57) * 32, known);
+            for (byte mask : state.residency().region(
+                    com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.Region.AT_83E0).knownMask().copy()) assertEquals(0, mask);
+            assertEquals(0, state.queue().headSource()); assertEquals(0, state.remainingTilesWord());
+            assertTrue(state.decoder().isEmpty()); assertEquals(0, state.sectionWord());
+            assertArrayEquals(new byte[512], state.codeTable().copy());
+        }
+    }
+
+    @Test void logShadow33CleanInitUsesLiveDevGlobalsAndOneDraw() throws Exception {
+        try (var f = new Fixture()) {
+            f.makePlayerAbsent(); springDeviceCut(f); var pool = f.runtime.placement().pool();
+            var source = logShadow33Image(f, 40, 0, 0, 0x80); pool.write(source);
+            var player = f.frame.state(); var environment = f.frame.environment(); var clock = f.frame.vIntClock();
+            var sounds = f.runtime.lastSoundRequests(); var saved = f.runtime.placement().capture().savedFlags().copy();
+            var other = pool.capture().slots(); var cached = checkpointGet(f.runtime, "logShadow");
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertArrayEquals(logShadow33ExpectedInit(f, source).copyBytes(), f.slot(40).copyBytes());
+            assertEquals(0x4418, f.slot(40).word(TILE)); assertEquals(6, f.slot(40).unsignedByte(PRIORITY));
+            assertSame(player, f.frame.state()); assertSame(environment, f.frame.environment()); assertEquals(clock, f.frame.vIntClock());
+            assertEquals(sounds, f.runtime.lastSoundRequests()); assertTrue(f.angleWrites.isEmpty());
+            assertArrayEquals(saved, f.runtime.placement().capture().savedFlags().copy()); platform21OtherImages(other, pool, 40);
+            assertSame(cached, checkpointGet(f.runtime, "logShadow"));
+            var sat = f.runtime.finishAfterCamera(POST); assertEquals(1, sat.spriteCount());
+            assertEquals(40, sat.provenance().getFirst().slotRef().wholeIndex()); assertEquals(6, sat.provenance().getFirst().queueBucket());
+            assertEquals(0x84, f.slot(40).spriteFlags());
+        }
+    }
+
+    @Test void logShadow33DirtyInitPreservesEveryUnwrittenByteAndRawSubtype() throws Exception {
+        for (int subtype : new int[]{0, 1, 0xFF}) for (int sprite : new int[]{0x81, 0x8B, 0xA3}) {
+            try (var f = new Fixture()) {
+                f.makePlayerAbsent(); springDeviceCut(f); var pool = f.runtime.placement().pool(); var source = pool.state(40);
+                for (var field : CdObjectState.ByteField.values()) source = source.moveByte(field, 0xA7);
+                for (var field : CdObjectState.WordField.values()) source = source.moveWord(field, 0xB6C5);
+                for (var field : CdObjectState.LongField.values()) source = source.moveLong(field, 0xD4E3F201);
+                source = source.moveByte(ID, CdLogShadow.OBJECT_ID).moveByte(ROUTINE, 0).moveByte(SPRITE_FLAGS, sprite)
+                        .moveByte(SUBTYPE, subtype).moveByte(SAVED_FLAGS_ID, 0).moveWord(X, 0x100).moveWord(Y, 0x780);
+                pool.write(source); var player = f.frame.state(); var environment = f.frame.environment();
+                var sounds = f.runtime.lastSoundRequests(); var other = pool.capture().slots();
+                f.runtime.runDynamicSlotsAfterReservedSlots();
+                assertArrayEquals(logShadow33ExpectedInit(f, source).copyBytes(), f.slot(40).copyBytes());
+                assertEquals(subtype, f.slot(40).unsignedByte(MAP_FRAME));
+                assertSame(player, f.frame.state()); assertSame(environment, f.frame.environment());
+                assertEquals(sounds, f.runtime.lastSoundRequests()); assertTrue(f.angleWrites.isEmpty());
+                platform21OtherImages(other, pool, 40);
+                // Static-bit/full-byte-frame selection has not been reached: no invented clamp or cleanup.
+            }
+        }
+    }
+
+    @Test void logShadow33MainPreservesExistingHeaderAndHasNoAnimationOrMotion() throws Exception {
+        try (var f = new Fixture()) {
+            f.makePlayerAbsent(); springDeviceCut(f); var pool = f.runtime.placement().pool();
+            var source = logShadow33Image(f, 40, 2, 0xFF, 0x83).moveLong(MAPPINGS, 0xDEADBEEF)
+                    .moveWord(TILE, 0xBEEF).moveByte(MAP_FRAME, 0xFE).moveByte(PRIORITY, 0x7E)
+                    .moveByte(WIDTH, 17).moveByte(Y_RADIUS, 23).moveWord(X_FRACTION, 0x1234).moveWord(Y_FRACTION, 0x5678)
+                    .moveWord(X_VELOCITY, 0x8001).moveWord(Y_VELOCITY, 0x7FFE).moveByte(ANIMATION_TIME, 0xFF);
+            pool.write(source); var player = f.frame.state(); var environment = f.frame.environment(); var clock = f.frame.vIntClock();
+            var art = f.frame.artState(); var section = f.runtime.sectionArtState(); var sounds = f.runtime.lastSoundRequests();
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertArrayEquals(source.moveByte(SPRITE_FLAGS, source.spriteFlags() & 0x7F).copyBytes(), f.slot(40).copyBytes());
+            assertSame(player, f.frame.state()); assertSame(environment, f.frame.environment()); assertEquals(clock, f.frame.vIntClock());
+            assertSame(art, f.frame.artState()); assertSame(section, f.runtime.sectionArtState()); assertEquals(sounds, f.runtime.lastSoundRequests());
+            assertTrue(f.angleWrites.isEmpty());
+        }
+    }
+
+    @Test void logShadow33UnsupportedRoutineFailsBeforeWrites() throws Exception {
+        for (int routine : new int[]{1, 3, 4, 0xFF}) {
+            try (var f = new Fixture()) {
+                f.makePlayerAbsent(); springDeviceCut(f); var pool = f.runtime.placement().pool();
+                var source = logShadow33Image(f, 40, routine, 0, 0x80); pool.write(source);
+                var images = pool.capture().slots(); var saved = f.runtime.placement().capture().savedFlags().copy();
+                var sounds = f.runtime.lastSoundRequests(); var player = f.frame.state();
+                var fault = assertThrows(CdLogShadow.UnsupportedLogShadow.class, f.runtime::runDynamicSlotsAfterReservedSlots);
+                assertEquals(CdLogShadow.UnsupportedBoundary.ROUTINE_DISPATCH, fault.boundary());
+                assertEquals(40, fault.wholeIndex()); assertEquals(routine, fault.value());
+                assertEquals(images, pool.capture().slots()); assertArrayEquals(saved, f.runtime.placement().capture().savedFlags().copy());
+                assertEquals(sounds, f.runtime.lastSoundRequests()); assertSame(player, f.frame.state()); logShadow33Closed(f);
+            }
+        }
+    }
+
+    @Test void logShadow33PhysicalWalkVisitsEachCachedBodyOnceInOrder() throws Exception {
+        try (var f = new Fixture()) {
+            f.makePlayerAbsent(); springDeviceCut(f); var pool = f.runtime.placement().pool();
+            for (int whole : new int[]{39, 40, 41}) pool.write(logShadow33Image(f, whole, 0, whole & 1, 0x80));
+            var cached = checkpointGet(f.runtime, "logShadow"); var sounds = f.runtime.lastSoundRequests();
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            for (int whole : new int[]{39, 40, 41}) { assertEquals(2, f.slot(whole).routine()); assertEquals(4, f.slot(whole).spriteFlags()); }
+            var sat = f.runtime.finishAfterCamera(POST);
+            assertEquals(List.of(39,40,41), sat.provenance().stream().map(p -> p.slotRef().wholeIndex()).toList());
+            assertTrue(sat.provenance().stream().allMatch(p -> p.queueBucket() == 6));
+            assertSame(cached, checkpointGet(f.runtime, "logShadow")); assertEquals(sounds, f.runtime.lastSoundRequests());
+        }
+    }
+
+    @Test void logShadow33FullPoolDoesNotAllocateAndDrawCapacityOnlyLimitsPicture() throws Exception {
+        try (var f = new Fixture()) {
+            f.makePlayerAbsent(); springDeviceCut(f); var pool = f.runtime.placement().pool();
+            for (int whole = 32; whole < 128; whole++) pool.write(logShadow33Image(f, whole, 0, 0, 0x80));
+            var player = f.frame.state(); var environment = f.frame.environment(); var sounds = f.runtime.lastSoundRequests();
+            assertTrue(pool.findObjSlot().isEmpty()); f.runtime.runDynamicSlotsAfterReservedSlots();
+            for (int whole = 32; whole < 128; whole++) {
+                assertEquals(CdLogShadow.OBJECT_ID, f.slot(whole).id()); assertEquals(2, f.slot(whole).routine());
+                assertEquals(4, f.slot(whole).spriteFlags()); assertEquals(0x4418, f.slot(whole).word(TILE));
+            }
+            assertTrue(pool.findObjSlot().isEmpty()); assertSame(player, f.frame.state()); assertSame(environment, f.frame.environment());
+            assertEquals(sounds, f.runtime.lastSoundRequests()); assertTrue(f.angleWrites.isEmpty());
+            var sat = f.runtime.finishAfterCamera(POST); assertEquals(63, sat.spriteCount());
+            assertEquals(java.util.stream.IntStream.range(32, 95).boxed().toList(),
+                    sat.provenance().stream().map(p -> p.slotRef().wholeIndex()).toList());
+        }
+    }
+
+    @Test void logShadow33CulledDrawClearsBitSevenWithoutSkippingBodyTail() throws Exception {
+        try (var f = new Fixture()) {
+            f.makePlayerAbsent(); springDeviceCut(f); var pool = f.runtime.placement().pool();
+            var source = logShadow33Image(f, 40, 0, 0, 0x80).moveWord(Y, 0x500); pool.write(source);
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertArrayEquals(logShadow33ExpectedInit(f, source).copyBytes(), f.slot(40).copyBytes());
+            assertEquals(4, f.slot(40).spriteFlags()); assertEquals(0, f.runtime.finishAfterCamera(POST).spriteCount());
+        }
+    }
+
+    @Test void logShadow33DespawnUsesPreScrollWrappedChunksAndKeepsEquality() throws Exception {
+        int[] x = {0x180, 0x200, 0x280, 0xFF80, 0xFF00};
+        boolean[] deleted = {false, false, true, false, true};
+        for (int i = 0; i < x.length; i++) {
+            try (var f = new Fixture()) {
+                f.makePlayerAbsent(); springDeviceCut(f); var pool = f.runtime.placement().pool();
+                var source = logShadow33Image(f, 40, 2, 0, 0x84).moveWord(X, x[i]); pool.write(source);
+                var saved = f.runtime.placement().capture().savedFlags().copy(); f.runtime.runDynamicSlotsAfterReservedSlots();
+                if (deleted[i]) assertArrayEquals(new byte[64], f.slot(40).copyBytes());
+                else assertArrayEquals(source.moveByte(SPRITE_FLAGS, 4).copyBytes(), f.slot(40).copyBytes());
+                assertArrayEquals(saved, f.runtime.placement().capture().savedFlags().copy());
+                assertFalse(f.runtime.closed());
+                // Masked source distances are $200/$280/$300/$000/$FF80; equality $280 survives.
+            }
+        }
+    }
+
+    @Test void logShadow33SavedZeroDeletesAllBytesAndQueuedReferenceSeesZero() throws Exception {
+        try (var f = new Fixture()) {
+            f.makePlayerAbsent(); springDeviceCut(f); var pool = f.runtime.placement().pool();
+            // Routine2 retains non-camera flags0: Draw enqueues, then the distance tail deletes the live slot.
+            var source = logShadow33Image(f, 40, 2, 0, 0).moveWord(X, 0x600).moveWord(X_FRACTION, 0x1234)
+                    .moveWord(Y_FRACTION, 0x5678).moveByte(COLLISION_TYPE, 0xAD).moveByte(ANIMATION_TIME, 0xFE);
+            pool.write(source); var saved = f.runtime.placement().capture().savedFlags().copy();
+            f.runtime.runDynamicSlotsAfterReservedSlots(); assertArrayEquals(new byte[64], f.slot(40).copyBytes());
+            assertArrayEquals(saved, f.runtime.placement().capture().savedFlags().copy());
+            assertEquals(0, f.runtime.finishAfterCamera(POST).spriteCount(), "queued pointer sees the current cleared ID");
+        }
+    }
+
+    @Test void logShadow33DirtySavedIdClearsOnlyPresentLoadedBit() throws Exception {
+        try (var f = new Fixture()) {
+            f.makePlayerAbsent(); springDeviceCut(f); var placement = f.runtime.placement(); var pool = placement.pool();
+            for (int period = 0; period < 3; period++) seedSpinTunnelLoaded(placement, 7, period);
+            var source = logShadow33Image(f, 40, 0, 0, 0x80).moveWord(X, 0x600).moveByte(SAVED_FLAGS_ID, 7); pool.write(source);
+            var expected = placement.capture().savedFlags().copy(); expected[2 + 3 * 7 + 1] &= 0x7F;
+            f.runtime.runDynamicSlotsAfterReservedSlots(); assertArrayEquals(new byte[64], f.slot(40).copyBytes());
+            assertEquals(0x55, placement.savedFlag(7, 1)); assertEquals(0xD5, placement.savedFlag(7, 0));
+            assertEquals(0xD5, placement.savedFlag(7, 2)); assertArrayEquals(expected, placement.capture().savedFlags().copy());
+        }
+    }
+
+    @Test void logShadow33InvalidSavedAddressKeepsInitAndDrawPrefixBeforeFailure() throws Exception {
+        try (var f = new Fixture()) {
+            f.makePlayerAbsent(); springDeviceCut(f); var pool = f.runtime.placement().pool();
+            var source = logShadow33Image(f, 40, 0, 0, 0x80).moveWord(X, 0x600).moveByte(SAVED_FLAGS_ID, 0xFF); pool.write(source);
+            var saved = f.runtime.placement().capture().savedFlags().copy(); var player = f.frame.state();
+            var sounds = f.runtime.lastSoundRequests();
+            var fault = assertThrows(CdLogShadow.UnsupportedLogShadow.class, f.runtime::runDynamicSlotsAfterReservedSlots);
+            assertEquals(CdLogShadow.UnsupportedBoundary.SAVED_FLAGS_ADDRESS, fault.boundary());
+            assertEquals(40, fault.wholeIndex()); assertEquals(2 + 3 * 255 + 1, fault.value());
+            assertArrayEquals(logShadow33ExpectedInit(f, source).copyBytes(), f.slot(40).copyBytes());
+            assertArrayEquals(saved, f.runtime.placement().capture().savedFlags().copy());
+            assertSame(player, f.frame.state()); assertEquals(sounds, f.runtime.lastSoundRequests()); logShadow33Closed(f);
+        }
+    }
+
+    @Test void logShadow33RawSubtypeFailsOnlyWhenItsMappingIsSelected() throws Exception {
+        try (var f = new Fixture()) {
+            f.makePlayerAbsent(); springDeviceCut(f); var pool = f.runtime.placement().pool();
+            var source = logShadow33Image(f, 40, 0, 0xFF, 0x80); pool.write(source);
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(CdOpeningObjectRuntime.Phase.DYNAMIC_DONE, f.runtime.phase()); assertEquals(0xFF, f.slot(40).unsignedByte(MAP_FRAME));
+            var expected = logShadow33ExpectedInit(f, source); assertArrayEquals(expected.copyBytes(), f.slot(40).copyBytes());
+            var section = f.runtime.sectionArtState();
+            assertThrows(UnsupportedOperationException.class, () -> f.runtime.finishAfterCamera(POST));
+            assertArrayEquals(expected.copyBytes(), f.slot(40).copyBytes()); assertSame(section, f.runtime.sectionArtState()); logShadow33Closed(f);
+        }
+    }
+
+    @Test void logShadow33MainUnknownPointerIsDeferredUntilSelectedBuild() throws Exception {
+        for (boolean visible : new boolean[]{false, true}) {
+            try (var f = new Fixture()) {
+                f.makePlayerAbsent(); springDeviceCut(f); var pool = f.runtime.placement().pool();
+                var source = logShadow33Image(f, 40, 2, 0, 0x84).moveLong(MAPPINGS, 0xFF2089EE)
+                        .moveWord(Y, visible ? 0x780 : 0x500); pool.write(source);
+                f.runtime.runDynamicSlotsAfterReservedSlots();
+                assertArrayEquals(source.moveByte(SPRITE_FLAGS, 4).copyBytes(), f.slot(40).copyBytes());
+                if (visible) {
+                    assertThrows(UnsupportedOperationException.class, () -> f.runtime.finishAfterCamera(POST)); logShadow33Closed(f);
+                } else {
+                    assertEquals(0, f.runtime.finishAfterCamera(POST).spriteCount()); assertFalse(f.runtime.closed());
+                }
+            }
+        }
+    }
+
+    @Test void logShadow33LaterUnknownRetainsPriorWorkAndSkipsLaterSlots() throws Exception {
+        try (var f = new Fixture()) {
+            f.makePlayerAbsent(); springDeviceCut(f); var pool = f.runtime.placement().pool();
+            var first = logShadow33Image(f, 40, 0, 0, 0x80); pool.write(first);
+            var unknown = pool.state(41).moveByte(ID, 0x7F).moveByte(ROUTINE, 0xA5); pool.write(unknown);
+            var later = logShadow33Image(f, 42, 0, 1, 0x80); pool.write(later);
+            var sounds = f.runtime.lastSoundRequests(); var player = f.frame.state(); var saved = f.runtime.placement().capture().savedFlags().copy();
+            var failure = assertThrows(UnsupportedOperationException.class, f.runtime::runDynamicSlotsAfterReservedSlots);
+            assertTrue(failure.getMessage().contains("7f")); assertTrue(failure.getMessage().contains("41"));
+            assertArrayEquals(logShadow33ExpectedInit(f, first).copyBytes(), f.slot(40).copyBytes());
+            assertEquals(unknown, f.slot(41)); assertEquals(later, f.slot(42)); assertEquals(sounds, f.runtime.lastSoundRequests());
+            assertSame(player, f.frame.state()); assertArrayEquals(saved, f.runtime.placement().capture().savedFlags().copy()); logShadow33Closed(f);
+        }
+    }
+
+    @Test void logShadow33CpuSatUsesNativeFramesFlipsAttributesAndPostScrollCamera() throws Exception {
+        for (int subtype : new int[]{0, 1}) for (int flips = 0; flips < 4; flips++) {
+            try (var f = new Fixture()) {
+                f.makePlayerAbsent(); springDeviceCut(f); var pool = f.runtime.placement().pool();
+                var source = logShadow33Image(f, 40, 0, subtype, 0x80 | flips); pool.write(source);
+                f.runtime.runDynamicSlotsAfterReservedSlots(); assertEquals(16, f.slot(40).unsignedByte(Y_RADIUS));
+                var post = new CameraWords(32, 0x700); var sat = f.runtime.finishAfterCamera(new DrawCameras(post, post, post));
+                assertEquals(1, sat.spriteCount()); assertEquals(40, sat.provenance().getFirst().slotRef().wholeIndex());
+                assertEquals(6, sat.provenance().getFirst().queueBucket()); assertEquals(subtype == 0 ? 0x0F : 0x0D, sat.bytes()[2] & 255);
+                int attributes = 0x4418 ^ ((flips & 1) != 0 ? 0x0800 : 0) ^ ((flips & 2) != 0 ? 0x1000 : 0);
+                assertEquals(attributes, word(sat.bytes(), 4)); assertEquals(0, attributes & 0x8000);
+                assertEquals(0x100 - post.xWord() + 128 - 16, word(sat.bytes(), 6));
+                assertEquals(0x780 - post.yWord() + 128 - (subtype == 0 ? 16 : 8), word(sat.bytes(), 0));
+            }
+        }
+    }
+
+    @Test void logShadow33ColdInitDefersCurrentArtUntilNextActualVInt() throws Exception {
+        try (var f = new Fixture()) {
+            f.makePlayerAbsent(); springDeviceCut(f); var pool = f.runtime.placement().pool();
+            pool.write(logShadow33Image(f, 40, 0, 0, 0x80)); var resident = f.runtime.sectionArtState().residency();
+            f.runtime.runDynamicSlotsAfterReservedSlots(); assertEquals(1, f.runtime.finishAfterCamera(POST).spriteCount());
+            f.runtime.finishOrdinaryTail(); assertSame(resident, f.runtime.sectionArtState().residency());
+            f.runtime.setPreScrollForeground(PRE); var selected = f.frame.prepareInput(0x80);
+            assertEquals(PlcLifecyclePhase.NORMAL_PAUSE, selected.phase());
+            var fault = assertThrows(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.OwnershipBoundary.class,
+                    () -> f.runtime.serviceVBlank(selected.phase()));
+            assertEquals(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.Boundary.UNKNOWN_PATTERN, fault.boundary());
+            assertEquals(0x418, fault.nativePatternId()); assertEquals(0x8300, fault.destinationWord());
+            assertSame(resident, f.runtime.sectionArtState().residency()); assertEquals(2, f.slot(40).routine()); logShadow33Closed(f);
+            // This clean native Init stops at the earlier Anton alias, not proof of selecting the new five.
+        }
+    }
+
+    @Test void logShadow33ConstructedMainSelectsEachNewUnknownPatternAtActualVInt() throws Exception {
+        for (int nativeId = 0x41F; nativeId <= 0x423; nativeId++) {
+            try (var f = new Fixture()) {
+                f.makePlayerAbsent(); springDeviceCut(f); var pool = f.runtime.placement().pool();
+                // Explicit dirty Main ingress, NOT a native Init tile, a reached route or known pixels.
+                var source = logShadow33Image(f, 40, 2, 0, 0x84).moveWord(TILE, 0x4000 | nativeId); pool.write(source);
+                var resident = f.runtime.sectionArtState().residency(); f.runtime.runDynamicSlotsAfterReservedSlots();
+                assertEquals(0x4000 | nativeId, f.slot(40).word(TILE)); assertEquals(1, f.runtime.finishAfterCamera(POST).spriteCount());
+                f.runtime.finishOrdinaryTail(); f.runtime.setPreScrollForeground(PRE); var selected = f.frame.prepareInput(0x80);
+                assertEquals(PlcLifecyclePhase.NORMAL_PAUSE, selected.phase());
+                var fault = assertThrows(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.OwnershipBoundary.class,
+                        () -> f.runtime.serviceVBlank(selected.phase()));
+                assertEquals(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.Boundary.UNKNOWN_PATTERN, fault.boundary());
+                assertEquals(nativeId, fault.nativePatternId()); assertEquals(nativeId * 32, fault.destinationWord());
+                assertSame(resident, f.runtime.sectionArtState().residency()); logShadow33Closed(f);
+            }
+        }
+    }
+
+    @Test void logShadow33HealthyCaptureRestoresExistingPartitionsAndCachedBody() throws Exception {
+        try (var f = new Fixture()) {
+            f.firstCycle(); f.makePlayerAbsent(); var pool = f.runtime.placement().pool(); pool.clearDynamicSlots();
+            pool.write(logShadow33Image(f, 40, 0, 0, 0x80));
+            var cut = f.runtime.captureClosedCut(); var actor = f.frame.captureActor(); var shared = f.frame.captureShared();
+            var cached = checkpointGet(f.runtime, "logShadow"); var reserved = horizontalReserved(f.runtime);
+            CdOpeningObjectRuntime.Snapshot expected = null; CdPlayerFrameRuntime.ActorState expectedActor = null;
+            CdPlayerFrameRuntime.SharedState expectedShared = null; byte[] expectedCpu = null;
+            for (int replay = 0; replay < 2; replay++) {
+                if (replay != 0) {
+                    f.frame.validateActorRestore(actor); f.frame.validateSharedRestore(shared); f.runtime.validateRestore(cut);
+                    f.frame.restoreActor(actor); f.frame.restoreShared(shared); f.runtime.restore(cut);
+                    assertEquals(cut.sectionArtState(), f.runtime.sectionArtState()); assertEquals(cut.lastSoundRequests(), f.runtime.lastSoundRequests());
+                    assertEquals(cut.checkpointState(), f.runtime.checkpointState()); assertEquals(reserved, horizontalReserved(f.runtime));
+                    assertEquals(actor, f.frame.captureActor()); assertEquals(shared, f.frame.captureShared());
+                }
+                monitorBegin(f, 2); f.runtime.runDynamicSlotsAfterReservedSlots(); monitorFinish(f);
+                assertSame(cached, checkpointGet(f.runtime, "logShadow"));
+                if (replay == 0) {
+                    expected = f.runtime.captureClosedCut(); expectedActor = f.frame.captureActor();
+                    expectedShared = f.frame.captureShared(); expectedCpu = f.runtime.cpuSat().bytes();
+                } else {
+                    assertMonitorSnapshot(expected, f.runtime.captureClosedCut()); assertEquals(expectedActor, f.frame.captureActor());
+                    assertEquals(expected.sectionArtState(), f.runtime.sectionArtState()); assertEquals(expected.checkpointState(), f.runtime.checkpointState());
+                    assertEquals(reserved, horizontalReserved(f.runtime));
+                    assertEquals(expectedShared, f.frame.captureShared()); assertArrayEquals(expectedCpu, f.runtime.cpuSat().bytes());
+                }
+            }
+        }
+    }
+
+    private static CdObjectState logShadow33Image(Fixture f, int whole, int routine, int subtype, int sprite) throws java.io.IOException {
+        var objects = f.assets.openingObjects();
+        return f.slot(whole).moveByte(ID, CdLogShadow.OBJECT_ID).moveByte(ROUTINE, routine).moveByte(SUBTYPE, subtype)
+                .moveByte(SAVED_FLAGS_ID, 0).moveByte(SPRITE_FLAGS, sprite).moveWord(X, 0x100).moveWord(Y, 0x780)
+                .moveByte(PRIORITY, routine == 0 ? 0xA6 : 6).moveByte(WIDTH, routine == 0 ? 3 : 0x10)
+                .moveByte(Y_RADIUS, routine == 0 ? 5 : 0x10).moveByte(MAP_FRAME, routine == 0 ? 0xE1 : subtype)
+                .moveLong(MAPPINGS, routine == 0 ? 0xDEADBEEF
+                        : objects.view(com.openggf.game.soniccd.level.CdR11aObjectAssets.Table.LOG_SHADOW_MAPPINGS).range().nativeAddress())
+                .moveWord(TILE, routine == 0 ? 0xBEEF : 0x4418);
+    }
+
+    private static CdObjectState logShadow33ExpectedInit(Fixture f, CdObjectState source) throws java.io.IOException {
+        // Ordinary admitted ACT0/Present1/goodFuture0 only; not a normalization of the Body's raw selectors.
+        return source.addByte(ROUTINE, 2).moveByte(SPRITE_FLAGS, (source.spriteFlags() | 4) & 0x7F)
+                .moveByte(PRIORITY, 6).moveLong(MAPPINGS, f.assets.openingObjects().view(
+                        com.openggf.game.soniccd.level.CdR11aObjectAssets.Table.LOG_SHADOW_MAPPINGS).range().nativeAddress())
+                .moveByte(MAP_FRAME, source.subtype()).moveByte(WIDTH, 16).moveByte(Y_RADIUS, 16).moveWord(TILE, 0x4418);
+    }
+
+    private static CdOpeningObjectRuntime.LogicalBanks logShadow33Banks(int logShadow) {
+        return new CdOpeningObjectRuntime.LogicalBanks(
+                100,124,138,208,236,299,369,374,413,449,464,500,512,594,613,659,667,679,701,758,logShadow);
+    }
+
+    private static void logShadow33Closed(Fixture f) {
+        assertEquals(CdOpeningObjectRuntime.Phase.FAILED, f.runtime.phase()); assertTrue(f.runtime.closed()); assertTrue(f.frame.closed());
+        assertThrows(IllegalStateException.class, f.runtime::runDynamicSlotsAfterReservedSlots);
+        assertThrows(IllegalStateException.class, f.runtime::captureClosedCut);
+    }
+
+    // Ordinary public Frame service remains PPZ ACT0/Present1; Runtime goodFuture has no public writer.
+    // Nonzero ACT/goodFuture, dirty raw-period selectors, selected base-view faults and injected draw-port
+    // Error/reentry remain component/source-review obligations, not fabricated Runtime execution coverage.
+    // Read-only reflection observes cached identity/shape only. No Result/effect replay, private Snapshot,
+    // replacement body, new global ingress, current-art write or manual SAT is used by these additions.
+    // No actual664 atlas retirement, natural5256, controlled Body bit0, full-USA or JP/EU result is claimed.
+    // END Log Shadow Runtime R1.
 }

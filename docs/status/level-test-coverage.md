@@ -4,19 +4,24 @@
 
 Latest 26 October evidence: the partial
 [Palmtree Panic Act1 Present matrix](../architecture/validation/levels/scd-palmtree-panic-act1-present.md)
-records the ordinary four-jump route through returned call5255, with genuine
-Disc Init3259/Main3260 and Tunnel Path Init3421/Main3422. The first5256 call
-stops at unowned Log Shadow33/live47; healthy full/course cuts precede it and
-the failed call remains terminal. Neither object acquires the player on this
-route. Controlled Body and native contact/image/timing parity remain open.
+records the ordinary four-jump route through returned call5322, with genuine
+Disc Init3259/Main3260, Tunnel Path Init3421/Main3422 and Log Shadow
+Init5256/Main5257. The first5323 call stops at unowned Sonic Hole31/live46;
+healthy full/course cuts precede it and the failed call remains terminal.
+No player acquisition or controlled Body is established on this route.
+Native contact/image/timing parity remains open.
 
-The fresh affected selection passes493 cases: Runtime433, WorldLoad53, two
+The fresh affected selection passes517 cases: Runtime456, WorldLoad53, three
 real EGL products and five source guards. A separate fresh structural run
 passes728 cases across90 classes. Both have zero failures, errors or skips;
 exact commands, identities and fixture-only corrections are in the dated
 plan. Tunnel component/Frame validation separately passed1179 cases.
-Runtime retains Source17, C30, twenty logical bases and659 potential atlas
-entries. Current440 rendering/retirement remains a separate bounded product;
+Runtime retains Source17 and joins C31, twenty-one logical bases and664
+potential atlas entries. Actual current Shadow5 rendering/664 retirement
+passes after a matched old659-client cleanup failure. All69 genuine PLC10
+services run in a separate existing component; the live World is unchanged.
+Uniform33 art does not visually distinguish flips. These resource checks
+and current440 rendering remain separate bounded products;
 the native Tamabboh World scene still fails its fixed blank-floor prerequisite.
 Full-act/USA gameplay and subsequent JP/EU parity remain incomplete.
 

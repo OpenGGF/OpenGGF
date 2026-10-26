@@ -113491,3 +113491,41 @@ smoke failures remain separately recorded. Next finite native owner: Monitor19.
   plan. Bounded static Runtime and route/FM reviews find no actionable P1/P2.
   This is not full smoke, full USA, controlled Body, native image/timing or
   regional certification. Next unsupported owner is33 at5256, not07 at3421.
+
+
+### 2026-10-26 — private CD Log Shadow visits; next Sonic Hole31 at5323
+
+- Private candidate overbe61f9b089fe93e4fc4b716c7e3212192f8dcea5 binds cached
+  ID33 through the existing increasing physical pass. C31/21 logical bases
+  and client664 preserve Source17/current regions/preload/restart ownership.
+- Same Right/four B windows1201..1232,1770..1801,3002..3033,5201..5232:
+  actual Shadow47 Init5256/Main5257 return with full64 literals; physical44
+  is routine2 at5286. Ordinary controller calls1..5322 return. These culled
+  Y0088/sprite04 visits do not establish natural Shadow scene pixels.
+- First5323 stops once at unowned31/live46/FFDB80 after earlier VInt/Body/
+  spawner work. Native ObjectIndex/ObjSonicHole (Tunnel Path/Main.asm:11–103,
+  N1ecc5f3) and row297/raw16f002e8b100e000/saved86 authenticate its owner.
+  The partial slot is placement-only/routine0. Eight changed dynamics are an
+  aggregate; no complete96 native partial model, failed capture or retry.
+- Temporary observer88056 ended1/0/1/0at18:38:16Z and was removed. Permanent
+  route37307 passes1/0/0/0at19:35:53Z (34.498s execution,628s queue), with
+  complete full/course5255→5256,5256→5257,5321→5322 before/after comparisons
+  plus every retained earlier proof. Existing terminal suppressed lifecycle
+  read is not repaired away; CPU identity comes from the actual post-replay
+  reference. Independent static route review found no actionable P1/P2.
+- Separate actual-current Shadow5/664 EGL product completes all69 PLC10
+  services/199tiles in the existing component, preserves the live World and
+  retires the complete installed range. Old659 client12593 fails exactly at
+  cleanupoffset659; restored664 client90812 passes1/0/0/0at19:01:01Z. Uniform
+  native33 art cannot visually distinguish flips/equal IDs; resource identity
+  checks remain separate. No all664 scene-rendered/native geometry claim.
+- Combined90516 passes517/0/0/0at19:40:44Z (52.839s execution,76s queue):
+  Runtime456, completeWorldLoad53, actual Ring/current440/currentShadow EGL3,
+  source guards5. Exact fresh identities/XML/J25/privatecwd/media/authS2/
+  surfaceless/explicit EGL opt-in/no skips and unchanged source pins checked.
+  Exact command and five source hashes are in the dated implementation plan.
+  Earlier728 structural guards are separate, not a new full-smoke pass.
+- Next concrete owner is Sonic Hole31; existing Source17/Mosqui70 current
+  aliases suffice. No ID31 body execution, controlled player, natural Shadow
+  image/timing, whole-USA or regional parity is claimed. Main and remote stay
+  untouched; this milestone is a private local increment.
