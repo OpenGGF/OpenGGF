@@ -71,6 +71,22 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+A controller bound is not an implementation frontier (2026-10-26, CD ID21).
+Right1200 and Right3600 returned every ordinary call while Sonic pushed a live
+raw object link. Record endpoint positions/flags/links and the actual stop
+reason; do not call a loop limit an unowned feature. A subsequent authored
+controller jump reached death/reload. Retire old Runtime/Frame captures at the
+real generation change, then observe the fresh visit separately. Rewind never
+turns a failed call into a completed frame.
+
+Ceiling adjacency reverses a negative step on the full-height branch
+(2026-10-26, CD ID21): FindLevelFloor .MaxFloor subtracts a3. ObjGetCeilDist
+passes-16, so query307 reaches317. A fixture at2F7 can miss the fault despite
+correct angle writes. Keep invalid words on a legitimate unvalidated alternate
+path, not the primary chunk which terrain admission rejects before the probe.
+A later mapping reader also remains active under time-stop; dirty subtypeFF
+must not accidentally select unadmitted frame3 when testing dispatch bypass.
+
 A closed cut can precede a legitimate native placement write (2026-10-25, CD
 platform742). The unowned physical75 was free at741, then SpawnObjects created
 ID21 before Body/the failing walk742. Comparing all later images to the prior

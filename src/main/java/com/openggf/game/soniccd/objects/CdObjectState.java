@@ -44,6 +44,8 @@ public final class CdObjectState {
         TUNNEL_DOOR_TIMER_HIGH(0x3A),
         // Checkpoint/Main.asm:7-11: overlapping native storage aliases only.
         CHECKPOINT_ACTIVE(0x2E), CHECKPOINT_BALL_ANGLE(0x34),
+        // Platform/Main.asm:48-55,135-535: overlapping native byte aliases only.
+        PLATFORM_PHASE(0x2A), PLATFORM_SUBSTATE(0x2B), PLATFORM_SAG(0x2C), PLATFORM_RANGE(0x2D), PLATFORM_TIMER(0x2E),
         // Collapsing Platform/Main.asm:102,168,193,271,286: overlapping native bytes only.
         COLLAPSE_SOLID_MARKER(0x3E), COLLAPSE_SAVED_SOURCE_ID(0x3F);
         private final int offset;
@@ -79,6 +81,8 @@ public final class CdObjectState {
         CHECKPOINT_BALL_X(0x2A), CHECKPOINT_BALL_Y(0x2C),
         // Anton/Main.asm:32,72 and wrapper:14: overlapping original-X word only.
         ANTON_ANCHOR_X(0x2E),
+        // Platform/Main.asm:34-36,100,136-535: overlapping original/anchor WORD aliases only.
+        PLATFORM_INITIAL_Y(0x36), PLATFORM_ANCHOR_X(0x38), PLATFORM_ANCHOR_Y(0x3A),
         // Collapsing Platform/Main.asm:94,105,202,295: overlapping WORD countdown only.
         COLLAPSE_DELAY(0x2A);
         private final int offset;

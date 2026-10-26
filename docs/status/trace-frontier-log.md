@@ -113038,3 +113038,36 @@ smoke failures remain separately recorded. Next finite native owner: Monitor19.
   corrected Spikes8/0); the old C28 inventory omission is source-attributed,
   not claimed baseline-executed. Native startup/HUD/audio, next21 and whole
   act/region breadth remain open.
+
+
+## 2026-10-26 — private CD ID21 and fresh restart Animals PLC frontier
+
+- Candidate overd975f191b3e181e3bd75ba577318970cac7dfef9 in private
+  feature/ai-sonic-cd-objects-local only. Native ID21 Init742 and Main743 now
+  complete. Permanent Right route reaches1200 with full/course replay at
+ 741/742/1199; its old741/742 unowned boundary is historical above.
+- Permanent selector: TestSonicCdOpeningWorldLoad#ordinaryRightRouteCompletesAntonCheckpointCollapseAndPlatform21Through1200WithReplay;
+ 10332 passes1/0/0/0 at00:04:58Z,30.062s/noqueue, exact source SHA03604cdcd7e95e996422dbe0d3741343168a9ecab003d53224828a5c6dc2623b.
+  Retains all earlier natural Checkpoint649 owner comparisons BEFORE replay.
+- World21+narrow Runtime69042 passes2/0/0/0 at23:44:13Z25Oct,41.024s/queue40s,
+  Java25/actual media/S2/surfaceless EGL/no skips.16 scenes/6273 ordinary calls,
+  current12 native patterns/all12 size-flip products/full-course pixels/selected
+  retirement;81 original ENGINE PNGs after allcleanup. No658-rendered claim.
+- Right-only observers24768/22894 complete1200/3600 with no unsupported call;
+  the latter ends pushing, not at an implementation boundary. Controller script
+ 1200R;32R+B;1200R then observes actual Kill1802, routine8/reset60 at1886 and
+  production generation2 at1947. Old Runtime/Frame/actor/level retire; no
+  old-epoch replay. Probe84710 passes its bounded stop-on-epoch observation.
+- Follow-up probe33660 errors1/0/1/0 at23:59:58Z25Oct,31.041s/noqueue, source
+ 1de37190f05ac59deaec6227e0aeebf484003ebc8388a034d8049767991099a5
+ 145611B (temporary observer, external frozen mirror). Fresh calls1..6 complete;
+  fresh7/global1954 fails in finishOrdinaryTail.prepare: SectionArtException
+  UNKNOWN_SOURCE2381C0/VRAM7100. Earlier service finishes the final Boulder tile,
+  pops the queue and retains count0/budget3/head2381C0; old table/decoder remain
+  diagnostic. No failed-call resume/completed1954/native parity claim.
+- Same C29/shared Platform57/source11/bank19/658. The next source must reuse
+  cached FrontierArtBank Animals; finite native authentication/source12 and
+  permanent fresh-route promotion remain next work. Final affected31987 passes672/0/0/0 at00:11:10Z (1m48/queue21s),
+  exact8freshXML/Java25/media/EGL/S2/no skips. Fresh guards74260 pass728/0/0/0 across90 fresh reports
+  (Java25/Lua5.4;5m15/queue272s;00:22:45Z); historical fixture reds are documented
+  in the dated implementation record, not claimed green.

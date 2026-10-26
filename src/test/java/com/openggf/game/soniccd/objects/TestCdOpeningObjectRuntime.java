@@ -8492,4 +8492,538 @@ class TestCdOpeningObjectRuntime {
                 m.playerJump(),m.charge(),m.moveLock(),m.stick(),m.playerControl(),m.previousPrimaryAngle(),m.previousSecondaryAngle()));
     }
     // END Collapse Platform Runtime R1.
+
+    // BEGIN Platform21 Runtime R1. Appended tests FIRST; ALL JAVA UNRUN by this author.
+    // Constructed actual-owner device cuts, never natural742, World, native-parity or GPU evidence.
+    @Test void platform21CachedPrivateBodyAddsNoPublicLifecycleBankSoundOrSnapshotContract() throws Exception {
+        assertEquals(19,CdOpeningObjectRuntime.LogicalBanks.class.getRecordComponents().length);
+        assertEquals(3,CdOpeningObjectRuntime.CheckpointBindings.class.getRecordComponents().length);
+        assertEquals(List.of(11),java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods()).filter(m->m.getName().equals(
+                "usaR11aOpeningDevEmptySatPreloadedArt")).map(java.lang.reflect.Method::getParameterCount).toList());
+        assertEquals(List.of(14),java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredMethods()).filter(m->m.getName().equals(
+                "usaR11aRestartDevEmptySatPreloadedArt")).map(java.lang.reflect.Method::getParameterCount).toList());
+        var bodies=java.util.Arrays.stream(CdOpeningObjectRuntime.class.getDeclaredFields()).filter(f->f.getType()==CdPlatform.class).toList();
+        assertEquals(1,bodies.size());assertTrue(java.lang.reflect.Modifier.isPrivate(bodies.getFirst().getModifiers()));
+        assertTrue(java.lang.reflect.Modifier.isFinal(bodies.getFirst().getModifiers()));
+        var scope=CdOpeningObjectRuntime.class.getDeclaredField("activePlatformInvocation");
+        assertTrue(java.lang.reflect.Modifier.isPrivate(scope.getModifiers()));assertTrue(java.lang.reflect.Modifier.isTransient(scope.getModifiers()));
+        for(var method:List.of(CdOpeningObjectRuntime.class.getDeclaredMethod("runPlatform",int.class),
+                CdOpeningObjectRuntime.class.getDeclaredMethod("requirePlatformCallback"),
+                CdOpeningObjectRuntime.class.getDeclaredMethod("validatePlatformSite",CdPlatform.SolidCall.class,CdObjectState.class),
+                CdOpeningObjectRuntime.class.getDeclaredMethod("commitPlatformSolid",CdPlatform.SolidCall.class),
+                CdOpeningObjectRuntime.class.getDeclaredMethod("commitPlatformPrimaryAngle",CdPlatform.PrimaryAngleCall.class)))
+            assertTrue(java.lang.reflect.Modifier.isPrivate(method.getModifiers()));
+        assertFalse(java.util.Arrays.stream(CdOpeningObjectRuntime.Snapshot.class.getDeclaredFields()).anyMatch(f->
+                f.getType()==CdPlatform.class||f.getType().getSimpleName().equals("PlatformInvocation")
+                        ||f.getType()==CdPlatform.SolidCall.class||f.getType()==CdPlatform.PrimaryAngleCall.class));
+        assertFalse(java.util.Arrays.stream(CdOpeningObjectRuntime.SoundRequest.class.getPermittedSubclasses()).anyMatch(t->t.getSimpleName().contains("PlatformFm")
+                &&t!=CdOpeningObjectRuntime.CollapsePlatformFm.class));
+        try(var f=new Fixture()) {var body=checkpointGet(f.runtime,"platform");springDeviceCut(f);f.makePlayerAbsent();
+            f.runtime.placement().pool().write(platform21Image(f,f.slot(40),0,0x40));f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertSame(body,checkpointGet(f.runtime,"platform"));assertNull(checkpointGet(f.runtime,"activePlatformInvocation"));monitorFinish(f);}
+    }
+
+    @Test void platform21ActualInitReturnsBeforeMainTopOscillationSagAndEveryInheritedScratchWrite() throws Exception {
+        for(int zone:List.of(0,1,0xFF))try(var f=new Fixture()) {
+            springDeviceCut(f);horizontalGates(f,0xFFFF,1);monitorEnvironment(f,0xFF,1,zone,1);var p=f.runtime.placement().pool();
+            var source=platform21Image(f,p.state(40),0,0x4D).moveByte(SPRITE_FLAGS,0x81).moveByte(SOLID_TYPE,0x55)
+                    .moveByte(PLATFORM_PHASE,0xFF).moveByte(PLATFORM_SUBSTATE,0xFD).moveByte(PLATFORM_SAG,0xFE).moveByte(PLATFORM_TIMER,0xFC)
+                    .moveByte(X_RADIUS,0xA5).moveByte(ANIMATION,0x72).moveByte(PREVIOUS_ANIMATION,0x73).moveByte(FLAGS,0xAD)
+                    .moveWord(X_FRACTION,0x1234).moveWord(Y_FRACTION,0x5678).moveWord(X_VELOCITY,0xFEDC).moveWord(Y_VELOCITY,0x89AB);
+            p.write(source);var cut=p.capture().slots();var actor=f.frame.state();var env=f.frame.environment();var sounds=f.runtime.lastSoundRequests();
+            f.runtime.runDynamicSlotsAfterReservedSlots();var a=CdPlatform.Assets.fromObjectAssets(f.assets.openingObjects());
+            var expected=source.moveByte(SPRITE_FLAGS,5).moveWord(TILE,0x44BE).moveByte(PRIORITY,2)
+                    .moveWord(PLATFORM_ANCHOR_X,source.centreX()).moveWord(PLATFORM_ANCHOR_Y,source.centreY()).moveWord(PLATFORM_INITIAL_Y,source.centreY())
+                    .moveLong(MAPPINGS,a.mappingsAddress()).moveByte(MAP_FRAME,1).moveByte(WIDTH,0x20).moveByte(Y_RADIUS,8)
+                    .moveByte(PLATFORM_RANGE,6).moveByte(ROUTINE,2);
+            assertEquals(expected,p.state(40));platform21OtherImages(cut,p,40);assertEquals(actor,f.frame.state());assertEquals(env,f.frame.environment());
+            assertEquals(sounds,f.runtime.lastSoundRequests());assertNull(checkpointGet(f.runtime,"activePlatformInvocation"));monitorFinish(f);
+        }
+    }
+
+    @Test void platform21AllTenActualFamiliesKeepNativeByteWordLongOrderAndDirtyNonwrites() throws Exception {
+        for(int family=0;family<10;family++)try(var f=new Fixture()) {
+            springDeviceCut(f);f.makePlayerAbsent();var p=f.runtime.placement().pool();
+            var source=platform21Image(f,p.state(40),2,family<<4).moveByte(PLATFORM_PHASE,0xFF).moveByte(PLATFORM_SAG,0xFF)
+                    .moveWord(X_FRACTION,0xBEEF).moveWord(Y_FRACTION,0xABCD).moveWord(X_VELOCITY,0x1234).moveWord(Y_VELOCITY,0xFEDC)
+                    .moveByte(ANIMATION,0x72).moveByte(SUBTYPE2,0xFF).moveByte(SOLID_TYPE,0x55);
+            p.write(source);var cut=p.capture().slots();var actor=f.frame.state();var sounds=f.runtime.lastSoundRequests();
+            var expected=source;int phase=family==1?0xFF:0;int osc=platform21Osc(f,phase,source.unsignedByte(PLATFORM_RANGE));
+            if(family==0)expected=expected.moveByte(PLATFORM_PHASE,0).moveWord(Y,source.word(PLATFORM_ANCHOR_Y)+osc);
+            else if(family<=3) {
+                expected=expected.moveByte(PLATFORM_PHASE,0).moveWord(X,source.word(PLATFORM_ANCHOR_X)+(family==3?-osc:osc));
+                expected=expected.moveWord(Y,source.word(PLATFORM_ANCHOR_Y)+(family==1?255:osc));
+                int delta=expected.longBits(CdObjectState.LongField.X_POSITION)-source.longBits(CdObjectState.LongField.X_POSITION);
+                expected=expected.moveWord(X_VELOCITY,delta>>8).moveByte(PLATFORM_SAG,0xFE);
+            } else expected=expected.moveWord(Y,source.word(PLATFORM_ANCHOR_Y)+255).moveByte(PLATFORM_SAG,0xFE);
+            expected=expected.moveByte(SOLID_TYPE,0).moveByte(SPRITE_FLAGS,4);
+            f.runtime.runDynamicSlotsAfterReservedSlots();assertEquals(expected,p.state(40),"native family "+family);
+            platform21OtherImages(cut,p,40);assertEquals(actor,f.frame.state());assertEquals(sounds,f.runtime.lastSoundRequests());monitorFinish(f);
+        }
+    }
+
+    @Test void platform21StationarySagUsesAsrByteNotSignedWordAndDoesNotClampDirtyCounter() throws Exception {
+        for(int sag:List.of(0,1,8,0x80,0xFF))try(var f=new Fixture()) {
+            springDeviceCut(f);f.makePlayerAbsent();var p=f.runtime.placement().pool();
+            var source=platform21Image(f,p.state(40),2,0x40).moveByte(PLATFORM_SAG,sag).moveWord(Y_FRACTION,0xFEED);p.write(source);
+            f.runtime.runDynamicSlotsAfterReservedSlots();int displacement=((byte)sag>>1)&255;
+            assertEquals(source.moveWord(Y,source.word(PLATFORM_ANCHOR_Y)+displacement).moveByte(PLATFORM_SAG,sag==0?0:sag-1)
+                    .moveByte(SOLID_TYPE,0).moveByte(SPRITE_FLAGS,4),p.state(40));monitorFinish(f);
+        }
+    }
+
+    @Test void platform21FullWordTimeStopBypassesInvalidSubtypeSubdirectoryAndAnchorTail() throws Exception {
+        for(int timer:List.of(0x100,0xFFFF))try(var f=new Fixture(new CdRingGlobals(0,3,0,0,0,timer,0,0))) {
+            springDeviceCut(f);f.makePlayerAbsent();var p=f.runtime.placement().pool();assertNotEquals(0,f.runtime.ringGlobals().timeStopTimer());
+            var source=platform21Image(f,p.state(40),2,0xFF).moveByte(MAP_FRAME,0).moveByte(PLATFORM_SUBSTATE,0xFF).moveByte(PLATFORM_PHASE,0xFD)
+                    .moveByte(PLATFORM_SAG,0xFE).moveWord(PLATFORM_ANCHOR_X,0x8000).moveWord(Y_FRACTION,0x1234);p.write(source);
+            f.runtime.runDynamicSlotsAfterReservedSlots();assertEquals(source.moveByte(SOLID_TYPE,0).moveByte(SPRITE_FLAGS,4),p.state(40));
+            assertNull(checkpointGet(f.runtime,"activePlatformInvocation"));monitorFinish(f);
+        }
+    }
+
+    @Test void platform21NoOuterVisibilityDebugMiniOrGoodFutureGateSkipsActualNativeMovement() throws Exception {
+        try(var f=new Fixture()) {
+            springDeviceCut(f);horizontalGates(f,0xFF00,1);var p=f.runtime.placement().pool();
+            var source=platform21Image(f,p.state(40),2,0).moveByte(SPRITE_FLAGS,0).moveByte(PLATFORM_PHASE,0x3F);p.write(source);
+            f.runtime.runDynamicSlotsAfterReservedSlots();assertEquals(0x40,p.state(40).unsignedByte(PLATFORM_PHASE));
+            assertEquals((source.word(PLATFORM_ANCHOR_Y)+platform21Osc(f,0x40,2))&0xFFFF,p.state(40).centreY());
+            assertEquals(0,p.state(40).unsignedByte(SOLID_TYPE));monitorFinish(f);
+        }
+    }
+
+    @Test void platform21RealTopCarriesActualFrameFractionsAndPreservesLegacySolidTopology() throws Exception {
+        for(int velocity:List.of(0,0x123,-0x123))try(var f=new Fixture()) {
+            springDeviceCut(f);var p=f.runtime.placement().pool();var source=platform21Contact(f,0x40,velocity,0,0)
+                    .moveWord(X_VELOCITY,velocity).moveByte(PLATFORM_SAG,0);p.write(source);
+            var call=platform21PureCall(f,source);var expected=assertInstanceOf(CdSolidObject.Completed.class,call.outcome()).completedResult();
+            assertEquals(CdSolidObject.Path.STAND_ON,expected.path());assertTrue(expected.calls().stream().anyMatch(CdSolidObject.FloorDistance.class::isInstance));
+            assertEquals(velocity!=0,expected.calls().stream().anyMatch(CdSolidObject.RoomInFront.class::isInstance));
+            int oldFraction=f.frame.state().motion().centreY16_16()&0xFFFF;var sounds=new ArrayList<>(f.runtime.lastSoundRequests());
+            for(var request:expected.fmRequests())sounds.add(new CdOpeningObjectRuntime.PlayerSound(new CdPlayerFrameRuntime.ContactFmSound(request)));
+            f.runtime.runDynamicSlotsAfterReservedSlots();assertEquals(expected.object().moveByte(PLATFORM_SAG,1).moveByte(SPRITE_FLAGS,4),p.state(40));
+            assertEquals(expected.player(),tunnelDoorPlayer(f));assertEquals(expected.globals(),tunnelDoorGlobals(f));assertEquals(oldFraction,f.frame.state().motion().centreY16_16()&0xFFFF);
+            assertEquals(sounds,f.runtime.lastSoundRequests());assertEquals(40,f.frame.state().objectLinks().standObject());monitorFinish(f);
+        }
+    }
+
+    @Test void platform21FiveFirstContactCallsTopTwiceAndKeepsEarlierBodyAndSharedFmLedger() throws Exception {
+        try(var f=new Fixture()) {
+            springDeviceCut(f);var p=f.runtime.placement().pool();var source=platform21Contact(f,0x50,0,40,1).moveByte(FLAGS,8);p.write(source);
+            var first=assertInstanceOf(CdSolidObject.Completed.class,platform21PureCall(f,source).outcome()).completedResult();
+            var middle=first.object().moveByte(PLATFORM_SAG,1).moveByte(PLATFORM_SUBSTATE,2).moveByte(PLATFORM_TIMER,29)
+                    .moveWord(Y,source.word(PLATFORM_ANCHOR_Y));
+            var second=CdSolidObject.fromAssets(f.assets).run(CdSolidObject.Entry.TOP_SOLID_OBJECT,middle,first.player(),new CdSolidObject.Gates(0,0),first.globals(),
+                    CdObjectPool.overlay(p.capture(),List.of(middle)));
+            var sounds=new ArrayList<>(f.runtime.lastSoundRequests());for(var request:first.fmRequests())sounds.add(new CdOpeningObjectRuntime.PlayerSound(new CdPlayerFrameRuntime.ContactFmSound(request)));
+            for(var request:second.fmRequests())sounds.add(new CdOpeningObjectRuntime.PlayerSound(new CdPlayerFrameRuntime.ContactFmSound(request)));
+            f.runtime.runDynamicSlotsAfterReservedSlots();assertEquals(second.object().moveByte(PLATFORM_SAG,second.d0().orElseThrow()!=0?2:0).moveByte(SPRITE_FLAGS,4),p.state(40));
+            assertEquals(second.player(),tunnelDoorPlayer(f));assertEquals(second.globals(),tunnelDoorGlobals(f));assertEquals(sounds,f.runtime.lastSoundRequests());monitorFinish(f);
+        }
+    }
+
+    @Test void platform21FiveTimerOneStillRunsSagWhileZeroRunsFullLongDropAndUnsignedAcceleration() throws Exception {
+        for(int timer:List.of(1,0))for(int velocity:List.of(0,0x3FF,0x400,0xFFFF))try(var f=new Fixture()) {
+            springDeviceCut(f);f.makePlayerAbsent();var p=f.runtime.placement().pool();
+            var source=platform21Image(f,p.state(40),2,0x50).moveByte(PLATFORM_SUBSTATE,0xFD).moveByte(PLATFORM_TIMER,timer)
+                    .moveByte(PLATFORM_SAG,3).moveWord(Y,0x740).moveWord(Y_FRACTION,0xFF80).moveWord(Y_VELOCITY,velocity);p.write(source);
+            var expected=source.moveByte(SOLID_TYPE,0).moveByte(SPRITE_FLAGS,4);
+            if(timer==1)expected=expected.moveByte(PLATFORM_TIMER,0).moveWord(Y,source.word(PLATFORM_ANCHOR_Y)+1).moveByte(PLATFORM_SAG,2);
+            else expected=expected.addLong(CdObjectState.LongField.Y_POSITION,((short)velocity)<<8).moveWord(Y_VELOCITY,velocity<0x400?velocity+0x40:velocity);
+            f.runtime.runDynamicSlotsAfterReservedSlots();assertEquals(expected,p.state(40));monitorFinish(f);
+        }
+    }
+
+    @Test void platform21FiveVerticalDeleteDoesNotClearSavedMembershipAndStillReachesClearedAnchorTail() throws Exception {
+        for(boolean anchorDeletes:List.of(false,true))try(var f=new Fixture()) {
+            platform21DeviceCut(f,new CameraWords(anchorDeletes?0x400:0,PRE.yWord()));f.makePlayerAbsent();var p=f.runtime.placement().pool();
+            var source=platform21Image(f,p.state(40),2,0x50).moveByte(PLATFORM_SUBSTATE,2).moveByte(PLATFORM_TIMER,0)
+                    .moveWord(Y,PRE.yWord()+0x101).moveByte(SAVED_FLAGS_ID,3);p.write(source);
+            f.runtime.placement().bsetSavedFlag(3,1,CdObjectPlacementRuntime.SavedBit.LOADED);
+            // Main uses the cleared anchor0 after DeleteObject. Camera0's preceding chunk gives0080;
+            // camera0400 givesFD00 and takes the second GetOff on the real all-zero source.
+            var saved=f.runtime.placement().capture().savedFlags().copy();var sounds=f.runtime.lastSoundRequests();
+            f.runtime.runDynamicSlotsAfterReservedSlots();assertArrayEquals(new byte[64],p.state(40).copyBytes());
+            assertArrayEquals(saved,f.runtime.placement().capture().savedFlags().copy());assertEquals(sounds,f.runtime.lastSoundRequests());
+            assertNull(checkpointGet(f.runtime,"activePlatformInvocation"));monitorFinish(f);
+        }
+    }
+
+    @Test void platform21FiveVerticalThresholdEqualitySurvivesBeforeStrictlyLowerUnsignedThresholdDeletes() throws Exception {
+        for(int delta:List.of(0,1))try(var f=new Fixture()) {
+            springDeviceCut(f);f.makePlayerAbsent();var p=f.runtime.placement().pool();
+            var source=platform21Image(f,p.state(40),2,0x50).moveByte(PLATFORM_SUBSTATE,2).moveWord(Y,PRE.yWord()+0x100+delta);p.write(source);
+            f.runtime.runDynamicSlotsAfterReservedSlots();assertEquals(delta==0?0x21:0,p.state(40).id());
+            if(delta==0)assertEquals(0x40,p.state(40).word(Y_VELOCITY));monitorFinish(f);
+        }
+    }
+
+    @Test void platform21SixMovementUsesOldPhaseThenAddsTwoAndNextVisitSavesCurrentY() throws Exception {
+        for(int phase:List.of(0,0x3E,0x3F,0x40,0xFF))try(var f=new Fixture()) {
+            springDeviceCut(f);f.makePlayerAbsent();var p=f.runtime.placement().pool();var source=platform21Image(f,p.state(40),2,0x60)
+                    .moveByte(PLATFORM_SUBSTATE,2).moveByte(PLATFORM_PHASE,phase).moveByte(PLATFORM_SAG,0).moveWord(Y,0x735).moveWord(Y_FRACTION,0xABCD);p.write(source);
+            var expected=source.moveByte(SOLID_TYPE,0).moveByte(SPRITE_FLAGS,4);
+            if(phase<0x40)expected=expected.moveWord(Y,source.word(PLATFORM_ANCHOR_Y)-platform21Osc(f,phase,2)).moveByte(PLATFORM_PHASE,phase+2);
+            else expected=expected.moveWord(PLATFORM_ANCHOR_Y,source.centreY()).moveByte(PLATFORM_SUBSTATE,4);
+            f.runtime.runDynamicSlotsAfterReservedSlots();assertEquals(expected,p.state(40));monitorFinish(f);
+        }
+    }
+
+    @Test void platform21SevenEightNineFirstContactRunsTheSameVisitTimerAndSecondTop() throws Exception {
+        for(int family:List.of(7,8,9))try(var f=new Fixture()) {
+            springDeviceCut(f);var p=f.runtime.placement().pool();p.write(platform21Contact(f,family<<4,0,0,0));
+            f.runtime.runDynamicSlotsAfterReservedSlots();assertEquals(2,p.state(40).unsignedByte(PLATFORM_SUBSTATE));
+            assertEquals(0x3B,p.state(40).unsignedByte(PLATFORM_TIMER));assertEquals(2,p.state(40).unsignedByte(PLATFORM_SAG));
+            assertEquals(40,f.frame.state().objectLinks().standObject());monitorFinish(f);
+        }
+    }
+
+    @Test void platform21EightNineTimerAndLastPhaseKeepLastVelocityWithoutForcedFortySample() throws Exception {
+        for(int family:List.of(8,9))for(int timer:List.of(1,0))for(int phase:List.of(0x3F,0x40,0xFF))try(var f=new Fixture()) {
+            springDeviceCut(f);f.makePlayerAbsent();var p=f.runtime.placement().pool();var source=platform21Image(f,p.state(40),2,family<<4)
+                    .moveByte(PLATFORM_SUBSTATE,2).moveByte(PLATFORM_TIMER,timer).moveByte(PLATFORM_PHASE,phase).moveByte(PLATFORM_SAG,3)
+                    .moveWord(X,0x115).moveWord(X_FRACTION,0xBEEF).moveWord(X_VELOCITY,0xFEDC);p.write(source);
+            var expected=source.moveByte(SOLID_TYPE,0).moveByte(SPRITE_FLAGS,4).moveByte(PLATFORM_SAG,2);
+            if(timer!=0)expected=expected.moveByte(PLATFORM_TIMER,0).moveWord(Y,source.word(PLATFORM_ANCHOR_Y)+1);
+            else if(phase<0x40) {
+                int osc=platform21Osc(f,phase,2);expected=expected.moveWord(X,source.word(PLATFORM_ANCHOR_X)+(family==9?-osc:osc))
+                        .moveByte(PLATFORM_PHASE,phase+1).moveWord(Y,source.word(PLATFORM_ANCHOR_Y)+1);
+                expected=expected.moveWord(X_VELOCITY,(expected.longBits(CdObjectState.LongField.X_POSITION)-source.longBits(CdObjectState.LongField.X_POSITION))>>8);
+            } else expected=expected.moveWord(PLATFORM_ANCHOR_X,source.centreX()).moveByte(PLATFORM_SUBSTATE,4).moveWord(Y,source.word(PLATFORM_ANCHOR_Y)+1);
+            f.runtime.runDynamicSlotsAfterReservedSlots();assertEquals(expected,p.state(40));monitorFinish(f);
+        }
+    }
+
+    @Test void platform21SevenActualObjMoveAndCeilingRawAngleAdoptIntoFrameBeforeFollowingTop() throws Exception {
+        try(var f=new Fixture()) {
+            springDeviceCut(f);f.makePlayerAbsent();var p=f.runtime.placement().pool();seedTunnelDoorGlobals(f,0,4,0x55,0x66);f.angleWrites.clear();
+            var source=platform21Image(f,p.state(40),2,0x70).moveByte(PLATFORM_SUBSTATE,2).moveByte(PLATFORM_TIMER,0)
+                    .moveWord(X_FRACTION,0xFF80).moveWord(Y_FRACTION,0x1280).moveWord(X_VELOCITY,0x123).moveWord(Y_VELOCITY,0xFFF0);p.write(source);
+            var moved=source.addLong(CdObjectState.LongField.X_POSITION,0x123<<8).addLong(CdObjectState.LongField.Y_POSITION,-16<<8).moveWord(Y_VELOCITY,-24);
+            var writes=new ArrayList<Integer>();var ceiling=CdObjectCollisionCheck.objGetCeilDist(new com.openggf.game.soniccd.player.CdPlayerTerrain(f.assets.terrain()),moved,0x55,writes::add);
+            var expected=moved;if(ceiling.distance()<0)expected=expected.moveWord(Y,moved.centreY()-ceiling.distance()).moveWord(PLATFORM_ANCHOR_Y,moved.centreY()-ceiling.distance()).moveByte(PLATFORM_SUBSTATE,4);
+            expected=expected.moveByte(SOLID_TYPE,0).moveByte(SPRITE_FLAGS,4);f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(expected,p.state(40));assertEquals(ceiling.primaryAngle(),f.frame.environment().movement().globals().primaryAngle());
+            assertEquals(0x66,f.frame.environment().movement().globals().secondaryAngle());assertTrue(f.angleWrites.isEmpty());
+            assertEquals(writes.isEmpty()?0x55:writes.getLast().intValue(),f.frame.environment().movement().globals().primaryAngle());monitorFinish(f);
+        }
+    }
+
+    @Test void platform21SevenReachedRealTerrainAngleStoresPublishOnlyRawPrimaryThroughActualRuntime() throws Exception {
+        try(var f=new Fixture()) {
+            springDeviceCut(f);f.makePlayerAbsent();seedTunnelDoorGlobals(f,0,4,0x55,0x66);var p=f.runtime.placement().pool();
+            var terrain=new com.openggf.game.soniccd.player.CdPlayerTerrain(f.assets.terrain());CdObjectState source=null;CdObjectCollisionCheck.CeilingDistance ceiling=null;
+            search:for(int x=0x80;x<=0x180;x+=16)for(int y=0x700;y<0x800;y++) {
+                var candidate=platform21Image(f,p.state(40),2,0x70).moveByte(PLATFORM_SUBSTATE,2).moveWord(X,x).moveWord(Y,y).moveWord(PLATFORM_ANCHOR_Y,y);
+                var writes=new ArrayList<Integer>();var result=CdObjectCollisionCheck.objGetCeilDist(terrain,candidate.moveWord(Y_VELOCITY,-8),0x55,writes::add);
+                if(!writes.isEmpty()){source=candidate;ceiling=result;break search;}
+            }
+            assertNotNull(source,"Declared bounded actual-terrain search must reach a genuine raw ceiling angle store");assertNotNull(ceiling);p.write(source);
+            var expected=source.moveWord(Y_VELOCITY,-8);if(ceiling.distance()<0)expected=expected.moveWord(Y,source.centreY()-ceiling.distance())
+                    .moveWord(PLATFORM_ANCHOR_Y,source.centreY()-ceiling.distance()).moveByte(PLATFORM_SUBSTATE,4);
+            expected=expected.moveByte(SOLID_TYPE,0).moveByte(SPRITE_FLAGS,4);var actor=f.frame.state();var cut=p.capture().slots();f.angleWrites.clear();
+            f.runtime.runDynamicSlotsAfterReservedSlots();assertEquals(expected,p.state(40));assertEquals(ceiling.primaryAngle(),tunnelDoorGlobals(f).primaryAngle());
+            assertEquals(0x66,tunnelDoorGlobals(f).secondaryAngle());assertEquals(actor,f.frame.state());assertTrue(f.angleWrites.isEmpty());platform21OtherImages(cut,p,40);monitorFinish(f);
+        }
+    }
+
+    @Test void platform21SevenUnavailableCeilingKeepsObjMoveVelocityPrefixAndStopsBeforeTopOrDraw() throws Exception {
+        try(var f=new Fixture()) {
+            springDeviceCut(f);f.makePlayerAbsent();var p=f.runtime.placement().pool();seedTunnelDoorGlobals(f,0,4,0x55,0x66);
+            // A real supported Terrain owner with an unavailable alternate foreground byte, not a throwing callback.
+            var source=platform21Image(f,p.state(40),2,0x70).moveByte(PLATFORM_SUBSTATE,2).moveByte(SPRITE_FLAGS,0xC4)
+                    .moveWord(X,0x100).moveWord(Y,0x80).moveWord(X_VELOCITY,0x123).moveWord(Y_VELOCITY,0xFFF0);p.write(source);
+            var moved=source.addLong(CdObjectState.LongField.X_POSITION,0x123<<8).addLong(CdObjectState.LongField.Y_POSITION,-16<<8).moveWord(Y_VELOCITY,-24);
+            var body=new CdPlatform(f.runtime.placement(),CdPlatform.Assets.fromObjectAssets(f.assets.openingObjects()),
+                    new com.openggf.game.soniccd.player.CdPlayerMath(f.assets.player()),platform21UnavailableTerrain(),CdSolidObject.fromAssets(f.assets),
+                    call->fail("unavailable ceiling precedes Top"),call->{assertEquals(moved,call.expectedSource());f.frame.applyObjectPrimaryAngle(call.value());},
+                    (pool,slot)->fail("unavailable ceiling precedes Draw"));
+            var failure=assertThrows(IllegalStateException.class,()->body.run(40,new CdPlatform.Globals(0x100,0,0,PRE.yWord(),1),
+                    new CdPlatform.Inputs(tunnelDoorPlayer(f),new CdSolidObject.Gates(0,0),tunnelDoorGlobals(f))));
+            assertTrue(failure.getMessage().startsWith("Unavailable native collision word"));
+            assertEquals(moved,p.state(40));assertEquals(0x66,f.frame.environment().movement().globals().secondaryAngle());
+        }
+    }
+
+    @Test void platform21OptionalSpringDirtyEarlierSlotKeepsExactUnwrittenImageAndRawUnsignedInitialOffset() throws Exception {
+        for(int secondary:List.of(2,0xF8))try(var f=new Fixture()) {
+            springDeviceCut(f);f.makePlayerAbsent();var p=f.runtime.placement().pool();var dirty=p.state(32).moveByte(FLAGS,0xA5)
+                    .moveWord(X_FRACTION,0x1234).moveWord(Y_FRACTION,0x5678).moveByte(ANIMATION,0x72).moveByte(SAVED_FLAGS_ID,0xDD);p.write(dirty);
+            var source=platform21Image(f,p.state(40),0,0x40).moveByte(SUBTYPE2,secondary);p.write(source);var actor=f.frame.state();
+            f.runtime.runDynamicSlotsAfterReservedSlots();var expected=dirty.moveByte(ID,0x0A).moveWord(X,source.centreX()+(secondary&0xF8))
+                    .moveWord(Y,source.centreY()-16).moveByte(SPRING_PARENT_Y_OFFSET,0xF0).moveWord(SPRING_PARENT,source.identity().nativeAddress24())
+                    .moveByte(SUBTYPE,secondary&2).moveByte(SPRING_PARENT_X_OFFSET,secondary&0xF8);
+            assertEquals(expected,p.state(32));assertEquals(0,p.state(32).routine());assertEquals(2,p.state(40).routine());assertEquals(actor,f.frame.state());monitorFinish(f);
+        }
+    }
+
+    @Test void platform21OptionalSpringLaterSlotRunsItsActualInitInTheSamePhysicalPass() throws Exception {
+        try(var f=new Fixture()) {
+            springDeviceCut(f);f.makePlayerAbsent();var p=f.runtime.placement().pool();p.write(platform21Image(f,p.state(32),0,0x40).moveByte(SUBTYPE2,2));
+            f.runtime.runDynamicSlotsAfterReservedSlots();assertEquals(0x0A,p.state(33).id());assertEquals(2,p.state(33).routine());
+            assertEquals(0xD800,p.state(33).word(SPRING_PARENT));assertEquals(0xF0,p.state(33).unsignedByte(SPRING_PARENT_Y_OFFSET));
+            assertEquals(p.state(32).centreX(),p.state(33).centreX());assertEquals((p.state(32).centreY()-16)&0xFFFF,p.state(33).centreY());monitorFinish(f);
+        }
+    }
+
+    @Test void platform21InitCapacityDestroyReturnsDirectlyToDrawWithoutMainAnchorGetOff() throws Exception {
+        try(var f=new Fixture()) {
+            platform21DeviceCut(f,new CameraWords(0x400,PRE.yWord()));var p=f.runtime.placement().pool();for(int i=32;i<128;i++)p.write(collapseImage(f,p.state(i),4,0x80).moveWord(COLLAPSE_DELAY,100));
+            var source=platform21Image(f,p.state(40),0,0x50).moveByte(SUBTYPE2,2).moveByte(FLAGS,8).moveByte(SAVED_FLAGS_ID,3);p.write(source);
+            seedSolidPlayer(f,8,40,1,0,0,0x1001234,0x7405678);
+            f.runtime.placement().bsetSavedFlag(3,1,CdObjectPlacementRuntime.SavedBit.LOADED);var actor=f.frame.state();var sounds=f.runtime.lastSoundRequests();
+            f.runtime.runDynamicSlotsAfterReservedSlots();assertArrayEquals(new byte[64],p.state(40).copyBytes());assertEquals(actor,f.frame.state());
+            assertEquals(0,f.runtime.placement().savedFlag(3,1)&0x80);assertEquals(sounds,f.runtime.lastSoundRequests());assertNull(checkpointGet(f.runtime,"activePlatformInvocation"));monitorFinish(f);
+        }
+    }
+
+    @Test void platform21AnchorUsesUnsignedChunkBhiAndRawPeriodOnlyWhenSavedIdIsNonzero() throws Exception {
+        for(int anchor:List.of(0x200,0x280,0xFF80))try(var f=new Fixture()) {
+            platform21DeviceCut(f,new CameraWords(0x80,PRE.yWord()));f.makePlayerAbsent();var p=f.runtime.placement().pool();monitorEnvironment(f,0xFF,1,0,0);
+            // camera0080 makes the comparison base0, so chunk0280 is equality and FF80 is unsigned large.
+            var source=platform21Image(f,p.state(40),2,0x40).moveWord(PLATFORM_ANCHOR_X,anchor);p.write(source);
+            f.runtime.runDynamicSlotsAfterReservedSlots();assertEquals(anchor==0xFF80?0:0x21,p.state(40).id());monitorFinish(f);
+        }
+        for(int period:List.of(0,1,2))try(var f=new Fixture()) {
+            springDeviceCut(f);f.makePlayerAbsent();monitorEnvironment(f,period,1,0,0);var p=f.runtime.placement().pool();
+            p.write(platform21Image(f,p.state(40),2,0x40).moveWord(PLATFORM_ANCHOR_X,0x8000).moveByte(SAVED_FLAGS_ID,3));
+            for(int t=0;t<3;t++)f.runtime.placement().bsetSavedFlag(3,t,CdObjectPlacementRuntime.SavedBit.LOADED);
+            f.runtime.runDynamicSlotsAfterReservedSlots();for(int t=0;t<3;t++)assertEquals(t==period?0:0x80,f.runtime.placement().savedFlag(3,t)&0x80);monitorFinish(f);
+        }
+    }
+
+    @Test void platform21RawSavedPeriodUsesExactLinearByteAliasWithoutMaskingOrWarpRemap() throws Exception {
+        for(int period:List.of(3,0x81,0xFF))try(var f=new Fixture()) {
+            springDeviceCut(f);var p=f.runtime.placement().pool();monitorEnvironment(f,period,1,0,0);
+            var source=platform21Image(f,p.state(40),2,0x40).moveByte(FLAGS,8).moveByte(SAVED_FLAGS_ID,3).moveWord(PLATFORM_ANCHOR_X,0x8000);p.write(source);
+            seedSolidPlayer(f,8,40,1,0,0,0x02001234,0x07005678);int index=2+3*3+period;int id=(index-2)/3,zone=(index-2)%3;
+            f.runtime.placement().bsetSavedFlag(id,zone,CdObjectPlacementRuntime.SavedBit.LOADED);var saved=f.runtime.placement().capture().savedFlags().copy();saved[index]&=0x7F;
+            var expected=assertInstanceOf(CdSolidObject.Completed.class,platform21PureCall(f,source).outcome()).completedResult();
+            var sounds=new ArrayList<>(f.runtime.lastSoundRequests());for(var request:expected.fmRequests())sounds.add(new CdOpeningObjectRuntime.PlayerSound(new CdPlayerFrameRuntime.ContactFmSound(request)));
+            f.runtime.runDynamicSlotsAfterReservedSlots();assertArrayEquals(new byte[64],p.state(40).copyBytes());assertEquals(expected.player(),tunnelDoorPlayer(f));
+            assertEquals(expected.globals(),tunnelDoorGlobals(f));assertEquals(sounds,f.runtime.lastSoundRequests());assertArrayEquals(saved,f.runtime.placement().capture().savedFlags().copy());monitorFinish(f);
+        }
+    }
+
+    @Test void platform21ReachedOutOfBankRawAddressRetainsTopGetOffPrefixAndStopsBeforeDeletion() throws Exception {
+        try(var f=new Fixture()) {
+            springDeviceCut(f);var p=f.runtime.placement().pool();monitorEnvironment(f,0xFF,1,0,0);
+            var source=platform21Image(f,p.state(40),2,0x40).moveByte(FLAGS,8).moveByte(SAVED_FLAGS_ID,0xFF).moveWord(PLATFORM_ANCHOR_X,0x8000);p.write(source);
+            seedSolidPlayer(f,8,40,1,0,0,0x02001234,0x07005678);var saved=f.runtime.placement().capture().savedFlags().copy();
+            var expected=assertInstanceOf(CdSolidObject.Completed.class,platform21PureCall(f,source).outcome()).completedResult();
+            var sounds=new ArrayList<>(f.runtime.lastSoundRequests());for(var request:expected.fmRequests())sounds.add(new CdOpeningObjectRuntime.PlayerSound(new CdPlayerFrameRuntime.ContactFmSound(request)));
+            var failure=assertThrows(CdPlatform.UnsupportedPlatform.class,f.runtime::runDynamicSlotsAfterReservedSlots);
+            assertEquals(CdPlatform.UnsupportedBoundary.SAVED_FLAGS_ADDRESS,failure.boundary());assertEquals(1022,failure.byteOffset());
+            assertEquals(expected.object(),p.state(40));assertEquals(expected.player(),tunnelDoorPlayer(f));assertEquals(expected.globals(),tunnelDoorGlobals(f));
+            assertEquals(sounds,checkpointGet(f.runtime,"sounds"));assertArrayEquals(saved,f.runtime.placement().capture().savedFlags().copy());
+            assertNull(checkpointGet(f.runtime,"activePlatformInvocation"));assertTrue(f.runtime.closed());
+        }
+    }
+
+    @Test void platform21SixActualContactFallsDirectlyIntoMovementAfterItsFirstSagTop() throws Exception {
+        try(var f=new Fixture()) {
+            springDeviceCut(f);var p=f.runtime.placement().pool();var source=platform21Contact(f,0x60,0,0,0);p.write(source);
+            f.runtime.runDynamicSlotsAfterReservedSlots();assertEquals(2,p.state(40).unsignedByte(PLATFORM_SUBSTATE));assertEquals(2,p.state(40).unsignedByte(PLATFORM_PHASE));
+            assertEquals(source.word(PLATFORM_ANCHOR_Y),p.state(40).centreY());assertEquals(1,p.state(40).unsignedByte(PLATFORM_SAG));
+            assertEquals(40,f.frame.state().objectLinks().standObject());monitorFinish(f);
+        }
+    }
+
+    @Test void platform21OddReachedSubdirectoriesStopAfterInitAcceptedTheirUnwrittenRawByte() throws Exception {
+        for(int family:List.of(6,7,8,9))try(var f=new Fixture()) {
+            springDeviceCut(f);f.makePlayerAbsent();var p=f.runtime.placement().pool();var source=platform21Image(f,p.state(40),2,family<<4).moveByte(PLATFORM_SUBSTATE,1);p.write(source);
+            assertThrows(UnsupportedOperationException.class,f.runtime::runDynamicSlotsAfterReservedSlots);assertEquals(source,p.state(40));
+            assertNull(checkpointGet(f.runtime,"activePlatformInvocation"));assertTrue(f.runtime.closed());
+        }
+    }
+
+    @Test void platform21ReachedInvalidNativeDispatchKeepsEarlierWorkAndNeverReachesLaterVisitOrTail() throws Exception {
+        for(boolean routine:List.of(false,true))try(var f=new Fixture()) {
+            springDeviceCut(f);f.makePlayerAbsent();var p=f.runtime.placement().pool();p.write(platform21Image(f,p.state(32),2,0).moveByte(PLATFORM_PHASE,0));
+            var bad=platform21Image(f,p.state(40),routine?3:2,routine?0x40:0xF0);p.write(bad);var later=platform21Image(f,p.state(41),2,0);p.write(later);
+            assertThrows(UnsupportedOperationException.class,f.runtime::runDynamicSlotsAfterReservedSlots);assertEquals(1,p.state(32).unsignedByte(PLATFORM_PHASE));
+            assertEquals(bad,p.state(40));assertEquals(later,p.state(41));assertNull(checkpointGet(f.runtime,"activePlatformInvocation"));assertTrue(f.runtime.closed());
+            assertThrows(IllegalStateException.class,f.runtime::captureClosedCut);assertThrows(IllegalStateException.class,f.runtime::runDynamicSlotsAfterReservedSlots);
+        }
+    }
+
+    @Test void platform21PrimaryAliasZeroAndDistinctDirtyIdZeroReleaseUseActualNativePhysicalBytes() throws Exception {
+        for(int stand:List.of(0,41))try(var f=new Fixture()) {
+            springDeviceCut(f);var p=f.runtime.placement().pool();var source=platform21Contact(f,0x40,0,0,0).moveByte(FLAGS,8);p.write(source);
+            var dirty=p.state(41).moveByte(ID,0x18).moveByte(FLAGS,0xAD).moveByte(SUBTYPE2,0xDD).moveWord(X_FRACTION,0x1234).moveWord(Y_FRACTION,0x5678);p.write(dirty);p.objNull(41);dirty=p.state(41);
+            var m=f.frame.state().motion();seedSolidPlayer(f,8,stand,0,0,0,m.centreX16_16(),m.centreY16_16());
+            var expected=assertInstanceOf(CdSolidObject.Completed.class,platform21PureCall(f,source).outcome()).completedResult();
+            f.runtime.runDynamicSlotsAfterReservedSlots();assertEquals(expected.player(),tunnelDoorPlayer(f));assertEquals(stand==41?dirty.moveByte(FLAGS,0xA5):dirty,p.state(41));
+            assertEquals(expected.object().moveByte(PLATFORM_SAG,1).moveByte(SPRITE_FLAGS,4),p.state(40));monitorFinish(f);
+        }
+    }
+
+    @Test void platform21ReservedStandStopPublishesGenuinePrefixWithoutSagFallDrawOrLaterWork() throws Exception {
+        try(var f=new Fixture()) {
+            springDeviceCut(f);var p=f.runtime.placement().pool();var source=platform21Contact(f,0x50,0,0,0).moveByte(FLAGS,8);p.write(source);
+            var m=f.frame.state().motion();seedSolidPlayer(f,8,5,0,0,0,m.centreX16_16(),m.centreY16_16());
+            var stopped=assertInstanceOf(CdSolidObject.NativeStopped.class,platform21PureCall(f,source).outcome());assertEquals(CdSolidObject.StopSite.STAND_RELEASE,stopped.stop().site());
+            var later=platform21Image(f,p.state(41),2,0);p.write(later);var sounds=f.runtime.lastSoundRequests();
+            var failure=assertThrows(CdSolidObject.UnsupportedSolidObject.class,f.runtime::runDynamicSlotsAfterReservedSlots);
+            assertEquals(stopped.stop().originalException().getMessage(),failure.getMessage());assertEquals(stopped.prefix().object(),p.state(40));
+            assertEquals(stopped.prefix().player(),tunnelDoorPlayer(f));assertEquals(stopped.prefix().globals(),tunnelDoorGlobals(f));assertEquals(later,p.state(41));
+            assertEquals(sounds,checkpointGet(f.runtime,"sounds"));assertNull(checkpointGet(f.runtime,"activePlatformInvocation"));assertTrue(f.frame.closed());
+        }
+    }
+
+    @Test void platform21DetachedMetadataForeignCutsMasksAndAngleValuesCannotMintPrivateInvocation() throws Exception {
+        try(var f=new Fixture()) {
+            springDeviceCut(f);f.makePlayerAbsent();var p=f.runtime.placement().pool();var source=platform21Image(f,p.state(40),2,0x40);p.write(source);
+            var call=platform21PureCall(f,source);var result=((CdSolidObject.Completed)call.outcome()).completedResult();
+            var badResult=new CdSolidObject.Result(result.entry(),result.object().moveWord(X,0x9999),result.player(),result.globals(),result.otherSlots(),java.util.Set.of(ROUTINE_2),
+                    result.playerWrites(),result.globalWrites(),result.calls(),result.path(),result.getOffReason(),result.d0());
+            var calls=List.of(call,new CdPlatform.SolidCall(call.site(),call.entry(),new CdObjectPool().capture(),call.expectedPlayer(),call.expectedGlobals(),call.outcome()),
+                    new CdPlatform.SolidCall(call.site(),call.entry(),CdObjectPool.overlay(call.actualCut(),List.of(source.moveWord(Y_FRACTION,1))),call.expectedPlayer(),call.expectedGlobals(),call.outcome()),
+                    new CdPlatform.SolidCall(call.site(),call.entry(),call.actualCut(),call.expectedPlayer(),call.expectedGlobals(),new CdSolidObject.Completed(badResult)));
+            var angle=new CdPlatform.PrimaryAngleCall(p.capture(),source,tunnelDoorGlobals(f).primaryAngle(),0x55);var slots=p.capture().slots();var actor=f.frame.state();var env=f.frame.environment();var sounds=f.runtime.lastSoundRequests();
+            for(var c:calls)assertThrows(IllegalStateException.class,()->spikesInvoke(f,"commitPlatformSolid",CdPlatform.SolidCall.class,c));
+            spikesStage(f,40);try {for(var c:calls)assertThrows(IllegalStateException.class,()->spikesInvoke(f,"commitPlatformSolid",CdPlatform.SolidCall.class,c));
+                assertThrows(IllegalStateException.class,()->spikesInvoke(f,"commitPlatformPrimaryAngle",CdPlatform.PrimaryAngleCall.class,angle));
+                assertEquals(slots,p.capture().slots());assertEquals(actor,f.frame.state());assertEquals(env,f.frame.environment());assertEquals(sounds,f.runtime.lastSoundRequests());}
+            finally {boulderUnstage(f);}
+        }
+    }
+
+    @Test void platform21EveryMutualGuardRejectsBothPortsAndActualBodyScopeAlwaysClearsOnHostFailure() throws Exception {
+        for(String guard:diagonalGuards())try(var f=new Fixture()) {
+            springDeviceCut(f);f.makePlayerAbsent();var p=f.runtime.placement().pool();var source=platform21Image(f,p.state(40),2,0x40);p.write(source);
+            var call=platform21PureCall(f,source);var angle=new CdPlatform.PrimaryAngleCall(p.capture(),source,tunnelDoorGlobals(f).primaryAngle(),0);
+            spikesStage(f,40);try {boulderSet(f.runtime,guard,true);
+                assertThrows(IllegalStateException.class,()->spikesInvoke(f,"commitPlatformSolid",CdPlatform.SolidCall.class,call));
+                assertThrows(IllegalStateException.class,()->spikesInvoke(f,"commitPlatformPrimaryAngle",CdPlatform.PrimaryAngleCall.class,angle));}
+            finally {boulderSet(f.runtime,guard,false);boulderUnstage(f);}
+            var slots=p.capture().slots();var actor=f.frame.state();var env=f.frame.environment();var sounds=f.runtime.lastSoundRequests();boulderSet(f.runtime,guard,true);
+            assertThrows(IllegalStateException.class,f.runtime::runDynamicSlotsAfterReservedSlots);assertEquals(slots,p.capture().slots());
+            assertEquals(actor,f.frame.state());assertEquals(env,f.frame.environment());assertEquals(sounds,checkpointGet(f.runtime,"sounds"));assertNull(checkpointGet(f.runtime,"activePlatformInvocation"));
+        }
+    }
+
+    @Test void platform21FrameCasRejectsFractionsLinksBothAnglesAndUndeclaredNonwritesThroughActualPublicOwner() throws Exception {
+        try(var f=new Fixture()) {
+            springDeviceCut(f);f.makePlayerAbsent();var p=f.runtime.placement().pool();var source=platform21Image(f,p.state(40),2,0x40);p.write(source);
+            var call=platform21PureCall(f,source);var result=((CdSolidObject.Completed)call.outcome()).completedResult();var player=call.expectedPlayer();var g=call.expectedGlobals();
+            var state=f.frame.state();var env=f.frame.environment();for(var wrong:List.of(new CdSolidObject.Globals(g.invincible(),g.scoreChain(),g.primaryAngle()^1,g.secondaryAngle()),
+                    new CdSolidObject.Globals(g.invincible(),g.scoreChain(),g.primaryAngle(),g.secondaryAngle()^1)))
+                assertThrows(IllegalArgumentException.class,()->f.frame.validateObjectSolidResult(player,wrong,result));
+            var m=player.actor().motion();var changed=new CdPlayerMotionState(m.centreX16_16()^1,m.centreY16_16(),m.xVelocity(),m.yVelocity(),m.groundVelocity(),m.routine(),m.angle(),m.flags(),m.spriteFlags(),
+                    m.xRadius(),m.yRadius(),m.animation(),m.previousAnimation(),m.playerJump(),m.charge(),m.moveLock(),m.stick(),m.playerControl(),m.previousPrimaryAngle(),m.previousSecondaryAngle());
+            var stale=new CdSolidObject.Player(new CdPlayerTouchResponse.Actor(changed,player.actor().tile(),player.actor().priority(),player.actor().hurt(),player.actor().rotationDistance()),player.slotId(),player.pushObject(),player.standObject());
+            assertThrows(IllegalArgumentException.class,()->f.frame.validateObjectSolidResult(stale,g,result));
+            assertThrows(IllegalArgumentException.class,()->f.frame.validateObjectSolidResult(new CdSolidObject.Player(player.actor(),player.slotId(),player.pushObject(),player.standObject()^1),g,result));
+            var undeclared=new CdSolidObject.Result(result.entry(),result.object(),stale,result.globals(),result.otherSlots(),result.objectWrites(),java.util.Set.of(),result.globalWrites(),result.calls(),result.path(),result.getOffReason(),result.d0());
+            assertThrows(IllegalArgumentException.class,()->f.frame.validateObjectSolidResult(player,g,undeclared));assertEquals(state,f.frame.state());assertEquals(env,f.frame.environment());
+        }
+    }
+
+    @Test void platform21RealUnavailableSolidPrefixUsesFramePrefixPortAndBodyRethrowsIdenticalException() throws Exception {
+        try(var f=new Fixture()) {
+            springDeviceCut(f);var p=f.runtime.placement().pool();var source=platform21Image(f,p.state(40),2,0x40).moveWord(X,0x100).moveWord(Y,0x80)
+                    .moveWord(PLATFORM_ANCHOR_Y,0x80).moveByte(Y_RADIUS,12);p.write(source);
+            seedSolidPlayer(f,2,0,0,0x123,0x400,0x01008000,0x00631234);collapseAlternateCollisionLayer(f);seedTunnelDoorGlobals(f,0,4,0x12,0x34);
+            var original=new RuntimeException[1];var reached=new CdSolidObject.Prefix[1];
+            var body=new CdPlatform(f.runtime.placement(),CdPlatform.Assets.fromObjectAssets(f.assets.openingObjects()),
+                    new com.openggf.game.soniccd.player.CdPlayerMath(f.assets.player()),new com.openggf.game.soniccd.player.CdPlayerTerrain(f.assets.terrain()),collapseUnavailableTerrain(f),call->{
+                var stopped=assertInstanceOf(CdSolidObject.NativeStopped.class,call.outcome());original[0]=stopped.stop().originalException();reached[0]=stopped.prefix();
+                assertEquals(CdPlatform.Site.SUBTYPE_4_TOP,call.site());assertEquals(p.capture().slots(),call.actualCut().slots());
+                f.frame.validateObjectSolidPrefix(call.expectedPlayer(),call.expectedGlobals(),stopped.prefix());
+                var overlay=CdObjectPool.overlay(call.actualCut(),List.of(stopped.prefix().object()));p.restore(overlay);
+                f.frame.applyObjectSolidPrefix(call.expectedPlayer(),call.expectedGlobals(),stopped.prefix());
+            },call->fail("4X never probes object ceiling"),(pool,slot)->fail("stopped Top never Draws"));
+            var thrown=assertThrows(RuntimeException.class,()->body.run(40,new CdPlatform.Globals(0x100,0,0,PRE.yWord(),1),
+                    new CdPlatform.Inputs(tunnelDoorPlayer(f),new CdSolidObject.Gates(0,0),tunnelDoorGlobals(f))));
+            assertNotNull(original[0]);assertSame(original[0],thrown);assertEquals(reached[0].object(),p.state(40));assertEquals(reached[0].player(),tunnelDoorPlayer(f));
+            assertEquals(reached[0].globals(),tunnelDoorGlobals(f));assertEquals(0,p.state(40).unsignedByte(PLATFORM_SAG));
+        }
+    }
+
+    @Test void platform21ActualMappingFirst4bfSharesCurrentC29AndPriorCpuSatWithImmutableOlderPicture() throws Exception {
+        for(int frame:List.of(0,1,2))try(var f=new Fixture()) {
+            springDeviceCut(f);f.makePlayerAbsent();var p=f.runtime.placement().pool();p.write(platform21Image(f,p.state(40),0,0x40|frame));
+            f.runtime.runDynamicSlotsAfterReservedSlots();var sat=f.runtime.finishAfterCamera(POST);f.runtime.finishOrdinaryTail();int at=satEntry(sat,40);
+            assertEquals(0x4BF,word(sat.bytes(),at+4)&0x7FF);assertEquals(0x44BE,p.state(40).word(TILE));
+            var o=(com.openggf.game.soniccd.level.CdR11aObjectAssets)checkpointGet(f.runtime,"objects");var resident=f.runtime.sectionArtState().residency();
+            var original=CdObjectPresentation.convert(sat,collapsePixels(f.frame,f.runtime,o,resident));
+            // Explicit current physical overwrite of the admitted shared Platform window; no new producer/bank/default.
+            var changed=collapseChanged(resident);var now=CdObjectPresentation.convert(sat,collapsePixels(f.frame,f.runtime,o,changed));int logical=BANKS.collapsePlatform()+1;
+            assertEquals(original.tiles(),now.tiles());assertNotEquals(original.patternVersions().get(logical),now.patternVersions().get(logical));
+            assertEquals(CdObjectPresentation.patternVersion(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(resident,0x4BF)),original.patternVersions().get(logical));
+            assertEquals(CdObjectPresentation.patternVersion(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(changed,0x4BF)),now.patternVersions().get(logical));
+            assertArrayEquals(sat.bytes(),f.runtime.cpuSat().bytes());assertEquals(11,o.sectionArtSources().sources().size());
+            f.service(0x80);assertEquals(original,f.runtime.displayedFrame());
+        }
+    }
+
+    @Test void platform21RestartCarriesSameUnknownCurrentWindowAndFirstSelectedBoundaryWithoutNewSeed() throws Exception {
+        var a=load();var carry=cameraArtDevIngress(a);try(var frame=CdPlayerFrameRuntime.externalTouchRequiredDevelopment(a,0);var runtime=collapseRestart(a,frame,carry)) {
+            frame.bindArtPublication((request,state)->{});assertEquals(carry.residency(),runtime.sectionArtState().residency());
+            var o=(com.openggf.game.soniccd.level.CdR11aObjectAssets)checkpointGet(runtime,"objects");
+            assertTrue(CdObjectPresentation.convert(runtime.cpuSat(),collapsePixels(frame,runtime,o,carry.residency())).tiles().isEmpty());
+            runtime.setPreScrollForeground(PRE);var selected=frame.prepareInput(0);runtime.serviceVBlank(selected.phase());runtime.spawnBeforeReservedSlots();runtime.runPlayerBody(1);
+            var p=runtime.placement().pool();p.clearDynamicSlots();p.write(p.state(40).moveByte(ID,0x21).moveByte(ROUTINE,0).moveByte(SUBTYPE,0x40).moveWord(X,64).moveWord(Y,0x740));
+            runtime.runDynamicSlotsAfterReservedSlots();var sat=runtime.finishAfterCamera(POST);runtime.finishOrdinaryTail();assertEquals(0x4BF,word(sat.bytes(),satEntry(sat,40)+4)&0x7FF);
+            int last=-1;for(int i=0;i<sat.provenance().size();i++)if(sat.provenance().get(i).slotRef().wholeIndex()==40)last=i*8;assertTrue(last>=0);
+            int firstConverted=word(sat.bytes(),last+4)&0x7FF;var resident=runtime.sectionArtState().residency();runtime.setPreScrollForeground(PRE);selected=frame.prepareInput(0x80);var phase=selected.phase();
+            var failure=assertThrows(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.OwnershipBoundary.class,()->runtime.serviceVBlank(phase));
+            assertEquals(firstConverted,failure.nativePatternId());assertEquals(resident,runtime.sectionArtState().residency());assertTrue(runtime.closed());assertNull(checkpointGet(runtime,"activePlatformInvocation"));
+        }
+    }
+
+    @Test void platform21CompletedInitCaptureRestoresFullPoolFrameArtKnownnessAndReplaysOrdinaryNextVisit() throws Exception {
+        try(var f=new Fixture()) {
+            springDeviceCut(f);f.makePlayerAbsent();var p=f.runtime.placement().pool();p.write(platform21Image(f,p.state(40),0,0x40));
+            f.runtime.runDynamicSlotsAfterReservedSlots();monitorFinish(f);var objects=f.runtime.captureClosedCut();var actor=f.frame.captureActor();var shared=f.frame.captureShared();
+            List<CdObjectState> expected=null;CdPlayerBody.State expectedActor=null;CdPlayerBody.Environment expectedEnvironment=null;List<CdOpeningObjectRuntime.SoundRequest> expectedSounds=null;
+            for(int replay=0;replay<2;replay++) {
+                if(replay!=0){f.frame.validateActorRestore(actor);f.frame.validateSharedRestore(shared);f.runtime.validateRestore(objects);
+                    f.frame.restoreActor(actor);f.frame.restoreShared(shared);f.runtime.restore(objects);assertEquals(objects.placement().pool().slots(),p.capture().slots());
+                    assertEquals(objects.sectionArtState(),f.runtime.sectionArtState());assertNull(checkpointGet(f.runtime,"activePlatformInvocation"));}
+                f.service(0);f.runtime.spawnBeforeReservedSlots();f.body(3);f.runtime.runDynamicSlotsAfterReservedSlots();monitorFinish(f);
+                if(replay==0){expected=p.capture().slots();expectedActor=f.frame.state();expectedEnvironment=f.frame.environment();expectedSounds=f.runtime.lastSoundRequests();}
+                else {assertEquals(expected,p.capture().slots());assertEquals(expectedActor,f.frame.state());assertEquals(expectedEnvironment,f.frame.environment());assertEquals(expectedSounds,f.runtime.lastSoundRequests());}
+            }
+        }
+    }
+
+    private static void platform21DeviceCut(Fixture f,CameraWords camera) {
+        f.firstCycle();f.service(0,camera);f.runtime.spawnBeforeReservedSlots();f.body(2);f.runtime.placement().pool().clearDynamicSlots();
+    }
+    private static CdObjectState platform21Image(Fixture f,CdObjectState s,int routine,int subtype) throws java.io.IOException {
+        var a=CdPlatform.Assets.fromObjectAssets(f.assets.openingObjects());return s.moveByte(ID,0x21).moveByte(ROUTINE,routine).moveByte(SUBTYPE,subtype)
+                .moveByte(SPRITE_FLAGS,0x84).moveByte(PRIORITY,2).moveWord(TILE,0x44BE).moveLong(MAPPINGS,a.mappingsAddress()).moveByte(MAP_FRAME,subtype&3)
+                .moveByte(WIDTH,0x10).moveByte(Y_RADIUS,8).moveWord(X,0x100).moveWord(Y,0x740).moveWord(PLATFORM_ANCHOR_X,0x100)
+                .moveWord(PLATFORM_ANCHOR_Y,0x740).moveWord(PLATFORM_INITIAL_Y,0x740).moveByte(PLATFORM_RANGE,2);
+    }
+    private static int platform21Osc(Fixture f,int phase,int range) {
+        return ((short)(new com.openggf.game.soniccd.player.CdPlayerMath(f.assets.player()).calcSine(phase).sine()*range))>>4;
+    }
+    private static void platform21OtherImages(List<CdObjectState> before,CdObjectPool pool,int source) {
+        for(var image:before)if(image.identity().wholeIndex()!=source)assertEquals(image,pool.state(image.identity().wholeIndex()));
+    }
+    private static CdPlatform.SolidCall platform21PureCall(Fixture f,CdObjectState source) {
+        var cut=f.runtime.placement().pool().capture();var player=tunnelDoorPlayer(f);var globals=tunnelDoorGlobals(f);var e=f.frame.environment();
+        var outcome=CdSolidObject.fromAssets(f.assets).runWithPrefix(CdSolidObject.Entry.TOP_SOLID_OBJECT,source,player,
+                new CdSolidObject.Gates(e.globals().debugMode(),e.movement().gates().miniSonic()),globals,cut);
+        return new CdPlatform.SolidCall(CdPlatform.Site.SUBTYPE_4_TOP,CdSolidObject.Entry.TOP_SOLID_OBJECT,cut,player,globals,outcome);
+    }
+    /** Declared finite search through genuine shared Solid over actual format terrain, never injected outcomes. */
+    private static CdObjectState platform21Contact(Fixture f,int subtype,int velocity,int stand,int charge) throws java.io.IOException {
+        var p=f.runtime.placement().pool();for(int y=0x710;y<0x7F0;y++) {
+            var source=platform21Image(f,p.state(40),2,subtype).moveWord(Y,y).moveWord(PLATFORM_ANCHOR_Y,y).moveWord(X_VELOCITY,velocity);p.write(source);
+            seedSolidPlayer(f,2,stand,charge,velocity,0x400,0x01008000,((y-8-19+2)<<16)|0x1234);
+            var outcome=platform21PureCall(f,source).outcome();if(outcome instanceof CdSolidObject.Completed done&&done.completedResult().path()==CdSolidObject.Path.STAND_ON)return source;
+        }
+        throw new AssertionError("Actual bounded R11A terrain supplied no Platform Top contact in the declared finite search");
+    }
+    private static com.openggf.game.soniccd.player.CdPlayerTerrain platform21UnavailableTerrain() {
+        byte[] chunks=new byte[61952],fg=new byte[338],bg=new byte[50],ids=new byte[900],angles=new byte[256],heights=new byte[4096],widths=new byte[4096];
+        fg[0]=41;fg[1]=7;bg[0]=5;bg[1]=7;java.util.Arrays.fill(fg,2,fg.length,(byte)2);fg[3]=(byte)0xF9;
+        return new com.openggf.game.soniccd.player.CdPlayerTerrain(com.openggf.game.soniccd.level.CdR11aTerrain.decode(
+                new byte[6432],new byte[25600],chunks,fg,bg,ids,angles,heights,widths));
+    }
+    // END Platform21 Runtime R1.
 }

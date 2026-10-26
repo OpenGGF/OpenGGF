@@ -432,6 +432,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     private final CdGameOver gameOver;
     private final CdBoulder boulder;
     private final CdCollapsePlatform collapsePlatform;
+    private final CdPlatform platform;
     private final CdSpikes spikes;
     private final CdCheckpoint checkpoint;
     private final CheckpointReads checkpointReads;
@@ -503,6 +504,9 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     /** Invocation-local authority only: never gameplay state, a saved phase or a capture partition. */
     private record CollapseInvocation(CdCollapsePlatform body, int wholeIndex) { }
     private transient CollapseInvocation activeCollapseInvocation;
+    /** Native visit origin only; never saved gameplay state or a retained callback capability. */
+    private record PlatformInvocation(CdPlatform body, int wholeIndex) { }
+    private transient PlatformInvocation activePlatformInvocation;
     private int dispatchWholeIndex = -1;
 
     /**
@@ -802,6 +806,10 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         collapsePlatform = new CdCollapsePlatform(placement, CdCollapsePlatform.Assets.fromObjectAssets(objects),
                 solid, this::commitCollapseSolid,
                 (pool, slot) -> drawDynamic(pool, slot.wholeIndex()), this::playCollapseFm);
+        platform = new CdPlatform(placement, CdPlatform.Assets.fromObjectAssets(objects),
+                new CdPlayerMath(assets.player()), new CdPlayerTerrain(assets.terrain()), solid,
+                this::commitPlatformSolid, this::commitPlatformPrimaryAngle,
+                (pool, slot) -> drawDynamic(pool, slot.wholeIndex()));
 
         boulder = new CdBoulder(placement, CdBoulder.Assets.fromObjectAssets(objects),
                 solid, this::commitBoulderSolid,
@@ -1363,6 +1371,10 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                     // Native ID20 visit, with actual raw pre-scroll globals and current Frame inputs.
                     // No outer visibility/time-stop/good-future/subtype gate or replay of body effects.
                     runCollapsePlatform(whole);
+                } else if (id == CdPlatform.OBJECT_ID) {
+                    // Actual live ID21; native Init/Main owns every reached gate, helper, child and tail.
+                    // Completed effects describe synchronous work and are never replayed.
+                    runPlatform(whole);
                 } else if (id == CdBoulder.OBJECT_ID) {
                     // ObjBoulder_Main (Boulder/Main.asm:41-48) reads the actual primary at this physical
                     // visit; its own sprite sign is the only outer Solid gate. No good-future/route gate.
@@ -2776,6 +2788,218 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
             sounds = nextSounds;
         } finally { inSolidCommit = false; }
     }
+
+    // BEGIN Platform21 Runtime R1 private integration.
+    /** Mint the private origin only around this cached body's actual admitted physical visit. */
+    private void runPlatform(int wholeIndex) {
+        checkActive(Phase.DYNAMIC_SLOTS);
+        if (activePlatformInvocation != null || wholeIndex != dispatchWholeIndex
+                || placement.pool().state(wholeIndex).id() != CdPlatform.OBJECT_ID) {
+            throw new IllegalStateException("Platform dispatch requires its current physical ID21 and no active invocation");
+        }
+        var gates = frame.environment().movement().gates();
+        var globals = new CdPlatform.Globals(gates.zoneAct(), ringGlobals.timeStopTimer(),
+                preScrollForeground.xWord(), preScrollForeground.yWord(), gates.timeZone());
+        var inputs = new CdPlatform.Inputs(solidPlayer(), solidGates(), solidGlobals());
+        activePlatformInvocation = new PlatformInvocation(platform, wholeIndex);
+        try {
+            platform.run(wholeIndex, globals, inputs);
+        } finally {
+            // Completion, native stop, host exception and Error all retire the invocation.
+            activePlatformInvocation = null;
+        }
+    }
+
+    /** Scope establishes origin; the reached site separately admits live or genuinely deleted a0. */
+    private CdObjectState requirePlatformCallback() {
+        checkActive(Phase.DYNAMIC_SLOTS);
+        var invocation = activePlatformInvocation;
+        if (invocation == null || invocation.body() != platform || invocation.wholeIndex() != dispatchWholeIndex
+                || dispatchWholeIndex < CdObjectPool.FIRST_WHOLE_INDEX || dispatchWholeIndex >= CdObjectPool.END_WHOLE_INDEX
+                || inDrawCallback || inSolidCommit || inSpringLaunch || inSpinTunnelCommit || inTunnelDoorFm
+                || inHorizontalTunnelDoorSolid || inHorizontalTunnelDoorFm
+                || inMonitorAngle || inMonitorFm || inMonitorAward || inTimePostDirection || inTimePostSubCpu) {
+            throw new IllegalStateException("Platform callback requires its actual synchronous cached-body invocation");
+        }
+        return placement.pool().state(dispatchWholeIndex);
+    }
+
+    /**
+     * Platform/Main.asm:89-118,135-521, pin 1ecc5f3a. Validate post-instruction cuts, including
+     * timer1->0, phase increments, same-visit second Tops and 5X's DeleteObject return into Main.
+     * A detached Site value supplies no authority; requirePlatformCallback has already checked origin.
+     */
+    private void validatePlatformSite(CdPlatform.SolidCall call, CdObjectState source) {
+        boolean anchor = call.site() == CdPlatform.Site.ANCHOR_GET_OFF;
+        boolean deleted = anchor && source.id() == 0 && source.routine() == 0
+                && java.util.Arrays.equals(source.copyBytes(), new byte[CdObjectState.BYTE_SIZE]);
+        if (!deleted && (source.id() != CdPlatform.OBJECT_ID || source.routine() != 2)) {
+            throw new IllegalStateException("Platform helper requires live ID21/routine2 except its actual cleared anchor tail");
+        }
+        int stop = ringGlobals.timeStopTimer();
+        if (call.site() == CdPlatform.Site.TIME_STOP_TOP) {
+            if (stop == 0 || deleted || call.entry() != CdSolidObject.Entry.TOP_SOLID_OBJECT) {
+                throw new IllegalStateException("Platform time-stop helper requires its nonzero native WORD and direct Top entry");
+            }
+            return; // Native time-stop does not read subtype/substate/phase or execute the anchor tail.
+        }
+        if (stop != 0) throw new IllegalStateException("Platform ordinary helper cannot run under native time-stop");
+        int family = source.subtype() >>> 4;
+        int state = source.unsignedByte(PLATFORM_SUBSTATE);
+        int timer = source.unsignedByte(PLATFORM_TIMER);
+        int phaseByte = source.unsignedByte(PLATFORM_PHASE);
+        boolean top = true;
+        boolean valid = switch (call.site()) {
+            case SUBTYPE_0_TOP -> family == 0;
+            case SUBTYPE_1_TOP -> family == 1;
+            case SUBTYPE_2_TOP -> family == 2;
+            case SUBTYPE_3_TOP -> family == 3;
+            case SUBTYPE_4_TOP -> family == 4;
+            case SUBTYPE_5_STATIONARY_TOP -> family == 5 && state == 0;
+            case SUBTYPE_5_TIMER_TOP -> family == 5 && state != 0 && timer != 0xFF;
+            case SUBTYPE_5_DROP_TOP -> family == 5 && state != 0 && timer == 0;
+            case SUBTYPE_5_DELETE_GET_OFF -> {
+                top = false;
+                yield family == 5 && state != 0 && timer == 0
+                        && ((preScrollForeground.yWord() + 0x100) & 0xFFFF) < source.centreY();
+            }
+            case SUBTYPE_6_STATIONARY_1_TOP -> family == 6 && state == 0;
+            case SUBTYPE_6_MOVE_DOWN_TOP -> family == 6 && state == 2 && phaseByte >= 2 && phaseByte <= 0x41;
+            case SUBTYPE_6_STATIONARY_2_TOP -> family == 6 && state == 4;
+            case SUBTYPE_7_STATIONARY_1_TOP -> family == 7 && state == 0;
+            case SUBTYPE_7_TIMER_TOP -> family == 7 && state == 2 && timer != 0xFF;
+            case SUBTYPE_7_RISING_TOP -> family == 7 && state == 2 && timer == 0;
+            case SUBTYPE_7_STATIONARY_2_TOP -> family == 7 && state == 4;
+            case SUBTYPE_8_STATIONARY_1_TOP -> family == 8 && state == 0;
+            case SUBTYPE_8_TIMER_TOP -> family == 8 && state == 2 && timer != 0xFF;
+            case SUBTYPE_8_MOVE_X_TOP -> family == 8 && state == 2 && timer == 0 && phaseByte >= 1 && phaseByte <= 0x40;
+            case SUBTYPE_8_STATIONARY_2_TOP -> family == 8 && state == 4;
+            case SUBTYPE_9_STATIONARY_1_TOP -> family == 9 && state == 0;
+            case SUBTYPE_9_TIMER_TOP -> family == 9 && state == 2 && timer != 0xFF;
+            case SUBTYPE_9_MOVE_X_TOP -> family == 9 && state == 2 && timer == 0 && phaseByte >= 1 && phaseByte <= 0x40;
+            case SUBTYPE_9_STATIONARY_2_TOP -> family == 9 && state == 4;
+            case ANCHOR_GET_OFF -> {
+                top = false;
+                int chunk = ((source.word(PLATFORM_ANCHOR_X) & 0xFF80)
+                        - ((preScrollForeground.xWord() - 0x80) & 0xFF80)) & 0xFFFF;
+                yield chunk > 0x280 && (deleted || family <= 9
+                        && (family < 6 || state == 0 || state == 2 || state == 4));
+            }
+            case TIME_STOP_TOP -> false; // Handled before any subtype reads.
+        };
+        if (!valid || call.entry() != (top ? CdSolidObject.Entry.TOP_SOLID_OBJECT : CdSolidObject.Entry.GET_OFF_OBJECT)) {
+            throw new IllegalStateException("Platform helper differs from its actual native instruction site/cut");
+        }
+    }
+
+    /** Platform-local output validation; the existing Collapse validator and all its messages stay exact. */
+    private List<CdObjectState> validatePlatformImages(CdPlatform.SolidCall call, CdObjectState source,
+            CdObjectState object, List<CdObjectState> others, java.util.Set<CdObjectState.ByteField> writes) {
+        var pool = placement.pool(); pool.validateWrite(object);
+        if (!source.identity().equals(object.identity()) || object.copyBytes().length != CdObjectState.BYTE_SIZE
+                || writes.stream().anyMatch(field -> field != SOLID_TYPE && field != FLAGS)
+                || writes.contains(SOLID_TYPE) != (call.entry() == CdSolidObject.Entry.TOP_SOLID_OBJECT)
+                || writes.contains(SOLID_TYPE) && object.unsignedByte(SOLID_TYPE) > 1
+                || ((object.flags() ^ source.flags()) & ~8) != 0) {
+            throw new IllegalArgumentException("Platform Solid output changed identity, canonical masks or unowned flag bits");
+        }
+        byte[] before = source.copyBytes(), after = object.copyBytes();
+        for (int offset = 0; offset < CdObjectState.BYTE_SIZE; offset++) {
+            if (offset == SOLID_TYPE.byteOffset() && writes.contains(SOLID_TYPE)
+                    || offset == FLAGS.byteOffset() && writes.contains(FLAGS)) continue;
+            if (before[offset] != after[offset]) throw new IllegalArgumentException("Undeclared Platform a0 byte " + offset);
+        }
+        if (others.size() > 1 || call.entry() == CdSolidObject.Entry.GET_OFF_OBJECT && !others.isEmpty()) {
+            throw new IllegalArgumentException("Platform helper returned extra dynamic releases");
+        }
+        var images = new ArrayList<CdObjectState>(1 + others.size()); images.add(object);
+        var seen = new java.util.HashSet<Integer>(); seen.add(dispatchWholeIndex);
+        for (var other : others) {
+            pool.validateWrite(other); int whole = other.identity().wholeIndex();
+            if (whole < CdObjectPool.FIRST_WHOLE_INDEX || whole >= CdObjectPool.END_WHOLE_INDEX || !seen.add(whole)
+                    || whole != call.expectedPlayer().standObject()) {
+                throw new IllegalArgumentException("Platform release must retain its distinct actual dynamic stand identity");
+            }
+            var original = call.actualCut().slots().get(whole - CdObjectPool.FIRST_WHOLE_INDEX);
+            if (!original.identity().equals(other.identity()) || !original.moveByte(FLAGS, original.flags() & ~8).equals(other)) {
+                throw new IllegalArgumentException("Platform other-slot release changed bytes beyond native BCLR3");
+            }
+            images.add(other); // Dirty ID0 is native physical RAM and remains legal.
+        }
+        return List.copyOf(images);
+    }
+
+    /** One genuine Outcome, all preflight/overlay/ordered FM allocation BEFORE the first pool publication. */
+    private void commitPlatformSolid(CdPlatform.SolidCall call) {
+        var source = requirePlatformCallback();
+        inSolidCommit = true;
+        try {
+            Objects.requireNonNull(call, "actual Platform Solid call");
+            var pool = placement.pool(); var cut = call.actualCut();
+            validateDynamicCapture(cut);
+            var before = cut.slots().get(dispatchWholeIndex - CdObjectPool.FIRST_WHOLE_INDEX);
+            if (!before.identity().equals(source.identity()) || !before.equals(source)
+                    || !pool.capture().slots().equals(cut.slots())) {
+                throw new IllegalStateException("Platform Solid requires its exact entire live physical source cut");
+            }
+            validatePlatformSite(call, before);
+            CdSolidObject.Result completed = null; CdSolidObject.Prefix prefix = null;
+            CdObjectState object; List<CdObjectState> others;
+            java.util.Set<CdObjectState.ByteField> writes;
+            List<CdPlayerTouchResponse.FmSound> requests;
+            if (call.outcome() instanceof CdSolidObject.Completed done) {
+                completed = done.completedResult();
+                if (completed.entry() != call.entry()) throw new IllegalArgumentException("Platform completed entry mismatch");
+                object = completed.object(); others = completed.otherSlots(); writes = completed.objectWrites();
+                requests = completed.fmRequests();
+            } else {
+                var stopped = (CdSolidObject.NativeStopped) call.outcome(); prefix = stopped.prefix();
+                if (prefix.entry() != call.entry() || call.entry() != CdSolidObject.Entry.TOP_SOLID_OBJECT) {
+                    throw new IllegalArgumentException("Platform native prefix must be the reached TopSolid entry");
+                }
+                object = prefix.object(); others = prefix.otherSlots(); writes = prefix.objectWrites();
+                requests = prefix.fmRequests();
+                if (!requests.isEmpty() || !others.isEmpty()) {
+                    throw new IllegalArgumentException("Stopped Top has no completed FM or dynamic release before its unavailable leaf");
+                }
+            }
+            var images = validatePlatformImages(call, before, object, others, writes);
+            var nextPool = CdObjectPool.overlay(cut, images); pool.validateRestore(nextPool);
+            if (completed != null) frame.validateObjectSolidResult(call.expectedPlayer(), call.expectedGlobals(), completed);
+            else frame.validateObjectSolidPrefix(call.expectedPlayer(), call.expectedGlobals(), prefix);
+            var ledger = new ArrayList<SoundRequest>(sounds);
+            for (var request : requests) ledger.add(new PlayerSound(new CdPlayerFrameRuntime.ContactFmSound(request)));
+            var nextSounds = List.copyOf(ledger);
+            pool.restore(nextPool);
+            if (completed != null) frame.applyObjectSolidResult(call.expectedPlayer(), call.expectedGlobals(), completed);
+            else frame.applyObjectSolidPrefix(call.expectedPlayer(), call.expectedGlobals(), prefix);
+            sounds = nextSounds;
+            // Return to Body: it checks publication and rethrows its identical original stop, without d0.
+        } finally { inSolidCommit = false; }
+    }
+
+    /** ObjPlatform_Subtype7X .RiseToCeiling: moved full positions and YV-=8 already belong to this cut. */
+    private void commitPlatformPrimaryAngle(CdPlatform.PrimaryAngleCall call) {
+        var source = requirePlatformCallback();
+        inSolidCommit = true;
+        try {
+            Objects.requireNonNull(call, "reached Platform primary-angle call");
+            var pool = placement.pool(); var cut = call.actualCut(); var expected = call.expectedSource();
+            validateDynamicCapture(cut); pool.validateWrite(expected);
+            if (source.id() != CdPlatform.OBJECT_ID || source.routine() != 2 || source.subtype() >>> 4 != 7
+                    || source.unsignedByte(PLATFORM_SUBSTATE) != 2 || source.unsignedByte(PLATFORM_TIMER) != 0
+                    || ringGlobals.timeStopTimer() != 0 || !source.identity().equals(expected.identity())
+                    || !source.equals(expected) || !cut.slots().get(dispatchWholeIndex - CdObjectPool.FIRST_WHOLE_INDEX).equals(expected)
+                    || !pool.capture().slots().equals(cut.slots())
+                    || frame.environment().movement().globals().primaryAngle() != call.expectedPrimaryAngle()) {
+                throw new IllegalStateException("Platform angle call differs from its actual Rising full-pool/source/Frame cut");
+            }
+            // Raw stores only: no pre-zero, pool publication, secondary write or post-return effect replay.
+            frame.applyObjectPrimaryAngle(call.value());
+            checkActive(Phase.DYNAMIC_SLOTS);
+        } finally { inSolidCommit = false; }
+    }
+    // END Platform21 Runtime R1 private integration.
 
     /** Exact cached private producer scope, immediately around one admitted physical native visit. */
     private void runCollapsePlatform(int wholeIndex) {

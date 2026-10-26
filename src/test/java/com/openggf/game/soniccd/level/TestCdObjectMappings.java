@@ -2012,5 +2012,44 @@ class TestCdObjectMappings {
         }
     }
     // END COLLAPSE PLATFORM PICTURE R1
+    @Test void actualUsaPlatformRegistersOneCompleteRootWithLiteralPiecesAndSharesTheExistingFiftySevenTiles() throws Exception {
+        var usa=usaMedia();var o=usa.objects();var resolver=CdObjectMappings.fromOpeningAssets(usa.assets(),o);
+        var raw=o.view(CdR11aObjectAssets.Table.PLATFORM_MAPPINGS).bytes();assertEquals(132,raw.length());
+        assertEquals(0x20CCC8,o.view(CdR11aObjectAssets.Table.PLATFORM_MAPPINGS).range().nativeAddress());
+        assertEquals("a8b6e5695090a558c67e7e776db8c4b642731a7ef7445608264b29f15529afd7",sha256(raw.copy()));
+        assertEquals(List.of(6,28,70),List.of(raw.unsignedWord(0),raw.unsignedWord(2),raw.unsignedWord(4)));
+        assertEquals(0,raw.unsignedByte(27));assertEquals(0,raw.unsignedByte(69));assertEquals(0,raw.unsignedByte(131));
+        int[][][] literal={
+            {{-16,0x001,-16},{-16,0x801,0},{0,0x005,-16},{0,0x805,0}},
+            {{-16,1,-32},{-16,1,-16},{-16,1,0},{-16,1,16},{0,5,-32},{0,9,-16},{0,9,0},{0,0x805,16}},
+            {{-16,1,-48},{-16,1,-32},{-16,1,-16},{-16,1,0},{-16,1,16},{-16,1,32},
+             {0,5,-48},{0,9,-32},{0,9,-16},{0,9,0},{0,9,16},{0,0x805,32}}};
+        var union=new TreeSet<Integer>();
+        for(int frame=0;frame<3;frame++) {
+            var expected=new java.util.ArrayList<CdObjectDrawQueue.RawPiece>();
+            for(var p:literal[frame]){expected.add(new CdObjectDrawQueue.RawPiece(p[0],5,p[1],p[2]));
+                for(int tile=0;tile<4;tile++)union.add((p[1]&0x7FF)+tile);}
+            assertEquals(expected,resolver.resolve(0x20CCC8,false,frame).pieces());
+            for(int flips=0;flips<4;flips++)for(int base:new int[]{0x44BE,0xC4BE}) {
+                var sat=drawPataBataMapping(resolver,0x20CCC8,frame,base,4|flips);var bytes=sat.bytes();
+                assertEquals(literal[frame].length,sat.spriteCount());
+                for(int p=0;p<literal[frame].length;p++) {
+                    int[] piece=literal[frame][p];assertEquals(5,bytes[p*8+2]&255);assertEquals(p+1,bytes[p*8+3]&255);
+                    assertEquals(256+((flips&2)==0?piece[0]:-piece[0]-16),word(bytes,p*8));
+                    assertEquals(384+((flips&1)==0?piece[2]:-piece[2]-16),word(bytes,p*8+6));
+                    assertEquals(((base+piece[1])&0xFFFF)^(flips<<11),word(bytes,p*8+4));
+                }
+            }
+        }
+        assertEquals(new TreeSet<>(List.of(1,2,3,4,5,6,7,8,9,10,11,12)),union);
+        for(int frame=3;frame<256;frame++){int absent=frame;assertThrows(UnsupportedOperationException.class,()->resolver.resolve(0x20CCC8,false,absent));}
+        for(int pointer:new int[]{0x20CCC9,0x20CCCE,0x20CD4C,0x20C940,0x20C944,0xFF20CCC8})
+            assertThrows(UnsupportedOperationException.class,()->resolver.resolve(pointer,false,0));
+        assertThrows(UnsupportedOperationException.class,()->resolver.resolve(0x20CCC8,true,0));
+        for(int root=0;root<4;root++)for(int frame=0;frame<CP_FRAMES[root];frame++)
+            assertEquals(declared(CP_ROOT[root],CP_RAW[root],0,CP_FRAMES[root]).resolve(CP_ROOT[root],false,frame),resolver.resolve(CP_ROOT[root],false,frame));
+        assertMonitorPriorRoots(usa,resolver);assertAntonFrames(resolver);
+    }
+
 }
 // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>

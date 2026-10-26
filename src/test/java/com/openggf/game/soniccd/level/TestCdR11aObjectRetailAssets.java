@@ -241,6 +241,9 @@ class TestCdR11aObjectRetailAssets {
         hashes.put(COLLAPSE_PLATFORM_MAPPINGS_2, "b045e60da3748ed69830e29883ed37a49b6a1285fdb4815d62b48ad871e36489");
         hashes.put(COLLAPSE_PLATFORM_SIZES_2, "70fc78ba6bf60ae0e46cf337463d71806897446379981e01a435ec331597a9c1");
         hashes.put(COLLAPSE_PLATFORM_MAPPINGS_4, "a39fbf7aa6cb97caa61a6ddcf52e0936979ecf3458c16f8e3aced9d75a005f5b");
+        hashes.put(PLATFORM_MAPPINGS, "a8b6e5695090a558c67e7e776db8c4b642731a7ef7445608264b29f15529afd7");
+        hashes.put(PLATFORM_WIDTHS, "87d0fad66b7f6fe31844c828bbfa818f478c885f0f7672d1bb38d89ed6bfb9d3");
+        hashes.put(PLATFORM_RANGES, "ce513997025ae549282209565f4c74aae2258cd6c391acd643d3b7f1b8071c9a");
         assertEquals(CdR11aObjectAssets.Table.values().length, hashes.size(), "every admitted table has a pinned digest");
         for (var table : CdR11aObjectAssets.Table.values()) {
             var view = objects.view(table);
@@ -3881,5 +3884,247 @@ class TestCdR11aObjectRetailAssets {
     private static final String COLLAPSE_ART_DECODED_SHA256 = "b33a50d46c89a5115a18548e6a3b083428c8a5bd2bcafc3c4c45e2718c5c768a";
     private static final String COLLAPSE_ART_LAST_TILE = "7777333377733333777333337733333377333333733333337333333333333333";
 
+
+    // Platform ID21 asset handoff R1: source-only additions below.
+
+    /** Original-media verification is opt-in and UNRUN in this source-only handoff. */
+    @ParameterizedTest(name = "{0} platform ID21 actual operands, three retained views and shared source11")
+    @EnumSource(CdReleaseVariant.class)
+    void platformAuthenticatesActualOperandsAndRetainsLazyViewsOverTheExistingEleventhSource(CdReleaseVariant variant)
+            throws Exception {
+        String configured = System.getProperty("soniccd.media.root");
+        Assumptions.assumeTrue(configured != null && !configured.isBlank(),
+                "Set soniccd.media.root for supplied-media checks");
+        String directory = switch (variant) { case USA -> "USA"; case JAPAN -> "Japan"; case EUROPE -> "Europe"; };
+        Path cue;
+        try (var files = Files.list(Path.of(configured).resolve(directory))) {
+            var cues = files.filter(p -> p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".cue")).toList();
+            assertEquals(1,cues.size()); cue = cues.getFirst();
+        }
+        CdR11aAssets owner; CdMmdImage retained;
+        CdR11aObjectAssets visualFirst = null, sourceFirst = null, viewsFirst = null;
+        try (var program = CdProgramAssets.open(cue,Optional.of(variant),Optional.empty())) {
+            owner = CdR11aAssetLoader.load(program,variant,CdStageKey.parse("R11A"));
+            retained = program.mmd(CdNativeFile.R11A);
+            assertEquals(262144,retained.fileBytes());
+            assertEquals(CdNativeFile.R11A,owner.profile().file());
+            assertEquals(CdMmdImage.Domain.ORIGINAL_WORD_RAM,owner.profile().domain());
+            assertEquals(variant,owner.profile().variant());
+            assertEquals(variant == CdReleaseVariant.USA
+                            ? "7aa54c36ab94dbe14068a18613c574b883ce446337bfaa9c571ec3523aff14e2"
+                            : "241be9620fbad1229792fedd1604066ae3e7d943cb7cc27bc94a4a837452d9b6",
+                    CdR11aProfile.sha256(retained.readFile(0,retained.fileBytes())));
+            owner.profile().verifyProgram(owner.profile().file(),owner.profile().domain(),retained);
+            verifyPlatform21NativeReferences(retained,variant);
+            if (variant != CdReleaseVariant.USA) {
+                for (int i = 0; i < 3; i++) {
+                    assertFalse(Arrays.equals(hexBytes(PLATFORM21_HEX[i]),PLATFORM21_TABLES.get(i).range().read(retained).copy()));
+                }
+                assertThrows(UnsupportedOperationException.class,owner::openingObjects);
+                assertThrows(UnsupportedOperationException.class,() -> CdR11aObjectAssets.load(
+                        owner.profile(),owner.identity(),retained,owner.loadPlan()));
+                var usa = CdR11aProfile.forStage(CdReleaseVariant.USA,CdStageKey.parse("R11A"));
+                var asserted = new CdR11aAssets.Identity(CdReleaseVariant.USA,usa.stage(),usa.file(),usa.domain(),
+                        usa.expectedMmdSha256(),owner.identity().observedWholeDiscSha256());
+                assertThrows(IOException.class,() -> CdR11aObjectAssets.load(usa,asserted,retained,owner.loadPlan()));
+            } else {
+                visualFirst = owner.openingObjects(); sourceFirst = owner.openingObjects(); viewsFirst = owner.openingObjects();
+                assertNotSame(visualFirst,sourceFirst); assertNotSame(visualFirst,viewsFirst);
+                for (var objects : List.of(visualFirst,sourceFirst,viewsFirst)) {
+                    assertSame(owner.identity(),objects.identity()); verifySectionSourcesCold(objects);
+                    var field = CdR11aObjectAssets.class.getDeclaredField("platform"); field.setAccessible(true);
+                    assertNull(field.get(objects)); verifyPlatform21OtherVisualsCold(objects);
+                }
+                for (int offset : new int[]{0x3A24,0x3EB4,0xC84A,0xC860,0xC862,0xC87E,
+                        0xC89C,0xC8AC,0xC8BC,0xC8D4,0xC8D5,0xC8E6,0xC8E7,
+                        0xC940,0xC943,0xC944,0xC947,0xCCC8,0xCD4B}) {
+                    byte[] changed = retained.readFile(0,retained.fileBytes()); changed[offset] ^= 1;
+                    assertThrows(IOException.class,() -> CdR11aObjectAssets.load(owner.profile(),owner.identity(),
+                            CdMmdImage.parse(changed),owner.loadPlan()),"changed platform owner/operand/window byte "+offset);
+                }
+            }
+        }
+        assertThrows(UnsupportedOperationException.class,() -> owner.decoded(CdR11aAsset.ART_PLATFORM));
+        if (variant != CdReleaseVariant.USA) { return; }
+        assertNotNull(visualFirst); assertNotNull(sourceFirst); assertNotNull(viewsFirst);
+        var objects = visualFirst; var reverseObjects = sourceFirst; var rawObjects = viewsFirst;
+        var optional = CdR11aObjectAssets.class.getDeclaredField("frontierViews"); optional.setAccessible(true);
+        var sourceField = CdR11aObjectAssets.class.getDeclaredField("sectionArtSources"); sourceField.setAccessible(true);
+        var platformField = CdR11aObjectAssets.class.getDeclaredField("platform"); platformField.setAccessible(true);
+        // These first accesses all occur after the actual public media source has closed.
+        var visual = objects.platform();
+        assertSame(visual,objects.platform()); assertNull(sourceField.get(objects));
+        assertEquals(List.of(PLATFORM_MAPPINGS),List.copyOf(((Map<?,?>) optional.get(objects)).keySet()));
+        verifyPlatform21OtherVisualsCold(objects);
+        var widths = rawObjects.view(PLATFORM_WIDTHS); var ranges = rawObjects.view(PLATFORM_RANGES);
+        assertNull(platformField.get(rawObjects)); assertNull(sourceField.get(rawObjects));
+        assertSame(widths,rawObjects.view(PLATFORM_WIDTHS)); assertSame(ranges,rawObjects.view(PLATFORM_RANGES));
+        assertArrayEquals(hexBytes("10203000"),widths.bytes().copy());
+        assertArrayEquals(hexBytes("02030406"),ranges.bytes().copy());
+        assertEquals(List.of(PLATFORM_WIDTHS,PLATFORM_RANGES),
+                List.copyOf(((Map<?,?>) optional.get(rawObjects)).keySet()));
+        var reverse = reverseObjects.sectionArtSources();
+        assertEquals(11,reverse.sources().size()); assertSame(reverse,reverseObjects.sectionArtSources());
+        var priorSources = reverse.sources();
+        var priorReads = priorSources.stream().map(CdR11aObjectAssets.SectionArtSource::decode).toList();
+        var priorInputs = priorSources.stream().map(CdR11aObjectAssets.SectionArtSource::readerBytes).toList();
+        assertNull(platformField.get(reverseObjects));
+        // Existing frontier-art validation reads Animals' base-tile table; no Platform view is read.
+        assertEquals(List.of(ANIMAL_BASE_TILES),List.copyOf(((Map<?,?>) optional.get(reverseObjects)).keySet()));
+        verifyPlatform21OtherVisualsCold(reverseObjects);
+        var reverseVisual = reverseObjects.platform(); var rawVisual = rawObjects.platform();
+        assertSame(reverseVisual,reverseObjects.platform()); assertSame(rawVisual,rawObjects.platform());
+        assertArrayEquals(visual.mappings().copy(),reverseVisual.mappings().copy());
+        assertArrayEquals(visual.mappings().copy(),rawVisual.mappings().copy());
+        assertNull(sourceField.get(rawObjects));
+        assertEquals(PLATFORM21_TABLES,List.copyOf(((Map<?,?>) optional.get(rawObjects)).keySet()));
+        assertEquals(PLATFORM21_SHA256[0],CdR11aProfile.sha256(visual.mappings().copy()));
+        assertArrayEquals(hexBytes(PLATFORM21_HEX[0]),visual.mappings().copy());
+        assertEquals(List.of(6,28,70),visual.mappingFrames().stream()
+                .map(CdObjectVisualAssets.MappingFrame::relativeOffset).toList());
+        assertEquals(List.of(4,8,12),visual.mappingFrames().stream().map(frame -> frame.pieces().size()).toList());
+        assertEquals(0,visual.mappingTableOffset()); assertEquals(0,visual.animationTable().length());
+        assertTrue(visual.animations().isEmpty());
+        assertThrows(IndexOutOfBoundsException.class,() -> visual.mappingFrames().get(3));
+        for (int i = 0; i < 3; i++) {
+            var table = PLATFORM21_TABLES.get(i); var view = objects.view(table);
+            assertSame(view,objects.view(table)); assertEquals(table,view.table()); assertEquals(table.range(),view.range());
+            assertArrayEquals(hexBytes(PLATFORM21_HEX[i]),view.bytes().copy());
+            assertEquals(PLATFORM21_SHA256[i],CdR11aProfile.sha256(view.bytes().copy()));
+            assertArrayEquals(table.range().read(retained).copy(),view.bytes().copy());
+            assertThrows(IndexOutOfBoundsException.class,() -> view.bytes().unsignedByte(table.range().length()));
+            assertThrows(ReadOnlyBufferException.class,() -> view.bytes().buffer().put((byte) 0));
+        }
+        var bank = objects.sectionArtSources();
+        assertEquals(11,bank.sources().size()); assertSame(bank,objects.sectionArtSources());
+        assertEquals(SECTION_SOURCES,bank.sources().stream().map(CdR11aObjectAssets.SectionArtSource::source).toList());
+        for (int i = 0; i < 11; i++) {
+            var source = bank.sources().get(i); var previous = priorSources.get(i);
+            assertSame(previous,reverse.sources().get(i));
+            assertSame(priorReads.get(i),reverse.source(SECTION_SOURCES.get(i)).decode());
+            assertSame(priorInputs.get(i),reverse.source(SECTION_SOURCES.get(i)).readerBytes());
+            assertEquals(SECTION_SOURCES.get(i),source.source()); assertEquals(SECTION_TILES[i],source.tileCount());
+            assertEquals(SECTION_JAVA_BYTES[i],source.decode().consumedInputBytes());
+            assertEquals(SECTION_NATIVE_BYTES[i],source.readerInputRange().length());
+            assertEquals(SECTION_BLOB_SHA256[i],CdR11aProfile.sha256(source.decode().sourceBlobRange().read(retained).copy()));
+            assertEquals(SECTION_NATIVE_SHA256[i],CdR11aProfile.sha256(source.readerBytes().copy()));
+            assertEquals(SECTION_DECODED_SHA256[i],CdR11aProfile.sha256(source.decode().bytes().copy()));
+            assertArrayEquals(previous.readerBytes().copy(),source.readerBytes().copy());
+            assertArrayEquals(previous.decode().bytes().copy(),source.decode().bytes().copy());
+        }
+        var platformSource = bank.source(CdR11aAsset.ART_PLATFORM);
+        assertSame(platformSource,bank.sources().get(10)); assertSame(platformSource.decode(),bank.source(platformSource.canonicalPlc()).decode());
+        assertEquals(1,platformSource.canonicalPlcId()); assertEquals(6,platformSource.canonicalRowIndex());
+        assertEquals(0x97C0,platformSource.canonicalPlc().vramAddress()); assertEquals(57,platformSource.tileCount());
+        assertSame(platformSource,bank.source(owner.loadPlan().plcs().get(1).entries().get(6)));
+        assertEquals(452,platformSource.decode().sourceBlobRange().length());
+        assertEquals(452,platformSource.decode().readerInputRange().length());
+        assertEquals(452,platformSource.decode().consumedInputBytes());
+        assertEquals(453,platformSource.readerInputRange().length()); assertEquals(453,platformSource.readerBytes().length());
+        assertEquals(0x8039,platformSource.readerBytes().unsignedWord(0));
+        assertEquals(COLLAPSE_ART_BLOB_SHA256,CdR11aProfile.sha256(platformSource.decode().sourceBlobRange().read(retained).copy()));
+        assertEquals(COLLAPSE_ART_NATIVE_SHA256,CdR11aProfile.sha256(platformSource.readerBytes().copy()));
+        assertEquals(COLLAPSE_ART_DECODED_SHA256,CdR11aProfile.sha256(platformSource.decode().bytes().copy()));
+        assertSame(bank,objects.sectionArtSources()); assertSame(reverse,reverseObjects.sectionArtSources());
+        // Every inherited source and all 51 inherited table windows survive the new lazy accesses.
+        for (int i = 0; i < 51; i++) {
+            var table = CdR11aObjectAssets.Table.values()[i]; var view = objects.view(table);
+            String digest = i < 45 ? COLLAPSE_OLD_SHA256[i] : COLLAPSE_SHA256[i-45];
+            assertEquals(digest,CdR11aProfile.sha256(view.bytes().copy()),table.name());
+            assertSame(view,objects.view(table)); assertArrayEquals(table.range().read(retained).copy(),view.bytes().copy());
+        }
+        for (var asset : List.of(CdR11aAsset.ART_SWINGING_PLATFORM,CdR11aAsset.ART_BIG_RING,CdR11aAsset.ART_GOAL_POST)) {
+            assertThrows(UnsupportedOperationException.class,() -> bank.source(asset));
+        }
+        for (int subtype2 = 0; subtype2 <= 255; subtype2++) {
+            int value = subtype2;
+            assertThrows(UnsupportedOperationException.class,() -> objects.tileWord(0x21,value));
+        }
+        assertEquals(List.of("PLATFORM_MAPPINGS","PLATFORM_WIDTHS","PLATFORM_RANGES"),
+                Arrays.stream(CdR11aObjectAssets.Table.values()).map(Enum::name)
+                        .filter(name -> name.startsWith("PLATFORM_")).toList());
+    }
+
+    private static void verifyPlatform21OtherVisualsCold(CdR11aObjectAssets objects) throws Exception {
+        for (var field : CdR11aObjectAssets.class.getDeclaredFields()) {
+            if (field.getType() == CdObjectVisualAssets.class
+                    && !java.lang.reflect.Modifier.isFinal(field.getModifiers()) && !field.getName().equals("platform")) {
+                field.setAccessible(true); assertNull(field.get(objects),"unrelated optional visual "+field.getName());
+            }
+        }
+    }
+
+    private static void verifyPlatform21NativeReferences(CdMmdImage image,CdReleaseVariant variant) {
+        // Each region was located independently through its own original CUE/PVD/root-directory file.
+        int directory = variant == CdReleaseVariant.USA ? 0x3E34 : 0x3E30;
+        int dispatch = variant == CdReleaseVariant.USA ? 0x3A22 : 0x3A1E;
+        int slot = variant == CdReleaseVariant.USA ? 0x3EB4 : 0x3EB0;
+        int body = variant == CdReleaseVariant.USA ? 0xC84A : 0xC858;
+        int index = variant == CdReleaseVariant.USA ? 0xC860 : 0xC86E;
+        int init = variant == CdReleaseVariant.USA ? 0xC876 : 0xC884;
+        int main = variant == CdReleaseVariant.USA ? 0xC948 : 0xC956;
+        int mapping = variant == CdReleaseVariant.USA ? 0xCCC8 : 0xCCD6;
+        int[] moves = variant == CdReleaseVariant.USA
+                ? new int[]{0xC89A,0xC8AA,0xC8BA} : new int[]{0xC8A8,0xC8B8,0xC8C8};
+        int[] consumers = variant == CdReleaseVariant.USA ? new int[]{0xC8D2,0xC8E4} : new int[]{0xC8E0,0xC8F2};
+        int[] roots = variant == CdReleaseVariant.USA ? new int[]{0xC940,0xC944} : new int[]{0xC94E,0xC952};
+        assertArrayEquals(hexBytes("d040d04043f9"),image.readFile(dispatch-4,6));
+        assertEquals(0x200000+directory,ByteBuffer.wrap(image.readFile(dispatch+2,4)).getInt());
+        assertEquals(directory+(0x21-1)*4,slot);
+        assertEquals(0x200000+body,ByteBuffer.wrap(image.readFile(slot,4)).getInt());
+        assertArrayEquals(hexBytes("700010280024303b000e4ebb000a"),image.readFile(body,14));
+        assertEquals(index,body+8+image.readFile(body+9,1)[0]);
+        assertArrayEquals(hexBytes("001600e8"),image.readFile(index,4));
+        assertEquals(init,index+ByteBuffer.wrap(image.readFile(index,2)).getShort());
+        assertEquals(main,index+ByteBuffer.wrap(image.readFile(index+2,2)).getShort());
+        assertArrayEquals(hexBytes("002800040001317c44be0002117c000200183168000800383168000c003a3168000c0036"),
+                image.readFile(init,36));
+        // Platform/Main.asm:37/40/43: all three MOVE.L immediates select Map1, not Map2.
+        for (int move : moves) {
+            assertEquals(0x203C,Short.toUnsignedInt(ByteBuffer.wrap(image.readFile(move,2)).getShort()));
+            assertEquals(0x200000+mapping,ByteBuffer.wrap(image.readFile(move+2,4)).getInt());
+        }
+        assertArrayEquals(hexBytes("0c79000000ff15066716"),image.readFile(moves[0]+6,10));
+        assertArrayEquals(hexBytes("0c79000100ff15066706"),image.readFile(moves[1]+6,10));
+        assertArrayEquals(hexBytes("21400004"),image.readFile(moves[2]+6,4));
+        for (int i = 0; i < 2; i++) {
+            assertArrayEquals(hexBytes(i == 0 ? "117b006c0019" : "117b105e002d"),image.readFile(consumers[i],6));
+            assertEquals(roots[i],consumers[i]+2+image.readFile(consumers[i]+3,1)[0]);
+            assertArrayEquals(hexBytes(PLATFORM21_HEX[i+1]),image.readFile(roots[i],4));
+            assertEquals(PLATFORM21_SHA256[i+1],CdR11aProfile.sha256(image.readFile(roots[i],4)));
+        }
+        assertEquals(roots[1],roots[0]+4); assertEquals(main,roots[1]+4);
+        assertArrayEquals(hexBytes(PLATFORM21_HEX[0]),image.readFile(mapping,132));
+        assertEquals(PLATFORM21_SHA256[0],CdR11aProfile.sha256(image.readFile(mapping,132)));
+        var nativeView = image.nativeSlice(CdMmdImage.Domain.ORIGINAL_WORD_RAM,0x200000+mapping,132);
+        byte[] nativeBytes = new byte[132]; nativeView.get(nativeBytes);
+        assertArrayEquals(hexBytes(PLATFORM21_HEX[0]),nativeBytes);
+        assertArrayEquals(hexBytes("0006001c0046"),Arrays.copyOf(nativeBytes,6));
+        assertEquals(4,Byte.toUnsignedInt(nativeBytes[6])); assertEquals(8,Byte.toUnsignedInt(nativeBytes[28]));
+        assertEquals(12,Byte.toUnsignedInt(nativeBytes[70]));
+        for (int pad : new int[]{27,69,131}) { assertEquals(0,nativeBytes[pad]); }
+        // The adjacent Map2 source candidate is unselected by these branches and remains unadmitted.
+        if (variant == CdReleaseVariant.USA) {
+            assertEquals(0x20CCC8,PLATFORM_MAPPINGS.range().nativeAddress());
+            assertEquals(0x20C940,PLATFORM_WIDTHS.range().nativeAddress());
+            assertEquals(0x20C944,PLATFORM_RANGES.range().nativeAddress());
+            for (int i = 0; i < 3; i++) {
+                assertArrayEquals(hexBytes(PLATFORM21_HEX[i]),PLATFORM21_TABLES.get(i).range().read(image).copy());
+            }
+        }
+    }
+
+    private static final List<CdR11aObjectAssets.Table> PLATFORM21_TABLES = List.of(
+            PLATFORM_MAPPINGS,PLATFORM_WIDTHS,PLATFORM_RANGES);
+    // Independent pinned N dc/include/EVEN reconstruction, not a copied/extracted game-payload file.
+    private static final String[] PLATFORM21_HEX = {
+            "0006001c004604f0050001f0f00508010000050005f000050805000008f0050001e0f0050001f0f005000100f00500011000050005e000050009f000050009000005080510000cf0050001d0f0050001e0f0050001f0f005000100f005000110f00500012000050005d000050009e000050009f000050009000005000910000508052000",
+            "10203000","02030406"};
+    private static final String[] PLATFORM21_SHA256 = {
+            "a8b6e5695090a558c67e7e776db8c4b642731a7ef7445608264b29f15529afd7",
+            "87d0fad66b7f6fe31844c828bbfa818f478c885f0f7672d1bb38d89ed6bfb9d3",
+            "ce513997025ae549282209565f4c74aae2258cd6c391acd643d3b7f1b8071c9a"};
+
+    // End Platform ID21 asset handoff R1.
     // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>
 }

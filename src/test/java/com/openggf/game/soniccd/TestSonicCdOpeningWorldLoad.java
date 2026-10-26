@@ -939,7 +939,7 @@ class TestSonicCdOpeningWorldLoad {
         registry.restore(full);assertState(before,h);step(h,input(8,0,false));assertState(at540,h);step(h,input(8,0,false));assertState(at541,h);
         registry.restoreCourse(course);assertState(before,h);step(h,input(8,0,false));assertState(at540,h);step(h,input(8,0,false));assertState(at541,h);
     }
-    @Test void ordinaryRightRouteCompletesAntonCheckpointAndCollapseThenStopsAtPlatform21At742WithReplay() throws Exception {
+    @Test void ordinaryRightRouteCompletesAntonCheckpointCollapseAndPlatform21Through1200WithReplay() throws Exception {
         var h=opening();var runtime=objects(h);var frame=h.module().requirePlayerFrame();var pool=runtime.placement().pool();
         for(int call=0;call<560;call++)step(h,input(8,0,false));
         assertEquals(0,pool.state(46).id());
@@ -1089,23 +1089,105 @@ class TestSonicCdOpeningWorldLoad {
             }
         }
         assertEquals(0,pool.state(75).id(),"This closed cut precedes the next native SpawnObjects");
-        var failure=assertThrows(UnsupportedOperationException.class,()->step(h,input(8,0,false)));
-        assertEquals("Unowned CD object ID $21 at live physical slot 75",failure.getMessage());
-        assertEquals(0x21,pool.state(75).id());assertEquals(0,pool.state(75).routine());
-        // SpawnObjects already ran in742 before Body and this physical walk. Compare no Init fields,
-        // not the preceding741 free image: placement legitimately wrote ID/native coordinates/subtypes.
-        assertEquals(0,pool.state(75).word(CdObjectState.WordField.TILE));
-        assertEquals(0,pool.state(75).longBits(CdObjectState.LongField.MAPPINGS));
-        assertEquals(0,pool.state(75).unsignedByte(CdObjectState.ByteField.PRIORITY));
-        assertEquals(0,pool.state(75).unsignedByte(CdObjectState.ByteField.WIDTH));
-        System.out.println("NATURAL_PLATFORM21_FRONTIER call=742 slot75="+java.util.HexFormat.of().formatHex(pool.state(75).copyBytes()));
-        assertEquals(0x032F4000,pool.state(35).longBits(CdObjectState.LongField.Y_POSITION));
-        assertEquals(0x48000,pool.state(35).longBits(CdObjectState.LongField.COLLAPSE_FALL_DELTA));
-        assertEquals(naturalSaved,runtime.checkpointState());
-        assertEquals(216737536,frame.state().motion().centreX16_16());assertEquals(48973568,frame.state().motion().centreY16_16());
-        assertEquals(1536,frame.state().motion().xVelocity());assertEquals(0,frame.state().motion().yVelocity());
+        // Native ObjPlatform Init returns before Main (Platform/Main.asm:30-81); the ordinary
+        // wrapper still runs DrawObject (same source:7-13). These are literal test oracles,
+        // corroborated by Root's completed USA controller cuts, never production-derived expected bytes.
+        byte[] platformInit=java.util.HexFormat.of().parseHex(
+                "210444be0020ccc80ef00000015c00000000000000000800021000000000000000000000020000004000000000020000000000000000015c0ef0015c00000000");
+        var level=h.mode().getLevelManager();var loadedLevel=level.getCurrentLevel();
+        long generation=level.getCompletedProductionLoadGeneration();var actor=h.module().requirePlayerActor();
+        for(int call=742;call<=1200;call++) {
+            // Eligible full/course cuts: post741 -> Init742, post742 -> first Main743,
+            // and the later pre-terminal1199 -> completed1200. No failed-call continuation.
+            boolean replay=call==742||call==743||call==1200;
+            var beforeCall=replay?state(h):null;
+            var fullCall=replay?registry.capture():null;var courseCall=replay?registry.captureCourse():null;
+            int levelFrame=level.getFrameCounter();var clock=frame.vIntClock();
+            step(h,input(8,0,false));
+            assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT,runtime.phase());
+            assertFalse(runtime.closed());assertFalse(frame.closed());
+            assertEquals(levelFrame+1,level.getFrameCounter());
+            assertEquals(clock.absoluteSeed(),frame.vIntClock().absoluteSeed());
+            assertEquals(clock.deltaSinceAdmittedCut()+1,frame.vIntClock().deltaSinceAdmittedCut());
+            assertEquals(naturalSaved,runtime.checkpointState(),"Natural call649 save survives every later Right call");
+
+            var platform=pool.state(75);
+            assertEquals(0x21,platform.id());assertEquals(2,platform.routine());assertEquals(0x40,platform.subtype());
+            // Subtype4X is stationary without contact, not an unimplemented oscillator.
+            // Top is unconditional in Main; its own no-contact path clears Solid type again.
+            assertEquals(3824,platform.centreX());assertEquals(348,platform.centreY());
+            assertEquals(0,platform.unsignedByte(CdObjectState.ByteField.PLATFORM_PHASE));
+            assertEquals(0,platform.unsignedByte(CdObjectState.ByteField.PLATFORM_SUBSTATE));
+            assertEquals(0,platform.unsignedByte(CdObjectState.ByteField.PLATFORM_SAG));
+            assertEquals(0,platform.unsignedByte(CdObjectState.ByteField.PLATFORM_TIMER));
+            assertEquals(0,platform.unsignedByte(CdObjectState.ByteField.SOLID_TYPE));
+            if(call==742||call==743)assertArrayEquals(platformInit,platform.copyBytes());
+            if(call==742) {
+                assertEquals(0x20CCC8,platform.longBits(CdObjectState.LongField.MAPPINGS));
+                assertEquals(0x44BE,platform.word(CdObjectState.WordField.TILE));
+                assertEquals(2,platform.unsignedByte(CdObjectState.ByteField.PRIORITY));
+                assertEquals(0x10,platform.unsignedByte(CdObjectState.ByteField.WIDTH));
+                assertEquals(8,platform.unsignedByte(CdObjectState.ByteField.Y_RADIUS));
+                assertEquals(0,platform.unsignedByte(CdObjectState.ByteField.X_RADIUS));
+                assertEquals(0,platform.unsignedByte(CdObjectState.ByteField.MAP_FRAME));
+                assertEquals(2,platform.unsignedByte(CdObjectState.ByteField.PLATFORM_RANGE));
+                assertEquals(348,platform.word(CdObjectState.WordField.PLATFORM_INITIAL_Y));
+                assertEquals(3824,platform.word(CdObjectState.WordField.PLATFORM_ANCHOR_X));
+                assertEquals(348,platform.word(CdObjectState.WordField.PLATFORM_ANCHOR_Y));
+                assertEquals(4,platform.spriteFlags(),"Native Draw leaves bit7 clear at this offscreen Init cut");
+                assertEquals(0x032F4000,pool.state(35).longBits(CdObjectState.LongField.Y_POSITION));
+                assertEquals(0x48000,pool.state(35).longBits(CdObjectState.LongField.COLLAPSE_FALL_DELTA));
+                assertEquals(216737536,frame.state().motion().centreX16_16());
+                assertEquals(48973568,frame.state().motion().centreY16_16());
+                assertEquals(1536,frame.state().motion().xVelocity());assertEquals(0,frame.state().motion().yVelocity());
+                assertEquals(1536,frame.state().motion().groundVelocity());assertEquals(2,frame.state().motion().routine());
+                assertEquals(2,frame.state().motion().flags());assertEquals(132,frame.state().motion().spriteFlags());
+                assertEquals(0,frame.state().objectLinks().pushObject());assertEquals(0,frame.state().objectLinks().standObject());
+                assertEquals(0x0200,runtime.sectionArtState().sectionWord());assertEquals(0,runtime.sectionArtState().remainingTilesWord());
+                assertEquals(0,runtime.sectionArtState().queue().headSource());
+            }
+            if(call==743) {
+                assertEquals(217130752,frame.state().motion().centreX16_16());
+                assertEquals(48973568,frame.state().motion().centreY16_16());
+                assertEquals(1536,frame.state().motion().xVelocity());assertEquals(56,frame.state().motion().yVelocity());
+                assertEquals(1536,frame.state().motion().groundVelocity());assertEquals(2,frame.state().motion().routine());
+                assertEquals(2,frame.state().motion().flags());
+            }
+            if(replay) {
+                var afterCall=state(h);
+                registry.restore(fullCall);assertState(beforeCall,h);assertEquals(naturalSaved,runtime.checkpointState());
+                step(h,input(8,0,false));assertState(afterCall,h);assertEquals(naturalSaved,runtime.checkpointState());
+                assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT,runtime.phase());
+                assertFalse(runtime.closed());assertFalse(frame.closed());
+                registry.restoreCourse(courseCall);assertState(beforeCall,h);assertEquals(naturalSaved,runtime.checkpointState());
+                step(h,input(8,0,false));assertState(afterCall,h);assertEquals(naturalSaved,runtime.checkpointState());
+                assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT,runtime.phase());
+                assertFalse(runtime.closed());assertFalse(frame.closed());
+            }
+            assertSame(level,h.mode().getLevelManager());assertSame(loadedLevel,level.getCurrentLevel());
+            assertEquals(generation,level.getCompletedProductionLoadGeneration(),"No load/restart epoch within this bounded route");
+            assertSame(runtime,objects(h));assertSame(frame,h.module().requirePlayerFrame());
+            assertSame(actor,h.module().requirePlayerActor());assertSame(pool,runtime.placement().pool());
+        }
+        // Completed1200 is a controller pushing obstacle, not an unsupported boundary or act completion.
+        var terminal=frame.state();var motion=terminal.motion();
+        assertEquals(222748416,motion.centreX16_16());assertEquals(48994048,motion.centreY16_16());
+        assertEquals(0,motion.xVelocity());assertEquals(0,motion.yVelocity());assertEquals(0,motion.groundVelocity());
+        assertEquals(2,motion.routine());assertEquals(32,motion.flags());assertEquals(132,motion.spriteFlags());
+        assertEquals(0,terminal.timers().hurt());
+        assertEquals(0,frame.environment().movement().globals().primaryAngle());
+        assertEquals(0,frame.environment().movement().globals().secondaryAngle());
+        assertEquals(53,terminal.objectLinks().pushObject(),"Raw whole-slot link only; no inferred object ID/class");
+        assertEquals(0,terminal.objectLinks().standObject());
+        assertEquals(1,terminal.animation().scriptIndex());assertEquals(6,terminal.animation().timer());
+        assertEquals(100,terminal.animation().mapFrame());
         assertEquals(0x0200,runtime.sectionArtState().sectionWord());assertEquals(0,runtime.sectionArtState().remainingTilesWord());
-        assertEquals(0,runtime.sectionArtState().queue().headSource());assertTrue(runtime.closed());assertTrue(frame.closed());
+        assertEquals(0,runtime.sectionArtState().queue().headSource());assertEquals(List.of(),runtime.lastSoundRequests());
+        assertEquals(2,runtime.levelGlobals().checkpoint());assertEquals(1,runtime.levelGlobals().spawnMode());
+        assertEquals(naturalSaved,runtime.checkpointState());
+        byte[] known=new byte[31];Arrays.fill(known,(byte)1);assertArrayEquals(known,naturalSaved.saved().knownMask().copy());
+        assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT,runtime.phase());
+        assertFalse(runtime.closed());assertFalse(frame.closed());
     }
 
     // ClearScreen/InitLevelDrawBG: this is post-initial-draw, before any represented V-int.

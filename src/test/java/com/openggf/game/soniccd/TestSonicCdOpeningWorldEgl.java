@@ -5192,4 +5192,384 @@ class TestSonicCdOpeningWorldEgl {
     }
     // END constructed Collapse Platform World proof.
     // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>
+
+
+    /**
+     * SOURCE-ONLY authored proof; every author oracle is UNRUN. TEST initial ingress is not a natural
+     * ID21 route/restart or a native callback trace. N = scddisasm 1ecc5f3a, Platform/Main.asm:7-277,
+     * :527-555; Object Solid.asm:15-146,174-243,328-430,473-479; Sonic/Main.asm:837-941,1033-1036.
+     */
+    @Test void actualEglConstructedPlatform21WorldCarriesSagsOscillatesDropsReplaysAndSharesExistingArt() throws Exception {
+        Assumptions.assumeTrue(Boolean.getBoolean("soniccd.opening.egl"),"Explicit actual EGL/media opt-in");
+        assertEquals("surfaceless-egl",System.getProperty("openggf.headless.gl"));
+        assertNull(System.getenv("DISPLAY"));assertNull(System.getenv("WAYLAND_DISPLAY"));
+        String media=System.getProperty("soniccd.media.root");assertNotNull(media);assertFalse(media.isBlank());
+        CdGameDataSource source;
+        try(var files=Files.list(Path.of(media).resolve("USA"))) {
+            var cues=files.filter(p->p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".cue")).toList();
+            assertEquals(1,cues.size());source=CdStockLaunch.prepare(cues.getFirst(),CdStockLaunch.Request.r11a());
+        }
+        String prefixLog=InputScriptCompiler.compileToInputLog("649 R"),sceneLog=InputScriptCompiler.compileToInputLog("96 -");
+        var prefix=new Bk2MovieLoader().parseInputLogText(Path.of("ENGINE-Platform21-ordinary-Right649-prerequisite"),prefixLog.lines().toList());
+        var movie=new Bk2MovieLoader().parseInputLogText(Path.of("ENGINE-constructed-Platform21-neutral96-bound"),sceneLog.lines().toList());
+        assertEquals(649,prefix.getFrameCount());assertEquals(96,movie.getFrameCount());
+        String construction="ENGINE CONSTRUCTED actual-USA R11A ID21 World; all author oracles UNRUN. No natural ID21 contact/restart/emulator/native parity certification.\n"
+                +"Ordinary Right649 reaches existing actual checkpoint/current57; capture one pristine full warm cut. 16 independent initial scenes: 4X frame0/1/2 x rawHV0..3,14 rows each; 0X/1X frame0/raw0,82 each; 5X frame1/raw0,3,96 each. Full/course replay makes6273 ordinary controller calls including649, not a measured execution cost.\n"
+                +"Preserve warmed INTEGER X and camera window. Pure real terrain query at cameraY+112 fixes two-foot support; TEST-declared parentY=floor-64, actorY=parentY-8-19-4. Radius8 and actual mappingY -16..16 motivate fixed clearance;64 is TEST construction, not native state/default or a fitted Collapse718 value. No terrain search/fallback. Headroom, swept envelope and support predicates must hold or stop.\n"
+                +"ONE CLOSED_CUT clear96 then physical40 ID21/native XY/subtype/secondary0/saved0/raw flips only, ONE existing same-owner actor restore/rebind (ABCD/1234 fractions,YV200,XV0) per scene. Stale inactive raw links retained. Then bounded ordinary neutral controller rows only; no post-ingress reseed, rebind, reload, spawner mute, terrain/global/gate edit or gameplay helper invocation.\n"
+                +"Independent literal ALL64 model and native sine operand words: actual Init returns without Main/Top; actual Draw marks bit7; next Main Top contact, standing vertical/horizontal carry, sag old-byte shift, 0X new-phase/1X old-phase sine turn, 5X first timer29/double sag, last timer0 still4X, next row full-LONG fall/unsigned cap/delete. Completed primary/support and cameras are labelled per-row World evidence, not an independent native callback trace.\n"
+                +"Existing source11/cached ART_PLATFORM PLC1,row6,97C0/57,Java452/native453; same current bytes and logical banks.collapsePlatform compatibility span. No new source/bank/Region/C29/reservation/count. Literal Map1 CCC8/132 three frames4/8/12 pieces, raw2x2/palette2/allHV, unique offsets1..C. Actual priorCPU+NOW display/currentCPU+NOW samples, ordered native PlaneB/terrain GPU and actual renderer isolated/TEST contrast/omission controls.\n"
+                +"Full/course selected preInit/postInit/contact/sag/turn/timer0/firstFall/terminal cuts compare complete actor/shared/native pool/reserved/saved/queue/CPU/picture/scroll/section/checkpoint31+knowledge/live owner BEFORE replay, then state+pixels forward without ingress. Selected12 existing shared entries installed/removed on module close; actual unrelated entry identities retained. Existing20th test alone retains exhaustive658 installation/retirement proof; this test does not claim658 or57 rendered from12 selected.\n"
+                +"World subset0X/1X/4X/5X only, all UNRUN. 2X/3X same-sine diagonal,6X phase3E stop,7X ObjMove/real ceiling,8X/9X60 timer/phase40 stop/retainedXV, optional native Spring children, dirty/nonzero secondary/exhaustion, time-stop/prefix boundaries and natural frontier remain Root/component/Runtime obligations. No Platform FM/A3; complete reached Body plus genuine shared Solid ledger only. Optional ENGINE output is written only after module AND finally session/graphics/boot cleanup returns.\n";
+        var observations=new StringBuilder();var artifacts=new java.util.LinkedHashMap<String,RgbaImage>();
+        // N Functions (Misc).asm:SineTable:81-86, exact first96 WORD operands; no CdPlayerMath/Body helper evaluation.
+        byte[] sine=java.util.HexFormat.of().parseHex(
+                "00000006000c00120019001f0025002b00310038003e0044004a00500056005c"
+                +"00610067006d00730078007e00830088008e00930098009d00a200a700ab00b0"
+                +"00b500b900bd00c100c500c900cd00d100d400d800db00de00e100e400e700ea"
+                +"00ec00ee00f100f300f400f600f800f900fb00fc00fd00fe00fe00ff00ff00ff"
+                +"010000ff00ff00ff00fe00fe00fd00fc00fb00f900f800f600f400f300f100ee"
+                +"00ec00ea00e700e400e100de00db00d800d400d100cd00c900c500c100bd00b9");
+        try(var boot=new HeadlessGameBoot(320,224)) {
+            try {
+                var loop=boot.bootSonicCdOpeningObjects(source);var mode=SessionManager.getCurrentGameplayMode();
+                var module=assertInstanceOf(SonicCdGameModule.class,mode.getWorldSession().getGameModule());
+                var runtime=assertInstanceOf(CdOpeningObjectRuntime.class,module.getGameService(NativeDynamicObjectPass.class));
+                var frame=module.requirePlayerFrame();var objects=source.assets().openingObjects();var pool=runtime.placement().pool();
+                assertSame(source,mode.getWorldSession().getDataSource());assertEquals(GameMode.LEVEL,loop.getCurrentGameMode());
+                assertEquals(NullAudioBackend.class,GameServices.audio().getBackend().getClass());
+                assertNull(GameServices.audio().captureLogicalSnapshot().presentation().activeMusic());
+                var bank=objects.sectionArtSources();var identities=bank.sources();assertEquals(11,identities.size());
+                var platform=bank.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_PLATFORM);
+                assertEquals(1,platform.canonicalPlcId());assertEquals(6,platform.canonicalRowIndex());assertEquals(0x97C0,platform.canonicalPlc().vramAddress());
+                assertEquals(57,platform.tileCount());assertEquals(452,platform.decode().sourceBlobRange().length());assertEquals(453,platform.readerInputRange().length());
+                assertEquals(1824,platform.decode().bytes().length());assertEquals(453,platform.readerBytes().length());
+                assertCollapseWorldCurrentSource(runtime,objects,bank,identities,platform);
+                var visual=objects.platform();assertSame(visual,objects.platform());assertEquals(3,visual.mappingFrames().size());assertTrue(visual.animations().isEmpty());
+                var maps=objects.view(com.openggf.game.soniccd.level.CdR11aObjectAssets.Table.PLATFORM_MAPPINGS);
+                assertEquals(51,com.openggf.game.soniccd.level.CdR11aObjectAssets.Table.PLATFORM_MAPPINGS.ordinal());
+                assertEquals(52,com.openggf.game.soniccd.level.CdR11aObjectAssets.Table.PLATFORM_WIDTHS.ordinal());
+                assertEquals(53,com.openggf.game.soniccd.level.CdR11aObjectAssets.Table.PLATFORM_RANGES.ordinal());
+                assertEquals(0x20CCC8,maps.range().nativeAddress());assertEquals(132,maps.bytes().length());
+                assertEquals("a8b6e5695090a558c67e7e776db8c4b642731a7ef7445608264b29f15529afd7",
+                        java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(maps.bytes().copy())));
+                assertEquals(0x20C940,objects.view(com.openggf.game.soniccd.level.CdR11aObjectAssets.Table.PLATFORM_WIDTHS).range().nativeAddress());
+                assertEquals(0x20C944,objects.view(com.openggf.game.soniccd.level.CdR11aObjectAssets.Table.PLATFORM_RANGES).range().nativeAddress());
+                assertArrayEquals(new byte[]{16,32,48,0},objects.view(com.openggf.game.soniccd.level.CdR11aObjectAssets.Table.PLATFORM_WIDTHS).bytes().copy());
+                assertArrayEquals(new byte[]{2,3,4,6},objects.view(com.openggf.game.soniccd.level.CdR11aObjectAssets.Table.PLATFORM_RANGES).bytes().copy());
+                assertArrayEquals(sine,frame.assets().player().sineTable().slice(0,sine.length).copy());
+                var mappings=com.openggf.game.soniccd.objects.CdObjectMappings.fromOpeningAssets(frame.assets(),objects);
+                for(int f=0;f<3;f++) {
+                    var resolved=mappings.resolve(0x20CCC8,false,f);var literal=platform21WorldPieces(f);assertEquals(4*(f+1),literal.length);assertEquals(literal.length,resolved.pieces().size());
+                    for(int p=0;p<literal.length;p++)assertEquals(new CdObjectDrawQueue.RawPiece(literal[p][0],5,literal[p][1],literal[p][2]),resolved.pieces().get(p));
+                }
+                for(int row=0;row<649;row++){step(loop,prefix.getFrame(row));assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT,runtime.phase());}
+                assertCollapseWorldCurrentSource(runtime,objects,bank,identities,platform);
+                assertEquals(2,frame.state().motion().routine());assertEquals(0,frame.state().motion().flags()&0x28);assertEquals(0,frame.state().timers().hurt());
+                assertEquals(2,frame.state().header().priority());assertEquals(2,runtime.levelGlobals().checkpoint());assertEquals(1,runtime.levelGlobals().spawnMode());
+                byte[] known=new byte[31];Arrays.fill(known,(byte)1);assertArrayEquals(known,runtime.checkpointState().saved().knownMask().copy());
+                int base=com.openggf.graphics.PatternAtlasRange.OBJECTS.base();var banks=new CdOpeningObjectRuntime.LogicalBanks(base,base+24,base+38);
+                assertEquals(base+601,banks.collapsePlatform());assertEquals(banks.anton()+22,banks.collapsePlatform());
+                var registry=mode.getRewindRegistry();var warmFull=registry.capture();var warm=capture(module);
+                artifacts.put("ENGINE-controller-Right-call649-natural-checkpoint-save.png",render(module,true));assertAntonWorldCapture(warm,module);
+                var reachedTiles=new java.util.TreeSet<Integer>();var products=new java.util.TreeSet<String>();int completedCalls=649,actualDeletes=0;
+                for(int scene=0;scene<16;scene++) {
+                    registry.restore(warmFull);assertAntonWorldCapture(warm,module);assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT,runtime.phase());
+                    int subtype=scene<12?0x40+scene/4:scene==12?0:scene==13?0x10:0x51;
+                    int flip=scene<12?scene%4:scene==15?3:0,rows=scene<12?14:scene<14?82:96;
+                    int[] cuts=scene<12?new int[]{0,1,2,9}:scene<14?new int[]{0,1,2,9,65}:new int[]{0,1,2,9,30,31,32,33,48};
+                    int x=frame.state().motion().centreX16_16()>>>16;assertEquals(warm.actor().state().motion().centreX16_16()>>>16,x);
+                    var terrain=new com.openggf.game.soniccd.player.CdPlayerTerrain(frame.assets().terrain());int probeY=GameServices.camera().getY()+112;
+                    var left=terrain.floor(x-9,probeY,13,0,16,4);var right=terrain.floor(x+9,probeY,13,0,16,4);
+                    assertTrue(left.angleWrite().isPresent()&&right.angleWrite().isPresent(),"Fixed real two-foot support prerequisite; no search/fallback");
+                    int floor=probeY+Math.min(left.distance(),right.distance()),y=floor-64,actorY=y-8-19-4;
+                    assertAntonWorldFloor(frame.assets().terrain(),terrain,x-9,floor,probeY+left.distance()-floor,4);
+                    assertAntonWorldFloor(frame.assets().terrain(),terrain,x+9,floor,probeY+right.distance()-floor,4);
+                    assertTrue(y-50-GameServices.camera().getY()>=0&&y+48-GameServices.camera().getY()<224,"TEST64 clearance: actor head and actual map16 plus sine32 envelope");
+                    assertTrue(x-48-GameServices.camera().getX()>=0&&x+48-GameServices.camera().getX()<=320,"Warmed integer X retained, full widest map visible");
+                    for(int dx=-48;dx<=48;dx+=8) {
+                        assertTrue(terrain.floor(x+dx,y+48,13,0,16,4).distance()>=0,"Real fixed swept map envelope above terrain");
+                        assertTrue(terrain.floor(x+dx,(y-50)^15,14,0x1000,-16,4).distance()>=0,"Real fixed visible headroom, no fabricated ceiling result");
+                    }
+                    assertTrue(terrain.floor(x-9,y-8,13,0,16,4).distance()>=12);
+                    assertTrue(terrain.floor(x+9,y-8,13,0,16,4).distance()>=12,"Shared Top floor cannot replace initial platform contact");
+                    assertEquals(0,runtime.ringGlobals().timeStopTimer());assertEquals(0,runtime.devGlobals().goodFuture());assertEquals(0,runtime.contactGlobals().timeWarp());
+                    assertEquals(0,frame.environment().globals().debugMode());assertEquals(0,frame.environment().globals().debugCheat());
+                    assertEquals(0,frame.environment().globals().invincible());assertEquals(0,frame.environment().movement().gates().miniSonic());
+                    assertEquals(0,frame.environment().movement().gates().speedShoes());
+                    var placement=runtime.placement().capture();var reserved=runtime.captureClosedCut().reserved();
+                    // TEST ingress, ONCE per independent scene. No phase/routine/map/sag/timer/velocity body seeds.
+                    pool.clearDynamicSlots();assertEquals(96,pool.capture().slots().size());assertTrue(pool.capture().slots().stream().allMatch(s->Arrays.equals(new byte[64],s.copyBytes())));
+                    pool.write(pool.state(40).moveByte(ID,0x21).moveByte(SUBTYPE,subtype).moveByte(SUBTYPE2,0).moveByte(SAVED_FLAGS_ID,0)
+                            .moveByte(FLAGS,flip).moveByte(SPRITE_FLAGS,flip).moveWord(X,x).moveWord(Y,y));
+                    stageCollapseWorldPlayer(module,(x<<16)|0xABCD,(actorY<<16)|0x1234,0); // Existing SAME-owner initial actor restore/rebind, once only.
+                    assertArrayEquals(placement.savedFlags().copy(),runtime.placement().capture().savedFlags().copy());assertEquals(placement.status(),runtime.placement().capture().status());
+                    assertReservedImages(reserved,runtime.captureClosedCut().reserved());
+                    byte[] model=platform21WorldModel(new byte[64],0,x,y,subtype,flip,GameServices.camera().getX(),GameServices.camera().getY(),false,sine);
+                    assertArrayEquals(model,pool.state(40).copyBytes());
+                    var modelRows=new ArrayList<byte[]>();modelRows.add(model);
+                    var fullCuts=new ArrayList<>(List.of(registry.capture()));var courseCuts=new ArrayList<>(List.of(registry.captureCourse()));
+                    var states=new ArrayList<>(List.of(capture(module)));var pictures=new ArrayList<>(List.of(render(module,true)));
+                    String label="subtype"+Integer.toHexString(subtype)+"-raw"+flip;boolean deleted=false,hadCarry=false;
+                    observations.append("scene=").append(label).append(" initialX=").append(x).append(" probeY=").append(probeY).append(" twoFootFloor=").append(floor)
+                            .append(" TEST-parentY=").append(y).append(" rows=").append(rows).append('\n');
+                    artifacts.put("ENGINE-Platform21-"+label+"-preInit.png",pictures.getFirst());
+                    for(int row=1;row<=rows;row++) {
+                        var previous=capture(module);int preX=GameServices.camera().getX(),preY=GameServices.camera().getY();
+                        assertTrue(preY>=0x100&&preY<0x700,"Fixed fixture excludes native vertical-wrap branches");
+                        assertEquals(0,runtime.ringGlobals().timeStopTimer());long clock=frame.vIntClock().absoluteValue().orElseThrow();int levelFrames=GameServices.level().getFrameCounter();
+                        platform21WorldStep(loop,movie.getFrame(row-1),module);completedCalls++;
+                        assertEquals(clock+1,frame.vIntClock().absoluteValue().orElseThrow());assertEquals(levelFrames+1,GameServices.level().getFrameCounter());
+                        var m=frame.state().motion();boolean support=(m.flags()&8)!=0;
+                        if(support){assertEquals(40,frame.state().objectLinks().standObject());assertNotEquals(0,pool.state(40).flags()&8);}
+                        if(row==1)assertFalse(support,"Init RTS owns no Main/Top contact");
+                        else if(subtype<0x50||row<=31)assertTrue(support,"Fixed genuine Top contact/carry prerequisite from row2");
+                        model=platform21WorldModel(model,row,x,y,subtype,flip,preX,preY,support,sine);modelRows.add(model);
+                        for(int whole=32;whole<=127;whole++)assertArrayEquals(whole==40?model:new byte[64],pool.state(whole).copyBytes(),"ALL64 native/nonwrite ID21 row/whole="+row+"/"+whole+" "+label);
+                        if(row==1){assertEquals(0,pool.state(40).unsignedByte(SOLID_TYPE));assertEquals(0,pool.state(40).unsignedByte(PLATFORM_SAG));assertEquals(0,pool.state(40).unsignedByte(PLATFORM_PHASE));assertNotEquals(0,pool.state(40).spriteFlags()&0x80);}
+                        if(support&&subtype<0x50) {
+                            assertEquals((platform21WorldRead(model,12,2)-27)&0xFFFF,m.centreY16_16()>>>16,"Actual native Top snaps WORD Y, retaining fraction");
+                            assertEquals((platform21WorldRead(model,8,2)<<16)|0xABCD,m.centreX16_16(),"Actual full X carry from unchanged Body neutral XV and object XV");
+                            hadCarry|=row>2&&(m.centreX16_16()!=previous.actor().state().motion().centreX16_16()||m.centreY16_16()!=previous.actor().state().motion().centreY16_16());
+                        }
+                        if(subtype==0x51) {
+                            if(row==2){assertEquals(29,pool.state(40).unsignedByte(PLATFORM_TIMER));assertEquals(2,pool.state(40).unsignedByte(PLATFORM_SAG));}
+                            if(row==31){assertEquals(0,pool.state(40).unsignedByte(PLATFORM_TIMER));assertEquals(0,pool.state(40).word(Y_VELOCITY));}
+                            if(row==32){assertEquals(modelRows.get(31)[12],model[12]);assertEquals(platform21WorldRead(modelRows.get(31),12,4),pool.state(40).longBits(Y_POSITION));assertEquals(0x40,pool.state(40).word(Y_VELOCITY));}
+                            if(row==33)assertEquals(platform21WorldRead(modelRows.get(32),12,4)+0x4000,pool.state(40).longBits(Y_POSITION),"First nonzero full-LONG fractional fall");
+                            if(!deleted&&pool.state(40).id()==0){deleted=true;actualDeletes++;observations.append(label).append(" actual vertical delete row=").append(row).append('\n');}
+                        }
+                        assertEquals(2,m.routine());assertEquals(0,frame.state().timers().hurt());
+                        assertEquals(states.getFirst().objects().checkpointState(),runtime.checkpointState(),"ALL31 saved bytes/knowledge and live checkpoint owner unchanged");
+                        assertEquals(states.getFirst().objects().contactGlobals(),runtime.contactGlobals());assertEquals(states.getFirst().objects().scoreGlobals(),runtime.scoreGlobals());
+                        assertArrayEquals(placement.savedFlags().copy(),runtime.placement().capture().savedFlags().copy());
+                        var completed=capture(module);var selected=completed.publication().published();assertEquals(previous.publication().prepared(),selected);
+                        assertCollapseWorldCurrentSource(runtime,objects,bank,identities,platform);assertSame(visual,objects.platform());
+                        var residency=runtime.sectionArtState().residency();var policy=monitorWorldPolicy(module,objects,banks);
+                        assertEquals(com.openggf.game.soniccd.resources.CdObjectPresentation.convert(previous.cpu(),policy),runtime.displayedFrame(),"Actual prior CPU plus NOW-serviced current C29 bytes");
+                        var cpuPicture=com.openggf.game.soniccd.resources.CdObjectPresentation.convert(runtime.cpuSat(),policy);
+                        assertCollapseWorldVersions(cpuPicture,residency,banks.collapsePlatform());assertCollapseWorldVersions(runtime.displayedFrame(),residency,banks.collapsePlatform());
+                        assertPlatform21WorldSat(runtime.cpuSat(),model,GameServices.camera().getX(),GameServices.camera().getY());
+                        var image=render(module,true);var backdrop=renderTerrain(module,selected);assertNativeGpuBackground(module);assertTerrainOutsideSprites(image,backdrop,runtime.displayedFrame());
+                        if(row>=2) {
+                            var priorModel=modelRows.get(row-1);assertPlatform21WorldSat(previous.cpu(),priorModel,selected.cameraX(),selected.cameraY());
+                            var literal=platform21WorldTiles(previous.cpu(),priorModel,selected.cameraX(),selected.cameraY());
+                            if(!literal.isEmpty()) {
+                                assertCollapseWorldPixels(runtime.displayedFrame(),image,backdrop,residency,banks.collapsePlatform(),literal);
+                                for(var cell:literal) {
+                                    reachedTiles.add(cell.offset());int id=banks.collapsePlatform()+cell.offset();var atlas=GameServices.graphics().getPatternAtlas();var entry=atlas.getEntry(id);assertNotNull(entry);
+                                    assertTrue(glIsTexture(atlas.getTextureId(entry.atlasIndex())));assertEquals(runtime.displayedFrame().patternVersions().get(id),com.openggf.graphics.SpritePresentation.patternSample(GameServices.graphics(),id));
+                                }
+                                products.add((subtype&3)+":"+flip);
+                                if(row==2) {
+                                    var only=collapseWorldOnly(runtime.displayedFrame(),banks.collapsePlatform());var isolated=renderDiagonalWorldPicture(module,only,null);
+                                    assertCollapseWorldPixels(only,isolated,backdrop,residency,banks.collapsePlatform(),literal);int contrastRgb=diagonalWorldContrastRgb(2);
+                                    var contrast=renderDiagonalWorldPicture(module,com.openggf.graphics.SpritePresentation.Frame.empty(),contrastRgb);var glyph=renderDiagonalWorldPicture(module,only,contrastRgb);
+                                    assertCollapseWorldPixels(only,glyph,contrast,residency,banks.collapsePlatform(),literal);
+                                    observations.append(label).append(' ').append(assertCollapseWorldOmissions(module,only,glyph,contrast,residency,banks.collapsePlatform(),literal,contrastRgb)).append('\n');
+                                    assertFalse(Arrays.equals(backdrop.pixels(),renderWithoutBackground(module).pixels()),"Actual selected ordered native PlaneB contributes");
+                                    artifacts.put("ENGINE-Platform21-"+label+"-first-displayed.png",image);artifacts.put("ENGINE-nativePlaneB-terrain-"+label+".png",backdrop);
+                                    artifacts.put("ENGINE-render-only-Platform21-"+label+".png",isolated);
+                                }
+                            }
+                        }
+                        if(row==1) {
+                            var literal=platform21WorldTiles(runtime.cpuSat(),model,GameServices.camera().getX(),GameServices.camera().getY());assertFalse(literal.isEmpty());
+                            assertTrue(literal.stream().allMatch(c->c.x()>=0&&c.y()>=0&&c.x()+8<=320&&c.y()+8<=224),"Actual complete postInit map visible");
+                            var only=collapseWorldOnly(cpuPicture,banks.collapsePlatform());var currentCpu=renderDiagonalWorldPicture(module,only,null);
+                            assertCollapseWorldPixels(only,currentCpu,backdrop,residency,banks.collapsePlatform(),literal);artifacts.put("ENGINE-render-only-currentCPU-Platform21-"+label+"-postInit.png",currentCpu);
+                        }
+                        observations.append(label).append(" row=").append(row).append(" World-primaryX16=").append(m.centreX16_16()).append(" World-primaryY16=").append(m.centreY16_16())
+                                .append(" World-support=").append(support).append(" World-preCamera=").append(preX).append(',').append(preY)
+                                .append(" modelPhase=").append(model[0x2A]&255).append(" modelSag=").append(model[0x2C]&255).append(" modelTimer=").append(model[0x2E]&255).append('\n');
+                        assertArrayEquals(image.pixels(),render(module,true).pixels());assertAntonWorldCapture(completed,module);
+                        states.add(completed);pictures.add(image);fullCuts.add(registry.capture());courseCuts.add(registry.captureCourse());
+                    }
+                    if(subtype==0){assertEquals(y+32,platform21WorldRead(modelRows.get(65),12,2));assertTrue(platform21WorldRead(modelRows.get(82),12,2)<y+32);assertTrue(hadCarry);}
+                    if(subtype==0x10){assertEquals(x+32,platform21WorldRead(modelRows.get(66),8,2));assertTrue(platform21WorldRead(modelRows.get(82),8,2)<x+32);assertTrue(hadCarry);}
+                    if((subtype&0xF0)==0x40){assertEquals(8,pool.state(40).unsignedByte(PLATFORM_SAG));assertEquals(y+4,pool.state(40).centreY());assertTrue(hadCarry);}
+                    if(subtype==0x51)assertTrue(deleted,"Source-derived96-row falling bound must actually reach vertical delete; no retry/resume");
+                    for(int cut:cuts)for(boolean courseOnly:List.of(false,true)) {
+                        if(courseOnly)registry.restoreCourse(courseCuts.get(cut));else registry.restore(fullCuts.get(cut));
+                        assertAntonWorldCapture(states.get(cut),module); // ALL checkpoint31+knowledge/live owner BEFORE any rendering or replay.
+                        assertArrayEquals(pictures.get(cut).pixels(),render(module,true).pixels());assertAntonWorldCapture(states.get(cut),module);
+                        for(int row=cut+1;row<=rows;row++) {
+                            platform21WorldStep(loop,movie.getFrame(row-1),module);completedCalls++;
+                            assertAntonWorldCapture(states.get(row),module);assertArrayEquals(modelRows.get(row),pool.state(40).copyBytes());
+                            assertArrayEquals(pictures.get(row).pixels(),render(module,true).pixels(),"ID21 full/course "+label+" cut/row="+cut+"/"+row);assertAntonWorldCapture(states.get(row),module);
+                        }
+                    }
+                }
+                assertEquals(6273,completedCalls);assertEquals(2,actualDeletes);
+                assertEquals(java.util.stream.IntStream.rangeClosed(1,12).boxed().collect(java.util.stream.Collectors.toSet()),reachedTiles);
+                var expectedProducts=new java.util.TreeSet<String>();for(int f=0;f<3;f++)for(int flip=0;flip<4;flip++)expectedProducts.add(f+":"+flip);assertEquals(expectedProducts,products);
+                assertCollapseWorldCurrentSource(runtime,objects,bank,identities,platform);var beforeRetirement=capture(module);var atlas=GameServices.graphics().getPatternAtlas();
+                for(int offset=1;offset<=12;offset++){int id=banks.collapsePlatform()+offset;var entry=atlas.getEntry(id);assertNotNull(entry,"Selected existing shared entry installed "+id);assertTrue(glIsTexture(atlas.getTextureId(entry.atlasIndex())));}
+                var shared=new java.util.HashMap<Integer,Object>();
+                for(int id=0;id<=0x7FF;id++){var entry=atlas.getEntry(id);if(entry!=null)shared.put(id,entry);}
+                for(var range:atlas.registeredRangesForTesting())for(int id=range.base();id<range.base()+range.size();id++) {
+                    if(id>=base&&id<base+658)continue;var entry=atlas.getEntry(id);if(entry!=null)shared.put(id,entry);
+                }
+                assertFalse(shared.isEmpty());assertTrue(shared.keySet().stream().anyMatch(id->id<=0x7FF));assertAntonWorldCapture(beforeRetirement,module);
+                module.closeTerrainPlayer();assertTrue(runtime.closed());assertTrue(frame.closed());assertSame(atlas,GameServices.graphics().getPatternAtlas());
+                for(int offset=1;offset<=12;offset++)assertNull(atlas.getEntry(banks.collapsePlatform()+offset),"New ID21 selections retired from SAME existing57 owner");
+                shared.forEach((id,entry)->assertSame(entry,atlas.getEntry(id),"Actual unrelated shared producer identity retained "+id));
+                assertEquals(NullAudioBackend.class,GameServices.audio().getBackend().getClass());
+                observations.append("ENGINE completed controller calls=").append(completedCalls).append(" actual5X-deletes=").append(actualDeletes)
+                        .append(" selected/shared offsets=").append(reachedTiles).append(" frameHV products=").append(products).append(" unrelated identities=").append(shared.size())
+                        .append("; selected12 installed/retired; no658 installation or full-native certification claim\n");
+            } finally {try{SessionManager.closeGameplaySession();}finally{GraphicsManager.destroyForReinit();}}
+        }
+        // No output directory/input/image/outcome exists until module AND session/graphics/boot closure returned.
+        Path output=openCaptureOutput(prefixLog+"\n; Independent TEST initial ingress per scene, then bounded neutral prefixes\n"+sceneLog,"soniccd.platform21.output");
+        if(output!=null) {
+            Files.writeString(output.resolve("construction.txt"),construction,StandardOpenOption.CREATE_NEW);
+            for(var artifact:artifacts.entrySet())ScreenshotCapture.savePNG(artifact.getValue(),output.resolve(artifact.getKey()));
+            Files.writeString(output.resolve("outcome.txt"),"ENGINE outcome: every asserted constructed subset check and module/session/graphics/boot cleanup returned. Source author did not execute this test; source authorship alone is UNRUN.\n"+construction+observations,StandardOpenOption.CREATE_NEW);
+        }
+    }
+
+    /** Complete neutral Body ledger, including both ChargeStops where reached; shared GetOff has charge0. */
+    private static void platform21WorldStep(GameLoop loop,Bk2FrameInput input,SonicCdGameModule module) {
+        var frame=module.requirePlayerFrame();var m=frame.state().motion();var runtime=(CdOpeningObjectRuntime)module.getGameService(NativeDynamicObjectPass.class);
+        assertEquals(0,input.p1InputMask());assertEquals(0,input.p1ActionMask());assertFalse(input.p1StartPressed());
+        assertEquals(2,m.routine());assertEquals(0,m.charge());assertEquals(0,m.moveLock());assertEquals(0,m.playerControl()&0xCD);
+        assertEquals(0,frame.environment().movement().globals().lookMode());assertEquals(0,frame.environment().movement().gates().speedShoes());
+        assertEquals(0,frame.environment().globals().invincible());assertEquals(0,frame.environment().globals().bossMusic());
+        var gates=frame.environment().movement().gates();assertEquals(0,gates.zoneAct());assertEquals(1,gates.timeZone());assertEquals(0,gates.waterSlide());assertEquals(0,gates.windTunnel());
+        var sounds=new ArrayList<CdPlayerFrameRuntime.Sound>();
+        if((m.flags()&8)==0) {
+            sounds.addAll(monitorWorldPlayerSounds(frame));
+            if((m.flags()&6)==0&&((m.angle()+0x20)&0xC0)==0&&m.groundVelocity()==0) {
+                var floor=new com.openggf.game.soniccd.player.CdPlayerTerrain(frame.assets().terrain()).floor(m.centreX16_16()>>>16,
+                        (m.centreY16_16()>>>16)+m.yRadius(),13,0,16,m.spriteFlags());
+                if(floor.distance()>=12&&m.previousPrimaryAngle()!=3&&m.previousSecondaryAngle()!=3)
+                    sounds.add(new CdPlayerFrameRuntime.ChargeSound(com.openggf.game.soniccd.player.CdPlayerCharge.Sound.FM_CHARGESTOP));
+            }
+        } else {
+            assertEquals(0,m.flags()&6);assertEquals(0,m.stick());assertEquals(40,frame.state().objectLinks().standObject());
+            var support=runtime.placement().pool().state(40);assertEquals(0x21,support.id());assertNotEquals(0,support.flags()&8);
+            // N Sonic/Main.asm:857-901: nonzero GVel and zero charge resets screen before balance.
+            if(((m.angle()+0x20)&0xC0)==0&&m.groundVelocity()==0) {
+                int width=support.unsignedByte(WIDTH),distance=(short)(width+(m.centreX16_16()>>>16)-support.centreX());
+                boolean balance=(byte)support.flags()>=0&&(distance<4||distance>=(short)(2*width-4));
+                if(!balance)sounds.add(new CdPlayerFrameRuntime.ChargeSound(com.openggf.game.soniccd.player.CdPlayerCharge.Sound.FM_CHARGESTOP));
+            }
+        }
+        var expected=new ArrayList<CdOpeningObjectRuntime.SoundRequest>();sounds.forEach(s->expected.add(new CdOpeningObjectRuntime.PlayerSound(s)));
+        // N Solid:32-35 requires nonzero charge; only nonnegative objectYV/no Kill in this bounded Top fixture.
+        step(loop,input);assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT,runtime.phase());
+        assertEquals(sounds,module.requirePlayerActor().lastSoundRequests(),"Complete source-backed Body standing/balance/Display ledger, duplicates retained");
+        assertEquals(expected,runtime.lastSoundRequests(),"Complete Body then genuine shared Solid ledger; no direct Platform FM or A3");
+    }
+
+    private static int platform21WorldRead(byte[] image,int at,int width) {
+        int value=0;for(int i=0;i<width;i++)value=(value<<8)|(image[at+i]&255);return value;
+    }
+
+    /** Expected-array operation only, N Platform:164-186; support is labelled completed World evidence. */
+    private static void platform21WorldSag(byte[] expected,boolean support) {
+        int sag=expected[0x2C]&255;if(support){if(sag<8)sag++;}else if(sag!=0)sag--;expected[0x2C]=(byte)sag;
+    }
+
+    /**
+     * Independent literal ALL64 native model of the declared clean0/1/4/5 subset. No production
+     * Platform/Solid/Frame result/algorithm is called. cameras/support are actual World inputs;
+     * repeated helper-return provenance remains a separate component/Runtime obligation.
+     */
+    private static byte[] platform21WorldModel(byte[] previous,int row,int x,int y,int subtype,int flip,int preX,int preY,boolean support,byte[] sine) {
+        byte[] e=previous.clone();
+        if(row==0) {
+            e=new byte[64];checkpointWorldPut(e,0,1,0x21);checkpointWorldPut(e,1,1,flip);checkpointWorldPut(e,0x22,1,flip);
+            checkpointWorldPut(e,0x28,1,subtype);checkpointWorldPut(e,8,2,x);checkpointWorldPut(e,12,2,y);return e;
+        }
+        if(row>1&&(previous[0]&255)==0){assertFalse(support);assertArrayEquals(new byte[64],previous);return e;}
+        if(row==1) {
+            assertFalse(support);checkpointWorldPut(e,2,2,0x44BE);checkpointWorldPut(e,4,4,0x20CCC8);
+            checkpointWorldPut(e,0x16,1,8);checkpointWorldPut(e,0x18,1,2);checkpointWorldPut(e,0x19,1,new int[]{16,32,48,0}[subtype&3]);
+            checkpointWorldPut(e,0x1A,1,subtype&3);checkpointWorldPut(e,0x24,1,2);checkpointWorldPut(e,0x2D,1,new int[]{2,3,4,6}[(subtype>>>2)&3]);
+            checkpointWorldPut(e,0x36,2,y);checkpointWorldPut(e,0x38,2,x);checkpointWorldPut(e,0x3A,2,y);
+        } else {
+            int variant=subtype>>>4,sag=e[0x2C]&255,phase=e[0x2A]&255,anchorY=platform21WorldRead(e,0x3A,2);
+            if(variant==0||variant==1) {
+                int sample=variant==0?(phase+1)&255:phase;assertTrue(sample<96,"Declared82-row source sine bound");
+                int osc=(short)((short)platform21WorldRead(sine,sample*2,2)*(e[0x2D]&255));osc=(short)(osc>>4);
+                checkpointWorldPut(e,0x2A,1,(phase+1)&255);
+                if(variant==0)checkpointWorldPut(e,12,2,anchorY+osc);
+                else {
+                    int oldX=platform21WorldRead(e,8,4);checkpointWorldPut(e,8,2,platform21WorldRead(e,0x38,2)+osc);
+                    checkpointWorldPut(e,0x10,2,(platform21WorldRead(e,8,4)-oldX)>>8);
+                    checkpointWorldPut(e,12,2,anchorY+(((byte)sag>>1)&255));platform21WorldSag(e,support);
+                }
+            } else if(variant==4) {
+                checkpointWorldPut(e,12,2,anchorY+(((byte)sag>>1)&255));platform21WorldSag(e,support);
+            } else if(variant==5) {
+                int sub=e[0x2B]&255,timer=e[0x2E]&255;
+                if(sub==0) {
+                    checkpointWorldPut(e,12,2,anchorY+(((byte)sag>>1)&255));platform21WorldSag(e,support);
+                    if(support){checkpointWorldPut(e,0x2B,1,2);timer=30;}
+                }
+                if(sub!=0||support) {
+                    if(timer!=0) {
+                        checkpointWorldPut(e,0x2E,1,timer-1);checkpointWorldPut(e,12,2,anchorY+(((byte)e[0x2C]>>1)&255));platform21WorldSag(e,support);
+                    } else {
+                        int oldYv=platform21WorldRead(e,0x12,2),fullY=platform21WorldRead(e,12,4)+((short)oldYv<<8);
+                        checkpointWorldPut(e,12,4,fullY);if(oldYv<0x400)checkpointWorldPut(e,0x12,2,oldYv+0x40);
+                        if(((preY+0x100)&0xFFFF)<(fullY>>>16)){assertFalse(support);return new byte[64];}
+                    }
+                }
+            } else throw new AssertionError("Unowned World model variant "+variant);
+            checkpointWorldPut(e,0x22,1,flip|(support?8:0));checkpointWorldPut(e,0x25,1,0);
+            assertTrue(((platform21WorldRead(e,0x38,2)&0xFF80)-((preX-0x80)&0xFF80)&0xFFFF)<=0x280,"Fixed current camera/anchor tail prerequisite");
+        }
+        int xx=platform21WorldRead(e,8,2),yy=platform21WorldRead(e,12,2),width=e[0x19]&255;
+        boolean visible=(short)(xx-preX+width)>=0&&(short)(xx-preX-width)<320&&(short)(yy-preY+8)>=0&&(short)(yy-preY-8)<224;
+        checkpointWorldPut(e,1,1,4|flip|(visible?0x80:0));return e;
+    }
+
+    /** N Map1 counted literal order, raw size05=2x2, not producer mappings or rendered geometry. */
+    private static int[][] platform21WorldPieces(int frame) {
+        assertTrue(frame>=0&&frame<3);int columns=2*(frame+1),left=-16*(frame+1);var pieces=new ArrayList<int[]>();
+        for(int c=0;c<columns;c++)pieces.add(new int[]{-16,frame==0&&c==columns-1?0x801:1,left+c*16});
+        for(int c=0;c<columns;c++)pieces.add(new int[]{0,c==0?5:c==columns-1?0x805:9,left+c*16});
+        return pieces.toArray(int[][]::new);
+    }
+
+    /** Actual SAT word/order oracle against independent expected raw parent, including shared bucket2. */
+    private static void assertPlatform21WorldSat(CdObjectDrawQueue.CpuSat sat,byte[] parent,int cameraX,int cameraY) {
+        assertTrue(sat.spriteCount()<80);int count=0,lastSonic=-1,firstPlatform=-1;byte[] raw=sat.bytes();
+        boolean visible=(parent[0]&255)==0x21&&(parent[1]&0x80)!=0;
+        int[][] pieces=visible?platform21WorldPieces(parent[0x1A]&255):new int[0][];
+        for(int entry=0;entry<sat.spriteCount();entry++) {
+            var origin=sat.provenance().get(entry);int whole=origin.slotRef().wholeIndex();
+            if(whole==0){assertEquals(2,origin.queueBucket());assertEquals(0,origin.queueOrdinal());lastSonic=entry;continue;}
+            assertEquals(40,whole);assertTrue(visible);assertEquals(2,origin.queueBucket());assertEquals(1,origin.queueOrdinal());
+            assertEquals(count,origin.mappingPieceOrdinal());int[] p=pieces[count++];if(firstPlatform<0)firstPlatform=entry;
+            int flags=parent[1]&255,sx=(flags&1)==0?p[2]:-p[2]-16,sy=(flags&2)==0?p[0]:-p[0]-16;
+            int word=(0x44BE+p[1])^((flags&3)<<11),at=entry*8;
+            assertEquals((platform21WorldRead(parent,12,2)-cameraY+128+sy)&0xFFFF,platform21WorldRead(raw,at,2));
+            assertEquals(5,raw[at+2]&255);assertEquals(entry+1,raw[at+3]&255);assertEquals(word,platform21WorldRead(raw,at+4,2));
+            assertEquals(0x4000,word&0xE000,"Native palette2/hardware priority0; shared bucket2 is separate");
+            int hardwareX=(platform21WorldRead(parent,8,2)-cameraX+128+sx)&511;
+            assertEquals(hardwareX==0?1:hardwareX,platform21WorldRead(raw,at+6,2));
+        }
+        assertEquals(pieces.length,count);assertTrue(lastSonic>=0);if(count>0)assertTrue(lastSonic<firstPlatform,"Actual primary before Platform in SAME bucket2");
+        assertEquals(0,platform21WorldRead(raw,sat.spriteCount()*8,4),"Native next-entry first-LONG terminator");
+    }
+
+    /** Existing shared57 cell value type/pixel helpers are deliberately reused; literal ID21 geometry is new. */
+    private static List<CollapseWorldCell> platform21WorldTiles(CdObjectDrawQueue.CpuSat sat,byte[] parent,int cameraX,int cameraY) {
+        var cells=new ArrayList<CollapseWorldCell>();
+        for(int entry=sat.spriteCount()-1;entry>=0;entry--) {
+            var origin=sat.provenance().get(entry);if(origin.slotRef().wholeIndex()==0)continue;assertEquals(40,origin.slotRef().wholeIndex());
+            int[] p=platform21WorldPieces(parent[0x1A]&255)[origin.mappingPieceOrdinal()];int flags=parent[1]&255,word=(0x44BE+p[1])^((flags&3)<<11);
+            boolean h=(word&0x800)!=0,v=(word&0x1000)!=0;
+            int x=platform21WorldRead(parent,8,2)-cameraX+((flags&1)==0?p[2]:-p[2]-16),y=platform21WorldRead(parent,12,2)-cameraY+((flags&2)==0?p[0]:-p[0]-16);
+            for(int row=0;row<2;row++)for(int col=0;col<2;col++)cells.add(new CollapseWorldCell((word&0x7FF)-0x4BE+col*2+row,
+                    x+(h?1-col:col)*8,y+(v?1-row:row)*8,h,v,entry));
+        }
+        return List.copyOf(cells);
+    }
+    // END constructed actual World ID21 subset proof. All source-author oracles UNRUN; defects require Root R2.
+    // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>
 }

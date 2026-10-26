@@ -1,3 +1,9 @@
+Sonic CD ID21 update (2026-10-26): the partial act matrix adds native Platform
+Init/Main controller cuts through1200 and16 constructed carry/oscillation/fall
+scenes on the existing shared art span. A separate controller jump reaches a
+natural checkpoint reload and the next unowned Animals PLC source; it is not
+whole-act or regional certification. The eight-class affected check passes672/0/0/0 with no skips; fresh structural guards pass728/0/0/0 across90 reports.
+
 # Level test coverage backlog
 
 Sonic CD opening-object update (2026-10-25): the same partial act matrix now

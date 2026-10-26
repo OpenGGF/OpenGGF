@@ -173,6 +173,8 @@ public final class CdObjectMappings implements CdDrawMappings {
         addObject(tables, objects, CdR11aObjectAssets.Table.COLLAPSE_PLATFORM_MAPPINGS_2, objects.collapsePlatform2());
         addObject(tables, objects, CdR11aObjectAssets.Table.COLLAPSE_PLATFORM_MAPPINGS_3, objects.collapsePlatform3());
         addObject(tables, objects, CdR11aObjectAssets.Table.COLLAPSE_PLATFORM_MAPPINGS_4, objects.collapsePlatform4());
+        // Actual ID21 Init selects this complete 132-byte root; its pixels share Collapse's current57.
+        addObject(tables, objects, CdR11aObjectAssets.Table.PLATFORM_MAPPINGS, objects.platform());
         var monitorView = objects.view(CdR11aObjectAssets.Table.MONITOR_TIME_MAPPINGS);
         var staticPieces = new ArrayList<DeclaredStaticPiece>();
         // ObjMonitorItem_Init (:451-459) adds the signed frame word and then one byte, skipping the count.

@@ -65,4 +65,40 @@ public final class CdObjectCollisionCheck {
         int primaryAngle = floor.angleWrite().orElse(0);
         return new FloorDistance(floor.distance(), primaryAngle, (primaryAngle & 1) == 0 ? primaryAngle : 0);
     }
+
+    /** d1 (signed word), the unchanged-or-written primaryAngle byte, and the separate d3.b result. */
+    public record CeilingDistance(int distance, int primaryAngle, int angleResult) {
+        public CeilingDistance {
+            if (distance != (short) distance) {
+                throw new IllegalArgumentException("Ceiling distance must be a signed native word");
+            }
+            if ((primaryAngle & ~0xFF) != 0 || (angleResult & ~0xFF) != 0) {
+                throw new IllegalArgumentException("Angles must be unsigned native bytes");
+            }
+        }
+    }
+
+    /**
+     * ObjGetCeilDist (Collision Check.asm:318-338 at scddisasm 1ecc5f3a): subtract the signed
+     * oYRadius byte from oY WORD, EOR.W #$F, then FindLevelFloor with d5=$E, d6=$1000,
+     * a3=-$10 and this object's oSprFlags. Unlike ObjGetFloorDist, this entry never pre-clears
+     * primaryAngle. Reached raw/flip stores use the existing writer synchronously; failures
+     * propagate unchanged with their completed stores intact. An odd raw angle returns $80
+     * only in d3.b, without another global write.
+     */
+    public static CeilingDistance objGetCeilDist(CdPlayerTerrain terrain, CdObjectState object,
+                                                int initialPrimaryAngle, IntConsumer angleWrite) {
+        Objects.requireNonNull(terrain, "terrain");
+        Objects.requireNonNull(object, "object");
+        Objects.requireNonNull(angleWrite, "existing primaryAngle writer");
+        if ((initialPrimaryAngle & ~0xFF) != 0) {
+            throw new IllegalArgumentException("Initial primaryAngle must be an unsigned native byte");
+        }
+        int y = object.centreY();
+        int x = object.centreX();
+        y = ((y - object.signedByte(CdObjectState.ByteField.Y_RADIUS)) & 0xFFFF) ^ 0xF;
+        var ceiling = terrain.floor(x, y, 14, 0x1000, -16, object.spriteFlags(), angleWrite);
+        int primaryAngle = ceiling.angleWrite().orElse(initialPrimaryAngle);
+        return new CeilingDistance(ceiling.distance(), primaryAngle, (primaryAngle & 1) == 0 ? primaryAngle : 0x80);
+    }
 }

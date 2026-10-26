@@ -6454,3 +6454,92 @@ finds no concrete P1/P2 in Root routeR4; all fixed inputs preserved. A separate
 source-only ID21 audit corrects the quick subtype transcription to40 and pins
 native row167, map/width/range authentication targets, same source11/57/current
 span and the separate ObjGetCeilDist7X prerequisite. It establishes no completed742.
+
+
+## Native ID21 Platform and controller continuation — 26 October 2026
+
+Private candidate over `d975f191b3e181e3bd75ba577318970cac7dfef9`;
+main/retained trees remain untouched. No merge, push, PR or public release.
+The full USA-then-Japan/Europe objective remains active.
+
+Actual USA operands authenticate one132-byte Map1 at20CCC8, width/range
+views at20C940/20C944 and existing57-tile ART_PLATFORM ownership. Three views
+append to the asset table; the existing source11, C29, bank19 and658-pattern
+reservation remain unchanged. One ordinary mapper registration admits the
+three native frames. No Map2 fallback or additional art/preload/region exists.
+
+`CdPlatform` executes native Init (returns before Main), full-WORD time-stop,
+all ten subtype families, sag, native sine/word/long movement, optional dirty
+Spring allocation, ceiling prefixes and exact anchor/saved-byte destruction.
+Eight State aliases address existing bytes. Runtime admits actual physical ID21
+through a cached private invocation;26 site checks and full96 source/output,
+Frame and ordered-FM preflight precede publication. Genuine stopped Solid
+prefixes publish synchronously and rethrow the original exception. Object
+ceiling probes never pre-clear the primary angle; raw reached stores publish
+before a later unowned terrain read. All inherited owner/capture/clock/phase
+and shared algorithm bodies remain unchanged.
+
+Focused observations before final delivery checks: ceiling32 passed; actual
+asset/mapper156 passed. Body R1 ran51/1/1/0: camera80 also triggered the anchor
+tail, and a primary invalid terrain word failed construction before the probe.
+Root R2 isolated the camera and alternate chunk, yielding50 passing methods;
+its adjacent row was still wrong. Native full-height subtracts negative a3,
+so R3 uses307->317 and passes the remaining method narrowly. Runtime R1
+ran362/0/1/0: time-stop bypass assertions passed, then the fixture's FF-derived
+frame3 failed the actual three-frame draw reader. Root R2 sets only MAP_FRAME0;
+the narrow check passes. Production was not changed to fit these fixtures.
+Retail Root R2 corrects an empty-cache assertion to the existing legitimate
+ANIMAL_BASE_TILES dependency; old views/source identities remain exact.
+Original red runs remain red; repaired bounded selections are not fresh
+all-green class invocations.
+
+Actual EGL World21 passes16 initial-only scenes: three sizes x four flips,
+vertical/horizontal oscillation and two timed falls/deletes. There are6273
+ordinary calls including649 warm and5100 full/course replay calls; literal
+native SAT/current12/palette/ordered terrain/PlaneB/omission controls pass.
+All81 original320x224 ENGINE PNGs and post-cleanup input/construction/outcome
+remain outside Git in `Downloads/Sonic-CD/native/engine-platform21-r1`.
+Selected12 entries retire while800 actual unrelated entry identities survive.
+This is not57/658 rendered or whole-act/native parity. Other subtype World
+products remain explicit matrix gaps despite component/Runtime coverage.
+
+The permanent Right-only route now completes1200, with full/course cuts
+741->742 Init,742->743 Main and1199->1200, retaining all earlier Ring/Spikes,
+Checkpoint649 save, Anton and collapsing-platform assertions. Physical75 is
+native subtype40 at3824/348: stationary without contact, not an unimplemented
+oscillator. The1200 endpoint is routine2/pushing raw physical link53; no
+object class is inferred from that link. Additional Right-only observation
+through3600 remains pushing, not an unsupported implementation frontier.
+The permanent route selector passes1/0/0/0 at00:04:58Z,30.062s/no queue.
+
+A separate controller-only probe round-trips `1200 R;32 R+B;1200 R` through
+InputScriptCompiler/Bk2MovieLoader. No actor/object/terrain/PLC ingress follows
+boot. Actual1802 reaches routine6/FM93;1886 reaches routine8/reset60;1947
+replaces Runtime/Frame/actor/level and advances production generation1->2.
+Fresh checkpoint XY fractions are0, saved31 remains known, rings0/lives2 and
+Ring animation7/1 restore; HUD remains explicit DEV0. Fresh ordinary calls1..6
+complete. Fresh7/global1954 completes the last Boulder tile and pops its head,
+then stops in prepare on UNKNOWN_SOURCE2381C0/VRAM7100 (Animals). Failed-state
+count0/budget3 and the advanced queue preserve that prefix; no failed-call
+resume or completed1954 is claimed. This is diagnostic source-fingerprinted
+observation, not yet the permanent restart-route assertion or native parity.
+The next finite source must reuse FrontierArtBank's cached Animals decode;
+no per-actor bank, cold preload, current owner or picture growth is justified.
+
+Validation commands use the private worktree, Java25 and actual media:
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 python3 "${OPENGGF_MAIN}/tools/testing/maven_queue.py" --normal -Dmse=off '-Dtest=TestCdR11aObjectAssets,TestCdR11aObjectRetailAssets,TestCdObjectMappings,TestCdObjectCollisionCheck,TestCdPlatform,TestCdOpeningObjectRuntime,TestSonicCdOpeningWorldLoad,TestSonicCdOpeningWorldEgl' "-Dsoniccd.media.root=${SCD_MEDIA_ROOT}" "-Dsonic2.rom.path=${SONIC2_ROM}" -Dsoniccd.opening.egl=true -Dopenggf.headless.gl=surfaceless-egl test
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 python3 "${OPENGGF_MAIN}/tools/testing/maven_queue.py" -Dmse=off -Pguards test -B
+```
+
+Final eight-class check31987 passes672/0/0/0 at00:11:10Z, Maven1m48/queue21s. Exact8fresh XML, Java25/privatecwd/actualmedia/EGL/S2 and zero skips were verified. Fresh guards74260 pass728/0/0/0 across90 exact fresh XML, Java25/privatecwd/Lua5.4, Maven5m15/queue272s, ending00:22:45Z. Tool preflight passed without executing tests.
+The change-based planner selects3755 smoke classes because these private CD
+paths are unclassified. Source additions are confined to CD assets/object
+owners; shared algorithms, selectors/build policy and other games are unchanged.
+The focused CD consumer/World/replay closure plus guards is proportionate here;
+no smoke/full-suite pass is claimed. Independent static component/integration
+reviews found no remaining P1/P2; exact fixture reds/corrections and UNRUN
+worker limits remain in the external reports. Temporary observer code is not
+part of the final candidate; useful controller recipes/failure cuts are retained
+here and in the existing measurement catalogue.

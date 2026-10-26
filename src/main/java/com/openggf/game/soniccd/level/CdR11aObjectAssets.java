@@ -91,7 +91,11 @@ public final class CdR11aObjectAssets {
         COLLAPSE_PLATFORM_MAPPINGS_3("MapSpr_CollapsePlatform3", 0xC5AE, 62),
         COLLAPSE_PLATFORM_MAPPINGS_2("MapSpr_CollapsePlatform2", 0xC5EC, 408),
         COLLAPSE_PLATFORM_SIZES_2("ObjCollapsePlatform_Sizes2", 0xC784, 40),
-        COLLAPSE_PLATFORM_MAPPINGS_4("MapSpr_CollapsePlatform4", 0xC7AC, 158);
+        COLLAPSE_PLATFORM_MAPPINGS_4("MapSpr_CollapsePlatform4", 0xC7AC, 158),
+        // Platform/Main.asm:37/40/43,51,55,85-86,559-561: actual USA LONG/PC-indexed operands.
+        PLATFORM_MAPPINGS("MapSpr_Platform", 0xCCC8, 132),
+        PLATFORM_WIDTHS("ObjPlatform_Widths", 0xC940, 4),
+        PLATFORM_RANGES("ObjPlatform_Ranges", 0xC944, 4);
 
         private final String nativeLabel;
         private final int offset;
@@ -359,6 +363,7 @@ public final class CdR11aObjectAssets {
     private CdObjectVisualAssets collapsePlatform2;
     private CdObjectVisualAssets collapsePlatform3;
     private CdObjectVisualAssets collapsePlatform4;
+    private CdObjectVisualAssets platform;
 
     private CdR11aObjectAssets(CdR11aAssets.Identity identity, Map<Table, View> views, List<Delta> deltas,
                                 List<TouchSize> dimensions, CdObjectVisualAssets rings,
@@ -845,6 +850,14 @@ public final class CdR11aObjectAssets {
                     read(Table.COLLAPSE_PLATFORM_MAPPINGS_4), 6, 57);
         }
         return collapsePlatform4;
+    }
+
+    /** Platform/Main.asm:37-55,559-561: three counted static frames over the existing 57-tile source. */
+    public synchronized CdObjectVisualAssets platform() {
+        if (platform == null) {
+            platform = CdObjectVisualAssets.decodeStatic(read(Table.PLATFORM_MAPPINGS), 3, 57);
+        }
+        return platform;
     }
 
     /** Obj3DPlant_Init (3D Ramp/Main.asm:57-90): ADD.W consumes signed offsets in two distinct bodies. */
