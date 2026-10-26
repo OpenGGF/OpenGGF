@@ -1,6 +1,7 @@
 package com.openggf.game.sonic1.specialstage;
 
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.tests.reel.S1SpecialStageReel;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.*;
 import org.junit.jupiter.api.*;
@@ -14,11 +15,12 @@ import static org.junit.jupiter.api.Assertions.*;
 @RequiresRom(SonicGame.SONIC_1)
 class TestTasS1EmeraldVerdicts {
     Sonic1SpecialStageManager manager;
-    @BeforeEach void setup(){TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_1);GraphicsManager.getInstance().initHeadless();manager=new Sonic1SpecialStageManager();}
-    @AfterEach void close(){manager.reset();GraphicsManager.getInstance().cleanup();GraphicsManager.getInstance().resetState();TestEnvironment.resetEngineOnly();}
+    S1SpecialStageReel reel;
+    @BeforeEach void setup() throws Exception {TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_1);GraphicsManager.getInstance().initHeadless();reel=S1SpecialStageReel.open();manager=new Sonic1SpecialStageManager();}
+    @AfterEach void close(){try {manager.reset();GraphicsManager.getInstance().cleanup();GraphicsManager.getInstance().resetState();TestEnvironment.resetEngineOnly();} finally {if(reel!=null)reel.close();}}
     @ParameterizedTest @ValueSource(ints={0,1,2,3,4,5})
     void eachNativeMazeEmeraldIsCollectedAndItsSparkleStartsExit(int stage) throws Exception {
-        manager.initialize(stage);manager.advanceToEntryPresentation();manager.update();
+        manager.initialize(stage);S1SpecialStageReel.advanceToEntryPresentation(manager);S1SpecialStageReel.update(manager);
         var layout=(byte[])field("layout").get(manager);
         int emerald=-1;
         for(int i=0;i<layout.length;i++)if((layout[i]&255)>=0x3b&&(layout[i]&255)<=0x40){emerald=i;break;}
@@ -28,10 +30,10 @@ class TestTasS1EmeraldVerdicts {
         field("sonicVelX").setInt(manager,0);field("sonicVelY").setInt(manager,0);field("sonicInertia").setInt(manager,0);
         field("ssAngle").setInt(manager,0);field("ssRotate").setInt(manager,0);field("sonicAirborne").setBoolean(manager,true);
         assertFalse(manager.isEmeraldCollected());assertFalse(field("exitTriggered").getBoolean(manager));
-        manager.update();
+        S1SpecialStageReel.update(manager);
         assertTrue(manager.isEmeraldCollected());
         assertFalse(field("exitTriggered").getBoolean(manager),"Collection does not directly freeze gameplay");
-        for(int i=0;i<30&&!field("exitTriggered").getBoolean(manager);i++)manager.update();
+        for(int i=0;i<30&&!field("exitTriggered").getBoolean(manager);i++)S1SpecialStageReel.update(manager);
         assertTrue(field("exitTriggered").getBoolean(manager),"The native sparkle queue starts exit after collection");
         assertEquals(stage,manager.getCurrentStage());
     }
