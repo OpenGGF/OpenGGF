@@ -198,6 +198,44 @@ def rom_identities(args):
     return result
 
 
+def validate_selected_cases(cases, sources):
+    """Reject a dirty provider/signature change before assigning old inventory IDs."""
+    groups = {}
+    for case in cases:
+        groups.setdefault((case['source_file'], case['method']), []).append(case)
+    for (source_file, name), expected in groups.items():
+        method = methods(sources[source_file]).get(name)
+        if method is None:
+            raise ValueError(f'Selected method missing from working source: {source_file}#{name}')
+        actual = [(i if method['parameterized'] else None, arguments)
+                  for i, arguments in enumerate(method['arguments'], 1)]
+        declared = [(c['invocation_index'], c['arguments']) for c in expected]
+        if actual != declared:
+            raise ValueError(f'Arguments/ordinals changed in working source: {source_file}#{name}; regenerate inventory')
+
+
+def recorded_fixture_hash(metadata, case, allow_legacy_source=False):
+    """The recorded source snapshot owns execution identity; inventory never supplies it."""
+    hashes = metadata.get('source_file_hashes')
+    if ('source_file_hashes' not in metadata and 'source_fingerprint' not in metadata
+            and allow_legacy_source):
+        return None
+    source_file = case.get('source_file')
+    actual = hashes.get(source_file) if isinstance(hashes, dict) else None
+    if not isinstance(actual, str) or not re.fullmatch(r'[0-9a-f]{64}', actual):
+        raise ValueError(f'Actual captured fixture hash unavailable: {case["id"]}')
+    if source_file in metadata.get('source_files_changed', []):
+        raise ValueError(f'Fixture source changed while queued/running: {case["id"]}')
+    return actual
+
+
+def validate_invocation(case):
+    actual = re.findall(r'\[test-template-invocation:#(\d+)\]', case['junit_unique_id'])
+    expected = [] if case['invocation_index'] is None else [str(case['invocation_index'])]
+    if actual != expected:
+        raise ValueError(f'JUnit invocation ordinal mismatch: {case["id"]}')
+
+
 def capture(args):
     inventory_path = Path(args.inventory).resolve()
     plan = json.loads(inventory_path.read_text())
@@ -212,6 +250,8 @@ def capture(args):
     for case in chosen:
         if case.get('unmerged_source') and blob('HEAD',case['source_file']) != blob(case['source_ref'],case['source_file']):
             raise ValueError(f"Unmerged inventory-only case cannot run in this tree: {case['id']}")
+    fixture_sources = {c['source_file']:(ROOT/c['source_file']).read_text() for c in chosen}
+    validate_selected_cases(chosen, fixture_sources)
     out = Path(args.out).resolve()
     out.mkdir(parents=True,exist_ok=False)
     roms = rom_identities(args)
@@ -234,13 +274,18 @@ def capture(args):
     # The invocation extension writes even on assertion failure. Setup skips have no invocation;
     # retain them explicitly, rather than claiming they ran or fabricating a clip.
     metadata['maven_exit_code'] = result.returncode
+    metadata['source_file_hashes_after'] = {
+        path:hashlib.sha256((ROOT/path).read_bytes()).hexdigest() if (ROOT/path).is_file() else None
+        for path in fixture_sources}
+    metadata['source_files_changed'] = [path for path, value in metadata['source_file_hashes_after'].items()
+                                        if value != source_hashes.get(path)]
     write_json(out/'run.json', metadata)
     reconcile(plan,out)
     write_json(out/'manifest.json',plan)
     return result.returncode
 
 
-def reconcile(plan, out):
+def reconcile(plan, out, allow_legacy_source=False):
     run_metadata = json.loads((out/'run.json').read_text())
     selected = set(run_metadata['selected_ids'])
     plan['run'] = run_metadata
@@ -256,9 +301,18 @@ def reconcile(plan, out):
         if len(matches)>1:
             raise ValueError(f"Duplicate captured JUnit identity: {case['id']}")
         if matches:
+            captured_hash = recorded_fixture_hash(run_metadata, case, allow_legacy_source)
+            if captured_hash is None and run_metadata.get('source_commit') != plan.get('source_commit'):
+                raise ValueError('Legacy recording must have the same explicit source base')
             case.update(matches[0]); case['reason']=matches[0]['capture_reason']
+            validate_invocation(case)
             case['roms'] = run_metadata.get('roms', {})
-            case['capture_fixture_sha256'] = case.get('fixture_sha256')
+            case['inventory_fixture_sha256'] = case.get('fixture_sha256')
+            case['capture_fixture_sha256'] = captured_hash
+            case['capture_hash_origin'] = 'run.json:source_file_hashes' if captured_hash else 'unavailable'
+            case['matches_inventory_source'] = captured_hash == case.get('fixture_sha256') if captured_hash else None
+            if captured_hash is None:
+                case['provenance_limit'] = 'Legacy preview: source base plus dirty diff; actual source-file hash unavailable'
             if not case['frames'] and case.get('drawable_disposition') != 'Not yet reviewed for drawable state':
                 case['reason'] = case.get('drawable_disposition',case['reason'])
         else:
@@ -271,6 +325,24 @@ def reconcile(plan, out):
 
 def run(command):
     subprocess.run(command,check=True)
+
+
+def reconcile_command(args):
+    """Derive corrected metadata from retained records without touching media/evidence."""
+    plan = json.loads(Path(args.inventory).read_text())
+    source = Path(args.run_dir).resolve()
+    destination = Path(args.out).resolve()
+    if destination.exists():
+        raise ValueError('Refusing to overwrite reconciled evidence')
+    reconcile(plan, source, args.allow_legacy_source)
+    for case in plan['cases']:
+        if case.get('case_dir'):
+            case['case_dir'] = os.path.relpath(source/case['case_dir'], destination)
+            case['recording_run'] = str(source/'run.json')
+    plan['reconciled_from'] = str(source)
+    destination.mkdir(parents=True)
+    write_json(destination/'manifest.json', plan)
+    print(destination/'manifest.json')
 
 
 def combine(args):
@@ -288,20 +360,36 @@ def combine(args):
             target = next((c for c in plan['cases'] if c['id']==case['id']),None)
             if target is None:
                 raise ValueError(f"Recording absent from inventory: {case['id']}")
-            if not case.get('capture_fixture_sha256') and args.allow_legacy_source:
-                if recording['source_commit'] != plan['source_commit']:
+            for field in ('class', 'method', 'arguments', 'invocation_index', 'source_file'):
+                if field not in case or field not in target or case[field] != target[field]:
+                    raise ValueError(f"Recorded invocation identity mismatch ({field}): {case['id']}")
+            validate_invocation(case)
+            run_path = Path(case.get('recording_run', path.parent/'run.json'))
+            if not run_path.is_absolute():
+                run_path = path.parent/run_path
+            metadata = json.loads(run_path.read_text())
+            actual_hash = recorded_fixture_hash(metadata, case, args.allow_legacy_source)
+            if actual_hash is None:
+                if (recording['source_commit'] != plan['source_commit']
+                        or metadata.get('source_commit') != plan['source_commit']):
                     raise ValueError('Legacy recording must have the same explicit source base')
-                case['capture_fixture_sha256'] = target['fixture_sha256']
-                case['provenance_limit'] = 'Legacy preview: source base plus recorded dirty diff; no per-file fingerprint'
-            if target.get('fixture_sha256') != case.get('capture_fixture_sha256'):
+                case['provenance_limit'] = 'Legacy preview: source base plus dirty diff; actual source-file hash unavailable'
+            elif target.get('fixture_sha256') != actual_hash:
                 raise ValueError(f"Fixture changed or old capture lacks fingerprint; recapture explicitly: {case['id']}")
             if target.get('case_dir') and not args.prefer_last:
                 raise ValueError(f"Duplicate recording: {case['id']}; supply only the selected revision")
+            inventory_fields = {key:target[key] for key in ('fixture_sha256', 'source_ref', 'unmerged_source',
+                                'task_commits', 'kind', 'source_arguments') if key in target}
             target.update(case)
+            target.update(inventory_fields)
+            target['inventory_fixture_sha256'] = target.get('fixture_sha256')
+            target['capture_fixture_sha256'] = actual_hash
+            target['capture_hash_origin'] = 'run.json:source_file_hashes' if actual_hash else 'unavailable'
+            target['matches_inventory_source'] = True if actual_hash else None
             target['case_dir'] = os.path.relpath(path.parent/case['case_dir'],out)
-            target['recording_run'] = str(path.parent/'run.json')
+            target['recording_run'] = str(run_path.resolve())
             if not target.get('roms'):
-                target['roms'] = json.loads((path.parent/'run.json').read_text()).get('roms',{})
+                target['roms'] = metadata.get('roms',{})
     plan['combined_from'] = inputs
     write_json(out/'manifest.json',plan)
     print(out/'manifest.json')
@@ -380,6 +468,7 @@ def main():
     p.add_argument('--out',required=True)
     for game in ('s1','s2','s3k','kis2'):
         p.add_argument('--'+game+'-rom')
+    p=sub.add_parser('reconcile');p.add_argument('--inventory',required=True);p.add_argument('--run-dir',required=True);p.add_argument('--out',required=True);p.add_argument('--allow-legacy-source',action='store_true')
     p=sub.add_parser('combine');p.add_argument('--inventory',required=True);p.add_argument('--manifest',action='append',required=True);p.add_argument('--out',required=True);p.add_argument('--prefer-last',action='store_true');p.add_argument('--allow-legacy-source',action='store_true')
     p=sub.add_parser('stitch');p.add_argument('--manifest',required=True);p.add_argument('--out',required=True)
     p.add_argument('--slow',type=int,choices=range(1,17),default=1)
@@ -392,6 +481,8 @@ def main():
         return capture(args)
     elif args.action=='combine':
         combine(args)
+    elif args.action=='reconcile':
+        reconcile_command(args)
     else:
         stitch(args)
     return 0

@@ -71,6 +71,23 @@ actual JUnit unique ID, converted arguments, display name, outcome and frame cou
 camera, clocks and mode. The current adapter has a 320×224 source contract.
 Original ROM bytes and ROM-derived frames stay local.
 
+Inventory and execution source identities are separate. `fixture_sha256` (also
+exposed as `inventory_fixture_sha256`) describes the inventory's source class;
+`capture_fixture_sha256` comes only from the actual run's
+`source_file_hashes[source_file]`. A dirty class B recorded against committed
+inventory A keeps both hashes and cannot be combined into A. Use a target
+inventory declaring B to combine that capture. The combiner rereads the retained
+run metadata, so a stale per-case hash claim cannot override it. Missing actual
+hashes fail closed; the explicit legacy exception below leaves them **null**, not
+equal to the inventory hash.
+
+Before capture, selected parameter arguments/ordinals must still match the working
+source. A changed provider requires a regenerated inventory; it cannot silently
+reuse old labels. Runtime reconciliation and combination also check actual JUnit
+arguments and invocation ordinals. New runs check selected source-class hashes
+again after Maven and reject identity attribution if those files changed while
+queued/running. Older recordings retain the limits of their original snapshots.
+
 ## Stitch and extend
 
 ```bash
@@ -103,9 +120,26 @@ Combination checks fixture identities and rejects duplicate captures by default.
 `--prefer-last` explicitly selects a corrected later revision of a duplicate.
 The development-only `--allow-legacy-source` admits the initial v1 preview with
 the same pinned source base and retained dirty diff, marking its missing per-file
-fingerprint as a provenance limit. New recordings use file fingerprints. Neither
-option permits different underlying fixture identities. Source directories remain
+fingerprint as a provenance limit. This option cannot bypass a known actual hash
+mismatch or an incomplete new-format hash map. New recordings use file fingerprints.
+Source directories remain
 external references; preserve all referenced runs when moving an assembled reel.
+
+Correct older metadata without rerunning tests or overwriting its evidence:
+
+```bash
+python3 tools/test_reel/test_reel.py reconcile \
+  --inventory /absolute/task/inventory.json \
+  --run-dir /absolute/task/run-001 \
+  --out /absolute/task/reconciled-001
+```
+
+The new manifest references the original case directories and `run.json`. It
+derives actual hashes from that retained record, not the current checkout or the
+inventory. Only the initial hashless v1 run needs `--allow-legacy-source` here.
+If this exposes A/B differences, keep them explicit and choose a matching target
+source before combination. The corrected initial preview metadata is described
+in the dated validation record; its existing video bytes were not regenerated.
 
 ## Add a real adapter
 

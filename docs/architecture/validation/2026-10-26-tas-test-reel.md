@@ -144,3 +144,85 @@ read: command identity, real invocations, skips and source state bound the claim
   source overlays and explicit missing dispositions permit parent-led expansion.
 - No padded showcase timings or music. The brief is the rapid native-time sequence;
   slower duplicated-frame output is an explicitly labelled debug option only.
+
+## Recorded-source provenance correction
+
+Parent review after local commit `78296018bbc1ceb041a29c0292e0d0d3d3ee99d9`
+found that reconciliation copied the committed inventory class hash into
+`capture_fixture_sha256`, even when a dirty class had actually executed. A new
+Python regression reproduced this exactly: inventory hash A plus retained
+`source_file_hashes` hash B incorrectly yielded A. The test failed before the fix.
+
+Execution identity now comes only from the retained run's
+`source_file_hashes[source_file]`; inventory identity remains separate. Combination
+rereads that actual map rather than trusting an older per-case hash claim, and
+requires it to equal the target inventory class hash. Missing hashes fail closed.
+Only the explicit original legacy policy admits a run without a hash map at the
+same source base, leaving its actual hash and match status null and its limitation
+visible. A known B/A mismatch cannot use that exception. A map present but missing
+the source file is an error. Source-class changes during new queued/running captures
+also prevent identity attribution.
+
+The bounded correction additionally checks working-source argument/ordinal
+expansion before capture and actual class/method/arguments/ordinal correspondence
+on combination. Duplicate parameter values still use their real JUnit invocation
+ordinals. A matching class hash alone never authorizes different parameter labels.
+`reconcile --inventory ... --run-dir ... --out ...` derives new metadata in a new
+folder, retaining the original records and media as external references.
+
+Verification command:
+
+```bash
+python3 -m unittest discover -s tools/test_reel -p 'test_test_*.py' -v
+```
+
+**12 Python tests pass**. The added regressions cover dirty A/B rejection with
+matching-B acceptance, stale per-case claims versus the actual run map, changed
+provider values, mismatched invocation arguments/ordinals, missing/incomplete
+hashes, explicit hashless legacy limits and evidence-preserving reconciliation.
+`git diff --check` and the new documentation links pass. No Java source, scope JSON,
+engine behavior, assertions, footage or Maven job changed in this follow-up. The
+parent's unchanged 13-class integration run was neither repeated nor stopped.
+
+Retained-data reproduction used `${TASK_DIR}/inventory-with-followup.json` and
+`${TASK_DIR}/headless-v2/run.json`. Of the 22 recorded headless cases, 21 S1 cases
+have committed inventory class hash
+`cc272afb3ddd6f20e5a75f7b32a2cb6b91dd5baa83c4a765848f6f1563639bac`
+but actual recorded class hash
+`0e5d1edc62e126a4202b344c1e6c486603cf206b79749cb07253c1d56fb9ede6`.
+The scoring-only case matches its inventory source. The corrected combiner rejects
+those dirty S1 captures against the old A inventory, as required. B is independently
+verified as the exact committed `TestTasS1Movement.java` bytes in `78296018bbc`;
+its extra opt-in frame call changed the source identity without changing assertions.
+
+New metadata is under `${TASK_DIR}/provenance-v3/`:
+
+- `headless/manifest.json`: derived from retained headless raw case records and
+  actual source hashes, keeping original A versus captured B explicit.
+- `representative/manifest.json`: derived with the explicit hashless legacy
+  option. No current checkout or inventory hash is invented as its executed hash.
+- `target-inventory.json`: explicitly declares the S1 class source from committed
+  `78296018bbc` as a per-file target overlay. Other source refs and the 247-case
+  census remain intact; this is a declared source union, not a claim of one tested
+  clean checkout. The retained v1 sources still require their legacy limitation.
+- `combined/manifest.json`: combines those corrected inputs against that explicit
+  target, selects the later corrected S1 capture, and points to the existing
+  `combined-v2/preview.mp4` and edit map. **25 recorded identities: 22 have actual
+  class hashes; three retained S2/S3K v1 identities have explicit unknown hashes**.
+  There are still 24 rendered clips, 199 frames and one non-drawable recorded case.
+  This supersedes the old combined metadata, not its unchanged video bytes.
+
+Exact metadata derivation, with `${TASK_DIR}` naming the existing external root:
+
+```bash
+python3 tools/test_reel/test_reel.py reconcile --inventory "${TASK_DIR}/inventory-with-followup.json" --run-dir "${TASK_DIR}/headless-v2" --out "${TASK_DIR}/provenance-v3/headless"
+python3 tools/test_reel/test_reel.py reconcile --inventory "${TASK_DIR}/inventory-with-followup.json" --run-dir "${TASK_DIR}/representative-v1" --allow-legacy-source --out "${TASK_DIR}/provenance-v3/representative"
+python3 tools/test_reel/test_reel.py combine --inventory "${TASK_DIR}/provenance-v3/target-inventory.json" --manifest "${TASK_DIR}/provenance-v3/representative/manifest.json" --manifest "${TASK_DIR}/provenance-v3/headless/manifest.json" --prefer-last --allow-legacy-source --out "${TASK_DIR}/provenance-v3/combined"
+```
+
+The target overlay is reviewable JSON. Its S1 hash was checked against
+`git show 78296018bbc:src/test/java/com/openggf/tests/TestTasS1Movement.java`;
+regeneration must verify that committed source hash and preserve its source ref,
+not blindly copy an executed hash into a supposedly committed inventory. All
+original runs, case records, manifests and video files remain intact. No Java
+re-execution, frame capture or video encoding was needed.
