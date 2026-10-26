@@ -704,9 +704,9 @@ class TestCdR11aSectionArt {
         }
         var objects = assets.openingObjects();
         var sources = objects.sectionArtSources();
-        assertEquals(11, sources.sources().size());
+        assertEquals(12, sources.sources().size());
         assertEquals(List.of(ART_PATA_BATA, ART_ANTON, ART_TAMABBOH, ART_MOSQUI, ART_3D_PLANT,
-                ART_3D_RAMP_BOOST, ART_BOULDER, ART_DIAGONAL_SPRING, ART_SPIKES, ART_CHECKPOINT, ART_PLATFORM),
+                ART_3D_RAMP_BOOST, ART_BOULDER, ART_DIAGONAL_SPRING, ART_SPIKES, ART_CHECKPOINT, ART_PLATFORM, ART_ANIMALS),
                 sources.sources().stream().map(source -> source.source()).toList());
         var mosqui = sources.source(ART_MOSQUI).decode().bytes();
         var plant = sources.source(ART_3D_PLANT).decode().bytes();
@@ -759,7 +759,7 @@ class TestCdR11aSectionArt {
 
     // BEGIN COLLAPSE PLATFORM PICTURE R1
     @Test void actualEleventhPlatformSourceKeepsCanonicalRowAndDistinctFiniteConsumers() throws Exception {
-        var assets=collapseActualAssets();var bank=assets.openingObjects().sectionArtSources();assertEquals(11,bank.sources().size());
+        var assets=collapseActualAssets();var bank=assets.openingObjects().sectionArtSources();assertEquals(12,bank.sources().size());
         var source=bank.sources().get(10);assertSame(source,bank.source(ART_PLATFORM));assertEquals(ART_PLATFORM,source.source());
         assertEquals(1,source.canonicalPlcId());assertEquals(6,source.canonicalRowIndex());assertEquals(0x97C0,source.canonicalPlc().vramAddress());
         assertEquals(57,source.tileCount());assertEquals(0x8039,source.readerBytes().unsignedWord(0));

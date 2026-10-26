@@ -71,6 +71,15 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Canonical source metadata is not the reached PLC selection (2026-10-26, CD
+Animals). The cached source is canonically PLC2/row1; saved section0200 actually
+loads fullPLC4, while a camera reversal to section0 appends incrementalPLC8.
+FullPLC2 has a GoalPost row; incremental8 does not. Two authored negative oracles
+failed because they inferred the queue from canonical metadata. Pin the actual
+section table, initial/update selector and complete reached row list before
+predicting the next unavailable producer. Preserve the unknown-source guard and
+correct the oracle; never change gameplay to force an expected stop.
+
 A controller bound is not an implementation frontier (2026-10-26, CD ID21).
 Right1200 and Right3600 returned every ordinary call while Sonic pushed a live
 raw object link. Record endpoint positions/flags/links and the actual stop

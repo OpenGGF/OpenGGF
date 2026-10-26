@@ -5120,28 +5120,57 @@ class TestCdOpeningObjectRuntime {
         }
     }
 
-    // Catches suppressing unowned later PLCs, rollback of the current generation, or continued CPU tail after a stop.
-    @Test void cameraArtActiveReversalReachesUnknownBoulderPrepareAndRetainsAlreadyWrittenPrefix() throws Exception {
+    // Catches truncating the actual incremental list, rolling back current bytes, or skipping its CPU tail.
+    @Test void cameraArtActiveReversalCompletesActualIncrementalSourcesWithoutDroppingCurrentPrefix() throws Exception {
         try (var f = new Fixture()) {
             cameraArtIdle(f); cameraArtCycle(f, 0x680, 0); cameraArtBegin(f, 0);
             f.runtime.spawnBeforeReservedSlots(); f.body(2); f.runtime.runDynamicSlotsAfterReservedSlots(); f.runtime.finishAfterCamera(POST);
-            f.runtime.finishOrdinaryTail(); // The real reversal list now prepares its owned first Boulder row.
+            f.runtime.finishOrdinaryTail();
             assertEquals(19, f.runtime.sectionArtState().remainingTilesWord());
             assertEquals(0x6E80, f.runtime.sectionArtState().queue().headDestination());
-            for (int i = 0; i < 6; i++) cameraArtCycle(f, 0, 0); // Eighteen real complete-tile writes, no filtering.
+            for (int i = 0; i < 6; i++) cameraArtCycle(f, 0, 0);
             assertEquals(1, f.runtime.sectionArtState().remainingTilesWord());
-            cameraArtBegin(f, 0); // Nineteenth tile completes and pops Boulder; Animals waits for ProcessPLCs.
+            cameraArtBegin(f, 0); // Last Boulder tile completes before native ProcessPLCs prepares Animals.
             var prefix = f.runtime.sectionArtState().residency(); var rings = f.runtime.ringGlobals();
             cameraArtBytes(prefix, 0x6E80, cameraArtSource(f, com.openggf.game.soniccd.level.CdR11aAsset.ART_BOULDER));
             f.runtime.spawnBeforeReservedSlots(); f.body(2); f.runtime.runDynamicSlotsAfterReservedSlots(); f.runtime.finishAfterCamera(POST);
-            var fault = assertThrows(com.openggf.game.soniccd.resources.CdR11aSectionArt.SectionArtException.class, f.runtime::finishOrdinaryTail);
-            assertEquals(com.openggf.game.soniccd.resources.CdR11aSectionArt.Reason.UNKNOWN_SOURCE, fault.reason());
-            assertEquals(prefix, f.runtime.sectionArtState().residency()); assertEquals(fault.state(), f.runtime.sectionArtState());
-            assertEquals(0, f.runtime.sectionArtState().sectionWord()); assertEquals(0, f.runtime.sectionArtState().remainingTilesWord());
-            assertEquals(0x7100, f.runtime.sectionArtState().queue().headDestination());
-            assertTrue(f.runtime.sectionArtState().stopped()); assertTrue(f.runtime.closed()); assertTrue(f.frame.closed());
-            assertEquals(rings, f.runtime.ringGlobals(), "ring tail follows the failed native ProcessPLCs cut");
-            assertThrows(IllegalStateException.class, () -> f.runtime.serviceVBlank(PlcLifecyclePhase.NORMAL_PAUSE));
+            f.runtime.finishOrdinaryTail();
+            assertEquals(prefix, f.runtime.sectionArtState().residency(), "prepare never writes current tiles");
+            assertEquals(rings.advanceGlobalRingAnimation(), f.runtime.ringGlobals());
+            // Native Section Data Present:14-19 selects UPDATE PLC8, not initial/full PLC2.
+            int update = f.assets.loadPlan().sections().getFirst().updatePlcId();
+            assertEquals(8, update); assertEquals(2, f.assets.loadPlan().sections().getFirst().initialPlcId());
+            var rows = f.assets.loadPlan().plcs().get(update).entries();
+            assertEquals(List.of(com.openggf.game.soniccd.level.CdR11aAsset.ART_BOULDER,
+                    com.openggf.game.soniccd.level.CdR11aAsset.ART_ANIMALS,
+                    com.openggf.game.soniccd.level.CdR11aAsset.ART_MOSQUI,
+                    com.openggf.game.soniccd.level.CdR11aAsset.ART_ANTON,
+                    com.openggf.game.soniccd.level.CdR11aAsset.ART_3D_PLANT,
+                    com.openggf.game.soniccd.level.CdR11aAsset.ART_3D_RAMP_BOOST), rows.stream().map(row -> row.source()).toList());
+            var bank = f.assets.openingObjects().sectionArtSources();
+            // Full PLC2 does contain GoalPost. Admission of Animals does not admit that producer.
+            var goal = f.assets.loadPlan().plcs().get(2).entries().get(6);
+            assertEquals(com.openggf.game.soniccd.level.CdR11aAsset.ART_GOAL_POST, goal.source());
+            assertThrows(UnsupportedOperationException.class, () -> bank.source(goal));
+            for (int row = 1; row < rows.size(); row++) {
+                var entry = rows.get(row); var source = bank.source(entry);
+                assertEquals(source.tileCount(), f.runtime.sectionArtState().remainingTilesWord());
+                int services = (source.tileCount() + 2) / 3;
+                for (int service = 0; service < services; service++) {
+                    cameraArtBegin(f, 0); prefix = f.runtime.sectionArtState().residency(); rings = f.runtime.ringGlobals();
+                    f.runtime.spawnBeforeReservedSlots(); f.body(2); f.runtime.runDynamicSlotsAfterReservedSlots();
+                    f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+                    assertEquals(prefix, f.runtime.sectionArtState().residency(), "CPU preparation preserves every completed VInt tile");
+                    assertEquals(rings.advanceGlobalRingAnimation(), f.runtime.ringGlobals());
+                    assertFalse(f.runtime.closed()); assertFalse(f.frame.closed());
+                }
+                cameraArtBytes(f.runtime.sectionArtState().residency(), entry.vramAddress(), source.decode().bytes());
+            }
+            assertEquals(0, f.runtime.sectionArtState().sectionWord());
+            assertEquals(0, f.runtime.sectionArtState().remainingTilesWord());
+            assertEquals(0, f.runtime.sectionArtState().queue().headSource());
+            assertFalse(f.runtime.sectionArtState().stopped());
+            assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT, f.runtime.phase());
         }
     }
 
@@ -5518,7 +5547,7 @@ class TestCdOpeningObjectRuntime {
     @Test void boulderColdDevSeedsExactlyNineteenCompleteTilesFromTheSameSevenSourceBank() throws Exception {
         try (var f = new Fixture()) {
             var objects = f.assets.openingObjects(); var bank = objects.sectionArtSources();
-            assertSame(bank, objects.sectionArtSources()); assertEquals(11, bank.sources().size());
+            assertSame(bank, objects.sectionArtSources()); assertEquals(12, bank.sources().size());
             var source = bank.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_BOULDER);
             assertEquals(2, source.canonicalPlcId()); assertEquals(0, source.canonicalRowIndex());
             assertEquals(f.assets.loadPlan().plcs().get(2).entries().getFirst(), source.canonicalPlc());
@@ -6010,7 +6039,7 @@ class TestCdOpeningObjectRuntime {
     @Test void diagonalColdSeedUsesExactlyTheEighthCanonicalSourceAndFortySixCompleteCurrentTiles() throws Exception {
         try (var f = new Fixture()) {
             var objects = f.assets.openingObjects(); var bank = objects.sectionArtSources(); assertSame(bank, objects.sectionArtSources());
-            assertEquals(11, bank.sources().size()); var source = bank.sources().get(7);
+            assertEquals(12, bank.sources().size()); var source = bank.sources().get(7);
             assertEquals(com.openggf.game.soniccd.level.CdR11aAsset.ART_DIAGONAL_SPRING, source.source());
             assertSame(source, bank.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_DIAGONAL_SPRING));
             assertEquals(1, source.canonicalPlcId()); assertEquals(5, source.canonicalRowIndex());
@@ -6571,7 +6600,7 @@ class TestCdOpeningObjectRuntime {
     @Test void spikesColdSeedsOnlyEightCompleteNinthCanonicalTilesAndKeepsTheSourceBankCached() throws Exception {
         try(var f=new Fixture()) {
             var objects=f.assets.openingObjects();var bank=objects.sectionArtSources();assertSame(bank,objects.sectionArtSources());
-            assertEquals(11,bank.sources().size());var source=bank.sources().get(8);
+            assertEquals(12,bank.sources().size());var source=bank.sources().get(8);
             assertSame(source,bank.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_SPIKES));
             assertEquals(1,source.canonicalPlcId());assertEquals(0,source.canonicalRowIndex());assertEquals(8,source.tileCount());
             assertEquals(0x8008,source.readerBytes().unsignedWord(0));assertEquals(256,source.decode().bytes().length());
@@ -7119,7 +7148,7 @@ class TestCdOpeningObjectRuntime {
     @Test void checkpointColdSeedsTwelveCompleteTilesFromTheSameTenthActualSourceOnly() throws Exception {
         try (var f = new Fixture()) {
             var o=f.assets.openingObjects();var bank=o.sectionArtSources();assertSame(bank,o.sectionArtSources());
-            assertEquals(11,bank.sources().size());var s=bank.sources().get(9);
+            assertEquals(12,bank.sources().size());var s=bank.sources().get(9);
             assertEquals(com.openggf.game.soniccd.level.CdR11aAsset.ART_CHECKPOINT,s.source());
             assertSame(s,bank.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_CHECKPOINT));
             assertEquals(0,s.canonicalPlcId());assertEquals(1,s.canonicalRowIndex());
@@ -7690,7 +7719,7 @@ class TestCdOpeningObjectRuntime {
     @Test void antonColdUnknownCanonicalPixelsAdmitEmptySatAndKeepAll579PreviousBindings() throws Exception {
         try(var f=new Fixture()) {
             var objects=f.assets.openingObjects();var bank=objects.sectionArtSources();assertSame(bank,objects.sectionArtSources());
-            assertEquals(11,bank.sources().size());assertSame(bank.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_ANTON),bank.sources().get(1));
+            assertEquals(12,bank.sources().size());assertSame(bank.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_ANTON),bank.sources().get(1));
             var state=f.runtime.sectionArtState();var pixels=antonPixels(f,state.residency());var old=checkpointPixels(f,state.residency());
             int[][] ranges={{0x780,24},{0x7AE,14},{0x3A0,70},{0x424,28},{0x441,63},{0x680,70},{0x6C6,5},{0x6D7,39},
                     {0x544,36},{0x334,15},{0x520,36},{0x328,12},{0x5A8,82},{0x374,19},{0x490,46},{0x320,8},{0x6CB,12}};
@@ -8106,7 +8135,7 @@ class TestCdOpeningObjectRuntime {
     @Test void collapseColdDevWritesExactlyFiftySevenCompleteTilesFromTheSameCachedEleventhSource() throws Exception {
         try(var f=new Fixture()) {
             var o=(com.openggf.game.soniccd.level.CdR11aObjectAssets)checkpointGet(f.runtime,"objects");
-            var bank=o.sectionArtSources();assertSame(bank,o.sectionArtSources());assertEquals(11,bank.sources().size());
+            var bank=o.sectionArtSources();assertSame(bank,o.sectionArtSources());assertEquals(12,bank.sources().size());
             var source=bank.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_PLATFORM);assertSame(source,bank.sources().get(10));
             assertSame(source.decode(),bank.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_PLATFORM).decode());
             assertEquals(1,source.canonicalPlcId());assertEquals(6,source.canonicalRowIndex());
@@ -8953,7 +8982,7 @@ class TestCdOpeningObjectRuntime {
             assertEquals(original.tiles(),now.tiles());assertNotEquals(original.patternVersions().get(logical),now.patternVersions().get(logical));
             assertEquals(CdObjectPresentation.patternVersion(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(resident,0x4BF)),original.patternVersions().get(logical));
             assertEquals(CdObjectPresentation.patternVersion(com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(changed,0x4BF)),now.patternVersions().get(logical));
-            assertArrayEquals(sat.bytes(),f.runtime.cpuSat().bytes());assertEquals(11,o.sectionArtSources().sources().size());
+            assertArrayEquals(sat.bytes(),f.runtime.cpuSat().bytes());assertEquals(12,o.sectionArtSources().sources().size());
             f.service(0x80);assertEquals(original,f.runtime.displayedFrame());
         }
     }

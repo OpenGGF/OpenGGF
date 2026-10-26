@@ -1640,4 +1640,401 @@ class TestSonicCdOpeningWorldLoad {
             var loaded = CdStockLaunch.prepare(cues.getFirst(), CdStockLaunch.Request.r11a()); SOURCES.put(variant, loaded); return loaded;
         }
     }
+
+    /**
+     * SOURCE-ONLY/UNRUN: Root's observed controller cuts end at fresh6; fresh7..14 is the
+     * source-derived Source12 oracle. Loaded0 means the completed new Init at global1947,
+     * not a fabricated frame-counter-zero cut. DEV HUD0 is explicit, not a retail timer claim.
+     */
+    @Test void controllerJumpRouteRestartsFromNaturalCheckpointAndServicesAnimalsWithFreshEpochReplay() throws Exception {
+        GameServices.configuration().setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, false);
+        GameServices.configuration().setSessionOverride(SonicConfiguration.LIVE_REWIND_DETERMINISM_AUDIT, false);
+        final String controllerScript = "1200 R;32 R+B;1200 R";
+        var log = com.openggf.tools.InputScriptCompiler.compileToInputLog(controllerScript);
+        var movie = new com.openggf.debug.playback.Bk2MovieLoader().parseInputLogText(
+                Path.of("natural-checkpoint-animals-controller"), log.lines().toList());
+        assertEquals(2432, movie.getFrameCount());
+        assertEquals(0, movie.getFrame(1199).p1ActionMask());
+        assertEquals(2, movie.getFrame(1200).p1ActionMask());
+        assertEquals(2, movie.getFrame(1231).p1ActionMask());
+        assertEquals(0, movie.getFrame(1232).p1ActionMask());
+
+        var h = opening();
+        var old = objects(h); var oldFrame = h.module().requirePlayerFrame();
+        var oldActor = h.module().requirePlayerActor();
+        var oldPlc = h.module().getGameService(PlcLifecycleService.class);
+        var world = h.mode().getWorldSession(); var level = h.mode().getLevelManager();
+        var oldLevel = level.getCurrentLevel();
+        long generation = level.getCompletedProductionLoadGeneration();
+        var registry = h.mode().getRewindRegistry();
+        CdOpeningObjectRuntime.CheckpointOwnerState naturalSaved = null;
+        int firstDead = -1, firstGone = -1, firstRestart = -1;
+        for (int call = 1; call <= 1946; call++) {
+            int previousCheckpoint = old.levelGlobals().checkpoint();
+            var row = movie.getFrame(call - 1);
+            step(h, input(row.p1InputMask(), row.p1ActionMask(), row.p1StartPressed()));
+            assertSame(world, h.mode().getWorldSession());
+            assertSame(level, h.mode().getLevelManager()); assertSame(oldLevel, level.getCurrentLevel());
+            assertSame(old, objects(h)); assertSame(oldFrame, h.module().requirePlayerFrame());
+            assertSame(oldActor, h.module().requirePlayerActor());
+            assertSame(oldPlc, h.module().getGameService(PlcLifecycleService.class));
+            assertEquals(generation, level.getCompletedProductionLoadGeneration());
+            assertFalse(old.closed()); assertFalse(oldFrame.closed());
+            assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT, old.phase());
+            if (previousCheckpoint != old.levelGlobals().checkpoint()) {
+                assertEquals(649, call); assertEquals(0, previousCheckpoint);
+                assertNull(naturalSaved);
+                naturalSaved = old.checkpointState(); // Actual contact, before hurt/death; no SaveData call.
+                assertEquals(2, old.levelGlobals().checkpoint()); assertEquals(1, old.levelGlobals().spawnMode());
+                byte[] allSavedKnown = new byte[31]; Arrays.fill(allSavedKnown, (byte) 1);
+                assertArrayEquals(allSavedKnown, naturalSaved.saved().knownMask().copy());
+                assertEquals(1, naturalSaved.saved().read(
+                        com.openggf.game.soniccd.objects.CdCheckpointSaveData.SavedField.SPAWN_MODE));
+                assertEquals(oldFrame.state().motion().centreX16_16() >>> 16, naturalSaved.saved().read(
+                        com.openggf.game.soniccd.objects.CdCheckpointSaveData.SavedField.PRIMARY_X));
+                assertEquals(oldFrame.state().motion().centreY16_16() >>> 16, naturalSaved.saved().read(
+                        com.openggf.game.soniccd.objects.CdCheckpointSaveData.SavedField.PRIMARY_Y));
+                assertEquals(0, naturalSaved.saved().read(
+                        com.openggf.game.soniccd.objects.CdCheckpointSaveData.SavedField.TIME_LONG));
+                assertEquals(List.of(new CdOpeningObjectRuntime.CheckpointFm(
+                                com.openggf.game.soniccd.objects.CdCheckpoint.FmSound.FM_CHECKPOINT_AE)),
+                        old.lastSoundRequests().stream().filter(CdOpeningObjectRuntime.CheckpointFm.class::isInstance).toList());
+            }
+            if (naturalSaved != null) assertNaturalRestartCheckpoint(naturalSaved, h);
+            if (call == 1200) {
+                var actor = oldFrame.state();
+                assertEquals(222748416, actor.motion().centreX16_16());
+                assertEquals(48994048, actor.motion().centreY16_16());
+                assertEquals(2, actor.motion().routine()); assertEquals(53, actor.objectLinks().pushObject());
+                assertEquals(2, old.levelGlobals().checkpoint()); assertEquals(1, old.levelGlobals().spawnMode());
+            }
+            int routine = oldFrame.state().motion().routine();
+            if (routine == 6 && firstDead < 0) firstDead = call;
+            if (routine == 8 && firstGone < 0) firstGone = call;
+            if (old.levelGlobals().levelRestart() != 0 && firstRestart < 0) firstRestart = call;
+            if (call == 1802) {
+                // ObjSonic_HurtChkLand -> KillPlayer: Sonic/Main.asm:2372-2376;
+                // KillPlayer (PP Player Object Collision.asm:279-294) writes routine6, -$700, FM_HURT.
+                assertEquals(6, routine); assertEquals(-1792, oldFrame.state().motion().yVelocity());
+                assertEquals(List.of(new CdOpeningObjectRuntime.PlayerSound(new CdPlayerFrameRuntime.ContactFmSound(
+                                com.openggf.game.soniccd.player.CdPlayerTouchResponse.FmSound.FM_HURT))),
+                        old.lastSoundRequests().stream().filter(CdOpeningObjectRuntime.PlayerSound.class::isInstance).toList());
+            }
+            if (call == 1886) {
+                // DeadChkGone (Sonic/Main.asm:2416-2444) precedes later live GameOver Init
+                // (Game Over/Main.asm:27-49): routine8/reset60/life decrement, then SCMD_FADEPCM.
+                assertEquals(8, routine); assertEquals(60, oldFrame.state().timers().reset());
+                assertEquals(2, old.ringGlobals().lives());
+                assertEquals(List.of(new CdOpeningObjectRuntime.GameOverSubCpu(
+                                com.openggf.game.soniccd.objects.CdGameOver.SubCpuCommand.SCMD_FADEPCM)),
+                        old.lastSoundRequests().stream().filter(CdOpeningObjectRuntime.GameOverSubCpu.class::isInstance).toList());
+            }
+            if (call == 1945) assertEquals(1, oldFrame.state().timers().reset());
+            assertEquals(call == 1946 ? 1 : 0, old.levelGlobals().levelRestart());
+        }
+        assertNotNull(naturalSaved);
+        assertEquals(1802, firstDead); assertEquals(1886, firstGone); assertEquals(1946, firstRestart);
+        assertEquals(8, oldFrame.state().motion().routine()); assertEquals(0, oldFrame.state().timers().reset());
+        assertEquals(2, old.levelGlobals().checkpoint()); assertEquals(1, old.levelGlobals().spawnMode());
+        // ObjSonic_Restart (Sonic/Main.asm:2459-2491): ordered typed requests only, no driver/audio execution.
+        assertEquals(List.of(
+                        new CdOpeningObjectRuntime.PlayerSound(new CdPlayerFrameRuntime.DriverRamWrite(0x1C3E, 1)),
+                        new CdOpeningObjectRuntime.PlayerSound(new CdPlayerFrameRuntime.BodySound(CdPlayerBody.Sound.SCMD_FADECDA))),
+                old.lastSoundRequests().stream().filter(CdOpeningObjectRuntime.PlayerSound.class::isInstance).toList());
+        oldActor.requireCompletedNativeFrame();
+        var old1946 = state(h); var oldFull = registry.capture(); var oldCourse = registry.captureCourse();
+
+        var loadRow = movie.getFrame(1946);
+        step(h, input(loadRow.p1InputMask(), loadRow.p1ActionMask(), loadRow.p1StartPressed())); // Global1947.
+        assertSame(world, h.mode().getWorldSession()); assertSame(level, h.mode().getLevelManager());
+        assertNotSame(oldLevel, level.getCurrentLevel());
+        assertEquals(generation + 1, level.getCompletedProductionLoadGeneration());
+        var fresh = objects(h); var freshFrame = h.module().requirePlayerFrame();
+        var freshActor = h.module().requirePlayerActor();
+        assertNotSame(old, fresh); assertNotSame(oldFrame, freshFrame); assertNotSame(oldActor, freshActor);
+        assertNotSame(oldPlc, h.module().getGameService(PlcLifecycleService.class));
+        assertTrue(old.closed()); assertTrue(oldFrame.closed()); assertFalse(fresh.closed()); assertFalse(freshFrame.closed());
+        assertSame(registry, h.mode().getRewindRegistry());
+        assertEquals(1, level.getFrameCounter()); assertEquals(1, freshFrame.environment().globals().levelFrames());
+        assertEquals(java.util.OptionalLong.of(0), freshFrame.vIntClock().absoluteSeed());
+        assertEquals(1, freshFrame.vIntClock().deltaSinceAdmittedCut());
+        var loadedMotion = freshFrame.state().motion();
+        assertEquals(179765248, loadedMotion.centreX16_16()); assertEquals(48955392, loadedMotion.centreY16_16());
+        assertEquals(0, loadedMotion.centreX16_16() & 0xFFFF); assertEquals(0, loadedMotion.centreY16_16() & 0xFFFF);
+        assertEquals(2, loadedMotion.routine());
+        assertEquals(new CdPlayerBody.ObjectLinks(0, 0), freshFrame.state().objectLinks());
+        assertEquals(0, freshFrame.state().timers().hurt()); assertEquals(0, freshFrame.state().timers().reset());
+        assertEquals(0, fresh.ringGlobals().rings()); assertEquals(2, fresh.ringGlobals().lives());
+        assertEquals(7, fresh.ringGlobals().ringAnimationTimer()); assertEquals(1, fresh.ringGlobals().ringAnimationFrame());
+        assertEquals(2, fresh.levelGlobals().checkpoint()); assertEquals(0, fresh.levelGlobals().spawnMode());
+        assertEquals(0, fresh.levelGlobals().levelRestart()); assertEquals(0, fresh.levelGlobals().updateHudTime());
+        assertEquals(3, fresh.levelGlobals().plcLoadFlags()); // Existing DEV title-loaded skip branch.
+        assertEquals(2583, h.mode().getCamera().getX()); assertEquals(651, h.mode().getCamera().getY());
+        assertSame(naturalSaved.saved(), fresh.checkpointState().saved());
+        assertArrayEquals(naturalSaved.saved().knownMask().copy(), fresh.checkpointState().saved().knownMask().copy());
+        assertEquals(naturalSaved.saved(), fresh.checkpointState().saved());
+        // LoadCheckpointData (Load Saved Data.asm:49-67): restore raw0, frames=$3B,
+        // then SUBQ.B seconds wraps to $FF. Main.SkipClear (:285-301) retains it before clearing spawn.
+        assertEquals(0, fresh.checkpointState().saved().read(
+                com.openggf.game.soniccd.objects.CdCheckpointSaveData.SavedField.TIME_LONG));
+        assertEquals(0x0000FF3B, com.openggf.game.soniccd.objects.CdCheckpointLiveAux.read(
+                fresh.checkpointState().live(), com.openggf.game.soniccd.objects.CdCheckpointLiveAux.Field.TIME_LONG));
+        assertEquals(naturalSaved.live().knownMask(), fresh.checkpointState().live().knownMask());
+
+        var plan = freshFrame.assets().loadPlan();
+        assertEquals(4, plan.sections().get(1).initialPlcId());
+        var actualLoadList = plan.plcs().get(4).entries();
+        assertEquals(6, actualLoadList.size());
+        assertEquals(List.of(
+                        com.openggf.game.soniccd.level.CdR11aAsset.ART_BOULDER,
+                        com.openggf.game.soniccd.level.CdR11aAsset.ART_ANIMALS,
+                        com.openggf.game.soniccd.level.CdR11aAsset.ART_PATA_BATA,
+                        com.openggf.game.soniccd.level.CdR11aAsset.ART_ANTON,
+                        com.openggf.game.soniccd.level.CdR11aAsset.ART_TAMABBOH,
+                        com.openggf.game.soniccd.level.CdR11aAsset.ART_GOAL_POST),
+                actualLoadList.stream().map(com.openggf.game.soniccd.level.CdR11aLoadPlan.PlcEntry::source).toList());
+        // LoadSectionArt (Section Art Load.asm:7-22), SectionInitPLCs:21-26 and PLC_Cam2_Full
+        // (Data (Act 1 Present).asm:102-115), never canonical PLC2 forced over saved camera/section.
+        var loadedArt = fresh.sectionArtState();
+        assertEquals(0x0200, loadedArt.sectionWord()); assertEquals(19, loadedArt.remainingTilesWord());
+        assertEquals(0x6E80, loadedArt.queue().headDestination());
+        assertEquals(actualLoadList.getFirst().sourceRange().nativeAddress(),
+                loadedArt.decoder().orElseThrow().nativeAddress());
+        for (int row = 1; row < actualLoadList.size(); row++) {
+            assertEquals(actualLoadList.get(row).sourceRange().nativeAddress(), loadedArt.queue().bytes().unsignedLong(row * 6));
+            assertEquals(actualLoadList.get(row).vramAddress(), loadedArt.queue().bytes().unsignedWord(row * 6 + 4));
+        }
+        for (int offset = actualLoadList.size() * 6; offset < 96; offset++)
+            assertEquals(0, loadedArt.queue().bytes().unsignedByte(offset));
+        assertEquals(old1946.objects().sectionArtState().residency(), loadedArt.residency(),
+                "Load/prepare carry the existing current bytes and knowledge; no Animals preload");
+        assertArrayEquals(loadedArt.decoder().orElseThrow().codeTable().copy(), loadedArt.codeTable().copy());
+
+        var loaded0 = state(h);
+        // Exact existing Frame owner rejection, before any restore callback/partition mutation.
+        var rejectedFull = assertThrows(IllegalArgumentException.class, () -> registry.restore(oldFull));
+        assertEquals("Snapshot belongs to another CD runtime/source owner", rejectedFull.getMessage());
+        assertState(loaded0, h); assertNaturalRestartCheckpoint(loaded0.objects().checkpointState(), h);
+        var rejectedCourse = assertThrows(IllegalArgumentException.class, () -> registry.restoreCourse(oldCourse));
+        assertEquals("Snapshot belongs to another CD runtime/source owner", rejectedCourse.getMessage());
+        assertState(loaded0, h); assertNaturalRestartCheckpoint(loaded0.objects().checkpointState(), h);
+
+        State[] freshStates = new State[15]; freshStates[0] = loaded0;
+        int[] cutCalls = {0, 1, 7, 10};
+        var freshFull = new java.util.ArrayList<com.openggf.game.rewind.CompositeSnapshot>();
+        var freshCourse = new java.util.ArrayList<com.openggf.game.rewind.CompositeSnapshot>();
+        freshFull.add(registry.capture()); freshCourse.add(registry.captureCourse());
+        for (int call = 1; call <= 6; call++) {
+            var row = movie.getFrame(1946 + call); // Fresh1..6 = global1948..1953.
+            step(h, input(row.p1InputMask(), row.p1ActionMask(), row.p1StartPressed()));
+            assertSame(fresh, objects(h)); assertSame(freshFrame, h.module().requirePlayerFrame());
+            assertEquals(generation + 1, level.getCompletedProductionLoadGeneration());
+            assertEquals(call + 1, level.getFrameCounter());
+            assertEquals(call + 1, freshFrame.environment().globals().levelFrames());
+            assertEquals(call + 1, freshFrame.vIntClock().deltaSinceAdmittedCut());
+            assertEquals(19 - call * 3, fresh.sectionArtState().remainingTilesWord());
+            assertEquals(0x0200, fresh.sectionArtState().sectionWord());
+            assertNaturalRestartCheckpoint(loaded0.objects().checkpointState(), h);
+            freshStates[call] = state(h);
+            if (call == 1) { freshFull.add(registry.capture()); freshCourse.add(registry.captureCourse()); }
+        }
+        assertEquals(0x2365C5L, fresh.sectionArtState().queue().headSource());
+        assertEquals(0x70C0, fresh.sectionArtState().queue().headDestination());
+
+        // The old eleven-source runtime must reach this real call and fail in ordinary-tail
+        // UNKNOWN_SOURCE $2381C0/$7100 AFTER its final Boulder service/pop. Do not catch/resume it.
+        // Every Source12 lookup/count assertion is deliberately below this production step.
+        var animalsReadyRow = movie.getFrame(1953);
+        step(h, input(animalsReadyRow.p1InputMask(), animalsReadyRow.p1ActionMask(), animalsReadyRow.p1StartPressed()));
+        assertEquals(8, level.getFrameCounter()); assertEquals(8, freshFrame.environment().globals().levelFrames());
+        assertEquals(8, freshFrame.vIntClock().deltaSinceAdmittedCut());
+        var animalsReady = fresh.sectionArtState();
+        for (int row = 1; row < actualLoadList.size() - 1; row++) {
+            assertEquals(actualLoadList.get(row + 1).sourceRange().nativeAddress(), animalsReady.queue().bytes().unsignedLong(row * 6));
+            assertEquals(actualLoadList.get(row + 1).vramAddress(), animalsReady.queue().bytes().unsignedWord(row * 6 + 4));
+        }
+        assertEquals(20, animalsReady.remainingTilesWord()); assertEquals(3, animalsReady.processBudgetWord());
+        assertEquals(0x0200, animalsReady.sectionWord()); assertEquals(0x7100, animalsReady.queue().headDestination());
+        assertEquals(0x238219L, animalsReady.queue().headSource());
+        var preparedAnimals = animalsReady.decoder().orElseThrow();
+        assertEquals(0x2381C0L, preparedAnimals.nativeAddress()); assertEquals(0x0014, preparedAnimals.headerWord());
+        assertFalse(preparedAnimals.xorMode()); assertEquals(89, preparedAnimals.inputOffset());
+        assertEquals(20, preparedAnimals.remainingTiles()); assertEquals(0x6CD5, preparedAnimals.readWord());
+        assertEquals(16, preparedAnimals.shiftWord());
+        assertEquals(com.openggf.game.soniccd.resources.CdR11aSectionArt.Writer.NORMAL, animalsReady.savedDecoder().writer());
+
+        // Read-only access to the EXISTING retained caches, no reopened openingObjects() owner and no new API.
+        var objectsField = CdOpeningObjectRuntime.class.getDeclaredField("objects"); objectsField.setAccessible(true);
+        var retainedAssets = assertInstanceOf(com.openggf.game.soniccd.level.CdR11aObjectAssets.class, objectsField.get(fresh));
+        var frontierField = CdOpeningObjectRuntime.class.getDeclaredField("frontierArt"); frontierField.setAccessible(true);
+        var frontier = assertInstanceOf(com.openggf.game.soniccd.level.CdR11aObjectAssets.FrontierArtBank.class,
+                frontierField.get(fresh));
+        assertSame(frontier, retainedAssets.frontierArtBank());
+        var animalBinding = frontier.binding(com.openggf.game.soniccd.level.CdR11aAsset.ART_ANIMALS);
+        var sourceBank = retainedAssets.sectionArtSources();
+        assertSame(sourceBank, retainedAssets.sectionArtSources()); assertEquals(12, sourceBank.sources().size());
+        assertEquals(List.of(
+                        com.openggf.game.soniccd.level.CdR11aAsset.ART_PATA_BATA,
+                        com.openggf.game.soniccd.level.CdR11aAsset.ART_ANTON,
+                        com.openggf.game.soniccd.level.CdR11aAsset.ART_TAMABBOH,
+                        com.openggf.game.soniccd.level.CdR11aAsset.ART_MOSQUI,
+                        com.openggf.game.soniccd.level.CdR11aAsset.ART_3D_PLANT,
+                        com.openggf.game.soniccd.level.CdR11aAsset.ART_3D_RAMP_BOOST,
+                        com.openggf.game.soniccd.level.CdR11aAsset.ART_BOULDER,
+                        com.openggf.game.soniccd.level.CdR11aAsset.ART_DIAGONAL_SPRING,
+                        com.openggf.game.soniccd.level.CdR11aAsset.ART_SPIKES,
+                        com.openggf.game.soniccd.level.CdR11aAsset.ART_CHECKPOINT,
+                        com.openggf.game.soniccd.level.CdR11aAsset.ART_PLATFORM,
+                        com.openggf.game.soniccd.level.CdR11aAsset.ART_ANIMALS),
+                sourceBank.sources().stream().map(com.openggf.game.soniccd.level.CdR11aObjectAssets.SectionArtSource::source).toList());
+        var animalSource = sourceBank.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_ANIMALS);
+        assertSame(sourceBank.sources().get(11), animalSource);
+        assertSame(animalSource, sourceBank.source(actualLoadList.get(1)));
+        assertEquals(2, animalSource.canonicalPlcId()); assertEquals(1, animalSource.canonicalRowIndex());
+        assertEquals(plan.plcs().get(2).entries().get(1), animalSource.canonicalPlc());
+        assertSame(animalBinding, frontier.binding(com.openggf.game.soniccd.level.CdR11aAsset.ART_ANIMALS));
+        assertSame(animalBinding.decode(), animalSource.decode());
+        assertEquals(446, animalSource.decode().sourceBlobRange().length());
+        assertEquals(actualLoadList.get(1).sourceRange(), animalSource.decode().sourceBlobRange());
+        assertEquals(animalSource.decode().sourceBlobRange(), animalSource.readerInputRange());
+        assertEquals(445, animalSource.decode().readerInputRange().length());
+        assertEquals(445, animalSource.decode().consumedInputBytes());
+        assertEquals(446, animalSource.readerInputRange().length()); assertEquals(446, animalSource.readerBytes().length());
+        assertEquals(0x0014, animalSource.readerBytes().unsignedWord(0));
+        assertEquals("63ae88feb8fcd2bb07d896715dc6a0974d289947114ab25064d43fea1e7b52ab",
+                java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")
+                        .digest(animalSource.readerBytes().copy())));
+        assertEquals(0, animalSource.readerBytes().unsignedByte(445), "Last actual Animals byte, not adjacent $80");
+        assertEquals(640, animalBinding.bytes().length()); assertEquals(20, animalBinding.tileCount());
+        assertEquals("ac1edab54e2b767578c6b3c2b828dc9821ef02c7a3bed9079dc7dded4a26e8d1",
+                java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")
+                        .digest(animalBinding.bytes().copy())));
+        assertArrayEquals(animalSource.readerBytes().copy(), preparedAnimals.sourceBytes().copy());
+        assertArrayEquals(preparedAnimals.codeTable().copy(), animalsReady.codeTable().copy());
+        var boulder = sourceBank.source(com.openggf.game.soniccd.level.CdR11aAsset.ART_BOULDER);
+        assertArrayEquals(boulder.decode().bytes().slice(18 * 32, 32).copy(),
+                com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(animalsReady.residency(), 0x386).copy());
+        var previousAnimalRegion = freshStates[6].objects().sectionArtState().residency().region(
+                com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.Region.AT_6E00);
+        var readyAnimalRegion = animalsReady.residency().region(
+                com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.Region.AT_6E00);
+        for (int offset = 0x300; offset < 0x580; offset++)
+            assertEquals(previousAnimalRegion.knownByte(offset), readyAnimalRegion.knownByte(offset),
+                    "CPU ProcessPLCs preparation publishes no Animals pixels");
+        freshStates[7] = state(h); freshFull.add(registry.capture()); freshCourse.add(registry.captureCourse());
+
+        // UNRUN positive oracle: ProcessPLCs (Functions (General).asm:664-695) prepares;
+        // DecompPLCSlow/Main/Pop (:721-784) services 3/3/3/3/3/3/2 tiles, then CPU prepares the next head.
+        for (int call = 8; call <= 14; call++) {
+            var row = movie.getFrame(1946 + call);
+            step(h, input(row.p1InputMask(), row.p1ActionMask(), row.p1StartPressed()));
+            assertSame(fresh, objects(h)); assertSame(freshFrame, h.module().requirePlayerFrame());
+            assertSame(freshActor, h.module().requirePlayerActor()); assertSame(world, h.mode().getWorldSession());
+            assertEquals(generation + 1, level.getCompletedProductionLoadGeneration());
+            assertFalse(fresh.closed()); assertFalse(freshFrame.closed());
+            assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT, fresh.phase());
+            assertEquals(0x0200, fresh.sectionArtState().sectionWord());
+            assertNaturalRestartCheckpoint(loaded0.objects().checkpointState(), h);
+            assertEquals(call + 1, level.getFrameCounter());
+            assertEquals(call + 1, freshFrame.environment().globals().levelFrames());
+            assertEquals(call + 1, freshFrame.vIntClock().deltaSinceAdmittedCut());
+            int completedTiles = Math.min((call - 7) * 3, 20);
+            assertNaturalAnimalsPrefix(animalsReady, animalBinding, completedTiles, h);
+            var art = fresh.sectionArtState(); var decoder = art.decoder().orElseThrow();
+            if (call < 14) {
+                assertEquals(20 - completedTiles, art.remainingTilesWord());
+                assertEquals(20 - completedTiles, decoder.remainingTiles());
+                assertEquals(0x2381C0L, decoder.nativeAddress()); assertEquals(0x0014, decoder.headerWord());
+                assertEquals(0, art.processBudgetWord()); assertEquals(0x7100 + (call - 7) * 96, art.queue().headDestination());
+                assertEquals(decoder.sourcePointer(), art.queue().headSource());
+                assertArrayEquals(animalsReady.codeTable().copy(), art.codeTable().copy());
+                assertEquals(com.openggf.game.soniccd.resources.CdR11aSectionArt.Writer.NORMAL, art.savedDecoder().writer());
+            } else {
+                var nextSource = sourceBank.source(actualLoadList.get(2));
+                assertEquals(com.openggf.game.soniccd.level.CdR11aAsset.ART_PATA_BATA, nextSource.source());
+                assertEquals(50, art.remainingTilesWord()); assertEquals(50, decoder.remainingTiles());
+                assertEquals(nextSource.readerInputRange().nativeAddress(), decoder.nativeAddress());
+                assertArrayEquals(nextSource.readerBytes().copy(), decoder.sourceBytes().copy());
+                assertEquals(0x7600, art.queue().headDestination()); assertEquals(2, art.processBudgetWord());
+                assertEquals(decoder.sourcePointer(), art.queue().headSource());
+                byte[] beforePop = freshStates[13].objects().sectionArtState().queue().bytes().copy();
+                byte[] popped = beforePop.clone();
+                for (int offset = 0; offset < 88; offset++) popped[offset] = beforePop[offset + 6];
+                assertArrayEquals(Arrays.copyOfRange(popped, 4, 96), Arrays.copyOfRange(art.queue().bytes().copy(), 4, 96),
+                        "FixBugs=0 88-byte POP; final eight descriptor bytes retain their prior values");
+            }
+            freshStates[call] = state(h);
+            if (call == 10) { freshFull.add(registry.capture()); freshCourse.add(registry.captureCourse()); }
+        }
+        var forwardState = state(h);
+        assertEquals(4, freshFull.size()); assertEquals(4, freshCourse.size());
+        // Byte equality alone cannot prove a write/call count: carried bytes may already equal the cold seed.
+        // Actual program, cursor/count, queue/table, ordinary services and authenticated binding own this proof.
+        for (int cut = 0; cut < cutCalls.length; cut++) {
+            for (boolean course : List.of(false, true)) {
+                if (course) registry.restoreCourse(freshCourse.get(cut)); else registry.restore(freshFull.get(cut));
+                assertState(freshStates[cutCalls[cut]], h); // Complete aggregate BEFORE the next ordinary forward step.
+                assertNaturalRestartCheckpoint(freshStates[cutCalls[cut]].objects().checkpointState(), h);
+                for (int call = cutCalls[cut] + 1; call <= 14; call++) {
+                    var row = movie.getFrame(1946 + call);
+                    step(h, input(row.p1InputMask(), row.p1ActionMask(), row.p1StartPressed()));
+                    assertState(freshStates[call], h);
+                    assertNaturalRestartCheckpoint(freshStates[call].objects().checkpointState(), h);
+                }
+                assertState(forwardState, h);
+                assertNaturalRestartCheckpoint(forwardState.objects().checkpointState(), h);
+                assertSame(naturalSaved.saved(), fresh.checkpointState().saved());
+                assertSame(fresh, objects(h)); assertSame(freshFrame, h.module().requirePlayerFrame());
+                assertSame(freshActor, h.module().requirePlayerActor()); assertSame(world, h.mode().getWorldSession());
+                assertEquals(generation + 1, level.getCompletedProductionLoadGeneration());
+            }
+        }
+        assertObjectRangeExactlyOnce();
+        // Bounded stop at fresh14/global1961. No goal-post, full-USA, native parity/audio/title/HUD claim.
+    }
+
+    private static void assertNaturalRestartCheckpoint(CdOpeningObjectRuntime.CheckpointOwnerState expected, Harness h) {
+        var actual = objects(h).checkpointState();
+        assertEquals(expected, actual); assertSame(expected.saved(), actual.saved());
+        assertArrayEquals(expected.saved().knownMask().copy(), actual.saved().knownMask().copy());
+        for (var field : com.openggf.game.soniccd.objects.CdCheckpointSaveData.SavedField.values()) {
+            assertEquals(expected.saved().read(field), actual.saved().read(field), field.name());
+            for (int part = 0; part < field.width(); part++)
+                assertEquals(expected.saved().knownByte(field.nativeAddress() + part),
+                        actual.saved().knownByte(field.nativeAddress() + part), field.name());
+        }
+        assertEquals(expected.live(), actual.live());
+        assertEquals(expected.live().knownMask(), actual.live().knownMask());
+        for (var field : com.openggf.game.soniccd.objects.CdCheckpointLiveAux.Field.values())
+            for (int part = 0; part < field.width(); part++)
+                assertEquals(expected.live().knownByte(field.nativeAddress() + part),
+                        actual.live().knownByte(field.nativeAddress() + part), field.name());
+        assertEquals(expected.saved().read(com.openggf.game.soniccd.objects.CdCheckpointSaveData.SavedField.TIME_LONG),
+                actual.saved().read(com.openggf.game.soniccd.objects.CdCheckpointSaveData.SavedField.TIME_LONG));
+        assertEquals(com.openggf.game.soniccd.objects.CdCheckpointLiveAux.read(expected.live(),
+                        com.openggf.game.soniccd.objects.CdCheckpointLiveAux.Field.TIME_LONG),
+                com.openggf.game.soniccd.objects.CdCheckpointLiveAux.read(actual.live(),
+                        com.openggf.game.soniccd.objects.CdCheckpointLiveAux.Field.TIME_LONG));
+    }
+
+    private static void assertNaturalAnimalsPrefix(
+            com.openggf.game.soniccd.resources.CdR11aSectionArt.State ready,
+            com.openggf.game.soniccd.level.CdR11aObjectAssets.ArtBinding binding, int completedTiles, Harness h) {
+        var current = objects(h).sectionArtState().residency();
+        for (var region : com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.Region.values()) {
+            var before = ready.residency().region(region); var after = current.region(region);
+            var beforeMask = before.knownMask(); var afterMask = after.knownMask();
+            for (int offset = 0; offset < region.byteLength(); offset++) {
+                boolean committed = region == com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.Region.AT_6E00
+                        && offset >= 0x300 && offset < 0x300 + completedTiles * 32;
+                var expected = committed ? java.util.OptionalInt.of(binding.bytes().unsignedByte(offset - 0x300))
+                        : before.knownByte(offset);
+                assertEquals(expected, after.knownByte(offset), region.name() + " byte " + offset);
+                assertEquals(committed ? 1 : beforeMask.unsignedByte(offset), afterMask.unsignedByte(offset));
+            }
+        }
+        for (int tile = 0; tile < completedTiles; tile++)
+            assertArrayEquals(binding.bytes().slice(tile * 32, 32).copy(),
+                    com.openggf.game.soniccd.resources.CdR11aCameraArtResidency.readTile(current, 0x388 + tile).copy());
+    }
 }

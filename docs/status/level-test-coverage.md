@@ -1,3 +1,12 @@
+Sonic CD cached Animals update (2026-10-26): the partial matrix now includes
+controller-only natural Checkpoint death/load and fresh Animals service through14,
+with old-epoch rejection and full/course replay. A separate continuation completes
+2005 calls and stops inside2006/fresh59 at source2320DA/9EE0. Source12 reuses the
+existing cache and physical owner; no new rendered product or act certification.
+The nine-class718 check has717 passes/one stale Runtime oracle; its source-correct
+incremental-PLC8 replacement passes narrowly. Fresh source12 structural guards
+pass728/0/0/0 across90 exact fresh executable-class reports, with no skips.
+
 Sonic CD ID21 update (2026-10-26): the partial act matrix adds native Platform
 Init/Main controller cuts through1200 and16 constructed carry/oscillation/fall
 scenes on the existing shared art span. A separate controller jump reaches a

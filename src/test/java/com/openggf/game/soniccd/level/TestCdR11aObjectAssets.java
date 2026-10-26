@@ -2926,5 +2926,157 @@ class TestCdR11aObjectAssets {
             "ce513997025ae549282209565f4c74aae2258cd6c391acd643d3b7f1b8071c9a"};
 
     // End Platform ID21 asset handoff R1.
+
+    // Animals source12: tests authored while the production mirror is absent; UNRUN here.
+
+    @Test
+    void animalsSource12KeepsTheCompleteFiftyFourTableManifestAndExistingSourceInventory() {
+        assertEquals(List.of(
+                "RING_DELTAS|ObjRing_Deltas|40086|32",
+                "RING_ANIMATIONS|Ani_Ring|41202|8",
+                "RING_MAPPINGS|MapSpr_Ring|41210|67",
+                "MOSQUI_NORMAL_ANIMATIONS|Ani_Mosqui1|46794|14",
+                "MOSQUI_DAMAGED_ANIMATIONS|Ani_Mosqui2|46808|13",
+                "MOSQUI_NORMAL_MAPPINGS|MapSpr_Mosqui1|46822|60",
+                "MOSQUI_DAMAGED_MAPPINGS|MapSpr_Mosqui2|46882|66",
+                "OBJECT_TILE_IDS|ObjectTileIDs|53064|74",
+                "TOUCH_DIMENSIONS|ObjColSizes|28870|126",
+                "FLYING_ANIMAL_ANIMATIONS|Ani_FlyingAnimal|53678|66",
+                "GROUND_ANIMAL_ANIMATIONS|Ani_GroundAnimal|53744|60",
+                "FLYING_ANIMAL_MAPPINGS|MapSpr_FlyingAnimal|53804|20",
+                "GROUND_ANIMAL_MAPPINGS|MapSpr_GroundAnimal|53824|36",
+                "ANIMAL_BASE_TILES|ObjAnimal_BaseTileList|53860|22",
+                "PLANT_MAPPINGS|MapSpr_3DPlant|57376|38",
+                "PLANT_OFFSETS|Obj3DPlant_Offsets1/Obj3DPlant_Offsets2|56776|14",
+                "RAMP_BOOSTER_MAPPINGS|MapSpr_3DRamp|130492|580",
+                "RAMP_BOOSTER_ANIMATIONS|Ani_3DRamp|57414|30",
+                "ENEMY_POINTS|EnemyPoints|28380|8",
+                "EXPLOSION_ANIMATIONS|Ani_Explosion|258164|20",
+                "EXPLOSION_MAPPINGS|MapSpr_Explosion|258184|146",
+                "POINTS_MAPPINGS|MapSpr_Points|44132|82",
+                "FLOWER_ANIMATIONS|Ani_Flower|220888|28",
+                "FLOWER_MAPPINGS|MapSpr_Flower|220916|90",
+                "GAME_OVER_MAPPINGS|MapSpr_GameOver/MapSpr_TimeOver|61502|56",
+                "FLOAT_BLOCK_ANIMATIONS|Ani_FloatBlock|41948|30",
+                "FLOAT_BLOCK_MAPPINGS|MapSpr_FloatBlock|41978|76",
+                "SPRING_ANIMATIONS|Ani_Spring|39826|14",
+                "SPRING_MAPPINGS|MapSpr_Spring1/MapSpr_Spring2/MapSpr_Spring3|39840|200",
+                "SPRING_SPEEDS|ObjSpring_Speeds|39144|4",
+                "POWERUP_MAPPINGS|MapSpr_Powerup|257692|274",
+                "TUNNEL_DOOR_VERTICAL_MAPPINGS|MapSpr_FlapDoorV|52890|28",
+                "MONITOR_TIME_ANIMATIONS|Ani_Monitor|43462|136",
+                "MONITOR_TIME_MAPPINGS|MapSpr_MonitorTime|43598|450",
+                "TUNNEL_DOOR_ANIMATIONS|Ani_TunnelDoor|258090|14",
+                "TUNNEL_DOOR_MAPPINGS|MapSpr_TunnelDoor|258104|28",
+                "PATA_BATA_ANIMATIONS|Ani_PataBata|46364|18",
+                "PATA_BATA_NORMAL_MAPPINGS|MapSpr_PataBata1|46382|34",
+                "PATA_BATA_DAMAGED_MAPPINGS|MapSpr_PataBata2|46416|40",
+                "BOULDER_MAPPINGS|MapSpr_Boulder|38484|14",
+                "SPIKES_MAPPINGS|MapSpr_Spikes|49648|24",
+                "CHECKPOINT_ANIMATIONS|Ani_Checkpoint|258330|6",
+                "CHECKPOINT_MAPPINGS|MapSpr_Checkpoint|258336|66",
+                "ANTON_ANIMATIONS|Ani_Anton|45982|12",
+                "ANTON_MAPPINGS|MapSpr_Anton|45994|112",
+                "COLLAPSE_PLATFORM_MAPPINGS_1|MapSpr_CollapsePlatform1|50464|118",
+                "COLLAPSE_PLATFORM_SIZES_1|ObjCollapsePlatform_Sizes1|50582|24",
+                "COLLAPSE_PLATFORM_MAPPINGS_3|MapSpr_CollapsePlatform3|50606|62",
+                "COLLAPSE_PLATFORM_MAPPINGS_2|MapSpr_CollapsePlatform2|50668|408",
+                "COLLAPSE_PLATFORM_SIZES_2|ObjCollapsePlatform_Sizes2|51076|40",
+                "COLLAPSE_PLATFORM_MAPPINGS_4|MapSpr_CollapsePlatform4|51116|158",
+                "PLATFORM_MAPPINGS|MapSpr_Platform|52424|132",
+                "PLATFORM_WIDTHS|ObjPlatform_Widths|51520|4",
+                "PLATFORM_RANGES|ObjPlatform_Ranges|51524|4"),
+                Arrays.stream(CdR11aObjectAssets.Table.values())
+                        .map(table -> table.name() + "|" + table.nativeLabel() + "|"
+                                + table.range().fileOffset() + "|" + table.range().length()).toList());
+        for (var variant : CdReleaseVariant.values()) {
+            var profile = CdR11aProfile.forStage(variant, CdStageKey.parse("R11A"));
+            var range = profile.range(CdR11aAsset.ART_ANIMALS);
+            assertEquals(new CdR11aProfile.FileRange(CdNativeFile.R11A,
+                    CdMmdImage.Domain.ORIGINAL_WORD_RAM, 0x381C0, 446), range);
+            assertEquals(0x2381C0, range.nativeAddress());
+            assertEquals(0x3837E, range.endExclusive());
+        }
+        assertEquals(CdR11aAsset.Encoding.NEMESIS, CdR11aAsset.ART_ANIMALS.encodingForReviewedConsumer());
+        // This one-row component vector authenticates no media and selects no runtime PLC.
+        var usa = CdR11aProfile.forStage(CdReleaseVariant.USA, CdStageKey.parse("R11A"));
+        var rows = CdR11aLoadPlan.decodePlcBody(usa,
+                java.util.HexFormat.of().parseHex("0000002381c07100"));
+        assertEquals(List.of(new CdR11aLoadPlan.PlcEntry(CdR11aAsset.ART_ANIMALS,
+                usa.range(CdR11aAsset.ART_ANIMALS), 0x7100)), rows);
+        assertThrows(IllegalArgumentException.class, () -> CdR11aLoadPlan.decodePlcBody(usa,
+                java.util.HexFormat.of().parseHex("0000002381c17100")));
+        assertThrows(IllegalArgumentException.class, () -> CdR11aLoadPlan.decodePlcBody(usa,
+                java.util.HexFormat.of().parseHex("0000002381c07101")));
+    }
+
+    @Test
+    void animalsSource12LiteralHasJava445ReadAheadAndPublicInputsRemainDefensive() throws Exception {
+        byte[] supplied = animals12LiteralSource();
+        assertEquals(446, supplied.length);
+        assertEquals("63ae88feb8fcd2bb07d896715dc6a0974d289947114ab25064d43fea1e7b52ab",
+                CdR11aProfile.sha256(supplied));
+        var retained = CdAssetBytes.copyOf(supplied);
+        byte[] javaInput = Arrays.copyOf(supplied, 445);
+        var decoded = CdNemesisAsset.decode(javaInput, 640, 640);
+        var full = CdNemesisAsset.decode(supplied, 640, 640);
+        assertEquals(445, decoded.consumedInputBytes());
+        assertEquals(445, full.consumedInputBytes());
+        assertEquals(640, decoded.bytes().length());
+        assertEquals("ac1edab54e2b767578c6b3c2b828dc9821ef02c7a3bed9079dc7dded4a26e8d1",
+                CdR11aProfile.sha256(decoded.bytes().copy()));
+        assertArrayEquals(full.bytes().copy(), decoded.bytes().copy());
+        var shortRead = assertThrows(IOException.class,
+                () -> CdNemesisAsset.decode(Arrays.copyOf(retained.copy(), 444), 640, 640));
+        assertEquals("Unexpected end of input data", shortRead.getMessage());
+        Arrays.fill(supplied, (byte) 0);
+        Arrays.fill(javaInput, (byte) 0);
+        assertEquals("63ae88feb8fcd2bb07d896715dc6a0974d289947114ab25064d43fea1e7b52ab",
+                CdR11aProfile.sha256(retained.copy()));
+        assertEquals("ac1edab54e2b767578c6b3c2b828dc9821ef02c7a3bed9079dc7dded4a26e8d1",
+                CdR11aProfile.sha256(decoded.bytes().copy()));
+        byte[] detached = decoded.bytes().copy(); detached[0] ^= 1;
+        assertNotEquals(detached[0], decoded.bytes().copy()[0]);
+        assertThrows(ReadOnlyBufferException.class, () -> retained.buffer().put((byte) 0));
+        assertThrows(ReadOnlyBufferException.class, () -> decoded.bytes().buffer().put((byte) 0));
+
+        // Public mutable input -> immutable original-MMD/range proof, never an authenticated owner.
+        byte[] file = new byte[CdR11aProfile.FILE_BYTES];
+        ByteBuffer.wrap(file).putInt(8, 0x200100).putInt(12, 0x20010C).putInt(16, 0x200112);
+        System.arraycopy(retained.copy(), 0, file, 0x381C0, 446);
+        file[0x3837E] = (byte) 0x80; // Explicit neighboring sentinel, outside Animals' source.
+        var image = CdMmdImage.parse(file);
+        Arrays.fill(file, (byte) 0);
+        var profile = CdR11aProfile.forStage(CdReleaseVariant.USA, CdStageKey.parse("R11A"));
+        var source = profile.range(CdR11aAsset.ART_ANIMALS).read(image);
+        assertEquals(0x0014, source.unsignedWord(0));
+        assertArrayEquals(retained.copy(), source.copy());
+        assertEquals(0x80, Byte.toUnsignedInt(image.readFile(0x3837E, 1)[0]));
+        assertThrows(IndexOutOfBoundsException.class, () -> source.unsignedByte(446));
+        var javaRange = new CdR11aProfile.FileRange(CdNativeFile.R11A,
+                CdMmdImage.Domain.ORIGINAL_WORD_RAM, 0x381C0, 445);
+        assertArrayEquals(Arrays.copyOf(retained.copy(), 445), javaRange.read(image).copy());
+        var asserted = new CdR11aAssets.Identity(CdReleaseVariant.USA, profile.stage(), profile.file(),
+                profile.domain(), profile.expectedMmdSha256(), "literal component data, not authenticated media");
+        assertThrows(IOException.class, () -> CdR11aObjectAssets.load(profile, asserted, image, null));
+    }
+
+    /** N f781e63bf598d090d8404263eda6b6071a2891ef, literal source data; never a runtime fallback. */
+    private static byte[] animals12LiteralSource() {
+        return java.util.HexFormat.of().parseHex(
+            "001480050f15122516362f462e563366397406810403163728f882040416342779830405163828f984063b8505151632"
+            + "48fa8604088705188807758a06368b0402150e251436358c177b8d03001513277a8f07741778ff6cd59395b2d5e8b24c"
+            + "b459264a8b24c9515e8a9922a2e495d2558aad525d132547f84f891f8cce977c33497baf7c4bbfa57fd4557f4ab88c71"
+            + "5d20f08be60f09f290784e3da4743d3de9e37f2e6666e559395cd173454b91515fc3fcf192e92afecd2597cd65d32f97"
+            + "f823c95fd08dfbd5fd08e486fdd9ae5eebdf12efe95ff5155fd2ae231c57483c22f983c27ca41e345f691d0d53de9e10"
+            + "fcb99ebcd793666666b9d7ba7677ab4e9214de4edef23666666629dc5b4eefeddbd525fcd73c5264f046e0e04fdfd10b"
+            + "1b8158505850ef74ef040af3a37f36c0a64241c0a03e6ec4751ac1f51ac1f50ed8a0e0cbf545f96d8bfd40bf94f3f579"
+            + "02179ec2e07990366666a5bfd7fbdfedff74ffb61ff1adffb16e4b305707673bca7716d3ba99cf39e62978d6c0bd14a7"
+            + "4141f1fcb3d47e688526fd672fdede39fe6d814c848381407cdd88ea3583ea3583ea1db141c197ea8bf2db17fa817f29"
+            + "f407620e0769b86f614170730000");
+    }
+
+    // End Animals source12 source-only tests.
+
     // Co-authored-by: OpenAI Codex GPT-6.1 Sol <noreply@openai.com>
 }

@@ -113071,3 +113071,39 @@ smoke failures remain separately recorded. Next finite native owner: Monitor19.
   exact8freshXML/Java25/media/EGL/S2/no skips. Fresh guards74260 pass728/0/0/0 across90 fresh reports
   (Java25/Lua5.4;5m15/queue272s;00:22:45Z); historical fixture reds are documented
   in the dated implementation record, not claimed green.
+
+
+## 2026-10-26 — private CD cached Animals service and next source2006
+
+- Over0afaea40f8b01a5e58cdb2b5d8b3a1123c5db35c in the same private worktree;
+  append source12 from the existing FrontierArtBank cached Java445 read, native
+  finite446/20tiles. Only Runtime/SectionArt count guards and inherited count/
+  source contracts migrate. No new bank/preload/region/logical or picture policy.
+- Permanent selector controllerJumpRouteRestartsFromNaturalCheckpointAndServicesAnimalsWithFreshEpochReplay
+  in TestSonicCdOpeningWorldLoad drives1200R/32R+B/thenR. Old11 matched RED83312
+  fails fresh7/global1954 at2381C0/7100; new12 positive2447 passes4/0/0/0 including
+  natural proof1 and Boulder retail3. Actual load1947 retires old captures;
+  fresh7..14 current Animals20 and full/course loaded0/1/7/10 replay pass.
+- Nine-class affected96460:718/1/0/0 at00:57:44Z,1m52/noqueue. Sole stale Runtime
+  Animals-negative is repaired to actual six-row incrementalPLC8 completion;
+  Root R2/R3 wrongly expected fullPLC2 GoalPost and failed. R4 selector
+  cameraArtActiveReversalCompletesActualIncrementalSourcesWithoutDroppingCurrentPrefix
+  passes1/0/0/0 in34195 at01:10:59Z,29.167s/noqueue.717 combined plus narrow repair
+  is not a fresh all-green718 run. Fresh source12 guards pending; old728 belongs0af.
+- Separate temporary controller observer22838 errors1/0/1/0 at01:12:59Z,
+ 30.011s/queue14s:2005 complete calls/fresh58, attempted2006/fresh59 stops at
+  SectionArt UNKNOWN_SOURCE2320DA/9EE0 during ordinary-tail prepare. Count0/
+  budget2 and advanced queue retain earlier service prefix. Permanent source
+ 155082B/6f8e7e82f4d3b5935acd6dc7bab9415c123a2f89342e0bb9310aa72c1a6124ab restored;
+  temporary145612B observer remains external. Next-source research is separate;
+  no completed2006/failed-call resume/act or native parity claim.
+- Commands, exact media/J25/EGL/S2 scope, model-vs-native limits, initial asset
+  reds and Root corrections are in the dated CD implementation record. No
+  public delivery or new quiet-hours visual; full private USA-then-JP/EU goal active.
+
+- Source12 final structural guards11227 pass728/0/0/0 at01:23:55Z,
+ 4m58/queue31s,90 exact fresh executable-class XML/J25/privatecwd/no skips.
+  Independent R4 review f2af1642d40318f771b7e09cb4408d275d6769722e6afd6426b9027a7efc5486
+  finds no actionable P1/P2; registration/Natural review also accepted its fixed
+  scope. Reviewers did not execute. Original718 invocation remains red with a
+  separately repaired narrow oracle; it is never relabeled all-green.

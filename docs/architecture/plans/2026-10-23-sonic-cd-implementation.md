@@ -6543,3 +6543,85 @@ reviews found no remaining P1/P2; exact fixture reds/corrections and UNRUN
 worker limits remain in the external reports. Temporary observer code is not
 part of the final candidate; useful controller recipes/failure cuts are retained
 here and in the existing measurement catalogue.
+
+
+## Cached Animals PLC source and natural restart replay — 26 October 2026
+
+Private candidate over `0afaea40f8b01a5e58cdb2b5d8b3a1123c5db35c`.
+The existing FrontierArtBank already owns Animals and its cached Java445-byte
+NemesisRead. The section source list now appends that same read as source12,
+canonical PLC2/row1/VRAM7100,20 tiles. Only the two existing source-count guards
+and demonstrated inherited source-list contracts migrate. There is no new
+bank, decode, public API, cold Animals preload, physical region, logical span,
+C30 or658 reservation change. Restart keeps its actual art/table/queue carry.
+
+Original USA/JP/EU media authenticate the identical446-byte Art_Animals source,
+header0014. Independent finite Python source models require Java445/native446;
+one-short444/445 fail independently, both full reads produce640 bytes with
+SHA256 `ac1edab54e2b767578c6b3c2b828dc9821ef02c7a3bed9079dc7dded4a26e8d1`.
+The native reader consumes the real final00 at3837D, excluding successor80.
+These are model observations, not native execution or regional gameplay parity.
+
+The permanent new selector is
+`TestSonicCdOpeningWorldLoad#controllerJumpRouteRestartsFromNaturalCheckpointAndServicesAnimalsWithFreshEpochReplay`.
+It drives only normal input:1200R,32R+B,thenR. Actual Checkpoint649 saves31
+bytes; Kill1802, gone1886/reset60 and load1947 retire the old epoch. The saved
+camera2583/section0200 selects actual full PLC4, although source metadata stays
+canonical PLC2. Fresh7 prepares Animals and fresh8..14 services all20 current
+tiles, retaining partial masks/nonwrites and preparing Pata next. Full/course
+cuts at loaded0,1,7,10 compare complete checkpoint/live/knowledge BEFORE forward
+replay to14. Old captures reject after actual generation1→2. No actor, object,
+terrain, PLC or physics values are injected, and failed calls are never resumed.
+
+Matched old-source11 RED83312 reaches the genuine fresh7/global1954 unavailable
+Animals stop:1/0/1/0,00:42:40Z,Maven1m24/no queue. Restoring exact source12 and
+Root guard joins gives2447:4/0/0/0 at00:47:43Z,Maven1m27/no queue (natural proof1
+and three repaired Boulder retail cases). Initial asset RED35724 ran123/8/1/0;
+first source12 check60150 ran123/1/0/0, with only the old Boulder assertion that
+Animals was unregistered. Root R2 replaces exactly that assertion with identity
+equality to the existing frontier cached decode; other unknown-source guards stay.
+
+Nine affected classes96460 ran718/1/0/0 at00:57:44Z,Maven1m52/no queue:
+WorldEGL21,WorldLoad51,Mappings38,unit87,retail36,collision32,Platform51,
+SectionArt40 all pass; Runtime361/362 pass. The stale reversal test expected
+Animals to stop. Root R2/R3 then incorrectly inferred the full initial PLC2's
+GoalPost from canonical metadata; both narrow runs failed, exposing actual head0.
+Native SectionData distinguishes initial2/4/5/6/7 from incremental8/9/A/B/C.
+Reversal actually selects PLC8 with six rows: Boulder,Animals,Mosqui,Anton,Plant,
+Ramp, and no GoalPost. Root R4 renames only that case to
+`cameraArtActiveReversalCompletesActualIncrementalSourcesWithoutDroppingCurrentPrefix`,
+checks actual selection, all six genuine VInt/Body/Draw/tail service prefixes and
+open CLOSED_CUT, and separately retains the full initial GoalPost unknown guard.
+It passes1/0/0/0 in34195 at01:10:59Z,29.167s/no queue. Thus717 combined passes
+plus the repaired narrow case are bounded coverage, not a fresh all-green718 run.
+All stated completed results have exact fresh XML, Java25/private cwd/actual
+media and zero skips; the combined run also supplies EGL and the actual S2 ROM.
+
+Command shape is the preceding ID21 affected command plus
+`TestCdR11aSectionArt`; all nine classes are explicit. Guard command remains
+`env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=lua5.4 python3 "${OPENGGF_MAIN}/tools/testing/maven_queue.py" -Dmse=off -Pguards test -B`.
+Fresh source12 structural guards11227 pass728/0/0/0 at01:23:55Z,
+Maven4m58/queue31s. Exact90 fresh executable-class XML, Java25.0.5.0.2/private
+cwd and zero skips are verified. A source census initially counted one historical
+package compatibility facade with no Jupiter declarations; excluding that
+non-executable facade makes the exact selected set90. No test rerun was needed. The3755-class unclassified smoke
+selection remains disproportionate to one cached-list append and two count
+joins; direct consumer/replay coverage plus structural guards is the chosen
+bounded validation, with no full-smoke/full-suite claim.
+
+A separate diagnostic cold-start continuation on the new source12 completes
+2005 controller calls (fresh58). Attempted2006/fresh59 fails during ordinary-tail
+prepare: SectionArtException UNKNOWN_SOURCE2320DA/VRAM9EE0, count0/budget2,
+advanced queue after the prior producer is exhausted. Observer22838 ran1/0/1/0,
+30.011s/queue14s,ending01:12:59Z. Its145612-byte temporary source is frozen
+externally; the155082-byte permanent natural test is restored. This next source
+needs its own native/media proof and is not admitted by weakening the guard.
+No completed2006, failed-call replay, full act/USA or regional parity is claimed.
+The full private objective remains active; no main-tree integration or publication.
+
+Independent one-method R4 review `f2af1642d40318f771b7e09cb4408d275d6769722e6afd6426b9027a7efc5486`
+finds no actionable P1/P2 and verifies all six frozen inputs unchanged. The prior
+registration/Natural review `a957eb2423ccef7dffff03e158cf1d3f5aa017ce2a61ff975dce2cc018f94bb0`
+also finds no new P1/P2 within its fixed scope. Neither reviewer executed tests.
+All nine current Java files match their final frozen author/Root revisions;
+permanent WorldLoad is restored and the diagnostic observer is outside Git.

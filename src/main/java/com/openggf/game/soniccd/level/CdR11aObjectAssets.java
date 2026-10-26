@@ -1128,7 +1128,12 @@ public final class CdR11aObjectAssets {
                     sectionArtSource(CdR11aAsset.ART_DIAGONAL_SPRING, 1, 5, 0x9200, 46, 780, diagonal),
                     sectionArtSource(CdR11aAsset.ART_SPIKES, 1, 0, 0x6400, 8, 87, spikes),
                     sectionArtSource(CdR11aAsset.ART_CHECKPOINT, 0, 1, 0xD960, 12, 212, checkpointRead),
-                    sectionArtSource(CdR11aAsset.ART_PLATFORM, 1, 6, 0x97C0, 57, 453, platform)));
+                    sectionArtSource(CdR11aAsset.ART_PLATFORM, 1, 6, 0x97C0, 57, 453, platform),
+                    // Art_Animals (Data (Act 1 Present).asm:89-90): canonical PLC2 row1, not runtime selection.
+                    // Reuse frontier's Java445 read; native446 ends at the real final source $00 ($3837D).
+                    // The adjacent $80 at $3837E is outside this retained source view and is never appended.
+                    sectionArtSource(CdR11aAsset.ART_ANIMALS, 2, 1, 0x7100, 20, 446,
+                            frontier.binding(CdR11aAsset.ART_ANIMALS).decode())));
         }
         return sectionArtSources;
     }
