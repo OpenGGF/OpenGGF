@@ -8734,3 +8734,113 @@ accounts for the remaining disputed regression intent. Close #207 as superseded
 by those bounded receipts, without merging its old implementation branch or
 claiming full SSZ/native parity. #208's same-movie cold DEZ1 intake remains OPEN;
 no old floor, incoming Native WIP or unrelated route was received here.
+
+
+## Post-223 same-movie cold DEZ1 attribution (2026-10-26)
+
+The unique #208 `recordedInputsAdvanceTheColdActOneRoute` obligation remains
+**OPEN** after the A6/A7 receipt. No historical 4,372-row/15,191-row floor or
+maximum-X measurement was copied into a new oracle. An isolated worktree based
+on `c50876b184612428ccaf22763412f88ffe505432` used the original cold DEZ1
+builder, Sonic+Tails, `withFreshLevelStartLifecycle()`, the same committed movie
+and zero-based offset468982. The temporary additive method was
+`TestS3kDezColdRoutes#inspectColdActOneRecordingInletAndTerminalOutcome`.
+Its JUnit pass means that observations and input-consumption checks completed;
+it is **not** a passing route or native-parity test. The diagnostic source is
+retained only in its isolated worktree, outside the delivered executable tree.
+
+The movie SHA-256 is
+`ad40fb0b0a74fa12b08ab71b2e48a7455b388d14f43f4cded502ac4a15d1b3c0`;
+physics is `a80884faad64bde01b4988d2b6af174370b02d571855efc5d59371449c6d43f4`;
+auxiliary observations are
+`beb3d01eca399950f1762c878b208775048792542396ff87eecf167a42878059`.
+The original S3&K ROM has CRC32 `63522553`, SHA-1
+`CFBF98C36C776677290A872547AC47C53D2761D6`, and MD5
+`c5b1c655c19f462ade0ac4e17a844d10`, matching the movie's 32-character
+recorded checksum. No ROM alias, asset fallback or recorded gameplay-state
+hydration was used. Physics/auxiliary rows were comparison-only.
+
+Every successful diagnostic consumed1,008 original movie rows before the live
+player died in act0, maximum centre X `$02F8`. All returned calls consumed
+exactly one row, with the current peek equal to the returned input. Normalized
+movie input and native physics input agreed throughout; that normalization
+collapses A/B/C and omits Start, so it is not complete controller provenance.
+All1,008 final driver observations were `GAMEPLAY_FRAME` with gameplay body
+executed, agreeing with the native level-counter progression. Successful calls
+hide internal setup retries. The actual camera width was320. The same live
+player remained bound to the camera. Driver count, level counter and
+`omVbla` were observed separately, not treated as interchangeable ROM clocks.
+
+First observed differences were camera X row0 (`$0018/$0040`, engine/native),
+rings313 (4/3), all three main-player velocity components853, and main-player
+position/fractions854. At853 native velocities are `$072C,$FD0D,$07C8`;
+engine velocities are `$F8D4,$02F3,$F838`. The actual main-player touch buffer
+contains a Chainspike child on that row. Its extended `$18` flags and `$FF`
+property legitimately select the native nonzero-property bounce. The generic
+nonzero byte gate is not a supported correction.
+
+The same Chainspike body appears at `$0280,$0AB0`, initializes at392,
+reacts at393 and reaches X `$0205` by530 in both observations. Native code
+replaces it with an explosion at583 and retires its children. The engine body
+survives and later returns to `$0280`, leaving the child contacted at853.
+Tails position agrees through159; first observed Y disagreement is160
+(native `$0998`, engine `$0997`), X161 (`$0198/$0195`), and CPU routine546
+(native6, engine8/PANIC). At583 native Tails is airborne/rolling while the
+engine sidekick is grounded/nonrolling. These observations establish an earlier
+sidekick/lifetime disagreement, **not its cause, newness, or a proven inlet fix**.
+No dedicated velocity-sign, camera, timing, CPU or contact fix was applied.
+
+An independent immutable-source comparison found no supported Chainspike
+init/wait/launch/charge correction. Separate source issues remain unqualified:
+the generic animation-$02 attack predicate additionally requires rolling;
+the extended child lacks native attack-time collision-flag clearing and
+property decrement; and its extension-frame bands run in reverse native order.
+These findings do not establish the body-survival cause. They were handed to
+the Native owner to avoid overlapping contact/placement ownership. Native WIP
+was neither inspected nor received. Current recorder source explains row
+semantics but is not attestation of the older recording's exact script revision.
+
+Six source epochs used the single method selector (SHA-256
+`b030180eca179052765a4d05ca04b18ee563c9dbfc44a98f8a3650449784c2fc`):
+
+| Epoch | Frozen tree | Actual diagnostic result | Maven time | Queue wait |
+| --- | --- | --- | --- | --- |
+| Initial inlet | `7ef3a65f0d2eb60dc0b671626579b0faeb9b6dff` |1P/0F/E/S; route blocked |1:33 |14s |
+| First context observer | `4effe17d554a90a0c28ccac0376548606cc9b870` |1E: logger used a null-spawn position getter |33.366s |12s |
+| Corrected context | `d04c670454baf045ca098199265183a056f3646a` |1P/0F/E/S; same route outcome |30.941s |6s |
+| Actual contact | `c5f0784f79e91848ff9d73c98f4eed4c589b3f4f` |1P/0F/E/S; same route outcome |32.668s |0s |
+| Companion samples | `98b8b7df95e1c56ef1280fdf7146e4f2ff19b456` |1P/0F/E/S; same route outcome |32.214s |0s |
+| First companion differences | `0e5939c020ea5986e579eb29e054e2c5d3ee579c` |1P/0F/E/S; same route outcome |33.177s |20s |
+
+The null-spawn observer error concerned the legitimate non-positional
+`InstaShieldObjectInstance`; the correction guarded diagnostic metadata only.
+It is not an engine-route error. The final launch frame was
+`57bf89df6d95392bd31eeeccaf89b6bcb4fad1b4e2f2513b34d55b3ee9de56ea`.
+Queue and Maven intervals are separate; they are not summed into elapsed task
+time. No baseline run or current-regression attribution is claimed.
+
+Each epoch used the current absolute Main queue wrapper with own
+`<PR_WORKTREE>` cwd/target and this command shape:
+
+```bash
+python3 "$OPENGGF_QUEUE_WRAPPER" --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl -DmodApi.destinationBranch=develop \
+  "-Dsonic1.rom.path=$OPENGGF_ROM_DIR/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$OPENGGF_ROM_DIR/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$OPENGGF_ROM_DIR/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  -Dtest=com.openggf.tests.TestS3kDezColdRoutes#inspectColdActOneRecordingInletAndTerminalOutcome \
+  test -B
+```
+
+Java25/Lua5.4/null OpenAL/surfaceless EGL and unset ambient launcher/display
+variables were retained. Exact source/tree/frame, Main wrapper imports and
+original ROM metadata were checked before each submission and sourcepost after
+readback. Each result had one actual JUnit identity,70 properties, suite/case
+streams and text; bounded consoles and any dumps were read. No dumps or
+unexpected caught runtime faults occurred. FAST load simulation falling back
+to NONE and compiler deprecations remain limits. All18 exact owned raw
+XML/text/console files were consumed under the supported worktree lock;
+useful source/classes remain isolated. No engine check, broad smoke, native
+emulator, timing override, fitted expectation or pass-cache archive was added
+by the documentation delivery. #208 remains open pending a supported runtime
+cause/qualified correction and fresh same-movie route qualification.

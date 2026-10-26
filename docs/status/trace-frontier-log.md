@@ -115804,3 +115804,35 @@ non-camera row 2147 P1 Y $04DA/$04DE. Terminal SS7 results at movie cursor 97208
 No new owner is attributed or investigated. Exact cases, source/fixture/selection
 identity, old-red and fixture-error limits are in the
 [audit](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#jawz-final-delta-publication-phase-2026-10-26).
+
+
+## Same-movie cold DEZ1 requalification remains blocked (2026-10-26)
+
+At base `c50876b184612428ccaf22763412f88ffe505432`, an isolated temporary
+`TestS3kDezColdRoutes#inspectColdActOneRecordingInletAndTerminalOutcome`
+used the unchanged cold Sonic+Tails builder and committed movie offset468982.
+The final diagnostic source tree was `0e5939c020ea5986e579eb29e054e2c5d3ee579c`,
+launch frame `57bf89df6d95392bd31eeeccaf89b6bcb4fad1b4e2f2513b34d55b3ee9de56ea`.
+Command: current absolute `$OPENGGF_QUEUE_WRAPPER --normal -Dmse=off
+-Dopenggf.headless.gl=surfaceless-egl -DmodApi.destinationBranch=develop
+-Dtest=com.openggf.tests.TestS3kDezColdRoutes#inspectColdActOneRecordingInletAndTerminalOutcome`
+plus all three original absolute ROM properties, `test -B`, own worktree/target,
+Java25/Lua5.4/null OpenAL and no ambient display/launcher overrides.
+
+The final1P/0F/E/S is an observation-shell result, not a passing route. It
+consumed1,008 rows before death, maximum X `$02F8`, native width320. Input
+consumption/normalized input and gameplay-body progression agreed throughout.
+First main-player differences: camera X row0, rings313, velocity853,
+position/fractions854. Actual main-player overlap at853 is an extended
+Chainspike child. Earlier Tails differences: Y160 (`$0998/$0997`, native/engine),
+X161 (`$0198/$0195`), CPU546 (6/8). Native destroys the parent at583;
+the engine retains it. Cause/newness and a legitimate correction remain unknown.
+
+Maven33.177s and queue20s are separate. All actual identities/properties,
+recursive streams, text, bounded console, dumps and sourcepost were read;
+owned raw output was consumed. No production, harness, asset, timing or oracle
+changed, and no historical4,372/15,191 floor was revived. The diagnostic source
+is held outside the delivered tree. This does not move a passing trace frontier
+or close #208. The [bounded attribution record](../architecture/plans/2026-10-22-native-gap-swarm.md#post-223-same-movie-cold-dez1-attribution-2026-10-26)
+keeps all six epochs, including the separate instrumentation error, source
+findings and remaining Native-ownership boundary.
