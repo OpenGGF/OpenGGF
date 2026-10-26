@@ -407,7 +407,6 @@ class TestCinematicScrollPublication {
             var renderer = spy(level.spritePresentationRenderer());
             renderer.spriteTables.prepare(new SpritePresentation.Frame(List.of()), nativeScroll);
             renderer.spriteTables.publish();
-            doReturn(new SpritePresentation.Frame(List.of())).when(renderer).captureSceneSpriteTable(any());
             level.graphicsManager = mock(com.openggf.graphics.GraphicsManager.class);
             when(level.graphicsManager.isHeadlessMode()).thenReturn(true);
             level.tilemapManager = null;
@@ -509,7 +508,20 @@ class TestCinematicScrollPublication {
             verify(contributor, times(9)).contribute(any(), any()); // One explicit seed plus eight entries.
             for (int[] actual : operands) assertArrayEquals(new int[]{99, 160, 160, 80}, actual);
             assertEquals(fgReads, foreground.reads); assertEquals(bgReads, background.reads);
-            verifyNoInteractions(provider, replacement, handler, level.objectManager);
+            verifyNoInteractions(provider, replacement, handler);
+            // Only live == null draws: its full-view tile and camera each prepare a complete native table.
+            var preparationOrder = inOrder(level.objectManager);
+            for (int pass = 0; pass < 2; pass++) {
+                preparationOrder.verify(level.objectManager).refreshRenderBucketsIfChanged();
+                for (int bucket = com.openggf.graphics.RenderPriority.MIN;
+                        bucket <= com.openggf.graphics.RenderPriority.MAX; bucket++) {
+                    // Verify the package-owned emission through its existing typed bridge.
+                    com.openggf.level.objects.ObjectDrawInternalAccess.drawBucket(
+                            preparationOrder.verify(level.objectManager), eq(bucket), same(level.graphicsManager), eq(List.of()));
+                }
+            }
+            verify(level.objectManager, never()).getFrameCounter();
+            verifyNoMoreInteractions(level.objectManager);
         } finally {
             level.graphicsManager = nativeGraphics;
             SessionManager.clear();

@@ -1124,6 +1124,11 @@ public final class LevelRenderer {
      */
     SpritePresentation.Frame captureSceneSpriteTable(SpriteManager sprites) {
         rejectScrollOperation();
+        return captureSceneSpriteTableForDraw(sprites);
+    }
+
+    /** Renderer-owned preparation keeps the enclosing draw's external capture/reentry guard active. */
+    private SpritePresentation.Frame captureSceneSpriteTableForDraw(SpriteManager sprites) {
         if (lm.graphicsManager == null || lm.camera == null) throw new IllegalStateException("Renderer not attached");
         boolean previous = preparingSpritePresentation;
         preparingSpritePresentation = true;
@@ -1663,7 +1668,7 @@ public final class LevelRenderer {
                             layer -> layer == SpritePresentation.Layer.HUD_COUNTERS, presentationRuntime());
                 }
             } else {
-                if (liveSpriteFrame == null) liveSpriteFrame = captureSceneSpriteTable(spriteManager);
+                if (liveSpriteFrame == null) liveSpriteFrame = captureSceneSpriteTableForDraw(spriteManager);
                 com.openggf.level.render.SpritePresentationRenderer.drawNative(lm.graphicsManager, liveSpriteFrame,
                         camera.getXWithShake(), camera.getYWithShake(), SpritePresentation.Layer::isHud,
                         presentationRuntime());
@@ -2107,12 +2112,15 @@ public final class LevelRenderer {
      * sprites/objects visible while the level tiles remain hidden.
      */
     public void renderSpriteObjectPass(SpriteManager spriteManager, boolean includeWaterSurface) {
+        if ((scrollOperation && scopedScroll == null) || (cinematicCameraActive && !cinematicCallbackActive)) {
+            throw new IllegalStateException("Drawing during presentation setup or cleanup");
+        }
         if (!preparingSpritePresentation && LevelSpritePresentation.enabled(lm) && !cinematicDraw) {
             drawPublishedSprites(layer -> !layer.isHud());
         } else if (preparingSpritePresentation) {
             prepareOrDrawLiveSprites(spriteManager);
         } else {
-            liveSpriteFrame = captureSceneSpriteTable(spriteManager);
+            liveSpriteFrame = captureSceneSpriteTableForDraw(spriteManager);
             com.openggf.level.render.SpritePresentationRenderer.drawNative(lm.graphicsManager, liveSpriteFrame,
                     lm.camera.getXWithShake(), lm.camera.getYWithShake(), layer -> !layer.isHud(), presentationRuntime());
         }
@@ -2266,7 +2274,7 @@ public final class LevelRenderer {
                 case HUD, HUD_COUNTERS -> false;
             });
         } else {
-            liveSpriteFrame = captureSceneSpriteTable(spriteManager);
+            liveSpriteFrame = captureSceneSpriteTableForDraw(spriteManager);
             com.openggf.level.render.SpritePresentationRenderer.drawNative(graphicsManager, liveSpriteFrame,
                     lm.camera.getXWithShake(), lm.camera.getYWithShake(), layer -> switch (layer) {
                         case PLAYER -> options.includePlayerSprites();

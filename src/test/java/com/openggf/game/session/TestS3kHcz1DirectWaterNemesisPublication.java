@@ -36,6 +36,7 @@ import java.util.List;
 
 // BEGIN HCZ1_DIRECT_FF_CONTROL_IMPORTS
 import com.openggf.game.rewind.CompositeSnapshot;
+import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.rewind.RewindSnapshotDiff;
 import com.openggf.game.rewind.RewindSnapshottable;
 import java.util.LinkedHashMap;
@@ -406,14 +407,46 @@ class TestS3kHcz1DirectWaterNemesisPublication {
             registry.restore(complete);
             assertAllRegistryKeys(complete, registry.capture());
             assertControlPrefix(control, 0);
-            var missing = new LinkedHashMap<>(complete.entries());
+            // Missing-key semantics belong to this private unscoped projection.
+            // Reuse the actual native adapters, in count/recipe/schedule order;
+            // leave the engine registry and its native publications untouched.
+            var projection = new RewindRegistry();
+            projection.register(inlet.plc());
+            projection.register(inlet.plc().recipeState());
+            projection.register(inlet.plc().ordinaryScheduleState());
+            var missing = new LinkedHashMap<>(projection.capture().entries());
             String scheduleKey = inlet.plc().ordinaryScheduleState().key();
             assertNotNull(missing.remove(scheduleKey));
-            registry.restore(new CompositeSnapshot(missing));
+            projection.restore(new CompositeSnapshot(missing));
             assertControlPrefix(control, 0);
             stepOrdinary(inlet, session, control.runner());
             assertControlPrefix(control, 0);
             stepOrdinary(inlet, session, control.runner());
+            assertControlPrefix(control, 3);
+        }
+    }
+
+    @Test
+    void publicSnapshotMapCopyIsRejectedBeforeAnyEngineOwnerChanges() throws Exception {
+        try (var session = bootControlSession()) {
+            var control = prepareWetControl(session);
+            var inlet = control.inlet();
+            var registry = inlet.context().getRewindRegistry();
+            var captured = registry.capture();
+            var unscoped = new CompositeSnapshot(new LinkedHashMap<>(captured.entries()));
+            assertAllRegistryKeys(captured, unscoped);
+
+            // Make the copied payload stale through the actual ordinary loop,
+            // so an attempted restore would rewind the confirmed prefix/head.
+            stepOrdinary(inlet, session, control.runner());
+            assertControlPrefix(control, 3);
+            var beforeRejectedRestore = registry.capture();
+            assertNotEquals(captured.get(inlet.plc().key()),
+                    beforeRejectedRestore.get(inlet.plc().key()),
+                    "the rejected copy must contain the earlier unspent head");
+            var failure = assertThrows(IllegalArgumentException.class, () -> registry.restore(unscoped));
+            assertEquals("Rewind snapshot belongs to a different world scope", failure.getMessage());
+            assertAllRegistryKeys(beforeRejectedRestore, registry.capture());
             assertControlPrefix(control, 3);
         }
     }

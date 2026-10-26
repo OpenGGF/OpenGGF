@@ -365,9 +365,42 @@ public class TestNativeRewindAdapterPublication {
         assertEquals(recipeAdapter.capture(), full.get(recipeAdapter.key()));
         assertEquals(recipeAdapter.capture(), course.get(recipeAdapter.key()));
         assertEquals(1, full.entries().keySet().stream().filter(recipeAdapter.key()::equals).count());
-        var missingRecipes = new LinkedHashMap<>(full.entries());
-        missingRecipes.remove(recipeAdapter.key());
-        assertThrows(IllegalStateException.class, () -> registry.restore(new CompositeSnapshot(missingRecipes)));
+        // Public map copies retain payloads, never an engine capture's world admission.
+        var publicCopy = new CompositeSnapshot(new LinkedHashMap<>(full.entries()));
+        assertEquals(full.entries(), publicCopy.entries());
+        // Missing-key semantics belong to a private unscoped registry. Reuse the
+        // actual native count/recipe/schedule adapters in their production order.
+        var projection = new RewindRegistry();
+        projection.register(owner);
+        projection.register(recipeAdapter);
+        projection.register(owner.ordinaryScheduleState());
+        var missingRecipes = new LinkedHashMap<>(projection.capture().entries());
+        assertNotNull(missingRecipes.remove(recipeAdapter.key()));
+        var missingRecipeProjection = new CompositeSnapshot(missingRecipes);
+        assertFalse(missingRecipeProjection.containsKey(recipeAdapter.key()));
+        assertEquals(queue, missingRecipeProjection.get(owner.key()));
+        assertNotNull(queue.activeEntry(), "the missing-recipe payload must contain a nonempty FIFO");
+        owner.serviceVBlank(PlcLifecyclePhase.LEVEL_TITLE_CARD);
+        mode.value = 99;
+        var beforeCopyRejection = registry.capture();
+        assertNotEquals(queue, beforeCopyRejection.get(owner.key()),
+                "both projection restores must target stale queue progress");
+        assertNotEquals(full.get(controller.key()), beforeCopyRejection.get(controller.key()));
+        var scopeFailure = assertThrows(IllegalArgumentException.class, () -> registry.restore(publicCopy));
+        assertEquals("Rewind snapshot belongs to a different world scope", scopeFailure.getMessage());
+        var afterCopyRejection = registry.capture();
+        assertEquals(beforeCopyRejection.entries().keySet(), afterCopyRejection.entries().keySet());
+        for (String key : beforeCopyRejection.entries().keySet())
+            assertTrue(RewindSnapshotDiff.keyEquals(key, beforeCopyRejection.get(key), afterCopyRejection.get(key)),
+                    () -> key + ": " + RewindSnapshotDiff.diffKey(key, beforeCopyRejection.get(key), afterCopyRejection.get(key)));
+        var missingRecipeFailure = assertThrows(IllegalStateException.class,
+                () -> projection.restore(missingRecipeProjection));
+        assertEquals("A nonempty Nemesis FIFO requires its recipe snapshot", missingRecipeFailure.getMessage());
+        assertEquals(queue, owner.capture(), "count restore must precede the actual missing-recipe guard");
+        assertEquals(99, mode.value, "the private native projection must not restore the mode ledger");
+        var blockedService = assertThrows(IllegalStateException.class,
+                () -> owner.serviceVBlank(PlcLifecyclePhase.LEVEL_TITLE_CARD));
+        assertEquals("Nemesis count restore requires its registered recipe companion", blockedService.getMessage());
         registry.restore(full);
         assertEquals(recipeAdapter.capture(), full.get(recipeAdapter.key()));
         assertFalse(course.containsKey(controller.key()));

@@ -1346,7 +1346,7 @@ class TestSonicCdOpeningWorldLoad {
 
     @ParameterizedTest @CsvSource({"true,scroll", "true,cinematic", "true,capture",
             "false,scroll", "false,cinematic", "false,capture"})
-    void nativeBackgroundNestedAdmissionRejectsBeforeCacheMutationAndClosesItsOwnVisit(
+    void nativeBackgroundAdmissionDistinguishesUnsupportedCinematicSetupFromNestedVisitFailure(
             boolean openingEntry, String enclosing) throws Exception {
         var h = openingEntry ? opening() : load(SonicCdGameModule.terrainOnlyDevelopmentPlayer(), source(CdReleaseVariant.USA), true);
         drawAndAssertNativeBackground(h);
@@ -1358,8 +1358,48 @@ class TestSonicCdOpeningWorldLoad {
         Runnable reject = () -> assertThrows(IllegalStateException.class, h.module().gameplayFrameController()::drawOverlay);
         switch (enclosing) {
             case "scroll" -> LevelSpritePresentation.withScroll(level, LevelSpritePresentation.captureScroll(level), reject);
-            case "cinematic" -> LevelSpritePresentation.withCinematicCamera(level, h.mode().getCamera().getX(),
-                    h.mode().getCamera().getY(), reject);
+            case "cinematic" -> {
+                // CD has no admitted native arena bounds: outer setup rejects before any nested CD visit.
+                var camera = h.mode().getCamera().capture();
+                var actor = h.module().requirePlayerActor(); var actorState = frame.captureActor();
+                var shared = frame.captureShared(); var beforeScroll = scroll(h);
+                var presentation = (SonicCdPlayerPresentation) h.module().getScrollHandlerProvider();
+                var publication = openingEntry ? presentation.captureScrollPublication() : null;
+                int levelFrame = level.getFrameCounter();
+                var openingState = openingEntry ? state(h) : null;
+                var callbackEntered = new java.util.concurrent.atomic.AtomicBoolean();
+                var failure = assertThrows(IllegalStateException.class, () ->
+                        LevelSpritePresentation.withCinematicCamera(level, h.mode().getCamera().getX(),
+                                h.mode().getCamera().getY(), () -> {
+                                    callbackEntered.set(true);
+                                    reject.run();
+                                }));
+                assertEquals("Cinematic view requires native-captured arena bounds", failure.getMessage());
+                assertFalse(callbackEntered.get(), "Unsupported outer setup must not enter the CD draw callback");
+                Runnable assertUnchanged = () -> {
+                    assertFalse(frame.closed());
+                    assertSame(level, h.mode().getLevelManager());
+                    assertSame(frame, h.module().requirePlayerFrame());
+                    assertSame(actor, h.module().requirePlayerActor());
+                    if (runtime != null) { assertFalse(runtime.closed()); assertSame(runtime, objects(h)); }
+                    assertEquals(body, frame.state()); assertEquals(clock, frame.vIntClock());
+                    assertEquals(actorState, frame.captureActor());
+                    assertEquals(shared.environment(), frame.captureShared().environment());
+                    assertEquals(shared.paused(), frame.captureShared().paused());
+                    assertEquals(levelFrame, level.getFrameCounter());
+                    assertEquals(camera, h.mode().getCamera().capture());
+                    assertScroll(beforeScroll, scroll(h));
+                    if (openingEntry) assertPublication(publication, presentation.captureScrollPublication());
+                    assertArrayEquals(bytes, NativeBackgroundTestAccess.descriptors(level));
+                    assertArrayEquals(geometry, NativeBackgroundTestAccess.geometry(level));
+                    assertArrayEquals(flags, NativeBackgroundTestAccess.flags(level));
+                    if (openingState != null) assertState(openingState, h);
+                };
+                assertUnchanged.run();
+                drawAndAssertNativeBackground(h);
+                assertUnchanged.run();
+                return;
+            }
             case "capture" -> graphics.executeCapturedCommands(reject, h.mode().getCamera().getX(),
                     h.mode().getCamera().getY(), 320, 224);
             default -> fail("unknown fixture scope");

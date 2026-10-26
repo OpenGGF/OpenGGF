@@ -824,4 +824,362 @@ class TestLevelScrollDrawScope {
             public void discard() { discarded.add(selected(f)); }
         };
     }
+
+    @Test void scopedLiveSpriteDrawPreparesTheFullTableAndKeepsExternalReentryClosed() {
+        var selections = List.of(
+                new LevelManager.LevelRenderOptions(true, false, false, false, false, false, false),
+                LevelManager.LevelRenderOptions.previewCapture(),
+                new LevelManager.LevelRenderOptions(true, true, true, true, false, false, false),
+                new LevelManager.LevelRenderOptions(false, false, false, true, false, false, false));
+        for (int scope = 0; scope < 3; scope++) {
+            for (var options : selections) {
+                try (var f = new ScrollFixture()) {
+                    var cache = backgroundCache(f);
+                    var frame = LevelSpritePresentation.captureScroll(f.level);
+                    f.horizontal[0] = 99;
+                    var camera = f.camera.capture();
+                    var tables = f.renderer.spriteTables.capture();
+                    var mask = f.renderer.boundsMask.capture();
+                    int clock = f.level.frameCounter, resolutions = f.resolutions.get();
+                    int expectedScroll = scope == 2 ? 99 : 0xff9cfff9;
+                    var captured = new ArrayList<Integer>();
+                    var replayed = new ArrayList<ScopedSpriteDraw>();
+                    var buckets = new ArrayList<Integer>();
+                    var released = new ArrayList<Integer>();
+                    var preparations = new java.util.concurrent.atomic.AtomicInteger();
+                    f.level.hudRenderManager = mock(com.openggf.level.objects.HudRenderManager.class);
+                    f.graphics.setCurrentSpriteTileOcclusionPaletteMask(5);
+                    doAnswer(call -> {
+                        assertTrue(SpritePresentation.isPreparing(f.graphics));
+                        assertScopedSpriteReentryClosed(f, frame);
+                        preparations.incrementAndGet();
+                        return null;
+                    }).when(f.sprites).prepareRenderBucketsForPass();
+                    doAnswer(call -> {
+                        assertTrue(SpritePresentation.isPreparing(f.graphics));
+                        assertTrue(f.graphics.isSpriteSatCollectionActive());
+                        int bucket = call.getArgument(0);
+                        buckets.add(bucket);
+                        if (bucket == 3) submitScopedSprite(f, 64, 24, false);
+                        return null;
+                    }).when(f.sprites).drawPreparedUnifiedBucketWithPriority(anyInt(), same(f.graphics), any());
+                    doAnswer(call -> {
+                        assertTrue(SpritePresentation.isPreparing(f.graphics));
+                        assertTrue(f.graphics.isSpriteSatCollectionActive());
+                        submitScopedSprite(f, 65, 40, true);
+                        return null;
+                    }).when(f.level.hudRenderManager).draw(any(), any());
+                    doAnswer(call -> {
+                        int pattern = call.getArgument(0);
+                        if (SpritePresentation.isPreparing(f.graphics)) captured.add(pattern);
+                        else {
+                            PatternDesc desc = call.getArgument(1);
+                            replayed.add(new ScopedSpriteDraw(pattern, desc.getPaletteIndex(), desc.getHFlip(),
+                                    desc.getVFlip(), desc.getPriority(), f.graphics.isUseSpritePriorityShader(),
+                                    f.graphics.getCurrentSpriteTileOcclusionPaletteMask()));
+                        }
+                        return call.callRealMethod();
+                    }).when(f.graphics).renderPatternWithId(anyInt(), any(), anyInt(), anyInt());
+                    f.graphics.registerCommand(observeDiscard(f, released));
+                    withSpriteDrawScope(f, frame, scope, () -> {
+                        assertEquals(expectedScroll, selected(f));
+                        f.graphics.registerCommand(observeDiscard(f, released));
+                        f.level.drawWithRenderOptions(f.sprites, options);
+                        assertFalse(SpritePresentation.isPreparing(f.graphics));
+                        assertFalse(f.graphics.isSpriteSatCollectionActive());
+                        assertScopedSpriteReentryClosed(f, frame);
+                        f.graphics.registerCommand(observeDiscard(f, released));
+                    });
+                    assertEquals(1, preparations.get(), "draw-time capture is reused for the HUD");
+                    assertEquals(List.of(0, 1, 2, 3, 4, 5, 6, 7), buckets);
+                    assertEquals(List.of(64, 65), captured,
+                            "native admission includes player and HUD even when those layers are omitted");
+                    var expectedReplay = new ArrayList<ScopedSpriteDraw>();
+                    if (options.includePlayerSprites())
+                        expectedReplay.add(new ScopedSpriteDraw(64, 2, true, false, false, true, 5));
+                    if (options.includeHud())
+                        expectedReplay.add(new ScopedSpriteDraw(65, 2, true, false, true, true, 0));
+                    assertEquals(expectedReplay, replayed);
+                    assertEquals(List.of(99, expectedScroll, expectedScroll), released);
+                    assertEquals(camera, f.camera.capture());
+                    assertEquals(tables, f.renderer.spriteTables.capture());
+                    assertEquals(mask, f.renderer.boundsMask.capture());
+                    assertEquals(clock, f.level.frameCounter);
+                    assertEquals(resolutions + (scope == 2 ? 1 : 0), f.resolutions.get());
+                    assertEquals(5, f.graphics.getCurrentSpriteTileOcclusionPaletteMask());
+                    assertFalse(f.renderer.getCurrentAdvancedRenderFrameState().hasForegroundVScrollOverride());
+                    assertEquals(99, selected(f));
+                    assertArrayEquals(backgroundImage(scope == 0 ? 11 : 42), cache.getBackgroundTilemapData());
+                    verify(f.parallax, never()).update(anyInt(), anyInt(), any(), anyInt());
+                    LevelSpritePresentation.validateScroll(f.level, frame);
+                    f.graphics.flush();
+                    assertEquals(3, released.size(), "scoped commands cannot escape to a later flush");
+                }
+            }
+        }
+    }
+
+    @Test void scopedLiveSpritePreparationFailureClosesCollectorsAndOwnedCommandsBeforeRecovery() {
+        for (int scope = 0; scope < 3; scope++) {
+            try (var f = new ScrollFixture()) {
+                backgroundCache(f);
+                var frame = LevelSpritePresentation.captureScroll(f.level);
+                f.horizontal[0] = 99;
+                var camera = f.camera.capture();
+                var tables = f.renderer.spriteTables.capture();
+                var mask = f.renderer.boundsMask.capture();
+                int clock = f.level.frameCounter;
+                int expectedScroll = scope == 2 ? 99 : 0xff9cfff9;
+                var released = new ArrayList<Integer>();
+                var failure = new IllegalArgumentException("native sprite producer failed");
+                var failOnce = new java.util.concurrent.atomic.AtomicBoolean(true);
+                f.graphics.setCurrentSpriteTileOcclusionPaletteMask(5);
+                doAnswer(call -> {
+                    assertTrue(SpritePresentation.isPreparing(f.graphics));
+                    assertTrue(f.graphics.isSpriteSatCollectionActive());
+                    if (failOnce.compareAndSet(true, false)) {
+                        assertScopedSpriteReentryClosed(f, frame);
+                        throw failure;
+                    }
+                    return null;
+                }).when(f.sprites).drawPreparedUnifiedBucketWithPriority(anyInt(), same(f.graphics), any());
+                int selectedScope = scope;
+                assertSame(failure, assertThrows(IllegalArgumentException.class,
+                        () -> withSpriteDrawScope(f, frame, selectedScope, () -> {
+                            f.graphics.registerCommand(observeDiscard(f, released));
+                            f.level.drawWithRenderOptions(f.sprites, LevelManager.LevelRenderOptions.previewCapture());
+                        })));
+                assertEquals(List.of(expectedScroll), released);
+                assertFalse(SpritePresentation.isPreparing(f.graphics));
+                assertFalse(f.graphics.isSpriteSatCollectionActive());
+                assertEquals(5, f.graphics.getCurrentSpriteTileOcclusionPaletteMask());
+                assertEquals(99, selected(f));
+                assertFalse(f.renderer.getCurrentAdvancedRenderFrameState().hasForegroundVScrollOverride());
+                assertEquals(camera, f.camera.capture());
+                assertEquals(tables, f.renderer.spriteTables.capture());
+                assertEquals(mask, f.renderer.boundsMask.capture());
+                assertEquals(clock, f.level.frameCounter);
+                LevelSpritePresentation.validateScroll(f.level, frame);
+                assertNotNull(f.renderer.captureSceneSpriteTable(f.sprites));
+                withSpriteDrawScope(f, frame, scope, () -> {
+                    f.level.drawWithRenderOptions(f.sprites, LevelManager.LevelRenderOptions.previewCapture());
+                    assertScopedSpriteReentryClosed(f, frame);
+                    f.graphics.registerCommand(observeDiscard(f, released));
+                });
+                assertEquals(List.of(expectedScroll, expectedScroll), released);
+                assertFalse(SpritePresentation.isPreparing(f.graphics));
+                assertFalse(f.graphics.isSpriteSatCollectionActive());
+                f.graphics.flush();
+                assertEquals(2, released.size(), "failed and recovered draws each close their owned commands once");
+            }
+        }
+    }
+
+    private record ScopedSpriteDraw(int pattern, int palette, boolean hFlip, boolean vFlip,
+                                    boolean priority, boolean priorityShader, int occlusionMask) { }
+
+    private static void submitScopedSprite(ScrollFixture f, int pattern, int x, boolean high) {
+        f.graphics.setCurrentSpriteTileOcclusionPaletteMask(high ? 0 : 5);
+        f.graphics.submitSpriteSatPiece(new com.openggf.level.render.SpritePieceRenderer.PreparedPiece(
+                f.camera.getXWithShake() + x, f.camera.getYWithShake() + 24,
+                1, 1, pattern, pattern, 2, true, false, high, high, 0, 1));
+    }
+
+    private static void withSpriteDrawScope(ScrollFixture f, LevelSpritePresentation.ScrollFrame frame,
+                                            int scope, Runnable draw) {
+        switch (scope) {
+            case 0 -> LevelSpritePresentation.withScroll(f.level, frame, draw);
+            case 1 -> LevelSpritePresentation.withScrollAndBackground(f.level, frame, backgroundImage(42), draw);
+            case 2 -> LevelSpritePresentation.withScrollAndBackground(f.level, null, backgroundImage(42), draw);
+            default -> throw new AssertionError("unknown sprite draw scope");
+        }
+    }
+
+    private static void assertScopedSpriteReentryClosed(ScrollFixture f, LevelSpritePresentation.ScrollFrame frame) {
+        assertEquals("Scroll capture/draw already active", assertThrows(IllegalStateException.class,
+                () -> f.renderer.captureSceneSpriteTable(f.sprites)).getMessage());
+        assertThrows(IllegalStateException.class, () -> LevelSpritePresentation.captureScroll(f.level));
+        assertThrows(IllegalStateException.class, () -> LevelSpritePresentation.validateScroll(f.level, frame));
+        assertThrows(IllegalStateException.class, () -> LevelSpritePresentation.withScroll(
+                f.level, frame, () -> fail("nested scroll")));
+        assertThrows(IllegalStateException.class, () -> LevelSpritePresentation.withScrollAndBackground(
+                f.level, null, backgroundImage(43), () -> fail("nested background")));
+        assertThrows(IllegalStateException.class, () -> LevelSpritePresentation.withCinematicCamera(
+                f.level, 1, 2, () -> fail("nested cinematic")));
+        assertThrows(IllegalStateException.class, () -> f.renderer.drawCinematicWorld(f.sprites));
+        assertThrows(IllegalStateException.class, () -> LevelSpritePresentation.prepare(f.level, f.sprites));
+        assertThrows(IllegalStateException.class, () -> LevelSpritePresentation.publish(
+                f.level, com.openggf.game.resources.PlcLifecyclePhase.ORDINARY_LEVEL));
+    }
+
+    @Test void publicSpriteOnlyPassRejectsScrollCaptureSetupBeforeAnyProducerOrGraphicsCall() {
+        try (var f = new ScrollFixture()) {
+            var camera = f.camera.capture();
+            var tables = f.renderer.spriteTables.capture();
+            var mask = f.renderer.boundsMask.capture();
+            int clock = f.level.frameCounter;
+            var preparations = trackPublicSpritePassPreparation(f);
+            var contributors = new java.util.concurrent.atomic.AtomicInteger();
+            var released = new ArrayList<Integer>();
+            f.graphics.registerCommand(observeDiscard(f, released));
+            f.controller.register(new com.openggf.game.render.AdvancedRenderMode() {
+                public String id() { return "public-sprite-pass-capture-admission"; }
+                public void contribute(com.openggf.game.render.AdvancedRenderModeContext context,
+                                       com.openggf.game.render.AdvancedRenderFrameState.Builder builder) {
+                    contributors.incrementAndGet();
+                    assertSetupRejectsPublicSpritePassBeforeMutation(f);
+                }
+            });
+            var frame = LevelSpritePresentation.captureScroll(f.level);
+            assertEquals(1, contributors.get());
+            assertEquals(0, preparations.get());
+            assertTrue(released.isEmpty(), "capture must not draw or drain prior commands");
+            assertFalse(SpritePresentation.isPreparing(f.graphics));
+            assertFalse(f.graphics.isSpriteSatCollectionActive());
+            assertEquals(camera, f.camera.capture());
+            assertEquals(tables, f.renderer.spriteTables.capture());
+            assertEquals(mask, f.renderer.boundsMask.capture());
+            assertEquals(clock, f.level.frameCounter);
+            assertFalse(f.renderer.getCurrentAdvancedRenderFrameState().hasForegroundVScrollOverride());
+            f.graphics.flush();
+            assertEquals(List.of(0xff9cfff9), released);
+            LevelSpritePresentation.withScroll(f.level, frame, () -> {
+                f.level.renderSpriteObjectPass(f.sprites, false);
+                f.graphics.registerCommand(observeDiscard(f, released));
+            });
+            assertEquals(1, preparations.get(), "the public sprite-only entry remains legal in an installed scope");
+            assertEquals(1, contributors.get());
+            assertEquals(List.of(0xff9cfff9, 0xff9cfff9), released);
+            LevelSpritePresentation.validateScroll(f.level, frame);
+            f.graphics.flush();
+            assertEquals(2, released.size());
+        }
+    }
+
+    @Test void publicSpriteOnlyPassRejectsCinematicSetupButDrawsInsideItsAdmittedCallback() {
+        try (var f = new ScrollFixture()) {
+            var camera = f.camera.capture();
+            var tables = f.renderer.spriteTables.capture();
+            var mask = f.renderer.boundsMask.capture();
+            int clock = f.level.frameCounter;
+            var preparations = trackPublicSpritePassPreparation(f);
+            var contributors = new java.util.concurrent.atomic.AtomicInteger();
+            var callbacks = new java.util.concurrent.atomic.AtomicInteger();
+            f.controller.register(new com.openggf.game.render.AdvancedRenderMode() {
+                public String id() { return "public-sprite-pass-cinematic-admission"; }
+                public void contribute(com.openggf.game.render.AdvancedRenderModeContext context,
+                                       com.openggf.game.render.AdvancedRenderFrameState.Builder builder) {
+                    contributors.incrementAndGet();
+                    assertSetupRejectsPublicSpritePassBeforeMutation(f);
+                }
+            });
+            LevelSpritePresentation.withCinematicCamera(f.level, 140, 168, () -> {
+                callbacks.incrementAndGet();
+                assertEquals(0, preparations.get());
+                f.level.renderSpriteObjectPass(f.sprites, false);
+                assertEquals(1, preparations.get());
+                assertEquals(140, f.camera.getX()); assertEquals(168, f.camera.getY());
+                f.graphics.flush();
+            });
+            assertEquals(1, contributors.get()); assertEquals(1, callbacks.get());
+            assertFalse(SpritePresentation.isPreparing(f.graphics));
+            assertFalse(f.graphics.isSpriteSatCollectionActive());
+            assertEquals(camera, f.camera.capture());
+            assertEquals(tables, f.renderer.spriteTables.capture());
+            assertEquals(mask, f.renderer.boundsMask.capture());
+            assertEquals(clock, f.level.frameCounter);
+            assertFalse(f.renderer.getCurrentAdvancedRenderFrameState().hasForegroundVScrollOverride());
+            assertNotNull(LevelSpritePresentation.captureScroll(f.level));
+        }
+    }
+
+    @Test void publicSpriteOnlyPassRejectsPriorFifoCallbacksButDrawsAfterScrollInstallation() {
+        for (int scope = 0; scope < 3; scope++) {
+            try (var f = new ScrollFixture()) {
+                var cache = backgroundCache(f);
+                var frame = LevelSpritePresentation.captureScroll(f.level);
+                f.horizontal[0] = 99;
+                var camera = f.camera.capture();
+                var tables = f.renderer.spriteTables.capture();
+                var mask = f.renderer.boundsMask.capture();
+                int clock = f.level.frameCounter;
+                int expectedScroll = scope == 2 ? 99 : 0xff9cfff9;
+                int expectedImage = scope == 0 ? 11 : 42;
+                var preparations = trackPublicSpritePassPreparation(f);
+                var dispatches = new ArrayList<String>();
+                var observations = new ArrayList<BackgroundObservation>();
+                Runnable priorProbe = () -> {
+                    assertEquals(99, selected(f));
+                    assertEquals(11, cache.getBackgroundTilemapData()[0]);
+                    assertEquals(0, preparations.get());
+                    assertSetupRejectsPublicSpritePassBeforeMutation(f);
+                    assertEquals(0, preparations.get());
+                    assertEquals(11, cache.getBackgroundTilemapData()[0]);
+                };
+                f.graphics.registerCommand(new GLCommandable() {
+                    public void execute(int x, int y, int w, int h) { dispatches.add("execute"); priorProbe.run(); }
+                    public void discard() { dispatches.add("discard"); priorProbe.run(); }
+                });
+                f.graphics.registerCommand(observeBackground(f, observations));
+                withSpriteDrawScope(f, frame, scope, () -> {
+                    // The real headless FIFO dispatches discard; no graphics flags or executor are replaced.
+                    assertEquals(List.of("discard"), dispatches);
+                    assertEquals(List.of(new BackgroundObservation(99, 11)), observations);
+                    assertEquals(0, preparations.get());
+                    assertEquals(expectedScroll, selected(f));
+                    f.level.renderSpriteObjectPass(f.sprites, false);
+                    assertScopedSpriteReentryClosed(f, frame);
+                    f.graphics.registerCommand(observeBackground(f, observations));
+                });
+                assertEquals(1, preparations.get());
+                assertEquals(List.of("discard"), dispatches);
+                assertEquals(List.of(new BackgroundObservation(99, 11),
+                        new BackgroundObservation(expectedScroll, expectedImage)), observations);
+                assertArrayEquals(backgroundImage(expectedImage), cache.getBackgroundTilemapData());
+                assertEquals(camera, f.camera.capture());
+                assertEquals(tables, f.renderer.spriteTables.capture());
+                assertEquals(mask, f.renderer.boundsMask.capture());
+                assertEquals(clock, f.level.frameCounter);
+                assertEquals(99, selected(f));
+                assertFalse(f.renderer.getCurrentAdvancedRenderFrameState().hasForegroundVScrollOverride());
+                assertFalse(SpritePresentation.isPreparing(f.graphics));
+                assertFalse(f.graphics.isSpriteSatCollectionActive());
+                verify(f.parallax, never()).update(anyInt(), anyInt(), any(), anyInt());
+                LevelSpritePresentation.validateScroll(f.level, frame);
+                f.graphics.flush();
+                assertEquals(List.of("discard"), dispatches);
+                assertEquals(2, observations.size(), "prior and scoped commands each close once");
+            }
+        }
+    }
+
+    private static void assertSetupRejectsPublicSpritePassBeforeMutation(ScrollFixture f) {
+        for (boolean water : new boolean[] {false, true}) {
+            int spriteCalls = mockingDetails(f.sprites).getInvocations().size();
+            int graphicsCalls = mockingDetails(f.graphics).getInvocations().size();
+            var failure = assertThrows(IllegalStateException.class,
+                    () -> f.level.renderSpriteObjectPass(f.sprites, water));
+            assertEquals("Drawing during presentation setup or cleanup", failure.getMessage());
+            assertEquals(spriteCalls, mockingDetails(f.sprites).getInvocations().size(),
+                    "setup rejection must precede every sprite producer call");
+            assertEquals(graphicsCalls, mockingDetails(f.graphics).getInvocations().size(),
+                    "setup rejection must precede graphics preparation, queue and batch calls");
+        }
+    }
+
+    private static java.util.concurrent.atomic.AtomicInteger trackPublicSpritePassPreparation(ScrollFixture f) {
+        var preparations = new java.util.concurrent.atomic.AtomicInteger();
+        doAnswer(call -> {
+            assertTrue(SpritePresentation.isPreparing(f.graphics));
+            preparations.incrementAndGet();
+            return null;
+        }).when(f.sprites).prepareRenderBucketsForPass();
+        doAnswer(call -> {
+            assertTrue(SpritePresentation.isPreparing(f.graphics));
+            assertTrue(f.graphics.isSpriteSatCollectionActive());
+            if ((int) call.getArgument(0) == 3) submitScopedSprite(f, 64, 24, false);
+            return null;
+        }).when(f.sprites).drawPreparedUnifiedBucketWithPriority(anyInt(), same(f.graphics), any());
+        return preparations;
+    }
 }
