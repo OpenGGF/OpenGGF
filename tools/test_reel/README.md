@@ -31,9 +31,9 @@ be ancestors of `--source`. To inspect committed follow-ups on another branch
 without merging them, add `--include-unmerged`: the manifest pins each overlay
 file to that SHA and marks its cases `unmerged_source`. Capture refuses an overlay
 whose source is absent from this tree. This is a planning inventory, not a tested
-source union. The initial S3K follow-up is
-`57e89fb6c5e2a0a68691892b641f9c27033b37b0`; add it after parent integration, or
-use that explicit overlay option while waiting. No worktree is changed.
+source union. The integrated scope includes S3K follow-up
+`57e89fb6c5e2a0a68691892b641f9c27033b37b0`. Use the explicit overlay option
+for later unmerged work only. No worktree is changed.
 
 ## Record a bounded selection
 

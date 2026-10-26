@@ -71,6 +71,19 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Fast emulation can bypass the observer and its stopping condition (2026-10-26,
+published TAS inlet capture). Original Gens11b reproduced the movie's zone
+progression, but `speedmode("maximum")` with `frameadvance` produced no registered
+before/after callbacks. Its callback-owned frame limit therefore never fired.
+The sparse route checkpoints were valid observations; they were not detailed
+mechanism evidence. A separate script context alone did not fix dispatch.
+A bounded 300-frame `turbo` probe produced 300 before, 300 after and 267 V-int
+execution hooks before the route capture was repeated. The inspected Gens source
+uses an unhooked fast update for maximum/invisible pacing and the hooked update
+for turbo. Verify the actual observer callbacks in a tiny control first, and
+keep independent driver-frame and host-wall limits even when callbacks work.
+See the [TAS evidence record](../architecture/validation/2026-10-26-tas-trick-verdicts.md).
+
 A golden digest characterizes its input owner as well as its kernel (2026-10-25,
 PR223 terrain receiving). A decoded-map corpus cannot silently become an encoded
 native-layout oracle after an owner change. Preserve the original hash,

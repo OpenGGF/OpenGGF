@@ -1211,6 +1211,9 @@ its original drawing priority.
   separates supported named tricks from executed engine limitations, with
   controls, original publication links and explicit route boundaries. Passing
   limitation checks document incompatibilities without treating them as repairs.
+  An opt-in [test reel tool](tools/test_reel/README.md) records actual fixture
+  frames and stitches short labelled clips, with an explicit inventory of cases
+  that still need a rendering adapter. Normal tests remain recording-free.
 
 - **Local ROM qualification:** Release preparation can bind the existing bounded
   AIZ1/HCZ1 route pilot to a reviewed candidate commit, reject changed inputs and

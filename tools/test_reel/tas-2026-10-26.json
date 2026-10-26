@@ -11,10 +11,11 @@
     "77e4c3845319f47ec840da7c2148fe4cb48a685c",
     "4f5eb1ee2de0b6128c39728289516c079d71064e",
     "d1f2f9cf831868d46ab7b193b581b008d3ebea6d",
-    "964c29d25fdab09fe8edd4acbe541a27fc64904c"
+    "964c29d25fdab09fe8edd4acbe541a27fc64904c",
+    "57e89fb6c5e2a0a68691892b641f9c27033b37b0"
   ],
   "pending": [
-    "S3K terrain/MHZ/flame-slope follow-up: append parent's final SHA with --add-commit"
+    "Flame-dash under-slope zip: add any later executed test commit when available"
   ],
   "adapters": {
     "com.openggf.tests.TestTasS1Movement": "headless-native-level",

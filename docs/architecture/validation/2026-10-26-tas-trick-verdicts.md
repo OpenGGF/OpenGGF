@@ -130,6 +130,47 @@ cases across 53 classes** for the settled changes. This does not close U01 or
 validate the separately developed test-recording tool. New executable edits
 require affected validation; later prose edits do not change these results.
 
+## Recorder integration validation
+
+The user also requested a tool to record today's actual test fixtures and stitch
+short clips. Its [implementation record](2026-10-26-tas-test-reel.md) and
+[usage guide](../../../tools/test_reel/README.md) distinguish static inventory,
+executed invocations and real rendered frames. The initial merged implementation
+is `78296018bbc1ceb041a29c0292e0d0d3d3ee99d9`.
+
+At integration `e0ca9b1e2dfa4d51c2ca7fa7bca5ad7ca5e31d6e`, with only scope JSON
+and prose edits, **13 classes / 104 cases passed with zero failures, errors or
+skips**. The run finished at `2026-10-26T16:21:56Z`: Maven **36.977 seconds**,
+queue wait **58 seconds**, command wall **95.60 seconds**. Recording was disabled
+for ordinary fixture execution; the extension's own tests explicitly exercise
+recording, parameterized identities, body versus final JUnit outcome, a failing
+teardown, and absent menu state. Graphics/audio/isolation guards and the required
+S3K gates ran in the same selection. This requalifies the three adapted fixtures
+following their recording-hook edits; counts overlap the earlier 206-case record
+and must not be added as distinct cases.
+
+The change planner selects 4,224 smoke classes for the new shared test extension,
+service registration and unclassified tooling. The implementation is opt-in and
+leaves production code unchanged. Focused lifecycle, opt-out fixture, rendering
+registration, audio and reused-JVM isolation checks address its bounded effects;
+this is not a broad smoke-suite result. Actual rendered opt-in runs remain
+separately documented in the recorder record. A subsequent Python-only provenance
+correction must preserve actual executed fixture hashes without changing this
+Java evidence.
+
+```bash
+TAS_REEL_INTEGRATION_SELECTORS='com.openggf.tests.TestTasS1Movement,com.openggf.game.sonic2.TestTasS2ManualTails,com.openggf.tools.TestTasS3kPauseClock,com.openggf.tests.reel.TestTestReelExtension,com.openggf.tests.TestHeadlessStateTeardownGuard,com.openggf.tools.TestHeadlessBackendPropertyIsolation,com.openggf.tools.TestRawGlfwTestSetupGuard,com.openggf.tools.TestHeadlessAudioOwnership,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kDecodingUtils,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading'
+env -u DISPLAY -u WAYLAND_DISPLAY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dtest=$TAS_REEL_INTEGRATION_SELECTORS" \
+  "-Dsonic1.rom.path=$MAIN_WORKSPACE/s1.gen" \
+  "-Dsonic2.rom.path=$MAIN_WORKSPACE/s2.gen" \
+  "-Ds3k.rom.path=$MAIN_WORKSPACE/s3k.gen" \
+  "-Dkis2.rom.path=$MAIN_WORKSPACE/kis2.gen" test
+```
+
 ## Observed limitations
 
 The native Start pause clock has reached contradictory outcomes in S1, S2 and S3K
