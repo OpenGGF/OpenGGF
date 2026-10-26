@@ -5,6 +5,12 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Enemy-chain bonuses:** Ordinary enemy kills award 10,000 points from the
+  sixteenth consecutive defeat, matching the native games. Normal and powered
+  kills share the calculation, including native counter wrap and rewind. Sonic 2
+  and 3&K select the native 10,000-point popup, and Sonic 2 selects the correct
+  1,000-point popup.
+
 - **Labyrinth water transport:** Sonic 1 wind tunnels and water slides observe the
   admitted VBlank before player movement, preserving the original suction and
   waterfall-sound phase across lag and rewind. Jumping from a breakable pole
@@ -1198,6 +1204,11 @@ its original drawing priority.
   at level load and through the boss PLC.
 
 ## Maintenance and release preparation
+
+- **TAS trick regressions:** Focused tests exercise native movement, object-contact
+  and special-stage behaviors described in published Sonic TAS notes. A linked
+  coverage record tracks all 48 previously partial trick families, distinguishing
+  reproduced mechanisms, component checks and remaining native input fixtures.
 
 - **Local ROM qualification:** Release preparation can bind the existing bounded
   AIZ1/HCZ1 route pilot to a reviewed candidate commit, reject changed inputs and

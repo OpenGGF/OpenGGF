@@ -4,6 +4,12 @@ This page covers the engine's test infrastructure and how to write tests for new
 
 All new or updated tests must use JUnit 5 / Jupiter. Do not add JUnit 4 tests, rules, runners, or `org.junit.*` imports.
 
+Published Sonic TAS trick regressions and remaining native-fixture requirements
+are indexed in the [TAS trick coverage record](../../architecture/validation/2026-10-26-tas-trick-regressions.md).
+It distinguishes a reproduced mechanism from component evidence and records the
+original submission, independent expectation and exact test selector. Passing a
+component check does not qualify an entire published movie.
+
 ## Running Tests
 
 ```bash

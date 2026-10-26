@@ -41,6 +41,8 @@ public class Sonic3kPointsObjectInstance extends AbstractPointsObjectInstance {
             case 200 -> 1;     // "200"
             case 500 -> 2;     // "500"
             case 1000 -> 3;    // "1000"
+            // loc_2C940 (sonic3k.asm:61121-61128) halves the chain's $A frame offset.
+            case 10000 -> 5;   // "10000"
             default -> 0;      // Default to "100"
         };
     }
