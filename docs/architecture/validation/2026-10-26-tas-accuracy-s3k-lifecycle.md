@@ -290,9 +290,11 @@ No setup failure or skip occurred in this follow-up. The run emitted the known
 FAST-load profile warning (no manifest, falls back to NONE); these MHZ object
 fixtures do not claim a FAST entry timing check.
 
-No Java/test source changed after submitting that candidate run. The source SHA
-will be added in the local documentation checkpoint after committing the tested
-source. Sphere validation from the initial run is reused because no Sphere
-source/test changed. Parent continues to own combined smoke/domain validation,
+Final follow-up source commit: `d65c78da54047515acb8f41ca8d40855dd1c17da`.
+No Java/test source changed after submitting the passing candidate run. This
+checkpoint adds only the exact source SHA. The local source commit passed hooks
+with all seven policy trailers and the separately parsed final model coauthor.
+Sphere validation from the initial run is reused because no Sphere source/test
+changed. Parent continues to own combined smoke/domain validation,
 central documentation and integration. No follow-up test IDs were renamed.
 No live validation job remains.
