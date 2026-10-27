@@ -77,7 +77,10 @@ reported one case and 256.922 seconds while launching every Python release-tool
 test plus the skip-classifier suite. Top-level case counts omit that inner
 breadth, and batch totals cannot identify individual expensive owners after raw
 XML is removed. Inspect nested invocations and retain bounded timing attribution;
-do not infer value or cost from class/case counts alone. See the
+do not infer value or cost from class/case counts alone. In the matched smoke
+measurement, three `TestSitarHeroCharts` cases spent 522.438 seconds preparing
+the full ROM song catalogues and checking every supported role/difficulty;
+their outer class reported 522.705 seconds. See the
 [local cost record](../architecture/research/2026-10-27-local-validation-cost.md).
 
 Passing gameplay assertions do not qualify recorded pixels (2026-10-26, full TAS
