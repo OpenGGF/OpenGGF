@@ -1115,6 +1115,8 @@ after the Jackson failure changed build inputs: 2/85 batches completed, 134 repo
 
 The production decision changed in
 [0bf1f2feed11f4139a81fbd15fbfb2c55d8b7db4](https://github.com/OpenGGF/OpenGGF/commit/0bf1f2feed11f4139a81fbd15fbfb2c55d8b7db4).
+The memory/staging and qualification follow-up is
+[67011cc9fe1886128b3f6be5d9abc903e53c062b](https://github.com/OpenGGF/OpenGGF/commit/67011cc9fe1886128b3f6be5d9abc903e53c062b).
 This promotion supersedes the production-rejection decision above; historical
 experiments and their limitations remain evidence, not current build policy.
 
@@ -1314,8 +1316,9 @@ terminology diagnostics.
 The two affected workflow-command guards and the release-tool safety gate pass
 after their targeted repairs; the new staged-build guard also passes. The four
 inherited findings above remain. These unrelated findings were not repaired or
-allowlisted by the native-build promotion. Consumed category diagnostics were acknowledged and deleted; baseline
-checkouts and one-off build/probe logs remain temporary. Qualified screenshots,
+allowlisted by the native-build promotion. Consumed category diagnostics were acknowledged and deleted. Both temporary
+baseline checkouts, consumed one-off logs and disposable runtime identities were
+removed after their results were recorded. Qualified screenshots,
 state/audio observations and the refreshed Linux archive stay in the external
 task artifact directory. The task branch is retained locally for review; it is
 not merged or pushed, and no Release workflow was dispatched.

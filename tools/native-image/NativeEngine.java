@@ -46,4 +46,3 @@ public final class NativeEngine {
         Engine.main(args);
     }
 }
-
