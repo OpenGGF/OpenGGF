@@ -14,6 +14,8 @@ racing/server/                  master server, Netty dedicated host, attempt ver
 The networking contracts marked `@ModApi` are available to any mod without installing
 Time Attack. Internal handshake and WebSocket parsers remain implementation details.
 The core dependency fence prevents networking from calling gameplay owners or mod code.
+For component, lifecycle and integration diagrams, see the
+[multiplayer Time Attack architecture reference](../docs/architecture/research/multiplayer-time-attack.md).
 For custom messages and rules, scene mods can use the existing owner-scoped `SceneNetwork`
 API (used by Sitar Hero). Putt Putt Paradise's existing direct TCP implementation is
 unchanged; it can adopt shared transport separately from Time Attack's racing protocol.
@@ -132,7 +134,7 @@ frame. Quick Chat wording is English for this MVP. Messages carry stable phrase
 IDs and host-supplied track context so a future community translation can render
 the recipient's language without changing the wire meaning.
 
-The racing wire protocol is version **6**. Upgrade clients, room hosts and the
+The racing wire protocol is version **8**. Upgrade clients, room hosts and the
 master together; older or incomplete message schemas are rejected.
 
 `settings.txt` keys for the look: `lookBase` is the base colour (three hex digits `BGR`, the
