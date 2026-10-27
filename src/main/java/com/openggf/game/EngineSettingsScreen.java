@@ -694,8 +694,11 @@ public final class EngineSettingsScreen {
             int resetX = width - resetButtonWidth() - 8;
             if (resetFocused) MenuChrome.focus(font, resetX, 155, resetButtonWidth(), 12, focusTicks);
             else MenuChrome.panel(font, resetX, 155, resetButtonWidth(), 12);
-            MenuChrome.changedMarker(font, 11, 161);
-            MenuChrome.compact(font, "CHANGED FROM DEFAULT", 18, 158, MenuChrome.DIM);
+            // The legend explains the amber marker only when this tab shows one.
+            if (Boolean.TRUE.equals(categoryChanged.get(tabs[category]))) {
+                MenuChrome.changedMarker(font, 11, 161);
+                MenuChrome.compact(font, "CHANGED FROM DEFAULT", 18, 158, MenuChrome.DIM);
+            }
             MenuChrome.compact(font, resetButtonText(), resetX + 7, 158, MenuChrome.AMBER);
             renderDescription(width);
             int unsaved = draft.changedCount();
@@ -787,8 +790,11 @@ public final class EngineSettingsScreen {
             if (fullSize) {
                 valueX = right - MenuChrome.labelWidth(value);
                 MenuChrome.label(font, value, valueX, y, valueColor);
+                valueX = switchBeside(key, valueX, y + 2);
                 MenuChrome.label(font, labels.get(key), 18, y, labelColor);
                 int tagX = valueX - 10 - restartTagWidth();
+                boolean tagged = restart && tagX >= 18 + MenuChrome.labelWidth(labels.get(key)) + 6;
+                if (!focused) leader(18 + MenuChrome.labelWidth(labels.get(key)) + 4, (tagged ? tagX : valueX) - 4, y + 8);
                 if (restart && tagX >= 18 + MenuChrome.labelWidth(labels.get(key)) + 6) restartTag(tagX, y);
             } else {
                 // Values keep up to half the row; labels take what is left and scroll when focused.
@@ -807,14 +813,17 @@ public final class EngineSettingsScreen {
                     String v = window(value, valueRoom / MenuChrome.COMPACT_ADVANCE, focused);
                     valueX = right - MenuChrome.compactWidth(v);
                     MenuChrome.compact(font, v, valueX, y + 1, value.equals("Unbound") ? MenuChrome.DIM : valueColor);
+                    valueX = switchBeside(key, valueX, y + 1);
                 }
                 int labelRoom = valueX - 10 - 18;
                 if (restart) {
                     restartTag(valueX - 10 - restartTagWidth(), y);
                     labelRoom -= restartTagWidth() + 4;
                 }
-                MenuChrome.compact(font, window(rowLabel(key), labelRoom / MenuChrome.COMPACT_ADVANCE, focused),
-                        18, y + 1, labelColor);
+                String shownLabel = window(rowLabel(key), labelRoom / MenuChrome.COMPACT_ADVANCE, focused);
+                MenuChrome.compact(font, shownLabel, 18, y + 1, labelColor);
+                if (!focused) leader(18 + MenuChrome.compactWidth(shownLabel) + 4,
+                        valueX - (restart ? restartTagWidth() + 14 : 4), y + 7);
             }
             if (focused) {
                 MenuChrome.triangle(font, valueX - 7, y + 2, 3, 'L', MenuChrome.GOLD, 1f);
@@ -830,6 +839,23 @@ public final class EngineSettingsScreen {
             MenuChrome.fill(font, width - 11, trackTop, 2, trackH, MenuChrome.EDGE, .6f);
             MenuChrome.fill(font, width - 12, thumbY, 4, thumbH, MenuChrome.CYAN);
         }
+    }
+
+    /**
+     * On/off rows show the shared switch beside their word, as Recordings and Mods do;
+     * returns the new left edge of the value so arrows and leaders stay clear of it.
+     */
+    private int switchBeside(SonicConfiguration key, int valueX, int y) {
+        if (ConfigCatalog.meta(key).type() != ConfigType.BOOL) return valueX;
+        int x = valueX - 5 - MenuChrome.TOGGLE_W;
+        MenuChrome.toggle(font, x, y, Boolean.parseBoolean(draft.text(key)), true);
+        return x;
+    }
+
+    /** Quiet dotted leader from a label to its value, so long rows read across. */
+    private void leader(int from, int to, int y) {
+        for (int x = from + Math.floorMod(-from, 3); x < to; x += 3)
+            MenuChrome.fill(font, x, y, 1, 1, MenuChrome.EDGE, .9f);
     }
 
     /** Under a Player 1 / Player 2 group the player is already named, so rows show the button alone. */

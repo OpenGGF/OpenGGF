@@ -383,6 +383,12 @@ public final class LaunchConfigPanel {
         int valueWidth = MenuChrome.compactWidth(value);
         int valueX = right - valueWidth;
         MenuChrome.compact(font, value, valueX, y + 1, color);
+        if (!focused) {
+            // The same quiet dotted leader as Settings rows, from label to value.
+            int from = 18 + MenuChrome.compactWidth(item.label) + 4;
+            for (int x = from + Math.floorMod(-from, 3); x < valueX - 4; x += 3)
+                MenuChrome.fill(font, x, y + 7, 1, 1, MenuChrome.EDGE, .9f);
+        }
         if (focused) {
             // The arrows hop outward for a few frames after each change.
             int nudge = changeTicks < 6 ? 1 : 0;
