@@ -668,3 +668,10 @@ replay windows remain explicit audit/qualification limits. Consumed diagnostics
 were inspected and acknowledged; profiler output remains temporary under
 `target/` and is discarded with the task tree. No raw reports, pass cache or
 validation receipt were archived.
+
+Implementation and the measured local recipe are committed as
+`0bd11d03e4e19aab199a5bcd8c8fe90250769b25`
+(`perf(test): bound routine validation with real behavior witnesses`). No
+executable input changed after the completed two-worker run; subsequent edits
+record its results and qualified-host guidance. The original full products and
+deferred cold qualifications remain callable through the explicit audit lane.
