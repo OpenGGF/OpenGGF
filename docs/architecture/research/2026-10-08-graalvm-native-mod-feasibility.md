@@ -1941,3 +1941,151 @@ qualification. No merge, push or workflow dispatch was performed.
 Tested executable SHA-256 values: `-Os`
 `1a090f9484f94cee84c1a57bb5e2ecf6c3f04b6d47cbd63707d4f77771a62339`;
 `-O2` `968b9a248918d8898bf93db41f509db2b2c02681cca4193b8f4e5ce8d594be01`.
+
+
+## Final platform recipe and updated-branch qualification (2026-10-27)
+
+The user adopted **`-Os` / 5 GiB on macOS only, default `-O2` / 8 GiB on
+all other platforms**. Commit `06b093edcff710662fae51f37fcc9aa5bdebc7d5`
+applies this in `tools/native-image/build.py`, shared by releases, local native
+builds and friends builders. All targets retain compiler G1,
+`ActiveProcessorCount=3` and `--parallelism=2`; `OPENGGF_NATIVE_IMAGE_HEAP`
+continues to override the heap. The standard `macos-15` runner is unchanged;
+Linux and Windows use their standard 16 GiB runners with conservative two-worker
+compilation. The final Linux image again reported optimization level 2 and
+**9.14 GiB peak compiler RSS** with the 8 GiB heap.
+
+The feature branch merged develop
+`d2f3ce1e3c3165034b1cbafb4c1792f5472fdc5f` in `dcba6ed63`.
+Both additive conflicts were preserved: native-image and atlas ignore exceptions,
+and the two independent measurement-hazard notes. Qualification below used engine
+source `4bf1fd22d57a2018a7709ce6b98aedaf19f2ccf8`. The final follow-up only lowers
+the dispatcher test budget and records evidence; engine/native inputs are unchanged.
+The always-true capability arguments, unused rejection helper/reason and obsolete
+notice screen/dispatch are removed. `GameMode.NATIVE_MOD_NOTICE` remains solely
+as a reserved compatibility enum value because it is already in the API pin;
+no API signature pin changed. The existing native-build changelog bullet was
+refined; root README and feature-guide prose were not edited.
+
+### Completed commands and scope
+
+`UPDATED_BASE` below is the full develop SHA above. `WT`, `GRAAL`, `JDK25`,
+`ROM_ROOT`, `ROM_ARGS`, `S1`, `S2`, `S3K` and `ARTIFACTS` have the meanings used
+in the preceding command records. Actual ROM arguments were absolute original
+paths; the three stock ROM CRC32/SHA-1 values matched the repository identities.
+No ROM was copied, renamed, uploaded or newly linked. Linux rendering and Java
+checks unset `DISPLAY` and `WAYLAND_DISPLAY`; Java checks selected JDK 25 and
+`LUA_BIN=lua5.4`. `FAILED_ORDINARY_METHODS` means exactly the ordinary methods
+in the table below, grouped as Surefire `Class#method+method` selectors with the
+`com.openggf.` prefix restored. The parameterized SOZ method selector includes its
+four passing sibling rows. `FAILED_GUARD_METHODS` means the four guard methods below.
+Baseline checks temporarily detached this same worktree at `UPDATED_BASE`, then
+restored the feature branch; no additional checkout or main-workspace update was
+made. Generated compilation outputs were cleared at both source transitions.
+
+| Command | Observed result |
+| --- | --- |
+| `python3 -m unittest discover -s tools/native-image -p 'test_*.py' -v` | 5 passed, no skips; platform selection, heap override, prepared-stage reuse and fail-closed toolchain/dependency controls. |
+| `python3 -m unittest discover -s tools/modding/native-linux -p 'test_*.py' -v` | 3 passed, no skips. |
+| `python3 -m unittest discover -s tools/modding/native-windows -p 'test_*.py' -v` | 3 passed, no skips; portable packaging checks, not a Windows image build. |
+| `python3 tools/testing/maven_queue.py -Dmse=off test-compile -B` | Passed after caller migration; production and test compilation completed. |
+| `python3 tools/testing/run_categories.py --base "$UPDATED_BASE" --headless-gl surfaceless-egl --rom-directory "$ROM_ROOT" --preflight` | Passed Java 25, Lua 5.4 and PowerShell prerequisites; no tests executed. |
+| `JAVA_HOME="$GRAAL" OPENGGF_MAVEN_QUEUE=serial python3 tools/testing/maven_queue.py -Dmse=off exec:exec -Dexec.executable=mvn '-Dexec.args=-Dmse=off -Pnative -Dmaven.test.skip=true package -B'` | Final Linux build exit 0; tests intentionally disabled for packaging. Generated contract regression controls and 24,827-entry / 1,991-type audit passed; runtime class loading enabled; optimization level 2, 8 GiB heap, two workers, 9.14 GiB compiler peak RSS. |
+| `"$WT/target/OpenGGF" --audit` | Exit 0; final embedded member contract passed. |
+| `"$WT/target/OpenGGF" --check-engine time-attack` | Exit 0; pinned bundled Time Attack loaded and registered through Engine's normal boot in a disposable working directory. |
+| `javac --release 25` for Hello Scene, then `GgfModCli package --input "$HELLO_CLASSES" --out "$HELLO_JAR"` | Compiled against the prepared engine/runtime classpath; packaged with zero validation findings. Resources copied beside the classes; jar installed only in the disposable probe's `mods/hello-scene.jar`. |
+| `"$WT/target/OpenGGF" -Dopenggf.headless.gl=surfaceless-egl --check-gameplay hello-scene "$ARTIFACTS/captures/hello-scene" "$S1" "$S2" "$S3K"` | Exit 0; real rendered scene, no owner findings/disabled owners, module-state roundtrip and scene reopen. Three PNGs retained outside the repo; gameplay PNG visually inspected. HeadlessSmpsAudioBackend used no-device audio. No audio-quality claim. |
+| `python3 tools/testing/run_categories.py --base "$UPDATED_BASE" --headless-gl surfaceless-egl --rom-directory "$ROM_ROOT" --max-minutes 240 --run` | Completed all 4,235 candidates / 85 ordinary batches and the separate guard lane. Ordinary: 41,305 tests, 42 failures, zero errors, 81 skips. Guards: 795 tests, four failures, zero errors/skips. Exit 1 from assertions; no timeout or unrun batch. Smoke excludes slow-suite, exhaustive-audit and separate trace/native profiles; this is not full-suite certification. |
+| At `UPDATED_BASE`: `python3 tools/testing/maven_queue.py --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Pguards "-Dtest=$FAILED_GUARD_METHODS" test -B` | Four cases: three identical failures, one pass, zero errors/skips. The dispatcher budget failure is new; the other three already fail on develop. |
+| At `UPDATED_BASE`: `python3 tools/testing/maven_queue.py --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Dtest=$FAILED_ORDINARY_METHODS" "${ROM_ARGS[@]}" test -B` | 46 cases: all 42 candidate failure identities reproduce with identical kind, exception type and assertion message; four parameterized sibling rows pass. Zero errors/skips. |
+| Restored feature: `python3 tools/testing/maven_queue.py --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Pguards '-Dtest=com.openggf.tests.TestArchitecturalSourceGuard#rootDispatchMethodsDoNotGrowBeyondCurrentBudgets' test -B` | Passed after lowering the exact budget from 276 to 263; one test, zero failures/errors/skips, fresh production/test compilation. No engine change or repeated native/broad smoke run was needed for this test-only correction. |
+
+Two early compilation attempts failed on newly obsolete positional capability
+arguments: native preparation found `ModTestKit`, and test compilation found
+`TestPuttPuttParadise`, `TestEditorCampaign` and a duplicate native-only UI helper
+call. These were **new, fixed** caller-migration errors before the final build and
+complete category run; final production/test compilation and native build passed.
+
+All 81 skips were inspected. There were 32 act/scenario assumptions about absent
+platforms or bounce targets, nine explicit HUD/Stageplay picture refreshes, two
+CNZ visual checks without initialized capture environments, ten absent packaged
+Second Strike inputs, two unrequested local reference/timeline checks, and 25
+opt-in diagnostics, measurements, captures, soak/isolation checks. The remaining
+one spin-tube check skipped because the configured tube did not capture/release
+Sonic. None reported a missing stock ROM. These skipped checks remain coverage
+limits, not passes.
+
+### Failure attribution
+
+Every ordinary row below is **already on develop** at `UPDATED_BASE`, matched
+one for one by exact case identity, failure kind, exception type and message.
+Identities omit only the `com.openggf.` prefix. Guard attribution is separate.
+There are **45 remaining inherited failures** (42 ordinary, three guards) and
+**no remaining new or worsened failures**. The complete red run is not described
+as green.
+
+<details>
+<summary>All ordinary failure identities and matched assertions</summary>
+
+| Identity | Matching assertion on candidate and develop | Attribution |
+| --- | --- | --- |
+| `game.sonic3k.objects.TestCnzMinibossRegistered#numericSlotIsImplementedInBothPointerTables` | `expected: <true> but was: <false>` | Already on develop |
+| `tools.TestDezColdRouteCapture#coldIncomingActTwoTraversesBothTransportersWithRewind` | `expected: <9589> but was: <3203>` | Already on develop |
+| `tools.TestDezColdRouteCapture#coldIncomingActTwoTraversesGravityTubesConveyorAndStaircaseWithRewind` | `expected: <9589> but was: <3203>` | Already on develop |
+| `tools.TestDezColdRouteCapture#coldIncomingActTwoTraversesUpperTransportChainsAndEastHubWithRewind` | `expected: <9589> but was: <3203>` | Already on develop |
+| `tools.TestDezColdRouteCapture#coldIncomingActTwoDefeatsGravityBossAndLoadsFinalStageWithoutTransformation` | `expected: <9589> but was: <3203>` | Already on develop |
+| `tools.TestDezColdRouteCapture#coldIncomingActTwoCrossesTiltingBridgeWithoutAShieldWithRewind` | `expected: <9589> but was: <3203>` | Already on develop |
+| `tools.TestDezColdRouteCapture#coldIncomingActTwoClimbsEnergyBridgesAndTogglesGravityWithRewind` | `expected: <9589> but was: <3203>` | Already on develop |
+| `tools.TestDezColdRouteCapture#coldRouteClearsAllTurbinePanelsAndOpensDoorWhileObjectControlled` | `expected: <9589> but was: <3203>` | Already on develop |
+| `tools.TestDezColdRouteCapture#coldCompleteRouteDefeatsBothMinibossPhasesAndLoadsActTwo` | `expected: <9589> but was: <3203>` | Already on develop |
+| `tools.TestDezColdRouteCapture#coldIncomingActTwoDescendsInvertedSpringShaftWithRewind` | `expected: <9589> but was: <3203>` | Already on develop |
+| `tools.TestDezColdRouteCapture#coldUpperRouteTraversesLiftsConveyorsAndTimedBridgesWithRewind` | `expected: <9589> but was: <3203>` | Already on develop |
+| `tools.TestDezColdRouteCapture#coldIncomingActTwoCompletesUpperGravityRouteCarrierAndCountdownLaunchWithRewind` | `expected: <9589> but was: <3203>` | Already on develop |
+| `tools.TestDezIncomingFinalRouteCapture#coldOrdinarySoloTailsClearsAllFinalPhasesAndLoadsEnding` | `death at 19930 ==> expected: <false> but was: <true>` | Already on develop |
+| `tools.TestDezIncomingFinalRouteCapture#coldOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding` | `death at 14721 ==> expected: <false> but was: <true>` | Already on develop |
+| `tools.TestDezIncomingFinalRouteCapture#coldWideOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding` | `death at 36000 ==> expected: <false> but was: <true>` | Already on develop |
+| `tools.TestDezIncomingFinalRouteCapture#coldEmeraldTeamClearsBothActsFinalFightAndDoomsday` | `death at 21162 ==> expected: <false> but was: <true>` | Already on develop |
+| `tools.TestDezIncomingFinalRouteCapture#coldOrdinaryTeamClearsHandsCoreAndEscapeShipAndLoadsEnding` | `death at 21162 ==> expected: <false> but was: <true>` | Already on develop |
+| `tools.TestDezSoloActTwoColdRouteCapture#coldWideSonicAloneClearsActTwoAndLoadsFinalStage` | `death at input 36000 ==> expected: <false> but was: <true>` | Already on develop |
+| `tools.TestDezSoloActTwoColdRouteCapture#coldTailsAloneClearsActTwoAndLoadsFinalStage` | `death at input 19930 ==> expected: <false> but was: <true>` | Already on develop |
+| `tools.TestDezSoloActTwoColdRouteCapture#coldTailsLowerGravityPadPreservesPendingContactAcrossRewind` | `death at 19930 ==> expected: <false> but was: <true>` | Already on develop |
+| `tools.TestDezSoloActTwoColdRouteCapture#coldSonicAloneClearsActTwoAndLoadsFinalStage` | `death at input 14721 ==> expected: <false> but was: <true>` | Already on develop |
+| `tools.TestDezSoloColdRouteCapture#coldSonicAloneClearsMinibossAndReachesPlayableActTwo` | `death at input 14721 ==> expected: <false> but was: <true>` | Already on develop |
+| `tools.TestDezSoloColdRouteCapture#coldTailsAloneClearsMinibossAndReachesPlayableActTwo` | `death at input 19930 ==> expected: <false> but was: <true>` | Already on develop |
+| `tools.TestDezSoloColdRouteCapture#coldWideSonicClearsBothBossPhasesAndReachesPlayableActTwo` | `both eight-hit phases must be defeated through player contact ==> expected: <2> but was: <0>` | Already on develop |
+| `tools.TestLrzKnucklesColdRouteCapture#coldKnucklesRestoresActTwoUpperClimbsAndDoorRelease` | `death at input 5027 ==> expected: <false> but was: <true>` | Already on develop |
+| `tools.TestLrzKnucklesColdRouteCapture#coldKnucklesReplaysIncomingRouteAndFirstActTwoDoor` | `first-door death at input 15323 ==> expected: <false> but was: <true>` | Already on develop |
+| `tools.TestLrzKnucklesColdRouteCapture#coldKnucklesCompletesActTwoAndReachesPlayableHiddenPalace` | `death at input 5027 ==> expected: <false> but was: <true>` | Already on develop |
+| `tools.TestLrzKnucklesColdRouteCapture#coldKnucklesReachesMinibossAndRestoresTraversalAndCloudEscape` | `death at input 15323 ==> expected: <false> but was: <true>` | Already on develop |
+| `tools.TestLrzKnucklesColdRouteCapture#coldKnucklesClearsMinibossAndRestoresFightAndActTwoHandoff` | `death at input 15323 ==> expected: <false> but was: <true>` | Already on develop |
+| `tools.TestLrzKnucklesColdRouteCapture#coldKnucklesRestoresActTwoTraversalToTheMiddleCorridor` | `death at input 5027 ==> expected: <false> but was: <true>` | Already on develop |
+| `tools.TestMhzKnucklesColdRouteCapture#coldKnucklesCompletesActOneAndRestoresNativeInteractions` | `cold Knuckles death at 26853 ==> expected: <false> but was: <true>` | Already on develop |
+| `tools.TestMhzKnucklesColdRouteCapture#coldKnucklesCompletesActTwoAndIsolatesTheFbzTimeline` | `cold Knuckles death at 26853 ==> expected: <false> but was: <true>` | Already on develop |
+| `tools.TestS3kHpzJoinedColdRouteCapture#coldKnucklesReplaysUpperPadAndTheJoinedSszCraneControlRelease` | `cold death 5027 ==> expected: <false> but was: <true>` | Already on develop |
+| `tools.TestS3kLrzHpzSszColdCampaign#sonicColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory` | `cold death 44639 ==> expected: <false> but was: <true>` | Already on develop |
+| `tools.TestS3kLrzHpzSszColdCampaign#tailsColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory` | `cold death 80320 ==> expected: <false> but was: <true>` | Already on develop |
+| `tools.TestS3kLrzHpzSszColdCampaign#pairColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory` | `cold death 73285 ==> expected: <false> but was: <true>` | Already on develop |
+| `tools.TestS3kLrzHpzSszColdCampaign#knucklesColdCampaignClearsSkySanctuaryTwoThroughTheEndingAndTitle` | `cold death 5027 ==> expected: <false> but was: <true>` | Already on develop |
+| `tools.TestSozColdRouteCapture#soloColdActCompletesWithTraversalReplayAndPlayableDestination(int, String)[5]` | `cold death at 15850 ==> expected: <false> but was: <true>` | Already on develop |
+| `tools.TestSozColdRouteCapture#knucklesColdActTwoCompletesWithPuzzleReplayAndPlayableLavaReef` | `cold death at 11787 ==> expected: <false> but was: <true>` | Already on develop |
+| `tools.TestSozColdRouteCapture#knucklesWideColdActTwoCompletesWithPuzzleReplayAndPlayableLavaReef` | `cold death at 23478 ==> expected: <false> but was: <true>` | Already on develop |
+| `tools.TestSszWidePairedColdRouteCapture#coldFirstReplicaAndTransportReplayWithRetiredColumnDebris` | `expected: <46> but was: <48>` | Already on develop |
+| `tools.TestSszWidePairedColdRouteCapture#coldCompleteWideRouteDefeatsAllBossesAndIsolatesTheDezTimeline` | `FIRST_FORWARD [wide-route-11640] frame=11640 n=24 input=11664 ==> expected: <false> but was: <true>` | Already on develop |
+
+</details>
+
+| Guard identity | Result and attribution |
+| --- | --- |
+| `game.rewind.coverage.TestRewindCoverageGuard#noNewCoverageGapsBeyondBaseline` | **Already on develop.** New rewind-coverage gap keys introduced (not in baseline):<br>  com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance#objectRef#hitProxy<br>Fix the object&#x27;s rewind coverage, or (only if intentional) add the key(s) to src/test/resources/rewind/coverage-baseline.txt. ==&gt; expected: &lt;true&gt; but was: &lt;false&gt; |
+| `tests.TestArchitecturalSourceGuard#rootDispatchMethodsDoNotGrowBeyondCurrentBudgets` | **New, fixed.** Develop passes at 276 lines; cleanup reduces the method to 263. Budget lowered to 263 and the exact guard rerun passed. |
+| `tests.TestBuildToolingGuard#s3kStaticSessionStateDebtShouldNotGrow` | **Already on develop.** S3K static session state changed; migrate new active-object/phase bridges to runtime-owned state or document why the release debt list changed<br>  added:<br>  src/main/java/com/openggf/game/sonic3k/features/HCZWaterSkimHandler.java - private static boolean slotRetired;<br>  src/main/java/com/openggf/game/sonic3k/objects/Aiz2BossEndSequenceState.java - private static volatile int cutsceneKnucklesSlot = -1;<br>  removed:<br>   |
+| `tests.rules.TestNoAssertionFreeDiagnostics#noAssertionFreeTestMethodsUnderTestsTree` | **Already on develop.** Assertion-free @Test methods found (add a real oracle, demote off @Test, or allowlist with a reason in TestNoAssertionFreeDiagnostics):<br>  TestTestReelExtension#bodyPasses has no assertion/verify/fail oracle (src/test/java/com/openggf/tests/reel/TestTestReelExtension.java) ==&gt; expected: &lt;true&gt; but was: &lt;false&gt; |
+
+Windows and macOS images remain **unverified locally** for this final recipe.
+CI would build Windows on `windows-latest` with default `-O2` / 8 GiB and macOS
+on standard `macos-15` with `-Os` / 5 GiB, using the same G1/two-worker builder.
+Each runs the generated and finished-image member audit, bundled Time Attack
+normal-boot check, and packaged-library/mod/licence validation. Hosted CI does
+not perform ROM-backed rendering. Windows/macOS memory peaks and gameplay remain
+unmeasured here. No workflow was dispatched, and no branch was pushed or merged
+into develop, next or master. The task worktree/branch remain for review.
