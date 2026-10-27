@@ -1,5 +1,12 @@
 # S3K Carnival Night Act 2 coverage matrix
 
+Selection update (2026-10-27): routine canonical entry/reload checks cover supported
+axis pairs; bonus transitions retain their existing pilots. Full Cartesian
+products are explicitly manual `exhaustive-audit` coverage, excluded from routine
+and release gates. Historical exhaustive qualifications below are unchanged and
+are not renewed by a routine pass. See the [selection record](../../research/2026-10-27-local-validation-cost.md).
+
+
 Canonical binding: `S3K_CARNIVAL_NIGHT_2`, engine zone 3/act 1, ROM `$0301`, S3KL object set.
 Edges: CNZ1 incoming structural/results handoff; ICZ1 outgoing full entry.
 Character routes: Sonic/Tails reach the end boss; Knuckles uses native cutscene/teleporter progression. Do not infer one route from another character code.

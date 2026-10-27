@@ -48,6 +48,7 @@ stable-retro-*.zip
 # Debug tools (uncompiled standalone scripts)
 tools/*
 !tools/native-image/
+!tools/project_atlas/
 !tools/performance/
 !tools/media/
 !tools/stageplay/

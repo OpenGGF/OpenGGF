@@ -87,9 +87,11 @@ class BatchTests(unittest.TestCase):
         if outcome != 'empty':
             reports.mkdir()
             suite = ET.Element('testsuite', tests='1', errors='0',
+                               name='Test' + str(len(self.events)), time='7.5',
                                failures=str(int(outcome == 'failed')),
                                skipped=str(int(outcome == 'skipped')))
-            case = ET.SubElement(suite, 'testcase', classname='Test' + str(len(self.events)), name='example')
+            case = ET.SubElement(suite, 'testcase', classname='Test' + str(len(self.events)),
+                                 name='example', time='1.25')
             if outcome == 'failed':
                 ET.SubElement(case, 'failure', message='assertion failed').text = 'evidence'
             if outcome == 'skipped':
@@ -130,6 +132,16 @@ class BatchTests(unittest.TestCase):
         self.assertEqual([60], self.preparation_timeouts)
         self.assertEqual([55, 45, 35, 25], self.timeouts)
         self.assertEqual([30, 10], [result['elapsed_seconds'] for result in self.results()])
+
+    def test_timing_evidence_survives_report_cleanup_with_lanes_separate(self):
+        self.assertEqual(0, self.execute())
+        ordinary, guards = self.results()
+        self.assertEqual(3, len(ordinary['slowest_classes']))
+        self.assertEqual(3, len(ordinary['slowest_cases']))
+        self.assertEqual(1, len(guards['slowest_classes']))
+        self.assertEqual(7.5, ordinary['slowest_classes'][0]['reported_seconds'])
+        self.assertEqual(1.25, ordinary['slowest_cases'][0]['reported_seconds'])
+        self.assertFalse(list(self.diagnostics().glob('*-reports')))
 
     def test_small_batch_keeps_includes_coverage_and_applies_both_bounded_heaps(self):
         shapes = []

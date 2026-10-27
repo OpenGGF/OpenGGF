@@ -114,6 +114,12 @@ python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B
   do not use them for routine broad checks or repeat testing during packaging.
   Do not manually
   narrow the runner's selection. See [test categories](tools/testing/README.md#test-categories).
+- `exhaustive-audit` holds low-incremental-value Cartesian configuration sweeps
+  and whole-tree wording/terminology or nested release-tool audits. It is excluded from routine smoke,
+  guards and release full-suite. Run it only when explicitly requested for that
+  audit; it is not an integration requirement. Keep the bounded real-behavior
+  representatives and adversarial controls in routine coverage. See
+  `tools/testing/README.md#exceptional-exhaustive-audits`.
 - **Proportionate validation:** choose checks from changed behavior, consumers
   and plausible failure modes. Focused regression/integration checks can replace
   a broad smoke run when impact is bounded and understood and no cross-cutting
@@ -381,6 +387,13 @@ version for a new release. Read
 [release publishing](docs/project/release-publishing.md) and use the
 `release-publishing` skill for publication or a skipped release job. Confirm
 the release and downloads before reporting that it shipped.
+
+Before final public-release qualification, rebuild, review and commit the project
+atlas from the prepared source/version commit using
+`python3 tools/project_atlas/generate.py --ref <reviewed-source-SHA>`. The atlas
+retains its input SHA; qualify the resulting final candidate SHA. See the
+publishing guide's atlas-refresh procedure, and leave tag creation to the
+authorized master-push workflow.
 
 For local release preparation, run the committed AIZ1/HCZ1 route pilot with
 `check_route_obligations.py --run --expected-candidate <reviewed-full-SHA>`

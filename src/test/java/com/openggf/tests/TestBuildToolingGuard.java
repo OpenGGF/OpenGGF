@@ -1,6 +1,7 @@
 package com.openggf.tests;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.io.TempDir;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -676,14 +677,25 @@ class TestBuildToolingGuard {
                 defaultGroups, "plain Maven and smoke must select the same bounded suite");
         assertTrue(defaultGroups.contains("slow-suite"));
         assertTrue(defaultGroups.contains("performance-measurement"));
+        assertTrue(defaultGroups.contains("exhaustive-audit"));
 
         Element full = profileById(pom, "full-suite");
         assertNotNull(full, "public release validation needs an explicit full-suite profile");
         assertNull(directChild(full, "activation"), "full-suite must never activate implicitly");
         String fullGroups = directChildText(directChild(full, "properties"), "surefire.excludedGroups");
         assertEquals(Set.of("tracechaser-integration", "audio-reference", "audio-stress",
-                        "audio-local-wave", "fbz-route"), Set.of(fullGroups.split(",")),
-                "release validation must restore the previous complete ordinary suite");
+                        "audio-local-wave", "fbz-route", "exhaustive-audit"), Set.of(fullGroups.split(",")),
+                "release validation includes slow oracles but keeps exceptional audits separate");
+
+        Element audit = profileById(pom, "exhaustive-audit");
+        assertNotNull(audit);
+        assertNull(directChild(audit, "activation"), "exceptional audits must be explicitly requested");
+        assertEquals("exhaustive-audit", audit.getElementsByTagName("groups").item(0).getTextContent());
+        assertEquals("exhaustive-audit", TestBuildToolingGuard.class.getDeclaredMethod(
+                "releaseGateToolsShouldRejectCorruptAndChangedEvidence").getAnnotation(Tag.class).value(),
+                "routine guards must not launch the complete Python release-tool suites");
+        assertTrue(profileById(pom, "guards").getElementsByTagName("excludedGroups")
+                .item(0).getTextContent().contains("exhaustive-audit"));
 
         String ci = Files.readString(Path.of(".github/workflows/ci.yml"));
         assertFalse(ci.contains("-Pfull-suite"), "routine CI must not run full-suite");
@@ -1827,6 +1839,7 @@ class TestBuildToolingGuard {
     }
 
     @Test
+    @Tag("exhaustive-audit")
     void releaseGateToolsShouldRejectCorruptAndChangedEvidence() throws Exception {
         Process process = new ProcessBuilder("python3", "-m", "unittest", "discover", "-s", "tools/testing",
                 "-p", "test_*release*.py").redirectErrorStream(true).start();
@@ -4220,7 +4233,10 @@ class TestBuildToolingGuard {
                 gitOutput(Path.of("."), "ls-files", "-s", "--", "tools/tracechaser").strip());
 
         String pom = Files.readString(Path.of("pom.xml"));
-        assertTrue(pom.contains("<surefire.excludedGroups>tracechaser-integration,audio-reference,audio-stress,audio-local-wave,fbz-route</surefire.excludedGroups>"));
+        String releaseGroups = directChildText(directChild(profileById(parsePom("pom.xml"),
+                "full-suite"), "properties"), "surefire.excludedGroups");
+        assertTrue(Set.of(releaseGroups.split(",")).contains("tracechaser-integration"),
+                "release validation must keep the optional TraceChaser subprocesses separate");
         assertTrue(pom.contains("<excludedGroups>${surefire.excludedGroups}</excludedGroups>"));
         assertTrue(pom.contains("<id>tracechaser-integration</id>"));
         for (String agentGuide : List.of("AGENTS.md", "CLAUDE.md")) {

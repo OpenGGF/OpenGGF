@@ -1,5 +1,12 @@
 # S3K Marble Garden Act 2 coverage matrix
 
+Selection update (2026-10-27): routine canonical entry/reload checks cover supported
+axis pairs; bonus transitions retain their existing pilots. Full Cartesian
+products are explicitly manual `exhaustive-audit` coverage, excluded from routine
+and release gates. Historical exhaustive qualifications below are unchanged and
+are not renewed by a routine pass. See the [selection record](../../research/2026-10-27-local-validation-cost.md).
+
+
 Canonical binding: `S3K_MARBLE_GARDEN_2`, engine zone 2/act 1, ROM `$0201`, S3KL object set.
 Edges: MGZ1 incoming structural act handoff; CNZ1 outgoing full entry.
 Character routes: Sonic/Tails use collapse/rescue/flying-boss progression; Knuckles uses the separate top-band end boss and capsule route.

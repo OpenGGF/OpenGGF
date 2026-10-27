@@ -81,6 +81,15 @@ GPU waits, while all-thread process CPU can exceed elapsed time. Exclude digest,
 readback and output work from both timing boundaries. See the
 [native study](../architecture/research/2026-10-08-graalvm-native-mod-feasibility.md#linux-optimization-and-oracle-comparison-2026-10-27).
 
+A JUnit case can hide a whole subprocess suite (2026-10-27, local validation).
+`TestBuildToolingGuard#releaseGateToolsShouldRejectCorruptAndChangedEvidence`
+reported one case and 256.922 seconds while launching every Python release-tool
+test plus the skip-classifier suite. Top-level case counts omit that inner
+breadth, and batch totals cannot identify individual expensive owners after raw
+XML is removed. Inspect nested invocations and retain bounded timing attribution;
+do not infer value or cost from class/case counts alone. See the
+[local cost record](../architecture/research/2026-10-27-local-validation-cost.md).
+
 Passing gameplay assertions do not qualify recorded pixels (2026-10-26, full TAS
 test reel). Enabling GL replaced a headless atlas while sprite renderers retained
 their allocated tile bases, so terrain and tests looked correct but capsules,

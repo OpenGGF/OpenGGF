@@ -1229,6 +1229,23 @@ its original drawing priority.
 
 ## Maintenance and release preparation
 
+- **Local validation cost:** Canonical entry/reload smoke checks cover supported
+  configuration pairs using the same real lifecycle and rewind assertions.
+  Complete configuration products, whole-tree wording/terminology audits and
+  nested release-tool sweeps move to a deliberately manual `exhaustive-audit` profile, separate from normal
+  integration and release gates. Bonus transitions retain their small pilots.
+  Category diagnostics identify expensive classes and individual cases before
+  deleting raw reports.
+
+- **Interactive project atlas:** A persisted documentation view maps components,
+  packages, Java types and explicit imports alongside Git activity and milestone
+  evidence. A time slider distinguishes present, absent and subsequently removed
+  source items and follows verified namespace moves across the package refactor,
+  retaining original-path provenance. The [on-demand generator](tools/project_atlas/README.md) rebuilds
+  the views from a chosen Git ref without ROMs or an engine build.
+  Public-release preparation rebuilds and commits the atlas before final
+  candidate qualification and the publishing push.
+
 - **TAS trick regressions:** Focused tests exercise native movement, object-contact
   and special-stage behaviors described in published Sonic TAS notes. The
   [representative verdict record](docs/architecture/validation/2026-10-26-tas-trick-verdicts.md)

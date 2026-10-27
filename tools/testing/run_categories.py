@@ -28,6 +28,7 @@ ROOT = Path(__file__).resolve().parents[2]
 TEST_ROOT = Path('src/test/java')
 PACKAGE = 'com/openggf/'
 ORDINARY_BATCH_CLASSES = 50
+SLOWEST_LIMIT = 20
 NS = {'m': 'http://maven.apache.org/POM/4.0.0'}
 ROM_PROPERTIES = {
     '69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b': 'sonic1.rom.path',
@@ -291,17 +292,37 @@ def summarize_skip_reason(reason):
     return {'reason': reason[:4096]}
 
 
+def slowest(records):
+    """Bound timing evidence independently of arrival order and batch boundaries."""
+    return sorted(records, key=lambda row: (-row['reported_seconds'], row['class'],
+                                            row.get('test', '')))[:SLOWEST_LIMIT]
+
+
+def record_timing(records, element, **identity):
+    try:
+        seconds = float(element.get('time', ''))
+    except ValueError:
+        return
+    if math.isfinite(seconds) and seconds >= 0:
+        records[:] = slowest([*records, dict(identity, reported_seconds=seconds)])
+
+
 def summarize(reports):
     totals = Counter(tests=0, failures=0, errors=0, skipped=0)
     skipped = []
     failures = []
+    classes = []
+    cases = []
     skipped_count = failed_count = 0
     files = sorted(reports.glob('TEST-*.xml'))
     for path in files:
         suite = ET.parse(path).getroot()
+        record_timing(classes, suite, **{'class': (suite.get('name') or path.stem[5:])[:512]})
         for key in totals:
             totals[key] += int(suite.get(key, '0'))
         for case in suite.findall('testcase'):
+            record_timing(cases, case, **{'class': (case.get('classname') or '')[:512],
+                                         'test': (case.get('name') or '')[:512]})
             skip = case.find('skipped')
             if skip is not None:
                 skipped_count += 1
@@ -320,6 +341,7 @@ def summarize(reports):
                                          'message': failure.get('message', '')[:2048],
                                          'detail': (failure.text or '')[:8192]})
     return {'reports': len(files), **totals, 'skipped_cases': skipped,
+            'slowest_classes': classes, 'slowest_cases': cases,
             'failed_cases': failures, 'skipped_cases_omitted': skipped_count - len(skipped),
             'failed_cases_omitted': failed_count - len(failures)}
 
@@ -345,6 +367,8 @@ def merge_summary(total, summary):
     """Aggregate counts and bounded case evidence without losing omitted-case counts."""
     for key in ('reports', 'tests', 'failures', 'errors', 'skipped'):
         total[key] = total.get(key, 0) + summary[key]
+    for key in ('slowest_classes', 'slowest_cases'):
+        total[key] = slowest([*total.get(key, []), *summary.get(key, [])])
     for key in ('skipped_cases', 'failed_cases'):
         cases = total.setdefault(key, [])
         incoming = summary.get(key, [])
@@ -499,6 +523,12 @@ def run_plan(root, plan, max_minutes=DEFAULT_MINUTES, keep_diagnostics=False, qu
                         total['elapsed_seconds'] = round(total['elapsed_seconds'] + duration, 2)
                         batch_summary = summarize(reports)
                         merge_summary(total, batch_summary)
+                        timing = batch_summary.get('slowest_classes', [])[:3]
+                        if timing:
+                            print(f'{lane} batch {index}/{len(lane_batches)}: {duration:.2f}s execution; '
+                                  'slowest reported classes (JUnit seconds): '
+                                  + ', '.join(f"{row['class']}={row['reported_seconds']:.3f}s"
+                                              for row in timing), flush=True)
                         if exit_code is not None:
                             total['exit_code'] = total['exit_code'] or exit_code
                             total['batches_completed'] += 1
@@ -526,7 +556,8 @@ def run_plan(root, plan, max_minutes=DEFAULT_MINUTES, keep_diagnostics=False, qu
             total['status'] = 'failed' if lane_failed else 'passed'
             (run / 'results.json').write_text(json.dumps(results, indent=2) + '\n')
             print(json.dumps({k: v for k, v in total.items()
-                              if k not in ('skipped_cases', 'failed_cases')}), flush=True)
+                              if k not in ('skipped_cases', 'failed_cases',
+                                           'slowest_classes', 'slowest_cases')}), flush=True)
             if empty:
                 status = 'failed'
                 return 1
