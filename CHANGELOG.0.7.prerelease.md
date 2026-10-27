@@ -1221,6 +1221,12 @@ its original drawing priority.
 
 ## Maintenance and release preparation
 
+- **Interactive project atlas:** A persisted documentation view maps components,
+  packages, Java types and explicit imports alongside Git activity and milestone
+  evidence. A time slider distinguishes present, absent and subsequently removed
+  source paths. The [on-demand generator](tools/project_atlas/README.md) rebuilds
+  the views from a chosen Git ref without ROMs or an engine build.
+
 - **TAS trick regressions:** Focused tests exercise native movement, object-contact
   and special-stage behaviors described in published Sonic TAS notes. The
   [representative verdict record](docs/architecture/validation/2026-10-26-tas-trick-verdicts.md)

@@ -35,6 +35,10 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
 
 ## Tools
 
+- [Project source atlas](../../tools/project_atlas/README.md): regenerate the
+  persisted component/class map, historical file-presence slider and Git
+  activity/milestone views from a pinned ref (2026-10-27 project atlas task).
+
 - [TAS evidence reports](../../tools/tas_audit/README.md) preserve the original publication census and render reviewed binary scenario verdicts; the [Gens SOZ observer](../../tools/gens/README.md) records read-only input-owner, completed-player and collision-response boundaries (2026-10-26 TAS audit).
 
 - [Stock native-clock diagnostic reader](../../tools/tracechaser/bizhawk-headless/README.md#stock-native-clock-diagnostic-adapter): preserves reviewed stock-core identity/access checks and raw scalar copying with explicit inputs; dormant, with no recorder/gameplay/readiness wiring or qualified phase origin (2026-10-17 S3K ending timing investigation).
