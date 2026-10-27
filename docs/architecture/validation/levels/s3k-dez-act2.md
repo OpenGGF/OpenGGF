@@ -1,5 +1,12 @@
 # S3K Death Egg Zone act 2 coverage matrix
 
+Routine selection update (2026-10-27): the reviewed full configuration products
+and long cold-campaign qualifications in the [local budget record](../../research/2026-10-27-local-validation-cost.md#thirty-minute-local-command-target)
+now require explicit `exhaustive-audit`. Short real contact, lifecycle and
+restore/forward witnesses remain routine. Historical qualification rows retain
+their original source/input scope; a current smoke pass does not renew deferred
+cold reachability, accumulated route state or every replay window.
+
 **Current route revalidation (2026-09-25, based on `3881f549a`):** the
 preserved cold ordinary ending movie initially died at input21410 after the
 native spike correction. Its controller inputs are now repaired:40316 frames

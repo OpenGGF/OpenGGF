@@ -66,6 +66,41 @@ three/four-axis exhaustive combinations for lower local cost, not for a claim of
 complete configuration certification. See the
 [selection and validation record](../../docs/architecture/research/2026-10-27-local-validation-cost.md).
 
+
+The complete local smoke-plus-guards command has a **30-minute target**, including
+preparation. Keep routine checks discriminating: short real loads, contacts,
+reloads and restore/forward boundaries, supported configuration witnesses and
+cheap independent contract oracles. Full song catalogues, configuration products
+and reviewed long cold campaigns belong to `exhaustive-audit`; its route replay
+windows remain real coverage when explicitly selected. Do not relabel an
+incomplete run as meeting the budget or skip missing ROMs to obtain a faster
+figure. Report queue waiting separately from execution and total command wall;
+shared-capacity waits can exceed the budget independently of test cost. The
+[measured budget record](../../docs/architecture/research/2026-10-27-local-validation-cost.md#thirty-minute-local-command-target)
+tracks the actual complete command and its limitations.
+
+On the measured 32-logical-CPU Linux host, the complete cold-target command
+finished in **28m35s with two workers**, versus **41m16s with one worker**.
+Both reported 35,908 cases, the same four pre-existing failures, no errors and
+49 identical skips. The two-worker result includes compilation and guards and
+had no recorded queue wait. It is a host observation, not a timing guarantee.
+For broad local validation on that qualified host, with Java 25, Lua 5.4 and
+original ROMs in the main checkout root:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/run_categories.py --category all --workers 2 \
+    --headless-gl surfaceless-egl --run
+```
+
+Use `--base <integration-base>` instead of `--category all` for change-based
+selection. The CLI default remains one worker; focused/resource-constrained
+runs keep it. Two workers use the existing exclusive queue lane, two 3 GiB
+maximum test heaps and serial JUnit within each JVM. Guards retain one worker.
+Allow memory for Maven and native allocations too; qualification on this host
+does not establish safe memory or a 30-minute duration on another machine.
+
 ## Test categories
 
 Use Python 3.11+ and Java 25. The runner uses the existing Maven defaults and exclusions;

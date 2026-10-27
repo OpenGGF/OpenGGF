@@ -21,6 +21,7 @@ import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Path;
@@ -298,16 +299,35 @@ class TestSitarHeroCharts {
         assertEquals(0, drumFamily(song("flying-battery-1"), 0x8F), "S3 clap");
     }
 
-    @Test @RequiresRom(SonicGame.SONIC_1)
+    @Test @Tag("exhaustive-audit") @RequiresRom(SonicGame.SONIC_1)
     void sonic1CatalogueAllRolesAndDifficulties() throws Exception { verifyRom("s1", new Sonic1AudioProfile()); }
 
-    @Test @RequiresRom(SonicGame.SONIC_2)
+    @Test @Tag("exhaustive-audit") @RequiresRom(SonicGame.SONIC_2)
     void sonic2CatalogueAllRolesAndDifficulties() throws Exception { verifyRom("s2", new Sonic2AudioProfile()); }
 
-    @Test @RequiresRom(SonicGame.SONIC_3K)
+    @Test @Tag("exhaustive-audit") @RequiresRom(SonicGame.SONIC_3K)
     void sonic3kCatalogueAllAvailableRolesAndDifficulties() throws Exception { verifyRom("s3k", new Sonic3kAudioProfile()); }
 
+    @Test @RequiresRom(SonicGame.SONIC_1)
+    void sonic1RepresentativePartsAndAbsentRoles() throws Exception {
+        verifyRom("s1", new Sonic1AudioProfile(), List.of("marble", "s1-special-stage", "final-zone"), 1200);
+    }
+
+    @Test @RequiresRom(SonicGame.SONIC_2)
+    void sonic2RepresentativeNoiseAndAbsentPsg() throws Exception {
+        verifyRom("s2", new Sonic2AudioProfile(), List.of("chemical-plant", "hill-top"), 1200);
+    }
+
+    @Test @RequiresRom(SonicGame.SONIC_3K)
+    void sonic3kRepresentativePartsAndAbsentPsg() throws Exception {
+        verifyRom("s3k", new Sonic3kAudioProfile(), List.of("hydrocity-1", "flying-battery-1"), 1200);
+    }
+
     private void verifyRom(String game, GameAudioProfile profile) throws Exception {
+        verifyRom(game, profile, null, Integer.MAX_VALUE);
+    }
+
+    private void verifyRom(String game, GameAudioProfile profile, List<String> selectedSongs, int maximumFrames) throws Exception {
         var config = SonicConfigurationService.createStandalone();
         config.setConfigValue(SonicConfiguration.FPS, 60);
         config.setConfigValue(SonicConfiguration.REGION, "NTSC");
@@ -316,11 +336,15 @@ class TestSitarHeroCharts {
                 new SmpsCoordFlagHandlerOwner(new SmpsCoordFlagRuntimeState()));
         var rom = GameServices.rom().getRom();
         try (var music = SceneMusicFactory.create(audio, ignored -> rom)) {
+            int verifiedSongs = 0;
             for (Object song : songs()) {
                 if (!game.equals(songType.getMethod("game").invoke(song))) continue;
                 String id = (String) songType.getMethod("id").invoke(song);
-                ScenePreparedMusic prepared = music.prepare(game, integer(song, "musicId"), integer(song, "durationFrames"));
-                assertEquals((long) integer(song, "durationFrames") * prepared.sampleRate() / 60, prepared.lengthSamples());
+                if (selectedSongs != null && !selectedSongs.contains(id)) continue;
+                verifiedSongs++;
+                int frames = Math.min(maximumFrames, integer(song, "durationFrames"));
+                ScenePreparedMusic prepared = music.prepare(game, integer(song, "musicId"), frames);
+                assertEquals((long) frames * prepared.sampleRate() / 60, prepared.lengthSamples());
                 for (SceneNoteEvent event : prepared.notes()) {
                     if (event.kind() == SceneNoteEvent.Kind.DAC) {
                         boolean nonPercussion = game.equals("s3k") && List.of(0xA5, 0xA9, 0xAA,
@@ -348,6 +372,7 @@ class TestSitarHeroCharts {
                     verifyPart(song, role, prepared, attacks);
                 }
             }
+            if (selectedSongs != null) assertEquals(selectedSongs.size(), verifiedSongs, "every selected song was verified");
         } finally { audio.destroy(); }
     }
 

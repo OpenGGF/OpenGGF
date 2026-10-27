@@ -13,6 +13,7 @@ import com.openggf.game.sonic3k.objects.MhzMinibossInstance;
 import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -31,6 +32,7 @@ class TestMhzKnucklesColdRouteCapture {
         SessionManager.clear();
     }
 
+    @Tag("exhaustive-audit")
     @Test void coldKnucklesCompletesActOneAndRestoresNativeInteractions() throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
                 "src/test/resources/routes/s3k/mhz1-knuckles-cold-complete-320.bk2"));
@@ -122,6 +124,7 @@ class TestMhzKnucklesColdRouteCapture {
         }
     }
 
+    @Tag("exhaustive-audit")
     @Test void coldKnucklesCompletesActTwoAndIsolatesTheFbzTimeline() throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
                 "src/test/resources/routes/s3k/mhz2-knuckles-cold-complete-320.bk2"));

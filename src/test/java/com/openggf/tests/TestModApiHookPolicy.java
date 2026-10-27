@@ -1,5 +1,6 @@
 package com.openggf.tests;
 
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -16,6 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 class TestModApiHookPolicy {
+    private static boolean powershellAvailable;
     private static final Path HOOK = Path.of(".githooks/validate-policy.sh").toAbsolutePath();
     private static final Path POWERSHELL_HOOK = Path.of(".githooks/validate-policy.ps1").toAbsolutePath();
     private static final String API = "src/main/java/com/openggf/mods/Example Api.java";
@@ -35,6 +37,11 @@ class TestModApiHookPolicy {
             """;
 
     @TempDir Path temp;
+
+    @BeforeAll
+    static void detectAvailableHookRuntimes() throws Exception {
+        powershellAvailable = commandAvailable("pwsh");
+    }
 
     @Test void annotatedSurfaceAndCandidatePinMustChangeTogether() throws Exception {
         Path repo = fixture();
@@ -530,7 +537,7 @@ class TestModApiHookPolicy {
     }
 
     private Path fixtureWithAnnotatedRecord() throws Exception {
-        Path repo = fixture();
+        Path repo = prepareFixture();
         write(repo,CLASS_API,"@ModApi\npublic record ExampleClass(int value) {\n"
                 + "    public ExampleClass {\n"
                 + "        if (value < 0) throw new IllegalArgumentException();\n"
@@ -539,7 +546,7 @@ class TestModApiHookPolicy {
     }
 
     private Path fixtureWithAnnotatedClass() throws Exception {
-        Path repo = fixture();
+        Path repo = prepareFixture();
         write(repo, CLASS_API, "import com.openggf.game.ModApi;\n/** Example. */\n@ModApi\npublic class ExampleClass {\n    public int value(int input) {\n        return input;\n    }\n}\n");
         write(repo, PIN, "baseline with class\n");
         git(repo, "add", ".");
@@ -548,7 +555,7 @@ class TestModApiHookPolicy {
     }
 
     private Path fixtureWithClassMembers(String members) throws Exception {
-        Path repo = fixture();
+        Path repo = prepareFixture();
         write(repo, CLASS_API, annotatedClass(members));
         write(repo, PIN, "baseline with class members\n");
         git(repo, "add", ".");
@@ -561,6 +568,15 @@ class TestModApiHookPolicy {
     }
 
     private Path fixture() throws Exception {
+        Path repo = prepareFixture();
+        git(repo, "add", ".");
+        commit(repo);
+        return repo;
+    }
+
+    private Path prepareFixture() throws Exception {
+        // Specialized fixtures add their initial API declarations before the
+        // first commit, avoiding an unused intermediate baseline tree.
         Path repo = temp.resolve("repo");
         Files.createDirectories(repo);
         git(repo, "init", "-b", "feature/test");
@@ -570,8 +586,6 @@ class TestModApiHookPolicy {
         write(repo, API, "@ModApi public interface Example { }\n");
         write(repo, "src/main/java/com/openggf/mods/ModApiVersion.java", "class ModApiVersion {\n    static final String CURRENT = \"0.7.0\"; }\n");
         write(repo, PIN, "baseline\n");
-        git(repo, "add", ".");
-        commit(repo);
         return repo;
     }
 
@@ -603,16 +617,34 @@ class TestModApiHookPolicy {
     }
 
     private static List<Integer> runHooks(Path repo, String... args) throws Exception {
-        List<Integer> results = new ArrayList<>();
+        List<List<String>> commands = new ArrayList<>();
         List<String> bash = new ArrayList<>(List.of("bash", HOOK.toString()));
         bash.addAll(List.of(args));
-        results.add(run(repo, bash.toArray(String[]::new)));
-        if (commandAvailable("pwsh")) {
+        commands.add(bash);
+        if (powershellAvailable) {
             List<String> powershell = new ArrayList<>(List.of("pwsh", "-NoProfile", "-File", POWERSHELL_HOOK.toString()));
             powershell.addAll(List.of(args));
-            results.add(run(repo, powershell.toArray(String[]::new)));
+            commands.add(powershell);
         }
-        return results;
+        // These modes only read the same staged tree/history and message. Both
+        // implementations finish before a caller can change the fixture again.
+        List<Process> processes = new ArrayList<>();
+        try {
+            for (List<String> command : commands) {
+                processes.add(new ProcessBuilder(command).directory(repo.toFile())
+                        .redirectErrorStream(true)
+                        .redirectOutput(ProcessBuilder.Redirect.DISCARD).start());
+            }
+            List<Integer> results = new ArrayList<>();
+            for (Process process : processes) {
+                results.add(process.waitFor());
+            }
+            return results;
+        } finally {
+            for (Process process : processes) {
+                if (process.isAlive()) process.destroyForcibly();
+            }
+        }
     }
 
     private static boolean commandAvailable(String command) throws Exception {

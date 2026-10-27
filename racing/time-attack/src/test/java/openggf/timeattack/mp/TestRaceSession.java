@@ -19,6 +19,7 @@ import com.openggf.net.protocol.ControlMessage;
 import com.openggf.net.protocol.RoomAccessPolicy;
 import com.openggf.net.protocol.RoomPassword;
 import openggf.racing.server.master.MasterServer;
+import openggf.racing.server.master.ControlledMasterServer;
 import openggf.racing.server.master.TestMasterServer;
 import openggf.timeattack.GhostStore;
 import openggf.timeattack.MemoryModStorage;
@@ -879,7 +880,13 @@ class TestRaceSession {
     }
 
     private String startPrivateMaster(String identityName) throws Exception {
-        masterServer = MasterServer.start(TestMasterServer.testConfig(), dir.resolve("private-master"));
+        return startPrivateMaster(identityName, null);
+    }
+
+    private String startPrivateMaster(String identityName, ControlledMasterServer controlled) throws Exception {
+        masterServer = controlled == null
+                ? MasterServer.start(TestMasterServer.testConfig(), dir.resolve("private-master"))
+                : controlled.start(TestMasterServer.testConfig(), dir.resolve("private-master"));
         String fingerprint = PlayerIdentity.loadOrCreate(dir.resolve(identityName + "-identity")).fingerprint();
         CountDownLatch established = new CountDownLatch(1);
         masterServer.execute(() -> { masterServer.establishForTest(fingerprint); established.countDown(); });
@@ -890,7 +897,8 @@ class TestRaceSession {
     @ParameterizedTest
     @ValueSource(strings = {"DIRECT", "RELAY", "LAN"})
     void privateCodeJoinsUseTheSelectedMasterAndNeverAppearInBrowserListings(String routing) throws Exception {
-        String url = startPrivateMaster("code-owner");
+        ControlledMasterServer controlled = routing.equals("RELAY") ? new ControlledMasterServer() : null;
+        String url = startPrivateMaster("code-owner", controlled);
         TimeAttackSettings ownerSettings = settings(freePort());
         ownerSettings.setMasterUrl(url);
         ownerSettings.setChatMode(com.openggf.net.protocol.ChatMode.QUICK_CHAT);
@@ -925,7 +933,15 @@ class TestRaceSession {
         assertNull(guest.passwordPrompt());
         guest.joinCode(code);
         pollUntil("fresh code prompt after cancellation", () -> guest.state() == RaceSession.State.PASSWORD_REQUIRED, owner, guest);
-        if (routing.equals("RELAY")) Thread.sleep(31_000); // The original attach grant expires while the user types.
+        if (routing.equals("RELAY")) {
+            Field roomIdField = RaceSession.class.getDeclaredField("masterRoomId");
+            roomIdField.setAccessible(true);
+            String roomId = (String) roomIdField.get(owner);
+            assertNotNull(roomId, "the admitted owner retains the real master room identity");
+            // Expire the original grant through the master's actual injected clock;
+            // fresh code resolution and relay admission still use the real socket path.
+            controlled.advanceRaceTime(roomId, 31_000);
+        }
         try (RoomPassword password = RoomPassword.of(PRIVATE_PASSWORD)) { guest.submitPassword(password); }
         pollUntil("code admission", () -> guest.state() == RaceSession.State.LOBBY
                 && owner.coordinator().session().players().size() == 2, owner, guest);

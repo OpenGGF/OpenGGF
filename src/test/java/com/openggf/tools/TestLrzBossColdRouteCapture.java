@@ -10,6 +10,7 @@ import com.openggf.game.sonic3k.objects.LrzEndBossObjectInstance;
 import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
@@ -21,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /** Ordinary cold Act1 carry, placed shield pickup, mine fight, results and playable HPZ. */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestLrzBossColdRouteCapture {
+    @Tag("exhaustive-audit")
     @Test void coldTeamCompletesBossActWithEarnedShieldAndRepeatableWorldState() throws Exception {
         // Flash, missiles, autoscroll changes, bridge/stair/platform contacts,
         // shield pickup, arena descent, mine cycles, defeat, capsule and results.

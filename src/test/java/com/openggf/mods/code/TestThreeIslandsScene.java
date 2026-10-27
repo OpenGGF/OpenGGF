@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -44,6 +45,13 @@ class TestThreeIslandsScene {
     private static final Path PROJECT = Path.of("examples/three-islands");
     private static final List<String> ZONES = List.of("ghz", "slz", "syz", "ehz", "cpz", "mcz", "aiz", "hcz", "lbz", "dez");
     private static final List<String> S3K_ZONES = List.of("aiz", "hcz", "lbz", "dez");
+
+    @TempDir static Path compiledRoot;
+    private static ExampleModHarness.CompiledExample compiled;
+
+    @BeforeAll static void compileExample() throws Exception {
+        compiled = ExampleModHarness.compile(PROJECT, compiledRoot);
+    }
 
     @TempDir
     Path work;
@@ -62,7 +70,7 @@ class TestThreeIslandsScene {
 
     private ExampleModHarness open() throws Exception {
         level = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
-        ExampleModHarness harness = ExampleModHarness.build(PROJECT, work.resolve("build"));
+        ExampleModHarness harness = compiled.open(work.resolve("build/storage"));
         harness.open(harness.apply(GameServices.module()), work.resolve("saves"), 400, 224);
         return harness;
     }
@@ -70,7 +78,7 @@ class TestThreeIslandsScene {
     private ExampleModHarness openWithRequiredSonic1() throws Exception {
         level = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
         bindRequiredSonic1();
-        ExampleModHarness harness = ExampleModHarness.build(PROJECT, work.resolve("build"));
+        ExampleModHarness harness = compiled.open(work.resolve("build/storage"));
         harness.open(harness.apply(GameServices.module()), work.resolve("saves"), 400, 224);
         return harness;
     }
@@ -251,7 +259,7 @@ class TestThreeIslandsScene {
     @Test
     void aSonic1ZonePlaysItsOwnRomSongWithoutPlaceholderSwitches() throws Exception {
         level = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
-        try (ExampleModHarness harness = ExampleModHarness.build(PROJECT, work.resolve("build"))) {
+        try (ExampleModHarness harness = compiled.open(work.resolve("build/storage"))) {
             harness.open(harness.apply(GameServices.module()), work.resolve("saves"), 400, 224, true);
             play(harness, 3);
             if (!harness.debugJump("field:ghz")) return; // No Sonic 1 ROM configured: its chapter is skipped.
@@ -291,7 +299,7 @@ class TestThreeIslandsScene {
     void continueStartsStarLightImmediatelyAndIndoorContinueSelectsMarble() throws Exception {
         level = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
         bindRequiredSonic1();
-        try (ExampleModHarness harness = ExampleModHarness.build(PROJECT, work.resolve("build"))) {
+        try (ExampleModHarness harness = compiled.open(work.resolve("build/storage"))) {
             Path saves = work.resolve("saves");
             Path save = saves.resolve("mods/three-islands/save.txt");
             Files.createDirectories(save.getParent());

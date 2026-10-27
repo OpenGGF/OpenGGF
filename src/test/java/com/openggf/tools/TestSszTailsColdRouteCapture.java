@@ -11,6 +11,7 @@ import com.openggf.sprites.playable.Tails;
 import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -23,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /** Cold solo Tails route: flight, carrier release, both replica fights and their gated pads. */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestSszTailsColdRouteCapture {
+    @Tag("exhaustive-audit")
     @ParameterizedTest
     @ValueSource(ints = {320, 352, 400, 528, 800})
     void coldGhzApproachProjectsThePreliminaryBoundsBeforeTestingTheLock(int width) throws Exception {
@@ -69,6 +71,7 @@ class TestSszTailsColdRouteCapture {
         }
     }
 
+    @Tag("exhaustive-audit")
     @ParameterizedTest
     @ValueSource(ints = {320, 800})
     void coldMechaEntryRetainsItsNativeWorldBox(int width) throws Exception {
@@ -120,6 +123,7 @@ class TestSszTailsColdRouteCapture {
         assertTrue(initialized, "cold route must actually initialize Mecha");
     }
 
+    @Tag("exhaustive-audit")
     @ParameterizedTest
     @ValueSource(ints = {320, 800})
     void coldSoloTailsDefeatsBothReplicasAndRidesTheirTeleporters(int width) throws Exception {
@@ -211,6 +215,7 @@ class TestSszTailsColdRouteCapture {
         }
     }
 
+    @Tag("exhaustive-audit")
     @ParameterizedTest
     @ValueSource(ints = {320, 800})
     void coldSoloTailsDefeatsMechaAndLoadsDezWithIsolatedHistory(int width) throws Exception {

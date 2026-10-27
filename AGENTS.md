@@ -79,6 +79,7 @@ mvn -Dmse=off -DskipTests package    # package without running tests; no test qu
 tools/testing/install-hooks.sh     # once per worktree
 python3 tools/testing/run_categories.py --list
 python3 tools/testing/run_categories.py --base <pre-task-commit> --run  # bounded smoke selection unless focused validation applies
+python3 tools/testing/run_categories.py --base <pre-task-commit> --workers 2 --run  # qualified broad local 30-minute recipe; see below
 python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=TestCollisionLogic" test  # focused iteration
 python3 tools/testing/maven_queue.py --lean -Dmse=off "-Dtest=TestCollisionLogic" test  # small focused tests, 1 GiB JVM heaps
 python3 tools/testing/maven_queue.py -Dmse=off package -DskipTests  # build only; batched smoke validation is separate
@@ -142,8 +143,19 @@ python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B
   remain separate; routine validation is not an exhaustive trace sweep.
 - Plan validation for the whole delivery, using the pre-task integration SHA.
   Finish focused fixes first. Before a broad smoke run, state its candidate class
-  count, expected cost and stopping rule. ROM-heavy smoke coverage can still take
-  an hour overall; smoke is a selection, not a short-runtime guarantee. Batches
+  count, expected cost and stopping rule. The complete local command targets
+  30 minutes including preparation and guards.
+  Keep full configuration products, catalogues and reviewed cold campaigns in
+  the explicit manual audit lane, with short real behavior witnesses in smoke.
+  The measured 32-logical-CPU Linux host meets that target with `--workers 2`
+  (28m35s including a clean build and guards; one worker took 41m16s). Use that
+  mode for broad local coverage on this qualified host. The CLI default remains
+  one worker for focused/resource-constrained runs; other hosts need memory and
+  timing qualification. Two workers retain the existing exclusive queue lane,
+  two 3 GiB maximum test heaps, serial Jupiter within each JVM and one-worker
+  guards. See the [measured recipe](tools/testing/README.md#exceptional-exhaustive-audits).
+  Record execution, queue wait and total wall separately; shared admission can
+  extend wall time independently of test cost. Batches
   provide admission opportunities for focused jobs; a single expensive class,
   memory pressure or an existing serial holder can still cause a wait. Run
   `run_categories.py --base <integration-base> --preflight` in the actual launch

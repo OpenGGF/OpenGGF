@@ -1225,9 +1225,17 @@ its original drawing priority.
   configuration pairs using the same real lifecycle and rewind assertions.
   Complete configuration products, whole-tree wording/terminology audits and
   nested release-tool sweeps move to a deliberately manual `exhaustive-audit` profile, separate from normal
-  integration and release gates. Bonus transitions retain their small pilots.
+  integration and release gates. Routine bonus, sanctuary and checkpoint checks
+  keep real contact/reload/replay witnesses; full configuration products, song
+  catalogues and long cold campaigns use the same manual audit lane. Mod routes
+  and ending lifecycles retain representative branch/width/character witnesses.
+  Immutable example packages compile once per test class while each scene gets
+  a fresh validated runtime. Source guards batch parsing without sharing scanner
+  state; terrain goldens retain their full probe corpus with direct delegation.
+  Relay expiry advances the real test server's injected clock instead of waiting
+  thirty-one seconds, retaining the actual socket admission check.
   Category diagnostics identify expensive classes and individual cases before
-  deleting raw reports.
+  deleting raw reports. The complete local command targets thirty minutes.
 
 - **Interactive project atlas:** A persisted documentation view maps components,
   packages, Java types and explicit imports alongside Git activity and milestone

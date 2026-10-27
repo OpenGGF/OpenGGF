@@ -7,6 +7,7 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
@@ -17,58 +18,72 @@ import static org.junit.jupiter.api.Assertions.*;
 /** Ordinary cold LRZ1 approach, scripted corkscrew and lower westbound route. */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestLrzColdRouteCapture {
+    @Tag("exhaustive-audit")
     @Test void coldTeamTraversesCorkscrewAndRestoresItsHorizontalExit() throws Exception {
         runColdRoute("corkscrew");
     }
 
+    @Tag("exhaustive-audit")
     @Test void coldTeamDeflectsShootingTriggerProjectileAndRetainsShield() throws Exception {
         runColdRoute("shield");
     }
 
+    @Tag("exhaustive-audit")
     @Test void coldTeamJumpsOffDashElevatorWithoutBeingLiftedAgain() throws Exception {
         runColdRoute("elevator");
     }
 
+    @Tag("exhaustive-audit")
     @Test void coldTeamRechargesDashElevatorWithoutFractionalChargeAcceleratingIt() throws Exception {
         runColdRoute("charge");
     }
 
+    @Tag("exhaustive-audit")
     @Test void coldTeamDeflectsExplodingRockFragmentsWithoutLosingShield() throws Exception {
         runColdRoute("shrapnel");
     }
 
+    @Tag("exhaustive-audit")
     @Test void coldTeamCrossesFallingLavaWithoutLosingFireShield() throws Exception {
         runColdRoute("fire");
     }
 
+    @Tag("exhaustive-audit")
     @Test void coldTeamBouncesFromCrusherWithoutPrematureRepeatHit() throws Exception {
         runColdRoute("crusher");
     }
 
+    @Tag("exhaustive-audit")
     @Test void coldTeamLeavesCrusherAndRidesSecondDashElevator() throws Exception {
         runColdRoute("lower-east");
     }
 
+    @Tag("exhaustive-audit")
     @Test void coldTeamBreaksRockWallAndRidesSpikePlatformToUpperLedge() throws Exception {
         runColdRoute("upper-ledge");
     }
 
+    @Tag("exhaustive-audit")
     @Test void coldTeamClimbsUpperCrushersAndCrossesWithFireDash() throws Exception {
         runColdRoute("high-climb");
     }
 
+    @Tag("exhaustive-audit")
     @Test void coldTeamOpensDoorSevenDropsBridgeAndTakesUpperSpring() throws Exception {
         runColdRoute("middle-spring");
     }
 
+    @Tag("exhaustive-audit")
     @Test void coldTeamRecoversFromDamageAndClimbsLateSpikePlatform() throws Exception {
         runColdRoute("late-ascent");
     }
 
+    @Tag("exhaustive-audit")
     @Test void coldTeamOpensFinalDoorAndEntersMinibossArena() throws Exception {
         runColdRoute("miniboss-arrival");
     }
 
+    @Tag("exhaustive-audit")
     @Test void coldTeamDefeatsMinibossAndReachesPlayableActTwo() throws Exception {
         runColdRoute("miniboss-clear");
     }

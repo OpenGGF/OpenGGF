@@ -30,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @RequiresRom(SonicGame.SONIC_3K)
 @Tag("fbz-route")
 class TestFbzTailsColdRouteCapture {
+    @Tag("exhaustive-audit")
     @Test
     void coldTailsCompletesActOneWithWholeWorldReplay() throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(

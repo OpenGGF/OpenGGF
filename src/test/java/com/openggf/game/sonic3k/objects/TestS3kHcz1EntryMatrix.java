@@ -6,6 +6,8 @@ import com.openggf.tests.SozAcceptanceConfigurations;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.Arguments;
 
@@ -27,7 +29,18 @@ class TestS3kHcz1EntryMatrix {
 
     @ParameterizedTest(name = "HCZ1 legacy custom geometry {0}px donor={1}")
     @MethodSource("legacyConfigurations")
+    @Tag("exhaustive-audit")
     void legacyCustomWidthsRetainEntryReplayAndRepeatedResetGeometry(int width, String donor) throws Exception {
+        verifyLegacyEntryAndRepeatedReset(width, donor);
+    }
+
+    @ParameterizedTest(name = "HCZ1 representative legacy geometry {0}px donor={1}")
+    @CsvSource({"512,s1", "640,s2"})
+    void representativeLegacyWidthsRetainEntryReplayAndRepeatedResetGeometry(int width, String donor) throws Exception {
+        verifyLegacyEntryAndRepeatedReset(width, donor);
+    }
+
+    private static void verifyLegacyEntryAndRepeatedReset(int width, String donor) throws Exception {
         Hcz1Route.withConfiguration(width, donor, route -> {
             int startX = route.fixture.sprite().getCentreX();
             while (route.fixture.sprite().getCentreX() <= startX + 64) {
@@ -42,25 +55,38 @@ class TestS3kHcz1EntryMatrix {
 
     @ParameterizedTest(name = "HCZ1 entry/replay width={0} donor={1}")
     @MethodSource("configurations")
+    @Tag("exhaustive-audit")
     void entryAdmitsMovementAndReplays(WidescreenAspect aspect, String donor) throws Exception {
+        Hcz1Route.withConfiguration(aspect, donor, route -> verifyPresetEntry(route, aspect, donor));
+    }
+
+    @ParameterizedTest(name = "HCZ1 representative entry/replay/reset {0} donor={1}")
+    @CsvSource({"NATIVE_4_3,off", "WIDE_16_10,s1", "WIDE_16_9,s2", "ULTRA_21_9,off", "SUPER_32_9,s1"})
+    void representativePresetsAdmitMovementReplayAndReplaceOwners(WidescreenAspect aspect, String donor) throws Exception {
         Hcz1Route.withConfiguration(aspect, donor, route -> {
-            int width = aspect.pixelWidth();
-            int startX = route.fixture.sprite().getCentreX();
-            while (route.fixture.sprite().getCentreX() <= startX + 64) {
-                assertTrue(route.frames < 900, "entry did not admit rightward movement");
-                route.step();
-            }
-            assertEquals(width, route.fixture.camera().getWidth());
-            assertEquals(1, GameServices.sprites().getSidekicks().size());
-            assertFalse(route.fixture.sprite().isObjectControlled());
-            TestS3kHcz1RouteRewind.replayTwice(route, 30, "ENTRY " + width + "/" + donor,
-                    () -> assertProductionOwners(aspect, donor));
-            assertProductionOwners(aspect, donor);
+            verifyPresetEntry(route, aspect, donor);
+            verifyRepeatedLoads(route, aspect.pixelWidth(), donor, aspect);
         });
+    }
+
+    private static void verifyPresetEntry(Hcz1Route route, WidescreenAspect aspect, String donor) {
+        int width = aspect.pixelWidth();
+        int startX = route.fixture.sprite().getCentreX();
+        while (route.fixture.sprite().getCentreX() <= startX + 64) {
+            assertTrue(route.frames < 900, "entry did not admit rightward movement");
+            route.step();
+        }
+        assertEquals(width, route.fixture.camera().getWidth());
+        assertEquals(1, GameServices.sprites().getSidekicks().size());
+        assertFalse(route.fixture.sprite().isObjectControlled());
+        TestS3kHcz1RouteRewind.replayTwice(route, 30, "ENTRY " + width + "/" + donor,
+                () -> assertProductionOwners(aspect, donor));
+        assertProductionOwners(aspect, donor);
     }
 
     @ParameterizedTest(name = "HCZ1 repeated production reset width={0} donor={1}")
     @MethodSource("configurations")
+    @Tag("exhaustive-audit")
     void repeatedLoadsReplaceOwnersAndRetainPlayableConfiguration(WidescreenAspect aspect, String donor) throws Exception {
         Hcz1Route.withConfiguration(aspect, donor, route -> {
             int width = aspect.pixelWidth();

@@ -73,6 +73,7 @@ class TestS3kSanctuaryPedestalLifecycle {
 
     @ParameterizedTest(name = "actual native-width selector {0}/stage{1}")
     @MethodSource("supportedNativeSelectors")
+    @org.junit.jupiter.api.Tag("exhaustive-audit")
     void everyNativeWidthProductPhysicallySelectsAllSevenNativeStageOwners(
             CanonicalEntryMatrixSupport.Row row, int stage) throws Exception {
         assertPhysicalEntry(row, stage);
@@ -80,6 +81,7 @@ class TestS3kSanctuaryPedestalLifecycle {
 
     @ParameterizedTest(name = "actual wider selector {0}/stage{1}")
     @MethodSource("supportedWiderSelectors")
+    @org.junit.jupiter.api.Tag("exhaustive-audit")
     void everyWiderProductPhysicallySelectsAllSevenNativeStageOwners(
             CanonicalEntryMatrixSupport.Row row, int stage) throws Exception {
         assertPhysicalEntry(row, stage);
@@ -103,6 +105,7 @@ class TestS3kSanctuaryPedestalLifecycle {
 
     @ParameterizedTest(name = "supported no-Saved2 developer-scene return {0}/{1}")
     @MethodSource("supportedOutcomes")
+    @org.junit.jupiter.api.Tag("exhaustive-audit")
     void everySupportedDirectSceneOutcomeReturnsAndReplaysWithoutSaved2(
             CanonicalEntryMatrixSupport.Row row, SanctuaryResultsLifecycleProbe.Outcome outcome)
             throws Exception {
