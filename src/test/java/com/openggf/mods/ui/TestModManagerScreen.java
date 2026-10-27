@@ -400,7 +400,7 @@ class TestModManagerScreen {
         assertFalse(screen.pendingState().entries().getFirst().trusted());
         assertFalse(screen.trustArmed());
 
-        ModManagerScreen nativeScreen = nativeGuardScreen(temp.resolve("native-update"), List.of(code), startup, false);
+        ModManagerScreen nativeScreen = codeModScreen(temp.resolve("native-update"), List.of(code), startup, false);
         press(nativeScreen, Action.ACCEPT);
         assertTrue(enabled(nativeScreen, "code-update"));
         assertTrue(nativeScreen.trustArmed());
@@ -1135,13 +1135,13 @@ class TestModManagerScreen {
         throw new AssertionError("Missing mod manager row: " + id);
     }
 
-    static ModManagerScreen nativeGuardScreen(Path root, List<ModDescriptor> descriptors,
-                                               ModState startup, boolean compiledModsSupported) {
+    static ModManagerScreen codeModScreen(Path root, List<ModDescriptor> descriptors,
+                                               ModState startup) {
         ModCatalog catalog = new EffectiveCatalogBuilder().build(descriptors, startup);
         PendingModStateEditor editor = new PendingModStateEditor(startup, catalog.scanned(),
                 new ModStateStore(root.toAbsolutePath().normalize()));
         return new ModManagerScreen(catalog, editor, new ModRuntimeFindingStore(), null,
-                PatternWindowState.EMPTY, compiledModsSupported);
+                PatternWindowState.EMPTY);
     }
 
     private static LogicalInputSnapshot logical(Action action) {

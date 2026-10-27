@@ -13,24 +13,24 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class TestModManagerScreenNativeGuard {
+class TestModManagerScreenCodeMods {
     @TempDir Path temp;
 
     @Test
     void codeModRowIsSupportedWithoutChangingEnabledIntent() {
-        Fixture fixture = fixture(false);
+        Fixture fixture = fixture();
         ModManagerScreen.RowView row = fixture.screen().rows().stream()
                 .filter(candidate -> candidate.identity().equals("codeon"))
                 .findFirst().orElseThrow();
 
         assertFalse(row.badges().contains("UNSUPPORTED"));
         assertFalse(row.notLoaded());
-        assertTrue(row.enabled(), "runtime suppression must not rewrite pending enabled intent");
+        assertTrue(row.enabled(), "code loading must preserve pending enabled intent");
     }
 
     @Test
-    void enablingUntrustedCodeModRequiresTrustOnNative() {
-        Fixture fixture = fixture(false);
+    void enablingUntrustedCodeModRequiresTrust() {
+        Fixture fixture = fixture();
         TestModManagerScreen.select(fixture.screen(), "codeoff");
 
         TestModManagerScreen.accept(fixture.screen());
@@ -40,8 +40,8 @@ class TestModManagerScreenNativeGuard {
     }
 
     @Test
-    void enablingDataModWithTrustedCodeDependencyWorksOnNative() {
-        Fixture fixture = fixture(false);
+    void enablingDataModWithTrustedCodeDependencyWorks() {
+        Fixture fixture = fixture();
         TestModManagerScreen.select(fixture.screen(), "datadep");
 
         TestModManagerScreen.accept(fixture.screen());
@@ -53,8 +53,8 @@ class TestModManagerScreenNativeGuard {
     }
 
     @Test
-    void disablingCodeModRemainsAllowedOnNative() {
-        Fixture fixture = fixture(false);
+    void disablingCodeModRemainsAllowed() {
+        Fixture fixture = fixture();
         TestModManagerScreen.select(fixture.screen(), "codeon");
 
         TestModManagerScreen.accept(fixture.screen());
@@ -63,8 +63,8 @@ class TestModManagerScreenNativeGuard {
     }
 
     @Test
-    void dataOnlyModEnablesNormallyOnNative() {
-        Fixture fixture = fixture(false);
+    void dataOnlyModEnablesNormally() {
+        Fixture fixture = fixture();
         TestModManagerScreen.select(fixture.screen(), "dataoff");
 
         TestModManagerScreen.accept(fixture.screen());
@@ -74,7 +74,7 @@ class TestModManagerScreenNativeGuard {
 
     @Test
     void supportedBuildEnablesTrustedCodeModNormally() {
-        Fixture fixture = fixture(true);
+        Fixture fixture = fixture();
         TestModManagerScreen.select(fixture.screen(), "codedep");
 
         TestModManagerScreen.accept(fixture.screen());
@@ -87,7 +87,7 @@ class TestModManagerScreenNativeGuard {
         assertFalse(row.notLoaded());
     }
 
-    private Fixture fixture(boolean compiledModsSupported) {
+    private Fixture fixture() {
         ModDescriptor codeOn = TestModManagerScreen.codeDescriptor(
                 "codeon", "Code On", "1".repeat(64));
         ModDescriptor codeOff = TestModManagerScreen.codeDescriptor(
@@ -110,9 +110,8 @@ class TestModManagerScreenNativeGuard {
                 new ModState.Entry("dataon", true, 3),
                 new ModState.Entry("dataoff", false, 4),
                 new ModState.Entry("datadep", false, 5)));
-        return new Fixture(TestModManagerScreen.nativeGuardScreen(
-                temp.resolve(compiledModsSupported ? "supported" : "native"),
-                descriptors, startup, compiledModsSupported));
+        return new Fixture(TestModManagerScreen.codeModScreen(
+                temp.resolve("mods"), descriptors, startup));
     }
 
     private record Fixture(ModManagerScreen screen) {

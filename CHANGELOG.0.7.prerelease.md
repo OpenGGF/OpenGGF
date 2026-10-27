@@ -1213,8 +1213,9 @@ its original drawing priority.
   and service retention. Code mods use the JVM's trust, validation and fault
   boundaries; native packages include first-party bundled mods such as Time Attack.
   Friends packages add the maintained examples and launch shortcuts using the same
-  native build recipe. Maven preparation and the size-optimized image compiler
-  run separately in CI to reduce build memory. Runtime loading remains an
+  native build recipe. macOS keeps size optimization and a 5 GiB compiler heap
+  on the standard runner; Linux and Windows use default optimization and 8 GiB.
+  Maven preparation and image compilation run separately in CI to reduce build memory. Runtime loading remains an
   experimental VM facility.
 - **Multi-game controlled mods:** one code mod can provide per-game patches with shared
   objects and services, alongside an optional mutator catalogue. Patches need no scene,

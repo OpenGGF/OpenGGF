@@ -55,13 +55,6 @@ public final class ModClassLoaderFactory {
 
     public ModRuntime create(EffectiveModCatalog catalog, Set<String> trustedCodeOwners)
             throws IOException {
-        return create(catalog, trustedCodeOwners, true);
-    }
-
-    // Retain the existing overload for callers; native/JVM now share code loading.
-    public ModRuntime create(EffectiveModCatalog catalog, Set<String> trustedCodeOwners,
-                             boolean compiledModsSupported)
-            throws IOException {
         Objects.requireNonNull(catalog, "catalog");
         Set<String> trusted = Set.copyOf(Objects.requireNonNull(trustedCodeOwners,
                 "trustedCodeOwners"));

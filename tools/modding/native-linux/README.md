@@ -89,5 +89,8 @@ python3 -m unittest discover -s tools/modding/native-linux -p 'test_*.py' -v
 
 Native images use LWJGL's official `unsafe` core classifier for JNI/Unsafe callbacks; the normal JVM build keeps its Java 25 FFM backend.
 
-Larger reference sets may set `OPENGGF_NATIVE_IMAGE_HEAP=8g` in the exclusive
-queue lane. This only changes the shared recipe's resource limit.
+Linux and Windows share the default `-O2`, 8 GiB G1 compiler heap, three active
+processors and two-worker recipe for their 16 GiB standard runners; macOS alone
+uses `-Os` and 5 GiB on `macos-15`. `OPENGGF_NATIVE_IMAGE_HEAP` can override the
+heap limit for larger reference sets in the exclusive queue lane. Platform
+selection and flags live only in `tools/native-image/build.py`.

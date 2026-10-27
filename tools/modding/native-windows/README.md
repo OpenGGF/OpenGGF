@@ -18,12 +18,12 @@ $engine = (Get-ChildItem target/*-jar-with-dependencies.jar).FullName
 $sdk = (Get-ChildItem target/*-openggf-mod-sdk.jar).FullName
 python tools/modding/native-windows/build_inputs.py --engine-jar $engine --sdk-jar $sdk --output target/windows-friends-inputs
 $env:OPENGGF_MAVEN_QUEUE = 'serial'
-$env:OPENGGF_MAVEN_QUEUE = "serial"
 python tools/testing/maven_queue.py "-Dmse=off" exec:exec "-Dexec.executable=python" "-Dexec.args=tools/modding/native-windows/build_windows.py --engine-jar `"$engine`" --inputs target/windows-friends-inputs --runtime-classpath target/native-runtime-classpath.txt --output target/windows-friends-native"
 ```
 
 Output directories must be new; remove only a previous build's owned outputs
-before rerunning. Compilation uses the shared 5 GiB G1 builder heap, two workers and size optimization;
+before rerunning. Compilation uses the shared default optimization (`-O2`),
+8 GiB G1 compiler heap, three active processors and two compiler workers;
 local compilation needs an exclusive queue slot. The GitHub workflow performs the same build on Windows,
 alongside fresh normal structural guards; both jobs must pass before delivery.
 It runs on targeted tool changes to
@@ -104,5 +104,8 @@ python3 -m unittest discover -s tools/modding/native-windows -p 'test_*.py' -v
 
 Native images use LWJGL's official `unsafe` core classifier for JNI/Unsafe callbacks; the normal JVM build keeps its Java 25 FFM backend.
 
-Larger reference sets may set `OPENGGF_NATIVE_IMAGE_HEAP=8g` in the exclusive
-queue lane. This only changes the shared recipe's resource limit.
+Linux and Windows share the default `-O2`, 8 GiB G1 compiler heap, three active
+processors and two-worker recipe for their 16 GiB standard runners; macOS alone
+uses `-Os` and 5 GiB on `macos-15`. `OPENGGF_NATIVE_IMAGE_HEAP` can override the
+heap limit for larger reference sets in the exclusive queue lane. Platform
+selection and flags live only in `tools/native-image/build.py`.

@@ -1,7 +1,6 @@
 package com.openggf.tools.nativeimage;
 
 import com.openggf.Engine;
-import java.lang.reflect.Modifier;
 import org.graalvm.nativeimage.hosted.Feature;
 import org.graalvm.nativeimage.hosted.RuntimeReflection;
 
@@ -9,11 +8,6 @@ import org.graalvm.nativeimage.hosted.RuntimeReflection;
 public final class NativeModFeature implements Feature {
     @Override public void beforeAnalysis(BeforeAnalysisAccess access) {
         try {
-            var field = Engine.class.getDeclaredField("compiledModsSupported");
-            if (field.getType() != boolean.class || !Modifier.isFinal(field.getModifiers())
-                    || Modifier.isStatic(field.getModifiers())) {
-                throw new IllegalStateException("Engine capability field changed; requalify the native build");
-            }
             Class<?> options = Class.forName("com.oracle.svm.core.hub.RuntimeClassLoading$Options");
             var optionField = options.getField("RuntimeClassLoading");
             Object key = optionField.get(null);
@@ -28,7 +22,7 @@ public final class NativeModFeature implements Feature {
             RuntimeReflection.register(Engine.class.getDeclaredField("modRuntime"));
             System.out.println("PASS native build contract: RuntimeClassLoading enabled");
         } catch (ReflectiveOperationException failure) {
-            throw new IllegalStateException("Pinned GraalVM/engine capability contract changed", failure);
+            throw new IllegalStateException("Pinned GraalVM/engine runtime-loading contract changed", failure);
         }
     }
 }

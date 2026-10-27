@@ -8,10 +8,13 @@ Windows x64, Linux x64 and macOS ARM64 archives and SHA-256 digests are pinned i
 `toolchain.py`, from the [official Community release](https://github.com/graalvm/graalvm-ce-builds/releases/tag/graal-25.4.4.1.1).
 Use `-Dnative.python=python` on Windows if `python3` is unavailable.
 
-The common recipe uses a 5 GiB compiler heap, G1 collection, two compiler workers
-and size optimization. The qualified Linux build peaked at 6.03 GiB RSS, down
-from 9.49 GiB with the original 8 GiB configuration. Keep native builds in the
-exclusive lane, including their non-heap overhead.
+The shared recipe selects `-Os` and a 5 GiB compiler heap on macOS, keeping
+its standard `macos-15` runner. Linux and Windows use the default optimization
+level (`-O2`) and an 8 GiB compiler heap on their 16 GiB standard runners.
+All platforms use G1, three active processors and two compiler workers to bound
+compiler and collection overhead. The Linux comparison peaked at 9.14 GiB RSS
+with `-O2`; macOS ARM64 and Windows memory peaks remain unverified locally.
+Keep native builds in the exclusive lane, including their non-heap overhead.
 The outer `exec:exec` queues the complete build, including its native compiler;
 a skipped-test package command by itself bypasses test admission:
 
@@ -30,8 +33,8 @@ then runs `python tools/native-image/build.py --stage compile` after Maven exits
 so the two heaps do not overlap. The upstream release test job remains mandatory.
 The standard `macos-15` runner stays selected; its actual ARM64 memory peak is
 unverified locally. No paid runner or older-toolchain fallback is selected.
-Larger reference sets can set `OPENGGF_NATIVE_IMAGE_HEAP=8g` without changing the
-recipe. The audit itself needs no ROMs. Release preparation retains its separate full-suite gates.
+`OPENGGF_NATIVE_IMAGE_HEAP` overrides the platform heap limit (for example,
+`OPENGGF_NATIVE_IMAGE_HEAP=10g` for a larger reference set). The audit itself needs no ROMs. Release preparation retains its separate full-suite gates.
 
 The generated contract starts with the complete annotated Mod API and signature
 closure. It retains concrete GameModule, mutator and world-policy implementations,

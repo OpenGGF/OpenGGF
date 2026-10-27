@@ -8,6 +8,7 @@ Friends packaging calls this same recipe with extra mod-reference inputs.
 import argparse
 import json
 import os
+import platform
 from pathlib import Path
 import shutil
 import subprocess
@@ -58,6 +59,14 @@ def compile_prepared(graal, output):
     if not argfile.is_file():
         raise ValueError('Prepare the native build before compiling its image')
     run([graal / ('bin/native-image.cmd' if os.name == 'nt' else 'bin/native-image'), '@' + str(argfile)], output)
+
+
+def compiler_options():
+    small_runner = platform.system() == 'Darwin'
+    heap = os.environ.get('OPENGGF_NATIVE_IMAGE_HEAP', '5g' if small_runner else '8g')
+    return [*(['-Os'] if small_runner else []), '-J-Xmx' + heap,
+            '-J-XX:-UseParallelGC', '-J-XX:+UseG1GC',
+            '-J-XX:ActiveProcessorCount=3', '--parallelism=2']
 
 
 def build(graal, classes, dependencies, output, mods=None, compile_image=True):
@@ -123,12 +132,12 @@ def build(graal, classes, dependencies, output, mods=None, compile_image=True):
                    and name.removeprefix('classes/').rsplit('/', 1)[0] in requested_paths
                    for name in contents.namelist()):
                 modules.add(module.stem)
-    # Size optimization and G1 completed the default graph in a 5 GiB heap
-    # (6.03 GiB Linux peak RSS), targeting the standard 7 GiB macOS runner.
-    # Larger reference sets can request more heap without a separate recipe.
-    heap = os.environ.get('OPENGGF_NATIVE_IMAGE_HEAP', '5g')
-    arguments = ['--enable-native-access=ALL-UNNAMED', '-march=compatibility', '-Os', '-J-Xmx' + heap,
-        '-J-XX:-UseParallelGC', '-J-XX:+UseG1GC', '-J-XX:ActiveProcessorCount=3', '--parallelism=2',
+    # macos-15 has 7 GiB: retain its qualified small-runner recipe. The
+    # 16 GiB Linux/Windows runners can afford default -O2 and an 8 GiB heap.
+    # Two workers / three active processors bound compiler and G1 overhead;
+    # Linux -O2 qualification with these limits peaked at 9.14 GiB RSS.
+    arguments = ['--enable-native-access=ALL-UNNAMED', '-march=compatibility',
+        *compiler_options(),
         '--add-modules=' + ','.join(sorted(modules)), '--initialize-at-run-time=org.lwjgl,java.awt,javax.swing,sun.awt,sun.java2d',
         # Preserve Java members, without blanket JNI exports of every member.
         # Actual JNI users (including LWJGL) retain their normal JNI metadata.

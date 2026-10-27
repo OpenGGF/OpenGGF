@@ -2,12 +2,29 @@
 import tempfile
 from pathlib import Path
 import unittest
-from build import check_toolchain, compile_prepared, native_dependencies, VERSION
+from build import check_toolchain, compile_prepared, native_dependencies, compiler_options, VERSION
 from unittest.mock import patch
 import os
 from toolchain import ASSETS
 
 class NativeBuildTests(unittest.TestCase):
+    def test_platform_recipes_and_heap_override(self):
+        for system in ('Darwin', 'Linux', 'Windows', 'FreeBSD'):
+            with self.subTest(system=system), patch('build.platform.system', return_value=system):
+                with patch.dict(os.environ, {}, clear=True):
+                    options = compiler_options()
+                self.assertEqual(system == 'Darwin', '-Os' in options)
+                self.assertFalse(any(option.startswith('-O') and option != '-Os' for option in options))
+                self.assertIn('-J-Xmx5g' if system == 'Darwin' else '-J-Xmx8g', options)
+                self.assertIn('-J-XX:+UseG1GC', options)
+                self.assertIn('-J-XX:ActiveProcessorCount=3', options)
+                self.assertIn('--parallelism=2', options)
+                with patch.dict(os.environ, {'OPENGGF_NATIVE_IMAGE_HEAP': '10g'}, clear=True):
+                    overridden = compiler_options()
+                self.assertEqual([option for option in options if not option.startswith('-J-Xmx')],
+                                 [option for option in overridden if not option.startswith('-J-Xmx')])
+                self.assertIn('-J-Xmx10g', overridden)
+
     def test_compile_stage_reuses_the_prepared_recipe(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

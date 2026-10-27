@@ -69,7 +69,6 @@ public final class ModManagerScreen {
     private final List<InvalidModEntry> invalidEntries;
     private final List<RepositoryScanFailure> repositoryFailures;
     private final PatternWindowState patternWindows;
-    private final boolean compiledModsSupported;
     private final Set<Path> bundledSourcePaths;
 
     private List<Row> rows = List.of();
@@ -110,13 +109,7 @@ public final class ModManagerScreen {
     public ModManagerScreen(ModCatalog catalog, PendingModStateEditor editor,
                             ModRuntimeFindingStore runtimeFindings, TextSink text,
                             PatternWindowState patternWindows) {
-        this(catalog, editor, runtimeFindings, text, patternWindows, true);
-    }
-
-    public ModManagerScreen(ModCatalog catalog, PendingModStateEditor editor,
-                            ModRuntimeFindingStore runtimeFindings, TextSink text,
-                            PatternWindowState patternWindows, boolean compiledModsSupported) {
-        this(catalog, editor, runtimeFindings, text, patternWindows, compiledModsSupported, Set.of());
+        this(catalog, editor, runtimeFindings, text, patternWindows, Set.of());
     }
 
     /**
@@ -125,7 +118,7 @@ public final class ModManagerScreen {
      */
     public ModManagerScreen(ModCatalog catalog, PendingModStateEditor editor,
                             ModRuntimeFindingStore runtimeFindings, TextSink text,
-                            PatternWindowState patternWindows, boolean compiledModsSupported,
+                            PatternWindowState patternWindows,
                             Set<Path> bundledSourcePaths) {
         this.bundledSourcePaths = Set.copyOf(Objects.requireNonNull(bundledSourcePaths, "bundledSourcePaths"));
         this.catalog = Objects.requireNonNull(catalog, "catalog");
@@ -133,7 +126,6 @@ public final class ModManagerScreen {
         this.runtimeFindings = Objects.requireNonNull(runtimeFindings, "runtimeFindings");
         this.text = text;
         this.patternWindows = Objects.requireNonNull(patternWindows, "patternWindows");
-        this.compiledModsSupported = compiledModsSupported;
         Map<String, ModDescriptor> descriptors = new LinkedHashMap<>();
         Map<String, Integer> counts = new LinkedHashMap<>();
         List<ModDescriptor> scannedDescriptors = new ArrayList<>();
