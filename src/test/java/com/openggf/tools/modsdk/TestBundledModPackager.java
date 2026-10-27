@@ -188,7 +188,7 @@ class TestBundledModPackager {
             assertFalse(effective.hasErrors(), () -> effective.findings().toString());
             assertEquals(java.util.Set.of(entry.id()), subsystem.trustedCodeOwners());
             try (ModRuntime runtime = new ModClassLoaderFactory(getClass().getClassLoader())
-                    .create(subsystem.processCatalog().effective(), subsystem.trustedCodeOwners(), true)) {
+                    .create(subsystem.processCatalog().effective(), subsystem.trustedCodeOwners())) {
                 assertEquals(java.util.Map.of(), runtime.rejectedOwners(), "the engine validator accepts the jar");
                 assertTrue(runtime.owners().contains(entry.id()));
                 assertNotNull(runtime.loadOwned(entry.id(), "hello.HelloSceneMod"));

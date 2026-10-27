@@ -58,7 +58,7 @@ public final class NativeModRegistrationProbe {
             }
             var catalog = new EffectiveModCatalog(List.of(descriptor));
             var factory = new ModClassLoaderFactory(NativeModRegistrationProbe.class.getClassLoader());
-            try (var runtime = factory.create(catalog, Set.of(owner), true)) {
+            try (var runtime = factory.create(catalog, Set.of(owner))) {
                 runtime.installFaultBoundary(new ModFaultBoundary(Map.of(), new ModRuntimeFindingStore(),
                         ignored -> new ModStateSaveResult.Saved(), runtime::disableOwnersForProcess));
                 if (!runtime.rejectedOwners().isEmpty()) {

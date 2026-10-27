@@ -158,11 +158,11 @@ class TestBundledModBoot {
         Path mods = Files.createDirectories(temp.resolve("mods"));
         Bundle bundle = bundle("1.0.0");
         ModSubsystem.installAtBoot(new ExternalContentPolicy(ExternalContentMode.NORMAL),
-                loader(mods, bundle), false);
+                loader(mods, bundle));
         ModSubsystem subsystem = ModSubsystem.current();
 
         try (ModRuntime runtime = new ModClassLoaderFactory(getClass().getClassLoader()).create(
-                subsystem.processCatalog().effective(), subsystem.trustedCodeOwners(), false)) {
+                subsystem.processCatalog().effective(), subsystem.trustedCodeOwners())) {
             assertTrue(runtime.rejectedOwners().isEmpty());
             assertTrue(runtime.owners().contains("time-attack"));
             runtime.newRegistrationPlan();
