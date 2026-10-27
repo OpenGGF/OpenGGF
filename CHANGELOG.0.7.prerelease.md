@@ -1232,7 +1232,8 @@ its original drawing priority.
 - **Interactive project atlas:** A persisted documentation view maps components,
   packages, Java types and explicit imports alongside Git activity and milestone
   evidence. A time slider distinguishes present, absent and subsequently removed
-  source paths. The [on-demand generator](tools/project_atlas/README.md) rebuilds
+  source items and follows verified namespace moves across the package refactor,
+  retaining original-path provenance. The [on-demand generator](tools/project_atlas/README.md) rebuilds
   the views from a chosen Git ref without ROMs or an engine build.
   Public-release preparation rebuilds and commits the atlas before final
   candidate qualification and the publishing push.

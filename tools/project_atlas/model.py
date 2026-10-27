@@ -40,6 +40,14 @@ DECL = re.compile(r'\b(class|interface|enum)\s+([A-Za-z_$][\w$]*)|\brecord\s+([A
 IMPORT = re.compile(r'\bimport\s+(static\s+)?([\w.$]+)(\.\*)?\s*;')
 
 
+def canonical_package(package):
+    return re.sub(r'^uk\.co\.jamesj999\.sonic(?=\.|$)', 'com.openggf', package)
+
+
+def canonical_namespace_path(path):
+    return re.sub(r'(^|/)uk/co/jamesj999/sonic/', r'\1com/openggf/', path, count=1)
+
+
 def parse_java(text):
     """Mask strings/comments; count named declarations including nested/local types."""
     clean = LEX.sub(lambda m: re.sub(r'[^\n]', ' ', m.group()), text)
@@ -82,7 +90,7 @@ def component(path, package):
     if not path.startswith('src/') or path.startswith(('src/main/resources/', 'src/test/resources/')):
         return 24
     # Historical paths predate the com.openggf rename. Normalize only for grouping.
-    normalized = re.sub(r'^uk\.co\.jamesj999\.sonic(?=\.|$)', 'com.openggf', package)
+    normalized = canonical_package(package)
     p = normalized.removeprefix('com.openggf.')
     for prefix, c in [('game.sonic1',0),('game.sonic2',1),('game.sonic3k',2),('game.rewind',6),('level.rewind',6),('trace',15),('tests.trace',15),('mods',12),('stageplay',13),('editor',14),('audio',10),('graphics',9),('camera',9),('render',9),('sprites.render',9),('sprites.art',9),('sprites',5),('physics',5),('level',4),('data',8),('io',8),('control',11),('configuration',11),('net',19),('capture',16),('debug',16),('bench',16),('tools',17),('testmode',15),('tests',18),('game',3),('timer',7),('architecture',7)]:
         if p == prefix or p.startswith(prefix+'.'):

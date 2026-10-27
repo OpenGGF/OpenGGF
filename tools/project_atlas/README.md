@@ -37,8 +37,8 @@ T3's `html_preview`, then `html_render`. No preview server is required.
 - **Source Universe:** stable, zoomable component/package/file layout; type and
   path search, source-scope and area controls. The time slider starts on the
   right at the source ref. Moving left visits older first-parent integrations,
-  sampled at daily boundaries with the first and final commits retained.
-  Solid colour means a path exists at the selected snapshot and in the current
+  sampled at daily and verified namespace-migration boundaries, with the first
+  and final commits retained. Solid colour means a source item exists at the selected snapshot and in the current
   source ref. Dotted ghosts are absent at that snapshot. Solid grayscale means
   the path exists there but was subsequently removed from the current ref.
   Package/component presence is derived from its file descendants.
@@ -53,8 +53,16 @@ T3's `html_preview`, then `html_render`. No preview server is required.
   most recent first-parent commits, with the five largest changed paths per
   scope. Milestones retain their source commit and qualification limits.
 
-Path identity is deliberate: renames appear as retirement of one path and birth
-of another; deletion and reintroduction produce separate lifetime intervals.
+Verified `uk.co.jamesj999.sonic` → `com.openggf` migrations retain one source
+identity and layout position. Joining requires a paired deletion/addition in
+the same integration, matching top-level declaration identities and normalized packages,
+and lifetimes that never overlap. Original paths remain searchable aliases and
+the source inspector shows the actual path at the selected snapshot. Historical
+package layout uses the canonical namespace, including genuinely retired items.
+Record-to-class conversions retain their named class identity; interface/enum
+kind changes do not establish a match.
+Unrelated moves, changed type identities and overlapping compatibility copies
+remain separate. Deletion and reintroduction retain separate lifetime intervals.
 The slider reconstructs file presence, not every historical declaration or
 dependency. Circle size and declaration metadata remain current or last-known
 before deletion, keeping positions stable while scrubbing. The header census
@@ -95,7 +103,8 @@ The ROM-free fixture tests cover lexical declarations and compression, pinned
 blob reads despite a dirty checkout, file creation/deletion/reintroduction,
 moves, first-parent merge admission, exact diff totals and a complete portable
 HTML build. Every real generation independently checks five historical Java
-path sets against `git ls-tree` and reconciles cumulative Java additions minus
+path sets against `git ls-tree`, additionally checks both sides of verified
+namespace migrations, and reconciles cumulative Java additions minus
 removals with the source census.
 
 After renderer changes, verify in T3 at desktop and 320px widths: rightmost

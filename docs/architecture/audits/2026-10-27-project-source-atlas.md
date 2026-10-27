@@ -7,11 +7,12 @@ library loads from jsDelivr. [Generator and usage](../../../tools/project_atlas/
 ## Source and scope
 
 The persisted snapshot reads `develop` at
-`c27aa5c1929be583e87de6169b7783b544cf37e3`: 10,649 current Java files,
-19,363 named types, 389 packages and 2,386,814 source lines. It includes 1,182
-historical Java paths that are no longer present. The initial chat atlas used
-`9a796ec60f8437fab1f2fffb755174a73c7f7659`; regeneration received the intervening
-local-validation-cost integration without changing this task's engine scope.
+`ca939333924a19826156cce871e31a3befbd450b`: 10,649 current Java files,
+19,363 named types, 389 packages and 2,386,814 source lines. It includes 553
+historical-only source items and follows 629 verified namespace moves. The initial
+chat atlas used `9a796ec60f8437fab1f2fffb755174a73c7f7659`; the first persisted
+snapshot used `c27aa5c1929be583e87de6169b7783b544cf37e3`. Regeneration includes
+the intervening validation-tooling and atlas/runbook integrations.
 
 The source census, source universe, import flows, repository inventory and Git
 history are views of one pinned ref. All project data, styles and application
@@ -24,8 +25,9 @@ or runtime call relationships.
 
 The Source Universe slider starts at its right endpoint, the source snapshot.
 Moving left visits older first-parent integrations, sampled at daily integration
-boundaries; the first and final commits are retained. This snapshot has 231 stops
-across 3,973 first-parent commits. Each stop names an actual Git commit and UTC
+boundaries and both sides of verified namespace migrations; the first and final
+commits are retained. This snapshot has 232 stops across 3,975 first-parent commits.
+Each stop names an actual Git commit and UTC
 committer date; it is not an interpolated source state.
 
 - A solid coloured item exists at the selected snapshot and at the current ref.
@@ -35,8 +37,10 @@ committer date; it is not an interpolated source state.
 
 Packages and components derive presence from their descendant paths. The layout
 is the union of current and historical paths and remains stable while scrubbing.
-Deletion/reintroduction produces separate intervals. A move is retirement of the
-old path and creation of the new path; symbol continuity is not guessed.
+Deletion/reintroduction produces separate intervals. Verified moves from
+`uk.co.jamesj999.sonic` to `com.openggf` retain one identity and layout position;
+the inspector and search retain original-path provenance. Other moves remain
+separate; continuity is not guessed from basenames alone.
 
 This is **file-presence history**, not a replay of every version of each class.
 Circle area and declaration metadata use current content, or the final blob
@@ -66,13 +70,32 @@ make the requested whole-project picture incomplete. The delivered representatio
 losslessly compresses repeated primary declaration names and groups adjacency
 data, retaining all current source/type/import records. History keeps exact daily
 totals and a clearly bounded recent-commit detail window. The time-aware artifact
-is about 465,000 characters at this pin.
+is about 466,000 characters at this pin.
 
 Current-file introduction dates alone were also rejected: they cannot render
 code that existed in the past and was removed. The generator instead replays all
 first-parent Java add/delete changes, records repeated lifetime intervals, and
 reads each removed path's final blob before retirement. It compares reconstructed
 path identities with independent `git ls-tree` snapshots.
+
+### Package-refactor continuity correction
+
+The original path-only model incorrectly retired the old namespace and birthed
+the new namespace at `ff21d6cfef54083ffdc3b00e7523b2eb13a15a2f` (2026-03-04
+first-parent integration). Its parent-to-child diff contains 629 exact namespace
+path pairs. The revised model joins only paired deletion/addition events in one
+integration, with matching normalized packages and top-level type identities,
+and no overlapping lifetime intervals. `ProfileSnapshot` and `SensorResult`
+change from records to ordinary classes in that diff; both retain their named
+class identity. Class-to-interface changes and concurrent compatibility copies
+remain distinct. Basename-only matching and merging coexisting paths were
+rejected because they would hide real source items.
+
+Both namespace paths share a single circle and canonical package position;
+historical aliases remain searchable and the inspector shows the actual old path
+before the refactor. Raw Git path checks remain independent of the collapsed
+identities, whose present counts must agree with physical Git tree counts.
+The slider explicitly includes the integration's before/after states.
 
 ## Verification and update
 
@@ -81,12 +104,14 @@ python3 -m unittest discover -s tools/project_atlas -p 'test_*.py' -v
 python3 tools/project_atlas/generate.py --ref develop --t3-limit
 ```
 
-Eight ROM-free fixture tests pass, covering lexical declarations, lossless
+Fourteen ROM-free fixture tests pass, covering lexical declarations, lossless
 encoding, resource-package grouping, pinned blob reads despite dirty files,
 creation/deletion/reintroduction, renames, first-parent merge admission, diff
-totals and portable HTML generation. Real generation reconciles Java additions
+totals, namespace move continuity, record conversion, rejected mismatches and
+overlapping copies, and portable HTML generation. Real generation reconciles Java additions
 minus removals to all 2,386,814 current source lines and independently compares
-five historical Java path sets with Git trees. Browser scenario checks cover
+seven historical Java path sets with Git trees, including both sides of the
+namespace refactor. Browser scenario checks cover
 slider endpoints, all three presence styles, stable geometry, historical source
 selection, native range-input events, scope/area controls and retained History navigation.
 
