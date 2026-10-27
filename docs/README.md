@@ -42,6 +42,9 @@ Architecture artifacts are classified by the question they answer:
 - [Plans](architecture/plans/) — how will it be built?
 - [Research](architecture/research/) — how does the system or source material
   work?
+  The [multiplayer Time Attack reference](architecture/research/multiplayer-time-attack.md)
+  maps components, room and attempt lifecycles, connection routes, verification
+  outcomes and cleanup, with separate integration diagrams.
 - [Audits](architecture/audits/) — what state is the project currently in?
   The [interactive source atlas](architecture/audits/project-source-atlas.html)
   maps components, classes, historical file presence and Git activity;
