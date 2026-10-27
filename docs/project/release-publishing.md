@@ -35,15 +35,17 @@ preparing the release. See [release rollover](release-rollover.md).
 
 ## Prepare and publish
 
-1. Run the full ordinary suite explicitly with
+1. Prepare the versioned release in a separate `master` worktree, following
+   [release rollover](release-rollover.md). Read the version from that commit's
+   `pom.xml`. [Rebuild, review and commit the project atlas](#refresh-the-project-atlas-for-a-release)
+   before fixing the final candidate SHA and running its release qualification.
+   Run the full ordinary suite explicitly with
    `python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B`,
    separate guards and required ROM/trace checks. Full suites are reserved for
    preparing a new public release; routine development and CI use smoke.
    `exhaustive-audit` remains separately manual even during release preparation;
    its configuration products and wording/terminology scans are not release gates.
-   Complete the release gates and prepare the reviewed release in a separate
-   `master` worktree. Follow [release rollover](release-rollover.md) when
-   promoting versions. Read the version from that commit's `pom.xml`.
+   Complete the release gates on the reviewed final release candidate.
    Run the exact-candidate local route pilot below on the final committed
    candidate too. Qualification of a development ancestor does not qualify a
    later version bump, merge resolution or promotion commit.
@@ -80,6 +82,41 @@ preparing the release. See [release rollover](release-rollover.md).
    are intermediate results. Report publication after checking the release
    itself. For a failed or cancelled run, inspect its tag and any partial
    release before retrying.
+
+## Refresh the project atlas for a release
+
+Rebuilding the [project atlas](../architecture/audits/project-source-atlas.html)
+is required during each public release preparation, after the version and source
+candidate are prepared and before final candidate qualification or the publishing
+push. The [generator guide](../../tools/project_atlas/README.md) describes the
+source inventory, historical slider and Git activity/milestone views and their
+limits. Generation itself needs Python and local Git history, not ROMs or Maven.
+
+In the isolated release worktree, set `ATLAS_SOURCE` to the reviewed, committed
+40-character source SHA with the intended POM version, then run:
+
+```bash
+python3 tools/project_atlas/generate.py --ref "$ATLAS_SOURCE"
+```
+
+Review the resulting `docs/architecture/audits/project-source-atlas.html` in a
+browser. Check its source SHA and version, rightmost time-slider state, historical
+presence styles, import/repository views and Git activity/milestone evidence.
+Commit the refreshed HTML through the normal trailer/policy flow before final
+release checks. If the source or version changes afterwards, refresh from the
+new prepared source commit, commit the result and qualify the new final candidate.
+
+The atlas deliberately records its **input** commit. Committing that generated
+artifact creates a different SHA; trying to make the embedded SHA equal its own
+containing commit would never converge. Record the resulting final committed SHA
+as `RELEASE_CANDIDATE` and use it for candidate-bound qualification below. A later
+promotion or merge commit likewise needs qualification of its actual pushed SHA.
+The atlas's source pin is documentation provenance, not release validation.
+
+Finish this refresh before the authorized `master` publishing push. Do not make
+or move a version tag for it: the Release workflow creates the tag at the
+validated pushed commit. This runbook step adds no publication trigger or hosted
+validation job.
 
 ## Local exact-candidate ROM qualification
 

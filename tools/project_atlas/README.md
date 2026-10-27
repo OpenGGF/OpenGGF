@@ -75,6 +75,16 @@ anonymous classes. Explicit imports resolve to repository top-level types;
 same-package references, wildcard expansion, reflection and dynamic dispatch
 are not inferred. Components are package/path groupings, not Maven modules.
 
+## Release preparation
+
+Every public release preparation must rebuild, review and commit the atlas after
+preparing its source/version commit and before final candidate qualification or
+the publishing push. Follow the
+[release runbook](../../docs/project/release-publishing.md#refresh-the-project-atlas-for-a-release)
+for the explicit source pin and final candidate SHA. The artifact records its
+input commit rather than its own containing commit; the Release workflow, not
+this tool, creates the public version tag.
+
 ## Verification
 
 ```bash

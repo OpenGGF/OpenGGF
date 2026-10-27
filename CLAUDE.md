@@ -388,6 +388,13 @@ version for a new release. Read
 `release-publishing` skill for publication or a skipped release job. Confirm
 the release and downloads before reporting that it shipped.
 
+Before final public-release qualification, rebuild, review and commit the project
+atlas from the prepared source/version commit using
+`python3 tools/project_atlas/generate.py --ref <reviewed-source-SHA>`. The atlas
+retains its input SHA; qualify the resulting final candidate SHA. See the
+publishing guide's atlas-refresh procedure, and leave tag creation to the
+authorized master-push workflow.
+
 For local release preparation, run the committed AIZ1/HCZ1 route pilot with
 `check_route_obligations.py --run --expected-candidate <reviewed-full-SHA>`
 and an absolute original S3&K ROM path. The strict candidate/source/fixture/ROM
