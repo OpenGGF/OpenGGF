@@ -1,5 +1,12 @@
 # S3K Carnival Night Act 1 coverage matrix
 
+Selection update (2026-10-27): routine canonical entry/reload checks cover supported
+axis pairs; bonus transitions retain their existing pilots. Full Cartesian
+products are explicitly manual `exhaustive-audit` coverage, excluded from routine
+and release gates. Historical exhaustive qualifications below are unchanged and
+are not renewed by a routine pass. See the [selection record](../../research/2026-10-27-local-validation-cost.md).
+
+
 Canonical binding: `S3K_CARNIVAL_NIGHT_1`, engine zone 3/act 0, ROM `$0300`, S3KL object set.
 Edges: MGZ2 incoming full entry; CNZ2 outgoing structural/results handoff.
 Character routes: Solo Sonic has a native temporary Tails carry-in; an incapable first configured follower retains its ordinary role alongside that intrinsic carrier. Configured teams retain all of their followers. Literal carried-P1 mappings borrow host-ROM presentation resources while the script owns them, then return to configured donor resources. Tails and Knuckles have distinct entry and progression contexts.

@@ -1,5 +1,11 @@
 # Level test coverage backlog
 
+Routine selection (2026-10-27): canonical entry/reload matrices now run supported
+pairs, and bonus transitions retain the existing pilots. Full Cartesian products
+are manual `exhaustive-audit` coverage, not ordinary integration/release gates.
+Historical 140/420-row results below retain their original commits and scope;
+a routine pass does not renew them. See the [selection record](../architecture/research/2026-10-27-local-validation-cost.md).
+
 TAS mechanism accuracy (2026-10-26): the [bounded repair record](../architecture/validation/2026-10-26-tas-accuracy-repairs.md)
 tracks native boundary, collision, input, boss and slot behavior with ordinary
 and restore-forward controls. These are representative mechanism obligations;

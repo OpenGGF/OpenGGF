@@ -135,7 +135,10 @@ public class MemoryFixture {
             self.assertEqual(0, compiled.returncode, compiled.stderr)
             output = root / 'events.jsonl'
             # Compilation releases activity before the probe waits for execution.
-            with maven_slot(REPOSITORY, estimate=30, kind='python-jdk-control') as fd:
+            # This fixed 128 MiB child has no Maven/engine/ROM workload; use the
+            # existing bounded lane instead of reserving the normal 7 GiB.
+            with maven_slot(REPOSITORY, estimate=30, kind='python-jdk-control',
+                            reservation=(4 * 1024 ** 3, 4), small_job=True) as fd:
                 ran = subprocess.run(['java', '-Xmx128m', '-cp', str(root) + ':' + str(jar),
                                       'com.openggf.tools.MemoryProfileLauncher', str(output), 'test', '3', '50',
                                       'MemoryFixture'], text=True, capture_output=True, timeout=40,
