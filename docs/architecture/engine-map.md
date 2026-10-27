@@ -13,6 +13,7 @@ Companion references:
 
 ## Contents
 
+- [Reimplementation boundary](#reimplementation-boundary)
 - [Entry point and packages](#entry-point-and-packages)
 - [Two-tier service architecture](#two-tier-service-architecture)
 - [Session ownership](#session-ownership)
@@ -33,6 +34,41 @@ Companion references:
 - [Audio engine](#audio-engine)
 - [Configuration and startup](#configuration-and-startup)
 - [Tooling](#tooling)
+
+## Reimplementation boundary
+
+OpenGGF reproduces shipped game behaviour through its own engine. Accuracy work
+implements the game's algorithms, state transitions, update order and observable
+output directly from ROM and disassembly evidence. It must not grow a console
+hardware emulator to obtain that behaviour.
+
+Do not introduce CPU instruction execution, instruction/cycle timing models,
+virtual VDP beam/status polling, or hardware register/bus protocols as an accuracy
+strategy. Hardware-facing game routines need explicit engine operations for their
+game effects. For example, a startup video-standard check should use the engine's
+resolved video-standard semantics where relevant; reproducing a 68000 polling
+loop or manufacturing its measured counter is outside scope. An unsupported
+effect must remain explicit instead of acquiring a fabricated completion receipt.
+
+ROM-shaped data and game state remain useful: raw palette words, tile and sprite
+formats, game-visible frame counters, fade arithmetic, decompression queues and
+rewind state can belong to the reimplementation. Engine rendering and asset
+scheduling can consume them directly. Their presence does not require emulated
+VDP execution, a virtual bus transaction or a physical-peripheral return chain
+before ordinary loading or gameplay may proceed. Preserve actual game-level
+ordering and resource ownership without inventing hardware prerequisites.
+
+Specific sound-hardware synthesis is the narrow exception. The existing YM2612
+and PSG chip implementations are permitted because they produce the required
+sound. This exception does not authorize general CPU/Z80 execution, system-bus
+emulation or video-device simulation around audio. Ordinary synchronization of
+the engine's audio producer remains a software ownership concern.
+
+External emulators are research and verification tools. Native reference
+captures, disassembly analysis and trace comparisons remain allowed. They do not
+provide runtime gameplay state; the existing bounded readiness-input exception
+retains its own [contract](designs/2026-07-27-cross-game-hardware-timing-trace-contract.md)
+and is not permission to build an emulator.
 
 ## Entry point and packages
 

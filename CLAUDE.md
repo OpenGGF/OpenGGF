@@ -17,6 +17,17 @@ S3K playable routes, keep AIZ → HCZ stable, and choose later-zone work by
 current route blockers and trace frontiers. Broader cleanup should serve the
 requested work or remove an active risk.
 
+OpenGGF pursues accuracy through game-engine reimplementation, not console
+hardware emulation. Implement game algorithms, state transitions and output
+directly. Do not add CPU instruction/cycle simulation, virtual VDP/beam timing,
+or hardware bus/register protocols to close parity gaps. Translate hardware-facing
+routines into engine semantics and document unsupported behaviour rather than
+making emulated hardware execution a prerequisite. Specific sound-chip emulation
+for audio synthesis is the sole exception; it does not extend to CPU, video or
+system-bus emulation around audio. External emulators remain reference tools;
+trace/capture comparison and the bounded timing-input contract below retain their
+existing restrictions. See the [reimplementation boundary](docs/architecture/engine-map.md#reimplementation-boundary).
+
 Carry authorized work through verification and the user's delivery flow.
 Use skills for relevant domain knowledge; load supporting references only
 for the current question. Routine implementation choices do not need a
